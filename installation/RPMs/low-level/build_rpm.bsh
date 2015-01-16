@@ -15,6 +15,7 @@ cd rpmbuild/SOURCES
 git clone ssh://git@dcostash.colo.seagate.com:7999/mcp/sspl.git
 cd sspl
 tar cvzf sspl-ll.tgz low-level 
+cp sspl-ll.tgz ..
 
 # Build RPM
 cd "$HomeDir"
