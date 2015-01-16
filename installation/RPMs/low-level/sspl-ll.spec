@@ -10,7 +10,7 @@ Source1:        sspl-ll
 Source2:        sspl_ll.conf
 BuildRoot:	%(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 BuildRequires:	rpm-build
-Requires:	python-pika pika pip	
+Requires:	python-twisted-core python-pip
 
 %description
 Installs SSPL-LL
@@ -18,9 +18,14 @@ Installs SSPL-LL
 %prep
 
 %post
+pip install pika
+pip install pyinotify
+
+cp /tmp/sspl-ll /etc/init.d
+cp /tmp/sspl_ll.conf /etc
 
 mkdir -p /opt/seagate/sspl
-tar xvzf /tmp/sspl-ll.tgz -C /opt/seagate
+tar xvzf /tmp/sspl-ll.tgz -C /opt/seagate/sspl
 
 chkconfig sspl-ll on
 systemctl start sspl-ll -l
