@@ -1,0 +1,85 @@
+.project
+.pydevproject
+org.eclipse.core.resources.prefs
+
+
+# PyCharm #
+##########
+.idea/
+
+# Intellij #
+##########
+*.iml
+
+# Logs and databases #
+######################
+*.log
+*.sqlite
+*.db3
+*.db
+
+# Compiled source #
+###################
+*.pyc
+
+# Test-generated files #
+########################
+_trial_marker
+@test_*_tmp
+_trial_temp
+results
+
+# Dumps #
+#########
+*.dump
+
+# twisted #
+###########
+*.cache
+twistd.pid
+twistd.log
+*.log.*
+
+# MagicDraw #
+#############
+*.bak
+
+# Packages #
+############
+# it's better to unpack these files and commit the raw source
+# git has its own built in compression methods
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+
+# OS generated files #
+######################
+.DS_Store*
+ehthumbs.db
+Icon?
+Thumbs.db
+
+# vi #
+######
+*.swp
+
+# build files #
+###############
+build
+dist
+
+# installer files #
+###################
+MANIFEST
+
+# Vagrant #
+###########
+.vagrant
+*.box
+
+

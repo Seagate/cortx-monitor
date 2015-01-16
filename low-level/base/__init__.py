@@ -1,0 +1,1 @@
+"""Base classes for all monitoring classes to inherit from"""

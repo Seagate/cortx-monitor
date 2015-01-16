@@ -1,0 +1,25 @@
+#!/bin/bash
+echo "Beginning SSPL-LL RPM build"
+
+echo "%_topdir %(echo $HOME)/sspl/installation/RPMs/low-level/rpmbuild" > ~/.rpmmacros
+
+HomeDir=`pwd`
+
+# Create directory for building rpm
+rm -Rf rpmbuild
+mkdir -p rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
+cp -Rf files/* rpmbuild/SOURCES
+
+# Tar up the code to be executed on the target machine
+cd rpmbuild/SOURCES
+git clone ssh://git@dcostash.colo.seagate.com:7999/mcp/sspl.git
+cd sspl
+tar cvzf sspl-ll.tgz low-level 
+
+# Build RPM
+cd "$HomeDir"
+
+rpmbuild -bb sspl-ll.spec
+cp rpmbuild/RPMS/noarch/*.rpm .
+rm -Rf rpmbuild
+
