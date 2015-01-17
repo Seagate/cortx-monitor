@@ -1,8 +1,7 @@
 """
  ****************************************************************************
- Filename:          service_loggin.py
+ Filename:          service_logging.py
  Description:       logging utilities for the daemon services
- Author:            Xyxratex developers
 
  Do NOT modify or remove this copyright and confidentiality notice!
  Copyright (c) 2001 - $Date: 2015/01/14 $ Seagate Technology, LLC.

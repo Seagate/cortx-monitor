@@ -32,10 +32,7 @@ class ConfigReader(object):
     Error                       = ConfigParser.Error
 
     def __init__(self, config):
-        """Constructor for ConfigReader
-
-        @param config: configuration file name
-        """
+        """Inializer for ConfigReader"""
         self._config_parser = ConfigParser.RawConfigParser()
         if not os.path.isfile(config):
             raise IOError("config file %s does not exist." %

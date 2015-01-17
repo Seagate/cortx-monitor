@@ -27,7 +27,7 @@ from utils.service_logging import logger
 class RabbitMQprocessor(ScheduledMonitorThread):
      
     MODULE_NAME = "RabbitMQprocessor"
-    PRIORITY = 1
+    PRIORITY 	= 1
 
     # Section and keys in configuration file
     RABBITMQPROCESSOR   = MODULE_NAME.upper()
