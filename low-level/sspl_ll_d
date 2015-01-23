@@ -40,9 +40,9 @@ from modules.drive_manager_monitor import DriveManagerMonitor
 from rabbitmq.rabbitmq_processor import RabbitMQprocessor 
 
 
-# This is the list of running threaded objects.  It is global for those rare
-#  occasions when cross-threaded object access is needed which must be
-#  implemented in thread-safe fashion.  Avoid this if possible but here if needed.
+# This is the list of running threaded modules.  It is global for those rare
+#  occasions when cross-threaded access is needed which must be implemented
+#  in thread-safe fashion.  Avoid if possible but here if needed.
 sspl_modules = []
 
 # Section and key in config file for bootstrap

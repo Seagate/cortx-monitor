@@ -18,17 +18,25 @@ Installs SSPL-LL
 %prep
 
 %post
+
+# Install dependencies
 pip install pika
 pip install pyinotify
 
+# Copy config file and service startup to correct locations
 cp /tmp/sspl-ll /etc/init.d
 cp /tmp/sspl_ll.conf /etc
 
+# Untar the service into /opt/seagate/sspl where it will execute from
 mkdir -p /opt/seagate/sspl
 tar xvzf /tmp/sspl-ll.tgz -C /opt/seagate/sspl
 
+# Have the service startup at boot time
 chkconfig sspl-ll on
+
+# Start the service
 systemctl start sspl-ll -l
+
 
 %install
 mkdir %{buildroot}/tmp

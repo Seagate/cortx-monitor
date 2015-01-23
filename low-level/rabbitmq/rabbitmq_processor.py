@@ -27,7 +27,7 @@ from utils.service_logging import logger
 class RabbitMQprocessor(ScheduledMonitorThread):
      
     MODULE_NAME = "RabbitMQprocessor"
-    PRIORITY 	= 1
+    PRIORITY = 1
 
     # Section and keys in configuration file
     RABBITMQPROCESSOR   = MODULE_NAME.upper()
@@ -99,22 +99,23 @@ class RabbitMQprocessor(ScheduledMonitorThread):
    
         try:
             # Configure pika with credentials from the config file
+            logger.info ("_transmitMsgOnExchange, creds: %s / %s" % (self._username, self._password))   
+            logger.info ("_transmitMsgOnExchange, exchange / routing_key: %s / %s" % (self._exchange_name, self._routing_key))
+            logger.info ("_transmitMsgOnExchange, jsonMsg: %s" % jsonMsg)
+            
             creds       = pika.PlainCredentials(self._username, self._password)
             connection  = pika.BlockingConnection(
                                     pika.ConnectionParameters(host='localhost', credentials=creds))
-            channel     = connection.channel()
-             
+            channel     = connection.channel()             
             channel.exchange_declare(exchange=self._exchange_name, exchange_type='topic')
-             
-            msgProps               = pika.BasicProperties()
-            msgProps.content_type  = "sspl_ll"
-            msgProps.delivery_mode = delivery_mode = 2, # Make message persistent
             
             # Publish json message
             channel.basic_publish(exchange=self._exchange_name, 
                                   routing_key=self._routing_key, 
-                                  body=jsonMsg, 
-                                  properties=msgProps)             
+                                  body=str(jsonMsg))             
+
+            # No exceptions thrown so success
+            logger.info ("_transmitMsgOnExchange, Successfully Sent: %s" % jsonMsg)
             connection.close()
             del(connection)
              
