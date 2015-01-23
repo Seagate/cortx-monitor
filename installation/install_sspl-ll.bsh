@@ -32,5 +32,5 @@ if [[ "$(ls -A /usr/lib64/python2.6/site-packages)" ]];then
 fi
 
 # Install SSPL-LL rpm
-yum install SSPL-LL-1.0.0-1.el7.noarch.rpm
+yum -y install SSPL-LL-1.0.0-1.el7.noarch.rpm
 
