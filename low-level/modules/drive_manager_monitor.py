@@ -44,7 +44,8 @@ class DriveManagerMonitor(ScheduledMonitorThread):
 
     def __init__(self):
         super(DriveManagerMonitor, self).__init__(self.MODULE_NAME,
-                                                  self.PRIORITY)        
+                                                  self.PRIORITY)
+        self._sentJSONmsg = None    
     
     def initialize(self, rabbitMsgQ, conf_reader):
         """initialize method contains conf_reader if needed"""
@@ -52,8 +53,7 @@ class DriveManagerMonitor(ScheduledMonitorThread):
                                                     conf_reader)           
         self._drive_mngr_base_dir  = self._getDrive_Mngr_Dir()
         self._drive_mngr_pid       = self._getDrive_Mngr_Pid()
-        
-        
+                
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""
         super(DriveManagerMonitor, self).shutdown() 
@@ -122,6 +122,12 @@ class DriveManagerMonitor(ScheduledMonitorThread):
         # Obtain json message containing all relevant data
         valid, jsonMsg = drive.toJson()
         
+        # Sometimes iNotify sends the same event twice, catch and ignore
+        if jsonMsg == self._sentJSONmsg:
+            return
+        else:
+            self._sentJSONmsg = jsonMsg
+    
         # If we have a valid json message then place it into the RabbitMQprocessor queue        
         if valid:            
             self._writeRabbitMQ(jsonMsg)
@@ -160,24 +166,23 @@ class Drive(object):
         self._drive_mngr_base_dir = drive_mngr_base_dir
         
     def _parse_path(self):
-        """Parse the path of the file, return True if valid file name exists in path"""
-        logger.info("Drive, _parse_path, path: %s" % self._path)
+        """Parse the path of the file, return True if valid file name exists in path"""        
         try:
             # Validate the path for the drive
             if "disk" not in self._path:
-                logger.warn("Drive, _parse_path: Drive path does not contain the keyword 'disk'")
+                logger.warn("Drive, _parse_path: Drive path does not contain the required keyword 'disk'")
                 return
                     
             # Remove base dcs dir and split into list parsing out enclosure and drive num
             data_str = self._path[len(self._drive_mngr_base_dir)+1:]    
             path_values = data_str.split("/")
             
-            # See if there is a valid filename: serial_number, slot, status
-            if len(path_values) == 3:
+            # See if there is a valid filename at the end: serial_number, slot, status
+            # Normal path will be: enclosure/disk/drive number
+            if len(path_values) < 4:
                 return False
             
-            # Parse out values for drive
-            logger.info("Drive, _parse_path, values: %s" % path_values)
+            # Parse out values for drive            
             self._enclosure = path_values[0]
             self._drive_num = path_values[2]
             
@@ -189,7 +194,7 @@ class Drive(object):
             return True
         
         except Exception as ex:
-            logger.exception("Drive, _parse_path: %s" % ex)
+            logger.exception("Drive, _parse_path: %s, ignoring event." % ex)
         return False
         
         

@@ -48,7 +48,7 @@ class RabbitMQprocessor(ScheduledMonitorThread):
 
     def initialize(self, rabbitMsgQ, conf_reader):
         """initialize method contains conf_reader if needed"""
-        super(DriveManagerMonitor, self).initialize(rabbitMsgQ,
+        super(RabbitMQprocessor, self).initialize(rabbitMsgQ,
                                                     conf_reader) 
         # Configure RabbitMQ Exchange to transmit message
         self._configureExchange()
