@@ -1,6 +1,6 @@
 Name:		SSPL-LL
 Version:	1.0.0
-Release:	0.el7
+Release:	1.el7
 Summary:	Installs SSPL-LL
 BuildArch:      noarch
 Group:		SSG
