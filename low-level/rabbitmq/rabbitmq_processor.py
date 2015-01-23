@@ -33,6 +33,7 @@ class RabbitMQprocessor(ScheduledMonitorThread):
     RABBITMQPROCESSOR   = MODULE_NAME.upper()
     EXCHANGE_NAME       = 'exchange_name'
     ROUTING_KEY         = 'routing_key'
+    VIRT_HOST           = 'virtual_host'
     USER_NAME           = 'username'
     PASSWORD            = 'password'
 
@@ -73,6 +74,9 @@ class RabbitMQprocessor(ScheduledMonitorThread):
     def _configureExchange(self):        
         """Configure the RabbitMQ exchange with defaults available"""
         try:
+            self._virtual_host   = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR, 
+                                                                 self.VIRT_HOST,
+                                                                 'SSPL')
             self._exchange_name = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR, 
                                                                  self.EXCHANGE_NAME,
                                                                  'sspl_ll_bcast')
@@ -93,21 +97,23 @@ class RabbitMQprocessor(ScheduledMonitorThread):
         except Exception as ex:
             logger.exception("RabbitMQprocessor, configureExchange: %s" % ex)
           
-    def _transmitMsgOnExchange(self, jsonMsg):        
+    def _transmitMsgOnExchange(self, jsonMsg):
         """Transmit json message onto RabbitMQ exchange"""
         logger.info("RabbitMQprocessor, transmitMsgOnExchange, transmitting jsonMsg: %s" % jsonMsg)
    
         try:
             # Configure pika with credentials from the config file
-            logger.info ("_transmitMsgOnExchange, creds: %s / %s" % (self._username, self._password))   
-            logger.info ("_transmitMsgOnExchange, exchange / routing_key: %s / %s" % (self._exchange_name, self._routing_key))
-            logger.info ("_transmitMsgOnExchange, jsonMsg: %s" % jsonMsg)
+            logger.info ("_transmitMsgOnExchange, creds: %s,  %s" % (self._username, self._password))   
+            logger.info ("_transmitMsgOnExchange, exchange, routing_key: %s, %s" % (self._exchange_name, self._routing_key))
+            logger.info ("_transmitMsgOnExchange, vhost, jsonMsg: %s, %s" % (self._virtual_host, jsonMsg))
             
             creds       = pika.PlainCredentials(self._username, self._password)
             connection  = pika.BlockingConnection(
-                                    pika.ConnectionParameters(host='localhost', credentials=creds))
-            channel     = connection.channel()             
-            channel.exchange_declare(exchange=self._exchange_name, exchange_type='topic')
+                                    pika.ConnectionParameters(host='localhost', 
+                                                              virtual_host=self._virtual_host,
+                                                              credentials=creds))
+            channel     = connection.channel()
+            channel.exchange_declare(exchange=self._exchange_name, exchange_type='topic', durable=True)
             
             # Publish json message
             channel.basic_publish(exchange=self._exchange_name, 
