@@ -31,6 +31,11 @@ cp /tmp/sspl_ll.conf /etc
 mkdir -p /opt/seagate/sspl
 tar xvzf /tmp/sspl-ll.tgz -C /opt/seagate/sspl
 
+# Create the drivemanager directory
+if [[ ! -d /tmp/dcs/drivemanager ]]; then 
+   mkdir -p /tmp/dcs/drivemanager
+fi
+
 # Have the service startup at boot time
 chkconfig sspl-ll on
 
