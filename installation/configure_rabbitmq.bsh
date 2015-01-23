@@ -1,0 +1,46 @@
+#!/bin/bash
+#
+# Configures RabbitMQ for SSPL-LL 
+# Uses default values in /etc/sspl-ll.conf
+#
+
+# Install RabbitMQ 3.3.5
+if [[ ! -f /etc/init.d/rabbitmq-server ]]; then
+    yum -y install http://www.rabbitmq.com/releases/rabbitmq-server/v3.3.5/rabbitmq-server-3.3.5-1.noarch.rpm
+fi
+
+# Enable the following plugins so RabbitMQ uses the STOMP protocol
+rabbitmq-plugins enable rabbitmq_stomp
+rabbitmq-plugins enable rabbitmq_management
+
+# Restart RabbitMQ to include the new plugins
+systemctl restart rabbitmq-server -l
+
+# Create a virtual host for the SSPL communications
+rabbitmqctl add_vhost SSPL
+
+# Create the above username with password
+rabbitmqctl add_user sspluser sspl4ever
+
+# Set permissions for the user on the vhost
+rabbitmqctl set_permissions -p SSPL sspluser ".*" ".*" ".*"
+
+# Promote the user to admin for the RabbitMQ Management Plugin
+rabbitmqctl set_user_tags sspluser administrator
+
+# Copy rabbitmqadmin application to /usr/local/bin for global access 
+hostname=`hostname`
+tophostname=`echo $hostname | cut -d '.' -f 1`
+cp /var/lib/rabbitmq/mnesia/rabbit@"$tophostname"-plugins-expand/rabbitmq_management-3.3.5/priv/www/cli/rabbitmqadmin /usr/local/bin
+chmod +x  /usr/local/bin/rabbitmqadmin
+
+# Create the SSPL Message Queue
+rabbitmqadmin -u sspluser  -p sspl4ever declare queue --vhost=SSPL name=SSPL_msgQ durable=true
+
+# Create the broadcast exchange to send messages to all consumers subscribed to the topic
+rabbitmqadmin -u sspluser  -p sspl4ever declare exchange --vhost=SSPL name=sspl_bcast  type=topic 
+
+# Create the RabbitMQ binding with the routing_key
+rabbitmqadmin -u sspluser  -p sspl4ever --vhost=SSPL declare binding source=sspl_bcast destination_type=queue destination=SSPL_msgQ routing_key=sspl_ll
+
+echo "RabbitMQ is installed and configured using the defaults from /etc/sspl_ll.conf"

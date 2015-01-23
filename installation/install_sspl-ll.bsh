@@ -1,4 +1,7 @@
 #!/bin/bash
+#
+# Installs dependencies and the SSPL-LL RPM located in the current directory
+#
 
 # Setup Yum repositories for dependencies
 rpm -Uvh http://dl.fedoraproject.org/pub/epel/7/x86_64/e/epel-release-7-5.noarch.rpm
@@ -31,6 +34,8 @@ if [[ "$(ls -A /usr/lib64/python2.6/site-packages)" ]];then
     mv -f /usr/lib64/python2.6/site-packages/* /usr/lib/python2.7/site-packages
 fi
 
+rpm=`ls SSPL*`
+
 # Install SSPL-LL rpm
-yum -y install SSPL-LL-1.0.0-1.el7.noarch.rpm
+yum -y install $rpm
 

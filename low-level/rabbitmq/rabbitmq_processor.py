@@ -45,6 +45,13 @@ class RabbitMQprocessor(ScheduledMonitorThread):
     def __init__(self):
         super(RabbitMQprocessor, self).__init__(self.MODULE_NAME,
                                                 self.PRIORITY)    
+
+    def initialize(self, rabbitMsgQ, conf_reader):
+        """initialize method contains conf_reader if needed"""
+        super(DriveManagerMonitor, self).initialize(rabbitMsgQ,
+                                                    conf_reader) 
+        # Configure RabbitMQ Exchange to transmit message
+        self._configureExchange()
         
     def run(self):
         """Run the monitoring periodically on its own thread. """
@@ -52,15 +59,13 @@ class RabbitMQprocessor(ScheduledMonitorThread):
         logger.info("Starting thread for '%s'", self.name())    
         
         # Check message queue and transmit any messages over the rabbitMQ 
-        if not self.isRabbitMsgQempty():
-            # Configure RabbitMQ Exchange to transmit message
-            self._configureExchange()
+        if not self.isRabbitMsgQempty():            
             
             # Loop thru all messages in queue until it's empty and transmit        
             while not self.isRabbitMsgQempty():
                 jsonMsg = self._readRabbitMQ()
                 
-                # TODO: Possible validation checking of json message
+                # TODO: Validation checking of json message against the schemas
                 self._transmitMsgOnExchange(jsonMsg)        
         
         # TODO: poll_time = int(self._get_monitor_config().get(MONITOR_POLL_KEY))
@@ -115,9 +120,13 @@ class RabbitMQprocessor(ScheduledMonitorThread):
             channel     = connection.channel()
             channel.exchange_declare(exchange=self._exchange_name, exchange_type='topic', durable=True)
             
+            msg_props = pika.BasicProperties()
+            msg_props.content_type = "text/plain"
+            
             # Publish json message
             channel.basic_publish(exchange=self._exchange_name, 
-                                  routing_key=self._routing_key, 
+                                  routing_key=self._routing_key,
+                                  properties=msg_props, 
                                   body=str(jsonMsg))             
 
             # No exceptions thrown so success
