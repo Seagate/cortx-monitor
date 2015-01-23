@@ -43,4 +43,4 @@ rabbitmqadmin -u sspluser  -p sspl4ever declare exchange --vhost=SSPL name=sspl_
 # Create the RabbitMQ binding with the routing_key
 rabbitmqadmin -u sspluser  -p sspl4ever --vhost=SSPL declare binding source=sspl_bcast destination_type=queue destination=SSPL_msgQ routing_key=sspl_ll
 
-echo "RabbitMQ is installed and configured using the defaults from /etc/sspl_ll.conf"
+echo "RabbitMQ is installed and configured using the defaults for /etc/sspl_ll.conf"
