@@ -21,6 +21,7 @@
 
 import Queue
 import pyinotify
+#from jsonschema import Draft4Validator
 
 from base.monitor_thread import ScheduledMonitorThread 
 from utils.service_logging import logger
@@ -206,9 +207,46 @@ class Drive(object):
         
         # Fill in json object and return it
         # TODO: Expand on this using json api libs and other data about drive stats
-        jsonMsg = {"Enclosure": self._enclosure,
-                   "DriveNum": self._drive_num,
-                   self._filename: self._fileValue}
+#         jsonMsg = {"Enclosure": self._enclosure,
+#                    "DriveNum": self._drive_num,
+#                    self._filename: self._fileValue}
+                    
+        jsonMsg = {"title" : "SSPL-LL Monitor Response",
+                   "description" : "Seagate Storage Platform Library - Low Level - Monitor Response",
+                   "sspl_ll_host": {
+                        "fqdn" : "sspl-ll-test.stsv.seagate.com",
+                        "ip_addr" : "192.168.174.128",
+                        "schema_version" : "1.0.0",
+                        "sspl_version" : "1.0.0",
+                        "local_time": "Tue Jan 27 17:50:26 MST 2015",                       
+                        },
+                   "monitor_msg_type": {
+                        "disk_status_drivemanager": {
+                            "enclosureSN" : self._enclosure,
+                            "diskNum" : self._drive_num,
+                            "diskSlot" : 0,
+                            "diskSN" : "Hard coded test using filename:content",
+                            self._filename: self._fileValue,            
+                            }
+                        }
+                   }
+        
+#         
+#         TODO: Validate against schema to catch json errors
+#         
+#         schema = {
+#             "$schema": "http://json-schema.org/schema#",
+#             "type": "object",
+#             "properties": {
+#                 "Enclosure": {"type": "string"},
+#                 "DriveNum": {"type": "string"},
+#             },
+#             "required": ["email"]
+#         }        
+#         logger.info("IN toJson and ready to validate with schema: %s" % schema)
+#         
+#         # Validate the message against the schema
+#         Draft4Validator.check_schema(schema)
         
         return (True, jsonMsg)
        
