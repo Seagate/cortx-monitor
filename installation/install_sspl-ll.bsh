@@ -12,27 +12,7 @@ yum clean all
 # Install required python packages
 yum -y install python-pip
 yum -y install pandoc
-
-# Install deps while ignoring dependencies (requires python27 which they don’t recognize)
-rpm -i --nodeps python27-setuptools-0.6c11-2.noarch.rpm
-rpm -i --nodeps python27-lockfile-0.9.1-1.noarch.rpm
-rpm -i --nodeps python27-daemon-1.6.1-1.noarch.rpm
-
-# Install RabbitMQ 3.3.5
-yum -y install http://www.rabbitmq.com/releases/rabbitmq-server/v3.3.5/rabbitmq-server-3.3.5-1.noarch.rpm
-
-# Consolidate all files into one location
-if [[ "$(ls -A /usr/local/lib/python2.7/site-packages)" ]];then
-    mv -f /usr/local/lib/python2.7/site-packages/* /usr/lib/python2.7/site-packages
-fi
-
-if [[ "$(ls -A /usr/lib/python2.6/site-packages)" ]];then
-    mv -f /usr/lib/python2.6/site-packages/* /usr/lib/python2.7/site-packages
-fi
-
-if [[ "$(ls -A /usr/lib64/python2.6/site-packages)" ]];then
-    mv -f /usr/lib64/python2.6/site-packages/* /usr/lib/python2.7/site-packages
-fi
+pip install python-daemon
 
 rpm=`ls SSPL*`
 

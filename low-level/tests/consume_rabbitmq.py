@@ -4,6 +4,9 @@ import socket
 
 fqdn = socket.gethostname()
 shortHostname = fqdn.split(".")[0]
+# Uncomment the below line to listen on mcu
+# shortHostname = "puppetmaster"
+
 print("Using hostname: %s" % shortHostname)
 
 creds = pika.PlainCredentials('sspluser', 'sspl4ever')
@@ -15,8 +18,6 @@ channel.exchange_declare(exchange='sspl_bcast',
                          type='topic', durable=True)
 
 result = channel.queue_declare(exclusive=False)
-queue_name = result.method.queue
-
 channel.queue_bind(exchange='sspl_bcast',
                    queue=shortHostname)
 

@@ -90,7 +90,7 @@ class RabbitMQprocessor(ScheduledMonitorThread):
                                                                  'sspl_ll')           
             self._username      = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR, 
                                                                  self.USER_NAME,
-                                                                 'sspl4ever')
+                                                                 'sspluser')
             self._password      = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR, 
                                                                  self.PASSWORD,
                                                                  'sspl4ever')
