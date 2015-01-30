@@ -4,8 +4,6 @@
 # Uses default values in /etc/sspl-ll.conf
 #
      
-hostname=`hostname -s`
-
 # Install RabbitMQ 3.3.5 if it's not present
 if [[ ! -f /etc/init.d/rabbitmq-server ]]; then
     # Setup Yum repositories for dependencies
@@ -64,7 +62,7 @@ echo "Promote the user to admin for the RabbitMQ Management Plugin"
 rabbitmqctl set_user_tags sspluser administrator
 
 echo "Copy rabbitmqadmin application to /usr/local/bin for global access"
-cp /var/lib/rabbitmq/mnesia/rabbit@"$hostname"-plugins-expand/rabbitmq_management-3.3.5/priv/www/cli/rabbitmqadmin /usr/local/bin
+cp /var/lib/rabbitmq/mnesia/rabbit@puppetmaster-plugins-expand/rabbitmq_management-3.3.5/priv/www/cli/rabbitmqadmin /usr/local/bin
 chmod +x  /usr/local/bin/rabbitmqadmin
 
 echo "Create the message queue for this node"
