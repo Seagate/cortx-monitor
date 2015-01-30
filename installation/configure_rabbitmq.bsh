@@ -3,31 +3,10 @@
 # Configures RabbitMQ for SSPL-LL 
 # Uses default values in /etc/sspl-ll.conf
 #
+     
+hostname=`hostname -s`
 
-if [[ "$#" -ne 1 ]]; then
-    echo "Usage:"
-    echo "$0 node	- For Standard Cluster Node"
-    echo "$0 mcu	- For Management Control Unit"
-    exit
-fi
-
-if [[ "$1" == "node" ]]; then
-    echo "Configuring RabbitMQ for a Standard Cluster Node"
-elif [[ "$1" == "mcu" ]]; then
-    echo "Configuring RabbitMQ for a Management Control Unit"
-else
-    echo "Invalid parameter, pluse use 'node' or 'mcu'"
-    exit
-fi
-
-# RabbitMQ uses the top portion of the hostname
-if [[ $1 == "mcu" ]]; then
-    hostname="puppetmaster"
-else
-    hostname=`hostname -s`
-fi
-
-# Install RabbitMQ 3.3.5
+# Install RabbitMQ 3.3.5 if it's not present
 if [[ ! -f /etc/init.d/rabbitmq-server ]]; then
     # Setup Yum repositories for dependencies
     rpm -Uvh http://dl.fedoraproject.org/pub/epel/7/x86_64/e/epel-release-7-5.noarch.rpm
@@ -39,14 +18,13 @@ if [[ ! -f /etc/init.d/rabbitmq-server ]]; then
 
     yum -y install python-pip
     pip install pika
-fi
 
-echo "Enable the following plugins so RabbitMQ uses the STOMP protocol"
-rabbitmq-plugins enable rabbitmq_stomp
-rabbitmq-plugins enable rabbitmq_management
+    echo "Enable the following plugins so RabbitMQ uses the STOMP protocol"
+    rabbitmq-plugins enable rabbitmq_stomp
+    rabbitmq-plugins enable rabbitmq_management
 
-echo "Create configuration files with hostname"
-cat <<EOF > /etc/rabbitmq/rabbitmq.config
+    echo "Create configuration files with puppetmaster defaults"
+    cat <<EOF > /etc/rabbitmq/rabbitmq.config
 [
   {rabbit, [
     {cluster_nodes, {[rabbit@puppetmaster], disc}},
@@ -64,54 +42,39 @@ cat <<EOF > /etc/rabbitmq/rabbitmq.config
 ].
 EOF
 
-cat <<EOF > /etc/rabbitmq/rabbitmq-env.conf
-RABBITMQ_NODENAME='rabbit@$hostname'
+    cat <<EOF > /etc/rabbitmq/rabbitmq-env.conf
+RABBITMQ_NODENAME='rabbit@puppetmaster'
 RABBITMQ_NODE_PORT=5672
 EOF
 
-# The erlang cookie is used to grant approval to join cluster
-cat <<EOF > /var/lib/rabbitmq/.erlang.cookie
-EJTZESBLFTIDLNXOWAAO
-EOF
-
-chmod 400 /var/lib/rabbitmq/.erlang.cookie
-chown rabbitmq:rabbitmq /var/lib/rabbitmq/.erlang.cookie
-
-echo "Restart RabbitMQ to include the new plugins"
-systemctl restart rabbitmq-server -l
-
-if [[ "$1" == "node" ]]; then
-    echo "Joining cluster"
-    rabbitmqctl stop_app
-    rabbitmqctl join_cluster 'rabbit@puppetmaster'
-    rabbitmqctl start_app
-
-else [[ "$1" == "mcu" ]]
-    echo "Create a virtual host for the SSPL communications"
-    rabbitmqctl add_vhost SSPL
-
-    echo "Create the user and password"
-    rabbitmqctl add_user sspluser sspl4ever
-
-    echo "Set permissions for the user on the vhost"
-    rabbitmqctl set_permissions -p SSPL sspluser ".*" ".*" ".*"
-
-    echo "Promote the user to admin for the RabbitMQ Management Plugin"
-    rabbitmqctl set_user_tags sspluser administrator
+    echo "Restart RabbitMQ to include the new plugins"
+    systemctl restart rabbitmq-server -l
 fi
+
+echo "Create a virtual host for the SSPL communications"
+rabbitmqctl add_vhost SSPL
+
+echo "Create the user and password"
+rabbitmqctl add_user sspluser sspl4ever
+
+echo "Set permissions for the user on the vhost"
+rabbitmqctl set_permissions -p SSPL sspluser ".*" ".*" ".*"
+
+echo "Promote the user to admin for the RabbitMQ Management Plugin"
+rabbitmqctl set_user_tags sspluser administrator
 
 echo "Copy rabbitmqadmin application to /usr/local/bin for global access"
 cp /var/lib/rabbitmq/mnesia/rabbit@"$hostname"-plugins-expand/rabbitmq_management-3.3.5/priv/www/cli/rabbitmqadmin /usr/local/bin
 chmod +x  /usr/local/bin/rabbitmqadmin
 
 echo "Create the message queue for this node"
-rabbitmqadmin -u sspluser  -p sspl4ever declare queue --vhost=SSPL name="$hostname" durable=true
+rabbitmqadmin -u sspluser  -p sspl4ever declare queue --vhost=SSPL name=SSPL-LL durable=true
 
 echo "Create the broadcast exchange to send messages to all consumers subscribed to the topic"
 rabbitmqadmin -u sspluser  -p sspl4ever declare exchange --vhost=SSPL name=sspl_bcast  type=topic
 
 echo "Create the RabbitMQ binding with the routing_key"
-rabbitmqadmin -u sspluser  -p sspl4ever --vhost=SSPL declare binding source=sspl_bcast destination_type=queue destination="$hostname" routing_key=sspl_ll
+rabbitmqadmin -u sspluser  -p sspl4ever --vhost=SSPL declare binding source=sspl_bcast destination_type=queue destination=SSPL-LL routing_key=sspl_ll
 
 if [[ -f /etc/init.d/sspl-ll ]]; then
     echo "Resatrt SSPL to use new RabbitMQ configuration"
