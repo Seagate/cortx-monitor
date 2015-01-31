@@ -21,14 +21,14 @@
 
 import Queue
 import pyinotify
-#from jsonschema import Draft4Validator
 
+from json_msgs.messages.monitors.drive_mngr import DriveMngrMsg
 from base.monitor_thread import ScheduledMonitorThread 
 from utils.service_logging import logger
 
 
 class DriveManagerMonitor(ScheduledMonitorThread):
-     
+    
     MODULE_NAME       = "DriveManagerMonitor"
     PRIORITY          = 2
 
@@ -46,7 +46,7 @@ class DriveManagerMonitor(ScheduledMonitorThread):
     def __init__(self):
         super(DriveManagerMonitor, self).__init__(self.MODULE_NAME,
                                                   self.PRIORITY)
-        self._sentJSONmsg = None    
+        self._sentJSONmsg = None
     
     def initialize(self, rabbitMsgQ, conf_reader):
         """initialize method contains conf_reader if needed"""
@@ -54,6 +54,7 @@ class DriveManagerMonitor(ScheduledMonitorThread):
                                                     conf_reader)           
         self._drive_mngr_base_dir  = self._getDrive_Mngr_Dir()
         self._drive_mngr_pid       = self._getDrive_Mngr_Pid()
+        
                 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""
@@ -121,17 +122,17 @@ class DriveManagerMonitor(ScheduledMonitorThread):
         drive = Drive(pathname, self._drive_mngr_base_dir)
         
         # Obtain json message containing all relevant data
-        valid, jsonMsg = drive.toJson()
+        valid, jsonMsg = drive.toJsonMsg()
         
         # Sometimes iNotify sends the same event twice, catch and ignore
-        if jsonMsg == self._sentJSONmsg:
+        if jsonMsg.getJson() == self._sentJSONmsg:
             return
         else:
-            self._sentJSONmsg = jsonMsg
+            self._sentJSONmsg = jsonMsg.getJson()
     
         # If we have a valid json message then place it into the RabbitMQprocessor queue        
         if valid:            
-            self._writeRabbitMQ(jsonMsg)
+            self._writeRabbitMQ(jsonMsg.getJson())
         else:
             logger.info("DriveManagerMonitor, _send_json_RabbitMQ, valid: %s(ignoring)," \
                         "jsonMsg: %s" % (valid, jsonMsg))
@@ -189,9 +190,14 @@ class Drive(object):
             
             # Read in the value of the file at the end of the path
             self._filename  = path_values[3]
+            
+            # The drive manager status file is currently only being used.
+            if self._filename != "status":
+                return False
+            
             with open (self._path, "r") as datafile:
                 data = datafile.read().replace('\n', '')
-            self._fileValue = data
+            self._status = data
             return True
         
         except Exception as ex:
@@ -199,54 +205,17 @@ class Drive(object):
         return False
         
         
-    def toJson(self):
+    def toJsonMsg(self):
         """Returns the JSON representation of a drive"""
         valid = self._parse_path()
         if not valid:
             return (False, None)
         
-        # Fill in json object and return it
-        # TODO: Expand on this using json api libs and other data about drive stats
-#         jsonMsg = {"Enclosure": self._enclosure,
-#                    "DriveNum": self._drive_num,
-#                    self._filename: self._fileValue}
-                    
-        jsonMsg = {"title" : "SSPL-LL Monitor Response",
-                   "description" : "Seagate Storage Platform Library - Low Level - Monitor Response",
-                   "sspl_ll_host": {
-                        "fqdn" : "sspl-ll-test.stsv.seagate.com",
-                        "ip_addr" : "192.168.174.128",
-                        "schema_version" : "1.0.0",
-                        "sspl_version" : "1.0.0",
-                        "local_time": "Tue Jan 27 17:50:26 MST 2015",                       
-                        },
-                   "monitor_msg_type": {
-                        "disk_status_drivemanager": {
-                            "enclosureSN" : self._enclosure,
-                            "diskNum" : self._drive_num,
-                            "diskSlot" : 0,
-                            "diskSN" : "Hard coded test using filename:content",
-                            self._filename: self._fileValue,            
-                            }
-                        }
-                   }
-        
-#         
-#         TODO: Validate against schema to catch json errors
-#         
-#         schema = {
-#             "$schema": "http://json-schema.org/schema#",
-#             "type": "object",
-#             "properties": {
-#                 "Enclosure": {"type": "string"},
-#                 "DriveNum": {"type": "string"},
-#             },
-#             "required": ["email"]
-#         }        
-#         logger.info("IN toJson and ready to validate with schema: %s" % schema)
-#         
-#         # Validate the message against the schema
-#         Draft4Validator.check_schema(schema)
+        # Create a drive manager json object which can be
+        #  be queued up for aggregation at a later time.
+        jsonMsg = DriveMngrMsg(self._enclosure,
+                               self._drive_num,
+                               self._status)
         
         return (True, jsonMsg)
        

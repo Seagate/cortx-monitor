@@ -58,15 +58,21 @@ class RabbitMQprocessor(ScheduledMonitorThread):
         super(RabbitMQprocessor, self).run()        
         logger.info("Starting thread for '%s'", self.name())    
         
-        # Check message queue and transmit any messages over the rabbitMQ 
-        if not self.isRabbitMsgQempty():            
-            
-            # Loop thru all messages in queue until it's empty and transmit        
-            while not self.isRabbitMsgQempty():
-                jsonMsg = self._readRabbitMQ()
+        try:
+            # Check message queue and transmit any messages over the rabbitMQ 
+            if not self.isRabbitMsgQempty():            
                 
-                # TODO: Validation checking of json message against the schemas
-                self._transmitMsgOnExchange(jsonMsg)        
+                # Loop thru all messages in queue until it's empty and transmit        
+                while not self.isRabbitMsgQempty():
+                    jsonMsg = self._readRabbitMQ()
+                    
+                    # TODO: Validation checking of json message against the schemas
+                    self._transmitMsgOnExchange(jsonMsg)       
+                         
+        except Exception as ex:
+            # Log it and restart the whole process when a failure occurs      
+            logger.exception("DriveManagerMonitor restarting")
+            self._scheduler.enter(10, self._priority, self.run, ())  
         
         # TODO: poll_time = int(self._get_monitor_config().get(MONITOR_POLL_KEY))
         self._scheduler.enter(10, self._priority, self.run, ())    

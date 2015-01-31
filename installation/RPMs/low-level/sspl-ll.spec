@@ -19,9 +19,11 @@ Installs SSPL-LL
 
 %post
 
-# Install dependencies
+# Install theese dependencies using pip until there is a 
+#  valid RPM for centos 7 available.
 pip install pika
 pip install pyinotify
+pip install jsonschema
 
 # Copy config file and service startup to correct locations
 cp /tmp/sspl-ll /etc/init.d
