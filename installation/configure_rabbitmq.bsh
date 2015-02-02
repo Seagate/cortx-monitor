@@ -3,6 +3,8 @@
 # Configures RabbitMQ for SSPL-LL 
 # Uses default values in /etc/sspl-ll.conf
 #
+
+hostname=`hostname -s`
      
 # Install RabbitMQ 3.3.5 if it's not present
 if [[ ! -f /etc/init.d/rabbitmq-server ]]; then
@@ -20,34 +22,10 @@ if [[ ! -f /etc/init.d/rabbitmq-server ]]; then
     echo "Enable the following plugins so RabbitMQ uses the STOMP protocol"
     rabbitmq-plugins enable rabbitmq_stomp
     rabbitmq-plugins enable rabbitmq_management
-
-    echo "Create configuration files with puppetmaster defaults"
-    cat <<EOF > /etc/rabbitmq/rabbitmq.config
-[
-  {rabbit, [
-    {cluster_nodes, {[rabbit@puppet], disc}},
-    {cluster_partition_handling, ignore},
-    {default_user, <<"guest">>},
-    {default_pass, <<"guest">>}
-  ]}
-,
-% Configure the Stomp Plugin listening port
-  {rabbitmq_stomp, [
-    {tcp_listeners, [61613]}
-,
-    {ssl_listeners, [6164]}
-  ]}
-].
-EOF
-
-    cat <<EOF > /etc/rabbitmq/rabbitmq-env.conf
-RABBITMQ_NODENAME='rabbit@puppet'
-RABBITMQ_NODE_PORT=5672
-EOF
-
-    echo "Restart RabbitMQ to include the new plugins"
-    systemctl restart rabbitmq-server -l
 fi
+
+echo "Restart RabbitMQ to include the new plugins"
+systemctl restart rabbitmq-server -l
 
 echo "Create a virtual host for the SSPL communications"
 rabbitmqctl add_vhost SSPL
@@ -62,7 +40,7 @@ echo "Promote the user to admin for the RabbitMQ Management Plugin"
 rabbitmqctl set_user_tags sspluser administrator
 
 echo "Copy rabbitmqadmin application to /usr/local/bin for global access"
-cp /var/lib/rabbitmq/mnesia/rabbit@puppetmaster-plugins-expand/rabbitmq_management-3.3.5/priv/www/cli/rabbitmqadmin /usr/local/bin
+cp /var/lib/rabbitmq/mnesia/rabbit@"$hostname"-plugins-expand/rabbitmq_management-3.3.5/priv/www/cli/rabbitmqadmin /usr/local/bin
 chmod +x  /usr/local/bin/rabbitmqadmin
 
 echo "Create the message queue for this node"
