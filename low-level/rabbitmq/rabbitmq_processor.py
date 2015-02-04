@@ -55,27 +55,25 @@ class RabbitMQprocessor(ScheduledMonitorThread):
         
     def run(self):
         """Run the monitoring periodically on its own thread. """
-        super(RabbitMQprocessor, self).run()        
+        #super(RabbitMQprocessor, self).run()        
         logger.info("Starting thread for '%s'", self.name())    
         
         try:
-            # Check message queue and transmit any messages over the rabbitMQ 
-            if not self.isRabbitMsgQempty():            
-                
-                # Loop thru all messages in queue until it's empty and transmit        
-                while not self.isRabbitMsgQempty():
-                    jsonMsg = self._readRabbitMQ()
-                    
-                    # TODO: Validation checking of json message against the schemas
-                    self._transmitMsgOnExchange(jsonMsg)       
-                         
+            # Block on message queue until it contains an entry 
+            jsonMsg = self._readRabbitMQ()
+            self._transmitMsgOnExchange(jsonMsg)    
+
+            # Loop thru all messages in queue until it's empty and transmit        
+            while not self.isRabbitMsgQempty():
+                jsonMsg = self._readRabbitMQ()                
+                self._transmitMsgOnExchange(jsonMsg)       
+            
         except Exception as ex:
             # Log it and restart the whole process when a failure occurs      
-            logger.exception("DriveManagerMonitor restarting")
-            self._scheduler.enter(10, self._priority, self.run, ())  
+            logger.exception("DriveManagerMonitor restarting")            
         
         # TODO: poll_time = int(self._get_monitor_config().get(MONITOR_POLL_KEY))
-        self._scheduler.enter(10, self._priority, self.run, ())    
+        self._scheduler.enter(0, self._priority, self.run, ())    
         logger.info("Finished thread for '%s'", self.name())
         
     def shutdown(self):

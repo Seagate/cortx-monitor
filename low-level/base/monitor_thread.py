@@ -5,7 +5,7 @@ import abc
 
 from utils.service_logging import logger
 from sched import scheduler
-
+from exceptions import NotImplementedError
 
 class MonitorThread(object):
     """Base Class for all Monitoring Processes"""
@@ -16,14 +16,15 @@ class MonitorThread(object):
 
     @abc.abstractmethod
     def initialize(self):
-        """Initialize the monitoring process"""
-        pass
+        """Initialize the monitoring process"""       
+        raise NotImplementedError("Subclasses should implement this!")              
 
     @abc.abstractmethod
     def run(self):
-        """Periodically run the monitoring process"""
-        pass
-
+        """Periodically run the monitoring process"""       
+        raise NotImplementedError("Subclasses should implement this!")
+        
+    
 
 class ScheduledMonitorThread(MonitorThread):
     """A monitoring process with an internal scheduler"""
@@ -57,16 +58,11 @@ class ScheduledMonitorThread(MonitorThread):
                     self._module_name)
 
     def initialize(self, rabbitMsgQ, conf_reader):
-        """Initialize the monitoring thread"""
-        super(ScheduledMonitorThread, self).initialize()        
+        """Initialize the monitoring thread"""   
         self._rabbitMsgQ     = rabbitMsgQ
         self._conf_reader    = conf_reader
         self._scheduler.enter(1, self._priority, self.run, ())
-    
-    def run(self):
-        """Periodically run the monitor process"""
-        super(ScheduledMonitorThread, self).run()
-    
+ 
     def getConf_reader(self):
         return self._conf_reader
     
@@ -74,13 +70,9 @@ class ScheduledMonitorThread(MonitorThread):
         return self._rabbitMsgQ.empty()
     
     def _readRabbitMQ(self):
-        """Reads a json message from the queue placed by another thread"""
-        jsonMsg = {}
-        if not self._rabbitMsgQ.empty():
-            jsonMsg = self._rabbitMsgQ.get_nowait()
-            logger.info("readRabbitMQ: From %s, Msg:%s" % (self.name(), jsonMsg))
-        else:
-            logger.info("readRabbitMQ: From %s: rabbitMsgQ is empty" % self.name())
+        """Reads a json message from the queue placed by another thread"""        
+        jsonMsg = self._rabbitMsgQ.get()
+        logger.info("readRabbitMQ: From %s, Msg:%s" % (self.name(), jsonMsg))       
         return jsonMsg
     
     def _writeRabbitMQ(self, jsonMsg):

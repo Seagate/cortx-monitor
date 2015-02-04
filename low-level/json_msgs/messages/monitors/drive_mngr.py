@@ -51,19 +51,18 @@ class DriveMngrMsg(BaseMonitorMsg):
                       "monitor_msg_type": {
                             self.MONITOR_MSG_TYPE: {
                                 "enclosureSN" : self._enclosure,
-                                "diskNum" : self._drive_num,            
-                                "status": self._status          
+                                "diskNum" : int(self._drive_num),                                            
+                                "diskStatus": self._status                                
                                 }
-                            }
+                            }                      
                       }
-
         
     def getJson(self):
         """Return a validated JSON object"""    
         # Validate the current message    
-        self.validateMsg()
+        self.validateMsg(self._json)       
         return json.dumps(self._json)
-                
+                 
     def getEnclosure(self):
         return self._enclosure
         
@@ -73,5 +72,6 @@ class DriveMngrMsg(BaseMonitorMsg):
     def getStatus(self):
         return self._status
     
-    
+    def setStatus(self, _status):
+        self._status = _status
         

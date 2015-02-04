@@ -10,7 +10,7 @@ Source1:        sspl-ll
 Source2:        sspl_ll.conf
 BuildRoot:	%(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 BuildRequires:	rpm-build
-Requires:	python-twisted-core python-pip
+Requires:	python-twisted-core python-pip python-daemon
 
 %description
 Installs SSPL-LL

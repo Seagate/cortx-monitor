@@ -33,11 +33,10 @@ class BaseMsg():
 
     def __init__(self):        
         pass
-
               
     @abc.abstractmethod          
-    def getJson(self):
-        pass
+    def getJson(self):        
+        raise NotImplementedError("Subclasses should implement this!")       
     
     
         

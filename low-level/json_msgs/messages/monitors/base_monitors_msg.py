@@ -20,9 +20,14 @@
 
 import os
 import abc
+import json
 from jsonschema import Draft4Validator
+from jsonschema import validate
+
 from json_msgs.messages.base_msg import BaseMsg
 from json_msgs.schemas import monitors 
+
+from utils.service_logging import logger
 
 class BaseMonitorMsg(BaseMsg):
     '''
@@ -31,27 +36,31 @@ class BaseMonitorMsg(BaseMsg):
 
     TITLE               = "SSPL-LL Monitor Response"
     DESCRIPTION         = "Seagate Storage Platform Library - Low Level - Monitor Response"
-    JSON_MONITOR_SCHEMA = "SSPL-LL_Monitor_Response"
+    JSON_MONITOR_SCHEMA = "SSPL-LL_Monitor_Response.json"
 
 
     def __init__(self):
+        """Reads in the json schema for all monitoring messages"""
         super(BaseMonitorMsg, self).__init__()
-          
+        
         # Read in the monitor schema for validating messages
         fileName = os.path.join(monitors.__path__[0],
                                 self.JSON_MONITOR_SCHEMA)        
         with open(fileName, 'r') as f:
-            self._schema = f.read()
+            _schema = f.read()
+        
+        # Remove tabs and newlines
+        self._schema = json.loads(' '.join(_schema.split()))
+        
+        # Validate the schema
+        Draft4Validator.check_schema(self._schema)
+        
+    def validateMsg(self, _jsonMsg):
+        """Validate the json message against the schema"""
+        logger.info("BaseMonitorMsg, validateMsg jsonmsg: %s" % _jsonMsg)        
+        validate(_jsonMsg, self._schema)
+        
             
-          
-    @abc.abstractmethod        
-    def getJson(self):
-        """Force all sub-classes to implement"""
-        pass
-    
-    
-    def validateMsg(self):                
-        #TODO: Get validation working against json messages
-        #Draft4Validator.check_schema(self._schema)
-        pass
+       
+       
         

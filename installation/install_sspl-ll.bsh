@@ -6,12 +6,13 @@
 # Setup Yum repositories for dependencies
 rpm -Uvh http://dl.fedoraproject.org/pub/epel/7/x86_64/e/epel-release-7-5.noarch.rpm
 
+# TODO: Add .repo for xyratex libs
+
 # Update all repositories
 yum clean all
 
 # Install required python packages
 yum -y install python-pip
-pip install python-daemon
 
 rpm=`ls SSPL*`
 

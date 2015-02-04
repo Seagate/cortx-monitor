@@ -67,7 +67,7 @@ class DriveManagerMonitor(ScheduledMonitorThread):
              
     def run(self):
         """Run the monitoring periodically on its own thread."""
-        super(DriveManagerMonitor, self).run()   
+        #super(DriveManagerMonitor, self).run()   
         logger.info("Starting thread for '%s'", self.name())                         
         logger.info("DriveManagerMonitor, run, directory: %s" % self._drive_mngr_base_dir)
         
@@ -99,7 +99,7 @@ class DriveManagerMonitor(ScheduledMonitorThread):
             self._scheduler.enter(10, self._priority, self.run, ())  
 
         logger.info("Finished thread for '%s'", self._module_name)       
-             
+        
     def _getDrive_Mngr_Dir(self):
         """Retrieves the drivemanager path to monitor on the file system"""
         return self._conf_reader._get_value_with_default(self.DRIVEMANAGERMONITOR, 
@@ -116,27 +116,24 @@ class DriveManagerMonitor(ScheduledMonitorThread):
         if ".swp" in pathname:
             return
         
-        logger.info("DriveManagerMonitor, _send_json_RabbitMQ: pathname %s" % pathname)  
+        logger.info("DriveManagerMonitor, _send_json_RabbitMQ: pathname %s" % pathname)
         
         # Convert pathname to Drive object to handle parsing and json conversion, etc
         drive = Drive(pathname, self._drive_mngr_base_dir)
         
         # Obtain json message containing all relevant data
         valid, jsonMsg = drive.toJsonMsg()
-        
-        # Sometimes iNotify sends the same event twice, catch and ignore
-        if jsonMsg.getJson() == self._sentJSONmsg:
-            return
-        else:
-            self._sentJSONmsg = jsonMsg.getJson()
-    
-        # If we have a valid json message then place it into the RabbitMQprocessor queue        
-        if valid:            
-            self._writeRabbitMQ(jsonMsg.getJson())
+     
+        # If we have a valid json message then place it into the RabbitMQprocessor queue
+        if valid:
+            # Sometimes iNotify sends the same event twice, catch and ignore
+            msgString = jsonMsg.getJson()
+            if msgString != self._sentJSONmsg:
+                self._writeRabbitMQ(msgString)
+                self._sentJSONmsg = msgString
         else:
             logger.info("DriveManagerMonitor, _send_json_RabbitMQ, valid: %s(ignoring)," \
-                        "jsonMsg: %s" % (valid, jsonMsg))
-    
+                        "jsonMsg: %s" % (valid, jsonMsg))    
     
     def InotifyEventHandlerDef(self):
         """Internal event handling class for Inotify"""
