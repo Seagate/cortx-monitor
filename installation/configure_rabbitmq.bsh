@@ -23,13 +23,13 @@ echo "Enable the following plugins so RabbitMQ uses the STOMP protocol"
 rabbitmq-plugins enable rabbitmq_stomp
 rabbitmq-plugins enable rabbitmq_management
 
+echo "Restart RabbitMQ to include the new plugins"
+systemctl restart rabbitmq-server -l
+
 echo "Copy rabbitmqadmin application to /usr/local/bin for global access"
 hostname=`hostname -s`
 cp /var/lib/rabbitmq/mnesia/rabbit@"$hostname"-plugins-expand/rabbitmq_management-*/priv/www/cli/rabbitmqadmin /usr/local/bin
 chmod +x  /usr/local/bin/rabbitmqadmin
-
-echo "Restart RabbitMQ to include the new plugins"
-systemctl restart rabbitmq-server -l
 
 echo "Create a virtual host for the SSPL communications"
 rabbitmqctl add_vhost SSPL
