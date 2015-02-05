@@ -10,7 +10,7 @@ Source1:        sspl-ll
 Source2:        sspl_ll.conf
 BuildRoot:	%(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 BuildRequires:	rpm-build
-Requires:	python-twisted-core python-pip python-daemon
+Requires:	python-daemon python-pyinotify python-jsonschema
 
 %description
 Installs SSPL-LL
@@ -18,12 +18,6 @@ Installs SSPL-LL
 %prep
 
 %post
-
-# Install theese dependencies using pip until there is a 
-#  valid RPM for centos 7 available.
-pip install pika
-pip install pyinotify
-pip install jsonschema
 
 # Copy config file and service startup to correct locations
 cp /tmp/sspl-ll /etc/init.d
