@@ -17,16 +17,16 @@ if [[ ! -f /etc/init.d/rabbitmq-server ]]; then
 
     yum -y install python-pip
     pip install pika
-
-    echo "Enable the following plugins so RabbitMQ uses the STOMP protocol"
-    rabbitmq-plugins enable rabbitmq_stomp
-    rabbitmq-plugins enable rabbitmq_management
-
-    echo "Copy rabbitmqadmin application to /usr/local/bin for global access"
-    hostname=`hostname -s`
-    cp /var/lib/rabbitmq/mnesia/rabbit@"$hostname"-plugins-expand/rabbitmq_management-3.3.5/priv/www/cli/rabbitmqadmin /usr/local/bin
-    chmod +x  /usr/local/bin/rabbitmqadmin
 fi
+    
+echo "Enable the following plugins so RabbitMQ uses the STOMP protocol"
+rabbitmq-plugins enable rabbitmq_stomp
+rabbitmq-plugins enable rabbitmq_management
+
+echo "Copy rabbitmqadmin application to /usr/local/bin for global access"
+hostname=`hostname -s`
+cp /var/lib/rabbitmq/mnesia/rabbit@"$hostname"-plugins-expand/rabbitmq_management-*/priv/www/cli/rabbitmqadmin /usr/local/bin
+chmod +x  /usr/local/bin/rabbitmqadmin
 
 echo "Restart RabbitMQ to include the new plugins"
 systemctl restart rabbitmq-server -l
