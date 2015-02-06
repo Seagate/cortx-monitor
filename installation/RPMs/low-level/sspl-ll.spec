@@ -30,6 +30,7 @@ tar xvzf /tmp/sspl-ll.tgz -C /opt/seagate/sspl
 # Create the drivemanager directory
 if [[ ! -d /tmp/dcs/drivemanager ]]; then 
    mkdir -p /tmp/dcs/drivemanager
+   chmod 777 /tmp/dcs/drivemanager
 fi
 
 # Have the service startup at boot time
