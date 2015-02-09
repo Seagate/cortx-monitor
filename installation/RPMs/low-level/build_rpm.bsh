@@ -1,4 +1,6 @@
 #!/bin/bash
+set -e
+
 echo "Beginning SSPL-LL RPM build"
 
 HomeDir=`pwd`
