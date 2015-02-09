@@ -18,7 +18,8 @@ cp sspl-ll.tgz ..
 # Build RPM
 cd "$HomeDir"
 
-rpmbuild --define "_topdir $HomeDir/rpmbuild" -bb sspl-ll.spec
+rpmbuild --define "_topdir $HomeDir/rpmbuild" -ba sspl-ll.spec
 cp rpmbuild/RPMS/noarch/*.rpm .
+cp rpmbuild/SRPMS/*.rpm .
 rm -Rf rpmbuild
 
