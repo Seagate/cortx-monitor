@@ -1,8 +1,6 @@
 #!/bin/bash
 echo "Beginning SSPL-LL RPM build"
 
-echo "%_topdir %(echo $HOME)/sspl/installation/RPMs/low-level/rpmbuild" > ~/.rpmmacros
-
 HomeDir=`pwd`
 
 # Create directory for building rpm
@@ -20,7 +18,7 @@ cp sspl-ll.tgz ..
 # Build RPM
 cd "$HomeDir"
 
-rpmbuild -bb sspl-ll.spec
+rpmbuild --define "_topdir $HomeDir/rpmbuild" -bb sspl-ll.spec
 cp rpmbuild/RPMS/noarch/*.rpm .
 rm -Rf rpmbuild
 
