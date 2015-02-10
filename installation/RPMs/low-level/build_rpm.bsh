@@ -1,7 +1,7 @@
 #!/bin/bash
-echo "Beginning SSPL-LL RPM build"
+set -e
 
-echo "%_topdir %(echo $HOME)/sspl/installation/RPMs/low-level/rpmbuild" > ~/.rpmmacros
+echo "Beginning SSPL-LL RPM build"
 
 HomeDir=`pwd`
 
@@ -20,7 +20,21 @@ cp sspl-ll.tgz ..
 # Build RPM
 cd "$HomeDir"
 
-rpmbuild -bb sspl-ll.spec
+rpmbuild --define "_topdir $HomeDir/rpmbuild" -ba sspl-ll.spec
 cp rpmbuild/RPMS/noarch/*.rpm .
+cp rpmbuild/SRPMS/*.rpm .
 rm -Rf rpmbuild
 
+# If mock package is present and current user is a member of the mock group,
+# then we can rebuilt the RPMs with mock.  Eventually, we will probably want to
+# switch mock to use our devvm configuration (from the mock-devvm-config
+# package.)
+if [ -x /usr/bin/mock ] && groups | grep -q mock ; then
+    mkdir -p ./mock_results
+    mock --rebuild *.src.rpm --resultdir=./mock_results
+    cp ./mock_results/*.rpm .
+    rm -rf ./mock_results
+else
+    echo "WARNING: /usr/bin/mock not present, or current user not part of" \
+        "mock group.  RPMs were built successfully, but without mock."
+fi
