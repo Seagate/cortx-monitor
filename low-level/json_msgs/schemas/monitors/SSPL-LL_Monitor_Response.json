@@ -1,44 +1,44 @@
 {
-	"$schema":"http://json-schema.org/draft-04/schema#",	
-	"type":"object",
-	"required": [ "monitor_msg_type" ],
-	"properties": {	       	
+	"$schema":"http://json-schema.org/draft-03/schema#",	
+	"type":"object",	
+	"properties": {
 		"sspl_ll_host": {
 	       	"schema_version": {
 	           	"description" :"SSPL JSON Schema Version",
-	           	"type" : "string"
+	           	"type" : "string",
+	           	"required" : true
 	       	},
 	        "sspl_version": {
 	           	"description" : "SSPL Version",
-	           	"type" : "string"
-	       	},
-	       	
-	       	"required": ["schema_version", "sspl_version"]
+	           	"type" : "string",
+	           	"required" : true
+	       	}
 	    },
-	
 		
 		"monitor_msg_type": {
-			"type" : "object",				
+			"type" : "object",	
+			"required" : true,			
 			"properties": {	
                 
                 "disk_status_drivemanager": {
 					"type" : "object",				
 					"properties": {	
 						"diskNum" : {
-		    				"type" : "number"	        				
+		    				"type" : "number",	   
+		    				"required" : true     				
 						},
-						"enclosureSN" : {					
-			        		"type" : "string"	        		
+						"enclosureSN" : {
+			        		"type" : "string",  
+			        		"required" : true   		
 						},
 						"diskStatus" : {
 							"description" : "Disk Status", 
-	        				"type" : "string"	
+	        				"type" : "string",
+	        				"required" : true
 						}
-					},
-					"required": [ "diskNum", "enclosureSN", "diskStatus" ]	
+					}
 				},
-				
-				
+								
 				"host_update": {
 					"type" : "object",
 					"properties": {
