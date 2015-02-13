@@ -11,11 +11,9 @@ mkdir -p rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
 cp -Rf files/* rpmbuild/SOURCES
 
 # Tar up the code to be executed on the target machine
-cd rpmbuild/SOURCES
-git clone ssh://git@dcostash.colo.seagate.com:7999/mcp/sspl.git
-cd sspl
-tar cvzf sspl-ll.tgz low-level 
-cp sspl-ll.tgz ..
+pushd $(git rev-parse --show-toplevel)
+git archive --output=./installation/RPMs/low-level/rpmbuild/SOURCES/sspl-ll.tgz HEAD ./low-level
+popd
 
 # Build RPM
 cd "$HomeDir"
