@@ -1,16 +1,16 @@
-Name:		SSPL-LL
-Version:	1.0.0
-Release:	1.el7
-Summary:	Installs SSPL-LL
-BuildArch:      noarch
-Group:		SSG
-License:	Seagate internal company use only
-Source0:        sspl-ll.tgz
-Source1:        sspl-ll
-Source2:        sspl_ll.conf
-BuildRoot:	%(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
-BuildRequires:	rpm-build
-Requires:	python-daemon python-inotify python-jsonschema python-pika rabbitmq-server
+Name:       SSPL-LL
+Version:    1.0.0
+Release:    1.el7
+Summary:    Installs SSPL-LL
+BuildArch:  noarch
+Group:      System Environment/Daemons
+License:    Seagate internal company use only
+Source0:    sspl-ll.tgz
+Source1:    sspl-ll
+Source2:    sspl_ll.conf
+BuildRoot:  %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
+BuildRequires: rpm-build
+Requires:   python-daemon python-inotify python-jsonschema python-pika rabbitmq-server
 
 %description
 Installs SSPL-LL
@@ -20,6 +20,9 @@ Installs SSPL-LL
 cp %SOURCE0 .
 cp %SOURCE1 .
 cp %SOURCE2 .
+
+
+%build
 
 
 %install
