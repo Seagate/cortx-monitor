@@ -21,7 +21,7 @@
 import os
 import abc
 import json
-from jsonschema import Draft4Validator
+from jsonschema import Draft3Validator
 from jsonschema import validate
 
 from json_msgs.messages.base_msg import BaseMsg
@@ -53,7 +53,7 @@ class BaseMonitorMsg(BaseMsg):
         self._schema = json.loads(' '.join(_schema.split()))
         
         # Validate the schema
-        Draft4Validator.check_schema(self._schema)
+        Draft3Validator.check_schema(self._schema)
         
     def validateMsg(self, _jsonMsg):
         """Validate the json message against the schema"""

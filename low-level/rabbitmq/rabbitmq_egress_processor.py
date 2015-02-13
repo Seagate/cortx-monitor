@@ -1,7 +1,7 @@
 """
  ****************************************************************************
- Filename:          rabbitmq_processor.py
- Description:       Handles asynchronous messaging via rabbitMQ
+ Filename:          rabbitmq_egress_processor.py
+ Description:       Handles outgoing messages via rabbitMQ
  Creation Date:     01/14/2015
  Author:            Jake Abernathy
 
@@ -17,17 +17,17 @@
  ****************************************************************************
 """
 
-import Queue
 import pika
 import os
 
-from base.monitor_thread import ScheduledMonitorThread 
+from base.monitor_thread import ScheduledMonitorThread
+from base.internal_msgQ import InternalMsgQ
 from utils.service_logging import logger
 
-class RabbitMQprocessor(ScheduledMonitorThread):
-     
-    MODULE_NAME = "RabbitMQprocessor"
-    PRIORITY = 1
+class RabbitMQegressProcessor(ScheduledMonitorThread, InternalMsgQ):
+    
+    MODULE_NAME = "RabbitMQegressProcessor"
+    PRIORITY    = 1
 
     # Section and keys in configuration file
     RABBITMQPROCESSOR   = MODULE_NAME.upper()
@@ -39,39 +39,47 @@ class RabbitMQprocessor(ScheduledMonitorThread):
 
     @staticmethod
     def name():
-        """ @return name of the monitoring module. """
-        return RabbitMQprocessor.MODULE_NAME
-
+        """ @return name of the monitoring module."""
+        return RabbitMQegressProcessor.MODULE_NAME
+    
     def __init__(self):
-        super(RabbitMQprocessor, self).__init__(self.MODULE_NAME,
-                                                self.PRIORITY)    
+        super(RabbitMQegressProcessor, self).__init__(self.MODULE_NAME,
+                                                self.PRIORITY)            
 
-    def initialize(self, rabbitMsgQ, conf_reader):
-        """initialize method contains conf_reader if needed"""
-        super(RabbitMQprocessor, self).initialize(rabbitMsgQ,
-                                                    conf_reader) 
+    def initialize(self, conf_reader, msgQlist):
+        """initialize configuration reader and internal msg queues"""               
+        # Initialize ScheduledMonitorThread and InternalMsgQ
+        super(RabbitMQegressProcessor, self).initialize(conf_reader)
+        
+        # Initialize internal message queues for this module
+        super(RabbitMQegressProcessor, self).initializeMsgQ(msgQlist)
+        
         # Configure RabbitMQ Exchange to transmit message
         self._configureExchange()
         
+        # Display values used to configure pika from the config file
+        logger.info ("RabbitMQegressProcessor, creds: %s,  %s" % (self._username, self._password))   
+        logger.info ("RabbitMQegressProcessor, exchange: %s, routing_key: %s, vhost: %s" % 
+                     (self._exchange_name, self._routing_key, self._virtual_host))                 
+        
     def run(self):
-        """Run the monitoring periodically on its own thread. """
-        #super(RabbitMQprocessor, self).run()        
-        logger.info("Starting thread for '%s'", self.name())    
+        """Run the module periodically on its own thread. """
+        logger.info("Starting thread for '%s'", self.name())
         
         try:
             # Block on message queue until it contains an entry 
-            jsonMsg = self._readRabbitMQ()
+            jsonMsg = self._readMyMsgQ()
             self._transmitMsgOnExchange(jsonMsg)    
-
-            # Loop thru all messages in queue until it's empty and transmit        
-            while not self.isRabbitMsgQempty():
-                jsonMsg = self._readRabbitMQ()                
-                self._transmitMsgOnExchange(jsonMsg)       
-            
+ 
+            # Loop thru all messages in queue until and transmit        
+            while not self._isMyMsgQempty():
+                jsonMsg = self._readMyMsgQ()
+                self._transmitMsgOnExchange(jsonMsg)
+             
         except Exception as ex:
             # Log it and restart the whole process when a failure occurs      
-            logger.exception("DriveManagerMonitor restarting")            
-        
+            logger.exception("RabbitMQegressProcessor restarting")            
+         
         # TODO: poll_time = int(self._get_monitor_config().get(MONITOR_POLL_KEY))
         self._scheduler.enter(0, self._priority, self.run, ())    
         logger.info("Finished thread for '%s'", self.name())
@@ -83,7 +91,7 @@ class RabbitMQprocessor(ScheduledMonitorThread):
     def _configureExchange(self):        
         """Configure the RabbitMQ exchange with defaults available"""
         try:
-            self._virtual_host   = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR, 
+            self._virtual_host  = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR, 
                                                                  self.VIRT_HOST,
                                                                  'SSPL')
             self._exchange_name = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR, 
@@ -97,32 +105,23 @@ class RabbitMQprocessor(ScheduledMonitorThread):
                                                                  'sspluser')
             self._password      = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR, 
                                                                  self.PASSWORD,
-                                                                 'sspl4ever')
-            
-            logger.info("RabbitMQprocessor, configureExchange, exchange_name: %s, " \
-                         "routing_key: %s, username: %s, password: %s" % 
-                         (self._exchange_name, self._routing_key, self._username, self._password))
-            
+                                                                 'sspl4ever')            
         except Exception as ex:
-            logger.exception("RabbitMQprocessor, configureExchange: %s" % ex)
+            logger.exception("RabbitMQegressProcessor, configureExchange: %s" % ex)
           
     def _transmitMsgOnExchange(self, jsonMsg):
         """Transmit json message onto RabbitMQ exchange"""
-        logger.info("RabbitMQprocessor, transmitMsgOnExchange, transmitting jsonMsg: %s" % jsonMsg)
+        logger.info("RabbitMQegressProcessor, transmitMsgOnExchange, jsonMsg: %s" % jsonMsg)
    
-        try:
-            # Configure pika with credentials from the config file
-            logger.info ("_transmitMsgOnExchange, creds: %s,  %s" % (self._username, self._password))   
-            logger.info ("_transmitMsgOnExchange, exchange, routing_key: %s, %s" % (self._exchange_name, self._routing_key))
-            logger.info ("_transmitMsgOnExchange, vhost, jsonMsg: %s, %s" % (self._virtual_host, jsonMsg))
-            
+        try:           
             creds       = pika.PlainCredentials(self._username, self._password)
             connection  = pika.BlockingConnection(
                                     pika.ConnectionParameters(host='localhost', 
                                                               virtual_host=self._virtual_host,
                                                               credentials=creds))
             channel     = connection.channel()
-            channel.exchange_declare(exchange=self._exchange_name, exchange_type='topic', durable=True)
+            channel.exchange_declare(exchange=self._exchange_name, exchange_type='topic', 
+                                     durable=True)
             
             msg_props = pika.BasicProperties()
             msg_props.content_type = "text/plain"
@@ -139,6 +138,6 @@ class RabbitMQprocessor(ScheduledMonitorThread):
             del(connection)
              
         except Exception as ex:
-            logger.exception("RabbitMQprocessor, transmitMsgOnExchange: %s" % ex)
+            logger.exception("RabbitMQegressProcessor, transmitMsgOnExchange: %s" % ex)
                   
         

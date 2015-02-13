@@ -24,10 +24,14 @@ import pyinotify
 
 from json_msgs.messages.monitors.drive_mngr import DriveMngrMsg
 from base.monitor_thread import ScheduledMonitorThread 
+from base.internal_msgQ import InternalMsgQ
 from utils.service_logging import logger
 
+# List of modules that receive messages from this module
+from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor 
 
-class DriveManagerMonitor(ScheduledMonitorThread):
+
+class DriveManagerMonitor(ScheduledMonitorThread, InternalMsgQ):
     
     MODULE_NAME       = "DriveManagerMonitor"
     PRIORITY          = 2
@@ -48,10 +52,15 @@ class DriveManagerMonitor(ScheduledMonitorThread):
                                                   self.PRIORITY)
         self._sentJSONmsg = None
     
-    def initialize(self, rabbitMsgQ, conf_reader):
-        """initialize method contains conf_reader if needed"""
-        super(DriveManagerMonitor, self).initialize(rabbitMsgQ,
-                                                    conf_reader)           
+    def initialize(self, conf_reader, msgQlist):
+        """initialize configuration reader and internal msg queues"""
+        
+        # Initialize ScheduledMonitorThread and InternalMsgQ
+        super(DriveManagerMonitor, self).initialize(conf_reader)
+        
+        # Initialize internal message queues for this module
+        super(DriveManagerMonitor, self).initializeMsgQ(msgQlist)
+        
         self._drive_mngr_base_dir  = self._getDrive_Mngr_Dir()
         self._drive_mngr_pid       = self._getDrive_Mngr_Pid()
         
@@ -66,10 +75,9 @@ class DriveManagerMonitor(ScheduledMonitorThread):
             logger.exception("DriveManagerMonitor, shutdown: %s" % ex)
              
     def run(self):
-        """Run the monitoring periodically on its own thread."""
-        #super(DriveManagerMonitor, self).run()   
+        """Run the monitoring periodically on its own thread."""         
         logger.info("Starting thread for '%s'", self.name())                         
-        logger.info("DriveManagerMonitor, run, directory: %s" % self._drive_mngr_base_dir)
+        logger.info("DriveManagerMonitor, run, base directory: %s" % self._drive_mngr_base_dir)
         
         try:
             # Followed tutorial for pyinotify: https://github.com/seb-m/pyinotify/wiki/Tutorial            
@@ -123,13 +131,14 @@ class DriveManagerMonitor(ScheduledMonitorThread):
         
         # Obtain json message containing all relevant data
         valid, jsonMsg = drive.toJsonMsg()
-     
+        
         # If we have a valid json message then place it into the RabbitMQprocessor queue
         if valid:
             # Sometimes iNotify sends the same event twice, catch and ignore
             msgString = jsonMsg.getJson()
-            if msgString != self._sentJSONmsg:
-                self._writeRabbitMQ(msgString)
+            if msgString != self._sentJSONmsg:                
+                # Send the json message to the RabbitMQ processor to transmit out
+                self._writeInternalMsgQ(RabbitMQegressProcessor.name(), msgString)
                 self._sentJSONmsg = msgString
         else:
             logger.info("DriveManagerMonitor, _send_json_RabbitMQ, valid: %s(ignoring)," \

@@ -1,4 +1,22 @@
-"""All Monitoring threads base classes"""
+"""
+ ****************************************************************************
+ Filename:          monitor_thread.py
+ Description:       Base classes used for scheduling thread execution 
+                    in modules.
+ Creation Date:     02/09/2015
+ Author:            Jake Abernathy
+
+ Do NOT modify or remove this copyright and confidentiality notice!
+ Copyright (c) 2001 - $Date: 2015/01/14 $ Seagate Technology, LLC.
+ The code contained herein is CONFIDENTIAL to Seagate Technology, LLC.
+ Portions are also trade secret. Any use, duplication, derivation, distribution
+ or disclosure of this code, for any reason, not expressly authorized is
+ prohibited. All other rights are expressly reserved by Seagate Technology, LLC.
+
+ ****************************************************************************
+ All relevant license information (GPL, FreeBSD, etc)
+ ****************************************************************************
+"""
 
 import time
 import abc
@@ -12,16 +30,16 @@ class MonitorThread(object):
     __metaclass__ = abc.ABCMeta
 
     def __init__(self):
-        pass
+        super(MonitorThread, self).__init__()        
 
     @abc.abstractmethod
     def initialize(self):
-        """Initialize the monitoring process"""       
-        raise NotImplementedError("Subclasses should implement this!")              
+        """Initialize the monitoring process"""
+        raise NotImplementedError("Subclasses should implement this!")
 
     @abc.abstractmethod
     def run(self):
-        """Periodically run the monitoring process"""       
+        """Periodically run the monitoring process"""
         raise NotImplementedError("Subclasses should implement this!")
         
     
@@ -36,6 +54,14 @@ class ScheduledMonitorThread(MonitorThread):
         self._module_name = module_name
         self._priority    = priority
 
+    def initialize(self, conf_reader):
+        """Initialize the monitoring thread"""
+        # Set the configuration file reader located in /etc/sspl-ll.conf
+        self._conf_reader = conf_reader
+        
+        # Set the scheduler to fire the thread right away
+        self._scheduler.enter(1, self._priority, self.run, ())        
+        
     def start(self):
         """Run the scheduler"""
         self._scheduler.run()
@@ -56,32 +82,9 @@ class ScheduledMonitorThread(MonitorThread):
         self._scheduler.enter(0, self._priority, self._cleanup_and_stop, ())
         logger.info("scheduling shut down for '%s'",
                     self._module_name)
-
-    def initialize(self, rabbitMsgQ, conf_reader):
-        """Initialize the monitoring thread"""   
-        self._rabbitMsgQ     = rabbitMsgQ
-        self._conf_reader    = conf_reader
-        self._scheduler.enter(1, self._priority, self.run, ())
  
     def getConf_reader(self):
         return self._conf_reader
-    
-    def isRabbitMsgQempty(self):
-        return self._rabbitMsgQ.empty()
-    
-    def _readRabbitMQ(self):
-        """Reads a json message from the queue placed by another thread"""        
-        jsonMsg = self._rabbitMsgQ.get()
-        logger.info("readRabbitMQ: From %s, Msg:%s" % (self.name(), jsonMsg))       
-        return jsonMsg
-    
-    def _writeRabbitMQ(self, jsonMsg):
-        """writes a json message to the RabbitMsgQ to be transmitted"""
-        try:
-            logger.info("writeRabbitMQ: From %s, Msg:%s" % (self.name(), jsonMsg))
-            self._rabbitMsgQ.put(jsonMsg)
-        except Exception as ex:
-            logger.exception("writeRabbitMQ: %s" % ex)
     
         
 
