@@ -105,7 +105,33 @@ class RabbitMQegressProcessor(ScheduledMonitorThread, InternalMsgQ):
                                                                  'sspluser')
             self._password      = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR, 
                                                                  self.PASSWORD,
-                                                                 'sspl4ever')            
+                                                                 'sspl4ever')
+
+            # ensure the rabbitmq queues/etc exist
+            creds = pika.PlainCredentials(self._username, self._password)
+            connection = pika.BlockingConnection(
+                pika.ConnectionParameters(
+                    host='localhost',
+                    virtual_host=self._virtual_host,
+                    credentials=creds
+                    )
+                )
+            channel = connection.channel()
+            channel.queue_declare(
+                queue='SSPL-LL',
+                durable=True
+                )
+            channel.exchange_declare(
+                exchange=self._exchange_name,
+                exchange_type='topic',
+                durable=True
+                )
+            channel.queue_bind(
+                queue='SSPL-LL',
+                exchange=self._exchange_name,
+                routing_key=self._routing_key
+                )
+
         except Exception as ex:
             logger.exception("RabbitMQegressProcessor, configureExchange: %s" % ex)
           
@@ -140,4 +166,4 @@ class RabbitMQegressProcessor(ScheduledMonitorThread, InternalMsgQ):
         except Exception as ex:
             logger.exception("RabbitMQegressProcessor, transmitMsgOnExchange: %s" % ex)
                   
-        
+

@@ -1,0 +1,109 @@
+#!/usr/bin/env python
+"""
+Setup rabbitmq for use by sspl_ll.
+
+This script uses /etc/sspl_ll.conf as the source of the parameters.  The
+existing vhost/user (if any) will be deleted and recreated.
+
+Usage:
+    ./sspl_ll_rabbitmq_reinit
+"""
+import subprocess
+import ConfigParser
+
+RABBITMQCTL = '/usr/sbin/rabbitmqctl'
+SSPL_LL_CONF = '/etc/sspl_ll.conf'
+SECTION="RABBITMQEGRESSPROCESSOR"
+
+
+def main():
+    """ Main line for this program. """
+    config = ConfigParser.SafeConfigParser()
+    config.read([SSPL_LL_CONF])
+
+    virtual_host = config.get(
+        section=SECTION,
+        option='virtual_host'
+        )
+    username = config.get(
+        section=SECTION,
+        option='username'
+        )
+    password = config.get(
+        section=SECTION,
+        option='password'
+        )
+
+    _recreate_vhost(virtual_host)
+    _recreate_user(username, password, virtual_host)
+
+    _restart_sspl_ll()
+
+
+def _recreate_vhost(virtual_host):
+    """ Recreates the specified vhost.
+
+    The vhost will be deleted if it already exists and then created.
+
+    @type virtual_host:           string
+    @param virtual_host:          The vhost to (re)create.
+    """
+    vhosts = subprocess.check_output(
+        [RABBITMQCTL, 'list_vhosts']
+        ).split('\n')
+    assert vhosts[0] == 'Listing vhosts ...'
+    assert vhosts[-2] == '...done.'
+    assert vhosts[-1] == ''
+    for vhost in vhosts[1:-1]:
+        if vhost == virtual_host:
+            subprocess.check_call([RABBITMQCTL, 'delete_vhost', virtual_host])
+            break
+    subprocess.check_call([RABBITMQCTL, 'add_vhost', virtual_host])
+
+
+def _recreate_user(username, password, virtual_host):
+    """ Recreate the rabbitmq user.
+
+    The user is deleted (if it exists) and then created with .* permissions for
+    conf,write,read on the specified virtual_host.
+
+    @type username:               string
+    @param username:              The user to recreate.
+    @type password:               string
+    @param passowrd:              The new password for the specified user.
+    @type virtual_host:           string
+    @param virtual_host:          The vhost on which the permissions will be
+                                  set.
+    """
+    users = subprocess.check_output(
+        [RABBITMQCTL, 'list_users']
+        ).split('\n')
+    assert users[0] == 'Listing users ...'
+    assert users[-2] == '...done.'
+    assert users[-1] == ''
+    for userspec in users[1:-1]:
+        user = userspec.split()[0]
+        if user == username:
+            subprocess.check_call([RABBITMQCTL, 'delete_user', username])
+            break
+    subprocess.check_call([RABBITMQCTL, 'add_user', username, password])
+    subprocess.check_call(
+        [
+            RABBITMQCTL, 'set_permissions',
+            '-p', virtual_host,
+            username, '.*', '.*', '.*'
+        ])
+    subprocess.check_call(
+        [RABBITMQCTL, 'set_user_tags', username, 'administrator']
+        )
+
+
+def _restart_sspl_ll():
+    """ Restarts the sspl-ll daemon. """
+    subprocess.check_call(
+        ['/usr/bin/systemctl', 'restart', 'sspl-ll', '--full']
+        )
+
+
+if __name__ == '__main__':
+    main()
