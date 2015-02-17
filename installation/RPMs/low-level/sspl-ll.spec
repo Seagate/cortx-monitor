@@ -44,6 +44,9 @@ if [[ ! -d /tmp/dcs/drivemanager ]]; then
    chmod 777 /tmp/dcs/drivemanager
 fi
 
+# setup rabbitmq vhost and user (incl permissions)
+/opt/seagate/sspl/low-level/sspl_ll_rabbitmq_reinit
+
 # Have the service startup at boot time
 chkconfig sspl-ll on
 
