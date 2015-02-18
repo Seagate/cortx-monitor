@@ -24,17 +24,19 @@
 					"type" : "object",				
 					"properties": {	
 						"diskNum" : {
-		    				"type" : "number",	   
-		    				"required" : true     				
+							"description" : "Drive Number within the enclosure", 
+		    					"type" : "number",	   
+		    					"required" : true
 						},
 						"enclosureSN" : {
-			        		"type" : "string",  
-			        		"required" : true   		
+							"description" : "Enclosure Serial Number", 
+			        			"type" : "string",  
+			        			"required" : true   		
 						},
 						"diskStatus" : {
 							"description" : "Disk Status", 
-	        				"type" : "string",
-	        				"required" : true
+	        					"type" : "string",
+	        					"required" : true
 						}
 					}
 				},

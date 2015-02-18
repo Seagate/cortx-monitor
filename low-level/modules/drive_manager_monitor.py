@@ -87,7 +87,7 @@ class DriveManagerMonitor(ScheduledMonitorThread, InternalMsgQ):
             mask    = pyinotify.IN_DELETE | pyinotify.IN_CREATE | pyinotify.IN_MODIFY         
             
             # Event handler class called by pyinotify when an events occurs on the file system            
-            handler = self.InotifyEventHandlerDef()            
+            handler = self.InotifyEventHandlerDef()
             
             # Create the blocking notifier utilizing Linux built-in inotify functionality
             blocking_notifier = pyinotify.Notifier(wm, handler)         
@@ -122,9 +122,7 @@ class DriveManagerMonitor(ScheduledMonitorThread, InternalMsgQ):
         """Place the json message into the RabbitMQprocessor queue if valid"""
         # Ignore swap files which can occur during testing and clog up logs
         if ".swp" in pathname:
-            return
-        
-        logger.info("DriveManagerMonitor, _send_json_RabbitMQ: pathname %s" % pathname)
+            return        
         
         # Convert pathname to Drive object to handle parsing and json conversion, etc
         drive = Drive(pathname, self._drive_mngr_base_dir)
@@ -135,9 +133,10 @@ class DriveManagerMonitor(ScheduledMonitorThread, InternalMsgQ):
         # If we have a valid json message then place it into the RabbitMQprocessor queue
         if valid:
             # Sometimes iNotify sends the same event twice, catch and ignore
-            msgString = jsonMsg.getJson()
+            msgString = jsonMsg.getJson()            
             if msgString != self._sentJSONmsg:                
                 # Send the json message to the RabbitMQ processor to transmit out
+                logger.info("DriveManagerMonitor, _send_json_RabbitMQ: pathname %s" % pathname)                                
                 self._writeInternalMsgQ(RabbitMQegressProcessor.name(), msgString)
                 self._sentJSONmsg = msgString
         else:

@@ -45,7 +45,7 @@ class BaseMonitorMsg(BaseMsg):
         
         # Read in the monitor schema for validating messages
         fileName = os.path.join(monitors.__path__[0],
-                                self.JSON_MONITOR_SCHEMA)        
+                                self.JSON_MONITOR_SCHEMA)
         with open(fileName, 'r') as f:
             _schema = f.read()
         

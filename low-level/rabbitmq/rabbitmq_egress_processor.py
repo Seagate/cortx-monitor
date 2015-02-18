@@ -44,7 +44,7 @@ class RabbitMQegressProcessor(ScheduledMonitorThread, InternalMsgQ):
     
     def __init__(self):
         super(RabbitMQegressProcessor, self).__init__(self.MODULE_NAME,
-                                                self.PRIORITY)            
+                                                      self.PRIORITY)            
 
     def initialize(self, conf_reader, msgQlist):
         """initialize configuration reader and internal msg queues"""               
@@ -146,7 +146,7 @@ class RabbitMQegressProcessor(ScheduledMonitorThread, InternalMsgQ):
                                                               virtual_host=self._virtual_host,
                                                               credentials=creds))
             channel     = connection.channel()
-            channel.exchange_declare(exchange=self._exchange_name, exchange_type='topic', 
+            channel.exchange_declare(exchange=self._exchange_name, type='topic', 
                                      durable=True)
             
             msg_props = pika.BasicProperties()
@@ -156,7 +156,7 @@ class RabbitMQegressProcessor(ScheduledMonitorThread, InternalMsgQ):
             channel.basic_publish(exchange=self._exchange_name, 
                                   routing_key=self._routing_key,
                                   properties=msg_props, 
-                                  body=str(jsonMsg))             
+                                  body=str(jsonMsg))
 
             # No exceptions thrown so success
             logger.info ("_transmitMsgOnExchange, Successfully Sent: %s" % jsonMsg)

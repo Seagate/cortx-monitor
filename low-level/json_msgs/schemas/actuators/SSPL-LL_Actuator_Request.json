@@ -1,0 +1,41 @@
+{
+	"$schema":"http://json-schema.org/draft-03/schema#",	
+	"type":"object",	
+	"properties": {
+		"sspl_ll_host": {
+	       	"schema_version": {
+	           	"description" :"SSPL JSON Schema Version",
+	           	"type" : "string",
+	           	"required" : true
+	       	},
+	        "sspl_version": {
+	           	"description" : "SSPL Version",
+	           	"type" : "string",
+	           	"required" : true
+	       	}
+	    },
+		
+		"actuator_msg_type": {
+			"type" : "object",	
+			"required" : true,
+			"properties": {	
+
+                "logging": {
+					"type" : "object",				
+					"properties": {	
+						"log_type" : {
+							"description" : "Used to identify the type of log, ie IEM", 
+		    				"type" : "string",	   
+		    				"required" : true     				
+						},
+						"log_msg" : {
+							"description" : "The entire message to be logged",
+			        		"type" : "string", 
+			        		"required" : true   		
+						}
+					}
+				}                            				
+			}
+		}
+	}
+}

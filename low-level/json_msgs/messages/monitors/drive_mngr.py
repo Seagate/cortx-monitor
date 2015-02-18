@@ -44,7 +44,7 @@ class DriveMngrMsg(BaseMonitorMsg):
         
         self._json = {"title" : self.TITLE,
                       "description" : self.DESCRIPTION,
-                      "sspl_ll_host": {                        
+                      "sspl_ll_host": {
                             "schema_version" : self.SCHEMA_VERSION,
                             "sspl_version" : self.SSPL_VERSION
                             },
