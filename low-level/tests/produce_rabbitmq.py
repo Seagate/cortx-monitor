@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import json
 import pika
 import socket
 
@@ -10,14 +11,11 @@ channel = connection.channel()
 channel.exchange_declare(exchange='sspl_bcast',
                          type='topic', durable=True)
 
-result = channel.queue_declare(exclusive=False)
-channel.queue_bind(exchange='sspl_bcast',
-                   queue='SSPL-LL')
-
 msg_props = pika.BasicProperties()
 msg_props.content_type = "text/plain"
 
-jsonMsg="Hello World!" 
+jsonMsg = open("actuator_msgs/iem_logging.json").read()
+
 channel.basic_publish(exchange='sspl_bcast',
                       routing_key='sspl_ll',
                       properties=msg_props, 

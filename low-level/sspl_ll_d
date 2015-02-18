@@ -1,4 +1,5 @@
 #!/usr/bin/python2.7
+# -*- coding: utf-8 -*-
 
 """
  ****************************************************************************
@@ -35,6 +36,7 @@ from utils.service_logging import logger
 
 # Import modules which will be will be available to sspl-ll
 from modules.drive_manager_monitor import DriveManagerMonitor 
+from modules.IEM_logging_actuator import IEMloggingProcessor 
 
 # Modules for handling RabbitMQ messages
 from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor 
@@ -64,7 +66,7 @@ def main(conf_reader):
     for conf_thread in conf_modules:
         klass = globals()[conf_thread]
 
-        sspl_modules.append(klass())       
+        sspl_modules.append(klass())
         msgQlist[klass.name()] = Queue.Queue()
     
     try:
@@ -81,9 +83,7 @@ def main(conf_reader):
      
         # Wait for all threads to exit
         for thread in threads:
-            thread.join()        
-               
-        return
+            thread.join()
         
     except Exception as ex:
         logger.exception(ex)
@@ -157,8 +157,8 @@ if __name__ == "__main__":
     try:
         logging_level = conf_reader._get_value_with_default(SSPL_SETTING,
                                                             LOGGING_LEVEL,
-                                                            "INFO")
-        init_logging(logging_level)
+                                                            "INFO")        
+        init_logging("SSPL-LL", logging_level)
 
     except Exception as err:
         # We don't have logger since it threw an exception, use generic 'print'
