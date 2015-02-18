@@ -10,7 +10,7 @@ Source1:    sspl-ll
 Source2:    sspl_ll.conf
 BuildRoot:  %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 BuildRequires: rpm-build
-Requires:   python-daemon python-inotify python-jsonschema python-pika rabbitmq-server python-twisted-core
+Requires:   python-daemon python-inotify python-jsonschema python-pika rabbitmq-server
 
 %description
 Installs SSPL-LL
