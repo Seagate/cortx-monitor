@@ -1,8 +1,9 @@
+# -*- coding: utf-8 -*-
 """
  ****************************************************************************
- Filename:          rabbitmq_ingress_processor.py
- Description:       Handles incoming messages via rabbitMQ
- Creation Date:     02/11/2015
+ Filename:          IEM_logging_actuator.py
+ Description:       Handles IEM logging actuator requests
+ Creation Date:     02/18/2015
  Author:            Jake Abernathy
 
  Do NOT modify or remove this copyright and confidentiality notice!
@@ -19,80 +20,55 @@
 
 import syslog
 import pika
-import json
 import os
-
-from jsonschema import Draft3Validator
-from jsonschema import validate
-
-from pika import exceptions
 
 from base.monitor_thread import ScheduledMonitorThread
 from base.internal_msgQ import InternalMsgQ
 from utils.service_logging import logger
 
-
-class RabbitMQingressProcessor(ScheduledMonitorThread, InternalMsgQ):
+class IEMloggingProcessor(ScheduledMonitorThread, InternalMsgQ):
     
-    MODULE_NAME = "RabbitMQingressProcessor"
-    PRIORITY    = 1
+    MODULE_NAME = "IEMloggingProcessor"
+    PRIORITY    = 2
 
     # Section and keys in configuration file
-    RABBITMQPROCESSOR   = MODULE_NAME.upper()
+    IEMLOGGINGPROCESSOR = MODULE_NAME.upper()
     EXCHANGE_NAME       = 'exchange_name'
-    QUEUE_NAME          = 'queue_name'
     ROUTING_KEY         = 'routing_key'
     VIRT_HOST           = 'virtual_host'
     USER_NAME           = 'username'
     PASSWORD            = 'password'
 
-    JSON_ACTUATOR_SCHEMA = "SSPL-LL_Actuator_Request.json"
-
 
     @staticmethod
     def name():
         """ @return name of the monitoring module."""
-        return RabbitMQingressProcessor.MODULE_NAME
+        return IEMloggingProcessor.MODULE_NAME
     
     def __init__(self):
-        super(RabbitMQingressProcessor, self).__init__(self.MODULE_NAME,
-                                                       self.PRIORITY)     
-        
-        # Read in the monitor schema for validating messages
-        dir = os.path.dirname(__file__)
-        fileName = os.path.join(dir,
-                                '../json_msgs/schemas/actuators/',
-                                self.JSON_ACTUATOR_SCHEMA)        
-        
-        with open(fileName, 'r') as f:
-            _schema = f.read()
-        
-        # Remove tabs and newlines
-        self._schema = json.loads(' '.join(_schema.split()))
-        
-        # Validate the schema
-        Draft3Validator.check_schema(self._schema)
+        super(IEMloggingProcessor, self).__init__(self.MODULE_NAME,
+                                                  self.PRIORITY)
 
     def initialize(self, conf_reader, msgQlist):
-        """initialize configuration reader and internal msg queues"""               
+        """initialize configuration reader and internal msg queues"""
         # Initialize ScheduledMonitorThread and InternalMsgQ
-        super(RabbitMQingressProcessor, self).initialize(conf_reader)
+        super(IEMloggingProcessor, self).initialize(conf_reader)
         
         # Initialize internal message queues for this module
-        super(RabbitMQingressProcessor, self).initializeMsgQ(msgQlist)
+        super(IEMloggingProcessor, self).initializeMsgQ(msgQlist)
         
         # Configure RabbitMQ Exchange to receive messages
         self._configureExchange()
         
         # Display values used to configure pika from the config file
-        logger.info ("RabbitMQingressProcessor, creds: %s,  %s" % (self._username, self._password))   
-        logger.info ("RabbitMQingressProcessor, exchange: %s, routing_key: %s, vhost: %s" % 
-                     (self._exchange_name, self._routing_key, self._virtual_host))                 
+        logger.info ("IEMloggingProcessor, creds: %s,  %s" % (self._username, self._password))   
+        logger.info ("IEMloggingProcessor, exchange: %s, routing_key: %s, vhost: %s" % 
+                     (self._exchange_name, self._routing_key, self._virtual_host))       
         
     def run(self):
-        """Run the module periodically on its own thread. """        
+        """Run the module periodically on its own thread. """
         logger.info("Starting thread for '%s'", self.name())
-        
+                
         try:
             creds       = pika.PlainCredentials(self._username, self._password)
             connection  = pika.BlockingConnection(
@@ -108,7 +84,7 @@ class RabbitMQingressProcessor(ScheduledMonitorThread, InternalMsgQ):
             channel.queue_bind(exchange=self._exchange_name,
                                queue=result.method.queue,
                                routing_key=self._routing_key)
-
+            
             channel.basic_consume(self._processMsg,
                                   queue=result.method.queue,
                                   no_ack=True)
@@ -116,63 +92,49 @@ class RabbitMQingressProcessor(ScheduledMonitorThread, InternalMsgQ):
             
         except Exception as ex:
             # Log it and restart the whole process when a failure occurs      
-            logger.exception("RabbitMQingressProcessor restarting")    
+            logger.exception("IEMloggingProcessor restarting")    
         
         # TODO: poll_time = int(self._get_monitor_config().get(MONITOR_POLL_KEY))
         self._scheduler.enter(0, self._priority, self.run, ())
-        logger.info("Finished thread for '%s'", self.name())
+        logger.info("Finished thread for '%s'", self.name())            
+            
         
     def _processMsg(self, ch, method, properties, body):
         """Parses the incoming message and hands off to the appropriate module"""        
-        try:
-            # Load in the json message and validate against the actuator schema
-            ingressMsg = json.loads(body)
-            validate(ingressMsg, self._schema)
-            
-            # Get the message type
-            msgType = ingressMsg.get("actuator_msg_type")
-            
-            # Hand off to appropriate module based on message type            
-            if msgType.get("logging").get("log_type") == "IEM":
-                logger.info("RabbitMQingressProcessor, _processMsg msg_type:Logging IEM") 
-                                
-                msg = msgType.get("logging").get("log_msg")
-                # Try encoding message to handle escape chars if present
-                try:
-                    logMsg = msg.encode('utf8')
-                except Exception as de:
-                    logger.info("RabbitMQingressProcessor, decoding failed, dumping to syslog") 
-                    logMsg = msg
-                    
-                syslog.syslog(logMsg)                
-            
-            # ... handle other incoming messages that have been validated                                
+        try:            
+            # Try encoding message to handle escape chars if present
+            try:
+                logMsg = body.encode('utf8')
+            except Exception as de:
+                logger.info("IEMloggingProcessor, decoding failed, dumping to syslog")
+                logMsg = body
+                
+            syslog.syslog(logMsg)
+            logger.info("IEMloggingProcessor, _processMsg logMsg: %s" % logMsg)
             
         except Exception as ex:
-            logger.exception("RabbitMQingressProcessor, unrecognized _processMsg: %s" % ingressMsg) 
+            logger.info("IEMloggingProcessor, Exception: %s" % ex)    
         
         
     def _configureExchange(self):        
         """Configure the RabbitMQ exchange with defaults available"""
         try:
-            self._virtual_host  = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR, 
+            self._virtual_host  = self._conf_reader._get_value_with_default(self.IEMLOGGINGPROCESSOR, 
                                                                  self.VIRT_HOST,
                                                                  'SSPL')
-            self._exchange_name = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR, 
+            self._exchange_name = self._conf_reader._get_value_with_default(self.IEMLOGGINGPROCESSOR, 
                                                                  self.EXCHANGE_NAME,
                                                                  'sspl_ll_bcast')
-            self._queue_name    = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR, 
-                                                                 self.QUEUE_NAME,
-                                                                 'SSPL-LL')
-            self._routing_key   = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR, 
+            self._routing_key   = self._conf_reader._get_value_with_default(self.IEMLOGGINGPROCESSOR, 
                                                                  self.ROUTING_KEY,
                                                                  'sspl_ll')           
-            self._username      = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR, 
+            self._username      = self._conf_reader._get_value_with_default(self.IEMLOGGINGPROCESSOR, 
                                                                  self.USER_NAME,
                                                                  'sspluser')
-            self._password      = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR, 
+            self._password      = self._conf_reader._get_value_with_default(self.IEMLOGGINGPROCESSOR, 
                                                                  self.PASSWORD,
-                                                                 'sspl4ever')            
+                                                                 'sspl4ever')
+
             # ensure the rabbitmq queues/etc exist
             creds = pika.PlainCredentials(self._username, self._password)
             connection = pika.BlockingConnection(
@@ -197,12 +159,12 @@ class RabbitMQingressProcessor(ScheduledMonitorThread, InternalMsgQ):
                 exchange=self._exchange_name,
                 routing_key=self._routing_key
                 )
-        
+
         except Exception as ex:
-            logger.exception("RabbitMQingressProcessor, configureExchange: %s" % ex)
-          
+            logger.exception("IEMloggingProcessor, configureExchange: %s" % ex)  
+        
+        
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""
-        super(DriveManagerMonitor, self).shutdown()
+        super(IEMloggingProcessor, self).shutdown()
         
-         

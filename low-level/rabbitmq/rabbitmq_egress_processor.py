@@ -37,6 +37,7 @@ class RabbitMQegressProcessor(ScheduledMonitorThread, InternalMsgQ):
     USER_NAME           = 'username'
     PASSWORD            = 'password'
 
+
     @staticmethod
     def name():
         """ @return name of the monitoring module."""
