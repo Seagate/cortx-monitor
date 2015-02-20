@@ -14,7 +14,7 @@ channel.exchange_declare(exchange='sspl_bcast',
 msg_props = pika.BasicProperties()
 msg_props.content_type = "text/plain"
 
-jsonMsg = open("actuator_msgs/iem_logging.json").read()
+jsonMsg = open("actuator_msgs/logging.json").read()
 
 channel.basic_publish(exchange='sspl_bcast',
                       routing_key='sspl_ll',

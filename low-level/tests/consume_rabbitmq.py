@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 import pika
-import socket
 import json
 
 
@@ -26,9 +25,9 @@ def callback(ch, method, properties, body):
     if ingressMsg.get("monitor_msg_type") is not None:
         print " [x] %r" % (body,)
 
+    ch.basic_ack(delivery_tag = method.delivery_tag)
 
 channel.basic_consume(callback,
-                      queue=result.method.queue,
-                      no_ack=True)
+                      queue=result.method.queue)
 channel.start_consuming()
 

@@ -36,7 +36,7 @@ from utils.service_logging import logger
 
 # Import modules which will be will be available to sspl-ll
 from modules.drive_manager_monitor import DriveManagerMonitor 
-from modules.IEM_logging_processor import IEMloggingProcessor 
+from modules.logging_processor import LoggingProcessor 
 
 # Modules for handling RabbitMQ messages
 from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor 

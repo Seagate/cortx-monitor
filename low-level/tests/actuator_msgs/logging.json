@@ -2,7 +2,7 @@
 	"title": "SSPL-LL Actuator Request",
 	"description": "Seagate Storage Platform Library - Low Level - Actuator Request",
 	
-	"sspl_ll_host": {
+	"sspl_ll_msg_header": {
 		"schema_version": "1.0.0",
 		"sspl_version": "1.0.0"
 	},

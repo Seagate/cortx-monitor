@@ -93,30 +93,22 @@ class RabbitMQingressProcessor(ScheduledMonitorThread, InternalMsgQ):
         """Run the module periodically on its own thread. """        
         logger.info("Starting thread for '%s'", self.name())
         
-        try:
-            creds       = pika.PlainCredentials(self._username, self._password)
-            connection  = pika.BlockingConnection(
-                                    pika.ConnectionParameters(host='localhost', 
-                                                              virtual_host=self._virtual_host,
-                                                              credentials=creds))
-            channel     = connection.channel()
-            
-            channel.exchange_declare(exchange=self._exchange_name, type='topic', 
-                                     durable=True)
-            
-            result = channel.queue_declare(exclusive=True)
-            channel.queue_bind(exchange=self._exchange_name,
+        try:            
+            result = self._channel.queue_declare(exclusive=True)
+            self._channel.queue_bind(exchange=self._exchange_name,
                                queue=result.method.queue,
                                routing_key=self._routing_key)
 
-            channel.basic_consume(self._processMsg,
-                                  queue=result.method.queue,
-                                  no_ack=True)
-            channel.start_consuming()
+            self._channel.basic_consume(self._processMsg,
+                                  queue=result.method.queue)                                 
+            self._channel.start_consuming()
             
         except Exception as ex:
             # Log it and restart the whole process when a failure occurs      
-            logger.exception("RabbitMQingressProcessor restarting")    
+            logger.exception("RabbitMQingressProcessor restarting")  
+            
+            # Configure RabbitMQ Exchange to receive messages
+            self._configureExchange()  
         
         # TODO: poll_time = int(self._get_monitor_config().get(MONITOR_POLL_KEY))
         self._scheduler.enter(0, self._priority, self.run, ())
@@ -125,28 +117,38 @@ class RabbitMQingressProcessor(ScheduledMonitorThread, InternalMsgQ):
     def _processMsg(self, ch, method, properties, body):
         """Parses the incoming message and hands off to the appropriate module"""        
         try:
-            # Load in the json message and validate against the actuator schema
-            ingressMsg = json.loads(body)
-            validate(ingressMsg, self._schema)
+            # Load in the json message
+            ingressMsg = json.loads(body)            
             
             # Get the message type
             msgType = ingressMsg.get("actuator_msg_type")
             
+            # We only handle incoming actuator requests, ignore anything else
+            if msgType is None:
+                return
+            
+            # Validate against the actuator schema
+            validate(ingressMsg, self._schema)
+            
             # Hand off to appropriate module based on message type            
             if msgType.get("logging").get("log_type") == "IEM":
                 logger.info("RabbitMQingressProcessor, _processMsg msg_type:Logging IEM") 
-                                
+                
                 msg = msgType.get("logging").get("log_msg")
                 # Try encoding message to handle escape chars if present
                 try:
                     logMsg = msg.encode('utf8')
                 except Exception as de:
-                    logger.info("RabbitMQingressProcessor, decoding failed, dumping to syslog") 
+                    logger.info("RabbitMQingressProcessor, no encoding applied, writing to syslog") 
                     logMsg = msg
-                    
+                
+                # Write message to syslog    
                 syslog.syslog(logMsg)                
             
             # ... handle other incoming messages that have been validated                                
+            
+            # Acknowledge message was received
+            ch.basic_ack(delivery_tag = method.delivery_tag)
             
         except Exception as ex:
             logger.exception("RabbitMQingressProcessor, unrecognized _processMsg: %s" % ingressMsg) 
@@ -182,22 +184,21 @@ class RabbitMQingressProcessor(ScheduledMonitorThread, InternalMsgQ):
                     credentials=creds
                     )
                 )
-            channel = connection.channel()
-            channel.queue_declare(
+            self._channel = connection.channel()
+            self._channel.queue_declare(
                 queue='SSPL-LL',
                 durable=True
                 )
-            channel.exchange_declare(
+            self._channel.exchange_declare(
                 exchange=self._exchange_name,
                 exchange_type='topic',
                 durable=True
                 )
-            channel.queue_bind(
+            self._channel.queue_bind(
                 queue='SSPL-LL',
                 exchange=self._exchange_name,
                 routing_key=self._routing_key
-                )
-        
+                )           
         except Exception as ex:
             logger.exception("RabbitMQingressProcessor, configureExchange: %s" % ex)
           

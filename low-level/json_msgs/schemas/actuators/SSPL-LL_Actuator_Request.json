@@ -2,7 +2,7 @@
 	"$schema":"http://json-schema.org/draft-03/schema#",	
 	"type":"object",	
 	"properties": {
-		"sspl_ll_host": {
+		"sspl_ll_msg_header": {
 	       	"schema_version": {
 	           	"description" :"SSPL JSON Schema Version",
 	           	"type" : "string",

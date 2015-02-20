@@ -56,7 +56,8 @@ class RabbitMQegressProcessor(ScheduledMonitorThread, InternalMsgQ):
         super(RabbitMQegressProcessor, self).initializeMsgQ(msgQlist)
         
         # Configure RabbitMQ Exchange to transmit message
-        self._configureExchange()
+        self._readConfig()
+        self._getConnection()
         
         # Display values used to configure pika from the config file
         logger.info ("RabbitMQegressProcessor, creds: %s,  %s" % (self._username, self._password))   
@@ -79,7 +80,10 @@ class RabbitMQegressProcessor(ScheduledMonitorThread, InternalMsgQ):
              
         except Exception as ex:
             # Log it and restart the whole process when a failure occurs      
-            logger.exception("RabbitMQegressProcessor restarting")            
+            logger.exception("RabbitMQegressProcessor restarting")    
+            
+            # Configure RabbitMQ Exchange to receive messages
+            self._configureExchange()        
          
         # TODO: poll_time = int(self._get_monitor_config().get(MONITOR_POLL_KEY))
         self._scheduler.enter(0, self._priority, self.run, ())    
@@ -89,7 +93,7 @@ class RabbitMQegressProcessor(ScheduledMonitorThread, InternalMsgQ):
         """Clean up scheduler queue and gracefully shutdown thread"""
         super(DriveManagerMonitor, self).shutdown()
         
-    def _configureExchange(self):        
+    def _readConfig(self):        
         """Configure the RabbitMQ exchange with defaults available"""
         try:
             self._virtual_host  = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR, 
@@ -107,17 +111,21 @@ class RabbitMQegressProcessor(ScheduledMonitorThread, InternalMsgQ):
             self._password      = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR, 
                                                                  self.PASSWORD,
                                                                  'sspl4ever')
-
+        except Exception as ex:
+            logger.exception("RabbitMQegressProcessor, _readConfig: %s" % ex)
+    
+    def _getConnection(self):     
+        try:   
             # ensure the rabbitmq queues/etc exist
             creds = pika.PlainCredentials(self._username, self._password)
-            connection = pika.BlockingConnection(
+            self._connection = pika.BlockingConnection(
                 pika.ConnectionParameters(
                     host='localhost',
                     virtual_host=self._virtual_host,
                     credentials=creds
                     )
                 )
-            channel = connection.channel()
+            channel = self._connection.channel()
             channel.queue_declare(
                 queue='SSPL-LL',
                 durable=True
@@ -132,26 +140,19 @@ class RabbitMQegressProcessor(ScheduledMonitorThread, InternalMsgQ):
                 exchange=self._exchange_name,
                 routing_key=self._routing_key
                 )
-
+            return channel
         except Exception as ex:
-            logger.exception("RabbitMQegressProcessor, configureExchange: %s" % ex)
+            logger.exception("RabbitMQegressProcessor, _getConnection: %s" % ex)
           
     def _transmitMsgOnExchange(self, jsonMsg):
         """Transmit json message onto RabbitMQ exchange"""
         logger.info("RabbitMQegressProcessor, transmitMsgOnExchange, jsonMsg: %s" % jsonMsg)
    
-        try:           
-            creds       = pika.PlainCredentials(self._username, self._password)
-            connection  = pika.BlockingConnection(
-                                    pika.ConnectionParameters(host='localhost', 
-                                                              virtual_host=self._virtual_host,
-                                                              credentials=creds))
-            channel     = connection.channel()
-            channel.exchange_declare(exchange=self._exchange_name, type='topic', 
-                                     durable=True)
-            
+        try:
             msg_props = pika.BasicProperties()
             msg_props.content_type = "text/plain"
+            
+            channel = self._getConnection()
             
             # Publish json message
             channel.basic_publish(exchange=self._exchange_name, 
@@ -161,8 +162,8 @@ class RabbitMQegressProcessor(ScheduledMonitorThread, InternalMsgQ):
 
             # No exceptions thrown so success
             logger.info ("_transmitMsgOnExchange, Successfully Sent: %s" % jsonMsg)
-            connection.close()
-            del(connection)
+            self._connection.close()
+            del(self._connection)
              
         except Exception as ex:
             logger.exception("RabbitMQegressProcessor, transmitMsgOnExchange: %s" % ex)

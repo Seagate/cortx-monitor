@@ -10,7 +10,7 @@ connection = pika.BlockingConnection(pika.ConnectionParameters(
         host='localhost', virtual_host='SSPL', credentials=creds))
 channel = connection.channel()
 
-channel.exchange_declare(exchange='sspl_bcast',
+channel.exchange_declare(exchange='sspl_iem',
                          type='topic', durable=True)
 
 msg_props = pika.BasicProperties()

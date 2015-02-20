@@ -1,8 +1,7 @@
-# -*- coding: utf-8 -*-
 """
  ****************************************************************************
- Filename:          IEM_logging_actuator.py
- Description:       Handles IEM logging actuator requests
+ Filename:          logging_processor.py
+ Description:       Handles logging Messages to Syslog
  Creation Date:     02/18/2015
  Author:            Jake Abernathy
 
@@ -26,9 +25,9 @@ from base.monitor_thread import ScheduledMonitorThread
 from base.internal_msgQ import InternalMsgQ
 from utils.service_logging import logger
 
-class IEMloggingProcessor(ScheduledMonitorThread, InternalMsgQ):
+class LoggingProcessor(ScheduledMonitorThread, InternalMsgQ):
     
-    MODULE_NAME = "IEMloggingProcessor"
+    MODULE_NAME = "LoggingProcessor"
     PRIORITY    = 2
 
     # Section and keys in configuration file
@@ -43,61 +42,54 @@ class IEMloggingProcessor(ScheduledMonitorThread, InternalMsgQ):
     @staticmethod
     def name():
         """ @return name of the monitoring module."""
-        return IEMloggingProcessor.MODULE_NAME
+        return LoggingProcessor.MODULE_NAME
     
     def __init__(self):
-        super(IEMloggingProcessor, self).__init__(self.MODULE_NAME,
+        super(LoggingProcessor, self).__init__(self.MODULE_NAME,
                                                   self.PRIORITY)
 
     def initialize(self, conf_reader, msgQlist):
         """initialize configuration reader and internal msg queues"""
         # Initialize ScheduledMonitorThread and InternalMsgQ
-        super(IEMloggingProcessor, self).initialize(conf_reader)
+        super(LoggingProcessor, self).initialize(conf_reader)
         
         # Initialize internal message queues for this module
-        super(IEMloggingProcessor, self).initializeMsgQ(msgQlist)
+        super(LoggingProcessor, self).initializeMsgQ(msgQlist)
         
         # Configure RabbitMQ Exchange to receive messages
         self._configureExchange()
         
         # Display values used to configure pika from the config file
-        logger.info ("IEMloggingProcessor, creds: %s,  %s" % (self._username, self._password))   
-        logger.info ("IEMloggingProcessor, exchange: %s, routing_key: %s, vhost: %s" % 
+        logger.info ("LoggingProcessor, creds: %s,  %s" % (self._username, self._password))   
+        logger.info ("LoggingProcessor, exchange: %s, routing_key: %s, vhost: %s" % 
                      (self._exchange_name, self._routing_key, self._virtual_host))       
         
     def run(self):
         """Run the module periodically on its own thread. """
         logger.info("Starting thread for '%s'", self.name())
                 
-        try:
-            creds       = pika.PlainCredentials(self._username, self._password)
-            connection  = pika.BlockingConnection(
-                                    pika.ConnectionParameters(host='localhost', 
-                                                              virtual_host=self._virtual_host,
-                                                              credentials=creds))
-            channel     = connection.channel()
+        try:            
+            result = self._channel.queue_declare(exclusive=True)
+            self._channel.queue_bind(exchange=self._exchange_name,
+                                queue=result.method.queue,
+                                routing_key=self._routing_key)
             
-            channel.exchange_declare(exchange=self._exchange_name, type='topic', 
-                                     durable=True)
+            self._channel.basic_consume(self._processMsg,
+                                  queue=result.method.queue)
             
-            result = channel.queue_declare(exclusive=True)
-            channel.queue_bind(exchange=self._exchange_name,
-                               queue=result.method.queue,
-                               routing_key=self._routing_key)
-            
-            channel.basic_consume(self._processMsg,
-                                  queue=result.method.queue,
-                                  no_ack=True)
-            channel.start_consuming()
+            self._channel.start_consuming()
             
         except Exception as ex:
             # Log it and restart the whole process when a failure occurs      
-            logger.exception("IEMloggingProcessor restarting")    
+            logger.exception("LoggingProcessor restarting") 
+            
+            # Configure RabbitMQ Exchange to receive messages
+            self._configureExchange()   
         
         # TODO: poll_time = int(self._get_monitor_config().get(MONITOR_POLL_KEY))
         self._scheduler.enter(0, self._priority, self.run, ())
         logger.info("Finished thread for '%s'", self.name())            
-            
+        
         
     def _processMsg(self, ch, method, properties, body):
         """Parses the incoming message and hands off to the appropriate module"""        
@@ -106,14 +98,16 @@ class IEMloggingProcessor(ScheduledMonitorThread, InternalMsgQ):
             try:
                 logMsg = body.encode('utf8')
             except Exception as de:
-                logger.info("IEMloggingProcessor, decoding failed, dumping to syslog")
+                logger.info("LoggingProcessor, no encoding applied, writing to syslog")
                 logMsg = body
-                
-            syslog.syslog(logMsg)
-            logger.info("IEMloggingProcessor, _processMsg logMsg: %s" % logMsg)
             
+            # Write message to syslog
+            syslog.syslog(logMsg)
+            
+            # Acknowledge message was received     
+            ch.basic_ack(delivery_tag = method.delivery_tag)
         except Exception as ex:
-            logger.info("IEMloggingProcessor, Exception: %s" % ex)    
+            logger.info("LoggingProcessor, Exception: %s" % ex)    
         
         
     def _configureExchange(self):        
@@ -144,27 +138,27 @@ class IEMloggingProcessor(ScheduledMonitorThread, InternalMsgQ):
                     credentials=creds
                     )
                 )
-            channel = connection.channel()
-            channel.queue_declare(
+            self._channel = connection.channel()
+            self._channel.queue_declare(
                 queue='SSPL-LL',
                 durable=True
                 )
-            channel.exchange_declare(
+            self._channel.exchange_declare(
                 exchange=self._exchange_name,
                 exchange_type='topic',
                 durable=True
                 )
-            channel.queue_bind(
+            self._channel.queue_bind(
                 queue='SSPL-LL',
                 exchange=self._exchange_name,
                 routing_key=self._routing_key
                 )
-
+            
         except Exception as ex:
-            logger.exception("IEMloggingProcessor, configureExchange: %s" % ex)  
+            logger.exception("LoggingProcessor, configureExchange: %s" % ex)  
         
         
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""
-        super(IEMloggingProcessor, self).shutdown()
+        super(LoggingProcessor, self).shutdown()
         
