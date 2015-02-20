@@ -23,6 +23,11 @@
                 "logging": {
 					"type" : "object",				
 					"properties": {	
+						"msg_version" : {
+							"description" : "Message Version Number", 
+			        		"type" : "string",  
+			        		"required" : true 
+						},
 						"log_type" : {
 							"description" : "Used to identify the type of log, ie IEM", 
 		    				"type" : "string",	   

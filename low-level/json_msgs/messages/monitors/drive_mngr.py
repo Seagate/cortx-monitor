@@ -32,6 +32,7 @@ class DriveMngrMsg(BaseMonitorMsg):
     '''
 
     MONITOR_MSG_TYPE = "disk_status_drivemanager"
+    MESSAGE_VERSION  = "1.0"
 
     def __init__(self, _enclosure,
                        _drive_num,
@@ -50,6 +51,7 @@ class DriveMngrMsg(BaseMonitorMsg):
                             },
                       "monitor_msg_type": {
                             self.MONITOR_MSG_TYPE: {
+                                "msg_version" : self.MESSAGE_VERSION,
                                 "enclosureSN" : self._enclosure,
                                 "diskNum" : int(self._drive_num),                                            
                                 "diskStatus": self._status                                

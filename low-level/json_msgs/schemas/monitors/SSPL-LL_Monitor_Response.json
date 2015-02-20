@@ -17,26 +17,31 @@
 		
 		"monitor_msg_type": {
 			"type" : "object",	
-			"required" : true,			
+			"required" : true,	
 			"properties": {	
                 
                 "disk_status_drivemanager": {
 					"type" : "object",				
 					"properties": {	
+						"msg_version" : {
+							"description" : "Message Version Number", 
+			        		"type" : "string",  
+			        		"required" : true 
+						},					
 						"diskNum" : {
 							"description" : "Drive Number within the enclosure", 
-		    					"type" : "number",	   
-		    					"required" : true
+		    				"type" : "number",	   
+		    				"required" : true
 						},
 						"enclosureSN" : {
 							"description" : "Enclosure Serial Number", 
-			        			"type" : "string",  
-			        			"required" : true   		
+			        		"type" : "string",  
+			        		"required" : true   		
 						},
 						"diskStatus" : {
 							"description" : "Disk Status", 
-	        					"type" : "string",
-	        					"required" : true
+	        				"type" : "string",
+	        				"required" : true
 						}
 					}
 				},
@@ -44,6 +49,11 @@
 				"host_update": {
 					"type" : "object",
 					"properties": {
+						"msg_version" : {
+							"description" : "Message Version Number", 
+			        		"type" : "string",  
+			        		"required" : true 
+						},
 						"bootTime" : {
 							"description" : "Time Since Host Was Started", 
 							"type" : "string"	
