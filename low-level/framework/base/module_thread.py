@@ -12,43 +12,41 @@
  Portions are also trade secret. Any use, duplication, derivation, distribution
  or disclosure of this code, for any reason, not expressly authorized is
  prohibited. All other rights are expressly reserved by Seagate Technology, LLC.
-
- ****************************************************************************
- All relevant license information (GPL, FreeBSD, etc)
  ****************************************************************************
 """
 
 import time
 import abc
+import json
 
-from utils.service_logging import logger
 from sched import scheduler
 from exceptions import NotImplementedError
+from debug import Debug
 
-class MonitorThread(object):
-    """Base Class for all Monitoring Processes"""
+
+class ModuleThread(object):
+    """Base Class for all Module Threads"""
     __metaclass__ = abc.ABCMeta
 
     def __init__(self):
-        super(MonitorThread, self).__init__()        
+        super(ModuleThread, self).__init__()        
 
     @abc.abstractmethod
     def initialize(self):
-        """Initialize the monitoring process"""
+        """Initialize the module thread"""
         raise NotImplementedError("Subclasses should implement this!")
 
     @abc.abstractmethod
     def run(self):
-        """Periodically run the monitoring process"""
+        """Periodically run the module thread"""
         raise NotImplementedError("Subclasses should implement this!")
-        
-    
 
-class ScheduledMonitorThread(MonitorThread):
-    """A monitoring process with an internal scheduler"""
+
+class ScheduledModuleThread(ModuleThread, Debug):
+    """A module thread with an internal scheduler"""
 
     def __init__(self, module_name, priority):
-        super(ScheduledMonitorThread, self).__init__()
+        super(ScheduledModuleThread, self).__init__()
 
         self._scheduler   = scheduler(time.time, time.sleep)
         self._module_name = module_name
@@ -68,8 +66,7 @@ class ScheduledMonitorThread(MonitorThread):
 
     def _cleanup_and_stop(self):
         """Clean out the remainder of events from the scheduler queue."""
-        logger.info("Shutting down monitoring thread for '%s'",
-                    self._module_name)
+        self._log_debug("Shutting down monitoring thread for '%s'" % self._module_name)
         for event in self._scheduler.queue:
             try:
                 self._scheduler.cancel(event)
@@ -80,11 +77,7 @@ class ScheduledMonitorThread(MonitorThread):
     def shutdown(self):
         """Clean up and shut down this monitor."""
         self._scheduler.enter(0, self._priority, self._cleanup_and_stop, ())
-        logger.info("scheduling shut down for '%s'",
-                    self._module_name)
+        self._log_debug("scheduling shut down for '%s'" % self._module_name)
  
     def getConf_reader(self):
         return self._conf_reader
-    
-        
-

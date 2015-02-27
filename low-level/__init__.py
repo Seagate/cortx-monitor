@@ -1,1 +1,1 @@
-"""Modules for SSPL-LL processing"""
+"""Seagate Storage Platform Library - Low Level (SSPL-LL) Project"""

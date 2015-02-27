@@ -27,7 +27,6 @@ from jsonschema import validate
 from json_msgs.messages.base_msg import BaseMsg
 from json_msgs.schemas import monitors 
 
-from utils.service_logging import logger
 
 class BaseMonitorMsg(BaseMsg):
     '''
@@ -56,8 +55,7 @@ class BaseMonitorMsg(BaseMsg):
         Draft3Validator.check_schema(self._schema)
         
     def validateMsg(self, _jsonMsg):
-        """Validate the json message against the schema"""
-        logger.info("BaseMonitorMsg, validateMsg jsonmsg: %s" % _jsonMsg)        
+        """Validate the json message against the schema"""             
         validate(_jsonMsg, self._schema)
         
             

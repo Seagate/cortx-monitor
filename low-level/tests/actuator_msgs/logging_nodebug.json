@@ -6,10 +6,6 @@
 		"schema_version": "1.0.0",
 		"sspl_version": "1.0.0"
 	},
-	"sspl_ll_debug": {
-                "debug_component" : "logging",
-                "debug_enabled" : true
-        },
 	"actuator_msg_type": {
 		"logging": {
 			"msg_version" : "1.0",

@@ -8,7 +8,7 @@
 	},
 	"sspl_ll_debug": {
                 "debug_component" : "logging",
-                "debug_enabled" : true
+                "debug_enabled" : false
         },
 	"actuator_msg_type": {
 		"logging": {

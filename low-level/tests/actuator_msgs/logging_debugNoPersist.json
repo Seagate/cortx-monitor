@@ -7,8 +7,7 @@
 		"sspl_version": "1.0.0"
 	},
 	"sspl_ll_debug": {
-                "debug_component" : "logging",
-                "debug_enabled" : true
+                "debug_component" : "logging"
         },
 	"actuator_msg_type": {
 		"logging": {

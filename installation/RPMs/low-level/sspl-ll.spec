@@ -11,6 +11,7 @@ Source2:    sspl_ll.conf
 BuildRoot:  %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 BuildRequires: rpm-build
 Requires:   python-daemon python-inotify python-jsonschema python-pika rabbitmq-server
+Requires:   python-zope-interface
 
 %description
 Installs SSPL-LL
@@ -45,7 +46,7 @@ if [[ ! -d /tmp/dcs/drivemanager ]]; then
 fi
 
 # setup rabbitmq vhost and user (incl permissions)
-/opt/seagate/sspl/low-level/sspl_ll_rabbitmq_reinit
+/opt/seagate/sspl/low-level/framework/sspl_ll_rabbitmq_reinit
 
 # Have the service startup at boot time
 chkconfig sspl-ll on

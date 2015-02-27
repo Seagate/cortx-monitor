@@ -19,7 +19,7 @@
 . /etc/rc.d/init.d/functions
 
 conf_filename=/etc/sspl_ll.conf
-prog_name="/opt/seagate/sspl/low-level/sspl_ll_d"
+prog_name="/opt/seagate/sspl/low-level/framework/sspl_ll_d"
 prog_path="$prog_name -c $conf_filename"
 
 start()

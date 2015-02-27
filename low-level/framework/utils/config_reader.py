@@ -11,9 +11,6 @@
  Portions are also trade secret. Any use, duplication, derivation, distribution
  or disclosure of this code, for any reason, not expressly authorized is
  prohibited. All other rights are expressly reserved by Seagate Technology, LLC.
-
- ****************************************************************************
- All relevant license information (GPL, FreeBSD, etc)
  ****************************************************************************
 """
 
@@ -24,7 +21,8 @@ from utils.service_logging import logger
 
 
 class ConfigReader(object):
-    """Configuration reader for notification sender""" 
+    """Configuration reader for notification sender"""
+
     # Available exceptions from ConfigParser
     MissingSectionHeaderError   = ConfigParser.MissingSectionHeaderError
     NoSectionError              = ConfigParser.NoSectionError

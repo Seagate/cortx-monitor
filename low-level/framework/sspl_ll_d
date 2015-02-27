@@ -30,21 +30,28 @@ import os
 
 from threading import Thread
 
+# Add the top level directories
+parentdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+os.sys.path.insert(0,parentdir)
+
 from utils.config_reader import ConfigReader
 from utils.service_logging import init_logging
 from utils.service_logging import logger
 
-# Import modules which will be will be available to sspl-ll
-from modules.drive_manager_monitor import DriveManagerMonitor 
-from modules.logging_processor import LoggingProcessor 
-
 # Modules for handling RabbitMQ messages
 from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor 
 from rabbitmq.rabbitmq_ingress_processor import RabbitMQingressProcessor 
+from rabbitmq.logging_processor import LoggingProcessor
+
+# Import modules which will be will be available to sspl-ll
+from modules.drive_manager_monitor import DriveManagerMonitor
+
+# Import message handlers
+from message_handlers.logging_msg_handler import LoggingMsgHandler
+
 
 # Section and key in config file for bootstrap
-SSPL_SETTING  = 'SSPL-LL_SETTING'    
-LOGGING_LEVEL = 'logging_level'  
+SSPL_SETTING  = 'SSPL-LL_SETTING'
 MODULES       = 'modules'
 
 def main(conf_reader):
@@ -154,11 +161,8 @@ if __name__ == "__main__":
         exit(os.EX_USAGE)
         
     # Initialize logging
-    try:
-        logging_level = conf_reader._get_value_with_default(SSPL_SETTING,
-                                                            LOGGING_LEVEL,
-                                                            "INFO")        
-        init_logging("SSPL-LL", logging_level)
+    try:             
+        init_logging("SSPL-LL", "DEBUG")
 
     except Exception as err:
         # We don't have logger since it threw an exception, use generic 'print'

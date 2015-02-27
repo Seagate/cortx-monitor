@@ -8,7 +8,7 @@ connection = pika.BlockingConnection(pika.ConnectionParameters(
         host='localhost', virtual_host='SSPL', credentials=creds))
 channel = connection.channel()
 
-channel.exchange_declare(exchange='sspl_bcast',
+channel.exchange_declare(exchange='sspl_halon',
                          type='topic', durable=True)
 
 msg_props = pika.BasicProperties()
@@ -16,7 +16,7 @@ msg_props.content_type = "text/plain"
 
 jsonMsg = open("actuator_msgs/logging.json").read()
 
-channel.basic_publish(exchange='sspl_bcast',
+channel.basic_publish(exchange='sspl_halon',
                       routing_key='sspl_ll',
                       properties=msg_props, 
                       body=str(jsonMsg))             

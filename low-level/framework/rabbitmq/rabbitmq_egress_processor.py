@@ -11,20 +11,18 @@
  Portions are also trade secret. Any use, duplication, derivation, distribution
  or disclosure of this code, for any reason, not expressly authorized is
  prohibited. All other rights are expressly reserved by Seagate Technology, LLC.
-
- ****************************************************************************
- All relevant license information (GPL, FreeBSD, etc)
  ****************************************************************************
 """
 
 import pika
 import os
 
-from base.monitor_thread import ScheduledMonitorThread
+from base.module_thread import ScheduledModuleThread
 from base.internal_msgQ import InternalMsgQ
 from utils.service_logging import logger
 
-class RabbitMQegressProcessor(ScheduledMonitorThread, InternalMsgQ):
+class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
+    """Handles outgoing messages via rabbitMQ"""
     
     MODULE_NAME = "RabbitMQegressProcessor"
     PRIORITY    = 1
@@ -40,7 +38,7 @@ class RabbitMQegressProcessor(ScheduledMonitorThread, InternalMsgQ):
 
     @staticmethod
     def name():
-        """ @return name of the monitoring module."""
+        """ @return: name of the module."""
         return RabbitMQegressProcessor.MODULE_NAME
     
     def __init__(self):
@@ -59,25 +57,24 @@ class RabbitMQegressProcessor(ScheduledMonitorThread, InternalMsgQ):
         self._readConfig()
         self._getConnection()
         
-        # Display values used to configure pika from the config file
-        logger.info ("RabbitMQegressProcessor, creds: %s,  %s" % (self._username, self._password))   
-        logger.info ("RabbitMQegressProcessor, exchange: %s, routing_key: %s, vhost: %s" % 
-                     (self._exchange_name, self._routing_key, self._virtual_host))                 
+        # Display values used to configure pika from the config file   
+        self._log_debug ("RabbitMQ exchange: %s, routing_key: %s, vhost: %s" %
+                       (self._exchange_name, self._routing_key, self._virtual_host))    
         
     def run(self):
         """Run the module periodically on its own thread. """
-        logger.info("Starting thread for '%s'", self.name())
+        self._log_debug("Starting thread")
         
         try:
             # Block on message queue until it contains an entry 
             jsonMsg = self._readMyMsgQ()
-            self._transmitMsgOnExchange(jsonMsg)    
+            self._transmitMsgOnExchange(jsonMsg)
  
-            # Loop thru all messages in queue until and transmit        
+            # Loop thru all messages in queue until and transmit
             while not self._isMyMsgQempty():
                 jsonMsg = self._readMyMsgQ()
                 self._transmitMsgOnExchange(jsonMsg)
-             
+            
         except Exception as ex:
             # Log it and restart the whole process when a failure occurs      
             logger.exception("RabbitMQegressProcessor restarting")    
@@ -87,7 +84,7 @@ class RabbitMQegressProcessor(ScheduledMonitorThread, InternalMsgQ):
          
         # TODO: poll_time = int(self._get_monitor_config().get(MONITOR_POLL_KEY))
         self._scheduler.enter(0, self._priority, self.run, ())    
-        logger.info("Finished thread for '%s'", self.name())
+        self._log_debug("Finished thread")
         
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""
@@ -146,9 +143,9 @@ class RabbitMQegressProcessor(ScheduledMonitorThread, InternalMsgQ):
           
     def _transmitMsgOnExchange(self, jsonMsg):
         """Transmit json message onto RabbitMQ exchange"""
-        logger.info("RabbitMQegressProcessor, transmitMsgOnExchange, jsonMsg: %s" % jsonMsg)
+        self._log_debug("_transmitMsgOnExchange, jsonMsg: %s" % jsonMsg)
    
-        try:
+        try:            
             msg_props = pika.BasicProperties()
             msg_props.content_type = "text/plain"
             
@@ -161,7 +158,7 @@ class RabbitMQegressProcessor(ScheduledMonitorThread, InternalMsgQ):
                                   body=str(jsonMsg))
 
             # No exceptions thrown so success
-            logger.info ("_transmitMsgOnExchange, Successfully Sent: %s" % jsonMsg)
+            self._log_debug("_transmitMsgOnExchange, Successfully Sent: %s" % jsonMsg)
             self._connection.close()
             del(self._connection)
              

@@ -13,9 +13,6 @@
  Portions are also trade secret. Any use, duplication, derivation, distribution
  or disclosure of this code, for any reason, not expressly authorized is
  prohibited. All other rights are expressly reserved by Seagate Technology, LLC.
-
- ****************************************************************************
- All relevant license information (GPL, FreeBSD, etc)
  ****************************************************************************
 """
 
@@ -23,15 +20,15 @@ import Queue
 import pyinotify
 
 from json_msgs.messages.monitors.drive_mngr import DriveMngrMsg
-from base.monitor_thread import ScheduledMonitorThread 
-from base.internal_msgQ import InternalMsgQ
-from utils.service_logging import logger
+from framework.base.module_thread import ScheduledModuleThread 
+from framework.base.internal_msgQ import InternalMsgQ
+from framework.utils.service_logging import logger
 
 # List of modules that receive messages from this module
-from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor 
+from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor 
 
 
-class DriveManagerMonitor(ScheduledMonitorThread, InternalMsgQ):
+class DriveManagerMonitor(ScheduledModuleThread, InternalMsgQ):
     
     MODULE_NAME       = "DriveManagerMonitor"
     PRIORITY          = 2
@@ -44,7 +41,7 @@ class DriveManagerMonitor(ScheduledMonitorThread, InternalMsgQ):
 
     @staticmethod
     def name():
-        """ @return name of the monitoring module. """
+        """ @return: name of the monitoring module. """
         return DriveManagerMonitor.MODULE_NAME
 
     def __init__(self):
@@ -64,22 +61,25 @@ class DriveManagerMonitor(ScheduledMonitorThread, InternalMsgQ):
         self._drive_mngr_base_dir  = self._getDrive_Mngr_Dir()
         self._drive_mngr_pid       = self._getDrive_Mngr_Pid()
         
-                
+        
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""
         super(DriveManagerMonitor, self).shutdown() 
         try:            
-            logger.info("DriveManagerMonitor, shutdown: removing pid:%s" % self._drive_mngr_pid)        
+            self._log_debug("DriveManagerMonitor, shutdown: removing pid:%s" % self._drive_mngr_pid)        
             os.remove(self._drive_mngr_pid)
         except Exception as ex:
             logger.exception("DriveManagerMonitor, shutdown: %s" % ex)
              
     def run(self):
         """Run the monitoring periodically on its own thread."""         
-        logger.info("Starting thread for '%s'", self.name())                         
-        logger.info("DriveManagerMonitor, run, base directory: %s" % self._drive_mngr_base_dir)
+        self._log_debug("Starting thread")                         
+        self._log_debug("run, base directory: %s" % self._drive_mngr_base_dir)
         
         try:
+            # Check for debug mode being activated
+            self._readMyMsgQ_noWait()
+            
             # Followed tutorial for pyinotify: https://github.com/seb-m/pyinotify/wiki/Tutorial            
             wm      = pyinotify.WatchManager() 
             
@@ -106,7 +106,7 @@ class DriveManagerMonitor(ScheduledMonitorThread, InternalMsgQ):
             logger.exception("DriveManagerMonitor restarting")
             self._scheduler.enter(10, self._priority, self.run, ())  
 
-        logger.info("Finished thread for '%s'", self._module_name)       
+        self._log_debug("Finished thread")       
         
     def _getDrive_Mngr_Dir(self):
         """Retrieves the drivemanager path to monitor on the file system"""
@@ -136,12 +136,12 @@ class DriveManagerMonitor(ScheduledMonitorThread, InternalMsgQ):
             msgString = jsonMsg.getJson()            
             if msgString != self._sentJSONmsg:                
                 # Send the json message to the RabbitMQ processor to transmit out
-                logger.info("DriveManagerMonitor, _send_json_RabbitMQ: pathname %s" % pathname)                                
+                #self._log_debug("DriveManagerMonitor, _send_json_RabbitMQ: pathname %s" % pathname)                                
                 self._writeInternalMsgQ(RabbitMQegressProcessor.name(), msgString)
                 self._sentJSONmsg = msgString
-        else:
-            logger.info("DriveManagerMonitor, _send_json_RabbitMQ, valid: %s(ignoring)," \
-                        "jsonMsg: %s" % (valid, jsonMsg))    
+        #else:
+        #    self._log_debug("DriveManagerMonitor, _send_json_RabbitMQ, valid: %s(ignoring)," \
+        #                "jsonMsg: %s" % (valid, jsonMsg))    
     
     def InotifyEventHandlerDef(self):
         """Internal event handling class for Inotify"""
@@ -177,7 +177,8 @@ class Drive(object):
         try:
             # Validate the path for the drive
             if "disk" not in self._path:
-                logger.warn("Drive, _parse_path: Drive path does not contain the required keyword 'disk'")
+                self._log_debug("Exception: Drive, _parse_path: Drive path does \
+                                not contain the required keyword 'disk'")
                 return
                     
             # Remove base dcs dir and split into list parsing out enclosure and drive num

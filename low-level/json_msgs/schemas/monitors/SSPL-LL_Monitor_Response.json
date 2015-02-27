@@ -12,7 +12,12 @@
 	           	"description" : "SSPL Version",
 	           	"type" : "string",
 	           	"required" : true
-	       	}
+	       	},
+	       	"msg_version" : {
+				"description" : "Message Version", 
+			    "type" : "string",  
+			    "required" : true 
+			}	
 	    },
 		
 		"monitor_msg_type": {
@@ -22,12 +27,7 @@
                 
                 "disk_status_drivemanager": {
 					"type" : "object",				
-					"properties": {	
-						"msg_version" : {
-							"description" : "Message Version Number", 
-			        		"type" : "string",  
-			        		"required" : true 
-						},					
+					"properties": {											
 						"diskNum" : {
 							"description" : "Drive Number within the enclosure", 
 		    				"type" : "number",	   
@@ -48,12 +48,7 @@
 								
 				"host_update": {
 					"type" : "object",
-					"properties": {
-						"msg_version" : {
-							"description" : "Message Version Number", 
-			        		"type" : "string",  
-			        		"required" : true 
-						},
+					"properties": {						
 						"bootTime" : {
 							"description" : "Time Since Host Was Started", 
 							"type" : "string"	

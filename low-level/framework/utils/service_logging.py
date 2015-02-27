@@ -44,15 +44,16 @@ LOGLEVEL_NAME_TO_LEVEL_DICT = {
 }
 
 
-def init_logging(dcs_service_name, log_level=LOG_INFO):
+def init_logging(dcs_service_name, log_level=LOG_DEBUG):
     """Initialize logging to log to syslog"""
+    
     warning_message = None
     if log_level not in LOGLEVEL_NAME_TO_LEVEL_DICT.keys():
         warning_message = str(
             "Invalid log_level '{0}' specified. Using "
-            "default log_level '{1}' instead.".format(log_level, LOG_INFO))
-        log_level = LOG_INFO
-    logger.setLevel(LOGLEVEL_NAME_TO_LEVEL_DICT[log_level])
+            "default log_level '{1}' instead.".format(log_level, LOG_DEBUG))
+        log_level = LOG_DEBUG
+    logger.setLevel(LOGLEVEL_NAME_TO_LEVEL_DICT[log_level])    
     num_attempts = 1
     handler = logging.NullHandler()
     while True:
@@ -74,7 +75,7 @@ def init_logging(dcs_service_name, log_level=LOG_INFO):
 
     logger.addHandler(handler)
     logger.info(
-        "Logging has been initialized for sspl '%s' service after %d attempts",
-        dcs_service_name, num_attempts)
+        "Logging has been initialized for sspl '%s' service after %d attempts to level %s",
+        dcs_service_name, num_attempts, log_level)
     if warning_message is not None:
         logger.warning(warning_message)

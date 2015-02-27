@@ -8,11 +8,11 @@ connection = pika.BlockingConnection(pika.ConnectionParameters(
         host='localhost', virtual_host='SSPL', credentials=creds))
 channel = connection.channel()
 
-channel.exchange_declare(exchange='sspl_bcast',
+channel.exchange_declare(exchange='sspl_halon',
                          type='topic', durable=True)
 
 result = channel.queue_declare(exclusive=True)
-channel.queue_bind(exchange='sspl_bcast',
+channel.queue_bind(exchange='sspl_halon',
                    queue=result.method.queue,
 		   routing_key='sspl_ll')
 print ' [*] Waiting for json messages. To exit press CTRL+C'

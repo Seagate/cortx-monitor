@@ -11,13 +11,9 @@
  Portions are also trade secret. Any use, duplication, derivation, distribution
  or disclosure of this code, for any reason, not expressly authorized is
  prohibited. All other rights are expressly reserved by Seagate Technology, LLC.
-
- ****************************************************************************
- All relevant license information (GPL, FreeBSD, etc)
  ****************************************************************************
 """
 
-import syslog
 import pika
 import json
 import os
@@ -27,12 +23,16 @@ from jsonschema import validate
 
 from pika import exceptions
 
-from base.monitor_thread import ScheduledMonitorThread
+from base.module_thread import ScheduledModuleThread
 from base.internal_msgQ import InternalMsgQ
 from utils.service_logging import logger
 
+# Import message handlers to hand off messages
+from message_handlers.logging_msg_handler import LoggingMsgHandler
 
-class RabbitMQingressProcessor(ScheduledMonitorThread, InternalMsgQ):
+
+class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
+    """Handles incoming messages via rabbitMQ"""
     
     MODULE_NAME = "RabbitMQingressProcessor"
     PRIORITY    = 1
@@ -51,7 +51,7 @@ class RabbitMQingressProcessor(ScheduledMonitorThread, InternalMsgQ):
 
     @staticmethod
     def name():
-        """ @return name of the monitoring module."""
+        """ @return: name of the module."""
         return RabbitMQingressProcessor.MODULE_NAME
     
     def __init__(self):
@@ -60,9 +60,9 @@ class RabbitMQingressProcessor(ScheduledMonitorThread, InternalMsgQ):
         
         # Read in the monitor schema for validating messages
         dir = os.path.dirname(__file__)
-        fileName = os.path.join(dir,
-                                '../json_msgs/schemas/actuators/',
-                                self.JSON_ACTUATOR_SCHEMA)        
+        fileName = os.path.join(dir, '..', '..', 'json_msgs',
+                                'schemas', 'actuators',
+                                self.JSON_ACTUATOR_SCHEMA)
         
         with open(fileName, 'r') as f:
             _schema = f.read()
@@ -82,16 +82,16 @@ class RabbitMQingressProcessor(ScheduledMonitorThread, InternalMsgQ):
         super(RabbitMQingressProcessor, self).initializeMsgQ(msgQlist)
         
         # Configure RabbitMQ Exchange to receive messages
-        self._configureExchange()
+        self._configure_exchange()
         
-        # Display values used to configure pika from the config file
-        logger.info ("RabbitMQingressProcessor, creds: %s,  %s" % (self._username, self._password))   
-        logger.info ("RabbitMQingressProcessor, exchange: %s, routing_key: %s, vhost: %s" % 
-                     (self._exchange_name, self._routing_key, self._virtual_host))                 
-        
+        # Display values used to configure pika from the config file 
+        self._log_debug("RabbitMQ user: %s" % self._username)
+        self._log_debug("RabbitMQ exchange: %s, routing_key: %s, vhost: %s" %
+                      (self._exchange_name, self._routing_key, self._virtual_host))
+
     def run(self):
         """Run the module periodically on its own thread. """        
-        logger.info("Starting thread for '%s'", self.name())
+        self._log_debug("Starting thread")
         
         try:            
             result = self._channel.queue_declare(exclusive=True)
@@ -99,11 +99,11 @@ class RabbitMQingressProcessor(ScheduledMonitorThread, InternalMsgQ):
                                queue=result.method.queue,
                                routing_key=self._routing_key)
 
-            self._channel.basic_consume(self._processMsg,
+            self._channel.basic_consume(self._process_msg,
                                   queue=result.method.queue)                                 
             self._channel.start_consuming()
             
-        except Exception as ex:
+        except Exception:
             # Log it and restart the whole process when a failure occurs      
             logger.exception("RabbitMQingressProcessor restarting")  
             
@@ -112,49 +112,47 @@ class RabbitMQingressProcessor(ScheduledMonitorThread, InternalMsgQ):
         
         # TODO: poll_time = int(self._get_monitor_config().get(MONITOR_POLL_KEY))
         self._scheduler.enter(0, self._priority, self.run, ())
-        logger.info("Finished thread for '%s'", self.name())
+        self._log_debug("Finished thread")
         
-    def _processMsg(self, ch, method, properties, body):
+    def _process_msg(self, ch, method, properties, body):
         """Parses the incoming message and hands off to the appropriate module"""        
-        try:
-            # Load in the json message
+        ingressMsg = {}
+        try:                                    
             ingressMsg = json.loads(body)            
-            
+                        
             # Get the message type
-            msgType = ingressMsg.get("actuator_msg_type")
+            msgType = ingressMsg.get("actuator_msg_type")            
             
             # We only handle incoming actuator requests, ignore anything else
             if msgType is None:
                 return
             
+            # Check for debugging being activated in the message header
+            self._check_debug(ingressMsg)
+            self._log_debug("_process_msg, ingressMsg: %s" % ingressMsg)
+
             # Validate against the actuator schema
             validate(ingressMsg, self._schema)
             
-            # Hand off to appropriate module based on message type            
-            if msgType.get("logging").get("log_type") == "IEM":
-                logger.info("RabbitMQingressProcessor, _processMsg msg_type:Logging IEM") 
-                
-                msg = msgType.get("logging").get("log_msg")
-                # Try encoding message to handle escape chars if present
-                try:
-                    logMsg = msg.encode('utf8')
-                except Exception as de:
-                    logger.info("RabbitMQingressProcessor, no encoding applied, writing to syslog") 
-                    logMsg = msg
-                
-                # Write message to syslog    
-                syslog.syslog(logMsg)                
+            self._log_debug("_process_msg, msgType: %s" % msgType)
+
+            # Hand off to appropriate module based on message type
+            if msgType.get("logging"):
+                self._writeInternalMsgQ(LoggingMsgHandler.name(), ingressMsg)
+
+            elif msgType.get("drive_manager"):
+                self._writeInternalMsgQ(ActuatorMsgHandler.name(), ingressMsg)
             
             # ... handle other incoming messages that have been validated                                
             
             # Acknowledge message was received
             ch.basic_ack(delivery_tag = method.delivery_tag)
-            
+                          
         except Exception as ex:
-            logger.exception("RabbitMQingressProcessor, unrecognized _processMsg: %s" % ingressMsg) 
+            logger.exception("_process_msg unrecognized message: %r" % ingressMsg)                 
+                         
         
-        
-    def _configureExchange(self):        
+    def _configure_exchange(self):        
         """Configure the RabbitMQ exchange with defaults available"""
         try:
             self._virtual_host  = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR, 
@@ -200,8 +198,8 @@ class RabbitMQingressProcessor(ScheduledMonitorThread, InternalMsgQ):
                 routing_key=self._routing_key
                 )           
         except Exception as ex:
-            logger.exception("RabbitMQingressProcessor, configureExchange: %s" % ex)
-          
+            logger.exception("_configure_exchange: %r" % ex)
+
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""
         super(DriveManagerMonitor, self).shutdown()

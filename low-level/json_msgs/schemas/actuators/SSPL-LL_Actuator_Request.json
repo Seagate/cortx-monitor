@@ -3,6 +3,7 @@
 	"type":"object",	
 	"properties": {
 		"sspl_ll_msg_header": {
+			"required" : true,
 	       	"schema_version": {
 	           	"description" :"SSPL JSON Schema Version",
 	           	"type" : "string",
@@ -12,7 +13,25 @@
 	           	"description" : "SSPL Version",
 	           	"type" : "string",
 	           	"required" : true
-	       	}
+	       	},
+	       	"msg_version" : {
+				"description" : "Message Version", 
+				"type" : "string",  
+				"required" : true
+			}
+		},
+		
+		"sspl_ll_debug": {			
+	       	"debug_component" : {
+				"description" : "Used to identify the component to debug", 
+				"type" : "string",
+				"required" : false 
+			},
+			"debug_enabled" : {
+				"description" : "Control persisting debug mode", 
+				"type" : "boolean",
+				"required" : false 
+			}			
 	    },
 		
 		"actuator_msg_type": {
@@ -22,12 +41,7 @@
 
                 "logging": {
 					"type" : "object",				
-					"properties": {	
-						"msg_version" : {
-							"description" : "Message Version Number", 
-			        		"type" : "string",  
-			        		"required" : true 
-						},
+					"properties": {							
 						"log_type" : {
 							"description" : "Used to identify the type of log, ie IEM", 
 		    				"type" : "string",	   

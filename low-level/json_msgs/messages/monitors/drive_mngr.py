@@ -47,11 +47,11 @@ class DriveMngrMsg(BaseMonitorMsg):
                       "description" : self.DESCRIPTION,
                       "sspl_ll_msg_header": {
                             "schema_version" : self.SCHEMA_VERSION,
-                            "sspl_version" : self.SSPL_VERSION
+                            "sspl_version" : self.SSPL_VERSION,
+                            "msg_version" : self.MESSAGE_VERSION,
                             },
                       "monitor_msg_type": {
-                            self.MONITOR_MSG_TYPE: {
-                                "msg_version" : self.MESSAGE_VERSION,
+                            self.MONITOR_MSG_TYPE: {                               
                                 "enclosureSN" : self._enclosure,
                                 "diskNum" : int(self._drive_num),                                            
                                 "diskStatus": self._status                                
