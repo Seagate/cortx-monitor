@@ -1,0 +1,16 @@
+#
+# Add the following configuration
+#
+
+git config core.whitespace \
+    trailing-space,space-before-tab
+
+#
+# Create symblic links for each of the hooks that
+# are in the folder
+#
+
+cd .git/hooks
+ln -s ../../hooks/commit-msg commit-msg
+ln -s ../../hooks/pre-commit pre-commit
+
