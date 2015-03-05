@@ -1,6 +1,6 @@
 Name:       SSPL-LL
 Version:    1.0.0
-Release:    3.el7
+Release:    2.el7
 Summary:    Installs SSPL-LL
 BuildArch:  noarch
 Group:      System Environment/Daemons
@@ -44,6 +44,9 @@ if [[ ! -d /tmp/dcs/drivemanager ]]; then
    chmod 777 /tmp/dcs
    chmod 777 /tmp/dcs/drivemanager
 fi
+
+# Make sure rabbitmq is started before we initialize it
+systemctl start rabbitmq-server -l
 
 # setup rabbitmq vhost and user (incl permissions)
 /opt/seagate/sspl/low-level/framework/sspl_ll_rabbitmq_reinit
