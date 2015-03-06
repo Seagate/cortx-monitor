@@ -51,6 +51,18 @@ systemctl start rabbitmq-server -l
 # setup rabbitmq vhost and user (incl permissions)
 /opt/seagate/sspl/low-level/framework/sspl_ll_rabbitmq_reinit
 
+# Have opehhpi startup at boot time
+chkconfig openhpid on
+
+# Start the service
+systemctl start openhpid -l
+
+# Have the dcs-collector startup at boot time
+chkconfig dcs-collector on
+
+# Start the service
+systemctl start dcs-collector -l
+
 # Have the service startup at boot time
 chkconfig sspl-ll on
 
