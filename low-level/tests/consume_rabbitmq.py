@@ -9,7 +9,7 @@ connection = pika.BlockingConnection(pika.ConnectionParameters(
 channel = connection.channel()
 
 channel.exchange_declare(exchange='sspl_halon',
-                         type='topic', durable=True)
+                         type='topic', durable=False)
 
 result = channel.queue_declare(exclusive=True)
 channel.queue_bind(exchange='sspl_halon',
@@ -22,7 +22,8 @@ def callback(ch, method, properties, body):
     ingressMsg = json.loads(body)
 
     # Get the message type
-    if ingressMsg.get("monitor_msg_type") is not None:
+    if ingressMsg.get("monitor_msg_type") is not None or \
+	ingressMsg.get("actuator_response_type") is not None:
         print " [x] %r" % (body,)
 
     ch.basic_ack(delivery_tag = method.delivery_tag)

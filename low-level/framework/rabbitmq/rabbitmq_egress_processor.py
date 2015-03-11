@@ -14,6 +14,7 @@
  ****************************************************************************
 """
 
+import json
 import pika
 import os
 
@@ -23,7 +24,7 @@ from utils.service_logging import logger
 
 class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
     """Handles outgoing messages via rabbitMQ"""
-    
+
     MODULE_NAME = "RabbitMQegressProcessor"
     PRIORITY    = 1
 
@@ -40,57 +41,56 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
     def name():
         """ @return: name of the module."""
         return RabbitMQegressProcessor.MODULE_NAME
-    
+
     def __init__(self):
         super(RabbitMQegressProcessor, self).__init__(self.MODULE_NAME,
-                                                      self.PRIORITY)            
+                                                      self.PRIORITY)
 
     def initialize(self, conf_reader, msgQlist):
         """initialize configuration reader and internal msg queues"""               
-        # Initialize ScheduledMonitorThread and InternalMsgQ
+        # Initialize ScheduledMonitorThread
         super(RabbitMQegressProcessor, self).initialize(conf_reader)
-        
+
         # Initialize internal message queues for this module
-        super(RabbitMQegressProcessor, self).initializeMsgQ(msgQlist)
-        
+        super(RabbitMQegressProcessor, self).initialize_msgQ(msgQlist)
+
         # Configure RabbitMQ Exchange to transmit message
-        self._readConfig()
-        self._getConnection()
-        
-        # Display values used to configure pika from the config file   
-        self._log_debug ("RabbitMQ exchange: %s, routing_key: %s, vhost: %s" %
-                       (self._exchange_name, self._routing_key, self._virtual_host))    
-        
+        self._read_config()
+        self._get_connection()
+
+        # Display values used to configure pika from the config file
+        self._log_debug("RabbitMQ user: %s" % self._username)
+        self._log_debug("RabbitMQ exchange: %s, routing_key: %s, vhost: %s" %
+                       (self._exchange_name, self._routing_key, self._virtual_host))
+
     def run(self):
         """Run the module periodically on its own thread. """
-        self._log_debug("Starting thread")
-        
+        self._log_debug("Start accepting requests")
+
         try:
             # Block on message queue until it contains an entry 
-            jsonMsg = self._readMyMsgQ()
-            self._transmitMsgOnExchange(jsonMsg)
+            jsonMsg = self._read_my_msgQ()
+            if jsonMsg is not None:
+                self._transmit_msg_on_exchange(jsonMsg)
  
             # Loop thru all messages in queue until and transmit
-            while not self._isMyMsgQempty():
-                jsonMsg = self._readMyMsgQ()
-                self._transmitMsgOnExchange(jsonMsg)
-            
-        except Exception as ex:
+            while not self._is_my_msgQ_empty():
+                jsonMsg = self._read_my_msgQ()
+                if jsonMsg is not None:
+                    self._transmit_msg_on_exchange(jsonMsg)
+
+        except Exception:
             # Log it and restart the whole process when a failure occurs      
-            logger.exception("RabbitMQegressProcessor restarting")    
-            
+            logger.exception("RabbitMQegressProcessor restarting")
+
             # Configure RabbitMQ Exchange to receive messages
-            self._configureExchange()        
-         
-        # TODO: poll_time = int(self._get_monitor_config().get(MONITOR_POLL_KEY))
+            self._read_config()
+            self._get_connection()        
+
         self._scheduler.enter(0, self._priority, self.run, ())    
-        self._log_debug("Finished thread")
-        
-    def shutdown(self):
-        """Clean up scheduler queue and gracefully shutdown thread"""
-        super(DriveManagerMonitor, self).shutdown()
-        
-    def _readConfig(self):        
+        self._log_debug("Finished processing successfully")
+
+    def _read_config(self):        
         """Configure the RabbitMQ exchange with defaults available"""
         try:
             self._virtual_host  = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR, 
@@ -98,7 +98,7 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
                                                                  'SSPL')
             self._exchange_name = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR, 
                                                                  self.EXCHANGE_NAME,
-                                                                 'sspl_ll_bcast')
+                                                                 'sspl_halon')
             self._routing_key   = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR, 
                                                                  self.ROUTING_KEY,
                                                                  'sspl_ll')           
@@ -109,10 +109,10 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
                                                                  self.PASSWORD,
                                                                  'sspl4ever')
         except Exception as ex:
-            logger.exception("RabbitMQegressProcessor, _readConfig: %s" % ex)
-    
-    def _getConnection(self):     
-        try:   
+            logger.exception("_read_config: %r" % ex)
+
+    def _get_connection(self):    
+        try:
             # ensure the rabbitmq queues/etc exist
             creds = pika.PlainCredentials(self._username, self._password)
             self._connection = pika.BlockingConnection(
@@ -122,47 +122,55 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
                     credentials=creds
                     )
                 )
-            channel = self._connection.channel()
-            channel.queue_declare(
+            self._channel = self._connection.channel()
+            self._channel.queue_declare(
                 queue='SSPL-LL',
-                durable=True
+                durable=False
                 )
-            channel.exchange_declare(
+            self._channel.exchange_declare(
                 exchange=self._exchange_name,
                 exchange_type='topic',
-                durable=True
+                durable=False
                 )
-            channel.queue_bind(
+            self._channel.queue_bind(
                 queue='SSPL-LL',
                 exchange=self._exchange_name,
                 routing_key=self._routing_key
                 )
-            return channel
         except Exception as ex:
-            logger.exception("RabbitMQegressProcessor, _getConnection: %s" % ex)
-          
-    def _transmitMsgOnExchange(self, jsonMsg):
+            logger.exception("_get_connection: %r" % ex)
+
+    def _transmit_msg_on_exchange(self, jsonMsg):
         """Transmit json message onto RabbitMQ exchange"""
-        self._log_debug("_transmitMsgOnExchange, jsonMsg: %s" % jsonMsg)
-   
-        try:            
+        self._log_debug("_transmit_msg_on_exchange, jsonMsg: %s" % jsonMsg)
+
+        try:
+            jsonMsg = json.dumps(jsonMsg, ensure_ascii=True).encode('utf8')
+            
             msg_props = pika.BasicProperties()
             msg_props.content_type = "text/plain"
-            
-            channel = self._getConnection()
-            
+
+            self._get_connection()
+
             # Publish json message
-            channel.basic_publish(exchange=self._exchange_name, 
+            self._channel.basic_publish(exchange=self._exchange_name, 
                                   routing_key=self._routing_key,
                                   properties=msg_props, 
                                   body=str(jsonMsg))
 
             # No exceptions thrown so success
-            self._log_debug("_transmitMsgOnExchange, Successfully Sent: %s" % jsonMsg)
+            self._log_debug("_transmit_msg_on_exchange, Successfully Sent: %s" % jsonMsg)
             self._connection.close()
             del(self._connection)
-             
-        except Exception as ex:
-            logger.exception("RabbitMQegressProcessor, transmitMsgOnExchange: %s" % ex)
-                  
 
+        except Exception as ex:
+            logger.exception("_transmit_msg_on_exchange: %r" % ex)
+
+    def shutdown(self):
+        """Clean up scheduler queue and gracefully shutdown thread"""
+        super(RabbitMQegressProcessor, self).shutdown()
+        try:
+            self._connection.close()
+            self._channel.stop_consuming()
+        except pika.exceptions.ConnectionClosed:
+            logger.info("RabbitMQegressProcessor, shutdown, RabbitMQ ConnectionClosed")

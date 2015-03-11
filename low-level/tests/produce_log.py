@@ -11,7 +11,7 @@ connection = pika.BlockingConnection(pika.ConnectionParameters(
 channel = connection.channel()
 
 channel.exchange_declare(exchange='sspl_iem',
-                         type='topic', durable=True)
+                         type='topic', durable=False)
 
 msg_props = pika.BasicProperties()
 msg_props.content_type = "text/plain"

@@ -20,7 +20,7 @@
 				"required" : true
 			},
 			"uuid" : {
-				"description" : "Universally Unique ID for Lifetime of Request",
+				"description" : "Universally Unique ID for Lifetime of Initial Request",
 				"type" : "string",
 				"required" : false
 			}
@@ -39,23 +39,21 @@
 			}
 	    },
 
-		"actuator_request_type": {
+		"actuator_response_type": {
 			"type" : "object",
 			"required" : true,
-			"additionalProperties" : false,
 			"properties": {
 
-                "logging": {
+                "ack": {
 					"type" : "object",
-					"additionalProperties" : false,
 					"properties": {
-						"log_type" : {
-							"description" : "Identify the type of log message",
+						"ack_type" : {
+							"description" : "Identify the type of acknowledgement",
 		    				"type" : "string",
 		    				"required" : true
 						},
-						"log_msg" : {
-							"description" : "The message to be logged",
+						"ack_msg" : {
+							"description" : "Message describing acknowledgement",
 			        		"type" : "string",
 			        		"required" : true
 						}
@@ -64,15 +62,14 @@
 
 				"thread_controller": {
 					"type" : "object",
-					"additionalProperties" : false,
 					"properties": {
 						"module_name" : {
-							"description" : "Identify the thread to be managed by its class name",
+							"description" : "Identify the module to be managed by its class name",
 		    				"type" : "string",
 		    				"required" : true
 						},
-						"thread_request" : {
-							"description" : "Action to be applied to thread: start | stop | restart | status",
+						"thread_response" : {
+							"description" : "Response from action applied: start | stop | restart | status",
 			        		"type" : "string",
 			        		"required" : true
 						}

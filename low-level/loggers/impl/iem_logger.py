@@ -34,7 +34,7 @@ class IEMlogger(Debug):
     def log_msg(self, jsonMsg):
         """logs the IEM message to syslog"""
 
-        logMsg = jsonMsg.get("actuator_msg_type").get("logging").get("log_msg")
+        logMsg = jsonMsg.get("actuator_request_type").get("logging").get("log_msg")
 
         # Encode and remove whitespace,\n,\t if present
         logMsg = json.dumps(logMsg, ensure_ascii=True).encode('utf8')

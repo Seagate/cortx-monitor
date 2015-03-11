@@ -4,15 +4,15 @@
 	
 	"sspl_ll_msg_header": {
 		"schema_version": "1.0.0",
-		"sspl_version": "1.0.0"
+		"sspl_version": "1.0.0",
+		"msg_version": "1.0.0"
 	},
 	"sspl_ll_debug": {
                 "debug_component" : "logging",
                 "debug_enabled" : true
         },
-	"actuator_msg_type": {
+	"actuator_request_type": {
 		"logging": {
-			"msg_version" : "1.0",
 			"log_type": "IEM",
 			"log_msg": "Sep 25 02:51:56 dvtrack00 plex info: IEC: 001002001: Rules Engine Event changed state from CONFIRMED to RESOLVED: {‘resolved_time': 1411638715.990002, 'state': 'RESOLVED', 'version': 1, 'uuid': '056184f4-43e2-11e4-923d-001e6739c920', 'event_code': '001001001', 'confirmed_time': 1411560775.977796, 'tracking_start_ts': 1411559875.990503, 'id': '001001001:10114:21', 'event_data': {'host_id': u'10114', 'dcs_timestamp': '1411559850', 'disk_status': u'Failed', 'disk_slot': u'21', 'serial_number': u'SHX0965000G02FG'}}"
 		}

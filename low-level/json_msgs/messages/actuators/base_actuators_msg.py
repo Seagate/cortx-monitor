@@ -1,9 +1,9 @@
 """
  ****************************************************************************
- Filename:          base_monitor_msg.py
- Description:       All monitor JSON messages extend this base class
+ Filename:          base_actuator_msg.py
+ Description:       All actuator JSON messages extend this base class
                     containing global constants used throughout  
- Creation Date:     01/31/2015
+ Creation Date:     03/03/2015
  Author:            Jake Abernathy
 
  Do NOT modify or remove this copyright and confidentiality notice!
@@ -21,26 +21,26 @@ from jsonschema import Draft3Validator
 from jsonschema import validate
 
 from json_msgs.messages.base_msg import BaseMsg
-from json_msgs.schemas import monitors 
+from json_msgs.schemas import actuators
 
 
-class BaseMonitorMsg(BaseMsg):
+class BaseActuatorMsg(BaseMsg):
     '''
-    The base class for all JSON monitor response messages transmitted by SSPL-LL
+    The base class for all JSON actuator response messages transmitted by SSPL-LL
     '''
 
-    TITLE               = "SSPL-LL Monitor Response"
-    DESCRIPTION         = "Seagate Storage Platform Library - Low Level - Monitor Response"
-    JSON_MONITOR_SCHEMA = "SSPL-LL_Monitor_Response.json"
+    TITLE                = "SSPL-LL Actuator Response"
+    DESCRIPTION          = "Seagate Storage Platform Library - Low Level - Actuator Response"
+    JSON_ACTUATOR_SCHEMA = "SSPL-LL_Actuator_Response.json"
 
 
     def __init__(self):
-        """Reads in the json schema for all monitoring response messages"""
-        super(BaseMonitorMsg, self).__init__()
+        """Reads in the json schema for all actuator response messages"""
+        super(BaseActuatorMsg, self).__init__()
         
         # Read in the monitor schema for validating messages
-        fileName = os.path.join(monitors.__path__[0],
-                                self.JSON_MONITOR_SCHEMA)
+        fileName = os.path.join(actuators.__path__[0],
+                                self.JSON_ACTUATOR_SCHEMA)
         with open(fileName, 'r') as f:
             _schema = f.read()
         

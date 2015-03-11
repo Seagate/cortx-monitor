@@ -29,11 +29,12 @@ from utils.service_logging import logger
 
 # Import message handlers to hand off messages
 from message_handlers.logging_msg_handler import LoggingMsgHandler
+from utils.thread_controller import ThreadController
 
 
 class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
     """Handles incoming messages via rabbitMQ"""
-    
+
     MODULE_NAME = "RabbitMQingressProcessor"
     PRIORITY    = 1
 
@@ -57,42 +58,42 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
     def __init__(self):
         super(RabbitMQingressProcessor, self).__init__(self.MODULE_NAME,
                                                        self.PRIORITY)     
-        
+
         # Read in the monitor schema for validating messages
         dir = os.path.dirname(__file__)
         fileName = os.path.join(dir, '..', '..', 'json_msgs',
                                 'schemas', 'actuators',
                                 self.JSON_ACTUATOR_SCHEMA)
-        
+
         with open(fileName, 'r') as f:
             _schema = f.read()
-        
+
         # Remove tabs and newlines
         self._schema = json.loads(' '.join(_schema.split()))
-        
+
         # Validate the schema
         Draft3Validator.check_schema(self._schema)
 
     def initialize(self, conf_reader, msgQlist):
         """initialize configuration reader and internal msg queues"""               
-        # Initialize ScheduledMonitorThread and InternalMsgQ
+        # Initialize ScheduledMonitorThread
         super(RabbitMQingressProcessor, self).initialize(conf_reader)
-        
+
         # Initialize internal message queues for this module
-        super(RabbitMQingressProcessor, self).initializeMsgQ(msgQlist)
-        
+        super(RabbitMQingressProcessor, self).initialize_msgQ(msgQlist)
+
         # Configure RabbitMQ Exchange to receive messages
         self._configure_exchange()
-        
-        # Display values used to configure pika from the config file 
+
+        # Display values used to configure pika from the config file
         self._log_debug("RabbitMQ user: %s" % self._username)
         self._log_debug("RabbitMQ exchange: %s, routing_key: %s, vhost: %s" %
                       (self._exchange_name, self._routing_key, self._virtual_host))
 
     def run(self):
         """Run the module periodically on its own thread. """        
-        self._log_debug("Starting thread")
-        
+        self._log_debug("Start accepting requests")
+
         try:            
             result = self._channel.queue_declare(exclusive=True)
             self._channel.queue_bind(exchange=self._exchange_name,
@@ -102,56 +103,61 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
             self._channel.basic_consume(self._process_msg,
                                   queue=result.method.queue)                                 
             self._channel.start_consuming()
-            
+
         except Exception:
-            # Log it and restart the whole process when a failure occurs      
-            logger.exception("RabbitMQingressProcessor restarting")  
-            
-            # Configure RabbitMQ Exchange to receive messages
-            self._configureExchange()  
-        
-        # TODO: poll_time = int(self._get_monitor_config().get(MONITOR_POLL_KEY))
-        self._scheduler.enter(0, self._priority, self.run, ())
-        self._log_debug("Finished thread")
-        
+            if self.is_running() == True:
+                logger.info("RabbitMQingressProcessor ungracefully breaking out of run loop, restarting.")
+
+                # Configure RabbitMQ Exchange to receive messages
+                self._configure_exchange()
+                self._scheduler.enter(1, self._priority, self.run, ())
+            else:
+                logger.info("RabbitMQingressProcessor gracefully breaking out of run Loop, not restarting.")
+
+        self._log_debug("Finished processing successfully")
+
     def _process_msg(self, ch, method, properties, body):
-        """Parses the incoming message and hands off to the appropriate module"""        
+        """Parses the incoming message and hands off to the appropriate module"""
         ingressMsg = {}
-        try:                                    
-            ingressMsg = json.loads(body)            
-                        
+        try:
+            if isinstance(body, dict) == False:
+                ingressMsg = json.loads(body)
+            else:
+                ingressMsg = body
+           
             # Get the message type
-            msgType = ingressMsg.get("actuator_msg_type")            
-            
+            msgType = ingressMsg.get("actuator_request_type")
+
             # We only handle incoming actuator requests, ignore anything else
             if msgType is None:
                 return
-            
+
             # Check for debugging being activated in the message header
             self._check_debug(ingressMsg)
             self._log_debug("_process_msg, ingressMsg: %s" % ingressMsg)
 
             # Validate against the actuator schema
             validate(ingressMsg, self._schema)
-            
+
             self._log_debug("_process_msg, msgType: %s" % msgType)
 
             # Hand off to appropriate module based on message type
             if msgType.get("logging"):
-                self._writeInternalMsgQ(LoggingMsgHandler.name(), ingressMsg)
+                self._write_internal_msgQ(LoggingMsgHandler.name(), ingressMsg)
 
-            elif msgType.get("drive_manager"):
-                self._writeInternalMsgQ(ActuatorMsgHandler.name(), ingressMsg)
-            
+            elif msgType.get("thread_controller"):
+                self._write_internal_msgQ(ThreadController.name(), ingressMsg)
+
+
             # ... handle other incoming messages that have been validated                                
-            
+
             # Acknowledge message was received
             ch.basic_ack(delivery_tag = method.delivery_tag)
-                          
+
         except Exception as ex:
             logger.exception("_process_msg unrecognized message: %r" % ingressMsg)                 
-                         
-        
+
+
     def _configure_exchange(self):        
         """Configure the RabbitMQ exchange with defaults available"""
         try:
@@ -160,7 +166,7 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
                                                                  'SSPL')
             self._exchange_name = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR, 
                                                                  self.EXCHANGE_NAME,
-                                                                 'sspl_ll_bcast')
+                                                                 'sspl_halon')
             self._queue_name    = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR, 
                                                                  self.QUEUE_NAME,
                                                                  'SSPL-LL')
@@ -175,22 +181,22 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
                                                                  'sspl4ever')            
             # ensure the rabbitmq queues/etc exist
             creds = pika.PlainCredentials(self._username, self._password)
-            connection = pika.BlockingConnection(
+            self._connection = pika.BlockingConnection(
                 pika.ConnectionParameters(
                     host='localhost',
                     virtual_host=self._virtual_host,
                     credentials=creds
                     )
                 )
-            self._channel = connection.channel()
+            self._channel = self._connection.channel()
             self._channel.queue_declare(
                 queue='SSPL-LL',
-                durable=True
+                durable=False
                 )
             self._channel.exchange_declare(
                 exchange=self._exchange_name,
                 exchange_type='topic',
-                durable=True
+                durable=False
                 )
             self._channel.queue_bind(
                 queue='SSPL-LL',
@@ -202,6 +208,9 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""
-        super(DriveManagerMonitor, self).shutdown()
-        
-         
+        super(RabbitMQingressProcessor, self).shutdown()
+        try:
+            self._connection.close()
+            self._channel.stop_consuming()
+        except pika.exceptions.ConnectionClosed:
+            logger.info("RabbitMQingressProcessor, shutdown, RabbitMQ ConnectionClosed")

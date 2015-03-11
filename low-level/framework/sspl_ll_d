@@ -14,9 +14,6 @@
  Portions are also trade secret. Any use, duplication, derivation, distribution
  or disclosure of this code, for any reason, not expressly authorized is
  prohibited. All other rights are expressly reserved by Seagate Technology, LLC.
-
- ****************************************************************************
- All relevant license information (GPL, FreeBSD, etc)
  ****************************************************************************
 """
 
@@ -38,16 +35,16 @@ from utils.config_reader import ConfigReader
 from utils.service_logging import init_logging
 from utils.service_logging import logger
 
-# Modules for handling RabbitMQ messages
+# Modules to be instantiated within sspl-ll
 from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor 
 from rabbitmq.rabbitmq_ingress_processor import RabbitMQingressProcessor 
 from rabbitmq.logging_processor import LoggingProcessor
-
-# Import modules which will be will be available to sspl-ll
-from modules.drive_manager_monitor import DriveManagerMonitor
-
-# Import message handlers
+from rabbitmq.thread_controller import ThreadController
+from message_handlers.drive_manager_monitor import DriveManagerMonitor
 from message_handlers.logging_msg_handler import LoggingMsgHandler
+
+# Message to send to HAlon upon critical thread errors
+from json_msgs.messages.actuators.thread_controller import ThreadControllerMsg
 
 
 # Section and key in config file for bootstrap
@@ -56,45 +53,52 @@ MODULES       = 'modules'
 
 def main(conf_reader):
     """The main bootstrap for sspl"""
-    
+
     logger.info("sspl-ll Bootstrap: Obtaining list of modules from config file")
     conf_modules = conf_reader._get_value_list(SSPL_SETTING,
                                                 MODULES)
     logger.info("sspl-ll Bootstrap: Modules to load: %s" % conf_modules)
-    
-    # Create a map of references to all the modules message queues.  Each module
+
+    # Create a map of references to all the module's message queues.  Each module
     #  is passed this mapping so that it can send messages to other modules.
     msgQlist = {}
-    
-    # Create a list of all the instantiated modules
-    sspl_modules = []
-    
+
+    # Create a mapping of all the instantiated modules to their names
+    sspl_modules = {}
+
     # Use reflection to instantiate the class based upon its class name in config file
     for conf_thread in conf_modules:
         klass = globals()[conf_thread]
 
-        sspl_modules.append(klass())
+        # Create mappings of modules and their message queues
+        sspl_modules[klass.name()] = klass()
         msgQlist[klass.name()] = Queue.Queue()
-    
+
+    # Instantiate the internal ThreadController
+    threadController = ThreadController()
+    msgQlist[threadController.name()] = Queue.Queue()
+
     try:
-        logger.info("sspl-ll Bootstrap: Starting modules on threads")
-        
-        threads = []        
         # Loop through the list of instanced modules and start them on threads
-        for curr_module in sspl_modules:
-            logger.info("sspl-ll Bootstrap: Starting module %s" % curr_module.name())     
+        for name, curr_module in sspl_modules.iteritems():
+            logger.info("Starting %s" % curr_module.name())
             thread = Thread(target=_run_thread_capture_errors,
                             args=(curr_module, sspl_modules, msgQlist, conf_reader))
             thread.start()
-            threads.append(thread)
-     
-        # Wait for all threads to exit
-        for thread in threads:
-            thread.join()
-        
+
+        # Start the ThreadController module with the list of threads
+        logger.info("Starting %s" % ThreadController.name())
+
+        # Initialize the thread controller with the list of references to all modules
+        controller_thread = Thread(target=_run_thread_capture_errors,
+                            args=(threadController, sspl_modules, msgQlist, conf_reader))
+        threadController.initialize_thread_list(sspl_modules)
+        controller_thread.start()
+
+        # Block main thread until thread controller has been halted
+        controller_thread.join()
     except Exception as ex:
         logger.exception(ex)
-
 
 def _run_thread_capture_errors(curr_module, sspl_modules, msgQlist, conf_reader):
     """Run the given thread and log any errors that happen on it.
@@ -105,13 +109,17 @@ def _run_thread_capture_errors(curr_module, sspl_modules, msgQlist, conf_reader)
         curr_module.initialize(conf_reader, msgQlist)
         curr_module.start()
 
-    except BaseException as ex:
-        logger.critical("sspl-ll encountered an error, terminating service Error: %s" % ex)
-        logger.exception()
-        for other_module in sspl_modules:
+    except Exception as ex:
+        # Populate an actuator response message and transmit back to HAlon
+        error_msg = "SSPL-LL encountered an error, terminating service Error: " + \
+                    + e + ", Exception: " + logger.exception()
+        jsonMsg   = ThreadControllerMsg(curr_module, error_msg).getJson()
+        curr_module._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
+
+        # Shut it down, error is non-recoverable
+        for name, other_module in sspl_modules.iteritems():
             if other_module is not curr_module:
                 other_module.shutdown()
-
 
 def shutdown_handler(a=None, b=None):
     """Handler called when shutting down"""
@@ -131,15 +139,15 @@ if __name__ == "__main__":
     # Retrieve configuration file for sspl-ll service
     try:
         opts = getopt.getopt(sys.argv[1:], "hc:", ["help", "config="])
-    
+
     except getopt.GetoptError as err:
         print_usage()
         sys.exit(os.EX_USAGE)
-    
+
     if len(opts[0]) < 1:
         print_usage()
         sys.exit(os.EX_USAGE)
-        
+
     for opt, arg in opts[0]:
         if opt == "-c" or opt == "--config":
             path_to_conf_file = arg
@@ -151,7 +159,7 @@ if __name__ == "__main__":
     try:
         conf_reader = ConfigReader(path_to_conf_file)
         conf_reader.validate_config_file()
-        
+
     except (IOError, ConfigReader.Error) as err:
         # We don't have logger yet, need to find log_level from conf file first
         print "[ Error ] when validating the configuration file %s :" % \
@@ -159,7 +167,7 @@ if __name__ == "__main__":
         print err
         print "Exiting ..."
         exit(os.EX_USAGE)
-        
+
     # Initialize logging
     try:             
         init_logging("SSPL-LL", "DEBUG")
@@ -170,19 +178,19 @@ if __name__ == "__main__":
         print err
         print "Exiting ..."
         exit(os.EX_USAGE)
-    
+
     try:    
         # Configure a shutdown handler to handle any necessary cleanup
         signal_map = {signal.SIGTERM: shutdown_handler}
-        
+
         # Start sspl-ll as a main process running multiple threads    
         with daemon.DaemonContext(signal_map=signal_map):
             main(conf_reader)
-            
+
     except (Exception, StandardError) as err:
-        logger.critical("While spawning sspl-ll process :%s" % err)
+        logger.critical("While spawning sspl-ll process :%r" % err)
         logger.exception()
         sys.exit(os.EX_USAGE)
-        
+
     print "SSPL-LL Process started successfully"
     sys.exit(os.EX_OK)

@@ -1,14 +1,14 @@
 """
  ****************************************************************************
- Filename:          drive_mngr.py
+ Filename:          thread_controller.py
  Description:       Defines the JSON message transmitted by the
-                    DriveManagerMonitor. There may be a time when we need to
+                    ThreadController. There may be a time when we need to
                     maintain state as far as messages being transmitted.  This
                     may involve aggregation of multiple messages before
                     transmissions or simply deferring an acknowledgment to
                     a later point in time.  For this reason, the JSON messages
                     are stored as objects which can be queued up, etc.
- Creation Date:     01/30/2015
+ Creation Date:     03/03/2015
  Author:            Jake Abernathy
 
  Do NOT modify or remove this copyright and confidentiality notice!
@@ -21,23 +21,23 @@
 """
 
 import json
-from json_msgs.messages.monitors.base_monitors_msg import BaseMonitorMsg
+from json_msgs.messages.actuators.base_actuators_msg import BaseActuatorMsg
 
-class DriveMngrMsg(BaseMonitorMsg):
-    """The JSON message transmitted by the DriveManagerMonitor"""
+class ThreadControllerMsg(BaseActuatorMsg):
+    '''
+    The JSON message transmitted by the Thread Controller
+    '''
 
-    MONITOR_MSG_TYPE = "disk_status_drivemanager"
+    ACTUATOR_MSG_TYPE = "thread_controller"
     MESSAGE_VERSION  = "1.0"
 
-    def __init__(self, _enclosure,
-                       _drive_num,
-                       _status):
-        super(DriveMngrMsg, self).__init__()         
-        
-        self._enclosure = _enclosure
-        self._drive_num = _drive_num
-        self._status    = _status        
-        
+    def __init__(self, module_name,
+                       thread_response):
+        super(ThreadControllerMsg, self).__init__()         
+
+        self._module_name = module_name
+        self._thread_response = thread_response
+
         self._json = {"title" : self.TITLE,
                       "description" : self.DESCRIPTION,
                       "sspl_ll_msg_header": {
@@ -45,30 +45,25 @@ class DriveMngrMsg(BaseMonitorMsg):
                             "sspl_version" : self.SSPL_VERSION,
                             "msg_version" : self.MESSAGE_VERSION,
                             },
-                      "monitor_msg_type": {
-                            self.MONITOR_MSG_TYPE: {                               
-                                "enclosureSN" : self._enclosure,
-                                "diskNum" : int(self._drive_num),                                            
-                                "diskStatus": self._status                                
+                      "actuator_response_type": {
+                            self.ACTUATOR_MSG_TYPE: {
+                                "module_name" : self._module_name,
+                                "thread_response" : self._thread_response
                                 }
-                            }                      
+                            }
                       }
-        
+
     def getJson(self):
         """Return a validated JSON object"""    
         # Validate the current message    
         self.validateMsg(self._json)       
         return json.dumps(self._json)
-                 
-    def getEnclosure(self):
-        return self._enclosure
-        
-    def getDriveNum(self):
-        return self._drive_num
-        
-    def getStatus(self):
-        return self._status
-    
-    def setStatus(self, _status):
-        self._status = _status
-        
+
+    def getModuleName(self):
+        return self._module_name
+
+    def getThreadResponse(self):
+        return self._thread_response
+
+    def setThreadResponse(self, thread_response):
+        self._thread_response = thread_response

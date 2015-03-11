@@ -51,6 +51,7 @@ class ScheduledModuleThread(ModuleThread, Debug):
         self._scheduler   = scheduler(time.time, time.sleep)
         self._module_name = module_name
         self._priority    = priority
+        self._running     = False
 
     def initialize(self, conf_reader):
         """Initialize the monitoring thread"""
@@ -58,15 +59,19 @@ class ScheduledModuleThread(ModuleThread, Debug):
         self._conf_reader = conf_reader
         
         # Set the scheduler to fire the thread right away
-        self._scheduler.enter(1, self._priority, self.run, ())        
+        self._scheduler.enter(1, self._priority, self.run, ())     
+        
+        # Set running to True signifying the thread is active
+        set_running = True   
         
     def start(self):
         """Run the scheduler"""
+        self._running = True
         self._scheduler.run()
 
     def _cleanup_and_stop(self):
         """Clean out the remainder of events from the scheduler queue."""
-        self._log_debug("Shutting down monitoring thread for '%s'" % self._module_name)
+        self._log_debug("_cleanup_and_stop")
         for event in self._scheduler.queue:
             try:
                 self._scheduler.cancel(event)
@@ -76,8 +81,14 @@ class ScheduledModuleThread(ModuleThread, Debug):
 
     def shutdown(self):
         """Clean up and shut down this monitor."""
-        self._scheduler.enter(0, self._priority, self._cleanup_and_stop, ())
-        self._log_debug("scheduling shut down for '%s'" % self._module_name)
+        self._running = False
+        # Give the module a few seconds to close down RabbitMQ connections if they're open
+        self._scheduler.enter(2, self._priority, self._cleanup_and_stop, ())
+        self._log_debug("Scheduling shut down")
  
-    def getConf_reader(self):
+    def _getConf_reader(self):
         return self._conf_reader
+    
+    def is_running(self):
+        return self._running
+

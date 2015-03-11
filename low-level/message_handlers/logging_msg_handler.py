@@ -14,9 +14,8 @@
  ****************************************************************************
 """
 
+import json
 import syslog
-import pika
-import os
 
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
@@ -46,34 +45,48 @@ class LoggingMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
     def initialize(self, conf_reader, msgQlist):
         """initialize configuration reader and internal msg queues"""
-        # Initialize ScheduledMonitorThread and InternalMsgQ
+        # Initialize ScheduledMonitorThread
         super(LoggingMsgHandler, self).initialize(conf_reader)
 
         # Initialize internal message queues for this module
-        super(LoggingMsgHandler, self).initializeMsgQ(msgQlist)
+        super(LoggingMsgHandler, self).initialize_msgQ(msgQlist)
 
     def run(self):
         """Run the module periodically on its own thread."""
-        self._log_debug("Starting thread")
+        self._log_debug("Start accepting requests")
+
         try:
             # Block on message queue until it contains an entry
-            jsonMsg = self._readMyMsgQ()
-            self._log_debug("run jsonMsg: %s" % jsonMsg)
+            jsonMsg = self._read_my_msgQ()
+            if jsonMsg is not None:
+                self._process_msg(jsonMsg)
 
-            # Parse out logging type and hand off to appropriate logger
-            if jsonMsg.get("actuator_msg_type").get("logging").get("log_type") == "IEM":
-                self._log_debug("_processMsg msg_type:Logging IEM")
-                IEMlogger(jsonMsg)
+            # Keep processing until the message queue is empty
+            while not self._is_my_msgQ_empty():
+                jsonMsg = self._read_my_msgQ()
+                if jsonMsg is not None:
+                    self._process_msg(jsonMsg)
 
-            # ...Handle other types of logging
-            
-        except Exception as ex:
+        except Exception:
             # Log it and restart the whole process when a failure occurs
             logger.exception("LoggingMsgHandler restarting")
 
-        # TODO: poll_time = int(self._get_monitor_config().get(MONITOR_POLL_KEY))
         self._scheduler.enter(0, self._priority, self.run, ())
-        self._log_debug("Finished thread")
+        self._log_debug("Finished processing successfully")
+
+    def _process_msg(self, jsonMsg):
+        """Parses the incoming message and hands off to the appropriate logger"""    
+        self._log_debug("_process_msg, jsonMsg: %s" % jsonMsg)  
+
+        if isinstance(jsonMsg, dict) == False:
+            jsonMsg = json.loads(jsonMsg)
+
+        if jsonMsg.get("actuator_request_type").get("logging").get("log_type") == "IEM":
+            self._log_debug("_processMsg, msg_type: IEM")
+            IEMlogger(jsonMsg)
+
+        # ... handle other logging types
+
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""

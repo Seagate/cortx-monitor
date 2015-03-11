@@ -24,7 +24,7 @@ from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
 
 class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
-    
+
     MODULE_NAME = "LoggingProcessor"
     PRIORITY    = 2
 
@@ -41,54 +41,55 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
     def name():
         """ @return: name of the monitoring module."""
         return LoggingProcessor.MODULE_NAME
-    
+
     def __init__(self):
         super(LoggingProcessor, self).__init__(self.MODULE_NAME,
                                                   self.PRIORITY)
 
     def initialize(self, conf_reader, msgQlist):
         """initialize configuration reader and internal msg queues"""
-        # Initialize ScheduledMonitorThread and InternalMsgQ
+        # Initialize ScheduledMonitorThread
         super(LoggingProcessor, self).initialize(conf_reader)
-        
+
         # Initialize internal message queues for this module
-        super(LoggingProcessor, self).initializeMsgQ(msgQlist)
-        
+        super(LoggingProcessor, self).initialize_msgQ(msgQlist)
+
         # Configure RabbitMQ Exchange to receive messages
-        self._configureExchange()
-        
+        self._configure_exchange()
+
         # Display values used to configure pika from the config file 
         self._log_debug("RabbitMQ exchange: %s, routing_key: %s, vhost: %s" %
                        (self._exchange_name, self._routing_key, self._virtual_host))
-        
+
     def run(self):
         """Run the module periodically on its own thread."""
-        self._log_debug("Starting thread")
+        self._log_debug("Start accepting requests")
         try:
             result = self._channel.queue_declare(exclusive=True)
             self._channel.queue_bind(exchange=self._exchange_name,
                                 queue=result.method.queue,
                                 routing_key=self._routing_key)
-            
-            self._channel.basic_consume(self._processMsg,
+
+            self._channel.basic_consume(self._process_msg,
                                   queue=result.method.queue)
-            
+
             self._channel.start_consuming()
 
         except Exception:
-            # Log it and restart the whole process when a failure occurs      
-            logger.exception("LoggingProcessor restarting") 
-            
-            # Configure RabbitMQ Exchange to receive messages
-            self._configureExchange()   
-        
-        # TODO: poll_time = int(self._get_monitor_config().get(MONITOR_POLL_KEY))
-        self._scheduler.enter(0, self._priority, self.run, ())
-        self._log_debug("Finished thread")
-        
-    def _processMsg(self, ch, method, properties, body):
-        """Parses the incoming message and hands off to the appropriate module"""        
-        try:            
+            if self.is_running() == True:
+                logger.info("LoggingProcessor ungracefully breaking out of run loop, restarting.")
+
+                # Configure RabbitMQ Exchange to receive messages
+                self._configure_exchange()
+                self._scheduler.enter(1, self._priority, self.run, ())
+            else:
+                logger.info("LoggingProcessor gracefully breaking out of run Loop, not restarting.")
+
+        self._log_debug("Finished processing successfully")
+
+    def _process_msg(self, ch, method, properties, body):
+        """Parses the incoming message and hands off to the appropriate module"""
+        try:
             # Encode and remove whitespace,\n,\t - Leaving as it might be useful
             #ingressMsgTxt = json.dumps(body, ensure_ascii=True).encode('utf8')
             #ingressMsg = json.loads(' '.join(ingressMsgTxt.split()))
@@ -97,18 +98,18 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
             try:
                 logMsg = body.encode('utf8')
             except Exception as de:
-                self._log_debug("_processMsg, no encoding applied, writing to syslog")
+                self._log_debug("_process_msg, no encoding applied, writing to syslog")
                 logMsg = body
-            
+
             # Write message to syslog
             syslog.syslog(logMsg)
-            
+
             # Acknowledge message was received     
             ch.basic_ack(delivery_tag = method.delivery_tag)
         except Exception as ex:
-            logger.exception("LoggingProcessor, _processMsg: %r" % ex)
-        
-    def _configureExchange(self):        
+            logger.exception("_process_msg: %r" % ex)
+
+    def _configure_exchange(self):        
         """Configure the RabbitMQ exchange with defaults available"""
         try:
             self._virtual_host  = self._conf_reader._get_value_with_default(self.LOGGINGPROCESSOR,
@@ -116,7 +117,7 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
                                                                  'SSPL')
             self._exchange_name = self._conf_reader._get_value_with_default(self.LOGGINGPROCESSOR,
                                                                  self.EXCHANGE_NAME,
-                                                                 'sspl_ll_bcast')
+                                                                 'sspl_halon')
             self._routing_key   = self._conf_reader._get_value_with_default(self.LOGGINGPROCESSOR,
                                                                  self.ROUTING_KEY,
                                                                  'sspl_ll')           
@@ -129,22 +130,22 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
 
             # ensure the rabbitmq queues/etc exist
             creds = pika.PlainCredentials(self._username, self._password)
-            connection = pika.BlockingConnection(
+            self._connection = pika.BlockingConnection(
                 pika.ConnectionParameters(
                     host='localhost',
                     virtual_host=self._virtual_host,
                     credentials=creds
                     )
                 )
-            self._channel = connection.channel()
+            self._channel = self._connection.channel()
             self._channel.queue_declare(
                 queue='SSPL-LL',
-                durable=True
+                durable=False
                 )
             self._channel.exchange_declare(
                 exchange=self._exchange_name,
                 exchange_type='topic',
-                durable=True
+                durable=False
                 )
             self._channel.queue_bind(
                 queue='SSPL-LL',
@@ -153,10 +154,15 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
                 )
             
         except Exception as ex:
-            logger.exception("LoggingProcessor, configureExchange: %s" % ex)  
-        
-        
+            logger.exception("_configure_exchange: %s" % ex)  
+
+
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""
         super(LoggingProcessor, self).shutdown()
+        try:
+            self._connection.close()
+            self._channel.stop_consuming()
+        except pika.exceptions.ConnectionClosed:
+            logger.info("LoggingProcessor, shutdown, RabbitMQ ConnectionClosed")
         
