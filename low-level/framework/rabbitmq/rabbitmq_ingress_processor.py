@@ -29,7 +29,7 @@ from utils.service_logging import logger
 
 # Import message handlers to hand off messages
 from message_handlers.logging_msg_handler import LoggingMsgHandler
-from utils.thread_controller import ThreadController
+#from thread_controller import ThreadController
 
 
 class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
@@ -146,7 +146,7 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
                 self._write_internal_msgQ(LoggingMsgHandler.name(), ingressMsg)
 
             elif msgType.get("thread_controller"):
-                self._write_internal_msgQ(ThreadController.name(), ingressMsg)
+                self._write_internal_msgQ("ThreadController", ingressMsg)
 
 
             # ... handle other incoming messages that have been validated                                

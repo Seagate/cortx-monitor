@@ -25,9 +25,9 @@ from framework.utils.service_logging import logger
 from json_msgs.messages.actuators.thread_controller import ThreadControllerMsg
 
 # Import modules to control
-from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
-from framework.rabbitmq.rabbitmq_ingress_processor import RabbitMQingressProcessor
-from framework.rabbitmq.logging_processor import LoggingProcessor
+from rabbitmq_egress_processor import RabbitMQegressProcessor
+from rabbitmq_ingress_processor import RabbitMQingressProcessor
+from logging_processor import LoggingProcessor
 from message_handlers.logging_msg_handler import LoggingMsgHandler
 from message_handlers.drive_manager_monitor import DriveManagerMonitor
 
