@@ -1,0 +1,20 @@
+yum install -y 		\
+python-sure		\
+python-fuzzywuzzy	\
+python-lettuce		\
+gemhpi			\
+lksctp-tools		\
+net-snmp-libs		\
+openhpi			\
+openhpi-libs		\
+python-daemon		\
+python-inotify		\
+python-jsonschema	\
+python-lockfile		\
+python-openhpi-baselib	\
+python-pika		\
+python-zope-interface	\
+zabbix-agent-lib	\
+zabbix-collector	\
+zabbix-openhpi-config
+

@@ -18,9 +18,10 @@ import json
 import pika
 import os
 
-from base.module_thread import ScheduledModuleThread
-from base.internal_msgQ import InternalMsgQ
-from utils.service_logging import logger
+from framework.base.module_thread import ScheduledModuleThread
+from framework.base.internal_msgQ import InternalMsgQ
+from framework.utils.service_logging import logger
+from json_msgs.messages.actuators.thread_controller import ThreadControllerMsg
 
 class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
     """Handles outgoing messages via rabbitMQ"""
@@ -47,7 +48,7 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
                                                       self.PRIORITY)
 
     def initialize(self, conf_reader, msgQlist):
-        """initialize configuration reader and internal msg queues"""               
+        """initialize configuration reader and internal msg queues"""
         # Initialize ScheduledMonitorThread
         super(RabbitMQegressProcessor, self).initialize(conf_reader)
 
@@ -57,6 +58,10 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
         # Configure RabbitMQ Exchange to transmit message
         self._read_config()
         self._get_connection()
+
+        # Flag denoting that a shutdown message has been placed
+        #  into our message queue from the main sspl_ll_d handler
+        self._request_shutdown = False
 
         # Display values used to configure pika from the config file
         self._log_debug("RabbitMQ user: %s" % self._username)
@@ -87,8 +92,16 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
             self._read_config()
             self._get_connection()        
 
-        self._scheduler.enter(0, self._priority, self.run, ())    
         self._log_debug("Finished processing successfully")
+        
+        # Shutdown is requested by the sspl_ll_d shutdown handler
+        #  placing a 'shutdown' msg into our queue which allows us to
+        #  finish processing any other queued up messages.
+        if self._request_shutdown == True:
+            self.shutdown()
+        else:
+            self._scheduler.enter(0, self._priority, self.run, ())    
+        
 
     def _read_config(self):        
         """Configure the RabbitMQ exchange with defaults available"""
@@ -146,22 +159,31 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
 
         try:
             jsonMsg = json.dumps(jsonMsg, ensure_ascii=True).encode('utf8')
-            
+
             msg_props = pika.BasicProperties()
             msg_props.content_type = "text/plain"
 
             self._get_connection()
 
             # Publish json message
-            self._channel.basic_publish(exchange=self._exchange_name, 
+            self._channel.basic_publish(exchange=self._exchange_name,
                                   routing_key=self._routing_key,
-                                  properties=msg_props, 
+                                  properties=msg_props,
                                   body=str(jsonMsg))
 
             # No exceptions thrown so success
             self._log_debug("_transmit_msg_on_exchange, Successfully Sent: %s" % jsonMsg)
             self._connection.close()
             del(self._connection)
+            
+            # Check for shut down message from sspl_ll_d and set a flag to shutdown
+            #  once our message queue is empty 
+            if isinstance(jsonMsg, ThreadControllerMsg):
+                if jsonMsg.get("actuator_response_type").get("thread_response") \
+                                            == "SSPL-LL is shutting down":
+                    self._log_debug("_transmit_msg_on_exchange, received" \
+                                    "global shutdown message from sspl_ll_d")
+                    self._request_shutdown = True
 
         except Exception as ex:
             logger.exception("_transmit_msg_on_exchange: %r" % ex)
@@ -169,8 +191,3 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""
         super(RabbitMQegressProcessor, self).shutdown()
-        try:
-            self._connection.close()
-            self._channel.stop_consuming()
-        except pika.exceptions.ConnectionClosed:
-            logger.info("RabbitMQegressProcessor, shutdown, RabbitMQ ConnectionClosed")

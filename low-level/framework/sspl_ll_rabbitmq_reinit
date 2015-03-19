@@ -37,7 +37,8 @@ def main():
     _recreate_vhost(virtual_host)
     _recreate_user(username, password, virtual_host)
 
-    _restart_sspl_ll()
+    # Make the caller restart sspl to avoid error on rpm install 
+    #_restart_sspl_ll()
 
 
 def _recreate_vhost(virtual_host):

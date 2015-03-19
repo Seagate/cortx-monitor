@@ -1,0 +1,1 @@
+"""RabbitMQ processor for automated integration tests"""

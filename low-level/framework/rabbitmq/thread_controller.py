@@ -25,9 +25,9 @@ from framework.utils.service_logging import logger
 from json_msgs.messages.actuators.thread_controller import ThreadControllerMsg
 
 # Import modules to control
-from rabbitmq_egress_processor import RabbitMQegressProcessor
-from rabbitmq_ingress_processor import RabbitMQingressProcessor
-from logging_processor import LoggingProcessor
+from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
+from framework.rabbitmq.rabbitmq_ingress_processor import RabbitMQingressProcessor
+from framework.rabbitmq.logging_processor import LoggingProcessor
 from message_handlers.logging_msg_handler import LoggingMsgHandler
 from message_handlers.drive_manager_monitor import DriveManagerMonitor
 
@@ -49,9 +49,9 @@ def _run_thread_capture_errors(curr_module, sspl_modules, msgQlist, conf_reader)
         # Populate an actuator response message and transmit back to HAlon
         error_msg = "SSPL-LL encountered an error, terminating service Error: " + \
                     + e + ", Exception: " + logger.exception()
-        jsonMsg   = ThreadControllerMsg(curr_module, error_msg).getJson()        
+        jsonMsg   = ThreadControllerMsg(curr_module.name(), error_msg).getJson()        
         curr_module._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
-        
+
         # Shut it down, error is non-recoverable
         for name, other_module in sspl_modules.iteritems():
             if other_module is not curr_module:
@@ -245,7 +245,16 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
 
         return False
 
+    def shutdown_all_modules(self):
+        """Calls shutdown for all modules except RabbitMQegressProcessor."""
+        for name, other_module in self.sspl_modules.iteritems():
+            if other_module is not self.sspl_modules[RabbitMQegressProcessor]:
+                other_module.shutdown()
+
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""
         super(ThreadController, self).shutdown()
-        
+
+    def check_RabbitMQegressProcessor_is_running(self):
+        """Used by the shutdown_handler to allow queued egress msgs to complete"""
+        return self._sspl_modules[RabbitMQegressProcessor.name()].is_running()

@@ -19,7 +19,7 @@ import syslog
 
 from zope.interface import implements
 from loggers.ILogger import ILogger
-from base.debug import Debug
+from framework.base.debug import Debug
 
 
 class IEMlogger(Debug):

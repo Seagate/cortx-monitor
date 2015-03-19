@@ -15,7 +15,7 @@
 """
 
 import json
-from utils.service_logging import logger
+from framework.utils.service_logging import logger
 
 
 class Debug(object):

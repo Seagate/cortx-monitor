@@ -20,7 +20,7 @@
 			}	
 	    },
 		
-		"monitor_msg_type": {
+		"sensor_response_type": {
 			"type" : "object",	
 			"required" : true,	
 			"properties": {	

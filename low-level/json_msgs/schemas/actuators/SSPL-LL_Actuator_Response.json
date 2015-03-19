@@ -37,14 +37,14 @@
 				"type" : "boolean",
 				"required" : false
 			}
-	    },
+		},
 
 		"actuator_response_type": {
 			"type" : "object",
 			"required" : true,
 			"properties": {
 
-                "ack": {
+				"ack": {
 					"type" : "object",
 					"properties": {
 						"ack_type" : {

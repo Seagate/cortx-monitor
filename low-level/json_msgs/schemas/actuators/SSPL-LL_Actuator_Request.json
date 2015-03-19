@@ -37,7 +37,7 @@
 				"type" : "boolean",
 				"required" : false
 			}
-	    },
+		},
 
 		"actuator_request_type": {
 			"type" : "object",
@@ -45,7 +45,7 @@
 			"additionalProperties" : false,
 			"properties": {
 
-                "logging": {
+				"logging": {
 					"type" : "object",
 					"additionalProperties" : false,
 					"properties": {

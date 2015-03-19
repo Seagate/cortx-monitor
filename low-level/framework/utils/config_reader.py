@@ -17,7 +17,7 @@
 import os
 import ConfigParser
 
-from utils.service_logging import logger
+from framework.utils.service_logging import logger
 
 
 class ConfigReader(object):

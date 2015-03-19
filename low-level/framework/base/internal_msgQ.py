@@ -17,7 +17,7 @@
 """
 
 import json
-from utils.service_logging import logger
+from framework.utils.service_logging import logger
 
 class InternalMsgQ(object):
     """Base Class for internal message queue communications between modules"""

@@ -22,7 +22,7 @@ def callback(ch, method, properties, body):
     ingressMsg = json.loads(body)
 
     # Get the message type
-    if ingressMsg.get("monitor_msg_type") is not None or \
+    if ingressMsg.get("sensor_response_type") is not None or \
 	ingressMsg.get("actuator_response_type") is not None:
         print " [x] %r" % (body,)
 

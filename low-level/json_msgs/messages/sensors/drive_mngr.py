@@ -21,13 +21,13 @@
 """
 
 import json
-from json_msgs.messages.monitors.base_monitors_msg import BaseMonitorMsg
+from json_msgs.messages.sensors.base_sensors_msg import BaseSensorMsg
 
-class DriveMngrMsg(BaseMonitorMsg):
+class DriveMngrMsg(BaseSensorMsg):
     """The JSON message transmitted by the DriveManagerMonitor"""
 
-    MONITOR_MSG_TYPE = "disk_status_drivemanager"
-    MESSAGE_VERSION  = "1.0"
+    SENSOR_RESPONSE_TYPE = "disk_status_drivemanager"
+    MESSAGE_VERSION      = "1.0.0"
 
     def __init__(self, _enclosure,
                        _drive_num,
@@ -45,8 +45,8 @@ class DriveMngrMsg(BaseMonitorMsg):
                             "sspl_version" : self.SSPL_VERSION,
                             "msg_version" : self.MESSAGE_VERSION,
                             },
-                      "monitor_msg_type": {
-                            self.MONITOR_MSG_TYPE: {                               
+                      "sensor_response_type": {
+                            self.SENSOR_RESPONSE_TYPE: {                               
                                 "enclosureSN" : self._enclosure,
                                 "diskNum" : int(self._drive_num),                                            
                                 "diskStatus": self._status                                

@@ -21,8 +21,8 @@ import pyinotify
 
 from framework.base.debug import Debug
 
-from json_msgs.messages.monitors.drive_mngr import DriveMngrMsg
-from framework.base.module_thread import ScheduledModuleThread 
+from json_msgs.messages.sensors.drive_mngr import DriveMngrMsg
+from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
 
@@ -75,18 +75,21 @@ class DriveManagerMonitor(ScheduledModuleThread, InternalMsgQ):
                 os.remove(self._drive_mngr_pid)
             self._blocking_notifier.stop()
 
-        except Exception as ex:
-            logger.exception("DriveManagerMonitor, shutdown: %s" % ex)
+        except Exception:
+            logger.info("DriveManagerMonitor, shutting down.")
 
     def run(self):
         """Run the monitoring periodically on its own thread."""
         # Check for debug mode being activated
         self._read_my_msgQ_noWait()
-
+        
         self._log_debug("Start accepting requests")
         self._log_debug("run, base directory: %s" % self._drive_mngr_base_dir)
-        logger.info("DriveManager started, initializing drives...")
-
+        if not self._drive_status:
+            logger.info("DriveManager started, initializing drives...")
+        else:
+            logger.info("DriveManager module restarted.")
+            
         try:
             # Followed tutorial for pyinotify: https://github.com/seb-m/pyinotify/wiki/Tutorial
             wm      = pyinotify.WatchManager()

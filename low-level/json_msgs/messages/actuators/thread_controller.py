@@ -29,7 +29,7 @@ class ThreadControllerMsg(BaseActuatorMsg):
     '''
 
     ACTUATOR_MSG_TYPE = "thread_controller"
-    MESSAGE_VERSION  = "1.0"
+    MESSAGE_VERSION  = "1.0.0"
 
     def __init__(self, module_name,
                        thread_response):
@@ -54,9 +54,9 @@ class ThreadControllerMsg(BaseActuatorMsg):
                       }
 
     def getJson(self):
-        """Return a validated JSON object"""    
-        # Validate the current message    
-        self.validateMsg(self._json)       
+        """Return a validated JSON object"""
+        # Validate the current message
+        self.validateMsg(self._json)
         return json.dumps(self._json)
 
     def getModuleName(self):
