@@ -35,21 +35,11 @@ if [[ ! `yum list installed python-lettuce` ]]; then
 fi
 
 
-# Install the simulator for multiple drives
-if [[ ! `yum list installed openhpi-dynamic_simulator` ]]; then
-    tar xvf simulator.tgz
-    cd installation/deps/simulator
-    ./install_sim.bsh
-    cd $TOP_DIR
-fi
-
 # Create simulated disk manager data
-if [[ ! -f /var/run/diskmonitor/drive_manager.json ]]; then
-    cd installation/deps/simulator
-    mkdir -p /var/run/diskmonitor
-    cp drive_manager.json /var/run/diskmonitor
-    cd $TOP_DIR
-fi
+mkdir -p /var/run/diskmonitor
+cp ./installation/deps/drive_manager.json /var/run/diskmonitor
+# Ensure dcs collector picks up the new file promptly
+systemctl restart dcs-collector
 
 # Enable repo for rabbitmq-server and install
 if [[ ! `yum list installed epel-release` ]]; then
