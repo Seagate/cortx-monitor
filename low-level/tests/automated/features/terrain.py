@@ -133,5 +133,4 @@ def stop_rabbitMQ_msg_processors(self):
     print "SSPL-LL Automated Test Process ended successfully"
     for name, module in world.sspl_modules.iteritems():
         module.shutdown()
-    os._exit(1)
-   
+    os._exit(0)
