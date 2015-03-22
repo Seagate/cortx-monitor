@@ -26,28 +26,11 @@
 
 TOP_DIR=`pwd`
 
-# Install the lettuce test framework and dependencies
-if [[ ! `yum list installed python-lettuce` ]]; then
-    cd installation/deps
-    chmod +x ./install_deps.bsh
-    ./install_deps.bsh
-    cd $TOP_DIR
-fi
-
-
 # Create simulated disk manager data
 mkdir -p /var/run/diskmonitor
 cp ./installation/deps/drive_manager.json /var/run/diskmonitor
 # Ensure dcs collector picks up the new file promptly
 systemctl restart dcs-collector
-
-# Enable repo for rabbitmq-server and install
-if [[ ! `yum list installed epel-release` ]]; then
-    rpm -Uvh http://dl.fedoraproject.org/pub/epel/7/x86_64/e/epel-release-7-5.noarch.rpm
-fi
-if [[ ! `yum list installed rabbitmq-server` ]]; then
-    yum install -y rabbitmq-server python-psutil
-fi
 
 # Make sure rabbitmq is started before we initialize it
 systemctl start rabbitmq-server -l
