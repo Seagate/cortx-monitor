@@ -26,19 +26,6 @@
 			}
 		},
 
-		"sspl_ll_debug": {
-	       	"debug_component" : {
-				"description" : "Used to identify the component to debug",
-				"type" : "string",
-				"required" : false
-			},
-			"debug_enabled" : {
-				"description" : "Control persisting debug mode",
-				"type" : "boolean",
-				"required" : false
-			}
-		},
-
 		"actuator_response_type": {
 			"type" : "object",
 			"required" : true,
@@ -72,6 +59,22 @@
 							"description" : "Response from action applied: start | stop | restart | status",
 			        		"type" : "string",
 			        		"required" : true
+						}
+					}
+				},
+
+				"systemd_service": {
+					"type" : "object",
+					"properties": {
+						"service_name" : {
+							"description" : "Identify the service to be managed",
+		    					"type" : "string",
+		    					"required" : true
+						},
+						"service_response" : {
+							"description" : "Response from action applied: start | stop | restart | status",
+			        			"type" : "string",
+			        			"required" : true
 						}
 					}
 				}

@@ -1,1 +1,1 @@
-"""Modules for retrieving data from individual sensors"""
+"""C API for retrieving data from individual sensors"""

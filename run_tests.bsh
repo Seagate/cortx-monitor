@@ -31,14 +31,24 @@ if [[ ! `yum list installed python-lettuce` ]]; then
     cd installation/deps
     chmod +x ./install_deps.bsh
     ./install_deps.bsh
+    cd $TOP_DIR
 fi
 
 
 # Install the simulator for multiple drives
 if [[ ! `yum list installed openhpi-dynamic_simulator` ]]; then
     tar xvf simulator.tgz
-    cd simulator
+    cd installation/deps/simulator
     ./install_sim.bsh
+    cd $TOP_DIR
+fi
+
+# Create simulated disk manager data
+if [[ ! -f /var/run/diskmonitor/drive_manager.json ]]; then
+    cd installation/deps/simulator
+    mkdir -p /var/run/diskmonitor
+    cp drive_manager.json /var/run/diskmonitor
+    cd $TOP_DIR
 fi
 
 # Enable repo for rabbitmq-server and install
@@ -53,7 +63,6 @@ fi
 systemctl start rabbitmq-server -l
 
 # Copy startup and config files
-cd $TOP_DIR
 cp installation/RPMs/low-level/files/sspl-ll /etc/init.d
 cp installation/RPMs/low-level/files/sspl_ll.conf /etc
 

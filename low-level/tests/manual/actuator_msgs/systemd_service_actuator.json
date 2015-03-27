@@ -1,0 +1,23 @@
+{
+	"title": "SSPL-LL Actuator Request",
+	"description": "Seagate Storage Platform Library - Low Level - Actuator Request",
+	
+	"sspl_ll_msg_header": {
+		"schema_version": "1.0.0",
+		"sspl_version": "1.0.0",
+		"msg_version": "1.0.0"
+	},
+ 	"sspl_ll_debug": {
+		"debug_component" : "sensor",
+		"debug_enabled" : true
+        },
+
+	"actuator_request_type": {
+		"systemd_service": {
+			"service_name" : "crond.service",
+			"service_request": "restart"
+		}
+	}
+}
+
+

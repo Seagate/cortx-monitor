@@ -29,6 +29,7 @@ from framework.utils.service_logging import logger
 
 # Import message handlers to hand off messages
 from message_handlers.logging_msg_handler import LoggingMsgHandler
+from message_handlers.systemd_msg_handler import SystemdMsgHandler
 
 
 class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
@@ -147,6 +148,8 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
             elif msgType.get("thread_controller"):
                 self._write_internal_msgQ("ThreadController", ingressMsg)
 
+            elif msgType.get("systemd_service"):
+                self._write_internal_msgQ("SystemdMsgHandler", ingressMsg)
 
             # ... handle other incoming messages that have been validated                                
 

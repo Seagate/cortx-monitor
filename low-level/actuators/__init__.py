@@ -1,1 +1,1 @@
-"""Modules for sending commands to external components"""
+"""Modules for retrieving data from individual sensors"""

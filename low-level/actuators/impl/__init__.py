@@ -1,1 +1,1 @@
-"""C API used by actuators"""
+"""Modules for retrieving data from individual sensors"""

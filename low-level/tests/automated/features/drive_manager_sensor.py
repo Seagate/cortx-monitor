@@ -19,8 +19,9 @@ from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 def given_that_all_drives_are_set_to_condition_and_sspl_is_started(step, condition):
     set_all_drives(condition)
     found = False
-    for proc in psutil.process_iter():
-        if proc.name == "sspl_ll_d":
+    for proc in psutil.process_iter():  
+        if proc.name == "sspl_ll_d" and \
+           proc.status in (psutil.STATUS_RUNNING, psutil.STATUS_SLEEPING):
             found = True
     assert found == True
 
