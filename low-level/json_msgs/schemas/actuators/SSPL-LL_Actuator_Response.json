@@ -4,20 +4,20 @@
 	"properties": {
 		"sspl_ll_msg_header": {
 			"required" : true,
-	       	"schema_version": {
-	           	"description" :"SSPL JSON Schema Version",
-	           	"type" : "string",
-	           	"required" : true
-	       	},
-	        "sspl_version": {
-	           	"description" : "SSPL Version",
-	           	"type" : "string",
-	           	"required" : true
-	       	},
-	       	"msg_version" : {
-				"description" : "Message Version",
+			"schema_version": {
+				"description" :"SSPL JSON Schema Version",
 				"type" : "string",
 				"required" : true
+	       	},
+	       	"sspl_version": {
+	       		"description" : "SSPL Version",
+	       		"type" : "string",
+	       		"required" : true
+	       	},
+	       	"msg_version" : {
+	       		"description" : "Message Version",
+	       		"type" : "string",
+	       		"required" : true
 			},
 			"uuid" : {
 				"description" : "Universally Unique ID for Lifetime of Initial Request",
