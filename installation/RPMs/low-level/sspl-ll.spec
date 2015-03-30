@@ -42,36 +42,8 @@ tar zxvf sspl-ll.tgz --directory %{buildroot}/opt/seagate/sspl
 
 
 %post
-# Create the drivemanager directory
-if [[ ! -d /tmp/dcs/drivemanager ]]; then 
-   mkdir -p /tmp/dcs/drivemanager
-   chmod 777 /tmp/dcs
-   chmod 777 /tmp/dcs/drivemanager
-fi
-
-# Make sure rabbitmq is started before we initialize it
-systemctl start rabbitmq-server -l
-
 # setup rabbitmq vhost and user (incl permissions)
 /opt/seagate/sspl/low-level/framework/sspl_ll_rabbitmq_reinit
-
-# Have opehhpi startup at boot time
-chkconfig openhpid on
-
-# Start the service
-systemctl start openhpid -l
-
-# Have the dcs-collector startup at boot time
-chkconfig dcs-collector on
-
-# Start the service
-systemctl start dcs-collector -l
-
-# Have the service startup at boot time
-chkconfig sspl-ll on
-
-# Start the service
-systemctl start sspl-ll -l
 
 
 %clean
