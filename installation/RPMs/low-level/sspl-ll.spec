@@ -1,6 +1,6 @@
 Name:       SSPL-LL
 Version:    1.0.0
-Release:    4.el7
+Release:    5.el7
 Summary:    Installs SSPL-LL
 BuildArch:  noarch
 Group:      System Environment/Daemons
