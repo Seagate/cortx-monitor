@@ -21,7 +21,6 @@ Installs SSPL-LL
 cp %SOURCE0 .
 cp %SOURCE1 .
 cp %SOURCE2 .
-cp %SOURCE3 .
 
 
 %build
