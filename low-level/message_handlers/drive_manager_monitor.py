@@ -16,6 +16,7 @@
  ****************************************************************************
 """
 import os
+import shutil
 import Queue
 import pyinotify
 
@@ -85,11 +86,10 @@ class DriveManagerMonitor(ScheduledModuleThread, InternalMsgQ):
         
         self._log_debug("Start accepting requests")
         self._log_debug("run, base directory: %s" % self._drive_mngr_base_dir)
-        if not self._drive_status:
-            logger.info("DriveManager started, initializing drives...")
-        else:
-            logger.info("DriveManager module restarted.")
-            
+        
+        # Retrieve the current information about each drive from the file system
+        self._init_drive_status()
+        
         try:
             # Followed tutorial for pyinotify: https://github.com/seb-m/pyinotify/wiki/Tutorial
             wm      = pyinotify.WatchManager()
@@ -128,6 +128,30 @@ class DriveManagerMonitor(ScheduledModuleThread, InternalMsgQ):
 
         self._log_debug("Finished processing successfully")
 
+    def _init_drive_status(self):
+        logger.info("DriveManager started, initializing drives at: %s" % self._drive_mngr_base_dir)
+        enclosures = os.listdir(self._drive_mngr_base_dir)
+        for enclosure in enclosures:
+            disk_dir = os.path.join(self._drive_mngr_base_dir, enclosure, "disk")
+            disks = os.listdir(disk_dir)
+            logger.info("DriveManager initializing: %s" % disk_dir)
+
+            for disk in disks:
+                # Read in the status file for each disk and fill into dict
+                pathname = os.path.join(disk_dir, disk)
+                status_file = os.path.join(pathname, "status")
+                if not os.path.isfile(status_file):
+                    continue
+                try:
+                    with open (status_file, "r") as datafile:
+                        status = datafile.read().replace('\n', '')
+                        logger.info("DriveManager, pathname: %s, status: %s" % 
+                                    (pathname, status))
+                        self._drive_status[pathname] = status
+                except Exception as e:
+                    logger.info("DriveManager, _init_drive_status, exception: %s" % e)
+
+
     def _getDrive_Mngr_Dir(self):
         """Retrieves the drivemanager path to monitor on the file system"""
         return self._conf_reader._get_value_with_default(self.DRIVEMANAGERMONITOR, 
@@ -158,12 +182,12 @@ class DriveManagerMonitor(ScheduledModuleThread, InternalMsgQ):
         # Obtain json message containing all relevant data
         jsonMsg = drive.toJsonMsg()
 
-        # Do nothing if we're starting up and initializing the status for all drives
+        # See if it's a new drive and handle, strip off filename first
+        pathname = os.path.dirname(pathname)
         if pathname not in self._drive_status:
             self._drive_status[pathname] = drive.get_drive_status()
-            logger.info("Enclosure: %s, Drive Number: %s" % \
-                        (drive.get_drive_enclosure(), drive.get_drive_num()))
-            return
+            logger.info("New drive found: pathname: %s, Enclosure: %s, Slot: %s" % \
+                        (pathname, drive.get_drive_enclosure(), drive.get_drive_num()))
 
         # Do nothing if the drive status has not changed
         if self._drive_status[pathname] == drive.get_drive_status():
