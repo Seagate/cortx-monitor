@@ -26,35 +26,46 @@ import time
 import sys
 import os
 
-from daemon.pidfile import PIDLockFile
-from threading import Thread
-
 # Add the top level directories
 parentdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.sys.path.insert(0,parentdir)
+
+from actuators.IService import IService
+
+from zope.component import getGlobalSiteManager
+from zope.interface import implementedBy
+
+from threading import Thread
 
 from utils.config_reader import ConfigReader
 from utils.service_logging import init_logging
 from utils.service_logging import logger
 
 # Modules for handling RabbitMQ messages and manipulating internal threads
-from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor 
-from rabbitmq.rabbitmq_ingress_processor import RabbitMQingressProcessor 
+from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
+from rabbitmq.rabbitmq_ingress_processor import RabbitMQingressProcessor
 from rabbitmq.logging_processor import LoggingProcessor
 from rabbitmq.thread_controller import ThreadController
 
 # Modules for handling specific JSON messages
-from message_handlers.drive_manager_monitor import DriveManagerMonitor
+from message_handlers.disk_msg_handler import DiskMsgHandler
 from message_handlers.logging_msg_handler import LoggingMsgHandler
-from message_handlers.systemd_msg_handler import SystemdMsgHandler
+from message_handlers.service_msg_handler import ServiceMsgHandler
 
 # Message to send to HAlon upon critical thread errors
 from json_msgs.messages.actuators.thread_controller import ThreadControllerMsg
 
 
 # Section and key in config file for bootstrap
-SSPL_SETTING  = 'SSPL-LL_SETTING'
-MODULES       = 'modules'
+SSPL_SETTING    = 'SSPL-LL_SETTING'
+CORE_PROCESSORS = 'core_processors'
+MSG_HANDLERS    = 'message_handlers'
+SENSORS         = 'sensors'
+ACTUATORS       = 'actuators'
+
+# Section containing information about the system we're running on
+SYS_INFORMATION = 'SYSTEM_INFORMATION'
+OPER_SYSTEM     = 'operating_system'
 
 # Instantiate the internal ThreadController. Global so the shutdown callback
 #  method can use it to properly halt all running threads.
@@ -63,33 +74,48 @@ threadController = ThreadController()
 def main(conf_reader):
     """The main bootstrap for sspl"""
     logger.info("sspl-ll Bootstrap: Obtaining list of modules from config file")
-    conf_modules = conf_reader._get_value_list(SSPL_SETTING,
-                                                MODULES)
-    logger.info("sspl-ll Bootstrap: Modules to load: %s" % conf_modules)
 
     # Create a map of references to all the module's message queues.  Each module
     #  is passed this mapping so that it can send messages to other modules.
     msgQlist = {}
 
     # Create a mapping of all the instantiated modules to their names
-    sspl_modules = {}
+    sspl_threaded_modules = {}
 
-    # Use reflection to instantiate the class based upon its class name in config file
-    for conf_thread in conf_modules:
-        klass = globals()[conf_thread]
+    # Use reflection to instantiate the classes based upon its class name in config file
+    core_processors = conf_reader._get_value_list(SSPL_SETTING,
+                                                  CORE_PROCESSORS)
+    logger.info("sspl-ll Bootstrap: core processors to load: %s" % core_processors)
+    for core_processor in core_processors:
+        klass = globals()[core_processor]
 
         # Create mappings of modules and their message queues
-        sspl_modules[klass.name()] = klass()
+        sspl_threaded_modules[klass.name()] = klass()
         msgQlist[klass.name()] = Queue.Queue()
 
+    message_handlers = conf_reader._get_value_list(SSPL_SETTING,
+                                                   MSG_HANDLERS)
+    logger.info("sspl-ll Bootstrap: message handlers to load: %s" % message_handlers)
+    for message_handler in message_handlers:
+        klass = globals()[message_handler]
+
+        # Create mappings of modules and their message queues
+        sspl_threaded_modules[klass.name()] = klass()
+        msgQlist[klass.name()] = Queue.Queue()
+
+    # Instantiate the sensors and actuators
+    sspl_threaded_modules, msgQlist = _sensors_actuators_factory(
+                                            sspl_threaded_modules, msgQlist)
+
+    # Add the ThreadConroller automatically
     msgQlist[ThreadController.name()] = Queue.Queue()
 
     try:
         # Loop through the list of instanced modules and start them on threads
-        for name, curr_module in sspl_modules.iteritems():
+        for name, curr_module in sspl_threaded_modules.iteritems():
             logger.info("Starting %s" % curr_module.name())
             thread = Thread(target=_run_thread_capture_errors,
-                            args=(curr_module, sspl_modules, msgQlist, conf_reader))
+                            args=(curr_module, sspl_threaded_modules, msgQlist, conf_reader))
             thread.start()
 
         # Start the ThreadController module with the list of threads
@@ -97,13 +123,13 @@ def main(conf_reader):
 
         # Initialize the thread controller with the list of references to all modules
         controller_thread = Thread(target=_run_thread_capture_errors,
-                            args=(threadController, sspl_modules, msgQlist, conf_reader))
-        threadController.initialize_thread_list(sspl_modules)
+                            args=(threadController, sspl_threaded_modules, msgQlist, conf_reader))
+        threadController.initialize_thread_list(sspl_threaded_modules)
         controller_thread.start()
 
         startup_msg = "SSPL-LL service has started successfully"
         jsonMsg   = ThreadControllerMsg(threadController.name(), startup_msg).getJson()
-        threadController._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)   
+        threadController._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
 
         # Block main thread until thread controller has been halted
         controller_thread.join()
@@ -111,9 +137,71 @@ def main(conf_reader):
     except Exception as ex:
         logger.exception(ex)
 
-def _run_thread_capture_errors(curr_module, sspl_modules, msgQlist, conf_reader):
+
+def _sensors_actuators_factory(sspl_threaded_modules, msgQlist):
+    """Loops thru list of sensors/actuators and instantiate"""
+
+    # The Zope Global Site Manager containing objects that implement the desired interfaces
+    gsm = getGlobalSiteManager()
+
+    # Read in operating system value from configuration file
+    operating_system = conf_reader._get_value(SYS_INFORMATION, OPER_SYSTEM)
+    logger.info("sspl-ll Bootstrap: operating system: %s" % operating_system)
+
+    # Read in list of sensors
+    sensors = conf_reader._get_value_list(SSPL_SETTING, SENSORS)
+    logger.info("sspl-ll Bootstrap: sensors to load: %s" % sensors)
+
+    # Read in list of actuators
+    actuators = conf_reader._get_value_list(SSPL_SETTING, ACTUATORS)
+    logger.info("sspl-ll Bootstrap: actuators to load: %s" % actuators)
+
+    # Import in the proper classes based upon values from config file
+    if operating_system == "centos7":
+        from actuators.impl.centos_7.systemd_service import SystemdService as Service
+        from sensors.impl.centos_7.drive_manager import DriveManager as DriveManager
+
+    elif operating_system in ["osX", "osx"]:
+        from actuators.impl.os_x.xinitd_service import XinitdService as Service
+        from sensors.impl.os_x.drive_manager import DriveManager as DriveManager
+
+    else:
+        raise Exception("Operating System not supported")
+
+    # Loop through the list of sensors/actuators and instantiate appropriately
+    #  based upon whether or not it is threaded
+    modules = sensors + actuators
+    for module in modules:
+        # Instantiate the class using reflection on the module's name; must match class name
+        klass = locals()[module]
+
+        # Look at module's configuration section and determine if it's threaded
+        threaded = 'True'
+        try:
+            threaded = conf_reader._get_value(klass.name().upper(), 'threaded')
+        except Exception as e:
+            threaded = 'False'  # Wasn't present so default to False
+
+        logger.info("Processing: %s, threaded: %s, Using Class: %s"
+                        % (module, threaded, klass.name()))
+
+        # If it's threaded then add it to the list which will be handled by the ThreadController
+        if threaded in ['True', 'true']:
+            sspl_threaded_modules[klass.name()] = klass()
+            msgQlist[klass.name()] = Queue.Queue()
+        else:
+            # It's a static non-threaded object, register it with the Zope global site manager
+            interface_impl = list(implementedBy(klass))[0]  # Assumes single inheritance only
+            logger.info("Interface implemented: %s" % interface_impl.__name__)
+
+            gsm.registerUtility(klass, interface_impl)
+
+    return (sspl_threaded_modules, msgQlist)
+
+
+def _run_thread_capture_errors(curr_module, sspl_threaded_modules, msgQlist, conf_reader):
     """Run the given thread and log any errors that happen on it.
-    Will stop all sspl_modules if one of them fails."""
+    Will stop all sspl_threaded_modules if one of them fails."""
     try:
         # Each module is passed a reference list to message queues so it can transmit
         #  internal messages to other modules as desired
@@ -128,7 +216,7 @@ def _run_thread_capture_errors(curr_module, sspl_modules, msgQlist, conf_reader)
         curr_module._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
 
         # Shut it down, error is non-recoverable
-        for name, other_module in sspl_modules.iteritems():
+        for name, other_module in sspl_threaded_modules.iteritems():
             if other_module is not curr_module:
                 other_module.shutdown()
 

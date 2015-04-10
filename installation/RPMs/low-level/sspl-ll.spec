@@ -1,6 +1,6 @@
 Name:       SSPL-LL
 Version:    1.0.0
-Release:    5.el7
+Release:    6.el7
 Summary:    Installs SSPL-LL
 BuildArch:  noarch
 Group:      System Environment/Daemons
@@ -11,7 +11,7 @@ Source2:    sspl_ll.conf
 BuildRoot:  %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 BuildRequires: rpm-build
 Requires:   python-daemon python-inotify python-jsonschema python-pika rabbitmq-server
-Requires:   python-zope-interface
+Requires:   python-zope-interface python-zope-event python-zope-component
 
 %description
 Installs SSPL-LL

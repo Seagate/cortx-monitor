@@ -1,0 +1,1 @@
+"""Sensor modules targeted at CentOS 7 operating system"""

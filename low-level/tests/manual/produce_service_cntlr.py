@@ -14,12 +14,12 @@ channel.exchange_declare(exchange='sspl_halon',
 msg_props = pika.BasicProperties()
 msg_props.content_type = "text/plain"
 
-jsonMsg = open("actuator_msgs/systemd_service_actuator.json").read()
+jsonMsg = open("actuator_msgs/service_cntrl_restart.json").read()
 
 channel.basic_publish(exchange='sspl_halon',
                       routing_key='sspl_ll',
-                      properties=msg_props, 
-                      body=str(jsonMsg))             
+                      properties=msg_props,
+                      body=str(jsonMsg))
 
 print "Successfully Sent: %s" % jsonMsg
 

@@ -17,7 +17,8 @@
 import json
 
 from zope.interface import implements
-from actuators.ISystemd import ISystemd
+from actuators.IService import IService
+
 from framework.base.debug import Debug
 from framework.utils.service_logging import logger
 
@@ -27,7 +28,7 @@ from dbus import SystemBus, Interface, exceptions as debus_exceptions
 class SystemdService(Debug):
     """Handles service request messages to systemd"""
 
-    implements(ISystemd)
+    implements(IService)
 
     ACTUATOR_NAME = "SystemdService"
 
@@ -50,14 +51,14 @@ class SystemdService(Debug):
                                  '/org/freedesktop/systemd1')
         self._manager = Interface(systemd, dbus_interface='org.freedesktop.systemd1.Manager')
 
-    def perform_service_request(self, jsonMsg):
+    def perform_request(self, jsonMsg):
         """Performs the service request"""
         self._check_debug(jsonMsg)
 
         # Parse out the service name and request to perform on it
-        self._service_name = jsonMsg.get("actuator_request_type").get("systemd_service").get("service_name")
-        self._service_request = jsonMsg.get("actuator_request_type").get("systemd_service").get("service_request")
-        self._log_debug("perform_service_request, service_name: %s, service_request: %s" % \
+        self._service_name = jsonMsg.get("actuator_request_type").get("service_controller").get("service_name")
+        self._service_request = jsonMsg.get("actuator_request_type").get("service_controller").get("service_request")
+        self._log_debug("perform_request, service_name: %s, service_request: %s" % \
                         (self._service_name, self._service_request))
 
         try:
@@ -69,7 +70,9 @@ class SystemdService(Debug):
 
             if self._service_request == "restart":
                 self._manager.RestartUnit(self._service_name, 'replace')
-                
+                result = self._get_status()
+                self._log_debug("perform_request restart: %s" % result)
+
             elif self._service_request == "start":
                 self._manager.StartUnit(self._service_name, 'replace')
 
@@ -81,7 +84,7 @@ class SystemdService(Debug):
                 pass
 
             else:
-                self._log_debug("perform_service_request, Unknown service request")
+                self._log_debug("perform_request, Unknown service request")
                 return self._service_name, "Unknown service request"
 
         except debus_exceptions.DBusException, error:
@@ -90,7 +93,7 @@ class SystemdService(Debug):
 
         # Get the current status of the process and return it back
         result = self._get_status()
-        self._log_debug("perform_service_request, status: %s" % result)
+        self._log_debug("perform_request, status: %s" % result)
 
         return self._service_name, result
 

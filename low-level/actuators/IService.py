@@ -1,7 +1,7 @@
 """
  ****************************************************************************
- Filename:          ISystemd.py
- Description:       Interface for Systemd classes
+ Filename:          IService.py
+ Description:       Interface for all service classes
  Creation Date:     03/25/2015
  Author:            Jake Abernathy
 
@@ -16,9 +16,9 @@
 
 from zope.interface import Interface
 
-class ISystemd(Interface):
-    """Interface for Systemd classes"""
+class IService(Interface):
+    """Interface for service classes"""
 
 
-    def perform_service_request(self, jsonMsg):
-        """Notifies systemd to perform the desired service action"""
+    def perform_request(self, jsonMsg):
+        """Notifies service to perform the desired action"""

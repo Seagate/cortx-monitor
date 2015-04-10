@@ -28,9 +28,15 @@ from json_msgs.messages.actuators.thread_controller import ThreadControllerMsg
 from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 from framework.rabbitmq.rabbitmq_ingress_processor import RabbitMQingressProcessor
 from framework.rabbitmq.logging_processor import LoggingProcessor
-from message_handlers.logging_msg_handler import LoggingMsgHandler
-from message_handlers.drive_manager_monitor import DriveManagerMonitor
 
+# Note that all threaded message handlers must have an import here to be controlled
+from message_handlers.logging_msg_handler import LoggingMsgHandler
+from message_handlers.disk_msg_handler import DiskMsgHandler
+from message_handlers.service_msg_handler import ServiceMsgHandler
+
+# Note that all threaded sensors and actuators must have an import here to be controlled
+from sensors.impl.centos_7.drive_manager import DriveManager
+from sensors.impl.os_x.drive_manager import DriveManager
 
 # Global method used by Thread to capture and log errors.  This must be global.
 def _run_thread_capture_errors(curr_module, sspl_modules, msgQlist, conf_reader):

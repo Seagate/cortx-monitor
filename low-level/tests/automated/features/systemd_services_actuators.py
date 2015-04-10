@@ -40,7 +40,7 @@ def when_i_send_in_the_actuator_message_to_action_the_service(step, action, serv
             "msg_version": "1.0.0"
         },
         "actuator_request_type": {
-            "systemd_service": {
+            "service_controller": {
                 "service_name" : service,
                 "service_request": action
             }
@@ -54,11 +54,11 @@ def then_sspl_ll_action_the_service_and_i_get_the_service_is_condition_response(
     print("Received: %s" % ingressMsg)
 
     # Verify module name and thread response
-    service_name = ingressMsg.get("actuator_response_type").get("systemd_service").get("service_name")
+    service_name = ingressMsg.get("actuator_response_type").get("service_controller").get("service_name")
     print("service_name: %s" % service_name)
     assert service_name == service
 
-    service_response = ingressMsg.get("actuator_response_type").get("systemd_service").get("service_response")
+    service_response = ingressMsg.get("actuator_response_type").get("service_controller").get("service_response")
     print("service_response: %s" % service_response)
     assert service_response == condition
 

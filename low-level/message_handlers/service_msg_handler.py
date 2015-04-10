@@ -1,7 +1,7 @@
 """
  ****************************************************************************
- Filename:          systemd_msg_handler.py
- Description:       Message Handler for systemd Messages
+ Filename:          service_msg_handler.py
+ Description:       Message Handler for service Messages
  Creation Date:     02/25/2015
  Author:            Jake Abernathy
 
@@ -17,37 +17,40 @@
 import json
 import syslog
 
+from actuators.IService import IService
+
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
 
-from actuators.impl.systemd_service import SystemdService
-from json_msgs.messages.actuators.systemd_service import SystemdServiceMsg
+from json_msgs.messages.actuators.service_controller import ServiceControllerMsg
 from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor 
 
-class SystemdMsgHandler(ScheduledModuleThread, InternalMsgQ):
+from zope.component import queryUtility
+
+class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
     """Message Handler for logging Messages"""
 
-    MODULE_NAME = "SystemdMsgHandler"
+    MODULE_NAME = "ServiceMsgHandler"
     PRIORITY    = 2
 
 
     @staticmethod
     def name():
         """ @return: name of the module."""
-        return SystemdMsgHandler.MODULE_NAME
+        return ServiceMsgHandler.MODULE_NAME
 
     def __init__(self):
-        super(SystemdMsgHandler, self).__init__(self.MODULE_NAME,
+        super(ServiceMsgHandler, self).__init__(self.MODULE_NAME,
                                                   self.PRIORITY)
 
     def initialize(self, conf_reader, msgQlist):
         """initialize configuration reader and internal msg queues"""
         # Initialize ScheduledMonitorThread
-        super(SystemdMsgHandler, self).initialize(conf_reader)
+        super(ServiceMsgHandler, self).initialize(conf_reader)
 
         # Initialize internal message queues for this module
-        super(SystemdMsgHandler, self).initialize_msgQ(msgQlist)
+        super(ServiceMsgHandler, self).initialize_msgQ(msgQlist)
 
     def run(self):
         """Run the module periodically on its own thread."""
@@ -67,7 +70,7 @@ class SystemdMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
         except Exception:
             # Log it and restart the whole process when a failure occurs
-            logger.exception("SystemdMsgHandler restarting")
+            logger.exception("ServiceMsgHandler restarting")
 
         self._scheduler.enter(0, self._priority, self.run, ())
         self._log_debug("Finished processing successfully")
@@ -80,19 +83,19 @@ class SystemdMsgHandler(ScheduledModuleThread, InternalMsgQ):
             jsonMsg = json.loads(jsonMsg)
 
         # Handle service start, stop, restart, status requests
-        if jsonMsg.get("actuator_request_type").get("systemd_service") is not None:
-            self._log_debug("_processMsg, msg_type: systemd_service")
+        if jsonMsg.get("actuator_request_type").get("service_controller") is not None:
+            self._log_debug("_processMsg, msg_type: service_controller")
 
-            #TODO: Create a factory class that returns the desired actuator object
-            #      based upon whether systemd or other service is available
-            systemd_service = SystemdService()
-            service_name, result = systemd_service.perform_service_request(jsonMsg)
+            # Query the Zope GlobalSiteManager for an object implementing IService
+            service_actuator = queryUtility(IService)()
+            logger.info("service_actuator name: %s" % service_actuator.name())            
+            service_name, result = service_actuator.perform_request(jsonMsg)
 
             self._log_debug("_processMsg, service_name: %s, result: %s" %
                             (service_name, result))
 
             # Create an actuator response and send it out
-            jsonMsg = SystemdServiceMsg(service_name, result).getJson()        
+            jsonMsg = ServiceControllerMsg(service_name, result).getJson()        
             self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
 
         # ... handle other systemd message types
@@ -100,4 +103,4 @@ class SystemdMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""
-        super(SystemdMsgHandler, self).shutdown()
+        super(ServiceMsgHandler, self).shutdown()

@@ -1,0 +1,1 @@
+"""Sensor modules targeted at Windows 8 operating system"""

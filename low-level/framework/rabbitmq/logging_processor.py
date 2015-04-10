@@ -78,9 +78,6 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
         except Exception:
             if self.is_running() == True:
                 logger.info("LoggingProcessor ungracefully breaking out of run loop, restarting.")
-
-                # Configure RabbitMQ Exchange to receive messages
-                self._configure_exchange()
                 self._scheduler.enter(1, self._priority, self.run, ())
             else:
                 logger.info("LoggingProcessor gracefully breaking out of run Loop, not restarting.")
@@ -117,7 +114,7 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
                                                                  'SSPL')
             self._exchange_name = self._conf_reader._get_value_with_default(self.LOGGINGPROCESSOR,
                                                                  self.EXCHANGE_NAME,
-                                                                 'sspl_halon')
+                                                                 'sspl_iem')
             self._routing_key   = self._conf_reader._get_value_with_default(self.LOGGINGPROCESSOR,
                                                                  self.ROUTING_KEY,
                                                                  'sspl_ll')           

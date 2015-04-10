@@ -27,9 +27,10 @@ from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
 
-# Import message handlers to hand off messages
+# Import message handlers to receive messages
 from message_handlers.logging_msg_handler import LoggingMsgHandler
-from message_handlers.systemd_msg_handler import SystemdMsgHandler
+from message_handlers.service_msg_handler import ServiceMsgHandler
+from message_handlers.disk_msg_handler import DiskMsgHandler
 
 
 class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
@@ -107,9 +108,6 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
         except Exception:
             if self.is_running() == True:
                 logger.info("RabbitMQingressProcessor ungracefully breaking out of run loop, restarting.")
-
-                # Configure RabbitMQ Exchange to receive messages
-                self._configure_exchange()
                 self._scheduler.enter(1, self._priority, self.run, ())
             else:
                 logger.info("RabbitMQingressProcessor gracefully breaking out of run Loop, not restarting.")
@@ -148,8 +146,8 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
             elif msgType.get("thread_controller"):
                 self._write_internal_msgQ("ThreadController", ingressMsg)
 
-            elif msgType.get("systemd_service"):
-                self._write_internal_msgQ("SystemdMsgHandler", ingressMsg)
+            elif msgType.get("service_controller"):
+                self._write_internal_msgQ("ServiceMsgHandler", ingressMsg)
 
             # ... handle other incoming messages that have been validated                                
 
@@ -204,7 +202,7 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
                 queue='SSPL-LL',
                 exchange=self._exchange_name,
                 routing_key=self._routing_key
-                )           
+                )
         except Exception as ex:
             logger.exception("_configure_exchange: %r" % ex)
 

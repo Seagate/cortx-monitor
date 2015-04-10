@@ -63,7 +63,7 @@
 					}
 				},
 
-				"systemd_service": {
+				"service_controller": {
 					"type": "object",
 					"properties": {
 						"service_name": {

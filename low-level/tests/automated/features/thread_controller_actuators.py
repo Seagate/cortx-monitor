@@ -26,7 +26,7 @@ def given_i_send_in_the_actuator_message_to_restart_drive_manager(step):
         },
         "actuator_request_type": {
             "thread_controller": {
-                "module_name" : "DriveManagerMonitor",
+                "module_name" : "DriveManager",
                 "thread_request": "restart"
             }
         }
@@ -47,7 +47,7 @@ def then_i_receive_Restart_Successful_JSON_response_message(step):
     # Verify module name and thread response
     module_name = ingressMsg.get("actuator_response_type").get("thread_controller").get("module_name")
     print("module_name: %s" % module_name)
-    assert module_name == "DriveManagerMonitor"
+    assert module_name == "DriveManager"
     
     thread_response = ingressMsg.get("actuator_response_type").get("thread_controller").get("thread_response")
     print("thread_response: %s" % thread_response)
@@ -67,7 +67,7 @@ def given_i_send_in_the_actuator_message_to_stop_drive_manager(step):
         },
         "actuator_request_type": {
             "thread_controller": {
-                "module_name" : "DriveManagerMonitor",
+                "module_name" : "DriveManager",
                 "thread_request": "stop"
             }
         }
@@ -88,7 +88,7 @@ def then_i_get_the_stop_successful_json_response_message(step):
     # Verify module name and thread response
     module_name = ingressMsg.get("actuator_response_type").get("thread_controller").get("module_name")
     print("module_name: %s" % module_name)
-    assert module_name == "DriveManagerMonitor"
+    assert module_name == "DriveManager"
     
     thread_response = ingressMsg.get("actuator_response_type").get("thread_controller").get("thread_response")
     print("thread_response: %s" % thread_response)
@@ -108,7 +108,7 @@ def given_i_send_in_the_actuator_message_to_start_drive_manager(step):
         },
         "actuator_request_type": {
             "thread_controller": {
-                "module_name" : "DriveManagerMonitor",
+                "module_name" : "DriveManager",
                 "thread_request": "start"
             }
         }
@@ -129,7 +129,7 @@ def then_i_get_the_start_successful_json_response_message(step):
     # Verify module name and thread response
     module_name = ingressMsg.get("actuator_response_type").get("thread_controller").get("module_name")
     print("module_name: %s" % module_name)
-    assert module_name == "DriveManagerMonitor"
+    assert module_name == "DriveManager"
 
     thread_response = ingressMsg.get("actuator_response_type").get("thread_controller").get("thread_response")
     print("thread_response: %s" % thread_response)
@@ -149,7 +149,7 @@ def given_i_request_to_stop_drive_manager_and_then_i_request_a_thread_status(ste
         },
         "actuator_request_type": {
             "thread_controller": {
-                "module_name" : "DriveManagerMonitor",
+                "module_name" : "DriveManager",
                 "thread_request": "stop"
             }
         }
@@ -168,7 +168,7 @@ def given_i_request_to_stop_drive_manager_and_then_i_request_a_thread_status(ste
         },
         "actuator_request_type": {
             "thread_controller": {
-                "module_name" : "DriveManagerMonitor",
+                "module_name" : "DriveManager",
                 "thread_request": "status"
             }
         }
@@ -189,7 +189,7 @@ def then_i_get_the_stop_successful_json_message_then_i_get_the_thread_status_mes
     # Verify module name and thread response
     module_name = ingressMsg.get("actuator_response_type").get("thread_controller").get("module_name")
     print("module_name: %s" % module_name)
-    assert module_name == "DriveManagerMonitor"
+    assert module_name == "DriveManager"
 
     thread_response = ingressMsg.get("actuator_response_type").get("thread_controller").get("thread_response")
     print("thread_response: %s" % thread_response)
@@ -201,7 +201,7 @@ def then_i_get_the_stop_successful_json_message_then_i_get_the_thread_status_mes
     # Verify module name and thread response
     module_name = ingressMsg.get("actuator_response_type").get("thread_controller").get("module_name")
     print("module_name: %s" % module_name)
-    assert module_name == "DriveManagerMonitor"
+    assert module_name == "DriveManager"
     
     thread_response = ingressMsg.get("actuator_response_type").get("thread_controller").get("thread_response")
     print("thread_response: %s" % thread_response)
@@ -221,7 +221,7 @@ def given_i_request_to_start_drive_manager_and_then_i_request_a_thread_status(st
         },
         "actuator_request_type": {
             "thread_controller": {
-                 "module_name" : "DriveManagerMonitor",
+                 "module_name" : "DriveManager",
                  "thread_request": "start"
             }
         }
@@ -240,7 +240,7 @@ def given_i_request_to_start_drive_manager_and_then_i_request_a_thread_status(st
         },
         "actuator_request_type": {
             "thread_controller": {
-                "module_name" : "DriveManagerMonitor",
+                "module_name" : "DriveManager",
                 "thread_request": "status"
             }
         }
@@ -261,7 +261,7 @@ def then_i_get_the_start_successful_json_message_then_i_get_the_thread_status_me
     # Verify module name and thread response
     module_name = ingressMsg.get("actuator_response_type").get("thread_controller").get("module_name")
     print("module_name: %s" % module_name)
-    assert module_name == "DriveManagerMonitor"
+    assert module_name == "DriveManager"
 
     thread_response = ingressMsg.get("actuator_response_type").get("thread_controller").get("thread_response")
     print("thread_response: %s" % thread_response)
@@ -273,7 +273,7 @@ def then_i_get_the_start_successful_json_message_then_i_get_the_thread_status_me
     # Verify module name and thread response
     module_name = ingressMsg.get("actuator_response_type").get("thread_controller").get("module_name")
     print("module_name: %s" % module_name)
-    assert module_name == "DriveManagerMonitor"
+    assert module_name == "DriveManager"
     
     thread_response = ingressMsg.get("actuator_response_type").get("thread_controller").get("thread_response")
     print("thread_response: %s" % thread_response)

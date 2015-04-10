@@ -1,8 +1,8 @@
 """
  ****************************************************************************
- Filename:          systemd_service.py
+ Filename:          service_controller.py
  Description:       Defines the JSON message transmitted by the
-                    SystemdService. There may be a time when we need to
+                    ServiceMsgHandler. There may be a time when we need to
                     maintain state as far as messages being transmitted.  This
                     may involve aggregation of multiple messages before
                     transmissions or simply deferring an acknowledgment to
@@ -23,17 +23,17 @@
 import json
 from json_msgs.messages.actuators.base_actuators_msg import BaseActuatorMsg
 
-class SystemdServiceMsg(BaseActuatorMsg):
+class ServiceControllerMsg(BaseActuatorMsg):
     '''
-    The JSON message transmitted by the Systemd Service Actuator
+    The JSON message transmitted by the ServiceMsgHandler
     '''
 
-    ACTUATOR_MSG_TYPE = "systemd_service"
+    ACTUATOR_MSG_TYPE = "service_controller"
     MESSAGE_VERSION  = "1.0.0"
 
     def __init__(self, service_name,
                        service_response):
-        super(SystemdServiceMsg, self).__init__()
+        super(ServiceControllerMsg, self).__init__()
 
         self._service_name = service_name
         self._service_response = service_response

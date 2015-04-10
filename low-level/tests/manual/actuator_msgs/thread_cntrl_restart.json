@@ -14,7 +14,7 @@
 
 	"actuator_request_type": {
 		"thread_controller": {
-			"module_name" : "DriveManagerMonitor",
+			"module_name" : "DriveManager",
 			"thread_request": "restart"
 		}
 	}

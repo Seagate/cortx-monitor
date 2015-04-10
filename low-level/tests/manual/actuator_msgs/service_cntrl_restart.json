@@ -13,7 +13,7 @@
         },
 
 	"actuator_request_type": {
-		"systemd_service": {
+		"service_controller": {
 			"service_name" : "crond.service",
 			"service_request": "restart"
 		}
