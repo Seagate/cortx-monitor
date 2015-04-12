@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="title">Seagate Storage Platform Library - High Level</string>
+    <string name="description">The Hello World PLEX Application</string>
+    <string name="hello_world">Hello World</string>
+</resources>
