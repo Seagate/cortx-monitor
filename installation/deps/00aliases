@@ -1,0 +1,5 @@
+Cmnd_Alias TRINITY_CMDS = /opt/xyratex/bin/,/usr/sbin/*_xyraid, /opt/xyratex/bin/tools/
+Cmnd_Alias ICINGA_CMDS = /usr/sbin/crm_mon, /usr/lib64/nagios/plugins/, /opt/xyratex/checks/, /opt/xyratex/bin/beSupplyNotify
+Cmnd_Alias ZABBIX_USR_CMDS = /opt/xyratex/zabbix/*/bin/
+Cmnd_Alias ZABBIX_SRV_CMDS = /opt/xyratex/zabbix/base-config/alertscripts/
+

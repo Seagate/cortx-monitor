@@ -48,17 +48,21 @@ def then_sspl_ll_transmits_a_json_msg_with_status_inuse_failed_for_disk_number_d
      disk_status = ingressMsg.get("sensor_response_type").get("disk_status_drivemanager").get("diskStatus")
      assert disk_status == "inuse_failed"
 
-@step(u'When I set all the drives to "([^"]*)"')
-def when_i_set_all_the_drives_to_condition(step, condition):
+@step(u'When I set "([^"]*)" drives to "([^"]*)"')
+def when_i_set_total_drives_to_condition(step, total, condition):
     drives = world.diskmonitor_file.get("drives")
+    total = 0;
     for drive in drives:
         drive["status"] = condition
+        total += 1
+        if total == 9:
+            break
     write_drive_manager()
     # Wait for Inotify to trigger
     time.sleep(10)
 
-@step(u'Then SSPL_LL transmits JSON msgs with status "([^"]*)" for all drives and enc "([^"]*)" for a total of "([^"]*)"')
-def then_sspl_ll_transmits_json_msgs_with_status_condition_for_all_drives_and_enc_for_a_total_of_total(step, condition, enc, total):
+@step(u'Then SSPL_LL transmits JSON msgs with status "([^"]*)" for "([^"]*)" drives and enc "([^"]*)" for a total of "([^"]*)"')
+def then_sspl_ll_transmits_json_msgs_with_status_condition_for_totalDrives_drives_and_enc_for_a_total_of_total(step, totalDrives, condition, enc, total):
     total_drives = 0
     ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
     sensor_response_type = ingressMsg.get("sensor_response_type").get("disk_status_drivemanager")

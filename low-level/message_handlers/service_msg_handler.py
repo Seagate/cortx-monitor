@@ -98,7 +98,7 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
             jsonMsg = ServiceControllerMsg(service_name, result).getJson()        
             self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
 
-        # ... handle other systemd message types
+        # ... handle other service message types
 
 
     def shutdown(self):

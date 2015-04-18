@@ -55,8 +55,8 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
     def run(self):
         """Run the module periodically on its own thread."""
 
-        self._set_debug(True)
-        self._set_debug_persist(True)
+        #self._set_debug(True)
+        #self._set_debug_persist(True)
 
         self._log_debug("Start accepting requests")
 

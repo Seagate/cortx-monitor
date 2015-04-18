@@ -20,7 +20,8 @@
 #	It will exit 0 upon success and 1 if any tests failed or had errors
 #
 # WARNING: Do not run this script on a production system.  It will install
-#          simulators that replace any live HPI data.
+#          simulators that replace any live HPI data which is most likely 
+#	   not what you want.
 #
 ####################################################################################
 
@@ -29,6 +30,14 @@ TOP_DIR=`pwd`
 # Create simulated disk manager data
 mkdir -p /var/run/diskmonitor
 cp ./installation/deps/drive_manager.json /var/run/diskmonitor
+
+# Copy over sudoers files
+cp ./installation/deps/00aliases /etc/sudoers.d
+cp ./installation/deps/sudoers /etc
+
+# Copy over dcs-collector configuration file
+cp ./installation/deps/dcs_collector.conf /etc
+
 # Ensure dcs collector picks up the new file promptly
 systemctl restart dcs-collector
 
