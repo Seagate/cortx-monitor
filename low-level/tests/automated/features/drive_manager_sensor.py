@@ -51,33 +51,20 @@ def then_sspl_ll_transmits_a_json_msg_with_status_inuse_failed_for_disk_number_d
 @step(u'When I set "([^"]*)" drives to "([^"]*)"')
 def when_i_set_total_drives_to_condition(step, total, condition):
     drives = world.diskmonitor_file.get("drives")
-    total = 0;
+    curr = 0;
     for drive in drives:
         drive["status"] = condition
-        total += 1
-        if total == 9:
+        curr += 1
+        if curr == int(total):
             break
     write_drive_manager()
-    # Wait for Inotify to trigger
-    time.sleep(10)
 
-@step(u'Then SSPL_LL transmits JSON msgs with status "([^"]*)" for "([^"]*)" drives and enc "([^"]*)" for a total of "([^"]*)"')
-def then_sspl_ll_transmits_json_msgs_with_status_condition_for_totalDrives_drives_and_enc_for_a_total_of_total(step, totalDrives, condition, enc, total):
-    total_drives = 0
-    ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
-    sensor_response_type = ingressMsg.get("sensor_response_type").get("disk_status_drivemanager")
-    assert sensor_response_type is not None
-    encl_sn = ingressMsg.get("sensor_response_type").get("disk_status_drivemanager").get("enclosureSN")
-    assert encl_sn == enc
-    disk_num = ingressMsg.get("sensor_response_type").get("disk_status_drivemanager").get("diskNum")
-    assert disk_num is not None
-    disk_status = ingressMsg.get("sensor_response_type").get("disk_status_drivemanager").get("diskStatus")
-    assert disk_status == condition
-    total_drives += 1
-
-    # Loop thru all messages in queue until and transmit
-    while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
+@step(u'Then SSPL_LL transmits JSON msgs with status "([^"]*)" for "([^"]*)" drives for enclosure "([^"]*)"')
+def then_sspl_ll_transmits_json_msgs_with_status_condition_for_total_drives_for_enclosure_enc(step, condition, total_drives, enc):    
+    total = 0
+    while total != int(total_drives):
         ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
+        print("ingressMsg: %s" % ingressMsg)
         sensor_response_type = ingressMsg.get("sensor_response_type").get("disk_status_drivemanager")
         assert sensor_response_type is not None
         encl_sn = ingressMsg.get("sensor_response_type").get("disk_status_drivemanager").get("enclosureSN")
@@ -86,10 +73,10 @@ def then_sspl_ll_transmits_json_msgs_with_status_condition_for_totalDrives_drive
         assert disk_num is not None
         disk_status = ingressMsg.get("sensor_response_type").get("disk_status_drivemanager").get("diskStatus")
         assert disk_status == condition
-        total_drives += 1
+        total += 1
+        print("total: %s" % total)
 
-    assert total_drives == int(total)
-
+    assert total == int(total_drives)
 
 def set_all_drives(condition):
     """Helper function to set all drives to the same condition"""    
