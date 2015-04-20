@@ -14,6 +14,7 @@ python-lockfile		\
 python-openhpi-baselib	\
 python-pika		\
 python-zope-interface	\
+python-zope-component	\
 zabbix-agent-lib	\
 zabbix-collector	\
 zabbix-openhpi-config
