@@ -20,11 +20,8 @@ def service_cmd_for_all_nodes(_, service, cmd):
     urllib.urlopen(url=url)
 
 
-@lettuce.step(
-    u'Then the following message is generated '
-    u'and placed in the queue:'
-    )
-def message_is_generated_and_queued(step):
+@lettuce.step(u'Then a serviceRequest message to "([^"]*)" "([^"]*)" is sent')
+def servicerequest_msg_sent(_, command, service_name):
     """ Ensure proper message generated and enqueued. """
     # wait for a message to appear in the fake_halond output directory
     lettuce.world.wait_for_condition(
@@ -40,8 +37,18 @@ def message_is_generated_and_queued(step):
         )[0]
     contents = open(os.path.join('/tmp/fake_halond', first_file), 'r').read()
 
-    assert contents == json.dumps(json.loads(step.multiline)), \
+    expected = json.dumps(json.loads("""
+        {{
+            "serviceRequest":
+            {{
+                "serviceName": "{service_name}",
+                "command": "{command}"
+            }}
+        }}
+        """.format(service_name=service_name, command=command)))
+
+    assert contents == json.dumps(json.loads(expected)), \
         "Message doesn't match.  Expected '{expected}' but got '{actual}'" \
-        .format(expected=step.multiline, actual=contents)
+        .format(expected=expected, actual=contents)
 
     os.unlink(os.path.join('/tmp/fake_halond', first_file))
