@@ -4,7 +4,7 @@ Feature: Service Request
     So that I can administer the cluster
 
     Scenario Outline: Restart,etc. service on all nodes
-        When I request "<service>" service "<command>" for all nodes
+        When I run "./cstor service <command> <service>"
         Then a serviceRequest message to "<command>" "<service>" is sent
     Examples:
         | service | command |

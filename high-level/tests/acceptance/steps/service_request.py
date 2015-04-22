@@ -3,6 +3,7 @@ import lettuce
 import urllib
 import os.path
 import json
+import cli.cstor
 
 # Note:  We should use the plex registry to programatically generate this URL
 # to protect against changes in how plex surfaces apps/providers/etc.  But
@@ -18,6 +19,15 @@ def service_cmd_for_all_nodes(_, service, cmd):
         service=service, cmd=cmd
         )
     urllib.urlopen(url=url)
+
+
+@lettuce.step(u'When I run "([^"]*)"')
+def when_i_run(_, cli_command):
+    """ Run a CLI command.
+
+    Warning:  For now, assumes the cli command is ./cstor
+    """
+    cli.cstor.main(cli_command.split()[1:])
 
 
 @lettuce.step(u'Then a serviceRequest message to "([^"]*)" "([^"]*)" is sent')
