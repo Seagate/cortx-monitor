@@ -10,14 +10,16 @@ from plex.core.plex_application import PlexApplication
 from plex.servicemaker.plex_dev_app_service_maker import dev_app_run_service
 
 
-class Main(PlexApplication):
+class Main(PlexApplication):  # pylint: disable=too-many-public-methods
     """The @string/title Application."""
     implements(IPlugin, IApplication)
 
+# pylint: disable=invalid-name
 main = Main("@string/title",
             "1.0",
             "@string/description",
             PlexApplication.CORE_APP)
+# pylint: enable=invalid-name
 
 if __name__ == "__main__":
     # Startup App Dev Mode

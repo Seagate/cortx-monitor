@@ -1,0 +1,117 @@
+""" Functions that run at startup/shutdown of the lettuce acceptance tests. """
+import lettuce
+import subprocess
+import time
+import os.path
+
+
+# pylint gets confused by @lettuce.before.all... not sure why.
+# pylint: disable=no-member
+@lettuce.before.all
+# pylint: enable=no-member
+def initial_setup():
+    """ Ensures initial state is reasonable.
+
+    Ensures rabbitmq, plex, and fake_halond are started
+    Ensures sspl_hl app is installed.
+    """
+    _ensure_rabbitmq_running()
+    _ensure_plex_running()
+    _install_plex_apps()
+    _disable_plex_auth()
+    _restart_plex()
+    _start_fake_halond()
+    time.sleep(5)
+
+
+@lettuce.after.all
+def _stop_fake_halond(_):
+    lettuce.world.fake_halond_process.terminate()
+
+
+def _ensure_rabbitmq_running():
+    with open('/dev/null', 'w') as devnull:
+        if subprocess.call(['rabbitmqctl', 'status'], stdout=devnull) != 0:
+            subprocess.Popen(['sudo', 'rabbitmq-server'], stdout=devnull)
+
+            def _is_rabbitmq_running():
+                status = subprocess.call(
+                    ['rabbitmqctl', 'status'],
+                    stdout=devnull
+                    )
+                return status == 0
+
+            lettuce.world.wait_for_condition(
+                status_func=_is_rabbitmq_running,
+                max_wait=10,
+                timeout_message=
+                "Timeout expired while waiting for rabbitmq to start"
+                )
+
+
+def _ensure_plex_running():
+    with open('/dev/null', 'w') as devnull:
+        status = subprocess.call(
+            ['/etc/init.d/plex', 'status'],
+            stdout=devnull
+            )
+
+        if status != 0:
+            subprocess.check_call(
+                ['/etc/init.d/plex', 'start'],
+                stdout=devnull
+                )
+
+
+def _install_plex_apps():
+    """ Install all relevant plex apps (currently just sspl_hl) """
+    with open('/dev/null', 'w') as devnull:
+        subprocess.check_call(
+            ['./install.py'],
+            cwd='./sspl_hl',
+            stdout=devnull
+            )
+
+
+def _disable_plex_auth():
+    """ Disable plex's authentication.
+
+    Note that plex is *not* restarted and that a restart is necessary if conf
+    is changed.
+    """
+    status = subprocess.call(
+        ['grep', '-q', 'enable_plex_authentication=yes', '/etc/plex.config']
+        )
+    if status != 0:
+        return
+
+    subprocess.call([
+        'sed', '--in-place', '-e',
+        's/enable_plex_authentication=yes/enable_plex_authentication=no/',
+        '/etc/plex.config'
+        ])
+
+
+def _restart_plex():
+    with open('/dev/null', 'w') as devnull:
+        subprocess.check_call(['/etc/init.d/plex', 'restart'], stdout=devnull)
+
+
+def _start_fake_halond():
+    """ Starts the fake_halond process.
+
+    Stores the process popen object into lettuce.world.fake_halond_process
+    """
+    if os.path.exists('/tmp/fake_halond') \
+            or os.path.exists('/tmp/fake_halond.pid'):
+        raise RuntimeError("Error: fake_halond already running?")
+
+    lettuce.world.fake_halond_process = subprocess.Popen(
+        ['./tests/fake_halond/fake_halond.py', '-p', '/tmp/fake_halond.pid']
+        )
+
+    lettuce.world.wait_for_condition(
+        status_func=lambda: os.path.exists('/tmp/fake_halond'),
+        max_wait=5,
+        timeout_message="Timeout Expired waiting for fake_halond to start"
+        )
