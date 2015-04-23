@@ -3,7 +3,7 @@ import lettuce
 import urllib
 import os.path
 import json
-import cli.cstor
+import subprocess
 
 # Note:  We should use the plex registry to programatically generate this URL
 # to protect against changes in how plex surfaces apps/providers/etc.  But
@@ -23,11 +23,8 @@ def service_cmd_for_all_nodes(_, service, cmd):
 
 @lettuce.step(u'When I run "([^"]*)"')
 def when_i_run(_, cli_command):
-    """ Run a CLI command.
-
-    Warning:  For now, assumes the cli command is ./cstor
-    """
-    cli.cstor.main(cli_command.split()[1:])
+    """ Run a CLI command.  """
+    lettuce.world.exitcode = subprocess.call(cli_command.split())
 
 
 @lettuce.step(u'Then a serviceRequest message to "([^"]*)" "([^"]*)" is sent')
@@ -62,3 +59,17 @@ def servicerequest_msg_sent(_, command, service_name):
         .format(expected=expected, actual=contents)
 
     os.unlink(os.path.join('/tmp/fake_halond', first_file))
+
+
+@lettuce.step(u'the exit code is "([^"]*)"')
+def exit_code_is_x(_, exitcode):
+    """ Ensure expected exit code for previously run shell command.
+
+    It's expected that 'When I run '<cmd>' has been previously called.
+    """
+    assert lettuce.world.exitcode == int(exitcode), \
+        "Error: exit code mismatch.  Expected {expected} but got {actual}" \
+        .format(
+            expected=exitcode,
+            actual=lettuce.world.exitcode
+        )

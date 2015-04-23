@@ -37,7 +37,7 @@ def main(args=sys.argv[1:]):
     #    )
 
     args = parser.parse_args(args)
-    args.func(args)
+    return args.func(args)
 
 
 def _get_service_provider_base_uri():
@@ -74,6 +74,8 @@ def service(args):
         service=args.service_name
         )
 
+    return 0
+
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main())

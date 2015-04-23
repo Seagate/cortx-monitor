@@ -4,8 +4,9 @@ Feature: Service Request
     So that I can administer the cluster
 
     Scenario Outline: Restart,etc. service on all nodes
-        When I run "./cstor service <command> <service>"
+        When I run "python ./cli/cstor.py service <command> <service>"
         Then a serviceRequest message to "<command>" "<service>" is sent
+        And the exit code is "0"
     Examples:
         | service | command |
         | crond   | restart |
@@ -14,3 +15,11 @@ Feature: Service Request
         | crond   | enable  |
         | crond   | disable |
         | crond   | status  |
+
+    Scenario: Invalid command
+        When I run "python ./cli/cstor.py service invalid_command crond"
+        Then the exit code is "2"
+
+    Scenario: Missing serviceName
+        When I run "python ./cli/cstor.py service restart"
+        Then the exit code is "2"

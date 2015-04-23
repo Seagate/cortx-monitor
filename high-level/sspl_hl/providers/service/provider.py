@@ -32,6 +32,40 @@ class Provider(DataStoreProvider):
             exchange='sspl_hl_cmd', type='topic', durable=True
             )
 
+    @staticmethod
+    def _validate_params(selection_args, responder):
+        """ Ensure query() parameters are ok. """
+        valid_commands = [
+            'start', 'stop', 'restart', 'enable', 'disable', 'status'
+            ]
+        if 'serviceName' not in selection_args:
+            responder.reply_exception(
+                "Error: Invalid request: Missing serviceName"
+                )
+            return False
+        elif 'command' not in selection_args:
+            responder.reply_exception(
+                "Error: Invalid request: Missing command"
+                )
+            return False
+        elif selection_args['command'] not in valid_commands:
+            responder.reply_exception(
+                "Error: Invalid command: '{}'".format(
+                    selection_args['command']
+                    )
+                )
+            return False
+        elif len(selection_args) > 2:
+            del selection_args['command']
+            del selection_args['serviceName']
+            responder.reply_exception(
+                "Error: Invalid request: Extra parameter '{extra}' detected"
+                .format(extra=selection_args.keys()[0])
+                )
+            return False
+
+        return True
+
     def query(
             self, uri, columns, selection_args, sort_order,
             range_from, range_to, responder
@@ -52,6 +86,9 @@ class Provider(DataStoreProvider):
                                   which nodes to operate on, eg
                                   'mycluster0[0-2]'
         """
+        if not self._validate_params(selection_args, responder):
+            return
+
         message = json.loads("""
             {{
                 "serviceRequest":
