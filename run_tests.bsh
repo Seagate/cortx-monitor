@@ -38,9 +38,6 @@ cp ./installation/deps/sudoers /etc
 # Copy over dcs-collector configuration file
 cp ./installation/deps/dcs_collector.conf /etc
 
-# Ensure dcs collector picks up the new file promptly
-systemctl restart dcs-collector
-
 # Make sure rabbitmq is started before we initialize it
 systemctl start rabbitmq-server -l
 
@@ -59,9 +56,6 @@ sed -i "s|^prog_name=|prog_name=$TOP_DIR/$SSPL_d\n#|g" /etc/init.d/sspl-ll
 # Start openhpid
 systemctl daemon-reload
 systemctl restart openhpid -l
-
-# Startup sspl-ll using this code
-systemctl restart sspl-ll -l
 
 # Execute tests
 cd low-level/tests/automated
