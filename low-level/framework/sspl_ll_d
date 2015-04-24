@@ -17,11 +17,14 @@
  ****************************************************************************
 """
 
+from systemd.daemon import notify
+
 import logging
 import daemon
 import signal
 import getopt
 import Queue
+import fcntl
 import time
 import sys
 import os
@@ -72,7 +75,7 @@ OPER_SYSTEM     = 'operating_system'
 threadController = ThreadController()
 
 def main(conf_reader):
-    """The main bootstrap for sspl"""
+    """The main bootstrap for sspl"""    
     logger.info("sspl-ll Bootstrap: Obtaining list of modules from config file")
 
     # Create a map of references to all the module's message queues.  Each module
@@ -130,6 +133,9 @@ def main(conf_reader):
         startup_msg = "SSPL-LL service has started successfully"
         jsonMsg   = ThreadControllerMsg(threadController.name(), startup_msg).getJson()
         threadController._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
+
+        # Let systemd know that we've started up successfully and ready for it to monitor sspl-ll
+        notify("READY=1")
 
         # Block main thread until thread controller has been halted
         controller_thread.join()
@@ -220,16 +226,18 @@ def _run_thread_capture_errors(curr_module, sspl_threaded_modules, msgQlist, con
             if other_module is not curr_module:
                 other_module.shutdown()
 
-def shutdown_handler(signum, stackframe):
-    """Handler called when shutting down a=None, b=None"""
+
+def shutdown_handler(signum=None, stackframe=None):
+    """Handler called when shutting down"""
     logger.info("sspl-ll is shutting down")
+
     shutdown_msg = "SSPL-LL is shutting down"
     jsonMsg   = ThreadControllerMsg(threadController.name(), shutdown_msg).getJson()
     threadController._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
 
     # Wait for the RabbitMQegressProcessor to finish processing
-    #  any messages which it may have in its queue
-    while threadController.check_RabbitMQegressProcessor_busy() is True:
+    # any messages which it may have in its queue
+    while threadController.check_RabbitMQegressProcessor_is_running() is True:
         timer.sleep(2)
 
     # Now call the shutdown methods for all modules to gracefully halt
@@ -237,6 +245,10 @@ def shutdown_handler(signum, stackframe):
 
     # Halt the thread controller module last for a clean system shutdown
     threadController.shutdown()
+
+    # Let systemd know that we've stopped successfully
+    notify("STOPPING=1")
+
 
 def print_usage():
     """Display the syntax usage for this script"""
@@ -279,7 +291,7 @@ if __name__ == "__main__":
         exit(os.EX_USAGE)
 
     # Initialize logging
-    try:             
+    try:
         init_logging("SSPL-LL", "DEBUG")
 
     except Exception as err:
@@ -290,10 +302,25 @@ if __name__ == "__main__":
         exit(os.EX_USAGE)
 
     try:
-        context = daemon.DaemonContext()
+        # Create a PID file for systemd
+        path = "/var/run/sspl_ll_d.pid"
+        pidfile = open(path, "a+")
+        try:
+            fcntl.flock(pidfile.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except IOError:
+            raise SystemExit("Already running according to " + path)
+        pidfile.seek(0)
+        pidfile.truncate()
+        pidfile.write(str(os.getpid()))
+        pidfile.flush()
+        pidfile.seek(0)
+
+        # Create the daemon context
+        context = daemon.DaemonContext(pidfile=pidfile)
 
         # Configure a shutdown handler to handle any necessary cleanup
-        context.signal_map = {signal.SIGTERM: shutdown_handler}
+        context.signal_map = {signal.SIGHUP : shutdown_handler}
+
         context.open()
 
         # Start sspl-ll as a main process running multiple threads
@@ -302,7 +329,6 @@ if __name__ == "__main__":
 
     except (Exception, StandardError) as err:
         logger.critical("While spawning sspl-ll process :%r" % err)
-        logger.exception()
         sys.exit(os.EX_USAGE)
 
     print "SSPL-LL Process started successfully"
