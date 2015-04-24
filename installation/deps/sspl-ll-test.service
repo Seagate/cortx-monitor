@@ -1,0 +1,13 @@
+[Unit]
+Description=SSPL Low Level Process
+After=syslog.target
+
+[Service]
+Type=notify
+ExecStart=/local/build/jenkins/workspace/sspl-ll-gerrit/low-level/framework/sspl_ll_d -c /etc/sspl_ll.conf
+PIDFile=/var/run/sspl_ll_d.pid
+User=sspl-ll
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

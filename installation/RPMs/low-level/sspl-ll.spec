@@ -47,10 +47,6 @@ cp sspl-ll_dbus_policy.conf %{buildroot}/etc/dbus-1/system.d
 mkdir -p %{buildroot}/opt/seagate/sspl
 tar zxvf sspl-ll.tgz --directory %{buildroot}/opt/seagate/sspl
 
-# Change ownership to the non-root sspl-ll user
-useradd -r -s /bin/false -G zabbix sspl-ll
-chown -R sspl-ll:sspl-ll %{buildroot}/opt/seagate/sspl
-
 
 %post
 # setup rabbitmq vhost and user (incl permissions)
@@ -73,8 +69,8 @@ rm -rf %{buildroot}
 
 
 %changelog
+* Fri April 24 2015 Aden jake Abernathy <aden.j.abernathy@seagate.com> - 1.0.0-7
+- Updating to run sspl-ll service as sspl-ll user instead of root
+
 * Fri Feb 13 2015 Aden Jake Abernathy <aden.j.abernathy@seagate.com> - 1.0.0-1
 - Initial spec file
-
-# Fri April 24 2015 Aden jake Abernathy <aden.j.abernathy@seagate.com> - 1.0.0-7
-- Updating to run sspl-ll service as sspl-ll user instead of root

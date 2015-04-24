@@ -42,7 +42,7 @@ cp ./installation/deps/dcs_collector.conf /etc
 systemctl start rabbitmq-server -l
 
 # Copy startup and config files
-cp installation/RPMs/low-level/files/sspl-ll /etc/init.d
+cp installation/deps/sspl-ll-test.service /etc/systemd/system/sspl-ll.service
 cp installation/RPMs/low-level/files/sspl_ll.conf /etc
 
 # Initialize rabbitmq queues and exchanges
