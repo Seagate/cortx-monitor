@@ -40,6 +40,7 @@ cp %SOURCE3 .
 # Copy config file and service startup to correct locations
 mkdir -p %{buildroot}/etc/init.d
 mkdir -p %{buildroot}/etc/systemd/system
+mkdir -p %{buildroot}/etc/dbus-1/system.d
 cp sspl-ll.service %{buildroot}/etc/systemd/system
 cp sspl_ll.conf %{buildroot}/etc
 cp sspl-ll_dbus_policy.conf %{buildroot}/etc/dbus-1/system.d
