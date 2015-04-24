@@ -6,7 +6,7 @@ After=syslog.target
 Type=notify
 ExecStart=/local/build/jenkins/workspace/sspl-ll-gerrit/low-level/framework/sspl_ll_d -c /etc/sspl_ll.conf
 PIDFile=/var/run/sspl_ll_d.pid
-User=sspl-ll
+User=root
 Restart=on-failure
 
 [Install]
