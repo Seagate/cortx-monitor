@@ -69,7 +69,7 @@ rm -rf %{buildroot}
 
 
 %changelog
-* Fri April 24 2015 Aden jake Abernathy <aden.j.abernathy@seagate.com> - 1.0.0-7
+* Fri Apr 24 2015 Aden jake Abernathy <aden.j.abernathy@seagate.com> - 1.0.0-7
 - Updating to run sspl-ll service as sspl-ll user instead of root
 
 * Fri Feb 13 2015 Aden Jake Abernathy <aden.j.abernathy@seagate.com> - 1.0.0-1
