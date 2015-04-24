@@ -51,7 +51,6 @@ low-level/framework/sspl_ll_rabbitmq_reinit
 
 # Update service script to point to this installation
 SSPL_d="low-level/framework/sspl_ll_d"
-sed -i "s|^prog_name=|prog_name=$TOP_DIR/$SSPL_d\n#|g" /etc/init.d/sspl-ll
 
 # Start openhpid
 systemctl daemon-reload
