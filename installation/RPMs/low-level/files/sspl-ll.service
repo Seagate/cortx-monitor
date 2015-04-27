@@ -5,7 +5,7 @@ After=syslog.target
 [Service]
 Type=notify
 ExecStart=/opt/seagate/sspl/low-level/framework/sspl_ll_d -c /etc/sspl_ll.conf
-PIDFile=/var/run/sspl_ll_d.pid
+PIDFile=/var/run/sspl_ll/sspl_ll_d.pid
 User=sspl-ll
 Restart=on-failure
 

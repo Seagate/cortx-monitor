@@ -303,7 +303,7 @@ if __name__ == "__main__":
 
     try:
         # Create a PID file for systemd
-        path = "/var/run/sspl_ll_d.pid"
+        path = "/var/run/sspl_ll/sspl_ll_d.pid"
         pidfile = open(path, "a+")
         try:
             fcntl.flock(pidfile.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)

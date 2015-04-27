@@ -19,10 +19,6 @@
 #	3) ./run_tests.bsh
 #	It will exit 0 upon success and 1 if any tests failed or had errors
 #
-# WARNING: Do not run this script on a production system.  It will install
-#          simulators that replace any live HPI data which is most likely 
-#	   not what you want.
-#
 ####################################################################################
 
 

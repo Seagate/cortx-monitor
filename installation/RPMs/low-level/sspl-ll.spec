@@ -41,6 +41,8 @@ cp %SOURCE3 .
 mkdir -p %{buildroot}/etc/init.d
 mkdir -p %{buildroot}/etc/systemd/system
 mkdir -p %{buildroot}/etc/dbus-1/system.d
+mkdir -p %{buildroot}/var/run/sspl_ll
+
 cp sspl-ll.service %{buildroot}/etc/systemd/system
 cp sspl_ll.conf %{buildroot}/etc
 cp sspl-ll_dbus_policy.conf %{buildroot}/etc/dbus-1/system.d
@@ -57,6 +59,7 @@ tar zxvf sspl-ll.tgz --directory %{buildroot}/opt/seagate/sspl
 # Have systemd reload
 systemctl daemon-reload
 
+
 %clean
 rm -rf %{buildroot}
 
@@ -64,10 +67,13 @@ rm -rf %{buildroot}
 %files
 %defattr(-,sspl-ll,sspl-ll,-)
 /opt/seagate/sspl/*
+/var/run/sspl_ll
 %defattr(-,root,root,-)
 /etc/systemd/system/sspl-ll.service
 /etc/sspl_ll.conf
 /etc/dbus-1/system.d/sspl-ll_dbus_policy.conf
+
+%ghost /var/run/sspl_ll/sspl_ll_d.pid
 
 
 %changelog
