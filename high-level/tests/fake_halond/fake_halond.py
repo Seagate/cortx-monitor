@@ -136,10 +136,14 @@ def rabbitmq_connect(host, exchange, queue, fake_output_dir):
     @return:                      A rabbitmq channel.
     """
     connection = pika.BlockingConnection(
-        pika.ConnectionParameters(host=host)
+        pika.ConnectionParameters(
+            host=host,
+            virtual_host="SSPL",
+            credentials=pika.PlainCredentials('sspluser', 'sspl4ever')
+            )
         )
     channel = connection.channel()
-    channel.exchange_declare(exchange=exchange, type='topic', durable=True)
+    channel.exchange_declare(exchange=exchange, type='topic', durable=False)
     channel.queue_declare(queue=queue, exclusive=True)
     channel.queue_bind(exchange=exchange, queue=queue)
     channel.basic_consume(

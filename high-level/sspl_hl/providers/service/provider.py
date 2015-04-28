@@ -25,11 +25,15 @@ class Provider(DataStoreProvider):
     def on_create(self):
         """ Implement this method to initialize the Provider. """
         self._connection = pika.BlockingConnection(
-            pika.ConnectionParameters(host='localhost')
+            pika.ConnectionParameters(
+                host='localhost',
+                virtual_host='SSPL',
+                credentials=pika.PlainCredentials('sspluser', 'sspl4ever')
+                )
             )
         self._channel = self._connection.channel()
         self._channel.exchange_declare(
-            exchange='sspl_hl_cmd', type='topic', durable=True
+            exchange='sspl_hl_cmd', type='topic', durable=False
             )
 
     @staticmethod

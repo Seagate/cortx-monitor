@@ -4,6 +4,8 @@ import subprocess
 import time
 import os.path
 
+RABBITMQCTL = '/usr/sbin/rabbitmqctl'
+
 
 # pylint gets confused by @lettuce.before.all... not sure why.
 # pylint: disable=no-member
@@ -16,6 +18,7 @@ def initial_setup():
     Ensures sspl_hl app is installed.
     """
     _ensure_rabbitmq_running()
+    _ensure_rabbitmq_settings()
     _ensure_plex_running()
     _install_plex_apps()
     _disable_plex_auth()
@@ -42,8 +45,17 @@ def _ensure_rabbitmq_running():
                 )
 
             def _is_rabbitmq_running():
+                # 'status' by itself seems insufficient.  We'll also wait for
+                # list_vhosts to be ready.
                 status = subprocess.call(
                     ['sudo', '/usr/sbin/rabbitmqctl', 'status'],
+                    stdout=devnull
+                    )
+                if status != 0:
+                    return False
+
+                status = subprocess.call(
+                    ['sudo', '/usr/sbin/rabbitmqctl', 'list_vhosts'],
                     stdout=devnull
                     )
                 return status == 0
@@ -54,6 +66,76 @@ def _ensure_rabbitmq_running():
                 timeout_message="Timeout expired while waiting for rabbitmq "
                 "to start"
                 )
+
+
+def _recreate_vhost(virtual_host):
+    """ Recreates the specified vhost.
+
+    The vhost will be deleted if it already exists and then created.
+
+    @type virtual_host:           string
+    @param virtual_host:          The vhost to (re)create.
+    """
+    vhosts = subprocess.check_output(
+        ['sudo', RABBITMQCTL, 'list_vhosts']
+        ).split('\n')
+    assert vhosts[0] == 'Listing vhosts ...'
+    assert vhosts[-2] == '...done.'
+    assert vhosts[-1] == ''
+    for vhost in vhosts[1:-1]:
+        if vhost == virtual_host:
+            subprocess.check_call(
+                ['sudo', RABBITMQCTL, 'delete_vhost', virtual_host]
+                )
+            break
+    subprocess.check_call(['sudo', RABBITMQCTL, 'add_vhost', virtual_host])
+
+
+def _recreate_user(username, password, virtual_host):
+    """ Recreate the rabbitmq user.
+
+    The user is deleted (if it exists) and then created with .* permissions for
+    conf,write,read on the specified virtual_host.
+
+    @type username:               string
+    @param username:              The user to recreate.
+    @type password:               string
+    @param passowrd:              The new password for the specified user.
+    @type virtual_host:           string
+    @param virtual_host:          The vhost on which the permissions will be
+                                  set.
+    """
+    users = subprocess.check_output(
+        ['sudo', RABBITMQCTL, 'list_users']
+        ).split('\n')
+    assert users[0] == 'Listing users ...'
+    assert users[-2] == '...done.'
+    assert users[-1] == ''
+    for userspec in users[1:-1]:
+        user = userspec.split()[0]
+        if user == username:
+            subprocess.check_call(
+                ['sudo', RABBITMQCTL, 'delete_user', username]
+                )
+            break
+    subprocess.check_call(
+        ['sudo', RABBITMQCTL, 'add_user', username, password]
+        )
+    subprocess.check_call(
+        [
+            'sudo', RABBITMQCTL, 'set_permissions',
+            '-p', virtual_host,
+            username, '.*', '.*', '.*'
+        ])
+    subprocess.check_call(
+        ['sudo', RABBITMQCTL, 'set_user_tags', username, 'administrator']
+        )
+
+
+def _ensure_rabbitmq_settings():
+    """ Ensure rabbitmq settings (vhost, users) are correct. """
+    _recreate_vhost('SSPL')
+    _recreate_user('sspluser', 'sspl4ever', 'SSPL')
 
 
 def _ensure_plex_running():
