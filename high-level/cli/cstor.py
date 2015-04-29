@@ -30,7 +30,7 @@ def main(args=sys.argv[1:]):
         'service_name',
         help="Service to operate on.  eg crond.",
         )
-    #service_parser.add_argument(
+    # service_parser.add_argument(
     #    'node_spec',
     #    help="Optional parameter to indicate which nodes should be affected.",
     #    nargs='?'
@@ -48,8 +48,8 @@ def _get_service_provider_base_uri():
         return next(
             provider
             for provider in providers
-            if provider['application'] == 'sspl_hl'
-            and provider['name'] == 'service'
+            if provider['application'] == 'sspl_hl' and
+            provider['name'] == 'service'
             )['uri']
     except StopIteration:
         raise RuntimeError(

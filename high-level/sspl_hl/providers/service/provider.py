@@ -69,7 +69,7 @@ class Provider(DataStoreProvider):
     def query(
             self, uri, columns, selection_args, sort_order,
             range_from, range_to, responder
-            ):  # pylint: disable=too-many-arguments
+    ):  # pylint: disable=too-many-arguments
         """ Sets state of services on the cluster.
 
         This generates a json message and places it into rabbitmq where it will
@@ -89,7 +89,7 @@ class Provider(DataStoreProvider):
         if not self._validate_params(selection_args, responder):
             return
 
-        message = json.loads("""
+        message = """
             {{
                 "serviceRequest":
                 {{
@@ -97,10 +97,12 @@ class Provider(DataStoreProvider):
                     "command": "{command}"
                 }}
             }}
-            """.format(
+            """
+        message = message.format(
             serviceName=selection_args['serviceName'],
-            command=selection_args['command'])
+            command=selection_args['command']
             )
+        message = json.loads(message)
 
         self._channel.basic_publish(
             exchange='sspl_hl_cmd',

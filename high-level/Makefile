@@ -15,7 +15,7 @@ pep8:
 
 pylint:
 	pylint \
-		--disable=locally-disabled \
+		--disable=locally-disabled,locally-enabled \
 		--rcfile=pylint.rc \
 		./sspl_hl \
 		./cli \

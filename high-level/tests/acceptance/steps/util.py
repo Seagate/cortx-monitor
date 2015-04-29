@@ -7,7 +7,7 @@ import time
 @lettuce.world.absorb
 def wait_for_condition(
         status_func, max_wait, timeout_message="Timeout Expired", step=0.1
-        ):
+):
     """ Waits for the specified condition to become true.
 
     This function repeatedly calls status_func().  When status_func() returns

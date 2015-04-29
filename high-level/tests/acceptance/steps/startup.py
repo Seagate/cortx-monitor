@@ -31,12 +31,19 @@ def _stop_fake_halond(_):
 
 def _ensure_rabbitmq_running():
     with open('/dev/null', 'w') as devnull:
-        if subprocess.call(['rabbitmqctl', 'status'], stdout=devnull) != 0:
-            subprocess.Popen(['sudo', 'rabbitmq-server'], stdout=devnull)
+        status = subprocess.call(
+            ['sudo', '/usr/sbin/rabbitmqctl', 'status'],
+            stdout=devnull
+            )
+        if status != 0:
+            subprocess.Popen(
+                ['sudo', '/usr/sbin/rabbitmq-server'],
+                stdout=devnull
+                )
 
             def _is_rabbitmq_running():
                 status = subprocess.call(
-                    ['rabbitmqctl', 'status'],
+                    ['sudo', '/usr/sbin/rabbitmqctl', 'status'],
                     stdout=devnull
                     )
                 return status == 0
@@ -44,21 +51,21 @@ def _ensure_rabbitmq_running():
             lettuce.world.wait_for_condition(
                 status_func=_is_rabbitmq_running,
                 max_wait=10,
-                timeout_message=
-                "Timeout expired while waiting for rabbitmq to start"
+                timeout_message="Timeout expired while waiting for rabbitmq "
+                "to start"
                 )
 
 
 def _ensure_plex_running():
     with open('/dev/null', 'w') as devnull:
         status = subprocess.call(
-            ['/etc/init.d/plex', 'status'],
+            ['sudo', '/etc/init.d/plex', 'status'],
             stdout=devnull
             )
 
         if status != 0:
             subprocess.check_call(
-                ['/etc/init.d/plex', 'start'],
+                ['sudo', '/etc/init.d/plex', 'start'],
                 stdout=devnull
                 )
 
@@ -67,8 +74,7 @@ def _install_plex_apps():
     """ Install all relevant plex apps (currently just sspl_hl) """
     with open('/dev/null', 'w') as devnull:
         subprocess.check_call(
-            ['./install.py'],
-            cwd='./sspl_hl',
+            ['sudo', 'rsync', '--recursive', './sspl_hl', '/opt/plex/apps/'],
             stdout=devnull
             )
 
@@ -79,14 +85,15 @@ def _disable_plex_auth():
     Note that plex is *not* restarted and that a restart is necessary if conf
     is changed.
     """
-    status = subprocess.call(
-        ['grep', '-q', 'enable_plex_authentication=yes', '/etc/plex.config']
-        )
+    status = subprocess.call([
+        'sudo', 'grep', '-q', 'enable_plex_authentication=yes',
+        '/etc/plex.config'
+        ])
     if status != 0:
         return
 
     subprocess.call([
-        'sed', '--in-place', '-e',
+        'sudo', 'sed', '--in-place', '-e',
         's/enable_plex_authentication=yes/enable_plex_authentication=no/',
         '/etc/plex.config'
         ])
@@ -94,7 +101,10 @@ def _disable_plex_auth():
 
 def _restart_plex():
     with open('/dev/null', 'w') as devnull:
-        subprocess.check_call(['/etc/init.d/plex', 'restart'], stdout=devnull)
+        subprocess.check_call(
+            ['sudo', '/etc/init.d/plex', 'restart'],
+            stdout=devnull
+            )
 
 
 def _start_fake_halond():
