@@ -25,6 +25,10 @@ def given_that_all_drives_are_set_to_condition_and_sspl_is_started(step, conditi
             found = True
     assert found == True
 
+    # Clear the message queue buffer out
+    while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
+        world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
+
 @step(u'When I set the "([^"]*)" to "([^"]*)" with serial number "([^"]*)"')
 def when_i_set_the_drive_pos_to_condition_with_serial_number_serial_number(step, drive_pos, condition, serial_num):
     print("\tdrive_pos: %s" % drive_pos)
@@ -90,7 +94,7 @@ def set_all_drives(condition):
 
     # If changes were made then wait for Inotify to trigger
     if dirty == True:
-        time.sleep(10)
+        time.sleep(15)
 
     # Clear the message queue buffer out
     while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():

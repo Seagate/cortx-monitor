@@ -3,7 +3,11 @@ from lettuce import *
 
 import os
 import json
+import time
 import psutil
+import signal
+import subprocess
+
 
 # Add the top level directory to the sys.path to access classes
 topdir = os.path.dirname(os.path.dirname(os.path.dirname \
@@ -18,7 +22,7 @@ from dbus import SystemBus, Interface, exceptions as debus_exceptions
 @step(u'Given that the "([^"]*)" service is "([^"]*)" and SSPL_LL is running')
 def given_that_the_name_service_is_condition_and_sspl_ll_is_running(step, name, condition):
     # Apply the condition to the service to guarantee a known starting state
-    assert condition in ("running", "halted")
+    assert condition in ("stop", "start", "running", "halted")
     start_stop_service(name, condition)
 
     # Check that the state for sspl_ll service is active
@@ -32,44 +36,35 @@ def given_that_the_name_service_is_condition_and_sspl_ll_is_running(step, name, 
     while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
         world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
 
-@step(u'When I send in the actuator message to "([^"]*)" the "([^"]*)"')
-def when_i_send_in_the_actuator_message_to_action_the_service(step, action, service):
-    egressMsg = {
-        "title": "SSPL-LL Actuator Request",
-        "description": "Seagate Storage Platform Library - Low Level - Actuator Request",
+@step(u'When I "([^"]*)" the "([^"]*)" service')
+def when_i_action_the_name_service(step, action, name):
+    start_stop_service(name, action)
 
-        "sspl_ll_msg_header": {
-            "schema_version": "1.0.0",
-            "sspl_version": "1.0.0",
-            "msg_version": "1.0.0"
-        },
-        "actuator_request_type": {
-            "service_controller": {
-                "service_name" : service,
-                "service_request": action
-            }
-        }
-    }
-    world.sspl_modules[RabbitMQegressProcessor.name()]._write_internal_msgQ(RabbitMQegressProcessor.name(), egressMsg)
+@step(u'When I ungracefully halt the "([^"]*)" service with signal "([^"]*)"')
+def when_i_ungracefully_halt_the_name_service_with_signal_signum(step, name, signum):
+    for proc in psutil.process_iter():
+        if proc.name == name:
+            proc.send_signal(int(signum))
 
-@step(u'Then SSPL_LL "([^"]*)" the "([^"]*)" and I get the service is "([^"]*)" response')
-def then_sspl_ll_action_the_service_and_i_get_the_service_is_condition_response(step, action, service, condition):
+
+@step(u'Then I receive a service watchdog json msg with service name "([^"]*)" and state of "([^"]*)"')
+def then_i_receive_a_service_watchdog_json_msg_with_service_name_name_and_state_of_condition(step, name, condition):
     ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
     print("Received: %s" % ingressMsg)
 
     # Verify module name and thread response
-    service_name = ingressMsg.get("actuator_response_type").get("service_controller").get("service_name")
+    service_name = ingressMsg.get("sensor_response_type").get("service_watchdog").get("service_name")
     print("service_name: %s" % service_name)
-    assert service_name == service
+    assert service_name == name
 
-    service_response = ingressMsg.get("actuator_response_type").get("service_controller").get("service_response")
-    print("service_response: %s" % service_response)
-    assert service_response == condition
+    service_state = ingressMsg.get("sensor_response_type").get("service_watchdog").get("service_state")
+    print("service_state: %s" % service_state)
+    assert service_state == condition
 
 
 def start_stop_service(service_name, action):
-    assert action in ("running", "halted")
-    
+    assert action in ("stop", "start", "running", "halted")
+
     # Obtain an instance of d-bus to communicate with systemd
     bus = SystemBus()
 
@@ -77,11 +72,12 @@ def start_stop_service(service_name, action):
     systemd = bus.get_object('org.freedesktop.systemd1',
                              '/org/freedesktop/systemd1')
     manager = Interface(systemd, dbus_interface='org.freedesktop.systemd1.Manager')
-    
-    if action == "running":
+
+    if action == "start" or \
+        action == "running":
         manager.StartUnit(service_name + ".service", 'replace')
     else:
         manager.StopUnit(service_name + ".service", 'replace')
-
-
+        
+    time.sleep(3)
     

@@ -14,7 +14,11 @@ from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 
 
 @step(u'Given I send in the actuator message to restart drive manager')
-def given_i_send_in_the_actuator_message_to_restart_drive_manager(step):    
+def given_i_send_in_the_actuator_message_to_restart_drive_manager(step):
+    # Clear the message queue buffer out
+    while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
+        world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
+
     egressMsg = {
         "title": "SSPL-LL Actuator Request",
         "description": "Seagate Storage Platform Library - Low Level - Actuator Request",

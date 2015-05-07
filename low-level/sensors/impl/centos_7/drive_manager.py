@@ -37,12 +37,12 @@ class DriveManager(ScheduledModuleThread, InternalMsgQ):
     implements(IDriveManager)
 
     MODULE_NAME       = "DriveManager"
-    PRIORITY          = 2
+    PRIORITY          = 1
 
     # Section and keys in configuration file
-    DRIVEMANAGERMONITOR = MODULE_NAME.upper()
-    DRIVE_MANAGER_DIR   = 'drivemanager_dir'
-    DRIVE_MANAGER_PID   = 'drivemanager_pid'
+    DRIVEMANAGER      = MODULE_NAME.upper()
+    DRIVE_MANAGER_DIR = 'drivemanager_dir'
+    DRIVE_MANAGER_PID = 'drivemanager_pid'
 
 
     @staticmethod
@@ -148,12 +148,12 @@ class DriveManager(ScheduledModuleThread, InternalMsgQ):
 
     def _getDrive_Mngr_Dir(self):
         """Retrieves the drivemanager path to monitor on the file system"""
-        return self._conf_reader._get_value_with_default(self.DRIVEMANAGERMONITOR, 
+        return self._conf_reader._get_value_with_default(self.DRIVEMANAGER, 
                                                                  self.DRIVE_MANAGER_DIR,
                                                                  '/tmp/dcs/drivemanager')                
     def _getDrive_Mngr_Pid(self):
         """Retrieves the pid file indicating pyinotify is running or not"""
-        return self._conf_reader._get_value_with_default(self.DRIVEMANAGERMONITOR,
+        return self._conf_reader._get_value_with_default(self.DRIVEMANAGER,
                                                                  self.DRIVE_MANAGER_PID,
                                                                  '/var/run/pyinotify.pid')
     def _notify_DiskMsgHandler(self, status_file):

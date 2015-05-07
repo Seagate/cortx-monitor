@@ -14,7 +14,7 @@
 
 	"actuator_request_type": {
 		"thread_controller": {
-			"module_name" : "DriveManager",
+			"module_name" : "SystemdWatchdog",
 			"thread_request": "restart"
 		}
 	}

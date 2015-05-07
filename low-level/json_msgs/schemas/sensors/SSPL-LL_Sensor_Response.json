@@ -45,7 +45,23 @@
 						}
 					}
 				},
-								
+
+				"service_watchdog": {
+					"type": "object",
+					"properties": {
+						"service_name": {
+							"description": "Identify the service with a state change",
+							"type": "string",
+							"required": true
+						},
+						"service_state": {
+							"description": "Current state of the service",
+							"type": "string",
+							"required": true
+						}
+					}
+				},		
+
 				"host_update": {
 					"type" : "object",
 					"properties": {						

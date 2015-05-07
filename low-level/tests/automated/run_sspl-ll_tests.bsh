@@ -10,6 +10,7 @@ sed -i "s|^#poll_interval=5|poll_interval=5|g" /etc/dcs_collector.conf
 
 # Make sure SSPL-LL is in a known default startup state
 systemctl restart dcs-collector -l
+sleep 5
 systemctl restart sspl-ll -l
 
 if [[ -f ./lettucetests.xml ]]; then

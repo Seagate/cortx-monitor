@@ -56,8 +56,13 @@ class SystemdService(Debug):
         self._check_debug(jsonMsg)
 
         # Parse out the service name and request to perform on it
-        self._service_name = jsonMsg.get("actuator_request_type").get("service_controller").get("service_name")
-        self._service_request = jsonMsg.get("actuator_request_type").get("service_controller").get("service_request")
+        if jsonMsg.get("actuator_request_type").get("service_controller") is not None:
+            self._service_name = jsonMsg.get("actuator_request_type").get("service_controller").get("service_name")
+            self._service_request = jsonMsg.get("actuator_request_type").get("service_controller").get("service_request")
+        else:
+            self._service_name = jsonMsg.get("actuator_request_type").get("service_watchdog_controller").get("service_name")
+            self._service_request = jsonMsg.get("actuator_request_type").get("service_watchdog_controller").get("service_request")    
+        
         self._log_debug("perform_request, service_name: %s, service_request: %s" % \
                         (self._service_name, self._service_request))
 
@@ -89,7 +94,7 @@ class SystemdService(Debug):
 
         except debus_exceptions.DBusException, error:
             logger.exception(error)
-            return self._service_name, error
+            return self._service_name, str(error)
 
         # Get the current status of the process and return it back
         result = self._get_status()
