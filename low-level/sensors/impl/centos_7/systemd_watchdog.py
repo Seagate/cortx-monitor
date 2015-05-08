@@ -19,6 +19,7 @@ import json
 import shutil
 import Queue
 import pyinotify
+import time
 
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
@@ -114,7 +115,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                     unit_name = unit[0]
 
                     # Apply the filter from config file if present
-                    if monitored_services:                
+                    if monitored_services:
                         if unit_name not in monitored_services:
                             continue
                     self._log_debug("    " + unit_name)
@@ -146,11 +147,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
             # Loop forever iterating over the context
             while self._running == True:
                 context.iteration(True)
-
-                # Check for any incoming msgs
-                json_msg = self._read_my_msgQ_noWait()
-                if json_msg is not None:
-                    self._process_msg(json_msg)
+                time.sleep(2)
 
             self._log_debug("SystemdWatchdog gracefully breaking out " \
                                 "of dbus Loop, not restarting.")
@@ -167,11 +164,6 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
         self._disable_debug_if_persist_false()
 
         self._log_debug("Finished processing successfully")
-
-    def _process_msg(self, json_msg):
-        """Process incoming json message"""
-        self._log_debug("_process_msg, json_msg: %s" % json_msg)
-        
 
     def _get_prop_changed(self, unit, interface, prop_name, changed_properties, invalidated_properties):
         """Retrieves the property that changed"""

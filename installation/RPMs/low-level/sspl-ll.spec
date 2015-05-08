@@ -13,7 +13,7 @@ BuildRoot:  %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 BuildRequires: rpm-build
 Requires:   python-daemon python-inotify python-jsonschema python-pika rabbitmq-server
 Requires:   python-zope-interface python-zope-event python-zope-component
-Requires:	systemd-python
+Requires:	systemd-python pygobject2
 Requires(pre): shadow-utils
 
 %description

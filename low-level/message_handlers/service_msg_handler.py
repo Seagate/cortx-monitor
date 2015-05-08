@@ -107,7 +107,7 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
             # Query the Zope GlobalSiteManager for an object implementing IService
             service_actuator = queryUtility(IService)()
-            logger.info("_process_msg, service_actuator name: %s" % service_actuator.name())            
+            self._log_debug("_process_msg, service_actuator name: %s" % service_actuator.name())            
             service_name, result = service_actuator.perform_request(jsonMsg)
 
             self._log_debug("_processMsg, service_name: %s, result: %s" %
