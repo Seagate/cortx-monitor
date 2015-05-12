@@ -1,6 +1,6 @@
 Name:       SSPL-LL
 Version:    1.0.0
-Release:    8.el7
+Release:    9.el7
 Summary:    Installs SSPL-LL
 BuildArch:  noarch
 Group:      System Environment/Daemons
@@ -22,7 +22,7 @@ Installs SSPL-LL
 
 %pre
 getent passwd sspl-ll >/dev/null || \
-     useradd -r -g zabbix -s /sbin/nologin \
+     useradd -r -g zabbix -G systemd-journal -s /sbin/nologin \
      -c "User account to run the sspl-ll service" sspl-ll
 
 
@@ -55,6 +55,10 @@ tar zxvf sspl-ll.tgz --directory %{buildroot}/opt/seagate/sspl
 # setup rabbitmq vhost and user (incl permissions)
 /opt/seagate/sspl/low-level/framework/sspl_ll_rabbitmq_reinit
 
+# Enable persistent boot information for journald
+mkdir -p /var/log/journal
+systemctl restart systemd-journald
+
 # Have systemd reload
 systemctl daemon-reload
 
@@ -73,6 +77,12 @@ rm -rf %{buildroot}
 
 
 %changelog
+* Fri May 01 2015 Aden jake Abernathy <aden.j.abernathy@seagate.com> - 1.0.0-9
+- Adding request actuator for journald logging
+
+* Fri May 01 2015 Aden jake Abernathy <aden.j.abernathy@seagate.com> - 1.0.0-8
+- Adding service watchdog module
+
 * Fri Apr 24 2015 Aden jake Abernathy <aden.j.abernathy@seagate.com> - 1.0.0-7
 - Updating to run sspl-ll service as sspl-ll user instead of root
 

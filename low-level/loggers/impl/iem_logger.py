@@ -1,7 +1,7 @@
 """
  ****************************************************************************
  Filename:          IEM_Logger.py
- Description:       Handles logging IEM messages to syslog
+ Description:       Handles logging IEM messages to the journal
  Creation Date:     02/26/2015
  Author:            Jake Abernathy
 
@@ -21,31 +21,81 @@ from zope.interface import implements
 from loggers.ILogger import ILogger
 from framework.base.debug import Debug
 
+from systemd import journal
+from syslog import (LOG_EMERG, LOG_ALERT, LOG_CRIT, LOG_ERR,
+                    LOG_WARNING, LOG_NOTICE, LOG_INFO, LOG_DEBUG)
+
+LOGLEVEL_NAME_TO_LEVEL_DICT = {
+    "LOG_EMERG"   : LOG_EMERG,
+    "LOG_ALERT"   : LOG_ALERT,
+    "LOG_CRIT"    : LOG_CRIT,
+    "LOG_ERR"     : LOG_ERR,
+    "LOG_WARNING" : LOG_WARNING,
+    "LOG_NOTICE"  : LOG_NOTICE,
+    "LOG_INFO"    : LOG_INFO,
+    "LOG_DEBUG"   : LOG_DEBUG
+}
 
 class IEMlogger(Debug):
-    """Handles logging IEM messages to syslog"""
+    """Handles logging IEM messages to the journal"""
 
     implements(ILogger)
 
-    def __init__(self, jsonMsg):
+    LOGGER_NAME = "IEMlogger"
+
+    @staticmethod
+    def name():
+        """ @return: name of the logger."""
+        return IEMlogger.LOGGER_NAME
+
+    def __init__(self):
         super(IEMlogger, self).__init__()
-        self.log_msg(jsonMsg)
 
     def log_msg(self, jsonMsg):
-        """logs the IEM message to syslog"""
+        """logs the IEM message to the journal"""
 
-        logMsg = jsonMsg.get("actuator_request_type").get("logging").get("log_msg")
+        self._check_debug(jsonMsg)
+
+        # Get the optional log_level if it exists in msg
+        if jsonMsg.get("actuator_request_type").get("logging").get("log_level") is not None:
+            log_level = jsonMsg.get("actuator_request_type").get("logging").get("log_level")
+        else:
+            log_level = "LOG_INFO"
+
+        # Get the message to log in format "IEC: EVENT_CODE: EVENT_STRING: JSON DATA"
+        log_msg = jsonMsg.get("actuator_request_type").get("logging").get("log_msg")
 
         # Encode and remove whitespace,\n,\t if present
-        logMsg = json.dumps(logMsg, ensure_ascii=True).encode('utf8')
-        logMsg = json.loads(' '.join(logMsg.split()))
+        log_msg = json.dumps(log_msg, ensure_ascii=True).encode('utf8')
+        log_msg = json.loads(' '.join(log_msg.split()))
 
         # Try encoding message to handle escape chars if present
         try:
-            logMsg = logMsg.encode('utf8')
+            log_msg = log_msg.encode('utf8')
         except Exception as de:
-            self._log_debug("\n\n_processMsg, no encoding applied, \
-                            writing to syslog: %r" % de)            
+            self._log_debug("log_msg, no encoding applied, \
+                            writing to journal: %r" % de)
 
-        # Write message to syslog
-        syslog.syslog(logMsg)
+        try:
+            # IEM logging format "IEC: EVENT_CODE: EVENT_STRING: JSON DATA"
+            event_code_start = log_msg.index("IEC:") + 4
+            event_code_stop  = log_msg.index(":", event_code_start)
+
+            # Parse out the event code and remove any white spaces
+            event_code = log_msg[event_code_start : event_code_stop].strip()
+            self._log_debug("log_msg, event_code: %s" % event_code)
+
+            msg = log_msg[event_code_stop+1 : ]
+            self._log_debug("log_msg, msg: %s" % msg)
+
+            # Use the optional log_level in json message and set it to PRIORITY
+            if log_level in LOGLEVEL_NAME_TO_LEVEL_DICT:
+                priority = LOGLEVEL_NAME_TO_LEVEL_DICT[log_level]
+            self._log_debug("log_msg, priority: %s" % priority)
+
+            # Send it to the journal with the appropriate arguments
+            journal.send(msg, MESSAGE_ID=event_code, PRIORITY=priority, 
+                         SYSLOG_IDENTIFIER="SSPL-LL (IEMLogger)")
+
+        except Exception as de:
+            self._log_debug("log_msg, Error parsing IEM message: %s" % de)

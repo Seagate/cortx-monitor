@@ -83,7 +83,8 @@ class LoggingMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
         if jsonMsg.get("actuator_request_type").get("logging").get("log_type") == "IEM":
             self._log_debug("_processMsg, msg_type: IEM")
-            IEMlogger(jsonMsg)
+            iem_logger = IEMlogger()
+            iem_logger.log_msg(jsonMsg)
 
         # ... handle other logging types
 
