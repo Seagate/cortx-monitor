@@ -1,7 +1,8 @@
 """
  ****************************************************************************
  Filename:          systemd_service.py
- Description:       Handles service request messages to systemd
+ Description:       Handles service request messages to systemd and write
+                    requests to journald
  Creation Date:     03/25/2015
  Author:            Jake Abernathy
 
@@ -15,6 +16,7 @@
 """
 
 import json
+import time
 
 from zope.interface import implements
 from actuators.IService import IService
@@ -95,6 +97,9 @@ class SystemdService(Debug):
         except debus_exceptions.DBusException, error:
             logger.exception(error)
             return self._service_name, str(error)
+
+        # Give the unit some time to finish starting/stopping to get final status
+        time.sleep(5)
 
         # Get the current status of the process and return it back
         result = self._get_status()
