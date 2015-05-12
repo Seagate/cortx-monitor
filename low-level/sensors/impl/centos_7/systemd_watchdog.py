@@ -181,7 +181,11 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
         if interface != 'org.freedesktop.systemd1.Unit':
             return
 
-        unit_name = unit.Get(interface, "Id")
+        # Get the interface for the unit
+        Iunit = Interface(unit, dbus_interface='org.freedesktop.DBus.Properties')
+
+        # Always call methods on the interface not the actual object
+        unit_name = Iunit.Get(interface, "Id")
         self._log_debug("_on_prop_changed, unit_name: %s" % unit_name)
         # self._log_debug("_on_prop_changed, changed_properties: %s" % changed_properties)
         # self._log_debug("_on_prop_changed, invalids: %s" % invalidated_properties)
@@ -194,13 +198,13 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
 
         # The state can change from an incoming json msg to the service msg handler
         #  This provides a catch to make sure that we don't send redundant msgs
-        if self._service_status.get(str(unit_name), "") == str(state):
+        if self._service_status.get(str(unit_name), "") == str(state) + ":" + str(substate):
             self._log_debug("_on_prop_changed, no service state change detected, ignoring.")
             return
         else:
             # Update the state in the global dict for later use
             self._log_debug("_on_prop_changed, service state change detected notifying ServiceMsgHandler.")
-            self._service_status[str(unit_name)] = str(state)
+            self._service_status[str(unit_name)] = str(state) + ":" + str(substate)
 
         # Only send out a json msg if there was a state or substate change for the service
         if state or substate:
