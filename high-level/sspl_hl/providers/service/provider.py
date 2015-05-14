@@ -4,12 +4,15 @@ PLEX data provider.
 # Third party
 from zope.interface import implements
 from twisted.plugin import IPlugin
+from twisted.internet import reactor
 import pika
 import json
 # PLEX
 from plex.common.interfaces.idata_provider import IDataProvider
 from plex.core.provider.data_store_provider import DataStoreProvider
 # Local
+
+from plex.util.concurrent.single_thread_executor import SingleThreadExecutor
 
 
 class Provider(DataStoreProvider):
@@ -19,11 +22,16 @@ class Provider(DataStoreProvider):
 
     def __init__(self, name, description):
         super(Provider, self).__init__(name, description)
+        self._single_thread_executor = SingleThreadExecutor()
         self._connection = None
         self._channel = None
 
     def on_create(self):
+        self._single_thread_executor.submit(self._on_create)
+
+    def _on_create(self):
         """ Implement this method to initialize the Provider. """
+
         self._connection = pika.BlockingConnection(
             pika.ConnectionParameters(
                 host='localhost',
@@ -43,29 +51,29 @@ class Provider(DataStoreProvider):
             'start', 'stop', 'restart', 'enable', 'disable', 'status'
             ]
         if 'serviceName' not in selection_args:
-            responder.reply_exception(
+            reactor.callFromThread(responder.reply_exception(
                 "Error: Invalid request: Missing serviceName"
-                )
+                ))
             return False
         elif 'command' not in selection_args:
-            responder.reply_exception(
+            reactor.callFromThread(responder.reply_exception(
                 "Error: Invalid request: Missing command"
-                )
+                ))
             return False
         elif selection_args['command'] not in valid_commands:
-            responder.reply_exception(
+            reactor.callFromThread(responder.reply_exception(
                 "Error: Invalid command: '{}'".format(
                     selection_args['command']
                     )
-                )
+                ))
             return False
         elif len(selection_args) > 2:
             del selection_args['command']
             del selection_args['serviceName']
-            responder.reply_exception(
+            reactor.callFromThread(responder.reply_exception(
                 "Error: Invalid request: Extra parameter '{extra}' detected"
                 .format(extra=selection_args.keys()[0])
-                )
+                ))
             return False
 
         return True
@@ -74,6 +82,11 @@ class Provider(DataStoreProvider):
             self, uri, columns, selection_args, sort_order,
             range_from, range_to, responder
     ):  # pylint: disable=too-many-arguments
+        self._single_thread_executor.submit(
+            self._query, selection_args, responder
+            )
+
+    def _query(self, selection_args, responder):
         """ Sets state of services on the cluster.
 
         This generates a json message and places it into rabbitmq where it will
@@ -113,7 +126,7 @@ class Provider(DataStoreProvider):
             routing_key='sspl_hl_cmd',
             body=json.dumps(message)
             )
-        responder.reply_no_match()
+        reactor.callFromThread(responder.reply_no_match)
 
 
 # pylint: disable=invalid-name

@@ -5,3 +5,6 @@
 [BASIC]
 # Don't require docstrings for private methods.
 no-docstring-rgx=_.*
+
+[TYPECHECK]
+ignored-classes=SQLObject,twisted.internet.reactor

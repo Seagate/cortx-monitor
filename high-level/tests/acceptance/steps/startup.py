@@ -46,7 +46,8 @@ def _ensure_rabbitmq_running():
 
             def _is_rabbitmq_running():
                 # 'status' by itself seems insufficient.  We'll also wait for
-                # list_vhosts to be ready.
+                # list_vhosts to be ready.  ... Update: still seems to be
+                # insufficient.  So we'll add a sleep.  :(
                 status = subprocess.call(
                     ['sudo', '/usr/sbin/rabbitmqctl', 'status'],
                     stdout=devnull
@@ -58,7 +59,11 @@ def _ensure_rabbitmq_running():
                     ['sudo', '/usr/sbin/rabbitmqctl', 'list_vhosts'],
                     stdout=devnull
                     )
-                return status == 0
+                if status != 0:
+                    return False
+
+                time.sleep(2)
+                return True
 
             lettuce.world.wait_for_condition(
                 status_func=_is_rabbitmq_running,

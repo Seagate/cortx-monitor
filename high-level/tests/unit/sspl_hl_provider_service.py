@@ -3,9 +3,20 @@ import pika
 import mock
 import json
 from sspl_hl.providers.service.provider import Provider
+from plex.util.concurrent.single_thread_executor import SingleThreadExecutor
 
 
 class SsplHlProviderService(unittest.TestCase):
+    def setUp(self):
+        self._p = mock.patch.object(
+            SingleThreadExecutor, 'submit',
+            side_effect=lambda fn, *args, **kwargs: fn(*args, **kwargs)
+            )
+        self._p.start()
+
+    def tearDown(self):
+        self._p.stop()
+
     @staticmethod
     def _generate_expected_message(service_name, command):
         return json.dumps(json.loads("""
