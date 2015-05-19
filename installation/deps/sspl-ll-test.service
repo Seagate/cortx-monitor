@@ -5,7 +5,7 @@ After=syslog.target
 [Service]
 Type=notify
 ExecStartPre=/usr/bin/mkdir /var/run/sspl_ll
-ExecStart=/local/build/jenkins/workspace/sspl-ll-gerrit/low-level/framework/sspl_ll_d -c /etc/sspl_ll.conf
+ExecStart=
 ExecStopPost=/usr/bin/rm -Rf /var/run/sspl_ll
 PIDFile=/var/run/sspl_ll/sspl_ll_d.pid
 User=root

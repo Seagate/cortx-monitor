@@ -42,6 +42,10 @@ systemctl start rabbitmq-server -l
 cp installation/deps/sspl-ll-test.service /etc/systemd/system/sspl-ll.service
 cp installation/deps/sspl_ll-test.conf /etc/sspl_ll.conf
 
+# Update sspl-ll.service with current path
+service_path="`pwd`/low-level/framework/sspl_ll_d"
+sed -i "s|^ExecStart=.*|ExecStart=${service_path} -c /etc/sspl_ll.conf|g" /etc/systemd/system/sspl-ll.service 
+
 # Initialize rabbitmq queues and exchanges
 chmod +x low-level/framework/sspl_ll_rabbitmq_reinit
 low-level/framework/sspl_ll_rabbitmq_reinit
