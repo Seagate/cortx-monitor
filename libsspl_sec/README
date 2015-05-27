@@ -1,0 +1,9 @@
+C library used to sign and verify messages sent throughout sspl.
+
+Build instructions (from git):
+
+./autogen.sh
+./configure
+make
+make check
+make install
