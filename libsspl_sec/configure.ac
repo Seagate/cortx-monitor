@@ -21,10 +21,13 @@ LT_INIT
 
 AC_HEADER_STDC
 
+AC_ARG_VAR(DOXYGEN, [Path to doxygen.  Used for API documentation generation.])
+AC_PATH_PROG(DOXYGEN, doxygen)
+
 #AC_CHECK_HEADERS(ssl.h,,AC_MSG_ERROR(missing ssl.h))
 #AC_CHECK_LIB(ssl, symbol_used_in_libssl,, AC_MSG_ERROR(missing libssl))
 
 ###############################################################################
 # Output
 ###############################################################################
-AC_OUTPUT(Makefile libsspl_sec/Makefile)
+AC_OUTPUT(Makefile libsspl_sec/Makefile doc/Makefile)
