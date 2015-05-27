@@ -2,4 +2,5 @@ AUTOMAKE_OPTIONS=foreign
 SUBDIRS=libsspl_sec doc
 
 all:
-	make -C doc
+	$(MAKE) -C libsspl_sec
+	$(MAKE) -C doc
