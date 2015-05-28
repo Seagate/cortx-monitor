@@ -53,14 +53,8 @@ if test "x$PYLINT" == "x" ; then
 fi
 
 
+PKG_CHECK_MODULES([CHECK], [check >= 0.9.4])
 
-AC_CHECK_HEADERS(cmocka.h,,AC_MSG_ERROR(missing cmocka.h),
-[
-    #include <stdarg.h>
-    #include <stddef.h>
-    #include <setjmp.h>
-])
-AC_CHECK_LIB(cmocka, _run_tests,, AC_MSG_ERROR(missing libcmocka))
 
 #AC_CHECK_HEADERS(ssl.h,,AC_MSG_ERROR(missing ssl.h))
 #AC_CHECK_LIB(ssl, symbol_used_in_libssl,, AC_MSG_ERROR(missing libssl))

@@ -1,15 +1,13 @@
-#include <stdarg.h>
-#include <stddef.h>
-#include <setjmp.h>
-#include <cmocka.h>
+#include <stdlib.h>
+#include <check.h>
 #include <string.h>
 
 #include "sspl_sec.h"
 #include "sec_method.h"
 
-void test_generate_session_token(void** state)
+START_TEST(test_generate_session_token)
 {
-    assert_int_equal(sspl_sec_get_method(), SSPL_SEC_METHOD_NONE);
+    ck_assert_int_eq(sspl_sec_get_method(), SSPL_SEC_METHOD_NONE);
 
     const char* username = "ignored";
     const char* password = "ignored";
@@ -21,12 +19,13 @@ void test_generate_session_token(void** state)
         session_length,
         token);
 
-    assert_memory_equal(token, "Token", sspl_get_token_length());
+    ck_assert(memcmp(token, "Token", sspl_get_token_length()) == 0);
 }
+END_TEST
 
-void test_sign_message(void** state)
+START_TEST(test_sign_message)
 {
-    assert_int_equal(sspl_sec_get_method(), SSPL_SEC_METHOD_NONE);
+    ck_assert_int_eq(sspl_sec_get_method(), SSPL_SEC_METHOD_NONE);
 
     const char* message = "Hello, World!";
     const char* username = "ignored";
@@ -39,12 +38,13 @@ void test_sign_message(void** state)
         token,
         sig);
 
-    assert_memory_equal(sig, "None", sspl_get_sig_length());
+    ck_assert(memcmp(sig, "None", sspl_get_sig_length()) == 0);
 }
+END_TEST
 
-void test_verify_message(void** state)
+START_TEST(test_verify_message)
 {
-    assert_int_equal(sspl_sec_get_method(), SSPL_SEC_METHOD_NONE);
+    ck_assert_int_eq(sspl_sec_get_method(), SSPL_SEC_METHOD_NONE);
 
     const char* message = "Hello, World!";
     const char* username = "ignored";
@@ -55,18 +55,35 @@ void test_verify_message(void** state)
                       username,
                       sig);
 
-    assert_true(success);
+    ck_assert(success);
+}
+END_TEST
+
+Suite* basic_tests()
+{
+    Suite* s = suite_create("basic tests");
+
+    /* Core test case */
+    TCase* tc_core = tcase_create("Core");
+
+    tcase_add_test(tc_core, test_generate_session_token);
+    tcase_add_test(tc_core, test_sign_message);
+    tcase_add_test(tc_core, test_verify_message);
+    suite_add_tcase(s, tc_core);
+
+    return s;
 }
 
 int main()
 {
-    const UnitTest tests[] =
-    {
-        unit_test(test_generate_session_token),
-        unit_test(test_sign_message),
-        unit_test(test_verify_message)
-    };
+    int number_failed;
 
-    return run_tests(tests);
+    Suite* s = basic_tests();
+    SRunner* sr = srunner_create(s);
+
+    srunner_run_all(sr, CK_NORMAL);
+    number_failed = srunner_ntests_failed(sr);
+    srunner_free(sr);
+    return (number_failed == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
