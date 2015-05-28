@@ -8,9 +8,16 @@ config.status
 config.sub
 configure
 depcomp
+.deps
+.dirstamp
 install-sh
+.libs
 libtool
 ltmain.sh
 Makefile
 Makefile.in
 missing
+*.o
+stylecheck.tmp
+tags
+test-driver
