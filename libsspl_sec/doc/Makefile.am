@@ -10,8 +10,10 @@ all-local: docs
 
 .PHONY: docs
 docs: Doxyfile
-	$(DOXYGEN)
+	$(DOXYGEN) $(srcdir)/Doxyfile
 
 
 clean-local:
 	rm -rf html latex doxygen_sqlite3.db
+
+EXTRA_DIST=Doxyfile ./examples/python/01_message_creator.py

@@ -5,14 +5,14 @@ STYLECHECKER=$(ASTYLE) --style=ansi --attach-extern-c --indent-classes --indent-
 check-local: c_style python_style
 
 python_style:
-	$(FLAKE8) .
-	$(PYLINT) --module-rgx='.*' ./doc/examples/python/*.py
-	$(PYLINT) ./tests/acceptance/steps/*.py
+	$(FLAKE8) $(top_srcdir)
+	$(PYLINT) --module-rgx='.*' $(top_srcdir)/doc/examples/python/*.py
+	$(PYLINT) $(top_srcdir)/tests/acceptance/steps/*.py
 
+if HAVE_ASTYLE
 c_style:
-	@echo ">>> $(STYLECHECKER) <<<"
 	@rm -f stylecheck.tmp
-	@for file in `find . -name '*.h' -or -name '*.c'` ; do \
+	@for file in `find $(top_srcdir) -name '*.h' -or -name '*.c'` ; do \
 		cat $$file | $(STYLECHECKER) > stylecheck.tmp ; \
 		if ! diff -q $$file stylecheck.tmp > /dev/null ; then \
 			echo "ERROR $$file failed style check." ; \
@@ -20,10 +20,14 @@ c_style:
 			exit 1 ; \
 		fi ; \
 	done
+else
+c_style:
+	@echo "C style checking disabled"
+endif
 
 c_style_interactive:
 	@rm -f stylecheck.tmp
-	@for file in `find . -name '*.h' -or -name '*.c'` ; do \
+	@for file in `find $(top_srcdir) -name '*.h' -or -name '*.c'` ; do \
 		cat $$file | $(STYLECHECKER) > stylecheck.tmp ; \
 		if ! diff -q $$file stylecheck.tmp > /dev/null ; then \
 			vimdiff $$file stylecheck.tmp ; \
