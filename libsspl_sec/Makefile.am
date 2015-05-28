@@ -6,6 +6,7 @@ check-local: c_style python_style
 
 python_style:
 	$(FLAKE8) .
+	$(PYLINT) --module-rgx='.*' ./doc/examples/python/*.py
 	$(PYLINT) ./tests/acceptance/steps/*.py
 
 c_style:

@@ -31,6 +31,12 @@ extern "C" {
  */
 
 /**
+ * @example examples/python/01_message_creator.py
+ *
+ * Shows how to create and sign a message with python.
+ */
+
+/**
  * @file
  *
  * @brief                         Functions for libsspl_sec.
