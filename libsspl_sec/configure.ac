@@ -15,6 +15,7 @@ AC_PROG_INSTALL
 AM_PROG_AR
 AC_PROG_LIBTOOL
 LT_INIT
+AM_PROG_CC_C_O
 
 ###############################################################################
 # Dependencies checks.
