@@ -1,10 +1,12 @@
 [Unit]
 Description=SSPL Low Level Process
-After=syslog.target
+Wants=openhpid.service drivemanager.service dcs-collector.service rabbitmq-server.service halond.service
+After=rabbitmq-server.service dcs-collector.service halond.service syslog.target
 
 [Service]
 Type=notify
 PermissionsStartOnly=true
+ExecStartPre=/opt/seagate/sspl/low-level/framework/sspl_ll_rabbitmq_reinit
 ExecStartPre=/usr/bin/mkdir /var/run/sspl_ll
 ExecStartPre=/usr/bin/chown sspl-ll:root /var/run/sspl_ll
 ExecStart=/opt/seagate/sspl/low-level/framework/sspl_ll_d -c /etc/sspl_ll.conf

@@ -1,8 +1,7 @@
 """
  ****************************************************************************
  Filename:          systemd_service.py
- Description:       Handles service request messages to systemd and write
-                    requests to journald
+ Description:       Handles service request messages to systemd
  Creation Date:     03/25/2015
  Author:            Jake Abernathy
 
@@ -75,10 +74,11 @@ class SystemdService(Debug):
             # Get a proxy to systemd for accessing properties of units
             self._proxy = self._bus.get_object("org.freedesktop.systemd1", str(systemd_unit))
 
+            # The returned result of the desired action
+            result = None
+
             if self._service_request == "restart":
                 self._manager.RestartUnit(self._service_name, 'replace')
-                result = self._get_status()
-                self._log_debug("perform_request restart: %s" % result)
 
             elif self._service_request == "start":
                 self._manager.StartUnit(self._service_name, 'replace')
@@ -89,6 +89,18 @@ class SystemdService(Debug):
             elif self._service_request == "status":
                 # Return the status below
                 pass
+
+            elif self._service_request == "enable":
+                service_list = []
+                service_list.append(self._service_name)
+                bool_res, result = self._manager.EnableUnitFiles(service_list, True, True)
+                self._log_debug("perform_request, bool: %s, result: %s" % (bool_res, result))
+
+            elif self._service_request == "disable":
+                service_list = []
+                service_list.append(self._service_name)
+                result = self._manager.DisableUnitFiles(service_list, True)
+                self._log_debug("perform_request, result: %s" % result)
 
             else:
                 self._log_debug("perform_request, Unknown service request")
@@ -102,10 +114,11 @@ class SystemdService(Debug):
         time.sleep(5)
 
         # Get the current status of the process and return it back
-        result = self._get_status()
-        self._log_debug("perform_request, status: %s" % result)
+        if result is None:
+            result = self._get_status()
+            self._log_debug("perform_request, result: %s" % result)
 
-        return self._service_name, result
+        return self._service_name, str(result)
 
     def _get_status(self):
         """"Returns the active state of the unit"""

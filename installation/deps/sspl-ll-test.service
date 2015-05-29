@@ -1,6 +1,7 @@
 [Unit]
 Description=SSPL Low Level Process
-After=syslog.target
+Wants=openhpid.service drivemanager.service dcs-collector.service rabbitmq-server.service halond.service
+After=rabbitmq-server.service dcs-collector.service halond.service syslog.target
 
 [Service]
 Type=notify

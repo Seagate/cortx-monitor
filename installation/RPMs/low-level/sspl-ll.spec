@@ -13,7 +13,7 @@ BuildRoot:  %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 BuildRequires: rpm-build
 Requires:   python-daemon python-inotify python-jsonschema python-pika rabbitmq-server
 Requires:   python-zope-interface python-zope-event python-zope-component
-Requires:	systemd-python pygobject2 dbus
+Requires:   systemd-python pygobject2 dbus
 Requires(pre): shadow-utils
 
 %description
@@ -38,7 +38,6 @@ cp %SOURCE3 .
 
 %install
 # Copy config file and service startup to correct locations
-mkdir -p %{buildroot}/etc/init.d
 mkdir -p %{buildroot}/etc/systemd/system
 mkdir -p %{buildroot}/etc/dbus-1/system.d
 
@@ -52,8 +51,6 @@ tar zxvf sspl-ll.tgz --directory %{buildroot}/opt/seagate/sspl
 
 
 %post
-# setup rabbitmq vhost and user (incl permissions)
-/opt/seagate/sspl/low-level/framework/sspl_ll_rabbitmq_reinit
 
 # Enable persistent boot information for journald
 mkdir -p /var/log/journal
@@ -62,6 +59,8 @@ systemctl restart systemd-journald
 # Have systemd reload
 systemctl daemon-reload
 
+# Enable service to start at boot
+systemctl enable sspl-ll
 
 %clean
 rm -rf %{buildroot}
@@ -77,8 +76,9 @@ rm -rf %{buildroot}
 
 
 %changelog
-* Fri May 01 2015 Aden jake Abernathy <aden.j.abernathy@seagate.com> - 1.0.0-9
-- Adding request actuator for journald logging
+* Fri May 29 2015 Aden jake Abernathy <aden.j.abernathy@seagate.com> - 1.0.0-9
+- Adding request actuator for journald logging, updating systemd unit file
+- Adding enabling and disabling of services, moving rabbitmq init script to unit file
 
 * Fri May 01 2015 Aden jake Abernathy <aden.j.abernathy@seagate.com> - 1.0.0-8
 - Adding service watchdog module
