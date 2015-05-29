@@ -22,16 +22,22 @@ def given_i_send_in_the_actuator_message_to_restart_drive_manager(step):
     egressMsg = {
         "title": "SSPL-LL Actuator Request",
         "description": "Seagate Storage Platform Library - Low Level - Actuator Request",
+        "username" : "JohnDoe",
+        "signature" : "None",
+        "time" : "2015-05-29 14:28:30.974749",
+        "expires" : 500,
 
-        "sspl_ll_msg_header": {
-            "schema_version": "1.0.0",
-            "sspl_version": "1.0.0",
-            "msg_version": "1.0.0"
-        },
-        "actuator_request_type": {
-            "thread_controller": {
-                "module_name" : "DriveManager",
-                "thread_request": "restart"
+        "message" : {
+            "sspl_ll_msg_header": {
+                "schema_version": "1.0.0",
+                "sspl_version": "1.0.0",
+                "msg_version": "1.0.0"
+            },
+            "actuator_request_type": {
+                "thread_controller": {
+                    "module_name" : "DriveManager",
+                    "thread_request": "restart"
+                }
             }
         }
     }
@@ -63,16 +69,22 @@ def given_i_send_in_the_actuator_message_to_stop_drive_manager(step):
     egressMsg = {
         "title": "SSPL-LL Actuator Request",
         "description": "Seagate Storage Platform Library - Low Level - Actuator Request",
+        "username" : "JohnDoe",
+        "signature" : "None",
+        "time" : "2015-05-29 14:28:30.974749",
+        "expires" : 500,
 
-        "sspl_ll_msg_header": {
-            "schema_version": "1.0.0",
-            "sspl_version": "1.0.0",
-            "msg_version": "1.0.0"
-        },
-        "actuator_request_type": {
-            "thread_controller": {
-                "module_name" : "DriveManager",
-                "thread_request": "stop"
+        "message" : {
+            "sspl_ll_msg_header": {
+                "schema_version": "1.0.0",
+                "sspl_version": "1.0.0",
+                "msg_version": "1.0.0"
+            },
+            "actuator_request_type": {
+                "thread_controller": {
+                    "module_name" : "DriveManager",
+                    "thread_request": "stop"
+                }
             }
         }
     }
@@ -104,16 +116,22 @@ def given_i_send_in_the_actuator_message_to_start_drive_manager(step):
     egressMsg = {
         "title": "SSPL-LL Actuator Request",
         "description": "Seagate Storage Platform Library - Low Level - Actuator Request",
+        "username" : "JohnDoe",
+        "signature" : "None",
+        "time" : "2015-05-29 14:28:30.974749",
+        "expires" : 500,
 
-        "sspl_ll_msg_header": {
-            "schema_version": "1.0.0",
-            "sspl_version": "1.0.0",
-            "msg_version": "1.0.0"
-        },
-        "actuator_request_type": {
-            "thread_controller": {
-                "module_name" : "DriveManager",
-                "thread_request": "start"
+        "message" : {
+            "sspl_ll_msg_header": {
+                "schema_version": "1.0.0",
+                "sspl_version": "1.0.0",
+                "msg_version": "1.0.0"
+            },
+            "actuator_request_type": {
+                "thread_controller": {
+                    "module_name" : "DriveManager",
+                    "thread_request": "start"
+                }
             }
         }
     }
@@ -145,16 +163,22 @@ def given_i_request_to_stop_drive_manager_and_then_i_request_a_thread_status(ste
     egressMsg = {
         "title": "SSPL-LL Actuator Request",
         "description": "Seagate Storage Platform Library - Low Level - Actuator Request",
+        "username" : "JohnDoe",
+        "signature" : "None",
+        "time" : "2015-05-29 14:28:30.974749",
+        "expires" : 500,
 
-        "sspl_ll_msg_header": {
-            "schema_version": "1.0.0",
-            "sspl_version": "1.0.0",
-            "msg_version": "1.0.0"
-        },
-        "actuator_request_type": {
-            "thread_controller": {
-                "module_name" : "DriveManager",
-                "thread_request": "stop"
+        "message" : {
+            "sspl_ll_msg_header": {
+                "schema_version": "1.0.0",
+                "sspl_version": "1.0.0",
+                "msg_version": "1.0.0"
+            },
+            "actuator_request_type": {
+                "thread_controller": {
+                    "module_name" : "DriveManager",
+                    "thread_request": "stop"
+                }
             }
         }
     }
@@ -164,16 +188,22 @@ def given_i_request_to_stop_drive_manager_and_then_i_request_a_thread_status(ste
     egressMsg = {
         "title": "SSPL-LL Actuator Request",
         "description": "Seagate Storage Platform Library - Low Level - Actuator Request",
+        "username" : "JohnDoe",
+        "signature" : "None",
+        "time" : "2015-05-29 14:28:30.974749",
+        "expires" : 500,
 
-        "sspl_ll_msg_header": {
-            "schema_version": "1.0.0",
-            "sspl_version": "1.0.0",
-            "msg_version": "1.0.0"
-        },
-        "actuator_request_type": {
-            "thread_controller": {
-                "module_name" : "DriveManager",
-                "thread_request": "status"
+        "message" : {
+            "sspl_ll_msg_header": {
+                "schema_version": "1.0.0",
+                "sspl_version": "1.0.0",
+                "msg_version": "1.0.0"
+            },
+            "actuator_request_type": {
+                "thread_controller": {
+                    "module_name" : "DriveManager",
+                    "thread_request": "status"
+                }
             }
         }
     }
@@ -217,16 +247,22 @@ def given_i_request_to_start_drive_manager_and_then_i_request_a_thread_status(st
     egressMsg = {
         "title": "SSPL-LL Actuator Request",
         "description": "Seagate Storage Platform Library - Low Level - Actuator Request",
+        "username" : "JohnDoe",
+        "signature" : "None",
+        "time" : "2015-05-29 14:28:30.974749",
+        "expires" : 500,
 
-        "sspl_ll_msg_header": {
-             "schema_version": "1.0.0",
-             "sspl_version": "1.0.0",
-             "msg_version": "1.0.0"
-        },
-        "actuator_request_type": {
-            "thread_controller": {
-                 "module_name" : "DriveManager",
-                 "thread_request": "start"
+        "message" : {
+            "sspl_ll_msg_header": {
+                 "schema_version": "1.0.0",
+                 "sspl_version": "1.0.0",
+                 "msg_version": "1.0.0"
+            },
+            "actuator_request_type": {
+                "thread_controller": {
+                     "module_name" : "DriveManager",
+                     "thread_request": "start"
+                }
             }
         }
     }
@@ -236,16 +272,22 @@ def given_i_request_to_start_drive_manager_and_then_i_request_a_thread_status(st
     egressMsg = {
         "title": "SSPL-LL Actuator Request",
         "description": "Seagate Storage Platform Library - Low Level - Actuator Request",
+        "username" : "JohnDoe",
+        "signature" : "None",
+        "time" : "2015-05-29 14:28:30.974749",
+        "expires" : 500,
 
-        "sspl_ll_msg_header": {
-            "schema_version": "1.0.0",
-            "sspl_version": "1.0.0",
-            "msg_version": "1.0.0"
-        },
-        "actuator_request_type": {
-            "thread_controller": {
-                "module_name" : "DriveManager",
-                "thread_request": "status"
+        "message" : {
+            "sspl_ll_msg_header": {
+                "schema_version": "1.0.0",
+                "sspl_version": "1.0.0",
+                "msg_version": "1.0.0"
+            },
+            "actuator_request_type": {
+                "thread_controller": {
+                    "module_name" : "DriveManager",
+                    "thread_request": "status"
+                }
             }
         }
     }

@@ -21,6 +21,8 @@
 """
 
 import json
+import datetime
+
 from json_msgs.messages.sensors.base_sensors_msg import BaseSensorMsg
 
 class DriveMngrMsg(BaseSensorMsg):
@@ -29,31 +31,46 @@ class DriveMngrMsg(BaseSensorMsg):
     SENSOR_RESPONSE_TYPE = "disk_status_drivemanager"
     MESSAGE_VERSION      = "1.0.0"
 
-    def __init__(self, _enclosure,
-                       _drive_num,
-                       _status):
+    def __init__(self, enclosure,
+                       drive_num,
+                       status,
+                       username = "SSPL-LL",
+                       signature = "N/A",
+                       time = str(datetime.datetime.now()),
+                       expires = -1):
         super(DriveMngrMsg, self).__init__()         
-        
-        self._enclosure = _enclosure
-        self._drive_num = _drive_num
-        self._status    = _status        
+
+        self._username  = username
+        self._signature = signature
+        self._time      = time
+        self._expires   = expires
+        self._enclosure = enclosure
+        self._drive_num = drive_num
+        self._status    = status        
         
         self._json = {"title" : self.TITLE,
                       "description" : self.DESCRIPTION,
-                      "sspl_ll_msg_header": {
-                            "schema_version" : self.SCHEMA_VERSION,
-                            "sspl_version" : self.SSPL_VERSION,
-                            "msg_version" : self.MESSAGE_VERSION,
-                            },
-                      "sensor_response_type": {
-                            self.SENSOR_RESPONSE_TYPE: {                               
-                                "enclosureSN" : self._enclosure,
-                                "diskNum" : int(self._drive_num),                                            
-                                "diskStatus": self._status                                
-                                }
-                            }                      
+                      "username" : self._username,
+                      "signature" : self._signature,
+                      "time" : self._time,
+                      "expires" : self._expires,
+
+                      "message" : {                   
+                          "sspl_ll_msg_header": {
+                                "schema_version" : self.SCHEMA_VERSION,
+                                "sspl_version" : self.SSPL_VERSION,
+                                "msg_version" : self.MESSAGE_VERSION,
+                                },
+                          "sensor_response_type": {
+                                self.SENSOR_RESPONSE_TYPE: {                               
+                                    "enclosureSN" : self._enclosure,
+                                    "diskNum" : int(self._drive_num),                                            
+                                    "diskStatus": self._status                                
+                                    }
+                                }                      
+                          }
                       }
-        
+
     def getJson(self):
         """Return a validated JSON object"""    
         # Validate the current message    

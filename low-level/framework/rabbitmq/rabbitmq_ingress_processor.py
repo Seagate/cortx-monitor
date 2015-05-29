@@ -117,6 +117,7 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
 
     def _process_msg(self, ch, method, properties, body):
         """Parses the incoming message and hands off to the appropriate module"""
+
         ingressMsg = {}
         try:
             if isinstance(body, dict) == False:
@@ -124,15 +125,19 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
             else:
                 ingressMsg = body
 
+            # TODO verify username and signature
+
+            message = ingressMsg.get("message")
+
             # Get the message type
-            msgType = ingressMsg.get("actuator_request_type")
+            msgType = message.get("actuator_request_type")
 
             # We only handle incoming actuator requests, ignore anything else
             if msgType is None:
                 return
 
             # Check for debugging being activated in the message header
-            self._check_debug(ingressMsg)
+            self._check_debug(message)
             self._log_debug("_process_msg, ingressMsg: %s" % ingressMsg)
 
             # Validate against the actuator schema
@@ -142,15 +147,18 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
 
             # Hand off to appropriate module based on message type
             if msgType.get("logging"):
-                self._write_internal_msgQ(LoggingMsgHandler.name(), ingressMsg)
+                self._write_internal_msgQ(LoggingMsgHandler.name(), message)
 
             elif msgType.get("thread_controller"):
-                self._write_internal_msgQ("ThreadController", ingressMsg)
+                self._write_internal_msgQ("ThreadController", message)
 
             elif msgType.get("service_controller"):
-                self._write_internal_msgQ("ServiceMsgHandler", ingressMsg)
+                self._write_internal_msgQ("ServiceMsgHandler", message)
 
-            # ... handle other incoming messages that have been validated                                
+            # TODO handle login controller messages by node message handler
+            # msgType.get("login_controller"):
+
+            # ... handle other incoming messages that have been validated               
 
             # Acknowledge message was received
             ch.basic_ack(delivery_tag = method.delivery_tag)

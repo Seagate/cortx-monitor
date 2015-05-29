@@ -21,9 +21,8 @@ print ' [*] Waiting for json messages. To exit press CTRL+C'
 def callback(ch, method, properties, body):
     ingressMsg = json.loads(body)
 
-    # Get the message type
-    if ingressMsg.get("sensor_response_type") is not None or \
-	ingressMsg.get("actuator_response_type") is not None:
+    if ingressMsg.get("message").get("sensor_response_type") is not None or \
+ 	   ingressMsg.get("message").get("actuator_response_type") is not None:
         print " [x] %r" % (body,)
 
     ch.basic_ack(delivery_tag = method.delivery_tag)

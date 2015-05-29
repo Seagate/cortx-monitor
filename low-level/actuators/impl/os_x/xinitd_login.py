@@ -1,8 +1,8 @@
 """
  ****************************************************************************
  Filename:          xinitd_service.py
- Description:       Handles service request messages to xinitd
- Creation Date:     03/25/2015
+ Description:       Handles login request messages to xinitd
+ Creation Date:     05/13/2015
  Author:            Jake Abernathy
 
  Do NOT modify or remove this copyright and confidentiality notice!
@@ -17,7 +17,7 @@
 import json
 
 from zope.interface import implements
-from actuators.IService import IService
+from actuators.ILogin import ILogin
 
 from framework.base.debug import Debug
 from framework.utils.service_logging import logger
@@ -25,33 +25,29 @@ from framework.utils.service_logging import logger
 from dbus import SystemBus, Interface, exceptions as debus_exceptions
 
 
-class XinitdService(Debug):
-    """Handles service request messages to xinitd"""
+class XinitdLogin(Debug):
+    """Handles login request messages to xinitd"""
 
-    implements(IService)
-    
-    ACTUATOR_NAME = "XinitdService"
+    implements(ILogin)
+
+    ACTUATOR_NAME = "XinitdLogin"
 
     @staticmethod
     def name():
         """ @return: name of the module."""
-        return XinitdService.ACTUATOR_NAME
+        return XinitdLogin.ACTUATOR_NAME
 
     def __init__(self):
-        super(XinitdService, self).__init__()
+        super(XinitdLogin, self).__init__()
 
     def perform_request(self, jsonMsg):
-        """Performs the request"""
+        """Performs the login request"""
         self._check_debug(jsonMsg)
 
-        # Parse out the service name and request to perform on it
-        self._service_name = jsonMsg.get("actuator_request_type").get("service_controller").get("service_name")
-        self._service_request = jsonMsg.get("actuator_request_type").get("service_controller").get("service_request")
-        self._log_debug("perform_request, service_name: %s, service_request: %s" % \
-                        (self._service_name, self._service_request))
+        # Parse out the login request to perform
+        self._login_request = jsonMsg.get("actuator_request_type").get("login_controller").get("login_request")
+        self._log_debug("perform_request, _login_request: %s" % self._login_request)
 
+        # Code to handle login requests using xinitd here...
         
-        # Code to handle service requests using xinitd here...
-        
-
-    
+            

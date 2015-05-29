@@ -72,6 +72,9 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
         """Run the module periodically on its own thread. """
         self._log_debug("Start accepting requests")
 
+        #self._set_debug(True)
+        #self._set_debug_persist(True)
+
         try:
             # Block on message queue until it contains an entry 
             jsonMsg = self._read_my_msgQ()

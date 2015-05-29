@@ -144,14 +144,16 @@ class RabbitMQingressProcessorTests(ScheduledModuleThread, InternalMsgQ):
             else:
                 ingressMsg = body
 
+            message = ingressMsg.get("message")
+
             # We're acting as HAlon so ignore actuator_requests
             #  and sensor_requests messages
-            if ingressMsg.get("actuator_request_type") is not None or \
-                ingressMsg.get("sensor_request_type") is not None:
+            if message.get("actuator_request_type") is not None or \
+                message.get("sensor_request_type") is not None:
                 return
 
             # Get the message type which 
-            msgType = ingressMsg.get("actuator_response_type")
+            msgType = message.get("actuator_response_type")
 
             # If it's an incoming actuator msg then validate against
             #  Actuator Response schema
@@ -159,12 +161,12 @@ class RabbitMQingressProcessorTests(ScheduledModuleThread, InternalMsgQ):
                 validate(ingressMsg, self._actuator_schema)
 
             if msgType is None:
-                msgType = ingressMsg.get("sensor_response_type")
+                msgType = message.get("sensor_response_type")
                 validate(ingressMsg, self._sensor_schema)
 
             # Write to the msg queue so the lettuce tests can
             #  retrieve it and examine for accuracy during automated testing
-            self._write_internal_msgQ("RabbitMQingressProcessorTests", ingressMsg)            
+            self._write_internal_msgQ("RabbitMQingressProcessorTests", message)            
 
             # Acknowledge message was received
             ch.basic_ack(delivery_tag = method.delivery_tag)

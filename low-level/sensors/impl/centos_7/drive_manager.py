@@ -18,6 +18,7 @@ import os
 import json
 import shutil
 import Queue
+import time
 import pyinotify
 
 from framework.base.module_thread import ScheduledModuleThread
@@ -43,7 +44,8 @@ class DriveManager(ScheduledModuleThread, InternalMsgQ):
     DRIVEMANAGER      = MODULE_NAME.upper()
     DRIVE_MANAGER_DIR = 'drivemanager_dir'
     DRIVE_MANAGER_PID = 'drivemanager_pid'
-
+    START_DELAY       = 'start_delay'
+    
 
     @staticmethod
     def name():
@@ -67,6 +69,7 @@ class DriveManager(ScheduledModuleThread, InternalMsgQ):
 
         self._drive_mngr_base_dir  = self._getDrive_Mngr_Dir()
         self._drive_mngr_pid       = self._getDrive_Mngr_Pid()
+        self._start_delay          = self._getStart_delay()
 
     def read_data(self):
         """Return the dict of drive status'"""
@@ -125,6 +128,12 @@ class DriveManager(ScheduledModuleThread, InternalMsgQ):
         self._log_debug("Finished processing successfully")
 
     def _init_drive_status(self):
+        # Allow time for the drivemanager to come up and populate the directory
+        while not os.path.isdir(self._drive_mngr_base_dir):
+            logger.info("DriveManager sensor, dir not found: %s " % self._drive_mngr_base_dir)
+            logger.info("DriveManager sensor, rechecking in %s secs" % self._start_delay)
+            time.sleep(int(self._start_delay))
+
         enclosures = os.listdir(self._drive_mngr_base_dir)
         for enclosure in enclosures:
             disk_dir = os.path.join(self._drive_mngr_base_dir, enclosure, "disk")
@@ -156,6 +165,12 @@ class DriveManager(ScheduledModuleThread, InternalMsgQ):
         return self._conf_reader._get_value_with_default(self.DRIVEMANAGER,
                                                                  self.DRIVE_MANAGER_PID,
                                                                  '/var/run/pyinotify.pid')
+    def _getStart_delay(self):
+        """Retrieves the start delay used to allow dcs-collector to startup first"""
+        return self._conf_reader._get_value_with_default(self.DRIVEMANAGER,
+                                                                 self.START_DELAY,
+                                                                 '20')
+        
     def _notify_DiskMsgHandler(self, status_file):
         """Send the event to the disk message handler for generating JSON message"""
 

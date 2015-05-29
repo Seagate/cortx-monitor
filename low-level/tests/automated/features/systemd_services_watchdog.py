@@ -26,10 +26,22 @@ def given_that_the_name_service_is_condition_and_sspl_ll_is_running(step, name, 
     start_stop_service(name, condition)
 
     # Check that the state for sspl_ll service is active
+    found = False
+
+    # Support for python-psutil < 2.1.3
     for proc in psutil.process_iter():
         if proc.name == "sspl_ll_d" and \
            proc.status in (psutil.STATUS_RUNNING, psutil.STATUS_SLEEPING):
-            found = True
+               found = True
+
+    # Support for python-psutil 2.1.3+
+    if found == False:
+        for proc in psutil.process_iter():
+            pinfo = proc.as_dict(attrs=['name', 'status'])
+            if pinfo['name'] == "sspl_ll_d" and \
+                pinfo['status'] in (psutil.STATUS_RUNNING, psutil.STATUS_SLEEPING):
+                    found = True
+
     assert found == True
 
     # Clear the message queue buffer out
@@ -42,9 +54,18 @@ def when_i_action_the_name_service(step, action, name):
 
 @step(u'When I ungracefully halt the "([^"]*)" service with signal "([^"]*)"')
 def when_i_ungracefully_halt_the_name_service_with_signal_signum(step, name, signum):
+    found = False
     for proc in psutil.process_iter():
         if proc.name == name:
             proc.send_signal(int(signum))
+            found = True
+            
+    # Support for python-psutil 2.1.3+
+    if found == False:
+        for proc in psutil.process_iter():
+            pinfo = proc.as_dict(attrs=['name', 'status'])
+            if pinfo['name'] == name:
+                proc.send_signal(int(signum))
 
 
 @step(u'Then I receive a service watchdog json msg with service name "([^"]*)" and state of "([^"]*)"')

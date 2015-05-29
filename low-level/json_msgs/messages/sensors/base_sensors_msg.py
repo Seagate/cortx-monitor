@@ -31,30 +31,26 @@ class BaseSensorMsg(BaseMsg):
 
     TITLE               = "SSPL-LL Sensor Response"
     DESCRIPTION         = "Seagate Storage Platform Library - Low Level - Sensor Response"
-    JSON_SENSOR_SCHEMA = "SSPL-LL_Sensor_Response.json"
+    JSON_SENSOR_SCHEMA  = "SSPL-LL_Sensor_Response.json"
 
 
     def __init__(self):
         """Reads in the json schema for all sensor response messages"""
         super(BaseSensorMsg, self).__init__()
-        
+
         # Read in the sensor schema for validating messages
         fileName = os.path.join(sensors.__path__[0],
                                 self.JSON_SENSOR_SCHEMA)
         with open(fileName, 'r') as f:
             _schema = f.read()
-        
+
         # Remove tabs and newlines
         self._schema = json.loads(' '.join(_schema.split()))
-        
+
         # Validate the schema
         Draft3Validator.check_schema(self._schema)
-        
+
     def validateMsg(self, _jsonMsg):
         """Validate the json message against the schema"""             
         validate(_jsonMsg, self._schema)
-        
-            
-       
-       
         

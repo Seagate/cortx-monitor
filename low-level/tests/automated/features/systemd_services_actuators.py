@@ -22,10 +22,22 @@ def given_that_the_name_service_is_condition_and_sspl_ll_is_running(step, name, 
     start_stop_service(name, condition)
 
     # Check that the state for sspl_ll service is active
+    found = False
+
+    # Support for python-psutil < 2.1.3
     for proc in psutil.process_iter():
         if proc.name == "sspl_ll_d" and \
            proc.status in (psutil.STATUS_RUNNING, psutil.STATUS_SLEEPING):
-            found = True
+               found = True
+
+    # Support for python-psutil 2.1.3+
+    if found == False:
+        for proc in psutil.process_iter():
+            pinfo = proc.as_dict(attrs=['name', 'status'])
+            if pinfo['name'] == "sspl_ll_d" and \
+                pinfo['status'] in (psutil.STATUS_RUNNING, psutil.STATUS_SLEEPING):
+                    found = True
+
     assert found == True
 
     # Clear the message queue buffer out
@@ -37,16 +49,22 @@ def when_i_send_in_the_actuator_message_to_action_the_service(step, action, serv
     egressMsg = {
         "title": "SSPL-LL Actuator Request",
         "description": "Seagate Storage Platform Library - Low Level - Actuator Request",
-
-        "sspl_ll_msg_header": {
-            "schema_version": "1.0.0",
-            "sspl_version": "1.0.0",
-            "msg_version": "1.0.0"
-        },
-        "actuator_request_type": {
-            "service_controller": {
-                "service_name" : service,
-                "service_request": action
+        "username" : "JohnDoe",
+        "signature" : "None",
+        "time" : "2015-05-29 14:28:30.974749",
+        "expires" : 500,
+    
+        "message" : {
+            "sspl_ll_msg_header": {
+                "schema_version": "1.0.0",
+                "sspl_version": "1.0.0",
+                "msg_version": "1.0.0"
+            },
+            "actuator_request_type": {
+                "service_controller": {
+                    "service_name" : service,
+                    "service_request": action
+                }
             }
         }
     }

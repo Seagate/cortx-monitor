@@ -50,7 +50,7 @@ def _run_thread_capture_errors(curr_module, sspl_modules, msgQlist, conf_reader)
         #  internal messages to other modules as desired
         curr_module.initialize(conf_reader, msgQlist)
         curr_module.start()
-        
+
     except BaseException as ex:
         logger.critical("SSPL-LL encountered a fatal error, terminating service Error: %s" % ex)
         logger.exception()

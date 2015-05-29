@@ -99,7 +99,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
 
             # Subscribe to signal changes
             self._manager.Subscribe() 
-            
+
             # Read in the list of services to monitor
             monitored_services = self._get_monitored_services()
             self._log_debug("Monitored services listed in conf file: %s" % monitored_services)

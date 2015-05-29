@@ -19,9 +19,8 @@
 	        },
 	
 		"actuator_request_type": {
-			"service_controller": {
-				"service_name" : "crond.service",
-				"service_request": "enable"
+			"login_controller": {
+				"login_request": "get_all_users"
 			}
 		}
 	}

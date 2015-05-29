@@ -21,6 +21,8 @@
 """
 
 import json
+import datetime
+
 from json_msgs.messages.actuators.base_actuators_msg import BaseActuatorMsg
 
 class ThreadControllerMsg(BaseActuatorMsg):
@@ -32,25 +34,40 @@ class ThreadControllerMsg(BaseActuatorMsg):
     MESSAGE_VERSION  = "1.0.0"
 
     def __init__(self, module_name,
-                       thread_response):
-        super(ThreadControllerMsg, self).__init__()         
+                       thread_response,
+                       username = "SSPL-LL",
+                       signature = "N/A",
+                       time = str(datetime.datetime.now()),
+                       expires = -1):
+        super(ThreadControllerMsg, self).__init__()
 
-        self._module_name = module_name
-        self._thread_response = thread_response
+        self._username          = username
+        self._signature         = signature
+        self._time              = time
+        self._expires           = expires
+        self._module_name       = module_name
+        self._thread_response   = thread_response
 
         self._json = {"title" : self.TITLE,
                       "description" : self.DESCRIPTION,
-                      "sspl_ll_msg_header": {
-                            "schema_version" : self.SCHEMA_VERSION,
-                            "sspl_version" : self.SSPL_VERSION,
-                            "msg_version" : self.MESSAGE_VERSION,
-                            },
-                      "actuator_response_type": {
-                            self.ACTUATOR_MSG_TYPE: {
-                                "module_name" : self._module_name,
-                                "thread_response" : self._thread_response
+                      "username" : self._username,
+                      "signature" : self._signature,
+                      "time" : self._time,
+                      "expires" : self._expires,
+
+                      "message" : {
+                          "sspl_ll_msg_header": {
+                                "schema_version" : self.SCHEMA_VERSION,
+                                "sspl_version" : self.SSPL_VERSION,
+                                "msg_version" : self.MESSAGE_VERSION,
+                                },
+                          "actuator_response_type": {
+                                self.ACTUATOR_MSG_TYPE: {
+                                    "module_name" : self._module_name,
+                                    "thread_response" : self._thread_response
+                                    }
                                 }
-                            }
+                          }
                       }
 
     def getJson(self):
@@ -59,11 +76,14 @@ class ThreadControllerMsg(BaseActuatorMsg):
         self.validateMsg(self._json)
         return json.dumps(self._json)
 
-    def getModuleName(self):
+    def get_module_name(self):
         return self._module_name
 
-    def getThreadResponse(self):
+    def set_module_name(self, module_name):
+        self._module_name = module_name
+
+    def get_thread_response(self):
         return self._thread_response
 
-    def setThreadResponse(self, thread_response):
+    def set_thread_response(self, thread_response):
         self._thread_response = thread_response
