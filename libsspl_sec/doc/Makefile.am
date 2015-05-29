@@ -12,6 +12,16 @@ all-local: docs
 docs: Doxyfile
 	$(DOXYGEN) $(srcdir)/Doxyfile
 
+install-data-local:
+	$(MKDIR_P) $(DESTDIR)$(docdir)/html
+	for f in `ls $(builddir)/html` ; do \
+		$(INSTALL_DATA) $(builddir)/html/$$f \
+			$(DESTDIR)$(docdir)/html; \
+	done
+
+uninstall-local:
+	rm $(DESTDIR)$(docdir)/html/*
+	-rmdir $(DESTDIR)$(docdir)/html
 
 clean-local:
 	rm -rf html latex doxygen_sqlite3.db
