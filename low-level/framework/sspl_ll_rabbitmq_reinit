@@ -34,20 +34,20 @@ def main():
         option='password'
         )
 
-    _recreate_vhost(virtual_host)
-    _recreate_user(username, password, virtual_host)
+    _create_vhost_if_necessary(virtual_host)
+    _create_user_if_necessary(username, password, virtual_host)
 
     # Make the caller restart sspl to avoid error on rpm install 
     #_restart_sspl_ll()
 
 
-def _recreate_vhost(virtual_host):
-    """ Recreates the specified vhost.
+def _create_vhost_if_necessary(virtual_host):
+    """ Creates the specified vhost (if necessary).
 
-    The vhost will be deleted if it already exists and then created.
+    No action will occur if the vhost already exists.
 
     @type virtual_host:           string
-    @param virtual_host:          The vhost to (re)create.
+    @param virtual_host:          The vhost to create.
     """
     vhosts = subprocess.check_output(
         [RABBITMQCTL, 'list_vhosts']
@@ -57,21 +57,28 @@ def _recreate_vhost(virtual_host):
     assert vhosts[-1] == ''
     for vhost in vhosts[1:-1]:
         if vhost == virtual_host:
-            subprocess.check_call([RABBITMQCTL, 'delete_vhost', virtual_host])
-            break
+            return
     subprocess.check_call([RABBITMQCTL, 'add_vhost', virtual_host])
 
 
-def _recreate_user(username, password, virtual_host):
-    """ Recreate the rabbitmq user.
+def _create_user_if_necessary(username, password, virtual_host):
+    """ Create the rabbitmq user (if necessary).
 
-    The user is deleted (if it exists) and then created with .* permissions for
-    conf,write,read on the specified virtual_host.
+    The user is created (if it doesn't exist) and then set with .* permissions
+    for conf,write,read on the specified virtual_host.
+
+    The permissions will be set regardless of whether or not the user already exists.
+
+    The password will only be set if this is a new user.
+
+    Note: To delete the user, from bash, run::
+        rabbitmqctl delete_user <username>
 
     @type username:               string
-    @param username:              The user to recreate.
+    @param username:              The user to create.
     @type password:               string
-    @param passowrd:              The new password for the specified user.
+    @param passowrd:              The password for the specified user.  Will
+                                  only be set if this is a new user.
     @type virtual_host:           string
     @param virtual_host:          The vhost on which the permissions will be
                                   set.
@@ -82,12 +89,14 @@ def _recreate_user(username, password, virtual_host):
     assert users[0] == 'Listing users ...'
     assert users[-2] == '...done.'
     assert users[-1] == ''
+    found_user = False
     for userspec in users[1:-1]:
         user = userspec.split()[0]
         if user == username:
-            subprocess.check_call([RABBITMQCTL, 'delete_user', username])
+            found_user = True
             break
-    subprocess.check_call([RABBITMQCTL, 'add_user', username, password])
+    if not found_user:
+        subprocess.check_call([RABBITMQCTL, 'add_user', username, password])
     subprocess.check_call(
         [
             RABBITMQCTL, 'set_permissions',
