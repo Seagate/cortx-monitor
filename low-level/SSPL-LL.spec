@@ -1,14 +1,22 @@
-Name:       SSPL-LL
-Version:    1.0.0
-Release:    10.el7
+#xyr build defines
+# This section will be re-written by Jenkins build system.
+%define _xyr_package_name     SSPL-LL
+%define _xyr_package_source   sspl-1.0.0.tgz
+%define _xyr_package_version  1.0.0
+%define _xyr_build_number     10.el7
+%define _xyr_pkg_url          http://es-gerrit:8080/sspl
+%define _xyr_svn_version      0
+#xyr end defines
+
+Name:       %{_xyr_package_name}
+Version:    %{_xyr_package_version}
+Release:    %{_xyr_build_number}
 Summary:    Installs SSPL-LL
 BuildArch:  noarch
 Group:      System Environment/Daemons
-License:    Seagate internal company use only
-Source0:    sspl-ll.tgz
-Source1:    sspl-ll.service
-Source2:    sspl_ll.conf
-Source3:    sspl-ll_dbus_policy.conf
+License:    Seagate Proprietary
+URL:        %{_xyr_pkg_url}
+Source0:    %{_xyr_package_source}
 BuildRoot:  %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 BuildRequires: rpm-build
 Requires:   python-daemon python-inotify python-jsonschema python-pika rabbitmq-server
@@ -27,11 +35,7 @@ getent passwd sspl-ll >/dev/null || \
 
 
 %prep
-cp %SOURCE0 .
-cp %SOURCE1 .
-cp %SOURCE2 .
-cp %SOURCE3 .
-
+%setup -n sspl/low-level
 
 %build
 
@@ -41,13 +45,13 @@ cp %SOURCE3 .
 mkdir -p %{buildroot}/etc/systemd/system
 mkdir -p %{buildroot}/etc/dbus-1/system.d
 
-cp sspl-ll.service %{buildroot}/etc/systemd/system
-cp sspl_ll.conf %{buildroot}/etc
-cp sspl-ll_dbus_policy.conf %{buildroot}/etc/dbus-1/system.d
+cp files/sspl-ll.service %{buildroot}/etc/systemd/system
+cp files/sspl_ll.conf %{buildroot}/etc
+cp files/sspl-ll_dbus_policy.conf %{buildroot}/etc/dbus-1/system.d
 
-# Untar the service into /opt/seagate/sspl where it will execute from
-mkdir -p %{buildroot}/opt/seagate/sspl
-tar zxvf sspl-ll.tgz --directory %{buildroot}/opt/seagate/sspl
+# Copy the service into /opt/seagate/sspl where it will execute from
+mkdir -p %{buildroot}/opt/seagate/sspl/low-level
+cp -rp . %{buildroot}/opt/seagate/sspl/low-level
 
 
 %post
@@ -76,6 +80,9 @@ rm -rf %{buildroot}
 
 
 %changelog
+* Mon Jun 01 2015 David Adair <dadair@seagate.com>
+- Add jenkins-friendly template.  Convert to single tarball for all of sspl.
+
 * Fri May 29 2015 Aden jake Abernathy <aden.j.abernathy@seagate.com> - 1.0.0-9
 - Adding request actuator for journald logging, updating systemd unit file
 - Adding enabling and disabling of services, moving rabbitmq init script to unit file

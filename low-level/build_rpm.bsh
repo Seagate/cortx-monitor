@@ -12,17 +12,17 @@ cp -Rf files/* rpmbuild/SOURCES
 
 # Tar up the code to be executed on the target machine
 pushd $(git rev-parse --show-toplevel)
-git archive --output=./installation/RPMs/low-level/rpmbuild/SOURCES/sspl-ll.tgz HEAD ./low-level
+git archive --prefix=sspl/ --output=$HomeDir/rpmbuild/SOURCES/sspl-1.0.0.tgz HEAD .
 popd
 
 # Build RPM
 cd "$HomeDir"
 
-rpmbuild --define "_topdir $HomeDir/rpmbuild" -ba sspl-ll.spec
+rpmbuild --define "_topdir $HomeDir/rpmbuild" -ba SSPL-LL.spec
 cp rpmbuild/RPMS/noarch/*.rpm .
 cp rpmbuild/SRPMS/*.rpm .
 rm -Rf rpmbuild
-
+exit 0
 # If mock package is present and current user is a member of the mock group,
 # then we can rebuilt the RPMs with mock.  Eventually, we will probably want to
 # switch mock to use our devvm configuration (from the mock-devvm-config

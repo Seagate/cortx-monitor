@@ -1,18 +1,27 @@
-%define name libsspl_sec
-%define version 0.0.1
-%define release 1%{?dist}
+#xyr build defines
+# This section will be re-written by Jenkins build system.
+%define _xyr_package_name     libsspl_sec
+%define _xyr_package_source   sspl-1.0.0.tgz
+%define _xyr_package_version  1.0.0
+%define _xyr_build_number     1.el7
+%define _xyr_pkg_url          http://es-gerrit:8080/sspl
+%define _xyr_svn_version      0
+#xyr end defines
 
-Name:       %{name}
-Version:    %{version}
-Release:    %{release}
+Name:       %{_xyr_package_name}
+Version:    %{_xyr_package_version}
+Release:    %{_xyr_build_number}
 Summary:    Segate System Platform Library - Security
 Group:      Libraries/System
 License:    Seagate Proprietary
-URL:        http://seagate.com
-Source0:    %{name}-%{version}.tar.gz
+URL:        %{_xyr_pkg_url}
+Source0:    %{_xyr_package_source}
 Vendor:     Seagate Technology LLC
 #BuildArch:  x86_64
 
+# For autogen step
+BuildRequires: libtool autoconf automake
+# For rest of build
 BuildRequires: gcc doxygen python-lettuce python-pep8 pylint check-devel openssl-devel graphviz
 #Requires:
 
@@ -22,10 +31,11 @@ Segate System Platform Library - Security
 A library used to sign and verify messages within SSPL.
 
 %prep
-%setup -q
+%setup -n sspl/libsspl_sec
 
 %build
-%configure
+[ -f ./autogen.sh ] && bash ./autogen.sh
+%configure PACKAGE_VERSION=%{version}
 make
 
 %install
@@ -43,7 +53,7 @@ make
 Summary:    The 'null' signature method for %{name}
 Requires:   %{name}=%{version}
 %description method_none
-This method doesn't actually do any signing.
+This method does not actually do any signing.
 
 %files method_none
 /usr/lib64/libsspl_sec/sspl_none.so.0
@@ -68,5 +78,8 @@ for all method modules (ie sspl_none.so).
 
 
 %changelog
+* Mon Jun 01 2015 David Adair <dadair@seagate.com>
+- Add jenkins-friendly template.  Convert to single tarball for all of sspl.
+
 * Thu May 28 2015 Rich Gowman <rich.gowman@seagate.com> 0.0.1-1
 - Initial RPM

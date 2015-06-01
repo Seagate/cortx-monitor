@@ -1,7 +1,10 @@
 NAME=sspl_hl
-VERSION=0.0.1
-RELEASE=1.el7.centos
+VERSION=1.0.0
+RELEASE=1.el7
 
+MOCK_CONFIG=-r mock_osaint
+
+.PHONY: check pep8 pylint ut at
 check: pep8 pylint ut at
 
 at:
@@ -22,21 +25,36 @@ pylint:
 		./tests/fake_halond/fake_halond.py \
 		./tests/acceptance/steps/*.py
 
-$(NAME)-$(VERSION).tar.gz:
-	cd .. && git archive --format=tar --prefix=$(NAME)-$(VERSION)/ HEAD:high-level | gzip > high-level/$(NAME)-$(VERSION).tar.gz
+.PHONY: tarball
+tarball:
+	rm -rf RPMBUILD
+	mkdir --parents RPMBUILD/SOURCES
+	mkdir --parents RPMBUILD/results
+	(cd .. && \
+	git archive --format=tar --prefix=sspl/ HEAD . | gzip > high-level/RPMBUILD/SOURCES/sspl-$(VERSION).tgz)
 
-$(NAME)-$(VERSION)-$(RELEASE).src.rpm: sspl_hl.spec $(NAME)-$(VERSION).tar.gz
-	mock --buildsrpm --spec sspl_hl.spec --sources $(NAME)-$(VERSION).tar.gz
-	cp /var/lib/mock/epel-7-x86_64/result/$@ .
+.PHONY: native
+native: tarball sspl_hl.spec
+	rpmbuild --define '_topdir $(shell pwd)/RPMBUILD' -ba sspl_hl.spec
+
+
+$(NAME)-$(VERSION)-$(RELEASE).src.rpm: tarball sspl_hl.spec
+	mock $(MOCK_CONFIG) --buildsrpm --spec sspl_hl.spec --sources RPMBUILD/SOURCES --resultdir RPMBUILD/result
+	cp RPMBUILD/result/$@ .
 
 $(NAME)-$(VERSION)-$(RELEASE).noarch.rpm: $(NAME)-$(VERSION)-$(RELEASE).src.rpm
-	mock --rebuild $<
-	cp /var/lib/mock/epel-7-x86_64/result/$@ .
+	mock $(MOCK_CONFIG) --resultdir RPMBUILD/result --rebuild $<
+	cp RPMBUILD/result/$@ .
 	#python2.7 setup.py bdist_rpm
 	#cp dist/*.rpm .
 
+.PHONY: mock
+mock: $(NAME)-$(VERSION)-$(RELEASE).noarch.rpm
+
 .PHONY: rpm
-rpm: $(NAME)-$(VERSION)-$(RELEASE).noarch.rpm
+rpm: native
 
 clean:
-	rm $(NAME)-*.rpm $(NAME)-*.tar.gz
+	rm -f $(NAME)-*.rpm
+	rm -rf RPMBUILD
+

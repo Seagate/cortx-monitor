@@ -1,7 +1,7 @@
 ###############################################################################
 # Initialize autoconf/automake
 ###############################################################################
-AC_INIT([libsspl_sec], [0.0.1])
+AC_INIT([libsspl_sec], [1.0.0])
 AC_CONFIG_SRCDIR([libsspl_sec/sspl_sec.h])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign tar-ustar])
 

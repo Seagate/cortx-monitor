@@ -1,17 +1,24 @@
-%define name sspl_hl
-%define version 0.0.1
-%define release 1%{?dist}
+#xyr build defines
+# This section will be re-written by Jenkins build system.
+%define _xyr_package_name     sspl_hl
+%define _xyr_package_source   sspl-1.0.0.tgz
+%define _xyr_package_version  1.0.0
+%define _xyr_build_number     1.el7
+%define _xyr_pkg_url          http://es-gerrit:8080/sspl
+%define _xyr_svn_version      0
+#xyr end defines
+
 %define installpath %{buildroot}/opt/plex/apps
 
-Name:       %{name}
-Version:    %{version}
-Release:    %{release}
+Name:       %{_xyr_package_name}
+Version:    %{_xyr_package_version}
+Release:    %{_xyr_build_number}
 Summary:    Seagate System Platform Library - High Level
 
 Group:      Applications/System
 License:    Seagate Proprietary
-URL:        http://seagate.com
-Source0:    %{name}-%{version}.tar.gz
+URL:        %{_xyr_pkg_url}
+Source0:    %{_xyr_package_source}
 Vendor:     Seagate Technology LLC
 BuildArch:  noarch
 
@@ -25,7 +32,7 @@ A cli (and library) that allow the user to control the cluster.
 
 
 %prep
-%setup -q
+%setup -q -n sspl/high-level
 
 
 %build
@@ -48,5 +55,8 @@ install cli/cstor.py %{buildroot}/usr/bin/cstor
 
 
 %changelog
+* Mon Jun 01 2015 David Adair <dadair@seagate.com>
+- Add jenkins-friendly template.  Convert to single tarball for all of sspl.
+
 * Thu Apr 23 2015 Rich Gowman <rich.gowman@seagate.com> 0.0.1-1
 - Initial RPM
