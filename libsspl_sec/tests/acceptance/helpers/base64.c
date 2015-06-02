@@ -4,6 +4,7 @@
 #include <assert.h>
 #include <math.h>
 #include <openssl/bio.h>
+#include <openssl/evp.h>
 BIO_METHOD* BIO_f_base64(void);
 
 size_t b64encode(
@@ -20,7 +21,7 @@ size_t b64encode(
     BIO_set_flags(bio, BIO_FLAGS_BASE64_NO_NL);
 
     BIO_write(b64, bytes_to_encode, bytes_to_encode_length);
-    BIO_flush(b64);
+    (void)BIO_flush(b64);
 
     int bytes_written = BIO_read(
                             mem, out_encoded_string, out_encoded_string_length);

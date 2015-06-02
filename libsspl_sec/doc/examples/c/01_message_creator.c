@@ -11,7 +11,7 @@ int main()
     unsigned int authn_token_len = strlen(password) + 1;
     const unsigned char* authn_token = (const unsigned char*)password;
     time_t session_length = 60 * 60;  // 1h
-    unsigned char* token = malloc(sspl_get_token_length());
+    unsigned char* token = (unsigned char*)malloc(sspl_get_token_length());
     memset(token, 0, sspl_get_token_length());
     sspl_generate_session_token(
         username, authn_token_len, authn_token,
@@ -20,7 +20,7 @@ int main()
     /* sign message */
     const char* message = "hello, world!";
     unsigned int msg_len = strlen(message) + 1;
-    unsigned char* sig = malloc(sspl_get_sig_length());
+    unsigned char* sig = (unsigned char*)malloc(sspl_get_sig_length());
     memset(sig, 0, sspl_get_sig_length());
     sspl_sign_message(
         msg_len, (const unsigned char*)message, username,

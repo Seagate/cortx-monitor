@@ -76,7 +76,7 @@ int main(int argc, char* argv[])
 
         if (bytes_read == 0) break;
 
-        message = realloc(message, size + bytes_read);
+        message = (char*)realloc(message, size + bytes_read);
         memcpy(message + size, buffer, bytes_read);
         size += bytes_read;
     }
