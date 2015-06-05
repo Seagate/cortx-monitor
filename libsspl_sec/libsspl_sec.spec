@@ -51,7 +51,7 @@ make
 
 %package method_none
 Summary:    The 'null' signature method for %{name}
-Requires:   %{name}=%{version}
+Requires:   %{name}
 %description method_none
 This method does not actually do any signing.
 
@@ -61,7 +61,7 @@ This method does not actually do any signing.
 
 %package devel
 Summary:    Development files for %{name}
-Requires:   %{name}=%{version} %{name}-method_none=%{version}
+Requires:   %{name} %{name}-method_none
 %description devel
 Includes headers for development against libsspl_sec.  Also includes .so files
 for all method modules (ie sspl_none.so).
