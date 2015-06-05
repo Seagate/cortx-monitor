@@ -67,6 +67,42 @@ AS_IF([test "x$with_astyle" != "xno"],
 ])
 
 
+# Allow optional lcov.
+AC_ARG_WITH(
+    [lcov],
+    [AS_HELP_STRING([--with-lcov],[support coverage reports @<:@default=check@:>@])],
+    [],
+    [with_lcov=check])
+AS_IF([test "x$with_lcov" != "xno"],
+[
+    AC_ARG_VAR(LCOV, [Path to lcov.  Used for coverage testing.])
+    AC_PATH_PROG(LCOV, lcov)
+    AC_ARG_VAR(GENHTML, [Path to genhtml.  Used for coverage testing.])
+    AC_PATH_PROG(GENHTML, genhtml)
+    if test "x$LCOV" == "x" ; then
+        if test "x$with_lcov" != "xcheck"; then
+            AC_MSG_FAILURE([--with-lcov was given, but test for lcov failed])
+        fi
+        AM_CONDITIONAL([HAVE_LCOV], [false])
+    else
+        if test "x$GENHTML" == "x" ; then
+            if test "x$with_lcov" != "xcheck"; then
+                AC_MSG_FAILURE([--with-lcov was given, but test for genhtml failed])
+            fi
+            AM_CONDITIONAL([HAVE_LCOV], [false])
+        else
+            AM_CONDITIONAL([HAVE_LCOV], [true])
+            CFLAGS="$CFLAGS -fprofile-arcs -ftest-coverage"
+            CXXFLAGS="$CXXFLAGS -fprofile-arcs -ftest-coverage"
+            LDFLAGS="$LDFLAGS -fprofile-arcs -ftest-coverage -lgcov"
+        fi
+    fi
+],
+[
+    AM_CONDITIONAL([HAVE_LCOV], [false])
+])
+
+
 # Note:  This will search for either flake8 or pep8 (with precedence given to
 # flake8.)  We'll take either.
 AC_ARG_VAR(FLAKE8, [Path to flake8 or pep8.  Used for python style checking.])

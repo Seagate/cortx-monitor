@@ -2,6 +2,16 @@ AUTOMAKE_OPTIONS=foreign
 SUBDIRS=libsspl_sec doc tests
 STYLECHECKER=$(ASTYLE) --style=ansi --attach-extern-c --indent-classes --indent-switches --break-blocks --pad-oper --pad-header --unpad-paren --align-pointer=type --remove-brackets --convert-tabs --max-code-length=80  --lineend=linux | head -n-1
 
+if HAVE_LCOV
+cov:
+	$(MAKE) -C doc cov_init
+	$(MAKE) check
+	$(MAKE) -C doc cov_fini
+else
+cov:
+	@echo "Coverage testing disabled"
+endif
+
 .PHONY: sspl-$(PACKAGE_VERSION).tgz
 sspl-$(PACKAGE_VERSION).tgz:
 	rm -rf $(top_builddir)/RPMBUILD
