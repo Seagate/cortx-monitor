@@ -21,7 +21,7 @@ BuildRoot:  %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 BuildRequires: rpm-build
 Requires:   python-daemon python-inotify python-jsonschema python-pika rabbitmq-server
 Requires:   python-zope-interface python-zope-event python-zope-component
-Requires:   systemd-python pygobject2 dbus
+Requires:   systemd-python pygobject2 dbus python-psutil libsspl_sec
 Requires(pre): shadow-utils
 
 %description
@@ -80,6 +80,9 @@ rm -rf %{buildroot}
 
 
 %changelog
+* Mon Jun 09 2015 Aden Jake Abernathy <aden.j.abernathy@seagate.com>
+- Linking into security libraries to apply authentication signatures
+
 * Mon Jun 01 2015 David Adair <dadair@seagate.com>
 - Add jenkins-friendly template.  Convert to single tarball for all of sspl.
 

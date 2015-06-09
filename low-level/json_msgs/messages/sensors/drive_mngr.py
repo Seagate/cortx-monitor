@@ -21,7 +21,6 @@
 """
 
 import json
-import datetime
 
 from json_msgs.messages.sensors.base_sensors_msg import BaseSensorMsg
 
@@ -34,10 +33,10 @@ class DriveMngrMsg(BaseSensorMsg):
     def __init__(self, enclosure,
                        drive_num,
                        status,
-                       username = "SSPL-LL",
+                       username  = "SSPL-LL",
                        signature = "N/A",
-                       time = str(datetime.datetime.now()),
-                       expires = -1):
+                       time      = "N/A",
+                       expires   = -1):
         super(DriveMngrMsg, self).__init__()         
 
         self._username  = username

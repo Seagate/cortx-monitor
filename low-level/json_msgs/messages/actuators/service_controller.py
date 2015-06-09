@@ -21,7 +21,6 @@
 """
 
 import json
-import datetime
 
 from json_msgs.messages.actuators.base_actuators_msg import BaseActuatorMsg
 
@@ -35,10 +34,10 @@ class ServiceControllerMsg(BaseActuatorMsg):
 
     def __init__(self, service_name,
                        service_response,
-                       username = "SSPL-LL",
+                       username  = "SSPL-LL",
                        signature = "N/A",
-                       time = str(datetime.datetime.now()),
-                       expires = -1):
+                       time      = "N/A",
+                       expires   = -1):
         super(ServiceControllerMsg, self).__init__()
 
         self._username          = username

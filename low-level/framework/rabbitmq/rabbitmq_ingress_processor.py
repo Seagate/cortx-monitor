@@ -32,6 +32,9 @@ from message_handlers.logging_msg_handler import LoggingMsgHandler
 from message_handlers.service_msg_handler import ServiceMsgHandler
 from message_handlers.disk_msg_handler import DiskMsgHandler
 
+import ctypes
+SSPL_SEC = ctypes.cdll.LoadLibrary('libsspl_sec.so')
+
 
 class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
     """Handles incoming messages via rabbitMQ"""
@@ -76,7 +79,7 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
         Draft3Validator.check_schema(self._schema)
 
     def initialize(self, conf_reader, msgQlist):
-        """initialize configuration reader and internal msg queues"""               
+        """initialize configuration reader and internal msg queues"""
         # Initialize ScheduledMonitorThread
         super(RabbitMQingressProcessor, self).initialize(conf_reader)
 
@@ -125,9 +128,15 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
             else:
                 ingressMsg = body
 
-            # TODO verify username and signature
+            # Authenticate message using username and signature fields
+            username  = ingressMsg.get("username")
+            signature = ingressMsg.get("signature")
+            message   = ingressMsg.get("message")
+            msg_len   = len(message) + 1
 
-            message = ingressMsg.get("message")
+            if SSPL_SEC.sspl_verify_message(msg_len, str(message), username, signature) != 0:
+                logger.warn("Authentication failed on message: %s" % ingressMsg)
+                return
 
             # Get the message type
             msgType = message.get("actuator_request_type")

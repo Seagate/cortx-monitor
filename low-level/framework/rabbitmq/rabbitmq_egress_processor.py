@@ -14,6 +14,7 @@
  ****************************************************************************
 """
 
+import datetime
 import json
 import pika
 import os
@@ -22,6 +23,10 @@ from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
 from json_msgs.messages.actuators.thread_controller import ThreadControllerMsg
+
+import ctypes
+SSPL_SEC = ctypes.cdll.LoadLibrary('libsspl_sec.so')
+
 
 class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
     """Handles outgoing messages via rabbitMQ"""
@@ -36,7 +41,9 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
     VIRT_HOST           = 'virtual_host'
     USER_NAME           = 'username'
     PASSWORD            = 'password'
-
+    SIGNATURE_USERNAME  = 'message_signature_username'
+    SIGNATURE_TOKEN     = 'message_signature_token'
+    SIGNATURE_EXPIRES   = 'message_signature_expires'
 
     @staticmethod
     def name():
@@ -68,6 +75,21 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
         self._log_debug("RabbitMQ exchange: %s, routing_key: %s, vhost: %s" %
                        (self._exchange_name, self._routing_key, self._virtual_host))
 
+        self._signature_user = self._conf_reader._get_value_with_default(
+                                                    self.RABBITMQPROCESSOR, 
+                                                    self.SIGNATURE_USERNAME,
+                                                    'sspl-ll')
+
+        self._signature_token = self._conf_reader._get_value_with_default(
+                                                    self.RABBITMQPROCESSOR, 
+                                                    self.SIGNATURE_TOKEN,
+                                                    'FAKETOKEN1234')
+
+        self._signature_expires = self._conf_reader._get_value_with_default(
+                                                    self.RABBITMQPROCESSOR, 
+                                                    self.SIGNATURE_EXPIRES,
+                                                    "3600")
+
     def run(self):
         """Run the module periodically on its own thread. """
         self._log_debug("Start accepting requests")
@@ -79,12 +101,14 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
             # Block on message queue until it contains an entry 
             jsonMsg = self._read_my_msgQ()
             if jsonMsg is not None:
+                self._add_signature(jsonMsg)
                 self._transmit_msg_on_exchange(jsonMsg)
  
             # Loop thru all messages in queue until and transmit
             while not self._is_my_msgQ_empty():
                 jsonMsg = self._read_my_msgQ()
                 if jsonMsg is not None:
+                    self._add_signature(jsonMsg)
                     self._transmit_msg_on_exchange(jsonMsg)
 
         except Exception:
@@ -156,6 +180,29 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
         except Exception as ex:
             logger.exception("_get_connection: %r" % ex)
 
+    def _add_signature(self, jsonMsg):
+        """Adds the authentication signature to the message"""
+        self._log_debug("_add_signature, jsonMsg: %s" % jsonMsg)
+        jsonMsg["username"] = self._signature_user
+        jsonMsg["expires"]  = int(self._signature_expires)
+        jsonMsg["time"]     = str(datetime.datetime.now())
+
+        authn_token_len = len(self._signature_token) + 1
+        session_length  = int(self._signature_expires)
+        token = ctypes.create_string_buffer(SSPL_SEC.sspl_get_token_length())
+
+        SSPL_SEC.sspl_generate_session_token(
+                                self._signature_user, authn_token_len, 
+                                self._signature_token, session_length, token)
+
+        # Generate the signature
+        msg_len = len(jsonMsg) + 1
+        sig = ctypes.create_string_buffer(SSPL_SEC.sspl_get_sig_length())
+        SSPL_SEC.sspl_sign_message(msg_len, str(jsonMsg), self._signature_user, 
+                                   token, sig)
+
+        jsonMsg["signature"] = str(sig.raw)
+
     def _transmit_msg_on_exchange(self, jsonMsg):
         """Transmit json message onto RabbitMQ exchange"""
         self._log_debug("_transmit_msg_on_exchange, jsonMsg: %s" % jsonMsg)
@@ -178,7 +225,7 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
             self._log_debug("_transmit_msg_on_exchange, Successfully Sent: %s" % jsonMsg)
             self._connection.close()
             del(self._connection)
-            
+
             # Check for shut down message from sspl_ll_d and set a flag to shutdown
             #  once our message queue is empty 
             if isinstance(jsonMsg, ThreadControllerMsg):

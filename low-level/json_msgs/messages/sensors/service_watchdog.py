@@ -21,7 +21,6 @@
 """
 
 import json
-import datetime
 
 from json_msgs.messages.sensors.base_sensors_msg import BaseSensorMsg
 
@@ -35,10 +34,10 @@ class ServiceWatchdogMsg(BaseSensorMsg):
 
     def __init__(self, service_name,
                        service_response,
-                       username = "SSPL-LL",
+                       username  = "SSPL-LL",
                        signature = "N/A",
-                       time = str(datetime.datetime.now()),
-                       expires = -1):
+                       time      = "N/A",
+                       expires   = -1):
         super(ServiceWatchdogMsg, self).__init__()
 
         self._username          = username

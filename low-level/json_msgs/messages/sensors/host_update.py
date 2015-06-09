@@ -21,7 +21,6 @@
 """
 
 import json
-import datetime
 
 from json_msgs.messages.sensors.base_sensors_msg import BaseSensorMsg
 
@@ -45,10 +44,10 @@ class HostUpdateMsg(BaseSensorMsg):
                        logged_in_users,
                        process_count,
                        running_process_count,
-                       username = "SSPL-LL",
+                       username  = "SSPL-LL",
                        signature = "N/A",
-                       time = str(datetime.datetime.now()),
-                       expires = -1):
+                       time      = "N/A",
+                       expires   = -1):
         super(HostUpdateMsg, self).__init__()
 
         self._username          = username

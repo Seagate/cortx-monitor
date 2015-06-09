@@ -19,6 +19,10 @@
 #	3) ./run_tests.bsh
 #	It will exit 0 upon success and 1 if any tests failed or had errors
 #
+#	Note: Do not run this on a production system as it will update the 
+#		  configuration files for a test environment by limiting the 
+#		  number of services monitored by the watchdog, etc.
+#
 ####################################################################################
 
 

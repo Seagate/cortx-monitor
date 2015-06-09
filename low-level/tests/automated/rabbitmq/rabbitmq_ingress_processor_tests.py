@@ -30,6 +30,9 @@ from framework.utils.service_logging import logger
 # Import message handlers to hand off messages
 from message_handlers.logging_msg_handler import LoggingMsgHandler
 
+import ctypes
+SSPL_SEC = ctypes.cdll.LoadLibrary('libsspl_sec.so')
+
 
 class RabbitMQingressProcessorTests(ScheduledModuleThread, InternalMsgQ):
     """Handles incoming messages via rabbitMQ for automated tests"""
@@ -144,7 +147,15 @@ class RabbitMQingressProcessorTests(ScheduledModuleThread, InternalMsgQ):
             else:
                 ingressMsg = body
 
-            message = ingressMsg.get("message")
+            # Authenticate message using username and signature fields
+            username  = ingressMsg.get("username")
+            signature = ingressMsg.get("signature")
+            message   = ingressMsg.get("message")
+            msg_len   = len(message) + 1
+
+            if SSPL_SEC.sspl_verify_message(msg_len, str(message), username, signature) != 0:
+                logger.error("Authentication failed on message: %s" % ingressMsg)
+                return
 
             # We're acting as HAlon so ignore actuator_requests
             #  and sensor_requests messages
