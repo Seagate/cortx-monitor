@@ -143,6 +143,18 @@
 									"required": true
 								}
 							}
+						},
+
+						"node_controller": {
+							"type": "object",
+							"additionalProperties": false,
+							"properties": {
+								"node_request": {
+									"description": "Action to be performed on node; host_update, etc.",
+									"type": "string",
+									"required": true
+								}
+							}
 						}
 					}
 				}

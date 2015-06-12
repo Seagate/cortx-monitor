@@ -110,11 +110,11 @@
 									"type" : "string"
 								},
 								"upTime" : {
-									"description" : "Time since host was wtarted in secs",
+									"description" : "Time since host was started in secs",
 									"type" : "number"
 								},
 								"uname" : {
-									"description" : "OS wystem information",
+									"description" : "OS system information",
 									"type" : "string"
 								},
 								"freeMem" : {
@@ -295,9 +295,6 @@
 												"type" : "integer"
 											},
 											"load5MinAvg" : {
-												"type" : "integer"
-											},
-											"load15MinAvg" : {
 												"type" : "integer"
 											},
 											"load15MinAvg" : {
