@@ -6,3 +6,4 @@ check_PROGRAMS=test_sec
 test_sec_SOURCES=test_sec.c
 
 TESTS=$(check_PROGRAMS)
+MOSTLYCLEANFILES=*.gcno *.gcda

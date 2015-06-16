@@ -57,7 +57,7 @@ c_style_interactive:
 	done
 
 clean-local:
-	rm -f stylecheck.tmp
 	rm -rf RPMBUILD
 
 EXTRA_DIST=libsspl_sec.spec
+MOSTLYCLEANFILES=*.gcno *.gcda stylecheck.tmp

@@ -41,6 +41,9 @@ uninstall-local:
 	-rmdir $(DESTDIR)$(docdir)/html
 
 clean-local:
-	rm -rf html latex doxygen_sqlite3.db
+	rm -rf html latex
+	find . -name '*.gcno' -exec rm '{}' \;
+	find . -name '*.gcda' -exec rm '{}' \;
 
 EXTRA_DIST=Doxyfile ./examples/python/01_message_creator.py
+MOSTLYCLEANFILES=doxygen_sqlite3.db

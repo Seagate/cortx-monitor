@@ -9,3 +9,5 @@ libsspl_sec_la_LIBADD=-ldl
 
 sspl_none_la_SOURCES=none.c
 sspl_none_la_LDFLAGS=-module
+
+MOSTLYCLEANFILES=*.gcno *.gcda

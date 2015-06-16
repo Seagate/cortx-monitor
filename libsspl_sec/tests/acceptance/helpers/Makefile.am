@@ -6,3 +6,5 @@ noinst_PROGRAMS=generate_session_token sign_message verify_message
 generate_session_token_SOURCES=generate_session_token.c base64.c base64.h
 sign_message_SOURCES=sign_message.c base64.c base64.h
 verify_message_SOURCES=verify_message.c base64.c base64.h
+
+MOSTLYCLEANFILES=*.gcno *.gcda
