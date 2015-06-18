@@ -1,8 +1,8 @@
 """
  ****************************************************************************
- Filename:          IDrive_manager.py
- Description:       Interface for all drive manager classes
- Creation Date:     03/25/2015
+ Filename:          INode_data.py
+ Description:       Interface for all node data classes
+ Creation Date:     06/10/2015
  Author:            Jake Abernathy
 
  Do NOT modify or remove this copyright and confidentiality notice!
@@ -16,9 +16,9 @@
 
 from zope.interface import Interface
 
-class IDriveManager(Interface):
-    """Interface for drive manager classes"""
+class INodeData(Interface):
+    """Interface for node data classes"""
 
 
-    def read_data(self):
-        """Notifies service to send its data"""
+    def read_data(self, subset="All", debug=False):
+        """Notifies module to return data based on a subset"""

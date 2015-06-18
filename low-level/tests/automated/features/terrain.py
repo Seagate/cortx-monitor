@@ -113,11 +113,11 @@ def _run_thread_capture_errors(curr_module, msgQlist, conf_reader):
 
     except BaseException as ex:
         logger.critical("SSPL-LL-Tests encountered a fatal error, terminating service Error: %s" % ex)
-        logger.exception()
+        logger.exception(ex)
 
         # Populate an actuator response message and transmit back to HAlon
         error_msg = "SSPL-LL-Tests encountered an error, terminating service Error: " + \
-                    + e + ", Exception: " + logger.exception()
+                    ", Exception: " + logger.exception(ex)
         jsonMsg   = ThreadControllerMsg(curr_module, error_msg).getJson()
         curr_module._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
 

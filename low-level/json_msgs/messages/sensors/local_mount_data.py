@@ -1,6 +1,6 @@
 """
  ****************************************************************************
- Filename:          host_update.py
+ Filename:          local_mount_data.py
  Description:       Defines the JSON message transmitted by the
                     node message handler. There may be a time when we need to
                     maintain state as far as messages being transmitted.  This
@@ -8,7 +8,7 @@
                     transmissions or simply deferring an acknowledgment to
                     a later point in time.  For this reason, the JSON messages
                     are stored as objects which can be queued up, etc.
- Creation Date:     05/20/2015
+ Creation Date:     06/12/2015
  Author:            Jake Abernathy
 
  Do NOT modify or remove this copyright and confidentiality notice!
@@ -24,30 +24,27 @@ import json
 
 from json_msgs.messages.sensors.base_sensors_msg import BaseSensorMsg
 
-class HostUpdateMsg(BaseSensorMsg):
+class LocalMountDataMsg(BaseSensorMsg):
     '''
     The JSON message transmitted by the node message handler
     '''
 
-    ACTUATOR_MSG_TYPE = "host_update"
+    ACTUATOR_MSG_TYPE = "local_mount_data"
     MESSAGE_VERSION  = "1.0.0"
 
     def __init__(self, host_id,
                        local_time,
-                       boot_time,
-                       up_time,
-                       uname,
+                       free_space,                       
+                       free_inodes,
+                       free_swap,
+                       total_space,
+                       total_swap,
                        units,
-                       free_mem,
-                       total_mem,
-                       logged_in_users,
-                       process_count,
-                       running_process_count,
                        username  = "SSPL-LL",
                        signature = "N/A",
                        time      = "N/A",
                        expires   = -1):
-        super(HostUpdateMsg, self).__init__()
+        super(LocalMountDataMsg, self).__init__()
 
         self._username          = username
         self._signature         = signature
@@ -55,15 +52,12 @@ class HostUpdateMsg(BaseSensorMsg):
         self._expires           = expires
         self._host_id           = host_id
         self._local_time        = local_time
-        self._boot_time         = boot_time
-        self._up_time           = up_time
-        self._uname             = uname
-        self._free_mem          = free_mem
-        self._total_mem         = total_mem
+        self._free_space        = free_space
+        self._free_inodes       = free_inodes
+        self._free_swap         = free_swap
+        self._total_space       = total_space
+        self._total_swap        = total_swap
         self._units             = units
-        self._logged_in_users   = logged_in_users
-        self._process_count     = process_count
-        self._running_process_count = running_process_count
 
         self._json = {"title" : self.TITLE,
                       "description" : self.DESCRIPTION,
@@ -82,20 +76,23 @@ class HostUpdateMsg(BaseSensorMsg):
                               self.ACTUATOR_MSG_TYPE: {
                                   "hostId"    : self._host_id,
                                   "localtime" : self._local_time,
-                                  "bootTime"  : self._boot_time,
-                                  "upTime"    : self._up_time,
-                                  "uname"     :  self._uname,
-                                  "freeMem" : {
-                                      "value" : self._free_mem,
+                                  "freeSpace"  : {
+                                      "value" : self._free_space,
                                       "units" : self._units
                                       },
-                                  "totalMem" : {
-                                      "value" : self._total_mem,
+                                  "freeInodes" : self._free_inodes,
+                                  "freeSwap" : {
+                                      "value" : self._free_swap,
                                       "units" : self._units
                                       },
-                                  "loggedInUsers" : self._logged_in_users,
-                                  "processCount"  : self._process_count,
-                                  "runningProcessCount" : self._running_process_count            
+                                  "totalSpace" : {
+                                      "value" : self._total_space,
+                                      "units" : self._units
+                                      },
+                                  "totalSwap" : {
+                                      "value" : self._total_swap,
+                                      "units" : self._units
+                                      }
                                   }
                               }
                           }
@@ -106,5 +103,5 @@ class HostUpdateMsg(BaseSensorMsg):
         # Validate the current message
         self.validateMsg(self._json)
         return json.dumps(self._json)
-    
+
     # Possible getters/setters below here in the future if we aggregate messages

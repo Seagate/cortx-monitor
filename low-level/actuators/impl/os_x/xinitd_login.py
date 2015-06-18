@@ -45,9 +45,11 @@ class XinitdLogin(Debug):
         self._check_debug(jsonMsg)
 
         # Parse out the login request to perform
-        self._login_request = jsonMsg.get("actuator_request_type").get("login_controller").get("login_request")
+        self._login_request = jsonMsg.get("login_request")
         self._log_debug("perform_request, _login_request: %s" % self._login_request)
 
         # Code to handle login requests using xinitd here...
         
+        test_names=["jake", "joe", "root"]
+        return test_names
             

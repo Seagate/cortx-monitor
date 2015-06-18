@@ -17,10 +17,9 @@
 			"debug_component" : "sensor",
 			"debug_enabled" : true
 	        },
-	
-		"actuator_request_type": {
-			"login_controller": {
-				"login_request": "get_all_users"
+		"sensor_request_type": {
+			"node_data": {
+				"sensor_type": "local_mount_data"
 			}
 		}
 	}

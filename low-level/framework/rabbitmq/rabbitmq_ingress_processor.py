@@ -31,6 +31,7 @@ from framework.utils.service_logging import logger
 from message_handlers.logging_msg_handler import LoggingMsgHandler
 from message_handlers.service_msg_handler import ServiceMsgHandler
 from message_handlers.disk_msg_handler import DiskMsgHandler
+from message_handlers.node_data_msg_handler import NodeDataMsgHandler
 
 import ctypes
 SSPL_SEC = ctypes.cdll.LoadLibrary('libsspl_sec.so')
@@ -52,7 +53,7 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
     PASSWORD            = 'password'
 
     JSON_ACTUATOR_SCHEMA = "SSPL-LL_Actuator_Request.json"
-
+    JSON_SENSOR_SCHEMA   = "SSPL-LL_Sensor_Request.json"
 
     @staticmethod
     def name():
@@ -73,10 +74,26 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
             _schema = f.read()
 
         # Remove tabs and newlines
-        self._schema = json.loads(' '.join(_schema.split()))
+        self._actuator_schema = json.loads(' '.join(_schema.split()))
 
-        # Validate the schema
-        Draft3Validator.check_schema(self._schema)
+        # Validate the actuator schema
+        Draft3Validator.check_schema(self._actuator_schema)
+
+        # Read in the sensor schema for validating messages
+        dir = os.path.dirname(__file__)
+        fileName = os.path.join(dir, '..', '..', 'json_msgs',
+                                'schemas', 'sensors',
+                                self.JSON_SENSOR_SCHEMA)
+
+        with open(fileName, 'r') as f:
+            _schema = f.read()
+
+        # Remove tabs and newlines
+        self._sensor_schema = json.loads(' '.join(_schema.split()))
+
+        # Validate the actuator schema
+        Draft3Validator.check_schema(self._sensor_schema)
+        
 
     def initialize(self, conf_reader, msgQlist):
         """initialize configuration reader and internal msg queues"""
@@ -108,10 +125,10 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
                                   queue=result.method.queue)                                 
             self._channel.start_consuming()
 
-        except Exception:
+        except Exception as e:
             if self.is_running() == True:
                 logger.info("RabbitMQingressProcessor ungracefully breaking out of run loop, restarting.")
-                logger.exception()
+                logger.exception(e)
                 self._scheduler.enter(1, self._priority, self.run, ())
             else:
                 logger.info("RabbitMQingressProcessor gracefully breaking out of run Loop, not restarting.")
@@ -133,30 +150,34 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
             signature = ingressMsg.get("signature")
             message   = ingressMsg.get("message")
             msg_len   = len(message) + 1
-
             if SSPL_SEC.sspl_verify_message(msg_len, str(message), username, signature) != 0:
                 logger.warn("Authentication failed on message: %s" % ingressMsg)
                 return
 
-            # Get the message type
-            msgType = message.get("actuator_request_type")
+            # Get the incoming message type
+            if message.get("actuator_request_type") is not None:
+                msgType = message.get("actuator_request_type")
 
-            # We only handle incoming actuator requests, ignore anything else
-            if msgType is None:
+                # Validate against the actuator schema
+                validate(ingressMsg, self._actuator_schema)
+
+            elif message.get("sensor_request_type") is not None:
+                msgType = message.get("sensor_request_type")
+
+                # Validate against the sensor schema
+                validate(ingressMsg, self._sensor_schema)
+
+            else:
+                # We only handle incoming actuator and sensor requests, ignore everything else
                 return
 
             # Check for debugging being activated in the message header
             self._check_debug(message)
             self._log_debug("_process_msg, ingressMsg: %s" % ingressMsg)
 
-            # Validate against the actuator schema
-            validate(ingressMsg, self._schema)
-
-            self._log_debug("_process_msg, msgType: %s" % msgType)
-
-            # Hand off to appropriate module based on message type
+            # Hand off to appropriate actuator message handler
             if msgType.get("logging"):
-                self._write_internal_msgQ(LoggingMsgHandler.name(), message)
+                self._write_internal_msgQ("LoggingMsgHandler", message)
 
             elif msgType.get("thread_controller"):
                 self._write_internal_msgQ("ThreadController", message)
@@ -164,8 +185,11 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
             elif msgType.get("service_controller"):
                 self._write_internal_msgQ("ServiceMsgHandler", message)
 
-            # TODO handle login controller messages by node message handler
-            # msgType.get("login_controller"):
+
+            # Hand off to appropriate sensor message handler
+            elif msgType.get("node_data"):
+                self._write_internal_msgQ("NodeDataMsgHandler", message)
+
 
             # ... handle other incoming messages that have been validated               
 

@@ -63,7 +63,7 @@ class SystemdService(Debug):
         else:
             self._service_name = jsonMsg.get("actuator_request_type").get("service_watchdog_controller").get("service_name")
             self._service_request = jsonMsg.get("actuator_request_type").get("service_watchdog_controller").get("service_request")    
-        
+
         self._log_debug("perform_request, service_name: %s, service_request: %s" % \
                         (self._service_name, self._service_request))
 
@@ -79,6 +79,9 @@ class SystemdService(Debug):
 
             if self._service_request == "restart":
                 self._manager.RestartUnit(self._service_name, 'replace')
+
+                # Ensure we get an "active" status and not "activating"
+                time.sleep(3)
 
             elif self._service_request == "start":
                 self._manager.StartUnit(self._service_name, 'replace')

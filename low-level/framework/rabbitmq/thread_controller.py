@@ -33,6 +33,7 @@ from framework.rabbitmq.logging_processor import LoggingProcessor
 from message_handlers.logging_msg_handler import LoggingMsgHandler
 from message_handlers.disk_msg_handler import DiskMsgHandler
 from message_handlers.service_msg_handler import ServiceMsgHandler
+from message_handlers.node_data_msg_handler import NodeDataMsgHandler
 
 # Note that all threaded sensors and actuators must have an import here to be controlled
 from sensors.impl.centos_7.systemd_watchdog import SystemdWatchdog
@@ -53,11 +54,11 @@ def _run_thread_capture_errors(curr_module, sspl_modules, msgQlist, conf_reader)
 
     except BaseException as ex:
         logger.critical("SSPL-LL encountered a fatal error, terminating service Error: %s" % ex)
-        logger.exception()
+        logger.exception(ex)
 
         # Populate an actuator response message and transmit back to HAlon
         error_msg = "SSPL-LL encountered an error, terminating service Error: " + \
-                    + e + ", Exception: " + logger.exception()
+                    ", Exception: " + logger.exception(ex)
         jsonMsg   = ThreadControllerMsg(curr_module.name(), error_msg).getJson()        
         curr_module._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
 

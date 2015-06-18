@@ -14,7 +14,7 @@ channel.exchange_declare(exchange='sspl_halon',
 msg_props = pika.BasicProperties()
 msg_props.content_type = "text/plain"
 
-jsonMsg = open("actuator_msgs/login_cntrl.json").read()
+jsonMsg = open("actuator_msgs/sensor_request_mount_data.json").read()
 
 channel.basic_publish(exchange='sspl_halon',
                       routing_key='sspl_ll',

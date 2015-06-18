@@ -18,10 +18,9 @@
 			"debug_enabled" : true
 	        },
 	
-		"actuator_request_type": {
-			"service_controller": {
-				"service_name" : "crond.service",
-				"service_request": "restart"
+		"sensor_request_type": {
+			"node_data": {
+				"sensor_type": "cpu_data"
 			}
 		}
 	}

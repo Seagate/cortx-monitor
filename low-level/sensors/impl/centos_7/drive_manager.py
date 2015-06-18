@@ -37,11 +37,11 @@ class DriveManager(ScheduledModuleThread, InternalMsgQ):
 
     implements(IDriveManager)
 
-    MODULE_NAME       = "DriveManager"
+    SENSOR_NAME       = "DriveManager"
     PRIORITY          = 1
 
     # Section and keys in configuration file
-    DRIVEMANAGER      = MODULE_NAME.upper()
+    DRIVEMANAGER      = SENSOR_NAME.upper()
     DRIVE_MANAGER_DIR = 'drivemanager_dir'
     DRIVE_MANAGER_PID = 'drivemanager_pid'
     START_DELAY       = 'start_delay'
@@ -50,10 +50,10 @@ class DriveManager(ScheduledModuleThread, InternalMsgQ):
     @staticmethod
     def name():
         """@return: name of the monitoring module."""
-        return DriveManager.MODULE_NAME
+        return DriveManager.SENSOR_NAME
 
     def __init__(self):
-        super(DriveManager, self).__init__(self.MODULE_NAME,
+        super(DriveManager, self).__init__(self.SENSOR_NAME,
                                                   self.PRIORITY)       
         # Mapping of drives and their status'
         self._drive_status = {}

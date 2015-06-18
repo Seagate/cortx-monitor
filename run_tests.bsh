@@ -25,6 +25,8 @@
 #
 ####################################################################################
 
+# Update the psutil package to the latest
+yum update python-psutil
 
 TOP_DIR=`pwd`
 

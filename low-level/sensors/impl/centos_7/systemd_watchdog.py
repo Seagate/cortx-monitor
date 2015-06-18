@@ -42,21 +42,21 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
 
     implements(IServiceWatchdog)
 
-    MODULE_NAME       = "SystemdWatchdog"
+    SENSOR_NAME       = "SystemdWatchdog"
     PRIORITY          = 2
 
     # Section and keys in configuration file
-    SYSTEMDWATCHDOG = MODULE_NAME.upper()
+    SYSTEMDWATCHDOG = SENSOR_NAME.upper()
     MONITORED_SERVICES = 'monitored_services'
 
 
     @staticmethod
     def name():
         """@return: name of the module."""
-        return SystemdWatchdog.MODULE_NAME
+        return SystemdWatchdog.SENSOR_NAME
 
     def __init__(self):
-        super(SystemdWatchdog, self).__init__(self.MODULE_NAME,
+        super(SystemdWatchdog, self).__init__(self.SENSOR_NAME,
                                                   self.PRIORITY)
         # Mapping of services and their status'
         self._service_status = {}

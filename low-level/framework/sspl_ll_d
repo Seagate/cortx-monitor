@@ -51,7 +51,7 @@ from rabbitmq.logging_processor import LoggingProcessor
 from rabbitmq.thread_controller import ThreadController
 
 # Modules for handling specific JSON messages
-from message_handlers.node_msg_handler import NodeMsgHandler
+from message_handlers.node_data_msg_handler import NodeDataMsgHandler
 from message_handlers.disk_msg_handler import DiskMsgHandler
 from message_handlers.logging_msg_handler import LoggingMsgHandler
 from message_handlers.service_msg_handler import ServiceMsgHandler
@@ -175,10 +175,13 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist):
         from actuators.impl.os_x.xinitd_service import XinitdService as Service
         from actuators.impl.os_x.xinitd_login import XinitdLogin as Login
         from sensors.impl.os_x.drive_manager import DriveManager as DriveManager
-        from sensors.impl.os_x.systemd_watchdog import XinitdWatchdog as ServiceWatchdog
+        from sensors.impl.os_x.xinitd_watchdog import XinitdWatchdog as ServiceWatchdog
 
     else:
         raise Exception("Operating System not supported")
+
+    # Import in generic sensors/actuators which work on all platforms
+    from sensors.impl.generic.node_data import NodeData as NodeData
 
     # Loop through the list of sensors/actuators and instantiate appropriately
     #  based upon whether or not it is threaded
