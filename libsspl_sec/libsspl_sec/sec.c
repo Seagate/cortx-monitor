@@ -13,7 +13,7 @@ void __attribute__((constructor)) sspl_sec_init(void)
     switch (sspl_sec_get_method())
     {
         case SSPL_SEC_METHOD_NONE:
-            _sspl_sec_lib_handle = dlopen("sspl_none.so", RTLD_NOW);
+            _sspl_sec_lib_handle = dlopen("sspl_none.so.0", RTLD_NOW);
             break;
 
         default:
