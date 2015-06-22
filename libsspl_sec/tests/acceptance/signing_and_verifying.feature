@@ -4,7 +4,8 @@ Feature: Signing and verifying messages.
     To prevent message forgery
 
     Scenario: Sign and verify a simple message
-        Given my username is "jsmith"
+        Given I set the method to be 'None'
+        And my username is "jsmith"
         And my passord is "p4ssw0rd"
         When I generate a session token
         And I sign the following message with my session token:
