@@ -34,7 +34,7 @@ from message_handlers.disk_msg_handler import DiskMsgHandler
 from message_handlers.node_data_msg_handler import NodeDataMsgHandler
 
 import ctypes
-SSPL_SEC = ctypes.cdll.LoadLibrary('libsspl_sec.so')
+SSPL_SEC = ctypes.cdll.LoadLibrary('libsspl_sec.so.0')
 
 
 class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
@@ -63,37 +63,36 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
     def __init__(self):
         super(RabbitMQingressProcessor, self).__init__(self.MODULE_NAME,
                                                        self.PRIORITY)
-
+ 
         # Read in the actuator schema for validating messages
         dir = os.path.dirname(__file__)
-        fileName = os.path.join(dir, '..', '..', 'json_msgs',
-                                'schemas', 'actuators',
-                                self.JSON_ACTUATOR_SCHEMA)
-
-        with open(fileName, 'r') as f:
-            _schema = f.read()
-
-        # Remove tabs and newlines
-        self._actuator_schema = json.loads(' '.join(_schema.split()))
-
-        # Validate the actuator schema
-        Draft3Validator.check_schema(self._actuator_schema)
-
+        schema_file = os.path.join(dir, '..', '..', 'json_msgs',
+                                   'schemas', 'actuators',
+                                   self.JSON_ACTUATOR_SCHEMA)
+        self._actuator_schema = self._load_schema(schema_file)
+  
         # Read in the sensor schema for validating messages
-        dir = os.path.dirname(__file__)
-        fileName = os.path.join(dir, '..', '..', 'json_msgs',
-                                'schemas', 'sensors',
-                                self.JSON_SENSOR_SCHEMA)
+        schema_file = os.path.join(dir, '..', '..', 'json_msgs',
+                                   'schemas', 'sensors',
+                                   self.JSON_SENSOR_SCHEMA)
+        self._sensor_schema = self._load_schema(schema_file)
 
-        with open(fileName, 'r') as f:
-            _schema = f.read()
+    def _load_schema(self, schema_file):
+        """Loads a schema from a file and validates
+
+        @param string schema_file     location of schema on the file system
+        @return string                Trimmed and validated schema
+        """
+        with open(schema_file, 'r') as f:
+            schema = f.read()
 
         # Remove tabs and newlines
-        self._sensor_schema = json.loads(' '.join(_schema.split()))
+        schema_trimmed = json.loads(' '.join(schema.split()))
 
         # Validate the actuator schema
-        Draft3Validator.check_schema(self._sensor_schema)
-        
+        Draft3Validator.check_schema(schema_trimmed)
+
+        return schema_trimmed
 
     def initialize(self, conf_reader, msgQlist):
         """initialize configuration reader and internal msg queues"""
@@ -150,6 +149,7 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
             signature = ingressMsg.get("signature")
             message   = ingressMsg.get("message")
             msg_len   = len(message) + 1
+            
             if SSPL_SEC.sspl_verify_message(msg_len, str(message), username, signature) != 0:
                 logger.warn("Authentication failed on message: %s" % ingressMsg)
                 return
@@ -176,18 +176,18 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
             self._log_debug("_process_msg, ingressMsg: %s" % ingressMsg)
 
             # Hand off to appropriate actuator message handler
-            if msgType.get("logging"):
+            if msgType.get("logging") is not None:
                 self._write_internal_msgQ("LoggingMsgHandler", message)
 
-            elif msgType.get("thread_controller"):
+            elif msgType.get("thread_controller") is not None:
                 self._write_internal_msgQ("ThreadController", message)
 
-            elif msgType.get("service_controller"):
+            elif msgType.get("service_controller") is not None:
                 self._write_internal_msgQ("ServiceMsgHandler", message)
 
 
             # Hand off to appropriate sensor message handler
-            elif msgType.get("node_data"):
+            elif msgType.get("node_data") is not None:
                 self._write_internal_msgQ("NodeDataMsgHandler", message)
 
 

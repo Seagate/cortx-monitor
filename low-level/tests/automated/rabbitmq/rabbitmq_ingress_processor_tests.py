@@ -20,6 +20,7 @@ import os
 
 from jsonschema import Draft3Validator
 from jsonschema import validate
+from lettuce import *
 
 from pika import exceptions
 
@@ -31,7 +32,7 @@ from framework.utils.service_logging import logger
 from message_handlers.logging_msg_handler import LoggingMsgHandler
 
 import ctypes
-SSPL_SEC = ctypes.cdll.LoadLibrary('libsspl_sec.so')
+SSPL_SEC = ctypes.cdll.LoadLibrary('libsspl_sec.so.0')
 
 
 class RabbitMQingressProcessorTests(ScheduledModuleThread, InternalMsgQ):
@@ -151,6 +152,11 @@ class RabbitMQingressProcessorTests(ScheduledModuleThread, InternalMsgQ):
             username  = ingressMsg.get("username")
             signature = ingressMsg.get("signature")
             message   = ingressMsg.get("message")
+            
+            assert(username is not None)
+            assert(signature is not None)
+            assert(message is not None)
+            
             msg_len   = len(message) + 1
 
             if SSPL_SEC.sspl_verify_message(msg_len, str(message), username, signature) != 0:

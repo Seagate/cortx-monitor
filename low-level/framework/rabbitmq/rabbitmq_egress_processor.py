@@ -25,7 +25,7 @@ from framework.utils.service_logging import logger
 from json_msgs.messages.actuators.thread_controller import ThreadControllerMsg
 
 import ctypes
-SSPL_SEC = ctypes.cdll.LoadLibrary('libsspl_sec.so')
+SSPL_SEC = ctypes.cdll.LoadLibrary('libsspl_sec.so.0')
 
 
 class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):

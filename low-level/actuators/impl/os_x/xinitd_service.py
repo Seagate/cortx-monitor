@@ -52,6 +52,3 @@ class XinitdService(Debug):
 
         
         # Code to handle service requests using xinitd here...
-        
-
-    

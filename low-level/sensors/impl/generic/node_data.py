@@ -47,12 +47,12 @@ class NodeData(Debug):
         super(NodeData, self).__init__()
 
         # Total number of CPUs
-        self._cpus = psutil.cpu_count()
+        self.cpus = psutil.cpu_count()
 
-        # Calculate the load averages on separate blocking threads     
-        self._load_1min_average  = []
-        self._load_5min_average  = []
-        self._load_15min_average = []       
+        # Calculate the load averages on separate blocking threads
+        self.load_1min_average  = []
+        self.load_5min_average  = []
+        self.load_15min_average = []
         load_1min_avg  = threading.Thread(target=self._load_1min_avg).start()
         load_5min_avg  = threading.Thread(target=self._load_5min_avg).start()
         load_15min_avg = threading.Thread(target=self._load_15min_avg).start()
@@ -64,22 +64,22 @@ class NodeData(Debug):
 
         try:
             # Determine the units factor value
-            self._units_factor = 1
+            self.units_factor = 1
             if units == "GB":
-                self._units_factor = 1000000000
+                self.units_factor = 1000000000
             elif units == "MB":
-                self._units_factor = 1000000
+                self.units_factor = 1000000
             elif units == "KB":
-                self._units_factor = 1000
+                self.units_factor = 1000
 
             # First call gethostname() to see if it returns something that looks like a host name,
             # if not then get the host by address
             if socket.gethostname().find('.') >= 0:
-                self._host_id = socket.gethostname()
+                self.host_id = socket.gethostname()
             else:
-                self._host_id = socket.gethostbyaddr(socket.gethostname())[0]
+                self.host_id = socket.gethostbyaddr(socket.gethostname())[0]
 
-            self._local_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S %Z')
+            self.local_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S %Z')
 
             # Branch off and gather data based upon value sent into subset
             if subset == "host_update":
@@ -102,30 +102,30 @@ class NodeData(Debug):
 
     def _get_host_update_data(self):
         """Retrieves node information for the host_update json message"""
-        self._up_time         = int(psutil.boot_time())
-        self._boot_time       = datetime.fromtimestamp(self._up_time).strftime('%Y-%m-%d %H:%M:%S %Z')
-        self._uname           = str(os.uname()).replace("'", "")
-        self._free_mem        = int(psutil.virtual_memory()[1])/self._units_factor        
-        self._total_mem       = int(psutil.virtual_memory()[0])/self._units_factor
-        self._free_mem_units  = "MB"
-        self._total_mem_units = "MB"
-        self._process_count   = len(psutil.get_pid_list())
+        self.up_time         = int(psutil.boot_time())
+        self.boot_time       = datetime.fromtimestamp(self.up_time).strftime('%Y-%m-%d %H:%M:%S %Z')
+        self.uname           = ' '.join(os.uname())
+        self.free_mem        = int(psutil.virtual_memory()[1])/self.units_factor
+        self.total_mem       = int(psutil.virtual_memory()[0])/self.units_factor
+        self.process_count   = len(psutil.get_pid_list())
 
         # Calculate the current number of running processes at this moment
         total_running_proc = 0
         for proc in psutil.process_iter():
             pinfo = proc.as_dict(attrs=['status'])
-            if pinfo['status'] not in (psutil.STATUS_ZOMBIE, psutil.STATUS_DEAD, psutil.STATUS_STOPPED):
+            if pinfo['status'] not in (psutil.STATUS_ZOMBIE, psutil.STATUS_DEAD,
+                                       psutil.STATUS_STOPPED, psutil.STATUS_IDLE,
+                                       psutil.STATUS_SLEEPING):
                 total_running_proc += 1
-        self._running_process_count = total_running_proc
+        self.running_process_count = total_running_proc
 
     def _get_local_mount_data(self):
         """Retrieves node information for the local_mount_data json message"""
-        self._total_space = psutil.disk_usage("/")[0]/self._units_factor
-        self._free_space  = psutil.disk_usage("/")[2]/self._units_factor
-        self._total_swap  = psutil.swap_memory()[0]/self._units_factor
-        self._free_swap   = psutil.swap_memory()[2]/self._units_factor
-        self._free_inodes = int(100 - math.ceil((float(os.statvfs("/").f_files - os.statvfs("/").f_ffree) \
+        self.total_space = psutil.disk_usage("/")[0]/self.units_factor
+        self.free_space  = psutil.disk_usage("/")[2]/self.units_factor
+        self.total_swap  = psutil.swap_memory()[0]/self.units_factor
+        self.free_swap   = psutil.swap_memory()[2]/self.units_factor
+        self.free_inodes = int(100 - math.ceil((float(os.statvfs("/").f_files - os.statvfs("/").f_ffree) \
                              / os.statvfs("/").f_files) * 100))
 
     def _get_cpu_data(self):
@@ -133,33 +133,33 @@ class NodeData(Debug):
         cpu_data = psutil.cpu_times_percent()
         self._log_debug("_get_cpu_data, cpu_data: %s %s %s %s %s %s %s %s %s %s" % cpu_data)
 
-        self._csps           = 0  # What the hell is csps - cycles per second?
-        self._user_time      = int(cpu_data[0])
-        self._nice_time      = int(cpu_data[1])
-        self._system_time    = int(cpu_data[2])
-        self._idle_time      = int(cpu_data[3])
-        self._iowait_time    = int(cpu_data[4])
-        self._interrupt_time = int(cpu_data[5])
-        self._softirq_time   = int(cpu_data[6])
-        self._steal_time     = int(cpu_data[7])
+        self.csps           = 0  # What the hell is csps - cycles per second?
+        self.user_time      = int(cpu_data[0])
+        self.nice_time      = int(cpu_data[1])
+        self.system_time    = int(cpu_data[2])
+        self.idle_time      = int(cpu_data[3])
+        self.iowait_time    = int(cpu_data[4])
+        self.interrupt_time = int(cpu_data[5])
+        self.softirq_time   = int(cpu_data[6])
+        self.steal_time     = int(cpu_data[7])
 
         # Array to hold data about each CPU core
-        self._cpu_core_data = []
+        self.cpu_core_data = []
         index = 0
-        while index < self._cpus:
+        while index < self.cpus:
             self._log_debug("_get_cpu_data, index: %s, 1 min: %s, 5 min: %s, 15 min: %s" %
                             (index,
-                            self._load_1min_average[index],
-                            self._load_5min_average[index],
-                            self._load_15min_average[index]))
+                            self.load_1min_average[index],
+                            self.load_5min_average[index],
+                            self.load_15min_average[index]))
 
             cpu_core_data = {"coreId"      : index,
-                             "load1MinAvg" : int(self._load_1min_average[index]),
-                             "load5MinAvg" : int(self._load_5min_average[index]),
-                             "load15MinAvg": int(self._load_15min_average[index]),
+                             "load1MinAvg" : int(self.load_1min_average[index]),
+                             "load5MinAvg" : int(self.load_5min_average[index]),
+                             "load15MinAvg": int(self.load_15min_average[index]),
                              "ips" : 0
                              }
-            self._cpu_core_data.append(cpu_core_data)
+            self.cpu_core_data.append(cpu_core_data)
             index += 1
 
     def _get_if_data(self):
@@ -167,7 +167,7 @@ class NodeData(Debug):
         net_data = psutil.net_io_counters(pernic=True)
 
         # Array to hold data about each network interface
-        self._if_data = []
+        self.if_data = []
         for interface, if_data in net_data.iteritems():
             self._log_debug("_get_if_data, interface: %s %s" % (interface, net_data))
 
@@ -181,123 +181,40 @@ class NodeData(Debug):
                        "packetsOut"         : net_data[interface].packets_sent,
                        "trafficOut"         : net_data[interface].bytes_sent
                        }
-            self._if_data.append(if_data)
+            self.if_data.append(if_data)
 
     def _load_1min_avg(self):
         """Loop forever calculating the one minute average load"""
         # Initialize list to -1 indicating the time interval has not occurred yet
         index = 0
-        while index < self._cpus:
-            self._load_1min_average.append(-1)
+        while index < self.cpus:
+            self.load_1min_average.append(-1)
             index += 1
 
         while True:
             # API call blocks for one minute and then returns the value
-            self._load_1min_average = psutil.cpu_percent(interval=1, percpu=True)
+            self.load_1min_average = psutil.cpu_percent(interval=1, percpu=True)
 
     def _load_5min_avg(self):
         """Loop forever calculating the five minute average load"""
         # Initialize list to -1 indicating the time interval has not occurred yet
         index = 0
-        while index < self._cpus:
-            self._load_5min_average.append(-1)
+        while index < self.cpus:
+            self.load_5min_average.append(-1)
             index += 1
 
         while True:
             # API call blocks for five minutes and then returns the value
-            self._load_5min_average = psutil.cpu_percent(interval=5, percpu=True)
+            self.load_5min_average = psutil.cpu_percent(interval=5, percpu=True)
 
     def _load_15min_avg(self):
         """Loop forever calculating the fifteen minute average load"""
         # Initialize list to -1 indicating the time interval has not occurred yet
         index = 0
-        while index < self._cpus:
-            self._load_15min_average.append(-1)
+        while index < self.cpus:
+            self.load_15min_average.append(-1)
             index += 1
 
         while True:
             # API call blocks for fifteen minutes and then returns the value
-            self._load_15min_average = psutil.cpu_percent(interval=15, percpu=True)
-
-
-    # General getters/setters below here
-    def get_if_data(self):
-        return self._if_data
-
-    def get_csps(self):
-        return self._csps
-
-    def get_user_time(self):
-        return self._user_time
-
-    def get_nice_time(self):
-        return self._nice_time
-
-    def get_system_time(self):
-        return self._system_time
-
-    def get_idle_time(self):
-        return self._idle_time
-
-    def get_iowait_time(self):
-        return self._iowait_time
-
-    def get_interrupt_time(self):
-        return self._interrupt_time
-
-    def get_softirq_time(self):
-        return self._softirq_time
-
-    def get_steal_time(self):
-        return self._steal_time
-
-    def get_cpu_core_data(self):
-        return self._cpu_core_data
-
-    def get_host_id(self):
-        return self._host_id
-
-    def get_local_time(self):
-        return self._local_time
-
-    def get_boot_time(self):
-        return self._boot_time
-
-    def get_up_time(self):
-        return self._up_time
-
-    def get_uname(self):
-        return self._uname
-
-    def get_free_mem(self):
-        return self._free_mem
-
-    def get_free_mem_units(self):
-        return self._free_mem_units
-
-    def get_total_mem(self):
-        return self._total_mem
-
-    def get_total_mem_units(self):
-        return self._total_mem_units
-
-    def get_process_count(self):
-        return self._process_count
-
-    def get_running_process_count(self):
-        return self._running_process_count
-
-    def get_total_space(self):
-        return self._total_space
-
-    def get_total_swap(self):
-        return self._total_swap  
-
-    def get_free_space(self):
-        return self._free_space
-
-    def get_free_swap(self):
-        return self._free_swap
-
-    def get_inodes(self):
-        return self._free_inodes
+            self.load_15min_average = psutil.cpu_percent(interval=15, percpu=True)

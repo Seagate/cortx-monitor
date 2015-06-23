@@ -123,7 +123,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         self._log_debug("Finished processing successfully")
 
     def _process_msg(self, jsonMsg):
-        """Parses the incoming message and hands off to the appropriate logger"""
+        """Parses the incoming message and generate the desired data message"""
         self._log_debug("_process_msg, jsonMsg: %s" % jsonMsg)
 
         if isinstance(jsonMsg, dict) == False:
@@ -172,15 +172,15 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         logged_in_users = self._login_actuator.perform_request(login_request)
 
         # Create the host update message and hand it over to the egress processor to transmit
-        jsonMsg = HostUpdateMsg(self._node_sensor.get_host_id(),
-                                self._node_sensor.get_local_time(),
-                                self._node_sensor.get_boot_time(),
-                                self._node_sensor.get_up_time(),
-                                self._node_sensor.get_uname(), self._units,
-                                self._node_sensor.get_free_mem(),
-                                self._node_sensor.get_total_mem(), logged_in_users,
-                                self._node_sensor.get_process_count(),
-                                self._node_sensor.get_running_process_count()
+        jsonMsg = HostUpdateMsg(self._node_sensor.host_id,
+                                self._node_sensor.local_time,
+                                self._node_sensor.boot_time,
+                                self._node_sensor.up_time,
+                                self._node_sensor.uname, self._units,
+                                self._node_sensor.free_mem,
+                                self._node_sensor.total_mem, logged_in_users,
+                                self._node_sensor.process_count,
+                                self._node_sensor.running_process_count
                                 ).getJson()
         self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
 
@@ -194,13 +194,13 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             logger.error("NodeDataMsgHandler, _generate_local_mount_data was NOT successful.")
 
         # Create the local mount data message and hand it over to the egress processor to transmit
-        jsonMsg = LocalMountDataMsg(self._node_sensor.get_host_id(),
-                                self._node_sensor.get_local_time(),
-                                self._node_sensor.get_free_space(),
-                                self._node_sensor.get_inodes(),
-                                self._node_sensor.get_free_swap(),
-                                self._node_sensor.get_total_space(),
-                                self._node_sensor.get_total_swap(),
+        jsonMsg = LocalMountDataMsg(self._node_sensor.host_id,
+                                self._node_sensor.local_time,
+                                self._node_sensor.free_space,
+                                self._node_sensor.free_inodes,
+                                self._node_sensor.free_swap,
+                                self._node_sensor.total_space,
+                                self._node_sensor.total_swap,
                                 self._units).getJson()
         self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
 
@@ -214,18 +214,18 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             logger.error("NodeDataMsgHandler, _generate_cpu_data was NOT successful.")
 
         # Create the local mount data message and hand it over to the egress processor to transmit
-        jsonMsg = CPUdataMsg(self._node_sensor.get_host_id(),
-                             self._node_sensor.get_local_time(),
-                             self._node_sensor.get_csps(),
-                             self._node_sensor.get_idle_time(),
-                             self._node_sensor.get_interrupt_time(),
-                             self._node_sensor.get_iowait_time(),
-                             self._node_sensor.get_nice_time(),
-                             self._node_sensor.get_softirq_time(),
-                             self._node_sensor.get_steal_time(),
-                             self._node_sensor.get_system_time(),
-                             self._node_sensor.get_user_time(),
-                             self._node_sensor.get_cpu_core_data()).getJson()
+        jsonMsg = CPUdataMsg(self._node_sensor.host_id,
+                             self._node_sensor.local_time,
+                             self._node_sensor.csps,
+                             self._node_sensor.idle_time,
+                             self._node_sensor.interrupt_time,
+                             self._node_sensor.iowait_time,
+                             self._node_sensor.nice_time,
+                             self._node_sensor.softirq_time,
+                             self._node_sensor.steal_time,
+                             self._node_sensor.system_time,
+                             self._node_sensor.user_time,
+                             self._node_sensor.cpu_core_data).getJson()
         self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
 
     def _generate_if_data(self):
@@ -237,9 +237,9 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         if not successful:
             logger.error("NodeDataMsgHandler, _generate_if_data was NOT successful.")
 
-        jsonMsg = IFdataMsg(self._node_sensor.get_host_id(),
-                            self._node_sensor.get_local_time(),
-                            self._node_sensor.get_if_data()).getJson()
+        jsonMsg = IFdataMsg(self._node_sensor.host_id,
+                            self._node_sensor.local_time,
+                            self._node_sensor.if_data).getJson()
         self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
 
     def shutdown(self):

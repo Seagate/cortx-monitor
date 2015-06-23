@@ -81,7 +81,14 @@ class SystemdService(Debug):
                 self._manager.RestartUnit(self._service_name, 'replace')
 
                 # Ensure we get an "active" status and not "activating"
-                time.sleep(3)
+                max_wait = 0
+                while self._get_status() != "active":
+                    self._log_debug("status is still activating, pausing")
+                    time.sleep(1)
+                    max_wait += 1
+                    if max_wait > 20:
+                        self._log_debug("maximum wait for service restart reached")
+                        break
 
             elif self._service_request == "start":
                 self._manager.StartUnit(self._service_name, 'replace')

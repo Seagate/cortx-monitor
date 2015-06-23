@@ -20,7 +20,7 @@
 	
 		"actuator_request_type": {
 			"service_controller": {
-				"service_name" : "crond.service",
+				"service_name" : "httpd.service",
 				"service_request": "restart"
 			}
 		}
