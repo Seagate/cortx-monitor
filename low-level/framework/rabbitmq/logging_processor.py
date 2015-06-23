@@ -101,40 +101,43 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
                 logMsg = body
 
             # See if there is an id available
+            msg_id = None
             try:
-                msg_id = logMsg[logMsg.index("IEC:"):10]
-                logger.info("HERE msg_id: %s" % msg_id)
+                iec_index = logMsg.index("IEC:")+4
+                tmp_msg = logMsg[iec_index : ]
+                colon_index = tmp_msg.index(":")
+                msg_id = str(logMsg[iec_index : iec_index + colon_index])
             except:
-                logger.info("Log message has no IEC to use as message_id in journal, ignoring.")
+                # Log message has no IEC to use as message_id in journal, ignoring
+                pass
 
             # Write message to the journal
             if "emerg" in logMsg or "EMERG" in logMsg:
-                journal.send(logMsg, PRIORITY=0)
+                journal.send(logMsg, PRIORITY=0, MESSAGE_ID=msg_id)
 
             elif "alert" in logMsg or "ALERT" in logMsg:
-                journal.send(logMsg, PRIORITY=1)
+                journal.send(logMsg, PRIORITY=1, MESSAGE_ID=msg_id)
 
             elif "critical" in logMsg or "CRITICAL" in logMsg:
-                journal.send(logMsg, PRIORITY=2)
+                journal.send(logMsg, PRIORITY=2, MESSAGE_ID=msg_id)
 
             elif "error" in logMsg or "ERROR" in logMsg:
-                journal.send(logMsg, PRIORITY=3)
+                journal.send(logMsg, PRIORITY=3, MESSAGE_ID=msg_id)
 
             elif "warning" in logMsg or "WARNING" in logMsg:
-                journal.send(logMsg, PRIORITY=4)
+                journal.send(logMsg, PRIORITY=4, MESSAGE_ID=msg_id)
 
             elif "notice" in logMsg or "NOTICE" in logMsg:
-                journal.send(logMsg, PRIORITY=5)
+                journal.send(logMsg, PRIORITY=5, MESSAGE_ID=msg_id)
 
             elif "info" in logMsg or "INFO" in logMsg:
-                journal.send(logMsg, PRIORITY=6)
+                journal.send(logMsg, PRIORITY=6, MESSAGE_ID=msg_id)
 
             elif "debug" in logMsg or "DEBUG" in logMsg:
-                journal.send(logMsg, PRIORITY=7)
+                journal.send(logMsg, PRIORITY=7, MESSAGE_ID=msg_id)
 
             else:
                 journal.send(logMsg)
-                logger.info("default priority")
 
             # Acknowledge message was received     
             ch.basic_ack(delivery_tag = method.delivery_tag)
