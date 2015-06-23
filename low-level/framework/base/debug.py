@@ -16,7 +16,7 @@
 
 import json
 from framework.utils.service_logging import logger
-
+from systemd import journal
 
 class Debug(object):
     """"Flags and methods for handling debug mode"""
@@ -29,7 +29,8 @@ class Debug(object):
     def _log_debug(self, message):
         """Logging messages"""
         if self._debug:
-            logger.info(self.name() + ", " + message)
+            log_msg = self.name() + ", " + message
+            journal.send(log_msg, PRIORITY=7)
 
     def _set_debug(self, debug):
         """Sets debug flag"""

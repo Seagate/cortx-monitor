@@ -15,9 +15,10 @@
  ****************************************************************************
 """
 
-import syslog
 import pika
 import os
+
+from systemd import journal
 
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
@@ -99,8 +100,41 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
                 self._log_debug("_process_msg, no encoding applied, writing to syslog")
                 logMsg = body
 
-            # Write message to syslog
-            syslog.syslog(logMsg)
+            # See if there is an id available
+            try:
+                msg_id = logMsg[logMsg.index("IEC:"):10]
+                logger.info("HERE msg_id: %s" % msg_id)
+            except:
+                logger.info("Log message has no IEC to use as message_id in journal, ignoring.")
+
+            # Write message to the journal
+            if "emerg" in logMsg or "EMERG" in logMsg:
+                journal.send(logMsg, PRIORITY=0)
+
+            elif "alert" in logMsg or "ALERT" in logMsg:
+                journal.send(logMsg, PRIORITY=1)
+
+            elif "critical" in logMsg or "CRITICAL" in logMsg:
+                journal.send(logMsg, PRIORITY=2)
+
+            elif "error" in logMsg or "ERROR" in logMsg:
+                journal.send(logMsg, PRIORITY=3)
+
+            elif "warning" in logMsg or "WARNING" in logMsg:
+                journal.send(logMsg, PRIORITY=4)
+
+            elif "notice" in logMsg or "NOTICE" in logMsg:
+                journal.send(logMsg, PRIORITY=5)
+
+            elif "info" in logMsg or "INFO" in logMsg:
+                journal.send(logMsg, PRIORITY=6)
+
+            elif "debug" in logMsg or "DEBUG" in logMsg:
+                journal.send(logMsg, PRIORITY=7)
+
+            else:
+                journal.send(logMsg)
+                logger.info("default priority")
 
             # Acknowledge message was received     
             ch.basic_ack(delivery_tag = method.delivery_tag)

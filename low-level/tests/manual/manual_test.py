@@ -148,6 +148,7 @@ class ManualTest():
                                   routing_key=self._routingkey,
                                   properties=msg_props,
                                   body=str(json.dumps(jsonMsg, ensure_ascii=True).encode('utf8')))
+            print "Successfully Sent: %s" % jsonMsg
 
         elif message is not None:
             #Convert the message back to plain text and send to consumer
@@ -155,8 +156,8 @@ class ManualTest():
                                   routing_key=self._routingkey,
                                   properties=msg_props,
                                   body=str(message))
+            print "Successfully Sent: %s" % message
 
-        print "Successfully Sent: %s" % jsonMsg
         connection.close()
         del(connection)
 
