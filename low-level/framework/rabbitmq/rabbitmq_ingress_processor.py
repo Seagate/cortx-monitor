@@ -149,7 +149,7 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
             signature = ingressMsg.get("signature")
             message   = ingressMsg.get("message")
             msg_len   = len(message) + 1
-            
+
             if SSPL_SEC.sspl_verify_message(msg_len, str(message), username, signature) != 0:
                 logger.warn("Authentication failed on message: %s" % ingressMsg)
                 return

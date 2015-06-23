@@ -18,11 +18,24 @@ from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 @step(u'Given that all drives are set to "([^"]*)" and sspl is started')
 def given_that_all_drives_are_set_to_condition_and_sspl_is_started(step, condition):
     set_all_drives(condition)
+
+    # Check that the state for sspl_ll service is active
     found = False
-    for proc in psutil.process_iter():  
+
+    # Support for python-psutil < 2.1.3
+    for proc in psutil.process_iter():
         if proc.name == "sspl_ll_d" and \
            proc.status in (psutil.STATUS_RUNNING, psutil.STATUS_SLEEPING):
-            found = True
+               found = True
+
+    # Support for python-psutil 2.1.3+
+    if found == False:
+        for proc in psutil.process_iter():
+            pinfo = proc.as_dict(attrs=['name', 'status'])
+            if pinfo['name'] == "sspl_ll_d" and \
+                pinfo['status'] in (psutil.STATUS_RUNNING, psutil.STATUS_SLEEPING):
+                    found = True
+
     assert found == True
 
     # Clear the message queue buffer out
