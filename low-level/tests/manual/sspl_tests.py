@@ -39,7 +39,7 @@ import sys
 sys.path.insert(0, '/opt/seagate/sspl/low-level')
 from framework.utils.config_reader import ConfigReader
 import ctypes
-SSPL_SEC = ctypes.cdll.LoadLibrary('libsspl_sec.so')
+SSPL_SEC = ctypes.cdll.LoadLibrary('libsspl_sec.so.0')
 
 class SSPLtest():
     """Class to perform tests on SSPL"""
@@ -52,7 +52,7 @@ class SSPLtest():
     SIGNATURE_EXPIRES   = 'message_signature_expires'
     #This is a hardcoded file location used for all actuator_msgs and the config file
     #This is needed to be hardcoded to run through MCollective from cluster_check
-    actuator_msgs_folder = "/opt/seagate/sspl/low-level/tests/manual/sspl_test/actuator_msgs/"
+    actuator_msgs_folder = "/opt/seagate/sspl/low-level/tests/manual/actuator_msgs/"
 
     def __init__(self, logger = None):
         """Sets the system in the right state for the tests
