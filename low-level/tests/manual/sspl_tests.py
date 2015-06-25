@@ -221,24 +221,25 @@ class SSPLtest():
 
             jsonMsg = json.loads(open(message).read())
 
-            requestType = jsonMsg.get("message").get("actuator_request_type")
+            if jsonMsg.get("message") is not None:
+                requestType = jsonMsg.get("message").get("actuator_request_type")
+                if requestType is not None:
+                    if requestType.get("service_controller"):
+                        serviceName = requestType.get("service_controller").get("service_name")
+                        serviceRequest = requestType.get("service_controller").get("service_request")
 
-            if requestType.get("service_controller"):
-                serviceName = requestType.get("service_controller").get("service_name")
-                serviceRequest = requestType.get("service_controller").get("service_request")
+                        self.testsJson.append({"Request Type" : "service", "Service Name" : serviceName, "Request" : serviceRequest, "File Location" : message})
 
-                self.testsJson.append({"Request Type" : "service", "Service Name" : serviceName, "Request" : serviceRequest, "File Location" : message})
+                    elif requestType.get("thread_controller"):
+                        threadName = requestType.get("thread_controller").get("module_name")
+                        threadRequest = requestType.get("thread_controller").get("thread_request")
 
-            elif requestType.get("thread_controller"):
-                threadName = requestType.get("thread_controller").get("module_name")
-                threadRequest = requestType.get("thread_controller").get("thread_request")
+                        self.testsJson.append({"Request Type" : "thread", "Thread Name" : threadName, "Request" : threadRequest, "File Location" : message})
 
-                self.testsJson.append({"Request Type" : "thread", "Thread Name" : threadName, "Request" : threadRequest, "File Location" : message})
+                    elif requestType.get("logging"):
+                        logMsg = requestType.get("logging").get("log_msg")
 
-            elif requestType.get("logging"):
-                logMsg = requestType.get("logging").get("log_msg")
-
-                self.testsJson.append({"Request Type" : "log", "Log Message" : logMsg, "File Location" : message})
+                        self.testsJson.append({"Request Type" : "log", "Log Message" : logMsg, "File Location" : message})
 
 
     def serviceVerify(self):
