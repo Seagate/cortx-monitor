@@ -22,18 +22,11 @@ BuildRequires: rpm-build
 Requires:   python-daemon python-inotify python-jsonschema python-pika rabbitmq-server
 Requires:   python-zope-interface python-zope-event python-zope-component python-hpi
 Requires:   systemd-python pygobject2 dbus python-psutil libsspl_sec usm_tools
-Requires:   zabbix-agent-lib zabbix-openhpi-config zabbix-collector
+Requires:   zabbix-agent-lib zabbix-openhpi-config zabbix-collector pyserial
 Requires(pre): shadow-utils
 
 %description
 Installs SSPL-LL
-
-
-%pre
-getent passwd sspl-ll >/dev/null || \
-     useradd -r -g zabbix -G systemd-journal -s /sbin/nologin \
-     -c "User account to run the sspl-ll service" sspl-ll
-
 
 %prep
 %setup -n sspl/low-level
@@ -81,7 +74,7 @@ rm -rf %{buildroot}
 
 
 %changelog
-* Mon Jun 09 2015 Aden Jake Abernathy <aden.j.abernathy@seagate.com>
+* Tue Jun 09 2015 Aden Jake Abernathy <aden.j.abernathy@seagate.com>
 - Linking into security libraries to apply authentication signatures
 
 * Mon Jun 01 2015 David Adair <dadair@seagate.com>

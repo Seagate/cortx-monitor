@@ -111,10 +111,10 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
                       (self._exchange_name, self._routing_key, self._virtual_host))
 
     def run(self):
-        """Run the module periodically on its own thread. """        
+        """Run the module periodically on its own thread."""
         self._log_debug("Start accepting requests")
 
-        try:            
+        try:
             result = self._channel.queue_declare(exclusive=True)
             self._channel.queue_bind(exchange=self._exchange_name,
                                queue=result.method.queue,
@@ -185,6 +185,8 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
             elif msgType.get("service_controller") is not None:
                 self._write_internal_msgQ("ServiceMsgHandler", message)
 
+            elif msgType.get("node_controller") is not None:
+                self._write_internal_msgQ("NodeControllerMsgHandler", message)
 
             # Hand off to appropriate sensor message handler
             elif msgType.get("node_data") is not None:

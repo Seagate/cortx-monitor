@@ -6,6 +6,7 @@ After=rabbitmq-server.service dcs-collector.service halond.service syslog.target
 [Service]
 Type=notify
 PermissionsStartOnly=true
+ExecStartPre=/opt/seagate/sspl/low-level/framework/sspl_ll_reinit
 ExecStartPre=/opt/seagate/sspl/low-level/framework/sspl_ll_rabbitmq_reinit
 ExecStartPre=/usr/bin/mkdir /var/run/sspl_ll
 ExecStartPre=/usr/bin/chown sspl-ll:root /var/run/sspl_ll

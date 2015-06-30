@@ -34,6 +34,7 @@ from message_handlers.logging_msg_handler import LoggingMsgHandler
 from message_handlers.disk_msg_handler import DiskMsgHandler
 from message_handlers.service_msg_handler import ServiceMsgHandler
 from message_handlers.node_data_msg_handler import NodeDataMsgHandler
+from message_handlers.node_controller_msg_handler import NodeControllerMsgHandler
 
 # Note that all threaded sensors and actuators must have an import here to be controlled
 from sensors.impl.centos_7.systemd_watchdog import SystemdWatchdog
