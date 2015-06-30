@@ -1,7 +1,7 @@
 {
 	"title": "SSPL-LL Actuator Request",
 	"description": "Seagate Storage Platform Library - Low Level - Actuator Request",
-	
+
 	"username" : "JohnDoe",
 	"signature" : "None",
 	"time" : "2015-05-29 14:28:30.974749",
@@ -12,12 +12,11 @@
 			"schema_version": "1.0.0",
 			"sspl_version": "1.0.0",
 			"msg_version": "1.0.0"
-		},
-	 	"sspl_ll_debug": {
+			},
+		"sspl_ll_debug": {
 			"debug_component" : "sensor",
 			"debug_enabled" : true
-	        },
-	
+			},
 		"sensor_request_type": {
 			"node_data": {
 				"sensor_type": "cpu_data"
@@ -25,5 +24,3 @@
 		}
 	}
 }
-
-
