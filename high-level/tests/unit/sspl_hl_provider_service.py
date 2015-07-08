@@ -1,33 +1,25 @@
+""" Unit tests for sspl_hl.providers.service.provider """
 import unittest
-import pika
 import mock
-import json
 from sspl_hl.providers.service.provider import Provider
 from plex.util.concurrent.single_thread_executor import SingleThreadExecutor
+import common
 
 
+# pylint: disable=too-many-public-methods
 class SsplHlProviderService(unittest.TestCase):
+    """ Test methods of the sspl_hl.providers.service.provider.Provider object.
+    """
     def setUp(self):
-        self._p = mock.patch.object(
+        self._patch_ste_submit = mock.patch.object(
             SingleThreadExecutor, 'submit',
-            side_effect=lambda fn, *args, **kwargs: fn(*args, **kwargs)
+            side_effect=lambda fn, *args, **kwargs:
+            fn(*args, **kwargs)  # pylint: disable=star-args
             )
-        self._p.start()
+        self._patch_ste_submit.start()
 
     def tearDown(self):
-        self._p.stop()
-
-    @staticmethod
-    def _generate_expected_message(service_name, command):
-        return json.dumps(json.loads("""
-            {{
-                "serviceRequest":
-                {{
-                    "serviceName": "{service_name}",
-                    "command": "{command}"
-                }}
-            }}
-            """.format(service_name=service_name, command=command)))
+        self._patch_ste_submit.stop()
 
     @staticmethod
     def _query_provider(args, responder=mock.MagicMock()):
@@ -44,16 +36,16 @@ class SsplHlProviderService(unittest.TestCase):
             )
 
     def _test_service_query(self, command):
-        expected = self._generate_expected_message(
+        expected = common.generate_service_request_msg(
             service_name="crond", command=command
             )
 
-        with mock.patch('pika.BlockingConnection') as p1:
+        with mock.patch('pika.BlockingConnection') as patch:
             self._query_provider(
                 args={'command': command, 'serviceName': 'crond'}
                 )
 
-        p1().channel().basic_publish.assert_called_with(
+        patch().channel().basic_publish.assert_called_with(
             body=expected,
             routing_key='sspl_hl_cmd',
             exchange='sspl_hl_cmd'
@@ -69,14 +61,14 @@ class SsplHlProviderService(unittest.TestCase):
         self._test_service_query('disable')
         self._test_service_query('status')
 
-    def test_malformed_service_query__bad_command(self):
+    def test_bad_command(self):
         """ Ensure sending a bad command results in an http error code.
 
         The cli should prevent this from happening, so this is just to cover
         the case of the user bypassing the cli and accessing the data provider
         directly.
         """
-        with mock.patch('pika.BlockingConnection') as p1:
+        with mock.patch('pika.BlockingConnection') as patch:
             responder = mock.MagicMock()
             self._query_provider(
                 args={'command': 'invalid_command', 'serviceName': 'crond'},
@@ -86,14 +78,16 @@ class SsplHlProviderService(unittest.TestCase):
                 "Error: Invalid command: 'invalid_command'"
                 )
 
-    def test_malformed_service_query__extra_params(self):
+        self.assertFalse(patch().channel().basic_publish.called)
+
+    def test_extra_params(self):
         """ Ensure sending extra query params results in an http error code.
 
         The cli should prevent this from happening, so this is just to cover
         the case of the user bypassing the cli and accessing the data provider
         directly.
         """
-        with mock.patch('pika.BlockingConnection') as p1:
+        with mock.patch('pika.BlockingConnection') as patch:
             responder = mock.MagicMock()
             self._query_provider(
                 args={
@@ -107,7 +101,9 @@ class SsplHlProviderService(unittest.TestCase):
                 "Error: Invalid request: Extra parameter 'extrastuff' detected"
                 )
 
-    def test_malformed_service_query__missing_servicename(self):
+        self.assertFalse(patch().channel().basic_publish.called)
+
+    def test_missing_servicename(self):
         """ Ensure sending query without service name results in an http error
         code.
 
@@ -115,7 +111,7 @@ class SsplHlProviderService(unittest.TestCase):
         the case of the user bypassing the cli and accessing the data provider
         directly.
         """
-        with mock.patch('pika.BlockingConnection') as p1:
+        with mock.patch('pika.BlockingConnection') as patch:
             responder = mock.MagicMock()
             self._query_provider(
                 args={'command': 'restart'},
@@ -125,14 +121,16 @@ class SsplHlProviderService(unittest.TestCase):
                 "Error: Invalid request: Missing serviceName"
                 )
 
-    def test_malformed_service_query__missing_command(self):
+        self.assertFalse(patch().channel().basic_publish.called)
+
+    def test_missing_command(self):
         """ Ensure sending query without command results in an http error code.
 
         The cli should prevent this from happening, so this is just to cover
         the case of the user bypassing the cli and accessing the data provider
         directly.
         """
-        with mock.patch('pika.BlockingConnection') as p1:
+        with mock.patch('pika.BlockingConnection') as patch:
             responder = mock.MagicMock()
             self._query_provider(
                 args={'serviceName': 'crond'},
@@ -141,6 +139,8 @@ class SsplHlProviderService(unittest.TestCase):
             responder.reply_exception.assert_called_once_with(
                 "Error: Invalid request: Missing command"
                 )
+
+        self.assertFalse(patch().channel().basic_publish.called)
 
 
 if __name__ == '__main__':

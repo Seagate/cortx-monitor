@@ -4,6 +4,7 @@ import urllib
 import os.path
 import json
 import subprocess
+import common
 
 # Note:  We should use the plex registry to programatically generate this URL
 # to protect against changes in how plex surfaces apps/providers/etc.  But
@@ -44,15 +45,9 @@ def servicerequest_msg_sent(_, command, service_name):
         )[0]
     contents = open(os.path.join('/tmp/fake_halond', first_file), 'r').read()
 
-    expected = json.dumps(json.loads("""
-        {{
-            "serviceRequest":
-            {{
-                "serviceName": "{service_name}",
-                "command": "{command}"
-            }}
-        }}
-        """.format(service_name=service_name, command=command)))
+    expected = common.generate_service_request_msg(
+        service_name=service_name, command=command
+        )
 
     assert contents == json.dumps(json.loads(expected)), \
         "Message doesn't match.  Expected '{expected}' but got '{actual}'" \

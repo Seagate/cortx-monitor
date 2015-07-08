@@ -8,22 +8,25 @@ MOCK_CONFIG=-r mock_osaint
 check: pep8 pylint ut at
 
 at:
-	PYTHONPATH=. lettuce --failfast ./tests/acceptance/*.feature
+	PYTHONPATH=.:tests lettuce --failfast ./tests/acceptance/*.feature
 
 ut:
-	PYTHONPATH=. python tests/unit/sspl_hl_provider_service.py
+	PYTHONPATH=.:tests python tests/unit/sspl_hl_provider_service.py
 
 pep8:
 	pep8 ./sspl_hl ./cli ./tests/
 
 pylint:
-	pylint \
+	pylint --version
+	PYTHONPATH=.:tests pylint \
 		--disable=locally-disabled,locally-enabled \
 		--rcfile=pylint.rc \
 		./sspl_hl \
 		./cli \
 		./tests/fake_halond/fake_halond.py \
-		./tests/acceptance/steps/*.py
+		./tests/acceptance/steps/*.py \
+		./tests/unit/*.py \
+		./tests/*.py
 
 .PHONY: tarball
 tarball:
