@@ -7,6 +7,8 @@ from twisted.plugin import IPlugin
 from twisted.internet import reactor
 import pika
 import json
+import datetime
+import uuid
 # PLEX
 from plex.common.interfaces.idata_provider import IDataProvider
 from plex.core.provider.data_store_provider import DataStoreProvider
@@ -86,6 +88,46 @@ class Provider(DataStoreProvider):
             self._query, selection_args, responder
             )
 
+    @staticmethod
+    def _generate_service_request_msg(
+            service_name,
+            command,
+            now=datetime.datetime.utcnow().isoformat() + '+00:00'):
+        """ Generate a service request message.
+
+        @param service_name:      Name of the service, eg 'crond.service'.
+        @param command:           Operation.  Must be one of 'start', 'stop',
+                                  'restart', 'enable', 'disable', 'status'.
+        @param now:               The current time.  (iso formatted).
+        @return:                  json service request message.
+        @rtype:                   json
+        """
+        message = """
+            {{
+                "username": "ignored_for_now",
+                "signature": "None",
+                "time": "{now}",
+                "expires": 3600,
+                "message":
+                {{
+                    "messageId": "{messageId}",
+                    "serviceRequest":
+                    {{
+                        "serviceName": "{serviceName}",
+                        "command": "{command}"
+                    }}
+                }}
+            }}
+            """
+        message = message.format(
+            messageId=uuid.uuid4(),
+            serviceName=service_name,
+            command=command,
+            now=now,
+            )
+        message = json.loads(message)
+        return message
+
     def _query(self, selection_args, responder):
         """ Sets state of services on the cluster.
 
@@ -106,20 +148,10 @@ class Provider(DataStoreProvider):
         if not self._validate_params(selection_args, responder):
             return
 
-        message = """
-            {{
-                "serviceRequest":
-                {{
-                    "serviceName": "{serviceName}",
-                    "command": "{command}"
-                }}
-            }}
-            """
-        message = message.format(
-            serviceName=selection_args['serviceName'],
-            command=selection_args['command']
+        message = self._generate_service_request_msg(
+            service_name=selection_args['serviceName'],
+            command=selection_args['command'],
             )
-        message = json.loads(message)
 
         self._channel.basic_publish(
             exchange='sspl_hl_cmd',

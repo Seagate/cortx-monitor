@@ -17,7 +17,6 @@ pep8:
 	pep8 ./sspl_hl ./cli ./tests/
 
 pylint:
-	pylint --version
 	PYTHONPATH=.:tests pylint \
 		--disable=locally-disabled,locally-enabled \
 		--rcfile=pylint.rc \
@@ -25,8 +24,7 @@ pylint:
 		./cli \
 		./tests/fake_halond/fake_halond.py \
 		./tests/acceptance/steps/*.py \
-		./tests/unit/*.py \
-		./tests/*.py
+		./tests/unit/*.py
 
 .PHONY: tarball
 tarball:

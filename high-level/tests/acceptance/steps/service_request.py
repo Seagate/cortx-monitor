@@ -4,7 +4,7 @@ import urllib
 import os.path
 import json
 import subprocess
-import common
+from sspl_hl.providers.service.provider import Provider
 
 # Note:  We should use the plex registry to programatically generate this URL
 # to protect against changes in how plex surfaces apps/providers/etc.  But
@@ -45,11 +45,20 @@ def servicerequest_msg_sent(_, command, service_name):
         )[0]
     contents = open(os.path.join('/tmp/fake_halond', first_file), 'r').read()
 
-    expected = common.generate_service_request_msg(
+    # pylint: disable=protected-access
+    expected = json.dumps(Provider._generate_service_request_msg(
         service_name=service_name, command=command
-        )
+        ))
+    # pylint: enable=protected-access
 
-    assert contents == json.dumps(json.loads(expected)), \
+    # alter the 'time' and 'messageId' field to match.  (We expect a minor
+    # variation).
+    tmp = json.loads(expected)
+    tmp['time'] = json.loads(contents)['time']
+    tmp['message']['messageId'] = json.loads(contents)['message']['messageId']
+    expected = json.dumps(tmp)
+
+    assert json.loads(contents) == json.loads(expected), \
         "Message doesn't match.  Expected '{expected}' but got '{actual}'" \
         .format(expected=expected, actual=contents)
 

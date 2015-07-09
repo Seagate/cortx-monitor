@@ -1,9 +1,31 @@
 """ Unit tests for sspl_hl.providers.service.provider """
+
+
+import datetime
+
+
+class _MyDatetime(datetime.datetime):
+    """ Identical to datetime.datetime but reimplements isoformat() to
+    record the first call and returns the same value for subsequent
+    calls.
+    """
+    _first_isoformat = None
+
+    def isoformat(self):
+        if _MyDatetime._first_isoformat is None:
+            _MyDatetime._first_isoformat = \
+                super(_MyDatetime, self).isoformat()
+        return _MyDatetime._first_isoformat + "FAKE"
+
+# "Monkey-patch" datetime.datetime for these tests to effectively freeze the
+# time.  This must be done before we start to import other modules.
+datetime.datetime = _MyDatetime
+
 import unittest
 import mock
+import json
 from sspl_hl.providers.service.provider import Provider
 from plex.util.concurrent.single_thread_executor import SingleThreadExecutor
-import common
 
 
 # pylint: disable=too-many-public-methods
@@ -36,11 +58,16 @@ class SsplHlProviderService(unittest.TestCase):
             )
 
     def _test_service_query(self, command):
-        expected = common.generate_service_request_msg(
-            service_name="crond", command=command
-            )
+        with mock.patch('uuid.uuid4', return_value='uuid_goes_here'), \
+                mock.patch('pika.BlockingConnection') as patch:
 
-        with mock.patch('pika.BlockingConnection') as patch:
+            # pylint: disable=protected-access
+            expected = json.dumps(Provider._generate_service_request_msg(
+                service_name="crond",
+                command=command,
+                ))
+            # pylint: enable=protected-access
+
             self._query_provider(
                 args={'command': command, 'serviceName': 'crond'}
                 )
