@@ -11,6 +11,11 @@
 id -u sspl-ll &>/dev/null || /usr/sbin/useradd -r -g zabbix \
     -s /sbin/nologin  \
     -c "User account to run the sspl-ll service" sspl-ll
-# Assign the groups 
+# Assign the groups
 usermod -a -G systemd-journal sspl-ll
 usermod -a -G dialout sspl-ll
+
+# Update the sudoers file with the sspl-ll user and available commands
+SUDO_LINE="sspl-ll	ALL = NOPASSWD: SSPL-LL_CMDS"
+grep -q "$SUDO_LINE" /etc/sudoers || echo "$SUDO_LINE" >> /etc/sudoers
+
