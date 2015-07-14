@@ -60,6 +60,10 @@ systemctl daemon-reload
 # Enable service to start at boot
 systemctl enable sspl-ll
 
+# Create the sspl-ll user and initialize
+/opt/seagate/sspl/low-level/framework/sspl_ll_reinit
+chown -R sspl-ll:root /opt/seagate/sspl/low-level
+
 %clean
 rm -rf %{buildroot}
 
