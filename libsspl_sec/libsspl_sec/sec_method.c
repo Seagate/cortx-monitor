@@ -11,5 +11,6 @@ enum sspl_sec_method sspl_sec_get_method()
 
 void sspl_sec_set_method(enum sspl_sec_method new_method)
 {
-    abort();
+    _sspl_sec_method_current = new_method;
+    sspl_sec_init();
 }

@@ -11,11 +11,9 @@ size_t b64encode(
     const unsigned char* bytes_to_encode, size_t bytes_to_encode_length,
     char* out_encoded_string, size_t out_encoded_string_length)
 {
-    BIO* bio;
-    BIO* b64;
-    b64 = BIO_new(BIO_f_base64());
+    BIO* b64 = BIO_new(BIO_f_base64());
     BIO* mem = BIO_new(BIO_s_mem());
-    bio = BIO_push(b64, mem);
+    BIO* bio = BIO_push(b64, mem);
 
     /* Do not use newlines to flush buffer */
     BIO_set_flags(bio, BIO_FLAGS_BASE64_NO_NL);
@@ -23,10 +21,8 @@ size_t b64encode(
     BIO_write(b64, bytes_to_encode, bytes_to_encode_length);
     (void)BIO_flush(b64);
 
-    int bytes_written = BIO_read(
-                            mem, out_encoded_string, out_encoded_string_length);
-    BIO_free_all(b64);
-    BIO_free_all(mem);
+    int bytes_written =
+        BIO_read(mem, out_encoded_string, out_encoded_string_length);
     BIO_free_all(bio);
 
     return bytes_written;

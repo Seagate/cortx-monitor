@@ -18,7 +18,8 @@ size_t b64encode(
     char* out_encoded_string, size_t out_encoded_string_length);
 
 /**
- * @brief                         Calculate the required size to hold a b64 encoded string.
+ * @brief                         Calculate the required size to hold a b64
+ *                                encoded string.
  *
  * Does not include the terminating 0 character.
  */

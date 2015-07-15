@@ -4,6 +4,7 @@
 #include <getopt.h>
 #include <string.h>
 #include <assert.h>
+#include <err.h>
 
 #include "sspl_sec.h"
 #include "sec_method.h"
@@ -62,24 +63,13 @@ int main(int argc, char* argv[])
 {
     struct Args args = parse_args(argc, argv);
 
-    /* set method, if necessary */
-    enum sspl_sec_method method = SSPL_SEC_METHOD_NONE;
-
+    /* set method */
     if (strcmp(args.method, "None") == 0)
-    {
-    }
-    //else (strcmp(args.method, "PKI") == 0)
-    //{
-    //    TODO
-    //}
+        sspl_sec_set_method(SSPL_SEC_METHOD_NONE);
+    else if (strcmp(args.method, "PKI") == 0)
+        sspl_sec_set_method(SSPL_SEC_METHOD_PKI);
     else
-    {
-        fprintf(stderr, "ERROR: Unrecognized method name: %s\n", args.method);
-        abort();
-    }
-
-    if (method != sspl_sec_get_method())
-        sspl_sec_set_method(method);
+        errx(EXIT_FAILURE, "Invalid method: '%s'", args.method);
 
     /* base64 decode the session token */
     unsigned char session_token[sspl_get_token_length()];

@@ -19,7 +19,8 @@ extern "C" {
 
 enum sspl_sec_method
 {
-    SSPL_SEC_METHOD_NONE
+    SSPL_SEC_METHOD_NONE,
+    SSPL_SEC_METHOD_PKI
 };
 
 /**

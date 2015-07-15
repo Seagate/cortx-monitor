@@ -29,6 +29,7 @@ def when_i_generate_a_session_token(_):
     """
     lettuce.world.encoded_session_token = subprocess.check_output([
         './helpers/generate_session_token',
+        '--method', lettuce.world.method_name,
         lettuce.world.username,
         lettuce.world.password
         ]).strip()
@@ -54,6 +55,7 @@ def sign_message_with_session_token(step):
     lettuce.world.message = step.multiline.strip()
     lettuce.world.encoded_sig = \
         proc.communicate(lettuce.world.message)[0].strip()
+    assert proc.returncode == 0
 
 
 @lettuce.step(u'Then the message can be verified as authentic.')
@@ -67,4 +69,5 @@ def verify_message(_):
         ]
     proc = subprocess.Popen(cmd, stdin=subprocess.PIPE)
     proc.communicate(lettuce.world.message)
-    assert proc.returncode == 0
+    assert proc.returncode == 0, \
+        "Non-zero return code (%i) from verify_message." % proc.returncode
