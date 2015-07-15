@@ -43,18 +43,29 @@ mkdir -p %{installpath}/sspl_hl/providers/service
 install sspl_hl/main.py sspl_hl/__init__.py %{installpath}/sspl_hl/
 install sspl_hl/providers/__init__.py %{installpath}/sspl_hl/providers/
 install sspl_hl/providers/service/*.py %{installpath}/sspl_hl/providers/service/
+mkdir -p %{buildroot}/usr/lib/python2.7/site-packages/cstor/cli/commands
+install cstor/__init__.py %{buildroot}/usr/lib/python2.7/site-packages/cstor/
+install cstor/cli/*.py %{buildroot}/usr/lib/python2.7/site-packages/cstor/cli/
+install cstor/cli/main.py %{buildroot}/usr/lib/python2.7/site-packages/cstor/cli/
+install cstor/cli/commands/*.py %{buildroot}/usr/lib/python2.7/site-packages/cstor/cli/commands/
+
 mkdir -p %{buildroot}/usr/bin
-install cli/cstor.py %{buildroot}/usr/bin/cstor
+ln -s /usr/lib/python2.7/site-packages/cstor/cli/main.py %{buildroot}/usr/bin/cstor
 
 
 %files
+%defattr(0644,plex,plex,-)
+/usr/lib/python2.7/site-packages/cstor
+/opt/plex/apps/sspl_hl
 %defattr(0755,root,root,-)
 /usr/bin/cstor
-%defattr(0644,plex,plex,-)
-/opt/plex/apps/sspl_hl
+/usr/lib/python2.7/site-packages/cstor/cli/main.py
 
 
 %changelog
+* Thu Jul 23 2015 Rich Gowman <rich.gowman@seagate.com>
+- Migrate cstor cli from single script to python module
+
 * Mon Jun 01 2015 David Adair <dadair@seagate.com>
 - Add jenkins-friendly template.  Convert to single tarball for all of sspl.
 
