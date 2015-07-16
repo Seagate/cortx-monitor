@@ -98,7 +98,7 @@ int main(int argc, char* argv[])
         size, (unsigned char*)message, args.username, session_token, sig);
 
     /* b64 encode sig */
-    char buf[sizeof(sig) * 4 / 3 + 1 + 2 + 1];
+    char buf[calc_max_b64_encoded_size(sizeof(sig))];
     memset(buf, 0, sizeof(buf));
     b64encode(sig, sizeof(sig), buf, sizeof(buf));
 

@@ -79,7 +79,7 @@ int main(int argc, char* argv[])
         args.session_length,
         session_token);
 
-    char buf[sizeof(session_token) * 4 / 3 + 1 + 2 + 1];
+    char buf[calc_max_b64_encoded_size(sizeof(session_token))];
     memset(buf, 0, sizeof(buf));
     b64encode(session_token, sspl_get_token_length(), buf, sizeof(buf));
     printf("%s\n", buf);

@@ -47,3 +47,20 @@ void b64decode(
     assert(length <= out_decoded_bytes_length);
     BIO_free_all(bio);
 }
+
+size_t calc_max_b64_encoded_size(size_t raw_size)
+{
+    /* b64 encoding uses 4 bytes for every 3 bytes of input.  We round that up
+     * to the next whole number.  (We're cheating a little; we should use
+     * ceil(raw_size * 4/3).  Instead we use integer division and add one.
+     * This will be slightly wrong if the raw_size is a multiple of three, in
+     * which case, we'll report an extra byte.  That's ok.
+     *
+     * We then add 2 more bytes as b64 encoding adds 0,1 or 2 padding
+     * characters ('=') depending on the length.  We assume a worst case
+     * scenario of 2.
+     *
+     * Finally, we add one more byte for the null terminator.
+     */
+    return raw_size * 4 / 3 + 1 + 2 + 1;
+}
