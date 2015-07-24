@@ -92,6 +92,9 @@ class ServiceRequest(object):
     """
     This class defines the Service command request to Halon.
     """
+    SERVICE_REQUEST_KEY = "serviceRequest"
+    COMMAND_KEY = "command"
+    NODE_KEY = "node"
 
     def __init__(self):
         self.service_request = CommandRequest()
@@ -139,6 +142,133 @@ class StatusResponse(object):
 
     def __init__(self):
         self.status_response = CommandResponse()
+
+
+class NodeStatusRequest(StatusRequest):
+    # pylint: disable=too-few-public-methods
+    """
+    This class defines the Status command for Halon node
+    """
+
+    def __init__(self):
+        super(NodeStatusRequest, self).__init__()
+
+    def get_request_message(self, entity_type, entity_filter=None):
+        """
+        Get the Halon node command status request message in JSON string
+        @param entity_type: The type of entity in CaStor system i.e. cluster
+        or node.
+        @type entity_type: str
+
+        @return: Halon node command status request message in string.
+        @rtype: str
+        """
+        message = {
+            StatusRequest.STATUS_REQUEST_KEY: {
+                StatusRequest.ENTITY_TYPE_KEY: entity_type,
+                StatusRequest.ENTITY_FILTER_KEY: entity_filter}}
+        self.status_request.message.update(message)
+        return self.status_request.__dict__
+
+
+class NodeStatusResponse(StatusResponse):
+    # pylint: disable=too-few-public-methods
+    """
+    This class is for emulating the Mock node Status command response from
+    Halon.
+    In future we can enhance this to parse the Halon Status response.
+
+    Notes:
+    1. Class level variables defined below with suffix "_key" are used
+       to create message keys to map to language bindings defined in
+       Halon message response.
+    2. In future we can externalize these keys to configuration file.
+    """
+    NO_OF_CLUSTERS = 3
+    NO_OF_NODES = 3
+    ENTITY_STATUS = [
+        'running',
+        'stopped',
+        'idle',
+        'starting',
+        'dead',
+        'active']
+
+    def __init__(self):
+        super(NodeStatusResponse, self).__init__()
+
+    @staticmethod
+    def _get_response_items(entity_type='node'):
+        """
+        Get the mocked entity items for Halon node status command response
+        @param entity_type: The type of entity in CaStor system i.e. cluster
+        or node.
+        @type entity_type: str
+
+
+        @return: Halon node command status response items list.
+        @rtype: list
+        """
+        items = []
+        for item_name in range(1, NodeStatusResponse.NO_OF_CLUSTERS):
+            item = {
+                StatusResponse.ENTITY_ID_KEY: get_uuid_in_str(),
+                StatusResponse.STATUS_KEY: random.choice(
+                    NodeStatusResponse.ENTITY_STATUS),
+                StatusResponse.ENTITY_NAME_KEY: '{}00{}'.format(
+                    entity_type,
+                    item_name)}
+            items.append(item)
+        return items
+
+    def get_response_message(self, entity_type):
+        """
+        Get the Halon node command status response message in JSON string
+        @param entity_type: The type of entity in CaStor system i.e. cluster
+        or node.
+        @type entity_type: str
+
+        @param entity_filter: The filter expression to filter the entities in
+        CaStor system
+        @type entity_filter: str
+
+        @return: Halon node command status response message in string.
+        @rtype: str
+        """
+
+        items = self._get_response_items(entity_type)
+        message = {
+            StatusResponse.STATUS_RESPONSE_KEY: {
+                StatusResponse.RESPONSE_ID_KEY: get_uuid_in_str(),
+                StatusResponse.ITEMS_KEY: items}}
+        self.status_response.message.update(message)
+        return self.status_response.__dict__
+
+
+class NodeServiceRequest(ServiceRequest):
+    # pylint: disable=too-few-public-methods
+
+    """
+        Service request for node
+    """
+    def __init(self):
+        super(NodeServiceRequest, self).__init__()
+
+    def get_request_message(self, command, node=None):
+        """
+        Get the Halon node command service request message in JSON string
+        @param command: The command for service [start, stop, etc.].
+        @type command: str
+
+        @return: Halon node command status request message.
+        @rtype: dict
+        """
+        message = {
+            ServiceRequest.SERVICE_REQUEST_KEY: {
+                ServiceRequest.COMMAND_KEY: command,
+                ServiceRequest.NODE_KEY: node}}
+        self.service_request.message.update(message)
+        return self.service_request.__dict__
 
 
 class ResourceGraphResponse(object):

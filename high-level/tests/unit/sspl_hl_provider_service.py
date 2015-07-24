@@ -5,7 +5,7 @@ import datetime
 import unittest
 import mock
 import json
-from sspl_hl.providers.service.provider import Provider
+from sspl_hl.providers.service.provider import ServiceProvider
 from plex.util.concurrent.single_thread_executor import SingleThreadExecutor
 
 
@@ -29,7 +29,8 @@ datetime.datetime = _MyDatetime
 
 # pylint: disable=too-many-public-methods
 class SsplHlProviderService(unittest.TestCase):
-    """ Test methods of the sspl_hl.providers.service.provider.Provider object.
+    """ Test methods of the
+        sspl_hl.providers.service.provider.ServiceProvider object.
     """
     def setUp(self):
         self._patch_ste_submit = mock.patch.object(
@@ -44,7 +45,7 @@ class SsplHlProviderService(unittest.TestCase):
 
     @staticmethod
     def _query_provider(args, responder=mock.MagicMock()):
-        provider = Provider("service", "description")
+        provider = ServiceProvider("service", "description")
         provider.on_create()
         provider.query(
             uri=None,
@@ -61,7 +62,7 @@ class SsplHlProviderService(unittest.TestCase):
                 mock.patch('pika.BlockingConnection') as patch:
 
             # pylint: disable=protected-access
-            expected = json.dumps(Provider._generate_service_request_msg(
+            exp = json.dumps(ServiceProvider._generate_service_request_msg(
                 service_name="crond",
                 command=command,
                 ))
@@ -70,9 +71,9 @@ class SsplHlProviderService(unittest.TestCase):
             self._query_provider(
                 args={'command': command, 'serviceName': 'crond'}
                 )
-
+        print exp
         patch().channel().basic_publish.assert_called_with(
-            body=expected,
+            body=exp,
             routing_key='sspl_hl_cmd',
             exchange='sspl_hl_cmd'
             )
@@ -85,7 +86,6 @@ class SsplHlProviderService(unittest.TestCase):
         self._test_service_query('stop')
         self._test_service_query('enable')
         self._test_service_query('disable')
-        self._test_service_query('status')
 
     def test_bad_command(self):
         """ Ensure sending a bad command results in an http error code.

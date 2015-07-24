@@ -32,6 +32,7 @@ class Node(BaseCommand):
         super(Node, self).__init__()
         self.action = parser.command
         self.target = parser.node_spec
+        self.provider = 'node'
 
     @staticmethod
     def add_args(subparsers):
@@ -47,14 +48,9 @@ class Node(BaseCommand):
         node_parser.add_argument('node_spec', help='Regex for the node names')
         node_parser.set_defaults(func=Node)
 
-    def get_provider_base_url(self):
-        """ Abstract method to get the base url for
-        the resource specific data provider
-        """
-        # This function needs node specific implementation
-
     def get_action_params(self):
         """ Abstract method to get the action parameters
         to be send in the request to data provider
         """
-        # This function needs node specific implementation
+        params = '&command={}&target={}'.format(self.action, self.target)
+        return params

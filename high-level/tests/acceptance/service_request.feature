@@ -14,7 +14,6 @@ Feature: Service Request
         | crond   | stop    |
         | crond   | enable  |
         | crond   | disable |
-        | crond   | status  |
 
     Scenario: Invalid command
         When I run "python ./cstor/cli/main.py service invalid_command crond"

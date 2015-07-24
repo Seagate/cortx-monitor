@@ -8,10 +8,7 @@ import urllib
 # Local
 
 from plex.util.concurrent.single_thread_executor import SingleThreadExecutor
-from sspl_hl.utils.message_utils import (HaResourceGraphResponse,
-                                         ERR_INVALID_RQ,
-                                         ERR_INVALID_CMD,
-                                         ERR_MISSING_CMD)
+from sspl_hl.utils.message_utils import HaResourceGraphResponse
 
 from sspl_hl.utils.base_castor_provider import BaseCastorProvider
 
@@ -27,6 +24,9 @@ class HaProvider(BaseCastorProvider):
         self._frontier_node_ip = None
         self._frontier_port = None
         self.frontier_service_url = None
+        self.valid_commands = ['show', 'status']
+        self.no_of_arguments = 2
+        self.valid_arg_keys = ['level', 'command']
 
     def on_create(self):
         self._frontier_node_ip = '127.0.0.1'
@@ -39,7 +39,7 @@ class HaProvider(BaseCastorProvider):
     def _on_create(self):
         """ Implement this method to initialize the HaProvider. """
         if not self._is_frontier_service_running():
-            self._start_froniter_service()
+            self._start_frontier_service()
 
     @staticmethod
     def _is_frontier_service_running():
@@ -49,51 +49,11 @@ class HaProvider(BaseCastorProvider):
         return True
 
     @staticmethod
-    def _start_froniter_service():
+    def _start_frontier_service():
         """
         Start the frontier service on given satellite or Halon node
         """
         pass
-
-    @staticmethod
-    def _validate_params(selection_args, responder):
-        """ Ensure query() parameters are ok. """
-        valid_commands = [
-            'show', 'status'
-        ]
-        valid_levels = ['info', 'debug']
-        if 'level' not in selection_args:
-            reactor.callFromThread(responder.reply_exception(
-                "Error: Invalid request: Missing level"
-            ))
-            return False
-        elif 'command' not in selection_args:
-            reactor.callFromThread(responder.reply_exception(ERR_MISSING_CMD))
-            return False
-        elif selection_args['command'] not in valid_commands:
-            reactor.callFromThread(responder.reply_exception(
-                ERR_INVALID_CMD.format(
-                    selection_args['command']
-                )
-            ))
-            return False
-        elif selection_args['level'] not in valid_levels:
-            reactor.callFromThread(responder.reply_exception(
-                ERR_INVALID_RQ.format(
-                    selection_args['level']
-                )
-            ))
-            return False
-        elif len(selection_args) > 2:
-            del selection_args['level']
-            del selection_args['command']
-            reactor.callFromThread(
-                responder.reply_exception(
-                    ERR_INVALID_RQ.format(
-                        extra=selection_args.keys()[0])))
-            return False
-
-        return True
 
     def _query(self, selection_args, responder):
         """ Get the resource graph ha on the cluster.
@@ -102,9 +62,7 @@ class HaProvider(BaseCastorProvider):
                                   'resourceGraphType' and can optionally
                                   include a 'command'
         """
-        if not self._validate_params(selection_args, responder):
-            return
-
+        super(HaProvider, self)._query(selection_args, responder)
         halon_response = self._get_mocked_ha_resource_graph()
         reactor.callFromThread(responder.reply(data=[halon_response]))
 
@@ -139,5 +97,5 @@ class HaProvider(BaseCastorProvider):
                     .format(err)))
 
 # pylint: disable=invalid-name
-provider = HaProvider("ha", "Ha Management HaProvider")
+provider = HaProvider("ha", "Ha Management Provider")
 # pylint: enable=invalid-name
