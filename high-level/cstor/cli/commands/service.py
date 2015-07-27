@@ -14,15 +14,9 @@
 # authorized in writing by Seagate Technology LLC is prohibited.
 # All rights are expressly reserved by Seagate Technology LLC.
 
-# Import System Modules
-
-import json
-import urllib
-
 # Import Local Modules
 
 from cstor.cli.commands.base_command import BaseCommand
-from cstor.cli.settings import BL_SERVER_BASE_URL, BL_HOST
 
 
 class Service(BaseCommand):
@@ -39,6 +33,7 @@ class Service(BaseCommand):
         self.action = parser.action
         self.resource = parser.service_name
         self.target = parser.node_spec
+        self.provider = 'service'
 
     @staticmethod
     def add_args(subparsers):
@@ -62,24 +57,7 @@ class Service(BaseCommand):
         service_parser.set_defaults(func=Service)
         service_parser.add_argument('--node_spec',
                                     help='Optional parameter to indicate which'
-                                    ' nodes should be affected.'
-                                    )
-
-    def get_provider_base_url(self):
-        """ Service class specific implementation of the abstract method
-        from base class
-        Returns the data provider base url for service command
-        """
-
-        providers = json.loads(urllib.urlopen(url='%sregistry/providers'
-                               % BL_SERVER_BASE_URL).read())
-        try:
-            return next(provider for provider in providers
-                        if provider['application'] == 'sspl_hl' and
-                        provider['name'] == 'service')['uri']
-        except StopIteration:
-            raise RuntimeError('Unable to find the sspl_hl.service provider'
-                               ' on %s' % BL_HOST)
+                                    ' nodes should be affected.')
 
     def get_action_params(self):
         """ Service class specific implementation of the abstract method

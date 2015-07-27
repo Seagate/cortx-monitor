@@ -19,10 +19,11 @@ sub commands supported by cstor
 
 import urllib
 import abc
+import json
 
 # Import local Modules
 
-from cstor.cli.settings import BL_HOST
+from cstor.cli.settings import BL_HOST, BL_SERVER_BASE_URL
 
 
 class BaseCommand(object):
@@ -36,27 +37,34 @@ class BaseCommand(object):
     def __init__(self):
         """ Init method of base class.
         """
-        pass
+        self.provider = None
 
     def execute_action(self):
         """ Function to execute the action by sending
         request to data provider in business logic server
         """
-
+        # pylint:disable=too-many-function-args
         url = 'http://%s%sdata?%s' % (
             BL_HOST,
             self.get_provider_base_url(),
             self.get_action_params())
 
-        urllib.urlopen(url=url)
+        action_response = urllib.urlopen(url=url).read()
+        print json.dumps(json.loads(action_response), indent=2)
 
-    @abc.abstractmethod
     def get_provider_base_url(self):
         """ Abstract method to get the base url for
         the resource specific data provider
         """
-
-        raise NotImplementedError
+        registry_url = '{}registry/providers'.format(BL_SERVER_BASE_URL)
+        providers = json.loads(urllib.urlopen(url=registry_url).read())
+        try:
+            return next(provider for provider in providers
+                        if provider['application'] == 'sspl_hl' and
+                        provider['name'] == self.provider)['uri']
+        except StopIteration:
+            raise RuntimeError('Unable to find the sspl_hl.ha provider on {}'
+                               .format(BL_HOST))
 
     @abc.abstractmethod
     def get_action_params(self):

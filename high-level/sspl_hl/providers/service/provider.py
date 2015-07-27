@@ -1,26 +1,22 @@
 """
-PLEX data provider.
+PLEX data provider for service implementation.
 """
 # Third party
-from zope.interface import implements
-from twisted.plugin import IPlugin
 from twisted.internet import reactor
 import pika
 import json
 import datetime
 import uuid
 # PLEX
-from plex.common.interfaces.idata_provider import IDataProvider
-from plex.core.provider.data_store_provider import DataStoreProvider
 # Local
 
 from plex.util.concurrent.single_thread_executor import SingleThreadExecutor
+from sspl_hl.utils.base_castor_provider import BaseCastorProvider
 
 
-class Provider(DataStoreProvider):
+class Provider(BaseCastorProvider):
     # pylint: disable=too-many-ancestors,too-many-public-methods
     """ Used to set state of services on the cluster. """
-    implements(IPlugin, IDataProvider)
 
     def __init__(self, name, description):
         super(Provider, self).__init__(name, description)
@@ -79,14 +75,6 @@ class Provider(DataStoreProvider):
             return False
 
         return True
-
-    def query(
-            self, uri, columns, selection_args, sort_order,
-            range_from, range_to, responder
-    ):  # pylint: disable=too-many-arguments
-        self._single_thread_executor.submit(
-            self._query, selection_args, responder
-            )
 
     @staticmethod
     def _generate_service_request_msg(

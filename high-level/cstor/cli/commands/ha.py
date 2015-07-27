@@ -30,7 +30,9 @@ class Ha(BaseCommand):
         """
 
         super(Ha, self).__init__()
-        self.action = parser.command
+        self.level = parser.level
+        self.command = parser.command
+        self.provider = 'ha'
 
     @staticmethod
     def add_args(subparsers):
@@ -40,18 +42,18 @@ class Ha(BaseCommand):
         ha_parser = subparsers.add_parser('ha',
                                           help='Subcommand to work '
                                           ' with HA component of cluster.')
-        ha_parser.add_argument('command', help='Command to run.',
-                               choices=['debug', 'show'])
-        ha_parser.set_defaults(func=Ha)
 
-    def get_provider_base_url(self):
-        """ Abstract method to get the base url for
-        the resource specific data provider
-        """
-        # This function needs node specific implementation
+        ha_parser.add_argument('level', help='Verbosity level of the command.',
+                               choices=['info', 'debug'])
+
+        ha_parser.add_argument('command', help='Command to run.',
+                               choices=['status', 'show'])
+
+        ha_parser.set_defaults(func=Ha)
 
     def get_action_params(self):
         """ Abstract method to get the action parameters
         to be send in the request to data provider
         """
-        # This function needs node specific implementation
+        params = 'level={}&command={}'.format(self.level, self.command)
+        return params
