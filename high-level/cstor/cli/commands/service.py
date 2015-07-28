@@ -50,10 +50,11 @@ class Service(BaseCommand):
             'enable',
             'disable',
             'status',
+            'list'
             ])
         service_parser.add_argument('service_name',
                                     help='Service to operate on.  '
-                                    'eg crond.service')
+                                    'e.g. crond.service')
         service_parser.set_defaults(func=Service)
         service_parser.add_argument('--node_spec',
                                     help='Optional parameter to indicate which'
@@ -66,5 +67,5 @@ class Service(BaseCommand):
         in the request to data provider
         """
 
-        params = 'serviceName=%s&command=%s' % (self.resource, self.action)
+        params = 'serviceName={}&command={}'.format(self.resource, self.action)
         return params

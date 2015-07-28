@@ -40,7 +40,7 @@ class Message(object):
     """
     This class defines the Halon message construct.
     """
-    message_id_key = "messageId"
+    MESSAGE_ID_KEY = "messageId"
 
     def __init__(self, message_id=get_uuid_in_str()):
         self.message_id = message_id
@@ -52,7 +52,7 @@ class Message(object):
         @return: returns the Halon message.
         @rtype: dict
         """
-        return {Message.message_id_key: self.message_id}
+        return {Message.MESSAGE_ID_KEY: self.message_id}
 
 
 class CommandRequest(object):
@@ -109,9 +109,9 @@ class StatusRequest(object):
        Halon message response
     2. In future we can externalize these keys to configuration file.
     """
-    status_request_key = "statusRequest"
-    entity_type_key = "entityType"
-    entity_filter_key = "entityFilter"
+    STATUS_REQUEST_KEY = "statusRequest"
+    ENTITY_TYPE_KEY = "entityType"
+    ENTITY_FILTER_KEY = "entityFilter"
 
     def __init__(self):
         self.status_request = CommandRequest()
@@ -130,12 +130,12 @@ class StatusResponse(object):
        Halon message response.
     2. In future we can externalize these keys to configuration file.
     """
-    status_response_key = "statusResponse"
-    entity_id_key = "entityId"
-    response_id_key = "responseId"
-    entity_name_key = "entityName"
-    status_key = "status"
-    items_key = "items"
+    STATUS_RESPONSE_KEY = "statusResponse"
+    ENTITY_ID_KEY = "entityId"
+    RESPONSE_ID_KEY = "responseId"
+    ENTITY_NAME_KEY = "entityName"
+    STATUS_KEY = "status"
+    ITEMS_KEY = "items"
 
     def __init__(self):
         self.status_response = CommandResponse()
@@ -155,12 +155,12 @@ class ResourceGraphResponse(object):
        Halon message response.
     2. In future we can externalize these keys to configuration file.
     """
-    status_response_key = "rgResponse"
-    entity_id_key = "entityId"
-    response_id_key = "responseId"
-    entity_name_key = "entityName"
-    status_key = "status"
-    items_key = "items"
+    STATUS_RESPONSE_KEY = "rgResponse"
+    ENTITY_ID_KEY = "entityId"
+    RESPONSE_ID_KEY = "responseId"
+    ENTITY_NAME_KEY = "entityName"
+    STATUS_KEY = "status"
+    ITEMS_KEY = "items"
 
     def __init__(self):
         self.status_response = CommandResponse()
@@ -208,10 +208,10 @@ class HaResourceGraphResponse(StatusResponse):
         items = []
         for item_name in range(1, HaResourceGraphResponse.NO_OF_CLUSTERS):
             item = {
-                StatusResponse.entity_id_key: get_uuid_in_str(),
-                StatusResponse.status_key: random.choice(
+                StatusResponse.ENTITY_ID_KEY: get_uuid_in_str(),
+                StatusResponse.STATUS_KEY: random.choice(
                     HaResourceGraphResponse.ENTITY_STATUS),
-                StatusResponse.entity_name_key: '{}00{}'.format(
+                StatusResponse.ENTITY_NAME_KEY: '{}00{}'.format(
                     entity_type,
                     item_name)}
             items.append(item)
@@ -231,9 +231,9 @@ class HaResourceGraphResponse(StatusResponse):
 
         items = self._get_response_items(entity_type)
         message = {
-            StatusResponse.status_response_key: {
-                StatusResponse.response_id_key: get_uuid_in_str(),
-                StatusResponse.items_key: items}}
+            StatusResponse.STATUS_RESPONSE_KEY: {
+                StatusResponse.RESPONSE_ID_KEY: get_uuid_in_str(),
+                StatusResponse.ITEMS_KEY: items}}
         self.status_response.message.update(message)
         return self.status_response.__dict__
 
@@ -244,3 +244,120 @@ class HaResourceGraphResponse(StatusResponse):
               resource graph information.
         """
         pass
+
+
+class ListResponse(object):
+    # pylint: disable=too-few-public-methods
+    """
+    This class is for emulating the Mock Service list command response
+    for Service listing.
+    In future we can enhance this to parse the Service List response.
+
+    Notes:
+    1. Class level variables defined below with suffix "_key" are used
+       to create message keys to map to language bindings defined in
+       Service List message response.
+    2. In future we can externalize these keys to configuration file.
+    """
+    SERVICE_RESPONSE_KEY = "serviceListResponse"
+    SERVICE_NAME_KEY = "serviceName"
+    PID_KEY = "pid"
+    SERVICE_DESCRIPTION_KEY = "serviceDescription"
+    LOAD_KEY = "load"
+    ACTIVE_KEY = "active"
+    SUB_KEY = "sub"
+    RESPONSE_ID_KEY = "responseId"
+    ITEMS_KEY = "items"
+    ENTITY_NAME_KEY = "entityName"
+    ENTITY_TYPE_KEY = "entityType"
+    ENTITY_ID_KEY = "entityId"
+
+    def __init__(self):
+        self.list_response = CommandResponse()
+
+
+class ServiceListResponse(ListResponse):
+    # pylint: disable=too-few-public-methods
+    """
+    This class is for emulating the Mock service list command response
+    from Halon.
+    In future we can enhance this to parse the service list response.
+
+    Notes:
+    1. Class level variables defined below with suffix "_key" are used
+       to create message keys to map to language bindings defined in
+       Service list message response.
+    2. In future we can externalize these keys to configuration file.
+    """
+    NO_OF_SERVICES = 4
+    SERVICE_NAMES = [
+        'crond',
+        'plex',
+        'halon',
+        'docker'
+    ]
+    LOAD_STATUS = [
+        "loaded",
+        "failed"
+    ]
+    ACTIVE_STATUS = [
+        "active",
+        "failed"
+    ]
+    SUB_STATUS = [
+        "waiting",
+        "mounted",
+        "running",
+        "plugged",
+        "exited"
+    ]
+
+    def __init__(self):
+        super(ServiceListResponse, self).__init__()
+
+    @staticmethod
+    def _get_response_items():
+        """
+        Get the mocked entity items for service list command response
+
+        @return: service list command items list.
+        @rtype: list
+        """
+        items = []
+        for item_name in range(1, ServiceListResponse.NO_OF_SERVICES):
+            item = {
+                ListResponse.SERVICE_NAME_KEY: random.choice(
+                    ServiceListResponse.SERVICE_NAMES),
+                ListResponse.PID_KEY: random.randint(
+                    1,
+                    9),
+                ListResponse.SERVICE_DESCRIPTION_KEY: "some description{}"
+                                                      .format(item_name),
+                ListResponse.LOAD_KEY: random.choice(
+                    ServiceListResponse.LOAD_STATUS),
+                ListResponse.ACTIVE_KEY: random.choice(
+                    ServiceListResponse.ACTIVE_STATUS),
+                ListResponse.SUB_KEY: random.choice(
+                    ServiceListResponse.SUB_STATUS),
+                ListResponse.ENTITY_NAME_KEY: random.choice(
+                    ['c{}'.format(item_name), 'n{}'.format(item_name)]),
+                ListResponse.ENTITY_TYPE_KEY: random.choice(
+                    ['cluster', 'node']),
+                ListResponse.ENTITY_ID_KEY: get_uuid_in_str()
+                }
+            items.append(item)
+        return items
+
+    def get_response_message(self):
+        """
+        Get the list response message.
+        """
+        items = self._get_response_items()
+        message = {
+            ListResponse.SERVICE_RESPONSE_KEY: {
+                ListResponse.RESPONSE_ID_KEY: get_uuid_in_str(),
+                ListResponse.ITEMS_KEY: items
+            }
+        }
+        self.list_response.message.update(message)
+        return self.list_response.__dict__

@@ -12,6 +12,7 @@ import uuid
 
 from plex.util.concurrent.single_thread_executor import SingleThreadExecutor
 from sspl_hl.utils.base_castor_provider import BaseCastorProvider
+from sspl_hl.utils.message_utils import ServiceListResponse
 
 
 class Provider(BaseCastorProvider):
@@ -46,7 +47,7 @@ class Provider(BaseCastorProvider):
     def _validate_params(selection_args, responder):
         """ Ensure query() parameters are ok. """
         valid_commands = [
-            'start', 'stop', 'restart', 'enable', 'disable', 'status'
+            'start', 'stop', 'restart', 'enable', 'disable', 'status', 'list'
             ]
         if 'serviceName' not in selection_args:
             reactor.callFromThread(responder.reply_exception(
@@ -135,18 +136,22 @@ class Provider(BaseCastorProvider):
         """
         if not self._validate_params(selection_args, responder):
             return
+        if selection_args['command'] in ['list']:
+            list_response = ServiceListResponse()
+            service_list = list_response.get_response_message()
+            reactor.callFromThread(responder.reply(data=[service_list]))
+        else:
+            message = self._generate_service_request_msg(
+                service_name=selection_args['serviceName'],
+                command=selection_args['command'],
+                )
 
-        message = self._generate_service_request_msg(
-            service_name=selection_args['serviceName'],
-            command=selection_args['command'],
-            )
-
-        self._channel.basic_publish(
-            exchange='sspl_hl_cmd',
-            routing_key='sspl_hl_cmd',
-            body=json.dumps(message)
-            )
-        reactor.callFromThread(responder.reply_no_match)
+            self._channel.basic_publish(
+                exchange='sspl_hl_cmd',
+                routing_key='sspl_hl_cmd',
+                body=json.dumps(message)
+                )
+            reactor.callFromThread(responder.reply_no_match)
 
 
 # pylint: disable=invalid-name
