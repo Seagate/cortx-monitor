@@ -90,6 +90,11 @@
 									"description": "Current state of the service",
 									"type": "string",
 									"required": true
+								},
+								"previous_service_state": {
+									"description": "Previous state of the service",
+									"type": "string",
+									"required": true
 								}
 							}
 						},
