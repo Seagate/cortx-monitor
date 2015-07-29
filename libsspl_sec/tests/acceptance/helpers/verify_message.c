@@ -3,8 +3,10 @@
 #include <stdio.h>
 #include <getopt.h>
 #include <string.h>
+#include <err.h>
 
 #include "sspl_sec.h"
+#include "sec_method.h"
 #include "base64.h"
 
 
@@ -61,6 +63,14 @@ int main(int argc, char* argv[])
 {
     struct Args args = parse_args(argc, argv);
 
+    /* set method */
+    if (strcmp(args.method, "None") == 0)
+        sspl_sec_set_method(SSPL_SEC_METHOD_NONE);
+    else if (strcmp(args.method, "PKI") == 0)
+        sspl_sec_set_method(SSPL_SEC_METHOD_PKI);
+    else
+        errx(EXIT_FAILURE, "Invalid method: '%s'", args.method);
+
     /* base64 decode the sig */
     unsigned char sig[sspl_get_sig_length()];
     b64decode(args.base64_sig, sig, sizeof(sig));
@@ -83,7 +93,7 @@ int main(int argc, char* argv[])
 
     /* verify message signature */
     int status = sspl_verify_message(
-                     strlen(message) + 1, (unsigned char*)message,
+                     strlen(message), (unsigned char*)message,
                      args.username,
                      sig);
 

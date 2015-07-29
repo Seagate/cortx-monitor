@@ -8,12 +8,24 @@
 
 void* _sspl_sec_lib_handle = NULL;
 
+void __attribute__((destructor)) sspl_sec_fini(void)
+{
+    dlclose(_sspl_sec_lib_handle);
+}
+
 void __attribute__((constructor)) sspl_sec_init(void)
 {
+    if (_sspl_sec_lib_handle != NULL)
+        sspl_sec_fini();
+
     switch (sspl_sec_get_method())
     {
         case SSPL_SEC_METHOD_NONE:
             _sspl_sec_lib_handle = dlopen("sspl_none.so.0", RTLD_NOW);
+            break;
+
+        case SSPL_SEC_METHOD_PKI:
+            _sspl_sec_lib_handle = dlopen("sspl_pki.so.0", RTLD_NOW);
             break;
 
         default:
@@ -26,15 +38,11 @@ void __attribute__((constructor)) sspl_sec_init(void)
     {
         fprintf(
             stderr,
-            "ERROR: A problem occurred while attempting to open sspl method module: %s\n",
+            "ERROR: A problem occurred while attempting "
+            "to open sspl method module: %s\n",
             dlerror());
         abort();
     }
-}
-
-void __attribute__((destructor)) sspl_sec_fini(void)
-{
-    dlclose(_sspl_sec_lib_handle);
 }
 
 unsigned int sspl_get_sig_length()
@@ -94,11 +102,13 @@ void sspl_generate_session_token(
     unsigned char* out_token)
 {
     typedef void (*SSPL_GENERATE_SESSION_TOKEN_FN_PTR)(
-        const char*, unsigned int, const unsigned char*, time_t, unsigned char*);
+        const char*, unsigned int, const unsigned char*,
+        time_t, unsigned char*);
     SSPL_GENERATE_SESSION_TOKEN_FN_PTR func_ptr = NULL;
     func_ptr = (SSPL_GENERATE_SESSION_TOKEN_FN_PTR)dlsym(
                    _sspl_sec_lib_handle,
                    __FUNCTION__);
     return (*func_ptr)(
-               username, authn_token_len, authn_token, session_length, out_token);
+               username, authn_token_len, authn_token,
+               session_length, out_token);
 }

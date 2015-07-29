@@ -1,2 +1,5 @@
+*.trs
+test_sec_method
+test_none
 test_sec
-test_sec.trs
+test_pki

@@ -1,26 +1,23 @@
 """
-PLEX data provider.
+PLEX data provider for service implementation.
 """
 # Third party
-from zope.interface import implements
-from twisted.plugin import IPlugin
 from twisted.internet import reactor
 import pika
 import json
 import datetime
 import uuid
 # PLEX
-from plex.common.interfaces.idata_provider import IDataProvider
-from plex.core.provider.data_store_provider import DataStoreProvider
 # Local
 
 from plex.util.concurrent.single_thread_executor import SingleThreadExecutor
+from sspl_hl.utils.base_castor_provider import BaseCastorProvider
+from sspl_hl.utils.message_utils import ServiceListResponse
 
 
-class Provider(DataStoreProvider):
+class Provider(BaseCastorProvider):
     # pylint: disable=too-many-ancestors,too-many-public-methods
     """ Used to set state of services on the cluster. """
-    implements(IPlugin, IDataProvider)
 
     def __init__(self, name, description):
         super(Provider, self).__init__(name, description)
@@ -50,7 +47,7 @@ class Provider(DataStoreProvider):
     def _validate_params(selection_args, responder):
         """ Ensure query() parameters are ok. """
         valid_commands = [
-            'start', 'stop', 'restart', 'enable', 'disable', 'status'
+            'start', 'stop', 'restart', 'enable', 'disable', 'status', 'list'
             ]
         if 'serviceName' not in selection_args:
             reactor.callFromThread(responder.reply_exception(
@@ -79,14 +76,6 @@ class Provider(DataStoreProvider):
             return False
 
         return True
-
-    def query(
-            self, uri, columns, selection_args, sort_order,
-            range_from, range_to, responder
-    ):  # pylint: disable=too-many-arguments
-        self._single_thread_executor.submit(
-            self._query, selection_args, responder
-            )
 
     @staticmethod
     def _generate_service_request_msg(
@@ -147,18 +136,22 @@ class Provider(DataStoreProvider):
         """
         if not self._validate_params(selection_args, responder):
             return
+        if selection_args['command'] in ['list']:
+            list_response = ServiceListResponse()
+            service_list = list_response.get_response_message()
+            reactor.callFromThread(responder.reply(data=[service_list]))
+        else:
+            message = self._generate_service_request_msg(
+                service_name=selection_args['serviceName'],
+                command=selection_args['command'],
+                )
 
-        message = self._generate_service_request_msg(
-            service_name=selection_args['serviceName'],
-            command=selection_args['command'],
-            )
-
-        self._channel.basic_publish(
-            exchange='sspl_hl_cmd',
-            routing_key='sspl_hl_cmd',
-            body=json.dumps(message)
-            )
-        reactor.callFromThread(responder.reply_no_match)
+            self._channel.basic_publish(
+                exchange='sspl_hl_cmd',
+                routing_key='sspl_hl_cmd',
+                body=json.dumps(message)
+                )
+            reactor.callFromThread(responder.reply_no_match)
 
 
 # pylint: disable=invalid-name

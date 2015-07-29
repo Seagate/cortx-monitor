@@ -14,14 +14,14 @@ ut:
 	PYTHONPATH=.:tests python tests/unit/sspl_hl_provider_service.py
 
 pep8:
-	pep8 ./sspl_hl ./cli ./tests/
+	pep8 ./sspl_hl ./cstor ./tests/
 
 pylint:
 	PYTHONPATH=.:tests pylint \
 		--disable=locally-disabled,locally-enabled \
 		--rcfile=pylint.rc \
 		./sspl_hl \
-		./cli \
+		./cstor \
 		./tests/fake_halond/fake_halond.py \
 		./tests/acceptance/steps/*.py \
 		./tests/unit/*.py

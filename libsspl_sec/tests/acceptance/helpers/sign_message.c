@@ -4,8 +4,10 @@
 #include <getopt.h>
 #include <string.h>
 #include <assert.h>
+#include <err.h>
 
 #include "sspl_sec.h"
+#include "sec_method.h"
 #include "base64.h"
 
 const char* DEFAULT_METHOD = "None";
@@ -61,6 +63,14 @@ int main(int argc, char* argv[])
 {
     struct Args args = parse_args(argc, argv);
 
+    /* set method */
+    if (strcmp(args.method, "None") == 0)
+        sspl_sec_set_method(SSPL_SEC_METHOD_NONE);
+    else if (strcmp(args.method, "PKI") == 0)
+        sspl_sec_set_method(SSPL_SEC_METHOD_PKI);
+    else
+        errx(EXIT_FAILURE, "Invalid method: '%s'", args.method);
+
     /* base64 decode the session token */
     unsigned char session_token[sspl_get_token_length()];
     b64decode(args.base64_session_token, session_token, sizeof(session_token));
@@ -88,7 +98,7 @@ int main(int argc, char* argv[])
         size, (unsigned char*)message, args.username, session_token, sig);
 
     /* b64 encode sig */
-    char buf[sizeof(sig) * 4 / 3 + 1 + 2 + 1];
+    char buf[calc_max_b64_encoded_size(sizeof(sig))];
     memset(buf, 0, sizeof(buf));
     b64encode(sig, sizeof(sig), buf, sizeof(buf));
 

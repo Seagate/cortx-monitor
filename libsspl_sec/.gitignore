@@ -21,3 +21,5 @@ missing
 stylecheck.tmp
 tags
 test-driver
+*.gcno
+*.gcda

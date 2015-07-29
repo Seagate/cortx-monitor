@@ -2,6 +2,11 @@
 
 
 import datetime
+import unittest
+import mock
+import json
+from sspl_hl.providers.service.provider import Provider
+from plex.util.concurrent.single_thread_executor import SingleThreadExecutor
 
 
 class _MyDatetime(datetime.datetime):
@@ -20,12 +25,6 @@ class _MyDatetime(datetime.datetime):
 # "Monkey-patch" datetime.datetime for these tests to effectively freeze the
 # time.  This must be done before we start to import other modules.
 datetime.datetime = _MyDatetime
-
-import unittest
-import mock
-import json
-from sspl_hl.providers.service.provider import Provider
-from plex.util.concurrent.single_thread_executor import SingleThreadExecutor
 
 
 # pylint: disable=too-many-public-methods

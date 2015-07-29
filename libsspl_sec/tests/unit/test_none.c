@@ -81,6 +81,8 @@ int main()
     Suite* s = basic_tests();
     SRunner* sr = srunner_create(s);
 
+    sspl_sec_set_method(SSPL_SEC_METHOD_NONE);
+
     srunner_run_all(sr, CK_NORMAL);
     number_failed = srunner_ntests_failed(sr);
     srunner_free(sr);

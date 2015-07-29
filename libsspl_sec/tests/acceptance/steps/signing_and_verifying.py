@@ -3,8 +3,14 @@ import lettuce
 import subprocess
 
 
-@lettuce.step(u'Given my username is "([^"]*)"')
-def given_my_username_is_group1(_, username):
+@lettuce.step(u'Given I set the method to be \'([^\']*)\'')
+def set_method(_, method_name):
+    """ Override the default encryption method. """
+    lettuce.world.method_name = method_name
+
+
+@lettuce.step(u'my username is "([^"]*)"')
+def my_username_is_group1(_, username):
     """ Record username for later use. """
     lettuce.world.username = username
 
@@ -23,6 +29,7 @@ def when_i_generate_a_session_token(_):
     """
     lettuce.world.encoded_session_token = subprocess.check_output([
         './helpers/generate_session_token',
+        '--method', lettuce.world.method_name,
         lettuce.world.username,
         lettuce.world.password
         ]).strip()
@@ -36,6 +43,7 @@ def sign_message_with_session_token(step):
     """
     cmd = [
         './helpers/sign_message',
+        '--method', lettuce.world.method_name,
         lettuce.world.username,
         lettuce.world.encoded_session_token
         ]
@@ -47,6 +55,7 @@ def sign_message_with_session_token(step):
     lettuce.world.message = step.multiline.strip()
     lettuce.world.encoded_sig = \
         proc.communicate(lettuce.world.message)[0].strip()
+    assert proc.returncode == 0
 
 
 @lettuce.step(u'Then the message can be verified as authentic.')
@@ -54,9 +63,11 @@ def verify_message(_):
     """ Use ./helpers/verify_message to verify previously generated sig. """
     cmd = [
         './helpers/verify_message',
+        '--method', lettuce.world.method_name,
         lettuce.world.username,
         lettuce.world.encoded_sig
         ]
     proc = subprocess.Popen(cmd, stdin=subprocess.PIPE)
     proc.communicate(lettuce.world.message)
-    assert proc.returncode == 0
+    assert proc.returncode == 0, \
+        "Non-zero return code (%i) from verify_message." % proc.returncode
