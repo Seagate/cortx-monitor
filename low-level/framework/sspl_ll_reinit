@@ -16,6 +16,6 @@ usermod -a -G systemd-journal sspl-ll
 usermod -a -G dialout sspl-ll
 
 # Update the sudoers file with the sspl-ll user and available commands
-SUDO_LINE="sspl-ll	ALL = NOPASSWD: /usr/sbin/mdadm" 
+SUDO_LINE="sspl-ll	ALL = NOPASSWD: /usr/sbin/mdadm"
 grep -q "$SUDO_LINE" /etc/sudoers || echo "$SUDO_LINE" >> /etc/sudoers
 

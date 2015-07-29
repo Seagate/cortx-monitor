@@ -128,30 +128,30 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
             self.shutdown()
         else:
             self._scheduler.enter(0, self._priority, self.run, ())    
-        
+
 
     def _read_config(self):        
         """Configure the RabbitMQ exchange with defaults available"""
         try:
-            self._virtual_host  = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR, 
+            self._virtual_host  = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
                                                                  self.VIRT_HOST,
                                                                  'SSPL')
-            self._exchange_name = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR, 
+            self._exchange_name = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
                                                                  self.EXCHANGE_NAME,
                                                                  'sspl_halon')
-            self._routing_key   = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR, 
+            self._routing_key   = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
                                                                  self.ROUTING_KEY,
                                                                  'sspl_ll')           
-            self._username      = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR, 
+            self._username      = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
                                                                  self.USER_NAME,
                                                                  'sspluser')
-            self._password      = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR, 
+            self._password      = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
                                                                  self.PASSWORD,
                                                                  'sspl4ever')
         except Exception as ex:
             logger.exception("_read_config: %r" % ex)
 
-    def _get_connection(self):    
+    def _get_connection(self):
         try:
             # ensure the rabbitmq queues/etc exist
             creds = pika.PlainCredentials(self._username, self._password)

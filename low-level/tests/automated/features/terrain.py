@@ -76,7 +76,7 @@ def init_rabbitMQ_msg_processors():
         msgQlist[klass.name()] = Queue.Queue()
  
     # Read in /var/run/diskmonitor/drive_manager.json to be used by drive manager tests
-    filename="/var/run/diskmonitor/drive_manager.json"
+    filename="/tmp/dcs/drivemanager/drive_manager.json"
     with open(filename, 'r') as f:
         diskmonitor_file = f.read()
 
@@ -95,7 +95,11 @@ def init_rabbitMQ_msg_processors():
             threads.append(thread)
 
         # Allow threads to startup before running tests
-        time.sleep(3)
+        time.sleep(15)
+
+        # Clear the message queue buffer out from msgs sent at startup
+        while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
+            world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
 
     except Exception as ex:
         logger.exception(ex)

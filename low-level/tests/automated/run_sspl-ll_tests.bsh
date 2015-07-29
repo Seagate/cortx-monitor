@@ -9,9 +9,15 @@ grep -q -F "[drivemanager]\npoll_interval=5\n" /etc/dcs_collector.conf || \
 sed -i "s|^#poll_interval=5|poll_interval=5|g" /etc/dcs_collector.conf
 
 # Make sure SSPL-LL is in a known default startup state
-systemctl restart dcs-collector -l
-sleep 5
-systemctl restart sspl-ll -l
+systemctl restart dcs-collector
+systemctl start crond
+
+# Create simulated disk manager data
+mkdir -p /tmp/dcs/drivemanager
+cp ../../../installation/deps/drive_manager.json /tmp/dcs/drivemanager
+chown -R zabbix:zabbix /tmp/dcs
+
+systemctl restart sspl-ll
 
 if [[ -f ./lettucetests.xml ]]; then
 	rm ./lettucetests.xml
@@ -22,7 +28,14 @@ lettuce --with-xunit --xunit-file=lettucetests.xml
 
 # Reset dcs-collector to default polling time to avoid thrashing
 sed -i "s|^poll_interval=5|#poll_interval=5|g" /etc/dcs_collector.conf
-systemctl restart dcs-collector -l
+
+systemctl restart dcs-collector
+
+# Create simulated disk manager data
+mkdir -p /tmp/dcs/drivemanager
+cp ../../../installation/deps/drive_manager.json /tmp/dcs/drivemanager
+chown -R zabbix:zabbix /tmp/dcs
+
 
 # Search results for success
 success=`grep 'testsuite errors="0" failures="0"' lettucetests.xml`

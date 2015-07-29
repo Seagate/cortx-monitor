@@ -27,7 +27,6 @@ from framework.utils.service_logging import logger
 
 # Modules that receive messages from this module
 from message_handlers.disk_msg_handler import DiskMsgHandler
-from json_msgs.messages.sensors.drive_mngr import DriveMngrMsg
 
 from zope.interface import implements
 from sensors.IDrive_manager import IDriveManager
@@ -45,7 +44,7 @@ class DriveManager(ScheduledModuleThread, InternalMsgQ):
     DRIVE_MANAGER_DIR = 'drivemanager_dir'
     DRIVE_MANAGER_PID = 'drivemanager_pid'
     START_DELAY       = 'start_delay'
-    
+
 
     @staticmethod
     def name():
@@ -129,6 +128,8 @@ class DriveManager(ScheduledModuleThread, InternalMsgQ):
 
     def _init_drive_status(self):
         # Allow time for the drivemanager to come up and populate the directory
+        time.sleep(5)
+         
         while not os.path.isdir(self._drive_mngr_base_dir):
             logger.info("DriveManager sensor, dir not found: %s " % self._drive_mngr_base_dir)
             logger.info("DriveManager sensor, rechecking in %s secs" % self._start_delay)
@@ -137,6 +138,11 @@ class DriveManager(ScheduledModuleThread, InternalMsgQ):
         enclosures = os.listdir(self._drive_mngr_base_dir)
         for enclosure in enclosures:
             disk_dir = os.path.join(self._drive_mngr_base_dir, enclosure, "disk")
+
+            # Ignore the drive_manager.json file
+            if not os.path.isdir(disk_dir):
+                continue
+
             disks = os.listdir(disk_dir)
             logger.info("DriveManager initializing: %s" % disk_dir)
 

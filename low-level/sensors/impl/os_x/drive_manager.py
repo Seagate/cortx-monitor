@@ -26,7 +26,6 @@ from framework.utils.service_logging import logger
 
 # Modules that receive messages from this module
 from message_handlers.disk_msg_handler import DiskMsgHandler
-from json_msgs.messages.sensors.drive_mngr import DriveMngrMsg
 
 from zope.interface import implements
 from sensors.IDrive_manager import IDriveManager

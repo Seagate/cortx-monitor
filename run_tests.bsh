@@ -27,10 +27,6 @@
 
 TOP_DIR=`pwd`
 
-# Create simulated disk manager data
-mkdir -p /var/run/diskmonitor
-cp ./installation/deps/drive_manager.json /var/run/diskmonitor
-
 # Copy over sudoers files
 cp ./installation/deps/00aliases /etc/sudoers.d
 cp ./installation/deps/sudoers /etc
