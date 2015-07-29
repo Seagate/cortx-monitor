@@ -28,6 +28,7 @@ from json_msgs.messages.sensors.host_update import HostUpdateMsg
 from json_msgs.messages.sensors.local_mount_data import LocalMountDataMsg
 from json_msgs.messages.sensors.cpu_data import CPUdataMsg
 from json_msgs.messages.sensors.if_data import IFdataMsg
+from json_msgs.messages.sensors.raid_data import RAIDdataMsg
 
 from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor 
 
@@ -73,10 +74,14 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                                                 "MB")
         self._node_sensor    = None
         self._login_actuator = None
+        self._RAID_status    = "N/A"
 
     def run(self):
         """Run the module periodically on its own thread."""
         self._log_debug("Start accepting requests")
+
+        # self._set_debug(True)
+        # self._set_debug_persist(True)
 
         try:
             # Query the Zope GlobalSiteManager for an object implementing INodeData
@@ -150,6 +155,10 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 self._generate_local_mount_data()
                 self._generate_cpu_data()
                 self._generate_if_data()
+
+            elif sensor_type == "raid_data":
+                self._generate_RAID_status(jsonMsg)
+
 
         # ... handle other node sensor message types
 
@@ -240,6 +249,26 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         jsonMsg = IFdataMsg(self._node_sensor.host_id,
                             self._node_sensor.local_time,
                             self._node_sensor.if_data).getJson()
+        self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
+
+    def _generate_RAID_status(self, jsonMsg):
+        """Create & transmit a RAID status data message as defined
+            by the sensor response json schema"""
+        # Get the host_id
+        if self._node_sensor.host_id == None:
+            successful = self._node_sensor.read_data("None", self._get_debug(), self._units)
+            if not successful:
+                logger.error("NodeDataMsgHandler, updating host information was NOT successful.")
+
+        # See if status is in the msg; ie it's an internal msg from the RAID sensor
+        if jsonMsg.get("sensor_request_type").get("node_data").get("status") is not None:
+            self._RAID_status = jsonMsg.get("sensor_request_type").get("node_data").get("status")
+
+        self._log_debug("_generate_RAID_status, host_id: %s, RAID_status: %s" % 
+                            (self._node_sensor.host_id, self._RAID_status))
+
+        jsonMsg = RAIDdataMsg(self._node_sensor.host_id,
+                              self._RAID_status).getJson()
         self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
 
     def shutdown(self):

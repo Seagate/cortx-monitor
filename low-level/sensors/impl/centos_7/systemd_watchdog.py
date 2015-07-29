@@ -46,7 +46,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
     PRIORITY          = 2
 
     # Section and keys in configuration file
-    SYSTEMDWATCHDOG = SENSOR_NAME.upper()
+    SYSTEMDWATCHDOG    = SENSOR_NAME.upper()
     MONITORED_SERVICES = 'monitored_services'
 
 
@@ -60,6 +60,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                                                   self.PRIORITY)
         # Mapping of services and their status'
         self._service_status = {}
+        self._inactive_services = []
 
     def initialize(self, conf_reader, msgQlist):
         """initialize configuration reader and internal msg queues"""
@@ -79,30 +80,57 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
         # Check for debug mode being activated
         self._read_my_msgQ_noWait()
 
-        self._set_debug(True)
-        self._set_debug_persist(True)
-
         self._log_debug("Start accepting requests")
+
+        # Flag signifying that there was a disabled service at startup
+        self._recheck = False
 
         try:
             # Integrate into the main dbus loop to catch events
             DBusGMainLoop(set_as_default=True)
- 
+
             # Connect to dbus system wide
             self._bus = SystemBus()
- 
+
             # Get an instance of systemd1
             systemd = self._bus.get_object("org.freedesktop.systemd1", "/org/freedesktop/systemd1")
 
             # Use the systemd object to get an interface to the Manager
             self._manager = Interface(systemd, dbus_interface='org.freedesktop.systemd1.Manager')
 
-            # Subscribe to signal changes
-            self._manager.Subscribe() 
-
             # Read in the list of services to monitor
             monitored_services = self._get_monitored_services()
             self._log_debug("Monitored services listed in conf file: %s" % monitored_services)
+
+            # Send out the current status of each monitored service
+            for service in monitored_services:
+                try:
+                    msgString = {"actuator_request_type": {
+                                    "service_watchdog_controller": {
+                                        "service_name" : service,
+                                        "service_request" : "status",
+                                        "previous_state" : "N/A"
+                                        }
+                                    }
+                                 }
+                    self._write_internal_msgQ(ServiceMsgHandler.name(), msgString)
+
+                    # Retrieve an object representation of the systemd unit
+                    unit = self._bus.get_object('org.freedesktop.systemd1',
+                                                self._manager.LoadUnit(service))
+                    state = unit.Get('org.freedesktop.systemd1.Unit',
+                                     'ActiveState',
+                                     dbus_interface='org.freedesktop.DBus.Properties')
+
+                    if state == "inactive":
+                        self._recheck = True
+                        self._inactive_services.append(service)
+
+                except Exception:
+                    logger.exception()
+
+            self._set_debug(True)
+            self._set_debug_persist(True)
 
             # Retrieve a list of all the service units
             self._units = self._manager.ListUnits()
@@ -134,6 +162,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                                             lambda a, b, c, p = unit :
                                             self._on_prop_changed(a, b, c, p),
                                             dbus_interface=dbus.PROPERTIES_IFACE)
+                    self._service_status[str(unit)] = "active"
 
             self._log_debug("Total services monitored: %d" % total)
 
@@ -148,6 +177,9 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
             while self._running == True:
                 context.iteration(True)
                 time.sleep(2)
+
+                if self._recheck == True:
+                    self._examine_inactive_services()
 
             self._log_debug("SystemdWatchdog gracefully breaking out " \
                                 "of dbus Loop, not restarting.")
@@ -165,6 +197,55 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
 
         self._log_debug("Finished processing successfully")
 
+    def _examine_inactive_services(self):
+        """See if an inactive service has been successfully started
+            and if so attach a callback method to its properties
+            to detect changes
+        """
+        for disabled_service in self._inactive_services:
+            # Retrieve an object representation of the systemd unit
+            unit = self._bus.get_object('org.freedesktop.systemd1',
+                                        self._manager.LoadUnit(disabled_service))
+
+            state = unit.Get('org.freedesktop.systemd1.Unit', 'ActiveState',
+                             dbus_interface='org.freedesktop.DBus.Properties')
+
+            substate = unit.Get('org.freedesktop.systemd1.Unit', 'SubState',
+                             dbus_interface='org.freedesktop.DBus.Properties')
+
+            if state == "active":
+                self._log_debug("Service: %s is now active and being monitored!" %
+                                disabled_service)
+                self._service_status[str(disabled_service)] = str(state) + ":" + str(substate)
+
+                # Use the systemd unit to get an Interface to call methods
+                Iunit = Interface(unit,
+                                  dbus_interface='org.freedesktop.systemd1.Manager')
+
+                # Connect the PropertiesChanged signal to the unit and assign a callback
+                Iunit.connect_to_signal('PropertiesChanged',
+                                         lambda a, b, c, p = unit :
+                                         self._on_prop_changed(a, b, c, p),
+                                         dbus_interface=dbus.PROPERTIES_IFACE)
+
+                self._inactive_services.remove(disabled_service)
+
+                # Send out notification of the state change
+                msgString = {"actuator_request_type": {
+                                    "service_watchdog_controller": {
+                                        "service_name" : disabled_service,
+                                        "service_request": "status",
+                                        "previous_state" : "inactive"
+                                        }
+                                    }
+                                 }
+                self._write_internal_msgQ(ServiceMsgHandler.name(), msgString)
+
+        # Disable recheck if we've assigned callbacks to all entries in our monitored services list
+        if len(self._inactive_services) == 0:
+            self._recheck = False
+            self._log_debug("Successfully monitoring all services!")
+
     def _get_prop_changed(self, unit, interface, prop_name, changed_properties, invalidated_properties):
         """Retrieves the property that changed"""
         if prop_name in invalidated_properties:
@@ -177,7 +258,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
     def _on_prop_changed(self, interface, changed_properties, invalidated_properties, unit):
         """Callback to handle state changes in services"""
         # We're dealing with systemd units so we only care about that interface
-        # self._log_debug("_on_prop_changed, interface: %s" % interface)
+        #self._log_debug("_on_prop_changed, interface: %s" % interface)
         if interface != 'org.freedesktop.systemd1.Unit':
             return
 
@@ -204,6 +285,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
         else:
             # Update the state in the global dict for later use
             self._log_debug("_on_prop_changed, service state change detected notifying ServiceMsgHandler.")
+            previous_service_status = self._service_status.get(str(unit_name), "").split(":")[0]
             self._service_status[str(unit_name)] = str(state) + ":" + str(substate)
 
         # Only send out a json msg if there was a state or substate change for the service
@@ -215,11 +297,16 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                 msgString = {"actuator_request_type": {
                                 "service_watchdog_controller": {
                                     "service_name" : unit_name,
-                                    "service_request": "status"
+                                    "service_request": "status",
+                                    "previous_state" : previous_service_status
                                     }
                                 }
                              }
                 self._write_internal_msgQ(ServiceMsgHandler.name(), msgString)
+
+                if state == "inactive":
+                    self._inactive_services.append(unit_name)
+                    self._recheck = True
 
     def _get_monitored_services(self):
         """Retrieves the list of services to be monitored"""

@@ -46,6 +46,8 @@ class NodeData(Debug):
     def __init__(self):
         super(NodeData, self).__init__()
 
+        self.host_id = None
+
         # Total number of CPUs
         self.cpus = psutil.cpu_count()
 

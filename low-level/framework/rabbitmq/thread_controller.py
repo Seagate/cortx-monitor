@@ -41,6 +41,7 @@ from sensors.impl.centos_7.systemd_watchdog import SystemdWatchdog
 from sensors.impl.centos_7.drive_manager import DriveManager
 from sensors.impl.os_x.drive_manager import DriveManager
 from sensors.impl.os_x.xinitd_watchdog import XinitdWatchdog
+from sensors.impl.generic.raid import RAIDsensor
 
 
 # Global method used by Thread to capture and log errors.  This must be global.

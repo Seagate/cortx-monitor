@@ -182,6 +182,8 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist):
     # Import in generic sensors/actuators which work on all platforms
     from sensors.impl.generic.node_data import NodeData as NodeData
     from actuators.impl.generic.raritan_pdu import RaritanPDU
+    from actuators.impl.generic.raid import RAIDactuator
+    from sensors.impl.generic.raid import RAIDsensor
 
     # Loop through the list of sensors/actuators and instantiate appropriately
     #  based upon whether or not it is threaded

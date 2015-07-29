@@ -48,9 +48,11 @@ class SystemdService(Debug):
         self._bus = SystemBus()
 
         # Obtain a manager interface to d-bus for communications with systemd
-        systemd = self._bus.get_object('org.freedesktop.systemd1',
-                                 '/org/freedesktop/systemd1')
+        systemd = self._bus.get_object('org.freedesktop.systemd1', '/org/freedesktop/systemd1')
         self._manager = Interface(systemd, dbus_interface='org.freedesktop.systemd1.Manager')
+
+        # Subscribe to signal changes
+        self._manager.Subscribe()
 
     def perform_request(self, jsonMsg):
         """Performs the service request"""

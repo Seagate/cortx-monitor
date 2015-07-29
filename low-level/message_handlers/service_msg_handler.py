@@ -55,9 +55,14 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
         # Initialize internal message queues for this module
         super(ServiceMsgHandler, self).initialize_msgQ(msgQlist)
 
+        self._service_actuator = None
+
     def run(self):
         """Run the module periodically on its own thread."""
         self._log_debug("Start accepting requests")
+
+        #self._set_debug(True)
+        #self._set_debug_persist(True)
 
         try:
             # Block on message queue until it contains an entry
@@ -90,16 +95,15 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
             self._log_debug("_processMsg, msg_type: service_controller")
 
             # Query the Zope GlobalSiteManager for an object implementing IService
-            service_actuator = queryUtility(IService)()
-            logger.info("_process_msg, service_actuator name: %s" % service_actuator.name())            
-            service_name, result = service_actuator.perform_request(jsonMsg)
+            if self._service_actuator == None:
+                self._service_actuator = queryUtility(IService)()
+                logger.info("_process_msg, service_actuator name: %s" % self._service_actuator.name())            
+            service_name, result = self._service_actuator.perform_request(jsonMsg)
 
             self._log_debug("_processMsg, service_name: %s, result: %s" %
                             (service_name, result))
 
             # Create an actuator response and send it out
-            # TODO: This should be sent out as an ack to the actuator request
-            #       once we have a rabbitmq egress handler for that channel
             jsonMsg = ServiceControllerMsg(service_name, result).getJson()               
             self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
 
@@ -108,15 +112,19 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
             self._log_debug("_processMsg, msg_type: service_watchdog_controller")
 
             # Query the Zope GlobalSiteManager for an object implementing IService
-            service_actuator = queryUtility(IService)()
-            self._log_debug("_process_msg, service_actuator name: %s" % service_actuator.name())            
-            service_name, result = service_actuator.perform_request(jsonMsg)
+            if self._service_actuator == None:
+                self._service_actuator = queryUtility(IService)()
+                self._log_debug("_process_msg, service_actuator name: %s" % self._service_actuator.name())            
+            service_name, result = self._service_actuator.perform_request(jsonMsg)
 
             self._log_debug("_processMsg, service_name: %s, result: %s" %
                             (service_name, result))
 
+            # Pull out the previous state and if it's equal to "status" fill it in with the current status
+            prev_service_state = jsonMsg.get("actuator_request_type").get("service_watchdog_controller").get("previous_state")
+
             # Create a service watchdog message and send it out
-            jsonMsg = ServiceWatchdogMsg(service_name, result).getJson()               
+            jsonMsg = ServiceWatchdogMsg(service_name, result, prev_service_state).getJson()               
             self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
 
         # ... handle other service message types

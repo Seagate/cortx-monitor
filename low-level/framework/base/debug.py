@@ -30,7 +30,7 @@ class Debug(object):
         """Logging messages"""
         if self._debug:
             log_msg = self.name() + ", " + message
-            journal.send(log_msg, PRIORITY=7)
+            journal.send(log_msg, PRIORITY=7, SYSLOG_IDENTIFIER="sspl-ll")
 
     def _set_debug(self, debug):
         """Sets debug flag"""

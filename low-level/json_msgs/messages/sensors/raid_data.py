@@ -1,14 +1,14 @@
 """
  ****************************************************************************
- Filename:          service_watchdog.py
- Description:       Defines the JSON message transmitted by the
-                    Service Watchdogs. There may be a time when we need to
+ Filename:          raid_data.py
+ Description:       Defines the JSON message transmitted by the node_data_msg_handler
+                    for changes in RAID. There may be a time when we need to
                     maintain state as far as messages being transmitted.  This
                     may involve aggregation of multiple messages before
                     transmissions or simply deferring an acknowledgment to
                     a later point in time.  For this reason, the JSON messages
                     are stored as objects which can be queued up, etc.
- Creation Date:     03/03/2015
+ Creation Date:     07/17/2015
  Author:            Jake Abernathy
 
  Do NOT modify or remove this copyright and confidentiality notice!
@@ -24,30 +24,28 @@ import json
 
 from json_msgs.messages.sensors.base_sensors_msg import BaseSensorMsg
 
-class ServiceWatchdogMsg(BaseSensorMsg):
+class RAIDdataMsg(BaseSensorMsg):
     '''
     The JSON message transmitted by the Service Watchdogs
     '''
 
-    ACTUATOR_MSG_TYPE = "service_watchdog"
+    ACTUATOR_MSG_TYPE = "raid_data"
     MESSAGE_VERSION  = "1.0.0"
 
-    def __init__(self, service_name,
-                       service_state,
-                       previous_service_state,
+    def __init__(self, host_id,
+                       mdstat,
                        username  = "SSPL-LL",
                        signature = "N/A",
                        time      = "N/A",
                        expires   = -1):
-        super(ServiceWatchdogMsg, self).__init__()
+        super(RAIDdataMsg, self).__init__()
 
-        self._username           = username
-        self._signature          = signature
-        self._time               = time
-        self._expires            = expires
-        self._service_name       = service_name
-        self._service_state      = service_state
-        self._prev_service_state = previous_service_state
+        self._host_id           = host_id
+        self._mdstat            = mdstat
+        self._username          = username
+        self._signature         = signature
+        self._time              = time
+        self._expires           = expires
 
         self._json = {"title" : self.TITLE,
                       "description" : self.DESCRIPTION,
@@ -64,9 +62,8 @@ class ServiceWatchdogMsg(BaseSensorMsg):
                                 },
                           "sensor_response_type": {
                                 self.ACTUATOR_MSG_TYPE: {
-                                    "service_name" : self._service_name,
-                                    "service_state" : self._service_state,
-                                    "previous_service_state" : self._prev_service_state
+                                    "hostId" : self._host_id,
+                                    "mdstat" : self._mdstat
                                     }
                                 }
                           }
@@ -78,14 +75,14 @@ class ServiceWatchdogMsg(BaseSensorMsg):
         self.validateMsg(self._json)
         return json.dumps(self._json)
 
-    def get_service_name(self):
-        return self._service_name
+    def get_host_id(self):
+        return self.host_id
     
-    def set_service_name(self, service_name):
-        self._service_name = service_name
+    def set_host_ide(self, host_id):
+        self._host_id = host_id
 
-    def get_service_response(self):
-        return self._service_response
+    def get_mdstat(self):
+        return self._mdstat
 
-    def set_service_response(self, service_response):
-        self._service_response = service_response
+    def set_mdstat(self, mdstat):
+        self._mdstat = mdstat
