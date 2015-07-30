@@ -77,6 +77,10 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
 
     def run(self):
         """Run the monitoring periodically on its own thread."""
+
+        # self._set_debug(True)
+        # self._set_debug_persist(True)
+        
         # Check for debug mode being activated
         self._read_my_msgQ_noWait()
 
@@ -105,14 +109,14 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
             # Send out the current status of each monitored service
             for service in monitored_services:
                 try:
-                    msgString = {"actuator_request_type": {
+                    msgString = json.dumps({"actuator_request_type": {
                                     "service_watchdog_controller": {
                                         "service_name" : service,
                                         "service_request" : "status",
                                         "previous_state" : "N/A"
                                         }
                                     }
-                                 }
+                                 })
                     self._write_internal_msgQ(ServiceMsgHandler.name(), msgString)
 
                     # Retrieve an object representation of the systemd unit
@@ -128,9 +132,6 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
 
                 except Exception:
                     logger.exception()
-
-            self._set_debug(True)
-            self._set_debug_persist(True)
 
             # Retrieve a list of all the service units
             self._units = self._manager.ListUnits()
@@ -231,14 +232,14 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                 self._inactive_services.remove(disabled_service)
 
                 # Send out notification of the state change
-                msgString = {"actuator_request_type": {
+                msgString = json.dumps({"actuator_request_type": {
                                     "service_watchdog_controller": {
                                         "service_name" : disabled_service,
                                         "service_request": "status",
                                         "previous_state" : "inactive"
                                         }
                                     }
-                                 }
+                                 })
                 self._write_internal_msgQ(ServiceMsgHandler.name(), msgString)
 
         # Disable recheck if we've assigned callbacks to all entries in our monitored services list
@@ -294,14 +295,14 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
 
             # Notify the service message handler to transmit the status of the service
             if unit_name is not None:
-                msgString = {"actuator_request_type": {
+                msgString = json.dumps({"actuator_request_type": {
                                 "service_watchdog_controller": {
                                     "service_name" : unit_name,
                                     "service_request": "status",
                                     "previous_state" : previous_service_status
                                     }
                                 }
-                             }
+                             })
                 self._write_internal_msgQ(ServiceMsgHandler.name(), msgString)
 
                 if state == "inactive":

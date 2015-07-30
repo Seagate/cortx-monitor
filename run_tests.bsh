@@ -53,8 +53,7 @@ chmod +x low-level/framework/sspl_ll_rabbitmq_reinit
 low-level/framework/sspl_ll_rabbitmq_reinit
 
 # Start openhpid
-systemctl daemon-reload
-systemctl restart openhpid -l
+systemctl start openhpid -l
 
 # Execute tests
 cd low-level/tests/automated
