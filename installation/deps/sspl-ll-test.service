@@ -10,6 +10,7 @@ ExecStart=
 ExecStopPost=/usr/bin/rm -Rf /var/run/sspl_ll
 PIDFile=/var/run/sspl_ll/sspl_ll_d.pid
 User=root
+Restart=on-failure
 
 
 [Install]

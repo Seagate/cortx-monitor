@@ -2,12 +2,6 @@
 
 echo "Running Automated Integration Tests for SSPL-LL"
 
-# Speed up the dcs-collector during the tests so they don't take so long
-grep -q -F "[drivemanager]\npoll_interval=5\n" /etc/dcs_collector.conf || \
-	grep -q -F "[drivemanager]\n#poll_interval=5\n" /etc/dcs_collector.conf || \
-	echo -e '[drivemanager]\npoll_interval=5\n' >> /etc/dcs_collector.conf
-sed -i "s|^#poll_interval=5|poll_interval=5|g" /etc/dcs_collector.conf
-
 # Make sure SSPL-LL is in a known default startup state
 systemctl start dcs-collector
 
