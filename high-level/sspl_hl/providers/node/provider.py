@@ -43,17 +43,18 @@ class NodeProvider(BaseCastorProvider):
         be processed by halond and eventually sent out to the various nodes in
         the cluster and processed by sspl-ll.
 
-        @param selection_args:    A dictionary that must contain 'nodeName'
-                                  and 'command' keys, and can optionally
-                                  include a 'nodes' key.  The nodeName
-                                  should be the node in question (ie crond),
-                                  the command should be one of 'start', 'stop',
-                                  'restart', 'enable', 'disable', or 'status',
-                                  and nodes value should be a regex indicating
+        @param selection_args:    A dictionary that must contain 'target'
+                                  and 'command' the command should be one
+                                  of 'start', 'stop','restart' and 'status'
+                                  and nodes value could be a regex indicating
                                   which nodes to operate on, eg
-                                  'mycluster0[0-2]'
+                                  'mynode0[0-2]'
         """
-        super(NodeProvider, self)._query(selection_args, responder)
+        result = super(NodeProvider, self)._query(selection_args, responder)
+        if result:
+            reactor.callFromThread(responder.reply_exception(result))
+            return
+
         message = self._generate_node_request_msg(
             target=selection_args['target'],
             command=selection_args['command'],

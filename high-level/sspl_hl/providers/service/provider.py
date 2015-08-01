@@ -82,6 +82,7 @@ class ServiceProvider(BaseCastorProvider):
         if result:
             reactor.callFromThread(responder.reply_exception(result))
             return
+
         if selection_args['command'] in ['list', 'status']:
             list_response = ServiceListResponse()
             service_list = list_response.get_response_message()
@@ -91,7 +92,9 @@ class ServiceProvider(BaseCastorProvider):
                 service_name=selection_args['serviceName'],
                 command=selection_args['command'],
                 )
+
             self._publish_message(message)
+
             reactor.callFromThread(responder.reply_no_match)
 
 

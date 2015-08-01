@@ -228,12 +228,8 @@ class NodeStatusResponse(StatusResponse):
         or node.
         @type entity_type: str
 
-        @param entity_filter: The filter expression to filter the entities in
-        CaStor system
-        @type entity_filter: str
-
-        @return: Halon node command status response message in string.
-        @rtype: str
+        @return: Halon node command status response message.
+        @rtype: dict
         """
 
         items = self._get_response_items(entity_type)

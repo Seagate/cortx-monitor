@@ -5,11 +5,14 @@ import os.path
 import json
 import subprocess
 from sspl_hl.providers.service.provider import ServiceProvider
+from sspl_hl.providers.node.provider import NodeProvider
+
 
 # Note:  We should use the plex registry to programatically generate this URL
 # to protect against changes in how plex surfaces apps/providers/etc.  But
 # since this is test code, we won't worry about it.
 SERVICE_URI = "http://localhost:8080/apps/sspl_hl/providers/service/data"
+NODE_URI = "http://localhost:8080/apps/sspl_hl/providers/node/data"
 
 
 @lettuce.step(u'When I request "([^"]*)" service "([^"]*)" for all nodes')
@@ -20,6 +23,16 @@ def service_cmd_for_all_nodes(_, service, cmd):
         service=service, cmd=cmd
         )
     urllib.urlopen(url=url)
+
+
+@lettuce.step(u'When I request "([^"]*)" node "([^"]*)" for all nodes')
+def node_cmd_for_all_nodes(_, node, cmd):
+    """ Request given node take given action by hitting data provider url.
+    """
+    url = NODE_URI + "?target={node}&command={cmd}".format(
+        node=node, cmd=cmd
+        )
+    urllib.urlopen(url=url).read()
 
 
 @lettuce.step(u'When I run "([^"]*)"')
@@ -53,6 +66,40 @@ def servicerequest_msg_sent(_, command, service_name):
 
     # alter the 'time' and 'messageId' field to match.  (We expect a minor
     # variation).
+    tmp = json.loads(exp)
+    tmp['time'] = json.loads(contents)['time']
+    tmp['message']['messageId'] = json.loads(contents)['message']['messageId']
+    exp = json.dumps(tmp)
+
+    assert json.loads(contents) == json.loads(exp), \
+        "Message doesn't match.  Expected '{expected}' but got '{actual}'" \
+        .format(expected=exp, actual=contents)
+
+    os.unlink(os.path.join('/tmp/fake_halond', first_file))
+
+
+@lettuce.step(u'Then a nodeRequest message to "([^"]*)" "([^"]*)" is sent')
+def noderequest_msg_sent(_, command, target):
+    """ Ensure proper message generated and enqueued. """
+    # wait for a message to appear in the fake_halond output directory
+    lettuce.world.wait_for_condition(
+        status_func=lambda: len(os.listdir('/tmp/fake_halond')) > 0,
+        max_wait=5,
+        timeout_message="Timeout expired while waiting for message to arrive "
+        "in fake_halond output directory."
+        )
+    first_file = sorted(
+        os.listdir('/tmp/fake_halond'),
+        key=lambda f: os.stat(os.path.join('/tmp/fake_halond', f)).st_mtime
+        )[0]
+    contents = open(os.path.join('/tmp/fake_halond', first_file), 'r').read()
+
+    # pylint: disable=protected-access
+    exp = json.dumps(NodeProvider._generate_node_request_msg(
+        target=target, command=command
+        ))
+    # pylint: enable=protected-access
+
     tmp = json.loads(exp)
     tmp['time'] = json.loads(contents)['time']
     tmp['message']['messageId'] = json.loads(contents)['message']['messageId']

@@ -4,12 +4,10 @@ PLEX data provider for Halon resource graph for ha.
 # Third party
 from twisted.internet import reactor
 import urllib
-# PLEX
-# Local
 
+# Local
 from plex.util.concurrent.single_thread_executor import SingleThreadExecutor
 from sspl_hl.utils.message_utils import HaResourceGraphResponse
-
 from sspl_hl.utils.base_castor_provider import BaseCastorProvider
 
 
@@ -62,7 +60,11 @@ class HaProvider(BaseCastorProvider):
                                   'resourceGraphType' and can optionally
                                   include a 'command'
         """
-        super(HaProvider, self)._query(selection_args, responder)
+        result = super(HaProvider, self)._query(selection_args, responder)
+        if result:
+            reactor.callFromThread(responder.reply_exception(result))
+            return
+
         halon_response = self._get_mocked_ha_resource_graph()
         reactor.callFromThread(responder.reply(data=[halon_response]))
 
