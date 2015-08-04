@@ -3,10 +3,8 @@ PLEX data provider for Halon resource graph for ha.
 """
 # Third party
 from twisted.internet import reactor
-import urllib
 
 # Local
-from plex.util.concurrent.single_thread_executor import SingleThreadExecutor
 from sspl_hl.utils.message_utils import HaResourceGraphResponse
 from sspl_hl.utils.base_castor_provider import BaseCastorProvider
 
@@ -18,13 +16,12 @@ class HaProvider(BaseCastorProvider):
 
     def __init__(self, name, description):
         super(HaProvider, self).__init__(name, description)
-        self._single_thread_executor = SingleThreadExecutor()
+        self.valid_commands = ['info', 'debug']
+        self.valid_subcommands = ['show', 'status']
+        self.valid_arg_keys = ['command', 'subcommand']
         self._frontier_node_ip = None
         self._frontier_port = None
         self.frontier_service_url = None
-        self.valid_commands = ['show', 'status']
-        self.no_of_arguments = 2
-        self.valid_arg_keys = ['level', 'command']
 
     def on_create(self):
         self._frontier_node_ip = '127.0.0.1'
@@ -64,7 +61,6 @@ class HaProvider(BaseCastorProvider):
         if result:
             reactor.callFromThread(responder.reply_exception(result))
             return
-
         halon_response = self._get_mocked_ha_resource_graph()
         reactor.callFromThread(responder.reply(data=[halon_response]))
 
@@ -86,7 +82,6 @@ class HaProvider(BaseCastorProvider):
         @return: return Halon resource graph for ha
         @rtype: dict
 
-        """
         try:
             rg_response = urllib.urlopen(self.frontier_service_url).read()
             # may need to do some parsing of data and conversion to dict
@@ -97,6 +92,7 @@ class HaProvider(BaseCastorProvider):
                 responder.reply_exception(
                     "Error: Unable to get resource graph information:{}"
                     .format(err)))
+        """
 
 # pylint: disable=invalid-name
 provider = HaProvider("ha", "Ha Management Provider")

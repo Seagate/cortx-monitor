@@ -20,9 +20,12 @@ class SsplHlProviderService(BaseUnitTest):
         """ Ensures restarting,etc a service generates the proper json message.
         """
         for command in SsplHlProviderService.NODE_COMMAND:
-            method_args = {'command': command, 'target': 'crond.service'}
+            method_args = {'command': command,
+                           'target': 'crond.service'}
+            selection_args = {'command': command,
+                              'target': 'crond.service'}
             # pylint: disable=protected-access
-            self._test_entity_query(method_args,
+            self._test_entity_query(selection_args,
                                     NodeProvider._generate_node_request_msg,
                                     method_args,
                                     NodeProvider('node', ''))

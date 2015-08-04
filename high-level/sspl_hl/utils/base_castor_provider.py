@@ -28,6 +28,7 @@ class BaseCastorProvider(DataStoreProvider):
                                'disable',
                                'list',
                                'status']
+        self.valid_subcommands = []
         self.no_of_arguments = 2
         self.valid_arg_keys = []
 
@@ -82,7 +83,17 @@ class BaseCastorProvider(DataStoreProvider):
                     selection_args['command']
                     )
                 )
-        elif len(selection_args) > self.no_of_arguments:
+        if ('action' in selection_args and
+                len(selection_args) == self.no_of_arguments + 1):
+            if selection_args['action'] == 'ha':
+                if selection_args['subcommand'] not in self.valid_subcommands:
+                    return(
+                        "Error: Invalid subcommand: '{}'".format(
+                            selection_args['subcommand']
+                            )
+                        )
+            del selection_args['action']
+        if len(selection_args) > self.no_of_arguments:
             for arg_key in self.valid_arg_keys:
                 del selection_args[arg_key]
             return(

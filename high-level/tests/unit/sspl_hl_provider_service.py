@@ -23,7 +23,8 @@ class SsplHlProviderService(BaseUnitTest):
         """ Ensures restarting,etc a service generates the proper json message.
         """
         for command in SsplHlProviderService.SERVICE_COMMAND:
-            method_args = {'command': command, 'service_name': 'crond.service'}
+            method_args = {'command': command,
+                           'service_name': 'crond.service'}
             # pylint: disable=protected-access
             selection_args = {'serviceName': 'crond.service',
                               'command': command}
@@ -39,7 +40,8 @@ class SsplHlProviderService(BaseUnitTest):
         the case of the user bypassing the cli and accessing the data provider
         directly.
         """
-        command_args = {'command': 'invalid_command', 'serviceName': 'crond'}
+        command_args = {'command': 'invalid_command',
+                        'serviceName': 'crond'}
         response_msg = "Error: Invalid command: 'invalid_command'"
 
         self._test_args_validation_cases(command_args,
