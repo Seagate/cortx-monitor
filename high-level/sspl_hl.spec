@@ -39,10 +39,15 @@ A cli (and library) that allow the user to control the cluster.
 
 
 %install
-mkdir -p %{installpath}/sspl_hl/providers/service
+mkdir -p %{installpath}/sspl_hl/views
+mkdir -p %{installpath}/sspl_hl/providers/{service,node,ha}
 install sspl_hl/main.py sspl_hl/__init__.py %{installpath}/sspl_hl/
 install sspl_hl/providers/__init__.py %{installpath}/sspl_hl/providers/
 install sspl_hl/providers/service/*.py %{installpath}/sspl_hl/providers/service/
+install sspl_hl/providers/node/*.py %{installpath}/sspl_hl/providers/node/
+install sspl_hl/providers/ha/*.py %{installpath}/sspl_hl/providers/ha/
+mkdir -p %{installpath}/sspl_hl/utils/
+install sspl_hl/utils/*.py %{installpath}/sspl_hl/utils/
 mkdir -p %{buildroot}/usr/lib/python2.7/site-packages/cstor/cli/commands
 install cstor/__init__.py %{buildroot}/usr/lib/python2.7/site-packages/cstor/
 install cstor/cli/*.py %{buildroot}/usr/lib/python2.7/site-packages/cstor/cli/
@@ -63,6 +68,10 @@ ln -s /usr/lib/python2.7/site-packages/cstor/cli/main.py %{buildroot}/usr/bin/cs
 
 
 %changelog
+* Tue Aug 04 2015 Rich Gowman <rich.gowman@seagate.com>
+- Add service and node providers
+- Add common utils package (used by various providers)
+
 * Thu Jul 23 2015 Rich Gowman <rich.gowman@seagate.com>
 - Migrate cstor cli from single script to python module
 
