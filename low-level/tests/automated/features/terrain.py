@@ -95,7 +95,7 @@ def init_rabbitMQ_msg_processors():
             threads.append(thread)
 
         # Allow threads to startup before running tests
-        time.sleep(15)
+        time.sleep(25)
 
         # Clear the message queue buffer out from msgs sent at startup
         while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
