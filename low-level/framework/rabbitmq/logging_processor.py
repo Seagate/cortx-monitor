@@ -113,28 +113,28 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
 
             # Write message to the journal
             if "emerg" in logMsg or "EMERG" in logMsg:
-                journal.send(logMsg, PRIORITY=0, MESSAGE_ID=msg_id)
+                journal.send(logMsg, PRIORITY=0, MESSAGE_ID=msg_id, SYSLOG_IDENTIFIER="sspl-ll")
 
             elif "alert" in logMsg or "ALERT" in logMsg:
-                journal.send(logMsg, PRIORITY=1, MESSAGE_ID=msg_id)
+                journal.send(logMsg, PRIORITY=1, MESSAGE_ID=msg_id, SYSLOG_IDENTIFIER="sspl-ll")
 
             elif "critical" in logMsg or "CRITICAL" in logMsg:
-                journal.send(logMsg, PRIORITY=2, MESSAGE_ID=msg_id)
+                journal.send(logMsg, PRIORITY=2, MESSAGE_ID=msg_id, SYSLOG_IDENTIFIER="sspl-ll")
 
             elif "error" in logMsg or "ERROR" in logMsg:
-                journal.send(logMsg, PRIORITY=3, MESSAGE_ID=msg_id)
+                journal.send(logMsg, PRIORITY=3, MESSAGE_ID=msg_id, SYSLOG_IDENTIFIER="sspl-ll")
 
             elif "warning" in logMsg or "WARNING" in logMsg:
-                journal.send(logMsg, PRIORITY=4, MESSAGE_ID=msg_id)
+                journal.send(logMsg, PRIORITY=4, MESSAGE_ID=msg_id, SYSLOG_IDENTIFIER="sspl-ll")
 
             elif "notice" in logMsg or "NOTICE" in logMsg:
-                journal.send(logMsg, PRIORITY=5, MESSAGE_ID=msg_id)
+                journal.send(logMsg, PRIORITY=5, MESSAGE_ID=msg_id, SYSLOG_IDENTIFIER="sspl-ll")
 
             elif "info" in logMsg or "INFO" in logMsg:
-                journal.send(logMsg, PRIORITY=6, MESSAGE_ID=msg_id)
+                journal.send(logMsg, PRIORITY=6, MESSAGE_ID=msg_id, SYSLOG_IDENTIFIER="sspl-ll")
 
             elif "debug" in logMsg or "DEBUG" in logMsg:
-                journal.send(logMsg, PRIORITY=7, MESSAGE_ID=msg_id)
+                journal.send(logMsg, PRIORITY=7, MESSAGE_ID=msg_id, SYSLOG_IDENTIFIER="sspl-ll")
 
             else:
                 journal.send(logMsg)

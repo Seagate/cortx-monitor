@@ -95,7 +95,7 @@ class IEMlogger(Debug):
 
             # Send it to the journal with the appropriate arguments
             journal.send(msg, MESSAGE_ID=event_code, PRIORITY=priority, 
-                         SYSLOG_IDENTIFIER="SSPL-LL (IEMLogger)")
+                         SYSLOG_IDENTIFIER="sspl-ll")
 
         except Exception as de:
             self._log_debug("log_msg, Error parsing IEM message: %s" % de)

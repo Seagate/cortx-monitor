@@ -1,7 +1,7 @@
 """
  ****************************************************************************
  Filename:          raritan_pdu.py
- Description:       Handles request messages to the Raritan PDU
+ Description:       Handles messages to the Raritan PDU
  Creation Date:     06/24/2015
  Author:            Jake Abernathy
 

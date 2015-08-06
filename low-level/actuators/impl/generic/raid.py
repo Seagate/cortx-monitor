@@ -1,7 +1,7 @@
 """
  ****************************************************************************
  Filename:          raid.py
- Description:       Handles request messages for RAID requests
+ Description:       Handles messages for RAID requests
  Creation Date:     07/08/2015
  Author:            Jake Abernathy
 

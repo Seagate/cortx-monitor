@@ -78,16 +78,10 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
     def run(self):
         """Run the monitoring periodically on its own thread."""
 
-        # self._set_debug(True)
-        # self._set_debug_persist(True)
-        
         # Check for debug mode being activated
         self._read_my_msgQ_noWait()
 
         self._log_debug("Start accepting requests")
-
-        # Flag signifying that there was a disabled service at startup
-        self._recheck = False
 
         try:
             # Integrate into the main dbus loop to catch events
@@ -104,41 +98,18 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
 
             # Read in the list of services to monitor
             monitored_services = self._get_monitored_services()
-            self._log_debug("Monitored services listed in conf file: %s" % monitored_services)
-
-            # Send out the current status of each monitored service
-            for service in monitored_services:
-                try:
-                    msgString = json.dumps({"actuator_request_type": {
-                                    "service_watchdog_controller": {
-                                        "service_name" : service,
-                                        "service_request" : "status",
-                                        "previous_state" : "N/A"
-                                        }
-                                    }
-                                 })
-                    self._write_internal_msgQ(ServiceMsgHandler.name(), msgString)
-
-                    # Retrieve an object representation of the systemd unit
-                    unit = self._bus.get_object('org.freedesktop.systemd1',
-                                                self._manager.LoadUnit(service))
-                    state = unit.Get('org.freedesktop.systemd1.Unit',
-                                     'ActiveState',
-                                     dbus_interface='org.freedesktop.DBus.Properties')
-
-                    if state == "inactive":
-                        self._recheck = True
-                        self._inactive_services.append(service)
-
-                except Exception:
-                    logger.exception()
 
             # Retrieve a list of all the service units
-            self._units = self._manager.ListUnits()
+            units = self._manager.ListUnits()
 
-            self._log_debug("Monitoring the following Services:")
+            #  Start out assuming their all inactive
+            self._inactive_services = list(monitored_services)
+
+            logger.info("SystemdWatchdog, Monitored services listed in conf file: %s" % monitored_services)
+            logger.info("SystemdWatchdog, Monitoring the following Services:")
+
             total = 0
-            for unit in self._units:
+            for unit in units:
 
                 if ".service" in unit[0]:
                     unit_name = unit[0]
@@ -147,7 +118,10 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                     if monitored_services:
                         if unit_name not in monitored_services:
                             continue
-                    self._log_debug("    " + unit_name)
+                    logger.info("    " + unit_name)
+
+                    # Remove it from our inactive list; it's alive and well
+                    self._inactive_services.remove(unit_name)
                     total += 1
 
                     # Retrieve an object representation of the systemd unit
@@ -165,7 +139,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                                             dbus_interface=dbus.PROPERTIES_IFACE)
                     self._service_status[str(unit)] = "active"
 
-            self._log_debug("Total services monitored: %d" % total)
+            logger.info("SystemdWatchdog, Total services monitored: %d" % total)
 
             # Retrieve the main loop which will be called in the run method
             self._loop = gobject.MainLoop()
@@ -174,12 +148,34 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
             gobject.threads_init()
             context = self._loop.get_context()
 
+            # Send out the current status of each monitored service
+            for service in monitored_services:
+                try:
+                    msgString = json.dumps({"actuator_request_type": {
+                                    "service_watchdog_controller": {
+                                        "service_name" : service,
+                                        "service_request" : "status",
+                                        "previous_state" : "N/A"
+                                        }
+                                    }
+                                 })
+                    self._write_internal_msgQ(ServiceMsgHandler.name(), msgString)
+
+                except Exception:
+                    logger.exception()
+
+            logger.info("SystemdWatchdog initialization completed")
+
+            # Leave enabled for now, it's not too verbose and handy in logs when status' change
+            self._set_debug(True)
+            self._set_debug_persist(True)
+
             # Loop forever iterating over the context
             while self._running == True:
                 context.iteration(True)
                 time.sleep(2)
 
-                if self._recheck == True:
+                if len(self._inactive_services) > 0:
                     self._examine_inactive_services()
 
             self._log_debug("SystemdWatchdog gracefully breaking out " \
@@ -242,10 +238,8 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                                  })
                 self._write_internal_msgQ(ServiceMsgHandler.name(), msgString)
 
-        # Disable recheck if we've assigned callbacks to all entries in our monitored services list
         if len(self._inactive_services) == 0:
-            self._recheck = False
-            self._log_debug("Successfully monitoring all services!")
+            self._log_debug("Successfully monitoring all services now!")
 
     def _get_prop_changed(self, unit, interface, prop_name, changed_properties, invalidated_properties):
         """Retrieves the property that changed"""
@@ -307,7 +301,6 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
 
                 if state == "inactive":
                     self._inactive_services.append(unit_name)
-                    self._recheck = True
 
     def _get_monitored_services(self):
         """Retrieves the list of services to be monitored"""

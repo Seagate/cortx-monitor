@@ -100,7 +100,7 @@ class SystemdService(Debug):
 
             elif self._service_request == "status":
                 # Return the status below
-                pass
+                return self._service_name, self._get_status()
 
             elif self._service_request == "enable":
                 service_list = []

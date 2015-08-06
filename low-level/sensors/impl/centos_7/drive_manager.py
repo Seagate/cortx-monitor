@@ -79,14 +79,14 @@ class DriveManager(ScheduledModuleThread, InternalMsgQ):
         # Check for debug mode being activated
         self._read_my_msgQ_noWait()
 
-        #self._set_debug(True)
-        #self._set_debug_persist(True)
-
         self._log_debug("Start accepting requests")
         self._log_debug("run, CentOS 7 base directory: %s" % self._drive_mngr_base_dir)
 
         # Retrieve the current information about each drive from the file system
         self._init_drive_status()
+        
+        self._set_debug(True)
+        self._set_debug_persist(True)
 
         try:
             # Followed tutorial for pyinotify: https://github.com/seb-m/pyinotify/wiki/Tutorial
@@ -153,13 +153,39 @@ class DriveManager(ScheduledModuleThread, InternalMsgQ):
                 if not os.path.isfile(status_file):
                     continue
                 try:
-                    with open (status_file, "r") as datafile:
-                        status = datafile.read().replace('\n', '')
-                        logger.info("DriveManager, pathname: %s, status: %s" % 
-                                    (pathname, status))
+                    with open(status_file, "r") as datafile:
+                        status = datafile.read().replace('\n', '')                
+
+                    # Read in the reason file if it's present
+                    reason_file = os.path.join(pathname, "reason")                    
+                    if os.path.isfile(reason_file):
+                        with open(reason_file, "r") as datafile:
+                            reason = datafile.read().replace('\n', '')
+                        # Append the reason to the status file
+                        self._drive_status[pathname] = "{0}_{1}".format(status, reason)
+                    else:
                         self._drive_status[pathname] = status
+
+                    logger.info("DriveManager, pathname: %s, status: %s" % 
+                               (pathname, self._drive_status[pathname]))
+
+                    # Remove base dcs dir since it contains no relevant data
+                    data_str = status_file[len(self._drive_mngr_base_dir)+1:]
+
+                    # Send a message to the disk manager handler to create and transmit json msg
+                    internal_json_msg = json.dumps( 
+                        {"sensor_response_type" : "disk_status_drivemanager",
+                         "event_path" : data_str,
+                         "status" : status
+                         })
+
+                    # Send the event to disk message handler to generate json message
+                    self._write_internal_msgQ(DiskMsgHandler.name(), internal_json_msg)
+
                 except Exception as e:
                     logger.info("DriveManager, _init_drive_status, exception: %s" % e)
+
+            logger.info("DriveManager, initialization completed successfully")
 
     def _getDrive_Mngr_Dir(self):
         """Retrieves the drivemanager path to monitor on the file system"""
@@ -176,7 +202,7 @@ class DriveManager(ScheduledModuleThread, InternalMsgQ):
         return self._conf_reader._get_value_with_default(self.DRIVEMANAGER,
                                                                  self.START_DELAY,
                                                                  '20')
-        
+
     def _notify_DiskMsgHandler(self, status_file):
         """Send the event to the disk message handler for generating JSON message"""
 
@@ -187,7 +213,14 @@ class DriveManager(ScheduledModuleThread, InternalMsgQ):
         # Read in status and see if it has changed
         with open (status_file, "r") as datafile:
             status = datafile.read().replace('\n', '')
- 
+
+        # See if there's a reason file
+        reason_file = os.path.join (os.path.dirname(status_file), "reason")
+        if os.path.isfile(reason_file):
+            with open(reason_file, "r") as datafile:
+                reason = datafile.read().replace('\n', '')
+                status = "{0}_{1}".format(status, reason)
+
         # Do nothing if the drive status has not changed
         if self._drive_status[os.path.dirname(status_file)] == status:
             return
@@ -226,7 +259,7 @@ class DriveManager(ScheduledModuleThread, InternalMsgQ):
                 # Validate the event path; must have disk and be a status/drawer file and not be a swap file
                 if self._validate_event_path(event.pathname):
                     #self._log_debug("InotifyEventHandler, process_IN_CLOSE_WRITE, event: %s" % event)
-                    status_file = os.path.join(os.path.dirname(event.pathname), "status") 
+                    status_file = os.path.join(os.path.dirname(event.pathname), "status")
                     _parent._notify_DiskMsgHandler(status_file)
 
             def _validate_event_path(self, event_path):
@@ -234,8 +267,10 @@ class DriveManager(ScheduledModuleThread, InternalMsgQ):
 
                  # Validate the event path; must have disk and be a status and not be a swap file
                 if "disk" not in event_path or \
-                    "status" not in event_path or \
-                    "status.swp" in event_path:
+                    (("status" not in event_path or \
+                    "status.swp" in event_path) and  \
+                    ("reason" not in event_path or \
+                    "reason.swp" in event_path)):
                     return False
 
                 return True

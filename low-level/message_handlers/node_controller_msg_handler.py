@@ -20,6 +20,7 @@ import time
 from actuators.ILogin import ILogin
 from actuators.Ipdu import IPDU
 from actuators.Iraid import IRAIDactuator
+from actuators.Iipmi import Iipmi
 
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
@@ -56,6 +57,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
         self._PDU_actuator  = None
         self._RAID_actuator = None
+        self._IPMI_actuator = None
 
     def run(self):
         """Run the module periodically on its own thread."""
@@ -107,8 +109,8 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 json_msg = AckResponseMsg(node_request, pdu_response).getJson()
                 self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
 
-            if component == "RAID":
-                # Query the Zope GlobalSiteManager for an object implementing the IPDU actuator
+            elif component == "RAID":
+                # Query the Zope GlobalSiteManager for an object implementing the IRAIDactuator
                 if self._RAID_actuator is None:
                     self._RAID_actuator = queryUtility(IRAIDactuator)()
                     self._log_debug("_process_msg, _RAID_actuator name: %s" % self._RAID_actuator.name())
@@ -119,6 +121,22 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
                 json_msg = AckResponseMsg(node_request, raid_response).getJson()
                 self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+
+            elif component == "IPMI":
+                # Query the Zope GlobalSiteManager for an object implementing the IPMI actuator
+                if self._IPMI_actuator is None:
+                    self._IPMI_actuator = queryUtility(Iipmi)(self._conf_reader)
+                    self._log_debug("_process_msg, _IPMI_actuator name: %s" % self._IPMI_actuator.name())
+
+                # Perform the RAID request on the node and get the response
+                ipmi_response = self._IPMI_actuator.perform_request(jsonMsg)
+                self._log_debug("_process_msg, ipmi_response: %s" % ipmi_response)
+
+                json_msg = AckResponseMsg(node_request, ipmi_response).getJson()
+                self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+
+            else:
+                self._log_debug("_process_msg, unknown node controller msg")
 
             # ... handle other node message types
 
