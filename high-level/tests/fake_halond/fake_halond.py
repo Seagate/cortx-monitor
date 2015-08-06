@@ -18,15 +18,10 @@ import argparse
 import signal
 import sys
 
-# Third party
-import pika
-
 # Local
-
-# pylint: disable=import-error
-from rabbit_mq_utils import (FakeHalondConsumer,
-                             HalonRequestHandler,
-                             FakeHalondPublisher)
+from sspl_hl.utils.rabbit_mq_utils import (HalondConsumer,
+                                           HalonRequestHandler,
+                                           HalondPublisher)
 
 
 def _cleanup(cleanup_funcs):
@@ -124,45 +119,6 @@ def parse_arguments():
     return parser.parse_args()
 
 
-def rabbitmq_connect(host, exchange, queue, fake_output_dir):
-    """ Connect to rabbitmq and setup callbacks.
-
-    Note that we don't start consuming as part of this.  To do so, call
-    start_consuming() on the returned objectect.
-
-    @param host:                  The rabbitmq host to connect to, eg
-                                  'localhost'.
-    @param exchange:              The rabbitmq exchange to connect to (on the
-                                  specified host.)  This will be created if it
-                                  doesn't already exist.
-    @param queue:                 The rabbitmq queue to connect to (from the
-                                  given exchange).  This will be created if it
-                                  doesn't already exist.
-    @type fake_output_dir         FakeHalondOutputDirectory
-    @param fake_output_dir        Object that managers the directory where the
-                                  output messages will be placed.
-    @return:                      A rabbitmq channel.
-    """
-    connection = pika.BlockingConnection(
-        pika.ConnectionParameters(
-            host=host,
-            virtual_host="SSPL",
-            credentials=pika.PlainCredentials('sspluser', 'sspl4ever')
-        )
-    )
-    channel = connection.channel()
-    channel.exchange_declare(exchange=exchange, type='topic', durable=False)
-    channel.queue_declare(queue=queue, exclusive=True)
-    channel.queue_bind(exchange=exchange, queue=queue)
-    channel.basic_consume(
-        lambda ch, method, properties, body:
-        fake_output_dir.write_message_to_directory(body),
-        queue=queue,
-        no_ack=True
-    )
-    return channel
-
-
 def create_pidfile(pidfile, _cleanup_funcs):  # pylint: disable=unused-argument
     """ Writes the pid for the process into the indicated file.
 
@@ -202,12 +158,12 @@ def main():
     args = parse_arguments()
     create_pidfile(args.pidfile, _cleanup_funcs)
 
-    publisher = FakeHalondPublisher(args.respconfig)
+    publisher = HalondPublisher(args.respconfig)
     fake_output_dir = FakeHalondOutputDirectory(
         args.directory,
         _cleanup_funcs,
         publisher)
-    consumer = FakeHalondConsumer(
+    consumer = HalondConsumer(
         args.cmdconfig,
         fake_output_dir.write_message_to_directory)
     consumer.start_consuming()

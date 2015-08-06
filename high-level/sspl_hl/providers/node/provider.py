@@ -30,7 +30,7 @@ class NodeProvider(BaseCastorProvider):
         """
         message = None
         if command == 'status':
-            message = NodeStatusRequest().get_request_message("node")
+            message = NodeStatusRequest().get_request_message("node", target)
         else:
             message = NodeServiceRequest().get_request_message(command, target)
         return message
