@@ -212,3 +212,22 @@ def _start_fake_halond():
         max_wait=5,
         timeout_message="Timeout Expired waiting for fake_halond to start"
         )
+
+
+@lettuce.before.all
+def _start_frontier_service():
+    """
+    Starts a Frontier service
+    Stores a process popen object into
+    lettuce.world.frontier
+    """
+    lettuce.world.frontier = subprocess.Popen(
+        ['./tests/fake_halond/frontier.py', '-p', '/tmp/frontier.pid']
+    )
+
+
+@lettuce.after.all
+def _stop_frontier_service(_):
+    """ Stops a frontier service
+    """
+    lettuce.world.frontier.terminate()
