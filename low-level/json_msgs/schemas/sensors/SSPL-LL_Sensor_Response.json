@@ -78,6 +78,57 @@
 							}
 						},
 
+						"disk_status_hpi": {
+							"type" : "object",
+							"properties": {
+								"hostId" : {
+									"description" : "Host ID of node",
+									"type" : "string",
+									"required" : true
+								},
+								"deviceId" : {
+									"description" : "Drive Identifier",
+									"type" : "string",
+									"required" : true
+								},
+								"drawer" : {
+									"description" : "Drawer number of drive",
+									"type" : "integer",
+									"required" : true
+								},
+								"location" : {
+									"description" : "Location number of drive",
+									"type" : "integer",
+									"required" : true
+								},
+								"manufacturer" : {
+									"description" : "Manufacturer of the drive",
+									"type" : "string",
+									"required" : true
+								},
+								"productName" : {
+									"description" : "Product name of the drive",
+									"type" : "string",
+									"required" : true
+								},
+								"productVersion" : {
+									"description" : "Version of the drive",
+									"type" : "string",
+									"required" : true
+								},
+								"serialNumber" : {
+									"description" : "Serial Number of the drive",
+									"type" : "string",
+									"required" : true
+								},
+								"wwn" : {
+									"description" : "wwn of the drive",
+									"type" : "string",
+									"required" : true
+								}
+							}
+						},
+
 						"service_watchdog": {
 							"type": "object",
 							"properties": {
