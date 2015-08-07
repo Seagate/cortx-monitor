@@ -30,8 +30,8 @@ class Ha(BaseCommand):
         """
 
         super(Ha, self).__init__()
-        self.level = parser.level
         self.command = parser.command
+        self.subcommand = parser.subcommand
         self.provider = 'ha'
 
     @staticmethod
@@ -40,13 +40,13 @@ class Ha(BaseCommand):
         """
 
         ha_parser = subparsers.add_parser('ha',
-                                          help='Subcommand to work '
+                                          help='action to work '
                                           ' with HA component of cluster.')
 
-        ha_parser.add_argument('level', help='Verbosity level of the command.',
+        ha_parser.add_argument('command', help='command for HA.',
                                choices=['info', 'debug'])
 
-        ha_parser.add_argument('command', help='Command to run.',
+        ha_parser.add_argument('subcommand', help='subcommand to run.',
                                choices=['status', 'show'])
 
         ha_parser.set_defaults(func=Ha)
@@ -55,5 +55,6 @@ class Ha(BaseCommand):
         """ Abstract method to get the action parameters
         to be send in the request to data provider
         """
-        params = 'level={}&command={}'.format(self.level, self.command)
+        params = 'command={}&subcommand={}'.format(self.command,
+                                                   self.subcommand)
         return params
