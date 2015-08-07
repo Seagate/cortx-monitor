@@ -37,12 +37,12 @@ def _ensure_rabbitmq_running():
         status = subprocess.call(
             ['sudo', '/usr/sbin/rabbitmqctl', 'status'],
             stdout=devnull
-            )
+        )
         if status != 0:
             subprocess.Popen(
                 ['sudo', '/usr/sbin/rabbitmq-server'],
                 stdout=devnull
-                )
+            )
 
             def _is_rabbitmq_running():
                 # 'status' by itself seems insufficient.  We'll also wait for
@@ -51,14 +51,14 @@ def _ensure_rabbitmq_running():
                 status = subprocess.call(
                     ['sudo', '/usr/sbin/rabbitmqctl', 'status'],
                     stdout=devnull
-                    )
+                )
                 if status != 0:
                     return False
 
                 status = subprocess.call(
                     ['sudo', '/usr/sbin/rabbitmqctl', 'list_vhosts'],
                     stdout=devnull
-                    )
+                )
                 if status != 0:
                     return False
 
@@ -70,7 +70,7 @@ def _ensure_rabbitmq_running():
                 max_wait=10,
                 timeout_message="Timeout expired while waiting for rabbitmq "
                 "to start"
-                )
+            )
 
 
 def _recreate_vhost(virtual_host):
@@ -83,7 +83,7 @@ def _recreate_vhost(virtual_host):
     """
     vhosts = subprocess.check_output(
         ['sudo', RABBITMQCTL, 'list_vhosts']
-        ).split('\n')
+    ).split('\n')
     assert vhosts[0] == 'Listing vhosts ...'
     assert vhosts[-2] == '...done.'
     assert vhosts[-1] == ''
@@ -91,7 +91,7 @@ def _recreate_vhost(virtual_host):
         if vhost == virtual_host:
             subprocess.check_call(
                 ['sudo', RABBITMQCTL, 'delete_vhost', virtual_host]
-                )
+            )
             break
     subprocess.check_call(['sudo', RABBITMQCTL, 'add_vhost', virtual_host])
 
@@ -112,7 +112,7 @@ def _recreate_user(username, password, virtual_host):
     """
     users = subprocess.check_output(
         ['sudo', RABBITMQCTL, 'list_users']
-        ).split('\n')
+    ).split('\n')
     assert users[0] == 'Listing users ...'
     assert users[-2] == '...done.'
     assert users[-1] == ''
@@ -121,11 +121,11 @@ def _recreate_user(username, password, virtual_host):
         if user == username:
             subprocess.check_call(
                 ['sudo', RABBITMQCTL, 'delete_user', username]
-                )
+            )
             break
     subprocess.check_call(
         ['sudo', RABBITMQCTL, 'add_user', username, password]
-        )
+    )
     subprocess.check_call(
         [
             'sudo', RABBITMQCTL, 'set_permissions',
@@ -134,7 +134,7 @@ def _recreate_user(username, password, virtual_host):
         ])
     subprocess.check_call(
         ['sudo', RABBITMQCTL, 'set_user_tags', username, 'administrator']
-        )
+    )
 
 
 def _ensure_rabbitmq_settings():
@@ -148,13 +148,13 @@ def _ensure_plex_running():
         status = subprocess.call(
             ['sudo', '/etc/init.d/plex', 'status'],
             stdout=devnull
-            )
+        )
 
         if status != 0:
             subprocess.check_call(
                 ['sudo', '/etc/init.d/plex', 'start'],
                 stdout=devnull
-                )
+            )
 
 
 def _install_plex_apps():
@@ -163,7 +163,7 @@ def _install_plex_apps():
         subprocess.check_call(
             ['sudo', 'rsync', '--recursive', './sspl_hl', '/opt/plex/apps/'],
             stdout=devnull
-            )
+        )
 
 
 def _disable_plex_auth():
@@ -175,7 +175,7 @@ def _disable_plex_auth():
     status = subprocess.call([
         'sudo', 'grep', '-q', 'enable_plex_authentication=yes',
         '/etc/plex.config'
-        ])
+    ])
     if status != 0:
         return
 
@@ -183,7 +183,7 @@ def _disable_plex_auth():
         'sudo', 'sed', '--in-place', '-e',
         's/enable_plex_authentication=yes/enable_plex_authentication=no/',
         '/etc/plex.config'
-        ])
+    ])
 
 
 def _restart_plex():
@@ -191,7 +191,7 @@ def _restart_plex():
         subprocess.check_call(
             ['sudo', '/etc/init.d/plex', 'restart'],
             stdout=devnull
-            )
+        )
 
 
 def _start_fake_halond():
@@ -204,8 +204,14 @@ def _start_fake_halond():
         raise RuntimeError("Error: fake_halond already running?")
 
     lettuce.world.fake_halond_process = subprocess.Popen(
-        ['./tests/fake_halond/fake_halond.py', '-p', '/tmp/fake_halond.pid']
-        )
+        [
+            './tests/fake_halond/fake_halond.py',
+            '-p',
+            '/tmp/fake_halond.pid',
+            '-c',
+            './tests/fake_halond/cmd_config.json',
+            '-r',
+            './tests/fake_halond/resp_config.json'])
 
     lettuce.world.wait_for_condition(
         status_func=lambda: os.path.exists('/tmp/fake_halond'),

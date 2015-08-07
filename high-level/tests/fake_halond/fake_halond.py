@@ -11,13 +11,22 @@ will be named 1.json, the second 2.json, the 10th 10.json.  The directory (and
 all files within it) will be deleted when the process exits.
 """
 
+# Standard
 import os.path
 import shutil
-import pika
 import argparse
 import signal
 import sys
-import json
+
+# Third party
+import pika
+
+# Local
+
+# pylint: disable=import-error
+from rabbit_mq_utils import (FakeHalondConsumer,
+                             HalonRequestHandler,
+                             FakeHalondPublisher)
 
 
 def _cleanup(cleanup_funcs):
@@ -27,145 +36,6 @@ def _cleanup(cleanup_funcs):
     sys.exit(1)
 
 
-class RabbitMQConfiguration(object):
-    # pylint: disable=too-few-public-methods, too-many-instance-attributes
-
-    """
-    Class to define Rabbit-MQ configuration parameters.
-    """
-
-    def __init__(self, config_file_path):
-        """
-        Initialize the object from a configuration file.
-
-        @param config_file_path: Absolute path to configuration JSON file.
-        @type config_file_path: str
-        """
-        self.host = 'localhost'
-        self.virtual_host = 'SSPL'
-        self.username = 'sspluser'
-        self.password = 'sspl4ever'
-        self.exchange = 'sspl_hl_cmd'
-        self.exchange_type = 'topic'
-        self.exchange_queue = 'sspl_hl_cmd'
-        self.routing_key = 'sspl_hl_cmd'
-        if config_file_path:
-            self.__dict__ = json.loads(open(config_file_path).read())
-
-
-class FakeHalondRMQ(object):
-    # pylint: disable=too-few-public-methods
-
-    """
-    Class to define the Halond Rabbit-MQ messaging.
-    """
-
-    def __init__(self, config_file_path):
-        """
-        Initialize the object from a configuration file.
-
-        @param config_file_path: Absolute path to configuration JSON file.
-        @type config_file_path: str
-        """
-        self.rabbit_mq_config = RabbitMQConfiguration(config_file_path)
-        self._connection = pika.BlockingConnection(
-            pika.ConnectionParameters(
-                host=self.rabbit_mq_config.host,
-                virtual_host=self.rabbit_mq_config.virtual_host,
-                credentials=pika.PlainCredentials(
-                    self.rabbit_mq_config.username,
-                    self.rabbit_mq_config.password)))
-        self._channel = self._connection.channel()
-        self._channel.exchange_declare(
-            exchange=self.rabbit_mq_config.exchange,
-            type=self.rabbit_mq_config.exchange_type,
-            durable=False)
-
-
-class FakeHalondConsumer(FakeHalondRMQ):
-    # pylint: disable=too-few-public-methods
-
-    """
-    Class to define the Halond Rabbit-MQ consumer.
-    """
-
-    def __init__(self, config_file_path, callback_function):
-        """
-        Initialize the object from a configuration file.
-
-        @param config_file_path: Absolute path to configuration JSON file.
-        @type config_file_path: str
-        """
-        super(FakeHalondConsumer, self).__init__(config_file_path)
-        self._channel.queue_declare(
-            queue=self.rabbit_mq_config.exchange_queue,
-            exclusive=True)
-        self._channel.queue_bind(
-            exchange=self.rabbit_mq_config.exchange,
-            queue=self.rabbit_mq_config.exchange_queue)
-        self._channel.basic_consume(
-            lambda ch, method, properties, body:
-            callback_function(body),
-            queue=self.rabbit_mq_config.exchange_queue,
-            no_ack=True
-        )
-
-    def start_consuming(self):
-        """
-        Start consuming the queue messages.
-        """
-        self._channel.start_consuming()
-
-
-class FakeHalondPublisher(FakeHalondRMQ):
-    # pylint: disable=too-few-public-methods
-
-    """
-    Class to define the Halond Rabbit-MQ publisher.
-    """
-
-    def __init__(self, config_file_path):
-        """
-        Initialize the object from a configuration file.
-
-        @param config_file_path: Absolute path to configuration JSON file.
-        @type config_file_path: str
-        """
-        super(FakeHalondPublisher, self).__init__(config_file_path)
-
-    def publish_message(self, message):
-        """
-        Publish the message to Halond Rabbit-MQ queue.
-
-        @param message: message to be published to queue.
-        @type message: str
-        """
-        self._channel.basic_publish(
-            exchange=self.rabbit_mq_config.exchange,
-            routing_key=self.rabbit_mq_config.routing_key,
-            body=json.dumps(message))
-
-
-class HalonRquestHandler(object):
-    # pylint: disable=too-few-public-methods
-
-    """
-    Class to define the Halond message request handler.
-    """
-
-    @staticmethod
-    def process_request(
-            body,
-            channel=None,
-            method=None,
-            properties=None,
-            fake_halond_publisher=None):
-        """
-        Process the message request received from the queue.
-        """
-        pass
-
-
 class FakeHalondOutputDirectory(object):
     # pylint: disable=too-few-public-methods
 
@@ -173,16 +43,17 @@ class FakeHalondOutputDirectory(object):
     (that would otherwise be processed by the real halond.)
     """
 
-    def __init__(self, directory, _cleanup_funcs):
+    def __init__(self, directory, _cleanup_funcs, publisher):
         # pylint: disable=unused-argument
         """ Creates the specified directory and prepares it for storage of fake
         halond messages.
 
-        @param directory          The name of the directory to be created, eg
+        @param directory:         The name of the directory to be created, eg
                                   '/tmp/fake_halond'.  The directory must not
                                   previously exist.  The directory (and it's
                                   contents) will be deleted when the program
                                   exits.
+        @param publisher:         Rabbit MQ publisher.
         """
         if os.path.exists(directory):
             raise RuntimeError(
@@ -191,6 +62,7 @@ class FakeHalondOutputDirectory(object):
             )
         self._directory = directory
         self._count = 0
+        self.publisher = publisher
         _cleanup_funcs += [self._remove_directory]
         os.mkdir(self._directory)
 
@@ -210,6 +82,9 @@ class FakeHalondOutputDirectory(object):
         filename = os.path.join(self._directory, "{}.json".format(self._count))
         with open(filename, 'w') as output:
             output.write(message)
+            response = HalonRequestHandler.process_request(message)
+            if response:
+                self.publisher.publish_message(message)
 
     def _remove_directory(self):
         """ Remove the registered directory.
@@ -237,22 +112,14 @@ def parse_arguments():
         help='pidfile location.  Defaults to /var/run/fake_halond.pid'
     )
     parser.add_argument(
-        '-H', '--host',
-        default='localhost',
-        help='Rabbitmq host to connect to.  (Defaults to "localhost" which is '
-        'almost certainly what you want.)'
+        '-c', '--cmdconfig',
+        help='Rabbitmq command request config file path'
+        'config file will have rabbit mq connection parameters)'
     )
     parser.add_argument(
-        '-e', '--exchange',
-        default='sspl_hl_cmd',
-        help='Rabbitmq exchange.  (Defaults to "sspl_hl_cmd" which is almost '
-        'certainly what you want.)'
-    )
-    parser.add_argument(
-        '-q', '--queue',
-        default='sspl_hl_cmd',
-        help='Rabbitmq queue.  (Defaults to "sspl_hl_cmd" which is almost '
-        'certainly what you want.)'
+        '-r', '--respconfig',
+        help='Rabbitmq message response config file path'
+        'config file will have rabbit mq connection parameters)'
     )
     return parser.parse_args()
 
@@ -334,15 +201,14 @@ def main():
     signal.signal(signal.SIGTERM, lambda x, y: _cleanup(_cleanup_funcs))
     args = parse_arguments()
     create_pidfile(args.pidfile, _cleanup_funcs)
-    fake_output_dir = FakeHalondOutputDirectory(args.directory, _cleanup_funcs)
-    # channel = rabbitmq_connect(
-    #    args.host, args.exchange, args.queue, fake_output_dir
-    # )
-    # channel.start_consuming()
 
-    # halond_request_handler = HalonRquestHandler()
+    publisher = FakeHalondPublisher(args.respconfig)
+    fake_output_dir = FakeHalondOutputDirectory(
+        args.directory,
+        _cleanup_funcs,
+        publisher)
     consumer = FakeHalondConsumer(
-        None,
+        args.cmdconfig,
         fake_output_dir.write_message_to_directory)
     consumer.start_consuming()
 
