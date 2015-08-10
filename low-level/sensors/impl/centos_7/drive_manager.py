@@ -200,7 +200,7 @@ class DriveManager(ScheduledModuleThread, InternalMsgQ):
 
         while not enclosures:
             logger.info("DriveManager sensor, no enclosures found: %s " % self._drive_mngr_base_dir)
-            logger.info("DriveManager sensor, rechecking in %s secs" % (int(self._start_delay)*2))
+            logger.info("DriveManager sensor, rechecking in %s secs" % (int(self._start_delay)*3))
 
             # Attempt to restart and initialize openhpi/gemhpi
             command = "systemctl restart openhpid"
@@ -210,7 +210,7 @@ class DriveManager(ScheduledModuleThread, InternalMsgQ):
             subprocess.Popen(command, shell=True, stdout=subprocess.PIPE,
                                        stderr=subprocess.PIPE)
 
-            time.sleep(int(self._start_delay)*2)
+            time.sleep(int(self._start_delay)*3)
             enclosures = os.listdir(self._drive_mngr_base_dir)
             for enclosure in enclosures:
                 if not os.path.isdir(os.path.join(self._drive_mngr_base_dir, enclosure)):
