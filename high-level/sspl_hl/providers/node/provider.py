@@ -5,9 +5,7 @@ PLEX data provider.
 from twisted.internet import reactor
 # PLEX
 from sspl_hl.utils.base_castor_provider import BaseCastorProvider
-from sspl_hl.utils.message_utils import NodeStatusRequest, \
-    NodeServiceRequest
-from sspl_hl.utils.message_utils import NodeStatusResponse
+from sspl_hl.utils.message_utils import NodeStatusRequest, NodeServiceRequest
 
 
 class NodeProvider(BaseCastorProvider):
@@ -16,7 +14,8 @@ class NodeProvider(BaseCastorProvider):
 
     def __init__(self, name, description):
         super(NodeProvider, self).__init__(name, description)
-        self.valid_arg_keys = ['target', 'command']
+        self.valid_arg_keys = ['target', 'command', 'debug']
+        self.no_of_arguments = 3
 
     @staticmethod
     def _generate_node_request_msg(target, command):
@@ -30,7 +29,7 @@ class NodeProvider(BaseCastorProvider):
         @rtype:                   json
         """
         message = None
-        if command in ['status', 'list']:
+        if command == 'status':
             message = NodeStatusRequest().get_request_message("node")
         else:
             message = NodeServiceRequest().get_request_message(command, target)
@@ -62,11 +61,13 @@ class NodeProvider(BaseCastorProvider):
 
         self._publish_message(message)
 
-        if selection_args['command'] in ['status', 'list']:
-            response = NodeStatusResponse().get_response_message('node')
-        else:
+        response = None
+        if selection_args['command'] == 'status':
             response = message
-
+        elif selection_args['debug'] == 'True':
+            response = message
+        else:
+            reactor.callFromThread(responder.reply_no_match)
         reactor.callFromThread(responder.reply, response)
 
 

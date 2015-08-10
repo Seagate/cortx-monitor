@@ -11,7 +11,6 @@ Feature: Node Request
         | nodespec| command |
         | node1   | stop    |
         | node1   | start   |
-        | node1   | list    |
         | node1   | status  |
 
     Scenario: Invalid command

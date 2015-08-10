@@ -15,3 +15,4 @@
 
 BL_HOST = 'localhost:8080'
 BL_SERVER_BASE_URL = 'http://%s/' % BL_HOST
+DEBUG = False

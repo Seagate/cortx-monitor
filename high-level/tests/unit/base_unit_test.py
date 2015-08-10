@@ -38,9 +38,9 @@ class BaseUnitTest(unittest.TestCase):
     def setUp(self):
         self._patch_ste_submit = mock.patch.object(
             SingleThreadExecutor, 'submit',
-
+            # pylint: disable=star-args, bad-option-value
             side_effect=lambda fn, *args, **kwargs:
-            fn(*args, **kwargs)  # pylint: disable=star-args
+            fn(*args, **kwargs)
         )
         self._patch_ste_submit.start()
 
@@ -85,11 +85,9 @@ class BaseUnitTest(unittest.TestCase):
         """
         with mock.patch('uuid.uuid4', return_value='uuid_goes_here'), \
                 mock.patch('pika.BlockingConnection') as patch:
-
             # pylint: disable=protected-access,star-args
             expected = json.dumps(msg_gen_method(**msg_gen_method_args))
             # pylint: enable=protected-access
-
             self._query_provider(args=selection_args, provider=provider)
 
         patch().channel().basic_publish.assert_called_with(

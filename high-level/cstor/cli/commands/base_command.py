@@ -48,9 +48,11 @@ class BaseCommand(object):
             BL_HOST,
             self.get_provider_base_url(),
             self.get_action_params())
-
-        action_response = urllib.urlopen(url=url).read()
-        print json.dumps(json.loads(action_response), indent=2)
+        response = urllib.urlopen(url=url).read()
+        try:
+            return json.dumps(json.loads(response), indent=2)
+        except ValueError:
+            raise ValueError("Could not load the response in json object")
 
     def get_provider_base_url(self):
         """ Abstract method to get the base url for

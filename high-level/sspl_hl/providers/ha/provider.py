@@ -22,6 +22,7 @@ class HaProvider(BaseCastorProvider):
         self._frontier_node_ip = None
         self._frontier_port = None
         self.frontier_service_url = None
+        self.no_of_arguments = 2
 
     def on_create(self):
         self._frontier_node_ip = '127.0.0.1'

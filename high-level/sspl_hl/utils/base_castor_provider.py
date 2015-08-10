@@ -29,7 +29,7 @@ class BaseCastorProvider(DataStoreProvider):
                                'list',
                                'status']
         self.valid_subcommands = []
-        self.no_of_arguments = 2
+        self.no_of_arguments = 1
         self.valid_arg_keys = []
 
     # pylint: disable=too-many-arguments

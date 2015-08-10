@@ -29,8 +29,10 @@ def main():
     """
 
     command_obj = Factory.get_subcmd()
-    command_obj.execute_action()
-
+    try:
+        print command_obj.execute_action()
+    except ValueError as extra_info:
+        print "some error occurred. Details: {}".format(str(extra_info))
 
 if __name__ == '__main__':
     main()

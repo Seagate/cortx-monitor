@@ -20,6 +20,7 @@ class ServiceProvider(BaseCastorProvider):
     def __init__(self, name, description):
         super(ServiceProvider, self).__init__(name, description)
         self.valid_arg_keys = ['serviceName', 'command']
+        self.no_of_arguments = 2
 
     @staticmethod
     def _generate_service_request_msg(

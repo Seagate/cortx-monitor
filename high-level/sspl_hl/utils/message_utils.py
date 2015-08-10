@@ -42,8 +42,8 @@ class Message(object):
     """
     MESSAGE_ID_KEY = "messageId"
 
-    def __init__(self, message_id=get_uuid_in_str()):
-        self.message_id = message_id
+    def __init__(self, message_id=None):
+        self.message_id = message_id or get_uuid_in_str()
 
     def to_dict(self):
         """
