@@ -84,7 +84,7 @@ class DriveManager(ScheduledModuleThread, InternalMsgQ):
 
         # Retrieve the current information about each drive from the file system
         self._init_drive_status()
-        
+
         self._set_debug(True)
         self._set_debug_persist(True)
 
@@ -104,10 +104,10 @@ class DriveManager(ScheduledModuleThread, InternalMsgQ):
             # main config method: mask is what we want to look for
             #                     rec=True, recursive thru all sub-directories
             #                     auto_add=True, automatically watch new directories
-            wm.add_watch(self._drive_mngr_base_dir, mask, rec=True, auto_add=True)                   
+            wm.add_watch(self._drive_mngr_base_dir, mask, rec=True, auto_add=True)
 
-            # Loop forever blocking on this thread, monitoring file system 
-            #  and firing events to InotifyEventHandler: process_IN_CREATE(), process_IN_DELETE()            
+            # Loop forever blocking on this thread, monitoring file system
+            #  and firing events to InotifyEventHandler: process_IN_CREATE(), process_IN_DELETE()
             self._blocking_notifier.loop()
 
         except Exception as ae:
@@ -129,13 +129,21 @@ class DriveManager(ScheduledModuleThread, InternalMsgQ):
     def _init_drive_status(self):
         # Allow time for the drivemanager to come up and populate the directory
         time.sleep(5)
-         
+
+        # Wait for the base directory to be created by drivemanager or dcs-collector
         while not os.path.isdir(self._drive_mngr_base_dir):
             logger.info("DriveManager sensor, dir not found: %s " % self._drive_mngr_base_dir)
             logger.info("DriveManager sensor, rechecking in %s secs" % self._start_delay)
             time.sleep(int(self._start_delay))
 
+        # Wait for the base directory to be populated by dcs-collector
         enclosures = os.listdir(self._drive_mngr_base_dir)
+        while not enclosures:
+            logger.info("DriveManager sensor, no enclosures found: %s " % self._drive_mngr_base_dir)
+            logger.info("DriveManager sensor, rechecking in %s secs" % self._start_delay)
+            time.sleep(int(self._start_delay))
+            enclosures = os.listdir(self._drive_mngr_base_dir)
+
         for enclosure in enclosures:
             disk_dir = os.path.join(self._drive_mngr_base_dir, enclosure, "disk")
 
@@ -154,10 +162,10 @@ class DriveManager(ScheduledModuleThread, InternalMsgQ):
                     continue
                 try:
                     with open(status_file, "r") as datafile:
-                        status = datafile.read().replace('\n', '')                
+                        status = datafile.read().replace('\n', '')
 
                     # Read in the reason file if it's present
-                    reason_file = os.path.join(pathname, "reason")                    
+                    reason_file = os.path.join(pathname, "reason")
                     if os.path.isfile(reason_file):
                         with open(reason_file, "r") as datafile:
                             reason = datafile.read().replace('\n', '')
@@ -166,14 +174,14 @@ class DriveManager(ScheduledModuleThread, InternalMsgQ):
                     else:
                         self._drive_status[pathname] = status
 
-                    logger.info("DriveManager, pathname: %s, status: %s" % 
+                    logger.info("DriveManager, pathname: %s, status: %s" %
                                (pathname, self._drive_status[pathname]))
 
                     # Remove base dcs dir since it contains no relevant data
                     data_str = status_file[len(self._drive_mngr_base_dir)+1:]
 
                     # Send a message to the disk manager handler to create and transmit json msg
-                    internal_json_msg = json.dumps( 
+                    internal_json_msg = json.dumps(
                         {"sensor_response_type" : "disk_status_drivemanager",
                          "event_path" : data_str,
                          "status" : status
@@ -233,7 +241,7 @@ class DriveManager(ScheduledModuleThread, InternalMsgQ):
         data_str = status_file[len(self._drive_mngr_base_dir)+1:]
 
         # Send a message to the disk manager handler to create and transmit json msg
-        internal_json_msg = json.dumps( 
+        internal_json_msg = json.dumps(
             {"sensor_response_type" : "disk_status_drivemanager",
                 "event_path" : data_str,
                 "status" : status
@@ -263,7 +271,7 @@ class DriveManager(ScheduledModuleThread, InternalMsgQ):
                     _parent._notify_DiskMsgHandler(status_file)
 
             def _validate_event_path(self, event_path):
-                """Returns true if the event path is valid for a status file"""                
+                """Returns true if the event path is valid for a status file"""
 
                  # Validate the event path; must have disk and be a status and not be a swap file
                 if "disk" not in event_path or \
@@ -286,8 +294,8 @@ class DriveManager(ScheduledModuleThread, InternalMsgQ):
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""
         super(DriveManager, self).shutdown()
-        try:            
-            self._log_debug("DriveManager, shutdown: removing pid:%s" % self._drive_mngr_pid)     
+        try:
+            self._log_debug("DriveManager, shutdown: removing pid:%s" % self._drive_mngr_pid)
             if os.path.isfile(self._drive_mngr_pid):
                 os.remove(self._drive_mngr_pid)
             self._blocking_notifier.stop()

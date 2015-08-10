@@ -281,6 +281,8 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
             # Update the state in the global dict for later use
             self._log_debug("_on_prop_changed, service state change detected notifying ServiceMsgHandler.")
             previous_service_status = self._service_status.get(str(unit_name), "").split(":")[0]
+            if not previous_service_status:
+                previous_service_status = "inactive"
             self._service_status[str(unit_name)] = str(state) + ":" + str(substate)
 
         # Only send out a json msg if there was a state or substate change for the service
