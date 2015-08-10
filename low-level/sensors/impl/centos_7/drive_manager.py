@@ -19,6 +19,7 @@ import json
 import shutil
 import Queue
 import time
+import subprocess
 import pyinotify
 
 from framework.base.module_thread import ScheduledModuleThread
@@ -130,20 +131,10 @@ class DriveManager(ScheduledModuleThread, InternalMsgQ):
         # Allow time for the drivemanager to come up and populate the directory
         time.sleep(5)
 
-        # Wait for the base directory to be created by drivemanager or dcs-collector
-        while not os.path.isdir(self._drive_mngr_base_dir):
-            logger.info("DriveManager sensor, dir not found: %s " % self._drive_mngr_base_dir)
-            logger.info("DriveManager sensor, rechecking in %s secs" % self._start_delay)
-            time.sleep(int(self._start_delay))
+        # Ensure there are enclosures present
+        self._validate_drive_manager_dir()
 
-        # Wait for the base directory to be populated by dcs-collector
         enclosures = os.listdir(self._drive_mngr_base_dir)
-        while not enclosures:
-            logger.info("DriveManager sensor, no enclosures found: %s " % self._drive_mngr_base_dir)
-            logger.info("DriveManager sensor, rechecking in %s secs" % self._start_delay)
-            time.sleep(int(self._start_delay))
-            enclosures = os.listdir(self._drive_mngr_base_dir)
-
         for enclosure in enclosures:
             disk_dir = os.path.join(self._drive_mngr_base_dir, enclosure, "disk")
 
@@ -194,6 +185,36 @@ class DriveManager(ScheduledModuleThread, InternalMsgQ):
                     logger.info("DriveManager, _init_drive_status, exception: %s" % e)
 
             logger.info("DriveManager, initialization completed successfully")
+
+    def _validate_drive_manager_dir(self):
+        """Loops until the base dir is populated with enclosures by dcs-collector"""
+        while not os.path.isdir(self._drive_mngr_base_dir):
+            logger.info("DriveManager sensor, dir not found: %s " % self._drive_mngr_base_dir)
+            logger.info("DriveManager sensor, rechecking in %s secs" % self._start_delay)
+            time.sleep(int(self._start_delay))
+
+        enclosures = os.listdir(self._drive_mngr_base_dir)
+        for enclosure in enclosures:
+            if not os.path.isdir(os.path.join(self._drive_mngr_base_dir, enclosure)):
+                enclosures.remove(enclosure)
+
+        while not enclosures:
+            logger.info("DriveManager sensor, no enclosures found: %s " % self._drive_mngr_base_dir)
+            logger.info("DriveManager sensor, rechecking in %s secs" % (int(self._start_delay)*2))
+
+            # Attempt to restart and initialize openhpi/gemhpi
+            command = "systemctl restart openhpid"
+            subprocess.Popen(command, shell=True, stdout=subprocess.PIPE,
+                                       stderr=subprocess.PIPE)
+            command = "/opt/seagate/sspl/low-level/framework/init_gemhpi"
+            subprocess.Popen(command, shell=True, stdout=subprocess.PIPE,
+                                       stderr=subprocess.PIPE)
+
+            time.sleep(int(self._start_delay)*2)
+            enclosures = os.listdir(self._drive_mngr_base_dir)
+            for enclosure in enclosures:
+                if not os.path.isdir(os.path.join(self._drive_mngr_base_dir, enclosure)):
+                    enclosures.remove(enclosure)
 
     def _getDrive_Mngr_Dir(self):
         """Retrieves the drivemanager path to monitor on the file system"""
