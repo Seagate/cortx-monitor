@@ -204,11 +204,14 @@ class DriveManager(ScheduledModuleThread, InternalMsgQ):
 
             # Attempt to restart and initialize openhpi/gemhpi
             command = "systemctl restart openhpid"
-            subprocess.Popen(command, shell=True, stdout=subprocess.PIPE,
+            process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE,
                                        stderr=subprocess.PIPE)
             command = "/opt/seagate/sspl/low-level/framework/init_gemhpi"
-            subprocess.Popen(command, shell=True, stdout=subprocess.PIPE,
+            process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE,
                                        stderr=subprocess.PIPE)
+            response, error = process.communicate()
+            self._log_debug("DriveManager sensor, initializing gem, result: %s, error: %s" % 
+                        (response, error))
 
             time.sleep(int(self._start_delay)*3)
             enclosures = os.listdir(self._drive_mngr_base_dir)
