@@ -99,5 +99,5 @@ class BaseCastorProvider(DataStoreProvider):
             return(
                 "Error: Invalid request: Extra parameter '{extra}' detected"
                 .format(extra=selection_args.keys()[0])
-                )
+            )
         return None

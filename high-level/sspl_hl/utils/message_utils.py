@@ -415,27 +415,10 @@ class ServiceListResponse(ListResponse):
        Service list message response.
     2. In future we can externalize these keys to configuration file.
     """
-    NO_OF_SERVICES = 4
+    NO_OF_SERVICES = 2
     SERVICE_NAMES = [
-        'crond',
-        'plex',
         'halon',
-        'docker'
-    ]
-    LOAD_STATUS = [
-        "loaded",
-        "failed"
-    ]
-    ACTIVE_STATUS = [
-        "active",
-        "failed"
-    ]
-    SUB_STATUS = [
-        "waiting",
-        "mounted",
-        "running",
-        "plugged",
-        "exited"
+        'mero'
     ]
 
     def __init__(self):
@@ -450,26 +433,12 @@ class ServiceListResponse(ListResponse):
         @rtype: list
         """
         items = []
-        for item_name in range(1, ServiceListResponse.NO_OF_SERVICES):
+        for item_name in ServiceListResponse.SERVICE_NAMES:
             item = {
-                ListResponse.SERVICE_NAME_KEY: random.choice(
-                    ServiceListResponse.SERVICE_NAMES),
-                ListResponse.PID_KEY: random.randint(
-                    1,
-                    9),
-                ListResponse.SERVICE_DESCRIPTION_KEY: "some description{}"
-                                                      .format(item_name),
-                ListResponse.LOAD_KEY: random.choice(
-                    ServiceListResponse.LOAD_STATUS),
-                ListResponse.ACTIVE_KEY: random.choice(
-                    ServiceListResponse.ACTIVE_STATUS),
-                ListResponse.SUB_KEY: random.choice(
-                    ServiceListResponse.SUB_STATUS),
-                ListResponse.ENTITY_NAME_KEY: random.choice(
-                    ['c{}'.format(item_name), 'n{}'.format(item_name)]),
-                ListResponse.ENTITY_TYPE_KEY: random.choice(
-                    ['cluster', 'node']),
-                ListResponse.ENTITY_ID_KEY: get_uuid_in_str()
+                ListResponse.SERVICE_NAME_KEY: item_name,
+                ListResponse.PID_KEY: random.randint(1, 3),
+                ListResponse.SERVICE_DESCRIPTION_KEY:
+                "some description for {} service".format(item_name)
                 }
             items.append(item)
         return items

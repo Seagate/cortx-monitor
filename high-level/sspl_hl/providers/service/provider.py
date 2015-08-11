@@ -2,13 +2,12 @@
 PLEX data provider for service implementation.
 """
 # Third party
-from twisted.internet import reactor
 import json
 import datetime
 import uuid
-# PLEX
-# Local
+from twisted.internet import reactor
 
+# Local
 from sspl_hl.utils.base_castor_provider import BaseCastorProvider
 from sspl_hl.utils.message_utils import ServiceListResponse
 
@@ -19,8 +18,8 @@ class ServiceProvider(BaseCastorProvider):
 
     def __init__(self, name, description):
         super(ServiceProvider, self).__init__(name, description)
-        self.valid_arg_keys = ['serviceName', 'command']
-        self.no_of_arguments = 2
+        self.no_of_arguments = 3
+        self.valid_arg_keys = ['serviceName', 'command', 'debug']
 
     @staticmethod
     def _generate_service_request_msg(
@@ -84,20 +83,23 @@ class ServiceProvider(BaseCastorProvider):
             reactor.callFromThread(responder.reply_exception, result)
             return
 
-        if selection_args['command'] in ['list', 'status']:
+        message = None
+        if selection_args['command'] in ['list']:
             list_response = ServiceListResponse()
-            service_list = list_response.get_response_message()
-            reactor.callFromThread(responder.reply, data=[service_list])
+            message = list_response.get_response_message()
         else:
             message = self._generate_service_request_msg(
                 service_name=selection_args['serviceName'],
-                command=selection_args['command'],
+                command=selection_args['command']
                 )
 
             self._publish_message(message)
 
+        if message and selection_args['debug'] == 'True' \
+                or selection_args['command'] in ['list']:
+            reactor.callFromThread(responder.reply, data=[message])
+        else:
             reactor.callFromThread(responder.reply_no_match)
-
 
 # pylint: disable=invalid-name
 provider = ServiceProvider("service", "Service Management Provider")

@@ -15,7 +15,6 @@ Feature: Service Request
         | crond   | enable  |
         | crond   | disable |
 
-
     Scenario: Invalid command
         When I run "python ./cstor/cli/main.py service invalid_command crond"
         Then the exit code is "2"
