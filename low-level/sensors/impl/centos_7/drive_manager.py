@@ -199,25 +199,27 @@ class DriveManager(ScheduledModuleThread, InternalMsgQ):
                 enclosures.remove(enclosure)
 
         while not enclosures:
-            logger.info("DriveManager sensor, no enclosures found: %s " % self._drive_mngr_base_dir)
-            logger.info("DriveManager sensor, rechecking in %s secs" % (int(self._start_delay)*3))
+           logger.info("DriveManager sensor, no enclosures found: %s " % self._drive_mngr_base_dir)
+           logger.info("DriveManager sensor, rechecking in %s secs" % (int(self._start_delay)*3))
 
-            # Attempt to restart and initialize openhpi/gemhpi
-            command = "systemctl restart openhpid"
-            process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE,
+           # Attempt to restart and initialize openhpi/gemhpi
+           command = "systemctl restart openhpid"
+           process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE,
                                        stderr=subprocess.PIPE)
-            command = "/opt/seagate/sspl/low-level/framework/init_gemhpi"
-            process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE,
-                                       stderr=subprocess.PIPE)
-            response, error = process.communicate()
-            self._log_debug("DriveManager sensor, initializing gem, result: %s, error: %s" % 
-                        (response, error))
+           time.sleep(int(self._start_delay))
 
-            time.sleep(int(self._start_delay)*3)
-            enclosures = os.listdir(self._drive_mngr_base_dir)
-            for enclosure in enclosures:
-                if not os.path.isdir(os.path.join(self._drive_mngr_base_dir, enclosure)):
-                    enclosures.remove(enclosure)
+           command = "sudo /opt/seagate/sspl/low-level/framework/init_gemhpi"
+           process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE,
+                                       stderr=subprocess.PIPE)
+           response, error = process.communicate()
+           logger.info("DriveManager sensor, initializing gem, result: %s, error: %s" %
+                       (response, error))
+
+           time.sleep(int(self._start_delay)*2)
+           enclosures = os.listdir(self._drive_mngr_base_dir)
+           for enclosure in enclosures:
+               if not os.path.isdir(os.path.join(self._drive_mngr_base_dir, enclosure)):
+                   enclosures.remove(enclosure)
 
     def _getDrive_Mngr_Dir(self):
         """Retrieves the drivemanager path to monitor on the file system"""
