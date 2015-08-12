@@ -1,11 +1,10 @@
 """
 PLEX data provider for Halon resource graph for ha.
 """
-# Third party
+import socket
 from twisted.internet import reactor
-
+# Third party
 # Local
-from sspl_hl.utils.message_utils import HaResourceGraphResponse
 from sspl_hl.utils.base_castor_provider import BaseCastorProvider
 
 
@@ -13,43 +12,39 @@ class HaProvider(BaseCastorProvider):
     # pylint: disable=too-many-ancestors,too-many-public-methods
 
     """ Used to set state of ha on the cluster. """
+    RG_COMMAND = "graph\r\n"
+    RG_QUIT_CMD = "quit\r\n"
+    READ_BYTE_SIZE = 4096
 
     def __init__(self, name, description):
         super(HaProvider, self).__init__(name, description)
         self.valid_commands = ['info', 'debug']
         self.valid_subcommands = ['show', 'status']
         self.valid_arg_keys = ['command', 'subcommand']
-        self._frontier_node_ip = None
-        self._frontier_port = None
-        self.frontier_service_url = None
         self.no_of_arguments = 2
-
-    def on_create(self):
         self._frontier_node_ip = '127.0.0.1'
-        self._frontier_port = '9028'
-        self.frontier_service_url = 'http://{}:{}'.format(
-            self._frontier_node_ip,
-            self._frontier_port)
-        self._single_thread_executor.submit(self._on_create)
+        self._frontier_port = 9008
+        self._conn = None
 
-    def _on_create(self):
-        """ Implement this method to initialize the HaProvider. """
-        if not self._is_frontier_service_running():
-            self._start_frontier_service()
+    def _connect_frontier_service(self):
+        """Connects to frontier service
+        """
+        self._conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self._conn.connect((self._frontier_node_ip, self._frontier_port))
 
-    @staticmethod
-    def _is_frontier_service_running():
+    def _receive_data(self):
+        """ Receive Data from frontier service
         """
-        Check if frontier service is running on satellite or Halon node
-        """
-        return True
-
-    @staticmethod
-    def _start_frontier_service():
-        """
-        Start the frontier service on given satellite or Halon node
-        """
-        pass
+        self._conn.sendall(self.RG_COMMAND)
+        resource_graph = ""
+        while 1:
+            response = self._conn.recv(self.READ_BYTE_SIZE)
+            if not len(response) > 0:
+                break
+            resource_graph += response
+        self._conn.sendall(self.RG_QUIT_CMD)
+        self._conn.close()
+        return resource_graph
 
     def _query(self, selection_args, responder):
         """ Get the resource graph ha on the cluster.
@@ -60,41 +55,25 @@ class HaProvider(BaseCastorProvider):
         """
         result = super(HaProvider, self)._query(selection_args, responder)
         if result:
-            reactor.callFromThread(responder.reply_exception(result))
+            reactor.callFromThread(responder.reply_exception, result)
             return
-        halon_response = self._get_mocked_ha_resource_graph()
-        reactor.callFromThread(responder.reply(data=[halon_response]))
-
-    @staticmethod
-    def _get_mocked_ha_resource_graph():
-        """
-        Get the mocked Halon resource graph for ha
-
-        @return: return mocked Halon resource graph for ha
-        @rtype: dict
-        """
-        rg_response = HaResourceGraphResponse()
-        return rg_response.get_response_message()
-
-    def _get_ha_resource_graph(self, responder):
-        """
-        Get the Halon resource graph for ha from frontier service
-
-        @return: return Halon resource graph for ha
-        @rtype: dict
-
         try:
-            rg_response = urllib.urlopen(self.frontier_service_url).read()
-            # may need to do some parsing of data and conversion to dict
-            return rg_response
+            halon_response = self.get_ha_resource_graph()
+            reactor.callFromThread(responder.reply, data=[halon_response])
         # pylint: disable=broad-except
         except Exception as err:
-            reactor.callFromThread(
-                responder.reply_exception(
-                    "Error: Unable to get resource graph information:{}"
-                    .format(err)))
+            reactor.callFromThread(responder.reply_exception, "Error: \
+Unable to get resource graph information:{}".format(err))
+
+    def get_ha_resource_graph(self):
         """
+        Get response from frontier service
+        """
+        self._connect_frontier_service()
+        data = self._receive_data()
+        self._conn.close()
+        return data
 
 # pylint: disable=invalid-name
-provider = HaProvider("ha", "Ha Management Provider")
+provider = HaProvider("Ha", "Ha Management Provider")
 # pylint: enable=invalid-name

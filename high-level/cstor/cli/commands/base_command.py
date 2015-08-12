@@ -20,7 +20,6 @@ sub commands supported by cstor
 import urllib
 import abc
 import json
-
 # Import local Modules
 
 from cstor.cli.settings import BL_HOST, BL_SERVER_BASE_URL

@@ -11,7 +11,6 @@ at:
 	PYTHONPATH=.:tests lettuce --failfast ./tests/acceptance/node_request.feature
 	PYTHONPATH=.:tests lettuce --failfast ./tests/acceptance/service_request.feature
 
-
 ut:
 	PYTHONPATH=.:tests python tests/unit/sspl_hl_provider_service.py
 	PYTHONPATH=.:tests python tests/unit/sspl_hl_provider_node.py

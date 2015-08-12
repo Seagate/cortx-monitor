@@ -1,7 +1,10 @@
-"""Unit tests for sspl_hl.providers.ha.provider"""
+"""Unit tests for sspl_hl.providers.ha.provider.HaProvider"""
 
 import unittest
 import mock
+import socket
+import subprocess
+import time
 from sspl_hl.providers.ha.provider import HaProvider
 from base_unit_test import BaseUnitTest
 # pylint: disable=too-many-public-methods
@@ -12,109 +15,185 @@ class SsplHlProviderHa(BaseUnitTest):
         sspl_hl.providers.ha.provider.HaProvider object.
     """
 
+    @classmethod
+    def setUpClass(cls):
+        cls.fsproc = None
+        if not cls._verify_frontier_running():
+            cls.fsproc = cls._start_fake_frontier()
+
+    @classmethod
+    def tearDownClass(cls):
+        if cls.fsproc is not None:
+            cls._stop_frontier(cls.fsproc)
+
     @staticmethod
-    def _query_provider(args, responder=mock.MagicMock(),
+    def _query_provider(args,
+                        responder=mock.MagicMock(),
                         provider=None):
         super(SsplHlProviderHa, SsplHlProviderHa)._query_provider(
             args,
             responder,
             HaProvider('Ha', ''))
-        response_data = {
-            'Called Status': responder.reply.called,
-            'Response Data': responder.reply.call_args
-        }
-        return response_data
 
     @classmethod
     def _unpack_response_data(cls, res_data):
-        if res_data['Response Data'] is not None:
-            # pylint: disable=unused-variable
-            (rd_args, rd_kwargs) = res_data['Response Data']
-            data = rd_kwargs['data'][0]
-            if 'message' in data:
-                if 'statusResponse' in data['message']:
-                    msg = data['message']
-                    if 'items' in msg['statusResponse']:
-                        msg_res = msg['statusResponse']
-                        if msg_res['items']:
-                            return len(msg_res['items'])
+        if res_data is not None:
+            if res_data['Response Data'] is not None:
+                # pylint: disable=unused-variable
+                rd_args = res_data['Response Data'][1]
+                if 'data' in rd_args:
+                    data = rd_args['data'][0]
+                    if 'label' in data:
+                        return 1
         return 0
+
+    @staticmethod
+    def _verify_frontier_running():
+        try:
+            conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            conn.connect(('127.0.0.1', 9008))
+            conn.close()
+            return True
+        except socket.error:
+            return False
+
+    @staticmethod
+    def _start_fake_frontier():
+        proc = subprocess.Popen(
+            ['./tests/fake_halond/frontier.py',
+             '-p',
+             '/tmp/frontier.pid']
+        )
+
+        # wait for frontier service to become available
+        timeout = 5
+        poll_interval = 0.1
+        while not SsplHlProviderHa._verify_frontier_running():
+            time.sleep(poll_interval)
+            timeout -= poll_interval
+            if timeout < 0:
+                raise RuntimeError("Unable to start fake frontier service")
+
+        return proc
+
+    @staticmethod
+    def _stop_frontier(proc):
+        proc.terminate()
 
     def _test_ha_query(self, command, subcommand):
 
-        res = self._query_provider(
+        self._query_provider(
             args={'command': command, 'subcommand': subcommand, 'action': 'ha'}
             )
-        return res
 
-    def test_ha_debug_show(self):
+    @mock.patch('pika.BlockingConnection')
+    @mock.patch('twisted.internet.reactor.callFromThread')
+    def test_ha_debug_show(self, cft_patch, conn_patch):
         """ Ensures cstor ha debug show command execution.
         """
-        test_result_data = self._test_ha_query('debug', 'show')
-        test_result_data['Test Name'] = "Test for 'cstor ha debug show' cmnd"
-        self.assertTrue(test_result_data['Called Status'])
-        nodes = SsplHlProviderHa._unpack_response_data(test_result_data)
-        self.assertEqual(nodes, 2)
+        result = {}
+        nodes_avlb = None
+        self._test_ha_query('debug', 'show')
+        result['Called Status'] = cft_patch.called
+        result['Response Data'] = cft_patch.call_args
+        nodes_avlb = self._unpack_response_data(result)
+        if result is not None:
+            self.assertTrue(result['Called Status'])
+        self.assertEqual(nodes_avlb, 1)
+        self.assertFalse(conn_patch().channel().basic_publish.called)
 
-    def test_ha_debug_status(self):
-        """ Ensures cstor ha debug show command execution.
+    @mock.patch('pika.BlockingConnection')
+    @mock.patch('twisted.internet.reactor.callFromThread')
+    def test_ha_debug_status(self, cft_patch, conn_patch):
+        """ Ensures cstor ha debug status command execution.
         """
-        test_result_data = self._test_ha_query('debug', 'status')
-        test_result_data['Test Name'] = "Test for 'cstor ha debug status' cmnd"
-        self.assertTrue(test_result_data['Called Status'])
-        nodes = SsplHlProviderHa._unpack_response_data(test_result_data)
-        self.assertEqual(nodes, 2)
+        result = {}
+        nodes_avlb = None
+        self._test_ha_query('debug', 'status')
+        result['Called Status'] = cft_patch.called
+        result['Response Data'] = cft_patch.call_args
+        nodes_avlb = self._unpack_response_data(result)
+        if result is not None:
+            self.assertTrue(result['Called Status'])
+        self.assertEqual(nodes_avlb, 1)
+        self.assertFalse(conn_patch().channel().basic_publish.called)
 
-    def test_ha_info_show(self):
+    @mock.patch('pika.BlockingConnection')
+    @mock.patch('twisted.internet.reactor.callFromThread')
+    def test_ha_info_show(self, cft_patch, conn_patch):
         """ Ensures cstor ha info show command execution.
         """
-        test_result_data = self._test_ha_query('info', 'show')
-        test_result_data['Test Name'] = "Test for 'cstor ha info show' cmnd"
-        self.assertTrue(test_result_data['Called Status'])
-        nodes = SsplHlProviderHa._unpack_response_data(test_result_data)
-        self.assertEqual(nodes, 2)
+        result = {}
+        nodes_avlb = None
+        self._test_ha_query('info', 'show')
+        result['Called Status'] = cft_patch.called
+        result['Response Data'] = cft_patch.call_args
+        nodes_avlb = self._unpack_response_data(result)
+        if result is not None:
+            self.assertTrue(result['Called Status'])
+        self.assertEqual(nodes_avlb, 1)
+        self.assertFalse(conn_patch().channel().basic_publish.called)
 
-    def test_ha_info_status(self):
-        """ Ensures cstor ha debug show command execution.
+    @mock.patch('pika.BlockingConnection')
+    @mock.patch('twisted.internet.reactor.callFromThread')
+    def test_ha_info_status(self, cft_patch, conn_patch):
+        """ Ensures cstor ha info status command execution.
         """
-        test_result_data = self._test_ha_query('info', 'status')
-        test_result_data['Test Name'] = "Test for 'cstor ha info status' cmnd"
-        self.assertTrue(test_result_data['Called Status'])
-        nodes = SsplHlProviderHa._unpack_response_data(test_result_data)
-        self.assertEqual(nodes, 2)
+        result = {}
+        nodes_avlb = None
+        self._test_ha_query('info', 'status')
+        result['Called Status'] = cft_patch.called
+        result['Response Data'] = cft_patch.call_args
+        nodes_avlb = self._unpack_response_data(result)
+        if result is not None:
+            self.assertTrue(result['Called Status'])
+        self.assertEqual(nodes_avlb, 1)
+        self.assertFalse(conn_patch().channel().basic_publish.called)
 
-    def test_bad_command(self):
+    @mock.patch('pika.BlockingConnection')
+    @mock.patch('twisted.internet.reactor.callFromThread')
+    def test_bad_command(self, cft_patch, conn_patch):
         """ Ensure sending a bad command results in an http error code.
 
         The cli should prevent this from happening, so this is just to cover
         the case of the user bypassing the cli and accessing the data provider
         directly.
         """
-        test_result_data = self._query_provider(
-            args={'command': 'invalid_command'},
+        result = {}
+        nodes_avlb = None
+        self._query_provider(
+            args={
+                'command': 'invalid_command'
+                },
             )
-        self.assertFalse(test_result_data['Called Status'])
-        nodes = SsplHlProviderHa._unpack_response_data(test_result_data)
-        self.assertEqual(nodes, 0)
+        result['Response Data'] = cft_patch.call_args
+        nodes_avlb = self._unpack_response_data(result)
+        self.assertEqual(nodes_avlb, 0)
+        self.assertFalse(conn_patch().channel().basic_publish.called)
 
-    def test_extra_params(self):
-        """ Ensure sending extra query params results in an http error code.
+    @mock.patch('pika.BlockingConnection')
+    @mock.patch('twisted.internet.reactor.callFromThread')
+    def test_extra_params(self, cft_patch, conn_patch):
+        """ Ensure extra query params results in an http error code.
 
         The cli should prevent this from happening, so this is just to cover
-        the case of the user bypassing the cli and accessing the data provider
+        thng the cli and accessing the data provider
         directly.
         """
-        test_result_data = self._query_provider(
+        result = {}
+        nodes_avlb = None
+        self._query_provider(
             args={
                 'command': 'debug',
                 'subcommand': 'info',
                 'action': 'ha',
                 'extraargs': 'blah'
                 },
-            )
-        self.assertFalse(test_result_data['Called Status'])
-        nodes = SsplHlProviderHa._unpack_response_data(test_result_data)
-        self.assertEqual(nodes, 0)
+        )
+        result['Response Data'] = cft_patch.call_args
+        nodes_avlb = self._unpack_response_data(result)
+        self.assertEqual(nodes_avlb, 0)
+        self.assertFalse(conn_patch().channel().basic_publish.called)
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest.main(verbosity=2)

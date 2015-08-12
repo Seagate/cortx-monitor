@@ -23,7 +23,7 @@ class FrontierService(object):
     BACKLOG = 5  # No of requests to hold in queue
     COMMAND_TO_CHECK = "GRAPH"
     DEFAULT_PID_FILE = "/tmp/frontier.pid"
-    RESPONSE_FILE = "frontier_response.txt"
+    RESPONSE_FILE = "./tests/fake_halond/frontier_response.txt"
 
     def __init__(self, pid_file=None):
         self._log = self._setup_logging()
