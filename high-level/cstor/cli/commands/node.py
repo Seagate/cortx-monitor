@@ -14,11 +14,16 @@
 # authorized in writing by Seagate Technology LLC is prohibited.
 # All rights are expressly reserved by Seagate Technology LLC.
 
-# Import Local Modules
+# Third Party
+import json
+import time
 
+# Import Local Modules
 from cstor.cli.commands.base_command import BaseCommand
 from cstor.cli.settings import DEBUG
-import json
+
+RETRY_CNT = 5
+RETRY_SLEEP_SEC = 5
 
 
 class Node(BaseCommand):
@@ -61,7 +66,7 @@ class Node(BaseCommand):
         node_parser.add_argument('node_spec', help='Regex for the node names')
         node_parser.set_defaults(func=Node)
 
-    def get_action_params(self):
+    def get_action_params(self, **kwargs):
         """ Abstract method to get the action parameters
         to be send in the request to data provider
         """
@@ -71,22 +76,49 @@ class Node(BaseCommand):
         return params
 
     @staticmethod
-    def _handle_status_request(status_response):
+    def _is_response_empty(response):
         """
-            Handle the status response handling for parsing the request_id
-            and query provider for the response.
-        """
+        Check if response contains at least one element in return list.
+        @param response: message from response provider.
+        @type response: str.
 
-        message_id = Node._get_message_id(status_response)
-        # url = 'http://{}/response/messageId={}'.format(BL_HOST,
-        #  message_id)
+        @return: response message is empty or not.
+        @rtype: bool
+        """
         try:
-            response = '{"Response": "Dummy status response received!", ' \
-                       '"messageID": "%s"}' % message_id
-            # response = urllib.urlopen(url=url).read()
-            return json.dumps(json.loads(response), indent=2)
+            resp_dict = json.loads(response)
+            if not resp_dict:
+                return True
+            else:
+                return False
         except ValueError:
             raise ValueError("Could not load the response in json object")
+
+    @staticmethod
+    def _handle_status_request(status_response):
+        """
+        Node status response handler for node status request.
+        1. Get the messageId from Node response status.
+        2. Query Response provider with messageId to get the
+           status command response.
+        3. If response is empty retry till defined RETRY_CNT
+        4. Pause for RETRY_SLEEP_SEC in between retries.
+
+        @param status_response: Node status command response
+        @type status_response: str
+        """
+
+        msg_id = Node._get_message_id(status_response)
+        from cstor.cli.commands.responder import Responder
+        res_request = Responder()
+        for retry in range(1, RETRY_CNT):
+            response = res_request.execute_action(message_id=msg_id)
+            if Node._is_response_empty(response):
+                print "Retry:{} for message_id:{}".format(retry, msg_id)
+                time.sleep(RETRY_SLEEP_SEC)
+            else:
+                break
+        return json.loads(response)
 
     @staticmethod
     def _get_message_id(status_response):

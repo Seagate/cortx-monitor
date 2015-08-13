@@ -51,7 +51,7 @@ class Ha(BaseCommand):
 
         ha_parser.set_defaults(func=Ha)
 
-    def get_action_params(self):
+    def get_action_params(self, **kwargs):
         """ Abstract method to get the action parameters
         to be send in the request to data provider
         """

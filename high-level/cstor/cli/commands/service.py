@@ -60,7 +60,7 @@ class Service(BaseCommand):
                                     help='Optional parameter to indicate which'
                                     ' nodes should be affected.')
 
-    def get_action_params(self):
+    def get_action_params(self, **kwargs):
         """ Service class specific implementation of the abstract method
         from base class
         Returns the list of action specific parameters to be sent

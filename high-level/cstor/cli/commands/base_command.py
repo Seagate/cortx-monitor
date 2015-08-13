@@ -39,7 +39,7 @@ class BaseCommand(object):
         """
         self.provider = None
 
-    def execute_action(self):
+    def execute_action(self, **kwargs):
         """ Function to execute the action by sending
         request to data provider in business logic server
         """
@@ -47,7 +47,7 @@ class BaseCommand(object):
         url = 'http://%s%sdata?%s' % (
             BL_HOST,
             self.get_provider_base_url(),
-            self.get_action_params())
+            self.get_action_params(**kwargs))
         response = urllib.urlopen(url=url).read()
         try:
             return json.dumps(json.loads(response), indent=2)
@@ -65,11 +65,11 @@ class BaseCommand(object):
                         if provider['application'] == 'sspl_hl' and
                         provider['name'] == self.provider)['uri']
         except StopIteration:
-            raise RuntimeError('Unable to find the sspl_hl.ha provider on {}'
-                               .format(BL_HOST))
+            raise RuntimeError('Unable to find the provider "{}" on {}'
+                               .format(self.provider, BL_HOST))
 
     @abc.abstractmethod
-    def get_action_params(self):
+    def get_action_params(self, **kwargs):
         """ Abstract method to get the action parameters
         to be send in the request to data provider
         """
