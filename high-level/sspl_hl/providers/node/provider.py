@@ -1,8 +1,9 @@
 """
 PLEX data provider.
 """
-# Third party
+# Third Party
 from twisted.internet import reactor
+
 # PLEX
 from sspl_hl.utils.base_castor_provider import BaseCastorProvider
 from sspl_hl.utils.message_utils import NodeStatusRequest, NodeServiceRequest
@@ -51,7 +52,7 @@ class NodeProvider(BaseCastorProvider):
         """
         result = super(NodeProvider, self)._query(selection_args, responder)
         if result:
-            reactor.callFromThread(responder.reply_exception(result))
+            reactor.callFromThread(responder.reply_exception, result)
             return
 
         message = self._generate_node_request_msg(
@@ -68,7 +69,7 @@ class NodeProvider(BaseCastorProvider):
             response = message
         else:
             reactor.callFromThread(responder.reply_no_match)
-        reactor.callFromThread(responder.reply, response)
+        reactor.callFromThread(responder.reply, data=[response])
 
 
 # pylint: disable=invalid-name

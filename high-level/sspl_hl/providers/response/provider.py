@@ -7,7 +7,6 @@ PLEX data provider for getting Halon response messages.
 # Third party
 import threading
 import json
-
 from twisted.internet import reactor
 
 # PLEX
@@ -49,8 +48,10 @@ class ResponseProvider(BaseCastorProvider):
 
         message_id = selection_args['messageId']
         if message_id in self.__message_dict.keys():
-            reactor.callFromThread(responder.reply(
-                data=[json.dumps(self.__message_dict.get(message_id))]))
+            reactor.callFromThread(
+                responder.reply, data=[
+                    json.dumps(
+                        self.__message_dict.get(message_id))])
         else:
             reactor.callFromThread(responder.reply_no_match)
 

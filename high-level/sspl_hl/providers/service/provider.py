@@ -81,13 +81,13 @@ class ServiceProvider(BaseCastorProvider):
         """
         result = super(ServiceProvider, self)._query(selection_args, responder)
         if result:
-            reactor.callFromThread(responder.reply_exception(result))
+            reactor.callFromThread(responder.reply_exception, result)
             return
 
         if selection_args['command'] in ['list', 'status']:
             list_response = ServiceListResponse()
             service_list = list_response.get_response_message()
-            reactor.callFromThread(responder.reply(data=[service_list]))
+            reactor.callFromThread(responder.reply, data=[service_list])
         else:
             message = self._generate_service_request_msg(
                 service_name=selection_args['serviceName'],

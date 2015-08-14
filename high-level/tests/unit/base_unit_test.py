@@ -13,6 +13,7 @@ from plex.util.concurrent.single_thread_executor import SingleThreadExecutor
 
 
 class _MyDatetime(datetime.datetime):
+
     """ Identical to datetime.datetime but reimplements isoformat() to
     record the first call and returns the same value for subsequent
     calls.
@@ -33,8 +34,10 @@ datetime.datetime = _MyDatetime
 
 class BaseUnitTest(unittest.TestCase):
     # pylint: disable=too-many-public-methods
+
     """ Base class containing common methods
     """
+
     def setUp(self):
         self._patch_ste_submit = mock.patch.object(
             SingleThreadExecutor, 'submit',
@@ -106,15 +109,17 @@ class BaseUnitTest(unittest.TestCase):
                           Ex.{'nodeName': 'node1'} for node
             response_msg: Text to be sent in response
         """
-        with mock.patch('pika.BlockingConnection') as patch:
+        with mock.patch('pika.BlockingConnection') as conn_patch, \
+                mock.patch('twisted.internet.reactor.callFromThread') \
+                as cft_patch:
             responder = mock.MagicMock()
             self._query_provider(
                 args=command_args,
                 responder=responder,
                 provider=provider
             )
-            responder.reply_exception.assert_called_once_with(
+            cft_patch.assert_called_once_with(
+                responder.reply_exception,
                 response_msg
             )
-
-        self.assertFalse(patch().channel().basic_publish.called)
+        self.assertFalse(conn_patch().channel().basic_publish.called)
