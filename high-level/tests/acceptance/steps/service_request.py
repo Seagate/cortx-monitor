@@ -13,6 +13,7 @@ from sspl_hl.providers.node.provider import NodeProvider
 # since this is test code, we won't worry about it.
 SERVICE_URI = "http://localhost:8080/apps/sspl_hl/providers/service/data"
 NODE_URI = "http://localhost:8080/apps/sspl_hl/providers/node/data"
+HA_URI = "http://localhost:8080/apps/sspl_hl/providers/ha/data"
 
 
 @lettuce.step(u'When I request "([^"]*)" service "([^"]*)" for all nodes')
@@ -35,10 +36,28 @@ def node_cmd_for_all_nodes(_, node, cmd):
     urllib.urlopen(url=url).read()
 
 
+@lettuce.step(u'When I make Ha request "([^"]*)" and "([^"]*)" for all nodes')
+def ha_cmd_for_all_nodes(_, cmd, subcmd):
+    """ Execute ha request by hitting ha data provider url.
+    """
+    url = HA_URI + "?command={cmd}&subcommand={subcmd}".format(
+        cmd=cmd, subcmd=subcmd
+        )
+    urllib.urlopen(url=url).read()
+
+
 @lettuce.step(u'When I run "([^"]*)"')
 def when_i_run(_, cli_command):
     """ Run a CLI command.  """
-    lettuce.world.exitcode = subprocess.call(cli_command.split())
+    proc = subprocess.Popen(
+        cli_command.split(),
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE
+        )
+    output, err = proc.communicate()  # pylint: disable=unused-variable
+    lettuce.world.ha_response = output
+    lettuce.world.exitcode = proc.returncode
 
 
 @lettuce.step(u'Then a serviceRequest message to "([^"]*)" "([^"]*)" is sent')
@@ -110,6 +129,22 @@ def noderequest_msg_sent(_, command, target):
         .format(expected=exp, actual=contents)
 
     os.unlink(os.path.join('/tmp/fake_halond', first_file))
+
+
+@lettuce.step(u'Then a command request to ha with "([^"]*)" "([^"]*)" is sent')
+def hacmdrequest_sent(_, command, subcommand):
+    """ Ensure proper message generated and enqueued. """
+    contents = lettuce.world.ha_response
+
+    # Tests that response contains valid data.
+    # Valid response would contain data in the sample format as below:
+    # \n12434567 [label=\"Service ServiceName {snString = 'HA.EQTracker'}\"]
+    # \nn812340088 [label=\"MonitorConf (Processes [MonitoredSerialized ])\"]
+
+    assert 'label' in contents, \
+        "Command: ha {cmd} {subcmd} Message doesn't match. \
+        Expected response data but got '{actual}'" \
+        .format(cmd=command, subcmd=subcommand, actual=contents)
 
 
 @lettuce.step(u'the exit code is "([^"]*)"')

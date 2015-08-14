@@ -36,13 +36,13 @@ class HaProvider(BaseCastorProvider):
         """ Receive Data from frontier service
         """
         self._conn.sendall(self.RG_COMMAND)
+        self._conn.sendall(self.RG_QUIT_CMD)
         resource_graph = ""
         while 1:
             response = self._conn.recv(self.READ_BYTE_SIZE)
             if not len(response) > 0:
                 break
             resource_graph += response
-        self._conn.sendall(self.RG_QUIT_CMD)
         self._conn.close()
         return resource_graph
 
