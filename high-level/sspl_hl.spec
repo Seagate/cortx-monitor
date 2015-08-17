@@ -40,12 +40,13 @@ A cli (and library) that allow the user to control the cluster.
 
 %install
 mkdir -p %{installpath}/sspl_hl/views
-mkdir -p %{installpath}/sspl_hl/providers/{service,node,ha}
+mkdir -p %{installpath}/sspl_hl/providers/{service,node,ha,response}
 install sspl_hl/main.py sspl_hl/__init__.py %{installpath}/sspl_hl/
 install sspl_hl/providers/__init__.py %{installpath}/sspl_hl/providers/
 install sspl_hl/providers/service/*.py %{installpath}/sspl_hl/providers/service/
 install sspl_hl/providers/node/*.py %{installpath}/sspl_hl/providers/node/
 install sspl_hl/providers/ha/*.py %{installpath}/sspl_hl/providers/ha/
+install sspl_hl/providers/response/*.py %{installpath}/sspl_hl/providers/response/
 mkdir -p %{installpath}/sspl_hl/utils/
 install sspl_hl/utils/*.py %{installpath}/sspl_hl/utils/
 mkdir -p %{buildroot}/usr/lib/python2.7/site-packages/cstor/cli/commands
