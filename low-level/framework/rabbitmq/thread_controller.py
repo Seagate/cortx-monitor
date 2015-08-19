@@ -39,8 +39,11 @@ from message_handlers.node_controller_msg_handler import NodeControllerMsgHandle
 # Note that all threaded sensors and actuators must have an import here to be controlled
 from sensors.impl.centos_7.systemd_watchdog import SystemdWatchdog
 from sensors.impl.centos_7.drive_manager import DriveManager
-from sensors.impl.os_x.drive_manager import DriveManager
+from sensors.impl.centos_7.hpi_monitor import HPIMonitor
 from sensors.impl.os_x.xinitd_watchdog import XinitdWatchdog
+from sensors.impl.os_x.drive_manager import DriveManager
+from sensors.impl.os_x.hpi_monitor import HPIMonitor
+
 from sensors.impl.generic.raid import RAIDsensor
 
 

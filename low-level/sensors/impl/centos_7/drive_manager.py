@@ -43,7 +43,6 @@ class DriveManager(ScheduledModuleThread, InternalMsgQ):
     # Section and keys in configuration file
     DRIVEMANAGER      = SENSOR_NAME.upper()
     DRIVE_MANAGER_DIR = 'drivemanager_dir'
-    DRIVE_MANAGER_PID = 'drivemanager_pid'
     START_DELAY       = 'start_delay'
 
 
@@ -67,8 +66,9 @@ class DriveManager(ScheduledModuleThread, InternalMsgQ):
         # Initialize internal message queues for this module
         super(DriveManager, self).initialize_msgQ(msgQlist)
 
+        self._drive_status = {}
+
         self._drive_mngr_base_dir  = self._getDrive_Mngr_Dir()
-        self._drive_mngr_pid       = self._getDrive_Mngr_Pid()
         self._start_delay          = self._getStart_delay()
 
     def read_data(self):
@@ -94,7 +94,7 @@ class DriveManager(ScheduledModuleThread, InternalMsgQ):
             wm      = pyinotify.WatchManager()
 
             # Mask events to watch for on the file system
-            mask    = pyinotify.IN_CLOSE_WRITE | pyinotify.IN_CREATE | pyinotify.IN_DELETE
+            mask    = pyinotify.IN_CLOSE_WRITE
 
             # Event handler class called by pyinotify when an events occurs on the file system
             handler = self.InotifyEventHandlerDef()
@@ -108,7 +108,7 @@ class DriveManager(ScheduledModuleThread, InternalMsgQ):
             wm.add_watch(self._drive_mngr_base_dir, mask, rec=True, auto_add=True)
 
             # Loop forever blocking on this thread, monitoring file system
-            #  and firing events to InotifyEventHandler: process_IN_CREATE(), process_IN_DELETE()
+            #  and firing events to InotifyEventHandler: process_IN_CLOSE_WRITE()
             self._blocking_notifier.loop()
 
         except Exception as ae:
@@ -135,21 +135,27 @@ class DriveManager(ScheduledModuleThread, InternalMsgQ):
         self._validate_drive_manager_dir()
 
         enclosures = os.listdir(self._drive_mngr_base_dir)
+        # Remove the 'discovery' file
+        for enclosure in enclosures:
+            if not os.path.isdir(os.path.join(self._drive_mngr_base_dir, enclosure)):
+                enclosures.remove(enclosure)
+
         for enclosure in enclosures:
             disk_dir = os.path.join(self._drive_mngr_base_dir, enclosure, "disk")
-
-            # Ignore the drive_manager.json file
-            if not os.path.isdir(disk_dir):
-                continue
-
-            disks = os.listdir(disk_dir)
             logger.info("DriveManager initializing: %s" % disk_dir)
 
+            disks = os.listdir(disk_dir)
             for disk in disks:
                 # Read in the status file for each disk and fill into dict
                 pathname = os.path.join(disk_dir, disk)
+                # Ignore the discovery file
+                if not os.path.isdir(pathname):
+                    continue
+            
                 status_file = os.path.join(pathname, "status")
+
                 if not os.path.isfile(status_file):
+                    logger.error("DriveManager error no status file for disk: %s" % disk)
                     continue
                 try:
                     with open(status_file, "r") as datafile:
@@ -184,7 +190,7 @@ class DriveManager(ScheduledModuleThread, InternalMsgQ):
                 except Exception as e:
                     logger.info("DriveManager, _init_drive_status, exception: %s" % e)
 
-            logger.info("DriveManager, initialization completed successfully")
+            logger.info("DriveManager, initialization completed")
 
     def _validate_drive_manager_dir(self):
         """Loops until the base dir is populated with enclosures by dcs-collector"""
@@ -194,6 +200,7 @@ class DriveManager(ScheduledModuleThread, InternalMsgQ):
             time.sleep(int(self._start_delay))
 
         enclosures = os.listdir(self._drive_mngr_base_dir)
+        # Remove the 'discovery' file
         for enclosure in enclosures:
             if not os.path.isdir(os.path.join(self._drive_mngr_base_dir, enclosure)):
                 enclosures.remove(enclosure)
@@ -226,11 +233,7 @@ class DriveManager(ScheduledModuleThread, InternalMsgQ):
         return self._conf_reader._get_value_with_default(self.DRIVEMANAGER, 
                                                                  self.DRIVE_MANAGER_DIR,
                                                                  '/tmp/dcs/drivemanager')                
-    def _getDrive_Mngr_Pid(self):
-        """Retrieves the pid file indicating pyinotify is running or not"""
-        return self._conf_reader._get_value_with_default(self.DRIVEMANAGER,
-                                                                 self.DRIVE_MANAGER_PID,
-                                                                 '/var/run/pyinotify.pid')
+
     def _getStart_delay(self):
         """Retrieves the start delay used to allow dcs-collector to startup first"""
         return self._conf_reader._get_value_with_default(self.DRIVEMANAGER,
@@ -299,7 +302,7 @@ class DriveManager(ScheduledModuleThread, InternalMsgQ):
             def _validate_event_path(self, event_path):
                 """Returns true if the event path is valid for a status file"""
 
-                 # Validate the event path; must have disk and be a status and not be a swap file
+                 # Validate the event path; must have disk and be a status or reason and not be a swap file
                 if "disk" not in event_path or \
                     (("status" not in event_path or \
                     "status.swp" in event_path) and  \
@@ -321,11 +324,6 @@ class DriveManager(ScheduledModuleThread, InternalMsgQ):
         """Clean up scheduler queue and gracefully shutdown thread"""
         super(DriveManager, self).shutdown()
         try:
-            self._log_debug("DriveManager, shutdown: removing pid:%s" % self._drive_mngr_pid)
-            if os.path.isfile(self._drive_mngr_pid):
-                os.remove(self._drive_mngr_pid)
             self._blocking_notifier.stop()
-
         except Exception:
             logger.info("DriveManager, shutting down.")
-    

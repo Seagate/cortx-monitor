@@ -1,9 +1,9 @@
 """
  ****************************************************************************
- Filename:          drive_manager.py
+ Filename:          hpi_monitor.py
  Description:       Monitors a specified Mac OS X path for changes
                     and notifies the disk message handler of events.
- Creation Date:     01/14/2015
+ Creation Date:     08/17/2015
  Author:            Jake Abernathy
 
  Do NOT modify or remove this copyright and confidentiality notice!
@@ -28,19 +28,20 @@ from framework.utils.service_logging import logger
 from message_handlers.disk_msg_handler import DiskMsgHandler
 
 from zope.interface import implements
-from sensors.IDrive_manager import IDriveManager
+from sensors.IHpi_monitor import IHPIMonitor
 
 
-class DriveManager(ScheduledModuleThread, InternalMsgQ):
+class HPIMonitor(ScheduledModuleThread, InternalMsgQ):
 
-    implements(IDriveManager)
+    implements(IHPIMonitor)
 
-    SENSOR_NAME       = "DriveManager"
+    SENSOR_NAME       = "HPIMonitor"
     PRIORITY          = 2
 
     # Section and keys in configuration file
-    DRIVEMANAGER        = SENSOR_NAME.upper()
-    DRIVE_MANAGER_DIR   = 'drivemanager_dir'
+    HPIMONITOR      = SENSOR_NAME.upper()
+    HPI_MONITOR_DIR = 'hpimonitor_dir'
+    START_DELAY     = 'start_delay'
 
     @staticmethod
     def name():
@@ -62,7 +63,10 @@ class DriveManager(ScheduledModuleThread, InternalMsgQ):
         # Initialize internal message queues for this module
         super(DriveManager, self).initialize_msgQ(msgQlist)
 
-        self._drive_mngr_base_dir  = self._getDrive_Mngr_Dir()
+        self._drive_status = {}
+
+        self._hpi_mntr_base_dir  = self._getHpi_Monitor_Dir()
+
 
     def read_data(self):
         """Return the dict of drive status'"""
@@ -74,23 +78,23 @@ class DriveManager(ScheduledModuleThread, InternalMsgQ):
         self._read_my_msgQ_noWait()
 
         self._log_debug("Start accepting requests")
-        self._log_debug("run, MAC OS X base directory: %s" % self._drive_mngr_base_dir)
+        self._log_debug("run, MAC OS X HPI base directory: %s" % self._hpi_mntr_base_dir)
 
 
-        # Code to handle MAC OS X drive manager events here...
+        # Code to handle MAC OS X HPI monitoring events here...
 
 
 
-    def _getDrive_Mngr_Dir(self):
-        """Retrieves the drivemanager path to monitor on the file system"""
-        return self._conf_reader._get_value_with_default(self.DRIVEMANAGER,
-                                                         self.DRIVE_MANAGER_DIR,
-                                                         '/tmp/dcs/drivemanager')
+    def _getHpi_Monitor_Dir(self):
+        """Retrieves the HPI path to monitor on the file system"""
+        return self._conf_reader._get_value_with_default(self.HPIMONITOR, 
+                                                        self.HPI_MONITOR_DIR,
+                                                        '/tmp/dcs/hpi')                
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""
         super(DriveManager, self).shutdown()
-#         try:
-#             self._blocking_notifier.stop()
-#         except Exception:
-#             logger.info("DriveManager, shutting down.")
+        #try:
+            #self._blocking_notifier.stop()
+        #except Exception:
+        #    logger.info("DriveManager, shutting down.")
