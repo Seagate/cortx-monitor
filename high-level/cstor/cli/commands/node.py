@@ -17,10 +17,13 @@
 # Third Party
 import json
 import time
+import argparse
 
 # Import Local Modules
 from cstor.cli.commands.base_command import BaseCommand
 from cstor.cli.settings import DEBUG
+from cstor.cli.errors import InvalidResponse
+
 
 RETRY_CNT = 5
 RETRY_SLEEP_SEC = 5
@@ -30,6 +33,8 @@ class Node(BaseCommand):
 
     """ Node command implementation class
     """
+    STATUS_RESPONSE_KEY = "statusResponse"
+    ENTITY_ID_KEY = "entityId"
 
     def __init__(self, parser):
         """ Initializes the node object with the
@@ -37,33 +42,60 @@ class Node(BaseCommand):
         """
 
         super(Node, self).__init__()
-        self.action = parser.action
-        self.target = parser.node_spec
+
+        if 'action' in parser:
+            self.action = parser.action
+        else:
+            self.action = None
+        if 'node_spec' in parser:
+            self.target = parser.node_spec
+        else:
+            self.target = None
         self.provider = 'node'
 
     def execute_action(self):
         """ Function to execute the action by sending
         request to data provider in business logic server.
-        Overridding will have the handling for status command.
+        Overriding will have the handling for status command.
         """
         response = super(Node, self).execute_action()
         if self.action == 'status':
             return Node._handle_status_request(response)
+        elif self.action == 'list':
+            result = Node._handle_status_request(response)
+            if result:
+                return Node._parse_status_response(result)
         else:
             return response
 
     @staticmethod
+    def _parse_status_response(response):
+        items = json.loads(response[0])[Node.STATUS_RESPONSE_KEY]
+        return [item[Node.ENTITY_ID_KEY] for item in items]
+
+    @staticmethod
     def add_args(subparsers):
-        """ defines the command structure for node command
+        """ Defines the command structure for node command
         """
+        parent_node_parser = argparse.ArgumentParser(add_help=False)
+
+        parent_node_parser.add_argument('node_spec',
+                                        default=None,
+                                        help='Regex for the node names')
 
         node_parser = subparsers.add_parser('node',
                                             help='Sub-command to work with '
                                             'node of the cluster.')
-        node_parser.add_argument('action', help='Command to run.',
-                                 choices=['start', 'stop',
-                                          'restart', 'status'])
-        node_parser.add_argument('node_spec', help='Regex for the node names')
+
+        action_parser = node_parser.add_subparsers(dest='action',
+                                                   help='Command to run.')
+        action_parser.add_parser('start', parents=[parent_node_parser])
+        action_parser.add_parser('stop', parents=[parent_node_parser])
+        action_parser.add_parser('enable', parents=[parent_node_parser])
+        action_parser.add_parser('disable', parents=[parent_node_parser])
+        action_parser.add_parser('status', parents=[parent_node_parser])
+        action_parser.add_parser('list')
+
         node_parser.set_defaults(func=Node)
 
     def get_action_params(self, **kwargs):
@@ -127,10 +159,12 @@ class Node(BaseCommand):
         """
         try:
             status_response = json.loads(status_response)
-        except ValueError:
-            raise ValueError("Invalid node status resonse")
+        except:
+            raise InvalidResponse(desc="Invalid node status response")
         if 'message' in status_response[0] and \
            'messageId' in status_response[0]['message']:
             return status_response[0]['message']['messageId']
         else:
-            raise ValueError("Invalid node status resonse")
+            raise InvalidResponse(desc="Invalid node status response. "
+                                       "Error occurred while parsing "
+                                       "the response message")

@@ -94,7 +94,7 @@ class ServiceRequest(object):
     """
     SERVICE_REQUEST_KEY = "serviceRequest"
     COMMAND_KEY = "command"
-    NODE_KEY = "node"
+    NODE_KEY = "nodes"
 
     def __init__(self):
         self.service_request = CommandRequest()
@@ -184,15 +184,8 @@ class NodeStatusResponse(StatusResponse):
        Halon message response.
     2. In future we can externalize these keys to configuration file.
     """
-    NO_OF_CLUSTERS = 3
-    NO_OF_NODES = 3
-    ENTITY_STATUS = [
-        'running',
-        'stopped',
-        'idle',
-        'starting',
-        'dead',
-        'active']
+    NO_OF_CLUSTERS = 2
+    ENTITY_STATUS = ['ok']
 
     def __init__(self):
         super(NodeStatusResponse, self).__init__()
@@ -212,12 +205,12 @@ class NodeStatusResponse(StatusResponse):
         items = []
         for item_name in range(1, NodeStatusResponse.NO_OF_CLUSTERS):
             item = {
-                StatusResponse.ENTITY_ID_KEY: get_uuid_in_str(),
-                StatusResponse.STATUS_KEY: random.choice(
-                    NodeStatusResponse.ENTITY_STATUS),
-                StatusResponse.ENTITY_NAME_KEY: '{}00{}'.format(
+                StatusResponse.ENTITY_ID_KEY: '{}{}'.format(
                     entity_type,
-                    item_name)}
+                    item_name),
+                StatusResponse.STATUS_KEY: random.choice(
+                    NodeStatusResponse.ENTITY_STATUS)
+            }
             items.append(item)
         return items
 
@@ -234,9 +227,9 @@ class NodeStatusResponse(StatusResponse):
 
         items = self._get_response_items(entity_type)
         message = {
-            StatusResponse.STATUS_RESPONSE_KEY: {
-                StatusResponse.RESPONSE_ID_KEY: get_uuid_in_str(),
-                StatusResponse.ITEMS_KEY: items}}
+            StatusResponse.STATUS_RESPONSE_KEY: items,
+            StatusResponse.RESPONSE_ID_KEY: get_uuid_in_str(),
+        }
         self.status_response.message.update(message)
         return self.status_response.__dict__
 
@@ -247,8 +240,12 @@ class NodeServiceRequest(ServiceRequest):
     """
         Service request for node
     """
-    def __init(self):
+    NODE_SERVICE_REQUEST_KEY = "nodeStatusChangeRequest"
+
+    def __init__(self):
         super(NodeServiceRequest, self).__init__()
+        self._internal_cmds = {'start': 'poweron',
+                               'stop': 'poweroff'}
 
     def get_request_message(self, command, node=None):
         """
@@ -259,8 +256,10 @@ class NodeServiceRequest(ServiceRequest):
         @return: Halon node command status request message.
         @rtype: dict
         """
+
+        command = self._internal_cmds.get(command, command)
         message = {
-            ServiceRequest.SERVICE_REQUEST_KEY: {
+            NodeServiceRequest.NODE_SERVICE_REQUEST_KEY: {
                 ServiceRequest.COMMAND_KEY: command,
                 ServiceRequest.NODE_KEY: node}}
         self.service_request.message.update(message)

@@ -31,7 +31,12 @@ def main():
 
     command_obj = Factory.get_subcmd()
     try:
-        print command_obj.execute_action()
+        result = command_obj.execute_action()
+        if result and isinstance(result, list):
+            for item in result:
+                print item
+        else:
+            print result
     except ValueError as extra_info:
         print "some error occurred. Details: {}".format(str(extra_info))
     except BaseError as extra_info:

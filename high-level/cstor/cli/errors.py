@@ -46,6 +46,20 @@ class CommandTerminated(BaseError):
     def __init__(self, err=None, desc=None):
         super(CommandTerminated, self).__init__(err, desc)
 
+
+class InvalidResponse(BaseError):
+    """
+        This error will be raised when an invalid response
+        message is received for any of the cli commands.
+    """
+    err = "Invalid response"
+    desc = "Invalid response message received " \
+           "or the response message could not be parsed correctly"
+
+    def __init__(self, err=None, desc=None):
+        super(InvalidResponse, self).__init__(err, desc)
+
+
 # if __name__ == '__main__':
 #     err_obj_1 = CommandTerminated(err="New Error", desc='some new error')
 #     print err_obj_1.err

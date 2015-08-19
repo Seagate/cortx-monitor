@@ -79,7 +79,7 @@ class FakeHalondOutputDirectory(object):
             output.write(message)
             response = HalonRequestHandler.process_request(message)
             if response:
-                self.publisher.publish_message(message)
+                self.publisher.publish_message(response)
 
     def _remove_directory(self):
         """ Remove the registered directory.

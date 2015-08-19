@@ -8,10 +8,12 @@ Feature: Node Request
         Then a nodeRequest message to "<command>" "<nodespec>" is sent
         And the exit code is "0"
     Examples:
-        | nodespec| command |
-        | node1   | stop    |
-        | node1   | start   |
-        | node1   | status  |
+        | nodespec| command  |
+        | node1   | start    |
+        | node1   | stop     |
+        | node1   | enable   |
+        | node1   | disable  |
+        | n2      | status   |
 
     Scenario: Invalid command
         When I run "python ./cstor/cli/main.py node invalid_command node1"
@@ -20,3 +22,7 @@ Feature: Node Request
     Scenario: Missing nodeName
         When I run "python ./cstor/cli/main.py node start"
         Then the exit code is "2"
+
+    Scenario: list nodes
+        When I run "python ./cstor/cli/main.py node list"
+        Then the exit code is "0"

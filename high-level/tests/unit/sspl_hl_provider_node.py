@@ -2,9 +2,16 @@
 
 
 import unittest
+import mock
+import json
 
 from sspl_hl.providers.node.provider import NodeProvider
 from base_unit_test import BaseUnitTest
+from sspl_hl.utils.message_utils import StatusRequest
+
+STATUS_REQUEST_KEY = StatusRequest.STATUS_REQUEST_KEY
+ENTITY_TYPE_KEY = StatusRequest.ENTITY_TYPE_KEY
+ENTITY_FILTER_KEY = StatusRequest.ENTITY_FILTER_KEY
 
 
 # pylint: disable=too-many-public-methods
@@ -14,10 +21,57 @@ class SsplHlProviderService(BaseUnitTest):
     """
     NODE_COMMAND = ['start',
                     'stop',
-                    'status']
+                    'enable',
+                    'disable',
+                    'status',
+                    'list']
+    INTERNAL_COMMAND = {'start': 'poweron',
+                        'stop': 'poweroff'}
+
+    def test_node_message_structure(self):
+        """ Ensures node poweron, stop, status, etc
+            generates a proper json request message.
+        """
+        for command in SsplHlProviderService.NODE_COMMAND:
+
+            selection_args = {'command': command,
+                              'target': "node*",
+                              'debug': False}
+
+            with mock.patch('uuid.uuid4', return_value='uuid_goes_here'), \
+                    mock.patch('pika.BlockingConnection') as patch:
+                # pylint: enable=protected-access
+                self._query_provider(args=selection_args,
+                                     provider=NodeProvider('node', ''))
+
+            args, kwargs = patch().channel().basic_publish.call_args
+            self.assertEquals(args, ())
+            body = json.loads(kwargs["body"])
+            if command in ['status', 'list']:
+                entity_type = \
+                    body["message"][STATUS_REQUEST_KEY][ENTITY_TYPE_KEY]
+                entity_filter = \
+                    body["message"][STATUS_REQUEST_KEY][ENTITY_FILTER_KEY]
+                self.assertEqual(entity_type, "node")
+                if command == 'status':
+                    self.assertRegexpMatches(entity_filter,
+                                             "n*",
+                                             "Not a valid Node Name!")
+                else:
+                    self.assertEquals(entity_filter, ".*",
+                                      "List should have target as "
+                                      "a regex to match all nodes!")
+            else:
+                nodes = body["message"]["nodeStatusChangeRequest"]["nodes"]
+                action = \
+                    body["message"]["nodeStatusChangeRequest"]["command"]
+                command = self.INTERNAL_COMMAND.get(command, command)
+                self.assertEquals(action, command)
+                self.assertEquals(nodes, "node*")
 
     def test_node_queries(self):
-        """ Ensures restarting,etc a service generates the proper json message.
+        """ Ensures start, stop, etc a node publishes
+            proper messages to rabbit mq.
         """
         for command in SsplHlProviderService.NODE_COMMAND:
             method_args = {'command': command,
