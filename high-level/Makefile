@@ -11,11 +11,14 @@ at:
 	PYTHONPATH=.:tests lettuce --failfast ./tests/acceptance/node_request.feature
 	PYTHONPATH=.:tests lettuce --failfast ./tests/acceptance/service_request.feature
 	PYTHONPATH=.:tests lettuce --failfast ./tests/acceptance/ha_request.feature
+	PYTHONPATH=.:tests lettuce --failfast ./tests/acceptance/fru_request.feature
+
 
 ut:
 	PYTHONPATH=.:tests python tests/unit/sspl_hl_provider_service.py
 	PYTHONPATH=.:tests python tests/unit/sspl_hl_provider_node.py
 	PYTHONPATH=.:tests python tests/unit/sspl_hl_provider_ha.py
+	PYTHONPATH=.:tests python tests/unit/sspl_hl_provider_fru.py
 	PYTHONPATH=.:tests python tests/unit/sspl_hl_provider_power.py
 
 pep8:

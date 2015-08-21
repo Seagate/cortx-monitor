@@ -25,6 +25,7 @@ from cstor.cli.commands.node import Node
 from cstor.cli.commands.service import Service
 from cstor.cli.commands.ha import Ha
 from cstor.cli.commands.power import Power
+from cstor.cli.commands.fru import FieldReplaceableUnit
 
 
 class Factory(object):
@@ -48,6 +49,7 @@ class Factory(object):
         Node.add_args(subparsers)
         Ha.add_args(subparsers)
         Power.add_args(subparsers)
+        FieldReplaceableUnit.add_args(subparsers)
         args = parser.parse_args()
         return args
 

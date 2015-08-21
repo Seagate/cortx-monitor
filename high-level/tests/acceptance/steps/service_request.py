@@ -6,6 +6,7 @@ import json
 import subprocess
 from sspl_hl.providers.service.provider import ServiceProvider
 from sspl_hl.providers.node.provider import NodeProvider
+from sspl_hl.providers.fru.provider import FRUProvider
 
 
 # Note:  We should use the plex registry to programatically generate this URL
@@ -14,6 +15,7 @@ from sspl_hl.providers.node.provider import NodeProvider
 SERVICE_URI = "http://localhost:8080/apps/sspl_hl/providers/service/data"
 NODE_URI = "http://localhost:8080/apps/sspl_hl/providers/node/data"
 HA_URI = "http://localhost:8080/apps/sspl_hl/providers/ha/data"
+FRU_URI = "http://localhost:8080/apps/sspl_hl/providers/fru/data"
 
 
 @lettuce.step(u'When I request "([^"]*)" service "([^"]*)" for all nodes')
@@ -145,6 +147,59 @@ def hacmdrequest_sent(_, command, subcommand):
         "Command: ha {cmd} {subcmd} Message doesn't match. \
         Expected response data but got '{actual}'" \
         .format(cmd=command, subcmd=subcommand, actual=contents)
+
+
+def _wait_for_halon():
+    """
+    Waits for a fake_halond to output dump into
+    a directory
+    @return: Contents of fake_halond file and filename
+    @rtype: tuple
+    @raise: OSError, IOError
+    """
+    lettuce.world.wait_for_condition(
+        status_func=lambda: len(os.listdir('/tmp/fake_halond')) > 0,
+        max_wait=5,
+        timeout_message="Timeout expired while waiting for message to arrive "
+                        "in fake_halond output directory."
+    )
+    try:
+        first_file = sorted(
+            os.listdir('/tmp/fake_halond'),
+            key=lambda f: os.stat(os.path.join('/tmp/fake_halond', f)).st_mtime
+        )[0]
+        contents = open(
+            os.path.join('/tmp/fake_halond', first_file),
+            'r').read()
+    except OSError:
+        raise OSError("Unable to list fake_halond")
+    except IOError:
+        raise IOError("Unable to read fake_halond output file")
+    return contents, first_file
+
+
+@lettuce.step(u'Then a fruRequest message to "([^"]*)" "([^"]*)" is sent')
+def fru_request_msg_sent(_, command, hwtype):
+    """ Ensure proper message generated and enqueued. """
+    # wait for a message to appear in the fake_halond output directory
+    contents, first_file = _wait_for_halon()
+
+    # pylint: disable=protected-access
+    exp = json.dumps(FRUProvider._generate_fru_request_msg(
+        fru_target=hwtype, fru_command=command
+        ))
+    # pylint: enable=protected-access
+
+    tmp = json.loads(exp)
+    tmp['time'] = json.loads(contents)['time']
+    tmp['message']['messageId'] = json.loads(contents)['message']['messageId']
+    exp = json.dumps(tmp)
+
+    assert json.loads(contents) == json.loads(exp), \
+        "Message doesn't match.  Expected '{expected}' but got '{actual}'" \
+        .format(expected=exp, actual=contents)
+
+    os.unlink(os.path.join('/tmp/fake_halond', first_file))
 
 
 @lettuce.step(u'the exit code is "([^"]*)"')

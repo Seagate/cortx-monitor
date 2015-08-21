@@ -456,3 +456,56 @@ class ServiceListResponse(ListResponse):
         }
         self.list_response.message.update(message)
         return self.list_response.__dict__
+
+
+class FRUStatusRequest(StatusRequest):
+    # pylint: disable=too-few-public-methods
+    """
+    This class defines the Status command for Halon fru
+    """
+
+    def __init__(self):
+        super(FRUStatusRequest, self).__init__()
+
+    def get_request_message(self, entity_type, entity_filter=None):
+        """
+        Get the Halon fru command status request message in JSON string
+        @param entity_type: The type of entity in CaStor system i.e. cluster
+        or node.
+        @type entity_type: str
+
+        @return: Halon fru command status request message in string.
+        @rtype: str
+        """
+        message = {
+            StatusRequest.STATUS_REQUEST_KEY: {
+                StatusRequest.ENTITY_TYPE_KEY: entity_type,
+                StatusRequest.ENTITY_FILTER_KEY: entity_filter}}
+        self.status_request.message.update(message)
+        return self.status_request.__dict__
+
+
+class FRUServiceRequest(ServiceRequest):
+    # pylint: disable=too-few-public-methods
+
+    """
+        Service request for fru
+    """
+    def __init(self):
+        super(FRUServiceRequest, self).__init__()
+
+    def get_request_message(self, command, node=None):
+        """
+        Get the Halon fru command service request message in JSON string
+        @param command: The command for service [status, list etc.].
+        @type command: str
+
+        @return: Halon fru command list request message.
+        @rtype: dict
+        """
+        message = {
+            ServiceRequest.SERVICE_REQUEST_KEY: {
+                ServiceRequest.COMMAND_KEY: command,
+                ServiceRequest.NODE_KEY: node}}
+        self.service_request.message.update(message)
+        return self.service_request.__dict__
