@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-""" File containing factpry class implementation for the different
+""" File containing factory class implementation for the different
 sub commands supported by cstpr command
 """
 
@@ -24,6 +24,7 @@ import argparse
 from cstor.cli.commands.node import Node
 from cstor.cli.commands.service import Service
 from cstor.cli.commands.ha import Ha
+from cstor.cli.commands.power import Power
 
 
 class Factory(object):
@@ -41,12 +42,12 @@ class Factory(object):
         to the main parser.
         Parser for any new subcommand to be added, should be added here
         """
-
-        parser = argparse.ArgumentParser(description='Cstor CLI command')
+        parser = argparse.ArgumentParser(description='CStor CLI command')
         subparsers = parser.add_subparsers()
         Service.add_args(subparsers)
         Node.add_args(subparsers)
         Ha.add_args(subparsers)
+        Power.add_args(subparsers)
         args = parser.parse_args()
         return args
 
@@ -55,6 +56,5 @@ class Factory(object):
         """ Returns the object created for the subcommand
         which was invoked by the user through CLI
         """
-
         args = Factory.parse_args()
         return args.func(args)

@@ -19,6 +19,7 @@
 # Import Local Modules
 
 from cstor.cli.commands.command_factory import Factory
+from cstor.cli.errors import BaseError
 
 
 def main():
@@ -33,6 +34,8 @@ def main():
         print command_obj.execute_action()
     except ValueError as extra_info:
         print "some error occurred. Details: {}".format(str(extra_info))
+    except BaseError as extra_info:
+        print "Error: {}, Desc: {}".format(extra_info.err, extra_info.desc)
 
 if __name__ == '__main__':
     main()

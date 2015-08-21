@@ -37,7 +37,7 @@ class Node(BaseCommand):
         """
 
         super(Node, self).__init__()
-        self.action = parser.command
+        self.action = parser.action
         self.target = parser.node_spec
         self.provider = 'node'
 
@@ -60,7 +60,7 @@ class Node(BaseCommand):
         node_parser = subparsers.add_parser('node',
                                             help='Sub-command to work with '
                                             'node of the cluster.')
-        node_parser.add_argument('command', help='Command to run.',
+        node_parser.add_argument('action', help='Command to run.',
                                  choices=['start', 'stop',
                                           'restart', 'status'])
         node_parser.add_argument('node_spec', help='Regex for the node names')

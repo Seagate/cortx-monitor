@@ -14,7 +14,6 @@ class SsplHlProviderService(BaseUnitTest):
     """
     NODE_COMMAND = ['start',
                     'stop',
-                    'restart',
                     'status']
 
     def test_node_queries(self):
@@ -54,7 +53,7 @@ class SsplHlProviderService(BaseUnitTest):
         the case of the user bypassing the cli and accessing the data provider
         directly.
         """
-        command_args = {'command': 'restart',
+        command_args = {'command': 'start',
                         'target': 'node*',
                         'debug': False,
                         'ext': 'up'}
@@ -71,7 +70,7 @@ class SsplHlProviderService(BaseUnitTest):
         the case of the user bypassing the cli and accessing the data provider
         directly.
         """
-        command_args = {'command': 'restart'}
+        command_args = {'command': 'start'}
         response_msg = "Error: Invalid request: Missing target"
         self._test_args_validation_cases(command_args,
                                          response_msg,

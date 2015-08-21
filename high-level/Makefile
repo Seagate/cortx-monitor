@@ -16,6 +16,7 @@ ut:
 	PYTHONPATH=.:tests python tests/unit/sspl_hl_provider_service.py
 	PYTHONPATH=.:tests python tests/unit/sspl_hl_provider_node.py
 	PYTHONPATH=.:tests python tests/unit/sspl_hl_provider_ha.py
+	PYTHONPATH=.:tests python tests/unit/sspl_hl_provider_power.py
 
 pep8:
 	pep8 ./sspl_hl ./cstor ./tests/
