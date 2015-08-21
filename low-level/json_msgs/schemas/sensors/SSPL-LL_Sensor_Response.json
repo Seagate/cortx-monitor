@@ -155,11 +155,13 @@
 							"properties": {
 								"hostId" : {
 									"description" : "Hostname of system",
-									"type" : "string"
+									"type" : "string",
+									"required": true
 								},
 								"localtime" : {
 									"description" : "Local time on system",
-									"type" : "string"
+									"type" : "string",
+									"required": true
 								},
 								"bootTime" : {
 									"description" : "Time host was started",
@@ -226,11 +228,13 @@
 							"properties": {
 								"hostId" : {
 									"description" : "Hostname of system",
-									"type" : "string"
+									"type" : "string",
+									"required": true
 								},
 								"localtime" : {
 									"description" : "Local time on system",
-									"type" : "string"
+									"type" : "string",
+									"required": true
 								},
 								"freeSpace": {
 									"type" : "object",
@@ -304,11 +308,13 @@
 							"properties": {
 								"hostId" : {
 									"description" : "Hostname of system",
-									"type" : "string"
+									"type" : "string",
+									"required": true
 								},
 								"localtime" : {
 									"description" : "Local time on system",
-									"type" : "string"
+									"type" : "string",
+									"required": true
 								},
 								"csps": {
 									"type" : "integer"
@@ -371,11 +377,13 @@
 							"properties": {
 								"hostId" : {
 									"description" : "Hostname of system",
-									"type" : "string"
+									"type" : "string",
+									"required": true
 								},
 								"localtime" : {
 									"description" : "Local time on system",
-									"type" : "string"
+									"type" : "string",
+									"required": true
 								},
 								"interfaces": {
 									"type": "array",
@@ -384,7 +392,8 @@
 										"type" : "object",
 										"properties": {
 											"ifId " : {
-												"type" : "string"
+												"type" : "string",
+												"required": true
 											},
 											"networkErrors" : {
 												"type" : "integer"
@@ -419,7 +428,8 @@
 							"properties" : {
 								"hostId" : {
 									"description" : "Hostname of system",
-									"type" : "string"
+									"type" : "string",
+									"required": true
 								},
 								"mdstat" : {
 									"description" : "/proc/mdstat containing state information about RAID",
