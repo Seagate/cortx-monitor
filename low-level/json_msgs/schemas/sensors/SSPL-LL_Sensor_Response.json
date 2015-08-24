@@ -392,8 +392,7 @@
 										"type" : "object",
 										"properties": {
 											"ifId " : {
-												"type" : "string",
-												"required": true
+												"type" : "string"
 											},
 											"networkErrors" : {
 												"type" : "integer"
