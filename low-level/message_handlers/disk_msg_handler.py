@@ -197,7 +197,7 @@ class Drive(object):
         self._serialNumber   = serialNumber
         self._wwn            = wwn 
         self._enclosure      = "N/A"
-        self._drive_num      = "N/A"        
+        self._drive_num      = "N/A"
         self._filename       = "N/A"
 
     def parse_drive_mngr_path(self):

@@ -22,7 +22,7 @@ BuildRequires: rpm-build
 Requires:   python-daemon python-inotify python-jsonschema python-pika rabbitmq-server
 Requires:   python-zope-interface python-zope-event python-zope-component python-hpi
 Requires:   systemd-python pygobject2 dbus python-psutil libsspl_sec usm_tools
-Requires:   zabbix-agent-lib zabbix-openhpi-config zabbix-collector pyserial
+Requires:   zabbix-agent-lib zabbix-openhpi-config zabbix-collector pyserial python-paramiko
 Requires(pre): shadow-utils
 
 %description
