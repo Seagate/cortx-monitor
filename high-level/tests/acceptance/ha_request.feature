@@ -8,10 +8,7 @@ Feature: Ha Request
         And the exit code is "0"
     Examples:
         | command | subcommand |
-        | debug   | show    |
-        | debug   | status  |
-        | info    | show    |
-        | info    | status  |
+        | debug   | show       |
 
 
     Scenario: Invalid command

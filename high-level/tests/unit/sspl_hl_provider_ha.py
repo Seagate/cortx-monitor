@@ -1,199 +1,142 @@
-"""Unit tests for sspl_hl.providers.ha.provider.HaProvider"""
+""" Unit tests for sspl_hl.providers.service.provider """
+
 
 import unittest
 import mock
-import socket
 import subprocess
-import time
+import os
+import signal
+
 from sspl_hl.providers.ha.provider import HaProvider
 from base_unit_test import BaseUnitTest
+
+
 # pylint: disable=too-many-public-methods
-
-
 class SsplHlProviderHa(BaseUnitTest):
     """ Test methods of the
-        sspl_hl.providers.ha.provider.HaProvider object.
+        sspl_hl.providers.service.provider.HaProvider object.
     """
+    HA_COMMAND = ['debug']
 
-    @classmethod
-    def setUpClass(cls):
-        cls.fsproc = None
-        if not cls._verify_frontier_running():
-            cls.fsproc = cls._start_fake_frontier()
-
-    @classmethod
-    def tearDownClass(cls):
-        if cls.fsproc is not None:
-            cls._stop_frontier(cls.fsproc)
-
-    @staticmethod
-    def _query_provider(args,
-                        responder=mock.MagicMock(),
-                        provider=None):
-        super(SsplHlProviderHa, SsplHlProviderHa)._query_provider(
-            args,
-            responder,
-            HaProvider('Ha', ''))
-
-    @classmethod
-    def _unpack_response_data(cls, res_data):
-        if res_data is not None:
-            if res_data['Response Data'] is not None:
-                # pylint: disable=unused-variable
-                rd_args = res_data['Response Data'][1]
-                if 'data' in rd_args:
-                    data = rd_args['data'][0]
-                    if 'label' in data:
-                        return 1
-        return 0
-
-    @staticmethod
-    def _verify_frontier_running():
-        try:
-            conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            conn.connect(('127.0.0.1', 9008))
-            conn.close()
-            return True
-        except socket.error:
-            return False
+    # pylint: disable=no-self-use
+    def _create_provider(self):
+        ha_provider = HaProvider('ha', '')
+        ha_provider.on_create()
+        return ha_provider
 
     @staticmethod
     def _start_fake_frontier():
+        """
+        Start the fake frontier service
+        """
         proc = subprocess.Popen(
             ['./tests/fake_halond/frontier.py',
              '-p',
-             '/tmp/frontier.pid']
+             '/tmp/frontier.pid'],
+            preexec_fn=os.setsid
         )
-
-        # wait for frontier service to become available
-        timeout = 5
-        poll_interval = 0.1
-        while not SsplHlProviderHa._verify_frontier_running():
-            time.sleep(poll_interval)
-            timeout -= poll_interval
-            if timeout < 0:
-                raise RuntimeError("Unable to start fake frontier service")
-
         return proc
 
     @staticmethod
-    def _stop_frontier(proc):
-        proc.terminate()
+    def _stop_fake_frontier(proc):
+        """
+        Stop the fake frontier service
+        @param proc: process
+        @type proc: subprocess.process
+        """
+        os.killpg(proc.pid, signal.SIGTERM)
 
-    def _test_ha_query(self, command, subcommand):
-
+    @mock.patch('twisted.internet.reactor.callFromThread')
+    def test_rg_reply(self, call_patch):
+        """
+        Test resource graph fetch from frontier service.
+        Ensure reply is called
+        """
+        # pylint: disable=protected-access
+        proc = SsplHlProviderHa._start_fake_frontier()
+        ha_provider = self._create_provider()
+        responder = mock.MagicMock()
         self._query_provider(
-            args={'command': command, 'subcommand': subcommand, 'action': 'ha'}
-            )
+            {'command': 'debug', 'subcommand': 'show'},
+            responder,
+            ha_provider
+        )
+        SsplHlProviderHa._stop_fake_frontier(proc)
+        args, kwargs = call_patch.call_args
+        self.assertFalse(kwargs == {})
+        self.assertTrue(responder.reply in args)
 
-    @mock.patch('pika.BlockingConnection')
     @mock.patch('twisted.internet.reactor.callFromThread')
-    def test_ha_debug_show(self, cft_patch, conn_patch):
-        """ Ensures cstor ha debug show command execution.
+    def test_rg_exception(self, call_patch):
         """
-        result = {}
-        nodes_avlb = None
-        self._test_ha_query('debug', 'show')
-        result['Called Status'] = cft_patch.called
-        result['Response Data'] = cft_patch.call_args
-        nodes_avlb = self._unpack_response_data(result)
-        if result is not None:
-            self.assertTrue(result['Called Status'])
-        self.assertEqual(nodes_avlb, 1)
-        self.assertFalse(conn_patch().channel().basic_publish.called)
-
-    @mock.patch('pika.BlockingConnection')
-    @mock.patch('twisted.internet.reactor.callFromThread')
-    def test_ha_debug_status(self, cft_patch, conn_patch):
-        """ Ensures cstor ha debug status command execution.
+        Test resource graph fetch from frontier service.
+        Ensure reply_exception is called since
+        fake frontier service is not running.
         """
-        result = {}
-        nodes_avlb = None
-        self._test_ha_query('debug', 'status')
-        result['Called Status'] = cft_patch.called
-        result['Response Data'] = cft_patch.call_args
-        nodes_avlb = self._unpack_response_data(result)
-        if result is not None:
-            self.assertTrue(result['Called Status'])
-        self.assertEqual(nodes_avlb, 1)
-        self.assertFalse(conn_patch().channel().basic_publish.called)
+        # pylint: disable=protected-access
+        ha_provider = self._create_provider()
+        responder = mock.MagicMock()
+        ha_provider._get_resource_graph(responder)
+        args, kwargs = call_patch.call_args
+        self.assertTrue(kwargs == {})
+        self.assertTrue(responder.reply_exception in args)
 
-    @mock.patch('pika.BlockingConnection')
-    @mock.patch('twisted.internet.reactor.callFromThread')
-    def test_ha_info_show(self, cft_patch, conn_patch):
-        """ Ensures cstor ha info show command execution.
-        """
-        result = {}
-        nodes_avlb = None
-        self._test_ha_query('info', 'show')
-        result['Called Status'] = cft_patch.called
-        result['Response Data'] = cft_patch.call_args
-        nodes_avlb = self._unpack_response_data(result)
-        if result is not None:
-            self.assertTrue(result['Called Status'])
-        self.assertEqual(nodes_avlb, 1)
-        self.assertFalse(conn_patch().channel().basic_publish.called)
-
-    @mock.patch('pika.BlockingConnection')
-    @mock.patch('twisted.internet.reactor.callFromThread')
-    def test_ha_info_status(self, cft_patch, conn_patch):
-        """ Ensures cstor ha info status command execution.
-        """
-        result = {}
-        nodes_avlb = None
-        self._test_ha_query('info', 'status')
-        result['Called Status'] = cft_patch.called
-        result['Response Data'] = cft_patch.call_args
-        nodes_avlb = self._unpack_response_data(result)
-        if result is not None:
-            self.assertTrue(result['Called Status'])
-        self.assertEqual(nodes_avlb, 1)
-        self.assertFalse(conn_patch().channel().basic_publish.called)
-
-    @mock.patch('pika.BlockingConnection')
-    @mock.patch('twisted.internet.reactor.callFromThread')
-    def test_bad_command(self, cft_patch, conn_patch):
+    def test_bad_command(self):
         """ Ensure sending a bad command results in an http error code.
 
         The cli should prevent this from happening, so this is just to cover
         the case of the user bypassing the cli and accessing the data provider
         directly.
         """
-        result = {}
-        nodes_avlb = None
-        self._query_provider(
-            args={
-                'command': 'invalid_command'
-                },
-            )
-        result['Response Data'] = cft_patch.call_args
-        nodes_avlb = self._unpack_response_data(result)
-        self.assertEqual(nodes_avlb, 0)
-        self.assertFalse(conn_patch().channel().basic_publish.called)
+        command_args = {'command': 'invalid_command', 'subcommand': 'show'}
+        response_msg = "Error: Invalid command: 'invalid_command'"
 
-    @mock.patch('pika.BlockingConnection')
-    @mock.patch('twisted.internet.reactor.callFromThread')
-    def test_extra_params(self, cft_patch, conn_patch):
-        """ Ensure extra query params results in an http error code.
+        self._test_args_validation_cases(command_args,
+                                         response_msg,
+                                         HaProvider('ha', ''))
+
+    def test_extra_service_params(self):
+        """ Ensure sending extra query params results in an http error code.
 
         The cli should prevent this from happening, so this is just to cover
-        thng the cli and accessing the data provider
+        the case of the user bypassing the cli and accessing the data provider
         directly.
         """
-        result = {}
-        nodes_avlb = None
-        self._query_provider(
-            args={
-                'command': 'debug',
-                'subcommand': 'info',
-                'action': 'ha',
-                'extraargs': 'blah'
-                },
-        )
-        result['Response Data'] = cft_patch.call_args
-        nodes_avlb = self._unpack_response_data(result)
-        self.assertEqual(nodes_avlb, 0)
-        self.assertFalse(conn_patch().channel().basic_publish.called)
+        command_args = {'command': 'debug',
+                        'subcommand': 'show',
+                        'ext': 'up'}
+        response_msg = "Error: Invalid request: Extra parameter 'ext' detected"
+        self._test_args_validation_cases(command_args,
+                                         response_msg,
+                                         HaProvider('ha', ''))
+
+    def test_missing_subcommand(self):
+        """ Ensure sending query without service name results in an http error
+        code.
+
+        The cli should prevent this from happening, so this is just to cover
+        the case of the user bypassing the cli and accessing the data provider
+        directly.
+        """
+        command_args = {'command': 'debug'}
+        response_msg = "Error: Invalid request: Missing subcommand"
+        self._test_args_validation_cases(command_args,
+                                         response_msg,
+                                         HaProvider('ha', ''))
+
+    def test_missing_command(self):
+        """ Ensure sending query without command results in an http error code.
+
+        The cli should prevent this from happening, so this is just to cover
+        the case of the user bypassing the cli and accessing the data provider
+        directly.
+        """
+        command_args = {'subcommand': 'show'}
+        response_msg = "Error: Invalid request: Missing command"
+        self._test_args_validation_cases(command_args,
+                                         response_msg,
+                                         HaProvider('ha', ''))
+
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    unittest.main()

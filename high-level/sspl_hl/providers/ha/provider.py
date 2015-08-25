@@ -1,50 +1,32 @@
 """
 PLEX data provider for Halon resource graph for ha.
 """
-import socket
-from twisted.internet import reactor
 # Third party
+from twisted.internet import reactor
+import socket
+
 # Local
 from sspl_hl.utils.base_castor_provider import BaseCastorProvider
 
 
 class HaProvider(BaseCastorProvider):
     # pylint: disable=too-many-ancestors,too-many-public-methods
+    """
+    Used to set state of ha on the cluster.
+    """
 
-    """ Used to set state of ha on the cluster. """
     RG_COMMAND = "graph\r\n"
     RG_QUIT_CMD = "quit\r\n"
-    READ_BYTE_SIZE = 4096
+    READ_BYTE_SIZE = 8192
 
     def __init__(self, name, description):
         super(HaProvider, self).__init__(name, description)
-        self.valid_commands = ['info', 'debug']
-        self.valid_subcommands = ['show', 'status']
+        self.valid_commands = ['debug']
+        self.valid_subcommands = ['show']
         self.valid_arg_keys = ['command', 'subcommand']
-        self.no_of_arguments = 2
         self._frontier_node_ip = '127.0.0.1'
         self._frontier_port = 9008
-        self._conn = None
-
-    def _connect_frontier_service(self):
-        """Connects to frontier service
-        """
-        self._conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self._conn.connect((self._frontier_node_ip, self._frontier_port))
-
-    def _receive_data(self):
-        """ Receive Data from frontier service
-        """
-        self._conn.sendall(self.RG_COMMAND)
-        self._conn.sendall(self.RG_QUIT_CMD)
-        resource_graph = ""
-        while 1:
-            response = self._conn.recv(self.READ_BYTE_SIZE)
-            if not len(response) > 0:
-                break
-            resource_graph += response
-        self._conn.close()
-        return resource_graph
+        self.no_of_arguments = 2
 
     def _query(self, selection_args, responder):
         """ Get the resource graph ha on the cluster.
@@ -56,24 +38,36 @@ class HaProvider(BaseCastorProvider):
         result = super(HaProvider, self)._query(selection_args, responder)
         if result:
             reactor.callFromThread(responder.reply_exception, result)
-            return
-        try:
-            halon_response = self.get_ha_resource_graph()
-            reactor.callFromThread(responder.reply, data=[halon_response])
-        # pylint: disable=broad-except
-        except Exception as err:
-            reactor.callFromThread(responder.reply_exception, "Error: \
-Unable to get resource graph information:{}".format(err))
+        else:
+            self._get_resource_graph(responder)
 
-    def get_ha_resource_graph(self):
+    def _get_resource_graph(self, responder):
         """
-        Get response from frontier service
+        Connect to frontier service and fetch RG.
         """
-        self._connect_frontier_service()
-        data = self._receive_data()
-        self._conn.close()
-        return data
+        try:
+            frontier_sock = socket.socket(
+                socket.AF_INET,
+                socket.SOCK_STREAM
+            )
+            frontier_sock.connect((
+                self._frontier_node_ip,
+                self._frontier_port
+            ))
+            frontier_sock.sendall(self.RG_COMMAND)
+            frontier_sock.sendall(self.RG_QUIT_CMD)
+            resource_graph = ""
+            while 1:
+                response = frontier_sock.recv(self.READ_BYTE_SIZE)
+                if not len(response) > 0:
+                    break
+                resource_graph += response
+            reactor.callFromThread(responder.reply, data=[resource_graph])
+        except socket.error as msg:
+            reactor.callFromThread(responder.reply_exception, msg)
+        finally:
+            frontier_sock.close()
 
 # pylint: disable=invalid-name
-provider = HaProvider("Ha", "Ha Management Provider")
+provider = HaProvider("ha", "Ha Management Provider")
 # pylint: enable=invalid-name
