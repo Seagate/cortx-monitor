@@ -93,6 +93,7 @@ class ServiceRequest(object):
     This class defines the Service command request to Halon.
     """
     SERVICE_REQUEST_KEY = "serviceRequest"
+    SERVICE_NAME_KEY = "serviceName"
     COMMAND_KEY = "command"
     NODE_KEY = "nodes"
 
@@ -142,6 +143,32 @@ class StatusResponse(object):
 
     def __init__(self):
         self.status_response = CommandResponse()
+
+
+class ServiceQueryRequest(ServiceRequest):
+    # pylint: disable=too-few-public-methods
+    """
+    This class defines the Service command
+    """
+
+    def __init__(self):
+        super(ServiceQueryRequest, self).__init__()
+
+    def get_request_message(self, service_name, command):
+        """
+        Get the Halon service request message in JSON string
+        @param service_name: Service name
+        @type service_name: str
+
+        @return: Halon service request message in string.
+        @rtype: str
+        """
+        message = {
+            ServiceRequest.SERVICE_REQUEST_KEY: {
+                ServiceRequest.SERVICE_NAME_KEY: service_name,
+                ServiceRequest.COMMAND_KEY: command}}
+        self.service_request.message.update(message)
+        return self.service_request.__dict__
 
 
 class NodeStatusRequest(StatusRequest):

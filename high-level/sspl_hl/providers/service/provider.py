@@ -2,14 +2,12 @@
 PLEX data provider for service implementation.
 """
 # Third party
-import json
-import datetime
-import uuid
 from twisted.internet import reactor
 
 # Local
 from sspl_hl.utils.base_castor_provider import BaseCastorProvider
 from sspl_hl.utils.message_utils import ServiceListResponse
+from sspl_hl.utils.message_utils import ServiceQueryRequest
 
 
 class ServiceProvider(BaseCastorProvider):
@@ -24,8 +22,7 @@ class ServiceProvider(BaseCastorProvider):
     @staticmethod
     def _generate_service_request_msg(
             service_name,
-            command,
-            now=datetime.datetime.utcnow().isoformat() + '+00:00'):
+            command):
         """ Generate a service request message.
 
         @param service_name:      Name of the service, eg 'crond.service'.
@@ -35,30 +32,9 @@ class ServiceProvider(BaseCastorProvider):
         @return:                  json service request message.
         @rtype:                   json
         """
-        message = """
-            {{
-                "username": "ignored_for_now",
-                "signature": "None",
-                "time": "{now}",
-                "expires": 3600,
-                "message":
-                {{
-                    "messageId": "{messageId}",
-                    "serviceRequest":
-                    {{
-                        "serviceName": "{serviceName}",
-                        "command": "{command}"
-                    }}
-                }}
-            }}
-            """
-        message = message.format(
-            messageId=uuid.uuid4(),
-            serviceName=service_name,
-            command=command,
-            now=now,
-            )
-        message = json.loads(message)
+        message = ServiceQueryRequest().get_request_message(
+            service_name,
+            command)
         return message
 
     def _query(self, selection_args, responder):
