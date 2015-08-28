@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-""" File containing "power" sub command implementation
+"""File containing "power" sub command implementation
 """
 
 # Do NOT modify or remove this copyright and confidentiality notice
@@ -25,7 +25,6 @@ CURRENT_NODE = "LOCAL_NODE"
 
 
 class Power(Node):
-
     """
         Power command implementation class
     """
@@ -51,7 +50,7 @@ class Power(Node):
                                             'which nodes should be affected.')
         power_parser = subparsers.add_parser('power',
                                              help='Sub-command to work with '
-                                             'power of the cluster.')
+                                                  'power of the cluster.')
         sub_cmds = power_parser.add_subparsers(dest='action',
                                                help='command to run')
         sub_cmds.add_parser('on', parents=[parent_cmd_parser])
@@ -66,22 +65,22 @@ class Power(Node):
     @staticmethod
     def handle_power_off_cases(parser):
         """
-           check the power off params and conditions for the command
+            check the power off params and conditions for the command
         """
-        if not parser.force:
-            if not parser.node_spec:
-                usr_input = raw_input("Are you sure you wanted to power off"
-                                      " all the node (y/n)")
-            elif not parser.node_spec == CURRENT_NODE:
-                usr_input = raw_input("Are you sure you wanted to power off"
+        if not (parser.force or parser.node_spec):
+            if parser.node_spec == CURRENT_NODE:
+                usr_input = raw_input("Are you sure you want to power off"
                                       " the current node (y/n)")
+            else:
+                usr_input = raw_input("Are you sure you want to power off"
+                                      " all the node (y/n)")
             Power.check_user_input(usr_input)
         return
 
     @staticmethod
     def check_user_input(usr_input):
         """
-            validate the user input and if needed poll for the correct input.
+            validate the user input and if needed poll for the correct input
         """
         usr_input = usr_input.upper()
         if usr_input in ['N', 'NO']:

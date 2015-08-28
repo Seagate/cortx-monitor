@@ -193,7 +193,7 @@ class NodeStatusRequest(StatusRequest):
         message = {
             StatusRequest.STATUS_REQUEST_KEY: {
                 StatusRequest.ENTITY_TYPE_KEY: entity_type,
-                StatusRequest.ENTITY_FILTER_KEY: entity_filter}}
+                StatusRequest.ENTITY_FILTER_KEY: entity_filter or '.*'}}
         self.status_request.message.update(message)
         return self.status_request.__dict__
 
@@ -288,7 +288,7 @@ class NodeServiceRequest(ServiceRequest):
         message = {
             NodeServiceRequest.NODE_SERVICE_REQUEST_KEY: {
                 ServiceRequest.COMMAND_KEY: command,
-                ServiceRequest.NODE_KEY: node}}
+                ServiceRequest.NODE_KEY: node or '.*'}}
         self.service_request.message.update(message)
         return self.service_request.__dict__
 

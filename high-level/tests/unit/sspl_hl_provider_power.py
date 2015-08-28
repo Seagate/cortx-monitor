@@ -90,22 +90,22 @@ class SsplHlProviderPower(BaseUnitTest):
                                          response_msg,
                                          PowerProvider('node', ''))
 
-    # def test_missing_command(self):
-    #     """
-    #     Ensure sending query without command results in an http error
-    #     code.
-    #
-    #     The cli should prevent this from happening, so this is just
-    #     to cover the case of the user bypassing the cli and accessing
-    #     the data provider directly.
-    #     """
-    #     response_msg = "Error: Invalid request: Missing command"
-    #     command_args = {'target': 'node*',
-    #                     'debug': True}
-    #
-    #     self._test_args_validation_cases(command_args,
-    #                                      response_msg,
-    #                                      PowerProvider('node', ''))
+    def test_missing_command(self):
+        """
+        Ensure sending query without command results in an http error
+        code.
+
+        The cli should prevent this from happening, so this is just
+        to cover the case of the user bypassing the cli and accessing
+        the data provider directly.
+        """
+        response_msg = "Error: Invalid request: Missing command"
+        command_args = {'target': 'node*',
+                        'debug': True}
+
+        self._test_args_validation_cases(command_args,
+                                         response_msg,
+                                         PowerProvider('node', ''))
 
 if __name__ == '__main__':
     unittest.main()

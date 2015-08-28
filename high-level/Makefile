@@ -12,7 +12,7 @@ at:
 	PYTHONPATH=.:tests lettuce --failfast ./tests/acceptance/service_request.feature
 	PYTHONPATH=.:tests lettuce --failfast ./tests/acceptance/ha_request.feature
 	PYTHONPATH=.:tests lettuce --failfast ./tests/acceptance/fru_request.feature
-
+	PYTHONPATH=.:tests lettuce --failfast ./tests/acceptance/power_request.feature
 
 ut:
 	PYTHONPATH=.:tests python tests/unit/sspl_hl_provider_service.py

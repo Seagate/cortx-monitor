@@ -19,7 +19,7 @@
 # Import Local Modules
 
 from cstor.cli.commands.command_factory import Factory
-from cstor.cli.errors import BaseError
+from cstor.cli.errors import BaseError, CommandTerminated
 
 
 def main():
@@ -29,18 +29,20 @@ def main():
     this script
     """
 
-    command_obj = Factory.get_subcmd()
     try:
+        command_obj = Factory.get_subcmd()
         result = command_obj.execute_action()
         if result and isinstance(result, list):
             for item in result:
                 print item
         else:
             print result
-    except ValueError as extra_info:
-        print "some error occurred. Details: {}".format(str(extra_info))
+    except CommandTerminated as extra_info:
+        return []
     except BaseError as extra_info:
         print "Error: {}, Desc: {}".format(extra_info.err, extra_info.desc)
+    except ValueError as extra_info:
+        print "Some error occurred. Details: {}".format(str(extra_info))
 
 if __name__ == '__main__':
     main()
