@@ -56,7 +56,6 @@ class ManualTest():
 
         try:
             conf_reader = ConfigReader(path_to_conf_file)
-            conf_reader.validate_config_file()
 
         except (IOError, ConfigReader.Error) as err:
             # We don't have logger yet, need to find log_level from conf file first

@@ -20,6 +20,7 @@ import syslog
 from zope.interface import implements
 from loggers.ILogger import ILogger
 from framework.base.debug import Debug
+from framework.utils.autoemail import AutoEmail
 
 from systemd import journal
 from syslog import (LOG_EMERG, LOG_ALERT, LOG_CRIT, LOG_ERR,
@@ -48,8 +49,10 @@ class IEMlogger(Debug):
         """ @return: name of the logger."""
         return IEMlogger.LOGGER_NAME
 
-    def __init__(self):
+    def __init__(self, conf_reader):
         super(IEMlogger, self).__init__()
+
+        self._autoemailer = AutoEmail(conf_reader)
 
     def log_msg(self, jsonMsg):
         """logs the IEM message to the journal"""
@@ -73,8 +76,7 @@ class IEMlogger(Debug):
         try:
             log_msg = log_msg.encode('utf8')
         except Exception as de:
-            self._log_debug("log_msg, no encoding applied, \
-                            writing to journal: %r" % de)
+            self._log_debug("log_msg, no encoding applied, writing to journal: %r" % de)
 
         try:
             # IEM logging format "IEC: EVENT_CODE: EVENT_STRING: JSON DATA"
@@ -94,8 +96,12 @@ class IEMlogger(Debug):
             self._log_debug("log_msg, priority: %s" % priority)
 
             # Send it to the journal with the appropriate arguments
-            journal.send(msg, MESSAGE_ID=event_code, PRIORITY=priority, 
+            journal.send(msg, MESSAGE_ID=event_code, PRIORITY=priority,
                          SYSLOG_IDENTIFIER="sspl-ll")
+
+            # Send email if priority exceeds LOGEMAILER priority in /etc/sspl-ll.conf
+            result = self._autoemailer._send_email(log_msg, priority)
+            self._log_debug("Autoemailer result: %s" % result)
 
         except Exception as de:
             self._log_debug("log_msg, Error parsing IEM message: %s" % de)

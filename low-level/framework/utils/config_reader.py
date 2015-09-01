@@ -100,25 +100,3 @@ class ConfigReader(object):
             value_list.append(item[1])
         return value_list
 
-    def _validate_all_general_settings(self):
-        """This function to make sure config file contain all general settings
-
-        Run through all public function above
-        if any exception was being raise, then we have an invalid
-        configuration file"""
-        
-#         try:
-#             self.get_logging_level()
-#                    
-#         except ConfigParser.Error as err:
-#             raise err
-
-    # TODO: Validate config file and give user a friendly error message if it's corrupt or missing
-    def validate_config_file(self):
-        """This function validate the config file
-
-        we only validate for the item we needed
-        no redundancy has been checked"""
-        self._validate_all_general_settings()
-
-

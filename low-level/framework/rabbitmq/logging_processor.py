@@ -23,6 +23,23 @@ from systemd import journal
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
+from framework.utils.autoemail import AutoEmail
+
+from syslog import (LOG_EMERG, LOG_ALERT, LOG_CRIT, LOG_ERR,
+                    LOG_WARNING, LOG_NOTICE, LOG_INFO, LOG_DEBUG)
+LOGLEVELS = [("emerg"    , 0),
+             ("emergency", 0),
+             ("alert"    , 1),
+             ("critical" , 2),
+             ("crit"     , 2),
+             ("error"    , 3),
+             ("warning"  , 4),
+             ("warn"     , 4),
+             ("notice"   , 5),
+             ("info"     , 6),
+             ("debug"    , 7),
+             (""         , 6) #Identify no log level as info
+            ]
 
 class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
 
@@ -55,12 +72,10 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
         # Initialize internal message queues for this module
         super(LoggingProcessor, self).initialize_msgQ(msgQlist)
 
+        self._autoemailer = AutoEmail(conf_reader)
+
         # Configure RabbitMQ Exchange to receive messages
         self._configure_exchange()
-
-        # Display values used to configure pika from the config file 
-        self._log_debug("RabbitMQ exchange: %s, routing_key: %s, vhost: %s" %
-                       (self._exchange_name, self._routing_key, self._virtual_host))
 
     def run(self):
         """Run the module periodically on its own thread."""
@@ -93,51 +108,44 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
             #ingressMsgTxt = json.dumps(body, ensure_ascii=True).encode('utf8')
             #ingressMsg = json.loads(' '.join(ingressMsgTxt.split()))
 
+            # Enable debugging if it's found in the message
+            if "debug" in body or "DEBUG" in body:
+                self._set_debug(True)
+
             # Try encoding message to handle escape chars if present
             try:
-                logMsg = body.encode('utf8')
+                log_msg = body.encode('utf8')
             except Exception as de:
                 self._log_debug("_process_msg, no encoding applied, writing to syslog")
-                logMsg = body
+                log_msg = body
 
             # See if there is an id available
-            msg_id = None
+            event_code = None
             try:
-                iec_index = logMsg.index("IEC:")+4
-                tmp_msg = logMsg[iec_index : ]
-                colon_index = tmp_msg.index(":")
-                msg_id = str(logMsg[iec_index : iec_index + colon_index])
+                event_code_start = log_msg.index("IEC:") + 4
+                event_code_stop  = log_msg.index(":", event_code_start)
+
+                # Parse out the event code and remove any white spaces
+                event_code = log_msg[event_code_start : event_code_stop].strip()
+                self._log_debug("log_msg, event_code: %s" % event_code)
             except:
                 # Log message has no IEC to use as message_id in journal, ignoring
                 pass
 
             # Write message to the journal
-            if "emerg" in logMsg or "EMERG" in logMsg:
-                journal.send(logMsg, PRIORITY=0, MESSAGE_ID=msg_id, SYSLOG_IDENTIFIER="sspl-ll")
+            for loglevel, priority in LOGLEVELS:
+                # Parse the message for a log level and log the message
+                if loglevel in log_msg or loglevel.upper() in log_msg:
+                    # Send it to the journal with the appropriate arguments
+                    journal.send(log_msg, MESSAGE_ID=event_code, PRIORITY=priority,
+                                 SYSLOG_IDENTIFIER="sspl-ll")
 
-            elif "alert" in logMsg or "ALERT" in logMsg:
-                journal.send(logMsg, PRIORITY=1, MESSAGE_ID=msg_id, SYSLOG_IDENTIFIER="sspl-ll")
+                    # Send email if priority exceeds LOGEMAILER priority in /etc/sspl-ll.conf
+                    result = self._autoemailer._send_email(log_msg, priority)
+                    self._log_debug("Autoemailer result: %s" % result)
 
-            elif "critical" in logMsg or "CRITICAL" in logMsg:
-                journal.send(logMsg, PRIORITY=2, MESSAGE_ID=msg_id, SYSLOG_IDENTIFIER="sspl-ll")
-
-            elif "error" in logMsg or "ERROR" in logMsg:
-                journal.send(logMsg, PRIORITY=3, MESSAGE_ID=msg_id, SYSLOG_IDENTIFIER="sspl-ll")
-
-            elif "warning" in logMsg or "WARNING" in logMsg:
-                journal.send(logMsg, PRIORITY=4, MESSAGE_ID=msg_id, SYSLOG_IDENTIFIER="sspl-ll")
-
-            elif "notice" in logMsg or "NOTICE" in logMsg:
-                journal.send(logMsg, PRIORITY=5, MESSAGE_ID=msg_id, SYSLOG_IDENTIFIER="sspl-ll")
-
-            elif "info" in logMsg or "INFO" in logMsg:
-                journal.send(logMsg, PRIORITY=6, MESSAGE_ID=msg_id, SYSLOG_IDENTIFIER="sspl-ll")
-
-            elif "debug" in logMsg or "DEBUG" in logMsg:
-                journal.send(logMsg, PRIORITY=7, MESSAGE_ID=msg_id, SYSLOG_IDENTIFIER="sspl-ll")
-
-            else:
-                journal.send(logMsg)
+                    # Break to avoid resending log messages
+                    break
 
             # Acknowledge message was received     
             ch.basic_ack(delivery_tag = method.delivery_tag)

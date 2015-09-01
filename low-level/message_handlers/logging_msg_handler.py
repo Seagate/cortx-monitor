@@ -50,8 +50,12 @@ class LoggingMsgHandler(ScheduledModuleThread, InternalMsgQ):
         # Initialize internal message queues for this module
         super(LoggingMsgHandler, self).initialize_msgQ(msgQlist)
 
+        self._conf_reader = conf_reader
+        self._iem_logger  = None
+
     def run(self):
         """Run the module periodically on its own thread."""
+
         self._log_debug("Start accepting requests")
 
         try:
@@ -82,8 +86,9 @@ class LoggingMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
         if jsonMsg.get("actuator_request_type").get("logging").get("log_type") == "IEM":
             self._log_debug("_processMsg, msg_type: IEM")
-            iem_logger = IEMlogger()
-            iem_logger.log_msg(jsonMsg)
+            if self._iem_logger == None:
+                self._iem_logger = IEMlogger(self._conf_reader)
+            self._iem_logger.log_msg(jsonMsg)
 
         # ... handle other logging types
 
