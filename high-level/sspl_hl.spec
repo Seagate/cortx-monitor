@@ -40,12 +40,14 @@ A cli (and library) that allow the user to control the cluster.
 
 %install
 mkdir -p %{installpath}/sspl_hl/views
-mkdir -p %{installpath}/sspl_hl/providers/{service,node,ha,response}
+mkdir -p %{installpath}/sspl_hl/providers/{service,node,ha,response,fru,power}
 install sspl_hl/main.py sspl_hl/__init__.py %{installpath}/sspl_hl/
 install sspl_hl/providers/__init__.py %{installpath}/sspl_hl/providers/
 install sspl_hl/providers/service/*.py %{installpath}/sspl_hl/providers/service/
 install sspl_hl/providers/node/*.py %{installpath}/sspl_hl/providers/node/
 install sspl_hl/providers/ha/*.py %{installpath}/sspl_hl/providers/ha/
+install sspl_hl/providers/fru/*.py %{installpath}/sspl_hl/providers/fru/
+install sspl_hl/providers/power/*.py %{installpath}/sspl_hl/providers/power/
 install sspl_hl/providers/response/*.py %{installpath}/sspl_hl/providers/response/
 mkdir -p %{installpath}/sspl_hl/utils/
 install sspl_hl/utils/*.py %{installpath}/sspl_hl/utils/
@@ -69,6 +71,9 @@ ln -s /usr/lib/python2.7/site-packages/cstor/cli/main.py %{buildroot}/usr/bin/cs
 
 
 %changelog
+* Mon Aug 31 2015 Malhar Vora <malhar.vora@seagate.com>
+- Add power and fru providers
+
 * Tue Aug 04 2015 Rich Gowman <rich.gowman@seagate.com>
 - Add service and node providers
 - Add common utils package (used by various providers)
