@@ -55,6 +55,9 @@ low-level/framework/sspl_ll_rabbitmq_reinit
 # Start openhpid
 systemctl start openhpid -l
 
+systemctl start crond
+systemctl start httpd
+
 # Execute tests
 cd low-level/tests/automated
 chmod +x run_sspl-ll_tests.bsh
