@@ -46,8 +46,9 @@ class Power(Node):
         """
         parent_cmd_parser = argparse.ArgumentParser(add_help=False)
         parent_cmd_parser.add_argument('--node_spec',
-                                       help='Optional parameter to indicate '
-                                            'which nodes should be affected.')
+                                       help='Optional parameter to indicate'
+                                            ' the Regex for nodes that '
+                                            'should be affected.')
         power_parser = subparsers.add_parser('power',
                                              help='Sub-command to work with '
                                                   'power of the cluster.')

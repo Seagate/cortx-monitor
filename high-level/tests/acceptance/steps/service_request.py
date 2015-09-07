@@ -99,38 +99,19 @@ def servicerequest_msg_sent(_, command, service_name):
     os.unlink(os.path.join('/tmp/fake_halond', first_file))
 
 
-@lettuce.step(u'Then a nodeRequest message to "([^"]*)" "([^"]*)" is sent')
+@lettuce.step(
+    u'Then a nodeRequest message to "([^"]*)" --node_spec "([^"]*)" is sent'
+)
 def noderequest_msg_sent(_, command, target):
-    """ Ensure proper message generated and enqueued. """
-    # wait for a message to appear in the fake_halond output directory
-    lettuce.world.wait_for_condition(
-        status_func=lambda: len(os.listdir('/tmp/fake_halond')) > 0,
-        max_wait=5,
-        timeout_message="Timeout expired while waiting for message to arrive "
-        "in fake_halond output directory."
-        )
-    first_file = sorted(
-        os.listdir('/tmp/fake_halond'),
-        key=lambda f: os.stat(os.path.join('/tmp/fake_halond', f)).st_mtime
-        )[0]
-    contents = open(os.path.join('/tmp/fake_halond', first_file), 'r').read()
+    """ Ensure proper message is generated for a specific
+    node and enqueued. """
+    _noderequest_msg_sent(command, target)
 
-    # pylint: disable=protected-access
-    exp = json.dumps(NodeProvider._generate_node_request_msg(
-        target=target, command=command
-        ))
-    # pylint: enable=protected-access
 
-    tmp = json.loads(exp)
-    tmp['time'] = json.loads(contents)['time']
-    tmp['message']['messageId'] = json.loads(contents)['message']['messageId']
-    exp = json.dumps(tmp)
-
-    assert json.loads(contents) == json.loads(exp), \
-        "Message doesn't match.  Expected '{expected}' but got '{actual}'" \
-        .format(expected=exp, actual=contents)
-
-    os.unlink(os.path.join('/tmp/fake_halond', first_file))
+@lettuce.step(u'Then a nodeRequest message to "([^"]*)" is sent')
+def all_noderequest_msg_sent(_, command):
+    """ Ensure proper message is generated for all node and enqueued. """
+    _noderequest_msg_sent(command)
 
 
 @lettuce.step(u'Then a command request to ha with "([^"]*)" "([^"]*)" is sent')
@@ -214,3 +195,36 @@ def exit_code_is_x(_, exitcode):
             expected=exitcode,
             actual=lettuce.world.exitcode
         )
+
+
+def _noderequest_msg_sent(command, target=None):
+    """ Ensure proper message is generated and enqueued. """
+    # wait for a message to appear in the fake_halond output directory
+    lettuce.world.wait_for_condition(
+        status_func=lambda: len(os.listdir('/tmp/fake_halond')) > 0,
+        max_wait=5,
+        timeout_message="Timeout expired while waiting for message to arrive "
+        "in fake_halond output directory."
+        )
+    first_file = sorted(
+        os.listdir('/tmp/fake_halond'),
+        key=lambda f: os.stat(os.path.join('/tmp/fake_halond', f)).st_mtime
+        )[0]
+    contents = open(os.path.join('/tmp/fake_halond', first_file), 'r').read()
+
+    # pylint: disable=protected-access
+    exp = json.dumps(NodeProvider._generate_node_request_msg(
+        target=target, command=command
+        ))
+    # pylint: enable=protected-access
+
+    tmp = json.loads(exp)
+    tmp['time'] = json.loads(contents)['time']
+    tmp['message']['messageId'] = json.loads(contents)['message']['messageId']
+    exp = json.dumps(tmp)
+
+    assert json.loads(contents) == json.loads(exp), \
+        "Message doesn't match.  Expected '{expected}' but got '{actual}'" \
+        .format(expected=exp, actual=contents)
+
+    os.unlink(os.path.join('/tmp/fake_halond', first_file))

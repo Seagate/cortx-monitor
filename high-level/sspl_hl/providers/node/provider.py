@@ -36,12 +36,28 @@ class NodeProvider(BaseCastorProvider):
         @rtype:                   json
         """
         message = None
-        if command == 'status':
-            message = NodeStatusRequest().get_request_message("node", target)
-        elif command == 'list':
-            message = NodeStatusRequest().get_request_message("node", ".*")
+        if target is None or str(target).lower() == "none":
+            if command in ["list", "status"]:
+                message = NodeStatusRequest().get_request_message("node")
+            else:
+                message = NodeServiceRequest().get_request_message(
+                    command, ".*")
         else:
-            message = NodeServiceRequest().get_request_message(command, target)
+            if command == "status":
+                message = NodeStatusRequest().get_request_message(
+                    "node",
+                    target
+                )
+            elif command == 'list':
+                message = NodeStatusRequest().get_request_message(
+                    "node",
+                    ".*"
+                )
+            else:
+                message = NodeServiceRequest().get_request_message(
+                    command,
+                    target
+                )
         return message
 
     def _query(self, selection_args, responder):

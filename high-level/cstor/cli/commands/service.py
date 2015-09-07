@@ -56,8 +56,9 @@ class Service(BaseCommand):
                                                 'e.g. crond.service')
         parent_service_parser.add_argument('--node_spec',
                                            help='Optional parameter to '
-                                                'indicate which nodes should '
-                                                'be affected.')
+                                                'indicate the Regex for'
+                                                ' nodes that should be '
+                                                'affected.')
 
         service_parser = subparsers.add_parser('service',
                                                help='Subcommand to work with '

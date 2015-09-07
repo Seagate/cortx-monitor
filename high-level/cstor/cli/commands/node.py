@@ -75,13 +75,15 @@ class Node(BaseCommand):
 
     @staticmethod
     def add_args(subparsers):
-        """ Defines the command structure for node command
+        """ Defines the command structure for node command.
         """
         parent_node_parser = argparse.ArgumentParser(add_help=False)
 
-        parent_node_parser.add_argument('node_spec',
+        parent_node_parser.add_argument('--node_spec',
                                         default=None,
-                                        help='Regex for the node names')
+                                        help='Optional parameter to indicate'
+                                             ' the Regex for nodes that '
+                                             'should be affected.')
 
         node_parser = subparsers.add_parser('node',
                                             help='Sub-command to work with '
@@ -133,7 +135,7 @@ class Node(BaseCommand):
         1. Get the messageId from Node response status.
         2. Query Response provider with messageId to get the
            status command response.
-        3. If response is empty retry till defined RETRY_CNT
+        3. If response is empty retry till defined RETRY_CNT.
         4. Pause for RETRY_SLEEP_SEC in between retries.
 
         @param status_response: Node status command response
