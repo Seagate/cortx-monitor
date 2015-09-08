@@ -78,6 +78,7 @@ class NodeProvider(BaseCastorProvider):
             response = message
         else:
             reactor.callFromThread(responder.reply_no_match)
+            return
         reactor.callFromThread(responder.reply, data=[response])
 
 
