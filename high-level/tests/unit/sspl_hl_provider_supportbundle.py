@@ -2,36 +2,17 @@
 
 
 import unittest
-import mock
 
 from sspl_hl.providers.support_bundle.provider import SupportBundleProvider
 from base_unit_test import BaseUnitTest
 
+
 # pylint: disable=too-many-public-methods
-
-
 class SsplHlProviderSupportBundle(BaseUnitTest):
     """ Test methods of the
         sspl_hl.providers.support_bundle.provider.SupportBundleProvider object.
     """
-    COMMAND = ['list', 'create']
-
-    def test_commands_no_provider(self):
-        """ Ensures support bundle commands does not make a call to the HAlon.
-        """
-
-        for command in SsplHlProviderSupportBundle.COMMAND:
-            selection_args = {'command': command}
-
-            with mock.patch('uuid.uuid4', return_value='uuid_goes_here'), \
-                    mock.patch('pika.BlockingConnection') as patch:
-                self._query_provider(args=selection_args,
-                                     provider=SupportBundleProvider(
-                                         'support_bundle', ''))
-
-            assert not patch().channel().basic_publish.called, \
-                'No Basic Publish call should ' \
-                'be made for service list command'
+    COMMAND = ['create', 'list']
 
     def test_bad_command(self):
         """ Ensure sending a bad command results in an http error code.

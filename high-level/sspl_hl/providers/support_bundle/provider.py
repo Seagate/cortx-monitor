@@ -2,10 +2,25 @@
 PLEX data provider.
 """
 # Third party
+
 from twisted.internet import reactor
 from sspl_hl.utils.base_castor_provider import BaseCastorProvider
-from sspl_hl.utils.common_utils import (list_available_support_bundle,
-                                        create_support_bundle)
+from sspl_hl.utils.bundle_utils import (list_bundle_files,
+                                        bundle_files)
+from sspl_hl.utils.message_utils import SupportBundleResponse
+
+# """
+# DEFAULT_LOG_FILES: This would contain the meta data for the files that
+# needs to be bundled from various different nodes/cluster.
+#
+# DEFAULT_PATH: It will contain the path where tar files will be created.
+# NOTE: Both these parameters will be later moved to plex configuration.
+# """
+
+# pylint: disable=dangerous-default-value
+DEFAULT_TARGET_FILES = {'n1': ['/var/log/plex/*.log'],
+                        'n2': []}
+DEFAULT_PATH = '/var/lib/support_bundles'
 
 
 class SupportBundleProvider(BaseCastorProvider):
@@ -32,7 +47,7 @@ class SupportBundleProvider(BaseCastorProvider):
 
         response = SupportBundleProvider._process_support_bundle_request(
             selection_args['command']
-            )
+        )
 
         reactor.callFromThread(responder.reply, data=[response])
 
@@ -42,13 +57,17 @@ class SupportBundleProvider(BaseCastorProvider):
         based on the command
         """
 
+        response = SupportBundleResponse()
         if command == 'list':
-            response = list_available_support_bundle()
+            bundle_list = list_bundle_files(path=DEFAULT_PATH)
+            response = response.get_response_message(command, bundle_list)
         elif command == 'create':
-            response = create_support_bundle()
+            bundle_name = bundle_files(DEFAULT_TARGET_FILES, DEFAULT_PATH)
+            response = response.get_response_message(command, bundle_name)
         else:
             response = 'command %s not supported' % command
         return response
 
-SupportBundleProvider('support_bundle',
-                      "Provider for command support_bundle")
+# pylint: disable=invalid-name
+provider = SupportBundleProvider('support_bundle',
+                                 "Provider for command support_bundle")

@@ -47,7 +47,7 @@ class Message(object):
 
     def to_dict(self):
         """
-        Get the Halon message in dict
+        Get the message in dict
 
         @return: returns the Halon message.
         @rtype: dict
@@ -535,3 +535,30 @@ class FRUServiceRequest(ServiceRequest):
                 ServiceRequest.NODE_KEY: node}}
         self.service_request.message.update(message)
         return self.service_request.__dict__
+
+
+class SupportBundleResponse(CommandResponse):
+    # pylint: disable=too-few-public-methods
+    """
+        Response for Support Bundle.
+    """
+    BUNDLE_NAME = "bundle_name"
+    BUNDLE_LIST = "bundle_list"
+
+    def __init__(self):
+        super(SupportBundleResponse, self).__init__()
+
+    def get_response_message(self, command_type, response):
+        """
+        Get the response message in dict format
+        @param: bundle_name Name of the created bundle package
+        @return: dict containing the response for bundle command
+        @rtype: dict
+        """
+        message = {}
+        if command_type == 'create':
+            message = {SupportBundleResponse.BUNDLE_NAME: response}
+        elif command_type == 'list':
+            message = {SupportBundleResponse.BUNDLE_LIST: response}
+        self.message.update(message)
+        return self.__dict__
