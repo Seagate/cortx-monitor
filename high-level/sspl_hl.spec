@@ -40,7 +40,7 @@ A cli (and library) that allow the user to control the cluster.
 
 %install
 mkdir -p %{installpath}/sspl_hl/views
-mkdir -p %{installpath}/sspl_hl/providers/{service,node,ha,response,fru,power}
+mkdir -p %{installpath}/sspl_hl/providers/{service,node,ha,response,fru,power,support_bundle}
 install sspl_hl/main.py sspl_hl/__init__.py %{installpath}/sspl_hl/
 install sspl_hl/providers/__init__.py %{installpath}/sspl_hl/providers/
 install sspl_hl/providers/service/*.py %{installpath}/sspl_hl/providers/service/
@@ -49,6 +49,7 @@ install sspl_hl/providers/ha/*.py %{installpath}/sspl_hl/providers/ha/
 install sspl_hl/providers/fru/*.py %{installpath}/sspl_hl/providers/fru/
 install sspl_hl/providers/power/*.py %{installpath}/sspl_hl/providers/power/
 install sspl_hl/providers/response/*.py %{installpath}/sspl_hl/providers/response/
+install sspl_hl/providers/support_bundle/*.py %{installpath}/sspl_hl/providers/support_bundle/
 mkdir -p %{installpath}/sspl_hl/utils/
 install sspl_hl/utils/*.py %{installpath}/sspl_hl/utils/
 mkdir -p %{buildroot}/usr/lib/python2.7/site-packages/cstor/cli/commands
@@ -60,6 +61,7 @@ install cstor/cli/commands/*.py %{buildroot}/usr/lib/python2.7/site-packages/cst
 mkdir -p %{buildroot}/usr/bin
 ln -s /usr/lib/python2.7/site-packages/cstor/cli/main.py %{buildroot}/usr/bin/cstor
 
+mkdir -p %{buildroot}/var/lib/support_bundles
 
 %files
 %defattr(0644,plex,plex,-)
@@ -71,6 +73,10 @@ ln -s /usr/lib/python2.7/site-packages/cstor/cli/main.py %{buildroot}/usr/bin/cs
 
 
 %changelog
+* Mon Sep 11 2015 Madhur Nawandar <madhur.nawandar@seagate.com>
+- Add support_bundle provider
+- Created directory to store support bundles
+
 * Mon Aug 31 2015 Malhar Vora <malhar.vora@seagate.com>
 - Add power and fru providers
 
