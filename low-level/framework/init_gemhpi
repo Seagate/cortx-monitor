@@ -1,4 +1,6 @@
 #!/bin/bash
 
+chown -R zabbix:zabbix /tmp/dcs/drivemanager
+
 echo -e 'sen\nq\nquit' | hpi_shell
 hpisensor
