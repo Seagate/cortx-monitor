@@ -921,7 +921,7 @@ class SSPLtest():
         """
 
         self.filter.remove(messageType)
-        ingresmsg = None
+        ingressmsg = None
 
         try:
             assert(self.event.wait(5))
@@ -1185,8 +1185,8 @@ class SSPLtest():
                             "EventVerify"       : "Failed",
                          }
 
-        if not self.hostUpdateVerify():
-            testPassedDict["HostUpdateVerify"] = "Passed"
+        #if not self.hostUpdateVerify():
+        #    testPassedDict["HostUpdateVerify"] = "Passed"
         if not self.eventVerify():
             testPassedDict["EventVerify"] = "Passed"
         if not self.serviceVerify():
