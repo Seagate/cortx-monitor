@@ -1184,14 +1184,14 @@ class SSPLtest():
         #    testPassedDict["HostUpdateVerify"] = "Passed"
         if not self.eventVerify():
             testPassedDict["EventVerify"] = "Passed"
-        if not self.serviceVerify():
-            testPassedDict["ServiceVerify"] = "Passed"
-        if not self.logVerify():
-            testPassedDict["LogVerify"] = "Passed"
-        if not self.threadVerify():
-            testPassedDict["ThreadVerify"] = "Passed"
-        if not self.serviceWatchdogVerify():
-           testPassedDict["WatchdogVerify"] = "Passed"
+        #if not self.serviceVerify():
+        #    testPassedDict["ServiceVerify"] = "Passed"
+        #if not self.logVerify():
+        #    testPassedDict["LogVerify"] = "Passed"
+        #if not self.threadVerify():
+        #    testPassedDict["ThreadVerify"] = "Passed"
+        #if not self.serviceWatchdogVerify():
+        #   testPassedDict["WatchdogVerify"] = "Passed"
         # Awaiting fix for gemhpi
         #if not self.driveVerify():
         #    testPassedDict["DriveVerify"] = "Passed"
