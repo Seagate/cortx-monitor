@@ -162,12 +162,6 @@ class SSPLtest():
         self.channel.exchange_declare(exchange='sspl_halon',
                                  type='topic', durable=False)
 
-        #Turn on all drives to be used during testing
-        for drive in self.drivesToTest:
-            self.driveOn(drive)
-        #Sleep for 30 seconds to allow drives to turn on
-        time.sleep(30)
-
 
     def usage(self):
         """Usage function"""
@@ -212,7 +206,7 @@ class SSPLtest():
                 sensorMsg = ingressMsg.get("message").get("sensor_response_type")
                 actuatorMsg = ingressMsg.get("message").get("actuator_response_type")
                 #Sorts out any outgoing messages only processes *_response_type
-                if sensorMsg is not None or actuatorMsg is not None:
+                if sensorMsg is not None or actuatorMsg is not None: 
                     #print " [x] %r" % (body,)
 
                     #Passes the ingress message to the interthread_msg string
@@ -787,7 +781,7 @@ class SSPLtest():
 
                     #Check for the drive manager message that we changed to
                     try:
-                        assert(self.event.wait(60))
+                        assert(self.event.wait(5))
                     except:
                         self.logger.debug('TIMEOUT: Did not get drivemanager event message back ' + str(disk))
                     self.event.clear()
@@ -800,7 +794,7 @@ class SSPLtest():
                         self.eventTestTotal += 1
                         assert(ingressmsg.get("message").get("sensor_response_type").get("disk_status_drivemanager").get("enclosureSN") == enclosure)
                         assert(ingressmsg.get("message").get("sensor_response_type").get("disk_status_drivemanager").get("diskNum") == disk)
-                        assert(ingressmsg.get("message").get("sensor_response_type").get("disk_status_drivemanager").get("diskStatus") == "inuse_failed")
+                        assert(ingressmsg.get("message").get("sensor_response_type").get("disk_status_drivemanager").get("diskStatus") == "inuse_failed_None")
                         self.testsPassed += 1
                         self.eventTestPassed += 1
                         self.logger.debug('Test to get drivemananger message on disk ' + str(disk) + ' succeeded')
@@ -824,7 +818,7 @@ class SSPLtest():
 
                     #Test to see hpi data change messages
                     try:
-                        assert(self.event.wait(60))
+                        assert(self.event.wait(10))
                     except:
                         self.logger.debug('TIMEOUT: Did not get hpi data change event message back ' + str(disk))
                     self.event.clear()
@@ -882,6 +876,7 @@ class SSPLtest():
                         self.logger.debug('Test to get hpi data change message on disk ' + str(disk) + ' succeeded')
                     except:
                         self.logger.debug('Test to get hpi data change message on disk ' + str(disk) + ' failed')
+                        self.logger.debug("ingressmsg: %s" % ingressmsg)
 
         self.filter.append("disk_status_hpi")
 
