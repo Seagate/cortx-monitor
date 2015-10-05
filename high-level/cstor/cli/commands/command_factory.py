@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """ File containing factory class implementation for the different
-sub commands supported by cstpr command
+subcommands supported by cstor command
 """
 
 # Do NOT modify or remove this copyright and confidentiality notice
@@ -27,6 +27,7 @@ from cstor.cli.commands.ha import Ha
 from cstor.cli.commands.power import Power
 from cstor.cli.commands.fru import FieldReplaceableUnit
 from cstor.cli.commands.support_bundle import SupportBundle
+from cstor.cli.commands.ldapadmin import LdapAdmin
 
 
 class Factory(object):
@@ -52,6 +53,7 @@ class Factory(object):
         Power.add_args(subparsers)
         FieldReplaceableUnit.add_args(subparsers)
         SupportBundle.add_args(subparsers)
+        LdapAdmin.add_args(subparsers)
         args = parser.parse_args()
         return args
 
