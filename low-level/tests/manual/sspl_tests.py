@@ -1184,6 +1184,7 @@ class SSPLtest():
         #    testPassedDict["HostUpdateVerify"] = "Passed"
         if not self.eventVerify():
             testPassedDict["EventVerify"] = "Passed"
+            self.testsTotal = self.testsPassed
         #if not self.serviceVerify():
         #    testPassedDict["ServiceVerify"] = "Passed"
         #if not self.logVerify():
