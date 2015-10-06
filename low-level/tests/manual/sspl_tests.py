@@ -1222,8 +1222,6 @@ class SSPLtest():
         else:
             testPassedDict["TestReturnCode"] = 1
 
-        # Temporary
-        testPassedDict["TestReturnCode"] = 0
         return testPassedDict
 
 if __name__ == '__main__':
