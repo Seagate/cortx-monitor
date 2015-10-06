@@ -64,6 +64,10 @@ systemctl enable sspl-ll
 /opt/seagate/sspl/low-level/framework/sspl_ll_reinit
 chown -R sspl-ll:root /opt/seagate/sspl/low-level
 
+# Restart dbus with policy file
+systemctl restart dbus
+
+
 %clean
 rm -rf %{buildroot}
 
