@@ -876,7 +876,6 @@ class SSPLtest():
                         self.logger.debug('Test to get hpi data change message on disk ' + str(disk) + ' succeeded')
                     except:
                         self.logger.debug('Test to get hpi data change message on disk ' + str(disk) + ' failed')
-                        self.logger.debug("ingressmsg: %s" % ingressmsg)
 
         self.filter.append("disk_status_hpi")
 
