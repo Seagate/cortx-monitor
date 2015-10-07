@@ -129,7 +129,7 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
                 logger.info("RabbitMQingressProcessor ungracefully breaking out of run loop, restarting.")
                 logger.exception(e)                
                 self._configure_exchange()
-                self._scheduler.enter(1, self._priority, self.run, ())
+                self._scheduler.enter(10, self._priority, self.run, ())
             else:
                 logger.info("RabbitMQingressProcessor gracefully breaking out of run Loop, not restarting.")
 
