@@ -17,8 +17,10 @@ python-zope-interface	\
 python-zope-component	\
 zabbix-agent-lib	\
 zabbix-collector	\
-zabbix-openhpi-config \
-python-paramiko \
-pyserial \
-libsspl_sec
+zabbix-openhpi-config   \
+python-paramiko         \
+pyserial                \
+libsspl_sec             \
+pylint                  \
+pep8
 
