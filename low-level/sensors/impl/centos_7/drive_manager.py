@@ -84,8 +84,7 @@ class DriveManager(ScheduledModuleThread, InternalMsgQ):
         self._log_debug("run, CentOS 7 base directory: %s" % self._drive_mngr_base_dir)
 
         # Retrieve the current information about each drive from the file system
-        if not self._drive_status:
-            self._init_drive_status()
+        self._init_drive_status()
 
         self._set_debug(True)
         self._set_debug_persist(True)
