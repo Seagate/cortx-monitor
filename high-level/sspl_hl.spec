@@ -70,6 +70,7 @@ mkdir -p %{buildroot}/var/lib/support_bundles
 %defattr(0755,root,root,-)
 /usr/bin/cstor
 /usr/lib/python2.7/site-packages/cstor/cli/main.py
+/var/lib/support_bundles
 
 
 %changelog
