@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from lettuce import *
 
+import time
 import os
 import json
 
@@ -62,6 +63,12 @@ def then_i_receive_Restart_Successful_JSON_response_message(step):
     thread_response = ingressMsg.get("actuator_response_type").get("thread_controller").get("thread_response")
     print("thread_response: %s" % thread_response)
     assert thread_response == "Restart Successful"
+
+    time.sleep(5)
+
+    # Clear the message queue buffer out
+    while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
+        world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
     print"Done"
     
 @step(u'Given I send in the actuator message to stop drive manager')
@@ -156,6 +163,12 @@ def then_i_get_the_start_successful_json_response_message(step):
     thread_response = ingressMsg.get("actuator_response_type").get("thread_controller").get("thread_response")
     print("thread_response: %s" % thread_response)
     assert thread_response == "Start Successful"
+
+    time.sleep(5)
+
+    # Clear the message queue buffer out
+    while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
+        world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
     print"Done"
 
 @step(u'Given I request to stop drive manager and then I request a thread status')
