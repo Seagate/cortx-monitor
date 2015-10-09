@@ -781,7 +781,7 @@ class SSPLtest():
 
                     #Check for the drive manager message that we changed to
                     try:
-                        assert(self.event.wait(5))
+                        assert(self.event.wait(30))
                     except:
                         self.logger.debug('TIMEOUT: Did not get drivemanager event message back ' + str(disk))
                     self.event.clear()
@@ -818,7 +818,7 @@ class SSPLtest():
 
                     #Test to see hpi data change messages
                     try:
-                        assert(self.event.wait(10))
+                        assert(self.event.wait(30))
                     except:
                         self.logger.debug('TIMEOUT: Did not get hpi data change event message back ' + str(disk))
                     self.event.clear()
@@ -1155,6 +1155,11 @@ class SSPLtest():
                 : 1 -> respective test failed
         """
 
+        command = "systemctl restart sspl-ll"
+        subprocess.Popen(command, shell=True, stdout=subprocess.PIPE,
+                                       stderr=subprocess.PIPE)
+        time.sleep(30)
+
         consumet = threading.Thread(target=self.start_consume)
         #serviceVerifyt = threading.Thread(target=self.serviceVerify)
         #logVerifyt = threading.Thread(target=self.logVerify)
@@ -1166,7 +1171,7 @@ class SSPLtest():
         consumet.setDaemon(True)
         consumet.start()
         #Sleep for one second to allow consumer to start accepting messages.
-        time.sleep(1)
+        time.sleep(10)
         #Begin all threads sequentially and don't start the next untill the previous has finished
 
         testPassedDict = {  "TestReturnCode"    : "Passed",
