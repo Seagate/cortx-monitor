@@ -24,6 +24,7 @@ def initial_setup():
     _disable_plex_auth()
     _restart_plex()
     _start_fake_halond()
+    _start_ldap_server()
     time.sleep(5)
 
 
@@ -237,3 +238,40 @@ def _stop_frontier_service(_):
     """ Stops a frontier service
     """
     lettuce.world.frontier.terminate()
+
+
+def _start_ldap_server():
+    """
+    Starts a Ldap service
+    Stores a process popen object into
+    lettuce.world.ldap
+    """
+    _terminate_ldap_procs()
+    lettuce.world.ldapservice = subprocess.Popen(
+        ['sudo', 'python', './tests/fake_ldap/ldap-server-fake.py', '&'],
+    )
+
+
+@lettuce.after.all
+def _stop_ldap_server(_):
+    """ Stops LDAP server
+    """
+    _terminate_ldap_procs()
+
+
+def _terminate_ldap_procs():
+    """ Terminates LDAP procs
+        on 389 port
+    """
+    # pylint: disable=unused-variable
+    ldap_proc = subprocess.Popen(
+        ['sudo', 'lsof', '-t', '-i:389'],
+        stdout=subprocess.PIPE,
+    )
+    out, err = ldap_proc.communicate()
+    if out:
+        pid = int(out)
+        ldap_kill = subprocess.Popen(
+            ['sudo', 'kill', '-9', str(pid)],
+        )
+    # pylint: enable=unused-variable

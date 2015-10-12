@@ -7,6 +7,9 @@ lksctp-tools		\
 net-snmp-libs		\
 openhpi			\
 openhpi-libs		\
+python-ldap             \
+openldap-clients        \
+openldap-servers        \
 python-daemon		\
 python-inotify		\
 python-jsonschema	\
@@ -22,5 +25,10 @@ python-paramiko         \
 pyserial                \
 libsspl_sec             \
 pylint                  \
-pep8
+pep8                    \
+easy_install
 
+easy_install pip
+
+pip install ldaptor     \
+service_identity

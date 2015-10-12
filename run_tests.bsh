@@ -52,6 +52,8 @@ systemctl daemon-reload
 chmod +x low-level/framework/sspl_ll_rabbitmq_reinit
 low-level/framework/sspl_ll_rabbitmq_reinit
 
+chmod +x installation/deps/install_deps.bsh
+./installation/deps/install_deps.bsh
 # Start openhpid
 systemctl start openhpid -l
 

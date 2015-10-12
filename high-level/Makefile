@@ -8,6 +8,7 @@ MOCK_CONFIG=-r mock_osaint
 check: pep8 pylint ut at
 
 at:
+	PYTHONPATH=.:tests lettuce --failfast ./tests/acceptance/admin_request.feature
 	PYTHONPATH=.:tests lettuce --failfast ./tests/acceptance/node_request.feature
 	PYTHONPATH=.:tests lettuce --failfast ./tests/acceptance/service_request.feature
 	PYTHONPATH=.:tests lettuce --failfast ./tests/acceptance/ha_request.feature

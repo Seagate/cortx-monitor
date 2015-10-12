@@ -3,6 +3,7 @@ import lettuce
 import urllib
 import os.path
 import json
+import ast
 import subprocess
 from sspl_hl.providers.service.provider import ServiceProvider
 from sspl_hl.providers.node.provider import NodeProvider
@@ -55,10 +56,10 @@ def when_i_run(_, cli_command):
         cli_command.split(),
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE
+        stderr=subprocess.PIPE,
         )
     output, err = proc.communicate()  # pylint: disable=unused-variable
-    lettuce.world.ha_response = output
+    lettuce.world.response = output
     lettuce.world.exitcode = proc.returncode
 
 
@@ -117,7 +118,7 @@ def all_noderequest_msg_sent(_, command):
 @lettuce.step(u'Then a command request to ha with "([^"]*)" "([^"]*)" is sent')
 def hacmdrequest_sent(_, command, subcommand):
     """ Ensure proper message generated and enqueued. """
-    contents = lettuce.world.ha_response
+    contents = lettuce.world.response
 
     # Tests that response contains valid data.
     # Valid response would contain data in the sample format as below:
@@ -128,6 +129,82 @@ def hacmdrequest_sent(_, command, subcommand):
         "Command: ha {cmd} {subcmd} Message doesn't match. \
         Expected response data but got '{actual}'" \
         .format(cmd=command, subcmd=subcommand, actual=contents)
+
+
+def validate_admin_output(contents, cmd, username):
+    ''' Method to validate cstor admin output '''
+    # pylint: disable=too-many-locals
+    out = ast.literal_eval(contents)
+    ugroup1 = 'Test'
+    ug1 = ['sheldon', 'victor']
+    ugroup2 = 'Cstor'
+    ug2 = ['howard', 'leonard']
+
+    for allusers in out:
+        for user in allusers:
+            userstr = user[0]
+            userdet = user[1]
+            udparts = userstr.split(',')
+            usercn = udparts[0].split('=')[1]
+
+            if usercn == 'Manager':
+                continue
+            userou = udparts[1].split('=')[1]
+            userdc1 = udparts[2].split('=')[1]
+            userdc2 = udparts[3].split('=')[1]
+
+            assert userdc1 == 'seagate' and userdc2 == 'com', \
+                "dc value for LDAP users doesnt match. \
+                Expected: response dc='{exp1}' and dc='{exp2}'' \
+                but got dc='{act1}' and dc='{act2}'" \
+                .format(exp1='seagate', exp2='com', act1=userdc1, act2=userdc2)
+
+            if usercn in ug1:
+                assert usercn in ug1 and userou == ugroup1, \
+                    "User values for LDAP users doesnt match. \
+                    Expected: response cn='{exp1}' and ou='{exp2}' \
+                    but got cn='{act1}' and ou='{act2}'" \
+                    .format(exp1=ug1, exp2=ugroup1, act1=usercn, act2=userou)
+
+            if usercn in ug2:
+                assert usercn in ug2 and userou == ugroup2, \
+                    "User values for LDAP users doesnt match. \
+                    Expected: response cn='{exp1}' and ou='{exp2}' \
+                    but got cn='{act1}' and ou='{act2}'" \
+                    .format(exp1=ug2, exp2=ugroup2, act1=usercn, act2=userou)
+
+            if cmd == 'show':
+                usercn = userdet["cn"][0]
+                (ucn, uou) = username.split('@')
+                assert usercn == ucn and userou == uou, \
+                    "User values for LDAP users doesnt match. \
+                    Expected: response cn='{exp1}' and ou='{exp2}' \
+                    but got cn='{act1}' and ou='{act2}'" \
+                    .format(exp1=usercn, exp2=userou, act1=ucn, act2=uou)
+
+
+@lettuce.step(u'Then a command list request to admin \
+with "([^"]*)" "([^"]*)" is sent')
+def adminlistcmdrequest_sent(_, command, subcommand):
+    """ Ensure proper message generated and enqueued. """
+    contents = lettuce.world.response
+    assert 'objectClass' in contents, \
+        "Command: admin {cmd} {subcmd} Message doesn't match. \
+        Expected response data with LDAP users list but got '{actual}'" \
+        .format(cmd=command, subcmd=subcommand, actual=contents)
+    validate_admin_output(contents, 'list', 'all')
+
+
+@lettuce.step(u'Then a command show request to admin \
+with "([^"]*)" "([^"]*)" "([^"]*)" is sent')
+def adminshowcmdrequest_sent(_, command, subcommand, user):
+    """ Ensure proper message generated and enqueued. """
+    contents = lettuce.world.response
+    assert 'objectClass' in contents, \
+        "Command: admin {cmd} {subcmd} {user} Message doesn't match. \
+        Expected response data but got '{actual}'" \
+        .format(cmd=command, subcmd=subcommand, user=user, actual=contents)
+    validate_admin_output(contents, 'show', user)
 
 
 def _wait_for_halon():
