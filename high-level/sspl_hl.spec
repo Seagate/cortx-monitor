@@ -40,7 +40,7 @@ A cli (and library) that allow the user to control the cluster.
 
 %install
 mkdir -p %{installpath}/sspl_hl/views
-mkdir -p %{installpath}/sspl_hl/providers/{service,node,ha,response,fru,power,support_bundle,ldap}
+mkdir -p %{installpath}/sspl_hl/providers/{service,node,ha,response,fru,power,support_bundle,ldap,access}
 install sspl_hl/main.py sspl_hl/__init__.py %{installpath}/sspl_hl/
 install sspl_hl/providers/__init__.py %{installpath}/sspl_hl/providers/
 install sspl_hl/providers/service/*.py %{installpath}/sspl_hl/providers/service/
@@ -51,6 +51,7 @@ install sspl_hl/providers/power/*.py %{installpath}/sspl_hl/providers/power/
 install sspl_hl/providers/response/*.py %{installpath}/sspl_hl/providers/response/
 install sspl_hl/providers/support_bundle/*.py %{installpath}/sspl_hl/providers/support_bundle/
 install sspl_hl/providers/ldap/*.py %{installpath}/sspl_hl/providers/ldap/
+install sspl_hl/providers/access/*.py %{installpath}/sspl_hl/providers/access/
 
 mkdir -p %{installpath}/sspl_hl/utils/
 install sspl_hl/utils/*.py %{installpath}/sspl_hl/utils/
