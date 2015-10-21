@@ -1158,7 +1158,7 @@ class SSPLtest():
         command = "systemctl restart sspl-ll"
         subprocess.Popen(command, shell=True, stdout=subprocess.PIPE,
                                        stderr=subprocess.PIPE)
-        time.sleep(30)
+        time.sleep(45)
 
         consumet = threading.Thread(target=self.start_consume)
         #serviceVerifyt = threading.Thread(target=self.serviceVerify)
@@ -1170,8 +1170,8 @@ class SSPLtest():
         #Set Consumer Thread to Daemon so it will be reaped when program finishes
         consumet.setDaemon(True)
         consumet.start()
-        #Sleep for one second to allow consumer to start accepting messages.
-        time.sleep(10)
+        #Sleep for a few seconds to allow consumer to start accepting messages.
+        time.sleep(20)
         #Begin all threads sequentially and don't start the next untill the previous has finished
 
         testPassedDict = {  "TestReturnCode"    : "Passed",
@@ -1186,11 +1186,14 @@ class SSPLtest():
 
         #if not self.hostUpdateVerify():
         #    testPassedDict["HostUpdateVerify"] = "Passed"
+        
+        # Only testing drivemanager and hpi for Beta release
         if not self.eventVerify():
             testPassedDict["EventVerify"] = "Passed"
             self.testsTotal = self.testsPassed
         else:
             testPassedDict["EventVerify"] = "Failed"
+        
         #if not self.serviceVerify():
         #    testPassedDict["ServiceVerify"] = "Passed"
         #if not self.logVerify():
