@@ -14,6 +14,7 @@
  ****************************************************************************
 """
 
+import socket
 import json
 import time
 
@@ -55,6 +56,8 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
         # Initialize internal message queues for this module
         super(NodeControllerMsgHandler, self).initialize_msgQ(msgQlist)
 
+        self.ip_addr = socket.gethostbyname(socket.getfqdn())
+
         self._PDU_actuator  = None
         self._RAID_actuator = None
         self._IPMI_actuator = None
@@ -90,7 +93,8 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
             jsonMsg = json.loads(jsonMsg)
 
         if jsonMsg.get("actuator_request_type").get("node_controller").get("node_request") is not None:
-            node_request = jsonMsg.get("actuator_request_type").get("node_controller").get("node_request")
+            node_request = jsonMsg.get("actuator_request_type").get("node_controller").get("node_request") + \
+                            " " + self.ip_addr
             self._log_debug("_processMsg, node_request: %s" % node_request)
 
             # Parse out the component field in the node_request

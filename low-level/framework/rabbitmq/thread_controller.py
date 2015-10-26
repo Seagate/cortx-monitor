@@ -43,8 +43,8 @@ from sensors.impl.centos_7.hpi_monitor import HPIMonitor
 from sensors.impl.os_x.xinitd_watchdog import XinitdWatchdog
 from sensors.impl.os_x.drive_manager import DriveManager
 from sensors.impl.os_x.hpi_monitor import HPIMonitor
-
 from sensors.impl.generic.raid import RAIDsensor
+from sensors.impl.generic.SMR_drive_data import SMRdriveData
 
 
 # Global method used by Thread to capture and log errors.  This must be global.

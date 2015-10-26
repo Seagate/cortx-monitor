@@ -29,3 +29,6 @@ grep -q "$SUDO_LINE" /etc/sudoers || echo "$SUDO_LINE" >> /etc/sudoers
 
 mkdir -p /tmp/dcs/drivemanager
 chown -R zabbix:zabbix /tmp/dcs/drivemanager
+
+# Grant IO abilities so that we can send ATA commands to drives as sspl-ll user
+setcap cap_sys_rawio=ep /usr/bin/python2.7

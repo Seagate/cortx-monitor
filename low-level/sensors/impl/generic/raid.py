@@ -125,13 +125,8 @@ class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
         """Retrieves the file containing the RAID status information"""
         return self._conf_reader._get_value_with_default(self.RAIDSENSOR,
                                                         self.RAID_STATUS_FILE,
-                                                        'RAID_status_file')
+                                                        '/proc/mdstat')
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""
         super(RAIDsensor, self).shutdown()
-        try:
-            self._log_debug("RAIDsensor, shutdown")
-            self._blocking_notifier.stop()
-        except Exception:
-            logger.info("RAIDsensor, shutting down.")
