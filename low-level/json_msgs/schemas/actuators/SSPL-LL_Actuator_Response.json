@@ -24,7 +24,7 @@
 			"type": "integer",
 			"required": false
 		},
-		
+
 		"message": {
 			"type": "object",
 			"required": true,

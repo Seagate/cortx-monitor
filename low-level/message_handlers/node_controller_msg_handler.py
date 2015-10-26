@@ -92,6 +92,11 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
         if isinstance(jsonMsg, dict) == False:
             jsonMsg = json.loads(jsonMsg)
 
+        # Parse out the uuid so that it can be sent back in Ack message
+        if jsonMsg.get("sspl_ll_msg_header").get("uuid") is not None:
+            uuid = jsonMsg.get("sspl_ll_msg_header").get("uuid")
+            self._log_debug("_processMsg, uuid: %s" % uuid)
+
         if jsonMsg.get("actuator_request_type").get("node_controller").get("node_request") is not None:
             node_request = jsonMsg.get("actuator_request_type").get("node_controller").get("node_request") + \
                             " " + self.ip_addr
@@ -110,7 +115,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 pdu_response = self._PDU_actuator.perform_request(jsonMsg)
                 self._log_debug("_process_msg, pdu_response: %s" % pdu_response)
 
-                json_msg = AckResponseMsg(node_request, pdu_response).getJson()
+                json_msg = AckResponseMsg(node_request, pdu_response, uuid).getJson()
                 self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
 
             elif component == "RAID":
@@ -123,7 +128,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 raid_response = self._RAID_actuator.perform_request(jsonMsg)
                 self._log_debug("_process_msg, raid_response: %s" % raid_response)
 
-                json_msg = AckResponseMsg(node_request, raid_response).getJson()
+                json_msg = AckResponseMsg(node_request, raid_response, uuid).getJson()
                 self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
 
             elif component == "IPMI":
@@ -136,7 +141,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 ipmi_response = self._IPMI_actuator.perform_request(jsonMsg)
                 self._log_debug("_process_msg, ipmi_response: %s" % ipmi_response)
 
-                json_msg = AckResponseMsg(node_request, ipmi_response).getJson()
+                json_msg = AckResponseMsg(node_request, ipmi_response, uuid).getJson()
                 self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
 
             else:

@@ -37,24 +37,19 @@ class BaseActuatorMsg(BaseMsg):
     def __init__(self):
         """Reads in the json schema for all actuator response messages"""
         super(BaseActuatorMsg, self).__init__()
-        
-        # Read in the monitor schema for validating messages
+
+        # Read in the schema for validating messages
         fileName = os.path.join(actuators.__path__[0],
                                 self.JSON_ACTUATOR_SCHEMA)
         with open(fileName, 'r') as f:
             _schema = f.read()
-        
+
         # Remove tabs and newlines
         self._schema = json.loads(' '.join(_schema.split()))
-        
+
         # Validate the schema
         Draft3Validator.check_schema(self._schema)
-        
+
     def validateMsg(self, _jsonMsg):
         """Validate the json message against the schema"""             
         validate(_jsonMsg, self._schema)
-        
-            
-       
-       
-        

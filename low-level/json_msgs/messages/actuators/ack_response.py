@@ -34,6 +34,7 @@ class AckResponseMsg(BaseActuatorMsg):
 
     def __init__(self, ack_type,
                        ack_msg,
+                       uuid      = "N/A",
                        username  = "SSPL-LL",
                        signature = "N/A",
                        time      = "N/A",
@@ -46,6 +47,7 @@ class AckResponseMsg(BaseActuatorMsg):
         self._expires   = expires
         self._ack_type  = ack_type
         self._ack_msg   = ack_msg
+        self._uuid      = uuid
 
         self._json = {"title" : self.TITLE,
                       "description" : self.DESCRIPTION,
@@ -59,6 +61,7 @@ class AckResponseMsg(BaseActuatorMsg):
                                 "schema_version" : self.SCHEMA_VERSION,
                                 "sspl_version" : self.SSPL_VERSION,
                                 "msg_version" : self.MESSAGE_VERSION,
+                                "uuid" : self._uuid
                                 },
                           "actuator_response_type": {
                                 self.ACTUATOR_MSG_TYPE: {

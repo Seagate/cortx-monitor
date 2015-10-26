@@ -22,18 +22,15 @@ class BaseMsg():
     The base class for all JSON messages transmitted by SSPL-LL
     '''
     __metaclass__ = abc.ABCMeta
-    
+
 
     SCHEMA_VERSION  = "1.0.0"
     SSPL_VERSION    = "1.0.0"
 
 
-    def __init__(self):        
+    def __init__(self):
         pass
-              
-    @abc.abstractmethod          
-    def getJson(self):        
-        raise NotImplementedError("Subclasses should implement this!")       
-    
-    
-        
+
+    @abc.abstractmethod
+    def getJson(self):
+        raise NotImplementedError("Subclasses should implement this!")        
