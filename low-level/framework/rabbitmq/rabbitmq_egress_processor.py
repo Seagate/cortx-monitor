@@ -37,6 +37,7 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
     # Section and keys in configuration file
     RABBITMQPROCESSOR   = MODULE_NAME.upper()
     EXCHANGE_NAME       = 'exchange_name'
+    ACK_EXCHANGE_NAME   = 'ack_exchange_name'
     ROUTING_KEY         = 'routing_key'
     VIRT_HOST           = 'virtual_host'
     USER_NAME           = 'username'
@@ -98,8 +99,9 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
         #self._set_debug_persist(True)
 
         try:
-            # Block on message queue until it contains an entry 
+            # Block on message queue until it contains an entry
             jsonMsg = self._read_my_msgQ()
+
             if jsonMsg is not None:
                 self._add_signature(jsonMsg)
                 self._transmit_msg_on_exchange(jsonMsg)
@@ -112,25 +114,24 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
                     self._transmit_msg_on_exchange(jsonMsg)
 
         except Exception:
-            # Log it and restart the whole process when a failure occurs      
+            # Log it and restart the whole process when a failure occurs
             logger.exception("RabbitMQegressProcessor restarting")
 
             # Configure RabbitMQ Exchange to receive messages
             self._read_config()
-            self._get_connection()        
+            self._get_connection()
 
         self._log_debug("Finished processing successfully")
-        
+
         # Shutdown is requested by the sspl_ll_d shutdown handler
         #  placing a 'shutdown' msg into our queue which allows us to
         #  finish processing any other queued up messages.
         if self._request_shutdown == True:
             self.shutdown()
         else:
-            self._scheduler.enter(10, self._priority, self.run, ())    
+            self._scheduler.enter(10, self._priority, self.run, ())
 
-
-    def _read_config(self):        
+    def _read_config(self):
         """Configure the RabbitMQ exchange with defaults available"""
         try:
             self._virtual_host  = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
@@ -139,6 +140,9 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
             self._exchange_name = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
                                                                  self.EXCHANGE_NAME,
                                                                  'sspl_halon')
+            self._ack_exchange_name = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
+                                                                 self.ACK_EXCHANGE_NAME,
+                                                                 'sspl_command_ack')
             self._routing_key   = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
                                                                  self.ROUTING_KEY,
                                                                  'sspl_ll')           
@@ -180,6 +184,35 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
         except Exception as ex:
             logger.exception("_get_connection: %r" % ex)
 
+    def _get_ack_connection(self):
+        try:
+            # ensure the rabbitmq queues/etc exist
+            creds = pika.PlainCredentials(self._username, self._password)
+            self._connection = pika.BlockingConnection(
+                pika.ConnectionParameters(
+                    host='localhost',
+                    virtual_host=self._virtual_host,
+                    credentials=creds
+                    )
+                )
+            self._channel = self._connection.channel()
+            self._channel.queue_declare(
+                queue='SSPL-LL',
+                durable=False
+                )
+            self._channel.exchange_declare(
+                exchange=self._ack_exchange_name,
+                exchange_type='topic',
+                durable=False
+                )
+            self._channel.queue_bind(
+                queue='SSPL-LL',
+                exchange=self._ack_exchange_name,
+                routing_key=self._routing_key
+                )
+        except Exception as ex:
+            logger.exception("_get_connection: %r" % ex)
+
     def _add_signature(self, jsonMsg):
         """Adds the authentication signature to the message"""
         self._log_debug("_add_signature, jsonMsg: %s" % jsonMsg)
@@ -198,7 +231,7 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
         # Generate the signature
         msg_len = len(jsonMsg) + 1
         sig = ctypes.create_string_buffer(SSPL_SEC.sspl_get_sig_length())
-        SSPL_SEC.sspl_sign_message(msg_len, str(jsonMsg), self._signature_user, 
+        SSPL_SEC.sspl_sign_message(msg_len, str(jsonMsg), self._signature_user,
                                    token, sig)
 
         jsonMsg["signature"] = str(sig.raw)
@@ -208,15 +241,22 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
         self._log_debug("_transmit_msg_on_exchange, jsonMsg: %s" % jsonMsg)
 
         try:
-            jsonMsg = json.dumps(jsonMsg, ensure_ascii=True).encode('utf8')
+            jsonMsg = json.dumps(jsonMsg).encode('utf8')
 
             msg_props = pika.BasicProperties()
             msg_props.content_type = "text/plain"
 
-            self._get_connection()
-
-            # Publish json message
-            self._channel.basic_publish(exchange=self._exchange_name,
+            # Publish json message to the correct channel
+            if json.loads(jsonMsg).get("message").get("actuator_response_type") is not None and \
+                json.loads(jsonMsg).get("message").get("actuator_response_type").get("ack") is not None:
+                  self._get_ack_connection()
+                  self._channel.basic_publish(exchange=self._ack_exchange_name,
+                                    routing_key=self._routing_key,
+                                    properties=msg_props,
+                                    body=str(jsonMsg))
+            else:
+                self._get_connection()
+                self._channel.basic_publish(exchange=self._exchange_name,
                                   routing_key=self._routing_key,
                                   properties=msg_props,
                                   body=str(jsonMsg))

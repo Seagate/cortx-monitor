@@ -36,6 +36,7 @@ class ManualTest():
     # Section and keys in configuration file
     VIRTUALHOST         = "virtual_host"
     EXCHANGENAME        = "exchange_name"
+    ACKEXCHANGENAME     = "ack_exchange_name"
     ROUTINGKEY          = "routing_key"
     USERNAME            = "username"
     PASSWORD            = "password"
@@ -73,6 +74,10 @@ class ManualTest():
                                                     self.module_name,
                                                     self.EXCHANGENAME,
                                                     'sspl_halon')
+        self._ackexchangename = conf_reader._get_value_with_default(
+                                                    self.module_name,
+                                                    self.ACKEXCHANGENAME,
+                                                    'sspl_command_ack')
         self._routingkey = conf_reader._get_value_with_default(
                                                     self.module_name,
                                                     self.ROUTINGKEY,
@@ -207,3 +212,52 @@ class ManualTest():
           channel.start_consuming()
         except KeyboardInterrupt:
             channel.stop_consuming()
+            
+    def basicConsumeAck(self):
+        """Starts consuming all messages sent on the ack channel
+        This function should be run on a daemon thread because it will never exit willingly
+        Sets the thread event object to true and copies all ingress messages to self.interthread_msg
+        """
+
+        creds = pika.PlainCredentials(self._username, self._password)
+        connection = pika.BlockingConnection(pika.ConnectionParameters(
+            host='localhost', virtual_host=self._virtualhost, credentials=creds))
+        channel = connection.channel()
+        channel.exchange_declare(exchange=self._ackexchangename,
+                         type='topic', durable=False)
+        result = channel.queue_declare(exclusive=True)
+        channel.queue_bind(exchange=self._ackexchangename,
+                           queue=result.method.queue,
+                   routing_key=self._routingkey)
+        print ' [*] Waiting for json messages. To exit press CTRL+C'
+
+        def callback(ch, method, properties, body):
+            '''Called whenever a message is passed to the Consumer
+            Verifies the authenticity of the signature with the SSPL_SEC libs
+            Stores the message and alerts any waiting threads when an ingress message is processed
+            '''
+            ingressMsg = json.loads(body)
+            username   = ingressMsg.get("username")
+            signature  = ingressMsg.get("signature")
+            message    = ingressMsg.get("message")
+            msg_len    = len(message) + 1
+            try:
+                #Verifies the authenticity of an ingress message
+                assert(SSPL_SEC.sspl_verify_message(msg_len, str(message), username, signature) == 0)
+                #Sorts out any outgoing messages only processes *_response_type
+                if ingressMsg.get("message").get("sensor_response_type") is not None or \
+                    ingressMsg.get("message").get("actuator_response_type") is not None:
+                    print " [x] %r" % (body,)
+            except:
+                print "Authentication failed on message: %s" % ingressMsg
+
+            ch.basic_ack(delivery_tag = method.delivery_tag)
+
+        #Sets the callback function to be used when start_consuming is called and specifies the queue to pull messages off of.
+        channel.basic_consume(callback,
+                              queue=result.method.queue)
+        try:
+          channel.start_consuming()
+        except KeyboardInterrupt:
+            channel.stop_consuming()
+
