@@ -43,7 +43,7 @@ class Service(BaseCommand):
             self.target = parser.node_spec
         else:
             self.target = None
-        self.provider = 'service'
+        self.provider = 'service_manager'
 
     @staticmethod
     def add_args(subparsers):

@@ -10,12 +10,12 @@ from sspl_hl.utils.message_utils import ServiceListResponse
 from sspl_hl.utils.message_utils import ServiceQueryRequest
 
 
-class ServiceProvider(BaseCastorProvider):
+class ServiceManagerProvider(BaseCastorProvider):
     # pylint: disable=too-many-ancestors,too-many-public-methods
     """ Used to set state of services on the cluster. """
 
     def __init__(self, name, description):
-        super(ServiceProvider, self).__init__(name, description)
+        super(ServiceManagerProvider, self).__init__(name, description)
         self.no_of_arguments = 3
         self.valid_arg_keys = ['serviceName', 'command', 'debug']
 
@@ -54,7 +54,10 @@ class ServiceProvider(BaseCastorProvider):
                                   which nodes to operate on, eg
                                   'mycluster0[0-2]'
         """
-        result = super(ServiceProvider, self)._query(selection_args, responder)
+        result = super(ServiceManagerProvider, self)._query(
+            selection_args,
+            responder
+        )
         if result:
             reactor.callFromThread(responder.reply_exception, result)
             return
@@ -67,7 +70,7 @@ class ServiceProvider(BaseCastorProvider):
             message = self._generate_service_request_msg(
                 service_name=selection_args['serviceName'],
                 command=selection_args['command']
-                )
+            )
 
             self._publish_message(message)
 
@@ -78,5 +81,6 @@ class ServiceProvider(BaseCastorProvider):
             reactor.callFromThread(responder.reply_no_match)
 
 # pylint: disable=invalid-name
-provider = ServiceProvider("service", "Service Management Provider")
+provider = ServiceManagerProvider("service_manager",
+                                  "Provider for cstor service command")
 # pylint: enable=invalid-name

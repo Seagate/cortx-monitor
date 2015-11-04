@@ -5,7 +5,7 @@ import os.path
 import json
 import ast
 import subprocess
-from sspl_hl.providers.service.provider import ServiceProvider
+from sspl_hl.providers.service_manager.provider import ServiceManagerProvider
 from sspl_hl.providers.node.provider import NodeProvider
 from sspl_hl.providers.fru.provider import FRUProvider
 
@@ -13,7 +13,8 @@ from sspl_hl.providers.fru.provider import FRUProvider
 # Note:  We should use the plex registry to programatically generate this URL
 # to protect against changes in how plex surfaces apps/providers/etc.  But
 # since this is test code, we won't worry about it.
-SERVICE_URI = "http://localhost:8080/apps/sspl_hl/providers/service/data"
+SERVICE_URI = \
+    "http://localhost:8080/apps/sspl_hl/providers/service_manager/data"
 NODE_URI = "http://localhost:8080/apps/sspl_hl/providers/node/data"
 HA_URI = "http://localhost:8080/apps/sspl_hl/providers/ha/data"
 FRU_URI = "http://localhost:8080/apps/sspl_hl/providers/fru/data"
@@ -81,7 +82,7 @@ def servicerequest_msg_sent(_, command, service_name):
     contents = open(os.path.join('/tmp/fake_halond', first_file), 'r').read()
 
     # pylint: disable=protected-access
-    exp = json.dumps(ServiceProvider._generate_service_request_msg(
+    exp = json.dumps(ServiceManagerProvider._generate_service_request_msg(
         service_name=service_name, command=command
         ))
     # pylint: enable=protected-access

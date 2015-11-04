@@ -4,7 +4,7 @@
 import unittest
 import mock
 
-from sspl_hl.providers.service.provider import ServiceProvider
+from sspl_hl.providers.service_manager.provider import ServiceManagerProvider
 from sspl_hl.utils.message_utils import ServiceListResponse
 from base_unit_test import BaseUnitTest
 
@@ -13,7 +13,7 @@ from base_unit_test import BaseUnitTest
 class SsplHlProviderService(BaseUnitTest):
 
     """ Test methods of the
-        sspl_hl.providers.service.provider.ServiceProvider object.
+        sspl_hl.providers.service.provider.ServiceManagerProvider object.
     """
     SERVICE_COMMAND = ['start',
                        'stop',
@@ -33,9 +33,9 @@ class SsplHlProviderService(BaseUnitTest):
                               'debug': True}
             self._test_entity_query(
                 selection_args,
-                ServiceProvider._generate_service_request_msg,
+                ServiceManagerProvider._generate_service_request_msg,
                 method_args,
-                ServiceProvider('service', ''))
+                ServiceManagerProvider('ServiceManagerProvider', ''))
 
     def test_service_list(self):
         """ Ensures service list command does not make a call to the provider.
@@ -46,8 +46,10 @@ class SsplHlProviderService(BaseUnitTest):
 
         with mock.patch('uuid.uuid4', return_value='uuid_goes_here'), \
                 mock.patch('pika.BlockingConnection') as patch:
-            self._query_provider(args=selection_args,
-                                 provider=ServiceProvider('service', ''))
+            self._query_provider(
+                args=selection_args,
+                provider=ServiceManagerProvider('ServiceManagerProvider', '')
+                )
 
         assert not patch().channel().basic_publish.called, \
             'No Basic Publish call should ' \
@@ -74,9 +76,11 @@ class SsplHlProviderService(BaseUnitTest):
                         'debug': True}
         response_msg = "Error: Invalid command: 'invalid_command'"
 
-        self._test_args_validation_cases(command_args,
-                                         response_msg,
-                                         ServiceProvider('service', ''))
+        self._test_args_validation_cases(
+            command_args,
+            response_msg,
+            ServiceManagerProvider('ServiceManagerProvider', '')
+            )
 
     def test_extra_params(self):
         """ Ensure sending extra query params results in an http error code.
@@ -91,9 +95,11 @@ class SsplHlProviderService(BaseUnitTest):
                         'debug': True}
         main_msg = "Error: Invalid request:"
         response_msg = " Extra parameter 'extrastuff' detected"
-        self._test_args_validation_cases(command_args,
-                                         main_msg + response_msg,
-                                         ServiceProvider('service', ''))
+        self._test_args_validation_cases(
+            command_args,
+            main_msg + response_msg,
+            ServiceManagerProvider('ServiceManagerProvider', '')
+            )
 
     def test_missing_servicename(self):
         """ Ensure sending query without service name results in an http error
@@ -106,9 +112,11 @@ class SsplHlProviderService(BaseUnitTest):
         command_args = {'command': 'restart',
                         'debug': True}
         response_msg = "Error: Invalid request: Missing serviceName"
-        self._test_args_validation_cases(command_args,
-                                         response_msg,
-                                         ServiceProvider('service', ''))
+        self._test_args_validation_cases(
+            command_args,
+            response_msg,
+            ServiceManagerProvider('ServiceManagerProvider', '')
+            )
 
     def test_missing_command(self):
         """ Ensure sending query without command results in an http error code.
@@ -120,9 +128,11 @@ class SsplHlProviderService(BaseUnitTest):
         command_args = {'serviceName': 'crond.service',
                         'debug': True}
         response_msg = "Error: Invalid request: Missing command"
-        self._test_args_validation_cases(command_args,
-                                         response_msg,
-                                         ServiceProvider('service', ''))
+        self._test_args_validation_cases(
+            command_args,
+            response_msg,
+            ServiceManagerProvider('ServiceManagerProvider', '')
+            )
 
 
 if __name__ == '__main__':
