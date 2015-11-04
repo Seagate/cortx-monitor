@@ -42,21 +42,21 @@ class AccessProvider(DataStoreProvider):
 
     # pylint: disable=too-many-arguments,unused-argument
     def query(self,
-              query_uri,
-              query_columns,
-              query_selection_args,
-              query_sort_order,
-              query_range_from,
-              query_range_to,
-              query_responder):
+              uri,
+              columns,
+              selection_args,
+              sort_order,
+              range_from,
+              range_to,
+              responder):
         """Query for data.
         @query_selection_args Used to specify arguments for the query.
         It is recommended to use uri over selection args
         @query_sort_order specify the sort order for the data
         """
         self._single_thread_executor_obj.submit(self._query,
-                                                query_selection_args,
-                                                query_responder)
+                                                selection_args,
+                                                responder)
 
     def _query(self, selection_args, responder):
         """
@@ -93,6 +93,13 @@ class AccessProvider(DataStoreProvider):
                 return(
                     "Error: Invalid request: Missing param {}".format(key)
                 )
+        if len(selection_args) > self.no_of_arguments:
+            for key in self.valid_arg_keys:
+                del selection_args[key]
+            return(
+                "Error: Invalid request: Extra param '{extra}' detected"
+                .format(extra=selection_args.keys()[0])
+            )
         return None
 
 # pylint: disable=invalid-name

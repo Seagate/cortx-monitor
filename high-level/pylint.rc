@@ -20,6 +20,6 @@ ignored-classes=SQLObject,twisted.internet.reactor
 # can either give multiple identifier separated by comma (,) or put this option
 # multiple time (only on the command line, not in the configuration file where
 # it should appear only once).
-disable=R0922
+disable=R0922,R0801
 
 #R0922: Abstract class is only referenced %s times

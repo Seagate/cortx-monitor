@@ -58,7 +58,7 @@ class LdapAccess(IBaseAccess):
             return_message = "Incorrect username and/or password. " \
                              "Login Failed."
         except ldap.LDAPError, error:
-            if type(error.message) == dict and 'desc' in error.message:
+            if error.message and 'desc' in error.message:
                 print error.message['desc']
             else:
                 print error
