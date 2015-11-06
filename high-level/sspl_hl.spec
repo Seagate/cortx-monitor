@@ -39,12 +39,13 @@ A cli (and library) that allow the user to control the cluster.
 
 
 %install
+mkdir -p %{installpath}/sspl_hl/utils
 mkdir -p %{installpath}/sspl_hl/views
-mkdir -p %{installpath}/sspl_hl/providers/{service,node,ha,response,fru,power,support_bundle,ldap,access}
+mkdir -p %{installpath}/sspl_hl/providers/{service_manager,node,ha,response,fru,power,support_bundle,ldap,access}
 install sspl_hl/main.py sspl_hl/__init__.py %{installpath}/sspl_hl/
 install sspl_hl/utils/auth.properties %{installpath}/sspl_hl/utils/
 install sspl_hl/providers/__init__.py %{installpath}/sspl_hl/providers/
-install sspl_hl/providers/service/*.py %{installpath}/sspl_hl/providers/service/
+install sspl_hl/providers/service_manager/*.py %{installpath}/sspl_hl/providers/service_manager/
 install sspl_hl/providers/node/*.py %{installpath}/sspl_hl/providers/node/
 install sspl_hl/providers/ha/*.py %{installpath}/sspl_hl/providers/ha/
 install sspl_hl/providers/fru/*.py %{installpath}/sspl_hl/providers/fru/
@@ -78,7 +79,7 @@ mkdir -p %{buildroot}/var/lib/support_bundles
 
 
 %changelog
-* Mon Sep 11 2015 Madhur Nawandar <madhur.nawandar@seagate.com>
+* Fri Sep 11 2015 Madhur Nawandar <madhur.nawandar@seagate.com>
 - Add support_bundle provider
 - Created directory to store support bundles
 
