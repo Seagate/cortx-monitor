@@ -22,6 +22,8 @@ from actuators.ILogin import ILogin
 from actuators.Ipdu import IPDU
 from actuators.Iraid import IRAIDactuator
 from actuators.Iipmi import Iipmi
+from actuators.Ireset_drive import IResetDrive
+from actuators.Ihdparm import IHdparm
 
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
@@ -58,9 +60,11 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
         self.ip_addr = socket.gethostbyname(socket.getfqdn())
 
-        self._PDU_actuator  = None
-        self._RAID_actuator = None
-        self._IPMI_actuator = None
+        self._PDU_actuator         = None
+        self._RAID_actuator        = None
+        self._IPMI_actuator        = None
+        self._hdparm_actuator      = None
+        self._reset_drive_actuator = None
 
     def run(self):
         """Run the module periodically on its own thread."""
@@ -143,9 +147,41 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
                 json_msg = AckResponseMsg(node_request, ipmi_response, uuid).getJson()
                 self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+                
+            elif component == "RESE":
+                # Query the Zope GlobalSiteManager for an object implementing the reset drive actuator
+                if self._reset_drive_actuator is None:
+                    self._reset_drive_actuator = queryUtility(IResetDrive)()
+                    self._log_debug("_process_msg, _reset_drive_actuator name: %s" % self._reset_drive_actuator.name())
+
+                # Perform the drive reset request on the node and get the response
+                reset_response = self._reset_drive_actuator.perform_request(jsonMsg)
+                self._log_debug("_process_msg, reset_response: %s" % reset_response)
+
+                json_msg = AckResponseMsg(node_request, reset_response, uuid).getJson()
+                self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+
+            elif component == "HDPA":
+                # Query the Zope GlobalSiteManager for an object implementing the hdparm actuator
+                if self._hdparm_actuator is None:
+                    self._hdparm_actuator = queryUtility(IHdparm)()
+                    self._log_debug("_process_msg, _hdparm_actuator name: %s" % self._hdparm_actuator.name())
+
+                # Perform the hdparm request on the node and get the response
+                hdparm_response = self._hdparm_actuator.perform_request(jsonMsg)
+                self._log_debug("_process_msg, hdparm_response: %s" % hdparm_response)
+
+                json_msg = AckResponseMsg(node_request, hdparm_response, uuid).getJson()
+                self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
 
             else:
-                self._log_debug("_process_msg, unknown node controller msg")
+                response = "NodeControllerMsgHandler, _process_msg, unknown node controller msg: {}" \
+                            .format(node_request)
+                self._log_debug(response)
+
+                json_msg = AckResponseMsg(node_request, response, uuid).getJson()
+                self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+
 
             # ... handle other node message types
 

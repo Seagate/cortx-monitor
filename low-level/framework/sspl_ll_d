@@ -185,6 +185,8 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist):
     from actuators.impl.generic.raritan_pdu import RaritanPDU
     from actuators.impl.generic.raid import RAIDactuator
     from actuators.impl.generic.ipmi import IPMI
+    from actuators.impl.generic.wbcli_reset_drive import WbcliResetDrive
+    from actuators.impl.generic.hdparm import Hdparm
 
     from sensors.impl.generic.raid import RAIDsensor
     from sensors.impl.generic.node_data import NodeData as NodeData
