@@ -12,14 +12,6 @@ Feature: Power Request
         When I run "python ./cstor/cli/main.py power off"
         Then the exit code is "1"
 
-    Scenario: power status
-        When I run "python ./cstor/cli/main.py power status"
-        Then the exit code is "0"
-
-    Scenario: power status
-        When I run "python ./cstor/cli/main.py power status --node_spec n1"
-        Then the exit code is "0"
-
     Scenario: Invalid command
         When I run "python ./cstor/cli/main.py power invalid_command"
         Then the exit code is "2"

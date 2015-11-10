@@ -2,9 +2,9 @@
 
 
 import unittest
-
+import mock
 from sspl_hl.providers.power.provider import PowerProvider
-from sspl_hl.providers.node.provider import NodeProvider
+
 
 from base_unit_test import BaseUnitTest
 
@@ -12,83 +12,70 @@ from base_unit_test import BaseUnitTest
 # pylint: disable=too-many-public-methods
 class SsplHlProviderPower(BaseUnitTest):
     """
-        Test methods of the
-        sspl_hl.providers.service.provider.NodeProvider object.
+    Test methods of the
+    sspl_hl.providers.service.provider.NodeProvider object.
     """
     POWER_COMMAND = ['on',
-                     'off',
-                     'status']
+                     'off']
 
-    MAPPED_COMMANDS = {'on': 'start',
-                       'off': 'stop'}
+    INTERNAL_COMMAND = {'on': 'poweron',
+                        'off': 'poweroff'}
 
     def test_power_queries(self):
         """
-            Ensures restarting,etc a service generates the proper json
-            message.
+        Ensures that power queries has been successfully
+        submitted by power provider.
         """
         for command in SsplHlProviderPower.POWER_COMMAND:
-            m_command = SsplHlProviderPower.MAPPED_COMMANDS.get(
-                command, command)
-
-            method_args = {'command': m_command,
-                           'target': 'node*'}
+            ipmitool_command_param = ["ipmitooltool.sh"]
             selection_args = {'command': command,
-                              'target': 'node*',
                               'debug': True}
-            # pylint: disable=protected-access
-            self._test_entity_query(selection_args,
-                                    NodeProvider._generate_node_request_msg,
-                                    method_args,
-                                    PowerProvider('power', ''))
+            ipmitool_command = self.INTERNAL_COMMAND.get(
+                selection_args['command'], selection_args['command']
+            )
+            ipmitool_command_param.append(ipmitool_command)
+            with mock.patch('subprocess.call', return_value=0) as patch:
+                power_provider = PowerProvider('power', '')
+                # pylint: disable=protected-access
+                self._query_provider(args=selection_args,
+                                     provider=power_provider)
+                patch.assert_called_with(
+                    ipmitool_command_param
+                )
 
     def test_bad_command(self):
-        """ Ensure sending a bad command results in appropriate error message.
+        """
+        Ensure sending a bad command results in appropriate error message.
 
         The cli should prevent this from happening, so this is just to cover
         the case of the user bypassing the cli and accessing the data provider
         directly using rest based request.
         """
-        command_args = {'command': 'invalid_command', 'target': 'node*',
-                        'debug': True}
+        command_args = {'command': 'invalid_command', 'debug': True}
         response_msg = "Error: Invalid command: 'invalid_command'"
 
         self._test_args_validation_cases(command_args,
                                          response_msg,
-                                         PowerProvider('node', ''))
+                                         PowerProvider('Power', ''))
 
     def test_extra_service_params(self):
         """
-            Ensure sending extra query params results in appropriate error
-            message.
-
-            The cli should prevent this from happening, so this is just to
-            cover the case of the user bypassing the cli and accessing the
-            data provider directly.
-        """
-        command_args = {'command': 'on',
-                        'target': 'node*',
-                        'debug': True,
-                        'ext': 'up'}
-        response_msg = "Error: Invalid request: Extra parameter 'ext' detected"
-
-        self._test_args_validation_cases(command_args,
-                                         response_msg,
-                                         PowerProvider('node', ''))
-
-    def test_missing_target(self):
-        """ Ensure sending query without service name results in an error
+        Ensure sending extra query params results in appropriate error
         message.
 
-        The cli should prevent this from happening, so this is just to cover
-        the case of the user bypassing the cli and accessing the data provider
-        directly.
+        The cli should prevent this from happening, so this is just to
+        cover the case of the user bypassing the cli and accessing the
+        data provider directly.
         """
-        command_args = {'command': 'on'}
-        response_msg = "Error: Invalid request: Missing target"
+        command_args = {'command': 'on',
+                        'debug': True,
+                        'ext': 'up'}
+        response_msg = \
+            "Error: Invalid request: Extra parameter 'ext' detected"
+
         self._test_args_validation_cases(command_args,
                                          response_msg,
-                                         PowerProvider('node', ''))
+                                         PowerProvider('Power', ''))
 
     def test_missing_command(self):
         """
@@ -99,13 +86,14 @@ class SsplHlProviderPower(BaseUnitTest):
         to cover the case of the user bypassing the cli and accessing
         the data provider directly.
         """
-        response_msg = "Error: Invalid request: Missing command"
+        response_msg = \
+            "Error: Invalid request: Missing command"
         command_args = {'target': 'node*',
                         'debug': True}
 
         self._test_args_validation_cases(command_args,
                                          response_msg,
-                                         PowerProvider('node', ''))
+                                         PowerProvider('Power', ''))
 
 if __name__ == '__main__':
     unittest.main()

@@ -15,18 +15,17 @@
 # All rights are expressly reserved by Seagate Technology LLC.
 
 # Third Party
-import argparse
-
 # Import Local Modules
-from cstor.cli.commands.node import Node
+from cstor.cli.commands.base_command import BaseCommand
 from cstor.cli.errors import CommandTerminated
+from cstor.cli.settings import DEBUG
 
 CURRENT_NODE = "LOCAL_NODE"
 
 
-class Power(Node):
+class Power(BaseCommand):
     """
-        Power command implementation class
+    Power command implementation class
     """
 
     def __init__(self, parser):
@@ -34,54 +33,61 @@ class Power(Node):
             Initializes the power object with the
             arguments passed from CLI
         """
+        if 'action' in parser:
+            self.action = parser.action
+        else:
+            self.action = None
+
         if parser.action == 'off':
             Power.handle_power_off_cases(parser)
-        super(Power, self).__init__(parser)
+        super(Power, self).__init__()
         self.provider = 'power'
+
+    def get_action_params(self, **kwargs):
+        """
+        Power method to get the action parameters
+        to be send in the request to data provider
+        """
+        params = '&command={}&debug={}'.format(self.action,
+                                               DEBUG)
+        return params
 
     @staticmethod
     def add_args(subparsers):
         """
-            defines the command structure for power command
+        Defines the command structure for power command
         """
-        parent_cmd_parser = argparse.ArgumentParser(add_help=False)
-        parent_cmd_parser.add_argument('--node_spec',
-                                       help='Optional parameter to indicate'
-                                            ' the Regex for nodes that '
-                                            'should be affected.')
         power_parser = subparsers.add_parser('power',
                                              help='Sub-command to work with '
                                                   'power of the cluster.')
         sub_cmds = power_parser.add_subparsers(dest='action',
                                                help='command to run')
-        sub_cmds.add_parser('on', parents=[parent_cmd_parser])
-        off_cmd = sub_cmds.add_parser('off', parents=[parent_cmd_parser])
+        sub_cmds.add_parser('on',
+                            help='Power on all the SSUs in the cluster')
+        off_cmd = sub_cmds.add_parser('off',
+                                      help='Power off all the SSUs in '
+                                           'the cluster')
         off_cmd.add_argument('-f', '--force', action='store_true',
-                             help='Forcing off may lead to data loss. I know '
-                                  'what I am doing and I won\'t blame Seagate'
-                                  ' for it')
-        sub_cmds.add_parser('status', parents=[parent_cmd_parser])
+                             help='Forcing off may lead to data loss. I '
+                                  'know what I am doing and I won\'t '
+                                  'blame SeaGate for it')
         power_parser.set_defaults(func=Power)
 
     @staticmethod
     def handle_power_off_cases(parser):
         """
-            check the power off params and conditions for the command
+        Check the power off params and conditions for the command
         """
-        if not (parser.force or parser.node_spec):
-            if parser.node_spec == CURRENT_NODE:
-                usr_input = raw_input("Are you sure you want to power off"
-                                      " the current node (y/n)")
-            else:
-                usr_input = raw_input("Are you sure you want to power off"
-                                      " all the node (y/n)")
+
+        if not parser.force:
+            usr_input = raw_input("Are you sure you want to power off"
+                                  " all the node (y/n)")
             Power.check_user_input(usr_input)
-        return
 
     @staticmethod
     def check_user_input(usr_input):
         """
-            validate the user input and if needed poll for the correct input
+        Validate the user input and if needed poll for the correct input
         """
         usr_input = usr_input.upper()
         if usr_input in ['N', 'NO']:

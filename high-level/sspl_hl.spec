@@ -79,6 +79,11 @@ mkdir -p %{buildroot}/var/lib/support_bundles
 
 
 %changelog
+* Thu Nov 12 2015 Bhupesh Pant <bhupesh.pant@seagate.com>
+- Add support to test power command using fake ipmitooltool.sh
+- Created empty ipmitooltool.sh to fake a real
+
+
 * Fri Sep 11 2015 Madhur Nawandar <madhur.nawandar@seagate.com>
 - Add support_bundle provider
 - Created directory to store support bundles
