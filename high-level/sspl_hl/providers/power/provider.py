@@ -57,16 +57,13 @@ class PowerProvider(BaseCastorProvider):
         ipmitool_command = self._ipmi_cmds.get(
             selection_args['command'], selection_args['command'])
         try:
-            ret_val = subprocess.call(["ipmitooltool.sh", ipmitool_command])
-        except OSError as process_error:
+            cmd_args = "sudo -u plex /usr/local/bin/ipmitooltool.sh {}".\
+                format(ipmitool_command)
+            ret_val = subprocess.call(cmd_args.split())
+        except (OSError, ValueError) as process_error:
             reactor.callFromThread(responder.reply_exception,
                                    str(process_error))
-        else:
-            if ret_val is not 0:
-                # report error:
-                pass
-
-        reactor.callFromThread(responder.reply, ret_val)
+        responder.reply(data=[ret_val])
 
 # pylint: disable=invalid-name
 provider = PowerProvider("power", "Provider for power command")
