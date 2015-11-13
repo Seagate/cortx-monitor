@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-"""File containing "power" sub command implementation
+"""File containing "status" sub command implementation
 """
 
 # Do NOT modify or remove this copyright and confidentiality notice
@@ -31,10 +31,11 @@ class Status(BaseCommand):
             arguments passed from CLI
         """
         super(Status, self).__init__()
-
         self.action = 'ipmi'
         self.parser = parser
         self.provider = 'status'
+        print 'This may take some time depending upon your ' \
+              'network configuration...'
 
     def get_action_params(self, **kwargs):
         """

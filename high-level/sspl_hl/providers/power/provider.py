@@ -57,8 +57,10 @@ class PowerProvider(BaseCastorProvider):
         ipmitool_command = self._ipmi_cmds.get(
             selection_args['command'], selection_args['command'])
         try:
-            cmd_args = "sudo -u plex /usr/local/bin/ipmitooltool.sh {}".\
-                format(ipmitool_command)
+            cmd_args = "{} {}".format(
+                BaseCastorProvider.IPMI_CMD,
+                ipmitool_command
+            )
             ret_val = subprocess.call(cmd_args.split())
         except (OSError, ValueError) as process_error:
             reactor.callFromThread(responder.reply_exception,

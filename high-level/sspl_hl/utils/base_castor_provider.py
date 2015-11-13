@@ -18,6 +18,8 @@ class BaseCastorProvider(DataStoreProvider):
     """ Used to set state of ha on the cluster. """
     implements(IPlugin, IDataProvider)
 
+    IPMI_CMD = "sudo /usr/local/bin/ipmitooltool.sh"
+
     def __init__(self, name, description):
         super(BaseCastorProvider, self).__init__(name, description)
         self._single_thread_executor = SingleThreadExecutor()

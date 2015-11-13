@@ -28,7 +28,7 @@ class SsplHlProviderPower(BaseUnitTest):
         """
         for command in SsplHlProviderPower.POWER_COMMAND:
             ipmitool_command_param = \
-                "sudo -u plex /usr/local/bin/ipmitooltool.sh ".split()
+                "sudo /usr/local/bin/ipmitooltool.sh ".split()
             selection_args = {'command': command,
                               'debug': True}
             ipmitool_command = self.INTERNAL_COMMAND.get(

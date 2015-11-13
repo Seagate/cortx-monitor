@@ -25,8 +25,6 @@ class StatusProvider(BaseCastorProvider):
     """
     Handler for all status based commands
     """
-    IPMI_COMMAND = "sudo -u plex /usr/local/bin/ipmitooltool.sh"
-    IPMI_STATUS_TMP_PATH = "/tmp/ipmi_status.tmp"
 
     def __init__(self, name, description):
         super(StatusProvider, self).__init__(name, description)
@@ -42,28 +40,21 @@ class StatusProvider(BaseCastorProvider):
         if result:
             reactor.callFromThread(responder.reply_exception, result)
             return
+        resp = "Unable to fetch the response"
         try:
-            cmd_args = "{} {} > {}".format(
-                StatusProvider.IPMI_COMMAND,
-                "status",
-                StatusProvider.IPMI_STATUS_TMP_PATH
+            cmd_args = "{} {}".format(
+                BaseCastorProvider.IPMI_CMD,
+                "status"
             )
-            subprocess.call(cmd_args.split())
-            resp = self._read_status_data(StatusProvider.IPMI_STATUS_TMP_PATH)
+            resp = subprocess.Popen(
+                cmd_args.split(),
+                stdout=subprocess.PIPE).communicate()[0] or\
+                resp
+
         except (OSError, ValueError) as process_error:
             reactor.callFromThread(responder.reply_exception,
                                    str(process_error))
         responder.reply(data=[resp])
-
-    @staticmethod
-    def _read_status_data(file_name):
-        """"""
-        try:
-            status_f = open(file_name)
-            resp = status_f.read()
-        except IOError:
-            resp = "Unable to fetch the response"
-        return resp
 
 # pylint: disable=invalid-name
 provider = StatusProvider("status", "Provider for status command")

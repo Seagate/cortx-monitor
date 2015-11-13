@@ -50,7 +50,7 @@ class BaseCommand(object):
             self.get_action_params(**kwargs))
         response = urllib.urlopen(url=url).read()
         try:
-            return json.dumps(json.loads(response), indent=2)
+            return json.loads(response)
         except ValueError:
             raise ValueError("Could not load the response in json object")
 
