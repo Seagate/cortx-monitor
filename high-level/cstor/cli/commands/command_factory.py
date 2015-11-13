@@ -21,13 +21,9 @@ import argparse
 
 # Import Local Modules
 
-# from cstor.cli.commands.node import Node
-# from cstor.cli.commands.service import Service
-# from cstor.cli.commands.ha import Ha
 from cstor.cli.commands.power import Power
-# from cstor.cli.commands.fru import FieldReplaceableUnit
 from cstor.cli.commands.support_bundle import SupportBundle
-# from cstor.cli.commands.ldapadmin import LdapAdmin
+from cstor.cli.commands.status import Status
 
 
 class Factory(object):
@@ -47,13 +43,9 @@ class Factory(object):
         """
         parser = argparse.ArgumentParser(description='CStor CLI command')
         subparsers = parser.add_subparsers()
-        # Service.add_args(subparsers)
-        # Node.add_args(subparsers)
-        # Ha.add_args(subparsers)
         Power.add_args(subparsers)
-        # FieldReplaceableUnit.add_args(subparsers)
         SupportBundle.add_args(subparsers)
-        # LdapAdmin.add_args(subparsers)
+        Status.add_args(subparsers)
         args = parser.parse_args()
         return args
 
