@@ -99,7 +99,7 @@ class HalondConsumer(HalondRMQ):
 
         super(HalondConsumer, self).__init__(config_file_path)
         self._channel.queue_declare(queue=self.exchange_queue,
-                                    exclusive=True)
+                                    exclusive=False)
         self._channel.queue_bind(exchange=self.exchange,
                                  queue=self.exchange_queue)
         self._channel.basic_consume(lambda ch, method, properties, body:

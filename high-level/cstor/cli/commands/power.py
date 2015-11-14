@@ -42,6 +42,8 @@ class Power(BaseCommand):
             Power.handle_power_off_cases(parser)
         super(Power, self).__init__()
         self.provider = 'power'
+        print 'This may take some time depending upon your ' \
+              'network configuration...'
 
     def get_action_params(self, **kwargs):
         """

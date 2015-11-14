@@ -41,7 +41,7 @@ A cli (and library) that allow the user to control the cluster.
 %install
 mkdir -p %{installpath}/sspl_hl/utils
 mkdir -p %{installpath}/sspl_hl/views
-mkdir -p %{installpath}/sspl_hl/providers/{service_manager,node,ha,response,fru,power,support_bundle,ldap,access}
+mkdir -p %{installpath}/sspl_hl/providers/{service_manager,node,ha,response,fru,power,support_bundle,ldap,access, status}
 install sspl_hl/main.py sspl_hl/__init__.py %{installpath}/sspl_hl/
 install sspl_hl/utils/auth.properties %{installpath}/sspl_hl/utils/
 install sspl_hl/providers/__init__.py %{installpath}/sspl_hl/providers/
@@ -54,6 +54,8 @@ install sspl_hl/providers/response/*.py %{installpath}/sspl_hl/providers/respons
 install sspl_hl/providers/support_bundle/*.py %{installpath}/sspl_hl/providers/support_bundle/
 install sspl_hl/providers/ldap/*.py %{installpath}/sspl_hl/providers/ldap/
 install sspl_hl/providers/access/*.py %{installpath}/sspl_hl/providers/access/
+install sspl_hl/providers/status/*.py %{installpath}/sspl_hl/providers/status/
+
 
 mkdir -p %{installpath}/sspl_hl/utils/
 install sspl_hl/utils/*.py %{installpath}/sspl_hl/utils/
@@ -78,11 +80,10 @@ mkdir -p %{buildroot}/var/lib/support_bundles
 /var/lib/support_bundles
 
 
-%changelog
-* Thu Nov 12 2015 Bhupesh Pant <bhupesh.pant@seagate.com>
-- Add support to test power command using fake ipmitooltool.sh
-- Created empty ipmitooltool.sh to fake a real
 
+%changelog
+* Thu Nov 14 2015 Bhupesh Pant <bhupesh.pant@seagate.com>
+- Add status provider
 
 * Fri Sep 11 2015 Madhur Nawandar <madhur.nawandar@seagate.com>
 - Add support_bundle provider
