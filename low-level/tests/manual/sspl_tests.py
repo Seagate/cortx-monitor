@@ -1158,7 +1158,7 @@ class SSPLtest():
         command = "systemctl restart sspl-ll"
         subprocess.Popen(command, shell=True, stdout=subprocess.PIPE,
                                        stderr=subprocess.PIPE)
-        time.sleep(45)
+        time.sleep(60)
 
         consumet = threading.Thread(target=self.start_consume)
         #serviceVerifyt = threading.Thread(target=self.serviceVerify)
@@ -1171,7 +1171,7 @@ class SSPLtest():
         consumet.setDaemon(True)
         consumet.start()
         #Sleep for a few seconds to allow consumer to start accepting messages.
-        time.sleep(20)
+        time.sleep(60)
         #Begin all threads sequentially and don't start the next untill the previous has finished
 
         testPassedDict = {  "TestReturnCode"    : "Passed",
