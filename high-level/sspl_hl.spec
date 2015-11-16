@@ -41,7 +41,7 @@ A cli (and library) that allow the user to control the cluster.
 %install
 mkdir -p %{installpath}/sspl_hl/utils
 mkdir -p %{installpath}/sspl_hl/views
-mkdir -p %{installpath}/sspl_hl/providers/{service_manager,node,ha,response,fru,power,support_bundle,ldap,access, status}
+mkdir -p %{installpath}/sspl_hl/providers/{service_manager,node,ha,response,fru,power,support_bundle,ldap,access,status}
 install sspl_hl/main.py sspl_hl/__init__.py %{installpath}/sspl_hl/
 install sspl_hl/utils/auth.properties %{installpath}/sspl_hl/utils/
 install sspl_hl/providers/__init__.py %{installpath}/sspl_hl/providers/
@@ -82,7 +82,7 @@ mkdir -p %{buildroot}/var/lib/support_bundles
 
 
 %changelog
-* Thu Nov 14 2015 Bhupesh Pant <bhupesh.pant@seagate.com>
+* Sat Nov 14 2015 Bhupesh Pant <bhupesh.pant@seagate.com>
 - Add status provider
 
 * Fri Sep 11 2015 Madhur Nawandar <madhur.nawandar@seagate.com>
