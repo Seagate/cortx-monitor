@@ -1,3 +1,6 @@
+RPMBUILD
+build_failed
+
 .project
 .pydevproject
 org.eclipse.core.resources.prefs
