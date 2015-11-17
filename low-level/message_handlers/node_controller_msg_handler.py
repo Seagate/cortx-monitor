@@ -147,7 +147,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
                 json_msg = AckResponseMsg(node_request, ipmi_response, uuid).getJson()
                 self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
-                
+
             elif component == "RESE":
                 # Query the Zope GlobalSiteManager for an object implementing the reset drive actuator
                 if self._reset_drive_actuator is None:
@@ -181,7 +181,6 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
                 json_msg = AckResponseMsg(node_request, response, uuid).getJson()
                 self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
-
 
             # ... handle other node message types
 

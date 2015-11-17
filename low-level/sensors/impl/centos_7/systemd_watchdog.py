@@ -187,7 +187,10 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
             if self.is_running() == True:
                 self._log_debug("SystemdWatchdog ungracefully breaking " \
                                 "out of dbus Loop, restarting: %r" % ae)
-                self._scheduler.enter(1, self._priority, self.run, ())
+                self._scheduler.enter(30, self._priority, self.run, ())
+                self._bus = None
+                self._manager = None
+
 
         # Reset debug mode if persistence is not enabled
         self._disable_debug_if_persist_false()
