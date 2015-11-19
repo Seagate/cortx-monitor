@@ -62,26 +62,24 @@ class SystemdLogin(Debug):
         self._login_request = jsonMsg.get("login_request")
         self._log_debug("perform_request, _login_request: %s" % self._login_request)
 
-        result = "N/A"
+        user_names = []
 
         try:
             # Return a list of user names currently logged in
             if self._login_request == "get_all_users":
                 users = self._manager.ListSessions()
-                user_names = []
-                for user in users:                
+                for user in users:
                     # session id, user id, user name, seat id, session object path
                     if user[2] not in user_names:
                         self._log_debug("perform_request, user name: %s" % (user[2]))
                         user_names.append(user[2])
 
-                return user_names
-
         except debus_exceptions.DBusException, error:
             logger.exception(error)
-            result = str(error)
+            self._bus = None
+            self._manager = None
 
-        return result
+        return user_names
 
     def _get_status(self):
         """"Returns the active state of the unit"""

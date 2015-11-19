@@ -129,7 +129,7 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
         if self._request_shutdown == True:
             self.shutdown()
         else:
-            self._scheduler.enter(10, self._priority, self.run, ())
+            self._scheduler.enter(1, self._priority, self.run, ())
 
     def _read_config(self):
         """Configure the RabbitMQ exchange with defaults available"""
@@ -241,6 +241,16 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
         self._log_debug("_transmit_msg_on_exchange, jsonMsg: %s" % jsonMsg)
 
         try:
+            # Check for shut down message from sspl_ll_d and set a flag to shutdown
+            #  once our message queue is empty 
+            if jsonMsg.get("message").get("actuator_response_type") is not None and \
+                jsonMsg.get("message").get("actuator_response_type").get("thread_controller") is not None and \
+                jsonMsg.get("message").get("actuator_response_type").get("thread_controller").get("thread_response") == \
+                    "SSPL-LL is shutting down":
+                    self._log_debug("_transmit_msg_on_exchange, received" \
+                                    "global shutdown message from sspl_ll_d")
+                    self._request_shutdown = True
+
             jsonMsg = json.dumps(jsonMsg).encode('utf8')
 
             msg_props = pika.BasicProperties()
@@ -265,15 +275,6 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
             self._log_debug("_transmit_msg_on_exchange, Successfully Sent: %s" % jsonMsg)
             self._connection.close()
             del(self._connection)
-
-            # Check for shut down message from sspl_ll_d and set a flag to shutdown
-            #  once our message queue is empty 
-            if isinstance(jsonMsg, ThreadControllerMsg):
-                if jsonMsg.get("actuator_response_type").get("thread_response") \
-                                            == "SSPL-LL is shutting down":
-                    self._log_debug("_transmit_msg_on_exchange, received" \
-                                    "global shutdown message from sspl_ll_d")
-                    self._request_shutdown = True
 
         except Exception as ex:
             logger.exception("_transmit_msg_on_exchange: %r" % ex)

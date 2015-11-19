@@ -261,10 +261,10 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
         return False
 
     def shutdown_all_modules(self):
-        """Calls shutdown for all modules except RabbitMQegressProcessor."""
-        for name, other_module in self.sspl_modules.iteritems():
-            if other_module is not self.sspl_modules[RabbitMQegressProcessor]:
-                other_module.shutdown()
+        """Calls shutdown for all modules"""
+        logger.info("Shutting down all modules")
+        for name, other_module in self._sspl_modules.iteritems():
+            other_module.shutdown()
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""

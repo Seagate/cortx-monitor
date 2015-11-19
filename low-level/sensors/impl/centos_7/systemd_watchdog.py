@@ -185,12 +185,11 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
             # Check for debug mode being activated when it breaks out of blocking loop
             self._read_my_msgQ_noWait()
             if self.is_running() == True:
-                self._log_debug("SystemdWatchdog ungracefully breaking " \
-                                "out of dbus Loop, restarting: %r" % ae)
-                self._scheduler.enter(30, self._priority, self.run, ())
-                self._bus = None
-                self._manager = None
-
+                self._log_debug("Ungracefully breaking " \
+                                "out of dbus loop with error: %r" % ae)
+                # Let the top level sspl_ll_d know that we have a fatal error
+                #  and shutdown so that systemd can restart it
+                raise Exception(ae)
 
         # Reset debug mode if persistence is not enabled
         self._disable_debug_if_persist_false()
@@ -315,11 +314,3 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""
         super(SystemdWatchdog, self).shutdown()
-        try:
-            self._log_debug("SystemdWatchdog, shutdown")
-
-            # Break out of dbus loop
-            self._running = False
-
-        except Exception:
-            logger.info("SystemdWatchdog, shutting down.")

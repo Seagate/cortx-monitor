@@ -1211,24 +1211,24 @@ class SSPLtest():
         #    testPassedDict["DriveVerify"] = "Passed"
 
         self.cleanUp()
-
-        self.logger.debug("Service Total Tests: " + str(self.serviceTestTotal))
-        self.logger.debug("Service Tests Passed: " + str(self.serviceTestPassed))
-        self.logger.debug("Thread Total Tests: " + str(self.threadTestTotal))
-        self.logger.debug("Thread Tests Passed: " + str(self.threadTestPassed))
-        self.logger.debug("Log Total Tests: " + str(self.logTestTotal))
-        self.logger.debug("Log Tests Passed: " + str(self.logTestPassed))
-        self.logger.debug("Watchdog Total Tests: " + str(self.watchdogTestTotal))
-        self.logger.debug("Watchdog Tests Passed: " + str(self.watchdogTestPassed))
-        self.logger.debug("Drive Total Tests: " + str(self.driveTestTotal))
-        self.logger.debug("Drive Tests Passed: " + str(self.driveTestPassed))
-        self.logger.debug("Host Update Total Tests: " + str(self.hostTestTotal))
-        self.logger.debug("Host Update Tests Passed: " + str(self.hostTestPassed))
-        self.logger.debug("Event Total Tests: " + str(self.eventTestTotal))
-        self.logger.debug("Event Tests Passed: " + str(self.eventTestPassed))
-
-        self.logger.debug("Total Tests: " + str(self.testsTotal))
-        self.logger.debug("Tests Passed: " + str(self.testsPassed))
+# 
+#         self.logger.debug("Service Total Tests: " + str(self.serviceTestTotal))
+#         self.logger.debug("Service Tests Passed: " + str(self.serviceTestPassed))
+#         self.logger.debug("Thread Total Tests: " + str(self.threadTestTotal))
+#         self.logger.debug("Thread Tests Passed: " + str(self.threadTestPassed))
+#         self.logger.debug("Log Total Tests: " + str(self.logTestTotal))
+#         self.logger.debug("Log Tests Passed: " + str(self.logTestPassed))
+#         self.logger.debug("Watchdog Total Tests: " + str(self.watchdogTestTotal))
+#         self.logger.debug("Watchdog Tests Passed: " + str(self.watchdogTestPassed))
+#         self.logger.debug("Drive Total Tests: " + str(self.driveTestTotal))
+#         self.logger.debug("Drive Tests Passed: " + str(self.driveTestPassed))
+#         self.logger.debug("Host Update Total Tests: " + str(self.hostTestTotal))
+#         self.logger.debug("Host Update Tests Passed: " + str(self.hostTestPassed))
+#         self.logger.debug("Event Total Tests: " + str(self.eventTestTotal))
+#         self.logger.debug("Event Tests Passed: " + str(self.eventTestPassed))
+# 
+#         self.logger.debug("Total Tests: " + str(self.testsTotal))
+#         self.logger.debug("Tests Passed: " + str(self.testsPassed))
 
 
         if self.testsTotal == self.testsPassed:

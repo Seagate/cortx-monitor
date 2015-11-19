@@ -57,13 +57,10 @@ class ScheduledModuleThread(ModuleThread, Debug):
         """Initialize the monitoring thread"""
         # Set the configuration file reader located in /etc/sspl-ll.conf
         self._conf_reader = conf_reader
-        
+
         # Set the scheduler to fire the thread right away
-        self._scheduler.enter(1, self._priority, self.run, ())     
-        
-        # Set running to True signifying the thread is active
-        set_running = True   
-        
+        self._scheduler.enter(1, self._priority, self.run, ())
+
     def start(self):
         """Run the scheduler"""
         self._running = True
@@ -71,24 +68,25 @@ class ScheduledModuleThread(ModuleThread, Debug):
 
     def _cleanup_and_stop(self):
         """Clean out the remainder of events from the scheduler queue."""
-        self._log_debug("_cleanup_and_stop")
+        self._log_debug("last module calling _cleanup_and_stop thread scheduler")
         for event in self._scheduler.queue:
             try:
                 self._scheduler.cancel(event)
             except ValueError:
                 # Being shut down so ignore
                 pass
+        self._log_debug("Thread scheduler cancelled successfully")
 
     def shutdown(self):
         """Clean up and shut down this monitor."""
         self._running = False
-        # Give the module a few seconds to close down RabbitMQ connections if they're open
-        self._scheduler.enter(2, self._priority, self._cleanup_and_stop, ())
+
+        # Give the module a few seconds to close down
+        self._scheduler.enter(10, self._priority, self._cleanup_and_stop, ())
         self._log_debug("Scheduling shut down")
  
     def _getConf_reader(self):
         return self._conf_reader
-    
+
     def is_running(self):
         return self._running
-
