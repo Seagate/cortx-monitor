@@ -26,6 +26,8 @@ from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 from json_msgs.messages.sensors.drive_mngr import DriveMngrMsg
 from json_msgs.messages.sensors.hpi_data import HPIDataMsg
 
+from json_msgs.messages.actuators.ack_response import AckResponseMsg
+
 
 class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
     """Message Handler for Disk Sensor Messages"""
@@ -54,11 +56,14 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
         # Initialize internal message queues for this module
         super(DiskMsgHandler, self).initialize_msgQ(msgQlist)
 
-        # Find a meaningful hostname to be used        
+        # Find a meaningful hostname to be used
         if socket.gethostname().find('.') >= 0:
             self._host_id = socket.gethostname()
         else:
             self._host_id = socket.gethostbyaddr(socket.gethostname())[0]
+
+        # Dict of drive manager drives
+        self._drives = {}
 
     def run(self):
         """Run the module periodically on its own thread."""
@@ -117,6 +122,10 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     logger.error("_process_msg, valid: False (ignoring)")
                     return
 
+                # Update the dict of drive manager drives
+                serial_number = jsonMsg.get("serial_number")
+                self._drives[serial_number] = drive
+
                 # Obtain json message containing all relevant data
                 internal_json_msg = drive.toDriveMngrJsonMsg().getJson()
 
@@ -148,23 +157,45 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 if not valid:
                     logger.error("_process_msg, valid: False (ignoring)")
                     return
-     
+
                 # Obtain json message containing all relevant data
                 internal_json_msg = drive.toHPIjsonMsg().getJson()
-     
+
                 # Send the json message to the RabbitMQ processor to transmit out
                 self._log_debug("_process_msg, internal_json_msg: %s" % internal_json_msg)
                 self._write_internal_msgQ(RabbitMQegressProcessor.name(), internal_json_msg)
-
 
             # ... handle other sensor response types
             else:
                 logger.warn("DiskMsgHandler, received unknown msg: %s" % jsonMsg)
 
-        # ... handle other disk message types
+        # Handle sensor request type messages
+        elif jsonMsg.get("sensor_request_type") is not None:
+            sensor_request_type = jsonMsg.get("sensor_request_type")
+            self._log_debug("_processMsg, sensor_request_type: %s" % sensor_request_type)
+
+            if sensor_request_type == "disk_smart_test":
+                serial_number = jsonMsg.get("serial_number")
+                self._log_debug("_processMsg, disk smart test, serial_number: %s" % serial_number)
+
+                node_request = jsonMsg.get("node_request")
+                uuid = jsonMsg.get("uuid")
+                if self._drives.get(serial_number) is not None:
+                    if self._drives[serial_number].get_drive_status() == "inuse_ok":
+                        response = "Passed"
+                    else:
+                        response = "Failed"
+                    self._log_debug("_processMsg, disk smart test, drive test status: %s" % 
+                                    response)
+                else:
+                    self._log_debug("_processMsg, disk smart test data not yet available")
+                    response = "Error: SMART results not yet available for drive, please try again later."
+
+                json_msg = AckResponseMsg(node_request, response, uuid).getJson()
+                self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
         else:
             logger.warn("DiskMsgHandler, received unknown msg: %s" % jsonMsg)
-        
+
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""

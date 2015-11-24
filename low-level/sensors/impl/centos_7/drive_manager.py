@@ -151,9 +151,20 @@ class DriveManager(ScheduledModuleThread, InternalMsgQ):
                 # Ignore the discovery file
                 if not os.path.isdir(pathname):
                     continue
-            
-                status_file = os.path.join(pathname, "status")
 
+                # Read in the serial number for the disk
+                serial_num_file = os.path.join(pathname, "serial_number")
+                if not os.path.isfile(serial_num_file):
+                    logger.error("DriveManager error no serial_number file for disk: %s" % disk)
+                    continue
+                try:
+                    with open(serial_num_file, "r") as datafile:
+                        serial_number = datafile.read().replace('\n', '')
+                except Exception as e:
+                    logger.info("DriveManager, _init_drive_status, exception: %s" % e)
+
+                # Read in the status for the disk
+                status_file = os.path.join(pathname, "status")
                 if not os.path.isfile(status_file):
                     logger.error("DriveManager error no status file for disk: %s" % disk)
                     continue
@@ -181,7 +192,8 @@ class DriveManager(ScheduledModuleThread, InternalMsgQ):
                     internal_json_msg = json.dumps(
                         {"sensor_response_type" : "disk_status_drivemanager",
                          "event_path" : data_str,
-                         "status" : status
+                         "status" : status,
+                         "serial_number" : serial_number
                          })
 
                     # Send the event to disk message handler to generate json message
@@ -240,11 +252,15 @@ class DriveManager(ScheduledModuleThread, InternalMsgQ):
                                                                  self.START_DELAY,
                                                                  '20')
 
-    def _notify_DiskMsgHandler(self, status_file):
+    def _notify_DiskMsgHandler(self, status_file, serial_num_file):
         """Send the event to the disk message handler for generating JSON message"""
 
         if not os.path.isfile(status_file):
             logger.warn("status_file: %s does not exist, ignoring." % status_file)
+            return
+        
+        if not os.path.isfile(serial_num_file):
+            logger.warn("serial_num_file: %s does not exist, ignoring." % serial_num_file)
             return
 
         # Read in status and see if it has changed
@@ -266,6 +282,10 @@ class DriveManager(ScheduledModuleThread, InternalMsgQ):
         self._log_debug("Status change, status_file: %s, status: %s" % (status_file, status))
         self._drive_status[os.path.dirname(status_file)] = status
 
+        # Read in the serial number
+        with open (serial_num_file, "r") as datafile:
+            serial_number = datafile.read().replace('\n', '')
+
         # Remove base dcs dir since it contains no relevant data
         data_str = status_file[len(self._drive_mngr_base_dir)+1:]
 
@@ -273,7 +293,8 @@ class DriveManager(ScheduledModuleThread, InternalMsgQ):
         internal_json_msg = json.dumps(
             {"sensor_response_type" : "disk_status_drivemanager",
                 "event_path" : data_str,
-                "status" : status
+                "status" : status,
+                "serial_number" : serial_number
             })
 
         # Send the event to disk message handler to generate json message
@@ -297,7 +318,8 @@ class DriveManager(ScheduledModuleThread, InternalMsgQ):
                 if self._validate_event_path(event.pathname):
                     #self._log_debug("InotifyEventHandler, process_IN_CLOSE_WRITE, event: %s" % event)
                     status_file = os.path.join(os.path.dirname(event.pathname), "status")
-                    _parent._notify_DiskMsgHandler(status_file)
+                    serial_num_file = os.path.join(os.path.dirname(event.pathname), "serial_number")
+                    _parent._notify_DiskMsgHandler(status_file, serial_num_file)
 
             def _validate_event_path(self, event_path):
                 """Returns true if the event path is valid for a status file"""
