@@ -5,9 +5,12 @@ PLEX data provider.
 
 from twisted.internet import reactor
 from sspl_hl.utils.base_castor_provider import BaseCastorProvider
-from sspl_hl.utils.bundle_utils import (list_bundle_files,
-                                        bundle_files)
 from sspl_hl.utils.message_utils import SupportBundleResponse
+from sspl_hl.utils.support_bundle.support_bundle_handler import \
+    SupportBundleHandler
+import sspl_hl.utils.common as utils
+from sspl_hl.utils.support_bundle import bundle_utils
+
 
 # """
 # DEFAULT_LOG_FILES: This would contain the meta data for the files that
@@ -16,11 +19,6 @@ from sspl_hl.utils.message_utils import SupportBundleResponse
 # DEFAULT_PATH: It will contain the path where tar files will be created.
 # NOTE: Both these parameters will be later moved to plex configuration.
 # """
-
-# pylint: disable=dangerous-default-value
-DEFAULT_TARGET_FILES = {'n1': ['/var/log/plex/*.log'],
-                        'n2': []}
-DEFAULT_PATH = '/var/lib/support_bundles'
 
 
 class SupportBundleProvider(BaseCastorProvider):
@@ -46,37 +44,44 @@ class SupportBundleProvider(BaseCastorProvider):
             self.log_warning(msg)
             reactor.callFromThread(responder.reply_exception, result)
             return
-        try:
-            response = SupportBundleProvider._process_support_bundle_request(
-                selection_args.get('command', None)
-            )
-            reactor.callFromThread(responder.reply, data=[response])
-        except OSError as error:
-            msg = '{} bundle command failed. Details: {}'.format(
-                selection_args.get('command', None),
-                str(error)
-            )
-            self.log_warning(msg)
-            reactor.callFromThread(responder.reply_exception,
-                                   'An Internal error has occurred, unable to '
-                                   'complete command.')
+        response = self.process_support_bundle_request(
+            selection_args['command']
+        )
 
-    @classmethod
-    def _process_support_bundle_request(cls, command):
+        reactor.callFromThread(responder.reply, data=[response])
+
+    def process_support_bundle_request(self, command):
         """ Process the request bundle request
         based on the command
         """
         response = SupportBundleResponse()
         if command == 'list':
-            bundle_list = list_bundle_files(path=DEFAULT_PATH)
+            bundle_list = bundle_utils.list_bundle_files()
             response = response.get_response_message(command, bundle_list)
         elif command == 'create':
-            bundle_name = bundle_files(DEFAULT_TARGET_FILES, DEFAULT_PATH)
-            response = response.get_response_message(command, bundle_name)
+            bundling_handler = SupportBundleHandler()
+            bundle_name = utils.get_curr_datetime_str()
+            deferred = bundling_handler.collect(bundle_name)
+            deferred.addCallback(self.handle_success)
+            deferred.addErrback(self.handle_failure)
+            response = response.get_response_message(
+                command, bundle_name + '.tar')
         else:
             response = 'command %s not supported' % command
         return response
 
+    def handle_success(self, _):
+        """
+        Success Handler
+        """
+        self.log_info('Bundling of logs Completed Successfully')
+
+    def handle_failure(self, error):
+        """
+        Error Handler
+        """
+        self.log_info('Bundling of logs Failed. Details: {}'.format(error))
+
 # pylint: disable=invalid-name
-provider = SupportBundleProvider('support_bundle',
-                                 "Provider for command support_bundle")
+provider = SupportBundleProvider('bundle',
+                                 "Provider for bundle commands")

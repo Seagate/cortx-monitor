@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-File containing " support_bundle" command implementation
+File containing "bundle" command implementation
 """
 
 # Do NOT modify or remove this copyright and confidentiality notice
@@ -30,14 +30,14 @@ class SupportBundle(BaseCommand):
 
         super(SupportBundle, self).__init__()
         self.command = parser.command
-        self.provider = "support_bundle"
+        self.provider = "bundle"
 
     @staticmethod
     def add_args(subparsers):
-        """ defines the command structure for support_bundle command
+        """ defines the command structure for bundle command
         """
 
-        sb_parser = subparsers.add_parser('support_bundle',
+        sb_parser = subparsers.add_parser('bundle',
                                           help='Sub-command \
         to work on support related operations')
 

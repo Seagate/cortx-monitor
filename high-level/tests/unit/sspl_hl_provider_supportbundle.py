@@ -3,7 +3,7 @@
 
 import unittest
 
-from sspl_hl.providers.support_bundle.provider import SupportBundleProvider
+from sspl_hl.providers.bundle.provider import SupportBundleProvider
 from base_unit_test import BaseUnitTest
 
 
