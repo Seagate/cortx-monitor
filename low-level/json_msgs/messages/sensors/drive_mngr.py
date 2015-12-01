@@ -33,20 +33,22 @@ class DriveMngrMsg(BaseSensorMsg):
     def __init__(self, enclosure,
                        drive_num,
                        status,
+                       serial_num,
                        username  = "SSPL-LL",
                        signature = "N/A",
                        time      = "N/A",
                        expires   = -1):
         super(DriveMngrMsg, self).__init__()         
 
-        self._username  = username
-        self._signature = signature
-        self._time      = time
-        self._expires   = expires
-        self._enclosure = enclosure
-        self._drive_num = drive_num
-        self._status    = status        
-        
+        self._username   = username
+        self._signature  = signature
+        self._time       = time
+        self._expires    = expires
+        self._enclosure  = enclosure
+        self._drive_num  = drive_num
+        self._status     = status
+        self._serial_num = serial_num
+
         self._json = {"title" : self.TITLE,
                       "description" : self.DESCRIPTION,
                       "username" : self._username,
@@ -54,19 +56,20 @@ class DriveMngrMsg(BaseSensorMsg):
                       "time" : self._time,
                       "expires" : self._expires,
 
-                      "message" : {                   
+                      "message" : {
                           "sspl_ll_msg_header": {
                                 "schema_version" : self.SCHEMA_VERSION,
                                 "sspl_version" : self.SSPL_VERSION,
-                                "msg_version" : self.MESSAGE_VERSION,
+                                "msg_version" : self.MESSAGE_VERSION
                                 },
                           "sensor_response_type": {
-                                self.SENSOR_RESPONSE_TYPE: {                               
+                                self.SENSOR_RESPONSE_TYPE: {                      
                                     "enclosureSN" : self._enclosure,
-                                    "diskNum" : int(self._drive_num),                                            
-                                    "diskStatus": self._status                                
+                                    "diskNum" : int(self._drive_num),
+                                    "diskStatus" : self._status,
+                                    "serialNumber" : self._serial_num
                                     }
-                                }                      
+                                }
                           }
                       }
 

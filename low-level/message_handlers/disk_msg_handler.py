@@ -108,15 +108,17 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 # Convert event path to Drive object to handle parsing and json conversion, etc
                 drive = Drive(self._host_id,
                               jsonMsg.get("event_path"),
-                              jsonMsg.get("status"))
+                              jsonMsg.get("status"),
+                              jsonMsg.get("serial_number"))
 
                 # Check to see if the drive path is valid
                 valid = drive.parse_drive_mngr_path()
 
                 self._log_debug("_process_msg enclosureSN: %s" % drive.get_drive_enclosure() \
-                                + ", diskNum: %s" % drive.get_drive_num() \
+                                + ", disk Num: %s" % drive.get_drive_num() \
                                 + ", filename: %s"  % drive.get_drive_filename() \
-                                + ", diskStatus: %s"  % drive.get_drive_status())
+                                + ", disk Status: %s"  % drive.get_drive_status() \
+                                + ", disk Serial Number: %s"  % drive.getSerialNumber())
 
                 if not valid:
                     logger.error("_process_msg, valid: False (ignoring)")
@@ -139,12 +141,12 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 drive = Drive(self._host_id,
                               jsonMsg.get("event_path"),
                               jsonMsg.get("status"),
+                              jsonMsg.get("serialNumber"),
                               jsonMsg.get("drawer"),
                               jsonMsg.get("location"),
                               jsonMsg.get("manufacturer"),
                               jsonMsg.get("productName"),
                               jsonMsg.get("productVersion"),
-                              jsonMsg.get("serialNumber"),
                               jsonMsg.get("wwn"))
 
                 # Check to see if the drive path is valid
@@ -207,12 +209,12 @@ class Drive(object):
 
     def __init__(self, hostId, path,
                  status         = "N/A",
+                 serialNumber   = "N/A",
                  drawer         = "N/A",
                  location       = "N/A",
                  manufacturer   = "N/A",
                  productName    = "N/A",
                  productVersion = "N/A",
-                 serialNumber   = "N/A",
                  wwn            = "N/A"
                  ):
         super(Drive, self).__init__()
@@ -220,12 +222,12 @@ class Drive(object):
         self._hostId         = hostId
         self._path           = path
         self._status         = status
+        self._serialNumber   = serialNumber
         self._drawer         = drawer
         self._location       = location
         self._manufacturer   = manufacturer
         self._productName    = productName
         self._productVersion = productVersion
-        self._serialNumber   = serialNumber
         self._wwn            = wwn 
         self._enclosure      = "N/A"
         self._drive_num      = "N/A"
@@ -280,7 +282,8 @@ class Drive(object):
         #  be queued up for aggregation at a later time if needed
         jsonMsg = DriveMngrMsg(self._enclosure,
                                self._drive_num,
-                               self._status)
+                               self._status,
+                               self._serialNumber)
         return jsonMsg
 
     def toHPIjsonMsg(self):
@@ -295,7 +298,8 @@ class Drive(object):
                              self._productName,
                              self._productVersion,
                              self._serialNumber,
-                             self._wwn)
+                             self._wwn,
+                             self._enclosure)
         return jsonMsg
 
 
