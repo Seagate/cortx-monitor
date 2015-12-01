@@ -169,7 +169,7 @@ class RabbitMQingressProcessorTests(ScheduledModuleThread, InternalMsgQ):
                 message.get("sensor_request_type") is not None:
                 return
 
-            # Get the message type which 
+            # Get the message type
             msgType = message.get("actuator_response_type")
 
             # If it's an incoming actuator msg then validate against
@@ -180,6 +180,10 @@ class RabbitMQingressProcessorTests(ScheduledModuleThread, InternalMsgQ):
             if msgType is None:
                 msgType = message.get("sensor_response_type")
                 validate(ingressMsg, self._sensor_schema)
+
+                # Ignore drive status messages when thread starts up
+                if message.get("sensor_response_type").get("disk_status_drivemanager") is not None:
+                    return
 
             # Write to the msg queue so the lettuce tests can
             #  retrieve it and examine for accuracy during automated testing
