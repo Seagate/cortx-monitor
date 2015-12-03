@@ -1210,7 +1210,7 @@ class SSPLtest():
         #if not self.driveVerify():
         #    testPassedDict["DriveVerify"] = "Passed"
 
-        self.cleanUp()
+#        self.cleanUp()
 # 
 #         self.logger.debug("Service Total Tests: " + str(self.serviceTestTotal))
 #         self.logger.debug("Service Tests Passed: " + str(self.serviceTestPassed))
