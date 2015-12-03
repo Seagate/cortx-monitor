@@ -183,7 +183,8 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 node_request = jsonMsg.get("node_request")
                 uuid = jsonMsg.get("uuid")
                 if self._drives.get(serial_number) is not None:
-                    if self._drives[serial_number].get_drive_status() == "inuse_ok":
+                    if self._drives[serial_number].get_drive_status().lower() == "inuse_ok" or \
+                       self._drives[serial_number].get_drive_status().lower() == "ok_none":
                         response = "Passed"
                     else:
                         response = "Failed"

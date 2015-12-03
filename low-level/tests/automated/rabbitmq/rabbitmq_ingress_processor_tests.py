@@ -181,7 +181,7 @@ class RabbitMQingressProcessorTests(ScheduledModuleThread, InternalMsgQ):
                 msgType = message.get("sensor_response_type")
                 validate(ingressMsg, self._sensor_schema)
 
-                # Ignore drive status messages when thread starts up
+                # Ignore drive status messages when thread starts up during tests
                 if message.get("sensor_response_type").get("disk_status_drivemanager") is not None:
                     return
 

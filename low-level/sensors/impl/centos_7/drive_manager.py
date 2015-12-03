@@ -174,9 +174,11 @@ class DriveManager(ScheduledModuleThread, InternalMsgQ):
 
                     # Read in the reason file if it's present
                     reason_file = os.path.join(pathname, "reason")
+
                     if os.path.isfile(reason_file):
                         with open(reason_file, "r") as datafile:
                             reason = datafile.read().replace('\n', '')
+
                         # Append the reason to the status file
                         self._drive_status[pathname] = "{0}_{1}".format(status, reason)
                     else:
@@ -192,7 +194,7 @@ class DriveManager(ScheduledModuleThread, InternalMsgQ):
                     internal_json_msg = json.dumps(
                         {"sensor_response_type" : "disk_status_drivemanager",
                          "event_path" : data_str,
-                         "status" : status,
+                         "status" : self._drive_status[pathname],
                          "serial_number" : serial_number
                          })
 
