@@ -22,6 +22,8 @@ from framework.utils.service_logging import logger
 
 from loggers.impl.iem_logger import IEMlogger
 
+from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
+from json_msgs.messages.actuators.ack_response import AckResponseMsg
 
 class LoggingMsgHandler(ScheduledModuleThread, InternalMsgQ):
     """Message Handler for logging Messages"""
@@ -84,14 +86,24 @@ class LoggingMsgHandler(ScheduledModuleThread, InternalMsgQ):
         if isinstance(jsonMsg, dict) == False:
             jsonMsg = json.loads(jsonMsg)
 
-        if jsonMsg.get("actuator_request_type").get("logging").get("log_type") == "IEM":
+        uuid = None
+        if jsonMsg.get("sspl_ll_msg_header").get("uuid") is not None:
+            uuid = jsonMsg.get("sspl_ll_msg_header").get("uuid")
+            self._log_debug("_process_msg, uuid: %s" % uuid)
+
+        log_type = jsonMsg.get("actuator_request_type").get("logging").get("log_type")
+
+        if log_type == "IEM":
             self._log_debug("_processMsg, msg_type: IEM")
             if self._iem_logger == None:
                 self._iem_logger = IEMlogger(self._conf_reader)
-            self._iem_logger.log_msg(jsonMsg)
+            result = self._iem_logger.log_msg(jsonMsg)
 
         # ... handle other logging types
 
+        # Send ack about logging msg
+        json_msg = AckResponseMsg(log_type, result, uuid).getJson()
+        self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""

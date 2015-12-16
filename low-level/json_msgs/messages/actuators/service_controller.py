@@ -86,3 +86,6 @@ class ServiceControllerMsg(BaseActuatorMsg):
 
     def set_service_response(self, service_response):
         self._service_response = service_response
+
+    def set_uuid(self, _uuid):
+        self._json["message"]["sspl_ll_msg_header"]["uuid"] = _uuid

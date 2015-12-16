@@ -173,10 +173,10 @@ class RaritanPDU(Debug):
         try:
             # Attempt to properly exit the session
             self._connection.write("exit\n")
+            # Close the connection
+            self._connection.close()
         except:
             pass
-        # Close the connection
-        self._connection.close()
 
     def _validate_response(self, response):
         """Checks the response for the 'Available commands:' in response

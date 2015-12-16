@@ -120,3 +120,6 @@ class HPIDataMsg(BaseSensorMsg):
 
     def getWWN(self):
         return self._wwn
+    
+    def set_uuid(self, _uuid):
+        self._json["message"]["sspl_ll_msg_header"]["uuid"] = _uuid

@@ -86,3 +86,6 @@ class ThreadControllerMsg(BaseActuatorMsg):
 
     def set_thread_response(self, thread_response):
         self._thread_response = thread_response
+        
+    def set_uuid(self, _uuid):
+        self._json["message"]["sspl_ll_msg_header"]["uuid"] = _uuid

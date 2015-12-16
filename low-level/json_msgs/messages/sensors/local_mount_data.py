@@ -104,4 +104,5 @@ class LocalMountDataMsg(BaseSensorMsg):
         self.validateMsg(self._json)
         return json.dumps(self._json)
 
-    # Possible getters/setters below here in the future if we aggregate messages
+    def set_uuid(self, _uuid):
+        self._json["message"]["sspl_ll_msg_header"]["uuid"] = _uuid

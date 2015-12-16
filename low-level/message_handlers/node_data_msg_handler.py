@@ -134,6 +134,13 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         if isinstance(jsonMsg, dict) == False:
             jsonMsg = json.loads(jsonMsg)
 
+        # Parse out the uuid so that it can be sent back in response message
+        self._uuid = None
+        if jsonMsg.get("sspl_ll_msg_header") is not None and \
+           jsonMsg.get("sspl_ll_msg_header").get("uuid") is not None:
+            self._uuid = jsonMsg.get("sspl_ll_msg_header").get("uuid")
+            self._log_debug("_processMsg, uuid: %s" % self._uuid)
+
         if jsonMsg.get("sensor_request_type").get("node_data").get("sensor_type") is not None:
             sensor_type = jsonMsg.get("sensor_request_type").get("node_data").get("sensor_type")
             self._log_debug("_processMsg, sensor_type: %s" % sensor_type)
@@ -181,7 +188,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         logged_in_users = self._login_actuator.perform_request(login_request)
 
         # Create the host update message and hand it over to the egress processor to transmit
-        jsonMsg = HostUpdateMsg(self._node_sensor.host_id,
+        hostUpdateMsg = HostUpdateMsg(self._node_sensor.host_id,
                                 self._node_sensor.local_time,
                                 self._node_sensor.boot_time,
                                 self._node_sensor.up_time,
@@ -190,7 +197,14 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                                 self._node_sensor.total_mem, logged_in_users,
                                 self._node_sensor.process_count,
                                 self._node_sensor.running_process_count
-                                ).getJson()
+                                )
+
+        # Add in uuid if it was present in the json request
+        if self._uuid is not None:
+            hostUpdateMsg.set_uuid(self._uuid)
+        jsonMsg = hostUpdateMsg.getJson()
+
+        # Transmit it out over rabbitMQ channel
         self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
 
     def _generate_local_mount_data(self):
@@ -203,14 +217,21 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             logger.error("NodeDataMsgHandler, _generate_local_mount_data was NOT successful.")
 
         # Create the local mount data message and hand it over to the egress processor to transmit
-        jsonMsg = LocalMountDataMsg(self._node_sensor.host_id,
+        localMountDataMsg = LocalMountDataMsg(self._node_sensor.host_id,
                                 self._node_sensor.local_time,
                                 self._node_sensor.free_space,
                                 self._node_sensor.free_inodes,
                                 self._node_sensor.free_swap,
                                 self._node_sensor.total_space,
                                 self._node_sensor.total_swap,
-                                self._units).getJson()
+                                self._units)
+
+        # Add in uuid if it was present in the json request
+        if self._uuid is not None:
+            localMountDataMsg.set_uuid(self._uuid)
+        jsonMsg = localMountDataMsg.getJson()
+
+        # Transmit it out over rabbitMQ channel
         self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
 
     def _generate_cpu_data(self):
@@ -223,7 +244,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             logger.error("NodeDataMsgHandler, _generate_cpu_data was NOT successful.")
 
         # Create the local mount data message and hand it over to the egress processor to transmit
-        jsonMsg = CPUdataMsg(self._node_sensor.host_id,
+        cpuDataMsg = CPUdataMsg(self._node_sensor.host_id,
                              self._node_sensor.local_time,
                              self._node_sensor.csps,
                              self._node_sensor.idle_time,
@@ -234,7 +255,14 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                              self._node_sensor.steal_time,
                              self._node_sensor.system_time,
                              self._node_sensor.user_time,
-                             self._node_sensor.cpu_core_data).getJson()
+                             self._node_sensor.cpu_core_data)
+
+        # Add in uuid if it was present in the json request
+        if self._uuid is not None:
+            cpuDataMsg.set_uuid(self._uuid)
+        jsonMsg = cpuDataMsg.getJson()
+
+        # Transmit it out over rabbitMQ channel
         self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
 
     def _generate_if_data(self):
@@ -246,9 +274,16 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         if not successful:
             logger.error("NodeDataMsgHandler, _generate_if_data was NOT successful.")
 
-        jsonMsg = IFdataMsg(self._node_sensor.host_id,
+        ifDataMsg = IFdataMsg(self._node_sensor.host_id,
                             self._node_sensor.local_time,
-                            self._node_sensor.if_data).getJson()
+                            self._node_sensor.if_data)
+
+        # Add in uuid if it was present in the json request
+        if self._uuid is not None:
+            ifDataMsg.set_uuid(self._uuid)
+        jsonMsg = ifDataMsg.getJson()
+
+        # Transmit it out over rabbitMQ channel
         self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
 
     def _generate_RAID_status(self, jsonMsg):
@@ -267,8 +302,15 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         self._log_debug("_generate_RAID_status, host_id: %s, RAID_status: %s" % 
                             (self._node_sensor.host_id, self._RAID_status))
 
-        jsonMsg = RAIDdataMsg(self._node_sensor.host_id,
-                              self._RAID_status).getJson()
+        raidDataMsg = RAIDdataMsg(self._node_sensor.host_id,
+                              self._RAID_status)
+
+        # Add in uuid if it was present in the json request
+        if self._uuid is not None:
+            raidDataMsg.set_uuid(self._uuid)
+        jsonMsg = raidDataMsg.getJson()
+
+        # Transmit it out over rabbitMQ channel
         self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
 
     def shutdown(self):

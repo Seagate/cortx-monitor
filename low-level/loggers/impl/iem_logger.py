@@ -78,6 +78,7 @@ class IEMlogger(Debug):
         except Exception as de:
             self._log_debug("log_msg, no encoding applied, writing to journal: %r" % de)
 
+        result = ""
         try:
             # IEM logging format "IEC: EVENT_CODE: EVENT_STRING: JSON DATA"
             event_code_start = log_msg.index("IEC:") + 4
@@ -100,8 +101,13 @@ class IEMlogger(Debug):
                          SYSLOG_IDENTIFIER="sspl-ll")
 
             # Send email if priority exceeds LOGEMAILER priority in /etc/sspl-ll.conf
-            result = self._autoemailer._send_email(log_msg, priority)
+            email_result = self._autoemailer._send_email(log_msg, priority)
+            result = "Successfully logged IEM msg, {}".format(email_result)
             self._log_debug("Autoemailer result: %s" % result)
 
         except Exception as de:
             self._log_debug("log_msg, Error parsing IEM message: %s" % de)
+            result = str(de)
+
+        return result
+            

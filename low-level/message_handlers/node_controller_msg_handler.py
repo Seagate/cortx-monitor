@@ -101,6 +101,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
             jsonMsg = json.loads(jsonMsg)
 
         # Parse out the uuid so that it can be sent back in Ack message
+        uuid = None
         if jsonMsg.get("sspl_ll_msg_header").get("uuid") is not None:
             uuid = jsonMsg.get("sspl_ll_msg_header").get("uuid")
             self._log_debug("_processMsg, uuid: %s" % uuid)
@@ -189,6 +190,21 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 drive_request = node_request[12:].strip()
                 self._log_debug("perform_request, drive request: %s" % drive_request)
 
+                # If the drive field is an asterisk then send all the smart results for all drives available
+                if drive_request == "*":
+                    # Send a message to the disk message handler to lookup the smart status and send it out
+                    internal_json_msg = json.dumps(
+                        {"sensor_request_type" : "disk_smart_test",
+                         "serial_number" : "*",
+                         "node_request" : self.ip_addr,
+                         "uuid" : uuid
+                         })
+
+                    # Send the event to disk message handler to generate json message
+                    self._write_internal_msgQ(DiskMsgHandler.name(), internal_json_msg)
+                    return
+
+                # Put together a message to get the serial number of the drive using hdparm tool
                 hd_parm_request = "HDPARM: -I {} | grep 'Serial Number:'".format(drive_request)
                 serial_num_msg = {
                          "actuator_request_type": {
@@ -221,6 +237,125 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     # Send the event to disk message handler to generate json message
                     self._write_internal_msgQ(DiskMsgHandler.name(), internal_json_msg)
 
+            elif component == "DRVM":
+                # Json msg is requesting the current status from drivemanager
+                
+                # Parse out the drive request field in json msg
+                node_request = jsonMsg.get("actuator_request_type").get("node_controller").get("node_request")
+                drive_request = node_request[15:].strip()
+                self._log_debug("perform_request, drive request: %s" % drive_request)
+                
+                # If the drive field is an asterisk then send all the drivemanager results for all drives available
+                if drive_request == "*":
+                    # Send a message to the disk message handler to lookup the drivemanager status and send it out
+                    internal_json_msg = json.dumps(
+                        {"sensor_request_type" : "drvmngr_status",
+                         "serial_number" : "*",
+                         "node_request" : self.ip_addr,
+                         "uuid" : uuid
+                         })
+
+                    # Send the event to disk message handler to generate json message
+                    self._write_internal_msgQ(DiskMsgHandler.name(), internal_json_msg)
+                    return
+
+                # Query the Zope GlobalSiteManager for an object implementing the hdparm actuator
+                if self._hdparm_actuator is None:
+                    self._hdparm_actuator = queryUtility(IHdparm)()
+                    self._log_debug("_process_msg, _hdparm_actuator name: %s" % self._hdparm_actuator.name())
+
+                # Put together a message to get the serial number of the drive using hdparm tool
+                hd_parm_request = "HDPARM: -I {} | grep 'Serial Number:'".format(drive_request)
+                serial_num_msg = {
+                         "actuator_request_type": {
+                            "node_controller": {
+                                "node_request": hd_parm_request
+                                }
+                            }
+                         }
+
+                # Send a request to the hdparm tool to get the serial number of the device
+                hdparm_response = self._hdparm_actuator.perform_request(serial_num_msg).strip()
+                self._log_debug("_process_msg, hdparm_response: %s" % hdparm_response)
+
+                # Stop here if we have an error
+                if "Error" in hdparm_response:
+                    json_msg = AckResponseMsg(node_request + " " + self.ip_addr, hdparm_response, uuid).getJson()
+                    self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+                else:
+                    # Parse out "Serial Number:" from hdparm result to obtain serial number
+                    serial_number = hdparm_response[15:].strip()
+
+                    # Send a message to the disk message handler to lookup the smart status and send it out
+                    internal_json_msg = json.dumps(
+                        {"sensor_request_type" : "drvmngr_status",
+                         "serial_number" : serial_number,
+                         "node_request" : node_request  + " " + self.ip_addr,
+                         "uuid" : uuid
+                         })
+
+                    # Send the event to disk message handler to generate json message
+                    self._write_internal_msgQ(DiskMsgHandler.name(), internal_json_msg)
+
+            elif component == "HPI_":
+                # Json msg is requesting the current status from HPI data
+                
+                # Parse out the drive request field in json msg
+                node_request = jsonMsg.get("actuator_request_type").get("node_controller").get("node_request")
+                drive_request = node_request[11:].strip()
+                self._log_debug("perform_request, drive request: %s" % drive_request)
+                
+                # If the drive field is an asterisk then send all the hpi results for all drives available
+                if drive_request == "*":
+                    # Send a message to the disk message handler to lookup the hpi status and send it out
+                    internal_json_msg = json.dumps(
+                        {"sensor_request_type" : "hpi_status",
+                         "serial_number" : "*",
+                         "node_request" : self.ip_addr,
+                         "uuid" : uuid
+                         })
+
+                    # Send the event to disk message handler to generate json message
+                    self._write_internal_msgQ(DiskMsgHandler.name(), internal_json_msg)
+                    return
+
+                # Query the Zope GlobalSiteManager for an object implementing the hdparm actuator
+                if self._hdparm_actuator is None:
+                    self._hdparm_actuator = queryUtility(IHdparm)()
+                    self._log_debug("_process_msg, _hdparm_actuator name: %s" % self._hdparm_actuator.name())
+
+                # Put together a message to get the serial number of the drive using hdparm tool
+                hd_parm_request = "HDPARM: -I {} | grep 'Serial Number:'".format(drive_request)
+                serial_num_msg = {
+                         "actuator_request_type": {
+                            "node_controller": {
+                                "node_request": hd_parm_request
+                                }
+                            }
+                         }
+
+                # Send a request to the hdparm tool to get the serial number of the device
+                hdparm_response = self._hdparm_actuator.perform_request(serial_num_msg).strip()
+                self._log_debug("_process_msg, hdparm_response: %s" % hdparm_response)
+
+                # Stop here if we have an error
+                if "Error" in hdparm_response:
+                    json_msg = AckResponseMsg(node_request + " " + self.ip_addr, hdparm_response, uuid).getJson()
+                    self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+                else:
+                    # Parse out "Serial Number:" from hdparm result to obtain serial number
+                    serial_number = hdparm_response[15:].strip()
+
+                    # Send a message to the disk message handler to lookup the smart status and send it out
+                    internal_json_msg = json.dumps(
+                        {"sensor_request_type" : "hpi_status",
+                         "serial_number" : serial_number,
+                         "node_request" : node_request  + " " + self.ip_addr,
+                         "uuid" : uuid
+                         })
+
+                    # Send the event to disk message handler to generate json message
+                    self._write_internal_msgQ(DiskMsgHandler.name(), internal_json_msg)
             else:
                 response = "NodeControllerMsgHandler, _process_msg, unknown node controller msg: {}" \
                             .format(node_request)

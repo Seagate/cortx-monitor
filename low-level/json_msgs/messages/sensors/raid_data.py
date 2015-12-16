@@ -86,3 +86,6 @@ class RAIDdataMsg(BaseSensorMsg):
 
     def set_mdstat(self, mdstat):
         self._mdstat = mdstat
+
+    def set_uuid(self, _uuid):
+        self._json["message"]["sspl_ll_msg_header"]["uuid"] = _uuid

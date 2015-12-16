@@ -93,7 +93,7 @@ class IPMI(Debug):
             response, error = process.communicate()
 
             if error:
-                response = "Error: {0}".format(error)
+                response = "{0}".format(error)
 
             self._log_debug("perform_request, IPMI response: %s" % response)
 

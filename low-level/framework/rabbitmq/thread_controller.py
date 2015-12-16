@@ -142,6 +142,13 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
         module_name    = jsonMsg.get("actuator_request_type").get("thread_controller").get("module_name")
         thread_request = jsonMsg.get("actuator_request_type").get("thread_controller").get("thread_request")
 
+        # Parse out the uuid so that it can be sent back in Ack message
+        uuid = None
+        if jsonMsg.get("sspl_ll_msg_header") is not None and \
+           jsonMsg.get("sspl_ll_msg_header").get("uuid") is not None:
+            uuid = jsonMsg.get("sspl_ll_msg_header").get("uuid")
+            self._log_debug("_processMsg, uuid: %s" % uuid)
+
         # Pass along the debug section to the module
         if jsonMsg.get("sspl_ll_debug") is not None:
             self.debug_section = { "sspl_ll_debug": {}}
@@ -171,7 +178,10 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
             self._thread_response = "Error, unrecognized thread request"
 
         # Populate an actuator response message and transmit
-        msgString = ThreadControllerMsg(module_name, self._thread_response).getJson()        
+        threadControllerMsg = ThreadControllerMsg(module_name, self._thread_response)
+        if uuid is not None:
+            threadControllerMsg.set_uuid(uuid)
+        msgString = threadControllerMsg.getJson()        
         self._write_internal_msgQ(RabbitMQegressProcessor.name(), msgString)
 
     def _restart_module(self, module_name):
