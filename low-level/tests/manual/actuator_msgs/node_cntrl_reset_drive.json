@@ -20,7 +20,7 @@
 			},
 		"actuator_request_type": {
 			"node_controller": {
-				"node_request": "RESET_DRIVE: /dev/sdaa"
+				"node_request": "RESET_DRIVE: /dev/sdab"
 			}
 		}
 	}

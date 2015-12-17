@@ -70,7 +70,7 @@ class WbcliResetDrive(Debug):
             if error:
                 return "Error: {0}".format(str(error))
 
-            serial_num = response.split(" ")[-1].strip()
+            serial_num = response.strip().split(" ")[-1]
             self._log_debug("perform_request, drive serial number: %s" % serial_num)
 
             # Recursively grep through the drivemanager dir with the serial number and get the path

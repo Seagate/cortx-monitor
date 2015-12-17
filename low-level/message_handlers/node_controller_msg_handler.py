@@ -121,7 +121,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     self._log_debug("_process_msg, _PDU_actuator name: %s" % self._PDU_actuator.name())
 
                 # Perform the request on the PDU and get the response
-                pdu_response = self._PDU_actuator.perform_request(jsonMsg)
+                pdu_response = self._PDU_actuator.perform_request(jsonMsg).strip()
                 self._log_debug("_process_msg, pdu_response: %s" % pdu_response)
 
                 json_msg = AckResponseMsg(node_request, pdu_response, uuid).getJson()
@@ -134,7 +134,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     self._log_debug("_process_msg, _RAID_actuator name: %s" % self._RAID_actuator.name())
 
                 # Perform the RAID request on the node and get the response
-                raid_response = self._RAID_actuator.perform_request(jsonMsg)
+                raid_response = self._RAID_actuator.perform_request(jsonMsg).strip()
                 self._log_debug("_process_msg, raid_response: %s" % raid_response)
 
                 json_msg = AckResponseMsg(node_request, raid_response, uuid).getJson()
@@ -147,7 +147,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     self._log_debug("_process_msg, _IPMI_actuator name: %s" % self._IPMI_actuator.name())
 
                 # Perform the RAID request on the node and get the response
-                ipmi_response = self._IPMI_actuator.perform_request(jsonMsg)
+                ipmi_response = self._IPMI_actuator.perform_request(jsonMsg).strip()
                 self._log_debug("_process_msg, ipmi_response: %s" % ipmi_response)
 
                 json_msg = AckResponseMsg(node_request, ipmi_response, uuid).getJson()
@@ -173,7 +173,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     self._log_debug("_process_msg, _hdparm_actuator name: %s" % self._hdparm_actuator.name())
 
                 # Perform the hdparm request on the node and get the response
-                hdparm_response = self._hdparm_actuator.perform_request(jsonMsg)
+                hdparm_response = self._hdparm_actuator.perform_request(jsonMsg).strip()
                 self._log_debug("_process_msg, hdparm_response: %s" % hdparm_response)
 
                 json_msg = AckResponseMsg(node_request, hdparm_response, uuid).getJson()

@@ -53,7 +53,7 @@ def main():
 
     # Display help if no args are passed in
     if len(sys.argv) == 1:
-        sys.argv.append("-h")
+        sys.argv.append("--help")
 
     program_name = os.path.basename(sys.argv[0])
     program_version = "v%s" % __version__
@@ -64,8 +64,11 @@ def main():
 
     try:
         # Setup argument parser
-        parser = ArgumentParser(description=description, formatter_class=RawDescriptionHelpFormatter)
-        parser.add_argument("-V", "--version", action="version", version=program_version_message)
+        parser = ArgumentParser(description=description, formatter_class=RawDescriptionHelpFormatter, add_help=False)
+        parser.add_argument("-v", "--version", action="version", version=program_version_message)
+        parser.add_argument("-a", "--all", action="store_true", help="show all the data received in responses")
+        parser.add_argument("-h", "--human", action="store_true", help="show responses with indentation for readability")
+        parser.add_argument("--help", action="store_true", help="show this help message and exit")
         parser.add_argument("--pdu", metavar="COMMAND", help="send command to PDU. \
                               ie 'show outlets details'")
         parser.add_argument("--resetdrive", metavar="DRIVE", help="reset drive by cycling its power.  ie /dev/sda1")
@@ -88,53 +91,57 @@ def main():
         group.add_argument("--mountdata", action="store_true", help="show local mount data")
         group.add_argument("--interfacedata", action="store_true", help="show network interface data")
         group.add_argument("--raiddata", action="store_true", help="show RAID data")
+
         parser.add_argument("--fromstdin", action="store_true", help="read JSON msg(s) from stdin")
         parser.add_argument("--fromfile", metavar="FILE", help="read JSON msg(s) from file")
 
         # Process arguments
         args = parser.parse_args()
 
-        if args.pdu:
+        if args.help:
+            parser.print_help()
+
+        elif args.pdu:
             # Load a PDU message from the manual tests directory and update it with args.pdu
             file = "../tests/manual/actuator_msgs/node_cntrl_pdu.json"
             jsonMsg = json.loads(open(file).read())
             jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = u"PDU: {}".format(args.pdu)
-            _send_raw_msg(jsonMsg)
+            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human)
 
         elif args.resetdrive:
             # Load a reset drive message from the manual tests directory and update it with args.resetdrive
             file = "../tests/manual/actuator_msgs/node_cntrl_pdu.json"
             jsonMsg = json.loads(open(file).read())
             jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = u"RESET_DRIVE: {}".format(args.resetdrive)
-            _send_raw_msg(jsonMsg)
+            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human)
 
         elif args.smart:
             # Load a smart test message from the manual tests directory and update it with args.smart
             file = "../tests/manual/actuator_msgs/node_cntrl_smart_test.json"
             jsonMsg = json.loads(open(file).read())
             jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = u"SMART_TEST: {}".format(args.smart)
-            _send_raw_msg(jsonMsg)
+            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human)
 
         elif args.drvmngr:
             # Load a drivemanager status message from the manual tests directory and update it with args.drvmngr
             file = "../tests/manual/actuator_msgs/node_cntrl_drvmngr_status.json"
             jsonMsg = json.loads(open(file).read())
             jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = u"DRVMNGR_STATUS: {}".format(args.drvmngr)
-            _send_raw_msg(jsonMsg)
+            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human)
 
         elif args.hpi:
             # Load a reset hpi status message from the manual tests directory and update it with args.hpi
             file = "../tests/manual/actuator_msgs/node_cntrl_drvmngr_status.json"
             jsonMsg = json.loads(open(file).read())
             jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = u"HPI_STATUS: {}".format(args.hpi)
-            _send_raw_msg(jsonMsg)
+            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human)
 
         elif args.restartthread:
             # Load a restart thread message from the manual tests directory and update it with args.restartthread
             file = "../tests/manual/actuator_msgs/thread_cntrl_restart.json"
             jsonMsg = json.loads(open(file).read())
             jsonMsg["message"]["actuator_request_type"]["thread_controller"]["module_name"] = u"{}".format(args.restartthread)
-            _send_raw_msg(jsonMsg)
+            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human)
 
         elif args.servicename or args.servicereq:
             if not args.servicename:
@@ -158,7 +165,7 @@ def main():
             jsonMsg = json.loads(open(file).read())
             jsonMsg["message"]["actuator_request_type"]["service_controller"]["service_name"] = u"{}".format(args.servicename)
             jsonMsg["message"]["actuator_request_type"]["service_controller"]["service_request"] = u"{}".format(args.servicereq)
-            _send_raw_msg(jsonMsg)
+            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human)
 
         elif args.ipmicmd or args.ipmiIP:
             if not args.ipmiIP:
@@ -174,7 +181,7 @@ def main():
             jsonMsg = json.loads(open(file).read())
             jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = u"IPMI: {} {}". \
                                     format(args.ipmiIP, args.ipmicmd)
-            _send_raw_msg(jsonMsg)
+            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human)
 
         elif args.hdparm:
             # Load a hdparm message from the manual tests directory and update it with args.hdparm
@@ -182,7 +189,7 @@ def main():
             jsonMsg = json.loads(open(file).read())
             jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = u"HDPARM: {}".\
                                     format(args.hdparm)
-            _send_raw_msg(jsonMsg)
+            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human)
 
         elif args.logiem or args.iemloglevel:
             if not args.logiem:
@@ -208,45 +215,45 @@ def main():
                                     format(args.iemloglevel)
             jsonMsg["message"]["actuator_request_type"]["logging"]["log_msg"] = u"{}".\
                                     format(args.logiem)
-            _send_raw_msg(jsonMsg)
+            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human)
 
         elif args.smrdata:
             # Load a restart thread message from the manual tests directory and update it with SMRdriveData
             file = "../tests/manual/actuator_msgs/thread_cntrl_restart.json"
             jsonMsg = json.loads(open(file).read())
             jsonMsg["message"]["actuator_request_type"]["thread_controller"]["module_name"] = u"SMRdriveData"
-            _send_raw_msg(jsonMsg)
-            print("Check logs for new SMR register values")
+            _send_raw_msg(jsonMsg, wait_for_response=False, alldata=args.all, indent=args.human)
+            print("Check logs for new SMR drive register values")
 
         elif args.cpudata:
             # Load a sensor request message for cpu data from the manual tests directory and send it in
             file = "../tests/manual/actuator_msgs/sensor_request_cpu_data.json"
             jsonMsg = json.loads(open(file).read())
-            _send_raw_msg(jsonMsg)
+            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human)
 
         elif args.hostdata:
             # Load a sensor request message for host data from the manual tests directory and send it in
             file = "../tests/manual/actuator_msgs/sensor_request_host_update.json"
             jsonMsg = json.loads(open(file).read())
-            _send_raw_msg(jsonMsg)
+            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human)
 
         elif args.mountdata:
             # Load a sensor request message for local mount data from the manual tests directory and send it in
             file = "../tests/manual/actuator_msgs/sensor_request_mount_data.json"
             jsonMsg = json.loads(open(file).read())
-            _send_raw_msg(jsonMsg)
+            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human)
 
         elif args.interfacedata:
             # Load a sensor request message for network data from the manual tests directory and send it in
             file = "../tests/manual/actuator_msgs/sensor_request_if_data.json"
             jsonMsg = json.loads(open(file).read())
-            _send_raw_msg(jsonMsg)
+            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human)
 
         elif args.raiddata:
             # Load a sensor request message for raid data from the manual tests directory and send it in
             file = "../tests/manual/actuator_msgs/sensor_request_raid_data.json"
             jsonMsg = json.loads(open(file).read())
-            _send_raw_msg(jsonMsg)
+            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human)
 
         elif args.fromstdin:
             print("Ctrl-D stop reading from stdin and transmit.  Multiple msgs can be piped in.")
@@ -273,7 +280,7 @@ def main():
 
             # Send them out one by one
             for json_msg in json_list:
-                _send_raw_msg(json_msg)
+                _send_raw_msg(json_msg, alldata=args.all, indent=args.human)
 
         elif args.fromfile:
             # Load in a multiple json msgs stored in a single file
@@ -291,7 +298,7 @@ def main():
 
             # Send them out one by one
             for json_msg in json_list:
-                _send_raw_msg(json_msg)
+                _send_raw_msg(json_msg, alldata=args.all, indent=args.human)
 
         return 0
     except KeyboardInterrupt:
@@ -303,7 +310,7 @@ def main():
         sys.stderr.write(indent + "  for help use --help")
         return 2
 
-def _send_raw_msg(jsonMsg, wait_for_response=True):
+def _send_raw_msg(jsonMsg, wait_for_response=True, alldata=False, indent=False):
     """Update authentication fields, validate and transmit json msg"""
     # Create instance of ManualTest to publish messages
     manTest = ManualTest("RABBITMQEGRESSPROCESSOR")
@@ -316,7 +323,7 @@ def _send_raw_msg(jsonMsg, wait_for_response=True):
 
     # Encode and publish
     message = json.dumps(jsonMsg, ensure_ascii=True).encode('utf8')
-    manTest.basicPublish(message=message, wait_for_response=wait_for_response)
+    manTest.basicPublish(message=message, wait_for_response=wait_for_response, alldata=alldata, indent=indent)
 
 
 if __name__ == "__main__":

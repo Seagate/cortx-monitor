@@ -207,9 +207,10 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                         self._log_debug("_processMsg, disk smart test, drive test status: %s" % 
                                     response)
 
-                        node_request = drive.get_drive_filename() + " " + node_request
+                        request = "SMART_TEST: serial number: {}, IP: {}" \
+                                    .format(drive.getSerialNumber(), node_request)
 
-                        json_msg = AckResponseMsg(node_request, response, uuid).getJson()
+                        json_msg = AckResponseMsg(request, response, uuid).getJson()
                         self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
 
                     return
@@ -251,7 +252,6 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     drive = self._drvmngr_drives[serial_number]
                     # Obtain json message containing all relevant data
                     internal_json_msg = drive.toDriveMngrJsonMsg(uuid=uuid).getJson()
-                    internal_json_msg['message']['uuid'] = uuid
 
                     # Send the json message to the RabbitMQ processor to transmit out
                     self._log_debug("_process_msg, internal_json_msg: %s" % internal_json_msg)
@@ -290,7 +290,6 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     drive = self._hpi_drives[serial_number]
                     # Obtain json message containing all relevant data
                     internal_json_msg = drive.toHPIjsonMsg(uuid=uuid).getJson()
-                    internal_json_msg['message']['uuid'] = uuid
 
                     # Send the json message to the RabbitMQ processor to transmit out
                     self._log_debug("_process_msg, internal_json_msg: %s" % internal_json_msg)

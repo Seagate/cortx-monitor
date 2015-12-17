@@ -74,6 +74,8 @@ class ManualTest():
                                    self.JSON_SENSOR_SCHEMA)
         self._sensor_schema = self._load_schema(schema_file)
 
+        self._alldata = True
+        self._indent = True
         self._request_uuid = None
         self._msg_received = False
         self._total_msg_received = 0
@@ -155,8 +157,8 @@ class ManualTest():
         jsonMsg["time"]     = str(datetime.now())
 
         # Add a random uuid to last the lifetime of the msg
-        #self._request_uuid = str(uuid.uuid4())
-        #jsonMsg["message"]["sspl_ll_msg_header"]['uuid'] = self._request_uuid
+        self._request_uuid = str(uuid.uuid4())
+        jsonMsg["message"]["sspl_ll_msg_header"]['uuid'] = self._request_uuid
 
         authn_token_len = len(self._signature_token) + 1
         session_length  = int(self._signature_expires)
@@ -175,14 +177,21 @@ class ManualTest():
         jsonMsg["signature"] = str(sig.raw)
 
 
-    def basicPublish(self, jsonfile=None, message=None, wait_for_response=True):
+    def basicPublish(self, jsonfile=None, message=None, wait_for_response=True, alldata=False, \
+                     indent=False):
         """Publishes message out to the rabbitmq server
 
         @param jsonfile = the file containing a json message to be sent to the server
         @type jsonfile = string
         @param message = A json message to be sent to the server
         @type message = string
+        @param wait_for_response = flag denoting to wait for response or not
+        @type wait_for_response = bool
+        @param alldata = flag denoting to show all data received otherwise just the message section
+        @type alldata = bool
         """
+        self._alldata = alldata
+        self._indent = indent
 
         # Start up threads to receive responses
         basic_consumet = threading.Thread(target=self.basicConsume)
@@ -220,7 +229,8 @@ class ManualTest():
                                   routing_key=self._routingkey,
                                   properties=msg_props,
                                   body=str(json.dumps(jsonMsg, ensure_ascii=True).encode('utf8')))
-            print "Successfully transmitted JSON request message:\n%s" % jsonMsg
+            print "Successfully transmitted request:"
+	    self.print_response(jsonMsg)            
 
         elif message is not None:
             #Convert the message back to plain text and send to consumer
@@ -228,14 +238,16 @@ class ManualTest():
                                   routing_key=self._routingkey,
                                   properties=msg_props,
                                   body=str(message))
-            print "Successfully transmitted JSON message:\n%s" % message
+            # See if we should indent for readability
+            print "Successfully transmitted request:"
+	    self.print_response(json.loads(message))     
 
         connection.close()
         del(connection)
 
         # Verify that we received a response back matching the uuid we sent in requeste
         if wait_for_response:
-            print "Awaiting response(s)...\n\n"
+            print "Awaiting response(s)...\n"
             max_wait = 0
             while self._msg_received == False:
                 time.sleep(4)
@@ -263,6 +275,37 @@ class ManualTest():
             # We only handle outgoing actuator and sensor requests, ignore everything else
             print "Only supports sending actuator and sensor requests"
             raise Exception("Validation failed")
+
+    def print_response(self, ingressMsg):
+        """Print the ingress msg received on the rabbitMQ"""
+
+        # If the alldata flag is set then use the entire ingressMsg otherwise just the message sections
+        if self._alldata:
+            response = ingressMsg
+        else:
+            if ingressMsg.get("message").get("actuator_response_type") is not None:
+                response = ingressMsg.get("message").get("actuator_response_type")
+            elif ingressMsg.get("message").get("sensor_response_type") is not None:
+                response = ingressMsg.get("message").get("sensor_response_type")
+            elif ingressMsg.get("message").get("sensor_request_type") is not None:
+                response = ingressMsg.get("message").get("sensor_request_type")
+	    elif ingressMsg.get("message").get("actuator_request_type") is not None:
+                response = ingressMsg.get("message").get("actuator_request_type") 
+            else:
+                response = "Invalid response type received, should be actuator_response_type \
+                            or sensor_response_type in: \n%s" % ingressMsg
+
+        # See if we should indent for readability
+        if self._indent:
+            response = json.dumps(response, sort_keys=True,
+                             indent=4, separators=(',', ': '))
+        print "%s\n" % response
+
+        # Write it out to a results file 
+        response = str(response).replace("\\n", "\n").replace("\\r", "")
+        with open('results.txt', 'w') as f:
+  	        f.write(str(response))
+
 
     def basicConsume(self):
         """Starts consuming all messages sent
@@ -297,9 +340,9 @@ class ManualTest():
             # Verify that the uuid of the response matches that of the request sent
             if self._request_uuid is not None and \
                uuid != self._request_uuid:
-                print "Received a JSON response on '{}' channel that doesn't match request uuid, ignoring:" \
+                print "Received a response on '{}' channel that doesn't match the request uuid:" \
                         .format(self._exchangename)
-                print "%r\n" % (body,)
+                self.print_response(ingressMsg)
                 return
 
             username   = ingressMsg.get("username")
@@ -309,15 +352,19 @@ class ManualTest():
             try:
                 #Verifies the authenticity of an ingress message
                 assert(SSPL_SEC.sspl_verify_message(msg_len, str(message), username, signature) == 0)
+            except:
+                print "Authentication failed on message: %s" % ingressMsg
+
+            try:
                 #Sorts out any outgoing messages only processes *_response_type
                 if ingressMsg.get("message").get("sensor_response_type") is not None or \
                     ingressMsg.get("message").get("actuator_response_type") is not None:
                     self._total_msg_received += 1
-                    print "{}) Received a valid JSON response on '{}' channel:" \
+                    print "{}) Received response on '{}' channel:" \
                             .format(self._total_msg_received, self._exchangename)
-                    print "%r\n" % (body,)
-            except:
-                print "Authentication failed on message: %s" % ingressMsg
+                    self.print_response(ingressMsg)
+            except Exception as e:
+                print "Error printing response: %r" % e
 
             ch.basic_ack(delivery_tag = method.delivery_tag)
             self._msg_received = True
@@ -363,9 +410,9 @@ class ManualTest():
             # Verify that the uuid of the response matches that of the request sent
             if self._request_uuid is not None and \
                uuid != self._request_uuid:
-                print "Received a JSON Ack response on '{}' channel that doesn't match request uuid, ignoring:" \
+                print "Received a Ack response on '{}' channel that doesn't match the request uuid:" \
                         .format(self._ackexchangename)
-                print "%r\n" % (body,)
+                self.print_response(ingressMsg)
                 return
 
             username   = ingressMsg.get("username")
@@ -375,15 +422,19 @@ class ManualTest():
             try:
                 #Verifies the authenticity of an ingress message
                 assert(SSPL_SEC.sspl_verify_message(msg_len, str(message), username, signature) == 0)
+            except:
+                print "Authentication failed on message: %s" % ingressMsg
+
+            try:
                 #Sorts out any outgoing messages only processes *_response_type
                 if ingressMsg.get("message").get("sensor_response_type") is not None or \
                     ingressMsg.get("message").get("actuator_response_type") is not None:
                     self._total_ack_msg_received += 1
-                    print "{}) Received a valid JSON Ack response on '{}' channel:" \
+                    print "{}) Received Ack response on '{}' channel:" \
                           .format(self._total_ack_msg_received, self._ackexchangename)
-                    print "%r\n" % (body,)
-            except:
-                print "Authentication failed on message: %s" % ingressMsg
+                    self.print_response(ingressMsg)
+            except Exception as e:
+                print "Error printing response: %r" % e
 
             ch.basic_ack(delivery_tag = method.delivery_tag)
             self._msg_received = True
