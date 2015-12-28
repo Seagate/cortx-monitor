@@ -562,3 +562,13 @@ class SupportBundleResponse(CommandResponse):
             message = {SupportBundleResponse.BUNDLE_LIST: response}
         self.message.update(message)
         return self.__dict__
+
+
+# if __name__ == "__main__":
+#     resp = SupportBundleResponse()
+#     print resp.get_response_message('create', 'bundle_id_2015120433383')
+#     print resp.get_response_message('list', ['bundle_id_20151204333832',
+#                                        'bundle_id_20151204332344',
+#                                        'bundle_id_20151204356567',
+#                                        'bundle_id_20151204678889'
+#                                        ])

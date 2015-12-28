@@ -8,22 +8,11 @@ MOCK_CONFIG=-r mock_osaint
 check: pep8 pylint ut at
 
 at:
-	# PYTHONPATH=.:tests lettuce --failfast ./tests/acceptance/admin_request.feature
-	# PYTHONPATH=.:tests lettuce --failfast ./tests/acceptance/node_request.feature
-	# PYTHONPATH=.:tests lettuce --failfast ./tests/acceptance/service_request.feature
-	# PYTHONPATH=.:tests lettuce --failfast ./tests/acceptance/ha_request.feature
-	# PYTHONPATH=.:tests lettuce --failfast ./tests/acceptance/fru_request.feature
 	PYTHONPATH=.:tests lettuce --failfast ./tests/acceptance/power_request.feature
 
 ut:
-	PYTHONPATH=.:tests python tests/unit/sspl_hl_provider_service.py
-	PYTHONPATH=.:tests python tests/unit/sspl_hl_provider_node.py
-	PYTHONPATH=.:tests python tests/unit/sspl_hl_provider_ha.py
-	PYTHONPATH=.:tests python tests/unit/sspl_hl_provider_fru.py
 	PYTHONPATH=.:tests python tests/unit/sspl_hl_provider_power.py
 	PYTHONPATH=.:tests python tests/unit/sspl_hl_provider_supportbundle.py
-	PYTHONPATH=.:tests python tests/unit/sspl_hl_provider_ldap.py
-	PYTHONPATH=.:tests python tests/unit/sspl_hl_provider_access.py
 
 pep8:
 	pep8 ./sspl_hl ./cstor ./tests/

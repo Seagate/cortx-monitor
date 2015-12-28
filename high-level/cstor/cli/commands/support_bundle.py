@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-""" File containing "support_bundle" sub command implementation
+""" File containing " support_bundle" command implementation
 """
 
 # Do NOT modify or remove this copyright and confidentiality notice
@@ -24,7 +24,7 @@ class SupportBundle(BaseCommand):
     """
 
     def __init__(self, parser):
-        """ Initializes the support_bundle object with the
+        """ Initializes the bundle object with the
         arguments passed from CLI
         """
 

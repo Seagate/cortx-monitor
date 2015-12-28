@@ -9,7 +9,6 @@ from plex.common.interfaces.idata_provider import IDataProvider
 from twisted.plugin import IPlugin
 from plex.core.provider.data_store_provider import DataStoreProvider
 from zope.interface import implements
-from sspl_hl.utils.access_utils import AccessUtils
 
 
 class BaseCastorProvider(DataStoreProvider):
@@ -35,16 +34,6 @@ class BaseCastorProvider(DataStoreProvider):
         self.valid_subcommands = []
         self.no_of_arguments = 1
         self.valid_arg_keys = []
-
-        self.access_config = AccessUtils.get_access_object()
-
-        if self.access_config.authenticate_user():
-            if self.access_config.authorize_user():
-                print "User authenticated"
-            else:
-                raise Exception("User Not Authorized")
-        else:
-            raise Exception("User Not Authenticated")
 
     # pylint: disable=too-many-arguments
     def query(self,
