@@ -1,7 +1,6 @@
-""" uitls
 """
-# Third party
-from plex.util.concurrent.single_thread_executor import SingleThreadExecutor
+Implements the base class for all the castor cli providers
+"""
 from plex.common.interfaces.idata_provider import IDataProvider
 from twisted.plugin import IPlugin
 from plex.core.provider.data_store_provider import DataStoreProvider
@@ -11,75 +10,124 @@ from zope.interface import implements
 class BaseCastorProvider(DataStoreProvider):
     # pylint: disable=too-many-ancestors,too-many-public-methods
     # pylint: disable=too-many-instance-attributes
-    """ Used to set state of ha on the cluster. """
+    """
+    Base class for each provider
+    """
     implements(IPlugin, IDataProvider)
 
     IPMI_CMD = "sudo /usr/local/bin/ipmitooltool.sh"
+    POWER_STATUS_CONFIG_FILE = "./power_status.json"
+    POWER_ON = 1
+    POWER_OFF = 2
 
-    def __init__(self, name, description):
-        super(BaseCastorProvider, self).__init__(name, description)
-        self._single_thread_executor = SingleThreadExecutor()
+    def __init__(self,
+                 title,
+                 description,
+                 style=DataStoreProvider.THREAD_STYLE.NON_REACTOR):
+
+        super(BaseCastorProvider, self).__init__(title=title,
+                                                 description=description,
+                                                 thread_style=style)
         self._connection = None
         self._channel = None
-        self.valid_commands = ['start',
-                               'stop',
-                               'restart',
-                               'enable',
-                               'disable',
-                               'list',
-                               'status']
+        self.valid_commands = []
         self.valid_subcommands = []
+        self.mandatory_args = []
         self.no_of_arguments = 1
         self.valid_arg_keys = []
 
-    # pylint: disable=too-many-arguments
-    def query(self,
-              uri,
-              columns,
-              selection_args,
-              sort_order,
-              range_from,
-              range_to,
-              responder):
-        self._single_thread_executor.submit(self._query,
-                                            selection_args,
-                                            responder)
+    def render_query(self, request):
+        """
+        It is the base class version of the render query. Actual
+        implementations would be in their respective providers.
+        """
+        # import pdb
+        # pdb.set_trace()
 
-    # pylint: disable=unused-argument
-    def _query(self, selection_args, responder):
-        return self._validate_params(selection_args)
-
-    def on_create(self):
-        self._single_thread_executor.submit(self._on_create)
-
-    def _on_create(self):
-        pass
+        result = self._validate_params(selection_args=request.selection_args)
+        if result:
+            request.responder.reply_exception(result)
+            return False
+        return True
 
     def _validate_params(self, selection_args):
         """ ensure query() parameters are ok. """
-        for arg_key in self.valid_arg_keys:
-            if arg_key not in selection_args:
+        val_result = self._validate_supported_args(selection_args)
+        if val_result:
+            return val_result
+        val_result = \
+            self._validate_supported_commands(selection_args['command'])
+        if val_result:
+            return val_result
+        if 'subcommand' in selection_args:
+            val_result = \
+                self._validate_supported_subcommands(
+                    selection_args['subcommand']
+                )
+        return val_result
+
+    def _validate_supported_args(self, selection_args):
+        """
+        Validate the supplied arguments should one of the supported args only.
+        """
+        val_result = self._validate_supported_args_count(selection_args)
+        if val_result:
+            return val_result
+        val_result = self._validate_mandatory_args(selection_args)
+        if val_result:
+            return val_result
+        ret_val = self._validate_unsupported_args(selection_args)
+        return ret_val
+
+    def _validate_unsupported_args(self, selection_args):
+        """
+        Check if the args are from supported list
+        """
+        for arg_key in selection_args:
+            if arg_key not in self.valid_arg_keys:
                 return(
-                    "Error: Invalid request: Missing {}".format(arg_key)
+                    "Error: Invalid request: Unsupported args {}".
+                    format(arg_key)
                     )
-        if selection_args['command'] not in self.valid_commands:
+
+    def _validate_supported_commands(self, command):
+        """
+        validate the command from the list of supported commands.
+        """
+        if command not in self.valid_commands:
             return(
                 "Error: Invalid command: '{}'".format(
-                    selection_args['command']
+                    command
                     )
                 )
-        if 'subcommand' in selection_args:
-            if selection_args['subcommand'] not in self.valid_subcommands:
-                return(
-                    "Error: Invalid subcommand: '{}'".format(
-                        selection_args['subcommand']
-                        )
-                    )
-        if len(selection_args) > self.no_of_arguments:
-            for arg_key in self.valid_arg_keys:
-                del selection_args[arg_key]
+
+    def _validate_supported_subcommands(self, sub_command):
+        """
+        validate the subcommand from the list of supported subcommands.
+        """
+        if sub_command not in self.valid_subcommands:
             return(
-                "Error: Invalid request: Extra parameter '{extra}' detected"
-                .format(extra=selection_args.keys()[0])
-            )
-        return None
+                "Error: Invalid subcommand: '{}'".format(
+                    sub_command
+                    )
+                )
+
+    def _validate_supported_args_count(self, selection_args):
+        """
+        Validate supported args count and report any extra param.
+        """
+        if len(selection_args) > self.no_of_arguments:
+            dict_clone = selection_args.copy()
+            for arg_key in self.valid_arg_keys:
+                del dict_clone[arg_key]
+            return("Error: Invalid request: Extra parameter '{extra}' detected"
+                   .format(extra=dict_clone.keys()[0]))
+
+    def _validate_mandatory_args(self, selection_args):
+        """
+        Validate all the mandatory args in the selection arguments.
+        """
+        for args in self.mandatory_args:
+            if args not in selection_args:
+                return("Error: Invalid request: Missing mandatory args: {}".
+                       format(args))

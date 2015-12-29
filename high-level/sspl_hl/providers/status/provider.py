@@ -11,10 +11,13 @@ Status provider implementation
 # distribution or disclosure of this code, for any reason, not expressly
 # authorized in writing by Seagate Technology LLC is prohibited.
 # All rights are expressly reserved by Seagate Technology LLC.
+# _author_ = Bhupesh Pant
+
+# Third party
 import json
 import urllib
-from plex.util.list_util import ensure_list
 import subprocess
+from twisted.internet.defer import DeferredList
 from sspl_hl.utils.base_castor_provider import BaseCastorProvider
 from twisted.internet.threads import deferToThread
 
@@ -24,46 +27,81 @@ class StatusProvider(BaseCastorProvider):
     """
     Handler for all status based commands
     """
+    CSMAN_CMD = '/usr/local/bin/csman.sh'
 
-    def __init__(self, name, description):
-        super(StatusProvider, self).__init__(name, description)
+    def __init__(self, title, description):
+        super(StatusProvider, self).__init__(title, description)
         self.valid_arg_keys = ["command", "debug"]
         self.no_of_arguments = 2
         self.valid_commands = ["ipmi"]
         self.mandatory_args = ["command"]
+        self.cluster_state = self.POWER_ON
+        self.response_list = {'sem_status': None,
+                              'power_status': None,
+                              'file_system_status': None}
 
-    def _query(self, selection_args, responder):
+    def render_query(self, request):
         """
+        Handles all the status request issued by the client.
         """
-        result = super(StatusProvider, self)._validate_params(selection_args)
-        if result:
-            responder.reply_exception(ensure_list(result))
+        if not super(StatusProvider, self).render_query(request):
             return
-        deferred_power_status = deferToThread(
+
+        defer_1 = deferToThread(
             StatusProvider.get_node_power_status
         )
-        deferred_power_status.addCallback(
+        defer_1.addCallback(
             self.handle_success,
-            responder
+            request
         )
-        deferred_power_status.addErrback(
-            self.handle_failure,
-            responder
+        defer_1.addErrback(
+            self.handle_failure
+        )
+        defer_2 = deferToThread(self.get_ras_sem_status)
+
+        defer_list = DeferredList(
+            [defer_1, defer_2], consumeErrors=True
         )
 
-    def handle_success(self, result, responder):
+        defer_list.addCallback(self._process_all_response, request)
+
+    def _process_all_response(self, resp, request):
+        """
+        Process the status response from all the sources
+        """
+        result = []
+        if resp[0][0]:
+            result.append(resp[0][1])
+        else:
+            self.log_warning('Failed to get nodes power status')
+        if resp[1][0]:
+            result.append(resp[1][1])
+        else:
+            self.log_warning('Failed to get RAS Sem notifications')
+        request.reply(result)
+
+    def get_ras_sem_status(self):
+        """
+        Gets ras sem notifications
+        """
+        resp_sem = "Unable to fetch the response of SEM"
+        sem = subprocess.Popen(['sh', self.CSMAN_CMD],
+                               stdout=subprocess.PIPE)
+        resp_sem = sem.communicate()[0] or\
+            resp_sem
+        return resp_sem
+
+    def handle_success(self, result, request):
         """
         Success handler for power status
         """
         if not (len(result.get('active_nodes')) or
                 len(result.get('inactive_nodes'))):
             self.log_warning(
-                'Could not fetch the data from mco for power status'
+                'Could not retrieve power status information from cluster'
             )
-            responder.reply_exception(
-                'Could not retrieve power status information from cluster')
-        else:
-            responder.reply(ensure_list(result))
+            request.responder.reply_exception(
+                'Could not fetch the data from mco for power status')
 
     def handle_failure(self, error):
         """

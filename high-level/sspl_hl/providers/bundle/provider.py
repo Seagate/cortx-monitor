@@ -1,29 +1,30 @@
 """
-PLEX data provider.
+Support bundle provider implementation
 """
-# Third party
 
-from twisted.internet import reactor
+# Do NOT modify or remove this copyright and confidentiality notice
+
+# Copyright 2015 Seagate Technology LLC or one of its affiliates.
+#
+# The code contained herein is CONFIDENTIAL to Seagate Technology LLC.
+# Portions may also be trade secret. Any use, duplication, derivation,
+# distribution or disclosure of this code, for any reason, not expressly
+# authorized in writing by Seagate Technology LLC is prohibited.
+# All rights are expressly reserved by Seagate Technology LLC.
+# _author_ = "Bhupesh Pant"
+
 from sspl_hl.utils.base_castor_provider import BaseCastorProvider
 from sspl_hl.utils.message_utils import SupportBundleResponse
 from sspl_hl.utils.support_bundle.support_bundle_handler import \
     SupportBundleHandler
 import sspl_hl.utils.common as utils
 from sspl_hl.utils.support_bundle import bundle_utils
-
-
-# """
-# DEFAULT_LOG_FILES: This would contain the meta data for the files that
-# needs to be bundled from various different nodes/cluster.
-#
-# DEFAULT_PATH: It will contain the path where tar files will be created.
-# NOTE: Both these parameters will be later moved to plex configuration.
-# """
+from twisted.internet.threads import deferToThread
 
 
 class SupportBundleProvider(BaseCastorProvider):
     # pylint: disable=too-many-ancestors,too-many-public-methods
-    """Data Provider"""
+    """Support Bundle data provider"""
 
     def __init__(self, name, description):
         super(SupportBundleProvider, self).__init__(name, description)
@@ -31,56 +32,81 @@ class SupportBundleProvider(BaseCastorProvider):
         self.valid_commands = ['create', 'list']
         self.no_of_arguments = 1
 
-    def _query(self, selection_args, responder):
-        """ Get the support bundle details.
-
-        @param selection_args:    includes a 'command'
+    def render_query(self, request):
         """
-        result = super(SupportBundleProvider, self)._query(
-            selection_args,
-            responder)
-        if result:
-            msg = 'Bundle command failed. Details: {}'.format(result)
-            self.log_warning(msg)
-            reactor.callFromThread(responder.reply_exception, result)
+        Support bundle request handler.
+        """
+        if not super(SupportBundleProvider, self).render_query(request):
             return
-        response = self.process_support_bundle_request(
-            selection_args['command']
-        )
+        self.process_support_bundle_request(request)
 
-        reactor.callFromThread(responder.reply, data=[response])
-
-    def process_support_bundle_request(self, command):
-        """ Process the request bundle request
-        based on the command
+    def process_support_bundle_request(self, request):
         """
-        response = SupportBundleResponse()
+        Process the request bundle request based on the command
+        """
+        command = request.selection_args.get('command', None)
         if command == 'list':
-            bundle_list = bundle_utils.list_bundle_files()
-            response = response.get_response_message(command, bundle_list)
+            deferred_list = deferToThread(
+                bundle_utils.list_bundle_files
+            )
+            deferred_list.addCallback(
+                SupportBundleProvider.handle_success_list_bundles,
+                request)
+            deferred_list.addErrback(
+                self.handle_failure_list_bundles,
+                request)
         elif command == 'create':
             bundling_handler = SupportBundleHandler()
             bundle_name = utils.get_curr_datetime_str()
-            deferred = bundling_handler.collect(bundle_name)
-            deferred.addCallback(self.handle_success)
-            deferred.addErrback(self.handle_failure)
-            response = response.get_response_message(
-                command, bundle_name + '.tar')
+            deferred_create = bundling_handler.collect(bundle_name)
+            deferred_create.addCallback(
+                self.handle_success_create_bundle,
+                request)
+            deferred_create.addErrback(
+                self.handle_failure_create_bundle,
+                request)
         else:
-            response = 'command %s not supported' % command
-        return response
+            err_msg = 'Failure. Details: command {} is not supported'.\
+                format(command)
+            self.log_warning(err_msg)
+            request.responder.reply_exception(err_msg)
 
-    def handle_success(self, _):
+    def handle_success_create_bundle(self, bundle_name, request):
         """
-        Success Handler
+        Create bundle success handler
         """
-        self.log_info('Bundling of logs Completed Successfully')
+        response = SupportBundleResponse()
+        msg = response.get_response_message('create', bundle_name)
+        self.log_info('Bundling has been triggered: Bundle_id: {}'.
+                      format(bundle_name))
+        request.reply(msg)
 
-    def handle_failure(self, error):
+    def handle_failure_create_bundle(self, error, request):
         """
-        Error Handler
+        Create bundle failure handler
         """
-        self.log_info('Bundling of logs Failed. Details: {}'.format(error))
+        err_msg = 'Error Occurred during bundle create. Details: {}'.\
+            format(error)
+        self.log_warning(err_msg)
+        request.responder.reply_exception(err_msg)
+
+    @staticmethod
+    def handle_success_list_bundles(bundles_list, request):
+        """
+        Success handler for list command
+        """
+        response = SupportBundleResponse()
+        msg = response.get_response_message('list', bundles_list)
+        request.reply(msg)
+
+    def handle_failure_list_bundles(self, error, request):
+        """
+        Failure handler for list command
+        """
+        err_msg = 'Error Occurred during bundle list. Details: {}'.\
+            format(error)
+        self.log_warning(err_msg)
+        request.responder.reply_exception(err_msg)
 
 # pylint: disable=invalid-name
 provider = SupportBundleProvider('bundle',

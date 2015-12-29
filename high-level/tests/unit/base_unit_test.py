@@ -10,6 +10,7 @@ import mock
 
 # Local imports
 from plex.util.concurrent.single_thread_executor import SingleThreadExecutor
+from plex.core.provider.data_store_provider import ProviderQueryRequest
 
 
 class _MyDatetime(datetime.datetime):
@@ -51,7 +52,9 @@ class BaseUnitTest(unittest.TestCase):
         self._patch_ste_submit.stop()
 
     @staticmethod
-    def _query_provider(args, responder=mock.MagicMock(), provider=None):
+    def _query_provider(args,
+                        request=mock.MagicMock(spec=ProviderQueryRequest),
+                        provider=None):
         """ Calls actual on_create() and query() method of a provider with
             arguments
         :param args: Dictionary of arguments to be supplied as a
@@ -62,15 +65,8 @@ class BaseUnitTest(unittest.TestCase):
         :return: None
         """
         provider.on_create()
-        provider.query(
-            uri=None,
-            columns=None,
-            selection_args=args,
-            sort_order=None,
-            range_from=None,
-            range_to=None,
-            responder=responder
-        )
+        request.selection_args = args
+        provider.render_query(request=request)
 
     def _test_entity_query(self,
                            selection_args,
@@ -109,17 +105,12 @@ class BaseUnitTest(unittest.TestCase):
                           Ex.{'nodeName': 'node1'} for node
             response_msg: Text to be sent in response
         """
-        with mock.patch('pika.BlockingConnection') as conn_patch, \
-                mock.patch('twisted.internet.reactor.callFromThread') \
-                as cft_patch:
-            responder = mock.MagicMock()
-            self._query_provider(
-                args=command_args,
-                responder=responder,
-                provider=provider
-            )
-            cft_patch.assert_called_once_with(
-                responder.reply_exception,
-                response_msg
-            )
-        self.assertFalse(conn_patch().channel().basic_publish.called)
+        request_mock = mock.MagicMock(spec=ProviderQueryRequest)
+        self._query_provider(
+            args=command_args,
+            request=request_mock,
+            provider=provider
+        )
+        request_mock.responder.reply_exception.assert_called_once_with(
+            response_msg
+        )

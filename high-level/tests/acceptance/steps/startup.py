@@ -228,9 +228,6 @@ def _start_frontier_service():
     Stores a process popen object into
     lettuce.world.frontier
     """
-    # lettuce.world.frontier = subprocess.Popen(
-    #     ['./tests/fake_halond/frontier.py', '-p', '/tmp/frontier.pid']
-    # )
     pass
 
 
@@ -238,5 +235,4 @@ def _start_frontier_service():
 def _stop_frontier_service(_):
     """ Stops a frontier service
     """
-    # lettuce.world.frontier.terminate()
     pass

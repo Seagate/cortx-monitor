@@ -79,6 +79,12 @@ class HalondRMQ(RabbitMQConfiguration):
             type=self.exchange_type,
             durable=False)
 
+    def close_connection(self):
+        """
+        Start consuming the queue messages.
+        """
+        self._connection.close()
+
 
 class HalondConsumer(HalondRMQ):
     # pylint: disable=too-few-public-methods
@@ -113,12 +119,9 @@ class HalondConsumer(HalondRMQ):
         """
         self._channel.start_consuming()
 
-    def stop_consuming(self):
-        """
-        Start consuming the queue messages.
-        """
+    def close_connection(self):
         self._channel.stop_consuming()
-        self._connection.close()
+        super(HalondConsumer, self).close_connection()
 
 
 class HalondPublisher(HalondRMQ):

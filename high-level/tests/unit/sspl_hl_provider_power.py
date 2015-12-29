@@ -1,12 +1,10 @@
 """ Unit tests for sspl_hl.providers.service.provider """
-
-
 import unittest
 import mock
 from sspl_hl.providers.power.provider import PowerProvider
-
-
 from base_unit_test import BaseUnitTest
+from plex.core.provider.data_store_provider import ProviderQueryRequest
+from plex.util.shell_command import ShellCommand
 
 
 # pylint: disable=too-many-public-methods
@@ -21,6 +19,15 @@ class SsplHlProviderPower(BaseUnitTest):
     INTERNAL_COMMAND = {'on': 'poweron',
                         'off': 'poweroff'}
 
+    @staticmethod
+    def _get_mock_request_object(command):
+        """
+        Return the mock request object.
+        """
+        request_mock = mock.MagicMock(spec=ProviderQueryRequest)
+        request_mock.selection_args = {'command': command}
+        return request_mock
+
     def test_power_queries(self):
         """
         Ensures that power queries has been successfully
@@ -28,23 +35,32 @@ class SsplHlProviderPower(BaseUnitTest):
         """
         for command in SsplHlProviderPower.POWER_COMMAND:
             ipmitool_command_param = \
-                "sudo /usr/local/bin/ipmitooltool.sh ".split()
+                "sudo /usr/local/bin/ipmitooltool.sh"
             selection_args = {'command': command,
                               'debug': True}
             ipmitool_command = self.INTERNAL_COMMAND.get(
                 selection_args['command'], selection_args['command']
             )
-            ipmitool_command_param.append(ipmitool_command)
-            with mock.patch('subprocess.call', return_value=0) as patch:
+            ipmitool_command_param = '{} {}'.format(
+                ipmitool_command_param,
+                ipmitool_command
+            )
+
+            with mock.patch('sspl_hl.providers.power.provider.ShellCommand',
+                            spec=ShellCommand) as shell_patch:
+                shell_command_mock = mock.MagicMock()
+                shell_patch.return_value = shell_command_mock
                 power_provider = PowerProvider('power', '')
-                # pylint: disable=protected-access
-                self._query_provider(args=selection_args,
-                                     provider=power_provider)
-                patch.assert_called_with(
+                request_obj = SsplHlProviderPower._get_mock_request_object(
+                    command
+                )
+                power_provider.render_query(request=request_obj)
+                shell_command_mock.run_command.assert_called_with(
                     ipmitool_command_param
                 )
 
-    def test_bad_command(self):
+    @staticmethod
+    def test_bad_command():
         """
         Ensure sending a bad command results in appropriate error message.
 
@@ -52,14 +68,22 @@ class SsplHlProviderPower(BaseUnitTest):
         the case of the user bypassing the cli and accessing the data provider
         directly using rest based request.
         """
-        command_args = {'command': 'invalid_command', 'debug': True}
+        command = 'invalid_command'
         response_msg = "Error: Invalid command: 'invalid_command'"
+        with mock.patch('sspl_hl.providers.power.provider.ShellCommand',
+                        spec=ShellCommand):
 
-        self._test_args_validation_cases(command_args,
-                                         response_msg,
-                                         PowerProvider('Power', ''))
+            request_mock = SsplHlProviderPower._get_mock_request_object(
+                command
+            )
+            power_provider = PowerProvider('power', '')
+            power_provider.render_query(request=request_mock)
+            request_mock.responder.reply_exception.assert_called_once_with(
+                response_msg
+            )
 
-    def test_extra_service_params(self):
+    @staticmethod
+    def test_extra_service_params():
         """
         Ensure sending extra query params results in appropriate error
         message.
@@ -74,11 +98,19 @@ class SsplHlProviderPower(BaseUnitTest):
         response_msg = \
             "Error: Invalid request: Extra parameter 'ext' detected"
 
-        self._test_args_validation_cases(command_args,
-                                         response_msg,
-                                         PowerProvider('Power', ''))
+        with mock.patch('sspl_hl.providers.power.provider.ShellCommand',
+                        spec=ShellCommand):
 
-    def test_missing_command(self):
+            request_mock = SsplHlProviderPower._get_mock_request_object('')
+            request_mock.selection_args = command_args
+            power_provider = PowerProvider('power', '')
+            power_provider.render_query(request=request_mock)
+            request_mock.responder.reply_exception.assert_called_once_with(
+                response_msg
+            )
+
+    @staticmethod
+    def test_missing_command():
         """
         Ensure sending query without command results in an http error
         code.
@@ -87,14 +119,21 @@ class SsplHlProviderPower(BaseUnitTest):
         to cover the case of the user bypassing the cli and accessing
         the data provider directly.
         """
-        response_msg = \
-            "Error: Invalid request: Missing command"
-        command_args = {'target': 'node*',
-                        'debug': True}
+        command_args = {'debug': True}
 
-        self._test_args_validation_cases(command_args,
-                                         response_msg,
-                                         PowerProvider('Power', ''))
+        response_msg = \
+            "Error: Invalid request: Missing mandatory args: command"
+
+        with mock.patch('sspl_hl.providers.power.provider.ShellCommand',
+                        spec=ShellCommand):
+
+            request_mock = SsplHlProviderPower._get_mock_request_object('')
+            request_mock.selection_args = command_args
+            power_provider = PowerProvider('power', '')
+            power_provider.render_query(request=request_mock)
+            request_mock.responder.reply_exception.assert_called_once_with(
+                response_msg
+            )
 
 if __name__ == '__main__':
     unittest.main()

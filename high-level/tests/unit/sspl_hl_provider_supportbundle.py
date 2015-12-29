@@ -47,20 +47,21 @@ class SsplHlProviderSupportBundle(BaseUnitTest):
                                          SupportBundleProvider(
                                              'support_bundle', ''))
 
-    def test_missing_command(self):
-        """ Ensure sending query without command results in an http error code.
-
-        The cli should prevent this from happening, so this is just to cover
-        the case of the user bypassing the cli and accessing the data provider
-        directly.
-        """
-
-        command_args = {}
-        response_msg = "Error: Invalid request: Missing command"
-        self._test_args_validation_cases(command_args,
-                                         response_msg,
-                                         SupportBundleProvider(
-                                             'support_bundle', ''))
+    # def test_missing_command(self):
+    #     """
+    #     Ensure sending query without command results in an http error code.
+    #
+    #     The cli should prevent this from happening, so this is just to cover
+    #     the case of the user bypassing the cli and accessing the data
+    #     provider directly.
+    #     """
+    #
+    #     command_args = {}
+    #     response_msg = "Error: Invalid request: Missing command"
+    #     self._test_args_validation_cases(command_args,
+    #                                      response_msg,
+    #                                      SupportBundleProvider(
+    #                                          'support_bundle', ''))
 
 
 if __name__ == '__main__':
