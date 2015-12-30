@@ -221,14 +221,9 @@ class DriveManager(ScheduledModuleThread, InternalMsgQ):
 
         while not enclosures:
            logger.info("DriveManager sensor, no enclosures found: %s " % self._drive_mngr_base_dir)
-           logger.info("DriveManager sensor, rechecking in %s secs" % (int(self._start_delay)*3))
+           logger.info("DriveManager sensor, rechecking in %s secs" % (int(self._start_delay)))
 
-           # Attempt to restart and initialize openhpi/gemhpi
-           command = "systemctl restart openhpid"
-           process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE,
-                                       stderr=subprocess.PIPE)
-           time.sleep(int(self._start_delay))
-
+           # Attempt to initialize gemhpi
            command = "sudo /opt/seagate/sspl/low-level/framework/init_gemhpi"
            process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE,
                                        stderr=subprocess.PIPE)
@@ -236,7 +231,7 @@ class DriveManager(ScheduledModuleThread, InternalMsgQ):
            logger.info("DriveManager sensor, initializing gem, result: %s, error: %s" %
                        (response, error))
 
-           time.sleep(int(self._start_delay)*2)
+           time.sleep(int(self._start_delay))
            enclosures = os.listdir(self._drive_mngr_base_dir)
            for enclosure in enclosures:
                if not os.path.isdir(os.path.join(self._drive_mngr_base_dir, enclosure)):
