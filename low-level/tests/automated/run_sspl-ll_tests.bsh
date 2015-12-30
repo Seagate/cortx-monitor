@@ -3,7 +3,7 @@
 echo "Running Automated Integration Tests for SSPL-LL"
 
 # Make sure SSPL-LL is in a known default startup state
-systemctl start dcs-collector
+#systemctl start dcs-collector
 
 # Create simulated disk manager data
 mkdir -p /tmp/dcs/drivemanager
