@@ -43,7 +43,6 @@ mkdir -p %{installpath}/sspl_hl/utils
 mkdir -p %{installpath}/sspl_hl/views
 mkdir -p %{installpath}/sspl_hl/providers/{response,power,support_bundle,status}
 install sspl_hl/main.py sspl_hl/__init__.py %{installpath}/sspl_hl/
-install sspl_hl/utils/auth.properties %{installpath}/sspl_hl/utils/
 install sspl_hl/providers/__init__.py %{installpath}/sspl_hl/providers/
 install sspl_hl/providers/service_manager/*.py %{installpath}/sspl_hl/providers/service_manager/
 install sspl_hl/providers/power/*.py %{installpath}/sspl_hl/providers/power/
@@ -77,6 +76,9 @@ mkdir -p %{buildroot}/var/lib/support_bundles
 
 
 %changelog
+* Wed Jan 06 2016 Bhupesh Pant <bhupesh.pant@seagate.com>
+- Removed auth.propeties files
+
 * Mon Dec 28 2015 Bhupesh Pant <bhupesh.pant@seagate.com>
 - Removed all the unnecessary providers
 
