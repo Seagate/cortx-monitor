@@ -44,7 +44,6 @@ mkdir -p %{installpath}/sspl_hl/views
 mkdir -p %{installpath}/sspl_hl/providers/{response,power,support_bundle,status}
 install sspl_hl/main.py sspl_hl/__init__.py %{installpath}/sspl_hl/
 install sspl_hl/providers/__init__.py %{installpath}/sspl_hl/providers/
-install sspl_hl/providers/service_manager/*.py %{installpath}/sspl_hl/providers/service_manager/
 install sspl_hl/providers/power/*.py %{installpath}/sspl_hl/providers/power/
 install sspl_hl/providers/response/*.py %{installpath}/sspl_hl/providers/response/
 install sspl_hl/providers/support_bundle/*.py %{installpath}/sspl_hl/providers/support_bundle/
