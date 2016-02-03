@@ -1,7 +1,8 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-""" File containing " support_bundle" command implementation
+"""
+File containing " support_bundle" command implementation
 """
 
 # Do NOT modify or remove this copyright and confidentiality notice
@@ -14,7 +15,6 @@
 # authorized in writing by Seagate Technology LLC is prohibited.
 # All rights are expressly reserved by Seagate Technology LLC.
 
-# Import Local Modules
 from cstor.cli.commands.base_command import BaseCommand
 
 
@@ -52,3 +52,54 @@ class SupportBundle(BaseCommand):
         """
         params = 'command={}'.format(self.command)
         return params
+
+    def execute_action(self, **kwargs):
+        """
+        Process the support_bundle response from the business layer
+        """
+        # pylint:disable=too-many-function-args
+        try:
+            response = super(SupportBundle, self).execute_action(**kwargs)
+            response = self.get_human_readable_response(response)
+        # pylint:disable=broad-except
+        except Exception:
+            response = 'An Internal error has occurred, unable to complete ' \
+                       'command.'
+        return response
+
+    @staticmethod
+    def get_human_readable_response(response):
+        """
+        Parse the json to read the human readable response
+        """
+        response = response and response[0]
+        message = response.get('message')
+        for key in message.keys():
+            if key == 'bundle_name':
+                return SupportBundle.get_create_bundle_response(message)
+            elif key == 'bundle_list':
+                return SupportBundle.get_bundle_list_response(message)
+
+    @staticmethod
+    def get_bundle_list_response(message):
+        """
+        Format the bundle list response
+        """
+        count = 0
+        response = ''
+        for tar_file in message.get('bundle_list', None):
+            count += 1
+            response = '{}\n {}'.format(response, tar_file)
+        response = 'Total bundles available: {} \n {}'.format(count, response)
+        return response
+
+    @staticmethod
+    def get_create_bundle_response(message):
+        """
+        Format the bundle create response
+        """
+        name = message.get('bundle_name', None)
+        response = 'Bundle creation has been initiated, File: {}. ' \
+                   '\n Use list command to monitor the progress.'.format(name)
+
+        return response
