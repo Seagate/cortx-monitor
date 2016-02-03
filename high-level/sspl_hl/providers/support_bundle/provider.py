@@ -42,21 +42,30 @@ class SupportBundleProvider(BaseCastorProvider):
             selection_args,
             responder)
         if result:
+            msg = 'Bundle command failed. Details: {}'.format(result)
+            self.log_warning(msg)
             reactor.callFromThread(responder.reply_exception, result)
             return
-
-        response = SupportBundleProvider._process_support_bundle_request(
-            selection_args['command']
-        )
-
-        reactor.callFromThread(responder.reply, data=[response])
+        try:
+            response = SupportBundleProvider._process_support_bundle_request(
+                selection_args.get('command', None)
+            )
+            reactor.callFromThread(responder.reply, data=[response])
+        except OSError as error:
+            msg = '{} bundle command failed. Details: {}'.format(
+                selection_args.get('command', None),
+                str(error)
+            )
+            self.log_warning(msg)
+            reactor.callFromThread(responder.reply_exception,
+                                   'An Internal error has occurred, unable to '
+                                   'complete command.')
 
     @classmethod
     def _process_support_bundle_request(cls, command):
         """ Process the request bundle request
         based on the command
         """
-
         response = SupportBundleResponse()
         if command == 'list':
             bundle_list = list_bundle_files(path=DEFAULT_PATH)

@@ -1,7 +1,8 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-""" File containing base class implementation for all the
+"""
+File containing base class implementation for all the
 sub commands supported by cstor
 """
 
@@ -15,47 +16,50 @@ sub commands supported by cstor
 # authorized in writing by Seagate Technology LLC is prohibited.
 # All rights are expressly reserved by Seagate Technology LLC.
 
-# Import System Modules
-
 import urllib
 import abc
 import json
-
-# Import local Modules
-
+import cstor.cli.errors as errors
 from cstor.cli.settings import BL_HOST, BL_SERVER_BASE_URL
 
 
 class BaseCommand(object):
-
-    """ This is a Abstract class, defined as a base class for
+    """
+    This is a Abstract class, defined as a base class for
     all the different types of sub-commands supported by Castor cli
     """
 
     __metaclass__ = abc.ABCMeta
 
     def __init__(self):
-        """ Init method of base class.
+        """
+        Init method of base class.
         """
         self.provider = None
 
     def execute_action(self, **kwargs):
-        """ Function to execute the action by sending
+        """
+        Function to execute the action by sending
         request to data provider in business logic server
         """
         # pylint:disable=too-many-function-args
-        url = 'http://%s%sdata?%s' % (
+        url = 'http://{0}{1}data?{3}'.format(
             BL_HOST,
             self.get_provider_base_url(),
             self.get_action_params(**kwargs))
-        response = urllib.urlopen(url=url).read()
-        try:
-            return json.loads(response)
-        except ValueError:
-            raise ValueError("Could not load the response in json object")
+        response = urllib.urlopen(url=url)
+        if response.getcode() == 200:
+            data = response.read()
+            try:
+                return json.loads(data)
+            except ValueError:
+                raise errors.InvalidResponse()
+        else:
+            raise errors.InternalError()
 
     def get_provider_base_url(self):
-        """ Abstract method to get the base url for
+        """
+        Abstract method to get the base url for
         the resource specific data provider
         """
         registry_url = '{}registry/providers'.format(BL_SERVER_BASE_URL)
@@ -70,7 +74,8 @@ class BaseCommand(object):
 
     @abc.abstractmethod
     def get_action_params(self, **kwargs):
-        """ Abstract method to get the action parameters
+        """
+        Abstract method to get the action parameters
         to be send in the request to data provider
         """
 

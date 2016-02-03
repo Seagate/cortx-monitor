@@ -37,12 +37,10 @@ def main():
                 print item
         else:
             print result
-    except CommandTerminated as extra_info:
+    except CommandTerminated:
         return []
     except BaseError as extra_info:
         print "Error: {}, Desc: {}".format(extra_info.err, extra_info.desc)
-    except ValueError as extra_info:
-        print "Some error occurred. Details: {}".format(str(extra_info))
 
 if __name__ == '__main__':
     main()

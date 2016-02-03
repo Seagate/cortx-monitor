@@ -60,8 +60,13 @@ class InvalidResponse(BaseError):
         super(InvalidResponse, self).__init__(err, desc)
 
 
-# if __name__ == '__main__':
-#     err_obj_1 = CommandTerminated(err="New Error", desc='some new error')
-#     print err_obj_1.err
-#     err_obj_2 = CommandTerminated()
-#     print err_obj_2.err
+class InternalError(BaseError):
+    """
+    This error is raised by CLI for all unknown internal errors
+    """
+
+    err = "Internal Error"
+    desc = 'An Internal error has occurred, unable to complete command.'
+
+    def __init__(self, err=None, desc=None):
+        super(InternalError, self).__init__(err, desc)
