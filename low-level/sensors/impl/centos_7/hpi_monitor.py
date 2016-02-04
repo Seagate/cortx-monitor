@@ -135,17 +135,17 @@ class HPIMonitor(ScheduledModuleThread, InternalMsgQ):
         self._log_debug("Finished processing successfully")
 
     def _init_drive_data(self):
-        # Allow time for the dcs-collector to come up and populate the directory
-        time.sleep(10)
+        """Initialize the dict containing HPI data for each disk"""
 
-        # Allow time for the dcs-collector to come up and populate the directory
+        # Wait for the dcs-collector to populate the /tmp/dcs/hpi directory
         while not os.path.isdir(self._hpi_mntr_base_dir):
             logger.info("HPIMonitor, dir not found: %s " % self._hpi_mntr_base_dir)
             logger.info("HPIMonitor, rechecking in %s secs" % self._start_delay)
             time.sleep(int(self._start_delay))
 
         enclosures = os.listdir(self._hpi_mntr_base_dir)
-        # Remove the 'discovery' file
+
+        # Remove the 'discovery' file and any others, only care about enclosure dirs
         for enclosure in enclosures:
             if not os.path.isdir(os.path.join(self._hpi_mntr_base_dir, enclosure)):
                 enclosures.remove(enclosure)
@@ -156,22 +156,34 @@ class HPIMonitor(ScheduledModuleThread, InternalMsgQ):
 
             disks = os.listdir(disk_dir)
             for disk in disks:
-                # Read in the serial_number file for each disk and fill into dict
+                # Create the drive location path
                 driveloc = os.path.join(disk_dir, disk)
 
                 # Ignore the discovery file
                 if not os.path.isdir(driveloc):
                     continue
 
+                # Check to see if the drive is present
+                serial_number = self._gather_data(driveloc+"/serial_number")
+                if serial_number == "ZBX_NOTPRESENT":
+                    continue
+
+                # Update the status to status_reason used throughout
+                if self._gather_data(driveloc+"/status") == "available":
+                    status = "OK_None"
+                else:
+                    status = "EMPTY_None"
+
+                # Read in the date for each disk and fill into dict
                 json_data = {"sensor_response_type" : "disk_status_hpi",
                             "event_path"        : driveloc[len(self._hpi_mntr_base_dir)+1:],
-                            "status"            : self._gather_data(driveloc+"/status"),
+                            "status"            : status,
                             "drawer"            : self._gather_data(driveloc+"/drawer"),
                             "location"          : self._gather_data(driveloc+"/location"),
                             "manufacturer"      : self._gather_data(driveloc+"/manufacturer"),
                             "productName"       : self._gather_data(driveloc+"/product_name"),
                             "productVersion"    : self._gather_data(driveloc+"/product_version"),
-                            "serialNumber"      : self._gather_data(driveloc+"/serial_number"),
+                            "serialNumber"      : serial_number,
                             "wwn"               : self._gather_data(driveloc+"/wwn")
                         }
 
@@ -203,6 +215,17 @@ class HPIMonitor(ScheduledModuleThread, InternalMsgQ):
         self._log_debug("_notify_DiskMsgHandler updated_file: %s, driveloc: %s" % 
                         (updated_file, driveloc))
 
+        # Check to see if the drive is present
+        serial_number = self._gather_data(driveloc+"/serial_number")
+        if serial_number == "ZBX_NOTPRESENT":
+            return
+        
+        # Update the status to status_reason used throughout
+        if self._gather_data(driveloc+"/status") == "available":
+            status = "OK_None"
+        else:
+            status = "EMPTY_None"
+
         # Send a message to the disk message handler to transmit
         json_data = {"sensor_response_type" : "disk_status_hpi",
                      "event_path"           : driveloc[len(self._hpi_mntr_base_dir)+1:],
@@ -212,7 +235,7 @@ class HPIMonitor(ScheduledModuleThread, InternalMsgQ):
                      "manufacturer"         : self._gather_data(driveloc+"/manufacturer"),
                      "productName"          : self._gather_data(driveloc+"/product_name"),
                      "productVersion"       : self._gather_data(driveloc+"/product_version"),
-                     "serialNumber"         : self._gather_data(driveloc+"/serial_number"),
+                     "serialNumber"         : serial_number,
                      "wwn"                  : self._gather_data(driveloc+"/wwn")
                      }
 

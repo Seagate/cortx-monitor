@@ -87,7 +87,8 @@ class LoggingMsgHandler(ScheduledModuleThread, InternalMsgQ):
             jsonMsg = json.loads(jsonMsg)
 
         uuid = None
-        if jsonMsg.get("sspl_ll_msg_header").get("uuid") is not None:
+        if jsonMsg.get("sspl_ll_msg_header") is not None and \
+           jsonMsg.get("sspl_ll_msg_header").get("uuid") is not None:
             uuid = jsonMsg.get("sspl_ll_msg_header").get("uuid")
             self._log_debug("_process_msg, uuid: %s" % uuid)
 

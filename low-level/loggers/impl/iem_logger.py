@@ -87,9 +87,7 @@ class IEMlogger(Debug):
             # Parse out the event code and remove any white spaces
             event_code = log_msg[event_code_start : event_code_stop].strip()
             self._log_debug("log_msg, event_code: %s" % event_code)
-
-            msg = log_msg[event_code_stop+1 : ]
-            self._log_debug("log_msg, msg: %s" % msg)
+            self._log_debug("log_msg: %s" % log_msg)
 
             # Use the optional log_level in json message and set it to PRIORITY
             if log_level in LOGLEVEL_NAME_TO_LEVEL_DICT:
@@ -97,7 +95,7 @@ class IEMlogger(Debug):
             self._log_debug("log_msg, priority: %s" % priority)
 
             # Send it to the journal with the appropriate arguments
-            journal.send(msg, MESSAGE_ID=event_code, PRIORITY=priority,
+            journal.send(log_msg, MESSAGE_ID=event_code, PRIORITY=priority,
                          SYSLOG_IDENTIFIER="sspl-ll")
 
             # Send email if priority exceeds LOGEMAILER priority in /etc/sspl-ll.conf

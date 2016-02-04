@@ -94,7 +94,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
         self._log_debug("Finished processing successfully")
 
     def _process_msg(self, jsonMsg):
-        """Parses the incoming message and hands off to the appropriate logger"""
+        """Parses the incoming message and handles appropriately"""
         self._log_debug("_process_msg, jsonMsg: %s" % jsonMsg)
 
         if isinstance(jsonMsg, dict) == False:
@@ -239,7 +239,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
             elif component == "DRVM":
                 # Json msg is requesting the current status from drivemanager
-                
+
                 # Parse out the drive request field in json msg
                 node_request = jsonMsg.get("actuator_request_type").get("node_controller").get("node_request")
                 drive_request = node_request[15:].strip()
@@ -299,12 +299,12 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
             elif component == "HPI_":
                 # Json msg is requesting the current status from HPI data
-                
+
                 # Parse out the drive request field in json msg
                 node_request = jsonMsg.get("actuator_request_type").get("node_controller").get("node_request")
                 drive_request = node_request[11:].strip()
                 self._log_debug("perform_request, drive request: %s" % drive_request)
-                
+
                 # If the drive field is an asterisk then send all the hpi results for all drives available
                 if drive_request == "*":
                     # Send a message to the disk message handler to lookup the hpi status and send it out

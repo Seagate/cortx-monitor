@@ -1,0 +1,6 @@
+polkit.addRule(function(action, subject) {
+    if (action.id == "org.freedesktop.udisks2.ata-smart-selftest" &&
+        subject.user == "sspl-ll") {
+        return polkit.Result.YES;
+    }
+});

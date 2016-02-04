@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# encoding: utf-8
 """
 # ****************************************************************************
 # Filename: manual_test.py
@@ -38,6 +39,7 @@ sys.path.insert(0, '../..')
 from framework.utils.config_reader import ConfigReader
 SSPL_SEC = ctypes.cdll.LoadLibrary('libsspl_sec.so.0')
 
+
 class ManualTest():
     # Section and keys in configuration file
     VIRTUALHOST         = "virtual_host"
@@ -53,7 +55,7 @@ class ManualTest():
     JSON_ACTUATOR_SCHEMA = "SSPL-LL_Actuator_Request.json"
     JSON_SENSOR_SCHEMA   = "SSPL-LL_Sensor_Request.json"
 
-    def __init__(self, module):
+    def __init__(self, module, start_threads=True):
         '''
         @param module: the module to load in /etc/sspl_ll/conf
         @type string
@@ -74,12 +76,23 @@ class ManualTest():
                                    self.JSON_SENSOR_SCHEMA)
         self._sensor_schema = self._load_schema(schema_file)
 
+        if start_threads:
+            # Start up threads to receive responses
+            self._basic_consumet = threading.Thread(target=self.basicConsume)
+            self._basic_consumet.setDaemon(True)
+            self._basic_consumet.start()
+
+            self._basic_consume_ackt = threading.Thread(target=self.basicConsumeAck)
+            self._basic_consume_ackt.setDaemon(True)
+            self._basic_consume_ackt.start()
+
         self._alldata = True
         self._indent = True
         self._request_uuid = None
         self._msg_received = False
         self._total_msg_received = 0
         self._total_ack_msg_received = 0
+        self._print_data = ""
 
     def _load_schema(self, schema_file):
         """Loads a schema from a file and validates
@@ -177,8 +190,8 @@ class ManualTest():
         jsonMsg["signature"] = str(sig.raw)
 
 
-    def basicPublish(self, jsonfile=None, message=None, wait_for_response=True, alldata=False, \
-                     indent=False):
+    def basicPublish(self, jsonfile=None, message=None, wait_for_response=True, 
+                     response_wait_time=3, alldata=False, indent=False, remove_results_file=True):
         """Publishes message out to the rabbitmq server
 
         @param jsonfile = the file containing a json message to be sent to the server
@@ -190,21 +203,23 @@ class ManualTest():
         @param alldata = flag denoting to show all data received otherwise just the message section
         @type alldata = bool
         """
+
         self._alldata = alldata
-        self._indent = indent
+        self._indent  = indent
 
-        # Start up threads to receive responses
-        basic_consumet = threading.Thread(target=self.basicConsume)
-        basic_consumet.setDaemon(True)
-        basic_consumet.start()
+        # Flag denoting a valid response message has been received
+        self._msg_received = False
+        self._request_uuid = None
 
-        basic_consume_ackt = threading.Thread(target=self.basicConsumeAck)
-        basic_consume_ackt.setDaemon(True)
-        basic_consume_ackt.start()
+        # Remove existing results.txt
+        if remove_results_file:
+            if os.path.exists("results.txt"):
+                os.remove("results.txt")
 
+        # Create rabbitMQ connection
         creds = pika.PlainCredentials(self._username, self._password)
         connection = pika.BlockingConnection(pika.ConnectionParameters(
-            host='localhost', virtual_host=self._virtualhost, credentials=creds))
+                     host='localhost', virtual_host=self._virtualhost, credentials=creds))
         channel = connection.channel()
 
         channel.exchange_declare(exchange=self._exchangename,
@@ -230,34 +245,36 @@ class ManualTest():
                                   properties=msg_props,
                                   body=str(json.dumps(jsonMsg, ensure_ascii=True).encode('utf8')))
             print "Successfully transmitted request:"
-	    self.print_response(jsonMsg)            
+            self._print_response(jsonMsg, save_to_file=False) 
 
         elif message is not None:
-            #Convert the message back to plain text and send to consumer
+            # Convert the message back to plain text and send to consumer
             channel.basic_publish(exchange=self._exchangename,
-                                  routing_key=self._routingkey,
-                                  properties=msg_props,
-                                  body=str(message))
-            # See if we should indent for readability
+                                   routing_key=self._routingkey,
+                                   properties=msg_props,
+                                   body=str(message))
+ 
             print "Successfully transmitted request:"
-	    self.print_response(json.loads(message))     
-
+            #self._print_response(message, save_to_file=False)     
+ 
         connection.close()
         del(connection)
-
+ 
         # Verify that we received a response back matching the uuid we sent in requeste
         if wait_for_response:
             print "Awaiting response(s)...\n"
             max_wait = 0
-            while self._msg_received == False:
-                time.sleep(4)
+            while not self._msg_received:
+                time.sleep(response_wait_time)
                 max_wait += 1
                 if max_wait > 20:
                     print "Timed out waiting for valid responses, giving up after 60 seconds"
                     break
 
+
     def validate(self, jsonMsg):
         """Validate the json msg against one of the schemas"""
+
         # Get the incoming message type
         if jsonMsg.get("message").get("actuator_request_type") is not None:
             msgType = jsonMsg.get("message").get("actuator_request_type")
@@ -276,7 +293,7 @@ class ManualTest():
             print "Only supports sending actuator and sensor requests"
             raise Exception("Validation failed")
 
-    def print_response(self, ingressMsg):
+    def _print_response(self, ingressMsg, save_to_file=True):
         """Print the ingress msg received on the rabbitMQ"""
 
         # If the alldata flag is set then use the entire ingressMsg otherwise just the message sections
@@ -289,11 +306,12 @@ class ManualTest():
                 response = ingressMsg.get("message").get("sensor_response_type")
             elif ingressMsg.get("message").get("sensor_request_type") is not None:
                 response = ingressMsg.get("message").get("sensor_request_type")
-	    elif ingressMsg.get("message").get("actuator_request_type") is not None:
-                response = ingressMsg.get("message").get("actuator_request_type") 
+            elif ingressMsg.get("message").get("actuator_request_type") is not None:
+                response = ingressMsg.get("message").get("actuator_request_type")
             else:
                 response = "Invalid response type received, should be actuator_response_type \
-                            or sensor_response_type in: \n%s" % ingressMsg
+                       or sensor_response_type in: \n%s" % ingressMsg
+                return
 
         # See if we should indent for readability
         if self._indent:
@@ -301,11 +319,11 @@ class ManualTest():
                              indent=4, separators=(',', ': '))
         print "%s\n" % response
 
-        # Write it out to a results file 
-        response = str(response).replace("\\n", "\n").replace("\\r", "")
-        with open('results.txt', 'w') as f:
-  	        f.write(str(response))
-
+        # Write it out to a results file
+        if save_to_file:
+            res = "{}\n".format(str(response).replace("\\n", "\n").replace("\\r", ""))
+            with open('results.txt', 'a+') as f:
+                f.write(res)
 
     def basicConsume(self):
         """Starts consuming all messages sent
@@ -342,7 +360,8 @@ class ManualTest():
                uuid != self._request_uuid:
                 print "Received a response on '{}' channel that doesn't match the request uuid:" \
                         .format(self._exchangename)
-                self.print_response(ingressMsg)
+                print "Expected uuid: {} but received: {}".format(self._request_uuid, uuid)        
+                self._print_response(ingressMsg, save_to_file=False)
                 return
 
             username   = ingressMsg.get("username")
@@ -362,12 +381,13 @@ class ManualTest():
                     self._total_msg_received += 1
                     print "{}) Received response on '{}' channel:" \
                             .format(self._total_msg_received, self._exchangename)
-                    self.print_response(ingressMsg)
+                    self._print_response(ingressMsg)
+                    self._msg_received = True
+
             except Exception as e:
                 print "Error printing response: %r" % e
 
             ch.basic_ack(delivery_tag = method.delivery_tag)
-            self._msg_received = True
 
         #Sets the callback function to be used when start_consuming is called and specifies the queue to pull messages off of.
         channel.basic_consume(callback,
@@ -412,7 +432,8 @@ class ManualTest():
                uuid != self._request_uuid:
                 print "Received a Ack response on '{}' channel that doesn't match the request uuid:" \
                         .format(self._ackexchangename)
-                self.print_response(ingressMsg)
+                print "Expected uuid: {} but received: {}".format(self._request_uuid, uuid)
+                self._print_response(ingressMsg, save_to_file=False)
                 return
 
             username   = ingressMsg.get("username")
@@ -432,12 +453,12 @@ class ManualTest():
                     self._total_ack_msg_received += 1
                     print "{}) Received Ack response on '{}' channel:" \
                           .format(self._total_ack_msg_received, self._ackexchangename)
-                    self.print_response(ingressMsg)
+                    self._print_response(ingressMsg)
+                    self._msg_received = True
             except Exception as e:
                 print "Error printing response: %r" % e
 
             ch.basic_ack(delivery_tag = method.delivery_tag)
-            self._msg_received = True
 
         #Sets the callback function to be used when start_consuming is called and specifies the queue to pull messages off of.
         channel.basic_consume(callback,
@@ -446,4 +467,6 @@ class ManualTest():
           channel.start_consuming()
         except KeyboardInterrupt:
             channel.stop_consuming()
-
+            
+    def get_msg_received(self):
+        return self._msg_received

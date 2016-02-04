@@ -18,6 +18,7 @@ import sys
 import os
 import re
 import json
+import time
 from json import JSONDecoder
 
 # Add the top level directories
@@ -35,6 +36,9 @@ __updated__ = '2015-12-02'
 
 FLAGS = re.VERBOSE | re.MULTILINE | re.DOTALL
 WHITESPACE = re.compile(r'[ \t\n\r]*', FLAGS)
+
+# Create instance of ManualTest to publish messages
+manTest = ManualTest("RABBITMQEGRESSPROCESSOR")    
 
 class CLIError(Exception):
     '''Generic exception to raise and log different fatal errors.'''
@@ -80,7 +84,7 @@ def main():
         parser.add_argument("--servicereq", metavar="REQUEST", help="start/stop/restart/status/enable/disable request")
         parser.add_argument("--ipmicmd", metavar="COMMAND", help="on/off/cycle/status (chassis power cmds or status)")
         parser.add_argument("--ipmiIP", metavar="IP", help="IP to apply command")
-        parser.add_argument("--hdparm", metavar="COMMAND", help="ie: \"-I /dev/sda | grep 'Serial Number:'\"")
+        parser.add_argument("--hdparm", metavar="COMMAND", help="ie \"-I /dev/sda | grep 'Serial Number:'\"")
         parser.add_argument("--logiem", metavar="MESSAGE", help="log IEM message.  ie 'IEC: 001002001: Rules Engine...'")
         parser.add_argument("--iemloglevel", metavar="LEVEL", help="IEM log level.  ie LOG_CRIT, LOG_ERR, LOG_WARNING")
 
@@ -120,21 +124,36 @@ def main():
             file = "../tests/manual/actuator_msgs/node_cntrl_smart_test.json"
             jsonMsg = json.loads(open(file).read())
             jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = u"SMART_TEST: {}".format(args.smart)
-            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human)
+
+            wait_time = 3
+            if "*" in str(args.smart):
+                wait_time = 20
+    
+            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, response_wait_time=wait_time)
 
         elif args.drvmngr:
             # Load a drivemanager status message from the manual tests directory and update it with args.drvmngr
             file = "../tests/manual/actuator_msgs/node_cntrl_drvmngr_status.json"
             jsonMsg = json.loads(open(file).read())
             jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = u"DRVMNGR_STATUS: {}".format(args.drvmngr)
-            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human)
+
+            wait_time = 3
+            if "*" in str(args.smart):
+                wait_time = 20
+
+            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, response_wait_time=wait_time)
 
         elif args.hpi:
             # Load a reset hpi status message from the manual tests directory and update it with args.hpi
             file = "../tests/manual/actuator_msgs/node_cntrl_drvmngr_status.json"
             jsonMsg = json.loads(open(file).read())
             jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = u"HPI_STATUS: {}".format(args.hpi)
-            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human)
+            
+            wait_time = 3
+            if "*" in str(args.smart):
+                wait_time = 20
+            
+            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, response_wait_time=wait_time)
 
         elif args.restartthread:
             # Load a restart thread message from the manual tests directory and update it with args.restartthread
@@ -267,7 +286,7 @@ def main():
                 return 0
 
             # Load in a multiple json msgs possibly sent in from stdin
-            json_list = []     
+            json_list = []
             decoder = JSONDecoder()
             s_len = len(json_txt)
             _w=WHITESPACE.match
@@ -278,14 +297,14 @@ def main():
                 end = _w(json_txt, end).end()
                 json_list.append(obj)
 
-            # Send them out one by one
+            # Send them out one by one and wait for a valid response
             for json_msg in json_list:
-                _send_raw_msg(json_msg, alldata=args.all, indent=args.human)
+                _send_raw_msg(json_msg, alldata=args.all, indent=args.human, remove_results_file=False)
 
         elif args.fromfile:
             # Load in a multiple json msgs stored in a single file
-            json_list = [] 
-            json_txt = open(args.fromfile).read()      
+            json_list = []
+            json_txt = open(args.fromfile).read()
             decoder = JSONDecoder()
             s_len = len(json_txt)
             _w=WHITESPACE.match
@@ -296,9 +315,9 @@ def main():
                 end = _w(json_txt, end).end()
                 json_list.append(obj)
 
-            # Send them out one by one
+            # Send them out one by one and wait for a valid response
             for json_msg in json_list:
-                _send_raw_msg(json_msg, alldata=args.all, indent=args.human)
+                _send_raw_msg(json_msg, alldata=args.all, indent=args.human, remove_results_file=False)
 
         return 0
     except KeyboardInterrupt:
@@ -310,11 +329,10 @@ def main():
         sys.stderr.write(indent + "  for help use --help")
         return 2
 
-def _send_raw_msg(jsonMsg, wait_for_response=True, alldata=False, indent=False):
+def _send_raw_msg(jsonMsg, wait_for_response=True, response_wait_time=3,
+                  alldata=False, indent=False, remove_results_file=True):
     """Update authentication fields, validate and transmit json msg"""
-    # Create instance of ManualTest to publish messages
-    manTest = ManualTest("RABBITMQEGRESSPROCESSOR")
-    
+
     # Update the authentication fields in json msg
     manTest.addAuthFields(jsonMsg)
 
@@ -323,8 +341,10 @@ def _send_raw_msg(jsonMsg, wait_for_response=True, alldata=False, indent=False):
 
     # Encode and publish
     message = json.dumps(jsonMsg, ensure_ascii=True).encode('utf8')
-    manTest.basicPublish(message=message, wait_for_response=wait_for_response, alldata=alldata, indent=indent)
-
+    manTest.basicPublish(message=message, wait_for_response=wait_for_response, 
+                         response_wait_time=response_wait_time,
+                         alldata=alldata, indent=indent,
+                         remove_results_file=remove_results_file)
 
 if __name__ == "__main__":
     sys.exit(main())

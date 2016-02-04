@@ -4,7 +4,7 @@
 
 	"username" : "Will get replaced by /etc/sspl-ll.conf",
 	"signature" : "None",
-	"time" : "2015-05-29 14:28:30.974749",
+	"time" : "auto-generated",
 	"expires" : 500,
 
 	"message" : {
@@ -15,7 +15,7 @@
 			},
 		"sspl_ll_debug": {
 			"debug_component" : "sensor",
-			"debug_enabled" : true
+			"debug_enabled" : false
 			},
 		"sensor_request_type": {
 			"node_data": {
@@ -30,7 +30,7 @@
 
 	"username" : "Will get replaced by /etc/sspl-ll.conf",
 	"signature" : "None",
-	"time" : "2015-05-29 14:28:30.974749",
+	"time" : "auto-generated",
 	"expires" : 500,
 
 	"message" : {
@@ -41,7 +41,7 @@
 			},
 		"sspl_ll_debug": {
 			"debug_component" : "sensor",
-			"debug_enabled" : true
+			"debug_enabled" : false
 			},
 		"sensor_request_type": {
 			"node_data": {
@@ -56,7 +56,7 @@
 	
 	"username" : "Will get replaced by /etc/sspl-ll.conf",
 	"signature" : "None",
-	"time" : "2015-05-29 14:28:30.974749",
+	"time" : "auto-generated",
 	"expires" : 500,
 
 	"message" : {
@@ -67,7 +67,7 @@
 			},
 		"sspl_ll_debug": {
 			"debug_component" : "sensor",
-			"debug_enabled" : true
+			"debug_enabled" : false
 			},
 		"sensor_request_type": {
 			"node_data": {
@@ -82,7 +82,7 @@
 	
 	"username" : "Will get replaced by /etc/sspl-ll.conf",
 	"signature" : "None",
-	"time" : "2015-05-29 14:28:30.974749",
+	"time" : "auto-generated",
 	"expires" : 500,
 
 	"message" : {
@@ -93,7 +93,7 @@
 			},
 		"sspl_ll_debug": {
 			"debug_component" : "sensor",
-			"debug_enabled" : true
+			"debug_enabled" : false
 			},
 		"sensor_request_type": {
 			"node_data": {

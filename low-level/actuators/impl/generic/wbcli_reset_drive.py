@@ -74,7 +74,7 @@ class WbcliResetDrive(Debug):
             self._log_debug("perform_request, drive serial number: %s" % serial_num)
 
             # Recursively grep through the drivemanager dir with the serial number and get the path
-            command = "grep -R {0} /tmp/dcs/drivemanager/* --exclude=/tmp/dcs/drivemanager/drive_manager.json" \
+            command = "grep -R {0} /tmp/dcs/dmreport/* --exclude=/tmp/dcs/dmreport/drive_manager.json" \
                       .format(serial_num)
             response, error = self._run_command(command)
             if error:

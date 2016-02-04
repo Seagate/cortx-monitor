@@ -14,7 +14,9 @@
  ****************************************************************************
 """
 
+import os
 import json
+import time
 import syslog
 import socket
 
@@ -28,6 +30,9 @@ from json_msgs.messages.sensors.hpi_data import HPIDataMsg
 
 from json_msgs.messages.actuators.ack_response import AckResponseMsg
 
+# Modules that receive messages from this module
+from message_handlers.logging_msg_handler import LoggingMsgHandler
+
 
 class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
     """Message Handler for Disk Sensor Messages"""
@@ -37,6 +42,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
     # Section and keys in configuration file
     DISKMSGHANDLER = MODULE_NAME.upper()
+    DMREPORT_FILE  = 'dmreport_file'
 
 
     @staticmethod
@@ -62,9 +68,12 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
         else:
             self._host_id = socket.gethostbyaddr(socket.gethostname())[0]
 
+        # Read in the location to serialize drive_manager.json
+        self._dmreport_file = self._getDMreport_File()
+
         # Dict of drive manager data for drives
         self._drvmngr_drives = {}
-        
+
         # Dict of HPI data for drives
         self._hpi_drives = {}
 
@@ -108,35 +117,78 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
             # Handle drivemanager events
             if sensor_response_type == "disk_status_drivemanager":
-                # Convert event path to Drive object to handle parsing and json conversion, etc
-                drive = Drive(self._host_id,
-                              jsonMsg.get("event_path"),
-                              jsonMsg.get("status"),
-                              jsonMsg.get("serial_number"))
 
-                # Check to see if the drive path is valid
-                valid = drive.parse_drive_mngr_path()
-
-                self._log_debug("_process_msg enclosureSN: %s" % drive.get_drive_enclosure() \
-                                + ", disk Num: %s" % drive.get_drive_num() \
-                                + ", filename: %s"  % drive.get_drive_filename() \
-                                + ", disk Status: %s"  % drive.get_drive_status() \
-                                + ", disk Serial Number: %s"  % drive.getSerialNumber())
-
-                if not valid:
-                    logger.error("_process_msg, valid: False (ignoring)")
-                    return
-
-                # Update the dict of drive manager drives
+                # Serial number is used as an index into dicts
                 serial_number = jsonMsg.get("serial_number")
-                self._drvmngr_drives[serial_number] = drive
+
+                # For external drivemanager application identified by having an event path
+                if jsonMsg.get("event_path") is not None:
+                    # Convert event path to Drive object to handle parsing and json conversion, etc
+                    drive = Drive(self._host_id,
+                                  jsonMsg.get("event_path"),
+                                  jsonMsg.get("status"),
+                                  serial_number)
+
+                    # Check to see if the drive path is valid
+                    valid = drive.parse_drive_mngr_path()
+
+                    self._log_debug("_process_msg enclosureSN: %s" % drive.get_drive_enclosure() \
+                                    + ", disk Num: %s" % drive.get_drive_num() \
+                                    + ", filename: %s"  % drive.get_drive_filename() \
+                                    + ", disk Status: %s"  % drive.get_drive_status() \
+                                    + ", disk Serial Number: %s"  % drive.getSerialNumber())
+
+                    if not valid:
+                        logger.error("_process_msg, event_path valid: False (ignoring)")
+                        return
+
+                # For internal systemdWatchdog device discovery identified by having an object path
+                elif jsonMsg.get("object_path") is not None:
+                    # Initialize path with a NotAvailable enclosure s/n and disk #
+                    event_path = "HPIdataNotAvailable/disk/-1/status"
+                    # Retrieve hpi drive object
+                    try:
+                        hpi_drive = self._hpi_drives[serial_number]
+                        # Build event path used in json msg
+                        event_path = hpi_drive.get_drive_enclosure() + "/disk/" + \
+                                      hpi_drive.get_drive_num() + "/status"
+                    except Exception as ae:
+                        logger.info("_process_msg, No HPI data for serial number: %s, ignoring" % serial_number)
+                        return
+
+                    drive = Drive(self._host_id,
+                                  event_path,
+                                  jsonMsg.get("status"),
+                                  serial_number)
+
+                    # Check to see if the drive path is valid
+                    valid = drive.parse_drive_mngr_path()
+                    if not valid:
+                        logger.error("_process_msg, object_path valid: False (ignoring)")
+                        return
+                else:
+                    self._log_debug("_process_msg, invalid sensor response message: %r" % jsonMsg)
+                    return
 
                 # Obtain json message containing all relevant data
                 internal_json_msg = drive.toDriveMngrJsonMsg().getJson()
-                
+
                 # Send the json message to the RabbitMQ processor to transmit out
                 self._log_debug("_process_msg, internal_json_msg: %s" % internal_json_msg)
                 self._write_internal_msgQ(RabbitMQegressProcessor.name(), internal_json_msg)
+
+
+                # Log the event as an IEM and serialize to file if the disk status has changed
+                if self._drvmngr_drives.get(serial_number) is not None and \
+                    self._drvmngr_drives.get(serial_number).get_drive_status() != \
+                        drive.get_drive_status():
+                    self._log_IEM(drive)
+    
+                # Update the dict of drive manager drives
+                self._drvmngr_drives[serial_number] = drive
+    
+                # Write the serial number and status to file
+                self._serialize_disk_status()
 
             # Handle HPI events
             elif sensor_response_type == "disk_status_hpi":
@@ -163,9 +215,26 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     logger.error("_process_msg, valid: False (ignoring)")
                     return
 
-                # Update the dict of drive manager drives
+                # Update the dict of hpi drives
                 serial_number = jsonMsg.get("serialNumber")
                 self._hpi_drives[serial_number] = drive
+
+                # Update the sub-set dict of drive manager drives
+                event_path = drive.get_drive_enclosure() + "/disk/" + \
+                                 drive.get_drive_num() + "/status"
+                drv_mngr_drive = Drive(self._host_id,
+                                  event_path,
+                                  jsonMsg.get("status"),
+                                  serial_number)
+
+                # Check to see if the drive path is valid
+                valid = drv_mngr_drive.parse_drive_mngr_path()
+                if not valid:
+                    logger.error("_process_msg, parse_drive_mngr_path, valid: False (ignoring)")
+                    return
+
+                # Initialize drivemanage drives
+                self._drvmngr_drives[serial_number] = drv_mngr_drive
 
                 # Obtain json message containing all relevant data
                 internal_json_msg = drive.toHPIjsonMsg().getJson()
@@ -314,6 +383,82 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
             json_msg = AckResponseMsg(node_request, response, uuid).getJson()
             self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
 
+    def _serialize_disk_status(self):
+        """Writes the current disks in {serial:status} format"""
+        try:
+            dmreport_dir = os.path.dirname(self._dmreport_file)
+            if not os.path.exists(dmreport_dir):
+                os.makedirs(dmreport_dir)
+
+            drives_list = []
+            json_dict = {}
+            for serial_num, drive in self._drvmngr_drives.iteritems():
+                # Split apart the drive status into status and reason values
+                # Status is first word before the first '_'
+                status, reason = str(drive.get_drive_status()).split("_", 1)
+                drives = {}
+                drives["serial_number"] = drive.getSerialNumber()
+                drives["status"] = status
+                drives["reason"] = reason
+                drives_list.append(drives)
+
+            json_dict["last_update_time"] = time.strftime("%c")
+            json_dict["drives"] = drives_list
+            json_dump = json.dumps(json_dict, sort_keys=True)
+            with open(self._dmreport_file, "w+") as dm_file:                
+                dm_file.write(json_dump)
+        except Exception as ae:
+            logger.exception(ae)
+
+    def _log_IEM(self, drive):
+        """Sends an IEM to logging msg handler"""
+        # Split apart the drive status into status and reason values
+        # Status is first word before the first '_'
+        status, reason = str(drive.get_drive_status()).split("_", 1)
+        self._log_debug("_log_IEM, status: %s reason:%s" % (status, reason))
+
+        if status.lower() == "empty" or \
+           status.lower() == "unused":   # Backwards compatible with external drivemanager
+            log_msg = "IEC: 020001002: Drive removed"
+
+        elif status.lower() == "ok" or \
+             status.lower() == "inuse":  # Backwards compatible with external drivemanager
+            log_msg = "IEC: 020001001: Drive added"
+
+        elif status.lower() == "failed":
+            if "smart" in reason.lower():
+                log_msg = "IEC: 020002002: SMART validation test has failed"
+
+            else:
+                log_msg = "IEC: 000000000: Attempting to log unknown disk status/reason: {}/{}".format(status, reason)
+
+        json_data = {"enclosure_serial_number": drive.get_drive_enclosure(),
+                         "disk_serial_number": drive.getSerialNumber(),
+                         "slot": drive.get_drive_num(), 
+                         "status": status,
+                         "reason": reason
+                         }
+
+        self._log_debug("_log_IEM, log_msg: %{}:{}".format(log_msg, json.dumps(json_data, sort_keys=True)))
+        internal_json_msg = json.dumps(
+                    {"actuator_request_type" : {
+                        "logging": {
+                            "log_level": "LOG_WARNING",
+                            "log_type": "IEM",
+                            "log_msg": "{}:{}".format(log_msg, json.dumps(json_data, sort_keys=True))
+                            }
+                        }
+                     })
+
+        # Send the event to disk message handler to generate json message
+        self._write_internal_msgQ(LoggingMsgHandler.name(), internal_json_msg)
+
+    def _getDMreport_File(self):
+        """Retrieves the file location"""
+        return self._conf_reader._get_value_with_default(self.DISKMSGHANDLER,
+                                                         self.DMREPORT_FILE,
+                                                         '/tmp/dcs/dmreport/drive_manager.json')
+
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""
         super(DiskMsgHandler, self).shutdown()
@@ -345,7 +490,7 @@ class Drive(object):
         self._productVersion = productVersion
         self._wwn            = wwn 
         self._enclosure      = "N/A"
-        self._drive_num      = "N/A"
+        self._drive_num      = -1
         self._filename       = "N/A"
 
     def parse_drive_mngr_path(self):
