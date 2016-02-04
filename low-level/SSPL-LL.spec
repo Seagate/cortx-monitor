@@ -39,6 +39,7 @@ Installs SSPL-LL
 # Copy config file and service startup to correct locations
 mkdir -p %{buildroot}/etc/systemd/system
 mkdir -p %{buildroot}/etc/dbus-1/system.d
+mkdir -p %{buildroot}/etc/polkit-1/rules.d
 
 cp files/sspl-ll.service %{buildroot}/etc/systemd/system
 cp files/sspl_ll.conf %{buildroot}/etc
