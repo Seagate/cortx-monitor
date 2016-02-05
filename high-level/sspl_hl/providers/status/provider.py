@@ -11,13 +11,12 @@ Status provider implementation
 # distribution or disclosure of this code, for any reason, not expressly
 # authorized in writing by Seagate Technology LLC is prohibited.
 # All rights are expressly reserved by Seagate Technology LLC.
-
-
-# Third party
-from twisted.internet import reactor
+import json
+import urllib
+from plex.util.list_util import ensure_list
 import subprocess
-# Local
 from sspl_hl.utils.base_castor_provider import BaseCastorProvider
+from twisted.internet.threads import deferToThread
 
 
 class StatusProvider(BaseCastorProvider):
@@ -38,23 +37,96 @@ class StatusProvider(BaseCastorProvider):
         """
         result = super(StatusProvider, self)._validate_params(selection_args)
         if result:
-            reactor.callFromThread(responder.reply_exception, result)
+            responder.reply_exception(ensure_list(result))
             return
-        resp = "Unable to fetch the response"
-        try:
-            cmd_args = "{} {}".format(
-                BaseCastorProvider.IPMI_CMD,
-                "status"
-            )
-            resp = subprocess.Popen(
-                cmd_args.split(),
-                stdout=subprocess.PIPE).communicate()[0] or\
-                resp
+        deferred_power_status = deferToThread(
+            StatusProvider.get_node_power_status
+        )
+        deferred_power_status.addCallback(
+            self.handle_success,
+            responder
+        )
+        deferred_power_status.addErrback(
+            self.handle_failure,
+            responder
+        )
 
-        except (OSError, ValueError) as process_error:
-            reactor.callFromThread(responder.reply_exception,
-                                   str(process_error))
-        responder.reply(data=[resp])
+    def handle_success(self, result, responder):
+        """
+        Success handler for power status
+        """
+        if not (len(result.get('active_nodes')) or
+                len(result.get('inactive_nodes'))):
+            self.log_warning(
+                'Could not fetch the data from mco for power status'
+            )
+            responder.reply_exception(
+                'Could not retrieve power status information from cluster')
+        else:
+            responder.reply(ensure_list(result))
+
+    def handle_failure(self, error):
+        """
+        Error Handler
+        """
+        self.log_warning(
+            'Error occurred in getting the power status of the cluster. '
+            'Details: {}'.format(error)
+        )
+
+    @staticmethod
+    def get_node_power_status():
+        """
+        Return the power status response
+        """
+        ssu_nodes = StatusProvider.get_ssu_list()
+        try:
+            active_ssu_list = subprocess.check_output(
+                'mco ping -F role=storage',
+                shell=True
+            )
+        except subprocess.CalledProcessError:
+            active_ssu_list = ''
+        active_ssu_node =\
+            [j.strip()
+             for i in active_ssu_list.split('\n')
+             for j in i.split()
+             if j.find('ssu') > -1]
+        inactive_ssu_nodes = list(set(ssu_nodes) - set(active_ssu_node))
+        power_status_response = dict(active_nodes=active_ssu_node,
+                                     inactive_nodes=inactive_ssu_nodes)
+        return power_status_response
+
+    @staticmethod
+    def get_ssu_list():
+        """
+        Return the names of all the ssu nodes
+        """
+        ssu_info = StatusProvider.query_ssu_data_from_puppet()
+        ssu_list = []
+        for info in ssu_info:
+            name = info.get('name')
+            if name:
+                ssu_list.append(name)
+        return ssu_list
+
+    @staticmethod
+    def query_ssu_data_from_puppet():
+        """
+        Make http query to puppet for ssu information
+        """
+        v3_nodes_url = "http://localhost:8082/v3/nodes"
+        query_params = {'query': '["=", ["fact", "role"], "storage"]'}
+        query = '{}?{}'.format(v3_nodes_url, urllib.urlencode(query_params))
+        response = urllib.urlopen(query).read()
+        if response:
+            try:
+                return json.loads(response)
+            except ValueError:
+                return []
+        else:
+            return []
+
 
 # pylint: disable=invalid-name
 provider = StatusProvider("status", "Provider for status command")

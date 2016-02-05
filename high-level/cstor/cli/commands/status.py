@@ -53,3 +53,40 @@ class Status(BaseCommand):
                                              help='Sub-command to work with '
                                                   'status of the cluster.')
         power_parser.set_defaults(func=Status)
+
+    def execute_action(self, **kwargs):
+        """
+        Process the support_bundle response from the business layer
+        """
+        # pylint:disable=too-many-function-args
+        try:
+            response_data = super(Status, self).execute_action(**kwargs)
+            response_str = self.get_human_readable_response(response_data)
+        # pylint:disable=broad-except
+        except Exception:
+            response_str = 'An Internal error has occurred, unable to ' \
+                           'complete command.'
+        return response_str
+
+    @staticmethod
+    def get_human_readable_response(result):
+        """
+        Parse the json to read the human readable response
+        """
+        result = result and result[-1]
+        active_nodes = ''
+        response = 'An Internal error has occurred, unable to complete ' \
+                   'command.'
+        for node in result.get('active_nodes', []):
+            active_nodes = '{}\n\t{}'.format(active_nodes, node)
+        inactive_nodes = ''
+        for node in result.get('inactive_nodes', []):
+            inactive_nodes = '{}\n\t{}'.format(inactive_nodes, node)
+        if active_nodes:
+            response = 'Active Nodes:- {}'.format(active_nodes)
+        if inactive_nodes:
+            response = '{} \n Inactive Nodes:- {}'.format(
+                response,
+                inactive_nodes
+            )
+        return response
