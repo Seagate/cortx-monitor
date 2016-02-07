@@ -153,8 +153,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                         event_path = hpi_drive.get_drive_enclosure() + "/disk/" + \
                                       hpi_drive.get_drive_num() + "/status"
                     except Exception as ae:
-                        logger.info("_process_msg, No HPI data for serial number: %s, ignoring" % serial_number)
-                        return
+                        logger.info("_process_msg, No HPI data for serial number: %s" % serial_number)
 
                     drive = Drive(self._host_id,
                                   event_path,
@@ -177,16 +176,15 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 self._log_debug("_process_msg, internal_json_msg: %s" % internal_json_msg)
                 self._write_internal_msgQ(RabbitMQegressProcessor.name(), internal_json_msg)
 
-
-                # Log the event as an IEM and serialize to file if the disk status has changed
+                # Log the event as an IEM if the disk status has changed
                 if self._drvmngr_drives.get(serial_number) is not None and \
                     self._drvmngr_drives.get(serial_number).get_drive_status() != \
                         drive.get_drive_status():
                     self._log_IEM(drive)
-    
+
                 # Update the dict of drive manager drives
                 self._drvmngr_drives[serial_number] = drive
-    
+
                 # Write the serial number and status to file
                 self._serialize_disk_status()
 
@@ -233,8 +231,11 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     logger.error("_process_msg, parse_drive_mngr_path, valid: False (ignoring)")
                     return
 
-                # Initialize drivemanage drives
+                # Update drivemanager drives
                 self._drvmngr_drives[serial_number] = drv_mngr_drive
+
+                # Write the serial number and status to file
+                self._serialize_disk_status()
 
                 # Obtain json message containing all relevant data
                 internal_json_msg = drive.toHPIjsonMsg().getJson()

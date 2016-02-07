@@ -508,7 +508,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
         elif smart_status.lower() == "error_handling":
             status_reason = "Failed_smart_damage"
         else:
-            status_reason = "Unknown smart status {}".format(smart_status)
+            status_reason = "Unknown smart status {}_unknown".format(smart_status)
 
         # Send a message to the disk manager handler to create and transmit json msg
         internal_json_msg = json.dumps(

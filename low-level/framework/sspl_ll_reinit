@@ -29,6 +29,7 @@ grep -q "$SUDO_LINE" /etc/sudoers || echo "$SUDO_LINE" >> /etc/sudoers
 
 # Start with a clean updated drive_manager.json file and serialized dir
 rm -Rf /tmp/dcs/dmreport
+systemctl restart openhpid
 
 # Grant IO abilities so that we can send ATA commands to drives as sspl-ll user
 setcap cap_sys_rawio=ep /usr/bin/python2.7
