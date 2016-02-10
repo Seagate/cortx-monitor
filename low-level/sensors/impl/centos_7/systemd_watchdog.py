@@ -350,7 +350,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
 
         # Always call methods on the interface not the actual object
         unit_name = Iunit.Get(interface, "Id")
-        self._log_debug("_on_prop_changed, unit_name: %s" % unit_name)
+
         # self._log_debug("_on_prop_changed, changed_properties: %s" % changed_properties)
         # self._log_debug("_on_prop_changed, invalids: %s" % invalidated_properties)
 
@@ -366,7 +366,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
             return
         else:
             # Update the state in the global dict for later use
-            self._log_debug("_on_prop_changed, service state change detected notifying ServiceMsgHandler.")
+            self._log_debug("_on_prop_changed, Service state change detected on unit: %s" % unit_name)
             previous_service_status = self._service_status.get(str(unit_name), "").split(":")[0]
             if not previous_service_status:
                 previous_service_status = "inactive"
@@ -489,6 +489,10 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
 
     def _process_smart_status(self, disk_path, smart_status, serial_number):
         """Create the status_reason field and notify disk msg handler"""
+        if len(smart_status) == 0:
+            self._log_debug("SMART result not ready on drive: %s" % serial_number)
+            return
+
         # Possible SMART status for systemd described at
         # http://udisks.freedesktop.org/docs/latest/gdbus-org.freedesktop.UDisks2.Drive.Ata.html#gdbus-property-org-freedesktop-UDisks2-Drive-Ata.SmartSelftestStatus
         if smart_status.lower() == "success":

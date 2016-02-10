@@ -1,0 +1,24 @@
+{
+	"title": "SSPL-LL Actuator Request",
+	"description": "Seagate Storage Platform Library - Low Level - Actuator Request",
+
+	"username" : "JohnDoe",
+	"signature" : "None",
+	"time" : "2015-05-29 14:28:30.974749",
+	"expires" : 500,
+
+	"message" : {
+		"sspl_ll_msg_header": {
+			"schema_version": "1.0.0",
+			"sspl_version": "1.0.0",
+			"msg_version": "1.0.0"
+			},
+		"actuator_request_type": {
+			"logging": {
+				"log_level": "LOG_WARNING",
+				"log_type": "HDS",
+				"log_msg": "IEC: 020001003: Halon Disk Status: {'status': 'Failed', 'reason': 'mero_timeout', 'serial_number':'Z8407SB0'}"
+			}
+		}
+	}
+}

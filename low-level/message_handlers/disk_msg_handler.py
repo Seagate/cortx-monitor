@@ -121,52 +121,37 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 # Serial number is used as an index into dicts
                 serial_number = jsonMsg.get("serial_number")
 
-                # For external drivemanager application identified by having an event path
-                if jsonMsg.get("event_path") is not None:
-                    # Convert event path to Drive object to handle parsing and json conversion, etc
-                    drive = Drive(self._host_id,
-                                  jsonMsg.get("event_path"),
-                                  jsonMsg.get("status"),
-                                  serial_number)
+                # Mero status takes precedence over all others, Mero sending OK_None resets for SMART tests
+                if self._drvmngr_drives.get(serial_number) is not None:
+                    curr_drive_status = self._drvmngr_drives.get(serial_number).get_drive_status()
+                    if "mero" in curr_drive_status.lower():
+                        # See if the msg came from a Halon Drive Status log msg, if not ignore
+                        if jsonMsg.get("object_path") != "HDS":
+                            logger.info("_process_msg, drive status is currently set to mero, ignoring")
+                            return
 
-                    # Check to see if the drive path is valid
-                    valid = drive.parse_drive_mngr_path()
+                # Initialize path with a NotAvailable enclosure s/n and disk #
+                hpi_available = False
+                event_path = "HPI_data_Not_Available/disk/-1/status"
+                # Retrieve hpi drive object
+                try:
+                    hpi_drive = self._hpi_drives[serial_number]
+                    # Build event path used in json msg
+                    event_path = hpi_drive.get_drive_enclosure() + "/disk/" + \
+                                  hpi_drive.get_drive_num() + "/status"
+                    hpi_available = True
+                except Exception as ae:
+                    logger.info("_process_msg, No HPI data for serial number: %s" % serial_number)
 
-                    self._log_debug("_process_msg enclosureSN: %s" % drive.get_drive_enclosure() \
-                                    + ", disk Num: %s" % drive.get_drive_num() \
-                                    + ", filename: %s"  % drive.get_drive_filename() \
-                                    + ", disk Status: %s"  % drive.get_drive_status() \
-                                    + ", disk Serial Number: %s"  % drive.getSerialNumber())
+                drive = Drive(self._host_id,
+                              event_path,
+                              jsonMsg.get("status"),
+                              serial_number)
 
-                    if not valid:
-                        logger.error("_process_msg, event_path valid: False (ignoring)")
-                        return
-
-                # For internal systemdWatchdog device discovery identified by having an object path
-                elif jsonMsg.get("object_path") is not None:
-                    # Initialize path with a NotAvailable enclosure s/n and disk #
-                    event_path = "HPIdataNotAvailable/disk/-1/status"
-                    # Retrieve hpi drive object
-                    try:
-                        hpi_drive = self._hpi_drives[serial_number]
-                        # Build event path used in json msg
-                        event_path = hpi_drive.get_drive_enclosure() + "/disk/" + \
-                                      hpi_drive.get_drive_num() + "/status"
-                    except Exception as ae:
-                        logger.info("_process_msg, No HPI data for serial number: %s" % serial_number)
-
-                    drive = Drive(self._host_id,
-                                  event_path,
-                                  jsonMsg.get("status"),
-                                  serial_number)
-
-                    # Check to see if the drive path is valid
-                    valid = drive.parse_drive_mngr_path()
-                    if not valid:
-                        logger.error("_process_msg, object_path valid: False (ignoring)")
-                        return
-                else:
-                    self._log_debug("_process_msg, invalid sensor response message: %r" % jsonMsg)
+                # Check to see if the drive path is valid
+                valid = drive.parse_drive_mngr_path()
+                if not valid:
+                    logger.error("_process_msg, object_path valid: False (ignoring)")
                     return
 
                 # Obtain json message containing all relevant data
@@ -182,11 +167,12 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                         drive.get_drive_status():
                     self._log_IEM(drive)
 
-                # Update the dict of drive manager drives
+                # Update the dict of drive manager drives and write s/n and status to file
                 self._drvmngr_drives[serial_number] = drive
 
-                # Write the serial number and status to file
-                self._serialize_disk_status()
+                # Write the serial number and status to file if HPI data exists (avoid SATI SSD)
+                if hpi_available:
+                    self._serialize_disk_status()
 
             # Handle HPI events
             elif sensor_response_type == "disk_status_hpi":
@@ -394,6 +380,10 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
             drives_list = []
             json_dict = {}
             for serial_num, drive in self._drvmngr_drives.iteritems():
+                # Don't serialize drives that have no HPI data
+                if drive.get_drive_enclosure() == "HPI_data_Not_Available":
+                    continue
+
                 # Split apart the drive status into status and reason values
                 # Status is first word before the first '_'
                 status, reason = str(drive.get_drive_status()).split("_", 1)
@@ -433,11 +423,15 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
             else:
                 log_msg = "IEC: 000000000: Attempting to log unknown disk status/reason: {}/{}".format(status, reason)
 
+        else:
+            log_msg = "IEC: 000000000: Attempting to log unknown disk status/reason: {}/{}".format(status, reason)
+
         json_data = {"enclosure_serial_number": drive.get_drive_enclosure(),
                          "disk_serial_number": drive.getSerialNumber(),
                          "slot": drive.get_drive_num(), 
                          "status": status,
-                         "reason": reason
+                         "reason": reason,
+                         "hostname": self._host_id
                          }
 
         self._log_debug("_log_IEM, log_msg: %{}:{}".format(log_msg, json.dumps(json_data, sort_keys=True)))

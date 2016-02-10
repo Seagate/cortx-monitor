@@ -22,7 +22,9 @@ from framework.utils.service_logging import logger
 
 from loggers.impl.iem_logger import IEMlogger
 
+# Modules that receive messages from this module
 from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
+
 from json_msgs.messages.actuators.ack_response import AckResponseMsg
 
 class LoggingMsgHandler(ScheduledModuleThread, InternalMsgQ):
@@ -76,7 +78,7 @@ class LoggingMsgHandler(ScheduledModuleThread, InternalMsgQ):
             # Log it and restart the whole process when a failure occurs
             logger.exception("LoggingMsgHandler restarting")
 
-        self._scheduler.enter(0, self._priority, self.run, ())
+        self._scheduler.enter(10, self._priority, self.run, ())
         self._log_debug("Finished processing successfully")
 
     def _process_msg(self, jsonMsg):
@@ -94,8 +96,39 @@ class LoggingMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
         log_type = jsonMsg.get("actuator_request_type").get("logging").get("log_type")
 
+        result = "N/A"
         if log_type == "IEM":
             self._log_debug("_processMsg, msg_type: IEM")
+            if self._iem_logger == None:
+                self._iem_logger = IEMlogger(self._conf_reader)
+            result = self._iem_logger.log_msg(jsonMsg)
+
+        if log_type == "HDS":
+            # Retrieve the serial number of the drive
+            self._log_debug("_processMsg, msg_type: HDS")
+            log_msg = jsonMsg.get("actuator_request_type").get("logging").get("log_msg")
+
+            # Parse out the json data section in the IEM and replace single quotes with double
+            json_data = json.loads(str('{' + log_msg.split('{')[1]).replace("'", '"'))
+
+            serial_number = json_data.get("serial_number")
+            status = json_data.get("status")
+            reason = json_data.get("reason")
+            self._log_debug("_processMsg, serial_number: %s, status: %s, reason: %s" 
+                            % (serial_number, status, reason))                
+
+            # Send a message to the disk manager handler to create and transmit json msg
+            internal_json_msg = json.dumps(
+                 {"sensor_response_type" : "disk_status_drivemanager",
+                  "object_path" : "HDS",
+                  "status" : "{}_{}".format(status, reason),
+                  "serial_number" : serial_number
+                 })
+
+            # Send the event to disk message handler to generate json message
+            self._write_internal_msgQ("DiskMsgHandler", internal_json_msg)
+
+            # Hand off to the IEM logger
             if self._iem_logger == None:
                 self._iem_logger = IEMlogger(self._conf_reader)
             result = self._iem_logger.log_msg(jsonMsg)
