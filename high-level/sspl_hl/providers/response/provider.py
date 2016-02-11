@@ -8,6 +8,7 @@ PLEX data provider for getting Halon response messages.
 import threading
 import json
 from twisted.internet import reactor
+from twisted.internet.task import deferLater
 
 # PLEX
 from plex.core import log
@@ -42,18 +43,52 @@ class ResponseProvider(BaseCastorProvider):
         """
         super(ResponseProvider, self).on_create()
         ResponseProvider.run_async(
-            self.consume_halon_messages, ())
+            self.consume_halon_messages, ()
+        )
 
-    def _query(self, selection_args, responder):
-
-        message_id = selection_args['messageId']
-        if message_id in self.__message_dict.keys():
-            reactor.callFromThread(
-                responder.reply, data=[
-                    json.dumps(
-                        self.__message_dict.get(message_id))])
+    @staticmethod
+    def handle_success_response(result, request):
+        """ Handle success response
+        """
+        if result:
+            request.reply(result)
         else:
-            reactor.callFromThread(responder.reply_no_match)
+            request.reply("No response")
+
+    @staticmethod
+    def handle_error_response(error, request):
+        """ Handle error response
+        """
+        if error:
+            request.reply(error)
+        else:
+            request.reply("Some error occurred")
+
+    def render_query(self, request):
+        """ Render query for Response Provider
+        """
+        defer_res = deferLater(
+            reactor, 1, self._check_and_get_data, 15, request
+        )
+        defer_res.addCallback(
+            ResponseProvider.handle_success_response, request)
+        defer_res.addErrback(
+            ResponseProvider.handle_error_response, request)
+
+    def _check_and_get_data(self, count_down, request):
+        """ Fetch data from response cache
+        """
+        message_id = request.selection_args.get('messageId')
+        if message_id in self.__message_dict.keys():
+            return json.dumps(self.__message_dict.get(message_id))
+        elif count_down > 0:
+            defer_fetch = deferLater(
+                reactor, 1, self._check_and_get_data, count_down-1, request)
+            return defer_fetch
+        else:
+            err_msg = "Error: Timed out while waiting for response from halon"
+            self.log_warning(err_msg)
+            return err_msg
 
     def put_response_message(self, body):
         """
@@ -66,20 +101,19 @@ class ResponseProvider(BaseCastorProvider):
         @param msg_dict: response messages dict
         @type msg_dict: dict
         """
-        log.info("Updating the with:{}".format(body))
         try:
             body_json = json.loads(body)
             message = find_key(body_json, 'message')
             if not message:
-                log.error('message key not found in \
-                message body {}'.format(body_json))
+                log.info("Message not found\
+ in message body {}".format(body_json))
                 return
             response_id = find_key(message, "responseId")
             if not response_id:
-                log.error('responseId key not found \
-                in message body {}'.format(message))
+                log.info("response_id\
+ not found in message of resposne body {}".format(message))
                 return
-            log.debug(
+            log.info(
                 "Updated message dict with:{}:{}".format(
                     response_id,
                     message))

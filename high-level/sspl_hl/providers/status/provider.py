@@ -11,7 +11,6 @@ Status provider implementation
 # distribution or disclosure of this code, for any reason, not expressly
 # authorized in writing by Seagate Technology LLC is prohibited.
 # All rights are expressly reserved by Seagate Technology LLC.
-# _author_ = Bhupesh Pant
 
 # Third party
 import json
@@ -21,6 +20,8 @@ from plex.util.list_util import ensure_list
 from twisted.internet.defer import DeferredList
 from sspl_hl.utils.base_castor_provider import BaseCastorProvider
 from twisted.internet.threads import deferToThread
+from sspl_hl.utils.message_utils import FileSystemStatusQueryRequest
+from sspl_hl.utils.rabbit_mq_utils import HalondPublisher
 
 
 class StatusProvider(BaseCastorProvider):
@@ -28,7 +29,6 @@ class StatusProvider(BaseCastorProvider):
     """
     Handler for all status based commands
     """
-    CSMAN_CMD = '/usr/local/bin/csman.sh'
 
     def __init__(self, title, description):
         super(StatusProvider, self).__init__(title, description)
@@ -37,9 +37,46 @@ class StatusProvider(BaseCastorProvider):
         self.valid_commands = ["ipmi"]
         self.mandatory_args = ["command"]
         self.cluster_state = self.POWER_ON
+        self.publisher = None
         self.response_list = {'sem_status': None,
                               'power_status': None,
                               'file_system_status': None}
+
+    @staticmethod
+    def _generate_fs_status_req_msg():
+        """ Generate a file system status request message from halon.
+        """
+        message = FileSystemStatusQueryRequest().get_request_message(
+            "cluster", None
+        )
+        return message
+
+    @staticmethod
+    def resp_callback_func(result):
+        """ Callback function for defer to receiver query
+        """
+        if result:
+            return result
+        else:
+            return "No results: EOM"
+
+    @staticmethod
+    def resp_err_func(error):
+        """ Errback function for defer to receiver.query
+        """
+        return error
+
+    def callback_func(self, result):
+        """ Callback function for defer to publish_fs_status_req
+        """
+        receiver = self.create_data_receiver(
+            app_name='sspl_hl',
+            provider_name='response')
+        message_id = result.get('message').get('messageId')
+        defer_4 = receiver.query({'messageId': message_id})
+        defer_4.addCallback(StatusProvider.resp_callback_func)
+        defer_4.addErrback(StatusProvider.resp_err_func)
+        return defer_4
 
     def render_query(self, request):
         """
@@ -55,53 +92,71 @@ class StatusProvider(BaseCastorProvider):
         defer_1.addErrback(self.handle_failure)
         defer_2 = deferToThread(self.get_ras_sem_status)
 
+        defer_3 = deferToThread(self.publish_fs_status_req)
+
+        defer_3.addCallback(self.callback_func)
+
         defer_list = DeferredList(
-            [defer_1, defer_2], consumeErrors=True
+            [defer_1, defer_2, defer_3], consumeErrors=True
         )
 
         defer_list.addCallback(self._process_all_response, request)
+
+    def publish_fs_status_req(self):
+        """ Publish status request message to rabbitmq
+        """
+        message = self._generate_fs_status_req_msg()
+        self.publisher = HalondPublisher(None)
+        self.publisher.publish_message(message)
+        return message
 
     def _process_all_response(self, resp, request):
         """
         Process the status response from all the sources
         """
-        if len(resp) != 2:
-            err_msg = 'Could not process the response for status command'
-            self.log_warning(err_msg)
+        if len(resp) != 3:
+            err_msg = 'Could not process the response for status command.'
+            self.log_warning('{} {}'.format(
+                err_msg,
+                'The response list is not populated correctly.'
+            ))
             request.responder.reply_exception(err_msg)
         else:
+            # Handle power response
             if resp[0][0]:
                 self.response_list['power_status'] = resp[0][1]
             else:
                 self.response_list['power_status'] = \
                     dict(active_nodes=[], inactive_nodes=[])
                 self.log_warning('Failed to get nodes power status')
+            # Handle RAS SEM response
             if resp[1][0]:
                 self.response_list['sem_status'] = resp[1][1]
             else:
                 self.response_list['sem_status'] = \
                     'Failed to get RAS Sem notifications'
                 self.log_warning('Failed to get RAS Sem notifications')
-            self.log_info(
-                'Collective Status Resp: {}'.format(self.response_list)
-            )
+            # Handle File System Status response
+            if resp[2][0]:
+                self.response_list['file_system_status'] = resp[2][1]
+            else:
+                self.response_list['sem_status'] = \
+                    'Failed to get File System Status'
+                self.log_warning('Failed to get File System Status from HAlon')
             request.reply(ensure_list(self.response_list))
 
     def get_ras_sem_status(self):
         """
         Gets ras sem notifications
         """
+        ras_sem_query = 'csman service notifications show'
         try:
-            ras_resp = subprocess.check_output(
-                ['sh', self.CSMAN_CMD]
-            )
-            self.log_debug(
-                'RAS SEM notification response: {}'.format(ras_resp)
-            )
+            ras_resp = subprocess.check_output(ras_sem_query.split())
         except subprocess.CalledProcessError:
             ras_resp = "Unable to fetch the response of RAS SEM notification"
             self.log_warning('{}. Command Failed: {}'.
-                             format(ras_resp, ''.join(self.CSMAN_CMD)))
+                             format(ras_resp, ''.join(ras_sem_query)))
+        self.log_debug('RAS SEM notification response: {}'.format(ras_resp))
         return ras_resp
 
     def handle_success(self, result):

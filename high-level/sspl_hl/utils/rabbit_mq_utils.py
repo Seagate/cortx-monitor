@@ -19,6 +19,7 @@ import pika
 import json
 # Local
 from sspl_hl.utils.message_utils import NodeStatusResponse
+# from sspl_hl.providers.response.provider import ResponseProvider
 # PLEX
 from plex.core import log
 
@@ -37,15 +38,14 @@ class RabbitMQConfiguration(object):
         @param config_file_path: Absolute path to configuration JSON file.
         @type config_file_path: str
         """
-
         self.host = 'localhost'
         self.virtual_host = 'SSPL'
         self.username = 'sspluser'
         self.password = 'sspl4ever'
         self.exchange = 'sspl_hl_cmd'
         self.exchange_type = 'topic'
-        self.exchange_queue = 'sspl_hl_cmd_resp'
-        self.routing_key = 'sspl_hl_cmd_resp'
+        self.exchange_queue = 'sspl_hl_cmd'
+        self.routing_key = 'sspl_hl_cmd'
         if config_file_path:
             self.__dict__ = json.loads(open(config_file_path).read())
 
@@ -74,10 +74,6 @@ class HalondRMQ(RabbitMQConfiguration):
                     self.username,
                     self.password)))
         self._channel = self._connection.channel()
-        self._channel.exchange_declare(
-            exchange=self.exchange,
-            type=self.exchange_type,
-            durable=False)
 
     def close_connection(self):
         """
@@ -104,10 +100,6 @@ class HalondConsumer(HalondRMQ):
         """
 
         super(HalondConsumer, self).__init__(config_file_path)
-        self._channel.queue_declare(queue=self.exchange_queue,
-                                    exclusive=False)
-        self._channel.queue_bind(exchange=self.exchange,
-                                 queue=self.exchange_queue)
         self._channel.basic_consume(lambda ch, method, properties, body:
                                     callback_function(body),
                                     queue=self.exchange_queue,

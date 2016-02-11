@@ -25,6 +25,9 @@ class Status(BaseCommand):
     """
     Power command implementation class
     """
+    STATUS_RESPONSE_KEY = "statusResponse"
+    ENTITY_ID_KEY = "entityId"
+    STATUS_KEY = "status"
 
     def __init__(self, parser):
         """
@@ -38,12 +41,70 @@ class Status(BaseCommand):
         print 'This may take some time depending upon your ' \
               'network configuration...'
 
+    # def execute_action(self):
+    #     """ Function to execute the action by sending
+    #     request to data provider in business logic server.
+    #     Overriding will have the handling for status command.
+    #     """
+    #     response = super(Status, self).execute_action()
+    #     pwr_res = response[0]['power_status']
+    #     rassem_res = response[0]['sem_status']
+    #     fs_res = response[0]['file_system_status'][0]
+    #     result = []
+    #     if fs_res:
+    #         if Status.is_json(fs_res):
+    #             fs_res = Status._parse_status_response(fs_res)
+    #         result.append("Filesystem status:" + str(fs_res))
+    #     if pwr_res:
+    #         pwr_res = Status._parse_power_status_response(pwr_res)
+    #         result.append(pwr_res)
+    #     if rassem_res:
+    #         result.append(rassem_res)
+    #     if result:
+    #         return result
+    #     else:
+    #         return "No response or some error occurred"
+    #
+    # @staticmethod
+    # def _parse_power_status_response(power_resp):
+    #     """ Parse power status response into human
+    #         readable response
+    #     """
+    #     active_nodes = '\n\t'.join(power_resp.get('active_nodes', []))
+    #     inactive_nodes = '\n\t'.join(power_resp.get('inactive_nodes', []))
+    #     pwr_response = ''
+    #     if active_nodes:
+    #         pwr_response = 'Active Nodes:- \n\t{}'.format(active_nodes)
+    #     if inactive_nodes:
+    #         pwr_response = '{} \n Inactive Nodes:- \n\t{}'.format(
+    #             pwr_response,
+    #             inactive_nodes
+    #         )
+    #     return pwr_response
+    #
+    # @staticmethod
+    # def is_json(myjson):
+    #     """ Verify for JSON structure
+    #     """
+    #     # pylint: disable=unused-variable
+    #     try:
+    #         json_object = json.loads(myjson)
+    #     # pylint: disable=invalid-name
+    #     except ValueError, e:
+    #         return False
+    #     return True
+
     def get_action_params(self, **kwargs):
         """
         Status method to get the command uri part
         """
         params = '&command={}&debug={}'.format(self.action, DEBUG)
         return params
+
+    # @staticmethod
+    # def _parse_status_response(response):
+    #     item = json.loads(response)[Status.STATUS_RESPONSE_KEY][0]
+    #     return item[Status.STATUS_KEY]
 
     @staticmethod
     def add_args(subparsers):

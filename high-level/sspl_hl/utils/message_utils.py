@@ -145,6 +145,27 @@ class StatusResponse(object):
         self.status_response = CommandResponse()
 
 
+class FileSystemStatusQueryRequest(StatusRequest):
+    # pylint: disable=too-few-public-methods
+    """
+    This class defines the Service command
+    """
+
+    def __init__(self):
+        super(FileSystemStatusQueryRequest, self).__init__()
+
+    def get_request_message(self, entity_type, entity_filter=None):
+        """
+        Get the Halon status request message in JSON string
+        """
+        message = {
+            StatusRequest.STATUS_REQUEST_KEY: {
+                StatusRequest.ENTITY_TYPE_KEY: entity_type,
+                StatusRequest.ENTITY_FILTER_KEY: entity_filter or '.*'}}
+        self.status_request.message.update(message)
+        return self.status_request.__dict__
+
+
 class ServiceQueryRequest(ServiceRequest):
     # pylint: disable=too-few-public-methods
     """
@@ -562,13 +583,3 @@ class SupportBundleResponse(CommandResponse):
             message = {SupportBundleResponse.BUNDLE_LIST: response}
         self.message.update(message)
         return self.__dict__
-
-
-# if __name__ == "__main__":
-#     resp = SupportBundleResponse()
-#     print resp.get_response_message('create', 'bundle_id_2015120433383')
-#     print resp.get_response_message('list', ['bundle_id_20151204333832',
-#                                        'bundle_id_20151204332344',
-#                                        'bundle_id_20151204356567',
-#                                        'bundle_id_20151204678889'
-#                                        ])
