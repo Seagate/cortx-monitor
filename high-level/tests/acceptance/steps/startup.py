@@ -17,19 +17,20 @@ def initial_setup():
     Ensures rabbitmq, plex, and fake_halond are started
     Ensures sspl_hl app is installed.
     """
-    _ensure_rabbitmq_running()
-    _ensure_rabbitmq_settings()
+    # _ensure_rabbitmq_running()
+    # _ensure_rabbitmq_settings()
     _ensure_plex_running()
     _install_plex_apps()
     _disable_plex_auth()
     _restart_plex()
-    _start_fake_halond()
+    # _start_fake_halond()
     time.sleep(5)
 
 
 @lettuce.after.all
 def _stop_fake_halond(_):
-    lettuce.world.fake_halond_process.terminate()
+    # lettuce.world.fake_halond_process.terminate()
+    pass
 
 
 def _ensure_rabbitmq_running():

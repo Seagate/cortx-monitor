@@ -1,9 +1,6 @@
 """ uitls
 """
 # Third party
-import pika
-import json
-
 from plex.util.concurrent.single_thread_executor import SingleThreadExecutor
 from plex.common.interfaces.idata_provider import IDataProvider
 from twisted.plugin import IPlugin
@@ -56,22 +53,7 @@ class BaseCastorProvider(DataStoreProvider):
         self._single_thread_executor.submit(self._on_create)
 
     def _on_create(self):
-        self._connection = pika.BlockingConnection(
-            pika.ConnectionParameters(
-                host='localhost',
-                virtual_host='SSPL',
-                credentials=pika.PlainCredentials('sspluser', 'sspl4ever')
-                )
-            )
-        self._channel = self._connection.channel()
-        self._channel.exchange_declare(
-            exchange='sspl_hl_cmd', type='topic', durable=False
-            )
-
-    def _publish_message(self, message):
-        self._channel.basic_publish(exchange='sspl_hl_cmd',
-                                    routing_key='sspl_hl_cmd',
-                                    body=json.dumps(message))
+        pass
 
     def _validate_params(self, selection_args):
         """ ensure query() parameters are ok. """
