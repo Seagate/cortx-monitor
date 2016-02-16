@@ -43,7 +43,7 @@ class BaseCommand(object):
         request to data provider in business logic server
         """
         # pylint:disable=too-many-function-args
-        url = 'http://{0}{1}data?{3}'.format(
+        url = 'http://{0}{1}data?{2}'.format(
             BL_HOST,
             self.get_provider_base_url(),
             self.get_action_params(**kwargs))

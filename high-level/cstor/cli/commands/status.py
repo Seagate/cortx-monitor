@@ -74,18 +74,14 @@ class Status(BaseCommand):
         Parse the json to read the human readable response
         """
         result = result and result[-1]
-        active_nodes = ''
         response = 'An Internal error has occurred, unable to complete ' \
                    'command.'
-        for node in result.get('active_nodes', []):
-            active_nodes = '{}\n\t{}'.format(active_nodes, node)
-        inactive_nodes = ''
-        for node in result.get('inactive_nodes', []):
-            inactive_nodes = '{}\n\t{}'.format(inactive_nodes, node)
+        active_nodes = '\n\t'.join(result.get('active_nodes', []))
+        inactive_nodes = '\n\t'.join(result.get('inactive_nodes', []))
         if active_nodes:
-            response = 'Active Nodes:- {}'.format(active_nodes)
+            response = 'Active Nodes:- \n\t{}'.format(active_nodes)
         if inactive_nodes:
-            response = '{} \n Inactive Nodes:- {}'.format(
+            response = '{} \n Inactive Nodes:- \n\t{}'.format(
                 response,
                 inactive_nodes
             )
