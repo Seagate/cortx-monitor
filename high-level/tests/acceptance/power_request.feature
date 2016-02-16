@@ -6,7 +6,7 @@ Feature: Power Request
 
     Scenario: power on
         When I run "python ./cstor/cli/main.py power on"
-        Then the exit code is "1"
+        Then the exit code is "0"
 
     Scenario: power off
         When I run "python ./cstor/cli/main.py power off"

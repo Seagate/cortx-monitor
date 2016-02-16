@@ -100,6 +100,7 @@ class SupportBundle(BaseCommand):
         """
         name = message.get('bundle_name', None)
         response = 'Bundle creation has been initiated, File: {}. ' \
-                   '\n Use list command to monitor the progress.'.format(name)
+                   '\n Use support_bundle \'list\' command to monitor the ' \
+                   'progress.'.format(name)
 
         return response
