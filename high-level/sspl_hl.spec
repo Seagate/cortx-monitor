@@ -41,12 +41,12 @@ A cli (and library) that allow the user to control the cluster.
 %install
 mkdir -p %{installpath}/sspl_hl/utils
 mkdir -p %{installpath}/sspl_hl/views
-mkdir -p %{installpath}/sspl_hl/providers/{response,power,support_bundle,status}
+mkdir -p %{installpath}/sspl_hl/providers/{response,power,bundle,status}
 install sspl_hl/main.py sspl_hl/__init__.py %{installpath}/sspl_hl/
 install sspl_hl/providers/__init__.py %{installpath}/sspl_hl/providers/
 install sspl_hl/providers/power/*.py %{installpath}/sspl_hl/providers/power/
 install sspl_hl/providers/response/*.py %{installpath}/sspl_hl/providers/response/
-install sspl_hl/providers/support_bundle/*.py %{installpath}/sspl_hl/providers/support_bundle/
+install sspl_hl/providers/bundle/*.py %{installpath}/sspl_hl/providers/bundle/
 install sspl_hl/providers/status/*.py %{installpath}/sspl_hl/providers/status/
 
 
@@ -75,6 +75,9 @@ mkdir -p %{buildroot}/var/lib/support_bundles
 
 
 %changelog
+* Thu Feb 18 2016 Bhupesh Pant <bhupesh.pant@seagate.com>
+- Changed support_bundle to bundle
+
 * Wed Jan 06 2016 Bhupesh Pant <bhupesh.pant@seagate.com>
 - Removed auth.propeties files
 
