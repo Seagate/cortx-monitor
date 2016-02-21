@@ -34,11 +34,12 @@ class DriveMngrMsg(BaseSensorMsg):
                        drive_num,
                        status,
                        serial_num,
+                       path_id,
                        username  = "SSPL-LL",
                        signature = "N/A",
                        time      = "N/A",
                        expires   = -1):
-        super(DriveMngrMsg, self).__init__()         
+        super(DriveMngrMsg, self).__init__()
 
         self._username   = username
         self._signature  = signature
@@ -48,6 +49,7 @@ class DriveMngrMsg(BaseSensorMsg):
         self._drive_num  = drive_num
         self._status     = status
         self._serial_num = serial_num
+        self._path_id    = path_id
 
         self._json = {"title" : self.TITLE,
                       "description" : self.DESCRIPTION,
@@ -67,7 +69,8 @@ class DriveMngrMsg(BaseSensorMsg):
                                     "enclosureSN" : self._enclosure,
                                     "diskNum" : int(self._drive_num),
                                     "diskStatus" : self._status,
-                                    "serialNumber" : self._serial_num
+                                    "serialNumber" : self._serial_num,
+                                    "pathID" : self._path_id
                                     }
                                 }
                           }

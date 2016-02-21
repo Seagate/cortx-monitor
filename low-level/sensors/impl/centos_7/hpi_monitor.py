@@ -82,8 +82,12 @@ class HPIMonitor(ScheduledModuleThread, InternalMsgQ):
         """Run the monitoring periodically on its own thread."""
 
         self._log_debug("Running HPIMONITOR")
+
         # Check for debug mode being activated
         self._read_my_msgQ_noWait()
+
+        # Allow time for the openhpid service to come up and populate /tmp/dcs/hpi
+        time.sleep(20)
 
         self._log_debug("Start accepting requests")
         self._log_debug("run, CentOS 7 base directory: %s" % self._hpi_mntr_base_dir)
@@ -212,14 +216,15 @@ class HPIMonitor(ScheduledModuleThread, InternalMsgQ):
 
         # Parse out the drive location without the ending filename that changed
         driveloc = os.path.dirname(updated_file)
-        self._log_debug("_notify_DiskMsgHandler updated_file: %s, driveloc: %s" % 
-                        (updated_file, driveloc))
 
         # Check to see if the drive is present
         serial_number = self._gather_data(driveloc+"/serial_number")
         if serial_number == "ZBX_NOTPRESENT":
             return
-        
+
+        self._log_debug("_notify_DiskMsgHandler updated_file: %s" %
+                        updated_file)
+
         # Update the status to status_reason used throughout
         if self._gather_data(driveloc+"/status") == "available":
             status = "OK_None"
@@ -229,7 +234,7 @@ class HPIMonitor(ScheduledModuleThread, InternalMsgQ):
         # Send a message to the disk message handler to transmit
         json_data = {"sensor_response_type" : "disk_status_hpi",
                      "event_path"           : driveloc[len(self._hpi_mntr_base_dir)+1:],
-                     "status"               : self._gather_data(driveloc+"/status"),
+                     "status"               : status,
                      "drawer"               : self._gather_data(driveloc+"/drawer"),
                      "location"             : self._gather_data(driveloc+"/location"),
                      "manufacturer"         : self._gather_data(driveloc+"/manufacturer"),
@@ -240,7 +245,8 @@ class HPIMonitor(ScheduledModuleThread, InternalMsgQ):
                      }
 
         # Do nothing if the overall state has not changed anywhere
-        if self._drive_data[driveloc] == json_data:
+        if self._drive_data.get(driveloc) is not None and \
+            self._drive_data.get(driveloc) == json_data:
             return
 
         # Store the JSON data into the dict for global access
@@ -272,7 +278,7 @@ class HPIMonitor(ScheduledModuleThread, InternalMsgQ):
             def _validate_event_path(self, event_path):
                 """Returns true if the event path is valid for a status file"""
 
-                 # Validate the event path; must have disk and be a status and not be a swap file
+                 # Validate the event path; must have disk and not be a swap file
                 if "disk" not in event_path or \
                     (("status" not in event_path or \
                     "status.swp" in event_path) and  \

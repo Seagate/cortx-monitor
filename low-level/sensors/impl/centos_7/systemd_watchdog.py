@@ -2,7 +2,9 @@
  ****************************************************************************
  Filename:          systemd_watchdog.py
  Description:       Monitors Centos 7 systemd for service events and notifies
-                    the ServiceMsgHandler
+                    the ServiceMsgHandler.  Detects drive add/remove event,
+                    performs SMART on drives and notifies DiskMsgHandler.
+
  Creation Date:     04/27/2015
  Author:            Jake Abernathy
 
@@ -82,6 +84,9 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
         # Retrieves the frequency to run SMART tests on all the drives
         self._smart_interval = self._getSMART_interval()
 
+        # Dict of drives by-id symlink from systemd
+        self._drive_by_id = {}
+
         # Next time to run SMART tests
         self._next_smart_tm = datetime.now() + timedelta(seconds=self._smart_interval)
 
@@ -96,7 +101,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
         #self._set_debug_persist(True)
 
         # Allow time for the hpi_monitor to come up
-        time.sleep(20)
+        time.sleep(40)
 
         # Check for debug mode being activated
         self._read_my_msgQ_noWait()
@@ -121,10 +126,10 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
             self._disk_manager = Interface(disk_systemd, dbus_interface='org.freedesktop.DBus.ObjectManager')
 
             # Assign callbacks to all devices to capture signals
-            self._disk_manager.connect_to_signal('InterfacesAdded', self._device_added)
-            self._disk_manager.connect_to_signal('InterfacesRemoved', self._device_removed)
+            self._disk_manager.connect_to_signal('InterfacesAdded', self._interface_added)
+            self._disk_manager.connect_to_signal('InterfacesRemoved', self._interface_removed)
 
-            # Send a fresh list of drives to disk msg handler and perform SMART tests
+            # Notify DiskMsgHandler of available drives and schedule SMART tests
             self._init_drives()
 
             # Read in the list of services to monitor
@@ -231,55 +236,83 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
 
         self._log_debug("Finished processing successfully")
 
-    def _init_drives(self):
-        """Send a fresh list of drives to disk msg handler and perform SMART tests"""
-        # Get a list of all the object paths so we can access drives later and relay to disk_msg_handler
-        re_drive = re.compile('(?P<path>.*?/drives/(?P<id>.*))')
+    def _update_by_id_paths(self):
+        """Updates the global dict of by-id symlinks for each drive"""
+
+        # Refresh the set of managed systemd objects
         self._disk_objects = self._disk_manager.GetManagedObjects()
+
+        # Get a list of all the block devices available in systemd
+        re_blocks = re.compile('(?P<path>.*?/block_devices/(?P<id>.*))')
+        block_devs = [m.groupdict() for m in
+                      [re_blocks.match(path) for path in self._disk_objects.keys()]
+                      if m]
+
+        # Retrieve the by-id symlink for each drive and save in a dict with the drive path as key
+        for block_dev in block_devs:
+            if self._disk_objects[block_dev['path']].get('org.freedesktop.UDisks2.Block') is not None:
+                # Obtain the list of symlinks for the block device
+                udisk_block = self._disk_objects[block_dev['path']]["org.freedesktop.UDisks2.Block"]
+                symlinks = self._sanitize_dbus_value(udisk_block["Symlinks"])
+
+                # Parse out the wwn symlink if it exists otherwise use the by-id
+                for symlink in symlinks:
+                    if "wwwn" in symlink:
+                        self._drive_by_id[udisk_block["Drive"]] = symlink
+                    elif "by-id" in symlink:
+                        self._drive_by_id[udisk_block["Drive"]] = symlink
+
+    def _schedule_SMART_test(self, drive_path, test_type="short"):
+        """Schedules a SMART test to be executed on a drive
+           add_interface/remove_interface is the callback
+           on completion
+        """
+        if self._disk_objects[drive_path].get('org.freedesktop.UDisks2.Drive.Ata') is not None:
+            self._log_debug("Running SMART on serial: %s" % drive_path)
+
+            udisk_drive_ata = self._disk_objects[drive_path]['org.freedesktop.UDisks2.Drive.Ata']
+            dev_obj = self._bus.get_object('org.freedesktop.UDisks2', drive_path)
+
+            # Obtain an interface to the ATA drive and start the SMART test
+            idev_obj = Interface(dev_obj, 'org.freedesktop.UDisks2.Drive.Ata')
+            idev_obj.SmartSelftestStart(test_type, {})
+        else:
+            self._log_debug("Drive does not support SMART: %s", drive_path)
+
+    def _init_drives(self):
+        """Notifies DiskMsgHanlder of available drives and schedules a short SMART test"""
 
         # Good for debugging and seeing values available in all the interfaces so keeping here
         #for object_path, interfaces_and_properties in self._disk_objects.items():
         #    self._print_interfaces_and_properties(interfaces_and_properties)
 
-        # Parse out the list of available drives in the list of object
+        # Update the drive's by-id symlink paths
+        self._update_by_id_paths()
+
+        # Get a list of all the drive devices available in systemd
+        re_drive = re.compile('(?P<path>.*?/drives/(?P<id>.*))')
         drives = [m.groupdict() for m in
                   [re_drive.match(path) for path in self._disk_objects.keys()]
                   if m]
 
-        self._log_debug("Running SMART tests on drives at startup")
+        # Loop through all the drives and initiate a SMART test
         for drive in drives:
             try:
-                # Run SMART tests on all ATA drives at startup
-                if self._disk_objects[drive['path']].get('org.freedesktop.UDisks2.Drive.Ata') is not None:
+                if self._disk_objects[drive['path']].get('org.freedesktop.UDisks2.Drive') is not None:
                     # Get the drive's serial number
                     udisk_drive = self._disk_objects[drive['path']]['org.freedesktop.UDisks2.Drive']
                     serial_number = str(udisk_drive["Serial"])
 
-                    udisk_drive_ata = self._disk_objects[drive['path']]['org.freedesktop.UDisks2.Drive.Ata']
-                    dev_obj = self._bus.get_object('org.freedesktop.UDisks2', drive['path'])
+                    # Generate and send an internal msg to DiskMsgHandler that the drive is available
+                    self._notify_disk_msg_handler(drive['path'], "OK_None", serial_number)
 
-                    # Obtain an interface to the ATA drive 
-                    idev_obj = Interface(dev_obj, 'org.freedesktop.UDisks2.Drive.Ata')
-
-                    # Send a message to the disk manager handler to create and transmit json msg
-                    internal_json_msg = json.dumps(
-                                {"sensor_response_type" : "disk_status_drivemanager",
-                                 "object_path" : str(drive['path']),
-                                 "status" : "OK_None",
-                                 "serial_number" : serial_number
-                                 })
-
-                    # Send the event to disk message handler to generate json message
-                    self._write_internal_msgQ(DiskMsgHandler.name(), internal_json_msg)
-
-                    # Start the SMART test
-                    self._log_debug("Running SMART on serial: %s" % str(udisk_drive["Serial"]))
-                    idev_obj.SmartSelftestStart('short', {})
+                    # Schedule a SMART test to begin
+                    self._schedule_SMART_test(drive['path'])
 
             except Exception as ae:
-                self._log_debug("Exception: %r" % ae)
+                self._log_debug("_init_drives, Exception: %r" % ae)
 
-        # Next time to run SMART tests
+        # Update the next time to run SMART tests
         self._next_smart_tm = datetime.now() + timedelta(seconds=self._smart_interval)
 
     def _examine_inactive_services(self):
@@ -396,33 +429,40 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
         return self._conf_reader._get_value_list(self.SYSTEMDWATCHDOG,
                                                  self.MONITORED_SERVICES)
 
-    def _device_added(self, object_path, interfaces_and_properties):
-        """Callback for when a new device or SMART job has been added"""
+    def _interface_added(self, object_path, interfaces_and_properties):
+        """Callback for when an interface like drive or SMART job has been added"""
         try:
-            self._log_debug("Device/Job Added")
+            self._log_debug("Interface Added")
             self._log_debug("  Object Path: %r" % object_path)
+
+            # Handle drives added
             if interfaces_and_properties.get("org.freedesktop.UDisks2.Drive") is not None:
+                # Update the drive's by-id symlink paths
+                self._update_by_id_paths()
+
                 serial_number = "{}".format(
                         str(interfaces_and_properties["org.freedesktop.UDisks2.Drive"]["Serial"]))
                 self._log_debug("  Serial number: %s" % serial_number)
 
-                # Send a message to the disk manager handler to create and transmit json msg
-                internal_json_msg = json.dumps(
-                    {"sensor_response_type" : "disk_status_drivemanager",
-                     "object_path" : str(object_path),
-                     "status" : "OK_None",
-                     "serial_number" : serial_number
-                    })
+                # Generate and send an internal msg to DiskMsgHandler
+                self._notify_disk_msg_handler(object_path, "OK_None", serial_number)
 
-                # Send the event to disk message handler to generate json message
-                self._write_internal_msgQ(DiskMsgHandler.name(), internal_json_msg)
+                # Schedule a conveyance type SMART test on new drives
+                self._schedule_SMART_test(object_path, test_type='conveyance')
 
                 # Display info about the added device
                 self._print_interfaces_and_properties(interfaces_and_properties)
 
-                # Update the list of managed objects when a new device has been added
-            	self._disk_objects = self._disk_manager.GetManagedObjects()
+                # Restart openhpid to update HPI data if it's not available
+                internal_json_msg = json.dumps(
+                                        {"actuator_request_type": {
+                                            "service_controller": {
+                                                "service_name" : "openhpid.service",
+                                                "service_request": "restart"
+                                        }}})
+                self._write_internal_msgQ(ServiceMsgHandler.name(), internal_json_msg)
 
+            # Handle jobs like SMART tests being initiated
             elif interfaces_and_properties.get("org.freedesktop.UDisks2.Job") is not None:
                Iprops = interfaces_and_properties.get("org.freedesktop.UDisks2.Job")
                if Iprops.get("Operation") is not None and \
@@ -432,41 +472,35 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                 self._smart_jobs[object_path] = Iprops
 
                 # Display info about the SMART test starting
-            	self._print_interfaces_and_properties(interfaces_and_properties)
+                self._print_interfaces_and_properties(interfaces_and_properties)
 
         except Exception as ae:
-            self._log_debug("_device_added: Exception: %r" % ae)
+            self._log_debug("_interface_added: Exception: %r" % ae)
 
-    def _device_removed(self, object_path, interfaces):
-        """Callback for when a drive or SMART job has been removed"""
-        self._log_debug("Device/Job Removed")
+    def _interface_removed(self, object_path, interfaces):
+        """Callback for when an interface like drive or SMART job has been removed"""
+        self._log_debug("Interface Removed")
         self._log_debug("  Object Path: %r" % object_path)
 
         for interface in interfaces:
             try:
+                # Handle drives removed
                 if interface == "org.freedesktop.UDisks2.Drive":
                     # Retrieve the serial number
                     udisk_drive = self._disk_objects[object_path]['org.freedesktop.UDisks2.Drive']
                     serial_number = str(udisk_drive["Serial"])
                     self._log_debug("  Serial Number: %s" % serial_number)
 
-                    # Send a message to the disk manager handler to create and transmit json msg
-                    internal_json_msg = json.dumps(
-                        {"sensor_response_type" : "disk_status_drivemanager",
-                         "object_path" : str(object_path),
-                         "status" : "EMPTY_None",
-                         "serial_number" : serial_number
-                        })
+                    # Generate and send an internal msg to DiskMsgHandler
+                    self._notify_disk_msg_handler(object_path, "EMPTY_None", serial_number)
 
-                    # Send the event to disk message handler to generate json message
-                    self._write_internal_msgQ(DiskMsgHandler.name(), internal_json_msg)
-
+                # Handle jobs completed like SMART tests 
                 elif interface == "org.freedesktop.UDisks2.Job":
-                    # Retrieve the save SMART data when the test was started
-                    smart_job = self._smart_jobs[object_path]
+                    # Retrieve the saved SMART data when the test was started
+                    smart_job = self._smart_jobs.get(object_path)
                     if smart_job is None:
                         self._log_debug("SMART job not found, ignoring: %s" % object_path)
-                        continue
+                        return
 
                     # Loop through all the currently managed objects and retrieve the smart status
                     for disk_path, interfaces_and_properties in self._disk_objects.items():
@@ -481,11 +515,12 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
 
                             # Process the SMART status and cleanup
                             self._process_smart_status(disk_path, smart_status, serial_number)
-                            self._smart_jobs[object_path] = {}
+                            self._smart_jobs[object_path] = None
                             return
 
             except Exception as ae:
-            	self._log_debug("_device_removed: Exception: %r" % ae)
+            	self._log_debug("interface_removed: Exception: %r" % ae) # Drive was removed during SMART?
+                self._log_debug("Possible cause: Job not found because service was recently restarted")
 
     def _process_smart_status(self, disk_path, smart_status, serial_number):
         """Create the status_reason field and notify disk msg handler"""
@@ -497,6 +532,8 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
         # http://udisks.freedesktop.org/docs/latest/gdbus-org.freedesktop.UDisks2.Drive.Ata.html#gdbus-property-org-freedesktop-UDisks2-Drive-Ata.SmartSelftestStatus
         if smart_status.lower() == "success":
             status_reason = "OK_None"
+        elif smart_status.lower() == "interrupted":
+            status_reason = "Unknown_smart_interrupted"
         elif smart_status.lower() == "aborted":
             status_reason = "Unknown_smart_aborted"
         elif smart_status.lower() == "fatal":
@@ -512,34 +549,50 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
         elif smart_status.lower() == "error_handling":
             status_reason = "Failed_smart_damage"
         else:
-            status_reason = "Unknown smart status {}_unknown".format(smart_status)
+            status_reason = "Unknown smart status: {}_unknown".format(smart_status)
+            
+        # Generate and send an internal msg to DiskMsgHandler
+        self._notify_disk_msg_handler(disk_path, status_reason, serial_number)
 
-        # Send a message to the disk manager handler to create and transmit json msg
-        internal_json_msg = json.dumps(
-        	{"sensor_response_type" : "disk_status_drivemanager",
-                 "object_path" : disk_path,
-                 "status" : status_reason,
-                 "serial_number" : serial_number
-                })
+    def _notify_disk_msg_handler(self, disk_path, status_reason, serial_number):
+        """Sends an internal msg to DiskMsgHandler with a drives status"""
+
+        # Retrieve the by-id simlink for the disk
+        path_id = self._drive_by_id[disk_path]
+
+        internal_json_msg = {"sensor_response_type" : "disk_status_drivemanager",
+                             "status" : status_reason,
+                             "serial_number" : serial_number,
+                             "path_id" : path_id
+                             }
         # Send the event to disk message handler to generate json message
         self._write_internal_msgQ(DiskMsgHandler.name(), internal_json_msg)
 
     def _sanitize_dbus_value(self, value):
-        """
-        Convert certain DBus type combinations so that they are easier to read
-        """
+        """Convert certain DBus type combinations so that they are easier to read"""
         if isinstance(value, Array) and value.signature == "ay":
-            # Symlinks are reported as extremely verbose dbus.Array of
-            # dbus.Array dbus.Byte Let's support that single odd case
-            # and convert them to Unicode strings, loosely
-            return [bytes(item).decode("UTF-8", "replace").strip("\0")
-                    for item in value]
+            try:
+                return self._decode_ay(value)
+            except:
+                # Try an array of arrays; 'aay' which is the symlinks
+                return list(map(self._decode_ay, value or ()))
         elif isinstance(value, Array) and value.signature == "y":
-            # Some other things are reported as array of bytes that are again,
-            # just strings but due to Unix heritage, of unknown encoding
-            return bytes(value).decode("UTF-8", "replace").strip("\0")
+            return bytearray(value).rstrip(bytearray((0,))).decode('utf-8')
         else:
             return value
+
+    def _decode_ay(self, value):
+        """Convert binary blob from DBus queries to strings"""
+        if len(value) == 0 or \
+           value is None:
+            return ''
+        elif isinstance(value, unicode):
+            return value
+        elif isinstance(value, bytes):
+            return value.decode('utf-8')
+        else:
+            # dbus.Array([dbus.Byte]) or any similar sequence type:
+            return bytearray(value).rstrip(bytearray((0,))).decode('utf-8')
 
     def _print_interfaces_and_properties(self, interfaces_and_properties):
         """
@@ -550,7 +603,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
             http://dbus.freedesktop.org/doc/dbus-specification.html#standard-interfaces-objectmanager
         """
         for interface_name, properties in interfaces_and_properties.items():
-            self._log_debug("Interface {}".format(interface_name))
+            self._log_debug("  Interface {}".format(interface_name))
             for prop_name, prop_value in properties.items():
                 prop_value = self._sanitize_dbus_value(prop_value)
                 self._log_debug("  {}: {}".format(prop_name, prop_value))
@@ -560,7 +613,6 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
         return int(self._conf_reader._get_value_with_default(self.SYSTEMDWATCHDOG,
                                                          self.SMART_TEST_INTERVAL,
                                                          86400))
-
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""
         super(SystemdWatchdog, self).shutdown()

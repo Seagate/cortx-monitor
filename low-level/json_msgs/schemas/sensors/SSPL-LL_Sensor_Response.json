@@ -61,7 +61,7 @@
 							"type" : "object",
 							"properties": {
 								"diskNum" : {
-									"description" : "Drive Number within the enclosure",
+									"description" : "Disk Number within the enclosure",
 									"type" : "number",
 									"required" : true
 								},
@@ -77,6 +77,11 @@
 								},
 								"serialNumber" : {
 									"description" : "Disk Serial Number",
+									"type" : "string",
+									"required" : true
+								},
+								"pathID" : {
+									"description" : "Disk by-id Symlink",
 									"type" : "string",
 									"required" : true
 								}
@@ -134,6 +139,11 @@
 								"enclosureSN" : {
 									"description" : "Enclosure Serial Number",
 									"type" : "string",
+									"required" : true
+								}, 
+								"diskNum" : {
+									"description" : "Drive Number within the enclosure",
+									"type" : "number",
 									"required" : true
 								}
 							}

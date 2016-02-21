@@ -124,7 +124,7 @@ def main():
             file = "../tests/manual/actuator_msgs/node_cntrl_pdu.json"
             jsonMsg = json.loads(open(file).read())
             jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = u"RESET_DRIVE: {}".format(args.resetdrive)
-            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human)
+            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, response_wait_time=60)
 
         elif args.smart:
             # Load a smart test message from the manual tests directory and update it with args.smart
@@ -196,7 +196,7 @@ def main():
                     drive = hdparm_response[15:].strip()
                     print("Successfully retrieved s/n: %s" % drive)
 
-            log_msg = "IEC: 020001003: Halon Disk Status: {'status': '%s', 'reason': '%s'," \
+            log_msg = "IEC: 038001001: Halon Disk Status: {'status': '%s', 'reason': '%s'," \
                         "'serial_number': '%s'}" % (status, reason, drive)
             print("log_msg: %s" % log_msg)
 

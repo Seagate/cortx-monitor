@@ -114,14 +114,15 @@ class LoggingMsgHandler(ScheduledModuleThread, InternalMsgQ):
             serial_number = json_data.get("serial_number")
             status = json_data.get("status")
             reason = json_data.get("reason")
-            self._log_debug("_processMsg, serial_number: %s, status: %s, reason: %s" 
-                            % (serial_number, status, reason))                
+            self._log_debug("_processMsg, serial_number: %s, status: %s, reason: %s"
+                            % (serial_number, status, reason))
 
             # Send a message to the disk manager handler to create and transmit json msg
             internal_json_msg = json.dumps(
-                 {"sensor_response_type" : "disk_status_drivemanager",
+                 {"sensor_response_type" : "disk_status_HDS",
                   "object_path" : "HDS",
-                  "status" : "{}_{}".format(status, reason),
+                  "status" : status,
+                  "reason" : reason,
                   "serial_number" : serial_number
                  })
 

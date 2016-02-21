@@ -64,13 +64,16 @@ class WbcliResetDrive(Debug):
                 return "Error: {0}".format(str(error))
             self._log_debug("perform_request, using scsi device: %s" % scsi_dev)
 
-            # Get the serial number of the drive
-            command = "sudo /usr/sbin/hdparm -I {0} | grep 'Serial Number:'".format(drive_request)
-            response, error = self._run_command(command)
-            if error:
-                return "Error: {0}".format(str(error))
+            # Get the serial number of the drive if the device name was used in command
+            if drive_request.startswith("/"):
+                command = "sudo /usr/sbin/hdparm -I {0} | grep 'Serial Number:'".format(drive_request)
+                response, error = self._run_command(command)
+                if error:
+                    return "Error: {0}".format(str(error))
 
-            serial_num = response.strip().split(" ")[-1]
+                serial_num = response.strip().split(" ")[-1]
+            else:
+                serial_num = drive_request
             self._log_debug("perform_request, drive serial number: %s" % serial_num)
 
             # Recursively grep through the drivemanager dir with the serial number and get the path

@@ -17,7 +17,7 @@
 			"logging": {
 				"log_level": "LOG_WARNING",
 				"log_type": "HDS",
-				"log_msg": "IEC: 020001003: Halon Disk Status: {'status': 'Failed', 'reason': 'mero_timeout', 'serial_number':'Z8407SB0'}"
+				"log_msg": "IEC: 038001001: Halon Disk Status: {'status': 'Failed', 'reason': 'mero_timeout', 'serial_number':'Z8407SB0'}"
 			}
 		}
 	}

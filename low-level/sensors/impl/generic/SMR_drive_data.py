@@ -83,7 +83,7 @@ class SMRdriveData(ScheduledModuleThread, InternalMsgQ):
         self._read_my_msgQ_noWait()
 
         # Slight pause so we don't clutter up logs with other threads initializing
-        time.sleep(30)
+        time.sleep(60)
 
         try:
             # Loop thru all the devices starting with an sg
