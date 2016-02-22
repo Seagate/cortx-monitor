@@ -41,6 +41,10 @@ class DriveMngrMsg(BaseSensorMsg):
                        expires   = -1):
         super(DriveMngrMsg, self).__init__()
 
+        # Split apart the drive status into status and reason values
+        # Status is first word before the first '_'
+        status, reason = str(status).split("_", 1)
+
         self._username   = username
         self._signature  = signature
         self._time       = time
@@ -48,6 +52,7 @@ class DriveMngrMsg(BaseSensorMsg):
         self._enclosure  = enclosure
         self._drive_num  = drive_num
         self._status     = status
+        self._reason     = reason
         self._serial_num = serial_num
         self._path_id    = path_id
 
@@ -65,10 +70,11 @@ class DriveMngrMsg(BaseSensorMsg):
                                 "msg_version" : self.MESSAGE_VERSION
                                 },
                           "sensor_response_type": {
-                                self.SENSOR_RESPONSE_TYPE: {                      
+                                self.SENSOR_RESPONSE_TYPE: {
                                     "enclosureSN" : self._enclosure,
                                     "diskNum" : int(self._drive_num),
                                     "diskStatus" : self._status,
+                                    "diskReason" : self._reason,
                                     "serialNumber" : self._serial_num,
                                     "pathID" : self._path_id
                                     }

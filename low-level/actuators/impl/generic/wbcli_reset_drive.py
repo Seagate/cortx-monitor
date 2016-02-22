@@ -105,7 +105,7 @@ class WbcliResetDrive(Debug):
             response, error = self._run_command(command)
             
             # Pause to allow time for poweron
-            time.sleep(30)
+            time.sleep(45)
  
             # Should be no error or response if wbcli was successful
             if error or response:

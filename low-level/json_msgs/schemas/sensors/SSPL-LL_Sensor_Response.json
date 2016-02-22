@@ -75,6 +75,11 @@
 									"type" : "string",
 									"required" : true
 								},
+								"diskReason" : {
+									"description" : "Disk Reason",
+									"type" : "string",
+									"required" : true
+								},
 								"serialNumber" : {
 									"description" : "Disk Serial Number",
 									"type" : "string",
