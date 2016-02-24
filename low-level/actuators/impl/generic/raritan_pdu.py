@@ -73,7 +73,13 @@ class RaritanPDU(Debug):
             self._log_debug("perform_request, pdu_request: %s" % pdu_request)
 
             # Create the serial port object and open the connection
-            self._connection = serial.Serial(self._comm_port, 115200 , timeout=1)
+            login_attempts = 0
+            try:
+                self._connection = serial.Serial(self._comm_port, 115200 , timeout=1)
+            except Exception as ae:
+                logger.info("Serial Port connection failure: %r" % ae)
+                # Attempt network connection
+                login_attempts = self._max_login_attempts
 
             # Send user/pass until max attempts has been reached
             login_attempts = 0

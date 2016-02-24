@@ -122,15 +122,31 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
             # Drivemanager events from systemd watchdog sensor
             if sensor_response_type == "disk_status_drivemanager":
-                self._process_drivemanager_response(jsonMsg)
+                # Serial number is used as an index into dicts
+                serial_number = jsonMsg.get("serial_number")
+
+                # An * in the serial_number field indicates a request to send all the current data
+                if serial_number == "*":
+                    self._transmit_all_drivemanager_responses()
+                    return
+
+                self._process_drivemanager_response(jsonMsg, serial_number)
 
             # Halon Disk Status (HDS log) events from the logging msg handler
             elif sensor_response_type == "disk_status_HDS":
-                self._process_HDS_response(jsonMsg)
+                self._process_HDS_response(jsonMsg, serial_number)
 
             # HPI events from the HPI monitor sensor
             elif sensor_response_type == "disk_status_hpi":
-                self._process_hpi_response(jsonMsg)
+                # Serial number is used as an index into dicts
+                serial_number = jsonMsg.get("serial_number")
+
+                # An * in the serial_number field indicates a request to send all the current data
+                if serial_number == "*":
+                    self._transmit_all_HPI_responses()
+                    return
+
+                self._process_hpi_response(jsonMsg, serial_number)
 
             # ... handle other disk sensor response types
             else:
@@ -310,10 +326,26 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
         # Send the json message to the RabbitMQ processor to transmit out
         self._write_internal_msgQ(RabbitMQegressProcessor.name(), internal_json_msg)
 
-    def _process_drivemanager_response(self, jsonMsg):
+    def _transmit_all_drivemanager_responses(self):
+        """Transmit all drivemanager data for every drive"""
+        for drive in self._drvmngr_drives:
+            # Obtain json message containing all relevant data
+            internal_json_msg = drive.toDriveMngrJsonMsg().getJson()
+
+            # Send the json message to the RabbitMQ processor to transmit out
+            self._write_internal_msgQ(RabbitMQegressProcessor.name(), internal_json_msg)
+
+    def _transmit_all_HPI_responses(self):
+        """Transmit all HPI data for every drive"""
+        for drive in self.self._hpi_drives:
+            # Obtain json message containing all relevant data
+            internal_json_msg = drive.toHPIjsonMsg().getJson()
+
+            # Send the json message to the RabbitMQ processor to transmit out
+            self._write_internal_msgQ(RabbitMQegressProcessor.name(), internal_json_msg)
+
+    def _process_drivemanager_response(self, jsonMsg, serial_number):
         """Process a disk_status_drivemanager msg sent from systemd watchdog"""
-        # Serial number is used as an index into dicts
-        serial_number = jsonMsg.get("serial_number")
 
         # See if we have an existing drive object and update it
         if self._drvmngr_drives.get(serial_number) is not None:
@@ -382,14 +414,14 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
         # Write the serial number and status to DCS file
         self._serialize_disk_status()
 
-    def _process_hpi_response(self, jsonMsg):
+    def _process_hpi_response(self, jsonMsg, serial_number):
         """Process a hpi_status msg sent from HPI Monitor Sensor"""
 
         # Convert to Drive object to handle parsing and json conversion, etc
         drive = Drive(self._host_id,
                       jsonMsg.get("event_path"),
                       jsonMsg.get("status"),
-                      jsonMsg.get("serialNumber"),
+                      serial_number,
                       jsonMsg.get("drawer"),
                       jsonMsg.get("location"),
                       jsonMsg.get("manufacturer"),
@@ -405,7 +437,6 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
             return
 
         # Update the dict of hpi drives
-        serial_number = jsonMsg.get("serialNumber")
         self._hpi_drives[serial_number] = drive
 
         # Obtain json message containing all relevant data

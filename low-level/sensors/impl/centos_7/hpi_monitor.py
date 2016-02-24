@@ -187,7 +187,7 @@ class HPIMonitor(ScheduledModuleThread, InternalMsgQ):
                             "manufacturer"      : self._gather_data(driveloc+"/manufacturer"),
                             "productName"       : self._gather_data(driveloc+"/product_name"),
                             "productVersion"    : self._gather_data(driveloc+"/product_version"),
-                            "serialNumber"      : serial_number,
+                            "serial_number"     : serial_number,
                             "wwn"               : self._gather_data(driveloc+"/wwn")
                         }
 
@@ -240,7 +240,7 @@ class HPIMonitor(ScheduledModuleThread, InternalMsgQ):
                      "manufacturer"         : self._gather_data(driveloc+"/manufacturer"),
                      "productName"          : self._gather_data(driveloc+"/product_name"),
                      "productVersion"       : self._gather_data(driveloc+"/product_version"),
-                     "serialNumber"         : serial_number,
+                     "serial_number"        : serial_number,
                      "wwn"                  : self._gather_data(driveloc+"/wwn")
                      }
 
