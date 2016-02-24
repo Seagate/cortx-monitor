@@ -13,6 +13,11 @@
  or disclosure of this code, for any reason, not expressly authorized is
  prohibited. All other rights are expressly reserved by Seagate Technology, LLC.
  ****************************************************************************
+ 
+ 
+         This Sensor Has Been Deprecated by the Systemd Watchdog
+         02/01/2016 Jake Abernathy
+ 
 """
 import os
 import json

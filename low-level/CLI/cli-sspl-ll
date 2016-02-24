@@ -134,7 +134,7 @@ def main():
 
             wait_time = 3
             if "*" in str(args.smart):
-                wait_time = 20
+                wait_time = 30
     
             _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, response_wait_time=wait_time)
 
@@ -145,20 +145,20 @@ def main():
             jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = u"DRVMNGR_STATUS: {}".format(args.drvmngr)
 
             wait_time = 3
-            if "*" in str(args.smart):
-                wait_time = 20
+            if "*" in str(args.drvmngr):
+                wait_time = 30
 
             _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, response_wait_time=wait_time)
 
         elif args.hpi:
             # Load a reset hpi status message from the manual tests directory and update it with args.hpi
-            file = "../tests/manual/actuator_msgs/node_cntrl_drvmngr_status.json"
+            file = "../tests/manual/actuator_msgs/node_cntrl_hpi_status.json"
             jsonMsg = json.loads(open(file).read())
             jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = u"HPI_STATUS: {}".format(args.hpi)
 
             wait_time = 3
-            if "*" in str(args.smart):
-                wait_time = 20
+            if "*" in str(args.hpi):
+                wait_time = 30
 
             _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, response_wait_time=wait_time)
 

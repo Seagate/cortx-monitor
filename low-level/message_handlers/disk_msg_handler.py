@@ -44,7 +44,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
     # Section and keys in configuration file
     DISKMSGHANDLER = MODULE_NAME.upper()
     DMREPORT_FILE  = 'dmreport_file'
-
+    ALWAYS_LOG_IEM = 'always_log_iem'
 
     @staticmethod
     def name():
@@ -71,6 +71,9 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
         # Read in the location to serialize drive_manager.json
         self._dmreport_file = self._getDMreport_File()
+
+        # Bool flag signifying to always log disk status even when it hasn't changed
+        self._always_log_IEM = self._getAlways_log_IEM()
 
         # Dict of drive manager data for drives
         self._drvmngr_drives = {}
@@ -321,7 +324,9 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
             drive = self._drvmngr_drives.get(serial_number)
             if drive.get_drive_status().lower() == status.lower() and \
                 drive.get_path_id() == path_id:
-                return
+
+                if not self._always_log_IEM:
+                    return
 
             # Ignore if current drive status has 'halon' in it which has precedence over all others
             if "halon" in drive.get_drive_status().lower():
@@ -363,6 +368,10 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
             # Update the dict of drive manager drives and write s/n and status to file
             self._drvmngr_drives[serial_number] = drive
+
+            # Log an IEM if flag is set to do so
+            if self._always_log_IEM:
+                self._log_IEM(drive)
 
         # Obtain json message containing all relevant data
         internal_json_msg = drive.toDriveMngrJsonMsg().getJson()
@@ -406,8 +415,14 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
         self._log_debug("_process_msg, internal_json_msg: %s" % internal_json_msg)
         self._write_internal_msgQ(RabbitMQegressProcessor.name(), internal_json_msg)
 
-        # See if there is a drivemanager drive available and update its HPI data
+        # See if there is a drivemanager drive available and update its HPI data if changed
         if self._drvmngr_drives.get(serial_number) is not None:
+
+            # Ignore if nothing changed otherwise send json msg, serialize and log IEM
+            if drivemngr_drive.get_drive_enclosure() == drive.get_drive_enclosure() and \
+                drivemngr_drive.get_drive_num() == drive.get_drive_num():
+                    return
+
             drivemngr_drive = self._drvmngr_drives.get(serial_number)
             drivemngr_drive.set_drive_enclosure(drive.get_drive_enclosure())
             drivemngr_drive.set_drive_num(drive.get_drive_num())
@@ -513,7 +528,12 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
         return self._conf_reader._get_value_with_default(self.DISKMSGHANDLER,
                                                          self.DMREPORT_FILE,
                                                          '/tmp/dcs/dmreport/drive_manager.json')
-
+    def _getAlways_log_IEM(self):
+        """Retrieves flag signifying we should always log disk status as an IEM even if they 
+            haven't changed.  This is useful for always logging SMART results"""
+        val = bool(self._conf_reader._get_value_with_default(self.DISKMSGHANDLER,
+                                                              self.ALWAYS_LOG_IEM,
+                                                              False))
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""
         super(DiskMsgHandler, self).shutdown()
