@@ -135,7 +135,7 @@ def main():
             wait_time = 3
             if "*" in str(args.smart):
                 wait_time = 30
-    
+
             _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, response_wait_time=wait_time)
 
         elif args.drvmngr:

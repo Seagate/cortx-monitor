@@ -450,11 +450,11 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
         if self._drvmngr_drives.get(serial_number) is not None:
 
             # Ignore if nothing changed otherwise send json msg, serialize and log IEM
+            drivemngr_drive = self._drvmngr_drives.get(serial_number)
             if drivemngr_drive.get_drive_enclosure() == drive.get_drive_enclosure() and \
                 drivemngr_drive.get_drive_num() == drive.get_drive_num():
                     return
 
-            drivemngr_drive = self._drvmngr_drives.get(serial_number)
             drivemngr_drive.set_drive_enclosure(drive.get_drive_enclosure())
             drivemngr_drive.set_drive_num(drive.get_drive_num())
 
