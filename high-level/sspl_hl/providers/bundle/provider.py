@@ -58,7 +58,10 @@ class SupportBundleProvider(BaseCastorProvider):
         elif command == 'create':
             bundling_handler = SupportBundleHandler()
             bundle_name = utils.get_curr_datetime_str()
-            deferred_create = bundling_handler.collect(bundle_name)
+            deferred_create = deferToThread(
+                bundling_handler.collect,
+                bundle_name
+            )
             deferred_create.addCallback(
                 self.handle_success_create_bundle,
                 request)

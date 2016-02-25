@@ -111,10 +111,13 @@ def create_bundle_structure(base_path, dir_info):
     Create empty bundle structure
     """
     try:
-        create_dir(base_path, dir_info)
+        bundle_path = os.path.join(base_path, dir_info)
+        os.mkdir(bundle_path)
     except OSError:
-        return False
-    return True
+        if os.path.exists(bundle_path):
+            pass
+        else:
+            raise
 
 
 def create_dir(base_path, dir_info):

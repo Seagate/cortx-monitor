@@ -31,7 +31,7 @@ from sspl_hl.utils.support_bundle.file_collector.file_collector import \
     McoRemoteFileCollector
 import os
 from sspl_hl.utils.common import execute_shell
-from plex.util.concurrent.executor_safe import ExecutorSafe, executorSafe
+from plex.util.concurrent.executor_safe import ExecutorSafe
 from plex.util.concurrent.single_thread_executor import SingleThreadExecutor
 import plex.core.log as logger
 
@@ -54,7 +54,6 @@ class SupportBundleHandler(ExecutorSafe):
         self._file_collection_rules = None
         self._ssu_list = []
 
-    @executorSafe
     def collect(self, bundle_name):
         # todo: collection info parameter should be added.
         """
@@ -77,7 +76,7 @@ class SupportBundleHandler(ExecutorSafe):
         )
         bundle_utils.create_bundle_structure(
             config.BASE_BUCKET_PATH,
-            bundle_dir_info
+            bundle_name
         )
         self._file_collection_rules = \
             ClusterFilesCollectionRules(self._ssu_list,
