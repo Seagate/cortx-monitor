@@ -33,3 +33,7 @@ systemctl restart openhpid
 
 # Grant IO abilities so that we can send ATA commands to drives as sspl-ll user
 setcap cap_sys_rawio=ep /usr/bin/python2.7
+
+# Make sure security policies are in place
+cp /opt/seagate/sspl/low-level/files/sspl-ll_dbus_policy.rules /etc/polkit-1/rules.d
+cp /opt/seagate/sspl/low-level/files/sspl-ll_dbus_policy.conf /etc/dbus-1/system.d
