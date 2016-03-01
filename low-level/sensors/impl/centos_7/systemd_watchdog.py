@@ -225,8 +225,8 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
             # Check for debug mode being activated when it breaks out of blocking loop
             self._read_my_msgQ_noWait()
             if self.is_running() == True:
-                self._log_debug("Ungracefully breaking " \
-                                "out of dbus loop with error: %r" % ae)
+                self._log_debug("Ungracefully breaking out of dbus loop with error: %s" 
+                                % ae)
                 # Let the top level sspl_ll_d know that we have a fatal error
                 #  and shutdown so that systemd can restart it
                 raise Exception(ae)
@@ -277,7 +277,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
             idev_obj = Interface(dev_obj, 'org.freedesktop.UDisks2.Drive.Ata')
             idev_obj.SmartSelftestStart(test_type, {})
         else:
-            self._log_debug("Drive does not support SMART: %s", drive_path)
+            self._log_debug("Drive does not support SMART: %s" % drive_path)
 
     def _init_drives(self):
         """Notifies DiskMsgHanlder of available drives and schedules a short SMART test"""
@@ -310,7 +310,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                     self._schedule_SMART_test(drive['path'])
 
             except Exception as ae:
-                self._log_debug("_init_drives, Exception: %r" % ae)
+                self._log_debug("_init_drives, Exception: %s" % ae)
 
         # Update the next time to run SMART tests
         self._next_smart_tm = datetime.now() + timedelta(seconds=self._smart_interval)

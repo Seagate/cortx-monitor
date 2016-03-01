@@ -91,10 +91,11 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
 
             self._channel.start_consuming()
 
-        except Exception:
+        except Exception as ae:
             if self.is_running() == True:
-                logger.info("LoggingProcessor ungracefully breaking out of run loop, restarting.")
-                self._scheduler.enter(10, self._priority, self.run, ())
+                logger.info("LoggingProcessor ungracefully breaking out of run loop, restarting: %s" 
+                            % ae)
+                self._scheduler.enter(1, self._priority, self.run, ())
             else:
                 logger.info("LoggingProcessor gracefully breaking out of run Loop, not restarting.")
 

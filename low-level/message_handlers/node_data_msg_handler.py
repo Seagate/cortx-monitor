@@ -120,11 +120,11 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     if jsonMsg is not None:
                         self._process_msg(jsonMsg)
 
-        except Exception:
+        except Exception as ae:
             # Log it and restart the whole process when a failure occurs
-            logger.exception("NodeDataMsgHandler restarting")
+            logger.exception("NodeDataMsgHandler restarting: %s" % ae)
 
-        self._scheduler.enter(10, self._priority, self.run, ())
+        self._scheduler.enter(1, self._priority, self.run, ())
         self._log_debug("Finished processing successfully")
 
     def _process_msg(self, jsonMsg):
