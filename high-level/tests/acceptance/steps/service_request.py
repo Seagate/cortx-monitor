@@ -60,6 +60,26 @@ def when_i_run(_, cli_command):
     lettuce.world.exitcode = proc.returncode
 
 
+@lettuce.step(u'Then a create bundleRequest message to "([^"]*)" is sent')
+def bundle_create_cmd_request_sent(_, command):
+    """ Ensure proper message generated and enqueued. """
+    contents = lettuce.world.response
+    assert 'Bundle creation has been initiated' in contents, \
+        "Command: bundle {cmd} Message doesn't match. \
+        Expected bundle create but got '{actual}'" \
+        .format(cmd=command, actual=contents)
+
+
+@lettuce.step(u'Then a list bundleRequest message to "([^"]*)" is sent')
+def bundle_list_cmd_request_sent(_, command):
+    """ Ensure proper message generated and enqueued. """
+    contents = lettuce.world.response
+    assert 'Total bundles available' in contents, \
+        "Command: bundle {cmd} Message doesn't match. \
+        Expected bundle list but got '{actual}'" \
+        .format(cmd=command, actual=contents)
+
+
 # @lettuce.step(
 #     u'Then a nodeRequest message to "([^"]*)" --node_spec "([^"]*)" is sent'
 # )
