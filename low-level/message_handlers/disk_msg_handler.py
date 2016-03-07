@@ -120,17 +120,17 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
             sensor_response_type = jsonMsg.get("sensor_response_type")
             self._log_debug("_processMsg, sensor_response_type: %s" % sensor_response_type)
 
+            # Serial number is used as an index into dicts
+            serial_number = jsonMsg.get("serial_number")
+
             # Drivemanager events from systemd watchdog sensor
             if sensor_response_type == "disk_status_drivemanager":
-                # Serial number is used as an index into dicts
-                serial_number = jsonMsg.get("serial_number")
 
                 # An * in the serial_number field indicates a request to send all the current data
                 if serial_number == "*":
                     self._transmit_all_drivemanager_responses()
-                    return
-
-                self._process_drivemanager_response(jsonMsg, serial_number)
+                else:
+                    self._process_drivemanager_response(jsonMsg, serial_number)
 
             # Halon Disk Status (HDS log) events from the logging msg handler
             elif sensor_response_type == "disk_status_HDS":
@@ -144,9 +144,8 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 # An * in the serial_number field indicates a request to send all the current data
                 if serial_number == "*":
                     self._transmit_all_HPI_responses()
-                    return
-
-                self._process_hpi_response(jsonMsg, serial_number)
+                else:
+                    self._process_hpi_response(jsonMsg, serial_number)
 
             # ... handle other disk sensor response types
             else:
@@ -162,6 +161,8 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
             self._log_debug("_processMsg, serial_number: %s" % serial_number)
 
             node_request = jsonMsg.get("node_request")
+            
+            # Parse out the UUID and save to send back in response if it's availabe
             uuid = None
             if jsonMsg.get("uuid") is not None:
                 uuid = jsonMsg.get("uuid")
