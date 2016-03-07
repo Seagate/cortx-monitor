@@ -138,9 +138,6 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
             # HPI events from the HPI monitor sensor
             elif sensor_response_type == "disk_status_hpi":
-                # Serial number is used as an index into dicts
-                serial_number = jsonMsg.get("serial_number")
-
                 # An * in the serial_number field indicates a request to send all the current data
                 if serial_number == "*":
                     self._transmit_all_HPI_responses()
@@ -149,7 +146,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
             # ... handle other disk sensor response types
             else:
-                logger.warn("_process_msg, received unknown sensor msg: %s" % jsonMsg)
+                logger.warn("_process_msg, received unknown sensor response msg: %s" % jsonMsg)
 
         # Handle sensor request type messages
         # TODO: Break this apart into small methods on a rainy day
@@ -157,16 +154,17 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
             sensor_request_type = jsonMsg.get("sensor_request_type")
             self._log_debug("_processMsg, sensor_request_type: %s" % sensor_request_type)
 
+            # Serial number is used as an index into dicts
             serial_number = jsonMsg.get("serial_number")
             self._log_debug("_processMsg, serial_number: %s" % serial_number)
 
             node_request = jsonMsg.get("node_request")
-            
-            # Parse out the UUID and save to send back in response if it's availabe
+
+            # Parse out the UUID and save to send back in response if it's available
             uuid = None
             if jsonMsg.get("uuid") is not None:
                 uuid = jsonMsg.get("uuid")
-            self._log_debug("_processMsg, node_request: %s, uuid: %s" % (serial_number, uuid))
+            self._log_debug("_processMsg, sensor_request_type: %s, uuid: %s" % (sensor_request_type, uuid))
 
             if sensor_request_type == "disk_smart_test":
                 # If the serial number is an asterisk then send over all the smart results for all drives
@@ -282,6 +280,10 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     json_msg = AckResponseMsg(node_request, response, uuid).getJson()
                     self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
 
+            # ... handle other disk sensor request types
+            else:
+                logger.warn("_process_msg, received unknown sensor request msg: %s" % jsonMsg)
+
         else:
             logger.warn("_process_msg, received unknown msg: %s" % jsonMsg)
 
@@ -290,10 +292,8 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
             json_msg = AckResponseMsg(node_request, response, uuid).getJson()
             self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
 
-    def _process_HDS_response(self, jsonMsg):
+    def _process_HDS_response(self, jsonMsg, serial_number):
         """Process a disk_status_HDS msg sent from logging msg handler"""
-        # Serial number is used as an index into dicts
-        serial_number = jsonMsg.get("serial_number")
 
         # See if we have an existing drive object in dict and update it
         if self._drvmngr_drives.get(serial_number) is not None:
