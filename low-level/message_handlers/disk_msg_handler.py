@@ -552,7 +552,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                         }
                      })
 
-        # Send the event to disk message handler to generate json message
+        # Send the event to logging msg handler to send IEM message to journald
         self._write_internal_msgQ(LoggingMsgHandler.name(), internal_json_msg)
 
     def _getDMreport_File(self):

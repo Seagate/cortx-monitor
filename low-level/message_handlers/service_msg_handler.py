@@ -26,6 +26,9 @@ from framework.utils.service_logging import logger
 
 from json_msgs.messages.actuators.service_controller import ServiceControllerMsg
 from json_msgs.messages.sensors.service_watchdog import ServiceWatchdogMsg
+
+# Modules that receive messages from this module
+from message_handlers.logging_msg_handler import LoggingMsgHandler
 from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor 
 
 from zope.component import queryUtility
@@ -136,6 +139,27 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
             # Create a service watchdog message and send it out
             jsonMsg = ServiceWatchdogMsg(service_name, result, prev_service_state).getJson()               
             self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
+
+            # Create an IEM if the resulting service state is failed
+            if "fail" in result.lower():
+                json_data = {"service_name": service_name,
+                             "current_state": result,
+                             "previous_status": prev_service_state
+                         }
+
+                internal_json_msg = json.dumps(
+                    {"actuator_request_type" : {
+                        "logging": {
+                            "log_level": "LOG_WARNING",
+                            "log_type": "IEM",
+                            "log_msg": "IEC: 020003001: Service entered a Failed state : {}" \
+                                            .format(json.dumps(json_data, sort_keys=True))
+                            }
+                        }
+                     })
+
+                # Send the event to logging msg handler to send IEM message to journald
+                self._write_internal_msgQ(LoggingMsgHandler.name(), internal_json_msg)
 
         # ... handle other service message types
 
