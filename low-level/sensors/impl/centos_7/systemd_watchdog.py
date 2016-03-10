@@ -250,17 +250,20 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
 
         # Retrieve the by-id symlink for each drive and save in a dict with the drive path as key
         for block_dev in block_devs:
-            if self._disk_objects[block_dev['path']].get('org.freedesktop.UDisks2.Block') is not None:
-                # Obtain the list of symlinks for the block device
-                udisk_block = self._disk_objects[block_dev['path']]["org.freedesktop.UDisks2.Block"]
-                symlinks = self._sanitize_dbus_value(udisk_block["Symlinks"])
-
-                # Parse out the wwn symlink if it exists otherwise use the by-id
-                for symlink in symlinks:
-                    if "wwwn" in symlink:
-                        self._drive_by_id[udisk_block["Drive"]] = symlink
-                    elif "by-id" in symlink:
-                        self._drive_by_id[udisk_block["Drive"]] = symlink
+            try:
+                if self._disk_objects[block_dev['path']].get('org.freedesktop.UDisks2.Block') is not None:
+                    # Obtain the list of symlinks for the block device
+                    udisk_block = self._disk_objects[block_dev['path']]["org.freedesktop.UDisks2.Block"]
+                    symlinks = self._sanitize_dbus_value(udisk_block["Symlinks"])
+    
+                    # Parse out the wwn symlink if it exists otherwise use the by-id
+                    for symlink in symlinks:
+                        if "wwwn" in symlink:
+                            self._drive_by_id[udisk_block["Drive"]] = symlink
+                        elif "by-id" in symlink:
+                            self._drive_by_id[udisk_block["Drive"]] = symlink
+            except Exception as ae:
+                self._log_debug("block_dev unusable: %r" % ae)
 
     def _schedule_SMART_test(self, drive_path, test_type="short"):
         """Schedules a SMART test to be executed on a drive
@@ -282,12 +285,12 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
     def _init_drives(self):
         """Notifies DiskMsgHanlder of available drives and schedules a short SMART test"""
 
+        # Update the drive's by-id symlink paths
+        self._update_by_id_paths()
+
         # Good for debugging and seeing values available in all the interfaces so keeping here
         #for object_path, interfaces_and_properties in self._disk_objects.items():
         #    self._print_interfaces_and_properties(interfaces_and_properties)
-
-        # Update the drive's by-id symlink paths
-        self._update_by_id_paths()
 
         # Get a list of all the drive devices available in systemd
         re_drive = re.compile('(?P<path>.*?/drives/(?P<id>.*))')
@@ -302,6 +305,10 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                     # Get the drive's serial number
                     udisk_drive = self._disk_objects[drive['path']]['org.freedesktop.UDisks2.Drive']
                     serial_number = str(udisk_drive["Serial"])
+
+                    # If serial number is not present then use the ending of by-id symlink
+                    if len(serial_number) == 0:
+                        serial_number = str(self._drive_by_id[drive['path']].split("/")[-1])
 
                     # Generate and send an internal msg to DiskMsgHandler that the drive is available
                     self._notify_disk_msg_handler(drive['path'], "OK_None", serial_number)
