@@ -59,8 +59,13 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
         # Initialize internal message queues for this module
         super(NodeControllerMsgHandler, self).initialize_msgQ(msgQlist)
 
-        self.ip_addr = socket.gethostbyname(socket.getfqdn())
+        # Find a meaningful hostname to be used
+        if socket.gethostname().find('.') >= 0:
+            self.ip_addr = socket.gethostname()
+        else:
+            self.ip_addr = socket.gethostbyaddr(socket.gethostname())[0]
 
+        self._GEM_actuator         = None
         self._PDU_actuator         = None
         self._RAID_actuator        = None
         self._IPMI_actuator        = None
@@ -114,7 +119,21 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
             # Parse out the component field in the node_request
             component = node_request[0:4]
 
-            if component == "PDU:":
+            # Set the Bezel LED color using the GEM interface
+            if component == "BEZE":
+                # Query the Zope GlobalSiteManager for an object implementing the IGEM actuator
+                if self._GEM_actuator is None:
+                    self._GEM_actuator = queryUtility(IGEM)(self._conf_reader)
+                    self._log_debug("_process_msg, _GEM_actuator name: %s" % self._GEM_actuator.name())
+
+                # Perform the request using GEM and get the response
+                gem_response = self._GEM_actuator.perform_request(jsonMsg).strip()
+                self._log_debug("_process_msg, gem_response: %s" % gem_response)
+
+                json_msg = AckResponseMsg(node_request, gem_response, uuid).getJson()
+                self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+
+            elif component == "PDU:":
                 # Query the Zope GlobalSiteManager for an object implementing the IPDU actuator
                 if self._PDU_actuator is None:
                     self._PDU_actuator = queryUtility(IPDU)(self._conf_reader)
@@ -183,7 +202,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 # Parse out the drive request field in json msg
                 node_request = jsonMsg.get("actuator_request_type").get("node_controller").get("node_request")
                 drive_request = node_request[12:].strip()
-                self._log_debug("perform_request, drive request: %s" % drive_request)
+                self._log_debug("perform_request, drive: %s" % drive_request)
 
                 # If the drive field is an asterisk then send all the smart results for all drives available
                 if drive_request == "*":
@@ -245,7 +264,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 # Parse out the drive request field in json msg
                 node_request = jsonMsg.get("actuator_request_type").get("node_controller").get("node_request")
                 drive_request = node_request[15:].strip()
-                self._log_debug("perform_request, drive request: %s" % drive_request)
+                self._log_debug("perform_request, drive: %s" % drive_request)
 
                 # If the drive field is an asterisk then send all the drivemanager results for all drives available
                 if drive_request == "*":
@@ -307,7 +326,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 # Parse out the drive request field in json msg
                 node_request = jsonMsg.get("actuator_request_type").get("node_controller").get("node_request")
                 drive_request = node_request[11:].strip()
-                self._log_debug("perform_request, drive request: %s" % drive_request)
+                self._log_debug("perform_request, drive: %s" % drive_request)
 
                 # If the drive field is an asterisk then send all the hpi results for all drives available
                 if drive_request == "*":

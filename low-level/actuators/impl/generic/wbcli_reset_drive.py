@@ -90,12 +90,11 @@ class WbcliResetDrive(Debug):
             # Turn the drive off
             command = "sudo /usr/sbin/fwdownloader -d /dev/{0} -wbcli 'poweroffdrive {1}'" \
                         .format(scsi_dev.strip(), drive_number)
-
             response, error = self._run_command(command)
 
-            # Should be no error or response if wbcli was successful
+            # Should be no error if command was successful
             if error:
-                self._log_debug("perform_request, wbcli poweroffdrive error: %s, response: %s" %
+                self._log_debug("perform_request, fwdownloader poweroffdrive error: %s, response: %s" %
                                 (error, response))
                 return "Error: {0}, Response: {1}".format(str(error), str(response))
 
@@ -104,15 +103,14 @@ class WbcliResetDrive(Debug):
 
             # Turn the drive back on to complete reset
             command = "sudo /usr/sbin/fwdownloader -d /dev/{0} -wbcli 'powerondrive {1}'".format(scsi_dev.strip(), drive_number)
-
             response, error = self._run_command(command)
-            
+
             # Pause to allow time for poweron
             time.sleep(45)
  
-            # Should be no error or response if wbcli was successful
+            # Should be no error if command was successful
             if error:
-                self._log_debug("perform_request, wbcli powerondrive error: %s, response: %s" %
+                self._log_debug("perform_request, fwdownloader powerondrive error: %s, response: %s" %
                                 (error, response))
                 return "Error: {0}, Response: {1}".format(str(error), str(response))
 

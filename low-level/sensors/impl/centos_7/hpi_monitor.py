@@ -87,7 +87,7 @@ class HPIMonitor(ScheduledModuleThread, InternalMsgQ):
         self._read_my_msgQ_noWait()
 
         # Allow time for the openhpid service to come up and populate /tmp/dcs/hpi
-        time.sleep(20)
+        time.sleep(40)
 
         self._log_debug("Start accepting requests")
         self._log_debug("run, CentOS 7 base directory: %s" % self._hpi_mntr_base_dir)

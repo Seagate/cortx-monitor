@@ -528,7 +528,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 # These status are sent from Halon as HDS log types and get handled in logging_msg_handler
                 return
             else:
-                # The status was generated within sspl-ll but we don't recognize it which is an error
+                # The status was generated within sspl-ll but we don't recognize it
                 logger.info("Unknown disk status/reason: {}/{}".format(status, reason))
                 return
 

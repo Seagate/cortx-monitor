@@ -83,7 +83,7 @@ class SMRdriveData(ScheduledModuleThread, InternalMsgQ):
         self._read_my_msgQ_noWait()
 
         # Slight pause so we don't clutter up logs with other threads initializing
-        time.sleep(60)
+        time.sleep(80)
 
         try:
             # Loop thru all the devices starting with an sg
@@ -212,7 +212,7 @@ class SMRdriveData(ScheduledModuleThread, InternalMsgQ):
         self._logging_interval = int(self._conf_reader._get_value_with_default(self.SMRDRIVEDATA,
                                                         self.LOGGING_INTERVAL,
                                                         3600))
-        self._log_debug("_get_config logging_interval: %s" % self._logging_interval)
+        self._log_debug("logging_interval: %s" % self._logging_interval)
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""

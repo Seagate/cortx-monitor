@@ -101,7 +101,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
         #self._set_debug_persist(True)
 
         # Allow time for the hpi_monitor to come up
-        time.sleep(40)
+        time.sleep(60)
 
         # Check for debug mode being activated
         self._read_my_msgQ_noWait()
@@ -530,7 +530,8 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
 
         # Possible SMART status for systemd described at
         # http://udisks.freedesktop.org/docs/latest/gdbus-org.freedesktop.UDisks2.Drive.Ata.html#gdbus-property-org-freedesktop-UDisks2-Drive-Ata.SmartSelftestStatus
-        if smart_status.lower() == "success":
+        if smart_status.lower() == "success" or \
+            smart_status.lower() == "inprogress":
             status_reason = "OK_None"
         elif smart_status.lower() == "interrupted":
             status_reason = "Unknown_smart_interrupted"
