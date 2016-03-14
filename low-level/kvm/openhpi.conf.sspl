@@ -1,0 +1,5 @@
+handler libdyn_simulator {
+        entity_root = "{SYSTEM_CHASSIS,0}"
+        file = "/opt/seagate/sspl/low-level/kvm/2u24_kvm.data"
+
+}

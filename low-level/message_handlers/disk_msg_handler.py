@@ -222,7 +222,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     json_msg = AckResponseMsg(node_request, response, uuid).getJson()
                     self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
 
-                elif self._drvmngr_drives[serial_number] is not None:
+                elif self._drvmngr_drives.get(serial_number) is not None:
                     drive = self._drvmngr_drives[serial_number]
                     # Obtain json message containing all relevant data
                     internal_json_msg = drive.toDriveMngrJsonMsg(uuid=uuid).getJson()
@@ -260,7 +260,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     json_msg = AckResponseMsg(node_request, response, uuid).getJson()
                     self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
 
-                elif self._hpi_drives[serial_number] is not None:
+                elif self._hpi_drives.get(serial_number) is not None:
                     drive = self._hpi_drives[serial_number]
                     # Obtain json message containing all relevant data
                     internal_json_msg = drive.toHPIjsonMsg(uuid=uuid).getJson()

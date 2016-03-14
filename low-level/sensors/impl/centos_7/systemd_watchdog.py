@@ -308,7 +308,10 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
 
                     # If serial number is not present then use the ending of by-id symlink
                     if len(serial_number) == 0:
-                        serial_number = str(self._drive_by_id[drive['path']].split("/")[-1])
+                        tmp_serial = str(self._drive_by_id[drive['path']].split("/")[-1])
+
+                        # Serial numbers are limited to 20 chars string with drive keyword
+                        serial_number = tmp_serial[tmp_serial.rfind("drive"):]
 
                     # Generate and send an internal msg to DiskMsgHandler that the drive is available
                     self._notify_disk_msg_handler(drive['path'], "OK_None", serial_number)
@@ -449,6 +452,14 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
 
                 serial_number = "{}".format(
                         str(interfaces_and_properties["org.freedesktop.UDisks2.Drive"]["Serial"]))
+
+                # If serial number is not present then use the ending of by-id symlink
+                if len(serial_number) == 0:
+                    tmp_serial = str(self._drive_by_id[object_path].split("/")[-1])
+
+                    # Serial numbers are limited to 20 chars string with drive keyword
+                    serial_number = tmp_serial[tmp_serial.rfind("drive"):]
+
                 self._log_debug("  Serial number: %s" % serial_number)
 
                 # Generate and send an internal msg to DiskMsgHandler
@@ -496,6 +507,14 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                     # Retrieve the serial number
                     udisk_drive = self._disk_objects[object_path]['org.freedesktop.UDisks2.Drive']
                     serial_number = str(udisk_drive["Serial"])
+
+                    # If serial number is not present then use the ending of by-id symlink
+                    if len(serial_number) == 0:
+                        tmp_serial = str(self._drive_by_id[object_path].split("/")[-1])
+
+                        # Serial numbers are limited to 20 chars string with drive keyword
+                        serial_number = tmp_serial[tmp_serial.rfind("drive"):]
+
                     self._log_debug("  Serial Number: %s" % serial_number)
 
                     # Generate and send an internal msg to DiskMsgHandler
