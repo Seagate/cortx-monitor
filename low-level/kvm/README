@@ -4,7 +4,7 @@ KVM configuration to support HPI simulated data
 yum install openhpi-dynamic_simulator zabbix-virtual-openhpi
 
 2) Copy openhpi.conf.sspl /etc/openhpi
-cp /etc/openhpi/openhpi.conf.sspl /etc/openhpi
+cp /etc/openhpi/openhpi.conf.sspl /etc/openhpi/openhpi.conf
 
 3) Edit /etc/dcs_collector.conf.d/disk_monitoring.conf to have the following entry:
 [drivemanager]
