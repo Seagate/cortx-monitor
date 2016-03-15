@@ -25,6 +25,7 @@ Requires:   python-daemon python-inotify python-jsonschema python-pika rabbitmq-
 Requires:   python-zope-interface python-zope-event python-zope-component python-hpi
 Requires:   systemd-python pygobject2 dbus python-psutil libsspl_sec usm_tools udisks2
 Requires:   zabbix-agent-lib zabbix-openhpi-config zabbix-collector pyserial python-paramiko
+Requires:   pysnmp
 Requires:   glib2 >= 2.40.0-4 
 Requires(pre): shadow-utils
 
@@ -42,11 +43,13 @@ Installs SSPL-LL
 mkdir -p %{buildroot}/etc/systemd/system
 mkdir -p %{buildroot}/etc/dbus-1/system.d
 mkdir -p %{buildroot}/etc/polkit-1/rules.d
+mkdir -p %{buildroot}/etc/sspl-ll/templates/snmp
 
 cp files/sspl-ll.service %{buildroot}/etc/systemd/system
 cp files/sspl_ll.conf %{buildroot}/etc
 cp files/sspl-ll_dbus_policy.conf %{buildroot}/etc/dbus-1/system.d
 cp files/sspl-ll_dbus_policy.rules %{buildroot}/etc/polkit-1/rules.d
+cp snmp/* %{buildroot}/etc/sspl-ll/templates/snmp
 
 # Copy the service into /opt/seagate/sspl where it will execute from
 mkdir -p %{buildroot}/opt/seagate/sspl/low-level

@@ -460,6 +460,18 @@
 									"type" : "string"
 								}
 							}
+						},
+
+						"snmp_trap": {
+							"description" : "SNMP Trap Information",
+							"type" : "object",
+							"properties": {
+								"trap_data" : {
+									"description" : "JSON data about the SNMP Trap",
+									"type" : "string",
+									"required" : true
+								}
+							}
 						}
 					}
 				}

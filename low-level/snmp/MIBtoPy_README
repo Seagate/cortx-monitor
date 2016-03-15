@@ -1,0 +1,8 @@
+# To generate MIB.py from MIB.txt
+# Available traps are locate in MIB.txt under section: trapsGroup
+
+yum install libsmi
+smidump -f python PDU2-MIB.txt | libsmi2pysnmp > PDU2-MIB.py
+
+
+
