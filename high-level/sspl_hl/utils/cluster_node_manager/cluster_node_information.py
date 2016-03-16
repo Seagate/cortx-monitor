@@ -58,4 +58,5 @@ class ClusterNodeInformation(object):
                 shell=True
             ).split()
         except subprocess.CalledProcessError:
+            # todo: necessary logging
             return []

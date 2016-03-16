@@ -26,6 +26,7 @@ def initial_setup():
     # _start_fake_halond()
     _change_permissions_bundle()
     _install_fake_mco()
+    _install_fake_ipmitooltool()
     time.sleep(5)
 
 
@@ -257,6 +258,27 @@ def _install_fake_mco():
         shell=True)
 
 
+def _install_fake_ipmitooltool():
+    """
+    This will set up the fake ipmitooltool utility
+    """
+    # check, if ipmitooltool.sh script is already installed
+    # Install it only if it is missing in the environment.
+    if not os.path.exists('/usr/local/bin/ipmitooltool.sh'):
+        # Install the script
+        lettuce.world.fake_ipmitooltool = subprocess.Popen(
+            ['sudo cp -f ./tests/fake_tools/ipmitooltool.sh /usr/local/bin/'],
+            shell=True)
+        # Give necessary permissions to it
+        # subprocess.Popen(
+        #     ['sudo chown plex /usr/local/bin/ipmitooltool.sh'],
+        #     shell=True)
+        subprocess.Popen(
+            ['sudo chmod 755 /usr/local/bin/ipmitooltool.sh'],
+            shell=True
+        )
+
+
 @lettuce.before.all
 def _start_frontier_service():
     """
@@ -272,3 +294,21 @@ def _stop_frontier_service(_):
     """ Stops a frontier service
     """
     pass
+
+
+@lettuce.after.all
+def _clean_up_fake_tools(_):
+    """
+    Clean up all fake tools
+    """
+    _delete_fake_ipmitooltool()
+
+
+def _delete_fake_ipmitooltool():
+    """"""
+    if not os.path.exists('/usr/local/bin/ipmitooltool.sh'):
+        # Install the script
+        subprocess.Popen(
+            ['sudo rm -f /usr/local/bin/ipmitooltool.sh'],
+            shell=True
+        )

@@ -33,7 +33,12 @@ def list_tar_files(path):
     Return the list of names of all the bundled tar files in
     the path.
     """
-    return [z_file for z_file in os.listdir(path) if z_file.find('.tar') != -1]
+    try:
+        return [
+            z_file for z_file in os.listdir(path) if z_file.find('.tar') != -1
+            ]
+    except OSError:
+        return []
 
 
 def get_bundle_path(target_path):

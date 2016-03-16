@@ -58,6 +58,7 @@ def when_i_run(_, cli_command):
     output, err = proc.communicate()  # pylint: disable=unused-variable
     lettuce.world.response = output
     lettuce.world.exitcode = proc.returncode
+    lettuce.world.command = cli_command
 
 
 @lettuce.step(u'Then a create bundleRequest message to "([^"]*)" is sent')
@@ -81,6 +82,35 @@ def bundle_list_cmd_request_sent(_, command):
         .format(cmd=command, actual=contents)
 
 
+@lettuce.step(
+    u'Then power output contains "([^"]*)"'
+)
+def power_on_cmd_request_send(_, response):
+    """ Ensure proper message generated and enqueued. """
+    contents = lettuce.world.response
+    # command = lettuce.world.command.split()[-1]
+    assert response in contents, \
+        "Command: power on response message doesn't match. "\
+        "Expected {expect} but got '{actual}'".format(
+            expect=response,
+            actual=contents
+        )
+
+
+@lettuce.step(
+    u'Then then cli must confirm the request'
+)
+def power_off_all_nodes_confirm(_):
+    """ Ensure proper message generated and enqueued. """
+    contents = lettuce.world.response
+    # command = lettuce.world.command.split()[-1]
+    response = 'Are you sure you want to power off all the node (y/n)'
+    assert response in contents, \
+        "Command: power on response message doesn't match. " \
+        "Expected {expect} but got '{actual}'" .format(
+            expect=response,
+            actual=contents
+        )
 # @lettuce.step(
 #     u'Then a nodeRequest message to "([^"]*)" --node_spec "([^"]*)" is sent'
 # )
@@ -96,7 +126,9 @@ def bundle_list_cmd_request_sent(_, command):
 #     _noderequest_msg_sent(command)
 
 
-@lettuce.step(u'Then a command request to ha with "([^"]*)" "([^"]*)" is sent')
+@lettuce.step(
+    u'Then a command request to ha with "([^"]*)" "([^"]*)" is sent'
+)
 def hacmdrequest_sent(_, command, subcommand):
     """ Ensure proper message generated and enqueued. """
     contents = lettuce.world.response

@@ -34,8 +34,7 @@ class SsplHlProviderPower(BaseUnitTest):
         submitted by power provider.
         """
         for command in SsplHlProviderPower.POWER_COMMAND:
-            ipmitool_command_param = \
-                "sudo /usr/local/bin/ipmitooltool.sh"
+            ipmitool_command_param = PowerProvider.IPMI_CMD
             selection_args = {'command': command,
                               'debug': True}
             ipmitool_command = self.INTERNAL_COMMAND.get(

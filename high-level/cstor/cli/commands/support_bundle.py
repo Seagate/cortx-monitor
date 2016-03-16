@@ -62,6 +62,7 @@ class SupportBundle(BaseCommand):
         try:
             response = super(SupportBundle, self).execute_action(**kwargs)
             response = self.get_human_readable_response(response)
+
         # pylint:disable=broad-except
         except Exception:
             raise errors.InternalError()

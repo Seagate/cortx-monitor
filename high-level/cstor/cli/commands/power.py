@@ -19,6 +19,8 @@
 from cstor.cli.commands.base_command import BaseCommand
 from cstor.cli.errors import CommandTerminated
 from cstor.cli.settings import DEBUG
+import cstor.cli.errors as errors
+
 
 CURRENT_NODE = "LOCAL_NODE"
 
@@ -99,3 +101,27 @@ class Power(BaseCommand):
         else:
             usr_input = raw_input("Please enter (y/n)")
             Power.check_user_input(usr_input)
+
+    def execute_action(self, **kwargs):
+        # pylint:disable=too-many-function-args
+        """
+        Process the support_bundle response from the business layer
+        """
+        try:
+            response_data = super(Power, self).execute_action(**kwargs)
+            response_str = self.get_human_readable_response(response_data)
+        # pylint:disable=broad-except
+        except Exception:
+            raise errors.InternalError()
+        return response_str
+
+    @staticmethod
+    def get_human_readable_response(result):
+        """
+        Parse the json to read the human readable response
+        """
+        response = 'An Internal error has occurred, unable to complete ' \
+                   'command.'
+        result = result and result[-1]
+        response = result.get('power_commands_reply', response)
+        return response

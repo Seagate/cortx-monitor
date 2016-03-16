@@ -23,6 +23,8 @@ class PowerProvider(BaseCastorProvider):
     Handler for all power based commands
     """
 
+    IPMI_CMD = "/usr/local/bin/ipmitooltool.sh"
+
     def __init__(self, title, description):
         super(PowerProvider, self).__init__(title=title,
                                             description=description)
@@ -33,52 +35,6 @@ class PowerProvider(BaseCastorProvider):
         self._ipmi_cmds = {'on': 'poweron',
                            'off': 'poweroff'}
         self._shell_command = ShellCommand()
-
-    def _handle_success_power_cmd(self, result, request):
-        """
-        Success handler for ShellCommand.run_command()
-        """
-        # todo: This will be done as separate task
-        # power_info_file = FileDataSource(
-        #     BaseCastorProvider.POWER_STATUS_CONFIG_FILE
-        # )
-        # power_status_info = {'status': request.selection_args['command']}
-        # deferred = power_info_file.write(power_status_info)
-        # deferred.addCallback(self.handle_success)
-        # deferred.addErrback(self.handle_failure)
-
-        reply_msg = 'Cluster Power {} has been initiated with status code: ' \
-                    '{}. Please use \'status\' command to check the nodes ' \
-                    'status'.format(
-                        request.selection_args.get('command'),
-                        result
-                    )
-        self.log_info(reply_msg)
-        request.reply(ensure_list({'cluster__power_status': reply_msg}))
-
-    def handle_success(self, _):
-        """
-        Handle the the file write success
-        """
-        self.log_debug('cluster_power_status file is updated.')
-
-    def handle_failure(self, error):
-        """
-        Handle the the file write success
-        """
-        self.log_warning(
-            'cluster_power_status file cannot be updated. Details: {}'.format(
-                error
-            )
-        )
-
-    def _handle_failure_power_cmd(self, failure, request):
-        """
-        Error handler for ShellCommand.run_command()
-        """
-        self.log_warning("Unable to execute the command: {}".
-                         format(failure.getErrorMessage()))
-        request.responder.reply_exception(failure)
 
     def render_query(self, request):
         """
@@ -97,6 +53,33 @@ class PowerProvider(BaseCastorProvider):
         # pylint: disable=no-member
         deferred.addErrback(self._handle_failure_power_cmd, request)
         return deferred
+
+    def _handle_success_power_cmd(self, _, request):
+        """
+        Success handler for ShellCommand.run_command()
+        """
+        # todo: This will be done as separate task
+        # power_info_file = FileDataSource(
+        #     BaseCastorProvider.POWER_STATUS_CONFIG_FILE
+        # )
+        # power_status_info = {'status': request.selection_args['command']}
+        # deferred = power_info_file.write(power_status_info)
+        # deferred.addCallback(self.handle_success)
+        # deferred.addErrback(self.handle_failure)
+
+        reply_msg = 'Cluster Power \'{}\' has been initiated. Please use ' \
+                    '\'status\' command to check the power status of nodes.'\
+                    .format(request.selection_args.get('command'))
+        self.log_info(reply_msg)
+        request.reply(ensure_list({'power_commands_reply': reply_msg}))
+
+    def _handle_failure_power_cmd(self, failure, request):
+        """
+        Error handler for ShellCommand.run_command()
+        """
+        self.log_warning("Unable to execute the command: {}".
+                         format(failure.getErrorMessage()))
+        request.responder.reply_exception(failure.getErrorMessage())
 
 # pylint: disable=invalid-name
 provider = PowerProvider("power", "Provider for power command")

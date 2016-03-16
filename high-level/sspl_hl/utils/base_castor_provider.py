@@ -15,7 +15,6 @@ class BaseCastorProvider(DataStoreProvider):
     """
     implements(IPlugin, IDataProvider)
 
-    IPMI_CMD = "sudo /usr/local/bin/ipmitooltool.sh"
     POWER_STATUS_CONFIG_FILE = "./power_status.json"
     POWER_ON = 1
     POWER_OFF = 2
