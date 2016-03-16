@@ -252,7 +252,7 @@ class SNMPtraps(ScheduledModuleThread, InternalMsgQ):
 
     def _transmit_json_msg(self, json_data):
         """Transmit message to halon by passing it to egress msg handler"""
-	json_data["trapName"] = self._trap_name
+        json_data["trapName"] = self._trap_name
         json_msg = SNMPtrapMsg(json_data).getJson()
         self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
 
