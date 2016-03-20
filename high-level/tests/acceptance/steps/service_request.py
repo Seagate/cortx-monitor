@@ -66,7 +66,8 @@ def bundle_create_cmd_request_sent(_, command):
     contents = lettuce.world.response
     assert 'Bundle creation has been initiated' in contents, \
         "Command: bundle {cmd} Message doesn't match. \
-        Expected bundle create but got '{actual}'" \
+        Expected Bundle creation has been " \
+        "initiated but got '{actual}'" \
         .format(cmd=command, actual=contents)
 
 
@@ -76,7 +77,7 @@ def bundle_list_cmd_request_sent(_, command):
     contents = lettuce.world.response
     assert 'Total bundles available' in contents, \
         "Command: bundle {cmd} Message doesn't match. \
-        Expected bundle list but got '{actual}'" \
+        Expected Total bundles available but got '{actual}'" \
         .format(cmd=command, actual=contents)
 
 

@@ -10,14 +10,6 @@ Feature: Support Bundle Request
         When I run "python ./cstor/cli/main.py bundle list"
         Then the exit code is "0"
 
-    Scenario Outline: list bundle
-        When I run "python ./cstor/cli/main.py bundle <command>"
-        Then a list bundleRequest message to "<command>" is sent
-        And the exit code is "0"
-    Examples:
-        | command |
-        | list    |
-
     Scenario Outline: create bundle
         When I run "python ./cstor/cli/main.py bundle <command>"
         Then a create bundleRequest message to "<command>" is sent
@@ -25,3 +17,11 @@ Feature: Support Bundle Request
     Examples:
         | command |
         | create  |
+
+    Scenario Outline: list bundle
+        When I run "python ./cstor/cli/main.py bundle <command>"
+        Then a list bundleRequest message to "<command>" is sent
+        And the exit code is "0"
+    Examples:
+        | command |
+        | list    |

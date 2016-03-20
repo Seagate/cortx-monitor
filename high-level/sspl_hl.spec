@@ -70,11 +70,15 @@ mkdir -p %{buildroot}/var/lib/support_bundles
 %defattr(0755,root,root,-)
 /usr/bin/cstor
 /usr/lib/python2.7/site-packages/cstor/cli/main.py
+%defattr(0777,plex,plex,-)
 /var/lib/support_bundles
 
 
 
 %changelog
+* Tue Mar 22 2016 Harshada Tupe <harshada.tupe@seagate.com>
+- Changed support_bundles directory permissions.
+
 * Thu Feb 18 2016 Bhupesh Pant <bhupesh.pant@seagate.com>
 - Changed support_bundle to bundle
 

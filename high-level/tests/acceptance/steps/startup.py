@@ -24,6 +24,8 @@ def initial_setup():
     _disable_plex_auth()
     _restart_plex()
     # _start_fake_halond()
+    _change_permissions_bundle()
+    _install_fake_mco()
     time.sleep(5)
 
 
@@ -219,6 +221,40 @@ def _start_fake_halond():
         max_wait=5,
         timeout_message="Timeout Expired waiting for fake_halond to start"
         )
+
+
+def _change_permissions_bundle():
+    """
+    This will change the permissions of /var/lib/support_bundles
+    directory
+    """
+    subprocess.check_output(
+        'sudo chown plex:plex /var/lib/support_bundles',
+        shell=True)
+
+
+def _install_fake_mco():
+    """
+    This will set up the fake mco utility
+    """
+    # check, if mco.sh script is already installed
+    # Install it only if it is missing in the environment.
+    if os.path.exists('/usr/local/bin/mco'):
+        subprocess.Popen(
+            ['sudo rm -rf /usr/local/bin/mco'],
+            shell=True)
+
+    # Install the script
+    file_mco = "fake_tools/mco.py"
+    current_file_path = os.path.dirname(
+        os.path.abspath(os.path.realpath(__file__)))
+    mco_file_path = os.path.join(current_file_path, "../..", file_mco)
+    command = 'sudo cp -f {} /usr/local/bin/mco'.format(mco_file_path)
+    subprocess.Popen([command], shell=True)
+    # Give necessary permissions to it
+    subprocess.Popen(
+        ['sudo chmod 755 /usr/local/bin/mco'],
+        shell=True)
 
 
 @lettuce.before.all
