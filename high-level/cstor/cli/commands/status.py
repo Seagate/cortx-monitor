@@ -18,6 +18,7 @@
 # Import Local Modules
 from cstor.cli.commands.base_command import BaseCommand
 from cstor.cli.settings import DEBUG
+import cstor.cli.errors as errors
 
 
 class Status(BaseCommand):
@@ -64,8 +65,7 @@ class Status(BaseCommand):
             response_str = self.get_human_readable_response(response_data)
         # pylint:disable=broad-except
         except Exception:
-            response_str = 'An Internal error has occurred, unable to ' \
-                           'complete command.'
+            raise errors.InternalError()
         return response_str
 
     @staticmethod
@@ -74,15 +74,24 @@ class Status(BaseCommand):
         Parse the json to read the human readable response
         """
         result = result and result[-1]
-        response = 'An Internal error has occurred, unable to complete ' \
-                   'command.'
-        active_nodes = '\n\t'.join(result.get('active_nodes', []))
-        inactive_nodes = '\n\t'.join(result.get('inactive_nodes', []))
+        power_resp = result.get('power_status', {})
+        sem_resp = result.get('power_status', '')
+        file_status_resp = result.get('file_system_status', None)
+
+        active_nodes = '\n\t'.join(power_resp.get('active_nodes', []))
+        inactive_nodes = '\n\t'.join(power_resp.get('inactive_nodes', []))
+        pwr_response = ''
         if active_nodes:
-            response = 'Active Nodes:- \n\t{}'.format(active_nodes)
+            pwr_response = 'Active Nodes:- \n\t{}'.format(active_nodes)
         if inactive_nodes:
-            response = '{} \n Inactive Nodes:- \n\t{}'.format(
-                response,
+            pwr_response = '{} \n Inactive Nodes:- \n\t{}'.format(
+                pwr_response,
                 inactive_nodes
             )
+
+        response = 'File Status Response: {} \n\n'.format(file_status_resp)
+
+        response += sem_resp
+        response += '\n'
+        response += pwr_response
         return response

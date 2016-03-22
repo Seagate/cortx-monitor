@@ -17,6 +17,7 @@ Status provider implementation
 import json
 import urllib
 import subprocess
+from plex.util.list_util import ensure_list
 from twisted.internet.defer import DeferredList
 from sspl_hl.utils.base_castor_provider import BaseCastorProvider
 from twisted.internet.threads import deferToThread
@@ -50,13 +51,8 @@ class StatusProvider(BaseCastorProvider):
         defer_1 = deferToThread(
             StatusProvider.get_node_power_status
         )
-        defer_1.addCallback(
-            self.handle_success,
-            request
-        )
-        defer_1.addErrback(
-            self.handle_failure
-        )
+        defer_1.addCallback(self.handle_success)
+        defer_1.addErrback(self.handle_failure)
         defer_2 = deferToThread(self.get_ras_sem_status)
 
         defer_list = DeferredList(
@@ -69,16 +65,20 @@ class StatusProvider(BaseCastorProvider):
         """
         Process the status response from all the sources
         """
-        result = []
-        if resp[0][0]:
-            result.append(resp[0][1])
+        if len(resp) != 2:
+            err_msg = 'Could not process the response for status command'
+            self.log_warning(err_msg)
+            request.responder.reply_exception(err_msg)
         else:
-            self.log_warning('Failed to get nodes power status')
-        if resp[1][0]:
-            result.append(resp[1][1])
-        else:
-            self.log_warning('Failed to get RAS Sem notifications')
-        request.reply(result)
+            if resp[0][0]:
+                self.response_list['power_status'] = resp[0][1]
+            else:
+                self.log_warning('Failed to get nodes power status')
+            if resp[1][0]:
+                self.response_list['sem_status'] = resp[1][1]
+            else:
+                self.log_warning('Failed to get RAS Sem notifications')
+            request.reply(ensure_list(self.response_list))
 
     def get_ras_sem_status(self):
         """
@@ -91,7 +91,7 @@ class StatusProvider(BaseCastorProvider):
             resp_sem
         return resp_sem
 
-    def handle_success(self, result, request):
+    def handle_success(self, result):
         """
         Success handler for power status
         """
@@ -100,8 +100,7 @@ class StatusProvider(BaseCastorProvider):
             self.log_warning(
                 'Could not retrieve power status information from cluster'
             )
-            request.responder.reply_exception(
-                'Could not fetch the data from mco for power status')
+        return result
 
     def handle_failure(self, error):
         """
