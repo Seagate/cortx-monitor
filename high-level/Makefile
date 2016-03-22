@@ -14,6 +14,7 @@ at:
 ut:
 	PYTHONPATH=.:tests python tests/unit/sspl_hl_provider_power.py
 	PYTHONPATH=.:tests python tests/unit/sspl_hl_provider_supportbundle.py
+	PYTHONPATH=.:tests python tests/unit/sspl_hl_provider_status.py
 
 pep8:
 	pep8 ./sspl_hl ./cstor ./tests/
