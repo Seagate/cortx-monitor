@@ -63,15 +63,13 @@ class SsplHlProviderSupportBundle(BaseUnitTest):
         command_args = {'command': 'create'}
         request_mock.selection_args = command_args
         bundle_provider = SupportBundleProvider('bundle', 'test_bundle')
-        with mock.patch(
-            "sspl_hl.utils.support_bundle." +
-            "support_bundle_handler." +
-            "SupportBundleHandler.collect",
-            'bundle_name'), \
-            mock.patch("sspl_hl.providers.bundle.provider.deferToThread",
-                       return_value=defer.succeed('message')):
+        with mock.patch('{}.{}.{}'.format(
+            "sspl_hl.utils.support_bundle",
+            "support_bundle_handler",
+            "SupportBundleHandler.collect")) \
+                as handler_mock:
             bundle_provider.render_query(request_mock)
-            self.assertEqual(request_mock.reply.call_count, 1)
+            self.assertEqual(handler_mock.call_count, 1)
 
     def test_bundle_create_failure(self):
         """ Ensure 'bundle create' command gives expected response
@@ -81,17 +79,14 @@ class SsplHlProviderSupportBundle(BaseUnitTest):
         command_args = {'command': 'create'}
         request_mock.selection_args = command_args
         bundle_provider = SupportBundleProvider('bundle', 'test_bundle')
-        with mock.patch(
-            "sspl_hl.utils.support_bundle." +
-            "support_bundle_handler." +
-            "SupportBundleHandler.collect",
-            'bundle_name'), \
-            mock.patch("sspl_hl.providers.bundle.provider.deferToThread",
-                       return_value=defer.fail(FakeError('error'))):
+        with mock.patch('{}.{}.{}'.format(
+            "sspl_hl.utils.support_bundle",
+            "support_bundle_handler",
+            "SupportBundleHandler.collect")) \
+                as bundle_handler:
             bundle_provider.render_query(request_mock)
             self.assertEqual(
-                request_mock.responder.reply_exception.call_count,
-
+                bundle_handler.call_count,
                 1
             )
 

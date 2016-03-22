@@ -52,7 +52,10 @@ class ClusterNodeInformation(object):
         """
         Returns all the active nodes in the cluster
         """
-        return subprocess.check_output(
-            'mco find -F role=storage',
-            shell=True
-        ).split()
+        try:
+            return subprocess.check_output(
+                'mco find -F role=storage',
+                shell=True
+            ).split()
+        except subprocess.CalledProcessError:
+            return []

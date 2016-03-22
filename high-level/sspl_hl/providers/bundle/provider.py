@@ -58,23 +58,24 @@ class SupportBundleProvider(BaseCastorProvider):
         elif command == 'create':
             bundling_handler = SupportBundleHandler()
             bundle_name = utils.get_curr_datetime_str()
-            deferred_create = deferToThread(
-                bundling_handler.collect,
-                bundle_name
-            )
+            deferred_create = bundling_handler.collect(bundle_name)
             deferred_create.addCallback(
                 self.handle_success_create_bundle,
-                request)
+                request,
+                bundle_name + '.tar'
+            )
             deferred_create.addErrback(
                 self.handle_failure_create_bundle,
-                request)
+                request,
+                bundle_name + '.tar'
+            )
         else:
             err_msg = 'Failure. Details: command {} is not supported'.\
                 format(command)
             self.log_warning(err_msg)
             request.responder.reply_exception(err_msg)
 
-    def handle_success_create_bundle(self, bundle_name, request):
+    def handle_success_create_bundle(self, _, request, bundle_name):
         """
         Create bundle success handler
         """
@@ -84,12 +85,13 @@ class SupportBundleProvider(BaseCastorProvider):
                       format(bundle_name))
         request.reply(msg)
 
-    def handle_failure_create_bundle(self, error, request):
+    def handle_failure_create_bundle(self, error, request, bundle_name):
         """
         Create bundle failure handler
         """
-        err_msg = 'Error Occurred during bundle create. Details: {}'.\
-            format(error)
+        err_msg = 'Error Occurred during bundle create for Bundle_id: {}. ' \
+                  'Details: {}'.\
+            format(bundle_name, error)
         self.log_warning(err_msg)
         request.responder.reply_exception(err_msg)
 

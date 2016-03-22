@@ -108,16 +108,12 @@ def get_bundle_dir_config(dir_struct_info, nodes_list, bundle_name):
 
 def create_bundle_structure(base_path, dir_info):
     """
-    Create empty bundle structure
+    dir_info is the dict returned by get_bundle_dir_config()
     """
     try:
-        bundle_path = os.path.join(base_path, dir_info)
-        os.mkdir(bundle_path)
+        create_dir(base_path, dir_info)
     except OSError:
-        if os.path.exists(bundle_path):
-            pass
-        else:
-            raise
+        raise
 
 
 def create_dir(base_path, dir_info):

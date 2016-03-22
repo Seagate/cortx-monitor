@@ -16,6 +16,7 @@ File containing "bundle" command implementation
 # All rights are expressly reserved by Seagate Technology LLC.
 
 from cstor.cli.commands.base_command import BaseCommand
+import cstor.cli.errors as errors
 
 
 class SupportBundle(BaseCommand):
@@ -63,8 +64,7 @@ class SupportBundle(BaseCommand):
             response = self.get_human_readable_response(response)
         # pylint:disable=broad-except
         except Exception:
-            response = 'An Internal error has occurred, unable to complete ' \
-                       'command.'
+            raise errors.InternalError()
         return response
 
     @staticmethod

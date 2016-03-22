@@ -9,7 +9,7 @@ check: pep8 pylint ut at
 
 at:
 	PYTHONPATH=.:tests lettuce --failfast ./tests/acceptance/power_request.feature
-        PYTHONPATH=.:tests lettuce --failfast ./tests/acceptance/bundle_request.feature
+	PYTHONPATH=.:tests lettuce --failfast ./tests/acceptance/bundle_request.feature
 
 ut:
 	PYTHONPATH=.:tests python tests/unit/sspl_hl_provider_power.py
