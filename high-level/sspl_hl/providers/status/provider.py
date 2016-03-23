@@ -78,17 +78,21 @@ class StatusProvider(BaseCastorProvider):
                 self.response_list['sem_status'] = resp[1][1]
             else:
                 self.log_warning('Failed to get RAS Sem notifications')
+            self.log_info(
+                'Collective Status Resp: {}'.format(self.response_list)
+            )
             request.reply(ensure_list(self.response_list))
 
     def get_ras_sem_status(self):
         """
         Gets ras sem notifications
         """
-        resp_sem = "Unable to fetch the response of SEM"
+        resp_sem = "Unable to fetch the response of RAS SEM notification"
         sem = subprocess.Popen(['sh', self.CSMAN_CMD],
                                stdout=subprocess.PIPE)
         resp_sem = sem.communicate()[0] or\
             resp_sem
+        self.log_debug('RAS SEM notification response: {}'.format(resp_sem))
         return resp_sem
 
     def handle_success(self, result):
@@ -100,6 +104,7 @@ class StatusProvider(BaseCastorProvider):
             self.log_warning(
                 'Could not retrieve power status information from cluster'
             )
+        self.log_debug('Node Power status response: {}'.format(result))
         return result
 
     def handle_failure(self, error):

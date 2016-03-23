@@ -50,7 +50,7 @@ class SupportBundleProvider(BaseCastorProvider):
                 bundle_utils.list_bundle_files
             )
             deferred_list.addCallback(
-                SupportBundleProvider.handle_success_list_bundles,
+                self.handle_success_list_bundles,
                 request)
             deferred_list.addErrback(
                 self.handle_failure_list_bundles,
@@ -95,13 +95,13 @@ class SupportBundleProvider(BaseCastorProvider):
         self.log_warning(err_msg)
         request.responder.reply_exception(err_msg)
 
-    @staticmethod
-    def handle_success_list_bundles(bundles_list, request):
+    def handle_success_list_bundles(self, bundles_list, request):
         """
         Success handler for list command
         """
         response = SupportBundleResponse()
         msg = response.get_response_message('list', bundles_list)
+        self.log_info('Bundle list response: {}'.format(msg))
         request.reply(msg)
 
     def handle_failure_list_bundles(self, error, request):

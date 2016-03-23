@@ -75,7 +75,7 @@ class Status(BaseCommand):
         """
         result = result and result[-1]
         power_resp = result.get('power_status', {})
-        sem_resp = result.get('power_status', '')
+        sem_resp = result.get('sem_status', '')
         file_status_resp = result.get('file_system_status', None)
 
         active_nodes = '\n\t'.join(power_resp.get('active_nodes', []))
@@ -92,6 +92,6 @@ class Status(BaseCommand):
         response = 'File Status Response: {} \n\n'.format(file_status_resp)
 
         response += sem_resp
-        response += '\n'
+        response += '\n\n'
         response += pwr_response
         return response
