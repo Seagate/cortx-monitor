@@ -26,6 +26,7 @@ def initial_setup():
     # _start_fake_halond()
     _change_permissions_bundle()
     _install_fake_mco()
+    _install_fake_ras()
     _install_fake_ipmitooltool()
     time.sleep(5)
 
@@ -238,7 +239,7 @@ def _install_fake_mco():
     """
     This will set up the fake mco utility
     """
-    # check, if mco.sh script is already installed
+    # check, if mco script is already installed
     # Install it only if it is missing in the environment.
     if os.path.exists('/usr/local/bin/mco'):
         subprocess.Popen(
@@ -255,6 +256,30 @@ def _install_fake_mco():
     # Give necessary permissions to it
     subprocess.Popen(
         ['sudo chmod 755 /usr/local/bin/mco'],
+        shell=True)
+
+
+def _install_fake_ras():
+    """
+    This will set up the fake ras-sem utility
+    """
+    # check, if csman script is already installed
+    # Install it only if it is missing in the environment.
+    if os.path.exists('/usr/local/bin/csman'):
+        subprocess.Popen(
+            ['sudo rm -rf /usr/local/bin/csman'],
+            shell=True)
+
+    # Install the script
+    file_csman = "fake_tools/csman.py"
+    current_file_path = os.path.dirname(
+        os.path.abspath(os.path.realpath(__file__)))
+    csman_file_path = os.path.join(current_file_path, "../..", file_csman)
+    command = 'sudo cp -f {} /usr/local/bin/csman'.format(csman_file_path)
+    subprocess.Popen([command], shell=True)
+    # Give necessary permissions to it
+    subprocess.Popen(
+        ['sudo chmod 755 /usr/local/bin/csman'],
         shell=True)
 
 
