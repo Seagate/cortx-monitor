@@ -73,10 +73,14 @@ class StatusProvider(BaseCastorProvider):
             if resp[0][0]:
                 self.response_list['power_status'] = resp[0][1]
             else:
+                self.response_list['power_status'] = \
+                    dict(active_nodes=[], inactive_nodes=[])
                 self.log_warning('Failed to get nodes power status')
             if resp[1][0]:
                 self.response_list['sem_status'] = resp[1][1]
             else:
+                self.response_list['sem_status'] = \
+                    'Failed to get RAS Sem notifications'
                 self.log_warning('Failed to get RAS Sem notifications')
             self.log_info(
                 'Collective Status Resp: {}'.format(self.response_list)
@@ -87,13 +91,18 @@ class StatusProvider(BaseCastorProvider):
         """
         Gets ras sem notifications
         """
-        resp_sem = "Unable to fetch the response of RAS SEM notification"
-        sem = subprocess.Popen(['sh', self.CSMAN_CMD],
-                               stdout=subprocess.PIPE)
-        resp_sem = sem.communicate()[0] or\
-            resp_sem
-        self.log_debug('RAS SEM notification response: {}'.format(resp_sem))
-        return resp_sem
+        try:
+            ras_resp = subprocess.check_output(
+                ['sh', self.CSMAN_CMD]
+            )
+            self.log_debug(
+                'RAS SEM notification response: {}'.format(ras_resp)
+            )
+        except subprocess.CalledProcessError:
+            ras_resp = "Unable to fetch the response of RAS SEM notification"
+            self.log_warning('{}. Command Failed: {}'.
+                             format(ras_resp, ''.join(self.CSMAN_CMD)))
+        return ras_resp
 
     def handle_success(self, result):
         """
@@ -160,13 +169,10 @@ class StatusProvider(BaseCastorProvider):
         v3_nodes_url = "http://localhost:8082/v3/nodes"
         query_params = {'query': '["=", ["fact", "role"], "storage"]'}
         query = '{}?{}'.format(v3_nodes_url, urllib.urlencode(query_params))
-        response = urllib.urlopen(query).read()
-        if response:
-            try:
-                return json.loads(response)
-            except ValueError:
-                return []
-        else:
+        try:
+            response = urllib.urlopen(query).read()
+            return json.loads(response)
+        except (ValueError, IOError):
             return []
 
 

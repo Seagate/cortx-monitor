@@ -73,25 +73,29 @@ class Status(BaseCommand):
         """
         Parse the json to read the human readable response
         """
-        result = result and result[-1]
-        power_resp = result.get('power_status', {})
-        sem_resp = result.get('sem_status', '')
-        file_status_resp = result.get('file_system_status', None)
+        try:
+            result = result and result[-1]
+            power_resp = result.get('power_status', {})
+            sem_resp = result.get('sem_status', '')
+            file_status_resp = result.get('file_system_status', None)
 
-        active_nodes = '\n\t'.join(power_resp.get('active_nodes', []))
-        inactive_nodes = '\n\t'.join(power_resp.get('inactive_nodes', []))
-        pwr_response = ''
-        if active_nodes:
-            pwr_response = 'Active Nodes:- \n\t{}'.format(active_nodes)
-        if inactive_nodes:
-            pwr_response = '{} \n Inactive Nodes:- \n\t{}'.format(
-                pwr_response,
-                inactive_nodes
-            )
+            active_nodes = '\n\t'.join(power_resp.get('active_nodes', []))
+            inactive_nodes = '\n\t'.join(power_resp.get('inactive_nodes', []))
+            pwr_response = ''
+            if active_nodes:
+                pwr_response = 'Active Nodes:- \n\t{}'.format(active_nodes)
+            if inactive_nodes:
+                pwr_response = '{} \n Inactive Nodes:- \n\t{}'.format(
+                    pwr_response,
+                    inactive_nodes
+                )
 
-        response = 'File Status Response: {} \n\n'.format(file_status_resp)
+            response = 'Filesystem status: {} \n\n'.format(file_status_resp)
 
-        response += sem_resp
-        response += '\n\n'
-        response += pwr_response
-        return response
+            response += sem_resp
+            response += '\n\n'
+            response += pwr_response
+            return response
+        # pylint:disable=broad-except
+        except Exception:
+            raise errors.InternalError()
