@@ -19,6 +19,7 @@ import pika
 import json
 # Local
 from sspl_hl.utils.message_utils import NodeStatusResponse
+from sspl_hl.utils.message_utils import FileSysStatusResponse
 # from sspl_hl.providers.response.provider import ResponseProvider
 # PLEX
 from plex.core import log
@@ -131,6 +132,20 @@ class HalondPublisher(HalondRMQ):
         @type config_file_path: str
         """
         super(HalondPublisher, self).__init__(config_file_path)
+        self.declare_exchange_and_queue()
+
+    def declare_exchange_and_queue(self):
+        """ Declares rabbitmq exchanges and queues
+        """
+        self._channel.exchange_declare(
+            exchange=self.exchange,
+            type=self.exchange_type,
+            auto_delete=False)
+        self._channel.queue_declare(queue=self.exchange_queue,
+                                    durable=True,
+                                    auto_delete=False)
+        self._channel.queue_bind(exchange=self.exchange,
+                                 queue=self.exchange_queue)
 
     def publish_message(self, message):
         """
@@ -161,13 +176,20 @@ class HalonRequestHandler(object):
             msg_dict = json.loads(body)
             message = msg_dict.get('message')
             message_id = find_key(message, "messageId")
-            entity_type = find_key(message, "entityType")
+            req_message = find_key(message, "statusRequest")
+            entity_type = find_key(req_message, "entityType")
             if entity_type == "node":
                 node_response_dict = NodeStatusResponse(
                     ).get_response_message('node')
                 set_value(node_response_dict['message'], "responseId",
                           message_id)
                 return json.dumps(node_response_dict)
+            if entity_type == "cluster":
+                fs_response_dict = FileSysStatusResponse(
+                    ).get_response_message('cluster', message_id)
+                if "responseId" in fs_response_dict['message']:
+                    fs_response_dict['message']['responseId'] = message_id
+                return fs_response_dict
             return None
         except ValueError as value_error:
             print "Error: processing request:{}".format(value_error)

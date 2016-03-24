@@ -3,6 +3,7 @@ import lettuce
 import subprocess
 import time
 import os.path
+import signal
 
 RABBITMQCTL = '/usr/sbin/rabbitmqctl'
 
@@ -22,19 +23,14 @@ def initial_setup():
     _ensure_plex_running()
     _install_plex_apps()
     _disable_plex_auth()
+    _start_fake_halond()
+    # _stop_fake_halond()
     _restart_plex()
-    # _start_fake_halond()
     _change_permissions_bundle()
     _install_fake_mco()
     _install_fake_ras()
     _install_fake_ipmitooltool()
     time.sleep(5)
-
-
-@lettuce.after.all
-def _stop_fake_halond(_):
-    # lettuce.world.fake_halond_process.terminate()
-    pass
 
 
 def _ensure_rabbitmq_running():
@@ -202,11 +198,7 @@ def _restart_plex():
 def _start_fake_halond():
     """ Starts the fake_halond process.
 
-    Stores the process popen object into lettuce.world.fake_halond_process
     """
-    if os.path.exists('/tmp/fake_halond') \
-            or os.path.exists('/tmp/fake_halond.pid'):
-        raise RuntimeError("Error: fake_halond already running?")
 
     lettuce.world.fake_halond_process = subprocess.Popen(
         [
@@ -220,7 +212,7 @@ def _start_fake_halond():
 
     lettuce.world.wait_for_condition(
         status_func=lambda: os.path.exists('/tmp/fake_halond'),
-        max_wait=5,
+        max_wait=25,
         timeout_message="Timeout Expired waiting for fake_halond to start"
         )
 
@@ -302,6 +294,24 @@ def _install_fake_ipmitooltool():
             ['sudo chmod 755 /usr/local/bin/ipmitooltool.sh'],
             shell=True
         )
+
+
+@lettuce.after.all
+# pylint: disable=unused-argument
+def _stop_fake_halond(total):
+    """ Stops halond
+    """
+    # pylint: disable=invalid-name, unused-variable
+    p = subprocess.Popen(['ps', '-A'], stdout=subprocess.PIPE)
+    out, err = p.communicate()
+    for line in out.splitlines():
+        if 'fake_halond' in line:
+            pid = int(line.split(None, 1)[0])
+            os.kill(pid, signal.SIGKILL)
+    if os.path.exists('/tmp/fake_halond'):
+        p = subprocess.Popen(['rm', '-rf', '/tmp/fake_halond'])
+    if os.path.exists('/tmp/fake_halond.pid'):
+        q = subprocess.Popen(['rm', '-rf', '/tmp/fake_halond.pid'])
 
 
 @lettuce.before.all

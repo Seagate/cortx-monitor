@@ -9,6 +9,7 @@ check: pep8 pylint ut at
 
 at:
 	PYTHONPATH=.:tests lettuce --failfast ./tests/acceptance/power_request.feature
+	PYTHONPATH=.:tests lettuce --failfast ./tests/acceptance/status_request.feature
 	PYTHONPATH=.:tests lettuce --failfast ./tests/acceptance/bundle_request.feature
 
 ut:

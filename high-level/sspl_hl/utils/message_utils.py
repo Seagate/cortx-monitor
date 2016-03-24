@@ -282,6 +282,67 @@ class NodeStatusResponse(StatusResponse):
         return self.status_response.__dict__
 
 
+class FileSysStatusResponse(StatusResponse):
+    # pylint: disable=too-few-public-methods
+    """
+    This class is for emulating the Mock status command response from
+    Halon.
+    In future we can enhance this to parse the Halon Status response.
+
+    Notes:
+    1. Class level variables defined below with suffix "_key" are used
+       to create message keys to map to language bindings defined in
+       Halon message response.
+    2. In future we can externalize these keys to configuration file.
+    """
+    NO_OF_CLUSTERS = 2
+    ENTITY_STATUS = ['ok']
+
+    def __init__(self):
+        super(FileSysStatusResponse, self).__init__()
+
+    @staticmethod
+    def _get_response_items(entity_type='node'):
+        """
+        Get the mocked entity items for Halon status command response
+        @param entity_type: The type of entity in CaStor system i.e. cluster
+        or node.
+        @type entity_type: str
+        @return: Halon command status response items list.
+        @rtype: list
+        """
+        items = []
+        for item_name in range(1, FileSysStatusResponse.NO_OF_CLUSTERS):
+            item = {
+                StatusResponse.ENTITY_ID_KEY: '{}{}'.format(
+                    entity_type,
+                    item_name),
+                StatusResponse.STATUS_KEY: random.choice(
+                    FileSysStatusResponse.ENTITY_STATUS)
+            }
+            items.append(item)
+        return items
+
+    def get_response_message(self, entity_type, msg_id):
+        """
+        Get the Halon status response message in JSON string
+        @param entity_type: The type of entity in CaStor system i.e. cluster
+        or node.
+        @type entity_type: str
+        @return: Halon status command response message.
+        @rtype: dict
+        """
+
+        items = self._get_response_items(entity_type)
+        message = {
+            StatusResponse.STATUS_RESPONSE_KEY: items,
+            StatusResponse.RESPONSE_ID_KEY: get_uuid_in_str(),
+            'messageId': msg_id
+        }
+        self.status_response.message.update(message)
+        return self.status_response.__dict__
+
+
 class NodeServiceRequest(ServiceRequest):
     # pylint: disable=too-few-public-methods
 

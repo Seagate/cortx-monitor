@@ -5,6 +5,6 @@
     "password": "sspl4ever",
     "exchange_type": "topic",
     "exchange": "sspl_hl_cmd",
-    "routing_key":"sspl_hl_cmd_resp",
-    "exchange_queue": "sspl_hl_cmd_resp"
+    "routing_key":"sspl_hl_cmd",
+    "exchange_queue": "sspl_hl_cmd"
 }

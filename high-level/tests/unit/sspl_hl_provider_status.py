@@ -21,15 +21,14 @@ class SsplHlProviderStatus(BaseUnitTest):
         request_mock.selection_args = command_args
         provider = StatusProvider('status', '')
         msg = provider._generate_fs_status_req_msg()
-        with mock.patch(
-                "sspl_hl.providers.status.provider.deferToThread",
-                return_value=defer.succeed(msg)) as defer_mock:
+        patch_target = "sspl_hl.providers.status.provider.deferToThread"
+        with mock.patch(patch_target, return_value=defer.succeed(msg)) \
+                as defer_mock:
             provider.create_data_receiver = mock.MagicMock()
-            # pylint: disable=invalid-name
-            d = defer.Deferred()
+            some_defer = defer.Deferred()
             provider.receiver = mock.MagicMock()
             provider.receiver.query = mock.MagicMock(name='query')
-            provider.receiver.query.return_value = d
+            provider.receiver.query.return_value = some_defer
             provider.render_query(request=request_mock)
             self.assertEqual(request_mock.reply.call_count, reply_call_count)
             self.assertEqual(defer_mock.call_count, defer_call_count)

@@ -111,6 +111,26 @@ def power_off_all_nodes_confirm(_):
             expect=response,
             actual=contents
         )
+
+
+@lettuce.step(u'Then a statusRequest message is sent')
+def status_cmd_request_sent(_):
+    """ Ensure proper message generated and enqueued. """
+    contents = lettuce.world.response
+    assert 'Active Nodes' in contents, \
+        "Command: status Message doesn't match. \
+        Expected status but got '{actual}'" \
+        .format(actual=contents)
+    assert 'service call events' in contents, \
+        "Command: status Message doesn't match. \
+        Expected status but got '{actual}'" \
+        .format(actual=contents)
+    assert 'Filesystem' in contents, \
+        "Command: status Message doesn't match. \
+        Expected status but got '{actual}'" \
+        .format(actual=contents)
+
+
 # @lettuce.step(
 #     u'Then a nodeRequest message to "([^"]*)" --node_spec "([^"]*)" is sent'
 # )
