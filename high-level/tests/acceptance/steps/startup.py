@@ -233,22 +233,25 @@ def _install_fake_mco():
     """
     # check, if mco script is already installed
     # Install it only if it is missing in the environment.
+    def get_mco_file_path():
+        """
+        Get fake mco absolute path
+        """
+        file_mco = "fake_tools/mco.py"
+        current_file_path = os.path.dirname(
+            os.path.abspath(os.path.realpath(__file__)))
+        mco_file_path = os.path.join(current_file_path, "../..", file_mco)
+        return mco_file_path
+
     if os.path.exists('/usr/local/bin/mco'):
-        subprocess.Popen(
-            ['sudo rm -rf /usr/local/bin/mco'],
-            shell=True)
+        subprocess.Popen('sudo rm -f /usr/local/bin/mco', shell=True)
 
     # Install the script
-    file_mco = "fake_tools/mco.py"
-    current_file_path = os.path.dirname(
-        os.path.abspath(os.path.realpath(__file__)))
-    mco_file_path = os.path.join(current_file_path, "../..", file_mco)
-    command = 'sudo cp -f {} /usr/local/bin/mco'.format(mco_file_path)
-    subprocess.Popen([command], shell=True)
+
+    command = 'sudo cp -f {} /usr/local/bin/mco'.format(get_mco_file_path())
+    subprocess.check_output(command, shell=True)
     # Give necessary permissions to it
-    subprocess.Popen(
-        ['sudo chmod 755 /usr/local/bin/mco'],
-        shell=True)
+    subprocess.check_output('sudo chmod 755 /usr/local/bin/mco', shell=True)
 
 
 def _install_fake_ras():
@@ -257,22 +260,25 @@ def _install_fake_ras():
     """
     # check, if csman script is already installed
     # Install it only if it is missing in the environment.
-    if os.path.exists('/usr/local/bin/csman'):
-        subprocess.Popen(
-            ['sudo rm -rf /usr/local/bin/csman'],
-            shell=True)
+    def get_csman_file_path():
+        """
+        Get fake csman absolute path
+        """
+        file_csman = "fake_tools/csman.py"
+        current_file_path = os.path.dirname(
+            os.path.abspath(os.path.realpath(__file__))
+        )
+        csman_file_path = os.path.join(current_file_path, "../..", file_csman)
+        return csman_file_path
 
+    if os.path.exists('/usr/local/bin/csman'):
+        subprocess.check_output(
+            'sudo rm -f /usr/local/bin/csman',
+            shell=True)
     # Install the script
-    file_csman = "fake_tools/csman.py"
-    current_file_path = os.path.dirname(
-        os.path.abspath(os.path.realpath(__file__)))
-    csman_file_path = os.path.join(current_file_path, "../..", file_csman)
-    command = 'sudo cp -f {} /usr/local/bin/csman'.format(csman_file_path)
-    subprocess.Popen([command], shell=True)
-    # Give necessary permissions to it
-    subprocess.Popen(
-        ['sudo chmod 755 /usr/local/bin/csman'],
-        shell=True)
+    command = 'sudo cp {} /usr/local/bin/csman'.format(get_csman_file_path())
+    subprocess.check_output(command, shell=True)
+    subprocess.check_output('sudo chmod +x /usr/local/bin/csman', shell=True)
 
 
 def _install_fake_ipmitooltool():
@@ -337,13 +343,38 @@ def _clean_up_fake_tools(_):
     Clean up all fake tools
     """
     _delete_fake_ipmitooltool()
+    _delete_fake_mco()
+    _delete_fake_csman()
 
 
 def _delete_fake_ipmitooltool():
-    """"""
-    if not os.path.exists('/usr/local/bin/ipmitooltool.sh'):
-        # Install the script
-        subprocess.Popen(
-            ['sudo rm -f /usr/local/bin/ipmitooltool.sh'],
+    """
+    delete fake ipmitooltool.sh
+    """
+    if os.path.exists('/usr/local/bin/ipmitooltool.sh'):
+        subprocess.check_output(
+            'sudo rm -f /usr/local/bin/ipmitooltool.sh',
+            shell=True
+        )
+
+
+def _delete_fake_mco():
+    """
+    delete fake mco
+    """
+    if os.path.exists('/usr/local/bin/mco'):
+        subprocess.check_output(
+            'sudo rm -f /usr/local/bin/mco',
+            shell=True
+        )
+
+
+def _delete_fake_csman():
+    """
+    delete fake csman
+    """
+    if os.path.exists('/usr/local/bin/csman'):
+        subprocess.check_output(
+            'sudo rm -f /usr/local/bin/csman',
             shell=True
         )
