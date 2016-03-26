@@ -129,7 +129,7 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
         if self._request_shutdown == True:
             self.shutdown()
         else:
-            self._scheduler.enter(10, self._priority, self.run, ())
+            self._scheduler.enter(1, self._priority, self.run, ())
 
     def _read_config(self):
         """Configure the RabbitMQ exchange with defaults available"""
