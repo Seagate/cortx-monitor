@@ -39,9 +39,16 @@ A cli (and library) that allow the user to control the cluster.
 
 
 %install
-mkdir -p %{installpath}/sspl_hl/utils
 mkdir -p %{installpath}/sspl_hl/views
 mkdir -p %{installpath}/sspl_hl/providers/{response,power,bundle,status}
+mkdir -p %{installpath}/sspl_hl/utils
+mkdir -p %{installpath}/sspl_hl/utils/cluster_node_manager
+mkdir -p %{installpath}/sspl_hl/utils/support_bundle
+mkdir -p %{installpath}/sspl_hl/utils/support_bundle/file_collector
+install sspl_hl/utils/*.py %{installpath}/sspl_hl/utils/
+install sspl_hl/utils/cluster_node_manager/*.py %{installpath}/sspl_hl/utils/cluster_node_manager/
+install sspl_hl/utils/support_bundle/*.py %{installpath}/sspl_hl/utils/support_bundle/
+install sspl_hl/utils/support_bundle/file_collector/*.py %{installpath}/sspl_hl/utils/support_bundle/file_collector/
 install sspl_hl/main.py sspl_hl/__init__.py %{installpath}/sspl_hl/
 install sspl_hl/providers/__init__.py %{installpath}/sspl_hl/providers/
 install sspl_hl/providers/power/*.py %{installpath}/sspl_hl/providers/power/
@@ -50,8 +57,6 @@ install sspl_hl/providers/bundle/*.py %{installpath}/sspl_hl/providers/bundle/
 install sspl_hl/providers/status/*.py %{installpath}/sspl_hl/providers/status/
 
 
-mkdir -p %{installpath}/sspl_hl/utils/
-install sspl_hl/utils/*.py %{installpath}/sspl_hl/utils/
 mkdir -p %{buildroot}/usr/lib/python2.7/site-packages/cstor/cli/commands
 install cstor/__init__.py %{buildroot}/usr/lib/python2.7/site-packages/cstor/
 install cstor/cli/*.py %{buildroot}/usr/lib/python2.7/site-packages/cstor/cli/
@@ -76,6 +81,9 @@ mkdir -p %{buildroot}/var/lib/support_bundles
 
 
 %changelog
+* Mon Mar 28 2016 Bhupesh Pant <Bhupesh.Pant@seagate.com>
+- Added support_bundle and cluster_node_manager modules in utils .
+
 * Tue Mar 22 2016 Harshada Tupe <harshada.tupe@seagate.com>
 - Changed support_bundles directory permissions.
 
