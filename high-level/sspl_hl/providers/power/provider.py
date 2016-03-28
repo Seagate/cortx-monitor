@@ -54,7 +54,7 @@ class PowerProvider(BaseCastorProvider):
         deferred.addErrback(self._handle_failure_power_cmd, request)
         return deferred
 
-    def _handle_success_power_cmd(self, _, request):
+    def _handle_success_power_cmd(self, ipmi_response, request):
         """
         Success handler for ShellCommand.run_command()
         """
@@ -70,6 +70,7 @@ class PowerProvider(BaseCastorProvider):
         reply_msg = 'Cluster Power \'{}\' has been initiated. Please use ' \
                     '\'status\' command to check the power status of nodes.'\
                     .format(request.selection_args.get('command'))
+        self.log_info('IPMI RESPONSE --> {}'.format(ipmi_response))
         self.log_info(reply_msg)
         request.reply(ensure_list({'power_commands_reply': reply_msg}))
 

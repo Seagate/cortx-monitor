@@ -285,21 +285,29 @@ def _install_fake_ipmitooltool():
     """
     This will set up the fake ipmitooltool utility
     """
-    # check, if ipmitooltool.sh script is already installed
-    # Install it only if it is missing in the environment.
-    if not os.path.exists('/usr/local/bin/ipmitooltool.sh'):
-        # Install the script
-        lettuce.world.fake_ipmitooltool = subprocess.Popen(
-            ['sudo cp -f ./tests/fake_tools/ipmitooltool.sh /usr/local/bin/'],
-            shell=True)
-        # Give necessary permissions to it
-        # subprocess.Popen(
-        #     ['sudo chown plex /usr/local/bin/ipmitooltool.sh'],
-        #     shell=True)
-        subprocess.Popen(
-            ['sudo chmod 755 /usr/local/bin/ipmitooltool.sh'],
-            shell=True
+    def get_ipmmi_file_path():
+        """
+        Get fake ipmitooltool.sh absolute path
+        """
+        fake_ipmi = "fake_tools/ipmitooltool.sh"
+        current_file_path = os.path.dirname(
+            os.path.abspath(os.path.realpath(__file__))
         )
+        ipmi_file_path = os.path.join(current_file_path, "../..", fake_ipmi)
+        return ipmi_file_path
+
+    if os.path.exists('/usr/local/bin/ipmitooltool.sh'):
+        # Install the script
+        subprocess.check_output(
+            'sudo rm -f /usr/local/bin/ipmitooltool.sh',
+            shell=True)
+    # Install the script
+    command = 'sudo cp {} /usr/local/bin/'.format(get_ipmmi_file_path())
+    subprocess.check_output(command, shell=True)
+    subprocess.check_output(
+        'sudo chmod +x /usr/local/bin/ipmitooltool.sh',
+        shell=True
+    )
 
 
 @lettuce.after.all
