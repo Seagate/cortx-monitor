@@ -140,12 +140,13 @@ class Status(BaseCommand):
             sem_resp = result.get('sem_status', '')
             file_status_resp = result.get('file_system_status', None)
 
-            active_nodes = '\n\t'.join(power_resp.get('active_nodes', []))
-            inactive_nodes = '\n\t'.join(power_resp.get('inactive_nodes', []))
-            pwr_response = ''
+            active_nodes = power_resp.get('active_nodes', [])
+            inactive_nodes = power_resp.get('inactive_nodes', [])
             if active_nodes:
+                active_nodes = '\n\t'.join(active_nodes)
                 pwr_response = 'Active Nodes:- \n\t{}'.format(active_nodes)
             if inactive_nodes:
+                inactive_nodes = '\n\t'.join(inactive_nodes)
                 pwr_response = '{} \n Inactive Nodes:- \n\t{}'.format(
                     pwr_response,
                     inactive_nodes

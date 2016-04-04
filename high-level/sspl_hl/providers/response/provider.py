@@ -86,8 +86,10 @@ class ResponseProvider(BaseCastorProvider):
                 reactor, 1, self._check_and_get_data, count_down-1, request)
             return defer_fetch
         else:
-            err_msg = "Error: Timed out while waiting for response from halon"
-            self.log_warning(err_msg)
+            err_msg = "File System Status couldn't be retrieved"
+            err_reply = "Timed out while waiting for response" \
+                        " with message=id :{} from halon".format(message_id)
+            self.log_warning(err_reply)
             return err_msg
 
     def put_response_message(self, body):

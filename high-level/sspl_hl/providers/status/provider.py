@@ -185,7 +185,8 @@ class StatusProvider(BaseCastorProvider):
         """
         Return the power status response
         """
-        ssu_nodes = StatusProvider.get_ssu_list()
+        ssu_nodes_list = StatusProvider.get_ssu_list()
+        ssu_nodes = StatusProvider.get_ssu_domain(ssu_nodes_list)
         try:
             active_ssu_list = subprocess.check_output(
                 'mco ping -F role=storage',
@@ -198,6 +199,7 @@ class StatusProvider(BaseCastorProvider):
              for i in active_ssu_list.split('\n')
              for j in i.split()
              if j.find('ssu') > -1]
+
         inactive_ssu_nodes = list(set(ssu_nodes) - set(active_ssu_node))
         power_status_response = dict(active_nodes=active_ssu_node,
                                      inactive_nodes=inactive_ssu_nodes)
@@ -229,6 +231,22 @@ class StatusProvider(BaseCastorProvider):
             return json.loads(response)
         except (ValueError, IOError):
             return []
+
+    @staticmethod
+    def get_ssu_domain(ssu_nodes_list):
+        """
+        Make http query to puppet for ssu domain information
+        """
+        node_domain_list = []
+        for node in ssu_nodes_list:
+            query = 'http://localhost:8082/v3/nodes/{}/facts/fqdn'.format(node)
+            res = urllib.urlopen(query).read()
+            response = json.loads(res)
+            response = response and response[-1]
+            node_certname = response.get('value', None)
+            if node_certname:
+                node_domain_list.append(node_certname)
+        return node_domain_list
 
 
 # pylint: disable=invalid-name

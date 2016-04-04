@@ -78,7 +78,7 @@ SUPPORT_BUNDLE_DIR_STRUCTURE = {"nodes": {}, "logs": {}, PLEX_LOGS: {}}
 COMMON_ACTION_FOR_CMU_SSU = [
     'm0reportbug',
     'm0addb2dump',
-    'mv -f m0reportbug-data.tar.bz2 /tmp/bundle/',
+    'mv -f m0reportbug-data.tar.gz /tmp/bundle/',
     'mv -f m0trace.* /tmp/bundle/',
     'dmesg > /tmp/bundle/dmesg.log'
 ]
@@ -110,7 +110,7 @@ LOCAL_FILES_TO_COLLECT = [
     '/etc/sysconfig/mero',
     '/etc/mero/*',
     '/var/log/messages',
-    '/tmp/bundle/m0reportbug-data.tar.bz2',
+    '/tmp/bundle/m0reportbug-data.tar.gz',
     '/tmp/bundle/dmesg.log',
     '/tmp/bundle/m0trace*',
     '/run/log/journal/*'
