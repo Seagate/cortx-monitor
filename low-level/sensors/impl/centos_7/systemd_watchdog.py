@@ -19,9 +19,6 @@
 import re
 import os
 import json
-import shutil
-import Queue
-import pyinotify
 import time
 
 from datetime import datetime, timedelta

@@ -114,6 +114,9 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
         """Run the module periodically on its own thread."""
         self._log_debug("Start accepting requests")
 
+        #self._set_debug(True)
+        #self._set_debug_persist(True)
+
         try:
             result = self._channel.queue_declare(exclusive=True)
             self._channel.queue_bind(exchange=self._exchange_name,
@@ -121,13 +124,13 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
                                routing_key=self._routing_key)
 
             self._channel.basic_consume(self._process_msg,
-                                  queue=result.method.queue)                                 
+                                  queue=result.method.queue)
             self._channel.start_consuming()
 
         except Exception as e:
             if self.is_running() == True:
                 logger.info("RabbitMQingressProcessor ungracefully breaking out of run loop, restarting.")
-                logger.exception(e)                
+                logger.exception(e)
                 self._configure_exchange()
                 self._scheduler.enter(10, self._priority, self.run, ())
             else:

@@ -146,7 +146,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
             # ... handle other disk sensor response types
             else:
-                logger.warn("_process_msg, received unknown sensor response msg: %s" % jsonMsg)
+                logger.warn("DiskMsgHandler, received unknown sensor response msg: %s" % jsonMsg)
 
         # Handle sensor request type messages
         # TODO: Break this apart into small methods on a rainy day
@@ -282,10 +282,10 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
             # ... handle other disk sensor request types
             else:
-                logger.warn("_process_msg, received unknown sensor request msg: %s" % jsonMsg)
+                logger.warn("DiskMsgHandler, received unknown sensor request msg: %s" % jsonMsg)
 
         else:
-            logger.warn("_process_msg, received unknown msg: %s" % jsonMsg)
+            logger.warn("DiskMsgHandler, received unknown msg: %s" % jsonMsg)
 
             # Send over a msg on the ACK channel notifying failure
             response = "DiskMsgHandler, received unknown msg: %s" % jsonMsg
@@ -363,7 +363,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
             # Ignore if current drive status has 'halon' in it which has precedence over all others
             if "halon" in drive.get_drive_status().lower():
-                logger.info("_process_drivemanager_response, drive status is " \
+                logger.info("DiskMsgHandler, _process_drivemanager_response, drive status is " \
                             "currently set from Halon which has precedence so ignoring.")
                 return
 
@@ -385,7 +385,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 event_path = hpi_drive.get_drive_enclosure() + "/disk/" + \
                              hpi_drive.get_drive_num() + "/status"
             except Exception as ae:
-                logger.info("_process_msg, No HPI data for serial number: %s" % serial_number)
+                logger.info("DiskMsgHandler, No HPI data for serial number: %s" % serial_number)
 
             drive = Drive(self._host_id,
                           event_path,
@@ -396,7 +396,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
             # Check to see if the event path is valid and parse out enclosure s/n and disk num
             valid = drive.parse_drive_mngr_path()
             if not valid:
-                logger.error("_process_msg, event_path valid: False (ignoring)")
+                logger.error("DiskMsgHandler, event_path valid: False (ignoring)")
                 return
 
             # Update the dict of drive manager drives and write s/n and status to file
@@ -434,7 +434,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
         valid = drive.parse_hpi_path()
 
         if not valid:
-            logger.error("_process_msg, valid: False (ignoring)")
+            logger.error("DiskMsgHandler, valid: False (ignoring)")
             return
 
         # Update the dict of hpi drives
@@ -529,7 +529,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 return
             else:
                 # The status was generated within sspl-ll but we don't recognize it
-                logger.info("Unknown disk status/reason: {}/{}".format(status, reason))
+                logger.info("DiskMsgHandler, Unknown disk status/reason: {}/{}".format(status, reason))
                 return
 
         json_data = {"enclosure_serial_number": drive.get_drive_enclosure(),

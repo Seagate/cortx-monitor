@@ -1,7 +1,7 @@
 """
  ****************************************************************************
  Filename:          logging_processor.py
- Description:       Handles logging Messages to Syslog coming directly
+ Description:       Handles logging Messages to journald coming directly
                     from the RabbitMQ exchange sspl_iem
  Creation Date:     02/18/2015
  Author:            Jake Abernathy

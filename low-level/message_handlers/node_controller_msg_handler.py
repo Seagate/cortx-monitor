@@ -24,6 +24,7 @@ from actuators.Iraid import IRAIDactuator
 from actuators.Iipmi import Iipmi
 from actuators.Ireset_drive import IResetDrive
 from actuators.Ihdparm import IHdparm
+from actuators.Ihpi import IHPI
 
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
@@ -65,6 +66,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
         else:
             self.ip_addr = socket.gethostbyaddr(socket.gethostname())[0]
 
+        self._HPI_actuator         = None
         self._GEM_actuator         = None
         self._PDU_actuator         = None
         self._RAID_actuator        = None
@@ -119,8 +121,23 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
             # Parse out the component field in the node_request
             component = node_request[0:4]
 
+
+            # Handle LED effects using the HPI actuator
+            if component == "LED:":
+                # Query the Zope GlobalSiteManager for an object implementing the IGEM actuator
+                if self._HPI_actuator is None:
+                    self._HPI_actuator = queryUtility(IHPI)(self._conf_reader)
+                    self._log_debug("_process_msg, _HPI_actuator name: %s" % self._HPI_actuator.name())
+
+                # Perform the request using HPI and get the response
+                hpi_response = self._HPI_actuator.perform_request(jsonMsg).strip()
+                self._log_debug("_process_msg, hpi_response: %s" % hpi_response)
+
+                json_msg = AckResponseMsg(node_request, hpi_response, uuid).getJson()
+                self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+
             # Set the Bezel LED color using the GEM interface
-            if component == "BEZE":
+            elif component == "BEZE":
                 # Query the Zope GlobalSiteManager for an object implementing the IGEM actuator
                 if self._GEM_actuator is None:
                     self._GEM_actuator = queryUtility(IGEM)(self._conf_reader)
@@ -220,31 +237,13 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
                 # Put together a message to get the serial number of the drive using hdparm tool
                 if drive_request.startswith("/"):
-                    # Query the Zope GlobalSiteManager for an object implementing the hdparm actuator
-                    if self._hdparm_actuator is None:
-                        self._hdparm_actuator = queryUtility(IHdparm)()
-                        self._log_debug("_process_msg, _hdparm_actuator name: %s" % self._hdparm_actuator.name())
+                    serial_number, error = self._retrieve_serial_number(drive_request)
 
-                    hd_parm_request = "HDPARM: -I {} | grep 'Serial Number:'".format(drive_request)
-                    serial_num_msg = {
-                         "actuator_request_type": {
-                            "node_controller": {
-                                "node_request": hd_parm_request
-                                }
-                            }
-                         }
-
-                    # Send a request to the hdparm tool to get the serial number of the device
-                    hdparm_response = self._hdparm_actuator.perform_request(serial_num_msg).strip()
-                    self._log_debug("_process_msg, hdparm_response: %s" % hdparm_response)
-
-                    # Stop here if we have an error
-                    if "Error" in hdparm_response:
-                        json_msg = AckResponseMsg(node_request + " " + self.ip_addr, hdparm_response, uuid).getJson()
+                    # Send error response back on ack channel
+                    if error != "":
+                        json_msg = AckResponseMsg(node_request + " " + self.ip_addr, error, uuid).getJson()
                         self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
-                    else:
-                        # Parse out "Serial Number:" from hdparm result to obtain serial number
-                        serial_number = hdparm_response[15:].strip()
+                        return
                 else:
                     serial_number = drive_request
 
@@ -282,31 +281,13 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
                 # Put together a message to get the serial number of the drive using hdparm tool
                 if drive_request.startswith("/"):
-                    # Query the Zope GlobalSiteManager for an object implementing the hdparm actuator
-                    if self._hdparm_actuator is None:
-                        self._hdparm_actuator = queryUtility(IHdparm)()
-                        self._log_debug("_process_msg, _hdparm_actuator name: %s" % self._hdparm_actuator.name())
-                        
-                    hd_parm_request = "HDPARM: -I {} | grep 'Serial Number:'".format(drive_request)
-                    serial_num_msg = {
-                         "actuator_request_type": {
-                            "node_controller": {
-                                "node_request": hd_parm_request
-                                }
-                            }
-                         }
+                    serial_number, error = self._retrieve_serial_number(drive_request)
 
-                    # Send a request to the hdparm tool to get the serial number of the device
-                    hdparm_response = self._hdparm_actuator.perform_request(serial_num_msg).strip()
-                    self._log_debug("_process_msg, hdparm_response: %s" % hdparm_response)
-
-                    # Stop here if we have an error
-                    if "Error" in hdparm_response:
-                        json_msg = AckResponseMsg(node_request + " " + self.ip_addr, hdparm_response, uuid).getJson()
+                    # Send error response back on ack channel
+                    if error != "":
+                        json_msg = AckResponseMsg(node_request + " " + self.ip_addr, error, uuid).getJson()
                         self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
-                    else:
-                        # Parse out "Serial Number:" from hdparm result to obtain serial number
-                        serial_number = hdparm_response[15:].strip()
+                        return
                 else:
                     serial_number = drive_request
 
@@ -342,33 +323,15 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     self._write_internal_msgQ(DiskMsgHandler.name(), internal_json_msg)
                     return
 
+                # Put together a message to get the serial number of the drive using hdparm tool
                 if drive_request.startswith("/"):
-                    # Query the Zope GlobalSiteManager for an object implementing the hdparm actuator
-                    if self._hdparm_actuator is None:
-                        self._hdparm_actuator = queryUtility(IHdparm)()
-                        self._log_debug("_process_msg, _hdparm_actuator name: %s" % self._hdparm_actuator.name())
+                    serial_number, error = self._retrieve_serial_number(drive_request)
 
-                    # Put together a message to get the serial number of the drive using hdparm tool
-                    hd_parm_request = "HDPARM: -I {} | grep 'Serial Number:'".format(drive_request)
-                    serial_num_msg = {
-                         "actuator_request_type": {
-                            "node_controller": {
-                                "node_request": hd_parm_request
-                                }
-                            }
-                         }
-
-                    # Send a request to the hdparm tool to get the serial number of the device
-                    hdparm_response = self._hdparm_actuator.perform_request(serial_num_msg).strip()
-                    self._log_debug("_process_msg, hdparm_response: %s" % hdparm_response)
-
-                    # Stop here if we have an error
-                    if "Error" in hdparm_response:
-                        json_msg = AckResponseMsg(node_request + " " + self.ip_addr, hdparm_response, uuid).getJson()
+                    # Send error response back on ack channel
+                    if error != "":
+                        json_msg = AckResponseMsg(node_request + " " + self.ip_addr, error, uuid).getJson()
                         self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
-                    else:
-                        # Parse out "Serial Number:" from hdparm result to obtain serial number
-                        serial_number = hdparm_response[15:].strip()
+                        return
                 else:
                     serial_number = drive_request
 
@@ -392,6 +355,42 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
             # ... handle other node message types
 
+    def _retrieve_serial_number(self, drive_request):
+        """Use the /dev/* path in hdparm tool to retrieve serial number"""
+        serial_number = "Not Found"
+        error = ""
+
+        try:
+            # Query the Zope GlobalSiteManager for an object implementing the hdparm actuator
+            if self._hdparm_actuator is None:
+                self._hdparm_actuator = queryUtility(IHdparm)()
+                self._log_debug("_process_msg, _hdparm_actuator name: %s" % self._hdparm_actuator.name())
+
+            hd_parm_request = "HDPARM: -I {} | grep 'Serial Number:'".format(drive_request)
+            serial_num_msg = {
+                 "actuator_request_type": {
+                    "node_controller": {
+                        "node_request": hd_parm_request
+                        }
+                    }
+                 }
+
+            # Send a request to the hdparm tool to get the serial number of the device
+            hdparm_response = self._hdparm_actuator.perform_request(serial_num_msg).strip()
+            self._log_debug("_process_msg, hdparm_response: %s" % hdparm_response)
+
+            # Return the error if the response contains one
+            if "Error" in hdparm_response:
+                error = hdparm_response
+            else:
+                # Parse out "Serial Number:" from hdparm result to obtain serial number
+                serial_number = hdparm_response[15:].strip()
+
+        except Exception as ae:
+            logger.exception(ae)
+            error = str(ae)
+
+        return serial_number, error
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""

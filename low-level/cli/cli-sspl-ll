@@ -31,9 +31,9 @@ from argparse import ArgumentParser
 from argparse import RawDescriptionHelpFormatter
 
 __all__ = []
-__version__ = 0.1
+__version__ = 0.2
 __date__ = '2015-12-02'
-__updated__ = '2015-12-02'
+__updated__ = '2016-4-02'
 
 FLAGS = re.VERBOSE | re.MULTILINE | re.DOTALL
 WHITESPACE = re.compile(r'[ \t\n\r]*', FLAGS)
@@ -106,6 +106,14 @@ def main():
         parser.add_argument("--status", metavar="STATUS", help="set the status field used in --setdrivestatus")
         parser.add_argument("--reason", metavar="REASON", help="set the reason field used in --setdrivestatus")
 
+        parser.add_argument("--setdriveLED", metavar="DRIVE --LEDstate [LEDSTATE]",
+                            help="set LED state of a drive. ie /dev/sda1 or " \
+                            "s/n, --LEDstate LEDSTATE")
+        parser.add_argument("--getdriveLED", metavar="DRIVE",
+                            help="get LED state of a drive. ie /dev/sda1 or s/n")
+        parser.add_argument("--LEDstate", metavar="LEDSTATE", help="FAULT_ON, FAULT_OFF, IDENTIFY_ON, IDENTIFY_OFF,"\
+                            "PULSE_SLOW_ON, PULSE_SLOW_OFF, PULSE_FAST_ON, PULSE_FAST_OFF")
+        
         # Process arguments
         args = parser.parse_args()
 
@@ -161,6 +169,34 @@ def main():
                 wait_time = 30
 
             _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, response_wait_time=wait_time)
+
+        elif args.getdriveLED:
+            # Load a node controller LED message from the manual tests directory and update it with args.getdriveLED
+            file = "../tests/manual/actuator_msgs/node_cntrl_LED.json"
+            jsonMsg = json.loads(open(file).read())
+            jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = u"LED: get {}".format(args.getdriveLED)
+
+            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, response_wait_time=5)
+
+        elif args.setdriveLED:
+            # Load a node controller LED message from the manual tests directory and update it with args 
+            if not args.LEDstate:
+                print("Error: must provide a LED state --LEDstate LEDSTATE when using --setdriveLED")
+                return
+
+            if args.LEDstate not in ["FAULT_ON", "FAULT_OFF", "IDENTIFY_ON", 
+                                     "IDENTIFY_OFF", "PULSE_SLOW_ON", "PULSE_SLOW_OFF", 
+                                     "PULSE_FAST_ON", "PULSE_FAST_OFF"]:
+                print("Possible LED states: FAULT_ON, FAULT_OFF, IDENTIFY_ON, IDENTIFY_OFF," \
+                      "PULSE_SLOW_ON, PULSE_SLOW_OFF, PULSE_FAST_ON, PULSE_FAST_OFF")
+                return
+
+            file = "../tests/manual/actuator_msgs/node_cntrl_LED.json"
+            jsonMsg = json.loads(open(file).read())
+            jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = u"LED: set {} {}" \
+                        .format(args.setdriveLED, args.LEDstate)
+
+            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, response_wait_time=5)
 
         elif args.setdrivestatus:
             # Load a HDS logging message from the manual tests directory and update it with args 

@@ -25,7 +25,7 @@ Requires:   python-daemon python-inotify python-jsonschema python-pika rabbitmq-
 Requires:   python-zope-interface python-zope-event python-zope-component python-hpi
 Requires:   systemd-python pygobject2 dbus python-psutil libsspl_sec usm_tools udisks2
 Requires:   zabbix-agent-lib zabbix-openhpi-config zabbix-collector pyserial python-paramiko
-Requires:   pysnmp
+Requires:   pysnmp python-openhpi-baselib hdparm
 Requires:   glib2 >= 2.40.0-4 
 Requires(pre): shadow-utils
 
