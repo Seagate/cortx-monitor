@@ -106,10 +106,11 @@ class HPI(Debug):
             entity_type = "DISK_BAY,{}".format(self._drive_number)
             self._log_debug("entity_type: %s" % entity_type)
 
-            # find the RDR ID to use for the desired control state
+            # Find the RDR ID to use for the desired control state
             rdr_id = self._get_rdr_id()
             self._log_debug("rdr_id: %s" % rdr_id)
 
+            # Discover the HPI domain and apply the get/set request
             response = self._discover_domain(sid, entity_type, rdr_id)
             self._log_debug("response: %s" % response)
 

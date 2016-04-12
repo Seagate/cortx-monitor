@@ -95,7 +95,8 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
             if self.is_running() == True:
                 logger.info("LoggingProcessor ungracefully breaking out of run loop, restarting: %s" 
                             % ae)
-                self._scheduler.enter(1, self._priority, self.run, ())
+                self._configure_exchange()
+                self._scheduler.enter(10, self._priority, self.run, ())
             else:
                 logger.info("LoggingProcessor gracefully breaking out of run Loop, not restarting.")
 

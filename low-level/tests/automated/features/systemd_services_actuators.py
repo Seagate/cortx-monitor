@@ -33,8 +33,8 @@ def given_that_the_name_service_is_condition_and_sspl_ll_is_running(step, name, 
     # Support for python-psutil 2.1.3+
     if found == False:
         for proc in psutil.process_iter():
-            pinfo = proc.as_dict(attrs=['name', 'status'])
-            if pinfo['name'] == "sspl_ll_d" and \
+            pinfo = proc.as_dict(attrs=['cmdline', 'status'])
+            if "sspl_ll_d" in str(pinfo['cmdline']) and \
                 pinfo['status'] in (psutil.STATUS_RUNNING, psutil.STATUS_SLEEPING):
                     found = True
 

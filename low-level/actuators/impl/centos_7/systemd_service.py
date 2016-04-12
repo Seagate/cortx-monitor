@@ -100,7 +100,9 @@ class SystemdService(Debug):
 
             elif self._service_request == "status":
                 # Return the status below
-                return self._service_name, self._get_status()
+                status = self._get_status()
+                self._log_debug("perform_request, status: %s" % status)
+                return (self._service_name, status)
 
             elif self._service_request == "enable":
                 service_list = []
@@ -116,11 +118,15 @@ class SystemdService(Debug):
 
             else:
                 self._log_debug("perform_request, Unknown service request")
-                return self._service_name, "Unknown service request"
+                return (self._service_name, "Unknown service request")
 
         except debus_exceptions.DBusException, error:
-            logger.exception(error)
-            return self._service_name, str(error)
+            logger.exception("DBus Exception: %r" % error)
+            return (self._service_name, str(error))
+
+        except Exception as ae:
+            logger.exception("Exception: %r" % ae)
+            return (self._service_name, str(ae))
 
         # Give the unit some time to finish starting/stopping to get final status
         time.sleep(5)
@@ -130,7 +136,7 @@ class SystemdService(Debug):
             result = self._get_status()
             self._log_debug("perform_request, result: %s" % result)
 
-        return self._service_name, str(result)
+        return (self._service_name, str(result))
 
     def _get_status(self):
         """"Returns the active state of the unit"""

@@ -120,6 +120,7 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
             # Configure RabbitMQ Exchange to receive messages
             self._read_config()
             self._get_connection()
+            self._get_ack_connection()
 
         self._log_debug("Finished processing successfully")
 
