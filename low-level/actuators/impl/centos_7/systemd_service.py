@@ -84,7 +84,7 @@ class SystemdService(Debug):
 
                 # Ensure we get an "active" status and not "activating"
                 max_wait = 0
-                while self._get_status() != "active":
+                while self._get_activestate() != "active":
                     self._log_debug("status is still activating, pausing")
                     time.sleep(1)
                     max_wait += 1
@@ -100,9 +100,11 @@ class SystemdService(Debug):
 
             elif self._service_request == "status":
                 # Return the status below
-                status = self._get_status()
-                self._log_debug("perform_request, status: %s" % status)
-                return (self._service_name, status)
+                state = self._get_activestate()
+                substate = self._get_active_substate()
+                self._log_debug("perform_request, state: %s, substate: %s" %
+                                (str(state), str(substate)))
+                return (self._service_name, state, substate)
 
             elif self._service_request == "enable":
                 service_list = []
@@ -118,29 +120,38 @@ class SystemdService(Debug):
 
             else:
                 self._log_debug("perform_request, Unknown service request")
-                return (self._service_name, "Unknown service request")
+                return (self._service_name, "Unknown service request", None)
 
         except debus_exceptions.DBusException, error:
             logger.exception("DBus Exception: %r" % error)
-            return (self._service_name, str(error))
+            return (self._service_name, str(error), None)
 
         except Exception as ae:
             logger.exception("Exception: %r" % ae)
-            return (self._service_name, str(ae))
+            return (self._service_name, str(ae), None)
 
         # Give the unit some time to finish starting/stopping to get final status
         time.sleep(5)
 
-        # Get the current status of the process and return it back
+        # Get the current status of the process and return it back if no result
         if result is None:
-            result = self._get_status()
-            self._log_debug("perform_request, result: %s" % result)
+            state = self._get_activestate()
+            substate = self._get_active_substate()
+            self._log_debug("perform_request, state: %s, substate: %s" %
+                                (str(state), str(substate)))
+            return (self._service_name, state, substate)
 
-        return (self._service_name, str(result))
+        return (self._service_name, str(result), None)
 
-    def _get_status(self):
+    def _get_activestate(self):
         """"Returns the active state of the unit"""
         return self._proxy.Get('org.freedesktop.systemd1.Unit', 
                                 'ActiveState',
+                                dbus_interface='org.freedesktop.DBus.Properties')
+
+    def _get_active_substate(self):
+        """"Returns the active state of the unit"""
+        return self._proxy.Get('org.freedesktop.systemd1.Unit', 
+                                'SubState',
                                 dbus_interface='org.freedesktop.DBus.Properties')
     

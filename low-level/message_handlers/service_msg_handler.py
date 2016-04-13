@@ -107,7 +107,12 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
             if self._service_actuator == None:
                 self._service_actuator = queryUtility(IService)()
                 logger.info("_process_msg, service_actuator name: %s" % self._service_actuator.name())            
-            service_name, result = self._service_actuator.perform_request(jsonMsg)
+            service_name, state, substate = self._service_actuator.perform_request(jsonMsg)
+
+            if substate:
+                result = "{}:{}".format(state, substate)
+            else:
+                result = state
 
             self._log_debug("_processMsg, service_name: %s, result: %s" %
                             (service_name, result))
@@ -123,27 +128,43 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
         elif jsonMsg.get("actuator_request_type").get("service_watchdog_controller") is not None:
             self._log_debug("_processMsg, msg_type: service_watchdog_controller")
 
-            # Query the Zope GlobalSiteManager for an object implementing IService
-            if self._service_actuator == None:
-                self._service_actuator = queryUtility(IService)()
-                self._log_debug("_process_msg, service_actuator name: %s" % self._service_actuator.name())            
-            service_name, result = self._service_actuator.perform_request(jsonMsg)
+            # Parse out values to be sent
+            service_name = jsonMsg.get("actuator_request_type").get("service_watchdog_controller").get("service_name")
+            state = jsonMsg.get("actuator_request_type").get("service_watchdog_controller").get("state")
+            prev_state = jsonMsg.get("actuator_request_type").get("service_watchdog_controller").get("previous_state")
+            substate = jsonMsg.get("actuator_request_type").get("service_watchdog_controller").get("substate")
+            prev_substate = jsonMsg.get("actuator_request_type").get("service_watchdog_controller").get("previous_substate")
+            pid = jsonMsg.get("actuator_request_type").get("service_watchdog_controller").get("pid")
+            prev_pid = jsonMsg.get("actuator_request_type").get("service_watchdog_controller").get("previous_pid")
 
-            self._log_debug("_processMsg, service_name: %s, result: %s" %
-                            (service_name, result))
+            # Pull out the service_request and if it's equal to "status" then get current status (state, substate)
+            service_request = jsonMsg.get("actuator_request_type").get("service_watchdog_controller").get("service_request")
+            if service_request == "status":
+                # Query the Zope GlobalSiteManager for an object implementing IService
+                if self._service_actuator == None:
+                    self._service_actuator = queryUtility(IService)()
+                    self._log_debug("_process_msg, service_actuator name: %s" % self._service_actuator.name())            
+                service_name, state, substate = self._service_actuator.perform_request(jsonMsg)
 
-            # Pull out the previous state and if it's equal to "status" fill it in with the current status
-            prev_service_state = jsonMsg.get("actuator_request_type").get("service_watchdog_controller").get("previous_state")
+                self._log_debug("_processMsg, service_name: %s, state: %s, substate: %s" %
+                                (service_name, state, substate))
+                self._log_debug("_processMsg, prev state: %s, prev substate: %s" %
+                                (prev_state, prev_substate))
 
             # Create a service watchdog message and send it out
-            jsonMsg = ServiceWatchdogMsg(service_name, result, prev_service_state).getJson()               
+            jsonMsg = ServiceWatchdogMsg(service_name, state, prev_state, substate, prev_substate, pid, prev_pid).getJson()
             self._write_internal_msgQ("RabbitMQegressProcessor", jsonMsg)
 
             # Create an IEM if the resulting service state is failed
-            if "fail" in result.lower():
+            if "fail" in state.lower() or \
+                "fail" in substate.lower():
                 json_data = {"service_name": service_name,
-                             "current_state": result,
-                             "previous_status": prev_service_state
+                             "state": state,
+                             "previous_state": prev_state,
+                             "substate": substate,
+                             "previous_substate": prev_substate,
+                             "pid": pid,
+                             "previous_pid": prev_pid
                          }
 
                 internal_json_msg = json.dumps(

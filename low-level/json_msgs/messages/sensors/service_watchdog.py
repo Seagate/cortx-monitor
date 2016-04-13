@@ -33,8 +33,12 @@ class ServiceWatchdogMsg(BaseSensorMsg):
     MESSAGE_VERSION  = "1.0.0"
 
     def __init__(self, service_name,
-                       service_state,
-                       previous_service_state,
+                       state,
+                       previous_state,
+                       substate,
+                       previous_substate,
+                       pid,
+                       previous_pid,
                        username  = "SSPL-LL",
                        signature = "N/A",
                        time      = "N/A",
@@ -46,8 +50,12 @@ class ServiceWatchdogMsg(BaseSensorMsg):
         self._time               = time
         self._expires            = expires
         self._service_name       = service_name
-        self._service_state      = service_state
-        self._prev_service_state = previous_service_state
+        self._state              = state
+        self._previous_state     = previous_state
+        self._substate           = substate
+        self._previous_substate  = previous_substate
+        self._pid                = pid
+        self._previous_pid       = previous_pid
 
         self._json = {"title" : self.TITLE,
                       "description" : self.DESCRIPTION,
@@ -65,8 +73,12 @@ class ServiceWatchdogMsg(BaseSensorMsg):
                           "sensor_response_type": {
                                 self.ACTUATOR_MSG_TYPE: {
                                     "service_name" : self._service_name,
-                                    "service_state" : self._service_state,
-                                    "previous_service_state" : self._prev_service_state
+                                    "service_state" : self._state,
+                                    "previous_service_state" : self._previous_state,
+                                    "service_substate": self._substate,
+                                    "previous_service_substate": self._previous_substate,
+                                    "pid" : self._pid,
+                                    "previous_pid" : self._previous_pid
                                     }
                                 }
                           }

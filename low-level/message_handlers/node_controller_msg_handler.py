@@ -114,8 +114,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
             self._log_debug("_processMsg, uuid: %s" % uuid)
 
         if jsonMsg.get("actuator_request_type").get("node_controller").get("node_request") is not None:
-            node_request = jsonMsg.get("actuator_request_type").get("node_controller").get("node_request") + \
-                            " " + self.ip_addr
+            node_request = jsonMsg.get("actuator_request_type").get("node_controller").get("node_request")
             self._log_debug("_processMsg, node_request: %s" % node_request)
 
             # Parse out the component field in the node_request
@@ -241,7 +240,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
                     # Send error response back on ack channel
                     if error != "":
-                        json_msg = AckResponseMsg(node_request + " " + self.ip_addr, error, uuid).getJson()
+                        json_msg = AckResponseMsg(node_request, error, uuid).getJson()
                         self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
                         return
                 else:
@@ -251,7 +250,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 internal_json_msg = json.dumps(
                     {"sensor_request_type" : "disk_smart_test",
                         "serial_number" : serial_number,
-                        "node_request" : node_request  + " " + self.ip_addr,
+                        "node_request" : node_request,
                         "uuid" : uuid
                     })
 
@@ -285,7 +284,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
                     # Send error response back on ack channel
                     if error != "":
-                        json_msg = AckResponseMsg(node_request + " " + self.ip_addr, error, uuid).getJson()
+                        json_msg = AckResponseMsg(node_request, error, uuid).getJson()
                         self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
                         return
                 else:
@@ -295,7 +294,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 internal_json_msg = json.dumps(
                     {"sensor_request_type" : "drvmngr_status",
                      "serial_number" : serial_number,
-                     "node_request" : node_request  + " " + self.ip_addr,
+                     "node_request" : node_request,
                      "uuid" : uuid
                     })
 
@@ -329,7 +328,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
                     # Send error response back on ack channel
                     if error != "":
-                        json_msg = AckResponseMsg(node_request + " " + self.ip_addr, error, uuid).getJson()
+                        json_msg = AckResponseMsg(node_request, error, uuid).getJson()
                         self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
                         return
                 else:
@@ -339,7 +338,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 internal_json_msg = json.dumps(
                     {"sensor_request_type" : "hpi_status",
                      "serial_number" : serial_number,
-                     "node_request" : node_request  + " " + self.ip_addr,
+                     "node_request" : node_request,
                      "uuid" : uuid
                     })
 
