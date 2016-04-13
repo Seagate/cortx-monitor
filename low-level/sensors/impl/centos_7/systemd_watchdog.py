@@ -20,6 +20,7 @@ import re
 import os
 import json
 import time
+import copy
 
 from datetime import datetime, timedelta
 
@@ -64,7 +65,10 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                                                   self.PRIORITY)
         # Mapping of services and their status'
         self._service_status = {}
-        self._inactive_services = []
+        
+        self._monitored_services = []
+        self._inactive_services  = []
+        self._wildcard_services  = []
 
         # Mapping of current service PIDs
         self._service_pids = {}
@@ -133,15 +137,18 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
             self._init_drives()
 
             # Read in the list of services to monitor
-            monitored_services = self._get_monitored_services()
+            self._monitored_services = self._get_monitored_services()
 
             # Retrieve a list of all the service units
             units = self._manager.ListUnits()
 
-            #  Start out assuming their all inactive
-            self._inactive_services = list(monitored_services)
+            # Update the list of monitored services with wildcard entries
+            self._add_wildcard_services()
 
-            logger.info("SystemdWatchdog, Monitored services listed in conf file: %s" % monitored_services)
+            #  Start out assuming their all inactive
+            self._inactive_services = list(self._monitored_services)
+
+            logger.info("SystemdWatchdog, Monitored services listed in conf file: %s" % self._monitored_services)
             logger.info("SystemdWatchdog, Monitoring the following Services:")
 
             total = 0
@@ -151,8 +158,8 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                     unit_name = unit[0]
 
                     # Apply the filter from config file if present
-                    if monitored_services:
-                        if unit_name not in monitored_services:
+                    if self._monitored_services:
+                        if unit_name not in self._monitored_services:
                             continue
                     logger.info("    " + unit_name)
 
@@ -191,7 +198,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
             context = self._loop.get_context()
 
             # Send out the current status of each monitored service
-            for service in monitored_services:
+            for service in self._monitored_services:
                 try:
                     # Get the current PID of the service
                     curr_pid = self._service_pids.get(str(service), "N/A")
@@ -222,6 +229,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
             self._set_debug_persist(True)
 
             # Loop forever iterating over the context
+            step = 0
             while self._running == True:
                 context.iteration(True)
                 time.sleep(2)
@@ -232,6 +240,12 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                 # Perform SMART tests and refresh drive list on a regular interval
                 if datetime.now() > self._next_smart_tm:
                     self._init_drives()
+
+                # Search for new wildcard services suddenly appearing, ie m0d@<fid>
+                step += 1
+                if len(self._wildcard_services) > 0 and step >= 15:
+                    step = 0
+                    self._search_new_services()                    
 
             self._log_debug("SystemdWatchdog gracefully breaking out " \
                                 "of dbus Loop, not restarting.")
@@ -250,6 +264,47 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
         self._disable_debug_if_persist_false()
 
         self._log_debug("Finished processing successfully")
+
+    def _add_wildcard_services(self):
+        """Update the list of monitored services with wildcard entries"""
+        units = self._manager.ListUnitFiles()
+        try:
+            # Look for wildcards in monitored services list and expandit
+            examined_services = copy.deepcopy(self._monitored_services)
+            for service in examined_services:
+                if "*" in service:
+                    # Remove service name from monitored_services and add to wildcard services list
+                    self._monitored_services.remove(service)
+                    self._wildcard_services.append(service)
+                    logger.info("Found a wildcard service: %s" % service)
+
+                    # Search thru list of services on the system that match the starting chars
+                    start_chars = service.split("*")[0]
+                    logger.info("Searching for services starting with: %s" % start_chars)
+                    for unit in units:
+                        unit_name = str(unit[0]).split("/")[-1]
+                        if unit_name.startswith(start_chars):
+                            logger.info("Adding wildcard service: %s" % unit_name)
+                            self._monitored_services.append(unit_name)
+        except Exception as ae:
+            logger.exception(ae)
+
+    def _search_new_services(self):
+        """Look for any new wildcard services, ie m0d@<fid>"""
+        units = self._manager.ListUnitFiles()
+        try:
+            for service in self._wildcard_services:
+                # Search thru list of services on the system that match the starting chars
+                start_chars = service.split("*")[0]
+                for unit in units:
+                    unit_name = str(unit[0]).split("/")[-1]
+                    if unit_name.startswith(start_chars) and \
+                        unit_name not in self._monitored_services:
+                        logger.info("Adding newly found wildcard service: %s" % unit_name)
+                        self._inactive_services.append(unit_name)
+
+        except Exception as ae:
+            logger.exception(ae)
 
     def _update_by_id_paths(self):
         """Updates the global dict of by-id symlinks for each drive"""
@@ -345,7 +400,8 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
             and if so attach a callback method to its properties
             to detect changes
         """
-        for disabled_service in self._inactive_services:
+        examined_services = copy.deepcopy(self._inactive_services)
+        for disabled_service in examined_services:
             # Retrieve an object representation of the systemd unit
             unit = self._bus.get_object('org.freedesktop.systemd1',
                                         self._manager.LoadUnit(disabled_service))
@@ -371,7 +427,9 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                                          self._on_prop_changed(a, b, c, p),
                                          dbus_interface=dbus.PROPERTIES_IFACE)
 
+                # Remove the service from the inactive list and add it to our currently monitored list
                 self._inactive_services.remove(disabled_service)
+                self._monitored_services.append(disabled_service)
 
                 # Get the current PID of the service
                 curr_pid = self._get_service_pid(unit)
@@ -449,15 +507,11 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
 
         # Update the state in the global dict for later use
         self._log_debug("_on_prop_changed, Service state change detected on unit: %s" % unit_name)
+        self._service_status[str(unit_name)] = str(state) + ":" + str(substate)
 
+        # get the previous state and substate for the service        
         previous_state = self._service_status.get(str(unit_name), "N/A:N/A").split(":")[0]
         previous_substate = self._service_status.get(str(unit_name), "N/A:N/A").split(":")[1]
-        if not previous_state:
-            previous_state = "inactive"
-        if not previous_substate:
-            previous_substate = "dead"
-
-        self._service_status[str(unit_name)] = str(state) + ":" + str(substate)
 
         self._log_debug("_on_prop_changed, State: %s, Substate: %s" % (state, substate))
         self._log_debug("_on_prop_changed, Previous State: %s, Previous Substate: %s" % 
