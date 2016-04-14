@@ -170,7 +170,7 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 internal_json_msg = json.dumps(
                     {"actuator_request_type" : {
                         "logging": {
-                            "log_level": "LOG_ERR",
+                            "log_level": "LOG_WARNING",
                             "log_type": "IEM",
                             "log_msg": "IEC: 020003001: Service entered a Failed state : {}" \
                                             .format(json.dumps(json_data, sort_keys=True))
