@@ -13,7 +13,7 @@ Contains File collector class for remote and local nodes
 # All rights are expressly reserved by Seagate Technology LLC.
 # __author__ = 'Bhupesh Pant'
 
-
+import json
 from sspl_hl.utils.cluster_node_manager.node_communication_handler import \
     Node, \
     NodeCommunicationHandler, \
@@ -24,15 +24,17 @@ from sspl_hl.utils.common import execute_shell
 import os
 import shutil
 import subprocess
+import plex.core.log as plex_log
 
 
 class FileCollector(object):
+    # pylint: disable=too-few-public-methods
     """
     Base class of File collector.
     """
     BUNDLE_TMP_DIR = '/tmp/bundle'
 
-    def __init__(self, host, collection_rules, logger=None):
+    def __init__(self, host, collection_rules, logger=plex_log):
         self.is_log_collected = False
         self.collection_rules = collection_rules
         self._actions = collection_rules.get(ACTION, [])
@@ -45,14 +47,14 @@ class FileCollector(object):
         """
         Collect the defined Files
         """
-        raise NotImplementedError
-
-    def list_collected_files(self):
-        """
-        List all the successfully collected files.
-        """
-        # todo: To be implemented
-        pass
+        try:
+            LocalFileCollector.create_tmp_bundle_directory()
+            self._execute_actions()
+            self._collect_files()
+            self._clean_up()
+        except (OSError, IOError):
+            # todo: log and exit
+            pass
 
     def _execute_actions(self):
         """
@@ -64,6 +66,12 @@ class FileCollector(object):
         """
         Do the necessary cleaning, like closing any connections or
         removing the temp files.
+        """
+        pass
+
+    def _collect_files(self):
+        """
+        Collect files and put to a common bucket
         """
         pass
 
@@ -156,6 +164,7 @@ class LocalFileCollector(FileCollector):
 
 
 class RemoteFileCollector(FileCollector):
+    # pylint: disable=too-few-public-methods
     """
     Collects files from the Remote machine
     """
@@ -239,19 +248,56 @@ class RemoteFileCollector(FileCollector):
                 pass
 
 
-class McoRemoteFileCollector(FileCollector):
+class McoRemoteFileCollector(object):
+    # pylint: disable=too-few-public-methods
     """
     MCO interface for the remote file collection.
     """
 
+    MCO_REMOTE_COLLECTION = 'python /var/lib/ssu_logs_collector.py'
+
+    def __init__(self, collection_rules):
+        """"""
+        collection_rules = collection_rules.values()
+        self._node_collection_rule = \
+            collection_rules and collection_rules[-1]
+        del self._node_collection_rule['bucket']
+
     def collect(self):
         """
-        Collect the files using mco interface
+        collect the remote bundling
         """
-        pass
+        plex_log.info('Remote bundling args:- {}'.format(
+            self._node_collection_rule))
+        self._execute_actions()
 
     def _execute_actions(self):
         """
-        Execute the commands in remote nodes using mco
+        Execute the command on remote node using mco
         """
-        pass
+        rules_node = json.dumps(self._node_collection_rule)
+        node_rule = rules_node.replace('"', '\\"')
+        command = '{} \'{}\''.format(
+            McoRemoteFileCollector.MCO_REMOTE_COLLECTION,
+            node_rule
+        )
+        mco_cmd = 'mco rpc runcmd rc cmd=\"{}\" -F role=storage'.\
+            format(command)
+        plex_log.info(
+            'Sending mco command, {} for initiating bundling '
+            'from SSU nodes'.format(mco_cmd)
+            )
+        try:
+            result = subprocess.check_output(mco_cmd, shell=True)
+            plex_log.info(
+                'Remote bundling is completed with Return code: {}'
+                .format(result))
+        except (subprocess.CalledProcessError, OSError) as err:
+            err_msg = \
+                'Command: {}, failed to execute. Details: {}'.format(
+                    command,
+                    str(err)
+                )
+            plex_log.warning(err_msg)
+            return None
+        return result

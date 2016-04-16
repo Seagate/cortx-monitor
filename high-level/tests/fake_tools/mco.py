@@ -1,7 +1,7 @@
 #!/usr/bin/python
 import sys
 
-if (len(sys.argv) > 3):
+if len(sys.argv) > 3:
 
     if (sys.argv[1] == 'ping') and \
             (sys.argv[2] == '-F') and \
@@ -23,5 +23,14 @@ if (len(sys.argv) > 3):
         print ('vmc-rekvm-ssu-1-3')
         print ('vmc-rekvm-ssu-1-5')
         print ('vmc-rekvm-ssu-1-4')
+    elif (sys.argv[1] == 'rpc') and \
+            (sys.argv[2] == 'runcmd') and \
+            (sys.argv[3] == 'rc'):
+        print ('vmc-rekvm-ssu-1-1')
+        print ('Output : 0')
+        print ('vmc-rekvm-ssu-1-2')
+        print ('Output : 0')
+        print ('vmc-rekvm-ssu-1-3')
+        print ('Output : 0')
 else:
     print

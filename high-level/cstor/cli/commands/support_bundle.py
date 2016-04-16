@@ -103,8 +103,8 @@ class SupportBundle(BaseCommand):
         Format the bundle create response
         """
         name = message.get('bundle_name', None)
-        response = 'Bundle creation has been initiated, File: {}. ' \
-                   '\n Use support_bundle \'list\' command to monitor the ' \
+        response = 'Bundle creation has been initiated, File: {} ' \
+                   '\nUse the bundle \'list\' command to monitor the ' \
                    'progress.'.format(name)
 
         return response

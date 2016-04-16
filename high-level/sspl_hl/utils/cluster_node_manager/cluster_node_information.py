@@ -17,6 +17,7 @@ Common responsibility includes,
 import json
 import subprocess
 import urllib
+import plex.core.log as logger
 
 
 class ClusterNodeInformation(object):
@@ -52,11 +53,27 @@ class ClusterNodeInformation(object):
         """
         Returns all the active nodes in the cluster
         """
+        mco_ping = 'mco find -F role=storage'
         try:
-            return subprocess.check_output(
-                'mco find -F role=storage',
-                shell=True
+            ssu_list = subprocess.check_output(
+                mco_ping, shell=True
             ).split()
-        except subprocess.CalledProcessError:
-            # todo: necessary logging
+            logger.debug('Active SSUs from command, {} : - {}'.format(
+                mco_ping,
+                ssu_list))
+            return ssu_list
+        except subprocess.CalledProcessError as err:
+            logger.warning(
+                'Failed to get SSU list. Details: {}'.format(str(err))
+            )
             return []
+
+    @staticmethod
+    def get_cmu_hostname():
+        """
+        Get hostname of the CMU
+        """
+        try:
+            return subprocess.check_output('hostname').strip()
+        except subprocess.CalledProcessError:
+            return ''

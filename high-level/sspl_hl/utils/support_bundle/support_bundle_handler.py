@@ -70,30 +70,36 @@ class SupportBundleHandler(ExecutorSafe):
         """
         logger.debug('Collection of bundle files has Started')
         self._ssu_list = self._cluster_node_manger.get_active_nodes()
+        logger.info('SSU List --->{}'.format(self._ssu_list))
         bundle_dir_info = bundle_utils.get_bundle_dir_config(
             config.SUPPORT_BUNDLE_DIR_STRUCTURE,
             self._ssu_list,
             bundle_name
         )
+        logger.info('Bundle_dir_info --->{}'.format(bundle_dir_info))
         bundle_utils.create_bundle_structure(
             config.BASE_BUCKET_PATH,
             bundle_dir_info
         )
         self._file_collection_rules = \
             ClusterFilesCollectionRules(self._ssu_list,
-                                        bundle_dir_info.keys()[0])
+                                        self._cluster_node_manger.
+                                        get_cmu_hostname(),
+                                        bundle_name)
+        logger.info('Bundling Info: Bundle_id: {}, Collection_rule: {}'.format(
+            bundle_name, self._file_collection_rules.get_remote_files_info()))
         self.collect_files_from_cluster()
         SupportBundleHandler.build_tar_bundle(bundle_dir_info)
-        logger.debug('Collection of bundle files has Successfully completed!')
+        logger.info('Collection of bundle files has Successfully completed!')
 
     def collect_files_from_cluster(self):
         """
         Collect files from local and remote cluster
         """
 
-        # SupportBundleHandler.collect_remote_files(
-        #     self._file_collection_rules.get_remote_files_info()
-        # )
+        SupportBundleHandler.collect_remote_files(
+            self._file_collection_rules.get_remote_files_info()
+        )
 
         SupportBundleHandler.collect_local_files(
             self._file_collection_rules.get_local_files_info()
@@ -124,10 +130,8 @@ class SupportBundleHandler(ExecutorSafe):
         collection rules. Collection will be handled by RemoteFileCollector
         object.
         """
-        for node in collection_rules.keys():
-            file_collector = McoRemoteFileCollector(node,
-                                                    collection_rules[node])
-            file_collector.collect()
+        file_collector = McoRemoteFileCollector(collection_rules)
+        file_collector.collect()
 
     @staticmethod
     def collect_local_files(collection_rules):

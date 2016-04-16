@@ -66,22 +66,34 @@ class ClusterFilesCollectionRules(object):
     will store the bundle collected from the node.
     """
 
-    def __init__(self, cluster_info, bucket):
+    def __init__(self, ssu_list, cmu_hostname, bucket):
+        self._cmu_hostname = cmu_hostname
         self._base_bucket = \
             os.path.join(config.BASE_BUCKET_PATH, bucket)
         self._collection_rules = \
-            self._generate_rules(cluster_info)
+            self._generate_rules(ssu_list)
 
-    def _generate_rules(self, cluster_info):
+    def _generate_rules(self, ssu_list):
         """
         Create a dict of collection rules for the cluster.
         Please refer the message structure above.
         """
+        # defaut_host: It will contains the information about
+        # the host details like,
+        # 1. hostname
+        # 2. pwd to connect to host
+        # 3. Bucket on the host to send files.
+        default_host = {
+            'name': self._cmu_hostname,
+            'pwd': config.NODES_ACCESS_KEY,
+            'bucket': os.path.join(self._base_bucket, 'nodes/')
+        }
 
         default_remote = {
             ACTION: config.ACTION_TO_TRIGGER_ON_REMOTE_NODE,
             FILES: config.REMOTE_FILES_TO_COLLECT,
-            BUCKET: ''
+            BUCKET: '',
+            'host': default_host
         }
         misc_files_rules = self._get_misc_files_rules()
 
@@ -93,7 +105,7 @@ class ClusterFilesCollectionRules(object):
         }
         rules = {}
         remote = {}
-        for node in cluster_info:
+        for node in ssu_list:
             remote[node] = dict(default_remote)
             remote[node][BUCKET] = \
                 os.path.join(self._base_bucket, 'nodes', '{}/'.format(node))

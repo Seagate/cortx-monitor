@@ -13,6 +13,7 @@ Contains the configuration used by the support bundle module.
 # __author__ = 'Bhupesh Pant'
 
 BASE_BUCKET_PATH = '/var/lib/support_bundles'
+NODES_ACCESS_KEY = 'dcouser'
 PLEX_LOGS = 'plex_logs'
 LOCAL = 'local'
 REMOTE = 'remote'
@@ -92,12 +93,13 @@ COMMON_FILES_TO_COLLECT_CMU_SSU = [
 # REMOTE CONFIGURATION
 # """
 ACTION_TO_TRIGGER_ON_REMOTE_NODE = [
-    'mv m0trace* /tmp/bundle/'
-] + COMMON_ACTION_FOR_CMU_SSU
+    'm0reportbug',
+    'mv -f m0reportbug-data.tar.gz /tmp/bundle/',
+]
 
 REMOTE_FILES_TO_COLLECT = [
 
-] + COMMON_FILES_TO_COLLECT_CMU_SSU
+]
 
 # """
 # LOCAL CONFIGURATION

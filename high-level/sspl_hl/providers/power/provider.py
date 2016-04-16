@@ -23,7 +23,7 @@ class PowerProvider(BaseCastorProvider):
     Handler for all power based commands
     """
 
-    IPMI_CMD = "sudo /usr/local/bin/ipmitooltool.sh"
+    IPMI_CMD = "sudo /usr/bin/ipmitooltool.sh"
 
     def __init__(self, title, description):
         super(PowerProvider, self).__init__(title=title,
@@ -68,7 +68,8 @@ class PowerProvider(BaseCastorProvider):
         # deferred.addErrback(self.handle_failure)
 
         reply_msg = 'Cluster Power \'{}\' has been initiated. Please use ' \
-                    '\'status\' command to check the power status of nodes.'\
+                    'the \'status\' command to check the power ' \
+                    'status of the nodes.'\
                     .format(request.selection_args.get('command'))
         self.log_info('IPMI RESPONSE --> {}'.format(ipmi_response))
         self.log_info(reply_msg)

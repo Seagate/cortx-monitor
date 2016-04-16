@@ -243,15 +243,17 @@ def _install_fake_mco():
         mco_file_path = os.path.join(current_file_path, "../..", file_mco)
         return mco_file_path
 
-    if os.path.exists('/usr/local/bin/mco'):
-        subprocess.Popen('sudo rm -f /usr/local/bin/mco', shell=True)
+    if os.path.exists('/usr/bin/mco'):
+        subprocess.Popen('sudo rm -f /usr/bin/mco', shell=True)
 
     # Install the script
 
-    command = 'sudo cp -f {} /usr/local/bin/mco'.format(get_mco_file_path())
+    command = 'sudo cp -f {} /usr/bin/mco'.format(get_mco_file_path())
     subprocess.check_output(command, shell=True)
     # Give necessary permissions to it
-    subprocess.check_output('sudo chmod +x /usr/local/bin/mco', shell=True)
+    subprocess.check_output('sudo chmod +x /usr/bin/mco', shell=True)
+    command_plex = 'sudo chown plex:plex /usr/bin/mco'
+    subprocess.check_output(command_plex, shell=True)
 
 
 def _install_fake_ras():
@@ -271,14 +273,14 @@ def _install_fake_ras():
         csman_file_path = os.path.join(current_file_path, "../..", file_csman)
         return csman_file_path
 
-    if os.path.exists('/usr/local/bin/csman'):
+    if os.path.exists('/usr/bin/csman'):
         subprocess.check_output(
-            'sudo rm -f /usr/local/bin/csman',
+            'sudo rm -f /usr/bin/csman',
             shell=True)
     # Install the script
-    command = 'sudo cp {} /usr/local/bin/csman'.format(get_csman_file_path())
+    command = 'sudo cp {} /usr/bin/csman'.format(get_csman_file_path())
     subprocess.check_output(command, shell=True)
-    subprocess.check_output('sudo chmod +x /usr/local/bin/csman', shell=True)
+    subprocess.check_output('sudo chmod +x /usr/bin/csman', shell=True)
 
 
 def _install_fake_ipmitooltool():
@@ -296,18 +298,20 @@ def _install_fake_ipmitooltool():
         ipmi_file_path = os.path.join(current_file_path, "../..", fake_ipmi)
         return ipmi_file_path
 
-    if os.path.exists('/usr/local/bin/ipmitooltool.sh'):
+    if os.path.exists('/usr/bin/ipmitooltool.sh'):
         # Install the script
         subprocess.check_output(
-            'sudo rm -f /usr/local/bin/ipmitooltool.sh',
+            'sudo rm -f /usr/bin/ipmitooltool.sh',
             shell=True)
     # Install the script
-    command = 'sudo cp {} /usr/local/bin/'.format(get_ipmmi_file_path())
+    command = 'sudo cp {} /usr/bin/'.format(get_ipmmi_file_path())
     subprocess.check_output(command, shell=True)
     subprocess.check_output(
-        'sudo chmod +x /usr/local/bin/ipmitooltool.sh',
+        'sudo chmod +x /usr/bin/ipmitooltool.sh',
         shell=True
     )
+    command_plex = 'sudo chown plex:plex /usr/bin/ipmitooltool.sh'
+    subprocess.check_output(command_plex, shell=True)
 
 
 @lettuce.after.all
@@ -359,9 +363,9 @@ def _delete_fake_ipmitooltool():
     """
     delete fake ipmitooltool.sh
     """
-    if os.path.exists('/usr/local/bin/ipmitooltool.sh'):
+    if os.path.exists('/usr/bin/ipmitooltool.sh'):
         subprocess.check_output(
-            'sudo rm -f /usr/local/bin/ipmitooltool.sh',
+            'sudo rm -f /usr/bin/ipmitooltool.sh',
             shell=True
         )
 
@@ -370,9 +374,9 @@ def _delete_fake_mco():
     """
     delete fake mco
     """
-    if os.path.exists('/usr/local/bin/mco'):
+    if os.path.exists('/usr/bin/mco'):
         subprocess.check_output(
-            'sudo rm -f /usr/local/bin/mco',
+            'sudo rm -f /usr/bin/mco',
             shell=True
         )
 
@@ -381,8 +385,8 @@ def _delete_fake_csman():
     """
     delete fake csman
     """
-    if os.path.exists('/usr/local/bin/csman'):
+    if os.path.exists('/usr/bin/csman'):
         subprocess.check_output(
-            'sudo rm -f /usr/local/bin/csman',
+            'sudo rm -f /usr/bin/csman',
             shell=True
         )
