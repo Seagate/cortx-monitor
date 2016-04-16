@@ -139,7 +139,7 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
             # Pull out the service_request and if it's equal to "status" then get current status (state, substate)
             service_request = jsonMsg.get("actuator_request_type").get("service_watchdog_controller").get("service_request")
-            if service_request == "status":
+            if service_request != "None":
                 # Query the Zope GlobalSiteManager for an object implementing IService
                 if self._service_actuator == None:
                     self._service_actuator = queryUtility(IService)()

@@ -163,13 +163,21 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                             continue
                     logger.info("    " + unit_name)
 
-                    # Remove it from our inactive list; it's alive and well
-                    self._inactive_services.remove(unit_name)
-                    total += 1
-
                     # Retrieve an object representation of the systemd unit
                     unit = self._bus.get_object('org.freedesktop.systemd1',
                                                 self._manager.GetUnit(unit_name))
+
+                    state = unit.Get('org.freedesktop.systemd1.Unit', 'ActiveState',
+                             dbus_interface='org.freedesktop.DBus.Properties')
+
+                    substate = unit.Get('org.freedesktop.systemd1.Unit', 'SubState',
+                             dbus_interface='org.freedesktop.DBus.Properties')
+                   
+                    self._service_status[str(unit_name)] = str(state) + ":" + str(substate)
+
+                    # Remove it from our inactive list; it's alive and well
+                    if state == "active":
+                        self._inactive_services.remove(unit_name)
 
                     # Use the systemd unit to get an Interface to call methods
                     Iunit = Interface(unit,
@@ -180,7 +188,6 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                                             lambda a, b, c, p = unit :
                                             self._on_prop_changed(a, b, c, p),
                                             dbus_interface=dbus.PROPERTIES_IFACE)
-                    self._service_status[str(unit_name)] = "active"
 
                     # Get the current PID of the service
                     curr_pid = self._get_service_pid(unit)
@@ -188,29 +195,14 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                     # Update the mapping of current pids
                     self._service_pids[str(unit_name)] = curr_pid
 
-            logger.info("SystemdWatchdog, Total services monitored: %d" % total)
-
-            # Retrieve the main loop which will be called in the run method
-            self._loop = gobject.MainLoop()
-
-            # Initialize the gobject threads and get its context
-            gobject.threads_init()
-            context = self._loop.get_context()
-
-            # Send out the current status of each monitored service
-            for service in self._monitored_services:
-                try:
-                    # Get the current PID of the service
-                    curr_pid = self._service_pids.get(str(service), "N/A")
-
                     # Setting service_request to 'status' will case msg handler to retrieve current values
                     msgString = json.dumps({"actuator_request_type": {
                                     "service_watchdog_controller": {
-                                        "service_name" : service,
-                                        "service_request" : "status",
-                                        "state" : "None",
+                                        "service_name" : unit_name,
+                                        "service_request" : "None",
+                                        "state" : state,
                                         "previous_state" : "N/A",
-                                        "substate" : "None",
+                                        "substate" : substate,
                                         "previous_substate" : "N/A",
                                         "pid" : curr_pid,
                                         "previous_pid" : "N/A"
@@ -219,9 +211,16 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                                  })
                     self._write_internal_msgQ(ServiceMsgHandler.name(), msgString)
 
-                except Exception:
-                    logger.exception()
+                    total += 1
 
+            # Retrieve the main loop which will be called in the run method
+            self._loop = gobject.MainLoop()
+
+            # Initialize the gobject threads and get its context
+            gobject.threads_init()
+            context = self._loop.get_context()
+
+            logger.info("SystemdWatchdog, Total services monitored: %d" % total)
             logger.info("SystemdWatchdog initialization completed")
 
             # Leave enabled for now, it's not too verbose and handy in logs when status' change
@@ -267,7 +266,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
 
     def _add_wildcard_services(self):
         """Update the list of monitored services with wildcard entries"""
-        units = self._manager.ListUnitFiles()
+        units = self._manager.ListUnits()
         try:
             # Look for wildcards in monitored services list and expandit
             examined_services = copy.deepcopy(self._monitored_services)
@@ -291,13 +290,19 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
 
     def _search_new_services(self):
         """Look for any new wildcard services, ie m0d@<fid>"""
-        units = self._manager.ListUnitFiles()
+        units = self._manager.ListUnits()
+        #logger.info("Searching for new services")
+        #logger.info("inactive_services: %s" % str(self._inactive_services))
+        #logger.info("monitored_services: %s" % str(self._monitored_services))
+        #logger.info("wildcard_services: %s" % str(self._wildcard_services))
+
         try:
             for service in self._wildcard_services:
                 # Search thru list of services on the system that match the starting chars
                 start_chars = service.split("*")[0]
                 for unit in units:
                     unit_name = str(unit[0]).split("/")[-1]
+
                     if unit_name.startswith(start_chars) and \
                         unit_name not in self._monitored_services:
                         logger.info("Adding newly found wildcard service: %s" % unit_name)
@@ -429,7 +434,8 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
 
                 # Remove the service from the inactive list and add it to our currently monitored list
                 self._inactive_services.remove(disabled_service)
-                self._monitored_services.append(disabled_service)
+                if disabled_service not in self._monitored_services:
+                    self._monitored_services.append(disabled_service)
 
                 # Get the current PID of the service
                 curr_pid = self._get_service_pid(unit)
@@ -465,8 +471,6 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
         Iunit = Interface(unit, dbus_interface='org.freedesktop.DBus.Properties')
 
         curr_pid = Iunit.Get('org.freedesktop.systemd1.Service', 'ExecMainPID')
-        self._log_debug("_get_service_pid, PID: %s" % str(curr_pid))
-
         return str(curr_pid)
 
     def _get_prop_changed(self, unit, interface, prop_name, changed_properties, invalidated_properties):
@@ -480,8 +484,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
 
     def _on_prop_changed(self, interface, changed_properties, invalidated_properties, unit):
         """Callback to handle state changes in services"""
-        # We're dealing with systemd units so we only care about that interface
-        #self._log_debug("_on_prop_changed, interface: %s" % interface)
+        # We currently only care about the unit interface
         if interface != 'org.freedesktop.systemd1.Unit':
             return
 
@@ -489,42 +492,50 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
         Iunit = Interface(unit, dbus_interface='org.freedesktop.DBus.Properties')
 
         # Always call methods on the interface not the actual object
-        unit_name = Iunit.Get(interface, "Id")
+        unit_name = str(Iunit.Get(interface, "Id"))
 
-        # self._log_debug("_on_prop_changed, changed_properties: %s" % changed_properties)
-        # self._log_debug("_on_prop_changed, invalids: %s" % invalidated_properties)
-
+        # Get the state and substate for the service
         state = self._get_prop_changed(unit, interface, "ActiveState",
                                        changed_properties, invalidated_properties)
 
         substate = self._get_prop_changed(unit, interface, "SubState",
                                           changed_properties, invalidated_properties)
 
+        # Compare prev to curr pids to see if the service restarted abruptly
+        curr_pid = self._get_service_pid(unit)
+
+        # Retrieve the previous pid of the service
+        prev_pid = self._service_pids.get(unit_name, "N/A")
+
+        # Check for services cycling faster than we can detect and send out json msg
+        if curr_pid != prev_pid and prev_pid != "0":
+            self._log_debug("_on_prop_changed, PID changed, curr: %s, prev: %s" %
+                            (curr_pid, prev_pid))
+            state    = "inactive"
+            substate = "dead"
+
+        # Update the mapping of current pids
+        self._service_pids[unit_name] = curr_pid
+
         # The state can change from an incoming json msg to the service msg handler
         #  This provides a catch to make sure that we don't send redundant msgs
-        if self._service_status.get(str(unit_name), "") == str(state) + ":" + str(substate):
+        if self._service_status.get(unit_name, "") == str(state) + ":" + str(substate):
+            self._log_debug("_on_prop_changed, No service state change detected: %s" % unit_name)
+            self._log_debug("\tstate: %s, substate: %s" % (state, substate))
             return
 
-        # Update the state in the global dict for later use
         self._log_debug("_on_prop_changed, Service state change detected on unit: %s" % unit_name)
-        self._service_status[str(unit_name)] = str(state) + ":" + str(substate)
 
         # get the previous state and substate for the service        
-        previous_state = self._service_status.get(str(unit_name), "N/A:N/A").split(":")[0]
-        previous_substate = self._service_status.get(str(unit_name), "N/A:N/A").split(":")[1]
+        previous_state = self._service_status.get(unit_name, "N/A:N/A").split(":")[0]
+        previous_substate = self._service_status.get(unit_name, "N/A:N/A").split(":")[1]
 
         self._log_debug("_on_prop_changed, State: %s, Substate: %s" % (state, substate))
         self._log_debug("_on_prop_changed, Previous State: %s, Previous Substate: %s" % 
                             (previous_state, previous_substate))
 
-        # Get the current PID of the service
-        curr_pid = self._get_service_pid(unit)
-
-        # Retrieve the previous pid of the service
-        prev_pid = self._service_pids.get(str(unit_name), "N/A")
-
-        # Update the mapping of current pids
-        self._service_pids[str(unit_name)] = curr_pid
+        # Update the state in the global dict for later use
+        self._service_status[unit_name] = str(state) + ":" + str(substate)
 
         # Notify the service message handler to transmit the status of the service
         msgString = json.dumps(
@@ -542,9 +553,6 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                         }
                      })
         self._write_internal_msgQ(ServiceMsgHandler.name(), msgString)
-
-        if state == "inactive":
-            self._inactive_services.append(unit_name)
 
     def _get_monitored_services(self):
         """Retrieves the list of services to be monitored"""
