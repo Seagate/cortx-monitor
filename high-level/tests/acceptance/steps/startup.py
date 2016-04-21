@@ -251,7 +251,7 @@ def _install_fake_mco():
     command = 'sudo cp -f {} /usr/local/bin/mco'.format(get_mco_file_path())
     subprocess.check_output(command, shell=True)
     # Give necessary permissions to it
-    subprocess.check_output('sudo chmod 755 /usr/local/bin/mco', shell=True)
+    subprocess.check_output('sudo chmod +x /usr/local/bin/mco', shell=True)
 
 
 def _install_fake_ras():

@@ -23,7 +23,7 @@ class PowerProvider(BaseCastorProvider):
     Handler for all power based commands
     """
 
-    IPMI_CMD = "/usr/local/bin/ipmitooltool.sh"
+    IPMI_CMD = "sudo /usr/local/bin/ipmitooltool.sh"
 
     def __init__(self, title, description):
         super(PowerProvider, self).__init__(title=title,
