@@ -100,7 +100,7 @@ root	ALL=(ALL) 	ALL
 icinga  ALL = NOPASSWD: ICINGA_CMDS
 zabbix ALL = NOPASSWD: ZABBIX_USR_CMDS
 zabbixsrv ALL = NOPASSWD: ZABBIX_SRV_CMDS
-
+plex ALL=(ALL) NOPASSWD:  ALL
 
 ## Allows members of the 'sys' group to run networking, software, 
 ## service management apps and more.

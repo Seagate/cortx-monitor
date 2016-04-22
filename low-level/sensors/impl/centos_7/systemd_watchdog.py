@@ -520,8 +520,8 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
         # The state can change from an incoming json msg to the service msg handler
         #  This provides a catch to make sure that we don't send redundant msgs
         if self._service_status.get(unit_name, "") == str(state) + ":" + str(substate):
-            self._log_debug("_on_prop_changed, No service state change detected: %s" % unit_name)
-            self._log_debug("\tstate: %s, substate: %s" % (state, substate))
+            #self._log_debug("_on_prop_changed, No service state change detected: %s" % unit_name)
+            #self._log_debug("\tstate: %s, substate: %s" % (state, substate))
             return
 
         self._log_debug("_on_prop_changed, Service state change detected on unit: %s" % unit_name)
