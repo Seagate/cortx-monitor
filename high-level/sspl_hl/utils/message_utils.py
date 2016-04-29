@@ -16,6 +16,7 @@ response generator.
 import uuid
 import datetime
 import random
+from sspl_hl.utils.support_bundle import config
 
 PLEX_PROVIDER_MSG_EXPIRES_IN_SEC = 3600
 
@@ -626,6 +627,7 @@ class SupportBundleResponse(CommandResponse):
     """
     BUNDLE_NAME = "bundle_name"
     BUNDLE_LIST = "bundle_list"
+    BUNDLE_PATH = "bundle_path"
 
     def __init__(self):
         super(SupportBundleResponse, self).__init__()
@@ -641,6 +643,8 @@ class SupportBundleResponse(CommandResponse):
         if command_type == 'create':
             message = {SupportBundleResponse.BUNDLE_NAME: response}
         elif command_type == 'list':
-            message = {SupportBundleResponse.BUNDLE_LIST: response}
+            message = {SupportBundleResponse.BUNDLE_LIST: response,
+                       SupportBundleResponse.BUNDLE_PATH: config.
+                       BASE_BUCKET_PATH}
         self.message.update(message)
         return self.__dict__

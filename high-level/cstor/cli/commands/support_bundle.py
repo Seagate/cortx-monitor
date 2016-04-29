@@ -17,7 +17,6 @@ File containing "bundle" command implementation
 
 from cstor.cli.commands.base_command import BaseCommand
 import cstor.cli.errors as errors
-from sspl_hl.utils.support_bundle import config
 
 
 class SupportBundle(BaseCommand):
@@ -94,7 +93,7 @@ class SupportBundle(BaseCommand):
             response = '{}\n {}'.format(response, tar_file)
         response = 'Bundles are available at {}\n' \
                    'Total bundles available: {} \n {}'.\
-            format(config.BASE_BUCKET_PATH,
+            format(message.get('bundle_path'),
                    count, response)
         return response
 
