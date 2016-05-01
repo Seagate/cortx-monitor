@@ -86,22 +86,22 @@ class IEMlogger(Debug):
 
             # Parse out the event code and remove any white spaces
             event_code = log_msg[event_code_start : event_code_stop].strip()
-            self._log_debug("log_msg, event_code: %s" % event_code)
             self._log_debug("log_msg: %s" % log_msg)
+            self._log_debug("IEC: %s" % event_code)
 
             # Use the optional log_level in json message and set it to PRIORITY
             if log_level in LOGLEVEL_NAME_TO_LEVEL_DICT:
                 priority = LOGLEVEL_NAME_TO_LEVEL_DICT[log_level]
-            self._log_debug("log_msg, priority: %s" % priority)
+            else:
+                priority = LOG_INFO
 
             # Send it to the journal with the appropriate arguments
             journal.send(log_msg, MESSAGE_ID=event_code, PRIORITY=priority,
                          SYSLOG_IDENTIFIER="sspl-ll")
 
             # Send email if priority exceeds LOGEMAILER priority in /etc/sspl-ll.conf
-            email_result = self._autoemailer._send_email(log_msg, priority)
-            result = "Successfully logged IEM msg, {}".format(email_result)
-            self._log_debug("Autoemailer result: %s" % result)
+            result = self._autoemailer._send_email(log_msg, priority)
+            self._log_debug("Emailing result: {}".format(result))
 
         except Exception as de:
             self._log_debug("log_msg, Error parsing IEM message: %s" % de)

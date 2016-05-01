@@ -34,7 +34,9 @@ class LoggingMsgHandler(ScheduledModuleThread, InternalMsgQ):
     PRIORITY    = 2
 
     # Section and keys in configuration file
-    LOGGINGMSGHANDLER = MODULE_NAME.upper()
+    LOGGINGMSGHANDLER   = MODULE_NAME.upper()
+    IEM_ROUTING_ENABLED = 'iem_routing_enabled'
+    IEM_LOG_LOCALLY     = 'iem_log_locally'
 
 
     @staticmethod
@@ -54,12 +56,16 @@ class LoggingMsgHandler(ScheduledModuleThread, InternalMsgQ):
         # Initialize internal message queues for this module
         super(LoggingMsgHandler, self).initialize_msgQ(msgQlist)
 
+        # Read in configuration values
         self._conf_reader = conf_reader
+        self._read_config()
+
         self._iem_logger  = None
 
     def run(self):
         """Run the module periodically on its own thread."""
-
+        #self._set_debug(True)
+        #self._set_debug_persist(True)
         self._log_debug("Start accepting requests")
 
         try:
@@ -98,14 +104,17 @@ class LoggingMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
         result = "N/A"
         if log_type == "IEM":
-            self._log_debug("_processMsg, msg_type: IEM")
-            if self._iem_logger == None:
-                self._iem_logger = IEMlogger(self._conf_reader)
-            result = self._iem_logger.log_msg(jsonMsg)
+            self._log_debug("_process_msg, msg_type: IEM")
+            if self._iem_log_locally == "true":
+                if self._iem_logger == None:
+                    self._iem_logger = IEMlogger(self._conf_reader)
+    
+                result = self._iem_logger.log_msg(jsonMsg)
+                self._log_debug("Log IEM results: %s" % result)        
 
         if log_type == "HDS":
             # Retrieve the serial number of the drive
-            self._log_debug("_processMsg, msg_type: HDS")
+            self._log_debug("_process_msg, msg_type: HDS")
             log_msg = jsonMsg.get("actuator_request_type").get("logging").get("log_msg")
 
             # Parse out the json data section in the IEM and replace single quotes with double
@@ -134,12 +143,53 @@ class LoggingMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 self._iem_logger = IEMlogger(self._conf_reader)
             result = self._iem_logger.log_msg(jsonMsg)
 
+            # Send ack about logging msg
+            ack_msg = AckResponseMsg(log_type, result, uuid).getJson()
+            self._write_internal_msgQ(RabbitMQegressProcessor.name(), ack_msg)
+
         # ... handle other logging types
 
-        # Send ack about logging msg
-        json_msg = AckResponseMsg(log_type, result, uuid).getJson()
-        self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+        # Route the IEM if enabled
+        if self._iem_routing_enabled == "true":
+            self._route_IEM(jsonMsg)
 
+    def _route_IEM(self, jsonMsg):
+        # Send the IEM to the logging msg handler to be processed
+        
+        # Get the optional log_level if it exists in msg
+        if jsonMsg.get("actuator_request_type").get("logging").get("log_level") is not None:
+            log_level = jsonMsg.get("actuator_request_type").get("logging").get("log_level")
+        else:
+            log_level = "LOG_INFO"
+
+        # Get the message to log in format "IEC: EVENT_CODE: EVENT_STRING: JSON DATA"
+        log_msg = "{} {}".format(log_level,
+                                 jsonMsg.get("actuator_request_type").get("logging").get("log_msg"))
+
+        internal_json_msg = json.dumps(
+                 {"message": {
+                    "IEM_routing": {
+                        "log_msg": log_msg
+                        }
+                    }
+                 })
+        # Send the IEM to RabbitMQegressProcessor to be routed to another IEM listener
+        self._write_internal_msgQ(RabbitMQegressProcessor.name(), internal_json_msg)
+
+    def _read_config(self):
+        """Read in configuration values"""
+        try:
+            self._iem_routing_enabled = self._conf_reader._get_value_with_default(self.LOGGINGMSGHANDLER,
+                                                                 self.IEM_ROUTING_ENABLED,
+                                                                 'false')
+            self._iem_log_locally     = self._conf_reader._get_value_with_default(self.LOGGINGMSGHANDLER,
+                                                                 self.IEM_LOG_LOCALLY,
+                                                                 'true')
+            logger.info("LoggingMsgHandler, IEM routing enabled: %s" % str(self._iem_routing_enabled))
+            logger.info("LoggingMsgHandler, IEM log locally: %s" % str(self._iem_log_locally))
+        except Exception as ex:
+            logger.exception("_read_config: %r" % ex)
+            
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""
         super(LoggingMsgHandler, self).shutdown()

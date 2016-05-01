@@ -17,6 +17,7 @@
 
 import pika
 import os
+import json
 
 from systemd import journal
 
@@ -25,21 +26,21 @@ from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
 from framework.utils.autoemail import AutoEmail
 
+# Modules that receive messages from this module
+from message_handlers.logging_msg_handler import LoggingMsgHandler
+
 from syslog import (LOG_EMERG, LOG_ALERT, LOG_CRIT, LOG_ERR,
                     LOG_WARNING, LOG_NOTICE, LOG_INFO, LOG_DEBUG)
-LOGLEVELS = [("emerg"    , 0),
-             ("emergency", 0),
-             ("alert"    , 1),
-             ("critical" , 2),
-             ("crit"     , 2),
-             ("error"    , 3),
-             ("warning"  , 4),
-             ("warn"     , 4),
-             ("notice"   , 5),
-             ("info"     , 6),
-             ("debug"    , 7),
-             (""         , 6) #Identify no log level as info
-            ]
+LOGLEVELS = {
+    "LOG_EMERG"   : LOG_EMERG,
+    "LOG_ALERT"   : LOG_ALERT,
+    "LOG_CRIT"    : LOG_CRIT,
+    "LOG_ERR"     : LOG_ERR,
+    "LOG_WARNING" : LOG_WARNING,
+    "LOG_NOTICE"  : LOG_NOTICE,
+    "LOG_INFO"    : LOG_INFO,
+    "LOG_DEBUG"   : LOG_DEBUG
+}
 
 class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
 
@@ -79,6 +80,9 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
 
     def run(self):
         """Run the module periodically on its own thread."""
+        #self._set_debug(True)
+        #self._set_debug_persist(True)
+
         self._log_debug("Start accepting requests")
         try:
             result = self._channel.queue_declare(exclusive=True)
@@ -110,7 +114,7 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
             #ingressMsg = json.loads(' '.join(ingressMsgTxt.split()))
 
             # Enable debugging if it's found in the message
-            if "debug" in body or "DEBUG" in body:
+            if "debug" in body.lower():
                 self._set_debug(True)
 
             # Try encoding message to handle escape chars if present
@@ -119,6 +123,15 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
             except Exception as de:
                 self._log_debug("_process_msg, no encoding applied, writing to syslog")
                 log_msg = body
+
+            # See if there is log level at the beginning
+            log_level = log_msg[0: log_msg.index(" ")]
+            if LOGLEVELS.get(log_level) is not None:
+                priority = LOGLEVELS[log_level]
+                log_msg = log_msg[log_msg.index(" "):]
+            else:
+                priority = LOG_INFO  # Default to info log level
+                log_level = "LOG_INFO"
 
             # See if there is an id available
             event_code = None
@@ -133,23 +146,26 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
                 # Log message has no IEC to use as message_id in journal, ignoring
                 pass
 
-            # Write message to the journal
-            for loglevel, priority in LOGLEVELS:
-                # Parse the message for a log level and log the message
-                if loglevel in log_msg or loglevel.upper() in log_msg:
-                    # Send it to the journal with the appropriate arguments
-                    journal.send(log_msg, MESSAGE_ID=event_code, PRIORITY=priority,
-                                 SYSLOG_IDENTIFIER="sspl-ll")
-
-                    # Send email if priority exceeds LOGEMAILER priority in /etc/sspl-ll.conf
-                    result = self._autoemailer._send_email(log_msg, priority)
-                    self._log_debug("Autoemailer result: %s" % result)
-
-                    # Break to avoid resending log messages
-                    break
+            # Not an IEM so just dump it to the journal and don't worry about email and routing back to CMU
+            if event_code == None:
+                journal.send(log_msg, MESSAGE_ID=event_code, PRIORITY=priority,
+                             SYSLOG_IDENTIFIER="sspl-ll")
+            else:
+                # Send the IEM to the logging msg handler to be processed
+                internal_json_msg = json.dumps(
+                    {"actuator_request_type" : {
+                        "logging": {
+                            "log_level": log_level,
+                            "log_type": "IEM",
+                            "log_msg": log_msg
+                            }
+                        }
+                     })
+                # Send the event to logging msg handler to send IEM message to journald
+                self._write_internal_msgQ(LoggingMsgHandler.name(), internal_json_msg)
 
             # Acknowledge message was received     
-            ch.basic_ack(delivery_tag = method.delivery_tag)
+            ch.basic_ack(delivery_tag = method.delivery_tag)            
         except Exception as ex:
             logger.exception("_process_msg: %r" % ex)
 

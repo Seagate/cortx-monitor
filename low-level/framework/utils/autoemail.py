@@ -116,8 +116,16 @@ class AutoEmail(object):
             return "No email recipients in config file"
 
         if msgPriority > self._log_priority:
-            return "Not emailing log due to log level: {0} exceeding the limit of: {1}". \
-                        format(msgPriority, self._log_priority)
+            priority     = "N/A"
+            log_priority = "N/A"
+            # Get the string values for displaying in logs 
+            for k, v in self.LOGLEVEL_NAME_TO_LEVEL_DICT.iteritems():
+                if int(v) == msgPriority:
+                    priority = k
+                if int(v) == self._log_priority:
+                    log_priority = k
+            return "Not emailing due to: {0} not >= {1}". \
+                        format(priority, log_priority)
 
         return_msg = "Failed to email log"
         try:

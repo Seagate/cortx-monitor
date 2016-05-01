@@ -35,16 +35,18 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
     PRIORITY    = 1
 
     # Section and keys in configuration file
-    RABBITMQPROCESSOR   = MODULE_NAME.upper()
-    EXCHANGE_NAME       = 'exchange_name'
-    ACK_EXCHANGE_NAME   = 'ack_exchange_name'
-    ROUTING_KEY         = 'routing_key'
-    VIRT_HOST           = 'virtual_host'
-    USER_NAME           = 'username'
-    PASSWORD            = 'password'
-    SIGNATURE_USERNAME  = 'message_signature_username'
-    SIGNATURE_TOKEN     = 'message_signature_token'
-    SIGNATURE_EXPIRES   = 'message_signature_expires'
+    RABBITMQPROCESSOR       = MODULE_NAME.upper()
+    EXCHANGE_NAME           = 'exchange_name'
+    ACK_EXCHANGE_NAME       = 'ack_exchange_name'
+    ROUTING_KEY             = 'routing_key'
+    VIRT_HOST               = 'virtual_host'
+    USER_NAME               = 'username'
+    PASSWORD                = 'password'
+    SIGNATURE_USERNAME      = 'message_signature_username'
+    SIGNATURE_TOKEN         = 'message_signature_token'
+    SIGNATURE_EXPIRES       = 'message_signature_expires'
+    IEM_ROUTE_ADDR          = 'iem_route_addr'
+    IEM_ROUTE_EXCHANGE_NAME = 'iem_route_exchange_name'
 
     @staticmethod
     def name():
@@ -63,7 +65,8 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
         # Initialize internal message queues for this module
         super(RabbitMQegressProcessor, self).initialize_msgQ(msgQlist)
 
-        # Configure RabbitMQ Exchange to transmit message
+        # Configure RabbitMQ Exchange to transmit messages
+        self._connection = None
         self._read_config()
         self._get_connection()
 
@@ -103,14 +106,12 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
             jsonMsg = self._read_my_msgQ()
 
             if jsonMsg is not None:
-                self._add_signature(jsonMsg)
                 self._transmit_msg_on_exchange(jsonMsg)
- 
+
             # Loop thru all messages in queue until and transmit
             while not self._is_my_msgQ_empty():
                 jsonMsg = self._read_my_msgQ()
                 if jsonMsg is not None:
-                    self._add_signature(jsonMsg)
                     self._transmit_msg_on_exchange(jsonMsg)
 
         except Exception:
@@ -153,16 +154,25 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
             self._password      = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
                                                                  self.PASSWORD,
                                                                  'sspl4ever')
+            self._iem_route_addr = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
+                                                                 self.IEM_ROUTE_ADDR,
+                                                                 '')
+            self._iem_route_exchange_name = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
+                                                                 self.IEM_ROUTE_EXCHANGE_NAME,
+                                                                 'sspl_iem')
+            if self._iem_route_addr != "":
+                logger.info("RabbitMQegressProcessor, Routing IEMs to: %s" % self._iem_route_addr)
+                logger.info("RabbitMQegressProcessor, Using IEM exchange: %s" % self._iem_route_exchange_name)
         except Exception as ex:
             logger.exception("_read_config: %r" % ex)
 
-    def _get_connection(self):
+    def _get_connection(self, host_addr='localhost'):
         try:
             # ensure the rabbitmq queues/etc exist
             creds = pika.PlainCredentials(self._username, self._password)
             self._connection = pika.BlockingConnection(
                 pika.ConnectionParameters(
-                    host='localhost',
+                    host=host_addr,
                     virtual_host=self._virtual_host,
                     credentials=creds
                     )
@@ -184,6 +194,7 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
                 )
         except Exception as ex:
             logger.exception("_get_connection: %r" % ex)
+            self._connection = None
 
     def _get_ack_connection(self):
         try:
@@ -213,6 +224,7 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
                 )
         except Exception as ex:
             logger.exception("_get_connection: %r" % ex)
+            self._connection = None
 
     def _add_signature(self, jsonMsg):
         """Adds the authentication signature to the message"""
@@ -248,34 +260,51 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
                 jsonMsg.get("message").get("actuator_response_type").get("thread_controller") is not None and \
                 jsonMsg.get("message").get("actuator_response_type").get("thread_controller").get("thread_response") == \
                     "SSPL-LL is shutting down":
-                    self._log_debug("_transmit_msg_on_exchange, received" \
+                    logger.info("_transmit_msg_on_exchange, received" \
                                     "global shutdown message from sspl_ll_d")
                     self._request_shutdown = True
-
-            jsonMsg = json.dumps(jsonMsg).encode('utf8')
 
             msg_props = pika.BasicProperties()
             msg_props.content_type = "text/plain"
 
             # Publish json message to the correct channel
-            if json.loads(jsonMsg).get("message").get("actuator_response_type") is not None and \
-                json.loads(jsonMsg).get("message").get("actuator_response_type").get("ack") is not None:
-                  self._get_ack_connection()
-                  self._channel.basic_publish(exchange=self._ack_exchange_name,
+            if jsonMsg.get("message").get("actuator_response_type") is not None and \
+              jsonMsg.get("message").get("actuator_response_type").get("ack") is not None:
+                self._add_signature(jsonMsg)
+                jsonMsg = json.dumps(jsonMsg).encode('utf8')
+
+                self._get_ack_connection()
+                self._channel.basic_publish(exchange=self._ack_exchange_name,
                                     routing_key=self._routing_key,
                                     properties=msg_props,
                                     body=str(jsonMsg))
+
+            # Routing requests for IEM msgs sent from the LoggingMsgHandler
+            elif jsonMsg.get("message").get("IEM_routing") is not None:
+                log_msg = jsonMsg.get("message").get("IEM_routing").get("log_msg")
+                self._log_debug("Routing IEM: %s" % log_msg)
+                if self._iem_route_addr != "":
+                    self._get_connection(host_addr=self._iem_route_addr)
+                    self._channel.basic_publish(exchange=self._iem_route_exchange_name,
+                                    routing_key=self._routing_key,
+                                    properties=msg_props,
+                                    body=str(log_msg))
+                else:
+                    logger.warn("Attempted to route IEM without a valid 'iem_route_addr' set.")
             else:
+                self._add_signature(jsonMsg)
+                jsonMsg = json.dumps(jsonMsg).encode('utf8')
                 self._get_connection()
                 self._channel.basic_publish(exchange=self._exchange_name,
-                                  routing_key=self._routing_key,
-                                  properties=msg_props,
-                                  body=str(jsonMsg))
+                                    routing_key=self._routing_key,
+                                    properties=msg_props,
+                                    body=str(jsonMsg))
 
             # No exceptions thrown so success
             self._log_debug("_transmit_msg_on_exchange, Successfully Sent: %s" % jsonMsg)
-            self._connection.close()
-            del(self._connection)
+            if self._connection is not None:
+                self._connection.close()
+                del(self._connection)
 
         except Exception as ex:
             logger.exception("_transmit_msg_on_exchange: %r" % ex)

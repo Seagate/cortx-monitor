@@ -23,6 +23,7 @@ import time
 from json import JSONDecoder
 
 # Add the top level directories
+#sys.path.insert(0, '/opt/seagate/sspl/low-level')
 sys.path.insert(0, '..')
 from framework.utils.config_reader import ConfigReader
 from tests.manual.manual_test import ManualTest
@@ -33,7 +34,7 @@ from argparse import RawDescriptionHelpFormatter
 __all__ = []
 __version__ = 0.2
 __date__ = '2015-12-02'
-__updated__ = '2016-4-02'
+__updated__ = '2016-5-02'
 
 FLAGS = re.VERBOSE | re.MULTILINE | re.DOTALL
 WHITESPACE = re.compile(r'[ \t\n\r]*', FLAGS)
@@ -82,8 +83,10 @@ def main():
         parser.add_argument("--ipmicmd", metavar="COMMAND", help="on/off/cycle/status (chassis power cmds or status)")
         parser.add_argument("--ipmiIP", metavar="IP", help="IP to apply command")
         parser.add_argument("--hdparm", metavar="COMMAND", help="ie \"-I /dev/sda | grep 'Serial Number:'\"")
-        parser.add_argument("--logiem", metavar="MESSAGE", help="log IEM message.  ie 'IEC: 001002001: Rules Engine...'")
+        parser.add_argument("--iemlog", metavar="MESSAGE", help="IEM log.  ie 'IEC: 001002001: Rules Engine...'")
         parser.add_argument("--iemloglevel", metavar="LEVEL", help="IEM log level.  ie LOG_CRIT, LOG_ERR, LOG_WARNING")
+        parser.add_argument("--iemhost", metavar="HOST", help="IEM receiver. ie 10.22.192.100, default localhost")
+        parser.add_argument("--iemexchange", metavar="EXCHNG", help="RabbitMQ exchange. ie sspl_iem, default sspl_halon")
 
         group = parser.add_mutually_exclusive_group()
         group.add_argument("--smrdata", action="store_true", help="log SMR drive register data")
@@ -298,9 +301,9 @@ def main():
                                     format(args.hdparm)
             _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human)
 
-        elif args.logiem or args.iemloglevel:
-            if not args.logiem:
-                print("Error: must provide an IEM message using --logiem MESSAGE")
+        elif args.iemlog or args.iemloglevel:
+            if not args.iemlog:
+                print("Error: must provide an IEM message using --iemlog MESSAGE")
                 return
  
             if not args.iemloglevel:
@@ -315,14 +318,24 @@ def main():
                 print("                                  LOG_WARNING, LOG_NOTICE, LOG_INFO, LOG_DEBUG")
                 return
 
-            # Load a logging message from the manual tests directory and update it with args.logiem
-            file = "../tests/manual/actuator_msgs/logging.json"
-            jsonMsg = json.loads(open(file).read())
-            jsonMsg["message"]["actuator_request_type"]["logging"]["log_level"] = u"{}".\
-                                    format(args.iemloglevel)
-            jsonMsg["message"]["actuator_request_type"]["logging"]["log_msg"] = u"{}".\
-                                    format(args.logiem)
-            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human)
+            if "IEC" not in args.iemlog:
+                print("Error: IEM log must be in form: 'IEC: xxxxxxxx: {JSON data}")
+                return
+
+            # Default to standard json format with typical headers
+            if not args.iemexchange:
+                # Load a logging message from the manual tests directory and update it with args.iemlog
+                file = "../tests/manual/actuator_msgs/logging.json"
+                jsonMsg = json.loads(open(file).read())
+                jsonMsg["message"]["actuator_request_type"]["logging"]["log_level"] = u"{}".\
+                                                            format(args.iemloglevel)
+                jsonMsg["message"]["actuator_request_type"]["logging"]["log_msg"] = u"{}".\
+                                                            format(args.iemlog)
+                _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, 
+                              wait_for_response=False, host=args.iemhost)
+            else:
+                log_msg = "{} {}".format(args.iemloglevel, args.iemlog)
+                _send_iem_exchange(args.iemexchange, log_msg, host=args.iemhost)
 
         elif args.smrdata:
             # Load a restart thread message from the manual tests directory and update it with SMRdriveData
@@ -418,7 +431,8 @@ def main():
         return 2
 
 def _send_raw_msg(jsonMsg, wait_for_response=True, response_wait_time=3,
-                  alldata=False, indent=False, remove_results_file=True):
+                  alldata=False, indent=False, remove_results_file=True, 
+                  host=None):
     """Update authentication fields, validate and transmit json msg"""
 
     # Update the authentication fields in json msg
@@ -432,7 +446,18 @@ def _send_raw_msg(jsonMsg, wait_for_response=True, response_wait_time=3,
     manTest.basicPublish(message=message, wait_for_response=wait_for_response, 
                          response_wait_time=response_wait_time,
                          alldata=alldata, indent=indent,
-                         remove_results_file=remove_results_file)
+                         remove_results_file=remove_results_file,
+                         host=host)
+
+def _send_iem_exchange(exchange, log_msg, host=None):
+    """Sends an IEM on a particular rabbitmq exchange"""
+    try:
+        # Raw IEM sent as a string with no header authentication fields or schema validation
+        manTest.basicPublish(message=log_msg, wait_for_response=False, 
+                             exchange=exchange, host=host)
+    except Exception as ae:
+        print "IEM failed on exchange: {}".format(exchange)
+        print "Exception:{}".format(ae)
 
 if __name__ == "__main__":
     sys.exit(main())
