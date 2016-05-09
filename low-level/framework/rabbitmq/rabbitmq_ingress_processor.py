@@ -112,10 +112,9 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
 
     def run(self):
         """Run the module periodically on its own thread."""
-        self._log_debug("Start accepting requests")
-
         #self._set_debug(True)
         #self._set_debug_persist(True)
+        self._log_debug("Start accepting requests")
 
         try:
             result = self._channel.queue_declare(exclusive=True)

@@ -185,8 +185,8 @@ class LoggingMsgHandler(ScheduledModuleThread, InternalMsgQ):
             self._iem_log_locally     = self._conf_reader._get_value_with_default(self.LOGGINGMSGHANDLER,
                                                                  self.IEM_LOG_LOCALLY,
                                                                  'true')
-            logger.info("LoggingMsgHandler, IEM routing enabled: %s" % str(self._iem_routing_enabled))
-            logger.info("LoggingMsgHandler, IEM log locally: %s" % str(self._iem_log_locally))
+            logger.info("         IEM routing enabled: %s" % str(self._iem_routing_enabled))
+            logger.info("         IEM log locally: %s" % str(self._iem_log_locally))
         except Exception as ex:
             logger.exception("_read_config: %r" % ex)
             

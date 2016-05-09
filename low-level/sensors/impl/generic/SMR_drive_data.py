@@ -212,7 +212,7 @@ class SMRdriveData(ScheduledModuleThread, InternalMsgQ):
         self._logging_interval = int(self._conf_reader._get_value_with_default(self.SMRDRIVEDATA,
                                                         self.LOGGING_INTERVAL,
                                                         3600))
-        logger.info("logging_interval: %s" % self._logging_interval)
+        logger.info("         Logging interval: %s" % self._logging_interval)
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""

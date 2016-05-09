@@ -62,7 +62,7 @@ class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
         super(RAIDsensor, self).initialize_msgQ(msgQlist)
 
         self._RAID_status_file = self._get_RAID_status_file()
-        logger.info("monitoring RAID status file: %s" % self._RAID_status_file)
+        logger.info("         Monitoring RAID status file: %s" % self._RAID_status_file)
 
     def read_data(self):
         """Return the Current RAID status information"""

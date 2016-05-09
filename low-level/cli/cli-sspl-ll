@@ -72,9 +72,9 @@ def main():
         # Setup argument parser
         parser = ArgumentParser(description=description, formatter_class=RawDescriptionHelpFormatter, add_help=False)
         parser.add_argument("-v", "--version", action="version", version=program_version_message)
-        parser.add_argument("-a", "--all", action="store_true", help="show all the data received in responses")
-        parser.add_argument("-h", "--human", action="store_true", help="show responses with indentation for readability")
-        parser.add_argument("--help", action="store_true", help="show this help message and exit")
+        parser.add_argument("-a", "--all", action="store_true", help="display all the data received in responses")
+        parser.add_argument("-h", "--human", action="store_true", help="display responses with indentation for readability")
+        parser.add_argument("--help", action="store_true", help="display this help message and exit")
         parser.add_argument("--pdu", metavar="COMMAND", help="send command to PDU. \
                               ie 'show outlets details'")
         parser.add_argument("--restartthread", metavar="NAME", help="restart an internal thread within the service")
@@ -87,22 +87,23 @@ def main():
         parser.add_argument("--iemloglevel", metavar="LEVEL", help="IEM log level.  ie LOG_CRIT, LOG_ERR, LOG_WARNING")
         parser.add_argument("--iemhost", metavar="HOST", help="IEM receiver. ie 10.22.192.100, default localhost")
         parser.add_argument("--iemexchange", metavar="EXCHNG", help="RabbitMQ exchange. ie sspl_iem, default sspl_halon")
+        parser.add_argument("--fsstats", metavar="FSFIDKEY", help="display total/free space on Mero, ie --mero_fststats 4")
 
         group = parser.add_mutually_exclusive_group()
         group.add_argument("--smrdata", action="store_true", help="log SMR drive register data")
-        group.add_argument("--cpudata", action="store_true", help="show CPU data")
-        group.add_argument("--hostdata", action="store_true", help="show host data")
-        group.add_argument("--mountdata", action="store_true", help="show local mount data")
-        group.add_argument("--interfacedata", action="store_true", help="show network interface data")
-        group.add_argument("--raiddata", action="store_true", help="show RAID data")
+        group.add_argument("--cpudata", action="store_true", help="display CPU data")
+        group.add_argument("--hostdata", action="store_true", help="display host data")
+        group.add_argument("--mountdata", action="store_true", help="display local mount data")
+        group.add_argument("--interfacedata", action="store_true", help="display network interface data")
+        group.add_argument("--raiddata", action="store_true", help="display RAID data")
 
         parser.add_argument("--fromstdin", action="store_true", help="read JSON msg(s) from stdin")
         parser.add_argument("--fromfile", metavar="FILE", help="read JSON msg(s) from file")
 
         parser.add_argument("--resetdrive", metavar="DRIVE", help="reset drive by cycling its power.  ie /dev/sda1")
-        parser.add_argument("--smart", metavar="DRIVE", help="show SMART results for a drive. ie /dev/sda1 or '*'")
-        parser.add_argument("--drvmngr", metavar="DRIVE", help="show drivemanager's status. ie /dev/sda1 or '*'")
-        parser.add_argument("--hpi", metavar="DRIVE", help="show HPI status. ie /dev/sda1 or '*'")
+        parser.add_argument("--smart", metavar="DRIVE", help="display SMART results for a drive. ie /dev/sda1 or '*'")
+        parser.add_argument("--drvmngr", metavar="DRIVE", help="display drivemanager's status. ie /dev/sda1 or '*'")
+        parser.add_argument("--hpi", metavar="DRIVE", help="display HPI status. ie /dev/sda1 or '*'")
         parser.add_argument("--setdrivestatus", metavar="DRIVE --status [STATUS] --reason [REASON]",
                             help="set status and reason of a drive. ie /dev/sda1 or " \
                             "s/n, --status STATUS --reason REASON")
@@ -344,6 +345,14 @@ def main():
             jsonMsg["message"]["actuator_request_type"]["thread_controller"]["module_name"] = u"SMRdriveData"
             _send_raw_msg(jsonMsg, wait_for_response=False, alldata=args.all, indent=args.human)
             print("Check logs for new SMR drive register values")
+
+        elif args.fsstats:
+            # Load a node controller mero message and update it
+            file = "../tests/manual/actuator_msgs/node_cntrl_mero.json"
+            jsonMsg = json.loads(open(file).read())
+            jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = \
+                    u"MERO: fsstats {}".format(args.fsstats)
+            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, response_wait_time=30)
 
         elif args.cpudata:
             # Load a sensor request message for cpu data from the manual tests directory and send it in

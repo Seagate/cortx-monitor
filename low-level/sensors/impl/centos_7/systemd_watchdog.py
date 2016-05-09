@@ -148,10 +148,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
             #  Start out assuming their all inactive
             self._inactive_services = list(self._monitored_services)
 
-            logger.info("SystemdWatchdog, Monitored services listed in conf file: %s" % self._monitored_services)
-            logger.info("SystemdWatchdog, Monitoring the following Services:")
-
-            total = 0
+            logger.info("Monitoring the following services listed in /etc/sspl_ll.conf:")
             for unit in units:
 
                 if ".service" in unit[0]:
@@ -211,8 +208,6 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                                  })
                     self._write_internal_msgQ(ServiceMsgHandler.name(), msgString)
 
-                    total += 1
-
             # Retrieve the main loop which will be called in the run method
             self._loop = gobject.MainLoop()
 
@@ -220,7 +215,6 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
             gobject.threads_init()
             context = self._loop.get_context()
 
-            logger.info("SystemdWatchdog, Total services monitored: %d" % total)
             logger.info("SystemdWatchdog initialization completed")
 
             # Leave enabled for now, it's not too verbose and handy in logs when status' change
@@ -275,7 +269,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                     # Remove service name from monitored_services and add to wildcard services list
                     self._monitored_services.remove(service)
                     self._wildcard_services.append(service)
-                    logger.info("Found a wildcard service: %s" % service)
+                    logger.info("Processing wildcard service: %s" % service)
 
                     # Search thru list of services on the system that match the starting chars
                     start_chars = service.split("*")[0]
@@ -283,7 +277,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                     for unit in units:
                         unit_name = str(unit[0]).split("/")[-1]
                         if unit_name.startswith(start_chars):
-                            logger.info("Adding wildcard service: %s" % unit_name)
+                            logger.info("    %s" % unit_name)
                             self._monitored_services.append(unit_name)
         except Exception as ae:
             logger.exception(ae)

@@ -188,6 +188,7 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist):
     from actuators.impl.generic.wbcli_reset_drive import WbcliResetDrive
     from actuators.impl.generic.hdparm import Hdparm
     from actuators.impl.generic.hpi import HPI
+    from actuators.impl.generic.spiel import Spiel
 
     from sensors.impl.generic.raid import RAIDsensor
     from sensors.impl.generic.node_data import NodeData as NodeData
@@ -208,7 +209,7 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist):
         except Exception as e:
             threaded = 'False'  # Wasn't present so default to False
 
-        logger.info("Processing: %s, threaded: %s, Using Class: %s"
+        logger.info("Processing: %s, threaded: %s, Instantiated Class: %s"
                         % (module, threaded, klass.name()))
 
         # If it's threaded then add it to the list which will be handled by the ThreadController
@@ -218,7 +219,7 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist):
         else:
             # It's a static non-threaded object, register it with the Zope global site manager
             interface_impl = list(implementedBy(klass))[0]  # Assumes single inheritance only
-            logger.info("Interface implemented: %s" % interface_impl.__name__)
+            logger.info("            Implements Interface: %s" % interface_impl.__name__)
 
             gsm.registerUtility(klass, interface_impl)
 

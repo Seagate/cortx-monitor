@@ -161,8 +161,8 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
                                                                  self.IEM_ROUTE_EXCHANGE_NAME,
                                                                  'sspl_iem')
             if self._iem_route_addr != "":
-                logger.info("RabbitMQegressProcessor, Routing IEMs to: %s" % self._iem_route_addr)
-                logger.info("RabbitMQegressProcessor, Using IEM exchange: %s" % self._iem_route_exchange_name)
+                logger.info("         Routing IEMs to host: %s" % self._iem_route_addr)
+                logger.info("         Using IEM exchange: %s" % self._iem_route_exchange_name)
         except Exception as ex:
             logger.exception("_read_config: %r" % ex)
 

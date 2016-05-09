@@ -25,6 +25,7 @@ from actuators.Iipmi import Iipmi
 from actuators.Ireset_drive import IResetDrive
 from actuators.Ihdparm import IHdparm
 from actuators.Ihpi import IHPI
+from actuators.Ispiel import ISpiel
 
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
@@ -66,6 +67,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
         else:
             self.ip_addr = socket.gethostbyaddr(socket.gethostname())[0]
 
+        self._spiel_actuator        = None
         self._HPI_actuator         = None
         self._GEM_actuator         = None
         self._PDU_actuator         = None
@@ -74,11 +76,10 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
         self._hdparm_actuator      = None
         self._reset_drive_actuator = None
 
-        self._set_debug(True)
-        self._set_debug_persist(True)
-
     def run(self):
         """Run the module periodically on its own thread."""
+        self._set_debug(True)
+        self._set_debug_persist(True)
         self._log_debug("Start accepting requests")
 
         try:
@@ -121,8 +122,22 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
             component = node_request[0:4]
 
 
+            # Handle requests related to Mero
+            if component == 'MERO':
+                # Query the Zope GlobalSiteManager for an object implementing the IMERO actuator
+                if self._spiel_actuator is None:
+                    self._spiel_actuator = queryUtility(ISpiel)(self._conf_reader)
+                    self._log_debug("_process_msg, _spiel_actuator name: %s" % self._spiel_actuator.name())
+
+                # Perform the request and get the response
+                spiel_response = self._spiel_actuator.perform_request(jsonMsg).strip()
+                self._log_debug("_process_msg, spiel response: %s" % spiel_response)
+
+                json_msg = AckResponseMsg(node_request, spiel_response, uuid).getJson()
+                self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+
             # Handle LED effects using the HPI actuator
-            if component == "LED:":
+            elif component == "LED:":
                 # Query the Zope GlobalSiteManager for an object implementing the IGEM actuator
                 if self._HPI_actuator is None:
                     self._HPI_actuator = queryUtility(IHPI)(self._conf_reader)

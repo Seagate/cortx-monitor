@@ -1,8 +1,8 @@
 """
  ****************************************************************************
- Filename:          Ihpi.py
- Description:       Interface for HPI actuator based classes
- Creation Date:     4/06/2016
+ Filename:          Ispiel.py
+ Description:       Interface for Spiel actuator based classes
+ Creation Date:     5/02/2016
  Author:            Jake Abernathy
 
  Do NOT modify or remove this copyright and confidentiality notice!
@@ -16,9 +16,9 @@
 
 from zope.interface import Interface
 
-class IHPI(Interface):
-    """Interface for HPI actuator based classes"""
+class ISpiel(Interface):
+    """Interface for Spiel actuator based classes"""
 
 
     def perform_request(self, jsonMsg):
-        """Notifies HPI actuator to update state values using HPI"""
+        """Notifies Spiel actuator to perform the desired request"""
