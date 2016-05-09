@@ -179,13 +179,15 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             logger.error("NodeDataMsgHandler, _generate_host_update was NOT successful.")
 
         # Query the Zope GlobalSiteManager for an object implementing ILogin
-        if self._login_actuator is None:
-            self._login_actuator = queryUtility(ILogin)()
-            self._log_debug("_generate_host_update, login_actuator name: %s" % self._login_actuator.name())
-
+        #if self._login_actuator is None:
+        #    self._login_actuator = queryUtility(ILogin)()
+        #    self._log_debug("_generate_host_update, login_actuator name: %s" % self._login_actuator.name())
+ 
         # Notify the login actuator to update its data of logged in users
-        login_request={"login_request": "get_all_users"}
-        logged_in_users = self._login_actuator.perform_request(login_request)
+        #login_request={"login_request": "get_all_users"}
+        #logged_in_users = self._login_actuator.perform_request(login_request)
+        # Return to this when/if it's actually going to be used
+        logged_in_users = []
 
         # Create the host update message and hand it over to the egress processor to transmit
         hostUpdateMsg = HostUpdateMsg(self._node_sensor.host_id,
