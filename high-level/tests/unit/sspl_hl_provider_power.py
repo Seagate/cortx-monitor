@@ -28,11 +28,51 @@ class SsplHlProviderPower(BaseUnitTest):
         request_mock.selection_args = {'command': command}
         return request_mock
 
-    def test_power_queries(self):
+    def setUp(self):
+        super(SsplHlProviderPower, self).setUp()
+        self.mocked_cluster_node_information = mock.MagicMock()
+        self.mocked_cluster_node_information.get_cluster_state_info = mock.\
+            MagicMock()
+
+    def test_power_for_cluster_up(self):
+        """
+        Gives appropriate call depending on cluster state
+        """
+
+        request_mock = mock.MagicMock()
+        self.mocked_cluster_node_information.get_cluster_state_info.\
+            return_value = (
+                "up", {"key1": [], "key2": []})
+        command_args = {'command': 'on'}
+        request_mock.selection_args = command_args
+        power_provider = PowerProvider('bundle', 'test_bundle',
+                                       self.mocked_cluster_node_information)
+        power_provider.render_query(request_mock)
+        self.assertEqual(request_mock.reply.call_count, 1)
+
+    def test_power_for_cluster_down(self):
+        """
+        Gives appropriate call depending on cluster state
+        """
+        request_mock = mock.MagicMock()
+        self.mocked_cluster_node_information.get_cluster_state_info.\
+            return_value = (
+                "down", {"key1": [], "key2": []})
+        command_args = {'command': 'off'}
+        request_mock.selection_args = command_args
+        power_provider = PowerProvider('bundle', 'test_bundle',
+                                       self.mocked_cluster_node_information)
+        power_provider.render_query(request_mock)
+        self.assertEqual(request_mock.reply.call_count, 1)
+
+    def test_power_queries_cmd_called(self):
         """
         Ensures that power queries has been successfully
         submitted by power provider.
         """
+        self.mocked_cluster_node_information.get_cluster_state_info.\
+            return_value = (
+                "partially_up", {"key1": [], "key2": []})
         for command in SsplHlProviderPower.POWER_COMMAND:
             ipmitool_command_param = PowerProvider.IPMI_CMD
             selection_args = {'command': command,
@@ -44,12 +84,13 @@ class SsplHlProviderPower(BaseUnitTest):
                 ipmitool_command_param,
                 ipmitool_command
             )
-
             with mock.patch('sspl_hl.providers.power.provider.ShellCommand',
                             spec=ShellCommand) as shell_patch:
                 shell_command_mock = mock.MagicMock()
                 shell_patch.return_value = shell_command_mock
-                power_provider = PowerProvider('power', '')
+                power_provider = PowerProvider(
+                    'power', '',
+                    self.mocked_cluster_node_information)
                 request_obj = SsplHlProviderPower._get_mock_request_object(
                     command
                 )
@@ -58,8 +99,7 @@ class SsplHlProviderPower(BaseUnitTest):
                     ipmitool_command_param
                 )
 
-    @staticmethod
-    def test_bad_command():
+    def test_bad_command(self):
         """
         Ensure sending a bad command results in appropriate error message.
 
@@ -69,20 +109,24 @@ class SsplHlProviderPower(BaseUnitTest):
         """
         command = 'invalid_command'
         response_msg = "Error: Invalid command: 'invalid_command'"
+        self.mocked_cluster_node_information.get_cluster_state_info.\
+            return_value = (
+                "partially_up", {"key1": [], "key2": []})
         with mock.patch('sspl_hl.providers.power.provider.ShellCommand',
                         spec=ShellCommand):
 
             request_mock = SsplHlProviderPower._get_mock_request_object(
                 command
             )
-            power_provider = PowerProvider('power', '')
+            power_provider = PowerProvider(
+                'power', '',
+                self.mocked_cluster_node_information)
             power_provider.render_query(request=request_mock)
             request_mock.responder.reply_exception.assert_called_once_with(
                 response_msg
             )
 
-    @staticmethod
-    def test_extra_service_params():
+    def test_extra_service_params(self):
         """
         Ensure sending extra query params results in appropriate error
         message.
@@ -91,6 +135,9 @@ class SsplHlProviderPower(BaseUnitTest):
         cover the case of the user bypassing the cli and accessing the
         data provider directly.
         """
+        self.mocked_cluster_node_information.get_cluster_state_info.\
+            return_value = (
+                "partially_up", {"key1": [], "key2": []})
         command_args = {'command': 'on',
                         'debug': True,
                         'ext': 'up'}
@@ -102,14 +149,15 @@ class SsplHlProviderPower(BaseUnitTest):
 
             request_mock = SsplHlProviderPower._get_mock_request_object('')
             request_mock.selection_args = command_args
-            power_provider = PowerProvider('power', '')
+            power_provider = PowerProvider(
+                'power', '',
+                self.mocked_cluster_node_information)
             power_provider.render_query(request=request_mock)
             request_mock.responder.reply_exception.assert_called_once_with(
                 response_msg
             )
 
-    @staticmethod
-    def test_missing_command():
+    def test_missing_command(self):
         """
         Ensure sending query without command results in an http error
         code.
@@ -118,6 +166,9 @@ class SsplHlProviderPower(BaseUnitTest):
         to cover the case of the user bypassing the cli and accessing
         the data provider directly.
         """
+        self.mocked_cluster_node_information.get_cluster_state_info.\
+            return_value = (
+                "partially_up", {"key1": [], "key2": []})
         command_args = {'debug': True}
 
         response_msg = \
@@ -128,7 +179,9 @@ class SsplHlProviderPower(BaseUnitTest):
 
             request_mock = SsplHlProviderPower._get_mock_request_object('')
             request_mock.selection_args = command_args
-            power_provider = PowerProvider('power', '')
+            power_provider = PowerProvider(
+                'power', '',
+                self.mocked_cluster_node_information)
             power_provider.render_query(request=request_mock)
             request_mock.responder.reply_exception.assert_called_once_with(
                 response_msg

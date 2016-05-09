@@ -77,3 +77,74 @@ class ClusterNodeInformation(object):
             return subprocess.check_output('hostname').strip()
         except subprocess.CalledProcessError:
             return ''
+
+    def get_node_power_status(self):
+        """
+        Return the power status response
+        """
+        ssu_nodes_list = self.get_ssu_name_list()
+        ssu_nodes = self.get_ssu_domain(ssu_nodes_list)
+        active_ssu_nodes = self.get_active_nodes()
+        inactive_ssu_nodes = list(set(ssu_nodes) - set(active_ssu_nodes))
+        power_status_response = dict(active_nodes=active_ssu_nodes,
+                                     inactive_nodes=inactive_ssu_nodes)
+        return power_status_response
+
+    def get_ssu_name_list(self):
+        """
+        Return the names of all the ssu nodes
+        """
+        ssu_info = self.query_ssu_data_from_puppet()
+        ssu_list = []
+        for info in ssu_info:
+            name = info.get('name')
+            if name:
+                ssu_list.append(name)
+        return ssu_list
+
+    @staticmethod
+    def query_ssu_data_from_puppet():
+        """
+        Make http query to puppet for ssu information
+        """
+        v3_nodes_url = "http://localhost:8082/v3/nodes"
+        query_params = {'query': '["=", ["fact", "role"], "storage"]'}
+        query = '{}?{}'.format(v3_nodes_url, urllib.urlencode(query_params))
+        try:
+            response = urllib.urlopen(query).read()
+            return json.loads(response)
+        except (ValueError, IOError):
+            return []
+
+    @staticmethod
+    def get_ssu_domain(ssu_nodes_list):
+        """
+        Make http query to puppet for ssu domain information
+        """
+        node_domain_list = []
+        for node in ssu_nodes_list:
+            query = 'http://localhost:8082/v3/nodes/{}/facts/fqdn'.format(node)
+            res = urllib.urlopen(query).read()
+            response = json.loads(res)
+            response = response and response[-1]
+            node_certname = response.get('value', None)
+            if node_certname:
+                node_domain_list.append(node_certname)
+        return node_domain_list
+
+    @staticmethod
+    def get_cluster_state_info():
+        """
+        Returns the state of a cluster
+        """
+        cluster_state = 0
+        list_of_nodes = ClusterNodeInformation().get_node_power_status()
+        active_nodes = list_of_nodes.get('active_nodes', [])
+        inactive_nodes = list_of_nodes.get('inactive_nodes', [])
+        if not active_nodes:
+            cluster_state = 'down'
+        elif not inactive_nodes:
+            cluster_state = 'up'
+        elif active_nodes and inactive_nodes:
+            cluster_state = 'partially_up'
+        return cluster_state, list_of_nodes

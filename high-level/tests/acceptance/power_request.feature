@@ -9,7 +9,7 @@ Feature: Power Request
 
     Scenario: power on
         When I run "python ./cstor/cli/main.py power on"
-        Then power output contains "Cluster Power 'on' has been initiated"
+        Then power output contains "Please use 'status' command to check the power status"
 
     Scenario: power off
         When I run "python ./cstor/cli/main.py power off"
@@ -21,7 +21,7 @@ Feature: Power Request
 
     Scenario: power off
         When I run "python ./cstor/cli/main.py power off -f"
-        Then power output contains "Cluster Power 'off' has been initiated"
+        Then power output contains "Please use 'status' command to check the power status"
 
     Scenario: Invalid command
         When I run "python ./cstor/cli/main.py power invalid_command"

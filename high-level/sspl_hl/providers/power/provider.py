@@ -12,9 +12,12 @@ File containing "Power provider", handling of the power sub-commands
 # authorized in writing by Seagate Technology LLC is prohibited.
 # All rights are expressly reserved by Seagate Technology LLC.
 # from plex.core.provider.dac.file_data_source import FileDataSource
+import json
 from plex.util.list_util import ensure_list
 from plex.util.shell_command import ShellCommand
 from sspl_hl.utils.base_castor_provider import BaseCastorProvider
+from sspl_hl.utils.cluster_node_manager.cluster_node_information \
+    import ClusterNodeInformation
 
 
 class PowerProvider(BaseCastorProvider):
@@ -25,7 +28,7 @@ class PowerProvider(BaseCastorProvider):
 
     IPMI_CMD = "sudo /usr/local/bin/ipmitooltool.sh"
 
-    def __init__(self, title, description):
+    def __init__(self, title, description, cluster_node_information_class):
         super(PowerProvider, self).__init__(title=title,
                                             description=description)
         self.valid_arg_keys = ['command', 'debug']
@@ -35,6 +38,7 @@ class PowerProvider(BaseCastorProvider):
         self._ipmi_cmds = {'on': 'poweron',
                            'off': 'poweroff'}
         self._shell_command = ShellCommand()
+        self._cluster_node_information_class = cluster_node_information_class
 
     def render_query(self, request):
         """
@@ -46,31 +50,46 @@ class PowerProvider(BaseCastorProvider):
         ipmitool_command = self._ipmi_cmds.get(
             selection_args['command'], selection_args['command'])
         cmd_args = "{} {}".format(PowerProvider.IPMI_CMD, ipmitool_command)
-        # pylint: disable=no-member
-        deferred = self._shell_command.run_command(cmd_args)
-        # pylint: disable=no-member
-        deferred.addCallback(self._handle_success_power_cmd, request)
-        # pylint: disable=no-member
-        deferred.addErrback(self._handle_failure_power_cmd, request)
-        return deferred
+        state_cluster, nodes_list = self._cluster_node_information_class.\
+            get_cluster_state_info()
+        if state_cluster == 'up' and \
+                request.selection_args.get('command') == 'on':
+            reply_msg = 'Cluster is already up. ' \
+                        '\nPlease use ' \
+                        '\'status\' command to check ' \
+                        'the power status of nodes.'
+            self.log_info(reply_msg)
+            request.reply(ensure_list({'power_commands_reply': reply_msg}))
+        elif state_cluster == 'down' and \
+                request.selection_args.get('command') == 'off':
+            reply_msg = 'Cluster is already down. ' \
+                        '\nPlease use ' \
+                        '\'status\' command to check ' \
+                        'the power status of nodes.'
+            self.log_info(reply_msg)
+            request.reply(ensure_list({'power_commands_reply': reply_msg}))
+        else:
+            # pylint: disable=no-member
+            deferred = self._shell_command.run_command(cmd_args)
+            # pylint: disable=no-member
+            deferred.addCallback(self._handle_success_power_cmd, request,
+                                 state_cluster, nodes_list)
+            # pylint: disable=no-member
+            deferred.addErrback(self._handle_failure_power_cmd, request)
 
-    def _handle_success_power_cmd(self, ipmi_response, request):
+    def _handle_success_power_cmd(self, ipmi_response, request,
+                                  cluster_state, nodes_list):
         """
         Success handler for ShellCommand.run_command()
         """
         # todo: This will be done as separate task
-        # power_info_file = FileDataSource(
-        #     BaseCastorProvider.POWER_STATUS_CONFIG_FILE
-        # )
-        # power_status_info = {'status': request.selection_args['command']}
-        # deferred = power_info_file.write(power_status_info)
-        # deferred.addCallback(self.handle_success)
-        # deferred.addErrback(self.handle_failure)
-
-        reply_msg = 'Cluster Power \'{}\' has been initiated. Please use ' \
-                    'the \'status\' command to check the power ' \
-                    'status of the nodes.'\
-                    .format(request.selection_args.get('command'))
+        reply_msg = ''
+        if request.selection_args.get('command') == 'on':
+            reply_msg = self._reply_msg_for_poweron(cluster_state,
+                                                    nodes_list)
+        elif request.selection_args.get('command') == 'off':
+            reply_msg = self._reply_msg_for_poweroff(cluster_state,
+                                                     nodes_list)
         self.log_info('IPMI RESPONSE --> {}'.format(ipmi_response))
         self.log_info(reply_msg)
         request.reply(ensure_list({'power_commands_reply': reply_msg}))
@@ -83,6 +102,49 @@ class PowerProvider(BaseCastorProvider):
                          format(failure.getErrorMessage()))
         request.responder.reply_exception(failure.getErrorMessage())
 
+    @staticmethod
+    def _reply_msg_for_poweron(cluster_state, nodes_list):
+        reply_msg = ''
+        inactive_nodes = json.dumps(nodes_list.get('inactive_nodes', []))
+        inactive_nodes = '\n'.join(inactive_nodes)
+
+        if cluster_state == 'down':
+            reply_msg = 'Cluster Power on has been ' \
+                        'initiated on the cluster. ' \
+                        '\nPlease use ' \
+                        '\'status\' command to check the ' \
+                        'power status of nodes.'
+        elif cluster_state == 'partially_up':
+            reply_msg = 'Cluster Power on has been ' \
+                        'initiated on following nodes:\n' \
+                        '{}\nPlease use ' \
+                        '\'status\' command to check the power ' \
+                        'status of nodes.'\
+                        .format(inactive_nodes)
+        return reply_msg
+
+    @staticmethod
+    def _reply_msg_for_poweroff(cluster_state, nodes_list):
+        reply_msg = ''
+        active_nodes = json.dumps(nodes_list.get('active_nodes', []))
+        active_nodes = '\n'.join(active_nodes)
+        if cluster_state == 'up':
+            reply_msg = 'Cluster Power off has been ' \
+                        'initiated on the cluster. ' \
+                        '\nPlease use ' \
+                        '\'status\' command to check the ' \
+                        'power status of nodes.'
+        elif cluster_state == 'partially_up':
+            reply_msg = 'Cluster Power off has been ' \
+                        'initiated on following nodes:\n' \
+                        '{}\nPlease use ' \
+                        '\'status\' command to check the power ' \
+                        'status of nodes.'\
+                        .format(active_nodes)
+
+        return reply_msg
+
 # pylint: disable=invalid-name
-provider = PowerProvider("power", "Provider for power command")
+provider = PowerProvider("power", "Provider for power command",
+                         ClusterNodeInformation)
 # pylint: enable=invalid-name
