@@ -23,8 +23,7 @@ import time
 from json import JSONDecoder
 
 # Add the top level directories
-#sys.path.insert(0, '/opt/seagate/sspl/low-level')
-sys.path.insert(0, '..')
+sys.path.insert(0, '/opt/seagate/sspl/low-level')
 from framework.utils.config_reader import ConfigReader
 from tests.manual.manual_test import ManualTest
 
