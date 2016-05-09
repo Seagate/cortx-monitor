@@ -298,19 +298,19 @@ def _install_fake_ipmitooltool():
         ipmi_file_path = os.path.join(current_file_path, "../..", fake_ipmi)
         return ipmi_file_path
 
-    if os.path.exists('/usr/bin/ipmitooltool.sh'):
+    if os.path.exists('/usr/local/bin/ipmitooltool.sh'):
         # Install the script
         subprocess.check_output(
-            'sudo rm -f /usr/bin/ipmitooltool.sh',
+            'sudo rm -f /usr/local/bin/ipmitooltool.sh',
             shell=True)
     # Install the script
-    command = 'sudo cp {} /usr/bin/'.format(get_ipmmi_file_path())
+    command = 'sudo cp {} /usr/local/bin/'.format(get_ipmmi_file_path())
     subprocess.check_output(command, shell=True)
     subprocess.check_output(
-        'sudo chmod +x /usr/bin/ipmitooltool.sh',
+        'sudo chmod +x /usr/local/bin/ipmitooltool.sh',
         shell=True
     )
-    command_plex = 'sudo chown plex:plex /usr/bin/ipmitooltool.sh'
+    command_plex = 'sudo chown plex:plex /usr/local/bin/ipmitooltool.sh'
     subprocess.check_output(command_plex, shell=True)
 
 
@@ -363,9 +363,9 @@ def _delete_fake_ipmitooltool():
     """
     delete fake ipmitooltool.sh
     """
-    if os.path.exists('/usr/bin/ipmitooltool.sh'):
+    if os.path.exists('/usr/local/bin/ipmitooltool.sh'):
         subprocess.check_output(
-            'sudo rm -f /usr/bin/ipmitooltool.sh',
+            'sudo rm -f /usr/local/bin/ipmitooltool.sh',
             shell=True
         )
 
