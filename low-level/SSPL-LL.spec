@@ -44,14 +44,12 @@ mkdir -p %{buildroot}/etc/systemd/system
 mkdir -p %{buildroot}/etc/dbus-1/system.d
 mkdir -p %{buildroot}/etc/polkit-1/rules.d
 mkdir -p %{buildroot}/etc/sspl-ll/templates/snmp
-mkdir -p %{buildroot}/usr/lib64/python2.7/site-packages
 
 cp files/sspl-ll.service %{buildroot}/etc/systemd/system
 cp files/sspl_ll.conf %{buildroot}/etc
 cp files/sspl-ll_dbus_policy.conf %{buildroot}/etc/dbus-1/system.d
 cp files/sspl-ll_dbus_policy.rules %{buildroot}/etc/polkit-1/rules.d
 cp snmp/* %{buildroot}/etc/sspl-ll/templates/snmp
-cp libs/mero.so  %{buildroot}/usr/lib64/python2.7/site-packages
 
 # Copy the service into /opt/seagate/sspl where it will execute from
 mkdir -p %{buildroot}/opt/seagate/sspl/low-level

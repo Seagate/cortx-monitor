@@ -34,6 +34,9 @@ setcap cap_sys_rawio=ep /usr/bin/python2.7
 cp -f /opt/seagate/sspl/low-level/files/sspl-ll_dbus_policy.rules /etc/polkit-1/rules.d
 cp -f /opt/seagate/sspl/low-level/files/sspl-ll_dbus_policy.conf /etc/dbus-1/system.d
 
+# Copy over mero.so to python site-packages
+mkdir -p /usr/lib64/python2.7/site-packages
+cp -f /opt/seagate/sspl/low-level/libs/mero.so  /usr/lib64/python2.7/site-packages
 
 # Enable SNMP traps on the PDU to be sent to the CMU
 #echo "Enable SNMP traps on the PDU to be sent to the CMU"
