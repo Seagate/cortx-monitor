@@ -125,21 +125,21 @@ def main():
 
         elif args.pdu:
             # Load a PDU message from the manual tests directory and update it with args.pdu
-            file = "../tests/manual/actuator_msgs/node_cntrl_pdu.json"
+            file = "/opt/seagate/sspl/low-level/tests/manual/actuator_msgs/node_cntrl_pdu.json"
             jsonMsg = json.loads(open(file).read())
             jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = u"PDU: {}".format(args.pdu)
             _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human)
 
         elif args.resetdrive:
             # Load a reset drive message from the manual tests directory and update it with args.resetdrive
-            file = "../tests/manual/actuator_msgs/node_cntrl_pdu.json"
+            file = "/opt/seagate/sspl/low-level/tests/manual/actuator_msgs/node_cntrl_pdu.json"
             jsonMsg = json.loads(open(file).read())
             jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = u"RESET_DRIVE: {}".format(args.resetdrive)
             _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, response_wait_time=60)
 
         elif args.smart:
             # Load a smart test message from the manual tests directory and update it with args.smart
-            file = "../tests/manual/actuator_msgs/node_cntrl_smart_test.json"
+            file = "/opt/seagate/sspl/low-level/tests/manual/actuator_msgs/node_cntrl_smart_test.json"
             jsonMsg = json.loads(open(file).read())
             jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = u"SMART_TEST: {}".format(args.smart)
 
@@ -151,7 +151,7 @@ def main():
 
         elif args.drvmngr:
             # Load a drivemanager status message from the manual tests directory and update it with args.drvmngr
-            file = "../tests/manual/actuator_msgs/node_cntrl_drvmngr_status.json"
+            file = "/opt/seagate/sspl/low-level/tests/manual/actuator_msgs/node_cntrl_drvmngr_status.json"
             jsonMsg = json.loads(open(file).read())
             jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = u"DRVMNGR_STATUS: {}".format(args.drvmngr)
 
@@ -163,7 +163,7 @@ def main():
 
         elif args.hpi:
             # Load a reset hpi status message from the manual tests directory and update it with args.hpi
-            file = "../tests/manual/actuator_msgs/node_cntrl_hpi_status.json"
+            file = "/opt/seagate/sspl/low-level/tests/manual/actuator_msgs/node_cntrl_hpi_status.json"
             jsonMsg = json.loads(open(file).read())
             jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = u"HPI_STATUS: {}".format(args.hpi)
 
@@ -175,7 +175,7 @@ def main():
 
         elif args.getdriveLED:
             # Load a node controller LED message from the manual tests directory and update it with args.getdriveLED
-            file = "../tests/manual/actuator_msgs/node_cntrl_LED.json"
+            file = "/opt/seagate/sspl/low-level/tests/manual/actuator_msgs/node_cntrl_LED.json"
             jsonMsg = json.loads(open(file).read())
             jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = u"LED: get {}".format(args.getdriveLED)
 
@@ -194,7 +194,7 @@ def main():
                       "PULSE_SLOW_ON, PULSE_SLOW_OFF, PULSE_FAST_ON, PULSE_FAST_OFF")
                 return
 
-            file = "../tests/manual/actuator_msgs/node_cntrl_LED.json"
+            file = "/opt/seagate/sspl/low-level/tests/manual/actuator_msgs/node_cntrl_LED.json"
             jsonMsg = json.loads(open(file).read())
             jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = u"LED: set {} {}" \
                         .format(args.setdriveLED, args.LEDstate)
@@ -239,7 +239,7 @@ def main():
                         "'serial_number': '%s'}" % (status, reason, drive)
             print("log_msg: %s" % log_msg)
 
-            file = "../tests/manual/actuator_msgs/HDS_logging.json"
+            file = "/opt/seagate/sspl/low-level/tests/manual/actuator_msgs/HDS_logging.json"
             jsonMsg = json.loads(open(file).read())
 
             print("    log_msg: %s" % log_msg)
@@ -248,7 +248,7 @@ def main():
 
         elif args.restartthread:
             # Load a restart thread message from the manual tests directory and update it with args.restartthread
-            file = "../tests/manual/actuator_msgs/thread_cntrl_restart.json"
+            file = "/opt/seagate/sspl/low-level/tests/manual/actuator_msgs/thread_cntrl_restart.json"
             jsonMsg = json.loads(open(file).read())
             jsonMsg["message"]["actuator_request_type"]["thread_controller"]["module_name"] = u"{}".format(args.restartthread)
             _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human)
@@ -271,7 +271,7 @@ def main():
                 args.servicename += ".service"
 
             # Load a service controller message from the manual tests directory and update it with args.servicename & servicereq
-            file = "../tests/manual/actuator_msgs/service_cntrl_restart.json"
+            file = "/opt/seagate/sspl/low-level/tests/manual/actuator_msgs/service_cntrl_restart.json"
             jsonMsg = json.loads(open(file).read())
             jsonMsg["message"]["actuator_request_type"]["service_controller"]["service_name"] = u"{}".format(args.servicename)
             jsonMsg["message"]["actuator_request_type"]["service_controller"]["service_request"] = u"{}".format(args.servicereq)
@@ -287,7 +287,7 @@ def main():
                 return
 
             # Load a IPMI command message from the manual tests directory and update it with args.ipmicmd & ipmiIP
-            file = "../tests/manual/actuator_msgs/node_cntrl_ipmi_status.json"
+            file = "/opt/seagate/sspl/low-level/tests/manual/actuator_msgs/node_cntrl_ipmi_status.json"
             jsonMsg = json.loads(open(file).read())
             jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = u"IPMI: {} {}". \
                                     format(args.ipmiIP, args.ipmicmd)
@@ -295,7 +295,7 @@ def main():
 
         elif args.hdparm:
             # Load a hdparm message from the manual tests directory and update it with args.hdparm
-            file = "../tests/manual/actuator_msgs/node_cntrl_hdparm.json"
+            file = "/opt/seagate/sspl/low-level/tests/manual/actuator_msgs/node_cntrl_hdparm.json"
             jsonMsg = json.loads(open(file).read())
             jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = u"HDPARM: {}".\
                                     format(args.hdparm)
@@ -325,7 +325,7 @@ def main():
             # Default to standard json format with typical headers
             if not args.iemexchange:
                 # Load a logging message from the manual tests directory and update it with args.iemlog
-                file = "../tests/manual/actuator_msgs/logging.json"
+                file = "/opt/seagate/sspl/low-level/tests/manual/actuator_msgs/logging.json"
                 jsonMsg = json.loads(open(file).read())
                 jsonMsg["message"]["actuator_request_type"]["logging"]["log_level"] = u"{}".\
                                                             format(args.iemloglevel)
@@ -339,7 +339,7 @@ def main():
 
         elif args.smrdata:
             # Load a restart thread message from the manual tests directory and update it with SMRdriveData
-            file = "../tests/manual/actuator_msgs/thread_cntrl_restart.json"
+            file = "/opt/seagate/sspl/low-level/tests/manual/actuator_msgs/thread_cntrl_restart.json"
             jsonMsg = json.loads(open(file).read())
             jsonMsg["message"]["actuator_request_type"]["thread_controller"]["module_name"] = u"SMRdriveData"
             _send_raw_msg(jsonMsg, wait_for_response=False, alldata=args.all, indent=args.human)
@@ -347,7 +347,7 @@ def main():
 
         elif args.fsstats:
             # Load a node controller mero message and update it
-            file = "../tests/manual/actuator_msgs/node_cntrl_mero.json"
+            file = "/opt/seagate/sspl/low-level/tests/manual/actuator_msgs/node_cntrl_mero.json"
             jsonMsg = json.loads(open(file).read())
             jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = \
                     u"MERO: fsstats {}".format(args.fsstats)
@@ -355,31 +355,31 @@ def main():
 
         elif args.cpudata:
             # Load a sensor request message for cpu data from the manual tests directory and send it in
-            file = "../tests/manual/actuator_msgs/sensor_request_cpu_data.json"
+            file = "/opt/seagate/sspl/low-level/tests/manual/actuator_msgs/sensor_request_cpu_data.json"
             jsonMsg = json.loads(open(file).read())
             _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human)
 
         elif args.hostdata:
             # Load a sensor request message for host data from the manual tests directory and send it in
-            file = "../tests/manual/actuator_msgs/sensor_request_host_update.json"
+            file = "/opt/seagate/sspl/low-level/tests/manual/actuator_msgs/sensor_request_host_update.json"
             jsonMsg = json.loads(open(file).read())
             _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human)
 
         elif args.mountdata:
             # Load a sensor request message for local mount data from the manual tests directory and send it in
-            file = "../tests/manual/actuator_msgs/sensor_request_mount_data.json"
+            file = "/opt/seagate/sspl/low-level/tests/manual/actuator_msgs/sensor_request_mount_data.json"
             jsonMsg = json.loads(open(file).read())
             _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human)
 
         elif args.interfacedata:
             # Load a sensor request message for network data from the manual tests directory and send it in
-            file = "../tests/manual/actuator_msgs/sensor_request_if_data.json"
+            file = "/opt/seagate/sspl/low-level/tests/manual/actuator_msgs/sensor_request_if_data.json"
             jsonMsg = json.loads(open(file).read())
             _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human)
 
         elif args.raiddata:
             # Load a sensor request message for raid data from the manual tests directory and send it in
-            file = "../tests/manual/actuator_msgs/sensor_request_raid_data.json"
+            file = "/opt/seagate/sspl/low-level/tests/manual/actuator_msgs/sensor_request_raid_data.json"
             jsonMsg = json.loads(open(file).read())
             _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human)
 
