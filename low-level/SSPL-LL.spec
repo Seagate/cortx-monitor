@@ -9,6 +9,7 @@
 #xyr end defines
 
 %define _unpackaged_files_terminate_build 0
+%define _binaries_in_noarch_packages_terminate_build   0
 
 Name:       %{_xyr_package_name}
 Version:    %{_xyr_package_version}
