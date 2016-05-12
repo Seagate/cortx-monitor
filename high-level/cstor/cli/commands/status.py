@@ -142,12 +142,13 @@ class Status(BaseCommand):
 
             active_nodes = power_resp.get('active_nodes', [])
             inactive_nodes = power_resp.get('inactive_nodes', [])
+            pwr_response = ''
             if active_nodes:
                 active_nodes = '\n\t'.join(active_nodes)
                 pwr_response = 'Active Nodes:- \n\t{}'.format(active_nodes)
             if inactive_nodes:
                 inactive_nodes = '\n\t'.join(inactive_nodes)
-                pwr_response = '{} \n Inactive Nodes:- \n\t{}'.format(
+                pwr_response = '{} \nInactive Nodes:- \n\t{}'.format(
                     pwr_response,
                     inactive_nodes
                 )
