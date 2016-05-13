@@ -31,6 +31,7 @@ from framework.utils.service_logging import logger
 # Modules that receive messages from this module
 from message_handlers.service_msg_handler import ServiceMsgHandler
 from message_handlers.disk_msg_handler import DiskMsgHandler
+from message_handlers.node_data_msg_handler import NodeDataMsgHandler
 
 from zope.interface import implements
 from sensors.IService_watchdog import IServiceWatchdog
@@ -90,6 +91,9 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
 
         # Dict of drives by-id symlink from systemd
         self._drive_by_id = {}
+        
+        # Dict of drives by device name from systemd
+        self._drive_by_device_name = {}
 
         # Next time to run SMART tests
         self._next_smart_tm = datetime.now() + timedelta(seconds=self._smart_interval)
@@ -324,13 +328,18 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                     # Obtain the list of symlinks for the block device
                     udisk_block = self._disk_objects[block_dev['path']]["org.freedesktop.UDisks2.Block"]
                     symlinks = self._sanitize_dbus_value(udisk_block["Symlinks"])
-    
+
                     # Parse out the wwn symlink if it exists otherwise use the by-id
                     for symlink in symlinks:
                         if "wwwn" in symlink:
                             self._drive_by_id[udisk_block["Drive"]] = symlink
                         elif "by-id" in symlink:
                             self._drive_by_id[udisk_block["Drive"]] = symlink
+
+                    # Maintain a dict of device names
+                    device = self._sanitize_dbus_value(udisk_block["Device"])
+                    self._drive_by_device_name[udisk_block["Drive"]] = device
+
             except Exception as ae:
                 self._log_debug("block_dev unusable: %r" % ae)
 
@@ -384,6 +393,9 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
 
                     # Generate and send an internal msg to DiskMsgHandler that the drive is available
                     self._notify_disk_msg_handler(drive['path'], "OK_None", serial_number)
+
+                    # Notify internal msg handlers who need to map device name to serial numbers
+                    self._notify_msg_handler_sn_device_mappings(drive['path'], serial_number)
 
                     # Schedule a SMART test to begin
                     self._schedule_SMART_test(drive['path'])
@@ -579,6 +591,9 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                 # Generate and send an internal msg to DiskMsgHandler
                 self._notify_disk_msg_handler(object_path, "OK_None", serial_number)
 
+                # Notify internal msg handlers who need to map device name to serial numbers
+                self._notify_msg_handler_sn_device_mappings(object_path, serial_number)
+                
                 # Schedule a conveyance type SMART test on new drives
                 self._schedule_SMART_test(object_path, test_type='conveyance')
 
@@ -708,6 +723,22 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                              }
         # Send the event to disk message handler to generate json message
         self._write_internal_msgQ(DiskMsgHandler.name(), internal_json_msg)
+
+    def _notify_msg_handler_sn_device_mappings(self, disk_path, serial_number):
+        """Sends an internal msg to handlers who need to maintain a 
+            mapping of serial numbers to device names
+        """
+
+        # Retrieve the device name for the disk
+        device_name = self._drive_by_device_name[disk_path]
+
+        internal_json_msg = {"sensor_response_type" : "devicename_serialnumber",
+                             "serial_number" : serial_number,
+                             "device_name" : device_name
+                             }
+
+        # Send the event to Node Data message handler to generate json message
+        self._write_internal_msgQ(NodeDataMsgHandler.name(), internal_json_msg)
 
     def _sanitize_dbus_value(self, value):
         """Convert certain DBus type combinations so that they are easier to read"""

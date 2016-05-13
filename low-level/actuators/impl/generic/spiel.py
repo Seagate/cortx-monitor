@@ -107,7 +107,11 @@ class Spiel(Debug):
             logger.exception(e)
 
     def _get_mero_fs_stats(self):
-        """Retrieve mero fs stats using m0_fs_stats"""
+        """Retrieve mero fs stats using m0_fs_stats
+        
+            This requires root access while SSPL runs as sspl-ll user.
+            Therefore, need to use sudo privileges and execute externally.
+        """
         results = "N/A"
         try:
             # Build the command args to pass to m0_fs_stats
@@ -129,7 +133,7 @@ class Spiel(Debug):
 
         except OSError as ae:
             logger.exception(ae)
-        return output
+        return results
 
     def _read_config(self):
         """Read in configuration values"""

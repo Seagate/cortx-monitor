@@ -86,7 +86,7 @@ def main():
         parser.add_argument("--iemloglevel", metavar="LEVEL", help="IEM log level.  ie LOG_CRIT, LOG_ERR, LOG_WARNING")
         parser.add_argument("--iemhost", metavar="HOST", help="IEM receiver. ie 10.22.192.100, default localhost")
         parser.add_argument("--iemexchange", metavar="EXCHNG", help="RabbitMQ exchange. ie sspl_iem, default sspl_halon")
-        parser.add_argument("--fsstats", metavar="FSFIDKEY", help="display total/free space on Mero, ie --mero_fststats 4")
+        parser.add_argument("--fsstats", metavar="FSFIDKEY", help="display total/free space on Mero, ie --fsstats 4")
 
         group = parser.add_mutually_exclusive_group()
         group.add_argument("--smrdata", action="store_true", help="log SMR drive register data")

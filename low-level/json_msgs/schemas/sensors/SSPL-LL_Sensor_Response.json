@@ -436,7 +436,7 @@
 									"items": {
 										"type" : "object",
 										"properties": {
-											"ifId " : {
+											"ifId" : {
 												"type" : "string"
 											},
 											"networkErrors" : {
@@ -477,7 +477,23 @@
 								},
 								"mdstat" : {
 									"description" : "/proc/mdstat containing state information about RAID",
-									"type" : "string"
+									"type" : "string",
+									"required": true
+								},
+								"device" : {
+									"description" : "md device",
+									"type" : "string",
+									"required": true
+								},
+								"drives": {
+									"0" : {
+										"type" : "string",
+										"required": true
+									}, 
+									"1" : {
+										"type" : "string",
+										"required": true
+									}
 								}
 							}
 						},

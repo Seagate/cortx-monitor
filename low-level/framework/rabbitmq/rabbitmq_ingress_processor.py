@@ -89,7 +89,7 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
         # Remove tabs and newlines
         schema_trimmed = json.loads(' '.join(schema.split()))
 
-        # Validate the actuator schema
+        # Validate the schema to conform to Draft 3 specification
         Draft3Validator.check_schema(schema_trimmed)
 
         return schema_trimmed

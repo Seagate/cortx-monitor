@@ -79,21 +79,6 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
         self._log_debug("RabbitMQ exchange: %s, routing_key: %s, vhost: %s" %
                        (self._exchange_name, self._routing_key, self._virtual_host))
 
-        self._signature_user = self._conf_reader._get_value_with_default(
-                                                    self.RABBITMQPROCESSOR, 
-                                                    self.SIGNATURE_USERNAME,
-                                                    'sspl-ll')
-
-        self._signature_token = self._conf_reader._get_value_with_default(
-                                                    self.RABBITMQPROCESSOR, 
-                                                    self.SIGNATURE_TOKEN,
-                                                    'FAKETOKEN1234')
-
-        self._signature_expires = self._conf_reader._get_value_with_default(
-                                                    self.RABBITMQPROCESSOR, 
-                                                    self.SIGNATURE_EXPIRES,
-                                                    "3600")
-
     def run(self):
         """Run the module periodically on its own thread. """
         self._log_debug("Start accepting requests")
@@ -154,6 +139,15 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
             self._password      = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
                                                                  self.PASSWORD,
                                                                  'sspl4ever')
+            self._signature_user = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR, 
+                                                                 self.SIGNATURE_USERNAME,
+                                                                 'sspl-ll')
+            self._signature_token = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR, 
+                                                                 self.SIGNATURE_TOKEN,
+                                                                 'FAKETOKEN1234')
+            self._signature_expires = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR, 
+                                                                 self.SIGNATURE_EXPIRES,
+                                                                 "3600")
             self._iem_route_addr = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
                                                                  self.IEM_ROUTE_ADDR,
                                                                  '')

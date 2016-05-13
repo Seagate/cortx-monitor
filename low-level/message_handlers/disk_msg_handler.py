@@ -391,7 +391,8 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                           event_path,
                           jsonMsg.get("status"),
                           serial_number,
-                          path_id=jsonMsg.get("path_id"))
+                          path_id=jsonMsg.get("path_id"),
+                          device_name=jsonMsg.get("device_name"))
 
             # Check to see if the event path is valid and parse out enclosure s/n and disk num
             valid = drive.parse_drive_mngr_path()
@@ -583,7 +584,8 @@ class Drive(object):
                  productName    = "N/A",
                  productVersion = "N/A",
                  wwn            = "N/A",
-                 path_id        = "N/A"
+                 path_id        = "N/A",
+                 device_name    = "N/A"
                  ):
         super(Drive, self).__init__()
 
@@ -598,6 +600,7 @@ class Drive(object):
         self._productVersion = productVersion
         self._wwn            = wwn
         self._path_id        = path_id
+        self._device_name    = device_name
         self._enclosure      = "N/A"
         self._drive_num      = -1
         self._filename       = "N/A"
