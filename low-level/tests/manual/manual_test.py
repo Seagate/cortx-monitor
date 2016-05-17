@@ -191,7 +191,8 @@ class ManualTest():
 
 
     def basicPublish(self, jsonfile=None, message=None, wait_for_response=True, 
-                     response_wait_time=3, alldata=False, indent=False, remove_results_file=True):
+                     response_wait_time=3, alldata=False, indent=False, 
+                     remove_results_file=True, exchange=None, host='localhost'):
         """Publishes message out to the rabbitmq server
 
         @param jsonfile = the file containing a json message to be sent to the server
@@ -203,6 +204,10 @@ class ManualTest():
         @param alldata = flag denoting to show all data received otherwise just the message section
         @type alldata = bool
         """
+
+        # If exchange is not passed in then use the one from the config file
+        if exchange is None:
+            exchange = self._exchangename
 
         self._alldata = alldata
         self._indent  = indent
@@ -219,10 +224,10 @@ class ManualTest():
         # Create rabbitMQ connection
         creds = pika.PlainCredentials(self._username, self._password)
         connection = pika.BlockingConnection(pika.ConnectionParameters(
-                     host='localhost', virtual_host=self._virtualhost, credentials=creds))
+                     host=host, virtual_host=self._virtualhost, credentials=creds))
         channel = connection.channel()
 
-        channel.exchange_declare(exchange=self._exchangename,
+        channel.exchange_declare(exchange=exchange,
                          type='topic', durable=False)
 
         msg_props = pika.BasicProperties()
@@ -240,7 +245,7 @@ class ManualTest():
             self.validate(jsonMsg)
 
             #Convert the message back to plain text and send to consumer
-            channel.basic_publish(exchange=self._exchangename,
+            channel.basic_publish(exchange=exchange,
                                   routing_key=self._routingkey,
                                   properties=msg_props,
                                   body=str(json.dumps(jsonMsg, ensure_ascii=True).encode('utf8')))
@@ -249,14 +254,13 @@ class ManualTest():
 
         elif message is not None:
             # Convert the message back to plain text and send to consumer
-            channel.basic_publish(exchange=self._exchangename,
+            channel.basic_publish(exchange=exchange,
                                    routing_key=self._routingkey,
                                    properties=msg_props,
                                    body=str(message))
- 
-            print "Successfully transmitted request:"
+            print "Successfully transmitted request"
             #self._print_response(message, save_to_file=False)     
- 
+
         connection.close()
         del(connection)
  
