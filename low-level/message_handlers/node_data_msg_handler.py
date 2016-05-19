@@ -334,7 +334,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             self._log_debug("path: %s" % str(path))
 
             # Lookup the serial number from the path
-            serial_number = self._drive_by_device_name.get(path)
+            serial_number = str(self._drive_by_device_name.get(path))
             self._log_debug("serial_number: %s" % str(serial_number))
             drive["serialNumber"] = serial_number
 
