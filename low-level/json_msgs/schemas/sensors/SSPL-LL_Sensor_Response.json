@@ -31,19 +31,19 @@
 			"properties": {
 				"sspl_ll_msg_header": {
 					"schema_version": {
-						"description" :"SSPL JSON Schema Version",
-						"type" : "string",
-						"required" : true
+						"description": "SSPL JSON Schema Version",
+						"type": "string",
+						"required": true
 					},
 					"sspl_version": {
-						"description" : "SSPL Version",
-						"type" : "string",
-						"required" : true
+						"description": "SSPL Version",
+						"type": "string",
+						"required": true
 					},
-					"msg_version" : {
-						"description" : "Message Version",
-						"type" : "string",
-						"required" : true
+					"msg_version": {
+						"description": "Message Version",
+						"type": "string",
+						"required": true
 					},
 					"uuid": {
 						"description": "Universally Unique ID of message",
@@ -53,103 +53,103 @@
 				},
 
 				"sensor_response_type": {
-					"type" : "object",
-					"required" : true,
+					"type": "object",
+					"required": true,
 					"properties": {
 
 						"disk_status_drivemanager": {
-							"type" : "object",
+							"type": "object",
 							"properties": {
-								"diskNum" : {
-									"description" : "Disk Number within the enclosure",
-									"type" : "number",
-									"required" : true
+								"diskNum": {
+									"description": "Disk Number within the enclosure",
+									"type": "integer",
+									"required": true
 								},
-								"enclosureSN" : {
-									"description" : "Enclosure Serial Number",
-									"type" : "string",
-									"required" : true
+								"enclosureSN": {
+									"description": "Enclosure Serial Number",
+									"type": "string",
+									"required": true
 								},
-								"diskStatus" : {
-									"description" : "Disk Status",
-									"type" : "string",
-									"required" : true
+								"diskStatus": {
+									"description": "Disk Status",
+									"type": "string",
+									"required": true
 								},
-								"diskReason" : {
-									"description" : "Disk Reason",
-									"type" : "string",
-									"required" : true
+								"diskReason": {
+									"description": "Disk Reason",
+									"type": "string",
+									"required": true
 								},
-								"serialNumber" : {
-									"description" : "Disk Serial Number",
-									"type" : "string",
-									"required" : true
+								"serialNumber": {
+									"description": "Disk Serial Number",
+									"type": "string",
+									"required": true
 								},
-								"pathID" : {
-									"description" : "Disk by-id Symlink",
-									"type" : "string",
-									"required" : true
+								"pathID": {
+									"description": "Disk by-id Symlink",
+									"type": "string",
+									"required": true
 								}
 							}
 						},
 
 						"disk_status_hpi": {
-							"type" : "object",
+							"type": "object",
 							"properties": {
-								"hostId" : {
-									"description" : "Host ID of node",
-									"type" : "string",
-									"required" : true
+								"hostId": {
+									"description": "Host ID of node",
+									"type": "string",
+									"required": true
 								},
-								"deviceId" : {
-									"description" : "Drive Identifier",
-									"type" : "string",
-									"required" : true
+								"deviceId": {
+									"description": "Drive Identifier",
+									"type": "string",
+									"required": true
 								},
-								"drawer" : {
-									"description" : "Drawer number of drive",
-									"type" : "integer",
-									"required" : true
+								"drawer": {
+									"description": "Drawer number of drive",
+									"type": "integer",
+									"required": true
 								},
-								"location" : {
-									"description" : "Location number of drive",
-									"type" : "integer",
-									"required" : true
+								"location": {
+									"description": "Location number of drive",
+									"type": "integer",
+									"required": true
 								},
-								"manufacturer" : {
-									"description" : "Manufacturer of the drive",
-									"type" : "string",
-									"required" : true
+								"manufacturer": {
+									"description": "Manufacturer of the drive",
+									"type": "string",
+									"required": true
 								},
-								"productName" : {
-									"description" : "Product name of the drive",
-									"type" : "string",
-									"required" : true
+								"productName": {
+									"description": "Product name of the drive",
+									"type": "string",
+									"required": true
 								},
-								"productVersion" : {
-									"description" : "Version of the drive",
-									"type" : "string",
-									"required" : true
+								"productVersion": {
+									"description": "Version of the drive",
+									"type": "string",
+									"required": true
 								},
-								"serialNumber" : {
-									"description" : "Serial Number of the drive",
-									"type" : "string",
-									"required" : true
+								"serialNumber": {
+									"description": "Serial Number of the drive",
+									"type": "string",
+									"required": true
 								},
-								"wwn" : {
-									"description" : "wwn of the drive",
-									"type" : "string",
-									"required" : true
+								"wwn": {
+									"description": "wwn of the drive",
+									"type": "string",
+									"required": true
 								},
-								"enclosureSN" : {
-									"description" : "Enclosure Serial Number",
-									"type" : "string",
-									"required" : true
-								}, 
-								"diskNum" : {
-									"description" : "Drive Number within the enclosure",
-									"type" : "number",
-									"required" : true
+								"enclosureSN": {
+									"description": "Enclosure Serial Number",
+									"type": "string",
+									"required": true
+								},
+								"diskNum": {
+									"description": "Drive Number within the enclosure",
+									"type": "integer",
+									"required": true
 								}
 							}
 						},
@@ -196,150 +196,174 @@
 						},
 
 						"host_update": {
-							"type" : "object",
+							"type": "object",
 							"properties": {
-								"hostId" : {
-									"description" : "Hostname of system",
-									"type" : "string",
+								"hostId": {
+									"description": "Hostname of system",
+									"type": "string",
 									"required": true
 								},
-								"localtime" : {
-									"description" : "Local time on system",
-									"type" : "string",
+								"localtime": {
+									"description": "Local time on system",
+									"type": "string",
 									"required": true
 								},
-								"bootTime" : {
-									"description" : "Time host was started",
-									"type" : "string"
+								"bootTime": {
+									"description": "Time host was started",
+									"type": "string"
 								},
-								"upTime" : {
-									"description" : "Time since host was started in secs",
-									"type" : "number"
+								"upTime": {
+									"description": "Time since host was started in secs",
+									"type": "number"
 								},
-								"uname" : {
-									"description" : "OS system information",
-									"type" : "string"
+								"uname": {
+									"description": "OS system information",
+									"type": "string"
 								},
-								"freeMem" : {
-									"description" : "Amount of free memory",
-									"type" : "object",
+								"freeMem": {
+									"description": "Amount of free memory",
+									"type": "object",
 									"properties": {
 										"value": {
-											"type" : "integer"
+											"type": "integer"
 										},
 										"units": {
 											"oneOf": [
-												{ "$ref": "#/units/GB" },
-												{ "$ref": "#/units/KB" },
-												{ "$ref": "#/units/MB" }
+												{
+													"$ref": "#/units/GB"
+												}, {
+													"$ref": "#/units/KB"
+												}, {
+													"$ref": "#/units/MB"
+												}
 											]
 										}
 									}
 								},
-								"totalMem" : {
-									"description" : "Total memory available",
-									"type" : "object",
+								"totalMem": {
+									"description": "Total memory available",
+									"type": "object",
 									"properties": {
 										"value": {
-											"type" : "integer"
+											"type": "integer"
 										},
 										"units": {
 											"oneOf": [
-												{ "$ref": "#/units/GB" },
-												{ "$ref": "#/units/KB" },
-												{ "$ref": "#/units/MB" }
+												{
+													"$ref": "#/units/GB"
+												}, {
+													"$ref": "#/units/KB"
+												}, {
+													"$ref": "#/units/MB"
+												}
 											]
 										}
 									}
 								},
-								"loggedInUsers" : {
-									"description" : "List of logged in users",
-									"type" : "array"
+								"loggedInUsers": {
+									"description": "List of logged in users",
+									"type": "array"
 								},
-								"processCount" : {
-									"description" : "Total number of processes",
-									"type" : "integer"
+								"processCount": {
+									"description": "Total number of processes",
+									"type": "integer"
 								},
-								"runningProcessCount" : {
-									"description" : "Total number of running processes",
-									"type" : "integer"
+								"runningProcessCount": {
+									"description": "Total number of running processes",
+									"type": "integer"
 								}
 							}
 						},
 
-						"local_mount_data" : {
-							"description" : "Local mount data",
-							"type" : "object",
+						"local_mount_data": {
+							"description": "Local mount data",
+							"type": "object",
 							"properties": {
-								"hostId" : {
-									"description" : "Hostname of system",
-									"type" : "string",
+								"hostId": {
+									"description": "Hostname of system",
+									"type": "string",
 									"required": true
 								},
-								"localtime" : {
-									"description" : "Local time on system",
-									"type" : "string",
+								"localtime": {
+									"description": "Local time on system",
+									"type": "string",
 									"required": true
 								},
 								"freeSpace": {
-									"type" : "object",
+									"type": "object",
 									"properties": {
 										"value": {
-											"type" : "integer"
+											"type": "integer"
 										},
 										"units": {
 											"oneOf": [
-												{ "$ref": "#/units/GB" },
-												{ "$ref": "#/units/KB" },
-												{ "$ref": "#/units/MB" }
+												{
+													"$ref": "#/units/GB"
+												}, {
+													"$ref": "#/units/KB"
+												}, {
+													"$ref": "#/units/MB"
+												}
 											]
 										}
 									}
 								},
 								"freeInodes": {
-									"type" : "integer"
+									"type": "integer"
 								},
 								"freeSwap": {
-									"type" : "object",
+									"type": "object",
 									"properties": {
 										"value": {
-											"type" : "integer"
+											"type": "integer"
 										},
 										"units": {
 											"oneOf": [
-											{ "$ref": "#/units/GB" },
-											{ "$ref": "#/units/KB" },
-											{ "$ref": "#/units/MB" }
+												{
+													"$ref": "#/units/GB"
+												}, {
+													"$ref": "#/units/KB"
+												}, {
+													"$ref": "#/units/MB"
+												}
 											]
 										}
 									}
 								},
 								"totalSpace": {
-									"type" : "object",
+									"type": "object",
 									"properties": {
 										"value": {
-											"type" : "integer"
+											"type": "integer"
 										},
 										"units": {
 											"oneOf": [
-												{ "$ref": "#/units/GB" },
-												{ "$ref": "#/units/KB" },
-												{ "$ref": "#/units/MB" }
+												{
+													"$ref": "#/units/GB"
+												}, {
+													"$ref": "#/units/KB"
+												}, {
+													"$ref": "#/units/MB"
+												}
 											]
 										}
 									}
 								},
 								"totalSwap": {
-									"type" : "object",
+									"type": "object",
 									"properties": {
 										"value": {
-											"type" : "integer"
+											"type": "integer"
 										},
 										"units": {
 											"oneOf": [
-												{ "$ref": "#/units/GB" },
-												{ "$ref": "#/units/KB" },
-												{ "$ref": "#/units/MB" }
+												{
+													"$ref": "#/units/GB"
+												}, {
+													"$ref": "#/units/KB"
+												}, {
+													"$ref": "#/units/MB"
+												}
 											]
 										}
 									}
@@ -347,68 +371,68 @@
 							}
 						},
 
-						"cpu_data" : {
-							"description" : "CPU Data",
-							"type" : "object",
+						"cpu_data": {
+							"description": "CPU Data",
+							"type": "object",
 							"properties": {
-								"hostId" : {
-									"description" : "Hostname of system",
-									"type" : "string",
+								"hostId": {
+									"description": "Hostname of system",
+									"type": "string",
 									"required": true
 								},
-								"localtime" : {
-									"description" : "Local time on system",
-									"type" : "string",
+								"localtime": {
+									"description": "Local time on system",
+									"type": "string",
 									"required": true
 								},
 								"csps": {
-									"type" : "integer"
+									"type": "integer"
 								},
 								"idleTime": {
-									"type" : "integer"
+									"type": "integer"
 								},
 								"interruptTime": {
-									"type" : "integer"
+									"type": "integer"
 								},
 								"iowaitTime ": {
-									"type" : "integer"
+									"type": "integer"
 								},
 								"niceTime": {
-									"type" : "integer"
+									"type": "integer"
 								},
 								"softirqTime": {
-									"type" : "integer"
+									"type": "integer"
 								},
 								"stealTime": {
-									"type" : "integer"
+									"type": "integer"
 								},
 								"systemTime": {
-									"type" : "integer"
+									"type": "integer"
 								},
 								"userTime": {
-									"type" : "integer"
+									"type": "integer"
 								},
 								"coreData": {
-									"description" : "CPU Core Data",
+									"description": "CPU Core Data",
 									"type": "array",
 									"minItems": 1,
 									"items": {
-										"type" : "object",
+										"type": "object",
 										"properties": {
-											"coreId" : {
-												"type" : "integer"
+											"coreId": {
+												"type": "integer"
 											},
-											"load1MinAvg" : {
-												"type" : "integer"
+											"load1MinAvg": {
+												"type": "integer"
 											},
-											"load5MinAvg" : {
-												"type" : "integer"
+											"load5MinAvg": {
+												"type": "integer"
 											},
-											"load15MinAvg" : {
-												"type" : "integer"
+											"load15MinAvg": {
+												"type": "integer"
 											},
-											"ips" : {
-												"type" : "integer"
+											"ips": {
+												"type": "integer"
 											}
 										}
 									}
@@ -416,49 +440,49 @@
 							}
 						},
 
-						"if_data" : {
-							"description" : "Network Interface Data",
-							"type" : "object",
+						"if_data": {
+							"description": "Network Interface Data",
+							"type": "object",
 							"properties": {
-								"hostId" : {
-									"description" : "Hostname of system",
-									"type" : "string",
+								"hostId": {
+									"description": "Hostname of system",
+									"type": "string",
 									"required": true
 								},
-								"localtime" : {
-									"description" : "Local time on system",
-									"type" : "string",
+								"localtime": {
+									"description": "Local time on system",
+									"type": "string",
 									"required": true
 								},
 								"interfaces": {
 									"type": "array",
 									"minItems": 1,
 									"items": {
-										"type" : "object",
+										"type": "object",
 										"properties": {
-											"ifId" : {
-												"type" : "string"
+											"ifId": {
+												"type": "string"
 											},
-											"networkErrors" : {
-												"type" : "integer"
+											"networkErrors": {
+												"type": "integer"
 											},
-											"droppedPacketsIn" : {
-												"type" : "integer"
+											"droppedPacketsIn": {
+												"type": "integer"
 											},
-											"packetsIn" : {
-												"type" : "integer"
+											"packetsIn": {
+												"type": "integer"
 											},
-											"trafficIn" : {
-												"type" : "integer"
+											"trafficIn": {
+												"type": "integer"
 											},
-											"droppedPacketsOut" : {
-												"type" : "integer"
+											"droppedPacketsOut": {
+												"type": "integer"
 											},
-											"packetsOut" : {
-												"type" : "integer"
+											"packetsOut": {
+												"type": "integer"
 											},
-											"trafficOut" : {
-												"type" : "integer"
+											"trafficOut": {
+												"type": "integer"
 											}
 										}
 									}
@@ -466,46 +490,56 @@
 							}
 						},
 
-						"raid_data" : {
-							"description" : "RAID Data",
-							"type" : "object",
-							"properties" : {
-								"hostId" : {
-									"description" : "Hostname of system",
-									"type" : "string",
+						"raid_data": {
+							"description": "RAID Data",
+							"type": "object",
+							"properties": {
+								"hostId": {
+									"description": "Hostname of system",
+									"type": "string",
 									"required": true
 								},
-								"mdstat" : {
-									"description" : "/proc/mdstat containing state information about RAID",
-									"type" : "string",
+								"mdstat": {
+									"description": "/proc/mdstat containing state information about RAID",
+									"type": "string",
 									"required": true
 								},
-								"device" : {
-									"description" : "md device",
-									"type" : "string",
+								"device": {
+									"description": "md device",
+									"type": "string",
 									"required": true
 								},
 								"drives": {
-									"0" : {
-										"type" : "string",
-										"required": true
-									}, 
-									"1" : {
-										"type" : "string",
-										"required": true
+									"description": "Constituent drives",
+									"type": "array",
+									"minItems": 0,
+									"items": {
+										"type": "object",
+										"properties": {
+											"path": {
+												"description": "Drive path (e.g. /dev/disk)",
+												"type": "string",
+												"required": true
+											},
+											"serialNumber": {
+												"description": "Drive serial number",
+												"type": "string",
+												"required": true
+											}
+										}
 									}
 								}
 							}
 						},
 
 						"snmp_trap": {
-							"description" : "SNMP Trap Information",
-							"type" : "object",
+							"description": "SNMP Trap Information",
+							"type": "object",
 							"properties": {
-								"trap_data" : {
-									"description" : "JSON data about the SNMP Trap",
-									"type" : "string",
-									"required" : true
+								"trap_data": {
+									"description": "JSON data about the SNMP Trap",
+									"type": "string",
+									"required": true
 								}
 							}
 						}

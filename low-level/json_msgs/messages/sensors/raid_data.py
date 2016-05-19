@@ -35,8 +35,7 @@ class RAIDdataMsg(BaseSensorMsg):
     def __init__(self, host_id,
                        mdstat,
                        device,
-                       drive_0,
-                       drive_1,
+                       drives,
                        username  = "SSPL-LL",
                        signature = "N/A",
                        time      = "N/A",
@@ -46,8 +45,7 @@ class RAIDdataMsg(BaseSensorMsg):
         self._host_id           = host_id
         self._mdstat            = mdstat
         self._device            = device
-        self._drive_0           = drive_0
-        self._drive_1           = drive_1
+        self._drives            = drives
         self._username          = username
         self._signature         = signature
         self._time              = time
@@ -71,10 +69,7 @@ class RAIDdataMsg(BaseSensorMsg):
                                     "hostId" : self._host_id,
                                     "mdstat" : self._mdstat,
                                     "device" : self._device,
-                                    "drives": {
-                                        "0" : self._drive_0,
-                                        "1" : self._drive_1
-                                        }
+                                    "drives" : drives
                                     }
                                 }
                           }

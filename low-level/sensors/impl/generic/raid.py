@@ -63,7 +63,7 @@ class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
         super(RAIDsensor, self).initialize_msgQ(msgQlist)
 
         self._RAID_status_file = self._get_RAID_status_file()
-        logger.info("         Monitoring RAID status file: %s" % self._RAID_status_file)
+        logger.info("          Monitoring RAID status file: %s" % self._RAID_status_file)
 
     def read_data(self):
         """Return the Current RAID status information"""
@@ -118,70 +118,60 @@ class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
     def _send_json_msg(self):
         """Transmit data to NodeDataMsgHandler to be processed and sent out"""
 
-        # Convert device names to serial numbers
-        drive_0 = self._run_hdparm_command(self._drive_0)
-        drive_1 = self._run_hdparm_command(self._drive_1)
-        self._log_debug("_get_drive_sn, device: %s, drive 0: %s, drive 1: %s" % \
-                        (self._device, drive_0, drive_1))
+        self._log_debug("_get_drive_sn, device: %s, drives: %s" % \
+                        (self._device, str(self._drives)))
 
         internal_json_msg = json.dumps(
             {"sensor_request_type" : {
                 "node_data" : {
                     "sensor_type" : "raid_data",
-                    "status"  : self._mdstat,
+                    "status"  : self._RAID_status.strip().replace("\n", " "),
                     "device"  : self._device,
-                    "drive_0" : drive_0,
-                    "drive_1" : drive_1,
+                    "drives"  : self._drives
                     }
                 }
             })
 
         # Send the event to node data message handler to generate json message and send out
         self._write_internal_msgQ(NodeDataMsgHandler.name(), internal_json_msg)
-
-        # Reset values in case there are more entries to be processed in /proc/mdstats
-        self._drive_0 = "N/A"
-        self._drive_1 = "N/A"
-        self._device  = "N/A"
+        self._drives = []
 
     def _get_drive_sn(self):
         """Parse out the two drives used by mdraid
             look up their serial numbers and return them"""
         # Replace new line chars with spaces
-        self._mdstat = self._RAID_status.strip().replace("\n", " ")
+        mdstat = self._RAID_status.strip().split("\n")
 
-        # Break the status string apart into separate fields
-        fields = self._mdstat.split(" ")
+        # List of raid drives
+        self._drives = []
 
-        self._drive_0 = "N/A"
-        self._drive_1 = "N/A"
-        self._device  = "N/A"
-        # Look for '[0]' & '[1]' identifying the drives in raid array
-        for field in fields:
-            if "[0]" in field:
-                self._drive_0 = "/dev/{}".format(field[: field.find('[')])
-            elif "[1]" in field:
-                self._drive_1 = "/dev/{}".format(field[: field.find('[')])
-            elif "md" in field:
-                self._device = "/dev/{}".format(field)
+        # Read in each line looking for a 'mdXXX' value
+        for line in mdstat:
+            # Break the  line apart into separate fields
+            fields = line.split(" ")
+            if "md" in fields[0]:
+                self._device = self._device = "/dev/{}".format(fields[0])
+                self._log_debug("md device found: %s" % self._device)
 
-            # Transmit data in a json msg if all the fields are filled in
-            if self._drive_0 != "N/A" and \
-               self._drive_1 != "N/A" and \
-               self._device  != "N/A":
+                # Parse out raid drives
+                for field in fields:
+                    if "[0]" in field:
+                        self._add_drive(field)
+                    if "[1]" in field:
+                        self._add_drive(field)
+                    if "[2]" in field:
+                        self._add_drive(field)
+                    if "[3]" in field:
+                        self._add_drive(field)
+
+                # Create a raid_msg and send it out
                 self._send_json_msg()
 
-    def _run_hdparm_command(self, drive):
-        """Run the hdparm command and get the response and error returned"""
-        command = "sudo /usr/sbin/hdparm -I {0} | grep 'Serial Number:'".format(drive)
-        self._log_debug("_run_hdparm_command, executing: %s" % command)
-
-        process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        response, error = process.communicate()
-        if not error:
-            return response.strip().split(" ")[-1]
-        else:
-            return drive
+    def _add_drive(self, field):
+        """Adds a drive to the list"""
+        drive = "/dev/{}".format(field[: field.find('[')])
+        drive_data = {"path" : drive, "serialNumber" : "None"}
+        self._drives.append(drive_data)
 
     def _get_RAID_status_file(self):
         """Retrieves the file containing the RAID status information"""

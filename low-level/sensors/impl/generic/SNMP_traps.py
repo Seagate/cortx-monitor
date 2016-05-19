@@ -270,9 +270,9 @@ class SNMPtraps(ScheduledModuleThread, InternalMsgQ):
                                                         self.BIND_PORT,
                                                         1620))
 
-        logger.info("         Listening on %s:%s" % (self._bind_ip, self._bind_port))
-        logger.info("         Enabled traps: %s" % str(self._enabled_traps))
-        logger.info("         Enabled MIBS: %s" % str(self._enabled_MIBS))
+        logger.info("          Listening on %s:%s" % (self._bind_ip, self._bind_port))
+        logger.info("          Enabled traps: %s" % str(self._enabled_traps))
+        logger.info("          Enabled MIBS: %s" % str(self._enabled_MIBS))
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""
