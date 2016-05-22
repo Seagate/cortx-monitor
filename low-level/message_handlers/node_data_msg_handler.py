@@ -74,7 +74,9 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                                                 "MB")
         self._node_sensor    = None
         self._login_actuator = None
-        self._RAID_status    = "N/A"
+
+        self._raid_drives = []
+        self._raid_device = "N/A"
 
         # UUID used in json msgs
         self._uuid = None
@@ -86,8 +88,8 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         """Run the module periodically on its own thread."""
         self._log_debug("Start accepting requests")
 
-        #self._set_debug(True)
-        #self._set_debug_persist(True)
+        # self._set_debug(True)
+        # self._set_debug_persist(True)
 
         try:
             # Query the Zope GlobalSiteManager for an object implementing INodeData
@@ -319,30 +321,28 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 logger.error("NodeDataMsgHandler, updating host information was NOT successful.")
 
         # See if status is in the msg; ie it's an internal msg from the RAID sensor
-        drives = []
-        device = "N/A"
         if jsonMsg.get("sensor_request_type").get("node_data").get("status") is not None:
-            self._RAID_status = jsonMsg.get("sensor_request_type").get("node_data").get("status")
-            device  = jsonMsg.get("sensor_request_type").get("node_data").get("device")
-            drives = list(jsonMsg.get("sensor_request_type").get("node_data").get("drives"))
+            self._raid_device = jsonMsg.get("sensor_request_type").get("node_data").get("device")
+            self._raid_drives = list(jsonMsg.get("sensor_request_type").get("node_data").get("drives"))
 
         # Loop thru each index of drives containing only paths and fill in with s/n
-        for drive in drives:
+        for drive in self._raid_drives:
             self._log_debug("drive: %s" % str(drive))
 
-            path = drive.get("path")
-            self._log_debug("path: %s" % str(path))
+            if drive.get("identity") is not None:
+                path = drive.get("identity").get("path")
+                self._log_debug("path: %s" % str(path))
 
-            # Lookup the serial number from the path
-            serial_number = str(self._drive_by_device_name.get(path))
-            self._log_debug("serial_number: %s" % str(serial_number))
-            drive["serialNumber"] = serial_number
+                # Lookup the serial number from the path
+                serial_number = str(self._drive_by_device_name.get(path))                
+                self._log_debug("serial_number: %s" % str(serial_number))
+                drive["identity"]["serialNumber"] = serial_number
 
-        self._log_debug("_generate_RAID_status, host_id: %s, RAID_status: %s, drives: %s" % 
-                    (self._node_sensor.host_id, self._RAID_status, str(drives)))
+        self._log_debug("_generate_RAID_status, host_id: %s, device: %s, drives: %s" % 
+                    (self._node_sensor.host_id, self._raid_device, str(self._raid_drives)))
 
         raidDataMsg = RAIDdataMsg(self._node_sensor.host_id,
-                              self._RAID_status, device, drives)
+                                  self._raid_device, self._raid_drives)
 
         # Add in uuid if it was present in the json request
         if self._uuid is not None:

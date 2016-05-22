@@ -73,13 +73,13 @@ class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
         """Run the sensor on its own thread"""
 
         # Allow systemd to process all the drives so we can map device name to serial numbers
-        time.sleep(90)
+        time.sleep(120)
 
         # Check for debug mode being activated
         self._read_my_msgQ_noWait()
 
-        #self._set_debug(True)
-        #self._set_debug_persist(True)
+        # self._set_debug(True)
+        # self._set_debug_persist(True)
 
         try:
             # Check for a change in status file and notify the node data msg handler
@@ -112,20 +112,115 @@ class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
         # Update the RAID status
         self._RAID_status = status
 
-        # Parse out drive serial numbers being used and transmit json msg
-        self._get_drive_sn()
+        # Process mdstat file and send json msg to NodeDataMsgHandler
+        self._process_mdstat()
+
+    def _process_mdstat(self):
+        """Parse out status' and path info for each drive"""
+        # Replace new line chars with spaces
+        mdstat = self._RAID_status.strip().split("\n")
+
+        # Array of optional identity json sections for drives in array
+        self._identity = {}
+
+        # Read in each line looking for a 'mdXXX' value
+        md_line_parsed = False
+        for line in mdstat:
+
+            # The line following the mdXXX : ... contains the [UU] status that we need
+            if md_line_parsed == True:
+                # Format is [x/y][UUUU____...]
+                self._parse_raid_status(line)
+
+                # Create a raid_msg and send it out
+                self._send_json_msg()
+
+                # Reset in case their are multiple configs in file
+                md_line_parsed = False
+
+            # Break the  line apart into separate fields
+            fields = line.split(" ")
+
+            # Parse out status' and path info for each drive
+            if "md" in fields[0]:
+                self._device = self._device = "/dev/{}".format(fields[0])
+                self._log_debug("md device found: %s" % self._device)
+
+                # Parse out raid drive paths if they're present
+                for field in fields:
+                    if "[" in field:
+                        self._add_drive(field)
+                md_line_parsed = True
+
+    def _add_drive(self, field):
+        """Adds a drive to the list"""
+        first_bracket_index = field.find('[')
+
+        # Next char is the drive index
+        drive_index = int(field[first_bracket_index + 1])
+        drive_path = "/dev/{}".format(field[: first_bracket_index])
+        self._log_debug("_add_drive, drive index: %d, path: %s" %
+                        (drive_index, drive_path))
+
+        # Create the json msg, serial number will be filled in by NodeDataMsgHandler
+        identity_data = {
+                            "path" : drive_path, 
+                            "serialNumber" : "None"
+                            }
+        
+        self._identity[drive_index] = identity_data
+
+    def _parse_raid_status(self, status_line):
+        """Parses the status of each drive denoted by U & _
+            for drive being Up or Down in raid
+        """
+        # Parse out x for total number of drives
+        first_bracket_index = status_line.find('[')
+        total_drives = int(status_line[first_bracket_index + 1])
+
+        # Break the  line apart into separate fields
+        fields = status_line.split(" ")
+
+        # The last field is the list of U & _
+        status = fields[-1]
+        self._log_debug("_parse_raid_status, status: %s, total drives: %d" %
+                        (status, total_drives))
+
+        # Array of raid drives in json format based on schema
+        self._drives = []
+
+        drive_index = 0
+        while total_drives > 0:
+            # Create the json msg and append it to the list
+            if self._identity.get(drive_index) is not None:
+                path = self._identity.get(drive_index).get("path")
+                drive_status_msg = {
+                                 "status" : status[total_drives],
+                                 "identity": {
+                                    "path": path,
+                                    "serialNumber": "None"
+                                    }
+                                }
+            else:
+                drive_status_msg = {"status" : status[total_drives]}
+
+            self._drives.append(drive_status_msg)
+
+            # Total drives gets decremented and drive index gets incremented
+            total_drives = total_drives - 1
+            drive_index = drive_index + 1
 
     def _send_json_msg(self):
         """Transmit data to NodeDataMsgHandler to be processed and sent out"""
 
-        self._log_debug("_get_drive_sn, device: %s, drives: %s" % \
+        self._log_debug("_send_json_msg, device: %s, drives: %s" % \
                         (self._device, str(self._drives)))
 
         internal_json_msg = json.dumps(
             {"sensor_request_type" : {
                 "node_data" : {
+                    "status": "update",
                     "sensor_type" : "raid_data",
-                    "status"  : self._RAID_status.strip().replace("\n", " "),
                     "device"  : self._device,
                     "drives"  : self._drives
                     }
@@ -134,44 +229,6 @@ class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
 
         # Send the event to node data message handler to generate json message and send out
         self._write_internal_msgQ(NodeDataMsgHandler.name(), internal_json_msg)
-        self._drives = []
-
-    def _get_drive_sn(self):
-        """Parse out the two drives used by mdraid
-            look up their serial numbers and return them"""
-        # Replace new line chars with spaces
-        mdstat = self._RAID_status.strip().split("\n")
-
-        # List of raid drives
-        self._drives = []
-
-        # Read in each line looking for a 'mdXXX' value
-        for line in mdstat:
-            # Break the  line apart into separate fields
-            fields = line.split(" ")
-            if "md" in fields[0]:
-                self._device = self._device = "/dev/{}".format(fields[0])
-                self._log_debug("md device found: %s" % self._device)
-
-                # Parse out raid drives
-                for field in fields:
-                    if "[0]" in field:
-                        self._add_drive(field)
-                    if "[1]" in field:
-                        self._add_drive(field)
-                    if "[2]" in field:
-                        self._add_drive(field)
-                    if "[3]" in field:
-                        self._add_drive(field)
-
-                # Create a raid_msg and send it out
-                self._send_json_msg()
-
-    def _add_drive(self, field):
-        """Adds a drive to the list"""
-        drive = "/dev/{}".format(field[: field.find('[')])
-        drive_data = {"path" : drive, "serialNumber" : "None"}
-        self._drives.append(drive_data)
 
     def _get_RAID_status_file(self):
         """Retrieves the file containing the RAID status information"""

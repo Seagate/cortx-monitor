@@ -499,11 +499,6 @@
 									"type": "string",
 									"required": true
 								},
-								"mdstat": {
-									"description": "/proc/mdstat containing state information about RAID",
-									"type": "string",
-									"required": true
-								},
 								"device": {
 									"description": "md device",
 									"type": "string",
@@ -512,22 +507,31 @@
 								"drives": {
 									"description": "Constituent drives",
 									"type": "array",
-									"minItems": 0,
+									"minItems": 2,
 									"items": {
 										"type": "object",
 										"properties": {
-											"path": {
-												"description": "Drive path (e.g. /dev/disk)",
+											"status": {
+												"description": "Drive status (U, _)",
 												"type": "string",
 												"required": true
 											},
-											"serialNumber": {
-												"description": "Drive serial number",
-												"type": "string",
-												"required": true
+											"identity": {
+												"type": "object",
+												"path": {
+													"description": "Drive path (e.g. /dev/disk)",
+													"type": "string",
+													"required": true
+												},
+												"serialNumber": {
+													"description": "Drive serial number",
+													"type": "string",
+													"required": true
+												}
 											}
 										}
-									}
+									},
+									"required": true
 								}
 							}
 						},

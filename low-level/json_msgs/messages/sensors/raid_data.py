@@ -33,7 +33,6 @@ class RAIDdataMsg(BaseSensorMsg):
     MESSAGE_VERSION  = "1.0.0"
 
     def __init__(self, host_id,
-                       mdstat,
                        device,
                        drives,
                        username  = "SSPL-LL",
@@ -43,7 +42,6 @@ class RAIDdataMsg(BaseSensorMsg):
         super(RAIDdataMsg, self).__init__()
 
         self._host_id           = host_id
-        self._mdstat            = mdstat
         self._device            = device
         self._drives            = drives
         self._username          = username
@@ -67,9 +65,8 @@ class RAIDdataMsg(BaseSensorMsg):
                           "sensor_response_type": {
                                 self.ACTUATOR_MSG_TYPE: {
                                     "hostId" : self._host_id,
-                                    "mdstat" : self._mdstat,
                                     "device" : self._device,
-                                    "drives" : drives
+                                    "drives" : self._drives
                                     }
                                 }
                           }
@@ -83,15 +80,9 @@ class RAIDdataMsg(BaseSensorMsg):
 
     def get_host_id(self):
         return self.host_id
-    
+
     def set_host_ide(self, host_id):
         self._host_id = host_id
-
-    def get_mdstat(self):
-        return self._mdstat
-
-    def set_mdstat(self, mdstat):
-        self._mdstat = mdstat
 
     def set_uuid(self, _uuid):
         self._json["message"]["sspl_ll_msg_header"]["uuid"] = _uuid
