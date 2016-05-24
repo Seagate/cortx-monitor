@@ -16,6 +16,7 @@
 
 # Third Party
 # Import Local Modules
+import json
 from cstor.cli.commands.base_command import BaseCommand
 from cstor.cli.settings import DEBUG
 import cstor.cli.errors as errors
@@ -82,17 +83,17 @@ class Status(BaseCommand):
     #         )
     #     return pwr_response
     #
-    # @staticmethod
-    # def is_json(myjson):
-    #     """ Verify for JSON structure
-    #     """
-    #     # pylint: disable=unused-variable
-    #     try:
-    #         json_object = json.loads(myjson)
-    #     # pylint: disable=invalid-name
-    #     except ValueError, e:
-    #         return False
-    #     return True
+    @staticmethod
+    def is_json(myjson):
+        """ Verify for JSON structure
+        """
+        # pylint: disable=unused-variable
+        try:
+            json_object = json.loads(myjson)
+        # pylint: disable=invalid-name
+        except ValueError, e:
+            return False
+        return True
 
     def get_action_params(self, **kwargs):
         """
@@ -101,10 +102,10 @@ class Status(BaseCommand):
         params = '&command={}&debug={}'.format(self.action, DEBUG)
         return params
 
-    # @staticmethod
-    # def _parse_status_response(response):
-    #     item = json.loads(response)[Status.STATUS_RESPONSE_KEY][0]
-    #     return item[Status.STATUS_KEY]
+    @staticmethod
+    def _parse_status_response(response):
+        item = json.loads(response)[Status.STATUS_RESPONSE_KEY][0]
+        return item.get(Status.STATUS_KEY, '')
 
     @staticmethod
     def add_args(subparsers):
@@ -152,8 +153,19 @@ class Status(BaseCommand):
                     pwr_response,
                     inactive_nodes
                 )
-
-            response = 'Filesystem status: {} \n\n'.format(file_status_resp)
+            file_resp = None
+            if file_status_resp:
+                if file_status_resp[0]:
+                    file_resp = file_status_resp[0]
+                    if Status.is_json(file_resp):
+                        file_resp = Status._parse_status_response(file_resp)
+                        response = 'Filesystem status: {} \n\n'.format(
+                            file_resp)
+                    else:
+                        response = 'Filesystem status: {} \n\n'.format(
+                            file_resp)
+            else:
+                response = 'Filesystem status: No response \n\n'
 
             response += sem_resp
             response += '\n\n'
