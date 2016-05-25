@@ -83,11 +83,11 @@ class HPIMonitor(ScheduledModuleThread, InternalMsgQ):
 
         self._log_debug("Running HPIMONITOR")
 
+        # Allow time for the openhpid service to come up and populate /tmp/dcs/hpi
+        time.sleep(10)
+
         # Check for debug mode being activated
         self._read_my_msgQ_noWait()
-
-        # Allow time for the openhpid service to come up and populate /tmp/dcs/hpi
-        time.sleep(40)
 
         self._log_debug("Start accepting requests")
         self._log_debug("run, CentOS 7 base directory: %s" % self._hpi_mntr_base_dir)
@@ -169,8 +169,6 @@ class HPIMonitor(ScheduledModuleThread, InternalMsgQ):
 
                 # Check to see if the drive is present
                 serial_number = self._gather_data(driveloc+"/serial_number")
-                if serial_number == "ZBX_NOTPRESENT":
-                    continue
 
                 # Update the status to status_reason used throughout
                 if self._gather_data(driveloc+"/status") == "available":

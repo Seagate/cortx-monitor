@@ -116,13 +116,13 @@ def main(conf_reader):
     try:
         # Loop through the list of instanced modules and start them on threads
         for name, curr_module in sspl_threaded_modules.iteritems():
-            logger.info("Starting %s" % curr_module.name())
+            logger.info("Starting: %s" % curr_module.name())
             thread = Thread(target=_run_thread_capture_errors,
                             args=(curr_module, sspl_threaded_modules, msgQlist, conf_reader))
             thread.start()
 
         # Start the ThreadController module with the list of threads
-        logger.info("Starting %s" % ThreadController.name())
+        logger.info("Starting: %s" % ThreadController.name())
 
         # Initialize the thread controller with the list of references to all modules
         controller_thread = Thread(target=_run_thread_capture_errors,
@@ -187,7 +187,7 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist):
     from actuators.impl.generic.ipmi import IPMI
     from actuators.impl.generic.wbcli_reset_drive import WbcliResetDrive
     from actuators.impl.generic.hdparm import Hdparm
-    from actuators.impl.generic.hpi import HPI
+    from actuators.impl.generic.hpi_actuator import HPIactuator
     from actuators.impl.generic.spiel import Spiel
 
     from sensors.impl.generic.raid import RAIDsensor

@@ -67,7 +67,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
         else:
             self.ip_addr = socket.gethostbyaddr(socket.gethostname())[0]
 
-        self._spiel_actuator        = None
+        self._spiel_actuator       = None
         self._HPI_actuator         = None
         self._GEM_actuator         = None
         self._PDU_actuator         = None
@@ -138,7 +138,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
             # Handle LED effects using the HPI actuator
             elif component == "LED:":
-                # Query the Zope GlobalSiteManager for an object implementing the IGEM actuator
+                # Query the Zope GlobalSiteManager for an object implementing the IHPI actuator
                 if self._HPI_actuator is None:
                     self._HPI_actuator = queryUtility(IHPI)(self._conf_reader)
                     self._log_debug("_process_msg, _HPI_actuator name: %s" % self._HPI_actuator.name())
@@ -205,15 +205,58 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
             elif component == "RESE":
                 # Query the Zope GlobalSiteManager for an object implementing the reset drive actuator
-                if self._reset_drive_actuator is None:
-                    self._reset_drive_actuator = queryUtility(IResetDrive)()
-                    self._log_debug("_process_msg, _reset_drive_actuator name: %s" % self._reset_drive_actuator.name())
+# Deprecated wbcli tool to reset a drive           
+#                 if self._reset_drive_actuator is None:
+#                     self._reset_drive_actuator = queryUtility(IResetDrive)()
+#                     self._log_debug("_process_msg, _reset_drive_actuator name: %s" % self._reset_drive_actuator.name())
+# 
+#                 # Perform the drive reset request on the node and get the response
+#                 reset_response = self._reset_drive_actuator.perform_request(jsonMsg)
+#                 self._log_debug("_process_msg, reset_response: %s" % reset_response)
+# 
+#                 json_msg = AckResponseMsg(node_request, reset_response, uuid).getJson()
+#                 self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
 
-                # Perform the drive reset request on the node and get the response
-                reset_response = self._reset_drive_actuator.perform_request(jsonMsg)
-                self._log_debug("_process_msg, reset_response: %s" % reset_response)
+                # Query the Zope GlobalSiteManager for an object implementing the IHPI actuator
+                if self._HPI_actuator is None:
+                    self._HPI_actuator = queryUtility(IHPI)(self._conf_reader)
+                    self._log_debug("_process_msg, _HPI_actuator name: %s" % self._HPI_actuator.name())
 
-                json_msg = AckResponseMsg(node_request, reset_response, uuid).getJson()
+                # Parse out the drive to power cycle
+                drive_request = node_request[13:].strip()
+                self._log_debug("perform_request, drive to power cycle: %s" % drive_request)
+
+                # Append POWER_OFF and then POWER_ON to notify HPI actuator of desired state
+                jsonMsg["actuator_request_type"]["node_controller"]["node_request"] = \
+                        "DISK: set {} POWER_OFF".format(drive_request)
+                self._log_debug("_process_msg, jsonMsg: %s" % jsonMsg)
+
+                # Perform the request using HPI and get the response
+                hpi_response = self._HPI_actuator.perform_request(jsonMsg).strip()
+                self._log_debug("_process_msg, hpi_response: %s" % hpi_response)
+
+                # Check for success and power the disk back on
+                if "Success" in hpi_response:
+                    # Pause to allow time for disk to power down
+                    time.sleep(10)
+
+                    # Append POWER_ON to notify HPI actuator of desired state
+                    jsonMsg["actuator_request_type"]["node_controller"]["node_request"] = \
+                               "DISK: set {} POWER_ON".format(drive_request)
+                    self._log_debug("_process_msg, jsonMsg: %s" % jsonMsg)
+
+                    # Perform the request using HPI and get the response
+                    hpi_response = self._HPI_actuator.perform_request(jsonMsg).strip()
+                    self._log_debug("_process_msg, hpi_response: %s" % hpi_response)
+
+                    # Simplify success message as external apps don't care about details
+                    if "Success" in hpi_response:
+                        # Pause to allow time for power on so external apps don't rush off
+                        time.sleep(45)
+
+                        hpi_response = "Successful"
+
+                json_msg = AckResponseMsg(node_request, hpi_response, uuid).getJson()
                 self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
 
             elif component == "HDPA":

@@ -472,6 +472,27 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
             # Log an IEM because we have new data
             self._log_IEM(drivemngr_drive)
 
+        # Disk is available in HPI but not systemd, started up with a drive missing or faulty
+        elif serial_number == "ZBX_NOTPRESENT":
+            logger.info("No drivemanager data for %s" % jsonMsg.get("event_path"))
+
+            # Manually populate the /tmp/dcs/dmreport/'event_path' files
+            dmreport_dir = os.path.dirname(self._dmreport_file)
+            disk_dir = "{}/{}".format(dmreport_dir, jsonMsg.get("event_path"))
+            if not os.path.exists(disk_dir):
+                os.makedirs(disk_dir)
+
+            self._write_file(disk_dir + "/drawer", jsonMsg.get("drawer"))
+            self._write_file(disk_dir + "/location", jsonMsg.get("location"))
+            self._write_file(disk_dir + "/serial_number", serial_number)
+            self._write_file(disk_dir + "/status", "EMPTY")
+            self._write_file(disk_dir + "/reason", "None")
+
+    def _write_file(self, file_path, contents):
+        """Writes the contents to file_path"""
+        with open(file_path, "w+") as disk_file:
+            disk_file.write(contents + "\n")
+
     def _serialize_disk_status(self):
         """Writes the current disks in {serial:status} format"""
         try:

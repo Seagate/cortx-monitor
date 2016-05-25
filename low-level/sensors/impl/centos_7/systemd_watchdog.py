@@ -109,7 +109,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
         #self._set_debug_persist(True)
 
         # Allow time for the hpi_monitor to come up
-        time.sleep(60)
+        time.sleep(20)
 
         # Check for debug mode being activated
         self._read_my_msgQ_noWait()
@@ -706,7 +706,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
             status_reason = "Failed_smart_damage"
         else:
             status_reason = "Unknown smart status: {}_unknown".format(smart_status)
-            
+
         # Generate and send an internal msg to DiskMsgHandler
         self._notify_disk_msg_handler(disk_path, status_reason, serial_number)
 
