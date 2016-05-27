@@ -109,7 +109,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
         #self._set_debug_persist(True)
 
         # Allow time for the hpi_monitor to come up
-        time.sleep(20)
+        time.sleep(35)
 
         # Check for debug mode being activated
         self._read_my_msgQ_noWait()

@@ -484,7 +484,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
             self._write_file(disk_dir + "/drawer", jsonMsg.get("drawer"))
             self._write_file(disk_dir + "/location", jsonMsg.get("location"))
-            self._write_file(disk_dir + "/serial_number", serial_number)
+            self._write_file(disk_dir + "/serial_number", "NOTPRESENT")
             self._write_file(disk_dir + "/status", "EMPTY")
             self._write_file(disk_dir + "/reason", "None")
 

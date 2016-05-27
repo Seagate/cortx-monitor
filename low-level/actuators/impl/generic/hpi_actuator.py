@@ -223,7 +223,7 @@ class HPIactuator(Debug):
                 response = "Error: saHpiSessionClose: {}" \
                             .format(HpiUtilGen.fromSaErrorT(error))
 
-        # Return the successfully set state for the ControlRecord
+        # Return the result for setting state of the ControlRecord
         return response
 
     def _get_sysinfo(self):
