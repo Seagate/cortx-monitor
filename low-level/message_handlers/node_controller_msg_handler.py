@@ -22,10 +22,10 @@ from actuators.ILogin import ILogin
 from actuators.Ipdu import IPDU
 from actuators.Iraid import IRAIDactuator
 from actuators.Iipmi import Iipmi
-from actuators.Ireset_drive import IResetDrive
 from actuators.Ihdparm import IHdparm
 from actuators.Ihpi import IHPI
 from actuators.Ispiel import ISpiel
+from actuators.Icommand_line import ICommandLine
 
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
@@ -67,14 +67,14 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
         else:
             self.ip_addr = socket.gethostbyaddr(socket.gethostname())[0]
 
-        self._spiel_actuator       = None
-        self._HPI_actuator         = None
-        self._GEM_actuator         = None
-        self._PDU_actuator         = None
-        self._RAID_actuator        = None
-        self._IPMI_actuator        = None
-        self._hdparm_actuator      = None
-        self._reset_drive_actuator = None
+        self._spiel_actuator        = None
+        self._HPI_actuator          = None
+        self._GEM_actuator          = None
+        self._PDU_actuator          = None
+        self._RAID_actuator         = None
+        self._IPMI_actuator         = None
+        self._hdparm_actuator       = None
+        self._command_line_actuator = None
 
     def run(self):
         """Run the module periodically on its own thread."""
@@ -122,8 +122,22 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
             component = node_request[0:4]
 
 
+            # Handle generic command line requests
+            if component == 'SSPL':
+                # Query the Zope GlobalSiteManager for an object implementing the IMERO actuator
+                if self._command_line_actuator is None:
+                    self._command_line_actuator = queryUtility(ICommandLine)(self._conf_reader)
+                    self._log_debug("_process_msg, _command_line_actuator name: %s" % self._command_line_actuator.name())
+
+                # Perform the request and get the response
+                command_line_response = self._command_line_actuator.perform_request(jsonMsg).strip()
+                self._log_debug("_process_msg, command line response: %s" % command_line_response)
+
+                json_msg = AckResponseMsg(node_request, command_line_response, uuid).getJson()
+                self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+
             # Handle requests related to Mero
-            if component == 'MERO':
+            elif component == 'MERO':
                 # Query the Zope GlobalSiteManager for an object implementing the IMERO actuator
                 if self._spiel_actuator is None:
                     self._spiel_actuator = queryUtility(ISpiel)(self._conf_reader)
@@ -204,19 +218,6 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
 
             elif component == "RESE":
-                # Query the Zope GlobalSiteManager for an object implementing the reset drive actuator
-# Deprecated wbcli tool to reset a drive           
-#                 if self._reset_drive_actuator is None:
-#                     self._reset_drive_actuator = queryUtility(IResetDrive)()
-#                     self._log_debug("_process_msg, _reset_drive_actuator name: %s" % self._reset_drive_actuator.name())
-# 
-#                 # Perform the drive reset request on the node and get the response
-#                 reset_response = self._reset_drive_actuator.perform_request(jsonMsg)
-#                 self._log_debug("_process_msg, reset_response: %s" % reset_response)
-# 
-#                 json_msg = AckResponseMsg(node_request, reset_response, uuid).getJson()
-#                 self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
-
                 # Query the Zope GlobalSiteManager for an object implementing the IHPI actuator
                 if self._HPI_actuator is None:
                     self._HPI_actuator = queryUtility(IHPI)(self._conf_reader)

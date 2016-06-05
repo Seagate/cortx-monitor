@@ -166,6 +166,7 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist):
     # Import in the proper classes based upon values from config file
     if operating_system == "centos7":
         from actuators.impl.centos_7.systemd_service import SystemdService as Service
+        from actuators.impl.centos_7.command_line import CommandLine as CommandLine
         from actuators.impl.centos_7.systemd_login import SystemdLogin as Login
         from sensors.impl.centos_7.drive_manager import DriveManager as DriveManager
         from sensors.impl.centos_7.systemd_watchdog import SystemdWatchdog as ServiceWatchdog
@@ -185,7 +186,6 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist):
     from actuators.impl.generic.raritan_pdu import RaritanPDU
     from actuators.impl.generic.raid import RAIDactuator
     from actuators.impl.generic.ipmi import IPMI
-    from actuators.impl.generic.wbcli_reset_drive import WbcliResetDrive
     from actuators.impl.generic.hdparm import Hdparm
     from actuators.impl.generic.hpi_actuator import HPIactuator
     from actuators.impl.generic.spiel import Spiel

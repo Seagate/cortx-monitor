@@ -74,6 +74,7 @@ def main():
         parser.add_argument("-a", "--all", action="store_true", help="display all the data received in responses")
         parser.add_argument("-h", "--human", action="store_true", help="display responses with indentation for readability")
         parser.add_argument("--help", action="store_true", help="display this help message and exit")
+        parser.add_argument("--generic", metavar="COMMAND", help="execute from command line ie 'SWAP ON'")
         parser.add_argument("--pdu", metavar="COMMAND", help="send command to PDU. \
                               ie 'show outlets details'")
         parser.add_argument("--restartthread", metavar="NAME", help="restart an internal thread within the service")
@@ -129,6 +130,13 @@ def main():
             jsonMsg = json.loads(open(file).read())
             jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = u"PDU: {}".format(args.pdu)
             _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human)
+
+        elif args.generic:
+            # Load a generic SSPL message from the manual tests directory and update it with args.generic
+            file = "/opt/seagate/sspl/low-level/tests/manual/actuator_msgs/node_cntrl_sspl.json"
+            jsonMsg = json.loads(open(file).read())
+            jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = u"SSPL: {}".format(args.generic)
+            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, response_wait_time=60)
 
         elif args.resetdrive:
             # Load a reset drive message from the manual tests directory and update it with args.resetdrive
@@ -438,7 +446,7 @@ def main():
         sys.stderr.write(indent + "  for help use --help")
         return 2
 
-def _send_raw_msg(jsonMsg, wait_for_response=True, response_wait_time=3,
+def _send_raw_msg(jsonMsg, wait_for_response=True, response_wait_time=5,
                   alldata=False, indent=False, remove_results_file=True, 
                   host=None):
     """Update authentication fields, validate and transmit json msg"""

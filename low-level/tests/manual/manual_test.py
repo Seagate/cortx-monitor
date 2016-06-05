@@ -269,10 +269,11 @@ class ManualTest():
             print "Awaiting response(s)...\n"
             max_wait = 0
             while not self._msg_received:
-                time.sleep(response_wait_time)
+                time.sleep(1)
                 max_wait += 1
-                if max_wait > 20:
-                    print "Timed out waiting for valid responses, giving up after 60 seconds"
+                if max_wait > response_wait_time:
+                    print "Timed out waiting for valid responses, giving up after %d seconds" \
+                            .format(response_wait_time)
                     break
 
 
