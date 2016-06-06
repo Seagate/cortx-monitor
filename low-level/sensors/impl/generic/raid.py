@@ -73,7 +73,7 @@ class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
         """Run the sensor on its own thread"""
 
         # Allow systemd to process all the drives so we can map device name to serial numbers
-        time.sleep(60)
+        time.sleep(120)
 
         # Check for debug mode being activated
         self._read_my_msgQ_noWait()

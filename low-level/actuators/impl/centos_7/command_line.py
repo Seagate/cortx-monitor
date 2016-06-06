@@ -69,7 +69,7 @@ class CommandLine(Debug):
                 return "Error: Command line request must consist of a command to perform"
 
             command_request = command_line_request[0].lower()
-            
+
             if len(command_line_request) > 1:
                 command_action = command_line_request[1].lower()
             else:
@@ -77,15 +77,15 @@ class CommandLine(Debug):
 
             if command_request == "swap":
                 if command_action == "on":
-                    command = "swapon -a"
+                    command = "sudo swapon -a"
                 elif command_action == "off":
-                    command = "swapoff -a"
+                    command = "sudo swapoff -a"
                 else:
                     return "Error: SSPL SWAP [ON|OFF] only supported"
 
             elif command_request == "mount" or \
                  command_request == "umount":
-                command = node_request[5:].strip()
+                command = "sudo {}".format(node_request[5:].strip())
 
             else:
                 return "Error: SSPL [command] [action], command must be swap/mount/umount"

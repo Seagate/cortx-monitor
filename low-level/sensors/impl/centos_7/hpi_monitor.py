@@ -84,7 +84,7 @@ class HPIMonitor(ScheduledModuleThread, InternalMsgQ):
         self._log_debug("Running HPIMONITOR")
 
         # Allow time for the openhpid service to come up and populate /tmp/dcs/hpi
-        time.sleep(20)
+        time.sleep(40)
 
         # Check for debug mode being activated
         self._read_my_msgQ_noWait()
