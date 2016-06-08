@@ -2,4 +2,5 @@
 "SSPL-LL","020","Drive Manager","001","Drive removed: {JSON data about event}","002"
 "SSPL-LL","020","Systemd SMART","002","SMART test has failed: {JSON data about event}","002"
 "SSPL-LL","020","Systemd Watchdog","003","Service entered a failed state: {JSON data about event}","001"
-"SSPL-LL","020","SNMP Sensor","004","004","SNMP Trap Received: {JSON data about event}","001"
+"SSPL-LL","020","SNMP Sensor","004","SNMP Trap Received: {JSON data about event}","001"
+"SSPL-LL","020","Expander Reset","005","Expander Reset Triggered: {JSON data about event}","001"

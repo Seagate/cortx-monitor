@@ -35,6 +35,8 @@ class DriveMngrMsg(BaseSensorMsg):
                        status,
                        serial_num,
                        path_id,
+                       disk_installed,
+                       disk_powered,
                        username  = "SSPL-LL",
                        signature = "N/A",
                        time      = "N/A",
@@ -45,16 +47,18 @@ class DriveMngrMsg(BaseSensorMsg):
         # Status is first word before the first '_'
         status, reason = str(status).split("_", 1)
 
-        self._username   = username
-        self._signature  = signature
-        self._time       = time
-        self._expires    = expires
-        self._enclosure  = enclosure
-        self._drive_num  = drive_num
-        self._status     = status
-        self._reason     = reason
-        self._serial_num = serial_num
-        self._path_id    = path_id
+        self._username       = username
+        self._signature      = signature
+        self._time           = time
+        self._expires        = expires
+        self._enclosure      = enclosure
+        self._drive_num      = drive_num
+        self._status         = status
+        self._reason         = reason
+        self._serial_num     = serial_num
+        self._path_id        = path_id
+        self._disk_installed = disk_installed
+        self._disk_powered   = disk_powered
 
         self._json = {"title" : self.TITLE,
                       "description" : self.DESCRIPTION,
@@ -76,7 +80,9 @@ class DriveMngrMsg(BaseSensorMsg):
                                     "diskStatus" : self._status,
                                     "diskReason" : self._reason,
                                     "serialNumber" : self._serial_num,
-                                    "pathID" : self._path_id
+                                    "pathID" : self._path_id,
+                                    "diskInstalled" : self._disk_installed,
+                                    "diskPowered" : self._disk_powered
                                     }
                                 }
                           }

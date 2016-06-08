@@ -19,6 +19,7 @@ import json
 import time
 import syslog
 import socket
+import subprocess
 
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
@@ -27,6 +28,7 @@ from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 
 from json_msgs.messages.sensors.drive_mngr import DriveMngrMsg
 from json_msgs.messages.sensors.hpi_data import HPIDataMsg
+from json_msgs.messages.sensors.expander_reset import ExpanderResetMsg
 
 from json_msgs.messages.actuators.ack_response import AckResponseMsg
 
@@ -80,6 +82,14 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
         # Dict of HPI data for drives
         self._hpi_drives = {}
+
+        # Current /dev/sgX which changes during expander resets
+        self._scsi_generic = "N/A"
+
+        # Initialize _scsi_generic to the current /dev/sgX value
+        self._check_expander_reset()
+        # Dump startup info to journal for debugging
+        logger.info("          Current /dev/sg device: %s" % self._scsi_generic)
 
     def run(self):
         """Run the module periodically on its own thread."""
@@ -350,6 +360,9 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
         # See if we have an existing drive object and update it
         if self._drvmngr_drives.get(serial_number) is not None:
+            # Check for expander reset
+            self._check_expander_reset()
+    
             status  = jsonMsg.get("status")
             path_id = jsonMsg.get("path_id")
 
@@ -377,13 +390,17 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
         # Create a new Drive object and add it to dict
         else:
             # Initialize event path with a NotAvailable enclosure s/n and disk #
-            event_path = "HPI_Data_Not_Available/disk/-1/status"
+            event_path     = "HPI_Data_Not_Available/disk/-1/status"
+            disk_powered   = "N/A"
+            disk_installed = "N/A"
             # Retrieve hpi drive object
             try:
                 hpi_drive = self._hpi_drives[serial_number]
                 # Build event path used in json msg
                 event_path = hpi_drive.get_drive_enclosure() + "/disk/" + \
                              hpi_drive.get_drive_num() + "/status"
+                disk_powered   = hpi_drive.get_disk_powered()
+                disk_installed = hpi_drive.get_disk_installed()
             except Exception as ae:
                 logger.info("DiskMsgHandler, No HPI data for serial number: %s" % serial_number)
 
@@ -391,6 +408,8 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                           event_path,
                           jsonMsg.get("status"),
                           serial_number,
+                          disk_powered=disk_powered,
+                          disk_installed=disk_installed,
                           path_id=jsonMsg.get("path_id"),
                           device_name=jsonMsg.get("device_name"))
 
@@ -429,7 +448,9 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                       jsonMsg.get("manufacturer"),
                       jsonMsg.get("productName"),
                       jsonMsg.get("productVersion"),
-                      jsonMsg.get("wwn"))
+                      jsonMsg.get("wwn"),
+                      jsonMsg.get("disk_installed"),
+                      jsonMsg.get("disk_powered"))
 
         # Check to see if the drive path is valid
         valid = drive.parse_hpi_path()
@@ -454,10 +475,14 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
             # Ignore if nothing changed otherwise send json msg, serialize and log IEM
             drivemngr_drive = self._drvmngr_drives.get(serial_number)
             if drivemngr_drive.get_drive_enclosure() == drive.get_drive_enclosure() and \
-                drivemngr_drive.get_drive_num() == drive.get_drive_num():
+                drivemngr_drive.get_drive_num() == drive.get_drive_num() and \
+                drivemngr_drive.get_disk_installed() == drive.get_disk_installed() and \
+                drivemngr_drive.get_disk_powered() == drive.get_disk_powered():
                     return
 
             drivemngr_drive.set_drive_enclosure(drive.get_drive_enclosure())
+            drivemngr_drive.set_disk_installed(drive.get_disk_installed())
+            drivemngr_drive.set_disk_powered(drive.get_disk_powered())
             drivemngr_drive.set_drive_num(drive.get_drive_num())
 
             # Obtain json message containing all relevant data
@@ -487,6 +512,8 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
             self._write_file(disk_dir + "/serial_number", "NOTPRESENT")
             self._write_file(disk_dir + "/status", "EMPTY")
             self._write_file(disk_dir + "/reason", "None")
+
+            # TODO: Possibly send drive_manager_status msg with present/powered False?
 
     def _write_file(self, file_path, contents):
         """Writes the contents to file_path"""
@@ -536,9 +563,15 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
            status.lower() == "unused":   # Backwards compatible with external drivemanager
             log_msg = "IEC: 020001002: Drive removed"
 
+            # TODO: HPI serial number is ZBX_NOTPRESENT, need to lookup based on disk num
+            drive.set_disk_powered("False")
+
         elif status.lower() == "ok" or \
              status.lower() == "inuse":  # Backwards compatible with external drivemanager
             log_msg = "IEC: 020001001: Drive added/back to normal state"
+
+            # TODO: HPI serial number is ZBX_NOTPRESENT, need to lookup based on disk num
+            drive.set_disk_powered("True")
 
         elif status.lower() == "failed":
             # Only handling SMART failures for now
@@ -560,7 +593,9 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                          "status": status,
                          "reason": reason,
                          "hostname": self._host_id,
-                         "path_id": drive.get_path_id()
+                         "path_id": drive.get_path_id(),
+                         "disk_installed": drive.get_disk_installed(),
+                         "disk_powered": drive.get_disk_powered()
                          }
 
         self._log_debug("_log_IEM, log_msg: %{}:{}".format(log_msg, json.dumps(json_data, sort_keys=True)))
@@ -576,6 +611,57 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
         # Send the event to logging msg handler to send IEM message to journald
         self._write_internal_msgQ(LoggingMsgHandler.name(), internal_json_msg)
+
+    def _check_expander_reset(self):
+        """Check for expander reset by polling for sgXX changes"""
+        scsi_command = "ls /sys/class/enclosure/*/device/scsi_generic" 
+        response, error = self._run_command(scsi_command)
+
+        # Expander reset causes scsi generic dir to vanish temporarily 
+        if "cannot access" in error:
+            if self._scsi_generic != "N/A":
+                self._scsi_generic = "N/A"
+                self._transmit_expander_reset()
+        else:
+            # If the /dev/sgX changed then we had an expander reset
+            if self._scsi_generic != "N/A" and \
+               self._scsi_generic != response:
+                self._transmit_expander_reset()
+
+            self._scsi_generic = response
+
+    def _transmit_expander_reset(self):
+        """Create and transmit an expander reset JSON msg"""
+        # Build JSON message, currently no data but following same pattern
+        expanderResetMsg = ExpanderResetMsg()
+        internal_json_msg = expanderResetMsg.getJson()
+
+        # Send the json message to the RabbitMQ processor to transmit out
+        self._write_internal_msgQ(RabbitMQegressProcessor.name(), internal_json_msg)
+
+        log_msg = "IEC: 020005001: Expander Reset Triggered"
+        json_data = {"scsi_generic_device": self._scsi_generic}
+
+        # Log an IEM
+        internal_json_msg = json.dumps(
+                    {"actuator_request_type" : {
+                        "logging": {
+                            "log_level": "LOG_WARNING",
+                            "log_type": "IEM",
+                            "log_msg": "{}:{}".format(log_msg, json.dumps(json_data, sort_keys=True))
+                            }
+                        }
+                     })
+
+        # Send the event to logging msg handler to send IEM message to journald
+        self._write_internal_msgQ(LoggingMsgHandler.name(), internal_json_msg)
+
+    def _run_command(self, command):
+        """Run the command and get the response and error returned"""
+        process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        response, error = process.communicate()
+
+        return response.rstrip('\n'), error.rstrip('\n')
 
     def _getDMreport_File(self):
         """Retrieves the file location"""
@@ -605,6 +691,8 @@ class Drive(object):
                  productName    = "N/A",
                  productVersion = "N/A",
                  wwn            = "N/A",
+                 disk_installed = "N/A",
+                 disk_powered   = "N/A",
                  path_id        = "N/A",
                  device_name    = "N/A"
                  ):
@@ -619,6 +707,9 @@ class Drive(object):
         self._manufacturer   = manufacturer
         self._productName    = productName
         self._productVersion = productVersion
+        self._wwn            = wwn
+        self._disk_installed = disk_installed
+        self._disk_powered   = disk_powered
         self._wwn            = wwn
         self._path_id        = path_id
         self._device_name    = device_name
@@ -676,7 +767,9 @@ class Drive(object):
                                self._drive_num,
                                self._status,
                                self._serialNumber,
-                               self._path_id)
+                               self._path_id,
+                               self._disk_installed,
+                               self._disk_powered)
         if uuid is not None:
             jsonMsg.set_uuid(uuid)
 
@@ -714,6 +807,14 @@ class Drive(object):
         """Set the drive eclosure serial_number"""
         self._enclosure = enclosure
 
+    def set_disk_installed(self, disk_installed):
+        """Set the disk_installed field of drive"""    
+        self._disk_installed = disk_installed
+
+    def set_disk_powered(self, disk_powered):
+        """Set the disk_powered field of drive"""    
+        self._disk_powered = disk_powered
+
     def set_drive_num(self, drive_num):
         """Set the drive number"""
         self._drive_num = drive_num
@@ -723,19 +824,27 @@ class Drive(object):
         return self._path_id
 
     def get_drive_status(self):
-        """Return the status of the drive"""    
+        """Return the status of the drive""" 
         return self._status
-    
+
     def get_drive_enclosure(self):
         """Return the enclosure of the drive"""    
         return self._enclosure
-    
+
+    def get_disk_installed(self):
+        """Return the disk_installed field of drive"""    
+        return self._disk_installed
+
+    def get_disk_powered(self):
+        """Return the disk_powered field of drive"""    
+        return self._disk_powered
+
     def get_drive_num(self):
         """Return the enclosure of the drive"""    
         return self._drive_num
-    
+
     def get_drive_filename(self):
-        """Return the filename of the drive"""    
+        """Return the filename of the drive"""
         return self._filename
 
     def get_drive_num(self):

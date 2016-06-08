@@ -77,6 +77,9 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
         # Mapping of SMART jobs and their properties
         self._smart_jobs = {}
 
+        # Delay so thread doesn't spin unnecessarily when not in use
+        self._thread_sleep = 1.0
+
     def initialize(self, conf_reader, msgQlist):
         """initialize configuration reader and internal msg queues"""
 
@@ -229,7 +232,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
             step = 0
             while self._running == True:
                 context.iteration(True)
-                time.sleep(2)
+                time.sleep(self._thread_sleep)
 
                 if len(self._inactive_services) > 0:
                     self._examine_inactive_services()
@@ -586,28 +589,28 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                     # Serial numbers are limited to 20 chars string with drive keyword
                     serial_number = tmp_serial[tmp_serial.rfind("drive"):]
 
-                self._log_debug("  Serial number: %s" % serial_number)
+                #self._log_debug("  Serial number: %s" % serial_number)
 
                 # Generate and send an internal msg to DiskMsgHandler
                 self._notify_disk_msg_handler(object_path, "OK_None", serial_number)
 
                 # Notify internal msg handlers who need to map device name to serial numbers
                 self._notify_msg_handler_sn_device_mappings(object_path, serial_number)
-                
+
                 # Schedule a conveyance type SMART test on new drives
                 self._schedule_SMART_test(object_path, test_type='conveyance')
 
                 # Display info about the added device
-                self._print_interfaces_and_properties(interfaces_and_properties)
+                #self._print_interfaces_and_properties(interfaces_and_properties)
 
                 # Restart openhpid to update HPI data if it's not available
-                internal_json_msg = json.dumps(
-                                        {"actuator_request_type": {
-                                            "service_controller": {
-                                                "service_name" : "openhpid.service",
-                                                "service_request": "restart"
-                                        }}})
-                self._write_internal_msgQ(ServiceMsgHandler.name(), internal_json_msg)
+                #internal_json_msg = json.dumps(
+                #                        {"actuator_request_type": {
+                #                            "service_controller": {
+                #                                "service_name" : "openhpid.service",
+                #                                "service_request": "restart"
+                #                        }}})
+                #self._write_internal_msgQ(ServiceMsgHandler.name(), internal_json_msg)
 
             # Handle jobs like SMART tests being initiated
             elif interfaces_and_properties.get("org.freedesktop.UDisks2.Job") is not None:
@@ -633,6 +636,9 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
             try:
                 # Handle drives removed
                 if interface == "org.freedesktop.UDisks2.Drive":
+                    # Speed thread up in case we have multiple drive removal events queued up
+                    self._thread_sleep = .10
+
                     # Retrieve the serial number
                     udisk_drive = self._disk_objects[object_path]['org.freedesktop.UDisks2.Drive']
                     serial_number = str(udisk_drive["Serial"])
@@ -651,6 +657,9 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
 
                 # Handle jobs completed like SMART tests 
                 elif interface == "org.freedesktop.UDisks2.Job":
+                    # If we're doing SMART tests then slow the thread down to save on CPU
+                    self._thread_sleep = 1.0
+
                     # Retrieve the saved SMART data when the test was started
                     smart_job = self._smart_jobs.get(object_path)
                     if smart_job is None:

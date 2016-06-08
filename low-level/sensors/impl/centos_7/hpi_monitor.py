@@ -176,6 +176,16 @@ class HPIMonitor(ScheduledModuleThread, InternalMsgQ):
                 else:
                     status = "EMPTY_None"
 
+                if self._gather_data(driveloc+"/disk_installed") == "1":
+                    disk_installed = "True"
+                else:
+                    disk_installed = "False"
+            
+                if self._gather_data(driveloc+"/disk_powered") == "1":
+                    disk_powered = "True"
+                else:
+                    disk_powered = "False"
+
                 # Read in the date for each disk and fill into dict
                 json_data = {"sensor_response_type" : "disk_status_hpi",
                             "event_path"        : driveloc[len(self._hpi_mntr_base_dir)+1:],
@@ -186,7 +196,9 @@ class HPIMonitor(ScheduledModuleThread, InternalMsgQ):
                             "productName"       : self._gather_data(driveloc+"/product_name"),
                             "productVersion"    : self._gather_data(driveloc+"/product_version"),
                             "serial_number"     : serial_number,
-                            "wwn"               : self._gather_data(driveloc+"/wwn")
+                            "wwn"               : self._gather_data(driveloc+"/wwn"),
+                            "disk_installed"    : disk_installed,
+                            "disk_powered"      : disk_powered
                         }
 
                 logger.info("HPIMonitor: %s" % str(json_data))
@@ -229,6 +241,16 @@ class HPIMonitor(ScheduledModuleThread, InternalMsgQ):
         else:
             status = "EMPTY_None"
 
+        if self._gather_data(driveloc+"/disk_installed") == "1":
+            disk_installed = "True"
+        else:
+            disk_installed = "False"
+            
+        if self._gather_data(driveloc+"/disk_powered") == "1":
+            disk_powered = "True"
+        else:
+            disk_powered = "False"
+
         # Send a message to the disk message handler to transmit
         json_data = {"sensor_response_type" : "disk_status_hpi",
                      "event_path"           : driveloc[len(self._hpi_mntr_base_dir)+1:],
@@ -239,7 +261,9 @@ class HPIMonitor(ScheduledModuleThread, InternalMsgQ):
                      "productName"          : self._gather_data(driveloc+"/product_name"),
                      "productVersion"       : self._gather_data(driveloc+"/product_version"),
                      "serial_number"        : serial_number,
-                     "wwn"                  : self._gather_data(driveloc+"/wwn")
+                     "wwn"                  : self._gather_data(driveloc+"/wwn"),
+                     "disk_installed"       : disk_installed,
+                     "disk_powered"         : disk_powered
                      }
 
         # Do nothing if the overall state has not changed anywhere
