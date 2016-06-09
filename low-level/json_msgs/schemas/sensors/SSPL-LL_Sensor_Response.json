@@ -89,16 +89,6 @@
 									"description": "Disk by-id Symlink",
 									"type": "string",
 									"required": true
-								},
-								"diskInstalled": {
-									"description": "Disk Installed in Slot",
-									"type": "string",
-									"required": true
-								},
-								"diskPowered": {
-									"description": "Disk Powered",
-									"type": "string",
-									"required": true
 								}
 							}
 						},
@@ -159,6 +149,16 @@
 								"diskNum": {
 									"description": "Drive Number within the enclosure",
 									"type": "integer",
+									"required": true
+								},
+								"diskInstalled": {
+									"description": "Disk Installed in Slot",
+									"type": "boolean",
+									"required": true
+								},
+								"diskPowered": {
+									"description": "Disk Powered",
+									"type": "boolean",
 									"required": true
 								}
 							}

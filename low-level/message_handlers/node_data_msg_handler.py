@@ -84,6 +84,9 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         # Dict of drives by device name from systemd
         self._drive_by_device_name = {}
 
+        # Dict of drive path by-ids by serial number from systemd
+        self._drive_byid_by_serial_number = {}
+
     def run(self):
         """Run the module periodically on its own thread."""
         self._log_debug("Start accepting requests")
@@ -95,9 +98,9 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             # Query the Zope GlobalSiteManager for an object implementing INodeData
             if self._node_sensor is None:
                 self._node_sensor = queryUtility(INodeData)()
-                self._log_debug("_node_sensor name: %s" % self._node_sensor.name())           
+                self._log_debug("_node_sensor name: %s" % self._node_sensor.name())
 
-            # Delay for the desired interval if it's greater than zero            
+            # Delay for the desired interval if it's greater than zero
             if self._transmit_interval > 0:
                 timer = self._transmit_interval
                 while timer > 0:
@@ -186,11 +189,15 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
     def _update_devicename_sn_dict(self, jsonMsg):
         """Update the dict of device names to serial numbers"""
+        drive_byid = jsonMsg.get("drive_byid")
         device_name = jsonMsg.get("device_name")
         serial_number = jsonMsg.get("serial_number")
+
         self._drive_by_device_name[device_name] = serial_number
-        self._log_debug("NodeDataMsgHandler, device_name: %s, serial_number: %s" % 
-                        (device_name, serial_number))
+        self._drive_byid_by_serial_number[serial_number] = drive_byid
+
+        self._log_debug("NodeDataMsgHandler, device_name: %s, serial_number: %s, drive_byid: %s" % 
+                        (device_name, serial_number, drive_byid))
 
     def _generate_host_update(self):
         """Create & transmit a host update message as defined
@@ -337,6 +344,10 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 serial_number = str(self._drive_by_device_name.get(path))                
                 self._log_debug("serial_number: %s" % str(serial_number))
                 drive["identity"]["serialNumber"] = serial_number
+
+                # Change device path to path-byid
+                drive_byid = str(self._drive_byid_by_serial_number.get(serial_number))
+                drive["identity"]["path"] = drive_byid
 
         self._log_debug("_generate_RAID_status, host_id: %s, device: %s, drives: %s" % 
                     (self._node_sensor.host_id, self._raid_device, str(self._raid_drives)))

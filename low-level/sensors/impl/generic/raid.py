@@ -164,10 +164,10 @@ class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
 
         # Create the json msg, serial number will be filled in by NodeDataMsgHandler
         identity_data = {
-                            "path" : drive_path, 
+                            "path" : drive_path,
                             "serialNumber" : "None"
                             }
-        
+
         self._identity[drive_index] = identity_data
 
     def _parse_raid_status(self, status_line):

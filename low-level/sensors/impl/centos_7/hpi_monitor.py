@@ -177,14 +177,14 @@ class HPIMonitor(ScheduledModuleThread, InternalMsgQ):
                     status = "EMPTY_None"
 
                 if self._gather_data(driveloc+"/disk_installed") == "1":
-                    disk_installed = "True"
+                    disk_installed = True
                 else:
-                    disk_installed = "False"
+                    disk_installed = False
             
                 if self._gather_data(driveloc+"/disk_powered") == "1":
-                    disk_powered = "True"
+                    disk_powered = True
                 else:
-                    disk_powered = "False"
+                    disk_powered = False
 
                 # Read in the date for each disk and fill into dict
                 json_data = {"sensor_response_type" : "disk_status_hpi",
@@ -229,9 +229,6 @@ class HPIMonitor(ScheduledModuleThread, InternalMsgQ):
 
         # Check to see if the drive is present
         serial_number = self._gather_data(driveloc+"/serial_number")
-        if serial_number == "ZBX_NOTPRESENT":
-            return
-
         self._log_debug("_notify_DiskMsgHandler updated_file: %s" %
                         updated_file)
 
@@ -242,14 +239,14 @@ class HPIMonitor(ScheduledModuleThread, InternalMsgQ):
             status = "EMPTY_None"
 
         if self._gather_data(driveloc+"/disk_installed") == "1":
-            disk_installed = "True"
+            disk_installed = True
         else:
-            disk_installed = "False"
+            disk_installed = False
             
         if self._gather_data(driveloc+"/disk_powered") == "1":
-            disk_powered = "True"
+            disk_powered = True
         else:
-            disk_powered = "False"
+            disk_powered = False
 
         # Send a message to the disk message handler to transmit
         json_data = {"sensor_response_type" : "disk_status_hpi",
@@ -300,24 +297,14 @@ class HPIMonitor(ScheduledModuleThread, InternalMsgQ):
             def _validate_event_path(self, event_path):
                 """Returns true if the event path is valid for a status file"""
 
-                 # Validate the event path; must have disk and not be a swap file
+                 # Validate the event path; must be one of the following and not be a swap file
                 if "disk" not in event_path or \
                     (("status" not in event_path or \
                     "status.swp" in event_path) and  \
-                    ("drawer" not in event_path or \
-                    "drawer.swp" in event_path) and \
-                    ("location" not in event_path or \
-                    "location.swp" in event_path) and \
-                    ("manufacturer" not in event_path or \
-                    "manufacturer.swp" in event_path) and \
-                    ("product_name" not in event_path or \
-                    "product_name.swp" in event_path) and \
-                    ("product_version" not in event_path or \
-                    "product_version.swp" in event_path) and \
-                    ("serial_number" not in event_path or \
-                    "serial_number.swp" in event_path) and \
-                    ("wwn" not in event_path or \
-                    "wwn.swp" in event_path)):
+                    ("disk_powered" not in event_path or \
+                    "disk_powered.swp" in event_path) and \
+                    ("disk_installed" not in event_path or \
+                    "disk_installed.swp" in event_path)):
                     return False
 
                 return True

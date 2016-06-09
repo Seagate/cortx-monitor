@@ -740,10 +740,14 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
 
         # Retrieve the device name for the disk
         device_name = self._drive_by_device_name[disk_path]
+        
+        # Retrieve the by-id simlink for the disk
+        drive_byid = self._drive_by_id[disk_path]
 
         internal_json_msg = {"sensor_response_type" : "devicename_serialnumber",
                              "serial_number" : serial_number,
-                             "device_name" : device_name
+                             "device_name" : device_name,
+                             "drive_byid" : drive_byid
                              }
 
         # Send the event to Node Data message handler to generate json message

@@ -37,6 +37,8 @@ class HPIDataMsg(BaseSensorMsg):
                        wwn,
                        enclosure,
                        driveNum,
+                       disk_installed,
+                       disk_powered,
                        username  = "SSPL-LL",
                        signature = "N/A",
                        time      = "N/A",
@@ -59,6 +61,8 @@ class HPIDataMsg(BaseSensorMsg):
         self._wwn               = wwn
         self._enclosure         = enclosure
         self._driveNum          = driveNum
+        self._disk_installed    = disk_installed
+        self._disk_powered      = disk_powered
 
         self._json = {"title" : self.TITLE,
                       "description" : self.DESCRIPTION,
@@ -85,7 +89,9 @@ class HPIDataMsg(BaseSensorMsg):
                                     "serialNumber" : self._serialNumber,
                                     "wwn" : self._wwn,
                                     "enclosureSN" : self._enclosure,
-                                    "diskNum" : int(self._driveNum)
+                                    "diskNum" : int(self._driveNum),
+                                    "diskInstalled" : self._disk_installed,
+                                    "diskPowered" : self._disk_powered
                                     }
                                 }
                           }

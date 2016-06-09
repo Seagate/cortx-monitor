@@ -35,8 +35,6 @@ class DriveMngrMsg(BaseSensorMsg):
                        status,
                        serial_num,
                        path_id,
-                       disk_installed,
-                       disk_powered,
                        username  = "SSPL-LL",
                        signature = "N/A",
                        time      = "N/A",
@@ -57,8 +55,6 @@ class DriveMngrMsg(BaseSensorMsg):
         self._reason         = reason
         self._serial_num     = serial_num
         self._path_id        = path_id
-        self._disk_installed = disk_installed
-        self._disk_powered   = disk_powered
 
         self._json = {"title" : self.TITLE,
                       "description" : self.DESCRIPTION,
@@ -80,9 +76,7 @@ class DriveMngrMsg(BaseSensorMsg):
                                     "diskStatus" : self._status,
                                     "diskReason" : self._reason,
                                     "serialNumber" : self._serial_num,
-                                    "pathID" : self._path_id,
-                                    "diskInstalled" : self._disk_installed,
-                                    "diskPowered" : self._disk_powered
+                                    "pathID" : self._path_id
                                     }
                                 }
                           }
