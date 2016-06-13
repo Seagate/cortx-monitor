@@ -191,7 +191,7 @@ class ManualTest():
 
 
     def basicPublish(self, jsonfile=None, message=None, wait_for_response=True, 
-                     response_wait_time=3, alldata=False, indent=False, 
+                     response_wait_time=3, force_wait=False, alldata=False, indent=False, 
                      remove_results_file=True, exchange=None, host='localhost'):
         """Publishes message out to the rabbitmq server
 
@@ -269,7 +269,11 @@ class ManualTest():
             print "Awaiting response(s)...\n"
             max_wait = 0
             while not self._msg_received:
-                time.sleep(1)
+                if force_wait:
+                    time.sleep(response_wait_time)
+                    break
+                else:
+                    time.sleep(1)
                 max_wait += 1
                 if max_wait > response_wait_time:
                     print "Timed out waiting for valid responses, giving up after %d seconds" \

@@ -500,6 +500,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
             hpi_drive = self._hpi_drives[serial_number]
             if hpi_drive.get_event_path() == event_path:
                 drive = hpi_drive
+                break
 
         if drive is not None:
             logger.info("DiskMsgHandler, S/N=ZBX_NOTPRESENT, HPI data found for %s" % jsonMsg.get("event_path"))

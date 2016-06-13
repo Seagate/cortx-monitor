@@ -516,13 +516,6 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
         # Retrieve the previous pid of the service
         prev_pid = self._service_pids.get(unit_name, "N/A")
 
-        # Check for services cycling faster than we can detect and send out json msg
-        if curr_pid != prev_pid and prev_pid != "0":
-            self._log_debug("_on_prop_changed, PID changed, curr: %s, prev: %s" %
-                            (curr_pid, prev_pid))
-            state    = "inactive"
-            substate = "dead"
-
         # Update the mapping of current pids
         self._service_pids[unit_name] = curr_pid
 

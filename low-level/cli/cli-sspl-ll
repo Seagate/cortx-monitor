@@ -151,11 +151,14 @@ def main():
             jsonMsg = json.loads(open(file).read())
             jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = u"SMART_TEST: {}".format(args.smart)
 
+            force_wait = False
             wait_time = 3
             if "*" in str(args.smart):
                 wait_time = 30
+                force_wait = True
 
-            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, response_wait_time=wait_time)
+            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, response_wait_time=wait_time,
+                          force_wait=force_wait)
 
         elif args.drvmngr:
             # Load a drivemanager status message from the manual tests directory and update it with args.drvmngr
@@ -163,11 +166,14 @@ def main():
             jsonMsg = json.loads(open(file).read())
             jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = u"DRVMNGR_STATUS: {}".format(args.drvmngr)
 
+            force_wait = False
             wait_time = 3
             if "*" in str(args.drvmngr):
                 wait_time = 30
+                force_wait = True
 
-            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, response_wait_time=wait_time)
+            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, response_wait_time=wait_time,
+                          force_wait=force_wait)
 
         elif args.hpi:
             # Load a reset hpi status message from the manual tests directory and update it with args.hpi
@@ -175,11 +181,14 @@ def main():
             jsonMsg = json.loads(open(file).read())
             jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = u"HPI_STATUS: {}".format(args.hpi)
 
+            force_wait = False
             wait_time = 3
             if "*" in str(args.hpi):
                 wait_time = 30
+                force_wait = True
 
-            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, response_wait_time=wait_time)
+            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, response_wait_time=wait_time,
+                          force_wait=force_wait)
 
         elif args.getdriveLED:
             # Load a node controller LED message from the manual tests directory and update it with args.getdriveLED
@@ -448,7 +457,7 @@ def main():
 
 def _send_raw_msg(jsonMsg, wait_for_response=True, response_wait_time=5,
                   alldata=False, indent=False, remove_results_file=True, 
-                  host=None):
+                  host=None, force_wait=False):
     """Update authentication fields, validate and transmit json msg"""
 
     # Update the authentication fields in json msg
@@ -460,7 +469,7 @@ def _send_raw_msg(jsonMsg, wait_for_response=True, response_wait_time=5,
     # Encode and publish
     message = json.dumps(jsonMsg, ensure_ascii=True).encode('utf8')
     manTest.basicPublish(message=message, wait_for_response=wait_for_response, 
-                         response_wait_time=response_wait_time,
+                         response_wait_time=response_wait_time, force_wait=force_wait,
                          alldata=alldata, indent=indent,
                          remove_results_file=remove_results_file,
                          host=host)
