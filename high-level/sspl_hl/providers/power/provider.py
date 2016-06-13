@@ -11,8 +11,7 @@ File containing "Power provider", handling of the power sub-commands
 # distribution or disclosure of this code, for any reason, not expressly
 # authorized in writing by Seagate Technology LLC is prohibited.
 # All rights are expressly reserved by Seagate Technology LLC.
-# from plex.core.provider.dac.file_data_source import FileDataSource
-import json
+
 from plex.util.list_util import ensure_list
 from plex.util.shell_command import ShellCommand
 from sspl_hl.utils.base_castor_provider import BaseCastorProvider
@@ -105,7 +104,7 @@ class PowerProvider(BaseCastorProvider):
     @staticmethod
     def _reply_msg_for_poweron(cluster_state, nodes_list):
         reply_msg = ''
-        inactive_nodes = json.dumps(nodes_list.get('inactive_nodes', []))
+        inactive_nodes = nodes_list.get('inactive_nodes', [])
         inactive_nodes = '\n'.join(inactive_nodes)
 
         if cluster_state == 'down':
@@ -126,7 +125,7 @@ class PowerProvider(BaseCastorProvider):
     @staticmethod
     def _reply_msg_for_poweroff(cluster_state, nodes_list):
         reply_msg = ''
-        active_nodes = json.dumps(nodes_list.get('active_nodes', []))
+        active_nodes = nodes_list.get('active_nodes', [])
         active_nodes = '\n'.join(active_nodes)
         if cluster_state == 'up':
             reply_msg = 'Cluster Power off has been ' \
