@@ -305,7 +305,8 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                     unit_name = str(unit[0]).split("/")[-1]
 
                     if unit_name.startswith(start_chars) and \
-                        unit_name not in self._monitored_services:
+                       unit_name not in self._monitored_services and \
+                       unit_name not in self._inactive_services:
                         logger.info("Adding newly found wildcard service: %s" % unit_name)
                         self._inactive_services.append(unit_name)
 
