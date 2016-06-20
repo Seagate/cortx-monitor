@@ -18,9 +18,10 @@ Rabbit MQ messaging related common classes.
 import pika
 import json
 # Local
+from pika.exceptions import AMQPConnectionError, AMQPError
+
 from sspl_hl.utils.message_utils import NodeStatusResponse
 from sspl_hl.utils.message_utils import FileSysStatusResponse
-# from sspl_hl.providers.response.provider import ResponseProvider
 # PLEX
 from plex.core import log
 
@@ -43,8 +44,8 @@ class RabbitMQConfiguration(object):
         self.virtual_host = 'SSPL'
         self.username = 'sspluser'
         self.password = 'sspl4ever'
-        self.exchange = 'sspl_hl_cmd'
         self.exchange_type = 'topic'
+        self.exchange = 'sspl_hl_cmd'
         self.exchange_queue = 'sspl_hl_cmd'
         self.routing_key = 'sspl_hl_cmd'
         if config_file_path:
@@ -101,6 +102,19 @@ class HalondConsumer(HalondRMQ):
         """
 
         super(HalondConsumer, self).__init__(config_file_path)
+        self.exchange = 'sspl_hl_resp'
+        self.exchange_queue = self.exchange
+        self.routing_key = self.exchange
+        log.info('RMQ Consumer config: {}'.format(self.__dict__))
+
+        self._channel.queue_declare(queue=self.exchange_queue, exclusive=True)
+        self._channel.queue_bind(exchange=self.exchange,
+                                 queue=self.exchange_queue,
+                                 routing_key=self.routing_key)
+        log.info('Initialized Exchange: {}, Queue: {} (exclusive),'
+                 ' routing_key: {}'.format(self.exchange,
+                                           self.exchange_queue,
+                                           self.routing_key))
         self._channel.basic_consume(lambda ch, method, properties, body:
                                     callback_function(body),
                                     queue=self.exchange_queue,
@@ -110,7 +124,12 @@ class HalondConsumer(HalondRMQ):
         """
         Start consuming the queue messages.
         """
-        self._channel.start_consuming()
+        try:
+            self._channel.start_consuming()
+        except AMQPConnectionError as err:
+            log.warning('Connection to RMQ has Broken. Details: [{}]'
+                        .format(str(err)))
+            self.close_connection()
 
     def close_connection(self):
         self._channel.stop_consuming()
@@ -132,6 +151,9 @@ class HalondPublisher(HalondRMQ):
         @type config_file_path: str
         """
         super(HalondPublisher, self).__init__(config_file_path)
+        self.exchange = 'sspl_hl_cmd'
+        self.routing_key = self.exchange
+        log.info('RMQ Publisher config: {}'.format(self.__dict__))
         self.declare_exchange_and_queue()
 
     def declare_exchange_and_queue(self):
@@ -141,11 +163,9 @@ class HalondPublisher(HalondRMQ):
             exchange=self.exchange,
             type=self.exchange_type,
             auto_delete=False)
-        self._channel.queue_declare(queue=self.exchange_queue,
-                                    durable=True,
-                                    auto_delete=False)
-        self._channel.queue_bind(exchange=self.exchange,
-                                 queue=self.exchange_queue)
+        log.info('Declared Exchange: {}, type: {}, auto_delete: {}'.format(
+            self.exchange, self.exchange_type, False
+        ))
 
     def publish_message(self, message):
         """
@@ -154,10 +174,17 @@ class HalondPublisher(HalondRMQ):
         @param message: message to be published to queue.
         @type message: str
         """
-        self._channel.basic_publish(
-            exchange=self.exchange,
-            routing_key=self.routing_key,
-            body=json.dumps(message))
+        try:
+            self._channel.basic_publish(
+                exchange=self.exchange,
+                routing_key=self.routing_key,
+                body=json.dumps(message))
+        except AMQPError as err:
+            log.warning('Message Publish Failed. Details: [{}]'.format(
+                str(err)))
+        else:
+            log.info('Message Published to Xch: [{}], Key: [{}], Msg: {}'.
+                     format(self.exchange, self.routing_key, message))
 
 
 class HalonRequestHandler(object):

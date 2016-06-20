@@ -51,22 +51,27 @@ class StatusProvider(BaseCastorProvider):
         )
         return message
 
-    @staticmethod
-    def resp_callback_func(result):
+    def resp_callback_func(self, result):
         """ Callback function for defer to receiver query
         """
         if result:
             return result
         else:
-            return "No results: EOM"
+            self.log_warning(
+                'No response received from response provider, '
+                'as data receiver.')
+            return "No results from Response Provider."
 
-    @staticmethod
-    def resp_err_func(error):
+    def resp_err_func(self, error):
         """ Errback function for defer to receiver.query
         """
+        self.log_warning(
+            'Data receiver could not fetch the result from response provider. '
+            'Details: [{}]'.format(error)
+        )
         return error
 
-    def callback_func(self, result):
+    def fs_status_resp_listerner(self, result):
         """ Callback function for defer to publish_fs_status_req
         """
         receiver = self.create_data_receiver(
@@ -74,8 +79,8 @@ class StatusProvider(BaseCastorProvider):
             provider_name='response')
         message_id = result.get('message').get('messageId')
         defer_4 = receiver.query({'messageId': message_id})
-        defer_4.addCallback(StatusProvider.resp_callback_func)
-        defer_4.addErrback(StatusProvider.resp_err_func)
+        defer_4.addCallback(self.resp_callback_func)
+        defer_4.addErrback(self.resp_err_func)
         return defer_4
 
     def render_query(self, request):
@@ -94,7 +99,7 @@ class StatusProvider(BaseCastorProvider):
 
         defer_3 = deferToThread(self.publish_fs_status_req)
 
-        defer_3.addCallback(self.callback_func)
+        defer_3.addCallback(self.fs_status_resp_listerner)
 
         defer_list = DeferredList(
             [defer_1, defer_2, defer_3], consumeErrors=True
@@ -140,9 +145,10 @@ class StatusProvider(BaseCastorProvider):
             if resp[2][0]:
                 self.response_list['file_system_status'] = resp[2][1]
             else:
-                self.response_list['sem_status'] = \
+                self.response_list['file_system_status'] = \
                     'Failed to get File System Status'
-                self.log_warning('Failed to get File System Status from HAlon')
+                self.log_warning('Failed to get File System Status from HAlon.'
+                                 ' Please check RMQ configurations.')
             request.reply(ensure_list(self.response_list))
 
     def get_ras_sem_status(self):

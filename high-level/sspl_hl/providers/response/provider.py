@@ -7,6 +7,8 @@ PLEX data provider for getting Halon response messages.
 # Third party
 import threading
 import json
+
+import time
 from twisted.internet import reactor
 from twisted.internet.task import deferLater
 
@@ -14,7 +16,8 @@ from twisted.internet.task import deferLater
 from plex.core import log
 
 # Local
-from sspl_hl.utils.rabbit_mq_utils import HalondConsumer, find_key
+from plex.util.list_util import ensure_list
+from sspl_hl.utils.rabbit_mq_utils import HalondConsumer
 from sspl_hl.utils.base_castor_provider import BaseCastorProvider
 
 
@@ -33,6 +36,8 @@ class ResponseProvider(BaseCastorProvider):
     Class to support Halond response message consumption.
     """
 
+    RESPONSE_POLLING_COUNT = 5
+
     def __init__(self, name, description):
         super(ResponseProvider, self).__init__(name, description)
         self.__message_dict = {}
@@ -48,27 +53,35 @@ class ResponseProvider(BaseCastorProvider):
 
     @staticmethod
     def handle_success_response(result, request):
-        """ Handle success response
+        """ Success handler for _check_and_get_data
         """
         if result:
-            request.reply(result)
+            request.reply(ensure_list(result))
         else:
-            request.reply("No response")
+            request.responder.reply_exception(
+                ensure_list("File System Status couldn't be retrieved")
+            )
 
     @staticmethod
     def handle_error_response(error, request):
-        """ Handle error response
+        """ Error Handler for _check_and_get_data
         """
         if error:
-            request.reply(error)
+            request.responder.reply_exception(ensure_list(error))
         else:
-            request.reply("Some error occurred")
+            request.responder.reply_exception(
+                ensure_list("Some error occurred")
+            )
 
     def render_query(self, request):
         """ Render query for Response Provider
         """
         defer_res = deferLater(
-            reactor, 1, self._check_and_get_data, 15, request
+            reactor,
+            1,
+            self._check_and_get_data,
+            ResponseProvider.RESPONSE_POLLING_COUNT,
+            request
         )
         defer_res.addCallback(
             ResponseProvider.handle_success_response, request)
@@ -78,13 +91,15 @@ class ResponseProvider(BaseCastorProvider):
     def _check_and_get_data(self, count_down, request):
         """ Fetch data from response cache
         """
+        poll_count = ResponseProvider.RESPONSE_POLLING_COUNT+1 - count_down
+        time.sleep(poll_count)
         message_id = request.selection_args.get('messageId')
+        self.log_info('Polling for Response. MSG_ID: {}. Re-try_Count: {}'
+                      .format(message_id, poll_count))
         if message_id in self.__message_dict.keys():
             return json.dumps(self.__message_dict.get(message_id))
         elif count_down > 0:
-            defer_fetch = deferLater(
-                reactor, 1, self._check_and_get_data, count_down-1, request)
-            return defer_fetch
+            return self._check_and_get_data(count_down-1, request)
         else:
             err_msg = "File System Status couldn't be retrieved"
             err_reply = "Timed out while waiting for response" \
@@ -103,25 +118,29 @@ class ResponseProvider(BaseCastorProvider):
         @param msg_dict: response messages dict
         @type msg_dict: dict
         """
+        log.info('Message received from sspl_hl_resp queue: {}'.
+                 format(body))
         try:
             body_json = json.loads(body)
-            message = find_key(body_json, 'message')
-            if not message:
-                log.info("Message not found\
- in message body {}".format(body_json))
-                return
-            response_id = find_key(message, "responseId")
-            if not response_id:
-                log.info("response_id\
- not found in message of resposne body {}".format(message))
-                return
-            log.info(
-                "Updated message dict with:{}:{}".format(
-                    response_id,
-                    message))
-            self.__message_dict[response_id] = message
         except ValueError as mp_exception:
-            log.debug("Unable to parse message:{} IGNORE".format(mp_exception))
+            log.info("Unable to parse message:{} IGNORE".format(mp_exception))
+            return
+
+        message = body_json.get('message')
+        if not message:
+            log.info("Invalid Msg: message key is missing. Msg: {}".
+                     format(body_json))
+            return
+        response_id = message.get("responseId")
+        if not response_id:
+            log.info("Invalid Msg: response_id not found. Msg: {}".
+                     format(message))
+            return
+        self.__message_dict[response_id] = message
+        log.info("Updated message dict with:{}:{}".format(
+            response_id,
+            message)
+        )
 
     def consume_halon_messages(self):
         """
