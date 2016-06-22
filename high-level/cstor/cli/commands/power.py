@@ -63,7 +63,7 @@ class Power(BaseCommand):
         """
         power_parser = subparsers.add_parser('power',
                                              help='Sub-command to work with '
-                                                  'power of the cluster.')
+                                                  'power of all the nodes.')
         sub_cmds = power_parser.add_subparsers(dest='action',
                                                help='command to run')
         sub_cmds.add_parser('on',
@@ -85,7 +85,7 @@ class Power(BaseCommand):
 
         if not parser.force:
             usr_input = raw_input("Are you sure you want to power off"
-                                  " all the node (y/n)")
+                                  " all the nodes (y/n)")
             Power.check_user_input(usr_input)
 
     @staticmethod

@@ -104,7 +104,7 @@ def power_off_all_nodes_confirm(_):
     """ Ensure proper message generated and enqueued. """
     contents = lettuce.world.response
     # command = lettuce.world.command.split()[-1]
-    response = 'Are you sure you want to power off all the node (y/n)'
+    response = 'Are you sure you want to power off all the nodes (y/n)'
     assert response in contents, \
         "Command: power on response message doesn't match. " \
         "Expected {expect} but got '{actual}'" .format(

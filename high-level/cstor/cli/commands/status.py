@@ -114,7 +114,7 @@ class Status(BaseCommand):
         """
         power_parser = subparsers.add_parser('status',
                                              help='Sub-command to work with '
-                                                  'status of the cluster.')
+                                                  'status of the nodes.')
         power_parser.set_defaults(func=Status)
 
     def execute_action(self, **kwargs):

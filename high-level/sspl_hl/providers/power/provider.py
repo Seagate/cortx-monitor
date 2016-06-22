@@ -53,7 +53,7 @@ class PowerProvider(BaseCastorProvider):
             get_cluster_state_info()
         if state_cluster == 'up' and \
                 request.selection_args.get('command') == 'on':
-            reply_msg = 'Cluster is already up. ' \
+            reply_msg = 'Nodes are already powered on. ' \
                         '\nPlease use ' \
                         '\'status\' command to check ' \
                         'the power status of nodes.'
@@ -61,7 +61,7 @@ class PowerProvider(BaseCastorProvider):
             request.reply(ensure_list({'power_commands_reply': reply_msg}))
         elif state_cluster == 'down' and \
                 request.selection_args.get('command') == 'off':
-            reply_msg = 'Cluster is already down. ' \
+            reply_msg = 'Nodes are already powered off. ' \
                         '\nPlease use ' \
                         '\'status\' command to check ' \
                         'the power status of nodes.'
@@ -109,7 +109,7 @@ class PowerProvider(BaseCastorProvider):
 
         if cluster_state == 'down':
             reply_msg = 'Cluster Power on has been ' \
-                        'initiated on the cluster. ' \
+                        'initiated on all the nodes. ' \
                         '\nPlease use ' \
                         '\'status\' command to check the ' \
                         'power status of nodes.'
@@ -129,7 +129,7 @@ class PowerProvider(BaseCastorProvider):
         active_nodes = '\n'.join(active_nodes)
         if cluster_state == 'up':
             reply_msg = 'Cluster Power off has been ' \
-                        'initiated on the cluster. ' \
+                        'initiated on all the nodes. ' \
                         '\nPlease use ' \
                         '\'status\' command to check the ' \
                         'power status of nodes.'
