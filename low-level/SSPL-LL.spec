@@ -74,7 +74,7 @@ systemctl enable sspl-ll
 chown -R sspl-ll:root /opt/seagate/sspl/low-level
 
 # Create a link to low-level cli for easy global access
-ln -sf /opt/seagate/sspl/low-level/cli/cli-sspl-ll /usr/bin
+ln -sf /opt/seagate/sspl/low-level/cli/sspl-ll-cli /usr/bin
 
 # Restart dbus with policy file
 systemctl restart dbus

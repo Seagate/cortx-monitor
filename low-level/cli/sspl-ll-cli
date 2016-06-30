@@ -1,7 +1,7 @@
 #!/usr/bin/env python 
 # encoding: utf-8
 """
- Filename:          cli-sspl-ll
+ Filename:          sspl-ll-cli
  Description:       CLI to send msgs to SSPL-LL service
  Creation Date:     12/02/2015
  Author:            Jake Abernathy
@@ -100,6 +100,8 @@ def main():
         parser.add_argument("--fromstdin", action="store_true", help="read JSON msg(s) from stdin")
         parser.add_argument("--fromfile", metavar="FILE", help="read JSON msg(s) from file")
 
+        parser.add_argument("--stopdrive", metavar="DRIVE", help="power down a drive.  ie /dev/sda1")
+        parser.add_argument("--startdrive", metavar="DRIVE", help="power up a drive.  ie /dev/sda1")
         parser.add_argument("--resetdrive", metavar="DRIVE", help="reset drive by cycling its power.  ie /dev/sda1")
         parser.add_argument("--smart", metavar="DRIVE", help="display SMART results for a drive. ie /dev/sda1 or '*'")
         parser.add_argument("--drvmngr", metavar="DRIVE", help="display drivemanager's status. ie /dev/sda1 or '*'")
@@ -138,9 +140,23 @@ def main():
             jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = u"SSPL: {}".format(args.generic)
             _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, response_wait_time=60)
 
+        elif args.stopdrive:
+            # Load a stop drive message from the manual tests directory and update it with args.stopdrive
+            file = "/opt/seagate/sspl/low-level/tests/manual/actuator_msgs/node_cntrl_stop_drive.json"
+            jsonMsg = json.loads(open(file).read())
+            jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = u"STOP_DRIVE: {}".format(args.stopdrive)
+            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, response_wait_time=60)
+
+        elif args.startdrive:
+            # Load a start drive message from the manual tests directory and update it with args.startdrive
+            file = "/opt/seagate/sspl/low-level/tests/manual/actuator_msgs/node_cntrl_start_drive.json"
+            jsonMsg = json.loads(open(file).read())
+            jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = u"START_DRIVE: {}".format(args.startdrive)
+            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, response_wait_time=60)
+
         elif args.resetdrive:
             # Load a reset drive message from the manual tests directory and update it with args.resetdrive
-            file = "/opt/seagate/sspl/low-level/tests/manual/actuator_msgs/node_cntrl_pdu.json"
+            file = "/opt/seagate/sspl/low-level/tests/manual/actuator_msgs/node_cntrl_reset_drive.json"
             jsonMsg = json.loads(open(file).read())
             jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = u"RESET_DRIVE: {}".format(args.resetdrive)
             _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, response_wait_time=60)

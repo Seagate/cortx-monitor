@@ -217,6 +217,62 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 json_msg = AckResponseMsg(node_request, ipmi_response, uuid).getJson()
                 self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
 
+            elif component == "STOP":
+                # Query the Zope GlobalSiteManager for an object implementing the IHPI actuator
+                if self._HPI_actuator is None:
+                    self._HPI_actuator = queryUtility(IHPI)(self._conf_reader)
+                    self._log_debug("_process_msg, _HPI_actuator name: %s" % self._HPI_actuator.name())
+
+                # Parse out the drive to stop
+                drive_request = node_request[12:].strip()
+                self._log_debug("perform_request, drive to stop: %s" % drive_request)
+
+                # Append POWER_OFF to notify HPI actuator of desired state
+                jsonMsg["actuator_request_type"]["node_controller"]["node_request"] = \
+                        "DISK: set {} POWER_OFF".format(drive_request)
+                self._log_debug("_process_msg, jsonMsg: %s" % jsonMsg)
+
+                # Perform the request using HPI and get the response
+                hpi_response = self._HPI_actuator.perform_request(jsonMsg).strip()
+                self._log_debug("_process_msg, hpi_response: %s" % hpi_response)
+
+                # Simplify success message as external apps don't care about details
+                if "Success" in hpi_response:
+                    hpi_response = "Successful"
+
+                json_msg = AckResponseMsg(node_request, hpi_response, uuid).getJson()
+                self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+
+            elif component == "STAR":
+                # Query the Zope GlobalSiteManager for an object implementing the IHPI actuator
+                if self._HPI_actuator is None:
+                    self._HPI_actuator = queryUtility(IHPI)(self._conf_reader)
+                    self._log_debug("_process_msg, _HPI_actuator name: %s" % self._HPI_actuator.name())
+
+                # Parse out the drive to start
+                drive_request = node_request[13:].strip()
+                self._log_debug("perform_request, drive to start: %s" % drive_request)
+
+                # Append POWER_ON to notify HPI actuator of desired state
+                jsonMsg["actuator_request_type"]["node_controller"]["node_request"] = \
+                        "DISK: set {} POWER_ON".format(drive_request)
+                self._log_debug("_process_msg, jsonMsg: %s" % jsonMsg)
+
+                # Perform the request using HPI and get the response
+                hpi_response = self._HPI_actuator.perform_request(jsonMsg).strip()
+                self._log_debug("_process_msg, hpi_response: %s" % hpi_response)
+
+                # Simplify success message as external apps don't care about details
+                if "Success" in hpi_response:
+                    hpi_response = "Successful"
+
+                json_msg = AckResponseMsg(node_request, hpi_response, uuid).getJson()
+                self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+
+                # Perform the request using HPI and get the response
+                hpi_response = self._HPI_actuator.perform_request(jsonMsg).strip()
+                self._log_debug("_process_msg, hpi_response: %s" % hpi_response)
+
             elif component == "RESE":
                 # Query the Zope GlobalSiteManager for an object implementing the IHPI actuator
                 if self._HPI_actuator is None:

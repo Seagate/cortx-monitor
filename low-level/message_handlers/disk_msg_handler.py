@@ -194,8 +194,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                         self._log_debug("_processMsg, disk smart test, drive test status: %s" % 
                                     response)
 
-                        request = "SMART_TEST: serial number: {}, IP: {}" \
-                                    .format(drive.getSerialNumber(), node_request)
+                        request = "SMART_TEST: {}".format(drive.getSerialNumber())
 
                         json_msg = AckResponseMsg(request, response, uuid).getJson()
                         self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
@@ -643,9 +642,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                          "status": status,
                          "reason": reason,
                          "hostname": self._host_id,
-                         "path_id": drive.get_path_id(),
-                         "disk_installed": str(drive.get_disk_installed()),
-                         "disk_powered": str(drive.get_disk_powered())
+                         "path_id": drive.get_path_id()
                          }
 
         self._log_debug("_log_IEM, log_msg: %{}:{}".format(log_msg, json.dumps(json_data, sort_keys=True)))

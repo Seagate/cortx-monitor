@@ -36,6 +36,15 @@
         "node_request": "DISK: set [drive id] [POWER_ON / POWEROFF]"
     }
 
+ Example JSON msgs for getting/setting enclosure ID:
+    "node_controller": {
+        "node_request": "ENCL: get id [drive id]"
+    }
+
+    "node_controller": {
+        "node_request": "ENCL: set id [drive id] [0-99]"
+    }
+
 
     [drive id] can be Device Name like /dev/sdab or disk Serial Number
 
