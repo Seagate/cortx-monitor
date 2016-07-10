@@ -99,9 +99,8 @@ class CommandLine(Debug):
 
             if error:
                 response = "{0}".format(error)
-
-            if not response:
-                response = "Command applied successfully"
+            else:
+                response = "Success"
 
             self._log_debug("perform_request, command response: %s" % response)
 

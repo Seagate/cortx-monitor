@@ -276,7 +276,7 @@ class ManualTest():
                     time.sleep(1)
                 max_wait += 1
                 if max_wait > response_wait_time:
-                    print "Timed out waiting for valid responses, giving up after %d seconds" \
+                    print "Timed out waiting for valid responses, giving up after {} seconds" \
                             .format(response_wait_time)
                     break
 

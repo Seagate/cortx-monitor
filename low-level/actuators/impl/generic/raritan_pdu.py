@@ -82,13 +82,13 @@ class RaritanPDU(Debug):
                 login_attempts = self._max_login_attempts
 
             # Send user/pass until max attempts has been reached
-            login_attempts = 0
             while login_attempts < self._max_login_attempts:
                 try:
                     if self._login_PDU() == True:
                         break
                 except RuntimeError as re:
                     self._log_debug("Failed attempting to login to PDU via serial port: %s" % re)
+                
                 login_attempts += 1
 
             # If we exceeded login attempts then try the network approach

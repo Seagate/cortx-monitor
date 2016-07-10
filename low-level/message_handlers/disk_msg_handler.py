@@ -401,6 +401,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                              hpi_drive.get_drive_num() + "/status"
             except Exception as ae:
                 logger.info("DiskMsgHandler, No HPI data for serial number: %s" % serial_number)
+                return
 
             drive = Drive(self._host_id,
                           event_path,

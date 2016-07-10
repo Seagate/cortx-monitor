@@ -131,7 +131,7 @@ def main():
             file = "/opt/seagate/sspl/low-level/tests/manual/actuator_msgs/node_cntrl_pdu.json"
             jsonMsg = json.loads(open(file).read())
             jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = u"PDU: {}".format(args.pdu)
-            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human)
+            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, force_wait=True, response_wait_time=30)
 
         elif args.generic:
             # Load a generic SSPL message from the manual tests directory and update it with args.generic

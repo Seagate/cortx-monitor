@@ -343,11 +343,13 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 # Lookup the serial number from the path
                 serial_number = str(self._drive_by_device_name.get(path))                
                 self._log_debug("serial_number: %s" % str(serial_number))
-                drive["identity"]["serialNumber"] = serial_number
+                if serial_number != "None":
+                    drive["identity"]["serialNumber"] = serial_number
 
                 # Change device path to path-byid
                 drive_byid = str(self._drive_byid_by_serial_number.get(serial_number))
-                drive["identity"]["path"] = drive_byid
+                if drive_byid != "None":
+                    drive["identity"]["path"] = drive_byid
 
         self._log_debug("_generate_RAID_status, host_id: %s, device: %s, drives: %s" % 
                     (self._node_sensor.host_id, self._raid_device, str(self._raid_drives)))
