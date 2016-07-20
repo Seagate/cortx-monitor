@@ -47,7 +47,7 @@ class SupportBundleProvider(BaseCastorProvider):
         command = request.selection_args.get('command', None)
         if command == 'list':
             deferred_list = deferToThread(
-                bundle_utils.list_bundle_files
+                bundle_utils.get_bundle_info
             )
             deferred_list.addCallback(
                 self.handle_success_list_bundles,
@@ -59,48 +59,56 @@ class SupportBundleProvider(BaseCastorProvider):
             bundling_handler = SupportBundleHandler()
             bundle_name = utils.get_curr_datetime_str()
             deferred_create = bundling_handler.collect(bundle_name)
+            # pylint: disable=no-member
             deferred_create.addCallback(
                 self.handle_success_create_bundle,
                 request,
-                bundle_name + '.tar'
+                bundle_name
             )
+            # pylint: disable=no-member
             deferred_create.addErrback(
                 self.handle_failure_create_bundle,
-                request,
-                bundle_name + '.tar'
+                bundle_name
             )
+            self.handle_success_create_bundle(None, request, bundle_name)
         else:
-            err_msg = 'Failure. Details: command {} is not supported'.\
+            err_msg = 'Bundle command Failure. ' \
+                      'Details: command {} is not supported'. \
                 format(command)
             self.log_warning(err_msg)
             request.responder.reply_exception(err_msg)
 
-    def handle_success_create_bundle(self, _, request, bundle_name):
+    def handle_success_create_bundle(self, result, request, bundle_name):
         """
         Create bundle success handler
         """
-        response = SupportBundleResponse()
-        msg = response.get_response_message('create', bundle_name)
-        self.log_info('Bundling has been triggered: Bundle_id: {}'.
-                      format(bundle_name))
-        request.reply(msg)
+        bundle_name = '{}.tar'.format(bundle_name)
+        if result:
+            self.log_info('Bundling for Bundle_id: {} is Complete'.
+                          format(bundle_name))
+        else:
+            response = SupportBundleResponse()
+            msg = response.get_response_message('create', bundle_name)
+            self.log_info('Bundling has been triggered: Bundle_id: {}'.
+                          format(bundle_name))
+            request.reply(msg)
 
-    def handle_failure_create_bundle(self, error, request, bundle_name):
+    def handle_failure_create_bundle(self, error, bundle_name):
         """
         Create bundle failure handler
         """
+        bundle_name = '{}.tar'.format(bundle_name)
         err_msg = 'Error Occurred during bundle create for Bundle_id: {}. ' \
-                  'Details: {}'.\
+                  'Details: {}'. \
             format(bundle_name, error)
         self.log_warning(err_msg)
-        request.responder.reply_exception(err_msg)
 
-    def handle_success_list_bundles(self, bundles_list, request):
+    def handle_success_list_bundles(self, bundles_info, request):
         """
         Success handler for list command
         """
         response = SupportBundleResponse()
-        msg = response.get_response_message('list', bundles_list)
+        msg = response.get_response_message('list', bundles_info)
         self.log_info('Bundle list response: {}'.format(msg))
         request.reply(msg)
 
@@ -108,7 +116,7 @@ class SupportBundleProvider(BaseCastorProvider):
         """
         Failure handler for list command
         """
-        err_msg = 'Error Occurred during bundle list. Details: {}'.\
+        err_msg = 'Error Occurred during bundle list. Details: {}'. \
             format(error)
         self.log_warning(err_msg)
         request.responder.reply_exception(err_msg)

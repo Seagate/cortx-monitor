@@ -1,0 +1,241 @@
+2015-08-05 12:27:33+0530 [-] INFO > Starting web server main (/usr/lib/python2.7/site-packages/plex/resources/web_main.py:154)
+2015-08-05 12:27:33+0530 [-] INFO > Initialize all applications (/usr/lib/python2.7/site-packages/plex/core/managers/application_manager.py:196)
+2015-08-05 12:27:33+0530 [-] INFO > Loading application sspl_hl. (/usr/lib/python2.7/site-packages/plex/core/managers/application_manager.py:222)
+2015-08-05 12:27:33+0530 [-] WARNING > Receiver for strings for app sspl_hl is not connected to a provider. Reconnecting in 2 s. (/usr/lib/python2.7/site-packages/plex/core/receiver/data_receiver.py:120)
+2015-08-05 12:27:33+0530 [-] INFO > Loaded strings provider: app.sspl_hl.strings (/usr/lib/python2.7/site-packages/plex/core/plugins/plex_main_plugin.py:142)
+2015-08-05 12:27:33+0530 [-] INFO > Shared storage exists. Using shared config, /mnt/mgmt/var/lib/plex_storage/sspl_hl/app.conf. (/usr/lib/python2.7/site-packages/plex/core/plex_application.py:206)
+2015-08-05 12:27:33+0530 [-] INFO > app config file '/mnt/mgmt/var/lib/plex_storage/sspl_hl/app.conf' does not exist (/usr/lib/python2.7/site-packages/plex/core/app_config.py:61)
+2015-08-05 12:27:33+0530 [-] Unhandled Error
+	Traceback (most recent call last):
+	  File "/usr/lib/python2.7/site-packages/plex/core/plugins/plugin_manager.py", line 52, in get_plugins_from_sub_dir
+	    null_filter, *args, **keywords)
+	  File "/usr/lib/python2.7/site-packages/plex/core/plugins/plugin_manager.py", line 73, in get_filtered_plugins_from_sub_dir
+	    *args, **keywords)
+	  File "/usr/lib/python2.7/site-packages/plex/core/plugins/plugin_manager.py", line 85, in _load_plugins_from_dir
+	    for plugin in getPlugins(plugin_type, plugin_package):
+	  File "/usr/lib64/python2.7/site-packages/twisted/plugin.py", line 209, in getPlugins
+	    allDropins = getCache(package)
+	--- <exception caught here> ---
+	  File "/usr/lib64/python2.7/site-packages/twisted/plugin.py", line 167, in getCache
+	    provider = pluginModule.load()
+	  File "/usr/lib64/python2.7/site-packages/twisted/python/modules.py", line 383, in load
+	    return self.pathEntry.pythonPath.moduleLoader(self.name)
+	  File "/usr/lib64/python2.7/site-packages/twisted/python/reflect.py", line 506, in namedAny
+	    topLevelPackage = _importAndCheckStack(trialname)
+	  File "/opt/plex/apps/sspl_hl/providers/service/provider.py", line 12, in <module>
+	    from sspl_hl.utils.base_castor_provider import BaseCastorProvider
+	exceptions.ImportError: No module named utils.base_castor_provider
+	
+2015-08-05 12:27:33+0530 [-] Unhandled Error
+	Traceback (most recent call last):
+	  File "/usr/lib/python2.7/site-packages/plex/core/plugins/plugin_manager.py", line 52, in get_plugins_from_sub_dir
+	    null_filter, *args, **keywords)
+	  File "/usr/lib/python2.7/site-packages/plex/core/plugins/plugin_manager.py", line 73, in get_filtered_plugins_from_sub_dir
+	    *args, **keywords)
+	  File "/usr/lib/python2.7/site-packages/plex/core/plugins/plugin_manager.py", line 85, in _load_plugins_from_dir
+	    for plugin in getPlugins(plugin_type, plugin_package):
+	  File "/usr/lib64/python2.7/site-packages/twisted/plugin.py", line 209, in getPlugins
+	    allDropins = getCache(package)
+	--- <exception caught here> ---
+	  File "/usr/lib64/python2.7/site-packages/twisted/plugin.py", line 167, in getCache
+	    provider = pluginModule.load()
+	  File "/usr/lib64/python2.7/site-packages/twisted/python/modules.py", line 383, in load
+	    return self.pathEntry.pythonPath.moduleLoader(self.name)
+	  File "/usr/lib64/python2.7/site-packages/twisted/python/reflect.py", line 506, in namedAny
+	    topLevelPackage = _importAndCheckStack(trialname)
+	  File "/usr/lib64/python2.7/site-packages/twisted/python/reflect.py", line 442, in _importAndCheckStack
+	    return __import__(importName)
+	exceptions.SyntaxError: invalid syntax (provider.py, line 88)
+	
+2015-08-05 12:27:33+0530 [-] Unhandled Error
+	Traceback (most recent call last):
+	  File "/usr/lib/python2.7/site-packages/plex/core/plugins/plugin_manager.py", line 52, in get_plugins_from_sub_dir
+	    null_filter, *args, **keywords)
+	  File "/usr/lib/python2.7/site-packages/plex/core/plugins/plugin_manager.py", line 73, in get_filtered_plugins_from_sub_dir
+	    *args, **keywords)
+	  File "/usr/lib/python2.7/site-packages/plex/core/plugins/plugin_manager.py", line 85, in _load_plugins_from_dir
+	    for plugin in getPlugins(plugin_type, plugin_package):
+	  File "/usr/lib64/python2.7/site-packages/twisted/plugin.py", line 209, in getPlugins
+	    allDropins = getCache(package)
+	--- <exception caught here> ---
+	  File "/usr/lib64/python2.7/site-packages/twisted/plugin.py", line 167, in getCache
+	    provider = pluginModule.load()
+	  File "/usr/lib64/python2.7/site-packages/twisted/python/modules.py", line 383, in load
+	    return self.pathEntry.pythonPath.moduleLoader(self.name)
+	  File "/usr/lib64/python2.7/site-packages/twisted/python/reflect.py", line 506, in namedAny
+	    topLevelPackage = _importAndCheckStack(trialname)
+	  File "/opt/plex/apps/sspl_hl/providers/node/provider.py", line 7, in <module>
+	    from sspl_hl.utils.base_castor_provider import BaseCastorProvider
+	exceptions.ImportError: No module named utils.base_castor_provider
+	
+2015-08-05 12:27:33+0530 [-] INFO > Done initializing all applications (/usr/lib/python2.7/site-packages/plex/core/managers/application_manager.py:201)
+2015-08-05 12:27:33+0530 [-] INFO > Initialize all shells (/usr/lib/python2.7/site-packages/plex/core/managers/shell_manager.py:194)
+2015-08-05 12:27:33+0530 [-] INFO > Done initializing all shells (/usr/lib/python2.7/site-packages/plex/core/managers/shell_manager.py:197)
+2015-08-05 12:27:33+0530 [-] INFO > Started web server main (/usr/lib/python2.7/site-packages/plex/resources/web_main.py:209)
+2015-08-05 12:27:33+0530 [-] INFO > plex: start RabbitMQ (/usr/lib/python2.7/site-packages/plex/pubsub/pub_sub_broker.py:32)
+2015-08-05 12:27:33+0530 [Broker,client] INFO > Initialize all applications (/usr/lib/python2.7/site-packages/plex/core/managers/application_manager.py:196)
+2015-08-05 12:27:33+0530 [Broker,client] INFO > Application sspl_hl of type core will not be loaded on server of type third_party. (/usr/lib/python2.7/site-packages/plex/core/managers/application_manager.py:229)
+2015-08-05 12:27:33+0530 [Broker,client] INFO > Done initializing all applications (/usr/lib/python2.7/site-packages/plex/core/managers/application_manager.py:201)
+2015-08-05 12:27:33+0530 [PlexTwistedProtocolConnection,client] INFO > plex: Connected to RabbitMQ (/usr/lib/python2.7/site-packages/plex/pubsub/pika_pub_sub.py:63)
+2015-08-05 12:27:33+0530 [PlexTwistedProtocolConnection,client] INFO > pub-sub: Consuming started (/usr/lib/python2.7/site-packages/plex/pubsub/pika_pub_sub.py:132)
+2015-08-05 12:27:35+0530 [-] INFO > Loaded application sspl_hl, Seagate Storage Platform Library - High Level, <plex.resources.parent_resource.ParentResource instance at 0x2dd21b8>. (/usr/lib/python2.7/site-packages/plex/core/managers/application_manager.py:170)
+2015-08-05 12:27:35+0530 [-] INFO > Initialized web server main (/usr/lib/python2.7/site-packages/plex/resources/web_main.py:215)
+2016-02-11 12:04:55+0530 [-] INFO > Starting web server main (/usr/lib/python2.7/site-packages/plex/resources/web_main.py:154)
+2016-02-11 12:04:55+0530 [-] INFO > Initialize all applications (/usr/lib/python2.7/site-packages/plex/core/managers/application_manager.py:196)
+2016-02-11 12:04:55+0530 [-] INFO > Loading application sspl_hl. (/usr/lib/python2.7/site-packages/plex/core/managers/application_manager.py:222)
+2016-02-11 12:04:55+0530 [-] WARNING > Receiver for strings for app sspl_hl is not connected to a provider. Reconnecting in 2 s. (/usr/lib/python2.7/site-packages/plex/core/receiver/data_receiver.py:120)
+2016-02-11 12:04:55+0530 [-] INFO > Loaded strings provider: app.sspl_hl.strings (/usr/lib/python2.7/site-packages/plex/core/plugins/plex_main_plugin.py:142)
+2016-02-11 12:04:55+0530 [-] INFO > Shared storage exists. Using shared config, /mnt/mgmt/var/lib/plex_storage/sspl_hl/app.conf. (/usr/lib/python2.7/site-packages/plex/core/plex_application.py:206)
+2016-02-11 12:04:55+0530 [-] INFO > app config file '/mnt/mgmt/var/lib/plex_storage/sspl_hl/app.conf' does not exist (/usr/lib/python2.7/site-packages/plex/core/app_config.py:61)
+2016-02-11 12:04:55+0530 [-] INFO > Done initializing all applications (/usr/lib/python2.7/site-packages/plex/core/managers/application_manager.py:201)
+2016-02-11 12:04:55+0530 [-] INFO > Initialize all shells (/usr/lib/python2.7/site-packages/plex/core/managers/shell_manager.py:194)
+2016-02-11 12:04:55+0530 [-] INFO > Done initializing all shells (/usr/lib/python2.7/site-packages/plex/core/managers/shell_manager.py:197)
+2016-02-11 12:04:55+0530 [-] INFO > Started web server main (/usr/lib/python2.7/site-packages/plex/resources/web_main.py:209)
+2016-02-11 12:04:55+0530 [-] INFO > plex: start RabbitMQ (/usr/lib/python2.7/site-packages/plex/pubsub/pub_sub_broker.py:32)
+2016-02-11 12:04:56+0530 [Broker,client] INFO > Initialize all applications (/usr/lib/python2.7/site-packages/plex/core/managers/application_manager.py:196)
+2016-02-11 12:04:56+0530 [Broker,client] INFO > Application sspl_hl of type core will not be loaded on server of type third_party. (/usr/lib/python2.7/site-packages/plex/core/managers/application_manager.py:229)
+2016-02-11 12:04:56+0530 [Broker,client] INFO > Done initializing all applications (/usr/lib/python2.7/site-packages/plex/core/managers/application_manager.py:201)
+2016-02-11 12:04:56+0530 [PlexTwistedProtocolConnection,client] INFO > plex: Connected to RabbitMQ (/usr/lib/python2.7/site-packages/plex/pubsub/pika_pub_sub.py:63)
+2016-02-11 12:04:56+0530 [PlexTwistedProtocolConnection,client] INFO > pub-sub: Consuming started (/usr/lib/python2.7/site-packages/plex/pubsub/pika_pub_sub.py:132)
+2016-02-11 12:04:57+0530 [-] INFO > Loaded provider: fru (/usr/lib/python2.7/site-packages/plex/core/managers/provider_manager.py:98)
+2016-02-11 12:04:57+0530 [-] INFO > Loaded provider: ha (/usr/lib/python2.7/site-packages/plex/core/managers/provider_manager.py:98)
+2016-02-11 12:04:57+0530 [-] INFO > Loaded provider: node (/usr/lib/python2.7/site-packages/plex/core/managers/provider_manager.py:98)
+2016-02-11 12:04:57+0530 [-] INFO > Loaded provider: power (/usr/lib/python2.7/site-packages/plex/core/managers/provider_manager.py:98)
+2016-02-11 12:04:57+0530 [-] INFO > Loaded provider: response (/usr/lib/python2.7/site-packages/plex/core/managers/provider_manager.py:98)
+2016-02-11 12:04:57+0530 [-] INFO > Loaded provider: service (/usr/lib/python2.7/site-packages/plex/core/managers/provider_manager.py:98)
+2016-02-11 12:04:57+0530 [-] INFO > Loaded provider: support_bundle (/usr/lib/python2.7/site-packages/plex/core/managers/provider_manager.py:98)
+2016-02-11 12:04:57+0530 [-] INFO > Loaded provider: file_stats (/usr/lib/python2.7/site-packages/plex/core/managers/provider_manager.py:98)
+2016-02-11 12:04:57+0530 [-] INFO > Loaded application sspl_hl, Seagate Storage Platform Library - High Level, <plex.resources.parent_resource.ParentResource instance at 0x35b0290>. (/usr/lib/python2.7/site-packages/plex/core/managers/application_manager.py:170)
+2016-02-11 12:04:57+0530 [-] INFO > Initialized web server main (/usr/lib/python2.7/site-packages/plex/resources/web_main.py:215)
+2016-02-11 12:55:15+0530 [-] ERROR > Exception in thread Thread-1:
+2016-02-11 12:55:15+0530 [-] ERROR > Traceback (most recent call last):
+2016-02-11 12:55:15+0530 [-] ERROR >   File "/usr/lib64/python2.7/threading.py", line 811, in __bootstrap_inner
+2016-02-11 12:55:15+0530 [-] ERROR >     self.run()
+2016-02-11 12:55:15+0530 [-] ERROR >   File "/usr/lib64/python2.7/threading.py", line 764, in run
+2016-02-11 12:55:15+0530 [-] ERROR >     self.__target(*self.__args, **self.__kwargs)
+2016-02-11 12:55:15+0530 [-] ERROR >   File "/opt/plex/apps/sspl_hl/providers/response/provider.py", line 103, in consume_halon_messages
+2016-02-11 12:55:15+0530 [-] ERROR >     consumer.start_consuming()
+2016-02-11 12:55:15+0530 [-] ERROR >   File "/opt/plex/apps/sspl_hl/utils/rabbit_mq_utils.py", line 114, in start_consuming
+2016-02-11 12:55:15+0530 [-] ERROR >     self._channel.start_consuming()
+2016-02-11 12:55:15+0530 [-] ERROR >   File "/usr/lib/python2.7/site-packages/pika/adapters/blocking_connection.py", line 955, in start_consuming
+2016-02-11 12:55:15+0530 [-] ERROR >     self.connection.process_data_events()
+2016-02-11 12:55:15+0530 [-] ERROR >   File "/usr/lib/python2.7/site-packages/pika/adapters/blocking_connection.py", line 240, in process_data_events
+2016-02-11 12:55:15+0530 [-] ERROR >     if self._handle_read():
+2016-02-11 12:55:15+0530 [-] ERROR >   File "/usr/lib/python2.7/site-packages/pika/adapters/blocking_connection.py", line 348, in _handle_read
+2016-02-11 12:55:15+0530 [-] ERROR >     super(BlockingConnection, self)._handle_read()
+2016-02-11 12:55:15+0530 [-] ERROR >   File "/usr/lib/python2.7/site-packages/pika/adapters/base_connection.py", line 351, in _handle_read
+2016-02-11 12:55:15+0530 [-] ERROR >     self._on_data_available(data)
+2016-02-11 12:55:15+0530 [-] ERROR >   File "/usr/lib/python2.7/site-packages/pika/connection.py", line 1285, in _on_data_available
+2016-02-11 12:55:15+0530 [-] ERROR >     self._process_frame(frame_value)
+2016-02-11 12:55:15+0530 [-] ERROR >   File "/usr/lib/python2.7/site-packages/pika/connection.py", line 1352, in _process_frame
+2016-02-11 12:55:15+0530 [-] ERROR >     if self._process_callbacks(frame_value):
+2016-02-11 12:55:15+0530 [-] ERROR >   File "/usr/lib/python2.7/site-packages/pika/connection.py", line 1322, in _process_callbacks
+2016-02-11 12:55:15+0530 [-] ERROR >     frame_value)                 # Args
+2016-02-11 12:55:15+0530 [-] ERROR >   File "/usr/lib/python2.7/site-packages/pika/callback.py", line 61, in wrapper
+2016-02-11 12:55:15+0530 [-] ERROR >     return function(*tuple(args), **kwargs)
+2016-02-11 12:55:15+0530 [-] ERROR >   File "/usr/lib/python2.7/site-packages/pika/callback.py", line 92, in wrapper
+2016-02-11 12:55:15+0530 [-] ERROR >     return function(*args, **kwargs)
+2016-02-11 12:55:15+0530 [-] ERROR >   File "/usr/lib/python2.7/site-packages/pika/callback.py", line 232, in process
+2016-02-11 12:55:15+0530 [-] ERROR >     callback(*args, **keywords)
+2016-02-11 12:55:15+0530 [-] ERROR >   File "/usr/lib/python2.7/site-packages/pika/adapters/blocking_connection.py", line 1029, in _on_cancel
+2016-02-11 12:55:15+0530 [-] ERROR >     raise exceptions.ConsumerCancelled(method_frame.method)
+2016-02-11 12:55:15+0530 [-] ERROR > ConsumerCancelled: <Basic.Cancel(['consumer_tag=ctag1.1c89c237d9834a2a87ec054c4c656344', 'nowait=True'])>
+2016-02-11 12:55:15+0530 [-] ERROR > 
+2016-02-11 12:55:30+0530 [-] ERROR
+	Traceback (most recent call last):
+	Failure: exceptions.ValueError: Error: Invalid request: Missing target
+	
+2016-02-11 15:36:41+0530 [-] INFO > Starting web server main (/usr/lib/python2.7/site-packages/plex/resources/web_main.py:151)
+2016-02-11 15:36:41+0530 [-] INFO > Initialize all applications (/usr/lib/python2.7/site-packages/plex/core/managers/application_manager.py:196)
+2016-02-11 15:36:41+0530 [-] INFO > Loading application sspl_hl. (/usr/lib/python2.7/site-packages/plex/core/managers/application_manager.py:222)
+2016-02-11 15:36:41+0530 [-] WARNING > Receiver for strings for app sspl_hl is not connected to a provider. Reconnecting in 2 s. (/usr/lib/python2.7/site-packages/plex/core/receiver/data_receiver.py:152)
+2016-02-11 15:36:41+0530 [-] INFO > Loaded strings provider: app.sspl_hl.strings (/usr/lib/python2.7/site-packages/plex/core/plugins/plex_main_plugin.py:167)
+2016-02-11 15:36:41+0530 [-] INFO > Done initializing all applications (/usr/lib/python2.7/site-packages/plex/core/managers/application_manager.py:201)
+2016-02-11 15:36:41+0530 [-] INFO > Initialize all shells (/usr/lib/python2.7/site-packages/plex/core/managers/shell_manager.py:194)
+2016-02-11 15:36:41+0530 [-] INFO > Done initializing all shells (/usr/lib/python2.7/site-packages/plex/core/managers/shell_manager.py:197)
+2016-02-11 15:36:41+0530 [-] INFO > Started web server main (/usr/lib/python2.7/site-packages/plex/resources/web_main.py:213)
+2016-02-11 15:36:41+0530 [-] INFO > plex: start RabbitMQ (/usr/lib/python2.7/site-packages/plex/pubsub/pub_sub_broker.py:32)
+2016-02-11 15:36:41+0530 [-] INFO > Shared storage exists. Using shared config, /mnt/mgmt/var/lib/plex_storage/sspl_hl/app.conf. (/usr/lib/python2.7/site-packages/plex/core/plex_application.py:226)
+2016-02-11 15:36:41+0530 [-] INFO app.sspl_hl > app config file '/mnt/mgmt/var/lib/plex_storage/sspl_hl/app.conf' does not exist (/usr/lib64/python2.7/site-packages/twisted/internet/defer.py:134)
+2016-02-11 15:36:41+0530 [Broker,client] INFO > Initialize all applications (/usr/lib/python2.7/site-packages/plex/core/managers/application_manager.py:196)
+2016-02-11 15:36:41+0530 [Broker,client] INFO > Application sspl_hl of type core will not be loaded on server of type third_party. (/usr/lib/python2.7/site-packages/plex/core/managers/application_manager.py:229)
+2016-02-11 15:36:41+0530 [Broker,client] INFO > Done initializing all applications (/usr/lib/python2.7/site-packages/plex/core/managers/application_manager.py:201)
+2016-02-11 15:36:41+0530 [PlexTwistedProtocolConnection,client] INFO > plex: Connected to RabbitMQ (/usr/lib/python2.7/site-packages/plex/pubsub/pika_pub_sub.py:64)
+2016-02-11 15:36:41+0530 [PlexTwistedProtocolConnection,client] INFO > pub-sub: Consuming started (/usr/lib/python2.7/site-packages/plex/pubsub/pika_pub_sub.py:141)
+2016-02-11 15:36:43+0530 [-] INFO > Loaded provider: fru (/usr/lib/python2.7/site-packages/plex/core/managers/provider_manager.py:79)
+2016-02-11 15:36:43+0530 [-] INFO > Loaded provider: ha (/usr/lib/python2.7/site-packages/plex/core/managers/provider_manager.py:79)
+2016-02-11 15:36:43+0530 [-] INFO > Loaded provider: node (/usr/lib/python2.7/site-packages/plex/core/managers/provider_manager.py:79)
+2016-02-11 15:36:43+0530 [-] INFO > Loaded provider: power (/usr/lib/python2.7/site-packages/plex/core/managers/provider_manager.py:79)
+2016-02-11 15:36:43+0530 [-] INFO > Loaded provider: response (/usr/lib/python2.7/site-packages/plex/core/managers/provider_manager.py:79)
+2016-02-11 15:36:43+0530 [-] INFO > Loaded provider: service (/usr/lib/python2.7/site-packages/plex/core/managers/provider_manager.py:79)
+2016-02-11 15:36:43+0530 [-] INFO > Loaded provider: support_bundle (/usr/lib/python2.7/site-packages/plex/core/managers/provider_manager.py:79)
+2016-02-11 15:36:43+0530 [-] INFO > Loaded provider: file_stats (/usr/lib/python2.7/site-packages/plex/core/managers/provider_manager.py:79)
+2016-02-11 15:36:43+0530 [-] INFO > Loaded provider: status (/usr/lib/python2.7/site-packages/plex/core/managers/provider_manager.py:79)
+2016-02-11 15:36:43+0530 [-] INFO > Loaded application sspl_hl, Seagate Storage Platform Library - High Level, <plex.resources.parent_resource.ParentResource instance at 0x29ac320>. (/usr/lib/python2.7/site-packages/plex/core/managers/application_manager.py:170)
+2016-02-11 15:36:43+0530 [-] INFO > Initialized web server main (/usr/lib/python2.7/site-packages/plex/resources/web_main.py:219)
+2016-03-01 12:20:33+0530 [-] INFO > Starting web server main (/usr/lib/python2.7/site-packages/plex/resources/web_main.py:151)
+2016-03-01 12:20:33+0530 [-] INFO > Initialize all applications (/usr/lib/python2.7/site-packages/plex/core/managers/application_manager.py:196)
+2016-03-01 12:20:33+0530 [-] INFO > Loading application sspl_hl. (/usr/lib/python2.7/site-packages/plex/core/managers/application_manager.py:222)
+2016-03-01 12:20:33+0530 [-] WARNING > Receiver for strings for app sspl_hl is not connected to a provider. Reconnecting in 2 s. (/usr/lib/python2.7/site-packages/plex/core/receiver/data_receiver.py:152)
+2016-03-01 12:20:33+0530 [-] INFO > Loaded strings provider: app.sspl_hl.strings (/usr/lib/python2.7/site-packages/plex/core/plugins/plex_main_plugin.py:167)
+2016-03-01 12:20:33+0530 [-] INFO > Done initializing all applications (/usr/lib/python2.7/site-packages/plex/core/managers/application_manager.py:201)
+2016-03-01 12:20:33+0530 [-] INFO > Initialize all shells (/usr/lib/python2.7/site-packages/plex/core/managers/shell_manager.py:194)
+2016-03-01 12:20:33+0530 [-] INFO > Done initializing all shells (/usr/lib/python2.7/site-packages/plex/core/managers/shell_manager.py:197)
+2016-03-01 12:20:33+0530 [-] INFO > Started web server main (/usr/lib/python2.7/site-packages/plex/resources/web_main.py:213)
+2016-03-01 12:20:33+0530 [-] INFO > plex: start RabbitMQ (/usr/lib/python2.7/site-packages/plex/pubsub/pub_sub_broker.py:32)
+2016-03-01 12:20:33+0530 [-] INFO > Shared storage exists. Using shared config, /mnt/mgmt/var/lib/plex_storage/sspl_hl/app.conf. (/usr/lib/python2.7/site-packages/plex/core/plex_application.py:226)
+2016-03-01 12:20:33+0530 [-] INFO app.sspl_hl > app config file '/mnt/mgmt/var/lib/plex_storage/sspl_hl/app.conf' does not exist (/usr/lib64/python2.7/site-packages/twisted/internet/defer.py:134)
+2016-03-01 12:20:34+0530 [Broker,client] INFO > Initialize all applications (/usr/lib/python2.7/site-packages/plex/core/managers/application_manager.py:196)
+2016-03-01 12:20:34+0530 [Broker,client] INFO > Application sspl_hl of type core will not be loaded on server of type third_party. (/usr/lib/python2.7/site-packages/plex/core/managers/application_manager.py:229)
+2016-03-01 12:20:34+0530 [Broker,client] INFO > Done initializing all applications (/usr/lib/python2.7/site-packages/plex/core/managers/application_manager.py:201)
+2016-03-01 12:20:35+0530 [PlexTwistedProtocolConnection,client] INFO > plex: Connected to RabbitMQ (/usr/lib/python2.7/site-packages/plex/pubsub/pika_pub_sub.py:64)
+2016-03-01 12:20:35+0530 [PlexTwistedProtocolConnection,client] INFO > pub-sub: Consuming started (/usr/lib/python2.7/site-packages/plex/pubsub/pika_pub_sub.py:141)
+2016-03-01 12:20:35+0530 [-] ERROR sspl_hl.file_stats
+	Traceback (most recent call last):
+	  File "/usr/lib64/python2.7/site-packages/twisted/internet/base.py", line 1169, in run
+	    self.mainLoop()
+	  File "/usr/lib64/python2.7/site-packages/twisted/internet/base.py", line 1178, in mainLoop
+	    self.runUntilCurrent()
+	  File "/usr/lib64/python2.7/site-packages/twisted/internet/base.py", line 800, in runUntilCurrent
+	    call.func(*call.args, **call.kw)
+	  File "/usr/lib/python2.7/site-packages/plex/util/concurrent/executor.py", line 636, in _call_in_reactor
+	    func_result = defer.maybeDeferred(func, *args, **kw)
+	--- <exception caught here> ---
+	  File "/usr/lib64/python2.7/site-packages/twisted/internet/defer.py", line 134, in maybeDeferred
+	    result = f(*args, **kw)
+	  File "/opt/plex/apps/sspl_hl/providers/file_stats/provider.py", line 40, in on_create
+	    utils.run_async(
+	exceptions.AttributeError: 'module' object has no attribute 'run_async'
+	
+2016-03-01 12:20:35+0530 [-] INFO > Loaded provider: file_stats (/usr/lib/python2.7/site-packages/plex/core/managers/provider_manager.py:79)
+2016-03-01 12:20:35+0530 [-] INFO > Loaded provider: fru (/usr/lib/python2.7/site-packages/plex/core/managers/provider_manager.py:79)
+2016-03-01 12:20:35+0530 [-] INFO > Loaded provider: ha (/usr/lib/python2.7/site-packages/plex/core/managers/provider_manager.py:79)
+2016-03-01 12:20:35+0530 [-] INFO > Loaded provider: node (/usr/lib/python2.7/site-packages/plex/core/managers/provider_manager.py:79)
+2016-03-01 12:20:35+0530 [-] INFO > Loaded provider: power (/usr/lib/python2.7/site-packages/plex/core/managers/provider_manager.py:79)
+2016-03-01 12:20:35+0530 [-] INFO > Loaded provider: service (/usr/lib/python2.7/site-packages/plex/core/managers/provider_manager.py:79)
+2016-03-01 12:20:35+0530 [-] INFO > Loaded provider: response (/usr/lib/python2.7/site-packages/plex/core/managers/provider_manager.py:79)
+2016-03-01 12:20:35+0530 [-] INFO > Loaded provider: support_bundle (/usr/lib/python2.7/site-packages/plex/core/managers/provider_manager.py:79)
+2016-03-01 12:20:35+0530 [-] INFO > Loaded provider: status (/usr/lib/python2.7/site-packages/plex/core/managers/provider_manager.py:79)
+2016-03-01 12:20:35+0530 [-] INFO > Loaded provider: bundle (/usr/lib/python2.7/site-packages/plex/core/managers/provider_manager.py:79)
+2016-03-01 12:20:35+0530 [-] INFO > Loaded application sspl_hl, Seagate Storage Platform Library - High Level, <plex.resources.parent_resource.ParentResource instance at 0x2278200>. (/usr/lib/python2.7/site-packages/plex/core/managers/application_manager.py:170)
+2016-03-01 12:20:35+0530 [-] INFO > Initialized web server main (/usr/lib/python2.7/site-packages/plex/resources/web_main.py:219)
+2016-03-01 12:24:13+0530 [-] WARNING sspl_hl.status > Error occurred in getting the power status of the cluster. Details: [Failure instance: Traceback: <type 'exceptions.IOError'>: [Errno socket error] [Errno 111] Connection refused
+	/usr/lib64/python2.7/threading.py:784:__bootstrap
+	/usr/lib64/python2.7/threading.py:811:__bootstrap_inner
+	/usr/lib64/python2.7/threading.py:764:run
+	--- <exception caught here> ---
+	/usr/lib64/python2.7/site-packages/twisted/python/threadpool.py:167:_worker
+	/usr/lib64/python2.7/site-packages/twisted/python/context.py:118:callWithContext
+	/usr/lib64/python2.7/site-packages/twisted/python/context.py:81:callWithContext
+	/opt/plex/apps/sspl_hl/providers/status/provider.py:120:get_node_power_status
+	/opt/plex/apps/sspl_hl/providers/status/provider.py:143:get_ssu_list
+	/opt/plex/apps/sspl_hl/providers/status/provider.py:159:query_ssu_data_from_puppet
+	/usr/lib64/python2.7/urllib.py:87:urlopen
+	/usr/lib64/python2.7/urllib.py:208:open
+	/usr/lib64/python2.7/urllib.py:345:open_http
+	/usr/lib64/python2.7/httplib.py:969:endheaders
+	/usr/lib64/python2.7/httplib.py:829:_send_output
+	/usr/lib64/python2.7/httplib.py:791:send
+	/usr/lib64/python2.7/httplib.py:772:connect
+	/usr/lib64/python2.7/socket.py:571:create_connection
+	] (/opt/plex/apps/sspl_hl/providers/status/provider.py:112)

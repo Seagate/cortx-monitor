@@ -16,16 +16,57 @@ It will contain all the utility functions used by the bundling
 import tarfile
 import os
 import glob
+import re
 from plex.core.log import error
 from sspl_hl.utils import common
 from sspl_hl.utils.support_bundle import config
 
 
-def list_bundle_files():
+def is_bundle_dir(f_name):
+    """Check if the file is the bundle directory.
+    This involves two checks,
+    1. The file should be a directory
+    2. It should start with a given format
+    """
+    def matches_pattern(string):
+        """Check if the string mathces the rexex pattern to match
+        the directory naming standard
+        """
+        if re.search('(\\d{4}-\\d{2}-\\d{2}_\\d{2}-\\d{2}-\\d{2})', string):
+            return True
+        else:
+            return False
+
+    return os.path.isdir(
+        os.path.join(config.BASE_BUCKET_PATH, f_name)
+    ) and \
+        matches_pattern(f_name)
+
+
+def list_in_progress_bundles_files():
+    """
+    List in progress bundles.
+    """
+    return [z_file for z_file in os.listdir(config.BASE_BUCKET_PATH)
+            if is_bundle_dir(z_file)]
+
+
+def list_completed_bundle_files():
     """
     Return the list of bundle names.
     """
     return list_tar_files(config.BASE_BUCKET_PATH)
+
+
+def get_bundle_info():
+    """Get the list of the bundles,
+    1. Collected, so far and
+    2. In progress
+     """
+    return dict(
+        completed=list_completed_bundle_files(),
+        in_progress=list_in_progress_bundles_files()
+    )
 
 
 def list_tar_files(path):
@@ -33,10 +74,15 @@ def list_tar_files(path):
     Return the list of names of all the bundled tar files in
     the path.
     """
+    def is_bundle_package(f_name):
+        """Check if the file is the bundle tar bar"""
+        return os.path.isfile(os.path.join(config.BASE_BUCKET_PATH, f_name))\
+            and \
+            tarfile.is_tarfile(os.path.join(config.BASE_BUCKET_PATH, f_name))
+        #     z_file.find('.tar') != -1
     try:
         return [
-            z_file for z_file in os.listdir(path) if z_file.find('.tar') != -1
-            ]
+            z_file for z_file in os.listdir(path) if is_bundle_package(z_file)]
     except OSError:
         return []
 

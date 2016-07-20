@@ -78,7 +78,7 @@ class SupportBundle(BaseCommand):
         for key in message.keys():
             if key == 'bundle_name':
                 return SupportBundle.get_create_bundle_response(message)
-            elif key == 'bundle_list':
+            elif key == 'bundle_info':
                 return SupportBundle.get_bundle_list_response(message)
 
     @staticmethod
@@ -88,13 +88,27 @@ class SupportBundle(BaseCommand):
         """
         count = 0
         response = ''
-        for tar_file in message.get('bundle_list', None):
+        bundle_info = message.get('bundle_info')
+        for tar_file in bundle_info.get('completed'):
             count += 1
             response = '{}\n {}'.format(response, tar_file)
-        response = 'Bundles are available at {}\n' \
-                   'Total bundles available: {} \n {}'.\
+        response = 'Bundles are available at {}\n\n' \
+                   'Total bundles available: {} {}'.\
             format(message.get('bundle_path'),
                    count, response)
+        in_progress_bundle = ''
+        count = 0
+        for in_progress in bundle_info.get('in_progress'):
+            count += 1
+            in_progress_bundle = '{}\n {}'.format(
+                in_progress_bundle,
+                in_progress
+            )
+        response = '{}\n\nBundling in progress: {}{}'.format(
+            response,
+            count,
+            in_progress_bundle
+        )
         return response
 
     @staticmethod
@@ -108,3 +122,14 @@ class SupportBundle(BaseCommand):
                    'progress.'.format(name)
 
         return response
+
+
+# resp = {'username': 'ignored_for_now', 'message': {'bundle_path':
+# '/var/lib/support_bundles', 'bundle_info': {'in_progress':
+# ['2016-07-13_04-52-51', '2016-07-13_04-52-52', '2016-07-13_04-52-56'],
+# 'completed': ['2016-07-13_04-52-561.tar', '2016-07-13_04-52-533.tar',
+# '2016-07-13_04-152-56.tar']}, 'messageId':
+# '82fcc575-7fda-4738-9520-4e1091a09634'},
+# 'time': '2016-07-19T09:10:10.323633+00:00', 'expires': 3600,
+# 'signature': 'None'}
+# print SupportBundle.get_bundle_list_response(resp['message'])

@@ -33,7 +33,7 @@ class SsplHlProviderSupportBundle(BaseUnitTest):
         request_mock.selection_args = command_args
         bundle_provider = SupportBundleProvider('bundle', 'test_bundle')
         with mock.patch(
-            "sspl_hl.utils.support_bundle.bundle_utils.list_bundle_files"), \
+            "sspl_hl.utils.support_bundle.bundle_utils.get_bundle_info"), \
             mock.patch("sspl_hl.providers.bundle.provider.deferToThread",
                        return_value=defer.succeed(["Bundle1, Bundle2"])):
             bundle_provider.render_query(request_mock)
@@ -48,7 +48,7 @@ class SsplHlProviderSupportBundle(BaseUnitTest):
         request_mock.selection_args = command_args
         bundle_provider = SupportBundleProvider('bundle', 'test_bundle')
         with mock.patch(
-            "sspl_hl.utils.support_bundle.bundle_utils.list_bundle_files"), \
+            "sspl_hl.utils.support_bundle.bundle_utils.get_bundle_info"), \
             mock.patch("sspl_hl.providers.bundle.provider.deferToThread",
                        return_value=defer.fail(FakeError('error'))):
             bundle_provider.render_query(request_mock)

@@ -70,13 +70,13 @@ class SupportBundleHandler(ExecutorSafe):
         """
         logger.debug('Collection of bundle files has Started')
         self._ssu_list = self._cluster_node_manger.get_active_nodes()
-        logger.info('SSU List --->{}'.format(self._ssu_list))
+        logger.info('SSU List : {}'.format(self._ssu_list))
         bundle_dir_info = bundle_utils.get_bundle_dir_config(
             config.SUPPORT_BUNDLE_DIR_STRUCTURE,
             self._ssu_list,
             bundle_name
         )
-        logger.info('Bundle_dir_info --->{}'.format(bundle_dir_info))
+        logger.info('Bundle_dir_info : {}'.format(bundle_dir_info))
         bundle_utils.create_bundle_structure(
             config.BASE_BUCKET_PATH,
             bundle_dir_info
@@ -86,11 +86,15 @@ class SupportBundleHandler(ExecutorSafe):
                                         self._cluster_node_manger.
                                         get_cmu_hostname(),
                                         bundle_name)
-        logger.info('Bundling Info: Bundle_id: {}, Collection_rule: {}'.format(
-            bundle_name, self._file_collection_rules.get_remote_files_info()))
+        logger.info('Bundling Info: Bundle_id: {}, Collection_rule: {}'.
+                    format(bundle_name,
+                           self._file_collection_rules.get_remote_files_info())
+                    )
         self.collect_files_from_cluster()
         SupportBundleHandler.build_tar_bundle(bundle_dir_info)
-        logger.info('Collection of bundle files has Successfully completed!')
+        logger.info('Collection of bundle files has Successfully completed. '
+                    'Bundle ID: {}'.format(bundle_name))
+        return 'success'
 
     def collect_files_from_cluster(self):
         """

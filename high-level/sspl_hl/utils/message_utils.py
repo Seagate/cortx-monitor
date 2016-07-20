@@ -626,7 +626,7 @@ class SupportBundleResponse(CommandResponse):
         Response for Support Bundle.
     """
     BUNDLE_NAME = "bundle_name"
-    BUNDLE_LIST = "bundle_list"
+    BUNDLE_INFO = "bundle_info"
     BUNDLE_PATH = "bundle_path"
 
     def __init__(self):
@@ -643,8 +643,13 @@ class SupportBundleResponse(CommandResponse):
         if command_type == 'create':
             message = {SupportBundleResponse.BUNDLE_NAME: response}
         elif command_type == 'list':
-            message = {SupportBundleResponse.BUNDLE_LIST: response,
-                       SupportBundleResponse.BUNDLE_PATH: config.
-                       BASE_BUCKET_PATH}
+            message = {SupportBundleResponse.BUNDLE_INFO: response,
+                       SupportBundleResponse.BUNDLE_PATH:
+                       config.BASE_BUCKET_PATH}
         self.message.update(message)
         return self.__dict__
+
+
+# print SupportBundleResponse().get_response_message('list',
+# {'in_progress': ['2016-07-13_04-52-51', '2016-07-13_04-52-52',
+        # '2016-07-13_04-52-56'], 'completed': []})
