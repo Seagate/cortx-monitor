@@ -320,24 +320,10 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
             # Serialize to DCS directory for RAS
             self._serialize_disk_status()
 
-        # Allow HDS msg to create a fake drive object for testing via CLI
+        # Halon sent a HDS log message but we don't know about the drive, error
         else:
-            event_path = "HPI_Data_Not_Available/disk/-1/status"
-
-            drive = Drive(self._host_id,
-                          event_path,
-                          jsonMsg.get("status"),
-                          serial_number,
-                          path_id="fictional/drive/path_id/for/testing")
-
-            # Parse the fictional event path so enclosure S/N & disk number is populated
-            drive.parse_drive_mngr_path()
-
-        # Obtain json message containing all relevant data
-        internal_json_msg = drive.toDriveMngrJsonMsg().getJson()
-
-        # Send the json message to the RabbitMQ processor to transmit out
-        self._write_internal_msgQ(RabbitMQegressProcessor.name(), internal_json_msg)
+            logger.warn("DiskMsgHandler, _process_HDS_response, received HDS request \
+                        for unknown drive: %s, jsonMsg: %s" % (serial_number, str(jsonMsg)))
 
     def _transmit_all_drivemanager_responses(self):
         """Transmit all drivemanager data for every drive"""

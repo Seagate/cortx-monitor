@@ -353,7 +353,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
            on completion
         """
         if self._disk_objects[drive_path].get('org.freedesktop.UDisks2.Drive.Ata') is not None:
-            self._log_debug("Running SMART on serial: %s" % drive_path)
+            self._log_debug("Running SMART on drive: %s" % drive_path)
 
             udisk_drive_ata = self._disk_objects[drive_path]['org.freedesktop.UDisks2.Drive.Ata']
             dev_obj = self._bus.get_object('org.freedesktop.UDisks2', drive_path)
@@ -381,6 +381,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                   if m]
 
         # Loop through all the drives and initiate a SMART test
+        self._smart_jobs = {}
         for drive in drives:
             try:
                 if self._disk_objects[drive['path']].get('org.freedesktop.UDisks2.Drive') is not None:
@@ -682,8 +683,9 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
 
     def _process_smart_status(self, disk_path, smart_status, serial_number):
         """Create the status_reason field and notify disk msg handler"""
+        # Interface was removed before test completed so reschedule
         if len(smart_status) == 0:
-            self._log_debug("SMART result not ready on drive: %s" % serial_number)
+            self._schedule_SMART_test(disk_path)
             return
 
         # Possible SMART status for systemd described at
@@ -692,9 +694,13 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
             smart_status.lower() == "inprogress":
             status_reason = "OK_None"
         elif smart_status.lower() == "interrupted":
-            status_reason = "Unknown_smart_interrupted"
+            self._log_debug("SMART test interrupted on drive, rescheduling: %s" % serial_number)
+            self._schedule_SMART_test(disk_path)
+            return
         elif smart_status.lower() == "aborted":
-            status_reason = "Unknown_smart_aborted"
+            self._log_debug("SMART test aborted on drive, rescheduling: %s" % serial_number)
+            self._schedule_SMART_test(disk_path)
+            return
         elif smart_status.lower() == "fatal":
             status_reason = "Failed_smart_failure"
         elif smart_status.lower() == "error_unknown":
