@@ -355,10 +355,8 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
         if self._disk_objects[drive_path].get('org.freedesktop.UDisks2.Drive.Ata') is not None:
             self._log_debug("Running SMART on drive: %s" % drive_path)
 
-            udisk_drive_ata = self._disk_objects[drive_path]['org.freedesktop.UDisks2.Drive.Ata']
-            dev_obj = self._bus.get_object('org.freedesktop.UDisks2', drive_path)
-
             # Obtain an interface to the ATA drive and start the SMART test
+            dev_obj = self._bus.get_object('org.freedesktop.UDisks2', drive_path)
             idev_obj = Interface(dev_obj, 'org.freedesktop.UDisks2.Drive.Ata')
             idev_obj.SmartSelftestStart(test_type, {})
         else:
@@ -668,12 +666,14 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                     	    udisk_drive_ata = self._disk_objects[disk_path]['org.freedesktop.UDisks2.Drive.Ata']
                     	    smart_status = str(udisk_drive_ata["SmartSelftestStatus"])
 
-                            udisk_drive = self._disk_objects[disk_path]['org.freedesktop.UDisks2.Drive']
-                            serial_number = str(udisk_drive["Serial"])
-                            self._log_debug("  Serial Number: %s, SMART status: %s" % (serial_number, smart_status))
-
                             # Process the SMART status and cleanup
-                            self._process_smart_status(disk_path, smart_status, serial_number)
+                            if len(smart_status) != 0:
+                                udisk_drive = self._disk_objects[disk_path]['org.freedesktop.UDisks2.Drive']
+                                serial_number = str(udisk_drive["Serial"])
+
+                                self._log_debug("  Serial Number: %s, SMART status: %s" % (serial_number, smart_status))
+                                self._process_smart_status(disk_path, smart_status, serial_number)
+
                             self._smart_jobs[object_path] = None
                             return
 
@@ -683,10 +683,6 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
 
     def _process_smart_status(self, disk_path, smart_status, serial_number):
         """Create the status_reason field and notify disk msg handler"""
-        # Interface was removed before test completed so reschedule
-        if len(smart_status) == 0:
-            self._schedule_SMART_test(disk_path)
-            return
 
         # Possible SMART status for systemd described at
         # http://udisks.freedesktop.org/docs/latest/gdbus-org.freedesktop.UDisks2.Drive.Ata.html#gdbus-property-org-freedesktop-UDisks2-Drive-Ata.SmartSelftestStatus
