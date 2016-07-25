@@ -85,7 +85,7 @@ class CommandLine(Debug):
 
             elif command_request == "mount" or \
                  command_request == "umount":
-                command = "sudo {}".format(node_request[5:].strip())
+                command = "sudo {}".format(node_request[5:].strip().lower())
 
             else:
                 return "Error: SSPL [command] [action], command must be swap/mount/umount"

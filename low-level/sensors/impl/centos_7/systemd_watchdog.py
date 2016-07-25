@@ -622,9 +622,6 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
 
     def _interface_removed(self, object_path, interfaces):
         """Callback for when an interface like drive or SMART job has been removed"""
-        self._log_debug("Interface Removed")
-        self._log_debug("  Object Path: %r" % object_path)
-
         for interface in interfaces:
             try:
                 # Handle drives removed
@@ -643,6 +640,8 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                         # Serial numbers are limited to 20 chars string with drive keyword
                         serial_number = tmp_serial[tmp_serial.rfind("drive"):]
 
+                    self._log_debug("Drive Interface Removed")
+                    self._log_debug("  Object Path: %r" % object_path)
                     self._log_debug("  Serial Number: %s" % serial_number)
 
                     # Generate and send an internal msg to DiskMsgHandler
@@ -671,11 +670,17 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                                 udisk_drive = self._disk_objects[disk_path]['org.freedesktop.UDisks2.Drive']
                                 serial_number = str(udisk_drive["Serial"])
 
+                                self._log_debug("SMART Job Interface Removed")
+                                self._log_debug("  Object Path: %r" % object_path)
                                 self._log_debug("  Serial Number: %s, SMART status: %s" % (serial_number, smart_status))
                                 self._process_smart_status(disk_path, smart_status, serial_number)
 
                             self._smart_jobs[object_path] = None
                             return
+
+                else:
+                    self._log_debug("Systemd Interface Removed")
+                    self._log_debug("  Object Path: %r" % object_path)
 
             except Exception as ae:
             	self._log_debug("interface_removed: Exception: %r" % ae) # Drive was removed during SMART?

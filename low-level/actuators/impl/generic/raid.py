@@ -61,8 +61,10 @@ class RAIDactuator(Debug):
             process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             response, error = process.communicate()
 
-            if error:
-                response = "Error: {0}".format(error)
+            if "error" in error.lower():
+                response = "{0}".format(error)
+            else:
+                response = "Success"
 
             self._log_debug("perform_request, RAID response: %s" % response)
 
