@@ -185,11 +185,10 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     for serial_number in self._drvmngr_drives:
                         drive = self._drvmngr_drives[serial_number]
 
-                        if drive.get_drive_status().lower() == "inuse_ok" or \
-                           drive.get_drive_status().lower() == "ok_none":
-                            response = "Passed"
-                        else:
+                        if "failed_smart" in drive.get_drive_status().lower():
                             response = "Failed"
+                        else:
+                            response = "Passed"
 
                         self._log_debug("_processMsg, disk smart test, drive test status: %s" % 
                                     response)
@@ -202,11 +201,11 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     return
 
                 elif self._drvmngr_drives.get(serial_number) is not None:
-                    if self._drvmngr_drives[serial_number].get_drive_status().lower() == "inuse_ok" or \
-                       self._drvmngr_drives[serial_number].get_drive_status().lower() == "ok_none":
-                        response = "Passed"
-                    else:
+                    if "failed_smart" in self._drvmngr_drives[serial_number].get_drive_status().lower():
                         response = "Failed"
+                    else:
+                        response = "Passed"
+
                     self._log_debug("_processMsg, disk smart test, drive test status: %s" % 
                                     response)
                 else:
