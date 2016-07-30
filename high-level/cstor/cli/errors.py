@@ -35,7 +35,7 @@ class BaseError(Exception):
         self.desc = desc or self.desc
 
 
-class CommandTerminated(BaseError):
+class CommandTerminated(KeyboardInterrupt):
     """
         This error will be raised when some command is terminated during
         the processing
