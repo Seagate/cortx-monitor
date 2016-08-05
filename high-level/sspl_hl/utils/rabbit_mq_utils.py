@@ -68,14 +68,19 @@ class HalondRMQ(RabbitMQConfiguration):
         """
 
         super(HalondRMQ, self).__init__(config_file_path)
-        self._connection = pika.BlockingConnection(
-            pika.ConnectionParameters(
-                host=self.host,
-                virtual_host=self.virtual_host,
-                credentials=pika.PlainCredentials(
-                    self.username,
-                    self.password)))
-        self._channel = self._connection.channel()
+        try:
+            self._connection = pika.BlockingConnection(
+                pika.ConnectionParameters(
+                    host=self.host,
+                    virtual_host=self.virtual_host,
+                    credentials=pika.PlainCredentials(
+                        self.username,
+                        self.password)))
+            self._channel = self._connection.channel()
+        except AMQPError as err:
+            log.warning('RMQ connections could not be established. '
+                        'Details: {}'.format(str(err)))
+            raise
 
     def close_connection(self):
         """
@@ -107,10 +112,23 @@ class HalondConsumer(HalondRMQ):
         self.routing_key = self.exchange
         log.info('RMQ Consumer config: {}'.format(self.__dict__))
 
-        self._channel.queue_declare(queue=self.exchange_queue, exclusive=True)
-        self._channel.queue_bind(exchange=self.exchange,
-                                 queue=self.exchange_queue,
-                                 routing_key=self.routing_key)
+        try:
+            self._channel.exchange_declare(exchange=self.exchange,
+                                           type='direct')
+        except AMQPError as err:
+            log.warning('Exchange: [{}], type: [ direct ] cannot be declared.'
+                        ' Details: {}'.format(self.exchange, str(err)))
+
+        try:
+            self._channel.queue_declare(queue=self.exchange_queue,
+                                        exclusive=True)
+            self._channel.queue_bind(exchange=self.exchange,
+                                     queue=self.exchange_queue,
+                                     routing_key=self.routing_key)
+        except AMQPError as err:
+            log.error('Halon consumer Fails to initialize the channel.'
+                      'Details: {}'.format(str(err)))
+            raise
         log.info('Initialized Exchange: {}, Queue: {} (exclusive),'
                  ' routing_key: {}'.format(self.exchange,
                                            self.exchange_queue,
@@ -159,13 +177,18 @@ class HalondPublisher(HalondRMQ):
     def declare_exchange_and_queue(self):
         """ Declares rabbitmq exchanges and queues
         """
-        self._channel.exchange_declare(
-            exchange=self.exchange,
-            type=self.exchange_type,
-            auto_delete=False)
-        log.info('Declared Exchange: {}, type: {}, auto_delete: {}'.format(
-            self.exchange, self.exchange_type, False
-        ))
+        try:
+            self._channel.exchange_declare(
+                exchange=self.exchange,
+                type=self.exchange_type,
+                auto_delete=False)
+            log.info('Declared Exchange: {}, type: {}, auto_delete: {}'.format(
+                self.exchange, self.exchange_type, False
+            ))
+        except AMQPError as err:
+            log.warning('Exchange declaration Failed. Details: {}'.format(
+                str(err))
+            )
 
     def publish_message(self, message):
         """
@@ -180,10 +203,14 @@ class HalondPublisher(HalondRMQ):
                 routing_key=self.routing_key,
                 body=json.dumps(message))
         except AMQPError as err:
-            log.warning('Message Publish Failed. Details: [{}]'.format(
-                str(err)))
+            log.warning(
+                'Message Publish Failed to Xchange: [{}], Key: [{}], Msg: {}. '
+                'Details: {}'.format(self.exchange,
+                                     self.routing_key,
+                                     message,
+                                     str(err)))
         else:
-            log.info('Message Published to Xch: [{}], Key: [{}], Msg: {}'.
+            log.info('Message Published to Xchange: [{}], Key: [{}], Msg: {}'.
                      format(self.exchange, self.routing_key, message))
 
 

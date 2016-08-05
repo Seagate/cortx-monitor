@@ -2,6 +2,8 @@
 import json
 
 import pika
+import sys
+
 from sspl_hl.utils.message_utils import FileSystemStatusQueryRequest
 
 
@@ -86,6 +88,11 @@ class HalonReqRespHandler(object):
         channel.start_consuming()
 
 
-msg = generate_fs_status_req_msg()
-HalonReqRespHandler.publish_halon_msg(msg)
-#HalonReqRespHandler.subscribe_halon_response()
+if len(sys.argv) > 1:
+    HalonReqRespHandler.subscribe_halon_response()
+else:
+    try:
+        msg = generate_fs_status_req_msg()
+        HalonReqRespHandler.publish_halon_msg(msg)
+    except KeyboardInterrupt:
+        print 'Ctrl has been pressed.'
