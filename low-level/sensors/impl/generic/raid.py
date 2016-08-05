@@ -65,6 +65,12 @@ class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
         self._RAID_status_file = self._get_RAID_status_file()
         logger.info("          Monitoring RAID status file: %s" % self._RAID_status_file)
 
+        # The status file contents
+        self._RAID_status_contents = "N/A"
+
+        # The mdX status line in the status file
+        self._RAID_status = "N/A"
+
     def read_data(self):
         """Return the Current RAID status information"""
         return self._RAID_status
@@ -104,13 +110,13 @@ class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
         with open(self._RAID_status_file, "r") as datafile:
             status = datafile.read()
 
-        # Do nothing if the RAID status has not changed
-        if self._RAID_status == status:
+        # Do nothing if the RAID status file has not changed
+        if self._RAID_status_contents == status:
             self._log_debug("_notify_NodeDataMsgHandler status unchanged, ignoring: %s" % status)
             return
 
-        # Update the RAID status
-        self._RAID_status = status
+        # Update the RAID status contents of file
+        self._RAID_status_contents = status
 
         # Process mdstat file and send json msg to NodeDataMsgHandler
         self._process_mdstat()
@@ -118,7 +124,7 @@ class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
     def _process_mdstat(self):
         """Parse out status' and path info for each drive"""
         # Replace new line chars with spaces
-        mdstat = self._RAID_status.strip().split("\n")
+        mdstat = self._RAID_status_contents.strip().split("\n")
 
         # Array of optional identity json sections for drives in array
         self._identity = {}
@@ -143,6 +149,14 @@ class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
 
             # Parse out status' and path info for each drive
             if "md" in fields[0]:
+                # See if the status line has changed, if not there's nothing to do
+                if self._RAID_status == line:
+                    self._log_debug("RAID status has not changed, ignoring: %s" % line)
+                    return
+                else:
+                    self._log_debug("RAID status has changed, old: %s, new: %s" % (self._RAID_status, line))
+                    self._RAID_status = line
+
                 self._device = self._device = "/dev/{}".format(fields[0])
                 self._log_debug("md device found: %s" % self._device)
 
@@ -177,6 +191,7 @@ class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
         # Parse out x for total number of drives
         first_bracket_index = status_line.find('[')
         total_drives = int(status_line[first_bracket_index + 1])
+        self._log_debug("_parse_raid_status, total_drives: %d" % total_drives)
 
         # Break the  line apart into separate fields
         fields = status_line.split(" ")
@@ -190,24 +205,24 @@ class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
         self._drives = []
 
         drive_index = 0
-        while total_drives > 0:
+        while drive_index < total_drives:
             # Create the json msg and append it to the list
             if self._identity.get(drive_index) is not None:
                 path = self._identity.get(drive_index).get("path")
                 drive_status_msg = {
-                                 "status" : status[total_drives],
+                                 "status" : status[drive_index + 1],  # Move past '['
                                  "identity": {
                                     "path": path,
                                     "serialNumber": "None"
                                     }
                                 }
             else:
-                drive_status_msg = {"status" : status[total_drives]}
+                drive_status_msg = {"status" : status[drive_index + 1]}  # Move past '['
 
+            self._log_debug("_parse_raid_status, drive_index: %d" % drive_index)
+            self._log_debug("_parse_raid_status, drive_status_msg: %s" % drive_status_msg)
             self._drives.append(drive_status_msg)
 
-            # Total drives gets decremented and drive index gets incremented
-            total_drives = total_drives - 1
             drive_index = drive_index + 1
 
     def _send_json_msg(self):

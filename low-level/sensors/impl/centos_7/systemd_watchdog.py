@@ -695,8 +695,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
             smart_status.lower() == "inprogress":
             status_reason = "OK_None"
         elif smart_status.lower() == "interrupted":
-            self._log_debug("SMART test interrupted on drive, rescheduling: %s" % serial_number)
-            self._schedule_SMART_test(disk_path)
+            # Ignore if the test was interrupted, not conclusive
             return
         elif smart_status.lower() == "aborted":
             self._log_debug("SMART test aborted on drive, rescheduling: %s" % serial_number)
@@ -796,9 +795,35 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
 
     def _getSMART_interval(self):
         """Retrieves the frequency to run SMART tests on all the drives"""
-        return int(self._conf_reader._get_value_with_default(self.SYSTEMDWATCHDOG,
+        smart_interval = int(self._conf_reader._get_value_with_default(self.SYSTEMDWATCHDOG,
                                                          self.SMART_TEST_INTERVAL,
                                                          86400))
+        # Add a sanity check to avoid constant looping, 15 minute minimum (900 secs)
+        if smart_interval < 900:
+            smart_interval = 900
+        return smart_interval
+
+
+    # TODO handle boolean values
+    def _getShort_SMART_enabled(self):
+        """Retrieves the flag indicating to run short tests periodically"""
+        smart_interval = int(self._conf_reader._get_value_with_default(self.SYSTEMDWATCHDOG,
+                                                         self.SMART_TEST_INTERVAL,
+                                                         86400))
+        return smart_interval
+
+    def _getConveyance_SMART_enabled(self):
+        """Retrieves the flag indicating to run conveyance tests when a disk is inserted"""
+        smart_interval = int(self._conf_reader._get_value_with_default(self.SYSTEMDWATCHDOG,
+                                                         self.SMART_TEST_INTERVAL,
+                                                         86400))
+        # Add a sanity check to avoid constant looping, 15 minute minimum (900 secs)
+        if smart_interval < 900:
+            smart_interval = 900            
+        return smart_interval
+
+
+
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""
         super(SystemdWatchdog, self).shutdown()
