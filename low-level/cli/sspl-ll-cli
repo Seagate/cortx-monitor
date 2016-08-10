@@ -119,7 +119,8 @@ def main():
                             help="get LED state of a drive. ie /dev/sda1 or s/n")
         parser.add_argument("--LEDstate", metavar="LEDSTATE", help="FAULT_ON, FAULT_OFF, IDENTIFY_ON, IDENTIFY_OFF,"\
                             "PULSE_SLOW_ON, PULSE_SLOW_OFF, PULSE_FAST_ON, PULSE_FAST_OFF")
-        
+        group.add_argument("--expreset", action="store_true", help="trigger expander reset")
+
         # Process arguments
         args = parser.parse_args()
 
@@ -415,6 +416,27 @@ def main():
             file = "/opt/seagate/sspl/low-level/tests/manual/actuator_msgs/sensor_request_raid_data.json"
             jsonMsg = json.loads(open(file).read())
             _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human)
+
+        elif args.expreset:
+            # Trigger expander reset
+
+            # Get the SG device
+            command = "ls /sys/class/enclosure/*/device/scsi_generic"
+
+            # Run the command and get the response and error returned
+            process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            response, error = process.communicate()
+
+            sg_dev = "/dev/{}".format(response.rstrip('\n'))
+            command = "wbcli {} reboot".format(sg_dev)
+
+            # Run the command and get the response and error returned
+            process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            response, error = process.communicate()
+            if error:
+                print("Error triggering expander reset: %s" % str(error))
+            if response:
+                print("Triggering expander reset: %s" % str(response))
 
         elif args.fromstdin:
             print("Ctrl-D stop reading from stdin and transmit.  Multiple msgs can be piped in.")

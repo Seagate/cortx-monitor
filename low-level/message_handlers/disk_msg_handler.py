@@ -540,7 +540,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                             internal_json_msg)
             self._write_internal_msgQ(RabbitMQegressProcessor.name(), internal_json_msg)
 
-        # Disk is not available in HPI, started up with a drive missing
+        # Disk is not available in HPI, started up with a drive missing or HPI needs refreshed
         else:
             logger.info("DiskMsgHandler, S/N=ZBX_NOTPRESENT for %s" % jsonMsg.get("event_path"))
 
@@ -555,6 +555,15 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
             self._write_file(disk_dir + "/serial_number", "NOTPRESENT")
             self._write_file(disk_dir + "/status", "EMPTY")
             self._write_file(disk_dir + "/reason", "None")
+
+            # Restart openhpid to update HPI data in case it's not available
+            internal_json_msg = json.dumps(
+                                    {"actuator_request_type": {
+                                        "service_controller": {
+                                            "service_name" : "openhpid.service",
+                                            "service_request": "restart"
+                                }}})
+            self._write_internal_msgQ(ServiceMsgHandler.name(), internal_json_msg)
 
     def _write_file(self, file_path, contents):
         """Writes the contents to file_path"""

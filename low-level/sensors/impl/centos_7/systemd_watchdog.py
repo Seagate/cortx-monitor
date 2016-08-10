@@ -79,6 +79,10 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
 
         # Delay so thread doesn't spin unnecessarily when not in use
         self._thread_sleep = 1.0
+        
+        # Location of hpi data directory populated by dcs-collector
+        self._hpi_base_dir = "/tmp/dcs/hpi"
+        self._start_delay  = 10
 
     def initialize(self, conf_reader, msgQlist):
         """initialize configuration reader and internal msg queues"""
@@ -110,6 +114,12 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
 
         #self._set_debug(True)
         #self._set_debug_persist(True)
+
+        # Wait for the dcs-collector to populate the /tmp/dcs/hpi directory
+        while not os.path.isdir(self._hpi_base_dir):
+            logger.info("SystemdWatchdog, dir not found: %s " % self._hpi_base_dir)
+            logger.info("SystemdWatchdog, rechecking in %s secs" % self._start_delay)
+            time.sleep(int(self._start_delay))
 
         # Allow time for the hpi_monitor to come up
         time.sleep(60)
@@ -239,7 +249,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
 
                 # Perform SMART tests and refresh drive list on a regular interval
                 if datetime.now() > self._next_smart_tm:
-                    self._init_drives()
+                    self._init_drives(stagger=True)
 
                 # Search for new wildcard services suddenly appearing, ie m0d@<fid>
                 step += 1
@@ -362,7 +372,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
         else:
             self._log_debug("Drive does not support SMART: %s" % drive_path)
 
-    def _init_drives(self):
+    def _init_drives(self, stagger=False):
         """Notifies DiskMsgHanlder of available drives and schedules a short SMART test"""
 
         # Update the drive's by-id symlink paths
@@ -400,7 +410,9 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                     # Notify internal msg handlers who need to map device name to serial numbers
                     self._notify_msg_handler_sn_device_mappings(drive['path'], serial_number)
 
-                    # Schedule a SMART test to begin
+                    # Schedule a SMART test to begin, if regular intervals then stagger
+                    if stagger:
+                        time.sleep(2)
                     self._schedule_SMART_test(drive['path'])
 
             except Exception as ae:
@@ -800,28 +812,27 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                                                          86400))
         # Add a sanity check to avoid constant looping, 15 minute minimum (900 secs)
         if smart_interval < 900:
-            smart_interval = 900
+            smart_interval = 86400
         return smart_interval
 
 
-    # TODO handle boolean values
+    # TODO handle boolean values from conf file
     def _getShort_SMART_enabled(self):
         """Retrieves the flag indicating to run short tests periodically"""
         smart_interval = int(self._conf_reader._get_value_with_default(self.SYSTEMDWATCHDOG,
-                                                         self.SMART_TEST_INTERVAL,
+                                                         self.SMART_SHORT_ENABLED,
                                                          86400))
         return smart_interval
 
     def _getConveyance_SMART_enabled(self):
         """Retrieves the flag indicating to run conveyance tests when a disk is inserted"""
         smart_interval = int(self._conf_reader._get_value_with_default(self.SYSTEMDWATCHDOG,
-                                                         self.SMART_TEST_INTERVAL,
+                                                         self.SMART_CONVEYANCE_ENABLED,
                                                          86400))
         # Add a sanity check to avoid constant looping, 15 minute minimum (900 secs)
         if smart_interval < 900:
-            smart_interval = 900            
+            smart_interval = 900
         return smart_interval
-
 
 
     def shutdown(self):

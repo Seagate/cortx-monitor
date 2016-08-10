@@ -35,6 +35,8 @@ from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 from json_msgs.messages.actuators.ack_response import AckResponseMsg
 
 from message_handlers.disk_msg_handler import DiskMsgHandler
+from message_handlers.service_msg_handler import ServiceMsgHandler
+
 from zope.component import queryUtility
 
 
@@ -203,6 +205,16 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
                 json_msg = AckResponseMsg(node_request, raid_response, uuid).getJson()
                 self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+
+                # Restart openhpid to update HPI data
+                if "assemble" in jsonMsg.get("actuator_request_type").get("node_controller").get("node_request").lower():
+                    internal_json_msg = json.dumps(
+                                       {"actuator_request_type": {
+                                            "service_controller": {
+                                                "service_name" : "openhpid.service",
+                                                "service_request": "restart"
+                                        }}})
+                    self._write_internal_msgQ(ServiceMsgHandler.name(), internal_json_msg)
 
             elif component == "IPMI":
                 # Query the Zope GlobalSiteManager for an object implementing the IPMI actuator

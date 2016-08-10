@@ -52,6 +52,10 @@ class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
                                          self.PRIORITY)
         # Current RAID status information
         self._RAID_status = None
+        
+        # Location of hpi data directory populated by dcs-collector
+        self._hpi_base_dir = "/tmp/dcs/hpi"
+        self._start_delay  = 10
 
     def initialize(self, conf_reader, msgQlist):
         """initialize configuration reader and internal msg queues"""
@@ -77,6 +81,12 @@ class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
 
     def run(self):
         """Run the sensor on its own thread"""
+
+        # Wait for the dcs-collector to populate the /tmp/dcs/hpi directory
+        while not os.path.isdir(self._hpi_base_dir):
+            logger.info("RAIDsensor, dir not found: %s " % self._hpi_base_dir)
+            logger.info("RAIDsensor, rechecking in %s secs" % self._start_delay)
+            time.sleep(int(self._start_delay))
 
         # Allow systemd to process all the drives so we can map device name to serial numbers
         time.sleep(120)
@@ -136,10 +146,11 @@ class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
             # The line following the mdXXX : ... contains the [UU] status that we need
             if md_line_parsed == True:
                 # Format is [x/y][UUUU____...]
-                self._parse_raid_status(line)
+                success = self._parse_raid_status(line)
 
                 # Create a raid_msg and send it out
-                self._send_json_msg()
+                if success:
+                    self._send_json_msg()
 
                 # Reset in case their are multiple configs in file
                 md_line_parsed = False
@@ -149,14 +160,6 @@ class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
 
             # Parse out status' and path info for each drive
             if "md" in fields[0]:
-                # See if the status line has changed, if not there's nothing to do
-                if self._RAID_status == line:
-                    self._log_debug("RAID status has not changed, ignoring: %s" % line)
-                    return
-                else:
-                    self._log_debug("RAID status has changed, old: %s, new: %s" % (self._RAID_status, line))
-                    self._RAID_status = line
-
                 self._device = self._device = "/dev/{}".format(fields[0])
                 self._log_debug("md device found: %s" % self._device)
 
@@ -170,18 +173,29 @@ class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
         """Adds a drive to the list"""
         first_bracket_index = field.find('[')
 
-        # Next char is the drive index
-        drive_index = int(field[first_bracket_index + 1])
+        # Parse out the drive path
         drive_path = "/dev/{}".format(field[: first_bracket_index])
+
+        # Parse out the drive index into [UU] status which is Device Role field
+        detail_command = "/usr/sbin/mdadm --examine {} | grep 'Device Role'".format(drive_path)
+        response, error = self._run_command(detail_command)
+
+        if error:
+            self._log_debug("_add_drive, Error retrieving drive index into status, example: [U_]: %s" %
+                            str(error))
+        try:
+            drive_index = int(response.split(" ")[-1])
+        except Exception as ae:
+            self._log_debug("_add_drive, get drive_index error: %s" % str(ae))
+            return
         self._log_debug("_add_drive, drive index: %d, path: %s" %
                         (drive_index, drive_path))
 
         # Create the json msg, serial number will be filled in by NodeDataMsgHandler
         identity_data = {
-                            "path" : drive_path,
-                            "serialNumber" : "None"
-                            }
-
+                        "path" : drive_path,
+                        "serialNumber" : "None"
+                        }
         self._identity[drive_index] = identity_data
 
     def _parse_raid_status(self, status_line):
@@ -200,6 +214,14 @@ class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
         status = fields[-1]
         self._log_debug("_parse_raid_status, status: %s, total drives: %d" %
                         (status, total_drives))
+
+        # See if the status line has changed, if not there's nothing to do
+        if self._RAID_status == status:
+            self._log_debug("RAID status has not changed, ignoring: %s" % status)
+            return False
+        else:
+            self._log_debug("RAID status has changed, old: %s, new: %s" % (self._RAID_status, status))
+            self._RAID_status = status
 
         # Array of raid drives in json format based on schema
         self._drives = []
@@ -225,6 +247,8 @@ class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
 
             drive_index = drive_index + 1
 
+        return True
+
     def _send_json_msg(self):
         """Transmit data to NodeDataMsgHandler to be processed and sent out"""
 
@@ -245,6 +269,19 @@ class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
         # Send the event to node data message handler to generate json message and send out
         self._write_internal_msgQ(NodeDataMsgHandler.name(), internal_json_msg)
 
+    def _run_command(self, command):
+        """Run the command and get the response and error returned"""
+        self._log_debug("_run_command: %s" % command)
+        process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        response, error = process.communicate()
+
+        if response:
+	       self._log_debug("_run_command, response: %s" % str(response))
+        if error:
+	       self._log_debug("_run_command: error: %s" % str(error))
+
+        return response.rstrip('\n'), error.rstrip('\n')
+ 
     def _get_RAID_status_file(self):
         """Retrieves the file containing the RAID status information"""
         return self._conf_reader._get_value_with_default(self.RAIDSENSOR,
