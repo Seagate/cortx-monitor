@@ -115,6 +115,9 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
         #self._set_debug(True)
         #self._set_debug_persist(True)
 
+        # Integrate into the main dbus loop to catch events
+        DBusGMainLoop(set_as_default=True)
+
         # Wait for the dcs-collector to populate the /tmp/dcs/hpi directory
         while not os.path.isdir(self._hpi_base_dir):
             logger.info("SystemdWatchdog, dir not found: %s " % self._hpi_base_dir)
@@ -130,9 +133,6 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
         self._log_debug("Start accepting requests")
 
         try:
-            # Integrate into the main dbus loop to catch events
-            DBusGMainLoop(set_as_default=True)
-
             # Connect to dbus system wide
             self._bus = SystemBus()
 

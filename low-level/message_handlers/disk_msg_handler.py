@@ -556,14 +556,15 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
             self._write_file(disk_dir + "/status", "EMPTY")
             self._write_file(disk_dir + "/reason", "None")
 
-            # Restart openhpid to update HPI data in case it's not available
-            internal_json_msg = json.dumps(
+            # Restart openhpid to update HPI data in case it's not available if we're not initializing
+            if self._drvmngr_drives:
+                internal_json_msg = json.dumps(
                                     {"actuator_request_type": {
                                         "service_controller": {
                                             "service_name" : "openhpid.service",
                                             "service_request": "restart"
-                                }}})
-            self._write_internal_msgQ(ServiceMsgHandler.name(), internal_json_msg)
+                                    }}})
+                self._write_internal_msgQ(ServiceMsgHandler.name(), internal_json_msg)
 
     def _write_file(self, file_path, contents):
         """Writes the contents to file_path"""
