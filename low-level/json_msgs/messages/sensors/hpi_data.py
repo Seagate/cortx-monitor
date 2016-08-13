@@ -132,6 +132,12 @@ class HPIDataMsg(BaseSensorMsg):
 
     def getWWN(self):
         return self._wwn
-    
+
+    def setDiskPowered(self, _powered):
+        self._json["message"]["sensor_response_type"][self.SENSOR_RESPONSE_TYPE]["diskPowered"] = _powered
+
+    def setDiskInstalled(self, _installed):
+        self._json["message"]["sensor_response_type"][self.SENSOR_RESPONSE_TYPE]["diskInstalled"] = _installed
+
     def set_uuid(self, _uuid):
         self._json["message"]["sspl_ll_msg_header"]["uuid"] = _uuid

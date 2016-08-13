@@ -291,6 +291,22 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     json_msg = AckResponseMsg(node_request, response, uuid).getJson()
                     self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
 
+            elif sensor_request_type == "sim_event":
+                logger.info("DiskMsgHandler, node_request: %s serial_number: %s" %
+                            (node_request, serial_number))
+
+                if node_request == "DRIVE_UNINSTALL":
+                    logger.info("DiskMsgHandler, simulating drive uninstall")
+                    self._sim_drive_uninstall(serial_number)                    
+
+                elif node_request == "DRIVE_INSTALL":
+                    logger.info("DiskMsgHandler, simulating drive uninstall")
+                    self._sim_drive_install(serial_number) 
+
+                elif node_request == "EXP_RESET":
+                    logger.info("DiskMsgHandler, simulating exp_reset")
+                    self._sim_exp_reset(serial_number) 
+
             # ... handle other disk sensor request types
             else:
                 logger.warn("DiskMsgHandler, received unknown sensor request msg: %s" % jsonMsg)
@@ -302,6 +318,94 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
             response = "DiskMsgHandler, received unknown msg: %s" % jsonMsg
             json_msg = AckResponseMsg(node_request, response, uuid).getJson()
             self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+
+    def _sim_exp_reset(self, serial_number):
+        """Handle simulating an expander reset"""
+        # Send the expander reset message
+        expanderResetMsg = ExpanderResetMsg()
+        internal_json_msg = expanderResetMsg.getJson()
+
+        # Send the json message to the RabbitMQ processor to transmit out
+        self._write_internal_msgQ(RabbitMQegressProcessor.name(), internal_json_msg)
+
+        # Loop thru all the drivemanager drives and set to EMPTY_None to simulate drive dropping out of OS
+        for serial_number in self._drvmngr_drives:
+            drive = self._drvmngr_drives[serial_number]
+
+            # Obtain json message containing all relevant data
+            json_msg = drive.toDriveMngrJsonMsg()
+            json_msg.setStatus("EMPTY_None")
+            internal_json_msg = json_msg.getJson()
+
+            # Send the json message to the RabbitMQ processor to transmit out
+            self._write_internal_msgQ(RabbitMQegressProcessor.name(), internal_json_msg)
+
+        # Loop thru all the drivemanager drives and set to EMPTY_None to simulate drive dropping out of OS
+        for serial_number in self._drvmngr_drives:
+            drive = self._drvmngr_drives[serial_number]
+
+            # Obtain json message containing all relevant data
+            json_msg = drive.toDriveMngrJsonMsg()
+            json_msg.setStatus("OK_None")
+            internal_json_msg = json_msg.getJson()
+
+            # Send the json message to the RabbitMQ processor to transmit out
+            self._write_internal_msgQ(RabbitMQegressProcessor.name(), internal_json_msg)
+
+    def _sim_drive_uninstall(self, serial_number):
+        """Handle simulate drive uninstalled events sent from cli"""
+        if self._drvmngr_drives.get(serial_number) is not None:
+            drive = self._drvmngr_drives[serial_number]
+
+            # Obtain json message containing all relevant data
+            json_msg = drive.toDriveMngrJsonMsg()
+            json_msg.setStatus("EMPTY_None")
+            internal_json_msg = json_msg.getJson()
+
+            # Send the json message to the RabbitMQ processor to transmit out
+            self._log_debug("_process_msg, internal_json_msg: %s" % internal_json_msg)
+            self._write_internal_msgQ(RabbitMQegressProcessor.name(), internal_json_msg)
+
+        if self._hpi_drives.get(serial_number) is not None:
+            drive = self._hpi_drives[serial_number]
+
+            # Obtain json message containing all relevant data
+            json_msg = drive.toHPIjsonMsg()
+            json_msg.setDiskPowered(False)
+            json_msg.setDiskInstalled(False)
+            internal_json_msg = json_msg.getJson()
+
+            # Send the json message to the RabbitMQ processor to transmit out
+            self._log_debug("_process_msg, internal_json_msg: %s" % internal_json_msg)
+            self._write_internal_msgQ(RabbitMQegressProcessor.name(), internal_json_msg)
+
+    def _sim_drive_install(self, serial_number):
+        """Handle simulate drive installed events sent from cli"""
+        if self._drvmngr_drives.get(serial_number) is not None:
+            drive = self._drvmngr_drives[serial_number]
+
+            # Obtain json message containing all relevant data
+            json_msg = drive.toDriveMngrJsonMsg()
+            json_msg.setStatus("OK_None")
+            internal_json_msg = json_msg.getJson()
+
+            # Send the json message to the RabbitMQ processor to transmit out
+            self._log_debug("_process_msg, internal_json_msg: %s" % internal_json_msg)
+            self._write_internal_msgQ(RabbitMQegressProcessor.name(), internal_json_msg)
+
+        if self._hpi_drives.get(serial_number) is not None:
+            drive = self._hpi_drives[serial_number]
+
+            # Obtain json message containing all relevant data
+            json_msg = drive.toHPIjsonMsg()
+            json_msg.setDiskPowered(True)
+            json_msg.setDiskInstalled(True)
+            internal_json_msg = json_msg.getJson()
+
+            # Send the json message to the RabbitMQ processor to transmit out
+            self._log_debug("_process_msg, internal_json_msg: %s" % internal_json_msg)
+            self._write_internal_msgQ(RabbitMQegressProcessor.name(), internal_json_msg)
+
 
     def _process_HDS_response(self, jsonMsg, serial_number):
         """Process a disk_status_HDS msg sent from logging msg handler"""

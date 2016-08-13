@@ -120,6 +120,11 @@ def main():
         parser.add_argument("--LEDstate", metavar="LEDSTATE", help="FAULT_ON, FAULT_OFF, IDENTIFY_ON, IDENTIFY_OFF,"\
                             "PULSE_SLOW_ON, PULSE_SLOW_OFF, PULSE_FAST_ON, PULSE_FAST_OFF")
         group.add_argument("--expreset", action="store_true", help="trigger expander reset")
+        parser.add_argument("--simulate", metavar="IDENTIFIER --event [EVENT]",
+                            help="simulate an event. ie /dev/sda1 or s/n " \
+                            "--event EVENT")
+        parser.add_argument("--event", metavar="EVENT", help="DRIVE_INSTALL, DRIVE_UNINSTALL, EXP_RESET " \
+                            "ie --simulate all-drives --event EXP_RESET")
 
         # Process arguments
         args = parser.parse_args()
@@ -234,6 +239,23 @@ def main():
                         .format(args.setdriveLED, args.LEDstate)
 
             _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, response_wait_time=5)
+
+        elif args.simulate:
+            # Load a node controller SIM message from the manual tests directory and update it with args 
+            if not args.event:
+                print("Error: must provide an event to simulate --event EVENT when using --simulate")
+                return
+
+            if args.event not in ["DRIVE_INSTALL", "DRIVE_UNINSTALL", "EXP_RESET"]:
+                print("Possible simulated EVENTS: DRIVE_INSTALL, DRIVE_UNINSTALL, EXP_RESET")
+                return
+
+            file = "/opt/seagate/sspl/low-level/tests/manual/actuator_msgs/node_cntrl_simulate_drive.json"
+            jsonMsg = json.loads(open(file).read())
+            jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = u"SIMULATE: {} {}" \
+                        .format(args.event, args.simulate)
+
+            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, response_wait_time=30)
 
         elif args.setdrivestatus:
             # Load a HDS logging message from the manual tests directory and update it with args 

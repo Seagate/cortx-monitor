@@ -471,6 +471,37 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
                 # Send the event to disk message handler to generate json message
                 self._write_internal_msgQ(DiskMsgHandler.name(), internal_json_msg)
+
+            elif component == "SIMU":
+                # Requesting to simulate an event
+                # Parse out the simulated request field
+                node_request = jsonMsg.get("actuator_request_type").get("node_controller").get("node_request")
+                sim_request = node_request[9:].strip().split(" ")
+                self._log_debug("perform_request, sim_request: %s" % str(sim_request))
+
+                # Put together a message to get the serial number of the drive using hdparm tool
+                if sim_request[1].startswith("/"):
+                    serial_number, error = self._retrieve_serial_number(sim_request[1])
+
+                    # Send error response back on ack channel
+                    if error != "":
+                        json_msg = AckResponseMsg(node_request, error, uuid).getJson()
+                        self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+                        return
+                else:
+                    serial_number = sim_request[1]
+
+                # Send a message to the disk message handler to lookup the hpi status and send it out
+                internal_json_msg = json.dumps(
+                        {"sensor_request_type" : "sim_event",
+                         "serial_number" : serial_number,
+                         "node_request" : sim_request[0],
+                         "uuid" : uuid
+                         })
+
+                # Send the event to disk message handler to generate json message
+                self._write_internal_msgQ(DiskMsgHandler.name(), internal_json_msg)
+
             else:
                 response = "NodeControllerMsgHandler, _process_msg, unknown node controller msg: {}" \
                             .format(node_request)

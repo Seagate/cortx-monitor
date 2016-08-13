@@ -87,19 +87,20 @@ class DriveMngrMsg(BaseSensorMsg):
         # Validate the current message    
         self.validateMsg(self._json)       
         return json.dumps(self._json)
-                 
+
     def getEnclosure(self):
         return self._enclosure
-        
+
     def getDriveNum(self):
         return self._drive_num
-        
+
     def getStatus(self):
         return self._status
-    
+
     def setStatus(self, _status):
-        self._status = _status
-        
+        status, reason = _status.split("_", 1)
+        self._json["message"]["sensor_response_type"][self.SENSOR_RESPONSE_TYPE]["diskStatus"] = status
+        self._json["message"]["sensor_response_type"][self.SENSOR_RESPONSE_TYPE]["diskReason"] = reason
+
     def set_uuid(self, _uuid):
         self._json["message"]["sspl_ll_msg_header"]["uuid"] = _uuid
-        
