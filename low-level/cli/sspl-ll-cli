@@ -103,7 +103,7 @@ def main():
         parser.add_argument("--stopdrive", metavar="DRIVE", help="power down a drive.  ie /dev/sda1")
         parser.add_argument("--startdrive", metavar="DRIVE", help="power up a drive.  ie /dev/sda1")
         parser.add_argument("--resetdrive", metavar="DRIVE", help="reset drive by cycling its power.  ie /dev/sda1")
-        parser.add_argument("--smart", metavar="DRIVE", help="display SMART results for a drive. ie /dev/sda1 or '*'")
+        parser.add_argument("--smart", metavar="DRIVE", help="schedule a SMART test on a drive. ie /dev/sda1 or '*'")
         parser.add_argument("--drvmngr", metavar="DRIVE", help="display drivemanager's status. ie /dev/sda1 or '*'")
         parser.add_argument("--hpi", metavar="DRIVE", help="display HPI status. ie /dev/sda1 or '*'")
         parser.add_argument("--setdrivestatus", metavar="DRIVE --status [STATUS] --reason [REASON]",
@@ -173,14 +173,9 @@ def main():
             jsonMsg = json.loads(open(file).read())
             jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = u"SMART_TEST: {}".format(args.smart)
 
-            force_wait = False
-            wait_time = 3
-            if "*" in str(args.smart):
-                wait_time = 30
-                force_wait = True
-
-            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, response_wait_time=wait_time,
-                          force_wait=force_wait)
+            print("\nInitiating SMART tests.  This can take several minutes...\n")
+            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, response_wait_time=300,
+                          force_wait=True)
 
         elif args.drvmngr:
             # Load a drivemanager status message from the manual tests directory and update it with args.drvmngr

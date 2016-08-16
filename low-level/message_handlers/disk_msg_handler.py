@@ -180,6 +180,10 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
             self._log_debug("_processMsg, sensor_request_type: %s, uuid: %s" % (sensor_request_type, uuid))
 
             if sensor_request_type == "disk_smart_test":
+                # This is currently deprecated and unused as requests for SMART tests now actually run
+                #  a new test instead of just returning the results from the last test.  The
+                #  NodeControllerMsgHandler now relays requests to the SystemdWatchdog to run the test
+
                 # If the serial number is an asterisk then send over all the smart results for all drives
                 if serial_number == "*":
                     for serial_number in self._drvmngr_drives:

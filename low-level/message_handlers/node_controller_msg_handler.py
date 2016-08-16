@@ -37,6 +37,8 @@ from json_msgs.messages.actuators.ack_response import AckResponseMsg
 from message_handlers.disk_msg_handler import DiskMsgHandler
 from message_handlers.service_msg_handler import ServiceMsgHandler
 
+from sensors.impl.centos_7.systemd_watchdog import SystemdWatchdog
+
 from zope.component import queryUtility
 
 
@@ -358,7 +360,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                          })
 
                     # Send the event to disk message handler to generate json message
-                    self._write_internal_msgQ(DiskMsgHandler.name(), internal_json_msg)
+                    self._write_internal_msgQ(SystemdWatchdog.name(), internal_json_msg)
                     return
 
                 # Put together a message to get the serial number of the drive using hdparm tool
@@ -382,7 +384,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     })
 
                 # Send the event to disk message handler to generate json message
-                self._write_internal_msgQ(DiskMsgHandler.name(), internal_json_msg)
+                self._write_internal_msgQ(SystemdWatchdog.name(), internal_json_msg)
 
             elif component == "DRVM":
                 # Requesting the current status from drivemanager

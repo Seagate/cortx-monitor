@@ -24,6 +24,7 @@ import copy
 
 from datetime import datetime, timedelta
 
+from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
@@ -32,6 +33,8 @@ from framework.utils.service_logging import logger
 from message_handlers.service_msg_handler import ServiceMsgHandler
 from message_handlers.disk_msg_handler import DiskMsgHandler
 from message_handlers.node_data_msg_handler import NodeDataMsgHandler
+
+from json_msgs.messages.actuators.ack_response import AckResponseMsg
 
 from zope.interface import implements
 from sensors.IService_watchdog import IServiceWatchdog
@@ -76,6 +79,9 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
 
         # Mapping of SMART jobs and their properties
         self._smart_jobs = {}
+
+        # Mapping of SMART uuids from incoming requests so they can be used in the responses back to halon
+        self._smart_uuids = {}
 
         # Delay so thread doesn't spin unnecessarily when not in use
         self._thread_sleep = 1.0
@@ -255,7 +261,10 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                 step += 1
                 if len(self._wildcard_services) > 0 and step >= 15:
                     step = 0
-                    self._search_new_services()                    
+                    self._search_new_services()
+
+                # Process any msgs sent to us
+                self._check_msg_queue()
 
             self._log_debug("SystemdWatchdog gracefully breaking out " \
                                 "of dbus Loop, not restarting.")
@@ -274,6 +283,75 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
         self._disable_debug_if_persist_false()
 
         self._log_debug("Finished processing successfully")
+
+    def _check_msg_queue(self):
+        """Handling incoming JSON msgs"""
+
+        # Process until our message queue is empty
+        while not self._is_my_msgQ_empty():
+            jsonMsg = self._read_my_msgQ()
+            if jsonMsg is not None:
+                self._process_msg(jsonMsg)
+
+    def _process_msg(self, jsonMsg):
+        """Process various messages sent to us on our msg queue"""
+        if isinstance(jsonMsg, dict) == False:
+            jsonMsg = json.loads(jsonMsg)
+
+        if jsonMsg.get("sensor_request_type") is not None:
+            sensor_request_type = jsonMsg.get("sensor_request_type")
+            self._log_debug("_processMsg, sensor_request_type: %s" % sensor_request_type)
+
+            # Serial number is used as an index into dicts
+            jsonMsg_serial_number = jsonMsg.get("serial_number")
+            self._log_debug("_processMsg, serial_number: %s" % jsonMsg_serial_number)
+
+            # Parse out the UUID and save to send back in response if it's available
+            uuid = None
+            if jsonMsg.get("uuid") is not None:
+                uuid = jsonMsg.get("uuid")
+            self._log_debug("_processMsg, sensor_request_type: %s, uuid: %s" % (sensor_request_type, uuid))
+
+            # Get a list of all the drive devices available in systemd
+            re_drive = re.compile('(?P<path>.*?/drives/(?P<id>.*))')
+            drives = [m.groupdict() for m in
+                  [re_drive.match(path) for path in self._disk_objects.keys()]
+                  if m]
+
+            if sensor_request_type == "disk_smart_test":
+                self._log_debug("_processMsg, Starting SMART test")
+                # If the serial number is an asterisk then schedule smart tests on all drives
+                if jsonMsg_serial_number == "*":
+                    self._smart_jobs = {}
+
+                # Loop through all the drives and initiate a SMART test
+                self._smart_jobs = {}
+                for drive in drives:
+                    try:
+                        if self._disk_objects[drive['path']].get('org.freedesktop.UDisks2.Drive') is not None:
+                            # Get the drive's serial number
+                            udisk_drive = self._disk_objects[drive['path']]['org.freedesktop.UDisks2.Drive']
+                            serial_number = str(udisk_drive["Serial"])
+
+                            # If serial number is not present then use the ending of by-id symlink
+                            if len(serial_number) == 0:
+                                tmp_serial = str(self._drive_by_id[drive['path']].split("/")[-1])
+
+                                # Serial numbers are limited to 20 chars string with drive keyword
+                                serial_number = tmp_serial[tmp_serial.rfind("drive"):]
+
+                            # Found the drive requested or it's an * indicating all drives
+                            if jsonMsg_serial_number == serial_number or \
+                                jsonMsg_serial_number == "*":
+
+                                # Associate the uuid to the drive path for the ack msg being sent back from request
+                                self._smart_uuids[drive['path']] = uuid
+
+                                # Schedule a SMART test to begin, if requesting all drives then stagger possibly?
+                                self._schedule_SMART_test(drive['path'])
+
+                    except Exception as ae:
+                        self._log_debug("_process_msg, Exception: %s" % ae)
 
     def _add_wildcard_services(self):
         """Update the list of monitored services with wildcard entries"""
@@ -412,7 +490,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
 
                     # Schedule a SMART test to begin, if regular intervals then stagger
                     if stagger:
-                        time.sleep(2)
+                        time.sleep(10)
                     self._schedule_SMART_test(drive['path'])
 
             except Exception as ae:
@@ -686,6 +764,21 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                                 self._log_debug("  Object Path: %r" % object_path)
                                 self._log_debug("  Serial Number: %s, SMART status: %s" % (serial_number, smart_status))
                                 self._process_smart_status(disk_path, smart_status, serial_number)
+
+                            # If we have a uuid available then this smart tests was caused by an incoming request
+                            #  and we need to send back a response to the sender with the uuid
+                            smart_uuid = self._smart_uuids.get(disk_path)
+
+                            # Send an ack back to sender if the smart test was caused by a request sent in
+                            if smart_uuid is not None:
+                                if "error" in smart_status.lower() or \
+                                    "fatal" in smart_status.lower():
+                                    response = "Failed"
+                                else:
+                                    response = "Passed"
+                                request = "SMART_TEST: {}".format(serial_number)
+                                json_msg = AckResponseMsg(request, response, smart_uuid).getJson()
+                                self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
 
                             self._smart_jobs[object_path] = None
                             return
