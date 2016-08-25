@@ -6,6 +6,7 @@ echo "Running Automated Integration Tests for SSPL-LL"
 mkdir -p /tmp/dcs/drivemanager
 cp ../../../installation/deps/drive_manager.json /tmp/dcs/drivemanager
 chown -R zabbix:zabbix /tmp/dcs
+mkdir -p /tmp/dcs/hpi
 
 systemctl start crond
 systemctl restart sspl-ll

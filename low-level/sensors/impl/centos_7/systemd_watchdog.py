@@ -450,6 +450,21 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
         else:
             self._log_debug("Drive does not support SMART: %s" % drive_path)
 
+            # If we have a uuid available then this smart tests was caused by an incoming request
+            #  and we need to send back a response to the sender with the uuid
+            smart_uuid = self._smart_uuids.get(drive_path)
+
+            # Send an ack back to sender if the smart test was caused by a request sent in
+            if smart_uuid is not None:
+                request = "SMART_TEST: {}".format(drive_path)
+
+                # Send an Ack msg back with SMART results
+                json_msg = AckResponseMsg(request, "Passed", smart_uuid).getJson()
+                self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+
+                # Remove from our list
+                self._smart_uuids[drive_path] = None
+
     def _init_drives(self, stagger=False):
         """Notifies DiskMsgHanlder of available drives and schedules a short SMART test"""
 
@@ -777,8 +792,13 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                                 else:
                                     response = "Passed"
                                 request = "SMART_TEST: {}".format(serial_number)
+
+                                # Send an Ack msg back with SMART results
                                 json_msg = AckResponseMsg(request, response, smart_uuid).getJson()
                                 self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+
+                                # Remove from our list
+                                self._smart_uuids[disk_path] = None
 
                             self._smart_jobs[object_path] = None
                             return

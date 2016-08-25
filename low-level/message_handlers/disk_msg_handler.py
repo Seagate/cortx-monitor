@@ -152,7 +152,10 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 if serial_number == "*":
                     self._transmit_all_HPI_responses()
                 else:
-                    if serial_number == "ZBX_NOTPRESENT":
+                    # Check for a valid WWN & serial number
+                    wwn = jsonMsg.get("wwn")
+                    if serial_number == "ZBX_NOTPRESENT" or \
+                       wwn == "ZBX_NOTPRESENT":
                         self._process_hpi_response_ZBX_NOTPRESENT(jsonMsg)
                     else:
                         self._process_hpi_response(jsonMsg, serial_number)
