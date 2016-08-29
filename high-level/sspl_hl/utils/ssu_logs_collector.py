@@ -36,6 +36,12 @@ import socket
 # 6 : Files cannot be copied to /tmp/bundle
 # 7 : Tar bundle could not be created
 # 8 : Tar Bundle could not be send to SSU
+# Note: Detailed input params for debugging purposes as follows:
+# '{"action": ["m0reportbug", "mv -f m0reportbug-data.tar.gz /tmp/bundle/"],
+#  "files": [], "host": {"pwd": "dcouser", "bucket":
+# "/var/lib/support_bundles/2016-08-29_12-42-28/nodes/",
+# "name": "vmc-rekvm-hvt-cc1.xy01.xyratex.com"}}' TRACE
+
 
 TRACE = True
 LOGGER = None
@@ -139,7 +145,7 @@ class RemoteFileCollector(object):
             except (OSError, IOError) as err:
                 log('Failed to collect file: {}. Details: {}'
                     .format(_file, str(err)))
-        if copy_count == 0 and not len(self._files):
+        if copy_count == 0 and len(self._files) > 0:
             print 6
             return False
         else:
@@ -163,7 +169,7 @@ class RemoteFileCollector(object):
         """
         Get the file from remote node
         """
-        cmd = 'scp /tmp/bundle.tar root@{}:{}/ '.format(
+        cmd = 'scp /tmp/bundle.* root@{}:{}/ '.format(
             self._node_name,
             self._bucket
         )

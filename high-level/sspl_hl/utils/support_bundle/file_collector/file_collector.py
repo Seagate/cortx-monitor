@@ -19,7 +19,7 @@ from sspl_hl.utils.cluster_node_manager.node_communication_handler import \
     NodeCommunicationHandler, \
     SSHException
 from sspl_hl.utils.support_bundle.config import \
-    ACTION, BUCKET, FILES, MISC
+    ACTION, BUCKET, FILES, MISC, TRACE_ENABLED_SSU_BUNDLING
 from sspl_hl.utils.common import execute_shell
 import os
 import shutil
@@ -277,9 +277,10 @@ class McoRemoteFileCollector(object):
         """
         rules_node = json.dumps(self._node_collection_rule)
         node_rule = rules_node.replace('"', '\\"')
-        command = '{} \'{}\''.format(
+        command = '{} \'{}\' {}'.format(
             McoRemoteFileCollector.MCO_REMOTE_COLLECTION,
-            node_rule
+            node_rule,
+            TRACE_ENABLED_SSU_BUNDLING
         )
         mco_cmd = 'mco rpc runcmd rc cmd=\"{}\" -F role=storage'.\
             format(command)

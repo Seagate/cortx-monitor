@@ -121,3 +121,10 @@ LOCAL_FILES_TO_COLLECT = [
 MISC_LOCAL_FILES_MAPPING = {
     PLEX_LOGS: ['/var/log/plex/plex*']
 }
+
+# """
+# Enable ssu_log_collector.py logging. A new bundle.log file will be added
+# in the support_bundle/nodes/xxxxx/ dir, which will contain the debug
+# level information remote bundling.
+# """
+TRACE_ENABLED_SSU_BUNDLING = False
