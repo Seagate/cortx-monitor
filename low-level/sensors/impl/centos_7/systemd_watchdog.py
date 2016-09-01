@@ -702,6 +702,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                 #self._print_interfaces_and_properties(interfaces_and_properties)
 
                 # Restart openhpid to update HPI data if it's not available
+                # Note: This is problematic during expander resets b/c it cycles too many times
                 #internal_json_msg = json.dumps(
                 #                        {"actuator_request_type": {
                 #                            "service_controller": {

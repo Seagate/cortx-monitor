@@ -42,18 +42,42 @@ mkdir -p /usr/lib64/python2.7/site-packages
 cp -f /opt/seagate/sspl/low-level/libs/mero.so  /usr/lib64/python2.7/site-packages
 
 # Enable SNMP traps on the PDU to be sent to the CMU
-#echo "Enable SNMP traps on the PDU to be sent to the CMU"
-# curl -skd '{
-#      "jsonrpc": "2.0",
-#      "method": "performBulk",
-#      "params": {
-#          "requests": [
-#              // First request: Eventengine::modifyAction()
-#              {"rid":"/event_engine",
-# "json":{"jsonrpc":"2.0", "method":"modifyAction", "params":{"action":{"id":"SystemSnmpTrapAction", "name":"System SNMP Notification Action", "isSystem":true, "type":"SendSnmpTrap", "arguments":[{"key":"SnmpNotfType", "value":"v2Trap"},{"key":"SnmpTrapDest1", "value":"172.16.0.41:1620:public"},{"key":"SnmpTrapDest2", "value":":162:"},{"key":"SnmpTrapDest3", "value":":162:"}]}}, "id":1127}},
-#              // Second request: Eventengine::modifyAction()
-#              {"rid":"/event_engine",
-# "json":{"jsonrpc":"2.0", "method":"modifyRule", "params":{"rule":{"id":"SystemSnmpTrapRule", "name":"System SNMP Notification Rule", "isSystem":true, "isEnabled":true, "isAutoRearm":true, "hasMatched":false, "condition":{"negate":false, "operation":0, "matchType":2, "eventId":["**"], "conditions":[]}, "actionIds":["SystemSnmpTrapAction"], "arguments":[]}}, "id":1128}}]},
-#      },
-#      "id": 1129
-# }' https://admin:admin@172.16.1.221/bulk
+if ping -c 1 172.16.1.221 &> /dev/null
+then
+ echo "Enable SNMP traps on the PDU at 172.16.1.221 to be sent to the CMU"
+ curl -skd '{
+      "jsonrpc": "2.0",
+      "method": "performBulk",
+      "params": {
+          "requests": [
+              // First request: Eventengine::modifyAction()
+              {"rid":"/event_engine",
+ "json":{"jsonrpc":"2.0", "method":"modifyAction", "params":{"action":{"id":"SystemSnmpTrapAction", "name":"System SNMP Notification Action", "isSystem":true, "type":"SendSnmpTrap", "arguments":[{"key":"SnmpNotfType", "value":"v2Trap"},{"key":"SnmpTrapDest1", "value":"172.16.0.41:1620:public"},{"key":"SnmpTrapDest2", "value":":162:"},{"key":"SnmpTrapDest3", "value":":162:"}]}}, "id":1127}},
+              // Second request: Eventengine::modifyAction()
+              {"rid":"/event_engine",
+ "json":{"jsonrpc":"2.0", "method":"modifyRule", "params":{"rule":{"id":"SystemSnmpTrapRule", "name":"System SNMP Notification Rule", "isSystem":true, "isEnabled":true, "isAutoRearm":true, "hasMatched":false, "condition":{"negate":false, "operation":0, "matchType":2, "eventId":["**"], "conditions":[]}, "actionIds":["SystemSnmpTrapAction"], "arguments":[]}}, "id":1128}}]},
+      },
+      "id": 1129
+ }' https://admin:admin@172.16.1.221/bulk
+fi
+
+# Enable SNMP traps on the PDU to be sent to the CMU
+if ping -c 1 172.16.1.222 &> /dev/null
+then
+ echo "Enable SNMP traps on the PDU at 172.16.1.222 to be sent to the CMU"
+ curl -skd '{
+      "jsonrpc": "2.0",
+      "method": "performBulk",
+      "params": {
+          "requests": [
+              // First request: Eventengine::modifyAction()
+              {"rid":"/event_engine",
+ "json":{"jsonrpc":"2.0", "method":"modifyAction", "params":{"action":{"id":"SystemSnmpTrapAction", "name":"System SNMP Notification Action", "isSystem":true, "type":"SendSnmpTrap", "arguments":[{"key":"SnmpNotfType", "value":"v2Trap"},{"key":"SnmpTrapDest1", "value":"172.16.0.41:1620:public"},{"key":"SnmpTrapDest2", "value":":162:"},{"key":"SnmpTrapDest3", "value":":162:"}]}}, "id":1127}},
+              // Second request: Eventengine::modifyAction()
+              {"rid":"/event_engine",
+ "json":{"jsonrpc":"2.0", "method":"modifyRule", "params":{"rule":{"id":"SystemSnmpTrapRule", "name":"System SNMP Notification Rule", "isSystem":true, "isEnabled":true, "isAutoRearm":true, "hasMatched":false, "condition":{"negate":false, "operation":0, "matchType":2, "eventId":["**"], "conditions":[]}, "actionIds":["SystemSnmpTrapAction"], "arguments":[]}}, "id":1128}}]},
+      },
+      "id": 1129
+ }' https://admin:admin@172.16.1.222/bulk
+fi
+

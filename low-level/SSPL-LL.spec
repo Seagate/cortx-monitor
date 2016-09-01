@@ -1,6 +1,6 @@
 #xyr build defines
 # This section will be re-written by Jenkins build system.
-%define _xyr_package_name     SSPL-LL
+%define _xyr_package_name     sspl-ll
 %define _xyr_package_source   sspl-1.0.0.tgz
 %define _xyr_package_version  1.0.0
 %define _xyr_build_number     10.el7

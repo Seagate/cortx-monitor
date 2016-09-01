@@ -215,7 +215,7 @@ class RaritanPDU(Debug):
                                                                    '/dev/ttyACM0')
             self._ip_addr = self._conf_reader._get_value_with_default(self.RARITANPDU,
                                                                    self.IP_ADDR,
-                                                                   '10.22.192.225')
+                                                                   '172.16.1.222')
             self._max_login_attempts = int(self._conf_reader._get_value_with_default(self.RARITANPDU,
                                                                    self.MAX_LOGIN_TRIES,
                                                                    5))
