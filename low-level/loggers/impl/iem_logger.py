@@ -104,8 +104,10 @@ class IEMlogger(Debug):
             self._log_debug("Emailing result: {}".format(result))
 
         except Exception as de:
-            self._log_debug("log_msg, Error parsing IEM message: %s" % de)
-            result = str(de)
+            # Dump to journal anyway as it could be useful for debugging format errors
+            result = "IEMlogger, log_msg, Error parsing IEM: {}".format(str(de))
+            journal.send(result, PRIORITY=LOG_WARNING, SYSLOG_IDENTIFIER="sspl-ll")
+            journal.send(log_msg, PRIORITY=LOG_WARNING, SYSLOG_IDENTIFIER="sspl-ll") 
 
         return result
             

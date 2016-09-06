@@ -307,7 +307,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     self._sim_drive_uninstall(serial_number)                    
 
                 elif node_request == "DRIVE_INSTALL":
-                    logger.info("DiskMsgHandler, simulating drive uninstall")
+                    logger.info("DiskMsgHandler, simulating drive install")
                     self._sim_drive_install(serial_number) 
 
                 elif node_request == "EXP_RESET":

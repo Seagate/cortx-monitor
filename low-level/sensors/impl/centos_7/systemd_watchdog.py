@@ -353,6 +353,22 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                     except Exception as ae:
                         self._log_debug("_process_msg, Exception: %s" % ae)
 
+                        # If we have a uuid available then this smart tests was caused by an incoming request
+                        #  and we need to send back a response to the sender with the uuid
+                        smart_uuid = self._smart_uuids.get(udisk_drive)
+
+                        # Send an ack back to sender if the smart test was caused by a request sent in
+                        if smart_uuid is not None:
+                            request = "SMART_TEST: {}".format(serial_number)
+                            response = "Failed (SMART already running)"
+
+                            # Send an Ack msg back with SMART results
+                            json_msg = AckResponseMsg(request, response, smart_uuid).getJson()
+                            self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+
+                            # Remove from our list
+                            self._smart_uuids[disk_path] = None
+
     def _add_wildcard_services(self):
         """Update the list of monitored services with wildcard entries"""
         units = self._manager.ListUnits()
@@ -459,7 +475,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                 request = "SMART_TEST: {}".format(drive_path)
 
                 # Send an Ack msg back with SMART results
-                json_msg = AckResponseMsg(request, "Passed", smart_uuid).getJson()
+                json_msg = AckResponseMsg(request, "Passed (Drive doesn't support ATA, ignoring)", smart_uuid).getJson()
                 self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
 
                 # Remove from our list
@@ -694,9 +710,6 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
 
                 # Notify internal msg handlers who need to map device name to serial numbers
                 self._notify_msg_handler_sn_device_mappings(object_path, serial_number)
-
-                # Schedule a conveyance type SMART test on new drives
-                self._schedule_SMART_test(object_path, test_type='conveyance')
 
                 # Display info about the added device
                 #self._print_interfaces_and_properties(interfaces_and_properties)
