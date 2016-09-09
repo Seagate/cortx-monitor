@@ -21,6 +21,7 @@ import os
 import json
 import time
 import copy
+import subprocess
 
 from datetime import datetime, timedelta
 
@@ -328,6 +329,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                 self._smart_jobs = {}
                 for drive in drives:
                     try:
+                        serial_number = None
                         if self._disk_objects[drive['path']].get('org.freedesktop.UDisks2.Drive') is not None:
                             # Get the drive's serial number
                             udisk_drive = self._disk_objects[drive['path']]['org.freedesktop.UDisks2.Drive']
@@ -348,26 +350,29 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                                 self._smart_uuids[drive['path']] = uuid
 
                                 # Schedule a SMART test to begin, if requesting all drives then stagger possibly?
-                                self._schedule_SMART_test(drive['path'])
+                                self._schedule_SMART_test(drive['path'], serial_number=serial_number)
 
                     except Exception as ae:
                         self._log_debug("_process_msg, Exception: %s" % ae)
+                        self._log_debug("Error SMART already running or device path not found")
+                        try:
+                            # If we have a uuid available then this smart tests was caused by an incoming request
+                            #  and we need to send back a response to the sender with the uuid
+                            smart_uuid = self._smart_uuids.get(udisk_drive)
+    
+                            # Send an ack back to sender if the smart test was caused by a request sent in
+                            if smart_uuid is not None:
+                                request  = "SMART_TEST: {}".format(serial_number)
+                                response = "Failed"
 
-                        # If we have a uuid available then this smart tests was caused by an incoming request
-                        #  and we need to send back a response to the sender with the uuid
-                        smart_uuid = self._smart_uuids.get(udisk_drive)
+                                # Send an Ack msg back with SMART results
+                                json_msg = AckResponseMsg(request, response, smart_uuid).getJson()
+                                self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
 
-                        # Send an ack back to sender if the smart test was caused by a request sent in
-                        if smart_uuid is not None:
-                            request = "SMART_TEST: {}".format(serial_number)
-                            response = "Failed (SMART already running)"
-
-                            # Send an Ack msg back with SMART results
-                            json_msg = AckResponseMsg(request, response, smart_uuid).getJson()
-                            self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
-
-                            # Remove from our list
-                            self._smart_uuids[disk_path] = None
+                                # Remove from our list
+                                self._smart_uuids[disk_path] = None
+                        except Exception as e:
+                            self._log_debug("_process_msg, Exception: %s" % e)
 
     def _add_wildcard_services(self):
         """Update the list of monitored services with wildcard entries"""
@@ -451,7 +456,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
             except Exception as ae:
                 self._log_debug("block_dev unusable: %r" % ae)
 
-    def _schedule_SMART_test(self, drive_path, test_type="short"):
+    def _schedule_SMART_test(self, drive_path, test_type="short", serial_number=None):
         """Schedules a SMART test to be executed on a drive
            add_interface/remove_interface is the callback
            on completion
@@ -463,23 +468,59 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
             dev_obj = self._bus.get_object('org.freedesktop.UDisks2', drive_path)
             idev_obj = Interface(dev_obj, 'org.freedesktop.UDisks2.Drive.Ata')
             idev_obj.SmartSelftestStart(test_type, {})
-        else:
-            self._log_debug("Drive does not support SMART: %s" % drive_path)
 
-            # If we have a uuid available then this smart tests was caused by an incoming request
-            #  and we need to send back a response to the sender with the uuid
+        # A request was received to run a SMART test on a SAS drive (RAID drives)
+        elif serial_number is not None:
+            # Retrieve the device name for the disk
+            device_name = self._drive_by_device_name[drive_path]
+            self._log_debug("Running SMART on SAS drive path: %s, dev name: %s" % (drive_path, device_name))
+
+            # Schedule a smart test to be run
+            command = "/usr/sbin/smartctl -t short -d scsi {}".format(device_name)
+            response, error = self._run_command(command)
+
+            ack_response = "Passed"
+            status_reason = "OK_None"
+            if len(error) > 0:
+                self._log_debug("Error running SMART on SAS drive: %s" % error)
+                status_reason = "Failed_smart_unknown"
+                ack_response  = "Failed"
+            else:
+                # Allow test to run
+                time.sleep(60)
+
+                # Get the results of test
+                command = "/usr/sbin/smartctl -H -d scsi {}".format(device_name)
+                response, error = self._run_command(command)
+
+                if "SMART Health Status: OK" not in response:
+                    self._log_debug("Error running SMART on SAS drive: %s" % response)
+                    ack_response  = "Failed"
+                    status_reason = "Failed_smart_failure"
+
+            # Generate and send an internal msg to DiskMsgHandler
+            self._notify_disk_msg_handler(drive_path, status_reason, serial_number)
+
+            # we need to send back a response to the sender with the uuid
             smart_uuid = self._smart_uuids.get(drive_path)
 
             # Send an ack back to sender if the smart test was caused by a request sent in
             if smart_uuid is not None:
-                request = "SMART_TEST: {}".format(drive_path)
+                request = "SMART_TEST: {}".format(serial_number)
 
                 # Send an Ack msg back with SMART results
-                json_msg = AckResponseMsg(request, "Passed (Drive doesn't support ATA, ignoring)", smart_uuid).getJson()
+                json_msg = AckResponseMsg(request, ack_response, smart_uuid).getJson()
                 self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
 
                 # Remove from our list
                 self._smart_uuids[drive_path] = None
+
+    def _run_command(self, command):
+        """Run the command and get the response and error returned"""
+        process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        response, error = process.communicate()
+
+        return response.rstrip('\n'), error.rstrip('\n')
 
     def _init_drives(self, stagger=False):
         """Notifies DiskMsgHanlder of available drives and schedules a short SMART test"""
@@ -753,7 +794,8 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                     serial_number = str(udisk_drive["Serial"])
 
                     # If serial number is not present then use the ending of by-id symlink
-                    if len(serial_number) == 0:
+                    if serial_number is None or \
+                        len(serial_number) == 0:
                         tmp_serial = str(self._drive_by_id[object_path].split("/")[-1])
 
                         # Serial numbers are limited to 20 chars string with drive keyword
@@ -782,7 +824,8 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                         if disk_path in smart_job["Objects"]:
                             # Get the SMART test results and the serial number
                     	    udisk_drive_ata = self._disk_objects[disk_path]['org.freedesktop.UDisks2.Drive.Ata']
-                    	    smart_status = str(udisk_drive_ata["SmartSelftestStatus"])
+                    	    smart_status    = str(udisk_drive_ata["SmartSelftestStatus"])
+                            serial_number   = None
 
                             # Process the SMART status and cleanup
                             if len(smart_status) != 0:
@@ -805,6 +848,14 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                                     response = "Failed"
                                 else:
                                     response = "Passed"
+
+                                # If serial number is not present then use the ending of by-id symlink
+                                if serial_number is None:
+                                   tmp_serial = str(self._drive_by_id[object_path].split("/")[-1])
+
+                                   # Serial numbers are limited to 20 chars string with drive keyword
+                                   serial_number = tmp_serial[tmp_serial.rfind("drive")]
+
                                 request = "SMART_TEST: {}".format(serial_number)
 
                                 # Send an Ack msg back with SMART results

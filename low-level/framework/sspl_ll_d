@@ -130,10 +130,6 @@ def main(conf_reader):
         threadController.initialize_thread_list(sspl_threaded_modules)
         controller_thread.start()
 
-        startup_msg = "SSPL-LL service has started successfully"
-        jsonMsg   = ThreadControllerMsg(threadController.name(), startup_msg).getJson()
-        threadController._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
-
         # Let systemd know that we've started up successfully and ready for it to monitor sspl-ll
         notify("READY=1")
 

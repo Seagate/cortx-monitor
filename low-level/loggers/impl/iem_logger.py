@@ -80,7 +80,7 @@ class IEMlogger(Debug):
 
         result = ""
         try:
-            # IEM logging format "IEC: EVENT_CODE: EVENT_STRING: JSON DATA"
+            # IEM logging format "IEC: EVENT_CODE: EVENT_STRING: {JSON DATA}"
             event_code_start = log_msg.index("IEC:") + 4
             event_code_stop  = log_msg.index(":", event_code_start)
 
@@ -105,9 +105,9 @@ class IEMlogger(Debug):
 
         except Exception as de:
             # Dump to journal anyway as it could be useful for debugging format errors
-            result = "IEMlogger, log_msg, Error parsing IEM: {}".format(str(de))
-            journal.send(result, PRIORITY=LOG_WARNING, SYSLOG_IDENTIFIER="sspl-ll")
-            journal.send(log_msg, PRIORITY=LOG_WARNING, SYSLOG_IDENTIFIER="sspl-ll") 
+            #result = "IEMlogger, log_msg, Error parsing IEM: {}".format(str(de))
+            #journal.send(result, PRIORITY=LOG_WARNING, SYSLOG_IDENTIFIER="sspl-ll")
+            journal.send(log_msg, PRIORITY=LOG_WARNING, SYSLOG_IDENTIFIER="sspl-ll")
 
         return result
             

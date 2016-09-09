@@ -15,6 +15,7 @@
  ****************************************************************************
 """
 
+import os
 import time
 from threading import Thread
 
@@ -91,8 +92,13 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
     def __init__(self):
         super(ThreadController, self).__init__(self.MODULE_NAME,
                                                   self.PRIORITY)
-        self._thread_response = "N/A"
-        self.debug_section    = None
+        self._threads_initialized = False
+        self._thread_response     = "N/A"
+        self.debug_section        = None
+        
+        # Location of hpi data directory populated by dcs-collector
+        self._hpi_base_dir = "/tmp/dcs/hpi"
+        self._start_delay  = 10
 
     def initialize(self, conf_reader, msgQlist):
         """initialize configuration reader and internal msg queues"""
@@ -108,8 +114,23 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
 
     def run(self):
         """Run the module periodically on its own thread."""
-        self._log_debug("Start accepting requests")
+        # Wait for the dcs-collector to populate the /tmp/dcs/hpi directory
+        while not os.path.isdir(self._hpi_base_dir):
+            logger.info("ThreadController, dir not found: %s " % self._hpi_base_dir)
+            logger.info("ThreadController, rechecking in %s secs" % self._start_delay)
+            time.sleep(int(self._start_delay))
 
+        if not self._threads_initialized:
+            # Allow other threads to initialize
+            time.sleep(165)
+
+            # Notify external applications that've started up successfully
+            startup_msg = "SSPL-LL service has started successfully"
+            jsonMsg     = ThreadControllerMsg(ThreadController.name(), startup_msg).getJson()
+            self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
+            self._threads_initialized = True
+
+        self._log_debug("Start accepting requests")
         try:
             # Block on message queue until it contains an entry
             jsonMsg = self._read_my_msgQ()

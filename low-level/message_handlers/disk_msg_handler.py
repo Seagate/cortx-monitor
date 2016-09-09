@@ -288,7 +288,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     self._write_internal_msgQ(RabbitMQegressProcessor.name(), internal_json_msg)
 
                     # Send over a msg on the ACK channel notifying success
-                    response = "Drive manager data sent successfully"
+                    response = "HPI data sent successfully"
                     json_msg = AckResponseMsg(node_request, response, uuid).getJson()
                     self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
 
