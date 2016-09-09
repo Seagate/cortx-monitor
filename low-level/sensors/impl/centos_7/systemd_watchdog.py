@@ -851,10 +851,10 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
 
                                 # If serial number is not present then use the ending of by-id symlink
                                 if serial_number is None:
-                                   tmp_serial = str(self._drive_by_id[object_path].split("/")[-1])
+                                   tmp_serial = disk_path.split("/")[-1]
 
-                                   # Serial numbers are limited to 20 chars string with drive keyword
-                                   serial_number = tmp_serial[tmp_serial.rfind("drive")]
+                                   # Serial number is past the last underscore
+                                   serial_number = tmp_serial.split("_")[-1]
 
                                 request = "SMART_TEST: {}".format(serial_number)
 

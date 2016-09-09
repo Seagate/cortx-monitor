@@ -110,4 +110,3 @@ class IEMlogger(Debug):
             journal.send(log_msg, PRIORITY=LOG_WARNING, SYSLOG_IDENTIFIER="sspl-ll")
 
         return result
-            
