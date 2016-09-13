@@ -112,6 +112,9 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
         # Next time to run SMART tests
         self._next_smart_tm = datetime.now() + timedelta(seconds=self._smart_interval)
 
+        # We need to speed up the thread to handle exp resets but then slow it back down to not chew up cpu
+        self._thread_speed_safeguard = 0
+
     def read_data(self):
         """Return the dict of service status'"""
         return self._service_status
@@ -193,7 +196,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
 
                     substate = unit.Get('org.freedesktop.systemd1.Unit', 'SubState',
                              dbus_interface='org.freedesktop.DBus.Properties')
-                   
+
                     self._service_status[str(unit_name)] = str(state) + ":" + str(substate)
 
                     # Remove it from our inactive list; it's alive and well
@@ -266,6 +269,14 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
 
                 # Process any msgs sent to us
                 self._check_msg_queue()
+
+                # Safe guard to slow the thread down after busy exp resets
+                self._thread_speed_safeguard += 1
+                # Only allow to run full throttle for 3 minutes (enough to handle exp resets)
+                if self._thread_speed_safeguard > 1800:   # 1800 = 10 * 60 * 3 running at .10 delay full speed
+                    self._thread_speed_safeguard = 0
+                    # Slow the main thread down to save on CPU as it gets sped up on drive removal
+                    self._thread_sleep = 1.0
 
             self._log_debug("SystemdWatchdog gracefully breaking out " \
                                 "of dbus Loop, not restarting.")
@@ -788,6 +799,9 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                 if interface == "org.freedesktop.UDisks2.Drive":
                     # Speed thread up in case we have multiple drive removal events queued up
                     self._thread_sleep = .10
+
+                    # Only allow it to run full speed temporarily in order to handle exp resets
+                    self._thread_speed_safeguard = 0
 
                     # Retrieve the serial number
                     udisk_drive = self._disk_objects[object_path]['org.freedesktop.UDisks2.Drive']
