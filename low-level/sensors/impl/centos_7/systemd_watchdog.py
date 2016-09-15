@@ -369,19 +369,18 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                         try:
                             # If we have a uuid available then this smart tests was caused by an incoming request
                             #  and we need to send back a response to the sender with the uuid
-                            smart_uuid = self._smart_uuids.get(udisk_drive)
-    
-                            # Send an ack back to sender if the smart test was caused by a request sent in
-                            if smart_uuid is not None:
+                            if uuid is not None:
                                 request  = "SMART_TEST: {}".format(serial_number)
                                 response = "Failed"
 
                                 # Send an Ack msg back with SMART results
-                                json_msg = AckResponseMsg(request, response, smart_uuid).getJson()
+                                json_msg = AckResponseMsg(request, response, uuid).getJson()
                                 self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
 
-                                # Remove from our list
-                                self._smart_uuids[disk_path] = None
+                            # Remove from our list if it's present
+                            smart_uuid = self._smart_uuids.get(drive['path'])
+                            if smart_uuid is not None:
+                                self._smart_uuids[drive['path']] = None
                         except Exception as e:
                             self._log_debug("_process_msg, Exception: %s" % e)
 
