@@ -270,27 +270,40 @@ class HPIactuator(Debug):
             else:
                 self._control_state = "OFF"
             # ControlRecord ID for identify LED
-            return "rqst_ident"
+            #return "rqst_ident"
+
+            # ControlRecord ID for fault LED (Currently only supporting FAULT LED)
+            return "rqst_fault"
 
         elif self._control_state == "PULSE_SLOW_ON" or \
              self._control_state == "PULSE_SLOW_OFF":
 
             if "ON" in self._control_state:
-                self._control_state = "PULSE_ON"
+                #self._control_state = "PULSE_ON" (Currently only supporting FAULT LED ON/OFF)
+                self._control_state = "ON"
             else:
-                self._control_state = "PULSE_OFF"
+                #self._control_state = "PULSE_OFF" (Currently only supporting FAULT LED ON/OFF)
+                self._control_state = "OFF"
             # ControlRecord ID for slow pulse LED
-            return "rqst_in_crit_array"
+            #return "rqst_in_crit_array"
+
+            # ControlRecord ID for fault LED (Currently only supporting FAULT LED)
+            return "rqst_fault"
 
         elif self._control_state == "PULSE_FAST_ON" or \
              self._control_state == "PULSE_FAST_OFF":
 
             if "ON" in self._control_state:
-                self._control_state = "PULSE_ON"
+                #self._control_state = "PULSE_ON" (Currently only supporting FAULT LED ON/OFF)
+                self._control_state = "ON"
             else:
-                self._control_state = "PULSE_OFF"
+                #self._control_state = "PULSE_OFF" (Currently only supporting FAULT LED ON/OFF)
+                self._control_state = "OFF"
             # ControlRecord ID for fast pulse LED
-            return "rqst_in_failed_array"
+            #return "rqst_in_failed_array"
+
+            # ControlRecord ID for fault LED (Currently only supporting FAULT LED)
+            return "rqst_fault"
 
         elif self._control_state == "POWER_ON" or \
              self._control_state == "POWER_OFF":
