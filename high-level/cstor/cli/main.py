@@ -38,7 +38,7 @@ def main():
         else:
             print result
     except CommandTerminated:
-        return []
+        print 'Command is terminated'
     except BaseError as extra_info:
         print "Error: {}, Desc: {}".format(extra_info.err, extra_info.desc)
 

@@ -47,7 +47,10 @@ class BaseCommand(object):
             BL_HOST,
             self.get_provider_base_url(),
             self.get_action_params(**kwargs))
-        response = urllib.urlopen(url=url)
+        try:
+            response = urllib.urlopen(url=url)
+        except KeyboardInterrupt:
+            raise errors.CommandTerminated()
         if response.getcode() == 200:
             data = response.read()
             try:

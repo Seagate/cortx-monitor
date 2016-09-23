@@ -42,47 +42,6 @@ class Status(BaseCommand):
         print 'This may take some time depending upon your ' \
               'network configuration...'
 
-    # def execute_action(self):
-    #     """ Function to execute the action by sending
-    #     request to data provider in business logic server.
-    #     Overriding will have the handling for status command.
-    #     """
-    #     response = super(Status, self).execute_action()
-    #     pwr_res = response[0]['power_status']
-    #     rassem_res = response[0]['sem_status']
-    #     fs_res = response[0]['file_system_status'][0]
-    #     result = []
-    #     if fs_res:
-    #         if Status.is_json(fs_res):
-    #             fs_res = Status._parse_status_response(fs_res)
-    #         result.append("Filesystem status:" + str(fs_res))
-    #     if pwr_res:
-    #         pwr_res = Status._parse_power_status_response(pwr_res)
-    #         result.append(pwr_res)
-    #     if rassem_res:
-    #         result.append(rassem_res)
-    #     if result:
-    #         return result
-    #     else:
-    #         return "No response or some error occurred"
-    #
-    # @staticmethod
-    # def _parse_power_status_response(power_resp):
-    #     """ Parse power status response into human
-    #         readable response
-    #     """
-    #     active_nodes = '\n\t'.join(power_resp.get('active_nodes', []))
-    #     inactive_nodes = '\n\t'.join(power_resp.get('inactive_nodes', []))
-    #     pwr_response = ''
-    #     if active_nodes:
-    #         pwr_response = 'Active Nodes:- \n\t{}'.format(active_nodes)
-    #     if inactive_nodes:
-    #         pwr_response = '{} \n Inactive Nodes:- \n\t{}'.format(
-    #             pwr_response,
-    #             inactive_nodes
-    #         )
-    #     return pwr_response
-    #
     @staticmethod
     def is_json(myjson):
         """ Verify for JSON structure
@@ -154,6 +113,7 @@ class Status(BaseCommand):
                     inactive_nodes
                 )
             file_resp = None
+            response = ''
             if file_status_resp:
                 if file_status_resp[0]:
                     file_resp = file_status_resp[0]
