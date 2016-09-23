@@ -337,7 +337,6 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                     self._smart_jobs = {}
 
                 # Loop through all the drives and initiate a SMART test
-                self._smart_jobs = {}
                 for drive in drives:
                     try:
                         serial_number = None
