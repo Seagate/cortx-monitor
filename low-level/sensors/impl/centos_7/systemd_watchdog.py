@@ -70,7 +70,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                                                   self.PRIORITY)
         # Mapping of services and their status'
         self._service_status = {}
-        
+
         self._monitored_services = []
         self._inactive_services  = []
         self._wildcard_services  = []
@@ -84,9 +84,12 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
         # Mapping of SMART uuids from incoming requests so they can be used in the responses back to halon
         self._smart_uuids = {}
 
+        # List of serial numbers which have been flagged for simulated failure of SMART tests from CLI
+        self._simulated_smart_failures = []
+
         # Delay so thread doesn't spin unnecessarily when not in use
         self._thread_sleep = 1.0
-        
+
         # Location of hpi data directory populated by dcs-collector
         self._hpi_base_dir = "/tmp/dcs/hpi"
         self._start_delay  = 10
@@ -330,7 +333,15 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                   [re_drive.match(path) for path in self._disk_objects.keys()]
                   if m]
 
-            if sensor_request_type == "disk_smart_test":
+            if sensor_request_type == "simulate_failure":
+                # Handle simulation requests
+                sim_request = jsonMsg.get("node_request")
+                self._log_debug("_processMsg, Starting simulating failure: %s" % sim_request)
+                if sim_request == "SMART_FAILURE":
+                    # Append to list of drives requested to simulate failure
+                    self._simulated_smart_failures.append(jsonMsg_serial_number)
+
+            elif sensor_request_type == "disk_smart_test":
                 self._log_debug("_processMsg, Starting SMART test")
                 # If the serial number is an asterisk then schedule smart tests on all drives
                 if jsonMsg_serial_number == "*":
@@ -847,6 +858,12 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                                 self._log_debug("SMART Job Interface Removed")
                                 self._log_debug("  Object Path: %r" % object_path)
                                 self._log_debug("  Serial Number: %s, SMART status: %s" % (serial_number, smart_status))
+
+                                # Simulate a SMART failure for RAS
+                                if serial_number in self._simulated_smart_failures:
+                                    self._log_debug("  SIMULATING SMART failure for RAS")
+                                    smart_status = "fatal"
+
                                 self._process_smart_status(disk_path, smart_status, serial_number)
 
                             # If we have a uuid available then this smart tests was caused by an incoming request
@@ -870,6 +887,11 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
 
                                 request = "SMART_TEST: {}".format(serial_number)
 
+                                # Simulate a SMART failure for Halon
+                                if serial_number in self._simulated_smart_failures:
+                                    self._log_debug("SIMULATING SMART failure for Halon")
+                                    response = "Failed"
+
                                 # Send an Ack msg back with SMART results
                                 json_msg = AckResponseMsg(request, response, smart_uuid).getJson()
                                 self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
@@ -878,7 +900,10 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                                 self._smart_uuids[disk_path] = None
 
                             self._smart_jobs[object_path] = None
-                            return
+
+                            # Remove from simulated SMART failures list
+                            if serial_number in self._simulated_smart_failures:
+                                self._simulated_smart_failures.remove(serial_number)
 
                 else:
                     self._log_debug("Systemd Interface Removed")
