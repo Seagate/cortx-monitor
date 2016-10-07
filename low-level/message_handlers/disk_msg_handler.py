@@ -588,71 +588,10 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
     def _process_hpi_response_ZBX_NOTPRESENT(self, jsonMsg):
         """Handle HPI data with serial number = ZBX_NOTPRESENT"""
-        # See if there is a HPI drive available based upon event path on fs
-        drive = None
-        event_path = jsonMsg.get("event_path")
 
-        for serial_number in self._hpi_drives:
-            hpi_drive = self._hpi_drives[serial_number]
-            if hpi_drive.get_event_path() == event_path:
-                drive = hpi_drive
-                break
-
-        if drive is not None:
-            logger.info("DiskMsgHandler, S/N=ZBX_NOTPRESENT, HPI data found for %s" % jsonMsg.get("event_path"))
-
-            # Don't step on valid values with ZBX_NOTPRESENT
-            wwn = jsonMsg.get("wwn")
-            if wwn == "ZBX_NOTPRESENT":
-                wwn = drive.getWWN()
-
-            productName = jsonMsg.get("productName")
-            if productName == "ZBX_NOTPRESENT":
-                productName = drive.getProductName()
-
-            productVersion = jsonMsg.get("productVersion")
-            if productVersion == "ZBX_NOTPRESENT":
-                productVersion = drive.getProductVersion()
-
-            manufacturer = jsonMsg.get("manufacturer")
-            if manufacturer == "ZBX_NOTPRESENT":
-                manufacturer = drive.getManufacturer()
-
-            # Update the fields except for serial number and send json msg
-            serial_number = drive.getSerialNumber()
-            drive = Drive(self._host_id,
-                      jsonMsg.get("event_path"),
-                      jsonMsg.get("status"),
-                      serial_number,
-                      jsonMsg.get("drawer"),
-                      jsonMsg.get("location"),
-                      manufacturer,
-                      productName,
-                      productVersion,
-                      wwn,
-                      jsonMsg.get("disk_installed"),
-                      jsonMsg.get("disk_powered"))
-
-            # Check to see if the drive path is valid
-            valid = drive.parse_hpi_path()
-
-            if not valid:
-                logger.error("DiskMsgHandler, valid: False (ignoring)")
-                return
-
-            # Update the dict of hpi drives
-            self._hpi_drives[serial_number] = drive
-
-            # Obtain json message containing all relevant data
-            internal_json_msg = drive.toHPIjsonMsg().getJson()
-
-            # Send the json message to the RabbitMQ processor to transmit out
-            self._log_debug("_process_hpi_response_ZBX_NOTPRESENT, internal_json_msg: %s" % 
-                            internal_json_msg)
-            self._write_internal_msgQ(RabbitMQegressProcessor.name(), internal_json_msg)
-
-        # Disk is not available in HPI, started up with a drive missing or HPI needs refreshed
-        else:
+        # If the serial number is set to the default then write it out as not present for RAS and restart openhpid
+        if jsonMsg.get("serial_number") == "ZBX_NOTPRESENT":
+            # Disk is not available in HPI, started up with a drive missing or HPI needs refreshed
             logger.info("DiskMsgHandler, S/N=ZBX_NOTPRESENT for %s" % jsonMsg.get("event_path"))
 
             # Manually populate the /tmp/dcs/dmreport/'event_path' files
@@ -667,15 +606,78 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
             self._write_file(disk_dir + "/status", "EMPTY")
             self._write_file(disk_dir + "/reason", "None")
 
-            # Restart openhpid to update HPI data in case it's not available if we're not initializing
-            if self._drvmngr_drives:
-                internal_json_msg = json.dumps(
-                                    {"actuator_request_type": {
-                                        "service_controller": {
-                                            "service_name" : "openhpid.service",
-                                            "service_request": "restart"
-                                    }}})
-                self._write_internal_msgQ(ServiceMsgHandler.name(), internal_json_msg)
+            # Restart openhpid to update HPI data for newly installed drives
+            internal_json_msg = json.dumps(
+                                {"actuator_request_type": {
+                                    "service_controller": {
+                                        "service_name" : "openhpid.service",
+                                        "service_request": "restart"
+                                }}})
+            self._write_internal_msgQ(ServiceMsgHandler.name(), internal_json_msg)
+
+        else:
+            # See if there is a HPI drive available based upon event path on fs
+            drive = None
+            event_path = jsonMsg.get("event_path")
+
+            for serial_number in self._hpi_drives:
+                hpi_drive = self._hpi_drives[serial_number]
+                if hpi_drive.get_event_path() == event_path:
+                    drive = hpi_drive
+                    break
+
+            if drive is not None:
+                logger.info("DiskMsgHandler, S/N=ZBX_NOTPRESENT, HPI data found for %s" % jsonMsg.get("event_path"))
+
+                # Don't step on valid values with ZBX_NOTPRESENT
+                wwn = jsonMsg.get("wwn")
+                if wwn == "ZBX_NOTPRESENT":
+                    wwn = drive.getWWN()
+
+                productName = jsonMsg.get("productName")
+                if productName == "ZBX_NOTPRESENT":
+                    productName = drive.getProductName()
+
+                productVersion = jsonMsg.get("productVersion")
+                if productVersion == "ZBX_NOTPRESENT":
+                    productVersion = drive.getProductVersion()
+
+                manufacturer = jsonMsg.get("manufacturer")
+                if manufacturer == "ZBX_NOTPRESENT":
+                    manufacturer = drive.getManufacturer()
+
+                # Update the fields except for serial number and send json msg
+                serial_number = drive.getSerialNumber()
+                drive = Drive(self._host_id,
+                          jsonMsg.get("event_path"),
+                          jsonMsg.get("status"),
+                          jsonMsg.get("serial_number"),
+                          jsonMsg.get("drawer"),
+                          jsonMsg.get("location"),
+                          manufacturer,
+                          productName,
+                          productVersion,
+                          wwn,
+                          jsonMsg.get("disk_installed"),
+                          jsonMsg.get("disk_powered"))
+
+                # Check to see if the drive path is valid
+                valid = drive.parse_hpi_path()
+
+                if not valid:
+                    logger.error("DiskMsgHandler, valid: False (ignoring)")
+                    return
+
+                # Update the dict of hpi drives
+                self._hpi_drives[serial_number] = drive
+
+                # Obtain json message containing all relevant data
+                internal_json_msg = drive.toHPIjsonMsg().getJson()
+
+                # Send the json message to the RabbitMQ processor to transmit out
+                self._log_debug("_process_hpi_response_ZBX_NOTPRESENT, internal_json_msg: %s" % 
+                                internal_json_msg)
+                self._write_internal_msgQ(RabbitMQegressProcessor.name(), internal_json_msg)
 
     def _write_file(self, file_path, contents):
         """Writes the contents to file_path"""

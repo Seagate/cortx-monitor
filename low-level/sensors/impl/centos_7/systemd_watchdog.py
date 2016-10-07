@@ -88,7 +88,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
         self._simulated_smart_failures = []
 
         # Delay so thread doesn't spin unnecessarily when not in use
-        self._thread_sleep = 1.0
+        self._thread_sleep = 5.0
 
         # Location of hpi data directory populated by dcs-collector
         self._hpi_base_dir = "/tmp/dcs/hpi"
@@ -279,7 +279,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                 if self._thread_speed_safeguard > 1800:   # 1800 = 10 * 60 * 3 running at .10 delay full speed
                     self._thread_speed_safeguard = 0
                     # Slow the main thread down to save on CPU as it gets sped up on drive removal
-                    self._thread_sleep = 1.0
+                    self._thread_sleep = 5.0
 
             self._log_debug("SystemdWatchdog gracefully breaking out " \
                                 "of dbus Loop, not restarting.")

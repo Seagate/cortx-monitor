@@ -229,8 +229,6 @@ class HPIMonitor(ScheduledModuleThread, InternalMsgQ):
 
         # Check to see if the drive is present
         serial_number = self._gather_data(driveloc+"/serial_number")
-        self._log_debug("_notify_DiskMsgHandler updated_file: %s" %
-                        updated_file)
 
         # Update the status to status_reason used throughout
         if self._gather_data(driveloc+"/status") == "available":
@@ -307,6 +305,8 @@ class HPIMonitor(ScheduledModuleThread, InternalMsgQ):
                     "disk_installed.swp" in event_path)):
                     return False
 
+                self._log_debug("_validate_event_path event_path: %s" %
+                        event_path)
                 return True
 
             def _log_debug(self, msg):
