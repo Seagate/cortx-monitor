@@ -34,7 +34,6 @@ from json_msgs.messages.actuators.ack_response import AckResponseMsg
 
 # Modules that receive messages from this module
 from message_handlers.logging_msg_handler import LoggingMsgHandler
-from message_handlers.service_msg_handler import ServiceMsgHandler
 
 
 class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
@@ -602,18 +601,12 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
             self._write_file(disk_dir + "/drawer", jsonMsg.get("drawer"))
             self._write_file(disk_dir + "/location", jsonMsg.get("location"))
-            self._write_file(disk_dir + "/serial_number", "NOTPRESENT")
+
+            if not os.path.exists(disk_dir + "/serial_number"):
+                self._write_file(disk_dir + "/serial_number", "NOTPRESENT")
+
             self._write_file(disk_dir + "/status", "EMPTY")
             self._write_file(disk_dir + "/reason", "None")
-
-            # Restart openhpid to update HPI data for newly installed drives
-            internal_json_msg = json.dumps(
-                                {"actuator_request_type": {
-                                    "service_controller": {
-                                        "service_name" : "openhpid.service",
-                                        "service_request": "restart"
-                                }}})
-            self._write_internal_msgQ(ServiceMsgHandler.name(), internal_json_msg)
 
         else:
             # See if there is a HPI drive available based upon event path on fs

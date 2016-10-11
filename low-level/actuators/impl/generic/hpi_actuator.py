@@ -385,7 +385,12 @@ class HPIactuator(Debug):
                      .format(serial_num)
         response, error = self._run_command(command)
         if error:
-            return "Error: {0}".format(str(error))
+            # Try searching thru /tmp/dcs/hpi
+            command = "grep -R {0} /tmp/dcs/hpi/*" \
+                         .format(serial_num)
+            response, error = self._run_command(command)
+            if error:
+                return "Error: {0}".format(str(error))
 
         # Parse out the drive number found in the drivemanager path to be used
         self._drive_number = os.path.dirname(response).split("/")[-1]

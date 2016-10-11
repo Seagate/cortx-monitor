@@ -17,6 +17,7 @@
 import pika
 import json
 import os
+import time
 
 from jsonschema import Draft3Validator
 from jsonschema import validate
@@ -114,6 +115,7 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
         """Run the module periodically on its own thread."""
         #self._set_debug(True)
         #self._set_debug_persist(True)
+        time.sleep(180)
         self._log_debug("Start accepting requests")
 
         try:

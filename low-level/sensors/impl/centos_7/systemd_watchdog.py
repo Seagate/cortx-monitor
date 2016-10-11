@@ -88,7 +88,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
         self._simulated_smart_failures = []
 
         # Delay so thread doesn't spin unnecessarily when not in use
-        self._thread_sleep = 5.0
+        self._thread_sleep = .50
 
         # Location of hpi data directory populated by dcs-collector
         self._hpi_base_dir = "/tmp/dcs/hpi"

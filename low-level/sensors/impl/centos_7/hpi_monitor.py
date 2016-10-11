@@ -21,6 +21,7 @@ import shutil
 import Queue
 import time
 import pyinotify
+import subprocess
 
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
@@ -28,6 +29,7 @@ from framework.utils.service_logging import logger
 
 # Modules that receive messages from this module
 from message_handlers.disk_msg_handler import DiskMsgHandler
+from message_handlers.service_msg_handler import ServiceMsgHandler
 
 from zope.interface import implements 
 from sensors.IHpi_monitor import IHPIMonitor
@@ -218,6 +220,13 @@ class HPIMonitor(ScheduledModuleThread, InternalMsgQ):
         with open (file, "r") as datafile:
             return str(datafile.read().replace('\n', ''))
 
+    def _run_command(self, command):
+        """Run the command and get the response and error returned"""
+        process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        response, error = process.communicate()
+ 
+        return response.rstrip('\n'), error.rstrip('\n')
+
     def _notify_DiskMsgHandler(self, updated_file):
         """Send the event to the disk message handler for generating JSON message"""
         if not os.path.isfile(updated_file):
@@ -272,6 +281,19 @@ class HPIMonitor(ScheduledModuleThread, InternalMsgQ):
         # Send the event to disk message handler to generate json message
         self._write_internal_msgQ(DiskMsgHandler.name(), json_data)
 
+        # Restart openhpid to update HPI data for newly installed drives
+	if serial_number == "ZBX_NOTPRESENT" and \
+           disk_installed == True and \
+           disk_powered == True:
+                logger.info("HPImonitor, _notify_DiskMsgHandler, Restarting openhpid")
+
+                command = "/usr/bin/systemctl restart openhpid"
+                response, error = self._run_command(command)
+                if len(error) > 0:
+                    logger.info("Error restarting openhpid: %s" % error)
+                else:
+                    logger.info("Restarted openhpid succesfully")
+
         # Reset debug mode if persistence is not enabled
         self._disable_debug_if_persist_false()
 
@@ -297,8 +319,8 @@ class HPIMonitor(ScheduledModuleThread, InternalMsgQ):
 
                  # Validate the event path; must be one of the following and not be a swap file
                 if "disk" not in event_path or \
-                    (("status" not in event_path or \
-                    "status.swp" in event_path) and  \
+                    (("serial_number" not in event_path or \
+                    "serial_number.swp" in event_path) and \
                     ("disk_powered" not in event_path or \
                     "disk_powered.swp" in event_path) and \
                     ("disk_installed" not in event_path or \
