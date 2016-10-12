@@ -23,6 +23,7 @@ import time
 import copy
 import subprocess
 
+from collections import defaultdict
 from datetime import datetime, timedelta
 
 from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
@@ -322,7 +323,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
             self._log_debug("_processMsg, serial_number: %s" % jsonMsg_serial_number)
 
             # Parse out the UUID and save to send back in response if it's available
-            uuid = None
+            uuid =  "Not-Found"
             if jsonMsg.get("uuid") is not None:
                 uuid = jsonMsg.get("uuid")
             self._log_debug("_processMsg, sensor_request_type: %s, uuid: %s" % (sensor_request_type, uuid))
@@ -368,18 +369,16 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                                 jsonMsg_serial_number == "*":
 
                                 # Associate the uuid to the drive path for the ack msg being sent back from request
-                                self._smart_uuids[drive['path']] = uuid
+                                self._smart_uuids[uuid] = serial_number
 
                                 # Schedule a SMART test to begin, if requesting all drives then stagger possibly?
                                 self._schedule_SMART_test(drive['path'], serial_number=serial_number)
 
                     except Exception as ae:
                         self._log_debug("_process_msg, Exception: %s" % ae)
-                        self._log_debug("Error SMART already running or device path not found")
                         try:
-                            # If we have a uuid available then this smart tests was caused by an incoming request
-                            #  and we need to send back a response to the sender with the uuid
-                            if uuid is not None:
+                            # If the error is not a duplicate request for running a test then send back an error
+                            if "already SMART self-test running" not in str(ae):
                                 request  = "SMART_TEST: {}".format(serial_number)
                                 response = "Failed"
 
@@ -387,10 +386,11 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                                 json_msg = AckResponseMsg(request, response, uuid).getJson()
                                 self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
 
-                            # Remove from our list if it's present
-                            smart_uuid = self._smart_uuids.get(drive['path'])
-                            if smart_uuid is not None:
-                                self._smart_uuids[drive['path']] = None
+                                # Remove from our list if it's present
+                                serial_number = self._smart_uuids.get(uuid)
+                                if serial_number is not None:
+                                    self._smart_uuids[uuid] = None
+
                         except Exception as e:
                             self._log_debug("_process_msg, Exception: %s" % e)
 
@@ -521,19 +521,23 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
             # Generate and send an internal msg to DiskMsgHandler
             self._notify_disk_msg_handler(drive_path, status_reason, serial_number)
 
-            # we need to send back a response to the sender with the uuid
-            smart_uuid = self._smart_uuids.get(drive_path)
+            # Create the request to be sent back
+            request = "SMART_TEST: {}".format(serial_number)
 
-            # Send an ack back to sender if the smart test was caused by a request sent in
-            if smart_uuid is not None:
-                request = "SMART_TEST: {}".format(serial_number)
+            # Loop thru all the uuids awaiting a response and find matching serial number
+            for smart_uuid in self._smart_uuids:
+                uuid_serial_number = self._smart_uuids.get(smart_uuid)
 
-                # Send an Ack msg back with SMART results
-                json_msg = AckResponseMsg(request, ack_response, smart_uuid).getJson()
-                self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+                # See if we have a match and send out response
+                if uuid_serial_number is not None and \
+                    serial_number == uuid_serial_number:                
 
-                # Remove from our list
-                self._smart_uuids[drive_path] = None
+                    # Send an Ack msg back with SMART results
+                    json_msg = AckResponseMsg(request, ack_response, smart_uuid).getJson()
+                    self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+
+                    # Remove from our list
+                    self._smart_uuids[smart_uuid] = None
 
     def _run_command(self, command):
         """Run the command and get the response and error returned"""
@@ -841,69 +845,66 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                     if smart_job is None:
                         self._log_debug("SMART job not found, ignoring: %s" % object_path)
                         return
+                    self._smart_jobs[object_path] = None
 
                     # Loop through all the currently managed objects and retrieve the smart status
                     for disk_path, interfaces_and_properties in self._disk_objects.items():
                         if disk_path in smart_job["Objects"]:
                             # Get the SMART test results and the serial number
+                            udisk_drive     = self._disk_objects[disk_path]['org.freedesktop.UDisks2.Drive']
                     	    udisk_drive_ata = self._disk_objects[disk_path]['org.freedesktop.UDisks2.Drive.Ata']
                     	    smart_status    = str(udisk_drive_ata["SmartSelftestStatus"])
-                            serial_number   = None
+                            serial_number   = str(udisk_drive["Serial"])
 
-                            # Process the SMART status and cleanup
-                            if len(smart_status) != 0:
-                                udisk_drive = self._disk_objects[disk_path]['org.freedesktop.UDisks2.Drive']
-                                serial_number = str(udisk_drive["Serial"])
+                            # If serial number is not present then use the ending of by-id symlink
+                            if serial_number is None or \
+                                len(serial_number) == 0:
+                                tmp_serial = disk_path.split("/")[-1]
 
-                                self._log_debug("SMART Job Interface Removed")
-                                self._log_debug("  Object Path: %r" % object_path)
-                                self._log_debug("  Serial Number: %s, SMART status: %s" % (serial_number, smart_status))
+                                # Serial number is past the last underscore
+                                serial_number = tmp_serial.split("_")[-1]
 
-                                # Simulate a SMART failure for RAS
-                                if serial_number in self._simulated_smart_failures:
-                                    self._log_debug("  SIMULATING SMART failure for RAS")
-                                    smart_status = "fatal"
-
-                                self._process_smart_status(disk_path, smart_status, serial_number)
-
-                            # If we have a uuid available then this smart tests was caused by an incoming request
-                            #  and we need to send back a response to the sender with the uuid
-                            smart_uuid = self._smart_uuids.get(disk_path)
-
-                            # Send an ack back to sender if the smart test was caused by a request sent in
-                            if smart_uuid is not None:
-                                if "error" in smart_status.lower() or \
+                            # Check for simulated SMART failure for Halon
+                            if serial_number in self._simulated_smart_failures:
+                                self._simulated_smart_failures.remove(serial_number)
+                                self._log_debug("SIMULATING SMART failure for Halon")
+                                response     = "Failed"
+                                smart_status = "fatal"
+                            else:
+                                # If ther is no status then test did not fail
+                                if len(smart_status) == 0:
+                                    response     = "Passed"
+                                    smart_status = "success"
+                                elif "error" in smart_status.lower() or \
                                     "fatal" in smart_status.lower():
                                     response = "Failed"
                                 else:
                                     response = "Passed"
 
-                                # If serial number is not present then use the ending of by-id symlink
-                                if serial_number is None:
-                                   tmp_serial = disk_path.split("/")[-1]
+                            self._log_debug("SMART Job Interface Removed")
+                            self._log_debug("  Object Path: %r" % object_path)
+                            self._log_debug("  Serial Number: %s, SMART status: %s" % (serial_number, smart_status))
 
-                                   # Serial number is past the last underscore
-                                   serial_number = tmp_serial.split("_")[-1]
+                            # Proccess the SMART result
+                            self._process_smart_status(disk_path, smart_status, serial_number)
 
-                                request = "SMART_TEST: {}".format(serial_number)
+                            # Create the request to be sent back
+                            request = "SMART_TEST: {}".format(serial_number)
 
-                                # Simulate a SMART failure for Halon
-                                if serial_number in self._simulated_smart_failures:
-                                    self._log_debug("SIMULATING SMART failure for Halon")
-                                    response = "Failed"
+                            # Loop thru all the uuids awaiting a response and find matching serial number
+                            for smart_uuid in self._smart_uuids:
+                                uuid_serial_number = self._smart_uuids.get(smart_uuid)
 
-                                # Send an Ack msg back with SMART results
-                                json_msg = AckResponseMsg(request, response, smart_uuid).getJson()
-                                self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+                                # See if we have a match and send out response
+                                if uuid_serial_number is not None and \
+                                    serial_number == uuid_serial_number:                
 
-                                # Remove from our list
-                                self._smart_uuids[disk_path] = None
+                                    # Send an Ack msg back with SMART results
+                                    json_msg = AckResponseMsg(request, response, smart_uuid).getJson()
+                                    self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
 
-                            self._smart_jobs[object_path] = None
-
-                            # Remove from simulated SMART failures list
-                            if serial_number in self._simulated_smart_failures:
-                                self._simulated_smart_failures.remove(serial_number)
+                                    # Remove from our list
+                                    self._smart_uuids[smart_uuid] = None
 
                 else:
                     self._log_debug("Systemd Interface Removed")

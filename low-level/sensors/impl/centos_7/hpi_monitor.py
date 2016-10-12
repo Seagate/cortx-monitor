@@ -282,11 +282,11 @@ class HPIMonitor(ScheduledModuleThread, InternalMsgQ):
         self._write_internal_msgQ(DiskMsgHandler.name(), json_data)
 
         # Restart openhpid to update HPI data for newly installed drives
-	if serial_number == "ZBX_NOTPRESENT" and \
+        if serial_number == "ZBX_NOTPRESENT" and \
            disk_installed == True and \
            disk_powered == True:
                 logger.info("HPImonitor, _notify_DiskMsgHandler, Restarting openhpid")
-
+                time.sleep(20)
                 command = "/usr/bin/systemctl restart openhpid"
                 response, error = self._run_command(command)
                 if len(error) > 0:
