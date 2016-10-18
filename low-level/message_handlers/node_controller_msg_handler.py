@@ -308,9 +308,6 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
                 # Check for success and power the disk back on
                 if "Success" in hpi_response:
-                    # Pause to allow time for disk to power down
-                    time.sleep(10)
-
                     # Append POWER_ON to notify HPI actuator of desired state
                     jsonMsg["actuator_request_type"]["node_controller"]["node_request"] = \
                                "DISK: set {} POWER_ON".format(drive_request)
@@ -322,9 +319,6 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
                     # Simplify success message as external apps don't care about details
                     if "Success" in hpi_response:
-                        # Pause to allow time for power on so external apps don't rush off
-                        time.sleep(45)
-
                         hpi_response = "Successful"
 
                 json_msg = AckResponseMsg(node_request, hpi_response, uuid).getJson()
