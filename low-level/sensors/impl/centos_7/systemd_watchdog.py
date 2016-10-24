@@ -342,6 +342,31 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                     # Append to list of drives requested to simulate failure
                     self._simulated_smart_failures.append(jsonMsg_serial_number)
 
+            elif sensor_request_type == "resend_drive_status":
+                self._log_debug("_processMsg, resend_drive_status: %s" % jsonMsg_serial_number)
+                for drive in drives:
+                    try:
+                        if self._disk_objects[drive['path']].get('org.freedesktop.UDisks2.Drive') is not None:
+                            # Get the drive's serial number
+                            udisk_drive = self._disk_objects[drive['path']]['org.freedesktop.UDisks2.Drive']
+                            serial_number = str(udisk_drive["Serial"])
+
+                            # If serial number is not present then use the ending of by-id symlink
+                            if len(serial_number) == 0:
+                                tmp_serial = str(self._drive_by_id[drive['path']].split("/")[-1])
+
+                                # Serial numbers are limited to 20 chars string with drive keyword
+                                serial_number = tmp_serial[tmp_serial.rfind("drive"):]
+
+                            if jsonMsg_serial_number == serial_number:
+                                # Generate and send an internal msg to DiskMsgHandler that the drive is available
+                                self._notify_disk_msg_handler(drive['path'], "OK_None", serial_number)
+
+                                # Notify internal msg handlers who need to map device name to serial numbers
+                                self._notify_msg_handler_sn_device_mappings(drive['path'], serial_number)
+                    except Exception as ae:
+                        self._log_debug("_process_msg, resend_drive_status, Exception: %s" % ae)
+
             elif sensor_request_type == "disk_smart_test":
                 self._log_debug("_processMsg, Starting SMART test")
                 # If the serial number is an asterisk then schedule smart tests on all drives
@@ -530,7 +555,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
 
                 # See if we have a match and send out response
                 if uuid_serial_number is not None and \
-                    serial_number == uuid_serial_number:                
+                    serial_number == uuid_serial_number:
 
                     # Send an Ack msg back with SMART results
                     json_msg = AckResponseMsg(request, ack_response, smart_uuid).getJson()

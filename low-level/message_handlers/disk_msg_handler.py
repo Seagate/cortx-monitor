@@ -585,6 +585,15 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
             # Log an IEM because we have new data
             self._log_IEM(drivemngr_drive)
 
+        elif self._drvmngr_drives:
+            # Have the drivemanager resend the drive's state
+            internal_json_msg = json.dumps(
+                {"sensor_request_type" : "resend_drive_status",
+                    "serial_number" : serial_number
+                })
+
+            self._write_internal_msgQ("SystemdWatchdog", internal_json_msg)
+
     def _process_hpi_response_ZBX_NOTPRESENT(self, jsonMsg):
         """Handle HPI data with serial number = ZBX_NOTPRESENT"""
 
