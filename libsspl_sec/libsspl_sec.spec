@@ -22,7 +22,7 @@ Vendor:     Seagate Technology LLC
 # For autogen step
 BuildRequires: libtool autoconf automake
 # For rest of build
-BuildRequires: gcc doxygen python-lettuce python-pep8 pylint check-devel openssl-devel graphviz
+BuildRequires: gcc doxygen python-pep8 pylint check-devel openssl-devel graphviz
 #Requires:
 
 # Temporary requirement on method_none.  This should eventually change to
@@ -40,7 +40,7 @@ A library used to sign and verify messages within SSPL.
 
 %build
 [ -f ./autogen.sh ] && bash ./autogen.sh
-%configure PACKAGE_VERSION=%{version}
+%configure --disable-tests PACKAGE_VERSION=%{version}
 make
 
 %install

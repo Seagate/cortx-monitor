@@ -29,11 +29,17 @@ if test "x$DOXYGEN" = "x" ; then
     AC_MSG_ERROR([Error:  Unable to find doxygen.])
 fi
 
-AC_ARG_VAR(LETTUCE, [Path to lettuce.  Used for acceptance testing.])
-AC_PATH_PROG(LETTUCE, lettuce,, $PATH:$HOME/.local/bin/)
-if test "x$LETTUCE" == "x" ; then
-    AC_MSG_ERROR([Error:  Unable to find lettuce.])
-fi
+AC_ARG_ENABLE([tests],
+        [AS_HELP_STRING([--disable-tests],
+                        [disable acceptance testing])],
+        [], [enable_tests=yes]
+)
+AS_IF([test $enable_tests = "yes"],
+            [AC_ARG_VAR(LETTUCE, [Path to lettuce.  Used for acceptance testing.])
+             AC_PATH_PROG(LETTUCE, lettuce,, $PATH:$HOME/.local/bin/)
+             if test "x$LETTUCE" == "x" ; then
+                 AC_MSG_ERROR([Error:  Unable to find lettuce.])
+             fi],[])
 
 AC_ARG_VAR(ASTYLE, [Path to astyle.  Used for C style checking.])
 AC_PATH_PROG(ASTYLE, astyle)
