@@ -19,6 +19,7 @@ import pika
 import json
 # Local
 from pika.exceptions import AMQPConnectionError, AMQPError
+import time
 
 from sspl_hl.utils.message_utils import NodeStatusResponse
 from sspl_hl.utils.message_utils import FileSysStatusResponse
@@ -68,6 +69,29 @@ class HalondRMQ(RabbitMQConfiguration):
         """
 
         super(HalondRMQ, self).__init__(config_file_path)
+        self._connection = None
+        self._channel = None
+        retry_counter = 1
+        while not(self._connection and self._channel) and retry_counter < 4:
+            self.init_connection()
+            if not (self._connection and self._channel):
+                log.warning('RMQ Connection Failed. Retry Attempt: {}'.
+                            format(retry_counter))
+                time.sleep(retry_counter * 1)
+                retry_counter += 1
+        if not(self._connection and self._channel):
+            log.warning('RMQ connection Failed. Halon communication channel '
+                        'could not be established.')
+            log.warning('sspl_hl_resp channel creation FAILED.')
+            raise AMQPConnectionError()
+        else:
+            log.info('RMQ connection is Initialized.')
+
+    def init_connection(self):
+        """
+        Initiate the connection with RMQ and open the necessary
+        communication channel.
+        """
         try:
             self._connection = pika.BlockingConnection(
                 pika.ConnectionParameters(
@@ -75,12 +99,13 @@ class HalondRMQ(RabbitMQConfiguration):
                     virtual_host=self.virtual_host,
                     credentials=pika.PlainCredentials(
                         self.username,
-                        self.password)))
+                        self.password)
+                )
+            )
             self._channel = self._connection.channel()
         except AMQPError as err:
             log.warning('RMQ connections could not be established. '
                         'Details: {}'.format(str(err)))
-            raise
 
     def close_connection(self):
         """
@@ -96,9 +121,7 @@ class HalondConsumer(HalondRMQ):
     Class to define the Halond Rabbit-MQ consumer.
     """
 
-    def __init__(self,
-                 config_file_path,
-                 callback_function):
+    def __init__(self, config_file_path, callback_function):
         """
         Initialize the object from a configuration file.
 
@@ -111,25 +134,23 @@ class HalondConsumer(HalondRMQ):
         self.exchange_queue = self.exchange
         self.routing_key = self.exchange
         log.info('RMQ Consumer config: {}'.format(self.__dict__))
-
         try:
             self._channel.exchange_declare(exchange=self.exchange,
                                            type='direct')
         except AMQPError as err:
             log.warning('Exchange: [{}], type: [ direct ] cannot be declared.'
                         ' Details: {}'.format(self.exchange, str(err)))
-
         try:
             self._channel.queue_declare(queue=self.exchange_queue,
-                                        exclusive=True)
+                                        exclusive=False)
             self._channel.queue_bind(exchange=self.exchange,
                                      queue=self.exchange_queue,
                                      routing_key=self.routing_key)
         except AMQPError as err:
-            log.error('Halon consumer Fails to initialize the channel.'
+            log.error('Halon consumer Fails to initialize the queue.'
                       'Details: {}'.format(str(err)))
             raise
-        log.info('Initialized Exchange: {}, Queue: {} (exclusive),'
+        log.info('Initialized Exchange: {}, Queue: {},'
                  ' routing_key: {}'.format(self.exchange,
                                            self.exchange_queue,
                                            self.routing_key))
@@ -182,13 +203,12 @@ class HalondPublisher(HalondRMQ):
                 exchange=self.exchange,
                 type=self.exchange_type,
                 auto_delete=False)
-            log.info('Declared Exchange: {}, type: {}, auto_delete: {}'.format(
-                self.exchange, self.exchange_type, False
-            ))
+            log.info('Declared Exchange: {}, type: {}, auto_delete: {}'
+                     .format(self.exchange, self.exchange_type, False))
         except AMQPError as err:
             log.warning('Exchange declaration Failed. Details: {}'.format(
-                str(err))
-            )
+                str(err)
+            ))
 
     def publish_message(self, message):
         """
