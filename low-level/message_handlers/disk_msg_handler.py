@@ -59,7 +59,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
         super(DiskMsgHandler, self).__init__(self.MODULE_NAME,
                                                   self.PRIORITY)
 
-    def initialize(self, conf_reader, msgQlist):
+    def initialize(self, conf_reader, msgQlist, products):
         """initialize configuration reader and internal msg queues"""
         # Initialize ScheduledMonitorThread
         super(DiskMsgHandler, self).initialize(conf_reader)
@@ -579,35 +579,32 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
         # See if there is a drivemanager drive available and update its HPI data if changed
         if self._drvmngr_drives.get(serial_number) is not None:
-
             # Ignore if nothing changed otherwise send json msg, serialize and log IEM
             drivemngr_drive = self._drvmngr_drives.get(serial_number)
-            if drivemngr_drive.get_drive_enclosure() == drive.get_drive_enclosure() and \
-                drivemngr_drive.get_drive_num() == drive.get_drive_num():
-                    return
+            if drivemngr_drive.get_drive_enclosure() != drive.get_drive_enclosure() or \
+                drivemngr_drive.get_drive_num() != drive.get_drive_num():
 
-            drivemngr_drive.set_drive_enclosure(drive.get_drive_enclosure())
-            drivemngr_drive.set_drive_num(drive.get_drive_num())
+                drivemngr_drive.set_drive_enclosure(drive.get_drive_enclosure())
+                drivemngr_drive.set_drive_num(drive.get_drive_num())
 
-            # Obtain json message containing all relevant data
-            internal_json_msg = drivemngr_drive.toDriveMngrJsonMsg().getJson()
+                # Obtain json message containing all relevant data
+                internal_json_msg = drivemngr_drive.toDriveMngrJsonMsg().getJson()
 
-            # Send the json message to the RabbitMQ processor to transmit out
-            self._write_internal_msgQ(RabbitMQegressProcessor.name(), internal_json_msg)
+                # Send the json message to the RabbitMQ processor to transmit out
+                self._write_internal_msgQ(RabbitMQegressProcessor.name(), internal_json_msg)
 
-            # Write the serial number and status to DCS file
-            self._serialize_disk_status()
+                # Write the serial number and status to DCS file
+                self._serialize_disk_status()
 
-            # Log an IEM because we have new data
-            self._log_IEM(drivemngr_drive)
+                # Log an IEM because we have new data
+                self._log_IEM(drivemngr_drive)
 
-        elif self._drvmngr_drives:
-            # Have the drivemanager resend the drive's state
+        # Have the drivemanager resend the drive's state in the OS
+        if self._drvmngr_drives:
             internal_json_msg = json.dumps(
                 {"sensor_request_type" : "resend_drive_status",
                     "serial_number" : serial_number
                 })
-
             self._write_internal_msgQ("SystemdWatchdog", internal_json_msg)
 
     def _process_hpi_response_ZBX_NOTPRESENT(self, jsonMsg):
@@ -899,7 +896,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                                                          self.MAX_DM_EVENTS_INT,
                                                          10))
 
-        logger.info("DiskMsgHandler, Expander Reset triggered with %d events in %d secs." %
+        logger.info("          Expander Reset triggered with %d events in %d secs." %
                     (self._max_drivemanager_events, self._max_drivemanager_event_interval))
 
     def shutdown(self):

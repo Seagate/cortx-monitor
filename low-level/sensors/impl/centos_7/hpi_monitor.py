@@ -182,7 +182,7 @@ class HPIMonitor(ScheduledModuleThread, InternalMsgQ):
                     disk_installed = True
                 else:
                     disk_installed = False
-            
+
                 if self._gather_data(driveloc+"/disk_powered") == "1":
                     disk_powered = True
                 else:
@@ -229,10 +229,6 @@ class HPIMonitor(ScheduledModuleThread, InternalMsgQ):
 
     def _notify_DiskMsgHandler(self, updated_file):
         """Send the event to the disk message handler for generating JSON message"""
-        if not os.path.isfile(updated_file):
-            logger.warn("updated_file: %s does not exist, ignoring." % updated_file)
-            return
-
         # Parse out the drive location without the ending filename that changed
         driveloc = os.path.dirname(updated_file)
 
@@ -249,11 +245,21 @@ class HPIMonitor(ScheduledModuleThread, InternalMsgQ):
             disk_installed = True
         else:
             disk_installed = False
-            
+
         if self._gather_data(driveloc+"/disk_powered") == "1":
             disk_powered = True
         else:
             disk_powered = False
+
+        # See if we need to use the previously saved serial number when disk is uninstalled
+        if "disk_installed" in updated_file:
+            # If field changed to disk being uninstalled then check for a valid serial number
+            if disk_installed == False and \
+                serial_number == "ZBX_NOTPRESENT":
+                if self._drive_data.get(driveloc) is not None:
+                    serial_number = self._drive_data.get(driveloc).get("serial_number")
+                    logger.info("Disk was removed, s/n=ZBX_NOTPRESENT, replacing with s/n: %s" % \
+                                serial_number)
 
         # Send a message to the disk message handler to transmit
         json_data = {"sensor_response_type" : "disk_status_hpi",
@@ -311,8 +317,7 @@ class HPIMonitor(ScheduledModuleThread, InternalMsgQ):
                 # Validate the event path; must have disk and be a status/drawer file and not be a swap file
                 if self._validate_event_path(event.pathname):
                     #self._log_debug("InotifyEventHandler, process_IN_CLOSE_WRITE, event: %s" % event)
-                    status_file = os.path.join(os.path.dirname(event.pathname), "status")
-                    _parent._notify_DiskMsgHandler(status_file)
+                    _parent._notify_DiskMsgHandler(event.pathname)
 
             def _validate_event_path(self, event_path):
                 """Returns true if the event path is valid for a status file"""
