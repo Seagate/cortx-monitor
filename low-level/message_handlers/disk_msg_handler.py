@@ -59,7 +59,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
         super(DiskMsgHandler, self).__init__(self.MODULE_NAME,
                                                   self.PRIORITY)
 
-    def initialize(self, conf_reader, msgQlist, products):
+    def initialize(self, conf_reader, msgQlist):
         """initialize configuration reader and internal msg queues"""
         # Initialize ScheduledMonitorThread
         super(DiskMsgHandler, self).initialize(conf_reader)
