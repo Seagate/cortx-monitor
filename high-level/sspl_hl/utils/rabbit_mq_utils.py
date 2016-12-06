@@ -75,14 +75,16 @@ class HalondRMQ(RabbitMQConfiguration):
         while not(self._connection and self._channel) and retry_counter < 4:
             self.init_connection()
             if not (self._connection and self._channel):
-                log.warning('RMQ Connection Failed. Retry Attempt: {}'.
-                            format(retry_counter))
-                time.sleep(retry_counter * 1)
+                log.warning(
+                    'RMQ Connection Failed. Retry Attempt: {} in {} secs'.
+                    format(retry_counter, retry_counter * 4))
+                time.sleep(retry_counter * 4)
                 retry_counter += 1
         if not(self._connection and self._channel):
             log.warning('RMQ connection Failed. Halon communication channel '
                         'could not be established.')
-            log.warning('sspl_hl_resp channel creation FAILED.')
+            log.error('sspl_hl_resp channel creation FAILED. '
+                      'Retry attempts: 3')
             raise AMQPConnectionError()
         else:
             log.info('RMQ connection is Initialized.')
