@@ -72,13 +72,13 @@ class HalondRMQ(RabbitMQConfiguration):
         self._connection = None
         self._channel = None
         retry_counter = 1
-        while not(self._connection and self._channel) and retry_counter < 4:
+        while not(self._connection and self._channel) and retry_counter < 6:
             self.init_connection()
             if not (self._connection and self._channel):
                 log.warning(
                     'RMQ Connection Failed. Retry Attempt: {} in {} secs'.
-                    format(retry_counter, retry_counter * 4))
-                time.sleep(retry_counter * 4)
+                    format(retry_counter, retry_counter * 2 + 60))
+                time.sleep(retry_counter * 2 + 60)
                 retry_counter += 1
         if not(self._connection and self._channel):
             log.warning('RMQ connection Failed. Halon communication channel '
