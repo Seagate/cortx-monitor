@@ -45,7 +45,6 @@ import dbus
 from dbus import SystemBus, Interface, Array
 import gobject
 from dbus.mainloop.glib import DBusGMainLoop
-from systemd import journal
 
 
 class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
@@ -88,8 +87,8 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
         # List of serial numbers which have been flagged for simulated failure of SMART tests from CLI
         self._simulated_smart_failures = []
 
-        # Delay so thread doesn't spin unnecessarily when not in use
-        self._thread_sleep = .50
+        # Delay so thread doesn't spin unnecessarily when not in use.  Startup running quickly to process everything
+        self._thread_sleep = .10
 
         # Location of hpi data directory populated by dcs-collector
         self._hpi_base_dir = "/tmp/dcs/hpi"
@@ -117,7 +116,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
         self._next_smart_tm = datetime.now() + timedelta(seconds=self._smart_interval)
 
         # We need to speed up the thread to handle exp resets but then slow it back down to not chew up cpu
-        self._thread_speed_safeguard = 0
+        self._thread_speed_safeguard = -1000  # Init to a negative number to allow extra time at startup
 
     def read_data(self):
         """Return the dict of service status'"""
@@ -327,6 +326,9 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
             if jsonMsg.get("uuid") is not None:
                 uuid = jsonMsg.get("uuid")
             self._log_debug("_processMsg, sensor_request_type: %s, uuid: %s" % (sensor_request_type, uuid))
+
+            # Refresh the set of managed systemd objects
+            self._disk_objects = self._disk_manager.GetManagedObjects()
 
             # Get a list of all the drive devices available in systemd
             re_drive = re.compile('(?P<path>.*?/drives/(?P<id>.*))')
