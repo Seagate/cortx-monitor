@@ -45,7 +45,6 @@ import dbus
 from dbus import SystemBus, Interface, Array
 import gobject
 from dbus.mainloop.glib import DBusGMainLoop
-from systemd import journal
 
 
 class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
@@ -327,6 +326,9 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
             if jsonMsg.get("uuid") is not None:
                 uuid = jsonMsg.get("uuid")
             self._log_debug("_processMsg, sensor_request_type: %s, uuid: %s" % (sensor_request_type, uuid))
+
+            # Refresh the set of managed systemd objects
+            self._disk_objects = self._disk_manager.GetManagedObjects()
 
             # Get a list of all the drive devices available in systemd
             re_drive = re.compile('(?P<path>.*?/drives/(?P<id>.*))')
