@@ -43,16 +43,16 @@ if [ -d "/etc/systemd" ]; then
     mkdir -p %{buildroot}/etc/systemd/system
     mkdir -p %{buildroot}/etc/dbus-1/system.d
     mkdir -p %{buildroot}/etc/polkit-1/rules.d
-	mkdir -p %{buildroot}/etc/sspl-ll/templates/snmp
+    mkdir -p %{buildroot}/etc/sspl-ll/templates/snmp
     cp files/sspl-ll.service %{buildroot}/etc/systemd/system
     cp files/sspl-ll_dbus_policy.conf %{buildroot}/etc/dbus-1/system.d
     cp files/sspl-ll_dbus_policy.rules %{buildroot}/etc/polkit-1/rules.d
     cp snmp/* %{buildroot}/etc/sspl-ll/templates/snmp
-	cp files/sspl_ll.conf %{buildroot}/etc
+    cp files/sspl_ll.conf %{buildroot}/etc
 else
-	# CS-LG are non-systemd
-	cp files/sspl_ll_cs.conf %{buildroot}/etc/sspl_ll.conf
-	cp files/sspl-ll %{buildroot}/etc/init.d
+    # CS-LG are non-systemd
+    cp files/sspl_ll_cs.conf %{buildroot}/etc/sspl_ll.conf
+    cp files/sspl-ll %{buildroot}/etc/init.d
 fi
 
 # Copy the service into /opt/seagate/sspl where it will execute from
@@ -78,13 +78,13 @@ if [ -d "/etc/systemd" ]; then
     systemctl restart dbus
 
 else
-	# CS-LG are non-systemd
-	chown -R sspl-ll:root /opt/seagate/sspl/low-level
+    # CS-LG are non-systemd
+    chown -R sspl-ll:root /opt/seagate/sspl/low-level
 
-	# Create a link to low-level cli for easy global access
-	ln -sf /opt/seagate/sspl/low-level/cli/sspl-ll-cli /usr/bin
+    # Create a link to low-level cli for easy global access
+    ln -sf /opt/seagate/sspl/low-level/cli/sspl-ll-cli /usr/bin
 
-	# Enable services to start at boot
+    # Enable services to start at boot
     chkconfig rabbitmq-server on
     chkconfig sspl-ll on
 fi
@@ -103,7 +103,6 @@ rm -rf %{buildroot}
 /etc/systemd/system/sspl-ll.service
 /etc/sspl_ll.conf
 /etc/dbus-1/system.d/sspl-ll_dbus_policy.conf
-/etc/init.d/sspl-ll
 
 
 %changelog
