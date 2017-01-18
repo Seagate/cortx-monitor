@@ -68,7 +68,7 @@ class SNMPtraps(ScheduledModuleThread, InternalMsgQ):
                                          self.PRIORITY)
         self._latest_trap = {}
 
-    def initialize(self, conf_reader, msgQlist):
+    def initialize(self, conf_reader, msgQlist, products):
         """initialize configuration reader and internal msg queues"""
 
         # Initialize ScheduledMonitorThread and InternalMsgQ

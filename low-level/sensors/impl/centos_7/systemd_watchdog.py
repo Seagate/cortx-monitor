@@ -94,7 +94,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
         self._hpi_base_dir = "/tmp/dcs/hpi"
         self._start_delay  = 10
 
-    def initialize(self, conf_reader, msgQlist):
+    def initialize(self, conf_reader, msgQlist, products):
         """initialize configuration reader and internal msg queues"""
 
         # Initialize ScheduledMonitorThread and InternalMsgQ
@@ -843,9 +843,15 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                     # Only allow it to run full speed temporarily in order to handle exp resets
                     self._thread_speed_safeguard = 0
 
-                    # Retrieve the serial number
-                    udisk_drive = self._disk_objects[object_path]['org.freedesktop.UDisks2.Drive']
-                    serial_number = str(udisk_drive["Serial"])
+                    # Attempt to retrieve the serial number
+                    serial_number = None
+                    try:
+                        udisk_drive = self._disk_objects[object_path]['org.freedesktop.UDisks2.Drive']
+                        serial_number = str(udisk_drive["Serial"])
+                    except Exception as ae:
+                        self._log_debug("Drive not found, manually parsing serial number from object path.")
+                        last_underscore = object_path.split("/")[-1]
+                        serial_number = last_underscore.split("_")[-1]
 
                     # If serial number is not present then use the ending of by-id symlink
                     if serial_number is None or \

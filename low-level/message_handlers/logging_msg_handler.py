@@ -20,12 +20,11 @@ from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
 
-from loggers.impl.iem_logger import IEMlogger
-
 # Modules that receive messages from this module
 from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 
 from json_msgs.messages.actuators.ack_response import AckResponseMsg
+
 
 class LoggingMsgHandler(ScheduledModuleThread, InternalMsgQ):
     """Message Handler for logging Messages"""
@@ -48,7 +47,7 @@ class LoggingMsgHandler(ScheduledModuleThread, InternalMsgQ):
         super(LoggingMsgHandler, self).__init__(self.MODULE_NAME,
                                                   self.PRIORITY)
 
-    def initialize(self, conf_reader, msgQlist):
+    def initialize(self, conf_reader, msgQlist, products):
         """initialize configuration reader and internal msg queues"""
         # Initialize ScheduledMonitorThread
         super(LoggingMsgHandler, self).initialize(conf_reader)
@@ -59,8 +58,13 @@ class LoggingMsgHandler(ScheduledModuleThread, InternalMsgQ):
         # Read in configuration values
         self._conf_reader = conf_reader
         self._read_config()
+        self._import_products(products)
 
-        self._iem_logger  = None
+    def _import_products(self, products):
+        """Import classes based on which product is being used"""
+        if "CS-A" in products:
+            from loggers.impl.iem_logger import IEMlogger
+            self._iem_logger = IEMlogger(self._conf_reader)
 
     def run(self):
         """Run the module periodically on its own thread."""
@@ -106,9 +110,6 @@ class LoggingMsgHandler(ScheduledModuleThread, InternalMsgQ):
         if log_type == "IEM":
             self._log_debug("_process_msg, msg_type: IEM")
             if self._iem_log_locally == "true":
-                if self._iem_logger == None:
-                    self._iem_logger = IEMlogger(self._conf_reader)
-    
                 result = self._iem_logger.log_msg(jsonMsg)
                 self._log_debug("Log IEM results: %s" % result)        
 
@@ -139,8 +140,6 @@ class LoggingMsgHandler(ScheduledModuleThread, InternalMsgQ):
             self._write_internal_msgQ("DiskMsgHandler", internal_json_msg)
 
             # Hand off to the IEM logger
-            if self._iem_logger == None:
-                self._iem_logger = IEMlogger(self._conf_reader)
             result = self._iem_logger.log_msg(jsonMsg)
 
             # Send ack about logging msg

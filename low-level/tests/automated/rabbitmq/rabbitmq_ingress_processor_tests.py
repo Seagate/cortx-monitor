@@ -94,7 +94,7 @@ class RabbitMQingressProcessorTests(ScheduledModuleThread, InternalMsgQ):
         Draft3Validator.check_schema(self._sensor_schema)
 
 
-    def initialize(self, conf_reader, msgQlist):
+    def initialize(self, conf_reader, msgQlist, products):
         """initialize configuration reader and internal msg queues"""
         # Initialize ScheduledMonitorThread
         super(RabbitMQingressProcessorTests, self).initialize(conf_reader)

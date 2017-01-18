@@ -1,12 +1,11 @@
 #!/usr/bin/env python
 """
-Setup rabbitmq for use by sspl_ll.
+Setup rabbitmq for use by sspl_ll on CS-A systems
 
-This script uses /etc/sspl_ll.conf as the source of the parameters.  The
-existing vhost/user (if any) will be deleted and recreated.
+This script uses /etc/sspl_ll.conf as the source of the parameters.
 
 Usage:
-    ./sspl_ll_rabbitmq_reinit
+    ./sspl_ll_rabbitmq_reinit_CS_A
 """
 import subprocess
 import ConfigParser
@@ -36,9 +35,6 @@ def main():
 
     _create_vhost_if_necessary(virtual_host)
     _create_user_if_necessary(username, password, virtual_host)
-
-    # Make the caller restart sspl to avoid error on rpm install 
-    #_restart_sspl_ll()
 
 
 def _create_vhost_if_necessary(virtual_host):
@@ -105,13 +101,6 @@ def _create_user_if_necessary(username, password, virtual_host):
         ])
     subprocess.check_call(
         [RABBITMQCTL, 'set_user_tags', username, 'administrator']
-        )
-
-
-def _restart_sspl_ll():
-    """ Restarts the sspl-ll daemon. """
-    subprocess.check_call(
-        ['/usr/bin/systemctl', 'restart', 'sspl-ll', '--full']
         )
 
 

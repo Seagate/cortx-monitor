@@ -57,7 +57,7 @@ class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
         self._hpi_base_dir = "/tmp/dcs/hpi"
         self._start_delay  = 10
 
-    def initialize(self, conf_reader, msgQlist):
+    def initialize(self, conf_reader, msgQlist, products):
         """initialize configuration reader and internal msg queues"""
 
         # Initialize ScheduledMonitorThread and InternalMsgQ

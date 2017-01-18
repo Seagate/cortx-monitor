@@ -18,15 +18,6 @@ import socket
 import json
 import time
 
-from actuators.ILogin import ILogin
-from actuators.Ipdu import IPDU
-from actuators.Iraid import IRAIDactuator
-from actuators.Iipmi import Iipmi
-from actuators.Ihdparm import IHdparm
-from actuators.Ihpi import IHPI
-from actuators.Ispiel import ISpiel
-from actuators.Icommand_line import ICommandLine
-
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
@@ -36,10 +27,6 @@ from json_msgs.messages.actuators.ack_response import AckResponseMsg
 
 from message_handlers.disk_msg_handler import DiskMsgHandler
 from message_handlers.service_msg_handler import ServiceMsgHandler
-
-from sensors.impl.centos_7.systemd_watchdog import SystemdWatchdog
-
-from zope.component import queryUtility
 
 
 class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
@@ -57,7 +44,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
         super(NodeControllerMsgHandler, self).__init__(self.MODULE_NAME,
                                                   self.PRIORITY)
 
-    def initialize(self, conf_reader, msgQlist):
+    def initialize(self, conf_reader, msgQlist, products):
         """initialize configuration reader and internal msg queues"""
         # Initialize ScheduledMonitorThread
         super(NodeControllerMsgHandler, self).initialize(conf_reader)
@@ -79,6 +66,14 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
         self._IPMI_actuator         = None
         self._hdparm_actuator       = None
         self._command_line_actuator = None
+
+        self._import_products(products)
+
+    def _import_products(self, products):
+        """Import classes based on which product is being used"""
+        if "CS-A" in products:
+            from zope.component import queryUtility
+            self._queryUtility = queryUtility
 
     def run(self):
         """Run the module periodically on its own thread."""
@@ -130,7 +125,8 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
             if component == 'SSPL':
                 # Query the Zope GlobalSiteManager for an object implementing the IMERO actuator
                 if self._command_line_actuator is None:
-                    self._command_line_actuator = queryUtility(ICommandLine)(self._conf_reader)
+                    from actuators.Icommand_line import ICommandLine
+                    self._command_line_actuator = self._queryUtility(ICommandLine)(self._conf_reader)
                     self._log_debug("_process_msg, _command_line_actuator name: %s" % self._command_line_actuator.name())
 
                 # Perform the request and get the response
@@ -144,7 +140,8 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
             elif component == 'MERO':
                 # Query the Zope GlobalSiteManager for an object implementing the IMERO actuator
                 if self._spiel_actuator is None:
-                    self._spiel_actuator = queryUtility(ISpiel)(self._conf_reader)
+                    from actuators.Ispiel import ISpiel
+                    self._spiel_actuator = self._queryUtility(ISpiel)(self._conf_reader)
                     self._log_debug("_process_msg, _spiel_actuator name: %s" % self._spiel_actuator.name())
 
                 # Perform the request and get the response
@@ -158,7 +155,8 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
             elif component == "LED:":
                 # Query the Zope GlobalSiteManager for an object implementing the IHPI actuator
                 if self._HPI_actuator is None:
-                    self._HPI_actuator = queryUtility(IHPI)(self._conf_reader)
+                    from actuators.Ihpi import IHPI
+                    self._HPI_actuator = self._queryUtility(IHPI)(self._conf_reader)
                     self._log_debug("_process_msg, _HPI_actuator name: %s" % self._HPI_actuator.name())
 
                 # Perform the request using HPI and get the response
@@ -172,7 +170,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
             elif component == "BEZE":
                 # Query the Zope GlobalSiteManager for an object implementing the IGEM actuator
                 if self._GEM_actuator is None:
-                    self._GEM_actuator = queryUtility(IGEM)(self._conf_reader)
+                    self._GEM_actuator = self._queryUtility(IGEM)(self._conf_reader)
                     self._log_debug("_process_msg, _GEM_actuator name: %s" % self._GEM_actuator.name())
 
                 # Perform the request using GEM and get the response
@@ -185,7 +183,8 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
             elif component == "PDU:":
                 # Query the Zope GlobalSiteManager for an object implementing the IPDU actuator
                 if self._PDU_actuator is None:
-                    self._PDU_actuator = queryUtility(IPDU)(self._conf_reader)
+                    from actuators.Ipdu import IPDU
+                    self._PDU_actuator = self._queryUtility(IPDU)(self._conf_reader)
                     self._log_debug("_process_msg, _PDU_actuator name: %s" % self._PDU_actuator.name())
 
                 # Perform the request on the PDU and get the response
@@ -198,7 +197,8 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
             elif component == "RAID":
                 # Query the Zope GlobalSiteManager for an object implementing the IRAIDactuator
                 if self._RAID_actuator is None:
-                    self._RAID_actuator = queryUtility(IRAIDactuator)()
+                    from actuators.Iraid import IRAIDactuator
+                    self._RAID_actuator = self._queryUtility(IRAIDactuator)()
                     self._log_debug("_process_msg, _RAID_actuator name: %s" % self._RAID_actuator.name())
 
                 # Perform the RAID request on the node and get the response
@@ -221,7 +221,8 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
             elif component == "IPMI":
                 # Query the Zope GlobalSiteManager for an object implementing the IPMI actuator
                 if self._IPMI_actuator is None:
-                    self._IPMI_actuator = queryUtility(Iipmi)(self._conf_reader)
+                    from actuators.Iipmi import Iipmi
+                    self._IPMI_actuator = self._queryUtility(Iipmi)(self._conf_reader)
                     self._log_debug("_process_msg, _IPMI_actuator name: %s" % self._IPMI_actuator.name())
 
                 # Perform the RAID request on the node and get the response
@@ -234,7 +235,8 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
             elif component == "STOP":
                 # Query the Zope GlobalSiteManager for an object implementing the IHPI actuator
                 if self._HPI_actuator is None:
-                    self._HPI_actuator = queryUtility(IHPI)(self._conf_reader)
+                    from actuators.Ihpi import IHPI
+                    self._HPI_actuator = self._queryUtility(IHPI)(self._conf_reader)
                     self._log_debug("_process_msg, _HPI_actuator name: %s" % self._HPI_actuator.name())
 
                 # Parse out the drive to stop
@@ -260,7 +262,8 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
             elif component == "STAR":
                 # Query the Zope GlobalSiteManager for an object implementing the IHPI actuator
                 if self._HPI_actuator is None:
-                    self._HPI_actuator = queryUtility(IHPI)(self._conf_reader)
+                    from actuators.Ihpi import IHPI
+                    self._HPI_actuator = self._queryUtility(IHPI)(self._conf_reader)
                     self._log_debug("_process_msg, _HPI_actuator name: %s" % self._HPI_actuator.name())
 
                 # Parse out the drive to start
@@ -290,7 +293,8 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
             elif component == "RESE":
                 # Query the Zope GlobalSiteManager for an object implementing the IHPI actuator
                 if self._HPI_actuator is None:
-                    self._HPI_actuator = queryUtility(IHPI)(self._conf_reader)
+                    from actuators.Ihpi import IHPI
+                    self._HPI_actuator = self._queryUtility(IHPI)(self._conf_reader)
                     self._log_debug("_process_msg, _HPI_actuator name: %s" % self._HPI_actuator.name())
 
                 # Parse out the drive to power cycle
@@ -327,7 +331,8 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
             elif component == "HDPA":
                 # Query the Zope GlobalSiteManager for an object implementing the hdparm actuator
                 if self._hdparm_actuator is None:
-                    self._hdparm_actuator = queryUtility(IHdparm)()
+                    from actuators.Ihdparm import IHdparm
+                    self._hdparm_actuator = self._queryUtility(IHdparm)()
                     self._log_debug("_process_msg, _hdparm_actuator name: %s" % self._hdparm_actuator.name())
 
                 # Perform the hdparm request on the node and get the response
@@ -353,7 +358,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                          "uuid" : uuid
                          })
 
-                    self._write_internal_msgQ(SystemdWatchdog.name(), internal_json_msg)
+                    self._write_internal_msgQ("SystemdWatchdog", internal_json_msg)
                     return
 
                 # Put together a message to get the serial number of the drive using hdparm tool
@@ -376,7 +381,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                         "uuid" : uuid
                     })
 
-                self._write_internal_msgQ(SystemdWatchdog.name(), internal_json_msg)
+                self._write_internal_msgQ("SystemdWatchdog", internal_json_msg)
 
             elif component == "DRVM":
                 # Requesting the current status from drivemanager
@@ -497,7 +502,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                          })
 
                     # Send the event to SystemdWatchdog to handle it from here
-                    self._write_internal_msgQ(SystemdWatchdog.name(), internal_json_msg)
+                    self._write_internal_msgQ("SystemdWatchdog", internal_json_msg)
 
                 else:
                     # Send a message to the disk message handler to handle simulation request
@@ -529,7 +534,8 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
         try:
             # Query the Zope GlobalSiteManager for an object implementing the hdparm actuator
             if self._hdparm_actuator is None:
-                self._hdparm_actuator = queryUtility(IHdparm)()
+                from actuators.Ihdparm import IHdparm
+                self._hdparm_actuator = self._queryUtility(IHdparm)()
                 self._log_debug("_process_msg, _hdparm_actuator name: %s" % self._hdparm_actuator.name())
 
             hd_parm_request = "HDPARM: -I {} | grep 'Serial Number:'".format(drive_request)

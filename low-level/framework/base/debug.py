@@ -16,7 +16,12 @@
 
 import json
 from framework.utils.service_logging import logger
-from systemd import journal
+try:
+   from systemd import journal
+   use_journal=True
+except ImportError:
+    use_journal=False
+
 
 class Debug(object):
     """"Flags and methods for handling debug mode"""
@@ -30,7 +35,10 @@ class Debug(object):
         """Logging messages"""
         if self._debug:
             log_msg = self.name() + ", " + message
-            journal.send(log_msg, PRIORITY=7, SYSLOG_IDENTIFIER="sspl-ll")
+            if use_journal:
+                journal.send(log_msg, PRIORITY=7, SYSLOG_IDENTIFIER="sspl-ll")
+            else:
+                logger.info(log_msg)
 
     def _set_debug(self, debug):
         """Sets debug flag"""

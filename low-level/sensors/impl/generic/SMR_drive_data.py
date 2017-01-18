@@ -58,7 +58,7 @@ class SMRdriveData(ScheduledModuleThread, InternalMsgQ):
                                          self.PRIORITY)
         self._cache_state = None
 
-    def initialize(self, conf_reader, msgQlist):
+    def initialize(self, conf_reader, msgQlist, products):
         """initialize configuration reader and internal msg queues"""
 
         # Initialize ScheduledMonitorThread and InternalMsgQ

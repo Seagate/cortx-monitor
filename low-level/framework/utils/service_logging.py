@@ -55,7 +55,7 @@ def init_logging(dcs_service_name, log_level=LOG_DEBUG):
         log_level = LOG_DEBUG
     logger.setLevel(LOGLEVEL_NAME_TO_LEVEL_DICT[log_level])    
     num_attempts = 1
-    handler = logging.NullHandler()
+   
     while True:
         try:
             handler = logging.handlers.SysLogHandler(address='/dev/log')

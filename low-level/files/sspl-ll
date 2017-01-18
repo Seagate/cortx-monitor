@@ -1,0 +1,119 @@
+#!/bin/sh
+#
+# chkconfig: 234 91 09
+# description: Seagate Storage Platform Library - Low Level
+# processname: sspl_ll_d
+#
+
+### BEGIN INIT INFO
+# Provides: sspl-llr
+# Required-Start: $local_fs $network $syslog
+# Required-Stop: $local_fs $network $syslog
+# Default-Start:
+# Default-Stop: 0 1 2 3 4 5 6
+# Short-Description: Start and stop the sspl-ll process
+# Description: Seagate Storage Platform Library - Low Level
+### END INIT INFO
+
+
+# Source function library.
+if [ -f /etc/init.d/functions ] ; then
+  . /etc/init.d/functions
+elif [ -f /etc/rc.d/init.d/functions ] ; then
+  . /etc/rc.d/init.d/functions
+else
+  exit 1
+fi
+
+name=`basename $0`
+pid_file="/var/run/$name.pid"
+stdout_log="/var/log/$name.log"
+stderr_log="/var/log/$name.err"
+
+user="sspl-ll"
+prog_name="/opt/seagate/sspl/low-level/framework/sspl_ll_d"
+config="/etc/sspl_ll.conf"
+cmd="--user ${user} --pidfile=${pid_file} ${prog_name} --config=${config} --systemd=False"
+
+rabbitmq_init="/opt/seagate/sspl/low-level/framework/sspl_ll_rabbitmq_reinit_CS_LG"
+sspl_ll_reinit="/opt/seagate/sspl/low-level/framework/sspl_ll_reinit_CS_LG"
+
+get_pid() {
+    cat "$pid_file"
+}
+
+is_running() {
+    [ -f "$pid_file" ] && ps `get_pid` > /dev/null 2>&1
+}
+
+case "$1" in
+    start)
+    if is_running; then
+        echo "Already started"
+    else
+        echo "Initializing SSPL-LL"
+	    $sspl_ll_reinit
+        echo "Initializing RabbitMQ"
+        $rabbitmq_init
+        echo "Starting $name"
+        daemon $cmd 
+        pid=`ps -A -o pid,cmd|grep ${prog_name} | grep -v grep |head -n 1 | awk '{print $1}'`
+        echo $pid > "$pid_file"
+        if ! is_running; then
+            echo "Unable to start, see $stdout_log and $stderr_log"
+            exit 1
+        fi
+    fi
+    ;;
+    stop)
+    if is_running; then
+        echo -n "Stopping $name.."
+        kill `get_pid`
+        for i in {1..10}
+        do
+            if ! is_running; then
+                break
+            fi
+
+            echo -n "."
+            sleep 1
+        done
+        echo
+
+        if is_running; then
+            echo "Not stopped; may still be shutting down or shutdown may have failed"
+            echo "Manually check for process and if not running the remove /var/run/sspl-ll.pid"
+            exit 1
+        else
+            echo "Stopped"
+            if [ -f "$pid_file" ]; then
+                rm "$pid_file"
+            fi
+        fi
+    else
+        echo "Not running"
+    fi
+    ;;
+    restart)
+    $0 stop
+    if is_running; then
+        echo "Unable to stop, will not attempt to start"
+        exit 1
+    fi
+    $0 start
+    ;;
+    status)
+    if is_running; then
+        echo "Running"
+    else
+        echo "Stopped"
+        exit 1
+    fi
+    ;;
+    *)
+    echo "Usage: $0 {start|stop|restart|status}"
+    exit 1
+    ;;
+esac
+
+exit 0

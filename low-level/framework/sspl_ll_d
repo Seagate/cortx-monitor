@@ -17,8 +17,6 @@
  ****************************************************************************
 """
 
-from systemd.daemon import notify
-
 import logging
 import daemon
 import signal
@@ -33,9 +31,6 @@ import os
 parentdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.sys.path.insert(0,parentdir)
 
-from zope.component import getGlobalSiteManager
-from zope.interface import implementedBy
-
 from threading import Thread
 
 from utils.config_reader import ConfigReader
@@ -45,15 +40,19 @@ from utils.service_logging import logger
 # Modules for handling RabbitMQ messages and manipulating internal threads
 from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 from rabbitmq.rabbitmq_ingress_processor import RabbitMQingressProcessor
+
+from framework.rabbitmq.plane_cntrl_rmq_egress_processor import PlaneCntrlRMQegressProcessor
+from framework.rabbitmq.plane_cntrl_rmq_ingress_processor import PlaneCntrlRMQingressProcessor
+
 from rabbitmq.logging_processor import LoggingProcessor
 from rabbitmq.thread_controller import ThreadController
-
-# Modules for handling specific JSON messages
+ 
 from message_handlers.node_controller_msg_handler import NodeControllerMsgHandler
 from message_handlers.node_data_msg_handler import NodeDataMsgHandler
 from message_handlers.disk_msg_handler import DiskMsgHandler
 from message_handlers.logging_msg_handler import LoggingMsgHandler
 from message_handlers.service_msg_handler import ServiceMsgHandler
+from message_handlers.plane_cntrl_msg_handler import PlaneCntrlMsgHandler
 
 # Message to send to HAlon upon critical thread errors
 from json_msgs.messages.actuators.thread_controller import ThreadControllerMsg
@@ -69,12 +68,14 @@ ACTUATORS       = 'actuators'
 # Section containing information about the system we're running on
 SYS_INFORMATION = 'SYSTEM_INFORMATION'
 OPER_SYSTEM     = 'operating_system'
+PRODUCT_NAME    = 'products'
 
 # Instantiate the internal ThreadController. Global so the shutdown callback
 #  method can use it to properly halt all running threads.
 threadController = ThreadController()
 
-def main(conf_reader):
+
+def main(conf_reader, systemd_support):
     """The main bootstrap for sspl"""    
     logger.info("sspl-ll Bootstrap: Obtaining list of modules from config file")
 
@@ -84,6 +85,18 @@ def main(conf_reader):
 
     # Create a mapping of all the instantiated modules to their names
     sspl_threaded_modules = {}
+
+    # Read in operating system value from configuration file
+    operating_system = conf_reader._get_value(SYS_INFORMATION, OPER_SYSTEM)
+    logger.info("sspl-ll Bootstrap: configuring for OS: %s" % operating_system)
+
+    # Read in product value from configuration file
+    try:
+        products = conf_reader._get_value_list(SYS_INFORMATION, PRODUCT_NAME)
+    except Exception:
+        # Default to Castor System for now
+        products = ["CS-A"]
+    logger.info("sspl-ll Bootstrap: product names supported: %s" % products)
 
     # Use reflection to instantiate the classes based upon its class name in config file
     core_processors = conf_reader._get_value_list(SSPL_SETTING,
@@ -99,6 +112,7 @@ def main(conf_reader):
     message_handlers = conf_reader._get_value_list(SSPL_SETTING,
                                                    MSG_HANDLERS)
     logger.info("sspl-ll Bootstrap: message handlers to load: %s" % message_handlers)
+
     for message_handler in message_handlers:
         klass = globals()[message_handler]
 
@@ -108,7 +122,8 @@ def main(conf_reader):
 
     # Instantiate the sensors and actuators
     sspl_threaded_modules, msgQlist = _sensors_actuators_factory(
-                                            sspl_threaded_modules, msgQlist)
+                                            sspl_threaded_modules, msgQlist,
+                                            operating_system, products)
 
     # Add the ThreadConroller automatically
     msgQlist[ThreadController.name()] = Queue.Queue()
@@ -118,38 +133,33 @@ def main(conf_reader):
         for name, curr_module in sspl_threaded_modules.iteritems():
             logger.info("Starting: %s" % curr_module.name())
             thread = Thread(target=_run_thread_capture_errors,
-                            args=(curr_module, sspl_threaded_modules, msgQlist, conf_reader))
+                            args=(curr_module, sspl_threaded_modules, msgQlist, conf_reader, products))
             thread.start()
-
+ 
         # Start the ThreadController module with the list of threads
         logger.info("Starting: %s" % ThreadController.name())
-
+ 
         # Initialize the thread controller with the list of references to all modules
         controller_thread = Thread(target=_run_thread_capture_errors,
-                            args=(threadController, sspl_threaded_modules, msgQlist, conf_reader))
-        threadController.initialize_thread_list(sspl_threaded_modules)
+                            args=(threadController, sspl_threaded_modules, msgQlist, conf_reader, products))
+        threadController.initialize_thread_list(sspl_threaded_modules, operating_system, products)
         controller_thread.start()
 
         # Let systemd know that we've started up successfully and ready for it to monitor sspl-ll
-        notify("READY=1")
+        if systemd_support:
+            from systemd.daemon import notify
+            notify("READY=1")
 
         # Block main thread until thread controller has been halted
         controller_thread.join()
-
+ 
     except Exception as ex:
         logger.exception(ex)
 
 
 # TODO: Create a factory class instead of a method
-def _sensors_actuators_factory(sspl_threaded_modules, msgQlist):
+def _sensors_actuators_factory(sspl_threaded_modules, msgQlist, operating_system, products):
     """Loops thru list of sensors/actuators and instantiate"""
-
-    # The Zope Global Site Manager containing objects that implement the desired interfaces
-    gsm = getGlobalSiteManager()
-
-    # Read in operating system value from configuration file
-    operating_system = conf_reader._get_value(SYS_INFORMATION, OPER_SYSTEM)
-    logger.info("sspl-ll Bootstrap: operating system: %s" % operating_system)
 
     # Read in list of sensors
     sensors = conf_reader._get_value_list(SSPL_SETTING, SENSORS)
@@ -168,6 +178,10 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist):
         from sensors.impl.centos_7.systemd_watchdog import SystemdWatchdog as ServiceWatchdog
         from sensors.impl.centos_7.hpi_monitor import HPIMonitor as HPIMonitor
 
+    elif operating_system == "centos6":
+        # Nothing yet
+        pass
+
     elif operating_system in ["osX", "osx"]:
         from actuators.impl.os_x.xinitd_service import XinitdService as Service
         from actuators.impl.os_x.xinitd_login import XinitdLogin as Login
@@ -177,19 +191,26 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist):
 
     else:
         raise Exception("Operating System not supported")
+ 
+    for product in products:
+        if product == "CS-A":
+            from actuators.impl.generic.raritan_pdu import RaritanPDU
+            from actuators.impl.generic.raid import RAIDactuator
+            from actuators.impl.generic.ipmi import IPMI
+            from actuators.impl.generic.hdparm import Hdparm
+            from actuators.impl.generic.hpi_actuator import HPIactuator
+            from actuators.impl.generic.spiel import Spiel
+ 
+            from sensors.impl.generic.raid import RAIDsensor
+            from sensors.impl.generic.node_data import NodeData as NodeData
+            from sensors.impl.generic.SMR_drive_data import SMRdriveData
+            from sensors.impl.generic.SNMP_traps import SNMPtraps
 
-    # Import in generic sensors/actuators which work on all platforms
-    from actuators.impl.generic.raritan_pdu import RaritanPDU
-    from actuators.impl.generic.raid import RAIDactuator
-    from actuators.impl.generic.ipmi import IPMI
-    from actuators.impl.generic.hdparm import Hdparm
-    from actuators.impl.generic.hpi_actuator import HPIactuator
-    from actuators.impl.generic.spiel import Spiel
+            from zope.component import getGlobalSiteManager
+            from zope.interface import implementedBy
 
-    from sensors.impl.generic.raid import RAIDsensor
-    from sensors.impl.generic.node_data import NodeData as NodeData
-    from sensors.impl.generic.SMR_drive_data import SMRdriveData
-    from sensors.impl.generic.SNMP_traps import SNMPtraps
+            # The Zope Global Site Manager containing objects that implement the desired interfaces
+            gsm = getGlobalSiteManager()
 
     # Loop through the list of sensors/actuators and instantiate appropriately
     #  based upon whether or not it is threaded
@@ -217,18 +238,19 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist):
             interface_impl = list(implementedBy(klass))[0]  # Assumes single inheritance only
             logger.info("            Implements Interface: %s" % interface_impl.__name__)
 
-            gsm.registerUtility(klass, interface_impl)
+            if "CS-A" in products:
+                gsm.registerUtility(klass, interface_impl)
 
     return (sspl_threaded_modules, msgQlist)
 
 
-def _run_thread_capture_errors(curr_module, sspl_threaded_modules, msgQlist, conf_reader):
+def _run_thread_capture_errors(curr_module, sspl_threaded_modules, msgQlist, conf_reader, products):
     """Run the given thread and log any errors that happen on it.
     Will stop all sspl_threaded_modules if one of them fails."""
     try:
         # Each module is passed a reference list to message queues so it can transmit
         #  internal messages to other modules as desired
-        curr_module.initialize(conf_reader, msgQlist)
+        curr_module.initialize(conf_reader, msgQlist, products)
         curr_module.start()
 
     except Exception as ex:
@@ -268,7 +290,11 @@ def shutdown_handler(signum=None, frame=None):
     threadController.shutdown()
 
     # Let systemd know that we've stopped successfully
-    notify("STOPPING=1")
+    try:
+        from systemd.daemon import notify
+        notify("STOPPING=1")
+    except Exception as ex:
+        logger.info("sspl-ll is not using systemd, ignoring.")
 
 def print_usage():
     """Display the syntax usage for this script"""
@@ -280,7 +306,7 @@ def print_usage():
 if __name__ == "__main__":
     # Retrieve configuration file for sspl-ll service
     try:
-        opts = getopt.getopt(sys.argv[1:], "hc:", ["help", "config="])
+        opts = getopt.getopt(sys.argv[1:], "hc:", ["help", "config=", "systemd="])
 
     except getopt.GetoptError as err:
         print_usage()
@@ -290,9 +316,13 @@ if __name__ == "__main__":
         print_usage()
         sys.exit(os.EX_USAGE)
 
+    systemd_support = True
     for opt, arg in opts[0]:
         if opt == "-c" or opt == "--config":
             path_to_conf_file = arg
+        elif opt == "-s" or opt == "--systemd":
+            if arg == "False":
+                systemd_support = False
         else:
             print_usage()
             sys.exit(os.EX_USAGE)
@@ -322,20 +352,23 @@ if __name__ == "__main__":
 
     try:
         # Create a PID file for systemd
-        path = "/var/run/sspl_ll/sspl_ll_d.pid"
-        pidfile = open(path, "a+")
-        try:
-            fcntl.flock(pidfile.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except IOError:
-            raise SystemExit("Already running according to " + path)
-        pidfile.seek(0)
-        pidfile.truncate()
-        pidfile.write(str(os.getpid()))
-        pidfile.flush()
-        pidfile.seek(0)
+        if systemd_support:
+            path = "/var/run/sspl_ll/sspl_ll_d.pid"
+            pidfile = open(path, "a+")
+            try:
+                fcntl.flock(pidfile.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except IOError:
+                raise SystemExit("Already running according to " + path)
+            pidfile.seek(0)
+            pidfile.truncate()
+            pidfile.write(str(os.getpid()))
+            pidfile.flush()
+            pidfile.seek(0)
 
-        # Create the daemon context
-        context = daemon.DaemonContext(pidfile=pidfile)
+            # Create the daemon context
+            context = daemon.DaemonContext(pidfile=pidfile)
+        else:
+            context = daemon.DaemonContext()
 
         # Configure a shutdown handler to handle any necessary cleanup for hangup signal
         context.signal_map = {signal.SIGHUP : lambda signum, frame: shutdown_handler()}
@@ -344,7 +377,7 @@ if __name__ == "__main__":
 
         # Start sspl-ll as a main process running multiple threads
         with context:
-            main(conf_reader)
+            main(conf_reader, systemd_support)
 
     except (Exception, StandardError) as err:
         logger.critical("While spawning sspl-ll process :%r" % err)

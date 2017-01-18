@@ -37,25 +37,15 @@ from message_handlers.service_msg_handler import ServiceMsgHandler
 from message_handlers.node_data_msg_handler import NodeDataMsgHandler
 from message_handlers.node_controller_msg_handler import NodeControllerMsgHandler
 
-# Note that all threaded sensors and actuators must have an import here to be controlled
-from sensors.impl.centos_7.systemd_watchdog import SystemdWatchdog
-from sensors.impl.centos_7.drive_manager import DriveManager
-from sensors.impl.centos_7.hpi_monitor import HPIMonitor
-from sensors.impl.os_x.xinitd_watchdog import XinitdWatchdog
-from sensors.impl.os_x.drive_manager import DriveManager
-from sensors.impl.os_x.hpi_monitor import HPIMonitor
-from sensors.impl.generic.raid import RAIDsensor
-from sensors.impl.generic.SMR_drive_data import SMRdriveData
-
 
 # Global method used by Thread to capture and log errors.  This must be global.
-def _run_thread_capture_errors(curr_module, sspl_modules, msgQlist, conf_reader):
+def _run_thread_capture_errors(curr_module, sspl_modules, msgQlist, conf_reader, products):
     """Run the given thread and log any errors that happen on it.
     Will stop all sspl_modules if one of them fails."""
     try:
         # Each module is passed a reference list to message queues so it can transmit
         #  internal messages to other modules as desired
-        curr_module.initialize(conf_reader, msgQlist)
+        curr_module.initialize(conf_reader, msgQlist, products)
         curr_module.start()
 
     except BaseException as ex:
@@ -100,7 +90,7 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
         self._hpi_base_dir = "/tmp/dcs/hpi"
         self._start_delay  = 10
 
-    def initialize(self, conf_reader, msgQlist):
+    def initialize(self, conf_reader, msgQlist, products):
         """initialize configuration reader and internal msg queues"""
         # Initialize ScheduledMonitorThread
         super(ThreadController, self).initialize(conf_reader)
@@ -108,27 +98,42 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
         # Initialize internal message queues for this module
         super(ThreadController, self).initialize_msgQ(msgQlist)
 
-    def initialize_thread_list(self, sspl_modules):
+    def initialize_thread_list(self, sspl_modules, operating_system, products):
         """initialize list of references to all modules"""
-        self._sspl_modules = sspl_modules
+        self._sspl_modules     = sspl_modules
+        self._products         = products
+        self._operating_system = operating_system
+
+        if operating_system == "centos7":
+            # Note that all threaded sensors and actuators must have an import here to be controlled
+            from sensors.impl.centos_7.systemd_watchdog import SystemdWatchdog
+            from sensors.impl.centos_7.drive_manager import DriveManager
+            from sensors.impl.centos_7.hpi_monitor import HPIMonitor
+
+        for product in self._products:
+            if product == "CS-A":
+                from sensors.impl.generic.raid import RAIDsensor
+                from sensors.impl.generic.SMR_drive_data import SMRdriveData
 
     def run(self):
         """Run the module periodically on its own thread."""
-        # Wait for the dcs-collector to populate the /tmp/dcs/hpi directory
-        while not os.path.isdir(self._hpi_base_dir):
-            logger.info("ThreadController, dir not found: %s " % self._hpi_base_dir)
-            logger.info("ThreadController, rechecking in %s secs" % self._start_delay)
-            time.sleep(int(self._start_delay))
+        for product in self._products:
+            if product == "CS-A" and \
+               not self._threads_initialized:
+                # Wait for the dcs-collector to populate the /tmp/dcs/hpi directory
+                while not os.path.isdir(self._hpi_base_dir):
+                    logger.info("ThreadController, dir not found: %s " % self._hpi_base_dir)
+                    logger.info("ThreadController, rechecking in %s secs" % self._start_delay)
+                    time.sleep(int(self._start_delay))
 
-        if not self._threads_initialized:
-            # Allow other threads to initialize
-            time.sleep(165)
+                # Allow other threads to initialize
+                time.sleep(165)
 
-            # Notify external applications that've started up successfully
-            startup_msg = "SSPL-LL service has started successfully"
-            jsonMsg     = ThreadControllerMsg(ThreadController.name(), startup_msg).getJson()
-            self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
-            self._threads_initialized = True
+                # Notify external applications that've started up successfully
+                startup_msg = "SSPL-LL service has started successfully"
+                jsonMsg     = ThreadControllerMsg(ThreadController.name(), startup_msg).getJson()
+                self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
+                self._threads_initialized = True
 
         self._log_debug("Start accepting requests")
         try:
@@ -253,7 +258,7 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
 
         module_thread = Thread(target=_run_thread_capture_errors,
                                   args=(self._sspl_modules[module_name], self._sspl_modules,
-                                  self._msgQlist, self._conf_reader))
+                                  self._msgQlist, self._conf_reader, self._products))
 
         # Put a configure debug message on the module's queue before starting it up
         if self.debug_section is not None:

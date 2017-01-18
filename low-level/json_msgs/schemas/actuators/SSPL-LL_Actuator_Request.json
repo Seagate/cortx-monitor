@@ -158,6 +158,28 @@
 									"required": true
 								}
 							}
+						},
+
+						"plane_controller": {
+							"type": "object",
+							"additionalProperties": false,
+							"properties": {
+								"plane_request": {
+									"description": "Requested action to perform",
+									"type": "string",
+									"required": true
+								},
+								"parameters": {
+									"description": "Optional parameters",
+									"type": "object",
+									"required": false
+								},
+								"type": {
+									"description": "Command type",
+									"type": "string",
+									"required": true
+								}
+							}
 						}
 					}
 				}

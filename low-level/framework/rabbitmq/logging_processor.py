@@ -19,7 +19,11 @@ import pika
 import os
 import json
 
-from systemd import journal
+try:
+   from systemd import journal
+   use_journal=True
+except ImportError:
+    use_journal=False
 
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
@@ -65,7 +69,7 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
         super(LoggingProcessor, self).__init__(self.MODULE_NAME,
                                                   self.PRIORITY)
 
-    def initialize(self, conf_reader, msgQlist):
+    def initialize(self, conf_reader, msgQlist, products):
         """initialize configuration reader and internal msg queues"""
         # Initialize ScheduledMonitorThread
         super(LoggingProcessor, self).initialize(conf_reader)
@@ -148,8 +152,11 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
 
             # Not an IEM so just dump it to the journal and don't worry about email and routing back to CMU
             if event_code == None:
-                journal.send(log_msg, MESSAGE_ID=event_code, PRIORITY=priority,
-                             SYSLOG_IDENTIFIER="sspl-ll")
+                if use_journal:
+                    journal.send(log_msg, MESSAGE_ID=event_code, PRIORITY=priority,
+                                 SYSLOG_IDENTIFIER="sspl-ll")
+                else:
+                    logger.info(log_msg)
             else:
                 # Send the IEM to the logging msg handler to be processed
                 internal_json_msg = json.dumps(
@@ -198,21 +205,24 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
                     )
                 )
             self._channel = self._connection.channel()
-            self._channel.queue_declare(
-                queue='SSPL-LL',
-                durable=False
-                )
-            self._channel.exchange_declare(
-                exchange=self._exchange_name,
-                exchange_type='topic',
-                durable=False
-                )
+            try:
+                self._channel.queue_declare(
+                    queue='SSPL-LL',
+                    durable=False
+                    )
+                self._channel.exchange_declare(
+                    exchange=self._exchange_name,
+                    type='topic',
+                    durable=False
+                    )
+            except:
+                pass
             self._channel.queue_bind(
                 queue='SSPL-LL',
                 exchange=self._exchange_name,
                 routing_key=self._routing_key
                 )
-            
+
         except Exception as ex:
             logger.exception("_configure_exchange: %s" % ex)  
 

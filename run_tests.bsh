@@ -29,7 +29,6 @@ TOP_DIR=`pwd`
 
 # Copy over sudoers files
 cp ./installation/deps/00aliases /etc/sudoers.d
-cp ./installation/deps/sudoers /etc
 
 # Copy over dcs-collector configuration file
 cp ./installation/deps/dcs_collector.conf /etc
@@ -49,8 +48,8 @@ sed -i "s|^ExecStart=.*|ExecStart=${service_path} -c /etc/sspl_ll.conf|g" /etc/s
 systemctl daemon-reload
 
 # Initialize rabbitmq queues and exchanges
-chmod +x low-level/framework/sspl_ll_rabbitmq_reinit
-low-level/framework/sspl_ll_rabbitmq_reinit
+chmod +x low-level/framework/sspl_ll_rabbitmq_reinit_CS_A
+low-level/framework/sspl_ll_rabbitmq_reinit_CS_A
 
 chmod +x installation/deps/install_deps.bsh
 ./installation/deps/install_deps.bsh

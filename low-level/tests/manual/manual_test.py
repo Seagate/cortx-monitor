@@ -22,7 +22,6 @@
 # ****************************************************************************
 """
 import json
-import pika
 import socket
 import sys
 import ctypes
@@ -32,17 +31,33 @@ import uuid
 import threading
 from datetime import datetime
 
-from jsonschema import Draft3Validator
-from jsonschema import validate
+try:
+    import pika
+except ImportError:
+    print("Error importing python-pika package")
+    
+try:
+    from jsonschema import Draft3Validator
+    from jsonschema import validate
+except ImportError:
+    print("Error importing python-jsonschema package")
 
 sys.path.insert(0, '../..')
+from framework.utils.service_logging import init_logging
+from framework.utils.service_logging import logger
 from framework.utils.config_reader import ConfigReader
-SSPL_SEC = ctypes.cdll.LoadLibrary('libsspl_sec.so.0')
 
+try:
+    use_security_lib=True
+    SSPL_SEC = ctypes.cdll.LoadLibrary('libsspl_sec.so.0')
+except Exception as ae:
+    use_security_lib=False
 
 class ManualTest():
     # Section and keys in configuration file
     VIRTUALHOST         = "virtual_host"
+    INGRESSQUEU         = "queue_name"
+    QUEUE_NAME          = "queue_name"
     EXCHANGENAME        = "exchange_name"
     ACKEXCHANGENAME     = "ack_exchange_name"
     ROUTINGKEY          = "routing_key"
@@ -51,6 +66,8 @@ class ManualTest():
     SIGNATURE_USERNAME  = 'message_signature_username'
     SIGNATURE_TOKEN     = 'message_signature_token'
     SIGNATURE_EXPIRES   = 'message_signature_expires'
+    PRIMARY_RABBITMQ    = 'primary_rabbitmq_server'
+    SECONDARY_RABBITMQ  = 'secondary_rabbitmq_server'
 
     JSON_ACTUATOR_SCHEMA = "SSPL-LL_Actuator_Request.json"
     JSON_SENSOR_SCHEMA   = "SSPL-LL_Sensor_Request.json"
@@ -60,7 +77,19 @@ class ManualTest():
         @param module: the module to load in /etc/sspl_ll/conf
         @type string
         '''
-        self.module_name   = module.upper()
+ 
+        # Initialize logging
+        try:
+            init_logging("sspl-ll-cli", "DEBUG")
+
+        except Exception as err:
+            # We don't have logger since it threw an exception, use generic 'print'
+            print "[ Error ] when initializing logging :"
+            print err
+            print "Exiting ..."
+            sys.exit(os.EX_USAGE)
+
+        self.module_name = module.upper()
         self.confReader()
 
         # Read in the actuator schema for validating messages
@@ -82,9 +111,15 @@ class ManualTest():
             self._basic_consumet.setDaemon(True)
             self._basic_consumet.start()
 
-            self._basic_consume_ackt = threading.Thread(target=self.basicConsumeAck)
-            self._basic_consume_ackt.setDaemon(True)
-            self._basic_consume_ackt.start()
+            if self.module_name == "RABBITMQEGRESSPROCESSOR":
+                self._basic_consume_ackt = threading.Thread(target=self.basicConsumeAck)
+                self._basic_consume_ackt.setDaemon(True)
+                self._basic_consume_ackt.start()
+                self._durable = False
+            else:
+                self._durable = True
+        else:
+            self._durable = False
 
         self._alldata = True
         self._indent = True
@@ -129,14 +164,40 @@ class ManualTest():
                                                     self.module_name,
                                                     self.VIRTUALHOST,
                                                     'SSPL')
+
+        if self.module_name == "RABBITMQEGRESSPROCESSOR":
+            self._ingress_queue = conf_reader._get_value_with_default(
+                                                        self.module_name,
+                                                        self.QUEUE_NAME,
+                                                        'SSPL-LL')
+        elif self.module_name == "PLANECNTRLRMQEGRESSPROCESSOR":
+            self._ingress_queue = conf_reader._get_value_with_default(
+                                                        self.module_name,
+                                                        self.QUEUE_NAME,
+                                                        'ras_status')
+
+        if self.module_name == "RABBITMQEGRESSPROCESSOR":
+            self._egress_queue = conf_reader._get_value_with_default(
+                                                        self.module_name,
+                                                        self.QUEUE_NAME,
+                                                        'SSPL-LL')
+        elif self.module_name == "PLANECNTRLRMQEGRESSPROCESSOR":
+            self._egress_queue = conf_reader._get_value_with_default(
+                                                        self.module_name,
+                                                        self.QUEUE_NAME,
+                                                        'ras_control')
+
         self._exchangename = conf_reader._get_value_with_default(
                                                     self.module_name,
                                                     self.EXCHANGENAME,
                                                     'sspl_halon')
-        self._ackexchangename = conf_reader._get_value_with_default(
-                                                    self.module_name,
-                                                    self.ACKEXCHANGENAME,
-                                                    'sspl_command_ack')
+
+        if self.module_name == "RABBITMQEGRESSPROCESSOR":
+            self._ackexchangename = conf_reader._get_value_with_default(
+                                                        self.module_name,
+                                                        self.ACKEXCHANGENAME,
+                                                        'sspl_command_ack')
+
         self._routingkey = conf_reader._get_value_with_default(
                                                     self.module_name,
                                                     self.ROUTINGKEY,
@@ -161,6 +222,29 @@ class ManualTest():
                                                     self.module_name,
                                                     self.SIGNATURE_EXPIRES,
                                                     "3600")
+        if self.module_name == "PLANECNTRLRMQEGRESSPROCESSOR":
+            self._primary_rabbitmq_server   = conf_reader._get_value_with_default(
+                                                        self.module_name, 
+                                                        self.PRIMARY_RABBITMQ,
+                                                        'localhost')
+            self._secondary_rabbitmq_server = conf_reader._get_value_with_default(
+                                                        self.module_name, 
+                                                        self.SECONDARY_RABBITMQ,
+                                                        'localhost')
+        else:
+            self._primary_rabbitmq_server   = "localhost"
+            self._secondary_rabbitmq_server = "localhost"
+
+        self._current_rabbitmq_server  = self._primary_rabbitmq_server
+
+    def _toggle_rabbitmq_servers(self):
+        """Toggle between hosts when a connection fails"""
+        prev_host = self._current_rabbitmq_server
+        if self._current_rabbitmq_server == self._primary_rabbitmq_server:
+            self._current_rabbitmq_server = self._secondary_rabbitmq_server
+        else:
+            self._current_rabbitmq_server = self._primary_rabbitmq_server
+        print "Warning! Connection timed out to %s attempting %s..." % (prev_host, self._current_rabbitmq_server)
 
     def addAuthFields(self, jsonMsg):
         """Adds authentication fields to message"""
@@ -173,26 +257,28 @@ class ManualTest():
         self._request_uuid = str(uuid.uuid4())
         jsonMsg["message"]["sspl_ll_msg_header"]['uuid'] = self._request_uuid
 
-        authn_token_len = len(self._signature_token) + 1
-        session_length  = int(self._signature_expires)
-        token = ctypes.create_string_buffer(SSPL_SEC.sspl_get_token_length())
+        if use_security_lib:
+            authn_token_len = len(self._signature_token) + 1
+            session_length  = int(self._signature_expires)
+            token = ctypes.create_string_buffer(SSPL_SEC.sspl_get_token_length())
 
-        SSPL_SEC.sspl_generate_session_token(
-                            self._signature_user, authn_token_len,
-                            self._signature_token, session_length, token)
-        # Generate the signature
-        msg_len = len(str(jsonMsg)) + 1
-        sig = ctypes.create_string_buffer(SSPL_SEC.sspl_get_sig_length())
-        #Calculates the security signature and stores it in sig
-        SSPL_SEC.sspl_sign_message(msg_len, str(jsonMsg), self._signature_user,
-                               token, sig)
-        #Add the signature calculated using the SSPL_SEC security libs
-        jsonMsg["signature"] = str(sig.raw)
-
+            SSPL_SEC.sspl_generate_session_token(
+                                self._signature_user, authn_token_len,
+                                self._signature_token, session_length, token)
+            # Generate the signature
+            msg_len = len(str(jsonMsg)) + 1
+            sig = ctypes.create_string_buffer(SSPL_SEC.sspl_get_sig_length())
+            # Calculates the security signature and stores it in sig
+            SSPL_SEC.sspl_sign_message(msg_len, str(jsonMsg), self._signature_user,
+                                   token, sig)
+            # Add the signature calculated using the SSPL_SEC security libs
+            jsonMsg["signature"] = str(sig.raw)
+        else:
+            jsonMsg["signature"] = "SecurityLibNotInstalled"
 
     def basicPublish(self, jsonfile=None, message=None, wait_for_response=True, 
                      response_wait_time=3, force_wait=False, alldata=False, indent=False, 
-                     remove_results_file=True, exchange=None, host='localhost'):
+                     remove_results_file=True, exchange=None, host=None):
         """Publishes message out to the rabbitmq server
 
         @param jsonfile = the file containing a json message to be sent to the server
@@ -204,6 +290,9 @@ class ManualTest():
         @param alldata = flag denoting to show all data received otherwise just the message section
         @type alldata = bool
         """
+
+        if host is None:
+            host = self._current_rabbitmq_server
 
         # If exchange is not passed in then use the one from the config file
         if exchange is None:
@@ -223,12 +312,20 @@ class ManualTest():
 
         # Create rabbitMQ connection
         creds = pika.PlainCredentials(self._username, self._password)
-        connection = pika.BlockingConnection(pika.ConnectionParameters(
-                     host=host, virtual_host=self._virtualhost, credentials=creds))
-        channel = connection.channel()
 
+        connection_success = False
+        while not connection_success:
+            try:
+                connection = pika.BlockingConnection(pika.ConnectionParameters(
+                     host=host, virtual_host=self._virtualhost, credentials=creds))
+                connection_success = True
+            except:
+                self._toggle_rabbitmq_servers()
+                time.sleep(10)
+
+        channel = connection.channel()
         channel.exchange_declare(exchange=exchange,
-                         type='topic', durable=False)
+                         type='topic', durable=self._durable)
 
         msg_props = pika.BasicProperties()
         msg_props.content_type = "text/plain"
@@ -249,7 +346,8 @@ class ManualTest():
                                   routing_key=self._routingkey,
                                   properties=msg_props,
                                   body=str(json.dumps(jsonMsg, ensure_ascii=True).encode('utf8')))
-            print "Successfully transmitted request:"
+            if not wait_for_response:
+                print "Successfully transmitted request:"
             self._print_response(jsonMsg, save_to_file=False) 
 
         elif message is not None:
@@ -258,15 +356,16 @@ class ManualTest():
                                    routing_key=self._routingkey,
                                    properties=msg_props,
                                    body=str(message))
-            print "Successfully transmitted request"
-            #self._print_response(message, save_to_file=False)     
+            if not wait_for_response:
+                print "Successfully transmitted request"
+                #self._print_response(message, save_to_file=False)     
 
         connection.close()
         del(connection)
  
         # Verify that we received a response back matching the uuid we sent in requeste
         if wait_for_response:
-            print "Awaiting response(s)...\n"
+            print "Awaiting response(s)..."
             max_wait = 0
             while not self._msg_received:
                 if force_wait:
@@ -326,13 +425,68 @@ class ManualTest():
         if self._indent:
             response = json.dumps(response, sort_keys=True,
                              indent=4, separators=(',', ': '))
-        print "%s\n" % response
+        print "%s\n" % str(response)
 
         # Write it out to a results file
         if save_to_file:
-            res = "{}\n".format(str(response).replace("\\n", "\n").replace("\\r", ""))
+            res = "%s\n" % str(response).replace("\\n", "\n").replace("\\r", "")
             with open('results.txt', 'a+') as f:
                 f.write(res)
+
+    def _print_SEDresponse(self, ingressMsg):
+        """Print responses from SED CLI"""
+        ack_msg  = ingressMsg.get("message").get("actuator_response_type").get("ack").get("ack_msg")
+        ack_type = ingressMsg.get("message").get("actuator_response_type").get("ack").get("ack_type")
+
+        # Parse out hostname and raid values
+        ack_types = ack_type.split(",")
+        for value in ack_types:
+            if "hostname" in value:
+                hostname = value
+            elif "raid_id" in value:
+                raid_id = value
+            elif "plane_request" in value:
+                plane_request = value
+            elif "msg_type" in value:
+                msg_type = value
+
+        # Display the hostname and raids
+        if "None" not in raid_id:
+            print "\nResponse from %s :%s" % (hostname, raid_id)
+        else:
+            print "\nResponse from %s" % (hostname)
+
+        #print "%s %s" % (msg_type, plane_request)
+
+        # Handle 'drive list' responses
+        #TODO: Handle different responses in separate methods
+        if "drive" in msg_type:
+            if "list" in plane_request:
+                try:
+                    header_start = ack_msg.index("Response:") + 9
+                    header_stop = ack_msg.index("fips") + 5
+                except Exception as ae:
+                    print(ack_msg)
+                    return
+
+                if "Errors:" in ack_msg:
+                    ack_errors = ack_msg.split("Errors:")[1]
+                    print "%s\n" % ack_errors
+                else:
+                    header_line = ack_msg[header_start:header_stop].replace("\n", "").replace("\t", "")
+                    header_vals = header_line.split(",")
+                    template = "{0:^20} {1:^20} {2:^15} {3:^15}" 
+                    print template.format(header_vals[0].upper(), header_vals[1].upper(),
+                                          header_vals[2].upper(), header_vals[3].upper())
+                    rows = ack_msg[header_stop:].replace("\t", "").split("\n")
+                    for row in rows:
+                        fields = row.split(",")
+                        if len(fields) == 4:
+                            print template.format(fields[0], fields[1], fields[2], fields[3])
+
+        else:
+            print"Received response which is not yet handled by CLI. Please try again."
+            sys.exit(1)
 
     def basicConsume(self):
         """Starts consuming all messages sent
@@ -341,15 +495,23 @@ class ManualTest():
         """
 
         creds = pika.PlainCredentials(self._username, self._password)
-        connection = pika.BlockingConnection(pika.ConnectionParameters(
-            host='localhost', virtual_host=self._virtualhost, credentials=creds))
+        connection_success = False
+        while not connection_success:
+            try:
+                connection = pika.BlockingConnection(pika.ConnectionParameters(
+                    host=self._current_rabbitmq_server, virtual_host=self._virtualhost, credentials=creds))
+                connection_success = True
+            except:
+                self._toggle_rabbitmq_servers()
+                time.sleep(5)
+
         channel = connection.channel()
         channel.exchange_declare(exchange=self._exchangename,
-                         type='topic', durable=False)
+                         type='topic', durable=self._durable)
         result = channel.queue_declare(exclusive=True)
         channel.queue_bind(exchange=self._exchangename,
                            queue=result.method.queue,
-                   routing_key=self._routingkey)
+                           routing_key=self._routingkey)
 
         def callback(ch, method, properties, body):
             '''Called whenever a message is passed to the Consumer
@@ -379,7 +541,8 @@ class ManualTest():
             msg_len    = len(message) + 1
             try:
                 #Verifies the authenticity of an ingress message
-                assert(SSPL_SEC.sspl_verify_message(msg_len, str(message), username, signature) == 0)
+                if use_security_lib:
+                    assert(SSPL_SEC.sspl_verify_message(msg_len, str(message), username, signature) == 0)
             except:
                 print "Authentication failed on message: %s" % ingressMsg
 
@@ -387,18 +550,26 @@ class ManualTest():
                 #Sorts out any outgoing messages only processes *_response_type
                 if ingressMsg.get("message").get("sensor_response_type") is not None or \
                     ingressMsg.get("message").get("actuator_response_type") is not None:
-                    self._total_msg_received += 1
-                    print "{}) Received response on '{}' channel:" \
-                            .format(self._total_msg_received, self._exchangename)
-                    self._print_response(ingressMsg)
-                    self._msg_received = True
+                    
+                    # For debugging
+                    if self.module_name == "RABBITMQEGRESSPROCESSOR":
+                        self._total_msg_received += 1
+                        print "%d) Received response on '%s' channel of queue '%s'" % \
+                                (self._total_msg_received, self._exchangename, self._ingress_queue)
+                        self._print_response(ingressMsg)
+                        self._msg_received = True
+
+                    # Plane controller SED CLI
+                    elif self.module_name == "PLANECNTRLRMQEGRESSPROCESSOR":
+                        self._print_SEDresponse(ingressMsg)
+                        self._msg_received = True
 
             except Exception as e:
                 print "Error printing response: %r" % e
 
             ch.basic_ack(delivery_tag = method.delivery_tag)
 
-        #Sets the callback function to be used when start_consuming is called and specifies the queue to pull messages off of.
+        # Sets the callback function to be used when start_consuming is called and specifies the queue to pull messages off of.
         channel.basic_consume(callback,
                               queue=result.method.queue)
         try:
@@ -413,15 +584,23 @@ class ManualTest():
         """
 
         creds = pika.PlainCredentials(self._username, self._password)
-        connection = pika.BlockingConnection(pika.ConnectionParameters(
-            host='localhost', virtual_host=self._virtualhost, credentials=creds))
+        
+        connection_success = False
+        while not connection_success:
+            try:
+                connection = pika.BlockingConnection(pika.ConnectionParameters(
+                    host=self._current_rabbitmq_server, virtual_host=self._virtualhost, credentials=creds))
+                connection_success = True
+            except:
+                time.sleep(5)
+
         channel = connection.channel()
         channel.exchange_declare(exchange=self._ackexchangename,
-                         type='topic', durable=False)
+                         type='topic', durable=self._durable)
         result = channel.queue_declare(exclusive=True)
         channel.queue_bind(exchange=self._ackexchangename,
                            queue=result.method.queue,
-                   routing_key=self._routingkey)
+                           routing_key=self._routingkey)
 
         def callback(ch, method, properties, body):
             '''Called whenever a message is passed to the Consumer
@@ -450,18 +629,19 @@ class ManualTest():
             message    = ingressMsg.get("message")
             msg_len    = len(message) + 1
             try:
-                #Verifies the authenticity of an ingress message
-                assert(SSPL_SEC.sspl_verify_message(msg_len, str(message), username, signature) == 0)
+                # Verifies the authenticity of an ingress message
+                if use_security_lib:
+                    assert(SSPL_SEC.sspl_verify_message(msg_len, str(message), username, signature) == 0)
             except:
                 print "Authentication failed on message: %s" % ingressMsg
 
             try:
-                #Sorts out any outgoing messages only processes *_response_type
+                # Sorts out any outgoing messages only processes *_response_type
                 if ingressMsg.get("message").get("sensor_response_type") is not None or \
                     ingressMsg.get("message").get("actuator_response_type") is not None:
                     self._total_ack_msg_received += 1
-                    print "{}) Received Ack response on '{}' channel:" \
-                          .format(self._total_ack_msg_received, self._ackexchangename)
+                    print "%s) Received on %s channel:" % \
+                          (self._total_ack_msg_received, self._ackexchangename)
                     self._print_response(ingressMsg)
                     self._msg_received = True
             except Exception as e:
@@ -469,7 +649,7 @@ class ManualTest():
 
             ch.basic_ack(delivery_tag = method.delivery_tag)
 
-        #Sets the callback function to be used when start_consuming is called and specifies the queue to pull messages off of.
+        # Sets the callback function to be used when start_consuming is called and specifies the queue to pull messages off of.
         channel.basic_consume(callback,
                               queue=result.method.queue)
         try:

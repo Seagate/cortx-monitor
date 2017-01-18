@@ -62,7 +62,7 @@ class DriveManager(ScheduledModuleThread, InternalMsgQ):
         # Mapping of drives and their status'
         self._drive_status = {}
 
-    def initialize(self, conf_reader, msgQlist):
+    def initialize(self, conf_reader, msgQlist, products):
         """initialize configuration reader and internal msg queues"""
 
         # Initialize ScheduledMonitorThread and InternalMsgQ

@@ -17,9 +17,6 @@
 import json
 import syslog
 
-from actuators.IService import IService
-from actuators.ILogin import ILogin
-
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
@@ -29,8 +26,6 @@ from json_msgs.messages.sensors.service_watchdog import ServiceWatchdogMsg
 
 # Modules that receive messages from this module
 from message_handlers.logging_msg_handler import LoggingMsgHandler
-
-from zope.component import queryUtility
 
 
 class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
@@ -49,7 +44,7 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
         super(ServiceMsgHandler, self).__init__(self.MODULE_NAME,
                                                   self.PRIORITY)
 
-    def initialize(self, conf_reader, msgQlist):
+    def initialize(self, conf_reader, msgQlist, products):
         """initialize configuration reader and internal msg queues"""
         # Initialize ScheduledMonitorThread
         super(ServiceMsgHandler, self).initialize(conf_reader)
@@ -58,6 +53,14 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
         super(ServiceMsgHandler, self).initialize_msgQ(msgQlist)
 
         self._service_actuator = None
+
+        self._import_products(products)
+
+    def _import_products(self, products):
+        """Import classes based on which product is being used"""
+        if "CS-A" in products:
+            from zope.component import queryUtility
+            self._queryUtility = queryUtility
 
     def run(self):
         """Run the module periodically on its own thread."""
@@ -105,7 +108,8 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
             # Query the Zope GlobalSiteManager for an object implementing IService
             if self._service_actuator == None:
-                self._service_actuator = queryUtility(IService)()
+                from actuators.IService import IService
+                self._service_actuator = self._queryUtility(IService)()
                 logger.info("_process_msg, service_actuator name: %s" % self._service_actuator.name())            
             service_name, state, substate = self._service_actuator.perform_request(jsonMsg)
 
@@ -142,7 +146,8 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
             if service_request != "None":
                 # Query the Zope GlobalSiteManager for an object implementing IService
                 if self._service_actuator == None:
-                    self._service_actuator = queryUtility(IService)()
+                    from actuators.IService import IService
+                    self._service_actuator = self._queryUtility(IService)()
                     self._log_debug("_process_msg, service_actuator name: %s" % self._service_actuator.name())            
                 service_name, state, substate = self._service_actuator.perform_request(jsonMsg)
 

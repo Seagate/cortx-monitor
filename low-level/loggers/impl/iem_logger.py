@@ -21,8 +21,14 @@ from zope.interface import implements
 from loggers.ILogger import ILogger
 from framework.base.debug import Debug
 from framework.utils.autoemail import AutoEmail
+from framework.utils.service_logging import logger
 
-from systemd import journal
+try:
+   from systemd import journal
+   use_journal=True
+except ImportError:
+    use_journal=False
+
 from syslog import (LOG_EMERG, LOG_ALERT, LOG_CRIT, LOG_ERR,
                     LOG_WARNING, LOG_NOTICE, LOG_INFO, LOG_DEBUG)
 
@@ -96,8 +102,11 @@ class IEMlogger(Debug):
                 priority = LOG_INFO
 
             # Send it to the journal with the appropriate arguments
-            journal.send(log_msg, MESSAGE_ID=event_code, PRIORITY=priority,
+            if use_journal:
+                journal.send(log_msg, MESSAGE_ID=event_code, PRIORITY=priority,
                          SYSLOG_IDENTIFIER="sspl-ll")
+            else:
+                logger.info(log_msg)
 
             # Send email if priority exceeds LOGEMAILER priority in /etc/sspl-ll.conf
             result = self._autoemailer._send_email(log_msg, priority)

@@ -1,0 +1,18 @@
+#!/bin/bash
+#
+# Perform initializations prior to starting sspl_ll
+#
+# Usage:
+#    ./sspl_ll_reinit_CS_LG
+
+# Add the sspl-ll user
+id -u sspl-ll &>/dev/null || /usr/sbin/useradd \
+	-s /sbin/nologin  \
+	-c "User account to run the sspl-ll service" sspl-ll
+
+# Automatically install dependencies based on config file
+sspl-ll-cli verify --checkdeps --autoinstall
+
+if [ -f /var/log/sedutil.log ]; then
+    chmod 666 /var/log/sedutil.log
+fi

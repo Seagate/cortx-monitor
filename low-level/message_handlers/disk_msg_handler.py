@@ -59,7 +59,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
         super(DiskMsgHandler, self).__init__(self.MODULE_NAME,
                                                   self.PRIORITY)
 
-    def initialize(self, conf_reader, msgQlist):
+    def initialize(self, conf_reader, msgQlist, products):
         """initialize configuration reader and internal msg queues"""
         # Initialize ScheduledMonitorThread
         super(DiskMsgHandler, self).initialize(conf_reader)
@@ -608,7 +608,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
             self._write_internal_msgQ("SystemdWatchdog", internal_json_msg)
 
     def _process_hpi_response_ZBX_NOTPRESENT(self, jsonMsg):
-        """Handle HPI data with serial number = ZBX_NOTPRESENT"""
+        """Handle HPI data with serial number or wwn = ZBX_NOTPRESENT"""
 
         # If the serial number is set to the default then write it out as not present for RAS and restart openhpid
         if jsonMsg.get("serial_number") == "ZBX_NOTPRESENT":

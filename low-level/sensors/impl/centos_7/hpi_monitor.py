@@ -59,7 +59,7 @@ class HPIMonitor(ScheduledModuleThread, InternalMsgQ):
         # Mapping of drives and their status'
         self._drive_data = {}
 
-    def initialize(self, conf_reader, msgQlist):
+    def initialize(self, conf_reader, msgQlist, products):
         """initialize configuration reader and internal msg queues"""
 
         # Initialize ScheduledMonitorThread and InternalMsgQ
@@ -282,7 +282,8 @@ class HPIMonitor(ScheduledModuleThread, InternalMsgQ):
             return
 
         # Store the JSON data into the dict for global access
-        self._drive_data[driveloc] = json_data
+        if serial_number != "ZBX_NOTPRESENT":
+            self._drive_data[driveloc] = json_data
 
         # Send the event to disk message handler to generate json message
         self._write_internal_msgQ(DiskMsgHandler.name(), json_data)

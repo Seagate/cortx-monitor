@@ -22,13 +22,20 @@ import errno
 
 from socket import gethostname, gethostbyaddr, gaierror
 from socket import error as socket_error
-from systemd import journal
+
+try:
+   from systemd import journal
+   use_journal=True
+except ImportError:
+    use_journal=False
+
 from syslog import (LOG_EMERG, LOG_ALERT, LOG_CRIT, LOG_ERR,
                     LOG_WARNING, LOG_NOTICE, LOG_INFO, LOG_DEBUG)
 
 # Import the email modules we'll need
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+
 
 class AutoEmail(object):
 
@@ -151,34 +158,47 @@ class AutoEmail(object):
 
         # Errors that can occur at runtime
         except gaierror:
-            journal.send("Could not get connection with server: {0}".format(self._email_server), PRIORITY=2)
+            if use_journal:
+                journal.send("Could not get connection with server: {0}".format(self._email_server), PRIORITY=2)
         except socket_error:
-            journal.send("Socket Error, port connection issue, port {0} used".format(self._tls_setting), PRIORITY=2)
+            if use_journal:
+                journal.send("Socket Error, port connection issue, port {0} used".format(self._tls_setting), PRIORITY=2)
         except smtplib.SMTPException:
-            journal.send("SMTP Error", PRIORITY=2)
+            if use_journal:
+                journal.send("SMTP Error", PRIORITY=2)
         except smtplib.SMTPServerDisconnected:
-            journal.send("Server \'{0}\' unexpectedly disconnected".format(self._email_server), PRIORITY=2)
+            if use_journal:
+                journal.send("Server \'{0}\' unexpectedly disconnected".format(self._email_server), PRIORITY=2)
         except smtplib.SMTPResponseException:
-            journal.send("SMTP Response error", PRIORITY=2)
+            if use_journal:
+                journal.send("SMTP Response error", PRIORITY=2)
         except smtplib.SMTPSenderRefused:
-            journal.send("SMTP Refused sender: \'{0}\'".format(self._email_sender), PRIORITY=2)
+            if use_journal:
+                journal.send("SMTP Refused sender: \'{0}\'".format(self._email_sender), PRIORITY=2)
         except smtplib.SMTPRecipientsRefused:
-            journal.send("SMTP Refused recipients: \'{0}\'".format(", ".join(str(x) for x in self._email_recipient)), PRIORITY=2)
+            if use_journal:
+                journal.send("SMTP Refused recipients: \'{0}\'".format(", ".join(str(x) for x in self._email_recipient)), PRIORITY=2)
         except smtplib.SMTPDataError:
-            journal.send("Server \'{0}\' refused message data".format(self._email_server), PRIORITY=2)
+            if use_journal:
+                journal.send("Server \'{0}\' refused message data".format(self._email_server), PRIORITY=2)
         except smtplib.SMTPConnectError:
-            journal.send("Couldn't connect with the server: {0}".format(self._email_server), PRIORITY=2)
+            if use_journal:
+                journal.send("Couldn't connect with the server: {0}".format(self._email_server), PRIORITY=2)
         except smtplib.SMTPHeloError:
-            journal.send("Server \'{0}\' refused our HELO message".format(self._email_server), PRIORITY=2)
+            if use_journal:
+                journal.send("Server \'{0}\' refused our HELO message".format(self._email_server), PRIORITY=2)
         except smtplib.SMTPAuthenticationError:
-            journal.send("Authentication failed", PRIORITY=2)
+            if use_journal:
+                journal.send("Authentication failed", PRIORITY=2)
         except:
-            journal.send("Unexpected error occured", PRIORITY=2)
+            if use_journal:
+                journal.send("Unexpected error occured", PRIORITY=2)
 
         finally:
             try:
                 mail.quit()
             except:
-                journal.send("Could not stop SMTP connection", PRIORITY=2)
+                if use_journal:
+                    journal.send("Could not stop SMTP connection", PRIORITY=2)
 
         return return_msg

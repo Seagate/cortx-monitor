@@ -4,7 +4,7 @@
 %define _xyr_package_source   sspl-1.0.0.tgz
 %define _xyr_package_version  1.0.0
 %define _xyr_build_number     10.el7
-%define _xyr_pkg_url          http://es-gerrit:8080/sspl
+%define _xyr_pkg_url          http://appdev-vm.xyus.xyratex.com:8080/view/OSAINT/job/OSAINT_sspl/
 %define _xyr_svn_version      0
 #xyr end defines
 
@@ -22,12 +22,7 @@ URL:        %{_xyr_pkg_url}
 Source0:    %{_xyr_package_source}
 BuildRoot:  %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 BuildRequires: rpm-build
-Requires:   python-daemon python-inotify python-jsonschema python-pika rabbitmq-server
-Requires:   python-zope-interface python-zope-event python-zope-component python-hpi
-Requires:   systemd-python pygobject2 dbus python-psutil libsspl_sec usm_tools udisks2
-Requires:   zabbix-agent-lib zabbix-openhpi-config zabbix-collector pyserial python-paramiko
-Requires:   pysnmp python-openhpi-baselib hdparm python-devel python-ply
-Requires:   glib2 >= 2.40.0-4 
+Requires:   python-daemon python-zope-interface python-zope-event python-zope-component
 Requires(pre): shadow-utils
 
 %description
@@ -41,16 +36,24 @@ Installs SSPL-LL
 
 %install
 # Copy config file and service startup to correct locations
-mkdir -p %{buildroot}/etc/systemd/system
-mkdir -p %{buildroot}/etc/dbus-1/system.d
-mkdir -p %{buildroot}/etc/polkit-1/rules.d
-mkdir -p %{buildroot}/etc/sspl-ll/templates/snmp
 
-cp files/sspl-ll.service %{buildroot}/etc/systemd/system
-cp files/sspl_ll.conf %{buildroot}/etc
-cp files/sspl-ll_dbus_policy.conf %{buildroot}/etc/dbus-1/system.d
-cp files/sspl-ll_dbus_policy.rules %{buildroot}/etc/polkit-1/rules.d
-cp snmp/* %{buildroot}/etc/sspl-ll/templates/snmp
+# CS-A identified by having a systemd directory for now
+# TODO: Identify systems with facter facts
+if [ -d "/etc/systemd" ]; then
+    mkdir -p %{buildroot}/etc/systemd/system
+    mkdir -p %{buildroot}/etc/dbus-1/system.d
+    mkdir -p %{buildroot}/etc/polkit-1/rules.d
+	mkdir -p %{buildroot}/etc/sspl-ll/templates/snmp
+    cp files/sspl-ll.service %{buildroot}/etc/systemd/system
+    cp files/sspl-ll_dbus_policy.conf %{buildroot}/etc/dbus-1/system.d
+    cp files/sspl-ll_dbus_policy.rules %{buildroot}/etc/polkit-1/rules.d
+    cp snmp/* %{buildroot}/etc/sspl-ll/templates/snmp
+	cp files/sspl_ll.conf %{buildroot}/etc
+else
+	# CS-LG are non-systemd
+	cp files/sspl_ll_cs.conf %{buildroot}/etc/sspl_ll.conf
+	cp files/sspl-ll %{buildroot}/etc/init.d
+fi
 
 # Copy the service into /opt/seagate/sspl where it will execute from
 mkdir -p %{buildroot}/opt/seagate/sspl/low-level
@@ -59,25 +62,34 @@ cp -rp . %{buildroot}/opt/seagate/sspl/low-level
 
 %post
 
-# Enable persistent boot information for journald
-mkdir -p /var/log/journal
-systemctl restart systemd-journald
+# Config for CS-A identified by having systemd available
+if [ -d "/etc/systemd" ]; then
+    mkdir -p /var/log/journal
+    systemctl restart systemd-journald
 
-# Have systemd reload
-systemctl daemon-reload
+    # Have systemd reload
+    systemctl daemon-reload
 
-# Enable service to start at boot
-systemctl enable sspl-ll
+    # Enable services to start at boot
+    systemctl enable sspl-ll
+    systemctl enable rabbitmq-server
 
-# Create the sspl-ll user and initialize
-/opt/seagate/sspl/low-level/framework/sspl_ll_reinit
-chown -R sspl-ll:root /opt/seagate/sspl/low-level
+    # Restart dbus with new policy files
+    systemctl restart dbus
 
-# Create a link to low-level cli for easy global access
-ln -sf /opt/seagate/sspl/low-level/cli/sspl-ll-cli /usr/bin
+else
+	# CS-LG are non-systemd
+	chown -R sspl-ll:root /opt/seagate/sspl/low-level
 
-# Restart dbus with policy file
-systemctl restart dbus
+	# Create a link to low-level cli for easy global access
+	ln -sf /opt/seagate/sspl/low-level/cli/sspl-ll-cli /usr/bin
+
+	# Enable services to start at boot
+    chkconfig rabbitmq-server on
+    chkconfig sspl-ll on
+fi
+
+service sspl-ll start
 
 
 %clean
@@ -91,6 +103,7 @@ rm -rf %{buildroot}
 /etc/systemd/system/sspl-ll.service
 /etc/sspl_ll.conf
 /etc/dbus-1/system.d/sspl-ll_dbus_policy.conf
+/etc/init.d/sspl-ll
 
 
 %changelog

@@ -1,7 +1,7 @@
 """
  ****************************************************************************
  Filename:          rabbitmq_ingress_processor.py
- Description:       Handles incoming messages via rabbitMQ
+ Description:       Handles incoming messages via rabbitMQ over localhost
  Creation Date:     02/11/2015
  Author:            Jake Abernathy
 
@@ -27,19 +27,21 @@ from pika import exceptions
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
+from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 
-# Import message handlers to receive messages
-from message_handlers.logging_msg_handler import LoggingMsgHandler
-from message_handlers.service_msg_handler import ServiceMsgHandler
-from message_handlers.disk_msg_handler import DiskMsgHandler
-from message_handlers.node_data_msg_handler import NodeDataMsgHandler
+from json_msgs.messages.actuators.ack_response import AckResponseMsg
 
 import ctypes
-SSPL_SEC = ctypes.cdll.LoadLibrary('libsspl_sec.so.0')
+try:
+    use_security_lib=True
+    SSPL_SEC = ctypes.cdll.LoadLibrary('libsspl_sec.so.0')
+except Exception as ae:
+    logger.info("libsspl_sec not found, disabling authentication on ingress msgs")
+    use_security_lib=False
 
 
 class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
-    """Handles incoming messages via rabbitMQ"""
+    """Handles incoming messages via rabbitMQ over localhost"""
 
     MODULE_NAME = "RabbitMQingressProcessor"
     PRIORITY    = 1
@@ -95,7 +97,7 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
 
         return schema_trimmed
 
-    def initialize(self, conf_reader, msgQlist):
+    def initialize(self, conf_reader, msgQlist, products):
         """initialize configuration reader and internal msg queues"""
         # Initialize ScheduledMonitorThread
         super(RabbitMQingressProcessor, self).initialize(conf_reader)
@@ -115,15 +117,15 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
         """Run the module periodically on its own thread."""
         #self._set_debug(True)
         #self._set_debug_persist(True)
+
         time.sleep(180)
-        self._log_debug("Start accepting requests")
+        logger.info("RabbitMQingressProcessor, Initialization complete, accepting requests")
 
         try:
             result = self._channel.queue_declare(exclusive=True)
             self._channel.queue_bind(exchange=self._exchange_name,
                                queue=result.method.queue,
                                routing_key=self._routing_key)
-
             self._channel.basic_consume(self._process_msg,
                                   queue=result.method.queue)
             self._channel.start_consuming()
@@ -131,7 +133,7 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
         except Exception as e:
             if self.is_running() == True:
                 logger.info("RabbitMQingressProcessor ungracefully breaking out of run loop, restarting.")
-                logger.exception(e)
+                logger.exception("RabbitMQingressProcessor, Exception: %s" % str(e))
                 self._configure_exchange()
                 self._scheduler.enter(10, self._priority, self.run, ())
             else:
@@ -149,14 +151,21 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
             else:
                 ingressMsg = body
 
+            self._log_debug("_process_msg: %s" % str(ingressMsg))
+
             # Authenticate message using username and signature fields
             username  = ingressMsg.get("username")
             signature = ingressMsg.get("signature")
             message   = ingressMsg.get("message")
+            uuid      = ingressMsg.get("uuid")
             msg_len   = len(message) + 1
 
-            if SSPL_SEC.sspl_verify_message(msg_len, str(message), username, signature) != 0:
-                logger.warn("Authentication failed on message: %s" % ingressMsg)
+            if uuid is None:
+                uuid = "N/A"
+
+            if use_security_lib and \
+               SSPL_SEC.sspl_verify_message(msg_len, str(message), username, signature) != 0:
+                logger.warn("RabbitMQingressProcessor, Authentication failed on message: %s" % ingressMsg)
                 return
 
             # Get the incoming message type
@@ -197,15 +206,19 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
             elif msgType.get("node_data") is not None:
                 self._write_internal_msgQ("NodeDataMsgHandler", message)
 
-
-            # ... handle other incoming messages that have been validated               
+            # ... handle other incoming messages that have been validated
+            else:
+                # Send ack about not finding a msg handler
+                ack_msg = AckResponseMsg("Error Processing Message", "Message Handler Not Found", uuid).getJson()
+                self._write_internal_msgQ(RabbitMQegressProcessor.name(), ack_msg)               
 
             # Acknowledge message was received
             ch.basic_ack(delivery_tag = method.delivery_tag)
 
         except Exception as ex:
-            logger.exception("_process_msg unrecognized message: %r" % ingressMsg)                 
-
+            logger.exception("RabbitMQingressProcessor, _process_msg unrecognized message: %r" % ingressMsg)
+            ack_msg = AckResponseMsg("Error Processing Msg", "Msg Handler Not Found", uuid).getJson()
+            self._write_internal_msgQ(RabbitMQegressProcessor.name(), ack_msg)
 
     def _configure_exchange(self):        
         """Configure the RabbitMQ exchange with defaults available"""
@@ -227,7 +240,7 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
                                                                  'sspluser')
             self._password      = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR, 
                                                                  self.PASSWORD,
-                                                                 'sspl4ever')            
+                                                                 'sspl4ever')
             # ensure the rabbitmq queues/etc exist
             creds = pika.PlainCredentials(self._username, self._password)
             self._connection = pika.BlockingConnection(
@@ -238,22 +251,28 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
                     )
                 )
             self._channel = self._connection.channel()
-            self._channel.queue_declare(
-                queue='SSPL-LL',
-                durable=False
-                )
-            self._channel.exchange_declare(
-                exchange=self._exchange_name,
-                exchange_type='topic',
-                durable=False
-                )
+            try:
+                self._channel.queue_declare(
+                    queue=self._queue_name,
+                    durable=False
+                    )
+            except Exception as e:
+                logger.exception(e)
+            try:
+                self._channel.exchange_declare(
+                    exchange=self._exchange_name,
+                    type='topic',
+                    durable=False
+                    )
+            except Exception as e:
+                logger.exception(e)
             self._channel.queue_bind(
-                queue='SSPL-LL',
+                queue=self._queue_name,
                 exchange=self._exchange_name,
                 routing_key=self._routing_key
                 )
         except Exception as ex:
-            logger.exception("_configure_exchange: %r" % ex)
+            logger.exception("RabbitMQingressProcessor, _configure_exchange: %r" % ex)
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""

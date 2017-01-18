@@ -17,9 +17,6 @@
 import json
 import time
 
-from actuators.ILogin import ILogin
-from sensors.INode_data import INodeData
-
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
@@ -31,8 +28,6 @@ from json_msgs.messages.sensors.if_data import IFdataMsg
 from json_msgs.messages.sensors.raid_data import RAIDdataMsg
 
 from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor 
-
-from zope.component import queryUtility
 
 
 class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
@@ -56,7 +51,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         super(NodeDataMsgHandler, self).__init__(self.MODULE_NAME,
                                                   self.PRIORITY)
 
-    def initialize(self, conf_reader, msgQlist):
+    def initialize(self, conf_reader, msgQlist, products):
         """initialize configuration reader and internal msg queues"""
         # Initialize ScheduledMonitorThread
         super(NodeDataMsgHandler, self).initialize(conf_reader)
@@ -72,6 +67,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                                                 self.NODEDATAMSGHANDLER, 
                                                 self.UNITS,
                                                 "MB")
+
         self._node_sensor    = None
         self._login_actuator = None
 
@@ -87,6 +83,14 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         # Dict of drive path by-ids by serial number from systemd
         self._drive_byid_by_serial_number = {}
 
+        self._import_products(products)
+
+    def _import_products(self, products):
+        """Import classes based on which product is being used"""
+        if "CS-A" in products:
+            from zope.component import queryUtility
+            self._queryUtility = queryUtility
+
     def run(self):
         """Run the module periodically on its own thread."""
         self._log_debug("Start accepting requests")
@@ -97,7 +101,8 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         try:
             # Query the Zope GlobalSiteManager for an object implementing INodeData
             if self._node_sensor is None:
-                self._node_sensor = queryUtility(INodeData)()
+                from sensors.INode_data import INodeData
+                self._node_sensor = self._queryUtility(INodeData)()
                 self._log_debug("_node_sensor name: %s" % self._node_sensor.name())
 
             # Delay for the desired interval if it's greater than zero
@@ -210,6 +215,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
         # Query the Zope GlobalSiteManager for an object implementing ILogin
         #if self._login_actuator is None:
+        #    from actuators.ILogin import ILogin
         #    self._login_actuator = queryUtility(ILogin)()
         #    self._log_debug("_generate_host_update, login_actuator name: %s" % self._login_actuator.name())
  

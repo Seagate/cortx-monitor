@@ -5,16 +5,26 @@
 # Create sspl-ll user and assign to groups
 #
 # Usage:
-#    ./sspl_ll_reinit
+#    ./sspl_ll_reinit_CS_A
+#
 
 # Add the sspl-ll user if it doesn't exist
 id -u sspl-ll &>/dev/null || /usr/sbin/useradd -r -g zabbix \
-    -s /sbin/nologin  \
-    -c "User account to run the sspl-ll service" sspl-ll
-# Assign the groups
+	-s /sbin/nologin  \
+	-c "User account to run the sspl-ll service" sspl-ll
+
+chown -R sspl-ll:root /opt/seagate/sspl/low-level
+
+# Create a link to low-level cli for easy global access
+ln -sf /opt/seagate/sspl/low-level/cli/sspl-ll-cli /usr/bin
+
+# Assign the required groups
 usermod -a -G systemd-journal sspl-ll
 usermod -a -G dialout sspl-ll
 usermod -a -G disk sspl-ll
+
+# Automatically install dependencies based on config file
+sspl-ll-cli --checkdeps --autoinstall
 
 # Update the sudoers file with the sspl-ll user and available commands
 SUDO_LINE="sspl-ll	ALL = NOPASSWD: /opt/seagate/sspl/low-level/libs/m0_fs_stats, /usr/sbin/smartctl, /usr/sbin/mdadm, /usr/bin/mount, /usr/bin/umount, /usr/sbin/swapon, /usr/sbin/swapoff, /usr/sbin/hdparm, /usr/bin/systemctl"
