@@ -51,6 +51,7 @@ if [ -d "/etc/systemd" ]; then
     cp files/sspl_ll.conf %{buildroot}/etc
 else
     # CS-LG are non-systemd
+    mkdir -p %{buildroot}/etc
     cp files/sspl_ll_cs.conf %{buildroot}/etc/sspl_ll.conf
     cp files/sspl-ll %{buildroot}/etc/init.d
 fi
@@ -99,10 +100,10 @@ rm -rf %{buildroot}
 %files
 %defattr(-,sspl-ll,root,-)
 /opt/seagate/sspl/*
-%defattr(-,root,root,-)
-/etc/systemd/system/sspl-ll.service
-/etc/sspl_ll.conf
-/etc/dbus-1/system.d/sspl-ll_dbus_policy.conf
+#%defattr(-,root,root,-)
+#/etc/systemd/system/sspl-ll.service
+#/etc/sspl_ll.conf
+#/etc/dbus-1/system.d/sspl-ll_dbus_policy.conf
 
 
 %changelog
