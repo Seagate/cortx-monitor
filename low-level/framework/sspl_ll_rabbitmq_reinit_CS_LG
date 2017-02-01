@@ -142,9 +142,6 @@ def _create_user_if_necessary(username, password, virtual_host):
 
 def _check_rabbitmq_status():
     """Reset if the node is down"""
-    command = "yum install --nogpgcheck erlang rabbitmq-server"
-    _send_command(command)
-
     command = "service rabbitmq-server status"
     response = _send_command(command)
     if "nodedown" in response:

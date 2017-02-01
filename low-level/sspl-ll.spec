@@ -47,7 +47,6 @@ if [ -d "/etc/systemd" ]; then
     cp files/sspl-ll.service %{buildroot}/etc/systemd/system
     cp files/sspl-ll_dbus_policy.conf %{buildroot}/etc/dbus-1/system.d
     cp files/sspl-ll_dbus_policy.rules %{buildroot}/etc/polkit-1/rules.d
-    cp snmp/* %{buildroot}/etc/sspl-ll/templates/snmp
     cp files/sspl_ll.conf %{buildroot}/etc
 else
     # CS-LG are non-systemd
@@ -65,6 +64,9 @@ cp -rp . %{buildroot}/opt/seagate/sspl/low-level
 
 # Config for CS-A identified by having systemd available
 if [ -d "/etc/systemd" ]; then
+    cp -f /opt/seagate/sspl/low-level/files/sspl_ll.conf /etc
+    cp -f /opt/seagate/sspl/low-level/files/sspl-ll.service /etc/systemd/system
+
     mkdir -p /var/log/journal
     systemctl restart systemd-journald
 
@@ -78,8 +80,12 @@ if [ -d "/etc/systemd" ]; then
     # Restart dbus with new policy files
     systemctl restart dbus
 
+	systemctl start sspl-ll
 else
     # CS-LG are non-systemd
+    cp -f /opt/seagate/sspl/low-level/files/sspl_ll_cs.conf /etc/sspl_ll.conf
+    cp -f /opt/seagate/sspl/low-level/files/sspl-ll /etc/init.d
+
     chown -R sspl-ll:root /opt/seagate/sspl/low-level
 
     # Create a link to low-level cli for easy global access
@@ -88,9 +94,9 @@ else
     # Enable services to start at boot
     chkconfig rabbitmq-server on
     chkconfig sspl-ll on
-fi
 
-service sspl-ll start
+	service sspl-ll start
+fi
 
 
 %clean
@@ -100,10 +106,6 @@ rm -rf %{buildroot}
 %files
 %defattr(-,sspl-ll,root,-)
 /opt/seagate/sspl/*
-#%defattr(-,root,root,-)
-#/etc/systemd/system/sspl-ll.service
-#/etc/sspl_ll.conf
-#/etc/dbus-1/system.d/sspl-ll_dbus_policy.conf
 
 
 %changelog

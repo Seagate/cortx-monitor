@@ -48,10 +48,6 @@ cp -f /opt/seagate/sspl/low-level/files/sspl-ll_dbus_policy.conf /etc/dbus-1/sys
 mkdir -p /etc/sspl-ll/templates/snmp
 cp -f /opt/seagate/sspl/low-level/snmp/* /etc/sspl-ll/templates/snmp
 
-# Copy over mero.so to python site-packages
-mkdir -p /usr/lib64/python2.7/site-packages
-cp -f /opt/seagate/sspl/low-level/libs/mero.so  /usr/lib64/python2.7/site-packages
-
 # Enable SNMP traps on the PDU to be sent to the CMU
 if ping -c 1 172.16.1.221 &> /dev/null
 then

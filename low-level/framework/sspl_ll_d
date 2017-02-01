@@ -199,7 +199,6 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist, operating_system
             from actuators.impl.generic.ipmi import IPMI
             from actuators.impl.generic.hdparm import Hdparm
             from actuators.impl.generic.hpi_actuator import HPIactuator
-            from actuators.impl.generic.spiel import Spiel
  
             from sensors.impl.generic.raid import RAIDsensor
             from sensors.impl.generic.node_data import NodeData as NodeData

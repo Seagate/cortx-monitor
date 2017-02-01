@@ -58,7 +58,6 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
         else:
             self.ip_addr = socket.gethostbyaddr(socket.gethostname())[0]
 
-        self._spiel_actuator        = None
         self._HPI_actuator          = None
         self._GEM_actuator          = None
         self._PDU_actuator          = None
@@ -134,21 +133,6 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 self._log_debug("_process_msg, command line response: %s" % command_line_response)
 
                 json_msg = AckResponseMsg(node_request, command_line_response, uuid).getJson()
-                self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
-
-            # Handle requests related to Mero
-            elif component == 'MERO':
-                # Query the Zope GlobalSiteManager for an object implementing the IMERO actuator
-                if self._spiel_actuator is None:
-                    from actuators.Ispiel import ISpiel
-                    self._spiel_actuator = self._queryUtility(ISpiel)(self._conf_reader)
-                    self._log_debug("_process_msg, _spiel_actuator name: %s" % self._spiel_actuator.name())
-
-                # Perform the request and get the response
-                spiel_response = self._spiel_actuator.perform_request(jsonMsg).strip()
-                self._log_debug("_process_msg, spiel response: %s" % spiel_response)
-
-                json_msg = AckResponseMsg(node_request, spiel_response, uuid).getJson()
                 self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
 
             # Handle LED effects using the HPI actuator

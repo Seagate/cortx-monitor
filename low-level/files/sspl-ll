@@ -52,7 +52,7 @@ case "$1" in
         echo "Already started"
     else
         echo "Initializing SSPL-LL"
-	    $sspl_ll_reinit
+        $sspl_ll_reinit
         echo "Initializing RabbitMQ"
         $rabbitmq_init
         echo "Starting $name"
