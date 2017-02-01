@@ -79,8 +79,6 @@ if [ -d "/etc/systemd" ]; then
 
     # Restart dbus with new policy files
     systemctl restart dbus
-
-	systemctl start sspl-ll
 else
     # CS-LG are non-systemd
     cp -f /opt/seagate/sspl/low-level/files/sspl_ll_cs.conf /etc/sspl_ll.conf
@@ -94,8 +92,6 @@ else
     # Enable services to start at boot
     chkconfig rabbitmq-server on
     chkconfig sspl-ll on
-
-	service sspl-ll start
 fi
 
 
