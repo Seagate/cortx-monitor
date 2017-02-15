@@ -64,6 +64,12 @@ cp -rp . %{buildroot}/opt/seagate/sspl/low-level
 
 # Config for CS-A identified by having systemd available
 if [ -d "/etc/systemd" ]; then
+    # Add the sspl-ll user if it doesn't exist
+    echo "SSPL-LL: creating sspl-ll user"
+        id -u sspl-ll &>/dev/null || /usr/sbin/useradd -r -g zabbix \
+	    -s /sbin/nologin  \
+	    -c "User account to run the sspl-ll service" sspl-ll
+
     cp -f /opt/seagate/sspl/low-level/files/sspl_ll.conf /etc
     cp -f /opt/seagate/sspl/low-level/files/sspl-ll.service /etc/systemd/system
 

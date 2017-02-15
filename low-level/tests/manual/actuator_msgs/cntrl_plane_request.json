@@ -16,8 +16,9 @@
 			},
 		"actuator_request_type": {
 			"plane_controller": {
-				"plane_request": "",
-				"parameters": ""
+				"command": "",
+				"parameters": "",
+				"arguments": ""
 			}
 		}
 	}

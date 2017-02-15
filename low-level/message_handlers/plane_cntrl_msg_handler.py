@@ -13,10 +13,10 @@
  prohibited. All other rights are expressly reserved by Seagate Technology, LLC.
  ****************************************************************************
 """
+import os
 import json
-import subprocess
-
-from socket import gethostname
+import syslog
+import logging
 
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
@@ -24,8 +24,17 @@ from framework.utils.service_logging import logger
 
 # Modules that receive messages from this module
 from framework.rabbitmq.plane_cntrl_rmq_egress_processor import PlaneCntrlRMQegressProcessor
-
 from json_msgs.messages.actuators.ack_response import AckResponseMsg
+
+# Need to track down an RPM for python-prct as RE won't go for easy-install, pip, setup.py, etc
+try:
+    import prctl
+
+    from seddispatch import SedOpDispatch
+    from pwd import getpwnam
+    from grp import getgrnam
+except ImportError as ie:
+    logger.info("If using Plane Controller Message handler then please install python-prctl package.")
 
 
 class PlaneCntrlMsgHandler(ScheduledModuleThread, InternalMsgQ):
@@ -52,12 +61,11 @@ class PlaneCntrlMsgHandler(ScheduledModuleThread, InternalMsgQ):
         # Initialize internal message queues for this module
         super(PlaneCntrlMsgHandler, self).initialize_msgQ(msgQlist)
 
-        self._host_name = gethostname() 
-        logger.info("          Monitoring plane requests for: %s" % self._host_name)
-        #logger.info("          HA Partner: %s" % self._sedutil_arg_parse.machineInfo.partner)
+        # Remove root privileges to control possible access
+        self._dropPrivileges("sspl-ll")
 
     def run(self):
-        """Run the module periodically on its own thread."""
+        """Run the module on its own thread blocking for incoming messages."""
         #self._set_debug(True)
         #self._set_debug_persist(True)
 
@@ -83,7 +91,7 @@ class PlaneCntrlMsgHandler(ScheduledModuleThread, InternalMsgQ):
         self._log_debug("Finished processing successfully")
 
     def _process_msg(self, jsonMsg):
-        """Parses the incoming message and hands off to the appropriate logger"""
+        """Parses the incoming message and process"""
         if isinstance(jsonMsg, dict) == False:
             jsonMsg = json.loads(jsonMsg)
 
@@ -91,86 +99,43 @@ class PlaneCntrlMsgHandler(ScheduledModuleThread, InternalMsgQ):
         success = self._parse_jsonMsg(jsonMsg)
         if not success:
             response = "An error occurred parsing JSON fields"
-            # Transmit the response back as an Ack json msg
             self._send_response(response)
             return
 
-        # Convert SSPL's CLI to sedutils CLI (temporary as CLIs differ)
-        self.ssplCLI_to_sedutilsCLI_converter()
+        try:
+            sedOpDispatch = SedOpDispatch(self._command, self._parameters, self._arguments)
+            status = sedOpDispatch.status
 
-        # See if the msg applies to this node 
-        if self._node_id != "None":
-            applies_to_node = False
-            for server in self._servers:
-                if server in self._host_name:
-                    applies_to_node = True
-                    break
-            if not applies_to_node:
-                self._log_debug("_processMsg, does not apply to this node, ignoring.")              
+            # Don't continue on init errors, invalid command or doesn't apply to this node
+            if sedOpDispatch.status != 0:
+                errors = sedOpDispatch.errors
+                self._log_debug("_process_msg, status: %s, errors: %s" % \
+                                (str(sedOpDispatch.status), str(errors)))
                 return
 
-        logger.info("PlaneCntrlMsgHandler, _process_msg. msg_type: %s, plane request: %s" % \
-                    (self._msg_type, self._plane_request))
-        logger.info("PlaneCntrlMsgHandler, _process_msg, node_id: %s, drive_id: %s, debug_id: %s, raid_id: %s" % 
-                    (self._node_id, self._drive_id, self._debug_id, self._raid_id))
-        try:
-            # Make a subprocess command into sedutil's CLI and capture the output (hopefully this will be in path later)
-            cmd = "python /usr/lib64/python2.6/site-packages/sedutil/sedutil.py %s %s" % \
-                        (self._sedutils_cmd, self._sedutils_params)
-            self._log_debug("_process_msg, sedutils cmd: %s " % cmd)
-            proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-            output, errors = proc.communicate()
- 
-            if proc.wait() != 0:
-                response = "Error executing %s, %d, %s" % (cmd, proc.returncode, errors or output)
-            else:
-                # Send back the response from sedutils.sedOps
-                if errors is not None and \
-                   len(errors) > 0:
-                    response = "Response: %s\n\nErrors: %s" % (output, errors)
-                else:
-                    response = "Response: %s" % output
+            status   = sedOpDispatch.run()
+            response = sedOpDispatch.output
+            errors   = sedOpDispatch.errors            
+            hostname = sedOpDispatch.hostname
+
+            # Transmit the response back as an Ack json msg
+            self._send_response(response, errors, status, hostname)
+
+            self._log_debug("PlaneCntrlMsgHandler, _process_msg, status: %s, command: %s, parameters: %s, args: %s" % \
+                        (str(status), str(self._command), str(self._parameters), str(self._arguments)))
+            self._log_debug("PlaneCntrlMsgHandler, _process_msg, response: %s" % str(response))
+            self._log_debug("PlaneCntrlMsgHandler, _process_msg, errors: %s" % str(errors))
         except Exception as ae:
             logger.warn("PlaneCntrlMsgHandler, _process_msg: %s" % str(ae))
             response = "There was an error processing the request.  Please refer to the logs for details."
 
-        # Transmit the response back as an Ack json msg
-        self._send_response(response)
-
-    def ssplCLI_to_sedutilsCLI_converter(self):
-        """Convert SSPL's CLI to sedutils CLI
-            TODO: Eventually get rid of this and have both CLIs align"""
-
-        self._sedutils_params = ""
-        self._sedutils_cmd = "'Not Supported'"
-
-        # Create the parameters that sedutil's CLI understands
-        if self._raid_id != "None":
-            self._raidset = self._raid_id.split(",")
-            self._sedutils_params += " --raidset %s" % self._raid_id
-
-        if self._node_id != "None":
-            self._servers = self._node_id.split(",")
-            self._sedutils_params += " --server %s" % self._node_id
-
-        if self._drive_id != "None":
-            self._drives = self._drive_id.split(",")
-            self._sedutils_params += " --drive %s" % self._drive_id
-
-        # Create the sedutil's command to use
-        if self._msg_type == "drive":
-            if self._plane_request == "list":
-               self._sedutils_cmd = "status"
-
-        elif self._msg_type == "config":
-            pass
-
-    def _send_response(self, response):
+    def _send_response(self, response, errors, status, hostname):
         """Transmit the response back as an Ack json msg"""
         self._log_debug("_send_response, response: %s" % str(response))
-        ack_msg = AckResponseMsg("hostname: %s, msg_type: %s, plane_request: %s, drive_id: %s, raid_id: %s" % \
-                                 (self._host_name, self._msg_type, self._plane_request, self._drive_id, self._raid_id), \
-                                 str(response), self._uuid).getJson()
+        ack_msg = AckResponseMsg("hostname: %s, command: %s, parameters: %s, arguments: %s, status: %s, errors: %s" % \
+                                 (hostname, str(self._command), str(self._parameters), str(self._arguments), \
+                                  str(status), str(errors)), \
+                                  str(response), self._uuid).getJson()
         self._write_internal_msgQ(PlaneCntrlRMQegressProcessor.name(), ack_msg)
 
     def _parse_jsonMsg(self, jsonMsg):
@@ -181,25 +146,43 @@ class PlaneCntrlMsgHandler(ScheduledModuleThread, InternalMsgQ):
             if jsonMsg.get("sspl_ll_msg_header") is not None and \
                jsonMsg.get("sspl_ll_msg_header").get("uuid") is not None:
                 self._uuid = jsonMsg.get("sspl_ll_msg_header").get("uuid")
+                self._log_debug("_processMsg, uuid: %s" % self._uuid)
 
             # Parse out values from msg
-            self._msg_type        = jsonMsg.get("actuator_request_type").get("plane_controller").get("type")
-            self._plane_request   = jsonMsg.get("actuator_request_type").get("plane_controller").get("plane_request")
-            self._node_id         = jsonMsg.get("actuator_request_type").get("plane_controller").get("parameters").get("node_id")
-            self._drive_id        = jsonMsg.get("actuator_request_type").get("plane_controller").get("parameters").get("drive_id")
-            self._debug_id        = jsonMsg.get("actuator_request_type").get("plane_controller").get("parameters").get("debug_id")
-            self._raid_id         = jsonMsg.get("actuator_request_type").get("plane_controller").get("parameters").get("raid_id")
+            self._command    = jsonMsg.get("actuator_request_type").get("plane_controller").get("command")
+            self._parameters = jsonMsg.get("actuator_request_type").get("plane_controller").get("parameters")
+            self._arguments  = jsonMsg.get("actuator_request_type").get("plane_controller").get("arguments")
 
             # Ignore incorrectly formatted messages
-            if self._msg_type is None or \
-                self._plane_request is None:
-                logger.warn("PlaneCntrlMsgHandler, _parse_jsonMsg, type or plane_request is none")
+            if self._command is None:
+                logger.warn("PlaneCntrlMsgHandler, _parse_jsonMsg, command is none")
+                logger.warn("PlaneCntrlMsgHandler, _process_msg, command: %s" % str(self._command))
                 return False
 
             return True
         except Exception as ae:
             logger.warn("PlaneCntrlMsgHandler, _parse_jsonMsg: %s" % str(ae))
             return False
+
+    def _dropPrivileges(self, user):
+        """Remove root privileges to control possible access"""
+        altgroups = ('disk',)
+        transition_caps = ('setuid', 'setgid')
+        keep_caps = ('sys_rawio',)
+
+        prctl.securebits.no_setuid_fixup = True
+
+        prctl.cap_effective.limit(*transition_caps + keep_caps)
+        prctl.cap_permitted.limit(*transition_caps + keep_caps)
+
+        pw = getpwnam(user)
+        os.setgid(pw.pw_gid)
+        os.setuid(pw.pw_uid)
+
+        os.setgroups([getgrnam(gname).gr_gid for gname in altgroups])
+
+        prctl.cap_effective.drop(*transition_caps)
+        prctl.cap_permitted.drop(*transition_caps)
 
 
     def shutdown(self):

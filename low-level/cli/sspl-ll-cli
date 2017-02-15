@@ -959,7 +959,7 @@ def install_package(dep):
         else:
             print("Result: %s" % response)
     except Exception as ae:
-        print("sspl-ll-cli install_package: %s" % str(ae))
+        print("sspl-ll-cli install package: %s" % str(ae))
 
 
 if __name__ == "__main__":

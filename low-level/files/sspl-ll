@@ -30,7 +30,7 @@ pid_file="/var/run/$name.pid"
 stdout_log="/var/log/$name.log"
 stderr_log="/var/log/$name.err"
 
-user="sspl-ll"
+user="root"
 prog_name="/opt/seagate/sspl/low-level/framework/sspl_ll_d"
 config="/etc/sspl_ll.conf"
 cmd="--user ${user} --pidfile=${pid_file} ${prog_name} --config=${config} --systemd=False"

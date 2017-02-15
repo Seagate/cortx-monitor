@@ -438,55 +438,52 @@ class ManualTest():
         ack_msg  = ingressMsg.get("message").get("actuator_response_type").get("ack").get("ack_msg")
         ack_type = ingressMsg.get("message").get("actuator_response_type").get("ack").get("ack_type")
 
+        #print "ack_msg: %s" % ack_msg
+        #print "ack_type: %s" % ack_type
+
         # Parse out hostname and raid values
         ack_types = ack_type.split(",")
         for value in ack_types:
             if "hostname" in value:
                 hostname = value
-            elif "raid_id" in value:
-                raid_id = value
-            elif "plane_request" in value:
-                plane_request = value
-            elif "msg_type" in value:
-                msg_type = value
+            elif "command" in value:
+                command = value
+            elif "errors" in value:
+                errors = value
 
-        # Display the hostname and raids
-        if "None" not in raid_id:
-            print "\nResponse from %s :%s" % (hostname, raid_id)
-        else:
-            print "\nResponse from %s" % (hostname)
+        if hostname is None or \
+           len(hostname) == 0:
+           return
 
-        #print "%s %s" % (msg_type, plane_request)
+        print "\nResponse from %s" % (hostname)
+        if len(errors) > 9:
+            print "\nErrors%s" % errors
 
-        # Handle 'drive list' responses
-        #TODO: Handle different responses in separate methods
-        if "drive" in msg_type:
-            if "list" in plane_request:
-                try:
-                    header_start = ack_msg.index("Response:") + 9
-                    header_stop = ack_msg.index("fips") + 5
-                except Exception as ae:
-                    print(ack_msg)
-                    return
+        # Handle 'drive status' response
+        if "status" in command:
+            template = "{0:^20}"
+            rows = ack_msg.replace("-","").replace("{","").replace("}","").replace("'","").split("\n")
+            first_row = True
+            headers = ""
+            for row in rows:
+                header_fields = row.split(",")
+                output = ""
+                for header_field in header_fields:
+                    if ":" in header_field:
+                        fields = header_field.split(":")
+                        # Grab the headers on the first row
+                        if first_row == True:
+                            headers = headers + template.format(fields[0]).upper()
+                        output = output + template.format(fields[1])
 
-                if "Errors:" in ack_msg:
-                    ack_errors = ack_msg.split("Errors:")[1]
-                    print "%s\n" % ack_errors
-                else:
-                    header_line = ack_msg[header_start:header_stop].replace("\n", "").replace("\t", "")
-                    header_vals = header_line.split(",")
-                    template = "{0:^20} {1:^20} {2:^15} {3:^15}" 
-                    print template.format(header_vals[0].upper(), header_vals[1].upper(),
-                                          header_vals[2].upper(), header_vals[3].upper())
-                    rows = ack_msg[header_stop:].replace("\t", "").split("\n")
-                    for row in rows:
-                        fields = row.split(",")
-                        if len(fields) == 4:
-                            print template.format(fields[0], fields[1], fields[2], fields[3])
-
+                if first_row == True:
+                    first_row = False
+                    print headers
+                print output
         else:
             print"Received response which is not yet handled by CLI. Please try again."
             sys.exit(1)
+
 
     def basicConsume(self):
         """Starts consuming all messages sent
