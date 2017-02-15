@@ -145,12 +145,13 @@ def _send_iem_exchange(exchange, log_msg, host=None):
         print "IEM failed on exchange: {}".format(exchange)
         print "Exception:{}".format(ae)
 
-def _send_SED_command(type, request, parameters, response_wait_time, force_wait):
+def _send_SED_command(request, parameters, arguments, response_wait_time, force_wait):
     file = "/opt/seagate/sspl/low-level/tests/manual/actuator_msgs/cntrl_plane_request.json"
     jsonMsg = json.loads(open(file).read())
-    jsonMsg["message"]["actuator_request_type"]["plane_controller"]["plane_request"] = u"%s" % request
+    jsonMsg["message"]["actuator_request_type"]["plane_controller"]["command"] = u"%s" % request
     jsonMsg["message"]["actuator_request_type"]["plane_controller"]["parameters"] = parameters
-    jsonMsg["message"]["actuator_request_type"]["plane_controller"]["type"] = u"%s" % type
+    jsonMsg["message"]["actuator_request_type"]["plane_controller"]["arguments"] = arguments
+
     _send_raw_msg(jsonMsg, response_wait_time=response_wait_time, indent=True, force_wait=force_wait)
 
 def _sed_print_usage():
@@ -236,9 +237,9 @@ def _init_SED(parser, program_name):
 
         # Branch off and handle config or drive commands
         if values[0] == "config":
-            success, request, parameters, response_wait_time, force_wait = _process_SED_config(values[1:])
+            success, request, parameters, arguments, response_wait_time, force_wait = _process_SED_config(values[1:])
         elif values[0] == "drive":
-            success, request, parameters, response_wait_time, force_wait = _process_SED_drive(values[1:])
+            success, request, parameters, arguments, response_wait_time, force_wait = _process_SED_drive(values[1:])
         elif values[0] == "verify":
             # See if --checkdeps is set and verify packages are installed
             if values[1] == "True":
@@ -248,7 +249,7 @@ def _init_SED(parser, program_name):
         # If successful then send the msg
         if success:
             if request:
-                _send_SED_command(values[0], request, parameters, response_wait_time, force_wait)
+                _send_SED_command(request, parameters, arguments, response_wait_time, force_wait)
         else:
             if request == "cancel":
                 print"Operation cancelled"
@@ -292,7 +293,11 @@ def _process_SED_drive(values):
     """Process values from command line for drive requests"""
     try:
         #print "drive values: %s" % values
+        for idx, value in enumerate(values):
+            if values[idx]== "None":
+                values[idx] = None
         params = {'drive_id':values[4], 'raid_id': values[5], 'node_id':values[6], 'debug_id': values[7]}
+        arguments = {}
 
         # If we're sending request to all nodes then force a 7 second delay and then read from rabbitmq
         if values[6] == "None":
@@ -304,8 +309,9 @@ def _process_SED_drive(values):
 
         # Drive list key-management
         if values[0] == "list":
-            # Only care about paramaters to identify the scope of the request
-            request = "%s" % values[0]
+            # Only care about arguments to identify the scope of the request, todo make these configurable via cli
+            arguments = {'json': None, 'cols': 'wGsf', 'delim': ',\t', 'condition': None, 'fromdb': None, 'ignoreha': False}
+            request = "status"
 
         elif values[0] == "modify":
             input, value = _get_sed_input("Available drive-level settings", "{security}", \
@@ -324,7 +330,7 @@ def _process_SED_drive(values):
             # Verify that the user really wants to erase
             response = raw_input("Drive erase confirm: \n\t[yes, no]\nsspl-ll-cli> ").strip()
             if response == "yes":
-                request = "%s %s" % (values[0], response)
+                arguments = {"recovery": None}
             else:
                 return False, "cancel", None, None
 
@@ -332,7 +338,7 @@ def _process_SED_drive(values):
             # Only care about paramaters to identify the scope of the request
             request = "%s" % values[0]
 
-        return True, request, params, response_timeout, force_wait
+        return True, request, params, arguments, response_timeout, force_wait
 
     except Exception as e:
         print"_process_SED_drive, Error occurred: %s" % str(e)
@@ -943,28 +949,17 @@ def check_dependencies(config_file, auto_install):
 def install_package(dep):
     """Use yum to instal a package"""
     print("\tAttempting to install/update: %s" % dep)
-    command = "yum -y --nogpgcheck install %s" % dep
-    process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    response, error = process.communicate()
-    if error is not None and \
-        len(error) > 0:
-        print("\tFailed installing package, %s" % error)
-    else:
-        print("Result: %s" % response)
-
-class AppendWithComma(argparse.Action):
-    '''
-    Action appends arguments to list allowing comma separators to specify multiple items
-    '''
-    def __call__(self, parser, namespace, values, option_string=None):
-        arg = getattr(namespace, self.dest, None)
-        if arg is None:
-            arg = []
-        if ',' in values:
-            arg = arg + values.split(',')
+    try:
+        command = "yum -y --nogpgcheck install %s" % dep
+        process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        response, error = process.communicate()
+        if error is not None and \
+            len(error) > 0:
+            print("\tFailed installing package, %s" % error)
         else:
-            arg.append(values)
-        setattr(namespace, self.dest, arg)
+            print("Result: %s" % response)
+    except Exception as ae:
+        print("sspl-ll-cli install_package: %s" % str(ae))
 
 
 if __name__ == "__main__":
