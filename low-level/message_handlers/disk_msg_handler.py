@@ -43,8 +43,11 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
     PRIORITY    = 2
 
     # Section and keys in configuration file
-    DISKMSGHANDLER = MODULE_NAME.upper()
-    DMREPORT_FILE  = 'dmreport_file'
+    DISKMSGHANDLER    = MODULE_NAME.upper()
+    DMREPORT_FILE     = 'dmreport_file'
+    MAX_DM_EVENTS     = 'max_drivemanager_events'
+    MAX_DM_EVENTS_INT = 'max_drivemanager_event_interval'
+
     ALWAYS_LOG_IEM = 'always_log_iem'
 
     @staticmethod
@@ -85,8 +88,19 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
         # Current /dev/sgX which changes during expander resets
         self._scsi_generic = "N/A"
 
+        # Counter to track drives with drivemanager events for determining partial expander resets
+        self._drivemanager_events_counter = 0
+
+        # Time of first drivemanager event in an incoming set for determining partial expander resets
+        self._first_drivemanager_event_tm = 0
+
+        # Get values for max number of events in the seconds interval to flag a partial expander reset
+        self._getDM_exp_reset_values()
+
         # Initialize _scsi_generic to the current /dev/sgX value
-        self._check_expander_reset()
+        # DEPRECATED for drivemanager interval checks
+        #self._check_expander_reset()
+
         # Dump startup info to journal for debugging
         logger.info("          Current /dev/sg device: %s" % self._scsi_generic)
 
@@ -457,9 +471,6 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
         # See if we have an existing drive object and update it
         if self._drvmngr_drives.get(serial_number) is not None:
-            # Check for expander reset
-            self._check_expander_reset()
-    
             status  = jsonMsg.get("status")
             path_id = jsonMsg.get("path_id")
 
@@ -470,6 +481,14 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
                 if not self._always_log_IEM:
                     return
+
+            # Check for expander reset by examining scsi generic value changing
+            # DEPRECATED for drivemanager interval checks
+            # self._check_expander_reset()
+
+            # Check for expander reset by examining number of EMPTY_None drivemanager events within an interval
+            if status == "EMPTY_None":
+                self._check_drivemanager_events_interval()
 
             # Ignore if current drive status has 'halon' in it which has precedence over all others
             if "halon" in drive.get_drive_status().lower():
@@ -592,7 +611,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
             self._write_internal_msgQ("SystemdWatchdog", internal_json_msg)
 
     def _process_hpi_response_ZBX_NOTPRESENT(self, jsonMsg):
-        """Handle HPI data with serial number = ZBX_NOTPRESENT"""
+        """Handle HPI data with serial number or wwn = ZBX_NOTPRESENT"""
 
         # If the serial number is set to the default then write it out as not present for RAS and restart openhpid
         if jsonMsg.get("serial_number") == "ZBX_NOTPRESENT":
@@ -773,7 +792,9 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
         self._write_internal_msgQ(LoggingMsgHandler.name(), internal_json_msg)
 
     def _check_expander_reset(self):
-        """Check for expander reset by polling for sgXX changes"""
+        """Check for expander reset by polling for sgXX changes  
+        DEPRECATED for drivemanager interval checks"""
+
         scsi_command = "ls /sys/class/enclosure/*/device/scsi_generic" 
         response, error = self._run_command(scsi_command)
 
@@ -789,6 +810,62 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 self._transmit_expander_reset()
 
             self._scsi_generic = response
+
+    def _check_drivemanager_events_interval(self):
+        """Check for expander reset by examining number of drivemanager events within an interval"""
+        # If the last event was more than two minutes reset everything as a safeguard against manually removed drives
+        if time.time() - self._first_drivemanager_event_tm > 120:
+            self._drivemanager_events_counter = 0
+
+        # If this is the first of a set of drivemanager events then capture the timestamp
+        if self._drivemanager_events_counter == 0:
+            self._first_drivemanager_event_tm = time.time()
+
+        # Increment counter to track drivemanager events for determining partial expander resets
+        self._drivemanager_events_counter += 1
+
+        logger.info("DiskMsgHandler, Total drivemanager events: %d" % self._drivemanager_events_counter)
+        logger.info("DiskMsgHandler, Seconds since first event: %d" %
+                        (time.time() - self._first_drivemanager_event_tm))
+
+        # If max events have occurred within max interval then we have an expander reset
+        if self._drivemanager_events_counter >= self._max_drivemanager_events:
+            logger.info("DiskMsgHandler, _drivemanager_events_counter: %d >= Max of %d" %
+                        (self._drivemanager_events_counter, self._max_drivemanager_events))
+
+            # See if a partial expander reset has occurred which is detected by X drive events in Y seconds
+            if time.time() - self._first_drivemanager_event_tm < self._max_drivemanager_event_interval:
+                logger.info("DiskMsgHandler, Max drivemanager events occurred in %d seconds." %
+                            self._max_drivemanager_event_interval)
+
+                # Temp fix for Halon not being able to handle partial expander resets by GA
+                #  When partial occurs then trigger a full expander reset and handle all 84 drives bouncing in OS
+                if self._max_drivemanager_events != 84:
+
+                    # Reset to look for all 84 drives bouncing in the OS indicative of a full expander reset
+                    self._max_drivemanager_events = 84
+
+                    # Reset current number of drivemanager events counter
+                    self._drivemanager_events_counter = 0
+
+                    # Reset max interval to two minutes for 84 drives
+                    self._max_drivemanager_event_interval = 120
+
+                    # Trigger a full expander reset when a partial has occurred
+                    self._trigger_expander_reset()
+
+                    # Log IEM and send out JSON msg
+                    self._transmit_expander_reset()
+                else:
+                    # Reset current number of drivemanager events counter
+                    self._drivemanager_events_counter = 0
+
+                    # Reset _max_drivemanager_events configurable value used to detect partial exp resets
+                    self._getDM_exp_reset_values()
+            else:
+                logger.info("DiskMsgHandler, Max drivemanager events did NOT occur in %d seconds." %
+                            self._max_drivemanager_event_interval)
+
 
     def _transmit_expander_reset(self):
         """Create and transmit an expander reset JSON msg"""
@@ -816,6 +893,22 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
         # Send the event to logging msg handler to send IEM message to journald
         self._write_internal_msgQ(LoggingMsgHandler.name(), internal_json_msg)
 
+    def _trigger_expander_reset(self):
+            """Trigger an expander reset by rebooting via wbcli tool"""
+
+            # Get the current SG device
+            command = "ls /sys/class/enclosure/*/device/scsi_generic"
+
+            response, error = self._run_command(command)
+            if len(error) > 0:
+                logger.info("Triggering expander reset results: %s, %s" % (response, error))
+
+            sg_dev = "/dev/{}".format(response)
+            command = "sudo wbcli {} reboot".format(sg_dev)
+
+            response, error = self._run_command(command)
+            logger.info("DiskMsgHandler, Triggering expander reset: %s, %s" % (response, error))
+
     def _run_command(self, command):
         """Run the command and get the response and error returned"""
         process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -834,6 +927,20 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
         val = bool(self._conf_reader._get_value_with_default(self.DISKMSGHANDLER,
                                                               self.ALWAYS_LOG_IEM,
                                                               False))
+        
+    def _getDM_exp_reset_values(self):
+        """Retrieves the values used to determine partial expander resets"""
+        self._max_drivemanager_events = int(self._conf_reader._get_value_with_default(self.DISKMSGHANDLER,
+                                                         self.MAX_DM_EVENTS,
+                                                         14))
+
+        self._max_drivemanager_event_interval = int(self._conf_reader._get_value_with_default(self.DISKMSGHANDLER,
+                                                         self.MAX_DM_EVENTS_INT,
+                                                         10))
+
+        logger.info("          Expander Reset triggered with %d events in %d secs." %
+                    (self._max_drivemanager_events, self._max_drivemanager_event_interval))
+
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""
         super(DiskMsgHandler, self).shutdown()
