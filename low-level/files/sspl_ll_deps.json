@@ -2,7 +2,9 @@
 	"RabbitMQingressProcessor": {
 		"python-pika": "0.9.5",
 		"python-jsonschema": "2.3.0",
-		"rabbitmq-server": "3.1.5"
+		"rabbitmq-server": "3.1.5",
+		"libsspl_sec": "1.0.0.o.1.0",
+		"libsspl_sec-method_none": "1.0.0.o.1.0"
 	},
 	"RabbitMQegressProcessor": {
 		"python-pika": "0.9.5",

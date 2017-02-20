@@ -828,7 +828,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
         logger.info("DiskMsgHandler, Seconds since first event: %d" %
                         (time.time() - self._first_drivemanager_event_tm))
 
-        # If max events have occurred within max interval then send expander reset msg
+        # If max events have occurred within max interval then we have an expander reset
         if self._drivemanager_events_counter >= self._max_drivemanager_events:
             logger.info("DiskMsgHandler, _drivemanager_events_counter: %d >= Max of %d" %
                         (self._drivemanager_events_counter, self._max_drivemanager_events))
@@ -848,7 +848,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     # Reset current number of drivemanager events counter
                     self._drivemanager_events_counter = 0
 
-                    # Reset max interval to two minutes for 84 drives
+                    # Set max interval to two minutes for 84 drives
                     self._max_drivemanager_event_interval = 120
 
                     # Trigger a full expander reset when a partial has occurred
@@ -856,15 +856,15 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
                     # Log IEM and send out JSON msg
                     self._transmit_expander_reset()
+                else:
+                    # Reset current number of drivemanager events counter
+                    self._drivemanager_events_counter = 0
+
+                    # Reset _max_drivemanager_events configurable value used to detect partial exp resets
+                    self._getDM_exp_reset_values()
             else:
                 logger.info("DiskMsgHandler, Max drivemanager events did NOT occur in %d seconds." %
                             self._max_drivemanager_event_interval)
-
-            # Reset current number of drivemanager events counter
-            self._drivemanager_events_counter = 0
-
-            # Reset _max_drivemanager_events configurable value used to detect partial exp resets
-            self._getDM_exp_reset_values()
 
     def _transmit_expander_reset(self):
         """Create and transmit an expander reset JSON msg"""
@@ -903,7 +903,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 logger.info("Triggering expander reset results: %s, %s" % (response, error))
 
             sg_dev = "/dev/{}".format(response)
-            command = "wbcli {} reboot".format(sg_dev)
+            command = "sudo wbcli {} reboot".format(sg_dev)
 
             response, error = self._run_command(command)
             logger.info("DiskMsgHandler, Triggering expander reset: %s, %s" % (response, error))
@@ -937,7 +937,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                                                          self.MAX_DM_EVENTS_INT,
                                                          10))
 
-        logger.info("          Expander Reset triggered with %d events in %d secs." %
+        logger.info("Expander Reset will be triggered with %d events in %d secs." %
                     (self._max_drivemanager_events, self._max_drivemanager_event_interval))
 
     def shutdown(self):
