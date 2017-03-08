@@ -4,8 +4,8 @@ RELEASE=1.el7
 
 MOCK_CONFIG=-r mock_osaint
 
-.PHONY: check pep8 pylint ut at
-check: pep8 pylint ut at
+.PHONY: check pep8 ut at
+check: pep8 ut at
 
 at:
 	PYTHONPATH=.:tests lettuce --failfast ./tests/acceptance/power_request.feature
@@ -19,16 +19,6 @@ ut:
 
 pep8:
 	pep8 ./sspl_hl ./cstor ./tests/
-
-pylint:
-	PYTHONPATH=.:tests pylint \
-		--disable=locally-disabled,locally-enabled \
-		--rcfile=pylint.rc \
-		./sspl_hl \
-		./cstor \
-		./tests/fake_halond/fake_halond.py \
-		./tests/acceptance/steps/*.py \
-		./tests/unit/*.py
 
 .PHONY: tarball
 tarball:
