@@ -22,7 +22,7 @@ Vendor:     Seagate Technology LLC
 # For autogen step
 BuildRequires: libtool autoconf automake
 # For rest of build
-BuildRequires: gcc doxygen python-pep8 pylint check-devel openssl-devel graphviz
+BuildRequires: gcc doxygen python-pep8 check-devel openssl-devel graphviz
 #Requires:
 
 # Temporary requirement on method_none.  This should eventually change to
