@@ -117,13 +117,6 @@ if test "x$FLAKE8" == "x" ; then
     AC_MSG_ERROR([Error: Unable to find flake8.])
 fi
 
-AC_ARG_VAR(PYLINT, [Path to pylint.  Used for python style checking.])
-AC_PATH_PROG(PYLINT, pylint)
-if test "x$PYLINT" == "x" ; then
-    AC_MSG_ERROR([Error: Unable to find pylint.])
-fi
-
-
 PKG_CHECK_MODULES([CHECK], [check >= 0.9.4])
 
 AC_CHECK_HEADERS(openssl/bio.h,,AC_MSG_ERROR(missing openssl))
