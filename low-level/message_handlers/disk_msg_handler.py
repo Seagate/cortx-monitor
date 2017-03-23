@@ -515,7 +515,15 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                              hpi_drive.get_drive_num() + "/status"
             except Exception as ae:
                 logger.info("DiskMsgHandler, No HPI data for serial number: %s" % serial_number)
-                return
+
+                # Safeguard to ensure refreshed data which might be needed for gemhpi bug FMW-21363
+#                 command = "/usr/bin/systemctl restart openhpid"
+#                 response, error = self._run_command(command)
+#                 if len(error) > 0:
+#                     logger.info("Error restarting openhpid: %s" % error)
+#                 else:
+#                     logger.info("Restarted openhpid succesfully")
+#                 return
 
             drive = Drive(self._host_id,
                           event_path,
@@ -570,6 +578,11 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
             logger.error("DiskMsgHandler, valid: False (ignoring)")
             return
 
+        # If it's an installed and powered HPI event then see if there was already a drive in this location and delete it
+        if jsonMsg.get("disk_installed") == True and \
+           jsonMsg.get("disk_powered") == True:
+            self._remove_replaced_drive(serial_number, drive.get_drive_enclosure(), drive.get_drive_num())
+
         # Update the dict of hpi drives
         self._hpi_drives[serial_number] = drive
 
@@ -609,6 +622,27 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     "serial_number" : serial_number
                 })
             self._write_internal_msgQ("SystemdWatchdog", internal_json_msg)
+
+    def _remove_replaced_drive(self, serial_number, enclosure, drive_num):
+        """Check for a drive being replaced with a new one and delete the old one"""
+        # Loop thru the dict of drivemanager objects and see if there is a drive at this location in the drawer
+        for old_serial_num, drive in self._drvmngr_drives.iteritems():
+            try:
+                if enclosure == drive.get_drive_enclosure() and \
+                   drive_num == drive.get_drive_num() and \
+                   serial_number != old_serial_num:
+
+                    logger.info("DiskMsgHandler, _remove_replaced_drive, found previous drive at num: %s, sn: %s" % \
+                                (drive_num, old_serial_num))
+
+                    # Found a previous drive in this location so delete it
+                    self._drvmngr_drives[old_serial_num] = None
+                    self._hpi_drives[old_serial_num]     = None
+
+            except Exception as ae:
+                logger.warn("DiskMsgHandler, _remove_replaced_drive exception: %s" % str(ae))
+                logger.info("new sn: %s, old sn: %s, drive num: %s, encl sn: %s" % \
+                            (serial_number, old_serial_num, drive_num, enclosure))
 
     def _process_hpi_response_ZBX_NOTPRESENT(self, jsonMsg):
         """Handle HPI data with serial number or wwn = ZBX_NOTPRESENT"""
@@ -841,6 +875,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 # Temp fix for Halon not being able to handle partial expander resets by GA
                 #  When partial occurs then trigger a full expander reset and handle all 84 drives bouncing in OS
                 if self._max_drivemanager_events != 84:
+                    logger.info("DiskMsgHandler, Partial expander reset detected.")
 
                     # Reset to look for all 84 drives bouncing in the OS indicative of a full expander reset
                     self._max_drivemanager_events = 84
@@ -857,6 +892,8 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     # Log IEM and send out JSON msg
                     self._transmit_expander_reset()
                 else:
+                    logger.info("DiskMsgHandler, Expander reset detected.")
+
                     # Reset current number of drivemanager events counter
                     self._drivemanager_events_counter = 0
 
@@ -900,13 +937,13 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
             response, error = self._run_command(command)
             if len(error) > 0:
-                logger.info("Triggering expander reset results: %s, %s" % (response, error))
+                logger.info("DiskMsgHandler, SCSI Generic lookup results: %s, %s" % (response, error))
 
             sg_dev = "/dev/{}".format(response)
             command = "sudo wbcli {} reboot".format(sg_dev)
 
             response, error = self._run_command(command)
-            logger.info("DiskMsgHandler, Triggering expander reset: %s, %s" % (response, error))
+            logger.info("DiskMsgHandler, Expander reset triggered, results: %s, %s" % (response, error))
 
     def _run_command(self, command):
         """Run the command and get the response and error returned"""
@@ -1111,14 +1148,6 @@ class Drive(object):
 
     def get_drive_num(self):
         """Return the enclosure of the drive"""    
-        return self._drive_num
-
-    def get_drive_filename(self):
-        """Return the filename of the drive"""
-        return self._filename
-
-    def get_drive_num(self):
-        """Return the enclosure of the drive"""
         return self._drive_num
 
     def get_drive_filename(self):
