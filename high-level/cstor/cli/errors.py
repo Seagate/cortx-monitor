@@ -70,3 +70,15 @@ class InternalError(BaseError):
 
     def __init__(self, err=None, desc=None):
         super(InternalError, self).__init__(err, desc)
+
+
+class InvalidArgumentError(BaseError):
+    """
+    This error is raised by CLI for all unknown internal errors
+    """
+
+    err = "Invalid input error"
+    desc = 'Invalid input provided. Please enter valid input.'
+
+    def __init__(self, err=None, desc=None):
+        super(InvalidArgumentError, self).__init__(err, desc)

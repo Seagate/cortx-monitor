@@ -14,6 +14,7 @@ class Main(PlexApplication):  # pylint: disable=too-many-public-methods
     """The @string/title Application."""
     implements(IPlugin, IApplication)
 
+
 # pylint: disable=invalid-name
 main = Main("@string/title",
             "1.0",

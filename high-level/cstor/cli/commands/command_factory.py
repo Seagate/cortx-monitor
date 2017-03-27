@@ -24,10 +24,10 @@ import argparse
 from cstor.cli.commands.power import Power
 from cstor.cli.commands.support_bundle import SupportBundle
 from cstor.cli.commands.status import Status
+from cstor.cli.commands.s3admin import S3Admin
 
 
 class Factory(object):
-
     """ Factory implementation to make the main cstor script
     agnostic to what sub-command is being called. As per the
     sub-command the object corresponding to that sub-command
@@ -46,6 +46,7 @@ class Factory(object):
         Power.add_args(subparsers)
         SupportBundle.add_args(subparsers)
         Status.add_args(subparsers)
+        S3Admin.add_args(subparsers)
         args = parser.parse_args()
         return args
 

@@ -17,6 +17,7 @@ import uuid
 import datetime
 import random
 from sspl_hl.utils.support_bundle import config
+from sspl_hl.utils.strings import Status
 
 PLEX_PROVIDER_MSG_EXPIRES_IN_SEC = 3600
 
@@ -548,7 +549,7 @@ class ServiceListResponse(ListResponse):
                 ListResponse.PID_KEY: random.randint(1, 3),
                 ListResponse.SERVICE_DESCRIPTION_KEY:
                 "some description for {} service".format(item_name)
-                }
+            }
             items.append(item)
         return items
 
@@ -600,6 +601,7 @@ class FRUServiceRequest(ServiceRequest):
     """
         Service request for fru
     """
+
     def __init(self):
         super(FRUServiceRequest, self).__init__()
 
@@ -649,6 +651,38 @@ class SupportBundleResponse(CommandResponse):
         self.message.update(message)
         return self.__dict__
 
+
+class S3CommandResponse(CommandResponse):
+    # pylint: disable=too-few-public-methods
+    """
+        Response for S3Admin commands request.
+    """
+    REASON = "reason"
+    STATUS = "status"
+    RESPONSE = "response"
+
+    def __init__(self):
+        super(S3CommandResponse, self).__init__()
+
+    def get_response_message(self, command_type, output):
+        """
+        Get the response message in dict format
+        @param: bundle_name Name of the created bundle package
+        @return: dict containing the response for bundle command
+        @rtype: dict
+        """
+        message = {}
+
+        if output.status == Status.OK_STATUS or \
+           output.status == Status.CREATED_STATUS:
+            account = output.response
+            message = {S3CommandResponse.STATUS: 0,
+                       S3CommandResponse.RESPONSE: account}
+        else:
+            message = {S3CommandResponse.STATUS: output.status,
+                       S3CommandResponse.REASON: output.msg}
+        self.message.update(message)
+        return self.__dict__
 
 # print SupportBundleResponse().get_response_message('list',
 # {'in_progress': ['2016-07-13_04-52-51', '2016-07-13_04-52-52',

@@ -35,12 +35,16 @@ def main():
         if result and isinstance(result, list):
             for item in result:
                 print item
+        elif result and isinstance(result, dict):
+            for key in result:
+                print key+": "+str(result.get(key))
         else:
-            print result
+            if result is not None:
+                print result
     except CommandTerminated:
         print 'Command is terminated'
     except BaseError as extra_info:
-        print "Error: {}, Desc: {}".format(extra_info.err, extra_info.desc)
+        print "Error: {}.\nDesc: {}".format(extra_info.err, extra_info.desc)
 
 if __name__ == '__main__':
     main()
