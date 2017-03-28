@@ -24,12 +24,7 @@ sspl-$(PACKAGE_VERSION).tgz:
 rpm: sspl-$(PACKAGE_VERSION).tgz libsspl_sec.spec
 	rpmbuild --define "_topdir $(abs_top_builddir)/RPMBUILD" --define "_tmppath $(abs_top_builddir)/RPMBUILD/tmp/" -ba libsspl_sec.spec
 
-check-local: c_style python_style
-
-python_style:
-	$(FLAKE8) $(top_srcdir)
-	$(PYLINT) --module-rgx='.*' $(top_srcdir)/doc/examples/python/*.py
-	$(PYLINT) $(top_srcdir)/tests/acceptance/steps/*.py
+check-local: c_style 
 
 if HAVE_ASTYLE
 c_style:
