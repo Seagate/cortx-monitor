@@ -75,6 +75,33 @@ PRODUCT_NAME    = 'products'
 threadController = ThreadController()
 
 
+def _dropPrivileges(user):
+    """Remove root privileges to control possible access"""
+    if os.getuid() != 0:
+        return
+
+    import prctl
+    from pwd import getpwnam
+    from grp import getgrnam
+
+    altgroups = ('disk',)
+    transition_caps = ('setuid', 'setgid')
+    keep_caps = ('sys_rawio',)
+
+    prctl.securebits.no_setuid_fixup = True
+
+    prctl.cap_effective.limit(*transition_caps + keep_caps)
+    prctl.cap_permitted.limit(*transition_caps + keep_caps)
+
+    pw = getpwnam(user)
+    os.setgid(pw.pw_gid)
+    os.setuid(pw.pw_uid)
+
+    os.setgroups([getgrnam(gname).gr_gid for gname in altgroups])
+
+    prctl.cap_effective.drop(*transition_caps)
+    prctl.cap_permitted.drop(*transition_caps)
+
 def main(conf_reader, systemd_support):
     """The main bootstrap for sspl"""    
     logger.info("sspl-ll Bootstrap: Obtaining list of modules from config file")
@@ -97,6 +124,10 @@ def main(conf_reader, systemd_support):
         # Default to Castor System for now
         products = ["CS-A"]
     logger.info("sspl-ll Bootstrap: product names supported: %s" % products)
+
+    # CS-L/G systems run as root and we set capabilities on the process to control the access available to it
+    if "CS-A" not in products:
+        _dropPrivileges("sspl-ll")
 
     # Use reflection to instantiate the classes based upon its class name in config file
     core_processors = conf_reader._get_value_list(SSPL_SETTING,
@@ -371,8 +402,6 @@ if __name__ == "__main__":
 
         # Configure a shutdown handler to handle any necessary cleanup for hangup signal
         context.signal_map = {signal.SIGHUP : lambda signum, frame: shutdown_handler()}
-
-        context.open()
 
         # Start sspl-ll as a main process running multiple threads
         with context:

@@ -18,7 +18,8 @@
 import pika
 import json
 import os
-import time
+
+from socket import gethostname
 
 from jsonschema import Draft3Validator
 from jsonschema import validate
@@ -31,6 +32,7 @@ from framework.utils.service_logging import logger
 from framework.rabbitmq.plane_cntrl_rmq_egress_processor import PlaneCntrlRMQegressProcessor
 
 from json_msgs.messages.actuators.ack_response import AckResponseMsg
+from socket import gethostname
 
 import ctypes
 try:
@@ -108,7 +110,9 @@ class PlaneCntrlRMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
         # Initialize internal message queues for this module
         super(PlaneCntrlRMQingressProcessor, self).initialize_msgQ(msgQlist)
 
-        self._current_rabbitMQ_server     = 'localhost'
+        self._current_rabbitMQ_server = 'localhost'
+
+        self._hostname = gethostname()
 
         # Configure RabbitMQ Exchange to receive messages
         self._configure_exchange()
@@ -161,7 +165,7 @@ class PlaneCntrlRMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
             username  = ingressMsg.get("username")
             signature = ingressMsg.get("signature")
             message   = ingressMsg.get("message")
-            uuid      = ingressMsg.get("uuid")
+            uuid      = message.get("sspl_ll_msg_header").get("uuid")
             msg_len   = len(message) + 1
 
             if uuid is None:
@@ -194,24 +198,33 @@ class PlaneCntrlRMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
             self._log_debug("_process_msg, ingressMsg: %s" % ingressMsg)
 
             # Hand off to appropriate actuator message handler
-            if msgType.get("logging") is not None:
-                self._write_internal_msgQ("LoggingMsgHandler", message)
+            if msgType.get("plane_controller") is not None:
+                command = message.get("actuator_request_type").get("plane_controller").get("command")
 
+                # For a job status request forward over to PlaneCntrlRMQegressProcessor
+                if command is not None and \
+                   command == "job_status":
+                    job_uuid = message.get("actuator_request_type").get("plane_controller").get("arguments").get("uuid", None)
+                    node_id  = message.get("actuator_request_type").get("plane_controller").get("parameters").get("node_id", None)
+
+                    # node_id set to None is a broadcast otherwise see if it applies to this node
+                    if node_id is None or \
+                       self._hostname in str(node_id):
+                        self._process_job_status(uuid, job_uuid)
+                else:
+                    self._write_internal_msgQ("PlaneCntrlMsgHandler", message)
+
+            # Handle restarting of internal threads
             elif msgType.get("thread_controller") is not None:
-                self._write_internal_msgQ("ThreadController", message)
+                node_id = None
+                if message.get("actuator_request_type").get("thread_controller").get("parameters") is not None and \
+                   message.get("actuator_request_type").get("thread_controller").get("parameters").get("node_id") is not None:
+                    node_id = message.get("actuator_request_type").get("thread_controller").get("parameters").get("node_id", None)
 
-            elif msgType.get("service_controller") is not None:
-                self._write_internal_msgQ("ServiceMsgHandler", message)
-
-            elif msgType.get("node_controller") is not None:
-                self._write_internal_msgQ("NodeControllerMsgHandler", message)
-
-            elif msgType.get("plane_controller") is not None:
-                self._write_internal_msgQ("PlaneCntrlMsgHandler", message)
-
-            # Hand off to appropriate sensor message handler
-            elif msgType.get("node_data") is not None:
-                self._write_internal_msgQ("NodeDataMsgHandler", message)
+                # node_id set to None is a broadcast otherwise see if it applies to this node
+                if node_id is None or \
+                   self._hostname in str(node_id):
+                    self._write_internal_msgQ("ThreadController", message)
 
             # ... handle other incoming messages that have been validated
             else:
@@ -226,6 +239,32 @@ class PlaneCntrlRMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
             logger.exception("PlaneCntrlRMQingressProcessor, _process_msg unrecognized message: %r" % ingressMsg)
             ack_msg = AckResponseMsg("Error Processing Msg", "Msg Handler Not Found", uuid).getJson()
             self._write_internal_msgQ(PlaneCntrlRMQegressProcessor.name(), ack_msg)
+
+    def _process_job_status(self, uuid, job_uuid):
+        """Send the current job status requested"""
+        self._log_debug("_process_job_status, job_status requested on uuid: %s" % job_uuid)
+        try:
+            # Get a copy of the job tasks in the PlaneCntrlMsgHandler msg queue pending being worked
+            plane_cntrl_jobs = self._get_msgQ_copy("PlaneCntrlMsgHandler")
+            response = "Not Found"
+
+            # See if the requested uuid is in the list of pending jobs
+            for plane_cntrl_job in plane_cntrl_jobs:
+                self._log_debug("_process_job_status, plane_cntrl_job: %s" % str(plane_cntrl_job))
+                if job_uuid in str(plane_cntrl_job):
+                    response = "In Queue"
+                    break
+
+            ack_type = {}
+            ack_type["hostname"] = gethostname()
+            ack_type["command"]  = "job_status"
+            ack_type["arguments"] = str(job_uuid)
+
+            # The uuid is either not found or it's in the queue to be worked
+            ack_msg = AckResponseMsg(json.dumps(ack_type), response, uuid).getJson()
+            self._write_internal_msgQ(PlaneCntrlRMQegressProcessor.name(), ack_msg)
+        except Exception as ex:
+            logger.exception("PlaneCntrlRMQingressProcessor, _process_job_status exception: %s" % str(ex))
 
     def _toggle_rabbitMQ_servers(self):
         """Toggle between hosts when a connection fails"""

@@ -146,7 +146,7 @@ def _send_iem_exchange(exchange, log_msg, host=None):
         print "Exception:{}".format(ae)
 
 def _send_SED_command(request, parameters, arguments, response_wait_time, force_wait):
-    file = "/opt/seagate/sspl/low-level/tests/manual/actuator_msgs/cntrl_plane_request.json"
+    file = "/opt/seagate/sspl/low-level/tests/manual/actuator_msgs/plane_cntrl_request.json"
     jsonMsg = json.loads(open(file).read())
     jsonMsg["message"]["actuator_request_type"]["plane_controller"]["command"] = u"%s" % request
     jsonMsg["message"]["actuator_request_type"]["plane_controller"]["parameters"] = parameters
@@ -310,7 +310,7 @@ def _process_SED_drive(values):
         # Drive list key-management
         if values[0] == "list":
             # Only care about arguments to identify the scope of the request, todo make these configurable via cli
-            arguments = {'json': None, 'cols': 'wGsf', 'delim': ',\t', 'condition': None, 'fromdb': None, 'ignoreha': False}
+            arguments = {'condition': None, 'fromdb': None, 'ignoreha': False}
             request = "status"
 
         elif values[0] == "modify":

@@ -86,6 +86,11 @@
 									"description": "Response from action applied: start | stop | restart | status",
 									"type": "string",
 									"required": true
+								},
+								"ack_type": {
+									"description": "Optional ack Parameters",
+									"type": "string",
+									"required": false
 								}
 							}
 						},

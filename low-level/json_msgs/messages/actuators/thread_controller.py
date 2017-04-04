@@ -34,6 +34,7 @@ class ThreadControllerMsg(BaseActuatorMsg):
 
     def __init__(self, module_name,
                        thread_response,
+                       ack_type  = "N/A",
                        username  = "SSPL-LL",
                        signature = "N/A",
                        time      = "N/A",
@@ -63,7 +64,8 @@ class ThreadControllerMsg(BaseActuatorMsg):
                           "actuator_response_type": {
                                 self.ACTUATOR_MSG_TYPE: {
                                     "module_name" : self._module_name,
-                                    "thread_response" : self._thread_response
+                                    "thread_response" : self._thread_response,
+                                    "ack_type" : ack_type
                                     }
                                 }
                           }

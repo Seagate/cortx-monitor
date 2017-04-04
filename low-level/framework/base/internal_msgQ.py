@@ -15,7 +15,7 @@
  prohibited. All other rights are expressly reserved by Seagate Technology, LLC.
  ****************************************************************************
 """
-
+import copy
 import json
 from framework.utils.service_logging import logger
 
@@ -39,43 +39,43 @@ class InternalMsgQ(object):
         try:
             q = self._msgQlist[self.name()]
             jsonMsg = q.get()
-    
+
             if jsonMsg is None:
                 return None
-    
+
             # Check for debugging being activated in the message header
             global_debug_off, jsonMsg = self._check_debug(jsonMsg)
             if global_debug_off == True:
                  self._debug_off_globally()
-    
+
             self._log_debug("_read_my_msgQ: %s, Msg:%s" % (self.name(), jsonMsg))
             return jsonMsg
-        
+
         except Exception as e:
             logger.exception("_read_my_msgQ: %r" % e)
-            
+
         return None
 
     def _read_my_msgQ_noWait(self):
         """Non-Blocks on reading from this module's queue placed by another thread"""
         try:
             q = self._msgQlist[self.name()]
-    
+
             # See if queue is empty otherwise don't bother
             if q.empty():
                 return None
-    
+
             # Don't block waiting for messages
             jsonMsg = q.get_nowait()
-    
+
             if jsonMsg is None:
                 return None
-    
+
             # Check for debugging being activated in the message header
             global_debug_off, jsonMsg = self._check_debug(jsonMsg)
             if global_debug_off == True:
                 self._debug_off_globally()
-    
+
             self._log_debug("_read_my_msgQ_noWait: %s, Msg:%s" % (self.name(), jsonMsg))
             return jsonMsg
 
@@ -89,6 +89,11 @@ class InternalMsgQ(object):
 
         q = self._msgQlist[toModule]
         q.put(jsonMsg)
+
+    def _get_msgQ_copy(self, module_name):
+        """Returns a copy of a modules message queue"""
+        with self._msgQlist[module_name].mutex:
+           return list(self._msgQlist[module_name].queue)
 
     def _debug_off_globally(self):
         """Turns debug mode off on all threads"""

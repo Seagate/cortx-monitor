@@ -17,7 +17,9 @@
 
 import os
 import time
+import json
 from threading import Thread
+from socket import gethostname
 
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
@@ -28,6 +30,7 @@ from json_msgs.messages.actuators.thread_controller import ThreadControllerMsg
 # Import modules to control
 from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 from framework.rabbitmq.rabbitmq_ingress_processor import RabbitMQingressProcessor
+from framework.rabbitmq.plane_cntrl_rmq_egress_processor import PlaneCntrlRMQegressProcessor
 from framework.rabbitmq.logging_processor import LoggingProcessor
 
 # Note that all threaded message handlers must have an import here to be controlled
@@ -36,6 +39,7 @@ from message_handlers.disk_msg_handler import DiskMsgHandler
 from message_handlers.service_msg_handler import ServiceMsgHandler
 from message_handlers.node_data_msg_handler import NodeDataMsgHandler
 from message_handlers.node_controller_msg_handler import NodeControllerMsgHandler
+from message_handlers.plane_cntrl_msg_handler import PlaneCntrlMsgHandler
 
 
 # Global method used by Thread to capture and log errors.  This must be global.
@@ -55,14 +59,21 @@ def _run_thread_capture_errors(curr_module, sspl_modules, msgQlist, conf_reader,
         # Populate an actuator response message and transmit back to HAlon
         error_msg = "SSPL-LL encountered an error, terminating service Error: " + \
                     ", Exception: " + logger.exception(ex)
-        jsonMsg   = ThreadControllerMsg(curr_module.name(), error_msg).getJson()        
-        curr_module._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
+        jsonMsg   = ThreadControllerMsg(curr_module.name(), error_msg).getJson()
+
+        for product in products:
+            if product == "CS-A":
+                self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
+                break
+            elif product == "CS-L" or \
+               product == "CS-G":
+                self._write_internal_msgQ(PlaneCntrlRMQegressProcessor.name(), jsonMsg)
+                break
 
         # Shut it down, error is non-recoverable
         for name, other_module in sspl_modules.iteritems():
             if other_module is not curr_module:
                 other_module.shutdown()
-
 
 
 class ThreadController(ScheduledModuleThread, InternalMsgQ):
@@ -89,6 +100,8 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
         # Location of hpi data directory populated by dcs-collector
         self._hpi_base_dir = "/tmp/dcs/hpi"
         self._start_delay  = 10
+        
+        self._hostname = gethostname()
 
     def initialize(self, conf_reader, msgQlist, products):
         """initialize configuration reader and internal msg queues"""
@@ -110,10 +123,12 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
             from sensors.impl.centos_7.drive_manager import DriveManager
             from sensors.impl.centos_7.hpi_monitor import HPIMonitor
 
+        # Handle configurations for specific products
         for product in self._products:
             if product == "CS-A":
                 from sensors.impl.generic.raid import RAIDsensor
                 from sensors.impl.generic.SMR_drive_data import SMRdriveData
+                break
 
     def run(self):
         """Run the module periodically on its own thread."""
@@ -135,6 +150,8 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
                 self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
                 self._threads_initialized = True
 
+        #self._set_debug(True)
+        #self._set_debug_persist(True)
         self._log_debug("Start accepting requests")
         try:
             # Block on message queue until it contains an entry
@@ -203,69 +220,104 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
         else:
             self._thread_response = "Error, unrecognized thread request"
 
+        node_id = []
+        if jsonMsg.get("actuator_request_type").get("thread_controller").get("parameters") is not None and \
+           jsonMsg.get("actuator_request_type").get("thread_controller").get("parameters").get("node_id"):
+            node_id = jsonMsg.get("actuator_request_type").get("thread_controller").get("parameters").get("node_id")
+
+        ack_type = {}
+        ack_type["hostname"] = unicode(self._hostname, 'utf-8')
+        ack_type["node_id"]  = node_id
+
         # Populate an actuator response message and transmit
-        threadControllerMsg = ThreadControllerMsg(module_name, self._thread_response)
+        threadControllerMsg = ThreadControllerMsg(module_name, self._thread_response, \
+                                                  json.dumps(ack_type))
+
         if uuid is not None:
             threadControllerMsg.set_uuid(uuid)
-        msgString = threadControllerMsg.getJson()        
-        self._write_internal_msgQ(RabbitMQegressProcessor.name(), msgString)
+        msgString = threadControllerMsg.getJson()
+        logger.info("ThreadController, response: %s" % str(msgString))
+        for product in self._products:
+            if product == "CS-A":
+                self._write_internal_msgQ(RabbitMQegressProcessor.name(), msgString)
+                break
+            elif product == "CS-L" or \
+                 product == "CS-G":
+                self._write_internal_msgQ(PlaneCntrlRMQegressProcessor.name(), msgString)
+                break
 
     def _restart_module(self, module_name):
         """Restart a module"""
         self._log_debug("_restart_module, module_name: %s" % module_name)
 
-        # Stop the module if it's running and let existing thread die gracefully
-        if self._status_module(module_name) == True:
-            self._stop_module(module_name)
+        try:
+            # Stop the module if it's running and let existing thread die gracefully
+            if self._status_module(module_name) == True:
+                self._stop_module(module_name)
 
-        # Allow module a few seconds to shut down gracefully
-        max_wait  = 10
-        curr_wait = 1
-        while self._status_module(module_name) == True:
-            logger.info("\n\nWAITING: %d" % curr_wait)
-            time.sleep(2)
-            curr_wait += 1
-            if curr_wait > max_wait:
-                break
+            # Allow module a few seconds to shut down gracefully
+            max_wait  = 10
+            curr_wait = 1
+            while self._status_module(module_name) == True:
+                time.sleep(3)
+                logger.info("Retrying: %s" % str(curr_wait))
+                self._stop_module(module_name)
+                curr_wait += 1
+                if curr_wait > max_wait:
+                    break
 
-        # Start the module
-        self._start_module(module_name)
-        self._thread_response = "Restart Successful"
+            # Start the module
+            self._start_module(module_name)
+        except Exception as ae:
+            logger.warn("Restart thread failed: %s" % str(ae))
+            self._thread_response = "Restart Failed"
+        else:
+            self._thread_response = "Restart Successful"
 
     def _stop_module(self, module_name):
         """Stop a module"""
         self._log_debug("_stop_module, module_name: %s" % module_name)
 
-        if self._status_module(module_name) == False:
-            self._log_debug("_start_module, status: False")
-            return
+        try:
+            if self._status_module(module_name) == False:
+                self._log_debug("_stop_module, status: False")
+                return
 
-        # Put a debug message on the module's queue before shutting it down
-        if self.debug_section is not None:
-            self._write_internal_msgQ(module_name, self.debug_section)
+            self._thread_response = "Stop Successful"
 
-        # Call the module's shutdown method for a graceful halt
-        self._sspl_modules[module_name].shutdown()
-        self._thread_response = "Stop Successful"
+            # Put a debug message on the module's queue before shutting it down
+            if self.debug_section is not None:
+                self._write_internal_msgQ(module_name, self.debug_section)
+
+            # Call the module's shutdown method for a graceful halt
+            self._sspl_modules[module_name].shutdown()
+        except Exception as ae:
+            logger.warn("Stop thread failed: %s" % str(ae))
+            self._thread_response = "Stop Failed"
 
     def _start_module(self, module_name):
         """Start a module"""
         self._log_debug("_start_module, module_name: %s" % module_name)
 
-        if self._status_module(module_name) == True:
-            self._log_debug("_start_module, status: True")
-            return
+        try:
+            if self._status_module(module_name) == True:
+                self._log_debug("_start_module, status: True")
+                return
 
-        module_thread = Thread(target=_run_thread_capture_errors,
-                                  args=(self._sspl_modules[module_name], self._sspl_modules,
-                                  self._msgQlist, self._conf_reader, self._products))
+            self._thread_response = "Start Successful"
 
-        # Put a configure debug message on the module's queue before starting it up
-        if self.debug_section is not None:
-            self._write_internal_msgQ(module_name, self.debug_section)
+            module_thread = Thread(target=_run_thread_capture_errors,
+                                      args=(self._sspl_modules[module_name], self._sspl_modules,
+                                      self._msgQlist, self._conf_reader, self._products))
 
-        module_thread.start()
-        self._thread_response = "Start Successful"
+            # Put a configure debug message on the module's queue before starting it up
+            if self.debug_section is not None:
+                self._write_internal_msgQ(module_name, self.debug_section)
+
+            module_thread.start()
+        except Exception as ae:
+            logger.warn("Start thread failed: %s" % str(ae))
+            self._thread_response = "Start Failed"        
 
     def _status_module(self, module_name):
         """Returns if the module is running or not"""
@@ -308,4 +360,10 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
 
     def check_RabbitMQegressProcessor_is_running(self):
         """Used by the shutdown_handler to allow queued egress msgs to complete"""
-        return self._sspl_modules[RabbitMQegressProcessor.name()].is_running()
+        for product in self._products:
+            if product == "CS-A":
+                return self._sspl_modules[PlaneCntrlRMQegressProcessor.name()].is_running()
+            elif product == "CS-L" or \
+                 product == "CS-G":
+                return self._sspl_modules[RabbitMQegressProcessor.name()].is_running()
+

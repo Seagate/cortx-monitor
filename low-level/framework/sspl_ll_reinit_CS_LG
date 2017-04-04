@@ -12,7 +12,3 @@ id -u sspl-ll &>/dev/null || /usr/sbin/useradd \
 
 # Automatically install dependencies based on config file
 sspl-ll-cli verify --checkdeps --autoinstall
-
-if [ -f /var/log/sedutil.log ]; then
-    chmod 666 /var/log/sedutil.log
-fi

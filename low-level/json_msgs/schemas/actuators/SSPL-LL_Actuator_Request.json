@@ -115,6 +115,11 @@
 									"description": "Action to be applied to thread: start | stop | restart | status",
 									"type": "string",
 									"required": true
+								},
+								"parameters": {
+									"description": "Optional Parameters",
+									"type": "object",
+									"required": false
 								}
 							}
 						},

@@ -16,10 +16,10 @@
 			},
 		"actuator_request_type": {
 			"plane_controller": {
-				"command": "",
-				"parameters": "",
-				"arguments": ""
-			}
+            	"command": "job_status",
+                "parameters": {},
+                "arguments": {}
+            }
 		}
 	}
 }

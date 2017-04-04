@@ -13,10 +13,8 @@
  prohibited. All other rights are expressly reserved by Seagate Technology, LLC.
  ****************************************************************************
 """
-import os
 import json
 import syslog
-import logging
 
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
@@ -25,16 +23,6 @@ from framework.utils.service_logging import logger
 # Modules that receive messages from this module
 from framework.rabbitmq.plane_cntrl_rmq_egress_processor import PlaneCntrlRMQegressProcessor
 from json_msgs.messages.actuators.ack_response import AckResponseMsg
-
-# Need to track down an RPM for python-prct as RE won't go for easy-install, pip, setup.py, etc
-try:
-    import prctl
-
-    from seddispatch import SedOpDispatch
-    from pwd import getpwnam
-    from grp import getgrnam
-except ImportError as ie:
-    logger.info("If using Plane Controller Message handler then please install python-prctl package.")
 
 
 class PlaneCntrlMsgHandler(ScheduledModuleThread, InternalMsgQ):
@@ -61,8 +49,17 @@ class PlaneCntrlMsgHandler(ScheduledModuleThread, InternalMsgQ):
         # Initialize internal message queues for this module
         super(PlaneCntrlMsgHandler, self).initialize_msgQ(msgQlist)
 
-        # Remove root privileges to control possible access
-        self._dropPrivileges("sspl-ll")
+        self._import_products(products)
+        
+        self._sedOpDispatch = None
+
+    def _import_products(self, products):
+        """Import classes based on which product is being used"""
+        if "CS-L" in products or \
+           "CS-G" in products:
+            from sedutil.sedDispatch import SedOpDispatch
+            self._SedOpDispatch = SedOpDispatch
+            self._SedOpDispatch.setLogger(logger)
 
     def run(self):
         """Run the module on its own thread blocking for incoming messages."""
@@ -92,6 +89,7 @@ class PlaneCntrlMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
     def _process_msg(self, jsonMsg):
         """Parses the incoming message and process"""
+
         if isinstance(jsonMsg, dict) == False:
             jsonMsg = json.loads(jsonMsg)
 
@@ -103,39 +101,57 @@ class PlaneCntrlMsgHandler(ScheduledModuleThread, InternalMsgQ):
             return
 
         try:
-            sedOpDispatch = SedOpDispatch(self._command, self._parameters, self._arguments)
-            status = sedOpDispatch.status
+            self._sedOpDispatch = self._SedOpDispatch(self._command, self._parameters, self._arguments)
+            status = self._sedOpDispatch.status
 
             # Don't continue on init errors, invalid command or doesn't apply to this node
-            if sedOpDispatch.status != 0:
-                errors = sedOpDispatch.errors
-                self._log_debug("_process_msg, status: %s, errors: %s" % \
-                                (str(sedOpDispatch.status), str(errors)))
+            if self._sedOpDispatch.status != 0:
+                if self._sedOpDispatch.status == 2:
+                    self._log_debug("_process_msg, request is not for this node, ignoring.")
+                else:
+                    errors = self._sedOpDispatch.errors
+                    self._log_debug("_process_msg, status: %s, errors: %s" % \
+                                    (str(self._sedOpDispatch.status), str(errors)))
                 return
 
-            status   = sedOpDispatch.run()
-            response = sedOpDispatch.output
-            errors   = sedOpDispatch.errors            
-            hostname = sedOpDispatch.hostname
+            # Let the egress processor know the current task being worked
+            self._write_internal_msgQ(PlaneCntrlRMQegressProcessor.name(), jsonMsg)
 
-            # Transmit the response back as an Ack json msg
-            self._send_response(response, errors, status, hostname)
+            hostname = self._sedOpDispatch.hostname
+            response = "N/A"
+            errors   = "N/A"
+
+            # Run the command with the parameters and arguments and retrive the response and any errors
+            status   = self._sedOpDispatch.run()
+            response = self._sedOpDispatch.output
+            errors   = self._sedOpDispatch.errors
 
             self._log_debug("PlaneCntrlMsgHandler, _process_msg, status: %s, command: %s, parameters: %s, args: %s" % \
                         (str(status), str(self._command), str(self._parameters), str(self._arguments)))
             self._log_debug("PlaneCntrlMsgHandler, _process_msg, response: %s" % str(response))
             self._log_debug("PlaneCntrlMsgHandler, _process_msg, errors: %s" % str(errors))
         except Exception as ae:
-            logger.warn("PlaneCntrlMsgHandler, _process_msg: %s" % str(ae))
+            errors = str(ae)
+            logger.warn("PlaneCntrlMsgHandler, _process_msg exception: %s" % errors)
             response = "There was an error processing the request.  Please refer to the logs for details."
 
-    def _send_response(self, response, errors, status, hostname):
+        # No need to enable self._sedOpDispatch.interrupt() in the shutdown()
+        self._sedOpDispatch = None
+
+        # Transmit the response back as an Ack json msg
+        self._send_response(status, hostname, response, errors)
+
+    def _send_response(self, status, hostname, response, errors):
         """Transmit the response back as an Ack json msg"""
-        self._log_debug("_send_response, response: %s" % str(response))
-        ack_msg = AckResponseMsg("hostname: %s, command: %s, parameters: %s, arguments: %s, status: %s, errors: %s" % \
-                                 (hostname, str(self._command), str(self._parameters), str(self._arguments), \
-                                  str(status), str(errors)), \
-                                  str(response), self._uuid).getJson()
+        ack_type = {}
+        ack_type["hostname"]    = unicode(hostname, 'utf-8')
+        ack_type["command"]     = self._command
+        ack_type["parameters"]  = self._parameters
+        ack_type["status"]      = status
+        ack_type["errors"]      = unicode(errors, 'utf-8')
+
+        ack_msg = AckResponseMsg(json.dumps(ack_type), \
+                                 str(response), self._uuid).getJson()
         self._write_internal_msgQ(PlaneCntrlRMQegressProcessor.name(), ack_msg)
 
     def _parse_jsonMsg(self, jsonMsg):
@@ -146,7 +162,6 @@ class PlaneCntrlMsgHandler(ScheduledModuleThread, InternalMsgQ):
             if jsonMsg.get("sspl_ll_msg_header") is not None and \
                jsonMsg.get("sspl_ll_msg_header").get("uuid") is not None:
                 self._uuid = jsonMsg.get("sspl_ll_msg_header").get("uuid")
-                self._log_debug("_processMsg, uuid: %s" % self._uuid)
 
             # Parse out values from msg
             self._command    = jsonMsg.get("actuator_request_type").get("plane_controller").get("command")
@@ -164,27 +179,17 @@ class PlaneCntrlMsgHandler(ScheduledModuleThread, InternalMsgQ):
             logger.warn("PlaneCntrlMsgHandler, _parse_jsonMsg: %s" % str(ae))
             return False
 
-    def _dropPrivileges(self, user):
-        """Remove root privileges to control possible access"""
-        altgroups = ('disk',)
-        transition_caps = ('setuid', 'setgid')
-        keep_caps = ('sys_rawio',)
-
-        prctl.securebits.no_setuid_fixup = True
-
-        prctl.cap_effective.limit(*transition_caps + keep_caps)
-        prctl.cap_permitted.limit(*transition_caps + keep_caps)
-
-        pw = getpwnam(user)
-        os.setgid(pw.pw_gid)
-        os.setuid(pw.pw_uid)
-
-        os.setgroups([getgrnam(gname).gr_gid for gname in altgroups])
-
-        prctl.cap_effective.drop(*transition_caps)
-        prctl.cap_permitted.drop(*transition_caps)
-
-
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""
+        logger.info("PlaneCntrlMsgHandler, thread shutting down")
+
+        # Cleanup
         super(PlaneCntrlMsgHandler, self).shutdown()
+
+        # Interrupt any current SED operations
+        if self._sedOpDispatch is not None:
+            try:
+                logger.info("PlaneCntrlMsgHandler, calling sedOpDispatch.interrupt()")
+                self._sedOpDispatch.interrupt()
+            except Exception as ae:
+                logger.warn("PlaneCntrlMsgHandler, shutdown, _sedOpDispatch.interrupt exception: %s" % str(ae))

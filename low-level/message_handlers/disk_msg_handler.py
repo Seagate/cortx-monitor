@@ -515,7 +515,6 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                              hpi_drive.get_drive_num() + "/status"
             except Exception as ae:
                 logger.info("DiskMsgHandler, No HPI data for serial number: %s" % serial_number)
-
                 # Safeguard to ensure refreshed data which might be needed for gemhpi bug FMW-21363
 #                 command = "/usr/bin/systemctl restart openhpid"
 #                 response, error = self._run_command(command)
@@ -523,7 +522,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
 #                     logger.info("Error restarting openhpid: %s" % error)
 #                 else:
 #                     logger.info("Restarted openhpid succesfully")
-#                 return
+                return
 
             drive = Drive(self._host_id,
                           event_path,
