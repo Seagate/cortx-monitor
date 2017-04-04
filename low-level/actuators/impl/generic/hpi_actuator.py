@@ -53,6 +53,7 @@
 """
 
 import os
+import time
 import subprocess
 
 from zope.interface import implements
@@ -349,6 +350,15 @@ class HPIactuator(Debug):
         if error != "None":
             return error
 
+        # Allow time for drivemanager to fully initialize, keep retrying for 5 minutes
+        max_retries = 10
+        curr_retry  = 0
+        while self._drive_number == -1 and \
+              curr_retry < max_retries:
+            time.sleep(30)
+            curr_retry += 1
+            error = self._get_drive_num(drive_request)
+
         # Parse out the requested control state and verify it is supported
         if self._command_type == "set":
             self._control_state = params[3].upper()
@@ -398,7 +408,7 @@ class HPIactuator(Debug):
 
         if len(self._drive_number) == 0 or \
            self._drive_number == -1:
-            return "Error: Failed to lookup disk number in /tmp/dcs/dmreport. (System still initializing?)"
+            return "Error: Failed to lookup disk number in /tmp/dcs/dmreport. (System still initializing?  Will retry in 30 secs.)"
 
         return "None"
 
