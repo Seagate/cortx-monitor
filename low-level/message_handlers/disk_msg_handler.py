@@ -45,6 +45,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
     # Section and keys in configuration file
     DISKMSGHANDLER    = MODULE_NAME.upper()
     DMREPORT_FILE     = 'dmreport_file'
+    DISKINFO_FILE     = 'diskinfo_file'
     MAX_DM_EVENTS     = 'max_drivemanager_events'
     MAX_DM_EVENTS_INT = 'max_drivemanager_event_interval'
 
@@ -75,6 +76,9 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
         # Read in the location to serialize drive_manager.json
         self._dmreport_file = self._getDMreport_File()
+
+        # Read in the location to serialize disk_info.json
+        self._disk_info_file = self._getDiskInfo_File()
 
         # Bool flag signifying to always log disk status even when it hasn't changed
         self._always_log_IEM = self._getAlways_log_IEM()
@@ -253,6 +257,10 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     json_msg = AckResponseMsg(node_request, response, uuid).getJson()
                     self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
 
+                elif serial_number == "serialize":
+                    # Create disk_info.json
+                    self._serialize_disk_info()
+
                 elif self._drvmngr_drives.get(serial_number) is not None:
                     drive = self._drvmngr_drives[serial_number]
                     # Obtain json message containing all relevant data
@@ -290,6 +298,10 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     response = "All HPI data sent successfully"
                     json_msg = AckResponseMsg(node_request, response, uuid).getJson()
                     self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+
+                elif serial_number == "serialize":
+                    # Create disk_info.json
+                    self._serialize_disk_info()
 
                 elif self._hpi_drives.get(serial_number) is not None:
                     drive = self._hpi_drives[serial_number]
@@ -766,8 +778,38 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
             json_dict["last_update_time"] = time.strftime("%c")
             json_dict["drives"] = drives_list
             json_dump = json.dumps(json_dict, sort_keys=True)
-            with open(self._dmreport_file, "w+") as dm_file:                
+            with open(self._dmreport_file, "w+") as dm_file:
                 dm_file.write(json_dump)
+        except Exception as ae:
+            logger.exception(ae)
+
+    def _serialize_disk_info(self):
+        """Writes the current disks HPI & drivemanager data to /tmp/dcs"""
+        try:
+            drives_list = []
+            json_dict = {}
+            for serial_number, drive in self._hpi_drives.iteritems():
+                # Obtain json message containing all relevant HPI data
+                hpi_msg = drive.toHPIjsonMsg().getJson()
+                hpi_json_msg = json.loads(hpi_msg).get("message").get("sensor_response_type").get("disk_status_hpi")
+
+                status = "N/A"
+                reason = "N/A"
+                if self._drvmngr_drives.get(serial_number) is not None:
+                    drive = self._drvmngr_drives[serial_number]
+                    # Get the status and reason fields for the drive
+                    status, reason = str(drive.get_drive_status()).split("_", 1)
+                hpi_json_msg["diskStatus"] = status
+                hpi_json_msg["diskReason"] = reason
+
+                drives_list.append(hpi_json_msg)
+
+            json_dict["timestamp"] = time.strftime("%c")
+            json_dict["drives"] = drives_list
+            json_dump = json.dumps(json_dict, sort_keys=True)
+            with open(self._disk_info_file, "w+") as disk_info_file:
+                disk_info_file.write(json_dump)                
+
         except Exception as ae:
             logger.exception(ae)
 
@@ -956,13 +998,17 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
         return self._conf_reader._get_value_with_default(self.DISKMSGHANDLER,
                                                          self.DMREPORT_FILE,
                                                          '/tmp/dcs/dmreport/drive_manager.json')
+    def _getDiskInfo_File(self):
+        """Retrieves the file location"""
+        return self._conf_reader._get_value_with_default(self.DISKMSGHANDLER,
+                                                         self.DISKINFO_FILE,
+                                                         '/tmp/dcs/disk_info.json')
     def _getAlways_log_IEM(self):
         """Retrieves flag signifying we should always log disk status as an IEM even if they 
             haven't changed.  This is useful for always logging SMART results"""
         val = bool(self._conf_reader._get_value_with_default(self.DISKMSGHANDLER,
                                                               self.ALWAYS_LOG_IEM,
                                                               False))
-        
     def _getDM_exp_reset_values(self):
         """Retrieves the values used to determine partial expander resets"""
         self._max_drivemanager_events = int(self._conf_reader._get_value_with_default(self.DISKMSGHANDLER,
@@ -973,7 +1019,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                                                          self.MAX_DM_EVENTS_INT,
                                                          10))
 
-        logger.info("Expander Reset will be triggered with %d events in %d secs." %
+        logger.info("          Expander Reset will be triggered with %d events in %d secs." %
                     (self._max_drivemanager_events, self._max_drivemanager_event_interval))
 
     def shutdown(self):

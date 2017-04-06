@@ -151,8 +151,6 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
             else:
                 ingressMsg = body
 
-            self._log_debug("_process_msg: %s" % str(ingressMsg))
-
             # Authenticate message using username and signature fields
             username  = ingressMsg.get("username")
             signature = ingressMsg.get("signature")

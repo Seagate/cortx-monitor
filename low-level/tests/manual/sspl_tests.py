@@ -87,19 +87,19 @@ class SSPLtest():
         self.logger.debug('SSPL Low Level Tests Begin')
         self.usage()
 
-        self.start_stop_service("crond", "start") #the following variables with the *ToTest names
+        #self.start_stop_service("crond", "start") the following variables with the *ToTest names
                                                   #are hardcoded to match the JSON files
                                                   #Keep consistent with JSON messages
 
-        self.servicesToTest = [{"Service" : "crond", "Action" : "stop"}]
-        self.drivesToTest = [0, 1, 50, 83]        #Drive numbers are to test first few drives, a middle drive and the last drive
+        #self.servicesToTest = [{"Service" : "crond", "Action" : "stop"}]
+        #self.drivesToTest = [0, 1, 50, 83]       Drive numbers are to test first few drives, a middle drive and the last drive
                                                   #Cannot cover all drives in a reasonable time, thus certain ones are chosen
                                                   #for a sample and then tested.
-        self.threadsToTest = ["DriveManager", "SystemdWatchdog"]
+        #self.threadsToTest = ["DriveManager", "SystemdWatchdog"]
 
         #initialize event and interthread_msg for communication between concurrent threads
-        self.event = threading.Event()
-        self.interthread_msg = ""
+        #self.event = threading.Event()
+        #self.interthread_msg = ""
 
         #Counters for test totals, will be reported at the end
         self.testsTotal = 0
@@ -118,9 +118,10 @@ class SSPLtest():
         self.hostTestPassed = 0
         self.eventTestTotal = 0
         self.eventTestPassed = 0
+        return
 
         #Gather information about json messages in ./actuator_msgs folder
-        self.egressMessage()
+        #self.egressMessage()
         #Read the configuration file
         path_to_conf_file = self.actuator_msgs_folder + "sspl_ll_tests.conf"
         try:
@@ -1154,13 +1155,13 @@ class SSPLtest():
                 : 0 -> respective test passed
                 : 1 -> respective test failed
         """
-
+ 
         command = "systemctl restart sspl-ll"
         subprocess.Popen(command, shell=True, stdout=subprocess.PIPE,
-                                       stderr=subprocess.PIPE)
-        time.sleep(60)
+                         stderr=subprocess.PIPE)
+        time.sleep(300)
 
-        consumet = threading.Thread(target=self.start_consume)
+        #consumet = threading.Thread(target=self.start_consume)
         #serviceVerifyt = threading.Thread(target=self.serviceVerify)
         #logVerifyt = threading.Thread(target=self.logVerify)
         #threadVerifyt = threading.Thread(target=self.threadVerify)
@@ -1168,20 +1169,20 @@ class SSPLtest():
         #driveVerifyt = threading.Thread(target=self.driveVerify)
 
         #Set Consumer Thread to Daemon so it will be reaped when program finishes
-        consumet.setDaemon(True)
-        consumet.start()
+        #consumet.setDaemon(True)
+        #consumet.start()
         #Sleep for a few seconds to allow consumer to start accepting messages.
-        time.sleep(60)
+        #time.sleep(30)
         #Begin all threads sequentially and don't start the next untill the previous has finished
 
         testPassedDict = {  "TestReturnCode"    : "Passed",
                             "ServiceVerify"     : "Passed",
                             "ThreadVerify"      : "Passed",
                             "LogVerify"         : "Passed",
-                            "DriveVerify"       : "Passed",  # Awaiting fix for gemhpi
+                            "DriveVerify"       : "Passed", 
                             "WatchdogVerify"    : "Passed",
                             "HostUpdateVerify"  : "Passed",
-                            "EventVerify"       : "Passed",
+                            "EventVerify"       : "Passed"
                          }
 
         #if not self.hostUpdateVerify():
@@ -1230,6 +1231,16 @@ class SSPLtest():
 #         self.logger.debug("Total Tests: " + str(self.testsTotal))
 #         self.logger.debug("Tests Passed: " + str(self.testsPassed))
 
+
+
+
+        command = "sspl-ll-cli --hpi serialize"
+        subprocess.Popen(command, shell=True, stdout=subprocess.PIPE,
+                                        stderr=subprocess.PIPE)
+        time.sleep(30)
+
+        with open("/tmp/dcs/disk_info.json", "r") as disk_info_file:
+                testPassedDict["hardware_info"] = json.loads(disk_info_file.read())
 
         if self.testsTotal == self.testsPassed:
             testPassedDict["TestReturnCode"] = 0

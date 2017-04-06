@@ -142,7 +142,7 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
                     time.sleep(int(self._start_delay))
 
                 # Allow other threads to initialize
-                time.sleep(165)
+                time.sleep(185)
 
                 # Notify external applications that've started up successfully
                 startup_msg = "SSPL-LL service has started successfully"
