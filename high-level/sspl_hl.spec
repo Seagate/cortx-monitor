@@ -40,9 +40,10 @@ A cli (and library) that allow the user to control the cluster.
 
 %install
 mkdir -p %{installpath}/sspl_hl/views
-mkdir -p %{installpath}/sspl_hl/providers/{response,power,bundle,status}
+mkdir -p %{installpath}/sspl_hl/providers/{response,power,bundle,status,s3admin,s3_account}
 mkdir -p %{installpath}/sspl_hl/utils
 mkdir -p %{installpath}/sspl_hl/utils/cluster_node_manager
+mkdir -p %{installpath}/sspl_hl/utils/s3admin
 mkdir -p %{installpath}/sspl_hl/utils/support_bundle
 mkdir -p %{installpath}/sspl_hl/utils/support_bundle/file_collector
 install sspl_hl/utils/*.py %{installpath}/sspl_hl/utils/
@@ -55,13 +56,23 @@ install sspl_hl/providers/power/*.py %{installpath}/sspl_hl/providers/power/
 install sspl_hl/providers/response/*.py %{installpath}/sspl_hl/providers/response/
 install sspl_hl/providers/bundle/*.py %{installpath}/sspl_hl/providers/bundle/
 install sspl_hl/providers/status/*.py %{installpath}/sspl_hl/providers/status/
+install sspl_hl/providers/s3_account/*.py %{installpath}/sspl_hl/providers/s3_account/
+install sspl_hl/providers/s3admin/*.py %{installpath}/sspl_hl/providers/s3admin/
+install sspl_hl/utils/s3admin/*.py %{installpath}/sspl_hl/utils/s3admin/
 
 
 mkdir -p %{buildroot}/usr/lib/python2.7/site-packages/cstor/cli/commands
+mkdir -p %{buildroot}/usr/lib/python2.7/site-packages/cstor/cli/commands/s3commands
+mkdir -p %{buildroot}/usr/lib/python2.7/site-packages/cstor/cli/commands/s3commands/utils
+mkdir -p %{buildroot}/usr/lib/python2.7/site-packages/cstor/cli/commands/utils
 install cstor/__init__.py %{buildroot}/usr/lib/python2.7/site-packages/cstor/
 install cstor/cli/*.py %{buildroot}/usr/lib/python2.7/site-packages/cstor/cli/
 install cstor/cli/main.py %{buildroot}/usr/lib/python2.7/site-packages/cstor/cli/
 install cstor/cli/commands/*.py %{buildroot}/usr/lib/python2.7/site-packages/cstor/cli/commands/
+install cstor/cli/commands/s3commands/*.py %{buildroot}/usr/lib/python2.7/site-packages/cstor/cli/commands/s3commands/
+install cstor/cli/commands/s3commands/utils/*.py %{buildroot}/usr/lib/python2.7/site-packages/cstor/cli/commands/s3commands/utils/
+install cstor/cli/commands/utils/*.py %{buildroot}/usr/lib/python2.7/site-packages/cstor/cli/commands/utils/
+
 
 mkdir -p %{buildroot}/usr/bin
 ln -s /usr/lib/python2.7/site-packages/cstor/cli/main.py %{buildroot}/usr/bin/cstor
