@@ -57,8 +57,23 @@ def when_i_run(_, cli_command):
         )
     output, err = proc.communicate()  # pylint: disable=unused-variable
     lettuce.world.response = output
+    lettuce.world.err = err
     lettuce.world.exitcode = proc.returncode
     lettuce.world.command = cli_command
+
+
+@lettuce.step(u'Then the output contains "([^"]*)"')
+def cli_output_contains(_, response):
+    """ Ensure proper message generated and enqueued. """
+    contents = lettuce.world.response
+    assert response in contents
+
+
+@lettuce.step(u'Then the error output contains "([^"]*)"')
+def cli_error_contains(_, response):
+    """ Ensure proper message generated and enqueued. """
+    err_contents = lettuce.world.err
+    assert response in err_contents
 
 
 @lettuce.step(u'Then a create bundleRequest message to "([^"]*)" is sent')
