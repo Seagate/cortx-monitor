@@ -12,6 +12,9 @@ import httplib
 
 
 class Strings():
+    """
+    Constant String initialization
+    """
     CREATE = "create"
     REMOVE = "remove"
     MODIFY = "modify"
@@ -24,11 +27,17 @@ class Strings():
     IAM_SERVICE = "iam"
     NO_SUCH_ENTITY = "NoSuchEntity"
     ENTITY_EXISTS = "EntityAlreadyExists"
+    INVALID_ACCESS_KEY = "InvalidAccessKeyId"
+    SIGNATURE_NOT_MATCH = "SignatureDoesNotMatch"
 
 
 class Status():
+    """
+    Http status return codes initialization
+    """
     OK_STATUS = httplib.OK
     CREATED_STATUS = httplib.CREATED
     NOT_FOUND = httplib.NOT_FOUND
     CONFLICT_STATUS = httplib.CONFLICT
     SERVICE_UNAVAILABLE = httplib.SERVICE_UNAVAILABLE
+    UNAUTHORIZED = httplib.UNAUTHORIZED

@@ -35,9 +35,9 @@ class S3AccountCommand(BaseCommand):
         # print parser
         super(S3AccountCommand, self).__init__()
         self.command = parser.command
-        self.provider = 's3admin'
+        self.provider = Strings.PROVIDER
         self.action = parser.action
-        if self.action == "create":
+        if self.action == Strings.CREATE:
             self.name = parser.name
             self.email = parser.email
 
@@ -62,7 +62,7 @@ class S3AccountCommand(BaseCommand):
             'account', help=cls.description())
 
         sub_cmds = sp.add_subparsers(dest='action')
-        sub_command = sub_cmds.add_parser('create',
+        sub_command = sub_cmds.add_parser(Strings.CREATE,
                                           help='Create new Account')
 
         sub_command.add_argument("-n", "--name", type=cls.validate_name,
@@ -73,7 +73,7 @@ class S3AccountCommand(BaseCommand):
                                  dest="email", required=True,
                                  help="Email of Account holder")
 
-        sub_cmds.add_parser('list', help="List all Accounts")
+        sub_cmds.add_parser(Strings.LIST, help="List all Accounts")
 
         sp.set_defaults(func=S3AccountCommand)
 
@@ -110,7 +110,8 @@ class S3AccountCommand(BaseCommand):
     def get_human_readable_response(name, result):
         response = result and result[0]
         message = response.get('message')
-        if message.get("status") == 0:
+        status = message.get(Strings.STATUS)
+        if status == 0:
             response = message.get("response")
             data = OrderedDict(
                 [("Account ID", "AccountId"),
@@ -136,12 +137,13 @@ class S3AccountCommand(BaseCommand):
             populate_credential_file(name, csv_data)
             return None
         else:
-            status = message.get("status")
-            data = "Status: Can not perform.\nDetails: "
+            data = Strings.CAN_NOT_PERFORM
             if status == Status.CONFLICT_STATUS:
                 data += "Account already exist. Please enter another name."
             elif status == Status.SERVICE_UNAVAILABLE:
                 data += "Service Unavailable."
+            elif status == Status.BAD_REQUEST:
+                data += "Bad Request. Invalid inputs provided."
             else:
                 reason = message.get("reason")
                 if reason is not None:
@@ -154,7 +156,8 @@ class S3AccountCommand(BaseCommand):
     def get_human_readable_list_response(result):
         response = result and result[0]
         message = response.get('message')
-        if message.get("status") == 0:
+        status = message.get("status")
+        if status == 0:
             writer = sys.stdout.write
             response = message.get("response")
             if response is None:
@@ -184,8 +187,8 @@ class S3AccountCommand(BaseCommand):
                 writer(line + '\n')
             return None
         else:
-            status = message.get("status")
-            data = "Status: Can not perform.\nDetails: "
+
+            data = Strings.CAN_NOT_PERFORM
             if status == Status.SERVICE_UNAVAILABLE:
                 data += "Service Unavailable."
             else:

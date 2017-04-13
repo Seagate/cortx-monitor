@@ -16,7 +16,7 @@ S3Admin provider implementation
 from sspl_hl.utils.base_castor_provider import BaseCastorProvider
 
 from sspl_hl.providers.s3_account.provider import S3AccountProvider
-# from sspl_hl.providers.s3_users.provider import S3UsersProvider
+from sspl_hl.providers.s3_users.provider import S3UsersProvider
 # from sspl_hl.providers.s3_access_key.provider import S3AccessKeyProvider
 
 
@@ -57,16 +57,26 @@ class S3AdminProvider(BaseCastorProvider):
             request.responder.reply_exception(err_msg)
 
     def handle_account_command(self, request):
+        """
+        Handles all account related operations.
+        """
 
         self._child_provider = S3AccountProvider("account", "handling account")
         self._child_provider.handleRequest(request)
 
     def handle_users_command(self, request):
-        pass
-        # self._child_provider = S3UsersProvider("users", "handling users")
-        # self._child_provider.handleRequest(request)
+        """
+        Handles all user related operations.
+        """
+
+        self._child_provider = S3UsersProvider("users", "handling users")
+        self._child_provider.handleRequest(request)
 
     def handle_access_key_command(self, request):
+        """
+        Handles all access_key related operations.
+        """
+
         pass
         # self._child_provider = S3AccessKeyProvider(
         #    "access_key", "handling access keys")

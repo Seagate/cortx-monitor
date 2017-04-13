@@ -19,6 +19,7 @@ import httplib
 
 
 class Strings(object):
+    PROVIDER = "s3admin"
     CREATE = "create"
     LIST = "list"
     MODIFY = "modify"
@@ -36,6 +37,8 @@ class Strings(object):
     CREDENTIAL_FILE_SUFFIX = "-accessKeys.csv"
     FILE_GENERATION_ERR = 'Unable to generate credential file.' \
                           'Please note down Access Key and Secret Key.'
+    CAN_NOT_PERFORM = "Status: Can not perform.\nDetails: "
+    STATUS = "status"
 
 
 class Status():
@@ -43,3 +46,6 @@ class Status():
     CREATED_STATUS = httplib.CREATED
     CONFLICT_STATUS = httplib.CONFLICT
     SERVICE_UNAVAILABLE = httplib.SERVICE_UNAVAILABLE
+    NOT_FOUND = httplib.NOT_FOUND
+    UNAUTHORIZED = httplib.UNAUTHORIZED
+    BAD_REQUEST = httplib.BAD_REQUEST

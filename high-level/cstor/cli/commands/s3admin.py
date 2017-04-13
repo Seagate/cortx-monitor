@@ -46,11 +46,11 @@ class S3Admin(BaseCommand):
 
             S3AccountCommand.arg_subparser(sub)
 
-            # from cstor.cli.commands.s3admin.s3_users \
-            #    import S3UsersCommand
-            # S3UsersCommand.arg_subparser(sub)
+            from cstor.cli.commands.s3commands.s3_users \
+                import S3UsersCommand
+            S3UsersCommand.arg_subparser(sub)
 
-            # from cstor.cli.commands.s3admin.s3_access_key \
+            # from cstor.cli.commands.s3commands.s3_access_key \
             #     import S3AccessKeyCommand
             # S3AccessKeyCommand.arg_subparser(sub)
 

@@ -37,7 +37,7 @@ def main():
                 print item
         elif result and isinstance(result, dict):
             for key in result:
-                print key+": "+str(result.get(key))
+                print key + ": " + str(result.get(key))
         else:
             if result is not None:
                 print result
@@ -45,6 +45,7 @@ def main():
         print 'Command is terminated'
     except BaseError as extra_info:
         print "Error: {}.\nDesc: {}".format(extra_info.err, extra_info.desc)
+
 
 if __name__ == '__main__':
     main()

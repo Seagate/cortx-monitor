@@ -10,20 +10,30 @@
 # _author_ = "Vikram chhajer"
 
 import json
-import xmltodict
 
+import xmltodict
 import plex.core.log as logger
+
 from sspl_hl.utils.strings import Strings, Status
 from sspl_hl.utils.s3admin.s3_utils import CommandResponse, execute_cmd
 
 
 class AccountUtility():
     def __init__(self, client, name=None, email=None):
+        """AccountUtility constructor.
+
+        Name and email will be required for create operation.
+        """
+
         self.client = client
         self.name = name
         self.email = email
 
     def list(self):
+        """
+        Handles account list operation
+        """
+
         parameters = {'Action': Strings.LIST_ACCOUNTS}
         try:
             response, data = execute_cmd(self.client, parameters)
@@ -49,6 +59,10 @@ class AccountUtility():
             return temp_account_response
 
     def create(self):
+        """
+        Handles account creation operation.
+        """
+
         logger.info("Inside create command")
         parameters = {'Action': 'CreateAccount',
                       'AccountName': self.name,
