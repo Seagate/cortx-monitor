@@ -5,7 +5,7 @@ Feature: S3admin Account Requests
     Scenario: s3admin command  with no parameters.
         When I run "python ./cstor/cli/main.py s3admin"
         Then the error output contains "error: too few arguments"
-        Then the error output contains "usage: main.py s3admin [-h] {account"
+        Then the error output contains "usage: main.py s3admin [-h]"
         And the exit code is "2"
 
     Scenario: s3admin account command  with no parameters.

@@ -13,6 +13,7 @@ at:
 	PYTHONPATH=.:tests lettuce --failfast ./tests/acceptance/status_request.feature
 	PYTHONPATH=.:tests lettuce --failfast ./tests/acceptance/s3admin_account_request.feature
 	PYTHONPATH=.:tests lettuce --failfast ./tests/acceptance/s3admin_user_request.feature
+	PYTHONPATH=.:tests lettuce --failfast ./tests/acceptance/s3admin_accesskey_request.feature
 
 ut:
 	PYTHONPATH=.:tests python tests/unit/sspl_hl_provider_power.py
@@ -20,7 +21,8 @@ ut:
 	PYTHONPATH=.:tests python tests/unit/sspl_hl_provider_status.py
 	PYTHONPATH=.:tests python tests/unit/sspl_hl_provider_s3admin.py
 	PYTHONPATH=.:tests python tests/unit/sspl_hl_provider_s3admin_account.py
-#	PYTHONPATH=.:tests python tests/unit/sspl_hl_provider_s3admin_user.py
+	PYTHONPATH=.:tests python tests/unit/sspl_hl_provider_s3admin_user.py
+	PYTHONPATH=.:tests python tests/unit/sspl_hl_provider_s3admin_access_key.py
 
 pep8:
 	pep8 ./sspl_hl ./cstor ./tests/

@@ -58,13 +58,34 @@ class SsplHlProviderS3Account_create(BaseUnitTest):
         "AccountId": "hzqUcLbrQ2ybs5Q3ycX9xA"
     }
 
-    @mock.patch('sspl_hl.providers.s3_users.provider.get_client')
-    def test_process_s3admin_request(self, get_client_mock):
+    @mock.patch('sspl_hl.providers.s3_account.provider.get_client')
+    def test_process_s3admin_request_success(self, get_client_mock):
         """ Ensure request is parsed and directed towards further respective
         functions according to action parameter.
         """
         request_mock = mock.MagicMock()
-        get_client_mock.return_value = None
+        get_client_mock.return_value = mock.MagicMock(), "Fake_response"
+        command_args = {'command': 'account', 'action': 'create',
+                        'name': 'UT_Test', 'email': 'ut@test.com'}
+        request_mock.selection_args = command_args
+        s3account_provider = S3AccountProvider("account", "handling account")
+        s3account_provider.execute_command = mock.MagicMock()
+        with mock.patch('{}.{}.{}'.format(
+                        "sspl_hl.utils", "message_utils",
+                        "S3CommandResponse.get_response_message")) \
+                as response_mock:
+            s3account_provider.process_s3admin_request(request_mock)
+            self.assertEqual(response_mock.call_count, 0)
+            self.assertEqual(request_mock.reply.call_count, 0)
+            self.assertEqual(s3account_provider.execute_command.call_count, 1)
+
+    @mock.patch('sspl_hl.providers.s3_account.provider.get_client')
+    def test_process_s3admin_request_failure(self, get_client_mock):
+        """ Ensure request is parsed and directed towards further respective
+        functions according to action parameter.
+        """
+        request_mock = mock.MagicMock()
+        get_client_mock.return_value = None, "Fake_response"
         command_args = {'command': 'account', 'action': 'create',
                         'name': 'UT_Test', 'email': 'ut@test.com'}
         request_mock.selection_args = command_args
@@ -158,25 +179,6 @@ class SsplHlProviderS3Account_list(BaseUnitTest):
             "AccountName": "Priti"
         }
     ]
-
-    @mock.patch('sspl_hl.providers.s3_users.provider.get_client')
-    def test_process_s3admin_request(self, get_client_mock):
-        """ Ensure request is parsed and directed towards further respective
-        functions according to action parameter.
-        """
-        get_client_mock.return_value = None
-        request_mock = mock.MagicMock()
-        command_args = {'command': 'account', 'action': 'list'}
-        request_mock.selection_args = command_args
-        s3account_provider = S3AccountProvider("account", "handling account")
-        s3account_provider.execute_command = mock.MagicMock()
-        var = "S3CommandResponse.get_response_message"
-        with mock.patch('{}.{}.{}'.format("sspl_hl.utils", "message_utils",
-                                          var)) as response_mock:
-            s3account_provider.process_s3admin_request(request_mock)
-            self.assertEqual(response_mock.call_count, 1)
-            self.assertEqual(request_mock.reply.call_count, 1)
-            self.assertEqual(s3account_provider.execute_command.call_count, 0)
 
     def test_execute_list_command_success(self):
         """Ensure request is received and parameters are processes to form

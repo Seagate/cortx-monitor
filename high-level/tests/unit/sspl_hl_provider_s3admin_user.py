@@ -55,10 +55,11 @@ class SsplHlProviderS3Users_create(BaseUnitTest):
         "Arn": "arn:aws:iam::1:user/admin"
     }
 
-    @mock.patch('sspl_hl.providers.s3_account.provider.get_client')
-    def test_process_s3auth_request(self, get_client_mock):
+    @mock.patch('sspl_hl.providers.s3_users.provider.get_client')
+    def test_process_s3admin_request_success(self, get_client_mock):
         """ Ensure process the request bundle request based on the command
         """
+        get_client_mock.return_value = mock.MagicMock(), "Fake_Response"
         request_mock = mock.MagicMock()
         command_args = {
             'command': 'user',
@@ -70,16 +71,39 @@ class SsplHlProviderS3Users_create(BaseUnitTest):
         request_mock.selection_args = command_args
         s3user_provider = S3UsersProvider("users", "handling users")
         s3user_provider.execute_command = mock.MagicMock()
-        s3user_provider.process_s3admin_request(request_mock)
-        access_key = request_mock.selection_args.get('access_key', None)
-        self.assertEqual(access_key, 'TgVCZxb7TY2wG-ySXVIR1w')
-        secret_key = request_mock.selection_args.get('secret_key', None)
-        self.assertEqual(secret_key,
-                         'Ihcg/nOEMAVuTB8MQZuUdwDaoAkGdkMhl+AFcd+B')
-        get_client_mock.assert_called_once_with(
-            access_key, secret_key, "iam")
-        s3user_provider.execute_command.assert_called_once_with(
-            request_mock)
+        with mock.patch('{}.{}.{}'.format(
+                        "sspl_hl.utils", "message_utils",
+                        "S3CommandResponse.get_response_message")) \
+                as response_mock:
+            s3user_provider.process_s3admin_request(request_mock)
+            self.assertEqual(response_mock.call_count, 0)
+            self.assertEqual(request_mock.reply.call_count, 0)
+            self.assertEqual(s3user_provider.execute_command.call_count, 1)
+
+    @mock.patch('sspl_hl.providers.s3_users.provider.get_client')
+    def test_process_s3admin_request_failure(self, get_client_mock):
+        """ Ensure process the request bundle request based on the command
+        """
+        get_client_mock.return_value = None, "Fake_Response"
+        request_mock = mock.MagicMock()
+        command_args = {
+            'command': 'user',
+            'action': 'create',
+            'name': 'test',
+            'access_key': 'TgVCZxb7TY2wG-ySXVIR1w',
+            'secret_key': 'Ihcg/nOEMAVuTB8MQZuUdwDaoAkGdkMhl+AFcd+B'
+        }
+        request_mock.selection_args = command_args
+        s3user_provider = S3UsersProvider("users", "handling users")
+        s3user_provider.execute_command = mock.MagicMock()
+        with mock.patch('{}.{}.{}'.format(
+                        "sspl_hl.utils", "message_utils",
+                        "S3CommandResponse.get_response_message")) \
+                as response_mock:
+            s3user_provider.process_s3admin_request(request_mock)
+            self.assertEqual(response_mock.call_count, 1)
+            self.assertEqual(request_mock.reply.call_count, 1)
+            self.assertEqual(s3user_provider.execute_command.call_count, 0)
 
     def test_execute_command_success(self):
         """Ensure execution of thread based on s3user
