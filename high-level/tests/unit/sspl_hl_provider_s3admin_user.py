@@ -55,7 +55,7 @@ class SsplHlProviderS3Users_create(BaseUnitTest):
         "Arn": "arn:aws:iam::1:user/admin"
     }
 
-    @mock.patch('sspl_hl.providers.s3_users.provider.get_client')
+    @mock.patch('sspl_hl.providers.s3_account.provider.get_client')
     def test_process_s3auth_request(self, get_client_mock):
         """ Ensure process the request bundle request based on the command
         """
@@ -77,7 +77,7 @@ class SsplHlProviderS3Users_create(BaseUnitTest):
         self.assertEqual(secret_key,
                          'Ihcg/nOEMAVuTB8MQZuUdwDaoAkGdkMhl+AFcd+B')
         get_client_mock.assert_called_once_with(
-            access_key, secret_key, None, "iam")
+            access_key, secret_key, "iam")
         s3user_provider.execute_command.assert_called_once_with(
             request_mock)
 
@@ -147,8 +147,7 @@ class SsplHlProviderS3Users_create(BaseUnitTest):
                 as response_mock:
             s3user_provider._handle_success(self.user_create_response,
                                             request_mock)
-            response_mock.assert_called_once_with('create',
-                                                  self.user_create_response)
+            response_mock.assert_called_once_with(self.user_create_response)
             self.assertEqual(request_mock.reply.call_count, 1)
 
 
@@ -179,7 +178,7 @@ class SsplHlProviderS3Users_list(BaseUnitTest):
         }
         request_mock.selection_args = command_args
         s3user_provider = S3UsersProvider("users", "handling users")
-        s3user_provider._handle_list_success = mock.MagicMock()
+        s3user_provider._handle_success = mock.MagicMock()
         with mock.patch("sspl_hl.providers.s3_users.provider.deferToThread",
                         return_value=defer.succeed(
                             self.user_list_response)):
@@ -190,7 +189,7 @@ class SsplHlProviderS3Users_list(BaseUnitTest):
                 s3user_provider.execute_command(request_mock)
                 action = request_mock.selection_args.get('action', None)
                 self.assertEqual(action, 'list')
-                s3user_provider._handle_list_success.assert_called_once_with(
+                s3user_provider._handle_success.assert_called_once_with(
                     self.user_list_response, request_mock)
 
     def test_handle_list_success(self):
@@ -203,10 +202,9 @@ class SsplHlProviderS3Users_list(BaseUnitTest):
                 "sspl_hl.utils", "message_utils",
                 "S3CommandResponse.get_response_message")) \
                 as response_mock:
-            s3user_provider._handle_list_success(self.user_list_response,
-                                                 request_mock)
-            response_mock.assert_called_once_with('list',
-                                                  self.user_list_response)
+            s3user_provider._handle_success(self.user_list_response,
+                                            request_mock)
+            response_mock.assert_called_once_with(self.user_list_response)
             self.assertEqual(request_mock.reply.call_count, 1)
 
 
@@ -226,7 +224,7 @@ class SsplHlProviderS3Users_modify(BaseUnitTest):
         }
         request_mock.selection_args = command_args
         s3user_provider = S3UsersProvider("users", "handling users")
-        s3user_provider._handle_modify_success = mock.MagicMock()
+        s3user_provider._handle_success = mock.MagicMock()
         with mock.patch("sspl_hl.providers.s3_users.provider.deferToThread",
                         return_value=defer.succeed(
                             SsplHlProviderS3Users_list.user_list_response)):
@@ -237,7 +235,7 @@ class SsplHlProviderS3Users_modify(BaseUnitTest):
                 s3user_provider.execute_command(request_mock)
                 action = request_mock.selection_args.get('action', None)
                 self.assertEqual(action, 'modify')
-                s3user_provider._handle_modify_success.assert_called_once_with(
+                s3user_provider._handle_success.assert_called_once_with(
                     SsplHlProviderS3Users_list.user_list_response,
                     request_mock)
 
@@ -251,12 +249,10 @@ class SsplHlProviderS3Users_modify(BaseUnitTest):
                 "sspl_hl.utils", "message_utils",
                 "S3CommandResponse.get_response_message")) \
                 as response_mock:
-            s3user_provider._handle_modify_success(
+            s3user_provider._handle_success(
                 SsplHlProviderS3Users_list.user_list_response, request_mock)
             response_mock.assert_called_once_with(
-                'list',
-                SsplHlProviderS3Users_list.user_list_response
-            )
+                SsplHlProviderS3Users_list.user_list_response)
             self.assertEqual(request_mock.reply.call_count, 1)
 
 
@@ -275,7 +271,7 @@ class SsplHlProviderS3Users_remove(BaseUnitTest):
         }
         request_mock.selection_args = command_args
         s3user_provider = S3UsersProvider("users", "handling users")
-        s3user_provider._handle_remove_success = mock.MagicMock()
+        s3user_provider._handle_success = mock.MagicMock()
         with mock.patch("sspl_hl.providers.s3_users.provider.deferToThread",
                         return_value=defer.succeed(
                             SsplHlProviderS3Users_list.user_list_response)):
@@ -286,7 +282,7 @@ class SsplHlProviderS3Users_remove(BaseUnitTest):
                 s3user_provider.execute_command(request_mock)
                 action = request_mock.selection_args.get('action', None)
                 self.assertEqual(action, 'remove')
-                s3user_provider._handle_remove_success.assert_called_once_with(
+                s3user_provider._handle_success.assert_called_once_with(
                     SsplHlProviderS3Users_list.user_list_response,
                     request_mock)
 
@@ -300,10 +296,9 @@ class SsplHlProviderS3Users_remove(BaseUnitTest):
                 "sspl_hl.utils", "message_utils",
                 "S3CommandResponse.get_response_message")) \
                 as response_mock:
-            s3user_provider._handle_remove_success(
+            s3user_provider._handle_success(
                 SsplHlProviderS3Users_list.user_list_response, request_mock)
             response_mock.assert_called_once_with(
-                'list',
                 SsplHlProviderS3Users_list.user_list_response
             )
             self.assertEqual(request_mock.reply.call_count, 1)

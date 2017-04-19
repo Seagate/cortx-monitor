@@ -664,7 +664,7 @@ class S3CommandResponse(CommandResponse):
     def __init__(self):
         super(S3CommandResponse, self).__init__()
 
-    def get_response_message(self, command_type, output):
+    def get_response_message(self, output):
         """
         Get the response message in dict format
         @param: bundle_name Name of the created bundle package
@@ -675,9 +675,9 @@ class S3CommandResponse(CommandResponse):
 
         if output.status == Status.OK_STATUS or \
            output.status == Status.CREATED_STATUS:
-            account = output.response
+            response = output.response
             message = {S3CommandResponse.STATUS: 0,
-                       S3CommandResponse.RESPONSE: account}
+                       S3CommandResponse.RESPONSE: response}
         else:
             message = {S3CommandResponse.STATUS: output.status,
                        S3CommandResponse.REASON: output.msg}

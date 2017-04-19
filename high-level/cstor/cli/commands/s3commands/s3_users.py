@@ -81,7 +81,7 @@ class S3UsersCommand(BaseCommand):
         cls.add_common_arguments(list_command)
 
         update_usage = "cstor s3admin user modify [-h] -o OLD_USER_NAME " \
-                       "-n NEW_USER_NAME [-p NEW_PATH]\n " \
+                       "-u NEW_USER_NAME [-p NEW_PATH]\n " \
                        "(-a ACCOUNT_NAME | -s SECRET_KEY -k ACCESS_KEY)"
 
         update_command = sub_cmds.add_parser(Strings.MODIFY,
@@ -136,8 +136,7 @@ class S3UsersCommand(BaseCommand):
             elif self.action == Strings.REMOVE:
                 response = self.get_human_readable_remove_response(response)
 
-        except Exception as ex:
-            print str(ex)
+        except Exception:
             raise errors.InternalError()
         return response
 
@@ -249,7 +248,7 @@ class S3UsersCommand(BaseCommand):
         else:
             reason = message.get("reason")
             if reason is not None:
-                data = "{}".format(reason)
+                data += "{}".format(reason)
             else:
-                data = "Unable to {} Account !".format(operation)
+                data += "Unable to perform {}!".format(operation)
         return data

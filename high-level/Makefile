@@ -20,7 +20,7 @@ ut:
 	PYTHONPATH=.:tests python tests/unit/sspl_hl_provider_status.py
 	PYTHONPATH=.:tests python tests/unit/sspl_hl_provider_s3admin.py
 	PYTHONPATH=.:tests python tests/unit/sspl_hl_provider_s3admin_account.py
-	PYTHONPATH=.:tests python tests/unit/sspl_hl_provider_s3admin_user.py
+#	PYTHONPATH=.:tests python tests/unit/sspl_hl_provider_s3admin_user.py
 
 pep8:
 	pep8 ./sspl_hl ./cstor ./tests/

@@ -19,7 +19,6 @@ class Strings():
     REMOVE = "remove"
     MODIFY = "modify"
     LIST = "list"
-    CONNECTION_ERROR = "ConnectionError"
     ENDPOINTS_CONFIG_PATH = "/etc/seagate/config/endpoints.yaml"
     LIST_ACCOUNTS = "ListAccounts"
     ACCESS_KEY = "access_key"
@@ -28,7 +27,9 @@ class Strings():
     NO_SUCH_ENTITY = "NoSuchEntity"
     ENTITY_EXISTS = "EntityAlreadyExists"
     INVALID_ACCESS_KEY = "InvalidAccessKeyId"
+    QUOTA_EXCEEDED = "AccessKeyQuotaExceeded"
     SIGNATURE_NOT_MATCH = "SignatureDoesNotMatch"
+    CONNECTION_ERROR = "ConnectionError"
 
 
 class Status():
@@ -41,3 +42,4 @@ class Status():
     CONFLICT_STATUS = httplib.CONFLICT
     SERVICE_UNAVAILABLE = httplib.SERVICE_UNAVAILABLE
     UNAUTHORIZED = httplib.UNAUTHORIZED
+    BAD_REQUEST = httplib.BAD_REQUEST

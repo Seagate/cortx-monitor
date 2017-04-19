@@ -129,7 +129,7 @@ def get_account_keys(account_name):
     else:
         raise errors.InvalidArgumentError(
             "Unable to get Account secret key and access key for "
-            "\'{}\'\. Please enter manually. ".format(
+            "\'{}\'. Please enter manually.".format(
                 account_name))
 
 

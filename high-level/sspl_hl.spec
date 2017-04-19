@@ -40,7 +40,7 @@ A cli (and library) that allow the user to control the cluster.
 
 %install
 mkdir -p %{installpath}/sspl_hl/views
-mkdir -p %{installpath}/sspl_hl/providers/{response,power,bundle,status,s3admin,s3_account,s3_users}
+mkdir -p %{installpath}/sspl_hl/providers/{response,power,bundle,status,s3admin,s3_account,s3_users,s3_access_key}
 mkdir -p %{installpath}/sspl_hl/utils
 mkdir -p %{installpath}/sspl_hl/utils/cluster_node_manager
 mkdir -p %{installpath}/sspl_hl/utils/s3admin
@@ -58,6 +58,7 @@ install sspl_hl/providers/bundle/*.py %{installpath}/sspl_hl/providers/bundle/
 install sspl_hl/providers/status/*.py %{installpath}/sspl_hl/providers/status/
 install sspl_hl/providers/s3_account/*.py %{installpath}/sspl_hl/providers/s3_account/
 install sspl_hl/providers/s3_users/*.py %{installpath}/sspl_hl/providers/s3_users/
+install sspl_hl/providers/s3_access_key/*.py %{installpath}/sspl_hl/providers/s3_access_key/
 install sspl_hl/providers/s3admin/*.py %{installpath}/sspl_hl/providers/s3admin/
 install sspl_hl/utils/s3admin/*.py %{installpath}/sspl_hl/utils/s3admin/
 

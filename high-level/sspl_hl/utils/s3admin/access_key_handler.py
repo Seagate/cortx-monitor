@@ -10,30 +10,27 @@
 # _author_ = "Vikram chhajer"
 
 import plex.core.log as logger
-from botocore.exceptions import ClientError
-
-from sspl_hl.utils.strings import Strings, Status
 from sspl_hl.utils.s3admin.s3_utils import CommandResponse
+from sspl_hl.utils.strings import Strings, Status
 
 
-class UsersUtility():
+class AccessKeyUtility():
     def __init__(self, client, args):
         """
-        UserUtility Constructor
+        AccessKeyUtility Constructor
         """
-
         self.client = client
         self.args = args
 
     def list(self):
         """
-        Handles user list operation.
+        Handle access key list operation.
         """
+        access_key_args = {}
+        access_key_args['UserName'] = self.args.get("user_name", None)
 
-        user_args = {}
         try:
-            logger.info("Inside list command")
-            result = self.client.list_users(**user_args)
+            result = self.client.list_access_keys(**access_key_args)
             metadata = result.get('ResponseMetadata')
             if metadata is not None:
                 status = metadata.get('HTTPStatusCode')
@@ -47,77 +44,62 @@ class UsersUtility():
 
     def modify(self):
         """
-        Handle user modify operation.
+        Handle access key modify operation.
         """
-        user_args = {}
-        logger.info("Inside modify command")
-        user_args['UserName'] = self.args.get("name", None)
-        user_args['NewUserName'] = self.args.get("new_name", None)
-        path = self.args.get("path", None)
-        if path is not None:
-            user_args['NewPath'] = path
-
+        access_key_args = {}
+        access_key_args['UserName'] = self.args.get("user_name", None)
+        access_key_args['AccessKeyId'] = self.args.get("user_access_key", None)
+        access_key_args['Status'] = self.args.get("status", None)
         try:
-            result = self.client.update_user(**user_args)
+            result = self.client.update_access_key(**access_key_args)
             metadata = result.get('ResponseMetadata')
             if metadata is not None:
                 status = metadata.get('HTTPStatusCode')
                 response = CommandResponse(status, result)
-                logger.info("User modified successfully")
             else:
                 response = self.response_generator("No Response received.")
-        except ClientError as ex:
+        except Exception as ex:
             response = self.response_generator(ex)
         return response
 
     def remove(self):
         """
-        Handle user remove operation.
+        Handle access key remove operation.
         """
-        user_args = {}
-        user_args['UserName'] = self.args.get("name", None)
+        access_key_args = {}
+        access_key_args['UserName'] = self.args.get("user_name", None)
+        access_key_args['AccessKeyId'] = self.args.get("user_access_key", None)
+
         try:
-            result = self.client.delete_user(**user_args)
+            result = self.client.delete_access_key(**access_key_args)
             metadata = result.get('ResponseMetadata')
             if metadata is not None:
                 status = metadata.get('HTTPStatusCode')
                 response = CommandResponse(status, result)
-                logger.info("User removed successfully")
             else:
                 response = self.response_generator("No Response received.")
-
         except Exception as ex:
             response = self.response_generator(ex)
         return response
 
     def create(self):
         """
-        Handle user create operation.
+        Handle access key create operation.
         """
-        user_args = {}
-        user_args['UserName'] = self.args.get("name", None)
-        path = self.args.get("path", None)
-        if path is not None:
-            user_args['Path'] = path
+
+        access_key_args = {}
+        access_key_args['UserName'] = self.args.get("user_name", None)
 
         try:
-            result = self.client.create_user(**user_args)
+            result = self.client.create_access_key(**access_key_args)
             metadata = result.get('ResponseMetadata')
             if metadata is not None:
                 status = metadata.get('HTTPStatusCode')
                 response = CommandResponse(status, result)
-                logger.info("User created successfully")
             else:
                 response = self.response_generator("No Response received.")
-        except ClientError as e:
-            response = self.response_generator(e)
         except Exception as ex:
-            logger.info("Exception %s " % str(ex))
-            status = -1
-            if type(ex) == Strings.CONNECTION_ERROR:
-                status = Status.SERVICE_UNAVAILABLE
-            response = CommandResponse(status=status, msg=str(ex))
-
+            response = self.response_generator(ex)
         return response
 
     def response_generator(self, ex):
@@ -140,6 +122,8 @@ class UsersUtility():
                 status = Status.NOT_FOUND
             elif ex.response['Error']['Code'] == Strings.SIGNATURE_NOT_MATCH:
                 status = Status.UNAUTHORIZED
+            elif ex.response['Error']['Code'] == Strings.QUOTA_EXCEEDED:
+                status = Status.BAD_REQUEST
             response = CommandResponse(status=status, msg=command_output)
         except Exception as ex:
             response = CommandResponse(status=status, msg=command_output)

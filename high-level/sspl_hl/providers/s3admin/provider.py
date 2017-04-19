@@ -17,7 +17,7 @@ from sspl_hl.utils.base_castor_provider import BaseCastorProvider
 
 from sspl_hl.providers.s3_account.provider import S3AccountProvider
 from sspl_hl.providers.s3_users.provider import S3UsersProvider
-# from sspl_hl.providers.s3_access_key.provider import S3AccessKeyProvider
+from sspl_hl.providers.s3_access_key.provider import S3AccessKeyProvider
 
 
 class S3AdminProvider(BaseCastorProvider):
@@ -61,7 +61,8 @@ class S3AdminProvider(BaseCastorProvider):
         Handles all account related operations.
         """
 
-        self._child_provider = S3AccountProvider("account", "handling account")
+        self._child_provider = S3AccountProvider("account",
+                                                 "handling account")
         self._child_provider.handleRequest(request)
 
     def handle_users_command(self, request):
@@ -76,11 +77,9 @@ class S3AdminProvider(BaseCastorProvider):
         """
         Handles all access_key related operations.
         """
-
-        pass
-        # self._child_provider = S3AccessKeyProvider(
-        #    "access_key", "handling access keys")
-        # self._child_provider.handleRequest(request)
+        self._child_provider = S3AccessKeyProvider("access_key",
+                                                   "handling access keys")
+        self._child_provider.handleRequest(request)
 
 
 # pylint: disable=invalid-name

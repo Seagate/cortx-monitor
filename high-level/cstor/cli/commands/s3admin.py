@@ -50,9 +50,9 @@ class S3Admin(BaseCommand):
                 import S3UsersCommand
             S3UsersCommand.arg_subparser(sub)
 
-            # from cstor.cli.commands.s3commands.s3_access_key \
-            #     import S3AccessKeyCommand
-            # S3AccessKeyCommand.arg_subparser(sub)
+            from cstor.cli.commands.s3commands.s3_access_key \
+                import S3AccessKeyCommand
+            S3AccessKeyCommand.arg_subparser(sub)
 
         except ImportError:
             pass

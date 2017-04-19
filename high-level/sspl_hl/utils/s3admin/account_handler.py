@@ -19,15 +19,16 @@ from sspl_hl.utils.s3admin.s3_utils import CommandResponse, execute_cmd
 
 
 class AccountUtility():
-    def __init__(self, client, name=None, email=None):
+    def __init__(self, client, args=None):
         """AccountUtility constructor.
 
         Name and email will be required for create operation.
         """
 
         self.client = client
-        self.name = name
-        self.email = email
+        self.args = args
+        #self.name = name
+        #self.email = email
 
     def list(self):
         """
@@ -62,11 +63,12 @@ class AccountUtility():
         """
         Handles account creation operation.
         """
-
+        name = self.args.get("name", None)
+        email = self.args.get("email", None)
         logger.info("Inside create command")
         parameters = {'Action': 'CreateAccount',
-                      'AccountName': self.name,
-                      'Email': self.email}
+                      'AccountName': name,
+                      'Email': email}
         try:
             response, data = execute_cmd(self.client, parameters)
             if response.status == Status.CREATED_STATUS:

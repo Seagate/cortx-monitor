@@ -147,9 +147,9 @@ class S3AccountCommand(BaseCommand):
             else:
                 reason = message.get("reason")
                 if reason is not None:
-                    data = "{}".format(reason)
+                    data += "{}".format(reason)
                 else:
-                    data = "Unable to create Account !"
+                    data += "Unable to create Account !"
         return data
 
     @staticmethod
