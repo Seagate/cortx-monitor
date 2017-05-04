@@ -24,17 +24,12 @@ class Strings():
     ACCESS_KEY = "access_key"
     SECRET_KEY = "secret_key"
     IAM_SERVICE = "iam"
-    S3_SERVICE = "s3"
     NO_SUCH_ENTITY = "NoSuchEntity"
     ENTITY_EXISTS = "EntityAlreadyExists"
     INVALID_ACCESS_KEY = "InvalidAccessKeyId"
     QUOTA_EXCEEDED = "AccessKeyQuotaExceeded"
     SIGNATURE_NOT_MATCH = "SignatureDoesNotMatch"
     CONNECTION_ERROR = "ConnectionError"
-    DELETE_CONFLICT = "DeleteConflict"
-    BUCKETS_AVAILABLE_ERROR = "Account can not be deleted." \
-                              " Please remove all Buckets associated with " \
-                              "Account."
 
 
 class Status():

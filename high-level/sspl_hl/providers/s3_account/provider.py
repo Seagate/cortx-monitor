@@ -9,11 +9,10 @@
 # All rights are expressly reserved by Seagate Technology LLC.
 # _author_ = "Vikram chhajer"
 
-from twisted.internet.threads import deferToThread
-
 from sspl_hl.utils.base_castor_provider import BaseCastorProvider
 from sspl_hl.utils.s3admin.s3_utils import get_client
 from sspl_hl.utils.s3admin.account_handler import AccountUtility
+from twisted.internet.threads import deferToThread
 from sspl_hl.utils.message_utils import S3CommandResponse
 from sspl_hl.utils.strings import Strings
 
@@ -24,12 +23,11 @@ class S3AccountProvider(BaseCastorProvider):
         S3AccountProvider Constructor
         """
         super(S3AccountProvider, self).__init__(name, description)
-        self.valid_arg_keys = ['command', 'action', 'name', 'email',
-                               'access_key', 'secret_key', 'force']
+        self.valid_arg_keys = ['command', 'action', 'name', 'email']
         self.valid_commands = ['account']
-        self.valid_subcommands = [Strings.CREATE, Strings.LIST, Strings.REMOVE]
+        self.valid_subcommands = [Strings.CREATE, Strings.LIST]
         self.mandatory_args = ['command', 'action']
-        self.no_of_arguments = 7
+        self.no_of_arguments = 4
         self.client = None
 
     def handleRequest(self, request):
@@ -66,9 +64,6 @@ class S3AccountProvider(BaseCastorProvider):
             deferred = deferToThread(account_handler.create())
         elif action == Strings.LIST:
             deferred = deferToThread(account_handler.list())
-        elif action == Strings.REMOVE:
-            deferred = deferToThread(account_handler.remove())
-
         deferred.addCallback(self._handle_success, request)
         deferred.addErrback(self._handle_failure)
 

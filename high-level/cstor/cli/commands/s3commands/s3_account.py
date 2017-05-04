@@ -20,9 +20,8 @@ from collections import OrderedDict
 
 from cstor.cli.commands.base_command import BaseCommand
 import cstor.cli.errors as errors
-from cstor.cli.commands.s3commands.utils.utility import AccountKeys
 from cstor.cli.commands.s3commands.utils.utility import _validate_email, \
-    populate_credential_file, _validate_name, delete_credential_file
+    populate_credential_file, _validate_name
 from cstor.cli.commands.utils.console import ConsoleTable
 from cstor.cli.commands.utils.strings import Strings, Status
 
@@ -30,8 +29,8 @@ from cstor.cli.commands.utils.strings import Strings, Status
 class S3AccountCommand(BaseCommand):
     def __init__(self, parser):
         """
-        Initializes the power object with the
-        arguments passed from CLI
+            Initializes the power object with the
+            arguments passed from CLI
         """
         # print parser
         super(S3AccountCommand, self).__init__()
@@ -41,10 +40,6 @@ class S3AccountCommand(BaseCommand):
         if self.action == Strings.CREATE:
             self.name = parser.name
             self.email = parser.email
-        if self.action == Strings.REMOVE:
-            self.name = parser.account_name
-            self.account_keys = AccountKeys(parser)
-            self.force = parser.force
 
     @classmethod
     def description(cls):
@@ -58,12 +53,6 @@ class S3AccountCommand(BaseCommand):
         params = '&command={}&action={}'.format(self.command, self.action)
         if self.action == Strings.CREATE:
             params += '&name={}&email={}'.format(self.name, self.email)
-        elif self.action == Strings.REMOVE:
-            params += '&name={}&force={}&access_key={}&secret_key={}'.format(
-                self.name,
-                self.force,
-                self.account_keys.get_access_key(),
-                self.account_keys.get_secret_key())
         return params
 
     @classmethod
@@ -85,41 +74,15 @@ class S3AccountCommand(BaseCommand):
                                  help="Email of Account holder")
 
         sub_cmds.add_parser(Strings.LIST, help="List all Accounts")
-        remove_command = sub_cmds.add_parser(Strings.REMOVE,
-                                             help="Remove Account")
-        remove_command.add_argument("-n", "--name", dest="account_name",
-                                    required=True,
-                                    type=cls.validate_name,
-                                    help="Account holder name.")
-        remove_command.add_argument("-f", "--force", action='store_true',
-                                    dest="force",
-                                    help="Forcefully Remove Account")
-
-        remove_command.add_argument("-k", "--access_key", dest="access_key",
-                                    help="Access key of Root Account."
-                                         "( Required if stored access_key "
-                                         "does not found. )",
-                                    required=False)
-        remove_command.add_argument("-s", "--secret_key", dest="secret_key",
-                                    help="Secret Key of Root Account."
-                                         "( Required if stored secret_key "
-                                         "does not found. )",
-                                    required=False)
 
         sp.set_defaults(func=S3AccountCommand)
 
     @classmethod
     def validate_email(cls, value):
-        """
-        Validation of Email Account
-        """
         return _validate_email(value)
 
     @classmethod
     def validate_name(cls, value):
-        """
-        Validation of name.
-        """
         return _validate_name(value)
 
     def execute_action(self, **kwargs):
@@ -135,9 +98,6 @@ class S3AccountCommand(BaseCommand):
                                                             response)
             elif self.action == Strings.LIST:
                 response = self.get_human_readable_list_response(response)
-            elif self.action == Strings.REMOVE:
-                response = self.get_human_readable_remove_response(self.name,
-                                                                   response)
 
         except Exception as ex:
             if Strings.SOCKET_ERROR in str(ex):
@@ -237,36 +197,5 @@ class S3AccountCommand(BaseCommand):
                     data += "{}".format(reason)
                 else:
                     data += "Unable to list Accounts !"
-
-        return data
-
-    @staticmethod
-    def get_human_readable_remove_response(name, result):
-        response = result and result[0]
-        message = response.get('message')
-        status = message.get("status")
-        if status == 0:
-            data = "Status: Success\nDetails: Account Removed successfully !"
-            delete_credential_file(name)
-            return data
-        else:
-            data = Strings.CAN_NOT_PERFORM
-            if status == Status.SERVICE_UNAVAILABLE:
-                data += "Service Unavailable."
-            elif status == Status.NOT_FOUND:
-                data += "Account does not exist."
-            elif status == Status.CONFLICT_STATUS:
-                data += "Account can not be removed as " \
-                        "It have associated Users and Access Keys. " \
-                        "\nPlease use --force option to remove Account."
-            elif status == Status.UNAUTHORIZED:
-                data += "Unauthorized Access. " \
-                        "Please enter valid Access key and Secret Key."
-            else:
-                reason = message.get("reason")
-                if reason is not None:
-                    data += "{}".format(reason)
-                else:
-                    data += "Unable to remove Account !"
 
         return data

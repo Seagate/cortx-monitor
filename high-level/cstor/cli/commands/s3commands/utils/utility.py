@@ -47,25 +47,10 @@ class AccountKeys:
             self.secret_key = parser.secret_key
             self.access_key = parser.access_key
         else:
-            command = parser.command
-            action = parser.action
-            if not (command == "account" and action == Strings.REMOVE):
-                if (parser.secret_key is not None) or \
-                        (parser.access_key is not None):
-                    raise errors.InvalidArgumentError(Strings.ACCOUNT_ERROR)
-                self.access_key, self.secret_key = get_account_keys(
-                    parser.account_name)
-            else:
-                if (parser.secret_key is not None) and \
-                        (parser.access_key is not None):
-                    self.secret_key = parser.secret_key
-                    self.access_key = parser.access_key
-                elif parser.secret_key is None and parser.access_key is None:
-                    self.access_key, self.secret_key = get_account_keys(
-                        parser.account_name)
-                else:
-                    raise errors.InvalidArgumentError(
-                        Strings.ACCOUNT_REMOVE_ERROR)
+            if parser.secret_key is not None or parser.access_key is not None:
+                raise errors.InvalidArgumentError(Strings.ACCOUNT_ERROR)
+            self.access_key, self.secret_key = get_account_keys(
+                parser.account_name)
 
     def get_secret_key(self):
         return encode_key(self.secret_key)
@@ -130,8 +115,9 @@ def get_file_name(account_name):
     credential_dir = Strings.ENDPOINTS_CONFIG_FOLDER
     if not os.path.isdir(credential_dir):
         os.makedirs(credential_dir)
-    file_name = credential_dir + account_name.lower()
-    file_name += Strings.CREDENTIAL_FILE_SUFFIX
+    file_name = credential_dir + \
+        account_name.lower() + \
+        Strings.CREDENTIAL_FILE_SUFFIX
     return file_name
 
 
@@ -152,15 +138,7 @@ def populate_credential_file(name, data):
         file_name = get_file_name(name)
         return csv_file_writer(file_name, data)
     except Exception:
-        print("Unable to populate credential file. Please store credentials")
-
-
-def delete_credential_file(name):
-    try:
-        file_name = get_file_name(name)
-        os.remove(file_name)
-    except Exception as ex:
-        print("Unable to delete credential file. ")
+        print("")
 
 
 def csv_file_writer(file_name, data):

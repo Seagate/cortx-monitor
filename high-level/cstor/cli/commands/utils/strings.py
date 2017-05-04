@@ -33,7 +33,6 @@ class Strings(object):
     SOCKET_ERROR = "socket error"
     ACCOUNT_ERROR = 'Either Account name or Secret key and Access key are ' \
                     'required.'
-    ACCOUNT_REMOVE_ERROR = 'Secret key and Access key both are required.'
     ENDPOINTS_CONFIG_FOLDER = "/opt/data/.s3seagate/"
     CREDENTIAL_FILE_SUFFIX = "-accessKeys.csv"
     FILE_GENERATION_ERR = 'Unable to generate credential file.' \
