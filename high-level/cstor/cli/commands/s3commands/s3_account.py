@@ -272,7 +272,7 @@ class S3AccountCommand(BaseCommand):
         else:
             data = Strings.CAN_NOT_PERFORM
             if status == Status.SERVICE_UNAVAILABLE:
-                data += "Service Unavailable."
+                data += "S3/IAM Service Unavailable."
             elif status == Status.NOT_FOUND:
                 data += "Account does not exist."
             elif status == Status.CONFLICT_STATUS:

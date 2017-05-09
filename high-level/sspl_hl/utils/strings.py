@@ -32,6 +32,8 @@ class Strings():
     SIGNATURE_NOT_MATCH = "SignatureDoesNotMatch"
     CONNECTION_ERROR = "ConnectionError"
     DELETE_CONFLICT = "DeleteConflict"
+    SERVICE_UNAVAILABLE = "ServiceUnavailable"
+
     BUCKETS_AVAILABLE_ERROR = "Account can not be deleted." \
                               " Please remove all Buckets associated with " \
                               "Account."

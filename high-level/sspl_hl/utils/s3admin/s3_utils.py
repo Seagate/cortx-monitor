@@ -58,23 +58,29 @@ def get_endpoint(service):
     endpoints_file = os.path.join(Strings.ENDPOINTS_CONFIG_PATH)
     with open(endpoints_file, 'r') as f:
         endpoints = yaml.safe_load(f)
+        if endpoints is None:
+            raise Exception("IAM/S3 Servers are not configured in "
+                            "Endpoints.yaml file")
+        if service not in endpoints:
+            raise ValueError("%s Servers are not configured."
+                             % service.upper())
         server = endpoints[service]
-        logger.info("Server for %s service: %s " % (service, server))
+        logger.info("Checking Server for %s service: %s " % (service, server))
         found = False
         if server is None:
             raise Exception("No Auth servers configured.")
         for url in server:
             try:
-                logger.info("Checking %s " % url)
+                logger.debug("Checking %s " % url)
                 urllib.urlopen(url).getcode()
                 found = True
-                logger.info("Returning %s " % url)
                 return url
             except Exception:
                 logger.debug("Server %s is not running. Trying next" % url)
                 continue
     if not found:
-        raise Exception("Unable to communicate to Auth servers.")
+        raise Exception("Unable to communicate to %s servers." %
+                        service.upper())
 
 
 # Create an IAM client.
