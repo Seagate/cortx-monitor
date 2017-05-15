@@ -45,7 +45,9 @@ Feature: S3admin User Requests
             | command   |
             | create    |
             | remove    |
-
+ 
+    # Note: Below scenarios are disabled due to lack of support of IAM and S3 server.
+    #
     #Scenario: user create,remove with invalid account name.
     #    When I run "python ./cstor/cli/main.py s3admin user <command> -u Test -a <input>"
     #    Then the output contains "Error: Unable to get Account secret key and access key"
@@ -65,7 +67,8 @@ Feature: S3admin User Requests
     #        | remove    | cvPfTQRPQEK_qUmzPBBicg  | fake_secret_key
 
     #Scenario: user create with account name.
-    #    When I run "python ./cstor/cli/main.py s3admin user create -u dev -a admin"
+    #    When I run "python ./cstor/cli/main.py s3admin account create -n Seagate -e admin@seagate.com"
+    #    When I run "python ./cstor/cli/main.py s3admin user create -u dev -a Seagate"
     #    Then the output contains "User ID" 
     #    Then the output contains "User Name"
     #    Then the output contains "Path"
@@ -81,11 +84,11 @@ Feature: S3admin User Requests
     #    And the exit code is "0"
 
     #Scenario: user create with existing user name.
-    #    When I run "python ./cstor/cli/main.py s3admin user create -u dev -a admin"
+    #    When I run "python ./cstor/cli/main.py s3admin user create -u dev -a Seagate"
     #    Then the output contains "User already exist. Please enter another User Name."
     
     #Scenario: user list
-    #    When I run "python ./cstor/cli/main.py s3admin user list -a admin"
+    #    When I run "python ./cstor/cli/main.py s3admin user list -a Seagate"
     #    Then the output contains "User Name" 
     #    Then the output contains "User ID"
     #    Then the output contains "ARN"
@@ -115,7 +118,7 @@ Feature: S3admin User Requests
     #    Then the output contains "Either Account name or Secret key and Access key are required.."
 
     #Scenario: Modify user providing old username that do not exists.
-    #    When I run "python ./cstor/cli/main.py s3admin user modify -o seagate -u seagate_dev -a admin"
+    #    When I run "python ./cstor/cli/main.py s3admin user modify -o seagate -u seagate_dev -a Seagate"
     #    Then the output contains "User does not exist. Please enter another User Name."
 
     #Scenario: Modify user providing invalid account name.
@@ -123,15 +126,15 @@ Feature: S3admin User Requests
     #    Then the output contains "Unable to get Account secret key and access key for 'INVALIDACCOUNT'"
 
     #Scenario: Modify user
-    #    When I run "python ./cstor/cli/main.py s3admin user modify -o dev -u new_dev -a admin"
+    #    When I run "python ./cstor/cli/main.py s3admin user modify -o dev -u new_dev -a Seagate"
     #    Then the output contains "User modified Successfully !!"
     #    And the exit code is "0"
 
     #Scenario: Remove invalid user
-    #    When I run "python ./cstor/cli/main.py s3admin user remove -u seagate -a admin"
+    #    When I run "python ./cstor/cli/main.py s3admin user remove -u seagate -a Seagate"
     #    Then the output contains "User does not exist. Please enter another User Name."
 
     #Scenario: Remove user
-    #    When I run "python ./cstor/cli/main.py s3admin user remove -u new_dev -a admin"
+    #    When I run "python ./cstor/cli/main.py s3admin user remove -u new_dev -a Seagate"
     #    Then the output contains "User removed Successfully !!"
     #    And the exit code is "0"

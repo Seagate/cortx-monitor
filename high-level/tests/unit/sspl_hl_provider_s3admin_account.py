@@ -244,5 +244,118 @@ class SsplHlProviderS3Account_list(BaseUnitTest):
             self.assertEqual(request_mock.reply.call_count, 1)
 
 
+class SsplHlProviderS3Account_remove(BaseUnitTest):
+    account_remove_response = "Fake_Response"
+
+    @mock.patch('sspl_hl.providers.s3_account.provider.get_client')
+    def test_process_s3admin_request_success(self, get_client_mock):
+        """ Ensure request is parsed and directed towards further respective
+        functions according to action parameter.
+        """
+        request_mock = mock.MagicMock()
+        get_client_mock.return_value = mock.MagicMock(), "Fake_response"
+        command_args = {'command': 'account', 'action': 'remove',
+                        'name': 'UT_Test', 'email': 'ut@test.com',
+                        'force': 'false'}
+        request_mock.selection_args = command_args
+        s3account_provider = S3AccountProvider("account", "handling account")
+        s3account_provider.execute_command = mock.MagicMock()
+        with mock.patch('{}.{}.{}'.format(
+                        "sspl_hl.utils", "message_utils",
+                        "S3CommandResponse.get_response_message")) \
+                as response_mock:
+            s3account_provider.process_s3admin_request(request_mock)
+            self.assertEqual(response_mock.call_count, 0)
+            self.assertEqual(request_mock.reply.call_count, 0)
+            self.assertEqual(s3account_provider.execute_command.call_count, 1)
+
+    @mock.patch('sspl_hl.providers.s3_account.provider.get_client')
+    def test_process_s3admin_request_failure(self, get_client_mock):
+        """ Ensure request is parsed and directed towards further respective
+        functions according to action parameter.
+        """
+        request_mock = mock.MagicMock()
+        get_client_mock.return_value = None, "Fake_response"
+        command_args = {'command': 'account', 'action': 'remove',
+                        'name': 'UT_Test', 'email': 'ut@test.com',
+                        'force': 'false'}
+        request_mock.selection_args = command_args
+        s3account_provider = S3AccountProvider("account", "handling account")
+        s3account_provider.execute_command = mock.MagicMock()
+        with mock.patch('{}.{}.{}'.format(
+                        "sspl_hl.utils", "message_utils",
+                        "S3CommandResponse.get_response_message")) \
+                as response_mock:
+            s3account_provider.process_s3admin_request(request_mock)
+            self.assertEqual(response_mock.call_count, 1)
+            self.assertEqual(request_mock.reply.call_count, 1)
+            self.assertEqual(s3account_provider.execute_command.call_count, 0)
+
+    def test_remove_account_command_success(self):
+        """ Ensure request is received and parameters are processes to form
+        a query. Ensure that according to received response,(in this case
+         success)further function is called to generate desired output.
+        """
+        request_mock = mock.MagicMock()
+        command_args = {'command': 'account', 'action': 'remove',
+                        'name': 'UT_Test', 'email': 'ut@test.com',
+                        'force': 'false'}
+        request_mock.selection_args = command_args
+        s3account_provider = S3AccountProvider("account", "handling account")
+        s3account_provider._handle_success = mock.MagicMock()
+        with mock.patch("sspl_hl.providers.s3_account.provider.deferToThread",
+                        return_value=defer.succeed(
+                            self.account_remove_response)):
+            with mock.patch('{}.{}.{}'.format("sspl_hl.utils.s3admin",
+                                              "account_handler",
+                                              "AccountUtility.remove")) \
+                    as account_remove_handler_mock:
+                s3account_provider.execute_command(request_mock)
+                action = request_mock.selection_args.get('action', None)
+                self.assertEqual(action, 'remove')
+                self.assertEqual(account_remove_handler_mock.call_count, 1)
+
+    def test_remove_account_command_failure(self):
+        """Ensure request is received and parameters are processes to form
+        a query. Ensure that according to received response,(in this case
+         failure)further function is called to generate reason of failure
+         and its description.
+        """
+        request_mock = mock.MagicMock()
+        command_args = {'command': 'account', 'action': 'remove',
+                        'name': 'UT_Test', 'email': 'ut@test.com',
+                        'force': 'false'}
+        request_mock.selection_args = command_args
+        s3account_provider = S3AccountProvider("account", "handling account")
+        s3account_provider._handle_failure = mock.MagicMock()
+        with mock.patch("sspl_hl.providers.s3_account.provider.deferToThread",
+                        return_value=defer.fail(FakeError('error'))):
+            with mock.patch('{}.{}.{}'.format("sspl_hl.utils.s3admin",
+                                              "account_handler",
+                                              "AccountUtility.remove")) \
+                    as account_remove_handler_mock:
+                s3account_provider.execute_command(request_mock)
+                action = request_mock.selection_args.get('action', None)
+                self.assertEqual(action, 'remove')
+                self.assertEqual(account_remove_handler_mock.call_count, 1)
+                self.assertEqual(s3account_provider._handle_failure.call_count,
+                                 1)
+
+    def test_handle_success(self):
+        """ When account create is successful, ensure that further function is
+        called to process the recived response from s3 server.
+        """
+        request_mock = mock.MagicMock()
+        s3account_provider = S3AccountProvider("account", "handling account")
+        with mock.patch('{}.{}.{}'.format(
+                "sspl_hl.utils", "message_utils",
+                "S3CommandResponse.get_response_message")) \
+                as response_mock:
+            s3account_provider._handle_success(
+                self.account_remove_response, request_mock)
+            response_mock.assert_called_once_with(self.account_remove_response)
+            self.assertEqual(request_mock.reply.call_count, 1)
+
+
 if __name__ == '__main__':
     unittest.main()
