@@ -664,7 +664,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
             logger.info("DiskMsgHandler, S/N=ZBX_NOTPRESENT for %s" % jsonMsg.get("event_path"))
 
             # Manually populate the /tmp/dcs/dmreport/'event_path' files
-            dmreport_dir = os.path.dirname(self._dmreport_file)
+            dmreport_dir = os.path.dirname("/tmp/dcs/dmreport")
             disk_dir = "{}/{}".format(dmreport_dir, jsonMsg.get("event_path"))
             if not os.path.exists(disk_dir):
                 os.makedirs(disk_dir)
@@ -997,7 +997,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
         """Retrieves the file location"""
         return self._conf_reader._get_value_with_default(self.DISKMSGHANDLER,
                                                          self.DMREPORT_FILE,
-                                                         '/tmp/dcs/dmreport/drive_manager.json')
+                                                         '/tmp/sspl/drivemanager/drive_manager.json')
     def _getDiskInfo_File(self):
         """Retrieves the file location"""
         return self._conf_reader._get_value_with_default(self.DISKMSGHANDLER,

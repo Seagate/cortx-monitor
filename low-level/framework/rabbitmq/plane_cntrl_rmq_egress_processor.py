@@ -255,7 +255,11 @@ class PlaneCntrlRMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
 
                 uuid = self._jsonMsg.get("message").get("sspl_ll_msg_header").get("uuid")
                 ack_msg = self._jsonMsg.get("message").get("actuator_response_type").get("ack").get("ack_msg")
-                ack_type = json.loads(self._jsonMsg.get("message").get("actuator_response_type").get("ack").get("ack_type"))
+                try:
+                    ack_type = json.loads(self._jsonMsg.get("message").get("actuator_response_type").get("ack").get("ack_type"))
+                except Exception as exi:
+                    logger.info("PlaneCntrlRMQegressProcessor, _transmit_msg_on_exchange no ack_type: %s" % str(self._jsonMsg))
+                    return
 
                 # If it's a job status request then parse out the uuid from args that we're looking for
                 if ack_type.get("command") is not None and \
@@ -269,14 +273,18 @@ class PlaneCntrlRMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
                 if self._working_uuid == uuid:
                     # If the ack msg is Not Found then change it to In work
                     if ack_msg == "Not Found":
-                        logger.info("PlaneCntrlMsgHandler is working on job task command: %s, uuid: %s, ack_msg: %s" % \
-                                    (str(self._working_command), str(uuid), str(ack_msg)))
                         self._jsonMsg["message"]["actuator_response_type"]["ack"]["ack_msg"] = "In Work"
+                        logger.info("PlaneCntrlMsgHandler is working on job task command: %s, uuid: %s, ack_msg: %s" % \
+                                    (str(self._working_command), str(uuid), "In Work"))
                     else:
                         # Task is no longer being worked on
+                        if ack_msg is None or \
+                           len(ack_msg) == 0:
+                            ack_msg = "Completed"
+                            self._jsonMsg["message"]["actuator_response_type"]["ack"]["ack_msg"] = ack_msg
+
                         logger.info("PlaneCntrlMsgHandler has completed job task command: %s, uuid: %s, ack_msg: %s" % \
                              (str(self._working_command), str(uuid), str(ack_msg)))
-
                         self._working_uuid = "N/A"
 
             msg_props = pika.BasicProperties()
@@ -301,41 +309,6 @@ class PlaneCntrlRMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
             logger.exception("PlaneCntrlRMQegressProcessor, _transmit_msg_on_exchange: %r" % ex)
             self._msg_sent_succesfull = False
             self._toggle_rabbitMQ_servers()
-
-    def _handle_job_status(self):
-        """Send the current job status requested"""
-        requested_uuid = self._jsonMsg.get("message").get("actuator_request_type").get("plane_controller").get("arguments").get("uuid")
-        msg_uuid = self._jsonMsg.get("message").get("uuid")
-
-        # Get a copy of the current tasks in the PlaneCntrlMsgHandler
-        queued_jobs = self._get_msgQ_copy("PlaneCntrlMsgHandler")
-        response = "N/A"
-        for queued_job in queued_jobs:
-            response += str(queued_job)
-        # For now send back all queued up tasks in ack msg
-        ack_msg = AckResponseMsg("command: job_status, requested_uuid: %s" % \
-                          (requested_uuid), response, msg_uuid).getJson()
-        ack_msg["username"] = self._signature_user
-        ack_msg["expires"]  = int(self._signature_expires)
-        ack_msg["time"]     = str(datetime.datetime.now())
-        ack_msg["signature"] = "SecurityLibNotInstalled"
-        ack_msg = json.dumps(ack_msg).encode('utf8')
-
-        msg_props = pika.BasicProperties()
-        msg_props.content_type = "text/plain"
-
-        self._get_connection(host_addr=self._current_rabbitMQ_server)
-        self._channel.basic_publish(exchange=self._exchange_name,
-                            routing_key=self._routing_key,
-                            properties=msg_props,
-                            body=str(ack_msg))
-
-        # No exceptions thrown so success
-        self._log_debug("_transmit_msg_on_exchange, Successfully Sent: %s" % ack_msg)
-        self._msg_sent_succesfull = True
-        if self._connection is not None:
-            self._connection.close()
-            del(self._connection)
 
     def _toggle_rabbitMQ_servers(self):
         """Toggle between hosts when a connection fails"""

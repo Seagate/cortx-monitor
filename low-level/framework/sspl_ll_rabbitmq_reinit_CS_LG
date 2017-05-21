@@ -69,6 +69,7 @@ def main():
 
     # Cluster the secondary server to the primary
     elif secondary_rabbitmq_server in hostnames:
+        _set_perms_erlang_key()
         _cluster_rabbitmq_servers(primary_rabbitmq_server, secondary_rabbitmq_server)
 
 def _create_vhost_if_necessary(virtual_host):
@@ -171,9 +172,13 @@ def _copy_erlang_key(secondary_rabbitmq_server):
 
 def _cluster_rabbitmq_servers(primary_rabbitmq_server, secondary_rabbitmq_server):
     """Perform the steps to cluster the rabbitmq servers"""
+    command = "service rabbitmq-server restart"
+    response = _send_command(command)
+    print("Clustering rabbitmq, restarting server: %s" % response)
+
     command = "%s stop_app" % RABBITMQCTL
     response = _send_command(command)
-    print("Clustering rabbitmq, stopping: %s" % response)
+    print("Clustering rabbitmq, stopping app: %s" % response)
 
     command = "nodeattr -v ha_pair | cut -f2 -d:"
     cluster_hostname = _send_command(command)

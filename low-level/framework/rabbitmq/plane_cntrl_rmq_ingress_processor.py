@@ -25,6 +25,7 @@ from jsonschema import Draft3Validator
 from jsonschema import validate
 
 from pika import exceptions
+from pika.exceptions import AMQPError
 
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
@@ -110,7 +111,7 @@ class PlaneCntrlRMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
         # Initialize internal message queues for this module
         super(PlaneCntrlRMQingressProcessor, self).initialize_msgQ(msgQlist)
 
-        self._current_rabbitMQ_server = 'localhost'
+        self._current_rabbitMQ_server = None
 
         self._hostname = gethostname()
 
@@ -139,10 +140,10 @@ class PlaneCntrlRMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
                                   queue=result.method.queue)
             self._channel.start_consuming()
 
-        except Exception as e:
+        except AMQPError as e:
             if self.is_running() == True:
                 logger.info("PlaneCntrlRMQingressProcessor ungracefully breaking out of run loop, restarting.")
-                logger.exception("PlaneCntrlRMQingressProcessor, Exception: %s" % str(e))
+                logger.exception("PlaneCntrlRMQingressProcessor, AMQPError: %s" % str(e))
                 self._toggle_rabbitMQ_servers()
                 self._configure_exchange()
                 self._scheduler.enter(10, self._priority, self.run, ())
@@ -205,7 +206,11 @@ class PlaneCntrlRMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
                 if command is not None and \
                    command == "job_status":
                     job_uuid = message.get("actuator_request_type").get("plane_controller").get("arguments").get("uuid", None)
-                    node_id  = message.get("actuator_request_type").get("plane_controller").get("parameters").get("node_id", None)
+
+                    node_id = None
+                    if message.get("actuator_request_type").get("plane_controller").get("parameters") is not None and \
+                       message.get("actuator_request_type").get("plane_controller").get("parameters").get("node_id") is not None:
+                        node_id  = message.get("actuator_request_type").get("plane_controller").get("parameters").get("node_id")
 
                     # node_id set to None is a broadcast otherwise see if it applies to this node
                     if node_id is None or \
@@ -228,17 +233,16 @@ class PlaneCntrlRMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
 
             # ... handle other incoming messages that have been validated
             else:
-                # Send ack about not finding a msg handler
-                ack_msg = AckResponseMsg("Error Processing Message", "Message Handler Not Found", uuid).getJson()
-                self._write_internal_msgQ(PlaneCntrlRMQegressProcessor.name(), ack_msg)               
-
-            # Acknowledge message was received
-            ch.basic_ack(delivery_tag = method.delivery_tag)
+                # Log a msg about not being able to process the message
+                logger.info("PlaneCntrlRMQingressProcessor, _process_msg, unrecognized message: %s" % str(ingressMsg))
 
         except Exception as ex:
             logger.exception("PlaneCntrlRMQingressProcessor, _process_msg unrecognized message: %r" % ingressMsg)
             ack_msg = AckResponseMsg("Error Processing Msg", "Msg Handler Not Found", uuid).getJson()
             self._write_internal_msgQ(PlaneCntrlRMQegressProcessor.name(), ack_msg)
+
+        # Acknowledge message was received
+        ch.basic_ack(delivery_tag = method.delivery_tag)
 
     def _process_job_status(self, uuid, job_uuid):
         """Send the current job status requested"""
@@ -273,7 +277,7 @@ class PlaneCntrlRMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
         else:
             self._current_rabbitMQ_server = self._primary_rabbitMQ_server
 
-    def _configure_exchange(self):        
+    def _configure_exchange(self):
         """Configure the RabbitMQ exchange with defaults available"""
         try:
             self._virtual_host  = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR, 
@@ -294,14 +298,15 @@ class PlaneCntrlRMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
             self._password      = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR, 
                                                                  self.PASSWORD,
                                                                  'sspl4ever')
-            self._primary_rabbitMQ_server         = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR, 
+            self._primary_rabbitMQ_server           = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR, 
                                                                  self.PRIMARY_RABBITMQ,
                                                                  'localhost')
             self._secondary_rabbitMQ_server         = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR, 
                                                                  self.SECONDARY_RABBITMQ,
                                                                  'localhost')
 
-            self._current_rabbitMQ_server = self._primary_rabbitMQ_server
+            if self._current_rabbitMQ_server is None:
+                self._current_rabbitMQ_server = self._primary_rabbitMQ_server
             logger.info("PlaneCntrlRMQingressProcessor, Attempting to connect to host: %s" % self._current_rabbitMQ_server)
             # ensure the rabbitmq queues/etc exist
             creds = pika.PlainCredentials(self._username, self._password)

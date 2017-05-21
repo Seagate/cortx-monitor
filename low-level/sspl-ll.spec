@@ -87,10 +87,17 @@ if [ -d "/etc/systemd" ]; then
     systemctl restart dbus
 else
     # CS-LG are non-systemd
+
+    # Add the sspl-ll user
+	id -u sspl-ll &>/dev/null || /usr/sbin/useradd \
+		-s /sbin/nologin  \
+		-c "User account to run the sspl-ll service" sspl-ll
+
+    # Change ownership to sspl-ll user
+	chown -R sspl-ll:root /opt/seagate/sspl/low-level
+	
     cp -f /opt/seagate/sspl/low-level/files/sspl_ll_cs.conf /etc/sspl_ll.conf
     cp -f /opt/seagate/sspl/low-level/files/sspl-ll /etc/init.d
-
-    chown -R sspl-ll:root /opt/seagate/sspl/low-level
 
     # Create a link to low-level cli for easy global access
     ln -sf /opt/seagate/sspl/low-level/cli/sspl-ll-cli /usr/bin

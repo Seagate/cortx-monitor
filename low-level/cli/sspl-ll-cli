@@ -947,7 +947,7 @@ def check_dependencies(config_file, auto_install):
                         print("\tPackage: %s, minimum required: %s, installed: %s OK!" % (dep, version, response))
 
 def install_package(dep):
-    """Use yum to instal a package"""
+    """Use yum to install a package"""
     print("\tAttempting to install/update: %s" % dep)
     try:
         command = "yum -y --nogpgcheck install %s" % dep

@@ -100,6 +100,10 @@ class PlaneCntrlMsgHandler(ScheduledModuleThread, InternalMsgQ):
             self._send_response(response)
             return
 
+        status   = -1
+        response = "N/A"
+        errors   = "N/A"
+        hostname = "N/A"
         try:
             self._sedOpDispatch = self._SedOpDispatch(self._command, self._parameters, self._arguments)
             status = self._sedOpDispatch.status
@@ -118,8 +122,6 @@ class PlaneCntrlMsgHandler(ScheduledModuleThread, InternalMsgQ):
             self._write_internal_msgQ(PlaneCntrlRMQegressProcessor.name(), jsonMsg)
 
             hostname = self._sedOpDispatch.hostname
-            response = "N/A"
-            errors   = "N/A"
 
             # Run the command with the parameters and arguments and retrive the response and any errors
             status   = self._sedOpDispatch.run()
