@@ -31,6 +31,7 @@ if [ "$ROLE" = "role => cc" ]; then
     CRON_LINE_SEARCH="0 0 \* \* \* root /opt/seagate/sspl/low-level/files/sspl_free_space.py"
     CRON_LINE="0 0 * * * root /opt/seagate/sspl/low-level/files/sspl_free_space.py"
     grep -q "$CRON_LINE_SEARCH" /etc/crontab || echo "$CRON_LINE" >> /etc/crontab
+    chmod +x /opt/seagate/sspl/low-level/files/sspl_free_space.py
 fi
 
 # Comment out the tty requirement in sudoers file
@@ -49,6 +50,8 @@ cp -f /opt/seagate/sspl/low-level/files/sspl-ll_dbus_policy.conf /etc/dbus-1/sys
 
 mkdir -p /etc/sspl-ll/templates/snmp
 cp -f /opt/seagate/sspl/low-level/snmp/* /etc/sspl-ll/templates/snmp
+
+rm -Rf /var/run/sspl_ll
 
 # Enable SNMP traps on the PDU to be sent to the CMU
 if ping -c 1 172.16.1.221 &> /dev/null
