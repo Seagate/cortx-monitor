@@ -44,6 +44,8 @@ def report_free_space():
         return
 
     # Parse out Total and Free Space lines in the response
+    total_space = "N/A"
+    free_space  = "N/A"
     response_rows = response.split("\n")
     for response_row in response_rows:
         if "Total space:" in response_row:
@@ -53,7 +55,7 @@ def report_free_space():
             break
 
     # Log values as an IEM using CLI.  RAS will relay back to Seagate's SPS site, https://service-processing-system.seagate.com/
-    json_data = {"Total Space": total_space, "Free Space": free_space}
+    json_data = {"Total_Space": total_space, "Free_Space": free_space}
     command = "sspl-ll-cli --iemloglevel LOG_INFO --iemlog 'IEC: 020006001: File System Statistics: %s'" % \
                 json.dumps(json_data)
     response, error = run_command(command)

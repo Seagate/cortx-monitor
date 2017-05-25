@@ -23,8 +23,15 @@ sspl-ll-cli --checkdeps --autoinstall
 
 # Update the sudoers file with the sspl-ll user and available commands
 SUDO_LINE="sspl-ll	ALL = NOPASSWD: /usr/sbin/smartctl, /usr/sbin/mdadm, /usr/bin/mount, /usr/bin/umount, /usr/sbin/swapon, /usr/sbin/swapoff, /usr/sbin/hdparm, /usr/bin/systemctl, /usr/sbin/wbcli"
-
 grep -q "$SUDO_LINE" /etc/sudoers || echo "$SUDO_LINE" >> /etc/sudoers
+
+# Update the crontab to log free space as IEMs on a daily basis on SMU
+ROLE=`facter -p | grep role`
+if [ "$ROLE" = "role => cc" ]; then
+    CRON_LINE_SEARCH="0 0 \* \* \* root /opt/seagate/sspl/low-level/files/sspl_free_space.py"
+    CRON_LINE="0 0 * * * root /opt/seagate/sspl/low-level/files/sspl_free_space.py"
+    grep -q "$CRON_LINE_SEARCH" /etc/crontab || echo "$CRON_LINE" >> /etc/crontab
+fi
 
 # Comment out the tty requirement in sudoers file
 sed -i "s/^Defaults    requiretty.*/#Defaults    requiretty/" /etc/sudoers
