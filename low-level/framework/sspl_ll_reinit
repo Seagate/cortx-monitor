@@ -21,6 +21,15 @@ SUDO_LINE="sspl-ll	ALL = NOPASSWD: /opt/seagate/sspl/low-level/libs/m0_fs_stats,
 
 grep -q "$SUDO_LINE" /etc/sudoers || echo "$SUDO_LINE" >> /etc/sudoers
 
+# Update the crontab to log free space as IEMs on a daily basis on SMU
+ROLE=`facter -p | grep role`
+if [ "$ROLE" = "role => cc" ]; then
+    CRON_LINE_SEARCH="0 0 \* \* \* root /opt/seagate/sspl/low-level/files/sspl_free_space.py"
+    CRON_LINE="0 0 * * * root /opt/seagate/sspl/low-level/files/sspl_free_space.py"
+    grep -q "$CRON_LINE_SEARCH" /etc/crontab || echo "$CRON_LINE" >> /etc/crontab
+    chmod +x /opt/seagate/sspl/low-level/files/sspl_free_space.py
+fi
+
 # Comment out the tty requirement in sudoers file
 sed -i "s/^Defaults    requiretty.*/#Defaults    requiretty/" /etc/sudoers
 
