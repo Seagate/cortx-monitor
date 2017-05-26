@@ -36,9 +36,10 @@ import socket
 # 6 : Files cannot be copied to /tmp/bundle
 # 7 : Tar bundle could not be created
 # 8 : Tar Bundle could not be send to SSU
+# 9 : Clean up Failed
 # Note: Detailed input params for debugging purposes as follows:
 # '{"action": ["m0reportbug", "mv -f m0reportbug-data.tar.gz /tmp/bundle/"],
-#  "files": [], "host": {"pwd": "dcouser", "bucket":
+#  "files": [], "host": {"": "xxxxxxxx", "bucket":
 # "/var/lib/support_bundles/2016-08-29_12-42-28/nodes/",
 # "name": "vmc-rekvm-hvt-cc1.xy01.xyratex.com"}}' TRACE
 
@@ -66,17 +67,21 @@ class RemoteFileCollector(object):
             socket.gethostname()
         )
         self._node_name = host_info.get('name')
-        self._pwd = host_info.get('pwd')
+        self._pwd = host_info.get('viel')
+        self.cleanup = self._rule.get('cleanup')
+
         log('Action      : {}'.format(self._actions))
         log('Files       : {}'.format(self._files))
         log('Host Bucket : {}'.format(self._bucket))
         log('Host Name   : {}'.format(self._node_name))
+        log('Cleanup     : {}'.format(self.cleanup))
 
     def collect(self):
         """Collect files from remote nodes"""
         if self._execute_actions():
             if self._collect_files():
                 self._send_tar_bundle()
+        self.clean_up()
 
     def _execute_actions(self):
         """
@@ -179,13 +184,20 @@ class RemoteFileCollector(object):
         else:
             log('Tar bundle CANNOT be sent to CMU', 3)
             print 8
-        self.clean_up()
 
     def clean_up(self):
         """
         Clean the tar bundle
         """
-        pass
+        for _file in self.cleanup:
+            try:
+                if os.path.isdir(_file):
+                    shutil.rmtree(_file)
+                elif os.path.isfile(_file):
+                    os.remove(_file)
+            except OSError as err:
+                log('Cleanup Error. Details: {}'.format(str(err)))
+                print 9
 
 
 # pylint: disable=W0603
@@ -253,6 +265,5 @@ def log(msg, level=1):
         else:
             msg = 'WARNING : {} \n'.format(msg)
         LOGGER.write(msg)
-
 
 main()

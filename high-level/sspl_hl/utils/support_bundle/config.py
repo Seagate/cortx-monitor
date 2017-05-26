@@ -21,8 +21,20 @@ BUCKET = 'bucket'
 FILES = 'files'
 ACTION = 'action'
 MISC = 'misc'
+CLEANUP = 'cleanup'
 
 SUPPORT_BUNDLE_DIR_STRUCTURE = {"nodes": {}, "logs": {}, PLEX_LOGS: {}}
+
+# The temporary directory created during the bundling. It will be deleted
+#  as a part of cleanup.
+BUNDLE_TMP_DIR = '/tmp/bundle'
+
+# """
+# Enable ssu_log_collector.py logging. A new bundle.log file will be added
+# in the support_bundle/nodes/xxxxx/ dir, which will contain the debug
+# level information remote bundling.
+# """
+TRACE_ENABLED_SSU_BUNDLING = True
 
 #
 #                     ** BUNDLING CONFIGURATION Params **
@@ -60,27 +72,31 @@ SUPPORT_BUNDLE_DIR_STRUCTURE = {"nodes": {}, "logs": {}, PLEX_LOGS: {}}
 #                 Cluster  are moved to common params. If any action of files
 #                 needs to be executed or collected respectively then put it to
 #                  common configuration.
-# Common params are as follows:
-# A). COMMON_ACTION_FOR_CMU_SSU   B). COMMON_FILES_TO_COLLECT_CMU_SSU
+#
+#  Common params are as follows:
+# A). COMMON_ACTION_FOR_CMU_SSU
+# B). COMMON_FILES_TO_COLLECT_CMU_SSU
+# C). CLEANUP_CODE
 #
 # LOCAL PARAMS: Configuration params that is specific to local nodes only.
 # Local params are as follows,
-# A). ACTION_TO_TRIGGER_ON_LOCAL_NODE  B). LOCAL_FILES_TO_COLLECT
+# A). ACTION_TO_TRIGGER_ON_LOCAL_NODE
+# B). LOCAL_FILES_TO_COLLECT
 # C). MISC_LOCAL_FILES_MAPPING
 #
 # REMOTE PARAMS: Configuration params that is specific to Remote nodes.
 # Remote params are as follows,
-# ACTION_TO_TRIGGER_ON_REMOTE_NODE
-# REMOTE_FILES_TO_COLLECT
+# A). ACTION_TO_TRIGGER_ON_REMOTE_NODE
+# B). REMOTE_FILES_TO_COLLECT
 
 # """
 # COMMON SUBSET PARAMS
 # """
 COMMON_ACTION_FOR_CMU_SSU = [
     'm0reportbug',
-    'm0addb2dump',
     'mv -f m0reportbug-data.tar.gz /tmp/bundle/',
-    'mv -f m0trace.* /tmp/bundle/',
+    'mv -f m0reportbug-traces.tar.gz /tmp/bundle/',
+    'mv -f m0reportbug-cores.tar.gz /tmp/bundle/',
     'dmesg > /tmp/bundle/dmesg.log'
 ]
 
@@ -89,17 +105,20 @@ COMMON_FILES_TO_COLLECT_CMU_SSU = [
     '/var/crash/*'
 ]
 
+
+COMMON_CLEANUP = [BUNDLE_TMP_DIR]
+
 # """
 # REMOTE CONFIGURATION
 # """
 ACTION_TO_TRIGGER_ON_REMOTE_NODE = [
-    'm0reportbug',
-    'mv -f m0reportbug-data.tar.gz /tmp/bundle/',
-]
+] + COMMON_ACTION_FOR_CMU_SSU
 
 REMOTE_FILES_TO_COLLECT = [
 
 ]
+
+REMOTE_CLEANUP = [] + COMMON_CLEANUP
 
 # """
 # LOCAL CONFIGURATION
@@ -113,8 +132,9 @@ LOCAL_FILES_TO_COLLECT = [
     '/etc/mero/*',
     '/var/log/messages',
     '/tmp/bundle/m0reportbug-data.tar.gz',
+    '/tmp/bundle/m0reportbug-traces.tar.gz',
+    '/tmp/bundle/m0reportbug-cores.tar.gz',
     '/tmp/bundle/dmesg.log',
-    '/tmp/bundle/m0trace*',
     '/run/log/journal/*'
 ] + COMMON_FILES_TO_COLLECT_CMU_SSU
 
@@ -122,9 +142,4 @@ MISC_LOCAL_FILES_MAPPING = {
     PLEX_LOGS: ['/var/log/plex/plex*']
 }
 
-# """
-# Enable ssu_log_collector.py logging. A new bundle.log file will be added
-# in the support_bundle/nodes/xxxxx/ dir, which will contain the debug
-# level information remote bundling.
-# """
-TRACE_ENABLED_SSU_BUNDLING = False
+LOCAL_CLEANUP = [] + COMMON_CLEANUP

@@ -19,7 +19,8 @@
 import os
 from sspl_hl.utils.support_bundle import config
 from sspl_hl.utils.support_bundle.config import \
-    ACTION, LOCAL, REMOTE, BUCKET, FILES, MISC
+    ACTION, LOCAL, REMOTE, BUCKET, FILES, MISC, \
+    REMOTE_CLEANUP, CLEANUP, LOCAL_CLEANUP
 
 # Message structure of cluster_file_collection_rules:
 # {
@@ -85,15 +86,17 @@ class ClusterFilesCollectionRules(object):
         # 3. Bucket on the host to send files.
         default_host = {
             'name': self._cmu_hostname,
-            'pwd': config.NODES_ACCESS_KEY,
-            'bucket': os.path.join(self._base_bucket, 'nodes/')
+            'viel': config.NODES_ACCESS_KEY,
+            BUCKET: os.path.join(self._base_bucket, 'nodes/')
         }
 
         default_remote = {
             ACTION: config.ACTION_TO_TRIGGER_ON_REMOTE_NODE,
             FILES: config.REMOTE_FILES_TO_COLLECT,
             BUCKET: '',
-            'host': default_host
+            'host': default_host,
+            CLEANUP: REMOTE_CLEANUP
+
         }
         misc_files_rules = self._get_misc_files_rules()
 
@@ -101,7 +104,8 @@ class ClusterFilesCollectionRules(object):
             ACTION: config.ACTION_TO_TRIGGER_ON_LOCAL_NODE,
             FILES: config.LOCAL_FILES_TO_COLLECT,
             BUCKET: os.path.join(self._base_bucket, 'logs'),
-            MISC: misc_files_rules
+            MISC: misc_files_rules,
+            CLEANUP: LOCAL_CLEANUP
         }
         rules = {}
         remote = {}
@@ -126,10 +130,10 @@ class ClusterFilesCollectionRules(object):
         """
         Return local file collection rules.
         """
-        return self._collection_rules[LOCAL]
+        return self._collection_rules.get(LOCAL)
 
     def get_remote_files_info(self):
         """
         Return remote file collection rules.
         """
-        return self._collection_rules[REMOTE]
+        return self._collection_rules.get(REMOTE)

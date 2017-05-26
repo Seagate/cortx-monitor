@@ -103,6 +103,8 @@ def bundle_files(target_files, target_path):
     """
         This function would be responsible for creating the tar ball of the
         selected files.
+        @target_files: contains the list of the files that needs to be tarred.
+        @target_path: path to keep the tar bundle.
     """
     try:
         if not os.path.exists(target_path):

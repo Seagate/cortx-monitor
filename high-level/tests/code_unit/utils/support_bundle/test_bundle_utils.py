@@ -65,3 +65,7 @@ class TestBundleUtils(unittest.TestCase):
         files_info = utils.bundle_files()
         self.assertTrue('completed' in files_info)
         self.assertTrue('in_process' in files_info)
+
+
+if __name__ == '__main__':
+    unittest.main()

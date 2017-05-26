@@ -19,7 +19,8 @@ from sspl_hl.utils.cluster_node_manager.node_communication_handler import \
     NodeCommunicationHandler, \
     SSHException
 from sspl_hl.utils.support_bundle.config import \
-    ACTION, BUCKET, FILES, MISC, TRACE_ENABLED_SSU_BUNDLING
+    ACTION, BUCKET, FILES, MISC, TRACE_ENABLED_SSU_BUNDLING, \
+    LOCAL_CLEANUP, BUNDLE_TMP_DIR, REMOTE_CLEANUP
 from sspl_hl.utils.common import execute_shell
 import os
 import shutil
@@ -32,7 +33,6 @@ class FileCollector(object):
     """
     Base class of File collector.
     """
-    BUNDLE_TMP_DIR = '/tmp/bundle'
 
     def __init__(self, host, collection_rules, logger=plex_log):
         self.is_log_collected = False
@@ -41,7 +41,7 @@ class FileCollector(object):
         self._files = collection_rules.get(FILES, [])
         self._bucket = collection_rules.get(BUCKET, '')
         self.host = host
-        self.log = logger
+        self.logger = logger
 
     def collect(self):
         """
@@ -105,23 +105,26 @@ class LocalFileCollector(FileCollector):
         for action in self._actions:
             try:
                 execute_shell(action)
-            except (OSError, subprocess.CalledProcessError):
-                # todo: Add logging
-                pass
+            except (OSError, subprocess.CalledProcessError) as err:
+                err_msg = 'Error occurred in ' \
+                          'LocalFileCollector::_execute_actions. Details: {}'\
+                    .format(str(err))
+                self.logger.warning(err_msg)
 
     @staticmethod
     def create_tmp_bundle_directory():
         """
         Create bundling tmp directory for local node.
         """
-        if os.path.exists(FileCollector.BUNDLE_TMP_DIR):
-            os.rmdir(FileCollector.BUNDLE_TMP_DIR)
-        os.mkdir(FileCollector.BUNDLE_TMP_DIR)
+        if os.path.exists(BUNDLE_TMP_DIR):
+            os.rmdir(BUNDLE_TMP_DIR)
+        os.mkdir(BUNDLE_TMP_DIR)
 
     def _collect_files(self):
         """
         Collect files from various logging sources to bucket.
         """
+        cp_cmd = ''
         for _file in self._files:
             try:
                 if os.path.isfile(_file):
@@ -129,9 +132,10 @@ class LocalFileCollector(FileCollector):
                 else:
                     cp_cmd = 'cp {} {}'.format(_file, self._bucket)
                     execute_shell(cp_cmd)
-            except (OSError, IOError, subprocess.CalledProcessError):
-                # todo: necessary logging
-                pass
+            except (OSError, IOError, subprocess.CalledProcessError) as err:
+                err_msg = 'Error during collection. cmd: {}, Details: {}'.\
+                    format(cp_cmd, str(err))
+                self.logger.warning(err_msg)
         self._collect_misc_files()
 
     def _collect_misc_files(self):
@@ -154,7 +158,7 @@ class LocalFileCollector(FileCollector):
         """
         delete the tmp files and folders.
         """
-        for _file in [FileCollector.BUNDLE_TMP_DIR]:
+        for _file in LOCAL_CLEANUP:
             rm_cmd = 'rm -rf {}'.format(_file)
             try:
                 execute_shell(rm_cmd)
@@ -225,20 +229,20 @@ class RemoteFileCollector(FileCollector):
         """
         Create the tmp bundle directory on SSUs
         """
-        bundle_tmp_dir = 'mkdir {}'.format(FileCollector.BUNDLE_TMP_DIR)
+        bundle_tmp_dir = 'mkdir {}'.format(BUNDLE_TMP_DIR)
         try:
             self._channel.execute_command(bundle_tmp_dir)
         except (SSHException, IOError):
             # todo: Take necessary steps
             print 'Unable to create bundle base: {} on host: {}'.format(
-                FileCollector.BUNDLE_TMP_DIR,
+                BUNDLE_TMP_DIR,
                 self.host
             )
             raise
 
     def _clean_up(self):
         """Clean all the temp files and the directory"""
-        cleanup_files = [FileCollector.BUNDLE_TMP_DIR]
+        cleanup_files = REMOTE_CLEANUP
         for _file in cleanup_files:
             rm_cmd = 'rm -rf {}'.format(_file)
             try:
@@ -256,8 +260,9 @@ class McoRemoteFileCollector(object):
 
     MCO_REMOTE_COLLECTION = 'python /var/lib/ssu_logs_collector.py'
 
-    def __init__(self, collection_rules):
+    def __init__(self, collection_rules, logger=plex_log):
         """"""
+        self.logger = logger
         collection_rules = collection_rules.values()
         self._node_collection_rule = \
             collection_rules and collection_rules[-1]
@@ -267,7 +272,7 @@ class McoRemoteFileCollector(object):
         """
         collect the remote bundling
         """
-        plex_log.info('Remote bundling args:- {}'.format(
+        self.logger.info('Remote bundling args:- {}'.format(
             self._node_collection_rule))
         self._execute_actions()
 
@@ -284,13 +289,13 @@ class McoRemoteFileCollector(object):
         )
         mco_cmd = 'mco rpc runcmd rc cmd=\"{}\" -F role=storage'.\
             format(command)
-        plex_log.info(
+        self.logger.info(
             'Sending mco command, {} for initiating bundling '
             'from SSU nodes'.format(mco_cmd)
             )
         try:
             result = subprocess.check_output(mco_cmd, shell=True)
-            plex_log.info(
+            self.logger.info(
                 'Remote bundling is completed with Return code: {}'
                 .format(result))
         except (subprocess.CalledProcessError, OSError) as err:
@@ -299,6 +304,6 @@ class McoRemoteFileCollector(object):
                     command,
                     str(err)
                 )
-            plex_log.warning(err_msg)
+            self.logger.warning(err_msg)
             return None
         return result

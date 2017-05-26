@@ -81,6 +81,7 @@ class SupportBundleHandler(ExecutorSafe):
             config.BASE_BUCKET_PATH,
             bundle_dir_info
         )
+
         self._file_collection_rules = \
             ClusterFilesCollectionRules(self._ssu_list,
                                         self._cluster_node_manger.

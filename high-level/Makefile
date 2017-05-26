@@ -23,6 +23,7 @@ ut:
 	PYTHONPATH=.:tests python tests/unit/sspl_hl_provider_s3admin_account.py
 	PYTHONPATH=.:tests python tests/unit/sspl_hl_provider_s3admin_user.py
 	PYTHONPATH=.:tests python tests/unit/sspl_hl_provider_s3admin_access_key.py
+	PYTHONPATH=.:tests python tests/code_unit/utils/support_bundle/file_collector/test_cluster_file_collection_rules.py
 
 pep8:
 	pep8 ./sspl_hl ./cstor ./tests/
