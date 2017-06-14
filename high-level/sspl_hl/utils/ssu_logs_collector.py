@@ -55,7 +55,7 @@ class RemoteFileCollector(object):
     """
 
     BUNDLE_TMP_DIR = '/tmp/bundle'
-    BUNDLE_TAR = '/tmp/bundle.tar'
+    BUNDLE_TAR = '{}.tar'.format(BUNDLE_TMP_DIR)
 
     def __init__(self, collection_rules):
         self._rule = json.loads(collection_rules)
@@ -92,6 +92,8 @@ class RemoteFileCollector(object):
                 if not self._execute_command(action):
                     log('Action: {} Failed.'.format(action), 2)
                     print 5
+                else:
+                    log('Action Execution Successful: [{}].for'.format(action))
             return True
         else:
             return False
@@ -104,8 +106,10 @@ class RemoteFileCollector(object):
         try:
             if os.path.exists(RemoteFileCollector.BUNDLE_TMP_DIR):
                 shutil.rmtree(RemoteFileCollector.BUNDLE_TMP_DIR)
+                log('Older bundle directory is removed!')
             if os.path.exists(RemoteFileCollector.BUNDLE_TAR):
-                os.remove('/tmp/bundle.tar')
+                os.remove(RemoteFileCollector.BUNDLE_TAR)
+                log('Older bundle.tar is removed!')
             os.mkdir(RemoteFileCollector.BUNDLE_TMP_DIR)
             log('Tmp bundle, {} dir Successfully Created'.format(
                 RemoteFileCollector.BUNDLE_TMP_DIR))
@@ -146,11 +150,12 @@ class RemoteFileCollector(object):
         for _file in self._files:
             try:
                 shutil.copy(_file, RemoteFileCollector.BUNDLE_TMP_DIR)
+                log('File collected successfully: [{}]'.format(_file))
                 copy_count += 1
             except (OSError, IOError) as err:
-                log('Failed to collect file: {}. Details: {}'
+                log('Failed to collect bundle directory: {}. Details: {}'
                     .format(_file, str(err)))
-        if copy_count == 0 and len(self._files) > 0:
+        if copy_count < 1 and len(self._files) > 0:
             print 6
             return False
         else:
@@ -174,7 +179,8 @@ class RemoteFileCollector(object):
         """
         Get the file from remote node
         """
-        cmd = 'scp /tmp/bundle.* root@{}:{}/ '.format(
+        cmd = 'scp {}.* root@{}:{}/ '.format(
+            RemoteFileCollector.BUNDLE_TMP_DIR,
             self._node_name,
             self._bucket
         )

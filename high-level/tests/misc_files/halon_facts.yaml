@@ -1,0 +1,935 @@
+id_racks:
+   - rack_idx: 0
+     rack_enclosures:
+       - enc_idx: 41
+         enc_id: "e8aa0f92-5d02-5f60-85ce-5cd3a7df29b8"
+         enc_bmc:
+           - bmc_addr: ""
+             bmc_user: "admin"
+             bmc_pass: "admin"
+           - bmc_addr: ""
+             bmc_user: "admin"
+             bmc_pass: "admin"
+         enc_hosts:
+           - h_fqdn: "vmc-rekvm-cc1.xy01.xyratex.com"
+             h_memsize: 7822.58
+             h_cpucount: 4
+             h_interfaces:
+               - if_macAddress: "52:54:00:ff:d0:ff"
+                 if_network: Management
+                 if_ipAddrs: [172.16.0.41]
+               - if_macAddress: "52:54:00:ff:01:a4"
+                 if_network: Data
+                 if_ipAddrs: [172.18.0.41]
+             h_halon:
+               address: "172.18.0.41:9000"
+               roles:
+                  - name: cmu
+   - rack_idx: 1
+     rack_enclosures:
+       - enc_idx: 1
+         enc_id: "86b7b938-3335-5e1f-b201-8ced232837f6"
+         enc_bmc:
+           - bmc_addr: ""
+             bmc_user: "admin"
+             bmc_pass: "admin"
+           - bmc_addr: ""
+             bmc_user: "admin"
+             bmc_pass: "admin"
+         enc_hosts:
+           - h_fqdn: "vmc-rekvm-dm-1-1.xy01.xyratex.com"
+             h_memsize: 3790.81
+             h_cpucount: 2
+             h_interfaces:
+               - if_macAddress: "52:54:00:ff:65:93"
+                 if_network: Management
+                 if_ipAddrs: [172.16.1.1]
+               - if_macAddress: "52:54:00:ff:73:63"
+                 if_network: Data
+                 if_ipAddrs: [172.18.1.1]
+             h_halon:
+               address: "172.18.1.1:9000"
+               roles:
+                  - name: dm
+       - enc_idx: 2
+         enc_id: "ece44af1-c380-569e-99fa-a6d8dd6a92f2"
+         enc_bmc:
+           - bmc_addr: ""
+             bmc_user: "admin"
+             bmc_pass: "admin"
+           - bmc_addr: ""
+             bmc_user: "admin"
+             bmc_pass: "admin"
+         enc_hosts:
+           - h_fqdn: "vmc-rekvm-ssu-1-2.xy01.xyratex.com"
+             h_memsize: 7822.58
+             h_cpucount: 4
+             h_interfaces:
+               - if_macAddress: "52:54:00:ff:7b:e1"
+                 if_network: Management
+                 if_ipAddrs: [172.16.1.2]
+               - if_macAddress: "52:54:00:ff:ed:02"
+                 if_network: Data
+                 if_ipAddrs: [172.18.1.2]
+             h_halon:
+               address: "172.18.1.2:9000"
+               roles:
+                  - name: station
+                  - name: ssu
+       - enc_idx: 3
+         enc_id: "2213202c-0227-54ff-86c9-597c341201f0"
+         enc_bmc:
+           - bmc_addr: ""
+             bmc_user: "admin"
+             bmc_pass: "admin"
+           - bmc_addr: ""
+             bmc_user: "admin"
+             bmc_pass: "admin"
+         enc_hosts:
+           - h_fqdn: "vmc-rekvm-ssu-1-3.xy01.xyratex.com"
+             h_memsize: 7822.58
+             h_cpucount: 4
+             h_interfaces:
+               - if_macAddress: "52:54:00:ff:8e:1b"
+                 if_network: Management
+                 if_ipAddrs: [172.16.1.3]
+               - if_macAddress: "52:54:00:ff:f6:02"
+                 if_network: Data
+                 if_ipAddrs: [172.18.1.3]
+             h_halon:
+               address: "172.18.1.3:9000"
+               roles:
+                  - name: ssu
+       - enc_idx: 4
+         enc_id: "3cce708f-d62c-5111-8508-51c21c277ec7"
+         enc_bmc:
+           - bmc_addr: ""
+             bmc_user: "admin"
+             bmc_pass: "admin"
+           - bmc_addr: ""
+             bmc_user: "admin"
+             bmc_pass: "admin"
+         enc_hosts:
+           - h_fqdn: "vmc-rekvm-ssu-1-4.xy01.xyratex.com"
+             h_memsize: 7822.58
+             h_cpucount: 4
+             h_interfaces:
+               - if_macAddress: "52:54:00:ff:25:31"
+                 if_network: Management
+                 if_ipAddrs: [172.16.1.4]
+               - if_macAddress: "52:54:00:ff:75:79"
+                 if_network: Data
+                 if_ipAddrs: [172.18.1.4]
+             h_halon:
+               address: "172.18.1.4:9000"
+               roles:
+                  - name: ssu
+       - enc_idx: 5
+         enc_id: "b0504c93-6ce8-5da1-83fd-efa6d07e4018"
+         enc_bmc:
+           - bmc_addr: ""
+             bmc_user: "admin"
+             bmc_pass: "admin"
+           - bmc_addr: ""
+             bmc_user: "admin"
+             bmc_pass: "admin"
+         enc_hosts:
+           - h_fqdn: "vmc-rekvm-ssu-1-5.xy01.xyratex.com"
+             h_memsize: 7822.58
+             h_cpucount: 4
+             h_interfaces:
+               - if_macAddress: "52:54:00:ff:d3:b4"
+                 if_network: Management
+                 if_ipAddrs: [172.16.1.5]
+               - if_macAddress: "52:54:00:ff:bc:1d"
+                 if_network: Data
+                 if_ipAddrs: [172.18.1.5]
+             h_halon:
+               address: "172.18.1.5:9000"
+               roles:
+                  - name: ssu
+       - enc_idx: 6
+         enc_id: "dbf96aae-9937-5f25-9426-5a4da98f1574"
+         enc_bmc:
+           - bmc_addr: ""
+             bmc_user: "admin"
+             bmc_pass: "admin"
+           - bmc_addr: ""
+             bmc_user: "admin"
+             bmc_pass: "admin"
+         enc_hosts:
+           - h_fqdn: "vmc-rekvm-ssu-1-6.xy01.xyratex.com"
+             h_memsize: 7822.58
+             h_cpucount: 4
+             h_interfaces:
+               - if_macAddress: "52:54:00:ff:97:aa"
+                 if_network: Management
+                 if_ipAddrs: [172.16.1.6]
+               - if_macAddress: "52:54:00:ff:cd:00"
+                 if_network: Data
+                 if_ipAddrs: [172.18.1.6]
+             h_halon:
+               address: "172.18.1.6:9000"
+               roles:
+                  - name: ssu
+id_m0_servers:
+  - m0h_fqdn: "vmc-rekvm-cc1.xy01.xyratex.com"
+    host_mem_as: 549755813888
+    host_mem_rss: 8009728
+    host_mem_stack: 8009728
+    host_mem_memlock: 8009728
+    host_cores: [1, 1, 1, 1]
+    lnid: "172.18.0.41@tcp"
+    m0h_roles:
+      - name: ha
+    m0h_devices: []
+  - m0h_fqdn: "vmc-rekvm-dm-1-1.xy01.xyratex.com"
+    host_mem_as: 549755813888
+    host_mem_rss: 8009728
+    host_mem_stack: 8009728
+    host_mem_memlock: 8009728
+    host_cores: [1, 1, 1, 1]
+    lnid: "172.18.1.1@tcp"
+    m0h_roles:
+      - name: ha
+      - name: m0t1fs
+    m0h_devices: []
+  - m0h_fqdn: "vmc-rekvm-ssu-1-2.xy01.xyratex.com"
+    host_mem_as: 549755813888
+    host_mem_rss: 8009728
+    host_mem_stack: 8009728
+    host_mem_memlock: 8009728
+    host_cores: [1, 1, 1, 1]
+    lnid: "172.18.1.2@tcp"
+    m0h_roles:
+      - name: ha
+      - name: storage
+      - name: confd
+    m0h_devices:    
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_04f36ed9-5821-48bb-b"
+        m0d_serial: "04f36ed9-5821-48bb-b"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_04f36ed9-5821-48bb-b"
+        m0d_slot: 1
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_8921b12c-7853-4a6d-a"
+        m0d_serial: "8921b12c-7853-4a6d-a"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_8921b12c-7853-4a6d-a"
+        m0d_slot: 11
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_3744e97b-8c5f-4176-8"
+        m0d_serial: "3744e97b-8c5f-4176-8"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_3744e97b-8c5f-4176-8"
+        m0d_slot: 5
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_c62a09a6-9f52-4264-b"
+        m0d_serial: "c62a09a6-9f52-4264-b"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_c62a09a6-9f52-4264-b"
+        m0d_slot: 18
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_bb4de126-b694-4bbc-9"
+        m0d_serial: "bb4de126-b694-4bbc-9"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_bb4de126-b694-4bbc-9"
+        m0d_slot: 15
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_6a533a8c-60f3-48d4-b"
+        m0d_serial: "6a533a8c-60f3-48d4-b"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_6a533a8c-60f3-48d4-b"
+        m0d_slot: 7
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_7622b25d-fd95-4ff0-a"
+        m0d_serial: "7622b25d-fd95-4ff0-a"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_7622b25d-fd95-4ff0-a"
+        m0d_slot: 9
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_96592835-cc7e-43b1-8"
+        m0d_serial: "96592835-cc7e-43b1-8"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_96592835-cc7e-43b1-8"
+        m0d_slot: 12
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_73c4898c-a5af-4c89-9"
+        m0d_serial: "73c4898c-a5af-4c89-9"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_73c4898c-a5af-4c89-9"
+        m0d_slot: 8
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_c4ea6564-7a4e-4ca9-b"
+        m0d_serial: "c4ea6564-7a4e-4ca9-b"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_c4ea6564-7a4e-4ca9-b"
+        m0d_slot: 17
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_0be14685-c6f2-4180-9"
+        m0d_serial: "0be14685-c6f2-4180-9"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_0be14685-c6f2-4180-9"
+        m0d_slot: 2
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_315eea5f-d240-49fb-8"
+        m0d_serial: "315eea5f-d240-49fb-8"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_315eea5f-d240-49fb-8"
+        m0d_slot: 4
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_f1737ffd-140b-4bcd-b"
+        m0d_serial: "f1737ffd-140b-4bcd-b"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_f1737ffd-140b-4bcd-b"
+        m0d_slot: 23
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_c25e94b1-d840-4a4f-b"
+        m0d_serial: "c25e94b1-d840-4a4f-b"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_c25e94b1-d840-4a4f-b"
+        m0d_slot: 16
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_b8c63c9d-a6e7-4a01-9"
+        m0d_serial: "b8c63c9d-a6e7-4a01-9"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_b8c63c9d-a6e7-4a01-9"
+        m0d_slot: 14
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_e0e85690-5dcf-4d12-8"
+        m0d_serial: "e0e85690-5dcf-4d12-8"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_e0e85690-5dcf-4d12-8"
+        m0d_slot: 20
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_e906b457-9a2c-47a8-8"
+        m0d_serial: "e906b457-9a2c-47a8-8"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_e906b457-9a2c-47a8-8"
+        m0d_slot: 22
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_e43ffd27-bcf3-4899-b"
+        m0d_serial: "e43ffd27-bcf3-4899-b"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_e43ffd27-bcf3-4899-b"
+        m0d_slot: 21
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_4b00347f-5824-4183-8"
+        m0d_serial: "4b00347f-5824-4183-8"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_4b00347f-5824-4183-8"
+        m0d_slot: 6
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_dc5e0464-f1af-4a7c-8"
+        m0d_serial: "dc5e0464-f1af-4a7c-8"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_dc5e0464-f1af-4a7c-8"
+        m0d_slot: 19
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_fb595d98-87d4-426c-8"
+        m0d_serial: "fb595d98-87d4-426c-8"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_fb595d98-87d4-426c-8"
+        m0d_slot: 24
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_7e367c69-57cc-460a-b"
+        m0d_serial: "7e367c69-57cc-460a-b"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_7e367c69-57cc-460a-b"
+        m0d_slot: 10
+  - m0h_fqdn: "vmc-rekvm-ssu-1-3.xy01.xyratex.com"
+    host_mem_as: 549755813888
+    host_mem_rss: 8009728
+    host_mem_stack: 8009728
+    host_mem_memlock: 8009728
+    host_cores: [1, 1, 1, 1]
+    lnid: "172.18.1.3@tcp"
+    m0h_roles:
+      - name: ha
+      - name: storage
+    m0h_devices:    
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_12f0da37-35ee-481b-b"
+        m0d_serial: "12f0da37-35ee-481b-b"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_12f0da37-35ee-481b-b"
+        m0d_slot: 2
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_f3e019c7-a1a8-4383-b"
+        m0d_serial: "f3e019c7-a1a8-4383-b"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_f3e019c7-a1a8-4383-b"
+        m0d_slot: 24
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_1ddebc78-981e-46e8-a"
+        m0d_serial: "1ddebc78-981e-46e8-a"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_1ddebc78-981e-46e8-a"
+        m0d_slot: 4
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_53b37418-fbd2-4145-8"
+        m0d_serial: "53b37418-fbd2-4145-8"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_53b37418-fbd2-4145-8"
+        m0d_slot: 7
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_e16dff37-8976-420c-9"
+        m0d_serial: "e16dff37-8976-420c-9"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_e16dff37-8976-420c-9"
+        m0d_slot: 22
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_b725b9f5-1ebf-43aa-b"
+        m0d_serial: "b725b9f5-1ebf-43aa-b"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_b725b9f5-1ebf-43aa-b"
+        m0d_slot: 18
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_39139b92-304e-4e6d-a"
+        m0d_serial: "39139b92-304e-4e6d-a"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_39139b92-304e-4e6d-a"
+        m0d_slot: 6
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_b2b2741a-b3bc-408d-9"
+        m0d_serial: "b2b2741a-b3bc-408d-9"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_b2b2741a-b3bc-408d-9"
+        m0d_slot: 17
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_a43db81a-e35b-44f4-9"
+        m0d_serial: "a43db81a-e35b-44f4-9"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_a43db81a-e35b-44f4-9"
+        m0d_slot: 14
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_af000724-c17f-43fd-8"
+        m0d_serial: "af000724-c17f-43fd-8"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_af000724-c17f-43fd-8"
+        m0d_slot: 16
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_e90fc229-3d5b-4be5-9"
+        m0d_serial: "e90fc229-3d5b-4be5-9"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_e90fc229-3d5b-4be5-9"
+        m0d_slot: 23
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_ae44dd51-7318-4471-a"
+        m0d_serial: "ae44dd51-7318-4471-a"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_ae44dd51-7318-4471-a"
+        m0d_slot: 15
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_e0e8d9ba-74ed-4efa-a"
+        m0d_serial: "e0e8d9ba-74ed-4efa-a"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_e0e8d9ba-74ed-4efa-a"
+        m0d_slot: 21
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_9adf81da-ec42-420a-9"
+        m0d_serial: "9adf81da-ec42-420a-9"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_9adf81da-ec42-420a-9"
+        m0d_slot: 12
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_e006ce05-5a39-4725-b"
+        m0d_serial: "e006ce05-5a39-4725-b"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_e006ce05-5a39-4725-b"
+        m0d_slot: 20
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_957a98ff-75b9-4af6-8"
+        m0d_serial: "957a98ff-75b9-4af6-8"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_957a98ff-75b9-4af6-8"
+        m0d_slot: 11
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_1d8b828f-eb89-4b83-b"
+        m0d_serial: "1d8b828f-eb89-4b83-b"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_1d8b828f-eb89-4b83-b"
+        m0d_slot: 3
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_a0b161d1-d512-4668-8"
+        m0d_serial: "a0b161d1-d512-4668-8"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_a0b161d1-d512-4668-8"
+        m0d_slot: 13
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_023add00-6f6e-4ce5-b"
+        m0d_serial: "023add00-6f6e-4ce5-b"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_023add00-6f6e-4ce5-b"
+        m0d_slot: 1
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_9349ae03-52b9-45f4-9"
+        m0d_serial: "9349ae03-52b9-45f4-9"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_9349ae03-52b9-45f4-9"
+        m0d_slot: 10
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_877ddaeb-ae71-4733-9"
+        m0d_serial: "877ddaeb-ae71-4733-9"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_877ddaeb-ae71-4733-9"
+        m0d_slot: 9
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_58dcddc3-56e4-4b4f-8"
+        m0d_serial: "58dcddc3-56e4-4b4f-8"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_58dcddc3-56e4-4b4f-8"
+        m0d_slot: 8
+  - m0h_fqdn: "vmc-rekvm-ssu-1-4.xy01.xyratex.com"
+    host_mem_as: 549755813888
+    host_mem_rss: 8009728
+    host_mem_stack: 8009728
+    host_mem_memlock: 8009728
+    host_cores: [1, 1, 1, 1]
+    lnid: "172.18.1.4@tcp"
+    m0h_roles:
+      - name: ha
+      - name: storage
+    m0h_devices:    
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_dcc414dd-9cf2-4e81-9"
+        m0d_serial: "dcc414dd-9cf2-4e81-9"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_dcc414dd-9cf2-4e81-9"
+        m0d_slot: 19
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_70e9948d-991b-4155-a"
+        m0d_serial: "70e9948d-991b-4155-a"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_70e9948d-991b-4155-a"
+        m0d_slot: 6
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_f6cebf7d-1174-4e90-9"
+        m0d_serial: "f6cebf7d-1174-4e90-9"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_f6cebf7d-1174-4e90-9"
+        m0d_slot: 23
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_6398ce65-9c74-4c7d-a"
+        m0d_serial: "6398ce65-9c74-4c7d-a"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_6398ce65-9c74-4c7d-a"
+        m0d_slot: 5
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_d3b2eeb6-ca66-4e9f-b"
+        m0d_serial: "d3b2eeb6-ca66-4e9f-b"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_d3b2eeb6-ca66-4e9f-b"
+        m0d_slot: 17
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_21cef0ae-6958-4b57-8"
+        m0d_serial: "21cef0ae-6958-4b57-8"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_21cef0ae-6958-4b57-8"
+        m0d_slot: 1
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_ba634976-3934-4294-9"
+        m0d_serial: "ba634976-3934-4294-9"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_ba634976-3934-4294-9"
+        m0d_slot: 14
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_2c1f8175-627b-404d-8"
+        m0d_serial: "2c1f8175-627b-404d-8"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_2c1f8175-627b-404d-8"
+        m0d_slot: 2
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_9926ded8-cff3-45a8-a"
+        m0d_serial: "9926ded8-cff3-45a8-a"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_9926ded8-cff3-45a8-a"
+        m0d_slot: 9
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_f8eb17ac-c68f-45e9-9"
+        m0d_serial: "f8eb17ac-c68f-45e9-9"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_f8eb17ac-c68f-45e9-9"
+        m0d_slot: 24
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_8d5bec5e-a2f5-402b-9"
+        m0d_serial: "8d5bec5e-a2f5-402b-9"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_8d5bec5e-a2f5-402b-9"
+        m0d_slot: 8
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_d5b77911-4662-4276-8"
+        m0d_serial: "d5b77911-4662-4276-8"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_d5b77911-4662-4276-8"
+        m0d_slot: 18
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_dd6e02f3-1b51-4b73-8"
+        m0d_serial: "dd6e02f3-1b51-4b73-8"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_dd6e02f3-1b51-4b73-8"
+        m0d_slot: 20
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_d16ff31c-b80f-4c92-8"
+        m0d_serial: "d16ff31c-b80f-4c92-8"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_d16ff31c-b80f-4c92-8"
+        m0d_slot: 16
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_4a04c69e-d558-4c5e-a"
+        m0d_serial: "4a04c69e-d558-4c5e-a"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_4a04c69e-d558-4c5e-a"
+        m0d_slot: 4
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_ba094143-cb0f-4011-9"
+        m0d_serial: "ba094143-cb0f-4011-9"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_ba094143-cb0f-4011-9"
+        m0d_slot: 13
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_f2a15e54-299f-40bc-b"
+        m0d_serial: "f2a15e54-299f-40bc-b"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_f2a15e54-299f-40bc-b"
+        m0d_slot: 22
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_74a1fd82-70fb-47c3-8"
+        m0d_serial: "74a1fd82-70fb-47c3-8"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_74a1fd82-70fb-47c3-8"
+        m0d_slot: 7
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_b7209bc3-8368-4743-a"
+        m0d_serial: "b7209bc3-8368-4743-a"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_b7209bc3-8368-4743-a"
+        m0d_slot: 12
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_de6a47a1-35aa-472e-a"
+        m0d_serial: "de6a47a1-35aa-472e-a"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_de6a47a1-35aa-472e-a"
+        m0d_slot: 21
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_c7ad0778-2b21-42ea-8"
+        m0d_serial: "c7ad0778-2b21-42ea-8"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_c7ad0778-2b21-42ea-8"
+        m0d_slot: 15
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_a857f77b-e937-45c4-8"
+        m0d_serial: "a857f77b-e937-45c4-8"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_a857f77b-e937-45c4-8"
+        m0d_slot: 11
+  - m0h_fqdn: "vmc-rekvm-ssu-1-5.xy01.xyratex.com"
+    host_mem_as: 549755813888
+    host_mem_rss: 8009728
+    host_mem_stack: 8009728
+    host_mem_memlock: 8009728
+    host_cores: [1, 1, 1, 1]
+    lnid: "172.18.1.5@tcp"
+    m0h_roles:
+      - name: ha
+      - name: storage
+    m0h_devices:    
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_76b2fb81-6712-4bda-b"
+        m0d_serial: "76b2fb81-6712-4bda-b"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_76b2fb81-6712-4bda-b"
+        m0d_slot: 9
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_16a20326-9b84-4d88-b"
+        m0d_serial: "16a20326-9b84-4d88-b"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_16a20326-9b84-4d88-b"
+        m0d_slot: 2
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_bb6215cd-52f7-42e0-9"
+        m0d_serial: "bb6215cd-52f7-42e0-9"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_bb6215cd-52f7-42e0-9"
+        m0d_slot: 18
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_6f7a0570-4271-4324-b"
+        m0d_serial: "6f7a0570-4271-4324-b"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_6f7a0570-4271-4324-b"
+        m0d_slot: 8
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_93f71574-4261-4e40-b"
+        m0d_serial: "93f71574-4261-4e40-b"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_93f71574-4261-4e40-b"
+        m0d_slot: 12
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_ddfcb978-016c-4036-b"
+        m0d_serial: "ddfcb978-016c-4036-b"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_ddfcb978-016c-4036-b"
+        m0d_slot: 20
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_02eeb13b-f343-40c4-a"
+        m0d_serial: "02eeb13b-f343-40c4-a"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_02eeb13b-f343-40c4-a"
+        m0d_slot: 1
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_d37d167b-743a-4b60-a"
+        m0d_serial: "d37d167b-743a-4b60-a"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_d37d167b-743a-4b60-a"
+        m0d_slot: 19
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_66bf0f93-4fc5-4b80-8"
+        m0d_serial: "66bf0f93-4fc5-4b80-8"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_66bf0f93-4fc5-4b80-8"
+        m0d_slot: 5
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_e8f1e66a-e6f0-4132-9"
+        m0d_serial: "e8f1e66a-e6f0-4132-9"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_e8f1e66a-e6f0-4132-9"
+        m0d_slot: 23
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_6cb4a6db-f502-477d-8"
+        m0d_serial: "6cb4a6db-f502-477d-8"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_6cb4a6db-f502-477d-8"
+        m0d_slot: 7
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_9b3f9c4b-664f-4300-b"
+        m0d_serial: "9b3f9c4b-664f-4300-b"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_9b3f9c4b-664f-4300-b"
+        m0d_slot: 13
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_acb79d0e-e03d-42a7-9"
+        m0d_serial: "acb79d0e-e03d-42a7-9"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_acb79d0e-e03d-42a7-9"
+        m0d_slot: 17
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_421bd13c-a888-46c8-b"
+        m0d_serial: "421bd13c-a888-46c8-b"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_421bd13c-a888-46c8-b"
+        m0d_slot: 3
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_84c7296f-08c7-45bd-8"
+        m0d_serial: "84c7296f-08c7-45bd-8"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_84c7296f-08c7-45bd-8"
+        m0d_slot: 10
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_930739db-fe50-4cf5-9"
+        m0d_serial: "930739db-fe50-4cf5-9"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_930739db-fe50-4cf5-9"
+        m0d_slot: 11
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_555f4d84-d408-461e-8"
+        m0d_serial: "555f4d84-d408-461e-8"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_555f4d84-d408-461e-8"
+        m0d_slot: 4
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_a8114670-63f4-4d95-8"
+        m0d_serial: "a8114670-63f4-4d95-8"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_a8114670-63f4-4d95-8"
+        m0d_slot: 14
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_a9a85e7c-e6a7-4b16-9"
+        m0d_serial: "a9a85e7c-e6a7-4b16-9"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_a9a85e7c-e6a7-4b16-9"
+        m0d_slot: 16
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_e87166ec-abb2-4d72-a"
+        m0d_serial: "e87166ec-abb2-4d72-a"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_e87166ec-abb2-4d72-a"
+        m0d_slot: 22
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_de867d94-3701-48fe-a"
+        m0d_serial: "de867d94-3701-48fe-a"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_de867d94-3701-48fe-a"
+        m0d_slot: 21
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_6cac4650-71fd-45b1-a"
+        m0d_serial: "6cac4650-71fd-45b1-a"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_6cac4650-71fd-45b1-a"
+        m0d_slot: 6
+  - m0h_fqdn: "vmc-rekvm-ssu-1-6.xy01.xyratex.com"
+    host_mem_as: 549755813888
+    host_mem_rss: 8009728
+    host_mem_stack: 8009728
+    host_mem_memlock: 8009728
+    host_cores: [1, 1, 1, 1]
+    lnid: "172.18.1.6@tcp"
+    m0h_roles:
+      - name: ha
+      - name: storage
+    m0h_devices:    
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_8fdb5c78-607d-4234-9"
+        m0d_serial: "8fdb5c78-607d-4234-9"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_8fdb5c78-607d-4234-9"
+        m0d_slot: 13
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_e51c2722-2414-4840-b"
+        m0d_serial: "e51c2722-2414-4840-b"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_e51c2722-2414-4840-b"
+        m0d_slot: 21
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_51fda06e-936e-4eb8-b"
+        m0d_serial: "51fda06e-936e-4eb8-b"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_51fda06e-936e-4eb8-b"
+        m0d_slot: 8
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_03a0a63e-c9fe-4c77-8"
+        m0d_serial: "03a0a63e-c9fe-4c77-8"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_03a0a63e-c9fe-4c77-8"
+        m0d_slot: 2
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_847e6120-440e-4208-9"
+        m0d_serial: "847e6120-440e-4208-9"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_847e6120-440e-4208-9"
+        m0d_slot: 12
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_42100a62-6e0d-4ee7-8"
+        m0d_serial: "42100a62-6e0d-4ee7-8"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_42100a62-6e0d-4ee7-8"
+        m0d_slot: 5
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_22d9a7cd-c1f3-4121-a"
+        m0d_serial: "22d9a7cd-c1f3-4121-a"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_22d9a7cd-c1f3-4121-a"
+        m0d_slot: 3
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_2e89a544-f579-43e7-9"
+        m0d_serial: "2e89a544-f579-43e7-9"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_2e89a544-f579-43e7-9"
+        m0d_slot: 4
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_f855335b-cc82-467b-a"
+        m0d_serial: "f855335b-cc82-467b-a"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_f855335b-cc82-467b-a"
+        m0d_slot: 24
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_45354278-0e13-4e1a-b"
+        m0d_serial: "45354278-0e13-4e1a-b"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_45354278-0e13-4e1a-b"
+        m0d_slot: 6
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_c7ef3aa3-41d9-415d-8"
+        m0d_serial: "c7ef3aa3-41d9-415d-8"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_c7ef3aa3-41d9-415d-8"
+        m0d_slot: 18
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_4eda2880-d871-47cd-a"
+        m0d_serial: "4eda2880-d871-47cd-a"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_4eda2880-d871-47cd-a"
+        m0d_slot: 7
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_f36c7ae7-c6bc-4b43-8"
+        m0d_serial: "f36c7ae7-c6bc-4b43-8"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_f36c7ae7-c6bc-4b43-8"
+        m0d_slot: 23
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_5f8703fb-e2ba-4aa1-9"
+        m0d_serial: "5f8703fb-e2ba-4aa1-9"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_5f8703fb-e2ba-4aa1-9"
+        m0d_slot: 9
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_dcfa3fe2-11f2-458f-8"
+        m0d_serial: "dcfa3fe2-11f2-458f-8"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_dcfa3fe2-11f2-458f-8"
+        m0d_slot: 20
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_7fc2e0cf-04bf-4334-b"
+        m0d_serial: "7fc2e0cf-04bf-4334-b"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_7fc2e0cf-04bf-4334-b"
+        m0d_slot: 11
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_978f4499-2e9d-41d2-a"
+        m0d_serial: "978f4499-2e9d-41d2-a"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_978f4499-2e9d-41d2-a"
+        m0d_slot: 14
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_eeed725e-4574-4958-a"
+        m0d_serial: "eeed725e-4574-4958-a"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_eeed725e-4574-4958-a"
+        m0d_slot: 22
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_a6817aac-338f-41fa-a"
+        m0d_serial: "a6817aac-338f-41fa-a"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_a6817aac-338f-41fa-a"
+        m0d_slot: 15
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_c342c518-e63d-4917-9"
+        m0d_serial: "c342c518-e63d-4917-9"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_c342c518-e63d-4917-9"
+        m0d_slot: 17
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_aa8865ff-25dc-4b0c-a"
+        m0d_serial: "aa8865ff-25dc-4b0c-a"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_aa8865ff-25dc-4b0c-a"
+        m0d_slot: 16
+      - m0d_wwn: "scsi-0QEMU_QEMU_HARDDISK_64d14758-b013-4224-9"
+        m0d_serial: "64d14758-b013-4224-9"
+        m0d_bsize: 4096
+        m0d_size: 536870912
+        m0d_path: "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_64d14758-b013-4224-9"
+        m0d_slot: 10
+id_m0_globals:
+  m0_be_ios_seg_size: 549755813888
+  m0_be_log_size: 17179869184
+  m0_be_seg_size: 549755813888
+  m0_be_tx_payload_size_max: 2097152
+  m0_be_tx_reg_nr_max: 262144
+  m0_be_tx_reg_size_max: 33554432
+  m0_be_txgr_freeze_timeout_max: 300
+  m0_be_txgr_freeze_timeout_min: 300
+  m0_be_txgr_payload_size_max: 134217728
+  m0_be_txgr_reg_nr_max: 2097152
+  m0_be_txgr_reg_size_max: 536870912
+  m0_be_txgr_tx_nr_max: 82
+  m0_block_size: 4096
+  m0_data_units: 8
+  m0_md_redundancy: 2
+  m0_min_rpc_recvq_len: 2048
+  m0_parity_units: 2
+  m0_failure_set_gen:
+    tag: Formulaic
+    contents:
+      - [0,0,0,0,1]
+      - [0,0,0,0,2]

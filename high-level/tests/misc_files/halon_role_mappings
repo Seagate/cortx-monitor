@@ -1,0 +1,19 @@
+- name: station
+  h_bootstrap_station: True
+  h_services:
+    - "decision-log start --log-text /var/log/halon.decision.log --trace-file /var/log/halon.trace.log"
+
+- name: ssu
+  h_bootstrap_station: False
+  h_services:
+    - "sspl start -u sspluser -p sspl4ever"
+
+- name: cmu
+  h_bootstrap_station: False
+  h_services:
+    - "sspl-hl start -u sspluser -p sspl4ever"
+    - "sspl start -u sspluser -p sspl4ever"
+
+- name: dm
+  h_bootstrap_station: False
+  h_services: []

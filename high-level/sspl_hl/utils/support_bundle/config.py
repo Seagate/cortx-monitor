@@ -11,6 +11,9 @@ Contains the configuration used by the support bundle module.
 # authorized in writing by Seagate Technology LLC is prohibited.
 # All rights are expressly reserved by Seagate Technology LLC.
 # __author__ = 'Bhupesh Pant'
+import os
+
+from sspl_hl.utils.halon import HalonConfigurationPuppet
 
 BASE_BUCKET_PATH = '/var/lib/support_bundles'
 NODES_ACCESS_KEY = 'dcouser'
@@ -23,11 +26,32 @@ ACTION = 'action'
 MISC = 'misc'
 CLEANUP = 'cleanup'
 
-SUPPORT_BUNDLE_DIR_STRUCTURE = {"nodes": {}, "logs": {}, PLEX_LOGS: {}}
-
 # The temporary directory created during the bundling. It will be deleted
 #  as a part of cleanup.
-BUNDLE_TMP_DIR = '/tmp/bundle'
+BUNDLE_TMP_DIR = '/tmp/bundle/'
+
+SUPPORT_BUNDLE_DIR_STRUCTURE = {"nodes": {}, "logs": {}, PLEX_LOGS: {}}
+
+
+def get_decision_logs_command():
+    """Query Halon interface and get the decision log node
+     and Path"""
+    cnf = HalonConfigurationPuppet()
+    cmd = 'scp root@{}:{} {}'.format(
+        cnf.get_station_node_info(),
+        cnf.get_decision_logs_path(),
+        BUNDLE_TMP_DIR
+    )
+    if 'DUMMY' in cmd:
+        return 'echo "Decision Logs could not be collected"'
+    return cmd
+
+
+def get_halon_logs_path():
+    """"""
+    cnf = HalonConfigurationPuppet()
+    return cnf.get_decision_logs_path()
+
 
 # """
 # Enable ssu_log_collector.py logging. A new bundle.log file will be added
@@ -93,11 +117,7 @@ TRACE_ENABLED_SSU_BUNDLING = True
 # COMMON SUBSET PARAMS
 # """
 COMMON_ACTION_FOR_CMU_SSU = [
-    'm0reportbug',
-    'mv -f m0reportbug-data.tar.gz /tmp/bundle/',
-    'mv -f m0reportbug-traces.tar.gz /tmp/bundle/',
-    'mv -f m0reportbug-cores.tar.gz /tmp/bundle/',
-    'dmesg > /tmp/bundle/dmesg.log'
+    'dmesg > {}'.format(os.path.join(BUNDLE_TMP_DIR, 'dmesg.log'))
 ]
 
 COMMON_FILES_TO_COLLECT_CMU_SSU = [
@@ -112,11 +132,15 @@ COMMON_CLEANUP = [BUNDLE_TMP_DIR]
 # REMOTE CONFIGURATION
 # """
 ACTION_TO_TRIGGER_ON_REMOTE_NODE = [
+    'm0reportbug',
+    'mv -f m0reportbug-data.tar.gz {}'.format(BUNDLE_TMP_DIR),
+    'mv -f m0reportbug-traces.tar.gz {}'.format(BUNDLE_TMP_DIR),
+    'mv -f m0reportbug-cores.tar.gz {}'.format(BUNDLE_TMP_DIR),
 ] + COMMON_ACTION_FOR_CMU_SSU
 
 REMOTE_FILES_TO_COLLECT = [
-
-]
+    '{}'.format(get_halon_logs_path())
+] + COMMON_FILES_TO_COLLECT_CMU_SSU
 
 REMOTE_CLEANUP = [] + COMMON_CLEANUP
 
@@ -124,17 +148,17 @@ REMOTE_CLEANUP = [] + COMMON_CLEANUP
 # LOCAL CONFIGURATION
 # """
 ACTION_TO_TRIGGER_ON_LOCAL_NODE = [
-
-] + COMMON_ACTION_FOR_CMU_SSU
+    'sudo m0reportbug',
+    ] + COMMON_ACTION_FOR_CMU_SSU
 
 LOCAL_FILES_TO_COLLECT = [
     '/etc/sysconfig/mero',
     '/etc/mero/*',
     '/var/log/messages',
-    '/tmp/bundle/m0reportbug-data.tar.gz',
-    '/tmp/bundle/m0reportbug-traces.tar.gz',
-    '/tmp/bundle/m0reportbug-cores.tar.gz',
-    '/tmp/bundle/dmesg.log',
+    '{}'.format(os.path.join(BUNDLE_TMP_DIR, 'm0reportbug-data.tar.gz')),
+    '{}'.format(os.path.join(BUNDLE_TMP_DIR, 'm0reportbug-traces.tar.gz')),
+    '{}'.format(os.path.join(BUNDLE_TMP_DIR, 'm0reportbug-cores.tar.gz')),
+    '{}'.format(os.path.join(BUNDLE_TMP_DIR, 'dmesg.log')),
     '/run/log/journal/*'
 ] + COMMON_FILES_TO_COLLECT_CMU_SSU
 

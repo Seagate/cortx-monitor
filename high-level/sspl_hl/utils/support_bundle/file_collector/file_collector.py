@@ -52,9 +52,9 @@ class FileCollector(object):
             self._execute_actions()
             self._collect_files()
             self._clean_up()
-        except (OSError, IOError):
-            # todo: log and exit
-            pass
+        except (OSError, IOError) as err:
+            self.logger.warning('Error occurred during File Collection. '
+                                'Details: {}'.format(str(err)))
 
     def _execute_actions(self):
         """
@@ -85,18 +85,31 @@ class LocalFileCollector(FileCollector):
         super(LocalFileCollector, self).__init__(host, collection_rules)
         self._misc_files = collection_rules.get(MISC)
 
+    @staticmethod
+    def _set_cwd(path):
+        """Set the cwd for the executing actions n other commands"""
+        if os.path.exists(path):
+            os.chdir(path)
+        else:
+            plex_log.warning('Bundle {} does not exists'.format(path))
+
     def collect(self):
         """
         Collect the files from local machine
         """
         try:
-            LocalFileCollector.create_tmp_bundle_directory()
+            cwd = os.getcwd()
+            LocalFileCollector.create_tmp_bundle_directory(BUNDLE_TMP_DIR)
+            LocalFileCollector._set_cwd(BUNDLE_TMP_DIR)
+            self.logger.info('Local tmp dir, {} created'.format(
+                BUNDLE_TMP_DIR))
             self._execute_actions()
             self._collect_files()
             self._clean_up()
-        except (OSError, IOError):
-            # todo: log and exit
-            pass
+            LocalFileCollector._set_cwd(cwd)
+        except (OSError, IOError) as err:
+            self.logger.warning('Error occurred during File Collection. '
+                                'Details: {}'.format(str(err)))
 
     def _execute_actions(self):
         """
@@ -104,37 +117,46 @@ class LocalFileCollector(FileCollector):
         """
         for action in self._actions:
             try:
-                execute_shell(action)
+                self.logger.info('executing {}'.format(action))
+                execute_shell('{}'.format(action))
             except (OSError, subprocess.CalledProcessError) as err:
-                err_msg = 'Error occurred in ' \
-                          'LocalFileCollector::_execute_actions. Details: {}'\
-                    .format(str(err))
+                err_msg = 'Error occurred while executing action: {}.' \
+                          ' Details: {}'.format(action, str(err))
                 self.logger.warning(err_msg)
 
     @staticmethod
-    def create_tmp_bundle_directory():
+    def create_tmp_bundle_directory(path):
         """
         Create bundling tmp directory for local node.
         """
-        if os.path.exists(BUNDLE_TMP_DIR):
-            os.rmdir(BUNDLE_TMP_DIR)
-        os.mkdir(BUNDLE_TMP_DIR)
+        if os.path.exists(path):
+            shutil.rmtree(path)
+        try:
+            os.mkdir(path)
+            plex_log.info('tmp bundle directory has been created')
+        except OSError as err:
+            plex_log.warning('tmp dir, {} creation error. Details: [{}]'.
+                             format(path, str(err)))
 
     def _collect_files(self):
         """
         Collect files from various logging sources to bucket.
         """
-        cp_cmd = ''
         for _file in self._files:
+            cp_cmd = 'cp {} {}'.format(_file, self._bucket)
             try:
                 if os.path.isfile(_file):
+                    self.logger.info('Collecting {}'.format(_file))
                     shutil.copy(_file, self._bucket)
                 else:
-                    cp_cmd = 'cp {} {}'.format(_file, self._bucket)
-                    execute_shell(cp_cmd)
+                    self.logger.warning('Copy Command Failed. Details: '
+                                        'Log file, [{}] do not exist.'
+                                        .format(_file))
             except (OSError, IOError, subprocess.CalledProcessError) as err:
-                err_msg = 'Error during collection. cmd: {}, Details: {}'.\
+                err_msg = 'Error occurred during copying local files to ' \
+                          'temporary bundle bucket. cmd: {}, Details: {}'.\
                     format(cp_cmd, str(err))
+
                 self.logger.warning(err_msg)
         self._collect_misc_files()
 
@@ -144,15 +166,19 @@ class LocalFileCollector(FileCollector):
         """
         for bucket in self._misc_files.keys():
             for _file in self._misc_files[bucket]:
+                cp_cmd = 'cp {} {}'.format(_file, bucket)
                 try:
                     if os.path.isfile(_file):
+                        self.logger.info('copying {}'.format(_file))
                         shutil.copy(_file, self._bucket)
                     else:
-                        cp_cmd = 'cp {} {}'.format(_file, bucket)
-                        execute_shell(cp_cmd)
-                except (OSError, IOError, subprocess.CalledProcessError):
-                    # todo: necessary logging
-                    pass
+                        execute_shell('{}'.format(cp_cmd))
+                except (OSError, IOError, subprocess.CalledProcessError) \
+                        as err:
+                    err_msg = 'Error occurred during copying local files to ' \
+                              'temporary bundle bucket.Cmd: {}. Details: {}'. \
+                        format(cp_cmd, str(err))
+                    self.logger.warning(err_msg)
 
     def _clean_up(self):
         """
@@ -162,9 +188,9 @@ class LocalFileCollector(FileCollector):
             rm_cmd = 'rm -rf {}'.format(_file)
             try:
                 execute_shell(rm_cmd)
-            except (OSError, subprocess.CalledProcessError):
-                # todo: necessary logging
-                pass
+            except (OSError, subprocess.CalledProcessError) as err:
+                self.logger.warning('Clean Up Failed. Cmd: {} Details: {}'.
+                                    format(rm_cmd, str(err)))
 
 
 class RemoteFileCollector(FileCollector):
@@ -176,8 +202,7 @@ class RemoteFileCollector(FileCollector):
     def __init__(self, host, collection_rules):
         super(RemoteFileCollector, self).__init__(host, collection_rules)
         self._channel = NodeCommunicationHandler(
-            Node(host)
-        )
+            Node(host))
 
     def collect(self):
         """
@@ -191,9 +216,9 @@ class RemoteFileCollector(FileCollector):
             self._clean_up()
             self._channel.close_connection()
         except (SSHException, IOError) as extra_info:
-            # todo: Necessary logging
-            print 'Error occurred during remote file collection. Details: {}'\
+            err = 'Error occurred during remote file collection. Details: {}'\
                 .format(str(extra_info))
+            self.logger.warning(err)
 
     def _collect_files(self):
         """
@@ -233,11 +258,8 @@ class RemoteFileCollector(FileCollector):
         try:
             self._channel.execute_command(bundle_tmp_dir)
         except (SSHException, IOError):
-            # todo: Take necessary steps
-            print 'Unable to create bundle base: {} on host: {}'.format(
-                BUNDLE_TMP_DIR,
-                self.host
-            )
+            self.logger.warning('Unable to create bundle base: {} on host: '
+                                '{}'.format(BUNDLE_TMP_DIR, self.host))
             raise
 
     def _clean_up(self):

@@ -1,6 +1,6 @@
 """ Unit tests for sspl_hl.providers.support_bundle.provider """
-
-
+import os
+import subprocess
 import unittest
 from twisted.internet import defer
 from sspl_hl.providers.bundle.provider import SupportBundleProvider
@@ -23,6 +23,33 @@ class SsplHlProviderSupportBundle(BaseUnitTest):
         sspl_hl.providers.support_bundle.provider.SupportBundleProvider object.
     """
     COMMAND = ['create', 'list']
+
+    @staticmethod
+    def get_file_path(file_name):
+        """
+        Get fake mco absolute path
+        """"misc_files/halon_facts.yaml"
+        current_file_path = os.path.dirname(
+            os.path.abspath(os.path.realpath(__file__)))
+        mco_file_path = os.path.join(current_file_path, "../..", file_name)
+        print "********", mco_file_path
+        return mco_file_path
+
+    @staticmethod
+    def install_fake_halon_config_files():
+        """Copy default halon config files"""
+        if not os.path.exists('/etc/halon/halon_facts.yaml'):
+            os.mkdir('/etc/halon')
+            command = 'sudo cp {} /etc/halon/'.format(
+                SsplHlProviderSupportBundle.get_file_path(
+                    'misc_files/halon_facts.yaml')
+            )
+            subprocess.check_output(command, shell=True)
+
+            command = 'sudo cp {} /etc/halon/'.format(
+                SsplHlProviderSupportBundle.get_file_path(
+                    'misc_files/halon_role_mappings'))
+            subprocess.check_output(command, shell=True)
 
     def test_bundle_list_success(self):
         """ Ensure 'bundle list' command gives expected response

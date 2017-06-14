@@ -70,7 +70,7 @@ class HalonReqRespHandler(object):
         # channel.exchange_declare(exchange=EXCHANGE,
         #                        type='topic')
         print ' [x] Exchange: {} is declared and ready'.format(EXCHANGE)
-        channel.queue_declare(queue=QUEUE, exclusive=True)
+        channel.queue_declare(queue=QUEUE)
         # queue_name = result.method.queue
 
         channel.queue_bind(exchange=EXCHANGE,

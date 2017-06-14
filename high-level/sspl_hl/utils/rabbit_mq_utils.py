@@ -138,10 +138,12 @@ class HalondConsumer(HalondRMQ):
         log.info('RMQ Consumer config: {}'.format(self.__dict__))
         try:
             self._channel.exchange_declare(exchange=self.exchange,
-                                           type='direct')
+                                           type=self.exchange_type)
         except AMQPError as err:
-            log.warning('Exchange: [{}], type: [ direct ] cannot be declared.'
-                        ' Details: {}'.format(self.exchange, str(err)))
+            log.warning('Exchange: [{}], type: [ {} ] cannot be declared.'
+                        ' Details: {}'.format(self.exchange,
+                                              self.exchange_type,
+                                              str(err)))
         try:
             self._channel.queue_declare(queue=self.exchange_queue,
                                         exclusive=False)

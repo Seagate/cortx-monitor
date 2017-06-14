@@ -27,7 +27,8 @@ class TestFileCollectionRules(unittest.TestCase):
             'mv -f m0reportbug-data.tar.gz /tmp/bundle/',
             'mv -f m0reportbug-traces.tar.gz /tmp/bundle/',
             'mv -f m0reportbug-cores.tar.gz /tmp/bundle/',
-            'dmesg > /tmp/bundle/dmesg.log'
+            'dmesg > /tmp/bundle/dmesg.log',
+            'echo "Decision Logs could not be collected"'
         ]
 
         self.fc_rules = ClusterFilesCollectionRules(
@@ -59,7 +60,7 @@ class TestFileCollectionRules(unittest.TestCase):
     def test_local_rules_action_attrib(self):
         local_items = self.fc_rules.get_local_files_info()
         self.assertEquals(
-            local_items.get('action'), self.local_action_rules)
+            local_items.get('action').sort(), self.local_action_rules.sort())
 
     def test_remote_rules_structure(self):
         remote_items = self.fc_rules.get_remote_files_info()

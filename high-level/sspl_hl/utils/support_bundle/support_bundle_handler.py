@@ -87,10 +87,15 @@ class SupportBundleHandler(ExecutorSafe):
                                         self._cluster_node_manger.
                                         get_cmu_hostname(),
                                         bundle_name)
-        logger.info('Bundling Info: Bundle_id: {}, Collection_rule: {}'.
+        logger.info('Local Bundling Info: Bundle_id: {}, Collection_rule: {}'.
+                    format(bundle_name,
+                           self._file_collection_rules.get_local_files_info())
+                    )
+        logger.info('Remote Bundling Info: Bundle_id: {}, Collection_rule: {}'.
                     format(bundle_name,
                            self._file_collection_rules.get_remote_files_info())
                     )
+
         self.collect_files_from_cluster()
         SupportBundleHandler.build_tar_bundle(bundle_dir_info)
         logger.info('Collection of bundle files has Successfully completed. '
@@ -105,7 +110,6 @@ class SupportBundleHandler(ExecutorSafe):
         SupportBundleHandler.collect_remote_files(
             self._file_collection_rules.get_remote_files_info()
         )
-
         SupportBundleHandler.collect_local_files(
             self._file_collection_rules.get_local_files_info()
         )

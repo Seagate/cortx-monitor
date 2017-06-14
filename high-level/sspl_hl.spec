@@ -23,7 +23,7 @@ Vendor:     Seagate Technology LLC
 BuildArch:  noarch
 
 BuildRequires: python >= 2.7.0
-Requires:   PLEX, python-paramiko, python-dateutil, botocore, boto3, jmespath, xmltodict
+Requires:   PLEX, python-paramiko, python-dateutil, botocore, boto3, jmespath, xmltodict, yaml
 
 %description
 Seagate System Platform Library - High Level
