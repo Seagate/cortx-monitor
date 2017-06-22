@@ -202,9 +202,12 @@ class RabbitMQingressProcessorTests(ScheduledModuleThread, InternalMsgQ):
             self._virtual_host  = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSORTEST,
                                                                  self.VIRT_HOST,
                                                                  'SSPL')
-            self._exchange_name = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSORTEST,
-                                                                 self.EXCHANGE_NAME,
-                                                                 'sspl_halon')
+            #self._exchange_name = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSORTEST,
+            #                                                     self.EXCHANGE_NAME,
+            #                                                     'sspl_halon')
+            # TODO: Update the puppet module with this new value
+            self._exchange_name = "sspl_halon_command"
+
             self._queue_name    = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSORTEST,
                                                                  self.QUEUE_NAME,
                                                                  'SSPL-LL')

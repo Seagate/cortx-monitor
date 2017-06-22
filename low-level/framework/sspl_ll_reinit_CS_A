@@ -18,9 +18,6 @@ usermod -a -G systemd-journal sspl-ll
 usermod -a -G dialout sspl-ll
 usermod -a -G disk sspl-ll
 
-# Automatically install dependencies based on config file
-sspl-ll-cli --checkdeps --autoinstall
-
 # Update the sudoers file with the sspl-ll user and available commands
 SUDO_LINE="sspl-ll	ALL = NOPASSWD: /usr/sbin/smartctl, /usr/sbin/mdadm, /usr/bin/mount, /usr/bin/umount, /usr/sbin/swapon, /usr/sbin/swapoff, /usr/sbin/hdparm, /usr/bin/systemctl, /usr/sbin/wbcli"
 grep -q "$SUDO_LINE" /etc/sudoers || echo "$SUDO_LINE" >> /etc/sudoers
@@ -33,6 +30,9 @@ if [ "$ROLE" = "role => cc" ]; then
     grep -q "$CRON_LINE_SEARCH" /etc/crontab || echo "$CRON_LINE" >> /etc/crontab
     chmod +x /opt/seagate/sspl/low-level/files/sspl_free_space.py
 fi
+
+# Automatically install dependencies based on config file
+sspl-ll-cli --checkdeps --autoinstall
 
 # Comment out the tty requirement in sudoers file
 sed -i "s/^Defaults    requiretty.*/#Defaults    requiretty/" /etc/sudoers

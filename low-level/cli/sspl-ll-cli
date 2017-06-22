@@ -133,7 +133,7 @@ def _send_raw_msg(jsonMsg, wait_for_response=True, response_wait_time=5,
                          response_wait_time=response_wait_time, force_wait=force_wait,
                          alldata=alldata, indent=indent,
                          remove_results_file=remove_results_file,
-                         host=host)
+                         exchange="sspl_halon_command", host=host)
 
 def _send_iem_exchange(exchange, log_msg, host=None):
     """Sends an IEM on a particular rabbitmq exchange"""

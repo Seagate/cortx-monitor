@@ -218,15 +218,18 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
             ack_msg = AckResponseMsg("Error Processing Msg", "Msg Handler Not Found", uuid).getJson()
             self._write_internal_msgQ(RabbitMQegressProcessor.name(), ack_msg)
 
-    def _configure_exchange(self):        
+    def _configure_exchange(self):
         """Configure the RabbitMQ exchange with defaults available"""
         try:
             self._virtual_host  = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR, 
                                                                  self.VIRT_HOST,
                                                                  'SSPL')
-            self._exchange_name = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR, 
-                                                                 self.EXCHANGE_NAME,
-                                                                 'sspl_halon')
+            #self._exchange_name = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR, 
+            #                                                     self.EXCHANGE_NAME,
+            #                                                     'sspl_halon')
+            # TODO: Update the puppet module with this new value
+            self._exchange_name = "sspl_halon_command"
+
             self._queue_name    = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR, 
                                                                  self.QUEUE_NAME,
                                                                  'SSPL-LL')
