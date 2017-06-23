@@ -52,9 +52,7 @@ class Power(BaseCommand):
         Power method to get the action parameters
         to be send in the request to data provider
         """
-        params = '&command={}&debug={}'.format(self.action,
-                                               DEBUG)
-        return params
+        return '&command={}&debug={}'.format(self.action, DEBUG)
 
     @staticmethod
     def add_args(subparsers):

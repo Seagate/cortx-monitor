@@ -1,7 +1,13 @@
 #!/usr/bin/python
 import sys
 
-if len(sys.argv) > 3:
+# mco rpc runcmd rc cmd=\"{}\" -F role=cc
+# mco rpc runcmd rc cmd=\"{}\" -F role=storage
+# mco find -F role=storage
+
+if len(sys.argv) > 5:
+    print 'Command executed successfully'
+elif len(sys.argv) > 3:
 
     if (sys.argv[1] == 'ping') and \
             (sys.argv[2] == '-F') and \
@@ -34,3 +40,5 @@ if len(sys.argv) > 3:
         print ('Output : 0')
 else:
     print
+
+sys.exit(0)

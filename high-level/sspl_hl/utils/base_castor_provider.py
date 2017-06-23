@@ -1,6 +1,17 @@
 """
 Implements the base class for all the castor cli providers
 """
+# Do NOT modify or remove this copyright and confidentiality notice
+
+# Copyright 2017 Seagate Technology LLC or one of its affiliates.
+#
+# The code contained herein is CONFIDENTIAL to Seagate Technology LLC.
+# Portions may also be trade secret. Any use, duplication, derivation,
+# distribution or disclosure of this code, for any reason, not expressly
+# authorized in writing by Seagate Technology LLC is prohibited.
+# All rights are expressly reserved by Seagate Technology LLC.
+# __author__ = 'Bhupesh Pant'
+
 from plex.common.interfaces.idata_provider import IDataProvider
 from twisted.plugin import IPlugin
 from plex.core.provider.data_store_provider import DataStoreProvider
@@ -40,11 +51,9 @@ class BaseCastorProvider(DataStoreProvider):
         It is the base class version of the render query. Actual
         implementations would be in their respective providers.
         """
-        # import pdb
-        # pdb.set_trace()
-
         result = self._validate_params(selection_args=request.selection_args)
         if result:
+            self.log_warning(result)
             request.responder.reply_exception(result)
             return False
         return True
@@ -115,11 +124,15 @@ class BaseCastorProvider(DataStoreProvider):
         """
         Validate supported args count and report any extra param.
         """
+        # if len(selection_args) < self.no_of_arguments:
+        #     return('Invalid Request: Minimum number of arguments needed'
+        #            ' for this request is not supplied.')
         if len(selection_args) > self.no_of_arguments:
             dict_clone = selection_args.copy()
             for arg_key in self.valid_arg_keys:
                 del dict_clone[arg_key]
-            return("Error: Invalid request: Extra parameter '{extra}' detected"
+            return("Error: Invalid request: Extra parameter"
+                   " '{extra}' detected"
                    .format(extra=dict_clone.keys()[0]))
 
     def _validate_mandatory_args(self, selection_args):

@@ -1,6 +1,9 @@
+#!/usr/bin/env python2.7
 # -*- coding: utf-8 -*-
 
-""" File containing all the CLI settings
+"""
+    This file will contain all the exceptions that will be raised by sspl_hl
+    plex application.
 """
 
 # Do NOT modify or remove this copyright and confidentiality notice
@@ -13,7 +16,3 @@
 # authorized in writing by Seagate Technology LLC is prohibited.
 # All rights are expressly reserved by Seagate Technology LLC.
 # __author__ = Bhupesh Pant
-
-BL_HOST = 'localhost:8080'
-BL_SERVER_BASE_URL = 'http://{}/'.format(BL_HOST)
-DEBUG = False

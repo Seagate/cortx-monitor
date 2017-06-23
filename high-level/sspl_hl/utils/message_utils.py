@@ -637,9 +637,9 @@ class SupportBundleResponse(CommandResponse):
     def get_response_message(self, command_type, response):
         """
         Get the response message in dict format
-        @param: bundle_name Name of the created bundle package
-        @return: dict containing the response for bundle command
-        @rtype: dict
+        :param: bundle_name Name of the created bundle package
+        :return: dict containing the response for bundle command
+        :rtype: dict
         """
         message = {}
         if command_type == 'create':
@@ -667,9 +667,9 @@ class S3CommandResponse(CommandResponse):
     def get_response_message(self, output):
         """
         Get the response message in dict format
-        @param: bundle_name Name of the created bundle package
-        @return: dict containing the response for bundle command
-        @rtype: dict
+        :param: output from the provider
+        :return: Rsponse in JSON
+        :rtype: dict
         """
         message = {}
 
@@ -683,6 +683,32 @@ class S3CommandResponse(CommandResponse):
                        S3CommandResponse.REASON: output.msg}
         self.message.update(message)
         return self.__dict__
+
+
+class UserMgmtCommandResponse(CommandResponse):
+    # pylint: disable=too-few-public-methods
+    """
+    Response for user_mgmt requests
+    """
+    def __init__(self):
+        super(UserMgmtCommandResponse, self).__init__()
+
+    def get_response_message(self, user, request, result):
+        """
+        Get the response message in dict format
+        :param: Result of the UserMgmt interface
+        :return: dict containing the response of UserCreation
+        in JSON format
+        :rtype: json
+        """
+        message = dict(command=request.selection_args.get('command', None),
+                       return_code=result.get('ret_code'),
+                       output=result.get('output'),
+                       user_info=dict(username=user.username,
+                                      components=user.authorizations,
+                                      password='___Hidden___')
+                       )
+        return message
 
 # print SupportBundleResponse().get_response_message('list',
 # {'in_progress': ['2016-07-13_04-52-51', '2016-07-13_04-52-52',

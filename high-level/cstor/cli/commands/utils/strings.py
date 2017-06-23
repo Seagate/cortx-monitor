@@ -42,7 +42,7 @@ class Strings(object):
     STATUS = "status"
 
 
-class Status():
+class Status(object):
     OK_STATUS = httplib.OK
     CREATED_STATUS = httplib.CREATED
     CONFLICT_STATUS = httplib.CONFLICT
@@ -50,3 +50,21 @@ class Status():
     NOT_FOUND = httplib.NOT_FOUND
     UNAUTHORIZED = httplib.UNAUTHORIZED
     BAD_REQUEST = httplib.BAD_REQUEST
+
+
+class BaseHelpStr(object):
+    """"""
+    help = 'Default Help'
+
+
+class UserHelpStr(BaseHelpStr):
+    """Help string for User class"""
+    help = 'Sub-Command to work with User mgmt interface. All the user mana' \
+           'gement is done with the help of POSIX APIs'
+    create = 'Creates a new POSIX User, of wheel group'
+    remove = 'Removes the POSIX User and its associated permissions'
+    force_remove = 'Forcing off may lead to unrevokable action. I know what' \
+                   ' I am doing and I won\'t blame SeaGate for it'
+    components = 'List of capabilities that the new user would need access to'
+    name = 'Username of the new user'
+    password = 'Password for the new user.'

@@ -14,6 +14,7 @@ subcommands supported by cstor command
 # distribution or disclosure of this code, for any reason, not expressly
 # authorized in writing by Seagate Technology LLC is prohibited.
 # All rights are expressly reserved by Seagate Technology LLC.
+# __author__ = Bhupesh Pant
 
 # Import System Modules
 
@@ -25,6 +26,7 @@ from cstor.cli.commands.power import Power
 from cstor.cli.commands.support_bundle import SupportBundle
 from cstor.cli.commands.status import Status
 from cstor.cli.commands.s3admin import S3Admin
+from cstor.cli.commands.user_mgmt import UserMgmt
 
 
 class Factory(object):
@@ -43,10 +45,17 @@ class Factory(object):
         """
         parser = argparse.ArgumentParser(description='CStor CLI command')
         subparsers = parser.add_subparsers()
+        # Adding Power Command Support
         Power.add_args(subparsers)
+        # Adding Bundle Command Support
         SupportBundle.add_args(subparsers)
+        # Adding status Command Support
         Status.add_args(subparsers)
+        # Adding S3Admin Command support
         S3Admin.add_args(subparsers)
+        # Adding user_mgmt Command Support
+        UserMgmt.add_args(subparsers)
+
         args = parser.parse_args()
         return args
 
