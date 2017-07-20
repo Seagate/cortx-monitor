@@ -146,6 +146,53 @@ def status_cmd_request_sent(_):
         .format(actual=contents)
 
 
+@lettuce.step(u'Then a create user_mgmt_request message to "([^"]*)" is sent')
+def user_create_cmd_request_sent(_, command):
+    """ Ensure proper message generated and enqueued. """
+    contents = lettuce.world.response
+    assert 'successfully created and authorized' in contents, \
+        "Command: user {cmd} Message doesn't match. \
+        Expected successfully created and " \
+        "authorized but got '{actual}'" \
+        .format(cmd=command, actual=contents)
+
+
+@lettuce.step(u'Then a remove user_mgmt_request message to "([^"]*)" is sent')
+def user_remove_cmd_request_sent(_, command):
+    """ Ensure proper message generated and enqueued. """
+    contents = lettuce.world.response
+    assert 'successfully removed' in contents, \
+        "Command: user {cmd} Message doesn't match. \
+        Expected successfully removed " \
+        "but got '{actual}'" \
+        .format(cmd=command, actual=contents)
+
+
+@lettuce.step(u'Then the user_create output contains "([^"]*)"')
+def user_create_cmd_request_send(_, response):
+    """ Ensure proper message generated and enqueued. """
+    contents = lettuce.world.response
+    # command = lettuce.world.command.split()[-1]
+    assert response in contents, \
+        "Command: status Message doesn't match. \
+        Expected {expect} but got '{actual}'".format(
+        expect=response,
+        actual=contents
+        )
+
+
+@lettuce.step(u'Then the user_remove output contains "([^"]*)"')
+def user_remove_cmd_request_send(_, response):
+    """ Ensure proper message generated and enqueued. """
+    contents = lettuce.world.response
+    # command = lettuce.world.command.split()[-1]
+    assert response in contents, \
+        "successfully removed"\
+        "Expected {expect} but got '{actual}'".format(
+            expect=response,
+            actual=contents
+        )
+
 # @lettuce.step(
 #     u'Then a nodeRequest message to "([^"]*)" --node_spec "([^"]*)" is sent'
 # )

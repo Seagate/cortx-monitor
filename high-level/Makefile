@@ -14,6 +14,7 @@ at:
 	PYTHONPATH=.:tests lettuce --failfast ./tests/acceptance/s3admin_account_request.feature
 	PYTHONPATH=.:tests lettuce --failfast ./tests/acceptance/s3admin_user_request.feature
 	PYTHONPATH=.:tests lettuce --failfast ./tests/acceptance/s3admin_accesskey_request.feature
+	PYTHONPATH=.:tests lettuce --failfast ./tests/acceptance/user_mgmt_request.feature
 
 ut:
 	PYTHONPATH=.:tests python tests/unit/sspl_hl_provider_power.py
