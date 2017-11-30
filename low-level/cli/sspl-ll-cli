@@ -31,9 +31,9 @@ from tests.manual.manual_test import ManualTest
 
 
 __all__ = []
-__version__ = 0.2
+__version__ = 0.3
 __date__ = '2015-12-02'
-__updated__ = '2016-11-02'
+__updated__ = '2017-22-11'
 
 FLAGS = re.VERBOSE | re.MULTILINE | re.DOTALL
 WHITESPACE = re.compile(r'[ \t\n\r]*', FLAGS)
@@ -80,10 +80,10 @@ def main():
 
     except (IOError, ConfigReader.Error) as err:
         # We don't have logger yet, need to find log_level from conf file first
-        print "[ Error ] when validating the configuration file %s :" % \
-            path_to_conf_file
-        print err
-        print "Exiting ..."
+        print("[ Error ] when validating the configuration file %s :" % \
+            path_to_conf_file)
+        print(err)
+        print("Exiting ...")
         sys.exit(os.EX_USAGE)
 
     # Read in CLI type value from configuration file
@@ -142,20 +142,20 @@ def _send_iem_exchange(exchange, log_msg, host=None):
         manTest.basicPublish(message=log_msg, wait_for_response=False, 
                              exchange=exchange, host=host)
     except Exception as ae:
-        print "IEM failed on exchange: {}".format(exchange)
-        print "Exception:{}".format(ae)
+        print("IEM failed on exchange: {}".format(exchange))
+        print("Exception:{}".format(ae))
 
 def _send_SED_command(request, parameters, arguments, response_wait_time, force_wait):
     file = "/opt/seagate/sspl/low-level/tests/manual/actuator_msgs/plane_cntrl_request.json"
     jsonMsg = json.loads(open(file).read())
-    jsonMsg["message"]["actuator_request_type"]["plane_controller"]["command"] = u"%s" % request
+    jsonMsg["message"]["actuator_request_type"]["plane_controller"]["command"] = "%s" % request
     jsonMsg["message"]["actuator_request_type"]["plane_controller"]["parameters"] = parameters
     jsonMsg["message"]["actuator_request_type"]["plane_controller"]["arguments"] = arguments
 
     _send_raw_msg(jsonMsg, response_wait_time=response_wait_time, indent=True, force_wait=force_wait)
 
 def _sed_print_usage():
-    print"Usage: sspl-ll-cli config [list | modify] key-management\n\t\t   drive [list | modify | erase | recover]"
+    print("Usage: sspl-ll-cli config [list | modify] key-management\n\t\t   drive [list | modify | erase | recover]")
 
 def _config_parser(args):
     """Parse the initial config input"""
@@ -163,7 +163,7 @@ def _config_parser(args):
     if args.list == "None" or \
        args.modify == "None":
         _sed_print_usage()
-        print"Choose from [list | modify] key-management\n"
+        print("Choose from [list | modify] key-management\n")
         exit(0)
 
     return 'config %s %s %s %s %s %s' % (args.list, args.modify, \
@@ -177,7 +177,7 @@ def _drive_parser(args):
        args.erase == "None" and \
        args.recover == "None":
         _sed_print_usage()
-        print"Choose from [list | modify | erase | recover]\n"
+        print("Choose from [list | modify | erase | recover]\n")
         exit(0)
 
     return 'drive %s %s %s %s %s %s %s %s' % (args.list, args.modify, args.erase, args.recover, \
@@ -188,9 +188,6 @@ def _verify_parser(args):
     #print"_verify_parser args: %s" % str(args)
     if args.config is None:
         args.config = "/etc/sspl_ll.conf"
-    if args.checkdeps == False:
-        print"choose from [--checkdeps]"
-        exit(0)
 
     return 'verify %s %s %s' % (args.checkdeps, args.config, args.autoinstall)
 
@@ -221,7 +218,6 @@ def _init_SED(parser, program_name):
     drive_parser.set_defaults(func=_drive_parser)
 
     verify_parser = SED_subparser.add_parser("verify", add_help=True)
-    verify_parser.add_argument("--checkdeps", action="store_true", help="Verify that dependencies are installed")
     verify_parser.add_argument("-c", "--config", metavar="FILE", help="Configuration file, defaults to /etc/sspl_ll.conf")
     verify_parser.add_argument("-a", "--autoinstall", action="store_true", help="Automatically attempt to install required packages")
     verify_parser.set_defaults(func=_verify_parser)
@@ -240,11 +236,6 @@ def _init_SED(parser, program_name):
             success, request, parameters, arguments, response_wait_time, force_wait = _process_SED_config(values[1:])
         elif values[0] == "drive":
             success, request, parameters, arguments, response_wait_time, force_wait = _process_SED_drive(values[1:])
-        elif values[0] == "verify":
-            # See if --checkdeps is set and verify packages are installed
-            if values[1] == "True":
-                check_dependencies(values[2], values[3])
-            return
 
         # If successful then send the msg
         if success:
@@ -252,15 +243,15 @@ def _init_SED(parser, program_name):
                 _send_SED_command(request, parameters, arguments, response_wait_time, force_wait)
         else:
             if request == "cancel":
-                print"Operation cancelled"
+                print("Operation cancelled")
             else:
-                print"A problem occurred, try again."
+                print("A problem occurred, try again.")
 
     except KeyboardInterrupt:
-        print"\nHalting sspl-ll-cli\n"
+        print("\nHalting sspl-ll-cli\n")
         return 0       
     except Exception as e:
-        print"An error occurred: %s" % str(e)
+        print("An error occurred: %s" % str(e))
         _sed_print_usage()
 
 def _get_sed_input(command, available_commands, get_value, verify_value, value_list):
@@ -270,7 +261,7 @@ def _get_sed_input(command, available_commands, get_value, verify_value, value_l
 
     while len(input) == 0 or \
         input not in available_commands:
-        input = raw_input("%s: \n\t%s\nsspl-ll-cli> " % (command, available_commands)).strip()
+        input = input("%s: \n\t%s\nsspl-ll-cli> " % (command, available_commands)).strip()
 
     if input == "cancel":
         return input, None
@@ -281,12 +272,12 @@ def _get_sed_input(command, available_commands, get_value, verify_value, value_l
     # Get a value for the selected input and verify it's in the value_list
     if get_value:
         valid_values = value_list[command_index]
-        value = raw_input("Set '%s' to [%s]: " % (input, valid_values))
+        value = input("Set '%s' to [%s]: " % (input, valid_values))
         if verify_value:
             while len(value) == 0 or \
                     (value not in valid_values and \
                        "Any" not in valid_values):
-                value = raw_input("Available choices: \n\t[%s]\nsspl-ll-cli> " % valid_values).strip()
+                value = input("Available choices: \n\t[%s]\nsspl-ll-cli> " % valid_values).strip()
     return input, value
 
 def _process_SED_drive(values):
@@ -328,7 +319,7 @@ def _process_SED_drive(values):
             request = "%s" % values[0]
 
             # Verify that the user really wants to erase
-            response = raw_input("Drive erase confirm: \n\t[yes, no]\nsspl-ll-cli> ").strip()
+            response = input("Drive erase confirm: \n\t[yes, no]\nsspl-ll-cli> ").strip()
             if response == "yes":
                 arguments = {"recovery": None}
             else:
@@ -341,7 +332,7 @@ def _process_SED_drive(values):
         return True, request, params, arguments, response_timeout, force_wait
 
     except Exception as e:
-        print"_process_SED_drive, Error occurred: %s" % str(e)
+        print("_process_SED_drive, Error occurred: %s" % str(e))
 
 def _process_SED_config(values):
     """Process values from command line for config requests
@@ -396,7 +387,7 @@ def _process_SED_config(values):
                         # Make sure the passwords match
                         if value == "on" and \
                             pass1 != pass2:
-                            print "Error passwords do not match"
+                            print("Error passwords do not match")
                             return False, None, None, None, None
 
                         if on_input2 == "cancel":
@@ -417,7 +408,7 @@ def _process_SED_config(values):
                 return True, request, params, response_timeout, force_wait
 
     except Exception as e:
-        print"_process_SED_config, Error occurred: %s" % str(e)
+        print("_process_SED_config, Error occurred: %s" % str(e))
     return False, None, None, None, None
 
 def _init_CS_A(parser, program_name):
@@ -476,8 +467,6 @@ def _init_CS_A(parser, program_name):
                         "--event EVENT")
     parser.add_argument("--event", metavar="EVENT", help="DRIVE_INSTALL, DRIVE_UNINSTALL, EXP_RESET, SMART_FAILURE." \
                         "  ie --simulate all-drives --event EXP_RESET")
-    parser.add_argument("--checkdeps", action="store_true", help="Verify package dependencies required for configuration." \
-                        "  ie --checkdeps --config=CONFIG --autoinstall")
     parser.add_argument("--config", metavar="CONFIG", help="Configuration file used to check dependencies.")
     parser.add_argument("--autoinstall", action="store_true", help="Automatically attempt to install required packages.")
 
@@ -492,42 +481,42 @@ def _init_CS_A(parser, program_name):
             # Load a PDU message from the manual tests directory and update it with args.pdu
             file = "/opt/seagate/sspl/low-level/tests/manual/actuator_msgs/node_cntrl_pdu.json"
             jsonMsg = json.loads(open(file).read())
-            jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = u"PDU: {}".format(args.pdu)
+            jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = "PDU: {}".format(args.pdu)
             _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, force_wait=True, response_wait_time=30)
 
         elif args.generic:
             # Load a generic SSPL message from the manual tests directory and update it with args.generic
             file = "/opt/seagate/sspl/low-level/tests/manual/actuator_msgs/node_cntrl_sspl.json"
             jsonMsg = json.loads(open(file).read())
-            jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = u"SSPL: {}".format(args.generic)
+            jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = "SSPL: {}".format(args.generic)
             _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, response_wait_time=60)
 
         elif args.stopdrive:
             # Load a stop drive message from the manual tests directory and update it with args.stopdrive
             file = "/opt/seagate/sspl/low-level/tests/manual/actuator_msgs/node_cntrl_stop_drive.json"
             jsonMsg = json.loads(open(file).read())
-            jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = u"STOP_DRIVE: {}".format(args.stopdrive)
+            jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = "STOP_DRIVE: {}".format(args.stopdrive)
             _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, response_wait_time=60)
 
         elif args.startdrive:
             # Load a start drive message from the manual tests directory and update it with args.startdrive
             file = "/opt/seagate/sspl/low-level/tests/manual/actuator_msgs/node_cntrl_start_drive.json"
             jsonMsg = json.loads(open(file).read())
-            jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = u"START_DRIVE: {}".format(args.startdrive)
+            jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = "START_DRIVE: {}".format(args.startdrive)
             _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, response_wait_time=60)
 
         elif args.resetdrive:
             # Load a reset drive message from the manual tests directory and update it with args.resetdrive
             file = "/opt/seagate/sspl/low-level/tests/manual/actuator_msgs/node_cntrl_reset_drive.json"
             jsonMsg = json.loads(open(file).read())
-            jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = u"RESET_DRIVE: {}".format(args.resetdrive)
+            jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = "RESET_DRIVE: {}".format(args.resetdrive)
             _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, response_wait_time=60)
 
         elif args.smart:
             # Load a smart test message from the manual tests directory and update it with args.smart
             file = "/opt/seagate/sspl/low-level/tests/manual/actuator_msgs/node_cntrl_smart_test.json"
             jsonMsg = json.loads(open(file).read())
-            jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = u"SMART_TEST: {}".format(args.smart)
+            jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = "SMART_TEST: {}".format(args.smart)
 
             print("\nInitiating SMART tests.  This can take several minutes...\n")
             _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, response_wait_time=300,
@@ -537,7 +526,7 @@ def _init_CS_A(parser, program_name):
             # Load a drivemanager status message from the manual tests directory and update it with args.drvmngr
             file = "/opt/seagate/sspl/low-level/tests/manual/actuator_msgs/node_cntrl_drvmngr_status.json"
             jsonMsg = json.loads(open(file).read())
-            jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = u"DRVMNGR_STATUS: {}".format(args.drvmngr)
+            jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = "DRVMNGR_STATUS: {}".format(args.drvmngr)
 
             force_wait = False
             wait_time = 3
@@ -552,7 +541,7 @@ def _init_CS_A(parser, program_name):
             # Load a reset hpi status message from the manual tests directory and update it with args.hpi
             file = "/opt/seagate/sspl/low-level/tests/manual/actuator_msgs/node_cntrl_hpi_status.json"
             jsonMsg = json.loads(open(file).read())
-            jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = u"HPI_STATUS: {}".format(args.hpi)
+            jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = "HPI_STATUS: {}".format(args.hpi)
 
             force_wait = False
             wait_time = 3
@@ -567,7 +556,7 @@ def _init_CS_A(parser, program_name):
             # Load a node controller LED message from the manual tests directory and update it with args.getdriveLED
             file = "/opt/seagate/sspl/low-level/tests/manual/actuator_msgs/node_cntrl_LED.json"
             jsonMsg = json.loads(open(file).read())
-            jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = u"LED: get {}".format(args.getdriveLED)
+            jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = "LED: get {}".format(args.getdriveLED)
 
             _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, response_wait_time=5)
 
@@ -586,7 +575,7 @@ def _init_CS_A(parser, program_name):
 
             file = "/opt/seagate/sspl/low-level/tests/manual/actuator_msgs/node_cntrl_LED.json"
             jsonMsg = json.loads(open(file).read())
-            jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = u"LED: set {} {}" \
+            jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = "LED: set {} {}" \
                         .format(args.setdriveLED, args.LEDstate)
 
             _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, response_wait_time=5)
@@ -603,7 +592,7 @@ def _init_CS_A(parser, program_name):
 
             file = "/opt/seagate/sspl/low-level/tests/manual/actuator_msgs/node_cntrl_simulate_drive.json"
             jsonMsg = json.loads(open(file).read())
-            jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = u"SIMULATE: {} {}" \
+            jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = "SIMULATE: {} {}" \
                         .format(args.event, args.simulate)
 
             # Don't wait for a response if requesting SMART failure as it just sets a flag in SSPL
@@ -631,7 +620,7 @@ def _init_CS_A(parser, program_name):
                 print("Retrieving serial number using device name with hdparm tool")
                 # Build the desired command using hdparm tool
                 command = "/usr/sbin/hdparm -I {} | grep 'Serial Number:'".format(drive)
-                print("executing command: %s" % command)
+                print(("executing command: %s" % command))
 
                 # Run the command and get the response and error returned
                 process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -640,29 +629,29 @@ def _init_CS_A(parser, program_name):
                 # If an error exists stop here and return the response
                 if error:
                     drive = "FAKE_TEST_SN"
-                    print("Failed to lookup s/n: {}".format(error))
-                    print("Ignoring and using a test s/n: %s" % drive)
+                    print(("Failed to lookup s/n: {}".format(error)))
+                    print(("Ignoring and using a test s/n: %s" % drive))
                 else:
                     # Parse out "Serial Number:" from hdparm result to obtain serial number
                     drive = hdparm_response[15:].strip()
-                    print("Successfully retrieved s/n: %s" % drive)
+                    print(("Successfully retrieved s/n: %s" % drive))
 
             log_msg = "IEC: 038001001: Halon Disk Status: {'status': '%s', 'reason': '%s'," \
                         "'serial_number': '%s'}" % (status, reason, drive)
-            print("log_msg: %s" % log_msg)
+            print(("log_msg: %s" % log_msg))
 
             file = "/opt/seagate/sspl/low-level/tests/manual/actuator_msgs/HDS_logging.json"
             jsonMsg = json.loads(open(file).read())
 
-            print("    log_msg: %s" % log_msg)
-            jsonMsg["message"]["actuator_request_type"]["logging"]["log_msg"] = u"{}".format(log_msg)
+            print(("    log_msg: %s" % log_msg))
+            jsonMsg["message"]["actuator_request_type"]["logging"]["log_msg"] = "{}".format(log_msg)
             _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human)
 
         elif args.restartthread:
             # Load a restart thread message from the manual tests directory and update it with args.restartthread
             file = "/opt/seagate/sspl/low-level/tests/manual/actuator_msgs/thread_cntrl_restart.json"
             jsonMsg = json.loads(open(file).read())
-            jsonMsg["message"]["actuator_request_type"]["thread_controller"]["module_name"] = u"{}".format(args.restartthread)
+            jsonMsg["message"]["actuator_request_type"]["thread_controller"]["module_name"] = "{}".format(args.restartthread)
             _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human)
 
         elif args.servicename or args.servicereq:
@@ -685,8 +674,8 @@ def _init_CS_A(parser, program_name):
             # Load a service controller message from the manual tests directory and update it with args.servicename & servicereq
             file = "/opt/seagate/sspl/low-level/tests/manual/actuator_msgs/service_cntrl_restart.json"
             jsonMsg = json.loads(open(file).read())
-            jsonMsg["message"]["actuator_request_type"]["service_controller"]["service_name"] = u"{}".format(args.servicename)
-            jsonMsg["message"]["actuator_request_type"]["service_controller"]["service_request"] = u"{}".format(args.servicereq)
+            jsonMsg["message"]["actuator_request_type"]["service_controller"]["service_name"] = "{}".format(args.servicename)
+            jsonMsg["message"]["actuator_request_type"]["service_controller"]["service_request"] = "{}".format(args.servicereq)
             _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human)
 
         elif args.ipmicmd or args.ipmiIP:
@@ -701,7 +690,7 @@ def _init_CS_A(parser, program_name):
             # Load a IPMI command message from the manual tests directory and update it with args.ipmicmd & ipmiIP
             file = "/opt/seagate/sspl/low-level/tests/manual/actuator_msgs/node_cntrl_ipmi_status.json"
             jsonMsg = json.loads(open(file).read())
-            jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = u"IPMI: {} {}". \
+            jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = "IPMI: {} {}". \
                                     format(args.ipmiIP, args.ipmicmd)
             _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human)
 
@@ -709,7 +698,7 @@ def _init_CS_A(parser, program_name):
             # Load a hdparm message from the manual tests directory and update it with args.hdparm
             file = "/opt/seagate/sspl/low-level/tests/manual/actuator_msgs/node_cntrl_hdparm.json"
             jsonMsg = json.loads(open(file).read())
-            jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = u"HDPARM: {}".\
+            jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = "HDPARM: {}".\
                                     format(args.hdparm)
             _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human)
 
@@ -739,9 +728,9 @@ def _init_CS_A(parser, program_name):
                 # Load a logging message from the manual tests directory and update it with args.iemlog
                 file = "/opt/seagate/sspl/low-level/tests/manual/actuator_msgs/logging.json"
                 jsonMsg = json.loads(open(file).read())
-                jsonMsg["message"]["actuator_request_type"]["logging"]["log_level"] = u"{}".\
+                jsonMsg["message"]["actuator_request_type"]["logging"]["log_level"] = "{}".\
                                                             format(args.iemloglevel)
-                jsonMsg["message"]["actuator_request_type"]["logging"]["log_msg"] = u"{}".\
+                jsonMsg["message"]["actuator_request_type"]["logging"]["log_msg"] = "{}".\
                                                             format(args.iemlog)
                 _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, 
                               wait_for_response=False, host=args.iemhost)
@@ -753,7 +742,7 @@ def _init_CS_A(parser, program_name):
             # Load a restart thread message from the manual tests directory and update it with SMRdriveData
             file = "/opt/seagate/sspl/low-level/tests/manual/actuator_msgs/thread_cntrl_restart.json"
             jsonMsg = json.loads(open(file).read())
-            jsonMsg["message"]["actuator_request_type"]["thread_controller"]["module_name"] = u"SMRdriveData"
+            jsonMsg["message"]["actuator_request_type"]["thread_controller"]["module_name"] = "SMRdriveData"
             _send_raw_msg(jsonMsg, wait_for_response=False, alldata=args.all, indent=args.human)
             print("Check logs for new SMR drive register values")
 
@@ -762,7 +751,7 @@ def _init_CS_A(parser, program_name):
             file = "/opt/seagate/sspl/low-level/tests/manual/actuator_msgs/node_cntrl_mero.json"
             jsonMsg = json.loads(open(file).read())
             jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = \
-                    u"MERO: fsstats {}".format(args.fsstats)
+                    "MERO: fsstats {}".format(args.fsstats)
             _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, response_wait_time=30)
 
         elif args.cpudata:
@@ -812,9 +801,9 @@ def _init_CS_A(parser, program_name):
             process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             response, error = process.communicate()
             if error:
-                print("Error triggering expander reset: %s" % str(error))
+                print(("Error triggering expander reset: %s" % str(error)))
             if response:
-                print("Triggering expander reset: %s" % str(response))
+                print(("Triggering expander reset: %s" % str(response)))
 
         elif args.fromstdin:
             print("Ctrl-D stop reading from stdin and transmit.  Multiple msgs can be piped in.")
@@ -861,106 +850,15 @@ def _init_CS_A(parser, program_name):
             for json_msg in json_list:
                 _send_raw_msg(json_msg, alldata=args.all, indent=args.human, remove_results_file=False)
 
-        elif args.checkdeps:
-            config_file = "/etc/sspl_ll.conf"
-            if args.config:
-                config_file = args.config
-
-            auto_install = False
-            if args.autoinstall:
-                auto_install = True
-
-            check_dependencies(config_file, auto_install)
-
         return 0
     except KeyboardInterrupt:
         return 0
-    except Exception, e:
-        print("Exception trying to parse:{}".format(e))
+    except Exception as e:
+        print(("Exception trying to parse:{}".format(e)))
         indent = len(program_name) * " "
         sys.stderr.write(program_name + ": " + repr(e) + "\n")
         sys.stderr.write(indent + "  for help use --help")
         return 2
-
-def check_dependencies(config_file, auto_install):
-    """Loop throught the configuration file and verify the required packages are installed"""
-    print("Checking dependencies required for configuration file: %s" % config_file)
-
-    try:
-        conf_reader = ConfigReader(config_file)
-    except (IOError, ConfigReader.Error) as err:
-        # We don't have logger yet, need to find log_level from conf file first
-        print "[ Error ] when validating the configuration file %s :" % \
-            path_to_conf_file
-        print err
-        print "Exiting ..."
-        sys.exit(os.EX_USAGE)
-
-    # Read in the core processors, actuators & sensor modules
-    modules = conf_reader._get_value_list(SSPL_LL_SETTING, CORE_PROCESSORS)
-    modules += conf_reader._get_value_list(SSPL_LL_SETTING, ACTUATORS)
-    modules += conf_reader._get_value_list(SSPL_LL_SETTING, SENSORS)
-    print("Current SSPL-LL configuraiton using modules: %s\n" % modules)
-
-    # Read in the files/sspl_ll_deps.json that lists the dependencies for each module
-    with open("/opt/seagate/sspl/low-level/files/sspl_ll_deps.json") as data_file:
-        deps_json = json.load(data_file)
-
-    # Loop thru all the modules and get their dependencies
-    for module in modules:
-        deps = deps_json.get(module)
-        if deps is not None:
-            dep_map = dict(deps)
-            print("\nProcessing %s:" % module)
-            for dep, version in dep_map.iteritems():
-                # Get the version of the package installed
-                command = "rpm -q --qf '%%{VERSION}' %s" % dep
-                process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                response, error = process.communicate()
-                missing = False
-                if error is not None and \
-                   len(error) > 0:
-                    print("\tPackage: %s, minimum required: %s FAILED!\n\n" % (dep, version))
-                    print("\tPackage: %s Error: %s" % (dep, error))
-                    if str(auto_install) == "True":
-                        install_package(dep)
-
-                elif "not installed" in response:
-                    print("\n\tPackage %s is not installed"% dep)
-                    if str(auto_install) == "True":
-                        install_package(dep)
-
-                else:
-                    required_version = version.replace(".", "")
-                    installed_version = response.replace(".", "")
-
-                    # If the versions are digits then compare
-                    if required_version.isdigit() and \
-                        installed_version.isdigit():
-                        if int(installed_version) < int(required_version):
-                            print("\tPackage: %s, minimum required: %s, installed: %s FAILED!" % (dep, version, response))
-                            if str(auto_install) == "True":
-                                install_package(dep)
-                        else:
-                            print("\tPackage: %s, minimum required: %s, installed: %s OK!" % (dep, version, response))
-                    else:
-                        print("\tPackage: %s, minimum required: %s, installed: %s OK!" % (dep, version, response))
-
-def install_package(dep):
-    """Use yum to install a package"""
-    print("\tAttempting to install/update: %s" % dep)
-    try:
-        command = "yum -y --nogpgcheck install %s" % dep
-        process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        response, error = process.communicate()
-        if error is not None and \
-            len(error) > 0:
-            print("\tFailed installing package, %s" % error)
-        else:
-            print("Result: %s" % response)
-    except Exception as ae:
-        print("sspl-ll-cli install package: %s" % str(ae))
-
 
 if __name__ == "__main__":
     sys.exit(main())

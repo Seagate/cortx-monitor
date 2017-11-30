@@ -55,9 +55,9 @@ class NodeData(Debug):
         self.load_1min_average  = []
         self.load_5min_average  = []
         self.load_15min_average = []
-        load_1min_avg  = threading.Thread(target=self._load_1min_avg).start()
-        load_5min_avg  = threading.Thread(target=self._load_5min_avg).start()
-        load_15min_avg = threading.Thread(target=self._load_15min_avg).start()
+        load_1min_avg  = os.getloadavg()[0]
+        load_5min_avg  = os.getloadavg()[1]
+        load_15min_avg = os.getloadavg()[2]
 
     def read_data(self, subset, debug, units="MB"):
         """Updates data based on a subset"""
@@ -185,38 +185,3 @@ class NodeData(Debug):
                        }
             self.if_data.append(if_data)
 
-    def _load_1min_avg(self):
-        """Loop forever calculating the one minute average load"""
-        # Initialize list to -1 indicating the time interval has not occurred yet
-        index = 0
-        while index < self.cpus:
-            self.load_1min_average.append(-1)
-            index += 1
-
-        while True:
-            # API call blocks for one minute and then returns the value
-            self.load_1min_average = psutil.cpu_percent(interval=1, percpu=True)
-
-    def _load_5min_avg(self):
-        """Loop forever calculating the five minute average load"""
-        # Initialize list to -1 indicating the time interval has not occurred yet
-        index = 0
-        while index < self.cpus:
-            self.load_5min_average.append(-1)
-            index += 1
-
-        while True:
-            # API call blocks for five minutes and then returns the value
-            self.load_5min_average = psutil.cpu_percent(interval=5, percpu=True)
-
-    def _load_15min_avg(self):
-        """Loop forever calculating the fifteen minute average load"""
-        # Initialize list to -1 indicating the time interval has not occurred yet
-        index = 0
-        while index < self.cpus:
-            self.load_15min_average.append(-1)
-            index += 1
-
-        while True:
-            # API call blocks for fifteen minutes and then returns the value
-            self.load_15min_average = psutil.cpu_percent(interval=15, percpu=True)

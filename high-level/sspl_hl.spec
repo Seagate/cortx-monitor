@@ -1,9 +1,12 @@
 #xyr build defines
 # This section will be re-written by Jenkins build system.
+%if 0%{?rhel} == 7
+    %define dist .el7
+%endif
 %define _xyr_package_name     sspl_hl
 %define _xyr_package_source   sspl-1.0.0.tgz
 %define _xyr_package_version  1.0.0
-%define _xyr_build_number     1.el7
+%define _xyr_build_number     1%{dist}
 %define _xyr_pkg_url          http://es-gerrit:8080/sspl
 %define _xyr_svn_version      0
 #xyr end defines
@@ -22,7 +25,7 @@ Source0:    %{_xyr_package_source}
 Vendor:     Seagate Technology LLC
 BuildArch:  noarch
 
-BuildRequires: python >= 2.7.0
+BuildRequires: python
 Requires:   PLEX, python-paramiko, python-dateutil, botocore, boto3, jmespath, xmltodict, PyYAML
 
 %description
@@ -32,6 +35,7 @@ A cli (and library) that allow the user to control the cluster.
 
 
 %prep
+
 %setup -q -n sspl/high-level
 
 
@@ -39,61 +43,34 @@ A cli (and library) that allow the user to control the cluster.
 
 
 %install
-mkdir -p %{installpath}/sspl_hl/views
-mkdir -p %{installpath}/sspl_hl/providers/{response,power,bundle,status,s3admin,s3_account,s3_users,s3_access_key}
-mkdir -p %{installpath}/sspl_hl/utils
-mkdir -p %{installpath}/sspl_hl/utils/cluster_node_manager
-mkdir -p %{installpath}/sspl_hl/utils/s3admin
-mkdir -p %{installpath}/sspl_hl/utils/support_bundle
-mkdir -p %{installpath}/sspl_hl/utils/support_bundle/file_collector
-install sspl_hl/utils/*.py %{installpath}/sspl_hl/utils/
-install sspl_hl/utils/cluster_node_manager/*.py %{installpath}/sspl_hl/utils/cluster_node_manager/
-install sspl_hl/utils/support_bundle/*.py %{installpath}/sspl_hl/utils/support_bundle/
-install sspl_hl/utils/support_bundle/file_collector/*.py %{installpath}/sspl_hl/utils/support_bundle/file_collector/
-install sspl_hl/main.py sspl_hl/__init__.py %{installpath}/sspl_hl/
-install sspl_hl/providers/__init__.py %{installpath}/sspl_hl/providers/
-install sspl_hl/providers/power/*.py %{installpath}/sspl_hl/providers/power/
-install sspl_hl/providers/response/*.py %{installpath}/sspl_hl/providers/response/
-install sspl_hl/providers/bundle/*.py %{installpath}/sspl_hl/providers/bundle/
-install sspl_hl/providers/status/*.py %{installpath}/sspl_hl/providers/status/
-install sspl_hl/providers/s3_account/*.py %{installpath}/sspl_hl/providers/s3_account/
-install sspl_hl/providers/s3_users/*.py %{installpath}/sspl_hl/providers/s3_users/
-install sspl_hl/providers/s3_access_key/*.py %{installpath}/sspl_hl/providers/s3_access_key/
-install sspl_hl/providers/s3admin/*.py %{installpath}/sspl_hl/providers/s3admin/
-install sspl_hl/utils/s3admin/*.py %{installpath}/sspl_hl/utils/s3admin/
+mkdir -p %{installpath}/
+cp -afv sspl_hl %{installpath}/
 
 
-mkdir -p %{buildroot}/usr/lib/python2.7/site-packages/cstor/cli/commands
-mkdir -p %{buildroot}/usr/lib/python2.7/site-packages/cstor/cli/commands/s3commands
-mkdir -p %{buildroot}/usr/lib/python2.7/site-packages/cstor/cli/commands/s3commands/utils
-mkdir -p %{buildroot}/usr/lib/python2.7/site-packages/cstor/cli/commands/utils
-install cstor/__init__.py %{buildroot}/usr/lib/python2.7/site-packages/cstor/
-install cstor/cli/*.py %{buildroot}/usr/lib/python2.7/site-packages/cstor/cli/
-install cstor/cli/main.py %{buildroot}/usr/lib/python2.7/site-packages/cstor/cli/
-install cstor/cli/commands/*.py %{buildroot}/usr/lib/python2.7/site-packages/cstor/cli/commands/
-install cstor/cli/commands/s3commands/*.py %{buildroot}/usr/lib/python2.7/site-packages/cstor/cli/commands/s3commands/
-install cstor/cli/commands/s3commands/utils/*.py %{buildroot}/usr/lib/python2.7/site-packages/cstor/cli/commands/s3commands/utils/
-install cstor/cli/commands/utils/*.py %{buildroot}/usr/lib/python2.7/site-packages/cstor/cli/commands/utils/
-
+mkdir -p %{buildroot}/%{python_sitelib}
+cp -afv cstor %{buildroot}/%{python_sitelib}/
 
 mkdir -p %{buildroot}/usr/bin
-ln -s /usr/lib/python2.7/site-packages/cstor/cli/main.py %{buildroot}/usr/bin/cstor
+ln -s %{python_sitelib}/cstor/cli/main.py %{buildroot}/usr/bin/cstor
 
 mkdir -p %{buildroot}/var/lib/support_bundles
 
 %files
 %defattr(0644,plex,plex,-)
-/usr/lib/python2.7/site-packages/cstor
+%{python_sitelib}/cstor
 /opt/plex/apps/sspl_hl
 %defattr(0755,root,root,-)
 /usr/bin/cstor
-/usr/lib/python2.7/site-packages/cstor/cli/main.py
+%{python_sitelib}/cstor/cli/main.py
 %defattr(0777,plex,plex,-)
 /var/lib/support_bundles
 
 
 
 %changelog
+* Thu Oct 19 2017 Oleg Gut <oleg.gut@seagate.com>
+- replaced hardcodes with macroses in spec, removed redundant code
+
 * Mon Mar 28 2016 Bhupesh Pant <Bhupesh.Pant@seagate.com>
 - Added support_bundle and cluster_node_manager modules in utils .
 

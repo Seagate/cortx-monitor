@@ -34,10 +34,9 @@ pep8:
 .PHONY: tarball
 tarball:
 	rm -rf RPMBUILD
-	mkdir --parents RPMBUILD/SOURCES
-	mkdir --parents RPMBUILD/results
+	mkdir --parents RPMBUILD/{SOURCES,results}
 	(cd .. && \
-	git archive --format=tar --prefix=sspl/ HEAD . | gzip > high-level/RPMBUILD/SOURCES/sspl-$(VERSION).tgz)
+	git archive --format=tar.gz --prefix=sspl/ HEAD . > high-level/RPMBUILD/SOURCES/sspl-$(VERSION).tgz)
 
 .PHONY: native
 native: tarball sspl_hl.spec
