@@ -1,7 +1,9 @@
 #xyr build defines
 # This section will be re-written by Jenkins build system.
+%define _zabbix_pkg_name zabbix
 %if 0%{?rhel} == 7
     %define dist .el7
+    %define _zabbix_pkg_name zabbix20
 %endif
 %define _xyr_package_name     sspl-ll
 %define _xyr_package_source   sspl-1.0.0.tgz
@@ -24,10 +26,10 @@ License:    Seagate Proprietary
 URL:        %{_xyr_pkg_url}
 Source0:    %{_xyr_package_source}
 BuildRoot:  %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
-BuildRequires: rpm-build
+BuildRequires: rpm-build sudo python-Levenshtein
 Requires:   python-daemon python-zope-interface python-zope-event python-zope-component python-pika python-jsonschema rabbitmq-server
 Requires:   pysnmp systemd-python pygobject2 python-slip-dbus udisks2 python-psutil python-inotify python-paramiko hdparm
-Requires:   libsspl_sec libsspl_sec-method_none
+Requires:   libsspl_sec libsspl_sec-method_none %{_zabbix_pkg_name}-agent
 Requires:   perl(Config::Any)
 Requires(pre): shadow-utils
 

@@ -18,7 +18,6 @@
 """
 
 import logging
-import daemon
 import signal
 import getopt
 import Queue
@@ -229,7 +228,10 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist, operating_system
             from actuators.impl.generic.raid import RAIDactuator
             from actuators.impl.generic.ipmi import IPMI
             from actuators.impl.generic.hdparm import Hdparm
-            from actuators.impl.generic.hpi_actuator import HPIactuator
+            try:
+                from actuators.impl.generic.hpi_actuator import HPIactuator
+            except ImportError:
+                logger.info("Could not import HPIactuator")
  
             from sensors.impl.generic.raid import RAIDsensor
             from sensors.impl.generic.node_data import NodeData as NodeData
@@ -383,33 +385,24 @@ if __name__ == "__main__":
     try:
         # Create a PID file for systemd
         if systemd_support:
-            path = "/var/run/sspl_ll/sspl_ll_d.pid"
-            pidfile = open(path, "a+")
-            try:
-                fcntl.flock(pidfile.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-            except IOError:
-                raise SystemExit("Already running according to " + path)
-            pidfile.seek(0)
-            pidfile.truncate()
-            pidfile.write(str(os.getpid()))
-            pidfile.flush()
-            pidfile.seek(0)
+            pidfile = "/var/run/sspl_ll/sspl_ll_d.pid"
+            if os.path.isfile(pidfile):
+                logger.critical("%s already exists, exiting" % pidfile)
+                sys.exit()
+            file(pidfile, "w").write(str(os.getpid()))
 
-            # Create the daemon context
-            context = daemon.DaemonContext(pidfile=pidfile)
-        else:
-            context = daemon.DaemonContext()
 
         # Configure a shutdown handler to handle any necessary cleanup for hangup signal
-        context.signal_map = {signal.SIGHUP : lambda signum, frame: shutdown_handler()}
 
         # Start sspl-ll as a main process running multiple threads
-        with context:
-            main(conf_reader, systemd_support)
+        main(conf_reader, systemd_support)
 
     except (Exception, StandardError) as err:
         logger.critical("While spawning sspl-ll process :%r" % err)
         sys.exit(os.EX_USAGE)
+
+    finally:
+        os.unlink(pidfile)
 
     print "SSPL-LL Process started successfully"
     sys.exit(os.EX_OK)
