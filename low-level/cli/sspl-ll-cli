@@ -81,7 +81,7 @@ def main():
     except (IOError, ConfigReader.Error) as err:
         # We don't have logger yet, need to find log_level from conf file first
         print("[ Error ] when validating the configuration file %s :" % \
-            path_to_conf_file)
+            CONF_FILE_PATH)
         print(err)
         print("Exiting ...")
         sys.exit(os.EX_USAGE)

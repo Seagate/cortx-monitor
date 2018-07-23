@@ -122,7 +122,7 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
         logger.info("RabbitMQingressProcessor, Initialization complete, accepting requests")
 
         try:
-            result = self._channel.queue_declare(exclusive=True)
+            result = self._channel.queue_declare(exclusive=True, durable=True)
             self._channel.queue_bind(exchange=self._exchange_name,
                                queue=result.method.queue,
                                routing_key=self._routing_key)
@@ -255,7 +255,7 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
             try:
                 self._channel.queue_declare(
                     queue=self._queue_name,
-                    durable=False
+                    durable=True
                     )
             except Exception as e:
                 logger.exception(e)
@@ -263,7 +263,7 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
                 self._channel.exchange_declare(
                     exchange=self._exchange_name,
                     type='topic',
-                    durable=False
+                    durable=True
                     )
             except Exception as e:
                 logger.exception(e)
