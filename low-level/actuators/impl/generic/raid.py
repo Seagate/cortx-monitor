@@ -52,9 +52,17 @@ class RAIDactuator(Debug):
 
             # Parse out the arguments for the RAID action
             raid_request = node_request[5:].strip()
+
+            # The 'mdadm' command has two modes of execution.
+            # 1. options: These start with '--' such as '--assemble'
+            # 2. device: Here arguments are device names i.e. /dev/... as first argument
+
+            if raid_request.startswith("/dev"):
+                command = "sudo /usr/sbin/mdadm {0}".format(raid_request)
+            else:
+                command = "sudo /usr/sbin/mdadm --{0}".format(raid_request)
             self._log_debug("perform_request, raid_request: %s" % raid_request)
 
-            command = "sudo /usr/sbin/mdadm --{0}".format(raid_request)
             self._log_debug("perform_request, executing RAID command: %s" % command)
 
             # Run the command and get the response and error returned

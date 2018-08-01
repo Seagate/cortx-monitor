@@ -89,7 +89,7 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
 
         self._log_debug("Start accepting requests")
         try:
-            result = self._channel.queue_declare(exclusive=True, durable=True)
+            result = self._channel.queue_declare(exclusive=True)
             self._channel.queue_bind(exchange=self._exchange_name,
                                 queue=result.method.queue,
                                 routing_key=self._routing_key)
@@ -208,12 +208,12 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
             try:
                 self._channel.queue_declare(
                     queue='SSPL-LL',
-                    durable=True
+                    durable=False
                     )
                 self._channel.exchange_declare(
                     exchange=self._exchange_name,
                     type='topic',
-                    durable=True
+                    durable=False
                     )
             except:
                 pass

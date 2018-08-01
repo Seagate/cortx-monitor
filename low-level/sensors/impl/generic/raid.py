@@ -25,6 +25,7 @@ from framework.utils.service_logging import logger
 
 # Modules that receive messages from this module
 from message_handlers.node_data_msg_handler import NodeDataMsgHandler
+from message_handlers.logging_msg_handler import LoggingMsgHandler
 
 from zope.interface import implements
 from sensors.Iraid import IRAIDsensor
@@ -52,9 +53,8 @@ class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
                                          self.PRIORITY)
         # Current RAID status information
         self._RAID_status = None
-        
+
         # Location of hpi data directory populated by dcs-collector
-        self._hpi_base_dir = "/tmp/dcs/hpi"
         self._start_delay  = 10
 
     def initialize(self, conf_reader, msgQlist, products):
@@ -81,12 +81,6 @@ class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
 
     def run(self):
         """Run the sensor on its own thread"""
-
-        # Wait for the dcs-collector to populate the /tmp/dcs/hpi directory
-        while not os.path.isdir(self._hpi_base_dir):
-            logger.info("RAIDsensor, dir not found: %s " % self._hpi_base_dir)
-            logger.info("RAIDsensor, rechecking in %s secs" % self._start_delay)
-            time.sleep(int(self._start_delay))
 
         # Allow systemd to process all the drives so we can map device name to serial numbers
         time.sleep(120)
@@ -151,6 +145,7 @@ class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
                 # Create a raid_msg and send it out
                 if success:
                     self._send_json_msg()
+                    self._log_IEM()
 
                 # Reset in case their are multiple configs in file
                 md_line_parsed = False
@@ -269,6 +264,26 @@ class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
         # Send the event to node data message handler to generate json message and send out
         self._write_internal_msgQ(NodeDataMsgHandler.name(), internal_json_msg)
 
+    def _log_IEM(self):
+        """Sends an IEM to logging msg handler"""
+        json_data = json.dumps(
+            {"sensor_request_type": {
+                "node_data": {
+                    "status": "update",
+                    "sensor_type": "raid_data",
+                    "device": self._device,
+                    "drives": self._drives
+                    }
+                }
+            }, sort_keys=True)
+
+        # Send the event to node data message handler to generate json message and send out
+        internal_json_msg=json.dumps(
+                {'actuator_request_type': {'logging': {'log_level': 'LOG_WARNING', 'log_type': 'IEM', 'log_msg': '{}'.format(json_data)}}})
+
+        # Send the event to logging msg handler to send IEM message to journald
+        self._write_internal_msgQ(LoggingMsgHandler.name(), internal_json_msg)
+
     def _run_command(self, command):
         """Run the command and get the response and error returned"""
         self._log_debug("_run_command: %s" % command)
@@ -281,7 +296,7 @@ class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
 	       self._log_debug("_run_command: error: %s" % str(error))
 
         return response.rstrip('\n'), error.rstrip('\n')
- 
+
     def _get_RAID_status_file(self):
         """Retrieves the file containing the RAID status information"""
         return self._conf_reader._get_value_with_default(self.RAIDSENSOR,
