@@ -1,0 +1,28 @@
+Steps for building the source code
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+1. Install the required RPMs as shown below:
+
+    $ sudo yum install epel-release
+    $ sudo yum install python-Levenshtein
+    $ sudo yum install -y libtool
+    $ sudo yum install -y doxygen
+    $ sudo yum install -y python-pep8
+    $ sudo yum install -y openssl-devel
+    $ sudo yum install -y graphviz
+    $ sudo yum install -y check-devel
+
+2. Change directory to the root of the SSPL source.
+
+    $ /.../sspl
+    $ ./jenkins/build.sh
+
+3. RPMs will be genrated in dist/rpmbuild/RPMS/ folder.
+
+    $ find dist/rpmbuild/RPMS -name "*.rpm"
+    dist/rpmbuild/RPMS/noarch/sspl-ll-1.0.0-11.el7.noarch.rpm
+    dist/rpmbuild/RPMS/x86_64/libsspl_sec-1.0.0-1.el7.x86_64.rpm
+    dist/rpmbuild/RPMS/x86_64/libsspl_sec-debuginfo-1.0.0-1.el7.x86_64.rpm
+    dist/rpmbuild/RPMS/x86_64/libsspl_sec-method_none-1.0.0-1.el7.x86_64.rpm
+    dist/rpmbuild/RPMS/x86_64/libsspl_sec-method_pki-1.0.0-1.el7.x86_64.rpm
+    dist/rpmbuild/RPMS/x86_64/libsspl_sec-devel-1.0.0-1.el7.x86_64.rpm

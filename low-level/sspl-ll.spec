@@ -1,30 +1,27 @@
 #xyr build defines
 # This section will be re-written by Jenkins build system.
-%define _zabbix_pkg_name zabbix
-%if 0%{?rhel} == 7
-    %define dist .el7
-    %define _zabbix_pkg_name zabbix20
-%endif
-%define _xyr_package_name     sspl-ll
-%define _xyr_package_source   sspl-1.0.0.tgz
-%define _xyr_package_version  1.0.0
-%define _xyr_build_number     11%{dist}
-%define _xyr_pkg_url          http://appdev-vm.xyus.xyratex.com:8080/view/OSAINT/job/OSAINT_sspl/
-%define _xyr_svn_version      0
+
+%define _zabbix_pkg_name zabbix20
+
+%define package_name     sspl
+%define package_source   sspl-%{version}.tgz
+%define package_version  %{version}
+%define build_number     %{dist}
+%define package_url      http://gerrit.mero.colo.seagate.com:8080/#/admin/projects/sspl
 #xyr end defines
 
 %define _unpackaged_files_terminate_build 0
 %define _binaries_in_noarch_packages_terminate_build   0
 
-Name:       %{_xyr_package_name}
-Version:    %{_xyr_package_version}
-Release:    %{_xyr_build_number}
-Summary:    Installs SSPL-LL
+Name:       %{package_name}
+Version:    %{package_version}
+Release:    %{build_number}
+Summary:    Installs SSPL
 BuildArch:  noarch
 Group:      System Environment/Daemons
 License:    Seagate Proprietary
-URL:        %{_xyr_pkg_url}
-Source0:    %{_xyr_package_source}
+URL:        %{package_url}
+Source0:    %{package_source}
 BuildRoot:  %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 BuildRequires: rpm-build sudo python-Levenshtein
 Requires:   python-daemon python-zope-interface python-zope-event python-zope-component python-pika python-jsonschema rabbitmq-server
@@ -34,7 +31,7 @@ Requires:   perl(Config::Any)
 Requires(pre): shadow-utils
 
 %description
-Installs SSPL-LL
+Installs SSPL
 
 %prep
 %setup -n sspl/low-level
@@ -57,7 +54,7 @@ cp -rp . ${RPM_BUILD_ROOT}/opt/seagate/sspl/low-level
 
 %post
 # Add the sspl-ll user if it doesn't exist
-echo "SSPL-LL: creating sspl-ll user"
+echo "SSPL: creating sspl-ll user"
     id -u sspl-ll &>/dev/null || /usr/sbin/useradd -r -g zabbix \
     -s /sbin/nologin  \
     -c "User account to run the sspl-ll service" sspl-ll
@@ -75,11 +72,12 @@ systemctl enable rabbitmq-server
 # Restart dbus with new policy files
 systemctl restart dbus
 
-
 %files
 %defattr(-,sspl-ll,root,-)
 /opt/seagate/sspl/*
 /etc/sspl_ll.conf
+/etc/systemd/system/sspl-ll.service
+
 
 %changelog
 * Wed Oct 18 2017 Oleg Gut <oleg.gut@seagate.com>

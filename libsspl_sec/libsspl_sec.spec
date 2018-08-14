@@ -1,21 +1,21 @@
 #xyr build defines
 # This section will be re-written by Jenkins build system.
-%define _xyr_package_name     libsspl_sec
-%define _xyr_package_source   sspl-1.0.0.tgz
-%define _xyr_package_version  1.0.0
-%define _xyr_build_number     1.el7
-%define _xyr_pkg_url          http://es-gerrit:8080/sspl
-%define _xyr_svn_version      0
+%define package_name     libsspl_sec
+%define package_source   sspl-%{version}.tgz
+%define package_version  %{version}
+%define build_number     %{dist}
+%define package_url      http://gerrit.mero.colo.seagate.com:8080/#/admin/projects/sspl
 #xyr end defines
 
-Name:       %{_xyr_package_name}
-Version:    %{_xyr_package_version}
-Release:    %{_xyr_build_number}
+Name:       %{package_name}
+Version:    %{package_version}
+Release:    %{build_number}
 Summary:    Segate System Platform Library - Security
 Group:      Libraries/System
 License:    Seagate Proprietary
-URL:        %{_xyr_pkg_url}
-Source0:    %{_xyr_package_source}
+URL:        %{package_url}
+Source0:    %{package_source}
+BuildRoot:  %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 Vendor:     Seagate Technology LLC
 #BuildArch:  x86_64
 
