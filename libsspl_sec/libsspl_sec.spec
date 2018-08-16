@@ -25,11 +25,6 @@ BuildRequires: libtool autoconf automake
 BuildRequires: gcc doxygen python-pep8 check-devel openssl-devel graphviz
 #Requires:
 
-# Temporary requirement on method_none.  This should eventually change to
-# ensure one method is installed (though doesn't matter which.)  Use rpm
-# provides mechanism.
-Requires: libsspl_sec-method_none
-
 %description
 Segate System Platform Library - Security
 

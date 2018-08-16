@@ -1,20 +1,24 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
 set -E
+
 SCRIPT_NAME=$(basename $0)
 SSPL_CONFIG_PATH="/var/sspl"
+SSPL_CONFIGURED="$SSPL_CONFIG_PATH/sspl-configured"
 
 usage() {
-    echo "$SCRIPT_NAME [{check|config}]"
+    echo "$SCRIPT_NAME [{check|config [-f]}]"
     exit 1
 }
 
 cmd="config"
+arg=""
 [ $# -ge 1 ] && cmd=$1
+[ $# -ge 2 ] && arg=$2
 
 case $cmd in
     check )
-        [ -f $SSPL_CONFIG_PATH/sspl-configured ]  && exit 0
+        [ -f $SSPL_CONFIGURED ]  && exit 0
         logger -i -p local3.err "SSPL is not configured."
         logger -i -p local3.err "Please run /opt/seagate/sspl/low-level/framework/sspl_init."
         exit 1
@@ -22,7 +26,16 @@ case $cmd in
 
     config )
         [ $(id -u) -ne 0 ] && echo "please run this command with root privileges" && exit 1
-        rm -f $SSPL_CONFIG_PATH/sspl-configured
+
+        if [ -f $SSPL_CONFIGURED ]; then
+            [ "$arg" = "-f" ] && arg="y"
+            while [ "$arg" != "y" -a "$arg" != "n" ]; do
+                echo -n "SSPL is already initialized. Do you want to reinitialize ?[y/n]: "
+                read arg
+            done
+            [ "$arg" != "y" ] && exit 1
+            rm -f $SSPL_CONFIGURED
+        fi
 
         # Add sspl-ll user to required groups and sudoers file etc.
         echo "Initializing SSPL configuration ... "
@@ -31,12 +44,21 @@ case $cmd in
         # Ensure rabbitmq-server has started
         systemctl start rabbitmq-server
 
+        # Reset RabbitMQ configuration
+        /sbin/rabbitmqctl stop_app
+        /sbin/rabbitmqctl reset
+        /sbin/rabbitmqctl start_app
+
         # Add required user and vhost to RabbitMQ. Set user permissions etc.
         echo "Creating required RABBITMQ configuration.... "
         /opt/seagate/sspl/low-level/framework/sspl_ll_rabbitmq_reinit_CS_A
         echo "SSPL configured successfully."
         mkdir -p $SSPL_CONFIG_PATH
-        touch $SSPL_CONFIG_PATH/sspl-configured
+
+        # Create mdadm.conf to set ACL on it.
+        touch /etc/mdadm.conf
+        setfacl -m u:sspl-ll:rw /etc/mdadm.conf
+        touch $SSPL_CONFIGURED
         ;;
 
     * )

@@ -25,7 +25,7 @@ Source0:    %{package_source}
 BuildRoot:  %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 BuildRequires: rpm-build sudo python-Levenshtein
 Requires:   python-daemon python-zope-interface python-zope-event python-zope-component python-pika python-jsonschema rabbitmq-server
-Requires:   pysnmp systemd-python pygobject2 python-slip-dbus udisks2 python-psutil python-inotify python-paramiko hdparm
+Requires:   pysnmp systemd-python pygobject2 python-slip-dbus udisks2 python-psutil python-inotify python-paramiko hdparm pyserial facter
 Requires:   libsspl_sec libsspl_sec-method_none %{_zabbix_pkg_name}-agent
 Requires:   perl(Config::Any)
 Requires(pre): shadow-utils

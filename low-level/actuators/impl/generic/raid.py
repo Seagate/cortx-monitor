@@ -36,6 +36,7 @@ class RAIDactuator(Debug):
 
     def __init__(self):
         super(RAIDactuator, self).__init__()
+        self._conf_command = "sudo /usr/sbin/mdadm --detail --scan > /etc/mdadm.conf"
 
     def perform_request(self, jsonMsg):
         """Performs the RAID request
@@ -63,11 +64,14 @@ class RAIDactuator(Debug):
                 command = "sudo /usr/sbin/mdadm --{0}".format(raid_request)
             self._log_debug("perform_request, raid_request: %s" % raid_request)
 
+            command = command + "; %s" % self._conf_command
             self._log_debug("perform_request, executing RAID command: %s" % command)
-
             # Run the command and get the response and error returned
             process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             response, error = process.communicate()
+
+            # /etc/mdadm.conf needs to be created/updated after each operation to keep track of state.
+            subprocess.Popen(self._conf_command, shell=True)
 
             if "error" in error.lower():
                 response = "{0}".format(error)

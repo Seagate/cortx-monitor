@@ -27,8 +27,9 @@ from json_msgs.messages.sensors.cpu_data import CPUdataMsg
 from json_msgs.messages.sensors.if_data import IFdataMsg
 from json_msgs.messages.sensors.raid_data import RAIDdataMsg
 
-from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor 
+from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 
+from message_handlers.logging_msg_handler import LoggingMsgHandler
 
 class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
     """Message Handler for generic node requests and generating
@@ -60,11 +61,11 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         super(NodeDataMsgHandler, self).initialize_msgQ(msgQlist)
 
         self._transmit_interval = int(self._conf_reader._get_value_with_default(
-                                                self.NODEDATAMSGHANDLER, 
+                                                self.NODEDATAMSGHANDLER,
                                                 self.TRANSMIT_INTERVAL,
                                                 60))
         self._units = self._conf_reader._get_value_with_default(
-                                                self.NODEDATAMSGHANDLER, 
+                                                self.NODEDATAMSGHANDLER,
                                                 self.UNITS,
                                                 "MB")
 
@@ -201,7 +202,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         self._drive_by_device_name[device_name] = serial_number
         self._drive_byid_by_serial_number[serial_number] = drive_byid
 
-        self._log_debug("NodeDataMsgHandler, device_name: %s, serial_number: %s, drive_byid: %s" % 
+        self._log_debug("NodeDataMsgHandler, device_name: %s, serial_number: %s, drive_byid: %s" %
                         (device_name, serial_number, drive_byid))
 
     def _generate_host_update(self):
@@ -218,7 +219,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         #    from actuators.ILogin import ILogin
         #    self._login_actuator = queryUtility(ILogin)()
         #    self._log_debug("_generate_host_update, login_actuator name: %s" % self._login_actuator.name())
- 
+
         # Notify the login actuator to update its data of logged in users
         #login_request={"login_request": "get_all_users"}
         #logged_in_users = self._login_actuator.perform_request(login_request)
@@ -321,6 +322,12 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             ifDataMsg.set_uuid(self._uuid)
         jsonMsg = ifDataMsg.getJson()
 
+        internal_json_msg=json.dumps(
+                {'actuator_request_type': {'logging': {'log_level': 'LOG_WARNING', 'log_type': 'IEM', 'log_msg': '{}'.format(jsonMsg)}}})
+
+        # Send the event to logging msg handler to send IEM message to journald
+        self._write_internal_msgQ(LoggingMsgHandler.name(), internal_json_msg)
+
         # Transmit it out over rabbitMQ channel
         self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
 
@@ -347,7 +354,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 self._log_debug("path: %s" % str(path))
 
                 # Lookup the serial number from the path
-                serial_number = str(self._drive_by_device_name.get(path))                
+                serial_number = str(self._drive_by_device_name.get(path))
                 self._log_debug("serial_number: %s" % str(serial_number))
                 if serial_number != "None":
                     drive["identity"]["serialNumber"] = serial_number
@@ -357,7 +364,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 if drive_byid != "None":
                     drive["identity"]["path"] = drive_byid
 
-        self._log_debug("_generate_RAID_status, host_id: %s, device: %s, drives: %s" % 
+        self._log_debug("_generate_RAID_status, host_id: %s, device: %s, drives: %s" %
                     (self._node_sensor.host_id, self._raid_device, str(self._raid_drives)))
 
         raidDataMsg = RAIDdataMsg(self._node_sensor.host_id,
