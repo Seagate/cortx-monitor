@@ -1,32 +1,29 @@
 #xyr build defines
 # This section will be re-written by Jenkins build system.
 
-%define _zabbix_pkg_name zabbix20
-
-%define package_name     sspl
-%define package_source   sspl-%{version}.tgz
-%define package_version  %{version}
-%define build_number     %{dist}
-%define package_url      http://gerrit.mero.colo.seagate.com:8080/#/admin/projects/sspl
+%define name sspl
+%define url  http://gerrit.mero.colo.seagate.com:8080/#/admin/projects
 #xyr end defines
 
 %define _unpackaged_files_terminate_build 0
 %define _binaries_in_noarch_packages_terminate_build   0
 
-Name:       %{package_name}
-Version:    %{package_version}
-Release:    %{build_number}
+Name:       %{name}
+Version:    %{version}
+Provides:   %{name} = %{version}
+Obsoletes:  %{name} <= %{version}
+Release:    %{dist}
 Summary:    Installs SSPL
 BuildArch:  noarch
 Group:      System Environment/Daemons
 License:    Seagate Proprietary
-URL:        %{package_url}
-Source0:    %{package_source}
+URL:        %{url}/%{name}
+Source0:    %{name}-%{version}.tgz
 BuildRoot:  %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 BuildRequires: rpm-build sudo python-Levenshtein
 Requires:   python-daemon python-zope-interface python-zope-event python-zope-component python-pika python-jsonschema rabbitmq-server
 Requires:   pysnmp systemd-python pygobject2 python-slip-dbus udisks2 python-psutil python-inotify python-paramiko hdparm pyserial facter
-Requires:   libsspl_sec libsspl_sec-method_none %{_zabbix_pkg_name}-agent
+Requires:   libsspl_sec libsspl_sec-method_none zabbix20-agent
 Requires:   perl(Config::Any)
 Requires(pre): shadow-utils
 
@@ -51,13 +48,18 @@ cp -afv files/etc ${RPM_BUILD_ROOT}/
 mkdir -p ${RPM_BUILD_ROOT}/opt/seagate/sspl/low-level
 cp -rp . ${RPM_BUILD_ROOT}/opt/seagate/sspl/low-level
 
-
 %post
-# Add the sspl-ll user if it doesn't exist
-echo "SSPL: creating sspl-ll user"
-    id -u sspl-ll &>/dev/null || /usr/sbin/useradd -r -g zabbix \
-    -s /sbin/nologin  \
-    -c "User account to run the sspl-ll service" sspl-ll
+case "$1" in
+    1)  # Add the sspl-ll user during first install if it doesnt exist
+        id -u sspl-ll &>/dev/null || /usr/sbin/useradd -r -g zabbix \
+            -s /sbin/nologin  \
+            -c "User account to run the sspl-ll service" sspl-ll
+        ;;
+    
+    2)  # In case of upgrade start sspl-ll after upgrade
+        systemctl restart sspl-ll.service 2> /dev/null
+        ;;
+esac
 
 mkdir -p /var/log/journal
 systemctl restart systemd-journald
@@ -66,20 +68,26 @@ systemctl restart systemd-journald
 systemctl daemon-reload
 
 # Enable services to start at boot
-systemctl enable sspl-ll
 systemctl enable rabbitmq-server
 
 # Restart dbus with new policy files
 systemctl restart dbus
 
+%preun
+# Remove configuration in case of uninstall
+[[ $1 = 0 ]] &&  rm -f /var/sspl/sspl-configured
+systemctl stop sspl-ll.service 2> /dev/null
+
 %files
 %defattr(-,sspl-ll,root,-)
 /opt/seagate/sspl/*
-/etc/sspl_ll.conf
+/etc/sspl_ll.conf.sample
 /etc/systemd/system/sspl-ll.service
 
-
 %changelog
+* Fri Aug 10 2018 Ujjwal Lanjewar <ujjwal.lanjewar@seagate.com>
+- Added version infrastructure and upgrade support
+
 * Wed Oct 18 2017 Oleg Gut <oleg.gut@seagate.com>
 - Reworking spec
 

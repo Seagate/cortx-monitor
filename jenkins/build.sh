@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -E
+set -e
 
 BASE_DIR=$(realpath $(dirname $0)/..)
 cd $BASE_DIR
@@ -43,5 +43,6 @@ tar -czvf $DIST/rpmbuild/SOURCES/sspl-$VERSION.tgz -C $BASE_DIR/.. sspl/low-leve
 rpmbuild --define "version $VERSION" --define "dist $GIT_VER" --define "_topdir $DIST/rpmbuild" -bb $BASE_DIR/low-level/sspl-ll.spec
 rpmbuild --define "version $VERSION" --define "dist $GIT_VER" --define "_topdir $DIST/rpmbuild" -bb $BASE_DIR/libsspl_sec/libsspl_sec.spec
 
+\rm -rf $DIST/rpmbuild/BUILD/*
 echo -e "\nGenerated RPMs..."
 find $DIST -name "*.rpm"

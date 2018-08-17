@@ -299,13 +299,13 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
             if self._jsonMsg.get("message").get("actuator_response_type") is not None and \
               self._jsonMsg.get("message").get("actuator_response_type").get("ack") is not None:
                 self._add_signature()
-                self._jsonMsg = json.dumps(self._jsonMsg).encode('utf8')
+                jsonMsg = json.dumps(self._jsonMsg).encode('utf8')
 
                 self._get_ack_connection()
                 self._channel.basic_publish(exchange=self._ack_exchange_name,
                                     routing_key=self._routing_key,
                                     properties=msg_props,
-                                    body=str(self._jsonMsg))
+                                    body=jsonMsg)
 
             # Routing requests for IEM msgs sent from the LoggingMsgHandler
             elif self._jsonMsg.get("message").get("IEM_routing") is not None:
@@ -321,12 +321,12 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
                     logger.warn("RabbitMQegressProcessor, Attempted to route IEM without a valid 'iem_route_addr' set.")
             else:
                 self._add_signature()
-                self._jsonMsg = json.dumps(self._jsonMsg).encode('utf8')
+                jsonMsg = json.dumps(self._jsonMsg).encode('utf8')
                 self._get_connection()
                 self._channel.basic_publish(exchange=self._exchange_name,
                                     routing_key=self._routing_key,
                                     properties=msg_props,
-                                    body=str(self._jsonMsg))
+                                    body=jsonMsg)
 
             # No exceptions thrown so success
             self._log_debug("_transmit_msg_on_exchange, Successfully Sent: %s" % self._jsonMsg)

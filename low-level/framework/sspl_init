@@ -25,7 +25,8 @@ case $cmd in
         ;;
 
     config )
-        [ $(id -u) -ne 0 ] && echo "please run this command with root privileges" && exit 1
+        [ $(id -u) -ne 0 ] && echo "Run this command with root privileges!!" && exit 1
+        [ -f /etc/sspl_ll.conf ] || { echo "Missing configuration!! Create /etc/sspl_ll.conf and rerun.";  exit 1; }
 
         if [ -f $SSPL_CONFIGURED ]; then
             [ "$arg" = "-f" ] && arg="y"
@@ -35,19 +36,26 @@ case $cmd in
             done
             [ "$arg" != "y" ] && exit 1
             rm -f $SSPL_CONFIGURED
+            systemctl stop sspl-ll.service
+            systemctl disable sspl-ll.service
         fi
 
         # Add sspl-ll user to required groups and sudoers file etc.
         echo "Initializing SSPL configuration ... "
         /opt/seagate/sspl/low-level/framework/sspl_ll_reinit_CS_A
 
+        # Create /tmp/dcs/hpi if required
+        [ ! -d "/tmp/dcs/hpi" ] && mkdir -p /tmp/dcs/hpi && id -u zabbix > /dev/null 2>&1 && chown zabbix:zabbix /tmp/dcs/hpi
+
         # Ensure rabbitmq-server has started
         systemctl start rabbitmq-server
 
-        # Reset RabbitMQ configuration
-        /sbin/rabbitmqctl stop_app
-        /sbin/rabbitmqctl reset
-        /sbin/rabbitmqctl start_app
+        if [ "$arg" != "-s" ]; then
+            # Reset RabbitMQ configuration
+            /sbin/rabbitmqctl stop_app
+            /sbin/rabbitmqctl reset
+            /sbin/rabbitmqctl start_app
+        fi
 
         # Add required user and vhost to RabbitMQ. Set user permissions etc.
         echo "Creating required RABBITMQ configuration.... "
@@ -59,6 +67,9 @@ case $cmd in
         touch /etc/mdadm.conf
         setfacl -m u:sspl-ll:rw /etc/mdadm.conf
         touch $SSPL_CONFIGURED
+
+        systemctl enable sspl-ll.service
+        systemctl start sspl-ll.service
         ;;
 
     * )

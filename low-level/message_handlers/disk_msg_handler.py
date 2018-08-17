@@ -534,7 +534,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
 #                     logger.info("Error restarting openhpid: %s" % error)
 #                 else:
 #                     logger.info("Restarted openhpid succesfully")
-                return
+#                 return
 
             drive = Drive(self._host_id,
                           event_path,
@@ -547,7 +547,8 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
             valid = drive.parse_drive_mngr_path()
             if not valid:
                 logger.error("DiskMsgHandler, event_path valid: False (ignoring)")
-                return
+                # TODO - For simulate command, path may not be valid. Check on HW
+                # return
 
             # Update the dict of drive manager drives and write s/n and status to file
             self._drvmngr_drives[serial_number] = drive

@@ -107,10 +107,6 @@ class ManualTest():
 
         if start_threads:
             # Start up threads to receive responses
-            self._basic_consumet = threading.Thread(target=self.basicConsume)
-            self._basic_consumet.setDaemon(True)
-            self._basic_consumet.start()
-
             if self.module_name == "RABBITMQEGRESSPROCESSOR":
                 self._basic_consume_ackt = threading.Thread(target=self.basicConsumeAck)
                 self._basic_consume_ackt.setDaemon(True)
@@ -118,6 +114,10 @@ class ManualTest():
                 self._durable = False
             else:
                 self._durable = True
+
+            self._basic_consumet = threading.Thread(target=self.basicConsume)
+            self._basic_consumet.setDaemon(True)
+            self._basic_consumet.start()
         else:
             self._durable = False
 
@@ -503,8 +503,7 @@ class ManualTest():
                 time.sleep(5)
 
         channel = connection.channel()
-        channel.exchange_declare(exchange=self._exchangename,
-                         type='topic', durable=self._durable)
+        channel.exchange_declare(exchange=self._exchangename, type='topic', durable=self._durable)
         result = channel.queue_declare(exclusive=True)
         channel.queue_bind(exchange=self._exchangename,
                            queue=result.method.queue,

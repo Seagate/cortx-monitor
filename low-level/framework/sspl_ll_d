@@ -202,8 +202,6 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist, operating_system
 
     # Read in list of sensors
     sensors = conf_reader._get_value_list(SSPL_SETTING, SENSORS)
-    if setup == 'vm' and 'HPIMonitor' in sensors :
-        sensors.remove('HPIMonitor')
     logger.info("sspl-ll Bootstrap: sensors to load: %s" % sensors)
 
     # Read in list of actuators
