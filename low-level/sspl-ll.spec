@@ -22,7 +22,7 @@ Source0:    %{name}-%{version}.tgz
 BuildRoot:  %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 BuildRequires: rpm-build sudo python-Levenshtein
 Requires:   python-daemon python-zope-interface python-zope-event python-zope-component python-pika python-jsonschema rabbitmq-server
-Requires:   pysnmp systemd-python pygobject2 python-slip-dbus udisks2 python-psutil python-inotify python-paramiko hdparm pyserial facter
+Requires:   pysnmp systemd-python pygobject2 python-slip-dbus udisks2 python-psutil python-inotify python-paramiko hdparm pyserial
 Requires:   libsspl_sec libsspl_sec-method_none zabbix20-agent
 Requires:   perl(Config::Any)
 Requires(pre): shadow-utils
@@ -49,13 +49,19 @@ mkdir -p ${RPM_BUILD_ROOT}/opt/seagate/sspl/low-level
 cp -rp . ${RPM_BUILD_ROOT}/opt/seagate/sspl/low-level
 
 %post
+# Copy sspl_ll.conf if not present.
+[ -f /etc/sspl_ll.conf ] || cp /etc/sspl_ll.conf.sample /etc/sspl_ll.conf
+# Copy init script
+mv /opt/seagate/sspl/low-level/framework/sspl_init /opt/seagate/sspl/
+
+
 case "$1" in
     1)  # Add the sspl-ll user during first install if it doesnt exist
         id -u sspl-ll &>/dev/null || /usr/sbin/useradd -r -g zabbix \
             -s /sbin/nologin  \
             -c "User account to run the sspl-ll service" sspl-ll
         ;;
-    
+
     2)  # In case of upgrade start sspl-ll after upgrade
         systemctl restart sspl-ll.service 2> /dev/null
         ;;
@@ -77,6 +83,11 @@ systemctl restart dbus
 # Remove configuration in case of uninstall
 [[ $1 = 0 ]] &&  rm -f /var/sspl/sspl-configured
 systemctl stop sspl-ll.service 2> /dev/null
+
+%postun
+rm -f /etc/polkit-1/rules.d/sspl-ll_dbus_policy.rules
+rm -f /etc/dbus-1/system.d/sspl-ll_dbus_policy.conf
+rm -f /opt/seagate/sspl/sspl_init
 
 %files
 %defattr(-,sspl-ll,root,-)

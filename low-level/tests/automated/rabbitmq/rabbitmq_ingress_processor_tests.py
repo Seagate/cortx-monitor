@@ -43,7 +43,7 @@ class RabbitMQingressProcessorTests(ScheduledModuleThread, InternalMsgQ):
 
     # Section and keys in configuration file
     RABBITMQPROCESSORTEST = MODULE_NAME.upper()
-    EXCHANGE_NAME         = 'exchange_name'
+    EXCHANGE_KEY_NAME     = 'exchange_name'
     QUEUE_NAME            = 'queue_name'
     ROUTING_KEY           = 'routing_key'
     VIRT_HOST             = 'virtual_host'
@@ -152,11 +152,11 @@ class RabbitMQingressProcessorTests(ScheduledModuleThread, InternalMsgQ):
             username  = ingressMsg.get("username")
             signature = ingressMsg.get("signature")
             message   = ingressMsg.get("message")
-            
+
             assert(username is not None)
             assert(signature is not None)
             assert(message is not None)
-            
+
             msg_len   = len(message) + 1
 
             if SSPL_SEC.sspl_verify_message(msg_len, str(message), username, signature) != 0:
@@ -187,7 +187,7 @@ class RabbitMQingressProcessorTests(ScheduledModuleThread, InternalMsgQ):
 
             # Write to the msg queue so the lettuce tests can
             #  retrieve it and examine for accuracy during automated testing
-            self._write_internal_msgQ("RabbitMQingressProcessorTests", message)            
+            self._write_internal_msgQ("RabbitMQingressProcessorTests", message)
 
             # Acknowledge message was received
             ch.basic_ack(delivery_tag = method.delivery_tag)
@@ -202,18 +202,15 @@ class RabbitMQingressProcessorTests(ScheduledModuleThread, InternalMsgQ):
             self._virtual_host  = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSORTEST,
                                                                  self.VIRT_HOST,
                                                                  'SSPL')
-            #self._exchange_name = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSORTEST,
-            #                                                     self.EXCHANGE_NAME,
-            #                                                     'sspl_halon')
-            # TODO: Update the puppet module with this new value
-            self._exchange_name = "sspl_halon_command"
-
+            self._exchange_name = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSORTEST,
+                                                                 self.EXCHANGE_KEY_NAME,
+                                                                 'sspl-command')
             self._queue_name    = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSORTEST,
                                                                  self.QUEUE_NAME,
-                                                                 'SSPL-LL')
+                                                                 'sspl-queue')
             self._routing_key   = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSORTEST,
                                                                  self.ROUTING_KEY,
-                                                                 'sspl_ll')
+                                                                 'sspl-key')
             self._username      = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSORTEST,
                                                                  self.USER_NAME,
                                                                  'sspluser')

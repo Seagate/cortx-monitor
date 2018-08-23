@@ -1,4 +1,4 @@
-#!/usr/bin/env python 
+#!/usr/bin/env python
 # encoding: utf-8
 """
  Filename:          sspl-ll-cli
@@ -14,7 +14,7 @@
  prohibited. All other rights are expressly reserved by Seagate Technology, LLC.
 """
 
-import argparse 
+import argparse
 import subprocess
 import sys
 import os
@@ -46,6 +46,9 @@ SSPL_LL_SETTING = 'SSPL-LL_SETTING'
 CORE_PROCESSORS = 'core_processors'
 ACTUATORS       = 'actuators'
 SENSORS         = 'sensors'
+RABBITMQINGRESSPROCESSOR = 'RABBITMQINGRESSPROCESSOR'
+EXCHANGE_KEY_NAME = 'exchange_name'
+SSPL_COMMAND_EXCHANGE = 'sspl-command'
 
 
 class CLIError(Exception):
@@ -87,9 +90,9 @@ def main():
         sys.exit(os.EX_USAGE)
 
     # Read in CLI type value from configuration file
-    cli_type = conf_reader._get_value_with_default(SYS_INFORMATION, 
-                                                         CLI_TYPE,
-                                                         'CS-A')
+    cli_type = conf_reader._get_value_with_default(SYS_INFORMATION, CLI_TYPE, 'CS-A')
+    # Read exchange to send commands to SSPL.
+    sspl_cmd_exchange = conf_reader._get_value_with_default(RABBITMQINGRESSPROCESSOR, EXCHANGE_KEY_NAME, SSPL_COMMAND_EXCHANGE)
     global manTest
     if cli_type == "SED":
         # Setup argument parser
@@ -113,12 +116,12 @@ def main():
             manTest = ManualTest("RABBITMQEGRESSPROCESSOR")
         except Exception:
             print("CLI only useful for verifying packages\n")
-        _init_CS_A(parser, program_name)
+        _init_CS_A(parser, program_name, exchange=sspl_cmd_exchange)
 
 
 def _send_raw_msg(jsonMsg, wait_for_response=True, response_wait_time=5,
-                  alldata=False, indent=False, remove_results_file=True, 
-                  host=None, force_wait=False):
+                  alldata=False, indent=False, remove_results_file=True,
+                  host=None, force_wait=False, exchange=SSPL_COMMAND_EXCHANGE):
     """Update authentication fields, validate and transmit json msg"""
 
     # Update the authentication fields in json msg
@@ -129,17 +132,17 @@ def _send_raw_msg(jsonMsg, wait_for_response=True, response_wait_time=5,
 
     # Encode and publish
     message = json.dumps(jsonMsg, ensure_ascii=True).encode('utf8')
-    manTest.basicPublish(message=message, wait_for_response=wait_for_response, 
+    manTest.basicPublish(message=message, wait_for_response=wait_for_response,
                          response_wait_time=response_wait_time, force_wait=force_wait,
                          alldata=alldata, indent=indent,
                          remove_results_file=remove_results_file,
-                         exchange="sspl_halon_command", host=host)
+                         exchange=exchange, host=host)
 
 def _send_iem_exchange(exchange, log_msg, host=None):
     """Sends an IEM on a particular rabbitmq exchange"""
     try:
         # Raw IEM sent as a string with no header authentication fields or schema validation
-        manTest.basicPublish(message=log_msg, wait_for_response=False, 
+        manTest.basicPublish(message=log_msg, wait_for_response=False,
                              exchange=exchange, host=host)
     except Exception as ae:
         print("IEM failed on exchange: {}".format(exchange))
@@ -249,7 +252,7 @@ def _init_SED(parser, program_name):
 
     except KeyboardInterrupt:
         print("\nHalting sspl-ll-cli\n")
-        return 0       
+        return 0
     except Exception as e:
         print("An error occurred: %s" % str(e))
         _sed_print_usage()
@@ -359,7 +362,7 @@ def _process_SED_config(values):
             if values[1] == "key-management":
                 input, value = _get_sed_input("Available system-level settings", "{kind, server, recovery, fips}", \
                                                True, True, ["off | ko | kmpi | local", "Any URI", \
-                                                            "on | off | password", "on | off"])                
+                                                            "on | off | password", "on | off"])
                 # If input is 'recovery' then get passwords
                 if input == "recovery":
                     if value == "on" or \
@@ -396,7 +399,7 @@ def _process_SED_config(values):
                         # Put together the request with passwords
                         if value == "password":
                             request = "%s %s %s %s %s %s" % (values[0], values[1], input, value, pass1, pass2)
-                        else: 
+                        else:
                             request = "%s %s %s %s %s" % (values[0], values[1], input, value, pass1)
                     else:
                         request = "%s %s %s %s off" % (values[0], values[1], input, value)
@@ -411,7 +414,7 @@ def _process_SED_config(values):
         print("_process_SED_config, Error occurred: %s" % str(e))
     return False, None, None, None, None
 
-def _init_CS_A(parser, program_name):
+def _init_CS_A(parser, program_name, exchange):
     """Initialize options for Castor CS-A project"""
     parser.add_argument("--help", action="store_true", help="display this help message and exit")
     parser.add_argument("-a", "--all", action="store_true", help="display all the data received in responses")
@@ -428,7 +431,7 @@ def _init_CS_A(parser, program_name):
     parser.add_argument("--iemlog", metavar="MESSAGE", help="IEM log.  ie 'IEC: 001002001: Rules Engine...'")
     parser.add_argument("--iemloglevel", metavar="LEVEL", help="IEM log level.  ie LOG_CRIT, LOG_ERR, LOG_WARNING")
     parser.add_argument("--iemhost", metavar="HOST", help="IEM receiver. ie 10.22.192.100, default localhost")
-    parser.add_argument("--iemexchange", metavar="EXCHNG", help="RabbitMQ exchange. ie sspl_iem, default sspl_halon")
+    parser.add_argument("--iemexchange", metavar="EXCHNG", help="RabbitMQ exchange. ie sspl_iem, default sspl-iem")
     parser.add_argument("--fsstats", metavar="FSFIDKEY", help="display total/free space on Mero, ie --fsstats 4")
 
     group = parser.add_mutually_exclusive_group()
@@ -482,35 +485,35 @@ def _init_CS_A(parser, program_name):
             file = "/opt/seagate/sspl/low-level/tests/manual/actuator_msgs/node_cntrl_pdu.json"
             jsonMsg = json.loads(open(file).read())
             jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = "PDU: {}".format(args.pdu)
-            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, force_wait=True, response_wait_time=30)
+            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, force_wait=True, response_wait_time=30, exchange=exchange)
 
         elif args.generic:
             # Load a generic SSPL message from the manual tests directory and update it with args.generic
             file = "/opt/seagate/sspl/low-level/tests/manual/actuator_msgs/node_cntrl_sspl.json"
             jsonMsg = json.loads(open(file).read())
             jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = "SSPL: {}".format(args.generic)
-            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, response_wait_time=60)
+            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, response_wait_time=60, exchange=exchange)
 
         elif args.stopdrive:
             # Load a stop drive message from the manual tests directory and update it with args.stopdrive
             file = "/opt/seagate/sspl/low-level/tests/manual/actuator_msgs/node_cntrl_stop_drive.json"
             jsonMsg = json.loads(open(file).read())
             jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = "STOP_DRIVE: {}".format(args.stopdrive)
-            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, response_wait_time=60)
+            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, response_wait_time=60, exchange=exchange)
 
         elif args.startdrive:
             # Load a start drive message from the manual tests directory and update it with args.startdrive
             file = "/opt/seagate/sspl/low-level/tests/manual/actuator_msgs/node_cntrl_start_drive.json"
             jsonMsg = json.loads(open(file).read())
             jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = "START_DRIVE: {}".format(args.startdrive)
-            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, response_wait_time=60)
+            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, response_wait_time=60, exchange=exchange)
 
         elif args.resetdrive:
             # Load a reset drive message from the manual tests directory and update it with args.resetdrive
             file = "/opt/seagate/sspl/low-level/tests/manual/actuator_msgs/node_cntrl_reset_drive.json"
             jsonMsg = json.loads(open(file).read())
             jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = "RESET_DRIVE: {}".format(args.resetdrive)
-            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, response_wait_time=60)
+            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, response_wait_time=60, exchange=exchange)
 
         elif args.smart:
             # Load a smart test message from the manual tests directory and update it with args.smart
@@ -520,7 +523,7 @@ def _init_CS_A(parser, program_name):
 
             print("\nInitiating SMART tests.  This can take several minutes...\n")
             _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, response_wait_time=300,
-                          force_wait=True)
+                          force_wait=True, exhange=exchange)
 
         elif args.drvmngr:
             # Load a drivemanager status message from the manual tests directory and update it with args.drvmngr
@@ -535,7 +538,7 @@ def _init_CS_A(parser, program_name):
                 force_wait = True
 
             _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, response_wait_time=wait_time,
-                          force_wait=force_wait)
+                          force_wait=force_wait, exchange=exchange)
 
         elif args.hpi:
             # Load a reset hpi status message from the manual tests directory and update it with args.hpi
@@ -550,7 +553,7 @@ def _init_CS_A(parser, program_name):
                 force_wait = True
 
             _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, response_wait_time=wait_time,
-                          force_wait=force_wait)
+                          force_wait=force_wait, exchange=exchange)
 
         elif args.getdriveLED:
             # Load a node controller LED message from the manual tests directory and update it with args.getdriveLED
@@ -558,16 +561,16 @@ def _init_CS_A(parser, program_name):
             jsonMsg = json.loads(open(file).read())
             jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = "LED: get {}".format(args.getdriveLED)
 
-            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, response_wait_time=5)
+            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, response_wait_time=5, exchange=exchange)
 
         elif args.setdriveLED:
-            # Load a node controller LED message from the manual tests directory and update it with args 
+            # Load a node controller LED message from the manual tests directory and update it with args
             if not args.LEDstate:
                 print("Error: must provide a LED state --LEDstate LEDSTATE when using --setdriveLED")
                 return
 
-            if args.LEDstate not in ["FAULT_ON", "FAULT_OFF", "IDENTIFY_ON", 
-                                     "IDENTIFY_OFF", "PULSE_SLOW_ON", "PULSE_SLOW_OFF", 
+            if args.LEDstate not in ["FAULT_ON", "FAULT_OFF", "IDENTIFY_ON",
+                                     "IDENTIFY_OFF", "PULSE_SLOW_ON", "PULSE_SLOW_OFF",
                                      "PULSE_FAST_ON", "PULSE_FAST_OFF"]:
                 print("Possible LED states: FAULT_ON, FAULT_OFF, IDENTIFY_ON, IDENTIFY_OFF," \
                       "PULSE_SLOW_ON, PULSE_SLOW_OFF, PULSE_FAST_ON, PULSE_FAST_OFF")
@@ -578,10 +581,10 @@ def _init_CS_A(parser, program_name):
             jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = "LED: set {} {}" \
                         .format(args.setdriveLED, args.LEDstate)
 
-            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, response_wait_time=5)
+            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, response_wait_time=5, exchange=exchange)
 
         elif args.simulate:
-            # Load a node controller SIM message from the manual tests directory and update it with args 
+            # Load a node controller SIM message from the manual tests directory and update it with args
             if not args.event:
                 print("Error: must provide an event to simulate --event EVENT when using --simulate")
                 return
@@ -598,12 +601,12 @@ def _init_CS_A(parser, program_name):
             # Don't wait for a response if requesting SMART failure as it just sets a flag in SSPL
             if args.event == "SMART_FAILURE":
                 print("\nSMART failure flagged which will affect the next request sent to run a SMART test.\n")
-                _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, wait_for_response=False)
+                _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, wait_for_response=False, exchange=exchange)
             else:
-                _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, response_wait_time=30)
+                _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, response_wait_time=30, exchange=exchange)
 
         elif args.setdrivestatus:
-            # Load a HDS logging message from the manual tests directory and update it with args 
+            # Load a HDS logging message from the manual tests directory and update it with args
             if not args.status:
                 print("Error: must provide a status --status STATUS when using --setdrivestatus")
                 return
@@ -645,14 +648,14 @@ def _init_CS_A(parser, program_name):
 
             print(("    log_msg: %s" % log_msg))
             jsonMsg["message"]["actuator_request_type"]["logging"]["log_msg"] = "{}".format(log_msg)
-            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human)
+            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, exchange=exchange)
 
         elif args.restartthread:
             # Load a restart thread message from the manual tests directory and update it with args.restartthread
             file = "/opt/seagate/sspl/low-level/tests/manual/actuator_msgs/thread_cntrl_restart.json"
             jsonMsg = json.loads(open(file).read())
             jsonMsg["message"]["actuator_request_type"]["thread_controller"]["module_name"] = "{}".format(args.restartthread)
-            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human)
+            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, exchange=exchange)
 
         elif args.servicename or args.servicereq:
             if not args.servicename:
@@ -676,7 +679,7 @@ def _init_CS_A(parser, program_name):
             jsonMsg = json.loads(open(file).read())
             jsonMsg["message"]["actuator_request_type"]["service_controller"]["service_name"] = "{}".format(args.servicename)
             jsonMsg["message"]["actuator_request_type"]["service_controller"]["service_request"] = "{}".format(args.servicereq)
-            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human)
+            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, exchange=exchange)
 
         elif args.ipmicmd or args.ipmiIP:
             if not args.ipmiIP:
@@ -692,7 +695,7 @@ def _init_CS_A(parser, program_name):
             jsonMsg = json.loads(open(file).read())
             jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = "IPMI: {} {}". \
                                     format(args.ipmiIP, args.ipmicmd)
-            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human)
+            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, exchange=exchange)
 
         elif args.hdparm:
             # Load a hdparm message from the manual tests directory and update it with args.hdparm
@@ -700,16 +703,16 @@ def _init_CS_A(parser, program_name):
             jsonMsg = json.loads(open(file).read())
             jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = "HDPARM: {}".\
                                     format(args.hdparm)
-            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human)
+            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, exchange=exchange)
 
         elif args.iemlog or args.iemloglevel:
             if not args.iemlog:
                 print("Error: must provide an IEM message using --iemlog MESSAGE")
                 return
- 
+
             if not args.iemloglevel:
                 print("Error: must provide a log level to apply using --iemloglevel LEVEL")
-                print("       where LEVEL is one of: LOG_EMERG, LOG_ALERT, LOG_CRIT, LOG_ERR,") 
+                print("       where LEVEL is one of: LOG_EMERG, LOG_ALERT, LOG_CRIT, LOG_ERR,")
                 print("                              LOG_WARNING, LOG_NOTICE, LOG_INFO, LOG_DEBUG")
                 return
 
@@ -732,8 +735,8 @@ def _init_CS_A(parser, program_name):
                                                             format(args.iemloglevel)
                 jsonMsg["message"]["actuator_request_type"]["logging"]["log_msg"] = "{}".\
                                                             format(args.iemlog)
-                _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, 
-                              wait_for_response=False, host=args.iemhost)
+                _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human,
+                              wait_for_response=False, host=args.iemhost, exchange=exchange)
             else:
                 log_msg = "{} {}".format(args.iemloglevel, args.iemlog)
                 _send_iem_exchange(args.iemexchange, log_msg, host=args.iemhost)
@@ -743,7 +746,7 @@ def _init_CS_A(parser, program_name):
             file = "/opt/seagate/sspl/low-level/tests/manual/actuator_msgs/thread_cntrl_restart.json"
             jsonMsg = json.loads(open(file).read())
             jsonMsg["message"]["actuator_request_type"]["thread_controller"]["module_name"] = "SMRdriveData"
-            _send_raw_msg(jsonMsg, wait_for_response=False, alldata=args.all, indent=args.human)
+            _send_raw_msg(jsonMsg, wait_for_response=False, alldata=args.all, indent=args.human, exchange=exchange)
             print("Check logs for new SMR drive register values")
 
         elif args.fsstats:
@@ -752,37 +755,37 @@ def _init_CS_A(parser, program_name):
             jsonMsg = json.loads(open(file).read())
             jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = \
                     "MERO: fsstats {}".format(args.fsstats)
-            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, response_wait_time=30)
+            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, response_wait_time=30, exchange=exchange)
 
         elif args.cpudata:
             # Load a sensor request message for cpu data from the manual tests directory and send it in
             file = "/opt/seagate/sspl/low-level/tests/manual/actuator_msgs/sensor_request_cpu_data.json"
             jsonMsg = json.loads(open(file).read())
-            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human)
+            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, exchange=exchange)
 
         elif args.hostdata:
             # Load a sensor request message for host data from the manual tests directory and send it in
             file = "/opt/seagate/sspl/low-level/tests/manual/actuator_msgs/sensor_request_host_update.json"
             jsonMsg = json.loads(open(file).read())
-            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human)
+            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, exchange=exchange)
 
         elif args.mountdata:
             # Load a sensor request message for local mount data from the manual tests directory and send it in
             file = "/opt/seagate/sspl/low-level/tests/manual/actuator_msgs/sensor_request_mount_data.json"
             jsonMsg = json.loads(open(file).read())
-            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human)
+            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, exchange=exchange)
 
         elif args.interfacedata:
             # Load a sensor request message for network data from the manual tests directory and send it in
             file = "/opt/seagate/sspl/low-level/tests/manual/actuator_msgs/sensor_request_if_data.json"
             jsonMsg = json.loads(open(file).read())
-            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human)
+            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, exchange=exchange)
 
         elif args.raiddata:
             # Load a sensor request message for raid data from the manual tests directory and send it in
             file = "/opt/seagate/sspl/low-level/tests/manual/actuator_msgs/sensor_request_raid_data.json"
             jsonMsg = json.loads(open(file).read())
-            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human)
+            _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, exchange=exchange)
 
         elif args.expreset:
             # Trigger expander reset
@@ -830,7 +833,7 @@ def _init_CS_A(parser, program_name):
 
             # Send them out one by one and wait for a valid response
             for json_msg in json_list:
-                _send_raw_msg(json_msg, alldata=args.all, indent=args.human, remove_results_file=False)
+                _send_raw_msg(json_msg, alldata=args.all, indent=args.human, remove_results_file=False, exchange=exchange)
 
         elif args.fromfile:
             # Load in a multiple json msgs stored in a single file
@@ -848,7 +851,7 @@ def _init_CS_A(parser, program_name):
 
             # Send them out one by one and wait for a valid response
             for json_msg in json_list:
-                _send_raw_msg(json_msg, alldata=args.all, indent=args.human, remove_results_file=False)
+                _send_raw_msg(json_msg, alldata=args.all, indent=args.human, remove_results_file=False, exchange=exchange)
 
         return 0
     except KeyboardInterrupt:

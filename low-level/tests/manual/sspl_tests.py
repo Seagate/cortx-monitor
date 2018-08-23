@@ -49,18 +49,22 @@ class SSPLtest():
     MODULE_NAME = "sspl-ll-tests"
 
     # Section and keys in configuration file
-    SSPLPROCESSOR       = MODULE_NAME.upper()
-    EVENTFIELDS         = "EVENT-FIELDS"
+    SSPLPROCESSOR        = MODULE_NAME.upper()
+    EVENTFIELDS          = "EVENT-FIELDS"
 
-    SIGNATURE_USERNAME  = 'message_signature_username'
-    SIGNATURE_TOKEN     = 'message_signature_token'
-    SIGNATURE_EXPIRES   = 'message_signature_expires'
-    FILTER              = 'ignorelist'
+    SIGNATURE_USERNAME   = 'message_signature_username'
+    SIGNATURE_TOKEN      = 'message_signature_token'
+    SIGNATURE_EXPIRES    = 'message_signature_expires'
+    FILTER               = 'ignorelist'
 
-    HOST_UPDATE         = 'host_update'
-    LOCAL_MOUNT_DATA    = 'local_mount_data'
-    CPU_DATA            = 'cpu_data'
-    IF_DATA             = 'if_data'
+    HOST_UPDATE          = 'host_update'
+    LOCAL_MOUNT_DATA     = 'local_mount_data'
+    CPU_DATA             = 'cpu_data'
+    IF_DATA              = 'if_data'
+
+    RABBITMQEGPROCESSOR  = 'RABBITMQEGRESSPROCESSOR'
+    EGRESS_KEY           = 'sspl-key'
+    EXCHANGE_KEY_NAME    = 'exchange_name'
 
     #This is a hardcoded file location used for all actuator_msgs and the config file
     #This is needed to be hardcoded to run through MCollective from cluster_check
@@ -150,6 +154,15 @@ class SSPLtest():
                                                     self.SIGNATURE_EXPIRES,
                                                     "3600")
 
+        # Gather RabbitMQ exchange information from configuration
+        self._egress_exchange = self._conf_reader._get_value_with_default(
+                                                    self.RABBITMQEGPROCESSOR,
+                                                    self.EXCHANGE_KEY_NAME,
+                                                    'sspl-sensor')
+        self._egress_key = self._conf_reader._get_value_with_default(
+                                                    self.RABBITMQEGPROCESSOR,
+                                                    self.EGRESS_KEY,
+                                                    'sspl-key')
         #List of message types to ignore. Will switch on and off as features are tested
         #TODO: Update this list as additional message features are added
         self.filter = self._conf_reader._get_value_list(self.SSPLPROCESSOR,
@@ -160,8 +173,7 @@ class SSPLtest():
                      host='localhost', virtual_host='SSPL', credentials=self.creds))
         self.channel = self.connection.channel()
 
-        self.channel.exchange_declare(exchange='sspl_halon',
-                                 type='topic', durable=False)
+        self.channel.exchange_declare(exchange=self._egress_exchange, type='topic', durable=False)
 
 
     def usage(self):
@@ -182,12 +194,9 @@ class SSPLtest():
         connection = pika.BlockingConnection(pika.ConnectionParameters(
                      host='localhost', virtual_host='SSPL', credentials=creds))
         channel = connection.channel()
-        channel.exchange_declare(exchange='sspl_halon',
-                                 type='topic', durable=False)
+        channel.exchange_declare(exchange=self._egress_exchange, type='topic', durable=False)
         result = channel.queue_declare(exclusive=True)
-        channel.queue_bind(exchange='sspl_halon',
-                           queue=result.method.queue,
-                   routing_key='sspl_ll')
+        channel.queue_bind(exchange=self._egress_exchange, queue=result.method.queue, routing_key=self._egress_key)
         self.logger.debug('Consumer Started.  Now Accepting JSON Messages!')
 
         def callback(ch, method, properties, body):
@@ -207,7 +216,7 @@ class SSPLtest():
                 sensorMsg = ingressMsg.get("message").get("sensor_response_type")
                 actuatorMsg = ingressMsg.get("message").get("actuator_response_type")
                 #Sorts out any outgoing messages only processes *_response_type
-                if sensorMsg is not None or actuatorMsg is not None: 
+                if sensorMsg is not None or actuatorMsg is not None:
                     #print " [x] %r" % (body,)
 
                     #Passes the ingress message to the interthread_msg string
@@ -1076,7 +1085,7 @@ class SSPLtest():
         msg_props = pika.BasicProperties()
         msg_props.content_type = "text/plain"
         #Convert the message back to plain text and send to consumer
-        self.channel.basic_publish(exchange='sspl_halon',
+        self.channel.basic_publish(exchange=self._egress_exchange,
                                   routing_key='sspl_ll',
                                   properties=msg_props,
                                   body=str(json.dumps(jsonMsg, ensure_ascii=True).encode('utf8')))
@@ -1155,7 +1164,7 @@ class SSPLtest():
                 : 0 -> respective test passed
                 : 1 -> respective test failed
         """
- 
+
         command = "systemctl restart sspl-ll"
         subprocess.Popen(command, shell=True, stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE)
@@ -1179,7 +1188,7 @@ class SSPLtest():
                             "ServiceVerify"     : "Passed",
                             "ThreadVerify"      : "Passed",
                             "LogVerify"         : "Passed",
-                            "DriveVerify"       : "Passed", 
+                            "DriveVerify"       : "Passed",
                             "WatchdogVerify"    : "Passed",
                             "HostUpdateVerify"  : "Passed",
                             "EventVerify"       : "Passed"
@@ -1187,7 +1196,7 @@ class SSPLtest():
 
         #if not self.hostUpdateVerify():
         #    testPassedDict["HostUpdateVerify"] = "Passed"
-        
+
         # Only testing drivemanager and hpi for Beta release
         #if not self.eventVerify():
             #testPassedDict["EventVerify"] = "Passed"
@@ -1198,7 +1207,7 @@ class SSPLtest():
 
         #else:
         #    testPassedDict["EventVerify"] = "Failed"
-        
+
         #if not self.serviceVerify():
         #    testPassedDict["ServiceVerify"] = "Passed"
         #if not self.logVerify():
@@ -1212,7 +1221,7 @@ class SSPLtest():
         #    testPassedDict["DriveVerify"] = "Passed"
 
 #        self.cleanUp()
-# 
+
 #         self.logger.debug("Service Total Tests: " + str(self.serviceTestTotal))
 #         self.logger.debug("Service Tests Passed: " + str(self.serviceTestPassed))
 #         self.logger.debug("Thread Total Tests: " + str(self.threadTestTotal))
@@ -1227,7 +1236,7 @@ class SSPLtest():
 #         self.logger.debug("Host Update Tests Passed: " + str(self.hostTestPassed))
 #         self.logger.debug("Event Total Tests: " + str(self.eventTestTotal))
 #         self.logger.debug("Event Tests Passed: " + str(self.eventTestPassed))
-# 
+
 #         self.logger.debug("Total Tests: " + str(self.testsTotal))
 #         self.logger.debug("Tests Passed: " + str(self.testsPassed))
 

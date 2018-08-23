@@ -47,13 +47,13 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
     PRIORITY    = 1
 
     # Section and keys in configuration file
-    RABBITMQPROCESSOR   = MODULE_NAME.upper()
-    EXCHANGE_NAME       = 'exchange_name'
-    QUEUE_NAME          = 'queue_name'
-    ROUTING_KEY         = 'routing_key'
-    VIRT_HOST           = 'virtual_host'
-    USER_NAME           = 'username'
-    PASSWORD            = 'password'
+    RABBITMQPROCESSOR    = MODULE_NAME.upper()
+    EXCHANGE_KEY_NAME    = 'exchange_name'
+    QUEUE_NAME           = 'queue_name'
+    ROUTING_KEY          = 'routing_key'
+    VIRT_HOST            = 'virtual_host'
+    USER_NAME            = 'username'
+    PASSWORD             = 'password'
 
     JSON_ACTUATOR_SCHEMA = "SSPL-LL_Actuator_Request.json"
     JSON_SENSOR_SCHEMA   = "SSPL-LL_Sensor_Request.json"
@@ -208,7 +208,7 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
             else:
                 # Send ack about not finding a msg handler
                 ack_msg = AckResponseMsg("Error Processing Message", "Message Handler Not Found", uuid).getJson()
-                self._write_internal_msgQ(RabbitMQegressProcessor.name(), ack_msg)               
+                self._write_internal_msgQ(RabbitMQegressProcessor.name(), ack_msg)
 
             # Acknowledge message was received
             ch.basic_ack(delivery_tag = method.delivery_tag)
@@ -221,25 +221,22 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
     def _configure_exchange(self):
         """Configure the RabbitMQ exchange with defaults available"""
         try:
-            self._virtual_host  = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR, 
+            self._virtual_host  = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
                                                                  self.VIRT_HOST,
                                                                  'SSPL')
-            #self._exchange_name = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR, 
-            #                                                     self.EXCHANGE_NAME,
-            #                                                     'sspl_halon')
-            # TODO: Update the puppet module with this new value
-            self._exchange_name = "sspl_halon_command"
-
-            self._queue_name    = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR, 
+            self._exchange_name = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
+                                                                 self.EXCHANGE_KEY_NAME,
+                                                                 'sspl-command')
+            self._queue_name    = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
                                                                  self.QUEUE_NAME,
-                                                                 'SSPL-LL')
-            self._routing_key   = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR, 
+                                                                 'sspl-queue')
+            self._routing_key   = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
                                                                  self.ROUTING_KEY,
-                                                                 'sspl_ll')           
-            self._username      = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR, 
+                                                                 'sspl-key')
+            self._username      = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
                                                                  self.USER_NAME,
                                                                  'sspluser')
-            self._password      = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR, 
+            self._password      = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
                                                                  self.PASSWORD,
                                                                  'sspl4ever')
             # ensure the rabbitmq queues/etc exist

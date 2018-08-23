@@ -41,8 +41,8 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
 
     # Section and keys in configuration file
     RABBITMQPROCESSOR       = MODULE_NAME.upper()
-    EXCHANGE_NAME           = 'exchange_name'
-    ACK_EXCHANGE_NAME       = 'ack_exchange_name'
+    EXCHANGE_KEY_NAME       = 'exchange_name'
+    ACK_EXCHANGE_KEY_NAME   = 'ack_exchange_name'
     QUEUE_NAME              = 'queue_name'
     ROUTING_KEY             = 'routing_key'
     VIRT_HOST               = 'virtual_host'
@@ -76,7 +76,7 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
         self._request_shutdown = False
 
         self._msg_sent_succesfull = True
-        
+
         self._products = products
 
         # Configure RabbitMQ Exchange to transmit messages
@@ -139,31 +139,31 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
             self._virtual_host  = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
                                                                  self.VIRT_HOST,
                                                                  'SSPL')
-            self._queue_name    = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR, 
+            self._queue_name    = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
                                                                  self.QUEUE_NAME,
-                                                                 'SSPL-LL')
+                                                                 'sspl-queue')
             self._exchange_name = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
-                                                                 self.EXCHANGE_NAME,
-                                                                 'sspl_halon')
+                                                                 self.EXCHANGE_KEY_NAME,
+                                                                 'sspl-sensor')
             self._ack_exchange_name = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
-                                                                 self.ACK_EXCHANGE_NAME,
-                                                                 'sspl_command_ack')
+                                                                 self.ACK_EXCHANGE_KEY_NAME,
+                                                                 'sspl-command-ack')
             self._routing_key   = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
                                                                  self.ROUTING_KEY,
-                                                                 'sspl_ll')           
+                                                                 'sspl-key')
             self._username      = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
                                                                  self.USER_NAME,
                                                                  'sspluser')
             self._password      = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
                                                                  self.PASSWORD,
                                                                  'sspl4ever')
-            self._signature_user = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR, 
+            self._signature_user = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
                                                                  self.SIGNATURE_USERNAME,
                                                                  'sspl-ll')
-            self._signature_token = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR, 
+            self._signature_token = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
                                                                  self.SIGNATURE_TOKEN,
                                                                  'FAKETOKEN1234')
-            self._signature_expires = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR, 
+            self._signature_expires = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
                                                                  self.SIGNATURE_EXPIRES,
                                                                  "3600")
             self._iem_route_addr = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
@@ -264,7 +264,7 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
             token = ctypes.create_string_buffer(SSPL_SEC.sspl_get_token_length())
 
             SSPL_SEC.sspl_generate_session_token(
-                                    self._signature_user, authn_token_len, 
+                                    self._signature_user, authn_token_len,
                                     self._signature_token, session_length, token)
 
             # Generate the signature
@@ -283,7 +283,7 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
 
         try:
             # Check for shut down message from sspl_ll_d and set a flag to shutdown
-            #  once our message queue is empty 
+            #  once our message queue is empty
             if self._jsonMsg.get("message").get("actuator_response_type") is not None and \
                 self._jsonMsg.get("message").get("actuator_response_type").get("thread_controller") is not None and \
                 self._jsonMsg.get("message").get("actuator_response_type").get("thread_controller").get("thread_response") == \

@@ -7,9 +7,9 @@ import pprint
 
 SSPL_USER = "sspluser"
 SSPL_PASS = "sspl4ever"
-SSPL_QUEUE = "SSPL-LL"
-SSPL_EXCHANGE = "sspl_halon"
-SSPL_KEY = "sspl_ll"
+SSPL_QUEUE = "sspl-queue"
+SSPL_EXCHANGE = "sspl-sensor"
+SSPL_KEY = "sspl-key"
 SSPL_VHOST = "SSPL"
 
 def process_msg(ch, method, properties, body):
@@ -19,6 +19,7 @@ try:
     if len(sys.argv) > 2:
         SSPL_EXCHANGE = sys.argv[1]
         SSPL_QUEUE = sys.argv[2]
+        SSPL_KEY = sys.argv[3]
 
     creds = pika.PlainCredentials(SSPL_USER, SSPL_PASS)
     connection = pika.BlockingConnection(pika.\

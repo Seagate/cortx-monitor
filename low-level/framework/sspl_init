@@ -20,7 +20,7 @@ case $cmd in
     check )
         [ -f $SSPL_CONFIGURED ]  && exit 0
         logger -i -p local3.err "SSPL is not configured."
-        logger -i -p local3.err "Please run /opt/seagate/sspl/low-level/framework/sspl_init."
+        logger -i -p local3.err "Please run /opt/seagate/sspl/sspl_init."
         exit 1
         ;;
 
