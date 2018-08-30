@@ -523,7 +523,7 @@ def _init_CS_A(parser, program_name, exchange):
 
             print("\nInitiating SMART tests.  This can take several minutes...\n")
             _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, response_wait_time=300,
-                          force_wait=True, exhange=exchange)
+                          force_wait=True, exchange=exchange)
 
         elif args.drvmngr:
             # Load a drivemanager status message from the manual tests directory and update it with args.drvmngr
