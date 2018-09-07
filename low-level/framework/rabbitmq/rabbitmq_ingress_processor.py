@@ -48,7 +48,7 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
 
     # Section and keys in configuration file
     RABBITMQPROCESSOR    = MODULE_NAME.upper()
-    EXCHANGE_KEY_NAME    = 'exchange_name'
+    EXCHANGE_NAME        = 'exchange_name'
     QUEUE_NAME           = 'queue_name'
     ROUTING_KEY          = 'routing_key'
     VIRT_HOST            = 'virtual_host'
@@ -225,14 +225,14 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
                                                                  self.VIRT_HOST,
                                                                  'SSPL')
             self._exchange_name = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
-                                                                 self.EXCHANGE_KEY_NAME,
-                                                                 'sspl-command')
+                                                                 self.EXCHANGE_NAME,
+                                                                 'sspl-in')
             self._queue_name    = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
                                                                  self.QUEUE_NAME,
-                                                                 'sspl-queue')
+                                                                 'actuator-req-queue')
             self._routing_key   = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
                                                                  self.ROUTING_KEY,
-                                                                 'sspl-key')
+                                                                 'actuator-req-key')
             self._username      = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
                                                                  self.USER_NAME,
                                                                  'sspluser')

@@ -43,7 +43,7 @@ class RabbitMQingressProcessorTests(ScheduledModuleThread, InternalMsgQ):
 
     # Section and keys in configuration file
     RABBITMQPROCESSORTEST = MODULE_NAME.upper()
-    EXCHANGE_KEY_NAME     = 'exchange_name'
+    EXCHANGE_NAME         = 'exchange_name'
     QUEUE_NAME            = 'queue_name'
     ROUTING_KEY           = 'routing_key'
     VIRT_HOST             = 'virtual_host'
@@ -203,14 +203,14 @@ class RabbitMQingressProcessorTests(ScheduledModuleThread, InternalMsgQ):
                                                                  self.VIRT_HOST,
                                                                  'SSPL')
             self._exchange_name = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSORTEST,
-                                                                 self.EXCHANGE_KEY_NAME,
-                                                                 'sspl-command')
+                                                                 self.EXCHANGE_NAME,
+                                                                 'sspl-in')
             self._queue_name    = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSORTEST,
                                                                  self.QUEUE_NAME,
-                                                                 'sspl-queue')
+                                                                 'actuator-req-queue')
             self._routing_key   = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSORTEST,
                                                                  self.ROUTING_KEY,
-                                                                 'sspl-key')
+                                                                 'actuator-req-key')
             self._username      = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSORTEST,
                                                                  self.USER_NAME,
                                                                  'sspluser')
@@ -228,7 +228,7 @@ class RabbitMQingressProcessorTests(ScheduledModuleThread, InternalMsgQ):
                 )
             self._channel = self._connection.channel()
             self._channel.queue_declare(
-                queue='SSPL-LL',
+                queue=self._queue_name,
                 durable=False
                 )
             self._channel.exchange_declare(
@@ -237,7 +237,7 @@ class RabbitMQingressProcessorTests(ScheduledModuleThread, InternalMsgQ):
                 durable=False
                 )
             self._channel.queue_bind(
-                queue='SSPL-LL',
+                queue=self._queue_name,
                 exchange=self._exchange_name,
                 routing_key=self._routing_key
                 )

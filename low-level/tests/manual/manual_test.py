@@ -58,9 +58,10 @@ class ManualTest():
     VIRTUALHOST          = "virtual_host"
     INGRESSQUEU          = "queue_name"
     QUEUE_NAME           = "queue_name"
-    EXCHANGE_KEY_NAME    = "exchange_name"
-    ACKEXCHANGENAME      = "ack_exchange_name"
+    ACKQUEUENAME         = "ack_queue_name"
+    EXCHANGE_NAME        = "exchange_name"
     ROUTINGKEY           = "routing_key"
+    ACKROUTINGKEY        = "ack_routing_key"
     USERNAME             = "username"
     PASSWORD             = "password"
     SIGNATURE_USERNAME   = 'message_signature_username'
@@ -105,21 +106,16 @@ class ManualTest():
                                    self.JSON_SENSOR_SCHEMA)
         self._sensor_schema = self._load_schema(schema_file)
 
+        self._durable = False
         if start_threads:
             # Start up threads to receive responses
-            if self.module_name == "RABBITMQEGRESSPROCESSOR":
-                self._basic_consume_ackt = threading.Thread(target=self.basicConsumeAck)
-                self._basic_consume_ackt.setDaemon(True)
-                self._basic_consume_ackt.start()
-                self._durable = False
-            else:
-                self._durable = True
+            self._basic_consume_ackt = threading.Thread(target=self.basicConsumeAck)
+            self._basic_consume_ackt.setDaemon(True)
+            self._basic_consume_ackt.start()
 
             self._basic_consumet = threading.Thread(target=self.basicConsume)
             self._basic_consumet.setDaemon(True)
             self._basic_consumet.start()
-        else:
-            self._durable = False
 
         self._alldata = True
         self._indent = True
@@ -165,43 +161,73 @@ class ManualTest():
                                                     self.VIRTUALHOST,
                                                     'SSPL')
 
-        if self.module_name == "RABBITMQEGRESSPROCESSOR":
+        # Ingress configuration
+        if self.module_name == "RABBITMQINGRESSPROCESSOR":
+            # Configuration to send message
             self._ingress_queue = conf_reader._get_value_with_default(
                                                         self.module_name,
                                                         self.QUEUE_NAME,
-                                                        'sspl-queue')
-        elif self.module_name == "PLANECNTRLRMQEGRESSPROCESSOR":
+                                                        'actuator-req-queue')
+            self._ingress_exchange = conf_reader._get_value_with_default(
+                                                        self.module_name,
+                                                        self.EXCHANGE_NAME,
+                                                        'sspl-in')
+            self._ingress_key = conf_reader._get_value_with_default(
+                                                        self.module_name,
+                                                        self.ROUTINGKEY,
+                                                        'actuator-req-key')
+            # Configuration to recieve sensor messages
+
+            self._egress_queue = conf_reader._get_value_with_default(
+                                                        'RABBITMQEGRESSPROCESSOR',
+                                                        self.QUEUE_NAME,
+                                                        'sensor-queue')
+            self._egress_exchange = conf_reader._get_value_with_default(
+                                                        'RABBITMQEGRESSPROCESSOR',
+                                                        self.EXCHANGE_NAME,
+                                                        'sspl-out')
+            self._egress_key = conf_reader._get_value_with_default(
+                                                        'RABBITMQEGRESSPROCESSOR',
+                                                        self.ROUTINGKEY,
+                                                        'sensor-key')
+
+        elif self.module_name == "PLANECNTRLRMQINGRESSPROCESSOR":
             self._ingress_queue = conf_reader._get_value_with_default(
                                                         self.module_name,
                                                         self.QUEUE_NAME,
                                                         'ras_status')
-
+        # Egress Queue
         if self.module_name == "RABBITMQEGRESSPROCESSOR":
             self._egress_queue = conf_reader._get_value_with_default(
                                                         self.module_name,
                                                         self.QUEUE_NAME,
-                                                        'sspl-queue')
+                                                        'sensor-queue')
         elif self.module_name == "PLANECNTRLRMQEGRESSPROCESSOR":
             self._egress_queue = conf_reader._get_value_with_default(
                                                         self.module_name,
                                                         self.QUEUE_NAME,
                                                         'ras_control')
 
+        self._ackexchangename = conf_reader._get_value_with_default(
+                                                    self.module_name,
+                                                    self.EXCHANGE_NAME,
+                                                    'sspl-out')
+        self._ackqueuename = conf_reader._get_value_with_default(
+                                                    self.module_name,
+                                                    self.ACKQUEUENAME,
+                                                    'actuator-resp-queue')
+        self._ackroutingkey = conf_reader._get_value_with_default(
+                                                    self.module_name,
+                                                    self.ROUTINGKEY,
+                                                    'actuator-resp-key')
         self._exchangename = conf_reader._get_value_with_default(
                                                     self.module_name,
-                                                    self.EXCHANGE_KEY_NAME,
-                                                    'sspl-sensor')
-
-        if self.module_name == "RABBITMQEGRESSPROCESSOR":
-            self._ackexchangename = conf_reader._get_value_with_default(
-                                                        self.module_name,
-                                                        self.ACKEXCHANGENAME,
-                                                        'sspl-command-ack')
-
+                                                    self.EXCHANGE_NAME,
+                                                    'sspl-in')
         self._routingkey = conf_reader._get_value_with_default(
                                                     self.module_name,
                                                     self.ROUTINGKEY,
-                                                    'sspl-key')
+                                                    'sensor-key')
         self._username = conf_reader._get_value_with_default(
                                                     self.module_name,
                                                     self.USERNAME,
@@ -324,7 +350,7 @@ class ManualTest():
                 time.sleep(10)
 
         channel = connection.channel()
-        channel.exchange_declare(exchange=exchange,
+        channel.exchange_declare(exchange=self._ingress_exchange,
                          type='topic', durable=self._durable)
 
         msg_props = pika.BasicProperties()
@@ -342,8 +368,8 @@ class ManualTest():
             self.validate(jsonMsg)
 
             #Convert the message back to plain text and send to consumer
-            channel.basic_publish(exchange=exchange,
-                                  routing_key=self._routingkey,
+            channel.basic_publish(exchange=self._ingress_exchange,
+                                  routing_key=self._ingress_key,
                                   properties=msg_props,
                                   body=str(json.dumps(jsonMsg, ensure_ascii=True).encode('utf8')))
             if not wait_for_response:
@@ -351,9 +377,11 @@ class ManualTest():
             self._print_response(jsonMsg, save_to_file=False)
 
         elif message is not None:
+            msg_dict = json.loads(message)
+            uuid = msg_dict["message"]["sspl_ll_msg_header"]["uuid"]
             # Convert the message back to plain text and send to consumer
-            channel.basic_publish(exchange=exchange,
-                                   routing_key=self._routingkey,
+            channel.basic_publish(exchange=self._ingress_exchange,
+                                   routing_key=self._ingress_key,
                                    properties=msg_props,
                                    body=str(message))
             if not wait_for_response:
@@ -503,11 +531,11 @@ class ManualTest():
                 time.sleep(5)
 
         channel = connection.channel()
-        channel.exchange_declare(exchange=self._exchangename, type='topic', durable=self._durable)
-        result = channel.queue_declare(exclusive=True)
-        channel.queue_bind(exchange=self._exchangename,
+        channel.exchange_declare(exchange=self._egress_exchange, type='topic', durable=self._durable)
+        result = channel.queue_declare(queue=self._egress_queue)
+        channel.queue_bind(exchange=self._egress_exchange,
                            queue=result.method.queue,
-                           routing_key=self._routingkey)
+                           routing_key=self._egress_key)
 
         def callback(ch, method, properties, body):
             '''Called whenever a message is passed to the Consumer
@@ -515,6 +543,8 @@ class ManualTest():
             Stores the message and alerts any waiting threads when an ingress message is processed
             '''
             ingressMsg = json.loads(body)
+            print "\n"
+            print ingressMsg["message"]
 
             uuid = None
             try:
@@ -593,10 +623,10 @@ class ManualTest():
         channel = connection.channel()
         channel.exchange_declare(exchange=self._ackexchangename,
                          type='topic', durable=self._durable)
-        result = channel.queue_declare(exclusive=True)
+        result = channel.queue_declare(queue=self._ackqueuename)
         channel.queue_bind(exchange=self._ackexchangename,
                            queue=result.method.queue,
-                           routing_key=self._routingkey)
+                           routing_key=self._ackroutingkey)
 
         def callback(ch, method, properties, body):
             '''Called whenever a message is passed to the Consumer
@@ -604,7 +634,8 @@ class ManualTest():
             Stores the message and alerts any waiting threads when an ingress message is processed
             '''
             ingressMsg = json.loads(body)
-
+            print "\n"
+            print ingressMsg["message"]
             uuid = None
             try:
                 uuid = ingressMsg["message"]["sspl_ll_msg_header"]["uuid"]
@@ -615,7 +646,7 @@ class ManualTest():
             if self._request_uuid is not None and \
                uuid != self._request_uuid:
                 print "Received a Ack response on '{}' channel that doesn't match the request uuid:" \
-                        .format(self._ackexchangename)
+                        .format(self._exchangename)
                 print "Expected uuid: {} but received: {}".format(self._request_uuid, uuid)
                 self._print_response(ingressMsg, save_to_file=False)
                 return
@@ -637,7 +668,7 @@ class ManualTest():
                     ingressMsg.get("message").get("actuator_response_type") is not None:
                     self._total_ack_msg_received += 1
                     print "%s) Received on %s channel:" % \
-                          (self._total_ack_msg_received, self._ackexchangename)
+                          (self._total_ack_msg_received, self._exchangename)
                     self._print_response(ingressMsg)
                     self._msg_received = True
             except Exception as e:

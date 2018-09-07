@@ -52,8 +52,8 @@ cp -rp . ${RPM_BUILD_ROOT}/opt/seagate/sspl/low-level
 # Copy sspl_ll.conf if not present.
 [ -f /etc/sspl_ll.conf ] || cp /etc/sspl_ll.conf.sample /etc/sspl_ll.conf
 # Copy init script
-mv /opt/seagate/sspl/low-level/framework/sspl_init /opt/seagate/sspl/
-
+[ -f /opt/seagate/sspl/sspl_init ] ||
+    ln -s /opt/seagate/sspl/low-level/framework/sspl_init /opt/seagate/sspl/sspl_init
 
 case "$1" in
     1)  # Add the sspl-ll user during first install if it doesnt exist
@@ -78,6 +78,8 @@ systemctl enable rabbitmq-server
 
 # Restart dbus with new policy files
 systemctl restart dbus
+
+echo "Installation complete !! Run /opt/seagate/sspl/sspl_init to configure SSPL"
 
 %preun
 # Remove configuration in case of uninstall

@@ -54,6 +54,7 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
     # Section and keys in configuration file
     LOGGINGPROCESSOR    = MODULE_NAME.upper()
     EXCHANGE_NAME       = 'exchange_name'
+    QUEUE_NAME          = 'queue_name'
     ROUTING_KEY         = 'routing_key'
     VIRT_HOST           = 'virtual_host'
     USER_NAME           = 'username'
@@ -171,12 +172,12 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
                 # Send the event to logging msg handler to send IEM message to journald
                 self._write_internal_msgQ(LoggingMsgHandler.name(), internal_json_msg)
 
-            # Acknowledge message was received     
-            ch.basic_ack(delivery_tag = method.delivery_tag)            
+            # Acknowledge message was received
+            ch.basic_ack(delivery_tag = method.delivery_tag)
         except Exception as ex:
             logger.exception("_process_msg: %r" % ex)
 
-    def _configure_exchange(self):        
+    def _configure_exchange(self):
         """Configure the RabbitMQ exchange with defaults available"""
         try:
             self._virtual_host  = self._conf_reader._get_value_with_default(self.LOGGINGPROCESSOR,
@@ -184,10 +185,13 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
                                                                  'SSPL')
             self._exchange_name = self._conf_reader._get_value_with_default(self.LOGGINGPROCESSOR,
                                                                  self.EXCHANGE_NAME,
-                                                                 'sspl_iem')
+                                                                 'sspl-in')
+            self._queue_name    = self._conf_reader._get_value_with_default(self.LOGGINGPROCESSOR,
+                                                                 self.QUEUE_NAME,
+                                                                 'iem-queue')
             self._routing_key   = self._conf_reader._get_value_with_default(self.LOGGINGPROCESSOR,
                                                                  self.ROUTING_KEY,
-                                                                 'sspl_ll')           
+                                                                 'iem-key')
             self._username      = self._conf_reader._get_value_with_default(self.LOGGINGPROCESSOR,
                                                                  self.USER_NAME,
                                                                  'sspluser')
@@ -207,7 +211,7 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
             self._channel = self._connection.channel()
             try:
                 self._channel.queue_declare(
-                    queue='SSPL-LL',
+                    queue=self._queue_name,
                     durable=False
                     )
                 self._channel.exchange_declare(
@@ -218,13 +222,13 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
             except:
                 pass
             self._channel.queue_bind(
-                queue='SSPL-LL',
+                queue=self._queue_name,
                 exchange=self._exchange_name,
                 routing_key=self._routing_key
                 )
 
         except Exception as ex:
-            logger.exception("_configure_exchange: %s" % ex)  
+            logger.exception("_configure_exchange: %s" % ex)
 
 
     def shutdown(self):
@@ -235,4 +239,4 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
             self._channel.stop_consuming()
         except pika.exceptions.ConnectionClosed:
             logger.info("LoggingProcessor, shutdown, RabbitMQ ConnectionClosed")
-        
+

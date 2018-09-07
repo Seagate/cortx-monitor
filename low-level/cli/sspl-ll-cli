@@ -113,7 +113,7 @@ def main():
         parser.add_argument("-v", "--version", action="version", version=program_version_message)
         try:
             # Create instance of ManualTest to publish messages
-            manTest = ManualTest("RABBITMQEGRESSPROCESSOR")
+            manTest = ManualTest("RABBITMQINGRESSPROCESSOR")
         except Exception:
             print("CLI only useful for verifying packages\n")
         _init_CS_A(parser, program_name, exchange=sspl_cmd_exchange)

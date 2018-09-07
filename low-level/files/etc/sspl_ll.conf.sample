@@ -17,31 +17,33 @@ setup=hw
 
 [RABBITMQINGRESSPROCESSOR]
 virtual_host=SSPL
-queue_name=sspl-queue
-exchange_name=sspl-command
-routing_key=sspl-key
+queue_name=actuator-req-queue
+exchange_name=sspl-in
+routing_key=actuator-req-key
 username=sspluser
 password=sspl4ever
 
 [RABBITMQEGRESSPROCESSOR]
 virtual_host=SSPL
-queue_name=sspl-queue
-exchange_name=sspl-sensor
-ack_exchange_name=sspl-command-ack
-routing_key=sspl-key
+queue_name=sensor-queue
+exchange_name=sspl-out
+routing_key=sensor-key
+ack_queue_name=actuator-resp-queue
+ack_exchange_name=sspl-out
+ack_routing_key=actuator-resp-key
 username=sspluser
 password=sspl4ever
 message_signature_username=sspl-ll
 message_signature_token=ALOIUD986798df69a8koDISLKJ282983
 message_signature_expires=3600
 iem_route_addr=
-iem_route_exchange_name=sspl_iem_exchange
+iem_route_exchange_name=sspl-out
 
 [LOGGINGPROCESSOR]
 virtual_host=SSPL
-queue_name=sspl-queue
-exchange_name=sspl-iem
-routing_key=sspl-key
+queue_name=iem-queue
+exchange_name=sspl-in
+routing_key=iem-key
 username=sspluser
 password=sspl4ever
 

@@ -64,7 +64,7 @@ class SSPLtest():
 
     RABBITMQEGPROCESSOR  = 'RABBITMQEGRESSPROCESSOR'
     EGRESS_KEY           = 'sspl-key'
-    EXCHANGE_KEY_NAME    = 'exchange_name'
+    EXCHANGE_NAME        = 'exchange_name'
 
     #This is a hardcoded file location used for all actuator_msgs and the config file
     #This is needed to be hardcoded to run through MCollective from cluster_check
@@ -157,12 +157,12 @@ class SSPLtest():
         # Gather RabbitMQ exchange information from configuration
         self._egress_exchange = self._conf_reader._get_value_with_default(
                                                     self.RABBITMQEGPROCESSOR,
-                                                    self.EXCHANGE_KEY_NAME,
-                                                    'sspl-sensor')
+                                                    self.EXCHANGE_NAME,
+                                                    'sspl-out')
         self._egress_key = self._conf_reader._get_value_with_default(
                                                     self.RABBITMQEGPROCESSOR,
                                                     self.EGRESS_KEY,
-                                                    'sspl-key')
+                                                    'sensor-key')
         #List of message types to ignore. Will switch on and off as features are tested
         #TODO: Update this list as additional message features are added
         self.filter = self._conf_reader._get_value_list(self.SSPLPROCESSOR,
@@ -1086,7 +1086,7 @@ class SSPLtest():
         msg_props.content_type = "text/plain"
         #Convert the message back to plain text and send to consumer
         self.channel.basic_publish(exchange=self._egress_exchange,
-                                  routing_key='sspl_ll',
+                                  routing_key=self._egress_key,
                                   properties=msg_props,
                                   body=str(json.dumps(jsonMsg, ensure_ascii=True).encode('utf8')))
 

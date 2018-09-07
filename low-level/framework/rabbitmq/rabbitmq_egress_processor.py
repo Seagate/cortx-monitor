@@ -41,11 +41,15 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
 
     # Section and keys in configuration file
     RABBITMQPROCESSOR       = MODULE_NAME.upper()
-    EXCHANGE_KEY_NAME       = 'exchange_name'
-    ACK_EXCHANGE_KEY_NAME   = 'ack_exchange_name'
+    VIRT_HOST               = 'virtual_host'
+
+    EXCHANGE_NAME           = 'exchange_name'
     QUEUE_NAME              = 'queue_name'
     ROUTING_KEY             = 'routing_key'
-    VIRT_HOST               = 'virtual_host'
+
+    ACK_QUEUE_NAME          = 'ack_queue_name'
+    ACK_ROUTING_KEY         = 'ack_routing_key'
+
     USER_NAME               = 'username'
     PASSWORD                = 'password'
     SIGNATURE_USERNAME      = 'message_signature_username'
@@ -98,14 +102,6 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
         #self._set_debug_persist(True)
 
         try:
-            # Block on message queue until it contains an entry
-            if self._msg_sent_succesfull:
-                # Only get a new msg if we've successfully processed the current one
-                self._jsonMsg = self._read_my_msgQ()
-
-            if self._jsonMsg is not None:
-                self._transmit_msg_on_exchange()
-
             # Loop thru all messages in queue until and transmit
             while not self._is_my_msgQ_empty():
                 # Only get a new msg if we've successfully processed the current one
@@ -139,18 +135,25 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
             self._virtual_host  = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
                                                                  self.VIRT_HOST,
                                                                  'SSPL')
+
+            # Read RabbitMQ configuration for sensor messages
             self._queue_name    = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
                                                                  self.QUEUE_NAME,
-                                                                 'sspl-queue')
+                                                                 'sensor-queue')
             self._exchange_name = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
-                                                                 self.EXCHANGE_KEY_NAME,
-                                                                 'sspl-sensor')
-            self._ack_exchange_name = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
-                                                                 self.ACK_EXCHANGE_KEY_NAME,
-                                                                 'sspl-command-ack')
+                                                                 self.EXCHANGE_NAME,
+                                                                 'sspl-out')
             self._routing_key   = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
                                                                  self.ROUTING_KEY,
-                                                                 'sspl-key')
+                                                                 'sensor-key')
+            # Read RabbitMQ configuration for Ack messages
+            self._ack_queue_name = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
+                                                                 self.ACK_QUEUE_NAME,
+                                                                 'actuator-resp-queue')
+            self._ack_routing_key = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
+                                                                 self.ACK_ROUTING_KEY,
+                                                                 'actuator-resp-key')
+
             self._username      = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
                                                                  self.USER_NAME,
                                                                  'sspluser')
@@ -171,7 +174,7 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
                                                                  '')
             self._iem_route_exchange_name = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
                                                                  self.IEM_ROUTE_EXCHANGE_NAME,
-                                                                 'sspl_iem')
+                                                                 'sspl-in')
 
             if self._iem_route_addr != "":
                 logger.info("         Routing IEMs to host: %s" % self._iem_route_addr)
@@ -191,6 +194,7 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
                     )
                 )
             self._channel = self._connection.channel()
+
             try:
                 self._channel.queue_declare(
                     queue=self._queue_name,
@@ -198,6 +202,7 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
                     )
             except Exception as e:
                 logger.exception(e)
+
             try:
                 self._channel.exchange_declare(
                     exchange=self._exchange_name,
@@ -206,6 +211,7 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
                     )
             except Exception as e:
                 logger.exception(e)
+
             self._channel.queue_bind(
                 queue=self._queue_name,
                 exchange=self._exchange_name,
@@ -229,24 +235,35 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
             self._channel = self._connection.channel()
             try:
                 self._channel.queue_declare(
-                    queue=self._queue_name,
+                    queue=self._ack_queue_name,
                     durable=False
                     )
             except Exception as e:
                 logger.exception(e)
+
             try:
                 self._channel.exchange_declare(
-                    exchange=self._ack_exchange_name,
+                    exchange=self._exchange_name,
                     type='topic',
                     durable=False
                     )
             except Exception as e:
                 logger.exception(e)
+
+            # Redirect Ack messages onto ack queue
+            self._channel.queue_bind(
+                queue=self._ack_queue_name,
+                exchange=self._exchange_name,
+                routing_key=self._ack_routing_key
+                )
+
+            # Duplicate Ack messages onto sensor queue
             self._channel.queue_bind(
                 queue=self._queue_name,
-                exchange=self._ack_exchange_name,
-                routing_key=self._routing_key
+                exchange=self._exchange_name,
+                routing_key=self._ack_routing_key
                 )
+
         except Exception as ex:
             logger.exception("RabbitMQegressProcessor, _get_connection: %r" % ex)
             self._connection = None
@@ -300,10 +317,10 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
               self._jsonMsg.get("message").get("actuator_response_type").get("ack") is not None:
                 self._add_signature()
                 jsonMsg = json.dumps(self._jsonMsg).encode('utf8')
-
+                self._get_connection()
                 self._get_ack_connection()
-                self._channel.basic_publish(exchange=self._ack_exchange_name,
-                                    routing_key=self._routing_key,
+                self._channel.basic_publish(exchange=self._exchange_name,
+                                    routing_key=self._ack_routing_key,
                                     properties=msg_props,
                                     body=jsonMsg)
 
