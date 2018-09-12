@@ -106,7 +106,7 @@ class ManualTest():
                                    self.JSON_SENSOR_SCHEMA)
         self._sensor_schema = self._load_schema(schema_file)
 
-        self._durable = False
+        self._durable = True
         if start_threads:
             # Start up threads to receive responses
             self._basic_consume_ackt = threading.Thread(target=self.basicConsumeAck)
@@ -304,7 +304,7 @@ class ManualTest():
 
     def basicPublish(self, jsonfile=None, message=None, wait_for_response=True,
                      response_wait_time=3, force_wait=False, alldata=False, indent=False,
-                     remove_results_file=True, exchange=None, host=None):
+                     remove_results_file=True, host=None):
         """Publishes message out to the rabbitmq server
 
         @param jsonfile = the file containing a json message to be sent to the server
@@ -319,10 +319,6 @@ class ManualTest():
 
         if host is None:
             host = self._current_rabbitmq_server
-
-        # If exchange is not passed in then use the one from the config file
-        if exchange is None:
-            exchange = self._exchangename
 
         self._alldata = alldata
         self._indent  = indent
@@ -532,7 +528,7 @@ class ManualTest():
 
         channel = connection.channel()
         channel.exchange_declare(exchange=self._egress_exchange, type='topic', durable=self._durable)
-        result = channel.queue_declare(queue=self._egress_queue)
+        result = channel.queue_declare(exclusive=True)
         channel.queue_bind(exchange=self._egress_exchange,
                            queue=result.method.queue,
                            routing_key=self._egress_key)
@@ -543,8 +539,6 @@ class ManualTest():
             Stores the message and alerts any waiting threads when an ingress message is processed
             '''
             ingressMsg = json.loads(body)
-            print "\n"
-            print ingressMsg["message"]
 
             uuid = None
             try:
@@ -578,10 +572,10 @@ class ManualTest():
                     ingressMsg.get("message").get("actuator_response_type") is not None:
 
                     # For debugging
-                    if self.module_name == "RABBITMQEGRESSPROCESSOR":
+                    if self.module_name == "RABBITMQINGRESSPROCESSOR":
                         self._total_msg_received += 1
                         print "%d) Received response on '%s' channel of queue '%s'" % \
-                                (self._total_msg_received, self._exchangename, self._ingress_queue)
+                                (self._total_msg_received, self._exchangename, self._egress_queue)
                         self._print_response(ingressMsg)
                         self._msg_received = True
 
@@ -623,7 +617,7 @@ class ManualTest():
         channel = connection.channel()
         channel.exchange_declare(exchange=self._ackexchangename,
                          type='topic', durable=self._durable)
-        result = channel.queue_declare(queue=self._ackqueuename)
+        result = channel.queue_declare(exclusive=True)
         channel.queue_bind(exchange=self._ackexchangename,
                            queue=result.method.queue,
                            routing_key=self._ackroutingkey)
@@ -634,8 +628,6 @@ class ManualTest():
             Stores the message and alerts any waiting threads when an ingress message is processed
             '''
             ingressMsg = json.loads(body)
-            print "\n"
-            print ingressMsg["message"]
             uuid = None
             try:
                 uuid = ingressMsg["message"]["sspl_ll_msg_header"]["uuid"]

@@ -1,9 +1,5 @@
-#xyr build defines
-# This section will be re-written by Jenkins build system.
-
 %define name sspl
-%define url  http://gerrit.mero.colo.seagate.com:8080/#/admin/projects
-#xyr end defines
+%define url  http://gerrit.mero.colo.seagate.com:8080/#/admin/projects/sspl
 
 %define _unpackaged_files_terminate_build 0
 %define _binaries_in_noarch_packages_terminate_build   0
@@ -48,24 +44,27 @@ cp -afv files/etc ${RPM_BUILD_ROOT}/
 mkdir -p ${RPM_BUILD_ROOT}/opt/seagate/sspl/low-level
 cp -rp . ${RPM_BUILD_ROOT}/opt/seagate/sspl/low-level
 
+%pre
+# Add the sspl-ll user during first install if it doesnt exist
+id -u sspl-ll &>/dev/null || {
+    echo "Creating sspl-ll user..."
+    /usr/sbin/useradd -r -g zabbix -s /sbin/nologin  \
+            -c "User account to run the sspl-ll service" sspl-ll
+}
+
 %post
 # Copy sspl_ll.conf if not present.
 [ -f /etc/sspl_ll.conf ] || cp /etc/sspl_ll.conf.sample /etc/sspl_ll.conf
+
 # Copy init script
 [ -f /opt/seagate/sspl/sspl_init ] ||
     ln -s /opt/seagate/sspl/low-level/framework/sspl_init /opt/seagate/sspl/sspl_init
 
-case "$1" in
-    1)  # Add the sspl-ll user during first install if it doesnt exist
-        id -u sspl-ll &>/dev/null || /usr/sbin/useradd -r -g zabbix \
-            -s /sbin/nologin  \
-            -c "User account to run the sspl-ll service" sspl-ll
-        ;;
-
-    2)  # In case of upgrade start sspl-ll after upgrade
-        systemctl restart sspl-ll.service 2> /dev/null
-        ;;
-esac
+# In case of upgrade start sspl-ll after upgrade
+if [ "$1" == "2" ]; then
+    echo "Restarting sspl-ll service..."
+    systemctl restart sspl-ll.service 2> /dev/null
+fi
 
 mkdir -p /var/log/journal
 systemctl restart systemd-journald
@@ -73,13 +72,15 @@ systemctl restart systemd-journald
 # Have systemd reload
 systemctl daemon-reload
 
-# Enable services to start at boot
-systemctl enable rabbitmq-server
+if [ "$1" = "1" ]; then
+    # Enable services to start at boot
+    systemctl enable rabbitmq-server
 
-# Restart dbus with new policy files
-systemctl restart dbus
+    # Restart dbus with new policy files
+    systemctl restart dbus
 
-echo "Installation complete !! Run /opt/seagate/sspl/sspl_init to configure SSPL"
+    echo "Installation complete !! Run /opt/seagate/sspl/sspl_init to configure SSPL"
+fi
 
 %preun
 # Remove configuration in case of uninstall

@@ -102,7 +102,7 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
 
         except Exception as ae:
             if self.is_running() == True:
-                logger.info("LoggingProcessor ungracefully breaking out of run loop, restarting: %s" 
+                logger.info("LoggingProcessor ungracefully breaking out of run loop, restarting: %s"
                             % ae)
                 self._configure_exchange()
                 self._scheduler.enter(10, self._priority, self.run, ())
@@ -212,12 +212,12 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
             try:
                 self._channel.queue_declare(
                     queue=self._queue_name,
-                    durable=False
+                    durable=True
                     )
                 self._channel.exchange_declare(
                     exchange=self._exchange_name,
                     type='topic',
-                    durable=False
+                    durable=True
                     )
             except:
                 pass

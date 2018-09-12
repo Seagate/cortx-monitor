@@ -65,6 +65,7 @@ class SSPLtest():
     RABBITMQEGPROCESSOR  = 'RABBITMQEGRESSPROCESSOR'
     EGRESS_KEY           = 'sspl-key'
     EXCHANGE_NAME        = 'exchange_name'
+    QUEUE_NAME           = 'queue_name'
 
     #This is a hardcoded file location used for all actuator_msgs and the config file
     #This is needed to be hardcoded to run through MCollective from cluster_check
@@ -143,12 +144,10 @@ class SSPLtest():
                                                     self.SSPLPROCESSOR,
                                                     self.SIGNATURE_USERNAME,
                                                     'sspl-ll')
-
         self._signature_token = self._conf_reader._get_value_with_default(
                                                     self.SSPLPROCESSOR,
                                                     self.SIGNATURE_TOKEN,
                                                     'FAKETOKEN1234')
-
         self._signature_expires = self._conf_reader._get_value_with_default(
                                                     self.SSPLPROCESSOR,
                                                     self.SIGNATURE_EXPIRES,
@@ -163,6 +162,11 @@ class SSPLtest():
                                                     self.RABBITMQEGPROCESSOR,
                                                     self.EGRESS_KEY,
                                                     'sensor-key')
+        self._egress_queue = self._conf_reader._get_value_with_default(
+                                                    self.RABBITMQEGPROCESSOR,
+                                                    self.QUEUE_NAME,
+                                                    'sensor-queue')
+
         #List of message types to ignore. Will switch on and off as features are tested
         #TODO: Update this list as additional message features are added
         self.filter = self._conf_reader._get_value_list(self.SSPLPROCESSOR,
@@ -173,7 +177,7 @@ class SSPLtest():
                      host='localhost', virtual_host='SSPL', credentials=self.creds))
         self.channel = self.connection.channel()
 
-        self.channel.exchange_declare(exchange=self._egress_exchange, type='topic', durable=False)
+        self.channel.exchange_declare(exchange=self._egress_exchange, type='topic', durable=True)
 
 
     def usage(self):
@@ -194,8 +198,8 @@ class SSPLtest():
         connection = pika.BlockingConnection(pika.ConnectionParameters(
                      host='localhost', virtual_host='SSPL', credentials=creds))
         channel = connection.channel()
-        channel.exchange_declare(exchange=self._egress_exchange, type='topic', durable=False)
-        result = channel.queue_declare(exclusive=True)
+        channel.exchange_declare(exchange=self._egress_exchange, type='topic', durable=True)
+        result = channel.queue_declare(self._egress_queue, durable=True)
         channel.queue_bind(exchange=self._egress_exchange, queue=result.method.queue, routing_key=self._egress_key)
         self.logger.debug('Consumer Started.  Now Accepting JSON Messages!')
 
