@@ -1,75 +1,116 @@
 #!/bin/bash
 
-set -E
+set -eu -o pipefail
 
 SCRIPT_NAME=$(basename $0)
-SSPL_CONFIG_PATH="/var/sspl"
-SSPL_CONFIGURED="$SSPL_CONFIG_PATH/sspl-configured"
+SSPL_CONF="/etc/sspl_ll.conf"
+SSPL_CONFIGURED="/var/sspl/sspl-configured"
+ROLES="gw ssu vm"
 
 usage() {
-    echo "$SCRIPT_NAME [{check|config [-f]}]"
+    cat << EOF
+$SCRIPT_NAME [{check|config [-f] [-r <ssu|gw|vm>]]
+config options:
+    -f  Force reinitialization. Do not prompt
+    -r  Role to be configured on the current node
+    -s  Skip RabbitMQ reset step
+
+EOF
     exit 1
 }
 
+config_sspl() {
+    force=0
+    role=
+    rabbitmq_reset=1
+
+    while [ $# -gt 0 ]; do
+        case $1 in
+            -f )
+                force=1
+                ;;
+            -r )
+                [ $# -lt 2 ] && usage
+                shift 1 && role=$1
+                [[ $ROLES =~ (^| )$role($| ) ]] || usage
+                ;;
+            -s )
+                rabbitmq_reset=
+                ;;
+            * )
+                usage
+                ;;
+        esac
+        shift 1
+    done
+
+    [ $(id -u) -ne 0 ] && echo "Run this command with root privileges!!" &&
+        exit 1
+    [ -f $SSPL_CONF ] || {
+        echo "Missing configuration!! Create $SSPL_CONF and rerun.";
+        exit 1;
+    }
+
+    [ -f $SSPL_CONFIGURED ] && {
+        [ "$force" = "1" ] && ans="y" || ans=;
+        while [ "$ans" != "y" -a "$ans" != "n" ]; do
+            echo -n "SSPL is already initialized. Reinitialize SSPL? [y/n]: ";
+            read ans;
+        done;
+        [ "$ans" != "y" ] && exit 1;
+        rm -f $SSPL_CONFIGURED;
+        systemctl stop sspl-ll.service;
+        systemctl disable sspl-ll.service;
+    }
+
+    # Configure role
+    [ -z "$role" ] || sed -i "s/^setup=.*/setup=$role/g" $SSPL_CONF
+
+    # Add sspl-ll user to required groups and sudoers file etc.
+    echo "Initializing SSPL configuration ... "
+    /opt/seagate/sspl/low-level/framework/sspl_ll_reinit_CS_A
+
+    # Create /tmp/dcs/hpi if required
+    [ ! -d "/tmp/dcs/hpi" ] && mkdir -p /tmp/dcs/hpi &&
+        id -u zabbix > /dev/null 2>&1 && chown zabbix:zabbix /tmp/dcs/hpi
+
+    # Ensure rabbitmq-server has started
+    systemctl start rabbitmq-server
+
+    # Reset RabbitMQ configuration
+    [ -z "$rabbitmq_reset" ] || {
+        /sbin/rabbitmqctl stop_app;
+        /sbin/rabbitmqctl reset;
+        /sbin/rabbitmqctl start_app;
+    }
+
+    # Add required user and vhost to RabbitMQ. Set user permissions etc.
+    echo "Creating required RABBITMQ configuration.... "
+    /opt/seagate/sspl/low-level/framework/sspl_ll_rabbitmq_reinit_CS_A
+    echo "SSPL configured successfully."
+    mkdir -p $(dirname $SSPL_CONFIGURED)
+
+    # Create mdadm.conf to set ACL on it.
+    touch /etc/mdadm.conf
+    setfacl -m u:sspl-ll:rw /etc/mdadm.conf
+    touch $SSPL_CONFIGURED
+
+    systemctl enable sspl-ll.service
+    systemctl start sspl-ll.service
+}
+
 cmd="config"
-arg=""
-[ $# -ge 1 ] && cmd=$1
-[ $# -ge 2 ] && arg=$2
+[ $# -ge 1 ] && cmd=$1 && shift 1
 
 case $cmd in
     check )
         [ -f $SSPL_CONFIGURED ]  && exit 0
-        logger -i -p local3.err "SSPL is not configured."
-        logger -i -p local3.err "Please run /opt/seagate/sspl/sspl_init."
+        logger -i -p local3.err "SSPL is not configured. Run /opt/seagate/sspl/sspl_init"
         exit 1
         ;;
 
     config )
-        [ $(id -u) -ne 0 ] && echo "Run this command with root privileges!!" && exit 1
-        [ -f /etc/sspl_ll.conf ] || { echo "Missing configuration!! Create /etc/sspl_ll.conf and rerun.";  exit 1; }
-
-        if [ -f $SSPL_CONFIGURED ]; then
-            [ "$arg" = "-f" ] && arg="y"
-            while [ "$arg" != "y" -a "$arg" != "n" ]; do
-                echo -n "SSPL is already initialized. Do you want to reinitialize ?[y/n]: "
-                read arg
-            done
-            [ "$arg" != "y" ] && exit 1
-            rm -f $SSPL_CONFIGURED
-            systemctl stop sspl-ll.service
-            systemctl disable sspl-ll.service
-        fi
-
-        # Add sspl-ll user to required groups and sudoers file etc.
-        echo "Initializing SSPL configuration ... "
-        /opt/seagate/sspl/low-level/framework/sspl_ll_reinit_CS_A
-
-        # Create /tmp/dcs/hpi if required
-        [ ! -d "/tmp/dcs/hpi" ] && mkdir -p /tmp/dcs/hpi && id -u zabbix > /dev/null 2>&1 && chown zabbix:zabbix /tmp/dcs/hpi
-
-        # Ensure rabbitmq-server has started
-        systemctl start rabbitmq-server
-
-        if [ "$arg" != "-s" ]; then
-            # Reset RabbitMQ configuration
-            /sbin/rabbitmqctl stop_app
-            /sbin/rabbitmqctl reset
-            /sbin/rabbitmqctl start_app
-        fi
-
-        # Add required user and vhost to RabbitMQ. Set user permissions etc.
-        echo "Creating required RABBITMQ configuration.... "
-        /opt/seagate/sspl/low-level/framework/sspl_ll_rabbitmq_reinit_CS_A
-        echo "SSPL configured successfully."
-        mkdir -p $SSPL_CONFIG_PATH
-
-        # Create mdadm.conf to set ACL on it.
-        touch /etc/mdadm.conf
-        setfacl -m u:sspl-ll:rw /etc/mdadm.conf
-        touch $SSPL_CONFIGURED
-
-        systemctl enable sspl-ll.service
-        systemctl start sspl-ll.service
+        config_sspl $*
         ;;
 
     * )

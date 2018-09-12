@@ -74,7 +74,7 @@ units=MB
 
 [SYSTEMDWATCHDOG]
 threaded=true
-monitored_services=m0t1fs@*.service, m0d@*.service, zabbix*.service, mero.service, mero-kernel.service, mero-trace@kernel.service, mero-server@mero-kernel.service, mero-mkfs@mero-kernel.service, mero-trace@mero-kernel.service, mero-server@kernel.service, mero-mkfs@kernel.service, halond.service, dcs-collector.service, rabbitmq-server.service, lnet.service, network.service, openhpid.service, systemd-user-sessions.service, systemd-journald.service, systemd-sysctl.service, systemd-logind.service, crond.service, syslog.service, sshd.service, mcollective.service, dbus.service
+monitored_services=m0t1fs@*.service, m0d@*.service, mero.service, mero-kernel.service, mero-trace@kernel.service, mero-server@mero-kernel.service, mero-mkfs@mero-kernel.service, mero-trace@mero-kernel.service, mero-server@kernel.service, mero-mkfs@kernel.service, halond.service, dcs-collector.service, rabbitmq-server.service, lnet.service, network.service, openhpid.service, systemd-user-sessions.service, systemd-journald.service, systemd-sysctl.service, systemd-logind.service, crond.service, syslog.service, sshd.service, dbus.service
 smart_test_interval=999999999
 
 [XINITDWATCHDOG]

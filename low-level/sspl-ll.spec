@@ -96,6 +96,8 @@ rm -f /opt/seagate/sspl/sspl_init
 %defattr(-,sspl-ll,root,-)
 /opt/seagate/sspl/*
 /etc/sspl_ll.conf.sample
+/etc/sspl_ll.conf.sample.gw
+/etc/sspl_ll.conf.sample.ssu
 /etc/systemd/system/sspl-ll.service
 
 %changelog

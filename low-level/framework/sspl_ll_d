@@ -206,7 +206,7 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist, operating_system
 
     # Read in list of actuators
     actuators = conf_reader._get_value_list(SSPL_SETTING, ACTUATORS)
-    if setup == 'vm' and 'HPIactuator' in actuators:
+    if setup in ['gw', 'vm'] and 'HPIactuator' in actuators:
         actuators.remove('HPIactuator')
     logger.info("sspl-ll Bootstrap: actuators to load: %s" % actuators)
 
@@ -239,7 +239,7 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist, operating_system
             from actuators.impl.generic.raid import RAIDactuator
             from actuators.impl.generic.ipmi import IPMI
             from actuators.impl.generic.hdparm import Hdparm
-            if setup != 'vm':
+            if setup not in ['vm', 'gw']:
                 try:
                     from actuators.impl.generic.hpi_actuator import HPIactuator
                 except ImportError:
