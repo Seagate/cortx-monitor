@@ -229,12 +229,12 @@ class RabbitMQingressProcessorTests(ScheduledModuleThread, InternalMsgQ):
             self._channel = self._connection.channel()
             self._channel.queue_declare(
                 queue=self._queue_name,
-                durable=True
+                durable=False
                 )
             self._channel.exchange_declare(
                 exchange=self._exchange_name,
                 exchange_type='topic',
-                durable=True
+                durable=False
                 )
             self._channel.queue_bind(
                 queue=self._queue_name,

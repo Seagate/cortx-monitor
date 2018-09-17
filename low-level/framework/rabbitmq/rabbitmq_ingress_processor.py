@@ -252,7 +252,7 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
             try:
                 self._channel.queue_declare(
                     queue=self._queue_name,
-                    durable=True
+                    durable=False
                     )
             except Exception as e:
                 logger.exception(e)
@@ -260,7 +260,7 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
                 self._channel.exchange_declare(
                     exchange=self._exchange_name,
                     type='topic',
-                    durable=True
+                    durable=False
                     )
             except Exception as e:
                 logger.exception(e)

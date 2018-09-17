@@ -106,7 +106,7 @@ class ManualTest():
                                    self.JSON_SENSOR_SCHEMA)
         self._sensor_schema = self._load_schema(schema_file)
 
-        self._durable = True
+        self._durable = False
         if start_threads:
             # Start up threads to receive responses
             self._basic_consume_ackt = threading.Thread(target=self.basicConsumeAck)
