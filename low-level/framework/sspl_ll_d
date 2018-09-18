@@ -181,13 +181,8 @@ def main(conf_reader, systemd_support):
         # Initialize the thread controller with the list of references to all modules
         controller_thread = Thread(target=_run_thread_capture_errors,
                             args=(threadController, sspl_threaded_modules, msgQlist, conf_reader, products))
-        threadController.initialize_thread_list(sspl_threaded_modules, operating_system, products)
+        threadController.initialize_thread_list(sspl_threaded_modules, operating_system, products, systemd_support)
         controller_thread.start()
-
-        # Let systemd know that we've started up successfully and ready for it to monitor sspl-ll
-        if systemd_support:
-            from systemd.daemon import notify
-            notify("READY=1")
 
         # Block main thread until thread controller has been halted
         controller_thread.join()

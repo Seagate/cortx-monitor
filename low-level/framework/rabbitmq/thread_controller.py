@@ -96,11 +96,11 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
         self._threads_initialized = False
         self._thread_response     = "N/A"
         self.debug_section        = None
-        
+
         # Location of hpi data directory populated by dcs-collector
         self._hpi_base_dir = "/tmp/dcs/hpi"
         self._start_delay  = 10
-        
+        self._systemd_support = True
         self._hostname = gethostname()
 
     def initialize(self, conf_reader, msgQlist, products):
@@ -111,11 +111,12 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
         # Initialize internal message queues for this module
         super(ThreadController, self).initialize_msgQ(msgQlist)
 
-    def initialize_thread_list(self, sspl_modules, operating_system, products):
+    def initialize_thread_list(self, sspl_modules, operating_system, products, systemd_support):
         """initialize list of references to all modules"""
         self._sspl_modules     = sspl_modules
         self._products         = products
         self._operating_system = operating_system
+        self._systemd_support  = systemd_support
 
         if operating_system == "centos7":
             # Note that all threaded sensors and actuators must have an import here to be controlled
@@ -150,9 +151,14 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
                 self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
                 self._threads_initialized = True
 
-        #self._set_debug(True)
-        #self._set_debug_persist(True)
-        self._log_debug("Start accepting requests")
+                # Let systemd know that we've started up successfully and ready for it to monitor sspl
+                if self._systemd_support:
+                    from systemd.daemon import notify
+                    notify("READY=1")
+
+                #self._set_debug(True)
+                #self._set_debug_persist(True)
+                self._log_debug("Start accepting requests")
         try:
             # Block on message queue until it contains an entry
             jsonMsg = self._read_my_msgQ()
@@ -317,7 +323,7 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
             module_thread.start()
         except Exception as ae:
             logger.warn("Start thread failed: %s" % str(ae))
-            self._thread_response = "Start Failed"        
+            self._thread_response = "Start Failed"
 
     def _status_module(self, module_name):
         """Returns if the module is running or not"""
@@ -326,7 +332,7 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
         else:
             self._thread_response = "Status: Halted"
 
-        self._log_debug("_status_module, module_name: %s, _thread_response: %s" % 
+        self._log_debug("_status_module, module_name: %s, _thread_response: %s" %
                         (module_name, self._thread_response))
         return self._sspl_modules[module_name].is_running()
 
@@ -342,8 +348,8 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
                         self._restart_module(module)
 
                 # Populate an actuator response message and transmit
-                msgString = ThreadControllerMsg("All Modules", "Restarted with debug mode off").getJson()        
-                self._write_internal_msgQ(RabbitMQegressProcessor.name(), msgString)        
+                msgString = ThreadControllerMsg("All Modules", "Restarted with debug mode off").getJson()
+                self._write_internal_msgQ(RabbitMQegressProcessor.name(), msgString)
                 return True
 
         return False
