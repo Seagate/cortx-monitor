@@ -575,7 +575,7 @@ class ManualTest():
                     if self.module_name == "RABBITMQINGRESSPROCESSOR":
                         self._total_msg_received += 1
                         print "%d) Received response on '%s' channel of queue '%s'" % \
-                                (self._total_msg_received, self._exchangename, self._egress_queue)
+                                (self._total_msg_received, self._egress_exchange, self._egress_queue)
                         self._print_response(ingressMsg)
                         self._msg_received = True
 

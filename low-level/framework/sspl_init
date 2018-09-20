@@ -5,11 +5,11 @@ set -eu -o pipefail
 SCRIPT_NAME=$(basename $0)
 SSPL_CONF="/etc/sspl_ll.conf"
 SSPL_CONFIGURED="/var/sspl/sspl-configured"
-ROLES="gw ssu vm"
+ROLES="gw ssu vm cmu"
 
 usage() {
     cat << EOF
-$SCRIPT_NAME [{check|config [-f] [-r <ssu|gw|vm>]]
+$SCRIPT_NAME [{check|config [-f] [-r <ssu|gw|cmu|vm>]]
 config options:
     -f  Force reinitialization. Do not prompt
     -r  Role to be configured on the current node
