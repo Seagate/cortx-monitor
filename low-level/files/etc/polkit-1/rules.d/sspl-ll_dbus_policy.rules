@@ -4,3 +4,12 @@ polkit.addRule(function(action, subject) {
         return polkit.Result.YES;
     }
 });
+
+// This rule allows sspl-ll user to start, stop, enable, disable systemd units
+polkit.addRule(function(action, subject) {
+    if (action.id == "org.freedesktop.systemd1.manage-units" || action.id == "org.freedesktop.systemd1.manage-unit-files") {
+        if (subject.user == "sspl-ll") {
+            return polkit.Result.YES;
+        }
+    }
+});

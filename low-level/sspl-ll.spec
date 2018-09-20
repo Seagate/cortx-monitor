@@ -75,10 +75,6 @@ systemctl daemon-reload
 if [ "$1" = "1" ]; then
     # Enable services to start at boot
     systemctl enable rabbitmq-server
-
-    # Restart dbus with new policy files
-    systemctl restart dbus
-
     echo "Installation complete !! Run /opt/seagate/sspl/sspl_init to configure SSPL"
 fi
 
