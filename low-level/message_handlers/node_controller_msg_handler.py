@@ -35,6 +35,9 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
     MODULE_NAME = "NodeControllerMsgHandler"
     PRIORITY    = 2
 
+    SYS_INFORMATION = 'SYSTEM_INFORMATION'
+    SETUP = 'setup'
+
     @staticmethod
     def name():
         """ @return: name of the module."""
@@ -137,11 +140,23 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
             # Handle LED effects using the HPI actuator
             elif component == "LED:":
+                # HPI related operations are not supported in VM environment.
+                if self._is_env_vm():
+                    logger.warn("HPI operations are not supported in vm environment")
+                    return
                 # Query the Zope GlobalSiteManager for an object implementing the IHPI actuator
                 if self._HPI_actuator is None:
                     from actuators.Ihpi import IHPI
-                    self._HPI_actuator = self._queryUtility(IHPI)(self._conf_reader)
-                    self._log_debug("_process_msg, _HPI_actuator name: %s" % self._HPI_actuator.name())
+                    # Load HPIActuator class
+                    HPI_actuator_class = self._queryUtility(IHPI)
+                    # Instantiate HPIActuator only if class is loaded
+                    if HPI_actuator_class:
+                        self._HPI_actuator = HPI_actuator_class(self._conf_reader)
+                    else:
+                        logger.exception("HPIActuator couldn't be loaded")
+                        return
+
+                self._log_debug("_process_msg, _HPI_actuator name: %s" % self._HPI_actuator.name())
 
                 # Perform the request using HPI and get the response
                 hpi_response = self._HPI_actuator.perform_request(jsonMsg).strip()
@@ -149,6 +164,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
                 json_msg = AckResponseMsg(node_request, hpi_response, uuid).getJson()
                 self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+
 
             # Set the Bezel LED color using the GEM interface
             elif component == "BEZE":
@@ -217,11 +233,23 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
 
             elif component == "STOP":
+                # HPI related operations are not supported in VM environment.
+                if self._is_env_vm():
+                    logger.warn("HPI operations are not supported in vm environment")
+                    return
                 # Query the Zope GlobalSiteManager for an object implementing the IHPI actuator
                 if self._HPI_actuator is None:
                     from actuators.Ihpi import IHPI
-                    self._HPI_actuator = self._queryUtility(IHPI)(self._conf_reader)
-                    self._log_debug("_process_msg, _HPI_actuator name: %s" % self._HPI_actuator.name())
+                    # Load HPIActuator class
+                    HPI_actuator_class = self._queryUtility(IHPI)
+                    # Instantiate HPIActuator only if class is loaded
+                    if HPI_actuator_class:
+                        self._HPI_actuator = HPI_actuator_class(self._conf_reader)
+                    else:
+                        logger.exception("HPIActuator couldn't be loaded")
+                        return
+
+                self._log_debug("_process_msg, _HPI_actuator name: %s" % self._HPI_actuator.name())
 
                 # Parse out the drive to stop
                 drive_request = node_request[12:].strip()
@@ -244,11 +272,23 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
 
             elif component == "STAR":
+                # HPI related operations are not supported in VM environment.
+                if self._is_env_vm():
+                    logger.warn("HPI operations are not supported in vm environment")
+                    return
                 # Query the Zope GlobalSiteManager for an object implementing the IHPI actuator
                 if self._HPI_actuator is None:
                     from actuators.Ihpi import IHPI
-                    self._HPI_actuator = self._queryUtility(IHPI)(self._conf_reader)
-                    self._log_debug("_process_msg, _HPI_actuator name: %s" % self._HPI_actuator.name())
+                    # Load HPIActuator class
+                    HPI_actuator_class = self._queryUtility(IHPI)
+                    # Instantiate HPIActuator only if class is loaded
+                    if HPI_actuator_class:
+                        self._HPI_actuator = HPI_actuator_class(self._conf_reader)
+                    else:
+                        logger.exception("HPIActuator couldn't be loaded")
+                        return
+
+                self._log_debug("_process_msg, _HPI_actuator name: %s" % self._HPI_actuator.name())
 
                 # Parse out the drive to start
                 drive_request = node_request[13:].strip()
@@ -275,11 +315,23 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 self._log_debug("_process_msg, hpi_response: %s" % hpi_response)
 
             elif component == "RESE":
+                # HPI related operations are not supported in VM environment.
+                if self._is_env_vm():
+                    logger.warn("HPI operations are not supported in vm environment")
+                    return
                 # Query the Zope GlobalSiteManager for an object implementing the IHPI actuator
                 if self._HPI_actuator is None:
                     from actuators.Ihpi import IHPI
-                    self._HPI_actuator = self._queryUtility(IHPI)(self._conf_reader)
-                    self._log_debug("_process_msg, _HPI_actuator name: %s" % self._HPI_actuator.name())
+                    # Load HPIActuator class
+                    HPI_actuator_class = self._queryUtility(IHPI)
+                    # Instantiate HPIActuator only if class is loaded
+                    if HPI_actuator_class:
+                        self._HPI_actuator = HPI_actuator_class(self._conf_reader)
+                    else:
+                        logger.exception("HPIActuator couldn't be loaded")
+                        return
+
+                self._log_debug("_process_msg, _HPI_actuator name: %s" % self._HPI_actuator.name())
 
                 # Parse out the drive to power cycle
                 drive_request = node_request[13:].strip()
@@ -547,6 +599,14 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
             error = str(ae)
 
         return serial_number, error
+
+    def _is_env_vm(self):
+        """Retrieves the current setup and returns True|False based on setup value."""
+        setup = self._conf_reader._get_value_with_default(self.SYS_INFORMATION,
+                                                          self.SETUP,
+                                                          "ssu")
+        return setup.lower() == "vm"
+
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""
