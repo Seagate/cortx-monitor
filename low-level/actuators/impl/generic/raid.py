@@ -27,7 +27,8 @@ class RAIDactuator(Debug):
     implements(IRAIDactuator)
 
     ACTUATOR_NAME = "RAIDactuator"
-
+    SUCCESS_MSG = "Success"
+    ERROR_MSG = "Error" + ":{}"
 
     @staticmethod
     def name():
@@ -53,6 +54,7 @@ class RAIDactuator(Debug):
 
             # Parse out the arguments for the RAID action
             raid_request = node_request[5:].strip()
+            self._log_debug("perform_request, raid_request: %s" % raid_request)
 
             # The 'mdadm' command has two modes of execution.
             # 1. options: These start with '--' such as '--assemble'
@@ -62,26 +64,28 @@ class RAIDactuator(Debug):
                 command = "sudo /usr/sbin/mdadm {0}".format(raid_request)
             else:
                 command = "sudo /usr/sbin/mdadm --{0}".format(raid_request)
-            self._log_debug("perform_request, raid_request: %s" % raid_request)
 
-            command = command + "; %s" % self._conf_command
             self._log_debug("perform_request, executing RAID command: %s" % command)
+
             # Run the command and get the response and error returned
-            process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            response, error = process.communicate()
+            process = subprocess.Popen(command.split(), shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            output, err = process.communicate()
 
             # /etc/mdadm.conf needs to be created/updated after each operation to keep track of state.
-            subprocess.Popen(self._conf_command, shell=True)
+            if raid_request.find("create") >= 0 and process.returncode == 0:
+                self._log_debug("perform_request, executing RAID command: %s" % self._conf_command)
+                subprocess.Popen(self._conf_command, shell=True)
 
-            if "error" in error.lower():
-                response = "{0}".format(error)
+            if process.returncode != 0:
+                response = RAIDactuator.ERROR_MSG.format(err)
             else:
-                response = "Success"
+                response = RAIDactuator.SUCCESS_MSG
 
-            self._log_debug("perform_request, RAID response: %s" % response)
+            self._log_debug("perform_request, RAID response: %s return code: %d" \
+            % (response + ":{}".format(output or err), process.returncode))
 
         except Exception as e:
             logger.exception(e)
-            response = str(e)
+            response = RAIDactuator.ERROR_MSG.format(err)
 
         return response
