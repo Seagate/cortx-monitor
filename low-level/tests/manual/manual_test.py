@@ -62,6 +62,8 @@ class ManualTest():
     EXCHANGE_NAME        = "exchange_name"
     ROUTINGKEY           = "routing_key"
     ACKROUTINGKEY        = "ack_routing_key"
+    ACKEXCHANGE_NAME     = "ack_exchange_name"
+    ACKQUEUE_NAME        = "ack_routing_key"
     USERNAME             = "username"
     PASSWORD             = "password"
     SIGNATURE_USERNAME   = 'message_signature_username'
@@ -210,15 +212,15 @@ class ManualTest():
 
         self._ackexchangename = conf_reader._get_value_with_default(
                                                     self.module_name,
-                                                    self.EXCHANGE_NAME,
+                                                    self.ACKEXCHANGE_NAME,
                                                     'sspl-out')
         self._ackqueuename = conf_reader._get_value_with_default(
                                                     self.module_name,
-                                                    self.ACKQUEUENAME,
+                                                    self.ACKQUEUE_NAME,
                                                     'actuator-resp-queue')
         self._ackroutingkey = conf_reader._get_value_with_default(
                                                     self.module_name,
-                                                    self.ROUTINGKEY,
+                                                    self.ACKROUTINGKEY,
                                                     'actuator-resp-key')
         self._exchangename = conf_reader._get_value_with_default(
                                                     self.module_name,
