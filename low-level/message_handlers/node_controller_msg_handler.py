@@ -70,6 +70,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
         self._command_line_actuator = None
 
         self._import_products(products)
+        self.setup = self._conf_reader._get_value_with_default(self.SYS_INFORMATION, self.SETUP, "ssu")
 
     def _import_products(self, products):
         """Import classes based on which product is being used"""
@@ -208,15 +209,17 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 json_msg = AckResponseMsg(node_request, raid_response, uuid).getJson()
                 self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
 
-                # Restart openhpid to update HPI data
-                if "assemble" in jsonMsg.get("actuator_request_type").get("node_controller").get("node_request").lower():
-                    internal_json_msg = json.dumps(
-                                       {"actuator_request_type": {
+                # Restart openhpid to update HPI data only if it is a H/W environment
+                if self.setup in [ "hw", "ssu" ]:
+                    self._log_debug("restarting openhpid service to update HPI data")
+                    if "assemble" in jsonMsg.get("actuator_request_type").get("node_controller").get("node_request").lower():
+                        internal_json_msg = json.dumps(
+                                            {"actuator_request_type": {
                                             "service_controller": {
                                                 "service_name" : "openhpid.service",
                                                 "service_request": "restart"
-                                        }}})
-                    self._write_internal_msgQ(ServiceMsgHandler.name(), internal_json_msg)
+                                            }}})
+                        self._write_internal_msgQ(ServiceMsgHandler.name(), internal_json_msg)
 
             elif component == "IPMI":
                 # Query the Zope GlobalSiteManager for an object implementing the IPMI actuator
