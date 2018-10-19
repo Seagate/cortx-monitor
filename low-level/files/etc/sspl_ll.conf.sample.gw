@@ -76,6 +76,7 @@ units=MB
 threaded=true
 monitored_services=halond.service, rabbitmq-server.service, lnet.service, network.service, systemd-user-sessions.service, systemd-journald.service, systemd-sysctl.service, systemd-logind.service, crond.service, syslog.service, sshd.service, dbus.service, s3authserver.service, s3server@*.service, slapd.service, haproxy.service, mero-kernel.service, system-mero\x2dtrace.slice
 smart_test_interval=999999999
+run_smart_on_start=False
 
 [XINITDWATCHDOG]
 threaded=true
