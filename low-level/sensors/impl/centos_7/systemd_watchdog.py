@@ -59,6 +59,11 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
     MONITORED_SERVICES = 'monitored_services'
     SMART_TEST_INTERVAL= 'smart_test_interval'
     SMART_ON_START     = 'run_smart_on_start'
+    SYSTEM_INFORMATION = 'SYSTEM_INFORMATION'
+    SETUP              = 'setup'
+
+    # SMART test response
+    SMART_STATUS_UNSUPPORTED = "Unsupported"
 
     @staticmethod
     def name():
@@ -108,6 +113,9 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
 
         self._run_smart_on_start = self._can_run_smart_on_start()
         self._log_debug("SystemdWatchdog, Run SMART test on start: %s" % self._run_smart_on_start)
+
+        self._smart_supported = self._is_smart_supported()
+        self._log_debug("SystemdWatchdog, SMART supported: %s" % self._smart_supported)
 
         # Dict of drives by-id symlink from systemd
         self._drive_by_id = {}
@@ -373,6 +381,15 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                         self._log_debug("_process_msg, resend_drive_status, Exception: %s" % ae)
 
             elif sensor_request_type == "disk_smart_test":
+                # No need to validate for serial if SMART is not supported.
+                if not self._smart_supported:
+                    # Create the request to be sent back
+                    request = "SMART_TEST: {}".format(jsonMsg_serial_number)
+                    # Send an Ack msg back with SMART results as Unsupported
+                    json_msg = AckResponseMsg(request, self.SMART_STATUS_UNSUPPORTED, "").getJson()
+                    self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+                    return
+
                 self._log_debug("_processMsg, Starting SMART test")
                 # If the serial number is an asterisk then schedule smart tests on all drives
                 if jsonMsg_serial_number == "*":
@@ -614,7 +631,8 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                     # Notify internal msg handlers who need to map device name to serial numbers
                     self._notify_msg_handler_sn_device_mappings(drive['path'], serial_number)
 
-                    if self._run_smart_on_start:
+                    # SMART test is not supported in VM environment
+                    if self._smart_supported and self._run_smart_on_start:
                         # Schedule a SMART test to begin, if regular intervals then stagger
                         if stagger:
                             time.sleep(10)
@@ -1101,6 +1119,14 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
             smart_interval = 900
         return smart_interval
 
+    def _is_smart_supported(self):
+        """Retrieves the current setup. This was added to not to run actual SMART test
+           in VM environment because virtual drives don't support SMART test.
+        """
+        setup = self._conf_reader._get_value_with_default(self.SYSTEM_INFORMATION,
+                                                          self.SETUP,
+                                                          "ssu")
+        return False if setup == "vm" else True
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""
