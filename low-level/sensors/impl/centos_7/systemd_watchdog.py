@@ -404,22 +404,30 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                             udisk_drive = self._disk_objects[drive['path']]['org.freedesktop.UDisks2.Drive']
                             serial_number = str(udisk_drive["Serial"])
 
-                            # If serial number is not present then use the ending of by-id symlink
                             if len(serial_number) == 0:
-                                tmp_serial = str(self._drive_by_id[drive['path']].split("/")[-1])
+                                self._log_debug("_init_drives, couldn't get serial number. Extracting from by-id link")
+                                by_id_link = str(self._drive_by_id.get(drive['path'], ""))
+                                if len(by_id_link) != 0:
+                                    tmp_serial = by_id_link.split("/")[-1]
 
-                                # Serial numbers are limited to 20 chars string with drive keyword
-                                serial_number = tmp_serial[tmp_serial.rfind("drive"):]
+                                    # Serial numbers are limited to 20 chars string with drive keyword
+                                    start_index = tmp_serial.rfind("drive")
+                                    if start_index != -1:
+                                        serial_number = tmp_serial[start_index:].strip()
+                                else:
+                                    self._log_debug(
+                                        "_init_drives, couldn't extract serial number from by-id link for drive path %s " % drive['path'] )
 
-                            # Found the drive requested or it's an * indicating all drives
-                            if jsonMsg_serial_number == serial_number or \
-                                jsonMsg_serial_number == "*":
+                            if len(serial_number) > 0:
+                                # Found the drive requested or it's an * indicating all drives
+                                if jsonMsg_serial_number == serial_number or \
+                                    jsonMsg_serial_number == "*":
 
-                                # Associate the uuid to the drive path for the ack msg being sent back from request
-                                self._smart_uuids[uuid] = serial_number
+                                    # Associate the uuid to the drive path for the ack msg being sent back from request
+                                    self._smart_uuids[uuid] = serial_number
 
-                                # Schedule a SMART test to begin, if requesting all drives then stagger possibly?
-                                self._schedule_SMART_test(drive['path'], serial_number=serial_number)
+                                    # Schedule a SMART test to begin, if requesting all drives then stagger possibly?
+                                    self._schedule_SMART_test(drive['path'], serial_number=serial_number)
 
                     except Exception as ae:
                         self._log_debug("_process_msg, Exception: %s" % ae)
@@ -618,18 +626,27 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                     udisk_drive = self._disk_objects[drive['path']]['org.freedesktop.UDisks2.Drive']
                     serial_number = str(udisk_drive["Serial"])
 
-                    # If serial number is not present then use the ending of by-id symlink
                     if len(serial_number) == 0:
-                        tmp_serial = str(self._drive_by_id[drive['path']].split("/")[-1])
+                        self._log_debug("_init_drives, couldn't get serial number. Extracting from by-id link")
+                        by_id_link = str(self._drive_by_id.get(drive['path'], ""))
+                        if len(by_id_link) != 0:
+                            tmp_serial = by_id_link.split("/")[-1]
 
-                        # Serial numbers are limited to 20 chars string with drive keyword
-                        serial_number = tmp_serial[tmp_serial.rfind("drive"):]
+                            # Serial numbers are limited to 20 chars string with drive keyword
+                            start_index = tmp_serial.rfind("drive")
+                            if start_index != -1:
+                                serial_number = tmp_serial[start_index:].strip()
+                        else:
+                            self._log_debug(
+                                "_init_drives, couldn't extract serial number from by-id link for drive path %s " % drive['path'] )
 
-                    # Generate and send an internal msg to DiskMsgHandler that the drive is available
-                    self._notify_disk_msg_handler(drive['path'], "OK_None", serial_number)
 
-                    # Notify internal msg handlers who need to map device name to serial numbers
-                    self._notify_msg_handler_sn_device_mappings(drive['path'], serial_number)
+                    if len(serial_number) > 0:
+                        # Generate and send an internal msg to DiskMsgHandler that the drive is available
+                        self._notify_disk_msg_handler(drive['path'], "OK_None", serial_number)
+
+                        # Notify internal msg handlers who need to map device name to serial numbers
+                        self._notify_msg_handler_sn_device_mappings(drive['path'], serial_number)
 
                     # SMART test is not supported in VM environment
                     if self._smart_supported and self._run_smart_on_start:
