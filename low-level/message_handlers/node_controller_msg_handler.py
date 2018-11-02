@@ -142,7 +142,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
             elif component == "LED:":
                 # HPI related operations are not supported in VM environment.
                 if self._is_env_vm():
-                    logger.warn("HPI operations are not supported in vm environment")
+                    logger.warn("HPI operations are not supported in current environment")
                     return
                 # Query the Zope GlobalSiteManager for an object implementing the IHPI actuator
                 if self._HPI_actuator is None:
@@ -235,7 +235,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
             elif component == "STOP":
                 # HPI related operations are not supported in VM environment.
                 if self._is_env_vm():
-                    logger.warn("HPI operations are not supported in vm environment")
+                    logger.warn("HPI operations are not supported in current environment")
                     return
                 # Query the Zope GlobalSiteManager for an object implementing the IHPI actuator
                 if self._HPI_actuator is None:
@@ -274,7 +274,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
             elif component == "STAR":
                 # HPI related operations are not supported in VM environment.
                 if self._is_env_vm():
-                    logger.warn("HPI operations are not supported in vm environment")
+                    logger.warn("HPI operations are not supported in current environment")
                     return
                 # Query the Zope GlobalSiteManager for an object implementing the IHPI actuator
                 if self._HPI_actuator is None:
@@ -317,7 +317,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
             elif component == "RESE":
                 # HPI related operations are not supported in VM environment.
                 if self._is_env_vm():
-                    logger.warn("HPI operations are not supported in vm environment")
+                    logger.warn("HPI operations are not supported in current environment")
                     return
                 # Query the Zope GlobalSiteManager for an object implementing the IHPI actuator
                 if self._HPI_actuator is None:
@@ -605,7 +605,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
         setup = self._conf_reader._get_value_with_default(self.SYS_INFORMATION,
                                                           self.SETUP,
                                                           "ssu")
-        return setup.lower() == "vm"
+        return setup.lower() in ['gw', 'cmu', 'vm']
 
 
     def shutdown(self):
