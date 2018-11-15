@@ -2,6 +2,7 @@
 Description=SSPL Low Level Process
 Wants=openhpid.service dcs-collector.service rabbitmq-server.service
 After=rabbitmq-server.service dcs-collector.service syslog.target
+Requires=rabbitmq-server.service
 
 [Service]
 Type=notify
