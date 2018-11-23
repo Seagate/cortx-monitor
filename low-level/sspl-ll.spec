@@ -86,7 +86,7 @@ systemctl stop sspl-ll.service 2> /dev/null
 %postun
 rm -f /etc/polkit-1/rules.d/sspl-ll_dbus_policy.rules
 rm -f /etc/dbus-1/system.d/sspl-ll_dbus_policy.conf
-rm -f /opt/seagate/sspl/sspl_init
+[ "$1" == "0" ] && rm -f /opt/seagate/sspl/sspl_init
 
 %files
 %defattr(-,sspl-ll,root,-)
