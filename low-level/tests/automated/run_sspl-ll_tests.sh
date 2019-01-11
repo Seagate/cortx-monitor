@@ -2,20 +2,25 @@
 
 echo "Running Automated Integration Tests for SSPL-LL"
 
+export PYTHONPATH="/opt/seagate/sspl/low-level"
+
 # Create simulated disk manager data
-mkdir -p /tmp/dcs/{drivemanager,hpi}
-cp ../../../installation/deps/drive_manager.json /tmp/dcs/drivemanager
+# TODO: Remove this line. This file is not needed as it is used for a deprecated module
+# called "drive_manager"
+#cp ../../../installation/deps/drive_manager.json /tmp/dcs/drivemanager
 chown -R zabbix:zabbix /tmp/dcs
 
 systemctl start crond
-systemctl restart sspl-ll
 
 if [[ -f ./lettucetests.xml ]]; then
 	rm ./lettucetests.xml
 fi
 
-# Execute tests and save results 
-lettuce --with-xunit --xunit-file=lettucetests.xml --verbosity=4
+# Locate features directory
+BASE_DIR=$(realpath $(dirname $0)/)
+
+# Execute tests and save results
+lettuce --with-xunit --xunit-file=lettucetests.xml --verbosity=4 $BASE_DIR
 
 # Search results for success
 success=`grep 'testsuite errors="0" failures="0"' lettucetests.xml`

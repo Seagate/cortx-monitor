@@ -32,7 +32,8 @@ def init_rabbitMQ_msg_processors():
     """The main bootstrap for sspl automated tests"""
 
     # Retrieve configuration file for sspl-ll service
-    path_to_conf_file = "./sspl_ll_tests.conf"
+    conf_directory = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    path_to_conf_file = os.path.join(conf_directory, "sspl_ll_tests.conf")
     try:
         conf_reader = ConfigReader(path_to_conf_file)
     except (IOError, ConfigReader.Error) as err:
@@ -64,7 +65,7 @@ def init_rabbitMQ_msg_processors():
 
     # Create a mapping of all the instantiated modules to their names
     world.sspl_modules = {}
-    
+
     # Read in product value from configuration file
     try:
         products = conf_reader._get_value_list(SYS_INFORMATION, PRODUCT_NAME)
@@ -80,14 +81,10 @@ def init_rabbitMQ_msg_processors():
         # Create mappings of modules and their message queues
         world.sspl_modules[klass.name()] = klass()
         msgQlist[klass.name()] = Queue.Queue()
- 
-    # Read in /var/run/diskmonitor/drive_manager.json to be used by drive manager tests
-    filename="/tmp/dcs/drivemanager/drive_manager.json"
-    with open(filename, 'r') as f:
-        diskmonitor_file = f.read()
 
     # Convert to a dict
-    world.diskmonitor_file = json.loads(diskmonitor_file)
+    # TODO: Check use of this
+    world.diskmonitor_file = json.loads("{}")
 
     try:
         # Loop through the list of instanced modules and start them on threads
@@ -101,7 +98,7 @@ def init_rabbitMQ_msg_processors():
             threads.append(thread)
 
         # Allow threads to startup before running tests
-        time.sleep(200)
+        time.sleep(2)
 
         # Clear the message queue buffer out from msgs sent at startup
         while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():

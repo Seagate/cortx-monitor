@@ -1,0 +1,20 @@
+Steps for running automation tests
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+1. Install the required RPMs as shown below:
+    $ sudo yum install -y epel-release
+    $ sudo yum install -y lxc
+    $ sudo yum install -y lxc-templates
+    $ sudo yum install -y lxc-extra
+    $ sudo yum install -y libvirt
+
+2. Comment following lines in /usr/share/lxc/config/centos.common.conf
+    lxc.cap.drop = mac_admin mac_override setfcap
+    lxc.cap.drop = sys_module sys_nice sys_pacct
+    lxc.cap.drop = sys_rawio sys_time
+
+3. Start libvirtd service
+    systemctl start libvirtd
+
+4. Start test
+   ./run_tests.sh

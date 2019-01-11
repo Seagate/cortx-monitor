@@ -22,6 +22,10 @@
 #
 ####################################################################################
 
+# TODO
+# 1. Separate the LXC and lettuce, so that lettuce can be invoked separately.
+# 2. Create RPM for sspl-test to include lettuce test.
+
 TOP_DIR=$PWD
 
 vm_name=sspl-test
@@ -32,56 +36,99 @@ which lxc-ls &>/dev/null || { echo "lxc-ls binary wasn't found on system, please
 
 [[ $($sudo lxc-ls) =~ "$vm_name" ]]  &&  $sudo lxc-stop -n $vm_name && $sudo lxc-destroy -n $vm_name
 $sudo bash  -c  "lxc-create -n $vm_name -t centos  -- -R 7"
-echo Xyratex | $sudo chroot /var/lib/lxc/$vm_name/rootfs passwd --stdin  -u root
-$sudo bash  -c  "lxc-start -n $vm_name"
+echo "Xyratex" | $sudo chroot /var/lib/lxc/$vm_name/rootfs passwd --stdin  -u root
+$sudo bash  -c  "lxc-start -d -n $vm_name"
 
 # we need to wait till yum will be functioning properly, this is the easiest way
 $sudo lxc-attach -n $vm_name  -- bash -c "while :; do yum install -y epel-release && break; done"
 
+# set hostname
+$sudo lxc-attach -n $vm_name  -- bash -c "echo $vm_name > /etc/hostname"
+
+# add entry in /etc/hosts
+$sudo lxc-attach -n $vm_name  -- bash -c "echo $(hostname -I) $vm_name >> /etc/hosts"
+
+# Make /root/sspl directory
+$sudo lxc-attach -n $vm_name -- /usr/bin/mkdir -p "/root/sspl"
+
 # now we will just copy sources to container
-pushd $TOP_DIR; tar cf -  --owner=0 --group=0 . |  $sudo lxc-attach -n $vm_name -- bash -c 'tar -xf  - -C  /root/'; popd
+pushd $TOP_DIR; tar cf -  --owner=0 --group=0 . |  $sudo lxc-attach -n $vm_name -- bash -c 'tar -xf  - -C  /root/sspl'; popd
 
-# install some basic debugging packages
-$sudo lxc-attach -n $vm_name  -- yum -y install yum-utils createrepo psmisc
+# Install required packages
+$sudo lxc-attach -n $vm_name  -- yum -y install httpd python2-pip rpm-build git python-Levenshtein graphviz openssl-devel check-devel python-pep8 doxygen libtool sudo make
 
-# and gather all dependencies for tools involved
+# Install lettuce
+$sudo lxc-attach -n $vm_name  -- pip install lettuce
+
+# Generate RPMs
+$sudo lxc-attach -n $vm_name  -- /root/sspl/jenkins/build.sh
+
+# Read VERSION
+BASE_DIR=$(realpath $(dirname $0)/..)
+GIT_VER=$(git rev-parse --short HEAD)
+VERSION=$(cat $BASE_DIR/sspl/VERSION)
+
+# Extract simulation data
+$sudo lxc-attach -n $vm_name  -- tar xvf /root/sspl/5u84_dcs_dump.tgz -C /tmp
+
+# Install sspl and libsspl_sec packages
+$sudo lxc-attach -n $vm_name  -- yum -y install /root/sspl/dist/rpmbuild/RPMS/x86_64/libsspl_sec-$VERSION-$GIT_VER.x86_64.rpm
+$sudo lxc-attach -n $vm_name  -- yum -y install /root/sspl/dist/rpmbuild/RPMS/x86_64/libsspl_sec-method_none-$VERSION-$GIT_VER.x86_64.rpm
+$sudo lxc-attach -n $vm_name  -- yum -y install /root/sspl/dist/rpmbuild/RPMS/noarch/sspl-$VERSION-$GIT_VER.noarch.rpm
+
+# Configur and start RabbitMQ
+$sudo lxc-attach -n $vm_name  --  bash -c 'echo AFYDPNYXGNARCABLNENP >> /var/lib/rabbitmq/.erlang.cookie'
+$sudo lxc-attach -n $vm_name  --  bash -c 'echo AFYDPNYXGNARCABLNENP >> /root/.erlang.cookie'
+$sudo lxc-attach -n $vm_name  --  bash -c 'echo NODENAME=rabbit >> /etc/rabbitmq/rabbitmq-env.conf'
+$sudo lxc-attach -n $vm_name  --  chmod 400 /var/lib/rabbitmq/.erlang.cookie
+$sudo lxc-attach -n $vm_name  --  chmod 400 /root/.erlang.cookie
+$sudo lxc-attach -n $vm_name  --  chown -R rabbitmq:rabbitmq /var/lib/rabbitmq/
+$sudo lxc-attach -n $vm_name  --  chown rabbitmq:rabbitmq /var/lib/rabbitmq/.erlang.cookie
+$sudo lxc-attach -n $vm_name  -- systemctl start rabbitmq-server -l
+
+# Change setup to vm in sspl configurations
+$sudo lxc-attach -n $vm_name  -- sed -i 's/setup=hw/setup=vm/g' /etc/sspl_ll.conf
+$sudo lxc-attach -n $vm_name  -- /root/sspl/low-level/framework/sspl_init
+
+# Create directories if not present
+#$sudo lxc-attach -n $vm_name -- /usr/bin/mkdir -p /etc/sudoers.d/
+#$sudo lxc-attach -n $vm_name -- /usr/bin/mkdir -p /var/www/html
 
 # Copy over sudoers files
-$sudo lxc-attach -n $vm_name -- /bin/cp /root/installation/deps/00aliases /etc/sudoers.d/
+#$sudo lxc-attach -n $vm_name -- /bin/cp /root/installation/deps/00aliases /etc/sudoers.d/
 
 # Copy over dcs-collector configuration file
-$sudo lxc-attach -n $vm_name --  /bin/cp /root/installation/deps/dcs_collector.conf /etc/
+#$sudo lxc-attach -n $vm_name --  /bin/cp /root/installation/deps/dcs_collector.conf /etc/
 
 # Make sure rabbitmq is started before we initialize it
 
-$sudo lxc-attach -n $vm_name  -- systemctl start rabbitmq-server -l
-
 # Copy startup and config files
-$sudo lxc-attach -n $vm_name  -- /bin/cp -r /root/installation/deps/sspl-ll.service.d /etc/systemd/system/
-$sudo lxc-attach -n $vm_name  -- /bin/cp low-level/files/etc/systemd/system/sspl-ll.service  /etc/systemd/system/
-$sudo lxc-attach -n $vm_name  -- /bin/cp /root/installation/deps/sspl_ll-test.conf /etc/sspl_ll.conf
+#$sudo lxc-attach -n $vm_name  -- /bin/cp -r /root/installation/deps/sspl-ll.service.d /etc/systemd/system/
+#$sudo lxc-attach -n $vm_name  -- /bin/cp /root/low-level/files/etc/systemd/system/sspl-ll.service  /etc/systemd/system/
+#$sudo lxc-attach -n $vm_name  -- /bin/cp /root/installation/deps/sspl_ll-test.conf /etc/sspl_ll.conf
 
 # Have systemd reload the unit file
-$sudo lxc-attach -n $vm_name  -- systemctl daemon-reload
+#$sudo lxc-attach -n $vm_name  -- systemctl daemon-reload
 
 # Initialize rabbitmq queues and exchanges
-$sudo lxc-attach -n $vm_name  -- chmod +x /root/low-level/framework/sspl_ll_rabbitmq_reinit_CS_A
-$sudo lxc-attach -n $vm_name  -- bash -c  'HOSTNAME=`hostname` /root/low-level/framework/sspl_ll_rabbitmq_reinit_CS_A'
+#$sudo lxc-attach -n $vm_name  -- chmod +x /root/low-level/framework/sspl_ll_rabbitmq_reinit_CS_A
+#$sudo lxc-attach -n $vm_name  -- bash -c  'HOSTNAME=`hostname` /root/low-level/framework/sspl_ll_rabbitmq_reinit_CS_A'
 
-$sudo lxc-attach -n $vm_name  -- chmod +x /root/installation/deps/install_deps.sh
-$sudo lxc-attach -n $vm_name  -- /root/installation/deps/install_deps.sh
+#$sudo lxc-attach -n $vm_name  -- chmod +x /root/installation/deps/install_deps.sh
+#$sudo lxc-attach -n $vm_name  -- /root/installation/deps/install_deps.sh
 # Start openhpid
-$sudo lxc-attach -n $vm_name --  /bin/cp /root/low-level/kvm/openhpi.conf.sspl /etc/openhpi/openhpi.conf
-$sudo lxc-attach -n $vm_name  --  /bin/sed -i 's#file.*#file = "/root/low-level/kvm/2u24_kvm.data"#g' /etc/openhpi/openhpi.conf
-$sudo lxc-attach -n $vm_name  -- systemctl start openhpid -l
+#$sudo lxc-attach -n $vm_name --  /bin/cp /root/low-level/kvm/openhpi.conf.sspl /etc/openhpi/openhpi.conf
+#$sudo lxc-attach -n $vm_name  --  /bin/sed -i 's#file.*#file = "/root/low-level/kvm/2u24_kvm.data"#g' /etc/openhpi/openhpi.conf
+#$sudo lxc-attach -n $vm_name  -- systemctl start openhpid -l
 
-$sudo lxc-attach -n $vm_name  -- systemctl start crond httpd
-$sudo lxc-attach -n $vm_name  -- bash -c 'pushd /root/libsspl_sec/; ./autogen.sh; ./configure;  make rpm; popd'
-$sudo lxc-attach -n $vm_name  -- bash -c 'mkdir -p /root/rpms/; find /root/libsspl_sec/ -name *.rpm -exec mv {} /root/rpms/  \;'
-$sudo lxc-attach -n $vm_name  -- bash -c "createrepo /root/rpms;  echo -e '[test-repo]\nname=Test repo\ngpgcheck=0\nenabled=1\nbaseurl=file:///root/rpms/' > /etc/yum.repos.d/test.repo"
-$sudo lxc-attach -n $vm_name  -- yum -y install libsspl_sec
+#$sudo lxc-attach -n $vm_name  -- systemctl start crond
+#$sudo lxc-attach -n $vm_name  -- bash -c 'pushd /root/libsspl_sec/; ./autogen.sh; ./configure;  make rpm; popd'
+#$sudo lxc-attach -n $vm_name  -- bash -c 'mkdir -p /root/rpms/; find /root/libsspl_sec/ -name *.rpm -exec mv {} /root/rpms/  \;'
+#$sudo lxc-attach -n $vm_name  -- bash -c "createrepo /root/rpms;  echo -e '[test-repo]\nname=Test repo\ngpgcheck=0\nenabled=1\nbaseurl=file:///root/rpms/' > /etc/yum.repos.d/test.repo"
+#$sudo lxc-attach -n $vm_name  -- yum -y install libsspl_sec
 # Execute tests
-$sudo lxc-attach -n $vm_name --  bash -c "cd /root/low-level/tests/automated; chmod +x run_sspl-ll_tests.sh; time ./run_sspl-ll_tests.sh"
+$sudo lxc-attach -n $vm_name -- bash -c "chmod +x /opt/seagate/sspl/low-level/tests/automated/run_sspl-ll_tests.sh"
+$sudo lxc-attach -n $vm_name -- bash -c "/opt/seagate/sspl/low-level/tests/automated/run_sspl-ll_tests.sh"
 retcode=$?
-#$sudo lxc-stop -n $vm_name && $sudo lxc-destroy -n $vm_name
+$sudo lxc-stop -n $vm_name && $sudo lxc-destroy -n $vm_name
 exit $retcode
