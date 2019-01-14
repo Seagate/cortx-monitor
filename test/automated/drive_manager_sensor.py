@@ -11,7 +11,7 @@ topdir = os.path.dirname(os.path.dirname(os.path.dirname \
             (os.path.dirname(os.path.abspath(__file__)))))
 os.sys.path.insert(0, topdir)
 
-from tests.automated.rabbitmq.rabbitmq_ingress_processor_tests import RabbitMQingressProcessorTests
+from test.automated.rabbitmq.rabbitmq_ingress_processor_tests import RabbitMQingressProcessorTests
 from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 
 
@@ -77,7 +77,7 @@ def when_i_set_total_drives_to_condition(step, total, condition):
     write_drive_manager()
 
 @step(u'Then SSPL_LL transmits JSON msgs with status "([^"]*)" for "([^"]*)" drives for enclosure "([^"]*)"')
-def then_sspl_ll_transmits_json_msgs_with_status_condition_for_total_drives_for_enclosure_enc(step, condition, total_drives, enc):    
+def then_sspl_ll_transmits_json_msgs_with_status_condition_for_total_drives_for_enclosure_enc(step, condition, total_drives, enc):
     total = 0
     while total != int(total_drives):
         ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
@@ -96,7 +96,7 @@ def then_sspl_ll_transmits_json_msgs_with_status_condition_for_total_drives_for_
     assert total == int(total_drives)
 
 def set_all_drives(condition):
-    """Helper function to set all drives to the same condition"""    
+    """Helper function to set all drives to the same condition"""
     drives = world.diskmonitor_file.get("drives")
     dirty = False
     for drive in drives:

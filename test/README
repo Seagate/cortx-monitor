@@ -19,5 +19,13 @@ Steps for running automation tests
 4. Install lettuce 0.2.23
     $ sudo pip install lettuce
 
-4. Start test
-   ./run_tests.sh
+5. Build RPMs
+
+6. Start test
+    Go to sspl directory:
+    sudo test/run_tests.sh [role] [sspl_install_path]
+    where
+        role - {dev|test}. Default is 'test'.
+        sspl_install_path - This is an optional argument where sspl source directory will be copied
+    dev  - To run test in containerized environment, with automatic sspl installation and configuration.
+    test - To run test in non-containerized environment, where sspl is expected to be already installed and configured.

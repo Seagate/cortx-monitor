@@ -36,11 +36,12 @@ Installs SSPL
 
 %install
 # Copy config file and service startup to correct locations
-
+mkdir -p ${RPM_BUILD_ROOT}/opt/seagate/sspl
 mkdir -p ${RPM_BUILD_ROOT}/etc/{systemd/system,dbus-1/system.d,polkit-1/rules.d,sspl-ll/templates/snmp}
 cp -afv files/etc ${RPM_BUILD_ROOT}/
 
 # Copy the service into /opt/seagate/sspl where it will execute from
+cp -rp __init__.py ${RPM_BUILD_ROOT}/opt/seagate/sspl
 mkdir -p ${RPM_BUILD_ROOT}/opt/seagate/sspl/low-level
 cp -rp . ${RPM_BUILD_ROOT}/opt/seagate/sspl/low-level
 
@@ -90,7 +91,8 @@ rm -f /etc/dbus-1/system.d/sspl-ll_dbus_policy.conf
 
 %files
 %defattr(-,sspl-ll,root,-)
-/opt/seagate/sspl/*
+/opt/seagate/sspl/__init__.py
+/opt/seagate/sspl/low-level
 /etc/sspl_ll.conf.sample
 /etc/sspl_ll.conf.sample.gw
 /etc/sspl_ll.conf.sample.ssu

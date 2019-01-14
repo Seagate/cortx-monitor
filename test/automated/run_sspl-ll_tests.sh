@@ -1,8 +1,8 @@
 #!/bin/bash -e
 
 echo "Running Automated Integration Tests for SSPL-LL"
-
-export PYTHONPATH="/opt/seagate/sspl/low-level"
+script_dir=$(dirname $0)
+export PYTHONPATH=$script_dir/../..:$script_dir/../../low-level
 
 # Create simulated disk manager data
 # TODO: Remove this line. This file is not needed as it is used for a deprecated module

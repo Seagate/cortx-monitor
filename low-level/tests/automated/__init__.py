@@ -1,1 +1,0 @@
-"""Seagate Storage Platform Library - Low Level (SSPL-LL) Project"""

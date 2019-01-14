@@ -20,7 +20,7 @@ from framework.utils.config_reader import ConfigReader
 from framework.utils.service_logging import init_logging
 from framework.utils.service_logging import logger
 
-from tests.automated.rabbitmq.rabbitmq_ingress_processor_tests import RabbitMQingressProcessorTests
+from test.automated.rabbitmq.rabbitmq_ingress_processor_tests import RabbitMQingressProcessorTests
 from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 
 # Section and key in config file for bootstrap

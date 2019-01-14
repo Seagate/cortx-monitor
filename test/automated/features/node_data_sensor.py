@@ -10,7 +10,7 @@ topdir = os.path.dirname(os.path.dirname(os.path.dirname \
             (os.path.dirname(os.path.abspath(__file__)))))
 os.sys.path.insert(0, topdir)
 
-from tests.automated.rabbitmq.rabbitmq_ingress_processor_tests import RabbitMQingressProcessorTests
+from test.automated.rabbitmq.rabbitmq_ingress_processor_tests import RabbitMQingressProcessorTests
 from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 
 @step(u'Given that SSPL-LL is running')
