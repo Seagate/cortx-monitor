@@ -48,6 +48,9 @@ ACTUATORS       = 'actuators'
 SENSORS         = 'sensors'
 RABBITMQINGRESSPROCESSOR = 'RABBITMQINGRESSPROCESSOR'
 
+#GEM commands
+REBOOT_ALL_SAS_EXPANDERS_CMD = 'wbcli {} "gncli exp:all reboot"'
+
 class CLIError(Exception):
     '''Generic exception to raise and log different fatal errors.'''
     def __init__(self, msg):
@@ -792,7 +795,7 @@ def _init_CS_A(parser, program_name):
             response, error = process.communicate()
 
             sg_dev = "/dev/{}".format(response.rstrip('\n'))
-            command = "wbcli {} reboot".format(sg_dev)
+            command = REBOOT_ALL_SAS_EXPANDERS_CMD.format(sg_dev)
 
             # Run the command and get the response and error returned
             process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
