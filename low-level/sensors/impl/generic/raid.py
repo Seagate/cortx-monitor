@@ -199,6 +199,11 @@ class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
         """
         # Parse out x for total number of drives
         first_bracket_index = status_line.find('[')
+
+        # If no '[' found, return
+        if first_bracket_index == -1:
+            return False
+
         total_drives = int(status_line[first_bracket_index + 1])
         self._log_debug("_parse_raid_status, total_drives: %d" % total_drives)
 
