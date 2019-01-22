@@ -42,6 +42,8 @@ class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
     RAIDSENSOR        = SENSOR_NAME.upper()
     RAID_STATUS_FILE  = 'RAID_status_file'
 
+    RAID_CONF_FILE    = '/etc/mdadm.conf'
+    RAID_DOWN_DRIVE_STATUS = [ { "status" : "_" }, { "status" : "_" } ]
 
     @staticmethod
     def name():
@@ -123,12 +125,16 @@ class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
         self._RAID_status_contents = status
 
         # Process mdstat file and send json msg to NodeDataMsgHandler
-        self._process_mdstat()
+        md_device_list = self._process_mdstat()
+
+        # checks mdadm conf file for missing raid array and send json message to NodeDataMsgHandler
+        self._process_missing_md_devices(md_device_list)
 
     def _process_mdstat(self):
         """Parse out status' and path info for each drive"""
         # Replace new line chars with spaces
         mdstat = self._RAID_status_contents.strip().split("\n")
+        md_device_list = []
 
         # Array of optional identity json sections for drives in array
         self._identity = {}
@@ -155,14 +161,16 @@ class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
 
             # Parse out status' and path info for each drive
             if "md" in fields[0]:
-                self._device = self._device = "/dev/{}".format(fields[0])
+                self._device = "/dev/{}".format(fields[0])
                 self._log_debug("md device found: %s" % self._device)
+                md_device_list.append(self._device)
 
                 # Parse out raid drive paths if they're present
                 for field in fields:
                     if "[" in field:
                         self._add_drive(field)
                 md_line_parsed = True
+        return md_device_list
 
     def _add_drive(self, field):
         """Adds a drive to the list"""
@@ -248,6 +256,28 @@ class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
             drive_index = drive_index + 1
 
         return True
+
+    def _process_missing_md_devices(self, md_device_list):
+        """ checks the md raid configuration file, compares all it's
+            entries with list of arrays from mdstat file and sends
+            missing entry in RabbitMQ channel
+        """
+
+        conf_device_list = []
+        with open(self.RAID_CONF_FILE, 'r') as raid_conf_file:
+            raid_conf_data = raid_conf_file.read().strip().split("\n")
+        for line in raid_conf_data:
+            raid_conf_field = line.split(" ")
+            if "md" in raid_conf_field[1]:
+                conf_device_list.append(raid_conf_field[1])
+
+        # compare conf file raid array list with mdstat raid array list
+        for device in conf_device_list:
+            if device not in md_device_list:
+                # add that missing raid array entry into the list of raid devices
+                self._device = device
+                self._drives  = self.RAID_DOWN_DRIVE_STATUS
+                self._send_json_msg()
 
     def _send_json_msg(self):
         """Transmit data to NodeDataMsgHandler to be processed and sent out"""
