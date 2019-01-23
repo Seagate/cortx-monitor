@@ -263,13 +263,22 @@ class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
             missing entry in RabbitMQ channel
         """
 
+        if not os.path.isfile(self.RAID_CONF_FILE):
+            logger.warn("_process_missing_md_devices, MDRaid configuration file %s is missing" % self.RAID_CONF_FILE)
+            return
+
         conf_device_list = []
         with open(self.RAID_CONF_FILE, 'r') as raid_conf_file:
             raid_conf_data = raid_conf_file.read().strip().split("\n")
         for line in raid_conf_data:
-            raid_conf_field = line.split(" ")
-            if "md" in raid_conf_field[1]:
-                conf_device_list.append(raid_conf_field[1])
+            try:
+                raid_conf_field = line.split(" ")
+                if "md" in raid_conf_field[1]:
+                    conf_device_list.append(raid_conf_field[1])
+            except Exception as ae:
+                self._log_debug("_process_missing_md_devices, error retrieving raid entry from %s file: %s" \
+                % (self.RAID_CONF_FILE, str(ae)))
+                return
 
         # compare conf file raid array list with mdstat raid array list
         for device in conf_device_list:
