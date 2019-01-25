@@ -64,7 +64,7 @@ class SystemdService(Debug):
             self._service_request = jsonMsg.get("actuator_request_type").get("service_controller").get("service_request")
         else:
             self._service_name = jsonMsg.get("actuator_request_type").get("service_watchdog_controller").get("service_name")
-            self._service_request = jsonMsg.get("actuator_request_type").get("service_watchdog_controller").get("service_request")    
+            self._service_request = jsonMsg.get("actuator_request_type").get("service_watchdog_controller").get("service_request")
 
         self._log_debug("perform_request, service_name: %s, service_request: %s" % \
                         (self._service_name, self._service_request))
@@ -109,13 +109,21 @@ class SystemdService(Debug):
             elif self._service_request == "enable":
                 service_list = []
                 service_list.append(self._service_name)
-                bool_res, result = self._manager.EnableUnitFiles(service_list, True, True)
+
+                """EnableUnitFiles() function takes second argument as boolean.
+                   True will enable a service for runtime only(creates symlink in /run/.. directory)
+                   False will enable a service persistently(creates symlink in /etc/.. directory)"""
+                bool_res, result = self._manager.EnableUnitFiles(service_list, False, True)
                 self._log_debug("perform_request, bool: %s, result: %s" % (bool_res, result))
 
             elif self._service_request == "disable":
                 service_list = []
                 service_list.append(self._service_name)
-                result = self._manager.DisableUnitFiles(service_list, True)
+
+                """DisableUnitFiles() function takes second argument as boolean.
+                   True will disable a service for runtime only(removes symlink from /run/.. directory)
+                   False will disable a service persistently(removes symlink from /etc/.. directory)"""
+                result = self._manager.DisableUnitFiles(service_list, False)
                 self._log_debug("perform_request, result: %s" % result)
 
             else:
@@ -145,13 +153,12 @@ class SystemdService(Debug):
 
     def _get_activestate(self):
         """"Returns the active state of the unit"""
-        return self._proxy.Get('org.freedesktop.systemd1.Unit', 
+        return self._proxy.Get('org.freedesktop.systemd1.Unit',
                                 'ActiveState',
                                 dbus_interface='org.freedesktop.DBus.Properties')
 
     def _get_active_substate(self):
         """"Returns the active state of the unit"""
-        return self._proxy.Get('org.freedesktop.systemd1.Unit', 
+        return self._proxy.Get('org.freedesktop.systemd1.Unit',
                                 'SubState',
                                 dbus_interface='org.freedesktop.DBus.Properties')
-    
