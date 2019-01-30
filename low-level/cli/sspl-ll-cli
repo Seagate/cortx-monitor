@@ -102,7 +102,7 @@ def main():
             manTest = ManualTest("PLANECNTRLRMQEGRESSPROCESSOR")
         except Exception:
             print("CLI only useful for verifying packages\n")
-        _init_SED(parser, program_name)
+        return _init_SED(parser, program_name)
 
     else:
         # Setup argument parser
@@ -114,7 +114,7 @@ def main():
             manTest = ManualTest("RABBITMQINGRESSPROCESSOR")
         except Exception:
             print("CLI only useful for verifying packages\n")
-        _init_CS_A(parser, program_name)
+        return _init_CS_A(parser, program_name)
 
 
 def _send_raw_msg(jsonMsg, wait_for_response=True, response_wait_time=5,
@@ -793,6 +793,11 @@ def _init_CS_A(parser, program_name):
             # Run the command and get the response and error returned
             process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             response, error = process.communicate()
+            str.strip(error)
+
+            if error:
+                print("Error in locating enclosure device to trigger exp-reset. %s" % error)
+                return process.returncode
 
             sg_dev = "/dev/{}".format(response.rstrip('\n'))
             command = REBOOT_ALL_SAS_EXPANDERS_CMD.format(sg_dev)
@@ -800,10 +805,14 @@ def _init_CS_A(parser, program_name):
             # Run the command and get the response and error returned
             process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             response, error = process.communicate()
+            str.strip(error)
+
             if error:
-                print(("Error triggering expander reset: %s" % str(error)))
+                print("Error triggering expander reset: %s" % str(error))
+                return process.returncode
+
             if response:
-                print(("Triggering expander reset: %s" % str(response)))
+                print("Triggering expander reset: %s" % str(response))
 
         elif args.fromstdin:
             print("Ctrl-D stop reading from stdin and transmit.  Multiple msgs can be piped in.")
