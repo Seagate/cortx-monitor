@@ -14,8 +14,8 @@ from tests.automated.rabbitmq.rabbitmq_ingress_processor_tests import RabbitMQin
 from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 
 
-@step(u'Given I send in the actuator message to restart drive manager')
-def given_i_send_in_the_actuator_message_to_restart_drive_manager(step):
+@step(u'Given I send in the actuator message to restart hpi monitor')
+def given_i_send_in_the_actuator_message_to_restart_hpi_monitor(step):
     # Clear the message queue buffer out
     while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
         world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
@@ -36,7 +36,7 @@ def given_i_send_in_the_actuator_message_to_restart_drive_manager(step):
             },
             "actuator_request_type": {
                 "thread_controller": {
-                    "module_name" : "DriveManager",
+                    "module_name" : "HPIMonitor",
                     "thread_request": "restart"
                 }
             }
@@ -44,9 +44,9 @@ def given_i_send_in_the_actuator_message_to_restart_drive_manager(step):
     }
     world.sspl_modules[RabbitMQegressProcessor.name()]._write_internal_msgQ(RabbitMQegressProcessor.name(), egressMsg)
 
-@step(u"When SSPL-LL restarts the thread for drive manager msg handler")
+@step(u"When SSPL-LL restarts the thread for hpi monitor msg handler")
 def when_SSPL_LL_restarts_the_thread(step):
-    print("SSPL-LL restarts the threads for drive manager msg handler")
+    print("SSPL-LL restarts the threads for hpi monitor msg handler")
     # TODO: Use an instance of JournalD sensor to monitor logs showing that SSPL-LL performed the correct action
 
 @step(u"Then I get the Restart Successful JSON response message")
@@ -54,12 +54,12 @@ def then_i_receive_Restart_Successful_JSON_response_message(step):
     """I get the JSON response msg with 'thread_response': 'Restart Successful' key value"""
     ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
     print("Received: %s" % ingressMsg)
-    
+
     # Verify module name and thread response
     module_name = ingressMsg.get("actuator_response_type").get("thread_controller").get("module_name")
     print("module_name: %s" % module_name)
-    assert module_name == "DriveManager"
-    
+    assert module_name == "HPIMonitor"
+
     thread_response = ingressMsg.get("actuator_response_type").get("thread_controller").get("thread_response")
     print("thread_response: %s" % thread_response)
     assert thread_response == "Restart Successful"
@@ -70,9 +70,9 @@ def then_i_receive_Restart_Successful_JSON_response_message(step):
     while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
         world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
     print"Done"
-    
-@step(u'Given I send in the actuator message to stop drive manager')
-def given_i_send_in_the_actuator_message_to_stop_drive_manager(step):
+
+@step(u'Given I send in the actuator message to stop hpi monitor')
+def given_i_send_in_the_actuator_message_to_stop_hpi_monitor(step):
     egressMsg = {
         "title": "SSPL-LL Actuator Request",
         "description": "Seagate Storage Platform Library - Low Level - Actuator Request",
@@ -89,7 +89,7 @@ def given_i_send_in_the_actuator_message_to_stop_drive_manager(step):
             },
             "actuator_request_type": {
                 "thread_controller": {
-                    "module_name" : "DriveManager",
+                    "module_name" : "HPIMonitor",
                     "thread_request": "stop"
                 }
             }
@@ -97,9 +97,9 @@ def given_i_send_in_the_actuator_message_to_stop_drive_manager(step):
     }
     world.sspl_modules[RabbitMQegressProcessor.name()]._write_internal_msgQ(RabbitMQegressProcessor.name(), egressMsg)
 
-@step(u'When SSPL-LL Stops the thread for drive manager msg handler')
-def when_sspl_ll_stops_the_thread_for_drive_manager_msg_handler(step):
-    print("SSPL-LL Stops the thread for drive manager msg handler")
+@step(u'When SSPL-LL Stops the thread for hpi monitor msg handler')
+def when_sspl_ll_stops_the_thread_for_hpi_monitor_msg_handler(step):
+    print("SSPL-LL Stops the thread for hpi monitor msg handler")
     # TODO: Use an instance of JournalD sensor to monitor logs showing that SSPL-LL performed the correct action
 
 @step(u'Then I get the Stop Successful JSON response message')
@@ -107,19 +107,19 @@ def then_i_get_the_stop_successful_json_response_message(step):
     """I get the JSON response msg with 'thread_response': 'Stop Successful' key value"""
     ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
     print("Received: %s" % ingressMsg)
-    
+
     # Verify module name and thread response
     module_name = ingressMsg.get("actuator_response_type").get("thread_controller").get("module_name")
     print("module_name: %s" % module_name)
-    assert module_name == "DriveManager"
-    
+    assert module_name == "HPIMonitor"
+
     thread_response = ingressMsg.get("actuator_response_type").get("thread_controller").get("thread_response")
     print("thread_response: %s" % thread_response)
     assert thread_response == "Stop Successful"
     print"Done"
 
-@step(u'Given I send in the actuator message to start drive manager')
-def given_i_send_in_the_actuator_message_to_start_drive_manager(step):
+@step(u'Given I send in the actuator message to start hpi monitor')
+def given_i_send_in_the_actuator_message_to_start_hpi_monitor(step):
     egressMsg = {
         "title": "SSPL-LL Actuator Request",
         "description": "Seagate Storage Platform Library - Low Level - Actuator Request",
@@ -136,7 +136,7 @@ def given_i_send_in_the_actuator_message_to_start_drive_manager(step):
             },
             "actuator_request_type": {
                 "thread_controller": {
-                    "module_name" : "DriveManager",
+                    "module_name" : "HPIMonitor",
                     "thread_request": "start"
                 }
             }
@@ -144,9 +144,9 @@ def given_i_send_in_the_actuator_message_to_start_drive_manager(step):
     }
     world.sspl_modules[RabbitMQegressProcessor.name()]._write_internal_msgQ(RabbitMQegressProcessor.name(), egressMsg)
 
-@step(u'When SSPL-LL Starts the thread for drive manager msg handler')
-def when_sspl_ll_starts_the_thread_for_drive_manager_msg_handler(step):
-    print("SSPL-LL Starts the thread for drive manager msg handler")
+@step(u'When SSPL-LL Starts the thread for hpi monitor msg handler')
+def when_sspl_ll_starts_the_thread_for_hpi_monitor_msg_handler(step):
+    print("SSPL-LL Starts the thread for hpi monitor msg handler")
     # TODO: Use an instance of JournalD sensor to monitor logs showing that SSPL-LL performed the correct action
 
 @step(u'Then I get the Start Successful JSON response message')
@@ -158,7 +158,7 @@ def then_i_get_the_start_successful_json_response_message(step):
     # Verify module name and thread response
     module_name = ingressMsg.get("actuator_response_type").get("thread_controller").get("module_name")
     print("module_name: %s" % module_name)
-    assert module_name == "DriveManager"
+    assert module_name == "HPIMonitor"
 
     thread_response = ingressMsg.get("actuator_response_type").get("thread_controller").get("thread_response")
     print("thread_response: %s" % thread_response)
@@ -171,8 +171,8 @@ def then_i_get_the_start_successful_json_response_message(step):
         world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
     print"Done"
 
-@step(u'Given I request to stop drive manager and then I request a thread status')
-def given_i_request_to_stop_drive_manager_and_then_i_request_a_thread_status(step):
+@step(u'Given I request to stop hpi monitor and then I request a thread status')
+def given_i_request_to_stop_hpi_monitor_and_then_i_request_a_thread_status(step):
     egressMsg = {
         "title": "SSPL-LL Actuator Request",
         "description": "Seagate Storage Platform Library - Low Level - Actuator Request",
@@ -189,7 +189,7 @@ def given_i_request_to_stop_drive_manager_and_then_i_request_a_thread_status(ste
             },
             "actuator_request_type": {
                 "thread_controller": {
-                    "module_name" : "DriveManager",
+                    "module_name" : "HPIMonitor",
                     "thread_request": "stop"
                 }
             }
@@ -214,7 +214,7 @@ def given_i_request_to_stop_drive_manager_and_then_i_request_a_thread_status(ste
             },
             "actuator_request_type": {
                 "thread_controller": {
-                    "module_name" : "DriveManager",
+                    "module_name" : "HPIMonitor",
                     "thread_request": "status"
                 }
             }
@@ -222,9 +222,9 @@ def given_i_request_to_stop_drive_manager_and_then_i_request_a_thread_status(ste
     }
     world.sspl_modules[RabbitMQegressProcessor.name()]._write_internal_msgQ(RabbitMQegressProcessor.name(), egressMsg)
 
-@step(u'When SSPL-LL Stops the drive manager and receives a request for thread status')
-def when_sspl_ll_stops_the_drive_manager_and_receives_a_request_for_thread_status(step):
-    print("SSPL-LL Starts the thread for drive manager msg handler")
+@step(u'When SSPL-LL Stops the hpi monitor and receives a request for thread status')
+def when_sspl_ll_stops_the_hpi_monitor_and_receives_a_request_for_thread_status(step):
+    print("SSPL-LL Starts the thread for hpi monitor msg handler")
     # TODO: Use an instance of JournalD sensor to monitor logs showing that SSPL-LL performed the correct action
 
 @step(u'Then I get the Stop Successful JSON message then I get the thread status message')
@@ -236,7 +236,7 @@ def then_i_get_the_stop_successful_json_message_then_i_get_the_thread_status_mes
     # Verify module name and thread response
     module_name = ingressMsg.get("actuator_response_type").get("thread_controller").get("module_name")
     print("module_name: %s" % module_name)
-    assert module_name == "DriveManager"
+    assert module_name == "HPIMonitor"
 
     thread_response = ingressMsg.get("actuator_response_type").get("thread_controller").get("thread_response")
     print("thread_response: %s" % thread_response)
@@ -248,15 +248,15 @@ def then_i_get_the_stop_successful_json_message_then_i_get_the_thread_status_mes
     # Verify module name and thread response
     module_name = ingressMsg.get("actuator_response_type").get("thread_controller").get("module_name")
     print("module_name: %s" % module_name)
-    assert module_name == "DriveManager"
-    
+    assert module_name == "HPIMonitor"
+
     thread_response = ingressMsg.get("actuator_response_type").get("thread_controller").get("thread_response")
     print("thread_response: %s" % thread_response)
     assert thread_response == "Status: Halted"
     print"Done"
 
-@step(u'Given I request to start drive manager and then I request a thread status')
-def given_i_request_to_start_drive_manager_and_then_i_request_a_thread_status(step):
+@step(u'Given I request to start hpi monitor and then I request a thread status')
+def given_i_request_to_start_hpi_monitor_and_then_i_request_a_thread_status(step):
     egressMsg = {
         "title": "SSPL-LL Actuator Request",
         "description": "Seagate Storage Platform Library - Low Level - Actuator Request",
@@ -273,7 +273,7 @@ def given_i_request_to_start_drive_manager_and_then_i_request_a_thread_status(st
             },
             "actuator_request_type": {
                 "thread_controller": {
-                     "module_name" : "DriveManager",
+                     "module_name" : "HPIMonitor",
                      "thread_request": "start"
                 }
             }
@@ -298,7 +298,7 @@ def given_i_request_to_start_drive_manager_and_then_i_request_a_thread_status(st
             },
             "actuator_request_type": {
                 "thread_controller": {
-                    "module_name" : "DriveManager",
+                    "module_name" : "HPIMonitor",
                     "thread_request": "status"
                 }
             }
@@ -306,9 +306,9 @@ def given_i_request_to_start_drive_manager_and_then_i_request_a_thread_status(st
     }
     world.sspl_modules[RabbitMQegressProcessor.name()]._write_internal_msgQ(RabbitMQegressProcessor.name(), egressMsg)
 
-@step(u'When SSPL-LL Starts the drive manager and receives a request for thread status')
-def when_sspl_ll_starts_the_drive_manager_and_receives_a_request_for_thread_status(step):
-    print("SSPL-LL Starts the thread for drive manager msg handler")
+@step(u'When SSPL-LL Starts the hpi monitor and receives a request for thread status')
+def when_sspl_ll_starts_the_hpi_monitor_and_receives_a_request_for_thread_status(step):
+    print("SSPL-LL Starts the thread for hpi monitor msg handler")
     # TODO: Use an instance of JournalD sensor to monitor logs showing that SSPL-LL performed the correct action
 
 @step(u'Then I get the Start Successful JSON message then I get the thread status message')
@@ -320,7 +320,7 @@ def then_i_get_the_start_successful_json_message_then_i_get_the_thread_status_me
     # Verify module name and thread response
     module_name = ingressMsg.get("actuator_response_type").get("thread_controller").get("module_name")
     print("module_name: %s" % module_name)
-    assert module_name == "DriveManager"
+    assert module_name == "HPIMonitor"
 
     thread_response = ingressMsg.get("actuator_response_type").get("thread_controller").get("thread_response")
     print("thread_response: %s" % thread_response)
@@ -332,16 +332,9 @@ def then_i_get_the_start_successful_json_message_then_i_get_the_thread_status_me
     # Verify module name and thread response
     module_name = ingressMsg.get("actuator_response_type").get("thread_controller").get("module_name")
     print("module_name: %s" % module_name)
-    assert module_name == "DriveManager"
-    
+    assert module_name == "HPIMonitor"
+
     thread_response = ingressMsg.get("actuator_response_type").get("thread_controller").get("thread_response")
     print("thread_response: %s" % thread_response)
     assert thread_response == "Status: Running"
     print"Done"
-
-
-
-
-
-
-    
