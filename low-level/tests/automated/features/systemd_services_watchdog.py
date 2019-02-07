@@ -59,7 +59,7 @@ def when_i_ungracefully_halt_the_name_service_with_signal_signum(step, name, sig
         if proc.name == name:
             proc.send_signal(int(signum))
             found = True
-            
+
     # Support for python-psutil 2.1.3+
     if found == False:
         for proc in psutil.process_iter():
@@ -99,6 +99,5 @@ def start_stop_service(service_name, action):
         manager.StartUnit(service_name + ".service", 'replace')
     else:
         manager.StopUnit(service_name + ".service", 'replace')
-        
+
     time.sleep(3)
-    

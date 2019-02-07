@@ -6,7 +6,7 @@ Feature: Test Systemd Watchdog Services Capabilities
 Scenario: Stop the crond service and verify the watchdog transmits correct json msg
 	Given that the "crond" service is "running" and SSPL_LL is running
 	When I "stop" the "crond" service
-	Then I receive a service watchdog json msg with service name "crond.service" and state of "inactive"
+	Then I receive a service watchdog json msg with service name "crond.service" and state of "deactivating"
 
 Scenario: Start the crond service and verify the watchdog transmits correct json msg
 	Given that the "crond" service is "halted" and SSPL_LL is running
