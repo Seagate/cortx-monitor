@@ -16,5 +16,8 @@ Steps for running automation tests
 3. Start libvirtd service
     systemctl start libvirtd
 
+4. Install lettuce 0.2.23
+    $ sudo pip install lettuce
+
 4. Start test
    ./run_tests.sh
