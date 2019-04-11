@@ -43,6 +43,7 @@ class RabbitMQingressProcessorTests(ScheduledModuleThread, InternalMsgQ):
 
     # Section and keys in configuration file
     RABBITMQPROCESSORTEST = MODULE_NAME.upper()
+    PRIMARY_RABBITMQ_HOST = 'primary_rabbitmq_host'
     EXCHANGE_NAME         = 'exchange_name'
     QUEUE_NAME            = 'queue_name'
     ROUTING_KEY           = 'routing_key'
@@ -202,6 +203,9 @@ class RabbitMQingressProcessorTests(ScheduledModuleThread, InternalMsgQ):
             self._virtual_host  = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSORTEST,
                                                                  self.VIRT_HOST,
                                                                  'SSPL')
+            self._primary_rabbitmq_host = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSORTEST,
+                                                                 self.PRIMARY_RABBITMQ_HOST,
+                                                                 'localhost')
             self._exchange_name = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSORTEST,
                                                                  self.EXCHANGE_NAME,
                                                                  'sspl-in')
@@ -221,7 +225,7 @@ class RabbitMQingressProcessorTests(ScheduledModuleThread, InternalMsgQ):
             creds = pika.PlainCredentials(self._username, self._password)
             self._connection = pika.BlockingConnection(
                 pika.ConnectionParameters(
-                    host='localhost',
+                    host=self._primary_rabbitmq_host,
                     virtual_host=self._virtual_host,
                     credentials=creds
                     )

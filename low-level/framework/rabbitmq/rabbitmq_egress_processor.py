@@ -43,6 +43,7 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
     RABBITMQPROCESSOR       = MODULE_NAME.upper()
     VIRT_HOST               = 'virtual_host'
 
+    PRIMARY_RABBITMQ_HOST   = 'primary_rabbitmq_host'
     EXCHANGE_NAME           = 'exchange_name'
     QUEUE_NAME              = 'queue_name'
     ROUTING_KEY             = 'routing_key'
@@ -135,6 +136,11 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
             self._virtual_host  = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
                                                                  self.VIRT_HOST,
                                                                  'SSPL')
+
+            # Read common RabbitMQ configuration
+            self._primary_rabbitmq_host = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
+                                                                 self.PRIMARY_RABBITMQ_HOST,
+                                                                 'localhost')
 
             # Read RabbitMQ configuration for sensor messages
             self._queue_name    = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
@@ -317,8 +323,8 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
               self._jsonMsg.get("message").get("actuator_response_type").get("ack") is not None:
                 self._add_signature()
                 jsonMsg = json.dumps(self._jsonMsg).encode('utf8')
-                self._get_connection()
-                self._get_ack_connection()
+                self._get_connection(host_addr=self._primary_rabbitmq_host)
+                self._get_ack_connection(host_addr=self._primary_rabbitmq_host)
                 self._channel.basic_publish(exchange=self._exchange_name,
                                     routing_key=self._ack_routing_key,
                                     properties=msg_props,
@@ -339,7 +345,7 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
             else:
                 self._add_signature()
                 jsonMsg = json.dumps(self._jsonMsg).encode('utf8')
-                self._get_connection()
+                self._get_connection(host_addr=self._primary_rabbitmq_host)
                 self._channel.basic_publish(exchange=self._exchange_name,
                                     routing_key=self._routing_key,
                                     properties=msg_props,

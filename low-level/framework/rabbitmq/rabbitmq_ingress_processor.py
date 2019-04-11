@@ -1,7 +1,7 @@
 """
  ****************************************************************************
  Filename:          rabbitmq_ingress_processor.py
- Description:       Handles incoming messages via rabbitMQ over localhost
+ Description:       Handles incoming messages via rabbitMQ
  Creation Date:     02/11/2015
  Author:            Jake Abernathy
 
@@ -41,19 +41,20 @@ except Exception as ae:
 
 
 class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
-    """Handles incoming messages via rabbitMQ over localhost"""
+    """Handles incoming messages via rabbitMQ"""
 
     MODULE_NAME = "RabbitMQingressProcessor"
     PRIORITY    = 1
 
     # Section and keys in configuration file
-    RABBITMQPROCESSOR    = MODULE_NAME.upper()
-    EXCHANGE_NAME        = 'exchange_name'
-    QUEUE_NAME           = 'queue_name'
-    ROUTING_KEY          = 'routing_key'
-    VIRT_HOST            = 'virtual_host'
-    USER_NAME            = 'username'
-    PASSWORD             = 'password'
+    RABBITMQPROCESSOR     = MODULE_NAME.upper()
+    PRIMARY_RABBITMQ_HOST = 'primary_rabbitmq_host'
+    EXCHANGE_NAME         = 'exchange_name'
+    QUEUE_NAME            = 'queue_name'
+    ROUTING_KEY           = 'routing_key'
+    VIRT_HOST             = 'virtual_host'
+    USER_NAME             = 'username'
+    PASSWORD              = 'password'
 
     JSON_ACTUATOR_SCHEMA = "SSPL-LL_Actuator_Request.json"
     JSON_SENSOR_SCHEMA   = "SSPL-LL_Sensor_Request.json"
@@ -224,6 +225,9 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
             self._virtual_host  = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
                                                                  self.VIRT_HOST,
                                                                  'SSPL')
+            self._primary_rabbitmq_host = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
+                                                                 self.PRIMARY_RABBITMQ_HOST,
+                                                                 'localhost')
             self._exchange_name = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
                                                                  self.EXCHANGE_NAME,
                                                                  'sspl-in')
@@ -243,7 +247,7 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
             creds = pika.PlainCredentials(self._username, self._password)
             self._connection = pika.BlockingConnection(
                 pika.ConnectionParameters(
-                    host='localhost',
+                    host=self._primary_rabbitmq_host,
                     virtual_host=self._virtual_host,
                     credentials=creds
                     )
