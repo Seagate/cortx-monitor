@@ -8,7 +8,6 @@ SSPL_CONFIGURED="/var/sspl/sspl-configured"
 ROLES="gw ssu vm cmu"
 
 SSU_DEPENDENCY_RPMS=(
-                "epel-release"
                 "sg3_utils"
                 "gemhpi"
                 "pull_sea_logs"
@@ -26,7 +25,6 @@ SSU_REQUIRED_PROCESSES=(
                 )
 
 VM_DEPENDENCY_RPMS=(
-                "epel-release"
                 "lxqt-policykit"
                 )
 usage() {
