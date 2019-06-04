@@ -19,9 +19,12 @@ BuildRoot:  %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 BuildRequires: rpm-build sudo python-Levenshtein
 Requires:   python-daemon python-zope-interface python-zope-event python-zope-component python-pika python-jsonschema rabbitmq-server
 Requires:   pysnmp systemd-python pygobject2 python-slip-dbus udisks2 python-psutil python-inotify python-paramiko hdparm pyserial
-Requires:   libsspl_sec libsspl_sec-method_none zabbix22-agent
+Requires:   libsspl_sec libsspl_sec-method_none
 Requires:   perl(Config::Any)
 Requires(pre): shadow-utils
+
+# Disabling for EES-non-requirement
+# Requires:  zabbix22-agent
 
 %description
 Installs SSPL
@@ -47,10 +50,12 @@ cp -rp . ${RPM_BUILD_ROOT}/opt/seagate/sspl/low-level
 
 %pre
 # Add the sspl-ll user during first install if it doesnt exist
+# Add this user in the primary group itself instead of zabbix group
 id -u sspl-ll &>/dev/null || {
     echo "Creating sspl-ll user..."
-    /usr/sbin/useradd -r -g zabbix -s /sbin/nologin  \
-            -c "User account to run the sspl-ll service" sspl-ll
+    #/usr/sbin/useradd -r -g zabbix -s /sbin/nologin  \
+    /usr/sbin/useradd -r sspl-ll -s /sbin/nologin  \
+            -c "User account to run the sspl-ll service"
 }
 
 %post

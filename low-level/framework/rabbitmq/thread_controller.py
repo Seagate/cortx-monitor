@@ -136,11 +136,9 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
         for product in self._products:
             if product == "CS-A" and \
                not self._threads_initialized:
-                # Wait for the dcs-collector to populate the /tmp/dcs/hpi directory
-                while not os.path.isdir(self._hpi_base_dir):
-                    logger.info("ThreadController, dir not found: %s " % self._hpi_base_dir)
-                    logger.info("ThreadController, rechecking in %s secs" % self._start_delay)
-                    time.sleep(int(self._start_delay))
+
+                # Disabling for EES-non-requitement
+                # Removing the code which waits for /tmp/dcs/hpi directory to get populated
 
                 # Allow other threads to initialize
                 time.sleep(185)

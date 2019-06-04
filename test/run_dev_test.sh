@@ -60,7 +60,8 @@ $sudo lxc-attach -n $vm_name  -- yum -y install httpd python2-pip rpm-build git 
 $sudo lxc-attach -n $vm_name  -- pip install lettuce
 
 # Extract simulation data
-$sudo lxc-attach -n $vm_name  -- bash -c "tar xvf $test_dir/../5u84_dcs_dump.tgz -C /tmp"
+# Disabling for EES-non-requirement
+#$sudo lxc-attach -n $vm_name  -- bash -c "tar xvf $test_dir/../5u84_dcs_dump.tgz -C /tmp"
 
 # Install sspl and libsspl_sec packages
 $sudo lxc-attach -n $vm_name  -- yum --enablerepo=updates clean metadata
@@ -79,8 +80,8 @@ $sudo lxc-attach -n $vm_name  --  chown rabbitmq:rabbitmq /var/lib/rabbitmq/.erl
 $sudo lxc-attach -n $vm_name  -- systemctl start rabbitmq-server -l
 
 # Change setup to vm in sspl configurations
-$sudo lxc-attach -n $vm_name  -- sed -i 's/setup=hw/setup=vm/g' /etc/sspl_ll.conf
 $sudo lxc-attach -n $vm_name  -- $sspl_install_dir/sspl/low-level/framework/sspl_init
+$sudo lxc-attach -n $vm_name  -- sed -i 's/setup=vm/setup=eos/g' /etc/sspl_ll.conf
 
 # Execute tests
 $sudo lxc-attach -n $vm_name -- bash -c "$test_dir/run_sspl-ll_tests.sh"

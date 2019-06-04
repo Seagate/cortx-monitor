@@ -38,6 +38,8 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
     SYS_INFORMATION = 'SYSTEM_INFORMATION'
     SETUP = 'setup'
 
+    UNSUPPORTED_REQUEST = "Unsupported Request"
+
     @staticmethod
     def name():
         """ @return: name of the module."""
@@ -154,18 +156,19 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     if HPI_actuator_class:
                         self._HPI_actuator = HPI_actuator_class(self._conf_reader)
                     else:
-                        logger.exception("HPIActuator couldn't be loaded")
+                        logger.warn("HPIActuator not loaded")
+                        json_msg = AckResponseMsg(node_request, NodeControllerMsgHandler.UNSUPPORTED_REQUEST, uuid).getJson()
+                        self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
                         return
 
-                self._log_debug("_process_msg, _HPI_actuator name: %s" % self._HPI_actuator.name())
+                    self._log_debug("_process_msg, _HPI_actuator name: %s" % self._HPI_actuator.name())
 
-                # Perform the request using HPI and get the response
-                hpi_response = self._HPI_actuator.perform_request(jsonMsg).strip()
-                self._log_debug("_process_msg, hpi_response: %s" % hpi_response)
+                    # Perform the request using HPI and get the response
+                    hpi_response = self._HPI_actuator.perform_request(jsonMsg).strip()
+                    self._log_debug("_process_msg, hpi_response: %s" % hpi_response)
 
-                json_msg = AckResponseMsg(node_request, hpi_response, uuid).getJson()
-                self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
-
+                    json_msg = AckResponseMsg(node_request, hpi_response, uuid).getJson()
+                    self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
 
             # Set the Bezel LED color using the GEM interface
             elif component == "BEZE":
@@ -249,30 +252,32 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     if HPI_actuator_class:
                         self._HPI_actuator = HPI_actuator_class(self._conf_reader)
                     else:
-                        logger.exception("HPIActuator couldn't be loaded")
+                        logger.warn("HPIActuator not loaded")
+                        json_msg = AckResponseMsg(node_request, NodeControllerMsgHandler.UNSUPPORTED_REQUEST, uuid).getJson()
+                        self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
                         return
 
-                self._log_debug("_process_msg, _HPI_actuator name: %s" % self._HPI_actuator.name())
+                    self._log_debug("_process_msg, _HPI_actuator name: %s" % self._HPI_actuator.name())
 
-                # Parse out the drive to stop
-                drive_request = node_request[12:].strip()
-                self._log_debug("perform_request, drive to stop: %s" % drive_request)
+                    # Parse out the drive to stop
+                    drive_request = node_request[12:].strip()
+                    self._log_debug("perform_request, drive to stop: %s" % drive_request)
 
-                # Append POWER_OFF to notify HPI actuator of desired state
-                jsonMsg["actuator_request_type"]["node_controller"]["node_request"] = \
-                        "DISK: set {} POWER_OFF".format(drive_request)
-                self._log_debug("_process_msg, jsonMsg: %s" % jsonMsg)
+                    # Append POWER_OFF to notify HPI actuator of desired state
+                    jsonMsg["actuator_request_type"]["node_controller"]["node_request"] = \
+                            "DISK: set {} POWER_OFF".format(drive_request)
+                    self._log_debug("_process_msg, jsonMsg: %s" % jsonMsg)
 
-                # Perform the request using HPI and get the response
-                hpi_response = self._HPI_actuator.perform_request(jsonMsg).strip()
-                self._log_debug("_process_msg, hpi_response: %s" % hpi_response)
+                    # Perform the request using HPI and get the response
+                    hpi_response = self._HPI_actuator.perform_request(jsonMsg).strip()
+                    self._log_debug("_process_msg, hpi_response: %s" % hpi_response)
 
-                # Simplify success message as external apps don't care about details
-                if "Success" in hpi_response:
-                    hpi_response = "Successful"
+                    # Simplify success message as external apps don't care about details
+                    if "Success" in hpi_response:
+                        hpi_response = "Successful"
 
-                json_msg = AckResponseMsg(node_request, hpi_response, uuid).getJson()
-                self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+                    json_msg = AckResponseMsg(node_request, hpi_response, uuid).getJson()
+                    self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
 
             elif component == "STAR":
                 # HPI related operations are not supported in VM environment.
@@ -288,34 +293,33 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     if HPI_actuator_class:
                         self._HPI_actuator = HPI_actuator_class(self._conf_reader)
                     else:
-                        logger.exception("HPIActuator couldn't be loaded")
+                        logger.warn("HPIActuator not loaded")
+                        json_msg = AckResponseMsg(node_request, NodeControllerMsgHandler.UNSUPPORTED_REQUEST, uuid).getJson()
+                        self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
                         return
 
-                self._log_debug("_process_msg, _HPI_actuator name: %s" % self._HPI_actuator.name())
+                    self._log_debug("_process_msg, _HPI_actuator name: %s" % self._HPI_actuator.name())
 
-                # Parse out the drive to start
-                drive_request = node_request[13:].strip()
-                self._log_debug("perform_request, drive to start: %s" % drive_request)
+                    # Parse out the drive to start
+                    drive_request = node_request[13:].strip()
+                    self._log_debug("perform_request, drive to start: %s" % drive_request)
 
-                # Append POWER_ON to notify HPI actuator of desired state
-                jsonMsg["actuator_request_type"]["node_controller"]["node_request"] = \
-                        "DISK: set {} POWER_ON".format(drive_request)
-                self._log_debug("_process_msg, jsonMsg: %s" % jsonMsg)
+                    # Append POWER_ON to notify HPI actuator of desired state
+                    jsonMsg["actuator_request_type"]["node_controller"]["node_request"] = \
+                            "DISK: set {} POWER_ON".format(drive_request)
+                    self._log_debug("_process_msg, jsonMsg: %s" % jsonMsg)
 
-                # Perform the request using HPI and get the response
-                hpi_response = self._HPI_actuator.perform_request(jsonMsg).strip()
-                self._log_debug("_process_msg, hpi_response: %s" % hpi_response)
+                    # Perform the request using HPI and get the response
+                    hpi_response = self._HPI_actuator.perform_request(jsonMsg).strip()
+                    self._log_debug("_process_msg, hpi_response: %s" % hpi_response)
 
-                # Simplify success message as external apps don't care about details
-                if "Success" in hpi_response:
-                    hpi_response = "Successful"
+                    # Simplify success message as external apps don't care about details
+                    if "Success" in hpi_response:
+                        hpi_response = "Successful"
 
-                json_msg = AckResponseMsg(node_request, hpi_response, uuid).getJson()
-                self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+                    json_msg = AckResponseMsg(node_request, hpi_response, uuid).getJson()
+                    self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
 
-                # Perform the request using HPI and get the response
-                hpi_response = self._HPI_actuator.perform_request(jsonMsg).strip()
-                self._log_debug("_process_msg, hpi_response: %s" % hpi_response)
 
             elif component == "RESE":
                 # HPI related operations are not supported in VM environment.
@@ -331,41 +335,43 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     if HPI_actuator_class:
                         self._HPI_actuator = HPI_actuator_class(self._conf_reader)
                     else:
-                        logger.exception("HPIActuator couldn't be loaded")
+                        logger.warn("HPIActuator not loaded")
+                        json_msg = AckResponseMsg(node_request, NodeControllerMsgHandler.UNSUPPORTED_REQUEST, uuid).getJson()
+                        self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
                         return
 
-                self._log_debug("_process_msg, _HPI_actuator name: %s" % self._HPI_actuator.name())
+                    self._log_debug("_process_msg, _HPI_actuator name: %s" % self._HPI_actuator.name())
 
-                # Parse out the drive to power cycle
-                drive_request = node_request[13:].strip()
-                self._log_debug("perform_request, drive to power cycle: %s" % drive_request)
+                    # Parse out the drive to power cycle
+                    drive_request = node_request[13:].strip()
+                    self._log_debug("perform_request, drive to power cycle: %s" % drive_request)
 
-                # Append POWER_OFF and then POWER_ON to notify HPI actuator of desired state
-                jsonMsg["actuator_request_type"]["node_controller"]["node_request"] = \
-                        "DISK: set {} POWER_OFF".format(drive_request)
-                self._log_debug("_process_msg, jsonMsg: %s" % jsonMsg)
-
-                # Perform the request using HPI and get the response
-                hpi_response = self._HPI_actuator.perform_request(jsonMsg).strip()
-                self._log_debug("_process_msg, hpi_response: %s" % hpi_response)
-
-                # Check for success and power the disk back on
-                if "Success" in hpi_response:
-                    # Append POWER_ON to notify HPI actuator of desired state
+                    # Append POWER_OFF and then POWER_ON to notify HPI actuator of desired state
                     jsonMsg["actuator_request_type"]["node_controller"]["node_request"] = \
-                               "DISK: set {} POWER_ON".format(drive_request)
+                            "DISK: set {} POWER_OFF".format(drive_request)
                     self._log_debug("_process_msg, jsonMsg: %s" % jsonMsg)
 
                     # Perform the request using HPI and get the response
                     hpi_response = self._HPI_actuator.perform_request(jsonMsg).strip()
                     self._log_debug("_process_msg, hpi_response: %s" % hpi_response)
 
-                    # Simplify success message as external apps don't care about details
+                    # Check for success and power the disk back on
                     if "Success" in hpi_response:
-                        hpi_response = "Successful"
+                        # Append POWER_ON to notify HPI actuator of desired state
+                        jsonMsg["actuator_request_type"]["node_controller"]["node_request"] = \
+                                   "DISK: set {} POWER_ON".format(drive_request)
+                        self._log_debug("_process_msg, jsonMsg: %s" % jsonMsg)
 
-                json_msg = AckResponseMsg(node_request, hpi_response, uuid).getJson()
-                self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+                        # Perform the request using HPI and get the response
+                        hpi_response = self._HPI_actuator.perform_request(jsonMsg).strip()
+                        self._log_debug("_process_msg, hpi_response: %s" % hpi_response)
+
+                            # Simplify success message as external apps don't care about details
+                        if "Success" in hpi_response:
+                            hpi_response = "Successful"
+
+                    json_msg = AckResponseMsg(node_request, hpi_response, uuid).getJson()
+                    self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
 
             elif component == "HDPA":
                 # Query the Zope GlobalSiteManager for an object implementing the hdparm actuator
@@ -469,6 +475,16 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
             elif component == "HPI_":
                 # Requesting the current status from HPI data
                 # Parse out the drive request field in json msg
+                if self._is_env_vm():
+                    logger.warn("HPI operations are not supported in current environment")
+                    return
+
+                if self.setup == 'eos':
+                    logger.warn("HPIMonitor not loaded")
+                    json_msg = AckResponseMsg(node_request, NodeControllerMsgHandler.UNSUPPORTED_REQUEST, uuid).getJson()
+                    self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+                    return
+
                 node_request = jsonMsg.get("actuator_request_type").get("node_controller").get("node_request")
                 drive_request = node_request[11:].strip()
                 self._log_debug("perform_request, drive: %s" % drive_request)

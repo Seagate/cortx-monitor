@@ -1,8 +1,12 @@
 [Unit]
 Description=SSPL Low Level Process
-Wants=openhpid.service dcs-collector.service rabbitmq-server.service
-After=rabbitmq-server.service dcs-collector.service syslog.target
+Wants=rabbitmq-server.service
+After=rabbitmq-server.service syslog.target
 Requires=rabbitmq-server.service
+
+# Disabling for EES-non-requirement
+# wants=openhpid.service dcs-collector.service
+# After=dcs-collector.service
 
 [Service]
 Type=notify

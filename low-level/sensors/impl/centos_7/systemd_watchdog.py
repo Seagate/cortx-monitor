@@ -139,14 +139,10 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
         #self._set_debug(True)
         #self._set_debug_persist(True)
 
+        # Removing the code which waits for /tmp/dcs/hpi directory to get populated.
+
         # Integrate into the main dbus loop to catch events
         DBusGMainLoop(set_as_default=True)
-
-        # Wait for the dcs-collector to populate the /tmp/dcs/hpi directory
-        while not os.path.isdir(self._hpi_base_dir):
-            logger.info("SystemdWatchdog, dir not found: %s " % self._hpi_base_dir)
-            logger.info("SystemdWatchdog, rechecking in %s secs" % self._start_delay)
-            time.sleep(int(self._start_delay))
 
         # Allow time for the hpi_monitor to come up
         time.sleep(60)

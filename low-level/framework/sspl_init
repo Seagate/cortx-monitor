@@ -5,7 +5,7 @@ set -u -o pipefail
 SCRIPT_NAME=$(basename $0)
 SSPL_CONF="/etc/sspl_ll.conf"
 SSPL_CONFIGURED="/var/sspl/sspl-configured"
-ROLES="gw ssu vm cmu"
+ROLES="gw ssu vm cmu eos"
 
 SSU_DEPENDENCY_RPMS=(
                 "sg3_utils"
@@ -148,8 +148,7 @@ config_sspl() {
     /opt/seagate/sspl/low-level/framework/sspl_ll_reinit_CS_A
 
     # Create /tmp/dcs/hpi if required
-    [ ! -d "/tmp/dcs/hpi" ] && mkdir -p /tmp/dcs/hpi &&
-        id -u zabbix > /dev/null 2>&1 && chown zabbix:zabbix /tmp/dcs/hpi
+    [ "$role" != "eos" ] && [ ! -d "/tmp/dcs/hpi" ] && mkdir -p /tmp/dcs/hpi && id -u zabbix > /dev/null 2>&1 && chown zabbix:zabbix /tmp/dcs/hpi
 
     # Ensure rabbitmq-server has started
     systemctl start rabbitmq-server
