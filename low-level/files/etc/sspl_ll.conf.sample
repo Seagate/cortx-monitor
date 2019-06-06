@@ -6,11 +6,10 @@ message_handlers=DiskMsgHandler, LoggingMsgHandler, ServiceMsgHandler, NodeDataM
 
 sensors=ServiceWatchdog, NodeData, RAIDsensor, SNMPtraps
 
-actuators=Service, Login, RaritanPDU, RAIDactuator, IPMI, Hdparm, CommandLine
+actuators=Service, RAIDactuator, Hdparm
 
 # Disabling for EES-non-requirement
-# list of modules which are disabled by default
-# actuators = HPIactuator
+# actuators = RaritanPDU, CommandLine, Login, IPMI, HPIactuator
 # sensors = HPIMonitor
 
 [SYSTEM_INFORMATION]
@@ -84,7 +83,7 @@ threaded=true
 monitored_services=m0t1fs@*.service, m0d@*.service, mero.service, mero-kernel.service, mero-trace@kernel.service, mero-server@mero-kernel.service, mero-mkfs@mero-kernel.service, mero-trace@mero-kernel.service, mero-server@kernel.service, mero-mkfs@kernel.service, halond.service, rabbitmq-server.service, lnet.service, network.service, systemd-user-sessions.service, systemd-journald.service, systemd-sysctl.service, systemd-logind.service, crond.service, syslog.service, sshd.service, mcollective.service, dbus.service
 # Disabling for EES-non-requirement
 # services disabled from monitoring in eos environment
-# openhpid.service, dcs-collector.service zabbix*.service
+# openhpid.service, dcs-collector.service, zabbix*.service, mcollective.service
 smart_test_interval=999999999
 run_smart_on_start=False
 

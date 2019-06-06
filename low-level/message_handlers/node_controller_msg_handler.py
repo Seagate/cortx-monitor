@@ -131,8 +131,16 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 # Query the Zope GlobalSiteManager for an object implementing the IMERO actuator
                 if self._command_line_actuator is None:
                     from actuators.Icommand_line import ICommandLine
-                    self._command_line_actuator = self._queryUtility(ICommandLine)(self._conf_reader)
-                    self._log_debug("_process_msg, _command_line_actuator name: %s" % self._command_line_actuator.name())
+
+                    command_line_actuator_class = self._queryUtility(ICommandLine)
+                    # Instantiate CommandLine Actuator only if class is loaded
+                    if command_line_actuator_class:
+                        self._command_line_actuator = command_line_actuator_class(self._conf_reader)
+                    else:
+                        logger.warn("CommandLine Actuator not loaded")
+                        json_msg = AckResponseMsg(node_request, NodeControllerMsgHandler.UNSUPPORTED_REQUEST, uuid).getJson()
+                        self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+                        return
 
                 # Perform the request and get the response
                 command_line_response = self._command_line_actuator.perform_request(jsonMsg).strip()
@@ -188,8 +196,16 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 # Query the Zope GlobalSiteManager for an object implementing the IPDU actuator
                 if self._PDU_actuator is None:
                     from actuators.Ipdu import IPDU
-                    self._PDU_actuator = self._queryUtility(IPDU)(self._conf_reader)
-                    self._log_debug("_process_msg, _PDU_actuator name: %s" % self._PDU_actuator.name())
+
+                    PDU_actuator_class = self._queryUtility(IPDU)
+                    # Instantiate RaritanPDU Actuator only if class is loaded
+                    if PDU_actuator_class:
+                        self._PDU_actuator = PDU_actuator_class(self._conf_reader)
+                    else:
+                        logger.warn("RaritanPDU Actuator not loaded")
+                        json_msg = AckResponseMsg(node_request, NodeControllerMsgHandler.UNSUPPORTED_REQUEST, uuid).getJson()
+                        self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+                        return
 
                 # Perform the request on the PDU and get the response
                 pdu_response = self._PDU_actuator.perform_request(jsonMsg).strip()
@@ -228,10 +244,18 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 # Query the Zope GlobalSiteManager for an object implementing the IPMI actuator
                 if self._IPMI_actuator is None:
                     from actuators.Iipmi import Iipmi
-                    self._IPMI_actuator = self._queryUtility(Iipmi)(self._conf_reader)
-                    self._log_debug("_process_msg, _IPMI_actuator name: %s" % self._IPMI_actuator.name())
 
-                # Perform the RAID request on the node and get the response
+                    IPMI_actuator_class = self._queryUtility(Iipmi)
+                    # Instantiate IPMI Actuator only if class is loaded
+                    if IPMI_actuator_class:
+                        self._IPMI_actuator = IPMI_actuator_class(self._conf_reader)
+                    else:
+                        logger.warn("IPMI Actuator not loaded")
+                        json_msg = AckResponseMsg(node_request, NodeControllerMsgHandler.UNSUPPORTED_REQUEST, uuid).getJson()
+                        self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+                        return
+
+                # Perform the IPMI request on the node and get the response
                 ipmi_response = self._IPMI_actuator.perform_request(jsonMsg).strip()
                 self._log_debug("_process_msg, ipmi_response: %s" % ipmi_response)
 
