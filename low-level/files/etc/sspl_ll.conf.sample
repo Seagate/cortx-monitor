@@ -2,9 +2,9 @@
 [SSPL-LL_SETTING]
 core_processors=RabbitMQegressProcessor, RabbitMQingressProcessor, LoggingProcessor
 
-message_handlers=DiskMsgHandler, LoggingMsgHandler, ServiceMsgHandler, NodeDataMsgHandler, NodeControllerMsgHandler
+message_handlers=DiskMsgHandler, LoggingMsgHandler, ServiceMsgHandler, NodeDataMsgHandler, NodeControllerMsgHandler, RealStorEnclMsgHandler
 
-sensors=ServiceWatchdog, NodeData, RAIDsensor
+sensors=ServiceWatchdog, NodeData, RAIDsensor, SNMPtraps
 
 actuators=Service, RAIDactuator, Hdparm
 
@@ -127,3 +127,4 @@ logging_interval=3600
 #enabled_MIBS=PDU2-MIB
 #bind_ip=service
 #bind_port=1620
+

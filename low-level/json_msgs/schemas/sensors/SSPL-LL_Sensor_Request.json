@@ -76,6 +76,17 @@
 					"required": true,
 					"additionalProperties": false,
 					"properties": {
+						"enclosure_alert": {
+							"type": "object",
+							"additionalProperties": false,
+							"properties": {
+								"sensor_type": {
+									"description": "Request RealStor sensor data; realstor_psu_sensor, etc.",
+									"type": "string",
+									"required": true
+								}
+							}
+						},
 
 						"node_data": {
 							"type": "object",

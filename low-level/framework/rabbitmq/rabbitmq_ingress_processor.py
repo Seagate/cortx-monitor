@@ -205,6 +205,8 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
             elif msgType.get("node_data") is not None:
                 self._write_internal_msgQ("NodeDataMsgHandler", message)
 
+            elif msgType.get("enclosure_alert") is not None:
+                self._write_internal_msgQ("RealStorEnclMsgHandler", message)
             # ... handle other incoming messages that have been validated
             else:
                 # Send ack about not finding a msg handler

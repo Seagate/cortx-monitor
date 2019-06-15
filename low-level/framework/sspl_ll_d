@@ -52,6 +52,7 @@ from message_handlers.disk_msg_handler import DiskMsgHandler
 from message_handlers.logging_msg_handler import LoggingMsgHandler
 from message_handlers.service_msg_handler import ServiceMsgHandler
 from message_handlers.plane_cntrl_msg_handler import PlaneCntrlMsgHandler
+from message_handlers.real_stor_encl_msg_handler import RealStorEnclMsgHandler
 
 # Message to send to HAlon upon critical thread errors
 from json_msgs.messages.actuators.thread_controller import ThreadControllerMsg

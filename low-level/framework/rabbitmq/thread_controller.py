@@ -40,6 +40,7 @@ from message_handlers.service_msg_handler import ServiceMsgHandler
 from message_handlers.node_data_msg_handler import NodeDataMsgHandler
 from message_handlers.node_controller_msg_handler import NodeControllerMsgHandler
 from message_handlers.plane_cntrl_msg_handler import PlaneCntrlMsgHandler
+from message_handlers.real_stor_encl_msg_handler import RealStorEnclMsgHandler
 
 
 # Global method used by Thread to capture and log errors.  This must be global.
