@@ -4,13 +4,13 @@ core_processors=RabbitMQegressProcessor, RabbitMQingressProcessor, LoggingProces
 
 message_handlers=DiskMsgHandler, LoggingMsgHandler, ServiceMsgHandler, NodeDataMsgHandler, NodeControllerMsgHandler
 
-sensors=ServiceWatchdog, NodeData, RAIDsensor, SNMPtraps
+sensors=ServiceWatchdog, NodeData, RAIDsensor
 
 actuators=Service, RAIDactuator, Hdparm
 
 # Disabling for EES-non-requirement
 # actuators = RaritanPDU, CommandLine, Login, IPMI, HPIactuator
-# sensors = HPIMonitor
+# sensors = HPIMonitor, SNMPtraps
 
 [SYSTEM_INFORMATION]
 operating_system=centos7
@@ -120,10 +120,10 @@ priority=LOG_ERR
 threaded=true
 logging_interval=3600
 
-[SNMPTRAPS]
-threaded=true
-enabled_traps=*
-enabled_MIBS=PDU2-MIB
-bind_ip=service
-bind_port=1620
-
+# Disabling for EES-non-requirement
+#[SNMPTRAPS]
+#threaded=true
+#enabled_traps=*
+#enabled_MIBS=PDU2-MIB
+#bind_ip=service
+#bind_port=1620
