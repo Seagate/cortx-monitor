@@ -631,6 +631,82 @@
 							}
 						},
 
+                        "enclosure_fan_alert": {
+                            "type": "object",
+                            "properties":{
+                                "alertType":{
+                                    "description": "Enclosure alert cause",
+                                    "type": "string",
+                                    "required": true
+                                },
+                                "resourceType": {
+                                    "description": "Enclosure resource type like FRU, Sensor",
+                                    "type": "string",
+                                    "required": true
+                                },
+                                "info": {
+                                    "type": "object",
+                                    "required": true,
+                                    "properties": {
+                                        "enclosure-id": {
+                                            "description": "Enclosure ID",
+                                            "type": "integer",
+                                            "required": true
+                                        },
+                                        "serial-number": {
+                                            "description": "Power supply serial number",
+                                            "type": "string",
+                                            "required": true
+                                          },
+                                        "description": {
+                                            "description": "FRU long description",
+                                            "type": "string",
+                                            "required": true
+                                          },
+                                        "revision": {
+                                            "description": "FRU hardware revision level",
+                                            "type": "string",
+                                            "required": true
+                                          },
+                                        "name": {
+                                            "description": "Name of the Module",
+                                            "type": "string",
+                                            "required": true
+                                          },
+                                          "fru-location": {
+                                            "description": "Location of the FRU in the enclosure",
+                                            "type": "string",
+                                            "required": true
+                                          },
+                                          "part-number": {
+                                            "description": "FRU part number",
+                                            "type": "string",
+                                            "required": true
+                                          },
+                                          "mfg-date": {
+                                            "description": "Date and time, in the format year-month-day hour:minutes:seconds (UTC), when the power supply module was manufactured",
+                                            "type": "string",
+                                            "required": true
+                                          },
+                                          "mfg-vendor-id": {
+                                            "description": "JEDEC ID of the FRU manufacturer",
+                                            "type": "string",
+                                            "required": true
+                                          },
+                                           "fru-status": {
+                                            "description": "FRU status as Fault, OK",
+                                            "type": "string",
+                                            "required": true
+                                          }
+                                        }
+                                    },
+                                    "extended_info": {
+                                        "type": "object",
+                                        "required": false
+                                    }
+                              }
+                        },
+
 						"raid_data": {
 							"description": "RAID Data",
 							"type": "object",

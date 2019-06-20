@@ -129,10 +129,11 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
         for product in self._products:
             if product in ["CS-A", "EES"]:
                 from sensors.impl.generic.raid import RAIDsensor
-                from sensors.impl.generic.SMR_drive_data import SMRdriveDatia
+                from sensors.impl.generic.SMR_drive_data import SMRdriveData
 
                 # TODO: add this in product=EES check
                 from sensors.impl.generic.psu_sensor import RealStorPSUSensor
+                from sensors.impl.generic.realstor_fan_sensor import RealStorFanSensor
                 break
 
     def run(self):
@@ -374,4 +375,3 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
             elif product == "CS-L" or \
                  product == "CS-G":
                 return self._sspl_modules[RabbitMQegressProcessor.name()].is_running()
-
