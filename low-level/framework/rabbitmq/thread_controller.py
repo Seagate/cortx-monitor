@@ -132,6 +132,9 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
                 from sensors.impl.generic.SMR_drive_data import SMRdriveData
 
                 # TODO: add this in product=EES check
+                from sensors.impl.platforms.realstor.realstor_disk_sensor \
+                import RealStorDiskSensor
+
                 from sensors.impl.generic.psu_sensor import RealStorPSUSensor
                 from sensors.impl.generic.realstor_fan_sensor import RealStorFanSensor
                 from sensors.impl.generic.realstor_controller_sensor import RealStorControllerSensor

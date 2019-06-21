@@ -4,7 +4,7 @@ core_processors=RabbitMQegressProcessor, RabbitMQingressProcessor, LoggingProces
 
 message_handlers=DiskMsgHandler, LoggingMsgHandler, ServiceMsgHandler, NodeDataMsgHandler, NodeControllerMsgHandler, RealStorEnclMsgHandler
 
-sensors=ServiceWatchdog, NodeData, RAIDsensor, RealStorFanSensor, RealStorPSUSensor, RealStorControllerSensor
+sensors=ServiceWatchdog, NodeData, RAIDsensor, RealStorFanSensor, RealStorPSUSensor, RealStorControllerSensor, RealStorDiskSensor
 
 actuators=Service, RAIDactuator, Hdparm
 
@@ -136,7 +136,13 @@ secondary_controller_ip=127.0.0.1
 secondary_controller_port=80
 user=xxxxx
 password=xxxxx
+mgmt_interface=cliapi
 
+[REALSTORSENSORS]
+polling_frequency=30
+
+#TODO Club common configs (ex:threaded) for set of modules
+#like RealStor Sensors
 [REALSTORPSUSENSOR]
 threaded=true
 
@@ -145,3 +151,7 @@ threaded=true
 
 [REALSTORCONTROLLERSENSOR]
 threaded=true
+
+[REALSTORDISKSENSOR]
+threaded=true
+polling_frequency_override=0

@@ -29,11 +29,13 @@ VM_DEPENDENCY_RPMS=(
                 )
 usage() {
     cat << EOF
-$SCRIPT_NAME [{check|config [-f] [-r <ssu|gw|cmu|vm>]]
+$SCRIPT_NAME [{check|config [-f] [-r <ssu|gw|cmu|vm>]|create [-dp]]
 config options:
     -f  Force reinitialization. Do not prompt
     -r  Role to be configured on the current node
     -s  Skip RabbitMQ reset step
+create options:
+    -dp Create configured datapath
 
 EOF
     exit 1
@@ -91,6 +93,24 @@ check_dependencies() {
               echo -e "No rpm or process dependencies set, to check for supplied role '$1', skipping checks.\n";
               ;;
     esac
+}
+
+create_req() {
+    while [ $# -gt 0 ]; do
+        case $1 in
+            -dp )
+                IFS='=' dp=`grep data_path $SSPL_CONF`; datapath=( $dp )
+                sspldp=`echo ${datapath[1]}`
+
+                mkdir -p $sspldp
+                chown -R sspl-ll $sspldp
+                ;;
+            * )
+                usage
+                ;;
+        esac
+        shift 1
+    done
 }
 
 config_sspl() {
@@ -187,6 +207,10 @@ case $cmd in
 
     config )
         config_sspl $*
+        ;;
+
+    create )
+        create_req $*
         ;;
 
     * )

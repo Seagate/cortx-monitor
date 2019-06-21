@@ -245,8 +245,11 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist, operating_system
             from sensors.impl.generic.node_data import NodeData as NodeData
             from sensors.impl.generic.SMR_drive_data import SMRdriveData
             from sensors.impl.generic.SNMP_traps import SNMPtraps
-            from sensors.impl.generic.psu_sensor import RealStorPSUSensor
+
+            # TODO to move realstor sensors under product==EES
+            from sensors.impl.platforms.realstor.realstor_disk_sensor import RealStorDiskSensor
             from sensors.impl.generic.realstor_fan_sensor import RealStorFanSensor
+            from sensors.impl.generic.psu_sensor import RealStorPSUSensor
             from sensors.impl.generic.realstor_controller_sensor import RealStorControllerSensor
 
             from zope.component import getGlobalSiteManager

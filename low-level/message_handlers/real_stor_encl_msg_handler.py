@@ -21,6 +21,7 @@ from zope.component import queryUtility
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
+from json_msgs.messages.sensors.realstor_disk_data import RealStorDiskDataMsg
 from json_msgs.messages.sensors.realstor_psu_data import RealStorPSUDataMsg
 from json_msgs.messages.sensors.realstor_fan_data import RealStorFandataMsg
 from json_msgs.messages.sensors.realstor_controller_data import RealStorControllerDataMsg
@@ -52,6 +53,7 @@ class RealStorEnclMsgHandler(ScheduledModuleThread, InternalMsgQ):
         # Initialize internal message queues for this module
         super(RealStorEnclMsgHandler, self).initialize_msgQ(msgQlist)
 
+        self._disk_sensor_message = None
         self._psu_sensor_message = None
         self._fan_sensor_message = None
         self._controller_sensor_message = None
@@ -93,6 +95,12 @@ class RealStorEnclMsgHandler(ScheduledModuleThread, InternalMsgQ):
             else:
                 # serves the request coming from sspl CLI
                 sensor_type = json_msg.get("sensor_request_type").get("enclosure_alert").get("sensor_type")
+                if sensor_type == "enclosure_disk_alert":
+                    # return the lastly saved json message as response for sspl CLI request
+                    if self._disk_sensor_message:
+                        self._write_internal_msgQ(RabbitMQegressProcessor.name(), self._disk_sensor_message)
+                    else:
+                        self._log_debug("No past disk sensor event data found")
                 if sensor_type == "enclosure_psu_alert":
                     # return the lastly saved json message as response for sspl CLI request
                     if self._psu_sensor_message:
@@ -126,6 +134,9 @@ class RealStorEnclMsgHandler(ScheduledModuleThread, InternalMsgQ):
             extended_info = json_msg.get("sensor_request_type").get("extended_info")
             self._log_debug("_processMsg, sensor_type: %s" % sensor_type)
 
+            if sensor_type == "enclosure_disk_alert":
+                self._generate_disk_alert(json_msg, alert_type, resource_type, info, extended_info)
+
             if sensor_type == "enclosure_fan_alert":
                 self._generate_fan_alert(json_msg, alert_type, resource_type, info, extended_info)
 
@@ -134,6 +145,17 @@ class RealStorEnclMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
             if sensor_type == "enclosure_controller_alert":
                 self._generate_controller_alert(json_msg, alert_type, resource_type, info, extended_info)
+
+    def _generate_disk_alert(self, json_msg, alert_type, resource_type, info, extended_info):
+        """parses the json message, also validates it and then send it to the RabbitMQ egress processor"""
+
+        self._log_debug("RealStorEnclMsgHandler, _generate_disk_alert, json_msg %s" % json_msg)
+
+        real_stor_disk_data_msg = RealStorDiskDataMsg(alert_type, resource_type, info, extended_info)
+        json_msg = real_stor_disk_data_msg.getJson()
+        # save the json message in memory to serve sspl CLI sensor request
+        self._disk_sensor_message = json_msg
+        self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
 
     def _generate_psu_alert(self, json_msg, alert_type, resource_type, info, extended_info):
         """parses the json message, also validates it and then send it to the RabbitMQ egress processor"""

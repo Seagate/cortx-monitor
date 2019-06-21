@@ -25,6 +25,7 @@ def login(loginhash):
 # It reads data from file with a name same as endpoint.
 @app.route('/{0}/show/<endpoint>'.format(api), methods=["GET"])
 def show_data(endpoint):
+    endpoint = endpoint.replace("/","-")
     api_file = open("{0}/{1}.txt".format(curr_dir, endpoint), "r")
     data = api_file.read()
     api_file.close()

@@ -72,6 +72,45 @@
                     "health-recommendation": "- The enclosure operating range is 5°C to 40°C (41°F to 104°F). If the ambient temperature is not too cold, a temperature sensor in this FRU has probably failed. Replace this FRU."
                 },
                 {
+                    "object-name":"unhealthy-component",
+                    "meta":"/meta/unhealthy-component",
+                    "component-type":"disk",
+                    "component-type-numeric":6,
+                    "component-id":"Disk 0.65",
+                    "basetype":"drives",
+                    "primary-key":"disk_00.65",
+                    "health":"Fault",
+                    "health-numeric":2,
+                    "health-reason":"Disk failure is imminent.",
+                    "health-recommendation":"- Replace the disk with one of the same type (SSD, enterprise SAS, or midline SAS) and the same or greater capacity. For continued optimum I/O performance, the replacement disk should have performance that is the same as or better than the one it is replacing."
+                },
+                {
+                    "object-name":"unhealthy-component",
+                    "meta":"/meta/unhealthy-component",
+                    "component-type":"disk",
+                    "component-type-numeric":6,
+                    "component-id":"Disk 0.81",
+                    "basetype":"drives",
+                    "primary-key":"disk_00.81",
+                    "health":"Degraded",
+                    "health-numeric":1,
+                    "health-reason":"A disk that was previously a member of a disk group has been detected.",
+                    "health-recommendation":"- If the associated disk group is offline or quarantined, contact technical support. Otherwise, clear the disk's metadata to reuse the disk."
+                },
+                {
+                    "object-name":"unhealthy-component",
+                    "meta":"/meta/unhealthy-component",
+                    "component-type":"disk",
+                    "component-type-numeric":6,
+                    "component-id":"Disk 0.82",
+                    "basetype":"drives",
+                    "primary-key":"disk_00.82",
+                    "health":"Degraded",
+                    "health-numeric":1,
+                    "health-reason":"The disk may contain invalid metadata.",
+                    "health-recommendation":"- If the associated disk group is offline or quarantined, contact technical support. Otherwise, clear the disk's metadata to reuse the disk."
+                },
+                {
                     "object-name": "unhealthy-component",
                     "component-type": "PSU",
                     "component-type-numeric": 5,
