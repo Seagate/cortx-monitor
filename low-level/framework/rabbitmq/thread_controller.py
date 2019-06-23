@@ -129,7 +129,10 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
         for product in self._products:
             if product in ["CS-A", "EES"]:
                 from sensors.impl.generic.raid import RAIDsensor
-                from sensors.impl.generic.SMR_drive_data import SMRdriveData
+                from sensors.impl.generic.SMR_drive_data import SMRdriveDatia
+
+                # TODO: add this in product=EES check
+                from sensors.impl.generic.psu_sensor import RealStorPSUSensor
                 break
 
     def run(self):

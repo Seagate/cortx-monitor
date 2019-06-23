@@ -1,0 +1,702 @@
+{
+	"$schema": "http://json-schema.org/draft-03/schema#",
+	"id": "http://json-schema.org/draft-03/schema#",
+
+	"type": "object",
+	"properties": {
+		"username": {
+			"description": "Username who generated message",
+			"type": "string",
+			"required": true
+		},
+		"signature": {
+			"description": "Authentication signature of message",
+			"type": "string",
+			"required": true
+		},
+		"time": {
+			"description": "The time the signature was generated",
+			"type": "string",
+			"required": true
+		},
+		"expires": {
+			"description": "The number of secs the signature remains valid after being generated",
+			"type": "integer",
+			"required": false
+		},
+
+		"message": {
+			"type": "object",
+			"required": true,
+			"properties": {
+				"sspl_ll_msg_header": {
+					"schema_version": {
+						"description": "SSPL JSON Schema Version",
+						"type": "string",
+						"required": true
+					},
+					"sspl_version": {
+						"description": "SSPL Version",
+						"type": "string",
+						"required": true
+					},
+					"msg_version": {
+						"description": "Message Version",
+						"type": "string",
+						"required": true
+					},
+					"uuid": {
+						"description": "Universally Unique ID of message",
+						"type": "string",
+						"required": false
+					}
+				},
+
+				"sensor_response_type": {
+					"type": "object",
+					"required": true,
+					"properties": {
+
+						"disk_status_drivemanager": {
+							"type": "object",
+							"properties": {
+								"diskNum": {
+									"description": "Disk Number within the enclosure",
+									"type": "integer",
+									"required": true
+								},
+								"enclosureSN": {
+									"description": "Enclosure Serial Number",
+									"type": "string",
+									"required": true
+								},
+								"diskStatus": {
+									"description": "Disk Status",
+									"type": "string",
+									"required": true
+								},
+								"diskReason": {
+									"description": "Disk Reason",
+									"type": "string",
+									"required": true
+								},
+								"serialNumber": {
+									"description": "Disk Serial Number",
+									"type": "string",
+									"required": true
+								},
+								"pathID": {
+									"description": "Disk by-id Symlink",
+									"type": "string",
+									"required": true
+								}
+							}
+						},
+
+            "enclosure_psu_alert": {
+              "type": "object",
+              "properties": {
+                "alertType": {
+                  "description": "Enclosure alert cause",
+                  "type": "string",
+                  "required": true
+                },
+                "resourceType": {
+                  "description": "Enclosure resource type like FRU, Sensor",
+                  "type": "string",
+                  "required": true
+                },
+                "info": {
+                  "type": "object",
+                  "required": true,
+                  "properties": {
+                    "enclosure-id": {
+                      "description": "Enclosure ID",
+                      "type": "integer",
+                      "required": true
+                    },
+                    "serial-number": {
+                      "description": "Power supply serial number",
+                      "type": "string",
+                      "required": true
+                    },
+                    "description": {
+                      "description": "FRU long description",
+                      "type": "string",
+                      "required": true
+                    },
+                    "revision": {
+                      "description": "FRU hardware revision level",
+                      "type": "string",
+                      "required": true
+                    },
+                    "model": {
+                      "description": "Power supply model",
+                      "type": "string",
+                      "required": true
+                    },
+                    "vendor": {
+                      "description": "Power supply vendor",
+                      "type": "string",
+                      "required": true
+                    },
+                    "location": {
+                      "description": "Power supply location in the form Enclosure enclosure-ID - position, where the position is as viewed from the back of the enclosure",
+                      "type": "string",
+                      "required": true
+                    },
+                    "part-number": {
+                      "description": "FRU part number",
+                      "type": "string",
+                      "required": true
+                    },
+                    "fru-shortname": {
+                      "description": "FRU short description",
+                      "type": "string",
+                      "required": true
+                    },
+                    "mfg-date": {
+                      "description": "Date and time, in the format year-month-day hour:minutes:seconds (UTC), when the power supply module was manufactured",
+                      "type": "string",
+                      "required": true
+                    },
+                    "mfg-vendor-id": {
+                      "description": "JEDEC ID of the FRU manufacturer",
+                      "type": "string",
+                      "required": true
+                    },
+                    "dc12v": {
+                      "description": "Voltage of the 12-volt power supply, in 100th of a volt",
+                      "type": "integer",
+                      "required": true
+                    },
+                    "dc5v": {
+                      "description": "Current status of locator led of drive",
+                      "type": "integer",
+                      "required": true
+                    },
+                    "dc33v": {
+                      "description": "Voltage of the 33-volt power supply, in 100th of a volt",
+                      "type": "integer",
+                      "required": true
+                    },
+                    "dc12i": {
+                      "description": "Voltage of the 12-volt power supply, in 100th of a volt",
+                      "type": "integer",
+                      "required": true
+                    },
+                    "dc5i": {
+                      "description": "Voltage of the 5-volt power supply, in 100th of a volt",
+                      "type": "integer",
+                      "required": true
+                    },
+                    "dctemp": {
+                      "description": "Power supply temperature",
+                      "type": "integer",
+                      "required": true
+                    },
+                    "health": {
+                      "description": "Health of PSU. OK, Degraded, Fault, N/A, Unknown",
+                      "type": "string",
+                      "required": true
+                    },
+                    "health-reason": {
+                      "description": "If Health is not OK, the reason for the health state",
+                      "type": "string",
+                      "required": true
+                    },
+                    "health-recommendation": {
+                      "description": "If Health is not OK, the recommended actions to take to resolve the health issue",
+                      "type": "string",
+                      "required": true
+                    },
+                    "status": {
+                      "description": "Power supply status",
+                      "type": "string",
+                      "required": true
+                    }
+                  }
+                },
+                "extended_info": {
+                  "type": "object",
+                  "required": false
+                }
+              }
+            },
+
+						"disk_status_hpi": {
+							"type": "object",
+							"properties": {
+								"hostId": {
+									"description": "Host ID of node",
+									"type": "string",
+									"required": true
+								},
+								"deviceId": {
+									"description": "Drive Identifier",
+									"type": "string",
+									"required": true
+								},
+								"drawer": {
+									"description": "Drawer number of drive",
+									"type": "integer",
+									"required": true
+								},
+								"location": {
+									"description": "Location number of drive",
+									"type": "integer",
+									"required": true
+								},
+								"manufacturer": {
+									"description": "Manufacturer of the drive",
+									"type": "string",
+									"required": true
+								},
+								"productName": {
+									"description": "Product name of the drive",
+									"type": "string",
+									"required": true
+								},
+								"productVersion": {
+									"description": "Version of the drive",
+									"type": "string",
+									"required": true
+								},
+								"serialNumber": {
+									"description": "Serial Number of the drive",
+									"type": "string",
+									"required": true
+								},
+								"wwn": {
+									"description": "wwn of the drive",
+									"type": "string",
+									"required": true
+								},
+								"enclosureSN": {
+									"description": "Enclosure Serial Number",
+									"type": "string",
+									"required": true
+								},
+								"diskNum": {
+									"description": "Drive Number within the enclosure",
+									"type": "integer",
+									"required": true
+								},
+								"diskInstalled": {
+									"description": "Disk Installed in Slot",
+									"type": "boolean",
+									"required": true
+								},
+								"diskPowered": {
+									"description": "Disk Powered",
+									"type": "boolean",
+									"required": true
+								}
+							}
+						},
+
+						"service_watchdog": {
+							"type": "object",
+							"properties": {
+								"service_name": {
+									"description": "Identify the service with a state change",
+									"type": "string",
+									"required": true
+								},
+								"service_state": {
+									"description": "Current state of the service",
+									"type": "string",
+									"required": true
+								},
+								"previous_service_state": {
+									"description": "Previous state of the service",
+									"type": "string",
+									"required": true
+								},
+								"service_substate": {
+									"description": "Current substate of the service",
+									"type": "string",
+									"required": true
+								},
+								"previous_service_substate": {
+									"description": "Previous substate of the service",
+									"type": "string",
+									"required": true
+								},
+								"pid": {
+									"description": "Current PID of the service",
+									"type": "string",
+									"required": true
+								},
+								"previous_pid": {
+									"description": "Previous PID of the service",
+									"type": "string",
+									"required": true
+								}
+							}
+						},
+
+						"host_update": {
+							"type": "object",
+							"properties": {
+								"hostId": {
+									"description": "Hostname of system",
+									"type": "string",
+									"required": true
+								},
+								"localtime": {
+									"description": "Local time on system",
+									"type": "string",
+									"required": true
+								},
+								"bootTime": {
+									"description": "Time host was started",
+									"type": "string"
+								},
+								"upTime": {
+									"description": "Time since host was started in secs",
+									"type": "number"
+								},
+								"uname": {
+									"description": "OS system information",
+									"type": "string"
+								},
+								"freeMem": {
+									"description": "Amount of free memory",
+									"type": "object",
+									"properties": {
+										"value": {
+											"type": "integer"
+										},
+										"units": {
+											"oneOf": [
+												{
+													"$ref": "#/units/GB"
+												}, {
+													"$ref": "#/units/KB"
+												}, {
+													"$ref": "#/units/MB"
+												}
+											]
+										}
+									}
+								},
+								"totalMem": {
+									"description": "Total memory available",
+									"type": "object",
+									"properties": {
+										"value": {
+											"type": "integer"
+										},
+										"units": {
+											"oneOf": [
+												{
+													"$ref": "#/units/GB"
+												}, {
+													"$ref": "#/units/KB"
+												}, {
+													"$ref": "#/units/MB"
+												}
+											]
+										}
+									}
+								},
+								"loggedInUsers": {
+									"description": "List of logged in users",
+									"type": "array"
+								},
+								"processCount": {
+									"description": "Total number of processes",
+									"type": "integer"
+								},
+								"runningProcessCount": {
+									"description": "Total number of running processes",
+									"type": "integer"
+								}
+							}
+						},
+
+						"local_mount_data": {
+							"description": "Local mount data",
+							"type": "object",
+							"properties": {
+								"hostId": {
+									"description": "Hostname of system",
+									"type": "string",
+									"required": true
+								},
+								"localtime": {
+									"description": "Local time on system",
+									"type": "string",
+									"required": true
+								},
+								"freeSpace": {
+									"type": "object",
+									"properties": {
+										"value": {
+											"type": "integer"
+										},
+										"units": {
+											"oneOf": [
+												{
+													"$ref": "#/units/GB"
+												}, {
+													"$ref": "#/units/KB"
+												}, {
+													"$ref": "#/units/MB"
+												}
+											]
+										}
+									}
+								},
+								"freeInodes": {
+									"type": "integer"
+								},
+								"freeSwap": {
+									"type": "object",
+									"properties": {
+										"value": {
+											"type": "integer"
+										},
+										"units": {
+											"oneOf": [
+												{
+													"$ref": "#/units/GB"
+												}, {
+													"$ref": "#/units/KB"
+												}, {
+													"$ref": "#/units/MB"
+												}
+											]
+										}
+									}
+								},
+								"totalSpace": {
+									"type": "object",
+									"properties": {
+										"value": {
+											"type": "integer"
+										},
+										"units": {
+											"oneOf": [
+												{
+													"$ref": "#/units/GB"
+												}, {
+													"$ref": "#/units/KB"
+												}, {
+													"$ref": "#/units/MB"
+												}
+											]
+										}
+									}
+								},
+								"totalSwap": {
+									"type": "object",
+									"properties": {
+										"value": {
+											"type": "integer"
+										},
+										"units": {
+											"oneOf": [
+												{
+													"$ref": "#/units/GB"
+												}, {
+													"$ref": "#/units/KB"
+												}, {
+													"$ref": "#/units/MB"
+												}
+											]
+										}
+									}
+								}
+							}
+						},
+
+						"cpu_data": {
+							"description": "CPU Data",
+							"type": "object",
+							"properties": {
+								"hostId": {
+									"description": "Hostname of system",
+									"type": "string",
+									"required": true
+								},
+								"localtime": {
+									"description": "Local time on system",
+									"type": "string",
+									"required": true
+								},
+								"csps": {
+									"type": "integer"
+								},
+								"idleTime": {
+									"type": "integer"
+								},
+								"interruptTime": {
+									"type": "integer"
+								},
+								"iowaitTime ": {
+									"type": "integer"
+								},
+								"niceTime": {
+									"type": "integer"
+								},
+								"softirqTime": {
+									"type": "integer"
+								},
+								"stealTime": {
+									"type": "integer"
+								},
+								"systemTime": {
+									"type": "integer"
+								},
+								"userTime": {
+									"type": "integer"
+								},
+								"coreData": {
+									"description": "CPU Core Data",
+									"type": "array",
+									"minItems": 1,
+									"items": {
+										"type": "object",
+										"properties": {
+											"coreId": {
+												"type": "integer"
+											},
+											"load1MinAvg": {
+												"type": "integer"
+											},
+											"load5MinAvg": {
+												"type": "integer"
+											},
+											"load15MinAvg": {
+												"type": "integer"
+											},
+											"ips": {
+												"type": "integer"
+											}
+										}
+									}
+								}
+							}
+						},
+
+						"if_data": {
+							"description": "Network Interface Data",
+							"type": "object",
+							"properties": {
+								"hostId": {
+									"description": "Hostname of system",
+									"type": "string",
+									"required": true
+								},
+								"localtime": {
+									"description": "Local time on system",
+									"type": "string",
+									"required": true
+								},
+								"interfaces": {
+									"type": "array",
+									"minItems": 1,
+									"items": {
+										"type": "object",
+										"properties": {
+											"ifId": {
+												"type": "string"
+											},
+											"networkErrors": {
+												"type": "integer"
+											},
+											"droppedPacketsIn": {
+												"type": "integer"
+											},
+											"packetsIn": {
+												"type": "integer"
+											},
+											"trafficIn": {
+												"type": "integer"
+											},
+											"droppedPacketsOut": {
+												"type": "integer"
+											},
+											"packetsOut": {
+												"type": "integer"
+											},
+											"trafficOut": {
+												"type": "integer"
+											}
+										}
+									}
+								}
+							}
+						},
+
+						"raid_data": {
+							"description": "RAID Data",
+							"type": "object",
+							"properties": {
+								"hostId": {
+									"description": "Hostname of system",
+									"type": "string",
+									"required": true
+								},
+								"device": {
+									"description": "md device",
+									"type": "string",
+									"required": true
+								},
+								"drives": {
+									"description": "Constituent drives",
+									"type": "array",
+									"minItems": 2,
+									"items": {
+										"type": "object",
+										"properties": {
+											"status": {
+												"description": "Drive status (U, _)",
+												"type": "string",
+												"required": true
+											},
+											"identity": {
+												"type": "object",
+												"properties": {
+													"path": {
+														"description": "Drive path (e.g. /dev/disk)",
+														"type": "string",
+														"required": true
+													},
+													"serialNumber": {
+														"description": "Drive serial number",
+														"type": "string",
+														"required": true
+													}
+												}
+											}
+										}
+									},
+									"required": true
+								}
+							}
+						},
+
+						"snmp_trap": {
+							"description": "SNMP Trap Information",
+							"type": "object",
+							"properties": {
+								"trap_data": {
+									"description": "JSON data about the SNMP Trap",
+									"type": "string",
+									"required": true
+								}
+							}
+						},
+
+						"expander_reset": {
+							"description": "Expander Reset Occurred"
+						}
+					}
+				}
+			}
+		}
+	}
+}

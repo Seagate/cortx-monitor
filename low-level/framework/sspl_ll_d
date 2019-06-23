@@ -51,6 +51,7 @@ from message_handlers.node_data_msg_handler import NodeDataMsgHandler
 from message_handlers.disk_msg_handler import DiskMsgHandler
 from message_handlers.logging_msg_handler import LoggingMsgHandler
 from message_handlers.service_msg_handler import ServiceMsgHandler
+from message_handlers.real_stor_encl_msg_handler import RealStorEnclMsgHandler
 from message_handlers.plane_cntrl_msg_handler import PlaneCntrlMsgHandler
 from message_handlers.real_stor_encl_msg_handler import RealStorEnclMsgHandler
 
@@ -244,6 +245,8 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist, operating_system
             from sensors.impl.generic.raid import RAIDsensor
             from sensors.impl.generic.node_data import NodeData as NodeData
             from sensors.impl.generic.SMR_drive_data import SMRdriveData
+            from sensors.impl.generic.SNMP_traps import SNMPtraps
+            from sensors.impl.generic.psu_sensor import RealStorPSUSensor
 
             from zope.component import getGlobalSiteManager
             from zope.interface import implementedBy
