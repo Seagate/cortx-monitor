@@ -34,7 +34,7 @@ class RealStorPSUSensor(ScheduledModuleThread, InternalMsgQ):
     SENSOR_NAME = "RealStorPSUSensor"
     PRIORITY = 1
 
-    STORAG_ENCLOSURE_KEY = "STORANGE_ENCLOSURE"
+    STORAGE_ENCLOSURE_KEY = "STORAGE_ENCLOSURE"
 
     # Keys for connections
     CONTROLLER_IP_KEY = "primary_controller_ip"
@@ -77,19 +77,19 @@ class RealStorPSUSensor(ScheduledModuleThread, InternalMsgQ):
         # Read configurations
         # Get controller IP to connect to
         self._controller_ip = self._conf_reader._get_value_with_default(
-            self.STORAG_ENCLOSURE_KEY, self.CONTROLLER_IP_KEY, '127.0.0.1')
+            self.STORAGE_ENCLOSURE_KEY, self.CONTROLLER_IP_KEY, '127.0.0.1')
 
         # Get port
         self._port = self._conf_reader._get_value_with_default(
-            self.STORAG_ENCLOSURE_KEY, self.PORT_KEY, '80')
+            self.STORAGE_ENCLOSURE_KEY, self.PORT_KEY, '80')
 
         # Get username
         self._username = self._conf_reader._get_value_with_default(
-            self.STORAG_ENCLOSURE_KEY, self.CONTROLLER_USERNAME_KEY, 'manage')
+            self.STORAGE_ENCLOSURE_KEY, self.CONTROLLER_USERNAME_KEY, 'manage')
 
         # Get password
         self._password = self._conf_reader._get_value_with_default(
-            self.STORAG_ENCLOSURE_KEY, self.CONTROLLER_PASSWORD_KEY,
+            self.STORAGE_ENCLOSURE_KEY, self.CONTROLLER_PASSWORD_KEY,
             '!manage')
 
         self._api_base_url = "http://{0}:{1}/api".format(
