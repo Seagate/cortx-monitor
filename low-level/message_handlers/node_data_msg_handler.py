@@ -88,7 +88,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
     def _import_products(self, products):
         """Import classes based on which product is being used"""
-        if "CS-A" in products:
+        if ("CS-A" in products) or ("EES" in products):
             from zope.component import queryUtility
             self._queryUtility = queryUtility
 

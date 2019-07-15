@@ -63,7 +63,7 @@ def _run_thread_capture_errors(curr_module, sspl_modules, msgQlist, conf_reader,
         jsonMsg   = ThreadControllerMsg(curr_module.name(), error_msg).getJson()
 
         for product in products:
-            if product == "CS-A":
+            if product in ["CS-A", "EES"]:
                 self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
                 break
             elif product == "CS-L" or \
@@ -127,7 +127,7 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
 
         # Handle configurations for specific products
         for product in self._products:
-            if product == "CS-A":
+            if product in ["CS-A", "EES"]:
                 from sensors.impl.generic.raid import RAIDsensor
                 from sensors.impl.generic.SMR_drive_data import SMRdriveData
                 break
@@ -135,7 +135,7 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
     def run(self):
         """Run the module periodically on its own thread."""
         for product in self._products:
-            if product == "CS-A" and \
+            if product in ["CS-A", "EES"] and \
                not self._threads_initialized:
 
                 # Disabling for EES-non-requitement
@@ -243,7 +243,7 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
         msgString = threadControllerMsg.getJson()
         logger.info("ThreadController, response: %s" % str(msgString))
         for product in self._products:
-            if product == "CS-A":
+            if product in ["CS-A", "EES"]:
                 self._write_internal_msgQ(RabbitMQegressProcessor.name(), msgString)
                 break
             elif product == "CS-L" or \
@@ -366,7 +366,7 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
     def check_RabbitMQegressProcessor_is_running(self):
         """Used by the shutdown_handler to allow queued egress msgs to complete"""
         for product in self._products:
-            if product == "CS-A":
+            if product in ["CS-A", "EES"]:
                 return self._sspl_modules[PlaneCntrlRMQegressProcessor.name()].is_running()
             elif product == "CS-L" or \
                  product == "CS-G":

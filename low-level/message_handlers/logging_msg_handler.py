@@ -62,7 +62,7 @@ class LoggingMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
     def _import_products(self, products):
         """Import classes based on which product is being used"""
-        if "CS-A" in products:
+        if ("CS-A" in products) or ("EES" in products):
             from loggers.impl.iem_logger import IEMlogger
             self._iem_logger = IEMlogger(self._conf_reader)
 
@@ -92,8 +92,8 @@ class LoggingMsgHandler(ScheduledModuleThread, InternalMsgQ):
         self._log_debug("Finished processing successfully")
 
     def _process_msg(self, jsonMsg):
-        """Parses the incoming message and hands off to the appropriate logger"""    
-        self._log_debug("_process_msg, jsonMsg: %s" % jsonMsg)  
+        """Parses the incoming message and hands off to the appropriate logger"""
+        self._log_debug("_process_msg, jsonMsg: %s" % jsonMsg)
 
         if isinstance(jsonMsg, dict) == False:
             jsonMsg = json.loads(jsonMsg)
@@ -188,7 +188,7 @@ class LoggingMsgHandler(ScheduledModuleThread, InternalMsgQ):
             logger.info("          IEM log locally: %s" % str(self._iem_log_locally))
         except Exception as ex:
             logger.exception("_read_config: %r" % ex)
-            
+
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""
         super(LoggingMsgHandler, self).shutdown()

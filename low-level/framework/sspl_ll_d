@@ -123,7 +123,7 @@ def main(conf_reader, systemd_support):
         products = conf_reader._get_value_list(SYS_INFORMATION, PRODUCT_NAME)
     except Exception:
         # Default to Castor System for now
-        products = ["CS-A"]
+        products = ["CS-A", "EES"]
 
     # Read in setup value from configuration file
     try:
@@ -134,7 +134,7 @@ def main(conf_reader, systemd_support):
     logger.info("sspl-ll Bootstrap: setup=%s products=%s" % (setup, products))
 
     # CS-L/G systems run as root and we set capabilities on the process to control the access available to it
-    if "CS-A" not in products:
+    if ("CS-A" not in products) and ("EES" not in products):
         _dropPrivileges("sspl-ll")
 
     # Use reflection to instantiate the classes based upon its class name in config file
@@ -230,24 +230,26 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist, operating_system
         raise Exception("Operating System not supported")
 
     for product in products:
-        if product == "CS-A":
+        if product in ["CS-A", "EES"]:
             from actuators.impl.generic.raritan_pdu import RaritanPDU
-            from actuators.impl.generic.raid import RAIDactuator
             from actuators.impl.generic.ipmi import IPMI
-            from actuators.impl.generic.hdparm import Hdparm
             if setup not in ['cmu', 'gw', 'vm']:
                 try:
                     from actuators.impl.generic.hpi_actuator import HPIactuator
                 except ImportError:
                     logger.info("Could not import HPIactuator")
-
+            from sensors.impl.generic.SNMP_traps import SNMPtraps
+            from actuators.impl.generic.raid import RAIDactuator
+            from actuators.impl.generic.hdparm import Hdparm
             from sensors.impl.generic.raid import RAIDsensor
             from sensors.impl.generic.node_data import NodeData as NodeData
             from sensors.impl.generic.SMR_drive_data import SMRdriveData
-            from sensors.impl.generic.SNMP_traps import SNMPtraps
 
             from zope.component import getGlobalSiteManager
             from zope.interface import implementedBy
+
+            from zope.component import queryUtility
+            from loggers.impl.iem_logger import IEMlogger
 
             # The Zope Global Site Manager containing objects that implement the desired interfaces
             gsm = getGlobalSiteManager()
@@ -278,7 +280,7 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist, operating_system
             interface_impl = list(implementedBy(klass))[0]  # Assumes single inheritance only
             logger.info("            Implements Interface: %s" % interface_impl.__name__)
 
-            if "CS-A" in products:
+            if ("CS-A" in products) or ("EES" in products):
                 gsm.registerUtility(klass, interface_impl)
 
     return (sspl_threaded_modules, msgQlist)
