@@ -13,9 +13,9 @@ os.sys.path.insert(0, topdir)
 from test.automated.rabbitmq.rabbitmq_ingress_processor_tests import RabbitMQingressProcessorTests
 from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 
-@step(u'Given that SSPL-LL is running')
-def given_that_sspl_ll_is_running(step):
-    # Check that the state for sspl_ll service is active
+@step(u'Given that SSPL is running')
+def given_that_sspl_is_running(step):
+    # Check that the state for sspl service is active
     found = False
 
     # Support for python-psutil < 2.1.3
@@ -39,7 +39,7 @@ def given_that_sspl_ll_is_running(step):
         world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
 
 
-@step(u'When I send in the node data sensor message to request the current "([^"]*)" data')
+@step(u'When I send in the fan sensor message to request the current "([^"]*)" data')
 def when_i_send_in_the_fan_data_sensor_message_to_request_the_current_sensor_type_data(step, sensor_type):
     egressMsg = {
         "title": "SSPL-LL Actuator Request",
@@ -72,29 +72,33 @@ def when_i_send_in_the_fan_data_sensor_message_to_request_the_current_sensor_typ
 
 @step(u'Then I get the "([^"]*)" JSON response message')
 def then_i_get_the_sensor_json_response_message(step, sensor):
-    ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
-    print("Received: %s" % ingressMsg)
+    while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
+        ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
+        print("Received: %s" % ingressMsg)
 
-    # Make sure we get back the message type that matches the request
-    msgType = ingressMsg.get("sensor_response_type")
-    assert(msgType != None)
+        try:
+            # Make sure we get back the message type that matches the request
+            msgType = ingressMsg.get("sensor_response_type")
+            assert(msgType != None)
 
-    if sensor == "enclosure_psu_alert":
-        psu_sensor_msg = ingressMsg.get("sensor_response_type").get("realstor_psu_sensor")
-        assert(psu_sensor_msg is not None)
-        assert(psu_sensor_msg.get("alert_type") is not None)
-        assert(psu_sensor_msg.get("resourceType") is not None)
-        assert(psu_sensor_msg.get("info") is not None)
-        assert(psu_sensor_msg.get("info").get("name") is not None)
-        assert(psu_sensor_msg.get("info").get("description") is not None)
-        assert(psu_sensor_msg.get("info").get("part-number") is not None)
-        assert(psu_sensor_msg.get("info").get("serial-number") is not None)
-        assert(psu_sensor_msg.get("info").get("revision") is not None)
-        assert(psu_sensor_msg.get("info").get("mfg-date") is not None)
-        assert(psu_sensor_msg.get("info").get("mfg-vendor-id") is not None)
-        assert(psu_sensor_msg.get("info").get("fru-location") is not None)
-        assert(psu_sensor_msg.get("info").get("fru-status") is not None)
-        assert(psu_sensor_msg.get("info").get("enclosure-id") is not None)
+            if sensor == "enclosure_fan_alert":
+                fan_sensor_msg = ingressMsg.get("sensor_response_type").get("enclosure_fan_alert")
+                assert(fan_sensor_msg is not None)
+                assert(fan_sensor_msg.get("alert_type") is not None)
+                assert(fan_sensor_msg.get("resource_type") is not None)
+                assert(fan_sensor_msg.get("info") is not None)
+                assert(fan_sensor_msg.get("info").get("name") is not None)
+                assert(fan_sensor_msg.get("info").get("description") is not None)
+                assert(fan_sensor_msg.get("info").get("part-number") is not None)
+                assert(fan_sensor_msg.get("info").get("serial-number") is not None)
+                assert(fan_sensor_msg.get("info").get("revision") is not None)
+                assert(fan_sensor_msg.get("info").get("mfg-date") is not None)
+                assert(fan_sensor_msg.get("info").get("mfg-vendor-id") is not None)
+                assert(fan_sensor_msg.get("info").get("fru-location") is not None)
+                assert(fan_sensor_msg.get("info").get("fru-status") is not None)
+                assert(fan_sensor_msg.get("info").get("enclosure-id") is not None)
 
-    else:
-        assert False, "Response not recognized"
+            else:
+                assert False, "Response not recognized"
+        except Exception as exception:
+            print exception

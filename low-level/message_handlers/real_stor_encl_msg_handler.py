@@ -85,7 +85,7 @@ class RealStorEnclMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
         if json_msg.get("sensor_request_type") is not None and \
             json_msg.get("sensor_request_type").get("enclosure_alert") is not None:
-            internal_sensor_request = json_msg.get("sensor_request_type").get("enclosure_alert").get("sensor_type")
+            internal_sensor_request = json_msg.get("sensor_request_type").get("enclosure_alert").get("status")
             if internal_sensor_request:
                 # parses the internal json request coming from any RealStor sensor
                 sensor_type = json_msg.get("sensor_request_type").get("enclosure_alert").get("sensor_type")

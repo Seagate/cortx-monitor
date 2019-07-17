@@ -18,10 +18,17 @@ sspl_install_dir=$1
 rpms_dir=$sspl_install_dir/sspl/dist/rpmbuild/RPMS
 test_dir=$sspl_install_dir/sspl/test/automated
 
+kill_mock_server()
+{
+    # Kill mock server
+    $sudo lxc-attach -n $vm_name  -- pkill -f "\./mock_server"
+}
+
 trap cleanup 0 2
 
 cleanup()
 {
+    kill_mock_server
     $sudo lxc-stop -n $vm_name; $sudo lxc-destroy -n $vm_name
     exit 1
 }
@@ -67,10 +74,6 @@ $sudo lxc-attach -n $vm_name  -- pip install lettuce
 # Removing installation of python-requests package
 # This package gets installed as dependency of sspl RPM
 
-# Install Flask
-$sudo lxc-attach -n $vm_name  -- pip --trusted-host=pypi.python.org --trusted-host=pypi.org \
---trusted-host=files.pythonhosted.org install Flask
-
 # Extract simulation data
 # Disabling for EES-non-requirement
 #$sudo lxc-attach -n $vm_name  -- bash -c "tar xvf $test_dir/../5u84_dcs_dump.tgz -C /tmp"
@@ -92,7 +95,8 @@ $sudo lxc-attach -n $vm_name  --  chown rabbitmq:rabbitmq /var/lib/rabbitmq/.erl
 $sudo lxc-attach -n $vm_name  -- systemctl start rabbitmq-server -l
 
 # Start mock API server
-$sudo lxc-attach -n $vm_name  -- python $sspl_install_dir/sspl/test/mock_server.py &
+# $sudo lxc-attach -n $vm_name  -- python $sspl_install_dir/sspl/test/mock_server.py &
+$sudo lxc-attach -n $vm_name  -- ./$sspl_install_dir/sspl/test/mock_server &
 
 # Change setup to vm in sspl configurations
 $sudo lxc-attach -n $vm_name  -- $sspl_install_dir/sspl/low-level/framework/sspl_init
@@ -100,9 +104,11 @@ $sudo lxc-attach -n $vm_name  -- sed -i 's/setup=vm/setup=eos/g' /etc/sspl_ll.co
 $sudo lxc-attach -n $vm_name  -- sed -i 's/primary_controller_port=80/primary_controller_port=8090/g' \
 /etc/sspl_ll.conf
 
-
 # Execute tests
 $sudo lxc-attach -n $vm_name -- bash -c "$test_dir/run_sspl-ll_tests.sh"
+
+# Stop the mock server 
+kill_mock_server
 
 retcode=$?
 exit $retcode

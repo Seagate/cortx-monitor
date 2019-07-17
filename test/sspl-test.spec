@@ -10,7 +10,7 @@ Group:      System Management
 License:    Seagate Proprietary
 URL:        %{url}
 Source0:    %{name}-%{version}.tgz
-Requires:   sspl
+Requires:   sspl python-flask
 BuildRoot:  %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 
 %description

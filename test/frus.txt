@@ -1,6 +1,6 @@
 {
 "status_code": 200,
-"api_response": {
+"api-response": {
 "enclosure-fru":[
   {
     "object-name":"fru",

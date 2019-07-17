@@ -73,7 +73,6 @@ def when_i_send_in_the_actuator_message_to_action_the_service(step, action, serv
 
 @step(u'Then SSPL_LL "([^"]*)" the "([^"]*)" and I get the service is "([^"]*)" response')
 def then_sspl_ll_action_the_service_and_i_get_the_service_is_condition_response(step, action, service, condition):
-    counter = 1
     while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
         ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
         print("Received: %s" % ingressMsg)

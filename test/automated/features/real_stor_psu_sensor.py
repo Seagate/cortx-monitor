@@ -83,8 +83,8 @@ def then_i_get_the_sensor_json_response_message(step, sensor):
             if sensor == "enclosure_psu_alert":
                 psu_sensor_msg = ingressMsg.get("sensor_response_type").get("enclosure_psu_alert")
                 assert(psu_sensor_msg is not None)
-                assert(psu_sensor_msg.get("alertType") is not None)
-                assert(psu_sensor_msg.get("resourceType") is not None)
+                assert(psu_sensor_msg.get("alert_type") is not None)
+                assert(psu_sensor_msg.get("resource_type") is not None)
                 assert(psu_sensor_msg.get("info") is not None)
                 assert(psu_sensor_msg.get("info").get("enclosure-id") is not None)
                 assert(psu_sensor_msg.get("info").get("serial-number") is not None)
@@ -107,7 +107,6 @@ def then_i_get_the_sensor_json_response_message(step, sensor):
                 assert(psu_sensor_msg.get("info").get("health-reason") is not None)
                 assert(psu_sensor_msg.get("info").get("health-recommendation") is not None)
                 assert(psu_sensor_msg.get("info").get("status") is not None)
-
             else:
                 assert False, "Response not recognized"
             break

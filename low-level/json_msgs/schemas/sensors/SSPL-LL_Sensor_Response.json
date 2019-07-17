@@ -96,12 +96,12 @@
             "enclosure_psu_alert": {
               "type": "object",
               "properties": {
-                "alertType": {
+                "alert_type": {
                   "description": "Enclosure alert cause",
                   "type": "string",
                   "required": true
                 },
-                "resourceType": {
+                "resource_type": {
                   "description": "Enclosure resource type like FRU, Sensor",
                   "type": "string",
                   "required": true
@@ -1425,12 +1425,12 @@
                         "enclosure_fan_alert": {
                             "type": "object",
                             "properties":{
-                                "alertType":{
+                                "alert_type":{
                                     "description": "Enclosure alert cause",
                                     "type": "string",
                                     "required": true
                                 },
-                                "resourceType": {
+                                "resource_type": {
                                     "description": "Enclosure resource type like FRU, Sensor",
                                     "type": "string",
                                     "required": true

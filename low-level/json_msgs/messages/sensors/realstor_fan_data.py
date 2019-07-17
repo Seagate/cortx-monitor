@@ -67,8 +67,8 @@ class RealStorFandataMsg(BaseSensorMsg):
                                 },
                           "sensor_response_type": {
                                 self.SENSOR_RESPONSE_TYPE: {
-                                    "alertType": self._alert_type,
-                                    "resourceType": self._resource_type,
+                                    "alert_type": self._alert_type,
+                                    "resource_type": self._resource_type,
                                     "info": {
                                         "name": self._name,
                                         "description": self._description,

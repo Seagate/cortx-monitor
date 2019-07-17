@@ -89,8 +89,8 @@ class RealStorPSUDataMsg(BaseSensorMsg):
                           },
                           "sensor_response_type": {
                               self.SENSOR_RESPONSE_TYPE: {
-                                  "alertType": self._alert_type,
-                                  "resourceType": self._resource_type,
+                                  "alert_type": self._alert_type,
+                                  "resource_type": self._resource_type,
                                   "info": {
                                       "enclosure-id": self._enclosure_id,
                                       "serial-number": self._serial_number,

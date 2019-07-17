@@ -67,7 +67,7 @@
             "dc12i": 0,
             "dc5i": 0,
             "dctemp": 0,
-            "health": "Degraded",
+            "health": "OK",
             "health-numeric": 1,
             "health-reason": "Unable to obtain FRU ID data for this FRU.",
             "health-recommendation": "- The FRU ID content was not read. This could be temporary or it may not programmed correctly.     - If this persists, contact technical support.",
