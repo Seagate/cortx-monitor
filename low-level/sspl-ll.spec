@@ -59,6 +59,12 @@ id -u sspl-ll &>/dev/null || {
             -c "User account to run the sspl-ll service"
 }
 
+# Create ras persistent cache folder
+# TODO: In production this directory will be created by provisioner
+# Remove this code when provisioner part is ready.
+mkdir -p /var/sspl/data/
+chown -R sspl-ll /var/sspl/
+
 %post
 # Copy sspl_ll.conf if not present.
 [ -f /etc/sspl_ll.conf ] || cp /etc/sspl_ll.conf.sample /etc/sspl_ll.conf

@@ -17,6 +17,7 @@ operating_system=centos7
 products=CS-A
 cli_type=CS-A
 setup=vm
+data_path=/var/sspl/data/
 
 [RABBITMQINGRESSPROCESSOR]
 virtual_host=SSPL
