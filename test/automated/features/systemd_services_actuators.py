@@ -70,19 +70,25 @@ def when_i_send_in_the_actuator_message_to_action_the_service(step, action, serv
     }
     world.sspl_modules[RabbitMQegressProcessor.name()]._write_internal_msgQ(RabbitMQegressProcessor.name(), egressMsg)
 
+
 @step(u'Then SSPL_LL "([^"]*)" the "([^"]*)" and I get the service is "([^"]*)" response')
 def then_sspl_ll_action_the_service_and_i_get_the_service_is_condition_response(step, action, service, condition):
-    ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
-    print("Received: %s" % ingressMsg)
+    counter = 1
+    while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
+        ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
+        print("Received: %s" % ingressMsg)
 
-    # Verify module name and thread response
-    service_name = ingressMsg.get("actuator_response_type").get("service_controller").get("service_name")
-    print("service_name: %s" % service_name)
-    assert service_name == service
+        try:
+            # Verify module name and thread response
+            service_name = ingressMsg.get("actuator_response_type").get("service_controller").get("service_name")
+            print("service_name: %s" % service_name)
+            assert service_name == service
 
-    service_response = ingressMsg.get("actuator_response_type").get("service_controller").get("service_response")
-    print("service_response: %s" % service_response)
-    assert service_response == condition
+            service_response = ingressMsg.get("actuator_response_type").get("service_controller").get("service_response")
+            print("service_response: %s" % service_response)
+            assert service_response == condition
+        except Exception as exception:
+            print exception
 
 
 def start_stop_service(service_name, action):

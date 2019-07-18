@@ -72,40 +72,44 @@ def when_i_send_in_the_psu_sensor_message_to_request_the_current_sensor_type_dat
 
 @step(u'Then I get the "([^"]*)" JSON response message')
 def then_i_get_the_sensor_json_response_message(step, sensor):
-    ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
-    print("Received: %s" % ingressMsg)
+    while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
+        ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
+        print("Received: %s" % ingressMsg)
+        try:
+            # Make sure we get back the message type that matches the request
+            msgType = ingressMsg.get("sensor_response_type")
+            assert(msgType != None)
 
-    # Make sure we get back the message type that matches the request
-    msgType = ingressMsg.get("sensor_response_type")
-    assert(msgType != None)
+            if sensor == "enclosure_psu_alert":
+                psu_sensor_msg = ingressMsg.get("sensor_response_type").get("enclosure_psu_alert")
+                assert(psu_sensor_msg is not None)
+                assert(psu_sensor_msg.get("alertType") is not None)
+                assert(psu_sensor_msg.get("resourceType") is not None)
+                assert(psu_sensor_msg.get("info") is not None)
+                assert(psu_sensor_msg.get("info").get("enclosure-id") is not None)
+                assert(psu_sensor_msg.get("info").get("serial-number") is not None)
+                assert(psu_sensor_msg.get("info").get("description") is not None)
+                assert(psu_sensor_msg.get("info").get("revision") is not None)
+                assert(psu_sensor_msg.get("info").get("model") is not None)
+                assert(psu_sensor_msg.get("info").get("vendor") is not None)
+                assert(psu_sensor_msg.get("info").get("location") is not None)
+                assert(psu_sensor_msg.get("info").get("part-number") is not None)
+                assert(psu_sensor_msg.get("info").get("fru-shortname") is not None)
+                assert(psu_sensor_msg.get("info").get("mfg-date") is not None)
+                assert(psu_sensor_msg.get("info").get("mfg-vendor-id") is not None)
+                assert(psu_sensor_msg.get("info").get("dc12v") is not None)
+                assert(psu_sensor_msg.get("info").get("dc5v") is not None)
+                assert(psu_sensor_msg.get("info").get("dc33v") is not None)
+                assert(psu_sensor_msg.get("info").get("dc12i") is not None)
+                assert(psu_sensor_msg.get("info").get("dc5i") is not None)
+                assert(psu_sensor_msg.get("info").get("dctemp") is not None)
+                assert(psu_sensor_msg.get("info").get("health") is not None)
+                assert(psu_sensor_msg.get("info").get("health-reason") is not None)
+                assert(psu_sensor_msg.get("info").get("health-recommendation") is not None)
+                assert(psu_sensor_msg.get("info").get("status") is not None)
 
-    if sensor == "enclosure_psu_alert":
-        psu_sensor_msg = ingressMsg.get("sensor_response_type").get("enclosure_psu_alert")
-        assert(psu_sensor_msg is not None)
-        assert(psu_sensor_msg.get("alert_type") is not None)
-        assert(psu_sensor_msg.get("resourceType") is not None)
-        assert(psu_sensor_msg.get("info") is not None)
-        assert(psu_sensor_msg.get("info").get("enclosure-id") is not None)
-        assert(psu_sensor_msg.get("info").get("serial-number") is not None)
-        assert(psu_sensor_msg.get("info").get("description") is not None)
-        assert(psu_sensor_msg.get("info").get("revision") is not None)
-        assert(psu_sensor_msg.get("info").get("model") is not None)
-        assert(psu_sensor_msg.get("info").get("vendor") is not None)
-        assert(psu_sensor_msg.get("info").get("location") is not None)
-        assert(psu_sensor_msg.get("info").get("part-number") is not None)
-        assert(psu_sensor_msg.get("info").get("fru-shortname") is not None)
-        assert(psu_sensor_msg.get("info").get("mfg-date") is not None)
-        assert(psu_sensor_msg.get("info").get("mfg-vendor-id") is not None)
-        assert(psu_sensor_msg.get("info").get("dc12v") is not None)
-        assert(psu_sensor_msg.get("info").get("dc5v") is not None)
-        assert(psu_sensor_msg.get("info").get("dc33v") is not None)
-        assert(psu_sensor_msg.get("info").get("dc12i") is not None)
-        assert(psu_sensor_msg.get("info").get("dc5i") is not None)
-        assert(psu_sensor_msg.get("info").get("dctemp") is not None)
-        assert(psu_sensor_msg.get("info").get("health") is not None)
-        assert(psu_sensor_msg.get("info").get("health-reason") is not None)
-        assert(psu_sensor_msg.get("info").get("health-recommendation") is not None)
-        assert(psu_sensor_msg.get("info").get("status") is not None)
-
-    else:
-        assert False, "Response not recognized"
+            else:
+                assert False, "Response not recognized"
+            break
+        except Exception as exception:
+            print exception

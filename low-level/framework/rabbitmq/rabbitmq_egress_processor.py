@@ -319,8 +319,15 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
             msg_props.content_type = "text/plain"
 
             # Publish json message to the correct channel
+            # NOTE: We need to route ThreadController messages to ACK channel.
+            # We can't modify schema as it will affect other modules too. As a
+            # temporary solution we have added a extra check to see if actuator_response_type
+            # is "thread_controller".
+            # TODO: Find a proper way to solve this issue. Avoid changing
+            # core egress processor code
             if self._jsonMsg.get("message").get("actuator_response_type") is not None and \
-              self._jsonMsg.get("message").get("actuator_response_type").get("ack") is not None:
+              (self._jsonMsg.get("message").get("actuator_response_type").get("ack") is not None or \
+                self._jsonMsg.get("message").get("actuator_response_type").get("thread_controller") is not None):
                 self._add_signature()
                 jsonMsg = json.dumps(self._jsonMsg).encode('utf8')
                 self._get_connection(host_addr=self._primary_rabbitmq_host)

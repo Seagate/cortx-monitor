@@ -69,17 +69,22 @@ def when_i_ungracefully_halt_the_name_service_with_signal_signum(step, name, sig
 
 @step(u'Then I receive a service watchdog json msg with service name "([^"]*)" and state of "([^"]*)"')
 def then_i_receive_a_service_watchdog_json_msg_with_service_name_name_and_state_of_condition(step, name, condition):
-    ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
-    print("Received: %s" % ingressMsg)
+    while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
+        ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
+        print("Received: %s" % ingressMsg)
 
-    # Verify module name and thread response
-    service_name = ingressMsg.get("sensor_response_type").get("service_watchdog").get("service_name")
-    print("service_name: %s" % service_name)
-    assert service_name == name
+        try:
+            # Verify module name and thread response
+            service_name = ingressMsg.get("sensor_response_type").get("service_watchdog").get("service_name")
+            print("service_name: %s" % service_name)
+            assert service_name == name
 
-    service_state = ingressMsg.get("sensor_response_type").get("service_watchdog").get("service_state")
-    print("service_state: %s" % service_state)
-    assert service_state == condition
+            service_state = ingressMsg.get("sensor_response_type").get("service_watchdog").get("service_state")
+            print("service_state: %s" % service_state)
+            assert service_state == condition
+            break
+        except Exception as exception:
+            print exception
 
 
 def start_stop_service(service_name, action):

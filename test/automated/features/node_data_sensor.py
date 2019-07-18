@@ -72,59 +72,63 @@ def when_i_send_in_the_node_data_sensor_message_to_request_the_current_sensor_ty
 
 @step(u'Then I get the "([^"]*)" JSON response message')
 def then_i_get_the_sensor_json_response_message(step, sensor):
-    ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
-    print("Received: %s" % ingressMsg)
+    while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
+        ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
+        print("Received: %s" % ingressMsg)
 
-    # Make sure we get back the message type that matches the request
-    msgType = ingressMsg.get("sensor_response_type")
-    assert(msgType != None)
+        try:
+            # Make sure we get back the message type that matches the request
+            msgType = ingressMsg.get("sensor_response_type")
+            assert(msgType != None)
 
-    if sensor == "host_update":
-        host_update_msg = ingressMsg.get("sensor_response_type").get("host_update")
-        assert(host_update_msg is not None)
-        assert(host_update_msg.get("hostId") is not None)
-        assert(host_update_msg.get("localtime") is not None)
-        assert(host_update_msg.get("bootTime") is not None)
-        assert(host_update_msg.get("upTime") is not None)
-        assert(host_update_msg.get("uname") is not None)
-        assert(host_update_msg.get("freeMem") is not None)
-        assert(host_update_msg.get("loggedInUsers") is not None)
-        assert(host_update_msg.get("processCount") is not None)
-        assert(host_update_msg.get("runningProcessCount") is not None)
+            if sensor == "host_update":
+                host_update_msg = ingressMsg.get("sensor_response_type").get("host_update")
+                assert(host_update_msg is not None)
+                assert(host_update_msg.get("hostId") is not None)
+                assert(host_update_msg.get("localtime") is not None)
+                assert(host_update_msg.get("bootTime") is not None)
+                assert(host_update_msg.get("upTime") is not None)
+                assert(host_update_msg.get("uname") is not None)
+                assert(host_update_msg.get("freeMem") is not None)
+                assert(host_update_msg.get("loggedInUsers") is not None)
+                assert(host_update_msg.get("processCount") is not None)
+                assert(host_update_msg.get("runningProcessCount") is not None)
 
-    elif sensor == "local_mount_data":
-        local_mount_data_msg = ingressMsg.get("sensor_response_type").get("local_mount_data")
-        assert(local_mount_data_msg is not None)
-        assert(local_mount_data_msg.get("hostId") is not None)
-        assert(local_mount_data_msg.get("localtime") is not None)
-        assert(local_mount_data_msg.get("freeSpace") is not None)
-        assert(local_mount_data_msg.get("freeInodes") is not None)
-        assert(local_mount_data_msg.get("freeSwap") is not None)
-        assert(local_mount_data_msg.get("totalSpace") is not None)
-        assert(local_mount_data_msg.get("totalSwap") is not None)
+            elif sensor == "local_mount_data":
+                local_mount_data_msg = ingressMsg.get("sensor_response_type").get("local_mount_data")
+                assert(local_mount_data_msg is not None)
+                assert(local_mount_data_msg.get("hostId") is not None)
+                assert(local_mount_data_msg.get("localtime") is not None)
+                assert(local_mount_data_msg.get("freeSpace") is not None)
+                assert(local_mount_data_msg.get("freeInodes") is not None)
+                assert(local_mount_data_msg.get("freeSwap") is not None)
+                assert(local_mount_data_msg.get("totalSpace") is not None)
+                assert(local_mount_data_msg.get("totalSwap") is not None)
 
-    elif sensor == "cpu_data":
-        cpu_data_msg = ingressMsg.get("sensor_response_type").get("cpu_data")
-        assert(cpu_data_msg is not None)
-        assert(cpu_data_msg.get("hostId") is not None)
-        assert(cpu_data_msg.get("localtime") is not None)
-        assert(cpu_data_msg.get("csps") is not None)
-        assert(cpu_data_msg.get("idleTime") is not None)
-        assert(cpu_data_msg.get("interruptTime") is not None)
-        assert(cpu_data_msg.get("iowaitTime") is not None)
-        assert(cpu_data_msg.get("niceTime") is not None)
-        assert(cpu_data_msg.get("softirqTime") is not None)
-        assert(cpu_data_msg.get("stealTime") is not None)
-        assert(cpu_data_msg.get("systemTime") is not None)
-        assert(cpu_data_msg.get("userTime") is not None)
-        assert(cpu_data_msg.get("coreData") is not None)
+            elif sensor == "cpu_data":
+                cpu_data_msg = ingressMsg.get("sensor_response_type").get("cpu_data")
+                assert(cpu_data_msg is not None)
+                assert(cpu_data_msg.get("hostId") is not None)
+                assert(cpu_data_msg.get("localtime") is not None)
+                assert(cpu_data_msg.get("csps") is not None)
+                assert(cpu_data_msg.get("idleTime") is not None)
+                assert(cpu_data_msg.get("interruptTime") is not None)
+                assert(cpu_data_msg.get("iowaitTime") is not None)
+                assert(cpu_data_msg.get("niceTime") is not None)
+                assert(cpu_data_msg.get("softirqTime") is not None)
+                assert(cpu_data_msg.get("stealTime") is not None)
+                assert(cpu_data_msg.get("systemTime") is not None)
+                assert(cpu_data_msg.get("userTime") is not None)
+                assert(cpu_data_msg.get("coreData") is not None)
 
-    elif sensor == "if_data":
-        if_data_msg = ingressMsg.get("sensor_response_type").get("if_data")
-        assert(if_data_msg is not None)
-        assert(if_data_msg.get("hostId") is not None)
-        assert(if_data_msg.get("localtime") is not None)
-        assert(if_data_msg.get("interfaces") is not None)
-
-    else:
-        assert False, "Response not recognized"
+            elif sensor == "if_data":
+                if_data_msg = ingressMsg.get("sensor_response_type").get("if_data")
+                assert(if_data_msg is not None)
+                assert(if_data_msg.get("hostId") is not None)
+                assert(if_data_msg.get("localtime") is not None)
+                assert(if_data_msg.get("interfaces") is not None)
+            else:
+                assert False, "Response not recognized"
+            break
+        except Exception as exception:
+            print exception

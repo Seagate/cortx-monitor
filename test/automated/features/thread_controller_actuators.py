@@ -51,24 +51,29 @@ def when_SSPL_LL_restarts_the_thread(step):
 @step(u"Then I get the Restart Successful JSON response message")
 def then_i_receive_Restart_Successful_JSON_response_message(step):
     """I get the JSON response msg with 'thread_response': 'Restart Successful' key value"""
-    ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
-    print("Received: %s" % ingressMsg)
-
-    # Verify module name and thread response
-    module_name = ingressMsg.get("actuator_response_type").get("thread_controller").get("module_name")
-    print("module_name: %s" % module_name)
-    assert module_name == "RAIDsensor"
-
-    thread_response = ingressMsg.get("actuator_response_type").get("thread_controller").get("thread_response")
-    print("thread_response: %s" % thread_response)
-    assert thread_response == "Restart Successful"
-
-    time.sleep(5)
-
-    # Clear the message queue buffer out
     while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
-        world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
-    print"Done"
+        ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
+        print("Received: %s" % ingressMsg)
+
+        try:
+            # Verify module name and thread response
+            module_name = ingressMsg.get("actuator_response_type").get("thread_controller").get("module_name")
+            print("module_name: %s" % module_name)
+            assert module_name == "RAIDsensor"
+
+            thread_response = ingressMsg.get("actuator_response_type").get("thread_controller").get("thread_response")
+            print("thread_response: %s" % thread_response)
+            assert thread_response == "Restart Successful"
+
+            time.sleep(5)
+
+            # Clear the message queue buffer out
+            while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
+                world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
+            print"Done"
+            break
+        except Exception as exception:
+            print exception
 
 @step(u'Given I send in the actuator message to stop raid sensor')
 def given_i_send_in_the_actuator_message_to_stop_raid_sensor(step):
@@ -104,18 +109,25 @@ def when_sspl_ll_stops_the_thread_for_raid_sensor_msg_handler(step):
 @step(u'Then I get the Stop Successful JSON response message')
 def then_i_get_the_stop_successful_json_response_message(step):
     """I get the JSON response msg with 'thread_response': 'Stop Successful' key value"""
-    ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
-    print("Received: %s" % ingressMsg)
+    while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
+        ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
+        print("Received: %s" % ingressMsg)
 
-    # Verify module name and thread response
-    module_name = ingressMsg.get("actuator_response_type").get("thread_controller").get("module_name")
-    print("module_name: %s" % module_name)
-    assert module_name == "RAIDsensor"
+        try:
 
-    thread_response = ingressMsg.get("actuator_response_type").get("thread_controller").get("thread_response")
-    print("thread_response: %s" % thread_response)
-    assert thread_response == "Stop Successful"
-    print"Done"
+            # Verify module name and thread response
+            module_name = ingressMsg.get("actuator_response_type").get("thread_controller").get("module_name")
+            print("module_name: %s" % module_name)
+            assert module_name == "RAIDsensor"
+
+            thread_response = ingressMsg.get("actuator_response_type").get("thread_controller").get("thread_response")
+            print("thread_response: %s" % thread_response)
+            assert thread_response == "Stop Successful"
+            print"Done"
+            break
+        except Exception as exception:
+            print exception
+
 
 @step(u'Given I send in the actuator message to start raid sensor')
 def given_i_send_in_the_actuator_message_to_start_raid_sensor(step):
@@ -151,24 +163,29 @@ def when_sspl_ll_starts_the_thread_for_raid_sensor_msg_handler(step):
 @step(u'Then I get the Start Successful JSON response message')
 def then_i_get_the_start_successful_json_response_message(step):
     """I get the JSON response msg with 'thread_response': 'Stop Successful' key value"""
-    ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
-    print("Received: %s" % ingressMsg)
-
-    # Verify module name and thread response
-    module_name = ingressMsg.get("actuator_response_type").get("thread_controller").get("module_name")
-    print("module_name: %s" % module_name)
-    assert module_name == "RAIDsensor"
-
-    thread_response = ingressMsg.get("actuator_response_type").get("thread_controller").get("thread_response")
-    print("thread_response: %s" % thread_response)
-    assert thread_response == "Start Successful"
-
-    time.sleep(5)
-
-    # Clear the message queue buffer out
     while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
-        world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
-    print"Done"
+        ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
+        print("Received: %s" % ingressMsg)
+
+        try:
+            # Verify module name and thread response
+            module_name = ingressMsg.get("actuator_response_type").get("thread_controller").get("module_name")
+            print("module_name: %s" % module_name)
+            assert module_name == "RAIDsensor"
+
+            thread_response = ingressMsg.get("actuator_response_type").get("thread_controller").get("thread_response")
+            print("thread_response: %s" % thread_response)
+            assert thread_response == "Start Successful"
+
+            time.sleep(5)
+
+            # Clear the message queue buffer out
+            while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
+                world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
+            print"Done"
+            break
+        except Exception as exception:
+            print exception
 
 @step(u'Given I request to stop raid sensor and then I request a thread status')
 def given_i_request_to_stop_raid_sensor_and_then_i_request_a_thread_status(step):
@@ -229,30 +246,36 @@ def when_sspl_ll_stops_the_raid_sensor_and_receives_a_request_for_thread_status(
 @step(u'Then I get the Stop Successful JSON message then I get the thread status message')
 def then_i_get_the_stop_successful_json_message_then_i_get_the_thread_status_message(step):
     """I get the JSON response msg with 'thread_response': 'Stop Successful' key value"""
-    ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
-    print("Received: %s" % ingressMsg)
 
-    # Verify module name and thread response
-    module_name = ingressMsg.get("actuator_response_type").get("thread_controller").get("module_name")
-    print("module_name: %s" % module_name)
-    assert module_name == "RAIDsensor"
+    while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
+        ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
+        print("Received: %s" % ingressMsg)
 
-    thread_response = ingressMsg.get("actuator_response_type").get("thread_controller").get("thread_response")
-    print("thread_response: %s" % thread_response)
-    assert thread_response == "Stop Successful"
+        try:
+            # Verify module name and thread response
+            module_name = ingressMsg.get("actuator_response_type").get("thread_controller").get("module_name")
+            print("module_name: %s" % module_name)
+            assert module_name == "RAIDsensor"
 
-    ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
-    print("Received: %s" % ingressMsg)
+            thread_response = ingressMsg.get("actuator_response_type").get("thread_controller").get("thread_response")
+            print("thread_response: %s" % thread_response)
+            assert thread_response == "Stop Successful"
 
-    # Verify module name and thread response
-    module_name = ingressMsg.get("actuator_response_type").get("thread_controller").get("module_name")
-    print("module_name: %s" % module_name)
-    assert module_name == "RAIDsensor"
+            ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
+            print("Received: %s" % ingressMsg)
 
-    thread_response = ingressMsg.get("actuator_response_type").get("thread_controller").get("thread_response")
-    print("thread_response: %s" % thread_response)
-    assert thread_response == "Status: Halted"
-    print"Done"
+            # Verify module name and thread response
+            module_name = ingressMsg.get("actuator_response_type").get("thread_controller").get("module_name")
+            print("module_name: %s" % module_name)
+            assert module_name == "RAIDsensor"
+
+            thread_response = ingressMsg.get("actuator_response_type").get("thread_controller").get("thread_response")
+            print("thread_response: %s" % thread_response)
+            assert thread_response == "Status: Halted"
+            print"Done"
+            break
+        except Exception as exception:
+            print exception
 
 @step(u'Given I request to start raid sensor and then I request a thread status')
 def given_i_request_to_start_raid_sensor_and_then_i_request_a_thread_status(step):
@@ -313,27 +336,32 @@ def when_sspl_ll_starts_the_raid_sensor_and_receives_a_request_for_thread_status
 @step(u'Then I get the Start Successful JSON message then I get the thread status message')
 def then_i_get_the_start_successful_json_message_then_i_get_the_thread_status_message(step):
     """I get the JSON response msg with 'thread_response': 'Stop Successful' key value"""
-    ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
-    print("Received: %s" % ingressMsg)
+    while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
+        ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
+        print("Received: %s" % ingressMsg)
 
-    # Verify module name and thread response
-    module_name = ingressMsg.get("actuator_response_type").get("thread_controller").get("module_name")
-    print("module_name: %s" % module_name)
-    assert module_name == "RAIDsensor"
+        try:
+            # Verify module name and thread response
+            module_name = ingressMsg.get("actuator_response_type").get("thread_controller").get("module_name")
+            print("module_name: %s" % module_name)
+            assert module_name == "RAIDsensor"
 
-    thread_response = ingressMsg.get("actuator_response_type").get("thread_controller").get("thread_response")
-    print("thread_response: %s" % thread_response)
-    assert thread_response == "Start Successful"
+            thread_response = ingressMsg.get("actuator_response_type").get("thread_controller").get("thread_response")
+            print("thread_response: %s" % thread_response)
+            assert thread_response == "Start Successful"
 
-    ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
-    print("Received: %s" % ingressMsg)
+            ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
+            print("Received: %s" % ingressMsg)
 
-    # Verify module name and thread response
-    module_name = ingressMsg.get("actuator_response_type").get("thread_controller").get("module_name")
-    print("module_name: %s" % module_name)
-    assert module_name == "RAIDsensor"
+            # Verify module name and thread response
+            module_name = ingressMsg.get("actuator_response_type").get("thread_controller").get("module_name")
+            print("module_name: %s" % module_name)
+            assert module_name == "RAIDsensor"
 
-    thread_response = ingressMsg.get("actuator_response_type").get("thread_controller").get("thread_response")
-    print("thread_response: %s" % thread_response)
-    assert thread_response == "Status: Running"
-    print"Done"
+            thread_response = ingressMsg.get("actuator_response_type").get("thread_controller").get("thread_response")
+            print("thread_response: %s" % thread_response)
+            assert thread_response == "Status: Running"
+            print"Done"
+            break
+        except Exception as exception:
+            print exception
