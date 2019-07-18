@@ -50,16 +50,26 @@ $sudo lxc-attach -n $vm_name  -- bash -c "echo $(hostname -I) $vm_name >> /etc/h
 
 # Extract sspl source directory in /root directory inside container
 BASE_DIR=$(realpath $(dirname $0)/..)
-pushd $TOP_DIR; tar cf -  --owner=0 --group=0 $BASE_DIR/../sspl |  $sudo lxc-attach -n $vm_name -- bash -c "tar -xf  - -C  $sspl_install_dir"; popd
-$sudo lxc-attach -n $vm_name  -- bash -c " [ ! -f $sspl_install_dir/sspl/dist/rpmbuild/RPMS/noarch/sspl-*.rpm ] " && echo "Please build RPMs" && exit 1
+pushd $TOP_DIR; tar cf -  --owner=0 --group=0 $BASE_DIR/../sspl |  $sudo \
+lxc-attach -n $vm_name -- bash -c "tar -xf  - -C  $sspl_install_dir"; popd
+
+$sudo lxc-attach -n $vm_name  -- bash -c " [ ! -f $sspl_install_dir/sspl/dist/rpmbuild/RPMS/noarch/sspl-*.rpm ] " \
+&& echo "Please build RPMs" && exit 1
 
 # Install required packages
-$sudo lxc-attach -n $vm_name  -- yum -y install httpd python2-pip rpm-build git python-Levenshtein graphviz openssl-devel check-devel python-pep8 doxygen libtool sudo make
+# Removing installation of httpd package from this list and replacing it with
+# chronyd as httpd was conflicting with other service during testing.
+$sudo lxc-attach -n $vm_name  -- yum -y install chrony python2-pip rpm-build git \
+python-Levenshtein graphviz openssl-devel check-devel python-pep8 doxygen libtool sudo make
 
 # Install lettuce
 $sudo lxc-attach -n $vm_name  -- pip install lettuce
-$sudo lxc-attach -n $vm_name  -- pip --trusted-host=pypi.python.org --trusted-host=pypi.org --trusted-host=files.pythonhosted.org install Flask
-$sudo lxc-attach -n $vm_name  -- pip --trusted-host=pypi.python.org --trusted-host=pypi.org --trusted-host=files.pythonhosted.org install requests
+# Removing installation of python-requests package
+# This package gets installed as dependency of sspl RPM
+
+# Install Flask
+$sudo lxc-attach -n $vm_name  -- pip --trusted-host=pypi.python.org --trusted-host=pypi.org \
+--trusted-host=files.pythonhosted.org install Flask
 
 # Extract simulation data
 # Disabling for EES-non-requirement
@@ -87,7 +97,8 @@ $sudo lxc-attach -n $vm_name  -- python $sspl_install_dir/sspl/test/mock_server.
 # Change setup to vm in sspl configurations
 $sudo lxc-attach -n $vm_name  -- $sspl_install_dir/sspl/low-level/framework/sspl_init
 $sudo lxc-attach -n $vm_name  -- sed -i 's/setup=vm/setup=eos/g' /etc/sspl_ll.conf
-$sudo lxc-attach -n $vm_name  -- sed -i 's/primary_controller_port=80/primary_controller_port=8090/g' /etc/sspl_ll.conf
+$sudo lxc-attach -n $vm_name  -- sed -i 's/primary_controller_port=80/primary_controller_port=8090/g' \
+/etc/sspl_ll.conf
 
 
 # Execute tests
