@@ -134,6 +134,7 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
                 # TODO: add this in product=EES check
                 from sensors.impl.generic.psu_sensor import RealStorPSUSensor
                 from sensors.impl.generic.realstor_fan_sensor import RealStorFanSensor
+                from sensors.impl.generic.realstor_controller_sensor import RealStorControllerSensor
                 break
 
     def run(self):

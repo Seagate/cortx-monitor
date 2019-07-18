@@ -23,6 +23,7 @@ from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
 from json_msgs.messages.sensors.realstor_psu_data import RealStorPSUDataMsg
 from json_msgs.messages.sensors.realstor_fan_data import RealStorFandataMsg
+from json_msgs.messages.sensors.realstor_controller_data import RealStorControllerDataMsg
 from message_handlers.logging_msg_handler import LoggingMsgHandler
 from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 
@@ -53,6 +54,7 @@ class RealStorEnclMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
         self._psu_sensor_message = None
         self._fan_sensor_message = None
+        self._controller_sensor_message = None
 
     def run(self):
         """Run the module periodically on its own thread."""
@@ -96,13 +98,19 @@ class RealStorEnclMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     if self._psu_sensor_message:
                         self._write_internal_msgQ(RabbitMQegressProcessor.name(), self._psu_sensor_message)
                     else:
-                        self._log_debug("No past data found")
+                        self._log_debug("No psu sensor past data found")
                 if sensor_type == "enclosure_fan_alert":
                     # return the lastly saved json message as response for sspl CLI request
                     if self._fan_sensor_message:
                         self._write_internal_msgQ(RabbitMQegressProcessor.name(), self._fan_sensor_message)
                     else:
-                        self._log_debug("No past data found")
+                        self._log_debug("No fan sensor past data found")
+                if sensor_type == "enclosure_controller_alert":
+                    # return the lastly saved json message as response for sspl CLI request
+                    if self._controller_sensor_message:
+                        self._write_internal_msgQ(RabbitMQegressProcessor.name(), self._controller_sensor_message)
+                    else:
+                        self._log_debug("No controller sensor past data found")
         else:
             logger.exception("_process_msg, Not a valid sensor request format")
 
@@ -124,6 +132,9 @@ class RealStorEnclMsgHandler(ScheduledModuleThread, InternalMsgQ):
             if sensor_type == "enclosure_psu_alert":
                 self._generate_psu_alert(json_msg, alert_type, resource_type, info, extended_info)
 
+            if sensor_type == "enclosure_controller_alert":
+                self._generate_controller_alert(json_msg, alert_type, resource_type, info, extended_info)
+
     def _generate_psu_alert(self, json_msg, alert_type, resource_type, info, extended_info):
         """parses the json message, also validates it and then send it to the RabbitMQ egress processor"""
 
@@ -144,6 +155,17 @@ class RealStorEnclMsgHandler(ScheduledModuleThread, InternalMsgQ):
         json_msg = real_stor_fan_data_msg.getJson()
         # save the json message in memory to serve sspl CLI sensor request
         self._fan_sensor_message = json_msg
+        self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+
+    def _generate_controller_alert(self, json_msg, alert_type, resource_type, info, extended_info):
+        """parses the json message, also validates it and then send it to the RabbitMQ egress processor"""
+
+        self._log_debug("RealStorEnclMsgHandler, _generate_controller_alert, json_msg %s" % json_msg)
+
+        real_stor_controller_data_msg = RealStorControllerDataMsg(alert_type, resource_type, info, extended_info)
+        json_msg = real_stor_controller_data_msg.getJson()
+        # save the json message in memory to serve sspl CLI sensor request
+        self._controller_sensor_message = json_msg
         self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
 
     def shutdown(self):

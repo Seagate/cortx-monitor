@@ -4,7 +4,7 @@ core_processors=RabbitMQegressProcessor, RabbitMQingressProcessor, LoggingProces
 
 message_handlers=DiskMsgHandler, LoggingMsgHandler, ServiceMsgHandler, NodeDataMsgHandler, NodeControllerMsgHandler, RealStorEnclMsgHandler
 
-sensors=ServiceWatchdog, NodeData, RAIDsensor, RealStorFanSensor, RealStorPSUSensor
+sensors=ServiceWatchdog, NodeData, RAIDsensor, RealStorFanSensor, RealStorPSUSensor, RealStorControllerSensor
 
 actuators=Service, RAIDactuator, Hdparm
 
@@ -140,4 +140,7 @@ password=xxxxx
 threaded=true
 
 [REALSTORFANSENSOR]
+threaded=true
+
+[REALSTORCONTROLLERSENSOR]
 threaded=true

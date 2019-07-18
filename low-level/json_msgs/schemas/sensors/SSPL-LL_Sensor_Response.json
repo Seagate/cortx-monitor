@@ -224,6 +224,797 @@
               }
             },
 
+            			"enclosure_controller_alert": {
+						    "type": "object",
+						    "properties": {
+						    	"alert_type": {
+						        	"description": "Enclosure alert cause",
+						        	"type": "string",
+						        	"required": true
+						      	},
+						      	"resource_type": {
+						        	"description": "Enclosure resource type like FRU, Sensor",
+						        	"type": "string",
+						        	"required": true
+						      	},
+						      	"info": {
+						        	"type": "object",
+						        	"required": true,
+						        	"properties": {
+						          	"object-name": {
+						            	"description": "Object Name",
+						            	"type": "string",
+						            	"required": true
+						          	},
+						          	"controller-id": {
+						            	"description": "Controller ID",
+						            	"type": "string",
+						            	"required": true
+						          	},
+						          	"serial-number": {
+							            "description": "Controller serial number",
+							            "type": "string",
+							            "required": true
+						          	},
+						          	"hardware-version": {
+							            "description": "Controller hardware version",
+							            "type": "string",
+							            "required": true
+						          	},
+						          	"cpld-version": {
+							            "description": "Complex Programmable Logic Device firmware version.",
+							            "type": "string",
+							            "required": true
+						          	},
+						          	"mac-address": {
+							            "description": "Controller network port MAC address",
+							            "type": "string",
+							            "required": true
+						          	},
+						          	"node-wwn": {
+							            "description": "Storage system World Wide Node Name (WWNN)",
+							            "type": "string",
+							            "required": true
+						          	},
+						          	"ip-address": {
+							            "description": "Controller network port IP address.",
+							            "type": "string",
+							            "required": true
+						          	},
+						          	"ip-subnet-mask": {
+							            "description": "Controller network port IP subnet mask.",
+							            "type": "string",
+							            "required": true
+						          	},
+						          	"ip-gateway": {
+							            "description": "Controller network port gateway IP address",
+							            "type": "string",
+							            "required": true
+						          	},
+						          	"disks": {
+							            "description": "Number of disks in the storage system",
+							            "type": "integer",
+							            "required": true
+						          	},
+						          	"number-of-storage-pools": {
+							            "description": "Number of virtual pools in the storage system",
+							            "type": "integer",
+							            "required": true
+						          	},
+						          	"virtual-disks": {
+							            "description": "Virtual Disk",
+							            "type": "integer",
+							            "required": true
+						          	},
+						          	"host-ports": {
+							            "description": "Number of host ports in the controller module",
+							            "type": "integer",
+							            "required": true
+						          	},
+						          	"drive-channels": {
+							            "description": "Drive Channels",
+							            "type": "integer",
+							            "required": true
+						          	},
+						          	"drive-bus-type": {
+							            "description": "Drive Bus Type",
+							            "type": "string",
+							            "required": true
+						          	},
+						          	"status": {
+							            "description": "Status of the controller",
+							            "type": "string",
+							            "required": true
+						          	},
+						          	"failed-over": {
+							            "description": "Indicates whether the partner controller has failed over to this controller",
+							            "type": "string",
+							            "required": true
+					          		},
+						          	"fail-over-reason": {
+							            "description": "If Failed Over to This Controller is Yes- a reason for the failover appears otherwise- Not applicable appears",
+							            "type": "string",
+							            "required": true
+						          	},
+						          	"vendor": {
+							            "description": "Controller Vender",
+							            "type": "string",
+							            "required": true
+						          	},
+						          	"model": {
+							            "description": "Controller model",
+							            "type": "string",
+							            "required": true
+						          	},
+						          	"platform-type": {
+							            "description": "Controller Platform Type",
+							            "type": "string",
+							            "required": true
+						          	},
+						          	"write-policy": {
+							            "description": "Write Policy",
+							            "type": "string",
+							            "required": true
+						          	},
+						          	"description": {
+							            "description": "Controller Description",
+							            "type": "string",
+							            "required": true
+						          	},
+						          	"part-number": {
+							            "description": "Controller Part Number",
+							            "type": "string",
+							            "required": true
+						          	},
+						          	"revision": {
+							            "description": "Revision Level",
+							            "type": "string",
+							            "required": true
+						          	},
+						          	"mfg-vendor-id": {
+							            "description": "Controller Mfg vender id",
+							            "type": "string",
+							            "required": true
+						          	},
+						          	"locator-led": {
+							            "description": "Locator Led",
+							            "type": "string",
+							            "required": true
+						          	},
+						          	"health": {
+							            "description": "Health of the controller",
+							            "type": "string",
+							            "required": true
+						          	},
+						          	"health-reason": {
+							            "description": "If Health is not OK, this field shows the reason for the health state",
+							            "type": "string",
+							            "required": true
+						          	},
+						          	"position": {
+							            "description": "Position of the controller in the enclosure",
+							            "type": "string",
+							            "required": true
+						          	},
+						          	"redundancy-mode": {
+							            "description": "Shows the system’s operating mode, also called the cache redundancy mode",
+							            "type": "string",
+							            "required": true
+						          	},
+						          	"redundancy-status": {
+							            "description": "Redundancy Status",
+							            "type": "string",
+							            "required": true
+						          	},
+						          	"compact_flash.0.cache-flush": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "compact_flash_0_cache-flush"
+						          	},
+						          	"compact_flash.0.controller-id": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "compact_flash_0_controller-id"
+						          	},
+						          	"compact_flash.0.health": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "compact_flash_0_health"
+						          	},
+						          	"compact_flash.0.health-reason": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "compact_flash_0_health-reason"
+						          	},
+						          	"compact_flash.0.health-recommendation": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "compact_flash_0_health-recommendation"
+						          	},
+						          	"compact_flash.0.name": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "compact_flash_0_name"
+						          	},
+						          	"compact_flash.0.status": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "compact_flash_0_status"
+						          	},
+						          	"expander_port.0.controller": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "expander_port_0_controller"
+						          	},
+						          	"expander_port.0.enclosure-id": {
+						          	    "required": false,
+						          	    "type": "integer",
+						          	    "description": "expander_port_0_enclosure-id"
+						          	},
+						          	"expander_port.0.health": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "expander_port_0_health"
+						          	},
+						          	"expander_port.0.health-reason": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "expander_port_0_health-reason"
+						          	},
+						          	"expander_port.0.health-recommendation": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "expander_port_0_health-recommendation"
+						          	},
+						          	"expander_port.0.name": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "expander_port_0_name"
+						          	},
+						          	"expander_port.0.sas-port-index": {
+						          	    "required": false,
+						          	    "type": "integer",
+						          	    "description": "expander_port_0_sas-port-index"
+						          	},
+						          	"expander_port.0.sas-port-type": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "expander_port_0_sas-port-type"
+						          	},
+						          	"expander_port.0.status": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "expander_port_0_status"
+						          	},
+						          	"expander_port.1.controller": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "expander_port_1_controller"
+						          	},
+						          	"expander_port.1.enclosure-id": {
+						          	    "required": false,
+						          	    "type": "integer",
+						          	    "description": "expander_port_1_enclosure-id"
+						          	},
+						          	"expander_port.1.health": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "expander_port_1_health"
+						          	},
+						          	"expander_port.1.health-reason": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "expander_port_1_health-reason"
+						          	},
+						          	"expander_port.1.health-recommendation": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "expander_port_1_health-recommendation"
+						          	},
+						          	"expander_port.1.name": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "expander_port_1_name"
+						          	},
+						          	"expander_port.1.sas-port-index": {
+						          	    "required": false,
+						          	    "type": "integer",
+						          	    "description": "expander_port_1_sas-port-index"
+						          	},
+						          	"expander_port.1.sas-port-type": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "expander_port_1_sas-port-type"
+						          	},
+						          	"expander_port.1.status": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "expander_port_1_status"
+						          	},
+						          	"expander_port.2.controller": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "expander_port_2_controller"
+						          	},
+						          	"expander_port.2.enclosure-id": {
+						          	    "required": false,
+						          	    "type": "integer",
+						          	    "description": "expander_port_2_enclosure-id"
+						          	},
+						          	"expander_port.2.health": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "expander_port_2_health"
+						          	},
+						          	"expander_port.2.health-reason": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "expander_port_2_health-reason"
+						          	},
+						          	"expander_port.2.health-recommendation": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "expander_port_2_health-recommendation"
+						          	},
+						          	"expander_port.2.name": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "expander_port_2_name"
+						          	},
+						          	"expander_port.2.sas-port-index": {
+						          	    "required": false,
+						          	    "type": "integer",
+						          	    "description": "expander_port_2_sas-port-index"
+						          	},
+						          	"expander_port.2.sas-port-type": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "expander_port_2_sas-port-type"
+						          	},
+						          	"expander_port.2.status": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "expander_port_2_status"
+						          	},
+						          	"expander_port.3.controller": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "expander_port_3_controller"
+						          	},
+						          	"expander_port.3.enclosure-id": {
+						          	    "required": false,
+						          	    "type": "integer",
+						          	    "description": "expander_port_3_enclosure-id"
+						          	},
+						          	"expander_port.3.health": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "expander_port_3_health"
+						          	},
+						          	"expander_port.3.health-reason": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "expander_port_3_health-reason"
+						          	},
+						          	"expander_port.3.health-recommendation": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "expander_port_3_health-recommendation"
+						          	},
+						          	"expander_port.3.name": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "expander_port_3_name"
+						          	},
+						          	"expander_port.3.sas-port-index": {
+						          	    "required": false,
+						          	    "type": "integer",
+						          	    "description": "expander_port_3_sas-port-index"
+						          	},
+						          	"expander_port.3.sas-port-type": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "expander_port_3_sas-port-type"
+						          	},
+						          	"expander_port.3.status": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "expander_port_3_status"
+						          	},
+						          	"expander_port.4.controller": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "expander_port_4_controller"
+						          	},
+						          	"expander_port.4.enclosure-id": {
+						          	    "required": false,
+						          	    "type": "integer",
+						          	    "description": "expander_port_4_enclosure-id"
+						          	},
+						          	"expander_port.4.health": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "expander_port_4_health"
+						          	},
+						          	"expander_port.4.health-reason": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "expander_port_4_health-reason"
+						          	},
+						          	"expander_port.4.health-recommendation": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "expander_port_4_health-recommendation"
+						          	},
+						          	"expander_port.4.name": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "expander_port_4_name"
+						          	},
+						          	"expander_port.4.sas-port-index": {
+						          	    "required": false,
+						          	    "type": "integer",
+						          	    "description": "expander_port_4_sas-port-index"
+						          	},
+						          	"expander_port.4.sas-port-type": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "expander_port_4_sas-port-type"
+						          	},
+						          	"expander_port.4.status": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "expander_port_4_status"
+						          	},
+						          	"expander_port.5.controller": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "expander_port_5_controller"
+						          	},
+						          	"expander_port.5.enclosure-id": {
+						          	    "required": false,
+						          	    "type": "integer",
+						          	    "description": "expander_port_5_enclosure-id"
+						          	},
+						          	"expander_port.5.health": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "expander_port_5_health"
+						          	},
+						          	"expander_port.5.health-reason": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "expander_port_5_health-reason"
+						          	},
+						          	"expander_port.5.health-recommendation": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "expander_port_5_health-recommendation"
+						          	},
+						          	"expander_port.5.name": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "expander_port_5_name"
+						          	},
+						          	"expander_port.5.sas-port-index": {
+						          	    "required": false,
+						          	    "type": "integer",
+						          	    "description": "expander_port_5_sas-port-index"
+						          	},
+						          	"expander_port.5.sas-port-type": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "expander_port_5_sas-port-type"
+						          	},
+						          	"expander_port.5.status": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "expander_port_5_status"
+						          	},
+						          	"expander_port.6.controller": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "expander_port_6_controller"
+						          	},
+						          	"expander_port.6.enclosure-id": {
+						          	    "required": false,
+						          	    "type": "integer",
+						          	    "description": "expander_port_6_enclosure-id"
+						          	},
+						          	"expander_port.6.health": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "expander_port_6_health"
+						          	},
+						          	"expander_port.6.health-reason": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "expander_port_6_health-reason"
+						          	},
+						          	"expander_port.6.health-recommendation": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "expander_port_6_health-recommendation"
+						          	},
+						          	"expander_port.6.name": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "expander_port_6_name"
+						          	},
+						          	"expander_port.6.sas-port-index": {
+						          	    "required": false,
+						          	    "type": "integer",
+						          	    "description": "expander_port_6_sas-port-index"
+						          	},
+						          	"expander_port.6.sas-port-type": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "expander_port_6_sas-port-type"
+						          	},
+						          	"expander_port.6.status": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "expander_port_6_status"
+						          	},
+						          	"expanders.0.drawer-id": {
+						          	    "required": false,
+						          	    "type": "integer",
+						          	    "description": "expanders_0_drawer-id"
+						          	},
+						          	"expanders.0.enclosure-id": {
+						          	    "required": false,
+						          	    "type": "integer",
+						          	    "description": "expanders_0_enclosure-id"
+						          	},
+						          	"expanders.0.extended-status": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "expanders_0_extended-status"
+						          	},
+						          	"expanders.0.fw-revision": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "expanders_0_fw-revision"
+						          	},
+						          	"expanders.0.health": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "expanders_0_health"
+						          	},
+						          	"expanders.0.health-reason": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "expanders_0_health-reason"
+						          	},
+						          	"expanders.0.health-recommendation": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "expanders_0_health-recommendation"
+						          	},
+						          	"expanders.0.location": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "expanders_0_location"
+						          	},
+						          	"expanders.0.name": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "expanders_0_name"
+						          	},
+						          	"expanders.0.status": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "expanders_0_status"
+						          	},
+						          	"network.0.duplex-mode": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "network_0_duplex-mode"
+						          	},
+						          	"network.0.health": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "network_0_health"
+						          	},
+						          	"network.0.health-reason": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "network_0_health-reason"
+						          	},
+						          	"network.0.link-speed": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "network_0_link-speed"
+						          	},
+						          	"port.0.actual-speed": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "port_0_actual-speed"
+						          	},
+						          	"port.0.configured-speed": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "port_0_configured-speed"
+						          	},
+						          	"port.0.controller": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "port_0_controller"
+						          	},
+						          	"port.0.fc.0.configured-topology": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "port_0_fc_0_configured-topology"
+						          	},
+						          	"port.0.fc.0.sfp-part-number": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "port_0_fc_0_sfp-part-number"
+						          	},
+						          	"port.0.fc.0.sfp-present": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "port_0_fc_0_sfp-present"
+						          	},
+						          	"port.0.fc.0.sfp-revision": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "port_0_fc_0_sfp-revision"
+						          	},
+						          	"port.0.fc.0.sfp-status": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "port_0_fc_0_sfp-status"
+						          	},
+						          	"port.0.fc.0.sfp-supported-speeds": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "port_0_fc_0_sfp-supported-speeds"
+						          	},
+						          	"port.0.fc.0.sfp-vendor": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "port_0_fc_0_sfp-vendor"
+						          	},
+						          	"port.0.health": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "port_0_health"
+						          	},
+						          	"port.0.health-reason": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "port_0_health-reason"
+						          	},
+						          	"port.0.health-recommendation": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "port_0_health-recommendation"
+						          	},
+						          	"port.0.media": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "port_0_media"
+						          	},
+						          	"port.0.port": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "port_0_port"
+						          	},
+						          	"port.0.port-type": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "port_0_port-type"
+						          	},
+						          	"port.0.status": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "port_0_status"
+						          	},
+						          	"port.0.target-id": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "port_0_target-id"
+						          	},
+						          	"port.1.actual-speed": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "port_1_actual-speed"
+						          	},
+						          	"port.1.configured-speed": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "port_1_configured-speed"
+						          	},
+						          	"port.1.controller": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "port_1_controller"
+						          	},
+						          	"port.1.fc.0.configured-topology": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "port_1_fc_0_configured-topology"
+						          	},
+						          	"port.1.fc.0.sfp-part-number": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "port_1_fc_0_sfp-part-number"
+						          	},
+						          	"port.1.fc.0.sfp-present": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "port_1_fc_0_sfp-present"
+						          	},
+						          	"port.1.fc.0.sfp-revision": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "port_1_fc_0_sfp-revision"
+						          	},
+						          	"port.1.fc.0.sfp-status": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "port_1_fc_0_sfp-status"
+						          	},
+						          	"port.1.fc.0.sfp-supported-speeds": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "port_1_fc_0_sfp-supported-speeds"
+						          	},
+						          	"port.1.fc.0.sfp-vendor": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "port_1_fc_0_sfp-vendor"
+						          	},
+						          	"port.1.health": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "port_1_health"
+						          	},
+						          	"port.1.health-reason": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "port_1_health-reason"
+						          	},
+						          	"port.1.health-recommendation": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "port_1_health-recommendation"
+						          	},
+						          	"port.1.media": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "port_1_media"
+						          	},
+						          	"port.1.port": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "port_1_port"
+						          	},
+						          	"port.1.port-type": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "port_1_port-type"
+						          	},
+						          	"port.1.status": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "port_1_status"
+						          	},
+						          	"port.1.target-id": {
+						          	    "required": false,
+						          	    "type": "string",
+						          	    "description": "port_1_target-id"
+						          	}
+						        }
+						    },
+						    	"extended_info": {
+						        	"type": "object",
+						        	"required": false
+						      	}
+						    }
+						},
+
 						"disk_status_hpi": {
 							"type": "object",
 							"properties": {
