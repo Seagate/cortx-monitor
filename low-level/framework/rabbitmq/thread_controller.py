@@ -138,6 +138,7 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
                 from sensors.impl.generic.psu_sensor import RealStorPSUSensor
                 from sensors.impl.generic.realstor_fan_sensor import RealStorFanSensor
                 from sensors.impl.generic.realstor_controller_sensor import RealStorControllerSensor
+                from sensors.impl.generic.realstor_sideplane_expander_sensor import RealStorSideplaneExpanderSensor
                 break
 
     def run(self):

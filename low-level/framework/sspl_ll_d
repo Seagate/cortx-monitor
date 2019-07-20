@@ -251,6 +251,7 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist, operating_system
             from sensors.impl.generic.realstor_fan_sensor import RealStorFanSensor
             from sensors.impl.generic.psu_sensor import RealStorPSUSensor
             from sensors.impl.generic.realstor_controller_sensor import RealStorControllerSensor
+            from sensors.impl.generic.realstor_sideplane_expander_sensor import RealStorSideplaneExpanderSensor
 
             from zope.component import getGlobalSiteManager
             from zope.interface import implementedBy

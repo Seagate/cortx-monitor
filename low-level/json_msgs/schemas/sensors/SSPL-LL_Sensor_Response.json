@@ -1630,6 +1630,76 @@
                               }
                         },
 
+                        "enclosure_sideplane_expander_alert": {
+                            "type": "object",
+                            "properties":{
+                                "alert_type":{
+                                    "description": "Enclosure alert cause",
+                                    "type": "string",
+                                    "required": true
+                                },
+                                "resource_type": {
+                                    "description": "Enclosure resource type like FRU, Sensor",
+                                    "type": "string",
+                                    "required": true
+                                },
+                                "info": {
+                                    "type": "object",
+                                    "required": true,
+                                    "properties": {
+                                    "sideplane_expander":{
+                                            "type": "object",
+                                            "required": true,
+                                            "properties":{
+                                        "enclosure-id": {
+                                            "description": "Enclosure ID",
+                                            "type": "integer",
+                                            "required": true
+                                        },
+                                        "location": {
+                                            "description": "enclosure and drawer location",
+                                            "type": "string",
+                                            "required": true
+                                          },
+                                        "name": {
+                                            "description": "Name of the Module",
+                                            "type": "string",
+                                            "required": true
+                                          },
+                                        "status": {
+                                            "description": "status of the sideplane like critical",
+                                            "type": "string",
+                                            "required": true
+                                          },
+                                          "health": {
+                                            "description": "Health of the FRU",
+                                            "type": "string",
+                                            "required": true
+                                          },
+                                           "health-reason": {
+                                            "description": "reason of FRU failure",
+                                            "type": "string",
+                                            "required": true
+                                          },
+                                           "health-recommendation": {
+                                            "description": "Health recommendation to resolve faults",
+                                            "type": "string",
+                                            "required": true
+                                          },
+                                           "unhealthy-components":{
+                                            "type": "array",
+                                            "required": false
+                                          }
+                                        }}
+                                       }
+                                    },
+                                    "extended_info": {
+                                        "type": "object",
+                                        "required": false
+                                    }
+                              }
+                        },
+
 						"raid_data": {
 							"description": "RAID Data",
 							"type": "object",
