@@ -15,6 +15,8 @@
 """
 import hashlib
 import json
+import os
+import errno
 
 import requests
 from zope.interface import implements
@@ -37,6 +39,7 @@ class RealStorSideplaneExpanderSensor(ScheduledModuleThread, InternalMsgQ):
     LOGIN_HEADERS = {"dataType": "json"}
 
     # sspl configuration keys
+    SYSTEM_INFORMATION_KEY = "SYSTEM_INFORMATION"
     REALSTORENCLOSURE_KEY = "STORAGE_ENCLOSURE"
     CONTROLLER_IP_KEY = "primary_controller_ip"
     CONTROLLER_PORT_KEY = "primary_controller_port"
@@ -45,6 +48,15 @@ class RealStorSideplaneExpanderSensor(ScheduledModuleThread, InternalMsgQ):
 
     RESOURCE_TYPE = "fru"
     SENSOR_TYPE = "enclosure_sideplane_expander_alert"
+
+    # Keys for disk volume to persist faulty FanModule data
+    VOLUME_LOCATION_KEY = "data_path"
+
+    # Enclosure directory name
+    ENCLOSURE_DIR = "encl"
+
+    # Fan Modules directory name
+    SIDEPLANE_EXPANDERS_DIR = "sideplane_expanders"
 
     @staticmethod
     def name():
@@ -62,8 +74,16 @@ class RealStorSideplaneExpanderSensor(ScheduledModuleThread, InternalMsgQ):
         self._api_base_url = None
         self._api_login_url = None
         self._session_key = None
-        self._faulty_sideplane_expander_list = []
+        self._sideplane_expander_list = []
         self._faulty_sideplane_expander_dict = {}
+
+        # Common storage location for RAS
+        self._common_storage_location = None
+
+        # Absolute path to store faulty FanModule data including common
+        # storage location.
+        self._dir_location = None
+
 
     def initialize(self, conf_reader, msgQlist, products):
         """initialize configuration reader and internal msg queues"""
@@ -91,9 +111,30 @@ class RealStorSideplaneExpanderSensor(ScheduledModuleThread, InternalMsgQ):
         self._password = self._conf_reader._get_value_with_default(
             self.REALSTORENCLOSURE_KEY, self.CONTROLLER_PASSWORD_KEY, '!manage')
 
+        # Get common storage location for persisting data
+        self._common_storage_location = \
+            self._conf_reader._get_value_with_default(
+                self.SYSTEM_INFORMATION_KEY, self.VOLUME_LOCATION_KEY,
+                "/var/sspl/data")
+
         self._api_base_url = "http://{0}:{1}/api".format(self._controller_ip,
             self._controller_port)
         self._api_login_url = "{0}/login".format(self._api_base_url)
+
+        self._dir_location = os.path.join(
+            self._common_storage_location, self.ENCLOSURE_DIR,
+            "frus", self.SIDEPLANE_EXPANDERS_DIR)
+
+        # Create internal directory structure  if not present
+        self._makedirectories(self._dir_location)
+
+        # Persistence file location. This file stores faulty sideplane expander data
+        self._faulty_sideplane_expander_file_path = os.path.join(
+            self._dir_location, "sideplane_expanders_data.json")
+
+        # Load faulty sideplane expander data from file if available
+        self._load_faulty_sideplane_expanders_from_file(self._faulty_sideplane_expander_file_path)
+
 
         try:
             self._session_key = self._do_login()
@@ -146,10 +187,10 @@ class RealStorSideplaneExpanderSensor(ScheduledModuleThread, InternalMsgQ):
         hash_value = hashlib.sha256(login_credentials).hexdigest()
         return hash_value
 
-    def _get_faulty_sideplane_expander_list(self):
+    def _get_sideplane_expander_list(self):
         """return sideplane expander list using API /show/enclosure"""
 
-        faulty_sideplane_expanders = []
+        sideplane_expanders = []
         url = "{0}/show/enclosure".format(self._api_base_url)
         frus = self._get_api_response(url, {"dataType": "json","sessionKey": \
         self._session_key})
@@ -159,39 +200,45 @@ class RealStorSideplaneExpanderSensor(ScheduledModuleThread, InternalMsgQ):
                 for drawer in encl_drawers:
                     sideplane_list = drawer["sideplanes"]
                     for sideplane in sideplane_list:
-                        if sideplane.get("unhealthy-component"):
-                            faulty_sideplane_expanders.append(sideplane)
-        return faulty_sideplane_expanders
+                    #    if sideplane.get("unhealthy-component"):
+                         sideplane_expanders.append(sideplane)
+        return sideplane_expanders
 
     def _check_for_sideplane_expander_fault(self):
         """iterates over sideplane expander list which has some fault. maintains
            a dictionary in order to keep track of previous health of the FRU, so
            that, alert_type can be set accordingly"""
+        self.unhealthy_components = {}
+        self._sideplane_expander_list = \
+        self._get_sideplane_expander_list()
+        alert_type = None
+        # Flag to indicate if there is a change in _faulty_sideplane_expander_list
+        state_changed = False
 
-        try:
-            self.unhealthy_components = {}
-            self._faulty_sideplane_expander_list = \
-            self._get_faulty_sideplane_expander_list()
-            alert_type = None
-            missing_health = " ".join("Check that all I/O modules and power supplies in\
-            the enclosure are fully seated in their slots and that their latches are locked".split())
+        missing_health = " ".join("Check that all I/O modules and power supplies in\
+        the enclosure are fully seated in their slots and that their latches are locked".split())
 
-            for faulty_sideplane_expander in self._faulty_sideplane_expander_list:
+        for sideplane_expander in self._sideplane_expander_list:
+            try:
                 self.unhealthy_components = \
-                faulty_sideplane_expander["unhealthy-component"]
-                fru_status = faulty_sideplane_expander["health"].lower()
-                durable_id = faulty_sideplane_expander["durable-id"].lower()
-                health_recommendation = \
-                str(self.unhealthy_components[0]["health-recommendation"])
+                sideplane_expander.get("unhealthy-component")
+                fru_status = sideplane_expander.get("health").lower()
+                durable_id = sideplane_expander.get("durable-id").lower()
+
+                if self.unhealthy_components:
+                    health_recommendation = \
+                    str(self.unhealthy_components[0]["health-recommendation"])
 
                 if fru_status == "fault" and missing_health.strip(" ") in health_recommendation:
                     if durable_id not in self._faulty_sideplane_expander_dict:
                         alert_type = "missing"
                         self._faulty_sideplane_expander_dict[durable_id] = alert_type
+                        state_changed = True
                 elif fru_status == "fault":
                     if durable_id not in self._faulty_sideplane_expander_dict:
                         alert_type = "fault"
                         self._faulty_sideplane_expander_dict[durable_id] = alert_type
+                        state_changed = True
                 elif fru_status == "ok":
                     if durable_id in self._faulty_sideplane_expander_dict:
                         previous_alert_type = self._faulty_sideplane_expander_dict.\
@@ -201,13 +248,18 @@ class RealStorSideplaneExpanderSensor(ScheduledModuleThread, InternalMsgQ):
                         elif previous_alert_type == "missing":
                             alert_type = "insert"
                         del self._faulty_sideplane_expander_dict[durable_id]
+                        state_changed = True
+                if state_changed:
+                    self._save_faulty_sideplane_expanders_to_file(self._faulty_sideplane_expander_file_path)
+                    state_changed = False
                 if alert_type:
                     internal_json_message = self._create_internal_json_message \
-                    (faulty_sideplane_expander, self.unhealthy_components, alert_type)
+                    (sideplane_expander, self.unhealthy_components, alert_type)
                     self._send_json_message(internal_json_message)
                     alert_type = None
-        except Exception as ae:
-            logger.exception(ae)
+
+            except Exception as ae:
+                logger.exception(ae)
 
     def _create_internal_json_message(self, sideplane_expander, unhealthy_components, \
         alert_type):
@@ -266,6 +318,79 @@ class RealStorSideplaneExpanderSensor(ScheduledModuleThread, InternalMsgQ):
             })
 
         return internal_json_msg
+
+    def _save_faulty_sideplane_expanders_to_file(self, filename):
+        """Stores previous faulty sideplane expander data instance member to file.
+        """
+
+        # Check if filename is blank or None
+        if not filename or len(filename.strip()) <= 0:
+            logger.critical("No filename is configured to save faulty sideplane data")
+            return
+
+        # Check if directory exists
+        directory_path = os.path.join(os.path.dirname(filename), "")
+        if not os.path.isdir(directory_path):
+            logger.critical("Path doesn't exists: {0}".format(directory_path))
+            return
+
+        try:
+            with open(filename, "w") as sideplane_expander_file:
+                json.dump(self._faulty_sideplane_expander_dict, sideplane_expander_file)
+        except IOError as io_error:
+            error_number = io_error.errno
+            if error_number == errno.EACCES:
+                logger.critical(
+                    "Permission denied for writing to: {0}".format(filename))
+            elif error_number == errno.ENOENT:
+                logger.critical("File not found: {0}".format(filename))
+                logger.exception(io_error)
+            else:
+                logger.critical("Error in writing file: {0}".format(io_error))
+        except Exception as exception:
+            logger.exception("Error in writing file: {0}".format(exception))
+
+    def _load_faulty_sideplane_expanders_from_file(self, filename):
+        """Loads previous faulty PSU data instance member from file
+        if exists.
+        """
+        if not filename or len(filename.strip()) <= 0:
+            logger.critical("No filename is configured to load faulty \
+            sideplane expander data from")
+            return
+        try:
+            with open(filename) as sideplane_expander_file:
+                data = sideplane_expander_file.read()
+                self._faulty_sideplane_expander_dict = json.loads(data)
+        except IOError as io_error:
+            error_number = io_error.errno
+            if error_number == errno.EACCES:
+                logger.critical(
+                    "Permission denied for reading from {0}".format(filename))
+            elif error_number == errno.ENOENT:
+                logger.warn(
+                    "File not found: {0}. Creating a new...".format(filename))
+                self._save_faulty_sideplane_expanders_to_file(self._faulty_sideplane_expander_file_path)
+            else:
+                logger.critical("Error in reading: {0}".format(io_error))
+        except ValueError as value_error:
+            logger.critical(value_error)
+        except Exception as exception:
+            logger.exception("Error in reading file: {0}".format(exception))
+
+    def _makedirectories(self, path):
+        """Creates leaf directory with required parents"""
+
+        try:
+            os.makedirs(path)
+        except OSError as os_error:
+            if os_error.errno == errno.EEXIST and os.path.isdir(path):
+                pass
+            elif os_error.errno == errno.EACCES:
+                logger.critical(
+                    "Permission denied while creating path: {0}".format(path))
+            else:
+                raise
 
     def _send_json_message(self, json_msg):
         """Transmit data to RealStorMsgHandler to be processed and sent out"""
