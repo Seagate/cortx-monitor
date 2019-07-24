@@ -10,13 +10,15 @@
  The code contained herein is CONFIDENTIAL to Seagate Technology, LLC.
  Portions are also trade secret. Any use, duplication, derivation, distribution
  or disclosure of this code, for any reason, not expressly authorized is
- prohibited. All other rights are expressly reserved by Seagate Technology, LLC.
+ prohibited. All other rights are expressly reserved by Seagate Technology,
+ LLC.
  ****************************************************************************
 """
 import errno
 import hashlib
 import json
 import os
+import re
 
 import requests
 from zope.interface import implements
@@ -46,7 +48,7 @@ class RealStorFanSensor(ScheduledModuleThread, InternalMsgQ):
     CONTROLLER_PASSWORD_KEY = "password"
 
     RESOURCE_TYPE = "fru"
-    SENSOR_TYPE = "enclosure_fan_alert"
+    SENSOR_TYPE = "enclosure_fan_module_alert"
 
     # Keys for disk volume to persist faulty FanModule data
     VOLUME_LOCATION_KEY = "data_path"
@@ -55,7 +57,6 @@ class RealStorFanSensor(ScheduledModuleThread, InternalMsgQ):
 
     # Enclosure directory name
     ENCLOSURE_DIR = "encl"
-
 
     # Fan Modules directory name
     FAN_MODULES_DIR = "fanmodules"
@@ -67,7 +68,7 @@ class RealStorFanSensor(ScheduledModuleThread, InternalMsgQ):
 
     def __init__(self):
         super(RealStorFanSensor, self).__init__(self.SENSOR_NAME,
-                                         self.PRIORITY)
+                                                self.PRIORITY)
 
         self._controller_ip = None
         self._port = None
@@ -76,9 +77,10 @@ class RealStorFanSensor(ScheduledModuleThread, InternalMsgQ):
         self._api_base_url = None
         self._api_login_url = None
         self._session_key = None
-        self._fan_list = {}
+
         self._faulty_fan_file_path = None
-        self._faulty_fan_list = {}
+        self._faulty_fan_modules_list = {}
+        self._fan_modules_list = {}
         self._common_storage_location = None  # Common storage location for RAS
 
         # Absolute path to store faulty FanModule data including common
@@ -105,11 +107,13 @@ class RealStorFanSensor(ScheduledModuleThread, InternalMsgQ):
 
         # Read Username
         self._username = self._conf_reader._get_value_with_default(
-            self.REALSTORENCLOSURE_KEY, self.CONTROLLER_USERNAME_KEY, 'manage')
+            self.REALSTORENCLOSURE_KEY, self.CONTROLLER_USERNAME_KEY,
+            'manage')
 
         # Read password
         self._password = self._conf_reader._get_value_with_default(
-            self.REALSTORENCLOSURE_KEY, self.CONTROLLER_PASSWORD_KEY, '!manage')
+            self.REALSTORENCLOSURE_KEY, self.CONTROLLER_PASSWORD_KEY,
+            '!manage')
 
         # Get common storage location for persisting data
         self._common_storage_location = \
@@ -118,7 +122,7 @@ class RealStorFanSensor(ScheduledModuleThread, InternalMsgQ):
                 "/var/sspl/data")
 
         self._api_base_url = "http://{0}:{1}/api".format(self._controller_ip,
-            self._controller_port)
+                                                         self._controller_port)
         self._api_login_url = "{0}/login".format(self._api_base_url)
 
         self._dir_location = os.path.join(
@@ -136,7 +140,8 @@ class RealStorFanSensor(ScheduledModuleThread, InternalMsgQ):
         try:
             self._session_key = self._do_login()
         except KeyError as key_error:
-            logger.exception("Unable to get session Key: {0}".format(key_error))
+            logger.exception(
+                "Unable to get session Key: {0}".format(key_error))
         except Exception as exception:
             logger.exception(exception)
 
@@ -149,36 +154,9 @@ class RealStorFanSensor(ScheduledModuleThread, InternalMsgQ):
 
         # Check for debug mode being activated
         self._read_my_msgQ_noWait()
-        try:
-            self._fan_module_list = self._get_fan_module_list()
-            alert_type = None
-            # Flag to indicate if there is a change in _faulty_fan_list
-            state_changed = False
-            for fan_module in self._fan_module_list:
-                serial_number = fan_module["serial-number"]
-                fru_status = fan_module["fru-status"]
-                slot = int(fan_module["fru-location"].split(" ")[3])
-                if fru_status == "Fault":
-                     if slot not in self._faulty_fan_list:
-                        self._faulty_fan_list[slot] = { "serial-number": serial_number }
-                        alert_type = "missing"
-                elif fru_status == "OK":
-                    if slot in self._faulty_fan_list:
-                        if serial_number in self._faulty_fan_list[slot]["serial-number"]:
-                            alert_type = "fault_resolved"
-                        else:
-                            alert_type = "insertion"
-                        del self._faulty_fan_list[slot]
-                if alert_type:
-                    internal_json_message = self._create_internal_json_message(fan_module, alert_type)
-                    self._send_json_message(internal_json_message)
-                    alert_type = None
-                # Persist faulty Fan Module list to file only if something is changed
-                if state_changed:
-                    self._save_faulty_fan_modules_to_file(self._faulty_fan_file_path)
-                    state_changed = False
-        except Exception as ae:
-            logger.exception(ae)
+
+        # Periodically check if there is any fault in the fan_module
+        self._check_for_fan_module_fault()
 
         self._scheduler.enter(30, self._priority, self.run, ())
 
@@ -188,13 +166,14 @@ class RealStorFanSensor(ScheduledModuleThread, InternalMsgQ):
         session_key = None
         hash_val = self._get_hash(self._username, self._password)
         login_url = "{0}/{1}".format(self._api_login_url, hash_val)
-        api_data = self._get_api_response(login_url, RealStorFanSensor.LOGIN_HEADERS)
+        api_data = \
+            self._get_api_response(login_url, RealStorFanSensor.LOGIN_HEADERS)
         if api_data:
             session_key = api_data["status"][0]["response"]
         return session_key
 
     def _get_api_response(self, api_url, headers):
-        """performs GET request and returns json response in case of successful
+        """Performs GET request and returns json response in case of successful
            HTTP request, otherwise returns None"""
 
         api_json_response = None
@@ -203,88 +182,167 @@ class RealStorFanSensor(ScheduledModuleThread, InternalMsgQ):
             api_json_response = json.loads(api_response.text)
         return api_json_response
 
+    def _check_for_fan_module_fault(self):
+        """Iterates over fan modules list. maintains a dictionary in order to
+           keep track of previous health of the FRU in order to set
+           alert_type"""
+
+        self._fan_modules_list = self._get_fan_modules_list()
+        alert_type = None
+
+        try:
+            for fan_module in self._fan_modules_list:
+                fru_status = fan_module.get("health").lower()
+                durable_id = fan_module.get("durable-id").lower()
+                health_reason = fan_module.get("health-reason").lower()
+
+                if fru_status == "fault" and \
+                    self._check_if_fan_module_is_installed(health_reason):
+                    if durable_id not in self._faulty_fan_modules_list:
+                        alert_type = "missing"
+                        self._faulty_fan_modules_list[durable_id] = alert_type
+                elif fru_status == "fault" or fru_status == "degraded":
+                    if durable_id not in self._faulty_fan_modules_list:
+                        alert_type = "fault"
+                        self._faulty_fan_modules_list[durable_id] = alert_type
+                elif fru_status == "ok":
+                    if durable_id in self._faulty_fan_modules_list:
+                        prev_alert_type = \
+                            self._faulty_fan_modules_list[durable_id]
+                        if prev_alert_type == "missing":
+                            alert_type = "insertion"
+                        else:
+                            alert_type = "fault_resolved"
+                        del self._faulty_fan_modules_list[durable_id]
+
+                # Persist faulty Fan Module list to file only if there is any
+                # type of alert generated
+                if alert_type:
+                    internal_json_message = \
+                        self._create_internal_json_msg(fan_module, alert_type)
+                    self._send_json_message(internal_json_message)
+                    self._save_faulty_fan_modules_to_file(self._faulty_fan_file_path)
+                    alert_type = None
+        except Exception as e:
+            logger.exception(e)
+
+    def _check_if_fan_module_is_installed(self, health_reason):
+        """ This function returns true if given string contains substring
+            otherwise, it returns false. To achieve this, it uses search
+            method of python re module"""
+
+        not_installed_health_string = "not installed"
+        return bool(re.search(not_installed_health_string, health_reason))
+
     def _get_hash(self, username, password):
-        """returns a calculated hash required for login"""
+        """Returns a calculated hash required for login"""
 
         login_credentials = "{0}_{1}".format(username, password)
         hash_value = hashlib.sha256(login_credentials).hexdigest()
         return hash_value
 
-    def _get_fan_module_list(self):
-        """return fan module list using API /show/frus"""
+    def _get_fan_modules_list(self):
+        """Returns fan module list using API /show/fan-modules"""
 
-        api_fan_module_list = {}
-        fan_module_list = []
-        url = "{0}/show/frus".format(self._api_base_url)
-        api_frus = self._get_api_response(url, {"dataType": "json","sessionKey": self._session_key})
-        if api_frus:
-            api_fru_list = api_frus["enclosure-fru"]
-            for fru in api_fru_list:
-                if fru["name"] == "FAN MODULE":
-                    fan_module_list.append(fru)
-            api_fan_module_list = fan_module_list
-        return api_fan_module_list
+        fan_modules_list = []
+        url = "{0}/show/fan-modules".format(self._api_base_url)
+        frus = self._get_api_response(url, {"dataType": "json",
+                                            "sessionKey": self._session_key})
+        if frus:
+            fan_modules_list = frus["fan-modules"]
+        return fan_modules_list
 
-    def _create_internal_json_message(self, fan_module, alert_type):
-        """creates internal json structure which is sent to realstor_msg_handler
-           for further processing"""
+    def _get_fan_attributes(self, fan_module):
+        """Returns individual fan attributes from each fan-module"""
 
-        info = {
-                    "name": fan_module.get("name"),
-                    "description": fan_module.get("description"),
-                    "part-number": fan_module.get("part-number"),
-                    "serial-number": fan_module.get("serial-number"),
-                    "revision": fan_module.get("revision"),
-                    "mfg-date": fan_module.get("mfg-date"),
-                    "mfg-vendor-id": fan_module.get("mfg-vendor-id"),
-                    "fru-location": fan_module.get("fru-location"),
-                    "fru-status": fan_module.get("fru-status"),
-                    "enclosure-id": fan_module.get("enclosure-id")
-               }
+        fans_list = []
+        fans = {}
+        fans = fan_module.get("fan", [])
 
-        extended_info = {
-                            "configuration-serial-number": fan_module.get("configuration-serialnumber")
-                        }
+        for fan in fans:
+            del fan["status-ses"]
+            del fan["meta"]
+            del fan["status-ses-numeric"]
+            del fan["locator-led-numeric"]
+            del fan["extended-status"]
+            del fan["object-name"]
+            del fan["status-numeric"]
+            del fan["health-numeric"]
+            del fan["position-numeric"]
+            fans_list.append(fan)
+        return fans_list
 
-        # create internal json message request structure that will be passed to the StorageEnclHandler
+    def _create_internal_json_msg(self, fan_module, alert_type):
+        """Creates internal json structure which is sent to
+            realstor_msg_handler for further processing"""
+
+        fan_module_info_key_list = \
+            ['name', 'location', 'status', 'health',
+                'health-reason', 'health-recommendation', 'enclosure-id']
+
+        fan_module_extended_info_key_list = ['durable-id', 'position']
+        fan_module_info_dict = {}
+        fan_module_extended_info_dict = {}
+
+        fans_list = self._get_fan_attributes(fan_module)
+
+        for fan_module_key, fan_module_value in fan_module.items():
+            if fan_module_key in fan_module_info_key_list:
+                fan_module_info_dict[fan_module_key] = fan_module_value
+            elif fan_module_key in fan_module_extended_info_key_list:
+                fan_module_extended_info_dict[fan_module_key] = \
+                    fan_module_value
+
+        fan_module_info_dict["fans"] = fans_list
+
+        info = {"fan_module": dict(fan_module_info_dict.items())}
+
+        extended_info = {"fan_module": fan_module_extended_info_dict}
+
+        # Creates internal json message request structure.
+        # this message will be passed to the StorageEnclHandler
         internal_json_msg = json.dumps(
-            {"sensor_request_type" : {
-                "enclosure_alert" : {
+            {"sensor_request_type": {
+                "enclosure_alert": {
                         "status": "update",
-                        "sensor_type" : RealStorFanSensor.SENSOR_TYPE,
+                        "sensor_type": RealStorFanSensor.SENSOR_TYPE,
                         "alert_type": alert_type,
                         "resource_type": RealStorFanSensor.RESOURCE_TYPE
-                    },
-                    "info"  : info,
-                    "extended_info": extended_info
-                    }
-            })
+                },
+                "info": info,
+                "extended_info": extended_info
+            }})
 
         return internal_json_msg
 
     def _send_json_message(self, json_msg):
         """Transmit data to RealStorMsgHandler to be processed and sent out"""
 
-        # Send the event to real stor message handler to generate json message and send out
+        # Send the event to real stor message handler
+        # to generate json message and send out
         self._write_internal_msgQ(RealStorEnclMsgHandler.name(), json_msg)
 
     def _log_IEM(self, info, extended_info):
         """Sends an IEM to logging msg handler"""
+
         json_data = json.dumps(
             {"sensor_request_type": {
                 "enclosure_alert": {
                         "status": "update",
                         "sensor_type": RealStorFanSensor.SENSOR_TYPE,
                         "resource_type": RealStorFanSensor.RESOURCE_TYPE
-                    },
-                    "info": info,
-                    "extended_info": extended_info
-                    }
-                }, sort_keys=True)
+                },
+                "info": info,
+                "extended_info": extended_info
+                }}, sort_keys=True)
 
-        # Send the event to real stor message handler to generate json message and send out
-        internal_json_msg=json.dumps(
-                {'actuator_request_type': {'logging': {'log_level': 'LOG_WARNING', 'log_type': 'IEM', 'log_msg': '{}'.format(json_data)}}})
+        # Send the event to real stor message handler
+        # to generate json message and send out
+        internal_json_msg = json.dumps(
+                {'actuator_request_type':
+                    {'logging':
+                        {'log_level': 'LOG_WARNING', 'log_type': 'IEM',
+                            'log_msg': '{}'.format(json_data)}}})
 
         # Send the event to logging msg handler to send IEM message to journald
         self._write_internal_msgQ(LoggingMsgHandler.name(), internal_json_msg)
@@ -294,7 +352,8 @@ class RealStorFanSensor(ScheduledModuleThread, InternalMsgQ):
 
         # Check if filename is blank or None
         if not filename or len(filename.strip()) <= 0:
-            logger.critical("No filename is configured to save faulty fan module data")
+            logger.critical(
+                "No filename is configured to save faulty fan module data")
             return
 
         # Check if directory exists
@@ -305,7 +364,7 @@ class RealStorFanSensor(ScheduledModuleThread, InternalMsgQ):
 
         try:
             with open(filename, "w") as fan_module_file:
-                json.dump(self._faulty_fan_list, fan_module_file)
+                json.dump(self._faulty_fan_modules_list, fan_module_file)
         except IOError as io_error:
             error_number = io_error.errno
             if error_number == errno.EACCES:
@@ -322,12 +381,14 @@ class RealStorFanSensor(ScheduledModuleThread, InternalMsgQ):
     def _load_faulty_fan_modules_from_file(self, filename):
         """Loads previous faulty Fan Module data from file if exists"""
         if not filename or len(filename.strip()) <= 0:
-            logger.critical("No filename is configured to load faulty Fan Module data from")
+            logger.critical(
+                "No filename is configured to load faulty Fan Module data from"
+                )
             return
         try:
             with open(filename) as fan_module_file:
                 data = fan_module_file.read()
-                self._faulty_fan_list = json.loads(data)
+                self._faulty_fan_modules_list = json.loads(data)
         except IOError as io_error:
             error_number = io_error.errno
             if error_number == errno.EACCES:
@@ -336,14 +397,14 @@ class RealStorFanSensor(ScheduledModuleThread, InternalMsgQ):
             elif error_number == errno.ENOENT:
                 logger.warn(
                     "File not found: {0}. Creating a new...".format(filename))
-                self._save_faulty_fan_modules_to_file(self._faulty_fan_file_path)
+                self._save_faulty_fan_modules_to_file(
+                                                    self._faulty_fan_file_path)
             else:
                 logger.critical("Error in reading: {0}".format(io_error))
         except ValueError as value_error:
             logger.critical(value_error)
         except Exception as exception:
             logger.exception("Error in reading file: {0}".format(exception))
-
 
     def _makedirectories(self, path):
         """Creates leaf directory with required parents"""

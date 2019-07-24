@@ -81,23 +81,31 @@ def then_i_get_the_sensor_json_response_message(step, sensor):
             msgType = ingressMsg.get("sensor_response_type")
             assert(msgType != None)
 
-            if sensor == "enclosure_fan_alert":
-                fan_sensor_msg = ingressMsg.get("sensor_response_type").get("enclosure_fan_alert")
+            if sensor == "enclosure_fan_module_alert":
+                fan_sensor_msg = ingressMsg.get("sensor_response_type").get("enclosure_fan_module_alert")
                 assert(fan_sensor_msg is not None)
                 assert(fan_sensor_msg.get("alert_type") is not None)
                 assert(fan_sensor_msg.get("resource_type") is not None)
-                assert(fan_sensor_msg.get("info") is not None)
-                assert(fan_sensor_msg.get("info").get("name") is not None)
-                assert(fan_sensor_msg.get("info").get("description") is not None)
-                assert(fan_sensor_msg.get("info").get("part-number") is not None)
-                assert(fan_sensor_msg.get("info").get("serial-number") is not None)
-                assert(fan_sensor_msg.get("info").get("revision") is not None)
-                assert(fan_sensor_msg.get("info").get("mfg-date") is not None)
-                assert(fan_sensor_msg.get("info").get("mfg-vendor-id") is not None)
-                assert(fan_sensor_msg.get("info").get("fru-location") is not None)
-                assert(fan_sensor_msg.get("info").get("fru-status") is not None)
-                assert(fan_sensor_msg.get("info").get("enclosure-id") is not None)
-
+                assert(fan_sensor_msg.get("info").get("fan_module") is not None)
+                fan_module = fan_sensor_msg.get("info").get("fan_module")
+                assert(fan_module.get("name") is not None)
+                assert(fan_module.get("location") is not None)
+                assert(fan_module.get("status") is not None)
+                assert(fan_module.get("health") is not None)
+                assert(fan_module.get("health-reason") is not None)
+                assert(fan_module.get("health-recommendation") is not None)
+                assert(fan_module.get("enclosure-id") is not None)
+                if fan_sensor_msg.get("info").get("fan_module").get("fans") is not None:
+                    fans = fan_sensor_msg.get("info").get("fan_module").get("fans")
+                    assert(fans.get("durable-id") is not None)
+                    assert(fans.get("status") is not None)
+                    assert(fans.get("position") is not None)
+                    assert(fans.get("part-number") is not None)
+                    assert(fans.get("fw-revision") is not None)
+                    assert(fans.get("hw-revision") is not None)
+                    assert(fans.get("health") is not None)
+                    assert(fans.get("health-reason") is not None)
+                    assert(fans.get("health-recommendation") is not None)
             else:
                 assert False, "Response not recognized"
         except Exception as exception:

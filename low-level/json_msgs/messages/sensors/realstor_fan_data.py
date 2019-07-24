@@ -1,8 +1,8 @@
 """
  ****************************************************************************
  Filename:          realstor_fan_data.py
- Description:       Defines the JSON message transmitted by the real_stor_encl_msg_handler
-                    for changes in FRU.
+ Description:       Defines the JSON message transmitted by the
+                    real_stor_encl_msg_handler for changes in FRU.
  Creation Date:     10/07/2019
  Author:            Madhura Mande
 
@@ -11,7 +11,8 @@
  The code contained herein is CONFIDENTIAL to Seagate Technology, LLC.
  Portions are also trade secret. Any use, duplication, derivation, distribution
  or disclosure of this code, for any reason, not expressly authorized is
- prohibited. All other rights are expressly reserved by Seagate Technology, LLC.
+ prohibited. All other rights are expressly reserved by Seagate Technology,
+ LLC.
  ****************************************************************************
 """
 
@@ -19,20 +20,21 @@ import json
 
 from json_msgs.messages.sensors.base_sensors_msg import BaseSensorMsg
 
-class RealStorFandataMsg(BaseSensorMsg):
 
-    SENSOR_RESPONSE_TYPE = "enclosure_fan_alert"
-    MESSAGE_VERSION  = "1.0.0"
+class RealStorFanDataMsg(BaseSensorMsg):
+
+    SENSOR_RESPONSE_TYPE = "enclosure_fan_module_alert"
+    MESSAGE_VERSION = "1.0.0"
 
     def __init__(self, alert_type,
-                       resource_type,
-                       info,
-                       extended_info,
-                       username  = "SSPL-LL",
-                       signature = "N/A",
-                       time      = "N/A",
-                       expires   = -1):
-        super(RealStorFandataMsg, self).__init__()
+                 resource_type,
+                 info,
+                 extended_info,
+                 username="SSPL-LL",
+                 signature="N/A",
+                 time="N/A",
+                 expires=-1):
+        super(RealStorFanDataMsg, self).__init__()
 
         self._alert_type = alert_type
         self._resource_type = resource_type
@@ -41,49 +43,57 @@ class RealStorFandataMsg(BaseSensorMsg):
         self._time = time
         self._expires = expires
 
-        self._name = info.get("name")
-        self._description = info.get("description")
-        self._part_number = info.get("part-number")
-        self._serial_number = info.get("serial-number")
-        self._revision = info.get("revision")
-        self._mfg_date = info.get("mfg-date")
-        self._mfg_vendor_id = info.get("mfg-vendor-id")
-        self._fru_location = info.get("fru-location")
-        self._fru_status = info.get("fru-status")
-        self._enclosure_id = info.get("enclosure-id")
+        self._fan_module_info = info.get("fan_module")
+        self._fan_module_extended_info = extended_info.get("fan_module")
 
-        self._json = {"title" : self.TITLE,
-                      "description" : self.DESCRIPTION,
-                      "username" : self._username,
-                      "signature" : self._signature,
-                      "time" : self._time,
-                      "expires" : self._expires,
+        self._name = self._fan_module_info.get("name")
+        self._status = self._fan_module_info.get("status")
+        self._location = self._fan_module_info.get("location")
+        self._enclosure_id = self._fan_module_info.get("enclosure-id")
+        self._health = self._fan_module_info.get("health")
+        self._health_reason = self._fan_module_info.get("health-reason")
+        self._health_recommendation = \
+            self._fan_module_info.get("health-recommendation")
+        self._fans = self._fan_module_info.get("fans", [])
 
-                      "message" : {
+        self._position = self._fan_module_extended_info.get("position")
+        self._durable_id = self._fan_module_extended_info.get("durable-id")
+
+        self._json = {"title": self.TITLE,
+                      "description": self.DESCRIPTION,
+                      "username": self._username,
+                      "signature": self._signature,
+                      "time": self._time,
+                      "expires": self._expires,
+
+                      "message": {
                           "sspl_ll_msg_header": {
-                                "schema_version" : self.SCHEMA_VERSION,
-                                "sspl_version" : self.SSPL_VERSION,
-                                "msg_version" : self.MESSAGE_VERSION,
+                                "schema_version": self.SCHEMA_VERSION,
+                                "sspl_version": self.SSPL_VERSION,
+                                "msg_version": self.MESSAGE_VERSION
                                 },
                           "sensor_response_type": {
                                 self.SENSOR_RESPONSE_TYPE: {
                                     "alert_type": self._alert_type,
                                     "resource_type": self._resource_type,
                                     "info": {
-                                        "name": self._name,
-                                        "description": self._description,
-                                        "part-number": self._part_number,
-                                        "serial-number": self._serial_number,
-                                        "revision": self._revision,
-                                        "mfg-date": self._mfg_date,
-                                        "mfg-vendor-id": self._mfg_vendor_id,
-                                        "fru-location": self._fru_location,
-                                        "fru-status": self._fru_status,
-                                        "enclosure-id": self._enclosure_id
-                                    },
+                                        "fan_module": {
+                                            "name": self._name,
+                                            "status": self._status,
+                                            "location": self._location,
+                                            "health": self._health,
+                                            "health-reason":
+                                                self._health_reason,
+                                            "health-recommendation":
+                                                self._health_recommendation,
+                                            "enclosure-id": self._enclosure_id,
+                                            "fans": self._fans
+                                        }},
                                     "extended_info": {
-                                        "configuration-serial-number": extended_info
-                                    }
+                                        "fan_module": {
+                                            "position": self._position,
+                                            "durable-id": self._durable_id
+                                        }}
                                     }
                                 }
                           }
