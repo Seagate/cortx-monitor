@@ -13,8 +13,10 @@
  prohibited. All other rights are expressly reserved by Seagate Technology, LLC.
  ****************************************************************************
 """
+import errno
 import hashlib
 import json
+import os
 
 import requests
 from zope.interface import implements
@@ -46,6 +48,18 @@ class RealStorFanSensor(ScheduledModuleThread, InternalMsgQ):
     RESOURCE_TYPE = "fru"
     SENSOR_TYPE = "enclosure_fan_alert"
 
+    # Keys for disk volume to persist faulty FanModule data
+    VOLUME_LOCATION_KEY = "data_path"
+
+    SYSTEM_INFORMATION_KEY = "SYSTEM_INFORMATION"
+
+    # Enclosure directory name
+    ENCLOSURE_DIR = "encl"
+
+
+    # Fan Modules directory name
+    FAN_MODULES_DIR = "fanmodules"
+
     @staticmethod
     def name():
         """@return: name of the monitoring module."""
@@ -63,7 +77,13 @@ class RealStorFanSensor(ScheduledModuleThread, InternalMsgQ):
         self._api_login_url = None
         self._session_key = None
         self._fan_list = {}
+        self._faulty_fan_file_path = None
         self._faulty_fan_list = {}
+        self._common_storage_location = None  # Common storage location for RAS
+
+        # Absolute path to store faulty FanModule data including common
+        # storage location.
+        self._dir_location = None
 
     def initialize(self, conf_reader, msgQlist, products):
         """initialize configuration reader and internal msg queues"""
@@ -91,10 +111,28 @@ class RealStorFanSensor(ScheduledModuleThread, InternalMsgQ):
         self._password = self._conf_reader._get_value_with_default(
             self.REALSTORENCLOSURE_KEY, self.CONTROLLER_PASSWORD_KEY, '!manage')
 
+        # Get common storage location for persisting data
+        self._common_storage_location = \
+            self._conf_reader._get_value_with_default(
+                self.SYSTEM_INFORMATION_KEY, self.VOLUME_LOCATION_KEY,
+                "/var/sspl/data")
+
         self._api_base_url = "http://{0}:{1}/api".format(self._controller_ip,
             self._controller_port)
         self._api_login_url = "{0}/login".format(self._api_base_url)
 
+        self._dir_location = os.path.join(
+            self._common_storage_location, self.ENCLOSURE_DIR,
+            "frus", self.FAN_MODULES_DIR)
+
+        # Create internal directory structure  if not present
+        self._makedirectories(self._dir_location)
+        # Persistence file location. This file stores faulty FanModule data
+        self._faulty_fan_file_path = os.path.join(
+            self._dir_location, "fanmodule_data.json")
+
+        # Load faulty Fan Module data from file if available
+        self._load_faulty_fan_modules_from_file(self._faulty_fan_file_path)
         try:
             self._session_key = self._do_login()
         except KeyError as key_error:
@@ -114,6 +152,8 @@ class RealStorFanSensor(ScheduledModuleThread, InternalMsgQ):
         try:
             self._fan_module_list = self._get_fan_module_list()
             alert_type = None
+            # Flag to indicate if there is a change in _faulty_fan_list
+            state_changed = False
             for fan_module in self._fan_module_list:
                 serial_number = fan_module["serial-number"]
                 fru_status = fan_module["fru-status"]
@@ -133,6 +173,10 @@ class RealStorFanSensor(ScheduledModuleThread, InternalMsgQ):
                     internal_json_message = self._create_internal_json_message(fan_module, alert_type)
                     self._send_json_message(internal_json_message)
                     alert_type = None
+                # Persist faulty Fan Module list to file only if something is changed
+                if state_changed:
+                    self._save_faulty_fan_modules_to_file(self._faulty_fan_file_path)
+                    state_changed = False
         except Exception as ae:
             logger.exception(ae)
 
@@ -180,13 +224,6 @@ class RealStorFanSensor(ScheduledModuleThread, InternalMsgQ):
                     fan_module_list.append(fru)
             api_fan_module_list = fan_module_list
         return api_fan_module_list
-
-    def _get_fan_list(self):
-        """return fan list using API /show/fans"""
-        api_fan_list = {}
-        url = "{0}/show/fans".format(self._api_base_url)
-        api_fan_list = self._get_api_response(url, {"dataType": "json","sessionKey": self._session_key})
-        return api_fan_list
 
     def _create_internal_json_message(self, fan_module, alert_type):
         """creates internal json structure which is sent to realstor_msg_handler
@@ -251,6 +288,75 @@ class RealStorFanSensor(ScheduledModuleThread, InternalMsgQ):
 
         # Send the event to logging msg handler to send IEM message to journald
         self._write_internal_msgQ(LoggingMsgHandler.name(), internal_json_msg)
+
+    def _save_faulty_fan_modules_to_file(self, filename):
+        """Stores previous faulty Fan Module data to file"""
+
+        # Check if filename is blank or None
+        if not filename or len(filename.strip()) <= 0:
+            logger.critical("No filename is configured to save faulty fan module data")
+            return
+
+        # Check if directory exists
+        directory_path = os.path.join(os.path.dirname(filename), "")
+        if not os.path.isdir(directory_path):
+            logger.critical("Path doesn't exists: {0}".format(directory_path))
+            return
+
+        try:
+            with open(filename, "w") as fan_module_file:
+                json.dump(self._faulty_fan_list, fan_module_file)
+        except IOError as io_error:
+            error_number = io_error.errno
+            if error_number == errno.EACCES:
+                logger.critical(
+                    "Permission denied for writing to: {0}".format(filename))
+            elif error_number == errno.ENOENT:
+                logger.critical("File not found: {0}".format(filename))
+                logger.exception(io_error)
+            else:
+                logger.critical("Error in writing file: {0}".format(io_error))
+        except Exception as exception:
+            logger.exception("Error in writing file: {0}".format(exception))
+
+    def _load_faulty_fan_modules_from_file(self, filename):
+        """Loads previous faulty Fan Module data from file if exists"""
+        if not filename or len(filename.strip()) <= 0:
+            logger.critical("No filename is configured to load faulty Fan Module data from")
+            return
+        try:
+            with open(filename) as fan_module_file:
+                data = fan_module_file.read()
+                self._faulty_fan_list = json.loads(data)
+        except IOError as io_error:
+            error_number = io_error.errno
+            if error_number == errno.EACCES:
+                logger.critical(
+                    "Permission denied for reading from {0}".format(filename))
+            elif error_number == errno.ENOENT:
+                logger.warn(
+                    "File not found: {0}. Creating a new...".format(filename))
+                self._save_faulty_fan_modules_to_file(self._faulty_fan_file_path)
+            else:
+                logger.critical("Error in reading: {0}".format(io_error))
+        except ValueError as value_error:
+            logger.critical(value_error)
+        except Exception as exception:
+            logger.exception("Error in reading file: {0}".format(exception))
+
+
+    def _makedirectories(self, path):
+        """Creates leaf directory with required parents"""
+        try:
+            os.makedirs(path)
+        except OSError as os_error:
+            if os_error.errno == errno.EEXIST and os.path.isdir(path):
+                pass
+            elif os_error.errno == errno.EACCES:
+                logger.critical(
+                    "Permission denied while creating path: {0}".format(path))
+            else:
+                raise
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""
