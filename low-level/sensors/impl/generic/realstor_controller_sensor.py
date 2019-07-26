@@ -16,6 +16,8 @@
 import hashlib
 import json
 import re
+import errno
+import os
 
 import requests
 from zope.interface import implements
@@ -28,6 +30,7 @@ from sensors.Icontroller import IControllersensor
 
 
 class RealStorControllerSensor(ScheduledModuleThread, InternalMsgQ):
+    """Monitors Controller data using RealStor API"""
 
     implements(IControllersensor)
 
@@ -35,6 +38,7 @@ class RealStorControllerSensor(ScheduledModuleThread, InternalMsgQ):
     PRIORITY = 1
 
     STORAGE_ENCLOSURE_KEY = "STORAGE_ENCLOSURE"
+    SYSTEM_INFORMATION_KEY = "SYSTEM_INFORMATION"
 
     # Keys for connections
     CONTROLLER_IP_KEY = "primary_controller_ip"
@@ -43,6 +47,15 @@ class RealStorControllerSensor(ScheduledModuleThread, InternalMsgQ):
     # Keys for credentials
     CONTROLLER_USERNAME_KEY = "user"
     CONTROLLER_PASSWORD_KEY = "password"
+
+    # Keys for disk volume to persist faulty Controller data
+    VOLUME_LOCATION_KEY = "data_path"
+
+    # Enclosure directory name
+    ENCLOSURE_DIR = "encl"
+
+    # Controllers directory name
+    CONTROLLERS_DIR = "controllers"
 
     #generic fields list
     controller_generic = ["object-name", "controller-id", "serial-number", "hardware-version",
@@ -89,9 +102,14 @@ class RealStorControllerSensor(ScheduledModuleThread, InternalMsgQ):
         self._username = None
         self._password = None
         self._session_key = None
+        self._faulty_controller_file_path = None
+        self._common_storage_location = None  # Common storage location for RAS
+
+        # Absolute path to store faulty Controller data including common
+        # storage location.
+        self._dir_location = None
 
         # Holds Controllers with faults. Used for future reference.
-        # TODO: Read this from file
         self._previously_faulty_controllers = {}
 
     def initialize(self, conf_reader, msgQlist, products):
@@ -121,10 +139,29 @@ class RealStorControllerSensor(ScheduledModuleThread, InternalMsgQ):
             self.STORAGE_ENCLOSURE_KEY, self.CONTROLLER_PASSWORD_KEY,
             '!manage')
 
+        # Get common storage location for persisting data
+        self._common_storage_location = \
+            self._conf_reader._get_value_with_default(
+                self.SYSTEM_INFORMATION_KEY, self.VOLUME_LOCATION_KEY,
+                "/var/sspl/data")
+
+        # Form an base API and login URL
         self._api_base_url = "http://{0}:{1}/api".format(
             self._controller_ip, self._port)
         self._login_url = "{0}/login".format(self._api_base_url)
 
+        self._dir_location = os.path.join(
+            self._common_storage_location, self.ENCLOSURE_DIR, "frus", self.CONTROLLERS_DIR)
+
+        # Create internal directory structure  if not present
+        self._makedirectories(self._dir_location)
+
+        # Persistence file location. This file stores faulty Controller data
+        self._faulty_controller_file_path = os.path.join(
+            self._dir_location, "controllerdata.json")
+
+        # Load faulty Controller data from file if available
+        self._load_faulty_controllers_from_file(self._faulty_controller_file_path)
         try:
             self._session_key = self._login(self._username, self._password)
         except KeyError as key_error:
@@ -133,9 +170,10 @@ class RealStorControllerSensor(ScheduledModuleThread, InternalMsgQ):
             logger.exception(exception)
 
     def read_data(self):
-        """Return the Current Controller information"""
-        faulty_controllers = self._get_msgs_for_faulty_controllers(send_message=False)
-        return faulty_controllers
+        """This method is part of interface. Currently it is not
+        in use.
+        """
+        return {}
 
     def run(self):
         """Run the sensor on its own thread"""
@@ -208,6 +246,8 @@ class RealStorControllerSensor(ScheduledModuleThread, InternalMsgQ):
         controller_health = None
         durable_id = None
         alert_type = ""
+        # Flag to indicate if there is a change in _previously_faulty_controllers
+        state_changed = False
         for controller in controllers:
             controller_health = controller["health"].lower()
             controller_status = controller["status"].lower()
@@ -220,6 +260,7 @@ class RealStorControllerSensor(ScheduledModuleThread, InternalMsgQ):
                         alert_type = "missing"
                     self._previously_faulty_controllers[durable_id] = {
                         "health": controller_health, "alert_type": alert_type}
+                    state_changed = True
                     internal_json_msg = self._create_internal_msg(
                         controller, alert_type)
                     faulty_controller_messages.append(internal_json_msg)
@@ -231,6 +272,7 @@ class RealStorControllerSensor(ScheduledModuleThread, InternalMsgQ):
                     alert_type = "fault"
                     self._previously_faulty_controllers[durable_id] = {
                         "health": controller_health, "alert_type": alert_type}
+                    state_changed = True
                     internal_json_msg = self._create_internal_msg(
                         controller, alert_type)
                     faulty_controller_messages.append(internal_json_msg)
@@ -252,6 +294,11 @@ class RealStorControllerSensor(ScheduledModuleThread, InternalMsgQ):
                         if send_message:
                             self._send_json_msg(internal_json_msg)
                     del self._previously_faulty_controllers[durable_id]
+                    state_changed = True
+            # Persist faulty Controller list to file only if something is changed
+            if state_changed:
+                self._save_faulty_controllers_to_file(self._faulty_controller_file_path)
+                state_changed = False
             alert_type = ""
         return faulty_controller_messages
 
@@ -375,6 +422,76 @@ class RealStorControllerSensor(ScheduledModuleThread, InternalMsgQ):
         if not json_msg:
             return
         self._write_internal_msgQ(RealStorEnclMsgHandler.name(), json_msg)
+
+    def _save_faulty_controllers_to_file(self, filename):
+        """Stores previous faulty Controller data instance member to file.
+        """
+        # Check if filename is blank or None
+        if not filename or len(filename.strip()) <= 0:
+            logger.critical("No filename is configured to save faulty Controller data")
+            return
+
+        # Check if directory exists
+        directory_path = os.path.join(os.path.dirname(filename), "")
+        if not os.path.isdir(directory_path):
+            logger.critical("Path doesn't exists: {0}".format(directory_path))
+            return
+
+        try:
+            with open(filename, "w") as controller_file:
+                json.dump(self._previously_faulty_controllers, controller_file)
+        except IOError as io_error:
+            error_number = io_error.errno
+            if error_number == errno.EACCES:
+                logger.critical(
+                    "Permission denied for writing to: {0}".format(filename))
+            elif error_number == errno.ENOENT:
+                logger.critical("File not found: {0}".format(filename))
+                logger.exception(io_error)
+            else:
+                logger.critical("Error in writing file: {0}".format(io_error))
+        except Exception as exception:
+            logger.exception("Error in writing file: {0}".format(exception))
+
+    def _load_faulty_controllers_from_file(self, filename):
+        """Loads previous faulty Controller data instance member from file
+        if exists.
+        """
+        if not filename or len(filename.strip()) <= 0:
+            logger.critical("No filename is configured to save faulty Controller from")
+            return
+        try:
+            with open(filename) as controller_file:
+                data = controller_file.read()
+                self._previously_faulty_controllers = json.loads(data)
+        except IOError as io_error:
+            error_number = io_error.errno
+            if error_number == errno.EACCES:
+                logger.critical(
+                    "Permission denied for reading from {0}".format(filename))
+            elif error_number == errno.ENOENT:
+                logger.warn(
+                    "File not found: {0}. Creating a new...".format(filename))
+                self._save_faulty_controllers_to_file(self._faulty_controller_file_path)
+            else:
+                logger.critical("Error in reading: {0}".format(io_error))
+        except ValueError as value_error:
+            logger.critical(value_error)
+        except Exception as exception:
+            logger.exception("Error in reading file: {0}".format(exception))
+
+    def _makedirectories(self, path):
+        """Creates leaf directory with required parents"""
+        try:
+            os.makedirs(path)
+        except OSError as os_error:
+            if os_error.errno == errno.EEXIST and os.path.isdir(path):
+                pass
+            elif os_error.errno == errno.EACCES:
+                logger.critical(
+                    "Permission denied while creating path: {0}".format(path))
+            else:
+                raise
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""
