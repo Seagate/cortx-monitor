@@ -19,6 +19,7 @@ import json
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
+from framework.base.sspl_constants import enabled_products
 
 # Modules that receive messages from this module
 from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
@@ -47,7 +48,7 @@ class LoggingMsgHandler(ScheduledModuleThread, InternalMsgQ):
         super(LoggingMsgHandler, self).__init__(self.MODULE_NAME,
                                                   self.PRIORITY)
 
-    def initialize(self, conf_reader, msgQlist, products):
+    def initialize(self, conf_reader, msgQlist, product):
         """initialize configuration reader and internal msg queues"""
         # Initialize ScheduledMonitorThread
         super(LoggingMsgHandler, self).initialize(conf_reader)
@@ -58,11 +59,11 @@ class LoggingMsgHandler(ScheduledModuleThread, InternalMsgQ):
         # Read in configuration values
         self._conf_reader = conf_reader
         self._read_config()
-        self._import_products(products)
+        self._import_products(product)
 
-    def _import_products(self, products):
+    def _import_products(self, product):
         """Import classes based on which product is being used"""
-        if ("CS-A" in products) or ("EES" in products):
+        if product in enabled_products:
             from loggers.impl.iem_logger import IEMlogger
             self._iem_logger = IEMlogger(self._conf_reader)
 
@@ -111,7 +112,7 @@ class LoggingMsgHandler(ScheduledModuleThread, InternalMsgQ):
             self._log_debug("_process_msg, msg_type: IEM")
             if self._iem_log_locally == "true":
                 result = self._iem_logger.log_msg(jsonMsg)
-                self._log_debug("Log IEM results: %s" % result)        
+                self._log_debug("Log IEM results: %s" % result)
 
         if log_type == "HDS":
             # Retrieve the serial number of the drive
@@ -154,7 +155,7 @@ class LoggingMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
     def _route_IEM(self, jsonMsg):
         # Send the IEM to the logging msg handler to be processed
-        
+
         # Get the optional log_level if it exists in msg
         if jsonMsg.get("actuator_request_type").get("logging").get("log_level") is not None:
             log_level = jsonMsg.get("actuator_request_type").get("logging").get("log_level")

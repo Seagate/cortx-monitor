@@ -1,0 +1,132 @@
+# Version 1.0.0
+[SSPL-LL_SETTING]
+core_processors=RabbitMQegressProcessor, RabbitMQingressProcessor, LoggingProcessor
+
+message_handlers=DiskMsgHandler, LoggingMsgHandler, ServiceMsgHandler, NodeDataMsgHandler, NodeControllerMsgHandler
+
+sensors=ServiceWatchdog, NodeData, RAIDsensor, HPIMonitor, SNMPtraps
+
+actuators=Service, Login, RaritanPDU, RAIDactuator, IPMI, Hdparm, HPIactuator, CommandLine
+
+
+[SYSTEM_INFORMATION]
+operating_system=centos7
+product=CS-A
+cli_type=CS-A
+setup=hw
+
+[RABBITMQINGRESSPROCESSOR]
+virtual_host=SSPL
+queue_name=actuator-req-queue
+exchange_name=sspl-in
+routing_key=actuator-req-key
+username=sspluser
+password=sspl4ever
+primary_rabbitmq_host=localhost
+
+[RABBITMQEGRESSPROCESSOR]
+virtual_host=SSPL
+queue_name=sensor-queue
+exchange_name=sspl-out
+routing_key=sensor-key
+ack_queue_name=actuator-resp-queue
+ack_exchange_name=sspl-out
+ack_routing_key=actuator-resp-key
+username=sspluser
+password=sspl4ever
+message_signature_username=sspl-ll
+message_signature_token=ALOIUD986798df69a8koDISLKJ282983
+message_signature_expires=3600
+iem_route_addr=
+iem_route_exchange_name=sspl-out
+primary_rabbitmq_host=localhost
+
+[LOGGINGPROCESSOR]
+virtual_host=SSPL
+queue_name=iem-queue
+exchange_name=sspl-in
+routing_key=iem-key
+username=sspluser
+password=sspl4ever
+primary_rabbitmq_host=localhost
+
+[LOGGINGMSGHANDLER]
+iem_routing_enabled=false
+iem_log_locally=true
+
+[DISKMSGHANDLER]
+dmreport_file=/tmp/sspl/drivemanager/drive_manager.json
+always_log_iem=False
+max_drivemanager_events=14
+max_drivemanager_event_interval=10
+
+[DRIVEMANAGER]
+threaded=true
+drivemanager_dir=/tmp/dcs/drivemanager
+diskinfo_file=/tmp/dcs/disk_info.json
+start_delay=300
+
+[HPIMONITOR]
+threaded=true
+hpimonitor_dir=/tmp/dcs/hpi
+start_delay=10
+
+[NODEDATAMSGHANDLER]
+transmit_interval=300
+units=MB
+
+[SYSTEMDWATCHDOG]
+threaded=true
+monitored_services=
+    m0t1fs@*.service, m0d@*.service, mero.service, mero-kernel.service,
+    mero-trace@kernel.service, mero-trace@mero-kernel.service,
+    mero-server@kernel.service, mero-server@mero-kernel.service,
+    mero-mkfs@kernel.service, mero-mkfs@mero-kernel.service,
+    rabbitmq-server.service, lnet.service, network.service,
+    openhpid.service, dcs-collector.service,
+    systemd-user-sessions.service, systemd-logind.service,
+    systemd-journald.service, systemd-sysctl.service,
+    crond.service, syslog.service, sshd.service, dbus.service
+smart_test_interval=999999999
+run_smart_on_start=False
+
+[XINITDWATCHDOG]
+threaded=true
+monitored_services=
+
+[RARITANPDU]
+user=admin
+pass=admin
+comm_port=/dev/ttyACM0
+IP_addr=172.16.1.222
+max_login_attempts=2
+
+[RAIDSENSOR]
+threaded=true
+RAID_status_file=/proc/mdstat
+
+[IPMI]
+user=admin
+pass=admin
+
+[SMTPSETTING]
+smptserver=mailhost.seagate.com
+recipient=malhar.vora@seagate.com
+smtp_port=25
+username=
+password=
+
+[LOGEMAILER]
+priority=LOG_ERR
+
+[SMRDRIVEDATA]
+threaded=true
+logging_interval=3600
+
+[SNMPTRAPS]
+threaded=true
+enabled_traps=*
+enabled_MIBS=PDU2-MIB
+bind_ip=service
+bind_port=1620
+

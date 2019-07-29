@@ -2,18 +2,18 @@
 [SSPL-LL_SETTING]
 core_processors=RabbitMQegressProcessor, RabbitMQingressProcessor, LoggingProcessor
 
-message_handlers=DiskMsgHandler, LoggingMsgHandler, ServiceMsgHandler, NodeDataMsgHandler, NodeControllerMsgHandler
+message_handlers=DiskMsgHandler, LoggingMsgHandler, ServiceMsgHandler, NodeDataMsgHandler, NodeControllerMsgHandler, RealStorEnclMsgHandler
 
-sensors=ServiceWatchdog, NodeData, RAIDsensor, HPIMonitor, SNMPtraps
+sensors=ServiceWatchdog, NodeData, RAIDsensor, SNMPtraps, HPIMonitor, RealStorFanSensor, RealStorPSUSensor, RealStorControllerSensor, RealStorDiskSensor, RealStorSideplaneExpanderSensor
 
-actuators=Service, Login, RaritanPDU, RAIDactuator, IPMI, Hdparm, HPIactuator, CommandLine
-
+actuators=Service, RAIDactuator, Hdparm, RaritanPDU, CommandLine, Login, IPMI, HPIactuator
 
 [SYSTEM_INFORMATION]
 operating_system=centos7
-products=CS-A
+product=CS-A
 cli_type=CS-A
 setup=hw
+data_path=/var/sspl/data/
 
 [RABBITMQINGRESSPROCESSOR]
 virtual_host=SSPL
@@ -77,7 +77,17 @@ units=MB
 
 [SYSTEMDWATCHDOG]
 threaded=true
-monitored_services=m0t1fs@*.service, m0d@*.service, mero.service, mero-kernel.service, mero-trace@kernel.service, mero-server@mero-kernel.service, mero-mkfs@mero-kernel.service, mero-trace@mero-kernel.service, mero-server@kernel.service, mero-mkfs@kernel.service, halond.service, dcs-collector.service, rabbitmq-server.service, lnet.service, network.service, openhpid.service, systemd-user-sessions.service, systemd-journald.service, systemd-sysctl.service, systemd-logind.service, crond.service, syslog.service, sshd.service, dbus.service
+monitored_services=
+    m0t1fs@*.service, m0d@*.service, mero.service, mero-kernel.service,
+    mero-trace@kernel.service, mero-trace@mero-kernel.service,
+    mero-server@kernel.service, mero-server@mero-kernel.service,
+    mero-mkfs@kernel.service, mero-mkfs@mero-kernel.service,
+    systemd-user-sessions.service, systemd-logind.service,
+    systemd-journald.service, systemd-sysctl.service,
+    crond.service, syslog.service, sshd.service,
+    rabbitmq-server.service, lnet.service, network.service,
+    mcollective.service, dbus.service,
+    openhpid.service, dcs-collector.service, zabbix*.service
 smart_test_interval=999999999
 run_smart_on_start=False
 
@@ -121,3 +131,32 @@ enabled_MIBS=PDU2-MIB
 bind_ip=service
 bind_port=1620
 
+[STORAGE_ENCLOSURE]
+primary_controller_ip=127.0.0.1
+primary_controller_port=80
+secondary_controller_ip=127.0.0.1
+secondary_controller_port=80
+user=xxxxx
+password=xxxxx
+mgmt_interface=cliapi
+
+[REALSTORSENSORS]
+polling_frequency=30
+
+#TODO Club common configs (ex:threaded) for set of modules
+#like RealStor Sensors
+[REALSTORPSUSENSOR]
+threaded=true
+
+[REALSTORFANSENSOR]
+threaded=true
+
+[REALSTORCONTROLLERSENSOR]
+threaded=true
+
+[REALSTORDISKSENSOR]
+threaded=true
+polling_frequency_override=0
+
+[REALSTORSIDEPLANEEXPANDERSENSOR]
+threaded=true

@@ -21,6 +21,7 @@ import time
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
+from framework.base.sspl_constants import enabled_products
 
 from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 from json_msgs.messages.actuators.ack_response import AckResponseMsg
@@ -49,7 +50,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
         super(NodeControllerMsgHandler, self).__init__(self.MODULE_NAME,
                                                   self.PRIORITY)
 
-    def initialize(self, conf_reader, msgQlist, products):
+    def initialize(self, conf_reader, msgQlist, product):
         """initialize configuration reader and internal msg queues"""
         # Initialize ScheduledMonitorThread
         super(NodeControllerMsgHandler, self).initialize(conf_reader)
@@ -71,12 +72,12 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
         self._hdparm_actuator       = None
         self._command_line_actuator = None
 
-        self._import_products(products)
+        self._import_products(product)
         self.setup = self._conf_reader._get_value_with_default(self.SYS_INFORMATION, self.SETUP, "ssu")
 
-    def _import_products(self, products):
+    def _import_products(self, product):
         """Import classes based on which product is being used"""
-        if ("CS-A" in products) or ("EES" in products):
+        if product in enabled_products:
             from zope.component import queryUtility
             self._queryUtility = queryUtility
 
@@ -165,8 +166,9 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                         self._HPI_actuator = HPI_actuator_class(self._conf_reader)
                     else:
                         logger.warn("HPIActuator not loaded")
-                        json_msg = AckResponseMsg(node_request, NodeControllerMsgHandler.UNSUPPORTED_REQUEST, uuid).getJson()
-                        self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+                        if self._product in enabled_products:
+                            json_msg = AckResponseMsg(node_request, NodeControllerMsgHandler.UNSUPPORTED_REQUEST, uuid).getJson()
+                            self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
                         return
 
                     self._log_debug("_process_msg, _HPI_actuator name: %s" % self._HPI_actuator.name())
@@ -277,8 +279,9 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                         self._HPI_actuator = HPI_actuator_class(self._conf_reader)
                     else:
                         logger.warn("HPIActuator not loaded")
-                        json_msg = AckResponseMsg(node_request, NodeControllerMsgHandler.UNSUPPORTED_REQUEST, uuid).getJson()
-                        self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+                        if self._product in enabled_products:
+                            json_msg = AckResponseMsg(node_request, NodeControllerMsgHandler.UNSUPPORTED_REQUEST, uuid).getJson()
+                            self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
                         return
 
                     self._log_debug("_process_msg, _HPI_actuator name: %s" % self._HPI_actuator.name())
@@ -318,8 +321,9 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                         self._HPI_actuator = HPI_actuator_class(self._conf_reader)
                     else:
                         logger.warn("HPIActuator not loaded")
-                        json_msg = AckResponseMsg(node_request, NodeControllerMsgHandler.UNSUPPORTED_REQUEST, uuid).getJson()
-                        self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+                        if self._product in enabled_products:
+                            json_msg = AckResponseMsg(node_request, NodeControllerMsgHandler.UNSUPPORTED_REQUEST, uuid).getJson()
+                            self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
                         return
 
                     self._log_debug("_process_msg, _HPI_actuator name: %s" % self._HPI_actuator.name())
@@ -360,8 +364,9 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                         self._HPI_actuator = HPI_actuator_class(self._conf_reader)
                     else:
                         logger.warn("HPIActuator not loaded")
-                        json_msg = AckResponseMsg(node_request, NodeControllerMsgHandler.UNSUPPORTED_REQUEST, uuid).getJson()
-                        self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+                        if self._product in enabled_products:
+                            json_msg = AckResponseMsg(node_request, NodeControllerMsgHandler.UNSUPPORTED_REQUEST, uuid).getJson()
+                            self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
                         return
 
                     self._log_debug("_process_msg, _HPI_actuator name: %s" % self._HPI_actuator.name())

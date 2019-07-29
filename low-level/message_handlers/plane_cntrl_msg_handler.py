@@ -19,6 +19,7 @@ import syslog
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
+from framework.base.sspl_constants import cs_legacy_products
 
 # Modules that receive messages from this module
 from framework.rabbitmq.plane_cntrl_rmq_egress_processor import PlaneCntrlRMQegressProcessor
@@ -41,7 +42,7 @@ class PlaneCntrlMsgHandler(ScheduledModuleThread, InternalMsgQ):
         super(PlaneCntrlMsgHandler, self).__init__(self.MODULE_NAME,
                                                   self.PRIORITY)
 
-    def initialize(self, conf_reader, msgQlist, products):
+    def initialize(self, conf_reader, msgQlist, product):
         """initialize configuration reader and internal msg queues"""
         # Initialize ScheduledMonitorThread
         super(PlaneCntrlMsgHandler, self).initialize(conf_reader)
@@ -49,14 +50,13 @@ class PlaneCntrlMsgHandler(ScheduledModuleThread, InternalMsgQ):
         # Initialize internal message queues for this module
         super(PlaneCntrlMsgHandler, self).initialize_msgQ(msgQlist)
 
-        self._import_products(products)
-        
+        self._import_products(product)
+
         self._sedOpDispatch = None
 
-    def _import_products(self, products):
+    def _import_products(self, product):
         """Import classes based on which product is being used"""
-        if "CS-L" in products or \
-           "CS-G" in products:
+        if product in cs_legacy_products:
             from sedutil.sedDispatch import SedOpDispatch
             self._SedOpDispatch = SedOpDispatch
             self._SedOpDispatch.setLogger(logger)

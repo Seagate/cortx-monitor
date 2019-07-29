@@ -43,6 +43,8 @@ Installs SSPL
 mkdir -p ${RPM_BUILD_ROOT}/opt/seagate/sspl
 mkdir -p ${RPM_BUILD_ROOT}/etc/{systemd/system,dbus-1/system.d,polkit-1/rules.d,sspl-ll/templates/snmp}
 cp -afv files/etc ${RPM_BUILD_ROOT}/
+mkdir -p ${RPM_BUILD_ROOT}/opt/seagate/sspl/conf
+cp -afv files/opt ${RPM_BUILD_ROOT}/
 
 # Copy the service into /opt/seagate/sspl where it will execute from
 cp -rp __init__.py ${RPM_BUILD_ROOT}/opt/seagate/sspl
@@ -66,8 +68,11 @@ mkdir -p /var/sspl/data/
 chown -R sspl-ll /var/sspl/
 
 %post
-# Copy sspl_ll.conf if not present.
-[ -f /etc/sspl_ll.conf ] || cp /etc/sspl_ll.conf.sample /etc/sspl_ll.conf
+# NOTE: By default the sspl default conf file will not be copied.
+# The provisioner is supposed to copy the appropriate conf file based
+# on product/env and start SSPL with it.
+# TODO: Disable this default copy once the provisioners are ready.
+[ -f /etc/sspl.conf ] || cp /opt/seagate/sspl/conf/sspl.conf.EES /etc/sspl.conf
 
 # Copy init script
 [ -f /opt/seagate/sspl/sspl_init ] ||
@@ -105,10 +110,12 @@ rm -f /etc/dbus-1/system.d/sspl-ll_dbus_policy.conf
 %defattr(-,sspl-ll,root,-)
 /opt/seagate/sspl/__init__.py
 /opt/seagate/sspl/low-level
-/etc/sspl_ll.conf.sample
-/etc/sspl_ll.conf.sample.gw
-/etc/sspl_ll.conf.sample.ssu
-/etc/systemd/system/sspl-ll.service
+/opt/seagate/sspl/conf/sspl.conf.sample
+/opt/seagate/sspl/conf/sspl.conf.gw
+/opt/seagate/sspl/conf/sspl.conf.ssu
+/opt/seagate/sspl/conf/sspl.conf.EES
+/opt/seagate/sspl/conf/sspl-ll.service.EES
+/opt/seagate/sspl/conf/sspl-ll.service.sample
 
 %changelog
 * Fri Aug 10 2018 Ujjwal Lanjewar <ujjwal.lanjewar@seagate.com>

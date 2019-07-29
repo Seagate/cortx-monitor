@@ -17,6 +17,7 @@ vm_name=sspl-test
 sspl_install_dir=$1
 rpms_dir=$sspl_install_dir/sspl/dist/rpmbuild/RPMS
 test_dir=$sspl_install_dir/sspl/test/automated
+product=EES
 
 kill_mock_server()
 {
@@ -82,6 +83,7 @@ $sudo lxc-attach -n $vm_name  -- pip install lettuce
 $sudo lxc-attach -n $vm_name  -- yum --enablerepo=updates clean metadata
 $sudo lxc-attach -n $vm_name  -- bash -c "yum -y localinstall $rpms_dir/x86_64/libsspl_sec-*.rpm"
 $sudo lxc-attach -n $vm_name  -- bash -c "yum -y localinstall $rpms_dir/noarch/sspl-*.rpm"
+$sudo lxc-attach -n $vm_name  -- cp /opt/seagate/sspl/conf/sspl.conf."${product}" /etc/sspl.conf
 
 
 # Configure and start RabbitMQ
@@ -100,14 +102,14 @@ $sudo lxc-attach -n $vm_name  -- ./$sspl_install_dir/sspl/test/mock_server &
 
 # Change setup to vm in sspl configurations
 $sudo lxc-attach -n $vm_name  -- $sspl_install_dir/sspl/low-level/framework/sspl_init
-$sudo lxc-attach -n $vm_name  -- sed -i 's/setup=vm/setup=eos/g' /etc/sspl_ll.conf
+[ "${product}" = "EES" ] && $sudo lxc-attach -n $vm_name  -- sed -i 's/setup=vm/setup=eos/g' /etc/sspl.conf
 $sudo lxc-attach -n $vm_name  -- sed -i 's/primary_controller_port=80/primary_controller_port=8090/g' \
-/etc/sspl_ll.conf
+/etc/sspl.conf
 
 # Execute tests
 $sudo lxc-attach -n $vm_name -- bash -c "$test_dir/run_sspl-ll_tests.sh"
 
-# Stop the mock server 
+# Stop the mock server
 kill_mock_server
 
 retcode=$?

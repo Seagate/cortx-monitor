@@ -60,7 +60,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
         super(DiskMsgHandler, self).__init__(self.MODULE_NAME,
                                                   self.PRIORITY)
 
-    def initialize(self, conf_reader, msgQlist, products):
+    def initialize(self, conf_reader, msgQlist, product):
         """initialize configuration reader and internal msg queues"""
         # Initialize ScheduledMonitorThread
         super(DiskMsgHandler, self).initialize(conf_reader)
@@ -214,7 +214,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                         else:
                             response = "Passed"
 
-                        self._log_debug("_processMsg, disk smart test, drive test status: %s" % 
+                        self._log_debug("_processMsg, disk smart test, drive test status: %s" %
                                     response)
 
                         request = "SMART_TEST: {}".format(drive.getSerialNumber())
@@ -230,7 +230,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     else:
                         response = "Passed"
 
-                    self._log_debug("_processMsg, disk smart test, drive test status: %s" % 
+                    self._log_debug("_processMsg, disk smart test, drive test status: %s" %
                                     response)
                 else:
                     self._log_debug("_processMsg, disk smart test data not yet available")
@@ -329,15 +329,15 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
                 if node_request == "DRIVE_UNINSTALL":
                     logger.info("DiskMsgHandler, simulating drive uninstall")
-                    self._sim_drive_uninstall(serial_number)                    
+                    self._sim_drive_uninstall(serial_number)
 
                 elif node_request == "DRIVE_INSTALL":
                     logger.info("DiskMsgHandler, simulating drive install")
-                    self._sim_drive_install(serial_number) 
+                    self._sim_drive_install(serial_number)
 
                 elif node_request == "EXP_RESET":
                     logger.info("DiskMsgHandler, simulating exp_reset")
-                    self._sim_exp_reset(serial_number) 
+                    self._sim_exp_reset(serial_number)
 
             # ... handle other disk sensor request types
             else:
@@ -739,7 +739,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 internal_json_msg = drive.toHPIjsonMsg().getJson()
 
                 # Send the json message to the RabbitMQ processor to transmit out
-                self._log_debug("_process_hpi_response_ZBX_NOTPRESENT, internal_json_msg: %s" % 
+                self._log_debug("_process_hpi_response_ZBX_NOTPRESENT, internal_json_msg: %s" %
                                 internal_json_msg)
                 self._write_internal_msgQ(RabbitMQegressProcessor.name(), internal_json_msg)
 
@@ -809,7 +809,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
             json_dict["drives"] = drives_list
             json_dump = json.dumps(json_dict, sort_keys=True)
             with open(self._disk_info_file, "w+") as disk_info_file:
-                disk_info_file.write(json_dump)                
+                disk_info_file.write(json_dump)
 
         except Exception as ae:
             logger.exception(ae)
@@ -846,7 +846,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
         json_data = {"enclosure_serial_number": drive.get_drive_enclosure(),
                          "disk_serial_number": drive.getSerialNumber(),
-                         "slot": drive.get_drive_num(), 
+                         "slot": drive.get_drive_num(),
                          "status": status,
                          "reason": reason,
                          "hostname": self._host_id,
@@ -868,13 +868,13 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
         self._write_internal_msgQ(LoggingMsgHandler.name(), internal_json_msg)
 
     def _check_expander_reset(self):
-        """Check for expander reset by polling for sgXX changes  
+        """Check for expander reset by polling for sgXX changes
         DEPRECATED for drivemanager interval checks"""
 
-        scsi_command = "ls /sys/class/enclosure/*/device/scsi_generic" 
+        scsi_command = "ls /sys/class/enclosure/*/device/scsi_generic"
         response, error = self._run_command(scsi_command)
 
-        # Expander reset causes scsi generic dir to vanish temporarily 
+        # Expander reset causes scsi generic dir to vanish temporarily
         if "cannot access" in error:
             if self._scsi_generic != "N/A":
                 self._scsi_generic = "N/A"
@@ -1005,7 +1005,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                                                          self.DISKINFO_FILE,
                                                          '/tmp/dcs/disk_info.json')
     def _getAlways_log_IEM(self):
-        """Retrieves flag signifying we should always log disk status as an IEM even if they 
+        """Retrieves flag signifying we should always log disk status as an IEM even if they
             haven't changed.  This is useful for always logging SMART results"""
         val = bool(self._conf_reader._get_value_with_default(self.DISKMSGHANDLER,
                                                               self.ALWAYS_LOG_IEM,
@@ -1157,11 +1157,11 @@ class Drive(object):
         self._enclosure = enclosure
 
     def set_disk_installed(self, disk_installed):
-        """Set the disk_installed field of drive"""    
+        """Set the disk_installed field of drive"""
         self._disk_installed = disk_installed
 
     def set_disk_powered(self, disk_powered):
-        """Set the disk_powered field of drive"""    
+        """Set the disk_powered field of drive"""
         self._disk_powered = disk_powered
 
     def set_drive_num(self, drive_num):
@@ -1177,23 +1177,23 @@ class Drive(object):
         return self._path_id
 
     def get_drive_status(self):
-        """Return the status of the drive""" 
+        """Return the status of the drive"""
         return self._status
 
     def get_drive_enclosure(self):
-        """Return the enclosure of the drive"""    
+        """Return the enclosure of the drive"""
         return self._enclosure
 
     def get_disk_installed(self):
-        """Return the disk_installed field of drive"""    
+        """Return the disk_installed field of drive"""
         return self._disk_installed
 
     def get_disk_powered(self):
-        """Return the disk_powered field of drive"""    
+        """Return the disk_powered field of drive"""
         return self._disk_powered
 
     def get_drive_num(self):
-        """Return the enclosure of the drive"""    
+        """Return the enclosure of the drive"""
         return self._drive_num
 
     def get_drive_filename(self):

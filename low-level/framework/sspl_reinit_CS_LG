@@ -3,7 +3,7 @@
 # Perform initializations prior to starting sspl_ll
 #
 # Usage:
-#    ./sspl_ll_reinit_CS_LG
+#    ./sspl_reinit_CS_LG
 
 # Add the sspl-ll user
 id -u sspl-ll &>/dev/null || /usr/sbin/useradd \

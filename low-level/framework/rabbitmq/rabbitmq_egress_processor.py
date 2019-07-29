@@ -68,7 +68,7 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
         super(RabbitMQegressProcessor, self).__init__(self.MODULE_NAME,
                                                       self.PRIORITY)
 
-    def initialize(self, conf_reader, msgQlist, products):
+    def initialize(self, conf_reader, msgQlist, product):
         """initialize configuration reader and internal msg queues"""
         # Initialize ScheduledMonitorThread
         super(RabbitMQegressProcessor, self).initialize(conf_reader)
@@ -82,7 +82,7 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
 
         self._msg_sent_succesfull = True
 
-        self._products = products
+        self._product = product
 
         # Configure RabbitMQ Exchange to transmit messages
         self._connection = None

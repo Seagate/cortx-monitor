@@ -32,6 +32,7 @@ from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 from framework.rabbitmq.rabbitmq_ingress_processor import RabbitMQingressProcessor
 from framework.rabbitmq.plane_cntrl_rmq_egress_processor import PlaneCntrlRMQegressProcessor
 from framework.rabbitmq.logging_processor import LoggingProcessor
+from framework.base.sspl_constants import enabled_products, cs_legacy_products, cs_products
 
 # Note that all threaded message handlers must have an import here to be controlled
 from message_handlers.logging_msg_handler import LoggingMsgHandler
@@ -44,13 +45,13 @@ from message_handlers.real_stor_encl_msg_handler import RealStorEnclMsgHandler
 
 
 # Global method used by Thread to capture and log errors.  This must be global.
-def _run_thread_capture_errors(curr_module, sspl_modules, msgQlist, conf_reader, products):
+def _run_thread_capture_errors(curr_module, sspl_modules, msgQlist, conf_reader, product):
     """Run the given thread and log any errors that happen on it.
     Will stop all sspl_modules if one of them fails."""
     try:
         # Each module is passed a reference list to message queues so it can transmit
         #  internal messages to other modules as desired
-        curr_module.initialize(conf_reader, msgQlist, products)
+        curr_module.initialize(conf_reader, msgQlist, product)
         curr_module.start()
 
     except BaseException as ex:
@@ -62,14 +63,10 @@ def _run_thread_capture_errors(curr_module, sspl_modules, msgQlist, conf_reader,
                     ", Exception: " + logger.exception(ex)
         jsonMsg   = ThreadControllerMsg(curr_module.name(), error_msg).getJson()
 
-        for product in products:
-            if product in ["CS-A", "EES"]:
-                self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
-                break
-            elif product == "CS-L" or \
-               product == "CS-G":
-                self._write_internal_msgQ(PlaneCntrlRMQegressProcessor.name(), jsonMsg)
-                break
+        if product in enabled_products:
+            self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
+        elif product in cs_legacy_products:
+            self._write_internal_msgQ(PlaneCntrlRMQegressProcessor.name(), jsonMsg)
 
         # Shut it down, error is non-recoverable
         for name, other_module in sspl_modules.iteritems():
@@ -104,7 +101,7 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
         self._systemd_support = True
         self._hostname = gethostname()
 
-    def initialize(self, conf_reader, msgQlist, products):
+    def initialize(self, conf_reader, msgQlist, product):
         """initialize configuration reader and internal msg queues"""
         # Initialize ScheduledMonitorThread
         super(ThreadController, self).initialize(conf_reader)
@@ -112,10 +109,10 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
         # Initialize internal message queues for this module
         super(ThreadController, self).initialize_msgQ(msgQlist)
 
-    def initialize_thread_list(self, sspl_modules, operating_system, products, systemd_support):
+    def initialize_thread_list(self, sspl_modules, operating_system, product, systemd_support):
         """initialize list of references to all modules"""
         self._sspl_modules     = sspl_modules
-        self._products         = products
+        self._product         = product
         self._operating_system = operating_system
         self._systemd_support  = systemd_support
 
@@ -126,47 +123,46 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
             from sensors.impl.centos_7.hpi_monitor import HPIMonitor
 
         # Handle configurations for specific products
-        for product in self._products:
-            if product in ["CS-A", "EES"]:
-                from sensors.impl.generic.raid import RAIDsensor
-                from sensors.impl.generic.SMR_drive_data import SMRdriveData
-
-                # TODO: add this in product=EES check
-                from sensors.impl.platforms.realstor.realstor_disk_sensor \
-                import RealStorDiskSensor
-
-                from sensors.impl.generic.psu_sensor import RealStorPSUSensor
-                from sensors.impl.generic.realstor_fan_sensor import RealStorFanSensor
-                from sensors.impl.generic.realstor_controller_sensor import RealStorControllerSensor
-                from sensors.impl.generic.realstor_sideplane_expander_sensor import RealStorSideplaneExpanderSensor
-                break
+        if product == "CS-A":
+            from sensors.impl.generic.SMR_drive_data import SMRdriveData
+        if product == "EES":
+            from sensors.impl.platforms.realstor.realstor_disk_sensor \
+            import RealStorDiskSensor
+            from sensors.impl.generic.psu_sensor import RealStorPSUSensor
+            from sensors.impl.generic.realstor_fan_sensor import RealStorFanSensor
+            from sensors.impl.generic.realstor_controller_sensor import RealStorControllerSensor
+            from sensors.impl.generic.realstor_sideplane_expander_sensor import RealStorSideplaneExpanderSensor
+        if product in enabled_products:
+            from sensors.impl.generic.raid import RAIDsensor
 
     def run(self):
         """Run the module periodically on its own thread."""
-        for product in self._products:
-            if product in ["CS-A", "EES"] and \
-               not self._threads_initialized:
+        if (self._product in enabled_products) and \
+           not self._threads_initialized:
+            if self._product in cs_products:
+                # Wait for the dcs-collector to populate the /tmp/dcs/hpi directory
+                while not os.path.isdir(self._hpi_base_dir):
+                    logger.info("ThreadController, dir not found: %s " % self._hpi_base_dir)
+                    logger.info("ThreadController, rechecking in %s secs" % self._start_delay)
+                    time.sleep(int(self._start_delay))
 
-                # Disabling for EES-non-requitement
-                # Removing the code which waits for /tmp/dcs/hpi directory to get populated
+            # Allow other threads to initialize
+            time.sleep(185)
 
-                # Allow other threads to initialize
-                time.sleep(185)
+            # Notify external applications that've started up successfully
+            startup_msg = "SSPL-LL service has started successfully"
+            jsonMsg     = ThreadControllerMsg(ThreadController.name(), startup_msg).getJson()
+            self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
+            self._threads_initialized = True
 
-                # Notify external applications that've started up successfully
-                startup_msg = "SSPL-LL service has started successfully"
-                jsonMsg     = ThreadControllerMsg(ThreadController.name(), startup_msg).getJson()
-                self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
-                self._threads_initialized = True
+            # Let systemd know that we've started up successfully and ready for it to monitor sspl
+            if self._systemd_support:
+                from systemd.daemon import notify
+                notify("READY=1")
 
-                # Let systemd know that we've started up successfully and ready for it to monitor sspl
-                if self._systemd_support:
-                    from systemd.daemon import notify
-                    notify("READY=1")
-
-                #self._set_debug(True)
-                #self._set_debug_persist(True)
-                self._log_debug("Start accepting requests")
+            #self._set_debug(True)
+            #self._set_debug_persist(True)
+            self._log_debug("Start accepting requests")
         try:
             # Block on message queue until it contains an entry
             jsonMsg = self._read_my_msgQ()
@@ -251,14 +247,10 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
             threadControllerMsg.set_uuid(uuid)
         msgString = threadControllerMsg.getJson()
         logger.info("ThreadController, response: %s" % str(msgString))
-        for product in self._products:
-            if product in ["CS-A", "EES"]:
-                self._write_internal_msgQ(RabbitMQegressProcessor.name(), msgString)
-                break
-            elif product == "CS-L" or \
-                 product == "CS-G":
-                self._write_internal_msgQ(PlaneCntrlRMQegressProcessor.name(), msgString)
-                break
+        if self._product in enabled_products:
+            self._write_internal_msgQ(RabbitMQegressProcessor.name(), msgString)
+        elif product in cs_legacy_products:
+            self._write_internal_msgQ(PlaneCntrlRMQegressProcessor.name(), msgString)
 
     def _restart_module(self, module_name):
         """Restart a module"""
@@ -322,7 +314,7 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
 
             module_thread = Thread(target=_run_thread_capture_errors,
                                       args=(self._sspl_modules[module_name], self._sspl_modules,
-                                      self._msgQlist, self._conf_reader, self._products))
+                                      self._msgQlist, self._conf_reader, self._product))
 
             # Put a configure debug message on the module's queue before starting it up
             if self.debug_section is not None:
@@ -374,9 +366,7 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
 
     def check_RabbitMQegressProcessor_is_running(self):
         """Used by the shutdown_handler to allow queued egress msgs to complete"""
-        for product in self._products:
-            if product in ["CS-A", "EES"]:
-                return self._sspl_modules[PlaneCntrlRMQegressProcessor.name()].is_running()
-            elif product == "CS-L" or \
-                 product == "CS-G":
-                return self._sspl_modules[RabbitMQegressProcessor.name()].is_running()
+        if self._product in enabled_products:
+            return self._sspl_modules[PlaneCntrlRMQegressProcessor.name()].is_running()
+        elif product in cs_legacy_products:
+            return self._sspl_modules[RabbitMQegressProcessor.name()].is_running()

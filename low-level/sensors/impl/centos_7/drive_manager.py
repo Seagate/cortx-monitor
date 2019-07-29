@@ -58,11 +58,11 @@ class DriveManager(ScheduledModuleThread, InternalMsgQ):
 
     def __init__(self):
         super(DriveManager, self).__init__(self.SENSOR_NAME,
-                                                  self.PRIORITY)       
+                                                  self.PRIORITY)
         # Mapping of drives and their status'
         self._drive_status = {}
 
-    def initialize(self, conf_reader, msgQlist, products):
+    def initialize(self, conf_reader, msgQlist, product):
         """initialize configuration reader and internal msg queues"""
 
         # Initialize ScheduledMonitorThread and InternalMsgQ
@@ -244,9 +244,9 @@ class DriveManager(ScheduledModuleThread, InternalMsgQ):
 
     def _getDrive_Mngr_Dir(self):
         """Retrieves the drivemanager path to monitor on the file system"""
-        return self._conf_reader._get_value_with_default(self.DRIVEMANAGER, 
+        return self._conf_reader._get_value_with_default(self.DRIVEMANAGER,
                                                                  self.DRIVE_MANAGER_DIR,
-                                                                 '/tmp/dcs/drivemanager')                
+                                                                 '/tmp/dcs/drivemanager')
 
     def _getStart_delay(self):
         """Retrieves the start delay used to allow dcs-collector to startup first"""
@@ -260,7 +260,7 @@ class DriveManager(ScheduledModuleThread, InternalMsgQ):
         if not os.path.isfile(status_file):
             logger.warn("status_file: %s does not exist, ignoring." % status_file)
             return
-        
+
         if not os.path.isfile(serial_num_file):
             logger.warn("serial_num_file: %s does not exist, ignoring." % serial_num_file)
             return

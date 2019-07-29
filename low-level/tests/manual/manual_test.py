@@ -145,7 +145,7 @@ class ManualTest():
         return schema_trimmed
 
     def confReader(self):
-        path_to_conf_file = "/etc/sspl_ll.conf"
+        path_to_conf_file = "/etc/sspl.conf"
 
         try:
             conf_reader = ConfigReader(path_to_conf_file)

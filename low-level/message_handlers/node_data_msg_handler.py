@@ -20,6 +20,7 @@ import time
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
+from framework.base.sspl_constants import enabled_products
 
 from json_msgs.messages.sensors.host_update import HostUpdateMsg
 from json_msgs.messages.sensors.local_mount_data import LocalMountDataMsg
@@ -52,7 +53,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         super(NodeDataMsgHandler, self).__init__(self.MODULE_NAME,
                                                   self.PRIORITY)
 
-    def initialize(self, conf_reader, msgQlist, products):
+    def initialize(self, conf_reader, msgQlist, product):
         """initialize configuration reader and internal msg queues"""
         # Initialize ScheduledMonitorThread
         super(NodeDataMsgHandler, self).initialize(conf_reader)
@@ -84,11 +85,11 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         # Dict of drive path by-ids by serial number from systemd
         self._drive_byid_by_serial_number = {}
 
-        self._import_products(products)
+        self._import_products(product)
 
-    def _import_products(self, products):
+    def _import_products(self, product):
         """Import classes based on which product is being used"""
-        if ("CS-A" in products) or ("EES" in products):
+        if product in enabled_products:
             from zope.component import queryUtility
             self._queryUtility = queryUtility
 

@@ -64,7 +64,7 @@ class PlaneCntrlRMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
         super(PlaneCntrlRMQegressProcessor, self).__init__(self.MODULE_NAME,
                                                       self.PRIORITY)
 
-    def initialize(self, conf_reader, msgQlist, products):
+    def initialize(self, conf_reader, msgQlist, product):
         """initialize configuration reader and internal msg queues"""
         # Initialize ScheduledMonitorThread
         super(PlaneCntrlRMQegressProcessor, self).initialize(conf_reader)
@@ -141,7 +141,7 @@ class PlaneCntrlRMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
             self._virtual_host  = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
                                                                  self.VIRT_HOST,
                                                                  'SSPL')
-            self._queue_name    = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR, 
+            self._queue_name    = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
                                                                  self.QUEUE_NAME,
                                                                  'ras_status')
             self._exchange_name = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
@@ -156,19 +156,19 @@ class PlaneCntrlRMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
             self._password      = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
                                                                  self.PASSWORD,
                                                                  'sspl4ever')
-            self._signature_user = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR, 
+            self._signature_user = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
                                                                  self.SIGNATURE_USERNAME,
                                                                  'sspl-ll')
-            self._signature_token = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR, 
+            self._signature_token = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
                                                                  self.SIGNATURE_TOKEN,
                                                                  'FAKETOKEN1234')
-            self._signature_expires = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR, 
+            self._signature_expires = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
                                                                  self.SIGNATURE_EXPIRES,
                                                                  "3600")
-            self._primary_rabbitMQ_server   = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR, 
+            self._primary_rabbitMQ_server   = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
                                                                  self.PRIMARY_RABBITMQ,
                                                                  'localhost')
-            self._secondary_rabbitMQ_server = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR, 
+            self._secondary_rabbitMQ_server = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
                                                                  self.SECONDARY_RABBITMQ,
                                                                  'localhost')
             self._current_rabbitMQ_server = self._primary_rabbitMQ_server
@@ -224,7 +224,7 @@ class PlaneCntrlRMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
             token = ctypes.create_string_buffer(SSPL_SEC.sspl_get_token_length())
 
             SSPL_SEC.sspl_generate_session_token(
-                                    self._signature_user, authn_token_len, 
+                                    self._signature_user, authn_token_len,
                                     self._signature_token, session_length, token)
 
             # Generate the signature

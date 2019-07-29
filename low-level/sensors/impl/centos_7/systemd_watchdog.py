@@ -30,6 +30,7 @@ from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
+from framework.base.sspl_constants import cs_products
 
 # Modules that receive messages from this module
 from message_handlers.service_msg_handler import ServiceMsgHandler
@@ -99,7 +100,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
         self._hpi_base_dir = "/tmp/dcs/hpi"
         self._start_delay  = 10
 
-    def initialize(self, conf_reader, msgQlist, products):
+    def initialize(self, conf_reader, msgQlist, product):
         """initialize configuration reader and internal msg queues"""
 
         # Initialize ScheduledMonitorThread and InternalMsgQ
@@ -129,6 +130,8 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
         # We need to speed up the thread to handle exp resets but then slow it back down to not chew up cpu
         self._thread_speed_safeguard = -1000  # Init to a negative number to allow extra time at startup
 
+        self._product = product
+
     def read_data(self):
         """Return the dict of service status'"""
         return self._service_status
@@ -139,10 +142,15 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
         #self._set_debug(True)
         #self._set_debug_persist(True)
 
-        # Removing the code which waits for /tmp/dcs/hpi directory to get populated.
-
         # Integrate into the main dbus loop to catch events
         DBusGMainLoop(set_as_default=True)
+
+        if self._product in cs_products:
+            # Wait for the dcs-collector to populate the /tmp/dcs/hpi directory
+            while not os.path.isdir(self._hpi_base_dir):
+                logger.info("SystemdWatchdog, dir not found: %s " % self._hpi_base_dir)
+                logger.info("SystemdWatchdog, rechecking in %s secs" % self._start_delay)
+                time.sleep(int(self._start_delay))
 
         # Allow time for the hpi_monitor to come up
         time.sleep(60)
@@ -185,7 +193,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
             #  Start out assuming their all inactive
             self._inactive_services = list(self._monitored_services)
 
-            logger.info("Monitoring the following services listed in /etc/sspl_ll.conf:")
+            logger.info("Monitoring the following services listed in /etc/sspl.conf:")
             for unit in units:
 
                 if ".service" in unit[0]:
@@ -920,8 +928,8 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                         if disk_path in smart_job["Objects"]:
                             # Get the SMART test results and the serial number
                             udisk_drive     = self._disk_objects[disk_path]['org.freedesktop.UDisks2.Drive']
-                    	    udisk_drive_ata = self._disk_objects[disk_path]['org.freedesktop.UDisks2.Drive.Ata']
-                    	    smart_status    = str(udisk_drive_ata["SmartSelftestStatus"])
+                            udisk_drive_ata = self._disk_objects[disk_path]['org.freedesktop.UDisks2.Drive.Ata']
+                            smart_status    = str(udisk_drive_ata["SmartSelftestStatus"])
                             serial_number   = str(udisk_drive["Serial"])
 
                             # If serial number is not present then use the ending of by-id symlink
@@ -979,7 +987,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                     self._log_debug("  Object Path: %r" % object_path)
 
             except Exception as ae:
-            	self._log_debug("interface_removed: Exception: %r" % ae) # Drive was removed during SMART?
+                self._log_debug("interface_removed: Exception: %r" % ae) # Drive was removed during SMART?
                 self._log_debug("Possible cause: Job not found because service was recently restarted")
 
     def _process_smart_status(self, disk_path, smart_status, serial_number):

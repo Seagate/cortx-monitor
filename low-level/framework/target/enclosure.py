@@ -24,7 +24,7 @@ from framework.utils.service_logging import logger
 
 class StorageEnclosure(object):
 
-    CONF_FILE = "/etc/sspl_ll.conf"
+    CONF_FILE = "/etc/sspl.conf"
 
     ENCL_FAMILY = "enclosure-family"
     EES_ENCL = "Realstor 5U84"

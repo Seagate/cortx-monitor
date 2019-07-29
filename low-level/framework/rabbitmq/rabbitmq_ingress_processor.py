@@ -98,7 +98,7 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
 
         return schema_trimmed
 
-    def initialize(self, conf_reader, msgQlist, products):
+    def initialize(self, conf_reader, msgQlist, product):
         """initialize configuration reader and internal msg queues"""
         # Initialize ScheduledMonitorThread
         super(RabbitMQingressProcessor, self).initialize(conf_reader)

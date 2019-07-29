@@ -26,6 +26,8 @@ from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 # Section and key in config file for bootstrap
 SSPL_SETTING    = 'SSPL-LL-TESTS_SETTING'
 MODULES         = 'modules'
+SYS_INFORMATION = 'SYSTEM_INFORMATION'
+PRODUCT_NAME    = 'product'
 
 @before.all
 def init_rabbitMQ_msg_processors():
@@ -33,7 +35,7 @@ def init_rabbitMQ_msg_processors():
 
     # Retrieve configuration file for sspl-ll service
     conf_directory = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    path_to_conf_file = os.path.join(conf_directory, "sspl_ll_tests.conf")
+    path_to_conf_file = os.path.join(conf_directory, "sspl_tests.conf")
     try:
         conf_reader = ConfigReader(path_to_conf_file)
     except (IOError, ConfigReader.Error) as err:
@@ -67,12 +69,8 @@ def init_rabbitMQ_msg_processors():
     world.sspl_modules = {}
 
     # Read in product value from configuration file
-    try:
-        products = conf_reader._get_value_list(SYS_INFORMATION, PRODUCT_NAME)
-    except Exception:
-        # Default to Castor System for now
-        products = ["CS-A"]
-    logger.info("sspl-ll Bootstrap: product names supported: %s" % products)
+    product = conf_reader._get_value(SYS_INFORMATION, PRODUCT_NAME)
+    logger.info("sspl-ll Bootstrap: product name supported: %s" % product)
 
     # Use reflection to instantiate the class based upon its class name in config file
     for conf_thread in conf_modules:
@@ -93,7 +91,7 @@ def init_rabbitMQ_msg_processors():
             logger.info("SSPL-LL-Tests Starting %s" % curr_module.name())
             curr_module._set_debug(True)
             thread = Thread(target=_run_thread_capture_errors,
-                            args=(curr_module, msgQlist, conf_reader, products))
+                            args=(curr_module, msgQlist, conf_reader, product))
             thread.start()
             threads.append(thread)
 
@@ -109,13 +107,13 @@ def init_rabbitMQ_msg_processors():
 
 
 # Global method used by Thread to capture and log errors.  This must be global.
-def _run_thread_capture_errors(curr_module, msgQlist, conf_reader, products):
+def _run_thread_capture_errors(curr_module, msgQlist, conf_reader, product):
     """Run the given thread and log any errors that happen on it.
     Will stop all sspl_modules if one of them fails."""
     try:
         # Each module is passed a reference list to message queues so it can transmit
         #  internal messages to other modules as desired
-        curr_module.initialize(conf_reader, msgQlist, products)
+        curr_module.initialize(conf_reader, msgQlist, product)
         curr_module.start()
 
     except BaseException as ex:

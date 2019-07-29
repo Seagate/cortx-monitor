@@ -4,10 +4,6 @@ Wants=rabbitmq-server.service
 After=rabbitmq-server.service syslog.target
 Requires=rabbitmq-server.service
 
-# Disabling for EES-non-requirement
-# wants=openhpid.service dcs-collector.service
-# After=dcs-collector.service
-
 [Service]
 Type=notify
 PermissionsStartOnly=true
@@ -15,7 +11,7 @@ ExecStartPre=/opt/seagate/sspl/sspl_init check
 ExecStartPre=/opt/seagate/sspl/sspl_init create -dp
 ExecStartPre=-/usr/bin/mkdir -p /var/run/sspl_ll
 ExecStartPre=/usr/bin/chown sspl-ll:root /var/run/sspl_ll
-ExecStart=/opt/seagate/sspl/low-level/framework/sspl_ll_d -c /etc/sspl_ll.conf
+ExecStart=/opt/seagate/sspl/low-level/framework/sspl_ll_d -c /etc/sspl.conf
 ExecStopPost=-/usr/bin/rm -Rf /var/run/sspl_ll
 PIDFile=/var/run/sspl_ll/sspl_ll_d.pid
 User=sspl-ll

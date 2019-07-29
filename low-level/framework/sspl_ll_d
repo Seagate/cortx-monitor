@@ -42,6 +42,7 @@ from rabbitmq.rabbitmq_ingress_processor import RabbitMQingressProcessor
 
 from framework.rabbitmq.plane_cntrl_rmq_egress_processor import PlaneCntrlRMQegressProcessor
 from framework.rabbitmq.plane_cntrl_rmq_ingress_processor import PlaneCntrlRMQingressProcessor
+from framework.base.sspl_constants import enabled_products
 
 from rabbitmq.logging_processor import LoggingProcessor
 from rabbitmq.thread_controller import ThreadController
@@ -68,7 +69,7 @@ ACTUATORS       = 'actuators'
 # Section containing information about the system we're running on
 SYS_INFORMATION = 'SYSTEM_INFORMATION'
 OPER_SYSTEM     = 'operating_system'
-PRODUCT_NAME    = 'products'
+PRODUCT_NAME    = 'product'
 SETUP           = 'setup'
 
 # Instantiate the internal ThreadController. Global so the shutdown callback
@@ -119,11 +120,7 @@ def main(conf_reader, systemd_support):
     logger.info("sspl-ll Bootstrap: configuring for OS: %s" % operating_system)
 
     # Read in product value from configuration file
-    try:
-        products = conf_reader._get_value_list(SYS_INFORMATION, PRODUCT_NAME)
-    except Exception:
-        # Default to Castor System for now
-        products = ["CS-A", "EES"]
+    product = conf_reader._get_value(SYS_INFORMATION, PRODUCT_NAME)
 
     # Read in setup value from configuration file
     try:
@@ -131,10 +128,10 @@ def main(conf_reader, systemd_support):
     except Exception:
         setup = 'hw'
 
-    logger.info("sspl-ll Bootstrap: setup=%s products=%s" % (setup, products))
+    logger.info("sspl-ll Bootstrap: setup=%s product=%s" % (setup, product))
 
     # CS-L/G systems run as root and we set capabilities on the process to control the access available to it
-    if ("CS-A" not in products) and ("EES" not in products):
+    if product not in enabled_products:
         _dropPrivileges("sspl-ll")
 
     # Use reflection to instantiate the classes based upon its class name in config file
@@ -163,7 +160,7 @@ def main(conf_reader, systemd_support):
 
     sspl_threaded_modules, msgQlist = _sensors_actuators_factory(
                                             sspl_threaded_modules, msgQlist,
-                                            operating_system, products, setup)
+                                            operating_system, product, setup)
 
     # Add the ThreadConroller automatically
     msgQlist[ThreadController.name()] = Queue.Queue()
@@ -173,7 +170,7 @@ def main(conf_reader, systemd_support):
         for name, curr_module in sspl_threaded_modules.iteritems():
             logger.info("Starting: %s" % curr_module.name())
             thread = Thread(target=_run_thread_capture_errors,
-                            args=(curr_module, sspl_threaded_modules, msgQlist, conf_reader, products))
+                            args=(curr_module, sspl_threaded_modules, msgQlist, conf_reader, product))
             thread.start()
 
         # Start the ThreadController module with the list of threads
@@ -181,8 +178,8 @@ def main(conf_reader, systemd_support):
 
         # Initialize the thread controller with the list of references to all modules
         controller_thread = Thread(target=_run_thread_capture_errors,
-                            args=(threadController, sspl_threaded_modules, msgQlist, conf_reader, products))
-        threadController.initialize_thread_list(sspl_threaded_modules, operating_system, products, systemd_support)
+                            args=(threadController, sspl_threaded_modules, msgQlist, conf_reader, product))
+        threadController.initialize_thread_list(sspl_threaded_modules, operating_system, product, systemd_support)
         controller_thread.start()
 
         # Block main thread until thread controller has been halted
@@ -193,7 +190,7 @@ def main(conf_reader, systemd_support):
 
 
 # TODO: Create a factory class instead of a method
-def _sensors_actuators_factory(sspl_threaded_modules, msgQlist, operating_system, products, setup):
+def _sensors_actuators_factory(sspl_threaded_modules, msgQlist, operating_system, product, setup):
     """Loops thru list of sensors/actuators and instantiate"""
 
     # Read in list of sensors
@@ -229,38 +226,40 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist, operating_system
     else:
         raise Exception("Operating System not supported")
 
-    for product in products:
-        if product in ["CS-A", "EES"]:
-            from actuators.impl.generic.raritan_pdu import RaritanPDU
-            from actuators.impl.generic.ipmi import IPMI
-            if setup not in ['cmu', 'gw', 'vm']:
-                try:
-                    from actuators.impl.generic.hpi_actuator import HPIactuator
-                except ImportError:
-                    logger.info("Could not import HPIactuator")
-            from sensors.impl.generic.SNMP_traps import SNMPtraps
-            from actuators.impl.generic.raid import RAIDactuator
-            from actuators.impl.generic.hdparm import Hdparm
-            from sensors.impl.generic.raid import RAIDsensor
-            from sensors.impl.generic.node_data import NodeData as NodeData
-            from sensors.impl.generic.SMR_drive_data import SMRdriveData
-            from sensors.impl.generic.SNMP_traps import SNMPtraps
+    if product == "CS-A":
+        from actuators.impl.generic.raritan_pdu import RaritanPDU
+        from actuators.impl.generic.ipmi import IPMI
+        if setup not in ['cmu', 'gw', 'vm']:
+            try:
+                from actuators.impl.generic.hpi_actuator import HPIactuator
+            except ImportError:
+                logger.info("Could not import HPIactuator")
 
-            # TODO to move realstor sensors under product==EES
-            from sensors.impl.platforms.realstor.realstor_disk_sensor import RealStorDiskSensor
-            from sensors.impl.generic.realstor_fan_sensor import RealStorFanSensor
-            from sensors.impl.generic.psu_sensor import RealStorPSUSensor
-            from sensors.impl.generic.realstor_controller_sensor import RealStorControllerSensor
-            from sensors.impl.generic.realstor_sideplane_expander_sensor import RealStorSideplaneExpanderSensor
+        from sensors.impl.generic.SNMP_traps import SNMPtraps
 
-            from zope.component import getGlobalSiteManager
-            from zope.interface import implementedBy
+    if product == "EES":
+        from sensors.impl.platforms.realstor.realstor_disk_sensor import RealStorDiskSensor
+        from sensors.impl.generic.psu_sensor import RealStorPSUSensor
+        from sensors.impl.generic.realstor_fan_sensor import RealStorFanSensor
+        from sensors.impl.generic.realstor_controller_sensor import RealStorControllerSensor
+        from sensors.impl.generic.realstor_sideplane_expander_sensor import RealStorSideplaneExpanderSensor
 
-            from zope.component import queryUtility
-            from loggers.impl.iem_logger import IEMlogger
+    if product in enabled_products:
+        from actuators.impl.generic.raid import RAIDactuator
+        from actuators.impl.generic.hdparm import Hdparm
 
-            # The Zope Global Site Manager containing objects that implement the desired interfaces
-            gsm = getGlobalSiteManager()
+        from sensors.impl.generic.raid import RAIDsensor
+        from sensors.impl.generic.node_data import NodeData as NodeData
+        from sensors.impl.generic.SMR_drive_data import SMRdriveData
+
+        from zope.component import getGlobalSiteManager
+        from zope.interface import implementedBy
+
+        from zope.component import queryUtility
+        from loggers.impl.iem_logger import IEMlogger
+
+        # The Zope Global Site Manager containing objects that implement the desired interfaces
+        gsm = getGlobalSiteManager()
 
     # Loop through the list of sensors/actuators and instantiate appropriately
     #  based upon whether or not it is threaded
@@ -288,19 +287,19 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist, operating_system
             interface_impl = list(implementedBy(klass))[0]  # Assumes single inheritance only
             logger.info("            Implements Interface: %s" % interface_impl.__name__)
 
-            if ("CS-A" in products) or ("EES" in products):
+            if product in enabled_products:
                 gsm.registerUtility(klass, interface_impl)
 
     return (sspl_threaded_modules, msgQlist)
 
 
-def _run_thread_capture_errors(curr_module, sspl_threaded_modules, msgQlist, conf_reader, products):
+def _run_thread_capture_errors(curr_module, sspl_threaded_modules, msgQlist, conf_reader, product):
     """Run the given thread and log any errors that happen on it.
     Will stop all sspl_threaded_modules if one of them fails."""
     try:
         # Each module is passed a reference list to message queues so it can transmit
         #  internal messages to other modules as desired
-        curr_module.initialize(conf_reader, msgQlist, products)
+        curr_module.initialize(conf_reader, msgQlist, product)
         curr_module.start()
 
     except Exception as ex:

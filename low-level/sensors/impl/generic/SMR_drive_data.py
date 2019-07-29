@@ -21,7 +21,7 @@ import ctypes
 import fcntl
 import subprocess
 
-from sensors.impl.c_api.ATA_SG_IO import AtaCmd, SgioHdr 
+from sensors.impl.c_api.ATA_SG_IO import AtaCmd, SgioHdr
 
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
@@ -58,7 +58,7 @@ class SMRdriveData(ScheduledModuleThread, InternalMsgQ):
                                          self.PRIORITY)
         self._cache_state = None
 
-    def initialize(self, conf_reader, msgQlist, products):
+    def initialize(self, conf_reader, msgQlist, product):
         """initialize configuration reader and internal msg queues"""
 
         # Initialize ScheduledMonitorThread and InternalMsgQ
@@ -94,7 +94,7 @@ class SMRdriveData(ScheduledModuleThread, InternalMsgQ):
             dirs = stdout.splitlines()
 
             # Send the ATA command to retrieve values from the drives and log them
-            for dir in dirs: 
+            for dir in dirs:
                 self._send_ATA_command(dir)
 
         except Exception as ae:
@@ -127,12 +127,12 @@ class SMRdriveData(ScheduledModuleThread, InternalMsgQ):
                    features=0,
                    sector_count_filler=0,
                    sector_count=1,
-		           lba_low_filler=0,
+                   lba_low_filler=0,
                    lba_low=log_addr,
                    lba_mid_filler=(page_number >> 8) & 0xff,
-                   lba_mid=page_number & 0xff,  
+                   lba_mid=page_number & 0xff,
                    lba_high_filler=0,
-                   lba_high=0,      
+                   lba_high=0,
                    device=0,
                    command=0x2f,  # ATA_READ_LOG_EXT 0x2f
                    control=0)
@@ -171,9 +171,9 @@ class SMRdriveData(ScheduledModuleThread, InternalMsgQ):
                 if valid != "8000":
                     return
 
-                # Swap bytes in the raw data 
+                # Swap bytes in the raw data
                 swap_row = "{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}".format(
-                           orig_row[1], orig_row[0], orig_row[3], orig_row[2], 
+                           orig_row[1], orig_row[0], orig_row[3], orig_row[2],
                            orig_row[5], orig_row[4], orig_row[7], orig_row[6],
                            orig_row[9], orig_row[8], orig_row[11], orig_row[10],
                            orig_row[13], orig_row[12], orig_row[15], orig_row[14])
@@ -205,10 +205,10 @@ class SMRdriveData(ScheduledModuleThread, InternalMsgQ):
                     self.logging_interval = int(polling_tm, 16)
 
         except Exception:
-	        pass # Does not support ATA command so ignore this device
+            pass # Does not support ATA command so ignore this device
 
     def _get_config(self):
-        """Retrieves the information in /etc/sspl_ll.conf"""
+        """Retrieves the information in /etc/sspl.conf"""
         self._logging_interval = int(self._conf_reader._get_value_with_default(self.SMRDRIVEDATA,
                                                         self.LOGGING_INTERVAL,
                                                         3600))

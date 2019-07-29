@@ -68,7 +68,7 @@ class SNMPtraps(ScheduledModuleThread, InternalMsgQ):
                                          self.PRIORITY)
         self._latest_trap = {}
 
-    def initialize(self, conf_reader, msgQlist, products):
+    def initialize(self, conf_reader, msgQlist, product):
         """initialize configuration reader and internal msg queues"""
 
         # Initialize ScheduledMonitorThread and InternalMsgQ
@@ -94,7 +94,7 @@ class SNMPtraps(ScheduledModuleThread, InternalMsgQ):
 
         try:
             self._log_debug("Start processing")
-            
+
             # Create MIB loader to lookup oids sent in traps
             self._mib_builder()
 
@@ -257,11 +257,11 @@ class SNMPtraps(ScheduledModuleThread, InternalMsgQ):
         self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
 
     def _get_config(self):
-        """Retrieves the information in /etc/sspl_ll.conf"""
+        """Retrieves the information in /etc/sspl.conf"""
         self._enabled_traps = self._conf_reader._get_value_list(self.SNMPTRAPS,
                                                         self.ENABLED_TRAPS)
         self._enabled_MIBS  = self._conf_reader._get_value_list(self.SNMPTRAPS,
-                                                        self.ENABLED_MIBS)                                                
+                                                        self.ENABLED_MIBS)
 
         self._bind_ip = self._conf_reader._get_value_with_default(self.SNMPTRAPS,
                                                         self.BIND_IP,

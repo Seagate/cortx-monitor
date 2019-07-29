@@ -128,7 +128,7 @@ class SSPLtest():
         #Gather information about json messages in ./actuator_msgs folder
         #self.egressMessage()
         #Read the configuration file
-        path_to_conf_file = self.actuator_msgs_folder + "sspl_ll_tests.conf"
+        path_to_conf_file = self.actuator_msgs_folder + "sspl_tests.conf"
         try:
             self._conf_reader = ConfigReader(path_to_conf_file)
 

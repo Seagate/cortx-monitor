@@ -59,7 +59,7 @@ class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
         # Location of hpi data directory populated by dcs-collector
         self._start_delay  = 10
 
-    def initialize(self, conf_reader, msgQlist, products):
+    def initialize(self, conf_reader, msgQlist, product):
         """initialize configuration reader and internal msg queues"""
 
         # Initialize ScheduledMonitorThread and InternalMsgQ
@@ -335,9 +335,9 @@ class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
         response, error = process.communicate()
 
         if response:
-	       self._log_debug("_run_command, response: %s" % str(response))
+            self._log_debug("_run_command, response: %s" % str(response))
         if error:
-	       self._log_debug("_run_command: error: %s" % str(error))
+            self._log_debug("_run_command: error: %s" % str(error))
 
         return response.rstrip('\n'), error.rstrip('\n')
 

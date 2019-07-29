@@ -39,10 +39,10 @@ FLAGS = re.VERBOSE | re.MULTILINE | re.DOTALL
 WHITESPACE = re.compile(r'[ \t\n\r]*', FLAGS)
 
 # Section containing information about the system we're running on
-CONF_FILE_PATH  = '/etc/sspl_ll.conf'
+CONF_FILE_PATH  = '/etc/sspl.conf'
 SYS_INFORMATION = 'SYSTEM_INFORMATION'
 CLI_TYPE        = 'cli_type'
-PRODUCTS        = 'products'
+PRODUCT        = 'product'
 SSPL_LL_SETTING = 'SSPL-LL_SETTING'
 CORE_PROCESSORS = 'core_processors'
 ACTUATORS       = 'actuators'
@@ -92,12 +92,10 @@ def main():
 
     # Read in CLI type value from configuration file
     cli_type = conf_reader._get_value_with_default(SYS_INFORMATION, CLI_TYPE, 'CS-A').lower()
-    # Read in products value from configuration file and split string to list using comma (',')
-    products = conf_reader._get_value_with_default(SYS_INFORMATION, PRODUCTS, 'EES').split(',')
+    product = conf_reader._get_value_with_default(SYS_INFORMATION, PRODUCT)
     # Convert all string to lowercase in the list for ignore case sensitive
-    products = [product.lower() for product in products]
     global manTest
-    if "ees" in products:
+    if product == "EES":
         # Setup argument parser
         parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawDescriptionHelpFormatter, \
                                          add_help=False)
@@ -204,7 +202,7 @@ def _verify_parser(args):
     """Parse the initial verify input"""
     #print"_verify_parser args: %s" % str(args)
     if args.config is None:
-        args.config = "/etc/sspl_ll.conf"
+        args.config = "/etc/sspl.conf"
 
     return 'verify %s %s %s' % (args.checkdeps, args.config, args.autoinstall)
 
@@ -235,7 +233,7 @@ def _init_SED(parser, program_name):
     drive_parser.set_defaults(func=_drive_parser)
 
     verify_parser = SED_subparser.add_parser("verify", add_help=True)
-    verify_parser.add_argument("-c", "--config", metavar="FILE", help="Configuration file, defaults to /etc/sspl_ll.conf")
+    verify_parser.add_argument("-c", "--config", metavar="FILE", help="Configuration file, defaults to /etc/sspl.conf")
     verify_parser.add_argument("-a", "--autoinstall", action="store_true", help="Automatically attempt to install required packages")
     verify_parser.set_defaults(func=_verify_parser)
 

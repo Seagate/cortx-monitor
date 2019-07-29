@@ -3,7 +3,8 @@
 set -u -o pipefail
 
 SCRIPT_NAME=$(basename $0)
-SSPL_CONF="/etc/sspl_ll.conf"
+DIR_NAME="/opt/seagate/sspl/"
+SSPL_CONF="/etc/sspl.conf"
 SSPL_CONFIGURED="/var/sspl/sspl-configured"
 ROLES="gw ssu vm cmu eos"
 
@@ -157,6 +158,17 @@ config_sspl() {
         systemctl disable sspl-ll.service;
     }
 
+    # Get product
+    product=$(sed -nr 's/^product=([^,]+)$/\1/p' $SSPL_CONF | head -1)
+    [ -z "$product" ] && echo "No product specified in $SSPL_CONF" && exit 1
+
+    enabled_products=$(python $DIR_NAME/low-level/framework/base/sspl_constants.py)
+    [ -z "$enabled_products" ] && echo "No enabled products!" && exit 1
+    [[ $enabled_products =~ (^| )$product($| ) ]] || {
+        echo "Product '$product' is not in enabled products list: $enabled_products";
+        exit 1;
+    }
+
     # Configure role
     [ -z "$role" ] || sed -i "s/^setup=.*/setup=$role/g" $SSPL_CONF
 
@@ -165,7 +177,20 @@ config_sspl() {
 
     # Add sspl-ll user to required groups and sudoers file etc.
     echo "Initializing SSPL configuration ... "
-    /opt/seagate/sspl/low-level/framework/sspl_ll_reinit_CS_A
+    # TODO: Combine /opt/seagate/sspl/low-level/framework/sspl_reinit
+    # and /opt/seagate/sspl/low-level/framework/sspl_reinit_CS_LG
+    # into a single file which can be passed a product as an argument
+    if [[ $enabled_products =~ (^| )$product($| ) ]]; then
+        /opt/seagate/sspl/low-level/framework/sspl_reinit $product || {
+            echo "/opt/seagate/sspl/low-level/framework/sspl_reinit failed with exit code $? for product $product";
+            exit 1;
+        }
+    else
+        /opt/seagate/sspl/low-level/framework/sspl_reinit_CS_LG || {
+            echo "/opt/seagate/sspl/low-level/framework/sspl_reinit_CS_LG failed with exit code $?";
+            exit 1;
+        }
+    fi
 
     # Create /tmp/dcs/hpi if required
     [ "$role" != "eos" ] && [ ! -d "/tmp/dcs/hpi" ] && mkdir -p /tmp/dcs/hpi && id -u zabbix > /dev/null 2>&1 && chown zabbix:zabbix /tmp/dcs/hpi
@@ -182,13 +207,28 @@ config_sspl() {
 
     # Add required user and vhost to RabbitMQ. Set user permissions etc.
     echo "Creating required RABBITMQ configuration.... "
-    /opt/seagate/sspl/low-level/framework/sspl_ll_rabbitmq_reinit_CS_A
+    # TODO: Combine /opt/seagate/sspl/low-level/framework/sspl_rabbitmq_reinit
+    # and /opt/seagate/sspl/low-level/framework/sspl_rabbitmq_reinit_CS_LG
+    # into a single file which can be passed a product as an argument
+    if [[ $enabled_products =~ (^| )$product($| ) ]]; then
+        /opt/seagate/sspl/low-level/framework/sspl_rabbitmq_reinit $product || {
+            echo "/opt/seagate/sspl/low-level/framework/sspl_rabbitmq_reinit failed with exit code $? for product $product";
+            exit 1;
+        }
+    else
+        /opt/seagate/sspl/low-level/framework/sspl_rabbitmq_reinit_CS_LG || {
+            echo "/opt/seagate/sspl/low-level/framework/sspl_rabbitmq_reinit_CS_LG failed with exit code $?";
+            exit 1;
+        }
+    fi
     echo "SSPL configured successfully."
     mkdir -p $(dirname $SSPL_CONFIGURED)
 
     # Create mdadm.conf to set ACL on it.
     touch /etc/mdadm.conf
     setfacl -m u:sspl-ll:rw /etc/mdadm.conf
+
+    cp /opt/seagate/sspl/conf/sspl-ll.service.$product /etc/systemd/system/sspl-ll.service
     touch $SSPL_CONFIGURED
 
     systemctl enable sspl-ll.service

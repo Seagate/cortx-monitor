@@ -5,7 +5,7 @@
 # Create sspl-ll user and assign to groups
 #
 # Usage:
-#    ./sspl_ll_reinit_CS_A
+#    ./sspl_reinit <product>
 #
 
 chown -R sspl-ll:root /opt/seagate/sspl/low-level

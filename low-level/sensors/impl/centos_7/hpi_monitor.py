@@ -31,7 +31,7 @@ from framework.utils.service_logging import logger
 from message_handlers.disk_msg_handler import DiskMsgHandler
 from message_handlers.service_msg_handler import ServiceMsgHandler
 
-from zope.interface import implements 
+from zope.interface import implements
 from sensors.IHpi_monitor import IHPIMonitor
 
 
@@ -59,7 +59,7 @@ class HPIMonitor(ScheduledModuleThread, InternalMsgQ):
         # Mapping of drives and their status'
         self._drive_data = {}
 
-    def initialize(self, conf_reader, msgQlist, products):
+    def initialize(self, conf_reader, msgQlist, product):
         """initialize configuration reader and internal msg queues"""
 
         # Initialize ScheduledMonitorThread and InternalMsgQ
@@ -67,7 +67,7 @@ class HPIMonitor(ScheduledModuleThread, InternalMsgQ):
 
         # Initialize internal message queues for this module
         super(HPIMonitor, self).initialize_msgQ(msgQlist)
-            
+
         self._hpi_mntr_base_dir  = self._getHpi_Monitor_Dir()
         self._start_delay        = self._getStart_delay()
 
@@ -224,7 +224,7 @@ class HPIMonitor(ScheduledModuleThread, InternalMsgQ):
         """Run the command and get the response and error returned"""
         process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         response, error = process.communicate()
- 
+
         return response.rstrip('\n'), error.rstrip('\n')
 
     def _notify_DiskMsgHandler(self, updated_file):
