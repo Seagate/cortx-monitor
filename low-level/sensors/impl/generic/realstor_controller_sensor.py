@@ -311,33 +311,39 @@ class RealStorControllerSensor(ScheduledModuleThread, InternalMsgQ):
 
         generic_dict={}
         extended_dict={}
-        #TODO Need to optimizing nested for look code here
+        generic_dict.update(dict.fromkeys(self.controller_generic, "NA"))
+        generic_dict.update({"network-parameters":[dict.fromkeys(self.network_generic, "NA")]})
+        generic_dict.update({"port":[dict.fromkeys(self.port_generic, "NA")]})
+        generic_dict["port"][0].update({"fc-port":[dict.fromkeys(self.fc_port_generic, "NA")]})
+        generic_dict.update({"expander-ports":[dict.fromkeys(self.expander_ports_generic, "NA")]})
+        generic_dict.update({"compact-flash":[dict.fromkeys(self.compact_flash_generic, "NA")]})
+        generic_dict.update({"expanders":[dict.fromkeys(self.expanders_generic, "NA")]})
         for key, value in controller_detail.iteritems():
             if key == "expander-ports":
-                expndr_ports_gen_dict, expndr_ports_ext_dict=self._get_nested_controller_data(
-                    "expander_port", controller_detail[key])
-                generic_dict.update(expndr_ports_gen_dict)
-                extended_dict.update(expndr_ports_ext_dict)
+                expndr_ports_gen_lst, expndr_ports_ext_lst=self._get_nested_controller_data(
+                    key, controller_detail[key])
+                generic_dict.update({key:expndr_ports_gen_lst})
+                extended_dict.update({key:expndr_ports_ext_lst})
             elif key == "port":
-                port_gen_dict, port_ext_dict = self._get_nested_controller_data(
-                    "port",controller_detail[key])
-                generic_dict.update(port_gen_dict)
-                extended_dict.update(port_ext_dict)
+                port_gen_lst, port_ext_lst = self._get_nested_controller_data(
+                    key,controller_detail[key])
+                generic_dict.update({key:port_gen_lst})
+                extended_dict.update({key:port_ext_lst})
             elif key == "network-parameters":
-                network_gen_dict, network_ext_dict = self._get_nested_controller_data(
-                    "network",controller_detail['network-parameters'])
-                generic_dict.update(network_gen_dict)
-                extended_dict.update(network_ext_dict)
+                network_gen_lst, network_ext_lst = self._get_nested_controller_data(
+                    key,controller_detail['network-parameters'])
+                generic_dict.update({key:network_gen_lst})
+                extended_dict.update({key:network_ext_lst})
             elif key == "compact-flash":
-                compact_gen_dict, compact_ext_dict = self._get_nested_controller_data(
-                    "compact_flash",controller_detail[key])
-                generic_dict.update(compact_gen_dict)
-                extended_dict.update(compact_ext_dict)
+                compact_gen_lst, compact_ext_lst = self._get_nested_controller_data(
+                    key,controller_detail[key])
+                generic_dict.update({key:compact_gen_lst})
+                extended_dict.update({key:compact_ext_lst})
             elif key == "expanders":
-                expanders_gen_dict, expanders_ext_dict = self._get_nested_controller_data(
-                    "expanders",controller_detail[key])
-                generic_dict.update(expanders_gen_dict)
-                extended_dict.update(expanders_ext_dict)
+                expanders_gen_lst, expanders_ext_lst = self._get_nested_controller_data(
+                    key,controller_detail[key])
+                generic_dict.update({key:expanders_gen_lst})
+                extended_dict.update({key:expanders_ext_lst})
             else:
                 if key in self.controller_generic:
                     generic_dict.update({key:value})
@@ -357,65 +363,64 @@ class RealStorControllerSensor(ScheduledModuleThread, InternalMsgQ):
             }})
         return internal_json_msg
 
-    def _get_nested_controller_data(self, prefix, lstdict):
-        generic_nested_dict={}
-        expanded_nested_dict={}
+    def _get_nested_controller_data(self, parent_key, lstdict):
+        generic_nested_lst=[]
+        expanded_nested_lst=[]
         for idx,nested_dict in enumerate(lstdict):
+            generic_nested_dict={}
+            expanded_nested_dict={}
             for key, value in nested_dict.iteritems():
                 if key == "fc-port":
-                    fc_port_gen_dict, fc_port_exp_dict = self._get_fc_port_controller_data(
-                        prefix+"."+str(idx)+".fc", nested_dict[key])
-                    generic_nested_dict.update(fc_port_gen_dict)
-                    expanded_nested_dict.update(fc_port_exp_dict)
+                    fc_port_gen_lst, fc_port_exp_lst = self._get_fc_port_controller_data(
+                        nested_dict[key])
+                    generic_nested_dict.update({key:fc_port_gen_lst})
+                    expanded_nested_dict.update({key:fc_port_exp_lst})
                 elif key == "sas-port":
-                    sas_port_exp_dict = self._get_sas_port_controller_data(
-                        prefix+"."+str(idx)+".sas", nested_dict[key])
-                    expanded_nested_dict.update(sas_port_exp_dict)
+                    expanded_nested_dict.update({key:nested_dict[key]})
                 else:
-                    if prefix == "expander_port":
+                    if parent_key == "expander-ports":
                         if key in self.expander_ports_generic:
-                            generic_nested_dict.update({prefix+"."+str(idx)+"."+key : value})
+                            generic_nested_dict.update({key:value})
                         else:
-                            expanded_nested_dict.update({prefix+"."+str(idx)+"."+key : value})
-                    elif prefix == "port":
+                            expanded_nested_dict.update({key:value})
+                    elif parent_key == "port":
                         if key in self.port_generic:
-                            generic_nested_dict.update({prefix+"."+str(idx)+"."+key : value})
+                            generic_nested_dict.update({key:value})
                         else:
-                            expanded_nested_dict.update({prefix+"."+str(idx)+"."+key : value})
-                    elif prefix == "network":
+                            expanded_nested_dict.update({key:value})
+                    elif parent_key == "network-parameters":
                         if key in self.network_generic:
-                            generic_nested_dict.update({prefix+"."+str(idx)+"."+key : value})
+                            generic_nested_dict.update({key:value})
                         else:
-                            expanded_nested_dict.update({prefix+"."+str(idx)+"."+key : value})
-                    elif prefix == "compact_flash":
+                            expanded_nested_dict.update({key:value})
+                    elif parent_key == "compact-flash":
                         if key in self.compact_flash_generic:
-                            generic_nested_dict.update({prefix+"."+str(idx)+"."+key : value})
+                            generic_nested_dict.update({key:value})
                         else:
-                            expanded_nested_dict.update({prefix+"."+str(idx)+"."+key : value})
-                    elif prefix == "expanders":
+                            expanded_nested_dict.update({key:value})
+                    elif parent_key == "expanders":
                         if key in self.expanders_generic:
-                            generic_nested_dict.update({prefix+"."+str(idx)+"."+key : value})
+                            generic_nested_dict.update({key:value})
                         else:
-                            expanded_nested_dict.update({prefix+"."+str(idx)+"."+key : value})
-        return generic_nested_dict, expanded_nested_dict
+                            expanded_nested_dict.update({key:value})
+            generic_nested_lst.append(generic_nested_dict)
+            expanded_nested_lst.append(expanded_nested_dict)
+        return generic_nested_lst, expanded_nested_lst
 
-    def _get_fc_port_controller_data(self, prefix, lstdict):
-        fc_port_generic_dic = {}
-        fc_port_expande_dic = {}
+    def _get_fc_port_controller_data(self, lstdict):
+        fc_port_generic_lst=[]
+        fc_port_expande_lst=[]
         for idx,nested_fc_dict in enumerate(lstdict):
+            fc_port_generic_dic={}
+            fc_port_expande_dic={}
             for key, value in nested_fc_dict.iteritems():
                 if key in self.fc_port_generic:
-                    fc_port_generic_dic.update({prefix+"."+str(idx)+"."+key : value})
+                    fc_port_generic_dic.update({key:value})
                 else:
-                    fc_port_expande_dic.update({prefix+"."+str(idx)+"."+key : value})
-        return fc_port_generic_dic, fc_port_expande_dic
-
-    def _get_sas_port_controller_data(self, prefix, lstdict):
-        sas_port_expande_dic = {}
-        for idx,nested_sas_dict in enumerate(lstdict):
-            for key, value in nested_sas_dict.iteritems():
-                sas_port_expande_dic.update({prefix+"."+str(idx)+"."+key : value})
-        return sas_port_expande_dic
+                    fc_port_expande_dic.update({key:value})
+            fc_port_generic_lst.append(fc_port_generic_dic)
+            fc_port_expande_lst.append(fc_port_expande_dic)
+        return fc_port_generic_lst, fc_port_expande_lst
 
     def _send_json_msg(self, json_msg):
         """Sends JSON message to Handler"""
