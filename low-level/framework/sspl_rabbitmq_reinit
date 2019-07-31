@@ -7,15 +7,24 @@ This script uses /etc/sspl.conf as the source of the parameters.
 Usage:
     ./sspl_rabbitmq_reinit <product>
 """
+from exceptions import ValueError
+import os
 import subprocess
+import sys
 import ConfigParser
 
 RABBITMQCTL = '/usr/sbin/rabbitmqctl'
 SSPL_CONF = '/etc/sspl.conf'
 SECTION="RABBITMQEGRESSPROCESSOR"
 
+# Add the top level directories
+parentdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+os.sys.path.insert(0,parentdir)
 
-def main():
+from base.sspl_constants import cs_legacy_products, enabled_products
+
+
+def main(product):
     """ Main line for this program. """
     config = ConfigParser.SafeConfigParser()
     config.read([SSPL_CONF])
@@ -33,31 +42,81 @@ def main():
         option='password'
         )
 
-    _create_vhost_if_necessary(virtual_host)
-    _create_user_if_necessary(username, password, virtual_host)
+    if product in cs_legacy_products:
+        primary_rabbitmq_server = config.get(
+            section=SECTION,
+            option='primary_rabbitmq_server'
+            )
+        secondary_rabbitmq_server = config.get(
+            section=SECTION,
+            option='secondary_rabbitmq_server'
+            )
+        _check_rabbitmq_status()
+        _start_rabbitmq()
+
+    _create_vhost_if_necessary(virtual_host, product)
+    _create_user_if_necessary(username, password, virtual_host, product)
 
 
-def _create_vhost_if_necessary(virtual_host):
+    if product in cs_legacy_products:
+        # Copy the erlang key from primary server to secondary and mirror queues
+        if primary_rabbitmq_server in hostnames:
+            _set_perms_erlang_key()
+            _copy_erlang_key(secondary_rabbitmq_server)
+            _create_ha_queues()
+
+        # Cluster the secondary server to the primary
+        elif secondary_rabbitmq_server in hostnames:
+            _set_perms_erlang_key()
+            _cluster_rabbitmq_servers(primary_rabbitmq_server, secondary_rabbitmq_server)
+
+def _create_vhost_if_necessary(virtual_host, product):
     """ Creates the specified vhost (if necessary).
 
     No action will occur if the vhost already exists.
 
     @type virtual_host:           string
     @param virtual_host:          The vhost to create.
+    @type product:                string
+    @param product:               The product for which initialization is
+                                  being done.
     """
-    vhosts = subprocess.check_output(
-        [RABBITMQCTL, 'list_vhosts']
-        ).split('\n')
-    assert vhosts[0] == 'Listing vhosts ...'
-    assert vhosts[-2] == '...done.'
-    assert vhosts[-1] == ''
-    for vhost in vhosts[1:-1]:
-        if vhost == virtual_host:
-            return
-    subprocess.check_call([RABBITMQCTL, 'add_vhost', virtual_host])
+    if product in cs_legacy_products:
+        command = "%s list_vhosts" % RABBITMQCTL
+        response = _send_command(command, fail_on_error=False)
+        # Try restarting service
+        if "Error" in response:
+            command = "service rabbitmq-server restart"
+            _send_command(command)
+            command = "%s list_vhosts" % RABBITMQCTL
+            response = _send_command(command)
+
+        vhosts = response.split('\n')
+        assert vhosts[0] == 'Listing vhosts ...'
+        for vhost in vhosts[1:-1]:
+            if vhost == virtual_host:
+                return
+
+        command = "%s add_vhost %s" % (RABBITMQCTL, virtual_host)
+        _send_command(command)
+        print("Successfully created vhost: %s" % virtual_host)
+
+    elif product in enabled_products:
+        vhosts = subprocess.check_output(
+            [RABBITMQCTL, 'list_vhosts']
+            ).split('\n')
+        assert vhosts[0] == 'Listing vhosts ...'
+        assert vhosts[-2] == '...done.'
+        assert vhosts[-1] == ''
+        for vhost in vhosts[1:-1]:
+            if vhost == virtual_host:
+                return
+        subprocess.check_call([RABBITMQCTL, 'add_vhost', virtual_host])
+    else:
+        raise ValueError("Product should be one of: %s" % (cs_legacy_products + enabled_products))
 
 
-def _create_user_if_necessary(username, password, virtual_host):
+def _create_user_if_necessary(username, password, virtual_host, product):
     """ Create the rabbitmq user (if necessary).
 
     The user is created (if it doesn't exist) and then set with .* permissions
@@ -78,31 +137,131 @@ def _create_user_if_necessary(username, password, virtual_host):
     @type virtual_host:           string
     @param virtual_host:          The vhost on which the permissions will be
                                   set.
+    @type product:                string
+    @param product:               The product for which initialization is
+                                  being done.
     """
-    users = subprocess.check_output(
-        [RABBITMQCTL, 'list_users']
-        ).split('\n')
-    assert users[0] == 'Listing users ...'
-    assert users[-2] == '...done.'
-    assert users[-1] == ''
-    found_user = False
-    for userspec in users[1:-1]:
-        user = userspec.split()[0]
-        if user == username:
-            found_user = True
-            break
-    if not found_user:
-        subprocess.check_call([RABBITMQCTL, 'add_user', username, password])
-    subprocess.check_call(
-        [
-            RABBITMQCTL, 'set_permissions',
-            '-p', virtual_host,
-            username, '.*', '.*', '.*'
-        ])
-    subprocess.check_call(
-        [RABBITMQCTL, 'set_user_tags', username, 'administrator']
-        )
+    if product in cs_legacy_products:
+        command = "%s list_users" % RABBITMQCTL
+        response = _send_command(command)
+
+        users = response.split("\n")
+        assert users[0] == 'Listing users ...'
+        found_user = False
+        for userspec in users[1:-1]:
+            user = userspec.split()[0]
+            if user == username:
+                found_user = True
+                break
+        if not found_user:
+            # Create the user and set permissions, will exit upon error
+            command = "%s add_user %s %s" % (RABBITMQCTL, username, password)
+            _send_command(command)
+            command = "%s set_permissions -p %s %s '.*' '.*' '.*'" % (RABBITMQCTL, virtual_host, username)
+            _send_command(command)
+            command = "%s set_user_tags %s administrator" % (RABBITMQCTL, username)
+            _send_command(command)
+    elif product in enabled_products:
+        users = subprocess.check_output(
+            [RABBITMQCTL, 'list_users']
+            ).split('\n')
+        assert users[0] == 'Listing users ...'
+        assert users[-2] == '...done.'
+        assert users[-1] == ''
+        found_user = False
+        for userspec in users[1:-1]:
+            user = userspec.split()[0]
+            if user == username:
+                found_user = True
+                break
+        if not found_user:
+            subprocess.check_call([RABBITMQCTL, 'add_user', username, password])
+        subprocess.check_call(
+            [
+                RABBITMQCTL, 'set_permissions',
+                '-p', virtual_host,
+                username, '.*', '.*', '.*'
+            ])
+        subprocess.check_call(
+            [RABBITMQCTL, 'set_user_tags', username, 'administrator']
+            )
+    else:
+        raise ValueError("Product should be one of: %s" % (cs_legacy_products + enabled_products))
+
+def _check_rabbitmq_status():
+    """Reset if the node is down"""
+    command = "service rabbitmq-server status"
+    response = _send_command(command)
+    if "nodedown" in response:
+        print("Nodedown, resetting")
+        command = "pkill beam.smp"
+        _send_command(command)
+
+def _start_rabbitmq():
+    """Ensure rabbitmq-server is started"""
+    command = "service rabbitmq-server start"
+    _send_command(command)
+
+def _set_perms_erlang_key():
+    # Set the ownership and permissions on cluster key
+    command = "chown rabbitmq:rabbitmq /var/lib/rabbitmq/.erlang.cookie"
+    _send_command(command)
+    command = "chmod 400 /var/lib/rabbitmq/.erlang.cookie"
+    _send_command(command)
+
+def _copy_erlang_key(secondary_rabbitmq_server):
+    """Copy the erlang key from primary server to secondary"""
+    # Copy the key from primary server to secondary
+    command = "scp /var/lib/rabbitmq/.erlang.cookie root@%s:/var/lib/rabbitmq/.erlang.cookie" % \
+                secondary_rabbitmq_server
+    response = _send_command(command)
+    print("Copy erlang key from primary host to secondary: %s" % response)
+
+def _cluster_rabbitmq_servers(primary_rabbitmq_server, secondary_rabbitmq_server):
+    """Perform the steps to cluster the rabbitmq servers"""
+    command = "service rabbitmq-server restart"
+    response = _send_command(command)
+    print("Clustering rabbitmq, restarting server: %s" % response)
+
+    command = "%s stop_app" % RABBITMQCTL
+    response = _send_command(command)
+    print("Clustering rabbitmq, stopping app: %s" % response)
+
+    command = "nodeattr -v ha_pair | cut -f2 -d:"
+    cluster_hostname = _send_command(command)
+    print("Joining cluster: %s" % cluster_hostname)
+
+    command = "%s join_cluster rabbit@%s" % \
+                (RABBITMQCTL, cluster_hostname)
+    response = _send_command(command)
+    print("Clustering rabbitmq, joining cluster: %s" % response)
+
+    command = "rabbitmqctl start_app"
+    response = _send_command(command)
+    print("Clustering rabbitmq, starting: %s" % response)
+
+    # Print the status of the cluster
+    command = "rabbitmqctl cluster_status"
+    response = _send_command(command)
+    print("Clustering rabbitmq, status: %s" % response)
+
+def _create_ha_queues():
+    """Mirror the ras_* queues between clustered rabbitmq servers"""
+    command = "%s set_policy ha-all \"^ras_\" '{\"ha-mode\":\"all\"}'" % RABBITMQCTL
+    response = _send_command(command)
+    print("Mirroring queues in cluster: %s" % response)
+
+def _send_command(command, fail_on_error=True):
+    process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    response, error = process.communicate()
+    if error is not None and \
+       len(error) > 0:
+        print("command '%s' failed with error\n%s" % (command, error))
+        if fail_on_error:
+            sys.exit(1)
+    return response
 
 
 if __name__ == '__main__':
-    main()
+    product = sys.argv[1]
+    main(product)

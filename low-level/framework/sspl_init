@@ -177,20 +177,12 @@ config_sspl() {
 
     # Add sspl-ll user to required groups and sudoers file etc.
     echo "Initializing SSPL configuration ... "
-    # TODO: Combine /opt/seagate/sspl/low-level/framework/sspl_reinit
-    # and /opt/seagate/sspl/low-level/framework/sspl_reinit_CS_LG
-    # into a single file which can be passed a product as an argument
-    if [[ $enabled_products =~ (^| )$product($| ) ]]; then
-        /opt/seagate/sspl/low-level/framework/sspl_reinit $product || {
-            echo "/opt/seagate/sspl/low-level/framework/sspl_reinit failed with exit code $? for product $product";
-            exit 1;
-        }
-    else
-        /opt/seagate/sspl/low-level/framework/sspl_reinit_CS_LG || {
-            echo "/opt/seagate/sspl/low-level/framework/sspl_reinit_CS_LG failed with exit code $?";
-            exit 1;
-        }
-    fi
+    /opt/seagate/sspl/low-level/framework/sspl_reinit $product || {
+        reinit_err="$?";
+        echo -n "/opt/seagate/sspl/low-level/framework/sspl_reinit failed ";
+        echo "with exit code ${reinit_err} for product $product";
+        exit 1;
+    }
 
     # Create /tmp/dcs/hpi if required
     [ "$role" != "eos" ] && [ ! -d "/tmp/dcs/hpi" ] && mkdir -p /tmp/dcs/hpi && id -u zabbix > /dev/null 2>&1 && chown zabbix:zabbix /tmp/dcs/hpi
@@ -207,20 +199,13 @@ config_sspl() {
 
     # Add required user and vhost to RabbitMQ. Set user permissions etc.
     echo "Creating required RABBITMQ configuration.... "
-    # TODO: Combine /opt/seagate/sspl/low-level/framework/sspl_rabbitmq_reinit
-    # and /opt/seagate/sspl/low-level/framework/sspl_rabbitmq_reinit_CS_LG
-    # into a single file which can be passed a product as an argument
-    if [[ $enabled_products =~ (^| )$product($| ) ]]; then
-        /opt/seagate/sspl/low-level/framework/sspl_rabbitmq_reinit $product || {
-            echo "/opt/seagate/sspl/low-level/framework/sspl_rabbitmq_reinit failed with exit code $? for product $product";
-            exit 1;
-        }
-    else
-        /opt/seagate/sspl/low-level/framework/sspl_rabbitmq_reinit_CS_LG || {
-            echo "/opt/seagate/sspl/low-level/framework/sspl_rabbitmq_reinit_CS_LG failed with exit code $?";
-            exit 1;
-        }
-    fi
+    /opt/seagate/sspl/low-level/framework/sspl_rabbitmq_reinit $product || {
+        reinit_err="$?";
+        echo -n "/opt/seagate/sspl/low-level/framework/sspl_rabbitmq_reinit failed ";
+        echo "with exit code ${reinit_err} for product $product";
+        exit 1;
+    }
+
     echo "SSPL configured successfully."
     mkdir -p $(dirname $SSPL_CONFIGURED)
 

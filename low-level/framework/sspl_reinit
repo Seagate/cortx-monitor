@@ -8,6 +8,16 @@
 #    ./sspl_reinit <product>
 #
 
+[ "${1}" = "CS-L" -o "${1}" = "CS-G" ] && {
+    id -u sspl-ll &>/dev/null || /usr/sbin/useradd \
+        -s /sbin/nologin  \
+        -c "User account to run the sspl-ll service" sspl-ll;
+
+    # Automatically install dependencies based on config file
+    sspl-ll-cli verify --checkdeps --autoinstall;
+    exit;
+}
+
 chown -R sspl-ll:root /opt/seagate/sspl/low-level
 
 # Create a link to low-level cli for easy global access
