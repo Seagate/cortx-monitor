@@ -92,7 +92,7 @@ def main():
 
     # Read in CLI type value from configuration file
     cli_type = conf_reader._get_value_with_default(SYS_INFORMATION, CLI_TYPE, 'CS-A').lower()
-    product = conf_reader._get_value_with_default(SYS_INFORMATION, PRODUCT)
+    product = conf_reader._get_value(SYS_INFORMATION, PRODUCT)
     # Convert all string to lowercase in the list for ignore case sensitive
     global manTest
     if product == "EES":
