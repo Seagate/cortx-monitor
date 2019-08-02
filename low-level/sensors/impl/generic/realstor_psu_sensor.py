@@ -1,7 +1,7 @@
 """
  ****************************************************************************
- Filename:          psu_sensor.py
- Description:       Monitors PSU data using RealStor API.
+ Filename:          realstor_psu_sensor.py
+ Description:       Monitors PSU using RealStor API.
  Creation Date:     06/24/2019
  Author:            Malhar Vora
 
@@ -96,14 +96,16 @@ class RealStorPSUSensor(ScheduledModuleThread, InternalMsgQ):
         # Get controller IP to connect to
         self._controller_ip = self._conf_reader._get_value_with_default(
             self.STORAGE_ENCLOSURE_KEY, self.CONTROLLER_IP_KEY, '127.0.0.1')
-
+        self._log_debug("_controller_ip: {0}".format(self._controller_ip))
         # Get port
         self._port = self._conf_reader._get_value_with_default(
             self.STORAGE_ENCLOSURE_KEY, self.PORT_KEY, '80')
+        self._log_debug("_port: {0}".format(self._port))
 
         # Get username
         self._username = self._conf_reader._get_value_with_default(
             self.STORAGE_ENCLOSURE_KEY, self.CONTROLLER_USERNAME_KEY, 'manage')
+        self._log_debug("_username: {0}".format(self._username))
 
         # Get password
         self._password = self._conf_reader._get_value_with_default(
@@ -115,14 +117,18 @@ class RealStorPSUSensor(ScheduledModuleThread, InternalMsgQ):
             self._conf_reader._get_value_with_default(
                 self.SYSTEM_INFORMATION_KEY, self.VOLUME_LOCATION_KEY,
                 "/var/sspl/data")
+        self._log_debug("_common_storage_location: {0}".format(
+            self._common_storage_location))
 
         # Form an base API and login URL
         self._api_base_url = "http://{0}:{1}/api".format(
             self._controller_ip, self._port)
         self._login_url = "{0}/login".format(self._api_base_url)
+        self._log_debug("_login_url: {0}".format(self._login_url))
 
         self._dir_location = os.path.join(
-            self._common_storage_location, self.ENCLOSURE_DIR, self.PSUS_DIR)
+            self._common_storage_location, self.ENCLOSURE_DIR, "frus",
+            self.PSUS_DIR)
 
         # Create internal directory structure  if not present
         self._makedirectories(self._dir_location)
@@ -130,6 +136,8 @@ class RealStorPSUSensor(ScheduledModuleThread, InternalMsgQ):
         # Persistence file location. This file stores faulty PSU data
         self._faulty_psu_file_path = os.path.join(
             self._dir_location, "psudata.json")
+        self._log_debug(
+            "_faulty_psu_file_path: {0}".format(self._faulty_psu_file_path))
 
         # Load faulty PSU data from file if available
         self._load_faulty_psus_from_file(self._faulty_psu_file_path)
@@ -173,6 +181,7 @@ class RealStorPSUSensor(ScheduledModuleThread, InternalMsgQ):
 
     def _get_data(self, url, headers=None):
         """Fetches data from API. Returns if HTTP status is 200"""
+        self._log_debug("RealStorPSUSensor._get_data -> {0}".format(url))
         response_data = None
         # Send a request
         response = requests.get(url, headers=headers)
@@ -195,6 +204,9 @@ class RealStorPSUSensor(ScheduledModuleThread, InternalMsgQ):
 
     def _extract_session_key(self, response_data):
         """Extracts session key from JSON response"""
+        self._log_debug(
+            "RealStorPSUSensor._extract_session_key -> {0}".format(
+                response_data))
         session_key = None
         session_key = response_data["status"][0]["response"]
         return session_key
@@ -212,6 +224,9 @@ class RealStorPSUSensor(ScheduledModuleThread, InternalMsgQ):
         """Checks for health of psus and returns list of messages to be
            sent to handler if there are any.
         """
+        self._log_debug(
+            "RealStorPSUSensor._get_msgs_for_faulty_psus -> {0} {1}".format(
+                psus, send_message))
         faulty_psu_messages = []
         internal_json_msg = None
         psu_health = None
@@ -224,6 +239,7 @@ class RealStorPSUSensor(ScheduledModuleThread, InternalMsgQ):
             durable_id = psu["durable-id"]
             psu_health_reason = psu["health-reason"]
             if psu_health == "fault":  # Check for missing and fault case
+                self._log_debug("Found fault in PSU {0}".format(durable_id))
                 if durable_id not in self._previously_faulty_psus:
                     alert_type = "fault"
                     # Check for removal
@@ -239,6 +255,7 @@ class RealStorPSUSensor(ScheduledModuleThread, InternalMsgQ):
                     if send_message:
                         self._send_json_msg(internal_json_msg)
             elif psu_health == "degraded":  # Check for fault case
+                self._log_debug("Found degraded in PSU {0}".format(durable_id))
                 if durable_id not in self._previously_faulty_psus:
                     alert_type = "fault"
                     self._previously_faulty_psus[durable_id] = {
@@ -251,6 +268,7 @@ class RealStorPSUSensor(ScheduledModuleThread, InternalMsgQ):
                     if send_message:
                         self._send_json_msg(internal_json_msg)
             elif psu_health == "ok":  # Check for healthy case
+                self._log_debug("Found ok in PSU {0}".format(durable_id))
                 if durable_id in self._previously_faulty_psus:
                     # Send message to handler
                     if send_message:
@@ -277,6 +295,9 @@ class RealStorPSUSensor(ScheduledModuleThread, InternalMsgQ):
         """Forms a dictionary containing info about PSUs to send to
            message handler.
         """
+        self._log_debug(
+            "RealStorPSUSensor._create_internal_msg -> {0} {1}".format(
+                psu_detail, alert_type))
         if not psu_detail:
             return {}
 
@@ -322,6 +343,8 @@ class RealStorPSUSensor(ScheduledModuleThread, InternalMsgQ):
 
     def _send_json_msg(self, json_msg):
         """Sends JSON message to Handler"""
+        self._log_debug(
+            "RealStorPSUSensor._send_json_msg -> {0}".format(json_msg))
         if not json_msg:
             return
         self._write_internal_msgQ(RealStorEnclMsgHandler.name(), json_msg)
@@ -339,6 +362,9 @@ class RealStorPSUSensor(ScheduledModuleThread, InternalMsgQ):
     def _save_faulty_psus_to_file(self, filename):
         """Stores previous faulty PSU data instance member to file.
         """
+        self._log_debug(
+            "RealStorPSUSensor._save_faulty_psus_to_file -> {0}".format(
+                filename))
         # Check if filename is blank or None
         if not filename or len(filename.strip()) <= 0:
             logger.critical("No filename is configured to save faulty PSU data")
@@ -353,6 +379,7 @@ class RealStorPSUSensor(ScheduledModuleThread, InternalMsgQ):
         try:
             with open(filename, "w") as psu_file:
                 json.dump(self._previously_faulty_psus, psu_file)
+                    "Finished writing to file: {0}".format(filename))
         except IOError as io_error:
             error_number = io_error.errno
             if error_number == errno.EACCES:
@@ -370,8 +397,12 @@ class RealStorPSUSensor(ScheduledModuleThread, InternalMsgQ):
         """Loads previous faulty PSU data instance member from file
         if exists.
         """
+        self._log_debug(
+            "RealStorPSUSensor._load_faulty_psus_from_file -> {0}".format(
+                filename))
         if not filename or len(filename.strip()) <= 0:
-            logger.critical("No filename is configured to load faulty PSU data from")
+            logger.critical(
+                "No filename is configured to load faulty PSU data from")
             return
         try:
             with open(filename) as psu_file:
@@ -395,11 +426,12 @@ class RealStorPSUSensor(ScheduledModuleThread, InternalMsgQ):
 
     def _makedirectories(self, path):
         """Creates leaf directory with required parents"""
+        self._log_debug("RealStorPSUSensor._makedirectories-> {0}".format(path))
         try:
             os.makedirs(path)
         except OSError as os_error:
             if os_error.errno == errno.EEXIST and os.path.isdir(path):
-                pass
+                self._log_debug(str(os_error))
             elif os_error.errno == errno.EACCES:
                 logger.critical(
                     "Permission denied while creating path: {0}".format(path))
