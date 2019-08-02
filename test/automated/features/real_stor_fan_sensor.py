@@ -11,13 +11,16 @@ topdir = os.path.dirname(os.path.dirname(os.path.dirname \
             (os.path.dirname(os.path.abspath(__file__)))))
 os.sys.path.insert(0, topdir)
 
+
 from test.automated.rabbitmq.rabbitmq_ingress_processor_tests import RabbitMQingressProcessorTests
 from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 
-@step(u'Given that SSPL is running')
-def given_that_sspl_ll_is_running(step):
-    # Check that the state for sspl_ll service is active
+
+@step('Given that SSPL is running')
+def given_that_sspl_is_running(step):
+    # Check that the state for sspl service is active
     found = False
+
     # Support for python-psutil < 2.1.3
     for proc in psutil.process_iter():
         if proc.name == "sspl_ll_d" and \
@@ -39,7 +42,7 @@ def given_that_sspl_ll_is_running(step):
         world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
 
 
-@step(u'When I send in the fan module sensor message to request the current "([^"]*)" data')
+@step('When I send in the fan module sensor message to request the current "([^"]*)" data')
 def when_i_send_in_the_fan_module_sensor_message_to_request_the_current_sensor_type_data(step, resource_type):
     egressMsg = {
         "title": "SSPL Actuator Request",
@@ -72,7 +75,7 @@ def when_i_send_in_the_fan_module_sensor_message_to_request_the_current_sensor_t
     world.sspl_modules[RabbitMQegressProcessor.name()]._write_internal_msgQ(RabbitMQegressProcessor.name(), egressMsg)
 
 
-@step(u'Then I get the fan module sensor JSON response message')
+@step('Then I get the fan module sensor JSON response message')
 def then_i_get_the_fan_module__sensor_json_response_message(step):
     fan_module_sensor_msg = None
     time.sleep(4)

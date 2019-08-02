@@ -22,7 +22,7 @@ import time
 import uuid
 
 import requests
-from zope.interface import implements
+from zope.interface import implementer
 
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
@@ -36,10 +36,10 @@ from message_handlers.real_stor_encl_msg_handler import RealStorEnclMsgHandler
 from sensors.Ilogicalvolume import ILogicalVolumesensor
 
 
+@implementer(ILogicalVolumesensor)
 class RealStorLogicalVolumeSensor(ScheduledModuleThread, InternalMsgQ):
     """Monitors Logical Volume data using RealStor API"""
 
-    implements(ILogicalVolumesensor)
 
     SENSOR_NAME = "RealStorLogicalVolumeSensor"
     SENSOR_RESP_TYPE = "enclosure_logical_volume_alert"

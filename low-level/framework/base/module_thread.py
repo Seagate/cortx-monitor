@@ -20,13 +20,11 @@ import abc
 import json
 
 from sched import scheduler
-from exceptions import NotImplementedError
-from debug import Debug
+from .debug import Debug
 
 
-class ModuleThread(object):
+class ModuleThread(object, metaclass=abc.ABCMeta):
     """Base Class for all Module Threads"""
-    __metaclass__ = abc.ABCMeta
 
     def __init__(self):
         super(ModuleThread, self).__init__()

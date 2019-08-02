@@ -70,10 +70,10 @@ def then_i_receive_Restart_Successful_JSON_response_message(step):
             # Clear the message queue buffer out
             while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
                 world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
-            print"Done"
+            print("Done")
             break
         except Exception as exception:
-            print exception
+            print(exception)
 
 @step(u'Given I send in the actuator message to stop raid sensor')
 def given_i_send_in_the_actuator_message_to_stop_raid_sensor(step):
@@ -133,7 +133,7 @@ def then_i_get_the_stop_successful_json_response_message(step):
             break
         except Exception as exception:
             time.sleep(2)
-            print exception
+            print(exception)
 
     assert(module_name is not None)
     assert(thread_response is not None)
@@ -191,10 +191,10 @@ def then_i_get_the_start_successful_json_response_message(step):
             # Clear the message queue buffer out
             while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
                 world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
-            print"Done"
+            print("Done")
             break
         except Exception as exception:
-            print exception
+            print(exception)
 
 @step(u'Given I request to stop raid sensor and then I request a thread status')
 def given_i_request_to_stop_raid_sensor_and_then_i_request_a_thread_status(step):
@@ -281,10 +281,10 @@ def then_i_get_the_stop_successful_json_message_then_i_get_the_thread_status_mes
             thread_response = ingressMsg.get("actuator_response_type").get("thread_controller").get("thread_response")
             print("thread_response: %s" % thread_response)
             assert thread_response == "Status: Halted"
-            print"Done"
+            print("Done")
             break
         except Exception as exception:
-            print exception
+            print(exception)
 
 @step(u'Given I request to start raid sensor and then I request a thread status')
 def given_i_request_to_start_raid_sensor_and_then_i_request_a_thread_status(step):
@@ -370,7 +370,7 @@ def then_i_get_the_start_successful_json_message_then_i_get_the_thread_status_me
             thread_response = ingressMsg.get("actuator_response_type").get("thread_controller").get("thread_response")
             print("thread_response: %s" % thread_response)
             assert thread_response == "Status: Running"
-            print"Done"
+            print("Done")
             break
         except Exception as exception:
-            print exception
+            print(exception)

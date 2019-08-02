@@ -16,7 +16,7 @@ from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 from dbus import SystemBus, Interface, exceptions as debus_exceptions
 
 
-@step(u'Given that the "([^"]*)" service is "([^"]*)" and SSPL_LL is running')
+@step('Given that the "([^"]*)" service is "([^"]*)" and SSPL_LL is running')
 def given_that_the_name_service_is_condition_and_sspl_ll_is_running(step, name, condition):
     # Apply the condition to the service to guarantee a known starting state
     assert condition in ("running", "halted")
@@ -45,7 +45,7 @@ def given_that_the_name_service_is_condition_and_sspl_ll_is_running(step, name, 
     while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
         world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
 
-@step(u'When I send in the actuator message to "([^"]*)" the "([^"]*)"')
+@step('When I send in the actuator message to "([^"]*)" the "([^"]*)"')
 def when_i_send_in_the_actuator_message_to_action_the_service(step, action, service):
     egressMsg = {
         "title": "SSPL Actuator Request",
@@ -72,7 +72,7 @@ def when_i_send_in_the_actuator_message_to_action_the_service(step, action, serv
     world.sspl_modules[RabbitMQegressProcessor.name()]._write_internal_msgQ(RabbitMQegressProcessor.name(), egressMsg)
 
 
-@step(u'Then SSPL_LL "([^"]*)" the "([^"]*)" and I get the service is "([^"]*)" response')
+@step('Then SSPL_LL "([^"]*)" the "([^"]*)" and I get the service is "([^"]*)" response')
 def then_sspl_ll_action_the_service_and_i_get_the_service_is_condition_response(step, action, service, condition):
 
     service_name = None
@@ -97,7 +97,7 @@ def then_sspl_ll_action_the_service_and_i_get_the_service_is_condition_response(
             break
         except Exception as exception:
             time.sleep(4)
-            print exception
+            print(exception)
 
     assert service_name == service
     assert service_response == condition

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python3.6
 # encoding: utf-8
 """
 # ****************************************************************************
@@ -87,9 +87,9 @@ class ManualTest():
 
         except Exception as err:
             # We don't have logger since it threw an exception, use generic 'print'
-            print "[ Error ] when initializing logging :"
-            print err
-            print "Exiting ..."
+            print("[ Error ] when initializing logging :")
+            print(err)
+            print("Exiting ...")
             sys.exit(os.EX_USAGE)
 
         self.module_name = module.upper()
@@ -152,10 +152,10 @@ class ManualTest():
 
         except (IOError, ConfigReader.Error) as err:
             # We don't have logger yet, need to find log_level from conf file first
-            print "[ Error ] when validating the configuration file %s :" % \
-                path_to_conf_file
-            print err
-            print "Exiting ..."
+            print("[ Error ] when validating the configuration file %s :" % \
+                path_to_conf_file)
+            print(err)
+            print("Exiting ...")
             exit(os.EX_USAGE)
 
         self._virtualhost = conf_reader._get_value_with_default(
@@ -272,7 +272,7 @@ class ManualTest():
             self._current_rabbitmq_server = self._secondary_rabbitmq_server
         else:
             self._current_rabbitmq_server = self._primary_rabbitmq_server
-        print "Warning! Connection timed out to %s attempting %s..." % (prev_host, self._current_rabbitmq_server)
+        print("Warning! Connection timed out to %s attempting %s..." % (prev_host, self._current_rabbitmq_server))
 
     def addAuthFields(self, jsonMsg):
         """Adds authentication fields to message"""
@@ -349,7 +349,7 @@ class ManualTest():
 
         channel = connection.channel()
         channel.exchange_declare(exchange=self._ingress_exchange,
-                         type='topic', durable=self._durable)
+                         exchange_type='topic', durable=self._durable)
 
         msg_props = pika.BasicProperties()
         msg_props.content_type = "text/plain"
@@ -371,7 +371,7 @@ class ManualTest():
                                   properties=msg_props,
                                   body=str(json.dumps(jsonMsg, ensure_ascii=True).encode('utf8')))
             if not wait_for_response:
-                print "Successfully transmitted request:"
+                print("Successfully transmitted request:")
             self._print_response(jsonMsg, save_to_file=False)
 
         elif message is not None:
@@ -383,7 +383,7 @@ class ManualTest():
                                    properties=msg_props,
                                    body=str(message))
             if not wait_for_response:
-                print "Successfully transmitted request"
+                print("Successfully transmitted request")
                 #self._print_response(message, save_to_file=False)
 
         connection.close()
@@ -391,7 +391,7 @@ class ManualTest():
 
         # Verify that we received a response back matching the uuid we sent in requeste
         if wait_for_response:
-            print "Awaiting response(s)..."
+            print("Awaiting response(s)...")
             max_wait = 0
             while not self._msg_received:
                 if force_wait:
@@ -401,8 +401,8 @@ class ManualTest():
                     time.sleep(1)
                 max_wait += 1
                 if max_wait > response_wait_time:
-                    print "Timed out waiting for valid responses, giving up after {} seconds" \
-                            .format(response_wait_time)
+                    print("Timed out waiting for valid responses, giving up after {} seconds" \
+                            .format(response_wait_time))
                     break
 
 
@@ -424,7 +424,7 @@ class ManualTest():
 
         else:
             # We only handle outgoing actuator and sensor requests, ignore everything else
-            print "Only supports sending actuator and sensor requests"
+            print("Only supports sending actuator and sensor requests")
             raise Exception("Validation failed")
 
     def _print_response(self, ingressMsg, save_to_file=True):
@@ -451,7 +451,7 @@ class ManualTest():
         if self._indent:
             response = json.dumps(response, sort_keys=True,
                              indent=4, separators=(',', ': '))
-        print "%s\n" % str(response)
+        print("%s\n" % str(response))
 
         # Write it out to a results file
         if save_to_file:
@@ -481,9 +481,9 @@ class ManualTest():
            len(hostname) == 0:
            return
 
-        print "\nResponse from %s" % (hostname)
+        print("\nResponse from %s" % (hostname))
         if len(errors) > 9:
-            print "\nErrors%s" % errors
+            print("\nErrors%s" % errors)
 
         # Handle 'drive status' response
         if "status" in command:
@@ -504,10 +504,10 @@ class ManualTest():
 
                 if first_row == True:
                     first_row = False
-                    print headers
-                print output
+                    print(headers)
+                print(output)
         else:
-            print"Received response which is not yet handled by CLI. Please try again."
+            print("Received response which is not yet handled by CLI. Please try again.")
             sys.exit(1)
 
 
@@ -529,8 +529,8 @@ class ManualTest():
                 time.sleep(5)
 
         channel = connection.channel()
-        channel.exchange_declare(exchange=self._egress_exchange, type='topic', durable=self._durable)
-        result = channel.queue_declare(exclusive=True)
+        channel.exchange_declare(exchange=self._egress_exchange, exchange_type='topic', durable=self._durable)
+        result = channel.queue_declare(queue="", exclusive=True)
         channel.queue_bind(exchange=self._egress_exchange,
                            queue=result.method.queue,
                            routing_key=self._egress_key)
@@ -551,9 +551,9 @@ class ManualTest():
             # Verify that the uuid of the response matches that of the request sent
             if self._request_uuid is not None and \
                uuid != self._request_uuid:
-                print "Received a response on '{}' channel that doesn't match the request uuid:" \
-                        .format(self._exchangename)
-                print "Expected uuid: {} but received: {}".format(self._request_uuid, uuid)
+                print("Received a response on '{}' channel that doesn't match the request uuid:" \
+                        .format(self._exchangename))
+                print("Expected uuid: {} but received: {}".format(self._request_uuid, uuid))
                 self._print_response(ingressMsg, save_to_file=False)
                 return
 
@@ -566,7 +566,7 @@ class ManualTest():
                 if use_security_lib:
                     assert(SSPL_SEC.sspl_verify_message(msg_len, str(message), username, signature) == 0)
             except:
-                print "Authentication failed on message: %s" % ingressMsg
+                print("Authentication failed on message: %s" % ingressMsg)
 
             try:
                 #Sorts out any outgoing messages only processes *_response_type
@@ -576,8 +576,8 @@ class ManualTest():
                     # For debugging
                     if self.module_name == "RABBITMQINGRESSPROCESSOR":
                         self._total_msg_received += 1
-                        print "%d) Received response on '%s' channel of queue '%s'" % \
-                                (self._total_msg_received, self._egress_exchange, self._egress_queue)
+                        print("%d) Received response on '%s' channel of queue '%s'" % \
+                                (self._total_msg_received, self._egress_exchange, self._egress_queue))
                         self._print_response(ingressMsg)
                         self._msg_received = True
 
@@ -587,13 +587,13 @@ class ManualTest():
                         self._msg_received = True
 
             except Exception as e:
-                print "Error printing response: %r" % e
+                print("Error printing response: %r" % e)
 
             ch.basic_ack(delivery_tag = method.delivery_tag)
 
         # Sets the callback function to be used when start_consuming is called and specifies the queue to pull messages off of.
         try:
-          channel.basic_consume(callback,
+          channel.basic_consume(on_message_callback=callback,
                           queue=result.method.queue)
           channel.start_consuming()
         except KeyboardInterrupt:
@@ -620,8 +620,8 @@ class ManualTest():
 
         channel = connection.channel()
         channel.exchange_declare(exchange=self._ackexchangename,
-                         type='topic', durable=self._durable)
-        result = channel.queue_declare(exclusive=True)
+                         exchange_type='topic', durable=self._durable)
+        result = channel.queue_declare(queue="", exclusive=True)
         channel.queue_bind(exchange=self._ackexchangename,
                            queue=result.method.queue,
                            routing_key=self._ackroutingkey)
@@ -641,9 +641,9 @@ class ManualTest():
             # Verify that the uuid of the response matches that of the request sent
             if self._request_uuid is not None and \
                uuid != self._request_uuid:
-                print "Received a Ack response on '{}' channel that doesn't match the request uuid:" \
-                        .format(self._exchangename)
-                print "Expected uuid: {} but received: {}".format(self._request_uuid, uuid)
+                print("Received a Ack response on '{}' channel that doesn't match the request uuid:" \
+                        .format(self._exchangename))
+                print("Expected uuid: {} but received: {}".format(self._request_uuid, uuid))
                 self._print_response(ingressMsg, save_to_file=False)
                 return
 
@@ -656,25 +656,25 @@ class ManualTest():
                 if use_security_lib:
                     assert(SSPL_SEC.sspl_verify_message(msg_len, str(message), username, signature) == 0)
             except:
-                print "Authentication failed on message: %s" % ingressMsg
+                print("Authentication failed on message: %s" % ingressMsg)
 
             try:
                 # Sorts out any outgoing messages only processes *_response_type
                 if ingressMsg.get("message").get("sensor_response_type") is not None or \
                     ingressMsg.get("message").get("actuator_response_type") is not None:
                     self._total_ack_msg_received += 1
-                    print "%s) Received on %s channel:" % \
-                          (self._total_ack_msg_received, self._exchangename)
+                    print("%s) Received on %s channel:" % \
+                          (self._total_ack_msg_received, self._exchangename))
                     self._print_response(ingressMsg)
                     self._msg_received = True
             except Exception as e:
-                print "Error printing response: %r" % e
+                print("Error printing response: %r" % e)
 
             ch.basic_ack(delivery_tag = method.delivery_tag)
 
         # Sets the callback function to be used when start_consuming is called and specifies the queue to pull messages off of.
         try:
-          channel.basic_consume(callback,
+          channel.basic_consume(on_message_callback=callback,
                                 queue=result.method.queue)
           channel.start_consuming()
         except KeyboardInterrupt:

@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/python3.6
 # -*- coding: utf-8 -*-
 
 """ This file acts as the main executable for the Castor CLI

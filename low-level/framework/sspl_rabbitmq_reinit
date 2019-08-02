@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python3.6
 """
 Setup rabbitmq for use by sspl_ll on EES systems
 
@@ -109,7 +109,7 @@ def _create_vhost_if_necessary(virtual_host, product):
     elif product in enabled_products:
         vhosts = subprocess.check_output(
             [RABBITMQCTL, 'list_vhosts']
-            ).split('\n')
+            ).decode("utf-8").split('\n')
         assert vhosts[0] == 'Listing vhosts ...'
         assert vhosts[-2] == '...done.'
         assert vhosts[-1] == ''
@@ -169,7 +169,7 @@ def _create_user_if_necessary(username, password, virtual_host, product):
     elif product in enabled_products:
         users = subprocess.check_output(
             [RABBITMQCTL, 'list_users']
-            ).split('\n')
+            ).decode("utf-8").split('\n')
         assert users[0] == 'Listing users ...'
         assert users[-2] == '...done.'
         assert users[-1] == ''

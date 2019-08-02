@@ -14,6 +14,7 @@ os.sys.path.insert(0, topdir)
 from test.automated.rabbitmq.rabbitmq_ingress_processor_tests import RabbitMQingressProcessorTests
 from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 
+
 @step(u'Given that SSPL is running')
 def given_that_sspl_ll_is_running(step):
     # Check that the state for sspl_ll service is active
@@ -84,8 +85,7 @@ def then_i_get_the_host_update_data_sensor_json_response_message(step):
         try:
             # Make sure we get back the message type that matches the request
             msg_type = ingressMsg.get("sensor_response_type")
-            if msg_type.get("info").get("resource_type") == "node:os:system":
-                host_update_msg = msg_type
+            host_update_msg = msg_type["host_update"]
             break
         except Exception as exception:
             time.sleep(4)
@@ -142,6 +142,7 @@ def then_i_get_the_local_mount_data_sensor_json_response_message(step):
     assert(local_mount_data_msg.get("totalSpace") is not None)
     assert(local_mount_data_msg.get("totalSwap") is not None)
 
+
 @step(u'Then I get the cpu data sensor JSON response message')
 def then_i_get_the_cpu_data_sensor_json_response_message(step):
 
@@ -155,8 +156,7 @@ def then_i_get_the_cpu_data_sensor_json_response_message(step):
         try:
             # Make sure we get back the message type that matches the request
             msg_type = ingressMsg.get("sensor_response_type")
-            if msg_type.get("info").get("resource_type") == "node:os:cpu":
-                cpu_data_msg = msg_type
+            cpu_data_msg = msg_type["cpu_data"]
             break
         except Exception as exception:
             time.sleep(4)
@@ -233,6 +233,7 @@ def then_i_get_the_if_data_sensor_json_response_message(step):
     assert(if_data_specific_info is not None)
     assert(if_data_specific_info.get("localtime") is not None)
     assert(if_data_specific_info.get("interfaces") is not None)
+
 
 @step(u'Then I get the disk space data sensor JSON response message')
 def then_i_get_the_disk_space_data_sensor_json_response_message(step):

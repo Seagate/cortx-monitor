@@ -18,7 +18,7 @@
 import os
 import json
 import shutil
-import Queue
+import queue
 import time
 import pyinotify
 import subprocess
@@ -31,13 +31,11 @@ from framework.utils.service_logging import logger
 from message_handlers.disk_msg_handler import DiskMsgHandler
 from message_handlers.service_msg_handler import ServiceMsgHandler
 
-from zope.interface import implements
+from zope.interface import implementer
 from sensors.IHpi_monitor import IHPIMonitor
 
-
+@implementer(IHPIMonitor)
 class HPIMonitor(ScheduledModuleThread, InternalMsgQ):
-
-    implements(IHPIMonitor)
 
 
     SENSOR_NAME       = "HPIMonitor"

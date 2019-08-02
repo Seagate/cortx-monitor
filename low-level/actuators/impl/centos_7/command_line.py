@@ -15,16 +15,15 @@
 """
 import subprocess
 
-from zope.interface import implements
+from zope.interface import implementer
 from actuators.Icommand_line import ICommandLine
 
 from framework.base.debug import Debug
 from framework.utils.service_logging import logger
 
+@implementer(ICommandLine)
 class CommandLine(Debug):
     """Handles messages for command line requests"""
-
-    implements(ICommandLine)
 
     ACTUATOR_NAME = "CommandLine"
 

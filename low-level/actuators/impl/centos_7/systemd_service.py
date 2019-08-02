@@ -17,7 +17,7 @@
 import json
 import time
 
-from zope.interface import implements
+from zope.interface import implementer
 from actuators.IService import IService
 
 from framework.base.debug import Debug
@@ -25,11 +25,9 @@ from framework.utils.service_logging import logger
 
 from dbus import SystemBus, Interface, exceptions as debus_exceptions
 
-
+@implementer(IService)
 class SystemdService(Debug):
     """Handles service request messages to systemd"""
-
-    implements(IService)
 
     ACTUATOR_NAME = "SystemdService"
 
@@ -130,7 +128,7 @@ class SystemdService(Debug):
                 self._log_debug("perform_request, Unknown service request")
                 return (self._service_name, "Unknown service request", None)
 
-        except debus_exceptions.DBusException, error:
+        except debus_exceptions.DBusException as error:
             logger.exception("DBus Exception: %r" % error)
             return (self._service_name, str(error), None)
 

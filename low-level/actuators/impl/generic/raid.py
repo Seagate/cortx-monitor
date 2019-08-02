@@ -15,16 +15,16 @@
 """
 import subprocess
 
-from zope.interface import implements
+from zope.interface import implementer
 from actuators.Iraid import IRAIDactuator
 
 from framework.base.debug import Debug
 from framework.utils.service_logging import logger
 
+@implementer(IRAIDactuator)
 class RAIDactuator(Debug):
     """Handles request messages for RAID requests"""
 
-    implements(IRAIDactuator)
 
     ACTUATOR_NAME = "RAIDactuator"
     SUCCESS_MSG = "Success"

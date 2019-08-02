@@ -94,7 +94,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
         self._RAID_actuator         = None
         self._IPMI_actuator         = None
         self._hdparm_actuator       = None
-	self._smartctl_actuator     = None
+        self._smartctl_actuator     = None
         self._command_line_actuator = None
         self._NodeHW_actuator       = None
 
@@ -536,31 +536,31 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                         self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
                         return
                 else:
-		    if self._smartctl_actuator is None:
-                	from actuators.Ismartctl import ISmartctl
-                	smartctl_actuator_class = self._queryUtility(ISmartctl)
-                	if smartctl_actuator_class:
-                   	   self._smartctl_actuator = self._queryUtility(ISmartctl)()
-                    	   self._log_debug("_process_msg, _smart_actuator name: %s" % self._smartctl_actuator.name())
-                	else:
-                    	   logger.error(" No module Smartctl is present to load")
-		    serial_compare = self._smartctl_actuator._check_serial_number(drive_request)
-		    if not serial_compare:
-			json_msg = AckResponseMsg(node_request, "Drive Not Found", uuid).getJson()
-			self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
-			return
-		    else:
-                    	serial_number = drive_request
+                    if self._smartctl_actuator is None:
+                        from actuators.Ismartctl import ISmartctl
+                        smartctl_actuator_class = self._queryUtility(ISmartctl)
+                        if smartctl_actuator_class:
+                            self._smartctl_actuator = self._queryUtility(ISmartctl)()
+                            self._log_debug("_process_msg, _smart_actuator name: %s" % self._smartctl_actuator.name())
+                        else:
+                            logger.error(" No module Smartctl is present to load")
+                    serial_compare = self._smartctl_actuator._check_serial_number(drive_request)
+                    if not serial_compare:
+                        json_msg = AckResponseMsg(node_request, "Drive Not Found", uuid).getJson()
+                        self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+                        return
+                    else:
+                        serial_number = drive_request
 
-                # Send the event to SystemdWatchdog to schedule SMART test
-                internal_json_msg = json.dumps(
-                    {"sensor_request_type" : "disk_smart_test",
-                        "serial_number" : serial_number,
-                        "node_request" : node_request,
-                        "uuid" : uuid
-                    })
+                    # Send the event to SystemdWatchdog to schedule SMART test
+                    internal_json_msg = json.dumps(
+                        {"sensor_request_type" : "disk_smart_test",
+                            "serial_number" : serial_number,
+                            "node_request" : node_request,
+                            "uuid" : uuid
+                        })
 
-                self._write_internal_msgQ("SystemdWatchdog", internal_json_msg)
+                    self._write_internal_msgQ("SystemdWatchdog", internal_json_msg)
 
             elif component == "DRVM":
                 # Requesting the current status from drivemanager
@@ -761,7 +761,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
         serial_number = "Not Found"
         error = ""
 
-	try:
+        try:
             # Query the Zope GlobalSiteManager for an object implementing the smart actuator
             if self._smartctl_actuator is None:
                 from actuators.Ismartctl import ISmartctl
@@ -794,7 +794,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 # Parse out "Serial Number:" from smartctl result to obtain serial number
                 serial_number = smartctl_response[14:].strip()
 
-	except Exception as ae:
+        except Exception as ae:
             logger.exception(ae)
             error = str(ae)
 

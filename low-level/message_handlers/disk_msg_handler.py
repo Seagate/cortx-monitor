@@ -644,7 +644,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
     def _remove_replaced_drive(self, serial_number, enclosure, drive_num):
         """Check for a drive being replaced with a new one and delete the old one"""
         # Loop thru the dict of drivemanager objects and see if there is a drive at this location in the drawer
-        for old_serial_num, drive in self._drvmngr_drives.iteritems():
+        for old_serial_num, drive in list(self._drvmngr_drives.items()):
             try:
                 if enclosure == drive.get_drive_enclosure() and \
                    drive_num == drive.get_drive_num() and \
@@ -763,7 +763,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
             drives_list = []
             json_dict = {}
-            for serial_num, drive in self._drvmngr_drives.iteritems():
+            for serial_num, drive in list(self._drvmngr_drives.items()):
                 # Don't serialize drives that have no HPI data
                 if drive.get_drive_enclosure() == "HPI_Data_Not_Available":
                     continue
@@ -795,7 +795,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
         try:
             drives_list = []
             json_dict = {}
-            for serial_number, drive in self._hpi_drives.iteritems():
+            for serial_number, drive in list(self._hpi_drives.items()):
                 # Obtain json message containing all relevant HPI data
                 hpi_msg = drive.toHPIjsonMsg().getJson()
                 hpi_json_msg = json.loads(hpi_msg).get("message").get("sensor_response_type").get("disk_status_hpi")

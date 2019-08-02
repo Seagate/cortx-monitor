@@ -86,7 +86,7 @@ def then_i_get_the_logical_volume_sensor_json_response_message(step):
             break
         except Exception as exception:
             time.sleep(4)
-            print exception
+            print(exception)
 
     assert(logical_volume_sensor_msg is not None)
     assert(logical_volume_sensor_msg.get("alert_type") is not None)

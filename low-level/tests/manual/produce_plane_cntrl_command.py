@@ -1,13 +1,13 @@
-#!/usr/bin/env python
+#!/usr/bin/python3.6
 
 import json
-from manual_test import ManualTest
+from .manual_test import ManualTest
 
 manTest = ManualTest("PLANECNTRLRMQEGRESSPROCESSOR")
 
 request = "status"
-arguments = {u'fromdb': None, u'delim': u',\\t', u'cols': u'wGsf', u'json': None, u'ignoreha': False, u'condition': None}
-parameters = {u'drive_id': None, u'raid_id': None, u'node_id': u'cslco1800', u'debug_id': None}
+arguments = {'fromdb': None, 'delim': ',\\t', 'cols': 'wGsf', 'json': None, 'ignoreha': False, 'condition': None}
+parameters = {'drive_id': None, 'raid_id': None, 'node_id': 'cslco1800', 'debug_id': None}
 
 #request = "job_status"
 #arguments = {'uuid':'tester'}
@@ -15,7 +15,7 @@ parameters = {u'drive_id': None, u'raid_id': None, u'node_id': u'cslco1800', u'd
 
 file = "/opt/seagate/sspl/low-level/tests/manual/actuator_msgs/plane_cntrl_request.json"
 jsonMsg = json.loads(open(file).read())
-jsonMsg["message"]["actuator_request_type"]["plane_controller"]["command"] = u"%s" % request
+jsonMsg["message"]["actuator_request_type"]["plane_controller"]["command"] = "%s" % request
 jsonMsg["message"]["actuator_request_type"]["plane_controller"]["parameters"] = parameters
 jsonMsg["message"]["actuator_request_type"]["plane_controller"]["arguments"] = arguments
 

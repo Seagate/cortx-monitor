@@ -1,7 +1,7 @@
-#!/usr/bin/env python
+#!/usr/bin/python3.6
 
 import json
-from manual_test import ManualTest
+from .manual_test import ManualTest
 
 manTest = ManualTest("PLANECNTRLRMQEGRESSPROCESSOR")
 

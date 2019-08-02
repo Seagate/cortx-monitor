@@ -261,7 +261,7 @@ class RealStorEnclosure(StorageEnclosure):
         cli_api_auth = self.user + '_' + self.passwd
 
         url = self.build_url(self.URI_CLIAPI_LOGIN)
-        auth_hash = hashlib.sha256(cli_api_auth).hexdigest()
+        auth_hash = hashlib.sha256(cli_api_auth.encode('utf-8')).hexdigest()
         headers = {'datatype':'json'}
 
         response = self.ws.ws_get(url + auth_hash, headers, \
@@ -298,8 +298,7 @@ class RealStorEnclosure(StorageEnclosure):
             #logger.debug("existing_faults TRUE")
             return True
 
-        if 0 != cmp(self.latest_faults,
-            self.memcache_faults):
+        if self.latest_faults != self.memcache_faults:
             changed = True
             logger.warn("System faults state changed, updating cached faults!!")
             self.memcache_faults = self.latest_faults
@@ -399,7 +398,9 @@ class RealStorEnclosure(StorageEnclosure):
 
             if system:
                 # Check if fault exists
-                if not system.has_key(self.FAULT_KEY):
+                # TODO: use self.FAULT_KEY in system: system.key() generates
+                # list and find item in that.
+                if not self.FAULT_KEY in system.keys():
                     logger.info("{0} Healthy, no faults seen".format(self.EES_ENCL))
                     return
 

@@ -17,11 +17,9 @@ URL:        http://gerrit.mero.colo.seagate.com:8080/#/admin/projects/sspl
 Source0:    %{name}-%{version}.tgz
 BuildRoot:  %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 BuildRequires: rpm-build sudo
-Requires:   python-daemon python-zope-interface python-zope-event python-zope-component python-pika python-jsonschema rabbitmq-server
-Requires:   pysnmp systemd-python pygobject2 python-slip-dbus udisks2 python-psutil python-inotify python-paramiko hdparm pyserial
-Requires:   python-requests ipmitool
-Requires:   libsspl_sec libsspl_sec-method_none
-Requires:   perl(Config::Any)
+Requires:   rabbitmq-server udisks2 hdparm python36 ipmitool python36-dbus systemd-devel python36-paramiko
+Requires:   libsspl_sec libsspl_sec-method_none python36-devel python36-psutil python36-gobject
+Requires:   perl(Config::Any) systemd-python36 python36
 Requires(pre): shadow-utils
 
 # Disabling for EES-non-requirement
@@ -34,6 +32,8 @@ Installs SSPL
 %setup -n sspl/low-level
 
 %build
+# Required to generate RPM targeted for Python3 even when default Python is 2.
+%global __python %{__python3}
 
 %clean
 [ "${RPM_BUILD_ROOT}" != "/" ] && rm -rf ${RPM_BUILD_ROOT}
@@ -73,11 +73,6 @@ mkdir -p /var/sspl/data/
 chown -R sspl-ll /var/sspl/
 
 %post
-# NOTE: By default the sspl default conf file will not be copied.
-# The provisioner is supposed to copy the appropriate conf file based
-# on product/env and start SSPL with it.
-# TODO: Disable this default copy once the provisioners are ready.
-
 # run conf_diff.py script
 [ -f /opt/seagate/sspl/low-level/framework/base/sspl_conf_adopt.py ] && python /opt/seagate/sspl/low-level/framework/base/sspl_conf_adopt.py
 
@@ -86,10 +81,6 @@ chown -R sspl-ll /var/sspl/
 
 # restore of data & iem folder
 [ -d /opt/seagate/backup/%{version}/sspl ] && cp -R /opt/seagate/backup/%{version}/sspl/* /var/sspl/
-
-# Copy rsyslog configuration
-#[ -f /etc/rsyslog.d/0-iemfwd.conf ] ||
-#    cp /opt/seagate/sspl/low-level/files/etc/rsyslog.d/0-iemfwd.conf /etc/rsyslog.d/0-iemfwd.conf
 
 # Copy init script
 [ -f /opt/seagate/sspl/sspl_init ] ||
@@ -101,17 +92,11 @@ if [ "$1" == "2" ]; then
     systemctl restart sspl-ll.service 2> /dev/null
 fi
 
-#mkdir -p /var/log/journal
-#systemctl restart systemd-journald
-
-# Have systemd reload
-#systemctl daemon-reload
-
-#if [ "$1" = "1" ]; then
-    # Enable services to start at boot
-#    systemctl enable rabbitmq-server
-#    echo "Installation complete !! Run /opt/seagate/sspl/sspl_init to configure SSPL"
-#fi
+if [ "$1" = "1" ]; then
+    echo "Installation complete. Follow the instructions."
+    echo "Run pip3.6 install -r /opt/seagate/sspl/low-level/requirements.txt"
+    echo "Run /opt/seagate/sspl/sspl_init to configure SSPL"
+fi
 
 %preun
 # Remove configuration in case of uninstall

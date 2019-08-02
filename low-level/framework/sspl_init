@@ -178,7 +178,7 @@ config_sspl() {
     product=$(sed -nr 's/^product=([^,]+)$/\1/p' $SSPL_CONF | head -1)
     [ -z "$product" ] && echo "No product specified in $SSPL_CONF" && exit 1
 
-    enabled_products=$(python $DIR_NAME/low-level/framework/base/sspl_constants.py)
+    enabled_products=$(python3.6 $DIR_NAME/low-level/framework/base/sspl_constants.py)
     [ -z "$enabled_products" ] && echo "No enabled products!" && exit 1
     [[ $enabled_products =~ (^| )$product($| ) ]] || {
         echo "Product '$product' is not in enabled products list: $enabled_products";

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python3.6
 from enum import Enum
 
 enabled_products = ["EES", "CS-A"]

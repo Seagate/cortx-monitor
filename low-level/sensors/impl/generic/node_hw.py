@@ -23,7 +23,7 @@ import tempfile
 import socket
 import uuid
 
-from zope.interface import implements
+from zope.interface import implementer
 
 from framework.utils.severity_reader import SeverityReader
 from message_handlers.node_data_msg_handler import NodeDataMsgHandler
@@ -42,11 +42,12 @@ IPMITOOL = "sudo ipmitool "
 BASH_ILLEGAL_CMD = 127
 DETECT_VM = "sudo /usr/bin/systemd-detect-virt"
 
+
+@implementer(INodeHWsensor)
 class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
     """Obtains data about the FRUs and logical sensors and updates
        if any state change occurs"""
 
-    implements(INodeHWsensor)
 
     SENSOR_NAME = "NodeHWsensor"
     PRIORITY = 1
@@ -251,7 +252,7 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
             self.sel_last_queried = time.time()
 
             key = val = None
-            info_list = ''.join(sel_info).split("\n")
+            info_list = b''.join(sel_info).decode("utf-8").split("\n")
 
             for info in info_list:
                 if ':' in info:
@@ -408,8 +409,8 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
         if retcode != 0:
             if retcode == 1:
                 if isinstance(res, tuple):
-                    resstr = ''.join(res)
-
+                    resstr = b''.join(res)
+                    resstr = resstr.decode("utf-8")
                     if resstr.find(self.IPMI_ERRSTR) == 0:
                         logger.error("{0}: ipmitool error:: {1}\n"
                             "Dependencies failed, shutting down sensor".\
@@ -437,7 +438,7 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
             msg = "ipmitool sdr type command failed: {0}".format(''.join(sensor_list_out))
             logger.error(msg)
             return
-        sensor_list = ''.join(sensor_list_out).split("\n")
+        sensor_list = b''.join(sensor_list_out).decode("utf-8").split("\n")
 
         out = []
         for sensor in sensor_list:
@@ -463,7 +464,7 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
             msg = "ipmitool sdr entity command failed: {0}".format(''.join(sensor_list_out))
             logger.error(msg)
             return
-        sensor_list = ''.join(sensor_list_out).split("\n")
+        sensor_list = b''.join(sensor_list_out).decode("utf-8").split("\n")
 
         out = []
         for sensor in sensor_list:
@@ -483,7 +484,7 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
             msg = "ipmitool sensor get command failed: {0}".format(''.join(sel_out))
             logger.error(msg)
             return
-        props_list = ''.join(props_list_out).split("\n")
+        props_list = b''.join(props_list_out).decode("utf-8").split("\n")
 
         static_keys = {}
         curr_key = None
@@ -503,7 +504,7 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
         }
         # Whatever keys from DYNAMIC_KEYS are present,
         # move them to the 'dynamic' dict
-        for c in (static_keys.viewkeys() & self.DYNAMIC_KEYS):
+        for c in (set(static_keys.keys()) & self.DYNAMIC_KEYS):
             dynamic[c] = static_keys[c]
             del static_keys[c]
 
@@ -520,7 +521,7 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
             msg = "ipmitool sensor get command failed: {0}".format(''.join(props_list_out))
             logger.error(msg)
             return (False, False)
-        props_list = ''.join(props_list_out).split("\n")
+        props_list = b''.join(props_list_out).decode("utf-8").split("\n")
         props_list = props_list[1:] # The first line is 'Locating sensor record...'
 
         specific_static = {}
@@ -541,12 +542,12 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
         }
         # Whatever keys from common_props are present,
         # move them to the 'common' dict
-        for c in (specific_static.viewkeys() & common_props):
+        for c in (set(specific_static.keys()) & common_props):
             common[c] = specific_static[c]
             del specific_static[c]
 
         specific_dynamic = {}
-        for c in (specific_static.viewkeys() & self.DYNAMIC_KEYS):
+        for c in (set(specific_static.keys()) & self.DYNAMIC_KEYS):
             specific_dynamic[c] = specific_static[c]
             del specific_static[c]
 
@@ -584,7 +585,7 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
 
         fan_common_data, fan_specific_data, fan_specific_data_dynamic = self._get_sensor_props(sensor_name)
 
-        for key in fan_specific_data.keys():
+        for key in list(fan_specific_data.keys()):
             if key not in fan_specific_list:
                 del fan_specific_data[key]
 

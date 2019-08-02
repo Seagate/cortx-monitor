@@ -22,7 +22,7 @@ import time
 import uuid
 
 import requests
-from zope.interface import implements
+from zope.interface import implementer
 
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
@@ -37,9 +37,9 @@ from message_handlers.real_stor_encl_msg_handler import RealStorEnclMsgHandler
 from sensors.ISideplane_expander import ISideplaneExpandersensor
 
 
+@implementer(ISideplaneExpandersensor)
 class RealStorSideplaneExpanderSensor(ScheduledModuleThread, InternalMsgQ):
 
-    implements(ISideplaneExpandersensor)
 
     SENSOR_NAME = "RealStorSideplaneExpanderSensor"
     SENSOR_TYPE = "enclosure_sideplane_expander_alert"

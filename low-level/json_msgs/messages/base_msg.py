@@ -2,7 +2,7 @@
  ****************************************************************************
  Filename:          base_msg.py
  Description:       All transmitted JSON messages extend this base class
-                    containing global constants used throughout  
+                    containing global constants used throughout
  Creation Date:     01/31/2015
  Author:            Jake Abernathy
 
@@ -17,11 +17,10 @@
 
 import abc
 
-class BaseMsg():
+class BaseMsg(metaclass=abc.ABCMeta):
     '''
     The base class for all JSON messages transmitted by SSPL-LL
     '''
-    __metaclass__ = abc.ABCMeta
 
 
     SCHEMA_VERSION  = "1.0.0"
@@ -33,4 +32,4 @@ class BaseMsg():
 
     @abc.abstractmethod
     def getJson(self):
-        raise NotImplementedError("Subclasses should implement this!")        
+        raise NotImplementedError("Subclasses should implement this!")

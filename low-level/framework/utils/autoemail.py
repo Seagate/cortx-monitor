@@ -125,8 +125,8 @@ class AutoEmail(object):
         if msgPriority > self._log_priority:
             priority     = "N/A"
             log_priority = "N/A"
-            # Get the string values for displaying in logs 
-            for k, v in self.LOGLEVEL_NAME_TO_LEVEL_DICT.iteritems():
+            # Get the string values for displaying in logs
+            for k, v in list(self.LOGLEVEL_NAME_TO_LEVEL_DICT.items()):
                 if int(v) == msgPriority:
                     priority = k
                 if int(v) == self._log_priority:

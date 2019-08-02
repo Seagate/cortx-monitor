@@ -14,7 +14,7 @@ os.sys.path.insert(0, topdir)
 from test.automated.rabbitmq.rabbitmq_ingress_processor_tests import RabbitMQingressProcessorTests
 from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 
-@step(u'Given that SSPL is running')
+@step('Given that SSPL is running')
 def given_that_sspl_is_running(step):
     # Check that the state for sspl service is active
     found = False
@@ -39,7 +39,7 @@ def given_that_sspl_is_running(step):
     while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
         world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
 
-@step(u'When I send in the controller sensor message to request the current "([^"]*)" data')
+@step('When I send in the controller sensor message to request the current "([^"]*)" data')
 def when_i_send_in_the_controller_sensor_message_to_request_the_current_sensor_type_data(step, resource_type):
     egressMsg = {
         "title": "SSPL Actuator Request",
@@ -71,7 +71,7 @@ def when_i_send_in_the_controller_sensor_message_to_request_the_current_sensor_t
     }
     world.sspl_modules[RabbitMQegressProcessor.name()]._write_internal_msgQ(RabbitMQegressProcessor.name(), egressMsg)
 
-@step(u'Then I get the controller sensor JSON response message')
+@step('Then I get the controller sensor JSON response message')
 def then_i_get_the_controller_sensor_json_response_message(step):
 
     controller_sensor_msg = None
@@ -86,7 +86,7 @@ def then_i_get_the_controller_sensor_json_response_message(step):
             break
         except Exception as exception:
             time.sleep(4)
-            print exception
+            print(exception)
 
     assert(controller_sensor_msg is not None)
     assert(controller_sensor_msg.get("alert_type") is not None)

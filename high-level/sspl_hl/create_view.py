@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/python3.6
 """
 Auto-generated PLEX View Creator.
 """

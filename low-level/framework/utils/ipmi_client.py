@@ -44,7 +44,7 @@ class IPMITool(IPMI):
             msg = "ipmitool sdr type command failed: {0}".format(''.join(sensor_list_out))
             logger.error(msg)
             return
-        sensor_list = ''.join(sensor_list_out).split("\n")
+        sensor_list = b''.join(sensor_list_out).decode("utf-8").split("\n")
 
         out = []
         for sensor in sensor_list:
@@ -83,7 +83,7 @@ class IPMITool(IPMI):
             msg = "ipmitool sensor get command failed: {0}".format(''.join(props_list_out))
             logger.error(msg)
             return (False, False)
-        props_list = ''.join(props_list_out).split("\n")
+        props_list = b''.join(props_list_out).decode("utf-8").split("\n")
         props_list = props_list[1:] # The first line is 'Locating sensor record...'
 
         specific = {}
@@ -104,7 +104,7 @@ class IPMITool(IPMI):
         }
         # Whatever keys from common_props are present,
         # move them to the 'common' dict
-        for c in (specific.viewkeys() & common_props):
+        for c in (set(specific.keys()) & common_props):
             common[c] = specific[c]
             del specific[c]
 
@@ -124,7 +124,6 @@ class IPMITool(IPMI):
 
     def _run_command(self, command, out_file=subprocess.PIPE):
         """executes commands"""
-
         process = subprocess.Popen(command, shell=True, stdout=out_file, stderr=subprocess.PIPE)
         result = process.communicate()
         return result, process.returncode
@@ -157,7 +156,7 @@ class IpmiFactory(object):
     def get_implementor(self, implementor):
         """Returns instance of the class based on value from config file
         """
-        for key,value in globals().iteritems():
+        for key,value in list(globals().items()):
             if key.lower() == implementor.lower():
                 return globals()[key]()
         return None

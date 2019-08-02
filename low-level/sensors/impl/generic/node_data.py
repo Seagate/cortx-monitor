@@ -28,14 +28,14 @@ import time
 from framework.base.debug import Debug
 from framework.utils.service_logging import logger
 
-from zope.interface import implements
+from zope.interface import implementer
 from sensors.INode_data import INodeData
 
 
+@implementer(INodeData)
 class NodeData(Debug):
     """Obtains data about the node and makes it available"""
 
-    implements(INodeData)
 
     SENSOR_NAME = "NodeData"
 
@@ -126,10 +126,10 @@ class NodeData(Debug):
 
     def _get_local_mount_data(self):
         """Retrieves node information for the local_mount_data json message"""
-        self.total_space = psutil.disk_usage("/")[0]/self.units_factor
-        self.free_space  = psutil.disk_usage("/")[2]/self.units_factor
-        self.total_swap  = psutil.swap_memory()[0]/self.units_factor
-        self.free_swap   = psutil.swap_memory()[2]/self.units_factor
+        self.total_space = int(psutil.disk_usage("/")[0])//int(self.units_factor)
+        self.free_space  = int(psutil.disk_usage("/")[2])//int(self.units_factor)
+        self.total_swap  = int(psutil.swap_memory()[0])//int(self.units_factor)
+        self.free_swap   = int(psutil.swap_memory()[2])//int(self.units_factor)
         self.free_inodes = int(100 - math.ceil((float(os.statvfs("/").f_files - os.statvfs("/").f_ffree) \
                              / os.statvfs("/").f_files) * 100))
 
@@ -200,8 +200,8 @@ class NodeData(Debug):
 
     def _get_disk_space_alert_data(self):
         """Retrieves node information for the disk_space_alert_data json message"""
-        self.total_space = psutil.disk_usage("/")[0]/self.units_factor
-        self.free_space  = psutil.disk_usage("/")[2]/self.units_factor
+        self.total_space = int(psutil.disk_usage("/")[0])//int(self.units_factor)
+        self.free_space  = int(psutil.disk_usage("/")[2])//int(self.units_factor)
         self.disk_used_percentage  = psutil.disk_usage("/")[3]
 
     def _load_1min_avg(self):

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python3.6
 # -*- coding: utf-8 -*-
 
 """
@@ -21,33 +21,33 @@ import getopt
 import fcntl
 import logging
 import os
-import Queue
+import queue
 import signal
 import sys
+import subprocess
 from threading import Thread
 import time
-import yum
 
 # Add the top level directories
 parentdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.sys.path.insert(0, parentdir)
 
 
-from utils.config_reader import ConfigReader
-from utils.service_logging import init_logging
-from utils.service_logging import logger
+from framework.utils.config_reader import ConfigReader
+from framework.utils.service_logging import init_logging
+from framework.utils.service_logging import logger
 
 # Modules for handling RabbitMQ messages and manipulating internal threads
-from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
-from rabbitmq.rabbitmq_ingress_processor import RabbitMQingressProcessor
+from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
+from framework.rabbitmq.rabbitmq_ingress_processor import RabbitMQingressProcessor
 
 from framework.rabbitmq.plane_cntrl_rmq_egress_processor import PlaneCntrlRMQegressProcessor
 from framework.rabbitmq.plane_cntrl_rmq_ingress_processor import PlaneCntrlRMQingressProcessor
 from framework.base.sspl_constants import enabled_products
 from framework.actuator_state_manager import actuator_state_manager
 
-from rabbitmq.logging_processor import LoggingProcessor
-from rabbitmq.thread_controller import ThreadController
+from framework.rabbitmq.logging_processor import LoggingProcessor
+from framework.rabbitmq.thread_controller import ThreadController
 
 from actuators.impl.actuator import Actuator
 from message_handlers.node_controller_msg_handler import NodeControllerMsgHandler
@@ -112,15 +112,13 @@ def _dropPrivileges(user):
 
 def is_package_installed(rpm_name):
     """Checks installation status of <rpm_name> using
-       YUM API and returns status based on that.
+       rpm utility and returns status based on the return code.
     """
     if not rpm_name or rpm_name.strip() == "":
         raise TypeError("RPM name can't be None or blank")
-    yum_base = None
-    installed = None
-    yum_base = yum.YumBase()
-    installed = yum_base.isPackageInstalled(rpm_name)
-    return installed
+    child_process = subprocess.Popen(["rpm", "-q", rpm_name], stdout=subprocess.PIPE)
+    stream_data = child.communicate()[0]
+    return child.returncode == 0
 
 
 def are_external_dependencies_available(plugin_name, rpm_deps):
@@ -177,7 +175,7 @@ def check_dependencies(sspl_threaded_modules):
     """
     dependency_broken_modules = set()
     logger.info("Dependency check started")
-    for name, curr_module in sspl_threaded_modules.iteritems():
+    for name, curr_module in list(sspl_threaded_modules.items()):
         # Check for dependency method availability. If it is not available
         # then assume that it has no dependency.
         if hasattr(curr_module, "dependencies"):
@@ -236,7 +234,7 @@ def main(conf_reader, systemd_support):
 
         # Create mappings of modules and their message queues
         sspl_threaded_modules[klass.name()] = klass()
-        msgQlist[klass.name()] = Queue.Queue()
+        msgQlist[klass.name()] = queue.Queue()
 
     message_handlers = conf_reader._get_value_list(SSPL_SETTING,
                                                    MSG_HANDLERS)
@@ -247,7 +245,7 @@ def main(conf_reader, systemd_support):
 
         # Create mappings of modules and their message queues
         sspl_threaded_modules[klass.name()] = klass()
-        msgQlist[klass.name()] = Queue.Queue()
+        msgQlist[klass.name()] = queue.Queue()
 
     # Instantiate the sensors and actuators
 
@@ -256,7 +254,7 @@ def main(conf_reader, systemd_support):
                                             operating_system, product, setup)
 
     # Add the ThreadConroller automatically
-    msgQlist[ThreadController.name()] = Queue.Queue()
+    msgQlist[ThreadController.name()] = queue.Queue()
 
     # Check dependencies for each plugin and get a list of plugins with
     # missing dependencies.
@@ -274,7 +272,7 @@ def main(conf_reader, systemd_support):
         logger.info("SSPL has started initialization")
     try:
         # Loop through the list of instanced modules and start them on threads
-        for name, curr_module in sspl_threaded_modules.iteritems():
+        for name, curr_module in sspl_threaded_modules.items():
             if name in dependency_broken_modules:
                 logger.warning(
                     "SSPL Bootstrap: Unable to load plugin {0} due to "
@@ -370,13 +368,13 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist, operating_system
 
         from actuators.impl.generic.raid import RAIDactuator
         from actuators.impl.generic.hdparm import Hdparm
-	from actuators.impl.generic.smartctl import Smartctl
+        from actuators.impl.generic.smartctl import Smartctl
         from actuators.impl.generic.node_hw import NodeHWactuator
         from actuators.impl.generic.realstor_encl import RealStorActuator
 
         from sensors.impl.generic.raid import RAIDsensor
         from sensors.impl.generic.node_data import NodeData as NodeData
-        from sensors.impl.generic.SMR_drive_data import SMRdriveData
+        # from sensors.impl.generic.SMR_drive_data import SMRdriveData
 
         from zope.component import getGlobalSiteManager
         from zope.interface import implementedBy
@@ -407,7 +405,7 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist, operating_system
         # If it's threaded then add it to the list which will be handled by the ThreadController
         if threaded in ['True', 'true']:
             sspl_threaded_modules[klass.name()] = klass()
-            msgQlist[klass.name()] = Queue.Queue()
+            msgQlist[klass.name()] = queue.Queue()
         elif issubclass(klass, Actuator):
             logger.info("%s derived from %s Base class" %
                         (klass.name(), inspect.getmro(klass)[1].__name__))
@@ -478,9 +476,9 @@ def shutdown_handler(signum=None, frame=None):
 
 def print_usage():
     """Display the syntax usage for this script"""
-    print """sspl_ll_d -c <path_to_conf_file>
+    print("""sspl_ll_d -c <path_to_conf_file>
     -h:    Display this help
-    -c:    Configuration settings for sspl_ll_d service"""
+    -c:    Configuration settings for sspl_ll_d service""")
 
 
 if __name__ == "__main__":
@@ -513,10 +511,10 @@ if __name__ == "__main__":
 
     except (IOError, ConfigReader.Error) as err:
         # We don't have logger yet, need to find log_level from conf file first
-        print "[ Error ] when validating the configuration file %s :" % \
-            path_to_conf_file
-        print err
-        print "Exiting ..."
+        print("[ Error ] when validating the configuration file %s :" % \
+            path_to_conf_file)
+        print(err)
+        print("Exiting ...")
         sys.exit(os.EX_USAGE)
 
     # Initialize logging
@@ -526,9 +524,9 @@ if __name__ == "__main__":
 
     except Exception as err:
         # We don't have logger since it threw an exception, use generic 'print'
-        print "[ Error ] when initializing logging :"
-        print err
-        print "Exiting ..."
+        print("[ Error ] when initializing logging :")
+        print(err)
+        print("Exiting ...")
         sys.exit(os.EX_USAGE)
 
     try:
@@ -538,17 +536,17 @@ if __name__ == "__main__":
             if os.path.isfile(pidfile):
                 pid = file(pidfile).read()
                 if len(pid) and os.path.exists("/proc/%s" % pid):
-                    print "Another instance of SSPL with pid %s is active. exiting..." % pid
+                    print("Another instance of SSPL with pid %s is active. exiting..." % pid)
                     sys.exit(s.EX_OK)
 
-            file(pidfile, "w").write(str(os.getpid()))
+            open(pidfile, "w").write(str(os.getpid()))
 
         # Start sspl-ll as a main process running multiple threads
         main(conf_reader, systemd_support)
 
-    except (Exception, StandardError) as err:
+    except (Exception) as err:
         logger.critical("While spawning sspl-ll process :%r" % err)
         sys.exit(os.EX_USAGE)
 
-    print "SSPL-LL Process started successfully"
+    print("SSPL-LL Process started successfully")
     sys.exit(os.EX_OK)

@@ -18,7 +18,7 @@
 import json
 import time
 
-from zope.interface import implements
+from zope.interface import implementer
 from actuators.ILogin import ILogin
 
 from framework.base.debug import Debug
@@ -27,11 +27,9 @@ from framework.utils.service_logging import logger
 from dbus import SystemBus, Interface, exceptions as debus_exceptions
 from systemd import login
 
-
+@implementer(ILogin)
 class SystemdLogin(Debug):
     """Handles login request messages of systemd"""
-
-    implements(ILogin)
 
     ACTUATOR_NAME = "SystemdLogin"
 
@@ -74,7 +72,7 @@ class SystemdLogin(Debug):
                         self._log_debug("perform_request, user name: %s" % (user[2]))
                         user_names.append(user[2])
 
-        except debus_exceptions.DBusException, error:
+        except debus_exceptions.DBusException as error:
             logger.exception(error)
             self._bus = None
             self._manager = None
@@ -83,7 +81,7 @@ class SystemdLogin(Debug):
 
     def _get_status(self):
         """"Returns the active state of the unit"""
-        return self._proxy.Get('org.freedesktop.login1', 
+        return self._proxy.Get('org.freedesktop.login1',
                                 'Name',
                                 dbus_interface='org.freedesktop.DBus.Properties')
-    
+

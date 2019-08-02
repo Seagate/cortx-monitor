@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python3.6
 """
 # ****************************************************************************
 # Filename: sspl_tests.py
@@ -1273,4 +1273,4 @@ class SSPLtest():
 
 if __name__ == '__main__':
     s = SSPLtest()
-    print "SSPL-LL Output = " + json.dumps(s.runSSPLTest(), ensure_ascii=False)
+    print("SSPL-LL Output = " + json.dumps(s.runSSPLTest(), ensure_ascii=False))

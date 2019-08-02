@@ -111,17 +111,17 @@ class Smartctl(Debug):
         return True
 
     def _check_serial_number(self, drive_request):
-	"""checks serial_number pass in --smart cmd  matched with any drive present on system """
-	#get all drives present on system
-	command = "sudo /usr/sbin/smartctl --scan"
-	response = self._run_command(command)
-	drive_list = response.strip().split("\n")
-	for drive in drive_list:
-	    drive_path = drive[:9]
-	    #get serial number of drive.
-	    command =  "sudo /usr/sbin/smartctl -i {0} | grep Serial".format(drive_path)
-	    response = self._run_command(command)
-	    serial_number = response[14:].strip()
-	    if drive_request == serial_number:
-		return True
-	return False
+        """checks serial_number pass in --smart cmd  matched with any drive present on system """
+        #get all drives present on system
+        command = "sudo /usr/sbin/smartctl --scan"
+        response = self._run_command(command)
+        drive_list = response.strip().split("\n")
+        for drive in drive_list:
+            drive_path = drive[:9]
+            #get serial number of drive.
+            command =  "sudo /usr/sbin/smartctl -i {0} | grep Serial".format(drive_path)
+            response = self._run_command(command)
+            serial_number = response[14:].strip()
+            if drive_request == serial_number:
+                return True
+        return False

@@ -125,7 +125,6 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
                         (self._exchange_name, self._routing_key, self._virtual_host))
 
     def run(self):
-        """Run the module periodically on its own thread."""
         # self._set_debug(True)
         # self._set_debug_persist(True)
 
@@ -133,12 +132,11 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
         logger.info("RabbitMQingressProcessor, Initialization complete, accepting requests")
 
         try:
-            result = self._channel.queue_declare(exclusive=True)
+            result = self._channel.queue_declare(queue="", exclusive=True)
             self._channel.queue_bind(exchange=self._exchange_name,
-                                     queue=result.method.queue,
-                                     routing_key=self._routing_key)
-            self._channel.basic_consume(self._process_msg,
-                                        queue=result.method.queue)
+                               queue=result.method.queue,
+                               routing_key=self._routing_key)
+            self._channel.basic_consume(on_message_callback=self._process_msg, queue=result.method.queue)
             self._channel.start_consuming()
 
         except Exception as e:
@@ -280,16 +278,13 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
                 )
             self._channel = self._connection.channel()
             try:
-                self._channel.queue_declare(
-                    queue=self._queue_name,
-                    durable=False
-                    )
+                self._channel.queue_declare(queue=self._queue_name, durable=False)
             except Exception as e:
                 logger.error(e)
             try:
                 self._channel.exchange_declare(
                     exchange=self._exchange_name,
-                    type='topic',
+                    exchange_type='topic',
                     durable=False
                     )
             except Exception as e:

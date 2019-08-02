@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/python3.6
 """Module that mocks Frontier service. It accepts an incoming
    connections and checks for a <COMMAND_TO_CHECK> in a received data.
    If it finds then it sends a content of

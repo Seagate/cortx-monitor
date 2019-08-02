@@ -99,4 +99,4 @@ if __name__ == "__main__":
         if channel: send_message(channel, msg)
 
     except Exception as e:
-        print 'error: Could not send mesasge. %s' %e
+        print('error: Could not send mesasge. %s' % e)

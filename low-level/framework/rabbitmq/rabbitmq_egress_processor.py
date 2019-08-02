@@ -211,7 +211,7 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
             try:
                 self._channel.exchange_declare(
                     exchange=self._exchange_name,
-                    type='topic',
+                    exchange_type='topic',
                     durable=False
                     )
             except Exception as e:
@@ -251,7 +251,7 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
             try:
                 self._channel.exchange_declare(
                     exchange=self._exchange_name,
-                    type='topic',
+                    exchange_type='topic',
                     durable=False
                     )
             except Exception as e:

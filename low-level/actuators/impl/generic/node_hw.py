@@ -105,9 +105,9 @@ class NodeHWactuator(Actuator, Debug):
         fru_type = "fan"
         specific_info = None
         specifics = []
-        for sensor_id, fru_info in self.fru_specific_info.iteritems():
+        for sensor_id, fru_info in list(self.fru_specific_info.items()):
             specific_info = dict()
-            for fru_key,fru_value in fru_info.iteritems():
+            for fru_key,fru_value in list(fru_info.items()):
                 specific_info[fru_key] = fru_value
             specific_info["resource_id"] = sensor_id
             specifics.append(specific_info)
@@ -128,7 +128,6 @@ class NodeHWactuator(Actuator, Debug):
             response = self._process_fru_request(node_request)
         elif node_request_instance == ['NDHW', 'node', 'sensor']:
             response = self._process_sensor_request(node_request)
-
         return response
 
     def _process_fru_request(self, node_request):
@@ -197,7 +196,7 @@ class NodeHWactuator(Actuator, Debug):
         # "node_request": "NDHW:node:sensor:Temperature"
         # "resource": "* or PS1 Temperature"
         self._sensor_type = node_request.get('node_request').split(":")[3]
-	self._resource_id = node_request.get('resource')
+        self._resource_id = node_request.get('resource')
         if self._sensor_type.lower() in list(map(lambda sensor_item: sensor_item.value.lower(), SensorTypes)):
             # fetch generic node info
             self._build_generic_info(response)
@@ -244,7 +243,7 @@ class NodeHWactuator(Actuator, Debug):
         :param response:
         :return:
         """
-	response['instance_id'] = self._resource_id
+        response['instance_id'] = self._resource_id
         response['alert_type'] = AlertTypes.GET.value
         response['severity'] = SeverityTypes.INFORMATIONAL.value
         response['info'] = {
@@ -323,9 +322,9 @@ class NodeHWactuator(Actuator, Debug):
         try:
             # check if data is tuple, convert to string
             if isinstance(data, tuple):
-                data_str = ''.join(data)
+                data_str = ''.join([item.decode("utf8") for item in data])
             else:
-                data_str = data
+                data_str = data.decode("utf-8")
 
             # from properties list split out key and values.
             for line in data_str.split("\n"):

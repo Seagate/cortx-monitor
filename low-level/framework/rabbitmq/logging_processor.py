@@ -93,13 +93,12 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
 
         self._log_debug("Start accepting requests")
         try:
-            result = self._channel.queue_declare(exclusive=True)
+            result = self._channel.queue_declare(queue="", exclusive=True)
             self._channel.queue_bind(exchange=self._exchange_name,
                                 queue=result.method.queue,
                                 routing_key=self._routing_key)
 
-            self._channel.basic_consume(self._process_msg,
-                                  queue=result.method.queue)
+            self._channel.basic_consume(queue=result.method.queue, on_message_callback=self._process_msg)
 
             self._channel.start_consuming()
 
@@ -219,7 +218,7 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
                     )
                 self._channel.exchange_declare(
                     exchange=self._exchange_name,
-                    type='topic',
+                    exchange_type='topic',
                     durable=False
                     )
             except:

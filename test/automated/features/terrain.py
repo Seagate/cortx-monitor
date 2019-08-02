@@ -5,7 +5,7 @@ import time
 import logging
 import daemon
 import signal
-import Queue
+import queue
 import sys
 import os
 
@@ -15,6 +15,7 @@ from threading import Thread
 topdir = os.path.dirname(os.path.dirname(os.path.dirname \
             (os.path.dirname(os.path.abspath(__file__)))))
 os.sys.path.insert(0, topdir)
+
 
 from framework.utils.config_reader import ConfigReader
 from framework.utils.service_logging import init_logging
@@ -40,10 +41,10 @@ def init_rabbitMQ_msg_processors():
         conf_reader = ConfigReader(path_to_conf_file)
     except (IOError, ConfigReader.Error) as err:
         # We don't have logger yet, need to find log_level from conf file first
-        print "[ Error ] when validating the configuration file %s :" % \
-            path_to_conf_file
-        print err
-        print "Exiting ..."
+        print("[ Error ] when validating the configuration file %s :" % \
+            path_to_conf_file)
+        print(err)
+        print("Exiting ...")
         exit(os.EX_USAGE)
 
     # Initialize logging
@@ -52,9 +53,9 @@ def init_rabbitMQ_msg_processors():
 
     except Exception as err:
         # We don't have logger since it threw an exception, use generic 'print'
-        print "[ Error ] when initializing logging :"
-        print err
-        print "Exiting ..."
+        print("[ Error ] when initializing logging :")
+        print(err)
+        print("Exiting ...")
         exit(os.EX_USAGE)
 
     # Modules to be used for testing
@@ -70,7 +71,7 @@ def init_rabbitMQ_msg_processors():
 
     # Read in product value from configuration file
     product = conf_reader._get_value(SYS_INFORMATION, PRODUCT_NAME)
-    logger.info("sspl-ll Bootstrap: product name supported: %s" % product)
+    logger.info("SSPL Bootstrap: product name supported: %s" % product)
 
     # Use reflection to instantiate the class based upon its class name in config file
     for conf_thread in conf_modules:
@@ -78,7 +79,7 @@ def init_rabbitMQ_msg_processors():
 
         # Create mappings of modules and their message queues
         world.sspl_modules[klass.name()] = klass()
-        msgQlist[klass.name()] = Queue.Queue()
+        msgQlist[klass.name()] = queue.Queue()
 
     # Convert to a dict
     # TODO: Check use of this
@@ -87,8 +88,8 @@ def init_rabbitMQ_msg_processors():
     try:
         # Loop through the list of instanced modules and start them on threads
         threads=[]
-        for name, curr_module in world.sspl_modules.iteritems():
-            logger.info("SSPL-Tests Starting %s" % curr_module.name())
+        for name, curr_module in list(world.sspl_modules.items()):
+            logger.info("SSPL Tests Starting %s" % curr_module.name())
             curr_module._set_debug(True)
             thread = Thread(target=_run_thread_capture_errors,
                             args=(curr_module, msgQlist, conf_reader, product))
@@ -127,7 +128,7 @@ def _run_thread_capture_errors(curr_module, msgQlist, conf_reader, product):
         curr_module._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
 
         # Shut it down, error is non-recoverable
-        for name, other_module in world.sspl_modules.iteritems():
+        for name, other_module in list(world.sspl_modules.items()):
             if other_module is not curr_module:
                 other_module.shutdown()
 
@@ -135,7 +136,7 @@ def _run_thread_capture_errors(curr_module, msgQlist, conf_reader, product):
 def stop_rabbitMQ_msg_processors(self):
     """Shuts down rabbitmq threads and terminates tests"""
     time.sleep(5)
-    print "SSPL Automated Test Process ended successfully"
-    for name, module in world.sspl_modules.iteritems():
+    print("SSPL Automated Test Process ended successfully")
+    for name, module in list(world.sspl_modules.items()):
         module.shutdown()
     os._exit(0)

@@ -34,14 +34,15 @@ from framework.platforms.realstor.realstor_enclosure import singleton_realstoren
 from message_handlers.real_stor_encl_msg_handler import RealStorEnclMsgHandler
 from message_handlers.logging_msg_handler import LoggingMsgHandler
 
-from zope.interface import implements
+from zope.interface import implementer
 from sensors.IRealStor_disk_sensor import IRealStorDiskSensor
 
+
+@implementer(IRealStorDiskSensor)
 class RealStorDiskSensor(ScheduledModuleThread, InternalMsgQ):
     """Monitors RealStor enclosure disks state and raise sspl events for
        detected faults, insertion,removal events """
 
-    implements(IRealStorDiskSensor)
 
     SENSOR_NAME = "RealStorDiskSensor"
     RESOURCE_TYPE = "enclosure:fru:disk"
@@ -168,7 +169,7 @@ class RealStorDiskSensor(ScheduledModuleThread, InternalMsgQ):
 
         # Build data for must fields in fru disk data
         for item in self.disk_generic_info:
-            if disk_info.has_key(item):
+            if item in disk_info:
                 disk[item] = disk_info[item]
 
         encl = self.rssencl.ENCL_FAMILY
@@ -447,7 +448,7 @@ class RealStorDiskSensor(ScheduledModuleThread, InternalMsgQ):
         specific_info.update(details)
         specific_info.update(ext)
 
-        for k in specific_info.viewkeys():
+        for k in specific_info.keys():
             if specific_info[k] == "":
                 specific_info[k] = "N/A"
 

@@ -17,7 +17,7 @@
 import json
 import syslog
 
-from zope.interface import implements
+from zope.interface import implementer
 from loggers.ILogger import ILogger
 from framework.base.debug import Debug
 from framework.utils.autoemail import AutoEmail
@@ -43,10 +43,9 @@ LOGLEVEL_NAME_TO_LEVEL_DICT = {
     "LOG_DEBUG"   : LOG_DEBUG
 }
 
+@implementer(ILogger)
 class IEMlogger(Debug):
     """Handles logging IEM messages to the journal"""
-
-    implements(ILogger)
 
     LOGGER_NAME = "IEMlogger"
 
@@ -76,7 +75,7 @@ class IEMlogger(Debug):
 
         # Encode and remove whitespace,\n,\t if present
         log_msg = json.dumps(log_msg, ensure_ascii=True).encode('utf8')
-        log_msg = json.loads(' '.join(log_msg.split()))
+        log_msg = json.loads(b' '.join(log_msg.split()))
 
         # Try encoding message to handle escape chars if present
         try:
@@ -116,6 +115,6 @@ class IEMlogger(Debug):
             # Dump to journal anyway as it could be useful for debugging format errors
             #result = "IEMlogger, log_msg, Error parsing IEM: {}".format(str(de))
             #journal.send(result, PRIORITY=LOG_WARNING, SYSLOG_IDENTIFIER="sspl-ll")
-            journal.send(log_msg, PRIORITY=LOG_WARNING, SYSLOG_IDENTIFIER="sspl-ll")
+            journal.send(log_msg.decode("utf-8"), PRIORITY=LOG_WARNING, SYSLOG_IDENTIFIER="sspl-ll")
 
         return result

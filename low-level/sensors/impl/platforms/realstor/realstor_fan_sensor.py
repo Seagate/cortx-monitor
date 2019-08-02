@@ -23,7 +23,7 @@ import time
 import uuid
 
 import requests
-from zope.interface import implements
+from zope.interface import implementer
 
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
@@ -37,10 +37,9 @@ from message_handlers.real_stor_encl_msg_handler import RealStorEnclMsgHandler
 
 from sensors.Ifan import IFANsensor
 
-
+@implementer(IFANsensor)
 class RealStorFanSensor(ScheduledModuleThread, InternalMsgQ):
 
-    implements(IFANsensor)
 
     SENSOR_NAME = "RealStorFanSensor"
     SENSOR_TYPE = "enclosure_fan_module_alert"

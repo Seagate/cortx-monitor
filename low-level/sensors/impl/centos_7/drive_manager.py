@@ -13,16 +13,16 @@
  or disclosure of this code, for any reason, not expressly authorized is
  prohibited. All other rights are expressly reserved by Seagate Technology, LLC.
  ****************************************************************************
- 
- 
+
+
          This Sensor Has Been Deprecated by the Systemd Watchdog
          02/01/2016 Jake Abernathy
- 
+
 """
 import os
 import json
 import shutil
-import Queue
+import queue
 import time
 import subprocess
 import pyinotify
@@ -34,13 +34,11 @@ from framework.utils.service_logging import logger
 # Modules that receive messages from this module
 from message_handlers.disk_msg_handler import DiskMsgHandler
 
-from zope.interface import implements
+from zope.interface import implementer
 from sensors.IDrive_manager import IDriveManager
 
-
+@implementer(IDriveManager)
 class DriveManager(ScheduledModuleThread, InternalMsgQ):
-
-    implements(IDriveManager)
 
     SENSOR_NAME       = "DriveManager"
     PRIORITY          = 1

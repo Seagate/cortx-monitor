@@ -146,11 +146,11 @@ class PlaneCntrlMsgHandler(ScheduledModuleThread, InternalMsgQ):
     def _send_response(self, status, hostname, response, errors):
         """Transmit the response back as an Ack json msg"""
         ack_type = {}
-        ack_type["hostname"]    = unicode(hostname, 'utf-8')
+        ack_type["hostname"]    = str(hostname, 'utf-8')
         ack_type["command"]     = self._command
         ack_type["parameters"]  = self._parameters
         ack_type["status"]      = status
-        ack_type["errors"]      = unicode(errors, 'utf-8')
+        ack_type["errors"]      = str(errors, 'utf-8')
 
         ack_msg = AckResponseMsg(json.dumps(ack_type), \
                                  str(response), self._uuid).getJson()

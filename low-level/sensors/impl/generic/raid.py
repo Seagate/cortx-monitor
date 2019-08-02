@@ -27,13 +27,13 @@ from framework.utils.service_logging import logger
 from message_handlers.node_data_msg_handler import NodeDataMsgHandler
 from message_handlers.logging_msg_handler import LoggingMsgHandler
 
-from zope.interface import implements
+from zope.interface import implementer
 from sensors.Iraid import IRAIDsensor
 
 
+@implementer(IRAIDsensor)
 class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
 
-    implements(IRAIDsensor)
 
     SENSOR_NAME       = "RAIDsensor"
     PRIORITY          = 1

@@ -15,7 +15,7 @@
 """
 
 import os
-import ConfigParser
+import configparser
 
 from framework.utils.service_logging import logger
 
@@ -24,17 +24,17 @@ class ConfigReader(object):
     """Configuration reader for notification sender"""
 
     # Available exceptions from ConfigParser
-    MissingSectionHeaderError   = ConfigParser.MissingSectionHeaderError
-    NoSectionError              = ConfigParser.NoSectionError
-    NoOptionError               = ConfigParser.NoOptionError
-    Error                       = ConfigParser.Error
+    MissingSectionHeaderError   = configparser.MissingSectionHeaderError
+    NoSectionError              = configparser.NoSectionError
+    NoOptionError               = configparser.NoOptionError
+    Error                       = configparser.Error
 
     def __init__(self, config):
         """Constructor for ConfigReader
 
         @param config: configuration file name
         """
-        self._config_parser = ConfigParser.RawConfigParser()
+        self._config_parser = configparser.RawConfigParser()
         if not os.path.isfile(config):
             raise IOError("config file %s does not exist." %
                           config)
@@ -56,7 +56,7 @@ class ConfigReader(object):
 
             exist
         """
-        value = self._config_parser.get(section, key)       
+        value = self._config_parser.get(section, key)
         if value == ['']:
             return ''
         else:
@@ -72,13 +72,13 @@ class ConfigReader(object):
         @raise ConfigParser.NoOptionError: when the specified key does not
             exist
         """
-        values_from_config_parser = self._get_value(section, key)        
+        values_from_config_parser = self._get_value(section, key)
         if values_from_config_parser == '':
             return []
-        else:            
-            split_vals = values_from_config_parser.split(',')        
-            stripped_vals = [val.strip() for val in split_vals]            
-            return stripped_vals 
+        else:
+            split_vals = values_from_config_parser.split(',')
+            stripped_vals = [val.strip() for val in split_vals]
+            return stripped_vals
 
     def _get_value_with_default(self, section, key, default_value):
         """helper function to read value with default function
@@ -88,7 +88,7 @@ class ConfigReader(object):
         """
         try:
             return self._get_value(section, key)
-        except ConfigParser.Error as ex:
+        except configparser.Error as ex:
             logger.warn("ConfigReader, _get_value_with_default: %s" % ex)
             return default_value
 

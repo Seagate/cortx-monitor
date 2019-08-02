@@ -22,7 +22,7 @@ import time
 import uuid
 
 import requests
-from zope.interface import implements
+from zope.interface import implementer
 
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
@@ -35,11 +35,10 @@ from message_handlers.real_stor_encl_msg_handler import RealStorEnclMsgHandler
 
 from sensors.Ipsu import IPSUsensor
 
-
+@implementer(IPSUsensor)
 class RealStorPSUSensor(ScheduledModuleThread, InternalMsgQ):
     """Monitors PSU data using RealStor API"""
 
-    implements(IPSUsensor)
 
     SENSOR_NAME = "RealStorPSUSensor"
     RESOURCE_CATEGORY = "enclosure:fru:psu"
@@ -259,7 +258,7 @@ class RealStorPSUSensor(ScheduledModuleThread, InternalMsgQ):
 
         alert_id = self._get_alert_id(epoch_time)
         resource_id = psu_detail.get("durable-id")
-        host_name = socket.gethostbyaddr(self.rssencl.mc1)[0]
+        host_name = socket.gethostname()
 
         info = {
                 "site_id": self.rssencl.site_id,
@@ -297,7 +296,7 @@ class RealStorPSUSensor(ScheduledModuleThread, InternalMsgQ):
             "position":  psu_detail.get("position"),
         }
 
-        for k in specific_info.viewkeys():
+        for k in specific_info.keys():
             if specific_info[k] == "":
                 specific_info[k] = "N/A"
 

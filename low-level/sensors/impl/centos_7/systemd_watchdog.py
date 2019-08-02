@@ -39,18 +39,17 @@ from message_handlers.node_data_msg_handler import NodeDataMsgHandler
 
 from json_msgs.messages.actuators.ack_response import AckResponseMsg
 
-from zope.interface import implements
+from zope.interface import implementer
 from sensors.IService_watchdog import IServiceWatchdog
 
 import dbus
 from dbus import SystemBus, Interface, Array
-import gobject
+from gi.repository import GObject as gobject
 from dbus.mainloop.glib import DBusGMainLoop
 
-
+@implementer(IServiceWatchdog)
 class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
 
-    implements(IServiceWatchdog)
 
     SENSOR_NAME       = "SystemdWatchdog"
     PRIORITY          = 2
@@ -355,7 +354,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
             # Get a list of all the drive devices available in systemd
             re_drive = re.compile('(?P<path>.*?/drives/(?P<id>.*))')
             drives = [m.groupdict() for m in
-                  [re_drive.match(path) for path in self._disk_objects.keys()]
+                  [re_drive.match(path) for path in list(self._disk_objects.keys())]
                   if m]
 
             if sensor_request_type == "simulate_failure":
@@ -517,7 +516,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
         # Get a list of all the block devices available in systemd
         re_blocks = re.compile('(?P<path>.*?/block_devices/(?P<id>.*))')
         block_devs = [m.groupdict() for m in
-                      [re_blocks.match(path) for path in self._disk_objects.keys()]
+                      [re_blocks.match(path) for path in list(self._disk_objects.keys())]
                       if m]
 
         # Retrieve the by-id symlink for each drive and save in a dict with the drive path as key
@@ -625,7 +624,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
         # Get a list of all the drive devices available in systemd
         re_drive = re.compile('(?P<path>.*?/drives/(?P<id>.*))')
         drives = [m.groupdict() for m in
-                  [re_drive.match(path) for path in self._disk_objects.keys()]
+                  [re_drive.match(path) for path in list(self._disk_objects.keys())]
                   if m]
 
         # Loop through all the drives and initiate a SMART test
@@ -931,7 +930,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                     self._smart_jobs[object_path] = None
 
                     # Loop through all the currently managed objects and retrieve the smart status
-                    for disk_path, interfaces_and_properties in self._disk_objects.items():
+                    for disk_path, interfaces_and_properties in list(self._disk_objects.items()):
                         if disk_path in smart_job["Objects"]:
                             # Get the SMART test results and the serial number
                             udisk_drive     = self._disk_objects[disk_path]['org.freedesktop.UDisks2.Drive']
@@ -1082,7 +1081,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
         if len(value) == 0 or \
            value is None:
             return ''
-        elif isinstance(value, unicode):
+        elif isinstance(value, str):
             return value
         elif isinstance(value, bytes):
             return value.decode('utf-8')
@@ -1098,9 +1097,9 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
         GetManagedObjects() for example. See this for details:
             http://dbus.freedesktop.org/doc/dbus-specification.html#standard-interfaces-objectmanager
         """
-        for interface_name, properties in interfaces_and_properties.items():
+        for interface_name, properties in list(interfaces_and_properties.items()):
             self._log_debug("  Interface {}".format(interface_name))
-            for prop_name, prop_value in properties.items():
+            for prop_name, prop_value in list(properties.items()):
                 prop_value = self._sanitize_dbus_value(prop_value)
                 self._log_debug("  {}: {}".format(prop_name, prop_value))
 

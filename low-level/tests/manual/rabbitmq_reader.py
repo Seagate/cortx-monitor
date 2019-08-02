@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python3.6
 
 import sys
 import pika
@@ -10,7 +10,7 @@ SSPL_PASS = "sspl4ever"
 SSPL_VHOST = "SSPL"
 
 def process_msg(ch, method, properties, body):
-    print body
+    print(body)
 
 try:
     if len(sys.argv) <= 2 or len(sys.argv) > 3:
@@ -24,11 +24,11 @@ try:
     connection = pika.BlockingConnection(pika.\
         ConnectionParameters(host="localhost", virtual_host=SSPL_VHOST, credentials=creds))
     channel = connection.channel()
-    result = channel.queue_declare(exclusive=True)
-    channel.exchange_declare(exchange=SSPL_EXCHANGE, type='topic', durable=False)
+    result = channel.queue_declare(queue="", exclusive=True)
+    channel.exchange_declare(exchange=SSPL_EXCHANGE, exchange_type='topic', durable=False)
     channel.queue_bind(queue=result.method.queue, exchange=SSPL_EXCHANGE, routing_key=SSPL_KEY)
-    channel.basic_consume(process_msg, queue=result.method.queue)
+    channel.basic_consume(on_message_callback=process_msg, queue=result.method.queue)
     channel.start_consuming()
 
 except Exception as e:
-    print e
+    print(e)

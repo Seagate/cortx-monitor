@@ -46,31 +46,34 @@ from message_handlers.real_stor_encl_msg_handler import RealStorEnclMsgHandler
 
 
 # Global method used by Thread to capture and log errors.  This must be global.
-def _run_thread_capture_errors(curr_module, sspl_modules, msgQlist, conf_reader, product):
+def _run_thread_capture_errors(curr_module, sspl_modules, msgQlist,
+                               conf_reader, product):
     """Run the given thread and log any errors that happen on it.
     Will stop all sspl_modules if one of them fails."""
     try:
-        # Each module is passed a reference list to message queues so it can transmit
-        #  internal messages to other modules as desired
+        # Each module is passed a reference list to message queues so it can
+        # transmit internal messages to other modules as desired.
         curr_module.initialize(conf_reader, msgQlist, product)
         curr_module.start()
 
     except BaseException as ex:
-        logger.critical("SSPL-LL encountered a fatal error, terminating service Error: %s" % ex)
+        logger.critical(
+            "SSPL-LL encountered a fatal error, terminating service Error: %s" % ex)
         logger.exception(ex)
 
         # Populate an actuator response message and transmit back to HAlon
         error_msg = "SSPL-LL encountered an error, terminating service Error: " + \
                     ", Exception: " + logger.exception(ex)
-        jsonMsg   = ThreadControllerMsg(curr_module.name(), error_msg).getJson()
+        json_msg = ThreadControllerMsg(curr_module.name(), error_msg).getJson()
 
         if product in enabled_products:
-            self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
+            self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
         elif product in cs_legacy_products:
-            self._write_internal_msgQ(PlaneCntrlRMQegressProcessor.name(), jsonMsg)
+            self._write_internal_msgQ(
+                PlaneCntrlRMQegressProcessor.name(), json_msg)
 
         # Shut it down, error is non-recoverable
-        for name, other_module in sspl_modules.iteritems():
+        for name, other_module in list(sspl_modules.items()):
             if other_module is not curr_module:
                 other_module.shutdown()
 
@@ -78,11 +81,10 @@ def _run_thread_capture_errors(curr_module, sspl_modules, msgQlist, conf_reader,
 class ThreadController(ScheduledModuleThread, InternalMsgQ):
 
     MODULE_NAME = "ThreadController"
-    PRIORITY    = 1
+    PRIORITY = 1
 
     # Section and keys in configuration file
-    THREADCONTROLLER    = MODULE_NAME.upper()
-
+    THREADCONTROLLER = MODULE_NAME.upper()
 
     @staticmethod
     def name():
@@ -93,12 +95,12 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
         super(ThreadController, self).__init__(self.MODULE_NAME,
                                                   self.PRIORITY)
         self._threads_initialized = False
-        self._thread_response     = "N/A"
-        self.debug_section        = None
+        self._thread_response = "N/A"
+        self.debug_section = None
 
         # Location of hpi data directory populated by dcs-collector
         self._hpi_base_dir = "/tmp/dcs/hpi"
-        self._start_delay  = 10
+        self._start_delay = 10
         self._systemd_support = True
         self._hostname = gethostname()
 
@@ -110,15 +112,17 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
         # Initialize internal message queues for this module
         super(ThreadController, self).initialize_msgQ(msgQlist)
 
-    def initialize_thread_list(self, sspl_modules, operating_system, product, systemd_support):
+    def initialize_thread_list(self, sspl_modules, operating_system, product,
+                               systemd_support):
         """initialize list of references to all modules"""
-        self._sspl_modules     = sspl_modules
-        self._product         = product
+        self._sspl_modules = sspl_modules
+        self._product = product
         self._operating_system = operating_system
-        self._systemd_support  = systemd_support
+        self._systemd_support = systemd_support
 
         if operating_system == "centos7":
-            # Note that all threaded sensors and actuators must have an import here to be controlled
+            # Note that all threaded sensors and actuators must have an
+            # import here to be controlled
             from sensors.impl.centos_7.systemd_watchdog import SystemdWatchdog
             from sensors.impl.centos_7.drive_manager import DriveManager
             from sensors.impl.centos_7.hpi_monitor import HPIMonitor
@@ -128,17 +132,17 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
             from sensors.impl.generic.SMR_drive_data import SMRdriveData
         if product == "EES":
             from sensors.impl.platforms.realstor.realstor_disk_sensor \
-            import RealStorDiskSensor
+                import RealStorDiskSensor
             from sensors.impl.platforms.realstor.realstor_psu_sensor \
-            import RealStorPSUSensor
+                import RealStorPSUSensor
             from sensors.impl.platforms.realstor.realstor_fan_sensor \
-            import RealStorFanSensor
+                import RealStorFanSensor
             from sensors.impl.platforms.realstor.realstor_controller_sensor \
-            import RealStorControllerSensor
+                import RealStorControllerSensor
             from sensors.impl.platforms.realstor.realstor_sideplane_expander_sensor \
-            import RealStorSideplaneExpanderSensor
+                import RealStorSideplaneExpanderSensor
             from sensors.impl.platforms.realstor.realstor_logical_volume_sensor \
-            import RealStorLogicalVolumeSensor
+                import RealStorLogicalVolumeSensor
         if product in enabled_products:
             from sensors.impl.generic.raid import RAIDsensor
 
@@ -149,8 +153,10 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
             if self._product in cs_products:
                 # Wait for the dcs-collector to populate the /tmp/dcs/hpi directory
                 while not os.path.isdir(self._hpi_base_dir):
-                    logger.info("ThreadController, dir not found: %s " % self._hpi_base_dir)
-                    logger.info("ThreadController, rechecking in %s secs" % self._start_delay)
+                    logger.info(
+                        "ThreadController, dir not found: %s " % self._hpi_base_dir)
+                    logger.info(
+                        "ThreadController, rechecking in %s secs" % self._start_delay)
                     time.sleep(int(self._start_delay))
 
             # Allow other threads to initialize
@@ -158,8 +164,8 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
 
             # Notify external applications that've started up successfully
             startup_msg = "SSPL-LL service has started successfully"
-            jsonMsg     = ThreadControllerMsg(ThreadController.name(), startup_msg).getJson()
-            self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
+            json_msg = ThreadControllerMsg(ThreadController.name(), startup_msg).getJson()
+            self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
             self._threads_initialized = True
 
             #self._set_debug(True)
@@ -238,7 +244,7 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
             node_id = jsonMsg.get("actuator_request_type").get("thread_controller").get("parameters").get("node_id")
 
         ack_type = {}
-        ack_type["hostname"] = unicode(self._hostname, 'utf-8')
+        ack_type["hostname"] = str(self._hostname, 'utf-8')
         ack_type["node_id"]  = node_id
 
         # Populate an actuator response message and transmit
@@ -359,7 +365,7 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
     def shutdown_all_modules(self):
         """Calls shutdown for all modules"""
         logger.info("Shutting down all modules")
-        for name, other_module in self._sspl_modules.iteritems():
+        for name, other_module in list(self._sspl_modules.items()):
             other_module.shutdown()
 
     def shutdown(self):

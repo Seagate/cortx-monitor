@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python3.6
 # -*- coding: utf-8 -*-
 
 """
@@ -16,7 +16,7 @@
  or disclosure of this code, for any reason, not expressly authorized is
  prohibited. All other rights are expressly reserved by Seagate Technology, LLC.
  ****************************************************************************
- 
+
  Example IEM generated on official CaStor hardware:
  May 23 21:20:26 castor-dev3-cc1.dco.colo.seagate.com sspl-ll[5589]: IEC: 020006001: File System Statistics: {"Total Space": "7174313371238400", "Free Space": "7170903111577600"}
 
@@ -40,7 +40,7 @@ def report_free_space():
         command = "sspl-ll-cli --iemloglevel LOG_WARNING --iemlog 'IEC: 020006002: File System Statistics Error: %s'" % \
                     json.dumps(json_data)
         run_command(command)
-        print "Error executing 'hctl cluster status': %s" % str(error)
+        print(("Error executing 'hctl cluster status': %s" % str(error)))
         return
 
     # Parse out Total and Free Space lines in the response
@@ -65,9 +65,9 @@ def report_free_space():
         command = "sspl-ll-cli --iemloglevel LOG_WARNING --iemlog 'IEC: 020006002: File System Statistics Error: %s'" % \
                     json.dumps(json_data)
         run_command(command)
-        print "Error while logging IEM via CLI: %s" % str(error)
+        print(("Error while logging IEM via CLI: %s" % str(error)))
     else:
-        print "Response: %s" % str(response)
+        print(("Response: %s" % str(response)))
 
 def run_command(command):
     """Run the command and get the response and error returned"""

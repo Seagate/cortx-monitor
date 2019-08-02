@@ -15,16 +15,15 @@
 """
 import subprocess
 
-from zope.interface import implements
+from zope.interface import implementer
 from actuators.Ihdparm import IHdparm
 
 from framework.base.debug import Debug
 from framework.utils.service_logging import logger
 
+@implementer(IHdparm)
 class Hdparm(Debug):
     """Handles messages for requests using hdparm tool"""
-
-    implements(IHdparm)
 
     ACTUATOR_NAME = "Hdparm"
 

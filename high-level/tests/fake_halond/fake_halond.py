@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/python3.6
 """
 A fake halond that listens to rabbitmq for messages and then just dumps them
 out to a directory in the order in which they're received.

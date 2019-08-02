@@ -142,12 +142,11 @@ class IEMSensor(ScheduledModuleThread, InternalMsgQ):
             stdout=subprocess.PIPE,stderr=subprocess.PIPE)
             p = select.poll()
             p.register(f.stdout)
-
             logger.info("Opened file to read IEM: {0}".format(self._log_file_path))
             while True:
                 iem_components = iem_msg = None
                 if p.poll():
-                    data = f.stdout.readline().rstrip()
+                    data = f.stdout.readline().decode('utf-8').rstrip()
                     self._log_debug("Received line {0}".format(data[5:]))
                     if data:
                         log_timestamp = data[:data.index(" ")]
@@ -165,7 +164,6 @@ class IEMSensor(ScheduledModuleThread, InternalMsgQ):
                                 timestamp_file = open(self._timestamp_file_path, "w")
                                 timestamp_file.write(log_timestamp)
                                 timestamp_file.close()
-
 
         except IOError as io_error:
             if io_error.errno == errno.ENOENT:
