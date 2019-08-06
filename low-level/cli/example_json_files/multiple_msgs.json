@@ -2,7 +2,7 @@
 	"title": "SSPL-LL Actuator Request",
 	"description": "Seagate Storage Platform Library - Low Level - Actuator Request",
 
-	"username" : "Will get replaced by /etc/sspl-ll.conf",
+	"username" : "Will get replaced by /etc/sspl.conf",
 	"signature" : "None",
 	"time" : "auto-generated",
 	"expires" : 500,
@@ -28,7 +28,7 @@
 	"title": "SSPL-LL Actuator Request",
 	"description": "Seagate Storage Platform Library - Low Level - Actuator Request",
 
-	"username" : "Will get replaced by /etc/sspl-ll.conf",
+	"username" : "Will get replaced by /etc/sspl.conf",
 	"signature" : "None",
 	"time" : "auto-generated",
 	"expires" : 500,
@@ -53,8 +53,8 @@
 {
 	"title": "SSPL-LL Actuator Request",
 	"description": "Seagate Storage Platform Library - Low Level - Actuator Request",
-	
-	"username" : "Will get replaced by /etc/sspl-ll.conf",
+
+	"username" : "Will get replaced by /etc/sspl.conf",
 	"signature" : "None",
 	"time" : "auto-generated",
 	"expires" : 500,
@@ -79,8 +79,8 @@
 {
 	"title": "SSPL-LL Actuator Request",
 	"description": "Seagate Storage Platform Library - Low Level - Actuator Request",
-	
-	"username" : "Will get replaced by /etc/sspl-ll.conf",
+
+	"username" : "Will get replaced by /etc/sspl.conf",
 	"signature" : "None",
 	"time" : "auto-generated",
 	"expires" : 500,
@@ -102,4 +102,29 @@
 		}
 	}
 }
+{
+	"title": "SSPL-LL Actuator Request",
+	"description": "Seagate Storage Platform Library - Low Level - Actuator Request",
 
+	"username" : "Will get replaced by /etc/sspl.conf",
+	"signature" : "None",
+	"time" : "auto-generated",
+	"expires" : 500,
+
+	"message" : {
+		"sspl_ll_msg_header": {
+			"schema_version": "1.0.0",
+			"sspl_version": "1.0.0",
+			"msg_version": "1.0.0"
+			},
+		"sspl_ll_debug": {
+			"debug_component" : "sensor",
+			"debug_enabled" : false
+			},
+		"sensor_request_type": {
+			"node_data": {
+				"sensor_type": "disk_space_alert"
+			}
+		}
+	}
+}

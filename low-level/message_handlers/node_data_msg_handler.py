@@ -16,6 +16,7 @@
 
 import json
 import time
+import psutil
 
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
@@ -27,6 +28,7 @@ from json_msgs.messages.sensors.local_mount_data import LocalMountDataMsg
 from json_msgs.messages.sensors.cpu_data import CPUdataMsg
 from json_msgs.messages.sensors.if_data import IFdataMsg
 from json_msgs.messages.sensors.raid_data import RAIDdataMsg
+from json_msgs.messages.sensors.disk_space_alert import DiskSpaceAlertMsg
 
 from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 
@@ -43,6 +45,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
     NODEDATAMSGHANDLER = MODULE_NAME.upper()
     TRANSMIT_INTERVAL = 'transmit_interval'
     UNITS = 'units'
+    DISK_USAGE_THRESHOLD = 'disk_usage_threshold'
 
     @staticmethod
     def name():
@@ -69,6 +72,10 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                                                 self.NODEDATAMSGHANDLER,
                                                 self.UNITS,
                                                 "MB")
+        self._disk_usage_threshold = int(self._conf_reader._get_value_with_default(
+                                                self.NODEDATAMSGHANDLER,
+                                                self.DISK_USAGE_THRESHOLD,
+                                                80))
 
         self._node_sensor    = None
         self._login_actuator = None
@@ -124,6 +131,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 self._generate_local_mount_data()
                 self._generate_cpu_data()
                 self._generate_if_data()
+                self._generate_disk_space_alert()
 
             # If the timer is zero then block for incoming requests notifying to transmit data
             else:
@@ -178,11 +186,15 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             elif sensor_type == "if_data":
                 self._generate_if_data()
 
+            elif sensor_type == "disk_space_alert":
+                self._generate_disk_space_alert()
+
             elif sensor_type == "host_update_all":
                 self._generate_host_update()
                 self._generate_local_mount_data()
                 self._generate_cpu_data()
                 self._generate_if_data()
+                self._generate_disk_space_alert()
 
             elif sensor_type == "raid_data":
                 self._generate_RAID_status(jsonMsg)
@@ -331,6 +343,35 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
         # Transmit it out over rabbitMQ channel
         self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
+
+    def _generate_disk_space_alert(self):
+        """Create & transmit a disk_space_alert message as defined
+            by the sensor response json schema"""
+
+        # Notify the node sensor to update its data required for the disk_space_data message
+        successful = self._node_sensor.read_data("disk_space_alert", self._get_debug(), self._units)
+        if not successful:
+            logger.error("NodeDataMsgHandler, _generate_disk_space_alert was NOT successful.")
+            return
+
+        if self._node_sensor.disk_used_percentage >= self._disk_usage_threshold:
+            # Create the disk space data message and hand it over to the egress processor to transmit
+            logger.warning("Disk usage increased to {}%, beyond configured threshold of {}%".\
+                format(self._node_sensor.disk_used_percentage, self._disk_usage_threshold))
+            diskSpaceAlertMsg = DiskSpaceAlertMsg(self._node_sensor.host_id,
+                                    self._node_sensor.local_time,
+                                    self._node_sensor.total_space,
+                                    self._node_sensor.free_space,
+                                    self._node_sensor.disk_used_percentage,
+                                    self._units)
+
+            # Add in uuid if it was present in the json request
+            if self._uuid is not None:
+                diskSpaceAlertMsg.set_uuid(self._uuid)
+            jsonMsg = diskSpaceAlertMsg.getJson()
+
+            # Transmit it out over rabbitMQ channel
+            self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
 
     def _generate_RAID_status(self, jsonMsg):
         """Create & transmit a RAID status data message as defined

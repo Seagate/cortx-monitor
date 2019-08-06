@@ -127,6 +127,15 @@ def then_i_get_the_sensor_json_response_message(step, sensor):
                 assert(if_data_msg.get("hostId") is not None)
                 assert(if_data_msg.get("localtime") is not None)
                 assert(if_data_msg.get("interfaces") is not None)
+
+            elif sensor == "disk_space_alert":
+                disk_space_alert_msg = ingressMsg.get("sensor_response_type").get("disk_space_alert")
+                assert(disk_space_alert_msg is not None)
+                assert(disk_space_alert_msg.get("hostId") is not None)
+                assert(disk_space_alert_msg.get("localtime") is not None)
+                assert(disk_space_alert_msg.get("freeSpace") is not None)
+                assert(disk_space_alert_msg.get("totalSpace") is not None)
+                assert(disk_space_alert_msg.get("diskUsedPercentage") is not None)
             else:
                 assert False, "Response not recognized"
             break

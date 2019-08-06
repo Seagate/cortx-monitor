@@ -61,6 +61,7 @@ class SSPLtest():
     LOCAL_MOUNT_DATA     = 'local_mount_data'
     CPU_DATA             = 'cpu_data'
     IF_DATA              = 'if_data'
+    DISK_SPACE_ALERT     = 'disk_space_alert'
 
     RABBITMQEGPROCESSOR  = 'RABBITMQEGRESSPROCESSOR'
     EGRESS_KEY           = 'sspl-key'
@@ -729,6 +730,7 @@ class SSPLtest():
         cpuData = [update for update in updates if update["Sensor Type"] == "cpu_data"][0]
         ifData = [update for update in updates if update["Sensor Type"] == "if_data"][0]
         hostUpdateAll = [update for update in updates if update["Sensor Type"] == "host_update_all"][0]
+        diskSpaceAlert = [update for update in updates if update["Sensor Type"] == "disk_space_alert"][0]
 
         # Fields to validate in
         # TODO: Update this list as additional message features are added
@@ -740,6 +742,8 @@ class SSPLtest():
                                                         self.CPU_DATA)
         ifDataFields = self._conf_reader._get_value_list(self.EVENTFIELDS,
                                                         self.IF_DATA)
+        diskSpaceAlertFields = self._conf_reader._get_value_list(self.EVENTFIELDS,
+                                                        self.DISK_SPACE_ALERT)
 
         # Test for host update sensor response
         self.basic_publish(hostUpdate["File Location"])
@@ -757,12 +761,17 @@ class SSPLtest():
         self.basic_publish(ifData["File Location"])
         self.hostMessage("if_data", ifDataFields)
 
+        # Test for disk space alert sensor response
+        self.basic_publish(diskSpaceAlert["File Location"])
+        self.hostMessage("disk_space_alert", diskSpaceAlertFields)
+
         # Test for host update all sensor response
         self.basic_publish(hostUpdateAll["File Location"])
         self.hostMessage("host_update", hostUpdateFields)
         self.hostMessage("local_mount_data", localMountDataFields)
         self.hostMessage("cpu_data", cpuDataFields)
         self.hostMessage("if_data", ifDataFields)
+        self.hostMessage("disk_space_alert", diskSpaceAlertFields)
 
         if self.hostTestTotal == self.hostTestPassed:
             return 0

@@ -96,6 +96,9 @@ class NodeData(Debug):
             elif subset == "if_data":
                 self._get_if_data()
 
+            elif subset == "disk_space_alert":
+                self._get_disk_space_alert_data()
+
         except Exception as e:
             logger.exception(e)
             return False
@@ -184,6 +187,12 @@ class NodeData(Debug):
                        "trafficOut"         : net_data[interface].bytes_sent
                        }
             self.if_data.append(if_data)
+
+    def _get_disk_space_alert_data(self):
+        """Retrieves node information for the disk_space_alert_data json message"""
+        self.total_space = psutil.disk_usage("/")[0]/self.units_factor
+        self.free_space  = psutil.disk_usage("/")[2]/self.units_factor
+        self.disk_used_percentage  = psutil.disk_usage("/")[3]
 
     def _load_1min_avg(self):
         """Loop forever calculating the one minute average load"""

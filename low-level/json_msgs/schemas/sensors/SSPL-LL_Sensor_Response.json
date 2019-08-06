@@ -979,6 +979,64 @@
 							}
 						},
 
+						"disk_space_alert": {
+							"description": "Disk space alert data",
+							"type": "object",
+							"properties": {
+								"hostId": {
+									"description": "Hostname of system",
+									"type": "string",
+									"required": true
+								},
+								"localtime": {
+									"description": "Local time on system",
+									"type": "string",
+									"required": true
+								},
+								"freeSpace": {
+									"type": "object",
+									"properties": {
+										"value": {
+											"type": "integer"
+										},
+										"units": {
+											"oneOf": [
+												{
+													"$ref": "#/units/GB"
+												}, {
+													"$ref": "#/units/KB"
+												}, {
+													"$ref": "#/units/MB"
+												}
+											]
+										}
+									}
+								},
+								"totalSpace": {
+									"type": "object",
+									"properties": {
+										"value": {
+											"type": "integer"
+										},
+										"units": {
+											"oneOf": [
+												{
+													"$ref": "#/units/GB"
+												}, {
+													"$ref": "#/units/KB"
+												}, {
+													"$ref": "#/units/MB"
+												}
+											]
+										}
+									}
+								},
+								"diskUsedPercentage": {
+									"type": "number"
+								}
+							}
+						},
+
                         "enclosure_fan_alert": {
                             "type": "object",
                             "properties":{
