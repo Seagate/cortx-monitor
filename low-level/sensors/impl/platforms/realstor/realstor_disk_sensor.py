@@ -25,8 +25,7 @@ import errno
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
-from framework.utils.config_reader import ConfigReader
-from framework.platforms.realstor.realstor_enclosure import RealStorEnclosure
+from framework.platforms.realstor.realstor_enclosure import singleton_realstorencl
 
 # Modules that receive messages from this module
 from message_handlers.real_stor_encl_msg_handler import RealStorEnclMsgHandler
@@ -74,7 +73,7 @@ class RealStorDiskSensor(ScheduledModuleThread, InternalMsgQ):
                                                     self.PRIORITY)
         self.last_alert = None
 
-        self.rssencl = RealStorEnclosure()
+        self.rssencl = singleton_realstorencl
 
         # disks persistent cache
         self.disks_prcache = self.rssencl.frus + "disks/"
@@ -188,9 +187,6 @@ class RealStorDiskSensor(ScheduledModuleThread, InternalMsgQ):
         if not self.latest_disks:
             logger.warn("Empty latest drive info set passed, cant compare!!")
             return
-
-        #logger.debug("memcache_disks [{0}]".format(self.memcache_disks.keys()))
-        #logger.debug("latest_disks [{0}]".format(self.latest_disks.keys()))
 
         # keys are disk slot numbers
         removed_disks = set(self.memcache_disks.keys()) - set(self.latest_disks.keys())

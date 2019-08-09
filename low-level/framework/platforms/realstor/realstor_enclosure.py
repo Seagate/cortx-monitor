@@ -31,8 +31,8 @@ class RealStorEnclosure(StorageEnclosure):
     """RealStor Enclosure Monitor functions using CLI API Webservice Interface"""
 
     REALSTOR_MC_BOOTWAIT = 0
-    DEFAULT_MC_DNS = "127.0.0.1"
-    WS_TO = 20
+    DEFAULT_MC_IP = "127.0.0.1"
+    WEBSERVICE_TIMEOUT = 20
     MAX_RETRIES = 2
 
     CONF_SECTION_MC = "STORAGE_ENCLOSURE"
@@ -47,6 +47,17 @@ class RealStorEnclosure(StorageEnclosure):
     URI_CLIAPI_LOGIN = "/login/"
     URI_CLIAPI_SHOWDISKS = "/show/disks"
     URI_CLIAPI_SHOWSYSTEM = "/show/system"
+    URI_CLIAPI_SHOWPSUS = "/show/power-supplies"
+    URI_CLIAPI_SHOWCONTROLLERS = "/show/controllers"
+    URI_CLIAPI_SHOWFANMODULES = "/show/fan-modules"
+    URI_CLIAPI_SHOWENCLOSURE = "/show/enclosure"
+
+    # Realstor generic health states
+    HEALTH_OK = "ok"
+    HEALTH_FAULT = "fault"
+    HEALTH_DEGRADED = "degraded"
+
+    STATUS_NOTINSTALLED = "not installed"
 
     DATA_FORMAT_JSON = 'json'
 
@@ -78,11 +89,11 @@ class RealStorEnclosure(StorageEnclosure):
 
         # Read in mc value from configuration file
         self.mc1 = self.conf_reader._get_value_with_default(
-            self.encl_conf, "primary_controller_ip", self.DEFAULT_MC_DNS)
+            self.encl_conf, "primary_controller_ip", self.DEFAULT_MC_IP)
         self.mc1_wsport = self.conf_reader._get_value_with_default(
             self.encl_conf, "primary_controller_port", '')
         self.mc2 = self.conf_reader._get_value_with_default(
-            self.encl_conf, "secondary_controller_ip", self.DEFAULT_MC_DNS)
+            self.encl_conf, "secondary_controller_ip", self.DEFAULT_MC_IP)
         self.mc2_wsport = self.conf_reader._get_value_with_default(
             self.encl_conf, "secondary_controller_port", '')
 
@@ -103,6 +114,7 @@ class RealStorEnclosure(StorageEnclosure):
         if self.mc_interface not in self.realstor_supported_interfaces:
             logger.error("Unspported Realstor interface configured,"
                 " monitoring and alerts generation may hamper")
+            return
 
         # login to mc to get session key, required for querying resources
         # periodically
@@ -129,6 +141,9 @@ class RealStorEnclosure(StorageEnclosure):
 
         if self.active_wsport.isdigit():
            wsport = ":" + self.active_wsport
+        else:
+           logger.warn("Non-numeric webservice port configured [%s], ignoring",\
+               self.active_wsport)
 
         url = "http://" + self.active_ip + wsport + "/api" + uri
 
@@ -146,18 +161,19 @@ class RealStorEnclosure(StorageEnclosure):
             self.active_wsport = self.mc1_wsport
 
         logger.debug("Current MC active ip {0}, active wsport {1}\
-            ".format(self.active_ip,self.active_wsport))
+            ".format(self.active_ip, self.active_wsport))
 
     def ws_request(self, url, method, retry_count=MAX_RETRIES,
             post_data=""):
         """Make webservice requests using common utils"""
         response = None
         relogin = False
-        tried_altip = False
+        tried_alt_ip = False
 
         while retry_count:
             response = self.ws.ws_request(method, url,
-                       self.common_reqheaders, post_data, self.WS_TO)
+                       self.common_reqheaders, post_data,
+                       self.WEBSERVICE_TIMEOUT)
 
             retry_count -= 1
 
@@ -177,9 +193,9 @@ class RealStorEnclosure(StorageEnclosure):
                     relogin = True
                     continue
 
-                if response.status_code == self.ws.HTTP_TIMEOUT and tried_altip == False:
+                if response.status_code == self.ws.HTTP_TIMEOUT and tried_alt_ip == False:
                     self.switch_to_alt_mc()
-                    tried_altip = True
+                    tried_alt_ip = True
                     continue
             break
 
@@ -196,10 +212,11 @@ class RealStorEnclosure(StorageEnclosure):
             try:
                 os.makedirs(cachedir)
             except OSError as exc:
-                if exc.errno != errno.EEXIST:
-                    logger.warn("{0} creation failed with OS error {1}, alerts"
-                    " may get missed on sspl restart or failover!!".format(
-                    cachedir,exc))
+                if exc.errno == errno.EEXIST and os.path.isdir(path):
+                    pass
+                elif os_error.errno == errno.EACCES:
+                    logger.critical(
+                        "Permission denied while creating dir: {0}".format(path))
             except Exception as err:
                     logger.warn("{0} creation failed with error {1}, alerts"
                     " may get missed on sspl restart or failover!!".format(
@@ -215,10 +232,11 @@ class RealStorEnclosure(StorageEnclosure):
         auth_hash = hashlib.sha256(cli_api_auth).hexdigest()
         headers = {'datatype':'json'}
 
-        response = self.ws.ws_get(url + auth_hash, headers, self.WS_TO)
+        response = self.ws.ws_get(url + auth_hash, headers, \
+                       self.WEBSERVICE_TIMEOUT)
 
         if not response:
-            logger.warn("Login ws request failed {0}".format(url))
+            logger.warn("Login webservice request failed {0}".format(url))
             return
 
         if response.status_code != self.ws.HTTP_OK:
@@ -385,3 +403,6 @@ class RealStorEnclosure(StorageEnclosure):
                      self.existing_faults = False
             else:
                 logger.error("poll system failed with err %d" % api_resp)
+
+# Object to use as singleton instance
+singleton_realstorencl = RealStorEnclosure()

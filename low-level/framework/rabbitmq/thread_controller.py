@@ -128,10 +128,14 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
         if product == "EES":
             from sensors.impl.platforms.realstor.realstor_disk_sensor \
             import RealStorDiskSensor
-            from sensors.impl.generic.realstor_psu_sensor import RealStorPSUSensor
-            from sensors.impl.generic.realstor_fan_sensor import RealStorFanSensor
-            from sensors.impl.generic.realstor_controller_sensor import RealStorControllerSensor
-            from sensors.impl.generic.realstor_sideplane_expander_sensor import RealStorSideplaneExpanderSensor
+            from sensors.impl.platforms.realstor.realstor_psu_sensor \
+            import RealStorPSUSensor
+            from sensors.impl.platforms.realstor.realstor_fan_sensor \
+            import RealStorFanSensor
+            from sensors.impl.platforms.realstor.realstor_controller_sensor \
+            import RealStorControllerSensor
+            from sensors.impl.platforms.realstor.realstor_sideplane_expander_sensor \
+            import RealStorSideplaneExpanderSensor
         if product in enabled_products:
             from sensors.impl.generic.raid import RAIDsensor
 

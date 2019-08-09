@@ -53,14 +53,7 @@ class StorageEnclosure(object):
     memcache_system = {}
     memcache_faults = {}
 
-    # encl instance
-    encl_inst = -1
-
     def __init__(self):
-
-        #ECS Requirement - multiple enclosure cache
-        self.encl_inst += 1
-        #self.enclosures.update({self.encl_inst:self.encl})
 
         # Validate configuration file for required valid values
         try:
@@ -73,7 +66,7 @@ class StorageEnclosure(object):
         self.vol_ras = self.conf_reader._get_value_with_default(\
             self.SYSINFO, "data_path", self.DEFAULT_RAS_VOL)
 
-        self.encl_cache = self.vol_ras + "encl_" + str(self.encl_inst) + "/"
+        self.encl_cache = self.vol_ras + "encl/"
         self.frus = self.encl_cache + "frus/"
 
         self.encl.update({"frus":self.memcache_frus})

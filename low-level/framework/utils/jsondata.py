@@ -14,6 +14,7 @@
  prohibited. All other rights are expressly reserved by Seagate Technology, LLC.
  ****************************************************************************
 """
+import os
 import json
 from framework.utils.service_logging import logger
 
@@ -24,6 +25,12 @@ class JsonData(object):
 
     def dump(self, dictobj, absfilepath):
         """ Dump dict obj as json to given absolute file path"""
+
+        # Check if directory exists
+        directory_path = os.path.join(os.path.dirname(absfilepath), "")
+        if not os.path.isdir(directory_path):
+            logger.critical("Path doesn't exists: {0}".format(directory_path))
+            return
 
         try:
             fh = open(absfilepath,"w")
@@ -42,9 +49,20 @@ class JsonData(object):
         """ Load dict obj from json in given absolute file path"""
         datadict = None
 
+        # Check if directory exists
+        directory_path = os.path.join(os.path.dirname(absfilepath), "")
+        if not os.path.isdir(directory_path):
+            logger.critical("Path doesn't exists: {0}".format(directory_path))
+            return
+
+
         try:
             fh = open(absfilepath,"r")
             datadict = json.load(fh)
+        except IOError as err:
+            errno, strerror = err.args
+            logger.error("I/O error[{0}] while loading data from file {1}): {2}"\
+                .format(errno,absfilepath,strerror))
         except ValueError as jsonerr:
             logger.error("JSON error{0} while loading from {1}".format(jsonerr, absfilepath))
             datadict = None
