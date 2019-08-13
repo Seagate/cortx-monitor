@@ -253,7 +253,10 @@ class RealStorControllerSensor(ScheduledModuleThread, InternalMsgQ):
             controller_status = controller["status"].lower()
             durable_id = controller["durable-id"]
             if controller_health == "fault":  # Check for missing and fault case
-                if durable_id not in self._previously_faulty_controllers:
+                # Status change from Degraded ==> Fault or OK ==> Fault
+                if (durable_id in self._previously_faulty_controllers and \
+                        self._previously_faulty_controllers[durable_id]['health']=="degraded") or \
+                        (durable_id not in self._previously_faulty_controllers):
                     alert_type = "fault"
                     # Check for removal
                     if controller_status == "not installed":
@@ -268,7 +271,10 @@ class RealStorControllerSensor(ScheduledModuleThread, InternalMsgQ):
                     if send_message:
                         self._send_json_msg(internal_json_msg)
             elif controller_health == "degraded":  # Check for fault case
-                if durable_id not in self._previously_faulty_controllers:
+                # Status change from Fault ==> Degraded or OK ==> Degraded
+                if (durable_id in self._previously_faulty_controllers and \
+                        self._previously_faulty_controllers[durable_id]['health']=="fault") or \
+                        (durable_id not in self._previously_faulty_controllers):
                     alert_type = "fault"
                     self._previously_faulty_controllers[durable_id] = {
                         "health": controller_health, "alert_type": alert_type}
@@ -280,6 +286,7 @@ class RealStorControllerSensor(ScheduledModuleThread, InternalMsgQ):
                     if send_message:
                         self._send_json_msg(internal_json_msg)
             elif controller_health == "ok":  # Check for healthy case
+                # Status change from Fault ==> OK or Degraded ==> OK
                 if durable_id in self._previously_faulty_controllers:
                     # Send message to handler
                     if send_message:
