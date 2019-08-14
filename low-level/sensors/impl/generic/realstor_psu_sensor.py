@@ -379,7 +379,6 @@ class RealStorPSUSensor(ScheduledModuleThread, InternalMsgQ):
         try:
             with open(filename, "w") as psu_file:
                 json.dump(self._previously_faulty_psus, psu_file)
-                    "Finished writing to file: {0}".format(filename))
         except IOError as io_error:
             error_number = io_error.errno
             if error_number == errno.EACCES:
