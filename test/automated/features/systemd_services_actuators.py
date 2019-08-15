@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 from lettuce import *
 
-import os
 import json
+import os
 import psutil
+import time
 
 # Add the top level directory to the sys.path to access classes
 topdir = os.path.dirname(os.path.dirname(os.path.dirname \
@@ -73,22 +74,33 @@ def when_i_send_in_the_actuator_message_to_action_the_service(step, action, serv
 
 @step(u'Then SSPL_LL "([^"]*)" the "([^"]*)" and I get the service is "([^"]*)" response')
 def then_sspl_ll_action_the_service_and_i_get_the_service_is_condition_response(step, action, service, condition):
+
+    service_name = None
+    service_response = None
+    time.sleep(10)
     while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
         ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
+        time.sleep(10)
         print("Received: %s" % ingressMsg)
 
         try:
             # Verify module name and thread response
-            service_name = ingressMsg.get("actuator_response_type").get("service_controller").get("service_name")
+            msg = ingressMsg.get("actuator_response_type").get("service_controller")
+            service_name = msg["service_name"]
+            time.sleep(10)
             print("service_name: %s" % service_name)
-            assert service_name == service
 
-            service_response = ingressMsg.get("actuator_response_type").get("service_controller").get("service_response")
+            msg = ingressMsg.get("actuator_response_type").get("service_controller")
+            service_response = msg["service_response"]
+            #time.sleep(4)
             print("service_response: %s" % service_response)
-            assert service_response == condition
+            break
         except Exception as exception:
+            time.sleep(4)
             print exception
 
+    assert service_name == service
+    assert service_response == condition
 
 def start_stop_service(service_name, action):
     assert action in ("running", "halted")

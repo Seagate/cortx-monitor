@@ -5,5 +5,5 @@ Feature: Test Controller Sensor Capabilities
 Scenario: Send SSPL a controller sensor message requesting controller data
 	Given that SSPL is running
 	When I send in the controller sensor message to request the current "enclosure_controller_alert" data
-	Then I get the "enclosure_controller_alert" JSON response message
+	Then I get the controller sensor JSON response message
 

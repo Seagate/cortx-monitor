@@ -38,6 +38,7 @@ $script_dir/mock_server &
 # primary_controller_ip=127.0.0.1 and primary_controller_port=8090.
 # For sanity test SSPL should connect to mock server instead of real server.
 # Restart SSPL to re-read configuration
+$sudo $script_dir/set_disk_threshold.sh
 echo "Restarting SSPL"
 systemctl restart sspl-ll
 

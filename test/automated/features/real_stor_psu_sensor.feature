@@ -6,5 +6,5 @@ Feature: Test PSU Sensor Capabilities
 Scenario: Send SSPL-LL a psu sensor message requesting psu data
 	Given that SSPL-LL is running
 	When I send in the psu sensor message to request the current "enclosure_psu_alert" data
-	Then I get the "enclosure_psu_alert" JSON response message
+	Then I get the psu sensor JSON response message
 

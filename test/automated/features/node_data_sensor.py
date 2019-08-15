@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 from lettuce import *
 
-import os
 import json
+import os
 import psutil
+import time
 
 # Add the top level directory to the sys.path to access classes
 topdir = os.path.dirname(os.path.dirname(os.path.dirname \
@@ -70,74 +71,144 @@ def when_i_send_in_the_node_data_sensor_message_to_request_the_current_sensor_ty
     world.sspl_modules[RabbitMQegressProcessor.name()]._write_internal_msgQ(RabbitMQegressProcessor.name(), egressMsg)
 
 
-@step(u'Then I get the "([^"]*)" JSON response message')
-def then_i_get_the_sensor_json_response_message(step, sensor):
+@step(u'Then I get the host update data sensor JSON response message')
+def then_i_get_the_host_update_data_sensor_json_response_message(step):
+
+    host_update_sensor_msg = None
+    time.sleep(4)
     while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
         ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
-        print("Received: %s" % ingressMsg)
+        time.sleep(10)
+        print("Received: {0}".format(ingressMsg))
 
         try:
             # Make sure we get back the message type that matches the request
-            msgType = ingressMsg.get("sensor_response_type")
-            assert(msgType != None)
-
-            if sensor == "host_update":
-                host_update_msg = ingressMsg.get("sensor_response_type").get("host_update")
-                assert(host_update_msg is not None)
-                assert(host_update_msg.get("hostId") is not None)
-                assert(host_update_msg.get("localtime") is not None)
-                assert(host_update_msg.get("bootTime") is not None)
-                assert(host_update_msg.get("upTime") is not None)
-                assert(host_update_msg.get("uname") is not None)
-                assert(host_update_msg.get("freeMem") is not None)
-                assert(host_update_msg.get("loggedInUsers") is not None)
-                assert(host_update_msg.get("processCount") is not None)
-                assert(host_update_msg.get("runningProcessCount") is not None)
-
-            elif sensor == "local_mount_data":
-                local_mount_data_msg = ingressMsg.get("sensor_response_type").get("local_mount_data")
-                assert(local_mount_data_msg is not None)
-                assert(local_mount_data_msg.get("hostId") is not None)
-                assert(local_mount_data_msg.get("localtime") is not None)
-                assert(local_mount_data_msg.get("freeSpace") is not None)
-                assert(local_mount_data_msg.get("freeInodes") is not None)
-                assert(local_mount_data_msg.get("freeSwap") is not None)
-                assert(local_mount_data_msg.get("totalSpace") is not None)
-                assert(local_mount_data_msg.get("totalSwap") is not None)
-
-            elif sensor == "cpu_data":
-                cpu_data_msg = ingressMsg.get("sensor_response_type").get("cpu_data")
-                assert(cpu_data_msg is not None)
-                assert(cpu_data_msg.get("hostId") is not None)
-                assert(cpu_data_msg.get("localtime") is not None)
-                assert(cpu_data_msg.get("csps") is not None)
-                assert(cpu_data_msg.get("idleTime") is not None)
-                assert(cpu_data_msg.get("interruptTime") is not None)
-                assert(cpu_data_msg.get("iowaitTime") is not None)
-                assert(cpu_data_msg.get("niceTime") is not None)
-                assert(cpu_data_msg.get("softirqTime") is not None)
-                assert(cpu_data_msg.get("stealTime") is not None)
-                assert(cpu_data_msg.get("systemTime") is not None)
-                assert(cpu_data_msg.get("userTime") is not None)
-                assert(cpu_data_msg.get("coreData") is not None)
-
-            elif sensor == "if_data":
-                if_data_msg = ingressMsg.get("sensor_response_type").get("if_data")
-                assert(if_data_msg is not None)
-                assert(if_data_msg.get("hostId") is not None)
-                assert(if_data_msg.get("localtime") is not None)
-                assert(if_data_msg.get("interfaces") is not None)
-
-            elif sensor == "disk_space_alert":
-                disk_space_alert_msg = ingressMsg.get("sensor_response_type").get("disk_space_alert")
-                assert(disk_space_alert_msg is not None)
-                assert(disk_space_alert_msg.get("hostId") is not None)
-                assert(disk_space_alert_msg.get("localtime") is not None)
-                assert(disk_space_alert_msg.get("freeSpace") is not None)
-                assert(disk_space_alert_msg.get("totalSpace") is not None)
-                assert(disk_space_alert_msg.get("diskUsedPercentage") is not None)
-            else:
-                assert False, "Response not recognized"
+            msg_type = ingressMsg.get("sensor_response_type")
+            host_update_msg = msg_type["host_update"]
             break
         except Exception as exception:
-            print exception
+            time.sleep(4)
+            print(exception)
+
+    assert(host_update_msg is not None)
+    assert(host_update_msg.get("hostId") is not None)
+    assert(host_update_msg.get("localtime") is not None)
+    assert(host_update_msg.get("bootTime") is not None)
+    assert(host_update_msg.get("upTime") is not None)
+    assert(host_update_msg.get("uname") is not None)
+    assert(host_update_msg.get("freeMem") is not None)
+    assert(host_update_msg.get("loggedInUsers") is not None)
+    assert(host_update_msg.get("processCount") is not None)
+    assert(host_update_msg.get("runningProcessCount") is not None)
+
+@step(u'Then I get the local mount data sensor JSON response message')
+def then_i_get_the_local_mount_data_sensor_json_response_message(step):
+
+    local_mount_data_msg = None
+    time.sleep(4)
+    while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
+        ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
+        time.sleep(10)
+        print("Received: {0}".format(ingressMsg))
+
+        try:
+            # Make sure we get back the message type that matches the request
+            msg_type = ingressMsg.get("sensor_response_type")
+            local_mount_data_msg = msg_type["local_mount_data"]
+            break
+        except Exception as exception:
+            time.sleep(4)
+            print(exception)
+
+    assert(local_mount_data_msg is not None)
+    assert(local_mount_data_msg.get("hostId") is not None)
+    assert(local_mount_data_msg.get("localtime") is not None)
+    assert(local_mount_data_msg.get("freeSpace") is not None)
+    assert(local_mount_data_msg.get("freeInodes") is not None)
+    assert(local_mount_data_msg.get("freeSwap") is not None)
+    assert(local_mount_data_msg.get("totalSpace") is not None)
+    assert(local_mount_data_msg.get("totalSwap") is not None)
+
+@step(u'Then I get the cpu data sensor JSON response message')
+def then_i_get_the_cpu_data_sensor_json_response_message(step):
+
+    cpu_data_msg = None
+    time.sleep(4)
+    while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
+        ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
+        time.sleep(10)
+        print("Received: {0}".format(ingressMsg))
+
+        try:
+            # Make sure we get back the message type that matches the request
+            msg_type = ingressMsg.get("sensor_response_type")
+            cpu_data_msg = msg_type["cpu_data"]
+            break
+        except Exception as exception:
+            time.sleep(4)
+            print(exception)
+
+    assert(cpu_data_msg is not None)
+    assert(cpu_data_msg.get("hostId") is not None)
+    assert(cpu_data_msg.get("localtime") is not None)
+    assert(cpu_data_msg.get("csps") is not None)
+    assert(cpu_data_msg.get("idleTime") is not None)
+    assert(cpu_data_msg.get("interruptTime") is not None)
+    assert(cpu_data_msg.get("iowaitTime") is not None)
+    assert(cpu_data_msg.get("niceTime") is not None)
+    assert(cpu_data_msg.get("softirqTime") is not None)
+    assert(cpu_data_msg.get("stealTime") is not None)
+    assert(cpu_data_msg.get("systemTime") is not None)
+    assert(cpu_data_msg.get("userTime") is not None)
+    assert(cpu_data_msg.get("coreData") is not None)
+
+@step(u'Then I get the if data sensor JSON response message')
+def then_i_get_the_if_data_sensor_json_response_message(step):
+
+    if_data_msg = None
+    time.sleep(4)
+    while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
+        ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
+        time.sleep(10)
+        print("Received: {0}".format(ingressMsg))
+
+        try:
+            # Make sure we get back the message type that matches the request
+            msg_type = ingressMsg.get("sensor_response_type")
+            if_data_msg = msg_type["if_data"]
+            break
+        except Exception as exception:
+            time.sleep(4)
+            print(exception)
+
+    assert(if_data_msg is not None)
+    assert(if_data_msg.get("hostId") is not None)
+    assert(if_data_msg.get("localtime") is not None)
+    assert(if_data_msg.get("interfaces") is not None)
+
+@step(u'Then I get the disk space data sensor JSON response message')
+def then_i_get_the_disk_space_data_sensor_json_response_message(step):
+
+    disk_space_data_msg = None
+    time.sleep(4)
+    while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
+        ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
+        time.sleep(10)
+        print("Received: {0}".format(ingressMsg))
+
+        try:
+            # Make sure we get back the message type that matches the request
+            msg_type = ingressMsg.get("sensor_response_type")
+            disk_space_data_msg = msg_type["disk_space_alert"]
+            break
+        except Exception as exception:
+            time.sleep(4)
+            print(exception)
+
+    assert(disk_space_data_msg is not None)
+    assert(disk_space_data_msg.get("hostId") is not None)
+    assert(disk_space_data_msg.get("localtime") is not None)
+    assert(disk_space_data_msg.get("freeSpace") is not None)
+    assert(disk_space_data_msg.get("totalSpace") is not None)
+    assert(disk_space_data_msg.get("diskUsedPercentage") is not None)
+

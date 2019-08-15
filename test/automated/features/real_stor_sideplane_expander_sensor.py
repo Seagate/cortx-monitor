@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 from lettuce import *
 
-import os
 import json
+import os
 import psutil
+import time
 
 # Add the top level directory to the sys.path to access classes
 topdir = os.path.dirname(os.path.dirname(os.path.dirname \
@@ -68,38 +69,42 @@ def when_i_send_in_the_sideplane_expander_sensor_message_to_request_the_current_
     }
     world.sspl_modules[RabbitMQegressProcessor.name()]._write_internal_msgQ(RabbitMQegressProcessor.name(), egressMsg)
 
-@step(u'Then I get the "([^"]*)" JSON response message')
-def then_i_get_the_sensor_json_response_message(step, sensor):
+@step(u'Then I get the sideplane expander sensor JSON response message')
+def then_i_get_the_sideplane_expander_sensor_json_response_message(step):
+
+    sideplane_expander_sensor_msg = None
+    time.sleep(4)
     while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
         ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
-        print("Received: %s" % ingressMsg)
+        time.sleep(2)
+        print("Received: {0}".format(ingressMsg))
         try:
             # Make sure we get back the message type that matches the request
-            msgType = ingressMsg.get("sensor_response_type")
-            assert(msgType != None)
-
-            if sensor == "enclosure_sideplane_expander_alert":
-                sideplaneexpander_msg = ingressMsg.get("sensor_response_type")
-                sideplaneexpander_sensor_msg = sideplaneexpander_msg.get(
-                    "enclosure_sideplane_expander_alert")
-                assert(sideplaneexpander_sensor_msg is not None)
-                assert(sideplaneexpander_sensor_msg.get("alert_type") is not None)
-                assert(sideplaneexpander_sensor_msg.get("resource_type") is not None)
-                assert(sideplaneexpander_sensor_msg.get("info") is not None)
-                assert(sideplaneexpander_sensor_msg.get("info").get("sideplane_expander") is not None)
-
-                sideplane_expander_data = sideplaneexpander_sensor_msg.get("info").get("sideplane_expander")
-
-                assert(sideplane_expander_data.get("status") is not None)
-                assert(sideplane_expander_data.get("name") is not None)
-                assert(sideplane_expander_data.get("enclosure-id") is not None)
-                assert(sideplane_expander_data.get("health-reason") is not None)
-                assert(sideplane_expander_data.get("health") is not None)
-                assert(sideplane_expander_data.get("location") is not None)
-                assert(sideplane_expander_data.get("position") is not None)
-                assert(sideplane_expander_data.get("health-recommendation") is not None)
-            else:
-                assert False, "Response not recognized"
+            msg_type = ingressMsg.get("sensor_response_type")
+            sideplane_expander_sensor_msg = msg_type["enclosure_sideplane_expander_alert"]
             break
         except Exception as exception:
+            time.sleep(4)
             print exception
+
+    assert(sideplane_expander_sensor_msg is not None)
+    assert(sideplane_expander_sensor_msg.get("alert_type") is not None)
+    assert(sideplane_expander_sensor_msg.get("resource_type") is not None)
+    assert(sideplane_expander_sensor_msg.get("info") is not None)
+    assert(sideplane_expander_sensor_msg.get("info").get("sideplane_expander") is not None)
+
+    sideplane_expander_info_data = sideplane_expander_sensor_msg.get("info").get("sideplane_expander")
+
+    assert(sideplane_expander_info_data.get("status") is not None)
+    assert(sideplane_expander_info_data.get("name") is not None)
+    assert(sideplane_expander_info_data.get("enclosure-id") is not None)
+    assert(sideplane_expander_info_data.get("health-reason") is not None)
+    assert(sideplane_expander_info_data.get("health") is not None)
+    assert(sideplane_expander_info_data.get("location") is not None)
+    assert(sideplane_expander_info_data.get("health-recommendation") is not None)
+
+    sideplane_expander_extended_info_data = sideplane_expander_sensor_msg.get("extended_info").get("sideplane_expander")
+    if sideplane_expander_extended_info_data:
+        assert(sideplane_expander_extended_info_data.get("position") is not None)
+        assert(sideplane_expander_extended_info_data.get("durable-id") is not None)
+        assert(sideplane_expander_extended_info_data.get("drawer-id") is not None)

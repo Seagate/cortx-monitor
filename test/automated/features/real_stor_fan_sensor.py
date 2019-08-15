@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 from lettuce import *
 
-import os
 import json
+import os
 import psutil
+import time
 
 # Add the top level directory to the sys.path to access classes
 topdir = os.path.dirname(os.path.dirname(os.path.dirname \
@@ -13,11 +14,10 @@ os.sys.path.insert(0, topdir)
 from test.automated.rabbitmq.rabbitmq_ingress_processor_tests import RabbitMQingressProcessorTests
 from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 
-@step(u'Given that SSPL is running')
-def given_that_sspl_is_running(step):
-    # Check that the state for sspl service is active
+@step(u'Given that SSPL-LL is running')
+def given_that_sspl_ll_is_running(step):
+    # Check that the state for sspl_ll service is active
     found = False
-
     # Support for python-psutil < 2.1.3
     for proc in psutil.process_iter():
         if proc.name == "sspl_ll_d" and \
@@ -39,8 +39,8 @@ def given_that_sspl_is_running(step):
         world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
 
 
-@step(u'When I send in the fan sensor message to request the current "([^"]*)" data')
-def when_i_send_in_the_fan_data_sensor_message_to_request_the_current_sensor_type_data(step, sensor_type):
+@step(u'When I send in the fan module sensor message to request the current "([^"]*)" data')
+def when_i_send_in_the_fan_module_sensor_message_to_request_the_current_sensor_type_data(step, sensor_type):
     egressMsg = {
         "title": "SSPL-LL Actuator Request",
         "description": "Seagate Storage Platform Library - Low Level - Actuator Request",
@@ -70,43 +70,49 @@ def when_i_send_in_the_fan_data_sensor_message_to_request_the_current_sensor_typ
     world.sspl_modules[RabbitMQegressProcessor.name()]._write_internal_msgQ(RabbitMQegressProcessor.name(), egressMsg)
 
 
-@step(u'Then I get the "([^"]*)" JSON response message')
-def then_i_get_the_sensor_json_response_message(step, sensor):
+@step(u'Then I get the fan module sensor JSON response message')
+def then_i_get_the_fan_module__sensor_json_response_message(step):
+    fan_module_sensor_msg = None
+    time.sleep(4)
     while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
         ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
-        print("Received: %s" % ingressMsg)
-
+        time.sleep(2)
+        print("Received: {0}".format(ingressMsg))
         try:
             # Make sure we get back the message type that matches the request
-            msgType = ingressMsg.get("sensor_response_type")
-            assert(msgType != None)
-
-            if sensor == "enclosure_fan_module_alert":
-                fan_sensor_msg = ingressMsg.get("sensor_response_type").get("enclosure_fan_module_alert")
-                assert(fan_sensor_msg is not None)
-                assert(fan_sensor_msg.get("alert_type") is not None)
-                assert(fan_sensor_msg.get("resource_type") is not None)
-                assert(fan_sensor_msg.get("info").get("fan_module") is not None)
-                fan_module = fan_sensor_msg.get("info").get("fan_module")
-                assert(fan_module.get("name") is not None)
-                assert(fan_module.get("location") is not None)
-                assert(fan_module.get("status") is not None)
-                assert(fan_module.get("health") is not None)
-                assert(fan_module.get("health-reason") is not None)
-                assert(fan_module.get("health-recommendation") is not None)
-                assert(fan_module.get("enclosure-id") is not None)
-                if fan_sensor_msg.get("info").get("fan_module").get("fans") is not None:
-                    fans = fan_sensor_msg.get("info").get("fan_module").get("fans")
-                    assert(fans.get("durable-id") is not None)
-                    assert(fans.get("status") is not None)
-                    assert(fans.get("position") is not None)
-                    assert(fans.get("part-number") is not None)
-                    assert(fans.get("fw-revision") is not None)
-                    assert(fans.get("hw-revision") is not None)
-                    assert(fans.get("health") is not None)
-                    assert(fans.get("health-reason") is not None)
-                    assert(fans.get("health-recommendation") is not None)
-            else:
-                assert False, "Response not recognized"
+            msg_type = ingressMsg.get("sensor_response_type")
+            fan_module_sensor_msg = msg_type["enclosure_fan_module_alert"]
+            break
         except Exception as exception:
-            print exception
+            time.sleep(4)
+            print(exception)
+
+    assert(fan_module_sensor_msg is not None)
+    assert(fan_module_sensor_msg.get("alert_type") is not None)
+    assert(fan_module_sensor_msg.get("resource_type") is not None)
+    assert(fan_module_sensor_msg.get("info").get("fan_module") is not None)
+    fan_module_info = fan_module_sensor_msg.get("info").get("fan_module")
+    assert(fan_module_info.get("name") is not None)
+    assert(fan_module_info.get("location") is not None)
+    assert(fan_module_info.get("status") is not None)
+    assert(fan_module_info.get("health") is not None)
+    assert(fan_module_info.get("health-reason") is not None)
+    assert(fan_module_info.get("health-recommendation") is not None)
+    assert(fan_module_info.get("enclosure-id") is not None)
+    fans = fan_module_sensor_msg.get("info").get("fan_module").get("fans")
+    if fans:
+        for fan in fans:
+            assert(fan.get("durable-id") is not None)
+            assert(fan.get("status") is not None)
+            assert(fan.get("position") is not None)
+            assert(fan.get("part-number") is not None)
+            assert(fan.get("fw-revision") is not None)
+            assert(fan.get("hw-revision") is not None)
+            assert(fan.get("health") is not None)
+            assert(fan.get("health-reason") is not None)
+            assert(fan.get("health-recommendation") is not None)
+
+    fan_module_extended_info = fan_module_sensor_msg.get("extended_info").get("fan_module")
+    if fan_module_extended_info:
+        assert(fan_module_extended_info.get("durable-id") is not None)
+        assert(fan_module_extended_info.get("position") is not None)

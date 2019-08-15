@@ -22,7 +22,7 @@ from dbus import SystemBus, Interface, exceptions as debus_exceptions
 def given_that_the_name_service_is_condition_and_sspl_ll_is_running(step, name, condition):
     # Apply the condition to the service to guarantee a known starting state
     assert condition in ("stop", "start", "running", "halted")
-    start_stop_service(name, condition)
+    #start_stop_service(name, condition)
 
     # Check that the state for sspl_ll service is active
     found = False
@@ -69,22 +69,27 @@ def when_i_ungracefully_halt_the_name_service_with_signal_signum(step, name, sig
 
 @step(u'Then I receive a service watchdog json msg with service name "([^"]*)" and state of "([^"]*)"')
 def then_i_receive_a_service_watchdog_json_msg_with_service_name_name_and_state_of_condition(step, name, condition):
+
+    service_name = None
+    service_state = None
+    time.sleep(4)
     while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
         ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
+        time.sleep(5)
         print("Received: %s" % ingressMsg)
 
         try:
             # Verify module name and thread response
             service_name = ingressMsg.get("sensor_response_type").get("service_watchdog").get("service_name")
             print("service_name: %s" % service_name)
-            assert service_name == name
 
             service_state = ingressMsg.get("sensor_response_type").get("service_watchdog").get("service_state")
             print("service_state: %s" % service_state)
-            assert service_state == condition
             break
         except Exception as exception:
             print exception
+    assert service_name == name
+    assert service_state == condition
 
 
 def start_stop_service(service_name, action):

@@ -4,6 +4,7 @@ from lettuce import *
 import os
 import json
 import psutil
+import time
 
 # Add the top level directory to the sys.path to access classes
 topdir = os.path.dirname(os.path.dirname(os.path.dirname \
@@ -70,45 +71,45 @@ def when_i_send_in_the_disk_sensor_message_to_request_the_current_sensor_type_da
     world.sspl_modules[RabbitMQegressProcessor.name()]._write_internal_msgQ(RabbitMQegressProcessor.name(), egressMsg)
 
 
-@step(u'Then I get the "([^"]*)" JSON response message')
-def then_i_get_the_sensor_json_response_message(step, sensor):
+@step(u'Then I get the disk sensor JSON response message')
+def then_i_get_the_disk_sensor_json_response_message(step):
+
+    disk_sensor_msg = None
+    time.sleep(4)
     while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
         ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
         print("Received: %s" % ingressMsg)
         try:
             # Make sure we get back the message type that matches the request
-            msgType = ingressMsg.get("sensor_response_type")
-            assert(msgType != None)
-
-            if sensor == "enclosure_disk_alert":
-                disk_sensor_msg = ingressMsg.get("sensor_response_type").get("enclosure_disk_alert")
-                assert(disk_sensor_msg is not None)
-                assert(disk_sensor_msg.get("alert_type") is not None)
-                assert(disk_sensor_msg.get("resource_type") is not None)
-                assert(disk_sensor_msg.get("info") is not None)
-                assert(disk_sensor_msg.get("info").get("description") is not None)
-                assert(disk_sensor_msg.get("info").get("slot") is not None)
-                assert(disk_sensor_msg.get("info").get("status") is not None)
-                assert(disk_sensor_msg.get("info").get("architecture") is not None)
-                assert(disk_sensor_msg.get("info").get("serial-number") is not None)
-                assert(disk_sensor_msg.get("info").get("size") is not None)
-                assert(disk_sensor_msg.get("info").get("vendor") is not None)
-                assert(disk_sensor_msg.get("info").get("model") is not None)
-                assert(disk_sensor_msg.get("info").get("revision") is not None)
-                assert(disk_sensor_msg.get("info").get("temperature") is not None)
-                assert(disk_sensor_msg.get("info").get("LED-status") is not None)
-                assert(disk_sensor_msg.get("info").get("locator-LED") is not None)
-                assert(disk_sensor_msg.get("info").get("blink-state") is not None)
-                assert(disk_sensor_msg.get("info").get("SMART") is not None)
-                assert(disk_sensor_msg.get("info").get("health") is not None)
-                assert(disk_sensor_msg.get("info").get("health-reason") is not None)
-                assert(disk_sensor_msg.get("info").get("health-recommendation") is not None)
-                assert(disk_sensor_msg.get("info").get("enclosure-family") is not None)
-                assert(disk_sensor_msg.get("info").get("enclosure-id") is not None)
-                assert(disk_sensor_msg.get("info").get("enclosure-wwn") is not None)
-
-            else:
-                assert False, "Response not recognized"
+            msg_type = ingressMsg.get("sensor_response_type")
+            time.sleep(2)
+            disk_sensor_msg = msg_type["enclosure_disk_alert"]
             break
         except Exception as exception:
+            time.sleep(4)
             print exception
+
+    assert(disk_sensor_msg is not None)
+    assert(disk_sensor_msg.get("alert_type") is not None)
+    assert(disk_sensor_msg.get("resource_type") is not None)
+    assert(disk_sensor_msg.get("info") is not None)
+    assert(disk_sensor_msg.get("info").get("description") is not None)
+    assert(disk_sensor_msg.get("info").get("slot") is not None)
+    assert(disk_sensor_msg.get("info").get("status") is not None)
+    assert(disk_sensor_msg.get("info").get("architecture") is not None)
+    assert(disk_sensor_msg.get("info").get("serial-number") is not None)
+    assert(disk_sensor_msg.get("info").get("size") is not None)
+    assert(disk_sensor_msg.get("info").get("vendor") is not None)
+    assert(disk_sensor_msg.get("info").get("model") is not None)
+    assert(disk_sensor_msg.get("info").get("revision") is not None)
+    assert(disk_sensor_msg.get("info").get("temperature") is not None)
+    assert(disk_sensor_msg.get("info").get("LED-status") is not None)
+    assert(disk_sensor_msg.get("info").get("locator-LED") is not None)
+    assert(disk_sensor_msg.get("info").get("blink-state") is not None)
+    assert(disk_sensor_msg.get("info").get("SMART") is not None)
+    assert(disk_sensor_msg.get("info").get("health") is not None)
+    assert(disk_sensor_msg.get("info").get("health-reason") is not None)
+    assert(disk_sensor_msg.get("info").get("health-recommendation") is not None)
+    assert(disk_sensor_msg.get("info").get("enclosure-family") is not None)
+    assert(disk_sensor_msg.get("info").get("enclosure-id") is not None)
+    assert(disk_sensor_msg.get("info").get("enclosure-wwn") is not None)

@@ -6,5 +6,5 @@ Feature: Test Disk Sensor Capabilities
 Scenario: Send SSPL-LL a disk sensor message requesting disk data
 	Given that SSPL-LL is running
 	When I send in the disk sensor message to request the current "enclosure_disk_alert" data
-	Then I get the "enclosure_disk_alert" JSON response message
+	Then I get the disk sensor JSON response message
 

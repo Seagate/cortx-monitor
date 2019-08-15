@@ -77,7 +77,7 @@ class RealStorEnclMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 self._expander_sensor_message,
             "enclosure_fan_module_alert": self._fan_module_sensor_message,
             "enclosure_psu_alert": self._psu_sensor_message,
-            "enclosure_controller_alert": self._generate_controller_alert,
+            "enclosure_controller_alert": self._controller_sensor_message,
             "enclosure_disk_alert": self._disk_sensor_message
         }
 
@@ -177,6 +177,7 @@ class RealStorEnclMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
         # save the json message in memory to serve sspl CLI sensor request
         self._disk_sensor_message = json_msg
+        self._fru_type["enclosure_disk_alert"] = self._disk_sensor_message
         self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
 
     def _generate_psu_alert(
@@ -193,6 +194,7 @@ class RealStorEnclMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
         # Saves the json message in memory to serve sspl CLI sensor request
         self._psu_sensor_message = json_msg
+        self._fru_type["enclosure_psu_alert"] = self._psu_sensor_message
         self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
 
     def _generate_fan_module_alert(
@@ -209,6 +211,8 @@ class RealStorEnclMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
         # save the json message in memory to serve sspl CLI sensor request
         self._fan_module_sensor_message = json_msg
+        self._fru_type["enclosure_fan_module_alert"] = \
+            self._fan_module_sensor_message
         self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
 
     def _generate_controller_alert(
@@ -226,6 +230,8 @@ class RealStorEnclMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
         # save the json message in memory to serve sspl CLI sensor request
         self._controller_sensor_message = json_msg
+        self._fru_type["enclosure_controller_alert"] = \
+            self._controller_sensor_message
         self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
 
     def _generate_expander_alert(
@@ -243,6 +249,8 @@ class RealStorEnclMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
         # save the json message in memory to serve sspl CLI sensor request
         self._expander_sensor_message = json_msg
+        self._fru_type["enclosure_sideplane_expander_alert"] = \
+            self._expander_sensor_message
         self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
 
     def shutdown(self):

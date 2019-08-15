@@ -21,6 +21,16 @@ def login(loginhash):
     response = json_data.get("api-response", {})
     return response, status_code
 
+@app.route('/{0}/show/disk/detail'.format(api), methods=["GET"])
+def show_disks_detail():
+    api_file = open("{0}/disk-detail.txt".format(curr_dir), "r")
+    data = api_file.read()
+    api_file.close()
+    json_data = json.loads(data)
+    status_code = json_data.get("status_code")
+    response = json_data.get("api-response")
+    return response, status_code
+
 # Generic function to serve all api /show/<endpoint> endpoints
 # It reads data from file with a name same as endpoint.
 @app.route('/{0}/show/<endpoint>'.format(api), methods=["GET"])

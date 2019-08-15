@@ -286,8 +286,8 @@ class RealStorControllerSensor(ScheduledModuleThread, InternalMsgQ):
         internal_json_msg = json.dumps(
             {"sensor_request_type": {
                     "enclosure_alert": {
-                        "sensor_type" : SENSOR_RESP_TYPE,
-                        "resource_type": RESOURCE_CATEGORY,
+                        "sensor_type" : self.SENSOR_RESP_TYPE,
+                        "resource_type": self.RESOURCE_CATEGORY,
                         "alert_type": alert_type,
                         "status": "update"
                     },

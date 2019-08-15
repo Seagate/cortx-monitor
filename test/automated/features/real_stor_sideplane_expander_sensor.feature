@@ -5,5 +5,5 @@ Feature: Test Sideplane Expander Sensor Capabilities
 Scenario: Send SSPL a sideplane expander sensor message requesting sideplane expander data
 	Given that SSPL is running
 	When I send in the sideplane expander sensor message to request the current "enclosure_sideplane_expander_alert" data
-	Then I get the "enclosure_sideplane_expander_alert" JSON response message
+	Then I get the sideplane expander sensor JSON response message
 
