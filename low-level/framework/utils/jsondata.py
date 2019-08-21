@@ -37,10 +37,10 @@ class JsonData(object):
             json.dump(dictobj, fh)
         except IOError as err:
             errno, strerror = err.args
-            logger.error("I/O error[{0}] while dumping data to file {1}): {2}"\
+            logger.warn("I/O error[{0}] while dumping data to file {1}): {2}"\
                 .format(errno,absfilepath,strerror))
         except Exception as gerr:
-            logger.error("Error[{0}] while dumping data to file {1}"\
+            logger.warn("Error[{0}] while dumping data to file {1}"\
                 .format(gerr, absfilepath))
         else:
             fh.close()
@@ -61,15 +61,15 @@ class JsonData(object):
             datadict = json.load(fh)
         except IOError as err:
             errno, strerror = err.args
-            logger.error("I/O error[{0}] while loading data from file {1}): {2}"\
+            logger.warn("I/O error[{0}] while loading data from file {1}): {2}"\
                 .format(errno,absfilepath,strerror))
         except ValueError as jsonerr:
-            logger.error("JSON error{0} while loading from {1}".format(jsonerr, absfilepath))
+            logger.warn("JSON error{0} while loading from {1}".format(jsonerr, absfilepath))
             datadict = None
         except OSError as oserr:
-            logger.error("OS error{0} while loading from {1}".format(oserr, absfilepath))
+            logger.warn("OS error{0} while loading from {1}".format(oserr, absfilepath))
         except Exception as gerr:
-            logger.error("Error{0} while reading data from file {1}"\
+            logger.warn("Error{0} while reading data from file {1}"\
                 .format(gerr, absfilepath))
         else:
             fh.close()

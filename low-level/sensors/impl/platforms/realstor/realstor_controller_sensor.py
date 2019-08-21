@@ -137,7 +137,10 @@ class RealStorControllerSensor(ScheduledModuleThread, InternalMsgQ):
         controllers = None
         try:
             controllers = self._get_controllers()
-            self._get_msgs_for_faulty_controllers(controllers)
+
+            if controllers:
+                self._get_msgs_for_faulty_controllers(controllers)
+
         except Exception as exception:
             logger.exception(exception)
 
@@ -155,6 +158,16 @@ class RealStorControllerSensor(ScheduledModuleThread, InternalMsgQ):
 
         response = self.rssencl.ws_request(url, self.rssencl.ws.HTTP_GET)
 
+        if not response:
+            logger.warn("{0}:: Controllers status unavailable as ws request {1}"
+                " failed".format(self.rssencl.EES_ENCL, url))
+            return
+
+        if response.status_code != self.rssencl.ws.HTTP_OK:
+            logger.error("{0}:: http request {1} to get controllers failed with"
+                " err {2}" % self.rssencl.EES_ENCL, url, response.status_code)
+            return
+
         response_data = json.loads(response.text)
         controllers = response_data.get("controllers")
         return controllers
@@ -170,6 +183,10 @@ class RealStorControllerSensor(ScheduledModuleThread, InternalMsgQ):
         alert_type = ""
         # Flag to indicate if there is a change in _previously_faulty_controllers
         state_changed = False
+
+        if not controllers:
+            return
+
         for controller in controllers:
             controller_health = controller["health"].lower()
             controller_status = controller["status"].lower()

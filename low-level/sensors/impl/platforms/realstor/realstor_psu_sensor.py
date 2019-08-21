@@ -110,7 +110,9 @@ class RealStorPSUSensor(ScheduledModuleThread, InternalMsgQ):
         try:
             psus = self._get_psus()
 
-            self._get_msgs_for_faulty_psus(psus)
+            if psus:
+                self._get_msgs_for_faulty_psus(psus)
+
         except Exception as exception:
             logger.exception(exception)
 
@@ -130,6 +132,17 @@ class RealStorPSUSensor(ScheduledModuleThread, InternalMsgQ):
         response = self.rssencl.ws_request(
                         url, self.rssencl.ws.HTTP_GET)
 
+        if not response:
+            logger.warn("{0}:: PSUs status unavailable as ws request {1}"
+                " failed".format(self.rssencl.EES_ENCL, url))
+            return
+
+        if response.status_code != self.rssencl.ws.HTTP_OK:
+            logger.error("{0}:: http request {1} to get power-supplies failed "
+                " with err {2}" % self.rssencl.EES_ENCL, url,
+                response.status_code)
+            return
+
         response_data = json.loads(response.text)
         psus = response_data.get("power-supplies")
         return psus
@@ -148,6 +161,10 @@ class RealStorPSUSensor(ScheduledModuleThread, InternalMsgQ):
         alert_type = ""
         # Flag to indicate if there is a change in _previously_faulty_psus
         state_changed = False
+
+        if not psus:
+            return
+
         for psu in psus:
             psu_health = psu["health"].lower()
             durable_id = psu["durable-id"]

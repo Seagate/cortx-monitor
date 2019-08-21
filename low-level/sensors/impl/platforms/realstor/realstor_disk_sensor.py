@@ -181,11 +181,13 @@ class RealStorDiskSensor(ScheduledModuleThread, InternalMsgQ):
         self.rss_cliapi_poll_disks(self.RSS_DISK_GET_ALL)
 
         if not self.memcache_disks:
-            logger.error("No drive info cache yet, cant compare!!")
+            logger.warn("Last polled drives info in-memory cache unavailable"
+                        ", unable to check drive presence change")
             return
 
         if not self.latest_disks:
-            logger.warn("Empty latest drive info set passed, cant compare!!")
+            logger.warn("Latest polled drives info in-memory cache unavailable"
+                        ", unable to check drive presence change")
             return
 
         # keys are disk slot numbers
@@ -260,12 +262,13 @@ class RealStorDiskSensor(ScheduledModuleThread, InternalMsgQ):
                         url, self.rssencl.ws.HTTP_GET)
 
         if not response:
-            logger.warn("Disks status unavailable as ws request failed")
+            logger.warn("{0}:: Disks status unavailable as ws request {1}"
+                " failed".format(self.rssencl.EES_ENCL, url))
             return
 
         if response.status_code != self.rssencl.ws.HTTP_OK:
-            logger.error("http request to poll disks failed with http err %d"
-                % response.status_code)
+            logger.error("{0}:: http request {1} to poll disks failed with"
+                " err {2}" % self.rssencl.EES_ENCL, url, response.status_code)
             return
 
         try:

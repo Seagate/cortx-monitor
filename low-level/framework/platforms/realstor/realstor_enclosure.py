@@ -33,7 +33,7 @@ class RealStorEnclosure(StorageEnclosure):
     REALSTOR_MC_BOOTWAIT = 0
     DEFAULT_MC_IP = "127.0.0.1"
     WEBSERVICE_TIMEOUT = 20
-    MAX_RETRIES = 2
+    MAX_RETRIES = 1
 
     CONF_SECTION_MC = "STORAGE_ENCLOSURE"
     CONF_REALSTORDISKSENSOR = "REALSTORDISKSENSOR"
@@ -178,7 +178,6 @@ class RealStorEnclosure(StorageEnclosure):
             retry_count -= 1
 
             if not response:
-                logger.warn("WS request failed {0}".format(url))
                 continue
 
             if response.status_code != self.ws.HTTP_OK:

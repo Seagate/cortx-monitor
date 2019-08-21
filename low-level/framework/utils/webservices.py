@@ -51,11 +51,11 @@ class WebServices(object):
                 wsresponse.raise_for_status()
 
         except requests.exceptions.ConnectionError as connerr:
-                logger.error("Connection Refused for api {0} - {1}\
-                    ".format(url,connerr))
+                logger.error("Connection Error for ws api {0} - {1}"\
+                    .format(url,connerr))
         except requests.exceptions.HTTPError as httperr:
-                logger.error("HTTP Error encountered for api {0} - {1}\
-                    ".format(url,httperr))
+                logger.error("HTTP Error encountered for api {0} - {1}"\
+                    .format(url,httperr))
         except requests.exceptions.Timeout as toerr:
                 logger.error("Timeout for api {0} - {1}".format(url,toerr))
         except Exception as err:

@@ -120,6 +120,16 @@ class RealStorSideplaneExpanderSensor(ScheduledModuleThread, InternalMsgQ):
         response = self.rssencl.ws_request(
                         url, self.rssencl.ws.HTTP_GET)
 
+        if not response:
+            logger.warn("{0}:: Enclosure status unavailable as ws request {1}"
+                " failed".format(self.rssencl.EES_ENCL, url))
+            return
+
+        if response.status_code != self.rssencl.ws.HTTP_OK:
+            logger.error("{0}:: http request {1} to get enclosure failed with"
+                " err {2}" % self.rssencl.EES_ENCL, url, response.status_code)
+            return
+
         response_data = json.loads(response.text)
         encl_drawers = response_data["enclosures"][0]["drawers"]
         if encl_drawers:
@@ -142,6 +152,9 @@ class RealStorSideplaneExpanderSensor(ScheduledModuleThread, InternalMsgQ):
 
         missing_health = " ".join("Check that all I/O modules and power supplies in\
         the enclosure are fully seated in their slots and that their latches are locked".split())
+
+        if not self._sideplane_expander_list:
+            return
 
         for sideplane_expander in self._sideplane_expander_list:
             try:

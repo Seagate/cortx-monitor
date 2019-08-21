@@ -115,6 +115,9 @@ class RealStorFanSensor(ScheduledModuleThread, InternalMsgQ):
         self._fan_modules_list = self._get_fan_modules_list()
         alert_type = None
 
+        if not self._fan_modules_list:
+            return
+
         try:
             for fan_module in self._fan_modules_list:
                 fru_status = fan_module.get("health").lower()
@@ -169,6 +172,17 @@ class RealStorFanSensor(ScheduledModuleThread, InternalMsgQ):
 
         response = self.rssencl.ws_request(
                         url, self.rssencl.ws.HTTP_GET)
+
+        if not response:
+            logger.warn("{0}:: Fan-modules status unavailable as ws request {1}"
+                            "failed".format(self.rssencl.EES_ENCL, url))
+            return
+
+        if response.status_code != self.rssencl.ws.HTTP_OK:
+            logger.error(
+                "{0}:: http request {1} to get fan-modules failed with http err"
+                "%d" % self.rssencl.EES_ENCL, url, response.status_code)
+            return
 
         response_data = json.loads(response.text)
 
