@@ -74,6 +74,11 @@ chown -R sspl-ll /var/sspl/
 # TODO: Disable this default copy once the provisioners are ready.
 [ -f /etc/sspl.conf ] || cp /opt/seagate/sspl/conf/sspl.conf.EES /etc/sspl.conf
 
+# Copy rsyslog configuration
+[ -f /etc/rsyslog.d/0-iemfwd.conf ] ||
+    cp /opt/seagate/sspl/low-level/files/etc/rsyslog.d/0-iemfwd.conf /etc/rsyslog.d/0-iemfwd.conf
+
+
 # Copy init script
 [ -f /opt/seagate/sspl/sspl_init ] ||
     ln -s /opt/seagate/sspl/low-level/framework/sspl_init /opt/seagate/sspl/sspl_init
