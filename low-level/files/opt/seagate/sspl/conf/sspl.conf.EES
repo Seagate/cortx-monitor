@@ -4,7 +4,7 @@ core_processors=RabbitMQegressProcessor, RabbitMQingressProcessor, LoggingProces
 
 message_handlers=DiskMsgHandler, LoggingMsgHandler, ServiceMsgHandler, NodeDataMsgHandler, NodeControllerMsgHandler, RealStorEnclMsgHandler
 
-sensors=ServiceWatchdog, NodeData, RAIDsensor, RealStorFanSensor, RealStorPSUSensor, RealStorControllerSensor, RealStorDiskSensor, RealStorSideplaneExpanderSensor, RealStorLogicalVolumeSensor
+sensors=ServiceWatchdog, NodeData, RAIDsensor, RealStorFanSensor, RealStorPSUSensor, RealStorControllerSensor, RealStorDiskSensor, RealStorSideplaneExpanderSensor, RealStorLogicalVolumeSensor, IEMSensor
 
 actuators=Service, RAIDactuator, Hdparm
 
@@ -129,3 +129,11 @@ threaded=true
 
 [REALSTORLOGICALVOLUMESENSOR]
 threaded=true
+
+[IEMSENSOR]
+threaded=true
+pipe_path=/var/sspl/data/iem
+site_id=001
+rack_id=001
+node_id=001
+

@@ -4,7 +4,7 @@ core_processors=RabbitMQegressProcessor, RabbitMQingressProcessor, LoggingProces
 
 message_handlers=DiskMsgHandler, LoggingMsgHandler, ServiceMsgHandler, NodeDataMsgHandler, NodeControllerMsgHandler
 
-sensors=ServiceWatchdog, NodeData, RAIDsensor, HPIMonitor, SNMPtraps
+sensors=ServiceWatchdog, NodeData, RAIDsensor, HPIMonitor, SNMPtraps, IEMSensor
 
 actuators=Service, Login, RaritanPDU, RAIDactuator, IPMI, Hdparm, HPIactuator, CommandLine
 
@@ -130,3 +130,9 @@ enabled_MIBS=PDU2-MIB
 bind_ip=service
 bind_port=1620
 
+[IEMSENSOR]
+threaded=true
+pipe_path=/var/sspl/data/iem
+site_id=001
+rack_id=001
+node_id=001

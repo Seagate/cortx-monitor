@@ -5,6 +5,7 @@ set -u -o pipefail
 SCRIPT_NAME=$(basename $0)
 DIR_NAME="/opt/seagate/sspl/"
 SSPL_CONF="/etc/sspl.conf"
+RSYSLOG_CONF="/etc/rsyslog.d/0-iemfwd.conf"
 SSPL_CONFIGURED="/var/sspl/sspl-configured"
 ROLES="gw ssu vm cmu eos"
 
@@ -215,6 +216,20 @@ config_sspl() {
 
     cp /opt/seagate/sspl/conf/sspl-ll.service.$product /etc/systemd/system/sspl-ll.service
     touch $SSPL_CONFIGURED
+
+    # Check if named pipe is created to read IEMs from.
+    PIPE_PATH=$(python -c "import ConfigParser; cf=ConfigParser.RawConfigParser(); cf.read('/etc/sspl.conf'); print(cf.get('IEMSENSOR', 'pipe_path'))")
+    # Create one if doesn't exist
+    [ -f $PIPE_PATH ] || mkfifo $PIPE_PATH &> /dev/null
+    # Pipe should be writable by Rsyslog as well as readable by SSPL which
+    # runs by a different user called sspl-ll. So permission needs to be
+    # changed.
+    chmod 774 $PIPE_PATH &> /dev/null
+    # Warn if pipe is not created.
+    [ -p $PIPE_PATH ] ||
+        echo "Error in creating $PIPE_PATH. IEMSensor will not be able to read IEM"
+    # Configure pipe path in Rsyslog configuration file
+    sed -i "s|pipe=.*|pipe=\"${PIPE_PATH}\"|g" $RSYSLOG_CONF
 
     systemctl enable sspl-ll.service
     systemctl start sspl-ll.service
