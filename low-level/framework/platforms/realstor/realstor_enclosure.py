@@ -291,9 +291,6 @@ class RealStorEnclosure(StorageEnclosure):
             for cached in self.memcache_faults:
 
                 if fault["component-id"] == cached["component-id"]:
-                    logger.debug("Found cached faulty resource {0}\
-                        ".format(fault["component-id"]))
-
                     if fault["health"] != cached["health"] \
                         or fault["health-reason"] != cached["health-reason"]:
                         logger.debug("New system Fault detected !!!")

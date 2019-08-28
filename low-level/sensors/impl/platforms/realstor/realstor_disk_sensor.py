@@ -131,7 +131,6 @@ class RealStorDiskSensor(ScheduledModuleThread, InternalMsgQ):
         self._disable_debug_if_persist_false()
 
         # Fire every configured seconds to poll disks status
-        #logger.info("pollfreq_disksensor %s" % self.pollfreq_disksensor)
         self._scheduler.enter(self.pollfreq_disksensor,
           self._priority, self.run, ())
 
@@ -167,7 +166,6 @@ class RealStorDiskSensor(ScheduledModuleThread, InternalMsgQ):
                             disk and self.NUMERIC_IDENTIFIER not in key}
 
         disk[self.rssencl.EXTENDED_INFO] = extended_info
-        #logger.info("fru disk \n%s\n" % disk.format())
 
         # notify realstor encl msg handler
         self._send_json_msg(alert_type, disk, extended_info)
@@ -214,23 +212,23 @@ class RealStorDiskSensor(ScheduledModuleThread, InternalMsgQ):
             return
 
         for slot in removed_disks:
-            #get drive data from disk cache
-            disk_info = self.rssencl.jsondata.load(
-                           self.disks_prcache+"disk_{0}.json".format(slot))
+            #get removed drive data from disk cache
+            disk_datafile = self.disks_prcache+"disk_{0}.json.prev".format(slot)
 
-            #logger.debug("Raising disk missing alert for slot {0} - info {1}"\
-            #    .format(slot,disk_info))
+            if not os.path.exists(disk_datafile):
+                disk_datafile = self.disks_prcache+"disk_{0}.json".format(slot)
+
+            disk_info = self.rssencl.jsondata.load(disk_datafile)
 
             #raise alert for missing drive
             self._rss_raise_disk_alert(self.rssencl.FRU_MISSING, disk_info)
 
+            os.remove(disk_datafile)
+
         for slot in inserted_disks:
-            #get drive data from disk cache
+            #get inserted drive data from disk cache
             disk_info = self.rssencl.jsondata.load(
                            self.disks_prcache+"disk_{0}.json".format(slot))
-
-            #logger.debug("Raising disk insertion alert for slot {0} - info {1}"\
-            #    .format(slot,disk_info))
 
             #raise alert for added drive
             self._rss_raise_disk_alert(self.rssencl.FRU_INSERTION, disk_info)
@@ -255,8 +253,6 @@ class RealStorDiskSensor(ScheduledModuleThread, InternalMsgQ):
                url = url + "/" + disk
 
         url = url + "/detail"
-
-        #logger.info("get_disks url: %s" % url)
 
         response = self.rssencl.ws_request(
                         url, self.rssencl.ws.HTTP_GET)
@@ -289,16 +285,33 @@ class RealStorDiskSensor(ScheduledModuleThread, InternalMsgQ):
             if api_resp == 0:
                 drives = jresponse['drives']
 
+                # reset latest drive cache to build new
+                self.latest_disks = {}
+
                 for drive in drives:
                     slot = drive.get("slot",-1)
                     sn = drive.get("serial-number","NA")
+
                     if slot != -1:
                         self.latest_disks[slot] = {"serial-number":sn}
 
                         #dump drive data to persistent cache
-                        dcachepath = self.disks_prcache + \
+                        dcache_path = self.disks_prcache + \
                                          "disk_{0}.json".format(slot)
-                        self.rssencl.jsondata.dump(drive, dcachepath)
+
+                        # If drive is replaced, previous drive info needs
+                        # to be retained in disk_<slot>.json.prev file and
+                        # then only dump new data to disk_<slot>.json
+                        if os.path.exists(dcache_path):
+                            prevdrive = self.rssencl.jsondata.load(dcache_path)
+                            prevsn = prevdrive.get("serial-number","NA")
+
+                            if prevsn != sn:
+                                os.rename(dcache_path,dcache_path + ".prev")
+
+                                self.rssencl.jsondata.dump(drive, dcache_path)
+                        else:
+                            self.rssencl.jsondata.dump(drive, dcache_path)
 
             #If no in-memory cache, build from persistent cache
             if not self.memcache_disks:
@@ -308,8 +321,6 @@ class RealStorDiskSensor(ScheduledModuleThread, InternalMsgQ):
             if not self.memcache_disks:
                 self.memcache_disks = self.latest_disks
 
-            #logger.debug("cached disks: %s" % (json.dumps(self.memcache_disks)))
-            #logger.debug("latest disks: %s" % (json.dumps(self.latest_disks)))
 
     def _rss_build_disk_cache_from_persistent_cache(self):
         """Retreive realstor system state info using cli api /show/system"""
@@ -419,8 +430,6 @@ class RealStorDiskSensor(ScheduledModuleThread, InternalMsgQ):
         """Transmit alert data to RealStorEnclMsgHandler to be processed
         and sent out
         """
-
-        #logger.info("_send_json_msg, info: %s, extended_info" % details, ext)
 
         internal_json_msg = self._gen_json_msg(alert_type, details, ext)
         self.last_alert = internal_json_msg
