@@ -7,7 +7,6 @@ This script uses /etc/sspl.conf as the source of the parameters.
 Usage:
     ./sspl_rabbitmq_reinit <product>
 """
-from exceptions import ValueError
 import os
 import subprocess
 import sys
