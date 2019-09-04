@@ -17,7 +17,10 @@ Steps for running automation tests
     systemctl start libvirtd
 
 4. Install lettuce 0.2.23
-    $ sudo pip install lettuce
+    $ sudo pip install lettuce==0.2.23
+
+5. Install Flask 1.1.1
+    $ sudo pip install Flask==1.1.1
 
 5. Build RPMs
 

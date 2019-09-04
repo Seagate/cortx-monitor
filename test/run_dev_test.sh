@@ -22,13 +22,14 @@ product=EES
 kill_mock_server()
 {
     # Kill mock server
-    $sudo lxc-attach -n $vm_name  -- pkill -f "\./mock_server"
+    $sudo lxc-attach -n $vm_name  -- pkill -f \./mock_server
 }
 
 trap cleanup 0 2
 
 cleanup()
 {
+    # Stop the mock_server
     kill_mock_server
     $sudo lxc-stop -n $vm_name; $sudo lxc-destroy -n $vm_name
     exit 1
@@ -71,7 +72,8 @@ $sudo lxc-attach -n $vm_name  -- yum -y install chrony python2-pip rpm-build git
 python-Levenshtein graphviz openssl-devel check-devel python-pep8 doxygen libtool sudo make
 
 # Install lettuce
-$sudo lxc-attach -n $vm_name  -- pip install lettuce
+$sudo lxc-attach -n $vm_name  -- pip install lettuce==0.2.23
+$sudo lxc-attach -n $vm_name  -- pip install Flask==1.1.1
 # Removing installation of python-requests package
 # This package gets installed as dependency of sspl RPM
 
@@ -95,22 +97,19 @@ $sudo lxc-attach -n $vm_name  --  chmod 400 /root/.erlang.cookie
 $sudo lxc-attach -n $vm_name  --  chown -R rabbitmq:rabbitmq /var/lib/rabbitmq/
 $sudo lxc-attach -n $vm_name  --  chown rabbitmq:rabbitmq /var/lib/rabbitmq/.erlang.cookie
 $sudo lxc-attach -n $vm_name  -- systemctl start rabbitmq-server -l
+$sudo lxc-attach -n $vm_name  -- systemctl start chronyd
 
 # Start mock API server
-# $sudo lxc-attach -n $vm_name  -- python $sspl_install_dir/sspl/test/mock_server.py &
-$sudo lxc-attach -n $vm_name  -- ./$sspl_install_dir/sspl/test/mock_server &
+$sudo lxc-attach -n $vm_name  -- $sspl_install_dir/sspl/test/mock_server &
 
 # Change setup to vm in sspl configurations
-$sudo lxc-attach -n $vm_name  -- $sspl_install_dir/sspl/low-level/framework/sspl_init
 [ "${product}" = "EES" ] && $sudo lxc-attach -n $vm_name  -- sed -i 's/setup=vm/setup=eos/g' /etc/sspl.conf
-$sudo lxc-attach -n $vm_name  -- sed -i 's/primary_controller_port=80/primary_controller_port=8090/g' \
-/etc/sspl.conf
+$sudo lxc-attach -n $vm_name  -- sed -i 's/primary_controller_port=80/primary_controller_port=8090/g' /etc/sspl.conf
+$sudo lxc-attach -n $vm_name  -- $sspl_install_dir/sspl/test/set_disk_threshold.sh
+$sudo lxc-attach -n $vm_name  -- $sspl_install_dir/sspl/low-level/framework/sspl_init
 
 # Execute tests
 $sudo lxc-attach -n $vm_name -- bash -c "$test_dir/run_sspl-ll_tests.sh"
-
-# Stop the mock server
-kill_mock_server
 
 retcode=$?
 exit $retcode
