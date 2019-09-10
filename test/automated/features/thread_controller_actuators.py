@@ -51,8 +51,6 @@ def when_SSPL_LL_restarts_the_thread(step):
 @step(u"Then I get the Restart Successful JSON response message")
 def then_i_receive_Restart_Successful_JSON_response_message(step):
     """I get the JSON response msg with 'thread_response': 'Restart Successful' key value"""
-    import pdb
-    pdb.set_trace()
     while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
         ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
         print("Received: %s" % ingressMsg)

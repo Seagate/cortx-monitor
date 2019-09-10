@@ -4,7 +4,7 @@ core_processors=RabbitMQegressProcessor, RabbitMQingressProcessor, LoggingProces
 
 message_handlers=DiskMsgHandler, LoggingMsgHandler, ServiceMsgHandler, NodeDataMsgHandler, NodeControllerMsgHandler, RealStorEnclMsgHandler
 
-sensors=ServiceWatchdog, NodeData, RAIDsensor, RealStorFanSensor, RealStorPSUSensor, RealStorControllerSensor, RealStorDiskSensor, RealStorSideplaneExpanderSensor
+sensors=ServiceWatchdog, NodeData, RAIDsensor, RealStorFanSensor, RealStorPSUSensor, RealStorControllerSensor, RealStorDiskSensor, RealStorSideplaneExpanderSensor, RealStorLogicalVolumeSensor
 
 actuators=Service, RAIDactuator, Hdparm
 
@@ -125,4 +125,7 @@ threaded=true
 polling_frequency_override=0
 
 [REALSTORSIDEPLANEEXPANDERSENSOR]
+threaded=true
+
+[REALSTORLOGICALVOLUMESENSOR]
 threaded=true

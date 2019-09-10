@@ -27,6 +27,8 @@ from json_msgs.messages.sensors.realstor_controller_data import \
     RealStorControllerDataMsg
 from json_msgs.messages.sensors.realstor_sideplane_expander_data import \
     RealStorSideplaneExpanderDataMsg
+from json_msgs.messages.sensors.realstor_logical_volume_data import \
+    RealStorLogicalVolumeDataMsg
 from message_handlers.logging_msg_handler import LoggingMsgHandler
 from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 
@@ -63,6 +65,7 @@ class RealStorEnclMsgHandler(ScheduledModuleThread, InternalMsgQ):
         self._fan_module_sensor_message = None
         self._controller_sensor_message = None
         self._expander_sensor_message = None
+        self._logical_volume_sensor_message = None
 
         self._fru_func_dict = {
             "enclosure_sideplane_expander_alert":
@@ -70,7 +73,9 @@ class RealStorEnclMsgHandler(ScheduledModuleThread, InternalMsgQ):
             "enclosure_fan_module_alert": self._generate_fan_module_alert,
             "enclosure_psu_alert": self._generate_psu_alert,
             "enclosure_controller_alert": self._generate_controller_alert,
-            "enclosure_disk_alert": self._generate_disk_alert
+            "enclosure_disk_alert": self._generate_disk_alert,
+            "enclosure_logical_volume_alert":
+                self._generate_logical_volume_alert
         }
         self._fru_type = {
             "enclosure_sideplane_expander_alert":
@@ -78,7 +83,9 @@ class RealStorEnclMsgHandler(ScheduledModuleThread, InternalMsgQ):
             "enclosure_fan_module_alert": self._fan_module_sensor_message,
             "enclosure_psu_alert": self._psu_sensor_message,
             "enclosure_controller_alert": self._controller_sensor_message,
-            "enclosure_disk_alert": self._disk_sensor_message
+            "enclosure_disk_alert": self._disk_sensor_message,
+            "enclosure_logical_volume_alert":
+                self._logical_volume_sensor_message
         }
 
     def run(self):
@@ -251,6 +258,25 @@ class RealStorEnclMsgHandler(ScheduledModuleThread, InternalMsgQ):
         self._expander_sensor_message = json_msg
         self._fru_type["enclosure_sideplane_expander_alert"] = \
             self._expander_sensor_message
+        self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+
+    def _generate_logical_volume_alert(
+            self, json_msg, alert_type, resource_type, info, extended_info):
+        """Parses the json message, also validates it and then send it to the
+           RabbitMQ egress processor"""
+
+        self._log_debug("RealStorEnclMsgHandler, _generate_logical_volume_alert,\
+            json_msg %s" % json_msg)
+
+        real_stor_logical_volume_data_msg = \
+            RealStorLogicalVolumeDataMsg(alert_type, resource_type, info,
+                                      extended_info)
+        json_msg = real_stor_logical_volume_data_msg.getJson()
+
+        # save the json message in memory to serve sspl CLI sensor request
+        self._logical_volume_sensor_message = json_msg
+        self._fru_type["enclosure_logical_volume_alert"] = \
+            self._logical_volume_sensor_message
         self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
 
     def shutdown(self):
