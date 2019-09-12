@@ -61,7 +61,8 @@ class RealStorEnclosure(StorageEnclosure):
 
     STATUS_NOTINSTALLED = "not installed"
 
-    DATA_FORMAT_JSON = 'json'
+    DATA_FORMAT_JSON = "json"
+    FAULT_KEY = "unhealthy-component"
 
     # Current support for 'cliapi', future scope for 'rest', 'redfish' apis
     # once available
@@ -155,6 +156,10 @@ class RealStorEnclosure(StorageEnclosure):
         """Switches active ip between primary and secondary management controller
            ips"""
 
+        if self.mc1 == self.mc2 and \
+            self.mc1_wsport == self.mc2_wsport:
+            return
+
         if self.active_ip == self.mc1:
             self.active_ip = self.mc2
             self.active_wsport = self.mc2_wsport
@@ -179,11 +184,10 @@ class RealStorEnclosure(StorageEnclosure):
 
             retry_count -= 1
 
-            if not response:
+            if response == None:
                 continue
 
             if response.status_code != self.ws.HTTP_OK:
-                logger.error("%s failed with http code %d" % (url, response.status_code))
 
                 # if call fails with invalid session key request or http 403
                 # forbidden request, login & retry
@@ -194,7 +198,9 @@ class RealStorEnclosure(StorageEnclosure):
                     relogin = True
                     continue
 
-                if response.status_code == self.ws.HTTP_TIMEOUT and tried_alt_ip == False:
+                elif (response.status_code == self.ws.HTTP_TIMEOUT or \
+                         response.status_code == self.ws.HTTP_CONN_REFUSED) \
+                         and tried_alt_ip == False:
                     self.switch_to_alt_mc()
                     tried_alt_ip = True
                     continue
@@ -341,8 +347,9 @@ class RealStorEnclosure(StorageEnclosure):
             return
 
         if response.status_code != self.ws.HTTP_OK:
-            logger.error("http request to poll system failed with http err %d"
-                % response.status_code)
+            logger.error("{0}:: http request {1} polling system status failed"
+                " with http err {2}".format(self.EES_ENCL, url, \
+                response.status_code))
             return
 
         self.poll_system_ts = time.time()
@@ -366,8 +373,13 @@ class RealStorEnclosure(StorageEnclosure):
                 self.memcache_system = system
 
             if system:
+                # Check if fault exists
+                if not system.has_key(self.FAULT_KEY):
+                    logger.info("{0} Healthy, no faults seen".format(self.EES_ENCL))
+                    return
+
                 # Extract system faults
-                self.latest_faults = system["unhealthy-component"]
+                self.latest_faults = system[self.FAULT_KEY]
 
                 #If no in-memory fault cache built yet!
                 if not self.memcache_faults:
