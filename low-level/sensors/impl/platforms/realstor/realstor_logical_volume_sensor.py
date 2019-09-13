@@ -154,8 +154,9 @@ class RealStorLogicalVolumeSensor(ScheduledModuleThread, InternalMsgQ):
             return
 
         if response.status_code != self.rssencl.ws.HTTP_OK:
-            logger.error("{0}:: http request {1} to get disk groups failed with"
-                " err {2}" % self.rssencl.EES_ENCL, url, response.status_code)
+            if url.find(self.rssencl.ws.LOOPBACK) == -1:
+                logger.error("{0}:: http request {1} to get disk groups failed with"
+                    " err {2}".format(self.rssencl.EES_ENCL, url, response.status_code))
             return
 
         response_data = json.loads(response.text)
