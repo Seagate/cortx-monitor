@@ -26,9 +26,8 @@ SSU_REQUIRED_PROCESSES=(
                 "dcs-collectord"
                 )
 
-VM_DEPENDENCY_RPMS=(
-                "lxqt-policykit"
-                )
+VM_DEPENDENCY_RPMS=()
+
 usage() {
     cat << EOF
 $SCRIPT_NAME [{check|config [-f] [-r <ssu|gw|cmu|vm>]|create [-dp]]
@@ -86,8 +85,9 @@ check_dependencies() {
 
        "vm"|"gw"|"cmu")
               echo "Checking for dependency rpms for role '$1'";
+              # No dependency currently. Keeping this section as it may be
+              # needed in future.
               check_for_dep_rpms "${VM_DEPENDENCY_RPMS[@]}";
-
               # No processes to check in vm/gw/cmu env
               ;;
 
