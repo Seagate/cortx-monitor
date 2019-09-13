@@ -137,3 +137,8 @@ site_id=001
 rack_id=001
 node_id=001
 
+[SYSTEMDWATCHDOG]
+threaded=true
+monitored_services=
+smart_test_interval=999999999
+run_smart_on_start=False
