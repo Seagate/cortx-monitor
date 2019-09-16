@@ -219,7 +219,8 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
 
                     # Remove it from our inactive list; it's alive and well
                     if state == "active":
-                        self._inactive_services.remove(unit_name)
+                        if unit_name in self._inactive_services:
+                            self._inactive_services.remove(unit_name)
 
                     # Use the systemd unit to get an Interface to call methods
                     Iunit = Interface(unit,
