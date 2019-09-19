@@ -93,8 +93,8 @@ class RealStorFanSensor(ScheduledModuleThread, InternalMsgQ):
                 self._faulty_fan_file_path)
 
     def read_data(self):
-        """Return the Current RAID status information"""
-        return "fan data"
+        """Return the Current fan_module information"""
+        return self._fan_modules_list
 
     def run(self):
         """Run the sensor on its own thread"""
@@ -193,22 +193,22 @@ class RealStorFanSensor(ScheduledModuleThread, InternalMsgQ):
     def _get_fan_attributes(self, fan_module):
         """Returns individual fan attributes from each fan-module"""
 
-        fans_list = []
+        fan_list = []
         fans = {}
-        fans = fan_module.get("fan", [])
+        fan_key = ""
 
-        for fan in fans:
-            del fan["status-ses"]
-            del fan["meta"]
-            del fan["status-ses-numeric"]
-            del fan["locator-led-numeric"]
-            del fan["extended-status"]
-            del fan["object-name"]
-            del fan["status-numeric"]
-            del fan["health-numeric"]
-            del fan["position-numeric"]
-            fans_list.append(fan)
-        return fans_list
+        fan_attribute_list = [ 'status', 'name', 'speed', 'durable-id',
+            'health', 'fw-revision', 'health-reason', 'serial-number',
+                'location', 'position', 'part-number', 'health-recommendation',
+                    'hw-revision', 'locator-led' ]
+
+        fru_fans = fan_module.get("fan", [])
+
+        for fan in fru_fans:
+            for fan_key in filter(lambda common_key: common_key in fan_attribute_list, fan):
+                fans[fan_key] = fan.get(fan_key)
+            fan_list.append(fans)
+        return fan_list
 
     def _create_internal_json_msg(self, fan_module, alert_type):
         """Creates internal json structure which is sent to
