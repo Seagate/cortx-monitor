@@ -10,7 +10,13 @@ Usage:
 import os
 import subprocess
 import sys
-import ConfigParser
+
+# Import config parser Python version specific
+if "2." in sys.version:
+  from ConfigParser import *
+  from ConfigParser import SafeConfigParser as ConfigParser
+else:
+  from configparser import *
 
 RABBITMQCTL = '/usr/sbin/rabbitmqctl'
 SSPL_CONF = '/etc/sspl.conf'
@@ -25,7 +31,7 @@ from base.sspl_constants import cs_legacy_products, enabled_products
 
 def main(product):
     """ Main line for this program. """
-    config = ConfigParser.SafeConfigParser()
+    config = ConfigParser()
     config.read([SSPL_CONF])
 
     virtual_host = config.get(
