@@ -52,6 +52,12 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
     IPMI_RESOURCE_TYPE_FAN = "node:fru:fan"
     IPMI_RESOURCE_TYPE_DISK = "node:fru:disk"
 
+    # Dependency list
+    DEPENDENCIES = {
+                    "plugins": ["RabbitMQegressProcessor"],
+                    "rpms": []
+    }
+
     @staticmethod
     def name():
         """ @return: name of the module."""
@@ -60,6 +66,13 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
     def __init__(self):
         super(NodeDataMsgHandler, self).__init__(self.MODULE_NAME,
                                                   self.PRIORITY)
+
+    @staticmethod
+    def dependencies():
+        """Returns a list of plugins and RPMs this module requires
+           to function.
+        """
+        return NodeDataMsgHandler.DEPENDENCIES
 
     def initialize(self, conf_reader, msgQlist, product):
         """initialize configuration reader and internal msg queues"""

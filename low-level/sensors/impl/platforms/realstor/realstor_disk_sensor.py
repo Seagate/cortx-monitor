@@ -62,11 +62,23 @@ class RealStorDiskSensor(ScheduledModuleThread, InternalMsgQ):
     DISK_IDENTIFIER = "Disk 0."
     NUMERIC_IDENTIFIER = "numeric"
 
+    # Dependency list
+    DEPENDENCIES = {
+                    "plugins": ["RealStorEnclMsgHandler"],
+                    "rpms": []
+    }
 
     @staticmethod
     def name():
         """@return: name of the module."""
         return RealStorDiskSensor.SENSOR_NAME
+
+    @staticmethod
+    def dependencies():
+        """Returns a list of plugins and RPMs this module requires
+           to function.
+        """
+        return RealStorDiskSensor.DEPENDENCIES
 
     def __init__(self):
         super(RealStorDiskSensor, self).__init__(self.SENSOR_NAME,

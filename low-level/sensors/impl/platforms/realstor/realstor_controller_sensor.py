@@ -37,6 +37,12 @@ class RealStorControllerSensor(ScheduledModuleThread, InternalMsgQ):
 
     implements(IControllersensor)
 
+    # Dependency list
+    DEPENDENCIES = {
+                    "plugins": ["RealStorEnclMsgHandler"],
+                    "rpms": []
+    }
+
     SENSOR_NAME = "RealStorControllerSensor"
     SENSOR_RESP_TYPE = "enclosure_controller_alert"
     RESOURCE_CATEGORY = "fru"
@@ -79,6 +85,13 @@ class RealStorControllerSensor(ScheduledModuleThread, InternalMsgQ):
     def name():
         """@return: name of the monitoring module."""
         return RealStorControllerSensor.SENSOR_NAME
+
+    @staticmethod
+    def dependencies():
+        """Returns a list of plugins and RPMs this module requires
+           to function.
+        """
+        return RealStorControllerSensor.DEPENDENCIES
 
     def __init__(self):
         super(RealStorControllerSensor, self).__init__(

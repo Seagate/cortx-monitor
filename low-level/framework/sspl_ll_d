@@ -17,14 +17,15 @@
  ****************************************************************************
 """
 
-import logging
-import signal
 import getopt
-import Queue
 import fcntl
-import time
-import sys
+import logging
 import os
+import Queue
+import signal
+import sys
+import time
+import yum
 
 # Add the top level directories
 parentdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -104,6 +105,94 @@ def _dropPrivileges(user):
     prctl.cap_effective.drop(*transition_caps)
     prctl.cap_permitted.drop(*transition_caps)
 
+
+def is_package_installed(rpm_name):
+    """Checks installation status of <rpm_name> using
+       YUM API and returns status based on that.
+    """
+    if not rpm_name or rpm_name.strip() == "":
+        raise TypeError("RPM name can't be None or blank")
+    yum_base = None
+    installed = None
+    yum_base = yum.YumBase()
+    installed = yum_base.isPackageInstalled(rpm_name)
+    return installed
+
+
+def are_external_dependencies_available(plugin_name, rpm_deps):
+    """Checks for availability of external dependencies and returns
+       True/False based on availability. Currently it checks for RPM
+       package installations only.
+    """
+    if not plugin_name or plugin_name.strip() == "":
+        raise TypeError("Plugin name can't be blank or None")
+    return are_rpm_dependencies_loaded(plugin_name, rpm_deps)
+
+
+def are_rpm_dependencies_loaded(plugin_name, rpm_deps):
+    """Checks that RPM dependencies are installed. Returns
+       boolean status based on that.
+    """
+    if not plugin_name or plugin_name.strip() == "":
+        raise TypeError("Plugin name can't be blank or None")
+    if rpm_deps is None:
+        raise TypeError("RPM list can't be None")
+    if len(rpm_deps) == 0:
+        return True
+    installed = False
+    for rpm in rpm_deps:
+        if not is_package_installed(rpm):
+            installed = False
+            logger.warn("Couldn't find RPM dependency "
+                "{0} for module {1}".format(rpm, plugin_name))
+    return installed
+
+
+def are_internal_dependencies_loaded(plugin_name, internal_deps,
+                                    loaded_module_list):
+    """Checks that plugin dependencies are loaded. Returns
+       boolean status based on that.
+    """
+    if not plugin_name or plugin_name.strip() == "":
+        raise TypeError("Plugin name can't be blank or None")
+    if not loaded_module_list:
+        raise TypeError("Module list can't be None")
+    installed = True
+    for plugin in internal_deps:
+        if not plugin in loaded_module_list.keys():
+            installed = False
+            logger.warn(
+                "Couldn't find plugin dependency "
+                "{0} for module {1}".format(plugin, plugin_name))
+    return installed
+
+
+def check_dependencies(sspl_threaded_modules):
+    """Checks for dependencies for each plugin in <loaded_plugin_dict>.
+       Returns a set of plugins with missing dependencies.
+    """
+    dependency_broken_modules = set()
+    logger.info("Dependency check started")
+    for name, curr_module in sspl_threaded_modules.iteritems():
+        # Check for dependency method availability. If it is not available
+        # then assume that it has no dependency.
+        if hasattr(curr_module, "dependencies"):
+            logger.info("Checking dependencies for {0}".format(name))
+            dependencies = curr_module.dependencies()
+            internal_deps = dependencies.get("plugins", [])
+            rpm_deps = dependencies.get("rpms", [])
+            # Check for internal deps
+            if not are_internal_dependencies_loaded(
+                name, internal_deps, sspl_threaded_modules):
+                dependency_broken_modules.add(name)
+            # Check for external deps
+            if not are_external_dependencies_available(name, rpm_deps):
+                dependency_broken_modules.add(name)
+        else:
+            logger.info("No dependencies specified for {0}".format(name))
+    return dependency_broken_modules
+
+
 def main(conf_reader, systemd_support):
     """The main bootstrap for sspl"""
     logger.info("sspl-ll Bootstrap: Obtaining list of modules from config file")
@@ -165,9 +254,28 @@ def main(conf_reader, systemd_support):
     # Add the ThreadConroller automatically
     msgQlist[ThreadController.name()] = Queue.Queue()
 
+    # Check dependencies for each plugin and get a list of plugins with
+    # missing dependencies.
+    dependency_broken_modules = check_dependencies(sspl_threaded_modules)
+
+    # IMP NOTE:
+    # -----------------------------------------------------------------------
+    # Here SSPL notifies Systemd that it is ready. Please note that here
+    # notifying Systemd about readyness doesn't mean all the plugins are
+    # loaded and ready to serve. It just means SSPL core is ready and it
+    # has started loading and initializing plugins.
+    if systemd_support:
+        from systemd.daemon import notify
+        notify("READY=1")
+        logger.info("SSPL has started initialization")
     try:
         # Loop through the list of instanced modules and start them on threads
         for name, curr_module in sspl_threaded_modules.iteritems():
+            if name in dependency_broken_modules:
+                logger.warning(
+                    "SSPL Bootstrap: Unable to load plugin {0} due to "
+                    "failed dependency resolution".format(name))
+                continue
             logger.info("Starting: %s" % curr_module.name())
             thread = Thread(target=_run_thread_capture_errors,
                             args=(curr_module, sspl_threaded_modules, msgQlist, conf_reader, product))
@@ -327,6 +435,7 @@ def _run_thread_capture_errors(curr_module, sspl_threaded_modules, msgQlist, con
         logger.info("Systemd will restart SSPL-LL momentarily")
         os.kill(os.getpid(), signal.SIGKILL)
 
+
 def shutdown_handler(signum=None, frame=None):
     """Handler called when shutting down"""
     logger.info("sspl-ll is shutting down")
@@ -353,6 +462,7 @@ def shutdown_handler(signum=None, frame=None):
         notify("STOPPING=1")
     except Exception as ex:
         logger.info("sspl-ll is not using systemd, ignoring.")
+
 
 def print_usage():
     """Display the syntax usage for this script"""

@@ -47,10 +47,23 @@ class RealStorFanSensor(ScheduledModuleThread, InternalMsgQ):
     # Fan Modules directory name
     FAN_MODULES_DIR = "fanmodules"
 
+    # Dependency list
+    DEPENDENCIES = {
+                    "plugins": ["RealStorEnclMsgHandler"],
+                    "rpms": []
+    }
+
     @staticmethod
     def name():
         """@return: name of the monitoring module."""
         return RealStorFanSensor.SENSOR_NAME
+
+    @staticmethod
+    def dependencies():
+        """Returns a list of plugins and RPMs this module requires
+           to function.
+        """
+        return RealStorFanSensor.DEPENDENCIES
 
     def __init__(self):
         super(RealStorFanSensor, self).__init__(self.SENSOR_NAME,

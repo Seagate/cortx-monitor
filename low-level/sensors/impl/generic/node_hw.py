@@ -73,6 +73,12 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
 
     request_shutdown = False
 
+    # Dependency list
+    DEPENDENCIES = {
+                    "plugins": ["NodeDataMsgHandler", "LoggingMsgHandler"],
+                    "rpms": []
+    }
+
     @staticmethod
     def name():
         """@return: name of the module."""

@@ -66,6 +66,12 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
     # SMART test response
     SMART_STATUS_UNSUPPORTED = "Unsupported"
 
+    # Dependency list
+    DEPENDENCIES = {
+                    "plugins": ["ServiceMsgHandler", "DiskMsgHandler", "NodeDataMsgHandler"],
+                    "rpms": ["smartmontools"]
+    }
+
     @staticmethod
     def name():
         """@return: name of the module."""

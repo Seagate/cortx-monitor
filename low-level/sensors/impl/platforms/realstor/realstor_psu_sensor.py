@@ -46,10 +46,23 @@ class RealStorPSUSensor(ScheduledModuleThread, InternalMsgQ):
     # PSUs directory name
     PSUS_DIR = "psus"
 
+    # Dependency list
+    DEPENDENCIES = {
+                    "plugins": ["RealStorEnclMsgHandler"],
+                    "rpms": []
+    }
+
     @staticmethod
     def name():
         """@return: name of the monitoring module."""
         return RealStorPSUSensor.SENSOR_NAME
+
+    @staticmethod
+    def dependencies():
+        """Returns a list of plugins and RPMs this module requires
+           to function.
+        """
+        return RealStorPSUSensor.DEPENDENCIES
 
     def __init__(self):
         super(RealStorPSUSensor, self).__init__(

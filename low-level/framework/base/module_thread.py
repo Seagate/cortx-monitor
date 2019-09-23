@@ -1,7 +1,7 @@
 """
  ****************************************************************************
  Filename:          monitor_thread.py
- Description:       Base classes used for scheduling thread execution 
+ Description:       Base classes used for scheduling thread execution
                     in modules.
  Creation Date:     02/09/2015
  Author:            Jake Abernathy
@@ -29,7 +29,7 @@ class ModuleThread(object):
     __metaclass__ = abc.ABCMeta
 
     def __init__(self):
-        super(ModuleThread, self).__init__()        
+        super(ModuleThread, self).__init__()
 
     @abc.abstractmethod
     def initialize(self):
@@ -84,7 +84,7 @@ class ScheduledModuleThread(ModuleThread, Debug):
         # Give the module a few seconds to close down
         self._scheduler.enter(10, self._priority, self._cleanup_and_stop, ())
         self._log_debug("Scheduling shut down")
- 
+
     def _getConf_reader(self):
         return self._conf_reader
 

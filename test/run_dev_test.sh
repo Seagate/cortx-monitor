@@ -107,6 +107,7 @@ $sudo lxc-attach -n $vm_name  -- $sspl_install_dir/sspl/test/mock_server &
 $sudo lxc-attach -n $vm_name  -- sed -i 's/primary_controller_port=80/primary_controller_port=8090/g' /etc/sspl.conf
 $sudo lxc-attach -n $vm_name  -- $sspl_install_dir/sspl/test/set_disk_threshold.sh
 $sudo lxc-attach -n $vm_name  -- $sspl_install_dir/sspl/low-level/framework/sspl_init
+$sudo lxc-attach -n $vm_name  -- $sspl_install_dir/sspl/test/rabbitmq_start_checker sspl-out actuator-resp-key
 
 # Execute tests
 $sudo lxc-attach -n $vm_name -- bash -c "$test_dir/run_sspl-ll_tests.sh"

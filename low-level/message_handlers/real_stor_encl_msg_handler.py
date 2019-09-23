@@ -42,6 +42,12 @@ class RealStorEnclMsgHandler(ScheduledModuleThread, InternalMsgQ):
     # TODO increase the priority
     PRIORITY = 2
 
+    # Dependency list
+    DEPENDENCIES = {
+                    "plugins": ["RabbitMQegressProcessor"],
+                    "rpms": []
+    }
+
     @staticmethod
     def name():
         """ @return: name of the module."""
@@ -50,6 +56,13 @@ class RealStorEnclMsgHandler(ScheduledModuleThread, InternalMsgQ):
     def __init__(self):
         super(RealStorEnclMsgHandler, self).__init__(self.MODULE_NAME,
                                                      self.PRIORITY)
+
+    @staticmethod
+    def dependencies():
+        """Returns a list of plugins and RPMs this module requires
+           to function.
+        """
+        return RealStorEnclMsgHandler.DEPENDENCIES
 
     def initialize(self, conf_reader, msgQlist, products):
         """initialize configuration reader and internal msg queues"""

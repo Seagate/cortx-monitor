@@ -98,6 +98,9 @@ $script_dir/mock_server &
 $sudo $script_dir/set_disk_threshold.sh
 echo "Restarting SSPL"
 systemctl restart sspl-ll
+echo "Waiting for SSPL to complete initialization of all the plugins"
+$script_dir/rabbitmq_start_checker sspl-out actuator-resp-key
+echo "Initialization completed. Starting tests"
 
 # Start tests
 execute_test

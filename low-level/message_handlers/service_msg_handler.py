@@ -35,6 +35,18 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
     MODULE_NAME = "ServiceMsgHandler"
     PRIORITY    = 2
 
+    # Dependency list
+    DEPENDENCIES = {
+                    "plugins": ["LoggingMsgHandler", "RabbitMQegressProcessor"],
+                    "rpms": []
+    }
+
+    @staticmethod
+    def dependencies():
+        """Returns a list of plugins and RPMs this module requires
+           to function.
+        """
+        return ServiceMsgHandler.DEPENDENCIES
 
     @staticmethod
     def name():

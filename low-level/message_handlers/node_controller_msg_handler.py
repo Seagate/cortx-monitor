@@ -41,10 +41,27 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
     UNSUPPORTED_REQUEST = "Unsupported Request"
 
+    # Dependency list
+    DEPENDENCIES = {
+                    "plugins": [
+                        "ServiceMsgHandler",
+                        "RabbitMQegressProcessor",
+                        "DiskMsgHandler"
+                    ],
+                    "rpms": []
+    }
+
     @staticmethod
     def name():
         """ @return: name of the module."""
         return NodeControllerMsgHandler.MODULE_NAME
+
+    @staticmethod
+    def dependencies():
+        """Returns a list of plugins and RPMs this module requires
+           to function.
+        """
+        return NodeControllerMsgHandler.DEPENDENCIES
 
     def __init__(self):
         super(NodeControllerMsgHandler, self).__init__(self.MODULE_NAME,

@@ -43,6 +43,12 @@ class RealStorLogicalVolumeSensor(ScheduledModuleThread, InternalMsgQ):
 
     PRIORITY = 1
 
+    # Dependency list
+    DEPENDENCIES = {
+                    "plugins": ["RealStorEnclMsgHandler"],
+                    "rpms": []
+    }
+
     disk_groups_generic = ["object-name", "name", "size", "freespace", "storage-type", "pool",
          "pool-serial-number", "pool-percentage", "owner", "raidtype", "status", "create-date",
          "disk-description", "serial-number", "pool-sector-format", "health", "health-reason",
@@ -69,6 +75,13 @@ class RealStorLogicalVolumeSensor(ScheduledModuleThread, InternalMsgQ):
     def name():
         """@return: name of the monitoring module."""
         return RealStorLogicalVolumeSensor.SENSOR_NAME
+
+    @staticmethod
+    def dependencies():
+        """Returns a list of plugins and RPMs this module requires
+           to function.
+        """
+        return RealStorLogicalVolumeSensor.DEPENDENCIES
 
     def __init__(self):
         super(RealStorLogicalVolumeSensor, self).__init__(

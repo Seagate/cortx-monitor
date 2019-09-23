@@ -63,10 +63,23 @@ class IEMSensor(ScheduledModuleThread, InternalMsgQ):
     PRIORITY = 1
     IEC_KEYWORD = "IEC"
 
+    # Dependency list
+    DEPENDENCIES = {
+                    "plugins": ["RabbitMQegressProcessor"],
+                    "rpms": []
+    }
+
     @staticmethod
     def name():
         """@return: name of the monitoring module."""
         return IEMSensor.SENSOR_NAME
+
+    @staticmethod
+    def dependencies():
+        """Returns a list of plugins and RPMs this module requires
+           to function.
+        """
+        return IEMSensor.DEPENDENCIES
 
     def __init__(self):
         super(IEMSensor, self).__init__(

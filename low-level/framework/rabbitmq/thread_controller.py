@@ -161,11 +161,6 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
             self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
             self._threads_initialized = True
 
-            # Let systemd know that we've started up successfully and ready for it to monitor sspl
-            if self._systemd_support:
-                from systemd.daemon import notify
-                notify("READY=1")
-
             #self._set_debug(True)
             #self._set_debug_persist(True)
             self._log_debug("Start accepting requests")

@@ -51,6 +51,12 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
     ALWAYS_LOG_IEM = 'always_log_iem'
 
+    # Dependency list
+    DEPENDENCIES = {
+                    "plugins": ["LoggingMsgHandler", "RabbitMQegressProcessor"],
+                    "rpms": []
+    }
+
     @staticmethod
     def name():
         """ @return: name of the module."""

@@ -46,6 +46,12 @@ class RealStorSideplaneExpanderSensor(ScheduledModuleThread, InternalMsgQ):
     # Fan Modules directory name
     SIDEPLANE_EXPANDERS_DIR = "sideplane_expanders"
 
+    # Dependency list
+    DEPENDENCIES = {
+                    "plugins": ["RealStorEnclMsgHandler"],
+                    "rpms": []
+    }
+
     @staticmethod
     def name():
         """@return: name of the monitoring module."""
@@ -62,6 +68,13 @@ class RealStorSideplaneExpanderSensor(ScheduledModuleThread, InternalMsgQ):
 
         # sideplane expander persistent cache
         self._sideplane_exp_prcache = None
+
+    @staticmethod
+    def dependencies():
+        """Returns a list of plugins and RPMs this module requires
+           to function.
+        """
+        return RealStorSideplaneExpanderSensor.DEPENDENCIES
 
     def initialize(self, conf_reader, msgQlist, products):
         """Initialize configuration reader and internal msg queues"""
