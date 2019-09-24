@@ -26,7 +26,7 @@ SSU_REQUIRED_PROCESSES=(
                 "dcs-collectord"
                 )
 
-VM_DEPENDENCY_RPMS=()
+VM_DEPENDENCY_RPMS=("")
 
 usage() {
     cat << EOF
@@ -45,6 +45,10 @@ EOF
 check_for_dep_rpms() {
 
    rpms=("$@");
+
+   if [ -z "$rpms" ]; then
+       return
+   fi
 
    for rpm in "${rpms[@]}"; do
         rpm -q --quiet $rpm;
