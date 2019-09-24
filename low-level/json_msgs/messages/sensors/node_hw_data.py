@@ -75,13 +75,19 @@ class NodeFanDataMsg(NodeHWDataMsg):
     def __init__(self, host_id, fans):
         super(NodeFanDataMsg, self).__init__(host_id)
 
-        self._fans              = fans
+        self._fans = fans
+        resource_type = fans.get("resource_type")
+        alert_type = fans.get("alert_type")
+        severity = fans.get("severity")
+        info = fans.get("info")
+        specific_info = fans.get("specific_info")
 
-        node_fan_data = { self.SENSOR_MSG_TYPE: {
-                               "hostId" : self._host_id,
-                                "fans" : self._fans
-                               }
-                       }
+        node_fan_data = {"host_name": self._host_id,
+                         "alert_type": alert_type,
+                         "resource_type": resource_type,
+                         "severity": severity,
+                         "info": info,
+                         "specific_info": specific_info}
 
         self._json["message"]["sensor_response_type"] = node_fan_data
 

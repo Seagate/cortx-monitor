@@ -45,8 +45,11 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
     PRIORITY = 1
 
     sel_event_info = ""
+    _sel_index_list = []
+    sel_list_index = 0
 
     TYPE_PSU = 'Power Supply'
+    TYPE_FAN = 'Fan'
 
     CONF_FILE = "/etc/sspl.conf"
     SYSINFO = "SYSTEM_INFORMATION"
@@ -99,7 +102,9 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
         self.index_file = self._get_file(index_file_name)
 
         if os.path.getsize(self.index_file.name) == 0:
-            self._write_index_file("0")
+            self._write_index_file(0)
+        else:
+            self.sel_list_index = self._read_index_file()
         # Now self.index_file has a valid sel index in it
 
         list_file_name = os.path.join(cache_dir, self.LIST_FILE)
@@ -113,8 +118,8 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
 
     def _read_index_file(self):
         self.index_file.seek(0)
-        index_line = self.index_file.readline()
-        return int(index_line, base=16)
+        index_line = self.index_file.readline().strip()
+        return int(index_line)
 
     def initialize(self, conf_reader, msgQlist, products):
         """initialize configuration reader and internal msg queues"""
@@ -130,9 +135,11 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
         self.sensor_id_map = dict()
         self.sensor_id_map[self.TYPE_PSU] = { sensor_num: sensor_id
             for (sensor_id, sensor_num) in self._get_sensor_list_by_type(self.TYPE_PSU)}
+        self.sensor_id_map[self.TYPE_FAN] = { sensor_num: sensor_id
+            for (sensor_id, sensor_num) in self._get_sensor_list_by_type(self.TYPE_FAN)}
 
     def _update_list_file(self):
-        (tmp_fd, tmp_name) = tempfile.mkstemp()
+        (tmp_fd, tmp_name) = tempfile.mkstemp("","",dir=self.DATA_PATH_VALUE_DEFAULT)
         sel_out, retcode = self._run_ipmitool_subcommand("sel list", out_file=tmp_fd)
         if retcode != 0:
             msg = "ipmitool sel list command failed: {0}".format(''.join(sel_out))
@@ -146,15 +153,11 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
         self.list_file.close()
         self.list_file = open(list_file_name, self.UPDATE_ONLY_MODE)
 
-
     def run(self):
         """Run the sensor on its own thread"""
 
         # Check for debug mode being activated
         self._read_my_msgQ_noWait()
-
-        # self._set_debug(True)
-        # self._set_debug_persist(True)
 
         try:
             # Check for a change in ipmi sel list and notify the node data msg handler
@@ -163,7 +166,7 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
                 # from the last iteration is incomplete. Complete that
                 # before getting the new SEL events.
                 self._notify_NodeDataMsgHandler()
-            self._update_list_file()
+            #self._update_list_file()
             self._notify_NodeDataMsgHandler()
         except Exception as ae:
             logger.exception(ae)
@@ -173,7 +176,7 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
         self._scheduler.enter(30, self._priority, self.run, ())
 
     def _get_sel_list(self):
-        index = self._read_index_file()
+        index_dir = self._read_index_file()
 
         # TODO: See if the following 2 loops can be reduced to
         # a single loop using mmap() and a fixed file format like
@@ -203,8 +206,12 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
         """See if there is any new event gets generated in the sel and notify
             node data message handler for generating JSON message"""
 
+        status = self._run_ipmitool_subcommand("sel list")
+
+        # TODO: can be optimized with file read approach
+        sel_event_list = ''.join(status[0]).split("\n")
         # splitting up the attributes from the list generated in the IPMI sel
-        for sel_event in self._get_sel_list():
+        for sel_event in sel_event_list:
             if sel_event == '':
                 break
 
@@ -214,12 +221,16 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
             index, date, time, device_id, event, status = [
                 attr.strip() for attr in sel_event.split("|") ]
 
+            index = int(index, base=16)
+            if index <= self.sel_list_index:
+                continue
+            self.sel_list_index = index
+
             if 'Fan ' in device_id:
-                self._parse_fan_info(index, date, time, device_id, event)
+                self._parse_fan_info(index, date, time, device_id, event, status)
             elif 'Power Supply ' in device_id:
                 self._parse_psu_info(index, date, time, device_id, event)
-
-            self._write_index_file(index)
+            self._write_index_file(self.sel_list_index)
 
         self.list_file.seek(0)
         self.list_file.truncate()
@@ -297,7 +308,7 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
         """get all the properties of a sensor.
            Returns a tuple (common, specific) where
            common is a dict of common sensor properties and
-             their values for this sensor, and
+           their values for this sensor, and
            specific is a dict of the properties specific to this sensor"""
         props_list_out, retcode = self._run_ipmitool_subcommand("sensor get '{0}'".format(sensor_id))
         if retcode != 0:
@@ -331,50 +342,48 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
 
         return (common, specific)
 
-    def _parse_fan_info(self, index, date, time, device_id, event):
+    def _parse_fan_info(self, index, date, time, device_id, event, status):
         """Parse out Fan realted changes that gets reaflected in the ipmi sel list"""
 
-        fru_id = device_id.split()[1]
+        #TODO: Can enrich the event message with more FRU info using
+        # command 'ipmitool sel get <sel-id>'
 
-        # event will be "Lower critical going low'. Splitting the event
-        # name which is critical in order to get its individual value
-        event_name = event.split(' ')[1] + ' ' + event.split(' ')[2]
+        #TODO: Enabled Assertions list (fan_specific_list[] in code) needs
+        # to be built dynamically to support platform specific assertions and
+        # not limit to these hardcoded ones.
 
-        # Getting the Actual Fan list in order to get individual values of Particular Fan
-        command = IPMITOOL + ' ' + "sensor list | grep Fan"
-        fan_list = self._run_command(command)
-        for fan in ''.join(fan_list[0]).split("\n"):
-                self._fans = []
-                fan_name = ''.join(fan).strip(' ').split("|")
+        severity_dict = {"fault": "error", "missing": "critical",
+                    "fault_resolved": "informational", "insertion": "informational",
+                    "threshold_breached:up": "warning","threshold_breached:low": "warning"}
+        fan_info = {}
+        fan_specific_list = ["Sensor Reading", "Lower Non-Recoverable", "Lower Non-Recoverable",
+                            "Upper Non-Recoverable", "Lower Critical", "Lower Non-Critical", "Upper Critical"]
 
-                # command will be sudo /usr/bin/ipmitool sensor get 'Sys Fan 1A' | grep '0x30'
-                command = IPMITOOL + ' ' + "sensor get '"'{0}'"' | grep '"'{1}'"'".format(fan_name[0].strip(' '), fru_id)
-                res, retcode = self._run_command(command)
-                fan_attributes = ['status', 'sensor reading', event_name]
-                if retcode == 0:
+        threshold_event = event.split(" ")
+        threshold = threshold_event[len(threshold_event)-1]
 
-                        # Fetching the individual values. Command will be sudo /usr/bin/ipmitool sensor get 'Sys Fan 1A' |
-                        # grep -wi -e 'status' -e 'sensor reading' -e 'Critical'
-                        command = IPMITOOL + ' ' + "sensor get '"'{0}'"' | grep -wi -e '"'{1}'"' -e '"'{2}'"' -e '"'{3}'"'" \
-                        .format(fan_name[0].strip(' '), *fan_attributes)
-                        res1 = self._run_command(command)
-                        sensor_reading = ''.join(res1[0]).split("\n")[0][15:].strip(': ')
-                        status = ''.join(res1[0]).split("\n")[1][8:].strip(': ')
-                        event_reading = ''.join(res1[0]).split("\n")[2][19:].strip(': ')
+        sensor_id = re.match(self.TYPE_FAN + ' ' + '#0x([0-9a-f]+)', device_id).group(1)
+        sensor_name = self.sensor_id_map[self.TYPE_FAN][sensor_id]
 
-                        self._fan_msg = {
-                                        "Fru Id": device_id,
-                                        "event": event.strip(),
-                                        "date": date,
-                                        "time": time,
-                                        "Status": status,
-                                        "Sensor Reading": sensor_reading,
-                                        event_name: event_reading
-                                        }
-                        self._fans.append(self._fan_msg)
-                        self._send_json_msg("fans", self._fans)
-                        self._log_IEM("fans", self._fans)
-                        break
+        fan_common_data, fan_specific_data = self._get_sensor_props(sensor_name)
+
+        for key in fan_specific_data.keys():
+            if key not in fan_specific_list:
+                del fan_specific_data[key]
+
+        fan_info = fan_specific_data
+
+        alert_type = "threshold_breached:" + threshold
+        resource_type = NodeDataMsgHandler.IPMI_RESOURCE_TYPE_FAN
+        severity = severity_dict.get(alert_type)
+
+        # TODO: date and time to be combine in one field in epoch format
+        fru_info = { "date": date, "time": time, "fru_id": device_id,
+                    "sensor_id": sensor_name, "event": event, "event_status": status }
+
+        self._send_json_msg(resource_type, alert_type, severity, fru_info, fan_info)
+        self._log_IEM(resource_type, alert_type, severity, fru_info, fan_info)
+        self._write_index_file(index)
 
     def _parse_psu_info(self, index, date, time, sensor, event):
         """Parse out Fan realted changes that gets reaflected in the ipmi sel list"""
@@ -407,6 +416,7 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
 
         self._send_json_msg(resource_type, alert_type, severity, info, specific_info)
         self._log_IEM(resource_type, alert_type, severity, info, specific_info)
+        self._write_index_file(index)
 
 
     def _send_json_msg(self, resource_type, alert_type, severity, info, specific_info):
@@ -414,14 +424,17 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
            device will be device name and data will consist of relevant data"""
 
         internal_json_msg = json.dumps({
-            "sensor_response_type" : {
+            "sensor_request_type" : {
+                "node_data":{
+                "status": "update",
                 "resource_type": resource_type,
                 "alert_type": alert_type,
                 "severity": severity,
                 "info": info,
                 "specific_info": specific_info
                 }
-            })
+            }
+          })
 
         # Send the event to node data message handler to generate json message and send out
         self._write_internal_msgQ(NodeDataMsgHandler.name(), internal_json_msg)
@@ -430,13 +443,16 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
         """Sends an IEM to logging msg handler"""
 
         json_data = json.dumps({
-            "sensor_response_type" : {
+            "sensor_request_type" : {
+                "node_data":{
+                "status": "update",
                 "resource_type": resource_type,
                 "alert_type": alert_type,
                 "severity": severity,
                 "info": info,
                 "specific_info": specific_info
                 }
+               }
             }, sort_keys=True)
 
         # Send the event to node data message handler to generate json message and send out

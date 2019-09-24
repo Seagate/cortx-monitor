@@ -98,6 +98,10 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
         self._import_products(product)
 
+        self._fru_dict = { "psu": self._generate_psu_data,
+                           "fan": self._generate_fan_data }
+
+
     def _import_products(self, product):
         """Import classes based on which product is being used"""
         if product in enabled_products:
@@ -207,13 +211,14 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         elif jsonMsg.get("sensor_response_type") is not None:
             if jsonMsg.get("sensor_response_type") == "devicename_serialnumber":
                 self._update_devicename_sn_dict(jsonMsg)
-            elif jsonMsg.get("sensor_response_type").get("resource_type") is not None:
-                resource_type = jsonMsg.get("sensor_response_type").get("resource_type")
-                if resource_type == self.IPMI_RESOURCE_TYPE_FAN:
-                    self._generate_fan_data(jsonMsg)
-                elif resource_type == self.IPMI_RESOURCE_TYPE_PSU:
-                    self._generate_psu_data(jsonMsg)
 
+        elif jsonMsg.get("sensor_request_type") is not None and \
+           jsonMsg.get("sensor_request_type").get("node_data") is not None and \
+           jsonMsg.get("sensor_request_type").get("node_data").get("resource_type") is not None:
+
+            fru_type = jsonMsg.get("sensor_request_type").get("node_data").get("resource_type").split(":")[2]
+            alert_func = self._fru_dict.get(fru_type.lower())
+            alert_func(jsonMsg)
         # ... handle other node sensor message types
 
     def _update_devicename_sn_dict(self, jsonMsg):
@@ -441,15 +446,13 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
         if jsonMsg.get("sensor_request_type").get("node_data").get("status") is not None:
             self._fru_info = jsonMsg.get("sensor_request_type").get("node_data")
-            if "fans" in self._fru_info:
-                self._fan_data = jsonMsg.get("sensor_request_type").get("node_data").get("fans")
-                node_fan_data_msg = NodeFanDataMsg(self._node_sensor.host_id, self._fan_data)
+            node_fan_data_msg = NodeFanDataMsg(self._node_sensor.host_id, self._fru_info)
 
-                if self._uuid is not None:
-                     node_fan_data_msg.set_uuid(self._uuid)
-                jsonMsg = node_fan_data_msg.getJson()
+        if self._uuid is not None:
+            node_fan_data_msg.set_uuid(self._uuid)
+        jsonMsg = node_fan_data_msg.getJson()
 
-                self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
+        self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
 
     def _generate_psu_data(self, jsonMsg):
         """Create & transmit a FRU psu data message as defined
@@ -460,8 +463,9 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             if not successful:
                 logger.error("NodeDataMsgHandler, updating host information was NOT successful.")
 
-        self._psu_data = jsonMsg.get("sensor_response_type")
-        node_psu_data_msg = NodePSUDataMsg(self._node_sensor.host_id, self._psu_data)
+        if jsonMsg.get("sensor_request_type").get("node_data").get("status") is not None:
+            self._fru_info = jsonMsg.get("sensor_request_type").get("node_data")
+            node_psu_data_msg = NodePSUDataMsg(self._node_sensor.host_id, self._fru_info)
 
         if self._uuid is not None:
              node_psu_data_msg.set_uuid(self._uuid)
