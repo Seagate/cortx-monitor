@@ -251,6 +251,7 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist, operating_system
         from sensors.impl.platforms.realstor.realstor_logical_volume_sensor \
         import RealStorLogicalVolumeSensor
         from sensors.impl.generic.iem_sensor import IEMSensor
+        from sensors.impl.generic.node_hw import NodeHWsensor
 
     if product in enabled_products:
         from actuators.impl.generic.raid import RAIDactuator

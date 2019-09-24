@@ -1428,6 +1428,58 @@
 							}
 						},
 
+                                            "hostId": {
+                                                "description": "Hostname of the system",
+                                                "type": "string"
+                                            },
+                                            "resource_type": {
+                                                "description": "Type of the resource on the node",
+                                                "type": "string"
+                                            },
+                                            "alert_type": {
+                                                "description": "Type of the alert on the resource",
+                                                "type": "string"
+                                            },
+                                            "severity": {
+                                                "description": "Severity of the alert on the resource",
+                                                "type": "string"
+                                            },
+                                            "info": {
+                                                "description": "Common properties of the resource",
+                                                "type": "object",
+                                                "properties": {
+                                                    "sensor_id":{
+                                                        "description": "The IPMI ID of the sensor on which the event was generated",
+                                                        "type": "string",
+                                                        "required": true
+                                                    },
+                                                    "time":{
+                                                        "description": "The time at which the event was generated",
+                                                        "type": "string",
+                                                        "required": true
+                                                    },
+                                                    "date":{
+                                                        "description": "The date on which the event was generated",
+                                                        "type": "string",
+                                                        "required": true
+                                                    },
+                                                    "fru_id":{
+                                                        "description": "The FRU ID of the sensor on which the event was generated",
+                                                        "type": "string",
+                                                        "required": true
+                                                    },
+                                                    "event":{
+                                                        "description": "The event that was generated",
+                                                        "type": "string",
+                                                        "required": true
+                                                    }
+                                                }
+                                            },
+                                            "specific_info": {
+                                                "description": "Specific properties of the resource",
+                                                "type": "object"
+                                            },
+
 						"snmp_trap": {
 							"description": "SNMP Trap Information",
 							"type": "object",

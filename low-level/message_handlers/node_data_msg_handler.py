@@ -29,6 +29,7 @@ from json_msgs.messages.sensors.cpu_data import CPUdataMsg
 from json_msgs.messages.sensors.if_data import IFdataMsg
 from json_msgs.messages.sensors.raid_data import RAIDdataMsg
 from json_msgs.messages.sensors.disk_space_alert import DiskSpaceAlertMsg
+from json_msgs.messages.sensors.node_hw_data import NodeFanDataMsg,NodePSUDataMsg
 
 from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 
@@ -46,6 +47,9 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
     TRANSMIT_INTERVAL = 'transmit_interval'
     UNITS = 'units'
     DISK_USAGE_THRESHOLD = 'disk_usage_threshold'
+
+    IPMI_RESOURCE_TYPE_PSU = "node:fru:psu"
+    IPMI_RESOURCE_TYPE_FAN = "node:fru:fan"
 
     @staticmethod
     def name():
@@ -200,9 +204,15 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 self._generate_RAID_status(jsonMsg)
 
         # Update mapping of device names to serial numbers for global use
-        elif jsonMsg.get("sensor_response_type") is not None and \
-             jsonMsg.get("sensor_response_type") == "devicename_serialnumber":
-            self._update_devicename_sn_dict(jsonMsg)
+        elif jsonMsg.get("sensor_response_type") is not None:
+            if jsonMsg.get("sensor_response_type") == "devicename_serialnumber":
+                self._update_devicename_sn_dict(jsonMsg)
+            elif jsonMsg.get("sensor_response_type").get("resource_type") is not None:
+                resource_type = jsonMsg.get("sensor_response_type").get("resource_type")
+                if resource_type == self.IPMI_RESOURCE_TYPE_FAN:
+                    self._generate_fan_data(jsonMsg)
+                elif resource_type == self.IPMI_RESOURCE_TYPE_PSU:
+                    self._generate_psu_data(jsonMsg)
 
         # ... handle other node sensor message types
 
@@ -420,6 +430,46 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         # Transmit it out over rabbitMQ channel
         self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
 
+    def _generate_fan_data(self, jsonMsg):
+        """Create & transmit a FRU fan data message as defined
+            by the sensor response json schema"""
+
+        if self._node_sensor.host_id == None:
+            successful = self._node_sensor.read_data("None", self._get_debug(), self._units)
+            if not successful:
+                logger.error("NodeDataMsgHandler, updating host information was NOT successful.")
+
+        if jsonMsg.get("sensor_request_type").get("node_data").get("status") is not None:
+            self._fru_info = jsonMsg.get("sensor_request_type").get("node_data")
+            if "fans" in self._fru_info:
+                self._fan_data = jsonMsg.get("sensor_request_type").get("node_data").get("fans")
+                node_fan_data_msg = NodeFanDataMsg(self._node_sensor.host_id, self._fan_data)
+
+                if self._uuid is not None:
+                     node_fan_data_msg.set_uuid(self._uuid)
+                jsonMsg = node_fan_data_msg.getJson()
+
+                self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
+
+    def _generate_psu_data(self, jsonMsg):
+        """Create & transmit a FRU psu data message as defined
+            by the sensor response json schema"""
+
+        if self._node_sensor.host_id == None:
+            successful = self._node_sensor.read_data("None", self._get_debug(), self._units)
+            if not successful:
+                logger.error("NodeDataMsgHandler, updating host information was NOT successful.")
+
+        self._psu_data = jsonMsg.get("sensor_response_type")
+        node_psu_data_msg = NodePSUDataMsg(self._node_sensor.host_id, self._psu_data)
+
+        if self._uuid is not None:
+             node_psu_data_msg.set_uuid(self._uuid)
+        jsonMsg = node_psu_data_msg.getJson()
+
+        self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
+
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""
         super(NodeDataMsgHandler, self).shutdown()
+
