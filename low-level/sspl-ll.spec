@@ -1,10 +1,7 @@
-%define name sspl
-%define url  http://gerrit.mero.colo.seagate.com:8080/#/admin/projects/sspl
-
 %define _unpackaged_files_terminate_build 0
 %define _binaries_in_noarch_packages_terminate_build   0
 
-Name:       %{name}
+Name:       sspl
 Version:    %{version}
 Provides:   %{name} = %{version}
 Obsoletes:  %{name} <= %{version}
@@ -13,7 +10,7 @@ Summary:    Installs SSPL
 BuildArch:  noarch
 Group:      System Environment/Daemons
 License:    Seagate Proprietary
-URL:        %{url}/%{name}
+URL:        http://gerrit.mero.colo.seagate.com:8080/#/admin/projects/sspl
 Source0:    %{name}-%{version}.tgz
 BuildRoot:  %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 BuildRequires: rpm-build sudo python-Levenshtein

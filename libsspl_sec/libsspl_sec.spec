@@ -20,9 +20,17 @@ Vendor:     Seagate Technology LLC
 #BuildArch:  x86_64
 
 # For autogen step
-BuildRequires: libtool autoconf automake
+BuildRequires: autoconf
+BuildRequires: automake
+BuildRequires: libtool
 # For rest of build
-BuildRequires: gcc doxygen python-pep8 check-devel openssl-devel graphviz
+BuildRequires: check-devel
+BuildRequires: doxygen
+BuildRequires: gcc
+BuildRequires: graphviz
+BuildRequires: make
+BuildRequires: openssl-devel
+BuildRequires: python-pep8
 #Requires:
 
 %description

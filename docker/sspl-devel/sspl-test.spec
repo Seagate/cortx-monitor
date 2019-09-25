@@ -1,0 +1,1 @@
+../../test/sspl-test.spec

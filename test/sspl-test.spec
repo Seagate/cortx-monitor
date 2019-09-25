@@ -1,14 +1,11 @@
-%define name sspl-test
-%define url http://gerrit.mero.colo.seagate.com:8080/#/admin/projects/sspl
-
-Name:       %{name}
+Name:       sspl-test
 Version:    %{version}
 Release:    %{dist}
 Summary:    Installs sspl-test scripts
 BuildArch:  noarch
 Group:      System Management
 License:    Seagate Proprietary
-URL:        %{url}
+URL:        http://gerrit.mero.colo.seagate.com:8080/#/admin/projects/sspl
 Source0:    %{name}-%{version}.tgz
 Requires:   sspl
 BuildRoot:  %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
