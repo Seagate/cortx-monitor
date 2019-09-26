@@ -62,13 +62,13 @@ execute_test()
 }
 
 lettuce_version=$(pip list 2>/dev/null | grep -wi lettuce | awk '{print $2}')
-[ ! -z $lettuce_version ] && [ $lettuce_version != "0.2.23" ] || {
+[ ! -z $lettuce_version ] && [ $lettuce_version = "0.2.23" ] || {
     echo "Please install lettuce 0.2.23"
     exit 1
 }
 
 flask_version=$(pip list 2>/dev/null | grep -wi flask | awk '{print $2}')
-[ ! -z $flask_version ] && [ $flask_version != "1.1.1" ] || {
+[ ! -z $flask_version ] && [ $flask_version = "1.1.1" ] || {
     flask_help
     echo "Please install Flask 1.1.1 using
           pip install Flask==1.1.1"

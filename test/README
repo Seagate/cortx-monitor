@@ -16,6 +16,15 @@ Steps for running automation tests
 3. Start libvirtd service
     systemctl start libvirtd
 
+4. Install pip 19.2.3
+    $ sudo yum install python-pip
+
+    - Check version using:
+    $ pip --version
+
+    - Upgrade to version 19.2.3 if not present, using:
+    $ sudo pip install --upgrade pip==19.2.3
+
 4. Install lettuce 0.2.23
     $ sudo pip install lettuce==0.2.23
 
