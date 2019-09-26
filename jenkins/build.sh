@@ -41,9 +41,9 @@ tar -czvf $DIST/SOURCES/sspl-$VERSION.tgz -C $BASE_DIR/.. sspl/low-level sspl/li
 tar -czvf $DIST/SOURCES/sspl-test-$VERSION.tgz -C $BASE_DIR/.. sspl/test
 
 # Generate RPMs
-rpmbuild --define "version $VERSION" --define "dist $GIT_VER" --define "_topdir $DIST" -bb $BASE_DIR/low-level/sspl-ll.spec
-rpmbuild --define "version $VERSION" --define "dist $GIT_VER" --define "_topdir $DIST" -bb $BASE_DIR/libsspl_sec/libsspl_sec.spec
-rpmbuild --define "version $VERSION" --define "dist $GIT_VER" --define "_topdir $DIST" -bb $BASE_DIR/test/sspl-test.spec
+rpmbuild --define "version $VERSION" --define "git_rev $GIT_VER" --define "_topdir $DIST" -bb $BASE_DIR/low-level/sspl-ll.spec
+rpmbuild --define "version $VERSION" --define "git_rev $GIT_VER" --define "_topdir $DIST" -bb $BASE_DIR/libsspl_sec/libsspl_sec.spec
+rpmbuild --define "version $VERSION" --define "git_rev $GIT_VER" --define "_topdir $DIST" -bb $BASE_DIR/test/sspl-test.spec
 
 \rm -rf $DIST/BUILD/*
 echo -e "\nGenerated RPMs..."

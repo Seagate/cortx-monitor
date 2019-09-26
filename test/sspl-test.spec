@@ -1,6 +1,9 @@
+# build number
+%define build_num  %( test -n "$build_number" && echo "$build_number" || echo 1 )
+
 Name:       sspl-test
 Version:    %{version}
-Release:    %{dist}
+Release:    %{build_num}_git%{git_rev}%{?dist}
 Summary:    Installs sspl-test scripts
 BuildArch:  noarch
 Group:      System Management

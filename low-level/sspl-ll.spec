@@ -1,11 +1,14 @@
 %define _unpackaged_files_terminate_build 0
 %define _binaries_in_noarch_packages_terminate_build   0
 
+# build number
+%define build_num  %( test -n "$build_number" && echo "$build_number" || echo 1 )
+
 Name:       sspl
 Version:    %{version}
 Provides:   %{name} = %{version}
 Obsoletes:  %{name} <= %{version}
-Release:    %{dist}
+Release:    %{build_num}_git%{git_rev}%{?dist}
 Summary:    Installs SSPL
 BuildArch:  noarch
 Group:      System Environment/Daemons

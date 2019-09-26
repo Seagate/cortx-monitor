@@ -6,7 +6,7 @@ COPY *.spec ./
 
 RUN yum install -y yum-priorities
 
-RUN yum-builddep -y --define 'version 0' libsspl_sec.spec \
-    && yum-builddep -y --define 'version 0' sspl-ll.spec \
-    && yum-builddep -y --define 'version 0' sspl-test.spec \
+RUN yum-builddep -y --define 'version 0' --define 'git_rev 000' libsspl_sec.spec \
+    && yum-builddep -y --define 'version 0' --define 'git_rev 000' sspl-ll.spec \
+    && yum-builddep -y --define 'version 0' --define 'git_rev 000' sspl-test.spec \
     && rm -f *.spec
