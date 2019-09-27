@@ -30,7 +30,7 @@ sspl-devel-image:
 	&& tar -ch . \
 	   | $(DOCKER) build \
 			-t $(NAMESPACE)/$(INAME):$(CENTOS_RELEASE) \
-			-t $(NAMESPACE)/mero/sspl:$(CENTOS_RELEASE) \
+			-t $(NAMESPACE)/eos/sspl:$(CENTOS_RELEASE) \
 			$(DOCKER_OPTS) -
 
 .PHONY: push
@@ -39,7 +39,7 @@ tag  := *
 push:
 	@for img in $$(docker images --filter=reference='$(NAMESPACE)/$(name):$(tag)' \
 				    --format '{{.Repository}}:{{.Tag}}' | grep -v none) \
-		    $$(docker images --filter=reference='$(NAMESPACE)/mero/$(name):$(tag)' \
+		    $$(docker images --filter=reference='$(NAMESPACE)/eos/$(name):$(tag)' \
 				    --format '{{.Repository}}:{{.Tag}}' | grep -v none) ; \
 	do \
 		echo "---> $$img" ; \
@@ -50,7 +50,7 @@ push:
 clean:
 	@for img in $$(docker images --filter=reference='$(NAMESPACE)/$(name):$(tag)' \
 				    --format '{{.Repository}}:{{.Tag}}') \
-		    $$(docker images --filter=reference='$(NAMESPACE)/mero/$(name):$(tag)' \
+		    $$(docker images --filter=reference='$(NAMESPACE)/eos/$(name):$(tag)' \
 				    --format '{{.Repository}}:{{.Tag}}') ; \
 	do \
 		echo "---> $$img" ; \
