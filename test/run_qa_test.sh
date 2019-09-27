@@ -20,6 +20,19 @@ flask_help()
           pip uninstall itsdangerous"
 }
 
+pre_requisites()
+{
+    # Backing up original persistence data
+    $sudo mv /var/sspl/data /var/sspl/orig-data
+
+    # Need empty persitence cache dir
+    $sudo mkdir -p /var/sspl/data
+
+    if [ -f "/var/sspl/orig-data/iem" ]; then
+        $sudo cp /var/sspl/orig-data/iem /var/sspl/data/iem
+    fi
+}
+
 kill_mock_server()
 {
     # Kill mock API server
@@ -34,6 +47,7 @@ cleanup()
     then
         sed -i 's/primary_controller_port=8090/primary_controller_port=80/g' /etc/sspl.conf
     fi
+
     echo "Stopping mock server"
     kill_mock_server
     echo "Exiting..."
@@ -47,14 +61,14 @@ execute_test()
     $sudo $script_dir/automated/run_sspl-ll_tests.sh
 }
 
-lettuce_version=$(pip list 2>null | grep -wi lettuce | awk '{print $2}')
-[ ! -z $lettuce_version ] && [ $lettuce_version = "0.2.23" ] || {
+lettuce_version=$(pip list 2>/dev/null | grep -wi lettuce | awk '{print $2}')
+[ ! -z $lettuce_version ] && [ $lettuce_version != "0.2.23" ] || {
     echo "Please install lettuce 0.2.23"
     exit 1
 }
 
-flask_version=$(pip list 2>null | grep -wi flask | awk '{print $2}')
-[ ! -z $flask_version ] && [ $flask_version = "1.1.1" ] || {
+flask_version=$(pip list 2>/dev/null | grep -wi flask | awk '{print $2}')
+[ ! -z $flask_version ] && [ $flask_version != "1.1.1" ] || {
     flask_help
     echo "Please install Flask 1.1.1 using
           pip install Flask==1.1.1"
@@ -70,6 +84,9 @@ then
     sed -i 's/primary_controller_port=80/primary_controller_port=8090/g' /etc/sspl.conf
 fi
 
+# Setting pre-requisites first
+pre_requisites
+
 # Start mock API server
 echo "Starting mock server on 127.0.0.1:8090"
 $script_dir/mock_server &
@@ -84,6 +101,10 @@ systemctl restart sspl-ll
 
 # Start tests
 execute_test
-
 retcode=$?
+
+# Restoring original cache data
+$sudo rm -rf /var/sspl/data
+$sudo mv /var/sspl/orig-data /var/sspl/data
+
 exit $retcode

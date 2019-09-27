@@ -21,9 +21,9 @@ def login(loginhash):
     response = json_data.get("api-response", {})
     return response, status_code
 
-@app.route('/{0}/show/disk/detail'.format(api), methods=["GET"])
+@app.route('/{0}/show/disks/detail'.format(api), methods=["GET"])
 def show_disks_detail():
-    api_file = open("{0}/disk-detail.txt".format(curr_dir), "r")
+    api_file = open("{0}/disks-detail.txt".format(curr_dir), "r")
     data = api_file.read()
     api_file.close()
     json_data = json.loads(data)

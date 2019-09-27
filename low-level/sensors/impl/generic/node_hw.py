@@ -33,7 +33,11 @@ from framework.utils.config_reader import ConfigReader
 from framework.utils.service_logging import logger
 from sensors.INode_hw import INodeHWsensor
 
-IPMITOOL = "sudo /usr/bin/ipmitool"
+IPMITOOL = "sudo ipmitool "
+
+# bash exit codes
+BASH_ILLEGAL_CMD = 127
+DETECT_VM = "sudo /usr/bin/systemd-detect-virt"
 
 class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
     """Obtains data about the FRUs and logical sensors and updates
@@ -63,6 +67,10 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
 
     UPDATE_CREATE_MODE = "w+"
     UPDATE_ONLY_MODE   = "r+"
+
+    IPMI_ERRSTR = "Could not open device at "
+
+    request_shutdown = False
 
     @staticmethod
     def name():
@@ -130,13 +138,29 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
         # Initialize internal message queues for this module
         super(NodeHWsensor, self).initialize_msgQ(msgQlist)
 
-        self._initialize_cache()
+        # Set flag 'request_shutdown' if vm detected
+        res, retcode = self._run_command(DETECT_VM)
+        if retcode == 0:
+            logger.info("{0}: VM env detected, ipmitool can't fetch monitoring"
+                " data".format(self.SENSOR_NAME))
+            self.request_shutdown = True
+        else:
+            # Set flag 'request_shutdown' if ipmitool cmd trial errors out
+            res, retcode = self._run_ipmitool_subcommand("")
 
-        self.sensor_id_map = dict()
-        self.sensor_id_map[self.TYPE_PSU] = { sensor_num: sensor_id
-            for (sensor_id, sensor_num) in self._get_sensor_list_by_type(self.TYPE_PSU)}
-        self.sensor_id_map[self.TYPE_FAN] = { sensor_num: sensor_id
-            for (sensor_id, sensor_num) in self._get_sensor_list_by_type(self.TYPE_FAN)}
+            self._initialize_cache()
+            self.sensor_id_map = dict()
+
+            if self.request_shutdown == False:
+                psu_sensor_list = self._get_sensor_list_by_type(self.TYPE_PSU)
+
+                self.sensor_id_map[self.TYPE_PSU] = { sensor_num: sensor_id
+                    for (sensor_id, sensor_num) in psu_sensor_list}
+
+                fan_sensor_list = self._get_sensor_list_by_type(self.TYPE_FAN)
+
+                self.sensor_id_map[self.TYPE_FAN] = { sensor_num: sensor_id
+                    for (sensor_id, sensor_num) in fan_sensor_list}
 
     def _update_list_file(self):
         (tmp_fd, tmp_name) = tempfile.mkstemp("","",dir=self.DATA_PATH_VALUE_DEFAULT)
@@ -159,21 +183,27 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
         # Check for debug mode being activated
         self._read_my_msgQ_noWait()
 
-        try:
-            # Check for a change in ipmi sel list and notify the node data msg handler
-            if os.path.getsize(self.list_file.name) != 0:
-                # If the SEL list file is not empty, that means that some of the processing
-                # from the last iteration is incomplete. Complete that
-                # before getting the new SEL events.
+        if self.request_shutdown == False:
+            try:
+                # Check for a change in ipmi sel list and notify the node data
+                # msg handler
+                if os.path.getsize(self.list_file.name) != 0:
+                    # If the SEL list file is not empty, that means that some
+                    # of the processing from the last iteration is incomplete.
+                    # Complete that before getting the new SEL events.
+                    self._notify_NodeDataMsgHandler()
+                #self._update_list_file()
                 self._notify_NodeDataMsgHandler()
-            #self._update_list_file()
-            self._notify_NodeDataMsgHandler()
-        except Exception as ae:
-            logger.exception(ae)
+            except Exception as ae:
+                logger.exception(ae)
 
-        # Reset debug mode if persistence is not enabled
-        self._disable_debug_if_persist_false()
-        self._scheduler.enter(30, self._priority, self.run, ())
+            # Reset debug mode if persistence is not enabled
+            self._disable_debug_if_persist_false()
+            self._scheduler.enter(30, self._priority, self.run, ())
+        else:
+            logger.warning("{0} Node hw monitoring disabled"\
+                .format(self.SENSOR_NAME))
+            self.shutdown()
 
     def _get_sel_list(self):
         index_dir = self._read_index_file()
@@ -245,10 +275,29 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
     def _run_ipmitool_subcommand(self, subcommand, grep_args=None, out_file=subprocess.PIPE):
         """executes ipmitool sub-commands, and optionally greps the output"""
 
-        command = IPMITOOL + ' ' + subcommand
+        command = IPMITOOL + subcommand
         if grep_args is not None:
             command += " | grep " + grep_args
-        return self._run_command(command, out_file)
+        res, retcode = self._run_command(command, out_file)
+
+        # Detect if ipmitool removed or facing error after sensor initialized
+        if retcode != 0:
+            if retcode == 1:
+                if isinstance(res, tuple):
+                    resstr = ''.join(res)
+
+                    if resstr.find(self.IPMI_ERRSTR) == 0:
+                        logger.error("{0}: ipmitool error:: {1}\n"
+                            "Dependencies failed, shutting down sensor".\
+                            format(self.SENSOR_NAME, resstr))
+                        self.request_shutdown = True
+            elif (retcode == BASH_ILLEGAL_CMD):
+                logger.error("{0}: Required ipmitool missing on Node."
+                    " Dependencies failed, shutting down sensor"\
+                    .format(self.SENSOR_NAME))
+                self.request_shutdown = True
+
+        return res, retcode
 
     def read_data(self):
         return self.sel_event_info
@@ -345,19 +394,23 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
     def _parse_fan_info(self, index, date, time, device_id, event, status):
         """Parse out Fan realted changes that gets reaflected in the ipmi sel list"""
 
-        #TODO: Can enrich the event message with more FRU info using
+        #TODO: Can enrich the sspl event message with more FRU info using
         # command 'ipmitool sel get <sel-id>'
+
+        severity_dict = {"fault": "error", "missing": "critical",
+                    "fault_resolved": "informational",
+                    "insertion": "informational",
+                    "threshold_breached:up": "warning",
+                    "threshold_breached:low": "warning"}
+        fan_info = {}
 
         #TODO: Enabled Assertions list (fan_specific_list[] in code) needs
         # to be built dynamically to support platform specific assertions and
         # not limit to these hardcoded ones.
-
-        severity_dict = {"fault": "error", "missing": "critical",
-                    "fault_resolved": "informational", "insertion": "informational",
-                    "threshold_breached:up": "warning","threshold_breached:low": "warning"}
-        fan_info = {}
-        fan_specific_list = ["Sensor Reading", "Lower Non-Recoverable", "Lower Non-Recoverable",
-                            "Upper Non-Recoverable", "Lower Critical", "Lower Non-Critical", "Upper Critical"]
+        fan_specific_list = ["Sensor Reading", "Lower Non-Recoverable",
+                             "Lower Non-Recoverable","Upper Non-Recoverable",
+                             "Lower Critical", "Lower Non-Critical",
+                             "Upper Critical"]
 
         threshold_event = event.split(" ")
         threshold = threshold_event[len(threshold_event)-1]
@@ -462,3 +515,6 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
         # Send the event to logging msg handler to send IEM message to journald
         self._write_internal_msgQ(LoggingMsgHandler.name(), internal_json_msg)
 
+    def shutdown(self):
+        """Clean up scheduler queue and gracefully shutdown thread"""
+        super(NodeHWsensor, self).shutdown()

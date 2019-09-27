@@ -179,13 +179,15 @@ class RealStorDiskSensor(ScheduledModuleThread, InternalMsgQ):
         self.rss_cliapi_poll_disks(self.RSS_DISK_GET_ALL)
 
         if not self.memcache_disks:
-            logger.warn("Last polled drives info in-memory cache unavailable"
-                        ", unable to check drive presence change")
-            return
+            if self.rssencl.active_ip != self.rssencl.ws.LOOPBACK:
+                logger.warn("Last polled drives info in-memory cache "
+                    "unavailable , unable to check drive presence change")
+                return
 
         if not self.latest_disks:
-            logger.warn("Latest polled drives info in-memory cache unavailable"
-                        ", unable to check drive presence change")
+            if self.rssencl.active_ip != self.rssencl.ws.LOOPBACK:
+                logger.warn("Latest polled drives info in-memory cache "
+                    "unavailable, unable to check drive presence change")
             return
 
         # keys are disk slot numbers

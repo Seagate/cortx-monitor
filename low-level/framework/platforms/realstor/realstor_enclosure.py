@@ -221,7 +221,7 @@ class RealStorEnclosure(StorageEnclosure):
             except OSError as exc:
                 if exc.errno == errno.EEXIST and os.path.isdir(path):
                     pass
-                elif os_error.errno == errno.EACCES:
+                elif exc.errno == errno.EACCES:
                     logger.critical(
                         "Permission denied while creating dir: {0}".format(path))
             except Exception as err:
@@ -247,8 +247,8 @@ class RealStorEnclosure(StorageEnclosure):
             return
 
         if response.status_code != self.ws.HTTP_OK:
-            logger.error("http request for login failed with err %d"
-                % response.status_code)
+            logger.error("{0}:: http request for login failed with err {1}"\
+                .format(self.EES_ENCL, response.status_code))
             return
 
         try:
