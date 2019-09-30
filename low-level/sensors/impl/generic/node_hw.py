@@ -54,6 +54,7 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
 
     TYPE_PSU = 'Power Supply'
     TYPE_FAN = 'Fan'
+    TYPE_DISK = 'Drive Slot / Bay'
 
     CONF_FILE = "/etc/sspl.conf"
     SYSINFO = "SYSTEM_INFORMATION"
@@ -162,6 +163,11 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
                 self.sensor_id_map[self.TYPE_FAN] = { sensor_num: sensor_id
                     for (sensor_id, sensor_num) in fan_sensor_list}
 
+                disk_sensor_list = self._get_sensor_list_by_type(self.TYPE_DISK)
+
+                self.sensor_id_map[self.TYPE_DISK] = { sensor_num: sensor_id
+                    for (sensor_id, sensor_num) in disk_sensor_list}
+
     def _update_list_file(self):
         (tmp_fd, tmp_name) = tempfile.mkstemp("","",dir=self.DATA_PATH_VALUE_DEFAULT)
         sel_out, retcode = self._run_ipmitool_subcommand("sel list", out_file=tmp_fd)
@@ -256,10 +262,12 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
                 continue
             self.sel_list_index = index
 
-            if 'Fan ' in device_id:
+            if self.TYPE_FAN in device_id:
                 self._parse_fan_info(index, date, time, device_id, event, status)
-            elif 'Power Supply ' in device_id:
+            elif self.TYPE_PSU in device_id:
                 self._parse_psu_info(index, date, time, device_id, event)
+            elif self.TYPE_DISK in device_id:
+                self._parse_disk_info(index, date, time, device_id, event, status)
             self._write_index_file(self.sel_list_index)
 
         self.list_file.seek(0)
@@ -322,6 +330,7 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
             # Example of output form 'sdr type' command:
             # Sys Fan 2B       | 33h | ok  | 29.4 | 5332 RPM
             # PS1 1a Fan Fail  | A0h | ok  | 29.13 |
+            # HDD 1 Status     | F1h | ok  |  4.2 | Drive Present
             fields_list = [ f.strip() for f in sensor.split("|")]
             sensor_id, sensor_num, status, entity_id, reading  = fields_list
             sensor_num = sensor_num.strip("h").lower()
@@ -361,9 +370,9 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
            specific is a dict of the properties specific to this sensor"""
         props_list_out, retcode = self._run_ipmitool_subcommand("sensor get '{0}'".format(sensor_id))
         if retcode != 0:
-            msg = "ipmitool sensor get command failed: {0}".format(''.join(sel_out))
+            msg = "ipmitool sensor get command failed: {0}".format(''.join(props_list_out))
             logger.error(msg)
-            return
+            return (False, False)
         props_list = ''.join(props_list_out).split("\n")
         props_list = props_list[1:] # The first line is 'Locating sensor record...'
 
@@ -471,6 +480,40 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
         self._log_IEM(resource_type, alert_type, severity, info, specific_info)
         self._write_index_file(index)
 
+    def _parse_disk_info(self, index, date, time, sensor, event, status):
+        """Parse out Disk related changes that gets reaflected in the ipmi sel list"""
+
+        sensor_num = re.match(self.TYPE_DISK + ' #0x([0-9a-f]+)', sensor).group(1)
+        sensor_id = self.sensor_id_map[self.TYPE_DISK][sensor_num]
+
+        common, specific = self._get_sensor_props(sensor_id)
+        if common:
+            disk_sensors_list = self._get_sensor_list_by_entity(common['Entity ID'])
+            disk_sensors_list.remove(sensor_id)
+
+            # TODO: Keep this common 'info' structure (with common fields) in common code
+            # and then use it for different Node FRUs.
+            info = {"date": date, "time": time, "sensor_id": sensor_id, "event": event,
+                    "fru_id": sensor}
+            if not specific:
+                specific = {"States Asserted": "N/A", "Sensor Type (Discrete)": "N/A"}
+            specific_info = specific
+            alert_severity_dict = {
+                ("Drive Present", "Asserted"): ("insertion", "informational"),
+                ("Drive Present", "Deasserted"): ("missing", "critical"),
+                }
+
+            resource_type = NodeDataMsgHandler.IPMI_RESOURCE_TYPE_DISK
+            if (event, status) in alert_severity_dict:
+                alert_type = alert_severity_dict[(event, status)][0]
+                severity   = alert_severity_dict[(event, status)][1]
+            else:
+                alert_type = "fault"
+                severity   = "informational"
+
+            self._send_json_msg(resource_type, alert_type, severity, info, specific_info)
+            self._log_IEM(resource_type, alert_type, severity, info, specific_info)
+            self._write_index_file(index)
 
     def _send_json_msg(self, resource_type, alert_type, severity, info, specific_info):
         """Transmit data to NodeDataMsgHandler which takes two arguments.

@@ -71,25 +71,25 @@ class NodeHWDataMsg(BaseSensorMsg):
     def set_uuid(self, _uuid):
         self._json["message"]["sspl_ll_msg_header"]["uuid"] = _uuid
 
-class NodeFanDataMsg(NodeHWDataMsg):
-    def __init__(self, host_id, fans):
-        super(NodeFanDataMsg, self).__init__(host_id)
+class NodeIPMIDataMsg(NodeHWDataMsg):
+    def __init__(self, host_id, fru):
+        super(NodeIPMIDataMsg, self).__init__(host_id)
 
-        self._fans = fans
-        resource_type = fans.get("resource_type")
-        alert_type = fans.get("alert_type")
-        severity = fans.get("severity")
-        info = fans.get("info")
-        specific_info = fans.get("specific_info")
+        self.fru = fru
+        resource_type = fru.get("resource_type")
+        alert_type = fru.get("alert_type")
+        severity = fru.get("severity")
+        info = fru.get("info")
+        specific_info = fru.get("specific_info")
 
-        node_fan_data = {"host_name": self._host_id,
+        node_ipmi_data = {"host_name": self._host_id,
                          "alert_type": alert_type,
                          "resource_type": resource_type,
                          "severity": severity,
                          "info": info,
                          "specific_info": specific_info}
 
-        self._json["message"]["sensor_response_type"] = node_fan_data
+        self._json["message"]["sensor_response_type"] = node_ipmi_data
 
 class NodePSUDataMsg(NodeHWDataMsg):
     def __init__(self, host_id, psu_event):
