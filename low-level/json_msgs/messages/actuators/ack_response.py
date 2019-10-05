@@ -34,39 +34,42 @@ class AckResponseMsg(BaseActuatorMsg):
 
     def __init__(self, ack_type,
                        ack_msg,
-                       uuid      = "N/A",
-                       username  = "SSPL-LL",
-                       signature = "N/A",
-                       time      = "N/A",
-                       expires   = -1):
+                       uuid="N/A",
+                       username="SSPL-LL",
+                       signature="N/A",
+                       time="N/A",
+                       expires=-1,
+                       error_no=0):
         super(AckResponseMsg, self).__init__()
 
-        self._username  = username
+        self._username = username
         self._signature = signature
-        self._time      = time
-        self._expires   = expires
-        self._ack_type  = ack_type
-        self._ack_msg   = ack_msg
-        self._uuid      = uuid
+        self._time = time
+        self._expires = expires
+        self._ack_type = ack_type
+        self._ack_msg = ack_msg
+        self._error_no = error_no
+        self._uuid = uuid
 
         self._json = {"title" : self.TITLE,
-                      "description" : self.DESCRIPTION,
-                      "username" : self._username,
-                      "signature" : self._signature,
-                      "time" : self._time,
-                      "expires" : self._expires,
+                      "description": self.DESCRIPTION,
+                      "username": self._username,
+                      "signature": self._signature,
+                      "time": self._time,
+                      "expires": self._expires,
 
-                      "message" : {
+                      "message": {
                           "sspl_ll_msg_header": {
-                                "schema_version" : self.SCHEMA_VERSION,
-                                "sspl_version" : self.SSPL_VERSION,
-                                "msg_version" : self.MESSAGE_VERSION,
-                                "uuid" : self._uuid
+                                "schema_version": self.SCHEMA_VERSION,
+                                "sspl_version": self.SSPL_VERSION,
+                                "msg_version": self.MESSAGE_VERSION,
+                                "uuid": self._uuid
                                 },
                           "actuator_response_type": {
                                 self.ACTUATOR_MSG_TYPE: {
-                                    "ack_type" : self._ack_type,
-                                    "ack_msg" : self._ack_msg
+                                    "ack_type": self._ack_type,
+                                    "ack_msg": self._ack_msg,
+                                    "error_no": self._error_no
                                     }
                                 }
                           }

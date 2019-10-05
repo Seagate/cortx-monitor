@@ -14,17 +14,17 @@
  ****************************************************************************
 """
 
+import errno
 import json
-import syslog
 
+from framework.actuator_state_manager import actuator_state_manager
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
 from framework.base.sspl_constants import enabled_products
-
 from json_msgs.messages.actuators.service_controller import ServiceControllerMsg
 from json_msgs.messages.sensors.service_watchdog import ServiceWatchdogMsg
-
+from json_msgs.messages.actuators.ack_response import AckResponseMsg
 # Modules that receive messages from this module
 from message_handlers.logging_msg_handler import LoggingMsgHandler
 
@@ -33,12 +33,14 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
     """Message Handler for service request messages"""
 
     MODULE_NAME = "ServiceMsgHandler"
-    PRIORITY    = 2
+    PRIORITY = 2
 
     # Dependency list
     DEPENDENCIES = {
-                    "plugins": ["LoggingMsgHandler", "RabbitMQegressProcessor"],
-                    "rpms": []
+        "plugins": [
+            "LoggingMsgHandler",
+            "RabbitMQegressProcessor"],
+        "rpms": []
     }
 
     @staticmethod
@@ -55,7 +57,9 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
     def __init__(self):
         super(ServiceMsgHandler, self).__init__(self.MODULE_NAME,
-                                                  self.PRIORITY)
+                                                self.PRIORITY)
+        self._service_actuator = None
+        self._query_utility = None
 
     def initialize(self, conf_reader, msgQlist, product):
         """initialize configuration reader and internal msg queues"""
@@ -65,34 +69,32 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
         # Initialize internal message queues for this module
         super(ServiceMsgHandler, self).initialize_msgQ(msgQlist)
 
-        self._service_actuator = None
-
         self._import_products(product)
 
     def _import_products(self, product):
         """Import classes based on which product is being used"""
         if product in enabled_products:
             from zope.component import queryUtility
-            self._queryUtility = queryUtility
+            self._query_utility = queryUtility
 
     def run(self):
         """Run the module periodically on its own thread."""
         self._log_debug("Start accepting requests")
 
-        #self._set_debug(True)
-        #self._set_debug_persist(True)
+        # self._set_debug(True)
+        # self._set_debug_persist(True)
 
         try:
             # Block on message queue until it contains an entry
-            jsonMsg = self._read_my_msgQ()
-            if jsonMsg is not None:
-                self._process_msg(jsonMsg)
+            json_msg = self._read_my_msgQ()
+            if json_msg is not None:
+                self._process_msg(json_msg)
 
             # Keep processing until the message queue is empty
             while not self._is_my_msgQ_empty():
-                jsonMsg = self._read_my_msgQ()
-                if jsonMsg is not None:
-                    self._process_msg(jsonMsg)
+                json_msg = self._read_my_msgQ()
+                if json_msg is not None:
+                    self._process_msg(json_msg)
 
         except Exception as ae:
             # Log it and restart the whole process when a failure occurs
@@ -102,7 +104,8 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
         self._log_debug("Finished processing successfully")
 
     def _process_msg(self, jsonMsg):
-        """Parses the incoming message and hands off to the appropriate logger"""
+        """Parses the incoming message and hands off to the appropriate logger
+        """
         self._log_debug("_process_msg, jsonMsg: %s" % jsonMsg)
 
         if isinstance(jsonMsg, dict) == False:
@@ -119,27 +122,55 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
         if jsonMsg.get("actuator_request_type").get("service_controller") is not None:
             self._log_debug("_processMsg, msg_type: service_controller")
 
-            # Query the Zope GlobalSiteManager for an object implementing IService
-            if self._service_actuator == None:
+            service_name = jsonMsg.get("actuator_request_type") \
+                .get("service_controller").get("service_name")
+            service_request = jsonMsg.get("actuator_request_type") \
+                .get("service_controller").get("service_request")
+            request = "{0}:{1}".format(service_request, service_name)
+
+            # If the state is INITIALIZED, We can assume that actuator is
+            # ready to perform operation.
+            if actuator_state_manager.is_initialized("Service"):
+                self._log_debug("_process_msg, service_actuator name: %s" %
+                                self._service_actuator.name())
+                self._execute_request(self._service_actuator, jsonMsg, uuid)
+
+            # If the state is INITIALIZING, need to send message
+            elif actuator_state_manager.is_initializing("Service"):
+                # This state will not be reached. Kept here for consistency.
+                logger.info("Service actuator is initializing")
+                busy_json_msg = AckResponseMsg(
+                    request, "BUSY", uuid, error_no=errno.EBUSY).getJson()
+                self._write_internal_msgQ(
+                    "RabbitMQegressProcessor", busy_json_msg)
+
+            elif actuator_state_manager.is_imported("Service"):
+                # This case will be for first request only. Subsequent
+                # requests will go to INITIALIZED state case.
+                logger.info("Service actuator is imported and initializing")
                 from actuators.IService import IService
-                self._service_actuator = self._queryUtility(IService)()
-                logger.info("_process_msg, service_actuator name: %s" % self._service_actuator.name())
-            service_name, state, substate = self._service_actuator.perform_request(jsonMsg)
+                actuator_state_manager.set_state(
+                    "Service", actuator_state_manager.INITIALIZING)
+                service_actuator_class = self._query_utility(IService)
+                if service_actuator_class:
+                    # NOTE: Instantiation part should not time consuming
+                    # otherwise ServiceMsgHandler will get block and will
+                    # not be able serve any subsequent requests. This applies
+                    # to instantiation of evey actuator.
+                    self._service_actuator = service_actuator_class()
+                    logger.info("_process_msg, service_actuator name: %s" %
+                                self._service_actuator.name())
+                    self._execute_request(
+                        self._service_actuator, jsonMsg, uuid)
+                    actuator_state_manager.set_state(
+                        "Service", actuator_state_manager.INITIALIZED)
+                else:
+                    logger.info("Service actuator is not instantiated")
 
-            if substate:
-                result = "{}:{}".format(state, substate)
+            # If there is no entry for actuator in table, We can assume
+            # that it is not loaded for some reason.
             else:
-                result = state
-
-            self._log_debug("_processMsg, service_name: %s, result: %s" %
-                            (service_name, result))
-
-            # Create an actuator response and send it out
-            serviceControllerMsg = ServiceControllerMsg(service_name, result)
-            if uuid is not None:
-                serviceControllerMsg.set_uuid(uuid)
-            jsonMsg = serviceControllerMsg.getJson()
-            self._write_internal_msgQ("RabbitMQegressProcessor", jsonMsg)
+                logger.warn("Service actuator is not loaded or not supported")
 
         # Handle events generated by the service watchdogs
         elif jsonMsg.get("actuator_request_type").get("service_watchdog_controller") is not None:
@@ -160,7 +191,7 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 # Query the Zope GlobalSiteManager for an object implementing IService
                 if self._service_actuator == None:
                     from actuators.IService import IService
-                    self._service_actuator = self._queryUtility(IService)()
+                    self._service_actuator = self._query_utility(IService)()
                     self._log_debug("_process_msg, service_actuator name: %s" % self._service_actuator.name())
                 service_name, state, substate = self._service_actuator.perform_request(jsonMsg)
 
@@ -183,7 +214,7 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
                              "previous_substate": prev_substate,
                              "pid": pid,
                              "previous_pid": prev_pid
-                         }
+                            }
 
                 internal_json_msg = json.dumps(
                     {"actuator_request_type" : {
@@ -194,13 +225,35 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
                                             .format(json.dumps(json_data, sort_keys=True))
                             }
                         }
-                     })
+                    })
 
                 # Send the event to logging msg handler to send IEM message to journald
-                self._write_internal_msgQ(LoggingMsgHandler.name(), internal_json_msg)
+                self._write_internal_msgQ(
+                    LoggingMsgHandler.name(), internal_json_msg)
 
         # ... handle other service message types
 
+    def _execute_request(self, actuator_instance, json_msg, uuid):
+        """Calls perform_request method of an actuator and sends response to
+           output channel.
+        """
+        service_name, state, substate = \
+            actuator_instance.perform_request(json_msg)
+
+        if substate:
+            result = "{}:{}".format(state, substate)
+        else:
+            result = state
+
+        self._log_debug("_processMsg, service_name: %s, result: %s" %
+                        (service_name, result))
+
+        # Create an actuator response and send it out
+        service_controller_msg = ServiceControllerMsg(service_name, result)
+        if uuid is not None:
+            service_controller_msg.set_uuid(uuid)
+        json_msg = service_controller_msg.getJson()
+        self._write_internal_msgQ("RabbitMQegressProcessor", json_msg)
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""

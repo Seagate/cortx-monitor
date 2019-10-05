@@ -66,6 +66,11 @@
 									"type": "string",
 									"required": true
 								},
+                                "error_no": {
+                                    "description": "Error number if actuator is busy or throwing error",
+                                    "type": "integer",
+                                    "required": false
+                                },
 								"ack_msg": {
 									"description": "Message describing acknowledgement",
 									"type": "string",

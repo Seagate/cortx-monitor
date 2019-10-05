@@ -14,8 +14,9 @@
  ****************************************************************************
 """
 
-import socket
+import errno
 import json
+import socket
 import time
 
 from framework.base.module_thread import ScheduledModuleThread
@@ -29,6 +30,9 @@ from json_msgs.messages.actuators.ndhw_ack_response import NodeHwAckResponseMsg
 
 from message_handlers.disk_msg_handler import DiskMsgHandler
 from message_handlers.service_msg_handler import ServiceMsgHandler
+
+# Import Actuator states table
+from framework.actuator_state_manager import actuator_state_manager
 
 
 class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
@@ -238,30 +242,52 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
 
             elif component == "RAID":
-                # Query the Zope GlobalSiteManager for an object implementing the IRAIDactuator
-                if self._RAID_actuator is None:
+                # If the state is INITIALIZED, We can assume that actuator is
+                # ready to perform operation.
+                if actuator_state_manager.is_initialized("RAIDactuator"):
+                    self._log_debug("_process_msg, _RAID_actuator name: %s" %
+                                    self._RAID_actuator.name())
+                    self._execute_raid_request(
+                        node_request, self._RAID_actuator, jsonMsg, uuid)
+
+                # If the state is INITIALIZING, need to send message
+                elif actuator_state_manager.is_initializing("RAIDactuator"):
+                    # This state will not be reached. Kept here for consistency.
+                    logger.info("RAID actuator is initializing")
+                    busy_json_msg = AckResponseMsg(
+                        node_request, "BUSY", uuid, error_no=errno.EBUSY).getJson()
+                    self._write_internal_msgQ(
+                        "RabbitMQegressProcessor", busy_json_msg)
+
+                elif actuator_state_manager.is_imported("RAIDactuator"):
+                    # This case will be for first request only. Subsequent
+                    # requests will go to INITIALIZED state case.
+                    logger.info("RAID actuator is imported and initializing")
+
                     from actuators.Iraid import IRAIDactuator
-                    self._RAID_actuator = self._queryUtility(IRAIDactuator)()
-                    self._log_debug("_process_msg, _RAID_actuator name: %s" % self._RAID_actuator.name())
+                    actuator_state_manager.set_state(
+                            "RAIDactuator", actuator_state_manager.INITIALIZING)
+                    # Query the Zope GlobalSiteManager for an object implementing the IRAIDactuator
+                    raid_actuator_class = self._queryUtility(IRAIDactuator)
+                    if raid_actuator_class:
+                        # NOTE: Instantiation part should not time consuming
+                        # otherwise NodeControllerMsgHandler will get block
+                        # and will not be able serve any subsequent requests.
+                        # This applies to instantiation of evey actuator.
+                        self._RAID_actuator = raid_actuator_class()
+                        logger.info("_process_msg, _RAID_actuator name: %s" %
+                                    self._RAID_actuator.name())
+                        self._execute_raid_request(
+                            node_request, self._RAID_actuator, jsonMsg, uuid)
+                        actuator_state_manager.set_state(
+                            "RAIDactuator", actuator_state_manager.INITIALIZED)
+                    else:
+                        logger.warn("RAID actuator is not instantiated")
 
-                # Perform the RAID request on the node and get the response
-                raid_response = self._RAID_actuator.perform_request(jsonMsg).strip()
-                self._log_debug("_process_msg, raid_response: %s" % raid_response)
-
-                json_msg = AckResponseMsg(node_request, raid_response, uuid).getJson()
-                self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
-
-                # Restart openhpid to update HPI data only if it is a H/W environment
-                if self.setup in [ "hw", "ssu" ]:
-                    self._log_debug("restarting openhpid service to update HPI data")
-                    if "assemble" in jsonMsg.get("actuator_request_type").get("node_controller").get("node_request").lower():
-                        internal_json_msg = json.dumps(
-                                            {"actuator_request_type": {
-                                            "service_controller": {
-                                                "service_name" : "openhpid.service",
-                                                "service_request": "restart"
-                                            }}})
-                        self._write_internal_msgQ(ServiceMsgHandler.name(), internal_json_msg)
+                # If there is no entry for actuator in table, We can assume
+                # that it is not loaded for some reason.
+                else:
+                    logger.warn("RAID actuator is not loaded or not supported")
 
             elif component == "IPMI":
                 # Query the Zope GlobalSiteManager for an object implementing the IPMI actuator
@@ -424,18 +450,61 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
 
             elif component == "HDPA":
-                # Query the Zope GlobalSiteManager for an object implementing the hdparm actuator
-                if self._hdparm_actuator is None:
+                # If the state is INITIALIZED, We can assume that actuator is
+                # ready to perform operation.
+                if actuator_state_manager.is_initialized("Hdparm"):
+                    logger.info("_process_msg, Hdparm_actuator name: %s" %
+                                self._hdparm_actuator.name())
+                    # Perform the hdparm request on the node and get the response
+                    hdparm_response = self._hdparm_actuator.perform_request(jsonMsg).strip()
+                    self._log_debug("_process_msg, hdparm_response: %s" % hdparm_response)
+
+                    json_msg = AckResponseMsg(node_request, hdparm_response, uuid).getJson()
+                    self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+
+                # If the state is INITIALIZING, need to send message
+                elif actuator_state_manager.is_initializing("Hdparm"):
+                    # This state will not be reached. Kept here for consistency.
+                    logger.info("Hdparm actuator is initializing")
+                    busy_json_msg = AckResponseMsg(
+                        node_request, "BUSY", uuid, error_no=errno.EBUSY).getJson()
+                    self._write_internal_msgQ(
+                        "RabbitMQegressProcessor", busy_json_msg)
+
+                elif actuator_state_manager.is_imported("Hdparm"):
+                    # This case will be for first request only. Subsequent
+                    # requests will go to INITIALIZED state case.
+                    logger.info("Hdparm actuator is imported and initializing")
+                    # Query the Zope GlobalSiteManager for an object
+                    # implementing the hdparm actuator.
                     from actuators.Ihdparm import IHdparm
-                    self._hdparm_actuator = self._queryUtility(IHdparm)()
-                    self._log_debug("_process_msg, _hdparm_actuator name: %s" % self._hdparm_actuator.name())
+                    actuator_state_manager.set_state(
+                            "Hdparm", actuator_state_manager.INITIALIZING)
+                    hdparm_actuator_class = self._queryUtility(IHdparm)
+                    if hdparm_actuator_class:
+                        # NOTE: Instantiation part should not time consuming
+                        # otherwise NodeControllerMsgHandler will get block and will
+                        # not be able serve any subsequent requests. This applies
+                        # to instantiation of evey actuator.
+                        self._hdparm_actuator = hdparm_actuator_class()
+                        self._log_debug(
+                            "_process_msg, _hdparm_actuator name: %s" %
+                            self._hdparm_actuator.name())
+                        # Perform the hdparm request on the node and get the response
+                        hdparm_response = self._hdparm_actuator.perform_request(jsonMsg).strip()
+                        self._log_debug("_process_msg, hdparm_response: %s" % hdparm_response)
 
-                # Perform the hdparm request on the node and get the response
-                hdparm_response = self._hdparm_actuator.perform_request(jsonMsg).strip()
-                self._log_debug("_process_msg, hdparm_response: %s" % hdparm_response)
+                        json_msg = AckResponseMsg(node_request, hdparm_response, uuid).getJson()
+                        self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+                        actuator_state_manager.set_state(
+                            "Hdparm", actuator_state_manager.INITIALIZED)
+                    else:
+                        logger.info("Hdparm actuator is not instantiated")
 
-                json_msg = AckResponseMsg(node_request, hdparm_response, uuid).getJson()
-                self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+                # If there is no entry for actuator in table, We can assume
+                # that it is not loaded for some reason.
+                else:
+                    logger.info("Hdparm actuator is not loaded or not supported")
 
             elif component == "SMAR":
                 # Parse out the drive request field in json msg
@@ -709,6 +778,30 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
             error = str(ae)
 
         return serial_number, error
+
+    def _execute_raid_request(
+            self, node_request, actuator_instance, json_msg, uuid):
+        """Performs a RAID request by calling perform_request method of a RAID
+           actuator.
+        """
+        # Perform the RAID request on the node and get the response
+        raid_response = actuator_instance.perform_request(json_msg).strip()
+        self._log_debug("_process_msg, raid_response: %s" % raid_response)
+
+        json_msg = AckResponseMsg(node_request, raid_response, uuid).getJson()
+        self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+
+        # Restart openhpid to update HPI data only if it is a H/W environment
+        if self.setup in [ "hw", "ssu" ]:
+            self._log_debug("restarting openhpid service to update HPI data")
+            if "assemble" in json_msg.get("actuator_request_type").get("node_controller").get("node_request").lower():
+                internal_json_msg = json.dumps(
+                                    {"actuator_request_type": {
+                                    "service_controller": {
+                                        "service_name" : "openhpid.service",
+                                        "service_request": "restart"
+                                    }}})
+                self._write_internal_msgQ(ServiceMsgHandler.name(), internal_json_msg)
 
     def _is_env_vm(self):
         """Retrieves the current setup and returns True|False based on setup value."""

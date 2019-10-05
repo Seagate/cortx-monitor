@@ -24,14 +24,14 @@ import os
 import Queue
 import signal
 import sys
+from threading import Thread
 import time
 import yum
 
 # Add the top level directories
 parentdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-os.sys.path.insert(0,parentdir)
+os.sys.path.insert(0, parentdir)
 
-from threading import Thread
 
 from utils.config_reader import ConfigReader
 from utils.service_logging import init_logging
@@ -44,6 +44,7 @@ from rabbitmq.rabbitmq_ingress_processor import RabbitMQingressProcessor
 from framework.rabbitmq.plane_cntrl_rmq_egress_processor import PlaneCntrlRMQegressProcessor
 from framework.rabbitmq.plane_cntrl_rmq_ingress_processor import PlaneCntrlRMQingressProcessor
 from framework.base.sspl_constants import enabled_products
+from framework.actuator_state_manager import actuator_state_manager
 
 from rabbitmq.logging_processor import LoggingProcessor
 from rabbitmq.thread_controller import ThreadController
@@ -412,6 +413,7 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist, operating_system
             logger.info("            Implements Interface: %s" % interface_impl.__name__)
 
             if product in enabled_products:
+                actuator_state_manager.set_state(module, actuator_state_manager.IMPORTED)
                 gsm.registerUtility(klass, interface_impl)
     return (sspl_threaded_modules, msgQlist)
 
