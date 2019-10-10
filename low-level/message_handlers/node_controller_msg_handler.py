@@ -88,6 +88,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
         self._IPMI_actuator         = None
         self._hdparm_actuator       = None
         self._command_line_actuator = None
+        self._NodeHW_actuator       = None
 
         self._import_products(product)
         self.setup = self._conf_reader._get_value_with_default(self.SYS_INFORMATION, self.SETUP, "ssu")
@@ -616,6 +617,31 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
                     # Send the event to disk message handler to generate json message
                     self._write_internal_msgQ(DiskMsgHandler.name(), internal_json_msg)
+
+            elif component == "NDHW":
+                # NDHW Stands for Node HW.
+                # Query the Zope GlobalSiteManager for an object implementing the INodeHWactuator
+                if self._NodeHW_actuator is None:
+                    from actuators.INode_hw import INodeHWactuator
+                    # Load NodeHWactuator class
+                    ndhw_actuator_class = self._queryUtility(INodeHWactuator)
+                    # Instantiate NodeHWactuator only if class is loaded
+                    if ndhw_actuator_class:
+                        self._NodeHW_actuator = ndhw_actuator_class(self._conf_reader)
+                    else:
+                        logger.warn("NodeHWactuator not loaded")
+                        if self._product in enabled_products:
+                            json_msg = AckResponseMsg(node_request, NodeControllerMsgHandler.UNSUPPORTED_REQUEST, uuid).getJson()
+                            self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+                        return
+
+                # Perform the NodeHW request on the node and get the response
+                #TODO: Send message to Ack as well as Sensor in their respective channel.
+                node_hw_response = self._NodeHW_actuator.perform_request(jsonMsg).strip()
+                self._log_debug("_process_msg, node_hw_response: %s" % node_hw_response)
+
+                json_msg = AckResponseMsg(node_request, node_hw_response, uuid).getJson()
+                self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
 
             else:
                 response = "NodeControllerMsgHandler, _process_msg, unknown node controller msg: {}" \
