@@ -6,7 +6,7 @@ message_handlers=DiskMsgHandler, LoggingMsgHandler, ServiceMsgHandler, NodeDataM
 
 sensors=ServiceWatchdog, NodeData, RAIDsensor, RealStorFanSensor, RealStorPSUSensor, RealStorControllerSensor, RealStorDiskSensor, RealStorSideplaneExpanderSensor, RealStorLogicalVolumeSensor, IEMSensor, NodeHWsensor
 
-actuators=Service, RAIDactuator, Hdparm
+actuators=Service, RAIDactuator, Hdparm, NodeHWactuator
 
 [SYSTEM_INFORMATION]
 operating_system=centos7
@@ -146,3 +146,5 @@ monitored_services=
 smart_test_interval=999999999
 run_smart_on_start=False
 
+[NODEHWACTUATOR]
+ipmi_client=ipmitool

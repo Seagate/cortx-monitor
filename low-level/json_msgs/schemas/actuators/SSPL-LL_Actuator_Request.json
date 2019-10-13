@@ -161,7 +161,12 @@
 									"description": "Action to be performed on node",
 									"type": "string",
 									"required": true
-								}
+								},
+                                "resource": {
+									"description": "Action to be performed on node",
+									"type": "string",
+									"required": false
+                                }
 							}
 						},
 

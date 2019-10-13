@@ -48,6 +48,7 @@ from framework.base.sspl_constants import enabled_products
 from rabbitmq.logging_processor import LoggingProcessor
 from rabbitmq.thread_controller import ThreadController
 
+from actuators.impl.actuator import Actuator
 from message_handlers.node_controller_msg_handler import NodeControllerMsgHandler
 from message_handlers.node_data_msg_handler import NodeDataMsgHandler
 from message_handlers.disk_msg_handler import DiskMsgHandler
@@ -362,6 +363,8 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist, operating_system
         from sensors.impl.generic.node_hw import NodeHWsensor
 
     if product in enabled_products:
+        import inspect
+
         from actuators.impl.generic.raid import RAIDactuator
         from actuators.impl.generic.hdparm import Hdparm
         from actuators.impl.generic.node_hw import NodeHWactuator
@@ -400,6 +403,9 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist, operating_system
         if threaded in ['True', 'true']:
             sspl_threaded_modules[klass.name()] = klass()
             msgQlist[klass.name()] = Queue.Queue()
+        elif issubclass(klass, Actuator):
+            logger.info("%s derived from %s Base class" %
+                        (klass.name(), inspect.getmro(klass)[1].__name__))
         else:
             # It's a static non-threaded object, register it with the Zope global site manager
             interface_impl = list(implementedBy(klass))[0]  # Assumes single inheritance only
@@ -407,7 +413,6 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist, operating_system
 
             if product in enabled_products:
                 gsm.registerUtility(klass, interface_impl)
-
     return (sspl_threaded_modules, msgQlist)
 
 

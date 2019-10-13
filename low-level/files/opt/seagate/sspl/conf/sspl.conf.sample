@@ -6,7 +6,7 @@ message_handlers=DiskMsgHandler, LoggingMsgHandler, ServiceMsgHandler, NodeDataM
 
 sensors=ServiceWatchdog, NodeData, RAIDsensor, SNMPtraps, HPIMonitor, RealStorFanSensor, RealStorPSUSensor, RealStorControllerSensor, RealStorDiskSensor, RealStorSideplaneExpanderSensor, IEMSensor, NodeHWsensor
 
-actuators=Service, RAIDactuator, Hdparm, RaritanPDU, CommandLine, Login, IPMI, HPIactuator
+actuators=Service, RAIDactuator, Hdparm, RaritanPDU, CommandLine, Login, IPMI, HPIactuator, NodeHWactuator
 
 [SYSTEM_INFORMATION]
 operating_system=centos7
@@ -170,3 +170,6 @@ pipe_path=/var/sspl/data/iem
 site_id=001
 rack_id=001
 node_id=001
+
+[NODEHWACTUATOR]
+ipmi_client=ipmitool
