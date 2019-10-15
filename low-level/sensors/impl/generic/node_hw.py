@@ -48,20 +48,19 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
     SENSOR_NAME = "NodeHWsensor"
     PRIORITY = 1
 
-    sel_event_info = ""
-    _sel_index_list = []
-    sel_list_index = 0
-
-    TYPE_PSU = 'Power Supply'
-    TYPE_FAN = 'Fan'
-    TYPE_DISK = 'Drive Slot / Bay'
-
     CONF_FILE = "/etc/sspl.conf"
     SYSINFO = "SYSTEM_INFORMATION"
     DATA_PATH_KEY = "data_path"
     DATA_PATH_VALUE_DEFAULT = "/var/sspl/data"
 
-    CACHE_DIR  = "server"
+    sel_event_info = ""
+
+    TYPE_PSU_SUPPLY = 'Power Supply'
+    TYPE_PSU_UNIT = 'Power Unit'
+    TYPE_FAN = 'Fan'
+    TYPE_DISK = 'Drive Slot / Bay'
+
+    CACHE_DIR_NAME  = "server"
     # This file stores the last index from the SEL list for which we have issued an event.
     INDEX_FILE = "last_sel_index"
     LIST_FILE  = "sel_list"
@@ -72,6 +71,11 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
     IPMI_ERRSTR = "Could not open device at "
 
     request_shutdown = False
+
+    DYNAMIC_KEYS = {
+            "Sensor Reading",
+            "States Asserted",
+            }
 
     # Dependency list
     DEPENDENCIES = {
@@ -87,6 +91,13 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
     def __init__(self):
         super(NodeHWsensor, self).__init__(self.SENSOR_NAME.upper(), self.PRIORITY)
         self.host_id = None
+
+        self.fru_types = {
+            self.TYPE_FAN: self._parse_fan_info,
+            self.TYPE_PSU_SUPPLY: self._parse_psu_supply_info,
+            self.TYPE_PSU_UNIT: self._parse_psu_unit_info,
+            self.TYPE_DISK: self._parse_disk_info,
+        }
 
         # Validate configuration file for required valid values
         try:
@@ -106,35 +117,37 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
     def _initialize_cache(self):
         data_dir =  self.conf_reader._get_value_with_default(
             self.SYSINFO, self.DATA_PATH_KEY, self.DATA_PATH_VALUE_DEFAULT)
-        cache_dir = os.path.join(data_dir, self.CACHE_DIR)
+        self.cache_dir_path = os.path.join(data_dir, self.CACHE_DIR_NAME)
 
-        if not os.path.exists(cache_dir):
-            logger.info("Creating cache dir: {0}".format(cache_dir))
-            os.makedirs(cache_dir)
-        logger.info("Using cache dir: {0}".format(cache_dir))
+        if not os.path.exists(self.cache_dir_path):
+            logger.info("Creating cache dir: {0}".format(self.cache_dir_path))
+            os.makedirs(self.cache_dir_path)
+        logger.info("Using cache dir: {0}".format(self.cache_dir_path))
 
-        index_file_name = os.path.join(cache_dir, self.INDEX_FILE)
+        index_file_name = os.path.join(self.cache_dir_path, self.INDEX_FILE)
         self.index_file = self._get_file(index_file_name)
 
         if os.path.getsize(self.index_file.name) == 0:
             self._write_index_file(0)
-        else:
-            self.sel_list_index = self._read_index_file()
         # Now self.index_file has a valid sel index in it
 
-        list_file_name = os.path.join(cache_dir, self.LIST_FILE)
+        list_file_name = os.path.join(self.cache_dir_path, self.LIST_FILE)
         self.list_file = self._get_file(list_file_name)
 
     def _write_index_file(self, index):
+        if not isinstance(index, int):
+            index = int(index, base=16)
+        literal = "{0:x}\n".format(index)
+
         self.index_file.seek(0)
         self.index_file.truncate()
-        self.index_file.write("{0}\n".format(index))
+        self.index_file.write(literal)
         self.index_file.flush()
 
     def _read_index_file(self):
         self.index_file.seek(0)
         index_line = self.index_file.readline().strip()
-        return int(index_line)
+        return int(index_line, base=16)
 
     def initialize(self, conf_reader, msgQlist, products):
         """initialize configuration reader and internal msg queues"""
@@ -159,31 +172,22 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
             self.sensor_id_map = dict()
 
             if self.request_shutdown == False:
-                psu_sensor_list = self._get_sensor_list_by_type(self.TYPE_PSU)
-
-                self.sensor_id_map[self.TYPE_PSU] = { sensor_num: sensor_id
-                    for (sensor_id, sensor_num) in psu_sensor_list}
-
-                fan_sensor_list = self._get_sensor_list_by_type(self.TYPE_FAN)
-
-                self.sensor_id_map[self.TYPE_FAN] = { sensor_num: sensor_id
-                    for (sensor_id, sensor_num) in fan_sensor_list}
-
-                disk_sensor_list = self._get_sensor_list_by_type(self.TYPE_DISK)
-
-                self.sensor_id_map[self.TYPE_DISK] = { sensor_num: sensor_id
-                    for (sensor_id, sensor_num) in disk_sensor_list}
+                for fru in self.fru_types:
+                    self.sensor_id_map[fru] = { sensor_num: sensor_id
+                        for (sensor_id, sensor_num) in
+                        self._get_sensor_list_by_type(fru)}
 
     def _update_list_file(self):
-        (tmp_fd, tmp_name) = tempfile.mkstemp("","",dir=self.DATA_PATH_VALUE_DEFAULT)
+        (tmp_fd, tmp_name) = tempfile.mkstemp(dir=self.cache_dir_path)
         sel_out, retcode = self._run_ipmitool_subcommand("sel list", out_file=tmp_fd)
         if retcode != 0:
             msg = "ipmitool sel list command failed: {0}".format(''.join(sel_out))
             logger.error(msg)
             raise Exception(msg)
 
-        # os.rename() is an atomic operation, which means that even if we crash
-        # the SEL list in self.list_file will always be in a consistent state.
+        # os.rename() is an atomic operation on POSIX, which means that even
+        # if we crash the SEL list in self.list_file will always be
+        # in a consistent state.
         list_file_name = self.list_file.name
         os.rename(tmp_name, list_file_name)
         self.list_file.close()
@@ -204,7 +208,8 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
                     # of the processing from the last iteration is incomplete.
                     # Complete that before getting the new SEL events.
                     self._notify_NodeDataMsgHandler()
-                #self._update_list_file()
+
+                self._update_list_file()
                 self._notify_NodeDataMsgHandler()
             except Exception as ae:
                 logger.exception(ae)
@@ -217,8 +222,8 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
                 .format(self.SENSOR_NAME))
             self.shutdown()
 
-    def _get_sel_list(self):
-        index_dir = self._read_index_file()
+    def _get_sel_event(self):
+        last_index = self._read_index_file()
 
         # TODO: See if the following 2 loops can be reduced to
         # a single loop using mmap() and a fixed file format like
@@ -228,11 +233,11 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
         self.list_file.seek(0, os.SEEK_SET)
         for line in self.list_file:
             if not found:
-                if line.split("|")[0] == " {0:x} ".format(index):
+                if line.split("|")[0].strip() == "{0:x}".format(last_index):
                     found = True
                 continue
 
-            yield line
+            yield self._make_sel_event(line)
 
         if not found:
             # This can mean one of a few things:
@@ -241,41 +246,44 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
             # 3. self.list_file is empty
             self.list_file.seek(0, os.SEEK_SET)
             for line in self.list_file:
-                yield line
+                yield self._make_sel_event(line)
 
+    def _make_sel_event(self, sel_line):
+            # Separate out the components of the sel event
+            # Sample sel event which gets parsed
+            # 2 | 04/16/2019 | 05:29:09 | Fan #0x30 | Lower Non-critical going low  | Asserted
+            index, date, time, device_id, event, status = [
+                attr.strip() for attr in sel_line.split("|") ]
+            device_type, sensor_num = re.match(
+                    '(.*) (#0x([0-9a-f]+))?', device_id).group(1, 3)
+            return (index, date, time, device_id, device_type, sensor_num, event, status)
 
     def _notify_NodeDataMsgHandler(self):
         """See if there is any new event gets generated in the sel and notify
             node data message handler for generating JSON message"""
 
-        status = self._run_ipmitool_subcommand("sel list")
+        last_fru_index = {}
+        last_index = None
+        for (index, date, time, device_id, device_type, sensor_num, event, status) \
+                in self._get_sel_event():
+            last_fru_index[device_type] = index
+            last_index = index
 
-        # TODO: can be optimized with file read approach
-        sel_event_list = ''.join(status[0]).split("\n")
-        # splitting up the attributes from the list generated in the IPMI sel
-        for sel_event in sel_event_list:
-            if sel_event == '':
-                break
+        for (index, date, time, device_id, device_type, sensor_num, event, status) \
+                in self._get_sel_event():
 
-            # Separate out the components of the sel event
-            # Sample sel event which gets parsed
-            # 2 | 04/16/2019 | 05:29:09 | Fan #0x30 | Lower Non-critical going low  | Asserted
-            index, date, time, device_id, event, status = [
-                attr.strip() for attr in sel_event.split("|") ]
+            is_last = (last_fru_index[device_type] == index)
+            logger.debug("_notify_NodeDataMsgHandler fan: is_last: {}, sel_event: {}".format(
+                is_last, (index, date, time, device_id, event, status)))
+            # TODO: Also use information from the command
+            # 'ipmitool sel get <sel-entry-id>'
+            # which gives more detailed information
+            if device_type in self.fru_types:
+                self.fru_types[device_type](index, date, time, device_id,
+                        sensor_num, event, status, is_last)
 
-            index = int(index, base=16)
-            if index <= self.sel_list_index:
-                continue
-            self.sel_list_index = index
-
-            if self.TYPE_FAN in device_id:
-                self._parse_fan_info(index, date, time, device_id, event, status)
-            elif self.TYPE_PSU in device_id:
-                self._parse_psu_info(index, date, time, device_id, event)
-            elif self.TYPE_DISK in device_id:
-                self._parse_disk_info(index, date, time, device_id, event, status)
-            self._write_index_file(self.sel_list_index)
-
+        if last_index is not None:
+            self._write_index_file(last_index)
         self.list_file.seek(0)
         self.list_file.truncate()
 
@@ -367,6 +375,37 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
             out.append(sensor_id)
         return out
 
+    def _get_sensor_sdr_props(self, sensor_id):
+        props_list_out, retcode = self._run_ipmitool_subcommand("sdr get '{0}'".format(sensor_id))
+        if retcode != 0:
+            msg = "ipmitool sensor get command failed: {0}".format(''.join(sel_out))
+            logger.error(msg)
+            return
+        props_list = ''.join(props_list_out).split("\n")
+
+        static_keys = {}
+        curr_key = None
+        for prop in props_list:
+            if prop == '':
+                continue
+            if ':' in prop:
+                curr_key, val = [f.strip() for f in prop.split(":")]
+                static_keys[curr_key] = val
+            else:
+                static_keys[curr_key] += "\n" + prop
+
+        dynamic = {}
+        common_props = {
+            'Sensor ID',
+            'Entity ID',
+        }
+        # Whatever keys from DYNAMIC_KEYS are present,
+        # move them to the 'dynamic' dict
+        for c in (static_keys.viewkeys() & self.DYNAMIC_KEYS):
+            dynamic[c] = static_keys[c]
+            del static_keys[c]
+
+        return (dynamic, static_keys)
 
     def _get_sensor_props(self, sensor_id):
         """get all the properties of a sensor.
@@ -382,16 +421,16 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
         props_list = ''.join(props_list_out).split("\n")
         props_list = props_list[1:] # The first line is 'Locating sensor record...'
 
-        specific = {}
+        specific_static = {}
         curr_key = None
         for prop in props_list:
             if prop == '':
                 continue
             if ':' in prop:
                 curr_key, val = [f.strip() for f in prop.split(":")]
-                specific[curr_key] = val
+                specific_static[curr_key] = val
             else:
-                specific[curr_key] += "\n" + prop
+                specific_static[curr_key] += "\n" + prop
 
         common = {}
         common_props = {
@@ -400,13 +439,18 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
         }
         # Whatever keys from common_props are present,
         # move them to the 'common' dict
-        for c in (specific.viewkeys() & common_props):
-            common[c] = specific[c]
-            del specific[c]
+        for c in (specific_static.viewkeys() & common_props):
+            common[c] = specific_static[c]
+            del specific_static[c]
 
-        return (common, specific)
+        specific_dynamic = {}
+        for c in (specific_static.viewkeys() & self.DYNAMIC_KEYS):
+            specific_dynamic[c] = specific_static[c]
+            del specific_static[c]
 
-    def _parse_fan_info(self, index, date, time, device_id, event, status):
+        return (common, specific_static, specific_dynamic)
+
+    def _parse_fan_info(self, index, date, time, device_id, sensor_id, event, status, is_last):
         """Parse out Fan realted changes that gets reaflected in the ipmi sel list"""
 
         #TODO: Can enrich the sspl event message with more FRU info using
@@ -430,10 +474,9 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
         threshold_event = event.split(" ")
         threshold = threshold_event[len(threshold_event)-1]
 
-        sensor_id = re.match(self.TYPE_FAN + ' ' + '#0x([0-9a-f]+)', device_id).group(1)
         sensor_name = self.sensor_id_map[self.TYPE_FAN][sensor_id]
 
-        fan_common_data, fan_specific_data = self._get_sensor_props(sensor_name)
+        fan_common_data, fan_specific_data, fan_specific_data_dynamic = self._get_sensor_props(sensor_name)
 
         for key in fan_specific_data.keys():
             if key not in fan_specific_list:
@@ -449,50 +492,123 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
         fru_info = { "date": date, "time": time, "fru_id": device_id,
                     "sensor_id": sensor_name, "event": event, "event_status": status }
 
+        if is_last:
+            fan_info.update(fan_specific_data_dynamic)
+
         self._send_json_msg(resource_type, alert_type, severity, fru_info, fan_info)
         self._log_IEM(resource_type, alert_type, severity, fru_info, fan_info)
-        self._write_index_file(index)
 
-    def _parse_psu_info(self, index, date, time, sensor, event):
-        """Parse out Fan realted changes that gets reaflected in the ipmi sel list"""
+    def _parse_psu_supply_info(self, index, date, time, sensor, sensor_num, event, status, is_last):
+        """Parse out PSU related changes that gets reflected in the ipmi sel list"""
 
-        sensor_num = re.match(self.TYPE_PSU + ' #0x([0-9a-f]+)', sensor).group(1)
-        sensor_id = self.sensor_id_map[self.TYPE_PSU][sensor_num]
+        alerts = {
+            ("Config Error", "Asserted"): ("fault","error"),
+            ("Config Error", "Deasserted"): ("fault_resolved","informational"),
+            ("Failure detected ()", "Asserted"): ("fault","error"),
+            ("Failure detected ()", "Deasserted"): ("fault_resolved","informational"),
+            ("Failure detected", "Asserted"): ("fault","error"),
+            ("Failure detected", "Deasserted"): ("fault_resolved","informational"),
+            ("Power Supply AC lost", "Asserted"): ("fault","critical"),
+            ("Power Supply AC lost", "Deasserted"): ("fault_resolved","informational"),
+            ("Power Supply Inactive", "Asserted"): ("fault","critical"),
+            ("Power Supply Inactive", "Deasserted"): ("fault_resolved","informational"),
+            ("Predictive failure", "Asserted"): ("fault","warning"),
+            ("Predictive failure", "Deasserted"): ("fault_resolved","informational"),
+            ("Presence detected", "Asserted"): ("insertion","informational"),
+            ("Presence detected", "Deasserted"): ("missing","critical"),
+        }
 
-        common, specific = self._get_sensor_props(sensor_id)
-        psu_sensors_list = self._get_sensor_list_by_entity(common['Entity ID'])
-        psu_sensors_list.remove(sensor_id)
+        sensor_id = self.sensor_id_map[self.TYPE_PSU_SUPPLY][sensor_num]
 
         info = {
             "date": date, "time": time,
-            "sensor_id": sensor_id, "event": event,
-            "fru_id": sensor
+            "sensor_id": sensor_id, "fru_id": sensor,
+            "event": event,
         }
-        specific_info = specific
 
         resource_type = NodeDataMsgHandler.IPMI_RESOURCE_TYPE_PSU
-        if 'Failure detected' in event:
-            alert_type = "fault"
-        else:
-            alert_type = "information"
+        try:
+            (alert_type, severity) = alerts[(event, status)]
+        except KeyError:
+            logger.error("Unknown event: {}, status: {}".format(event, status))
+            return
 
-        if alert_type == "fault":
-            severity = "critical"
-        else:
-            severity = "informational"
-
+        dynamic, static = self._get_sensor_sdr_props(sensor_id)
+        specific_info = {}
+        specific_info.update(static)
+        if is_last:
+            specific_info.update(dynamic)
 
         self._send_json_msg(resource_type, alert_type, severity, info, specific_info)
         self._log_IEM(resource_type, alert_type, severity, info, specific_info)
-        self._write_index_file(index)
 
-    def _parse_disk_info(self, index, date, time, sensor, event, status):
+    def _parse_psu_unit_info(self, index, date, time, sensor, sensor_num, event, status, is_last):
+        """Parse out PSU related changes that gets reflected in the ipmi sel list"""
+
+        alerts = {
+
+            ("240VA power down", "Asserted"): ("fault", "critical"),
+            ("240VV power down", "Deasserted"): ("fault_resolved", "informational"),
+            ("AC lost", "Asserted"): ("fault", "critical"),
+            ("AC lost", "Deasserted"): ("fault_resolved", "informational"),
+            ("Failure detected", "Asserted"): ("fault", "critical"),
+            ("Failure detected", "Deasserted"): ("fault_resolved", "informational"),
+            ("Power off/down", "Asserted"): ("fault", "critical"),
+            ("Power off/down", "Deasserted"): ("fault_resolved", "informational"),
+            ("Soft-power control failure", "Asserted"): ("fault", "warning"),
+            ("Soft-power control failure", "Deasserted"): ("fault_resolved", "informational"),
+
+
+
+            ("Fully Redundant", "Asserted"): ("fault_resolved", "informational"),
+            ("Fully Redundant", "Deasserted"): ("fault", "warning"),
+            ("Non-Redundant: Insufficient Resources", "Asserted"): ("fault", "critical"),
+            ("Non-Redundant: Insufficient Resources", "Deasserted"): ("fault_resolved", "informational"),
+            ("Non-Redundant: Sufficient from Insufficient", "Asserted"): ("fault", "warning"),
+            ("Non-Redundant: Sufficient from Insufficient", "Deasserted"): ("fault", "warning"),
+            ("Non-Redundant: Sufficient from Redundant", "Asserted"): ("fault", "warning"),
+            ("Non-Redundant: Sufficient from Redundant", "Deasserted"): ("fault", "informational"),
+            ("Redundancy Degraded", "Asserted"): ("fault", "warning"),
+            ("Redundancy Degraded", "Deasserted"): ("fault_resolved", "informational"),
+            ("Redundancy Degraded from Fully Redundant", "Asserted"): ("fault", "warning"),
+            ("Redundancy Degraded from Fully Redundant", "Deasserted"): ("fault_resolved", "warning"),
+            ("Redundancy Degraded from Non-Redundant", "Asserted"): ("fault", "critical"),
+            ("Redundancy Degraded from Non-Redundant", "Deasserted"): ("fault_resolved", "warning"),
+            ("Redundancy Lost", "Asserted"): ("fault", "warning"),
+            ("Redundancy Lost", "Deasserted"): ("fault_resolved", "informational"),
+
+        }
+
+        sensor_id = self.sensor_id_map[self.TYPE_PSU_UNIT][sensor_num]
+
+        info = {
+            "date": date, "time": time,
+            "sensor_id": sensor_id, "fru_id": sensor,
+            "event": event,
+        }
+
+        resource_type = NodeDataMsgHandler.IPMI_RESOURCE_TYPE_PSU
+        try:
+            (alert_type, severity) = alerts[(event, status)]
+        except KeyError:
+            logger.error("Unknown event: {}, status: {}".format(event, status))
+            return
+
+        dynamic, static = self._get_sensor_sdr_props(sensor_id)
+        specific_info = {}
+        specific_info.update(static)
+        if is_last:
+            specific_info.update(dynamic)
+
+        self._send_json_msg(resource_type, alert_type, severity, info, specific_info)
+        self._log_IEM(resource_type, alert_type, severity, info, specific_info)
+
+    def _parse_disk_info(self, index, date, time, sensor, sensor_num, event, status, is_last):
         """Parse out Disk related changes that gets reaflected in the ipmi sel list"""
 
-        sensor_num = re.match(self.TYPE_DISK + ' #0x([0-9a-f]+)', sensor).group(1)
         sensor_id = self.sensor_id_map[self.TYPE_DISK][sensor_num]
 
-        common, specific = self._get_sensor_props(sensor_id)
+        common, specific, specific_dynamic = self._get_sensor_props(sensor_id)
         if common:
             disk_sensors_list = self._get_sensor_list_by_entity(common['Entity ID'])
             disk_sensors_list.remove(sensor_id)
@@ -517,9 +633,11 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
                 alert_type = "fault"
                 severity   = "informational"
 
+            if is_last:
+                specific_info.update(specific_dynamic)
+
             self._send_json_msg(resource_type, alert_type, severity, info, specific_info)
             self._log_IEM(resource_type, alert_type, severity, info, specific_info)
-            self._write_index_file(index)
 
     def _send_json_msg(self, resource_type, alert_type, severity, info, specific_info):
         """Transmit data to NodeDataMsgHandler which takes two arguments.

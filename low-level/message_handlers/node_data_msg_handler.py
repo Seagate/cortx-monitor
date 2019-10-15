@@ -29,7 +29,7 @@ from json_msgs.messages.sensors.cpu_data import CPUdataMsg
 from json_msgs.messages.sensors.if_data import IFdataMsg
 from json_msgs.messages.sensors.raid_data import RAIDdataMsg
 from json_msgs.messages.sensors.disk_space_alert import DiskSpaceAlertMsg
-from json_msgs.messages.sensors.node_hw_data import NodeIPMIDataMsg, NodePSUDataMsg
+from json_msgs.messages.sensors.node_hw_data import NodeIPMIDataMsg
 
 from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 
@@ -224,8 +224,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         elif jsonMsg.get("sensor_request_type") is not None and \
             jsonMsg.get("sensor_request_type").get("node_data") is not None and \
             jsonMsg.get("sensor_request_type").get("node_data").get("resource_type") is not None:
-                fru_type = jsonMsg.get("sensor_request_type").get("node_data").get("resource_type").split(":")[2]
-                self._generate_node_fru_data(jsonMsg, fru_type)
+                self._generate_node_fru_data(jsonMsg)
 
         # ... handle other node sensor message types
 
@@ -443,30 +442,8 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         # Transmit it out over rabbitMQ channel
         self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
 
-    def _generate_node_fru_data(self, jsonMsg, fru_type):
+    def _generate_node_fru_data(self, jsonMsg):
         """Create & transmit a FRU IPMI data message as defined
-            by the sensor response json schema"""
-
-        if fru_type == "psu":
-            self._generate_psu_data(jsonMsg)
-        else:
-            if self._node_sensor.host_id == None:
-                successful = self._node_sensor.read_data("None", self._get_debug(), self._units)
-                if not successful:
-                    logger.error("NodeDataMsgHandler, updating host information was NOT successful.")
-
-            if jsonMsg.get("sensor_request_type").get("node_data").get("status") is not None:
-                self._fru_info = jsonMsg.get("sensor_request_type").get("node_data")
-                node_ipmi_data_msg = NodeIPMIDataMsg(self._node_sensor.host_id, self._fru_info)
-
-            if self._uuid is not None:
-                node_ipmi_data_msg.set_uuid(self._uuid)
-            jsonMsg = node_ipmi_data_msg.getJson()
-
-            self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
-
-    def _generate_psu_data(self, jsonMsg):
-        """Create & transmit a FRU psu data message as defined
             by the sensor response json schema"""
 
         if self._node_sensor.host_id == None:
@@ -476,11 +453,11 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
         if jsonMsg.get("sensor_request_type").get("node_data").get("status") is not None:
             self._fru_info = jsonMsg.get("sensor_request_type").get("node_data")
-            node_psu_data_msg = NodePSUDataMsg(self._node_sensor.host_id, self._fru_info)
+            node_ipmi_data_msg = NodeIPMIDataMsg(self._node_sensor.host_id, self._fru_info)
 
         if self._uuid is not None:
-             node_psu_data_msg.set_uuid(self._uuid)
-        jsonMsg = node_psu_data_msg.getJson()
+            node_ipmi_data_msg.set_uuid(self._uuid)
+        jsonMsg = node_ipmi_data_msg.getJson()
 
         self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
 

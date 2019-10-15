@@ -90,11 +90,3 @@ class NodeIPMIDataMsg(NodeHWDataMsg):
                          "specific_info": specific_info}
 
         self._json["message"]["sensor_response_type"] = node_ipmi_data
-
-class NodePSUDataMsg(NodeHWDataMsg):
-    def __init__(self, host_id, psu_event):
-        super(NodePSUDataMsg, self).__init__(host_id)
-
-        self._psu = psu_event
-        self._psu["hostId"] = self._host_id
-        self._json["message"]["sensor_response_type"] = self._psu
