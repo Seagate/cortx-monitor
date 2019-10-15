@@ -23,6 +23,7 @@ flask_help()
 pre_requisites()
 {
     # Backing up original persistence data
+    $sudo rm -rf /var/sspl/orig-data
     $sudo mv /var/sspl/data /var/sspl/orig-data
 
     # Need empty persitence cache dir
