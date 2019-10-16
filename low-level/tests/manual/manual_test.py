@@ -592,12 +592,14 @@ class ManualTest():
             ch.basic_ack(delivery_tag = method.delivery_tag)
 
         # Sets the callback function to be used when start_consuming is called and specifies the queue to pull messages off of.
-        channel.basic_consume(callback,
-                              queue=result.method.queue)
         try:
+          channel.basic_consume(callback,
+                          queue=result.method.queue)
           channel.start_consuming()
         except KeyboardInterrupt:
             channel.stop_consuming()
+        except Exception as err:
+            print("Connection is Broken, observed error: {0}".format(err))
 
     def basicConsumeAck(self):
         """Starts consuming all messages sent on the ack channel
@@ -671,12 +673,14 @@ class ManualTest():
             ch.basic_ack(delivery_tag = method.delivery_tag)
 
         # Sets the callback function to be used when start_consuming is called and specifies the queue to pull messages off of.
-        channel.basic_consume(callback,
-                              queue=result.method.queue)
         try:
+          channel.basic_consume(callback,
+                                queue=result.method.queue)
           channel.start_consuming()
         except KeyboardInterrupt:
             channel.stop_consuming()
+        except Exception as err:
+            print("Connection is Broken, observed error: {0}".format(err))
 
     def get_msg_received(self):
         return self._msg_received
