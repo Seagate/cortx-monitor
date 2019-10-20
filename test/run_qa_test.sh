@@ -55,7 +55,7 @@ cleanup()
     exit 1
 }
 
-trap cleanup 0 2 15
+trap cleanup 0 1 2 3 6 9 15
 
 execute_test()
 {
