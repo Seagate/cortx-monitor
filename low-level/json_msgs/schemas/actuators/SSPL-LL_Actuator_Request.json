@@ -162,11 +162,11 @@
 									"type": "string",
 									"required": true
 								},
-                                "resource": {
-									"description": "Action to be performed on node",
+								"resource": {
+									"description": "Node entity to perform action upon. Required only for node hw actuator",
 									"type": "string",
 									"required": false
-                                }
+								}
 							}
 						},
 

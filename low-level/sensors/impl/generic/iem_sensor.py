@@ -32,6 +32,7 @@ class IEMSensor(ScheduledModuleThread, InternalMsgQ):
 
     SENSOR_NAME = "IEMSensor"
     SENSOR_RESP_TYPE = "iem_alert"
+    SYSTEM_INFORMATION = "SYSTEM_INFORMATION"
 
     # Keys for config settings
     PIPE_PATH_KEY = "pipe_path"
@@ -105,13 +106,13 @@ class IEMSensor(ScheduledModuleThread, InternalMsgQ):
             self.DEFAULT_PIPE_PATH)
 
         self._site_id = self._conf_reader._get_value_with_default(
-            self.SENSOR_NAME.upper(), self.SITE_ID_KEY, self.DEFAULT_SITE_ID)
+            self.SYSTEM_INFORMATION.upper(), self.SITE_ID_KEY, self.DEFAULT_SITE_ID)
 
         self._rack_id = self._conf_reader._get_value_with_default(
-            self.SENSOR_NAME.upper(), self.RACK_ID_KEY, self.DEFAULT_RACK_ID)
+            self.SYSTEM_INFORMATION.upper(), self.RACK_ID_KEY, self.DEFAULT_RACK_ID)
 
         self._node_id = self._conf_reader._get_value_with_default(
-            self.SENSOR_NAME.upper(), self.NODE_ID_KEY, self.DEFAULT_NODE_ID)
+            self.SYSTEM_INFORMATION.upper(), self.NODE_ID_KEY, self.DEFAULT_NODE_ID)
 
     def read_data(self):
         """This method is part of interface. Currently it is not

@@ -17,9 +17,17 @@
             "debug_component" : "sensor",
             "debug_enabled" : true
             },
+        "request_path":{
+            "site_id": 0,
+            "rack_id": 0,
+            "node_id": 1
+        },
+        "response_dest":{
+        },
         "actuator_request_type": {
             "node_controller": {
-                "node_request": "NDHW: DISK, FAN and PSU"
+                "node_request": "NDHW:node:fru:<fru-type>",
+                "resource":  "<instance-id>/*"
             }
         }
     }

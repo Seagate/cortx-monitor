@@ -25,6 +25,7 @@ from framework.base.sspl_constants import enabled_products
 
 from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 from json_msgs.messages.actuators.ack_response import AckResponseMsg
+from json_msgs.messages.actuators.ndhw_ack_response import NodeHwAckResponseMsg
 
 from message_handlers.disk_msg_handler import DiskMsgHandler
 from message_handlers.service_msg_handler import ServiceMsgHandler
@@ -621,10 +622,11 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     self._write_internal_msgQ(DiskMsgHandler.name(), internal_json_msg)
 
             elif component == "NDHW":
+                # NDHW Stands for Node HW.
                 # Check for VM environment
                 if self._is_env_vm():
                     # For VM environment,send Unsupported response in ack channel
-                    json_msg = AckResponseMsg(node_request, "Unsupported", uuid).getJson()
+                    json_msg = NodeHwAckResponseMsg(node_request, "Unsupported", uuid).getJson()
                     self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
                     return
                 try:
@@ -641,24 +643,24 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                            ipmi_factory.get_implementor(self.ipmi_client_name)
                         # Instantiate NodeHWactuator only if class is loaded
                         if ipmi_client is not None:
-                            self._NodeHW_actuator = NodeHWactuator(ipmi_client)
+                            self._NodeHW_actuator = NodeHWactuator(ipmi_client, self._conf_reader)
                             self._NodeHW_actuator.initialize()
                         else:
                             logger.error("IPMI client: '"'{0}'"' doesn't exist".format(self.ipmi_client_name))
                             return
                     node_request = jsonMsg.get("actuator_request_type")
                     # Perform the NodeHW request on the node and get the response
+                    #TODO: Send message to Ack as well as Sensor in their respective channel.
                     node_hw_response = self._NodeHW_actuator.perform_request(node_request)
                     self._log_debug("_process_msg, node_hw_response: %s" % node_hw_response)
-                    # json_msg = AckResponseMsg(node_request, node_hw_response, uuid).getJson()
-                    # self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+                    json_msg = NodeHwAckResponseMsg(node_request, node_hw_response, uuid).getJson()
+                    self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
                 except ImportError as e:
                     logger.error("Modules could not be loaded: %s" % e)
                     return
                 except Exception as e:
                     logger.error("NodeControllerMsgHandler, _process_msg, Exception in request handling: %s" % e)
                     return
-                #TODO: Send message to Ack as well as Sensor in their respective channel.
 
             else:
                 response = "NodeControllerMsgHandler, _process_msg, unknown node controller msg: {}" \

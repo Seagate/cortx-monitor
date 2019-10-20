@@ -9,7 +9,7 @@ class IPMITool(IPMI):
        functionality using ipmitool utility
     """
     _instance = None
-    IPMITOOL = "sudo /usr/bin/ipmitool"
+    IPMITOOL = "sudo /usr/bin/ipmitool "
 
     def __new__(cls):
         """new method"""
@@ -34,8 +34,31 @@ class IPMITool(IPMI):
            Sys Fan 2B       | 33h | ok  | 29.4 | 5332 RPM
            ( sensor_id | sensor_num | status | entity_id |
             <FRU Specific attribute> )
+            Params : self, fru_type
+            Output Format : List of Tuple
+            Output Example : [(HDD 1 Status, F1, ok, 4.2, Drive Present),]
         """
-        raise NotImplementedError()
+        sensor_list_out, retcode = self._run_ipmitool_subcommand("sdr type '{0}'".format(fru_type))
+        if retcode != 0:
+            msg = "ipmitool sdr type command failed: {0}".format(''.join(sensor_list_out))
+            logger.error(msg)
+            return
+        sensor_list = ''.join(sensor_list_out).split("\n")
+
+        out = []
+        for sensor in sensor_list:
+            if sensor == "":
+                break
+            # Example of output form 'sdr type' command:
+            # Sys Fan 2B       | 33h | ok  | 29.4 | 5332 RPM
+            # PS1 1a Fan Fail  | A0h | ok  | 29.13 |
+            # HDD 1 Status     | F1h | ok  |  4.2 | Drive Present
+            fields_list = [ f.strip() for f in sensor.split("|")]
+            sensor_id, sensor_num, status, entity_id, reading  = fields_list
+            sensor_num = sensor_num.strip("h").lower()
+
+            out.append((sensor_id, sensor_num, status, entity_id, reading))
+        return out
 
     def get_sensor_sdr_props(self, sensor_id):
         """Returns sensor software data record based on sensor id of a FRU
@@ -45,26 +68,75 @@ class IPMITool(IPMI):
         """
         raise NotImplementedError()
 
-    def get_sensor_props(self):
+    def get_sensor_props(self, sensor_id):
         """Returns individual sensor instance properties based on
            sensor id using ipmitool utility
            ipmitool sensor get "Sys Fan 1A"
            Returns FRU instance specific information
+           Params : self, sensor_id
+           Output Format : Tuple inside dictionary of common and specific data
+           Output Example : ({common dict data},{specific dict data})
         """
-        raise NotImplementedError()
+        props_list_out, retcode = self._run_ipmitool_subcommand("sensor get '{0}'".format(sensor_id))
+        if retcode != 0:
+            msg = "ipmitool sensor get command failed: {0}".format(''.join(props_list_out))
+            logger.error(msg)
+            return (False, False)
+        props_list = ''.join(props_list_out).split("\n")
+        props_list = props_list[1:] # The first line is 'Locating sensor record...'
 
-    def _run_ipmitool_sub_command(self, sub_command, grep_args=None):
-        """executes ipmitool sub-commands using python subprocess module,
-           and optionally greps the output
+        specific = {}
+        curr_key = None
+        for prop in props_list:
+            if prop == '':
+                continue
+            if ':' in prop:
+                curr_key, val = [f.strip() for f in prop.split(":")]
+                specific[curr_key] = val
+            else:
+                specific[curr_key] += "\n" + prop
+
+        common = {}
+        common_props = {
+            'Sensor ID',
+            'Entity ID',
+        }
+        # Whatever keys from common_props are present,
+        # move them to the 'common' dict
+        for c in (specific.viewkeys() & common_props):
+            common[c] = specific[c]
+            del specific[c]
+
+        return (common, specific)
+
+    def get_fru_list_by_type(self, fru_list, sensor_id_map):
+        """Returns FRU instances list using ipmitool sdr type command
+            Params : self, fru_list, sensor_id_map
+            Output Format : dictionary which have fru_instance mapping with fru id
+            Output Example : {"disk":{0:"HDD 1 Status", },"fan":{}}
         """
-        command = IPMITool.IPMITOOL + ' ' + sub_command
-        if grep_args is not None:
-            command += " | grep " + grep_args
-        process = subprocess.Popen(command, shell=True,
-                                   stdout=subprocess.PIPE,
-                                   stderr=subprocess.PIPE)
+        for fru in fru_list:
+            fru_detail = self.get_sensor_list_by_type(fru)
+            sensor_id_map[fru] = {fru_detail.index(fru): fru[0].strip()
+                for fru in fru_detail}
+        return sensor_id_map
+
+    def _run_command(self, command, out_file=subprocess.PIPE):
+        """executes commands"""
+
+        process = subprocess.Popen(command, shell=True, stdout=out_file, stderr=subprocess.PIPE)
         result = process.communicate()
         return result, process.returncode
+
+    def _run_ipmitool_subcommand(self, subcommand, grep_args=None, out_file=subprocess.PIPE):
+        """executes ipmitool sub-commands, and optionally greps the output"""
+
+        command = self.IPMITOOL + subcommand
+        if grep_args is not None:
+            command += " | grep " + grep_args
+        res, retcode = self._run_command(command, out_file)
+
+        return res, retcode
 
 
 class IpmiFactory(object):

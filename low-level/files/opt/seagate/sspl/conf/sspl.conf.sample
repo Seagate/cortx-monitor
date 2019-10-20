@@ -14,6 +14,9 @@ product=CS-A
 cli_type=CS-A
 setup=hw
 data_path=/var/sspl/data/
+site_id=001
+rack_id=001
+node_id=001
 
 [RABBITMQINGRESSPROCESSOR]
 virtual_host=SSPL
@@ -167,9 +170,6 @@ threaded=true
 [IEMSENSOR]
 threaded=true
 pipe_path=/var/sspl/data/iem
-site_id=001
-rack_id=001
-node_id=001
 
 [NODEHWACTUATOR]
 ipmi_client=ipmitool
