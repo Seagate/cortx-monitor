@@ -60,6 +60,11 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
     TYPE_FAN = 'Fan'
     TYPE_DISK = 'Drive Slot / Bay'
 
+    SEL_USAGE_THRESHOLD = 90
+    SEL_INFO_PERC_USED = "Percent Used"
+    SEL_INFO_FREESPACE = "Free Space"
+    SEL_INFO_ENTRIES = "Entries"
+
     CACHE_DIR_NAME  = "server"
     # This file stores the last index from the SEL list for which we have issued an event.
     INDEX_FILE = "last_sel_index"
@@ -71,6 +76,8 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
     IPMI_ERRSTR = "Could not open device at "
 
     request_shutdown = False
+    sel_last_queried = None
+    SEL_QUERY_FREQ = 300
 
     DYNAMIC_KEYS = {
             "Sensor Reading",
@@ -193,6 +200,71 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
         self.list_file.close()
         self.list_file = open(list_file_name, self.UPDATE_ONLY_MODE)
 
+    def _check_and_clear_sel(self):
+        """ Clear SEL Table if SEL used memory seen above threshold
+            SEL_USAGE_THRESHOLD """
+
+        info_dict = {}
+
+        if self.sel_last_queried:
+            last_checked = time.time() - self.sel_last_queried
+
+            if last_checked < self.SEL_QUERY_FREQ:
+                return
+
+        try:
+            sel_info, retcode = self._run_ipmitool_subcommand("sel info")
+            if retcode != 0:
+                logger.error("ipmitool sel info command failed, "
+                    "with err {0}".format(retcode))
+                return (False)
+
+            # record SEL last queried time
+            self.sel_last_queried = time.time()
+
+            key = val = None
+            info_list = ''.join(sel_info).split("\n")
+
+            for info in info_list:
+                if ':' in info:
+                    key, val = [f.strip() for f in info.split(":", 1)]
+                    info_dict[key] = val
+
+            if self.SEL_INFO_PERC_USED in info_dict:
+                '''strip '%' or any unwanted char from value'''
+                info_dict[self.SEL_INFO_PERC_USED] = re.sub('%', '',
+                                          info_dict[self.SEL_INFO_PERC_USED])
+
+                if info_dict[self.SEL_INFO_PERC_USED].isdigit():
+                   used = int(info_dict[self.SEL_INFO_PERC_USED])
+                else:
+                    entries = int(info_dict[self.SEL_INFO_ENTRIES])
+                    free = int(re.sub('[A-Za-z]+','',\
+                               info_dict[self.SEL_INFO_FREESPACE]))
+
+                    entries = entries * 16
+                    free = free + entries
+
+                    used = (100 * entries) / free
+                    logger.debug("SEL % Used: calculated {0}%".format(used))
+
+            if used > self.SEL_USAGE_THRESHOLD:
+                logger.warning("SEL usage above threshold {0}%, "
+                    "clearing SEL".format(self.SEL_USAGE_THRESHOLD))
+
+                cleared, retcode = self._run_ipmitool_subcommand("sel clear")
+                if retcode != 0:
+                    logger.critical("{0}: Error in clearing SEL, overflow"
+                        " may result in loss of node alerts from SEL in future"\
+                        .format(self.host_id))
+                    return
+
+                #reset last processed SEL index in cached index file
+                self._write_index_file(0)
+
+        except Exception as ae:
+            logger.exception(ae)
+
     def run(self):
         """Run the sensor on its own thread"""
 
@@ -211,6 +283,8 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
 
                 self._update_list_file()
                 self._notify_NodeDataMsgHandler()
+
+                self._check_and_clear_sel()
             except Exception as ae:
                 logger.exception(ae)
 
