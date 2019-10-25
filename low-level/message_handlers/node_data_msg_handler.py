@@ -47,6 +47,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
     TRANSMIT_INTERVAL = 'transmit_interval'
     UNITS = 'units'
     DISK_USAGE_THRESHOLD = 'disk_usage_threshold'
+    DEFAULT_DISK_USAGE_THRESHOLD = 80
 
     IPMI_RESOURCE_TYPE_PSU = "node:fru:psu"
     IPMI_RESOURCE_TYPE_FAN = "node:fru:fan"
@@ -90,10 +91,10 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                                                 self.NODEDATAMSGHANDLER,
                                                 self.UNITS,
                                                 "MB")
-        self._disk_usage_threshold = int(self._conf_reader._get_value_with_default(
+        self._disk_usage_threshold = self._conf_reader._get_value_with_default(
                                                 self.NODEDATAMSGHANDLER,
                                                 self.DISK_USAGE_THRESHOLD,
-                                                80))
+                                                self.DEFAULT_DISK_USAGE_THRESHOLD)
 
         self._node_sensor    = None
         self._login_actuator = None
@@ -375,6 +376,18 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         if not successful:
             logger.error("NodeDataMsgHandler, _generate_disk_space_alert was NOT successful.")
             return
+
+        # Changing disk_usage_threshold type according to what value type entered in config file
+        self._disk_usage_threshold = str(self._disk_usage_threshold)
+        try:
+            if self._disk_usage_threshold.isdigit():
+                self._disk_usage_threshold = int(self._disk_usage_threshold)
+            else:
+                self._disk_usage_threshold = float(self._disk_usage_threshold)
+        except ValueError:
+            logger.warning("Disk Space Alert, Invalid disk_usage_threshold value are entered in config.")
+            # Assigning default value to _disk_usage_threshold
+            self._disk_usage_threshold = self.DEFAULT_DISK_USAGE_THRESHOLD
 
         if self._node_sensor.disk_used_percentage >= self._disk_usage_threshold:
             # Create the disk space data message and hand it over to the egress processor to transmit
