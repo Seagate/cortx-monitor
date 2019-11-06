@@ -63,6 +63,7 @@ class NodeHWactuator(Actuator, Debug):
                                                 0))
         self.sensor_id_map = None
         self._executor = executor
+        self.fru_specific_info = {}
         self._resource_id = ""
         self._sensor_type = ""
 
@@ -72,6 +73,46 @@ class NodeHWactuator(Actuator, Debug):
             ['fan', 'power supply', 'drive slot / bay'],
             sensor_id_map={})
         self.sensor_id_map = sensor_id_map
+
+    def _get_fru_instances(self, fru, fru_instance):
+        """Get the fru information based on fru_type and instance"""
+        response = None
+        sensor_props_list = {}
+        fru_info_dict = {}
+        if fru_instance == "*":
+            try:
+                fru_dict = self.sensor_id_map[fru.lower()]
+                for sensor_id in fru_dict.values():
+                    if sensor_id == '':
+                        continue
+                    sensor_common_info, sensor_specific_info = self._executor.get_sensor_props(sensor_id)
+                    self.fru_specific_info[sensor_id] = sensor_specific_info
+
+                if self.fru_specific_info is not None:
+                    response = self._parse_fru_info()
+            except KeyError as e:
+                logger.error('NodeHWactuator, _get_fru_instances, \
+                                Unable to process the FRU type: %s' % e)
+                return
+            except Exception as e:
+                logger.exception('NodeHWactuator, _get_fru_instances, \
+                                Error occured during request parsing %s' % e)
+                return
+        return response
+
+    def _parse_fru_info(self):
+        """Parses fan information"""
+        fru_type = "fan"
+        specific_info = None
+        specifics = []
+        for sensor_id, fru_info in self.fru_specific_info.iteritems():
+            specific_info = dict()
+            for fru_key,fru_value in fru_info.iteritems():
+                specific_info[fru_key] = fru_value
+            specific_info["resource_id"] = sensor_id
+            specifics.append(specific_info)
+        response = self._create_node_fru_json_message(specifics)
+        return response
 
     def perform_request(self, json_msg):
         """Performs the Node server request
@@ -83,13 +124,13 @@ class NodeHWactuator(Actuator, Debug):
         node_request_instance = node_request.get("node_request").split(":")[:3]
 
         if node_request_instance == ['NDHW', 'node', 'fru']:
-            response = self._get_node_fru_info(node_request)
+            response = self._process_fru_request(node_request)
         elif node_request_instance == ['NDHW', 'node', 'sensor']:
             response = self._process_sensor_request(node_request)
 
         return response
 
-    def _get_node_fru_info(self, node_request):
+    def _process_fru_request(self, node_request):
         """Get the fru information based on node_request
         @return: The response string from performing the request
         """
@@ -109,7 +150,7 @@ class NodeHWactuator(Actuator, Debug):
             # Converting Fru ID From "HDD 0 Status (0xf0)" to "Drive Slot / Bay #0xf0"
             response['specific_info']['fru_id'] = fru+" #"+common['Sensor ID'].split('(')[1][:-1]
         else:
-            pass
+            response = self._get_fru_instances(fru, fru_instance)
 
         return response
 
@@ -131,6 +172,7 @@ class NodeHWactuator(Actuator, Debug):
             "site_id": self._site_id,
             "rack_id": self._rack_id,
             "node_id": self._node_id,
+            "resource_id": "*",
             "resource_type": resource_type,
             "fetch_time": epoch_time
           },
