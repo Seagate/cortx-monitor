@@ -2,6 +2,7 @@ import abc
 import subprocess
 
 from framework.utils.ipmi import IPMI
+from framework.utils.service_logging import logger
 
 
 class IPMITool(IPMI):
@@ -130,10 +131,16 @@ class IPMITool(IPMI):
 
     def _run_ipmitool_subcommand(self, subcommand, grep_args=None, out_file=subprocess.PIPE):
         """executes ipmitool sub-commands, and optionally greps the output"""
-
         command = self.IPMITOOL + subcommand
         if grep_args is not None:
-            command += " | grep " + grep_args
+            command += " | grep "
+            if isinstance(grep_args, list):
+                grep_args_str = ""
+                for arg in grep_args:
+                    grep_args_str = "'{}' ".format(arg)
+                command += grep_args_str
+            else:
+                command += "'{}'".format(grep_args)
         res, retcode = self._run_command(command, out_file)
 
         return res, retcode
