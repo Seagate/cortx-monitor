@@ -69,7 +69,7 @@ $sudo lxc-attach -n $vm_name  -- bash -c " [ ! -f $sspl_install_dir/sspl/dist/rp
 # Removing installation of httpd package from this list and replacing it with
 # chronyd as httpd was conflicting with other service during testing.
 $sudo lxc-attach -n $vm_name  -- yum -y install chrony python2-pip rpm-build git \
-python-Levenshtein graphviz openssl-devel check-devel python-pep8 doxygen libtool sudo make
+graphviz openssl-devel check-devel python-pep8 doxygen libtool sudo make
 
 # Install lettuce
 $sudo lxc-attach -n $vm_name  -- pip install lettuce==0.2.23

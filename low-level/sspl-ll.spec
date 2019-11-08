@@ -16,7 +16,7 @@ License:    Seagate Proprietary
 URL:        http://gerrit.mero.colo.seagate.com:8080/#/admin/projects/sspl
 Source0:    %{name}-%{version}.tgz
 BuildRoot:  %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
-BuildRequires: rpm-build sudo python-Levenshtein
+BuildRequires: rpm-build sudo
 Requires:   python-daemon python-zope-interface python-zope-event python-zope-component python-pika python-jsonschema rabbitmq-server
 Requires:   pysnmp systemd-python pygobject2 python-slip-dbus udisks2 python-psutil python-inotify python-paramiko hdparm pyserial
 Requires:   python-requests ipmitool

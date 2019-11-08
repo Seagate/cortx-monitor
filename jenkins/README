@@ -4,7 +4,6 @@ Steps for building the source code
 1. Install the required RPMs as shown below:
 
     $ sudo yum install epel-release
-    $ sudo yum install python-Levenshtein
     $ sudo yum install -y libtool
     $ sudo yum install -y doxygen
     $ sudo yum install -y python-pep8
