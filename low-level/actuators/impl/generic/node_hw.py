@@ -112,6 +112,7 @@ class NodeHWactuator(Actuator, Debug):
             specific_info["resource_id"] = sensor_id
             specifics.append(specific_info)
         response = self._create_node_fru_json_message(specifics)
+        self.fru_specific_info = {}
         return response
 
     def perform_request(self, json_msg):
