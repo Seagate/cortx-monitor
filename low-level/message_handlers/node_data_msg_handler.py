@@ -224,7 +224,8 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 self._update_devicename_sn_dict(jsonMsg)
         elif jsonMsg.get("sensor_request_type") is not None and \
             jsonMsg.get("sensor_request_type").get("node_data") is not None and \
-            jsonMsg.get("sensor_request_type").get("node_data").get("resource_type") is not None:
+            jsonMsg.get("sensor_request_type").get("node_data").get("info") is not None and \
+            jsonMsg.get("sensor_request_type").get("node_data").get("info").get("resource_type") is not None:
                 self._generate_node_fru_data(jsonMsg)
 
         # ... handle other node sensor message types
@@ -464,9 +465,9 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             if not successful:
                 logger.error("NodeDataMsgHandler, updating host information was NOT successful.")
 
-        if jsonMsg.get("sensor_request_type").get("node_data").get("status") is not None:
+        if jsonMsg.get("sensor_request_type").get("node_data") is not None:
             self._fru_info = jsonMsg.get("sensor_request_type").get("node_data")
-            node_ipmi_data_msg = NodeIPMIDataMsg(self._node_sensor.host_id, self._fru_info)
+            node_ipmi_data_msg = NodeIPMIDataMsg(self._fru_info)
 
         if self._uuid is not None:
             node_ipmi_data_msg.set_uuid(self._uuid)

@@ -27,14 +27,12 @@ class NodeHWDataMsg(BaseSensorMsg):
     SENSOR_MSG_TYPE = "node_hw_data"
     MESSAGE_VERSION  = "1.0.0"
 
-    def __init__(self, host_id,
-                       username  = "SSPL-LL",
+    def __init__(self, username  = "SSPL-LL",
                        signature = "N/A",
                        time      = "N/A",
                        expires   = -1):
         super(NodeHWDataMsg, self).__init__()
 
-        self._host_id           = host_id
         self._username          = username
         self._signature         = signature
         self._time              = time
@@ -62,29 +60,24 @@ class NodeHWDataMsg(BaseSensorMsg):
         self.validateMsg(self._json)
         return json.dumps(self._json)
 
-    def get_host_id(self):
-        return self.host_id
-
-    def set_host_id(self, host_id):
-        self._host_id = host_id
-
     def set_uuid(self, _uuid):
         self._json["message"]["sspl_ll_msg_header"]["uuid"] = _uuid
 
 class NodeIPMIDataMsg(NodeHWDataMsg):
-    def __init__(self, host_id, fru):
-        super(NodeIPMIDataMsg, self).__init__(host_id)
+    def __init__(self, fru):
+        super(NodeIPMIDataMsg, self).__init__()
 
         self.fru = fru
-        resource_type = fru.get("resource_type")
         alert_type = fru.get("alert_type")
         severity = fru.get("severity")
         info = fru.get("info")
         specific_info = fru.get("specific_info")
+        host_id = fru.get("host_id")
+        alert_id = fru.get("alert_id")
 
-        node_ipmi_data = {"host_name": self._host_id,
+        node_ipmi_data = {"host_id": host_id,
                          "alert_type": alert_type,
-                         "resource_type": resource_type,
+                         "alert_id": alert_id,
                          "severity": severity,
                          "info": info,
                          "specific_info": specific_info}

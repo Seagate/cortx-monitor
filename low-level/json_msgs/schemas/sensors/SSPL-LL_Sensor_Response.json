@@ -744,7 +744,7 @@
                                 "alert_type":{
                                     "description": "Enclosure alert cause",
                                     "type": "string",
-                                    "required": true
+                                    "required": false
                                 },
                                 "alert_id":{
                                     "description": "Id which will uniquely identify this alert",
@@ -763,7 +763,7 @@
                                 },
                                 "info": {
                                     "type": "object",
-                                    "required": true,
+                                    "required": false,
                                             "properties":{
                                                 "site_id": {
                                                     "description": "Site unique ID",
@@ -777,7 +777,7 @@
                                                   },
                                                 "node_id": {
                                                     "description": "Unique Node id in a rack",
-                                                    "type": "string",
+                                                    "type": "integer",
                                                     "required": true
                                                   },
                                                 "cluster_id": {
@@ -924,58 +924,6 @@
 								}
 							}
 						},
-
-                                            "hostId": {
-                                                "description": "Hostname of the system",
-                                                "type": "string"
-                                            },
-                                            "resource_type": {
-                                                "description": "Type of the resource on the node",
-                                                "type": "string"
-                                            },
-                                            "alert_type": {
-                                                "description": "Type of the alert on the resource",
-                                                "type": "string"
-                                            },
-                                            "severity": {
-                                                "description": "Severity of the alert on the resource",
-                                                "type": "string"
-                                            },
-                                            "info": {
-                                                "description": "Common properties of the resource",
-                                                "type": "object",
-                                                "properties": {
-                                                    "sensor_id":{
-                                                        "description": "The IPMI ID of the sensor on which the event was generated",
-                                                        "type": "string",
-                                                        "required": false
-                                                    },
-                                                    "time":{
-                                                        "description": "The time at which the event was generated",
-                                                        "type": "string",
-                                                        "required": false
-                                                    },
-                                                    "date":{
-                                                        "description": "The date on which the event was generated",
-                                                        "type": "string",
-                                                        "required": false
-                                                    },
-                                                    "fru_id":{
-                                                        "description": "The FRU ID of the sensor on which the event was generated",
-                                                        "type": "string",
-                                                        "required": false
-                                                    },
-                                                    "event":{
-                                                        "description": "The event that was generated",
-                                                        "type": "string",
-                                                        "required": false
-                                                    }
-                                                }
-                                            },
-                                            "specific_info": {
-                                                "description": "Specific properties of the resource",
-                                                "type": "object"
-                                            },
 
 						"snmp_trap": {
 							"description": "SNMP Trap Information",

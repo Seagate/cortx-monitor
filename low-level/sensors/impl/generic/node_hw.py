@@ -20,6 +20,8 @@ import time
 import json
 import re
 import tempfile
+import socket
+import uuid
 
 from zope.interface import implements
 
@@ -75,6 +77,12 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
 
     IPMI_ERRSTR = "Could not open device at "
 
+    SYSTEM_INFORMATION = "SYSTEM_INFORMATION"
+    SITE_ID = "site_id"
+    RACK_ID = "rack_id"
+    NODE_ID = "node_id"
+    CLUSTER_ID = "cluster_id"
+
     request_shutdown = False
     sel_last_queried = None
     SEL_QUERY_FREQ = 300
@@ -97,7 +105,7 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
 
     def __init__(self):
         super(NodeHWsensor, self).__init__(self.SENSOR_NAME.upper(), self.PRIORITY)
-        self.host_id = None
+        self.host_id = self._get_host_id()
 
         self.fru_types = {
             self.TYPE_FAN: self._parse_fan_info,
@@ -164,6 +172,24 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
 
         # Initialize internal message queues for this module
         super(NodeHWsensor, self).initialize_msgQ(msgQlist)
+
+        self._site_id = int(conf_reader._get_value_with_default(
+                                                self.SYSTEM_INFORMATION,
+                                                self.SITE_ID,
+                                                0))
+        self._rack_id = int(conf_reader._get_value_with_default(
+                                                self.SYSTEM_INFORMATION,
+                                                self.RACK_ID,
+                                                0))
+        self._node_id = int(conf_reader._get_value_with_default(
+                                                self.SYSTEM_INFORMATION,
+                                                self.NODE_ID,
+                                                0))
+
+        self._cluster_id = int(conf_reader._get_value_with_default(
+                                                self.SYSTEM_INFORMATION,
+                                                self.CLUSTER_ID,
+                                                0))
 
         # Set flag 'request_shutdown' if vm detected
         res, retcode = self._run_command(DETECT_VM)
@@ -462,7 +488,7 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
         for prop in props_list:
             if prop == '':
                 continue
-            if ':' in prop:
+            if ':' in prop and '[' not in prop and ']' not in prop:
                 curr_key, val = [f.strip() for f in prop.split(":")]
                 static_keys[curr_key] = val
             else:
@@ -564,7 +590,7 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
 
         # TODO: date and time to be combine in one field in epoch format
         fru_info = { "date": date, "time": time, "fru_id": device_id,
-                    "sensor_id": sensor_name, "event": event, "event_status": status }
+                    "sensor_id": sensor_name, "event": event, "event_status": status, "event_time": "1555391559"}
 
         if is_last:
             fan_info.update(fan_specific_data_dynamic)
@@ -593,14 +619,17 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
         }
 
         sensor_id = self.sensor_id_map[self.TYPE_PSU_SUPPLY][sensor_num]
-
+        resource_type = NodeDataMsgHandler.IPMI_RESOURCE_TYPE_PSU
         info = {
-            "date": date, "time": time,
-            "sensor_id": sensor_id, "fru_id": sensor,
-            "event": event,
+            "site_id": self._site_id,
+            "rack_id": self._rack_id,
+            "node_id": self._node_id,
+            "cluster_id": self._cluster_id,
+            "resource_type": resource_type,
+            "resource_id": sensor,
+            "event_time": self._get_epoch_time_from_date_and_time(date, time)
         }
 
-        resource_type = NodeDataMsgHandler.IPMI_RESOURCE_TYPE_PSU
         try:
             (alert_type, severity) = alerts[(event, status)]
         except KeyError:
@@ -609,7 +638,19 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
 
         dynamic, static = self._get_sensor_sdr_props(sensor_id)
         specific_info = {}
+        specific_info["fru_id"] = sensor
+        specific_info["event"] = event
         specific_info.update(static)
+
+        # Remove unnecessary characters props
+        for key in ['Deassertions Enabled', 'Assertions Enabled',
+                    'States Asserted', 'Assertion Events']:
+            try:
+                specific_info[key] = re.sub(',  +', ', ', re.sub('[\[\]]','', \
+                    specific_info[key]).replace('\n',','))
+            except KeyError:
+                pass
+
         if is_last:
             specific_info.update(dynamic)
 
@@ -654,14 +695,18 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
         }
 
         sensor_id = self.sensor_id_map[self.TYPE_PSU_UNIT][sensor_num]
+        resource_type = NodeDataMsgHandler.IPMI_RESOURCE_TYPE_PSU
 
         info = {
-            "date": date, "time": time,
-            "sensor_id": sensor_id, "fru_id": sensor,
-            "event": event,
+            "site_id": self._site_id,
+            "rack_id": self._rack_id,
+            "node_id": self._node_id,
+            "cluster_id": self._cluster_id,
+            "resource_type": resource_type,
+            "resource_id": sensor,
+            "event_time": self._get_epoch_time_from_date_and_time(date, time)
         }
 
-        resource_type = NodeDataMsgHandler.IPMI_RESOURCE_TYPE_PSU
         try:
             (alert_type, severity) = alerts[(event, status)]
         except KeyError:
@@ -670,7 +715,18 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
 
         dynamic, static = self._get_sensor_sdr_props(sensor_id)
         specific_info = {}
+        specific_info["fru_id"] = sensor
+        specific_info["event"] = event
         specific_info.update(static)
+
+        for key in ['Deassertions Enabled', 'Assertions Enabled',
+                    'Assertion Events', 'States Asserted']:
+            try:
+                specific_info[key] = re.sub(',  +', ', ', re.sub('[\[\]]','', \
+                    specific_info[key]).replace('\n',','))
+            except KeyError:
+                pass
+
         if is_last:
             specific_info.update(dynamic)
 
@@ -690,7 +746,7 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
             # TODO: Keep this common 'info' structure (with common fields) in common code
             # and then use it for different Node FRUs.
             info = {"date": date, "time": time, "sensor_id": sensor_id, "event": event,
-                    "fru_id": sensor}
+                    "fru_id": sensor, "event_time": "1555391559"}
             if not specific:
                 specific = {"States Asserted": "N/A", "Sensor Type (Discrete)": "N/A"}
             specific_info = specific
@@ -720,12 +776,12 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
         internal_json_msg = json.dumps({
             "sensor_request_type" : {
                 "node_data":{
-                "status": "update",
-                "resource_type": resource_type,
-                "alert_type": alert_type,
-                "severity": severity,
-                "info": info,
-                "specific_info": specific_info
+                    "alert_type": alert_type,
+                    "severity": severity,
+                    "alert_id": self._get_alert_id(info["event_time"]),
+                    "host_id": self.host_id,
+                    "info": info,
+                    "specific_info": specific_info
                 }
             }
           })
@@ -739,12 +795,12 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
         json_data = json.dumps({
             "sensor_request_type" : {
                 "node_data":{
-                "status": "update",
-                "resource_type": resource_type,
-                "alert_type": alert_type,
-                "severity": severity,
-                "info": info,
-                "specific_info": specific_info
+                    "alert_type": alert_type,
+                    "severity": severity,
+                    "alert_id": self._get_alert_id(info["event_time"]),
+                    "host_id": self.host_id,
+                    "info": info,
+                    "specific_info": specific_info
                 }
                }
             }, sort_keys=True)
@@ -755,6 +811,23 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
 
         # Send the event to logging msg handler to send IEM message to journald
         self._write_internal_msgQ(LoggingMsgHandler.name(), internal_json_msg)
+
+    def _get_host_id(self):
+        return socket.getfqdn()
+
+    def _get_alert_id(self, epoch_time):
+        """Returns alert id which is a combination of
+           epoch_time and salt value
+        """
+        salt = str(uuid.uuid4().hex)
+        alert_id = epoch_time + salt
+        return alert_id
+
+    def _get_epoch_time_from_date_and_time(self, _date, _time):
+        timestamp_format = '%m/%d/%Y %H:%M:%S'
+        timestamp = time.strptime('{} {}'.format(_date,_time), timestamp_format)
+        return str(int(time.mktime(timestamp)))
+
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""
