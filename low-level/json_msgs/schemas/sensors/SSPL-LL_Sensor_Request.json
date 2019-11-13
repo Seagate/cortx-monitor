@@ -80,11 +80,16 @@
 							"type": "object",
 							"additionalProperties": false,
 							"properties": {
-								"sensor_type": {
-									"description": "Request RealStor sensor data; realstor_psu_sensor, etc.",
-									"type": "string",
-									"required": true
-								}
+                                "info":{
+                                    "type": "object",
+                                    "properties": {
+								        "resource_type": {
+									        "description": "Request RealStor sensor data; realstor_psu_sensor, etc.",
+									        "type": "string",
+									        "required": true
+								        }
+                                    }
+                                }
 							}
 						},
 

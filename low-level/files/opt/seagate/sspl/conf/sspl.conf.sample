@@ -17,6 +17,7 @@ data_path=/var/sspl/data/
 site_id=001
 rack_id=001
 node_id=001
+cluster_id=001
 
 [RABBITMQINGRESSPROCESSOR]
 virtual_host=SSPL

@@ -26,10 +26,12 @@ class RealStorFanDataMsg(BaseSensorMsg):
     SENSOR_RESPONSE_TYPE = "enclosure_fan_module_alert"
     MESSAGE_VERSION = "1.0.0"
 
-    def __init__(self, alert_type,
-                 resource_type,
+    def __init__(self, host_name,
+                 alert_type,
+                 alert_id,
+                 severity,
                  info,
-                 extended_info,
+                 specific_info,
                  username="SSPL-LL",
                  signature="N/A",
                  time="N/A",
@@ -37,27 +39,24 @@ class RealStorFanDataMsg(BaseSensorMsg):
         super(RealStorFanDataMsg, self).__init__()
 
         self._alert_type = alert_type
-        self._resource_type = resource_type
+        self._host_name = host_name
+        self._alert_id = alert_id
+        self._severity = severity
         self._username = username
         self._signature = signature
         self._time = time
         self._expires = expires
 
-        self._fan_module_info = info.get("fan_module")
-        self._fan_module_extended_info = extended_info.get("fan_module")
+        self._fru_info = info
+        self._fru_specific_info = specific_info
 
-        self._name = self._fan_module_info.get("name")
-        self._status = self._fan_module_info.get("status")
-        self._location = self._fan_module_info.get("location")
-        self._enclosure_id = self._fan_module_info.get("enclosure-id")
-        self._health = self._fan_module_info.get("health")
-        self._health_reason = self._fan_module_info.get("health-reason")
-        self._health_recommendation = \
-            self._fan_module_info.get("health-recommendation")
-        self._fans = self._fan_module_info.get("fans", [])
-
-        self._position = self._fan_module_extended_info.get("position")
-        self._durable_id = self._fan_module_extended_info.get("durable-id")
+        self._site_id = self._fru_info.get("site_id")
+        self._rack_id = self._fru_info.get("rack_id")
+        self._node_id = self._fru_info.get("node_id")
+        self._cluster_id = self._fru_info.get("cluster_id")
+        self._resource_id = self._fru_info.get("resource_id")
+        self._resource_type = self._fru_info.get("resource_type")
+        self._event_time = self._fru_info.get("event_time")
 
         self._json = {"title": self.TITLE,
                       "description": self.DESCRIPTION,
@@ -73,28 +72,20 @@ class RealStorFanDataMsg(BaseSensorMsg):
                                 "msg_version": self.MESSAGE_VERSION
                                 },
                           "sensor_response_type": {
-                                self.SENSOR_RESPONSE_TYPE: {
+                                    "host_id": self._host_name,
                                     "alert_type": self._alert_type,
-                                    "resource_type": self._resource_type,
+                                    "alert_id": self._alert_id,
+                                    "severity": self._severity,
                                     "info": {
-                                        "fan_module": {
-                                            "name": self._name,
-                                            "status": self._status,
-                                            "location": self._location,
-                                            "health": self._health,
-                                            "health-reason":
-                                                self._health_reason,
-                                            "health-recommendation":
-                                                self._health_recommendation,
-                                            "enclosure-id": self._enclosure_id,
-                                            "fans": self._fans
-                                        }},
-                                    "extended_info": {
-                                        "fan_module": {
-                                            "position": self._position,
-                                            "durable-id": self._durable_id
-                                        }}
-                                    }
+                                            "site_id": self._site_id,
+                                            "rack_id": self._rack_id,
+                                            "node_id": self._node_id,
+                                            "cluster_id": self._cluster_id,
+                                            "resource_type": self._resource_type,
+                                            "event_time": self._event_time,
+                                            "resource_id": self._resource_id
+                                        },
+                                    "specific_info": self._fru_specific_info
                                 }
                           }
                       }

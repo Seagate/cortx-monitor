@@ -1238,77 +1238,71 @@
 								}
 							}
 						},
-
-                        "enclosure_fan_module_alert": {
-                            "type": "object",
-                            "properties":{
                                 "alert_type":{
                                     "description": "Enclosure alert cause",
                                     "type": "string",
                                     "required": true
                                 },
-                                "resource_type": {
-                                    "description": "Enclosure resource type like FRU, Sensor",
+                                "alert_id":{
+                                    "description": "Id which will uniquely identify this alert",
                                     "type": "string",
-                                    "required": true
+                                    "required": false
+                                },
+                                "severity":{
+                                    "description": "Severity of an alert. Eg: Critical, Warning etc",
+                                    "type": "string",
+                                    "required": false
+                                },
+                                "host_id": {
+                                    "description": "Host name of the system",
+                                    "type": "string",
+                                    "required": false
                                 },
                                 "info": {
                                     "type": "object",
                                     "required": true,
-                                    "properties": {
-                                        "fan_module":{
-                                            "type":"object",
-                                            "required": true,
                                             "properties":{
-                                                "enclosure-id": {
-                                                    "description": "Enclosure ID",
+                                                "site_id": {
+                                                    "description": "Site unique ID",
                                                     "type": "integer",
                                                     "required": true
                                                 },
-                                                "name": {
-                                                    "description": "Name of the fan module",
+                                                "rack_id": {
+                                                    "description": "Unique Rack id in a site",
+                                                    "type": "integer",
+                                                    "required": true
+                                                  },
+                                                "node_id": {
+                                                    "description": "Unique Node id in a rack",
                                                     "type": "string",
                                                     "required": true
                                                   },
-                                                "status": {
-                                                    "description": "status of the fan module",
+                                                "cluster_id": {
+                                                    "description": "Cluster identification to locate enclosure",
+                                                    "type": "integer",
+                                                    "required": true
+                                                  },
+                                                "resource_type": {
+                                                    "description": "Type Of Resource, eg enclosure:fru:fan",
                                                     "type": "string",
                                                     "required": true
                                                   },
-                                                "location": {
-                                                    "description": "Location of the fan module inside enclosure",
+                                                "event_time": {
+                                                    "description": "Time when event took place",
                                                     "type": "string",
                                                     "required": true
                                                   },
-                                                "health": {
-                                                    "description": "Health of the Fan module like OK, Degraded",
+                                                "resource_id": {
+                                                    "description": "ID which uniquely identifies the resource/instance",
                                                     "type": "string",
                                                     "required": true
-                                                  },
-                                                "health-reason": {
-                                                    "description": "Health reason if it is not OK",
-                                                    "type": "string",
-                                                    "required": true
-                                                  },
-                                                "health-recommendation": {
-                                                    "description": "recommendation to solve the issue",
-                                                    "type": "string",
-                                                    "required": true
-                                                  },
-                                                "fans": {
-                                                    "description": "list of individual fans with its attributes",
-                                                    "type": "array",
-                                                    "required": false
                                                   }
-                                            }}
-                                        }
+                                            }
                                     },
-                                    "extended_info": {
+                                    "specific_info": {
                                         "type": "object",
                                         "required": false
-                                    }
-                              }
-                        },
+                                    },
 
                         "enclosure_sideplane_expander_alert": {
                             "type": "object",
@@ -1451,27 +1445,27 @@
                                                     "sensor_id":{
                                                         "description": "The IPMI ID of the sensor on which the event was generated",
                                                         "type": "string",
-                                                        "required": true
+                                                        "required": false
                                                     },
                                                     "time":{
                                                         "description": "The time at which the event was generated",
                                                         "type": "string",
-                                                        "required": true
+                                                        "required": false
                                                     },
                                                     "date":{
                                                         "description": "The date on which the event was generated",
                                                         "type": "string",
-                                                        "required": true
+                                                        "required": false
                                                     },
                                                     "fru_id":{
                                                         "description": "The FRU ID of the sensor on which the event was generated",
                                                         "type": "string",
-                                                        "required": true
+                                                        "required": false
                                                     },
                                                     "event":{
                                                         "description": "The event that was generated",
                                                         "type": "string",
-                                                        "required": true
+                                                        "required": false
                                                     }
                                                 }
                                             },

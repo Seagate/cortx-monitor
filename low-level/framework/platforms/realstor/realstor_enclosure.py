@@ -36,9 +36,14 @@ class RealStorEnclosure(StorageEnclosure):
     MAX_RETRIES = 1
 
     CONF_SECTION_MC = "STORAGE_ENCLOSURE"
+    SYSTEM_INFORMATION = "SYSTEM_INFORMATION"
     CONF_REALSTORDISKSENSOR = "REALSTORDISKSENSOR"
     CONF_REALSTORSENSORS = "REALSTORSENSORS"
     DEFAULT_POLL = 30
+    SITE_ID = "site_id"
+    CLUSTER_ID = "cluster_id"
+    NODE_ID = "node_id"
+    RACK_ID = "rack_id"
 
     DEFAULT_USER = "manage"
     DEFAULT_PASSWD = "!manage"
@@ -113,6 +118,24 @@ class RealStorEnclosure(StorageEnclosure):
 
         self.pollfreq = int(self.conf_reader._get_value_with_default(
             self.CONF_REALSTORSENSORS, "polling_frequency", self.DEFAULT_POLL))
+
+        self.site_id = int(self.conf_reader._get_value_with_default(
+                                                self.SYSTEM_INFORMATION,
+                                                self.SITE_ID,
+                                                0))
+        self.rack_id = int(self.conf_reader._get_value_with_default(
+                                                self.SYSTEM_INFORMATION,
+                                                self.RACK_ID,
+                                                0))
+        self.node_id = int(self.conf_reader._get_value_with_default(
+                                                self.SYSTEM_INFORMATION,
+                                                self.NODE_ID,
+                                                0))
+
+        self.cluster_id = int(self.conf_reader._get_value_with_default(
+                                                self.SYSTEM_INFORMATION,
+                                                self.CLUSTER_ID,
+                                                0))
 
         if self.mc_interface not in self.realstor_supported_interfaces:
             logger.error("Unspported Realstor interface configured,"

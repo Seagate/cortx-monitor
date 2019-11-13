@@ -18,6 +18,9 @@ import errno
 import json
 import os
 import re
+import socket
+import time
+import uuid
 
 import requests
 from zope.interface import implements
@@ -25,6 +28,7 @@ from zope.interface import implements
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
+from framework.utils.severity_reader import SeverityReader
 from message_handlers.logging_msg_handler import LoggingMsgHandler
 from framework.platforms.realstor.realstor_enclosure import singleton_realstorencl
 
@@ -40,7 +44,7 @@ class RealStorFanSensor(ScheduledModuleThread, InternalMsgQ):
 
     SENSOR_NAME = "RealStorFanSensor"
     SENSOR_TYPE = "enclosure_fan_module_alert"
-    RESOURCE_TYPE = "fru"
+    RESOURCE_TYPE = "enclosure:fru:fan"
 
     PRIORITY = 1
 
@@ -229,9 +233,9 @@ class RealStorFanSensor(ScheduledModuleThread, InternalMsgQ):
 
         fan_module_info_key_list = \
             ['name', 'location', 'status', 'health',
-                'health-reason', 'health-recommendation', 'enclosure-id']
+                'health-reason', 'health-recommendation', 'enclosure-id',
+                'durable-id', 'position']
 
-        fan_module_extended_info_key_list = ['durable-id', 'position']
         fan_module_info_dict = {}
         fan_module_extended_info_dict = {}
 
@@ -240,15 +244,26 @@ class RealStorFanSensor(ScheduledModuleThread, InternalMsgQ):
         for fan_module_key, fan_module_value in fan_module.items():
             if fan_module_key in fan_module_info_key_list:
                 fan_module_info_dict[fan_module_key] = fan_module_value
-            elif fan_module_key in fan_module_extended_info_key_list:
-                fan_module_extended_info_dict[fan_module_key] = \
-                    fan_module_value
 
         fan_module_info_dict["fans"] = fans_list
 
-        info = {"fan_module": dict(fan_module_info_dict.items())}
+        severity_reader = SeverityReader()
+        severity = severity_reader.map_severity(alert_type)
+        epoch_time = str(int(time.time()))
 
-        extended_info = {"fan_module": fan_module_extended_info_dict}
+        alert_id = self._get_alert_id(epoch_time)
+        resource_id = fan_module_info_dict.get("name", "")
+        host_name = socket.gethostname()
+
+        info = {
+                "site_id": self.rssencl.site_id,
+                "cluster_id": self.rssencl.cluster_id,
+                "rack_id": self.rssencl.rack_id,
+                "node_id": self.rssencl.node_id,
+                "resource_type": self.RESOURCE_TYPE,
+                "resource_id": resource_id,
+                "event_time": epoch_time
+                }
 
         # Creates internal json message request structure.
         # this message will be passed to the StorageEnclHandler
@@ -256,15 +271,24 @@ class RealStorFanSensor(ScheduledModuleThread, InternalMsgQ):
             {"sensor_request_type": {
                 "enclosure_alert": {
                         "status": "update",
-                        "sensor_type": RealStorFanSensor.SENSOR_TYPE,
+                        "host_id": host_name,
                         "alert_type": alert_type,
-                        "resource_type": RealStorFanSensor.RESOURCE_TYPE
-                },
-                "info": info,
-                "extended_info": extended_info
+                        "severity": severity,
+                        "alert_id": alert_id,
+                        "info": info,
+                        "specific_info": fan_module_info_dict
+                    }
             }})
 
         return internal_json_msg
+
+    def _get_alert_id(self, epoch_time):
+        """Returns alert id which is a combination of
+           epoch_time and salt value
+        """
+        salt = str(uuid.uuid4().hex)
+        alert_id = epoch_time + salt
+        return alert_id
 
     def _send_json_message(self, json_msg):
         """Transmit data to RealStorMsgHandler to be processed and sent out"""
@@ -273,6 +297,7 @@ class RealStorFanSensor(ScheduledModuleThread, InternalMsgQ):
         # to generate json message and send out
         self._write_internal_msgQ(RealStorEnclMsgHandler.name(), json_msg)
 
+    # TODO: Need to change IEM Message Format
     def _log_IEM(self, info, extended_info):
         """Sends an IEM to logging msg handler"""
 
@@ -296,7 +321,7 @@ class RealStorFanSensor(ScheduledModuleThread, InternalMsgQ):
                             'log_msg': '{}'.format(json_data)}}})
 
         # Send the event to logging msg handler to send IEM message to journald
-        self._write_internal_msgQ(LoggingMsgHandler.name(), internal_json_msg)
+        #self._write_internal_msgQ(LoggingMsgHandler.name(), internal_json_msg)
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""

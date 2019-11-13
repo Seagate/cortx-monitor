@@ -40,7 +40,7 @@ def given_that_sspl_ll_is_running(step):
 
 
 @step(u'When I send in the fan module sensor message to request the current "([^"]*)" data')
-def when_i_send_in_the_fan_module_sensor_message_to_request_the_current_sensor_type_data(step, sensor_type):
+def when_i_send_in_the_fan_module_sensor_message_to_request_the_current_sensor_type_data(step, resource_type):
     egressMsg = {
         "title": "SSPL-LL Actuator Request",
         "description": "Seagate Storage Platform Library - Low Level - Actuator Request",
@@ -62,7 +62,9 @@ def when_i_send_in_the_fan_module_sensor_message_to_request_the_current_sensor_t
             },
             "sensor_request_type": {
                 "enclosure_alert": {
-                    "sensor_type": sensor_type
+                        "info": {
+                            "resource_type": resource_type
+                    }
                 }
             }
         }
@@ -80,8 +82,8 @@ def then_i_get_the_fan_module__sensor_json_response_message(step):
         print("Received: {0}".format(ingressMsg))
         try:
             # Make sure we get back the message type that matches the request
-            msg_type = ingressMsg.get("sensor_response_type")
-            fan_module_sensor_msg = msg_type["enclosure_fan_module_alert"]
+            fan_module_sensor_msg = ingressMsg.get("sensor_response_type")
+            # fan_module_sensor_msg = msg_type["enclosure_fan_module_alert"]
             break
         except Exception as exception:
             time.sleep(4)
@@ -89,30 +91,47 @@ def then_i_get_the_fan_module__sensor_json_response_message(step):
 
     assert(fan_module_sensor_msg is not None)
     assert(fan_module_sensor_msg.get("alert_type") is not None)
-    assert(fan_module_sensor_msg.get("resource_type") is not None)
-    assert(fan_module_sensor_msg.get("info").get("fan_module") is not None)
-    fan_module_info = fan_module_sensor_msg.get("info").get("fan_module")
-    assert(fan_module_info.get("name") is not None)
-    assert(fan_module_info.get("location") is not None)
-    assert(fan_module_info.get("status") is not None)
-    assert(fan_module_info.get("health") is not None)
-    assert(fan_module_info.get("health-reason") is not None)
-    assert(fan_module_info.get("health-recommendation") is not None)
-    assert(fan_module_info.get("enclosure-id") is not None)
-    fans = fan_module_sensor_msg.get("info").get("fan_module").get("fans")
+    assert(fan_module_sensor_msg.get("alert_id") is not None)
+    assert(fan_module_sensor_msg.get("severity") is not None)
+    assert(fan_module_sensor_msg.get("host_id") is not None)
+    assert(fan_module_sensor_msg.get("info") is not None)
+
+    fan_module_info = fan_module_sensor_msg.get("info")
+    assert(fan_module_info.get("site_id") is not None)
+    assert(fan_module_info.get("node_id") is not None)
+    assert(fan_module_info.get("cluster_id") is not None)
+    assert(fan_module_info.get("rack_id") is not None)
+    assert(fan_module_info.get("resource_type") is not None)
+    assert(fan_module_info.get("event_time") is not None)
+    assert(fan_module_info.get("resource_id") is not None)
+
+    fru_specific_info = fan_module_sensor_msg.get("specific_info", {})
+    if fru_specific_info:
+        assert(fru_specific_info.get("durable-id") is not None)
+        assert(fru_specific_info.get("status") is not None)
+        assert(fru_specific_info.get("name") is not None)
+        assert(fru_specific_info.get("enclosure-id") is not None)
+        assert(fru_specific_info.get("health") is not None)
+        assert(fru_specific_info.get("health-reason") is not None)
+        assert(fru_specific_info.get("location") is not None)
+        assert(fru_specific_info.get("health-recommendation") is not None)
+        assert(fru_specific_info.get("position") is not None)
+
+    fans = fan_module_sensor_msg.get("specific_info").get("fans", [])
     if fans:
         for fan in fans:
             assert(fan.get("durable-id") is not None)
             assert(fan.get("status") is not None)
+            assert(fan.get("name") is not None)
+            assert(fan.get("speed") is not None)
+            assert(fan.get("locator-led") is not None)
             assert(fan.get("position") is not None)
+            assert(fan.get("location") is not None)
             assert(fan.get("part-number") is not None)
+            assert(fan.get("serial-number") is not None)
             assert(fan.get("fw-revision") is not None)
             assert(fan.get("hw-revision") is not None)
             assert(fan.get("health") is not None)
             assert(fan.get("health-reason") is not None)
             assert(fan.get("health-recommendation") is not None)
 
-    fan_module_extended_info = fan_module_sensor_msg.get("extended_info").get("fan_module")
-    if fan_module_extended_info:
-        assert(fan_module_extended_info.get("durable-id") is not None)
-        assert(fan_module_extended_info.get("position") is not None)

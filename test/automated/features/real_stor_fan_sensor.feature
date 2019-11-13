@@ -5,6 +5,6 @@ Feature: Test Fan module Sensor Capabilities
 
 Scenario: Send SSPL-LL a fan sensor message requesting fan data
 	Given that SSPL-LL is running
-	When I send in the fan module sensor message to request the current "enclosure_fan_module_alert" data
+	When I send in the fan module sensor message to request the current "enclosure:fru:fan" data
 	Then I get the fan module sensor JSON response message
 
