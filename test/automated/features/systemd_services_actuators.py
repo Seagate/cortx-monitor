@@ -48,8 +48,8 @@ def given_that_the_name_service_is_condition_and_sspl_ll_is_running(step, name, 
 @step(u'When I send in the actuator message to "([^"]*)" the "([^"]*)"')
 def when_i_send_in_the_actuator_message_to_action_the_service(step, action, service):
     egressMsg = {
-        "title": "SSPL-LL Actuator Request",
-        "description": "Seagate Storage Platform Library - Low Level - Actuator Request",
+        "title": "SSPL Actuator Request",
+        "description": "Seagate Storage Platform Library - Actuator Request",
         "username" : "JohnDoe",
         "signature" : "None",
         "time" : "2015-05-29 14:28:30.974749",

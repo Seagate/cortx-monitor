@@ -116,22 +116,22 @@
 							}
 						},
 						"host_id": {
-							"description": "Host ID of node. Required only for node hw actuator",
+							"description": "Host ID of node.",
 							"type": "string",
 							"required": false
 						},
 						"alert_type": {
-							"description": "Sensor Response Type. Required only for node hw actuator",
+							"description": "Sensor Response Type.",
 							"type": "string",
 							"required": false
 						},
 						"instance_id": {
-							"description": "Instance ID which will be map with Resource ID. Required only for node hw actuator",
+							"description": "Instance ID which will be map with Resource ID.",
 							"type": "string",
 							"required": false
 						},
 						"severity": {
-							"description": "The degree of impact an event has on the operation of a component. Required only for node hw actuator",
+							"description": "The degree of impact an event has on the operation of a component.",
 							"type": "string",
 							"required": false
 						},
@@ -139,27 +139,27 @@
 							"type": "object",
 							"properties": {
 								"site_id": {
-									"description": "A number that uniquely identifies a single data center site. Required only for node hw actuator",
+									"description": "A number that uniquely identifies a single data center site.",
 									"type": "integer",
 									"required": true
 								},
 								"rack_id": {
-									"description": "A numerical value that identifies a single Rack in a single site. Required only for node hw actuator",
+									"description": "A numerical value that identifies a single Rack in a single site.",
 									"type": "integer",
 									"required": true
 								},
 								"node_id": {
-									"description": "A numerical value that indicates type of node in cluster. i.e 1-Mero,2-GW in EOS. Required only for node hw actuator",
+									"description": "A numerical value that indicates type of node in cluster. i.e 1-Mero,2-GW in EOS.",
 									"type": "integer",
 									"required": true
 								},
 								"resource_type": {
-									"description": "Enclosure resource type like FRU, Sensor. Required only for node hw actuator",
+									"description": "Enclosure resource type like FRU, Sensor.",
 									"type": "string",
 									"required": true
 								},
 								"resource_id": {
-									"description": "FRU's Resource Id. Required only for node hw actuator",
+									"description": "FRU's Resource Id.",
 									"type": "string",
 									"required": false
 								},
@@ -168,8 +168,8 @@
 									"type": "string",
 									"required": false
 								},
-								"fetch_time": {
-									"description": "Time of fetch data from IPMI. Required only for node hw actuator",
+								"event_time": {
+									"description": "Time of fetched data using IPMI.",
 									"type": "string",
 									"required": false
 								}
@@ -189,7 +189,7 @@
 						"then": {
 						  	"properties": {
 								"specific_info": {
-							  		"description": "Specific dynamically generated information of FRU's. Required only for node hw actuator",
+							  		"description": "Specific dynamically generated information of FRU's.",
 							  		"type": "array",
 							  		"required": false
 								}
@@ -198,7 +198,7 @@
 						"else": {
 						  	"properties": {
 								"specific_info": {
-							  		"description": "Specific dynamically generated information of FRU's. Required only for node hw actuator",
+							  		"description": "Specific dynamically generated information of FRU's.",
 									"type": "object",
 							  		"required": false
 								}

@@ -56,7 +56,7 @@ class NodeHwAckResponseMsg(BaseActuatorMsg):
         self._node_id = info.get("node_id")
         self._resource_type = info.get("resource_type")
         self._resource_id = info.get("resource_id")
-        self._fetch_time = info.get("fetch_time")
+        self._fetch_time = info.get("event_time")
 
         self._specific_info = ack_msg.get("specific_info")
 
@@ -88,7 +88,7 @@ class NodeHwAckResponseMsg(BaseActuatorMsg):
                                   "node_id": self._node_id,
                                   "resource_type": self._resource_type,
                                   "resource_id": self._resource_id,
-                                  "fetch_time": self._fetch_time
+                                  "event_time": self._fetch_time
                                 },
                               "specific_info": self._specific_info
                           }

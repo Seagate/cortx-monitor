@@ -175,7 +175,7 @@ class NodeHWactuator(Actuator, Debug):
             "node_id": self._node_id,
             "resource_id": "*",
             "resource_type": resource_type,
-            "fetch_time": epoch_time
+            "event_time": epoch_time
           },
           "specific_info": specifics
         }
@@ -253,7 +253,7 @@ class NodeHWactuator(Actuator, Debug):
             "node_id": self._node_id,
             "resource_type": "node:sensor:" + self._sensor_type.lower(),
             "resource_id": self._resource_id,
-            "fetch_time": str(calendar.timegm(time.gmtime())),
+            "event_time": str(calendar.timegm(time.gmtime())),
         }
 
         # fetch host details

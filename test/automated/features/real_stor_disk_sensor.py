@@ -14,7 +14,7 @@ os.sys.path.insert(0, topdir)
 from test.automated.rabbitmq.rabbitmq_ingress_processor_tests import RabbitMQingressProcessorTests
 from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 
-@step(u'Given that SSPL-LL is running')
+@step(u'Given that SSPL is running')
 def given_that_sspl_ll_is_running(step):
     # Check that the state for sspl_ll service is active
     found = False
@@ -43,8 +43,8 @@ def given_that_sspl_ll_is_running(step):
 @step(u'When I send in the disk sensor message to request the current "([^"]*)" data')
 def when_i_send_in_the_disk_sensor_message_to_request_the_current_sensor_type_data(step, resource_type):
     egressMsg = {
-        "title": "SSPL-LL Actuator Request",
-        "description": "Seagate Storage Platform Library - Low Level - Actuator Request",
+        "title": "SSPL Actuator Request",
+        "description": "Seagate Storage Platform Library - Actuator Request",
 
         "username" : "JohnDoe",
         "signature" : "None",

@@ -1,6 +1,6 @@
 {
-	"title": "SSPL-LL Actuator Request",
-	"description": "Seagate Storage Platform Library - Low Level - Actuator Request",
+	"title": "SSPL Actuator Request",
+	"description": "Seagate Storage Platform Library - Actuator Request",
 
 	"username" : "Will get replaced by /etc/sspl.conf",
 	"signature" : "None",
@@ -25,8 +25,8 @@
 	}
 }
 {
-	"title": "SSPL-LL Actuator Request",
-	"description": "Seagate Storage Platform Library - Low Level - Actuator Request",
+	"title": "SSPL Actuator Request",
+	"description": "Seagate Storage Platform Library - Actuator Request",
 
 	"username" : "Will get replaced by /etc/sspl.conf",
 	"signature" : "None",
@@ -51,8 +51,8 @@
 	}
 }
 {
-	"title": "SSPL-LL Actuator Request",
-	"description": "Seagate Storage Platform Library - Low Level - Actuator Request",
+	"title": "SSPL Actuator Request",
+	"description": "Seagate Storage Platform Library - Actuator Request",
 
 	"username" : "Will get replaced by /etc/sspl.conf",
 	"signature" : "None",
@@ -77,8 +77,8 @@
 	}
 }
 {
-	"title": "SSPL-LL Actuator Request",
-	"description": "Seagate Storage Platform Library - Low Level - Actuator Request",
+	"title": "SSPL Actuator Request",
+	"description": "Seagate Storage Platform Library - Actuator Request",
 
 	"username" : "Will get replaced by /etc/sspl.conf",
 	"signature" : "None",
@@ -103,8 +103,8 @@
 	}
 }
 {
-	"title": "SSPL-LL Actuator Request",
-	"description": "Seagate Storage Platform Library - Low Level - Actuator Request",
+	"title": "SSPL Actuator Request",
+	"description": "Seagate Storage Platform Library - Actuator Request",
 
 	"username" : "Will get replaced by /etc/sspl.conf",
 	"signature" : "None",

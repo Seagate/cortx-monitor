@@ -20,8 +20,8 @@ def given_i_send_in_the_actuator_message_to_restart_raid_sensor(step):
         world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
 
     egressMsg = {
-        "title": "SSPL-LL Actuator Request",
-        "description": "Seagate Storage Platform Library - Low Level - Actuator Request",
+        "title": "SSPL Actuator Request",
+        "description": "Seagate Storage Platform Library - Actuator Request",
         "username" : "JohnDoe",
         "signature" : "None",
         "time" : "2015-05-29 14:28:30.974749",
@@ -43,10 +43,10 @@ def given_i_send_in_the_actuator_message_to_restart_raid_sensor(step):
     }
     world.sspl_modules[RabbitMQegressProcessor.name()]._write_internal_msgQ(RabbitMQegressProcessor.name(), egressMsg)
 
-@step(u"When SSPL-LL restarts the thread for raid sensor msg handler")
+@step(u"When SSPL restarts the thread for raid sensor msg handler")
 def when_SSPL_LL_restarts_the_thread(step):
-    print("SSPL-LL restarts the threads for raid sensor msg handler")
-    # TODO: Use an instance of JournalD sensor to monitor logs showing that SSPL-LL performed the correct action
+    print("SSPL restarts the threads for raid sensor msg handler")
+    # TODO: Use an instance of JournalD sensor to monitor logs showing that SSPL performed the correct action
 
 @step(u"Then I get the Restart Successful JSON response message")
 def then_i_receive_Restart_Successful_JSON_response_message(step):
@@ -78,8 +78,8 @@ def then_i_receive_Restart_Successful_JSON_response_message(step):
 @step(u'Given I send in the actuator message to stop raid sensor')
 def given_i_send_in_the_actuator_message_to_stop_raid_sensor(step):
     egressMsg = {
-        "title": "SSPL-LL Actuator Request",
-        "description": "Seagate Storage Platform Library - Low Level - Actuator Request",
+        "title": "SSPL Actuator Request",
+        "description": "Seagate Storage Platform Library - Actuator Request",
         "username" : "JohnDoe",
         "signature" : "None",
         "time" : "2015-05-29 14:28:30.974749",
@@ -101,10 +101,10 @@ def given_i_send_in_the_actuator_message_to_stop_raid_sensor(step):
     }
     world.sspl_modules[RabbitMQegressProcessor.name()]._write_internal_msgQ(RabbitMQegressProcessor.name(), egressMsg)
 
-@step(u'When SSPL-LL Stops the thread for raid sensor msg handler')
+@step(u'When SSPL Stops the thread for raid sensor msg handler')
 def when_sspl_ll_stops_the_thread_for_raid_sensor_msg_handler(step):
-    print("SSPL-LL Stops the thread for raid sensor msg handler")
-    # TODO: Use an instance of JournalD sensor to monitor logs showing that SSPL-LL performed the correct action
+    print("SSPL Stops the thread for raid sensor msg handler")
+    # TODO: Use an instance of JournalD sensor to monitor logs showing that SSPL performed the correct action
 
 @step(u'Then I get the Stop Successful JSON response message')
 def then_i_get_the_stop_successful_json_response_message(step):
@@ -141,8 +141,8 @@ def then_i_get_the_stop_successful_json_response_message(step):
 @step(u'Given I send in the actuator message to start raid sensor')
 def given_i_send_in_the_actuator_message_to_start_raid_sensor(step):
     egressMsg = {
-        "title": "SSPL-LL Actuator Request",
-        "description": "Seagate Storage Platform Library - Low Level - Actuator Request",
+        "title": "SSPL Actuator Request",
+        "description": "Seagate Storage Platform Library - Actuator Request",
         "username" : "JohnDoe",
         "signature" : "None",
         "time" : "2015-05-29 14:28:30.974749",
@@ -164,10 +164,10 @@ def given_i_send_in_the_actuator_message_to_start_raid_sensor(step):
     }
     world.sspl_modules[RabbitMQegressProcessor.name()]._write_internal_msgQ(RabbitMQegressProcessor.name(), egressMsg)
 
-@step(u'When SSPL-LL Starts the thread for raid sensor msg handler')
+@step(u'When SSPL Starts the thread for raid sensor msg handler')
 def when_sspl_ll_starts_the_thread_for_raid_sensor_msg_handler(step):
-    print("SSPL-LL Starts the thread for raid sensor msg handler")
-    # TODO: Use an instance of JournalD sensor to monitor logs showing that SSPL-LL performed the correct action
+    print("SSPL Starts the thread for raid sensor msg handler")
+    # TODO: Use an instance of JournalD sensor to monitor logs showing that SSPL performed the correct action
 
 @step(u'Then I get the Start Successful JSON response message')
 def then_i_get_the_start_successful_json_response_message(step):
@@ -199,8 +199,8 @@ def then_i_get_the_start_successful_json_response_message(step):
 @step(u'Given I request to stop raid sensor and then I request a thread status')
 def given_i_request_to_stop_raid_sensor_and_then_i_request_a_thread_status(step):
     egressMsg = {
-        "title": "SSPL-LL Actuator Request",
-        "description": "Seagate Storage Platform Library - Low Level - Actuator Request",
+        "title": "SSPL Actuator Request",
+        "description": "Seagate Storage Platform Library - Actuator Request",
         "username" : "JohnDoe",
         "signature" : "None",
         "time" : "2015-05-29 14:28:30.974749",
@@ -224,8 +224,8 @@ def given_i_request_to_stop_raid_sensor_and_then_i_request_a_thread_status(step)
 
     # Request the status for the stopped thread
     egressMsg = {
-        "title": "SSPL-LL Actuator Request",
-        "description": "Seagate Storage Platform Library - Low Level - Actuator Request",
+        "title": "SSPL Actuator Request",
+        "description": "Seagate Storage Platform Library - Actuator Request",
         "username" : "JohnDoe",
         "signature" : "None",
         "time" : "2015-05-29 14:28:30.974749",
@@ -247,10 +247,10 @@ def given_i_request_to_stop_raid_sensor_and_then_i_request_a_thread_status(step)
     }
     world.sspl_modules[RabbitMQegressProcessor.name()]._write_internal_msgQ(RabbitMQegressProcessor.name(), egressMsg)
 
-@step(u'When SSPL-LL Stops the raid sensor and receives a request for thread status')
+@step(u'When SSPL Stops the raid sensor and receives a request for thread status')
 def when_sspl_ll_stops_the_raid_sensor_and_receives_a_request_for_thread_status(step):
-    print("SSPL-LL Starts the thread for raid sensor msg handler")
-    # TODO: Use an instance of JournalD sensor to monitor logs showing that SSPL-LL performed the correct action
+    print("SSPL Starts the thread for raid sensor msg handler")
+    # TODO: Use an instance of JournalD sensor to monitor logs showing that SSPL performed the correct action
 
 @step(u'Then I get the Stop Successful JSON message then I get the thread status message')
 def then_i_get_the_stop_successful_json_message_then_i_get_the_thread_status_message(step):
@@ -289,8 +289,8 @@ def then_i_get_the_stop_successful_json_message_then_i_get_the_thread_status_mes
 @step(u'Given I request to start raid sensor and then I request a thread status')
 def given_i_request_to_start_raid_sensor_and_then_i_request_a_thread_status(step):
     egressMsg = {
-        "title": "SSPL-LL Actuator Request",
-        "description": "Seagate Storage Platform Library - Low Level - Actuator Request",
+        "title": "SSPL Actuator Request",
+        "description": "Seagate Storage Platform Library - Actuator Request",
         "username" : "JohnDoe",
         "signature" : "None",
         "time" : "2015-05-29 14:28:30.974749",
@@ -314,8 +314,8 @@ def given_i_request_to_start_raid_sensor_and_then_i_request_a_thread_status(step
 
     # Request the status for the stopped thread
     egressMsg = {
-        "title": "SSPL-LL Actuator Request",
-        "description": "Seagate Storage Platform Library - Low Level - Actuator Request",
+        "title": "SSPL Actuator Request",
+        "description": "Seagate Storage Platform Library - Actuator Request",
         "username" : "JohnDoe",
         "signature" : "None",
         "time" : "2015-05-29 14:28:30.974749",
@@ -337,10 +337,10 @@ def given_i_request_to_start_raid_sensor_and_then_i_request_a_thread_status(step
     }
     world.sspl_modules[RabbitMQegressProcessor.name()]._write_internal_msgQ(RabbitMQegressProcessor.name(), egressMsg)
 
-@step(u'When SSPL-LL Starts the raid sensor and receives a request for thread status')
+@step(u'When SSPL Starts the raid sensor and receives a request for thread status')
 def when_sspl_ll_starts_the_raid_sensor_and_receives_a_request_for_thread_status(step):
-    print("SSPL-LL Starts the thread for raid sensor msg handler")
-    # TODO: Use an instance of JournalD sensor to monitor logs showing that SSPL-LL performed the correct action
+    print("SSPL Starts the thread for raid sensor msg handler")
+    # TODO: Use an instance of JournalD sensor to monitor logs showing that SSPL performed the correct action
 
 @step(u'Then I get the Start Successful JSON message then I get the thread status message')
 def then_i_get_the_start_successful_json_message_then_i_get_the_thread_status_message(step):

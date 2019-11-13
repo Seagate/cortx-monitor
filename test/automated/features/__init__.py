@@ -1,1 +1,1 @@
-"""Lettuce automated integration tests for SSPL-LL"""
+"""Lettuce automated integration tests for SSPL"""

@@ -2,7 +2,7 @@
  ****************************************************************************
  Filename:          base_sensor_msg.py
  Description:       All sensor JSON messages extend this base class
-                    containing global constants used throughout  
+                    containing global constants used throughout
  Creation Date:     01/31/2015
  Author:            Jake Abernathy
 
@@ -21,7 +21,7 @@ from jsonschema import Draft3Validator
 from jsonschema import validate
 
 from json_msgs.messages.base_msg import BaseMsg
-from json_msgs.schemas import sensors 
+from json_msgs.schemas import sensors
 
 
 class BaseSensorMsg(BaseMsg):
@@ -29,8 +29,8 @@ class BaseSensorMsg(BaseMsg):
     The base class for all JSON sensor response messages transmitted by SSPL-LL
     '''
 
-    TITLE               = "SSPL-LL Sensor Response"
-    DESCRIPTION         = "Seagate Storage Platform Library - Low Level - Sensor Response"
+    TITLE               = "SSPL Sensor Response"
+    DESCRIPTION         = "Seagate Storage Platform Library - Sensor Response"
     JSON_SENSOR_SCHEMA  = "SSPL-LL_Sensor_Response.json"
 
 
@@ -51,6 +51,5 @@ class BaseSensorMsg(BaseMsg):
         Draft3Validator.check_schema(self._schema)
 
     def validateMsg(self, _jsonMsg):
-        """Validate the json message against the schema"""             
+        """Validate the json message against the schema"""
         validate(_jsonMsg, self._schema)
-        

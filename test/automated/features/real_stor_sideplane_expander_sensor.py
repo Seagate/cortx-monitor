@@ -42,8 +42,8 @@ def given_that_sspl_is_running(step):
 @step(u'When I send in the sideplane expander sensor message to request the current "([^"]*)" data')
 def when_i_send_in_the_sideplane_expander_sensor_message_to_request_the_current_sensor_type_data(step, resource_type):
     egressMsg = {
-        "title": "SSPL-LL Actuator Request",
-        "description": "Seagate Storage Platform Library - Low Level - Actuator Request",
+        "title": "SSPL Actuator Request",
+        "description": "Seagate Storage Platform Library - Actuator Request",
 
         "username" : "JohnDoe",
         "signature" : "None",

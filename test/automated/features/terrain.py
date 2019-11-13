@@ -24,7 +24,7 @@ from test.automated.rabbitmq.rabbitmq_ingress_processor_tests import RabbitMQing
 from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 
 # Section and key in config file for bootstrap
-SSPL_SETTING    = 'SSPL-LL-TESTS_SETTING'
+SSPL_SETTING    = 'SSPL-TESTS_SETTING'
 MODULES         = 'modules'
 SYS_INFORMATION = 'SYSTEM_INFORMATION'
 PRODUCT_NAME    = 'product'
@@ -48,7 +48,7 @@ def init_rabbitMQ_msg_processors():
 
     # Initialize logging
     try:
-        init_logging("SSPL-LL-Tests", "DEBUG")
+        init_logging("SSPL-Tests", "DEBUG")
 
     except Exception as err:
         # We don't have logger since it threw an exception, use generic 'print'
@@ -88,7 +88,7 @@ def init_rabbitMQ_msg_processors():
         # Loop through the list of instanced modules and start them on threads
         threads=[]
         for name, curr_module in world.sspl_modules.iteritems():
-            logger.info("SSPL-LL-Tests Starting %s" % curr_module.name())
+            logger.info("SSPL-Tests Starting %s" % curr_module.name())
             curr_module._set_debug(True)
             thread = Thread(target=_run_thread_capture_errors,
                             args=(curr_module, msgQlist, conf_reader, product))
@@ -117,11 +117,11 @@ def _run_thread_capture_errors(curr_module, msgQlist, conf_reader, product):
         curr_module.start()
 
     except BaseException as ex:
-        logger.critical("SSPL-LL-Tests encountered a fatal error, terminating service Error: %s" % ex)
+        logger.critical("SSPL-Tests encountered a fatal error, terminating service Error: %s" % ex)
         logger.exception(ex)
 
         # Populate an actuator response message and transmit back to HAlon
-        error_msg = "SSPL-LL-Tests encountered an error, terminating service Error: " + \
+        error_msg = "SSPL-Tests encountered an error, terminating service Error: " + \
                     ", Exception: " + logger.exception(ex)
         jsonMsg   = ThreadControllerMsg(curr_module, error_msg).getJson()
         curr_module._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
@@ -135,7 +135,7 @@ def _run_thread_capture_errors(curr_module, msgQlist, conf_reader, product):
 def stop_rabbitMQ_msg_processors(self):
     """Shuts down rabbitmq threads and terminates tests"""
     time.sleep(5)
-    print "SSPL-LL Automated Test Process ended successfully"
+    print "SSPL Automated Test Process ended successfully"
     for name, module in world.sspl_modules.iteritems():
         module.shutdown()
     os._exit(0)

@@ -39,7 +39,7 @@ class StorageEnclosure(object):
     FRU_MISSING = "missing"
     FRU_INSERTION = "insertion"
     FRU_FAULT = "fault"
-    FRU_FAULT_RESOLVED = "resolved"
+    FRU_FAULT_RESOLVED = "fault-resolved"
 
     fru_alerts = [FRU_MISSING, FRU_INSERTION, FRU_FAULT, FRU_FAULT_RESOLVED]
 

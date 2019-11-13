@@ -2,7 +2,7 @@
  ****************************************************************************
  Filename:          base_actuator_msg.py
  Description:       All actuator JSON messages extend this base class
-                    containing global constants used throughout  
+                    containing global constants used throughout
  Creation Date:     03/03/2015
  Author:            Jake Abernathy
 
@@ -29,8 +29,8 @@ class BaseActuatorMsg(BaseMsg):
     The base class for all JSON actuator response messages transmitted by SSPL-LL
     '''
 
-    TITLE                = "SSPL-LL Actuator Response"
-    DESCRIPTION          = "Seagate Storage Platform Library - Low Level - Actuator Response"
+    TITLE                = "SSPL Actuator Response"
+    DESCRIPTION          = "Seagate Storage Platform Library - Actuator Response"
     JSON_ACTUATOR_SCHEMA = "SSPL-LL_Actuator_Response.json"
 
 
@@ -51,5 +51,5 @@ class BaseActuatorMsg(BaseMsg):
         Draft3Validator.check_schema(self._schema)
 
     def validateMsg(self, _jsonMsg):
-        """Validate the json message against the schema"""             
+        """Validate the json message against the schema"""
         validate(_jsonMsg, self._schema)
