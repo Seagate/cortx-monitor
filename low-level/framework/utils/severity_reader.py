@@ -17,8 +17,8 @@
 class SeverityReader(object):
 
     ALERT_TO_SEVERITY_MAPPING = {
-        "fault": "critical",
-         "fault-resolved": "informational",
+         "fault": "critical",
+         "fault_resolved": "informational",
          "missing": "critical",
          "insertion": "informational",
          "threshold_breached:low": "warning",
