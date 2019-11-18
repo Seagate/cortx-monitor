@@ -14,10 +14,10 @@
  ****************************************************************************
 """
 
-import datetime
 import json
 import pika
 import os
+import time
 
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
@@ -279,7 +279,7 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
         self._log_debug("_add_signature, jsonMsg: %s" % self._jsonMsg)
         self._jsonMsg["username"] = self._signature_user
         self._jsonMsg["expires"]  = int(self._signature_expires)
-        self._jsonMsg["time"]     = str(datetime.datetime.now())
+        self._jsonMsg["time"]     = str(int(time.time()))
 
         if use_security_lib:
             authn_token_len = len(self._signature_token) + 1

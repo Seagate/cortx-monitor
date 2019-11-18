@@ -24,13 +24,14 @@ from json_msgs.messages.sensors.base_sensors_msg import BaseSensorMsg
 
 class RealStorSideplaneExpanderDataMsg(BaseSensorMsg):
 
-    SENSOR_RESPONSE_TYPE = "enclosure_sideplane_expander_alert"
     MESSAGE_VERSION = "1.0.0"
 
-    def __init__(self, alert_type,
-                 resource_type,
+    def __init__(self, host_name,
+                 alert_type,
+                 alert_id,
+                 severity,
                  info,
-                 extended_info,
+                 specific_info,
                  username="SSPL-LL",
                  signature="N/A",
                  time="N/A",
@@ -38,34 +39,24 @@ class RealStorSideplaneExpanderDataMsg(BaseSensorMsg):
         super(RealStorSideplaneExpanderDataMsg, self).__init__()
 
         self._alert_type = alert_type
-        self._resource_type = resource_type
+        self._alert_id = alert_id
         self._username = username
+        self._host_name = host_name
+        self._severity = severity
         self._signature = signature
         self._time = time
         self._expires = expires
 
-        self._sideplane_expander_info = info.get("sideplane_expander")
-        self._sideplane_expander_extended_info = \
-            extended_info.get("sideplane_expander")
+        self._fru_info = info
+        self._fru_specific_info = specific_info
 
-        self._name = self._sideplane_expander_info.get("name")
-        self._status = self._sideplane_expander_info.get("status")
-        self._location = self._sideplane_expander_info.get("location")
-        self._health = self._sideplane_expander_info.get("health")
-        self._health_reason = \
-            self._sideplane_expander_info.get("health-reason")
-        self._health_recommendation = \
-            self._sideplane_expander_info.get("health-recommendation")
-        self._enclosure_id = self._sideplane_expander_info.get("enclosure-id")
-        self._unhealthy_components = \
-            self._sideplane_expander_info.get("unhealthy_components", [])
-
-        self._position = \
-            self._sideplane_expander_extended_info.get("position")
-        self._durable_id = \
-            self._sideplane_expander_extended_info.get("durable-id")
-        self._drawer_id = \
-            self._sideplane_expander_extended_info.get("drawer-id")
+        self._site_id = self._fru_info.get("site_id")
+        self._rack_id = self._fru_info.get("rack_id")
+        self._node_id = self._fru_info.get("node_id")
+        self._cluster_id = self._fru_info.get("cluster_id")
+        self._resource_id = self._fru_info.get("resource_id")
+        self._resource_type = self._fru_info.get("resource_type")
+        self._event_time = self._fru_info.get("event_time")
 
         self._json = {"title": self.TITLE,
                       "description": self.DESCRIPTION,
@@ -81,35 +72,23 @@ class RealStorSideplaneExpanderDataMsg(BaseSensorMsg):
                                 "msg_version": self.MESSAGE_VERSION
                                 },
                           "sensor_response_type": {
-                                self.SENSOR_RESPONSE_TYPE: {
                                     "alert_type": self._alert_type,
-                                    "resource_type": self._resource_type,
+                                    "alert_id": self._resource_type,
+                                    "host_id": self._host_name,
+                                    "severity": self._severity,
                                     "info": {
-                                        "sideplane_expander": {
-                                            "name": self._name,
-                                            "status": self._status,
-                                            "location": self._location,
-                                            "health": self._health,
-                                            "health-reason":
-                                                self._health_reason,
-                                            "health-recommendation":
-                                                self._health_recommendation,
-                                            "enclosure-id": self._enclosure_id,
-                                            "unhealthy-components":
-                                                self._unhealthy_components
-                                        }
+                                            "site_id": self._site_id,
+                                            "rack_id": self._rack_id,
+                                            "node_id": self._node_id,
+                                            "cluster_id": self._cluster_id,
+                                            "resource_type": self._resource_type,
+                                            "event_time": self._event_time,
+                                            "resource_id": self._resource_id
                                     },
-                                    "extended_info": {
-                                        "sideplane_expander": {
-                                            "position": self._position,
-                                            "durable-id": self._durable_id,
-                                            "drawer-id": self._drawer_id
-                                        }
-                                    }
+                                    "specific_info": self._fru_specific_info
                                 }
                             }
                         }
-                  }
 
     def getJson(self):
         """Return a validated JSON object"""

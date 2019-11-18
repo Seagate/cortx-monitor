@@ -40,7 +40,7 @@ def given_that_sspl_is_running(step):
         world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
 
 @step(u'When I send in the sideplane expander sensor message to request the current "([^"]*)" data')
-def when_i_send_in_the_sideplane_expander_sensor_message_to_request_the_current_sensor_type_data(step, sensor_type):
+def when_i_send_in_the_sideplane_expander_sensor_message_to_request_the_current_sensor_type_data(step, resource_type):
     egressMsg = {
         "title": "SSPL-LL Actuator Request",
         "description": "Seagate Storage Platform Library - Low Level - Actuator Request",
@@ -62,7 +62,9 @@ def when_i_send_in_the_sideplane_expander_sensor_message_to_request_the_current_
             },
             "sensor_request_type": {
                 "enclosure_alert": {
-                    "sensor_type": sensor_type
+                    "info": {
+                        "resource_type": resource_type
+                    }
                 }
             }
         }
@@ -80,8 +82,7 @@ def then_i_get_the_sideplane_expander_sensor_json_response_message(step):
         print("Received: {0}".format(ingressMsg))
         try:
             # Make sure we get back the message type that matches the request
-            msg_type = ingressMsg.get("sensor_response_type")
-            sideplane_expander_sensor_msg = msg_type["enclosure_sideplane_expander_alert"]
+            sideplane_expander_sensor_msg = ingressMsg.get("sensor_response_type")
             break
         except Exception as exception:
             time.sleep(4)
@@ -89,22 +90,29 @@ def then_i_get_the_sideplane_expander_sensor_json_response_message(step):
 
     assert(sideplane_expander_sensor_msg is not None)
     assert(sideplane_expander_sensor_msg.get("alert_type") is not None)
-    assert(sideplane_expander_sensor_msg.get("resource_type") is not None)
+    assert(sideplane_expander_sensor_msg.get("alert_id") is not None)
+    assert(sideplane_expander_sensor_msg.get("host_id") is not None)
+    assert(sideplane_expander_sensor_msg.get("severity") is not None)
     assert(sideplane_expander_sensor_msg.get("info") is not None)
-    assert(sideplane_expander_sensor_msg.get("info").get("sideplane_expander") is not None)
 
-    sideplane_expander_info_data = sideplane_expander_sensor_msg.get("info").get("sideplane_expander")
+    sideplane_expander_info_data = sideplane_expander_sensor_msg.get("info")
+    assert(sideplane_expander_info_data.get("site_id") is not None)
+    assert(sideplane_expander_info_data.get("node_id") is not None)
+    assert(sideplane_expander_info_data.get("cluster_id") is not None)
+    assert(sideplane_expander_info_data.get("rack_id") is not None)
+    assert(sideplane_expander_info_data.get("resource_type") is not None)
+    assert(sideplane_expander_info_data.get("event_time") is not None)
+    assert(sideplane_expander_info_data.get("resource_id") is not None)
 
-    assert(sideplane_expander_info_data.get("status") is not None)
-    assert(sideplane_expander_info_data.get("name") is not None)
-    assert(sideplane_expander_info_data.get("enclosure-id") is not None)
-    assert(sideplane_expander_info_data.get("health-reason") is not None)
-    assert(sideplane_expander_info_data.get("health") is not None)
-    assert(sideplane_expander_info_data.get("location") is not None)
-    assert(sideplane_expander_info_data.get("health-recommendation") is not None)
-
-    sideplane_expander_extended_info_data = sideplane_expander_sensor_msg.get("extended_info").get("sideplane_expander")
-    if sideplane_expander_extended_info_data:
-        assert(sideplane_expander_extended_info_data.get("position") is not None)
-        assert(sideplane_expander_extended_info_data.get("durable-id") is not None)
-        assert(sideplane_expander_extended_info_data.get("drawer-id") is not None)
+    sideplane_expander_specific_info_data = sideplane_expander_sensor_msg.get("specific_info", {})
+    if sideplane_expander_specific_info_data:
+        assert(sideplane_expander_specific_info_data.get("position") is not None)
+        assert(sideplane_expander_specific_info_data.get("durable-id") is not None)
+        assert(sideplane_expander_specific_info_data.get("drawer-id") is not None)
+        assert(sideplane_expander_specific_info_data.get("status") is not None)
+        assert(sideplane_expander_specific_info_data.get("name") is not None)
+        assert(sideplane_expander_specific_info_data.get("enclosure-id") is not None)
+        assert(sideplane_expander_specific_info_data.get("health-reason") is not None)
+        assert(sideplane_expander_specific_info_data.get("health") is not None)
+        assert(sideplane_expander_specific_info_data.get("location") is not None)
+        assert(sideplane_expander_specific_info_data.get("health-recommendation") is not None)

@@ -17,6 +17,9 @@
 import json
 import os
 import errno
+import socket
+import time
+import uuid
 
 import requests
 from zope.interface import implements
@@ -24,6 +27,7 @@ from zope.interface import implements
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
+from framework.utils.severity_reader import SeverityReader
 from message_handlers.logging_msg_handler import LoggingMsgHandler
 from framework.platforms.realstor.realstor_enclosure import singleton_realstorencl
 
@@ -39,7 +43,7 @@ class RealStorSideplaneExpanderSensor(ScheduledModuleThread, InternalMsgQ):
 
     SENSOR_NAME = "RealStorSideplaneExpanderSensor"
     SENSOR_TYPE = "enclosure_sideplane_expander_alert"
-    RESOURCE_TYPE = "fru"
+    RESOURCE_TYPE = "enclosure:fru:sideplane"
 
     PRIORITY = 1
 
@@ -219,14 +223,14 @@ class RealStorSideplaneExpanderSensor(ScheduledModuleThread, InternalMsgQ):
            required attributes and returns the same list"""
 
         sideplane_unhealthy_components = []
+        unhealthy_component = {}
+
+        unhealthy_component_list = ['health', 'health-reason',
+                                        'health-recommendation', 'component-id']
 
         for unhealthy_component in unhealthy_components:
-            del unhealthy_component["component-type-numeric"]
-            del unhealthy_component["basetype"]
-            del unhealthy_component["meta"]
-            del unhealthy_component["primary-key"]
-            del unhealthy_component["health-numeric"]
-            del unhealthy_component["object-name"]
+            for unhealthy_key in filter(lambda common_key: common_key in unhealthy_component, unhealthy_component_list):
+                unhealthy_component[unhealthy_key] = unhealthy_component.get(unhealthy_key, "")
             sideplane_unhealthy_components.append(unhealthy_component)
 
         return sideplane_unhealthy_components
@@ -238,13 +242,10 @@ class RealStorSideplaneExpanderSensor(ScheduledModuleThread, InternalMsgQ):
 
         sideplane_expander_info_key_list = \
             ['name', 'status', 'location', 'health', 'health-reason',
-                'health-recommendation', 'enclosure-id']
-
-        sideplane_expander_extended_info_key_list = \
-            ['durable-id', 'drawer-id', 'position']
+                'health-recommendation', 'enclosure-id',
+                'durable-id', 'drawer-id', 'position']
 
         sideplane_expander_info_dict = {}
-        sideplane_expander_extended_info_dict = {}
 
         if unhealthy_components:
             sideplane_unhealthy_components = \
@@ -253,36 +254,53 @@ class RealStorSideplaneExpanderSensor(ScheduledModuleThread, InternalMsgQ):
         for exp_key, exp_val in sideplane_expander.items():
             if exp_key in sideplane_expander_info_key_list:
                 sideplane_expander_info_dict[exp_key] = exp_val
-            if exp_key in sideplane_expander_extended_info_key_list:
-                sideplane_expander_extended_info_dict[exp_key] = exp_val
 
         sideplane_expander_info_dict["unhealthy_components"] = \
             unhealthy_components
 
-        info = {"sideplane_expander":
-                dict(sideplane_expander_info_dict.items())}
+        severity_reader = SeverityReader()
+        severity = severity_reader.map_severity(alert_type)
+        epoch_time = str(int(time.time()))
 
-        extended_info = {"sideplane_expander":
-                         sideplane_expander_extended_info_dict}
+        alert_id = self._get_alert_id(epoch_time)
+        drawer_id = "drawer" + ' ' + str(sideplane_expander_info_dict.get("drawer-id"))
+        name = sideplane_expander_info_dict.get("name", "")
+        resource_id = drawer_id + ' ' + name
+        host_name = socket.gethostname()
 
-        # create internal json message request structure that will be passed to
-        # the StorageEnclHandler
+
+        info = {
+                "site_id": self.rssencl.site_id,
+                "cluster_id": self.rssencl.cluster_id,
+                "rack_id": self.rssencl.rack_id,
+                "node_id": self.rssencl.node_id,
+                "resource_type": self.RESOURCE_TYPE,
+                "resource_id": resource_id,
+                "event_time": epoch_time
+                }
+
         internal_json_msg = json.dumps(
             {"sensor_request_type": {
                 "enclosure_alert": {
                         "status": "update",
-                        "sensor_type":
-                        RealStorSideplaneExpanderSensor.SENSOR_TYPE,
+                        "host_id": host_name,
                         "alert_type": alert_type,
-                        "resource_type":
-                        RealStorSideplaneExpanderSensor.RESOURCE_TYPE
-                    },
-                "info": info,
-                "extended_info": extended_info
-               }
-             })
+                        "alert_id": alert_id,
+                        "severity": severity,
+                        "info": info,
+                        "specific_info": sideplane_expander_info_dict
+                        }
+             }})
 
         return internal_json_msg
+
+    def _get_alert_id(self, epoch_time):
+        """Returns alert id which is a combination of
+           epoch_time and salt value
+        """
+        salt = str(uuid.uuid4().hex)
+        alert_id = epoch_time + salt
+        return alert_id
 
     def _send_json_message(self, json_msg):
         """Transmit data to RealStorMsgHandler to be processed and sent out"""
