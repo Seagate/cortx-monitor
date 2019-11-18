@@ -30,10 +30,12 @@ class RealStorLogicalVolumeDataMsg(BaseSensorMsg):
     SENSOR_RESPONSE_TYPE = "enclosure_logical_volume_alert"
     MESSAGE_VERSION = "1.0.0"
 
-    def __init__(self, alert_type,
-                 resource_type,
+    def __init__(self, host_name,
+                 alert_type,
+                 alert_id,
+                 severity,
                  info,
-                 extended_info,
+                 specific_info,
                  username="SSPL-LL",
                  signature="N/A",
                  time="N/A",
@@ -42,21 +44,25 @@ class RealStorLogicalVolumeDataMsg(BaseSensorMsg):
         super(RealStorLogicalVolumeDataMsg, self).__init__()
 
         # Header attributes
+        self._alert_type = alert_type
+        self._host_name = host_name
+        self._alert_id = alert_id
+        self._severity = severity
         self._username = username
+        self._signature = signature
         self._time = time
         self._expires = expires
-        self._signature = signature
 
-        self._alert_type = alert_type
-        self._resource_type = resource_type
+        self._fru_info = info
+        self._fru_specific_info = specific_info
 
-        # Already filtered out data in realstor_logical_volume_sensor.py
-        # Generic info attributes
-        for key, value in info.iteritems():
-            setattr(self, '_'+key.replace('.', '_').replace('-','_'), value)
-
-        # extended info attributes
-        self._extended_info = extended_info
+        self._site_id = self._fru_info.get("site_id")
+        self._rack_id = self._fru_info.get("rack_id")
+        self._node_id = self._fru_info.get("node_id")
+        self._cluster_id = self._fru_info.get("cluster_id")
+        self._resource_id = self._fru_info.get("resource_id")
+        self._resource_type = self._fru_info.get("resource_type")
+        self._event_time = self._fru_info.get("event_time")
 
         self._json = {"title": self.TITLE,
                       "description": self.DESCRIPTION,
@@ -72,41 +78,23 @@ class RealStorLogicalVolumeDataMsg(BaseSensorMsg):
                               "msg_version": self.MESSAGE_VERSION,
                           },
                           "sensor_response_type": {
-                              self.SENSOR_RESPONSE_TYPE: {
-                                  "alert_type": self._alert_type,
-                                  "resource_type": self._resource_type,
-                                  "info": {
-                                      "object-name" : self._object_name,
-                                      "virtual-disk-name" : self._virtual_disk_name,
-                                      "storage-pool-name" : self._storage_pool_name,
-                                      "volume-name" : self._volume_name,
-                                      "size" : self._size,
-                                      "total-size" : self._total_size,
-                                      "allocated-size" : self._allocated_size,
-                                      "storage-type" : self._storage_type,
-                                      "owner" : self._owner,
-                                      "serial-number" : self._serial_number,
-                                      "write-policy" : self._write_policy,
-                                      "volume-type" : self._volume_type,
-                                      "volume-class" : self._volume_class,
-                                      "blocksize" : self._blocksize,
-                                      "blocks" : self._blocks,
-                                      "capabilities" : self._capabilities,
-                                      "virtual-disk-serial" : self._virtual_disk_serial,
-                                      "volume-description" : self._volume_description,
-                                      "wwn" : self._wwn,
-                                      "progress" : self._progress,
-                                      "raidtype" : self._raidtype,
-                                      "health" : self._health,
-                                      "health-reason" : self._health_reason,
-                                      "health-recommendation" : self._health_recommendation,
-                                      "disk-group" : self._disk_group
-                                  },
-                                  "extended_info": self._extended_info
-                              }
+                              "host_id": self._host_name,
+                              "alert_type": self._alert_type,
+                              "alert_id": self._alert_id,
+                              "severity": self._severity,
+                              "info": {
+                                      "site_id": self._site_id,
+                                      "rack_id": self._rack_id,
+                                      "node_id": self._node_id,
+                                      "cluster_id": self._cluster_id,
+                                      "resource_type": self._resource_type,
+                                      "event_time": self._event_time,
+                                      "resource_id": self._resource_id
+                              },
+                              "specific_info": self._fru_specific_info
                           }
                       }
-                      }
+                    }
 
     def getJson(self):
         """Return a validated JSON object"""

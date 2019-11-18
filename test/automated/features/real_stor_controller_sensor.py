@@ -83,7 +83,6 @@ def then_i_get_the_controller_sensor_json_response_message(step):
         try:
             # Make sure we get back the message type that matches the request
             controller_sensor_msg = ingressMsg.get("sensor_response_type")
-            #controller_sensor_msg = msg_type["enclosure_controller_alert"]
             break
         except Exception as exception:
             time.sleep(4)

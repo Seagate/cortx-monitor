@@ -40,7 +40,7 @@ def given_that_sspl_is_running(step):
         world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
 
 @step(u'When I send in the logical volume sensor message to request the current "([^"]*)" data')
-def when_i_send_in_the_logical_volume_sensor_message_to_request_the_current_sensor_type_data(step, sensor_type):
+def when_i_send_in_the_logical_volume_sensor_message_to_request_the_current_sensor_type_data(step, resource_type):
     egressMsg = {
         "title": "SSPL-LL Actuator Request",
         "description": "Seagate Storage Platform Library - Low Level - Actuator Request",
@@ -62,7 +62,9 @@ def when_i_send_in_the_logical_volume_sensor_message_to_request_the_current_sens
             },
             "sensor_request_type": {
                 "enclosure_alert": {
-                    "sensor_type": sensor_type
+                    "info": {
+                        "resource_type": resource_type
+                    }
                 }
             }
         }
@@ -80,8 +82,7 @@ def then_i_get_the_logical_volume_sensor_json_response_message(step):
         print("Received: %s" % ingressMsg)
         try:
             # Make sure we get back the message type that matches the request
-            msg_type = ingressMsg.get("sensor_response_type")
-            logical_volume_sensor_msg = msg_type["enclosure_logical_volume_alert"]
+            logical_volume_sensor_msg = ingressMsg.get("sensor_response_type")
             break
         except Exception as exception:
             time.sleep(4)
@@ -89,33 +90,44 @@ def then_i_get_the_logical_volume_sensor_json_response_message(step):
 
     assert(logical_volume_sensor_msg is not None)
     assert(logical_volume_sensor_msg.get("alert_type") is not None)
-    assert(logical_volume_sensor_msg.get("resource_type") is not None)
+    assert(logical_volume_sensor_msg.get("alert_id") is not None)
+    assert(logical_volume_sensor_msg.get("severity") is not None)
+    assert(logical_volume_sensor_msg.get("host_id") is not None)
+    assert(logical_volume_sensor_msg.get("info") is not None)
+    assert(logical_volume_sensor_msg.get("specific_info") is not None)
 
     info = logical_volume_sensor_msg.get("info")
-    assert(info is not None)
+    assert(info.get("site_id") is not None)
+    assert(info.get("node_id") is not None)
+    assert(info.get("cluster_id") is not None)
+    assert(info.get("rack_id") is not None)
+    assert(info.get("resource_type") is not None)
+    assert(info.get("event_time") is not None)
+    assert(info.get("resource_id") is not None)
 
-    assert(info.get("object-name") is not None)
-    assert(info.get("virtual-disk-name") is not None)
-    assert(info.get("storage-pool-name") is not None)
-    assert(info.get("volume-name") is not None)
-    assert(info.get("size") is not None)
-    assert(info.get("total-size") is not None)
-    assert(info.get("allocated-size") is not None)
-    assert(info.get("storage-type") is not None)
-    assert(info.get("owner") is not None)
-    assert(info.get("serial-number") is not None)
-    assert(info.get("write-policy") is not None)
-    assert(info.get("volume-type") is not None)
-    assert(info.get("volume-class") is not None)
-    assert(info.get("blocksize") is not None)
-    assert(info.get("blocks") is not None)
-    assert(info.get("capabilities") is not None)
-    assert(info.get("virtual-disk-serial") is not None)
-    assert(info.get("volume-description") is not None)
-    assert(info.get("wwn") is not None)
-    assert(info.get("progress") is not None)
-    assert(info.get("raidtype") is not None)
-    assert(info.get("health") is not None)
-    assert(info.get("health-reason") is not None)
-    assert(info.get("health-recommendation") is not None)
-    assert(info.get("disk-group") is not None)
+    specific_info = logical_volume_sensor_msg.get("specific_info")
+    assert(specific_info.get("object-name") is not None)
+    assert(specific_info.get("virtual-disk-name") is not None)
+    assert(specific_info.get("storage-pool-name") is not None)
+    assert(specific_info.get("volume-name") is not None)
+    assert(specific_info.get("size") is not None)
+    assert(specific_info.get("total-size") is not None)
+    assert(specific_info.get("allocated-size") is not None)
+    assert(specific_info.get("storage-type") is not None)
+    assert(specific_info.get("owner") is not None)
+    assert(specific_info.get("serial-number") is not None)
+    assert(specific_info.get("write-policy") is not None)
+    assert(specific_info.get("volume-type") is not None)
+    assert(specific_info.get("volume-class") is not None)
+    assert(specific_info.get("blocksize") is not None)
+    assert(specific_info.get("blocks") is not None)
+    assert(specific_info.get("capabilities") is not None)
+    assert(specific_info.get("virtual-disk-serial") is not None)
+    assert(specific_info.get("volume-description") is not None)
+    assert(specific_info.get("wwn") is not None)
+    assert(specific_info.get("progress") is not None)
+    assert(specific_info.get("raidtype") is not None)
+    assert(specific_info.get("health") is not None)
+    assert(specific_info.get("health-reason") is not None)
+    assert(specific_info.get("health-recommendation") is not None)
+    assert(specific_info.get("disk-group") is not None)

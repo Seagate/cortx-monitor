@@ -17,6 +17,9 @@ import json
 import re
 import errno
 import os
+import socket
+import time
+import uuid
 
 import requests
 from zope.interface import implements
@@ -24,6 +27,7 @@ from zope.interface import implements
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
+from framework.utils.severity_reader import SeverityReader
 from framework.platforms.realstor.realstor_enclosure import singleton_realstorencl
 
 # Modules that receive messages from this module
@@ -40,6 +44,7 @@ class RealStorLogicalVolumeSensor(ScheduledModuleThread, InternalMsgQ):
     SENSOR_NAME = "RealStorLogicalVolumeSensor"
     SENSOR_RESP_TYPE = "enclosure_logical_volume_alert"
     RESOURCE_CATEGORY = "fru"
+    RESOURCE_TYPE = "enclosure:fru:logical_volume"
 
     PRIORITY = 1
 
@@ -287,33 +292,61 @@ class RealStorLogicalVolumeSensor(ScheduledModuleThread, InternalMsgQ):
         if not logical_volume_detail:
             return {}
 
-        info = dict.fromkeys(self.volumes_generic, "NA")
+        generic_info = dict.fromkeys(self.volumes_generic, "NA")
         extended_info = dict.fromkeys(self.volumes_extended, "NA")
         disk_groups_info = dict.fromkeys(self.disk_groups_generic, "NA")
 
+        severity_reader = SeverityReader()
+        severity = severity_reader.map_severity(alert_type)
+        epoch_time = str(int(time.time()))
+
+        alert_id = self._get_alert_id(epoch_time)
+        resource_id = logical_volume_detail.get("volume-name", "")
+        host_name = socket.gethostname()
+
         for key, value in logical_volume_detail.items():
             if key in self.volumes_generic:
-                info.update({key : value})
+                generic_info.update({key : value})
             elif key in self.volumes_extended:
                 extended_info.update({key : value})
 
         for key, value in disk_group.items():
             if key in self.disk_groups_generic:
                 disk_groups_info.update({key : value})
-        info['disk-group'] = [disk_groups_info]
+        generic_info['disk-group'] = [disk_groups_info]
+        generic_info.update(extended_info)
+
+        info = {
+                "site_id": self.rssencl.site_id,
+                "cluster_id": self.rssencl.cluster_id,
+                "rack_id": self.rssencl.rack_id,
+                "node_id": self.rssencl.node_id,
+                "resource_type": self.RESOURCE_TYPE,
+                "resource_id": resource_id,
+                "event_time": epoch_time
+                }
 
         internal_json_msg = json.dumps(
             {"sensor_request_type": {
-                    "enclosure_alert": {
-                        "sensor_type" : self.SENSOR_RESP_TYPE,
-                        "resource_type": self.RESOURCE_CATEGORY,
-                        "alert_type": alert_type,
-                        "status": "update"
-                    },
+                "enclosure_alert": {
+                    "host_id": host_name,
+                    "severity": severity,
+                    "alert_id": alert_id,
+                    "alert_type": alert_type,
+                    "status": "update",
                     "info": info,
-                    "extended_info": extended_info
+                    "specific_info": generic_info
+                }
             }})
         return internal_json_msg
+
+    def _get_alert_id(self, epoch_time):
+        """Returns alert id which is a combination of
+           epoch_time and salt value
+        """
+        salt = str(uuid.uuid4().hex)
+        alert_id = epoch_time + salt
+        return alert_id
 
     def _send_json_msg(self, json_msg):
         """Sends JSON message to Handler"""
