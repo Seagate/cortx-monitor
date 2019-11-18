@@ -17,6 +17,9 @@ import json
 import re
 import errno
 import os
+import socket
+import time
+import uuid
 
 import requests
 from zope.interface import implements
@@ -24,6 +27,7 @@ from zope.interface import implements
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
+from framework.utils.severity_reader import SeverityReader
 from framework.platforms.realstor.realstor_enclosure import singleton_realstorencl
 
 # Modules that receive messages from this module
@@ -46,40 +50,12 @@ class RealStorControllerSensor(ScheduledModuleThread, InternalMsgQ):
     SENSOR_NAME = "RealStorControllerSensor"
     SENSOR_RESP_TYPE = "enclosure_controller_alert"
     RESOURCE_CATEGORY = "fru"
+    RESOURCE_TYPE = "enclosure:fru:controller"
 
     PRIORITY = 1
 
     # Controllers directory name
     CONTROLLERS_DIR = "controllers"
-
-    #generic fields list
-    controller_generic = ["object-name", "controller-id", "serial-number", "hardware-version",
-                          "position", "cpld-version", "mac-address", "node-wwn", "ip-address",
-                          "ip-subnet-mask", "ip-gateway", "disks", "number-of-storage-pools",
-                          "virtual-disks", "host-ports", "drive-channels", "drive-bus-type",
-                          "status", "failed-over", "fail-over-reason", "vendor", "model",
-                          "platform-type", "write-policy", "description", "part-number",
-                          "revision", "mfg-vendor-id", "locator-led", "health", "health-reason",
-                          "redundancy-mode", "redundancy-status"]
-
-    network_generic = ["link-speed", "duplex-mode", "health", "health-reason"]
-
-    port_generic = ["controller", "port", "port-type", "media", "target-id", "status",
-                    "actual-speed", "configured-speed", "health", "health-reason",
-                    "health-recommendation"]
-
-    fc_port_generic = ["configured-topology", "sfp-status", "sfp-present", "sfp-vendor",
-                       "sfp-part-number", "sfp-revision", "sfp-supported-speeds"]
-
-    expander_ports_generic = ["enclosure-id", "controller", "sas-port-type", "sas-port-index",
-                              "name", "status", "health", "health-reason", "health-recommendation"]
-
-    compact_flash_generic = ["controller-id", "name", "status", "cache-flush", "health",
-                             "health-reason", "health-recommendation"]
-
-    expanders_generic = ["enclosure-id", "drawer-id", "name", "location", "status",
-                         "extended-status", "fw-revision", "health", "health-reason",
-                         "health-recommendation"]
 
     @staticmethod
     def name():
@@ -273,118 +249,45 @@ class RealStorControllerSensor(ScheduledModuleThread, InternalMsgQ):
         if not controller_detail:
             return {}
 
-        generic_dict={}
-        extended_dict={}
-        generic_dict.update(dict.fromkeys(self.controller_generic, "NA"))
-        generic_dict.update({"network-parameters":[dict.fromkeys(self.network_generic, "NA")]})
-        generic_dict.update({"port":[dict.fromkeys(self.port_generic, "NA")]})
-        generic_dict["port"][0].update({"fc-port":[dict.fromkeys(self.fc_port_generic, "NA")]})
-        generic_dict.update({"expander-ports":[dict.fromkeys(self.expander_ports_generic, "NA")]})
-        generic_dict.update({"compact-flash":[dict.fromkeys(self.compact_flash_generic, "NA")]})
-        generic_dict.update({"expanders":[dict.fromkeys(self.expanders_generic, "NA")]})
-        for key, value in controller_detail.iteritems():
-            if key == "expander-ports":
-                expndr_ports_gen_lst, expndr_ports_ext_lst=self._get_nested_controller_data(
-                    key, controller_detail[key])
-                generic_dict.update({key:expndr_ports_gen_lst})
-                extended_dict.update({key:expndr_ports_ext_lst})
-            elif key == "port":
-                port_gen_lst, port_ext_lst = self._get_nested_controller_data(
-                    key,controller_detail[key])
-                generic_dict.update({key:port_gen_lst})
-                extended_dict.update({key:port_ext_lst})
-            elif key == "network-parameters":
-                network_gen_lst, network_ext_lst = self._get_nested_controller_data(
-                    key,controller_detail['network-parameters'])
-                generic_dict.update({key:network_gen_lst})
-                extended_dict.update({key:network_ext_lst})
-            elif key == "compact-flash":
-                compact_gen_lst, compact_ext_lst = self._get_nested_controller_data(
-                    key,controller_detail[key])
-                generic_dict.update({key:compact_gen_lst})
-                extended_dict.update({key:compact_ext_lst})
-            elif key == "expanders":
-                expanders_gen_lst, expanders_ext_lst = self._get_nested_controller_data(
-                    key,controller_detail[key])
-                generic_dict.update({key:expanders_gen_lst})
-                extended_dict.update({key:expanders_ext_lst})
-            else:
-                if key in self.controller_generic:
-                    generic_dict.update({key:value})
-                else:
-                    extended_dict.update({key:value})
+        severity_reader = SeverityReader()
+        severity = severity_reader.map_severity(alert_type)
+        epoch_time = str(int(time.time()))
+
+        alert_id = self._get_alert_id(epoch_time)
+        resource_id = controller_detail.get("durable-id", "")
+        host_name = socket.gethostname()
+        info = {
+                "site_id": self.rssencl.site_id,
+                "cluster_id": self.rssencl.cluster_id,
+                "rack_id": self.rssencl.rack_id,
+                "node_id": self.rssencl.node_id,
+                "resource_type": self.RESOURCE_TYPE,
+                "resource_id": resource_id,
+                "event_time": epoch_time
+                }
 
         internal_json_msg = json.dumps(
             {"sensor_request_type": {
-                    "enclosure_alert": {
-                        "sensor_type" : self.SENSOR_RESP_TYPE,
-                        "resource_type": self.RESOURCE_CATEGORY,
-                        "alert_type": alert_type,
-                        "status": "update"
-                    },
-                    "info": generic_dict,
-                    "extended_info": extended_dict
+                "enclosure_alert": {
+                    "host_id": host_name,
+                    "severity": severity,
+                    "alert_id": alert_id,
+                    "alert_type": alert_type,
+                    "status": "update",
+                    "info": info,
+                    "specific_info": controller_detail
+                }
             }})
+
         return internal_json_msg
 
-    def _get_nested_controller_data(self, parent_key, lstdict):
-        generic_nested_lst=[]
-        expanded_nested_lst=[]
-        for idx,nested_dict in enumerate(lstdict):
-            generic_nested_dict={}
-            expanded_nested_dict={}
-            for key, value in nested_dict.iteritems():
-                if key == "fc-port":
-                    fc_port_gen_lst, fc_port_exp_lst = self._get_fc_port_controller_data(
-                        nested_dict[key])
-                    generic_nested_dict.update({key:fc_port_gen_lst})
-                    expanded_nested_dict.update({key:fc_port_exp_lst})
-                elif key == "sas-port":
-                    expanded_nested_dict.update({key:nested_dict[key]})
-                else:
-                    if parent_key == "expander-ports":
-                        if key in self.expander_ports_generic:
-                            generic_nested_dict.update({key:value})
-                        else:
-                            expanded_nested_dict.update({key:value})
-                    elif parent_key == "port":
-                        if key in self.port_generic:
-                            generic_nested_dict.update({key:value})
-                        else:
-                            expanded_nested_dict.update({key:value})
-                    elif parent_key == "network-parameters":
-                        if key in self.network_generic:
-                            generic_nested_dict.update({key:value})
-                        else:
-                            expanded_nested_dict.update({key:value})
-                    elif parent_key == "compact-flash":
-                        if key in self.compact_flash_generic:
-                            generic_nested_dict.update({key:value})
-                        else:
-                            expanded_nested_dict.update({key:value})
-                    elif parent_key == "expanders":
-                        if key in self.expanders_generic:
-                            generic_nested_dict.update({key:value})
-                        else:
-                            expanded_nested_dict.update({key:value})
-            generic_nested_lst.append(generic_nested_dict)
-            expanded_nested_lst.append(expanded_nested_dict)
-        return generic_nested_lst, expanded_nested_lst
-
-    def _get_fc_port_controller_data(self, lstdict):
-        fc_port_generic_lst=[]
-        fc_port_expande_lst=[]
-        for idx,nested_fc_dict in enumerate(lstdict):
-            fc_port_generic_dic={}
-            fc_port_expande_dic={}
-            for key, value in nested_fc_dict.iteritems():
-                if key in self.fc_port_generic:
-                    fc_port_generic_dic.update({key:value})
-                else:
-                    fc_port_expande_dic.update({key:value})
-            fc_port_generic_lst.append(fc_port_generic_dic)
-            fc_port_expande_lst.append(fc_port_expande_dic)
-        return fc_port_generic_lst, fc_port_expande_lst
+    def _get_alert_id(self, epoch_time):
+        """Returns alert id which is a combination of
+           epoch_time and salt value
+        """
+        salt = str(uuid.uuid4().hex)
+        alert_id = epoch_time + salt
+        return alert_id
 
     def _send_json_msg(self, json_msg):
         """Sends JSON message to Handler"""
