@@ -17,6 +17,9 @@ import errno
 import json
 import os
 import re
+import socket
+import time
+import uuid
 
 import requests
 from zope.interface import implements
@@ -24,6 +27,7 @@ from zope.interface import implements
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
+from framework.utils.severity_reader import SeverityReader
 from framework.platforms.realstor.realstor_enclosure import singleton_realstorencl
 
 # Modules that receive messages from this module
@@ -38,8 +42,7 @@ class RealStorPSUSensor(ScheduledModuleThread, InternalMsgQ):
     implements(IPSUsensor)
 
     SENSOR_NAME = "RealStorPSUSensor"
-    SENSOR_RESP_TYPE = "enclosure_psu_alert"
-    RESOURCE_CATEGORY = "fru"
+    RESOURCE_CATEGORY = "enclosure:fru:psu"
 
     PRIORITY = 1
 
@@ -250,7 +253,25 @@ class RealStorPSUSensor(ScheduledModuleThread, InternalMsgQ):
         if not psu_detail:
             return {}
 
+        severity_reader = SeverityReader()
+        severity = severity_reader.map_severity(alert_type)
+        epoch_time = str(int(time.time()))
+
+        alert_id = self._get_alert_id(epoch_time)
+        resource_id = psu_detail.get("durable-id")
+        host_name = socket.gethostbyaddr(self.rssencl.mc1)[0]
+
         info = {
+                "site_id": self.rssencl.site_id,
+                "cluster_id": self.rssencl.cluster_id,
+                "rack_id": self.rssencl.rack_id,
+                "node_id": self.rssencl.node_id,
+                "resource_type": self.RESOURCE_CATEGORY,
+                "resource_id": resource_id,
+                "event_time": epoch_time
+                }
+
+        specific_info = {
             "enclosure-id": psu_detail.get("enclosure-id"),
             "serial-number":  psu_detail.get("serial-number"),
             "description":  psu_detail.get("description"),
@@ -271,24 +292,39 @@ class RealStorPSUSensor(ScheduledModuleThread, InternalMsgQ):
             "health":  psu_detail.get("health"),
             "health-reason":  psu_detail.get("health-reason"),
             "health-recommendation":  psu_detail.get("health-recommendation"),
-            "status":  psu_detail.get("status")
-        }
-        extended_info = {
+            "status":  psu_detail.get("status"),
             "durable-id":  psu_detail.get("durable-id"),
             "position":  psu_detail.get("position"),
         }
+
+        for k in specific_info.viewkeys():
+            if specific_info[k] == "":
+                specific_info[k] = "N/A"
+
+        # Creates internal json message request structure.
+        # this message will be passed to the StorageEnclHandler
         internal_json_msg = json.dumps(
             {"sensor_request_type": {
                 "enclosure_alert": {
-                    "sensor_type": self.SENSOR_RESP_TYPE,
-                    "resource_type": self.RESOURCE_CATEGORY,
-                    "alert_type": alert_type,
-                    "status": "update"
-                },
-                "info": info,
-                "extended_info": extended_info
+                        "status": "update",
+                        "host_id": host_name,
+                        "alert_type": alert_type,
+                        "severity": severity,
+                        "alert_id": alert_id,
+                        "info": info,
+                        "specific_info": specific_info
+                }
             }})
+
         return internal_json_msg
+
+    def _get_alert_id(self, epoch_time):
+        """Returns alert id which is a combination of
+           epoch_time and salt value
+        """
+        salt = str(uuid.uuid4().hex)
+        alert_id = epoch_time + salt
+        return alert_id
 
     def _send_json_msg(self, json_msg):
         """Sends JSON message to Handler"""

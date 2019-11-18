@@ -40,7 +40,7 @@ def given_that_sspl_ll_is_running(step):
 
 
 @step(u'When I send in the psu sensor message to request the current "([^"]*)" data')
-def when_i_send_in_the_psu_sensor_message_to_request_the_current_sensor_type_data(step, sensor_type):
+def when_i_send_in_the_psu_sensor_message_to_request_the_current_sensor_type_data(step, resource_type):
     egressMsg = {
         "title": "SSPL-LL Actuator Request",
         "description": "Seagate Storage Platform Library - Low Level - Actuator Request",
@@ -62,7 +62,9 @@ def when_i_send_in_the_psu_sensor_message_to_request_the_current_sensor_type_dat
             },
             "sensor_request_type": {
                 "enclosure_alert": {
-                    "sensor_type": sensor_type
+                    "info": {
+                        "resource_type": resource_type
+                    }
                 }
             }
         }
@@ -82,40 +84,50 @@ def then_i_get_the_psu_sensor_json_response_message(step):
         try:
             # Make sure we get back the message type that matches the request
             msg_type = ingressMsg.get("sensor_response_type")
-            psu_sensor_msg = msg_type["enclosure_psu_alert"]
-            break
+            if msg_type["info"]["resource_type"] == "enclosure:fru:psu":
+                psu_sensor_msg = msg_type
+                break
+
         except Exception as exception:
             time.sleep(4)
             print(exception)
 
     assert(psu_sensor_msg is not None)
+    assert(psu_sensor_msg.get("host_id") is not None)
     assert(psu_sensor_msg.get("alert_type") is not None)
-    assert(psu_sensor_msg.get("resource_type") is not None)
+    assert(psu_sensor_msg.get("severity") is not None)
+    assert(psu_sensor_msg.get("alert_id") is not None)
     psu_info = psu_sensor_msg.get("info")
     assert(psu_info is not None)
-    assert(psu_info.get("enclosure-id") is not None)
-    assert(psu_info.get("serial-number") is not None)
-    assert(psu_info.get("description") is not None)
-    assert(psu_info.get("revision") is not None)
-    assert(psu_info.get("model") is not None)
-    assert(psu_info.get("vendor") is not None)
-    assert(psu_info.get("location") is not None)
-    assert(psu_info.get("part-number") is not None)
-    assert(psu_info.get("fru-shortname") is not None)
-    assert(psu_info.get("mfg-date") is not None)
-    assert(psu_info.get("mfg-vendor-id") is not None)
-    assert(psu_info.get("dc12v") is not None)
-    assert(psu_info.get("dc5v") is not None)
-    assert(psu_info.get("dc33v") is not None)
-    assert(psu_info.get("dc12i") is not None)
-    assert(psu_info.get("dc5i") is not None)
-    assert(psu_info.get("dctemp") is not None)
-    assert(psu_info.get("health") is not None)
-    assert(psu_info.get("health-reason") is not None)
-    assert(psu_info.get("health-recommendation") is not None)
-    assert(psu_info.get("status") is not None)
-
-    psu_extended_info = psu_sensor_msg.get("extended_info")
-    if psu_extended_info:
-        assert(psu_extended_info.get("durable-id") is not None)
-        assert(psu_extended_info.get("position") is not None)
+    assert(psu_info.get("site_id") is not None)
+    assert(psu_info.get("cluster_id") is not None)
+    assert(psu_info.get("rack_id") is not None)
+    assert(psu_info.get("node_id") is not None)
+    assert(psu_info.get("resource_type") is not None)
+    assert(psu_info.get("resource_id") is not None)
+    assert(psu_info.get("event_time") is not None)
+    psu_specific_info = psu_sensor_msg.get("specific_info")
+    assert(psu_specific_info is not None)
+    assert(psu_specific_info.get("enclosure-id") is not None)
+    assert(psu_specific_info.get("serial-number") is not None)
+    assert(psu_specific_info.get("description") is not None)
+    assert(psu_specific_info.get("revision") is not None)
+    assert(psu_specific_info.get("model") is not None)
+    assert(psu_specific_info.get("vendor") is not None)
+    assert(psu_specific_info.get("location") is not None)
+    assert(psu_specific_info.get("part-number") is not None)
+    assert(psu_specific_info.get("fru-shortname") is not None)
+    assert(psu_specific_info.get("mfg-date") is not None)
+    assert(psu_specific_info.get("mfg-vendor-id") is not None)
+    assert(psu_specific_info.get("dc12v") is not None)
+    assert(psu_specific_info.get("dc5v") is not None)
+    assert(psu_specific_info.get("dc33v") is not None)
+    assert(psu_specific_info.get("dc12i") is not None)
+    assert(psu_specific_info.get("dc5i") is not None)
+    assert(psu_specific_info.get("dctemp") is not None)
+    assert(psu_specific_info.get("health") is not None)
+    assert(psu_specific_info.get("health-reason") is not None)
+    assert(psu_specific_info.get("health-recommendation") is not None)
+    assert(psu_specific_info.get("status") is not None)
+    assert(psu_specific_info.get("durable-id") is not None)
+    assert(psu_specific_info.get("position") is not None)

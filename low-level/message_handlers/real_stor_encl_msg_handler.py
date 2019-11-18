@@ -196,7 +196,7 @@ class RealStorEnclMsgHandler(ScheduledModuleThread, InternalMsgQ):
         self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
 
     def _generate_psu_alert(
-            self, json_msg, host_name, alert_type, resource_type, info, extended_info, sensor_type):
+            self, json_msg, host_name, alert_type, alert_id, severity, info, specific_info, sensor_type):
         """Parses the json message, also validates it and then send it to the
            RabbitMQ egress processor"""
 
