@@ -744,10 +744,6 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
             disk_sensors_list = self._get_sensor_list_by_entity(common['Entity ID'])
             disk_sensors_list.remove(sensor_id)
 
-            # TODO: Keep this common 'info' structure (with common fields) in common code
-            # and then use it for different Node FRUs.
-            info = {"date": date, "time": time, "sensor_id": sensor_id, "event": event,
-                    "fru_id": sensor, "event_time": "1555391559"}
             if not specific:
                 specific = {"States Asserted": "N/A", "Sensor Type (Discrete)": "N/A"}
             specific_info = specific
@@ -757,15 +753,34 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
                 }
 
             resource_type = NodeDataMsgHandler.IPMI_RESOURCE_TYPE_DISK
+            info = {
+                "site_id": self._site_id,
+                "rack_id": self._rack_id,
+                "node_id": self._node_id,
+                "cluster_id": self._cluster_id,
+                "resource_type": resource_type,
+                "resource_id": sensor,
+                "event_time": self._get_epoch_time_from_date_and_time(date, time)
+            }
             if (event, status) in alert_severity_dict:
                 alert_type = alert_severity_dict[(event, status)][0]
                 severity   = alert_severity_dict[(event, status)][1]
             else:
                 alert_type = "fault"
                 severity   = "informational"
+            specific_info["fru_id"] = sensor
+            specific_info["event"] = "{0} - {1}".format(event, status)
 
             if is_last:
                 specific_info.update(specific_dynamic)
+
+            for key in ['Deassertions Enabled', 'Assertions Enabled',
+                        'Assertion Events', 'States Asserted']:
+                try:
+                    specific_info[key] = re.sub(',  +', ', ', re.sub('[\[\]]','', \
+                        specific_info[key]).replace('\n',','))
+                except KeyError:
+                    pass
 
             self._send_json_msg(resource_type, alert_type, severity, info, specific_info)
             self._log_IEM(resource_type, alert_type, severity, info, specific_info)
@@ -828,7 +843,6 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
         timestamp_format = '%m/%d/%Y %H:%M:%S'
         timestamp = time.strptime('{} {}'.format(_date,_time), timestamp_format)
         return str(int(time.mktime(timestamp)))
-
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""
