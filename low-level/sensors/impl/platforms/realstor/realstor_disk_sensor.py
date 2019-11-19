@@ -21,10 +21,13 @@ import threading
 import json
 import time
 import errno
+import socket
+import uuid
 
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
+from framework.utils.severity_reader import SeverityReader
 from framework.platforms.realstor.realstor_enclosure import singleton_realstorencl
 
 # Modules that receive messages from this module
@@ -41,8 +44,7 @@ class RealStorDiskSensor(ScheduledModuleThread, InternalMsgQ):
     implements(IRealStorDiskSensor)
 
     SENSOR_NAME = "RealStorDiskSensor"
-    SENSOR_RESP_TYPE = "enclosure_disk_alert"
-    RESOURCE_CATEGORY = "fru"
+    RESOURCE_TYPE = "enclosure:fru:disk"
 
     PRIORITY          = 1
 
@@ -176,8 +178,6 @@ class RealStorDiskSensor(ScheduledModuleThread, InternalMsgQ):
         # get remaining extra key value pairs from passed disk_info
         extended_info = {key:disk_info[key] for key in disk_info if key not in\
                             disk and self.NUMERIC_IDENTIFIER not in key}
-
-        disk[self.rssencl.EXTENDED_INFO] = extended_info
 
         # notify realstor encl msg handler
         self._send_json_msg(alert_type, disk, extended_info)
@@ -426,20 +426,54 @@ class RealStorDiskSensor(ScheduledModuleThread, InternalMsgQ):
     def _gen_json_msg(self, alert_type, details, ext):
         """ Generate json message"""
 
+        severity_reader = SeverityReader()
+        severity = severity_reader.map_severity(alert_type)
+        epoch_time = str(int(time.time()))
+
+        alert_id = self._get_alert_id(epoch_time)
+        resource_id = ext.get("durable-id")
+        host_name = socket.gethostname()
+
+        info = {
+                "site_id": self.rssencl.site_id,
+                "cluster_id": self.rssencl.cluster_id,
+                "rack_id": self.rssencl.rack_id,
+                "node_id": self.rssencl.node_id,
+                "resource_type": self.RESOURCE_TYPE,
+                "resource_id": resource_id,
+                "event_time": epoch_time
+                }
+        specific_info = dict()
+        specific_info.update(details)
+        specific_info.update(ext)
+
+        for k in specific_info.viewkeys():
+            if specific_info[k] == "":
+                specific_info[k] = "N/A"
+
+
         json_msg = json.dumps(
             {"sensor_request_type" : {
                 "enclosure_alert" : {
                     "status": "update",
-                    "sensor_type" : self.SENSOR_RESP_TYPE,
+                    "host_id": host_name,
                     "alert_type": alert_type,
-                    "resource_type" : self.RESOURCE_CATEGORY
+                    "severity": severity,
+                    "alert_id": alert_id,
+                    "info": info,
+                    "specific_info": specific_info
                 },
-                "info" : details,
-                "extended_info":ext
-                }
-            })
+            }})
 
         return json_msg
+
+    def _get_alert_id(self, epoch_time):
+        """Returns alert id which is a combination of
+           epoch_time and salt value
+        """
+        salt = str(uuid.uuid4().hex)
+        alert_id = epoch_time + salt
+        return alert_id
 
     def _send_json_msg(self, alert_type, details, ext):
         """Transmit alert data to RealStorEnclMsgHandler to be processed

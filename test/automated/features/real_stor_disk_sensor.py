@@ -41,7 +41,7 @@ def given_that_sspl_ll_is_running(step):
 
 
 @step(u'When I send in the disk sensor message to request the current "([^"]*)" data')
-def when_i_send_in_the_disk_sensor_message_to_request_the_current_sensor_type_data(step, sensor_type):
+def when_i_send_in_the_disk_sensor_message_to_request_the_current_sensor_type_data(step, resource_type):
     egressMsg = {
         "title": "SSPL-LL Actuator Request",
         "description": "Seagate Storage Platform Library - Low Level - Actuator Request",
@@ -63,7 +63,9 @@ def when_i_send_in_the_disk_sensor_message_to_request_the_current_sensor_type_da
             },
             "sensor_request_type": {
                 "enclosure_alert": {
-                    "sensor_type": sensor_type
+                    "info": {
+                        "resource_type": resource_type
+                    }
                 }
             }
         }
@@ -83,33 +85,49 @@ def then_i_get_the_disk_sensor_json_response_message(step):
             # Make sure we get back the message type that matches the request
             msg_type = ingressMsg.get("sensor_response_type")
             time.sleep(2)
-            disk_sensor_msg = msg_type["enclosure_disk_alert"]
-            break
+            if msg_type['info']['resource_type'] == "enclosure:fru:disk":
+                disk_sensor_msg = msg_type
+                break
         except Exception as exception:
             time.sleep(4)
             print exception
 
     assert(disk_sensor_msg is not None)
     assert(disk_sensor_msg.get("alert_type") is not None)
-    assert(disk_sensor_msg.get("resource_type") is not None)
+    assert(disk_sensor_msg.get("alert_id") is not None)
+    assert(disk_sensor_msg.get("severity") is not None)
+    assert(disk_sensor_msg.get("host_id") is not None)
     assert(disk_sensor_msg.get("info") is not None)
-    assert(disk_sensor_msg.get("info").get("description") is not None)
-    assert(disk_sensor_msg.get("info").get("slot") is not None)
-    assert(disk_sensor_msg.get("info").get("status") is not None)
-    assert(disk_sensor_msg.get("info").get("architecture") is not None)
-    assert(disk_sensor_msg.get("info").get("serial-number") is not None)
-    assert(disk_sensor_msg.get("info").get("size") is not None)
-    assert(disk_sensor_msg.get("info").get("vendor") is not None)
-    assert(disk_sensor_msg.get("info").get("model") is not None)
-    assert(disk_sensor_msg.get("info").get("revision") is not None)
-    assert(disk_sensor_msg.get("info").get("temperature") is not None)
-    assert(disk_sensor_msg.get("info").get("LED-status") is not None)
-    assert(disk_sensor_msg.get("info").get("locator-LED") is not None)
-    assert(disk_sensor_msg.get("info").get("blink-state") is not None)
-    assert(disk_sensor_msg.get("info").get("SMART") is not None)
-    assert(disk_sensor_msg.get("info").get("health") is not None)
-    assert(disk_sensor_msg.get("info").get("health-reason") is not None)
-    assert(disk_sensor_msg.get("info").get("health-recommendation") is not None)
-    assert(disk_sensor_msg.get("info").get("enclosure-family") is not None)
-    assert(disk_sensor_msg.get("info").get("enclosure-id") is not None)
-    assert(disk_sensor_msg.get("info").get("enclosure-wwn") is not None)
+
+    disk_sensor_info = disk_sensor_msg.get("info")
+    assert(disk_sensor_info.get("site_id") is not None)
+    assert(disk_sensor_info.get("node_id") is not None)
+    assert(disk_sensor_info.get("cluster_id") is not None)
+    assert(disk_sensor_info.get("rack_id") is not None)
+    assert(disk_sensor_info.get("resource_type") is not None)
+    assert(disk_sensor_info.get("event_time") is not None)
+    assert(disk_sensor_info.get("resource_id") is not None)
+
+    disk_sensor_specific_info = disk_sensor_msg.get("specific_info")
+    assert(disk_sensor_specific_info is not None)
+    assert(disk_sensor_specific_info.get("description") is not None)
+    assert(disk_sensor_specific_info.get("slot") is not None)
+    assert(disk_sensor_specific_info.get("status") is not None)
+    assert(disk_sensor_specific_info.get("architecture") is not None)
+    assert(disk_sensor_specific_info.get("serial-number") is not None)
+    assert(disk_sensor_specific_info.get("size") is not None)
+    assert(disk_sensor_specific_info.get("vendor") is not None)
+    assert(disk_sensor_specific_info.get("model") is not None)
+    assert(disk_sensor_specific_info.get("revision") is not None)
+    assert(disk_sensor_specific_info.get("temperature") is not None)
+    assert(disk_sensor_specific_info.get("LED-status") is not None)
+    assert(disk_sensor_specific_info.get("locator-LED") is not None)
+    assert(disk_sensor_specific_info.get("blink") is not None)
+    assert(disk_sensor_specific_info.get("smart") is not None)
+    assert(disk_sensor_specific_info.get("health") is not None)
+    assert(disk_sensor_specific_info.get("health-reason") is not None)
+    assert(disk_sensor_specific_info.get("health-recommendation") is not None)
+    assert(disk_sensor_specific_info.get("enclosure-family") is not None)
+    assert(disk_sensor_specific_info.get("enclosure-id") is not None)
+    assert(disk_sensor_specific_info.get("enclosure-wwn") is not None)
+
