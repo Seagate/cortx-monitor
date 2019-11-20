@@ -73,7 +73,7 @@ class RealStorSideplaneExpanderDataMsg(BaseSensorMsg):
                                 },
                           "sensor_response_type": {
                                     "alert_type": self._alert_type,
-                                    "alert_id": self._resource_type,
+                                    "alert_id": self._alert_id,
                                     "host_id": self._host_name,
                                     "severity": self._severity,
                                     "info": {
