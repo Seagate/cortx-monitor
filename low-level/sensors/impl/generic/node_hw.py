@@ -25,6 +25,7 @@ import uuid
 
 from zope.interface import implements
 
+from framework.utils.severity_reader import SeverityReader
 from message_handlers.node_data_msg_handler import NodeDataMsgHandler
 from message_handlers.logging_msg_handler import LoggingMsgHandler
 
@@ -556,11 +557,6 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
         #TODO: Can enrich the sspl event message with more FRU info using
         # command 'ipmitool sel get <sel-id>'
 
-        severity_dict = {"fault": "error", "missing": "critical",
-                    "fault_resolved": "informational",
-                    "insertion": "informational",
-                    "threshold_breached:up": "warning",
-                    "threshold_breached:low": "warning"}
         fan_info = {}
 
         #TODO: Enabled Assertions list (fan_specific_list[] in code) needs
@@ -583,14 +579,19 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
                 del fan_specific_data[key]
 
         fan_info = fan_specific_data
-
+        fan_info.update({"fru_id" : device_id, "event" : event})
         alert_type = "threshold_breached:" + threshold
         resource_type = NodeDataMsgHandler.IPMI_RESOURCE_TYPE_FAN
-        severity = severity_dict.get(alert_type)
-
-        # TODO: date and time to be combine in one field in epoch format
-        fru_info = { "date": date, "time": time, "fru_id": device_id,
-                    "sensor_id": sensor_name, "event": event, "event_status": status, "event_time": "1555391559"}
+        severity_reader = SeverityReader()
+        severity = severity_reader.map_severity(alert_type)
+        fru_info = {    "site_id": self._site_id,
+                        "rack_id": self._rack_id,
+                        "node_id": self._node_id,
+                        "cluster_id":self._cluster_id ,
+                        "resource_type": resource_type,
+                        "resource_id": sensor_name,
+                        "event_time":self._get_epoch_time_from_date_and_time(date, time)
+                    }
 
         if is_last:
             fan_info.update(fan_specific_data_dynamic)

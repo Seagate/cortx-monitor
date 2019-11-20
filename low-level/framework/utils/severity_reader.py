@@ -20,7 +20,9 @@ class SeverityReader(object):
         "fault": "critical",
          "resolved": "informational",
          "missing": "critical",
-         "insertion": "informational"
+         "insertion": "informational",
+         "threshold_breached:low": "warning",
+         "threshold_breached:up": "warning"
     }
 
     def __init__(self):
@@ -37,5 +39,5 @@ class SeverityReader(object):
             return
         except Exception as e:
             logger.error('SeverityReader, map_severity, Exception occured \
-                            while mapping alert_type to severity: %s' % e)
+                            while mapping alert_type to severity: %s ' % e)
             return
