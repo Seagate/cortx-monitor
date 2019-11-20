@@ -43,8 +43,8 @@ class RealStorLogicalVolumeSensor(ScheduledModuleThread, InternalMsgQ):
 
     SENSOR_NAME = "RealStorLogicalVolumeSensor"
     SENSOR_RESP_TYPE = "enclosure_logical_volume_alert"
-    RESOURCE_CATEGORY = "fru"
-    RESOURCE_TYPE = "enclosure:fru:logical_volume"
+    RESOURCE_CATEGORY = "eos"
+    RESOURCE_TYPE = "enclosure:eos:logical_volume"
 
     PRIORITY = 1
 
