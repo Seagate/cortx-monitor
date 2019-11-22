@@ -163,13 +163,30 @@
 									"required": true
 								},
 								"resource": {
-									"description": "Node entity to perform action upon. Required only for node hw actuator",
+									"description": "Resources on which to perform the action",
 									"type": "string",
-									"required": false
+									"required": true
 								}
 							}
 						},
 
+						"storage_enclosure": {
+							"type": "object",
+							"additionalProperties": false,
+							"properties": {
+								"enclosure_request": {
+									"description": "Action to be performed on node",
+									"type": "string",
+									"required": true
+								},
+                                "resource": {
+                                    "description": "Resources on which to perform the action",
+                                    "type": "string",
+                                    "required": true
+                                }
+							}
+						},
+                        
 						"plane_controller": {
 							"type": "object",
 							"additionalProperties": false,

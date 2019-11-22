@@ -73,7 +73,7 @@
                                 },
 								"ack_msg": {
 									"description": "Message describing acknowledgement",
-									"type": "string",
+									"type": "object",
 									"required": true
 								}
 							}
@@ -161,12 +161,17 @@
 								"resource_id": {
 									"description": "FRU's Resource Id. Required only for node hw actuator",
 									"type": "string",
-									"required": true
+									"required": false
+								},
+								"event_time": {
+									"description": "Time of fetch data from IPMI. Required only for node hw actuator",
+									"type": "string",
+									"required": false
 								},
 								"fetch_time": {
 									"description": "Time of fetch data from IPMI. Required only for node hw actuator",
 									"type": "string",
-									"required": true
+									"required": false
 								}
 							}
 						},

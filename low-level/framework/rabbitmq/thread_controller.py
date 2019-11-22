@@ -40,6 +40,7 @@ from message_handlers.disk_msg_handler import DiskMsgHandler
 from message_handlers.service_msg_handler import ServiceMsgHandler
 from message_handlers.node_data_msg_handler import NodeDataMsgHandler
 from message_handlers.node_controller_msg_handler import NodeControllerMsgHandler
+from message_handlers.real_stor_actuator_msg_handler import RealStorActuatorMsgHandler
 from message_handlers.plane_cntrl_msg_handler import PlaneCntrlMsgHandler
 from message_handlers.real_stor_encl_msg_handler import RealStorEnclMsgHandler
 

@@ -57,6 +57,7 @@ from message_handlers.logging_msg_handler import LoggingMsgHandler
 from message_handlers.service_msg_handler import ServiceMsgHandler
 from message_handlers.plane_cntrl_msg_handler import PlaneCntrlMsgHandler
 from message_handlers.real_stor_encl_msg_handler import RealStorEnclMsgHandler
+from message_handlers.real_stor_actuator_msg_handler import RealStorActuatorMsgHandler
 
 # Message to send to HAlon upon critical thread errors
 from json_msgs.messages.actuators.thread_controller import ThreadControllerMsg
@@ -369,6 +370,7 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist, operating_system
         from actuators.impl.generic.raid import RAIDactuator
         from actuators.impl.generic.hdparm import Hdparm
         from actuators.impl.generic.node_hw import NodeHWactuator
+        from actuators.impl.generic.RealStor import RealStorActuator
 
         from sensors.impl.generic.raid import RAIDsensor
         from sensors.impl.generic.node_data import NodeData as NodeData

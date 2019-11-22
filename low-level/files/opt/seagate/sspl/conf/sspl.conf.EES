@@ -2,11 +2,11 @@
 [SSPL-LL_SETTING]
 core_processors=RabbitMQegressProcessor, RabbitMQingressProcessor, LoggingProcessor
 
-message_handlers=DiskMsgHandler, LoggingMsgHandler, ServiceMsgHandler, NodeDataMsgHandler, NodeControllerMsgHandler, RealStorEnclMsgHandler
+message_handlers=DiskMsgHandler, LoggingMsgHandler, ServiceMsgHandler, NodeDataMsgHandler, NodeControllerMsgHandler, RealStorEnclMsgHandler, RealStorActuatorMsgHandler
 
 sensors=ServiceWatchdog, NodeData, RAIDsensor, RealStorFanSensor, RealStorPSUSensor, RealStorControllerSensor, RealStorDiskSensor, RealStorSideplaneExpanderSensor, RealStorLogicalVolumeSensor, IEMSensor, NodeHWsensor
 
-actuators=Service, RAIDactuator, Hdparm, NodeHWactuator
+actuators=Service, RAIDactuator, Hdparm, NodeHWactuator, RealStorActuator
 
 [SYSTEM_INFORMATION]
 operating_system=centos7

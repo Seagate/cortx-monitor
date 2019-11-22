@@ -211,6 +211,9 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
             elif msgType.get("node_controller") is not None:
                 self._write_internal_msgQ("NodeControllerMsgHandler", message)
 
+            elif msgType.get("storage_enclosure") is not None:
+                self._write_internal_msgQ("RealStorActuatorMsgHandler", message)
+
             # Hand off to appropriate sensor message handler
             elif msgType.get("node_data") is not None:
                 self._write_internal_msgQ("NodeDataMsgHandler", message)
