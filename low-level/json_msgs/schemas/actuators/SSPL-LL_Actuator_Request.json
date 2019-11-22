@@ -186,7 +186,6 @@
                                 }
 							}
 						},
-                        
 						"plane_controller": {
 							"type": "object",
 							"additionalProperties": false,

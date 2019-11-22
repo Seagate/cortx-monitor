@@ -1,6 +1,6 @@
 """
  ****************************************************************************
- Filename:          RealStor.py
+ Filename:          realstor_encl.py
  Description:       Handles messages for RealStor enclosure requests
  Creation Date:     11/08/2019
  Author:            Pranav Risbud
@@ -23,6 +23,7 @@ from actuators.impl.actuator import Actuator
 
 from framework.base.debug import Debug
 from framework.utils.service_logging import logger
+from framework.utils import mon_utils
 
 from framework.platforms.realstor.realstor_enclosure import singleton_realstorencl
 
@@ -38,6 +39,7 @@ class RealStorActuator(Actuator, Debug):
     REQUEST_GET = "ENCL"
 
     FRU_DISK = "disk"
+    FRU_FAN = "fan"
 
     RESOURCE_DISK_ALL = "*"
 
@@ -53,9 +55,12 @@ class RealStorActuator(Actuator, Debug):
 
         self.request_fru_func = {
             self.REQUEST_GET: {
-                self.FRU_DISK: self._get_disk
+                self.FRU_DISK: self._get_disk,
+                self.FRU_FAN: self._get_fan_modules
             }
         }
+
+        self.fru_response_manipulators = {self.FRU_FAN: self.manipulate_fan_response}
 
     def perform_request(self, jsonMsg):
         """Performs the RealStor enclosure request
@@ -87,10 +92,16 @@ class RealStorActuator(Actuator, Debug):
         else:
             host_id = socket.gethostbyaddr(socket.gethostname())[0]
 
+        alert_id = mon_utils.get_alert_id(epoch_time)
+
+        if resource_id != "*":
+            resource_id = self.fru_response_manipulators[fru_type](fru_details)
+
         response = {
           "alert_type":"GET",
           "severity":"informational",
           "host_id": host_id,
+          "alert_id": alert_id,
           "info": {
             "site_id": self.rssencl.site_id,
             "rack_id": self.rssencl.rack_id,
@@ -98,7 +109,7 @@ class RealStorActuator(Actuator, Debug):
             "cluster_id": self.rssencl.cluster_id,
             "resource_type": resource_type,
             "resource_id": resource_id,
-            "event_time": epoch_time,
+            "event_time": epoch_time
           },
           "specific_info": fru_details
         }
@@ -162,4 +173,86 @@ class RealStorActuator(Actuator, Debug):
 
                 return drives
 
+    def _get_fan_modules(self, instance_id):
 
+        url = self.rssencl.build_url(
+              self.rssencl.URI_CLIAPI_SHOWFANMODULES)
+
+        response = self.rssencl.ws_request(
+                        url, self.rssencl.ws.HTTP_GET)
+
+        if not response:
+            logger.warn("{0}:: Fan-modules status unavailable as ws request {1}"
+                            "failed".format(self.rssencl.EES_ENCL, url))
+            return
+
+        if response.status_code != self.rssencl.ws.HTTP_OK:
+            if url.find(self.rssencl.ws.LOOPBACK) == -1:
+                logger.error(
+                    "{0}:: http request {1} to get fan-modules failed with http err"
+                    " {2}".format(self.rssencl.EES_ENCL, url, response.status_code))
+            return
+
+        response_data = json.loads(response.text)
+
+        fan_modules_list = response_data["fan-modules"]
+        fan_modules_list = self._get_fan_module_data(fan_modules_list, instance_id)
+        return fan_modules_list
+
+    def _get_fan_module_data(self, fan_modules_list, instance_id):
+
+        fan_module_info_dict = {}
+        fan_module_list = []
+
+        for fan_module in fan_modules_list:
+            if instance_id == "*":
+                fan_module_info_dict = self._parse_fan_module_info(fan_module)
+                logger.exception(fan_module_info_dict)
+                fan_module_list.append(fan_module_info_dict)
+            else:
+                name = fan_module.get("name", None)
+                if name is None:
+                    continue
+                slot = name.split(" ")[2]
+                if slot == instance_id:
+                    fan_module_info_dict = self._parse_fan_module_info(fan_module)
+        if fan_module_list:
+            return fan_module_list
+        return fan_module_info_dict
+
+    def _parse_fan_module_info(self, fan_module):
+        fan_list = []
+        fans = {}
+        fan_key = ""
+
+        fan_attribute_list = [ 'status', 'name', 'speed', 'durable-id',
+            'health', 'fw-revision', 'health-reason', 'serial-number',
+                'location', 'position', 'part-number', 'health-recommendation',
+                    'hw-revision', 'locator-led' ]
+
+        fru_fans = fan_module.get("fan", [])
+
+        for fan in fru_fans:
+            for fan_key in filter(lambda common_key: common_key in fan_attribute_list, fan):
+                fans[fan_key] = fan.get(fan_key)
+            fan_list.append(fans)
+
+        fan_module_info_key_list = \
+            ['name', 'location', 'status', 'health',
+                'health-reason', 'health-recommendation', 'enclosure-id',
+                'durable-id', 'position']
+
+        fan_module_info_dict = {}
+
+        for fan_module_key, fan_module_value in fan_module.items():
+            if fan_module_key in fan_module_info_key_list:
+                fan_module_info_dict[fan_module_key] = fan_module_value
+
+        fan_module_info_dict["fans"] = fan_list
+        return fan_module_info_dict
+
+    def manipulate_fan_response(self, response):
+        """Manipulate fan response dto change resource_id"""
+        resource_id = None
+        resource_id = response.get("name", None)
+        return resource_id

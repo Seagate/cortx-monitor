@@ -24,7 +24,7 @@ from framework.utils.service_logging import logger
 from framework.base.sspl_constants import enabled_products
 
 from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
-from json_msgs.messages.actuators.real_stor_actuator_ack_response import RealStorActuatorAckMsg
+from json_msgs.messages.sensors.realstor_actuator_response import RealStorActuatorSensorMsg
 
 from message_handlers.disk_msg_handler import DiskMsgHandler
 from message_handlers.service_msg_handler import ServiceMsgHandler
@@ -73,7 +73,6 @@ class RealStorActuatorMsgHandler(ScheduledModuleThread, InternalMsgQ):
         # Initialize ScheduledMonitorThread
         super(RealStorActuatorMsgHandler, self).initialize(conf_reader)
 
-        logger.error("initialize(): msgQlist: {}".format(msgQlist))
         # Initialize internal message queues for this module
         super(RealStorActuatorMsgHandler, self).initialize_msgQ(msgQlist)
 
@@ -139,7 +138,7 @@ class RealStorActuatorMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
             if self._real_stor_actuator is None:
                 try:
-                    from actuators.impl.generic.RealStor import RealStorActuator
+                    from actuators.impl.generic.realstor_encl import RealStorActuator
                     self._real_stor_actuator = RealStorActuator()
                 except ImportError as e:
                     logger.warn("RealStor Actuator not loaded")
@@ -151,8 +150,7 @@ class RealStorActuatorMsgHandler(ScheduledModuleThread, InternalMsgQ):
             real_stor_response = self._real_stor_actuator.perform_request(jsonMsg)
             self._log_debug("_process_msg, RealStor response: %s" % real_stor_response)
 
-            json_msg = RealStorActuatorAckMsg(enclosure_request, real_stor_response,
-                    uuid).getJson()
+            json_msg = RealStorActuatorSensorMsg(real_stor_response, uuid).getJson()
             self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
 
     def shutdown(self):

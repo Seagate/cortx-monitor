@@ -671,10 +671,35 @@
                                                   }
                                             }
                                     },
-                                    "specific_info": {
-                                        "type": "object",
-                                        "required": false
-                                    },
+                                    "if": {
+                            "properties": {
+                                "info": {
+                                    "properties": {
+                                        "resource_id": {
+                                            "const": "*"
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "then": {
+                            "properties": {
+                                "specific_info": {
+                                    "description": "Specific dynamically generated information of FRU's. Required only for node hw actuator",
+                                    "type": "array",
+                                    "required": false
+                                }
+                            }
+                        },
+                        "else": {
+                            "properties": {
+                                "specific_info": {
+                                    "description": "Specific dynamically generated information of FRU's. Required only for node hw actuator",
+                                    "type": "object",
+                                    "required": false
+                                }
+                            }
+                        },
 
                         "enclosure_sideplane_expander_alert": {
                             "type": "object",
