@@ -32,9 +32,6 @@ class RealStorActuator(Actuator, Debug):
 
     ACTUATOR_NAME = "RealStorActuator"
     SYSTEM_INFORMATION = "SYSTEM_INFORMATION"
-    SITE_ID = "site_id"
-    RACK_ID = "rack_id"
-    NODE_ID = "node_id"
 
     REQUEST_GET = "ENCL"
 
@@ -75,37 +72,36 @@ class RealStorActuator(Actuator, Debug):
         response = "N/A"
         try:
             enclosure_request = jsonMsg.get("actuator_request_type").get("storage_enclosure").get("enclosure_request")
-            (request_type, enclosure, fru, fru_type) = [
+            (request_type, enclosure, component, component_type) = [
                     s.strip() for s in enclosure_request.split(":")]
             resource = jsonMsg.get("actuator_request_type").get("storage_enclosure").get("resource")
-
-            response = self.make_response(self.request_fru_func[request_type][fru_type](
-                resource), fru_type, resource)
-
+            if component == "fru":
+                response = self.make_response(self.request_fru_func[request_type][component_type](
+                    resource), component ,component_type, resource)
+            elif component == "sensor":
+                response = self.make_response(
+                            self._get_sensor_status(sensor_type=component_type, sensor_name=resource),
+                            component,
+                            component_type,
+                            resource)
         except Exception as e:
             logger.exception("Error while getting details for JSON: {}".format(jsonMsg))
             response = {"Error": e}
 
         return response
 
-    def make_response(self, fru_details, fru_type, resource_id):
+    def make_response(self, component_details, component, component_type, resource_id):
 
-        resource_type = "enclosure:fru:{}".format(fru_type)
-        epoch_time = str(calendar.timegm(time.gmtime()))
-        if socket.gethostname().find('.') >= 0:
-            host_id = socket.gethostname()
-        else:
-            host_id = socket.gethostbyaddr(socket.gethostname())[0]
-
+        resource_type = "enclosure:{}:{}".format(component, component_type)
+        epoch_time = str(int(time.time()))
         alert_id = mon_utils.get_alert_id(epoch_time)
 
-        if resource_id != self.RESOURCE_ALL:
-            resource_id = self.fru_response_manipulators[fru_type](fru_details)
-
+        if component == "fru" and resource_id != self.RESOURCE_ALL:
+            resource_id = self.fru_response_manipulators[component_type](component_details)
         response = {
           "alert_type":"GET",
           "severity":"informational",
-          "host_id": host_id,
+          "host_id": socket.getfqdn(),
           "alert_id": alert_id,
           "info": {
             "site_id": self.rssencl.site_id,
@@ -116,7 +112,7 @@ class RealStorActuator(Actuator, Debug):
             "resource_id": resource_id,
             "event_time": epoch_time
           },
-          "specific_info": fru_details
+          "specific_info": component_details
         }
 
         return response
@@ -313,3 +309,50 @@ class RealStorActuator(Actuator, Debug):
         resource_id = None
         resource_id = response.get("durable-id", None)
         return resource_id
+
+    def _get_sensor_status(self, sensor_type, sensor_name):
+            """Retreive realstor sensor info using cli api /show/sensor-status"""
+
+            # make ws request
+            url = self.rssencl.build_url(
+                    self.rssencl.URI_CLIAPI_SHOWSENSORSTATUS)
+
+            response = self.rssencl.ws_request(url, self.rssencl.ws.HTTP_GET)
+
+            if not response:
+                logger.warn("{0}:: Sensor status unavailable as ws request {1}"
+                    " failed".format(self.rssencl.EES_ENCL, url))
+                return
+
+            if response.status_code != self.rssencl.ws.HTTP_OK:
+                if url.find(self.rssencl.ws.LOOPBACK) == -1:
+                    logger.error("{0}:: http request {1} to poll sensor failed with"
+                        " err {2}".format(self.rssencl.EES_ENCL, url, response.status_code))
+                return
+
+            try:
+                jresponse = json.loads(response.content)
+            except ValueError as badjson:
+                logger.error("%s returned mal-formed json:\n%s" % (url, badjson))
+
+            if jresponse:
+                api_resp = self.rssencl.get_api_status(jresponse['status'])
+
+                if ((api_resp == -1) and
+                    (response.status_code == self.rssencl.ws.HTTP_OK)):
+                    logger.warn("/show/sensor-status api response unavailable, "
+                        "marking success as http code is 200")
+                    api_resp = 0
+
+                if api_resp == 0:
+                    sensors = jresponse["sensors"]
+
+                    #TODO: optimize for specific sensor
+                    if sensor_name != self.RESOURCE_ALL:
+                        for sensor in sensors:
+                            if sensor["sensor-name"] == sensor_name:
+                                return sensor
+                    else:
+                        sensors = [sensor for sensor in sensors
+                                if sensor["sensor-type"] == sensor_type.title()]
+                        return sensors

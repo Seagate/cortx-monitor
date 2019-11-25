@@ -135,7 +135,6 @@ def then_i_get_the_fan_module_json_response_message(step):
             assert(fan.get("health-reason") is not None)
             assert(fan.get("health-recommendation") is not None)
 
-
 @step(u'Then I get the controller JSON response message')
 def then_i_get_the_controller_json_response_message(step):
 
@@ -209,3 +208,111 @@ def then_i_get_the_controller_json_response_message(step):
     assert(specific_info.get("expander-ports") is not None)
     assert(specific_info.get("expanders") is not None)
     assert(specific_info.get("port") is not None)
+
+@step(u'When I send in the enclosure actuator request to get the current "([^"]*)" data for "([^"]*)" sensor')
+def when_i_send_in_the_enclosure_actuator_message_to_request_the_current_sensor_type_data(step, resource_type, resource_id):
+    egressMsg = {
+        "title": "SSPL-LL Actuator Request",
+        "description": "Seagate Storage Platform Library - Low Level - Actuator Request",
+
+        "username" : "JohnDoe",
+        "signature" : "None",
+        "time" : "2015-05-29 14:28:30.974749",
+        "expires" : 500,
+
+        "message" : {
+            "sspl_ll_msg_header": {
+                "schema_version": "1.0.0",
+                "sspl_version": "1.0.0",
+                "msg_version": "1.0.0"
+            },
+             "sspl_ll_debug": {
+                "debug_component" : "sensor",
+                "debug_enabled" : True
+            },
+            "response_dest": {},
+            "sspl_ll_msg_header": {
+            "msg_version": "1.0.0",
+            "uuid": "16476007-a739-4785-b5c7-f3de189cdf9d",
+            "schema_version": "1.0.0",
+            "sspl_version": "1.0.0"
+            },
+            "request_path": {
+                "site_id": 0,
+                "node_id": 1,
+                "rack_id": 0,
+                "cluster_id": 1
+            },
+            "actuator_request_type": {
+                "storage_enclosure": {
+                    "enclosure_request": resource_type,
+                    "resource": resource_id
+                }
+            }
+        }
+        }
+    world.sspl_modules[RabbitMQegressProcessor.name()]._write_internal_msgQ(RabbitMQegressProcessor.name(), egressMsg)
+
+@step(u'Then I get the sensor JSON response message for "([^"]*)" "([^"]*)" sensor')
+def then_i_get_the_sensor_json_response_message(step, resource_id, sensor_type):
+
+    pods_sensor_actuator_msg = None
+    time.sleep(4)
+    while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
+        ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
+        time.sleep(2)
+        print("Received: {0}".format(ingressMsg))
+        try:
+            # Make sure we get back the message type that matches the request
+            msg_type = ingressMsg.get("sensor_response_type")
+            if msg_type["info"]["resource_type"] == "enclosure:sensor:{}".format(sensor_type.lower()):
+                pods_sensor_actuator_msg = msg_type
+                break
+
+        except Exception as exception:
+            time.sleep(4)
+            print(exception)
+
+    assert(pods_sensor_actuator_msg is not None)
+    assert(pods_sensor_actuator_msg.get("host_id") is not None)
+    assert(pods_sensor_actuator_msg.get("alert_type") is not None)
+    assert(pods_sensor_actuator_msg.get("alert_id") is not None)
+    assert(pods_sensor_actuator_msg.get("severity") is not None)
+
+    sensor_info = pods_sensor_actuator_msg.get("info")
+    assert(sensor_info is not None)
+    assert(sensor_info.get("site_id") is not None)
+    assert(sensor_info.get("cluster_id") is not None)
+    assert(sensor_info.get("rack_id") is not None)
+    assert(sensor_info.get("node_id") is not None)
+    assert(sensor_info.get("resource_type") is not None)
+    assert((sensor_info.get("resource_id") == resource_id) is True)
+    assert(sensor_info.get("event_time") is not None)
+
+    sensor_specific_info = pods_sensor_actuator_msg.get("specific_info")
+    assert(sensor_specific_info is not None)
+
+    if resource_id == "*":
+        assert(isinstance(sensor_specific_info, list))
+        for specific_info in sensor_specific_info:
+            verify_specific_info_for_platform_sensors(specific_info, sensor_type)
+    else:
+        assert(isinstance(sensor_specific_info, dict))
+        assert((sensor_specific_info.get("sensor-name") == resource_id) is True)
+        verify_specific_info_for_platform_sensors(sensor_specific_info, sensor_type)
+
+def verify_specific_info_for_platform_sensors(specific_info, sensor_type):
+    assert(specific_info.get("drawer-id-numeric") is not None)
+    assert(specific_info.get("status") is not None)
+    assert(specific_info.get("container") is not None)
+    assert(specific_info.get("enclosure-id") is not None)
+    assert((specific_info.get("sensor-type") == sensor_type) is True)
+    assert(specific_info.get("durable-id") is not None)
+    assert(specific_info.get("value") is not None)
+    assert(specific_info.get("object-name") is not None)
+    assert(specific_info.get("controller-id-numeric") is not None)
+    assert(specific_info.get("container-numeric") is not None)
+    assert(specific_info.get("controller-id") is not None)
+    assert(specific_info.get("sensor-type-numeric") is not None)
+    assert(specific_info.get("drawer-id") is not None)
+    assert(specific_info.get("status-numeric") is not None)

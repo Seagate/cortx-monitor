@@ -12,3 +12,32 @@ Scenario: Send SSPL an enclosure actuator message requesting controller data
     When I send in the enclosure actuator message to request the current "ENCL:enclosure:fru:controller" data
     Then I get the controller JSON response message
 
+Scenario: Send SSPL an enclosure actuator message requesting temperature sensor data for all sensor
+	Given that SSPL is running
+	When I send in the enclosure actuator request to get the current "ENCL:enclosure:sensor:temperature" data for "*" sensor
+	Then I get the sensor JSON response message for "*" "Temperature" sensor
+
+Scenario: Send SSPL an enclosure actuator message requesting temperature sensor data for specific sensor
+	Given that SSPL is running
+	When I send in the enclosure actuator request to get the current "ENCL:enclosure:sensor:temperature" data for "CPU Temperature-Ctlr B" sensor
+	Then I get the sensor JSON response message for "CPU Temperature-Ctlr B" "Temperature" sensor
+
+Scenario: Send SSPL an enclosure actuator message requesting voltage sensor data for all sensor
+	Given that SSPL is running
+	When I send in the enclosure actuator request to get the current "ENCL:enclosure:sensor:voltage" data for "*" sensor
+	Then I get the sensor JSON response message for "*" "Voltage" sensor
+
+Scenario: Send SSPL an enclosure actuator message requesting voltage sensor data for specific sensor
+	Given that SSPL is running
+	When I send in the enclosure actuator request to get the current "ENCL:enclosure:sensor:voltage" data for "Capacitor Pack Voltage-Ctlr B" sensor
+	Then I get the sensor JSON response message for "Capacitor Pack Voltage-Ctlr B" "Voltage" sensor
+
+Scenario: Send SSPL an enclosure actuator message requesting current sensor data for all sensor
+	Given that SSPL is running
+	When I send in the enclosure actuator request to get the current "ENCL:enclosure:sensor:current" data for "*" sensor
+	Then I get the sensor JSON response message for "*" "Current" sensor
+
+Scenario: Send SSPL an enclosure actuator message requesting current sensor data for specific sensor
+	Given that SSPL is running
+	When I send in the enclosure actuator request to get the current "ENCL:enclosure:sensor:current" data for "Current 12V Rail Loc: right-PSU" sensor
+	Then I get the sensor JSON response message for "Current 12V Rail Loc: right-PSU" "Current" sensor
