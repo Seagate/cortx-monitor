@@ -135,6 +135,121 @@ def then_i_get_the_fan_module_json_response_message(step):
             assert(fan.get("health-reason") is not None)
             assert(fan.get("health-recommendation") is not None)
 
+@step(u'When I send in the disk actuator message to request the current "([^"]*)" data for disk instance "([^"]*)"')
+def when_i_send_in_the_disk_actuator_message_to_request_the_current_actuator_type_data(step, resource_type, resource_id):
+    egressMsg = {
+        "title": "SSPL-LL Actuator Request",
+        "description": "Seagate Storage Platform Library - Low Level - Actuator Request",
+
+        "username" : "JohnDoe",
+        "signature" : "None",
+        "time" : "2015-05-29 14:28:30.974749",
+        "expires" : 500,
+
+        "message" : {
+            "sspl_ll_msg_header": {
+                "schema_version": "1.0.0",
+                "sspl_version": "1.0.0",
+                "msg_version": "1.0.0"
+            },
+             "sspl_ll_debug": {
+                "debug_component" : "actuator",
+                "debug_enabled" : True
+            },
+            "request_path": {
+                "site_id": 1,
+                "rack_id": 1,
+                "cluster_id": 1,
+                "node_id": 1
+            },
+            "response_dest": {},
+            "actuator_request_type": {
+                "storage_enclosure": {
+                    "enclosure_request": resource_type,
+                    "resource": resource_id
+                }
+            }
+        }
+    }
+    world.sspl_modules[RabbitMQegressProcessor.name()]._write_internal_msgQ(RabbitMQegressProcessor.name(), egressMsg)
+
+
+@step(u'Then I get the disk actuator JSON response message for disk instance "([^"]*)"')
+def then_i_get_the_disk_actuator_json_response_message(step, resource_id):
+
+    disk_actuator_msg = None
+    time.sleep(4)
+    while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
+        ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
+        print("Received: %s" % ingressMsg)
+        try:
+            # Make sure we get back the message type that matches the request
+            msg_type = ingressMsg.get("sensor_response_type")
+            time.sleep(2)
+            if msg_type['info']['resource_type'] == "enclosure:fru:disk":
+                disk_actuator_msg = msg_type
+                break
+        except Exception as exception:
+            time.sleep(4)
+            print exception
+
+    assert(disk_actuator_msg is not None)
+    assert(disk_actuator_msg.get("alert_type") is not None)
+    assert(disk_actuator_msg.get("severity") is not None)
+    assert(disk_actuator_msg.get("alert_id") is not None)
+    assert(disk_actuator_msg.get("host_id") is not None)
+    assert(disk_actuator_msg.get("info") is not None)
+
+    disk_actuator_info = disk_actuator_msg.get("info")
+    assert(disk_actuator_info.get("site_id") is not None)
+    assert(disk_actuator_info.get("node_id") is not None)
+    assert(disk_actuator_info.get("cluster_id") is not None)
+    assert(disk_actuator_info.get("rack_id") is not None)
+    assert(disk_actuator_info.get("resource_type") is not None)
+    assert(disk_actuator_info.get("event_time") is not None)
+
+    assert(disk_actuator_info.get("resource_id") is not None)
+    if resource_id != "*":
+        diskId = "disk_00.{}".format(resource_id)
+        assert(disk_actuator_info.get("resource_id") == diskId)
+    else:
+        assert(disk_actuator_info.get("resource_id") == "*")
+
+    disk_actuator_specific_info_array = disk_actuator_msg.get("specific_info")
+    assert(disk_actuator_specific_info_array is not None)
+
+    assert(len(disk_actuator_specific_info_array) > 0)
+    if resource_id != "*":
+        assert(len(disk_actuator_specific_info_array) == 1)
+    else:
+        assert(len(disk_actuator_specific_info_array) > 1)
+
+
+    for disk_actuator_specific_info in disk_actuator_specific_info_array:
+        assert(disk_actuator_specific_info is not None)
+        assert(disk_actuator_specific_info.get("durable-id") is not None)
+        if resource_id != "*":
+            assert(disk_actuator_specific_info.get("durable-id") == diskId)
+        assert(disk_actuator_specific_info.get("description") is not None)
+        assert(disk_actuator_specific_info.get("slot") is not None)
+        assert(disk_actuator_specific_info.get("status") is not None)
+        assert(disk_actuator_specific_info.get("architecture") is not None)
+        assert(disk_actuator_specific_info.get("serial-number") is not None)
+        assert(disk_actuator_specific_info.get("size") is not None)
+        assert(disk_actuator_specific_info.get("vendor") is not None)
+        assert(disk_actuator_specific_info.get("model") is not None)
+        assert(disk_actuator_specific_info.get("revision") is not None)
+        assert(disk_actuator_specific_info.get("temperature") is not None)
+        assert(disk_actuator_specific_info.get("led-status") is not None)
+        assert(disk_actuator_specific_info.get("locator-led") is not None)
+        assert(disk_actuator_specific_info.get("blink") is not None)
+        assert(disk_actuator_specific_info.get("smart") is not None)
+        assert(disk_actuator_specific_info.get("health") is not None)
+        assert(disk_actuator_specific_info.get("health-reason") is not None)
+        assert(disk_actuator_specific_info.get("health-recommendation") is not None)
+        assert(disk_actuator_specific_info.get("enclosure-id") is not None)
+        assert(disk_actuator_specific_info.get("enclosure-wwn") is not None)
+
 @step(u'Then I get the controller JSON response message')
 def then_i_get_the_controller_json_response_message(step):
 

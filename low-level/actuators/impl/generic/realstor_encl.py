@@ -61,6 +61,7 @@ class RealStorActuator(Actuator, Debug):
 
         self.fru_response_manipulators = {
             self.FRU_FAN: self.manipulate_fan_response,
+            self.FRU_DISK: self.update_disk_response,
             self.FRU_CONTROLLER: self._update_controller_response
         }
 
@@ -251,6 +252,10 @@ class RealStorActuator(Actuator, Debug):
 
         fan_module_info_dict["fans"] = fan_list
         return fan_module_info_dict
+
+    def update_disk_response(self, drives):
+        """Manipulate disk response to get resource_id"""
+        return drives[0].get("durable-id")
 
     def manipulate_fan_response(self, response):
         """Manipulate fan response dto change resource_id"""

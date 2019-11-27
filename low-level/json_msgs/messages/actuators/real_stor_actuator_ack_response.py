@@ -48,6 +48,7 @@ class RealStorActuatorAckMsg(BaseActuatorMsg):
         self._host_id       = ack_msg.get("host_id")
         self._alert_type    = ack_msg.get("alert_type")
         self._severity      = ack_msg.get("severity")
+        self._alert_id      = ack_msg.get("alert_id")
 
         info = ack_msg.get("info")
         self._site_id = info.get("site_id")
@@ -81,6 +82,7 @@ class RealStorActuatorAckMsg(BaseActuatorMsg):
                               "host_id": self._host_id,
                               "alert_type": self._alert_type,
                               "severity": self._severity,
+                              "alert_id": self._alert_id,
                               "info": {
                                   "site_id": self._site_id,
                                   "rack_id": self._rack_id,

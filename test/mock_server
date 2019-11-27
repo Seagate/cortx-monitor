@@ -31,6 +31,21 @@ def show_disks_detail():
     response = json_data.get("api-response")
     return response, status_code
 
+@app.route('/{0}/show/disks/<diskId>/detail'.format(api), methods=["GET"])
+def show_single_disk_detail(diskId):
+    api_file = open("{0}/disks-detail.txt".format(curr_dir), "r")
+    data = api_file.read()
+    api_file.close()
+    json_data = json.loads(data)
+    status_code = json_data.get("status_code")
+    response = json_data.get("api-response")
+    new_drives = []
+    for d in response["drives"]:
+        if d["durable-id"] == "disk_0{}".format(diskId):
+            new_drives.append(d)
+    response["drives"] = new_drives
+    return response, status_code
+
 @app.route('/{0}/show/volumes/pool/<pool_serial_number>'.format(api), methods=["GET"])
 def show_volumes(pool_serial_number):
     api_file = open("{0}/volumes.txt".format(curr_dir), "r")

@@ -45,7 +45,7 @@ class RealStorActuatorSensorMsg(BaseSensorMsg):
         self._expires       = expires
         self._host_id       = sensor_response.get("host_id")
         self._alert_type    = sensor_response.get("alert_type")
-        self._alert_id    = sensor_response.get("alert_id")
+        self._alert_id      = sensor_response.get("alert_id")
         self._severity      = sensor_response.get("severity")
 
         info = sensor_response.get("info")
