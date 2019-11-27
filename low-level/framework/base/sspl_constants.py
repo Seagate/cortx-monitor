@@ -22,7 +22,11 @@ class SeverityTypes(Enum):
 
 class ResourceTypes(Enum):
     SENSOR = "sensor"
+    INTERFACE = "interface"
 
+
+class EnclInterface(Enum):
+    SAS = "SAS"
 
 if __name__ == "__main__":
     print(' '.join(enabled_products))

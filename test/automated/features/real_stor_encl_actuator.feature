@@ -61,3 +61,8 @@ Scenario: Send SSPL a psu actuator message requesting psu data
 	Given that SSPL is running
 	When I send in the psu sensor message to request the psu "ENCL:enclosure:fru:psu" data
 	Then I get the psu actuator JSON response message for psu instance "*"
+	
+Scenario: Send SSPL an Enclosure SAS Port message requesting sas port status data
+	Given that SSPL is running
+	When I send Enclosure SAS Port message to request the current "enclosure:interface:sas" data
+	Then I get the Enclosure SAS ports JSON response message

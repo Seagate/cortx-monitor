@@ -77,7 +77,6 @@ def when_i_send_in_the_enclosure_actuator_message_to_request_the_current_fru_typ
     }
     world.sspl_modules[RabbitMQegressProcessor.name()]._write_internal_msgQ(RabbitMQegressProcessor.name(), egressMsg)
 
-
 @step(u'Then I get the fan module JSON response message')
 def then_i_get_the_fan_module_json_response_message(step):
 
@@ -437,6 +436,7 @@ def verify_fan_module_specific_info(fru_specific_info):
                     assert(fan.get("health") is not None)
                     assert(fan.get("health-reason") is not None)
                     assert(fan.get("health-recommendation") is not None)
+
 @step(u'When I send in the psu sensor message to request the psu "([^"]*)" data')
 def when_i_send_in_the_psu_actuator_message_to_request_the_psu_actuator_type_data(step, resource_type):
     egressMsg = {
@@ -476,11 +476,11 @@ def when_i_send_in_the_psu_actuator_message_to_request_the_psu_actuator_type_dat
         }
     world.sspl_modules[RabbitMQegressProcessor.name()]._write_internal_msgQ(RabbitMQegressProcessor.name(), egressMsg)
 
-
 @step(u'Then I get the psu actuator JSON response message for psu instance "([^"]*)"')
 def then_i_get_the_psu_atuator_json_response_message(step, resource_id):
 
     psu_actuator_msg = None
+
     time.sleep(4)
     while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
         ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
@@ -562,3 +562,85 @@ def then_i_get_the_psu_atuator_json_response_message(step, resource_id):
         assert(psu_specific_info.get("position") is not None)
         assert(psu_specific_info.get("model") is not None)
         assert(psu_specific_info.get("mfg-vendor-id") is not None)
+
+@step(u'When I send Enclosure SAS Port message to request the current "([^"]*)" data')
+def when_i_send_the_enclosure_sas_port_message_to_request_the_current_actuator_type_data(step, resource_type):
+    egressMsg = {
+      "username": "sspl-ll",
+      "description": "Seagate Storage Platform Library - Low Level - Actuator Request",
+      "title": "SSPL-LL Actuator Request",
+      "expires": 3600,
+      "signature": "None",
+      "time": "2019-11-21 08:37:27.144640",
+      "message": {
+        "sspl_ll_debug": {
+          "debug_component": "sensor",
+          "debug_enabled": True
+        },
+        "response_dest": {},
+        "sspl_ll_msg_header": {
+          "msg_version": "1.0.0",
+          "uuid": "2ba55744-8218-40c2-8c2c-ea7bddf79c09",
+          "schema_version": "1.0.0",
+          "sspl_version": "1.0.0"
+        },
+        "actuator_request_type": {
+          "storage_enclosure": {
+            "enclosure_request": "ENCL: enclosure:interface:sas",
+            "resource": "Expansion Port"
+          }
+        }
+      }
+    }
+    world.sspl_modules[RabbitMQegressProcessor.name()]._write_internal_msgQ(RabbitMQegressProcessor.name(), egressMsg)
+
+@step(u'Then I get the Enclosure SAS ports JSON response message')
+def then_i_get_the_enclosure_sas_ports_json_response_message(step):
+    enclosure_msg = None
+    time.sleep(4)
+    while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
+        ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
+        time.sleep(2)
+        print("Received: %s" % ingressMsg)
+        try:
+            # Make sure we get back the message type that matches the request
+            enclosure_msg = ingressMsg.get("sensor_response_type")
+            break
+        except Exception as exception:
+            time.sleep(4)
+            print exception
+
+    assert(enclosure_msg is not None)
+    assert(enclosure_msg.get("alert_type") is not None)
+    assert(enclosure_msg.get("alert_id") is not None)
+    assert(enclosure_msg.get("host_id") is not None)
+    assert(enclosure_msg.get("severity") is not None)
+    assert(enclosure_msg.get("info") is not None)
+
+    enclosure_sas_info = enclosure_msg.get("info")
+    assert(enclosure_sas_info.get("event_time") is not None)
+    assert(enclosure_sas_info.get("resource_id") is not None)
+    assert(enclosure_sas_info.get("site_id") is not None)
+    assert(enclosure_sas_info.get("node_id") is not None)
+    assert(enclosure_sas_info.get("cluster_id") is not None)
+    assert(enclosure_sas_info.get("rack_id") is not None)
+    assert(enclosure_sas_info.get("resource_type") is not None)
+
+    assert(enclosure_msg.get("specific_info") is not None)
+    enclosure_specific_info = enclosure_msg.get("specific_info", {})
+    if enclosure_specific_info:
+        assert(enclosure_specific_info.get("status") is not None)
+        assert(enclosure_specific_info.get("sas-port-type-numeric") is not None)
+        assert(enclosure_specific_info.get("name") is not None)
+        assert(enclosure_specific_info.get("enclosure-id") is not None)
+        assert(enclosure_specific_info.get("durable-id") is not None)
+        assert(enclosure_specific_info.get("health-reason") is not None)
+        assert(enclosure_specific_info.get("sas-port-index") is not None)
+        assert(enclosure_specific_info.get("controller") is not None)
+        assert(enclosure_specific_info.get("health") is not None)
+        assert(enclosure_specific_info.get("controller-numeric") is not None)
+        assert(enclosure_specific_info.get("object-name") is not None)
+        assert(enclosure_specific_info.get("health-numeric") is not None)
+        assert(enclosure_specific_info.get("health-recommendation") is not None)
+        assert(enclosure_specific_info.get("status-numeric") is not None)
+        assert(enclosure_specific_info.get("sas-port-type") is not None)

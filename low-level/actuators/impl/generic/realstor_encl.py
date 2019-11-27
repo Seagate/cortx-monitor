@@ -24,8 +24,9 @@ from actuators.impl.actuator import Actuator
 from framework.base.debug import Debug
 from framework.utils.service_logging import logger
 from framework.utils import mon_utils
-
 from framework.platforms.realstor.realstor_enclosure import singleton_realstorencl
+from framework.base.sspl_constants import AlertTypes, SeverityTypes, ResourceTypes
+
 
 class RealStorActuator(Actuator, Debug):
     """Handles request messages for Node server requests"""
@@ -79,6 +80,7 @@ class RealStorActuator(Actuator, Debug):
             enclosure_request = jsonMsg.get("actuator_request_type").get("storage_enclosure").get("enclosure_request")
             (request_type, enclosure, component, component_type) = [
                     s.strip() for s in enclosure_request.split(":")]
+
             resource = jsonMsg.get("actuator_request_type").get("storage_enclosure").get("resource")
             if component == "fru":
                 response = self.make_response(self.request_fru_func[request_type][component_type](
@@ -89,6 +91,13 @@ class RealStorActuator(Actuator, Debug):
                             component,
                             component_type,
                             resource)
+            elif component == "interface":
+                enclosure_type = enclosure_request.split(":")[2]
+                if enclosure_type == ResourceTypes.INTERFACE.value:
+                    response = self._handle_ports_request(enclosure_request, resource)
+                else:
+                    logger.error("Some unsupported interface passed, interface:{}".format(enclosure_type))
+
         except Exception as e:
             logger.exception("Error while getting details for JSON: {}".format(jsonMsg))
             response = {"Error": e}
@@ -407,3 +416,90 @@ class RealStorActuator(Actuator, Debug):
                     else:
                         raise Exception("Resource not Found")
 
+    def _handle_ports_request(self, enclosure_request, resource):
+        response = dict()
+        logger.info('handling ports request..')
+        self._enclosure_type = enclosure_request.split(":")[2]
+        self._enclosure_resource_type = enclosure_request.split(":")[3]
+        self._resource_id = resource
+        if self._enclosure_type.lower() in list(map(lambda enclr_item: enclr_item.value.lower(), ResourceTypes)):
+            self._build_generic_info(response)
+            # fetch specific info
+            # self._build_enclosure_info(response, self._enclosure_type, self._resource_id)
+            self._build_sas_port_status_info(response)
+        else:
+            logger.error("Error: Unsupported enclosure type {}".format(self._sensor_type))
+        return response
+
+    def _build_generic_info(self, response):
+        """
+        Build json with generic information
+        :param response:
+        :return:
+        """
+        epoch_time = str(calendar.timegm(time.gmtime()))
+        response['instance_id'] = self._resource_id
+        response['alert_type'] = AlertTypes.GET.value
+        response['severity'] = SeverityTypes.INFORMATIONAL.value
+        response['alert_id'] = mon_utils.get_alert_id(epoch_time)
+        response['info'] = {
+            "site_id": self.rssencl.site_id,
+            "rack_id": self.rssencl.rack_id,
+            "node_id": self.rssencl.node_id,
+            "cluster_id": self.rssencl.cluster_id,
+            "resource_type": "enclosure:" + self._enclosure_type.lower() + ":" + self._enclosure_resource_type.lower(),
+            "resource_id": self._resource_id,
+            "event_time": str(calendar.timegm(time.gmtime())),
+        }
+        # fetch host details
+        response["host_id"] = socket.getfqdn()
+
+    def _build_sas_port_status_info(self, response):
+        """Retrieve enclosure sas ports status i.e sas link health and phy stats"""
+
+        # make ws request
+        sas_url = self.rssencl.build_url(self.rssencl.URI_CLIAPI_SASHEALTHSTATUS)
+        self._get_enclosure_data(sas_url, response)
+
+    def _get_enclosure_data(self, sasurl, response):
+        logger.info("url comes into _get_enclosure_data is:{0}".format(sasurl))
+        sas_response = self.rssencl.ws_request(sasurl, self.rssencl.ws.HTTP_GET)
+        logger.info("_get_sas_port_status, sasresponse for coming is:{0}".format(sas_response))
+
+        if not sas_response:
+            logger.warn(
+                "{0}:: sas port status unavailable for request:{1} --gets failed".format(self.rssencl.EES_ENCL, url))
+            return None
+
+        if sas_response.status_code != self.rssencl.ws.HTTP_OK:
+            if sasurl.find(self.rssencl.ws.LOOPBACK) == -1:
+                logger.error("{0}:: http request {1} to sas port health status failed with error:{2}".format(
+                    self.rssencl.EES_ENCL, sasurl, sasresponse.status_code))
+            return None
+
+        json_response = None
+        try:
+            json_response = json.loads(sas_response.content)
+        except ValueError as v_error:
+            logger.error("{0} returned invalid json:\n{1}".format(sasurl, v_error))
+
+        if json_response is not None:
+            api_status = self.rssencl.get_api_status(json_response['status'])
+            if ((api_status == -1) and (sas_response.status_code == self.rssencl.ws.HTTP_OK)):
+                logger.warn("/show/sas-link-health api response unavailable, "
+                            "marking success as http code is 200")
+
+            if api_status == 0:
+                if self._resource_id == self.RESOURCE_ALL:
+                    response['specific_info'] = []
+                    response['specific_info'].extend(json_response.get("expander-ports"))
+                else:
+                    response['specific_info'] = {}
+                    for port_enclr in json_response.get("expander-ports"):
+                        logger.info(port_enclr)
+                        if self._resource_id.lower() == port_enclr['name'].lower():
+                            response['specific_info'] = port_enclr
+                            break
+                    else:
+                        response['specific_info']["reason"] = "Data not available for port interface: {}.".format(
+                            self._resource_id.lower())

@@ -59,6 +59,7 @@ class RealStorEnclosure(StorageEnclosure):
     URI_CLIAPI_SHOWDISKGROUPS = "/show/disk-groups"
     URI_CLIAPI_SHOWVOLUMES = "/show/volumes"
     URI_CLIAPI_SHOWSENSORSTATUS = "/show/sensor-status"
+    URI_CLIAPI_SASHEALTHSTATUS = "/show/sas-link-health"
 
     # Realstor generic health states
     HEALTH_OK = "ok"

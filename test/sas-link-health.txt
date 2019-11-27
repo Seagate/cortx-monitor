@@ -1,0 +1,69 @@
+{
+    "status_code": 200,
+    "api-response": {
+    "expander-ports": [
+             {
+               "status": "Disconnected",
+               "sas-port-type-numeric": 5,
+               "name": "Expansion Port",
+               "enclosure-id": 0,
+               "durable-id": "expport_universal_0.A0",
+               "health-reason": "No drive enclosure is connected to this expansion port. This is normal if this is the last (or only) enclosure in the cabling sequence of the system.",
+               "sas-port-index": 0,
+               "controller": "A",
+               "health": "N/A",
+               "controller-numeric": 1,
+               "object-name": "expander-port",
+               "health-numeric": 4,
+               "health-recommendation": "- No action is required.",
+               "status-numeric": 6,
+               "sas-port-type": "Expansion Port Universal"
+             },
+            {
+                "status": "Up",
+                "sas-port-type-numeric": 1,
+                "name": "Drawer0-egress A0",
+                "enclosure-id": 0,
+                "durable-id": "drawer_egress_0.D0.A0",
+                "health-reason": "",
+                "sas-port-index": 0,
+                "controller": "A",
+                "health": "OK",
+                "controller-numeric": 1,
+                "object-name": "expander-port",
+                "health-numeric": 0,
+                "health-recommendation": "",
+                "status-numeric": 0,
+                "sas-port-type": "Drawer Port Egress"
+            },
+            {
+                "status": "Up",
+                "sas-port-type-numeric": 1,
+                "name": "Drawer0-egress A1",
+                "enclosure-id": 0,
+                "durable-id": "drawer_egress_0.D0.A1",
+                "health-reason": "",
+                "sas-port-index": 1,
+                "controller": "A",
+                "health": "OK",
+                "controller-numeric": 1,
+                "object-name": "expander-port",
+                "health-numeric": 0,
+                "health-recommendation": "",
+                "status-numeric": 0,
+                "sas-port-type": "Drawer Port Egress"
+            }
+        ],
+    "status": [
+        {
+            "object-name": "status",
+            "response-type": "Success",
+            "response-type-numeric": 0,
+            "response": "Command completed successfully. (2019-07-04 04:23:04)",
+            "return-code": 0,
+            "component-id": "",
+            "time-stamp": "2019-07-04 04:23:04",
+            "time-stamp-numeric": 1562214184
+        }
+    ]
+}}

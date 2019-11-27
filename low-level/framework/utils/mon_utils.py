@@ -23,4 +23,3 @@ def get_alert_id(epoch_time):
     salt = str(uuid.uuid4().hex)
     alert_id = epoch_time + salt
     return alert_id
-
