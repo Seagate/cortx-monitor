@@ -41,6 +41,8 @@ class RealStorActuator(Actuator, Debug):
 
     RESOURCE_ALL = "*"
 
+    FRU_PSU = "psu"
+
     @staticmethod
     def name():
         """ @return: name of the module."""
@@ -55,14 +57,16 @@ class RealStorActuator(Actuator, Debug):
             self.REQUEST_GET: {
                 self.FRU_DISK: self._get_disk,
                 self.FRU_FAN: self._get_fan_modules,
-                self.FRU_CONTROLLER: self._get_controllers
+                self.FRU_CONTROLLER: self._get_controllers,
+                self.FRU_PSU:self._get_psu
             }
         }
 
         self.fru_response_manipulators = {
             self.FRU_FAN: self.manipulate_fan_response,
             self.FRU_DISK: self.update_disk_response,
-            self.FRU_CONTROLLER: self._update_controller_response
+            self.FRU_CONTROLLER: self._update_controller_response,
+            self.FRU_PSU:self._update_psu_response
         }
 
     def perform_request(self, jsonMsg):
@@ -315,6 +319,12 @@ class RealStorActuator(Actuator, Debug):
         resource_id = response.get("durable-id", None)
         return resource_id
 
+    def _update_psu_response(self, response):
+        """Manipulate controller response dto change resource_id"""
+        resource_id = None
+        resource_id = response.get("name", None)
+        return resource_id
+
     def _get_sensor_status(self, sensor_type, sensor_name):
             """Retreive realstor sensor info using cli api /show/sensor-status"""
 
@@ -361,3 +371,39 @@ class RealStorActuator(Actuator, Debug):
                         sensors = [sensor for sensor in sensors
                                 if sensor["sensor-type"] == sensor_type.title()]
                         return sensors
+
+    def _get_psu(self, psu_name):
+        #build url for fetching the psu type data
+        url = self.rssencl.build_url(
+                      self.rssencl.URI_CLIAPI_SHOWPSUS)
+        response = self.rssencl.ws_request( url, self.rssencl.ws.HTTP_GET)
+        if not response:
+            logger.warn("{0}: Psu status unavailable as ws request {1}"
+                    " failed".format(self.rssencl.EES_ENCL, url))
+            return
+        if response.status_code != self.rssencl.ws.HTTP_OK:
+            if url.find(self.rssencl.ws.LOOPBACK) == -1:
+                logger.error("{0}:: http request {1} to poll psu failed with"
+                        " err {2}".format(self.rssencl.EES_ENCL, url, response.status_code))
+            return
+        try:
+            jresponse = json.loads(response.content)
+        except ValueError as badjson:
+            logger.error("%s returned mal-formed json:\n%s" % (url, badjson))
+        if jresponse:
+            api_resp = self.rssencl.get_api_status(jresponse['status'])
+            if ((api_resp == -1) and
+                    (response.status_code == self.rssencl.ws.HTTP_OK)):
+                logger.warn("/show/power-supplies api response unavailable, "
+                        "marking success as http code is 200")
+                api_resp = 0
+            if api_resp == 0:
+                if psu_name == "*":
+                    return jresponse["power-supplies"]
+                else:
+                    for resource in jresponse["power-supplies"]:
+                        if psu_name == resource["name"]:
+                            return resource
+                    else:
+                        raise Exception("Resource not Found")
+

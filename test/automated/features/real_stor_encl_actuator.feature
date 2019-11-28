@@ -56,3 +56,8 @@ Scenario: Send SSPL an enclosure actuator message requesting current sensor data
 	Given that SSPL is running
 	When I send in the enclosure actuator request to get the current "ENCL:enclosure:sensor:current" data for "Current 12V Rail Loc: right-PSU" sensor
 	Then I get the sensor JSON response message for "Current 12V Rail Loc: right-PSU" "Current" sensor
+
+Scenario: Send SSPL a psu actuator message requesting psu data
+	Given that SSPL is running
+	When I send in the psu sensor message to request the psu "ENCL:enclosure:fru:psu" data
+	Then I get the psu actuator JSON response message for psu instance "*"
