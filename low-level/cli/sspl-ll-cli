@@ -562,6 +562,7 @@ def _process_arguments(parser, program_name):
             file = "/opt/seagate/sspl/low-level/tests/manual/actuator_msgs/node_cntrl_smart_test.json"
             jsonMsg = json.loads(open(file).read())
             jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = "SMART_TEST: {}".format(args.smart)
+            jsonMsg["message"]["actuator_request_type"]["node_controller"]["resource"] = "{}".format(args.smart)
             print("\nInitiating SMART tests.  This can take several minutes...\n")
             _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, response_wait_time=300,
                           force_wait=True)
