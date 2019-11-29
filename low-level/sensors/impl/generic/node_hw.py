@@ -570,6 +570,11 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
         threshold_event = event.split(" ")
         threshold = threshold_event[len(threshold_event)-1]
 
+        if event.lower() == 'fully redundant':
+            alert_type = "fault"
+        elif threshold.lower() in ['low', 'high']:
+            alert_type = "threshold_breached:{0}".format(threshold)
+
         sensor_name = self.sensor_id_map[self.TYPE_FAN][sensor_id]
 
         fan_common_data, fan_specific_data, fan_specific_data_dynamic = self._get_sensor_props(sensor_name)
@@ -580,10 +585,10 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
 
         fan_info = fan_specific_data
         fan_info.update({"fru_id" : device_id, "event" : event})
-        alert_type = "threshold_breached:" + threshold
         resource_type = NodeDataMsgHandler.IPMI_RESOURCE_TYPE_FAN
         severity_reader = SeverityReader()
         severity = severity_reader.map_severity(alert_type)
+
         fru_info = {    "site_id": self._site_id,
                         "rack_id": self._rack_id,
                         "node_id": self._node_id,
