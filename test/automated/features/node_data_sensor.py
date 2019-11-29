@@ -189,7 +189,7 @@ def then_i_get_the_if_data_sensor_json_response_message(step):
 @step(u'Then I get the disk space data sensor JSON response message')
 def then_i_get_the_disk_space_data_sensor_json_response_message(step):
 
-    disk_space_data_msg = None
+    disk_space_sensor_msg = None
     time.sleep(4)
     while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
         ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
@@ -199,16 +199,33 @@ def then_i_get_the_disk_space_data_sensor_json_response_message(step):
         try:
             # Make sure we get back the message type that matches the request
             msg_type = ingressMsg.get("sensor_response_type")
-            disk_space_data_msg = msg_type["disk_space_alert"]
-            break
+            if msg_type["info"]["resource_type"] == "node:os:disk_space":
+                disk_space_sensor_msg = msg_type
+                break
         except Exception as exception:
             time.sleep(4)
             print(exception)
 
-    assert(disk_space_data_msg is not None)
-    assert(disk_space_data_msg.get("hostId") is not None)
-    assert(disk_space_data_msg.get("localtime") is not None)
-    assert(disk_space_data_msg.get("freeSpace") is not None)
-    assert(disk_space_data_msg.get("totalSpace") is not None)
-    assert(disk_space_data_msg.get("diskUsedPercentage") is not None)
+    assert(disk_space_sensor_msg is not None)
+    assert(disk_space_sensor_msg.get("alert_type") is not None)
+    assert(disk_space_sensor_msg.get("alert_id") is not None)
+    assert(disk_space_sensor_msg.get("severity") is not None)
+    assert(disk_space_sensor_msg.get("host_id") is not None)
+    assert(disk_space_sensor_msg.get("info") is not None)
+    assert(disk_space_sensor_msg.get("specific_info") is not None)
+
+    disk_space_info = disk_space_sensor_msg.get("info")
+    assert(disk_space_info.get("site_id") is not None)
+    assert(disk_space_info.get("node_id") is not None)
+    assert(disk_space_info.get("cluster_id") is not None)
+    assert(disk_space_info.get("rack_id") is not None)
+    assert(disk_space_info.get("resource_type") is not None)
+    assert(disk_space_info.get("event_time") is not None)
+    assert(disk_space_info.get("resource_id") is not None)
+
+    disk_space_specific_info = disk_space_sensor_msg.get("specific_info")
+    assert(disk_space_specific_info is not None)
+    assert(disk_space_specific_info.get("freeSpace") is not None)
+    assert(disk_space_specific_info.get("totalSpace") is not None)
+    assert(disk_space_specific_info.get("diskUsedPercentage") is not None)
 

@@ -49,6 +49,12 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
     DISK_USAGE_THRESHOLD = 'disk_usage_threshold'
     DEFAULT_DISK_USAGE_THRESHOLD = 80
 
+    SYSTEM_INFORMATION = "SYSTEM_INFORMATION"
+    SITE_ID = "site_id"
+    CLUSTER_ID = "cluster_id"
+    NODE_ID = "node_id"
+    RACK_ID = "rack_id"
+
     IPMI_RESOURCE_TYPE_PSU = "node:fru:psu"
     IPMI_RESOURCE_TYPE_FAN = "node:fru:fan"
     IPMI_RESOURCE_TYPE_DISK = "node:fru:disk"
@@ -95,6 +101,24 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                                                 self.NODEDATAMSGHANDLER,
                                                 self.DISK_USAGE_THRESHOLD,
                                                 self.DEFAULT_DISK_USAGE_THRESHOLD)
+
+        self.site_id = int(self._conf_reader._get_value_with_default(
+                                                self.SYSTEM_INFORMATION,
+                                                self.SITE_ID,
+                                                0))
+        self.rack_id = int(self._conf_reader._get_value_with_default(
+                                                self.SYSTEM_INFORMATION,
+                                                self.RACK_ID,
+                                                0))
+        self.node_id = int(self._conf_reader._get_value_with_default(
+                                                self.SYSTEM_INFORMATION,
+                                                self.NODE_ID,
+                                                0))
+
+        self.cluster_id = int(self._conf_reader._get_value_with_default(
+                                                self.SYSTEM_INFORMATION,
+                                                self.CLUSTER_ID,
+                                                0))
 
         self._node_sensor    = None
         self._login_actuator = None
@@ -399,7 +423,9 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                                     self._node_sensor.total_space,
                                     self._node_sensor.free_space,
                                     self._node_sensor.disk_used_percentage,
-                                    self._units)
+                                    self._units,
+                                    self.site_id, self.rack_id,
+                                    self.node_id, self.cluster_id)
 
             # Add in uuid if it was present in the json request
             if self._uuid is not None:

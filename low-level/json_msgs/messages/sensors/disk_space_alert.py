@@ -21,8 +21,11 @@
 """
 
 import json
+import calendar
+import time
 
 from json_msgs.messages.sensors.base_sensors_msg import BaseSensorMsg
+from framework.utils import mon_utils
 
 class DiskSpaceAlertMsg(BaseSensorMsg):
     """The JSON message transmitted by the node message handler"""
@@ -30,58 +33,86 @@ class DiskSpaceAlertMsg(BaseSensorMsg):
     ACTUATOR_MSG_TYPE = "disk_space_alert"
     MESSAGE_VERSION  = "1.0.0"
 
+    ALERT_TYPE = "fault"
+    SEVERITY = "warning"
+    RESOURCE_TYPE = "node:os:disk_space"
+    RESOURCE_ID = "0"
+
     def __init__(self, host_id,
                        local_time,
                        free_space,
                        total_space,
                        disk_used_percentage,
                        units,
+                       site_id, rack_id,
+                       node_id, cluster_id,
                        username  = "SSPL-LL",
                        signature = "N/A",
-                       time      = "N/A",
-                       expires   = -1):
+                       in_time      = "N/A",
+                       expires   = -1
+                       ):
         super(DiskSpaceAlertMsg, self).__init__()
 
         self._username               = username
         self._signature              = signature
-        self._time                   = time
+        self._time                   = in_time
         self._expires                = expires
         self._host_id                = host_id
-        self._local_time             = local_time
+        # No need for local time
         self._free_space             = free_space
         self._total_space            = total_space
         self._disk_used_percentage   = disk_used_percentage
         self._units                  = units
 
-        self._json = {"title" : self.TITLE,
-                      "description" : self.DESCRIPTION,
+        self._site_id                = site_id
+        self._rack_id                = rack_id
+        self._node_id                = node_id
+        self._cluster_id             = cluster_id
+
+        epoch_time = str(calendar.timegm(time.gmtime()))
+        alert_id = mon_utils.get_alert_id(epoch_time)
+
+        self._json = {
                       "username" : self._username,
+                      "description" : self.DESCRIPTION,
+                      "title" : self.TITLE,
+                      "expires" : self._expires,
                       "signature" : self._signature,
                       "time" : self._time,
-                      "expires" : self._expires,
 
                       "message" : {
                           "sspl_ll_msg_header": {
+                              "msg_version"    : self.MESSAGE_VERSION,
                               "schema_version" : self.SCHEMA_VERSION,
                               "sspl_version"   : self.SSPL_VERSION,
-                              "msg_version"    : self.MESSAGE_VERSION,
                               },
                           "sensor_response_type": {
-                              self.ACTUATOR_MSG_TYPE: {
-                                  "hostId"    : self._host_id,
-                                  "localtime" : self._local_time,
+                              "alert_type": self.ALERT_TYPE,
+                              "severity": self.SEVERITY,
+                              "alert_id": alert_id,
+                              "host_id": self._host_id,
+                              "info": {
+                                "site_id": self._site_id,
+                                "rack_id": self._rack_id,
+                                "node_id": self._node_id,
+                                "cluster_id": self._cluster_id,
+                                "resource_type": self.RESOURCE_TYPE,
+                                "resource_id": self.RESOURCE_ID,
+                                "event_time": epoch_time
+                              },
+                              "specific_info": {
                                   "freeSpace"  : {
                                       "value" : self._free_space,
                                       "units" : self._units
-                                      },
+                                  },
                                   "totalSpace" : {
                                       "value" : self._total_space,
                                       "units" : self._units
-                                      },
+                                  },
                                   "diskUsedPercentage" : self._disk_used_percentage
-                                  }
                               }
                           }
+                      }
                       }
 
     def getJson(self):
