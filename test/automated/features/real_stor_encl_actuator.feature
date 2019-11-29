@@ -4,23 +4,27 @@ Feature: Test Enclosure Actuator Capabilities
 
 Scenario: Send SSPL an enclosure actuator message requesting fan_module data
     Given that SSPL is running
-    When I send in the enclosure actuator message to request the current "ENCL:enclosure:fru:fan" data
+    When I send in the enclosure actuator message to request the current "ENCL:enclosure:fru:fan" data with instance id "4"
+    Then I get the fan module JSON response message
+
+Scenario: Send SSPL an enclosure actuator message requesting fan_module data
+    Given that SSPL is running
+    When I send in the enclosure actuator message to request the current "ENCL:enclosure:fru:fan" data with instance id "*"
     Then I get the fan module JSON response message
 
 Scenario: Send SSPL-LL a disk actuator message requesting single-instance disk data
 	Given that SSPL is running
-    When I send in the disk actuator message to request the current "ENCL: enclosure:fru:disk" data for disk instance "65"
+    When I send in the enclosure actuator message to request the current "ENCL:enclosure:fru:disk" data with instance id "65"
 	Then I get the disk actuator JSON response message for disk instance "65"
 
 Scenario: Send SSPL-LL a disk actuator message requesting multi-instance disk data
 	Given that SSPL is running
-    When I send in the disk actuator message to request the current "ENCL: enclosure:fru:disk" data for disk instance "*"
+    When I send in the enclosure actuator message to request the current "ENCL:enclosure:fru:disk" data with instance id "*"
 	Then I get the disk actuator JSON response message for disk instance "*"
-
 
 Scenario: Send SSPL an enclosure actuator message requesting controller data
     Given that SSPL is running
-    When I send in the enclosure actuator message to request the current "ENCL:enclosure:fru:controller" data
+    When I send in the enclosure actuator message to request the current "ENCL:enclosure:fru:controller" data with instance id "1"
     Then I get the controller JSON response message
 
 Scenario: Send SSPL an enclosure actuator message requesting temperature sensor data for all sensor

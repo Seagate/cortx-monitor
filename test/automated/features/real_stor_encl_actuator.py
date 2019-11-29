@@ -39,8 +39,8 @@ def given_that_sspl_ll_is_running(step):
         world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
 
 
-@step(u'When I send in the enclosure actuator message to request the current "([^"]*)" data')
-def when_i_send_in_the_enclosure_actuator_message_to_request_the_current_fru_type_data(step, resource_type):
+@step(u'When I send in the enclosure actuator message to request the current "([^"]*)" data with instance id "([^"]*)"')
+def when_i_send_in_the_enclosure_actuator_message_to_request_the_current_fru_type_data(step, resource_type, resource_id):
     egressMsg = {
         "title": "SSPL Actuator Request",
         "description": "Seagate Storage Platform Library - Actuator Request",
@@ -60,10 +60,17 @@ def when_i_send_in_the_enclosure_actuator_message_to_request_the_current_fru_typ
                 "debug_component" : "sensor",
                 "debug_enabled" : True
             },
+            "request_path": {
+                "site_id": 1,
+                "rack_id": 1,
+                "cluster_id": 1,
+                "node_id": 1
+            },
+            "response_dest": {},
             "actuator_request_type": {
                 "storage_enclosure": {
                     "enclosure_request": resource_type,
-                    "resource": "1"
+                    "resource": resource_id
                 }
             }
         }
@@ -83,7 +90,6 @@ def then_i_get_the_fan_module_json_response_message(step):
         try:
             # Make sure we get back the message type that matches the request
             fan_module_sensor_msg = ingressMsg.get("sensor_response_type")
-            # fan_module_sensor_msg = msg_type["enclosure_fan_module_alert"]
             break
         except Exception as exception:
             time.sleep(4)
@@ -106,6 +112,12 @@ def then_i_get_the_fan_module_json_response_message(step):
     assert(fan_module_info.get("resource_id") is not None)
 
     fru_specific_info = fan_module_sensor_msg.get("specific_info", {})
+
+    resource_id = fan_module_info.get("resource_id")
+    if resource_id == "*":
+        verify_fan_module_specific_info(fru_specific_info)
+        return
+
     if fru_specific_info:
         assert(fru_specific_info.get("durable-id") is not None)
         assert(fru_specific_info.get("status") is not None)
@@ -134,45 +146,6 @@ def then_i_get_the_fan_module_json_response_message(step):
             assert(fan.get("health") is not None)
             assert(fan.get("health-reason") is not None)
             assert(fan.get("health-recommendation") is not None)
-
-@step(u'When I send in the disk actuator message to request the current "([^"]*)" data for disk instance "([^"]*)"')
-def when_i_send_in_the_disk_actuator_message_to_request_the_current_actuator_type_data(step, resource_type, resource_id):
-    egressMsg = {
-        "title": "SSPL-LL Actuator Request",
-        "description": "Seagate Storage Platform Library - Low Level - Actuator Request",
-
-        "username" : "JohnDoe",
-        "signature" : "None",
-        "time" : "2015-05-29 14:28:30.974749",
-        "expires" : 500,
-
-        "message" : {
-            "sspl_ll_msg_header": {
-                "schema_version": "1.0.0",
-                "sspl_version": "1.0.0",
-                "msg_version": "1.0.0"
-            },
-             "sspl_ll_debug": {
-                "debug_component" : "actuator",
-                "debug_enabled" : True
-            },
-            "request_path": {
-                "site_id": 1,
-                "rack_id": 1,
-                "cluster_id": 1,
-                "node_id": 1
-            },
-            "response_dest": {},
-            "actuator_request_type": {
-                "storage_enclosure": {
-                    "enclosure_request": resource_type,
-                    "resource": resource_id
-                }
-            }
-        }
-    }
-    world.sspl_modules[RabbitMQegressProcessor.name()]._write_internal_msgQ(RabbitMQegressProcessor.name(), egressMsg)
-
 
 @step(u'Then I get the disk actuator JSON response message for disk instance "([^"]*)"')
 def then_i_get_the_disk_actuator_json_response_message(step, resource_id):
@@ -431,3 +404,36 @@ def verify_specific_info_for_platform_sensors(specific_info, sensor_type):
     assert(specific_info.get("sensor-type-numeric") is not None)
     assert(specific_info.get("drawer-id") is not None)
     assert(specific_info.get("status-numeric") is not None)
+
+def verify_fan_module_specific_info(fru_specific_info):
+    """Verify fan_module specific info"""
+
+    if fru_specific_info:
+        for fru_info in fru_specific_info:
+            assert(fru_info.get("durable-id") is not None)
+            assert(fru_info.get("status") is not None)
+            assert(fru_info.get("name") is not None)
+            assert(fru_info.get("enclosure-id") is not None)
+            assert(fru_info.get("health") is not None)
+            assert(fru_info.get("health-reason") is not None)
+            assert(fru_info.get("location") is not None)
+            assert(fru_info.get("health-recommendation") is not None)
+            assert(fru_info.get("position") is not None)
+
+            fans = fru_info.get("fans", [])
+            if fans:
+                for fan in fans:
+                    assert(fan.get("durable-id") is not None)
+                    assert(fan.get("status") is not None)
+                    assert(fan.get("name") is not None)
+                    assert(fan.get("speed") is not None)
+                    assert(fan.get("locator-led") is not None)
+                    assert(fan.get("position") is not None)
+                    assert(fan.get("location") is not None)
+                    assert(fan.get("part-number") is not None)
+                    assert(fan.get("serial-number") is not None)
+                    assert(fan.get("fw-revision") is not None)
+                    assert(fan.get("hw-revision") is not None)
+                    assert(fan.get("health") is not None)
+                    assert(fan.get("health-reason") is not None)
+                    assert(fan.get("health-recommendation") is not None)
