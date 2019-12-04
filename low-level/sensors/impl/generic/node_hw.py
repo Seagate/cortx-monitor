@@ -558,20 +558,24 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
         # command 'ipmitool sel get <sel-id>'
 
         fan_info = {}
+        alert_type = None
 
         #TODO: Enabled Assertions list (fan_specific_list[] in code) needs
         # to be built dynamically to support platform specific assertions and
         # not limit to these hardcoded ones.
         fan_specific_list = ["Sensor Reading", "Lower Non-Recoverable",
-                             "Lower Non-Recoverable","Upper Non-Recoverable",
+                             "Upper Non-Recoverable","Upper Non-Critical",
                              "Lower Critical", "Lower Non-Critical",
-                             "Upper Critical"]
+                             "Upper Critical", "Fully Redundant", "State Asserted",
+                             "State Deasserted"]
 
         threshold_event = event.split(" ")
         threshold = threshold_event[len(threshold_event)-1]
 
-        if event.lower() == 'fully redundant':
+        if status.lower() == "deasserted" and event.lower() == "fully redundant":
             alert_type = "fault"
+        elif status.lower() == "asserted" and event.lower() == "fully redundant":
+            alert_type = "fault_resolved"
         elif threshold.lower() in ['low', 'high']:
             alert_type = "threshold_breached:{0}".format(threshold)
 
@@ -587,7 +591,16 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
         fan_info.update({"fru_id" : device_id, "event" : event})
         resource_type = NodeDataMsgHandler.IPMI_RESOURCE_TYPE_FAN
         severity_reader = SeverityReader()
-        severity = severity_reader.map_severity(alert_type)
+        if alert_type:
+            severity = severity_reader.map_severity(alert_type)
+            if threshold.lower() in ['low', 'high'] and status.lower() == "deasserted":
+                severity = "informational"
+        else:
+            # Else section will handle some unknown as well as known events like
+            # "State Asserted", "State Deasserted" or "Sensor Reading" and also it is
+            # keeping default severity and alert_type for those events.
+            alert_type = "miscellaneous"
+            severity = "informational"
 
         fru_info = {    "site_id": self._site_id,
                         "rack_id": self._rack_id,
