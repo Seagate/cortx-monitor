@@ -48,6 +48,10 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
     UNITS = 'units'
     DISK_USAGE_THRESHOLD = 'disk_usage_threshold'
     DEFAULT_DISK_USAGE_THRESHOLD = 80
+    CPU_USAGE_THRESHOLD = 'cpu_usage_threshold'
+    DEFAULT_CPU_USAGE_THRESHOLD = 80
+    HOST_MEMORY_USAGE_THRESHOLD = 'host_memory_usage_threshold'
+    DEFAULT_HOST_MEMORY_USAGE_THRESHOLD = 80
 
     SYSTEM_INFORMATION = "SYSTEM_INFORMATION"
     SITE_ID = "site_id"
@@ -102,6 +106,16 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                                                 self.DISK_USAGE_THRESHOLD,
                                                 self.DEFAULT_DISK_USAGE_THRESHOLD)
 
+        self._cpu_usage_threshold = self._conf_reader._get_value_with_default(
+                                                self.NODEDATAMSGHANDLER,
+                                                self.CPU_USAGE_THRESHOLD,
+                                                self.DEFAULT_CPU_USAGE_THRESHOLD)
+
+        self._host_memory_usage_threshold = self._conf_reader._get_value_with_default(
+                                                self.NODEDATAMSGHANDLER,
+                                                self.HOST_MEMORY_USAGE_THRESHOLD,
+                                                self.DEFAULT_HOST_MEMORY_USAGE_THRESHOLD)
+
         self.site_id = int(self._conf_reader._get_value_with_default(
                                                 self.SYSTEM_INFORMATION,
                                                 self.SITE_ID,
@@ -122,7 +136,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         self.nw_status = {}
         self._node_sensor    = None
         self._login_actuator = None
-
+        self._epoch_time = str(int(time.time()))
         self._raid_drives = []
         self._raid_device = "N/A"
 
@@ -274,37 +288,42 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         if not successful:
             logger.error("NodeDataMsgHandler, _generate_host_update was NOT successful.")
 
-        # Query the Zope GlobalSiteManager for an object implementing ILogin
-        #if self._login_actuator is None:
-        #    from actuators.ILogin import ILogin
-        #    self._login_actuator = queryUtility(ILogin)()
-        #    self._log_debug("_generate_host_update, login_actuator name: %s" % self._login_actuator.name())
+        self._host_memory_usage_threshold = str(self._host_memory_usage_threshold)
+        try:
+            if self._host_memory_usage_threshold.isdigit():
+                self._host_memory_usage_threshold = int(self._host_memory_usage_threshold)
+            else:
+                self._host_memory_usage_threshold = float(self._host_memory_usage_threshold)
+        except ValueError:
+            logger.warning("Host Memory Alert, Invalid host_memory_usage_threshold value are entered in config.")
+            # Assigning default value to _disk_usage_threshold
+            self._host_memory_usage_threshold = self.DEFAULT_HOST_MEMORY_USAGE_THRESHOLD
+        if self._node_sensor.total_memory["percent"] >= self._host_memory_usage_threshold:
+            # Create the disk space data message and hand it over to the egress processor to transmit
+            logger.warning("Host Memory usage increased to {}%, beyond configured threshold of {}%".\
+                format(self._node_sensor.total_memory["percent"], self._host_memory_usage_threshold))
 
-        # Notify the login actuator to update its data of logged in users
-        #login_request={"login_request": "get_all_users"}
-        #logged_in_users = self._login_actuator.perform_request(login_request)
-        # Return to this when/if it's actually going to be used
-        logged_in_users = []
+            logged_in_users = []
+            # Create the host update message and hand it over to the egress processor to transmit
+            hostUpdateMsg = HostUpdateMsg(self._node_sensor.host_id,
+                                    self._epoch_time,
+                                    self._node_sensor.boot_time,
+                                    self._node_sensor.up_time,
+                                    self._node_sensor.uname, self._units,
+                                    self.site_id, self.rack_id,
+                                    self.node_id, self.cluster_id,
+                                    self._node_sensor.total_memory,
+                                    self._node_sensor.logged_in_users,
+                                    self._node_sensor.process_count,
+                                    self._node_sensor.running_process_count
+                                    )
 
-        # Create the host update message and hand it over to the egress processor to transmit
-        hostUpdateMsg = HostUpdateMsg(self._node_sensor.host_id,
-                                self._node_sensor.local_time,
-                                self._node_sensor.boot_time,
-                                self._node_sensor.up_time,
-                                self._node_sensor.uname, self._units,
-                                self._node_sensor.free_mem,
-                                self._node_sensor.total_mem, logged_in_users,
-                                self._node_sensor.process_count,
-                                self._node_sensor.running_process_count
-                                )
-
-        # Add in uuid if it was present in the json request
-        if self._uuid is not None:
-            hostUpdateMsg.set_uuid(self._uuid)
-        jsonMsg = hostUpdateMsg.getJson()
-
-        # Transmit it out over rabbitMQ channel
-        self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
+            # Add in uuid if it was present in the json request
+            if self._uuid is not None:
+                hostUpdateMsg.set_uuid(self._uuid)
+            jsonMsg = hostUpdateMsg.getJson()
+            # Transmit it out over rabbitMQ channel
+            self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
 
     def _generate_local_mount_data(self):
         """Create & transmit a local_mount_data message as defined
@@ -317,7 +336,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
         # Create the local mount data message and hand it over to the egress processor to transmit
         localMountDataMsg = LocalMountDataMsg(self._node_sensor.host_id,
-                                self._node_sensor.local_time,
+                                self._epoch_time,
                                 self._node_sensor.free_space,
                                 self._node_sensor.free_inodes,
                                 self._node_sensor.free_swap,
@@ -342,27 +361,49 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         if not successful:
             logger.error("NodeDataMsgHandler, _generate_cpu_data was NOT successful.")
 
-        # Create the local mount data message and hand it over to the egress processor to transmit
-        cpuDataMsg = CPUdataMsg(self._node_sensor.host_id,
-                             self._node_sensor.local_time,
-                             self._node_sensor.csps,
-                             self._node_sensor.idle_time,
-                             self._node_sensor.interrupt_time,
-                             self._node_sensor.iowait_time,
-                             self._node_sensor.nice_time,
-                             self._node_sensor.softirq_time,
-                             self._node_sensor.steal_time,
-                             self._node_sensor.system_time,
-                             self._node_sensor.user_time,
-                             self._node_sensor.cpu_core_data)
+        self._cpu_usage_threshold = str(self._cpu_usage_threshold)
+        try:
+            if self._cpu_usage_threshold.isdigit():
+                self._cpu_usage_threshold = int(self._cpu_usage_threshold)
+            else:
+                self._cpu_usage_threshold = float(self._cpu_usage_threshold)
+        except ValueError:
+            logger.warning("CPU Usage Alert, Invalid host_memory_usage_threshold value are entered in config.")
+            # Assigning default value to _cpu_usage_threshold
+            self._cpu_usage_threshold = self.DEFAULT_CPU_USAGE_THRESHOLD
 
-        # Add in uuid if it was present in the json request
-        if self._uuid is not None:
-            cpuDataMsg.set_uuid(self._uuid)
-        jsonMsg = cpuDataMsg.getJson()
+        if self._node_sensor.cpu_usage >= self._cpu_usage_threshold:
+            # Create the cpu usage data message and hand it over to the egress processor to transmit
+            logger.warning("CPU usage increased to {}%, beyond configured threshold of {}%".\
+                format(self._node_sensor.cpu_usage, self._cpu_usage_threshold))
 
-        # Transmit it out over rabbitMQ channel
-        self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
+            # Create the local mount data message and hand it over to the egress processor to transmit
+            cpuDataMsg = CPUdataMsg(self._node_sensor.host_id,
+                                self._epoch_time,
+                                self._node_sensor.csps,
+                                self._node_sensor.idle_time,
+                                self._node_sensor.interrupt_time,
+                                self._node_sensor.iowait_time,
+                                self._node_sensor.nice_time,
+                                self._node_sensor.softirq_time,
+                                self._node_sensor.steal_time,
+                                self._node_sensor.system_time,
+                                self._node_sensor.user_time,
+                                self._node_sensor.cpu_core_data,
+                                self._node_sensor.cpu_usage,
+                                self.site_id,
+                                self.rack_id,
+                                self.node_id,
+                                self.cluster_id,
+                            )
+
+            # Add in uuid if it was present in the json request
+            if self._uuid is not None:
+                cpuDataMsg.set_uuid(self._uuid)
+            jsonMsg = cpuDataMsg.getJson()
+
+            # Transmit it out over rabbitMQ channel
+            self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
 
     def _generate_if_data(self):
         """Create & transmit a network interface data message as defined
@@ -430,7 +471,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             logger.warning("Disk usage increased to {}%, beyond configured threshold of {}%".\
                 format(self._node_sensor.disk_used_percentage, self._disk_usage_threshold))
             diskSpaceAlertMsg = DiskSpaceAlertMsg(self._node_sensor.host_id,
-                                    self._node_sensor.local_time,
+                                    self._epoch_time,
                                     self._node_sensor.total_space,
                                     self._node_sensor.free_space,
                                     self._node_sensor.disk_used_percentage,

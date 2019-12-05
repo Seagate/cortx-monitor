@@ -78,7 +78,7 @@ class DiskSpaceAlertMsg(BaseSensorMsg):
                       "title" : self.TITLE,
                       "expires" : self._expires,
                       "signature" : self._signature,
-                      "time" : self._time,
+                      "time" : epoch_time,
 
                       "message" : {
                           "sspl_ll_msg_header": {

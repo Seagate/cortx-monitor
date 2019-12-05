@@ -21,7 +21,8 @@
 """
 
 import json
-
+import time
+from framework.utils import mon_utils
 from json_msgs.messages.sensors.base_sensors_msg import BaseSensorMsg
 
 class CPUdataMsg(BaseSensorMsg):
@@ -31,6 +32,11 @@ class CPUdataMsg(BaseSensorMsg):
 
     ACTUATOR_MSG_TYPE = "cpu_data"
     MESSAGE_VERSION  = "1.0.0"
+
+    ALERT_TYPE = "fault"
+    SEVERITY = "warning"
+    RESOURCE_TYPE = "node:os:cpu"
+    RESOURCE_ID = "0"
 
     def __init__(self, host_id,
                        local_time,
@@ -44,19 +50,23 @@ class CPUdataMsg(BaseSensorMsg):
                        system_time,
                        user_time,
                        core_data,
+                       cpu_usage,
+                       site_id,
+                       rack_id,
+                       node_id,
+                       cluster_id,
                        username  = "SSPL-LL",
                        signature = "N/A",
-                       time      = "N/A",
+                       in_time      = "N/A",
                        expires   = -1):
         super(CPUdataMsg, self).__init__()
 
         self._username          = username
         self._signature         = signature
-        self._time              = time
+        self._time              = in_time
         self._expires           = expires
         self._host_id           = host_id
         self._local_time        = local_time
-        
         self._csps              = csps
         self._idle_time         = idle_time
         self._interrupt_time    = interrupt_time
@@ -67,14 +77,22 @@ class CPUdataMsg(BaseSensorMsg):
         self._system_time       = system_time
         self._user_time         = user_time
         self._core_data         = core_data
+        self._cpu_usage         = cpu_usage
+        self._site_id           = site_id
+        self._rack_id           = rack_id
+        self._node_id           = node_id
+        self._cluster_id        = cluster_id
 
+        epoch_time = str(int(time.time()))
+        alert_id = mon_utils.get_alert_id(epoch_time)
 
-        self._json = {"title" : self.TITLE,
-                      "description" : self.DESCRIPTION,
+        self._json = {
                       "username" : self._username,
-                      "signature" : self._signature,
-                      "time" : self._time,
+                      "description" : self.DESCRIPTION,
+                      "title" : self.TITLE,
                       "expires" : self._expires,
+                      "signature" : self._signature,
+                      "time" : epoch_time,
 
                       "message" : {
                           "sspl_ll_msg_header": {
@@ -83,8 +101,20 @@ class CPUdataMsg(BaseSensorMsg):
                               "msg_version"    : self.MESSAGE_VERSION,
                               },
                           "sensor_response_type": {
-                              self.ACTUATOR_MSG_TYPE: {
-                                  "hostId"        : self._host_id,
+                              "alert_type": self.ALERT_TYPE,
+                              "severity": self.SEVERITY,
+                              "alert_id": alert_id,
+                              "host_id": self._host_id,
+                              "info": {
+                                "site_id": self._site_id,
+                                "rack_id": self._rack_id,
+                                "node_id": self._node_id,
+                                "cluster_id": self._cluster_id,
+                                "resource_type": self.RESOURCE_TYPE,
+                                "resource_id": self.RESOURCE_ID,
+                                "event_time": epoch_time
+                              },
+                          "specific_info": {
                                   "localtime"     : self._local_time,
                                   "csps"          : self._csps,
                                   "idleTime"      : self._idle_time,
@@ -95,11 +125,12 @@ class CPUdataMsg(BaseSensorMsg):
                                   "stealTime"     : self._steal_time,
                                   "systemTime"    : self._system_time,
                                   "userTime"      : self._user_time,
-                                  "coreData"      : self._core_data
-                                  }
+                                  "coreData"      : self._core_data,
+                                  "cpu_usage"     : self._cpu_usage
                               }
                           }
                       }
+                  }
 
     def getJson(self):
         """Return a validated JSON object"""

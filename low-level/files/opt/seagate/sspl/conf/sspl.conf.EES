@@ -69,6 +69,11 @@ transmit_interval=300
 units=MB
 # Disk Usage Threshold value in terms of usage percentage (i.e. 0 to 100)
 disk_usage_threshold=80
+# CPU Usage Threshold value in terms of usage in percentage (i.e. 0 to 100%)
+cpu_usage_threshold=80
+# Memory Usage Threshold value in terms of usage in percentage (i.e. 0 to 100%)
+host_memory_usage_threshold=80
+
 
 [XINITDWATCHDOG]
 threaded=true

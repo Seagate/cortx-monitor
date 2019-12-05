@@ -56,56 +56,56 @@
 					"type": "object",
 					"required": true,
 					"properties": {
-            "iem_alert": {
-              "type": "object",
-              "properties": {
-                "site_id": {
-                  "type": "string",
-                  "required": true,
-                  "description": "A number that uniquely identifies a single data center site"
-                },
-                "rack_id": {
-                  "type": "string",
-                  "required": true,
-                  "description": "A numerical value that identifies a single Rack in a single site"
-                },
-                "node_id": {
-                  "type": "string",
-                  "required": true,
-                  "description": "A numerical value that indicates type of node in cluster. i.e 1-Mero,2-GW in EOS"
-                },
-                "source_id": {
-                  "type": "string",
-                  "required": true,
-                  "description": "A string that indicates type of component. i.e H-Hardware, S-Software, F-Firmware, O-OS"
-                },
-                "component_id": {
-                  "type": "string",
-                  "required": true,
-                  "description": "A number that indicates component that generated IEM. Component can be software applications like S3, SSPL or hardware components like PODS"
-                },
-                "module_id": {
-                  "type": "string",
-                  "required": true,
-                  "description": "A number that indicates sub module of a component that generated IEM. i.e SSPL submodule like HPI"
-                },
-                "event_id": {
-                  "type": "string",
-                  "required": true,
-                  "description": "A numerical value that uniquely identifies an event. i.e  1-drive removal, 2-drive insertion and alike. Each team will be given a range to be used"
-                },
-                "severity": {
-                  "type": "string",
-                  "required": true,
-                  "description": "The degree of impact an event has on the operation of a component. i.e A, X, E, W"
-                },
-                "description": {
-                  "type": "string",
-                  "required": true,
-                  "description": "Short summary of an event"
-                }
-              }
-            },
+						"iem_alert": {
+							"type": "object",
+							"properties": {
+								"site_id": {
+									"type": "string",
+									"required": true,
+									"description": "A number that uniquely identifies a single data center site"
+								},
+								"rack_id": {
+									"type": "string",
+									"required": true,
+									"description": "A numerical value that identifies a single Rack in a single site"
+								},
+								"node_id": {
+									"type": "string",
+									"required": true,
+									"description": "A numerical value that indicates type of node in cluster. i.e 1-Mero,2-GW in EOS"
+								},
+								"source_id": {
+									"type": "string",
+									"required": true,
+									"description": "A string that indicates type of component. i.e H-Hardware, S-Software, F-Firmware, O-OS"
+								},
+								"component_id": {
+									"type": "string",
+									"required": true,
+									"description": "A number that indicates component that generated IEM. Component can be software applications like S3, SSPL or hardware components like PODS"
+								},
+								"module_id": {
+									"type": "string",
+									"required": true,
+									"description": "A number that indicates sub module of a component that generated IEM. i.e SSPL submodule like HPI"
+								},
+								"event_id": {
+									"type": "string",
+									"required": true,
+									"description": "A numerical value that uniquely identifies an event. i.e  1-drive removal, 2-drive insertion and alike. Each team will be given a range to be used"
+								},
+								"severity": {
+									"type": "string",
+									"required": true,
+									"description": "The degree of impact an event has on the operation of a component. i.e A, X, E, W"
+								},
+								"description": {
+									"type": "string",
+									"required": true,
+									"description": "Short summary of an event"
+								}
+							}
+						},
 
 
 						"disk_status_drivemanager": {
@@ -291,12 +291,13 @@
 											"type": "integer"
 										},
 										"units": {
-											"oneOf": [
-												{
+											"oneOf": [{
 													"$ref": "#/units/GB"
-												}, {
+												},
+												{
 													"$ref": "#/units/KB"
-												}, {
+												},
+												{
 													"$ref": "#/units/MB"
 												}
 											]
@@ -311,29 +312,108 @@
 											"type": "integer"
 										},
 										"units": {
-											"oneOf": [
-												{
+											"oneOf": [{
 													"$ref": "#/units/GB"
-												}, {
+												},
+												{
 													"$ref": "#/units/KB"
-												}, {
+												},
+												{
 													"$ref": "#/units/MB"
 												}
 											]
 										}
 									}
 								},
-								"loggedInUsers": {
-									"description": "List of logged in users",
-									"type": "array"
+								"alert_type": {
+									"description": "Enclosure alert cause",
+									"type": "string",
+									"required": false
 								},
-								"processCount": {
-									"description": "Total number of processes",
-									"type": "integer"
+								"alert_id": {
+									"description": "Id which will uniquely identify this alert",
+									"type": "string",
+									"required": false
 								},
-								"runningProcessCount": {
-									"description": "Total number of running processes",
-									"type": "integer"
+								"severity": {
+									"description": "Severity of an alert. Eg: Critical, Warning etc",
+									"type": "string",
+									"required": false
+								},
+								"host_id": {
+									"description": "Host name of the system",
+									"type": "string",
+									"required": false
+								},
+								"info": {
+									"type": "object",
+									"required": false,
+									"properties": {
+										"site_id": {
+											"description": "Site unique ID",
+											"type": "integer",
+											"required": true
+										},
+										"rack_id": {
+											"description": "Unique Rack id in a site",
+											"type": "integer",
+											"required": true
+										},
+										"node_id": {
+											"description": "Unique Node id in a rack",
+											"type": "integer",
+											"required": true
+										},
+										"cluster_id": {
+											"description": "Cluster identification to locate enclosure",
+											"type": "integer",
+											"required": true
+										},
+										"resource_type": {
+											"description": "Type Of Resource, eg enclosure:fru:fan",
+											"type": "string",
+											"required": true
+										},
+										"event_time": {
+											"description": "Time when event took place",
+											"type": "string",
+											"required": true
+										},
+										"resource_id": {
+											"description": "ID which uniquely identifies the resource/instance",
+											"type": "string",
+											"required": true
+										}
+									}
+								},
+								"if": {
+									"properties": {
+										"info": {
+											"properties": {
+												"resource_id": {
+													"const": "*"
+												}
+											}
+										}
+									}
+								},
+								"then": {
+									"properties": {
+										"specific_info": {
+											"description": "Specific dynamically generated information of FRU's. Required only for node hw actuator",
+											"type": "array",
+											"required": false
+										}
+									}
+								},
+								"else": {
+									"properties": {
+										"specific_info": {
+											"description": "Specific dynamically generated information of FRU's. Required only for node hw actuator",
+											"type": "object",
+											"required": false
+										}
+									}
 								}
 							}
 						},
@@ -359,15 +439,13 @@
 											"type": "integer"
 										},
 										"units": {
-											"oneOf": [
-												{
-													"$ref": "#/units/GB"
-												}, {
-													"$ref": "#/units/KB"
-												}, {
-													"$ref": "#/units/MB"
-												}
-											]
+											"oneOf": [{
+												"$ref": "#/units/GB"
+											}, {
+												"$ref": "#/units/KB"
+											}, {
+												"$ref": "#/units/MB"
+											}]
 										}
 									}
 								},
@@ -381,15 +459,13 @@
 											"type": "integer"
 										},
 										"units": {
-											"oneOf": [
-												{
-													"$ref": "#/units/GB"
-												}, {
-													"$ref": "#/units/KB"
-												}, {
-													"$ref": "#/units/MB"
-												}
-											]
+											"oneOf": [{
+												"$ref": "#/units/GB"
+											}, {
+												"$ref": "#/units/KB"
+											}, {
+												"$ref": "#/units/MB"
+											}]
 										}
 									}
 								},
@@ -400,15 +476,13 @@
 											"type": "integer"
 										},
 										"units": {
-											"oneOf": [
-												{
-													"$ref": "#/units/GB"
-												}, {
-													"$ref": "#/units/KB"
-												}, {
-													"$ref": "#/units/MB"
-												}
-											]
+											"oneOf": [{
+												"$ref": "#/units/GB"
+											}, {
+												"$ref": "#/units/KB"
+											}, {
+												"$ref": "#/units/MB"
+											}]
 										}
 									}
 								},
@@ -419,15 +493,13 @@
 											"type": "integer"
 										},
 										"units": {
-											"oneOf": [
-												{
-													"$ref": "#/units/GB"
-												}, {
-													"$ref": "#/units/KB"
-												}, {
-													"$ref": "#/units/MB"
-												}
-											]
+											"oneOf": [{
+												"$ref": "#/units/GB"
+											}, {
+												"$ref": "#/units/KB"
+											}, {
+												"$ref": "#/units/MB"
+											}]
 										}
 									}
 								}
@@ -575,14 +647,14 @@
 										},
 										"units": {
 											"oneOf": [
-												{
-													"$ref": "#/units/GB"
-												}, {
-													"$ref": "#/units/KB"
-												}, {
-													"$ref": "#/units/MB"
-												}
-											]
+											{
+												"$ref": "#/units/GB"
+											}, {
+												"$ref": "#/units/KB"
+											}, {
+												"$ref": "#/units/MB"
+											}
+										]
 										}
 									}
 								},
@@ -594,14 +666,14 @@
 										},
 										"units": {
 											"oneOf": [
-												{
-													"$ref": "#/units/GB"
-												}, {
-													"$ref": "#/units/KB"
-												}, {
-													"$ref": "#/units/MB"
-												}
-											]
+											{
+												"$ref": "#/units/GB"
+											}, {
+												"$ref": "#/units/KB"
+											}, {
+												"$ref": "#/units/MB"
+											}
+										]
 										}
 									}
 								},
@@ -610,166 +682,166 @@
 								}
 							}
 						},
-                                "alert_type":{
-                                    "description": "Enclosure alert cause",
-                                    "type": "string",
-                                    "required": false
-                                },
-                                "alert_id":{
-                                    "description": "Id which will uniquely identify this alert",
-                                    "type": "string",
-                                    "required": false
-                                },
-                                "severity":{
-                                    "description": "Severity of an alert. Eg: Critical, Warning etc",
-                                    "type": "string",
-                                    "required": false
-                                },
-                                "host_id": {
-                                    "description": "Host name of the system",
-                                    "type": "string",
-                                    "required": false
-                                },
-                                "info": {
-                                    "type": "object",
-                                    "required": false,
-                                            "properties":{
-                                                "site_id": {
-                                                    "description": "Site unique ID",
-                                                    "type": "integer",
-                                                    "required": true
-                                                },
-                                                "rack_id": {
-                                                    "description": "Unique Rack id in a site",
-                                                    "type": "integer",
-                                                    "required": true
-                                                  },
-                                                "node_id": {
-                                                    "description": "Unique Node id in a rack",
-                                                    "type": "integer",
-                                                    "required": true
-                                                  },
-                                                "cluster_id": {
-                                                    "description": "Cluster identification to locate enclosure",
-                                                    "type": "integer",
-                                                    "required": true
-                                                  },
-                                                "resource_type": {
-                                                    "description": "Type Of Resource, eg enclosure:fru:fan",
-                                                    "type": "string",
-                                                    "required": true
-                                                  },
-                                                "event_time": {
-                                                    "description": "Time when event took place",
-                                                    "type": "string",
-                                                    "required": true
-                                                  },
-                                                "resource_id": {
-                                                    "description": "ID which uniquely identifies the resource/instance",
-                                                    "type": "string",
-                                                    "required": true
-                                                  }
-                                            }
-                                    },
-                                    "if": {
-                            "properties": {
-                                "info": {
-                                    "properties": {
-                                        "resource_id": {
-                                            "const": "*"
-                                        }
-                                    }
-                                }
-                            }
-                        },
-                        "then": {
-                            "properties": {
-                                "specific_info": {
-                                    "description": "Specific dynamically generated information of FRU's. Required only for node hw actuator",
-                                    "type": "array",
-                                    "required": false
-                                }
-                            }
-                        },
-                        "else": {
-                            "properties": {
-                                "specific_info": {
-                                    "description": "Specific dynamically generated information of FRU's. Required only for node hw actuator",
-                                    "type": "object",
-                                    "required": false
-                                }
-                            }
-                        },
+						"alert_type":{
+							"description": "Enclosure alert cause",
+							"type": "string",
+							"required": false
+						},
+						"alert_id":{
+							"description": "Id which will uniquely identify this alert",
+							"type": "string",
+							"required": false
+						},
+						"severity":{
+							"description": "Severity of an alert. Eg: Critical, Warning etc",
+							"type": "string",
+							"required": false
+						},
+						"host_id": {
+							"description": "Host name of the system",
+							"type": "string",
+							"required": false
+						},
+						"info": {
+							"type": "object",
+							"required": false,
+							"properties":{
+								"site_id": {
+									"description": "Site unique ID",
+									"type": "integer",
+									"required": true
+								},
+								"rack_id": {
+									"description": "Unique Rack id in a site",
+									"type": "integer",
+									"required": true
+								},
+								"node_id": {
+									"description": "Unique Node id in a rack",
+									"type": "integer",
+									"required": true
+								},
+								"cluster_id": {
+									"description": "Cluster identification to locate enclosure",
+									"type": "integer",
+									"required": true
+								},
+								"resource_type": {
+									"description": "Type Of Resource, eg enclosure:fru:fan",
+									"type": "string",
+									"required": true
+								},
+								"event_time": {
+									"description": "Time when event took place",
+									"type": "string",
+									"required": true
+								},
+								"resource_id": {
+									"description": "ID which uniquely identifies the resource/instance",
+									"type": "string",
+									"required": true
+								}
+							}
+						},
+						"if": {
+							"properties": {
+								"info": {
+									"properties": {
+										"resource_id": {
+											"const": "*"
+										}
+									}
+								}
+							}
+						},
+						"then": {
+							"properties": {
+								"specific_info": {
+									"description": "Specific dynamically generated information of FRU's. Required only for node hw actuator",
+									"type": "array",
+									"required": false
+								}
+							}
+						},
+						"else": {
+							"properties": {
+								"specific_info": {
+									"description": "Specific dynamically generated information of FRU's. Required only for node hw actuator",
+									"type": "object",
+									"required": false
+								}
+							}
+						},
 
-                        "enclosure_sideplane_expander_alert": {
-                            "type": "object",
-                            "properties":{
-                                "alert_type":{
-                                    "description": "Enclosure alert cause",
-                                    "type": "string",
-                                    "required": true
-                                },
-                                "resource_type": {
-                                    "description": "Enclosure resource type like FRU, Sensor",
-                                    "type": "string",
-                                    "required": true
-                                },
-                                "info": {
-                                    "type": "object",
-                                    "required": true,
-                                    "properties": {
-                                    "sideplane_expander":{
-                                            "type": "object",
-                                            "required": true,
-                                            "properties":{
-                                        "enclosure-id": {
-                                            "description": "Enclosure ID",
-                                            "type": "integer",
-                                            "required": true
-                                        },
-                                        "location": {
-                                            "description": "enclosure and drawer location",
-                                            "type": "string",
-                                            "required": true
-                                          },
-                                        "name": {
-                                            "description": "Name of the Module",
-                                            "type": "string",
-                                            "required": true
-                                          },
-                                        "status": {
-                                            "description": "status of the sideplane like critical",
-                                            "type": "string",
-                                            "required": true
-                                          },
-                                          "health": {
-                                            "description": "Health of the FRU",
-                                            "type": "string",
-                                            "required": true
-                                          },
-                                           "health-reason": {
-                                            "description": "reason of FRU failure",
-                                            "type": "string",
-                                            "required": true
-                                          },
-                                           "health-recommendation": {
-                                            "description": "Health recommendation to resolve faults",
-                                            "type": "string",
-                                            "required": true
-                                          },
-                                           "unhealthy-components":{
-                                            "type": "array",
-                                            "required": false
-                                          }
-                                        }}
-                                       }
-                                    },
-                                    "extended_info": {
-                                        "type": "object",
-                                        "required": false
-                                    }
-                              }
-                        },
+						"enclosure_sideplane_expander_alert": {
+							"type": "object",
+							"properties":{
+								"alert_type":{
+									"description": "Enclosure alert cause",
+									"type": "string",
+									"required": true
+								},
+								"resource_type": {
+									"description": "Enclosure resource type like FRU, Sensor",
+									"type": "string",
+									"required": true
+								},
+								"info": {
+									"type": "object",
+									"required": true,
+									"properties": {
+										"sideplane_expander":{
+											"type": "object",
+											"required": true,
+											"properties":{
+												"enclosure-id": {
+													"description": "Enclosure ID",
+													"type": "integer",
+													"required": true
+												},
+												"location": {
+													"description": "enclosure and drawer location",
+													"type": "string",
+													"required": true
+												},
+												"name": {
+													"description": "Name of the Module",
+													"type": "string",
+													"required": true
+												},
+												"status": {
+													"description": "status of the sideplane like critical",
+													"type": "string",
+													"required": true
+												},
+												"health": {
+													"description": "Health of the FRU",
+													"type": "string",
+													"required": true
+												},
+												"health-reason": {
+													"description": "reason of FRU failure",
+													"type": "string",
+													"required": true
+												},
+												"health-recommendation": {
+													"description": "Health recommendation to resolve faults",
+													"type": "string",
+													"required": true
+												},
+												"unhealthy-components":{
+													"type": "array",
+													"required": false
+												}
+										}}
+									}
+								},
+								"extended_info": {
+									"type": "object",
+									"required": false
+								}
+							}
+						},
 
 						"raid_data": {
 							"description": "RAID Data",

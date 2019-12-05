@@ -23,6 +23,7 @@ import psutil
 import threading
 
 from datetime import datetime, timedelta
+import time
 
 from framework.base.debug import Debug
 from framework.utils.service_logging import logger
@@ -46,8 +47,9 @@ class NodeData(Debug):
 
     def __init__(self):
         super(NodeData, self).__init__()
-        self.host_id = None
 
+        self.host_id = socket.getfqdn()
+        self._epoch_time = str(int(time.time()))
         # Total number of CPUs
         self.cpus = psutil.cpu_count()
 
@@ -76,11 +78,6 @@ class NodeData(Debug):
 
             # First call gethostname() to see if it returns something that looks like a host name,
             # if not then get the host by address
-            if socket.gethostname().find('.') >= 0:
-                self.host_id = socket.gethostname()
-            else:
-                self.host_id = socket.gethostbyaddr(socket.gethostname())[0]
-
             self.local_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S %Z')
 
             # Branch off and gather data based upon value sent into subset
@@ -107,13 +104,16 @@ class NodeData(Debug):
 
     def _get_host_update_data(self):
         """Retrieves node information for the host_update json message"""
+        logged_in_users = []
+        uname_keys = ("sysname", "nodename", "version", "release", "machine")
         self.up_time         = int(psutil.boot_time())
-        self.boot_time       = datetime.fromtimestamp(self.up_time).strftime('%Y-%m-%d %H:%M:%S %Z')
-        self.uname           = ' '.join(os.uname())
-        self.free_mem        = int(psutil.virtual_memory()[1])/self.units_factor
-        self.total_mem       = int(psutil.virtual_memory()[0])/self.units_factor
+        self.boot_time       = self._epoch_time
+        self.uname           = dict(zip(uname_keys, os.uname()))
+        self.total_memory = dict(psutil.virtual_memory()._asdict())
         self.process_count   = len(psutil.get_pid_list())
-
+        for users in psutil.users():
+            logged_in_users.append(dict(users._asdict()))
+        self.logged_in_users = logged_in_users
         # Calculate the current number of running processes at this moment
         total_running_proc = 0
         for proc in psutil.process_iter():
@@ -135,6 +135,7 @@ class NodeData(Debug):
 
     def _get_cpu_data(self):
         """Retrieves node information for the cpu_data json message"""
+        cpu_core_usage_dict = dict()
         cpu_data = psutil.cpu_times_percent()
         self._log_debug("_get_cpu_data, cpu_data: %s %s %s %s %s %s %s %s %s %s" % cpu_data)
 
@@ -148,6 +149,7 @@ class NodeData(Debug):
         self.softirq_time   = int(cpu_data[6])
         self.steal_time     = int(cpu_data[7])
 
+        self.cpu_usage = psutil.cpu_percent(interval=1, percpu=False)
         # Array to hold data about each CPU core
         self.cpu_core_data = []
         index = 0
