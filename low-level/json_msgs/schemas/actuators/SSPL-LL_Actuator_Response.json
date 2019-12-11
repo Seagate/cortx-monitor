@@ -72,13 +72,33 @@
                                     "required": false
                                 },
 								"ack_msg": {
-									"description": "Message describing acknowledgement",
-									"type": "object",
-									"required": true
+									"if":{
+										"properties":{
+											"Msg":{
+												"message":{
+													"ack":{"ack_type":{
+														"SMART_TEST":{}
+															}
+													}
+												}
+											}
+										}
+									},
+									"then":{
+										"properties": {
+											"description": "Message describing acknowledgement",
+											"type": "string",
+											"required": true
+												}
+										},
+									"else":{
+										"description": "Message describing acknowledgement",
+										"type": "object",
+										"required": true
+										}
+									}
 								}
-							}
 						},
-
 						"thread_controller": {
 							"type": "object",
 							"properties": {
@@ -200,7 +220,7 @@
 								"specific_info": {
 							  		"description": "Specific dynamically generated information of FRU's.",
 									"type": "object",
-							  		"required": false
+									"required": false
 								}
 						  	}
 						}

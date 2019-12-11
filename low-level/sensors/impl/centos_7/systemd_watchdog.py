@@ -276,7 +276,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
             # Loop forever iterating over the context
             step = 0
             while self._running == True:
-                context.iteration(True)
+                context.iteration(False)
                 time.sleep(self._thread_sleep)
 
                 if len(self._inactive_services) > 0:

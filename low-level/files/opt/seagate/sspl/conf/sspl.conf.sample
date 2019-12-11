@@ -6,7 +6,7 @@ message_handlers=DiskMsgHandler, LoggingMsgHandler, ServiceMsgHandler, NodeDataM
 
 sensors=ServiceWatchdog, NodeData, RAIDsensor, SNMPtraps, HPIMonitor, RealStorFanSensor, RealStorPSUSensor, RealStorControllerSensor, RealStorDiskSensor, RealStorSideplaneExpanderSensor, IEMSensor, NodeHWsensor
 
-actuators=Service, RAIDactuator, Hdparm, RaritanPDU, CommandLine, Login, IPMI, HPIactuator, NodeHWactuator
+actuators=Service, RAIDactuator, Hdparm, RaritanPDU, CommandLine, Login, IPMI, HPIactuator, NodeHWactuator, Smartctl
 
 [SYSTEM_INFORMATION]
 operating_system=centos7

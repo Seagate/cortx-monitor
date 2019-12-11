@@ -6,7 +6,7 @@ message_handlers=DiskMsgHandler, LoggingMsgHandler, ServiceMsgHandler, NodeDataM
 
 sensors=ServiceWatchdog, NodeData, RAIDsensor, RealStorFanSensor, RealStorPSUSensor, RealStorControllerSensor, RealStorDiskSensor, RealStorSideplaneExpanderSensor, RealStorLogicalVolumeSensor, IEMSensor, NodeHWsensor
 
-actuators=Service, RAIDactuator, Hdparm, NodeHWactuator, RealStorActuator
+actuators=Service, RAIDactuator, Smartctl, NodeHWactuator, RealStorActuator
 
 [SYSTEM_INFORMATION]
 operating_system=centos7

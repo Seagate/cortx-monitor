@@ -94,6 +94,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
         self._RAID_actuator         = None
         self._IPMI_actuator         = None
         self._hdparm_actuator       = None
+	self._smartctl_actuator     = None
         self._command_line_actuator = None
         self._NodeHW_actuator       = None
 
@@ -742,38 +743,44 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
             # ... handle other node message types
 
     def _retrieve_serial_number(self, drive_request):
-        """Use the /dev/* path in hdparm tool to retrieve serial number"""
+        """Retrieves serial number using smartctl tool with /dev/* path"""
         serial_number = "Not Found"
         error = ""
 
-        try:
-            # Query the Zope GlobalSiteManager for an object implementing the hdparm actuator
-            if self._hdparm_actuator is None:
-                from actuators.Ihdparm import IHdparm
-                self._hdparm_actuator = self._queryUtility(IHdparm)()
-                self._log_debug("_process_msg, _hdparm_actuator name: %s" % self._hdparm_actuator.name())
+	try:
+            # Query the Zope GlobalSiteManager for an object implementing the smart actuator
+            if self._smartctl_actuator is None:
+                from actuators.Ismartctl import ISmartctl
+                smartctl_actuator_class = self._queryUtility(ISmartctl)
+                if smartctl_actuator_class:
+                    self._smartctl_actuator = self._queryUtility(ISmartctl)()
+                    self._log_debug("_process_msg, _smart_actuator name: %s" % self._smartctl_actuator.name())
+                else:
+                    logger.exception("_retrieve_serial_number, No module Smartctl is present to load")
+                    return serial_number, error
 
-            hd_parm_request = "HDPARM: -I {} | grep 'Serial Number:'".format(drive_request)
+            # Forming a request to get serial number of a drive using smartctl tool
+            smartctl_request = "SMARTCTL: GET_SERIAL {}".format(drive_request)
             serial_num_msg = {
                  "actuator_request_type": {
                     "node_controller": {
-                        "node_request": hd_parm_request
+                        "node_request": smartctl_request
                         }
                     }
                  }
 
-            # Send a request to the hdparm tool to get the serial number of the device
-            hdparm_response = self._hdparm_actuator.perform_request(serial_num_msg).strip()
-            self._log_debug("_process_msg, hdparm_response: %s" % hdparm_response)
+            # Send a request to the smartctl actuator to get the serial number of the device
+            smartctl_response = self._smartctl_actuator.perform_request(serial_num_msg).strip()
+            self._log_debug("_process_msg, smartctl_response: %s" % smartctl_response)
 
             # Return the error if the response contains one
-            if "Error" in hdparm_response:
-                error = hdparm_response
+            if "error" in smartctl_response.lower():
+                error = smartctl_response
             else:
-                # Parse out "Serial Number:" from hdparm result to obtain serial number
-                serial_number = hdparm_response[15:].strip()
+                # Parse out "Serial Number:" from smartctl result to obtain serial number
+                serial_number = smartctl_response[14:].strip()
 
-        except Exception as ae:
+	except Exception as ae:
             logger.exception(ae)
             error = str(ae)
 
