@@ -119,7 +119,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                                                 self.SYSTEM_INFORMATION,
                                                 self.CLUSTER_ID,
                                                 0))
-
+        self.nw_status = {}
         self._node_sensor    = None
         self._login_actuator = None
 
@@ -216,7 +216,6 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
             sensor_type = jsonMsg.get("sensor_request_type").get("node_data").get("sensor_type")
             self._log_debug("_processMsg, sensor_type: %s" % sensor_type)
-
             if sensor_type == "host_update":
                 self._generate_host_update()
 
@@ -373,24 +372,36 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         successful = self._node_sensor.read_data("if_data", self._get_debug())
         if not successful:
             logger.error("NodeDataMsgHandler, _generate_if_data was NOT successful.")
-
-        ifDataMsg = IFdataMsg(self._node_sensor.host_id,
+        interfaces = self._node_sensor.if_data
+        is_alert = self._is_nwalert_exist(interfaces)
+        if is_alert:
+            ifDataMsg = IFdataMsg(self._node_sensor.host_id,
                             self._node_sensor.local_time,
-                            self._node_sensor.if_data)
+                            self._node_sensor.if_data,
+                            self.site_id, self.node_id, self.cluster_id, self.rack_id)
+            # Add in uuid if it was present in the json request
+            if self._uuid is not None:
+                ifDataMsg.set_uuid(self._uuid)
+            jsonMsg = ifDataMsg.getJson()
+            internal_json_msg=json.dumps(
+                    {'actuator_request_type': {'logging': {'log_level': 'LOG_WARNING', 'log_type': 'IEM', 'log_msg': '{}'.format(jsonMsg)}}})
 
-        # Add in uuid if it was present in the json request
-        if self._uuid is not None:
-            ifDataMsg.set_uuid(self._uuid)
-        jsonMsg = ifDataMsg.getJson()
+            # Send the event to logging msg handler to send IEM message to journald
+            self._write_internal_msgQ(LoggingMsgHandler.name(), internal_json_msg)
+            # Transmit it out over rabbitMQ channel
+            self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
 
-        internal_json_msg=json.dumps(
-                {'actuator_request_type': {'logging': {'log_level': 'LOG_WARNING', 'log_type': 'IEM', 'log_msg': '{}'.format(jsonMsg)}}})
-
-        # Send the event to logging msg handler to send IEM message to journald
-        self._write_internal_msgQ(LoggingMsgHandler.name(), internal_json_msg)
-
-        # Transmit it out over rabbitMQ channel
-        self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
+    def _is_nwalert_exist(self, interfaces):
+        """This method checks conditions to trigger network alerts.
+                isup = True # for network is up and running and False for down"""
+        res = False
+        nw_status_dict = {}
+        for interface in interfaces:
+            nw_status_dict[interface.get("ifId")] = interface.get("nwStatus")
+        if len(self.nw_status) != 0 and self.nw_status != nw_status_dict:
+                res = True
+        self.nw_status = nw_status_dict
+        return res
 
     def _generate_disk_space_alert(self):
         """Create & transmit a disk_space_alert message as defined

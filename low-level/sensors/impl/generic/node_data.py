@@ -15,6 +15,7 @@
 """
 
 import os
+import sys
 import math
 import datetime
 import socket
@@ -45,7 +46,6 @@ class NodeData(Debug):
 
     def __init__(self):
         super(NodeData, self).__init__()
-
         self.host_id = None
 
         # Total number of CPUs
@@ -170,12 +170,11 @@ class NodeData(Debug):
     def _get_if_data(self):
         """Retrieves node information for the if_data json message"""
         net_data = psutil.net_io_counters(pernic=True)
-
         # Array to hold data about each network interface
         self.if_data = []
-        for interface, if_data in net_data.iteritems():
+        for interface, if_data in net_data.items():
             self._log_debug("_get_if_data, interface: %s %s" % (interface, net_data))
-
+            nw_status = self._fetch_nw_status()
             if_data = {"ifId" : interface,
                        "networkErrors"      : (net_data[interface].errin +
                                                net_data[interface].errout),
@@ -184,9 +183,18 @@ class NodeData(Debug):
                        "trafficIn"          : net_data[interface].bytes_recv,
                        "droppedPacketsOut"  : net_data[interface].dropout,
                        "packetsOut"         : net_data[interface].packets_sent,
-                       "trafficOut"         : net_data[interface].bytes_sent
+                       "trafficOut"         : net_data[interface].bytes_sent,
+                       "nwStatus": nw_status[interface]
                        }
             self.if_data.append(if_data)
+
+    def _fetch_nw_status(self):
+        nw_dict = {}
+        nws = os.popen("ip --br a | awk '{print $1, $2}'").read().split('\n')[:-1]
+        for nw in nws:
+            nw_dict[nw.split(' ')[0]] = nw.split(' ')[1]
+        logger.info("network info going is : {}".format(nw_dict))
+        return nw_dict
 
     def _get_disk_space_alert_data(self):
         """Retrieves node information for the disk_space_alert_data json message"""
