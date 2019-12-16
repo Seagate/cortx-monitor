@@ -34,6 +34,8 @@ __all__ = []
 __version__ = 0.3
 __date__ = '2015-12-02'
 __updated__ = '2017-22-11'
+program_name = os.path.basename(sys.argv[0])
+program_version_message = ('%s v%s (%s)' %(program_name, __version__, __updated__))
 
 FLAGS = re.VERBOSE | re.MULTILINE | re.DOTALL
 WHITESPACE = re.compile(r'[ \t\n\r]*', FLAGS)
@@ -71,10 +73,6 @@ def main():
     if len(sys.argv) == 1:
         sys.argv.append("--help")
 
-    program_name = os.path.basename(sys.argv[0])
-    program_version = "v%s" % __version__
-    program_build_date = str(__updated__)
-    program_version_message = '%%(prog)s %s (%s)' % (program_version, program_build_date)
     program_shortdesc = __import__('__main__').__doc__.split("\n")[1]
     description = "Program for interacting with SSPL-LL service"
 
@@ -99,7 +97,7 @@ def main():
         # Setup argument parser
         parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawDescriptionHelpFormatter, \
                                          add_help=False)
-        parser.add_argument("-v", "--version", action="version", version=program_version_message)
+        parser.add_argument("-v", "--version", action="store_true", help="show cli version")
         try:
             # Create instance of ManualTest to publish messages
             manTest = ManualTest("RABBITMQINGRESSPROCESSOR")
@@ -112,7 +110,7 @@ def main():
             # Setup argument parser
             parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawDescriptionHelpFormatter, \
                                              add_help=True)
-            parser.add_argument("-v", "--version", action="version", version=program_version_message)
+            parser.add_argument("-v", "--version", action="store_true", help="show cli version")
             try:
                 # Create instance of ManualTest to publish messages
                 manTest = ManualTest("PLANECNTRLRMQEGRESSPROCESSOR")
@@ -124,7 +122,7 @@ def main():
             # Setup argument parser
             parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawDescriptionHelpFormatter, \
                                              add_help=False)
-            parser.add_argument("-v", "--version", action="version", version=program_version_message)
+            parser.add_argument("-v", "--version", action="store_true", help="show cli version")
             try:
                 # Create instance of ManualTest to publish messages
                 manTest = ManualTest("RABBITMQINGRESSPROCESSOR")
@@ -241,9 +239,8 @@ def _init_SED(parser, program_name):
         # Process arguments
         args = parser.parse_args()
         values = args.func(args).split()
-
-        if "help" in values:
-            parser.print_help()
+	if "help" in values:
+	    parser.print_help()
             return 1
 
         # Branch off and handle config or drive commands
@@ -518,6 +515,8 @@ def _process_arguments(parser, program_name):
     # Processing arguments for _init_CS_A and _init_EES functions.
     try:
         args = parser.parse_args()
+        if args.version:
+	    print(program_version_message)
 
         if args.help:
             parser.print_help()
