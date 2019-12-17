@@ -1,0 +1,3 @@
+alerts.os.test_disk_space_alert
+alerts.realstor.test_real_stor_controller_sensor
+alerts.realstor.test_real_stor_disk_sensor

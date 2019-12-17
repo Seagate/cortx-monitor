@@ -1,0 +1,152 @@
+{
+    "status_code": 200,
+    "api-response": {
+    "system": [
+        {
+            "object-name": "system-information",
+            "system-name": "sati20-m08-gallium",
+            "system-contact": "Uninitialized Contact",
+            "system-location": "Uninitialized Location",
+            "system-information": "Uninitialized Info",
+            "midplane-serial-number": "00C0FFA7117A",
+            "vendor-name": "",
+            "product-id": "3865",
+            "product-brand": "",
+            "scsi-vendor-id": "SEAGATE",
+            "scsi-product-id": "3865",
+            "enclosure-count": 1,
+            "health": "Degraded",
+            "health-numeric": 1,
+            "health-reason": "A subcomponent of this component is unhealthy.",
+            "other-MC-status": "Operational",
+            "other-MC-status-numeric": 4760,
+            "pfuStatus": "Idle",
+            "supported-locales": "English (English), Spanish (español), French (français), German (Deutsch), Italian (italiano), Japanese (日本語), Korean (한국어), Dutch (Nederlands), Chinese-Simplified (简体中文), Chinese-Traditional (繁體中文)",
+            "current-node-wwn": "208000c0ffa7117a",
+            "fde-security-status": "Unsecured",
+            "fde-security-status-numeric": 1,
+            "platform-type": "Gallium",
+            "platform-type-numeric": 3,
+            "platform-brand": "Generic",
+            "platform-brand-numeric": 19,
+            "redundancy": [
+                {
+                    "object-name": "system-redundancy",
+                    "redundancy-mode": "Active-Active ULP",
+                    "redundancy-mode-numeric": 8,
+                    "redundancy-status": "Redundant",
+                    "redundancy-status-numeric": 2,
+                    "controller-a-status": "Operational",
+                    "controller-a-status-numeric": 0,
+                    "controller-a-serial-number": "DHSIFTJ-18253C638B",
+                    "controller-b-status": "Operational",
+                    "controller-b-status-numeric": 0,
+                    "controller-b-serial-number": "DHSIFTJ-18253C63BA",
+                    "other-MC-status": "Operational",
+                    "other-MC-status-numeric": 4760
+                }
+            ],
+            "unhealthy-component": [
+                {
+                    "object-name": "unhealthy-component",
+                    "component-type": "sensor",
+                    "component-type-numeric": 11,
+                    "component-id": "Enclosure 0, Controller B, Expander Internal Temperature Loc: lower-IOM B",
+                    "basetype": "sensor",
+                    "primary-key": "sensor_temp_iom_0.B.6",
+                    "health": "Fault",
+                    "health-numeric": 2,
+                    "health-reason": "Unable to communicate with the sensor.",
+                    "health-recommendation": "- Shut down and replace the controller module."
+                },
+                {
+                    "object-name": "unhealthy-component",
+                    "component-type": "sensor",
+                    "component-type-numeric": 11,
+                    "component-id": "Enclosure 0, Controller B, Expander Temperature-Ctlr B",
+                    "basetype": "sensor",
+                    "primary-key": "sensor_temp_ctrl_B.4",
+                    "health": "Fault",
+                    "health-numeric": 2,
+                    "health-reason": "The temperature is below the critical low temperature value.",
+                    "health-recommendation": "- The enclosure operating range is 5°C to 40°C (41°F to 104°F). If the ambient temperature is not too cold, a temperature sensor in this FRU has probably failed. Replace this FRU."
+                },
+                {
+                    "object-name":"unhealthy-component",
+                    "meta":"/meta/unhealthy-component",
+                    "component-type":"disk",
+                    "component-type-numeric":6,
+                    "component-id":"Disk 0.65",
+                    "basetype":"drives",
+                    "primary-key":"disk_00.65",
+                    "health":"Fault",
+                    "health-numeric":2,
+                    "health-reason":"Disk failure is imminent.",
+                    "health-recommendation":"- Replace the disk with one of the same type (SSD, enterprise SAS, or midline SAS) and the same or greater capacity. For continued optimum I/O performance, the replacement disk should have performance that is the same as or better than the one it is replacing."
+                },
+                {
+                    "object-name":"unhealthy-component",
+                    "meta":"/meta/unhealthy-component",
+                    "component-type":"disk",
+                    "component-type-numeric":6,
+                    "component-id":"Disk 0.81",
+                    "basetype":"drives",
+                    "primary-key":"disk_00.81",
+                    "health":"Degraded",
+                    "health-numeric":1,
+                    "health-reason":"A disk that was previously a member of a disk group has been detected.",
+                    "health-recommendation":"- If the associated disk group is offline or quarantined, contact technical support. Otherwise, clear the disk's metadata to reuse the disk."
+                },
+                {
+                    "object-name":"unhealthy-component",
+                    "meta":"/meta/unhealthy-component",
+                    "component-type":"disk",
+                    "component-type-numeric":6,
+                    "component-id":"Disk 0.82",
+                    "basetype":"drives",
+                    "primary-key":"disk_00.82",
+                    "health":"Degraded",
+                    "health-numeric":1,
+                    "health-reason":"The disk may contain invalid metadata.",
+                    "health-recommendation":"- If the associated disk group is offline or quarantined, contact technical support. Otherwise, clear the disk's metadata to reuse the disk."
+                },
+                {
+                    "object-name": "unhealthy-component",
+                    "component-type": "PSU",
+                    "component-type-numeric": 5,
+                    "component-id": "Enclosure 0, Power Supply 0",
+                    "basetype": "power-supplies",
+                    "primary-key": "psu_0.0",
+                    "health": "Degraded",
+                    "health-numeric": 1,
+                    "health-reason": "Unable to obtain FRU ID data for this FRU.",
+                    "health-recommendation": "- The FRU ID content was not read. This could be temporary or it may not programmed correctly.     - If this persists, contact technical support."
+                },
+                {
+                    "object-name": "unhealthy-component",
+                    "component-type": "PSU",
+                    "component-type-numeric": 5,
+                    "component-id": "Enclosure 0, Power Supply 1",
+                    "basetype": "power-supplies",
+                    "primary-key": "psu_0.1",
+                    "health": "Degraded",
+                    "health-numeric": 1,
+                    "health-reason": "Unable to obtain FRU ID data for this FRU.",
+                    "health-recommendation": "- The FRU ID content was not read. This could be temporary or it may not programmed correctly.     - If this persists, contact technical support."
+                }
+            ]
+        }
+    ],
+    "status": [
+        {
+            "object-name": "status",
+            "response-type": "Success",
+            "response-type-numeric": 0,
+            "response": "Command completed successfully. (2019-06-26 04:44:05)",
+            "return-code": 0,
+            "component-id": "",
+            "time-stamp": "2019-06-26 04:44:05",
+            "time-stamp-numeric": 1561524245
+        }
+    ]
+}}
