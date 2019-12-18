@@ -536,7 +536,21 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                         self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
                         return
                 else:
-                    serial_number = drive_request
+		    if self._smartctl_actuator is None:
+                	from actuators.Ismartctl import ISmartctl
+                	smartctl_actuator_class = self._queryUtility(ISmartctl)
+                	if smartctl_actuator_class:
+                   	   self._smartctl_actuator = self._queryUtility(ISmartctl)()
+                    	   self._log_debug("_process_msg, _smart_actuator name: %s" % self._smartctl_actuator.name())
+                	else:
+                    	   logger.error(" No module Smartctl is present to load")
+		    serial_compare = self._smartctl_actuator._check_serial_number(drive_request)
+		    if not serial_compare:
+			json_msg = AckResponseMsg(node_request, "Drive Not Found", uuid).getJson()
+			self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+			return
+		    else:
+                    	serial_number = drive_request
 
                 # Send the event to SystemdWatchdog to schedule SMART test
                 internal_json_msg = json.dumps(
