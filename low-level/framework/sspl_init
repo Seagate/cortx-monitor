@@ -221,19 +221,20 @@ config_sspl() {
     cp /opt/seagate/sspl/conf/sspl-ll.service.$product /etc/systemd/system/sspl-ll.service
     touch $SSPL_CONFIGURED
 
-    # Check if named pipe is created to read IEMs from.
-    PIPE_PATH=$(python -c "import ConfigParser; cf=ConfigParser.RawConfigParser(); cf.read('/etc/sspl.conf'); print(cf.get('IEMSENSOR', 'pipe_path'))")
-    # Create one if doesn't exist
-    [ -f $PIPE_PATH ] || mkfifo $PIPE_PATH &> /dev/null
-    # Pipe should be writable by Rsyslog as well as readable by SSPL which
-    # runs by a different user called sspl-ll. So permission needs to be
-    # changed.
-    chmod 774 $PIPE_PATH &> /dev/null
-    # Warn if pipe is not created.
-    [ -p $PIPE_PATH ] ||
-        echo "Error in creating $PIPE_PATH. IEMSensor will not be able to read IEM"
-    # Configure pipe path in Rsyslog configuration file
-    sed -i "s|pipe=.*|pipe=\"${PIPE_PATH}\"|g" $RSYSLOG_CONF
+    LOG_FILE_PATH=$(python -c "import ConfigParser; cf=ConfigParser.RawConfigParser(); cf.read('/etc/sspl.conf'); print(cf.get('IEMSENSOR', 'log_file_path'))")
+    TIMESTAMP_FILE_PATH=$(python -c "import ConfigParser; cf=ConfigParser.RawConfigParser(); cf.read('/etc/sspl.conf'); print(cf.get('IEMSENSOR', 'timestamp_file_path'))")
+    LOG_FILE_DIR=$(dirname $LOG_FILE_PATH)
+    TIMESTAMP_FILE_DIR=$(dirname $TIMESTAMP_FILE_PATH)
+    mkdir -p $LOG_FILE_DIR
+    chmod 755 $LOG_FILE_DIR
+    [ -f $LOG_FILE_PATH ] || touch $LOG_FILE_PATH
+    chmod 664 $LOG_FILE_PATH
+    mkdir -p $TIMESTAMP_FILE_DIR
+    chmod 755 $TIMESTAMP_FILE_DIR
+    [ -f $TIMESTAMP_FILE_PATH ] || touch $TIMESTAMP_FILE_PATH
+    chown sspl-ll $TIMESTAMP_FILE_PATH
+    # Configure log file path in Rsyslog configuration file
+    sed -i "s|File=.*|File=\"${LOG_FILE_PATH}\"|g" $RSYSLOG_CONF
 
     systemctl enable sspl-ll.service
     systemctl start sspl-ll.service

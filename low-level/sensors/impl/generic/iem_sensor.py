@@ -18,6 +18,9 @@
 """
 import errno
 import select
+import subprocess
+import time
+import datetime
 
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
@@ -35,13 +38,15 @@ class IEMSensor(ScheduledModuleThread, InternalMsgQ):
     SYSTEM_INFORMATION = "SYSTEM_INFORMATION"
 
     # Keys for config settings
-    PIPE_PATH_KEY = "pipe_path"
+    LOG_FILE_PATH_KEY = "log_file_path"
+    TIMESTAMP_FILE_PATH_KEY = "timestamp_file_path"
     SITE_ID_KEY = "site_id"
     RACK_ID_KEY = "rack_id"
     NODE_ID_KEY = "node_id"
 
     # Default values for config  settings
-    DEFAULT_PIPE_PATH = '/var/sspl/data/iem'
+    DEFAULT_LOG_FILE_PATH = "/var/sspl/data/iem/iem_messages"
+    DEFAULT_TIMESTAMP_FILE_PATH = "/var/sspl/data/iem/last_processed_msg_time"
     DEFAULT_SITE_ID = "001"
     DEFAULT_RACK_ID = "001"
     DEFAULT_NODE_ID = "001"
@@ -85,8 +90,8 @@ class IEMSensor(ScheduledModuleThread, InternalMsgQ):
     def __init__(self):
         super(IEMSensor, self).__init__(
             self.SENSOR_NAME, self.PRIORITY)
-        self._pipe_path = None
-        self._pipe_file = None
+        self._log_file_path = None
+        self._timestamp_file_path = None
         self._site_id = None
         self._rack_id = None
         self._node_id = None
@@ -101,9 +106,13 @@ class IEMSensor(ScheduledModuleThread, InternalMsgQ):
         super(IEMSensor, self).initialize_msgQ(msgQlist)
 
         # Read configurations
-        self._pipe_path = self._conf_reader._get_value_with_default(
-            self.SENSOR_NAME.upper(), self.PIPE_PATH_KEY,
-            self.DEFAULT_PIPE_PATH)
+        self._log_file_path = self._conf_reader._get_value_with_default(
+            self.SENSOR_NAME.upper(), self.LOG_FILE_PATH_KEY,
+            self.DEFAULT_LOG_FILE_PATH)
+
+        self._timestamp_file_path = self._conf_reader._get_value_with_default(
+            self.SENSOR_NAME.upper(), self.TIMESTAMP_FILE_PATH_KEY,
+            self.DEFAULT_TIMESTAMP_FILE_PATH)
 
         self._site_id = self._conf_reader._get_value_with_default(
             self.SYSTEM_INFORMATION.upper(), self.SITE_ID_KEY, self.DEFAULT_SITE_ID)
@@ -122,48 +131,55 @@ class IEMSensor(ScheduledModuleThread, InternalMsgQ):
 
     def run(self):
         """Run the sensor on its own thread"""
-        # TODO:
-        # (1) Optimize logic for following input.
-        #     echo -n "hello" > <path_to_pipe>. Currently it goes in infinite
-        #     loop. There is a chance of presense of new line character.
-        # (2) Currently there is no persistence for logs in case of SSPL
-        #     restart of system restart. Implement that mechanism.
 
         # Check for debug mode being activated
         self._read_my_msgQ_noWait()
         iem_components = None
         try:
-            self._pipe_file = open(self._pipe_path, "r")
-            logger.info("Opened pipe to read IEM: {0}".format(self._pipe_file))
+            f = subprocess.Popen(['tail','-Fn+1', self._log_file_path],\
+            stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+            p = select.poll()
+            p.register(f.stdout)
+
+            logger.info("Opened file to read IEM: {0}".format(self._log_file_path))
             while True:
-                read_list = iem_components = iem_msg = None
-                read_list, _, _ = select.select(
-                    [self._pipe_file.fileno()], [], [])
-                if read_list:
-                    data = self._pipe_file.readline().rstrip()
+                iem_components = iem_msg = None
+                if p.poll():
+                    data = f.stdout.readline().rstrip()
                     self._log_debug("Received line {0}".format(data[5:]))
                     if data:
-                        iem_msg = self._get_iem(data)
-                        iem_components = self._extract_iem_components(
-                            iem_msg)
-                        if iem_components:
-                            self._send_msg(iem_components)
+                        log_timestamp = data[:data.index("+")]
+                        last_processed_log_timestamp = datetime.datetime.now().isoformat()
+                        timestamp_file = open(self._timestamp_file_path, "r")
+                        last_processed_log_timestamp = timestamp_file.read().strip()
+                        timestamp_file.close()
+                        if not last_processed_log_timestamp or log_timestamp > last_processed_log_timestamp:
+                            iem_msg = self._get_iem(data)
+                            iem_components = self._extract_iem_components(
+                                iem_msg)
+                            if iem_components:
+                                logger.info("IEM mesage {} {}".format(log_timestamp, iem_components))
+                                self._send_msg(iem_components)
+                                timestamp_file = open(self._timestamp_file_path, "w")
+                                timestamp_file.write(log_timestamp)
+                                timestamp_file.close()
+
 
         except IOError as io_error:
             if io_error.errno == errno.ENOENT:
                 logger.error(
-                    "Unable to read IEM from file. "
-                    "File doesn't exist: {0}".format(self._pipe_path))
+                    "Unable to read IEM timestamp from file. "
+                    "File doesn't exist: {0}".format(self._log_file_path))
             elif io_error.errno == errno.EACCES:
                 logger.error(
-                    "Unable to read IEM from file. "
+                    "Unable to read IEM timestamp from file. "
                     "Permission denied while reading from: {0}".format(
-                        self._pipe_path))
+                        self._log_file_path))
             else:
                 logger.error(
-                    "Unable to read IEM from file. "
+                    "Unable to read IEM timestamp from file. "
                     "Error while reading from {0}:{1}".format(
-                        self._pipe_path, str(io_error)))
+                        self._log_file_path, str(io_error)))
         except ValueError as value_error:
             error_msg = value_error.message.split(":")[1].strip()
             logger.error("Invalid hex value: {0}".format(error_msg))
@@ -175,12 +191,9 @@ class IEMSensor(ScheduledModuleThread, InternalMsgQ):
 
         except Exception as exception:
             logger.error(
-                "Unable to read IEM from file. "
+                "Unable to read IEM timestamp from file. "
                 "Error while reading from {0}:{1}".format(
-                    self._pipe_path, str(exception)))
-            if self._pipe_file and not self._pipe_file.closed:
-                self._log_debug("Closing file {0}".format(self._pipe_path))
-                self._pipe_file.close()
+                    self._log_file_path, str(exception)))
             logger.exception(exception)
 
         # Reset debug mode if persistence is not enabled
