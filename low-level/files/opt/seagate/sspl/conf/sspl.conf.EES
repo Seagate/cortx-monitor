@@ -4,7 +4,7 @@ core_processors=RabbitMQegressProcessor, RabbitMQingressProcessor, LoggingProces
 
 message_handlers=DiskMsgHandler, LoggingMsgHandler, ServiceMsgHandler, NodeDataMsgHandler, NodeControllerMsgHandler, RealStorEnclMsgHandler, RealStorActuatorMsgHandler
 
-sensors=ServiceWatchdog, NodeData, RAIDsensor, RealStorFanSensor, RealStorPSUSensor, RealStorControllerSensor, RealStorDiskSensor, RealStorSideplaneExpanderSensor, RealStorLogicalVolumeSensor, IEMSensor, NodeHWsensor
+sensors=ServiceWatchdog, RAIDsensor, NodeData, RealStorFanSensor, RealStorPSUSensor, RealStorControllerSensor, RealStorDiskSensor, RealStorSideplaneExpanderSensor, RealStorLogicalVolumeSensor, IEMSensor, NodeHWsensor
 
 actuators=Service, RAIDactuator, Smartctl, NodeHWactuator, RealStorActuator
 
