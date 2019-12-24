@@ -21,6 +21,7 @@ import select
 import subprocess
 import time
 import datetime
+import os
 
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
@@ -136,6 +137,7 @@ class IEMSensor(ScheduledModuleThread, InternalMsgQ):
         self._read_my_msgQ_noWait()
         iem_components = None
         try:
+            self._create_file(self._timestamp_file_path)
             f = subprocess.Popen(['tail','-Fn+1', self._log_file_path],\
             stdout=subprocess.PIPE,stderr=subprocess.PIPE)
             p = select.poll()
@@ -148,7 +150,7 @@ class IEMSensor(ScheduledModuleThread, InternalMsgQ):
                     data = f.stdout.readline().rstrip()
                     self._log_debug("Received line {0}".format(data[5:]))
                     if data:
-                        log_timestamp = data[:data.index("+")]
+                        log_timestamp = data[:data.index(" ")]
                         last_processed_log_timestamp = datetime.datetime.now().isoformat()
                         timestamp_file = open(self._timestamp_file_path, "r")
                         last_processed_log_timestamp = timestamp_file.read().strip()
@@ -367,6 +369,14 @@ class IEMSensor(ScheduledModuleThread, InternalMsgQ):
         if iec_keyword_index != -1:
             ret = log[iec_keyword_index:]
         return ret
+
+    def _create_file(self, path):
+        dir = path[:path.rindex("/")]
+        if not os.path.exists(dir):
+            os.makedirs(dir)
+        if not os.path.exists(path):
+            file = open(path, "w+")
+            file.close()
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""

@@ -1,0 +1,10 @@
+/var/sspl/data/iem/iem_messages
+{
+        size 1k
+        rotate 10
+        copytruncate
+        missingok
+        postrotate
+            /bin/kill -HUP `cat /var/run/syslogd.pid 2> /dev/null` 2> /dev/null || true
+        endscript
+}
