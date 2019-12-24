@@ -146,11 +146,21 @@ class RealStorFanSensor(ScheduledModuleThread, InternalMsgQ):
                     if durable_id not in self._faulty_fan_modules_list:
                         alert_type = self.rssencl.FRU_MISSING
                         self._faulty_fan_modules_list[durable_id] = alert_type
+                    else:
+                        prev_alert_type = self._faulty_fan_modules_list[durable_id]
+                        if prev_alert_type != self.rssencl.FRU_MISSING:
+                            alert_type = self.rssencl.FRU_MISSING
+                            self._faulty_fan_modules_list[durable_id] = alert_type
                 elif fru_status == self.rssencl.HEALTH_FAULT or \
                          fru_status == self.rssencl.HEALTH_DEGRADED:
                     if durable_id not in self._faulty_fan_modules_list:
                         alert_type = self.rssencl.FRU_FAULT
                         self._faulty_fan_modules_list[durable_id] = alert_type
+                    else:
+                        prev_alert_type = self._faulty_fan_modules_list[durable_id]
+                        if prev_alert_type != self.rssencl.FRU_FAULT:
+                            alert_type = self.rssencl.FRU_FAULT
+                            self._faulty_fan_modules_list[durable_id] = alert_type
                 elif fru_status == self.rssencl.HEALTH_OK:
                     if durable_id in self._faulty_fan_modules_list:
                         prev_alert_type = \
