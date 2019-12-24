@@ -6,3 +6,5 @@ alerts.realstor.test_real_stor_fan_actuator
 alerts.realstor.test_real_stor_psu_sensor
 alerts.realstor.test_real_stor_for_platform_sensor
 alerts.realstor.test_real_stor_sideplane_expander_sensor
+alerts.realstor.test_real_stor_disk_actuator
+alerts.realstor.test_real_stor_psu_actuator
