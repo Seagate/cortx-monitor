@@ -105,7 +105,17 @@ deleteMockedInterface()
 # primary_controller_ip=127.0.0.1 and primary_controller_port=$MOCK_SERVER_PORT.
 # For sanity test SSPL should connect to mock server instead of real server.
 # Restart SSPL to re-read configuration
-$sudo $script_dir/set_disk_threshold.sh
+#Taking the backup of /etc/sspl.conf before running test cases and place back as it is after test.
+#for testing purpose need to generating the alerts for CPU usage, Memory Usage and disk usage the
+#making the threshold value less than the actual usage for HOst, CPU and DIsk we update the the
+#threshold values (e.g. # Disk Usage Threshold value in terms of usage percentage (i.e. 0 to 100)
+#disk_usage_threshold=28
+# CPU Usage Threshold value in terms of usage in percentage (i.e. 0 to 100%)
+#cpu_usage_threshold=1
+# Memory Usage Threshold value in terms of usage in percentage (i.e. 0 to 100%)
+#host_memory_usage_threshold=34.3)
+$sudo cp /etc/sspl.conf /etc/sspl.conf.back
+$sudo $script_dir/set_threshold.sh
 echo "Restarting SSPL"
 systemctl restart sspl-ll
 echo "Waiting for SSPL to complete initialization of all the plugins"
@@ -115,6 +125,9 @@ echo "Initialization completed. Starting tests"
 # Start tests
 execute_test
 retcode=$?
+
+#Updating the /etc/sspl.conf with respect to there original changes.
+$sudo mv /etc/sspl.conf.back /etc/sspl.conf
 
 # Restoring original cache data
 $sudo rm -rf /var/sspl/data

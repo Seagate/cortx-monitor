@@ -86,6 +86,16 @@ $sudo lxc-attach -n $vm_name  -- yum --enablerepo=updates clean metadata
 $sudo lxc-attach -n $vm_name  -- bash -c "yum -y localinstall $rpms_dir/x86_64/libsspl_sec-*.rpm"
 $sudo lxc-attach -n $vm_name  -- bash -c "yum -y localinstall $rpms_dir/noarch/sspl-*.rpm"
 $sudo lxc-attach -n $vm_name  -- cp /opt/seagate/sspl/conf/sspl.conf."${product}" /etc/sspl.conf
+#Taking the backup of /etc/sspl.conf before running test cases and place back as it is after test.
+#for testing purpose need to generating the alerts for CPU usage, Memory Usage and disk usage the
+#making the threshold value less than the actual usage for HOst, CPU and DIsk we update the the
+#threshold values (e.g. # Disk Usage Threshold value in terms of usage percentage (i.e. 0 to 100)
+#disk_usage_threshold=28
+# CPU Usage Threshold value in terms of usage in percentage (i.e. 0 to 100%)
+#cpu_usage_threshold=1
+# Memory Usage Threshold value in terms of usage in percentage (i.e. 0 to 100%)
+#host_memory_usage_threshold=34.3)
+$sudo lxc-attach -n $vm_name  -- cp /etc/sspl.conf /etc/sspl.conf.back
 
 
 # Configure and start RabbitMQ
@@ -105,12 +115,16 @@ $sudo lxc-attach -n $vm_name  -- $sspl_install_dir/sspl/test/mock_server &
 # Change setup to vm in sspl configurations
 [ "${product}" = "EES" ] && $sudo lxc-attach -n $vm_name  -- sed -i 's/setup=vm/setup=eos/g' /etc/sspl.conf
 $sudo lxc-attach -n $vm_name  -- sed -i 's/primary_controller_port=80/primary_controller_port=8090/g' /etc/sspl.conf
-$sudo lxc-attach -n $vm_name  -- $sspl_install_dir/sspl/test/set_disk_threshold.sh
+#updating the /etc/sspl.conf with respect to threshold value for Host, Cpu, Disk
+$sudo lxc-attach -n $vm_name  -- $sspl_install_dir/sspl/test/set_threshold.sh
 $sudo lxc-attach -n $vm_name  -- $sspl_install_dir/sspl/low-level/framework/sspl_init
 $sudo lxc-attach -n $vm_name  -- $sspl_install_dir/sspl/test/rabbitmq_start_checker sspl-out actuator-resp-key
 
 # Execute tests
 $sudo lxc-attach -n $vm_name -- bash -c "$test_dir/run_sspl-ll_tests.sh"
+
+#Updating the /etc/sspl.conf with respect to there original changes.
+$sudo lxc-attach -n $vm_name -- mv /etc/sspl.conf.back /etc/sspl.conf
 
 retcode=$?
 exit $retcode

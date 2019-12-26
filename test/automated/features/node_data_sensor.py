@@ -84,22 +84,35 @@ def then_i_get_the_host_update_data_sensor_json_response_message(step):
         try:
             # Make sure we get back the message type that matches the request
             msg_type = ingressMsg.get("sensor_response_type")
-            host_update_msg = msg_type["host_update"]
+            if msg_type.get("info").get("resource_type") == "node:os:system":
+                host_update_msg = msg_type
             break
         except Exception as exception:
             time.sleep(4)
             print(exception)
-
     assert(host_update_msg is not None)
-    assert(host_update_msg.get("hostId") is not None)
-    assert(host_update_msg.get("localtime") is not None)
-    assert(host_update_msg.get("bootTime") is not None)
-    assert(host_update_msg.get("upTime") is not None)
-    assert(host_update_msg.get("uname") is not None)
-    assert(host_update_msg.get("freeMem") is not None)
-    assert(host_update_msg.get("loggedInUsers") is not None)
-    assert(host_update_msg.get("processCount") is not None)
-    assert(host_update_msg.get("runningProcessCount") is not None)
+    assert(host_update_msg.get("alert_type") is not None)
+    assert(host_update_msg.get("alert_id") is not None)
+    assert(host_update_msg.get("severity") is not None)
+    assert(host_update_msg.get("host_id") is not None)
+    assert(host_update_msg.get("info") is not None)
+    assert(host_update_msg.get("specific_info") is not None)
+    info = host_update_msg.get("info")
+    assert(info.get("site_id") is not None)
+    assert(info.get("node_id") is not None)
+    assert(info.get("cluster_id") is not None)
+    assert(info.get("rack_id") is not None)
+    assert(info.get("resource_type") is not None)
+    assert(info.get("event_time") is not None)
+    assert(info.get("resource_id") is not None)
+    specific_info = host_update_msg.get("specific_info")
+    assert(specific_info.get("loggedInUsers") is not None)
+    assert(specific_info.get("totalMemory") is not None)
+    assert(specific_info.get("runningProcessCount") is not None)
+    assert(specific_info.get("uname") is not None)
+    assert(specific_info.get("bootTime") is not None)
+    assert(specific_info.get("processCount") is not None)
+    assert(specific_info.get("localtime") is not None)
 
 @step(u'Then I get the local mount data sensor JSON response message')
 def then_i_get_the_local_mount_data_sensor_json_response_message(step):
@@ -142,25 +155,41 @@ def then_i_get_the_cpu_data_sensor_json_response_message(step):
         try:
             # Make sure we get back the message type that matches the request
             msg_type = ingressMsg.get("sensor_response_type")
-            cpu_data_msg = msg_type["cpu_data"]
+            if msg_type.get("info").get("resource_type") == "node:os:cpu":
+                cpu_data_msg = msg_type
             break
         except Exception as exception:
             time.sleep(4)
             print(exception)
 
     assert(cpu_data_msg is not None)
-    assert(cpu_data_msg.get("hostId") is not None)
-    assert(cpu_data_msg.get("localtime") is not None)
-    assert(cpu_data_msg.get("csps") is not None)
-    assert(cpu_data_msg.get("idleTime") is not None)
-    assert(cpu_data_msg.get("interruptTime") is not None)
-    assert(cpu_data_msg.get("iowaitTime") is not None)
-    assert(cpu_data_msg.get("niceTime") is not None)
-    assert(cpu_data_msg.get("softirqTime") is not None)
-    assert(cpu_data_msg.get("stealTime") is not None)
-    assert(cpu_data_msg.get("systemTime") is not None)
-    assert(cpu_data_msg.get("userTime") is not None)
-    assert(cpu_data_msg.get("coreData") is not None)
+    assert(cpu_data_msg.get("alert_type") is not None)
+    assert(cpu_data_msg.get("alert_id") is not None)
+    assert(cpu_data_msg.get("severity") is not None)
+    assert(cpu_data_msg.get("host_id") is not None)
+    assert(cpu_data_msg.get("info") is not None)
+    assert(cpu_data_msg.get("specific_info") is not None)
+    info = cpu_data_msg.get("info")
+    assert(info.get("site_id") is not None)
+    assert(info.get("node_id") is not None)
+    assert(info.get("cluster_id") is not None)
+    assert(info.get("rack_id") is not None)
+    assert(info.get("resource_type") is not None)
+    assert(info.get("event_time") is not None)
+    assert(info.get("resource_id") is not None)
+    specific_info = cpu_data_msg.get("specific_info")
+    assert(specific_info.get("systemTime") is not None)
+    assert(specific_info.get("interruptTime") is not None)
+    assert(specific_info.get("userTime") is not None)
+    assert(specific_info.get("idleTime") is not None)
+    assert(specific_info.get("csps") is not None)
+    assert(specific_info.get("iowaitTime") is not None)
+    assert(specific_info.get("niceTime") is not None)
+    assert(specific_info.get("cpu_usage") is not None)
+    assert(specific_info.get("coreData") is not None)
+    assert(specific_info.get("localtime") is not None)
+    assert(specific_info.get("softirqTime") is not None)
+    assert(specific_info.get("stealTime") is not None)
 
 @step(u'Then I get the if data sensor JSON response message')
 def then_i_get_the_if_data_sensor_json_response_message(step):
@@ -247,4 +276,3 @@ def then_i_get_the_disk_space_data_sensor_json_response_message(step):
     assert(disk_space_specific_info.get("freeSpace") is not None)
     assert(disk_space_specific_info.get("totalSpace") is not None)
     assert(disk_space_specific_info.get("diskUsedPercentage") is not None)
-
