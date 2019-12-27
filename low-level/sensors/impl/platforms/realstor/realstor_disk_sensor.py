@@ -102,6 +102,9 @@ class RealStorDiskSensor(ScheduledModuleThread, InternalMsgQ):
         if self.pollfreq_disksensor == 0:
                 self.pollfreq_disksensor = self.rssencl.pollfreq
 
+        # Flag to indicate suspension of module
+        self._suspended = False
+
     def initialize(self, conf_reader, msgQlist, products):
         """initialize configuration reader and internal msg queues"""
 
@@ -120,6 +123,11 @@ class RealStorDiskSensor(ScheduledModuleThread, InternalMsgQ):
 
     def run(self):
         """Run disk monitoring periodically on its own thread."""
+
+        # Do not proceed if module is suspended
+        if self._suspended == True:
+            self._scheduler.enter(self.pollfreq_disksensor, self._priority, self.run, ())
+            return
 
         # Allow RealStor Encl MC to start services.
         #time.sleep(self.rssencl.REALSTOR_MC_BOOTWAIT)
@@ -504,6 +512,16 @@ class RealStorDiskSensor(ScheduledModuleThread, InternalMsgQ):
 
         # Send the event to logging msg handler to send IEM message to journald
         self._write_internal_msgQ(LoggingMsgHandler.name(), internal_json_msg)
+
+    def suspend(self):
+        """Suspends the module thread. It should be non-blocking"""
+        super(RealStorDiskSensor, self).suspend()
+        self._suspended = True
+
+    def resume(self):
+        """Resumes the module thread. It should be non-blocking"""
+        super(RealStorDiskSensor, self).resume()
+        self._suspended = False
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""

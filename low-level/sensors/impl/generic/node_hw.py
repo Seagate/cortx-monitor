@@ -120,6 +120,9 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
             self.TYPE_DISK: self._parse_disk_info,
         }
 
+        # Flag to indicate suspension of module
+        self._suspended = False
+
         # Validate configuration file for required valid values
         try:
             self.conf_reader = ConfigReader(self.CONF_FILE)
@@ -303,6 +306,10 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
     def run(self):
         """Run the sensor on its own thread"""
 
+        # Do not proceed if module is suspended
+        if self._suspended == True:
+            self._scheduler.enter(self.polling_interval, self._priority, self.run, ())
+            return
         # Check for debug mode being activated
         self._read_my_msgQ_noWait()
 
@@ -869,6 +876,16 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
         timestamp_format = '%m/%d/%Y %H:%M:%S'
         timestamp = time.strptime('{} {}'.format(_date,_time), timestamp_format)
         return str(int(time.mktime(timestamp)))
+
+    def suspend(self):
+        """Suspends the module thread. It should be non-blocking"""
+        super(NodeHWsensor, self).suspend()
+        self._suspended = True
+
+    def resume(self):
+        """Resumes the module thread. It should be non-blocking"""
+        super(NodeHWsensor, self).resume()
+        self._suspended = False
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""

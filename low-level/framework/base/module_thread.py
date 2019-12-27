@@ -15,11 +15,13 @@
  ****************************************************************************
 """
 
-import time
 import abc
 import json
-
+import time
 from sched import scheduler
+
+from framework.utils.service_logging import logger
+
 from .debug import Debug
 
 
@@ -42,6 +44,11 @@ class ModuleThread(object, metaclass=abc.ABCMeta):
 
 class ScheduledModuleThread(ModuleThread, Debug):
     """A module thread with an internal scheduler"""
+
+    # Module thread states
+    ACTIVE = 1
+    SUSPENDED = 2
+    HALTED = 3
 
     def __init__(self, module_name, priority):
         super(ScheduledModuleThread, self).__init__()
@@ -88,3 +95,25 @@ class ScheduledModuleThread(ModuleThread, Debug):
 
     def is_running(self):
         return self._running
+
+    def suspend(self):
+        logger.debug("suspend() of {0} is called".format(self.name()))
+
+    def resume(self):
+        """Resumes the module thread. It should be non-blocking"""
+        logger.debug("resume() of {0} is called".format(self.name()))
+
+    def get_state(self):
+        """Returns the current state of module thread"""
+        current_state = None
+        if self.is_running() and not self.is_suspended():
+            current_state = ScheduledModuleThread.ACTIVE
+        elif self.is_running() and self.is_suspended():
+            current_state = ScheduledModuleThread.SUSPENDED
+        elif not self.is_running():
+            current_state = ScheduledModuleThread.HALTED
+        return current_state
+
+    def is_suspended(self):
+        """Returns True if the module thread is suspended. False otherwise"""
+        logger.debug("is_suspended() of {0} is called".format(self.name()))

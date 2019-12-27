@@ -81,6 +81,9 @@ class RealStorPSUSensor(ScheduledModuleThread, InternalMsgQ):
         # Holds PSUs with faults. Used for future reference.
         self._previously_faulty_psus = {}
 
+        # Flag to indicate suspension of module
+        self._suspended = False
+
     def initialize(self, conf_reader, msgQlist, products):
         """initialize configuration reader and internal msg queues"""
 
@@ -118,7 +121,10 @@ class RealStorPSUSensor(ScheduledModuleThread, InternalMsgQ):
 
     def run(self):
         """Run the sensor on its own thread"""
-
+        # Do not proceed if module is suspended
+        if self._suspended == True:
+            self._scheduler.enter(10, self._priority, self.run, ())
+            return
         # Check for debug mode being activated
         self._read_my_msgQ_noWait()
 
@@ -371,6 +377,16 @@ class RealStorPSUSensor(ScheduledModuleThread, InternalMsgQ):
             else True.
         """
         return bool(re.findall("not installed", health_reason))
+
+    def suspend(self):
+        """Suspends the module thread. It should be non-blocking"""
+        super(RealStorPSUSensor, self).suspend()
+        self._suspended = True
+
+    def resume(self):
+        """Resumes the module thread. It should be non-blocking"""
+        super(RealStorPSUSensor, self).resume()
+        self._suspended = False
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""

@@ -7,6 +7,8 @@ message_handlers=DiskMsgHandler, LoggingMsgHandler, ServiceMsgHandler, NodeDataM
 sensors=ServiceWatchdog, NodeData, RAIDsensor, SNMPtraps, HPIMonitor, RealStorFanSensor, RealStorPSUSensor, RealStorControllerSensor, RealStorDiskSensor, RealStorSideplaneExpanderSensor, IEMSensor, NodeHWsensor
 
 actuators=Service, RAIDactuator, Hdparm, RaritanPDU, CommandLine, Login, IPMI, HPIactuator, NodeHWactuator, Smartctl
+# List of modules to run in degraded mode
+degraded_state_modules=ServiceWatchdog, RAIDsensor, NodeData, IEMSensor, NodeHWsensor, DiskMsgHandler, LoggingMsgHandler, ServiceMsgHandler, NodeDataMsgHandler, NodeControllerMsgHandler
 
 [SYSTEM_INFORMATION]
 operating_system=centos7

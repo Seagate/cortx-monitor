@@ -111,6 +111,13 @@ echo "Waiting for SSPL to complete initialization of all the plugins"
 $script_dir/rabbitmq_start_checker sspl-out actuator-resp-key
 echo "Initialization completed. Starting tests"
 
+# Switch SSPL to active state to resume all the suspended plugins. If SSPL is
+# not switched to active state then plugins will not respond and tests will
+# fail. Sending SIGUP to SSPL makes SSPL to read state file and switch state.
+echo "state=active" > /var/sspl/data/state.txt
+PID=`ps -aux| grep "sspl_ll_d -c /etc/sspl.conf" | grep -v "grep" | awk '{print $2}'`
+kill -s SIGHUP $PID
+
 # Start tests
 execute_test $*
 retcode=$?

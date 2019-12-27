@@ -56,6 +56,8 @@ class RealStorEnclMsgHandler(ScheduledModuleThread, InternalMsgQ):
     def __init__(self):
         super(RealStorEnclMsgHandler, self).__init__(self.MODULE_NAME,
                                                      self.PRIORITY)
+        # Flag to indicate suspension of module
+        self._suspended = False
 
     @staticmethod
     def dependencies():
@@ -100,6 +102,11 @@ class RealStorEnclMsgHandler(ScheduledModuleThread, InternalMsgQ):
     def run(self):
         """Run the module periodically on its own thread."""
         self._log_debug("Start accepting requests")
+
+        # Do not proceed if module is suspended
+        if self._suspended == True:
+            self._scheduler.enter(1, self._priority, self.run, ())
+            return
 
         try:
             # Block on message queue until it contains an entry
@@ -286,6 +293,16 @@ class RealStorEnclMsgHandler(ScheduledModuleThread, InternalMsgQ):
         self._fru_type[sensor_type] = \
             self._logical_volume_sensor_message
         self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+
+    def suspend(self):
+        """Suspends the module thread. It should be non-blocking"""
+        super(RealStorEnclMsgHandler, self).suspend()
+        self._suspended = True
+
+    def resume(self):
+        """Resumes the module thread. It should be non-blocking"""
+        super(RealStorEnclMsgHandler, self).resume()
+        self._suspended = False
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""

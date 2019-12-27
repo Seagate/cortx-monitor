@@ -27,6 +27,9 @@ import sys
 import subprocess
 from threading import Thread
 import time
+import signal
+import uuid
+import json
 
 # Add the top level directories
 parentdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -69,6 +72,7 @@ CORE_PROCESSORS = 'core_processors'
 MSG_HANDLERS    = 'message_handlers'
 SENSORS         = 'sensors'
 ACTUATORS       = 'actuators'
+DEGRADED_STATE_MODULES = 'degraded_state_modules'
 
 # Section containing information about the system we're running on
 SYS_INFORMATION = 'SYSTEM_INFORMATION'
@@ -77,9 +81,24 @@ PRODUCT_NAME    = 'product'
 SETUP           = 'setup'
 LOG_LEVEL       = 'log_level'
 
+# State file
+STATE_FILE = "/var/sspl/data/state.txt"
+STATES = ["active", "degrade"]
+DEFAULT_STATE = "degrade"
+
+# Keys for state file
+STATE_KEY = "state" # Indicates desired state of SSPL to switch in
+
 # Instantiate the internal ThreadController. Global so the shutdown callback
 #  method can use it to properly halt all running threads.
 threadController = ThreadController()
+
+# Queue instance for ThreadController. We need to enqueue a message to a queue
+# that which is attached to ThreadController. We have msgQlist that contains
+# list of queues for various modules but its scope is till main() function. We
+# need ThreadController queue which can be accessible out of main function and
+# so We need to take this global variable.
+thread_controller_queue = None
 
 
 def _dropPrivileges(user):
@@ -225,6 +244,17 @@ def main(conf_reader, systemd_support):
     if product not in enabled_products:
         _dropPrivileges("sspl-ll")
 
+    # List of modules to run in degraded mode
+    modules_to_resume = []
+    try:
+        # Read list of modules from conf file to load in degraded mode
+        modules_to_resume = conf_reader._get_value_list(SSPL_SETTING,
+                                                      DEGRADED_STATE_MODULES)
+    except Exception as e:
+        logger.warn("Configuration not found: degraded_state_modules")
+        modules_to_resume = []
+    logger.info("modules_to_resume: {0}".format(str(modules_to_resume)))
+
     # Use reflection to instantiate the classes based upon its class name in config file
     core_processors = conf_reader._get_value_list(SSPL_SETTING,
                                                   CORE_PROCESSORS)
@@ -256,6 +286,10 @@ def main(conf_reader, systemd_support):
     # Add the ThreadConroller automatically
     msgQlist[ThreadController.name()] = queue.Queue()
 
+    # Make ThreadController queue globally accessible
+    global thread_controller_queue
+    thread_controller_queue = msgQlist[ThreadController.name()]
+
     # Check dependencies for each plugin and get a list of plugins with
     # missing dependencies.
     dependency_broken_modules = check_dependencies(sspl_threaded_modules)
@@ -270,6 +304,7 @@ def main(conf_reader, systemd_support):
         from systemd.daemon import notify
         notify("READY=1")
         logger.info("SSPL has started initialization")
+    resume_module = False
     try:
         # Loop through the list of instanced modules and start them on threads
         for name, curr_module in sspl_threaded_modules.items():
@@ -278,9 +313,15 @@ def main(conf_reader, systemd_support):
                     "SSPL Bootstrap: Unable to load plugin {0} due to "
                     "failed dependency resolution".format(name))
                 continue
-            logger.info("Starting: %s" % curr_module.name())
+            # SSPL will be started in degrade mode by default.
+            # Run module only if either it is allowed to run in degraded mode
+            # or it is defined in core modules.
+            resume = False
+            if name in modules_to_resume or name in ThreadController.ALWAYS_ACTIVE_MODULES:
+                resume = True
+
             thread = Thread(target=_run_thread_capture_errors,
-                            args=(curr_module, sspl_threaded_modules, msgQlist, conf_reader, product))
+                            args=(curr_module, sspl_threaded_modules, msgQlist, conf_reader, product, resume))
             thread.start()
 
         # Start the ThreadController module with the list of threads
@@ -288,7 +329,7 @@ def main(conf_reader, systemd_support):
 
         # Initialize the thread controller with the list of references to all modules
         controller_thread = Thread(target=_run_thread_capture_errors,
-                            args=(threadController, sspl_threaded_modules, msgQlist, conf_reader, product))
+                            args=(threadController, sspl_threaded_modules, msgQlist, conf_reader, product, True))
         threadController.initialize_thread_list(sspl_threaded_modules, operating_system, product, systemd_support)
         controller_thread.start()
 
@@ -420,12 +461,16 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist, operating_system
     return (sspl_threaded_modules, msgQlist)
 
 
-def _run_thread_capture_errors(curr_module, sspl_threaded_modules, msgQlist, conf_reader, product):
+def _run_thread_capture_errors(curr_module, sspl_threaded_modules, msgQlist, conf_reader, product, resume):
     """Run the given thread and log any errors that happen on it.
     Will stop all sspl_threaded_modules if one of them fails."""
     try:
+        # Suspend module threads
+        if resume == False:
+            curr_module.suspend()
         # Each module is passed a reference list to message queues so it can transmit
-        #  internal messages to other modules as desired
+        # internal messages to other modules as desired
+        logger.info("Starting: %s" % curr_module.name())
         curr_module.initialize(conf_reader, msgQlist, product)
         curr_module.start()
 
@@ -481,6 +526,64 @@ def print_usage():
     -c:    Configuration settings for sspl_ll_d service""")
 
 
+def signal_handler(signal_number, frame):
+    """Handles SIGHUP currently. On SIGHUP signal reception, this function
+       reads intended state for SSPL from a text file. After that it calls
+       ThreadController methods to switch to different mode.
+       The entries in text file should be in form of <key=value>.
+    """
+    logger.debug("signal_handler called with {0}".format(signal_number))
+    entries = dict()
+    state = "active"
+    try:
+        with open(STATE_FILE) as state_file:
+
+            for line in state_file.readlines():
+                # This try block supresses exceptions in for loop when
+                # something wrong happens while reading entries. Because
+                # of this for loop it will log warning and move forward
+                # to next entry.
+                try:
+                    splitted_data = line.split("=")
+                    # Put as a key-value in dictionary
+                    entries[splitted_data[0].strip()] = splitted_data[1].strip()
+                except Exception as exc:
+                    logger.warn("Error in reading key: {0}".format(exc))
+
+        state = entries[STATE_KEY]
+        logger.debug("state contains {0}".format(state))
+    except Exception as e:
+        logger.warn("Error in reading state file: {0}".format(e))
+
+    if state.strip().lower() not in STATES:
+        logger.warn("Invalid state found: {0}. Falling back to default state {1}".format(state, DEFAULT_STATE))
+        state = DEFAULT_STATE
+
+    logger.info("Received SIGHUP to switch to {0} state".format(state))
+    if thread_controller_queue:
+        state_change_msg = {
+                    "sspl_ll_debug": {
+                        "debug_component": "sensor",
+                        "debug_enabled": True
+                    },
+                    "sspl_ll_msg_header": {
+                        "msg_version": "1.0.0",
+                        "uuid": str(uuid.uuid4()),
+                        "schema_version": "1.0.0",
+                        "sspl_version": "1.0.0",
+                    },
+                    "actuator_request_type": {
+                        "thread_controller": {
+                            "module_name": "all",
+                            "thread_request": state
+                        }
+                    }
+        }
+        thread_controller_queue.put(json.dumps(state_change_msg))
+    else:
+        logger.error("thread_controller_queue is None")
+
+
 if __name__ == "__main__":
     # Retrieve configuration file for sspl-ll service
     try:
@@ -493,6 +596,8 @@ if __name__ == "__main__":
     if len(opts[0]) < 1:
         print_usage()
         sys.exit(os.EX_USAGE)
+
+    signal.signal(signal.SIGHUP, signal_handler)
 
     systemd_support = True
     for opt, arg in opts[0]:

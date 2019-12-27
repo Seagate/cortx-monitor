@@ -74,6 +74,9 @@ class RealStorSideplaneExpanderSensor(ScheduledModuleThread, InternalMsgQ):
         # sideplane expander persistent cache
         self._sideplane_exp_prcache = None
 
+        # Flag to indicate suspension of module
+        self._suspended = False
+
     @staticmethod
     def dependencies():
         """Returns a list of plugins and RPMs this module requires
@@ -119,6 +122,10 @@ class RealStorSideplaneExpanderSensor(ScheduledModuleThread, InternalMsgQ):
     def run(self):
         """Run the sensor on its own thread"""
 
+        # Do not proceed if module is suspended
+        if self._suspended == True:
+            self._scheduler.enter(30, self._priority, self.run, ())
+            return
         # Check for debug mode being activated
         self._read_my_msgQ_noWait()
 
@@ -309,6 +316,16 @@ class RealStorSideplaneExpanderSensor(ScheduledModuleThread, InternalMsgQ):
         # Send the event to real stor message handler to generate json message
         # and send out
         self._write_internal_msgQ(RealStorEnclMsgHandler.name(), json_msg)
+
+    def suspend(self):
+        """Suspends the module thread. It should be non-blocking"""
+        super(RealStorSideplaneExpanderSensor, self).suspend()
+        self._suspended = True
+
+    def resume(self):
+        """Resumes the module thread. It should be non-blocking"""
+        super(RealStorSideplaneExpanderSensor, self).resume()
+        self._suspended = False
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""

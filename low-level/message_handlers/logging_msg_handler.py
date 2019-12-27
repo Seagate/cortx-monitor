@@ -47,6 +47,8 @@ class LoggingMsgHandler(ScheduledModuleThread, InternalMsgQ):
     def __init__(self):
         super(LoggingMsgHandler, self).__init__(self.MODULE_NAME,
                                                   self.PRIORITY)
+        # Flag to indicate suspension of module
+        self._suspended = False
 
     def initialize(self, conf_reader, msgQlist, product):
         """initialize configuration reader and internal msg queues"""
@@ -72,6 +74,11 @@ class LoggingMsgHandler(ScheduledModuleThread, InternalMsgQ):
         #self._set_debug(True)
         #self._set_debug_persist(True)
         self._log_debug("Start accepting requests")
+
+        # Do not proceed if module is suspended
+        if self._suspended == True:
+            self._scheduler.enter(20, self._priority, self.run, ())
+            return
 
         try:
             # Block on message queue until it contains an entry
@@ -189,6 +196,16 @@ class LoggingMsgHandler(ScheduledModuleThread, InternalMsgQ):
             logger.info("          IEM log locally: %s" % str(self._iem_log_locally))
         except Exception as ex:
             logger.exception("_read_config: %r" % ex)
+
+    def suspend(self):
+        """Suspends the module thread. It should be non-blocking"""
+        super(LoggingMsgHandler, self).suspend()
+        self._suspended = True
+
+    def resume(self):
+        """Resumes the module thread. It should be non-blocking"""
+        super(LoggingMsgHandler, self).resume()
+        self._suspended = False
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""

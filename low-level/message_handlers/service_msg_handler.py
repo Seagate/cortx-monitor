@@ -61,6 +61,9 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
         self._service_actuator = None
         self._query_utility = None
 
+        # Flag to indicate suspension of module
+        self._suspended = False
+
     def initialize(self, conf_reader, msgQlist, product):
         """initialize configuration reader and internal msg queues"""
         # Initialize ScheduledMonitorThread
@@ -80,6 +83,11 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
     def run(self):
         """Run the module periodically on its own thread."""
         self._log_debug("Start accepting requests")
+
+        # Do not proceed if module is suspended
+        if self._suspended == True:
+            self._scheduler.enter(1, self._priority, self.run, ())
+            return
 
         # self._set_debug(True)
         # self._set_debug_persist(True)
@@ -254,6 +262,16 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
             service_controller_msg.set_uuid(uuid)
         json_msg = service_controller_msg.getJson()
         self._write_internal_msgQ("RabbitMQegressProcessor", json_msg)
+
+    def suspend(self):
+        """Suspends the module thread. It should be non-blocking"""
+        super(ServiceMsgHandler, self).suspend()
+        self._suspended = True
+
+    def resume(self):
+        """Resumes the module thread. It should be non-blocking"""
+        super(ServiceMsgHandler, self).resume()
+        self._suspended = False
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""

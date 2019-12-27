@@ -85,6 +85,14 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
 
     # Section and keys in configuration file
     THREADCONTROLLER = MODULE_NAME.upper()
+    ALWAYS_ACTIVE_MODULES = [
+        "RabbitMQegressProcessor", "RabbitMQingressProcessor",
+        "ThreadController", "LoggingMsgHandler"
+    ]
+
+    # Constats for keys to read from conf file
+    SSPL_SETTING = 'SSPL-LL_SETTING'
+    DEGRADED_STATE_MODULES = 'degraded_state_modules'
 
     @staticmethod
     def name():
@@ -103,6 +111,7 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
         self._start_delay = 10
         self._systemd_support = True
         self._hostname = gethostname()
+        self._modules_to_resume = []
 
     def initialize(self, conf_reader, msgQlist, product):
         """initialize configuration reader and internal msg queues"""
@@ -111,6 +120,7 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
 
         # Initialize internal message queues for this module
         super(ThreadController, self).initialize_msgQ(msgQlist)
+        self._modules_to_resume = self._get_degraded_state_modules_list()
 
     def initialize_thread_list(self, sspl_modules, operating_system, product,
                                systemd_support):
@@ -174,7 +184,6 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
         try:
             # Block on message queue until it contains an entry
             jsonMsg = self._read_my_msgQ()
-
             if jsonMsg is not None:
                 self._process_msg(jsonMsg)
 
@@ -235,6 +244,20 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
             self._stop_module(module_name)
         elif thread_request == "status":
             self._status_module(module_name)
+        elif thread_request == "degrade":
+            if module_name.lower() != "all":
+                logger.warn(
+                    "Invalid module_name {0}. Need 'all' in module_name"
+                    .format(module_name))
+                return
+            self._switch_to_degraded_state(self._sspl_modules)
+        elif thread_request == "active":
+            if module_name.lower() != "all":
+                logger.warn(
+                    "Invalid module_name {0}. Need 'all' in module_name"
+                    .format(module_name))
+                return
+            self._switch_to_active_state(self._sspl_modules)
         else:
             self._thread_response = "Error, unrecognized thread request"
 
@@ -244,8 +267,8 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
             node_id = jsonMsg.get("actuator_request_type").get("thread_controller").get("parameters").get("node_id")
 
         ack_type = {}
-        ack_type["hostname"] = str(self._hostname, 'utf-8')
-        ack_type["node_id"]  = node_id
+        ack_type["hostname"] = self._hostname
+        ack_type["node_id"] = node_id
 
         # Populate an actuator response message and transmit
         threadControllerMsg = ThreadControllerMsg(module_name, self._thread_response, \
@@ -287,6 +310,37 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
             self._thread_response = "Restart Failed"
         else:
             self._thread_response = "Restart Successful"
+
+    def _switch_to_degraded_state(self, modules):
+        """Shifts SSPL to degraded state. Essentially it calls a suspend of
+           every module every running in an independent thread
+        """
+        self._log_debug("_switch_to_degraded_state, modules: %s" % modules)
+        if not modules:
+            raise TypeError("module parameter can't be None")
+        try:
+            for name, module_instance in modules.items():
+                if not name in self._modules_to_resume:
+                    module_instance.suspend()
+            self._thread_response = "Degrade Successful"
+        except Exception as e:
+            logger.warn("Degrade operation failed: {0}".format(e))
+            self._thread_response = "Degrade failed"
+
+    def _switch_to_active_state(self, modules):
+        """Shifts SSPL to active state. Essentially it calls a resume of
+           every module every running in an independent thread
+        """
+        self._log_debug("_switch_to_active_state, modules: %s" % modules)
+        if not modules:
+            raise TypeError("module parameter can't be None")
+        try:
+            for name, module_instance in modules.items():
+                module_instance.resume()
+            self._thread_response = "Active Successful"
+        except Exception as e:
+            logger.error("Active operation failed: {0}".format(e))
+            self._thread_response = "Active failed"
 
     def _stop_module(self, module_name):
         """Stop a module"""
@@ -378,3 +432,17 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
             return self._sspl_modules[PlaneCntrlRMQegressProcessor.name()].is_running()
         elif product in cs_legacy_products:
             return self._sspl_modules[RabbitMQegressProcessor.name()].is_running()
+
+    def _get_degraded_state_modules_list(self):
+        """Reads list of modules to run in degraded state and returns a list
+           of those modules.
+        """
+        # List of modules to run in degraded mode
+        modules_to_resume = []
+        try:
+            # Read list of modules from conf file to load in degraded mode
+            modules_to_resume = self._conf_reader._get_value_list(self.SSPL_SETTING,
+                                                          self.DEGRADED_STATE_MODULES)
+        except Exception as e:
+            logger.warn("ThreadController: Configuration not found, degraded_state_modules")
+            modules_to_resume = []

@@ -77,6 +77,8 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
     def __init__(self):
         super(NodeDataMsgHandler, self).__init__(self.MODULE_NAME,
                                                   self.PRIORITY)
+        # Flag to indicate suspension of module
+        self._suspended = False
 
     @staticmethod
     def dependencies():
@@ -160,6 +162,11 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
     def run(self):
         """Run the module periodically on its own thread."""
         self._log_debug("Start accepting requests")
+
+        # Do not proceed if module is suspended
+        if self._suspended == True:
+            self._scheduler.enter(1, self._priority, self.run, ())
+            return
 
         # self._set_debug(True)
         # self._set_debug_persist(True)
@@ -552,6 +559,16 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         jsonMsg = node_ipmi_data_msg.getJson()
 
         self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
+
+    def suspend(self):
+        """Suspends the module thread. It should be non-blocking"""
+        super(NodeDataMsgHandler, self).suspend()
+        self._suspended = True
+
+    def resume(self):
+        """Resumes the module thread. It should be non-blocking"""
+        super(NodeDataMsgHandler, self).resume()
+        self._suspended = False
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""

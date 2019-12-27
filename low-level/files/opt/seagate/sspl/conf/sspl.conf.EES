@@ -8,6 +8,9 @@ sensors=ServiceWatchdog, RAIDsensor, NodeData, RealStorFanSensor, RealStorPSUSen
 
 actuators=Service, RAIDactuator, Smartctl, NodeHWactuator, RealStorActuator
 
+# List of modules to run in degraded mode
+degraded_state_modules=ServiceWatchdog, RAIDsensor, NodeData, IEMSensor, NodeHWsensor, DiskMsgHandler, LoggingMsgHandler, ServiceMsgHandler, NodeDataMsgHandler, NodeControllerMsgHandler
+
 [SYSTEM_INFORMATION]
 operating_system=centos7
 product=EES

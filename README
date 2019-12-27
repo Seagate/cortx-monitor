@@ -1,0 +1,24 @@
+=> SSPL states
+   ~~~~~~~~~~~
+
+   -> Active state:
+      When SSPL is in active state, all the configured plugins including Storage
+      Enclosure monitoring and Node monitoring are working.
+
+   -> Degraded state:
+      In Degraded state, plugins responsible for Storage Enclosure monitoring
+      are suspended. Plugins in this state run but don't check for platform
+      components state change and no alerts are raised.
+
+=> Steps to switch SSPL state
+   ~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   -> Switch to Active state:
+
+      $ echo "state=active" > /var/sspl/data/state.txt
+      $ kill -s SIGHUP <SSPL-PID>
+
+   -> Switch to Degraded state:
+
+      $ echo "state=degrade" > /var/sspl/data/state.txt
+      $ kill -s SIGHUP <SSPL-PID>

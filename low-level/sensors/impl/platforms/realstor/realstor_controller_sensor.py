@@ -83,6 +83,9 @@ class RealStorControllerSensor(ScheduledModuleThread, InternalMsgQ):
         # Holds Controllers with faults. Used for future reference.
         self._previously_faulty_controllers = {}
 
+        # Flag to indicate suspension of module
+        self._suspended = False
+
     def initialize(self, conf_reader, msgQlist, products):
         """initialize configuration reader and internal msg queues"""
 
@@ -119,6 +122,11 @@ class RealStorControllerSensor(ScheduledModuleThread, InternalMsgQ):
 
     def run(self):
         """Run the sensor on its own thread"""
+
+        # Do not proceed if module is suspended
+        if self._suspended == True:
+            self._scheduler.enter(10, self._priority, self.run, ())
+            return
 
         # Check for debug mode being activated
         self._read_my_msgQ_noWait()
@@ -294,6 +302,16 @@ class RealStorControllerSensor(ScheduledModuleThread, InternalMsgQ):
         if not json_msg:
             return
         self._write_internal_msgQ(RealStorEnclMsgHandler.name(), json_msg)
+
+    def suspend(self):
+        """Suspends the module thread. It should be non-blocking"""
+        super(RealStorControllerSensor, self).suspend()
+        self._suspended = True
+
+    def resume(self):
+        """Resumes the module thread. It should be non-blocking"""
+        super(RealStorControllerSensor, self).resume()
+        self._suspended = False
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""

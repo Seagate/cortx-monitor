@@ -81,6 +81,9 @@ class RealStorFanSensor(ScheduledModuleThread, InternalMsgQ):
         # fan modules psus persistent cache
         self._fanmodule_prcache = None
 
+        # Flag to indicate suspension of module
+        self._suspended = False
+
     def initialize(self, conf_reader, msgQlist, products):
         """initialize configuration reader and internal msg queues"""
 
@@ -89,6 +92,7 @@ class RealStorFanSensor(ScheduledModuleThread, InternalMsgQ):
 
         # Initialize internal message queues for this module
         super(RealStorFanSensor, self).initialize_msgQ(msgQlist)
+
 
         self._fanmodule_prcache = os.path.join(self.rssencl.frus, \
                                       self.FAN_MODULES_DIR)
@@ -115,6 +119,11 @@ class RealStorFanSensor(ScheduledModuleThread, InternalMsgQ):
 
     def run(self):
         """Run the sensor on its own thread"""
+
+        # Do not proceed if module is suspended
+        if self._suspended == True:
+            self._scheduler.enter(30, self._priority, self.run, ())
+            return
 
         # Check for debug mode being activated
         self._read_my_msgQ_noWait()
@@ -332,6 +341,16 @@ class RealStorFanSensor(ScheduledModuleThread, InternalMsgQ):
 
         # Send the event to logging msg handler to send IEM message to journald
         #self._write_internal_msgQ(LoggingMsgHandler.name(), internal_json_msg)
+
+    def suspend(self):
+        """Suspends the module thread. It should be non-blocking"""
+        super(RealStorFanSensor, self).suspend()
+        self._suspended = True
+
+    def resume(self):
+        """Resumes the module thread. It should be non-blocking"""
+        super(RealStorFanSensor, self).resume()
+        self._suspended = False
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""

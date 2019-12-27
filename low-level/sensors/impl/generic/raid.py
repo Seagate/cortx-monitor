@@ -59,6 +59,9 @@ class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
         # Location of hpi data directory populated by dcs-collector
         self._start_delay  = 10
 
+        # Flag to indicate suspension of module
+        self._suspended = False
+
     def initialize(self, conf_reader, msgQlist, product):
         """initialize configuration reader and internal msg queues"""
 
@@ -83,6 +86,11 @@ class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
 
     def run(self):
         """Run the sensor on its own thread"""
+
+        # Do not proceed if module is suspended
+        if self._suspended == True:
+            self._scheduler.enter(30, self._priority, self.run, ())
+            return
 
         # Allow systemd to process all the drives so we can map device name to serial numbers
         time.sleep(120)
@@ -327,6 +335,15 @@ class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
 
         # Send the event to logging msg handler to send IEM message to journald
         self._write_internal_msgQ(LoggingMsgHandler.name(), internal_json_msg)
+    def suspend(self):
+        """Suspends the module thread. It should be non-blocking"""
+        super(RAIDsensor, self).suspend()
+        self._suspended = True
+
+    def resume(self):
+        """Resumes the module thread. It should be non-blocking"""
+        super(RAIDsensor, self).resume()
+        self._suspended = False
 
     def _run_command(self, command):
         """Run the command and get the response and error returned"""
