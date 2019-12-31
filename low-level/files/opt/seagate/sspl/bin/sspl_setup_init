@@ -1,0 +1,158 @@
+#!/bin/bash
+
+set -u -o pipefail
+
+#################################################################
+# This script performs following operations.
+# - Creates datapath as defined in /etc/sspl.conf
+# - Check dependencies for roles other than 'eos'
+#################################################################
+
+script_dir=$(dirname $0)
+# Import common constants
+source $script_dir/constants.sh
+
+SCRIPT_NAME=$(basename $0)
+SSPL_CONFIGURED="/var/sspl/sspl-configured"
+
+SSU_DEPENDENCY_RPMS=(
+                "sg3_utils"
+                "gemhpi"
+                "pull_sea_logs"
+                "python-hpi"
+                "zabbix-agent-lib"
+                "zabbix-api-gescheit"
+                "zabbix-xrtx-lib"
+                "python-openhpi-baselib"
+                "zabbix-collector"
+     )
+
+SSU_REQUIRED_PROCESSES=(
+                "openhpid"
+                "dcs-collectord"
+                )
+
+VM_DEPENDENCY_RPMS=("")
+
+usage() {
+    cat << EOF
+$SCRIPT_NAME [check|create [-dp] [-r <ssu|gw|cmu|vm>]]
+create options:
+    -dp Create configured datapath
+    -r  Role to be configured on the current node
+EOF
+    exit 1
+}
+
+check_for_dep_rpms() {
+
+   rpms=("$@");
+
+   if [ -z "$rpms" ]; then
+       return
+   fi
+
+   for rpm in "${rpms[@]}"; do
+        rpm -q --quiet $rpm;
+
+        if [ $? -eq 1 ]; then
+          echo "- Required rpm '$rpm' not installed, exiting";
+          exit 1;
+        fi
+   done
+}
+
+check_for_active_processes() {
+
+   processes=("$@");
+
+   for proc in "${processes[@]}"; do
+        pgrep -x $proc > /dev/null;
+
+        if [ $? -eq 1 ]; then
+            echo "- Required process '$proc' not running, exiting";
+            exit 1;
+        fi
+   done
+
+}
+
+check_dependencies() {
+
+    # Check for dependency rpms and required processes active state based on role
+    case $1 in
+       "ssu")
+              echo "Checking for dependency rpms for role '$1'";
+              check_for_dep_rpms "${SSU_DEPENDENCY_RPMS[@]}";
+
+              echo "Checking for required processes running state for role '$1'";
+              check_for_active_processes "${SSU_REQUIRED_PROCESSES[@]}";
+              ;;
+
+       "vm"|"gw"|"cmu")
+              echo "Checking for dependency rpms for role '$1'";
+              # No dependency currently. Keeping this section as it may be
+              # needed in future.
+              check_for_dep_rpms "${VM_DEPENDENCY_RPMS[@]}";
+              # No processes to check in vm/gw/cmu env
+              ;;
+
+       *)
+              echo -e "No rpm or process dependencies set, to check for supplied role '$1', skipping checks.\n";
+              ;;
+    esac
+}
+
+create_req() {
+    role=
+
+    while [ $# -gt 0 ]; do
+        case $1 in
+            -dp )
+                IFS='=' dp=`grep data_path $SSPL_CONF`; datapath=( $dp )
+                sspldp=`echo ${datapath[1]}`
+
+                mkdir -p $sspldp
+                chown -R sspl-ll $sspldp
+                ;;
+            -r )
+                [ $# -lt 2 ] && usage
+                shift 1 && role=$1
+                [[ $ROLES =~ (^| )$role($| ) ]] || usage
+                ;;
+            * )
+                usage
+                ;;
+        esac
+        shift 1
+    done
+
+    # Create /tmp/dcs/hpi if required. Not needed for 'eos' role
+    [ "$role" != "eos" ] && [ ! -d "/tmp/dcs/hpi" ] && mkdir -p /tmp/dcs/hpi && id -u zabbix > /dev/null 2>&1 && chown zabbix:zabbix /tmp/dcs/hpi
+
+    # Check for sspl required processes and misc dependencies like installation, etc based on 'role'
+    [ -z "$role" ] || check_dependencies $role
+
+    # Create mdadm.conf to set ACL on it.
+    touch /etc/mdadm.conf
+    setfacl -m u:sspl-ll:rw /etc/mdadm.conf
+
+}
+
+cmd="create"
+[ $# -ge 1 ] && cmd=$1 && shift 1
+case $cmd in
+    check )
+        [ -f $SSPL_CONFIGURED ]  && exit 0
+        logger -i -p local3.err "SSPL is not configured. Run provisioner scripts in /opt/seagate/sspl/bin."
+        exit 1
+        ;;
+
+    create )
+        create_req $*
+        ;;
+
+    * )
+        usage
+        ;;
+esac

@@ -1,0 +1,57 @@
+#!/bin/bash
+
+set -u -o pipefail
+
+######################################################################
+# This script serves as an entry point for various operations for SSPL
+# as needed by provisioner.
+######################################################################
+
+SCRIPT_NAME=$(basename $0)
+
+usage() {
+    cat << EOF
+$SCRIPT_NAME [{post_install|init [-dp] [-r <ssu|gw|cmu|vm>]|config [-f] [-r <ssu|gw|cmu|vm>]|test|reset]
+init options:
+    -dp Create configured datapath
+    -r  Role to be configured on the current node
+config options:
+    -f  Force reinitialization. Do not prompt
+    -r  Role to be configured on the current node
+EOF
+    exit 1
+}
+
+cmd=
+[ $# -ge 1 ] && cmd=$1 && shift 1
+
+case $cmd in
+    post_install )
+        ./sspl_post_install $*
+        exit $?
+        ;;
+
+    init )
+        ./sspl_setup_init $*
+        exit $?
+        ;;
+
+    config )
+        ./sspl_config $*
+        exit $?
+        ;;
+
+    test )
+        ./sspl_test $*
+        exit $?
+        ;;
+
+    reset )
+        ./sspl_reset $*
+        exit $?
+        ;;
+
+    * )
+        usage
+        ;;
+esac

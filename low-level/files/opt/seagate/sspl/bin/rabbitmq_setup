@@ -1,0 +1,37 @@
+#!/bin/bash
+
+set -u -o pipefail
+
+##############################################################################
+# This script performs following operations
+# - Resets RabbitMQ. It does following in reset.
+#   It returns a RabbitMQ node to its virgin state. Removes the node from any
+#   cluster it belongs to, removes all data from the management database,
+#   such as configured users and vhosts, and deletes all persistent messages.
+# - Creates VHost, user and queues.
+# - Set permissions and tags for user.
+# IMP NOTE: For this script to work properly, RabbitMQ server must be running
+###############################################################################
+script_dir=$(dirname $0)
+
+# Import common constants
+source $script_dir/constants.sh
+
+# Reset RabbitMQ configuration
+/sbin/rabbitmqctl stop_app;
+/sbin/rabbitmqctl reset;
+/sbin/rabbitmqctl start_app;
+
+# Get product
+product=$(sed -nr 's/^product=([^,]+)$/\1/p' $SSPL_CONF | head -1)
+[ -z "$product" ] && echo "No product specified in $SSPL_CONF" && exit 1
+
+# Add required user and vhost to RabbitMQ. Set user permissions etc.
+echo "Creating required RABBITMQ configuration.... "
+/opt/seagate/sspl/low-level/framework/sspl_rabbitmq_reinit $product || {
+    reinit_err="$?";
+    echo -n "/opt/seagate/sspl/low-level/framework/sspl_rabbitmq_reinit failed ";
+    echo "with exit code ${reinit_err} for product $product";
+    exit 1;
+}
+

@@ -121,6 +121,12 @@ rm -f /etc/dbus-1/system.d/sspl-ll_dbus_policy.conf
 /opt/seagate/sspl/conf/sspl.conf.EES
 /opt/seagate/sspl/conf/sspl-ll.service.EES
 /opt/seagate/sspl/conf/sspl-ll.service.sample
+/opt/seagate/sspl/conf/setup.yaml
+/opt/seagate/sspl/bin/rabbitmq_setup
+/opt/seagate/sspl/bin/constants.sh
+/opt/seagate/sspl/bin/sspl_setup_init
+/opt/seagate/sspl/bin/sspl_setup
+
 
 %changelog
 * Fri Aug 10 2018 Ujjwal Lanjewar <ujjwal.lanjewar@seagate.com>

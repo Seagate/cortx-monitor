@@ -7,8 +7,7 @@ Requires=rabbitmq-server.service
 [Service]
 Type=notify
 PermissionsStartOnly=true
-ExecStartPre=/opt/seagate/sspl/sspl_init check
-ExecStartPre=/opt/seagate/sspl/sspl_init create -dp
+ExecStartPre=/opt/seagate/sspl/bin/sspl_setup_init check
 ExecStartPre=-/usr/bin/mkdir -p /var/run/sspl_ll
 ExecStartPre=/usr/bin/chown sspl-ll:root /var/run/sspl_ll
 ExecStart=/opt/seagate/sspl/low-level/framework/sspl_ll_d -c /etc/sspl.conf

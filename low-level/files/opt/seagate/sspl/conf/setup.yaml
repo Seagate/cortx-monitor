@@ -1,0 +1,21 @@
+SSPL:
+    post_install:
+         script: /opt/seagate/sspl/bin/sspl_setup
+         vars:
+            - post_install
+    init:
+         script: /opt/seagate/sspl/bin/sspl_setup
+         vars:
+            - init -r eos
+    config:
+         script: /opt/seagate/sspl/bin/sspl_setup
+         vars:
+            - config
+    test:
+         script: /opt/seagate/sspl/bin/sspl_setup
+         vars:
+            - test
+    reset:
+         script: /opt/seagate/sspl/bin/sspl_setup
+         vars:
+            - reset
