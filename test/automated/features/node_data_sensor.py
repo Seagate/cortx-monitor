@@ -5,7 +5,7 @@ import json
 import os
 import psutil
 import time
-
+import simulate_network_interface as mock_eth_interface
 # Add the top level directory to the sys.path to access classes
 topdir = os.path.dirname(os.path.dirname(os.path.dirname \
             (os.path.dirname(os.path.abspath(__file__)))))
@@ -166,25 +166,44 @@ def then_i_get_the_cpu_data_sensor_json_response_message(step):
 def then_i_get_the_if_data_sensor_json_response_message(step):
 
     if_data_msg = None
+    #create and shuffle mocked network interface to get network alerts
+    mock_eth_interface.shuffle_nw_interface()
     time.sleep(4)
     while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
         ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
         time.sleep(10)
         print("Received: {0}".format(ingressMsg))
-
         try:
             # Make sure we get back the message type that matches the request
             msg_type = ingressMsg.get("sensor_response_type")
-            if_data_msg = msg_type["if_data"]
-            break
+            if msg_type["info"]["resource_type"] == "node:interface:nw":
+                if_data_msg = msg_type
+                break
         except Exception as exception:
             time.sleep(4)
             print(exception)
 
     assert(if_data_msg is not None)
-    assert(if_data_msg.get("hostId") is not None)
-    assert(if_data_msg.get("localtime") is not None)
-    assert(if_data_msg.get("interfaces") is not None)
+    assert(if_data_msg.get("alert_type") is not None)
+    assert(if_data_msg.get("alert_id") is not None)
+    assert(if_data_msg.get("severity") is not None)
+    assert(if_data_msg.get("host_id") is not None)
+    assert(if_data_msg.get("info") is not None)
+    assert(if_data_msg.get("specific_info") is not None)
+
+    if_data_info = if_data_msg.get("info")
+    assert(if_data_info.get("site_id") is not None)
+    assert(if_data_info.get("node_id") is not None)
+    assert(if_data_info.get("cluster_id") is not None)
+    assert(if_data_info.get("rack_id") is not None)
+    assert(if_data_info.get("resource_type") is not None)
+    assert(if_data_info.get("event_time") is not None)
+    assert(if_data_info.get("resource_id") is not None)
+
+    if_data_specific_info = if_data_msg.get("specific_info")
+    assert(if_data_specific_info is not None)
+    assert(if_data_specific_info.get("localtime") is not None)
+    assert(if_data_specific_info.get("interfaces") is not None)
 
 @step(u'Then I get the disk space data sensor JSON response message')
 def then_i_get_the_disk_space_data_sensor_json_response_message(step):
