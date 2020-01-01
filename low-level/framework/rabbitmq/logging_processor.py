@@ -18,6 +18,7 @@
 import pika
 import os
 import json
+import time
 
 try:
    from systemd import journal
@@ -81,7 +82,9 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
         self._autoemailer = AutoEmail(conf_reader)
 
         # Configure RabbitMQ Exchange to receive messages
-        self._configure_exchange()
+        self._configure_exchange(retry=False)
+
+        self._wait_time = 10
 
     def run(self):
         """Run the module periodically on its own thread."""
@@ -104,7 +107,7 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
             if self.is_running() == True:
                 logger.info("LoggingProcessor ungracefully breaking out of run loop, restarting: %s"
                             % ae)
-                self._configure_exchange()
+                self._configure_exchange(retry=True)
                 self._scheduler.enter(10, self._priority, self.run, ())
             else:
                 logger.info("LoggingProcessor gracefully breaking out of run Loop, not restarting.")
@@ -175,9 +178,9 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
             # Acknowledge message was received
             ch.basic_ack(delivery_tag = method.delivery_tag)
         except Exception as ex:
-            logger.exception("_process_msg: %r" % ex)
+            logger.error("_process_msg: %r" % ex)
 
-    def _configure_exchange(self):
+    def _configure_exchange(self, retry=False):
         """Configure the RabbitMQ exchange with defaults available"""
         try:
             self._virtual_host  = self._conf_reader._get_value_with_default(self.LOGGINGPROCESSOR,
@@ -228,7 +231,10 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
                 )
 
         except Exception as ex:
-            logger.exception("_configure_exchange: %s" % ex)
+            logger.error("_configure_exchange: %s" % ex)
+            if retry:
+                time.sleep(self._wait_time)
+                self._configure_exchange(retry=True)
 
 
     def shutdown(self):

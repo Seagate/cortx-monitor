@@ -89,6 +89,8 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
         self._password = None
         self._channel = None
 
+        self._wait_time = 10
+
     def _load_schema(self, schema_file):
         """Loads a schema from a file and validates
 
@@ -115,7 +117,7 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
         super(RabbitMQingressProcessor, self).initialize_msgQ(msgQlist)
 
         # Configure RabbitMQ Exchange to receive messages
-        self._configure_exchange()
+        self._configure_exchange(retry=False)
 
         # Display values used to configure pika from the config file
         self._log_debug("RabbitMQ user: %s" % self._username)
@@ -142,8 +144,8 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
         except Exception as e:
             if self.is_running() == True:
                 logger.info("RabbitMQingressProcessor ungracefully breaking out of run loop, restarting.")
-                logger.exception("RabbitMQingressProcessor, Exception: %s" % str(e))
-                self._configure_exchange()
+                logger.error("RabbitMQingressProcessor, Exception: %s" % str(e))
+                self._configure_exchange(retry=True)
                 self._scheduler.enter(10, self._priority, self.run, ())
             else:
                 logger.info("RabbitMQingressProcessor gracefully breaking out of run Loop, not restarting.")
@@ -233,11 +235,11 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
             ch.basic_ack(delivery_tag=method.delivery_tag)
 
         except Exception as ex:
-            logger.exception("RabbitMQingressProcessor, _process_msg unrecognized message: %r" % ingressMsg)
+            logger.error("RabbitMQingressProcessor, _process_msg unrecognized message: %r" % ingressMsg)
             ack_msg = AckResponseMsg("Error Processing Msg", "Msg Handler Not Found", uuid).getJson()
             self._write_internal_msgQ(RabbitMQegressProcessor.name(), ack_msg)
 
-    def _configure_exchange(self):
+    def _configure_exchange(self, retry=False):
         """Configure the RabbitMQ exchange with defaults available"""
         # Make methods locally available
         get_value_with_default = self._conf_reader._get_value_with_default
@@ -283,7 +285,7 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
                     durable=False
                     )
             except Exception as e:
-                logger.exception(e)
+                logger.error(e)
             try:
                 self._channel.exchange_declare(
                     exchange=self._exchange_name,
@@ -291,15 +293,18 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
                     durable=False
                     )
             except Exception as e:
-                logger.exception(e)
+                logger.error(e)
             self._channel.queue_bind(
                 queue=self._queue_name,
                 exchange=self._exchange_name,
                 routing_key=self._routing_key
                 )
         except Exception as ex:
-            logger.exception("RabbitMQingressProcessor, \
+            logger.error("RabbitMQingressProcessor, \
                 _configure_exchange: %r" % ex)
+            if retry:
+                time.sleep(self._wait_time)
+                self._configure_exchange(retry=True)
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""

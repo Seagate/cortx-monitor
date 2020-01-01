@@ -86,9 +86,8 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
 
         # Configure RabbitMQ Exchange to transmit messages
         self._connection = None
+        self._wait_time = 10
         self._read_config()
-        self._get_connection()
-        self._get_ack_connection()
 
         # Display values used to configure pika from the config file
         self._log_debug("RabbitMQ user: %s" % self._username)
@@ -114,11 +113,11 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
 
         except Exception:
             # Log it and restart the whole process when a failure occurs
-            logger.exception("RabbitMQegressProcessor restarting")
+            logger.error("RabbitMQegressProcessor restarting")
 
             # Configure RabbitMQ Exchange to receive messages
-            self._get_connection()
-            self._get_ack_connection()
+            self._get_connection(host_addr=self._primary_rabbitmq_host, retry=True)
+            self._get_ack_connection(host_addr=self._primary_rabbitmq_host, retry=True)
 
         self._log_debug("Finished processing successfully")
 
@@ -186,9 +185,9 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
                 logger.info("         Routing IEMs to host: %s" % self._iem_route_addr)
                 logger.info("         Using IEM exchange: %s" % self._iem_route_exchange_name)
         except Exception as ex:
-            logger.exception("RabbitMQegressProcessor, _read_config: %r" % ex)
+            logger.error("RabbitMQegressProcessor, _read_config: %r" % ex)
 
-    def _get_connection(self, host_addr='localhost'):
+    def _get_connection(self, host_addr='localhost', retry=False):
         try:
             # ensure the rabbitmq queues/etc exist
             creds = pika.PlainCredentials(self._username, self._password)
@@ -207,7 +206,7 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
                     durable=False
                     )
             except Exception as e:
-                logger.exception(e)
+                logger.error(e)
 
             try:
                 self._channel.exchange_declare(
@@ -216,7 +215,7 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
                     durable=False
                     )
             except Exception as e:
-                logger.exception(e)
+                logger.error(e)
 
             self._channel.queue_bind(
                 queue=self._queue_name,
@@ -224,10 +223,12 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
                 routing_key=self._routing_key
                 )
         except Exception as ex:
-            logger.exception("RabbitMQegressProcessor, _get_connection: %r" % ex)
-            self._connection = None
+            logger.error("RabbitMQegressProcessor, _get_connection: %r" % ex)
+            if retry:
+                time.sleep(self._wait_time)
+                self._get_connection(host_addr=self._primary_rabbitmq_host, retry=True)
 
-    def _get_ack_connection(self, host_addr='localhost'):
+    def _get_ack_connection(self, host_addr='localhost', retry=False):
         try:
             # ensure the rabbitmq queues/etc exist
             creds = pika.PlainCredentials(self._username, self._password)
@@ -245,7 +246,7 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
                     durable=False
                     )
             except Exception as e:
-                logger.exception(e)
+                logger.error(e)
 
             try:
                 self._channel.exchange_declare(
@@ -254,7 +255,7 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
                     durable=False
                     )
             except Exception as e:
-                logger.exception(e)
+                logger.error(e)
 
             # Redirect Ack messages onto ack queue
             self._channel.queue_bind(
@@ -271,8 +272,10 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
                 )
 
         except Exception as ex:
-            logger.exception("RabbitMQegressProcessor, _get_connection: %r" % ex)
-            self._connection = None
+            logger.error("RabbitMQegressProcessor, _get_connection: %r" % ex)
+            if retry:
+                time.sleep(self._wait_time)
+                self._get_ack_connection(host_addr=self._primary_rabbitmq_host, retry=True)
 
     def _add_signature(self):
         """Adds the authentication signature to the message"""
@@ -330,8 +333,8 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
                 self._jsonMsg.get("message").get("actuator_response_type").get("thread_controller") is not None):
                 self._add_signature()
                 jsonMsg = json.dumps(self._jsonMsg).encode('utf8')
-                self._get_connection(host_addr=self._primary_rabbitmq_host)
-                self._get_ack_connection(host_addr=self._primary_rabbitmq_host)
+                self._get_connection(host_addr=self._primary_rabbitmq_host, retry=True)
+                self._get_ack_connection(host_addr=self._primary_rabbitmq_host, retry=True)
                 self._channel.basic_publish(exchange=self._exchange_name,
                                     routing_key=self._ack_routing_key,
                                     properties=msg_props,
@@ -342,7 +345,7 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
                 log_msg = self._jsonMsg.get("message").get("IEM_routing").get("log_msg")
                 self._log_debug("Routing IEM: %s" % log_msg)
                 if self._iem_route_addr != "":
-                    self._get_connection(host_addr=self._iem_route_addr)
+                    self._get_connection(host_addr=self._iem_route_addr, retry=True)
                     self._channel.basic_publish(exchange=self._iem_route_exchange_name,
                                     routing_key=self._routing_key,
                                     properties=msg_props,
@@ -352,7 +355,7 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
             else:
                 self._add_signature()
                 jsonMsg = json.dumps(self._jsonMsg).encode('utf8')
-                self._get_connection(host_addr=self._primary_rabbitmq_host)
+                self._get_connection(host_addr=self._primary_rabbitmq_host, retry=True)
                 self._channel.basic_publish(exchange=self._exchange_name,
                                     routing_key=self._routing_key,
                                     properties=msg_props,
@@ -366,7 +369,7 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
                 del(self._connection)
 
         except Exception as ex:
-            logger.exception("RabbitMQegressProcessor, _transmit_msg_on_exchange: %r" % ex)
+            logger.error("RabbitMQegressProcessor, _transmit_msg_on_exchange: %r" % ex)
             self._msg_sent_succesfull = False
 
     def shutdown(self):
