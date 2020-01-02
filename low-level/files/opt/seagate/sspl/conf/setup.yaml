@@ -14,7 +14,8 @@ SSPL:
     test:
          script: /opt/seagate/sspl/bin/sspl_setup
          vars:
-            - test
+            - test self
+            - test sanity
     reset:
          script: /opt/seagate/sspl/bin/sspl_setup
          vars:

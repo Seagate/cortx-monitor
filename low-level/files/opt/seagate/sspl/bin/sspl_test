@@ -1,0 +1,10 @@
+#!/bin/bash -e
+
+TEST_DIR=/opt/seagate/sspl/sspl_test
+if [ ! -d $TEST_DIR ]; then
+    echo "sspl-test is not installed. Skipping tests"
+    exit 1
+fi
+
+$TEST_DIR/run_tests.sh test $*
+exit $?

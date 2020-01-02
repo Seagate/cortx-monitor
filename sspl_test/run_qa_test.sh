@@ -59,7 +59,7 @@ trap cleanup 0 1 2 3 6 9 15
 
 execute_test()
 {
-    $sudo $script_dir/run_sspl-ll_tests.sh
+    $sudo $script_dir/run_sspl-ll_tests.sh $*
 }
 
 # lettuce_version=$(pip list 2>/dev/null | grep -wi lettuce | awk '{print $2}')
@@ -90,24 +90,21 @@ pre_requisites
 
 # Start mock API server
 echo "Starting mock server on 127.0.0.1:8090"
-#$script_dir/mock_server &
-./mock_server &
+$script_dir/mock_server &
 
 # IMP NOTE: Please make sure that SSPL conf file has
 # primary_controller_ip=127.0.0.1 and primary_controller_port=8090.
 # For sanity test SSPL should connect to mock server instead of real server.
 # Restart SSPL to re-read configuration
-#$sudo $script_dir/set_disk_threshold.sh
-$sudo ./set_disk_threshold.sh
+$sudo $script_dir/set_disk_threshold.sh
 echo "Restarting SSPL"
 systemctl restart sspl-ll
 echo "Waiting for SSPL to complete initialization of all the plugins"
-#$script_dir/rabbitmq_start_checker sspl-out actuator-resp-key
-./rabbitmq_start_checker sspl-out actuator-resp-key
+$script_dir/rabbitmq_start_checker sspl-out actuator-resp-key
 echo "Initialization completed. Starting tests"
 
 # Start tests
-execute_test
+execute_test $*
 retcode=$?
 
 # Restoring original cache data

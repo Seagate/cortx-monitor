@@ -30,7 +30,7 @@ case $role in
     $sudo $script_dir/run_dev_test.sh $sspl_install_path
     ;;
 "test")
-    $sudo $script_dir/run_qa_test.sh
+    $sudo $script_dir/run_qa_test.sh $2
     ;;
 *)
     echo "Unknown role supplied"
