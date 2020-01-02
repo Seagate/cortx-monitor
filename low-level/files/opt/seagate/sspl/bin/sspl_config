@@ -1,0 +1,123 @@
+#!/bin/bash
+
+set -u -o pipefail
+
+#################################################################
+# This script performs following operations
+# - Check if product is one of the enabled products
+# - Configures role in sspl.conf if supplied
+# - Executes sspl_reinit script
+#################################################################
+
+script_dir=$(dirname $0)
+
+# Import common constants
+source $script_dir/constants.sh
+
+SCRIPT_NAME=$(basename $0)
+DIR_NAME="/opt/seagate/sspl/"
+RSYSLOG_CONF="/etc/rsyslog.d/0-iemfwd.conf"
+LOGROTATE_CONF="/etc/logrotate.d/iem_messages"
+SSPL_CONFIGURED="/var/sspl/sspl-configured"
+
+usage() {
+    cat << EOF
+$SCRIPT_NAME [{config [-f] [-r <ssu|gw|cmu|vm>]]
+config options:
+    -f  Force reinitialization. Do not prompt
+    -r  Role to be configured on the current node
+EOF
+    exit 1
+}
+
+config_sspl() {
+    force=0
+    role=
+
+    while [ $# -gt 0 ]; do
+        case $1 in
+            -f )
+                force=1
+                ;;
+            -r )
+                [ $# -lt 2 ] && usage
+                shift 1 && role=$1
+                [[ $ROLES =~ (^| )$role($| ) ]] || usage
+                ;;
+            * )
+                usage
+                ;;
+        esac
+        shift 1
+    done
+
+    [ $(id -u) -ne 0 ] && echo "Run this command with root privileges!!" &&
+        exit 1
+    [ -f $SSPL_CONF ] || {
+        echo "Missing configuration!! Create $SSPL_CONF and rerun.";
+        exit 1;
+    }
+
+    [ -f $SSPL_CONFIGURED ] && {
+        [ "$force" = "1" ] && ans="y" || ans=;
+        while [ "$ans" != "y" -a "$ans" != "n" ]; do
+            echo -n "SSPL is already initialized. Reinitialize SSPL? [y/n]: ";
+            read ans;
+        done;
+        [ "$ans" != "y" ] && exit 1;
+        rm -f $SSPL_CONFIGURED;
+    }
+
+    # Get product
+    product=$(sed -nr 's/^product=([^,]+)$/\1/p' $SSPL_CONF | head -1)
+    [ -z "$product" ] && echo "No product specified in $SSPL_CONF" && exit 1
+
+    enabled_products=$(python $DIR_NAME/low-level/framework/base/sspl_constants.py)
+    [ -z "$enabled_products" ] && echo "No enabled products!" && exit 1
+    [[ $enabled_products =~ (^| )$product($| ) ]] || {
+        echo "Product '$product' is not in enabled products list: $enabled_products";
+        exit 1;
+    }
+
+    # Configure role
+    [ -z "$role" ] || sed -i "s/^setup=.*/setup=$role/g" $SSPL_CONF
+
+    # Add sspl-ll user to required groups and sudoers file etc.
+    echo "Initializing SSPL configuration ... "
+    /opt/seagate/sspl/low-level/framework/sspl_reinit $product || {
+        reinit_err="$?";
+        echo -n "/opt/seagate/sspl/low-level/framework/sspl_reinit failed ";
+        echo "with exit code ${reinit_err} for product $product";
+        exit 1;
+    }
+
+    echo "SSPL configured successfully."
+    mkdir -p $(dirname $SSPL_CONFIGURED)
+
+    touch $SSPL_CONFIGURED
+
+    # IEM configuration
+    # Configure log file path in Rsyslog and logrotate configuration file
+    IFS='=' lfp=`grep log_file_path $SSPL_CONF`; datapath=( $lfp )
+    LOG_FILE_PATH=`echo ${datapath[1]}`
+    if [ -z "$LOG_FILE_PATH" ]
+    then
+        sed -i "s|File=.*|File=\/var/sspl/data/iem/iem_messages\"|g" $RSYSLOG_CONF
+    else
+        sed -i "s|File=.*|File=\"${LOG_FILE_PATH}\"|g" $RSYSLOG_CONF
+        sed -i "1 s|^.*$|${LOG_FILE_PATH}|g" /opt/seagate/sspl/low-level/files/etc/logrotate.d/iem_messages
+    fi
+    cp /opt/seagate/sspl/low-level/files/etc/logrotate.d/iem_messages $LOGROTATE_CONF
+}
+
+cmd="config"
+case $cmd in
+
+    config )
+        config_sspl $*
+        ;;
+
+    * )
+        usage
+        ;;
+esac

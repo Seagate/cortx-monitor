@@ -78,22 +78,11 @@ chown -R sspl-ll /var/sspl/
 [ -f /etc/rsyslog.d/0-iemfwd.conf ] ||
     cp /opt/seagate/sspl/low-level/files/etc/rsyslog.d/0-iemfwd.conf /etc/rsyslog.d/0-iemfwd.conf
 
-
-# Copy init script
-[ -f /opt/seagate/sspl/sspl_init ] ||
-    ln -s /opt/seagate/sspl/low-level/framework/sspl_init /opt/seagate/sspl/sspl_init
-
 # In case of upgrade start sspl-ll after upgrade
 if [ "$1" == "2" ]; then
     echo "Restarting sspl-ll service..."
     systemctl restart sspl-ll.service 2> /dev/null
 fi
-
-mkdir -p /var/log/journal
-systemctl restart systemd-journald
-
-# Have systemd reload
-systemctl daemon-reload
 
 if [ "$1" = "1" ]; then
     # Enable services to start at boot
@@ -126,6 +115,7 @@ rm -f /etc/dbus-1/system.d/sspl-ll_dbus_policy.conf
 /opt/seagate/sspl/bin/constants.sh
 /opt/seagate/sspl/bin/sspl_setup_init
 /opt/seagate/sspl/bin/sspl_setup
+/opt/seagate/sspl/bin/sspl_config
 
 
 %changelog
