@@ -72,11 +72,16 @@ chown -R sspl-ll /var/sspl/
 # The provisioner is supposed to copy the appropriate conf file based
 # on product/env and start SSPL with it.
 # TODO: Disable this default copy once the provisioners are ready.
-[ -f /etc/sspl.conf ] || cp /opt/seagate/sspl/conf/sspl.conf.EES /etc/sspl.conf
+#[ -f /etc/sspl.conf ] || cp /opt/seagate/sspl/conf/sspl.conf.EES /etc/sspl.conf
 
 # Copy rsyslog configuration
-[ -f /etc/rsyslog.d/0-iemfwd.conf ] ||
-    cp /opt/seagate/sspl/low-level/files/etc/rsyslog.d/0-iemfwd.conf /etc/rsyslog.d/0-iemfwd.conf
+#[ -f /etc/rsyslog.d/0-iemfwd.conf ] ||
+#    cp /opt/seagate/sspl/low-level/files/etc/rsyslog.d/0-iemfwd.conf /etc/rsyslog.d/0-iemfwd.conf
+
+
+# Copy init script
+#[ -f /opt/seagate/sspl/sspl_init ] ||
+#    ln -s /opt/seagate/sspl/low-level/framework/sspl_init /opt/seagate/sspl/sspl_init
 
 # In case of upgrade start sspl-ll after upgrade
 if [ "$1" == "2" ]; then
@@ -84,11 +89,17 @@ if [ "$1" == "2" ]; then
     systemctl restart sspl-ll.service 2> /dev/null
 fi
 
-if [ "$1" = "1" ]; then
+#mkdir -p /var/log/journal
+#systemctl restart systemd-journald
+
+# Have systemd reload
+#systemctl daemon-reload
+
+#if [ "$1" = "1" ]; then
     # Enable services to start at boot
-    systemctl enable rabbitmq-server
-    echo "Installation complete !! Run /opt/seagate/sspl/sspl_init to configure SSPL"
-fi
+#    systemctl enable rabbitmq-server
+#    echo "Installation complete !! Run /opt/seagate/sspl/sspl_init to configure SSPL"
+#fi
 
 %preun
 # Remove configuration in case of uninstall
@@ -116,7 +127,7 @@ rm -f /etc/dbus-1/system.d/sspl-ll_dbus_policy.conf
 /opt/seagate/sspl/bin/sspl_setup_init
 /opt/seagate/sspl/bin/sspl_setup
 /opt/seagate/sspl/bin/sspl_config
-
+/opt/seagate/sspl/bin/sspl_post_install
 
 %changelog
 * Fri Aug 10 2018 Ujjwal Lanjewar <ujjwal.lanjewar@seagate.com>

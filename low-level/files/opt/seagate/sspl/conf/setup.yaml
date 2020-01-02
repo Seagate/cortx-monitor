@@ -2,7 +2,7 @@ SSPL:
     post_install:
          script: /opt/seagate/sspl/bin/sspl_setup
          vars:
-            - post_install
+            - post_install -p EES
     init:
          script: /opt/seagate/sspl/bin/sspl_setup
          vars:
