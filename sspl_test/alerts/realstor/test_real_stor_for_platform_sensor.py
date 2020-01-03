@@ -27,7 +27,7 @@ def test_real_stor_sensor_current(agrs):
                 break
         except Exception as exception:
             time.sleep(4)
-            print exception
+            print(exception)
 
     assert(current_module_actuator_msg is not None)
     assert(current_module_actuator_msg.get("alert_type") is not None)
@@ -66,7 +66,7 @@ def test_real_stor_sensor_voltage(agrs):
                 break
         except Exception as exception:
             time.sleep(4)
-            print exception
+            print(exception)
 
     assert(voltage_module_actuator_msg is not None)
     assert(voltage_module_actuator_msg.get("alert_type") is not None)
@@ -105,7 +105,7 @@ def test_real_stor_sensor_temperature(agrs):
                 break
         except Exception as exception:
             time.sleep(4)
-            print exception
+            print(exception)
 
     assert(temperature_module_actuator_msg is not None)
     assert(temperature_module_actuator_msg.get("alert_type") is not None)

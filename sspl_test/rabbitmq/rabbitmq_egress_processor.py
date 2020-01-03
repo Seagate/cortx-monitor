@@ -18,10 +18,9 @@ import json
 import pika
 import os
 import time
-#TODO Need to revisit to remove dependency on SSPL code
-from framework.base.module_thread import ScheduledModuleThread
-from framework.base.internal_msgQ import InternalMsgQ
-from framework.utils.service_logging import logger
+from sspl_test.framework.base.module_thread import ScheduledModuleThread
+from sspl_test.framework.base.internal_msgQ import InternalMsgQ
+from sspl_test.framework.utils.service_logging import logger
 
 import ctypes
 try:
@@ -211,7 +210,7 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
             try:
                 self._channel.exchange_declare(
                     exchange=self._exchange_name,
-                    type='topic',
+                    exchange_type='topic',
                     durable=False
                     )
             except Exception as e:
@@ -249,7 +248,7 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
             try:
                 self._channel.exchange_declare(
                     exchange=self._exchange_name,
-                    type='topic',
+                    exchange_type='topic',
                     durable=False
                     )
             except Exception as e:

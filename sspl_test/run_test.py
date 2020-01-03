@@ -25,10 +25,8 @@ import argparse
 
 # Adding sspl and sspl_test path
 test_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.append(os.path.join(0,test_path))
-sys.path.append(os.path.join(1,test_path,'low-level'))
+sys.path.append(os.path.join(test_path))
 
-from sspl_test.payload import *
 from sspl_test.common import TestFailed, init_rabbitMQ_msg_processors, stop_rabbitMQ_msg_processors
 
 def tmain(argp, argv):

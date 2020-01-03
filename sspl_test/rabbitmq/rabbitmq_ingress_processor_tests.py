@@ -20,16 +20,11 @@ import os
 
 from jsonschema import Draft3Validator
 from jsonschema import validate
-from lettuce import *
 
 from pika import exceptions
-#TODO Need to revisit to remove dependency on SSPL code
-from framework.base.module_thread import ScheduledModuleThread
-from framework.base.internal_msgQ import InternalMsgQ
-from framework.utils.service_logging import logger
-
-# Import message handlers to hand off messages
-from message_handlers.logging_msg_handler import LoggingMsgHandler
+from sspl_test.framework.base.module_thread import ScheduledModuleThread
+from sspl_test.framework.base.internal_msgQ import InternalMsgQ
+from sspl_test.framework.utils.service_logging import logger
 
 import ctypes
 SSPL_SEC = ctypes.cdll.LoadLibrary('libsspl_sec.so.0')

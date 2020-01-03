@@ -29,7 +29,7 @@ def test_real_stor_sideplane_expander_sensor(agrs):
                 break
         except Exception as exception:
             time.sleep(4)
-            print exception
+            print(exception)
 
     assert(sideplane_expander_sensor_msg is not None)
     assert(sideplane_expander_sensor_msg.get("alert_type") is not None)

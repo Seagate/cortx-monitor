@@ -29,7 +29,7 @@ def test_real_stor_disk_sensor(agrs):
                 break
         except Exception as exception:
             time.sleep(4)
-            print exception
+            print(exception)
 
     assert(disk_sensor_msg is not None)
     assert(disk_sensor_msg.get("alert_type") is not None)

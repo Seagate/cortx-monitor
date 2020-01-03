@@ -29,7 +29,7 @@ def test_real_stor_fan_module_actuator(agrs):
                 break
         except Exception as exception:
             time.sleep(4)
-            print exception
+            print(exception)
 
     assert(fan_module_actuator_msg is not None)
     assert(fan_module_actuator_msg.get("alert_type") is not None)

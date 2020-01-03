@@ -29,7 +29,7 @@ def test_real_stor_psu_actuator(agrs):
                 break
         except Exception as exception:
             time.sleep(4)
-            print exception
+            print(exception)
 
     assert(psu_actuator_msg is not None)
     assert(psu_actuator_msg.get("host_id") is not None)
