@@ -140,15 +140,15 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
             os.makedirs(self.cache_dir_path)
         logger.info("Using cache dir: {0}".format(self.cache_dir_path))
 
-        index_file_name = os.path.join(self.cache_dir_path, self.INDEX_FILE)
-        self.index_file = self._get_file(index_file_name)
+        self.index_file_name = os.path.join(self.cache_dir_path, self.INDEX_FILE)
+        self.index_file = self._get_file(self.index_file_name)
 
-        if os.path.getsize(self.index_file.name) == 0:
+        if os.path.getsize(self.index_file_name) == 0:
             self._write_index_file(0)
         # Now self.index_file has a valid sel index in it
 
-        list_file_name = os.path.join(self.cache_dir_path, self.LIST_FILE)
-        self.list_file = self._get_file(list_file_name)
+        self.list_file_name = os.path.join(self.cache_dir_path, self.LIST_FILE)
+        self.list_file = self._get_file(self.list_file_name)
 
     def _write_index_file(self, index):
         if not isinstance(index, int):
@@ -219,13 +219,14 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
             logger.error(msg)
             raise Exception(msg)
 
-        # os.rename() is an atomic operation on POSIX, which means that even
-        # if we crash the SEL list in self.list_file will always be
-        # in a consistent state.
-        list_file_name = self.list_file.name
-        os.rename(tmp_name, list_file_name)
+        # os.rename() is required to be atomic on POSIX,
+        # (from here: https://docs.python.org/2/library/os.html#os.rename)
+        # which means that even if the current python process crashes
+        # the SEL list in the self.list_file_name file
+        # will always be in a consistent state.
+        os.rename(tmp_name, self.list_file_name)
         self.list_file.close()
-        self.list_file = open(list_file_name, self.UPDATE_ONLY_MODE)
+        self.list_file = os.fdopen(tmp_fd, self.UPDATE_ONLY_MODE)
 
     def _check_and_clear_sel(self):
         """ Clear SEL Table if SEL used memory seen above threshold
@@ -302,7 +303,7 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
             try:
                 # Check for a change in ipmi sel list and notify the node data
                 # msg handler
-                if os.path.getsize(self.list_file.name) != 0:
+                if os.path.getsize(self.list_file_name) != 0:
                     # If the SEL list file is not empty, that means that some
                     # of the processing from the last iteration is incomplete.
                     # Complete that before getting the new SEL events.
