@@ -11,7 +11,7 @@ SCRIPT_NAME=$(basename $0)
 
 usage() {
     cat << EOF
-$SCRIPT_NAME [post_install[-p <EES>]|init [-dp] [-r <ssu|gw|cmu|vm>]|config [-f] [-r <ssu|gw|cmu|vm>]|test [self|sanity]|reset]
+$SCRIPT_NAME [post_install[-p <EES>]|init [-dp] [-r <ssu|gw|cmu|vm>]|config [-f] [-r <ssu|gw|cmu|vm>]|test [self|sanity]|reset [hard -p <EES>|soft]]
 init options:
     -dp Create configured datapath
     -r  Role to be configured on the current node
@@ -20,6 +20,8 @@ config options:
     -r  Role to be configured on the current node
 post_install options:
     -p Product to be configured
+reset options:
+    -p product to be configured
 EOF
     exit 1
 }

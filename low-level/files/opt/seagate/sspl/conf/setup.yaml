@@ -19,4 +19,5 @@ SSPL:
     reset:
          script: /opt/seagate/sspl/bin/sspl_setup
          vars:
-            - reset
+            - reset hard -p EES
+            - reset soft

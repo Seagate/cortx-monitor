@@ -129,6 +129,7 @@ rm -f /etc/dbus-1/system.d/sspl-ll_dbus_policy.conf
 /opt/seagate/sspl/bin/sspl_config
 /opt/seagate/sspl/bin/sspl_post_install
 /opt/seagate/sspl/bin/sspl_test
+/opt/seagate/sspl/bin/sspl_reset
 
 %changelog
 * Fri Aug 10 2018 Ujjwal Lanjewar <ujjwal.lanjewar@seagate.com>

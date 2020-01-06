@@ -1,0 +1,72 @@
+#!/bin/bash
+
+# Stop the script if any command fails
+set -u -o pipefail
+
+script_dir=$(dirname $0)
+
+# Import common constants
+source $script_dir/constants.sh
+
+SCRIPT_NAME=$(basename $0)
+
+IFS='=' dp=`grep data_path $SSPL_CONF`; datapath=( $dp )
+SSPL_DATA_DIR=`echo ${datapath[1]}`
+
+IFS='=' lfp=`grep log_file_path $SSPL_CONF`; datapath=( $lfp )
+IEM_FILE_PATH=`echo ${datapath[1]}`
+
+usage() {
+    cat << EOF
+$SCRIPT_NAME [hard [-p <EES>]|soft]
+hard options:
+    -p product to be configured
+EOF
+    exit 1
+}
+
+hard_reset()
+{
+    PRODUCT=EES
+
+    while [ $# -gt 0 ]; do
+        case $1 in
+            -p )
+                [ $# -lt 2 ] && usage
+                shift 1 && PRODUCT=$1
+                [[ $PRODUCTS =~ (^| )$PRODUCT($| ) ]] || usage
+                ;;
+            * )
+                usage
+                ;;
+        esac
+        shift 1
+    done
+
+    # Reset sspl_conf
+    cp $SSPL_BASE_DIR/conf/sspl.conf.$PRODUCT $SSPL_CONF
+}
+
+soft_reset()
+{
+    # Remove .json files and truncate iem log file
+    find $SSPL_DATA_DIR -type f -name "*.json" -exec rm -f {} \;
+    truncate -s 0 $IEM_FILE_PATH
+}
+
+cmd=
+[ $# -ge 1 ] && cmd=$1 && shift 1
+
+case $cmd in
+    hard )
+        hard_reset $*
+        ;;
+
+    soft )
+        soft_reset $*
+        ;;
+
+    * )
+        usage
+        ;;
+esac
