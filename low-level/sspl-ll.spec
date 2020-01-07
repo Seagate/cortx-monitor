@@ -61,6 +61,11 @@ id -u sspl-ll &>/dev/null || {
             -c "User account to run the sspl-ll service"
 }
 
+# take backup of cache folder if exists
+mkdir -p /opt/seagate/backup/%{version}
+[ -f /etc/sspl.conf ] && cp /etc/sspl.conf /opt/seagate/backup/%{version}/sspl.conf
+[ -d /var/sspl ] && cp -R /var/sspl /opt/seagate/backup/%{version}/
+
 # Create ras persistent cache folder
 # TODO: In production this directory will be created by provisioner
 # Remove this code when provisioner part is ready.
@@ -72,12 +77,19 @@ chown -R sspl-ll /var/sspl/
 # The provisioner is supposed to copy the appropriate conf file based
 # on product/env and start SSPL with it.
 # TODO: Disable this default copy once the provisioners are ready.
-#[ -f /etc/sspl.conf ] || cp /opt/seagate/sspl/conf/sspl.conf.EES /etc/sspl.conf
+
+# run conf_diff.py script
+[ -f /opt/seagate/sspl/low-level/framework/base/sspl_conf_adopt.py ] && python /opt/seagate/sspl/low-level/framework/base/sspl_conf_adopt.py
+
+# restore /tmp/sspl_tmp.conf (its updated from previuos version of /etc/sspl.conf & new keys added in sspl.conf.EES)
+[ -f /tmp/sspl_tmp.conf ] && cp /tmp/sspl_tmp.conf /etc/sspl.conf
+
+# restore of data & iem folder
+[ -d /opt/seagate/backup/%{version}/sspl ] && cp -R /opt/seagate/backup/%{version}/sspl/* /var/sspl/
 
 # Copy rsyslog configuration
 #[ -f /etc/rsyslog.d/0-iemfwd.conf ] ||
 #    cp /opt/seagate/sspl/low-level/files/etc/rsyslog.d/0-iemfwd.conf /etc/rsyslog.d/0-iemfwd.conf
-
 
 # Copy init script
 [ -f /opt/seagate/sspl/sspl_init ] ||
