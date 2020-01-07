@@ -38,6 +38,7 @@ kill_mock_server()
 
 cleanup()
 {
+    deleteDummyInterface
     # Again Changing port to default which is 80
     port=$(sed -n -e '/primary_controller_port/ s/.*\= *//p' /etc/sspl.conf)
     if [ $port == "5100" ]
@@ -87,6 +88,11 @@ pre_requisites
 # Start mock API server
 echo "Starting mock server on 127.0.0.1:5100"
 $script_dir/mock_server &
+
+deleteDummyInterface()
+{
+    ip link delete dummy1
+}
 
 # IMP NOTE: Please make sure that SSPL conf file has
 # primary_controller_ip=127.0.0.1 and primary_controller_port=5100.
