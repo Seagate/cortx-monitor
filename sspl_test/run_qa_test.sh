@@ -24,14 +24,10 @@ pre_requisites()
 {
     # Backing up original persistence data
     $sudo rm -rf /var/sspl/orig-data
-    $sudo mv /var/sspl/data /var/sspl/orig-data
-
-    # Need empty persitence cache dir
-    $sudo mkdir -p /var/sspl/data
-
-    if [ -f "/var/sspl/orig-data/iem" ]; then
-        $sudo cp /var/sspl/orig-data/iem /var/sspl/data/iem
-    fi
+    $sudo mkdir -p /var/sspl/orig-data
+    $sudo find /var/sspl -maxdepth 2 -type d -path '/var/sspl/data/*' -not -name 'iem'  -exec bash -c 'mv -f ${0} ${0/data/orig-data}/' {} \;
+    $sudo mkdir -p /var/sspl/orig-data/iem
+    $sudo mv /var/sspl/data/iem/last_processed_msg_time /var/sspl/orig-data/iem/last_processed_msg_time
 }
 
 kill_mock_server()
@@ -108,7 +104,9 @@ execute_test $*
 retcode=$?
 
 # Restoring original cache data
-$sudo rm -rf /var/sspl/data
-$sudo mv /var/sspl/orig-data /var/sspl/data
+$sudo find /var/sspl -maxdepth 2 -type d -path '/var/sspl/data/*' -not -name 'iem'  -exec bash -c 'rm -rf ${0}' {} \;
+$sudo find /var/sspl -maxdepth 2 -type d -path '/var/sspl/orig-data/*' -not -name 'iem'  -exec bash -c 'mv -f ${0} ${0/orig-data/data}/' {} \;
+$sudo mv /var/sspl/orig-data/iem/last_processed_msg_time /var/sspl/data/iem/last_processed_msg_time
+$sudo rm -rf /var/sspl/orig-data
 
 exit $retcode
