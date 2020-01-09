@@ -137,9 +137,9 @@ bind_port=1620
 
 [STORAGE_ENCLOSURE]
 primary_controller_ip=127.0.0.1
-primary_controller_port=8090
+primary_controller_port=5100
 secondary_controller_ip=127.0.0.1
-secondary_controller_port=8090
+secondary_controller_port=5100
 user=xxxxx
 password=xxxxx
 mgmt_interface=cliapi
