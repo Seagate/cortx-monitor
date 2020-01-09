@@ -121,6 +121,16 @@ create_req() {
 }
 
 config_sspl() {
+
+    # steps from %post section of sspl-ll.spec
+
+    # Copy sspl conf
+    [ -f /etc/sspl.conf ] || cp /opt/seagate/sspl/conf/sspl.conf.EES /etc/sspl.conf
+
+    # Copy rsyslog configuration
+    [ -f /etc/rsyslog.d/0-iemfwd.conf ] ||
+       cp /opt/seagate/sspl/low-level/files/etc/rsyslog.d/0-iemfwd.conf /etc/rsyslog.d/0-iemfwd.conf
+
     force=0
     role=
     rabbitmq_reset=1

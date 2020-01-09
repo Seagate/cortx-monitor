@@ -80,8 +80,8 @@ chown -R sspl-ll /var/sspl/
 
 
 # Copy init script
-#[ -f /opt/seagate/sspl/sspl_init ] ||
-#    ln -s /opt/seagate/sspl/low-level/framework/sspl_init /opt/seagate/sspl/sspl_init
+[ -f /opt/seagate/sspl/sspl_init ] ||
+    ln -s /opt/seagate/sspl/low-level/framework/sspl_init /opt/seagate/sspl/sspl_init
 
 # In case of upgrade start sspl-ll after upgrade
 if [ "$1" == "2" ]; then
