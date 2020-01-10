@@ -372,7 +372,7 @@ class RealStorEnclosure(StorageEnclosure):
             return
 
         if response.status_code != self.ws.HTTP_OK:
-            logger.error("{0}:: http request {1} polling system status failed"
+            logger.info("{0}:: http request {1} polling system status failed"
                 " with http err {2}".format(self.EES_ENCL, url, \
                 response.status_code))
             return

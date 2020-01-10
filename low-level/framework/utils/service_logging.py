@@ -26,7 +26,6 @@ RECONNECT_DELAY_INTERVAL_SECONDS = 1
 
 LOG_CRITICAL = "CRITICAL"
 LOG_ERROR    = "ERROR"
-LOG_WARN     = "WARN"
 LOG_WARNING  = "WARNING"
 LOG_INFO     = "INFO"
 LOG_DEBUG    = "DEBUG"
@@ -36,7 +35,6 @@ LOG_NOTSET   = "NOTSET"
 LOGLEVEL_NAME_TO_LEVEL_DICT = {
     LOG_CRITICAL: logging.CRITICAL,
     LOG_ERROR: logging.ERROR,
-    LOG_WARN: logging.WARNING,
     LOG_WARNING: logging.WARNING,
     LOG_INFO: logging.INFO,
     LOG_DEBUG: logging.DEBUG,
@@ -44,18 +42,18 @@ LOGLEVEL_NAME_TO_LEVEL_DICT = {
 }
 
 
-def init_logging(dcs_service_name, log_level=LOG_DEBUG):
+def init_logging(dcs_service_name, log_level=LOG_INFO):
     """Initialize logging to log to syslog"""
-    
+
     warning_message = None
     if log_level not in LOGLEVEL_NAME_TO_LEVEL_DICT.keys():
         warning_message = str(
             "Invalid log_level '{0}' specified. Using "
-            "default log_level '{1}' instead.".format(log_level, LOG_DEBUG))
-        log_level = LOG_DEBUG
-    logger.setLevel(LOGLEVEL_NAME_TO_LEVEL_DICT[log_level])    
+            "default log_level '{1}' instead.".format(log_level, LOG_INFO))
+        log_level = LOG_INFO
+    logger.setLevel(LOGLEVEL_NAME_TO_LEVEL_DICT[log_level])
     num_attempts = 1
-   
+
     while True:
         try:
             handler = logging.handlers.SysLogHandler(address='/dev/log')

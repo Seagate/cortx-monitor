@@ -195,7 +195,7 @@ class NodeData(Debug):
         nws = os.popen("ip --br a | awk '{print $1, $2}'").read().split('\n')[:-1]
         for nw in nws:
             nw_dict[nw.split(' ')[0]] = nw.split(' ')[1]
-        logger.info("network info going is : {}".format(nw_dict))
+        logger.debug("network info going is : {}".format(nw_dict))
         return nw_dict
 
     def _get_disk_space_alert_data(self):

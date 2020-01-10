@@ -18,6 +18,8 @@ cluster_id=001
 site_id=001
 rack_id=001
 node_id=001
+# Possible log levels are CRITICAL, ERROR, WARNING, INFO, DEBUG and NOTSET
+log_level=INFO
 
 [RABBITMQINGRESSPROCESSOR]
 virtual_host=SSPL

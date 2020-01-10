@@ -75,6 +75,7 @@ SYS_INFORMATION = 'SYSTEM_INFORMATION'
 OPER_SYSTEM     = 'operating_system'
 PRODUCT_NAME    = 'product'
 SETUP           = 'setup'
+LOG_LEVEL       = 'log_level'
 
 # Instantiate the internal ThreadController. Global so the shutdown callback
 #  method can use it to properly halt all running threads.
@@ -520,7 +521,8 @@ if __name__ == "__main__":
 
     # Initialize logging
     try:
-        init_logging("SSPL-LL", "DEBUG")
+        logging_level = conf_reader._get_value_with_default(SYS_INFORMATION, LOG_LEVEL, "INFO")
+        init_logging("SSPL-LL", logging_level)
 
     except Exception as err:
         # We don't have logger since it threw an exception, use generic 'print'

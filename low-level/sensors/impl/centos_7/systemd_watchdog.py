@@ -209,7 +209,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                     if self._monitored_services:
                         if unit_name not in self._monitored_services:
                             continue
-                    logger.info("    " + unit_name)
+                    logger.debug("    " + unit_name)
 
                     # Retrieve an object representation of the systemd unit
                     unit = self._bus.get_object('org.freedesktop.systemd1',
