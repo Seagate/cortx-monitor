@@ -40,9 +40,9 @@ cleanup()
 {
     # Again Changing port to default which is 80
     port=$(sed -n -e '/primary_controller_port/ s/.*\= *//p' /etc/sspl.conf)
-    if [ $port == "8090" ]
+    if [ $port == "5100" ]
     then
-        sed -i 's/primary_controller_port=8090/primary_controller_port=80/g' /etc/sspl.conf
+        sed -i 's/primary_controller_port=5100/primary_controller_port=80/g' /etc/sspl.conf
     fi
 
     echo "Stopping mock server"
@@ -74,22 +74,22 @@ flask_version=$(pip list 2>/dev/null | grep -wi flask | awk '{print $2}')
 }
 
 # check the port configured in /etc/sspl.conf
-# change the port to 8090 as mock_server runs on 8090
+# change the port to 5100 as mock_server runs on 5100
 port=$(sed -n -e '/primary_controller_port/ s/.*\= *//p' /etc/sspl.conf)
 if [ $port == "80" ]
 then
-    sed -i 's/primary_controller_port=80/primary_controller_port=8090/g' /etc/sspl.conf
+    sed -i 's/primary_controller_port=80/primary_controller_port=5100/g' /etc/sspl.conf
 fi
 
 # Setting pre-requisites first
 pre_requisites
 
 # Start mock API server
-echo "Starting mock server on 127.0.0.1:8090"
+echo "Starting mock server on 127.0.0.1:5100"
 $script_dir/mock_server &
 
 # IMP NOTE: Please make sure that SSPL conf file has
-# primary_controller_ip=127.0.0.1 and primary_controller_port=8090.
+# primary_controller_ip=127.0.0.1 and primary_controller_port=5100.
 # For sanity test SSPL should connect to mock server instead of real server.
 # Restart SSPL to re-read configuration
 $sudo $script_dir/set_disk_threshold.sh
