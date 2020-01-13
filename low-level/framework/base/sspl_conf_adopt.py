@@ -1,5 +1,13 @@
 from ConfigParser import ConfigParser
 
+class EqualsSpaceRemover:
+    output_file = None
+    def __init__(self, new_output_file):
+        self.output_file = new_output_file
+
+    def write(self, diffgen):
+        self.output_file.write(diffgen.replace( " = ", "=", 1 ))
+
 class ConfDiff(object):
 
     def __init__(self, conf_file1, conf_file2):
@@ -25,4 +33,4 @@ if __name__ == '__main__':
     print('writing destination conf file to tmp dir.')
     conf_diff.update_sub_section_diff()
     with open('/tmp/sspl_tmp.conf', 'w') as configfile:
-        conf_diff.conf_file2_dict.write(configfile)
+        conf_diff.conf_file2_dict.write(EqualsSpaceRemover(configfile))
