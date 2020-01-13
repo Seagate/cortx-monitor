@@ -26,6 +26,7 @@ import logging
 import Queue
 import sys
 import os
+import psutil
 from threading import Thread
 from sspl_test.default import *
 
@@ -146,6 +147,31 @@ def _run_thread_capture_errors(curr_module, msgQlist, conf_reader, product):
         for name, other_module in world.sspl_modules.iteritems():
             if other_module is not curr_module:
                 other_module.shutdown()
+
+# Common method used by test to check sspl service state
+def check_sspl_ll_is_running():
+    # Check that the state for sspl service is active
+    found = False
+
+    # Support for python-psutil < 2.1.3
+    for proc in psutil.process_iter():
+        if proc.name == "sspl_ll_d" and \
+           proc.status in (psutil.STATUS_RUNNING, psutil.STATUS_SLEEPING):
+               found = True
+
+    # Support for python-psutil 2.1.3+
+    if found == False:
+        for proc in psutil.process_iter():
+            pinfo = proc.as_dict(attrs=['cmdline', 'status'])
+            if "sspl_ll_d" in str(pinfo['cmdline']) and \
+                pinfo['status'] in (psutil.STATUS_RUNNING, psutil.STATUS_SLEEPING):
+                    found = True
+
+    assert found == True
+
+    # Clear the message queue buffer out
+    while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
+        world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
 
 def stop_rabbitMQ_msg_processors():
     """Shuts down rabbitmq threads and terminates tests"""

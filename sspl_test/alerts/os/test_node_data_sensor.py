@@ -1,13 +1,13 @@
 import json
 import os
-import psutil
 from time import sleep
 import sys
-import dummy_interface
+import simulate_network_interface as mock_eth_interface
 
 from sspl_test.default import *
 from sspl_test.rabbitmq.rabbitmq_ingress_processor_tests import RabbitMQingressProcessorTests
 from sspl_test.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
+from sspl_test.common import check_sspl_ll_is_running
 
 def init(args):
     pass
@@ -17,7 +17,7 @@ def test_if_data_sensor(args):
     node_data_sensor_message_request("node:interface:nw")
     if_data_msg = None
     #create dummy interface to get network alerts
-    dummy_interface.create_interface()
+    mock_eth_interface.shuffle_nw_interface()
     sleep(4)
     while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
         ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
@@ -178,30 +178,6 @@ def test_host_update_data_sensor(args):
     assert(specific_info.get("bootTime") is not None)
     assert(specific_info.get("processCount") is not None)
     assert(specific_info.get("localtime") is not None)
-
-def check_sspl_ll_is_running():
-    # Check that the state for sspl service is active
-    found = False
-
-    # Support for python-psutil < 2.1.3
-    for proc in psutil.process_iter():
-        if proc.name == "sspl_ll_d" and \
-           proc.status in (psutil.STATUS_RUNNING, psutil.STATUS_SLEEPING):
-               found = True
-
-    # Support for python-psutil 2.1.3+
-    if found == False:
-        for proc in psutil.process_iter():
-            pinfo = proc.as_dict(attrs=['cmdline', 'status'])
-            if "sspl_ll_d" in str(pinfo['cmdline']) and \
-                pinfo['status'] in (psutil.STATUS_RUNNING, psutil.STATUS_SLEEPING):
-                    found = True
-
-    assert found == True
-
-    # Clear the message queue buffer out
-    while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
-        world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
 
 def node_data_sensor_message_request(sensor_type):
     egressMsg = {

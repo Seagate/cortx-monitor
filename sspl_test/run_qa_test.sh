@@ -40,7 +40,7 @@ kill_mock_server()
 
 cleanup()
 {
-    deleteDummyInterface
+    deleteMockedInterface
     # Again Changing port to default which is 80
     port=$(sed -n -e '/primary_controller_port/ s/.*\= *//p' /etc/sspl.conf)
     if [ $port == "$MOCK_SERVER_PORT" ]
@@ -91,9 +91,9 @@ pre_requisites
 echo "Starting mock server on 127.0.0.1:$MOCK_SERVER_PORT"
 $script_dir/mock_server &
 
-deleteDummyInterface()
+deleteMockedInterface()
 {
-    ip link delete dummy1
+    ip link delete eth-mocked
 }
 
 # IMP NOTE: Please make sure that SSPL conf file has
