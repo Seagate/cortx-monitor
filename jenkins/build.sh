@@ -39,11 +39,13 @@ mkdir -p $DIST/SOURCES
 # Create tar of source directory
 tar -czvf $DIST/SOURCES/sspl-$VERSION.tgz -C $BASE_DIR/.. sspl/low-level sspl/libsspl_sec
 tar -czvf $DIST/SOURCES/sspl-test-$VERSION.tgz -C $BASE_DIR/.. sspl/test
+tar -czvf $DIST/SOURCES/sspl-test-ctf-$VERSION.tgz -C $BASE_DIR/.. sspl/sspl_test
 
 # Generate RPMs
 rpmbuild --define "version $VERSION" --define "git_rev $GIT_VER" --define "_topdir $DIST" -bb $BASE_DIR/low-level/sspl-ll.spec
 rpmbuild --define "version $VERSION" --define "git_rev $GIT_VER" --define "_topdir $DIST" -bb $BASE_DIR/libsspl_sec/libsspl_sec.spec
 rpmbuild --define "version $VERSION" --define "git_rev $GIT_VER" --define "_topdir $DIST" -bb $BASE_DIR/test/sspl-test.spec
+rpmbuild --define "version $VERSION" --define "git_rev $GIT_VER" --define "_topdir $DIST" -bb $BASE_DIR/sspl_test/sspl-test-ctf.spec
 
 \rm -rf $DIST/BUILD/*
 echo -e "\nGenerated RPMs..."

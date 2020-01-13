@@ -4,7 +4,7 @@
 Name:       sspl-test-ctf
 Version:    %{version}
 Release:    %{build_num}_git%{git_rev}%{?dist}
-Summary:    Installs sspl-test-ctf scripts
+Summary:    Installs SSPL test for common test framework
 BuildArch:  noarch
 Group:      System Management
 License:    Seagate Proprietary
