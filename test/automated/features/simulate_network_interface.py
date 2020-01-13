@@ -10,7 +10,7 @@ def create_nw_interface():
     call("ip link set name eth-mocked dev dummy0".split())
     sleep(.1)
     call("ip link add eth-mocked type dummy".split())
-    
+
 def shuffle_nw_interface():
     create_nw_interface()
     sleep(.2)
