@@ -12,7 +12,7 @@ ExecStart=/opt/seagate/sspl/low-level/framework/sspl_ll_d -c /etc/sspl.conf
 ExecStopPost=-/usr/bin/rm -Rf /var/run/sspl_ll
 PIDFile=/var/run/sspl_ll/sspl_ll_d.pid
 User=sspl-ll
-Restart=on-failure
+Restart=no
 TimeoutStartSec=190
 
 [Install]
