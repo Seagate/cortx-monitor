@@ -17,6 +17,7 @@
 import pika
 import json
 import os
+import time
 
 from jsonschema import Draft3Validator
 from jsonschema import validate
@@ -111,12 +112,12 @@ class RabbitMQingressProcessorTests(ScheduledModuleThread, InternalMsgQ):
         self._log_debug("Start accepting requests")
 
         try:
-            result = self._channel.queue_declare(exclusive=True)
+            result = self._channel.queue_declare(queue="", exclusive=True)
             self._channel.queue_bind(exchange=self._exchange_name,
                                queue=result.method.queue,
                                routing_key=self._routing_key)
 
-            self._channel.basic_consume(self._process_msg,
+            self._channel.basic_consume(on_message_callback=self._process_msg,
                                   queue=result.method.queue)
             self._channel.start_consuming()
 
@@ -246,9 +247,10 @@ class RabbitMQingressProcessorTests(ScheduledModuleThread, InternalMsgQ):
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""
         super(RabbitMQingressProcessorTests, self).shutdown()
+        time.sleep(4)
         try:
             if self._connection is not None:
                 self._connection.close()
-            self._channel.stop_consuming()
+                self._channel.stop_consuming()
         except pika.exceptions.ConnectionClosed:
             logger.info("RabbitMQingressProcessorTests, shutdown, RabbitMQ ConnectionClosed")

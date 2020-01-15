@@ -2,8 +2,8 @@ import json
 import os
 from time import sleep
 import sys
-import simulate_network_interface as mock_eth_interface
 
+from sspl_test.alerts.os import simulate_network_interface as mock_eth_interface
 from sspl_test.default import *
 from sspl_test.rabbitmq.rabbitmq_ingress_processor_tests import RabbitMQingressProcessorTests
 from sspl_test.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor

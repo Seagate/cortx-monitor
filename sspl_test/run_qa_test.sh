@@ -11,15 +11,15 @@ flask_help()
        rpm -qa | grep python-flask"
  echo "If packge detail appears, uninstall Flask using command
        yum remove python-flask"
- echo "If package details doesn't appear, then it was installed using pip"
- echo "You can check Flask version using pip with following command
-       pip freeze | grep Flask"
+ echo "If package details doesn't appear, then it was installed using pip3.6"
+ echo "You can check Flask version using pip3.6 with following command
+       pip3.6 freeze | grep flask"
  echo "Uninstall previously installed Flask version using
-       pip uninstall Flask"
- echo -e "In a similar way, uninstall all its dependencies using pip:
-          pip uninstall Werkzeug
-          pip uninstall Jinja2
-          pip uninstall itsdangerous"
+       pip3.6 uninstall flask"
+ echo -e "In a similar way, uninstall all its dependencies using pip3.6:
+          pip3.6 uninstall Werkzeug
+          pip3.6 uninstall Jinja2
+          pip3.6 uninstall itsdangerous"
 }
 
 pre_requisites()
@@ -32,6 +32,11 @@ pre_requisites()
     $sudo mv /var/sspl/data/iem/last_processed_msg_time /var/sspl/orig-data/iem/last_processed_msg_time
 }
 
+deleteMockedInterface()
+{
+    ip link delete eth-mocked
+}
+
 kill_mock_server()
 {
     # Kill mock API server
@@ -40,7 +45,6 @@ kill_mock_server()
 
 cleanup()
 {
-    deleteMockedInterface
     # Again Changing port to default which is 80
     port=$(sed -n -e '/primary_controller_port/ s/.*\= *//p' /etc/sspl.conf)
     if [ $port == "$MOCK_SERVER_PORT" ]
@@ -50,6 +54,7 @@ cleanup()
 
     echo "Stopping mock server"
     kill_mock_server
+    deleteMockedInterface
     echo "Exiting..."
     exit 1
 }
@@ -61,17 +66,11 @@ execute_test()
     $sudo $script_dir/run_sspl-ll_tests.sh $*
 }
 
-# lettuce_version=$(pip list 2>/dev/null | grep -wi lettuce | awk '{print $2}')
-# [ ! -z $lettuce_version ] && [ $lettuce_version = "0.2.23" ] || {
-#     echo "Please install lettuce 0.2.23"
-#     exit 1
-# }
-
-flask_version=$(pip list 2>/dev/null | grep -wi flask | awk '{print $2}')
-[ ! -z $flask_version ] && [ $flask_version = "1.1.1" ] || {
+flask_installed=$(python3.6 -c 'import pkgutil; print(1 if pkgutil.find_loader("flask") else 0)')
+[ $flask_installed = "1" ] && [ $(python3.6 -c 'import flask; print(flask.__version__)') = "1.1.1" ] || {
     flask_help
     echo "Please install Flask 1.1.1 using
-          pip install Flask==1.1.1"
+          pip3.6 install flask==1.1.1"
     echo -e "\n"
     exit 1
 }
@@ -90,11 +89,6 @@ pre_requisites
 # Start mock API server
 echo "Starting mock server on 127.0.0.1:$MOCK_SERVER_PORT"
 $script_dir/mock_server &
-
-deleteMockedInterface()
-{
-    ip link delete eth-mocked
-}
 
 # IMP NOTE: Please make sure that SSPL conf file has
 # primary_controller_ip=127.0.0.1 and primary_controller_port=$MOCK_SERVER_PORT.

@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3.6
 
 """
  ****************************************************************************
@@ -151,7 +151,7 @@ def _run_thread_capture_errors(curr_module, msgQlist, conf_reader, product):
         curr_module._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
 
         # Shut it down, error is non-recoverable
-        for name, other_module in world.sspl_modules.iteritems():
+        for name, other_module in list(world.sspl_modules.items()):
             if other_module is not curr_module:
                 other_module.shutdown()
 
@@ -184,6 +184,6 @@ def stop_rabbitMQ_msg_processors():
     """Shuts down rabbitmq threads and terminates tests"""
     time.sleep(5)
     print("SSPL Automated Test Process ended successfully")
-    for name, module in world.sspl_modules.items():
+    for name, module in list(world.sspl_modules.items()):
         module.shutdown()
     os._exit(0)
