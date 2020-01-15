@@ -89,6 +89,10 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
     sel_last_queried = None
     SEL_QUERY_FREQ = 300
 
+    NODEHWSENSOR = "NODEHWSENSOR"
+    POLLING_INTERVAL = "polling_interval"
+    DEFAULT_POLLING_INTERVAL = "30"
+
     DYNAMIC_KEYS = {
             "Sensor Reading",
             "States Asserted",
@@ -123,6 +127,8 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
         except (IOError, ConfigReader.Error) as err:
             logger.error("[ Error ] when validating the config file {0} - {1}"\
                  .format(self.CONF_FILE, err))
+        self.polling_interval = int(self.conf_reader._get_value_with_default(
+            self.NODEHWSENSOR, self.POLLING_INTERVAL, self.DEFAULT_POLLING_INTERVAL))
 
     def _get_file(self, name):
         if os.path.exists(name):
@@ -319,7 +325,7 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
 
             # Reset debug mode if persistence is not enabled
             self._disable_debug_if_persist_false()
-            self._scheduler.enter(30, self._priority, self.run, ())
+            self._scheduler.enter(self.polling_interval, self._priority, self.run, ())
         else:
             logger.warning("{0} Node hw monitoring disabled"\
                 .format(self.SENSOR_NAME))

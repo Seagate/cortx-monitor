@@ -140,6 +140,7 @@ threaded=true
 
 [NODEHWSENSOR]
 threaded=true
+polling_interval=30
 
 [REALSTORLOGICALVOLUMESENSOR]
 threaded=true
