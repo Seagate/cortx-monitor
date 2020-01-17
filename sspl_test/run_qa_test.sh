@@ -100,7 +100,8 @@ deleteMockedInterface()
 # primary_controller_ip=127.0.0.1 and primary_controller_port=$MOCK_SERVER_PORT.
 # For sanity test SSPL should connect to mock server instead of real server.
 # Restart SSPL to re-read configuration
-$sudo $script_dir/set_disk_threshold.sh
+$sudo cp /etc/sspl.conf /etc/sspl.conf.back
+$sudo $script_dir/set_threshold.sh
 echo "Restarting SSPL"
 systemctl restart sspl-ll
 echo "Waiting for SSPL to complete initialization of all the plugins"
