@@ -1,4 +1,10 @@
 #!/bin/bash
+
+#Modify transmit_interval in /etc/sspl.conf les than current value
+#to generate the alerts.
+transmit_interval=10
+sed -i -e "s/\(transmit_interval=\).*/\1$transmit_interval/" /etc/sspl.conf
+
 #Taking the current disk usage value and modify disk_usage_threshold in /etc/sspl.conf les than current value
 #for generate the alerts.
 out=`python3.6 -c "import psutil; print(int(psutil.disk_usage('/')[3]-2))"`

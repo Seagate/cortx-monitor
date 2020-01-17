@@ -112,4 +112,5 @@ $sudo find /var/sspl -maxdepth 2 -type d -path '/var/sspl/orig-data/*' -not -nam
 $sudo mv /var/sspl/orig-data/iem/last_processed_msg_time /var/sspl/data/iem/last_processed_msg_time
 $sudo rm -rf /var/sspl/orig-data
 
+$sudo mv /etc/sspl.conf.back /etc/sspl.conf
 exit $retcode
