@@ -11,6 +11,7 @@ source $script_dir/constants.sh
 SCRIPT_NAME=$(basename $0)
 
 RSYSLOG_CONF="/etc/rsyslog.d/0-iemfwd.conf"
+RSYSLOG_SSPL_CONF="/etc/rsyslog.d/1-ssplfwd.conf"
 
 usage() {
     cat << EOF
@@ -48,6 +49,9 @@ pip3.6 install -r /opt/seagate/sspl/low-level/requirements.txt
 # Copy rsyslog configuration
 [ -f $RSYSLOG_CONF ] ||
     cp $SSPL_BASE_DIR/low-level/files/$RSYSLOG_CONF $RSYSLOG_CONF
+
+[ -f $RSYSLOG_SSPL_CONF ] ||
+    cp $SSPL_BASE_DIR/low-level/files/$RSYSLOG_SSPL_CONF $RSYSLOG_SSPL_CONF
 
 # Copy sspl-ll.service file and enable service
 cp $SSPL_BASE_DIR/conf/sspl-ll.service.$PRODUCT /etc/systemd/system/sspl-ll.service

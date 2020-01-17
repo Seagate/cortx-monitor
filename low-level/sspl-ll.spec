@@ -82,9 +82,18 @@ chown -R sspl-ll /var/sspl/
 # restore of data & iem folder
 [ -d /opt/seagate/backup/%{version}/sspl ] && cp -R /opt/seagate/backup/%{version}/sspl/* /var/sspl/
 
+# Copy rsyslog configuration
+# [ -f /etc/rsyslog.d/0-iemfwd.conf ] ||
+#    cp /opt/seagate/sspl/low-level/files/etc/rsyslog.d/0-iemfwd.conf /etc/rsyslog.d/0-iemfwd.conf
+
+# [ -f /etc/rsyslog.d/1-ssplfwd.conf ] ||
+#    cp /opt/seagate/sspl/low-level/files/etc/rsyslog.d/1-ssplfwd.conf /etc/rsyslog.d/1-ssplfwd.conf
+
 # Copy init script
 [ -f /opt/seagate/sspl/sspl_init ] ||
     ln -s /opt/seagate/sspl/low-level/files/opt/seagate/sspl/bin/sspl_provisioner_init /opt/seagate/sspl/sspl_init
+
+mkdir -p /var/log/sspl/
 
 # In case of upgrade start sspl-ll after upgrade
 if [ "$1" == "2" ]; then

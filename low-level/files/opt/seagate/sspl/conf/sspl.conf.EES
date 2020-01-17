@@ -20,6 +20,7 @@ rack_id=001
 node_id=001
 # Possible log levels are CRITICAL, ERROR, WARNING, INFO, DEBUG and NOTSET
 log_level=INFO
+sspl_log_file_path=/var/log/sspl/sspl.log
 
 [RABBITMQINGRESSPROCESSOR]
 virtual_host=SSPL

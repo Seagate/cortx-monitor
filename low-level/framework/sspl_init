@@ -6,7 +6,9 @@ SCRIPT_NAME=$(basename $0)
 DIR_NAME="/opt/seagate/sspl/"
 SSPL_CONF="/etc/sspl.conf"
 RSYSLOG_CONF="/etc/rsyslog.d/0-iemfwd.conf"
+RSYSLOG_SSPL_CONF="/etc/rsyslog.d/1-ssplfwd.conf"
 LOGROTATE_CONF="/etc/logrotate.d/iem_messages"
+SSPL_LOGROTATE_CONF="/etc/logrotate.d/sspl_logs"
 SSPL_CONFIGURED="/var/sspl/sspl-configured"
 ROLES="gw ssu vm cmu eos"
 
@@ -134,6 +136,9 @@ config_sspl() {
     [ -f /etc/rsyslog.d/0-iemfwd.conf ] ||
        cp /opt/seagate/sspl/low-level/files/etc/rsyslog.d/0-iemfwd.conf /etc/rsyslog.d/0-iemfwd.conf
 
+    [ -f $RSYSLOG_SSPL_CONF ] ||
+       cp /opt/seagate/sspl/low-level/files/$RSYSLOG_SSPL_CONF $RSYSLOG_SSPL_CONF
+
     force=0
     role=
     rabbitmq_reset=1
@@ -235,6 +240,17 @@ config_sspl() {
     cp /opt/seagate/sspl/conf/sspl-ll.service.$product /etc/systemd/system/sspl-ll.service
     touch $SSPL_CONFIGURED
 
+    # SSPL Log file configuration
+    IFS='=' lfp=`grep sspl_log_file_path $SSPL_CONF`; logpath=( $lfp )
+    SSPL_LOG_FILE_PATH=`echo ${logpath[1]}`
+
+    [ ! -z "$SSPL_LOG_FILE_PATH" ] &&
+    {
+        sed -i "s|File=.*|File=\"$SSPL_LOG_FILE_PATH\")|g" $RSYSLOG_SSPL_CONF
+        sed -i "1 s|^.*$|${SSPL_LOG_FILE_PATH}|g" /opt/seagate/sspl/low-level/files/etc/logrotate.d/sspl_logs
+    }
+
+
     # Configure log file path in Rsyslog and logrotate configuration file
     IFS='=' lfp=`grep log_file_path $SSPL_CONF`; datapath=( $lfp )
     LOG_FILE_PATH=`echo ${datapath[1]}`
@@ -248,7 +264,14 @@ config_sspl() {
     fi
 
     cp /opt/seagate/sspl/low-level/files/etc/logrotate.d/iem_messages $LOGROTATE_CONF
+    cp /opt/seagate/sspl/low-level/files/etc/logrotate.d/sspl_logs $SSPL_LOGROTATE_CONF
 
+    # This rsyslog restart will happen after successful updation of rsyslog
+    # conf file and before sspl starts. If at all this will be removed from
+    # here, there will be a chance that SSPL intial logs will not be present in
+    # /var/log/sspl/sspl.log file. So, initial logs needs to be collected from
+    # /var/log/messages
+    systemctl restart rsyslog
     systemctl enable sspl-ll.service
     systemctl start sspl-ll.service
 }

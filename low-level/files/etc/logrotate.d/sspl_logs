@@ -1,0 +1,10 @@
+/var/log/sspl/sspl.log
+{
+        size 10K
+        rotate 20
+        copytruncate
+        missingok
+        postrotate
+            /bin/kill -HUP `cat /var/run/syslogd.pid 2> /dev/null` 2> /dev/null || true
+        endscript
+}
