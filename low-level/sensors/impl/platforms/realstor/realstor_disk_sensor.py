@@ -29,6 +29,7 @@ from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
 from framework.platforms.realstor.realstor_enclosure import singleton_realstorencl
+from framework.utils.store_factory import store
 
 # Modules that receive messages from this module
 from message_handlers.real_stor_encl_msg_handler import RealStorEnclMsgHandler
@@ -233,7 +234,7 @@ class RealStorDiskSensor(ScheduledModuleThread, InternalMsgQ):
             if not os.path.exists(disk_datafile):
                 disk_datafile = self.disks_prcache+"disk_{0}.json".format(slot)
 
-            disk_info = self.rssencl.jsondata.load(disk_datafile)
+            disk_info = store.get(disk_datafile)
 
             #raise alert for missing drive
             self._rss_raise_disk_alert(self.rssencl.FRU_MISSING, disk_info)
@@ -242,7 +243,7 @@ class RealStorDiskSensor(ScheduledModuleThread, InternalMsgQ):
 
         for slot in inserted_disks:
             #get inserted drive data from disk cache
-            disk_info = self.rssencl.jsondata.load(
+            disk_info = store.get(
                            self.disks_prcache+"disk_{0}.json".format(slot))
 
             #raise alert for added drive
@@ -319,15 +320,15 @@ class RealStorDiskSensor(ScheduledModuleThread, InternalMsgQ):
                         # to be retained in disk_<slot>.json.prev file and
                         # then only dump new data to disk_<slot>.json
                         if os.path.exists(dcache_path):
-                            prevdrive = self.rssencl.jsondata.load(dcache_path)
+                            prevdrive = store.get(dcache_path)
                             prevsn = prevdrive.get("serial-number","NA")
 
                             if prevsn != sn:
                                 os.rename(dcache_path,dcache_path + ".prev")
 
-                                self.rssencl.jsondata.dump(drive, dcache_path)
+                                store.put(drive, dcache_path)
                         else:
-                            self.rssencl.jsondata.dump(drive, dcache_path)
+                            store.put(drive, dcache_path)
 
             #If no in-memory cache, build from persistent cache
             if not self.memcache_disks:
@@ -354,7 +355,7 @@ class RealStorDiskSensor(ScheduledModuleThread, InternalMsgQ):
         for filename in files:
             if filename.startswith('disk_') and filename.endswith('.json'):
 
-                drive = self.rssencl.jsondata.load(self.disks_prcache + filename)
+                drive = store.get(self.disks_prcache + filename)
                 filename = filename[:-5]
                 slotstr = filename.strip('disk_')
 
@@ -399,7 +400,7 @@ class RealStorDiskSensor(ScheduledModuleThread, InternalMsgQ):
                             slot = fault["component-id"].split()[1].split('.')[1]
 
                             #get drive data from disk cache
-                            disk_info = self.rssencl.jsondata.load(
+                            disk_info = store.get(
                                 self.disks_prcache+"disk_{0}.json".format(slot))
 
                             # raise alert for disk fault

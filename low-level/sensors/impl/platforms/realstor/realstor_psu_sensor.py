@@ -29,6 +29,7 @@ from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
 from framework.platforms.realstor.realstor_enclosure import singleton_realstorencl
+from framework.utils.store_factory import store
 
 # Modules that receive messages from this module
 from message_handlers.real_stor_encl_msg_handler import RealStorEnclMsgHandler
@@ -101,12 +102,12 @@ class RealStorPSUSensor(ScheduledModuleThread, InternalMsgQ):
             "_faulty_psu_file_path: {0}".format(self._faulty_psu_file_path))
 
         # Load faulty PSU data from file if available
-        self._previously_faulty_psus = self.rssencl.jsondata.load(\
+        self._previously_faulty_psus = store.get(\
                                            self._faulty_psu_file_path)
 
         if self._previously_faulty_psus == None:
             self._previously_faulty_psus = {}
-            self.rssencl.jsondata.dump(self._previously_faulty_psus,\
+            store.put(self._previously_faulty_psus,\
                 self._faulty_psu_file_path)
 
     def read_data(self):
@@ -237,7 +238,7 @@ class RealStorPSUSensor(ScheduledModuleThread, InternalMsgQ):
                     del self._previously_faulty_psus[durable_id]
             # Persist faulty PSU list to file only if something is changed
             if state_changed:
-                self.rssencl.jsondata.dump(self._previously_faulty_psus,\
+                store.put(self._previously_faulty_psus,\
                     self._faulty_psu_file_path)
                 state_changed = False
             alert_type = ""

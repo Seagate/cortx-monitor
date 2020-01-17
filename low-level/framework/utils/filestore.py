@@ -1,10 +1,10 @@
 """
  ****************************************************************************
- Filename:          jsondata.py
+ Filename:          filestore.py
  Description:       Utility functions to deal with json data,
                     dump or load from file
- Creation Date:     07/26/2019
- Author:            Chetan Deshmukh <chetan.deshmukh@seagate.com>
+ Creation Date:     01/16/2020
+ Author:            Sandeep Anjara <sandeep.anjara@seagate.com>
 
  Do NOT modify or remove this copyright and confidentiality notice!
  Copyright (c) 2001 - $Date: 2019/06/11 $ Seagate Technology, LLC.
@@ -16,25 +16,28 @@
 """
 import os
 import json
+import pickle
+from framework.utils.store import Store
 from framework.utils.service_logging import logger
 
-class JsonData(object):
+class FileStore(Store):
 
     def __init__(self):
-        super(JsonData, self).__init__()
+        super(FileStore, self).__init__()
 
-    def dump(self, dictobj, absfilepath):
-        """ Dump dict obj as json to given absolute file path"""
+    def put(self, value, key):
+        """ Dump value to given absolute file path"""
 
         # Check if directory exists
+        absfilepath = key
         directory_path = os.path.join(os.path.dirname(absfilepath), "")
         if not os.path.isdir(directory_path):
             logger.critical("Path doesn't exists: {0}".format(directory_path))
             return
 
         try:
-            fh = open(absfilepath,"w")
-            json.dump(dictobj, fh)
+            fh = open(absfilepath,"wb")
+            pickle.dump(value, fh)
         except IOError as err:
             errno, strerror = err.args
             logger.warn("I/O error[{0}] while dumping data to file {1}): {2}"\
@@ -45,9 +48,11 @@ class JsonData(object):
         else:
             fh.close()
 
-    def load(self, absfilepath):
+    def get(self, key):
         """ Load dict obj from json in given absolute file path"""
-        datadict = None
+
+        value = None
+        absfilepath = key
 
         # Check if directory exists
         directory_path = os.path.join(os.path.dirname(absfilepath), "")
@@ -57,15 +62,15 @@ class JsonData(object):
 
 
         try:
-            fh = open(absfilepath,"r")
-            datadict = json.load(fh)
+            fh = open(absfilepath,"rb")
+            value = pickle.load(fh)
         except IOError as err:
             errno, strerror = err.args
             logger.warn("I/O error[{0}] while loading data from file {1}): {2}"\
                 .format(errno,absfilepath,strerror))
         except ValueError as jsonerr:
             logger.warn("JSON error{0} while loading from {1}".format(jsonerr, absfilepath))
-            datadict = None
+            value = None
         except OSError as oserr:
             logger.warn("OS error{0} while loading from {1}".format(oserr, absfilepath))
         except Exception as gerr:
@@ -74,4 +79,4 @@ class JsonData(object):
         else:
             fh.close()
 
-        return datadict
+        return value

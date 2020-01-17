@@ -31,6 +31,7 @@ from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
 from message_handlers.logging_msg_handler import LoggingMsgHandler
 from framework.platforms.realstor.realstor_enclosure import singleton_realstorencl
+from framework.utils.store_factory import store
 
 # Modules that receive messages from this module
 from message_handlers.real_stor_encl_msg_handler import RealStorEnclMsgHandler
@@ -100,12 +101,12 @@ class RealStorFanSensor(ScheduledModuleThread, InternalMsgQ):
             self._fanmodule_prcache, "fanmodule_data.json")
 
         # Load faulty Fan Module data from file if available
-        self._faulty_fan_modules_list = self.rssencl.jsondata.load(\
+        self._faulty_fan_modules_list = store.get(\
                                            self._faulty_fan_file_path)
 
         if self._faulty_fan_modules_list == None:
             self._faulty_fan_modules_list = {}
-            self.rssencl.jsondata.dump(self._faulty_fan_modules_list,\
+            store.put(self._faulty_fan_modules_list,\
                 self._faulty_fan_file_path)
 
     def read_data(self):
@@ -176,7 +177,7 @@ class RealStorFanSensor(ScheduledModuleThread, InternalMsgQ):
                     internal_json_message = \
                         self._create_internal_json_msg(fan_module, alert_type)
                     self._send_json_message(internal_json_message)
-                    self.rssencl.jsondata.dump(self._faulty_fan_modules_list,\
+                    store.put(self._faulty_fan_modules_list,\
                         self._faulty_fan_file_path)
                     alert_type = None
         except Exception as e:

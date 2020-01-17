@@ -29,6 +29,7 @@ from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
 from framework.platforms.realstor.realstor_enclosure import singleton_realstorencl
+from framework.utils.store_factory import store
 
 # Modules that receive messages from this module
 from message_handlers.real_stor_encl_msg_handler import RealStorEnclMsgHandler
@@ -122,12 +123,12 @@ class RealStorLogicalVolumeSensor(ScheduledModuleThread, InternalMsgQ):
             self._logical_volume_prcache, "logicalvolumedata.json")
 
         # Load faulty Logical Volume data from file if available
-        self._previously_faulty_disk_groups = self.rssencl.jsondata.load(\
+        self._previously_faulty_disk_groups = store.get(\
                                                   self._faulty_disk_group_file_path)
 
         if self._previously_faulty_disk_groups == None:
             self._previously_faulty_disk_groups = {}
-            self.rssencl.jsondata.dump(self._previously_faulty_disk_groups,\
+            store.put(self._previously_faulty_disk_groups,\
                 self._faulty_disk_group_file_path)
 
     def read_data(self):
@@ -279,7 +280,7 @@ class RealStorLogicalVolumeSensor(ScheduledModuleThread, InternalMsgQ):
                     state_changed = True
             # Persist faulty Logical Volume list to file only if something is changed
             if state_changed:
-                self.rssencl.jsondata.dump(self._previously_faulty_disk_groups,\
+                store.put(self._previously_faulty_disk_groups,\
                     self._faulty_disk_group_file_path)
                 state_changed = False
             alert_type = ""

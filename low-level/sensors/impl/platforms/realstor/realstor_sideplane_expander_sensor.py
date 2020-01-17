@@ -30,6 +30,7 @@ from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
 from message_handlers.logging_msg_handler import LoggingMsgHandler
 from framework.platforms.realstor.realstor_enclosure import singleton_realstorencl
+from framework.utils.store_factory import store
 
 # Modules that receive messages from this module
 from message_handlers.real_stor_encl_msg_handler import RealStorEnclMsgHandler
@@ -102,12 +103,12 @@ class RealStorSideplaneExpanderSensor(ScheduledModuleThread, InternalMsgQ):
 
         # Load faulty sideplane expander data from file if available
         self._faulty_sideplane_expander_dict = \
-            self.rssencl.jsondata.load(\
+            store.get(\
                self._faulty_sideplane_expander_file_path)
 
         if self._faulty_sideplane_expander_dict == None:
             self._faulty_sideplane_expander_dict = {}
-            self.rssencl.jsondata.dump(\
+            store.put(\
                 self._faulty_sideplane_expander_dict,\
                 self._faulty_sideplane_expander_file_path)
 
@@ -210,7 +211,7 @@ class RealStorSideplaneExpanderSensor(ScheduledModuleThread, InternalMsgQ):
                             sideplane_expander, self.unhealthy_components,
                             alert_type)
                     self._send_json_message(internal_json_message)
-                    self.rssencl.jsondata.dump(\
+                    store.put(\
                         self._faulty_sideplane_expander_dict,\
                         self._faulty_sideplane_expander_file_path)
                     alert_type = None

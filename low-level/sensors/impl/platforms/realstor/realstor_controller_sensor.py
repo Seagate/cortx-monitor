@@ -29,6 +29,7 @@ from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
 from framework.platforms.realstor.realstor_enclosure import singleton_realstorencl
+from framework.utils.store_factory import store
 
 # Modules that receive messages from this module
 from message_handlers.real_stor_encl_msg_handler import RealStorEnclMsgHandler
@@ -102,12 +103,12 @@ class RealStorControllerSensor(ScheduledModuleThread, InternalMsgQ):
             self._controller_prcache, "controllerdata.json")
 
         # Load faulty Controller data from file if available
-        self._previously_faulty_controllers = self.rssencl.jsondata.load(\
+        self._previously_faulty_controllers = store.get(\
                                                   self._faulty_controller_file_path)
 
         if self._previously_faulty_controllers == None:
             self._previously_faulty_controllers = {}
-            self.rssencl.jsondata.dump(self._previously_faulty_controllers,\
+            store.put(self._previously_faulty_controllers,\
                 self._faulty_controller_file_path)
 
     def read_data(self):
@@ -235,7 +236,7 @@ class RealStorControllerSensor(ScheduledModuleThread, InternalMsgQ):
                     state_changed = True
             # Persist faulty Controller list to file only if something is changed
             if state_changed:
-                self.rssencl.jsondata.dump(self._previously_faulty_controllers,\
+                store.put(self._previously_faulty_controllers,\
                     self._faulty_controller_file_path)
                 state_changed = False
             alert_type = ""

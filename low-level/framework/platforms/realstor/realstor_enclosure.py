@@ -25,7 +25,7 @@ from framework.target.enclosure import StorageEnclosure
 from framework.utils.service_logging import logger
 from framework.utils.config_reader import ConfigReader
 from framework.utils.webservices import WebServices
-from framework.utils.jsondata import JsonData
+from framework.utils.store_factory import store
 
 class RealStorEnclosure(StorageEnclosure):
     """RealStor Enclosure Monitor functions using CLI API Webservice Interface"""
@@ -91,7 +91,6 @@ class RealStorEnclosure(StorageEnclosure):
         self.ws = WebServices()
         self.common_reqheaders = {}
 
-        self.jsondata = JsonData()
         self.encl_conf = self.CONF_SECTION_MC
 
         self.system_persistent_cache = self.encl_cache + "system/"
@@ -305,7 +304,7 @@ class RealStorEnclosure(StorageEnclosure):
 
             #Update faults in persistent cache
             logger.info("Updating faults persistent cache!!")
-            self.jsondata.dump(self.memcache_faults,
+            store.put(self.memcache_faults,
                 self.faults_persistent_cache)
 
         return changed
@@ -414,7 +413,7 @@ class RealStorEnclosure(StorageEnclosure):
                         "No cached faults, building from  persistent cache {0}"\
                         .format(self.faults_persistent_cache))
 
-                    self.memcache_faults = self.jsondata.load(
+                    self.memcache_faults = store.get(
                                                self.faults_persistent_cache)
 
                     # still if none, build from latest faults & persist
@@ -431,7 +430,7 @@ class RealStorEnclosure(StorageEnclosure):
                         #logger.debug("existing_faults {0}".\
                         #    format(self.existing_faults))
 
-                        self.jsondata.dump(self.memcache_faults,
+                        store.put(self.memcache_faults,
                             self.faults_persistent_cache)
                 else:
                      # Reset flag as existing faults processed by now

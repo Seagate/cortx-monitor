@@ -137,3 +137,8 @@ bind_port=1620
 threaded=true
 log_file_path=/var/sspl/data/iem/iem_messages
 timestamp_file_path=/var/sspl/data/iem/last_processed_msg_time
+
+[DATASTORE]
+store_type=file
+consul_host=127.0.0.1
+consul_port=8500

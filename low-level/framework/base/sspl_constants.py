@@ -28,5 +28,10 @@ class ResourceTypes(Enum):
 class EnclInterface(Enum):
     SAS = "SAS"
 
+
+class StoreTypes(Enum):
+    FILE = "file"
+    CONSUL = "consul"
+
 if __name__ == "__main__":
     print(' '.join(enabled_products))
