@@ -96,7 +96,7 @@ def main():
     if product == "EES":
         # Setup argument parser
         parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawDescriptionHelpFormatter, \
-                                         add_help=False)
+                                         add_help=False, allow_abbrev=False)
         parser.add_argument("-v", "--version", action="store_true", help="show cli version")
         try:
             # Create instance of ManualTest to publish messages
@@ -109,7 +109,7 @@ def main():
         if cli_type == "sed":
             # Setup argument parser
             parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawDescriptionHelpFormatter, \
-                                             add_help=True)
+                                             add_help=True, allow_abbrev=False)
             parser.add_argument("-v", "--version", action="store_true", help="show cli version")
             try:
                 # Create instance of ManualTest to publish messages
@@ -121,7 +121,7 @@ def main():
         else:
             # Setup argument parser
             parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawDescriptionHelpFormatter, \
-                                             add_help=False)
+                                             add_help=False, allow_abbrev=False)
             parser.add_argument("-v", "--version", action="store_true", help="show cli version")
             try:
                 # Create instance of ManualTest to publish messages
