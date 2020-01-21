@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -u -o pipefail
+set -e -u -o pipefail
 
 ######################################################################
 # This script serves as an entry point for various operations for SSPL
@@ -8,6 +8,8 @@ set -u -o pipefail
 ######################################################################
 
 SCRIPT_NAME=$(basename $0)
+SCRIPT_DIR=$(dirname $0)
+SSPL_CONFIGURED="/var/sspl/sspl-configured"
 
 usage() {
     cat << EOF
@@ -31,28 +33,34 @@ cmd=
 
 case $cmd in
     post_install )
-        ./sspl_post_install $*
+        $SCRIPT_DIR/sspl_post_install $*
         exit $?
         ;;
 
     init )
-        ./sspl_setup_init $*
+        $SCRIPT_DIR/sspl_setup_init $*
         exit $?
         ;;
 
     config )
-        ./sspl_config $*
+        $SCRIPT_DIR/sspl_config $*
         exit $?
         ;;
 
     test )
-        ./sspl_test $*
+        $SCRIPT_DIR/sspl_test $*
         exit $?
         ;;
 
     reset )
-        ./sspl_reset $*
+        $SCRIPT_DIR/sspl_reset $*
         exit $?
+        ;;
+
+    check )
+        [ -f $SSPL_CONFIGURED ]  && exit 0
+        logger -i -p local3.err "SSPL is not configured. Run provisioner scripts in /opt/seagate/sspl/bin."
+        exit 1
         ;;
 
     * )

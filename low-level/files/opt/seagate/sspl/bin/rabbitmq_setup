@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -u -o pipefail
+set -e -u -o pipefail
 
 ##############################################################################
 # This script performs following operations

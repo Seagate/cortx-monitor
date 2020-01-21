@@ -1,0 +1,14 @@
+#!/bin/bash
+
+set -e -u -o pipefail
+
+##############################################################################
+# This script is meant to be used by developers. It calls all the provisioner
+# scripts sequentially. It will replace sspl_init eventually.
+##############################################################################
+
+SCRIPT_DIR=$(dirname $0)
+
+$SCRIPT_DIR/bin/sspl_post_install -p EES
+$SCRIPT_DIR/bin/sspl_setup_init -r eos
+$SCRIPT_DIR/bin/sspl_config

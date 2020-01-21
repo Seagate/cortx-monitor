@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -u -o pipefail
+set -e -u -o pipefail
 
 #################################################################
 # This script performs following operations.
@@ -13,7 +13,6 @@ script_dir=$(dirname $0)
 source $script_dir/constants.sh
 
 SCRIPT_NAME=$(basename $0)
-SSPL_CONFIGURED="/var/sspl/sspl-configured"
 
 SSU_DEPENDENCY_RPMS=(
                 "sg3_utils"
@@ -36,7 +35,7 @@ VM_DEPENDENCY_RPMS=("")
 
 usage() {
     cat << EOF
-$SCRIPT_NAME [check|create [-dp] [-r <ssu|gw|cmu|vm>]]
+$SCRIPT_NAME [check|create [-dp] [-r <ssu|gw|cmu|vm|eos>]]
 create options:
     -dp Create configured datapath
     -r  Role to be configured on the current node
@@ -106,6 +105,11 @@ check_dependencies() {
 create_req() {
     role=
 
+    if [ $# -eq 0 ]
+      then
+        usage
+    fi
+
     while [ $# -gt 0 ]; do
         case $1 in
             -dp )
@@ -139,20 +143,4 @@ create_req() {
 
 }
 
-cmd="create"
-[ $# -ge 1 ] && cmd=$1 && shift 1
-case $cmd in
-    check )
-        [ -f $SSPL_CONFIGURED ]  && exit 0
-        logger -i -p local3.err "SSPL is not configured. Run provisioner scripts in /opt/seagate/sspl/bin."
-        exit 1
-        ;;
-
-    create )
-        create_req $*
-        ;;
-
-    * )
-        usage
-        ;;
-esac
+create_req $*

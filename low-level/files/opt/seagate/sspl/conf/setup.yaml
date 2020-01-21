@@ -1,4 +1,4 @@
-SSPL:
+sspl:
     post_install:
          script: /opt/seagate/sspl/bin/sspl_setup
          vars:

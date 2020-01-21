@@ -17,9 +17,9 @@ URL:        http://gerrit.mero.colo.seagate.com:8080/#/admin/projects/sspl
 Source0:    %{name}-%{version}.tgz
 BuildRoot:  %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 BuildRequires: rpm-build sudo
-Requires:   rabbitmq-server udisks2 hdparm python36 ipmitool python36-dbus systemd-devel python36-paramiko
-Requires:   libsspl_sec libsspl_sec-method_none python36-devel python36-psutil python36-gobject
-Requires:   perl(Config::Any) systemd-python36 python36
+Requires:   rabbitmq-server udisks2 hdparm python36 ipmitool python36-dbus python36-paramiko
+Requires:   libsspl_sec libsspl_sec-method_none python36-psutil python36-gobject
+Requires:   perl(Config::Any) systemd-python36
 Requires(pre): shadow-utils
 
 # Disabling for EES-non-requirement
@@ -84,7 +84,7 @@ chown -R sspl-ll /var/sspl/
 
 # Copy init script
 [ -f /opt/seagate/sspl/sspl_init ] ||
-    ln -s /opt/seagate/sspl/low-level/framework/sspl_init /opt/seagate/sspl/sspl_init
+    ln -s /opt/seagate/sspl/low-level/files/opt/seagate/sspl/bin/sspl_provisioner_init /opt/seagate/sspl/sspl_init
 
 # In case of upgrade start sspl-ll after upgrade
 if [ "$1" == "2" ]; then
@@ -94,7 +94,6 @@ fi
 
 if [ "$1" = "1" ]; then
     echo "Installation complete. Follow the instructions."
-    echo "Run pip3.6 install -r /opt/seagate/sspl/low-level/requirements.txt"
     echo "Run /opt/seagate/sspl/sspl_init to configure SSPL"
 fi
 
