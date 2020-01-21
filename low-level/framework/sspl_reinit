@@ -23,6 +23,9 @@ chown -R sspl-ll:root /opt/seagate/sspl/low-level
 # Create a link to low-level cli for easy global access
 ln -sf /opt/seagate/sspl/low-level/cli/sspl-ll-cli /usr/bin
 
+# Create a link to low-level sspl support bundle for easy global access
+ln -sf /opt/seagate/sspl/low-level/files/opt/seagate/sspl/bin/sspl_bundle_generate /usr/bin
+
 # Assign the required groups
 usermod -a -G systemd-journal sspl-ll
 usermod -a -G dialout sspl-ll

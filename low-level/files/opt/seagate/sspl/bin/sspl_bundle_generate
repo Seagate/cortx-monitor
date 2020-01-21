@@ -1,0 +1,78 @@
+#!/usr/bin/python3.6
+
+import tarfile
+import os
+import time
+import sys
+
+# Add the top level directories
+sys.path.insert(0, '/opt/seagate/sspl/low-level')
+from framework.utils.config_reader import ConfigReader
+
+SYS_INFORMATION = "SYSTEM_INFORMATION"
+IEM_SENSOR = "IEMSENSOR"
+
+localTempPath = "/tmp/support_bundle/"
+sspl_conf_dir = "/etc/sspl.conf"
+sspl_log_default = "/var/log/sspl"
+iem_log_default = "/var/log/iem"
+onGoingRequestPath = "/tmp/sspl-sb-req.txt"
+
+def make_sspl_log_tarfile(parser, tmpFile):
+    file_name = "sspl_%s.tar.gz" % parser[1]
+    try:
+        conf_reader = ConfigReader(sspl_conf_dir)
+
+    except (IOError, ConfigReader.Error) as err:
+        print("[ Error ] when validating the configuration file %s :" % \
+            sspl_conf_dir)
+        print(err)
+        print("Exiting ...")
+        sys.exit(1)
+
+    sspl_log_dir = conf_reader._get_value_with_default(SYS_INFORMATION,
+        "sspl_log_file_path", sspl_log_default).replace("/sspl.log","")
+
+    iem_log_dir = conf_reader._get_value_with_default(IEM_SENSOR,
+        "log_file_path", iem_log_default).replace("/iem_messages","")
+
+    configure_path = parser[2]
+    if configure_path:
+        if os.path.exists(configure_path):
+            localTempPath = configure_path+"sspl/"
+        else:
+            print("Given path doesn't exist")
+            tmpFile.close()
+            os.remove(onGoingRequestPath)
+            sys.exit(1)
+    if not os.path.exists(localTempPath):
+        os.makedirs(localTempPath)
+    try:
+        with tarfile.open(localTempPath+file_name, "w:gz") as tar:
+            file_dir = file_name.replace(".tar.gz","")
+            tar.add(sspl_log_dir, arcname=file_dir+"/sspl/")
+            tar.add(sspl_conf_dir, arcname=file_dir+"/conf/sspl.conf")
+            tar.add(iem_log_dir, arcname=file_dir+"/iem/")
+            tar.close()
+    except (OSError, tarfile.TarError) as err:
+        print("Facing problem while creating sspl support bundle : %s" % err)
+        tmpFile.close()
+        os.remove(onGoingRequestPath)
+        sys.exit(1)
+
+    print("SSPL Support Bundle File Uploaded Successfully..!")
+    print("SSPL Support Bundle Location: %s" % localTempPath+file_name)
+
+if __name__ == "__main__":
+    if not os.path.isfile(onGoingRequestPath):
+        if len(sys.argv) is not 3:
+            print("Unrecognized arguments: %s" % sys.argv)
+            sys.exit(1)
+        tmpFile = open(onGoingRequestPath, "w")
+        make_sspl_log_tarfile(sys.argv, tmpFile)
+        tmpFile.close()
+        os.remove(onGoingRequestPath)
+    else:
+        print("Already SSPL Support Bundle request is going on, So skipping current request..!")
+        sys.exit(1)
+
