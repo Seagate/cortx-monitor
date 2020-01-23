@@ -8,4 +8,5 @@ PLAN=${1:-sanity}
 systemctl start crond
 
 # Execute tests
-$sudo $script_dir/run_test.py -t $script_dir/plans/$PLAN.pln
+#$sudo ./$script_dir/run_test.py -t $script_dir/plans/$PLAN.pln
+$sudo /usr/bin/sspl_tests -t $script_dir/plans/$PLAN.pln

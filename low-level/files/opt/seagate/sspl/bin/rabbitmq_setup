@@ -34,9 +34,10 @@ product=$(sed -nr 's/^product=([^,]+)$/\1/p' $SSPL_CONF | head -1)
 
 # Add required user and vhost to RabbitMQ. Set user permissions etc.
 echo "Creating required RABBITMQ configuration.... "
-/opt/seagate/sspl/low-level/framework/sspl_rabbitmq_reinit $product || {
+#/opt/seagate/sspl/low-level/framework/sspl_rabbitmq_reinit $product || {
+/opt/seagate/sspl/bin/sspl_rabbitmq_reinit $product || {
     reinit_err="$?";
-    echo -n "/opt/seagate/sspl/low-level/framework/sspl_rabbitmq_reinit failed ";
+    echo -n "/opt/seagate/sspl/bin/sspl_rabbitmq_reinit failed ";
     echo "with exit code ${reinit_err} for product $product";
     exit 1;
 }

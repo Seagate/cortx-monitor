@@ -24,8 +24,8 @@ def main():
 
     # do something with the message and signature here.  (ie write to a file,
     # socket, etc.)
-    print "Message: '%s'" % message
-    print "Signature: '%s'" % sig.raw
+    print("Message: '%s'" % message)
+    print("Signature: '%s'" % sig.raw)
 
 
 if __name__ == '__main__':

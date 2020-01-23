@@ -22,7 +22,7 @@ from jsonschema import validate
 
 from json_msgs.messages.base_msg import BaseMsg
 from json_msgs.schemas import actuators
-
+from framework.base.sspl_constants import RESOURCE_PATH
 
 class BaseActuatorMsg(BaseMsg):
     '''
@@ -39,8 +39,10 @@ class BaseActuatorMsg(BaseMsg):
         super(BaseActuatorMsg, self).__init__()
 
         # Read in the schema for validating messages
-        fileName = os.path.join(actuators.__path__[0],
+        fileName = os.path.join(RESOURCE_PATH + '/actuators',
                                 self.JSON_ACTUATOR_SCHEMA)
+        #fileName = os.path.join(actuators.__path__[0],
+        #                        self.JSON_ACTUATOR_SCHEMA)
         with open(fileName, 'r') as f:
             _schema = f.read()
 

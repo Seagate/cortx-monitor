@@ -29,7 +29,7 @@ Requires(pre): shadow-utils
 Installs SSPL
 
 %prep
-%setup -n sspl/low-level
+%setup -n sspl
 
 %build
 # Required to generate RPM targeted for Python3 even when default Python is 2.
@@ -41,15 +41,7 @@ Installs SSPL
 %install
 # Copy config file and service startup to correct locations
 mkdir -p ${RPM_BUILD_ROOT}/opt/seagate/sspl
-mkdir -p ${RPM_BUILD_ROOT}/etc/{systemd/system,dbus-1/system.d,polkit-1/rules.d,sspl-ll/templates/snmp}
-cp -afv files/etc ${RPM_BUILD_ROOT}/
-mkdir -p ${RPM_BUILD_ROOT}/opt/seagate/sspl/conf
-cp -afv files/opt ${RPM_BUILD_ROOT}/
-
-# Copy the service into /opt/seagate/sspl where it will execute from
-cp -rp __init__.py ${RPM_BUILD_ROOT}/opt/seagate/sspl
-mkdir -p ${RPM_BUILD_ROOT}/opt/seagate/sspl/low-level
-cp -rp . ${RPM_BUILD_ROOT}/opt/seagate/sspl/low-level
+cp -rp . ${RPM_BUILD_ROOT}/opt/seagate/sspl
 
 %pre
 # Add the sspl-ll user during first install if it doesnt exist
@@ -73,8 +65,23 @@ mkdir -p /var/sspl/data/
 chown -R sspl-ll /var/sspl/
 
 %post
+mkdir -p /var/sspl/bundle /var/log/sspl /etc/sspl
+SSPL_DIR=/opt/seagate/sspl
+CFG_DIR=$SSPL_DIR/conf
+
+[ -d "${SSPL_DIR}/lib" ] && {
+    ln -sf $SSPL_DIR/lib/sspl_ll_d /usr/bin/sspl_ll_d
+    ln -sf $SSPL_DIR/lib/sspl_ll_cli /usr/bin/sspl_ll_cli
+    ln -sf $SSPL_DIR/lib/sspl_ll_d $SSPL_DIR/bin/sspl_ll_d
+    ln -sf $SSPL_DIR/lib/sspl_ll_cli $SSPL_DIR/bin/sspl_ll_cli
+}
+
+[ -d "${SSPL_DIR}/sspl_test" ] && {
+    ln -sf $SSPL_DIR/sspl_test/sspl_tests/sspl_tests /usr/bin/sspl_tests
+}
+
 # run conf_diff.py script
-[ -f /opt/seagate/sspl/low-level/framework/base/sspl_conf_adopt.py ] && python /opt/seagate/sspl/low-level/framework/base/sspl_conf_adopt.py
+[ -f /opt/seagate/sspl/bin/sspl_conf_adopt.py ] && python3 /opt/seagate/sspl/bin/sspl_conf_adopt.py
 
 # restore /tmp/sspl_tmp.conf (its updated from previuos version of /etc/sspl.conf & new keys added in sspl.conf.EES)
 [ -f /tmp/sspl_tmp.conf ] && cp /tmp/sspl_tmp.conf /etc/sspl.conf
@@ -91,9 +98,7 @@ chown -R sspl-ll /var/sspl/
 
 # Copy init script
 [ -f /opt/seagate/sspl/sspl_init ] ||
-    ln -s /opt/seagate/sspl/low-level/files/opt/seagate/sspl/bin/sspl_provisioner_init /opt/seagate/sspl/sspl_init
-
-mkdir -p /var/log/sspl/
+    ln -s $SSPL_DIR/bin/sspl_provisioner_init /opt/seagate/sspl/sspl_init
 
 # In case of upgrade start sspl-ll after upgrade
 if [ "$1" == "2" ]; then
@@ -103,6 +108,7 @@ fi
 
 if [ "$1" = "1" ]; then
     echo "Installation complete. Follow the instructions."
+    echo "Run pip3.6 install -r /opt/seagate/sspl/conf/requirements.txt"
     echo "Run /opt/seagate/sspl/sspl_init to configure SSPL"
 fi
 
@@ -118,23 +124,7 @@ rm -f /etc/dbus-1/system.d/sspl-ll_dbus_policy.conf
 
 %files
 %defattr(-,sspl-ll,root,-)
-/opt/seagate/sspl/__init__.py
-/opt/seagate/sspl/low-level
-/opt/seagate/sspl/conf/sspl.conf.sample
-/opt/seagate/sspl/conf/sspl.conf.gw
-/opt/seagate/sspl/conf/sspl.conf.ssu
-/opt/seagate/sspl/conf/sspl.conf.EES
-/opt/seagate/sspl/conf/sspl-ll.service.EES
-/opt/seagate/sspl/conf/sspl-ll.service.sample
-/opt/seagate/sspl/conf/setup.yaml
-/opt/seagate/sspl/bin/rabbitmq_setup
-/opt/seagate/sspl/bin/constants.sh
-/opt/seagate/sspl/bin/sspl_setup_init
-/opt/seagate/sspl/bin/sspl_setup
-/opt/seagate/sspl/bin/sspl_config
-/opt/seagate/sspl/bin/sspl_post_install
-/opt/seagate/sspl/bin/sspl_test
-/opt/seagate/sspl/bin/sspl_reset
+/opt/seagate/sspl/*
 
 %changelog
 * Fri Aug 10 2018 Ujjwal Lanjewar <ujjwal.lanjewar@seagate.com>

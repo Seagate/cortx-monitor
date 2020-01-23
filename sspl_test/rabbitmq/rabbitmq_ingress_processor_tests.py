@@ -26,10 +26,9 @@ from pika import exceptions
 from sspl_test.framework.base.module_thread import ScheduledModuleThread
 from sspl_test.framework.base.internal_msgQ import InternalMsgQ
 from sspl_test.framework.utils.service_logging import logger
-
+from sspl_test.framework.base.sspl_constants import RESOURCE_PATH
 import ctypes
 SSPL_SEC = ctypes.cdll.LoadLibrary('libsspl_sec.so.0')
-
 
 class RabbitMQingressProcessorTests(ScheduledModuleThread, InternalMsgQ):
     """Handles incoming messages via rabbitMQ for automated tests"""
@@ -62,8 +61,10 @@ class RabbitMQingressProcessorTests(ScheduledModuleThread, InternalMsgQ):
 
         # Read in the actuator schema for validating messages
         dir = os.path.dirname(__file__)
-        fileName = os.path.join(dir, '..', '..', 'low-level', 'json_msgs',
-                                'schemas', 'actuators',
+        #fileName = os.path.join(dir, '..', '..', 'low-level', 'json_msgs',
+        #                        'schemas', 'actuators',
+        #                        self.JSON_ACTUATOR_SCHEMA)
+        fileName = os.path.join(RESOURCE_PATH + '/actuators',
                                 self.JSON_ACTUATOR_SCHEMA)
 
         with open(fileName, 'r') as f:
@@ -77,8 +78,10 @@ class RabbitMQingressProcessorTests(ScheduledModuleThread, InternalMsgQ):
 
         # Read in the sensor schema for validating messages
         dir = os.path.dirname(__file__)
-        fileName = os.path.join(dir, '..', '..', 'low-level', 'json_msgs',
-                                'schemas', 'sensors',
+        #fileName = os.path.join(dir, '..', '..', 'low-level', 'json_msgs',
+        #                        'schemas', 'sensors',
+        #                        self.JSON_SENSOR_SCHEMA)
+        fileName = os.path.join(RESOURCE_PATH + '/sensors',
                                 self.JSON_SENSOR_SCHEMA)
 
         with open(fileName, 'r') as f:

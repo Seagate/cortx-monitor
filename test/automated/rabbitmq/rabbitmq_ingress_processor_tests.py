@@ -27,6 +27,7 @@ from pika import exceptions
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
+from framework.base.sspl_constants import RESOURCE_PATH
 
 # Import message handlers to hand off messages
 from message_handlers.logging_msg_handler import LoggingMsgHandler
@@ -65,9 +66,11 @@ class RabbitMQingressProcessorTests(ScheduledModuleThread, InternalMsgQ):
                                                        self.PRIORITY)
 
         # Read in the actuator schema for validating messages
-        dir = os.path.dirname(__file__)
-        fileName = os.path.join(dir, '..', '..', '..', 'low-level', 'json_msgs',
-                                'schemas', 'actuators',
+        #dir = os.path.dirname(__file__)
+        #fileName = os.path.join(dir, '..', '..', '..', 'low-level', 'json_msgs',
+        #                        'schemas', 'actuators',
+        #                        self.JSON_ACTUATOR_SCHEMA)
+        fileName = os.path.join(RESOURCE_PATH + '/actuators',
                                 self.JSON_ACTUATOR_SCHEMA)
 
         with open(fileName, 'r') as f:
@@ -80,9 +83,11 @@ class RabbitMQingressProcessorTests(ScheduledModuleThread, InternalMsgQ):
         Draft3Validator.check_schema(self._actuator_schema)
 
         # Read in the sensor schema for validating messages
-        dir = os.path.dirname(__file__)
-        fileName = os.path.join(dir, '..', '..', '..', 'low-level', 'json_msgs',
-                                'schemas', 'sensors',
+        #dir = os.path.dirname(__file__)
+        #fileName = os.path.join(dir, '..', '..', '..', 'low-level', 'json_msgs',
+        #                        'schemas', 'sensors',
+        #                        self.JSON_SENSOR_SCHEMA)
+        fileName = os.path.join(RESOURCE_PATH + '/sensors',
                                 self.JSON_SENSOR_SCHEMA)
 
         with open(fileName, 'r') as f:

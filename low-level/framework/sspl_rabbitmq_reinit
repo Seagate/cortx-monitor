@@ -26,8 +26,7 @@ SECTION="RABBITMQEGRESSPROCESSOR"
 parentdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.sys.path.insert(0,parentdir)
 
-from base.sspl_constants import cs_legacy_products, enabled_products
-
+from sspl_constants import cs_legacy_products, enabled_products
 
 def main(product):
     """ Main line for this program. """

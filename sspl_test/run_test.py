@@ -25,14 +25,14 @@ import argparse
 
 # Adding sspl and sspl_test path
 test_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.append(os.path.join(test_path))
+os.sys.path.append(os.path.join(test_path))
 
 from sspl_test.common import TestFailed, init_rabbitMQ_msg_processors, stop_rabbitMQ_msg_processors
 
 def tmain(argp, argv):
     # Import required TEST modules
     ts_path = os.path.dirname(argv)
-    sys.path.append(os.path.join(ts_path, '..', '..'))
+    os.sys.path.append(os.path.join(ts_path, '..', '..'))
     args = {}
 
     # Prepare to run the test, all or subset per command line args
@@ -47,6 +47,7 @@ def tmain(argp, argv):
         file_path = os.path.dirname(os.path.realpath(__file__))
         for root, directories, filenames in os.walk(os.getcwd()):
             for filename in filenames:
+                print("filename : {}".format(filename))
                 if re.match(r'test_.*\.py$', filename):
                     file = os.path.join(root, filename).rsplit('.', 1)[0]\
                         .replace(file_path + "/", "").replace("/", ".")
@@ -58,7 +59,7 @@ def tmain(argp, argv):
         print('\n####### Test Suite: %s ######' %ts)
         ts_count += 1
         try:
-            ts_module = __import__('sspl.sspl_test.%s' %ts, fromlist=[ts])
+            ts_module = __import__('sspl_test.%s' %ts, fromlist=[ts])
             # Initialization
             init = getattr(ts_module, 'init')
             init(args)

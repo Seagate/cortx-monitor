@@ -1,3 +1,6 @@
+%define _unpackaged_files_terminate_build 0
+%define _binaries_in_noarch_packages_terminate_build   0
+
 # build number
 %define build_num  %( test -n "$build_number" && echo "$build_number" || echo 1 )
 
@@ -13,11 +16,12 @@ Source0:    %{name}-%{version}.tgz
 Requires:   sspl
 BuildRoot:  %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 
+
 %description
 Installs SSPL sanity test ctf scripts
 
 %prep
-%setup -n sspl/sspl_test
+%setup -n sspl_test
 
 %clean
 [ "${RPM_BUILD_ROOT}" != "/" ] && rm -rf ${RPM_BUILD_ROOT}
@@ -25,6 +29,14 @@ Installs SSPL sanity test ctf scripts
 %install
 mkdir -p ${RPM_BUILD_ROOT}/opt/seagate/sspl/sspl_test
 cp -rp . ${RPM_BUILD_ROOT}/opt/seagate/sspl/sspl_test
+
+%post
+SSPL_DIR=/opt/seagate/sspl
+CFG_DIR=$SSPL_DIR/conf
+
+[ -d "${SSPL_DIR}/sspl_test/lib" ] && {
+    ln -sf $SSPL_DIR/sspl_test/lib/sspl_tests /usr/bin/sspl_tests
+}
 
 %files
 %defattr(-,sspl-ll,root,-)

@@ -32,6 +32,12 @@ from sspl_test.default import *
 from sspl_test.framework.utils.config_reader import ConfigReader
 from sspl_test.framework.utils.service_logging import init_logging
 from sspl_test.framework.utils.service_logging import logger
+
+# Adding sspl and sspl_test path
+test_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+os.sys.path.append(os.path.join(test_path))
+os.sys.path.append(os.path.join(test_path + "/../"))
+
 from sspl_test.rabbitmq.rabbitmq_ingress_processor_tests import RabbitMQingressProcessorTests
 from sspl_test.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 
@@ -58,8 +64,14 @@ def init_rabbitMQ_msg_processors():
     """The main bootstrap for sspl automated tests"""
 
     # Retrieve configuration file for sspl-ll service
-    conf_directory = os.path.dirname(os.path.abspath(__file__))
-    path_to_conf_file = os.path.join(conf_directory, "sspl_tests.conf")
+    path_to_conf_file = "/opt/seagate/sspl/sspl_test/conf/sspl_tests.conf"
+    if os.path.exists(path_to_conf_file):
+        print("Using conf file : {}".format(path_to_conf_file))
+    else:
+        conf_directory = os.path.dirname(os.path.abspath(__file__))
+        path_to_conf_file = os.path.join(conf_directory, "sspl_tests.conf")
+        print("Using conf file : {}".format(path_to_conf_file))
+
     try:
         conf_reader = ConfigReader(path_to_conf_file)
     except (IOError, ConfigReader.Error) as err:
@@ -73,7 +85,6 @@ def init_rabbitMQ_msg_processors():
     # Initialize logging
     try:
         init_logging("SSPL-Tests", "DEBUG")
-
     except Exception as err:
         # We don't have logger since it threw an exception, use generic 'print'
         print("[ Error ] when initializing logging :")

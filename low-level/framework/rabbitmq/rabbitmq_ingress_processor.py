@@ -28,6 +28,7 @@ from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
 from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 from json_msgs.messages.actuators.ack_response import AckResponseMsg
+from framework.base.sspl_constants import RESOURCE_PATH
 
 try:
     use_security_lib = True
@@ -67,15 +68,19 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
                                                        self.PRIORITY)
 
         # Read in the actuator schema for validating messages
-        dir = os.path.dirname(__file__)
-        schema_file = os.path.join(dir, '..', '..', 'json_msgs',
-                                   'schemas', 'actuators',
+        # dir = os.path.dirname(__file__)
+        #schema_file = os.path.join(dir, '..', '..', 'json_msgs',
+        #                           'schemas', 'actuators',
+        #                           self.JSON_ACTUATOR_SCHEMA)
+        schema_file = os.path.join(RESOURCE_PATH + '/actuators',
                                    self.JSON_ACTUATOR_SCHEMA)
         self._actuator_schema = self._load_schema(schema_file)
 
         # Read in the sensor schema for validating messages
-        schema_file = os.path.join(dir, '..', '..', 'json_msgs',
-                                   'schemas', 'sensors',
+        #schema_file = os.path.join(dir, '..', '..', 'json_msgs',
+        #                           'schemas', 'sensors',
+        #                           self.JSON_SENSOR_SCHEMA)
+        schema_file = os.path.join(RESOURCE_PATH + '/sensors',
                                    self.JSON_SENSOR_SCHEMA)
         self._sensor_schema = self._load_schema(schema_file)
 

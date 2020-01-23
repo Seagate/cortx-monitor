@@ -18,13 +18,14 @@
     exit;
 }
 
-chown -R sspl-ll:root /opt/seagate/sspl/low-level
+#chown -R sspl-ll:root /opt/seagate/sspl/low-level
+chown -R sspl-ll:root /opt/seagate/sspl
 
 # Create a link to low-level cli for easy global access
-ln -sf /opt/seagate/sspl/low-level/cli/sspl-ll-cli /usr/bin
+ln -sf /opt/seagate/sspl/lib/sspl_ll_cli /usr/bin/sspl_ll_cli
 
 # Create a link to low-level sspl support bundle for easy global access
-ln -sf /opt/seagate/sspl/low-level/files/opt/seagate/sspl/bin/sspl_bundle_generate /usr/bin
+ln -sf /opt/seagate/sspl/bin/sspl_bundle_generate /usr/bin
 
 # Assign the required groups
 usermod -a -G systemd-journal sspl-ll
@@ -49,10 +50,10 @@ rm -Rf /tmp/dcs/dmreport
 setcap cap_sys_rawio=ep /usr/bin/python2.7
 
 # Make sure security policies are in place
-cp -f /opt/seagate/sspl/low-level/files/etc/polkit-1/rules.d/sspl-ll_dbus_policy.rules /etc/polkit-1/rules.d
-cp -f /opt/seagate/sspl/low-level/files/etc/dbus-1/system.d/sspl-ll_dbus_policy.conf /etc/dbus-1/system.d
+cp -f /opt/seagate/sspl/conf/etc/polkit-1/rules.d/sspl-ll_dbus_policy.rules /etc/polkit-1/rules.d
+cp -f /opt/seagate/sspl/conf/etc/dbus-1/system.d/sspl-ll_dbus_policy.conf /etc/dbus-1/system.d
 
 mkdir -p /etc/sspl-ll/templates/snmp
-cp -f /opt/seagate/sspl/low-level/snmp/* /etc/sspl-ll/templates/snmp
+cp -f /opt/seagate/sspl/conf/snmp/* /etc/sspl-ll/templates/snmp
 
 rm -Rf /var/run/sspl_ll
