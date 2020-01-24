@@ -188,14 +188,15 @@ class RealStorPSUSensor(ScheduledModuleThread, InternalMsgQ):
             # Check for missing and fault case
             if psu_health == self.rssencl.HEALTH_FAULT:
                 self._log_debug("Found fault in PSU {0}".format(durable_id))
-                if durable_id not in self._previously_faulty_psus:
-                    alert_type = self.rssencl.FRU_FAULT
-                    # Check for removal
-                    if self._check_if_psu_not_installed(psu_health_reason):
-                        alert_type = self.rssencl.FRU_MISSING
+                alert_type = self.rssencl.FRU_FAULT
+                # Check for removal
+                if self._check_if_psu_not_installed(psu_health_reason):
+                    alert_type = self.rssencl.FRU_MISSING
+                state_changed = not (durable_id in self._previously_faulty_psus and
+                        self._previously_faulty_psus[durable_id]["alert_type"] == alert_type)
+                if state_changed:
                     self._previously_faulty_psus[durable_id] = {
                         "health": psu_health, "alert_type": alert_type}
-                    state_changed = True
                     internal_json_msg = self._create_internal_msg(
                         psu, alert_type)
                     faulty_psu_messages.append(internal_json_msg)
@@ -205,11 +206,11 @@ class RealStorPSUSensor(ScheduledModuleThread, InternalMsgQ):
             # Check for fault case
             elif psu_health == self.rssencl.HEALTH_DEGRADED:
                 self._log_debug("Found degraded in PSU {0}".format(durable_id))
-                if durable_id not in self._previously_faulty_psus:
+                state_changed = durable_id not in self._previously_faulty_psus
+                if state_changed:
                     alert_type = self.rssencl.FRU_FAULT
                     self._previously_faulty_psus[durable_id] = {
                         "health": psu_health, "alert_type": alert_type}
-                    state_changed = True
                     internal_json_msg = self._create_internal_msg(
                         psu, alert_type)
                     faulty_psu_messages.append(internal_json_msg)
@@ -219,7 +220,8 @@ class RealStorPSUSensor(ScheduledModuleThread, InternalMsgQ):
             # Check for healthy case
             elif psu_health == self.rssencl.HEALTH_OK:
                 self._log_debug("Found ok in PSU {0}".format(durable_id))
-                if durable_id in self._previously_faulty_psus:
+                state_changed = durable_id in self._previously_faulty_psus
+                if state_changed:
                     # Send message to handler
                     if send_message:
                         previous_alert_type = \
@@ -233,7 +235,6 @@ class RealStorPSUSensor(ScheduledModuleThread, InternalMsgQ):
                         if send_message:
                             self._send_json_msg(internal_json_msg)
                     del self._previously_faulty_psus[durable_id]
-                    state_changed = True
             # Persist faulty PSU list to file only if something is changed
             if state_changed:
                 self.rssencl.jsondata.dump(self._previously_faulty_psus,\
@@ -241,6 +242,33 @@ class RealStorPSUSensor(ScheduledModuleThread, InternalMsgQ):
                 state_changed = False
             alert_type = ""
         return faulty_psu_messages
+
+    def _get_hostname(self):
+        try:
+            return socket.getfqdn()
+        except Exception as e:
+            logger.exception("Got exception {} when trying to get hostname"
+                    " using getfqdn().".format(e))
+
+        logger.info(" Trying with ip addr command")
+        try:
+            from subprocess import run, PIPE
+            from re import findall
+
+            IP_CMD = "ip -f inet addr show scope global up | grep inet"
+            IP_REGEX = b'\\b(\\d{1,3}(?:\\.\d{1,3}){3})/\d{1,2}\\b'
+
+            ip_out = run(IP_CMD, stdout=PIPE, shell=True, check=True)
+            ip_list = re.findall(IP_REGEX, ip_out.stdout)
+            if ip_list:
+                return ip_list[0]
+        except Exception as e:
+            logger.exception("Got exception {} when trying to get hostname"
+                    " using ip addr command.".format(e))
+
+        # Ultimate fallback, when we are completely out of options
+        logger.info("Using localhost")
+        return "localhost"
 
     def _create_internal_msg(self, psu_detail, alert_type):
         """Forms a dictionary containing info about PSUs to send to
@@ -258,7 +286,7 @@ class RealStorPSUSensor(ScheduledModuleThread, InternalMsgQ):
 
         alert_id = self._get_alert_id(epoch_time)
         resource_id = psu_detail.get("durable-id")
-        host_name = socket.gethostname()
+        host_name = self._get_hostname()
 
         info = {
                 "site_id": self.rssencl.site_id,
