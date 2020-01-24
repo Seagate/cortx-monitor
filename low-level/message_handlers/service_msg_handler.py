@@ -197,7 +197,7 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
             service_request = jsonMsg.get("actuator_request_type").get("service_watchdog_controller").get("service_request")
             if service_request != "None":
                 # Query the Zope GlobalSiteManager for an object implementing IService
-                if self._service_actuator == None:
+                if self._service_actuator is None:
                     from actuators.IService import IService
                     self._service_actuator = self._query_utility(IService)()
                     self._log_debug("_process_msg, service_actuator name: %s" % self._service_actuator.name())

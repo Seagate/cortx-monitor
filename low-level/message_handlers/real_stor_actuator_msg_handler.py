@@ -14,9 +14,7 @@
  ****************************************************************************
 """
 
-import socket
 import json
-import time
 
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
@@ -25,9 +23,6 @@ from framework.base.sspl_constants import enabled_products
 
 from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 from json_msgs.messages.sensors.realstor_actuator_response import RealStorActuatorSensorMsg
-
-from message_handlers.disk_msg_handler import DiskMsgHandler
-from message_handlers.service_msg_handler import ServiceMsgHandler
 
 
 class RealStorActuatorMsgHandler(ScheduledModuleThread, InternalMsgQ):

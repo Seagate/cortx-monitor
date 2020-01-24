@@ -13,7 +13,6 @@
  prohibited. All other rights are expressly reserved by Seagate Technology, LLC.
  ****************************************************************************
 """
-import errno
 import json
 import os
 import re
@@ -21,7 +20,6 @@ import socket
 import time
 import uuid
 
-import requests
 from zope.interface import implementer
 
 from framework.base.module_thread import ScheduledModuleThread
@@ -108,7 +106,7 @@ class RealStorPSUSensor(ScheduledModuleThread, InternalMsgQ):
         self._previously_faulty_psus = store.get(\
                                            self._faulty_psu_file_path)
 
-        if self._previously_faulty_psus == None:
+        if self._previously_faulty_psus is None:
             self._previously_faulty_psus = {}
             store.put(self._previously_faulty_psus,\
                 self._faulty_psu_file_path)

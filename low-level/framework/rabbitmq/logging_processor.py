@@ -16,7 +16,6 @@
 """
 
 import pika
-import os
 import json
 import time
 
@@ -154,7 +153,7 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
                 pass
 
             # Not an IEM so just dump it to the journal and don't worry about email and routing back to CMU
-            if event_code == None:
+            if event_code is None:
                 if use_journal:
                     journal.send(log_msg, MESSAGE_ID=event_code, PRIORITY=priority,
                                  SYSLOG_IDENTIFIER="sspl-ll")

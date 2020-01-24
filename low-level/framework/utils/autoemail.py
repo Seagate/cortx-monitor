@@ -17,8 +17,6 @@
  ****************************************************************************
 """
 import smtplib
-import string
-import errno
 
 from socket import gethostname, gethostbyaddr, gaierror
 from socket import error as socket_error

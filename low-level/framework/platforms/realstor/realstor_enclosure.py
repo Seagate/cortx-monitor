@@ -16,14 +16,12 @@
 
 import os
 import errno
-import threading
 import json
 import hashlib
 import time
 
 from framework.target.enclosure import StorageEnclosure
 from framework.utils.service_logging import logger
-from framework.utils.config_reader import ConfigReader
 from framework.utils.webservices import WebServices
 from framework.utils.store_factory import store
 
@@ -208,7 +206,7 @@ class RealStorEnclosure(StorageEnclosure):
 
             retry_count -= 1
 
-            if response == None:
+            if response is None:
                 continue
 
             if response.status_code != self.ws.HTTP_OK:

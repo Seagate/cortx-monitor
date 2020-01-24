@@ -14,10 +14,7 @@
  prohibited. All other rights are expressly reserved by Seagate Technology, LLC.
  ****************************************************************************
 """
-import os
 import json
-import time
-import subprocess
 
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
@@ -29,15 +26,12 @@ from message_handlers.logging_msg_handler import LoggingMsgHandler
 
 from json_msgs.messages.sensors.snmp_trap import SNMPtrapMsg
 
-from pysnmp.smi import builder, view, error
-from pysnmp.smi.view import MibViewController
+from pysnmp.smi import builder, view
 
 from pysnmp.carrier.asynsock.dispatch import AsynsockDispatcher
 from pysnmp.carrier.asynsock.dgram import udp, udp6
 from pyasn1.codec.ber import decoder
 from pysnmp.proto import api
-
-from pysnmp.proto import rfc1902
 
 from zope.interface import implements
 from sensors.INode_data import INodeData

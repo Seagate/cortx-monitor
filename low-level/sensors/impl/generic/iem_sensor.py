@@ -19,7 +19,6 @@
 import errno
 import select
 import subprocess
-import time
 import datetime
 import os
 import csv
@@ -402,18 +401,6 @@ class IEMSensor(ScheduledModuleThread, InternalMsgQ):
             components.append(iem_parts[0][8:]) # Event ID
             components.append(iem_parts[1]) # Description level
         return components
-
-    def _get_iem(self, log):
-        """Returns a string starting from the word <IEC> from a syslog
-           log line.
-        """
-        if log is None or len(log.strip()) == 0:
-            raise TypeError
-        ret = None
-        iec_keyword_index = log.find(self.IEC_KEYWORD)
-        if iec_keyword_index != -1:
-            ret = log[iec_keyword_index:]
-        return ret
 
     def _create_file(self, path):
         dir = path[:path.rindex("/")]

@@ -15,13 +15,11 @@
  prohibited. All other rights are expressly reserved by Seagate Technology, LLC.
  ****************************************************************************
 """
-import copy
-import json
 from framework.utils.service_logging import logger
 
 class InternalMsgQ(object):
     """Base Class for internal message queue communications between modules"""
-    
+
     def __init__(self):
         super(InternalMsgQ, self).__init__()
 

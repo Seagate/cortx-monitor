@@ -13,7 +13,6 @@
  prohibited. All other rights are expressly reserved by Seagate Technology, LLC.
  ****************************************************************************
 """
-import subprocess
 import json
 import calendar
 import time

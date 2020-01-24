@@ -14,7 +14,6 @@
  LLC.
  ****************************************************************************
 """
-import errno
 import json
 import os
 import re
@@ -22,14 +21,12 @@ import socket
 import time
 import uuid
 
-import requests
 from zope.interface import implementer
 
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
-from message_handlers.logging_msg_handler import LoggingMsgHandler
 from framework.platforms.realstor.realstor_enclosure import singleton_realstorencl
 from framework.utils.store_factory import store
 
@@ -108,7 +105,7 @@ class RealStorFanSensor(ScheduledModuleThread, InternalMsgQ):
         self._faulty_fan_modules_list = store.get(\
                                            self._faulty_fan_file_path)
 
-        if self._faulty_fan_modules_list == None:
+        if self._faulty_fan_modules_list is None:
             self._faulty_fan_modules_list = {}
             store.put(self._faulty_fan_modules_list,\
                 self._faulty_fan_file_path)

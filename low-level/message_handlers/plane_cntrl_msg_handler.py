@@ -14,7 +14,6 @@
  ****************************************************************************
 """
 import json
-import syslog
 
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ

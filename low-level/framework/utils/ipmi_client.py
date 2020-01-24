@@ -1,4 +1,3 @@
-import abc
 import subprocess
 
 from framework.utils.ipmi import IPMI

@@ -13,9 +13,6 @@
  prohibited. All other rights are expressly reserved by Seagate Technology, LLC.
  ****************************************************************************
 """
-
-import json
-import time
 import serial
 import paramiko
 from functools import partial

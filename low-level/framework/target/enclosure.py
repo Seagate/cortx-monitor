@@ -15,9 +15,7 @@
 """
 
 import os
-import sys
 import errno
-import threading
 
 from framework.utils.config_reader import ConfigReader
 from framework.utils.service_logging import logger

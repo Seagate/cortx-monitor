@@ -17,7 +17,6 @@
 import errno
 import json
 import socket
-import time
 
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
@@ -724,7 +723,6 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     # Load and Instantiate the Actuator for the first request
                     if self._NodeHW_actuator is None:
                         from actuators.impl.generic.node_hw import NodeHWactuator
-                        from framework.utils.ipmi import IPMI
                         from framework.utils.ipmi_client import IpmiFactory
                         self.ipmi_client_name = self._conf_reader._get_value_with_default(
                             self.NODE_HW_ACTUATOR, self.IPMI_IMPLEMENTOR,

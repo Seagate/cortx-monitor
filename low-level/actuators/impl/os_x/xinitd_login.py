@@ -14,15 +14,11 @@
  ****************************************************************************
 """
 
-import json
 
 from zope.interface import implements
 from actuators.ILogin import ILogin
 
 from framework.base.debug import Debug
-from framework.utils.service_logging import logger
-
-from dbus import SystemBus, Interface, exceptions as debus_exceptions
 
 
 class XinitdLogin(Debug):

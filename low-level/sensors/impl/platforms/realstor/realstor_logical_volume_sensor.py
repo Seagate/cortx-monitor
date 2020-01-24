@@ -14,14 +14,11 @@
  ****************************************************************************
 """
 import json
-import re
-import errno
 import os
 import socket
 import time
 import uuid
 
-import requests
 from zope.interface import implementer
 
 from framework.base.module_thread import ScheduledModuleThread
@@ -129,7 +126,7 @@ class RealStorLogicalVolumeSensor(ScheduledModuleThread, InternalMsgQ):
         self._previously_faulty_disk_groups = store.get(\
                                                   self._faulty_disk_group_file_path)
 
-        if self._previously_faulty_disk_groups == None:
+        if self._previously_faulty_disk_groups is None:
             self._previously_faulty_disk_groups = {}
             store.put(self._previously_faulty_disk_groups,\
                 self._faulty_disk_group_file_path)

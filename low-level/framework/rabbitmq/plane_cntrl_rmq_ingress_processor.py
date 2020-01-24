@@ -24,7 +24,6 @@ from socket import gethostname
 from jsonschema import Draft3Validator
 from jsonschema import validate
 
-from pika import exceptions
 from pika.exceptions import AMQPError
 
 from framework.base.module_thread import ScheduledModuleThread
@@ -33,7 +32,7 @@ from framework.utils.service_logging import logger
 from framework.rabbitmq.plane_cntrl_rmq_egress_processor import PlaneCntrlRMQegressProcessor
 
 from json_msgs.messages.actuators.ack_response import AckResponseMsg
-from socket import gethostname
+
 
 import ctypes
 try:

@@ -14,14 +14,11 @@
  ****************************************************************************
 """
 import json
-import re
-import errno
 import os
 import socket
 import time
 import uuid
 
-import requests
 from zope.interface import implementer
 
 from framework.base.module_thread import ScheduledModuleThread
@@ -109,7 +106,7 @@ class RealStorControllerSensor(ScheduledModuleThread, InternalMsgQ):
         self._previously_faulty_controllers = store.get(\
                                                   self._faulty_controller_file_path)
 
-        if self._previously_faulty_controllers == None:
+        if self._previously_faulty_controllers is None:
             self._previously_faulty_controllers = {}
             store.put(self._previously_faulty_controllers,\
                 self._faulty_controller_file_path)

@@ -17,10 +17,8 @@
 """
 
 import os
-import threading
 import json
 import time
-import errno
 import socket
 import uuid
 

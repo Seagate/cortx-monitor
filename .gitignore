@@ -21,6 +21,12 @@ org.eclipse.core.resources.prefs
 *.db3
 *.db
 
+# Env File #
+.env
+
+# VS Code settings #
+.vscode/
+
 # Compiled source #
 ###################
 *.pyc

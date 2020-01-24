@@ -16,7 +16,6 @@
 
 import json
 import time
-import psutil
 
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
@@ -498,7 +497,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         """Create & transmit a RAID status data message as defined
             by the sensor response json schema"""
         # Get the host_id
-        if self._node_sensor.host_id == None:
+        if self._node_sensor.host_id is None:
             successful = self._node_sensor.read_data("None", self._get_debug(), self._units)
             if not successful:
                 logger.error("NodeDataMsgHandler, updating host information was NOT successful.")
@@ -545,7 +544,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         """Create & transmit a FRU IPMI data message as defined
             by the sensor response json schema"""
 
-        if self._node_sensor.host_id == None:
+        if self._node_sensor.host_id is None:
             successful = self._node_sensor.read_data("None", self._get_debug(), self._units)
             if not successful:
                 logger.error("NodeDataMsgHandler, updating host information was NOT successful.")

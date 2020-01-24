@@ -16,13 +16,11 @@
 
 import json
 import pika
-import os
 import time
 
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
-from json_msgs.messages.actuators.thread_controller import ThreadControllerMsg
 
 import ctypes
 try:

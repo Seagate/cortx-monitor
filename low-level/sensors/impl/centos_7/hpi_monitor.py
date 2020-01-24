@@ -16,9 +16,6 @@
  ****************************************************************************
 """
 import os
-import json
-import shutil
-import queue
 import time
 import pyinotify
 import subprocess
@@ -29,7 +26,6 @@ from framework.utils.service_logging import logger
 
 # Modules that receive messages from this module
 from message_handlers.disk_msg_handler import DiskMsgHandler
-from message_handlers.service_msg_handler import ServiceMsgHandler
 
 from zope.interface import implementer
 from sensors.IHpi_monitor import IHPIMonitor

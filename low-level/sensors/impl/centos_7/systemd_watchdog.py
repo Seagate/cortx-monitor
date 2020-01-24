@@ -23,7 +23,6 @@ import time
 import copy
 import subprocess
 
-from collections import defaultdict
 from datetime import datetime, timedelta
 
 from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor

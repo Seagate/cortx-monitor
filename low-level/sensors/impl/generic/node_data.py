@@ -15,14 +15,12 @@
 """
 
 import os
-import sys
 import math
-import datetime
 import socket
 import psutil
 import threading
 
-from datetime import datetime, timedelta
+from datetime import datetime
 import time
 
 from framework.base.debug import Debug

@@ -67,10 +67,9 @@ from xrtx_hpi_lib.hpi_session_management import PyHpiSessionManagement
 from openhpi_baselib import SA_OK, SaHpiCtrlStateT, SaHpiCtrlStateUnionT, \
         HpiUtilGen, saHpiControlSet
 
-from hpi.inventory.iterator import FruIterator, SubFruIterator
+from hpi.inventory.iterator import SubFruIterator
 from hpi.inventory.parser.inventory import SystemInventoryParser
 from hpi.inventory.system import SystemInventory
-from hpi.resource.entry_tree import ResourceEntityTree
 
 
 class HPIactuator(Debug):

@@ -14,22 +14,17 @@
  ****************************************************************************
 """
 
-import json
-
 from zope.interface import implements
 from actuators.IService import IService
 
 from framework.base.debug import Debug
-from framework.utils.service_logging import logger
-
-from dbus import SystemBus, Interface, exceptions as debus_exceptions
 
 
 class XinitdService(Debug):
     """Handles service request messages to xinitd"""
 
     implements(IService)
-    
+
     ACTUATOR_NAME = "XinitdService"
 
     @staticmethod

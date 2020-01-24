@@ -21,8 +21,6 @@
 """
 import os
 import json
-import shutil
-import queue
 import time
 import subprocess
 import pyinotify

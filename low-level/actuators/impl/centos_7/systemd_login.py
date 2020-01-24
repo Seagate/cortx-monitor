@@ -15,9 +15,6 @@
  ****************************************************************************
 """
 
-import json
-import time
-
 from zope.interface import implementer
 from actuators.ILogin import ILogin
 
@@ -25,7 +22,7 @@ from framework.base.debug import Debug
 from framework.utils.service_logging import logger
 
 from dbus import SystemBus, Interface, exceptions as debus_exceptions
-from systemd import login
+
 
 @implementer(ILogin)
 class SystemdLogin(Debug):

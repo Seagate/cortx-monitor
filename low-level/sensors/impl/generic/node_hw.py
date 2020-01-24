@@ -29,7 +29,6 @@ from framework.utils.severity_reader import SeverityReader
 from message_handlers.node_data_msg_handler import NodeDataMsgHandler
 from message_handlers.logging_msg_handler import LoggingMsgHandler
 
-from framework.base.debug import Debug
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.config_reader import ConfigReader

@@ -17,7 +17,6 @@
 import os
 import json
 import time
-import syslog
 import socket
 import subprocess
 

@@ -15,7 +15,6 @@
  ****************************************************************************
 """
 
-import json
 
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
@@ -29,7 +28,6 @@ from json_msgs.messages.sensors.realstor_sideplane_expander_data import \
     RealStorSideplaneExpanderDataMsg
 from json_msgs.messages.sensors.realstor_logical_volume_data import \
     RealStorLogicalVolumeDataMsg
-from message_handlers.logging_msg_handler import LoggingMsgHandler
 from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 
 
