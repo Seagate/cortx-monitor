@@ -257,7 +257,7 @@ config_sspl() {
 
     if [ -z "$LOG_FILE_PATH" ]
     then
-        sed -i "s|File=.*|File=\/var/sspl/data/iem/iem_messages\"|g" $RSYSLOG_CONF
+        sed -i "s|File=.*|File=\/var/log/iem/iem_messages\"|g" $RSYSLOG_CONF
     else
         sed -i "s|File=.*|File=\"${LOG_FILE_PATH}\"|g" $RSYSLOG_CONF
         sed -i "1 s|^.*$|${LOG_FILE_PATH}|g" /opt/seagate/sspl/low-level/files/etc/logrotate.d/iem_messages

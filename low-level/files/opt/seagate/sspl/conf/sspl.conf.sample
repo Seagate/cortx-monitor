@@ -172,7 +172,7 @@ threaded=true
 
 [IEMSENSOR]
 threaded=true
-log_file_path=/var/sspl/data/iem/iem_messages
+log_file_path=/var/log/iem/iem_messages
 timestamp_file_path=/var/sspl/data/iem/last_processed_msg_time
 
 [NODEHWACTUATOR]

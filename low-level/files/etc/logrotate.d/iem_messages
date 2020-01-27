@@ -1,6 +1,6 @@
-/var/sspl/data/iem/iem_messages
+/var/log/iem/iem_messages
 {
-        size 1k
+        size 10k
         rotate 10
         copytruncate
         missingok

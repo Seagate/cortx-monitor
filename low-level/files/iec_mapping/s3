@@ -1,0 +1,5 @@
+0030010001,LDAP,LDAP errors
+0030020001,Request Handler,Request encoding and decoding errors
+0030030001,Algorithm,Algorithmic errors
+0030040001,System,System related errors
+0030050001,General,Miscellaneous errors

@@ -22,6 +22,9 @@ import subprocess
 import time
 import datetime
 import os
+import csv
+
+from functools import lru_cache
 
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
@@ -46,7 +49,7 @@ class IEMSensor(ScheduledModuleThread, InternalMsgQ):
     NODE_ID_KEY = "node_id"
 
     # Default values for config  settings
-    DEFAULT_LOG_FILE_PATH = "/var/sspl/data/iem/iem_messages"
+    DEFAULT_LOG_FILE_PATH = "/var/log/iem/iem_messages"
     DEFAULT_TIMESTAMP_FILE_PATH = "/var/sspl/data/iem/last_processed_msg_time"
     DEFAULT_SITE_ID = "001"
     DEFAULT_RACK_ID = "001"
@@ -69,6 +72,8 @@ class IEMSensor(ScheduledModuleThread, InternalMsgQ):
 
     PRIORITY = 1
     IEC_KEYWORD = "IEC"
+
+    IEC_MAPPING_DIR_PATH="/opt/seagate/sspl/low-level/files/iec_mapping"
 
     # Dependency list
     DEPENDENCIES = {
@@ -242,6 +247,9 @@ class IEMSensor(ScheduledModuleThread, InternalMsgQ):
         if not self._are_components_in_range(**args):
             return
 
+        # Decode component_id, module_id and event_id
+        component_id, module_id, event_id = self._decode_msg( f"{component_id}{module_id}{event_id}")
+
         info = {
             "site_id": self._site_id,
             "rack_id": self._rack_id,
@@ -256,6 +264,40 @@ class IEMSensor(ScheduledModuleThread, InternalMsgQ):
         iem_data_msg = IEMDataMsg(info)
         json_msg = iem_data_msg.getJson()
         self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+
+    def _get_component(self, component):
+        "Decode a component"
+        if os.path.exists(f"{self.IEC_MAPPING_DIR_PATH}/components"):
+            with open(f"{self.IEC_MAPPING_DIR_PATH}/components", newline='') as f:
+                reader = csv.reader(f)
+                for row in reader:
+                    if component == row[0]:
+                        return row[1]
+                else:
+                    return None
+        else:
+            return None
+
+
+    @lru_cache(maxsize=32)
+    def _decode_msg(self, code):
+        "Decode a msg"
+
+        component_id, module_id, event_id = code[:3], code[3:6], code[6:]
+        component = self._get_component(component_id)
+        if component:
+            if os.path.exists(f"{self.IEC_MAPPING_DIR_PATH}/{component}"):
+                with open(f"{self.IEC_MAPPING_DIR_PATH}/{component}", newline='') as f:
+                    reader = csv.reader(f)
+                    for row in reader:
+                        if code == row[0]:
+                            return component, row[1], row[2]
+                    else:
+                       return component, module_id, event_id
+            else:
+                return component, module_id, event_id
+        else:
+            return component_id, module_id, event_id
 
     def _get_iem(self, log):
         """Returns a string starting from the word <IEC> from a syslog
