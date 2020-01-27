@@ -99,7 +99,7 @@ config_sspl() {
     touch $SSPL_CONFIGURED
 
     # SSPL Log file configuration
-    IFS='=' lfp=`grep sspl_log_file_path $SSPL_CONF`; logpath=( $lfp )
+    IFS='=' lfp=`grep ^sspl_log_file_path $SSPL_CONF`; logpath=( $lfp )
     SSPL_LOG_FILE_PATH=`echo ${logpath[1]}`
 
     [ ! -z "$SSPL_LOG_FILE_PATH" ] &&
@@ -110,7 +110,7 @@ config_sspl() {
 
     # IEM configuration
     # Configure log file path in Rsyslog and logrotate configuration file
-    IFS='=' lfp=`grep log_file_path $SSPL_CONF`; datapath=( $lfp )
+    IFS='=' lfp=`grep ^log_file_path $SSPL_CONF`; datapath=( $lfp )
     LOG_FILE_PATH=`echo ${datapath[1]}`
     if [ -z "$LOG_FILE_PATH" ]
     then

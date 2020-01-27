@@ -15,9 +15,8 @@ sspl:
          script: /opt/seagate/sspl/bin/sspl_setup
          vars:
             - test self
-            - test sanity
     reset:
          script: /opt/seagate/sspl/bin/sspl_setup
          vars:
             - reset hard -p EES
-            - reset soft
+
