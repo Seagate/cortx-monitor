@@ -18,19 +18,17 @@ import os
 import time
 import subprocess
 
-from zope.interface import implements
+from zope.interface import implementer
 from actuators.Ireset_drive import IResetDrive
 
 from framework.base.debug import Debug
 from framework.utils.service_logging import logger
 
+@implementer(IResetDrive)
 class WbcliResetDrive(Debug):
     """Handles request messages to power cycle drives using the wbcli tool"""
 
-    implements(IResetDrive)
-
     ACTUATOR_NAME = "WbcliResetDrive"
-
 
     @staticmethod
     def name():
@@ -107,7 +105,7 @@ class WbcliResetDrive(Debug):
 
             # Pause to allow time for poweron
             time.sleep(45)
- 
+
             # Should be no error if command was successful
             if error:
                 self._log_debug("perform_request, fwdownloader powerondrive error: %s, response: %s" %

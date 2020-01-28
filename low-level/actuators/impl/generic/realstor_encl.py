@@ -14,7 +14,6 @@
  ****************************************************************************
 """
 import json
-import calendar
 import time
 import socket
 
@@ -153,9 +152,9 @@ class RealStorActuator(Actuator, Debug):
                 logger.error("RealStorActuator: _get_disk: {}".format(msg))
                 return
 
-            url = url + "/" + diskId
+            url = f"{url}/{diskId}"
 
-        url = url + "/detail"
+        url = f"{url}/detail"
 
 
         response = self.rssencl.ws_request( url, self.rssencl.ws.HTTP_GET)
@@ -488,7 +487,7 @@ class RealStorActuator(Actuator, Debug):
         :param response:
         :return:
         """
-        epoch_time = str(calendar.timegm(time.gmtime()))
+        epoch_time = str(int(time.time()))
         response['instance_id'] = self._resource_id
         response['alert_type'] = AlertTypes.GET.value
         response['severity'] = SeverityTypes.INFORMATIONAL.value
@@ -498,9 +497,9 @@ class RealStorActuator(Actuator, Debug):
             "rack_id": self.rssencl.rack_id,
             "node_id": self.rssencl.node_id,
             "cluster_id": self.rssencl.cluster_id,
-            "resource_type": "enclosure:" + self._enclosure_type.lower() + ":" + self._enclosure_resource_type.lower(),
+            "resource_type": f"enclosure:{self._enclosure_type.lower()}:{self._enclosure_resource_type.lower()}",
             "resource_id": self._resource_id,
-            "event_time": str(calendar.timegm(time.gmtime())),
+            "event_time": epoch_time,
         }
         # fetch host details
         response["host_id"] = socket.getfqdn()

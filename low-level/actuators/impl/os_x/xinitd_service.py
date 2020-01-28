@@ -14,16 +14,15 @@
  ****************************************************************************
 """
 
-from zope.interface import implements
+
+from zope.interface import implementer
 from actuators.IService import IService
 
 from framework.base.debug import Debug
 
-
+@implementer(IService)
 class XinitdService(Debug):
     """Handles service request messages to xinitd"""
-
-    implements(IService)
 
     ACTUATOR_NAME = "XinitdService"
 
@@ -45,5 +44,5 @@ class XinitdService(Debug):
         self._log_debug("perform_request, service_name: %s, service_request: %s" % \
                         (self._service_name, self._service_request))
 
-        
+
         # Code to handle service requests using xinitd here...

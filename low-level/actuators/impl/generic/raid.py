@@ -28,8 +28,6 @@ class RAIDactuator(Debug):
 
     ACTUATOR_NAME = "RAIDactuator"
     SUCCESS_MSG = "Success"
-    ERROR_MSG = "Error" + ":{}"
-
     @staticmethod
     def name():
         """ @return: name of the module."""
@@ -77,7 +75,7 @@ class RAIDactuator(Debug):
                 subprocess.Popen(self._conf_command, shell=True)
 
             if process.returncode != 0:
-                response = RAIDactuator.ERROR_MSG.format(err)
+                response = f"Error:{err}"
             else:
                 response = RAIDactuator.SUCCESS_MSG
 
@@ -86,6 +84,6 @@ class RAIDactuator(Debug):
 
         except Exception as e:
             logger.exception(e)
-            response = RAIDactuator.ERROR_MSG.format(err)
+            response = f"Error:{err}"
 
         return response

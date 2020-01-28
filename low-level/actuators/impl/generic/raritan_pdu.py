@@ -17,16 +17,15 @@ import serial
 import paramiko
 from functools import partial
 
-from zope.interface import implements
+from zope.interface import implementer
 from actuators.Ipdu import IPDU
 
 from framework.base.debug import Debug
 from framework.utils.service_logging import logger
 
+@implementer(IPDU)
 class RaritanPDU(Debug):
     """Handles request messages to the Raritan PDU"""
-
-    implements(IPDU)
 
     ACTUATOR_NAME = "RaritanPDU"
 
@@ -63,18 +62,18 @@ class RaritanPDU(Debug):
         try:
             # Parse out the login request to perform
             node_request = jsonMsg.get("actuator_request_type").get("node_controller").get("node_request")
-            self._log_debug("perform_request, node_request: %s" % node_request)
+            self._log_debug(f"perform_request, node_request: {node_request}")
 
             # Parse out the command to send to the PDU
             pdu_request = node_request[5:]
-            self._log_debug("perform_request, pdu_request: %s" % pdu_request)
+            self._log_debug(f"perform_request, pdu_request: {pdu_request}")
 
             # Create the serial port object and open the connection
             login_attempts = 0
             try:
                 self._connection = serial.Serial(self._comm_port, 115200 , timeout=1)
             except Exception as ae:
-                logger.info("Serial Port connection failure: %r" % ae)
+                logger.info(f"Serial Port connection failure: {ae}")
                 # Attempt network connection
                 login_attempts = self._max_login_attempts
 
@@ -111,7 +110,7 @@ class RaritanPDU(Debug):
                         self._log_debug("Reading from PDU completed")
 
                 except Exception as e:
-                    self._log_debug("Warning: Attempted IP connection to PDU: %r" % e)
+                    self._log_debug(f"Warning: Attempted IP connection to PDU: {e}")
                     return str(e)
 
                 finally:
@@ -150,7 +149,7 @@ class RaritanPDU(Debug):
 
         # Send the username and read the response
         response = self._send_request_read_response_serial(self._user)
-        self._log_debug("_login_PDU, sent username: %s" % self._user)
+        self._log_debug(f"_login_PDU, sent username: {self._user}")
 
         # Send over the password if it is requested
         if "Password:" in response:
@@ -217,7 +216,7 @@ class RaritanPDU(Debug):
                                                                    self.MAX_LOGIN_TRIES,
                                                                    5))
 
-            logger.info("PDU Config: user: %s, Comm Port: %s, max login attempts: %s, IP: %s" % 
+            logger.info("PDU Config: user: %s, Comm Port: %s, max login attempts: %s, IP: %s" %
                             (self._user, self._comm_port, self._max_login_attempts, self._ip_addr))
         except Exception as e:
             logger.exception(e)

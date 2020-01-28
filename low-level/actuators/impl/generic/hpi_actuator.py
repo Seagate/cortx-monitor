@@ -56,7 +56,7 @@ import os
 import time
 import subprocess
 
-from zope.interface import implements
+from zope.interface import implementer
 from actuators.Ihpi import IHPI
 
 from framework.base.debug import Debug
@@ -71,17 +71,15 @@ from hpi.inventory.iterator import SubFruIterator
 from hpi.inventory.parser.inventory import SystemInventoryParser
 from hpi.inventory.system import SystemInventory
 
-
+@implementer(IHPI)
 class HPIactuator(Debug):
     """Handles messages for changing state in Resource Data
        Records(RDR) within HPI's Resource Present Table(RPT)"""
 
-    implements(IHPI)
-
     ACTUATOR_NAME = "HPIactuator"
 
-    VALID_CTRL_STATES = ["FAULT_ON", "FAULT_OFF", "IDENTIFY_ON", 
-                         "IDENTIFY_OFF", "PULSE_SLOW_ON", "PULSE_SLOW_OFF", 
+    VALID_CTRL_STATES = ["FAULT_ON", "FAULT_OFF", "IDENTIFY_ON",
+                         "IDENTIFY_OFF", "PULSE_SLOW_ON", "PULSE_SLOW_OFF",
                          "PULSE_FAST_ON", "PULSE_FAST_OFF",
                          "POWER_ON", "POWER_OFF"]
 
@@ -107,10 +105,7 @@ class HPIactuator(Debug):
         self._drive_number = -1
 
         # Read in the configuration values, for possible future use
-        #self._conf_reader = conf_reader
-        #self._read_config()
-
-        # Temporarily leave debugging on during beta release     
+        # Temporarily leave debugging on during beta release
         self._set_debug(True)
         self._set_debug_persist(True)
 
@@ -331,7 +326,7 @@ class HPIactuator(Debug):
         self._log_debug("perform_request, node_request: %s" % node_request)
 
         # Separate the fields into usable params
-        # [0]:Component [1]:get/set [2]: identifier like disk s/n [3]: Ctrl State 
+        # [0]:Component [1]:get/set [2]: identifier like disk s/n [3]: Ctrl State
         params = node_request.strip().split(" ")
         self._log_debug("perform_request, params: %s" % str(params))
 
@@ -407,7 +402,8 @@ class HPIactuator(Debug):
 
         if len(self._drive_number) == 0 or \
            self._drive_number == -1:
-            return "Error: Failed to lookup disk number in /tmp/dcs/dmreport. (System still initializing?  Will retry in 30 secs.)"
+            return "Error: Failed to lookup disk number in /tmp/dcs/dmreport.    \
+                                             (System still initializing?  Will retry in 30 secs.)"
 
         return "None"
 

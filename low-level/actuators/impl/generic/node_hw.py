@@ -14,8 +14,6 @@
  LLC.
  ****************************************************************************
 """
-import abc
-import subprocess
 import calendar
 import time
 import socket
@@ -61,6 +59,7 @@ class NodeHWactuator(Actuator, Debug):
                                                 self.SYSTEM_INFORMATION,
                                                 self.NODE_ID,
                                                 0))
+        self.host_id = socket.getfqdn()
         self.sensor_id_map = None
         self._executor = executor
         self.fru_specific_info = {}
@@ -159,14 +158,10 @@ class NodeHWactuator(Actuator, Debug):
            Handler for further validation"""
         resource_type = "node:fru:{0}".format(self.fru_node_request)
         epoch_time = str(calendar.timegm(time.gmtime()))
-        if socket.gethostname().find('.') >= 0:
-            host_id = socket.gethostname()
-        else:
-            host_id = socket.gethostbyaddr(socket.gethostname())[0]
         response = {
           "alert_type":"GET",
           "severity":"informational",
-          "host_id": host_id,
+          "host_id": self.host_id,
           "instance_id": "*",
           "info": {
             "site_id": self._site_id,
@@ -254,22 +249,6 @@ class NodeHWactuator(Actuator, Debug):
             "resource_id": self._resource_id,
             "event_time": str(calendar.timegm(time.gmtime())),
         }
-
-        # fetch host details
-        self._build_host_details(response)
-
-    def _build_host_details(self, response):
-        """
-        build json with host details
-        :param response:
-        :return:
-        """
-        # fetch host id from socket set in response
-        if socket.gethostname().find('.') >= 0:
-            _host_id = socket.gethostname()
-        else:
-            _host_id = socket.gethostbyaddr(socket.gethostname())[0]
-        response['host_id'] = _host_id
 
     def _build_sensor_info(self, response, sensor_type, sensor_name):
         """

@@ -36,8 +36,6 @@ class Smartctl(Debug):
 
 
     ACTUATOR_NAME = "Smartctl"
-    ERROR_MSG = "Error" + ":{}"
-
     VALID_REQUESTS = ["GET_SERIAL"]
 
     @staticmethod
@@ -93,11 +91,12 @@ class Smartctl(Debug):
             response = ''.join(res)
             # If an error exists stop here and return the response
             if process.returncode != 0:
-                err = self.ERROR_MSG.format(response.split("\n")[3])
+                err_response = response.split('\n')[3]
+                err = f"Error:{err_response}"
                 return err
         except Exception as exc:
             logger.exception(exc)
-            response = self.ERROR_MSG.format(exc)
+            response = f"Error:{exc}"
 
         return response
 

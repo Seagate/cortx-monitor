@@ -15,16 +15,14 @@
 """
 
 
-from zope.interface import implements
+from zope.interface import implementer
 from actuators.ILogin import ILogin
 
 from framework.base.debug import Debug
 
-
+@implementer(ILogin)
 class XinitdLogin(Debug):
     """Handles login request messages to xinitd"""
-
-    implements(ILogin)
 
     ACTUATOR_NAME = "XinitdLogin"
 
@@ -45,7 +43,6 @@ class XinitdLogin(Debug):
         self._log_debug("perform_request, _login_request: %s" % self._login_request)
 
         # Code to handle login requests using xinitd here...
-        
+
         test_names=["jake", "joe", "root"]
         return test_names
-            

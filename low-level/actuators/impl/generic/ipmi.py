@@ -15,16 +15,15 @@
 """
 import subprocess
 
-from zope.interface import implements
+from zope.interface import implementer
 from actuators.Iipmi import Iipmi
 
 from framework.base.debug import Debug
 from framework.utils.service_logging import logger
 
+@implementer(Iipmi)
 class IPMI(Debug):
     """Handles messages for IPMI requests"""
-
-    implements(Iipmi)
 
     ACTUATOR_NAME = "IPMI"
 
@@ -57,11 +56,11 @@ class IPMI(Debug):
         try:
             # Parse out the login request to perform
             node_request = jsonMsg.get("actuator_request_type").get("node_controller").get("node_request")
-            self._log_debug("perform_request, node_request: %s" % node_request)
+            self._log_debug(f"perform_request, node_request: {node_request}")
 
             # Parse out the arguments for the IPMI action
             ipmi_request = node_request[5:].strip().split(" ", 1)
-            self._log_debug("perform_request, ipmi_request: %s" % ipmi_request)
+            self._log_debug(f"perform_request, ipmi_request: {ipmi_request}")
 
             if len(ipmi_request) != 2:
                 return "Error: IPMI request must consist of [IP] [Command]"
@@ -69,33 +68,28 @@ class IPMI(Debug):
             ipmi_ip = ipmi_request[0]
             ipmi_req_command = ipmi_request[1].lower()
 
-            if ipmi_req_command == "on":                
-                ipmi_command = "ipmitool -I lanplus -H {0} -U {1} -P {2} chassis power on" \
-                                .format(ipmi_ip, self._user, self._pass)                
+            if ipmi_req_command == "on":
+                ipmi_command = f"ipmitool -I lanplus -H {ipmi_ip} -U {self._user} -P {self._pass} chassis power on"
             elif ipmi_req_command == "off":
-                ipmi_command = "ipmitool -I lanplus -H {0} -U {1} -P {2} chassis power soft" \
-                                .format(ipmi_ip, self._user, self._pass)
+                ipmi_command = f"ipmitool -I lanplus -H {ipmi_ip} -U {self._user} -P {self._pass} chassis power soft"
             elif ipmi_req_command == "cycle":
-                ipmi_command = "ipmitool -I lanplus -H {0} -U {1} -P {2} chassis power cycle" \
-                                .format(ipmi_ip, self._user, self._pass)
+                ipmi_command = f"ipmitool -I lanplus -H {ipmi_ip} -U {self._user} -P {self._pass} chassis power cycle"
             elif ipmi_req_command == "status":
-                ipmi_command = "ipmitool -I lanplus -H {0} -U {1} -P {2} chassis status" \
-                                .format(ipmi_ip, self._user, self._pass)
+                ipmi_command = "ipmitool -I lanplus -H {ipmi_ip} -U {self._user} -P {self._pass} chassis status"
             else:
                 return "Error: IPMI [IP] [Command], command must be on/off/cycle/status"
 
-            self._log_debug("perform_request, IP: %s request: %s" %
-                                (ipmi_ip, ipmi_command))
+            self._log_debug(f"perform_request, IP: {ipmi_ip} request: {ipmi_command}")
 
             # Run the command and get the response and error returned
-            process = subprocess.Popen(ipmi_command, shell=True, stdout=subprocess.PIPE, 
+            process = subprocess.Popen(ipmi_command, shell=True, stdout=subprocess.PIPE,
                                        stderr=subprocess.PIPE)
             response, error = process.communicate()
 
             if error:
-                response = "{0}".format(error)
+                response = f"{error}"
 
-            self._log_debug("perform_request, IPMI response: %s" % response)
+            self._log_debug(f"perform_request, IPMI response: {response}")
 
         except Exception as e:
             logger.exception(e)
@@ -115,4 +109,3 @@ class IPMI(Debug):
             logger.info("IPMI Config: user: %s" % self._user)
         except Exception as e:
             logger.exception(e)
-    
