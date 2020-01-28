@@ -49,7 +49,7 @@ class RealStorControllerSensor(ScheduledModuleThread, InternalMsgQ):
     RESOURCE_CATEGORY = "fru"
     RESOURCE_TYPE = "enclosure:fru:controller"
 
-    PRIORITY = 1
+    PRIORITY          = 1
 
     # Controllers directory name
     CONTROLLERS_DIR = "controllers"
@@ -162,14 +162,13 @@ class RealStorControllerSensor(ScheduledModuleThread, InternalMsgQ):
         response = self.rssencl.ws_request(url, self.rssencl.ws.HTTP_GET)
 
         if not response:
-            logger.warn("{0}:: Controllers status unavailable as ws request {1}"
-                " failed".format(self.rssencl.EES_ENCL, url))
+            logger.warn(f"{self.rssencl.EES_ENCL}:: Controllers status unavailable as ws request {url}")
             return
 
         if response.status_code != self.rssencl.ws.HTTP_OK:
             if url.find(self.rssencl.ws.LOOPBACK) == -1:
-                logger.error("{0}:: http request {1} to get controllers failed with"
-                    " err {2}".format(self.rssencl.EES_ENCL, url, response.status_code))
+                logger.error(f"{self.rssencl.EES_ENCL}:: http request {url} to get controllers failed with \
+                     err {response.status_code}")
             return
 
         response_data = json.loads(response.text)

@@ -76,6 +76,13 @@ class NodeData(Debug):
 
             # First call gethostname() to see if it returns something that looks like a host name,
             # if not then get the host by address
+            # Find a meaningful hostname to be used
+            self.host_id = socket.getfqdn()
+            # getfqdn() function checks the socket.gethostname() to get the host name if it not available
+            # then it try to find host name from socket.gethostbyaddr(socket.gethostname())[0] and return the
+            # meaningful host name priviously we chking the this two conditions explicitly which is implicitly
+            # doing by getfqdn() function. so removing the code and adding the getfqdn() function to get Hostname.
+
             self.local_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S %Z')
 
             # Branch off and gather data based upon value sent into subset

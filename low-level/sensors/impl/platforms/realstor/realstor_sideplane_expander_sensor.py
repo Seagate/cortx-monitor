@@ -152,14 +152,13 @@ class RealStorSideplaneExpanderSensor(ScheduledModuleThread, InternalMsgQ):
                         url, self.rssencl.ws.HTTP_GET)
 
         if not response:
-            logger.warn("{0}:: Enclosure status unavailable as ws request {1}"
-                " failed".format(self.rssencl.EES_ENCL, url))
+            logger.warn(f"{self.rssencl.EES_ENCL}:: Enclosure status unavailable as ws request {url} failed")
             return
 
         if response.status_code != self.rssencl.ws.HTTP_OK:
             if url.find(self.rssencl.ws.LOOPBACK) == -1:
-                logger.error("{0}:: http request {1} to get enclosure failed with"
-                    " err {2}".format(self.rssencl.EES_ENCL, url, response.status_code))
+                logger.error(f"{self.rssencl.EES_ENCL}:: http request {url} to get enclosure failed with  \
+                                      err {response.status_code}")
             return
 
         response_data = json.loads(response.text)
@@ -181,8 +180,7 @@ class RealStorSideplaneExpanderSensor(ScheduledModuleThread, InternalMsgQ):
         self._sideplane_expander_list = \
             self._get_sideplane_expander_list()
         alert_type = None
-        # Declaring the health_recommendation with default type NoneType not assume 
-        #now what type of data it hold.
+        # Declaring the health_recommendation with default type NoneType.
         health_recommendation = None
 
         missing_health = " ".join("Check that all I/O modules and power supplies in\
@@ -203,8 +201,8 @@ class RealStorSideplaneExpanderSensor(ScheduledModuleThread, InternalMsgQ):
                         str(self.unhealthy_components[0]
                             ["health-recommendation"])
 
-                # added condition to check the health_recommendation not None if the fault response will be
-                # theire it goes inside and then check missing health.
+                # checking the health_recommendation not None if the fault response will be
+                # theire it checks missing health.
                 if fru_status == self.rssencl.HEALTH_FAULT and health_recommendation:
                     if missing_health.strip(" ") in health_recommendation:
                         if durable_id not in self._faulty_sideplane_expander_dict:
@@ -253,8 +251,7 @@ class RealStorSideplaneExpanderSensor(ScheduledModuleThread, InternalMsgQ):
 
         return sideplane_unhealthy_components
 
-    def _create_internal_json_message(self, sideplane_expander,
-                                      unhealthy_components, alert_type):
+    def _create_internal_json_message(self, sideplane_expander, unhealthy_components, alert_type):
         """Creates internal json structure which is sent to
            realstor_msg_handler for further processing"""
 

@@ -106,7 +106,7 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
         except Exception as ae:
             # Log it and restart the whole process when a failure occurs
-            logger.exception("ServiceMsgHandler restarting: %s" % ae)
+            logger.exception(f"ServiceMsgHandler restarting: {ae}")
 
         self._scheduler.enter(1, self._priority, self.run, ())
         self._log_debug("Finished processing successfully")
@@ -114,7 +114,7 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
     def _process_msg(self, jsonMsg):
         """Parses the incoming message and hands off to the appropriate logger
         """
-        self._log_debug("_process_msg, jsonMsg: %s" % jsonMsg)
+        self._log_debug(f"_process_msg, jsonMsg: {jsonMsg}")
 
         if isinstance(jsonMsg, dict) is False:
             jsonMsg = json.loads(jsonMsg)
@@ -124,7 +124,7 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
         if jsonMsg.get("sspl_ll_msg_header") is not None and \
            jsonMsg.get("sspl_ll_msg_header").get("uuid") is not None:
             uuid = jsonMsg.get("sspl_ll_msg_header").get("uuid")
-            self._log_debug("_processMsg, uuid: %s" % uuid)
+            self._log_debug(f"_processMsg, uuid: {uuid}")
 
         # Handle service start, stop, restart, status requests
         if jsonMsg.get("actuator_request_type").get("service_controller") is not None:
@@ -134,13 +134,12 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 .get("service_controller").get("service_name")
             service_request = jsonMsg.get("actuator_request_type") \
                 .get("service_controller").get("service_request")
-            request = "{0}:{1}".format(service_request, service_name)
+            request = f"{service_request}:{service_name}"
 
             # If the state is INITIALIZED, We can assume that actuator is
             # ready to perform operation.
             if actuator_state_manager.is_initialized("Service"):
-                self._log_debug("_process_msg, service_actuator name: %s" %
-                                self._service_actuator.name())
+                self._log_debug(f"_process_msg, service_actuator name: {self._service_actuator.name()}")
                 self._execute_request(self._service_actuator, jsonMsg, uuid)
 
             # If the state is INITIALIZING, need to send message
@@ -166,8 +165,7 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     # not be able serve any subsequent requests. This applies
                     # to instantiation of evey actuator.
                     self._service_actuator = service_actuator_class()
-                    logger.info("_process_msg, service_actuator name: %s" %
-                                self._service_actuator.name())
+                    logger.info(f"_process_msg, service_actuator name: {self._service_actuator.name()}")
                     self._execute_request(
                         self._service_actuator, jsonMsg, uuid)
                     actuator_state_manager.set_state(
@@ -200,13 +198,11 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 if self._service_actuator is None:
                     from actuators.IService import IService
                     self._service_actuator = self._query_utility(IService)()
-                    self._log_debug("_process_msg, service_actuator name: %s" % self._service_actuator.name())
+                    self._log_debug(f"_process_msg, service_actuator name: {self._service_actuator.name()}")
                 service_name, state, substate = self._service_actuator.perform_request(jsonMsg)
 
-                self._log_debug("_processMsg, service_name: %s, state: %s, substate: %s" %
-                                (service_name, state, substate))
-                self._log_debug("_processMsg, prev state: %s, prev substate: %s" %
-                                (prev_state, prev_substate))
+                self._log_debug(f"_processMsg, service_name: {service_name}, state: {state}, substate: {substate}")
+                self._log_debug(f"_processMsg, prev state: {prev_state}, prev substate: {prev_substate}")
 
             # Create a service watchdog message and send it out
             jsonMsg = ServiceWatchdogMsg(service_name, state, prev_state, substate, prev_substate, pid, prev_pid).getJson()
@@ -229,8 +225,7 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
                         "logging": {
                             "log_level": "LOG_WARNING",
                             "log_type": "IEM",
-                            "log_msg": "IEC: 020003001: Service entered a Failed state : {}" \
-                                            .format(json.dumps(json_data, sort_keys=True))
+                            "log_msg": f"IEC: 020003001: Service entered a Failed state : {json.dumps(json_data, sort_keys=True)}"
                             }
                         }
                     })
@@ -249,12 +244,11 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
             actuator_instance.perform_request(json_msg)
 
         if substate:
-            result = "{}:{}".format(state, substate)
+            result = f"{state}:{substate}"
         else:
             result = state
 
-        self._log_debug("_processMsg, service_name: %s, result: %s" %
-                        (service_name, result))
+        self._log_debug(f"_processMsg, service_name: {service_name}, result: {result}")
 
         # Create an actuator response and send it out
         service_controller_msg = ServiceControllerMsg(service_name, result)

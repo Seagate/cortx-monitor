@@ -102,7 +102,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
 
         # Location of hpi data directory populated by dcs-collector
         self._hpi_base_dir = "/tmp/dcs/hpi"
-        self._start_delay  = 10
+        self._start_delay = 10
 
     def initialize(self, conf_reader, msgQlist, product):
         """initialize configuration reader and internal msg queues"""
@@ -117,10 +117,10 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
         self._smart_interval = self._getSMART_interval()
 
         self._run_smart_on_start = self._can_run_smart_on_start()
-        self._log_debug("SystemdWatchdog, Run SMART test on start: %s" % self._run_smart_on_start)
+        self._log_debug(f"SystemdWatchdog, Run SMART test on start: {self._run_smart_on_start}")
 
         self._smart_supported = self._is_smart_supported()
-        self._log_debug("SystemdWatchdog, SMART supported: %s" % self._smart_supported)
+        self._log_debug(f"SystemdWatchdog, SMART supported: {self._smart_supported}")
 
         # Dict of drives by-id symlink from systemd
         self._drive_by_id = {}
@@ -152,8 +152,8 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
         if self._product in cs_products:
             # Wait for the dcs-collector to populate the /tmp/dcs/hpi directory
             while not os.path.isdir(self._hpi_base_dir):
-                logger.info("SystemdWatchdog, dir not found: %s " % self._hpi_base_dir)
-                logger.info("SystemdWatchdog, rechecking in %s secs" % self._start_delay)
+                logger.info(f"SystemdWatchdog, dir not found: {self._hpi_base_dir}")
+                logger.info(f"SystemdWatchdog, rechecking in {self._start_delay} secs")
                 time.sleep(int(self._start_delay))
 
         # Allow time for the hpi_monitor to come up
@@ -207,7 +207,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                     if self._monitored_services:
                         if unit_name not in self._monitored_services:
                             continue
-                    logger.debug("    " + unit_name)
+                    logger.debug(f"    {unit_name}")
 
                     # Retrieve an object representation of the systemd unit
                     unit = self._bus.get_object('org.freedesktop.systemd1',
@@ -273,7 +273,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
 
             # Loop forever iterating over the context
             step = 0
-            while self._running is True:
+            while self._running == True:
                 context.iteration(False)
                 time.sleep(self._thread_sleep)
 
@@ -287,7 +287,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                 # Search for new wildcard services suddenly appearing, ie m0d@<fid>
                 step += 1
                 if len(self._wildcard_services) > 0 and step >= 15:
-                    step = 0
+                    step : int = 0
                     self._search_new_services()
 
                 # Process any msgs sent to us
@@ -296,7 +296,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                 # Safe guard to slow the thread down after busy exp resets
                 self._thread_speed_safeguard += 1
                 # Only allow to run full throttle for 3 minutes (enough to handle exp resets)
-                if self._thread_speed_safeguard > 1800:   # 1800 = 10 * 60 * 3 running at .10 delay full speed
+                if self._thread_speed_safeguard > 18_00:   # 1800 = 10 * 60 * 3 running at .10 delay full speed
                     self._thread_speed_safeguard = 0
                     # Slow the main thread down to save on CPU as it gets sped up on drive removal
                     self._thread_sleep = 5.0
@@ -308,8 +308,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
             # Check for debug mode being activated when it breaks out of blocking loop
             self._read_my_msgQ_noWait()
             if self.is_running() is True:
-                self._log_debug("Ungracefully breaking out of dbus loop with error: %s"
-                                % ae)
+                self._log_debug(f"Ungracefully breaking out of dbus loop with error: {ae}")
                 # Let the top level sspl_ll_d know that we have a fatal error
                 #  and shutdown so that systemd can restart it
                 raise Exception(ae)
@@ -335,17 +334,17 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
 
         if jsonMsg.get("sensor_request_type") is not None:
             sensor_request_type = jsonMsg.get("sensor_request_type")
-            self._log_debug("_processMsg, sensor_request_type: %s" % sensor_request_type)
+            self._log_debug(f"_processMsg, sensor_request_type: {sensor_request_type}")
 
             # Serial number is used as an index into dicts
             jsonMsg_serial_number = jsonMsg.get("serial_number")
-            self._log_debug("_processMsg, serial_number: %s" % jsonMsg_serial_number)
+            self._log_debug(f"_processMsg, serial_number: {jsonMsg_serial_number}")
 
             # Parse out the UUID and save to send back in response if it's available
             uuid =  "Not-Found"
             if jsonMsg.get("uuid") is not None:
                 uuid = jsonMsg.get("uuid")
-            self._log_debug("_processMsg, sensor_request_type: %s, uuid: %s" % (sensor_request_type, uuid))
+            self._log_debug(f"_processMsg, sensor_request_type: {sensor_request_type}, uuid: {uuid}")
 
             # Refresh the set of managed systemd objects
             self._disk_objects = self._disk_manager.GetManagedObjects()
@@ -359,13 +358,13 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
             if sensor_request_type == "simulate_failure":
                 # Handle simulation requests
                 sim_request = jsonMsg.get("node_request")
-                self._log_debug("_processMsg, Starting simulating failure: %s" % sim_request)
+                self._log_debug(f"_processMsg, Starting simulating failure: {sim_request}")
                 if sim_request == "SMART_FAILURE":
                     # Append to list of drives requested to simulate failure
                     self._simulated_smart_failures.append(jsonMsg_serial_number)
 
             elif sensor_request_type == "resend_drive_status":
-                self._log_debug("_processMsg, resend_drive_status: %s" % jsonMsg_serial_number)
+                self._log_debug(f"_processMsg, resend_drive_status: {jsonMsg_serial_number}")
                 for drive in drives:
                     try:
                         if self._disk_objects[drive['path']].get('org.freedesktop.UDisks2.Drive') is not None:
@@ -387,13 +386,13 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                                 # Notify internal msg handlers who need to map device name to serial numbers
                                 self._notify_msg_handler_sn_device_mappings(drive['path'], serial_number)
                     except Exception as ae:
-                        self._log_debug("_process_msg, resend_drive_status, Exception: %s" % ae)
+                        self._log_debug(f"_process_msg, resend_drive_status, Exception: {ae}")
 
             elif sensor_request_type == "disk_smart_test":
                 # No need to validate for serial if SMART is not supported.
                 if not self._smart_supported:
                     # Create the request to be sent back
-                    request = "SMART_TEST: {}".format(jsonMsg_serial_number)
+                    request = f"SMART_TEST: {jsonMsg_serial_number}"
                     # Send an Ack msg back with SMART results as Unsupported
                     json_msg = AckResponseMsg(request, self.SMART_STATUS_UNSUPPORTED, "").getJson()
                     self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
@@ -425,7 +424,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                                         serial_number = tmp_serial[start_index:].strip()
                                 else:
                                     self._log_debug(
-                                        "_init_drives, couldn't extract serial number from by-id link for drive path %s " % drive['path'] )
+                                        f"_init_drives, couldn't extract serial number from by-id link for drive path {drive['path']} ")
 
                             if len(serial_number) > 0:
                                 # Found the drive requested or it's an * indicating all drives
@@ -439,11 +438,11 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                                     self._schedule_SMART_test(drive['path'], serial_number=serial_number)
 
                     except Exception as ae:
-                        self._log_debug("_process_msg, Exception: %s" % ae)
+                        self._log_debug(f"_process_msg, Exception: {ae}")
                         try:
                             # If the error is not a duplicate request for running a test then send back an error
                             if "already SMART self-test running" not in str(ae):
-                                request  = "SMART_TEST: {}".format(serial_number)
+                                request  = f"SMART_TEST: {serial_number}"
                                 response = "Failed"
 
                                 # Send an Ack msg back with SMART results
@@ -456,7 +455,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                                     self._smart_uuids[uuid] = None
 
                         except Exception as e:
-                            self._log_debug("_process_msg, Exception: %s" % e)
+                            self._log_debug(f"_process_msg, Exception: {e}")
 
     def _add_wildcard_services(self):
         """Update the list of monitored services with wildcard entries"""
@@ -469,15 +468,15 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                     # Remove service name from monitored_services and add to wildcard services list
                     self._monitored_services.remove(service)
                     self._wildcard_services.append(service)
-                    logger.info("Processing wildcard service: %s" % service)
+                    logger.info(f"Processing wildcard service: {service}")
 
                     # Search thru list of services on the system that match the starting chars
                     start_chars = service.split("*")[0]
-                    logger.info("Searching for services starting with: %s" % start_chars)
+                    logger.info(f"Searching for services starting with: {start_chars}")
                     for unit in units:
                         unit_name = str(unit[0]).split("/")[-1]
                         if unit_name.startswith(start_chars):
-                            logger.info("    %s" % unit_name)
+                            logger.info(f"    {unit_name}")
                             self._monitored_services.append(unit_name)
         except Exception as ae:
             logger.exception(ae)
@@ -500,7 +499,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                     if unit_name.startswith(start_chars) and \
                        unit_name not in self._monitored_services and \
                        unit_name not in self._inactive_services:
-                        logger.info("Adding newly found wildcard service: %s" % unit_name)
+                        logger.info(f"Adding newly found wildcard service: {unit_name}")
                         self._inactive_services.append(unit_name)
 
         except Exception as ae:
@@ -540,13 +539,13 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
             except Exception as ae:
                 self._log_debug("block_dev unusable: %r" % ae)
 
-    def _schedule_SMART_test(self, drive_path, test_type="short", serial_number=None):
+    def _schedule_SMART_test(self, drive_path, test_type ="short", serial_number =None):
         """Schedules a SMART test to be executed on a drive
            add_interface/remove_interface is the callback
            on completion
         """
         if self._disk_objects[drive_path].get('org.freedesktop.UDisks2.Drive.Ata') is not None:
-            self._log_debug("Running SMART on drive: %s" % drive_path)
+            self._log_debug(f"Running SMART on drive: {drive_path}")
 
             # Obtain an interface to the ATA drive and start the SMART test
             dev_obj = self._bus.get_object('org.freedesktop.UDisks2', drive_path)
@@ -557,16 +556,16 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
         elif serial_number is not None:
             # Retrieve the device name for the disk
             device_name = self._drive_by_device_name[drive_path]
-            self._log_debug("Running SMART on SAS drive path: %s, dev name: %s" % (drive_path, device_name))
+            self._log_debug(f"Running SMART on SAS drive path: {drive_path}, dev name: {device_name}")
 
             # Schedule a smart test to be run
-            command = "/usr/sbin/smartctl -t short -d scsi {}".format(device_name)
+            command = f"/usr/sbin/smartctl -t short -d scsi {device_name}"
             response, error = self._run_command(command)
 
             ack_response = "Passed"
             status_reason = "OK_None"
             if len(error) > 0:
-                self._log_debug("Error running SMART on SAS drive: %s" % error)
+                self._log_debug(f"Error running SMART on SAS drive: {error}")
                 status_reason = "Failed_smart_unknown"
                 ack_response  = "Failed"
             else:
@@ -574,11 +573,11 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                 time.sleep(60)
 
                 # Get the results of test
-                command = "/usr/sbin/smartctl -H -d scsi {}".format(device_name)
+                command = f"/usr/sbin/smartctl -H -d scsi {device_name}"
                 response, error = self._run_command(command)
 
                 if "SMART Health Status: OK" not in response:
-                    self._log_debug("Error running SMART on SAS drive: %s" % response)
+                    self._log_debug(f"Error running SMART on SAS drive: {response}")
                     ack_response  = "Failed"
                     status_reason = "Failed_smart_failure"
 
@@ -586,7 +585,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
             self._notify_disk_msg_handler(drive_path, status_reason, serial_number)
 
             # Create the request to be sent back
-            request = "SMART_TEST: {}".format(serial_number)
+            request = f"SMART_TEST: {serial_number}"
 
             # Loop thru all the uuids awaiting a response and find matching serial number
             for smart_uuid in self._smart_uuids:
@@ -627,7 +626,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                   if m]
 
         # Loop through all the drives and initiate a SMART test
-        self._smart_jobs = {}
+        self._smart_jobs : Dict[str, str] = {}
         for drive in drives:
             try:
                 if self._disk_objects[drive['path']].get('org.freedesktop.UDisks2.Drive') is not None:
@@ -647,8 +646,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                                 serial_number = tmp_serial[start_index:].strip()
                         else:
                             self._log_debug(
-                                "_init_drives, couldn't extract serial number from by-id link for drive path %s " % drive['path'] )
-
+                                f"_init_drives, couldn't extract serial number from by-id link for drive path {drive['path']}")
 
                     if len(serial_number) > 0:
                         # Generate and send an internal msg to DiskMsgHandler that the drive is available
@@ -665,7 +663,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                         self._schedule_SMART_test(drive['path'])
 
             except Exception as ae:
-                self._log_debug("_init_drives, Exception: %s" % ae)
+                self._log_debug(f"_init_drives, Exception: {ae}")
 
         # Update the next time to run SMART tests
         self._next_smart_tm = datetime.now() + timedelta(seconds=self._smart_interval)
@@ -688,8 +686,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                              dbus_interface='org.freedesktop.DBus.Properties')
 
             if state == "active":
-                self._log_debug("Service: %s is now active and being monitored!" %
-                                disabled_service)
+                self._log_debug(f"Service: {disabled_service} is now active and being monitored!")
                 self._service_status[str(disabled_service)] = str(state) + ":" + str(substate)
 
                 # Use the systemd unit to get an Interface to call methods
@@ -787,15 +784,14 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
             #self._log_debug("\tstate: %s, substate: %s" % (state, substate))
             return
 
-        self._log_debug("_on_prop_changed, Service state change detected on unit: %s" % unit_name)
+        self._log_debug(f"_on_prop_changed, Service state change detected on unit: {unit_name}")
 
         # get the previous state and substate for the service
         previous_state = self._service_status.get(unit_name, "N/A:N/A").split(":")[0]
         previous_substate = self._service_status.get(unit_name, "N/A:N/A").split(":")[1]
 
-        self._log_debug("_on_prop_changed, State: %s, Substate: %s" % (state, substate))
-        self._log_debug("_on_prop_changed, Previous State: %s, Previous Substate: %s" %
-                            (previous_state, previous_substate))
+        self._log_debug(f"_on_prop_changed, State: {state}, Substate: {substate}")
+        self._log_debug(f"_on_prop_changed, Previous State: {previous_state}, Previous Substate: {previous_substate}")
 
         # Update the state in the global dict for later use
         self._service_status[unit_name] = str(state) + ":" + str(substate)
@@ -833,8 +829,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                 # Update the drive's by-id symlink paths
                 self._update_by_id_paths()
 
-                serial_number = "{}".format(
-                        str(interfaces_and_properties["org.freedesktop.UDisks2.Drive"]["Serial"]))
+                serial_number = f"{str(interfaces_and_properties['org.freedesktop.UDisks2.Drive']['Serial'])}"
 
                 # If serial number is not present then use the ending of by-id symlink
                 if len(serial_number) == 0:
@@ -910,8 +905,8 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                         serial_number = tmp_serial[tmp_serial.rfind("drive"):]
 
                     self._log_debug("Drive Interface Removed")
-                    self._log_debug("  Object Path: %r" % object_path)
-                    self._log_debug("  Serial Number: %s" % serial_number)
+                    self._log_debug(f"  Object Path: {object_path}")
+                    self._log_debug(f"  Serial Number: {serial_number}")
 
                     # Generate and send an internal msg to DiskMsgHandler
                     self._notify_disk_msg_handler(object_path, "EMPTY_None", serial_number)
@@ -924,7 +919,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                     # Retrieve the saved SMART data when the test was started
                     smart_job = self._smart_jobs.get(object_path)
                     if smart_job is None:
-                        self._log_debug("SMART job not found, ignoring: %s" % object_path)
+                        self._log_debug(f"SMART job not found, ignoring: {object_path}")
                         return
                     self._smart_jobs[object_path] = None
 
@@ -963,14 +958,14 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                                     response = "Passed"
 
                             self._log_debug("SMART Job Interface Removed")
-                            self._log_debug("  Object Path: %r" % object_path)
-                            self._log_debug("  Serial Number: %s, SMART status: %s" % (serial_number, smart_status))
+                            self._log_debug(f"  Object Path: {object_path}")
+                            self._log_debug(f"  Serial Number: {serial_number}, SMART status: {smart_status}")
 
                             # Proccess the SMART result
                             self._process_smart_status(disk_path, smart_status, serial_number)
 
                             # Create the request to be sent back
-                            request = "SMART_TEST: {}".format(serial_number)
+                            request = f"SMART_TEST: {serial_number}"
 
                             # Loop thru all the uuids awaiting a response and find matching serial number
                             for smart_uuid in self._smart_uuids:
@@ -989,10 +984,10 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
 
                 else:
                     self._log_debug("Systemd Interface Removed")
-                    self._log_debug("  Object Path: %r" % object_path)
+                    self._log_debug(f"  Object Path: {object_path}")
 
             except Exception as ae:
-                self._log_debug("interface_removed: Exception: %r" % ae) # Drive was removed during SMART?
+                self._log_debug(f"interface_removed: Exception: {ae}") # Drive was removed during SMART?
                 self._log_debug("Possible cause: Job not found because service was recently restarted")
 
     def _process_smart_status(self, disk_path, smart_status, serial_number):
@@ -1007,7 +1002,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
             # Ignore if the test was interrupted, not conclusive
             return
         elif smart_status.lower() == "aborted":
-            self._log_debug("SMART test aborted on drive, rescheduling: %s" % serial_number)
+            self._log_debug(f"SMART test aborted on drive, rescheduling: {serial_number}")
             self._schedule_SMART_test(disk_path)
             return
         elif smart_status.lower() == "fatal":
@@ -1023,7 +1018,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
         elif smart_status.lower() == "error_handling":
             status_reason = "Failed_smart_damage"
         else:
-            status_reason = "Unknown smart status: {}_unknown".format(smart_status)
+            status_reason = f"Unknown smart status: {smart_status}_unknown"
 
         # Generate and send an internal msg to DiskMsgHandler
         self._notify_disk_msg_handler(disk_path, status_reason, serial_number)
@@ -1097,10 +1092,10 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
             http://dbus.freedesktop.org/doc/dbus-specification.html#standard-interfaces-objectmanager
         """
         for interface_name, properties in list(interfaces_and_properties.items()):
-            self._log_debug("  Interface {}".format(interface_name))
+            self._log_debug(f"  Interface {interface_name}")
             for prop_name, prop_value in list(properties.items()):
                 prop_value = self._sanitize_dbus_value(prop_value)
-                self._log_debug("  {}: {}".format(prop_name, prop_value))
+                self._log_debug(f"  {prop_name}: {prop_value}")
 
     def _getSMART_interval(self):
         """Retrieves the frequency to run SMART tests on all the drives"""
@@ -1124,7 +1119,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
             return True
         if run_smart_on_start != 'false':
             logger.warn(
-                "Invalid configuration (%s) for run_smart_on_start. Assuming False" % run_smart_on_start)
+                f"Invalid configuration ({run_smart_on_start}) for run_smart_on_start. Assuming False")
         return False
 
     # TODO handle boolean values from conf file

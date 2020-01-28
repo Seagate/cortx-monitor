@@ -38,8 +38,8 @@ from sensors.IDrive_manager import IDriveManager
 @implementer(IDriveManager)
 class DriveManager(ScheduledModuleThread, InternalMsgQ):
 
-    SENSOR_NAME       = "DriveManager"
-    PRIORITY          = 1
+    SENSOR_NAME     = "DriveManager"
+    PRIORITY        = 1
 
     # Section and keys in configuration file
     DRIVEMANAGER      = SENSOR_NAME.upper()
@@ -67,7 +67,7 @@ class DriveManager(ScheduledModuleThread, InternalMsgQ):
         # Initialize internal message queues for this module
         super(DriveManager, self).initialize_msgQ(msgQlist)
 
-        self._drive_status = {}
+        self._drive_status : Dict[str, str] = {}
 
         self._drive_mngr_base_dir  = self._getDrive_Mngr_Dir()
         self._start_delay          = self._getStart_delay()
@@ -82,7 +82,7 @@ class DriveManager(ScheduledModuleThread, InternalMsgQ):
         self._read_my_msgQ_noWait()
 
         self._log_debug("Start accepting requests")
-        self._log_debug("run, CentOS 7 base directory: %s" % self._drive_mngr_base_dir)
+        self._log_debug(f"run, CentOS 7 base directory: {self._drive_mngr_base_dir}")
 
         # Retrieve the current information about each drive from the file system
         self._init_drive_status()
@@ -137,13 +137,12 @@ class DriveManager(ScheduledModuleThread, InternalMsgQ):
 
         enclosures = os.listdir(self._drive_mngr_base_dir)
         # Remove the 'discovery' file
-        for enclosure in enclosures:
-            if not os.path.isdir(os.path.join(self._drive_mngr_base_dir, enclosure)):
-                enclosures.remove(enclosure)
+        enclosures = [enclosure for enclosure in enclosures \
+                 if not os.path.isdir(os.path.join(self._drive_mngr_base_dir, enclosure))]
 
         for enclosure in enclosures:
             disk_dir = os.path.join(self._drive_mngr_base_dir, enclosure, "disk")
-            logger.info("DriveManager initializing: %s" % disk_dir)
+            logger.info(f"DriveManager initializing: {disk_dir}")
 
             disks = os.listdir(disk_dir)
             for disk in disks:
@@ -156,18 +155,18 @@ class DriveManager(ScheduledModuleThread, InternalMsgQ):
                 # Read in the serial number for the disk
                 serial_num_file = os.path.join(pathname, "serial_number")
                 if not os.path.isfile(serial_num_file):
-                    logger.error("DriveManager error no serial_number file for disk: %s" % disk)
+                    logger.error(f"DriveManager error no serial_number file for disk: {disk}")
                     continue
                 try:
                     with open(serial_num_file, "r") as datafile:
                         serial_number = datafile.read().replace('\n', '')
                 except Exception as e:
-                    logger.info("DriveManager, _init_drive_status, exception: %s" % e)
+                    logger.info(f"DriveManager, _init_drive_status, exception: {e}")
 
                 # Read in the status for the disk
                 status_file = os.path.join(pathname, "status")
                 if not os.path.isfile(status_file):
-                    logger.error("DriveManager error no status file for disk: %s" % disk)
+                    logger.error(f"DriveManager error no status file for disk: {disk}")
                     continue
                 try:
                     with open(status_file, "r") as datafile:
@@ -181,12 +180,11 @@ class DriveManager(ScheduledModuleThread, InternalMsgQ):
                             reason = datafile.read().replace('\n', '')
 
                         # Append the reason to the status file
-                        self._drive_status[pathname] = "{0}_{1}".format(status, reason)
+                        self._drive_status[pathname] = f"{status}_{reason}"
                     else:
                         self._drive_status[pathname] = status
 
-                    logger.info("DriveManager, pathname: %s, status: %s" %
-                               (pathname, self._drive_status[pathname]))
+                    logger.info(f"DriveManager, pathname: {pathname}, status: {self._drive_status[pathname]}")
 
                     # Remove base dcs dir since it contains no relevant data
                     data_str = status_file[len(self._drive_mngr_base_dir)+1:]
@@ -203,15 +201,15 @@ class DriveManager(ScheduledModuleThread, InternalMsgQ):
                     self._write_internal_msgQ(DiskMsgHandler.name(), internal_json_msg)
 
                 except Exception as e:
-                    logger.info("DriveManager, _init_drive_status, exception: %s" % e)
+                    logger.info(f"DriveManager, _init_drive_status, exception: {e}")
 
             logger.info("DriveManager, initialization completed")
 
     def _validate_drive_manager_dir(self):
         """Loops until the base dir is populated with enclosures by dcs-collector"""
         while not os.path.isdir(self._drive_mngr_base_dir):
-            logger.info("DriveManager sensor, dir not found: %s " % self._drive_mngr_base_dir)
-            logger.info("DriveManager sensor, rechecking in %s secs" % self._start_delay)
+            logger.info(f"DriveManager sensor, dir not found: {self._drive_mngr_base_dir}")
+            logger.info(f"DriveManager sensor, rechecking in {self._start_delay} secs")
             time.sleep(int(self._start_delay))
 
         enclosures = os.listdir(self._drive_mngr_base_dir)
@@ -221,16 +219,15 @@ class DriveManager(ScheduledModuleThread, InternalMsgQ):
                 enclosures.remove(enclosure)
 
         while not enclosures:
-           logger.info("DriveManager sensor, no enclosures found: %s " % self._drive_mngr_base_dir)
-           logger.info("DriveManager sensor, rechecking in %s secs" % (int(self._start_delay)))
+           logger.info(f"DriveManager sensor, no enclosures found: {self._drive_mngr_base_dir}")
+           logger.info(f"DriveManager sensor, rechecking in {(int(self._start_delay))} secs")
 
            # Attempt to initialize gemhpi
            command = "sudo /opt/seagate/sspl/low-level/framework/init_gemhpi"
            process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE,
                                        stderr=subprocess.PIPE)
            response, error = process.communicate()
-           logger.info("DriveManager sensor, initializing gem, result: %s, error: %s" %
-                       (response, error))
+           logger.info(f"DriveManager sensor, initializing gem, result: {response}, error: {error}")
 
            time.sleep(int(self._start_delay))
            enclosures = os.listdir(self._drive_mngr_base_dir)
@@ -250,15 +247,15 @@ class DriveManager(ScheduledModuleThread, InternalMsgQ):
                                                                  self.START_DELAY,
                                                                  '20')
 
-    def _notify_DiskMsgHandler(self, status_file, serial_num_file):
+    def _notify_DiskMsgHandler(self, status_file : str, serial_num_file):
         """Send the event to the disk message handler for generating JSON message"""
 
         if not os.path.isfile(status_file):
-            logger.warn("status_file: %s does not exist, ignoring." % status_file)
+            logger.warn(f"status_file: {status_file} does not exist, ignoring.")
             return
 
         if not os.path.isfile(serial_num_file):
-            logger.warn("serial_num_file: %s does not exist, ignoring." % serial_num_file)
+            logger.warn(f"serial_num_file: {serial_num_file} does not exist, ignoring.")
             return
 
         # Read in status and see if it has changed
@@ -270,14 +267,14 @@ class DriveManager(ScheduledModuleThread, InternalMsgQ):
         if os.path.isfile(reason_file):
             with open(reason_file, "r") as datafile:
                 reason = datafile.read().replace('\n', '')
-                status = "{0}_{1}".format(status, reason)
+                status = f"{status}_{reason}"
 
         # Do nothing if the drive status has not changed
         if self._drive_status[os.path.dirname(status_file)] == status:
             return
 
         # Update the status for this drive
-        self._log_debug("Status change, status_file: %s, status: %s" % (status_file, status))
+        self._log_debug(f"Status change, status_file: {status_file}, status: {status}")
         self._drive_status[os.path.dirname(status_file)] = status
 
         # Read in the serial number

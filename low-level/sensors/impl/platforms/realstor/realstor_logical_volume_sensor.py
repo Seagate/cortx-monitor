@@ -181,14 +181,13 @@ class RealStorLogicalVolumeSensor(ScheduledModuleThread, InternalMsgQ):
         response = self.rssencl.ws_request(url, self.rssencl.ws.HTTP_GET)
 
         if not response:
-            logger.warn("{0}:: Disk Groups status unavailable as ws request {1}"
-                " failed".format(self.rssencl.EES_ENCL, url))
+            logger.warn(f"{self.rssencl.EES_ENCL}:: Disk Groups status unavailable as ws request {url} failed")
             return
 
         if response.status_code != self.rssencl.ws.HTTP_OK:
             if url.find(self.rssencl.ws.LOOPBACK) == -1:
-                logger.error("{0}:: http request {1} to get disk groups failed with"
-                    " err {2}".format(self.rssencl.EES_ENCL, url, response.status_code))
+                logger.error(f"{self.rssencl.EES_ENCL}:: http request {url} to get disk groups failed with  \
+                     err {response.status_code}")
             return
 
         response_data = json.loads(response.text)
@@ -201,18 +200,18 @@ class RealStorLogicalVolumeSensor(ScheduledModuleThread, InternalMsgQ):
         """
         url = self.rssencl.build_url(self.rssencl.URI_CLIAPI_SHOWVOLUMES)
 
-        url = url + "/pool/" + pool_serial_number
+        url = f"{url}/pool/{pool_serial_number}"
 
         response = self.rssencl.ws_request(url, self.rssencl.ws.HTTP_GET)
 
         if not response:
-            logger.warn("{0}:: Logical Volume status unavailable as ws request {1}"
-                " failed".format(self.rssencl.EES_ENCL, url))
+            logger.warn(f"{self.rssencl.EES_ENCL}:: Logical Volume status unavailable as ws request {url}"
+                " failed")
             return
 
         if response.status_code != self.rssencl.ws.HTTP_OK:
-            logger.error("{0}:: http request {1} to get logical volumes failed with"
-                " err {2}" % self.rssencl.EES_ENCL, url, response.status_code)
+            logger.error(f"{self.rssencl.EES_ENCL}:: http request {url} to get logical volumes failed with \
+                 err {response.status_code}")
             return
 
         response_data = json.loads(response.text)
@@ -248,7 +247,7 @@ class RealStorLogicalVolumeSensor(ScheduledModuleThread, InternalMsgQ):
                     alert_type = self.rssencl.FRU_FAULT
                     self._previously_faulty_disk_groups[serial_number] = {
                         "health": disk_group_health, "alert_type": alert_type}
-                    state_changed = True
+                    state_changed : bool = True
                     logical_volumes = self._get_logical_volumes(pool_serial_number)
                     for logical_volume in logical_volumes:
                         internal_json_msg = self._create_internal_msg(
@@ -267,7 +266,7 @@ class RealStorLogicalVolumeSensor(ScheduledModuleThread, InternalMsgQ):
                     alert_type = self.rssencl.FRU_FAULT
                     self._previously_faulty_disk_groups[serial_number] = {
                         "health": disk_group_health, "alert_type": alert_type}
-                    state_changed = True
+                    state_changed : bool = True
                     logical_volumes = self._get_logical_volumes(pool_serial_number)
                     for logical_volume in logical_volumes:
                         internal_json_msg = self._create_internal_msg(

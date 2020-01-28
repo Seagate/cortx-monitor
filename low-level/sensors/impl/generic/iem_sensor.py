@@ -187,7 +187,7 @@ class IEMSensor(ScheduledModuleThread, InternalMsgQ):
                         self._log_file_path, str(io_error)))
         except ValueError as value_error:
             error_msg = value_error.message.split(":")[1].strip()
-            logger.error("Invalid hex value: {0}".format(error_msg))
+            logger.error(f"Invalid hex value: {error_msg}")
 
         except IndexError as index_error:
             # One major reason we get this error is some component is missing
@@ -218,21 +218,17 @@ class IEMSensor(ScheduledModuleThread, InternalMsgQ):
         # Example IEM -> "IEC: BO1001000001:Error in connecting to controller"
         # Actual IEC doesn't contain separator between fields. It is shown
         # here just for readability. Each field has fixed length.
-        severity = iem_components[0]
-        source_id = iem_components[1]
-        component_id = iem_components[2]
-        module_id = iem_components[3]
-        event_id = iem_components[4]
-        description = iem_components[5]
+        severity, source_id, component_id, module_id, event_id, description = \
+                                                        [iem_components[i] for i in range(6)]
 
         # Check if severity level is valid
         if severity not in self.SEVERITY_LEVELS:
-            logger.warn("Invalid Severity level: {0}".format(severity))
+            logger.warn(f"Invalid Severity level: {severity}")
             return
 
         # Check for valid source id
         if source_id not in self.SOURCE_IDS:
-            logger.warn("Invalid Source ID level: {0}".format(source_id))
+            logger.warn(f"Invalid Source ID level: {source_id}")
             return
 
         # Check for other components
@@ -316,8 +312,7 @@ class IEMSensor(ScheduledModuleThread, InternalMsgQ):
             ret = log[iec_keyword_index:]
         return ret
 
-    def _are_components_in_range(
-        self, _site_id, _rack_id, _node_id, _comp_id, _module_id, _event_id):
+    def _are_components_in_range(self, _site_id, _rack_id, _node_id, _comp_id, _module_id, _event_id):
         """Validates various components of IEM against a predefined range.
             Returns True/False based on that check.
             TODO: Iterate directly over hex range instead of converting
@@ -337,42 +332,42 @@ class IEMSensor(ScheduledModuleThread, InternalMsgQ):
         min_site_id = int(self.ID_MIN, 16)
         max_site_id = int(self.SITE_ID_MAX, 16)
         if site_id not in range(min_site_id, max_site_id + 1):
-            logger.warn("Site Id {0} is not in range {1}-{2}".format(_site_id, self.ID_MIN, self.SITE_ID_MAX))
+            logger.warn(f"Site Id {_site_id} is not in range {self.ID_MIN}-{self.SITE_ID_MAX}")
             components_in_range = False
 
         # Check if rack id out of range
         min_rack_id = int(self.ID_MIN, 16)
         max_rack_id = int(self.RACK_ID_MAX, 16)
         if rack_id not in range(min_rack_id, max_rack_id + 1):
-            logger.warn("Rack Id {0} is not in range {1}-{2}".format(_rack_id, self.ID_MIN , self.RACK_ID_MAX))
+            logger.warn(f"Rack Id {_rack_id} is not in range {self.ID_MIN}-{self.RACK_ID_MAX}")
             components_in_range = False
 
         # Check if node id out of range
         min_node_id = int(self.ID_MIN, 16)
         max_node_id = int(self.NODE_ID_MAX, 16)
         if node_id not in range(min_node_id, max_node_id + 1):
-            logger.warn("Node Id {0} is not in range {1}-{2}".format(_node_id, self.ID_MIN, self.NODE_ID_MAX))
+            logger.warn(f"Node Id {_node_id} is not in range {self.ID_MIN}-{self.NODE_ID_MAX}")
             components_in_range = False
 
         # Check if component id out of range
         min_comp_id = int(self.ID_MIN, 16)
         max_comp_id = int(self.COMPONENT_ID_MAX, 16)
         if comp_id not in range(min_comp_id, max_comp_id + 1):
-            logger.warn("Component Id {0} is not in range {1}-{2}".format(_comp_id, self.ID_MIN, self.COMPONENT_ID_MAX))
+            logger.warn(f"Component Id {_comp_id} is not in range {self.ID_MIN}-{self.COMPONENT_ID_MAX}")
             components_in_range = False
 
         # Check if module id out of range
         min_mod_id = int(self.ID_MIN, 16)
         max_mod_id = int(self.MODULE_ID_MAX, 16)
         if module_id not in range(min_mod_id, max_mod_id + 1):
-            logger.warn("Module Id {0} is not in range {1}-{2}".format(_module_id, self.ID_MIN, self.MODULE_ID_MAX))
+            logger.warn(f"Module Id {_module_id} is not in range {self.ID_MIN}-{self.MODULE_ID_MAX}")
             components_in_range = False
 
         # Check if event id out of range
         min_event_id = int(self.ID_MIN, 16)
         max_event_id = int(self.EVENT_ID_MAX, 16)
         if event_id not in range(min_event_id, max_event_id + 1):
-            logger.warn("Event Id {0} is not in range {1}-{2}".format(_event_id, self.ID_MIN, self.EVENT_ID_MAX))
+            logger.warn(f"Event Id {_event_id} is not in range {self.ID_MIN}-{self.EVENT_ID_MAX}")
             components_in_range = False
 
         return components_in_range
@@ -384,7 +379,7 @@ class IEMSensor(ScheduledModuleThread, InternalMsgQ):
         components = []
         if iem is None or len(iem.strip()) == 0:
             raise TypeError
-        things_to_strip = "{0}:".format(self.IEC_KEYWORD)
+        things_to_strip = f"{self.IEC_KEYWORD}:"
         splitted_iem = iem.lstrip(things_to_strip).strip()
         # Split IEM by ":" delimieter. First part is IEC and second part
         # is description.

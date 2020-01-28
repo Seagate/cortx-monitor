@@ -215,15 +215,14 @@ class RealStorFanSensor(ScheduledModuleThread, InternalMsgQ):
                         url, self.rssencl.ws.HTTP_GET)
 
         if not response:
-            logger.warn("{0}:: Fan-modules status unavailable as ws request {1}"
-                            "failed".format(self.rssencl.EES_ENCL, url))
+            logger.warn(f"{self.rssencl.EES_ENCL}:: Fan-modules status unavailable as ws request {url} failed")
             return
 
         if response.status_code != self.rssencl.ws.HTTP_OK:
             if url.find(self.rssencl.ws.LOOPBACK) == -1:
                 logger.error(
-                    "{0}:: http request {1} to get fan-modules failed with http err"
-                    " {2}".format(self.rssencl.EES_ENCL, url, response.status_code))
+                    f"{self.rssencl.EES_ENCL}:: http request {url} to get fan-modules failed with http err  \
+                               {response.status_code}")
             return
 
         response_data = json.loads(response.text)
@@ -342,7 +341,7 @@ class RealStorFanSensor(ScheduledModuleThread, InternalMsgQ):
                 {'actuator_request_type':
                     {'logging':
                         {'log_level': 'LOG_WARNING', 'log_type': 'IEM',
-                            'log_msg': '{}'.format(json_data)}}})
+                            'log_msg': f'{json_data}'}}})
 
         # Send the event to logging msg handler to send IEM message to journald
         #self._write_internal_msgQ(LoggingMsgHandler.name(), internal_json_msg)

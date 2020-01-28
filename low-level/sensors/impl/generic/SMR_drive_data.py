@@ -1,7 +1,7 @@
 """
  ****************************************************************************
  Filename:          SMR_drive_data.py
- Description:       Reads state and polling time values from each drive and 
+ Description:       Reads state and polling time values from each drive and
                     logs them to journal
  Creation Date:     10/05/2015
  Author:            Jake Abernathy
@@ -25,14 +25,16 @@ from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
 from systemd import journal
 
-from zope.interface import implements
+# Modules that receive messages from this module
+from message_handlers.node_data_msg_handler import NodeDataMsgHandler
+
+from zope.interface import implementer
 from sensors.INode_data import INodeData
 
 libc = ctypes.CDLL('libc.so.6')
 
+@implementer(INodeData)
 class SMRdriveData(ScheduledModuleThread, InternalMsgQ):
-
-    implements(INodeData)
 
     SENSOR_NAME       = "SMRdriveData"
     PRIORITY          = 1
@@ -40,7 +42,6 @@ class SMRdriveData(ScheduledModuleThread, InternalMsgQ):
     # Section and keys in configuration file
     SMRDRIVEDATA      = SENSOR_NAME.upper()
     LOGGING_INTERVAL  = 'logging_interval'
-
 
     @staticmethod
     def name():
@@ -155,42 +156,38 @@ class SMRdriveData(ScheduledModuleThread, InternalMsgQ):
         try:
             with open(dev, 'r') as fd:
                 if libc.ioctl(fd.fileno(), SG_IO, ctypes.byref(sgio)) != 0:
-                    self._log_debug(" _send_ATA_command dev: %s does not support ATA command, skipping" % dev)
+                    self._log_debug(f" _send_ATA_command dev: {dev} does not support ATA command, skipping")
                     return
 
                 orig_row = result[64:80]
-                valid = "%02x%02x" % (ord(orig_row[15]), ord(orig_row[14]))
+                valid = f"{ord(orig_row[15]):02x}{ord(orig_row[14]):02x}"
 
                 # Only care about valid values
                 if valid != "8000":
                     return
 
                 # Swap bytes in the raw data
-                swap_row = "{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}".format(
-                           orig_row[1], orig_row[0], orig_row[3], orig_row[2],
-                           orig_row[5], orig_row[4], orig_row[7], orig_row[6],
-                           orig_row[9], orig_row[8], orig_row[11], orig_row[10],
-                           orig_row[13], orig_row[12], orig_row[15], orig_row[14])
+                swap_row = f"{orig_row[1]}{orig_row[0]}{orig_row[3]}{orig_row[2]}{orig_row[5]}{orig_row[4]}  \
+                             {orig_row[7]}{orig_row[6]}{orig_row[9]}{orig_row[8]}{orig_row[11]}{orig_row[10]} \
+                             {orig_row[13]}{orig_row[12]}{orig_row[15]}{orig_row[14]}"
 
                 # Create a string to log for debugging purposes
-                i     = 1
-                res   = ""
-                for bb in swap_row:
-                    if i % 2 == 0:
-                        res += ("%02x " % ord(bb))
+                counter = 1
+                res = ""
+                for row in swap_row:
+                    if counter % 2 == 0:
+                        res += f"{ord(row):02x}"
                     else:
-                        res += ("%02x" % ord(bb))
-                    i += 1
+                        res += f"{ord(row):02x}"
+                    counter += 1
 
                 # Start with last four bytes, fist two are unused of the four
-                steady_state = "%02x%02x" % (ord(swap_row[10]), ord(swap_row[11]))
-                polling_tm   = "%02x%02x" % (ord(swap_row[12]), ord(swap_row[13]))
+                steady_state = f"{ord(swap_row[10]):02x}{ord(swap_row[11]):02x}"
+                polling_tm   = f"{ord(swap_row[12]):02x}{ord(swap_row[13]):02x}"
                 if len(dev) == 8:
-                    msg = "{} : {} state:{}h time:{}h valid:{}h" \
-                          .format(dev, res, steady_state, polling_tm, valid)
+                    msg = f"{dev} : {res} state:{steady_state}h time:{polling_tm}h valid:{valid}h"
                 else:
-                    msg = "{}: {} state:{}h time:{}h valid:{}h" \
-                          .format(dev, res, steady_state, polling_tm, valid)
+                    msg = f"{dev}: {res} state:{steady_state}h time:{polling_tm}h valid:{valid}h"
                 journal.send(msg, SYSLOG_IDENTIFIER="sspl-ll")
 
                 # Assign the shortest drive polling time to the thread scheduler
@@ -206,7 +203,7 @@ class SMRdriveData(ScheduledModuleThread, InternalMsgQ):
         self._logging_interval = int(self._conf_reader._get_value_with_default(self.SMRDRIVEDATA,
                                                         self.LOGGING_INTERVAL,
                                                         3600))
-        logger.info("         Logging interval: %s" % self._logging_interval)
+        logger.info(f"Logging interval: {self._logging_interval}")
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""

@@ -46,7 +46,7 @@ class RealStorDiskSensor(ScheduledModuleThread, InternalMsgQ):
     SENSOR_NAME = "RealStorDiskSensor"
     RESOURCE_TYPE = "enclosure:fru:disk"
 
-    PRIORITY          = 1
+    PRIORITY = 1
 
     RSS_DISK_GET_ALL = "all"
 
@@ -90,7 +90,7 @@ class RealStorDiskSensor(ScheduledModuleThread, InternalMsgQ):
         self.rssencl = singleton_realstorencl
 
         # disks persistent cache
-        self.disks_prcache = self.rssencl.frus + "disks/"
+        self.disks_prcache = f"{self.rssencl.frus}disks/"
 
         self.pollfreq_disksensor = \
             int(self.rssencl.conf_reader._get_value_with_default(\
@@ -165,7 +165,7 @@ class RealStorDiskSensor(ScheduledModuleThread, InternalMsgQ):
             return
 
         if alert_type not in self.rssencl.fru_alerts:
-            logger.error("Supplied alert type [%s] not supported" % alert_type)
+            logger.error(f"Supplied alert type [{alert_type}] not supported")
             return
 
         # form json with default values
@@ -235,10 +235,10 @@ class RealStorDiskSensor(ScheduledModuleThread, InternalMsgQ):
 
         for slot in removed_disks:
             #get removed drive data from disk cache
-            disk_datafile = self.disks_prcache+"disk_{0}.json.prev".format(slot)
+            disk_datafile = f"self.disks_prcache disk_{slot}.json.prev"
 
             if not os.path.exists(disk_datafile):
-                disk_datafile = self.disks_prcache+"disk_{0}.json".format(slot)
+                disk_datafile = f"{self.disks_prcache}disk_{slot}.json"
 
             disk_info = store.get(disk_datafile)
 
@@ -249,8 +249,8 @@ class RealStorDiskSensor(ScheduledModuleThread, InternalMsgQ):
 
         for slot in inserted_disks:
             #get inserted drive data from disk cache
-            disk_info = store.get(
-                           self.disks_prcache+"disk_{0}.json".format(slot))
+            disk_info = self.rssencl.jsondata.load(
+                           f"{self.disks_prcache}disk_{slot}.json")
 
             #raise alert for added drive
             self._rss_raise_disk_alert(self.rssencl.FRU_INSERTION, disk_info)
@@ -272,28 +272,26 @@ class RealStorDiskSensor(ScheduledModuleThread, InternalMsgQ):
            diskId = disk.partition("0.")[2]
 
            if(diskId.isdigit()):
-               url = url + "/" + disk
-
-        url = url + "/detail"
+               url = f"{url}/{disk}"
+        url = f"{url}/detail"
 
         response = self.rssencl.ws_request(
                         url, self.rssencl.ws.HTTP_GET)
 
         if not response:
-            logger.warn("{0}:: Disks status unavailable as ws request {1}"
-                " failed".format(self.rssencl.EES_ENCL, url))
+            logger.warn(f"{self.rssencl.EES_ENCL}:: Disks status unavailable as ws request {url} failed")
             return
 
         if response.status_code != self.rssencl.ws.HTTP_OK:
             if url.find(self.rssencl.ws.LOOPBACK) == -1:
-                logger.error("{0}:: http request {1} to poll disks failed with"
-                    " err {2}".format(self.rssencl.EES_ENCL, url, response.status_code))
+                logger.error(f"{self.rssencl.EES_ENCL}:: http request {url} to poll disks failed with \
+                       err {response.status_code}")
             return
 
         try:
             jresponse = json.loads(response.content)
         except ValueError as badjson:
-            logger.error("%s returned mal-formed json:\n%s" % (url, badjson))
+            logger.error(f"{url} returned mal-formed json:\n{badjson}")
 
         if jresponse:
             api_resp = self.rssencl.get_api_status(jresponse['status'])
@@ -320,8 +318,7 @@ class RealStorDiskSensor(ScheduledModuleThread, InternalMsgQ):
                         self.latest_disks[slot] = {"serial-number":sn, "health":health}
 
                         #dump drive data to persistent cache
-                        dcache_path = self.disks_prcache + \
-                                         "disk_{0}.json".format(slot)
+                        dcache_path = f"{self.disks_prcache}disk_{slot}.json"
 
                         # If drive is replaced, previous drive info needs
                         # to be retained in disk_<slot>.json.prev file and
@@ -368,7 +365,7 @@ class RealStorDiskSensor(ScheduledModuleThread, InternalMsgQ):
                 slotstr = filename.strip('disk_')
 
                 if not slotstr.isdigit():
-                    logger.debug("slot {0} not numeric, ignoring".format(slotstr))
+                    logger.debug(f"slot {slotstr} not numeric, ignoring")
                     continue
 
                 slot = int(slotstr)
@@ -422,8 +419,7 @@ class RealStorDiskSensor(ScheduledModuleThread, InternalMsgQ):
                     for d in self.rssencl.latest_faults) and self.DISK_IDENTIFIER in cached["component-id"]:
 
                     # Extract slot from "component-id":"Disk 0.39"
-                    logger.info("Found resolved disk fault for {0}"\
-                        .format(cached["component-id"]))
+                    logger.info(f"Found resolved disk fault for {cached['component-id']}")
                     slot = cached["component-id"].split()[1].split('.')[1]
 
                     # Alert send only if disks_prcache updated with latest disk data
@@ -438,7 +434,7 @@ class RealStorDiskSensor(ScheduledModuleThread, InternalMsgQ):
             self.rssencl.update_memcache_faults()
 
         except Exception as e:
-            logger.exception("Error in _rss_check_disk_faults {0}".format(e))
+            logger.exception(f"Error in _rss_check_disk_faults {e}")
 
     def _gen_json_msg(self, alert_type, details, ext):
         """ Generate json message"""
@@ -513,7 +509,7 @@ class RealStorDiskSensor(ScheduledModuleThread, InternalMsgQ):
                 {'actuator_request_type':
                     {'logging':
                         {'log_level': 'LOG_WARNING', 'log_type': 'IEM',
-                          'log_msg': '{}'.format(json_data)}
+                          'log_msg': f'{json_data}'}
                     }
                 })
 

@@ -120,15 +120,14 @@ class RealStorEnclMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
         except Exception as ae:
             # Log it and restart the whole process when a failure occurs
-            logger.exception("RealStorEnclMsgHandler restarting: %s" % ae)
+            logger.exception(f"RealStorEnclMsgHandler restarting: {ae}")
 
         self._scheduler.enter(1, self._priority, self.run, ())
         self._log_debug("Finished processing successfully")
 
     def _process_msg(self, json_msg):
         """Parses the incoming message and generate the desired data message"""
-        self._log_debug(
-            "RealStorEnclMsgHandler, _process_msg, json_msg: %s" % json_msg)
+        self._log_debug(f"RealStorEnclMsgHandler, _process_msg, json_msg: {json_msg}")
 
         if json_msg.get("sensor_request_type").get("enclosure_alert") is not None:
             internal_sensor_request = json_msg.get("sensor_request_type").\
@@ -151,8 +150,8 @@ class RealStorEnclMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     self._write_internal_msgQ(RabbitMQegressProcessor.name(),
                                               sensor_message_type)
                 else:
-                    self._log_debug("RealStorEnclMsgHandler, _process_msg, \
-                        No past data found for %s sensor type" % sensor_type)
+                    self._log_debug(f"RealStorEnclMsgHandler, _process_msg, \
+                        No past data found for {sensor_type} sensor type")
         else:
             logger.exception("RealStorEnclMsgHandler, _process_msg,\
                 Not a valid sensor request format")
@@ -161,8 +160,7 @@ class RealStorEnclMsgHandler(ScheduledModuleThread, InternalMsgQ):
         """Extracts specific field from json message and propagates
            json message based on sensor type"""
 
-        self._log_debug(
-            "RealStorEnclMsgHandler, _propagate_alert, json_msg %s" % json_msg)
+        self._log_debug(f"RealStorEnclMsgHandler, _propagate_alert, json_msg {json_msg}")
 
         sensor_request = json_msg.get("sensor_request_type").get("enclosure_alert")
         host_name = sensor_request.get("host_id")
@@ -171,25 +169,25 @@ class RealStorEnclMsgHandler(ScheduledModuleThread, InternalMsgQ):
         severity = sensor_request.get("severity")
         info = sensor_request.get("info")
         specific_info = sensor_request.get("specific_info")
-        self._log_debug("_processMsg, sensor_type: %s" % sensor_type)
+        self._log_debug(f"_processMsg, sensor_type: {sensor_type}")
         try:
             alert_func = self._fru_func_dict.get(sensor_type)
             alert_func(json_msg, host_name, alert_type, alert_id, severity, info,
                        specific_info, sensor_type)
         except TypeError:
-            logger.error("RealStorEnclMsgHandler, _propagate_alert,\
-                Not a valid sensor type: %s" % sensor_type)
+            logger.error(f"RealStorEnclMsgHandler, _propagate_alert,\
+                Not a valid sensor type: {sensor_type}")
         except Exception as e:
-            logger.error("RealStorEnclMsgHandler, _propagate_alert,\
-                error validating sensor_type: %s %s" % (sensor_type, e))
+            logger.error(f"RealStorEnclMsgHandler, _propagate_alert,\
+                error validating sensor_type: {sensor_type} {e}")
 
-    def _generate_disk_alert(
-            self, json_msg, host_name, alert_type, alert_id, severity, info, specific_info, sensor_type):
+    def _generate_disk_alert(self, json_msg, host_name, alert_type, alert_id, severity,    \
+                                       info, specific_info, sensor_type):
         """Parses the json message, also validates it and then send it to the
            RabbitMQ egress processor"""
 
-        self._log_debug("RealStorEnclMsgHandler, _generate_disk_alert,\
-            json_msg %s" % json_msg)
+        self._log_debug(f"RealStorEnclMsgHandler, _generate_disk_alert,\
+            json_msg {json_msg}")
 
         real_stor_disk_data_msg = \
             RealStorDiskDataMsg(host_name, alert_type, alert_id, severity, info, specific_info)
@@ -200,13 +198,13 @@ class RealStorEnclMsgHandler(ScheduledModuleThread, InternalMsgQ):
         self._fru_type[sensor_type] = self._disk_sensor_message
         self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
 
-    def _generate_psu_alert(
-            self, json_msg, host_name, alert_type, alert_id, severity, info, specific_info, sensor_type):
+    def _generate_psu_alert(self, json_msg, host_name, alert_type, alert_id,
+                                             severity, info, specific_info, sensor_type):
         """Parses the json message, also validates it and then send it to the
            RabbitMQ egress processor"""
 
-        self._log_debug("RealStorEnclMsgHandler, _generate_psu_alert,\
-            json_msg %s" % json_msg)
+        self._log_debug(f"RealStorEnclMsgHandler, _generate_psu_alert,\
+            json_msg {json_msg}")
 
         real_stor_psu_data_msg = \
             RealStorPSUDataMsg(host_name, alert_type, alert_id, severity, info, specific_info)
@@ -217,13 +215,13 @@ class RealStorEnclMsgHandler(ScheduledModuleThread, InternalMsgQ):
         self._fru_type[sensor_type] = self._psu_sensor_message
         self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
 
-    def _generate_fan_module_alert(
-            self, json_msg, host_name, alert_type, alert_id, severity, info, specific_info, sensor_type):
+    def _generate_fan_module_alert(self, json_msg, host_name, alert_type, alert_id,
+                                             severity, info, specific_info, sensor_type):
         """Parses the json message, also validates it and then send it to the
            RabbitMQ egress processor"""
 
-        self._log_debug("RealStorEnclMsgHandler, _generate_fan_alert,\
-            json_msg %s" % json_msg)
+        self._log_debug(f"RealStorEnclMsgHandler, _generate_fan_alert,\
+            json_msg {json_msg}")
 
         real_stor_fan_data_msg = \
             RealStorFanDataMsg(host_name, alert_type, alert_id, severity, info, specific_info)
@@ -235,13 +233,13 @@ class RealStorEnclMsgHandler(ScheduledModuleThread, InternalMsgQ):
             self._fan_module_sensor_message
         self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
 
-    def _generate_controller_alert(
-            self, json_msg, host_name, alert_type, alert_id, severity, info, specific_info, sensor_type):
+    def _generate_controller_alert(self, json_msg, host_name, alert_type, alert_id,
+                                       severity, info, specific_info, sensor_type):
         """Parses the json message, also validates it and then send it to the
            RabbitMQ egress processor"""
 
-        self._log_debug("RealStorEnclMsgHandler, _generate_controller_alert,\
-            json_msg %s" % json_msg)
+        self._log_debug(f"RealStorEnclMsgHandler, _generate_controller_alert,\
+            json_msg {json_msg}")
 
         real_stor_controller_data_msg = \
             RealStorControllerDataMsg(host_name, alert_type, alert_id, severity, info,
@@ -254,13 +252,13 @@ class RealStorEnclMsgHandler(ScheduledModuleThread, InternalMsgQ):
             self._controller_sensor_message
         self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
 
-    def _generate_expander_alert(
-            self, json_msg, host_name, alert_type, alert_id, severity, info, specific_info, sensor_type):
+    def _generate_expander_alert(self, json_msg, host_name, alert_type,
+                                         alert_id, severity, info, specific_info, sensor_type):
         """Parses the json message, also validates it and then send it to the
            RabbitMQ egress processor"""
 
-        self._log_debug("RealStorEnclMsgHandler, _generate_expander_alert,\
-            json_msg %s" % json_msg)
+        self._log_debug(f"RealStorEnclMsgHandler, _generate_expander_alert,\
+            json_msg {json_msg}")
 
         real_stor_expander_data_msg = \
             RealStorSideplaneExpanderDataMsg(host_name, alert_type, alert_id, severity, info,
@@ -273,13 +271,13 @@ class RealStorEnclMsgHandler(ScheduledModuleThread, InternalMsgQ):
             self._expander_sensor_message
         self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
 
-    def _generate_logical_volume_alert(
-            self, json_msg, host_name, alert_type, alert_id, severity, info, specific_info, sensor_type):
+    def _generate_logical_volume_alert(self, json_msg, host_name, alert_type, alert_id,
+                                                   severity, info, specific_info, sensor_type):
         """Parses the json message, also validates it and then send it to the
            RabbitMQ egress processor"""
 
-        self._log_debug("RealStorEnclMsgHandler, _generate_logical_volume_alert,\
-            json_msg %s" % json_msg)
+        self._log_debug(f"RealStorEnclMsgHandler, _generate_logical_volume_alert,\
+            json_msg {json_msg}")
 
         real_stor_logical_volume_data_msg = \
             RealStorLogicalVolumeDataMsg(host_name, alert_type, alert_id, severity, info,

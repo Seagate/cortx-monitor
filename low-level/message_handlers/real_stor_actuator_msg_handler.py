@@ -15,6 +15,7 @@
 """
 
 import json
+import time
 
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
@@ -102,14 +103,14 @@ class RealStorActuatorMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
         except Exception as ae:
             # Log it and restart the whole process when a failure occurs
-            logger.exception("RealStorActuatorMsgHandler restarting: %s" % ae)
+            logger.exception(f"RealStorActuatorMsgHandler restarting: {ae}")
 
         self._scheduler.enter(1, self._priority, self.run, ())
         self._log_debug("Finished processing successfully")
 
     def _process_msg(self, jsonMsg):
         """Parses the incoming message and handles appropriately"""
-        self._log_debug("RealStorActuatorMsgHandler, _process_msg, jsonMsg: %s" % jsonMsg)
+        self._log_debug(f"RealStorActuatorMsgHandler, _process_msg, jsonMsg: {jsonMsg}")
 
         if isinstance(jsonMsg, dict) is False:
             jsonMsg = json.loads(jsonMsg)
@@ -118,13 +119,13 @@ class RealStorActuatorMsgHandler(ScheduledModuleThread, InternalMsgQ):
         uuid = None
         if jsonMsg.get("sspl_ll_msg_header").get("uuid") is not None:
             uuid = jsonMsg.get("sspl_ll_msg_header").get("uuid")
-            self._log_debug("_processMsg, uuid: %s" % uuid)
+            self._log_debug(f"_processMsg, uuid: {uuid}")
 
-        logger.debug("RealStorActuatorMsgHandler: _process_msg: jsonMsg: {}".format(jsonMsg))
+        logger.debug(f"RealStorActuatorMsgHandler: _process_msg: jsonMsg: {jsonMsg}")
         if jsonMsg.get("actuator_request_type").get("storage_enclosure").get("enclosure_request") is not None:
             enclosure_request = jsonMsg.get("actuator_request_type").get("storage_enclosure").get("enclosure_request")
-            self._log_debug("_processMsg, enclosure_request: %s" % enclosure_request)
-            logger.debug("RealStorActuatorMsgHandler: _process_msg: INSIDE: jsonMsg: {}".format(jsonMsg))
+            self._log_debug(f"_processMsg, enclosure_request: {enclosure_request}")
+            logger.debug(f"RealStorActuatorMsgHandler: _process_msg: INSIDE: jsonMsg: {jsonMsg}")
 
             # Parse out the request field in the enclosure_request
             (request, fru) = enclosure_request.split(":", 1)
@@ -143,7 +144,7 @@ class RealStorActuatorMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
             # Perform the request and get the response
             real_stor_response = self._real_stor_actuator.perform_request(jsonMsg)
-            self._log_debug("_process_msg, RealStor response: %s" % real_stor_response)
+            self._log_debug(f"_process_msg, RealStor response: {real_stor_response}")
 
             json_msg = RealStorActuatorSensorMsg(real_stor_response, uuid).getJson()
             self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)

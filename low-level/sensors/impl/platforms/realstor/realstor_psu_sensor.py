@@ -108,7 +108,7 @@ class RealStorPSUSensor(ScheduledModuleThread, InternalMsgQ):
         self._faulty_psu_file_path = os.path.join(
             self.psu_prcache, "psudata.json")
         self._log_debug(
-            "_faulty_psu_file_path: {0}".format(self._faulty_psu_file_path))
+            f"_faulty_psu_file_path: {self._faulty_psu_file_path}")
 
         # Load faulty PSU data from file if available
         self._previously_faulty_psus = store.get(\
@@ -162,28 +162,25 @@ class RealStorPSUSensor(ScheduledModuleThread, InternalMsgQ):
                         url, self.rssencl.ws.HTTP_GET)
 
         if not response:
-            logger.warn("{0}:: PSUs status unavailable as ws request {1}"
-                " failed".format(self.rssencl.EES_ENCL, url))
+            logger.warn(f"{self.rssencl.EES_ENCL}:: PSUs status unavailable as ws request {url} failed")
             return
 
         if response.status_code != self.rssencl.ws.HTTP_OK:
             if url.find(self.rssencl.ws.LOOPBACK) == -1:
-                logger.error("{0}:: http request {1} to get power-supplies failed "
-                    " with err {2}".format(self.rssencl.EES_ENCL, url,
-                    response.status_code))
+                logger.error(f"{self.rssencl.EES_ENCL}:: http request {url} to get power-supplies failed   \
+                                       with err {response.status_code}")
             return
 
         response_data = json.loads(response.text)
         psus = response_data.get("power-supplies")
         return psus
 
-    def _get_msgs_for_faulty_psus(self, psus, send_message=True):
+    def _get_msgs_for_faulty_psus(self, psus, send_message = True):
         """Checks for health of psus and returns list of messages to be
            sent to handler if there are any.
         """
         self._log_debug(
-            "RealStorPSUSensor._get_msgs_for_faulty_psus -> {0} {1}".format(
-                psus, send_message))
+            f"RealStorPSUSensor._get_msgs_for_faulty_psus -> {psus} {send_message}")
         faulty_psu_messages = []
         internal_json_msg = None
         psu_health = None
@@ -289,8 +286,7 @@ class RealStorPSUSensor(ScheduledModuleThread, InternalMsgQ):
            message handler.
         """
         self._log_debug(
-            "RealStorPSUSensor._create_internal_msg -> {0} {1}".format(
-                psu_detail, alert_type))
+            f"RealStorPSUSensor._create_internal_msg -> {psu_detail} {alert_type}")
         if not psu_detail:
             return {}
 

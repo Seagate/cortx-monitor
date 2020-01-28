@@ -84,11 +84,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
         super(NodeControllerMsgHandler, self).initialize_msgQ(msgQlist)
 
         # Find a meaningful hostname to be used
-        if socket.gethostname().find('.') >= 0:
-            self.ip_addr = socket.gethostname()
-        else:
-            self.ip_addr = socket.gethostbyaddr(socket.gethostname())[0]
-
+        self.host_id = socket.getfqdn()
         self._HPI_actuator          = None
         self._GEM_actuator          = None
         self._PDU_actuator          = None
@@ -134,14 +130,14 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
         except Exception as ae:
             # Log it and restart the whole process when a failure occurs
-            logger.exception("NodeControllerMsgHandler restarting: %s" % ae)
+            logger.exception(f"NodeControllerMsgHandler restarting: {ae}")
 
         self._scheduler.enter(1, self._priority, self.run, ())
         self._log_debug("Finished processing successfully")
 
     def _process_msg(self, jsonMsg):
         """Parses the incoming message and handles appropriately"""
-        self._log_debug("_process_msg, jsonMsg: %s" % jsonMsg)
+        self._log_debug(f"_process_msg, jsonMsg: {jsonMsg}")
 
         if isinstance(jsonMsg, dict) is False:
             jsonMsg = json.loads(jsonMsg)
@@ -150,11 +146,11 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
         uuid = None
         if jsonMsg.get("sspl_ll_msg_header").get("uuid") is not None:
             uuid = jsonMsg.get("sspl_ll_msg_header").get("uuid")
-            self._log_debug("_processMsg, uuid: %s" % uuid)
+            self._log_debug(f"_processMsg, uuid: {uuid}")
 
         if jsonMsg.get("actuator_request_type").get("node_controller").get("node_request") is not None:
             node_request = jsonMsg.get("actuator_request_type").get("node_controller").get("node_request")
-            self._log_debug("_processMsg, node_request: %s" % node_request)
+            self._log_debug(f"_processMsg, node_request: {node_request}")
 
             # Parse out the component field in the node_request
             component = node_request[0:4]
@@ -177,7 +173,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
                 # Perform the request and get the response
                 command_line_response = self._command_line_actuator.perform_request(jsonMsg).strip()
-                self._log_debug("_process_msg, command line response: %s" % command_line_response)
+                self._log_debug(f"_process_msg, command line response: {command_line_response}")
 
                 json_msg = AckResponseMsg(node_request, command_line_response, uuid).getJson()
                 self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
@@ -203,11 +199,11 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                             self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
                         return
 
-                    self._log_debug("_process_msg, _HPI_actuator name: %s" % self._HPI_actuator.name())
+                    self._log_debug(f"_process_msg, _HPI_actuator name: {self._HPI_actuator.name()}")
 
                     # Perform the request using HPI and get the response
                     hpi_response = self._HPI_actuator.perform_request(jsonMsg).strip()
-                    self._log_debug("_process_msg, hpi_response: %s" % hpi_response)
+                    self._log_debug(f"_process_msg, hpi_response: {hpi_response}")
 
                     json_msg = AckResponseMsg(node_request, hpi_response, uuid).getJson()
                     self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
@@ -217,11 +213,11 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 # Query the Zope GlobalSiteManager for an object implementing the IGEM actuator
                 if self._GEM_actuator is None:
                     self._GEM_actuator = self._queryUtility(IGEM)(self._conf_reader)
-                    self._log_debug("_process_msg, _GEM_actuator name: %s" % self._GEM_actuator.name())
+                    self._log_debug(f"_process_msg, _GEM_actuator name: {self._GEM_actuator.name()}")
 
                 # Perform the request using GEM and get the response
                 gem_response = self._GEM_actuator.perform_request(jsonMsg).strip()
-                self._log_debug("_process_msg, gem_response: %s" % gem_response)
+                self._log_debug(f"_process_msg, gem_response: {gem_response}")
 
                 json_msg = AckResponseMsg(node_request, gem_response, uuid).getJson()
                 self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
@@ -243,7 +239,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
                 # Perform the request on the PDU and get the response
                 pdu_response = self._PDU_actuator.perform_request(jsonMsg).strip()
-                self._log_debug("_process_msg, pdu_response: %s" % pdu_response)
+                self._log_debug(f"_process_msg, pdu_response: {pdu_response}")
 
                 json_msg = AckResponseMsg(node_request, pdu_response, uuid).getJson()
                 self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
@@ -252,8 +248,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 # If the state is INITIALIZED, We can assume that actuator is
                 # ready to perform operation.
                 if actuator_state_manager.is_initialized("RAIDactuator"):
-                    self._log_debug("_process_msg, _RAID_actuator name: %s" %
-                                    self._RAID_actuator.name())
+                    self._log_debug(f"_process_msg, _RAID_actuator name: {self._RAID_actuator.name()}")
                     self._execute_raid_request(
                         node_request, self._RAID_actuator, jsonMsg, uuid)
 
@@ -282,8 +277,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                         # and will not be able serve any subsequent requests.
                         # This applies to instantiation of evey actuator.
                         self._RAID_actuator = raid_actuator_class()
-                        logger.info("_process_msg, _RAID_actuator name: %s" %
-                                    self._RAID_actuator.name())
+                        logger.info(f"_process_msg, _RAID_actuator name: {self._RAID_actuator.name()}")
                         self._execute_raid_request(
                             node_request, self._RAID_actuator, jsonMsg, uuid)
                         actuator_state_manager.set_state(
@@ -313,7 +307,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
                 # Perform the IPMI request on the node and get the response
                 ipmi_response = self._IPMI_actuator.perform_request(jsonMsg).strip()
-                self._log_debug("_process_msg, ipmi_response: %s" % ipmi_response)
+                self._log_debug(f"_process_msg, ipmi_response: {ipmi_response}")
 
                 json_msg = AckResponseMsg(node_request, ipmi_response, uuid).getJson()
                 self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
@@ -338,20 +332,20 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                             self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
                         return
 
-                    self._log_debug("_process_msg, _HPI_actuator name: %s" % self._HPI_actuator.name())
+                    self._log_debug(f"_process_msg, _HPI_actuator name: {self._HPI_actuator.name()}")
 
                     # Parse out the drive to stop
                     drive_request = node_request[12:].strip()
-                    self._log_debug("perform_request, drive to stop: %s" % drive_request)
+                    self._log_debug(f"perform_request, drive to stop: {drive_request}")
 
                     # Append POWER_OFF to notify HPI actuator of desired state
                     jsonMsg["actuator_request_type"]["node_controller"]["node_request"] = \
-                            "DISK: set {} POWER_OFF".format(drive_request)
-                    self._log_debug("_process_msg, jsonMsg: %s" % jsonMsg)
+                            f"DISK: set {drive_request} POWER_OFF"
+                    self._log_debug(f"_process_msg, jsonMsg: {jsonMsg}")
 
                     # Perform the request using HPI and get the response
                     hpi_response = self._HPI_actuator.perform_request(jsonMsg).strip()
-                    self._log_debug("_process_msg, hpi_response: %s" % hpi_response)
+                    self._log_debug(f"_process_msg, hpi_response: {hpi_response}")
 
                     # Simplify success message as external apps don't care about details
                     if "Success" in hpi_response:
@@ -380,20 +374,20 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                             self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
                         return
 
-                    self._log_debug("_process_msg, _HPI_actuator name: %s" % self._HPI_actuator.name())
+                    self._log_debug(f"_process_msg, _HPI_actuator name: {self._HPI_actuator.name()}")
 
                     # Parse out the drive to start
                     drive_request = node_request[13:].strip()
-                    self._log_debug("perform_request, drive to start: %s" % drive_request)
+                    self._log_debug(f"perform_request, drive to start: {drive_request}")
 
                     # Append POWER_ON to notify HPI actuator of desired state
                     jsonMsg["actuator_request_type"]["node_controller"]["node_request"] = \
-                            "DISK: set {} POWER_ON".format(drive_request)
-                    self._log_debug("_process_msg, jsonMsg: %s" % jsonMsg)
+                            f"DISK: set {drive_request} POWER_ON"
+                    self._log_debug(f"_process_msg, jsonMsg: {jsonMsg}")
 
                     # Perform the request using HPI and get the response
                     hpi_response = self._HPI_actuator.perform_request(jsonMsg).strip()
-                    self._log_debug("_process_msg, hpi_response: %s" % hpi_response)
+                    self._log_debug(f"_process_msg, hpi_response: {hpi_response}")
 
                     # Simplify success message as external apps don't care about details
                     if "Success" in hpi_response:
@@ -423,31 +417,31 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                             self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
                         return
 
-                    self._log_debug("_process_msg, _HPI_actuator name: %s" % self._HPI_actuator.name())
+                    self._log_debug(f"_process_msg, _HPI_actuator name: {self._HPI_actuator.name()}")
 
                     # Parse out the drive to power cycle
                     drive_request = node_request[13:].strip()
-                    self._log_debug("perform_request, drive to power cycle: %s" % drive_request)
+                    self._log_debug(f"perform_request, drive to power cycle: {drive_request}")
 
                     # Append POWER_OFF and then POWER_ON to notify HPI actuator of desired state
                     jsonMsg["actuator_request_type"]["node_controller"]["node_request"] = \
-                            "DISK: set {} POWER_OFF".format(drive_request)
-                    self._log_debug("_process_msg, jsonMsg: %s" % jsonMsg)
+                            f"DISK: set {drive_request} POWER_OFF"
+                    self._log_debug(f"_process_msg, jsonMsg: {jsonMsg}")
 
                     # Perform the request using HPI and get the response
                     hpi_response = self._HPI_actuator.perform_request(jsonMsg).strip()
-                    self._log_debug("_process_msg, hpi_response: %s" % hpi_response)
+                    self._log_debug(f"_process_msg, hpi_response: {hpi_response}")
 
                     # Check for success and power the disk back on
                     if "Success" in hpi_response:
                         # Append POWER_ON to notify HPI actuator of desired state
                         jsonMsg["actuator_request_type"]["node_controller"]["node_request"] = \
-                                   "DISK: set {} POWER_ON".format(drive_request)
-                        self._log_debug("_process_msg, jsonMsg: %s" % jsonMsg)
+                                   f"DISK: set {drive_request} POWER_ON"
+                        self._log_debug(f"_process_msg, jsonMsg: {jsonMsg}")
 
                         # Perform the request using HPI and get the response
                         hpi_response = self._HPI_actuator.perform_request(jsonMsg).strip()
-                        self._log_debug("_process_msg, hpi_response: %s" % hpi_response)
+                        self._log_debug(f"_process_msg, hpi_response: {hpi_response}")
 
                             # Simplify success message as external apps don't care about details
                         if "Success" in hpi_response:
@@ -460,11 +454,10 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 # If the state is INITIALIZED, We can assume that actuator is
                 # ready to perform operation.
                 if actuator_state_manager.is_initialized("Hdparm"):
-                    logger.info("_process_msg, Hdparm_actuator name: %s" %
-                                self._hdparm_actuator.name())
+                    logger.info(f"_process_msg, Hdparm_actuator name: {self._hdparm_actuator.name()}")
                     # Perform the hdparm request on the node and get the response
                     hdparm_response = self._hdparm_actuator.perform_request(jsonMsg).strip()
-                    self._log_debug("_process_msg, hdparm_response: %s" % hdparm_response)
+                    self._log_debug(f"_process_msg, hdparm_response: {hdparm_response}")
 
                     json_msg = AckResponseMsg(node_request, hdparm_response, uuid).getJson()
                     self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
@@ -494,12 +487,10 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                         # not be able serve any subsequent requests. This applies
                         # to instantiation of evey actuator.
                         self._hdparm_actuator = hdparm_actuator_class()
-                        self._log_debug(
-                            "_process_msg, _hdparm_actuator name: %s" %
-                            self._hdparm_actuator.name())
+                        self._log_debug(f"_process_msg, _hdparm_actuator name: {self._hdparm_actuator.name()}")
                         # Perform the hdparm request on the node and get the response
                         hdparm_response = self._hdparm_actuator.perform_request(jsonMsg).strip()
-                        self._log_debug("_process_msg, hdparm_response: %s" % hdparm_response)
+                        self._log_debug(f"_process_msg, hdparm_response: {hdparm_response}")
 
                         json_msg = AckResponseMsg(node_request, hdparm_response, uuid).getJson()
                         self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
@@ -517,7 +508,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 # Parse out the drive request field in json msg
                 node_request = jsonMsg.get("actuator_request_type").get("node_controller").get("node_request")
                 drive_request = node_request[12:].strip()
-                self._log_debug("perform_request, drive: %s" % drive_request)
+                self._log_debug(f"perform_request, drive: {drive_request}")
 
                 # If the drive field is an asterisk then send all the smart results for all drives available
                 if drive_request == "*":
@@ -525,7 +516,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     internal_json_msg = json.dumps(
                         {"sensor_request_type" : "disk_smart_test",
                          "serial_number" : "*",
-                         "node_request" : self.ip_addr,
+                         "node_request" : self.host_id,
                          "uuid" : uuid
                          })
 
@@ -573,7 +564,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 # Parse out the drive request field in json msg
                 node_request = jsonMsg.get("actuator_request_type").get("node_controller").get("node_request")
                 drive_request = node_request[15:].strip()
-                self._log_debug("perform_request, drive: %s" % drive_request)
+                self._log_debug(f"perform_request, drive: {drive_request}")
 
                 # If the drive field is an asterisk then send all the drivemanager results for all drives available
                 if drive_request == "*":
@@ -581,7 +572,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     internal_json_msg = json.dumps(
                         {"sensor_request_type" : "drvmngr_status",
                          "serial_number" : "*",
-                         "node_request" : self.ip_addr,
+                         "node_request" : self.host_id,
                          "uuid" : uuid
                          })
 
@@ -627,7 +618,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
                 node_request = jsonMsg.get("actuator_request_type").get("node_controller").get("node_request")
                 drive_request = node_request[11:].strip()
-                self._log_debug("perform_request, drive: %s" % drive_request)
+                self._log_debug(f"perform_request, drive: {drive_request}")
 
                 # If the drive field is an asterisk then send all the hpi results for all drives available
                 if drive_request == "*":
@@ -635,7 +626,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     internal_json_msg = json.dumps(
                         {"sensor_request_type" : "hpi_status",
                          "serial_number" : "*",
-                         "node_request" : self.ip_addr,
+                         "node_request" : self.host_id,
                          "uuid" : uuid
                          })
 
@@ -671,7 +662,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 # Parse out the simulated request field
                 node_request = jsonMsg.get("actuator_request_type").get("node_controller").get("node_request")
                 sim_request = node_request[9:].strip().split(" ")
-                self._log_debug("perform_request, sim_request: %s" % str(sim_request))
+                self._log_debug(f"perform_request, sim_request: {str(sim_request)}")
 
                 # Put together a message to get the serial number of the drive using hdparm tool
                 if sim_request[1].startswith("/"):
@@ -687,7 +678,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
                 # SMART simulation requests are sent to SystemdWatchdog
                 if sim_request[0] == "SMART_FAILURE":
-                    logger.info("NodeControllerMsgHandler, simulating SMART_FAILURE on drive: %s" % serial_number)
+                    logger.info(f"NodeControllerMsgHandler, simulating SMART_FAILURE on drive: {serial_number}")
 
                     internal_json_msg = json.dumps(
                         {"sensor_request_type" : "simulate_failure",
@@ -735,25 +726,24 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                             self._NodeHW_actuator = NodeHWactuator(ipmi_client, self._conf_reader)
                             self._NodeHW_actuator.initialize()
                         else:
-                            logger.error("IPMI client: '"'{0}'"' doesn't exist".format(self.ipmi_client_name))
+                            logger.error(f"IPMI client: '{self.ipmi_client_name}' doesn't exist")
                             return
                     node_request = jsonMsg.get("actuator_request_type")
                     # Perform the NodeHW request on the node and get the response
                     #TODO: Send message to Ack as well as Sensor in their respective channel.
                     node_hw_response = self._NodeHW_actuator.perform_request(node_request)
-                    self._log_debug("_process_msg, node_hw_response: %s" % node_hw_response)
+                    self._log_debug(f"_process_msg, node_hw_response: {node_hw_response}")
                     json_msg = NodeHwAckResponseMsg(node_request, node_hw_response, uuid).getJson()
                     self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
                 except ImportError as e:
-                    logger.error("Modules could not be loaded: %s" % e)
+                    logger.error(f"Modules could not be loaded: {e}")
                     return
                 except Exception as e:
-                    logger.error("NodeControllerMsgHandler, _process_msg, Exception in request handling: %s" % e)
+                    logger.error(f"NodeControllerMsgHandler, _process_msg, Exception in request handling: {e}")
                     return
 
             else:
-                response = "NodeControllerMsgHandler, _process_msg, unknown node controller msg: {}" \
-                            .format(node_request)
+                response = f"NodeControllerMsgHandler, _process_msg, unknown node controller msg: {node_request}"
                 self._log_debug(response)
 
                 json_msg = AckResponseMsg(node_request, response, uuid).getJson()
@@ -805,14 +795,13 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
         return serial_number, error
 
-    def _execute_raid_request(
-            self, node_request, actuator_instance, json_msg, uuid):
+    def _execute_raid_request(self, node_request, actuator_instance, json_msg, uuid):
         """Performs a RAID request by calling perform_request method of a RAID
            actuator.
         """
         # Perform the RAID request on the node and get the response
         raid_response = actuator_instance.perform_request(json_msg).strip()
-        self._log_debug("_process_msg, raid_response: %s" % raid_response)
+        self._log_debug(f"_process_msg, raid_response: {raid_response}")
 
         json_msg = AckResponseMsg(node_request, raid_response, uuid).getJson()
         self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)

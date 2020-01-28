@@ -76,11 +76,11 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
         super(DiskMsgHandler, self).initialize_msgQ(msgQlist)
 
         # Find a meaningful hostname to be used
-        if socket.gethostname().find('.') >= 0:
-            self._host_id = socket.gethostname()
-        else:
-            self._host_id = socket.gethostbyaddr(socket.gethostname())[0]
-
+        self.host_id = socket.getfqdn()
+        # getfqdn() function checks the socket.gethostname() to get the host name if it not available
+        # then it try to find host name from socket.gethostbyaddr(socket.gethostname())[0] and return the
+        # meaningful host name priviously we chking the this two conditions explicitly which is implicitly
+        # doing by getfqdn() function. so removing the code and adding the getfqdn() function to get Hostname.
         # Read in the location to serialize drive_manager.json
         self._dmreport_file = self._getDMreport_File()
 
@@ -113,7 +113,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
         #self._check_expander_reset()
 
         # Dump startup info to journal for debugging
-        logger.info("          Current /dev/sg device: %s" % self._scsi_generic)
+        logger.info(f"Current /dev/sg device: {self._scsi_generic}")
 
     def run(self):
         """Run the module periodically on its own thread."""
@@ -142,14 +142,14 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
         except Exception as ae:
             # Log it and restart the whole process when a failure occurs
-            logger.exception("DiskMsgHandler restarting: %s" % ae)
+            logger.exception(f"DiskMsgHandler restarting: {ae}")
 
         self._scheduler.enter(1, self._priority, self.run, ())
         self._log_debug("Finished processing successfully")
 
     def _process_msg(self, jsonMsg):
         """Parses the incoming message and hands off to the appropriate logger"""
-        self._log_debug("_process_msg, jsonMsg: %s" % jsonMsg)
+        self._log_debug(f"_process_msg, jsonMsg: {jsonMsg}")
 
         if isinstance(jsonMsg, dict) is False:
             jsonMsg = json.loads(jsonMsg)
@@ -157,7 +157,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
         # Handle sensor response type messages that update the drive's state
         if jsonMsg.get("sensor_response_type") is not None:
             sensor_response_type = jsonMsg.get("sensor_response_type")
-            self._log_debug("_processMsg, sensor_response_type: %s" % sensor_response_type)
+            self._log_debug(f"_processMsg, sensor_response_type: {sensor_response_type}")
 
             # Serial number is used as an index into dicts
             serial_number = jsonMsg.get("serial_number")
@@ -191,17 +191,17 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
             # ... handle other disk sensor response types
             else:
-                logger.warn("DiskMsgHandler, received unknown sensor response msg: %s" % jsonMsg)
+                logger.warn(f"DiskMsgHandler, received unknown sensor response msg: {jsonMsg}")
 
         # Handle sensor request type messages
         # TODO: Break this apart into small methods on a rainy day
         elif jsonMsg.get("sensor_request_type") is not None:
             sensor_request_type = jsonMsg.get("sensor_request_type")
-            self._log_debug("_processMsg, sensor_request_type: %s" % sensor_request_type)
+            self._log_debug(f"_processMsg, sensor_request_type: {sensor_request_type}")
 
             # Serial number is used as an index into dicts
             serial_number = jsonMsg.get("serial_number")
-            self._log_debug("_processMsg, serial_number: %s" % serial_number)
+            self._log_debug(f"_processMsg, serial_number: {serial_number}")
 
             node_request = jsonMsg.get("node_request")
 
@@ -209,7 +209,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
             uuid = None
             if jsonMsg.get("uuid") is not None:
                 uuid = jsonMsg.get("uuid")
-            self._log_debug("_processMsg, sensor_request_type: %s, uuid: %s" % (sensor_request_type, uuid))
+            self._log_debug(f"_processMsg, sensor_request_type: {sensor_request_type}, uuid: {uuid}")
 
             if sensor_request_type == "disk_smart_test":
                 # This is currently deprecated and unused as requests for SMART tests now actually run
@@ -226,10 +226,9 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                         else:
                             response = "Passed"
 
-                        self._log_debug("_processMsg, disk smart test, drive test status: %s" %
-                                    response)
+                        self._log_debug(f"_processMsg, disk smart test, drive test status: {response}")
 
-                        request = "SMART_TEST: {}".format(drive.getSerialNumber())
+                        request = f"SMART_TEST: {drive.getSerialNumber()}"
 
                         json_msg = AckResponseMsg(request, response, uuid).getJson()
                         self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
@@ -242,8 +241,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     else:
                         response = "Passed"
 
-                    self._log_debug("_processMsg, disk smart test, drive test status: %s" %
-                                    response)
+                    self._log_debug(f"_processMsg, disk smart test, drive test status: {response}")
                 else:
                     self._log_debug("_processMsg, disk smart test data not yet available")
                     response = "Error: SMART results not yet available for drive, please try again later."
@@ -261,7 +259,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                         internal_json_msg = drive.toDriveMngrJsonMsg(uuid=uuid).getJson()
 
                         # Send the json message to the RabbitMQ processor to transmit out
-                        self._log_debug("_process_msg, internal_json_msg: %s" % internal_json_msg)
+                        self._log_debug(f"_process_msg, internal_json_msg: {internal_json_msg}")
                         self._write_internal_msgQ(RabbitMQegressProcessor.name(), internal_json_msg)
 
                     # Send over a msg on the ACK channel notifying success
@@ -279,7 +277,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     internal_json_msg = drive.toDriveMngrJsonMsg(uuid=uuid).getJson()
 
                     # Send the json message to the RabbitMQ processor to transmit out
-                    self._log_debug("_process_msg, internal_json_msg: %s" % internal_json_msg)
+                    self._log_debug(f"_process_msg, internal_json_msg: {internal_json_msg}")
                     self._write_internal_msgQ(RabbitMQegressProcessor.name(), internal_json_msg)
 
                     # Send over a msg on the ACK channel notifying success
@@ -303,7 +301,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                         internal_json_msg = drive.toHPIjsonMsg(uuid=uuid).getJson()
 
                         # Send the json message to the RabbitMQ processor to transmit out
-                        self._log_debug("_process_msg, internal_json_msg: %s" % internal_json_msg)
+                        self._log_debug(f"_process_msg, internal_json_msg: {internal_json_msg}")
                         self._write_internal_msgQ(RabbitMQegressProcessor.name(), internal_json_msg)
 
                     # Send over a msg on the ACK channel notifying success
@@ -321,7 +319,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     internal_json_msg = drive.toHPIjsonMsg(uuid=uuid).getJson()
 
                     # Send the json message to the RabbitMQ processor to transmit out
-                    self._log_debug("_process_msg, internal_json_msg: %s" % internal_json_msg)
+                    self._log_debug(f"_process_msg, internal_json_msg: {internal_json_msg}")
                     self._write_internal_msgQ(RabbitMQegressProcessor.name(), internal_json_msg)
 
                     # Send over a msg on the ACK channel notifying success
@@ -336,8 +334,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
 
             elif sensor_request_type == "sim_event":
-                logger.info("DiskMsgHandler, node_request: %s serial_number: %s" %
-                            (node_request, serial_number))
+                logger.info(f"DiskMsgHandler, node_request: {node_request} serial_number: {serial_number}" )
 
                 if node_request == "DRIVE_UNINSTALL":
                     logger.info("DiskMsgHandler, simulating drive uninstall")
@@ -353,13 +350,13 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
             # ... handle other disk sensor request types
             else:
-                logger.warn("DiskMsgHandler, received unknown sensor request msg: %s" % jsonMsg)
+                logger.warn(f"DiskMsgHandler, received unknown sensor request msg: {jsonMsg}")
 
         else:
-            logger.warn("DiskMsgHandler, received unknown msg: %s" % jsonMsg)
+            logger.warn(f"DiskMsgHandler, received unknown msg: {jsonMsg}")
 
             # Send over a msg on the ACK channel notifying failure
-            response = "DiskMsgHandler, received unknown msg: %s" % jsonMsg
+            response = f"DiskMsgHandler, received unknown msg: {jsonMsg}"
             json_msg = AckResponseMsg(node_request, response, uuid).getJson()
             self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
 
@@ -407,7 +404,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
             internal_json_msg = json_msg.getJson()
 
             # Send the json message to the RabbitMQ processor to transmit out
-            self._log_debug("_process_msg, internal_json_msg: %s" % internal_json_msg)
+            self._log_debug(f"_process_msg, internal_json_msg: {internal_json_msg}")
             self._write_internal_msgQ(RabbitMQegressProcessor.name(), internal_json_msg)
 
         if self._hpi_drives.get(serial_number) is not None:
@@ -420,7 +417,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
             internal_json_msg = json_msg.getJson()
 
             # Send the json message to the RabbitMQ processor to transmit out
-            self._log_debug("_process_msg, internal_json_msg: %s" % internal_json_msg)
+            self._log_debug(f"_process_msg, internal_json_msg: {internal_json_msg}")
             self._write_internal_msgQ(RabbitMQegressProcessor.name(), internal_json_msg)
 
     def _sim_drive_install(self, serial_number):
@@ -434,7 +431,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
             internal_json_msg = json_msg.getJson()
 
             # Send the json message to the RabbitMQ processor to transmit out
-            self._log_debug("_process_msg, internal_json_msg: %s" % internal_json_msg)
+            self._log_debug(f"_process_msg, internal_json_msg: {internal_json_msg}")
             self._write_internal_msgQ(RabbitMQegressProcessor.name(), internal_json_msg)
 
         if self._hpi_drives.get(serial_number) is not None:
@@ -447,7 +444,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
             internal_json_msg = json_msg.getJson()
 
             # Send the json message to the RabbitMQ processor to transmit out
-            self._log_debug("_process_msg, internal_json_msg: %s" % internal_json_msg)
+            self._log_debug(f"_process_msg, internal_json_msg: {internal_json_msg}")
             self._write_internal_msgQ(RabbitMQegressProcessor.name(), internal_json_msg)
 
 
@@ -461,7 +458,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
             # Update the drive with the new status and reason
             drive = self._drvmngr_drives.get(serial_number)
-            status_reason = "{}_{}".format(status, reason)
+            status_reason = f"{status}_{reason}"
             drive.set_drive_status(status_reason)
 
             # Serialize to DCS directory for RAS
@@ -469,8 +466,8 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
         # Halon sent a HDS log message but we don't know about the drive, error
         else:
-            logger.warn("DiskMsgHandler, _process_HDS_response, received HDS request \
-                        for unknown drive: %s, jsonMsg: %s" % (serial_number, str(jsonMsg)))
+            logger.warn(f"DiskMsgHandler, _process_HDS_response, received HDS request \
+                        for unknown drive: {serial_number}, jsonMsg: {str(jsonMsg)}" )
 
     def _transmit_all_drivemanager_responses(self):
         """Transmit all drivemanager data for every drive"""
@@ -535,18 +532,10 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
             try:
                 hpi_drive = self._hpi_drives[serial_number]
                 # Build event path used in json msg
-                event_path = hpi_drive.get_drive_enclosure() + "/disk/" + \
-                             hpi_drive.get_drive_num() + "/status"
+                event_path = f"{hpi_drive.get_drive_enclosure()}/disk/    \
+                             {hpi_drive.get_drive_num()}/status"
             except Exception as ae:
-                logger.info("DiskMsgHandler, No HPI data for serial number: %s" % serial_number)
-                # Safeguard to ensure refreshed data which might be needed for gemhpi bug FMW-21363
-#                 command = "/usr/bin/systemctl restart openhpid"
-#                 response, error = self._run_command(command)
-#                 if len(error) > 0:
-#                     logger.info("Error restarting openhpid: %s" % error)
-#                 else:
-#                     logger.info("Restarted openhpid succesfully")
-#                 return
+                logger.info(f"DiskMsgHandler, No HPI data for serial number: {serial_number}")
 
             drive = Drive(self._host_id,
                           event_path,
@@ -614,7 +603,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
         internal_json_msg = drive.toHPIjsonMsg().getJson()
 
         # Send the json message to the RabbitMQ processor to transmit out
-        self._log_debug("_process_msg, internal_json_msg: %s" % internal_json_msg)
+        self._log_debug(f"_process_msg, internal_json_msg: {internal_json_msg}")
         self._write_internal_msgQ(RabbitMQegressProcessor.name(), internal_json_msg)
 
         # See if there is a drivemanager drive available and update its HPI data if changed
@@ -656,17 +645,16 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                    drive_num == drive.get_drive_num() and \
                    serial_number != old_serial_num:
 
-                    logger.info("DiskMsgHandler, _remove_replaced_drive, found previous drive at num: %s, sn: %s" % \
-                                (drive_num, old_serial_num))
+                    logger.info(f"DiskMsgHandler, _remove_replaced_drive, found previous drive       \
+                                                                at num: {drive_num}, sn: {old_serial_num}" )
 
                     # Found a previous drive in this location so delete it
                     self._drvmngr_drives[old_serial_num] = None
                     self._hpi_drives[old_serial_num]     = None
 
             except Exception as ae:
-                logger.warn("DiskMsgHandler, _remove_replaced_drive exception: %s" % str(ae))
-                logger.info("new sn: %s, old sn: %s, drive num: %s, encl sn: %s" % \
-                            (serial_number, old_serial_num, drive_num, enclosure))
+                logger.warn(f"DiskMsgHandler, _remove_replaced_drive exception: {str(ae)}")
+                logger.info(f"new sn: {serial_number}, old sn: {old_serial_num}, drive num: {drive_num}, encl sn: {enclosure}" )
 
     def _process_hpi_response_ZBX_NOTPRESENT(self, jsonMsg):
         """Handle HPI data with serial number or wwn = ZBX_NOTPRESENT"""
@@ -674,22 +662,22 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
         # If the serial number is set to the default then write it out as not present for RAS and restart openhpid
         if jsonMsg.get("serial_number") == "ZBX_NOTPRESENT":
             # Disk is not available in HPI, started up with a drive missing or HPI needs refreshed
-            logger.info("DiskMsgHandler, S/N=ZBX_NOTPRESENT for %s" % jsonMsg.get("event_path"))
+            logger.info(f"DiskMsgHandler, S/N=ZBX_NOTPRESENT for {jsonMsg.get('event_path')}")
 
             # Manually populate the /tmp/dcs/dmreport/'event_path' files
             dmreport_dir = os.path.dirname("/tmp/dcs/dmreport")
-            disk_dir = "{}/{}".format(dmreport_dir, jsonMsg.get("event_path"))
+            disk_dir = f"{dmreport_dir}/{jsonMsg.get('event_path')}"
             if not os.path.exists(disk_dir):
                 os.makedirs(disk_dir)
 
-            self._write_file(disk_dir + "/drawer", jsonMsg.get("drawer"))
-            self._write_file(disk_dir + "/location", jsonMsg.get("location"))
+            self._write_file(f"{disk_dir}/drawer", jsonMsg.get("drawer"))
+            self._write_file(f"{disk_dir}/location", jsonMsg.get("location"))
 
-            if not os.path.exists(disk_dir + "/serial_number"):
-                self._write_file(disk_dir + "/serial_number", "NOTPRESENT")
+            if not os.path.exists(f"{disk_dir}/serial_number"):
+                self._write_file(f"{disk_dir}/serial_number", "NOTPRESENT")
 
-            self._write_file(disk_dir + "/status", "EMPTY")
-            self._write_file(disk_dir + "/reason", "None")
+            self._write_file(f"{disk_dir}/status", "EMPTY")
+            self._write_file(f"{disk_dir}/reason", "None")
 
         else:
             # See if there is a HPI drive available based upon event path on fs
@@ -703,7 +691,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     break
 
             if drive is not None:
-                logger.info("DiskMsgHandler, S/N=ZBX_NOTPRESENT, HPI data found for %s" % jsonMsg.get("event_path"))
+                logger.info(f"DiskMsgHandler, S/N=ZBX_NOTPRESENT, HPI data found for {jsonMsg.get('event_path')}")
 
                 # Don't step on valid values with ZBX_NOTPRESENT
                 wwn = jsonMsg.get("wwn")
@@ -751,8 +739,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 internal_json_msg = drive.toHPIjsonMsg().getJson()
 
                 # Send the json message to the RabbitMQ processor to transmit out
-                self._log_debug("_process_hpi_response_ZBX_NOTPRESENT, internal_json_msg: %s" %
-                                internal_json_msg)
+                self._log_debug(f"_process_hpi_response_ZBX_NOTPRESENT, internal_json_msg: {internal_json_msg}")
                 self._write_internal_msgQ(RabbitMQegressProcessor.name(), internal_json_msg)
 
     def _write_file(self, file_path, contents):
@@ -767,8 +754,8 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
             if not os.path.exists(dmreport_dir):
                 os.makedirs(dmreport_dir)
 
-            drives_list = []
-            json_dict = {}
+            drives_list = []  # List of type string.
+            json_dict = {} # Dictionary of type string value paire.
             for serial_num, drive in list(self._drvmngr_drives.items()):
                 # Don't serialize drives that have no HPI data
                 if drive.get_drive_enclosure() == "HPI_Data_Not_Available":
@@ -782,7 +769,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 if "halon" in status.lower():
                     status = "EMPTY"
 
-                drives = {}
+                drives = {}  # Dictonary type of string key value pair
                 drives["serial_number"] = drive.getSerialNumber()
                 drives["status"] = status
                 drives["reason"] = reason
@@ -831,7 +818,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
         # Split apart the drive status into status and reason values
         # Status is first word before the first '_'
         status, reason = str(drive.get_drive_status()).split("_", 1)
-        self._log_debug("_log_IEM, status: %s reason:%s" % (status, reason))
+        self._log_debug(f"_log_IEM, status: {status} reason:{reason}")
 
         log_msg = ""
         if status.lower() == "empty" or \
@@ -853,7 +840,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 return
             else:
                 # The status was generated within sspl-ll but we don't recognize it
-                logger.info("DiskMsgHandler, Unknown disk status/reason: {}/{}".format(status, reason))
+                logger.info(f"DiskMsgHandler, Unknown disk status/reason: {status}/{reason}")
                 return
 
         json_data = {"enclosure_serial_number": drive.get_drive_enclosure(),
@@ -865,13 +852,13 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                          "path_id": drive.get_path_id()
                          }
 
-        self._log_debug("_log_IEM, log_msg: %{}:{}".format(log_msg, json.dumps(json_data, sort_keys=True)))
+        self._log_debug(f"_log_IEM, log_msg: %{log_msg}:{json.dumps(json_data, sort_keys=True)}")
         internal_json_msg = json.dumps(
                     {"actuator_request_type" : {
                         "logging": {
                             "log_level": "LOG_WARNING",
                             "log_type": "IEM",
-                            "log_msg": "{}:{}".format(log_msg, json.dumps(json_data, sort_keys=True))
+                            "log_msg": f"{log_msg}:{json.dumps(json_data, sort_keys=True)}"
                             }
                         }
                      })
@@ -912,19 +899,17 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
         # Increment counter to track drivemanager events for determining partial expander resets
         self._drivemanager_events_counter += 1
 
-        logger.info("DiskMsgHandler, Total drivemanager events: %d" % self._drivemanager_events_counter)
-        logger.info("DiskMsgHandler, Seconds since first event: %d" %
-                        (time.time() - self._first_drivemanager_event_tm))
+        logger.info(f"DiskMsgHandler, Total drivemanager events: {self._drivemanager_events_counter}")
+        logger.info(f"DiskMsgHandler, Seconds since first event: {(time.time() - self._first_drivemanager_event_tm)}")
 
         # If max events have occurred within max interval then we have an expander reset
         if self._drivemanager_events_counter >= self._max_drivemanager_events:
-            logger.info("DiskMsgHandler, _drivemanager_events_counter: %d >= Max of %d" %
-                        (self._drivemanager_events_counter, self._max_drivemanager_events))
+            logger.info(f"DiskMsgHandler, _drivemanager_events_counter:     \
+                              {self._drivemanager_events_counter} >= Max of {self._max_drivemanager_events}")
 
             # See if a partial expander reset has occurred which is detected by X drive events in Y seconds
             if time.time() - self._first_drivemanager_event_tm < self._max_drivemanager_event_interval:
-                logger.info("DiskMsgHandler, Max drivemanager events occurred in %d seconds." %
-                            self._max_drivemanager_event_interval)
+                logger.info(f"DiskMsgHandler, Max drivemanager events occurred in {self._max_drivemanager_event_interval} seconds.")
 
                 # Temp fix for Halon not being able to handle partial expander resets by GA
                 #  When partial occurs then trigger a full expander reset and handle all 84 drives bouncing in OS
@@ -954,8 +939,8 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     # Reset _max_drivemanager_events configurable value used to detect partial exp resets
                     self._getDM_exp_reset_values()
             else:
-                logger.info("DiskMsgHandler, Max drivemanager events did NOT occur in %d seconds." %
-                            self._max_drivemanager_event_interval)
+                logger.info(f"DiskMsgHandler, Max drivemanager events did NOT occur     \
+                                                  in {self._max_drivemanager_event_interval} seconds.")
 
     def _transmit_expander_reset(self):
         """Create and transmit an expander reset JSON msg"""
@@ -966,7 +951,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
         # Send the json message to the RabbitMQ processor to transmit out
         self._write_internal_msgQ(RabbitMQegressProcessor.name(), internal_json_msg)
 
-        log_msg = "IEC: 020005001: Expander Reset Triggered"
+        log_msg  = "IEC: 020005001: Expander Reset Triggered"
         json_data = {"scsi_generic_device": self._scsi_generic}
 
         # Log an IEM
@@ -975,7 +960,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                         "logging": {
                             "log_level": "LOG_WARNING",
                             "log_type": "IEM",
-                            "log_msg": "{}:{}".format(log_msg, json.dumps(json_data, sort_keys=True))
+                            "log_msg": f"{log_msg}:{json.dumps(json_data, sort_keys=True)}"
                             }
                         }
                      })
@@ -987,17 +972,17 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
             """Trigger an expander reset by rebooting via wbcli tool"""
 
             # Get the current SG device
-            command = "ls /sys/class/enclosure/*/device/scsi_generic"
+            command : str = "ls /sys/class/enclosure/*/device/scsi_generic"
 
             response, error = self._run_command(command)
             if len(error) > 0:
-                logger.info("DiskMsgHandler, SCSI Generic lookup results: %s, %s" % (response, error))
+                logger.info(f"DiskMsgHandler, SCSI Generic lookup results: {response}, {error}")
 
-            sg_dev = "/dev/{}".format(response)
-            command = "sudo wbcli {} reboot".format(sg_dev)
+            sg_dev = f"/dev/{response}"
+            command = f"sudo wbcli {sg_dev} reboot"
 
             response, error = self._run_command(command)
-            logger.info("DiskMsgHandler, Expander reset triggered, results: %s, %s" % (response, error))
+            logger.info(f"DiskMsgHandler, Expander reset triggered, results: {response}, {error}")
 
     def _run_command(self, command):
         """Run the command and get the response and error returned"""
@@ -1032,8 +1017,8 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                                                          self.MAX_DM_EVENTS_INT,
                                                          10))
 
-        logger.info("          Expander Reset will be triggered with %d events in %d secs." %
-                    (self._max_drivemanager_events, self._max_drivemanager_event_interval))
+        logger.info(f"Expander Reset will be triggered with {self._max_drivemanager_events}       \
+                                            events in {self._max_drivemanager_event_interval} secs.")
 
     def suspend(self):
         """Suspends the module thread. It should be non-blocking"""
@@ -1107,7 +1092,7 @@ class Drive(object):
             return True
 
         except Exception as ex:
-            logger.exception("Drive, _parse_path: %s, ignoring event." % ex)
+            logger.exception(f"Drive, _parse_path: {ex}, ignoring event.")
         return False
 
     def parse_hpi_path(self):
@@ -1127,10 +1112,10 @@ class Drive(object):
             return True
 
         except Exception as ex:
-            logger.exception("Drive, _parse_path: %s, ignoring event." % ex)
+            logger.exception(f"Drive, _parse_path: {ex}, ignoring event.")
         return False
 
-    def toDriveMngrJsonMsg(self, uuid=None):
+    def toDriveMngrJsonMsg(self, uuid =None):
         """Returns the JSON representation of a drive"""
         # Create a drive manager json object which can be
         #  be queued up for aggregation at a later time if needed

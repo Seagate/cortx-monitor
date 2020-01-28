@@ -81,7 +81,7 @@ class PlaneCntrlMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
         except Exception as ae:
             # Log it and restart the whole process when a failure occurs
-            logger.exception("PlaneCntrlMsgHandler restarting: %s" % str(ae))
+            logger.exception(f"PlaneCntrlMsgHandler restarting: {str(ae)}")
 
         self._scheduler.enter(1, self._priority, self.run, ())
         self._log_debug("Finished processing successfully")
@@ -113,8 +113,7 @@ class PlaneCntrlMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     self._log_debug("_process_msg, request is not for this node, ignoring.")
                 else:
                     errors = self._sedOpDispatch.errors
-                    self._log_debug("_process_msg, status: %s, errors: %s" % \
-                                    (str(self._sedOpDispatch.status), str(errors)))
+                    self._log_debug(f"_process_msg, status: {str(self._sedOpDispatch.status)}, errors: {str(errors)}")
                 return
 
             # Let the egress processor know the current task being worked
@@ -127,13 +126,14 @@ class PlaneCntrlMsgHandler(ScheduledModuleThread, InternalMsgQ):
             response = self._sedOpDispatch.output
             errors   = self._sedOpDispatch.errors
 
-            self._log_debug("PlaneCntrlMsgHandler, _process_msg, status: %s, command: %s, parameters: %s, args: %s" % \
-                        (str(status), str(self._command), str(self._parameters), str(self._arguments)))
-            self._log_debug("PlaneCntrlMsgHandler, _process_msg, response: %s" % str(response))
-            self._log_debug("PlaneCntrlMsgHandler, _process_msg, errors: %s" % str(errors))
+            self._log_debug(f"PlaneCntrlMsgHandler, _process_msg, status: {str(status)},     \
+                              command: {str(self._command)}, parameters: {str(self._parameters)}, \
+                              args: {str(self._arguments)}")
+            self._log_debug(f"PlaneCntrlMsgHandler, _process_msg, response: {str(response)}")
+            self._log_debug(f"PlaneCntrlMsgHandler, _process_msg, errors: {str(errors)}")
         except Exception as ae:
             errors = str(ae)
-            logger.warn("PlaneCntrlMsgHandler, _process_msg exception: %s" % errors)
+            logger.warn(f"PlaneCntrlMsgHandler, _process_msg exception: {errors}")
             response = "There was an error processing the request.  Please refer to the logs for details."
 
         # No need to enable self._sedOpDispatch.interrupt() in the shutdown()
@@ -145,12 +145,9 @@ class PlaneCntrlMsgHandler(ScheduledModuleThread, InternalMsgQ):
     def _send_response(self, status, hostname, response, errors):
         """Transmit the response back as an Ack json msg"""
         ack_type = {}
-        ack_type["hostname"]    = str(hostname, 'utf-8')
-        ack_type["command"]     = self._command
-        ack_type["parameters"]  = self._parameters
-        ack_type["status"]      = status
-        ack_type["errors"]      = str(errors, 'utf-8')
-
+        ack_type["hostname"], ack_type["command"], ack_type["parameters"], ack_type["status"], \
+            ack_type["errors"] = str(hostname, 'utf-8'), self._command, self._parameters,  \
+            status, str(errors, 'utf-8')
         ack_msg = AckResponseMsg(json.dumps(ack_type), \
                                  str(response), self._uuid).getJson()
         self._write_internal_msgQ(PlaneCntrlRMQegressProcessor.name(), ack_msg)
@@ -172,12 +169,12 @@ class PlaneCntrlMsgHandler(ScheduledModuleThread, InternalMsgQ):
             # Ignore incorrectly formatted messages
             if self._command is None:
                 logger.warn("PlaneCntrlMsgHandler, _parse_jsonMsg, command is none")
-                logger.warn("PlaneCntrlMsgHandler, _process_msg, command: %s" % str(self._command))
+                logger.warn(f"PlaneCntrlMsgHandler, _process_msg, command: {str(self._command)}")
                 return False
 
             return True
         except Exception as ae:
-            logger.warn("PlaneCntrlMsgHandler, _parse_jsonMsg: %s" % str(ae))
+            logger.warn(f"PlaneCntrlMsgHandler, _parse_jsonMsg: {str(ae)}")
             return False
 
     def shutdown(self):
@@ -193,4 +190,4 @@ class PlaneCntrlMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 logger.info("PlaneCntrlMsgHandler, calling sedOpDispatch.interrupt()")
                 self._sedOpDispatch.interrupt()
             except Exception as ae:
-                logger.warn("PlaneCntrlMsgHandler, shutdown, _sedOpDispatch.interrupt exception: %s" % str(ae))
+                logger.warn(f"PlaneCntrlMsgHandler, shutdown, _sedOpDispatch.interrupt exception: {str(ae)}")

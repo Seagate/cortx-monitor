@@ -33,13 +33,12 @@ from pysnmp.carrier.asynsock.dgram import udp, udp6
 from pyasn1.codec.ber import decoder
 from pysnmp.proto import api
 
-from zope.interface import implements
+
+from zope.interface import implementer
 from sensors.INode_data import INodeData
 
-
+@implementer(INodeData)
 class SNMPtraps(ScheduledModuleThread, InternalMsgQ):
-
-    implements(INodeData)
 
     SENSOR_NAME       = "SNMPtraps"
     PRIORITY          = 1
@@ -124,8 +123,7 @@ class SNMPtraps(ScheduledModuleThread, InternalMsgQ):
         # Could not bind to IP:port, log it and exit out module
         except Exception as ae:
             self._log_debug("Unable to process SNMP traps from this node, closing module.")
-            self._log_debug("SNMP Traps sensor attempted to bind to %s:%s" %
-                            (self._bind_ip, self._bind_port))
+            self._log_debug(f"SNMP Traps sensor attempted to bind to {self._bind_ip}:{self._bind_port}")
 
     def _mib_builder(self):
         """Loads the MIB files and creates dicts with hierarchical structure"""
@@ -151,8 +149,7 @@ class SNMPtraps(ScheduledModuleThread, InternalMsgQ):
             # Retrieve information in MIB using the OID
             modName, nodeDesc, suffix = self._mibView.getNodeLocation(oid)
             ret_val = val.getComponent().getComponent().getComponent().prettyPrint()
-            self._log_debug('module: %s, %s: %s, oid: %s' %
-                            (modName, nodeDesc, ret_val, oid.prettyPrint()))
+            self._log_debug(f'module: {modName}, {nodeDesc}: {ret_val}, oid: {oid.prettyPrint()}')
 
             # Lookup the trap name from the SNMP Modules MIB
             if nodeDesc == "snmpModules":
@@ -163,7 +160,7 @@ class SNMPtraps(ScheduledModuleThread, InternalMsgQ):
 
                 oid, label, suffix = self._mibView.getNodeName(tuple_oid)
                 self._trap_name = str(label[-1])
-                self._log_debug('Trap Notification: %s' % self._trap_name)
+                self._log_debug(f'Trap Notification: {self._trap_name}')
         except Exception as ae:
             self._log_debug("_mib_oid_value: %r" % ae)
         return (nodeDesc, ret_val)
@@ -178,31 +175,25 @@ class SNMPtraps(ScheduledModuleThread, InternalMsgQ):
             if msgVer in api.protoModules:
                 pMod = api.protoModules[msgVer]
             else:
-                self._log_debug('Unsupported SNMP version %s' % msgVer)
+                self._log_debug(f'Unsupported SNMP version {msgVer}')
                 return
 
             reqMsg, wholeMsg = decoder.decode(
                 wholeMsg, asn1Spec=pMod.Message(),)
-            self._log_debug('Notification message from %s:%s: ' %
-                                (transportDomain, transportAddress))
+            self._log_debug(f'Notification message from {transportDomain}:{transportAddress}: ')
 
             reqPDU = pMod.apiMessage.getPDU(reqMsg)
             if reqPDU.isSameTypeWith(pMod.TrapPDU()):
                 if msgVer == api.protoVersion1:
-                    self._log_debug('Enterprise: %s' %
-                            (pMod.apiTrapPDU.getEnterprise(reqPDU).prettyPrint()))
+                    self._log_debug(f'Enterprise: {pMod.apiTrapPDU.getEnterprise(reqPDU).prettyPrint()}')
 
-                    self._log_debug('Agent Address: %s' %
-                            (pMod.apiTrapPDU.getAgentAddr(reqPDU).prettyPrint()))
+                    self._log_debug(f'Agent Address: {pMod.apiTrapPDU.getAgentAddr(reqPDU).prettyPrint()}')
 
-                    self._log_debug('Generic Trap: %s' %
-                            (pMod.apiTrapPDU.getGenericTrap(reqPDU).prettyPrint()))
+                    self._log_debug(f'Generic Trap: {pMod.apiTrapPDU.getGenericTrap(reqPDU).prettyPrint()}')
 
-                    self._log_debug('Specific Trap: %s' %
-                            (pMod.apiTrapPDU.getSpecificTrap(reqPDU).prettyPrint()))
+                    self._log_debug(f'Specific Trap: {pMod.apiTrapPDU.getSpecificTrap(reqPDU).prettyPrint()}')
 
-                    self._log_debug('Uptime: %s' %
-                            (pMod.apiTrapPDU.getTimeStamp(reqPDU).prettyPrint()))
+                    self._log_debug(f'Uptime: {pMod.apiTrapPDU.getTimeStamp(reqPDU).prettyPrint()}')
 
                     varBinds = pMod.apiTrapPDU.getVarBindList(reqPDU)
                 else:
@@ -215,8 +206,8 @@ class SNMPtraps(ScheduledModuleThread, InternalMsgQ):
                     if nodeDesc != "N/A" and ret_val != "N/A":
                         json_data[nodeDesc] = ret_val
 
-        self._log_debug("trap_name: %s" % self._trap_name)
-        self._log_debug("enabled_traps: %s " % self._enabled_traps)
+        self._log_debug(f"trap_name: {self._trap_name}")
+        self._log_debug(f"enabled_traps: {self._enabled_traps}")
 
         # Apply filter unless there is an asterisk in the list
         if '*' in self._enabled_traps or \
@@ -230,13 +221,13 @@ class SNMPtraps(ScheduledModuleThread, InternalMsgQ):
 
     def _log_iem(self, json_data):
         """Create IEM and send to logging msg handler"""
-        log_msg = "IEC: 020004001: SNMP Trap Received, {}".format(self._trap_name)
+        log_msg = f"IEC: 020004001: SNMP Trap Received, {self._trap_name}"
         internal_json_msg = json.dumps(
                     {"actuator_request_type" : {
                         "logging": {
                             "log_level": "LOG_WARNING",
                             "log_type": "IEM",
-                            "log_msg": "{}:{}".format(log_msg, json.dumps(json_data, sort_keys=True))
+                            "log_msg": f"{log_msg}:{json.dumps(json_data, sort_keys=True)}"
                             }
                         }
                      })

@@ -90,7 +90,7 @@ class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
         super(RAIDsensor, self).initialize_msgQ(msgQlist)
 
         self._RAID_status_file = self._get_RAID_status_file()
-        logger.info("          Monitoring RAID status file: %s" % self._RAID_status_file)
+        logger.info(f"          Monitoring RAID status file: {self._RAID_status_file}")
 
         # The status file contents
         self._RAID_status_contents = "N/A"
@@ -152,7 +152,7 @@ class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
         # resource_id for drive alerts
         resource_id = None
         if not os.path.isfile(self._RAID_status_file):
-            logger.warn("status_file: %s does not exist, ignoring." % self._RAID_status_file)
+            logger.warn(f"status_file: {self._RAID_status_file} does not exist, ignoring.")
             return
 
         # Read in status and see if it has changed
@@ -161,7 +161,7 @@ class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
 
         # Do nothing if the RAID status file has not changed
         if self._RAID_status_contents == status:
-            self._log_debug("_notify_NodeDataMsgHandler status unchanged, ignoring: %s" % status)
+            self._log_debug(f"_notify_NodeDataMsgHandler status unchanged, ignoring: {status}")
             return
 
         # Update the RAID status contents of file
@@ -261,8 +261,9 @@ class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
 
             # Parse out status' and path info for each drive
             if "md" in fields[0]:
-                self._device = "/dev/{}".format(fields[0])
-                self._log_debug("md device found: %s" % self._device)
+                self._device = f"/dev/{fields[0]}"
+                self._log_debug(f"md device found: {self._device}")
+                md_device_list.append(self._device)
 
                 # Parse out raid drive paths if they're present
                 for field in fields:
@@ -280,22 +281,20 @@ class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
         first_bracket_index = field.find('[')
 
         # Parse out the drive path
-        drive_path = "/dev/{}".format(field[: first_bracket_index])
+        drive_path = f"/dev/{field[: first_bracket_index]}"
 
         # Parse out the drive index into [UU] status which is Device Role field
-        detail_command = "/usr/sbin/mdadm --examine {} | grep 'Device Role'".format(drive_path)
+        detail_command = f"/usr/sbin/mdadm --examine {drive_path} | grep 'Device Role'"
         response, error = self._run_command(detail_command)
 
         if error:
-            self._log_debug("_add_drive, Error retrieving drive index into status, example: [U_]: %s" %
-                            str(error))
+            self._log_debug(f"_add_drive, Error retrieving drive index into status, example: [U_]: {str(error)}")
         try:
             drive_index = int(response.split(" ")[-1])
         except Exception as ae:
-            self._log_debug("_add_drive, get drive_index error: %s" % str(ae))
+            self._log_debug(f"_add_drive, get drive_index error: {str(ae)}")
             return
-        self._log_debug("_add_drive, drive index: %d, path: %s" %
-                        (drive_index, drive_path))
+        self._log_debug(f"_add_drive, drive index: {drive_index}, path: {drive_path}")
 
         # Create the json msg, serial number will be filled in by NodeDataMsgHandler
         identity_data = {
@@ -328,10 +327,10 @@ class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
 
         # See if the status line has changed, if not there's nothing to do
         if self._RAID_status == status:
-            self._log_debug("RAID status has not changed, ignoring: %s" % status)
+            self._log_debug(f"RAID status has not changed, ignoring: {status}")
             return False
         else:
-            self._log_debug("RAID status has changed, old: %s, new: %s" % (self._RAID_status, status))
+            self._log_debug(f"RAID status has changed, old: {self._RAID_status}, new: {status}")
             self._RAID_status = status
 
         # Array of raid drives in json format based on schema
@@ -352,8 +351,8 @@ class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
             else:
                drive_status_msg = {"status" : status[drive_index + 1]}  # Move past '['
 
-            self._log_debug("_parse_raid_status, drive_index: %d" % drive_index)
-            self._log_debug("_parse_raid_status, drive_status_msg: %s" % drive_status_msg)
+            self._log_debug(f"_parse_raid_status, drive_index: {drive_index}")
+            self._log_debug(f"_parse_raid_status, drive_status_msg: {drive_status_msg}")
             self._drives.append(drive_status_msg)
 
             drive_index = drive_index + 1
@@ -367,7 +366,7 @@ class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
         """
 
         if not os.path.isfile(self.RAID_CONF_FILE):
-            logger.warn("_process_missing_md_devices, MDRaid configuration file %s is missing" % self.RAID_CONF_FILE)
+            logger.warn(f"_process_missing_md_devices, MDRaid configuration file {self.RAID_CONF_FILE} is missing")
             return
 
         conf_device_list = []
@@ -379,8 +378,8 @@ class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
                 if "md" in raid_conf_field[1]:
                     conf_device_list.append(raid_conf_field[1])
             except Exception as ae:
-                self._log_debug("_process_missing_md_devices, error retrieving raid entry from %s file: %s" \
-                % (self.RAID_CONF_FILE, str(ae)))
+                self._log_debug(f"_process_missing_md_devices, error retrieving raid entry    \
+                 from {self.RAID_CONF_FILE} file: {str(ae)}")
                 return
 
         # compare conf file raid array list with mdstat raid array list
@@ -455,7 +454,7 @@ class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
 
         # Send the event to node data message handler to generate json message and send out
         internal_json_msg=json.dumps(
-                {'actuator_request_type': {'logging': {'log_level': 'LOG_WARNING', 'log_type': 'IEM', 'log_msg': '{}'.format(json_data)}}})
+                {'actuator_request_type': {'logging': {'log_level': 'LOG_WARNING', 'log_type': 'IEM', 'log_msg': f'{json_data}'}}})
 
         # Send the event to logging msg handler to send IEM message to journald
         self._write_internal_msgQ(LoggingMsgHandler.name(), internal_json_msg)
@@ -479,14 +478,14 @@ class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
 
     def _run_command(self, command):
         """Run the command and get the response and error returned"""
-        self._log_debug("_run_command: %s" % command)
+        self._log_debug(f"_run_command: {command}")
         process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         response, error = process.communicate()
 
         if response:
-            self._log_debug("_run_command, response: %s" % str(response))
+            self._log_debug(f"_run_command, response: {str(response)}")
         if error:
-            self._log_debug("_run_command: error: %s" % str(error))
+            self._log_debug(f"_run_command: error: {str(error)}")
 
         return response.decode().rstrip('\n'), error.decode().rstrip('\n')
 

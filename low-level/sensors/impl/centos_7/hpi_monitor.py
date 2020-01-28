@@ -34,8 +34,8 @@ from sensors.IHpi_monitor import IHPIMonitor
 class HPIMonitor(ScheduledModuleThread, InternalMsgQ):
 
 
-    SENSOR_NAME       = "HPIMonitor"
-    PRIORITY          = 1
+    SENSOR_NAME      = "HPIMonitor"
+    PRIORITY         = 1
 
     # Section and keys in configuration file
     HPIMONITOR      = SENSOR_NAME.upper()
@@ -69,8 +69,7 @@ class HPIMonitor(ScheduledModuleThread, InternalMsgQ):
         """Send a dict of drive status to the DiskMsgHandler"""
 
         for drive_data in self._drive_data:
-            logger.info("HPIMonitor, read_data: %s" % str(drive_data))
-
+            logger.info(f"HPIMonitor, read_data: {str(drive_data)}")
             # Send it to the disk message handler to be processed and transmitted
             self._write_internal_msgQ(DiskMsgHandler.name(), drive_data)
 
@@ -86,7 +85,7 @@ class HPIMonitor(ScheduledModuleThread, InternalMsgQ):
         self._read_my_msgQ_noWait()
 
         self._log_debug("Start accepting requests")
-        self._log_debug("run, CentOS 7 base directory: %s" % self._hpi_mntr_base_dir)
+        self._log_debug(f"run, CentOS 7 base directory: {self._hpi_mntr_base_dir}")
 
         # Retrieve the current information about each drive from the file system
         self._init_drive_data()
@@ -139,20 +138,19 @@ class HPIMonitor(ScheduledModuleThread, InternalMsgQ):
 
         # Wait for the dcs-collector to populate the /tmp/dcs/hpi directory
         while not os.path.isdir(self._hpi_mntr_base_dir):
-            logger.info("HPIMonitor, dir not found: %s " % self._hpi_mntr_base_dir)
-            logger.info("HPIMonitor, rechecking in %s secs" % self._start_delay)
+            logger.info(f"HPIMonitor, dir not found: {self._hpi_mntr_base_dir} ")
+            logger.info(f"HPIMonitor, rechecking in {self._start_delay} secs")
             time.sleep(int(self._start_delay))
 
         enclosures = os.listdir(self._hpi_mntr_base_dir)
 
         # Remove the 'discovery' file and any others, only care about enclosure dirs
-        for enclosure in enclosures:
-            if not os.path.isdir(os.path.join(self._hpi_mntr_base_dir, enclosure)):
-                enclosures.remove(enclosure)
+        enclosures = [enclosure for enclosure in enclosures \
+                 if not os.path.isdir(os.path.join(self._hpi_mntr_base_dir, enclosure))]
 
         for enclosure in enclosures:
             disk_dir = os.path.join(self._hpi_mntr_base_dir, enclosure, "disk")
-            self._log_debug("initializing: %s" % disk_dir)
+            self._log_debug(f"initializing: {disk_dir}")
 
             disks = os.listdir(disk_dir)
             for disk in disks:
@@ -172,11 +170,13 @@ class HPIMonitor(ScheduledModuleThread, InternalMsgQ):
                 else:
                     status = "EMPTY_None"
 
+                disk_installed : bool
                 if self._gather_data(driveloc+"/disk_installed") == "1":
                     disk_installed = True
                 else:
                     disk_installed = False
 
+                disk_powered : bool
                 if self._gather_data(driveloc+"/disk_powered") == "1":
                     disk_powered = True
                 else:
@@ -186,18 +186,18 @@ class HPIMonitor(ScheduledModuleThread, InternalMsgQ):
                 json_data = {"sensor_response_type" : "disk_status_hpi",
                             "event_path"        : driveloc[len(self._hpi_mntr_base_dir)+1:],
                             "status"            : status,
-                            "drawer"            : self._gather_data(driveloc+"/drawer"),
-                            "location"          : self._gather_data(driveloc+"/location"),
-                            "manufacturer"      : self._gather_data(driveloc+"/manufacturer"),
-                            "productName"       : self._gather_data(driveloc+"/product_name"),
-                            "productVersion"    : self._gather_data(driveloc+"/product_version"),
+                            "drawer"            : self._gather_data(f"{driveloc}/drawer"),
+                            "location"          : self._gather_data(f"{driveloc}/location"),
+                            "manufacturer"      : self._gather_data(f"{driveloc}/manufacturer"),
+                            "productName"       : self._gather_data(f"{driveloc}/product_name"),
+                            "productVersion"    : self._gather_data(f"{driveloc}/product_version"),
                             "serial_number"     : serial_number,
-                            "wwn"               : self._gather_data(driveloc+"/wwn"),
+                            "wwn"               : self._gather_data(f"{driveloc}/wwn"),
                             "disk_installed"    : disk_installed,
                             "disk_powered"      : disk_powered
                         }
 
-                logger.info("HPIMonitor: %s" % str(json_data))
+                logger.info(f"HPIMonitor: {str(json_data)}")
                 # Store the JSON data into the dict for global access
                 self._drive_data[driveloc] = json_data
 
@@ -227,20 +227,22 @@ class HPIMonitor(ScheduledModuleThread, InternalMsgQ):
         driveloc = os.path.dirname(updated_file)
 
         # Check to see if the drive is present
-        serial_number = self._gather_data(driveloc+"/serial_number")
+        serial_number = self._gather_data(f"{driveloc}/serial_number")
 
         # Update the status to status_reason used throughout
-        if self._gather_data(driveloc+"/status") == "available":
+        if self._gather_data(f"{driveloc}/status") == "available":
             status = "OK_None"
         else:
             status = "EMPTY_None"
 
-        if self._gather_data(driveloc+"/disk_installed") == "1":
+        disk_installed : bool
+        if self._gather_data(f"{driveloc}/disk_installed") == "1":
             disk_installed = True
         else:
             disk_installed = False
 
-        if self._gather_data(driveloc+"/disk_powered") == "1":
+        disk_powered : bool
+        if self._gather_data(f"{driveloc}/disk_powered") == "1":
             disk_powered = True
         else:
             disk_powered = False
@@ -252,20 +254,19 @@ class HPIMonitor(ScheduledModuleThread, InternalMsgQ):
                 serial_number == "ZBX_NOTPRESENT":
                 if self._drive_data.get(driveloc) is not None:
                     serial_number = self._drive_data.get(driveloc).get("serial_number")
-                    logger.info("Disk was removed, s/n=ZBX_NOTPRESENT, replacing with s/n: %s" % \
-                                serial_number)
+                    logger.info(f"Disk was removed, s/n=ZBX_NOTPRESENT, replacing with s/n: {serial_number}")
 
         # Send a message to the disk message handler to transmit
         json_data = {"sensor_response_type" : "disk_status_hpi",
                      "event_path"           : driveloc[len(self._hpi_mntr_base_dir)+1:],
                      "status"               : status,
-                     "drawer"               : self._gather_data(driveloc+"/drawer"),
-                     "location"             : self._gather_data(driveloc+"/location"),
-                     "manufacturer"         : self._gather_data(driveloc+"/manufacturer"),
-                     "productName"          : self._gather_data(driveloc+"/product_name"),
-                     "productVersion"       : self._gather_data(driveloc+"/product_version"),
+                     "drawer"               : self._gather_data(f"{driveloc}/drawer"),
+                     "location"             : self._gather_data(f"{driveloc}/location"),
+                     "manufacturer"         : self._gather_data(f"{driveloc}/manufacturer"),
+                     "productName"          : self._gather_data(f"{driveloc}/product_name"),
+                     "productVersion"       : self._gather_data(f"{driveloc}/product_version"),
                      "serial_number"        : serial_number,
-                     "wwn"                  : self._gather_data(driveloc+"/wwn"),
+                     "wwn"                  : self._gather_data(f"{driveloc}/wwn"),
                      "disk_installed"       : disk_installed,
                      "disk_powered"         : disk_powered
                      }
@@ -291,7 +292,7 @@ class HPIMonitor(ScheduledModuleThread, InternalMsgQ):
                 command = "/usr/bin/systemctl restart openhpid"
                 response, error = self._run_command(command)
                 if len(error) > 0:
-                    logger.info("Error restarting openhpid: %s" % error)
+                    logger.info(f"Error restarting openhpid: {error}")
                 else:
                     logger.info("Restarted openhpid succesfully")
 
@@ -327,8 +328,7 @@ class HPIMonitor(ScheduledModuleThread, InternalMsgQ):
                     "disk_installed.swp" in event_path)):
                     return False
 
-                self._log_debug("_validate_event_path event_path: %s" %
-                        event_path)
+                self._log_debug(f"_validate_event_path event_path: {event_path}")
                 return True
 
             def _log_debug(self, msg):

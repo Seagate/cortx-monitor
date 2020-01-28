@@ -94,14 +94,14 @@ class LoggingMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
         except Exception as ae:
             # Log it and restart the whole process when a failure occurs
-            logger.exception("LoggingMsgHandler restarting: %s" % ae)
+            logger.exception(f"LoggingMsgHandler restarting: {ae}")
 
         self._scheduler.enter(1, self._priority, self.run, ())
         self._log_debug("Finished processing successfully")
 
     def _process_msg(self, jsonMsg):
         """Parses the incoming message and hands off to the appropriate logger"""
-        self._log_debug("_process_msg, jsonMsg: %s" % jsonMsg)
+        self._log_debug(f"_process_msg, jsonMsg: {jsonMsg}")
 
         if isinstance(jsonMsg, dict) is False:
             jsonMsg = json.loads(jsonMsg)
@@ -110,7 +110,7 @@ class LoggingMsgHandler(ScheduledModuleThread, InternalMsgQ):
         if jsonMsg.get("sspl_ll_msg_header") is not None and \
            jsonMsg.get("sspl_ll_msg_header").get("uuid") is not None:
             uuid = jsonMsg.get("sspl_ll_msg_header").get("uuid")
-            self._log_debug("_process_msg, uuid: %s" % uuid)
+            self._log_debug(f"_process_msg, uuid: {uuid}")
 
         log_type = jsonMsg.get("actuator_request_type").get("logging").get("log_type")
 
@@ -119,7 +119,7 @@ class LoggingMsgHandler(ScheduledModuleThread, InternalMsgQ):
             self._log_debug("_process_msg, msg_type: IEM")
             if self._iem_log_locally == "true":
                 result = self._iem_logger.log_msg(jsonMsg)
-                self._log_debug("Log IEM results: %s" % result)
+                self._log_debug(f"Log IEM results: {result}")
 
         if log_type == "HDS":
             # Retrieve the serial number of the drive
@@ -132,8 +132,7 @@ class LoggingMsgHandler(ScheduledModuleThread, InternalMsgQ):
             serial_number = json_data.get("serial_number")
             status = json_data.get("status")
             reason = json_data.get("reason")
-            self._log_debug("_processMsg, serial_number: %s, status: %s, reason: %s"
-                            % (serial_number, status, reason))
+            self._log_debug(f"_processMsg, serial_number: {serial_number}, status:{status}, reason: {reason}")
 
             # Send a message to the disk manager handler to create and transmit json msg
             internal_json_msg = json.dumps(
@@ -170,8 +169,7 @@ class LoggingMsgHandler(ScheduledModuleThread, InternalMsgQ):
             log_level = "LOG_INFO"
 
         # Get the message to log in format "IEC: EVENT_CODE: EVENT_STRING: JSON DATA"
-        log_msg = "{} {}".format(log_level,
-                                 jsonMsg.get("actuator_request_type").get("logging").get("log_msg"))
+        log_msg = f"{log_level} {jsonMsg.get('actuator_request_type').get('logging').get('log_msg')}"
 
         internal_json_msg = json.dumps(
                  {"message": {
@@ -192,10 +190,10 @@ class LoggingMsgHandler(ScheduledModuleThread, InternalMsgQ):
             self._iem_log_locally     = self._conf_reader._get_value_with_default(self.LOGGINGMSGHANDLER,
                                                                  self.IEM_LOG_LOCALLY,
                                                                  'true')
-            logger.info("          IEM routing enabled: %s" % str(self._iem_routing_enabled))
-            logger.info("          IEM log locally: %s" % str(self._iem_log_locally))
+            logger.info(f"IEM routing enabled: {str(self._iem_routing_enabled)}")
+            logger.info(f"IEM log locally: {str(self._iem_log_locally)}")
         except Exception as ex:
-            logger.exception("_read_config: %r" % ex)
+            logger.exception(f"_read_config: {ex}")
 
     def suspend(self):
         """Suspends the module thread. It should be non-blocking"""
