@@ -120,7 +120,7 @@ class HPIMonitor(ScheduledModuleThread, InternalMsgQ):
             # Check for debug mode being activated when it breaks out of blocking loop
             self._read_my_msgQ_noWait()
 
-            if self.is_running() == True:
+            if self.is_running() is True:
                 self._log_debug("HPIMonitor ungracefully breaking " \
                                 "out of iNotify Loop, restarting: %r" % ae)
                 self._scheduler.enter(1, self._priority, self.run, ())
@@ -248,7 +248,7 @@ class HPIMonitor(ScheduledModuleThread, InternalMsgQ):
         # See if we need to use the previously saved serial number when disk is uninstalled
         if "disk_installed" in updated_file:
             # If field changed to disk being uninstalled then check for a valid serial number
-            if disk_installed == False and \
+            if disk_installed is False and \
                 serial_number == "ZBX_NOTPRESENT":
                 if self._drive_data.get(driveloc) is not None:
                     serial_number = self._drive_data.get(driveloc).get("serial_number")
@@ -284,8 +284,8 @@ class HPIMonitor(ScheduledModuleThread, InternalMsgQ):
 
         # Restart openhpid to update HPI data for newly installed drives
         if serial_number == "ZBX_NOTPRESENT" and \
-           disk_installed == True and \
-           disk_powered == True:
+           disk_installed is True and \
+           disk_powered is True:
                 logger.info("HPImonitor, _notify_DiskMsgHandler, Restarting openhpid")
                 time.sleep(20)
                 command = "/usr/bin/systemctl restart openhpid"

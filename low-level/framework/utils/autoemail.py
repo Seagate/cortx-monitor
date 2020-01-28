@@ -188,15 +188,15 @@ class AutoEmail(object):
         except smtplib.SMTPAuthenticationError:
             if use_journal:
                 journal.send("Authentication failed", PRIORITY=2)
-        except:
+        except Exception as e:
             if use_journal:
-                journal.send("Unexpected error occured", PRIORITY=2)
+                journal.send("Unexpected error occured: {}".format(e), PRIORITY=2)
 
         finally:
             try:
                 mail.quit()
-            except:
+            except Exception as e:
                 if use_journal:
-                    journal.send("Could not stop SMTP connection", PRIORITY=2)
+                    journal.send("Could not stop SMTP connection: Error: {}".format(e), PRIORITY=2)
 
         return return_msg

@@ -214,7 +214,7 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
             self._initialize_cache()
             self.sensor_id_map = dict()
 
-            if self.request_shutdown == False:
+            if self.request_shutdown is False:
                 for fru in self.fru_types:
                     self.sensor_id_map[fru] = { sensor_num: sensor_id
                         for (sensor_id, sensor_num) in
@@ -312,7 +312,7 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
         # Check for debug mode being activated
         self._read_my_msgQ_noWait()
 
-        if self.request_shutdown == False:
+        if self.request_shutdown is False:
             try:
                 # Check for a change in ipmi sel list and notify the node data
                 # msg handler
@@ -379,17 +379,17 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
 
         last_fru_index = {}
         last_index = None
-        for (index, date, time, device_id, device_type, sensor_num, event, status) \
+        for (index, date, event_time, device_id, device_type, sensor_num, event, status) \
                 in self._get_sel_event():
             last_fru_index[device_type] = index
             last_index = index
 
-        for (index, date, time, device_id, device_type, sensor_num, event, status) \
+        for (index, date, event_time, device_id, device_type, sensor_num, event, status) \
                 in self._get_sel_event():
 
             is_last = (last_fru_index[device_type] == index)
             logger.debug("_notify_NodeDataMsgHandler fan: is_last: {}, sel_event: {}".format(
-                is_last, (index, date, time, device_id, event, status)))
+                is_last, (index, date, event_time, device_id, event, status)))
             # TODO: Also use information from the command
             # 'ipmitool sel get <sel-entry-id>'
             # which gives more detailed information

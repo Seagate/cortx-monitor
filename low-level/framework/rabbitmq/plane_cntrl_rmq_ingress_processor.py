@@ -33,7 +33,6 @@ from framework.rabbitmq.plane_cntrl_rmq_egress_processor import PlaneCntrlRMQegr
 
 from json_msgs.messages.actuators.ack_response import AckResponseMsg
 
-
 import ctypes
 try:
     use_security_lib=True
@@ -140,7 +139,7 @@ class PlaneCntrlRMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
             self._channel.start_consuming()
 
         except AMQPError as e:
-            if self.is_running() == True:
+            if self.is_running() is True:
                 logger.info("PlaneCntrlRMQingressProcessor ungracefully breaking out of run loop, restarting.")
                 logger.exception("PlaneCntrlRMQingressProcessor, AMQPError: %s" % str(e))
                 self._toggle_rabbitMQ_servers()
@@ -156,7 +155,7 @@ class PlaneCntrlRMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
 
         ingressMsg = {}
         try:
-            if isinstance(body, dict) == False:
+            if isinstance(body, dict) is False:
                 ingressMsg = json.loads(body)
             else:
                 ingressMsg = body

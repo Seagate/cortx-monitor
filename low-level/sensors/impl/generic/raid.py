@@ -152,7 +152,7 @@ class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
         for line in mdstat:
 
             # The line following the mdXXX : ... contains the [UU] status that we need
-            if md_line_parsed == True:
+            if md_line_parsed is True:
                 # Format is [x/y][UUUU____...]
                 success = self._parse_raid_status(line)
 

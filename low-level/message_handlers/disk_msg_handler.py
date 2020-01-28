@@ -151,7 +151,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
         """Parses the incoming message and hands off to the appropriate logger"""
         self._log_debug("_process_msg, jsonMsg: %s" % jsonMsg)
 
-        if isinstance(jsonMsg, dict) == False:
+        if isinstance(jsonMsg, dict) is False:
             jsonMsg = json.loads(jsonMsg)
 
         # Handle sensor response type messages that update the drive's state

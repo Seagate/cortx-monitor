@@ -130,7 +130,7 @@ class PlaneCntrlRMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
         # Shutdown is requested by the sspl_ll_d shutdown handler
         #  placing a 'shutdown' msg into our queue which allows us to
         #  finish processing any other queued up messages.
-        if self._request_shutdown == True:
+        if self._request_shutdown is True:
             self.shutdown()
         else:
             self._scheduler.enter(1, self._priority, self.run, ())

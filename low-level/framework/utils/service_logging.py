@@ -62,7 +62,8 @@ def init_logging(dcs_service_name, log_level=LOG_INFO):
             formatter = logging.Formatter(syslog_format)
             handler.setFormatter(formatter)
             break
-        except:
+        except Exception as e:
+            print('Syslog connect exception: {}. Retrying...'.format(e))
             if num_attempts <= MAX_SYSLOG_CONNECT_ATTEMPTS:
                 num_attempts += 1
                 time.sleep(RECONNECT_DELAY_INTERVAL_SECONDS)

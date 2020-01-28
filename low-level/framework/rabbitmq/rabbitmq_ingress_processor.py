@@ -140,7 +140,7 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
             self._channel.start_consuming()
 
         except Exception as e:
-            if self.is_running() == True:
+            if self.is_running() is True:
                 logger.info("RabbitMQingressProcessor ungracefully breaking out of run loop, restarting.")
                 logger.error("RabbitMQingressProcessor, Exception: %s" % str(e))
                 self._configure_exchange(retry=True)
@@ -156,7 +156,7 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
         ingressMsg = {}
         uuid = None
         try:
-            if isinstance(body, dict) == False:
+            if isinstance(body, dict) is False:
                 ingressMsg = json.loads(body)
             else:
                 ingressMsg = body

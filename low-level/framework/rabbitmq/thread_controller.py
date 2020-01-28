@@ -205,7 +205,7 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
         self._log_debug("_process_msg, jsonMsg: %s" % jsonMsg)
 
         # Check to see if debug mode is being globally turned off on all modules
-        if self._check_reset_all_modules(jsonMsg) == True:
+        if self._check_reset_all_modules(jsonMsg) is True:
             return
 
         # Parse out the module name and request
@@ -289,13 +289,13 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
 
         try:
             # Stop the module if it's running and let existing thread die gracefully
-            if self._status_module(module_name) == True:
+            if self._status_module(module_name) is True:
                 self._stop_module(module_name)
 
             # Allow module a few seconds to shut down gracefully
             max_wait  = 10
             curr_wait = 1
-            while self._status_module(module_name) == True:
+            while self._status_module(module_name) is True:
                 time.sleep(3)
                 logger.info("Retrying: %s" % str(curr_wait))
                 self._stop_module(module_name)
@@ -347,7 +347,7 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
         self._log_debug("_stop_module, module_name: %s" % module_name)
 
         try:
-            if self._status_module(module_name) == False:
+            if self._status_module(module_name) is False:
                 self._log_debug("_stop_module, status: False")
                 return
 
@@ -368,7 +368,7 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
         self._log_debug("_start_module, module_name: %s" % module_name)
 
         try:
-            if self._status_module(module_name) == True:
+            if self._status_module(module_name) is True:
                 self._log_debug("_start_module, status: True")
                 return
 
@@ -389,7 +389,7 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
 
     def _status_module(self, module_name):
         """Returns if the module is running or not"""
-        if self._sspl_modules[module_name].is_running() == True:
+        if self._sspl_modules[module_name].is_running() is True:
             self._thread_response = "Status: Running"
         else:
             self._thread_response = "Status: Halted"

@@ -143,7 +143,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
         """Parses the incoming message and handles appropriately"""
         self._log_debug("_process_msg, jsonMsg: %s" % jsonMsg)
 
-        if isinstance(jsonMsg, dict) == False:
+        if isinstance(jsonMsg, dict) is False:
             jsonMsg = json.loads(jsonMsg)
 
         # Parse out the uuid so that it can be sent back in Ack message

@@ -273,7 +273,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
 
             # Loop forever iterating over the context
             step = 0
-            while self._running == True:
+            while self._running is True:
                 context.iteration(False)
                 time.sleep(self._thread_sleep)
 
@@ -307,7 +307,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
         except Exception as ae:
             # Check for debug mode being activated when it breaks out of blocking loop
             self._read_my_msgQ_noWait()
-            if self.is_running() == True:
+            if self.is_running() is True:
                 self._log_debug("Ungracefully breaking out of dbus loop with error: %s"
                                 % ae)
                 # Let the top level sspl_ll_d know that we have a fatal error
@@ -330,7 +330,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
 
     def _process_msg(self, jsonMsg):
         """Process various messages sent to us on our msg queue"""
-        if isinstance(jsonMsg, dict) == False:
+        if isinstance(jsonMsg, dict) is False:
             jsonMsg = json.loads(jsonMsg)
 
         if jsonMsg.get("sensor_request_type") is not None:

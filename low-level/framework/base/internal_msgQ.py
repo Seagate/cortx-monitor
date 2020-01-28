@@ -43,7 +43,7 @@ class InternalMsgQ(object):
 
             # Check for debugging being activated in the message header
             global_debug_off, jsonMsg = self._check_debug(jsonMsg)
-            if global_debug_off == True:
+            if global_debug_off is True:
                  self._debug_off_globally()
 
             self._log_debug("_read_my_msgQ: %s, Msg:%s" % (self.name(), jsonMsg))
@@ -71,7 +71,7 @@ class InternalMsgQ(object):
 
             # Check for debugging being activated in the message header
             global_debug_off, jsonMsg = self._check_debug(jsonMsg)
-            if global_debug_off == True:
+            if global_debug_off is True:
                 self._debug_off_globally()
 
             self._log_debug("_read_my_msgQ_noWait: %s, Msg:%s" % (self.name(), jsonMsg))

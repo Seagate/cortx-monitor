@@ -81,11 +81,11 @@ class RaritanPDU(Debug):
             # Send user/pass until max attempts has been reached
             while login_attempts < self._max_login_attempts:
                 try:
-                    if self._login_PDU() == True:
+                    if self._login_PDU() is True:
                         break
                 except RuntimeError as re:
                     self._log_debug("Failed attempting to login to PDU via serial port: %s" % re)
-                
+
                 login_attempts += 1
 
             # If we exceeded login attempts then try the network approach
@@ -125,7 +125,7 @@ class RaritanPDU(Debug):
                 response = self._send_request_read_response_serial(pdu_request)
 
                 # Apply some validation to the response and retry as a safety net
-                if self._validate_response(response) == False:
+                if self._validate_response(response) is False:
                     response = self._send_request_read_response_serial(pdu_request)
 
         except Exception as e:
@@ -172,14 +172,14 @@ class RaritanPDU(Debug):
             raise RuntimeError("no password prompt detected")
 
     def _logout_PDU(self):
-        """Sends an exit command to properly logout and close connection"""       
+        """Sends an exit command to properly logout and close connection"""
         try:
             # Attempt to properly exit the session
             self._connection.write("exit\n")
             # Close the connection
             self._connection.close()
-        except:
-            pass
+        except Exception as e:
+            self._log_debug('Error while logout {}'.format(e))
 
     def _validate_response(self, response):
         """Checks the response for the 'Available commands:' in response

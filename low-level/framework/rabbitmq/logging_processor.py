@@ -102,7 +102,7 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
             self._channel.start_consuming()
 
         except Exception as ae:
-            if self.is_running() == True:
+            if self.is_running() is True:
                 logger.info("LoggingProcessor ungracefully breaking out of run loop, restarting: %s"
                             % ae)
                 self._configure_exchange(retry=True)
@@ -148,9 +148,9 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
                 # Parse out the event code and remove any white spaces
                 event_code = log_msg[event_code_start : event_code_stop].strip()
                 self._log_debug("log_msg, event_code: %s" % event_code)
-            except:
+            except Exception as e:
                 # Log message has no IEC to use as message_id in journal, ignoring
-                pass
+                self._log_debug('Log message has no IEC to use as message_id in journal, ignoring: error: '.format(e))
 
             # Not an IEM so just dump it to the journal and don't worry about email and routing back to CMU
             if event_code is None:
@@ -220,8 +220,8 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
                     exchange_type='topic',
                     durable=False
                     )
-            except:
-                pass
+            except Exception as e:
+                logger.info('Error in exchange declare {}'.format(e))
             self._channel.queue_bind(
                 queue=self._queue_name,
                 exchange=self._exchange_name,

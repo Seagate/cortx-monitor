@@ -89,7 +89,7 @@ class PlaneCntrlMsgHandler(ScheduledModuleThread, InternalMsgQ):
     def _process_msg(self, jsonMsg):
         """Parses the incoming message and process"""
 
-        if isinstance(jsonMsg, dict) == False:
+        if isinstance(jsonMsg, dict) is False:
             jsonMsg = json.loads(jsonMsg)
 
         # Parse json msg into usable fields

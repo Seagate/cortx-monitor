@@ -42,7 +42,7 @@ class Debug(object):
 
     def _set_debug(self, debug):
         """Sets debug flag"""
-        if self._debug_persist == False:
+        if self._debug_persist is False:
             self._debug = debug
 
     def _get_debug(self):
@@ -59,18 +59,18 @@ class Debug(object):
 
     def _disable_debug_if_persist_false(self):
         """Turn debug mode off if persistence is False"""
-        if self._debug_persist == False:
+        if self._debug_persist is False:
             self._debug = False
 
     def _check_debug(self, jsonMsgRaw):
         """Examines the optional debug section in json msg and turns on/off debug mode
 
-        Returns True if the only line in the sspl_ll_debug section is 
+        Returns True if the only line in the sspl_ll_debug section is
         "debug_enabled" : false signifying that all threads should turn
         debug mode persistence off and reset to default startup"""
 
         # Handle raw strings
-        if isinstance(jsonMsgRaw, dict) == False:
+        if isinstance(jsonMsgRaw, dict) is False:
             jsonMsg = json.loads(jsonMsgRaw)
         else:
             jsonMsg = jsonMsgRaw
@@ -81,7 +81,7 @@ class Debug(object):
             jsonMsg.get("sspl_ll_debug").get("debug_enabled") is not None:
                 #logger.info("%s, _check_debug, debug_enabled: %s" % (self.name(), jsonMsgRaw))
 
-                if jsonMsg.get("sspl_ll_debug").get("debug_enabled") == False:
+                if jsonMsg.get("sspl_ll_debug").get("debug_enabled") is False:
                     #logger.info("%s, _check_debug, debug_enabled is False" % self.name())
                     self._set_debug_persist(False)
 
@@ -102,20 +102,20 @@ class Debug(object):
                     elif jsonMsg.get("sspl_ll_msg_header") is not None:
                         return (False, jsonMsg)
 
-                elif jsonMsg.get("sspl_ll_debug").get("debug_enabled") == True:
+                elif jsonMsg.get("sspl_ll_debug").get("debug_enabled") is True:
                     self._set_debug(True)
                     self._set_debug_persist(True)
 
                     # TODO: See if there is no debug_component and set all modules to debug mode
                     #return (True, jsonMsg)
         else:
-             # Handle case for having an optional debug_component; we want granularity in modules      
+             # Handle case for having an optional debug_component; we want granularity in modules
              if jsonMsg.get("sspl_ll_debug") is not None and \
                 jsonMsg.get("sspl_ll_debug").get("debug_component") is not None:
-                    #logger.info("%s, _check_debug, debug_enabled: %s" % (self.name(), jsonMsgRaw))                    
+                    #logger.info("%s, _check_debug, debug_enabled: %s" % (self.name(), jsonMsgRaw))
                     self._set_debug(True)
              # Check to see if persistent debug is set, if not then turn debug mode off
-             elif self._get_debug_persist() == False:
+             elif self._get_debug_persist() is False:
                  self._set_debug(False)
 
         return (False, jsonMsg)

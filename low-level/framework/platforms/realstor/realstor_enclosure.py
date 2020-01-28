@@ -213,7 +213,7 @@ class RealStorEnclosure(StorageEnclosure):
 
                 # if call fails with invalid session key request or http 403
                 # forbidden request, login & retry
-                if response.status_code == self.ws.HTTP_FORBIDDEN and relogin == False:
+                if response.status_code == self.ws.HTTP_FORBIDDEN and relogin is False:
                     logger.info("%s failed, retrying after login " % (url))
 
                     self.login()
@@ -222,7 +222,7 @@ class RealStorEnclosure(StorageEnclosure):
 
                 elif (response.status_code == self.ws.HTTP_TIMEOUT or \
                          response.status_code == self.ws.HTTP_CONN_REFUSED) \
-                         and tried_alt_ip == False:
+                         and tried_alt_ip is False:
                     self.switch_to_alt_mc()
                     tried_alt_ip = True
                     continue
