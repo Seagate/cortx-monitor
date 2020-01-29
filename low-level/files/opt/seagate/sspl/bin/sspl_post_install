@@ -57,3 +57,6 @@ pip3.6 install -r /opt/seagate/sspl/low-level/requirements.txt
 cp $SSPL_BASE_DIR/conf/sspl-ll.service.$PRODUCT /etc/systemd/system/sspl-ll.service
 systemctl enable sspl-ll.service
 systemctl daemon-reload
+
+# Configure rabbitmq
+$script_dir/rabbitmq_setup

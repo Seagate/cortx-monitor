@@ -29,7 +29,9 @@ pre_requisites()
     $sudo mkdir -p /var/sspl/orig-data
     $sudo find /var/sspl -maxdepth 2 -type d -path '/var/sspl/data/*' -not -name 'iem'  -exec bash -c 'mv -f ${0} ${0/data/orig-data}/' {} \;
     $sudo mkdir -p /var/sspl/orig-data/iem
-    $sudo mv /var/sspl/data/iem/last_processed_msg_time /var/sspl/orig-data/iem/last_processed_msg_time
+    if [ -f /var/sspl/data/iem/last_processed_msg_time ]; then
+        $sudo mv /var/sspl/data/iem/last_processed_msg_time /var/sspl/orig-data/iem/last_processed_msg_time
+    fi
 }
 
 deleteMockedInterface()
@@ -125,7 +127,9 @@ retcode=$?
 # Restoring original cache data
 $sudo find /var/sspl -maxdepth 2 -type d -path '/var/sspl/data/*' -not -name 'iem'  -exec bash -c 'rm -rf ${0}' {} \;
 $sudo find /var/sspl -maxdepth 2 -type d -path '/var/sspl/orig-data/*' -not -name 'iem'  -exec bash -c 'mv -f ${0} ${0/orig-data/data}/' {} \;
-$sudo mv /var/sspl/orig-data/iem/last_processed_msg_time /var/sspl/data/iem/last_processed_msg_time
+if [ -f /var/sspl/orig-data/iem/last_processed_msg_time ]; then
+    $sudo mv /var/sspl/orig-data/iem/last_processed_msg_time /var/sspl/data/iem/last_processed_msg_time
+fi
 $sudo rm -rf /var/sspl/orig-data
 
 $sudo mv /etc/sspl.conf.back /etc/sspl.conf
