@@ -46,8 +46,10 @@ try:
     result = channel.queue_declare(queue="", exclusive=True)
     channel.exchange_declare(exchange=SSPL_EXCHANGE, exchange_type='topic', durable=False)
     channel.queue_bind(queue=result.method.queue, exchange=SSPL_EXCHANGE, routing_key=SSPL_KEY)
-    channel.basic_consume(on_message_callback=process_msg, queue=result.method.queue)
-    channel.start_consuming()
-
+    try:
+        channel.basic_consume(on_message_callback=process_msg, queue=result.method.queue)
+        channel.start_consuming()
+    except KeyboardInterrupt:
+        channel.stop_consuming()
 except Exception as e:
     print(e)

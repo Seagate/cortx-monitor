@@ -12,3 +12,5 @@ SCRIPT_DIR=$(dirname $0)
 $SCRIPT_DIR/bin/sspl_post_install -p EES
 $SCRIPT_DIR/bin/sspl_setup_init -r eos
 $SCRIPT_DIR/bin/sspl_config
+sudo systemctl start sspl-ll.service
+sudo systemctl start rabbitmq-server.service

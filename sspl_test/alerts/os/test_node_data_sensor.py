@@ -210,4 +210,4 @@ def node_data_sensor_message_request(sensor_type):
     world.sspl_modules[RabbitMQegressProcessor.name()]._write_internal_msgQ(RabbitMQegressProcessor.name(), egressMsg)
 
 
-test_list = [test_if_data_sensor, test_cpu_data_sensor, test_host_update_data_sensor]
+test_list = [test_cpu_data_sensor]

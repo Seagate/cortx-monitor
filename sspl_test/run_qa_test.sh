@@ -34,7 +34,11 @@ pre_requisites()
 
 deleteMockedInterface()
 {
-    ip link delete eth-mocked
+    ip link show eth-mocked
+    if [ $? == 0 ]
+    then
+        ip link delete eth-mocked
+    fi
 }
 
 kill_mock_server()
@@ -49,7 +53,7 @@ cleanup()
     port=$(sed -n -e '/primary_controller_port/ s/.*\= *//p' /etc/sspl.conf)
     if [ $port == "$MOCK_SERVER_PORT" ]
     then
-        sed -i 's/primary_controller_port='"$MOCK_SERVER_PORT"'/primary_controller_port=80/g' /etc/sspl.conf
+        sed -i 's/primary_controller_port='"$MOCK_SERVER_PORT"'/primary_controller_port='"$primary_port"'/g' /etc/sspl.conf
     fi
 
     echo "Stopping mock server"
@@ -75,12 +79,17 @@ flask_installed=$(python3.6 -c 'import pkgutil; print(1 if pkgutil.find_loader("
     exit 1
 }
 
+# Take backup of original sspl.conf
+$sudo cp /etc/sspl.conf /etc/sspl.conf.back
+
+
+
 # check the port configured in /etc/sspl.conf
 # change the port to $MOCK_SERVER_PORT as mock_server runs on $MOCK_SERVER_PORT
-port=$(sed -n -e '/primary_controller_port/ s/.*\= *//p' /etc/sspl.conf)
-if [ $port == "80" ]
+primary_port=$(sed -n -e '/primary_controller_port/ s/.*\= *//p' /etc/sspl.conf)
+if [ "$primary_port" != "$MOCK_SERVER_PORT" ]
 then
-    sed -i 's/primary_controller_port=80/primary_controller_port='"$MOCK_SERVER_PORT"'/g' /etc/sspl.conf
+    sed -i 's/primary_controller_port='"$primary_port"'/primary_controller_port='"$MOCK_SERVER_PORT"'/g' /etc/sspl.conf
 fi
 
 # Setting pre-requisites first
@@ -94,10 +103,10 @@ $script_dir/mock_server &
 # primary_controller_ip=127.0.0.1 and primary_controller_port=$MOCK_SERVER_PORT.
 # For sanity test SSPL should connect to mock server instead of real server.
 # Restart SSPL to re-read configuration
-$sudo cp /etc/sspl.conf /etc/sspl.conf.back
+
 $sudo $script_dir/set_threshold.sh
 echo "Restarting SSPL"
-systemctl restart sspl-ll
+$sudo systemctl restart sspl-ll
 echo "Waiting for SSPL to complete initialization of all the plugins"
 $script_dir/rabbitmq_start_checker sspl-out actuator-resp-key
 echo "Initialization completed. Starting tests"
@@ -113,4 +122,7 @@ $sudo mv /var/sspl/orig-data/iem/last_processed_msg_time /var/sspl/data/iem/last
 $sudo rm -rf /var/sspl/orig-data
 
 $sudo mv /etc/sspl.conf.back /etc/sspl.conf
+echo "Tests completed, restored configs .."
+cleanup
+echo "Cleaned Up .."
 exit $retcode

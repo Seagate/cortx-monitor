@@ -250,7 +250,10 @@ class RabbitMQingressProcessorTests(ScheduledModuleThread, InternalMsgQ):
         time.sleep(4)
         try:
             if self._connection is not None:
-                self._connection.close()
-                self._channel.stop_consuming()
+                try:
+                    self._connection.close()
+                    self._channel.stop_consuming()
+                except Exception as err:
+                    print("Connection is Broken")
         except pika.exceptions.ConnectionClosed:
             logger.info("RabbitMQingressProcessorTests, shutdown, RabbitMQ ConnectionClosed")

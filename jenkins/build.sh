@@ -38,8 +38,8 @@ mkdir -p $DIST/SOURCES
 
 # Create tar of source directory
 tar -czvf $DIST/SOURCES/sspl-$VERSION.tgz -C $BASE_DIR/.. sspl/low-level sspl/libsspl_sec
-tar -czvf $DIST/SOURCES/sspl-test-$VERSION.tgz -C $BASE_DIR/.. sspl/test
-tar -czvf $DIST/SOURCES/sspl-test-ctf-$VERSION.tgz -C $BASE_DIR/.. sspl/sspl_test
+tar -czvf $DIST/SOURCES/sspl-test-lettuce-py2.7-$VERSION.tgz -C $BASE_DIR/.. sspl/test
+tar -czvf $DIST/SOURCES/sspl-test-$VERSION.tgz -C $BASE_DIR/.. sspl/sspl_test
 tar -czvf $DIST/SOURCES/systemd-python36-$VERSION.tgz -C $BASE_DIR/.. sspl/systemd-python36
 
 # Generate RPMs

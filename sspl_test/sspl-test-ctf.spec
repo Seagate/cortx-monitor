@@ -1,7 +1,7 @@
 # build number
 %define build_num  %( test -n "$build_number" && echo "$build_number" || echo 1 )
 
-Name:       sspl-test-ctf
+Name:       sspl-test
 Version:    %{version}
 Release:    %{build_num}_git%{git_rev}%{?dist}
 Summary:    Installs SSPL test for common test framework
