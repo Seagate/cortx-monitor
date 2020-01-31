@@ -172,6 +172,9 @@ class RealStorSideplaneExpanderSensor(ScheduledModuleThread, InternalMsgQ):
         self._sideplane_expander_list = \
             self._get_sideplane_expander_list()
         alert_type = None
+        # Declaring the health_recommendation with default type NoneType not assume 
+        #now what type of data it hold.
+        health_recommendation = None
 
         missing_health = " ".join("Check that all I/O modules and power supplies in\
         the enclosure are fully seated in their slots and that their latches are locked".split())
@@ -191,11 +194,13 @@ class RealStorSideplaneExpanderSensor(ScheduledModuleThread, InternalMsgQ):
                         str(self.unhealthy_components[0]
                             ["health-recommendation"])
 
-                if fru_status == self.rssencl.HEALTH_FAULT \
-                    and missing_health.strip(" ") in health_recommendation:
-                    if durable_id not in self._faulty_sideplane_expander_dict:
-                        alert_type = self.rssencl.FRU_MISSING
-                        self._faulty_sideplane_expander_dict[durable_id] = alert_type
+                # added condition to check the health_recommendation not None if the fault response will be
+                # theire it goes inside and then check missing health.
+                if fru_status == self.rssencl.HEALTH_FAULT and health_recommendation:
+                    if missing_health.strip(" ") in health_recommendation:
+                        if durable_id not in self._faulty_sideplane_expander_dict:
+                            alert_type = self.rssencl.FRU_MISSING
+                            self._faulty_sideplane_expander_dict[durable_id] = alert_type
                 elif fru_status == self.rssencl.HEALTH_FAULT:
                     if durable_id not in self._faulty_sideplane_expander_dict:
                         alert_type = self.rssencl.FRU_FAULT
