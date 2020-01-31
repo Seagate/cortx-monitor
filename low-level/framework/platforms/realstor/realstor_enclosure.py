@@ -298,14 +298,16 @@ class RealStorEnclosure(StorageEnclosure):
         if self.latest_faults != self.memcache_faults:
             changed = True
             logger.warn("System faults state changed, updating cached faults!!")
-            self.memcache_faults = self.latest_faults
-
-            #Update faults in persistent cache
-            logger.info("Updating faults persistent cache!!")
-            store.put(self.memcache_faults,
-                self.faults_persistent_cache)
 
         return changed
+
+    def update_memcache_faults(self):
+        self.memcache_faults = self.latest_faults
+
+        #Update faults in persistent cache
+        logger.info("Updating faults persistent cache!!")
+        store.put(self.memcache_faults,
+            self.faults_persistent_cache)
 
     def check_new_fault(self, fault):
         """Check if supplied is new fault"""
@@ -316,16 +318,14 @@ class RealStorEnclosure(StorageEnclosure):
 
         newkid = False
 
-        if self.memcache_faults and fault:
+        if fault not in self.memcache_faults:
+            newkid = True
             for cached in self.memcache_faults:
-
-                if fault["component-id"] == cached["component-id"]:
-                    if fault["health"] != cached["health"] \
-                        or fault["health-reason"] != cached["health-reason"]:
-                        logger.debug("New system Fault detected !!!")
-                        logger.debug("Health changed for faulty resource {0}\
-                            ".format(fault["component-id"]))
-                        newkid = True
+                if fault["component-id"] == cached["component-id"] \
+                    and fault["health"] == cached["health"] \
+                    and fault["health-reason"] == cached["health-reason"]:
+                    newkid = False
+                    break
 
         return newkid
 

@@ -312,11 +312,12 @@ class RealStorDiskSensor(ScheduledModuleThread, InternalMsgQ):
                 self.latest_disks = {}
 
                 for drive in drives:
-                    slot = drive.get("slot",-1)
-                    sn = drive.get("serial-number","NA")
+                    slot = drive.get("slot", -1)
+                    sn = drive.get("serial-number", "NA")
+                    health = drive.get("health", "NA")
 
                     if slot != -1:
-                        self.latest_disks[slot] = {"serial-number":sn}
+                        self.latest_disks[slot] = {"serial-number":sn, "health":health}
 
                         #dump drive data to persistent cache
                         dcache_path = self.disks_prcache + \
@@ -328,8 +329,9 @@ class RealStorDiskSensor(ScheduledModuleThread, InternalMsgQ):
                         if os.path.exists(dcache_path):
                             prevdrive = store.get(dcache_path)
                             prevsn = prevdrive.get("serial-number","NA")
+                            prevhealth = prevdrive.get("health", "NA")
 
-                            if prevsn != sn:
+                            if prevsn != sn or prevhealth != health:
                                 os.rename(dcache_path,dcache_path + ".prev")
 
                                 store.put(drive, dcache_path)
@@ -405,28 +407,35 @@ class RealStorDiskSensor(ScheduledModuleThread, InternalMsgQ):
                             # Extract slot from "component-id":"Disk 0.39"
                             slot = fault["component-id"].split()[1].split('.')[1]
 
-                            #get drive data from disk cache
-                            disk_info = store.get(
-                                self.disks_prcache+"disk_{0}.json".format(slot))
+                            # Alert send only if disks_prcache updated with latest disk data
+                            if self.latest_disks[int(slot)]["health"] != "OK":
+                                #get drive data from disk cache
+                                disk_info = store.get(
+                                    self.disks_prcache+"disk_{0}.json".format(slot))
 
-                            # raise alert for disk fault
-                            self._rss_raise_disk_alert(self.rssencl.FRU_FAULT, disk_info)
+                                # raise alert for disk fault
+                                self._rss_raise_disk_alert(self.rssencl.FRU_FAULT, disk_info)
 
             # Check for resolved faults
             for cached in self.rssencl.memcache_faults:
                 if not any(d.get("component-id", None) == cached["component-id"] \
-                    for d in self.rssencl.latest_faults):
+                    for d in self.rssencl.latest_faults) and self.DISK_IDENTIFIER in cached["component-id"]:
 
                     # Extract slot from "component-id":"Disk 0.39"
                     logger.info("Found resolved disk fault for {0}"\
                         .format(cached["component-id"]))
                     slot = cached["component-id"].split()[1].split('.')[1]
 
-                    #get drive data from inmemory disk cache
-                    disk_info = self.memcache_disks[slot]
+                    # Alert send only if disks_prcache updated with latest disk data
+                    if self.latest_disks[int(slot)]["health"] == "OK":
+                        # get drive data from disk cache
+                        disk_info = store.get(
+                            self.disks_prcache+"disk_{0}.json".format(slot))
 
-                    # raise alert for resolved disk fault
-                    self._rss_raise_disk_alert(self.rssencl.FRU_FAULT_RESOLVED, disk_info)
+                        # raise alert for resolved disk fault
+                        self._rss_raise_disk_alert(self.rssencl.FRU_FAULT_RESOLVED, disk_info)
+
+            self.rssencl.update_memcache_faults()
 
         except Exception as e:
             logger.exception("Error in _rss_check_disk_faults {0}".format(e))
