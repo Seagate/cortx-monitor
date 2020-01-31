@@ -28,10 +28,28 @@ class ResourceTypes(Enum):
 class EnclInterface(Enum):
     SAS = "SAS"
 
-
 class StoreTypes(Enum):
     FILE = "file"
     CONSUL = "consul"
+
+iem_severity_types = {
+    "A": "alert",
+    "X": "critical",
+    "E": "error",
+    "W": "warning",
+    "N": "notice",
+    "C": "configuration",
+    "I": "informational",
+    "D": "detail",
+    "B": "debug"
+}
+
+iem_source_types = {
+    "H": "Hardware",
+    "S": "Software",
+    "F": "Firmware",
+    "O": "OS"
+}
 
 if __name__ == "__main__":
     print(' '.join(enabled_products))

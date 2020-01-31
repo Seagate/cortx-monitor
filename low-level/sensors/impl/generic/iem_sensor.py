@@ -28,6 +28,7 @@ from functools import lru_cache
 
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
+from framework.base.sspl_constants import iem_severity_types, iem_source_types
 from framework.utils.service_logging import logger
 
 from json_msgs.messages.sensors.iem_data import IEMDataMsg
@@ -246,6 +247,10 @@ class IEMSensor(ScheduledModuleThread, InternalMsgQ):
         }
         if not self._are_components_in_range(**args):
             return
+
+        # Update severity and source_id
+        severity = iem_severity_types.get(severity, severity)
+        source_id = iem_source_types.get(source_id, source_id)
 
         # Decode component_id, module_id and event_id
         component_id, module_id, event_id = self._decode_msg( f"{component_id}{module_id}{event_id}")
