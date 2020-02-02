@@ -394,7 +394,7 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
             # 'ipmitool sel get <sel-entry-id>'
             # which gives more detailed information
             if device_type in self.fru_types:
-                self.fru_types[device_type](index, date, time, device_id,
+                self.fru_types[device_type](index, date, event_time, device_id,
                         sensor_num, event, status, is_last)
 
         if last_index is not None:
@@ -565,7 +565,7 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
 
         return (common, specific_static, specific_dynamic)
 
-    def _parse_fan_info(self, index, date, time, device_id, sensor_id, event, status, is_last):
+    def _parse_fan_info(self, index, date, _time, device_id, sensor_id, event, status, is_last):
         """Parse out Fan realted changes that gets reaflected in the ipmi sel list"""
 
         #TODO: Can enrich the sspl event message with more FRU info using
@@ -622,7 +622,7 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
                         "cluster_id":self._cluster_id ,
                         "resource_type": resource_type,
                         "resource_id": sensor_name,
-                        "event_time":self._get_epoch_time_from_date_and_time(date, time)
+                        "event_time":self._get_epoch_time_from_date_and_time(date, _time)
                     }
 
         if is_last:
@@ -631,7 +631,7 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
         self._send_json_msg(resource_type, alert_type, severity, fru_info, fan_info)
         self._log_IEM(resource_type, alert_type, severity, fru_info, fan_info)
 
-    def _parse_psu_supply_info(self, index, date, time, sensor, sensor_num, event, status, is_last):
+    def _parse_psu_supply_info(self, index, date, _time, sensor, sensor_num, event, status, is_last):
         """Parse out PSU related changes that gets reflected in the ipmi sel list"""
 
         alerts = {
@@ -660,7 +660,7 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
             "cluster_id": self._cluster_id,
             "resource_type": resource_type,
             "resource_id": sensor,
-            "event_time": self._get_epoch_time_from_date_and_time(date, time)
+            "event_time": self._get_epoch_time_from_date_and_time(date, _time)
         }
 
         try:
@@ -690,7 +690,7 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
         self._send_json_msg(resource_type, alert_type, severity, info, specific_info)
         self._log_IEM(resource_type, alert_type, severity, info, specific_info)
 
-    def _parse_psu_unit_info(self, index, date, time, sensor, sensor_num, event, status, is_last):
+    def _parse_psu_unit_info(self, index, date, _time, sensor, sensor_num, event, status, is_last):
         """Parse out PSU related changes that gets reflected in the ipmi sel list"""
 
         alerts = {
@@ -737,7 +737,7 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
             "cluster_id": self._cluster_id,
             "resource_type": resource_type,
             "resource_id": sensor,
-            "event_time": self._get_epoch_time_from_date_and_time(date, time)
+            "event_time": self._get_epoch_time_from_date_and_time(date, _time)
         }
 
         try:
@@ -766,7 +766,7 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
         self._send_json_msg(resource_type, alert_type, severity, info, specific_info)
         self._log_IEM(resource_type, alert_type, severity, info, specific_info)
 
-    def _parse_disk_info(self, index, date, time, sensor, sensor_num, event, status, is_last):
+    def _parse_disk_info(self, index, date, _time, sensor, sensor_num, event, status, is_last):
         """Parse out Disk related changes that gets reaflected in the ipmi sel list"""
 
         sensor_id = self.sensor_id_map[self.TYPE_DISK][sensor_num]
@@ -792,7 +792,7 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
                 "cluster_id": self._cluster_id,
                 "resource_type": resource_type,
                 "resource_id": sensor,
-                "event_time": self._get_epoch_time_from_date_and_time(date, time)
+                "event_time": self._get_epoch_time_from_date_and_time(date, _time)
             }
             if (event, status) in alert_severity_dict:
                 alert_type = alert_severity_dict[(event, status)][0]
