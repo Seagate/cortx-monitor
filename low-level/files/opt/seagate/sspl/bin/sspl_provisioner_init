@@ -14,3 +14,15 @@ $SCRIPT_DIR/bin/sspl_setup_init -r eos
 $SCRIPT_DIR/bin/sspl_config
 sudo systemctl start sspl-ll.service
 sudo systemctl start rabbitmq-server.service
+
+# TODO: Temporary change until HA integration is in place
+# Switch SSPL to active state to resume all the suspended plugins. If SSPL is
+# not switched to active state then plugins will not respond and tests will
+# fail. Sending SIGUP to SSPL makes SSPL to read state file and switch state.
+echo "*************************************************************************"
+echo "Changing SSPL state to 'active', disable step once HA integration complete"
+echo "*************************************************************************"
+echo "state=active" > /var/sspl/data/state.txt
+PID=`ps -aux| grep "sspl_ll_d -c /etc/sspl.conf" | grep -v "grep" | awk '{print $2}'`
+kill -s SIGHUP $PID
+

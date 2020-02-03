@@ -1,6 +1,7 @@
-#!/bin/bash -e
+#!/bin/bash
 
 MOCK_SERVER_PORT=5100
+RMQ_SELF_STARTED=0
 
 [[ $EUID -ne 0 ]] && sudo=sudo
 script_dir=$(dirname $0)
@@ -32,6 +33,14 @@ pre_requisites()
     if [ -f /var/sspl/data/iem/last_processed_msg_time ]; then
         $sudo mv /var/sspl/data/iem/last_processed_msg_time /var/sspl/orig-data/iem/last_processed_msg_time
     fi
+
+    # Start rabbitmq if not already running
+    systemctl status rabbitmq-server 1>/dev/null && export status=true || export status=false
+    if [ "$status" = "false" ]; then
+        echo "Starting rabbitmq server as needed for tests"
+        systemctl start rabbitmq-server
+        RMQ_SELF_STARTED=1
+    fi
 }
 
 deleteMockedInterface()
@@ -39,7 +48,7 @@ deleteMockedInterface()
     ip link show eth-mocked
     if [ $? == 0 ]
     then
-        ip link delete eth-mocked
+        ip link delete eth-mocked 2>/dev/null
     fi
 }
 
@@ -49,11 +58,11 @@ kill_mock_server()
     pkill -f \./mock_server
 }
 
-cleanup()
+restore_cfg_services()
 {
-    # Again Changing port to default which is 80
+    # Restoring MC port to value stored before tests
     port=$(sed -n -e '/primary_controller_port/ s/.*\= *//p' /etc/sspl.conf)
-    if [ $port == "$MOCK_SERVER_PORT" ]
+    if [ "$port" == "$MOCK_SERVER_PORT" ]
     then
         sed -i 's/primary_controller_port='"$MOCK_SERVER_PORT"'/primary_controller_port='"$primary_port"'/g' /etc/sspl.conf
     fi
@@ -61,11 +70,23 @@ cleanup()
     echo "Stopping mock server"
     kill_mock_server
     deleteMockedInterface
+
+    if [ "$RMQ_SELF_STARTED" -eq 1 ]
+    then
+        echo "Stopping rabbitmq server as was started for tests"
+        systemctl stop rabbitmq-server
+        RMQ_SELF_STARTED=0
+    fi
+}
+
+cleanup()
+{
+    restore_cfg_services
     echo "Exiting..."
     exit 1
 }
 
-trap cleanup 0 1 2 3 6 9 15
+trap cleanup 1 2 3 6 9 15
 
 execute_test()
 {
@@ -133,7 +154,7 @@ fi
 $sudo rm -rf /var/sspl/orig-data
 
 $sudo mv /etc/sspl.conf.back /etc/sspl.conf
-echo "Tests completed, restored configs .."
-cleanup
+echo "Tests completed, restored configs and services .."
+restore_cfg_services
 echo "Cleaned Up .."
 exit $retcode
