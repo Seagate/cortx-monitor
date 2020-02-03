@@ -6,11 +6,17 @@
 
 2. Initialization of SSPL
     - Make sure rabbitmq is installed on both the nodes.
-    - Execute /opt/seagate/sspl/sspl_init.
+
+    - If system is not provisioned, execute following steps to initialize SSPL:
+        /opt/seagate/sspl/bin/sspl_post_install -p EES
+        /opt/seagate/sspl/bin/sspl_setup_init -r eos
+        /opt/seagate/sspl/bin/sspl_config
+        systemctl start sspl-ll.service
+        systemctl start rabbitmq-server.service
 
 3. Installation of SSPL resource agent script
     - Copy Resource Agent script from
-      "cp /opt/seagate/sspl/low-level/tests/manual/resource_agaents/sspl_stateful_resource_agent /lib/ocf/resource.d/sspl/sspl_stateful"
+      "cp /opt/seagate/sspl/bin/pacemaker/sspl_stateful_resource_agent /lib/ocf/resource.d/sspl/sspl_stateful"
 
 4. Creation of the SSPL resource (Master/Slave approach)
     - "pcs resource create sspl ocf:sspl:sspl_stateful master failure-timeout=10s"
