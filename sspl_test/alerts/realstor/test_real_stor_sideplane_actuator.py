@@ -8,6 +8,7 @@ import sys
 from sspl_test.default import *
 from sspl_test.rabbitmq.rabbitmq_ingress_processor_tests import RabbitMQingressProcessorTests
 from sspl_test.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
+from sspl_test.common import check_sspl_ll_is_running
 
 def init(args):
     pass
@@ -138,30 +139,6 @@ def verify_sideplane_module_specific_info(sideplane_specific_info):
                     assert(expander.get("health-numeric") is not None)
                     assert(expander.get("health-reason") is not None)
                     assert(expander.get("health-recommendation") is not None)
-
-def check_sspl_ll_is_running():
-    # Check that the state for sspl service is active
-    found = False
-
-    # Support for python-psutil < 2.1.3
-    for proc in psutil.process_iter():
-        if proc.name == "sspl_ll_d" and \
-           proc.status in (psutil.STATUS_RUNNING, psutil.STATUS_SLEEPING):
-               found = True
-
-    # Support for python-psutil 2.1.3+
-    if found == False:
-        for proc in psutil.process_iter():
-            pinfo = proc.as_dict(attrs=['cmdline', 'status'])
-            if "sspl_ll_d" in str(pinfo['cmdline']) and \
-                pinfo['status'] in (psutil.STATUS_RUNNING, psutil.STATUS_SLEEPING):
-                    found = True
-
-    assert found == True
-
-    # Clear the message queue buffer out
-    while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
-        world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
 
 def sideplane_actuator_message_request(resource_type, resource_id):
     egressMsg = {
