@@ -55,7 +55,7 @@ hard_reset()
 
     # Remove sspl_conf
     rm -f $SSPL_CONF
-    
+
     # Remove sspl-configured file
     rm -f $SSPL_CONFIGURED
 
@@ -90,6 +90,11 @@ hard_reset()
     # Remove logrotate config files
     rm -f /etc/logrotate.d/iem_messages
     rm -f /etc/logrotate.d/sspl_logs
+
+    # Remove SSPL configuration files
+    rm -f /etc/sspl.conf
+    rm -rf /etc/sspl-ll
+    rm -f /etc/sspl.conf.bak
 
 }
 
