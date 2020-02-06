@@ -504,8 +504,15 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
         # See if status is in the msg; ie it's an internal msg from the RAID sensor
         if jsonMsg.get("sensor_request_type").get("node_data").get("status") is not None:
-            self._raid_device = jsonMsg.get("sensor_request_type").get("node_data").get("device")
-            self._raid_drives = list(jsonMsg.get("sensor_request_type").get("node_data").get("drives"))
+            sensor_request = jsonMsg.get("sensor_request_type").get("node_data")
+            host_name = sensor_request.get("host_id")
+            alert_type = sensor_request.get("alert_type")
+            alert_id = sensor_request.get("alert_id")
+            severity = sensor_request.get("severity")
+            info = sensor_request.get("info")
+            specific_info = sensor_request.get("specific_info")
+            self._raid_device = jsonMsg.get("sensor_request_type").get("node_data").get("specific_info").get("device")
+            self._raid_drives = list(jsonMsg.get("sensor_request_type").get("node_data").get("specific_info").get("drives"))
 
         # Loop thru each index of drives containing only paths and fill in with s/n
         for drive in self._raid_drives:
@@ -529,9 +536,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         self._log_debug("_generate_RAID_status, host_id: %s, device: %s, drives: %s" %
                     (self._node_sensor.host_id, self._raid_device, str(self._raid_drives)))
 
-        raidDataMsg = RAIDdataMsg(self._node_sensor.host_id,
-                                  self._raid_device, self._raid_drives)
-
+        raidDataMsg = RAIDdataMsg(host_name, alert_type, alert_id, severity, info, specific_info)
         # Add in uuid if it was present in the json request
         if self._uuid is not None:
             raidDataMsg.set_uuid(self._uuid)

@@ -18,10 +18,13 @@ import os
 import json
 import time
 import subprocess
+import socket
+import uuid
 
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
+from framework.utils.severity_reader import SeverityReader
 
 # Modules that receive messages from this module
 from message_handlers.node_data_msg_handler import NodeDataMsgHandler
@@ -30,13 +33,13 @@ from message_handlers.logging_msg_handler import LoggingMsgHandler
 from zope.interface import implementer
 from sensors.Iraid import IRAIDsensor
 
-
 @implementer(IRAIDsensor)
 class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
 
 
     SENSOR_NAME       = "RAIDsensor"
     PRIORITY          = 1
+    RESOURCE_TYPE     = "node:os:raid"
 
     # Section and keys in configuration file
     RAIDSENSOR        = SENSOR_NAME.upper()
@@ -44,6 +47,21 @@ class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
 
     RAID_CONF_FILE    = '/etc/mdadm.conf'
     RAID_DOWN_DRIVE_STATUS = [ { "status" : "_" }, { "status" : "_" } ]
+
+    SYSTEM_INFORMATION = "SYSTEM_INFORMATION"
+    SITE_ID = "site_id"
+    CLUSTER_ID = "cluster_id"
+    NODE_ID = "node_id"
+    RACK_ID = "rack_id"
+
+    prev_alert_type = None
+    alert_type = None
+
+    # alerts
+    FAULT_RESOLVED = "fault_resolved"
+    FAULT = "fault"
+    MISSING = "missing"
+    INSERTION = "insertion"
 
     @staticmethod
     def name():
@@ -79,6 +97,19 @@ class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
 
         # The mdX status line in the status file
         self._RAID_status = "N/A"
+
+        self._faulty_drive_list = {}
+
+        self._faulty_device_list = {}
+
+        self._site_id = int(self._conf_reader._get_value_with_default(
+                                self.SYSTEM_INFORMATION, self.SITE_ID, 0))
+        self._cluster_id = int(self._conf_reader._get_value_with_default(
+                                self.SYSTEM_INFORMATION, self.CLUSTER_ID, 0))
+        self._rack_id = int(self._conf_reader._get_value_with_default(
+                                self.SYSTEM_INFORMATION, self.RACK_ID, 0))
+        self._node_id = int(self._conf_reader._get_value_with_default(
+                                self.SYSTEM_INFORMATION, self.NODE_ID, 0))
 
     def read_data(self):
         """Return the Current RAID status information"""
@@ -116,6 +147,10 @@ class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
     def _notify_NodeDataMsgHandler(self):
         """See if the status files changed and notify node data message handler
             for generating JSON message"""
+        self._drive_state_changed = False
+        self._device_state_changed = False
+        # resource_id for drive alerts
+        resource_id = None
         if not os.path.isfile(self._RAID_status_file):
             logger.warn("status_file: %s does not exist, ignoring." % self._RAID_status_file)
             return
@@ -133,34 +168,91 @@ class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
         self._RAID_status_contents = status
 
         # Process mdstat file and send json msg to NodeDataMsgHandler
-        md_device_list = self._process_mdstat()
+        md_device_list, drive_list,drive_status_chnaged = self._process_mdstat()
 
         # checks mdadm conf file for missing raid array and send json message to NodeDataMsgHandler
         self._process_missing_md_devices(md_device_list)
+
+        if md_device_list:
+            device = md_device_list[0]
+            if device in self._faulty_device_list:
+                self.alert_type = self.FAULT_RESOLVED
+                self._device_state_changed = True
+                del self._faulty_device_list[device]
+
+        if drive_list:
+            if len(drive_list) < self._total_drives and \
+                self.prev_alert_type != self.MISSING:
+                self.alert_type = self.MISSING
+                resource_id = self._device+":"
+                self._drive_state_changed = True
+            if len(drive_list) >= self._total_drives and \
+                self.prev_alert_type == self.MISSING:
+                self.alert_type = self.INSERTION
+                resource_id = self._device+":/dev/"+drive_list[0]
+                if drive_list[0] in self._faulty_drive_list:
+                    del self._faulty_drive_list[drive_list[0]]
+                self._drive_state_changed = True
+            if self.alert_type is not None:
+                if self._device_state_changed == True:
+                    self._resource_id = self._device
+                if self._drive_state_changed == True:
+                    self._resource_id = resource_id
+                self._send_json_msg(self.alert_type,self._resource_id)
+
+            if drive_status_chnaged:
+                for drive in self._drives:
+                    if drive.get("identity") is not None:
+                        drive_path = drive.get("identity").get("path")
+                        drive_name = drive_path[5:]
+                        resource_id = self._device+":/dev/"+drive_name
+                        drive_status = drive.get("status")
+                        if drive_status != "U" and drive_name not in self._faulty_drive_list:
+                            self.alert_type = self.FAULT
+                            self._drive_state_changed = True
+                            self._faulty_drive_list[drive_name] = self.alert_type
+                        if drive_status == "U" and drive_name in self._faulty_drive_list:
+                            self.alert_type = self.FAULT_RESOLVED
+                            self._drive_state_changed = True
+                            del self._faulty_drive_list[drive_name]
+                        if self.alert_type is not None and self._drive_state_changed == True:
+                            self._send_json_msg(self.alert_type,resource_id)
 
     def _process_mdstat(self):
         """Parse out status' and path info for each drive"""
         # Replace new line chars with spaces
         mdstat = self._RAID_status_contents.strip().split("\n")
         md_device_list = []
-
+        drive_list = []
+        # list of lines in mdstat which contains "md"
+        mdlines = []
+        # select 1st raid device to monitor
+        monitored_device = []
+        drive_status_chnaged = False
         # Array of optional identity json sections for drives in array
         self._identity = {}
 
         # Read in each line looking for a 'mdXXX' value
         md_line_parsed = False
         for line in mdstat:
+            fields = line.split(" ")
+            if "md" in fields[0]:
+                mdlines.append(line)
+                self._device = "/dev/{}".format(fields[0])
+                self._log_debug("md device found: %s" % self._device)
+                md_device_list.append(self._device)
+        if len(md_device_list) > 1:
+            logger.warning("Multiple RAID arrays are not supported,%s device not monitored." %self._device)
+        if mdlines:
+            # find 1st mdarray in mdstat to monitor
+            index = mdstat.index(mdlines[-1])
+            monitored_device = mdstat[index:]
 
+        for line in monitored_device:
             # The line following the mdXXX : ... contains the [UU] status that we need
             if md_line_parsed is True:
                 # Format is [x/y][UUUU____...]
-                success = self._parse_raid_status(line)
-
-                # Create a raid_msg and send it out
-                if success:
-                    self._send_json_msg()
-                    self._log_IEM()
-
+                drive_status_chnaged = self._parse_raid_status(line)
                 # Reset in case their are multiple configs in file
                 md_line_parsed = False
 
@@ -171,14 +263,17 @@ class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
             if "md" in fields[0]:
                 self._device = "/dev/{}".format(fields[0])
                 self._log_debug("md device found: %s" % self._device)
-                md_device_list.append(self._device)
 
                 # Parse out raid drive paths if they're present
                 for field in fields:
                     if "[" in field:
+                        if field not in drive_list:
+                            index = field.find("[")
+                            drive_name = field[:index]
+                            drive_list.append(drive_name)
                         self._add_drive(field)
                 md_line_parsed = True
-        return md_device_list
+        return md_device_list,drive_list, drive_status_chnaged
 
     def _add_drive(self, field):
         """Adds a drive to the list"""
@@ -220,8 +315,8 @@ class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
         if first_bracket_index == -1:
             return False
 
-        total_drives = int(status_line[first_bracket_index + 1])
-        self._log_debug("_parse_raid_status, total_drives: %d" % total_drives)
+        self._total_drives = int(status_line[first_bracket_index + 1])
+        self._log_debug("_parse_raid_status, total_drives: %d" % self._total_drives)
 
         # Break the  line apart into separate fields
         fields = status_line.split(" ")
@@ -229,7 +324,7 @@ class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
         # The last field is the list of U & _
         status = fields[-1]
         self._log_debug("_parse_raid_status, status: %s, total drives: %d" %
-                        (status, total_drives))
+                        (status, self._total_drives))
 
         # See if the status line has changed, if not there's nothing to do
         if self._RAID_status == status:
@@ -243,7 +338,7 @@ class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
         self._drives = []
 
         drive_index = 0
-        while drive_index < total_drives:
+        while drive_index < self._total_drives:
             # Create the json msg and append it to the list
             if self._identity.get(drive_index) is not None:
                 path = self._identity.get(drive_index).get("path")
@@ -255,7 +350,7 @@ class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
                                     }
                                 }
             else:
-                drive_status_msg = {"status" : status[drive_index + 1]}  # Move past '['
+               drive_status_msg = {"status" : status[drive_index + 1]}  # Move past '['
 
             self._log_debug("_parse_raid_status, drive_index: %d" % drive_index)
             self._log_debug("_parse_raid_status, drive_status_msg: %s" % drive_status_msg)
@@ -293,25 +388,54 @@ class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
             if device not in md_device_list:
                 # add that missing raid array entry into the list of raid devices
                 self._device = device
+                prev_drive_status = self._drives
                 self._drives  = self.RAID_DOWN_DRIVE_STATUS
-                self._send_json_msg()
+                self.alert_type = self.FAULT
+                self._faulty_device_list[device] = self.FAULT
+                self._send_json_msg(self.alert_type,self._device)
+                self._drives = prev_drive_status
 
-    def _send_json_msg(self):
+    def _send_json_msg(self,alert_type, resource_id):
         """Transmit data to NodeDataMsgHandler to be processed and sent out"""
 
-        self._log_debug("_send_json_msg, device: %s, drives: %s" % \
-                        (self._device, str(self._drives)))
+        epoch_time = str(int(time.time()))
+        severity_reader = SeverityReader()
+        severity = severity_reader.map_severity(alert_type)
+        self._alert_id = self._get_alert_id(epoch_time)
+        host_name = socket.getfqdn()
+
+        info = {
+                "site_id": self._site_id,
+                "cluster_id": self._cluster_id,
+                "rack_id": self._rack_id,
+                "node_id": self._node_id,
+                "resource_type": self.RESOURCE_TYPE,
+                "resource_id": resource_id,
+                "event_time": epoch_time
+               }
+        specific_info = {
+            "device": self._device,
+            "drives": self._drives
+                }
 
         internal_json_msg = json.dumps(
             {"sensor_request_type" : {
-                "node_data" : {
+                "node_data": {
                     "status": "update",
                     "sensor_type" : "raid_data",
-                    "device"  : self._device,
-                    "drives"  : self._drives
+                    "host_id": host_name,
+                    "alert_type": alert_type,
+                    "alert_id": self._alert_id,
+                    "severity": severity,
+                    "info": info,
+                    "specific_info": specific_info
                     }
                 }
             })
+        self.prev_alert_type = alert_type
+        self.alert_type = None
+
+        self._log_debug("_send_json_msg, internal_json_msg: %s" %(internal_json_msg))
 
         # Send the event to node data message handler to generate json message and send out
         self._write_internal_msgQ(NodeDataMsgHandler.name(), internal_json_msg)
@@ -335,6 +459,14 @@ class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
 
         # Send the event to logging msg handler to send IEM message to journald
         self._write_internal_msgQ(LoggingMsgHandler.name(), internal_json_msg)
+
+    def _get_alert_id(self, epoch_time):
+        """Returns alert id which is a combination of
+        epoch_time and salt value
+        """
+        salt = str(uuid.uuid4().hex)
+        alert_id = epoch_time + salt
+        return alert_id
     def suspend(self):
         """Suspends the module thread. It should be non-blocking"""
         super(RAIDsensor, self).suspend()
@@ -356,7 +488,7 @@ class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
         if error:
             self._log_debug("_run_command: error: %s" % str(error))
 
-        return response.rstrip('\n'), error.rstrip('\n')
+        return response.decode().rstrip('\n'), error.decode().rstrip('\n')
 
     def _get_RAID_status_file(self):
         """Retrieves the file containing the RAID status information"""

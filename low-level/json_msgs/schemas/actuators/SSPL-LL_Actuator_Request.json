@@ -163,9 +163,25 @@
 									"required": true
 								},
 								"resource": {
+                                    "if": {
+                                        "properties": {
+                                            "node_request": {
+                                                "RAID": { }
+                                                }
+                                            }
+                                        },
+                                    "then": {
+                                        "properties": {
+                                            "description": "Resources on which to perform the action",
+                                            "type": "string",
+                                            "required": false
+                                            }
+                                        },
+                                    "else": {
 									"description": "Resources on which to perform the action",
 									"type": "string",
 									"required": true
+                                    }
 								}
 							}
 						},

@@ -33,8 +33,11 @@ class RAIDdataMsg(BaseSensorMsg):
     MESSAGE_VERSION  = "1.0.0"
 
     def __init__(self, host_id,
-                       device,
-                       drives,
+                       alert_type,
+                       alert_id,
+                       severity,
+                       info,
+                       specific_info,
                        username  = "SSPL-LL",
                        signature = "N/A",
                        time      = "N/A",
@@ -42,12 +45,25 @@ class RAIDdataMsg(BaseSensorMsg):
         super(RAIDdataMsg, self).__init__()
 
         self._host_id           = host_id
-        self._device            = device
-        self._drives            = drives
+        self._alert_id          = alert_id
+        self._alert_type        = alert_type
+        self._severity          = severity
+        self._sensor_info       = info
+        self._sensor_specific_info  = specific_info
         self._username          = username
         self._signature         = signature
         self._time              = time
         self._expires           = expires
+        self._site_id = self._sensor_info.get("site_id")
+        self._rack_id = self._sensor_info.get("rack_id")
+        self._node_id = self._sensor_info.get("node_id")
+        self._node_id = self._sensor_info.get("node_id")
+        self._cluster_id = self._sensor_info.get("cluster_id")
+        self._resource_id = self._sensor_info.get("resource_id")
+        self._resource_type = self._sensor_info.get("resource_type")
+        self._event_time = self._sensor_info.get("event_time")
+        self._device = self._sensor_specific_info.get("device")
+        self._drive = self._sensor_specific_info.get("drives")
 
         self._json = {"title" : self.TITLE,
                       "description" : self.DESCRIPTION,
@@ -63,10 +79,22 @@ class RAIDdataMsg(BaseSensorMsg):
                                 "msg_version" : self.MESSAGE_VERSION,
                                 },
                           "sensor_response_type": {
-                                self.ACTUATOR_MSG_TYPE: {
-                                    "hostId" : self._host_id,
-                                    "device" : self._device,
-                                    "drives" : self._drives
+                                    "host_id" : self._host_id,
+                                    "alert_id": self._alert_id,
+                                    "alert_type": self._alert_type,
+                                    "severity": self._severity,
+                                    "info": {
+                                            "site_id": self._site_id,
+                                            "rack_id": self._rack_id,
+                                            "node_id": self._node_id,
+                                            "cluster_id": self._cluster_id,
+                                            "resource_id": self._resource_id,
+                                            "resource_type": self._resource_type,
+                                            "event_time": self._event_time,
+                                        },
+                                    "specific_info": {
+                                            "device": self._device,
+                                            "drives": self._drive
                                     }
                                 }
                           }

@@ -852,43 +852,104 @@
 									"type": "string",
 									"required": true
 								},
-								"device": {
-									"description": "md device",
-									"type": "string",
-									"required": true
-								},
-								"drives": {
-									"description": "Constituent drives",
-									"type": "array",
-									"minItems": 0,
-									"items": {
-										"type": "object",
-										"properties": {
-											"status": {
-												"description": "Drive status (U, _)",
-												"type": "string",
-												"required": true
-											},
-											"identity": {
-												"type": "object",
-												"properties": {
-													"path": {
-														"description": "Drive path (e.g. /dev/disk)",
-														"type": "string",
-														"required": true
-													},
-													"serialNumber": {
-														"description": "Drive serial number",
-														"type": "string",
-														"required": true
-													}
-												}
-											}
-										}
-									},
-									"required": true
-								}
-							}
+                                "alert_id": {
+                                    "description": "Id which will uniquely identify this alert",
+                                    "type": "string",
+                                    "required": true
+                                        },
+                                "alert_type": {
+                                    "description": "RAID sensor alert cause",
+                                    "type": "string",
+                                    "required": true
+                                        },
+                                "severity": {
+                                    "description": "Severity of an alert. Eg: Critical, Warning etc",
+                                    "type": "string",
+                                    "required": true
+                                        },
+                                "info": {
+                                    "type": "object",
+                                    "required": true,
+                                    "properties": {
+                                        "site_id": {
+                                            "description": "Site unique ID",
+                                            "type": "integer",
+                                            "required": true
+                                                },
+                                        "rack_id": {
+                                            "description": "Unique Rack id in a site",
+                                            "type": "integer",
+                                            "required": true
+                                                },
+                                        "node_id": {
+                                            "description": "Unique Node id in a rack",
+                                            "type": "integer",
+                                            "required": true
+                                                },
+                                        "cluster_id": {
+                                            "description": "Cluster identification to locate sensor",
+                                            "type": "integer",
+                                            "required": true
+                                                },
+                                        "resource_type": {
+                                            "description": "Type Of Resource, eg node:sensor:raid",
+                                            "type": "string",
+                                            "required": true
+                                                },
+                                        "event_time": {
+                                            "description": "Time when event took place",
+                                            "type": "string",
+                                            "required": true
+                                                },
+                                        "resource_id": {
+                                            "description": "ID which uniquely identifies the resource/instance",
+                                            "type": "string",
+                                            "required": true
+                                                }
+                                            }
+                                        },
+                                "specific_info": {
+                                    "type": "object",
+                                    "required": false,
+                                    "properties": {
+								        "device": {
+									        "description": "md device",
+									        "type": "string",
+									        "required": true
+								            },
+								        "drives": {
+									        "description": "Constituent drives",
+									        "type": "array",
+									        "minItems": 0,
+									        "items": {
+										        "type": "object",
+										        "properties": {
+											        "status": {
+												        "description": "Drive status (U, _)",
+												        "type": "string",
+												        "required": true
+											            },
+											        "identity": {
+												        "type": "object",
+												        "properties": {
+													        "path": {
+														        "description": "Drive path (e.g. /dev/disk)",
+														        "type": "string",
+														        "required": true
+													            },
+													        "serialNumber": {
+														        "description": "Drive serial number",
+														        "type": "string",
+														        "required": true
+													            }
+												            }
+											            }
+										            }
+									            }
+								            }
+                                        }
+							    }
+                            }
 						},
 
 						"snmp_trap": {
