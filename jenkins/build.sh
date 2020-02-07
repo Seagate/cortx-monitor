@@ -97,6 +97,9 @@ export PYTHONPATH=$TMPDIR/sspl/:$TMPDIR/sspl_test:$PYTHONPATH
 # Check python package
 req_file=$BASE_DIR/low-level/requirements.txt
 echo "Installing python packages..."
+python3 -m pip install --user -r $req_file  > /dev/null || {
+    echo "Unable to install package from $req_file"; exit 1;
+};
 
 if [ "$TEST" == true ]
 then
@@ -121,9 +124,6 @@ then
     python3 -m PyInstaller --clean -y --distpath ${DIST}/sspl_test --key ${KEY} ${PYINSTALLER_FILE}
 fi
 
-python3 -m pip install --user -r $req_file  > /dev/null || {
-    echo "Unable to install package from $req_file"; exit 1;
-};
 # Create spec for pyinstaller
 PYINSTALLER_FILE=$TMPDIR/${PRODUCT}_sspl.spec
 cp $BASE_DIR/jenkins/pyinstaller/sspl.spec ${PYINSTALLER_FILE}
