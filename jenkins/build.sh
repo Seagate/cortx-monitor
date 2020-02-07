@@ -6,6 +6,8 @@ BUILD_START_TIME=$(date +%s)
 BASE_DIR=$(realpath $(dirname $0)/..)
 
 PROG_NAME=$(basename $0)
+# keeping the rpmbuild path as it is to make the build green.
+RPM_BUILD_PATH=${DIST:-$HOME/rpmbuild}
 DIST=$(realpath $BASE_DIR/dist)
 
 usage() {
@@ -147,19 +149,17 @@ printf "%02d:%02d:%02d\n" $(( CORE_DIFF / 3600 )) $(( ( CORE_DIFF / 60 ) % 60 ))
 # Remove existing directory tree and create fresh one.
 TAR_START_TIME=$(date +%s)
 cd $BASE_DIR
-rm -rf ${DIST}/rpmbuild
-mkdir -p ${DIST}/rpmbuild/SOURCES
+rm -rf ${RPM_BUILD_PATH}
+mkdir -p ${RPM_BUILD_PATH}/SOURCES
 
 # Create tar for sspl
 echo "Creating tar for sspl build"
-
 if [ "$TEST" == true ]
 then
-    tar -czvf ${DIST}/rpmbuild/SOURCES/sspl-test-${VERSION}.tgz -C ${DIST} sspl_test
+    tar -czvf ${RPM_BUILD_PATH}/SOURCES/sspl-test-${VERSION}.tgz -C ${DIST} sspl_test
 fi
-
-tar -czvf ${DIST}/rpmbuild/SOURCES/sspl-${VERSION}.tgz -C ${DIST} sspl
-tar -czvf ${DIST}/rpmbuild/SOURCES/systemd-python36-${VERSION}.tgz -C ${DIST} sspl
+tar -czvf ${RPM_BUILD_PATH}/SOURCES/sspl-${VERSION}.tgz -C ${DIST} sspl
+tar -czvf ${RPM_BUILD_PATH}/SOURCES/systemd-python36-${VERSION}.tgz -C ${DIST} sspl
 
 TAR_END_TIME=$(date +%s)
 echo "Generated tar for sspl build"
@@ -167,7 +167,7 @@ echo "Generated tar for sspl build"
 ################### RPM builds for SSPL ##############################
 echo "Generating rpm's for sspl build"
 RPM_BUILD_START_TIME=$(date +%s)
-TOPDIR=$(realpath ${DIST}/rpmbuild)
+TOPDIR=$(realpath $RPM_BUILD_PATH)
 echo $TOPDIR
 
 rpmbuild --define "version $VERSION" --define "git_rev $GIT_VER" --define "_topdir $TOPDIR" -bb $TMPDIR/sspl-ll.spec
@@ -186,4 +186,4 @@ BUILD_END_TIME=$(date +%s)
 \rm -rf $DIST/sspl
 \rm -rf $DIST/sspl_test
 echo -e "\nGenerated RPMs..."
-find $DIST -name "*.rpm"
+find $RPM_BUILD_PATH -name "*.rpm"
