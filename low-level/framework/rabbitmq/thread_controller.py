@@ -280,7 +280,7 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
         logger.info("ThreadController, response: %s" % str(msgString))
         if self._product in enabled_products:
             self._write_internal_msgQ(RabbitMQegressProcessor.name(), msgString)
-        elif product in cs_legacy_products:
+        elif self._product in cs_legacy_products:
             self._write_internal_msgQ(PlaneCntrlRMQegressProcessor.name(), msgString)
 
     def _restart_module(self, module_name):
@@ -430,7 +430,7 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
         """Used by the shutdown_handler to allow queued egress msgs to complete"""
         if self._product in enabled_products:
             return self._sspl_modules[PlaneCntrlRMQegressProcessor.name()].is_running()
-        elif product in cs_legacy_products:
+        elif self._product in cs_legacy_products:
             return self._sspl_modules[RabbitMQegressProcessor.name()].is_running()
 
     def _get_degraded_state_modules_list(self):
@@ -445,4 +445,4 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
                                                           self.DEGRADED_STATE_MODULES)
         except Exception as e:
             logger.warn("ThreadController: Configuration not found, degraded_state_modules")
-            modules_to_resume = []
+        return modules_to_resume

@@ -44,10 +44,7 @@ class BaseActuatorMsg(BaseMsg):
         #fileName = os.path.join(actuators.__path__[0],
         #                        self.JSON_ACTUATOR_SCHEMA)
         with open(fileName, 'r') as f:
-            _schema = f.read()
-
-        # Remove tabs and newlines
-        self._schema = json.loads(' '.join(_schema.split()))
+            self._schema = json.load(f)
 
         # Validate the schema
         Draft3Validator.check_schema(self._schema)

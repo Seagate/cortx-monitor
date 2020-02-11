@@ -18,17 +18,13 @@
 import time
 import abc
 import json
-import six
 
 from sched import scheduler
 from .debug import Debug
 
-@six.add_metaclass(abc.ABCMeta)
-class ModuleThread(object):
-    """Base Class for all Module Threads"""
 
-    def __init__(self):
-        super(ModuleThread, self).__init__()
+class ModuleThread(metaclass=abc.ABCMeta):
+    """Base Class for all Module Threads"""
 
     @abc.abstractmethod
     def initialize(self):

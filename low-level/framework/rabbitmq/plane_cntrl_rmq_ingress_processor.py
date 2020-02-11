@@ -96,15 +96,12 @@ class PlaneCntrlRMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
         @return string                Trimmed and validated schema
         """
         with open(schema_file, 'r') as f:
-            schema = f.read()
-
-        # Remove tabs and newlines
-        schema_trimmed = json.loads(' '.join(schema.split()))
+            schema = json.load(f)
 
         # Validate the schema to conform to Draft 3 specification
-        Draft3Validator.check_schema(schema_trimmed)
+        Draft3Validator.check_schema(schema)
 
-        return schema_trimmed
+        return schema
 
     def initialize(self, conf_reader, msgQlist, products):
         """initialize configuration reader and internal msg queues"""
@@ -348,7 +345,9 @@ class PlaneCntrlRMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
         """Clean up scheduler queue and gracefully shutdown thread"""
         super(PlaneCntrlRMQingressProcessor, self).shutdown()
         try:
-            self._connection.close()
-            self._channel.stop_consuming()
+            if self._connection is not None:
+                self._channel.stop_consuming()
+                self._channel.close()
+                self._connection.close()
         except pika.exceptions.ConnectionClosed:
             logger.info("PlaneCntrlRMQingressProcessor, shutdown, RabbitMQ ConnectionClosed")

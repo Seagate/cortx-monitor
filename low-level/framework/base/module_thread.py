@@ -25,11 +25,8 @@ from framework.utils.service_logging import logger
 from .debug import Debug
 
 
-class ModuleThread(object, metaclass=abc.ABCMeta):
+class ModuleThread(metaclass=abc.ABCMeta):
     """Base Class for all Module Threads"""
-
-    def __init__(self):
-        super(ModuleThread, self).__init__()
 
     @abc.abstractmethod
     def initialize(self):

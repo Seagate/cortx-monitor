@@ -22,7 +22,6 @@ import inspect
 import traceback
 import json
 import time
-import logging
 import sys
 import os
 import psutil

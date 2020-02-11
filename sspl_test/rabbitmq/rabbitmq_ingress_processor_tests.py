@@ -30,6 +30,7 @@ from sspl_test.framework.base.sspl_constants import RESOURCE_PATH
 import ctypes
 SSPL_SEC = ctypes.cdll.LoadLibrary('libsspl_sec.so.0')
 
+
 class RabbitMQingressProcessorTests(ScheduledModuleThread, InternalMsgQ):
     """Handles incoming messages via rabbitMQ for automated tests"""
 
@@ -67,14 +68,7 @@ class RabbitMQingressProcessorTests(ScheduledModuleThread, InternalMsgQ):
         fileName = os.path.join(RESOURCE_PATH + '/actuators',
                                 self.JSON_ACTUATOR_SCHEMA)
 
-        with open(fileName, 'r') as f:
-            _schema = f.read()
-
-        # Remove tabs and newlines
-        self._actuator_schema = json.loads(' '.join(_schema.split()))
-
-        # Validate the schema
-        Draft3Validator.check_schema(self._actuator_schema)
+        self._actuator_schema = self._load_schema(fileName)
 
         # Read in the sensor schema for validating messages
         dir = os.path.dirname(__file__)
@@ -84,15 +78,21 @@ class RabbitMQingressProcessorTests(ScheduledModuleThread, InternalMsgQ):
         fileName = os.path.join(RESOURCE_PATH + '/sensors',
                                 self.JSON_SENSOR_SCHEMA)
 
-        with open(fileName, 'r') as f:
-            _schema = f.read()
+        self._sensor_schema = self._load_schema(fileName)
 
-        # Remove tabs and newlines
-        self._sensor_schema = json.loads(' '.join(_schema.split()))
+    def _load_schema(self, schema_file):
+        """Loads a schema from a file and validates
 
-        # Validate the schema
-        Draft3Validator.check_schema(self._sensor_schema)
+        @param string schema_file     location of schema on the file system
+        @return string                Trimmed and validated schema
+        """
+        with open(schema_file, 'r') as f:
+            schema = json.load(f)
 
+        # Validate the schema to conform to Draft 3 specification
+        Draft3Validator.check_schema(schema)
+
+        return schema
 
     def initialize(self, conf_reader, msgQlist, product):
         """initialize configuration reader and internal msg queues"""
@@ -253,10 +253,8 @@ class RabbitMQingressProcessorTests(ScheduledModuleThread, InternalMsgQ):
         time.sleep(4)
         try:
             if self._connection is not None:
-                try:
-                    self._connection.close()
-                    self._channel.stop_consuming()
-                except Exception as err:
-                    print("Connection is Broken")
+                self._channel.stop_consuming()
+                self._channel.close()
+                self._connection.close()
         except pika.exceptions.ConnectionClosed:
             logger.info("RabbitMQingressProcessorTests, shutdown, RabbitMQ ConnectionClosed")

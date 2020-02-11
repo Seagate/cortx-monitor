@@ -639,12 +639,14 @@ if __name__ == "__main__":
         if systemd_support:
             pidfile = "/var/run/sspl_ll/sspl_ll.pid"
             if os.path.isfile(pidfile):
-                pid = file(pidfile).read()
+                with open(pidfile) as fileObj:
+                    pid = fileObj.read()
                 if len(pid) and os.path.exists("/proc/%s" % pid):
                     print("Another instance of SSPL with pid %s is active. exiting..." % pid)
-                    sys.exit(s.EX_OK)
+                    sys.exit(os.EX_OK)
 
-            open(pidfile, "w").write(str(os.getpid()))
+            with open(pidfile, "w") as fileObj:
+                fileObj.write(str(os.getpid()))
 
         # Start sspl-ll as a main process running multiple threads
         main(conf_reader, systemd_support)
