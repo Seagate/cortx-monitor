@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-MOCK_SERVER_PORT=5100
+MOCK_SERVER_PORT=28200
 
 [[ $EUID -ne 0 ]] && sudo=sudo
 script_dir=$(dirname $0)

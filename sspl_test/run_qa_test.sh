@@ -1,6 +1,6 @@
 #!/bin/bash
 
-MOCK_SERVER_PORT=5100
+MOCK_SERVER_PORT=28200
 RMQ_SELF_STARTED=0
 
 [[ $EUID -ne 0 ]] && sudo=sudo
