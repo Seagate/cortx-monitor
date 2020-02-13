@@ -73,7 +73,7 @@ class IEMSensor(ScheduledModuleThread, InternalMsgQ):
     PRIORITY = 1
     IEC_KEYWORD = "IEC"
 
-    IEC_MAPPING_DIR_PATH="/opt/seagate/sspl/low-level/files/iec_mapping"
+    IEC_MAPPING_DIR_PATH="/opt/seagate/eos/iem/iec_mapping"
 
     # Dependency list
     DEPENDENCIES = {

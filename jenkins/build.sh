@@ -58,7 +58,7 @@ TMPDIR="$DIST/tmp"
 [ -d "$TMPDIR" ] && {
     rm -rf ${TMPDIR}
 }
-mkdir -p $DIST/sspl/bin $DIST/sspl/conf $DIST/sspl/resources/actuators $DIST/sspl/resources/actuator_msgs $DIST/sspl/resources/sensors $TMPDIR
+mkdir -p $DIST/sspl/bin $DIST/sspl/conf $DIST/sspl/resources/actuators $DIST/sspl/resources/actuator_msgs $DIST/sspl/resources/sensors $DIST/sspl/resources/iem/iec_mapping $TMPDIR
 
 cp -R $BASE_DIR/low-level/snmp $DIST/sspl/conf
 cp -R $BASE_DIR/low-level/files/opt/seagate/sspl/bin/* $DIST/sspl/bin
@@ -73,6 +73,8 @@ cp -R $BASE_DIR/low-level/json_msgs/schemas/actuators/*.json $DIST/sspl/resource
 cp -R $BASE_DIR/low-level/json_msgs/schemas/sensors/*.json $DIST/sspl/resources/sensors
 cp -R $BASE_DIR/low-level/tests/manual/actuator_msgs/*.json $DIST/sspl/resources/actuator_msgs
 cp -R $BASE_DIR/low-level/tests/manual/actuator_msgs/*.conf $DIST/sspl/resources/actuator_msgs
+
+cp -R $BASE_DIR/low-level/files/iec_mapping/* $DIST/sspl/resources/iem/iec_mapping
 
 cp -R $BASE_DIR/libsspl_sec/ $DIST/sspl
 cp -R $BASE_DIR/systemd-python36/ $DIST/sspl

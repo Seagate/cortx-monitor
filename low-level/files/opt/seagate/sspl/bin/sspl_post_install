@@ -58,5 +58,9 @@ cp $SSPL_BASE_DIR/conf/sspl-ll.service.$PRODUCT /etc/systemd/system/sspl-ll.serv
 systemctl enable sspl-ll.service
 systemctl daemon-reload
 
+# Copy IEC mapping files
+mkdir -p $BASE_DIR/iem/iec_mapping
+cp -R $SSPL_BASE_DIR/resources/iem/iec_mapping/* $BASE_DIR/iem/iec_mapping
+
 # Configure rabbitmq
 $script_dir/rabbitmq_setup
