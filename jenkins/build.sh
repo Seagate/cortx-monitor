@@ -175,9 +175,9 @@ TAR_START_TIME=$(date +%s)
 echo "Creating tar for sspl build"
 if [ "$TEST" == true ]
 then
-    tar -czvf ${RPM_BUILD_PATH}/SOURCES/sspl-test-${VERSION}.tgz -C ${DIST} sspl_test
+    tar -czvf ${RPM_BUILD_PATH}/SOURCES/eos-sspl-test-${VERSION}.tgz -C ${DIST} sspl_test
 fi
-tar -czvf ${RPM_BUILD_PATH}/SOURCES/sspl-${VERSION}.tgz -C ${DIST} sspl
+tar -czvf ${RPM_BUILD_PATH}/SOURCES/eos-sspl-${VERSION}.tgz -C ${DIST} sspl
 
 TAR_END_TIME=$(date +%s)
 echo "Generated tar for sspl build"

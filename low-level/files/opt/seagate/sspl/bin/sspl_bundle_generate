@@ -6,7 +6,7 @@ import time
 import sys
 
 # Add the top level directories
-sys.path.insert(0, '/opt/seagate/sspl/low-level')
+sys.path.insert(0, '/opt/seagate/eos/sspl/low-level')
 from config_reader import ConfigReader
 
 SYS_INFORMATION = "SYSTEM_INFORMATION"
@@ -14,8 +14,8 @@ IEM_SENSOR = "IEMSENSOR"
 
 localTempPath = "/tmp/support_bundle/"
 sspl_conf_dir = "/etc/sspl.conf"
-sspl_log_default = "/var/log/sspl"
-iem_log_default = "/var/log/iem"
+sspl_log_default = "/var/log/eos/sspl"
+iem_log_default = "/var/log/eos/iem"
 onGoingRequestPath = "/tmp/sspl-sb-req.txt"
 
 def make_sspl_log_tarfile(parser, tmpFile):

@@ -49,8 +49,8 @@ class IEMSensor(ScheduledModuleThread, InternalMsgQ):
     NODE_ID_KEY = "node_id"
 
     # Default values for config  settings
-    DEFAULT_LOG_FILE_PATH = "/var/log/iem/iem_messages"
-    DEFAULT_TIMESTAMP_FILE_PATH = "/var/sspl/data/iem/last_processed_msg_time"
+    DEFAULT_LOG_FILE_PATH = "/var/log/eos/iem/iem_messages"
+    DEFAULT_TIMESTAMP_FILE_PATH = "/var/eos/sspl/data/iem/last_processed_msg_time"
     DEFAULT_SITE_ID = "001"
     DEFAULT_RACK_ID = "001"
     DEFAULT_NODE_ID = "001"

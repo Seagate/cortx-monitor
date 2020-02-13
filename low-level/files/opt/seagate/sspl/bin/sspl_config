@@ -15,12 +15,12 @@ script_dir=$(dirname $0)
 source $script_dir/constants.sh
 
 SCRIPT_NAME=$(basename $0)
-DIR_NAME="/opt/seagate/sspl"
+DIR_NAME="/opt/seagate/eos/sspl"
 RSYSLOG_CONF="/etc/rsyslog.d/0-iemfwd.conf"
 RSYSLOG_SSPL_CONF="/etc/rsyslog.d/1-ssplfwd.conf"
 LOGROTATE_CONF="/etc/logrotate.d/iem_messages"
 LOGROTATE_SSPL_CONF="/etc/logrotate.d/sspl_logs"
-SSPL_CONFIGURED="/var/sspl/sspl-configured"
+SSPL_CONFIGURED="/var/eos/sspl/sspl-configured"
 
 usage() {
     cat << EOF
@@ -114,7 +114,7 @@ config_sspl() {
     LOG_FILE_PATH=`echo ${datapath[1]}`
     if [ -z "$LOG_FILE_PATH" ]
     then
-        sed -i "s|File=.*|File=\/var/log/iem/iem_messages\"|g" $RSYSLOG_CONF
+        sed -i "s|File=.*|File=\/var/log/eos/iem/iem_messages\"|g" $RSYSLOG_CONF
     else
         sed -i "s|File=.*|File=\"${LOG_FILE_PATH}\"|g" $RSYSLOG_CONF
         sed -i "1 s|^.*$|${LOG_FILE_PATH}|g" $DIR_NAME/conf/etc/logrotate.d/iem_messages
@@ -125,7 +125,7 @@ config_sspl() {
     # This rsyslog restart will happen after successful updation of rsyslog
     # conf file and before sspl starts. If at all this will be removed from
     # here, there will be a chance that SSPL intial logs will not be present in
-    # "/var/log/sspl/sspl.log" file. So, initial logs needs to be collected from
+    # "/var/log/eos/sspl/sspl.log" file. So, initial logs needs to be collected from
     # "/var/log/messages"
     systemctl restart rsyslog
 

@@ -63,7 +63,7 @@ def init_rabbitMQ_msg_processors():
     """The main bootstrap for sspl automated tests"""
 
     # Retrieve configuration file for sspl-ll service
-    path_to_conf_file = "/opt/seagate/sspl/sspl_test/conf/sspl_tests.conf"
+    path_to_conf_file = "/opt/seagate/eos/sspl/sspl_test/conf/sspl_tests.conf"
     if os.path.exists(path_to_conf_file):
         print("Using conf file : {}".format(path_to_conf_file))
     else:

@@ -26,12 +26,12 @@ flask_help()
 pre_requisites()
 {
     # Backing up original persistence data
-    $sudo rm -rf /var/sspl/orig-data
-    $sudo mkdir -p /var/sspl/orig-data
-    $sudo find /var/sspl -maxdepth 2 -type d -path '/var/sspl/data/*' -not -name 'iem'  -exec bash -c 'mv -f ${0} ${0/data/orig-data}/' {} \;
-    $sudo mkdir -p /var/sspl/orig-data/iem
-    if [ -f /var/sspl/data/iem/last_processed_msg_time ]; then
-        $sudo mv /var/sspl/data/iem/last_processed_msg_time /var/sspl/orig-data/iem/last_processed_msg_time
+    $sudo rm -rf /var/eos/sspl/orig-data
+    $sudo mkdir -p /var/eos/sspl/orig-data
+    $sudo find /var/eos/sspl -maxdepth 2 -type d -path '/var/eos/sspl/data/*' -not -name 'iem'  -exec bash -c 'mv -f ${0} ${0/data/orig-data}/' {} \;
+    $sudo mkdir -p /var/eos/sspl/orig-data/iem
+    if [ -f /var/eos/sspl/data/iem/last_processed_msg_time ]; then
+        $sudo mv /var/eos/sspl/data/iem/last_processed_msg_time /var/eos/sspl/orig-data/iem/last_processed_msg_time
     fi
 
     # Start rabbitmq if not already running
@@ -43,7 +43,7 @@ pre_requisites()
     fi
 
     # clearing consul keys.
-    consul kv delete -recurse var/sspl/data
+    consul kv delete -recurse var/eos/sspl/data
 }
 
 deleteMockedInterface()
@@ -140,7 +140,7 @@ echo "Initialization completed. Starting tests"
 # Switch SSPL to active state to resume all the suspended plugins. If SSPL is
 # not switched to active state then plugins will not respond and tests will
 # fail. Sending SIGUP to SSPL makes SSPL to read state file and switch state.
-echo "state=active" > /var/sspl/data/state.txt
+echo "state=active" > /var/eos/sspl/data/state.txt
 PID=`ps -aux| grep "sspl_ll_d -c /etc/sspl.conf" | grep -v "grep" | awk '{print $2}'`
 kill -s SIGHUP $PID
 
@@ -149,12 +149,12 @@ execute_test $*
 retcode=$?
 
 # Restoring original cache data
-$sudo find /var/sspl -maxdepth 2 -type d -path '/var/sspl/data/*' -not -name 'iem'  -exec bash -c 'rm -rf ${0}' {} \;
-$sudo find /var/sspl -maxdepth 2 -type d -path '/var/sspl/orig-data/*' -not -name 'iem'  -exec bash -c 'mv -f ${0} ${0/orig-data/data}/' {} \;
-if [ -f /var/sspl/orig-data/iem/last_processed_msg_time ]; then
-    $sudo mv /var/sspl/orig-data/iem/last_processed_msg_time /var/sspl/data/iem/last_processed_msg_time
+$sudo find /var/eos/sspl -maxdepth 2 -type d -path '/var/eos/sspl/data/*' -not -name 'iem'  -exec bash -c 'rm -rf ${0}' {} \;
+$sudo find /var/eos/sspl -maxdepth 2 -type d -path '/var/eos/sspl/orig-data/*' -not -name 'iem'  -exec bash -c 'mv -f ${0} ${0/orig-data/data}/' {} \;
+if [ -f /var/eos/sspl/orig-data/iem/last_processed_msg_time ]; then
+    $sudo mv /var/eos/sspl/orig-data/iem/last_processed_msg_time /var/eos/sspl/data/iem/last_processed_msg_time
 fi
-$sudo rm -rf /var/sspl/orig-data
+$sudo rm -rf /var/eos/sspl/orig-data
 
 $sudo mv /etc/sspl.conf.back /etc/sspl.conf
 echo "Tests completed, restored configs and services .."

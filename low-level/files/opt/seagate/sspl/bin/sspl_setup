@@ -9,7 +9,7 @@ set -e -u -o pipefail
 
 SCRIPT_NAME=$(basename $0)
 SCRIPT_DIR=$(dirname $0)
-SSPL_CONFIGURED="/var/sspl/sspl-configured"
+SSPL_CONFIGURED="/var/eos/sspl/sspl-configured"
 
 usage() {
     cat << EOF
@@ -64,7 +64,7 @@ case $cmd in
 
     check )
         [ -f $SSPL_CONFIGURED ]  && exit 0
-        logger -i -p local3.err "SSPL is not configured. Run provisioner scripts in /opt/seagate/sspl/bin."
+        logger -i -p local3.err "SSPL is not configured. Run provisioner scripts in /opt/seagate/eos/sspl/bin."
         exit 1
         ;;
 

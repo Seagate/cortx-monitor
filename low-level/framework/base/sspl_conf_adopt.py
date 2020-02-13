@@ -15,13 +15,16 @@ class ConfDiff(object):
         conf_file1_section = self.conf_file1_dict._sections
         conf_file2_section = self.conf_file2_dict._sections
         for item in set(conf_file1_section):
-            diff = {k: conf_file1_section[item][k] for k in set(conf_file1_section[item]) - set(conf_file2_section[item])}
-            if diff:
-                conf_file2_section[item].update(diff)
+            if conf_file2_section.get(item):
+                diff = {k: conf_file1_section[item][k] for k in set(conf_file1_section[item]) - set(conf_file2_section[item])}
+                if diff:
+                    conf_file2_section[item].update(diff)
+            else:
+                conf_file2_section[item] = conf_file1_section[item]
 
 if __name__ == '__main__':
     print('comparing conf files.')
-    conf_diff = ConfDiff('/opt/seagate/sspl/conf/sspl.conf.EES', '/etc/sspl.conf')
+    conf_diff = ConfDiff('/opt/seagate/eos/sspl/conf/sspl.conf.EES', '/etc/sspl.conf')
     print('writing destination conf file to tmp dir.')
     conf_diff.update_sub_section_diff()
     with open('/tmp/sspl_tmp.conf', 'w') as configfile:

@@ -41,7 +41,7 @@ Location to store the resource state in
 Location to store the sspl mode. [ Active, Degraded ]
 </longdesc>
 <shortdesc lang="en">SSPL state file</shortdesc>
-<content type="string" default="/var/sspl/data/state.txt" />
+<content type="string" default="/var/eos/sspl/data/state.txt" />
 </parameter>
 </parameters>
 <actions>
@@ -121,10 +121,10 @@ stateful_demote() {
         return $OCF_FAILED_MASTER
     fi
     if [ -z $OCF_RESKEY_sspl_mode ]; then
-        OCF_RESKEY_sspl_mode="/var/sspl/data/state.txt"
+        OCF_RESKEY_sspl_mode="/var/eos/sspl/data/state.txt"
     fi
     [ -f $OCF_RESKEY_sspl_mode ] && {
-        echo "state=degrade" > /var/sspl/data/state.txt
+        echo "state=degrade" > /var/eos/sspl/data/state.txt
         sspl_pid=`systemctl status sspl-ll | grep PID | awk '{print $3}'`
         usr/bin/kill -s SIGHUP $sspl_pid
     }
@@ -139,10 +139,10 @@ stateful_promote() {
     set_master_score "${master_score}"
 
     if [ -z $OCF_RESKEY_sspl_mode ]; then
-        OCF_RESKEY_sspl_mode="/var/sspl/data/state.txt"
+        OCF_RESKEY_sspl_mode="/var/eos/sspl/data/state.txt"
     fi
     [ -f $OCF_RESKEY_sspl_mode ] && {
-        echo "state=active" > /var/sspl/data/state.txt
+        echo "state=active" > /var/eos/sspl/data/state.txt
         sspl_pid=`systemctl status sspl-ll | grep PID | awk '{print $3}'`
         /usr/bin/kill -s SIGHUP $sspl_pid
     }

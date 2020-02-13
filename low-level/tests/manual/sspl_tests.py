@@ -38,7 +38,7 @@ from os.path import isfile, join
 from dbus import SystemBus, Interface, exceptions as debus_exceptions
 
 import sys
-sys.path.insert(0, '/opt/seagate/sspl/low-level')
+sys.path.insert(0, '/opt/seagate/eos/sspl/low-level')
 from framework.utils.config_reader import ConfigReader
 
 import ctypes
@@ -70,7 +70,7 @@ class SSPLtest():
 
     #This is a hardcoded file location used for all actuator_msgs and the config file
     #This is needed to be hardcoded to run through MCollective from cluster_check
-    actuator_msgs_folder = "/opt/seagate/sspl/low-level/tests/manual/actuator_msgs/"
+    actuator_msgs_folder = "/opt/seagate/eos/sspl/low-level/tests/manual/actuator_msgs/"
 
     def __init__(self, logger = None):
         """Sets the system in the right state for the tests

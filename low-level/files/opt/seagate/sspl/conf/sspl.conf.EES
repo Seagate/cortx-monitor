@@ -16,14 +16,14 @@ operating_system=centos7
 product=EES
 cli_type=CS-A
 setup=eos
-data_path=/var/sspl/data/
+data_path=/var/eos/sspl/data/
 cluster_id=001
 site_id=001
 rack_id=001
 node_id=001
 # Possible log levels are CRITICAL, ERROR, WARNING, INFO, DEBUG and NOTSET
 log_level=INFO
-sspl_log_file_path=/var/log/sspl/sspl.log
+sspl_log_file_path=/var/log/eos/sspl/sspl.log
 
 [RABBITMQINGRESSPROCESSOR]
 virtual_host=SSPL
@@ -155,8 +155,8 @@ threaded=true
 
 [IEMSENSOR]
 threaded=true
-log_file_path=/var/log/iem/iem_messages
-timestamp_file_path=/var/sspl/data/iem/last_processed_msg_time
+log_file_path=/var/log/eos/iem/iem_messages
+timestamp_file_path=/var/eos/sspl/data/iem/last_processed_msg_time
 
 [SYSTEMDWATCHDOG]
 threaded=true

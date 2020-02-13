@@ -4,7 +4,7 @@ from enum import Enum
 enabled_products = ["EES", "CS-A"]
 cs_products = ["CS-A"]
 cs_legacy_products = ["CS-L", "CS-G"]
-RESOURCE_PATH = "/opt/seagate/sspl/resources/"
+RESOURCE_PATH = "/opt/seagate/eos/sspl/resources/"
 
 class AlertTypes(Enum):
     GET = "get"

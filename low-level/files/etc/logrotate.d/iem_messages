@@ -1,4 +1,4 @@
-/var/log/iem/iem_messages
+/var/log/eos/iem/iem_messages
 {
         size 10k
         rotate 10

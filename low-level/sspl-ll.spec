@@ -4,7 +4,7 @@
 # build number
 %define build_num  %( test -n "$build_number" && echo "$build_number" || echo 1 )
 
-Name:       sspl
+Name:       eos-sspl
 Version:    %{version}
 Provides:   %{name} = %{version}
 Obsoletes:  %{name} <= %{version}
@@ -42,8 +42,8 @@ Installs SSPL
 
 %install
 # Copy config file and service startup to correct locations
-mkdir -p ${RPM_BUILD_ROOT}/opt/seagate/sspl
-cp -rp . ${RPM_BUILD_ROOT}/opt/seagate/sspl
+mkdir -p ${RPM_BUILD_ROOT}/opt/seagate/eos/sspl
+cp -rp . ${RPM_BUILD_ROOT}/opt/seagate/eos/sspl
 
 %pre
 # Add the sspl-ll user during first install if it doesnt exist
@@ -58,17 +58,17 @@ id -u sspl-ll &>/dev/null || {
 # take backup of cache folder if exists
 mkdir -p /opt/seagate/backup/%{version}
 [ -f /etc/sspl.conf ] && cp /etc/sspl.conf /opt/seagate/backup/%{version}/sspl.conf
-[ -d /var/sspl ] && cp -R /var/sspl /opt/seagate/backup/%{version}/
+[ -d /var/eos/sspl ] && cp -R /var/eos/sspl /opt/seagate/backup/%{version}/
 
 # Create ras persistent cache folder
 # TODO: In production this directory will be created by provisioner
 # Remove this code when provisioner part is ready.
-mkdir -p /var/sspl/data/
-chown -R sspl-ll /var/sspl/
+mkdir -p /var/eos/sspl/data/
+chown -R sspl-ll /var/eos/sspl/
 
 %post
-mkdir -p /var/sspl/bundle /var/log/sspl /etc/sspl
-SSPL_DIR=/opt/seagate/sspl
+mkdir -p /var/eos/sspl/bundle /var/log/eos/sspl /etc/sspl
+SSPL_DIR=/opt/seagate/eos/sspl
 CFG_DIR=$SSPL_DIR/conf
 
 [ -d "${SSPL_DIR}/lib" ] && {
@@ -83,24 +83,24 @@ CFG_DIR=$SSPL_DIR/conf
 }
 
 # run conf_diff.py script
-[ -f /opt/seagate/sspl/bin/sspl_conf_adopt.py ] && python3 /opt/seagate/sspl/bin/sspl_conf_adopt.py
+[ -f /opt/seagate/eos/sspl/bin/sspl_conf_adopt.py ] && python3 /opt/seagate/eos/sspl/bin/sspl_conf_adopt.py
 
 # restore /tmp/sspl_tmp.conf (its updated from previuos version of /etc/sspl.conf & new keys added in sspl.conf.EES)
 [ -f /tmp/sspl_tmp.conf ] && cp /tmp/sspl_tmp.conf /etc/sspl.conf
 
 # restore of data & iem folder
-[ -d /opt/seagate/backup/%{version}/sspl ] && cp -R /opt/seagate/backup/%{version}/sspl/* /var/sspl/
+[ -d /opt/seagate/backup/%{version}/sspl ] && cp -R /opt/seagate/backup/%{version}/sspl/* /var/eos/sspl/
 
 # Copy rsyslog configuration
 # [ -f /etc/rsyslog.d/0-iemfwd.conf ] ||
-#    cp /opt/seagate/sspl/low-level/files/etc/rsyslog.d/0-iemfwd.conf /etc/rsyslog.d/0-iemfwd.conf
+#    cp /opt/seagate/eos/sspl/low-level/files/etc/rsyslog.d/0-iemfwd.conf /etc/rsyslog.d/0-iemfwd.conf
 
 # [ -f /etc/rsyslog.d/1-ssplfwd.conf ] ||
-#    cp /opt/seagate/sspl/low-level/files/etc/rsyslog.d/1-ssplfwd.conf /etc/rsyslog.d/1-ssplfwd.conf
+#    cp /opt/seagate/eos/sspl/low-level/files/etc/rsyslog.d/1-ssplfwd.conf /etc/rsyslog.d/1-ssplfwd.conf
 
 # Copy init script
-[ -f /opt/seagate/sspl/sspl_init ] ||
-    ln -s $SSPL_DIR/bin/sspl_provisioner_init /opt/seagate/sspl/sspl_init
+[ -f /opt/seagate/eos/sspl/sspl_init ] ||
+    ln -s $SSPL_DIR/bin/sspl_provisioner_init /opt/seagate/eos/sspl/sspl_init
 
 # In case of upgrade start sspl-ll after upgrade
 if [ "$1" == "2" ]; then
@@ -110,23 +110,23 @@ fi
 
 if [ "$1" = "1" ]; then
     echo "Installation complete. Follow the instructions."
-    echo "Run pip3.6 install -r /opt/seagate/sspl/conf/requirements.txt"
-    echo "Run /opt/seagate/sspl/sspl_init to configure SSPL"
+    echo "Run pip3.6 install -r /opt/seagate/eos/sspl/conf/requirements.txt"
+    echo "Run /opt/seagate/eos/sspl/sspl_init to configure SSPL"
 fi
 
 %preun
 # Remove configuration in case of uninstall
-[[ $1 = 0 ]] &&  rm -f /var/sspl/sspl-configured
+[[ $1 = 0 ]] &&  rm -f /var/eos/sspl/sspl-configured
 systemctl stop sspl-ll.service 2> /dev/null
 
 %postun
 rm -f /etc/polkit-1/rules.d/sspl-ll_dbus_policy.rules
 rm -f /etc/dbus-1/system.d/sspl-ll_dbus_policy.conf
-[ "$1" == "0" ] && rm -f /opt/seagate/sspl/sspl_init
+[ "$1" == "0" ] && rm -f /opt/seagate/eos/sspl/sspl_init
 
 %files
 %defattr(-,sspl-ll,root,-)
-/opt/seagate/sspl/*
+/opt/seagate/eos/sspl/*
 
 %changelog
 * Fri Aug 10 2018 Ujjwal Lanjewar <ujjwal.lanjewar@seagate.com>

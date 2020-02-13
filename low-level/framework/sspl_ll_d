@@ -82,7 +82,7 @@ SETUP           = 'setup'
 LOG_LEVEL       = 'log_level'
 
 # State file
-STATE_FILE = "/var/sspl/data/state.txt"
+STATE_FILE = "/var/eos/sspl/data/state.txt"
 STATES = ["active", "degrade"]
 DEFAULT_STATE = "degrade"
 

@@ -1,25 +1,24 @@
 sspl:
     post_install:
-         script: /opt/seagate/sspl/bin/sspl_setup
+         script: /opt/seagate/eos/sspl/bin/sspl_setup
          args:
             - post_install -p EES
     init:
-         script: /opt/seagate/sspl/bin/sspl_setup
+         script: /opt/seagate/eos/sspl/bin/sspl_setup
          args:
             - init -r eos
     config:
-         script: /opt/seagate/sspl/bin/sspl_setup
+         script: /opt/seagate/eos/sspl/bin/sspl_setup
          args:
             - config
     test:
-         script: /opt/seagate/sspl/bin/sspl_setup
+         script: /opt/seagate/eos/sspl/bin/sspl_setup
          args:
             - test self
     reset:
-         script: /opt/seagate/sspl/bin/sspl_setup
+         script: /opt/seagate/eos/sspl/bin/sspl_setup
          args:
             - reset hard -p EES
 
 support_bundle:
-    - /opt/seagate/sspl/bin/sspl_bundle_generate
-
+    - /opt/seagate/eos/sspl/bin/sspl_bundle_generate

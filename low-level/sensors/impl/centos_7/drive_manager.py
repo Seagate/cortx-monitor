@@ -223,7 +223,7 @@ class DriveManager(ScheduledModuleThread, InternalMsgQ):
            logger.info(f"DriveManager sensor, rechecking in {(int(self._start_delay))} secs")
 
            # Attempt to initialize gemhpi
-           command = "sudo /opt/seagate/sspl/low-level/framework/init_gemhpi"
+           command = "sudo /opt/seagate/eos/sspl/low-level/framework/init_gemhpi"
            process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE,
                                        stderr=subprocess.PIPE)
            response, error = process.communicate()

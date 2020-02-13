@@ -3,7 +3,7 @@
 # Stop the script if any command fails
 set -e -u -o pipefail
 
-TEST_DIR=/opt/seagate/sspl/sspl_test
+TEST_DIR=/opt/seagate/eos/sspl/sspl_test
 if rpm -qa | grep -q sspl-test ;
 then
     $TEST_DIR/run_tests.sh test $*

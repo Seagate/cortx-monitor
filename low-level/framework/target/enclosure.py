@@ -31,7 +31,7 @@ class StorageEnclosure(object):
 
     # SSPL Data path
     SYSINFO = "SYSTEM_INFORMATION"
-    DEFAULT_RAS_VOL = "/var/sspl/data/"
+    DEFAULT_RAS_VOL = "/var/eos/sspl/data/"
 
     # RAS FRU alert types
     FRU_MISSING = "missing"

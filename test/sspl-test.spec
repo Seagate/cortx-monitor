@@ -1,7 +1,7 @@
 # build number
 %define build_num  %( test -n "$build_number" && echo "$build_number" || echo 1 )
 
-Name:       sspl-test-lettuce-py2.7
+Name:       eos-sspl-test-lettuce-py2.7
 Version:    %{version}
 Release:    %{build_num}_git%{git_rev}%{?dist}
 Summary:    Installs sspl-test scripts
@@ -23,12 +23,12 @@ Installs SSPL sanity test scripts
 [ "${RPM_BUILD_ROOT}" != "/" ] && rm -rf ${RPM_BUILD_ROOT}
 
 %install
-mkdir -p ${RPM_BUILD_ROOT}/opt/seagate/sspl/test
-cp -rp . ${RPM_BUILD_ROOT}/opt/seagate/sspl/test
+mkdir -p ${RPM_BUILD_ROOT}/opt/seagate/eos/sspl/test
+cp -rp . ${RPM_BUILD_ROOT}/opt/seagate/eos/sspl/test
 
 %files
 %defattr(-,sspl-ll,root,-)
-/opt/seagate/sspl/test
+/opt/seagate/eos/sspl/test
 
 %changelog
 * Fri Mar 22 2019 Madhura Mande <madhura.mande@seagate.com>

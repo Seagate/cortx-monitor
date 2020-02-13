@@ -54,7 +54,7 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
     CONF_FILE = "/etc/sspl.conf"
     SYSINFO = "SYSTEM_INFORMATION"
     DATA_PATH_KEY = "data_path"
-    DATA_PATH_VALUE_DEFAULT = "/var/sspl/data"
+    DATA_PATH_VALUE_DEFAULT = "/var/eos/sspl/data"
 
     sel_event_info = ""
 
