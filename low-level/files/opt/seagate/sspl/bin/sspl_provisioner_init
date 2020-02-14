@@ -9,6 +9,21 @@ set -e -u -o pipefail
 
 SCRIPT_DIR=$(dirname $0)
 
+# Install consul if not available
+if ! [ -x "$(command -v consul)" ]; then
+    wget https://releases.hashicorp.com/consul/1.7.0/consul_1.7.0_linux_amd64.zip
+    if ! [ -x "$(command -v unzip)" ]; then
+        yum install -y unzip
+    fi
+    unzip consul_1.7.0_linux_amd64.zip
+    mv ./consul /usr/bin
+    rm consul_1.7.0_linux_amd64.zip
+fi
+
+# Start consul if not running
+CONSUL_PS=$(ps -aux | grep "consul" | grep -v "grep" || true)
+[ -z "$CONSUL_PS" ] && consul agent -dev &>/dev/null &
+
 $SCRIPT_DIR/bin/sspl_post_install -p EES
 $SCRIPT_DIR/bin/sspl_setup_init -r eos
 $SCRIPT_DIR/bin/sspl_config

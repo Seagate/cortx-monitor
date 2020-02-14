@@ -164,6 +164,6 @@ run_smart_on_start=False
 ipmi_client=ipmitool
 
 [DATASTORE]
-store_type=file
+store_type=consul
 consul_host=127.0.0.1
 consul_port=8500

@@ -128,6 +128,11 @@ config_sspl() {
     # "/var/log/sspl/sspl.log" file. So, initial logs needs to be collected from
     # "/var/log/messages"
     systemctl restart rsyslog
+
+    # If consul is not running, exit
+    CONSUL_PS=$(ps -aux | grep "consul" | grep -v "grep" || true)
+    [ -z "$CONSUL_PS" ] && echo "Consul is not running, exiting.." && exit 1
+
 }
 
 cmd="config"
