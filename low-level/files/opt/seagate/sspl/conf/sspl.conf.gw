@@ -17,6 +17,8 @@ setup=gw
 site_id=001
 rack_id=001
 node_id=001
+syslog_host=localhost
+syslog_port=514
 
 [RABBITMQINGRESSPROCESSOR]
 virtual_host=SSPL

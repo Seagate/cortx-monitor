@@ -17,19 +17,30 @@
 
 import logging.handlers
 import time
+import os
 
-logger_facility = "sspl-ll"
-logger = logging.getLogger(logger_facility)
+
+try:
+    from systemd import journal
+    use_journal = True
+except ImportError:
+    use_journal = False
+
+
+logger_facility = "sspl"
+_logger = logging.getLogger(logger_facility)
 
 MAX_SYSLOG_CONNECT_ATTEMPTS = 120
 RECONNECT_DELAY_INTERVAL_SECONDS = 1
+SYSLOG_IDENTIFIER = "sspl"
 
 LOG_CRITICAL = "CRITICAL"
-LOG_ERROR    = "ERROR"
-LOG_WARNING  = "WARNING"
-LOG_INFO     = "INFO"
-LOG_DEBUG    = "DEBUG"
-LOG_NOTSET   = "NOTSET"
+LOG_ERROR = "ERROR"
+LOG_WARNING = "WARNING"
+LOG_INFO = "INFO"
+LOG_DEBUG = "DEBUG"
+LOG_NOTSET = "NOTSET"
+
 
 # Dictionary to convert loglevel strings to loglevels
 LOGLEVEL_NAME_TO_LEVEL_DICT = {
@@ -42,7 +53,7 @@ LOGLEVEL_NAME_TO_LEVEL_DICT = {
 }
 
 
-def init_logging(dcs_service_name, log_level=LOG_INFO):
+def init_logging(dcs_service_name, log_level=LOG_INFO, syslog_host="localhost", syslog_port=514):
     """Initialize logging to log to syslog"""
 
     warning_message = None
@@ -51,12 +62,14 @@ def init_logging(dcs_service_name, log_level=LOG_INFO):
             "Invalid log_level '{0}' specified. Using "
             "default log_level '{1}' instead.".format(log_level, LOG_INFO))
         log_level = LOG_INFO
-    logger.setLevel(LOGLEVEL_NAME_TO_LEVEL_DICT[log_level])
+    _logger.setLevel(LOGLEVEL_NAME_TO_LEVEL_DICT[log_level])
     num_attempts = 1
+    handler = None
 
     while True:
         try:
-            handler = logging.handlers.SysLogHandler(address='/dev/log')
+            handler = logging.handlers.SysLogHandler(
+                address=(syslog_host, syslog_port))
             syslog_format = "%(name)s[%(process)d]: " \
                 "%(levelname)s %(message)s (%(filename)s:%(lineno)d)"
             formatter = logging.Formatter(syslog_format)
@@ -71,10 +84,41 @@ def init_logging(dcs_service_name, log_level=LOG_INFO):
             else:
                 print("Warning: Unable to connect to syslog for logging")
                 break
-
-    logger.addHandler(handler)
-    logger.info(
-        "Logging has been initialized for sspl '%s' service after %d attempts to level %s",
-        dcs_service_name, num_attempts, log_level)
+    _logger.addHandler(handler)
+    logger.info(f"Logging has been initialized for sspl {dcs_service_name}"
+                f"service after {num_attempts} attempts to level {log_level}")
     if warning_message is not None:
         logger.warning(warning_message)
+
+
+class Logger:
+    """
+    A wrapper class to wrap logging functionality.
+    """
+
+    def __init__(self, _logger):
+        self._logger = _logger
+
+    def info(self, *args, **kwargs):
+        self._logger.info(*args, **kwargs)
+
+    def debug(self, *args, **kwargs):
+        self._logger.debug(*args, **kwargs)
+
+    def warn(self, *args, **kwargs):
+        self._logger.warn(*args, **kwargs)
+
+    def warning(self, *args, **kwargs):
+        self._logger.warn(*args, **kwargs)
+
+    def exception(self, *args, **kwargs):
+        self._logger.exception(*args, **kwargs)
+
+    def error(self, *args, **kwargs):
+        self._logger.error(*args, **kwargs)
+
+    def critical(self, *args, **kwargs):
+        self._logger.critical(*args, **kwargs)
+
+
+logger = Logger(_logger)

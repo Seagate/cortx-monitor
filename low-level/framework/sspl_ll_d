@@ -80,6 +80,10 @@ OPER_SYSTEM     = 'operating_system'
 PRODUCT_NAME    = 'product'
 SETUP           = 'setup'
 LOG_LEVEL       = 'log_level'
+SYSLOG_HOST_KEY = "syslog_host"
+SYSLOG_PORT_KEY = "syslog_port"
+DEFAULT_SYSLOG_HOST = "localhost"
+DEFAULT_SYSLOG_PORT = 514
 
 # State file
 STATE_FILE = "/var/eos/sspl/data/state.txt"
@@ -625,7 +629,9 @@ if __name__ == "__main__":
     # Initialize logging
     try:
         logging_level = conf_reader._get_value_with_default(SYS_INFORMATION, LOG_LEVEL, "INFO")
-        init_logging("SSPL-LL", logging_level)
+        syslog_host = conf_reader._get_value_with_default(SYS_INFORMATION, SYSLOG_HOST_KEY, DEFAULT_SYSLOG_HOST)
+        syslog_port = int(conf_reader._get_value_with_default(SYS_INFORMATION, SYSLOG_PORT_KEY, DEFAULT_SYSLOG_PORT))
+        init_logging("SSPL-LL", logging_level, syslog_host, syslog_port)
 
     except Exception as err:
         # We don't have logger since it threw an exception, use generic 'print'
