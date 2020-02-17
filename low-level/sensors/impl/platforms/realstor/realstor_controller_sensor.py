@@ -80,6 +80,14 @@ class RealStorControllerSensor(ScheduledModuleThread, InternalMsgQ):
         # Holds Controllers with faults. Used for future reference.
         self._previously_faulty_controllers = {}
 
+        self.pollfreq_controllersensor = \
+            int(self.rssencl.conf_reader._get_value_with_default(\
+                self.rssencl.CONF_REALSTORCONTROLLERSENSOR,\
+                "polling_frequency_override", 0))
+
+        if self.pollfreq_controllersensor == 0:
+                self.pollfreq_controllersensor = self.rssencl.pollfreq
+
         # Flag to indicate suspension of module
         self._suspended = False
 
@@ -142,7 +150,8 @@ class RealStorControllerSensor(ScheduledModuleThread, InternalMsgQ):
         self._disable_debug_if_persist_false()
 
         # Fire every 10 seconds to see if We have a faulty Controller
-        self._scheduler.enter(10, self._priority, self.run, ())
+        self._scheduler.enter(self.pollfreq_controllersensor,
+                self._priority, self.run, ())
 
     def _get_controllers(self):
         """Receives list of Controllers from API.

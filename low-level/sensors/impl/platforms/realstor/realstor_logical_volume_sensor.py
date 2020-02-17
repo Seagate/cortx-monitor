@@ -100,6 +100,14 @@ class RealStorLogicalVolumeSensor(ScheduledModuleThread, InternalMsgQ):
         # Holds Logical Volumes with faults. Used for future reference.
         self._previously_faulty_disk_groups = {}
 
+        self.pollfreq_logical_volume_sensor = \
+            int(self.rssencl.conf_reader._get_value_with_default(\
+                self.rssencl.CONF_REALSTORLOGICALVOLUMESENSOR,\
+                "polling_frequency_override", 0))
+
+        if self.pollfreq_logical_volume_sensor == 0:
+                self.pollfreq_disksensor = self.rssencl.pollfreq
+
         # Flag to indicate suspension of module
         self._suspended = False
 
@@ -161,7 +169,8 @@ class RealStorLogicalVolumeSensor(ScheduledModuleThread, InternalMsgQ):
         self._disable_debug_if_persist_false()
 
         # Fire every 10 seconds to see if We have a faulty Logical Volume
-        self._scheduler.enter(10, self._priority, self.run, ())
+        self._scheduler.enter(self.pollfreq_logical_volume_sensor,
+                self._priority, self.run, ())
 
     def _get_disk_groups(self):
         """Receives list of Disk Groups from API.

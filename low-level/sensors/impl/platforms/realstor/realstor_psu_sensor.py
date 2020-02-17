@@ -79,6 +79,14 @@ class RealStorPSUSensor(ScheduledModuleThread, InternalMsgQ):
         # Holds PSUs with faults. Used for future reference.
         self._previously_faulty_psus = {}
 
+        self.pollfreq_psusensor = \
+            int(self.rssencl.conf_reader._get_value_with_default(\
+                self.rssencl.CONF_REALSTORPSUSENSOR,\
+                "polling_frequency_override", 0))
+
+        if self.pollfreq_psusensor == 0:
+                self.pollfreq_psusensor = self.rssencl.pollfreq
+
         # Flag to indicate suspension of module
         self._suspended = False
 
@@ -140,7 +148,8 @@ class RealStorPSUSensor(ScheduledModuleThread, InternalMsgQ):
         self._disable_debug_if_persist_false()
 
         # Fire every 10 seconds to see if We have a faulty PSU
-        self._scheduler.enter(10, self._priority, self.run, ())
+        self._scheduler.enter(self.pollfreq_psusensor,
+                self._priority, self.run, ())
 
     def _get_psus(self):
         """Receives list of PSUs from API.

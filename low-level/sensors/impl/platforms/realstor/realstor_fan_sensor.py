@@ -78,6 +78,14 @@ class RealStorFanSensor(ScheduledModuleThread, InternalMsgQ):
         # fan modules psus persistent cache
         self._fanmodule_prcache = None
 
+        self.pollfreq_fansensor = \
+            int(self.rssencl.conf_reader._get_value_with_default(\
+                self.rssencl.CONF_REALSTORFANSENSOR,\
+                "polling_frequency_override", 0))
+
+        if self.pollfreq_fansensor == 0:
+                self.pollfreq_fansensor = self.rssencl.pollfreq
+
         # Flag to indicate suspension of module
         self._suspended = False
 
@@ -128,7 +136,7 @@ class RealStorFanSensor(ScheduledModuleThread, InternalMsgQ):
         # Periodically check if there is any fault in the fan_module
         self._check_for_fan_module_fault()
 
-        self._scheduler.enter(30, self._priority, self.run, ())
+        self._scheduler.enter(self.pollfreq_fansensor, self._priority, self.run, ())
 
     def _check_for_fan_module_fault(self):
         """Iterates over fan modules list. maintains a dictionary in order to

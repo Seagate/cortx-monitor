@@ -71,6 +71,14 @@ class RealStorSideplaneExpanderSensor(ScheduledModuleThread, InternalMsgQ):
         # sideplane expander persistent cache
         self._sideplane_exp_prcache = None
 
+        self.pollfreq_sideplane_expander_sensor = \
+            int(self.rssencl.conf_reader._get_value_with_default(\
+                self.rssencl.CONF_REALSTORSIDEPLANEEXPANDERSENSOR,\
+                "polling_frequency_override", 0))
+
+        if self.pollfreq_sideplane_expander_sensor == 0:
+                self.pollfreq_sideplane_expander_sensor = self.rssencl.pollfreq
+
         # Flag to indicate suspension of module
         self._suspended = False
 
@@ -129,7 +137,8 @@ class RealStorSideplaneExpanderSensor(ScheduledModuleThread, InternalMsgQ):
         # periodically check are there any faults found in sideplane expanders
         self._check_for_sideplane_expander_fault()
 
-        self._scheduler.enter(30, self._priority, self.run, ())
+        self._scheduler.enter(self.pollfreq_sideplane_expander_sensor,
+                self._priority, self.run, ())
 
     def _get_sideplane_expander_list(self):
         """return sideplane expander list using API /show/enclosure"""
