@@ -78,41 +78,60 @@ class NodeHWactuator(Actuator, Debug):
         response = None
         sensor_props_list = {}
         fru_info_dict = {}
-        if fru_instance == "*":
-            try:
+        try:
+            if self.sensor_id_map:
                 fru_dict = self.sensor_id_map[fru.lower()]
                 for sensor_id in fru_dict.values():
                     if sensor_id == '':
                         continue
                     sensor_common_info, sensor_specific_info = self._executor.get_sensor_props(sensor_id)
                     self.fru_specific_info[sensor_id] = sensor_specific_info
-
                 if self.fru_specific_info is not None:
-                    response = self._parse_fru_info()
-            except KeyError as e:
-                logger.error('NodeHWactuator, _get_fru_instances, \
+                    resource_info = self._parse_fru_info(fru)
+                if fru_instance == "*":
+                    response = self._create_node_fru_json_message(resource_info, fru_instance)
+                else:
+                    for resource in resource_info:
+                        if resource['resource_id'] == fru_instance:
+                            response = self._create_node_fru_json_message(resource, fru_instance)
+                            break
+                    else:
+                        raise Exception("Resource Id Not Found %s" %(fru_instance))
+
+        except KeyError as e:
+            logger.error('NodeHWactuator, _get_fru_instances, \
                                 Unable to process the FRU type: %s' % e)
-                return
-            except Exception as e:
-                logger.exception('NodeHWactuator, _get_fru_instances, \
+            return
+        except Exception as e:
+            logger.exception('NodeHWactuator, _get_fru_instances, \
                                 Error occured during request parsing %s' % e)
-                return
+            return
         return response
 
-    def _parse_fru_info(self):
+    def _parse_fru_info(self, fru):
         """Parses fan information"""
-        fru_type = "fan"
         specific_info = None
         specifics = []
-        for sensor_id, fru_info in list(self.fru_specific_info.items()):
+
+        for sensor_id, fru_info in self.fru_specific_info.items():
             specific_info = dict()
-            for fru_key,fru_value in list(fru_info.items()):
+            for fru_key,fru_value in fru_info.items():
                 specific_info[fru_key] = fru_value
             specific_info["resource_id"] = sensor_id
             specifics.append(specific_info)
-        response = self._create_node_fru_json_message(specifics)
+
+        if fru == "Power Supply":
+            for each in specifics:
+                if each.get('States Asserted'):
+                    each['States Asserted'] = ' '.join(x.strip() for x in each['States Asserted'].split())
+
+        if (fru == "fan") or (fru == "Drive Slot / Bay"):
+            for each in specifics:
+                if each.get('States Asserted'):
+                    each['States Asserted'] = ' '.join(x.strip() for x in each['States Asserted'].split())
+
         self.fru_specific_info = {}
-        return response
+        return specifics
 
     def perform_request(self, json_msg):
         """Performs the Node server request
@@ -137,7 +156,6 @@ class NodeHWactuator(Actuator, Debug):
         self.fru_node_request = node_request.get("node_request").split(":")[3]
         fru = self.NODE_REQUEST_MAP.get(self.fru_node_request)
         fru_instance = node_request.get("resource")
-
         if fru_instance.isdigit() and isinstance(int(fru_instance), int):
             fru_dict = self.sensor_id_map.get(fru.lower())
             sensor_id = fru_dict[int(fru_instance)]
@@ -153,7 +171,7 @@ class NodeHWactuator(Actuator, Debug):
 
         return response
 
-    def _create_node_fru_json_message(self, specifics):
+    def _create_node_fru_json_message(self, specifics, resource_id):
         """Creates JSON response to be sent out to Node Controller Message
            Handler for further validation"""
         resource_type = "node:fru:{0}".format(self.fru_node_request)
@@ -162,26 +180,18 @@ class NodeHWactuator(Actuator, Debug):
           "alert_type":"GET",
           "severity":"informational",
           "host_id": self.host_id,
-          "instance_id": "*",
+          "instance_id": resource_id,
           "info": {
             "site_id": self._site_id,
             "rack_id": self._rack_id,
             "node_id": self._node_id,
-            "resource_id": "*",
+            "resource_id": resource_id,
             "resource_type": resource_type,
             "event_time": epoch_time
           },
           "specific_info": specifics
         }
 
-        # Converting raw 'States Asserted' value with readbale value.
-        # Example : "Drive Slot / Bay\n                         [Drive Present]"
-        # ==> "Drive Slot / Bay : Drive Present"
-        if 'States Asserted' in response['specific_info']:
-            raw_str = response['specific_info']['States Asserted'].split('\n')
-            filter_str = raw_str[0]+raw_str[1].strip()\
-                .replace('[',' : ').replace(']','')
-            response['specific_info']['States Asserted'] = filter_str
         return response
 
     def _process_sensor_request(self, node_request):
