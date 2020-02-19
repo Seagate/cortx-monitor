@@ -218,9 +218,8 @@ class RealStorSideplaneExpanderSensor(ScheduledModuleThread, InternalMsgQ):
                     if durable_id in self._faulty_sideplane_expander_dict:
                         previous_alert_type = self._faulty_sideplane_expander_dict.\
                         get(durable_id)
-                        if previous_alert_type == self.rssencl.FRU_FAULT:
-                            alert_type = self.rssencl.FRU_FAULT_RESOLVED
-                        elif previous_alert_type == self.rssencl.FRU_MISSING:
+                        alert_type = self.rssencl.FRU_FAULT_RESOLVED
+                        if previous_alert_type == self.rssencl.FRU_MISSING:
                             alert_type = self.rssencl.FRU_INSERTION
                         del self._faulty_sideplane_expander_dict[durable_id]
                 if alert_type:
