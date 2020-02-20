@@ -105,6 +105,25 @@ python3 -m pip install --user -r $req_file  > /dev/null || {
     echo "Unable to install package from $req_file"; exit 1;
 };
 
+#Check & install required RPM packages
+echo "Installing build required RPM packages..."
+yum install -y python36-dbus python36-paramiko \
+    python36-psutil python36-gobject
+
+echo "Generating tar & RPM's for pre requisite packages systemd_python."
+yum erase -y systemd-python36-*
+cd $BASE_DIR
+rm -rf ${RPM_BUILD_PATH}
+mkdir -p ${RPM_BUILD_PATH}/SOURCES
+TOPDIR=$(realpath $RPM_BUILD_PATH)
+echo $TOPDIR
+
+tar -czvf ${RPM_BUILD_PATH}/SOURCES/systemd-python36-${VERSION}.tgz -C ${BASE_DIR}/.. sspl/systemd-python36
+rpmbuild --define "version $VERSION" --define "git_rev $GIT_VER" --define "_topdir $TOPDIR" -bb $BASE_DIR/systemd-python36/systemd-python36.spec
+
+echo 'Installing systemd-python36*...'
+yum install -y ${RPM_BUILD_PATH}/RPMS/x86_64/systemd-python36-*
+
 if [ "$TEST" == true ]
 then
     mkdir -p $TMPDIR/sspl_test $DIST/sspl_test $DIST/sspl_test/conf
@@ -150,9 +169,6 @@ printf "%02d:%02d:%02d\n" $(( CORE_DIFF / 3600 )) $(( ( CORE_DIFF / 60 ) % 60 ))
 
 # Remove existing directory tree and create fresh one.
 TAR_START_TIME=$(date +%s)
-cd $BASE_DIR
-rm -rf ${RPM_BUILD_PATH}
-mkdir -p ${RPM_BUILD_PATH}/SOURCES
 
 # Create tar for sspl
 echo "Creating tar for sspl build"
@@ -161,7 +177,6 @@ then
     tar -czvf ${RPM_BUILD_PATH}/SOURCES/sspl-test-${VERSION}.tgz -C ${DIST} sspl_test
 fi
 tar -czvf ${RPM_BUILD_PATH}/SOURCES/sspl-${VERSION}.tgz -C ${DIST} sspl
-tar -czvf ${RPM_BUILD_PATH}/SOURCES/systemd-python36-${VERSION}.tgz -C ${DIST} sspl
 
 TAR_END_TIME=$(date +%s)
 echo "Generated tar for sspl build"
@@ -169,12 +184,9 @@ echo "Generated tar for sspl build"
 ################### RPM builds for SSPL ##############################
 echo "Generating rpm's for sspl build"
 RPM_BUILD_START_TIME=$(date +%s)
-TOPDIR=$(realpath $RPM_BUILD_PATH)
-echo $TOPDIR
 
 rpmbuild --define "version $VERSION" --define "git_rev $GIT_VER" --define "_topdir $TOPDIR" -bb $TMPDIR/sspl-ll.spec
 rpmbuild --define "version $VERSION" --define "git_rev $GIT_VER" --define "_topdir $TOPDIR" -bb $TMPDIR/libsspl_sec.spec
-rpmbuild --define "version $VERSION" --define "git_rev $GIT_VER" --define "_topdir $TOPDIR" -bb $TMPDIR/systemd-python36.spec
 
 if [ "$TEST" == true ]
 then
@@ -187,5 +199,8 @@ BUILD_END_TIME=$(date +%s)
 \rm -rf $TMPDIR
 \rm -rf $DIST/sspl
 \rm -rf $DIST/sspl_test
+# remove systemd-python36
+yum erase -y systemd-python36-*
+
 echo -e "\nGenerated RPMs..."
 find $RPM_BUILD_PATH -name "*.rpm"

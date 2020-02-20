@@ -17,9 +17,11 @@ URL:        http://gerrit.mero.colo.seagate.com:8080/#/admin/projects/sspl
 Source0:    %{name}-%{version}.tgz
 BuildRoot:  %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 BuildRequires: python36 rpm-build sudo
-Requires:   rabbitmq-server udisks2 hdparm python36 ipmitool python36-dbus python36-paramiko
-Requires:   libsspl_sec libsspl_sec-method_none python36-psutil python36-gobject
-Requires:   perl(Config::Any) systemd-python36
+Requires:   rabbitmq-server udisks2 hdparm python36 ipmitool libsspl_sec libsspl_sec-method_none
+#note: we commented out below dependecies here because they are reuired at build time only for Pyinstaller.
+#Requires:  python36-dbus python36-paramiko
+#Requires:  python36-psutil python36-gobject systemd-python36
+Requires:   perl(Config::Any)
 Requires(pre): shadow-utils
 
 # Disabling for EES-non-requirement
