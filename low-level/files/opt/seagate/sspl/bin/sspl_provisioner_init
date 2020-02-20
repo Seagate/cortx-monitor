@@ -3,7 +3,9 @@
 set -e -u -o pipefail
 
 ##############################################################################
-# This script is meant to be used by developers. It calls all the provisioner
+# This script is meant to be used by developers.
+# Components are not supposed to install/start consul by itself in production,
+# provisioner would do. This script calls all the provisioner
 # scripts sequentially. It will replace sspl_init eventually.
 ##############################################################################
 
@@ -11,6 +13,9 @@ SCRIPT_DIR=$(dirname $0)
 
 # Install consul if not available
 if ! [ -x "$(command -v consul)" ]; then
+    if ! [ -x "$(command -v wget)" ]; then
+        yum install -y wget
+    fi
     wget https://releases.hashicorp.com/consul/1.7.0/consul_1.7.0_linux_amd64.zip
     if ! [ -x "$(command -v unzip)" ]; then
         yum install -y unzip
