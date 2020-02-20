@@ -10,23 +10,36 @@ Usage:
 import os
 import subprocess
 import sys
+import socket
 
-# Import config parser Python version specific
-if "2." in sys.version:
-  from ConfigParser import *
-  from ConfigParser import SafeConfigParser as ConfigParser
-else:
-  from configparser import *
+import pika
+
+from configparser import ConfigParser
+from framework.utils.config_reader import ConfigReader
 
 RABBITMQCTL = '/usr/sbin/rabbitmqctl'
 SSPL_CONF = '/etc/sspl.conf'
 SECTION="RABBITMQEGRESSPROCESSOR"
+INGRESS_CONFIG_SECTION = 'RABBITMQINGRESSPROCESSOR'
+EGRESS_CONFIG_SECTION = 'RABBITMQEGRESSPROCESSOR'
+LOGGER_CONFIG_SECTION = 'LOGGINGPROCESSOR'
+CLUSTER_SECTION = 'RABBITMQCLUSTER'
+ERLANG_COOKIE_PATH = '/var/lib/rabbitmq/.erlang.cookie'
+
+EXCHANGE_NAME = 'exchange_name'
+QUEUE_NAME = 'queue_name'
+ROUTING_KEY = 'routing_key'
+VIRT_HOST = 'virtual_host'
+USER_NAME = 'username'
+PASSWORD = 'password'
 
 # Add the top level directories
 parentdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.sys.path.insert(0,parentdir)
 
 from sspl_constants import cs_legacy_products, enabled_products
+
+config_reader = ConfigReader(SSPL_CONF)
 
 def main(product):
     """ Main line for this program. """
@@ -73,6 +86,134 @@ def main(product):
         elif secondary_rabbitmq_server in hostnames:
             _set_perms_erlang_key()
             _cluster_rabbitmq_servers(primary_rabbitmq_server, secondary_rabbitmq_server)
+
+    cluster_nodes = config_reader._get_value_list(CLUSTER_SECTION, 'cluster_nodes')
+    if len(cluster_nodes) > 1:
+        copy_erlang_cookie()
+        cluster_rabbit_mq()
+        create_mirrored_queues()
+    else:
+        print('RabbitMQ is running in single node mode.')
+
+
+def copy_erlang_cookie():
+    print('Creating erlang cookie...')
+    command = 'systemctl stop rabbitmq-server'
+    _send_command(command)
+    # all rabbitmq servers needs to have same erlang cookie for clustering.
+    cookie_value = config_reader._get_value(CLUSTER_SECTION, 'erlang_cookie')
+
+    command = f'chmod +w {ERLANG_COOKIE_PATH}'
+    _send_command(command)
+    command = f'echo "{cookie_value}" > {ERLANG_COOKIE_PATH}'
+    _send_command(command)
+    command = f'chmod -w {ERLANG_COOKIE_PATH}'
+    _send_command(command)
+    command = 'systemctl start rabbitmq-server'
+    _send_command(command)
+    print('Done creating erlang cookie')
+
+
+def create_mirrored_queues():
+    print('Creating mirrored queues...')
+    vhost, username, password, exchange_name, queue_name, routing_key = \
+        _get_connection_config(INGRESS_CONFIG_SECTION)
+    _set_ha_policy(queue_name)
+    create_queue(vhost, username, password, exchange_name,
+                 queue_name, routing_key)
+
+    vhost, username, password, exchange_name, queue_name, routing_key = \
+        _get_connection_config(EGRESS_CONFIG_SECTION)
+    _set_ha_policy(queue_name)
+    create_queue(vhost, username, password, exchange_name,
+                 queue_name, routing_key)
+
+    vhost, username, password, exchange_name, queue_name, routing_key = \
+        _get_connection_config(LOGGER_CONFIG_SECTION)
+    _set_ha_policy(queue_name)
+    create_queue(vhost, username, password, exchange_name,
+                 queue_name, routing_key)
+    print('Done creating mirrored queues...')
+
+
+def _set_ha_policy(queue_name):
+    print('Setting HA policy for queue {}'.format(queue_name))
+    command = f'{RABBITMQCTL} set_policy -p SSPL ha-{queue_name} ' + \
+              f'"^{queue_name}$" \'{{"ha-mode":"all"}}\''
+    print(command)
+    _send_command(command)
+
+
+def _get_connection_config(section):
+    vhost = config_reader._get_value(section, VIRT_HOST)
+    exchange_name = config_reader._get_value(section, EXCHANGE_NAME)
+    queue_name = config_reader._get_value(section, QUEUE_NAME)
+    routing_key = config_reader._get_value(section, ROUTING_KEY)
+
+    username = config_reader._get_value(section, USER_NAME)
+    password = config_reader._get_value(section, PASSWORD)
+    return vhost, username, password, exchange_name, queue_name, routing_key
+
+
+def create_queue(vhost, username, password, exchange_name, queue_name,
+                 routing_key):
+    creds = pika.PlainCredentials(username, password)
+    connection = pika.BlockingConnection(
+        pika.ConnectionParameters(
+            host='localhost',
+            credentials=creds,
+            virtual_host=vhost,
+        )
+    )
+    channel = connection.channel()
+    try:
+        channel.queue_delete(queue=queue_name)
+        channel.queue_declare(queue=queue_name, durable=True)
+    except Exception as e:
+        print('Exception in queue declaration: {}'.format(e))
+    try:
+        channel.exchange_declare(
+            exchange=exchange_name,
+            exchange_type='topic',
+            durable=False,
+        )
+    except Exception as e:
+        print('Exception is exchange declaration: {}'.format(e))
+    channel.queue_bind(
+        queue=queue_name,
+        exchange=exchange_name,
+        routing_key=routing_key
+    )
+    connection.close()
+
+
+def cluster_rabbit_mq():
+    print('Joining to RabbitMQ cluster...')
+    nodes = config_reader._get_value_list(CLUSTER_SECTION, 'cluster_nodes')
+    fqdn = socket.getfqdn().split('.')[0]
+    clustered = False
+    for node in nodes:
+        if node != fqdn and not clustered:
+            command = "%s stop_app" % RABBITMQCTL
+            response = _send_command(command)
+            print("Stopping app: %s" % response)
+            command = f'{RABBITMQCTL} join_cluster rabbit@{node}'
+            response = _send_command(command, fail_on_error=False)
+            print(f"Join response: {response}")
+            if 'Error:' in response:
+                print(f'Unable to connect to {node} error: {response}')
+                print('Re-trying another node...')
+            else:
+                clustered = True
+            command = "rabbitmqctl start_app"
+            response = _send_command(command)
+            print("node started")
+            break
+    if clustered:
+        print('Clustering was successful.')
+    else:
+        print('Not connected any node. Please check configuration.')
+
 
 def _create_vhost_if_necessary(virtual_host, product):
     """ Creates the specified vhost (if necessary).
@@ -256,6 +397,7 @@ def _create_ha_queues():
     print("Mirroring queues in cluster: %s" % response)
 
 def _send_command(command, fail_on_error=True):
+    print(f'Executing: {command}')
     process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     response, error = process.communicate()
     if error is not None and \
@@ -263,7 +405,9 @@ def _send_command(command, fail_on_error=True):
         print("command '%s' failed with error\n%s" % (command, error))
         if fail_on_error:
             sys.exit(1)
-    return response
+        else:
+            return str(error)
+    return str(response)
 
 
 if __name__ == '__main__':

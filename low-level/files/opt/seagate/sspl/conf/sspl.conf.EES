@@ -60,6 +60,10 @@ username=sspluser
 password=sspl4ever
 primary_rabbitmq_host=localhost
 
+[RABBITMQCLUSTER]
+cluster_nodes=localhost
+erlang_cookie=QLDZYPYEYGHECTHYQXFJ
+
 [LOGGINGMSGHANDLER]
 iem_routing_enabled=false
 iem_log_locally=true
