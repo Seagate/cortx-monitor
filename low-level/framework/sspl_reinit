@@ -54,6 +54,6 @@ cp -f /opt/seagate/sspl/conf/etc/polkit-1/rules.d/sspl-ll_dbus_policy.rules /etc
 cp -f /opt/seagate/sspl/conf/etc/dbus-1/system.d/sspl-ll_dbus_policy.conf /etc/dbus-1/system.d
 
 mkdir -p /etc/sspl-ll/templates/snmp
-cp -f /opt/seagate/sspl/conf/snmp/* /etc/sspl-ll/templates/snmp
+cp -rf /opt/seagate/sspl/conf/snmp/* /etc/sspl-ll/templates/snmp
 
 rm -Rf /var/run/sspl_ll
