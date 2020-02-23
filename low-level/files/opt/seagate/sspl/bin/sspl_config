@@ -131,7 +131,10 @@ config_sspl() {
 
     # If consul is not running, exit
     CONSUL_PS=$(ps -aux | grep "consul" | grep -v "grep" || true)
-    [ -z "$CONSUL_PS" ] && echo "Consul is not running, exiting.." && exit 1
+    if [ -z "$CONSUL_PS" ]; then
+        echo "Consul is not running, exiting..";
+        exit 1
+    fi
 
 }
 
