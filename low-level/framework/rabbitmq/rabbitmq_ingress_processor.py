@@ -313,4 +313,6 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
                 self._connection.close()
         except pika.exceptions.ConnectionClosed:
             logger.info("RabbitMQingressProcessorTests, shutdown, RabbitMQ ConnectionClosed")
+        except Exception as err:
+            logger.info("RabbitMQingressProcessorTests, shutdown, RabbitMQ {}".format(str(err)))
 
