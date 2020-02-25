@@ -15,7 +15,7 @@ import socket
 import pika
 
 from configparser import ConfigParser
-from framework.utils.config_reader import ConfigReader
+from config_reader import ConfigReader
 
 RABBITMQCTL = '/usr/sbin/rabbitmqctl'
 SSPL_CONF = '/etc/sspl.conf'
@@ -91,7 +91,7 @@ def main(product):
     if len(cluster_nodes) > 1:
         copy_erlang_cookie()
         cluster_rabbit_mq()
-        create_mirrored_queues()
+        # create_mirrored_queues()  # will enable after fixing sanity tests.
     else:
         print('RabbitMQ is running in single node mode.')
 

@@ -65,6 +65,7 @@ cp -R $BASE_DIR/low-level/files/opt/seagate/sspl/bin/* $DIST/sspl/bin
 cp -R $BASE_DIR/low-level/requirements.txt $DIST/sspl/conf/requirements.txt
 cp -R $BASE_DIR/low-level/framework/base/sspl_constants.py $DIST/sspl/bin/sspl_constants.py
 cp -R $BASE_DIR/low-level/framework/base/sspl_conf_adopt.py $DIST/sspl/bin/sspl_conf_adopt.py
+cp -R $BASE_DIR/low-level/framework/utils/config_reader.py $DIST/sspl/bin/config_reader.py
 cp -R $BASE_DIR/low-level/framework/sspl_init $DIST/sspl/bin
 cp -R $BASE_DIR/low-level/framework/sspl_reinit $DIST/sspl/bin
 cp -R $BASE_DIR/low-level/framework/sspl_rabbitmq_reinit $DIST/sspl/bin

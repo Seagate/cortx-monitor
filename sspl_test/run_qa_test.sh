@@ -41,6 +41,9 @@ pre_requisites()
         systemctl start rabbitmq-server
         RMQ_SELF_STARTED=1
     fi
+
+    # clearing consul keys.
+    consul kv delete -recurse var/sspl/data
 }
 
 deleteMockedInterface()

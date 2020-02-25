@@ -17,7 +17,6 @@
 import os
 import configparser
 
-from framework.utils.service_logging import logger
 
 
 class ConfigReader(object):
@@ -89,7 +88,7 @@ class ConfigReader(object):
         try:
             return self._get_value(section, key)
         except configparser.Error as ex:
-            logger.warn("ConfigReader, _get_value_with_default: %s" % ex)
+            print(f'Error reading config value: {ex}. Returning default value')
             return default_value
 
     def _get_all_values_for_section(self, section):
