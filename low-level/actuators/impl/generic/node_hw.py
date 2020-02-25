@@ -236,11 +236,38 @@ class NodeHWactuator(Actuator, Debug):
          Assertions Enabled    : unc+ ucr+
          Deassertions Enabled  : unc+ ucr+
         """
-        sensor_get_response, return_code = self._executor._run_ipmitool_subcommand("sensor get '{0}'".format(sensor_name))
-        if return_code != 0:
-            msg = "sensor get '{0}' : command failed with error {1}".format(sensor_name, sensor_get_response)
-            logger.error(msg)
-        return self._response_to_dict(sensor_get_response)
+        try:
+            sensor_get_response, return_code = self._executor._run_ipmitool_subcommand("sensor get '{0}'".format(sensor_name))
+            if return_code == 0:
+                return self._response_to_dict(sensor_get_response)
+            else:
+                msg = "sensor get '{0}' : command failed with error {1}".format(sensor_name, sensor_get_response)
+                logger.warn(msg)
+                return self._errorstr_to_dict(sensor_get_response)
+        except Exception as err:
+            logger.error("Exception occurred in _get_sensor_properties for cmd - sensor get '{0}': {1}".format(sensor_name, err))
+
+    def _get_str_response(self, data):
+        # check if data is tuple, convert to string
+        if isinstance(data, tuple):
+            data_str = ''.join([item.decode("utf8") for item in data])
+        else:
+            data_str = data.decode("utf-8")
+        return data_str
+
+    def _errorstr_to_dict(self, data):
+        error_resp = {'sensor_error': None}
+        try:
+            data_str = self._get_str_response(data)
+            for line in data_str.split("\n"):
+                if "Sensor Reading" in line:
+                    error_str = "-".join(line.split(":")[1:])
+                    error_resp['sensor_reading'] = error_str
+                    break
+        except Exception as err:
+            logger.error("Exception occurs while parsing sensor error string:{0}".format(err))
+        return error_resp
+
 
     def _build_generic_info(self, response):
         """
@@ -309,12 +336,7 @@ class NodeHWactuator(Actuator, Debug):
         many_sensors_data = []
         properties = {}
         try:
-            # check if data is tuple, convert to string
-            if isinstance(data, tuple):
-                data_str = ''.join([item.decode("utf8") for item in data])
-            else:
-                data_str = data.decode("utf-8")
-
+            data_str = self._get_str_response(data)
             # from properties list split out key and values.
             for line in data_str.split("\n"):
                 if split_char in line:
