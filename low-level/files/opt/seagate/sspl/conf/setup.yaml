@@ -20,3 +20,6 @@ sspl:
          args:
             - reset hard -p EES
 
+support_bundle:
+    - /opt/seagate/sspl/bin/sspl_bundle_generate
+
