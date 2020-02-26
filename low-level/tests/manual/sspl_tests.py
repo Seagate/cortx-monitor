@@ -178,7 +178,7 @@ class SSPLtest():
                      host='localhost', virtual_host='SSPL', credentials=self.creds))
         self.channel = self.connection.channel()
 
-        self.channel.exchange_declare(exchange=self._egress_exchange, type='topic', durable=False)
+        self.channel.exchange_declare(exchange=self._egress_exchange, type='topic', durable=True)
 
 
     def usage(self):
@@ -199,8 +199,8 @@ class SSPLtest():
         connection = pika.BlockingConnection(pika.ConnectionParameters(
                      host='localhost', virtual_host='SSPL', credentials=creds))
         channel = connection.channel()
-        channel.exchange_declare(exchange=self._egress_exchange, type='topic', durable=False)
-        result = channel.queue_declare(self._egress_queue, durable=False)
+        channel.exchange_declare(exchange=self._egress_exchange, type='topic', durable=True)
+        result = channel.queue_declare(self._egress_queue, durable=True)
         channel.queue_bind(exchange=self._egress_exchange, queue=result.method.queue, routing_key=self._egress_key)
         self.logger.debug('Consumer Started.  Now Accepting JSON Messages!')
 

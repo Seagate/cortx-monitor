@@ -280,14 +280,14 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
                 )
             self._channel = self._connection.channel()
             try:
-                self._channel.queue_declare(queue=self._queue_name, durable=False)
+                self._channel.queue_declare(queue=self._queue_name, durable=True)
             except Exception as e:
                 logger.error(e)
             try:
                 self._channel.exchange_declare(
                     exchange=self._exchange_name,
                     exchange_type='topic',
-                    durable=False
+                    durable=True
                     )
             except Exception as e:
                 logger.error(e)

@@ -29,8 +29,8 @@ def get_connection():
     connection = pika.BlockingConnection(
                     pika.ConnectionParameters(host=RABBITMQ_HOST, virtual_host=VIRTUAL_HOST, credentials=creds))
     channel = connection.channel()
-    result = channel.queue_declare(queue=QUEUE, durable=False)
-    channel.exchange_declare(exchange=EXCHANGE_NAME, type=EXCHANGE_TYPE, durable=False)
+    result = channel.queue_declare(queue=QUEUE, durable=True)
+    channel.exchange_declare(exchange=EXCHANGE_NAME, type=EXCHANGE_TYPE, durable=True)
     channel.queue_bind(queue=QUEUE, exchange=EXCHANGE_NAME, routing_key=ROUTING_KEY)
     return channel
 

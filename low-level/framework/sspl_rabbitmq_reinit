@@ -26,12 +26,15 @@ LOGGER_CONFIG_SECTION = 'LOGGINGPROCESSOR'
 CLUSTER_SECTION = 'RABBITMQCLUSTER'
 ERLANG_COOKIE_PATH = '/var/lib/rabbitmq/.erlang.cookie'
 
-EXCHANGE_NAME = 'exchange_name'
-QUEUE_NAME = 'queue_name'
+EXCHANGE_NAME_KEY = 'exchange_name'
+QUEUE_NAME_KEY = 'queue_name'
 ROUTING_KEY = 'routing_key'
-VIRT_HOST = 'virtual_host'
-USER_NAME = 'username'
-PASSWORD = 'password'
+ACK_QUEUE_NAME_KEY = 'ack_queue_name'
+ACK_ROUTING_KEY = 'ack_routing_key'
+ACK_EXCHANGE_NAME_KEY = 'ack_exchange_name'
+VIRT_HOST_KEY = 'virtual_host'
+USER_NAME_KEY = 'username'
+PASSWORD_KEY = 'password'
 
 # Add the top level directories
 parentdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -71,9 +74,23 @@ def main(product):
         _check_rabbitmq_status()
         _start_rabbitmq()
 
+    # Always copy erlang cookie.
+    copy_erlang_cookie()
+
+    # Connect to cluster before creating user accounts.
+    cluster_nodes = config_reader._get_value_list(
+            CLUSTER_SECTION, 'cluster_nodes'
+        )
+    if len(cluster_nodes) > 1:
+        cluster_rabbit_mq()
+    else:
+        print('RabbitMQ is running in single node mode.')
+
     _create_vhost_if_necessary(virtual_host, product)
     _create_user_if_necessary(username, password, virtual_host, product)
 
+    # create durable/mirrored queues in either single or clustered mode.
+    create_mirrored_queues()
 
     if product in cs_legacy_products:
         # Copy the erlang key from primary server to secondary and mirror queues
@@ -86,14 +103,6 @@ def main(product):
         elif secondary_rabbitmq_server in hostnames:
             _set_perms_erlang_key()
             _cluster_rabbitmq_servers(primary_rabbitmq_server, secondary_rabbitmq_server)
-
-    cluster_nodes = config_reader._get_value_list(CLUSTER_SECTION, 'cluster_nodes')
-    if len(cluster_nodes) > 1:
-        copy_erlang_cookie()
-        cluster_rabbit_mq()
-        # create_mirrored_queues()  # will enable after fixing sanity tests.
-    else:
-        print('RabbitMQ is running in single node mode.')
 
 
 def copy_erlang_cookie():
@@ -116,18 +125,33 @@ def copy_erlang_cookie():
 
 def create_mirrored_queues():
     print('Creating mirrored queues...')
+    # creating actuator-req-queue queue.
     vhost, username, password, exchange_name, queue_name, routing_key = \
         _get_connection_config(INGRESS_CONFIG_SECTION)
     _set_ha_policy(queue_name)
     create_queue(vhost, username, password, exchange_name,
                  queue_name, routing_key)
 
+    # creating sensor-queue queue
     vhost, username, password, exchange_name, queue_name, routing_key = \
         _get_connection_config(EGRESS_CONFIG_SECTION)
     _set_ha_policy(queue_name)
     create_queue(vhost, username, password, exchange_name,
                  queue_name, routing_key)
 
+    # creating actuator-resp-queue queue
+    vhost, username, password, exchange_name, queue_name, routing_key = \
+        _get_connection_config(
+            EGRESS_CONFIG_SECTION,
+            exchange_key=ACK_QUEUE_NAME_KEY,
+            queue_key=ACK_QUEUE_NAME_KEY,
+            routing_key=ACK_ROUTING_KEY
+        )
+    _set_ha_policy(queue_name)
+    create_queue(vhost, username, password, exchange_name,
+                 queue_name, routing_key)
+
+    # creating iem-queue queue
     vhost, username, password, exchange_name, queue_name, routing_key = \
         _get_connection_config(LOGGER_CONFIG_SECTION)
     _set_ha_policy(queue_name)
@@ -144,14 +168,15 @@ def _set_ha_policy(queue_name):
     _send_command(command)
 
 
-def _get_connection_config(section):
-    vhost = config_reader._get_value(section, VIRT_HOST)
-    exchange_name = config_reader._get_value(section, EXCHANGE_NAME)
-    queue_name = config_reader._get_value(section, QUEUE_NAME)
-    routing_key = config_reader._get_value(section, ROUTING_KEY)
+def _get_connection_config(section, exchange_key=EXCHANGE_NAME_KEY,
+                           queue_key=QUEUE_NAME_KEY, routing_key=ROUTING_KEY):
+    vhost = config_reader._get_value(section, VIRT_HOST_KEY)
+    exchange_name = config_reader._get_value(section, exchange_key)
+    queue_name = config_reader._get_value(section, queue_key)
+    routing_key = config_reader._get_value(section, routing_key)
 
-    username = config_reader._get_value(section, USER_NAME)
-    password = config_reader._get_value(section, PASSWORD)
+    username = config_reader._get_value(section, USER_NAME_KEY)
+    password = config_reader._get_value(section, PASSWORD_KEY)
     return vhost, username, password, exchange_name, queue_name, routing_key
 
 
@@ -167,7 +192,6 @@ def create_queue(vhost, username, password, exchange_name, queue_name,
     )
     channel = connection.channel()
     try:
-        channel.queue_delete(queue=queue_name)
         channel.queue_declare(queue=queue_name, durable=True)
     except Exception as e:
         print('Exception in queue declaration: {}'.format(e))
@@ -175,7 +199,7 @@ def create_queue(vhost, username, password, exchange_name, queue_name,
         channel.exchange_declare(
             exchange=exchange_name,
             exchange_type='topic',
-            durable=False,
+            durable=True,
         )
     except Exception as e:
         print('Exception is exchange declaration: {}'.format(e))
