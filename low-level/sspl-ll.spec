@@ -18,7 +18,6 @@ Source0:    %{name}-%{version}.tgz
 BuildRoot:  %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 BuildRequires: python36 rpm-build sudo
 Requires:   rabbitmq-server udisks2 hdparm python36 ipmitool libsspl_sec libsspl_sec-method_none
-#note: we commented out below dependecies here because they are reuired at build time only for Pyinstaller.
 #Requires:  python36-dbus python36-paramiko
 #Requires:  python36-psutil python36-gobject systemd-python36
 Requires:   perl(Config::Any)
@@ -76,10 +75,6 @@ CFG_DIR=$SSPL_DIR/conf
     ln -sf $SSPL_DIR/lib/sspl_ll_cli /usr/bin/sspl_ll_cli
     ln -sf $SSPL_DIR/lib/sspl_ll_d $SSPL_DIR/bin/sspl_ll_d
     ln -sf $SSPL_DIR/lib/sspl_ll_cli $SSPL_DIR/bin/sspl_ll_cli
-}
-
-[ -d "${SSPL_DIR}/sspl_test" ] && {
-    ln -sf $SSPL_DIR/sspl_test/sspl_tests/sspl_tests /usr/bin/sspl_tests
 }
 
 # run conf_diff.py script
