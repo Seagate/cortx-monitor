@@ -106,7 +106,7 @@ class RealStorLogicalVolumeSensor(ScheduledModuleThread, InternalMsgQ):
                 "polling_frequency_override", 0))
 
         if self.pollfreq_logical_volume_sensor == 0:
-                self.pollfreq_disksensor = self.rssencl.pollfreq
+                self.pollfreq_logical_volume_sensor = self.rssencl.pollfreq
 
         # Flag to indicate suspension of module
         self._suspended = False
