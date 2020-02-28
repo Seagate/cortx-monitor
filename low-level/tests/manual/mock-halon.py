@@ -84,17 +84,42 @@ def prepare_msg(sensor, identifier, status):
     return msg
 
 if __name__ == "__main__":
-    if len(sys.argv) < 4: usage()
-    sensor, identifier, status = sys.argv[1], sys.argv[2], sys.argv[3]
+    #if len(sys.argv) < 4: usage()
+    #sensor, identifier, status = sys.argv[1], sys.argv[2], sys.argv[3]
 
-    msg_file = os.path.join(os.path.dirname(sys.argv[0]), sensor)
-    if not os.path.exists(msg_file):
-        sys.stderr.write('error: invalid sensor type\n')
-        usage()
+    #msg_file = os.path.join(os.path.dirname(sys.argv[0]), sensor)
+    #if not os.path.exists(msg_file):
+    #    sys.stderr.write('error: invalid sensor type\n')
+    #    usage()
 
     try:
         #msg = prepare_msg(sensor, identifier, status)
-        msg = '''{"username": "sspl-ll", "expires": 3600, "description": "Seagate Storage Platform Library - Low Level - Actuator Request", "title": "SSPL-LL Actuator Request", "signature": "None", "time": "2018-07-31 04:08:04.071170", "message": {"sspl_ll_debug": {"debug_component": "sensor", "debug_enabled": true}, "sspl_ll_msg_header": {"msg_version": "1.0.0", "uuid": "9e6b8e53-10f7-4de0-a9aa-b7895bab7774", "schema_version": "1.0.0", "sspl_version": "1.0.0"}, "actuator_request_type": {"node_controller": {"node_request": "GET: node:fru:fan", "resource": "*"}}}}'''
+        msg = ''' {
+        "title": "SSPL Actuator Request",
+        "description": "Seagate Storage Platform Library - Actuator Request",
+
+        "username" : "JohnDoe",
+        "signature" : "None",
+        "time" : "2015-05-29 14:28:30.974749",
+        "expires" : 500,
+
+        "message" : {
+            "sspl_ll_msg_header": {
+                "schema_version": "1.0.0",
+                "sspl_version": "1.0.0",
+                "msg_version": "1.0.0"
+            },
+             "sspl_ll_debug": {
+                "debug_component" : "sensor",
+                "debug_enabled" : True
+            },
+            "sensor_request_type": {
+                "node_data": {
+                    "sensor_type": "node:os:cpu"
+                }
+            }
+        }
+    }'''
         channel = get_connection()
         if channel: send_message(channel, msg)
 

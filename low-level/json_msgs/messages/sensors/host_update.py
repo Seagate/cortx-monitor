@@ -33,7 +33,6 @@ class HostUpdateMsg(BaseSensorMsg):
     ACTUATOR_MSG_TYPE = "host_update"
     MESSAGE_VERSION  = "1.0.0"
 
-    ALERT_TYPE = "fault"
     SEVERITY = "warning"
     RESOURCE_TYPE = "node:os:system"
     RESOURCE_ID = "0"
@@ -52,6 +51,7 @@ class HostUpdateMsg(BaseSensorMsg):
                        logged_in_users,
                        process_count,
                        running_process_count,
+                       alert_type,
                        username  = "SSPL-LL",
                        signature = "N/A",
                        in_time      = "N/A",
@@ -76,6 +76,7 @@ class HostUpdateMsg(BaseSensorMsg):
         self._rack_id           = rack_id
         self._node_id           = node_id
         self._cluster_id        = cluster_id
+        self.alert_type         = alert_type
 
         epoch_time = str(int(time.time()))
         alert_id = mon_utils.get_alert_id(epoch_time)
@@ -95,7 +96,7 @@ class HostUpdateMsg(BaseSensorMsg):
                               "msg_version"    : self.MESSAGE_VERSION,
                               },
                           "sensor_response_type": {
-                              "alert_type": self.ALERT_TYPE,
+                              "alert_type": self.alert_type,
                               "severity": self.SEVERITY,
                               "alert_id": alert_id,
                               "host_id": self._host_id,

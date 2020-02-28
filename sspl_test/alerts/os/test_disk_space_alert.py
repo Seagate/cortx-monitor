@@ -14,7 +14,7 @@ def init(args):
 
 def test_disk_space_alert(agrs):
     check_sspl_ll_is_running()
-    disk_space_data_sensor_request("disk_space_alert")
+    disk_space_data_sensor_request("node:os:disk_space")
     disk_space_sensor_msg = None
     time.sleep(4)
     while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():

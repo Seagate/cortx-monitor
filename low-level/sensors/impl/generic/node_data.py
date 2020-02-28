@@ -115,7 +115,7 @@ class NodeData(Debug):
         self.boot_time       = self._epoch_time
         self.uname           = dict(zip(uname_keys, os.uname()))
         self.total_memory = dict(psutil.virtual_memory()._asdict())
-        self.process_count   = len(psutil.get_pid_list())
+        self.process_count   = len(psutil.pids())
         for users in psutil.users():
             logged_in_users.append(dict(users._asdict()))
         self.logged_in_users = logged_in_users
