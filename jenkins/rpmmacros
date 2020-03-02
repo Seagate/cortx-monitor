@@ -1,0 +1,3 @@
+%_gpgbin /usr/bin/gpg2
+%__gpg_sign_cmd %{__gpg} gpg2 --force-v3-sigs --batch --no-armor --passphrase-fd 0 --no-secmem-warning -u "%{_gpg_name}" -sbo %{__signature_filename} --digest-algo sha256 %{__plaintext_filename}
+

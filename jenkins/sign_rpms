@@ -1,0 +1,6 @@
+#!/usr/bin/expect -f
+
+spawn rpm -D [format "%%_gpg_name %s (%s) <%s>" [lindex $argv 0] [lindex $argv 2] [lindex $argv 1]] --addsign [lrange $argv 3 end]
+expect "Enter pass phrase:" { send "\r" }
+
+

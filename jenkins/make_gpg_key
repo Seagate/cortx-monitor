@@ -1,0 +1,17 @@
+#!/usr/bin/expect -f
+
+# puts [format "%sWOW\r" [lindex $argv 2] ]
+# send [concat [lindex $argv 0] "wow" "\r"]
+# interact
+
+spawn gpg2 --gen-key --passphrase ""
+expect -exact "Your selection? " { send "1\r" }
+expect "What keysize do you want?" { send "\r" }
+expect "Key is valid for?" { send "\r" }
+expect "Is this correct?" { send "y\r" }
+expect "Real name:" { send [format "%s\r" [lindex $argv 0]]}
+expect "Email address:" { send [format "%s\r" [lindex $argv 1]]}
+expect "Comment:" { send [format "%s\r" [lindex $argv 2]]}
+expect "Change (N)ame, (C)omment, (E)mail or (O)kay/(Q)uit?" { send "o\r" }
+interact
+
