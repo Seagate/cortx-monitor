@@ -18,6 +18,7 @@ import os
 import errno
 import json
 import pickle
+from configparser import ConfigParser
 from framework.utils.store import Store
 from framework.utils.service_logging import logger
 
@@ -25,6 +26,18 @@ class FileStore(Store):
 
     def __init__(self):
         super(FileStore, self).__init__()
+        self.config_parser = ConfigParser()
+
+    def read(self, config_path=None):
+        if config_path is None:
+            logger.error("config path can't be empty for filestore config operations")
+            return None
+        if config_path is not None and isinstance(config_path, str):
+            self.config_parser.read(config_path)
+        elif config_path is not None and isinstance(config_path, dict):
+            self.config_parser.read_dict(config_path)
+        else:
+            logger.error("config path can be either filepath or dict for filestore config operations")
 
     def put(self, value, key):
         """ Dump value to given absolute file path"""
@@ -56,9 +69,26 @@ class FileStore(Store):
         else:
             fh.close()
 
-    def get(self, key):
-        """ Load dict obj from json in given absolute file path"""
+    def get(self, key, option=None):
+        """
+        key: abs path of file in case to load any json object and section of ini in case of loading any config
+        option: section's option
+        e.g. for config we can use: store.get('SYSTEM_INFORMATION', 'operating_system')
+        e.g. to get cache or to load files we can use: store.get('file_path_to_load')
+        """
+        if option:
+            return self.config_parser.get(key, option)
+        else:
+            return self._load_json_file(key)
 
+    def items(self, section):
+        """
+        overridden from config parser to make look and feel like same
+        """
+        return self.config_parser.items(section)
+
+    def _load_json_file(self, key):
+        """ Load dict obj from json in given absolute file path"""
         value = None
         absfilepath = key
 
@@ -67,7 +97,6 @@ class FileStore(Store):
         if not os.path.isdir(directory_path):
             logger.critical("Path doesn't exists: {0}".format(directory_path))
             return
-
 
         try:
             fh = open(absfilepath,"rb")
@@ -99,7 +128,7 @@ class FileStore(Store):
         """
         if os.path.exists(key):
             os.remove(key)
-    
+
     def get_keys_with_prefix(self, prefix):
         """ get keys with given prefix
         """
@@ -107,3 +136,9 @@ class FileStore(Store):
             return []
         else:
             return os.listdir(prefix)
+
+
+if __name__ == '__main__':
+    store = FileStore()
+    store.read('/etc/sspl.conf')
+    print(store.get('SYSTEM_INFORMATION', 'setup'))

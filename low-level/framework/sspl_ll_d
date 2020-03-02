@@ -441,6 +441,8 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist, operating_system
         threaded = 'True'
         try:
             threaded = conf_reader._get_value(klass.name().upper(), 'threaded')
+            if threaded == '':
+                threaded = 'False'
         except Exception as e:
             threaded = 'False'  # Wasn't present so default to False
 
@@ -525,9 +527,9 @@ def shutdown_handler(signum=None, frame=None):
 
 def print_usage():
     """Display the syntax usage for this script"""
-    print("""sspl_ll_d -c <path_to_conf_file>
+    print("""sspl_ll_d
     -h:    Display this help
-    -c:    Configuration settings for sspl_ll_d service""")
+    """)
 
 
 def signal_handler(signal_number, frame):
@@ -591,37 +593,34 @@ def signal_handler(signal_number, frame):
 if __name__ == "__main__":
     # Retrieve configuration file for sspl-ll service
     try:
-        opts = getopt.getopt(sys.argv[1:], "hc:", ["help", "config=", "systemd="])
+        opts = getopt.getopt(sys.argv[1:], "h:", ["help", "systemd="])
 
     except getopt.GetoptError as err:
-        print_usage()
-        sys.exit(os.EX_USAGE)
-
-    if len(opts[0]) < 1:
         print_usage()
         sys.exit(os.EX_USAGE)
 
     signal.signal(signal.SIGHUP, signal_handler)
 
     systemd_support = True
-    for opt, arg in opts[0]:
-        if opt == "-c" or opt == "--config":
-            path_to_conf_file = arg
-        elif opt == "-s" or opt == "--systemd":
-            if arg == "False":
-                systemd_support = False
-        else:
-            print_usage()
-            sys.exit(os.EX_USAGE)
+    if len(opts[0]) > 0:
+        for opt, arg in opts[0]:
+            if opt == "-s" or opt == "--systemd":
+                if arg == "False":
+                    systemd_support = False
+            else:
+                print_usage()
+                sys.exit(os.EX_USAGE)
 
     # Validate configuration file for required valid values
     try:
-        conf_reader = ConfigReader(path_to_conf_file)
-
+        conf_reader = ConfigReader()
     except (IOError, ConfigReader.Error) as err:
         # We don't have logger yet, need to find log_level from conf file first
-        print("[ Error ] when validating the configuration file %s :" % \
-            path_to_conf_file)
+        print("[ Error ] when validating the configuration : ")
+        print(err)
+        print("Exiting ...")
+        sys.exit(os.EX_USAGE)
+    except Exception as e:
         print(err)
         print("Exiting ...")
         sys.exit(os.EX_USAGE)

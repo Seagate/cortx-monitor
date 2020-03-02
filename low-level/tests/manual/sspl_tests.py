@@ -131,7 +131,7 @@ class SSPLtest():
         #Read the configuration file
         path_to_conf_file = self.actuator_msgs_folder + "sspl_tests.conf"
         try:
-            self._conf_reader = ConfigReader(path_to_conf_file)
+            self._conf_reader = ConfigReader(is_test=True, test_config_path=path_to_conf_file)
 
         except (IOError, ConfigReader.Error) as err:
             # We don't have logger yet, need to find log_level from conf file first

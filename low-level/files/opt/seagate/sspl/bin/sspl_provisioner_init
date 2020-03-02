@@ -25,6 +25,12 @@ if ! [ -x "$(command -v consul)" ]; then
     rm consul_1.7.0_linux_amd64.zip
 fi
 
+if ! [ "$(rpm -qa | grep eos-prvsnr-cli)" ]; then
+    pkg_name=$(curl -s http://ci-storage.mero.colo.seagate.com/releases/eos/integration/centos-7.7.1908/last_successful/|grep eos-prvsnr-cli-1.0.0| sed 's/<\/*[^>]*>//g'|cut -d' ' -f1)
+    yum install -y http://ci-storage.mero.colo.seagate.com/releases/eos/integration/centos-7.7.1908/last_successful/$pkg_name
+    sh /opt/seagate/eos-prvsnr/cli/setup-provisioner -S
+fi
+
 # Start consul if not running
 CONSUL_PS=$(ps -aux | grep "consul" | grep -v "grep" || true)
 [ -z "$CONSUL_PS" ] && consul agent -dev &>/dev/null &
@@ -43,6 +49,6 @@ echo "*************************************************************************"
 echo "Changing SSPL state to 'active', disable step once HA integration complete"
 echo "*************************************************************************"
 echo "state=active" > /var/eos/sspl/data/state.txt
-PID=`ps -aux| grep "sspl_ll_d -c /etc/sspl.conf" | grep -v "grep" | awk '{print $2}'`
+PID=`ps -aux| grep "sspl_ll_d" | grep -v "grep" | awk '{print $2}'`
 kill -s SIGHUP $PID
 

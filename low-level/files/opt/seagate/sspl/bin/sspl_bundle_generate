@@ -13,7 +13,6 @@ SYS_INFORMATION = "SYSTEM_INFORMATION"
 IEM_SENSOR = "IEMSENSOR"
 
 localTempPath = "/tmp/support_bundle/"
-sspl_conf_dir = "/etc/sspl.conf"
 sspl_log_default = "/var/log/eos/sspl"
 iem_log_default = "/var/log/eos/iem"
 onGoingRequestPath = "/tmp/sspl-sb-req.txt"
@@ -21,7 +20,7 @@ onGoingRequestPath = "/tmp/sspl-sb-req.txt"
 def make_sspl_log_tarfile(parser, tmpFile):
     file_name = "sspl_%s.tar.gz" % parser[1]
     try:
-        conf_reader = ConfigReader(sspl_conf_dir)
+        conf_reader = ConfigReader(is_init=True)
 
     except (IOError, ConfigReader.Error) as err:
         print("[ Error ] when validating the configuration file %s :" % \

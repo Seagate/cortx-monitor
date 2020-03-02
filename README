@@ -22,3 +22,19 @@
 
       $ echo "state=degrade" > /var/eos/sspl/data/state.txt
       $ kill -s SIGHUP <SSPL-PID>
+
+=> Consul Configs
+   ~~~~~~~~~~~~~~
+
+   -> All eos configs will be available through salt API's, then stored in consul in paticular format i.e.
+      component.section.key = value
+
+   -> Get value from consul:
+
+      consul kv get component.section.key
+      Example: consul kv get sspl.NODEDATAMSGHANDLER.disk_usage_threshold
+
+   -> Put(Update) value in consul:
+
+      consul kv put sspl.NODEDATAMSGHANDLER.disk_usage_threshold $out
+      Where key='sspl.NODEDATAMSGHANDLER.disk_usage_threshold' and value='$out'

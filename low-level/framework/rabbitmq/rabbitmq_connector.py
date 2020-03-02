@@ -13,7 +13,7 @@ RABBITMQ_CLUSTER_SECTION = 'RABBITMQCLUSTER'
 RABBITMQ_CLUSTER_HOSTS_KEY = 'cluster_nodes'
 
 
-config = ConfigReader('/etc/sspl.conf')
+config = ConfigReader()
 connection_exceptions = (
     pika.exceptions.AMQPConnectionError,
     pika.exceptions.ChannelClosedByBroker,

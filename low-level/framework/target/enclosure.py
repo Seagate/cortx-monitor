@@ -22,8 +22,6 @@ from framework.utils.service_logging import logger
 
 class StorageEnclosure(object):
 
-    CONF_FILE = "/etc/sspl.conf"
-
     ENCL_FAMILY = "enclosure-family"
     EES_ENCL = "Realstor 5U84"
 
@@ -55,7 +53,7 @@ class StorageEnclosure(object):
 
         # Validate configuration file for required valid values
         try:
-            self.conf_reader = ConfigReader(self.CONF_FILE)
+            self.conf_reader = ConfigReader()
 
         except (IOError, ConfigReader.Error) as err:
             logger.error("[ Error ] when validating the config file {0} - {1}"\

@@ -2,6 +2,7 @@
 
 MOCK_SERVER_PORT=28200
 RMQ_SELF_STARTED=0
+SSPL_STORE_TYPE=${SSPL_STORE_TYPE:-consul}
 
 [[ $EUID -ne 0 ]] && sudo=sudo
 script_dir=$(dirname $0)
@@ -70,10 +71,19 @@ kill_mock_server()
 restore_cfg_services()
 {
     # Restoring MC port to value stored before tests
-    port=$(sed -n -e '/primary_controller_port/ s/.*\= *//p' /etc/sspl.conf)
-    if [ "$port" == "$MOCK_SERVER_PORT" ]
+    if [ "$SSPL_STORE_TYPE" == "file" ]
     then
-        sed -i 's/primary_controller_port='"$MOCK_SERVER_PORT"'/primary_controller_port='"$primary_port"'/g' /etc/sspl.conf
+        port=$(sed -n -e '/primary_controller_port/ s/.*\= *//p' /etc/sspl.conf)
+        if [ "$port" == "$MOCK_SERVER_PORT" ]
+        then
+            sed -i 's/primary_controller_port='"$MOCK_SERVER_PORT"'/primary_controller_port='"$primary_port"'/g' /etc/sspl.conf
+        fi
+    else
+        port=$(consul kv get sspl.STORAGE_ENCLOSURE.primary_controller_port)
+        if [ "$port" == "$MOCK_SERVER_PORT" ]
+        then
+            consul kv put sspl.STORAGE_ENCLOSURE.primary_controller_port $primary_port
+        fi
     fi
 
     echo "Stopping mock server"
@@ -121,16 +131,23 @@ flask_installed=$(python3.6 -c 'import pkgutil; print(1 if pkgutil.find_loader("
 }
 
 # Take backup of original sspl.conf
-$sudo cp /etc/sspl.conf /etc/sspl.conf.back
+[[ -f /etc/sspl.conf ]] && $sudo cp /etc/sspl.conf /etc/sspl.conf.back
 
-
-
-# check the port configured in /etc/sspl.conf
+# check the port configured in consul
 # change the port to $MOCK_SERVER_PORT as mock_server runs on $MOCK_SERVER_PORT
-primary_port=$(sed -n -e '/primary_controller_port/ s/.*\= *//p' /etc/sspl.conf)
-if [ "$primary_port" != "$MOCK_SERVER_PORT" ]
+if [ "$SSPL_STORE_TYPE" == "consul" ]
 then
-    sed -i 's/primary_controller_port='"$primary_port"'/primary_controller_port='"$MOCK_SERVER_PORT"'/g' /etc/sspl.conf
+    primary_port=$(consul kv get sspl.STORAGE_ENCLOSURE.primary_controller_port)
+    if [ "$primary_port" != "$MOCK_SERVER_PORT" ]
+    then
+        consul kv put sspl.STORAGE_ENCLOSURE.primary_controller_port $MOCK_SERVER_PORT
+    fi
+else
+    primary_port=$(sed -n -e '/primary_controller_port/ s/.*\= *//p' /etc/sspl.conf)
+    if [ "$primary_port" != "$MOCK_SERVER_PORT" ]
+    then
+        sed -i 's/primary_controller_port='"$primary_port"'/primary_controller_port='"$MOCK_SERVER_PORT"'/g' /etc/sspl.conf
+    fi
 fi
 
 # Setting pre-requisites first
@@ -144,8 +161,23 @@ $script_dir/mock_server &
 # primary_controller_ip=127.0.0.1 and primary_controller_port=$MOCK_SERVER_PORT.
 # For sanity test SSPL should connect to mock server instead of real server.
 # Restart SSPL to re-read configuration
+if [ "$SSPL_STORE_TYPE" == "consul" ]
+then
+    transmit_interval=$(consul kv get sspl.NODEDATAMSGHANDLER.transmit_interval)
+    disk_usage_threshold=$(consul kv get sspl.NODEDATAMSGHANDLER.disk_usage_threshold)
+    host_memory_usage_threshold=$(consul kv get sspl.NODEDATAMSGHANDLER.host_memory_usage_threshold)
+    cpu_usage_threshold=$(consul kv get sspl.NODEDATAMSGHANDLER.cpu_usage_threshold)
+else
+    transmit_interval=$(sed -n -e '/transmit_interval/ s/.*\= *//p' /etc/sspl.conf)
+    disk_usage_threshold=$(sed -n -e '/disk_usage_threshold/ s/.*\= *//p' /etc/sspl.conf)
+    host_memory_usage_threshold=$(sed -n -e '/host_memory_usage_threshold/ s/.*\= *//p' /etc/sspl.conf)
+    cpu_usage_threshold=$(sed -n -e '/cpu_usage_threshold/ s/.*\= *//p' /etc/sspl.conf)
+fi
 
-$sudo $script_dir/set_threshold.sh
+# setting values for testing
+disk_out=`python3.6 -c "import psutil; print(int(psutil.disk_usage('/')[3]-2))"`
+$sudo $script_dir/set_threshold.sh "10" $disk_out "0" "0"
+
 echo "Restarting SSPL"
 $sudo systemctl restart sspl-ll
 echo "Waiting for SSPL to complete initialization of all the plugins"
@@ -156,7 +188,7 @@ echo "Initialization completed. Starting tests"
 # not switched to active state then plugins will not respond and tests will
 # fail. Sending SIGUP to SSPL makes SSPL to read state file and switch state.
 echo "state=active" > /var/eos/sspl/data/state.txt
-PID=`ps -aux| grep "sspl_ll_d -c /etc/sspl.conf" | grep -v "grep" | awk '{print $2}'`
+PID=`ps -aux| grep "sspl_ll_d" | grep -v "grep" | awk '{print $2}'`
 kill -s SIGHUP $PID
 
 # Start tests
@@ -171,7 +203,10 @@ if [ -f /var/eos/sspl/orig-data/iem/last_processed_msg_time ]; then
 fi
 $sudo rm -rf /var/eos/sspl/orig-data
 
-$sudo mv /etc/sspl.conf.back /etc/sspl.conf
+# setting back the actual values
+$sudo $script_dir/set_threshold.sh $transmit_interval $disk_usage_threshold $host_memory_usage_threshold $cpu_usage_threshold
+[[ -f /etc/sspl.conf.back ]] && $sudo mv /etc/sspl.conf.back /etc/sspl.conf
+
 echo "Tests completed, restored configs and services .."
 restore_cfg_services
 echo "Cleaned Up .."

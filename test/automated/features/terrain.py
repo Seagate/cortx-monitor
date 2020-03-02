@@ -38,7 +38,7 @@ def init_rabbitMQ_msg_processors():
     conf_directory = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     path_to_conf_file = os.path.join(conf_directory, "sspl_tests.conf")
     try:
-        conf_reader = ConfigReader(path_to_conf_file)
+        conf_reader = ConfigReader(is_test=True, test_config_path=path_to_conf_file)
     except (IOError, ConfigReader.Error) as err:
         # We don't have logger yet, need to find log_level from conf file first
         print("[ Error ] when validating the configuration file %s :" % \

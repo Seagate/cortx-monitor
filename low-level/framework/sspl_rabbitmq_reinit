@@ -19,7 +19,6 @@ from config_reader import ConfigReader
 from eos.utils.security.cipher import Cipher
 
 RABBITMQCTL = '/usr/sbin/rabbitmqctl'
-SSPL_CONF = '/etc/sspl.conf'
 SECTION="RABBITMQEGRESSPROCESSOR"
 INGRESS_CONFIG_SECTION = 'RABBITMQINGRESSPROCESSOR'
 EGRESS_CONFIG_SECTION = 'RABBITMQEGRESSPROCESSOR'
@@ -40,14 +39,13 @@ PASSWORD_KEY = 'password'
 SYSTEM_INFORMATION_KEY = 'SYSTEM_INFORMATION'
 CLUSTER_ID_KEY = 'cluster_id'
 NODE_ID_KEY = 'node_id'
-
 # Add the top level directories
 parentdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.sys.path.insert(0,parentdir)
 
 from sspl_constants import cs_legacy_products, enabled_products
 
-config_reader = ConfigReader(SSPL_CONF)
+config_reader = ConfigReader(is_init=True)
 
 
 def gen_key(cluster_id, node_id):
@@ -65,30 +63,27 @@ def decrypt(key, text):
 
 def main(product):
     """ Main line for this program. """
-    config = ConfigParser()
-    config.read([SSPL_CONF])
-
-    virtual_host = config.get(
+    virtual_host = config_reader._get_value(
         section=SECTION,
-        option='virtual_host'
+        key='virtual_host'
         )
-    username = config.get(
+    username = config_reader._get_value(
         section=SECTION,
-        option='username'
+        key='username'
         )
-    password = config.get(
+    password = config_reader._get_value(
         section=SECTION,
-        option='password'
+        key='password'
         )
 
     if product in cs_legacy_products:
-        primary_rabbitmq_server = config.get(
+        primary_rabbitmq_server = config_reader._get_value(
             section=SECTION,
-            option='primary_rabbitmq_server'
+            key='primary_rabbitmq_server'
             )
-        secondary_rabbitmq_server = config.get(
+        secondary_rabbitmq_server = config_reader._get_value(
             section=SECTION,
-            option='secondary_rabbitmq_server'
+            key='secondary_rabbitmq_server'
             )
         _check_rabbitmq_status()
         _start_rabbitmq()
@@ -108,8 +103,8 @@ def main(product):
     _create_vhost_if_necessary(virtual_host, product)
 
     # Decrypt password -----------------------
-    cluster_id = config.get(section=SYSTEM_INFORMATION_KEY, option=CLUSTER_ID_KEY)
-    node_id = config.get(section=SYSTEM_INFORMATION_KEY, option=NODE_ID_KEY)
+    cluster_id = config_reader._get_value(section=SYSTEM_INFORMATION_KEY, key=CLUSTER_ID_KEY)
+    node_id = config_reader._get_value(section=SYSTEM_INFORMATION_KEY, key=NODE_ID_KEY)
 
     # Generate key
     key = gen_key(str(int(cluster_id)), str(int(node_id)))

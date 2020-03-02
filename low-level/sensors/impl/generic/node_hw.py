@@ -48,7 +48,6 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
     SENSOR_NAME = "NodeHWsensor"
     PRIORITY = 1
 
-    CONF_FILE = "/etc/sspl.conf"
     SYSINFO = "SYSTEM_INFORMATION"
     DATA_PATH_KEY = "data_path"
     DATA_PATH_VALUE_DEFAULT = "/var/eos/sspl/data"
@@ -124,7 +123,7 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
 
         # Validate configuration file for required valid values
         try:
-            self.conf_reader = ConfigReader(self.CONF_FILE)
+            self.conf_reader = ConfigReader()
 
         except (IOError, ConfigReader.Error) as err:
             logger.error("[ Error ] when validating the config file {0} - {1}"\
