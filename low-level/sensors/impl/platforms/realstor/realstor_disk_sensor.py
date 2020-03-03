@@ -249,8 +249,7 @@ class RealStorDiskSensor(ScheduledModuleThread, InternalMsgQ):
 
         for slot in inserted_disks:
             #get inserted drive data from disk cache
-            disk_info = self.rssencl.jsondata.load(
-                           f"{self.disks_prcache}disk_{slot}.json")
+            disk_info = store.get(f"{self.disks_prcache}disk_{slot}.json")
 
             #raise alert for added drive
             self._rss_raise_disk_alert(self.rssencl.FRU_INSERTION, disk_info)

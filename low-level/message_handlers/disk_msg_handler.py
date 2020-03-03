@@ -76,7 +76,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
         super(DiskMsgHandler, self).initialize_msgQ(msgQlist)
 
         # Find a meaningful hostname to be used
-        self.host_id = socket.getfqdn()
+        self._host_id = socket.getfqdn()
         # getfqdn() function checks the socket.gethostname() to get the host name if it not available
         # then it try to find host name from socket.gethostbyaddr(socket.gethostname())[0] and return the
         # meaningful host name priviously we chking the this two conditions explicitly which is implicitly

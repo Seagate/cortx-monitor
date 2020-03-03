@@ -868,7 +868,7 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
 
     def _get_epoch_time_from_date_and_time(self, _date, _time):
         timestamp_format = '%m/%d/%Y %H:%M:%S'
-        timestamp = time.strptime(f'{_date,_time} {timestamp_format}')
+        timestamp = time.strptime(f'{_date},{_time} {timestamp_format}')
         return str(int(time.mktime(timestamp)))
 
     def suspend(self):
