@@ -19,6 +19,7 @@ import json
 import os
 import time
 
+from eos.utils.security.cipher import Cipher
 import pika
 
 from jsonschema import Draft3Validator
@@ -27,9 +28,11 @@ from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
 from .rabbitmq_connector import RabbitMQSafeConnection
+from framework.utils import encryptor
 from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 from json_msgs.messages.actuators.ack_response import AckResponseMsg
 from framework.base.sspl_constants import RESOURCE_PATH
+
 
 try:
     use_security_lib = True
@@ -55,6 +58,10 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
     VIRT_HOST = 'virtual_host'
     USER_NAME = 'username'
     PASSWORD = 'password'
+
+    SYSTEM_INFORMATION_KEY = 'SYSTEM_INFORMATION'
+    CLUSTER_ID_KEY = 'cluster_id'
+    NODE_ID_KEY = 'node_id'
 
     JSON_ACTUATOR_SCHEMA = "SSPL-LL_Actuator_Request.json"
     JSON_SENSOR_SCHEMA = "SSPL-LL_Sensor_Request.json"
@@ -261,6 +268,14 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
             self._password = get_value_with_default(self.RABBITMQPROCESSOR,
                                                     self.PASSWORD,
                                                     'sspl4ever')
+
+            cluster_id = get_value_with_default(self.SYSTEM_INFORMATION_KEY,
+                                                self.CLUSTER_ID_KEY, '')
+            node_id = get_value_with_default(self.SYSTEM_INFORMATION_KEY,
+                                             self.NODE_ID_KEY, '')
+            # Decrypt RabbitMQ Password
+            decryption_key = encryptor.gen_key(str(int(cluster_id)), str(int(node_id)))
+            self._password = encryptor.decrypt(decryption_key, self._password.encode('ascii'))
             self._connection = RabbitMQSafeConnection(
                 self._username, self._password, self._virtual_host,
                 self._exchange_name, self._routing_key, self._queue_name

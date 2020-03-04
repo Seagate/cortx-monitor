@@ -22,6 +22,7 @@ from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
 from .rabbitmq_connector import RabbitMQSafeConnection
+from framework.utils import encryptor
 
 import ctypes
 try:
@@ -58,6 +59,10 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
     IEM_ROUTE_ADDR          = 'iem_route_addr'
     IEM_ROUTE_EXCHANGE_NAME = 'iem_route_exchange_name'
 
+    SYSTEM_INFORMATION_KEY = 'SYSTEM_INFORMATION'
+    CLUSTER_ID_KEY = 'cluster_id'
+    NODE_ID_KEY = 'node_id'
+
     @staticmethod
     def name():
         """ @return: name of the module."""
@@ -86,19 +91,23 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
         # Configure RabbitMQ Exchange to transmit messages
         self._connection = None
         self._read_config()
+
         self._connection = RabbitMQSafeConnection(
             self._username, self._password, self._virtual_host,
             self._exchange_name, self._routing_key, self._queue_name
         )
+
         self._ack_connection = RabbitMQSafeConnection(
             self._username, self._password, self._virtual_host,
             self._exchange_name, self._ack_routing_key, self._ack_queue_name
         )
+
         self._iem_connection = RabbitMQSafeConnection(
             self._username, self._password, self._virtual_host,
             self._iem_route_exchange_name, self._routing_key,
             self._queue_name
         )
+
         # Display values used to configure pika from the config file
         self._log_debug("RabbitMQ user: %s" % self._username)
         self._log_debug("RabbitMQ exchange: %s, routing_key: %s, vhost: %s" %
@@ -169,12 +178,12 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
                                                                  self.ACK_ROUTING_KEY,
                                                                  'actuator-resp-key')
 
-            self._username      = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
+            self._username = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
                                                                  self.USER_NAME,
                                                                  'sspluser')
-            self._password      = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
+            self._password = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
                                                                  self.PASSWORD,
-                                                                 'sspl4ever')
+                                                                 '')
             self._signature_user = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
                                                                  self.SIGNATURE_USERNAME,
                                                                  'sspl-ll')
@@ -190,6 +199,16 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
             self._iem_route_exchange_name = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
                                                                  self.IEM_ROUTE_EXCHANGE_NAME,
                                                                  'sspl-in')
+
+            cluster_id = self._conf_reader._get_value_with_default(self.SYSTEM_INFORMATION_KEY,
+                                                                   self.CLUSTER_ID_KEY, '')
+
+            node_id = self._conf_reader._get_value_with_default(self.SYSTEM_INFORMATION_KEY,
+                                                                self.NODE_ID_KEY, '')
+
+            # Decrypt RabbitMQ Password
+            decryption_key = encryptor.gen_key(str(int(cluster_id)), str(int(node_id)))
+            self._password = encryptor.decrypt(decryption_key, self._password.encode('ascii'))
 
             if self._iem_route_addr != "":
                 logger.info("         Routing IEMs to host: %s" % self._iem_route_addr)

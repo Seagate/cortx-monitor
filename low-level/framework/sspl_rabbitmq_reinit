@@ -16,6 +16,7 @@ import pika
 
 from configparser import ConfigParser
 from config_reader import ConfigReader
+from eos.utils.security.cipher import Cipher
 
 RABBITMQCTL = '/usr/sbin/rabbitmqctl'
 SSPL_CONF = '/etc/sspl.conf'
@@ -36,6 +37,10 @@ VIRT_HOST_KEY = 'virtual_host'
 USER_NAME_KEY = 'username'
 PASSWORD_KEY = 'password'
 
+SYSTEM_INFORMATION_KEY = 'SYSTEM_INFORMATION'
+CLUSTER_ID_KEY = 'cluster_id'
+NODE_ID_KEY = 'node_id'
+
 # Add the top level directories
 parentdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.sys.path.insert(0,parentdir)
@@ -43,6 +48,20 @@ os.sys.path.insert(0,parentdir)
 from sspl_constants import cs_legacy_products, enabled_products
 
 config_reader = ConfigReader(SSPL_CONF)
+
+
+def gen_key(cluster_id, node_id):
+    # Generate key for decryption
+    username = 'sspl'
+    service_name = 'sspl'
+    key = Cipher.generate_key(cluster_id, node_id, username, service_name)
+    return key
+
+
+def decrypt(key, text):
+    '''Decrypt the <text>'''
+    return Cipher.decrypt(key, text).decode()
+
 
 def main(product):
     """ Main line for this program. """
@@ -87,10 +106,18 @@ def main(product):
         print('RabbitMQ is running in single node mode.')
 
     _create_vhost_if_necessary(virtual_host, product)
+
+    # Decrypt password -----------------------
+    cluster_id = config.get(section=SYSTEM_INFORMATION_KEY, option=CLUSTER_ID_KEY)
+    node_id = config.get(section=SYSTEM_INFORMATION_KEY, option=NODE_ID_KEY)
+
+    # Generate key
+    key = gen_key(str(int(cluster_id)), str(int(node_id)))
+    password = decrypt(key, password.encode('ascii'))
     _create_user_if_necessary(username, password, virtual_host, product)
 
     # create durable/mirrored queues in either single or clustered mode.
-    create_mirrored_queues()
+    create_mirrored_queues(key)
 
     if product in cs_legacy_products:
         # Copy the erlang key from primary server to secondary and mirror queues
@@ -131,13 +158,13 @@ def sync_queue(queue_name):
     _send_command(command)
 
 
-def create_mirrored_queues():
+def create_mirrored_queues(decryption_key):
     print('Creating mirrored queues...')
     # creating actuator-req-queue queue.
     vhost, username, password, exchange_name, queue_name, routing_key = \
         _get_connection_config(INGRESS_CONFIG_SECTION)
     _set_ha_policy(queue_name)
-    create_queue(vhost, username, password, exchange_name,
+    create_queue(vhost, username, decrypt(decryption_key, password.encode('ascii')), exchange_name,
                  queue_name, routing_key)
     sync_queue(queue_name)
 
@@ -145,7 +172,7 @@ def create_mirrored_queues():
     vhost, username, password, exchange_name, queue_name, routing_key = \
         _get_connection_config(EGRESS_CONFIG_SECTION)
     _set_ha_policy(queue_name)
-    create_queue(vhost, username, password, exchange_name,
+    create_queue(vhost, username, decrypt(decryption_key, password.encode('ascii')), exchange_name,
                  queue_name, routing_key)
     sync_queue(queue_name)
 
@@ -158,7 +185,7 @@ def create_mirrored_queues():
             routing_key=ACK_ROUTING_KEY
         )
     _set_ha_policy(queue_name)
-    create_queue(vhost, username, password, exchange_name,
+    create_queue(vhost, username, decrypt(decryption_key, password.encode('ascii')), exchange_name,
                  queue_name, routing_key)
     sync_queue(queue_name)
 
@@ -166,7 +193,7 @@ def create_mirrored_queues():
     vhost, username, password, exchange_name, queue_name, routing_key = \
         _get_connection_config(LOGGER_CONFIG_SECTION)
     _set_ha_policy(queue_name)
-    create_queue(vhost, username, password, exchange_name,
+    create_queue(vhost, username, decrypt(decryption_key, password.encode('ascii')), exchange_name,
                  queue_name, routing_key)
     sync_queue(queue_name)
     print('Done creating mirrored queues...')

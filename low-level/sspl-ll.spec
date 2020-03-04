@@ -20,7 +20,7 @@ BuildRequires: python36 rpm-build sudo
 Requires:   rabbitmq-server udisks2 hdparm python36 ipmitool eos-libsspl_sec eos-libsspl_sec-method_none
 #Requires:  python36-dbus python36-paramiko
 #Requires:  python36-psutil python36-gobject systemd-python36
-Requires:   perl(Config::Any)
+Requires:   perl(Config::Any) eos-py-utils
 Requires(pre): shadow-utils
 
 # Disabling for EES-non-requirement

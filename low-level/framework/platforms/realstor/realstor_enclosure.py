@@ -24,6 +24,7 @@ from framework.target.enclosure import StorageEnclosure
 from framework.utils.service_logging import logger
 from framework.utils.webservices import WebServices
 from framework.utils.store_factory import store
+from framework.utils import encryptor
 
 class RealStorEnclosure(StorageEnclosure):
     """RealStor Enclosure Monitor functions using CLI API Webservice Interface"""
@@ -140,6 +141,9 @@ class RealStorEnclosure(StorageEnclosure):
                                                 self.SYSTEM_INFORMATION,
                                                 self.CLUSTER_ID,
                                                 0))
+        # Decrypt MC Password
+        decryption_key = encryptor.gen_key(str(self.cluster_id), str(self.node_id))
+        self.passwd = encryptor.decrypt(decryption_key, self.passwd.encode('ascii'))
 
         if self.mc_interface not in self.realstor_supported_interfaces:
             logger.error("Unspported Realstor interface configured,"
