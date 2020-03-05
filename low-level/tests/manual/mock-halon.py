@@ -84,13 +84,13 @@ def prepare_msg(sensor, identifier, status):
     return msg
 
 if __name__ == "__main__":
-    #if len(sys.argv) < 4: usage()
-    #sensor, identifier, status = sys.argv[1], sys.argv[2], sys.argv[3]
+    if len(sys.argv) < 4: usage()
+    sensor, identifier, status = sys.argv[1], sys.argv[2], sys.argv[3]
 
-    #msg_file = os.path.join(os.path.dirname(sys.argv[0]), sensor)
-    #if not os.path.exists(msg_file):
-    #    sys.stderr.write('error: invalid sensor type\n')
-    #    usage()
+    msg_file = os.path.join(os.path.dirname(sys.argv[0]), sensor)
+    if not os.path.exists(msg_file):
+        sys.stderr.write('error: invalid sensor type\n')
+        usage()
 
     try:
         #msg = prepare_msg(sensor, identifier, status)
@@ -111,11 +111,11 @@ if __name__ == "__main__":
             },
              "sspl_ll_debug": {
                 "debug_component" : "sensor",
-                "debug_enabled" : True
+                "debug_enabled" : true
             },
             "sensor_request_type": {
                 "node_data": {
-                    "sensor_type": "node:os:cpu"
+                    "sensor_type": "node:os:system"
                 }
             }
         }

@@ -15,10 +15,10 @@ def test_cpu_data_sensor(args):
     check_sspl_ll_is_running()
     node_data_sensor_message_request("node:os:cpu")
     cpu_data_msg = None
-    sleep(10)
+    sleep(4)
     while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
         ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
-        sleep(10)
+        sleep(4)
         print("Received for cpu_data: {0}".format(ingressMsg))
         try:
             # Make sure we get back the message type that matches the request

@@ -151,10 +151,10 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         self._raid_drives = []
         self._raid_device = "N/A"
         self.os_sensor_type = {
-            "disk_space_alert" : self.disk_sensor_data,
-            "host_update" : self.host_sensor_data,
-            "if_data"   : self.if_sensor_data,
-            "cpu_data"  : self.cpu_sensor_data
+            "disk_space" : self.disk_sensor_data,
+            "system" : self.host_sensor_data,
+            "nw"   : self.if_sensor_data,
+            "cpu"  : self.cpu_sensor_data
         }
 
         # UUID used in json msgs
@@ -250,7 +250,6 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
            jsonMsg.get("sensor_request_type").get("node_data").get("sensor_type") is not None:
             self.sensor_type = jsonMsg.get("sensor_request_type").get("node_data").get("sensor_type").split(":")[2]
             self._log_debug("_processMsg, sensor_type: %s" % self.sensor_type)
-            self.logger.info("Sensor type---->>> %s" %(self.sensor_type))
 
             if self.sensor_type == "system":
                 self._generate_host_update()
@@ -367,7 +366,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 jsonMsg = hostUpdateMsg.getJson()
                 # Transmit it out over rabbitMQ channel
                 self.host_sensor_data = jsonMsg
-                self.os_sensor_type["host_update"] = self.host_sensor_data
+                self.os_sensor_type["system"] = self.host_sensor_data
                 self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
 
         if (self._node_sensor.total_memory["percent"] < self._host_memory_usage_threshold) and (self.host_fault == True):
@@ -395,7 +394,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 jsonMsg = hostUpdateMsg.getJson()
                 # Transmit it out over rabbitMQ channel
                 self.host_sensor_data = jsonMsg
-                self.os_sensor_type[self.sensor_type] = self.host_sensor_data
+                self.os_sensor_type["system"] = self.host_sensor_data
                 self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
                 self.host_fault = False
 
@@ -480,7 +479,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     cpuDataMsg.set_uuid(self._uuid)
                 jsonMsg = cpuDataMsg.getJson()
                 self.cpu_sensor_data = jsonMsg
-                self.os_sensor_type["cpu_data"] = self.cpu_sensor_data
+                self.os_sensor_type["cpu"] = self.cpu_sensor_data
                 # Transmit it out over rabbitMQ channel
                 self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
 
@@ -515,7 +514,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 cpuDataMsg.set_uuid(self._uuid)
             jsonMsg = cpuDataMsg.getJson()
             self.cpu_sensor_data = jsonMsg
-            self.os_sensor_type[self.sensor_type] = self.cpu_sensor_data
+            self.os_sensor_type["cpu"] = self.cpu_sensor_data
             # Transmit it out over rabbitMQ channel
             self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
             self.cpu_fault = False
@@ -546,7 +545,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
                 # Send the event to logging msg handler to send IEM message to journald
                 self.if_sensor_data = jsonMsg
-                self.os_sensor_type[self.sensor_type] = self.if_sensor_data
+                self.os_sensor_type["nw"] = self.if_sensor_data
                 self._write_internal_msgQ(LoggingMsgHandler.name(), internal_json_msg)
                 # Transmit it out over rabbitMQ channel
                 self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
@@ -565,7 +564,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
             # Send the event to logging msg handler to send IEM message to journald
             self.if_sensor_data = jsonMsg
-            self.os_sensor_type[self.sensor_type] = self.if_sensor_data
+            self.os_sensor_type["nw"] = self.if_sensor_data
             self._write_internal_msgQ(LoggingMsgHandler.name(), internal_json_msg)
             # Transmit it out over rabbitMQ channel
             self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
@@ -625,7 +624,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     diskSpaceAlertMsg.set_uuid(self._uuid)
                 jsonMsg = diskSpaceAlertMsg.getJson()
                 self.disk_sensor_data = jsonMsg
-                self.os_sensor_type["disk_space_alert"] = self.disk_sensor_data
+                self.os_sensor_type["disk_space"] = self.disk_sensor_data
                 # Transmit it out over rabbitMQ channel
                 self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
 
@@ -651,7 +650,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 diskSpaceAlertMsg.set_uuid(self._uuid)
             jsonMsg = diskSpaceAlertMsg.getJson()
             self.disk_sensor_data = jsonMsg
-            self.os_sensor_type["disk_space_alert"] = self.disk_sensor_data
+            self.os_sensor_type["disk_space"] = self.disk_sensor_data
             # Transmit it out over rabbitMQ channel
             self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
             self.disk_fault = False
