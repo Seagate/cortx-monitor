@@ -118,7 +118,8 @@ def copy_erlang_cookie():
     _send_command(command)
     command = f'chmod -w {ERLANG_COOKIE_PATH}'
     _send_command(command)
-    command = 'systemctl start rabbitmq-server'
+    # restarting to make sure it starts in case it is not stopped already.
+    command = 'systemctl restart rabbitmq-server'
     _send_command(command)
     print('Done creating erlang cookie')
 

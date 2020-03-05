@@ -42,4 +42,4 @@ echo "Creating required RABBITMQ configuration.... "
     exit 1;
 }
 
-systemctl stop rabbitmq-server
+# systemctl stop rabbitmq-server
