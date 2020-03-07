@@ -221,7 +221,11 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
 
     def _update_list_file(self):
         (tmp_fd, tmp_name) = tempfile.mkstemp(dir=self.cache_dir_path)
-        sel_out, retcode = self._run_ipmitool_subcommand("sel list", out_file=tmp_fd)
+        # make sel list filter only for available frus. no extra data needed
+        # 'Power Supply|Power Unit|Fan|Drive Slot / Bay'
+        available_fru = '|'.join(self.fru_types.keys())
+        sel_out, retcode = self._run_ipmitool_subcommand("sel list", grep_args=f"-E '{available_fru}'",
+                                                             out_file=tmp_fd)
         if retcode != 0:
             msg = f"ipmitool sel list command failed: {''.join(sel_out)}"
             logger.error(msg)
@@ -366,8 +370,14 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
             # 2 | 04/16/2019 | 05:29:09 | Fan #0x30 | Lower Non-critical going low  | Asserted
             index, date, time, device_id, event, status = [
                 attr.strip() for attr in sel_line.split("|") ]
-            device_type, sensor_num = re.match(
-                    '(.*) (#0x([0-9a-f]+))?', device_id).group(1, 3)
+            try:
+                device_type, sensor_num = re.match(
+                        '(.*) (#0x([0-9a-f]+))?', device_id).group(1, 3)
+            except:
+                # If device_type and sensor_num is not found in device_id
+                device_type = device_id
+                sensor_num = ''
+
             return (index, date, time, device_id, device_type, sensor_num, event, status)
 
     def _notify_NodeDataMsgHandler(self):
@@ -617,7 +627,7 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
                         "cluster_id":self._cluster_id ,
                         "resource_type": resource_type,
                         "resource_id": sensor_name,
-                        "event_time":self._get_epoch_time_from_date_and_time(date, _time)
+                        "event_time": str(int(time.time()))
                     }
 
         if is_last:
@@ -655,7 +665,7 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
             "cluster_id": self._cluster_id,
             "resource_type": resource_type,
             "resource_id": sensor,
-            "event_time": self._get_epoch_time_from_date_and_time(date, _time)
+            "event_time": str(int(time.time()))
         }
 
         try:
@@ -732,7 +742,7 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
             "cluster_id": self._cluster_id,
             "resource_type": resource_type,
             "resource_id": sensor,
-            "event_time": self._get_epoch_time_from_date_and_time(date, _time)
+            "event_time": str(int(time.time()))
         }
 
         try:
@@ -787,7 +797,7 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
                 "cluster_id": self._cluster_id,
                 "resource_type": resource_type,
                 "resource_id": sensor,
-                "event_time": self._get_epoch_time_from_date_and_time(date, _time)
+                "event_time": str(int(time.time()))
             }
             if (event, status) in alert_severity_dict:
                 alert_type = alert_severity_dict[(event, status)][0]
@@ -865,11 +875,6 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
         salt = str(uuid.uuid4().hex)
         alert_id = epoch_time + salt
         return alert_id
-
-    def _get_epoch_time_from_date_and_time(self, _date, _time):
-        timestamp_format = '%m/%d/%Y %H:%M:%S'
-        timestamp = time.strptime(f'{_date},{_time} {timestamp_format}')
-        return str(int(time.mktime(timestamp)))
 
     def suspend(self):
         """Suspends the module thread. It should be non-blocking"""
