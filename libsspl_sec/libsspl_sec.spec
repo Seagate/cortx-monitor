@@ -1,7 +1,7 @@
 # build number
 %define build_num  %( test -n "$build_number" && echo "$build_number" || echo 1 )
 
-Name:       libsspl_sec
+Name:       eos-libsspl_sec
 Version:    %{version}
 Release:    %{build_num}_git%{git_rev}%{?dist}
 Summary:    Segate System Platform Library - Security
