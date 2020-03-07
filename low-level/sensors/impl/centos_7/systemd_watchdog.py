@@ -323,7 +323,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
 
         # Process until our message queue is empty
         while not self._is_my_msgQ_empty():
-            jsonMsg = self._read_my_msgQ()
+            jsonMsg, _ = self._read_my_msgQ()
             if jsonMsg is not None:
                 self._process_msg(jsonMsg)
 

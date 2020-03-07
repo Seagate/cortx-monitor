@@ -183,13 +183,13 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
             self._log_debug("Start accepting requests")
         try:
             # Block on message queue until it contains an entry
-            jsonMsg = self._read_my_msgQ()
+            jsonMsg, _ = self._read_my_msgQ()
             if jsonMsg is not None:
                 self._process_msg(jsonMsg)
 
             # Keep processing until the message queue is empty
             while not self._is_my_msgQ_empty():
-                jsonMsg = self._read_my_msgQ()
+                jsonMsg, _ = self._read_my_msgQ()
                 if jsonMsg is not None:
                     self._process_msg(jsonMsg)
 

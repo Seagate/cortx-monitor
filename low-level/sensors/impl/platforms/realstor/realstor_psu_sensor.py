@@ -19,6 +19,7 @@ import re
 import socket
 import time
 import uuid
+from threading import Event
 
 from zope.interface import implementer
 
@@ -89,6 +90,8 @@ class RealStorPSUSensor(ScheduledModuleThread, InternalMsgQ):
 
         # Flag to indicate suspension of module
         self._suspended = False
+
+        self._event = Event()
 
     def initialize(self, conf_reader, msgQlist, products):
         """initialize configuration reader and internal msg queues"""
@@ -248,6 +251,9 @@ class RealStorPSUSensor(ScheduledModuleThread, InternalMsgQ):
                     del self._previously_faulty_psus[durable_id]
             # Persist faulty PSU list to file only if something is changed
             if state_changed:
+                # TODO: Handle timeout scenario
+                # Wait till msg is sent to rabbitmq
+                self._event.wait()
                 store.put(self._previously_faulty_psus,\
                     self._faulty_psu_file_path)
                 state_changed = False
@@ -369,7 +375,8 @@ class RealStorPSUSensor(ScheduledModuleThread, InternalMsgQ):
             "RealStorPSUSensor._send_json_msg -> {0}".format(json_msg))
         if not json_msg:
             return
-        self._write_internal_msgQ(RealStorEnclMsgHandler.name(), json_msg)
+        self._event.clear()
+        self._write_internal_msgQ(RealStorEnclMsgHandler.name(), json_msg, self._event)
 
     def _check_if_psu_not_installed(self, health_reason):
         """Checks if PSU is not installed by checking <not installed>

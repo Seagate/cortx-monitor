@@ -103,7 +103,7 @@ class PlaneCntrlRMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
             # Block on message queue until it contains an entry
             if self._msg_sent_succesfull:
                 # Only get a new msg if we've successfully processed the current one
-                self._jsonMsg = self._read_my_msgQ()
+                self._jsonMsg, self._event = self._read_my_msgQ()
 
             if self._jsonMsg is not None:
                 self._transmit_msg_on_exchange()
@@ -112,7 +112,7 @@ class PlaneCntrlRMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
             while not self._is_my_msgQ_empty():
                 # Only get a new msg if we've successfully processed the current one
                 if self._msg_sent_succesfull:
-                    self._jsonMsg = self._read_my_msgQ()
+                    self._jsonMsg, self._event = self._read_my_msgQ()
 
                 if self._jsonMsg is not None:
                     self._transmit_msg_on_exchange()
@@ -259,6 +259,9 @@ class PlaneCntrlRMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
             self._connection.publish(exchange, routing_key, properties, body)
             # No exceptions thrown so success
             self._log_debug("_transmit_msg_on_exchange, Successfully Sent: %s" % self._jsonMsg)
+            # If event is added by sensors, set it
+            if self._event:
+                self._event.set()
             self._msg_sent_succesfull = True
         except Exception as ex:
             logger.exception("PlaneCntrlRMQegressProcessor, _transmit_msg_on_exchange: %r" % ex)

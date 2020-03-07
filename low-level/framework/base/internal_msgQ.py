@@ -36,10 +36,10 @@ class InternalMsgQ(object):
         """Blocks on reading from this module's queue placed by another thread"""
         try:
             q = self._msgQlist[self.name()]
-            jsonMsg = q.get()
+            jsonMsg, event = q.get()
 
             if jsonMsg is None:
-                return None
+                return None, None
 
             # Check for debugging being activated in the message header
             global_debug_off, jsonMsg = self._check_debug(jsonMsg)
@@ -47,12 +47,12 @@ class InternalMsgQ(object):
                  self._debug_off_globally()
 
             self._log_debug("_read_my_msgQ: %s, Msg:%s" % (self.name(), jsonMsg))
-            return jsonMsg
+            return jsonMsg, event
 
         except Exception as e:
             logger.exception("_read_my_msgQ: %r" % e)
 
-        return None
+        return None, None
 
     def _read_my_msgQ_noWait(self):
         """Non-Blocks on reading from this module's queue placed by another thread"""
@@ -61,13 +61,13 @@ class InternalMsgQ(object):
 
             # See if queue is empty otherwise don't bother
             if q.empty():
-                return None
+                return None, None
 
             # Don't block waiting for messages
-            jsonMsg = q.get_nowait()
+            jsonMsg, event = q.get_nowait()
 
             if jsonMsg is None:
-                return None
+                return None, None
 
             # Check for debugging being activated in the message header
             global_debug_off, jsonMsg = self._check_debug(jsonMsg)
@@ -75,18 +75,18 @@ class InternalMsgQ(object):
                 self._debug_off_globally()
 
             self._log_debug("_read_my_msgQ_noWait: %s, Msg:%s" % (self.name(), jsonMsg))
-            return jsonMsg
+            return jsonMsg, event
 
         except Exception as e:
             logger.exception("_read_my_msgQ_noWait: %r" % e)
 
-    def _write_internal_msgQ(self, toModule, jsonMsg):
+    def _write_internal_msgQ(self, toModule, jsonMsg, event=None):
         """writes a json message to an internal message queue"""
         self._log_debug("_write_internal_msgQ: From %s, To %s, Msg:%s" %
                        (self.name(), toModule, jsonMsg))
 
         q = self._msgQlist[toModule]
-        q.put(jsonMsg)
+        q.put((jsonMsg, event))
 
     def _get_msgQ_copy(self, module_name):
         """Returns a copy of a modules message queue"""

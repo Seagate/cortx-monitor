@@ -19,6 +19,7 @@ import os
 import socket
 import time
 import uuid
+from threading import Event
 
 from zope.interface import implementer
 
@@ -81,6 +82,8 @@ class RealStorSideplaneExpanderSensor(ScheduledModuleThread, InternalMsgQ):
 
         # Flag to indicate suspension of module
         self._suspended = False
+
+        self._event = Event()
 
     @staticmethod
     def dependencies():
@@ -226,6 +229,9 @@ class RealStorSideplaneExpanderSensor(ScheduledModuleThread, InternalMsgQ):
                             sideplane_expander, self.unhealthy_components,
                             alert_type)
                     self._send_json_message(internal_json_message)
+                    # TODO: Handle timeout scenario
+                    # Wait till msg is sent to rabbitmq
+                    self._event.wait()
                     store.put(\
                         self._faulty_sideplane_expander_dict,\
                         self._faulty_sideplane_expander_file_path)
@@ -322,7 +328,8 @@ class RealStorSideplaneExpanderSensor(ScheduledModuleThread, InternalMsgQ):
 
         # Send the event to real stor message handler to generate json message
         # and send out
-        self._write_internal_msgQ(RealStorEnclMsgHandler.name(), json_msg)
+        self._event.clear()
+        self._write_internal_msgQ(RealStorEnclMsgHandler.name(), json_msg, self._event)
 
     def suspend(self):
         """Suspends the module thread. It should be non-blocking"""

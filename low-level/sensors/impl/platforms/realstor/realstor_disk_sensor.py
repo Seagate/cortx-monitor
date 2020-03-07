@@ -21,6 +21,8 @@ import json
 import time
 import socket
 import uuid
+from threading import Event
+import re
 
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
@@ -102,6 +104,8 @@ class RealStorDiskSensor(ScheduledModuleThread, InternalMsgQ):
 
         # Flag to indicate suspension of module
         self._suspended = False
+
+        self._event = None
 
     def initialize(self, conf_reader, msgQlist, products):
         """initialize configuration reader and internal msg queues"""
@@ -233,6 +237,7 @@ class RealStorDiskSensor(ScheduledModuleThread, InternalMsgQ):
             #logger.info("Disk presence state _NOT_ changed !!!")
             return
 
+        self._event = Event()
         for slot in removed_disks:
             #get removed drive data from disk cache
             disk_datafile = f"self.disks_prcache disk_{slot}.json.prev"
@@ -242,10 +247,14 @@ class RealStorDiskSensor(ScheduledModuleThread, InternalMsgQ):
 
             disk_info = store.get(disk_datafile)
 
+            
             #raise alert for missing drive
             self._rss_raise_disk_alert(self.rssencl.FRU_MISSING, disk_info)
-
+            # Wait till msg is sent to rabbitmq
+            self._event.wait()
             os.remove(disk_datafile)
+            self._event.clear()
+        self._event = None
 
         for slot in inserted_disks:
             #get inserted drive data from disk cache
@@ -358,10 +367,10 @@ class RealStorDiskSensor(ScheduledModuleThread, InternalMsgQ):
 
         for filename in files:
             if filename.startswith('disk_') and filename.endswith('.json'):
-
+                if f"{filename}.prev" in files:
+                    filename = f"{filename}.prev"
                 drive = store.get(self.disks_prcache + filename)
-                filename = filename[:-5]
-                slotstr = filename.strip('disk_')
+                slotstr = re.findall("disk_(\d+).json", filename)[0]
 
                 if not slotstr.isdigit():
                     logger.debug(f"slot {slotstr} not numeric, ignoring")
@@ -389,6 +398,7 @@ class RealStorDiskSensor(ScheduledModuleThread, InternalMsgQ):
 
             # TODO optimize to avoid nested 'for' loops.
             # Second 'for' loop in check_new_fault()
+            self._event = Event()
             if faults:
                 for fault in faults:
 
@@ -411,6 +421,9 @@ class RealStorDiskSensor(ScheduledModuleThread, InternalMsgQ):
 
                                 # raise alert for disk fault
                                 self._rss_raise_disk_alert(self.rssencl.FRU_FAULT, disk_info)
+                                # To ensure all msg is sent to rabbitmq before updating cache
+                                self._event.wait()
+                                self._event.clear() 
 
             # Check for resolved faults
             for cached in self.rssencl.memcache_faults:
@@ -426,11 +439,13 @@ class RealStorDiskSensor(ScheduledModuleThread, InternalMsgQ):
                         # get drive data from disk cache
                         disk_info = store.get(
                             self.disks_prcache+"disk_{0}.json".format(slot))
-
                         # raise alert for resolved disk fault
                         self._rss_raise_disk_alert(self.rssencl.FRU_FAULT_RESOLVED, disk_info)
-
+                        # To ensure all msg is sent to rabbitmq before updating cache
+                        self._event.wait()
+                        self._event.clear()
             self.rssencl.update_memcache_faults()
+            self._event = None
 
         except Exception as e:
             logger.exception(f"Error in _rss_check_disk_faults {e}")
@@ -496,7 +511,7 @@ class RealStorDiskSensor(ScheduledModuleThread, InternalMsgQ):
         self.last_alert = internal_json_msg
 
         # Send the event to storage encl message handler to generate json message and send out
-        self._write_internal_msgQ(RealStorEnclMsgHandler.name(), internal_json_msg)
+        self._write_internal_msgQ(RealStorEnclMsgHandler.name(), internal_json_msg, self._event)
 
     def _log_IEM(self, alert_type, details, ext):
         """Sends an IEM to logging msg handler"""

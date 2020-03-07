@@ -18,6 +18,7 @@ import os
 import socket
 import time
 import uuid
+from threading import Event
 
 from zope.interface import implementer
 
@@ -110,6 +111,8 @@ class RealStorLogicalVolumeSensor(ScheduledModuleThread, InternalMsgQ):
 
         # Flag to indicate suspension of module
         self._suspended = False
+
+        self._event = Event()
 
     def initialize(self, conf_reader, msgQlist, products):
         """initialize configuration reader and internal msg queues"""
@@ -292,6 +295,9 @@ class RealStorLogicalVolumeSensor(ScheduledModuleThread, InternalMsgQ):
                     state_changed = True
             # Persist faulty Logical Volume list to file only if something is changed
             if state_changed:
+                # TODO: Handle timeout scenario
+                # Wait till msg is sent to rabbitmq
+                self._event.wait()
                 store.put(self._previously_faulty_disk_groups,\
                     self._faulty_disk_group_file_path)
                 state_changed = False
@@ -365,7 +371,9 @@ class RealStorLogicalVolumeSensor(ScheduledModuleThread, InternalMsgQ):
         """Sends JSON message to Handler"""
         if not json_msg:
             return
-        self._write_internal_msgQ(RealStorEnclMsgHandler.name(), json_msg)
+
+        self._event.clear()
+        self._write_internal_msgQ(RealStorEnclMsgHandler.name(), json_msg, self._event)
 
     def suspend(self):
         """Suspends the module thread. It should be non-blocking"""

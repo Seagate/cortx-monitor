@@ -20,6 +20,7 @@ import re
 import socket
 import time
 import uuid
+from threading import Event
 
 from zope.interface import implementer
 
@@ -88,6 +89,8 @@ class RealStorFanSensor(ScheduledModuleThread, InternalMsgQ):
 
         # Flag to indicate suspension of module
         self._suspended = False
+
+        self._event = Event()
 
     def initialize(self, conf_reader, msgQlist, products):
         """initialize configuration reader and internal msg queues"""
@@ -191,6 +194,8 @@ class RealStorFanSensor(ScheduledModuleThread, InternalMsgQ):
                     internal_json_message = \
                         self._create_internal_json_msg(fan_module, alert_type)
                     self._send_json_message(internal_json_message)
+                    # Wait till msg is sent to rabbitmq
+                    self._event.wait()
                     store.put(self._faulty_fan_modules_list,\
                         self._faulty_fan_file_path)
                     alert_type = None
@@ -316,9 +321,11 @@ class RealStorFanSensor(ScheduledModuleThread, InternalMsgQ):
     def _send_json_message(self, json_msg):
         """Transmit data to RealStorMsgHandler to be processed and sent out"""
 
+        self._event.clear()
+
         # Send the event to real stor message handler
         # to generate json message and send out
-        self._write_internal_msgQ(RealStorEnclMsgHandler.name(), json_msg)
+        self._write_internal_msgQ(RealStorEnclMsgHandler.name(), json_msg, self._event)
 
     # TODO: Need to change IEM Message Format
     def _log_IEM(self, info, extended_info):

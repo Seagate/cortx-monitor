@@ -583,7 +583,7 @@ def signal_handler(signal_number, frame):
                         }
                     }
         }
-        thread_controller_queue.put(json.dumps(state_change_msg))
+        thread_controller_queue.put((json.dumps(state_change_msg), None))
     else:
         logger.error("thread_controller_queue is None")
 

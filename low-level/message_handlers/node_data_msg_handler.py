@@ -198,7 +198,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 timer = self._transmit_interval
                 while timer > 0:
                     # See if the message queue contains an entry and process
-                    jsonMsg = self._read_my_msgQ_noWait()
+                    jsonMsg, _ = self._read_my_msgQ_noWait()
                     if jsonMsg is not None:
                         self._process_msg(jsonMsg)
 
@@ -214,13 +214,13 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             # If the timer is zero then block for incoming requests notifying to transmit data
             else:
                 # Block on message queue until it contains an entry
-                jsonMsg = self._read_my_msgQ()
+                jsonMsg, _ = self._read_my_msgQ()
                 if jsonMsg is not None:
                     self._process_msg(jsonMsg)
 
                 # Keep processing until the message queue is empty
                 while not self._is_my_msgQ_empty():
-                    jsonMsg = self._read_my_msgQ()
+                    jsonMsg, _ = self._read_my_msgQ()
                     if jsonMsg is not None:
                         self._process_msg(jsonMsg)
 

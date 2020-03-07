@@ -94,13 +94,13 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
         try:
             # Block on message queue until it contains an entry
-            json_msg = self._read_my_msgQ()
+            json_msg, _ = self._read_my_msgQ()
             if json_msg is not None:
                 self._process_msg(json_msg)
 
             # Keep processing until the message queue is empty
             while not self._is_my_msgQ_empty():
-                json_msg = self._read_my_msgQ()
+                json_msg, _ = self._read_my_msgQ()
                 if json_msg is not None:
                     self._process_msg(json_msg)
 
