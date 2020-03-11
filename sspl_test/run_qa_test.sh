@@ -45,6 +45,8 @@ pre_requisites()
     # Enable ipmi simulator
     cp -Rp $script_dir/ipmi_simulator/ipmisimtool /usr/bin
     touch /tmp/activate_ipmisimtool
+    # Backup consul data before deleting
+    consul kv export var/eos/sspl/data/ > /tmp/consul_backup.json
 
     # clearing consul keys.
     consul kv delete -recurse var/eos/sspl/data
@@ -88,6 +90,11 @@ restore_cfg_services()
     # Remove ipmisimtool
     rm -f /usr/bin/ipmisimtool
     rm -f /tmp/activate_ipmisimtool
+
+    # Restore consul data
+    consul kv delete -recurse var/eos/sspl/data
+    consul kv import @/tmp/consul_backup.json
+    $sudo rm -f /tmp/consul_backup.json
 }
 
 cleanup()
