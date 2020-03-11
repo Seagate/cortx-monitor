@@ -124,6 +124,13 @@ def copy_erlang_cookie():
     print('Done creating erlang cookie')
 
 
+def sync_queue(queue_name):
+    """Queues need to be synced when new node joined to the cluster.
+    """
+    command = f'{RABBITMQCTL} sync_queue -p SSPL {queue_name}'
+    _send_command(command)
+
+
 def create_mirrored_queues():
     print('Creating mirrored queues...')
     # creating actuator-req-queue queue.
@@ -132,6 +139,7 @@ def create_mirrored_queues():
     _set_ha_policy(queue_name)
     create_queue(vhost, username, password, exchange_name,
                  queue_name, routing_key)
+    sync_queue(queue_name)
 
     # creating sensor-queue queue
     vhost, username, password, exchange_name, queue_name, routing_key = \
@@ -139,6 +147,7 @@ def create_mirrored_queues():
     _set_ha_policy(queue_name)
     create_queue(vhost, username, password, exchange_name,
                  queue_name, routing_key)
+    sync_queue(queue_name)
 
     # creating actuator-resp-queue queue
     vhost, username, password, exchange_name, queue_name, routing_key = \
@@ -151,6 +160,7 @@ def create_mirrored_queues():
     _set_ha_policy(queue_name)
     create_queue(vhost, username, password, exchange_name,
                  queue_name, routing_key)
+    sync_queue(queue_name)
 
     # creating iem-queue queue
     vhost, username, password, exchange_name, queue_name, routing_key = \
@@ -158,6 +168,7 @@ def create_mirrored_queues():
     _set_ha_policy(queue_name)
     create_queue(vhost, username, password, exchange_name,
                  queue_name, routing_key)
+    sync_queue(queue_name)
     print('Done creating mirrored queues...')
 
 

@@ -29,6 +29,7 @@ from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
 from framework.utils.autoemail import AutoEmail
+from .rabbitmq_connector import RabbitMQSafeConnection
 
 # Modules that receive messages from this module
 from message_handlers.logging_msg_handler import LoggingMsgHandler
@@ -79,11 +80,8 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
         super(LoggingProcessor, self).initialize_msgQ(msgQlist)
 
         self._autoemailer = AutoEmail(conf_reader)
-
         # Configure RabbitMQ Exchange to receive messages
         self._configure_exchange(retry=False)
-
-        self._wait_time = 10
 
     def run(self):
         """Run the module periodically on its own thread."""
@@ -92,15 +90,7 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
 
         self._log_debug("Start accepting requests")
         try:
-            result = self._channel.queue_declare(queue="", exclusive=True)
-            self._channel.queue_bind(exchange=self._exchange_name,
-                                queue=result.method.queue,
-                                routing_key=self._routing_key)
-
-            self._channel.basic_consume(queue=result.method.queue, on_message_callback=self._process_msg)
-
-            self._channel.start_consuming()
-
+            self._connection.consume(callback=self._process_msg)
         except Exception as ae:
             if self.is_running() is True:
                 logger.info("LoggingProcessor ungracefully breaking out of run loop, restarting: %s"
@@ -174,7 +164,7 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
                 self._write_internal_msgQ(LoggingMsgHandler.name(), internal_json_msg)
 
             # Acknowledge message was received
-            ch.basic_ack(delivery_tag = method.delivery_tag)
+            self._connection.ack(ch, delivery_tag=method.delivery_tag)
         except Exception as ex:
             logger.error("_process_msg: %r" % ex)
 
@@ -199,48 +189,19 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
             self._password      = self._conf_reader._get_value_with_default(self.LOGGINGPROCESSOR,
                                                                  self.PASSWORD,
                                                                  'sspl4ever')
-
-            # ensure the rabbitmq queues/etc exist
-            creds = pika.PlainCredentials(self._username, self._password)
-            self._connection = pika.BlockingConnection(
-                pika.ConnectionParameters(
-                    host='localhost',
-                    virtual_host=self._virtual_host,
-                    credentials=creds
-                    )
-                )
-            self._channel = self._connection.channel()
-            try:
-                self._channel.queue_declare(
-                    queue=self._queue_name,
-                    durable=True,
-                    )
-                self._channel.exchange_declare(
-                    exchange=self._exchange_name,
-                    exchange_type='topic',
-                    durable=True,
-                    )
-            except Exception as e:
-                logger.info('Error in exchange declare {}'.format(e))
-            self._channel.queue_bind(
-                queue=self._queue_name,
-                exchange=self._exchange_name,
-                routing_key=self._routing_key
-                )
-
+            self._connection = RabbitMQSafeConnection(
+                self._username, self._password, self._virtual_host,
+                self._exchange_name, self._routing_key, self._queue_name
+            )
         except Exception as ex:
             logger.error("_configure_exchange: %s" % ex)
-            if retry:
-                time.sleep(self._wait_time)
-                self._configure_exchange(retry=True)
 
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""
         super(LoggingProcessor, self).shutdown()
         try:
-            self._connection.close()
-            self._channel.stop_consuming()
+            self._connection.cleanup()
         except pika.exceptions.ConnectionClosed:
             logger.info("LoggingProcessor, shutdown, RabbitMQ ConnectionClosed")
 

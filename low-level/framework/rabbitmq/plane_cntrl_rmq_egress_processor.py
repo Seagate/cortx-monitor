@@ -22,6 +22,7 @@ import time
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
+from .rabbitmq_connector import RabbitMQSafeConnection
 from json_msgs.messages.actuators.thread_controller import ThreadControllerMsg
 from json_msgs.messages.actuators.ack_response import AckResponseMsg
 
@@ -81,7 +82,6 @@ class PlaneCntrlRMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
         # Configure RabbitMQ Exchange to transmit messages
         self._connection = None
         self._read_config()
-        self._get_connection(host_addr=self._current_rabbitMQ_server)
 
         # UUID and command of the current task being worked
         self._working_uuid = "N/A"
@@ -120,10 +120,6 @@ class PlaneCntrlRMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
         except Exception:
             # Log it and restart the whole process when a failure occurs
             logger.exception("PlaneCntrlRMQegressProcessor restarting")
-
-            # Configure RabbitMQ Exchange to receive messages
-            self._toggle_rabbitMQ_servers()
-            self._get_connection(host_addr=self._current_rabbitMQ_server)
 
         self._log_debug("Finished processing successfully")
 
@@ -172,45 +168,13 @@ class PlaneCntrlRMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
                                                                  self.SECONDARY_RABBITMQ,
                                                                  'localhost')
             self._current_rabbitMQ_server = self._primary_rabbitMQ_server
+            self._connection = RabbitMQSafeConnection(
+                self._username, self._password, self._virtual_host,
+                self._exchange_name, self._routing_key, self._queue_name
+            )
 
         except Exception as ex:
             logger.exception("PlaneCntrlRMQegressProcessor, _read_config: %r" % ex)
-
-    def _get_connection(self, host_addr):
-        try:
-            # ensure the rabbitmq queues/etc exist
-            creds = pika.PlainCredentials(self._username, self._password)
-            self._connection = pika.BlockingConnection(
-                pika.ConnectionParameters(
-                    host=host_addr,
-                    virtual_host=self._virtual_host,
-                    credentials=creds
-                    )
-                )
-            self._channel = self._connection.channel()
-            try:
-                self._channel.queue_declare(
-                    queue=self._queue_name,
-                    durable=True
-                    )
-            except Exception as e:
-                logger.exception(e)
-            try:
-                self._channel.exchange_declare(
-                    exchange=self._exchange_name,
-                    type='topic',
-                    durable=True
-                    )
-            except Exception as e:
-                logger.exception(e)
-            self._channel.queue_bind(
-                queue=self._queue_name,
-                exchange=self._exchange_name,
-                routing_key=self._routing_key
-                )
-        except Exception as ex:
-            logger.exception("PlaneCntrlRMQegressProcessor, _get_connection: %r" % ex)
-            self._connection = None
 
     def _add_signature(self):
         """Adds the authentication signature to the message"""
@@ -292,23 +256,13 @@ class PlaneCntrlRMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
 
             self._add_signature()
             self._jsonMsg = json.dumps(self._jsonMsg).encode('utf8')
-            self._get_connection(host_addr=self._current_rabbitMQ_server)
-            self._channel.basic_publish(exchange=self._exchange_name,
-                                routing_key=self._routing_key,
-                                properties=msg_props,
-                                body=str(self._jsonMsg))
-
+            self._connection.publish(exchange, routing_key, properties, body)
             # No exceptions thrown so success
             self._log_debug("_transmit_msg_on_exchange, Successfully Sent: %s" % self._jsonMsg)
             self._msg_sent_succesfull = True
-            if self._connection is not None:
-                self._connection.close()
-                del(self._connection)
-
         except Exception as ex:
             logger.exception("PlaneCntrlRMQegressProcessor, _transmit_msg_on_exchange: %r" % ex)
             self._msg_sent_succesfull = False
-            self._toggle_rabbitMQ_servers()
 
     def _toggle_rabbitMQ_servers(self):
         """Toggle between hosts when a connection fails"""

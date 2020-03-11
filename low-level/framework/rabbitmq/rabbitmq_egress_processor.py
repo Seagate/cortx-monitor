@@ -21,6 +21,7 @@ import time
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
+from .rabbitmq_connector import RabbitMQSafeConnection
 
 import ctypes
 try:
@@ -84,9 +85,20 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
 
         # Configure RabbitMQ Exchange to transmit messages
         self._connection = None
-        self._wait_time = 10
         self._read_config()
-
+        self._connection = RabbitMQSafeConnection(
+            self._username, self._password, self._virtual_host,
+            self._exchange_name, self._routing_key, self._queue_name
+        )
+        self._ack_connection = RabbitMQSafeConnection(
+            self._username, self._password, self._virtual_host,
+            self._exchange_name, self._ack_routing_key, self._ack_queue_name
+        )
+        self._iem_connection = RabbitMQSafeConnection(
+            self._username, self._password, self._virtual_host,
+            self._iem_route_exchange_name, self._routing_key,
+            self._queue_name
+        )
         # Display values used to configure pika from the config file
         self._log_debug("RabbitMQ user: %s" % self._username)
         self._log_debug("RabbitMQ exchange: %s, routing_key: %s, vhost: %s" %
@@ -185,96 +197,6 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
         except Exception as ex:
             logger.error("RabbitMQegressProcessor, _read_config: %r" % ex)
 
-    def _get_connection(self, host_addr='localhost', retry=False):
-        try:
-            # ensure the rabbitmq queues/etc exist
-            creds = pika.PlainCredentials(self._username, self._password)
-            self._connection = pika.BlockingConnection(
-                pika.ConnectionParameters(
-                    host=host_addr,
-                    virtual_host=self._virtual_host,
-                    credentials=creds
-                    )
-                )
-            self._channel = self._connection.channel()
-
-            try:
-                self._channel.queue_declare(
-                    queue=self._queue_name,
-                    durable=True
-                    )
-            except Exception as e:
-                logger.error(e)
-
-            try:
-                self._channel.exchange_declare(
-                    exchange=self._exchange_name,
-                    exchange_type='topic',
-                    durable=True
-                    )
-            except Exception as e:
-                logger.error(e)
-
-            self._channel.queue_bind(
-                queue=self._queue_name,
-                exchange=self._exchange_name,
-                routing_key=self._routing_key
-                )
-        except Exception as ex:
-            logger.error("RabbitMQegressProcessor, _get_connection: %r" % ex)
-            if retry:
-                time.sleep(self._wait_time)
-                self._get_connection(host_addr=self._primary_rabbitmq_host, retry=True)
-
-    def _get_ack_connection(self, host_addr='localhost', retry=False):
-        try:
-            # ensure the rabbitmq queues/etc exist
-            creds = pika.PlainCredentials(self._username, self._password)
-            self._connection = pika.BlockingConnection(
-                pika.ConnectionParameters(
-                    host=host_addr,
-                    virtual_host=self._virtual_host,
-                    credentials=creds
-                    )
-                )
-            self._channel = self._connection.channel()
-            try:
-                self._channel.queue_declare(
-                    queue=self._ack_queue_name,
-                    durable=True
-                    )
-            except Exception as e:
-                logger.error(e)
-
-            try:
-                self._channel.exchange_declare(
-                    exchange=self._exchange_name,
-                    exchange_type='topic',
-                    durable=True
-                    )
-            except Exception as e:
-                logger.error(e)
-
-            # Redirect Ack messages onto ack queue
-            self._channel.queue_bind(
-                queue=self._ack_queue_name,
-                exchange=self._exchange_name,
-                routing_key=self._ack_routing_key
-                )
-
-            # Duplicate Ack messages onto sensor queue
-            self._channel.queue_bind(
-                queue=self._queue_name,
-                exchange=self._exchange_name,
-                routing_key=self._ack_routing_key
-                )
-
-        except Exception as ex:
-            logger.error("RabbitMQegressProcessor, _get_connection: %r" % ex)
-            if retry:
-                time.sleep(self._wait_time)
-                self._get_ack_connection(host_addr=self._primary_rabbitmq_host, retry=True)
-
     def _add_signature(self):
         """Adds the authentication signature to the message"""
         self._log_debug("_add_signature, jsonMsg: %s" % self._jsonMsg)
@@ -331,41 +253,33 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
                 self._jsonMsg.get("message").get("actuator_response_type").get("thread_controller") is not None):
                 self._add_signature()
                 jsonMsg = json.dumps(self._jsonMsg).encode('utf8')
-                self._get_connection(host_addr=self._primary_rabbitmq_host, retry=True)
-                self._get_ack_connection(host_addr=self._primary_rabbitmq_host, retry=True)
-                self._channel.basic_publish(exchange=self._exchange_name,
-                                    routing_key=self._ack_routing_key,
-                                    properties=msg_props,
-                                    body=jsonMsg)
+                self._ack_connection.publish(exchange=self._exchange_name,
+                                             routing_key=self._ack_routing_key,
+                                             properties=msg_props,
+                                             body=jsonMsg)
 
             # Routing requests for IEM msgs sent from the LoggingMsgHandler
             elif self._jsonMsg.get("message").get("IEM_routing") is not None:
                 log_msg = self._jsonMsg.get("message").get("IEM_routing").get("log_msg")
                 self._log_debug("Routing IEM: %s" % log_msg)
                 if self._iem_route_addr != "":
-                    self._get_connection(host_addr=self._iem_route_addr, retry=True)
-                    self._channel.basic_publish(exchange=self._iem_route_exchange_name,
-                                    routing_key=self._routing_key,
-                                    properties=msg_props,
-                                    body=str(log_msg))
+                    self._iem_connection.publish(exchange=self._iem_route_exchange_name,
+                                                 routing_key=self._routing_key,
+                                                 properties=msg_props,
+                                                 body=str(log_msg))
                 else:
                     logger.warn("RabbitMQegressProcessor, Attempted to route IEM without a valid 'iem_route_addr' set.")
             else:
                 self._add_signature()
                 jsonMsg = json.dumps(self._jsonMsg).encode('utf8')
-                self._get_connection(host_addr=self._primary_rabbitmq_host, retry=True)
-                self._channel.basic_publish(exchange=self._exchange_name,
-                                    routing_key=self._routing_key,
-                                    properties=msg_props,
-                                    body=jsonMsg)
+                self._connection.publish(exchange=self._exchange_name,
+                                         routing_key=self._routing_key,
+                                         properties=msg_props,
+                                         body=jsonMsg)
 
             # No exceptions thrown so success
             self._log_debug("_transmit_msg_on_exchange, Successfully Sent: %s" % self._jsonMsg)
             self._msg_sent_succesfull = True
-            if self._connection is not None:
-                self._connection.close()
-                del(self._connection)
-
         except Exception as ex:
             logger.error("RabbitMQegressProcessor, _transmit_msg_on_exchange: %r" % ex)
             self._msg_sent_succesfull = False

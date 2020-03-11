@@ -29,6 +29,7 @@ from pika.exceptions import AMQPError
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
+from .rabbitmq_connector import RabbitMQSafeConnection
 from framework.rabbitmq.plane_cntrl_rmq_egress_processor import PlaneCntrlRMQegressProcessor
 from framework.base.sspl_constants import RESOURCE_PATH
 
@@ -132,14 +133,7 @@ class PlaneCntrlRMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
 
         try:
             # Start consuming and processing ingress msgs
-            result = self._channel.queue_declare(exclusive=True)
-            self._channel.queue_bind(exchange=self._exchange_name,
-                               queue=result.method.queue,
-                               routing_key=self._routing_key)
-            self._channel.basic_consume(self._process_msg,
-                                  queue=result.method.queue)
-            self._channel.start_consuming()
-
+            self._connection.consume(callback=self._process_msg)
         except AMQPError as e:
             if self.is_running() is True:
                 logger.info("PlaneCntrlRMQingressProcessor ungracefully breaking out of run loop, restarting.")
@@ -242,7 +236,7 @@ class PlaneCntrlRMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
             self._write_internal_msgQ(PlaneCntrlRMQegressProcessor.name(), ack_msg)
 
         # Acknowledge message was received
-        ch.basic_ack(delivery_tag = method.delivery_tag)
+        self._connection.ack(ch, delivery_tag=method.delivery_tag)
 
     def _process_job_status(self, uuid, job_uuid):
         """Send the current job status requested"""
@@ -280,64 +274,36 @@ class PlaneCntrlRMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
     def _configure_exchange(self):
         """Configure the RabbitMQ exchange with defaults available"""
         try:
-            self._virtual_host  = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR, 
-                                                                 self.VIRT_HOST,
-                                                                 'SSPL')
-            self._exchange_name = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR, 
-                                                                 self.EXCHANGE_NAME,
-                                                                 'ras_sspl')
-            self._queue_name    = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR, 
-                                                                 self.QUEUE_NAME,
-                                                                 'ras_control')
-            self._routing_key   = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR, 
-                                                                 self.ROUTING_KEY,
-                                                                 'sspl_ll')           
-            self._username      = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR, 
-                                                                 self.USER_NAME,
-                                                                 'sspluser')
-            self._password      = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR, 
-                                                                 self.PASSWORD,
-                                                                 'sspl4ever')
-            self._primary_rabbitMQ_server           = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR, 
-                                                                 self.PRIMARY_RABBITMQ,
-                                                                 'localhost')
-            self._secondary_rabbitMQ_server         = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR, 
-                                                                 self.SECONDARY_RABBITMQ,
-                                                                 'localhost')
-
+            self._virtual_host = self._conf_reader._get_value_with_default(
+                self.RABBITMQPROCESSOR, self.VIRT_HOST, 'SSPL'
+            )
+            self._exchange_name = self._conf_reader._get_value_with_default(
+                self.RABBITMQPROCESSOR, self.EXCHANGE_NAME, 'ras_sspl'
+            )
+            self._queue_name = self._conf_reader._get_value_with_default(
+                self.RABBITMQPROCESSOR, self.QUEUE_NAME, 'ras_control'
+            )
+            self._routing_key = self._conf_reader._get_value_with_default(
+                self.RABBITMQPROCESSOR, self.ROUTING_KEY, 'sspl_ll'
+            )
+            self._username = self._conf_reader._get_value_with_default(
+                self.RABBITMQPROCESSOR, self.USER_NAME, 'sspluser'
+            )
+            self._password = self._conf_reader._get_value_with_default(
+               self.RABBITMQPROCESSOR, self.PASSWORD, 'sspl4ever'
+            )
+            self._primary_rabbitMQ_server = self._conf_reader._get_value_with_default(
+                self.RABBITMQPROCESSOR, self.PRIMARY_RABBITMQ, 'localhost'
+            )
+            self._secondary_rabbitMQ_server = self._conf_reader._get_value_with_default(
+                self.RABBITMQPROCESSOR, self.SECONDARY_RABBITMQ, 'localhost'
+            )
+            self._connection = RabbitMQSafeConnection(
+                self._username, self._password, self._virtual_host,
+                self._exchange_name, self._routing_key, self._queue_name
+            )
             if self._current_rabbitMQ_server is None:
                 self._current_rabbitMQ_server = self._primary_rabbitMQ_server
-            logger.info("PlaneCntrlRMQingressProcessor, Attempting to connect to host: %s" % self._current_rabbitMQ_server)
-            # ensure the rabbitmq queues/etc exist
-            creds = pika.PlainCredentials(self._username, self._password)
-            self._connection = pika.BlockingConnection(
-                pika.ConnectionParameters(
-                    host=self._current_rabbitMQ_server,
-                    virtual_host=self._virtual_host,
-                    credentials=creds
-                    )
-                )
-            self._channel = self._connection.channel()
-            try:
-                self._channel.queue_declare(
-                    queue=self._queue_name,
-                    durable=True
-                    )
-            except Exception as e:
-                logger.exception(e)
-            try:
-                self._channel.exchange_declare(
-                    exchange=self._exchange_name,
-                    type='topic',
-                    durable=True
-                    )
-            except Exception as e:
-                logger.exception(e)
-            self._channel.queue_bind(
-                queue=self._queue_name,
-                exchange=self._exchange_name,
-                routing_key=self._routing_key
-                )
         except Exception as ex:
             logger.exception("PlaneCntrlRMQingressProcessor, _configure_exchange: %r" % ex)
 
@@ -345,10 +311,7 @@ class PlaneCntrlRMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
         """Clean up scheduler queue and gracefully shutdown thread"""
         super(PlaneCntrlRMQingressProcessor, self).shutdown()
         try:
-            if self._connection is not None:
-                self._channel.stop_consuming()
-                self._channel.close()
-                self._connection.close()
+            self._connection.cleanup()
         except pika.exceptions.ConnectionClosed:
             logger.info("PlaneCntrlRMQingressProcessor, shutdown, RabbitMQ ConnectionClosed")
         except Exception as err:

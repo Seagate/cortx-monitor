@@ -27,6 +27,7 @@ from sspl_test.framework.base.module_thread import ScheduledModuleThread
 from sspl_test.framework.base.internal_msgQ import InternalMsgQ
 from sspl_test.framework.utils.service_logging import logger
 from sspl_test.framework.base.sspl_constants import RESOURCE_PATH
+from .rabbitmq_sspl_test_connector import RabbitMQSafeConnection
 import ctypes
 SSPL_SEC = ctypes.cdll.LoadLibrary('libsspl_sec.so.0')
 
@@ -115,15 +116,7 @@ class RabbitMQingressProcessorTests(ScheduledModuleThread, InternalMsgQ):
         self._log_debug("Start accepting requests")
 
         try:
-            result = self._channel.queue_declare(queue="", exclusive=True)
-            self._channel.queue_bind(exchange=self._exchange_name,
-                               queue=result.method.queue,
-                               routing_key=self._routing_key)
-
-            self._channel.basic_consume(on_message_callback=self._process_msg,
-                                  queue=result.method.queue)
-            self._channel.start_consuming()
-
+            self._connection.consume(callback=self._process_msg)
         except Exception:
             if self.is_running() == True:
                 logger.info("RabbitMQingressProcessorTests ungracefully breaking out of run loop, restarting.")
@@ -190,60 +183,43 @@ class RabbitMQingressProcessorTests(ScheduledModuleThread, InternalMsgQ):
             self._write_internal_msgQ("RabbitMQingressProcessorTests", message)
 
             # Acknowledge message was received
-            ch.basic_ack(delivery_tag = method.delivery_tag)
+            self._connection.ack(ch, delivery_tag=method.delivery_tag)
 
         except Exception as ex:
             logger.exception("_process_msg unrecognized message: %r" % ingressMsg)
 
-
     def _configure_exchange(self):
         """Configure the RabbitMQ exchange with defaults available"""
         try:
-            self._virtual_host  = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSORTEST,
-                                                                 self.VIRT_HOST,
-                                                                 'SSPL')
-            self._primary_rabbitmq_host = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSORTEST,
-                                                                 self.PRIMARY_RABBITMQ_HOST,
-                                                                 'localhost')
-            self._exchange_name = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSORTEST,
-                                                                 self.EXCHANGE_NAME,
-                                                                 'sspl-in')
-            self._queue_name    = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSORTEST,
-                                                                 self.QUEUE_NAME,
-                                                                 'actuator-req-queue')
-            self._routing_key   = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSORTEST,
-                                                                 self.ROUTING_KEY,
-                                                                 'actuator-req-key')
-            self._username      = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSORTEST,
-                                                                 self.USER_NAME,
-                                                                 'sspluser')
-            self._password      = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSORTEST,
-                                                                 self.PASSWORD,
-                                                                 'sspl4ever')
-            # ensure the rabbitmq queues/etc exist
-            creds = pika.PlainCredentials(self._username, self._password)
-            self._connection = pika.BlockingConnection(
-                pika.ConnectionParameters(
-                    host=self._primary_rabbitmq_host,
-                    virtual_host=self._virtual_host,
-                    credentials=creds
-                    )
-                )
-            self._channel = self._connection.channel()
-            self._channel.queue_declare(
-                queue=self._queue_name,
-                durable=True
-                )
-            self._channel.exchange_declare(
-                exchange=self._exchange_name,
-                exchange_type='topic',
-                durable=True
-                )
-            self._channel.queue_bind(
-                queue=self._queue_name,
-                exchange=self._exchange_name,
-                routing_key=self._routing_key
-                )
+            self._virtual_host = self._conf_reader._get_value_with_default(
+                self.RABBITMQPROCESSORTEST, self.VIRT_HOST, "SSPL"
+            )
+            self._primary_rabbitmq_host = self._conf_reader._get_value_with_default(
+                self.RABBITMQPROCESSORTEST, self.PRIMARY_RABBITMQ_HOST, "localhost"
+            )
+            self._exchange_name = self._conf_reader._get_value_with_default(
+                self.RABBITMQPROCESSORTEST, self.EXCHANGE_NAME, "sspl-in"
+            )
+            self._queue_name = self._conf_reader._get_value_with_default(
+                self.RABBITMQPROCESSORTEST, self.QUEUE_NAME, "actuator-req-queue"
+            )
+            self._routing_key = self._conf_reader._get_value_with_default(
+                self.RABBITMQPROCESSORTEST, self.ROUTING_KEY, "actuator-req-key"
+            )
+            self._username = self._conf_reader._get_value_with_default(
+                self.RABBITMQPROCESSORTEST, self.USER_NAME, "sspluser"
+            )
+            self._password = self._conf_reader._get_value_with_default(
+                self.RABBITMQPROCESSORTEST, self.PASSWORD, "sspl4ever"
+            )
+            self._connection = RabbitMQSafeConnection(
+                self._username,
+                self._password,
+                self._virtual_host,
+                self._exchange_name,
+                self._routing_key,
+                self._queue_name,
+            )
         except Exception as ex:
             logger.exception("_configure_exchange: %r" % ex)
 
@@ -252,10 +228,7 @@ class RabbitMQingressProcessorTests(ScheduledModuleThread, InternalMsgQ):
         super(RabbitMQingressProcessorTests, self).shutdown()
         time.sleep(4)
         try:
-            if self._connection is not None:
-                self._channel.stop_consuming()
-                self._channel.close()
-                self._connection.close()
+            self._connection.cleanup()
         except pika.exceptions.ConnectionClosed:
             logger.info("RabbitMQingressProcessorTests, shutdown, RabbitMQ ConnectionClosed")
         except Exception as err:

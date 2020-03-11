@@ -26,6 +26,7 @@ from jsonschema import validate
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
+from .rabbitmq_connector import RabbitMQSafeConnection
 from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 from json_msgs.messages.actuators.ack_response import AckResponseMsg
 from framework.base.sspl_constants import RESOURCE_PATH
@@ -94,8 +95,6 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
         self._password = None
         self._channel = None
 
-        self._wait_time = 10
-
     def _load_schema(self, schema_file):
         """Loads a schema from a file and validates
 
@@ -134,13 +133,7 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
         logger.info("RabbitMQingressProcessor, Initialization complete, accepting requests")
 
         try:
-            result = self._channel.queue_declare(queue="", exclusive=True)
-            self._channel.queue_bind(exchange=self._exchange_name,
-                               queue=result.method.queue,
-                               routing_key=self._routing_key)
-            self._channel.basic_consume(on_message_callback=self._process_msg, queue=result.method.queue)
-            self._channel.start_consuming()
-
+            self._connection.consume(callback=self._process_msg)
         except Exception as e:
             if self.is_running() is True:
                 logger.info("RabbitMQingressProcessor ungracefully breaking out of run loop, restarting.")
@@ -232,7 +225,7 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
                 self._write_internal_msgQ(RabbitMQegressProcessor.name(), ack_msg)
 
             # Acknowledge message was received
-            ch.basic_ack(delivery_tag=method.delivery_tag)
+            self._connection.ack(ch, delivery_tag=method.delivery_tag)
 
         except Exception as ex:
             logger.error("RabbitMQingressProcessor, _process_msg unrecognized message: %r" % ingressMsg)
@@ -268,49 +261,18 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
             self._password = get_value_with_default(self.RABBITMQPROCESSOR,
                                                     self.PASSWORD,
                                                     'sspl4ever')
-
-            # Ensure the rabbitmq queues/etc exist
-            creds = pika.PlainCredentials(self._username, self._password)
-            self._connection = pika.BlockingConnection(
-                pika.ConnectionParameters(
-                    host=self._primary_rabbitmq_host,
-                    virtual_host=self._virtual_host,
-                    credentials=creds
-                    )
-                )
-            self._channel = self._connection.channel()
-            try:
-                self._channel.queue_declare(queue=self._queue_name, durable=True)
-            except Exception as e:
-                logger.error(e)
-            try:
-                self._channel.exchange_declare(
-                    exchange=self._exchange_name,
-                    exchange_type='topic',
-                    durable=True
-                    )
-            except Exception as e:
-                logger.error(e)
-            self._channel.queue_bind(
-                queue=self._queue_name,
-                exchange=self._exchange_name,
-                routing_key=self._routing_key
-                )
+            self._connection = RabbitMQSafeConnection(
+                self._username, self._password, self._virtual_host,
+                self._exchange_name, self._routing_key, self._queue_name
+            )
         except Exception as ex:
-            logger.error("RabbitMQingressProcessor, \
-                _configure_exchange: %r" % ex)
-            if retry:
-                time.sleep(self._wait_time)
-                self._configure_exchange(retry=True)
+            logger.error("RabbitMQingressProcessor, _configure_exchange: %r" % ex)
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""
         super(RabbitMQingressProcessor, self).shutdown()
         try:
-            if self._connection is not None:
-                self._channel.stop_consuming()
-                self._channel.close()
-                self._connection.close()
+            self._connection.cleanup()
         except pika.exceptions.ConnectionClosed:
             logger.info("RabbitMQingressProcessorTests, shutdown, RabbitMQ ConnectionClosed")
         except Exception as err:
