@@ -27,7 +27,7 @@ except ImportError:
     use_journal = False
 
 
-logger_facility = "sspl"
+logger_facility = "sspl-ll"
 _logger = logging.getLogger(logger_facility)
 
 MAX_SYSLOG_CONNECT_ATTEMPTS = 120
