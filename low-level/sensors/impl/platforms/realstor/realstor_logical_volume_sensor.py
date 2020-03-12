@@ -126,9 +126,6 @@ class RealStorLogicalVolumeSensor(ScheduledModuleThread, InternalMsgQ):
         self._logical_volume_prcache = os.path.join(self.rssencl.frus,\
              self.LOGICAL_VOLUMES_DIR)
 
-        # Create internal directory structure  if not present
-        self.rssencl.check_prcache(self._logical_volume_prcache)
-
         # Persistence file location. This file stores faulty Logical Volume data
         self._faulty_disk_group_file_path = os.path.join(
             self._logical_volume_prcache, "logicalvolumedata.json")

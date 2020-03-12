@@ -37,3 +37,21 @@ class Store(object):
         """get data from store
         """
         raise NotImplementedError("sub class should implement this")
+
+    @abc.abstractmethod
+    def exists(self, key):
+        """check if key exists
+        """
+        raise NotImplementedError("sub class should implement this")
+
+    @abc.abstractmethod
+    def delete(self, key):
+        """ delete data for given key
+        """
+        raise NotImplementedError("sub class should implement this")
+
+    @abc.abstractmethod
+    def get_keys_with_prefix(self, prefix):
+        """ get keys with given prefix
+        """
+        raise NotImplementedError("sub class should implement this")

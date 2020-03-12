@@ -104,9 +104,6 @@ class RealStorSideplaneExpanderSensor(ScheduledModuleThread, InternalMsgQ):
         self._sideplane_exp_prcache = os.path.join(self.rssencl.frus,\
                                           self.SIDEPLANE_EXPANDERS_DIR)
 
-        # Create internal directory structure  if not present
-        self.rssencl.check_prcache(self._sideplane_exp_prcache)
-
         # Persistence file location.
         # This file stores faulty sideplane expander data
         self._faulty_sideplane_expander_file_path = os.path.join(

@@ -61,3 +61,27 @@ class ConsulStore(Store):
                 .format(gerr, key))
 
         return data
+
+    def exists(self, key):
+        """check if key exists
+        """
+        if self.get(key):
+            return True
+        else:
+            return False
+
+    def delete(self, key):
+        """ delete a key
+        """
+        key = self._get_key(key)
+        self.consul_conn.kv.delete(key)
+
+    def get_keys_with_prefix(self, prefix):
+        """ get keys with given prefix
+        """
+        prefix = self._get_key(prefix)
+        data = self.consul_conn.kv.get(prefix, recurse=True)[1]
+        if data:
+            return [item["Key"][item["Key"].rindex("/")+1:] for item in data]
+        else:
+            return []

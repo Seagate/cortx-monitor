@@ -105,9 +105,6 @@ class RealStorFanSensor(ScheduledModuleThread, InternalMsgQ):
         self._fanmodule_prcache = os.path.join(self.rssencl.frus, \
                                       self.FAN_MODULES_DIR)
 
-        # Create internal directory structure  if not present
-        self.rssencl.check_prcache(self._fanmodule_prcache)
-
         # Persistence file location. This file stores faulty FanModule data
         self._faulty_fan_file_path = os.path.join(
             self._fanmodule_prcache, "fanmodule_data.json")

@@ -15,6 +15,7 @@
  ****************************************************************************
 """
 import os
+import errno
 import json
 import pickle
 from framework.utils.store import Store
@@ -28,12 +29,19 @@ class FileStore(Store):
     def put(self, value, key):
         """ Dump value to given absolute file path"""
 
-        # Check if directory exists
         absfilepath = key
         directory_path = os.path.join(os.path.dirname(absfilepath), "")
+
+        # If directory does not exists, create
         if not os.path.isdir(directory_path):
-            logger.critical("Path doesn't exists: {0}".format(directory_path))
-            return
+            try:
+                os.makedirs(directory_path, exist_ok=True)
+            except OSError as exc:
+                if exc.errno == errno.EACCES:
+                    logger.critical(f"Permission denied while creating dir: {directory_path}")
+            except Exception as err:
+                    logger.warn(f"{directory_path} creation failed with error {err}, alerts \
+                    may get missed on sspl restart or failover!!")
 
         try:
             fh = open(absfilepath,"wb")
@@ -80,3 +88,22 @@ class FileStore(Store):
             fh.close()
 
         return value
+
+    def exists(self, key):
+        """check if key exists
+        """
+        return os.path.exists(key)
+
+    def delete(self, key):
+        """ delete a file
+        """
+        if os.path.exists(key):
+            os.remove(key)
+    
+    def get_keys_with_prefix(self, prefix):
+        """ get keys with given prefix
+        """
+        if not os.path.exists(prefix):
+            return []
+        else:
+            return os.listdir(prefix)

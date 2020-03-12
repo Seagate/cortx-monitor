@@ -14,7 +14,6 @@
  ****************************************************************************
 """
 
-import os
 import errno
 import json
 import hashlib
@@ -154,15 +153,6 @@ class RealStorEnclosure(StorageEnclosure):
         # periodically
         self.login()
 
-        try:
-            if not os.path.exists(self.frus):
-                os.makedirs(self.frus)
-        except OSError as oserr:
-            if oserr.errno != errno.EEXIST:
-                logger.error("makedirs failed with OS error {0}".format(oserr))
-        except Exception as err:
-            logger.error("makedirs failed with unknown error {0}".format(err))
-
     def _add_request_headers(self, sessionKey):
         """Add common request headers"""
         self.common_reqheaders['datatype'] = self.DATA_FORMAT_JSON
@@ -238,27 +228,6 @@ class RealStorEnclosure(StorageEnclosure):
             break
 
         return response
-
-    def check_prcache(self, cachedir):
-        """Check for persistent cache dir and create if absent"""
-        available = os.path.exists(cachedir)
-
-        if not available:
-            logger.info("Missing RAS persistent cache, creating {0}\
-                ".format(cachedir))
-
-            try:
-                os.makedirs(cachedir)
-            except OSError as exc:
-                if exc.errno == errno.EEXIST and os.path.isdir(path):
-                    pass
-                elif exc.errno == errno.EACCES:
-                    logger.critical(
-                        "Permission denied while creating dir: {0}".format(path))
-            except Exception as err:
-                    logger.warn("{0} creation failed with error {1}, alerts"
-                    " may get missed on sspl restart or failover!!".format(
-                    cachedir,err))
 
     def login(self):
         """Perform realstor login to get session key & make it available
@@ -363,7 +332,6 @@ class RealStorEnclosure(StorageEnclosure):
                 "ignoring".format(elapsed, self.pollfreq))
             return
 
-        self.check_prcache(self.system_persistent_cache)
         system = None
 
         # make ws request

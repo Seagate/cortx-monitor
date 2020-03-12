@@ -106,9 +106,6 @@ class RealStorControllerSensor(ScheduledModuleThread, InternalMsgQ):
         self._controller_prcache = os.path.join(self.rssencl.frus,\
              self.CONTROLLERS_DIR)
 
-        # Create internal directory structure  if not present
-        self.rssencl.check_prcache(self._controller_prcache)
-
         # Persistence file location. This file stores faulty Controller data
         self._faulty_controller_file_path = os.path.join(
             self._controller_prcache, "controllerdata.json")

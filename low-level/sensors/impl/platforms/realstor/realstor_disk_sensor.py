@@ -16,7 +16,6 @@
  ****************************************************************************
 """
 
-import os
 import json
 import time
 import socket
@@ -116,9 +115,6 @@ class RealStorDiskSensor(ScheduledModuleThread, InternalMsgQ):
         # Initialize internal message queues for this module
         super(RealStorDiskSensor, self).initialize_msgQ(msgQlist)
 
-        # check for disk persistent cache
-        self.rssencl.check_prcache(self.disks_prcache)
-
     def read_data(self):
         """Return the last raised alert, none otherwise"""
         return self.last_alert
@@ -136,8 +132,6 @@ class RealStorDiskSensor(ScheduledModuleThread, InternalMsgQ):
 
         # Check for debug mode being activated
         self._read_my_msgQ_noWait()
-
-        self.rssencl.check_prcache(self.disks_prcache)
 
         try:
             # poll all disk status and raise events if
@@ -242,7 +236,7 @@ class RealStorDiskSensor(ScheduledModuleThread, InternalMsgQ):
             #get removed drive data from disk cache
             disk_datafile = f"self.disks_prcache disk_{slot}.json.prev"
 
-            if not os.path.exists(disk_datafile):
+            if not store.exists(disk_datafile):
                 disk_datafile = f"{self.disks_prcache}disk_{slot}.json"
 
             disk_info = store.get(disk_datafile)
@@ -252,7 +246,7 @@ class RealStorDiskSensor(ScheduledModuleThread, InternalMsgQ):
             self._rss_raise_disk_alert(self.rssencl.FRU_MISSING, disk_info)
             # Wait till msg is sent to rabbitmq
             self._event.wait()
-            os.remove(disk_datafile)
+            store.delete(disk_datafile)
             self._event.clear()
         self._event = None
 
@@ -331,13 +325,15 @@ class RealStorDiskSensor(ScheduledModuleThread, InternalMsgQ):
                         # If drive is replaced, previous drive info needs
                         # to be retained in disk_<slot>.json.prev file and
                         # then only dump new data to disk_<slot>.json
-                        if os.path.exists(dcache_path):
+                        if store.exists(dcache_path):
                             prevdrive = store.get(dcache_path)
                             prevsn = prevdrive.get("serial-number","NA")
                             prevhealth = prevdrive.get("health", "NA")
 
                             if prevsn != sn or prevhealth != health:
-                                os.rename(dcache_path,dcache_path + ".prev")
+                                # Rename path
+                                store.put(store.get(dcache_path), dcache_path + ".prev")
+                                store.delete(dcache_path)
 
                                 store.put(drive, dcache_path)
                         else:
@@ -355,11 +351,7 @@ class RealStorDiskSensor(ScheduledModuleThread, InternalMsgQ):
     def _rss_build_disk_cache_from_persistent_cache(self):
         """Retreive realstor system state info using cli api /show/system"""
 
-        if not os.path.exists(self.disks_prcache):
-            logger.debug("Disk cache folder doesnt exists, ignoring")
-            return
-
-        files = os.listdir(self.disks_prcache)
+        files = store.get_keys_with_prefix(self.disks_prcache)
 
         if not files:
             logger.debug("No files in Disk cache folder, ignoring")

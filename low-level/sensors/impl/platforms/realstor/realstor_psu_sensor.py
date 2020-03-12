@@ -104,9 +104,6 @@ class RealStorPSUSensor(ScheduledModuleThread, InternalMsgQ):
 
         self.psu_prcache = os.path.join(self.rssencl.frus, self.PSUS_DIR)
 
-        # Create internal directory structure  if not present
-        self.rssencl.check_prcache(self.psu_prcache)
-
         # Persistence file location. This file stores faulty PSU data
         self._faulty_psu_file_path = os.path.join(
             self.psu_prcache, "psudata.json")
