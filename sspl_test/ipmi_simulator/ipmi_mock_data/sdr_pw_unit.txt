@@ -1,0 +1,18 @@
+Sensor ID              : Pwr Unit Status (0x1)
+ Entity ID             : 21.1 (Power Management)
+ Sensor Type (Discrete): Power Unit (0x09)
+ Sensor Reading        : 0h
+ Event Message Control : Per-threshold
+ Assertions Enabled    : Power Unit
+                         [Power off/down]
+                         [240VA power down]
+                         [AC lost]
+                         [Soft-power control failure]
+                         [Failure detected]
+ Deassertions Enabled  : Power Unit
+                         [Power off/down]
+                         [240VA power down]
+                         [AC lost]
+                         [Soft-power control failure]
+                         [Failure detected]
+ OEM                   : 0

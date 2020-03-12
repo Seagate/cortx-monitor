@@ -68,10 +68,9 @@ class NodeHWactuator(Actuator, Debug):
 
     def initialize(self):
         """Performs basic Node HW actuator initialization"""
-        sensor_id_map = self._executor.get_fru_list_by_type(
+        self.sensor_id_map = self._executor.get_fru_list_by_type(
             ['fan', 'power supply', 'drive slot / bay'],
             sensor_id_map={})
-        self.sensor_id_map = sensor_id_map
 
     def _get_fru_instances(self, fru, fru_instance):
         """Get the fru information based on fru_type and instance"""
@@ -85,7 +84,7 @@ class NodeHWactuator(Actuator, Debug):
                     if sensor_id == '':
                         continue
                     sensor_common_info, sensor_specific_info = self._executor.get_sensor_props(sensor_id)
-                    self.fru_specific_info[sensor_id] = sensor_specific_info
+                    self.fru_specific_info[sensor_id] = sensor_common_info
                 if self.fru_specific_info is not None:
                     resource_info = self._parse_fru_info(fru)
                 if fru_instance == "*":
@@ -125,7 +124,7 @@ class NodeHWactuator(Actuator, Debug):
                 if each.get('States Asserted'):
                     each['States Asserted'] = ' '.join(x.strip() for x in each['States Asserted'].split())
 
-        if (fru == "fan") or (fru == "Drive Slot / Bay"):
+        if (fru == "Fan") or (fru == "Drive Slot / Bay"):
             for each in specifics:
                 if each.get('States Asserted'):
                     each['States Asserted'] = ' '.join(x.strip() for x in each['States Asserted'].split())
@@ -160,7 +159,7 @@ class NodeHWactuator(Actuator, Debug):
             fru_dict = self.sensor_id_map.get(fru.lower())
             sensor_id = fru_dict[int(fru_instance)]
             common, specific = self._executor.get_sensor_props(sensor_id)
-            response = self._create_node_fru_json_message(specific)
+            response = self._create_node_fru_json_message(specific, sensor_id)
             response['instance_id'] = fru_instance
             response['info']['resource_id'] = sensor_id
 

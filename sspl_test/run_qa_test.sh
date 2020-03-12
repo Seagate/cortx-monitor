@@ -42,6 +42,10 @@ pre_requisites()
         RMQ_SELF_STARTED=1
     fi
 
+    # Enable ipmi simulator
+    cp -Rp $script_dir/ipmi_simulator/ipmisimtool /usr/bin
+    touch /tmp/activate_ipmisimtool
+
     # clearing consul keys.
     consul kv delete -recurse var/eos/sspl/data
 }
@@ -80,6 +84,10 @@ restore_cfg_services()
         systemctl stop rabbitmq-server
         RMQ_SELF_STARTED=0
     fi
+
+    # Remove ipmisimtool
+    rm -f /usr/bin/ipmisimtool
+    rm -f /tmp/activate_ipmisimtool
 }
 
 cleanup()

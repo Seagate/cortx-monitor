@@ -13,3 +13,4 @@ alerts.realstor.test_real_stor_disk_actuator
 alerts.realstor.test_real_stor_psu_actuator
 alerts.realstor.test_real_stor_controller_actuator
 alerts.realstor.test_real_stor_sideplane_actuator
+alerts.node.test_node_psu_actuator

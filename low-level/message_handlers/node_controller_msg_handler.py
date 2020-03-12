@@ -704,12 +704,6 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
             elif component == "NDHW":
                 # NDHW Stands for Node HW.
-                # Check for VM environment
-                if self._is_env_vm():
-                    # For VM environment,send Unsupported response in ack channel
-                    json_msg = NodeHwAckResponseMsg(node_request, "Unsupported", uuid).getJson()
-                    self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
-                    return
                 try:
                     # Load and Instantiate the Actuator for the first request
                     if self._NodeHW_actuator is None:

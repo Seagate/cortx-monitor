@@ -1,0 +1,131 @@
+#!/bin/bash
+
+#  ipmisimtool is a simulator of ipmitool. It reads mock data file based on the driven command
+#
+#                sdr type {sensor_type}
+#                sdr entity {entity_id}
+#                sdr get {sensor_id}
+#                sensor get {sensor_id}
+#                sensor list
+#                sel list
+#                sel info
+#
+#
+#        Note: Have some entries in SEL.
+
+
+BASE_PATH="/opt/seagate/eos/sspl"
+
+filename=""
+
+# handle 'sel' commands
+if [ "$1" == "sel" ]; then
+        command=${@:2}
+        case $command in
+                "list")
+                        filename="$BASE_PATH/sspl_test/ipmi_simulator/ipmi_mock_data/sel_list.txt"
+                        ;;
+                "info")
+                        filename="$BASE_PATH/sspl_test/ipmi_simulator/ipmi_mock_data/sel_info.txt"
+                        ;;
+                *)
+                        echo "Invalid command: $@. IPMISIMTOOL can't process it."
+                        exit 1
+        esac
+fi
+
+# handle 'sdr type' commands
+if [ "$1 $2" == "sdr type" ]; then
+        command=${@:3}
+        case $command in
+                "Fan")
+                        filename="$BASE_PATH/sspl_test/ipmi_simulator/ipmi_mock_data/fan.txt"
+                        ;;
+                "Power Supply")
+                        filename="$BASE_PATH/sspl_test/ipmi_simulator/ipmi_mock_data/power_supply.txt"
+                        ;;
+                "Power Unit")
+                        filename="$BASE_PATH/sspl_test/ipmi_simulator/ipmi_mock_data/power_unit.txt"
+                        ;;
+                "Drive Slot / Bay")
+                        filename="$BASE_PATH/sspl_test/ipmi_simulator/ipmi_mock_data/disk.txt"
+                        ;;
+                *)
+                        echo "Invalid command: $@. IPMISIMTOOL can't process it."
+                        exit 1
+        esac
+fi
+
+
+# handle 'sensor list' commands
+if [ "$1 $2" == "sensor list" ]; then
+        filename="$BASE_PATH/sspl_test/ipmi_simulator/ipmi_mock_data/sensor_list.txt"
+fi
+
+
+# handle 'sensor get' commands
+if [ "$1 $2" == "sensor get" ]; then
+        command=${@:3}
+        case $command in
+                "Fan Redundancy")
+                        filename="$BASE_PATH/sspl_test/ipmi_simulator/ipmi_mock_data/sensor_fan_redund.txt"
+                        ;;
+                "PS2 Status")
+                        filename="$BASE_PATH/sspl_test/ipmi_simulator/ipmi_mock_data/sensor_ps2.txt"
+                        ;;
+                "HDD 0 Status")
+                        filename="$BASE_PATH/sspl_test/ipmi_simulator/ipmi_mock_data/sensor_hdd0.txt"
+                        ;;
+                "Pwr Unit Status")
+                        filename="$BASE_PATH/sspl_test/ipmi_simulator/ipmi_mock_data/sensor_pw_unit.txt"
+                        ;;
+                *)
+                        echo "Invalid command: $@. IPMISIMTOOL can't process it."
+                        exit 1
+        esac
+fi
+
+
+# handle 'sdr entity' commands
+if [ "$1 $2" == "sdr entity" ]; then
+        if [ "$#" -ne 3 ]; then
+                echo "Invalid command: $@. IPMISIMTOOL can't process it."
+                exit 1
+        fi
+        res=`egrep "\|[ ]+$3 \|" $BASE_PATH/sspl_test/ipmi_simulator/ipmi_mock_data/entity.txt`
+        if [ "$res" == "" ]; then
+                echo "No fru found for given entity"
+                exit 1
+        fi
+        echo $res
+fi
+
+
+# handle 'sdr get' commands
+if [ "$1 $2" == "sdr get" ]; then
+        command=${@:3}
+        case $command in
+                "Fan Redundancy")
+                        filename="$BASE_PATH/sspl_test/ipmi_simulator/ipmi_mock_data/sdr_fan_redund.txt"
+                        ;;
+                "PS2 Status")
+                        filename="$BASE_PATH/sspl_test/ipmi_simulator/ipmi_mock_data/sdr_ps2.txt"
+                        ;;
+                "HDD 0 Status")
+                        filename="$BASE_PATH/sspl_test/ipmi_simulator/ipmi_mock_data/sdr_hdd0.txt"
+                        ;;
+                "Pwr Unit Status")
+                        filename="$BASE_PATH/sspl_test/ipmi_simulator/ipmi_mock_data/sdr_pw_unit.txt"
+                        ;;
+                *)
+                        echo "Invalid command: $@. IPMISIMTOOL can't process it."
+                        exit 1
+        esac
+fi
+
+
+if [ "$filename" != "" ]; then
+        while IFS= read -r LINE; do
+                echo $LINE
+        done < $filename
+fi

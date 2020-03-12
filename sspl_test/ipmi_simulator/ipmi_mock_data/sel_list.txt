@@ -1,0 +1,4 @@
+1 | 02/28/2020 | 14:01:45 | Fan #0x0c | Fully Redundant | Asserted
+2 | 02/28/2020 | 15:30:55 | Power Supply #0x51 | Power Supply AC lost | Asserted
+3 | 02/28/2020 | 16:31:42 | Drive Slot / Bay #0xf0 | Drive Present | Asserted
+4 | 02/28/2020 | 17:05:21 | Power Unit #0x01 | Power off/down | Asserted

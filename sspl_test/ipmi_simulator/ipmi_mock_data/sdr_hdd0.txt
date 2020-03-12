@@ -1,0 +1,18 @@
+Sensor ID              : HDD 0 Status (0xf0)
+ Entity ID             : 4.1 (Disk or Disk Bay)
+ Sensor Type (Discrete): Drive Slot / Bay (0x0d)
+ Sensor Reading        : 0h
+ Event Message Control : Per-threshold
+ States Asserted       : Drive Slot / Bay
+                         [Drive Present]
+ Assertion Events      : Drive Slot / Bay
+                         [Drive Present]
+ Assertions Enabled    : Drive Slot / Bay
+                         [Drive Present]
+                         [Drive Fault]
+                         [Rebuild In Progress]
+ Deassertions Enabled  : Drive Slot / Bay
+                         [Drive Present]
+                         [Drive Fault]
+                         [Rebuild In Progress]
+ OEM                   : 0

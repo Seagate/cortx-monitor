@@ -75,7 +75,7 @@ class IPMI(Debug):
             elif ipmi_req_command == "cycle":
                 ipmi_command = f"ipmitool -I lanplus -H {ipmi_ip} -U {self._user} -P {self._pass} chassis power cycle"
             elif ipmi_req_command == "status":
-                ipmi_command = "ipmitool -I lanplus -H {ipmi_ip} -U {self._user} -P {self._pass} chassis status"
+                ipmi_command = f"ipmitool -I lanplus -H {ipmi_ip} -U {self._user} -P {self._pass} chassis status"
             else:
                 return "Error: IPMI [IP] [Command], command must be on/off/cycle/status"
 

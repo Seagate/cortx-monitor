@@ -1,0 +1,4 @@
+Locating sensor record...
+Sensor ID              : Pwr Unit Status (0x1)
+ Entity ID             : 21.1
+ Sensor Type (Discrete): Power Unit

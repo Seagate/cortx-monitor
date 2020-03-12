@@ -35,11 +35,8 @@ from framework.utils.config_reader import ConfigReader
 from framework.utils.service_logging import logger
 from sensors.INode_hw import INodeHWsensor
 
-IPMITOOL = "sudo ipmitool "
-
 # bash exit codes
 BASH_ILLEGAL_CMD = 127
-DETECT_VM = "sudo /usr/bin/systemd-detect-virt"
 
 
 @implementer(INodeHWsensor)
@@ -91,6 +88,9 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
     NODEHWSENSOR = "NODEHWSENSOR"
     POLLING_INTERVAL = "polling_interval"
     DEFAULT_POLLING_INTERVAL = "30"
+
+    IPMITOOL = "sudo ipmitool "
+    IPMISIMTOOL = "ipmisimtool "
 
     DYNAMIC_KEYS = {
             "Sensor Reading",
@@ -201,10 +201,16 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
                                                 self.CLUSTER_ID,
                                                 0))
 
-        # Set flag 'request_shutdown' if vm detected
-        res, retcode = self._run_command(DETECT_VM)
-        if retcode == 0:
-            logger.info(f"{self.SENSOR_NAME}: VM env detected, ipmitool can't fetch monitoring data")
+        # A dummy file path check to select ipmi simulator if sanity test
+        # intends to use simulator, otherwise default.
+        if os.path.exists("/tmp/activate_ipmisimtool"):
+            self.IPMITOOL = self.IPMISIMTOOL
+            logger.debug("IPMI simulator is activated")
+
+        # Set flag 'request_shutdown' if ipmitool/simulator is non-functional
+        res, retcode = self._run_command(command=self.IPMITOOL)
+        if retcode != 0:
+            logger.debug(f"{self.SENSOR_NAME}: ipmitool can't fetch monitoring data")
             self.request_shutdown = True
         else:
             # Set flag 'request_shutdown' if ipmitool cmd trial errors out
@@ -368,7 +374,7 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
             # Separate out the components of the sel event
             # Sample sel event which gets parsed
             # 2 | 04/16/2019 | 05:29:09 | Fan #0x30 | Lower Non-critical going low  | Asserted
-            index, date, time, device_id, event, status = [
+            index, date, _time, device_id, event, status = [
                 attr.strip() for attr in sel_line.split("|") ]
             try:
                 device_type, sensor_num = re.match(
@@ -378,7 +384,7 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
                 device_type = device_id
                 sensor_num = ''
 
-            return (index, date, time, device_id, device_type, sensor_num, event, status)
+            return (index, date, _time, device_id, device_type, sensor_num, event, status)
 
     def _notify_NodeDataMsgHandler(self):
         """See if there is any new event gets generated in the sel and notify
@@ -395,8 +401,8 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
                 in self._get_sel_event():
 
             is_last = (last_fru_index[device_type] == index)
-            logger.debug(f"_notify_NodeDataMsgHandler fan: is_last: \
-                                        {is_last}, sel_event: {(index, date, time, device_id, event, status)}")
+            logger.debug(f"_notify_NodeDataMsgHandler '{device_type}': is_last: \
+                                        {is_last}, sel_event: {(index, date, event_time, device_id, event, status)}")
             # TODO: Also use information from the command
             # 'ipmitool sel get <sel-entry-id>'
             # which gives more detailed information
@@ -419,7 +425,7 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
     def _run_ipmitool_subcommand(self, subcommand, grep_args=None, out_file=subprocess.PIPE):
         """executes ipmitool sub-commands, and optionally greps the output"""
 
-        command = IPMITOOL + subcommand
+        command = self.IPMITOOL + subcommand
         if grep_args is not None:
             command += " | grep " + grep_args
         res, retcode = self._run_command(command, out_file)
@@ -497,7 +503,7 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
     def _get_sensor_sdr_props(self, sensor_id):
         props_list_out, retcode = self._run_ipmitool_subcommand(f"sdr get '{sensor_id}'")
         if retcode != 0:
-            msg = f"ipmitool sensor get command failed: {''.join(sel_out)}"
+            msg = f"ipmitool sensor get command failed: {''.join(props_list_out)}"
             logger.error(msg)
             return
         props_list = b''.join(props_list_out).decode("utf-8").split("\n")
@@ -569,7 +575,7 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
 
         return (common, specific_static, specific_dynamic)
 
-    def _parse_fan_info(self, index, date, time, device_id, sensor_id,    \
+    def _parse_fan_info(self, index, date, _time, device_id, sensor_id,\
                                                  event, status, is_last):
         """Parse out Fan realted changes that gets reaflected in the ipmi sel list"""
 
@@ -602,7 +608,7 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
 
         fan_common_data, fan_specific_data, fan_specific_data_dynamic = self._get_sensor_props(sensor_name)
 
-        for key in fan_specific_data:
+        for key in list(fan_specific_data):
             if key not in fan_specific_list:
                 del fan_specific_data[key]
 

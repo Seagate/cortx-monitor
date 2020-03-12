@@ -1,3 +1,4 @@
+import os
 import subprocess
 
 from framework.utils.ipmi import IPMI
@@ -10,6 +11,7 @@ class IPMITool(IPMI):
     """
     _instance = None
     IPMITOOL = "sudo /usr/bin/ipmitool "
+    IPMISIMTOOL = "/usr/bin/ipmisimtool "
 
     def __new__(cls):
         """new method"""
@@ -38,9 +40,9 @@ class IPMITool(IPMI):
             Output Format : List of Tuple
             Output Example : [(HDD 1 Status, F1, ok, 4.2, Drive Present),]
         """
-        sensor_list_out, retcode = self._run_ipmitool_subcommand("sdr type '{0}'".format(fru_type))
+        sensor_list_out, retcode = self._run_ipmitool_subcommand(f"sdr type '{fru_type.title()}'")
         if retcode != 0:
-            msg = "ipmitool sdr type command failed: {0}".format(''.join(sensor_list_out))
+            msg = "ipmitool sdr type command failed: {0}".format(b''.join(sensor_list_out))
             logger.error(msg)
             return
         sensor_list = b''.join(sensor_list_out).decode("utf-8").split("\n")
@@ -79,7 +81,7 @@ class IPMITool(IPMI):
         """
         props_list_out, retcode = self._run_ipmitool_subcommand("sensor get '{0}'".format(sensor_id))
         if retcode != 0:
-            msg = "ipmitool sensor get command failed: {0}".format(''.join(props_list_out))
+            msg = "ipmitool sensor get command failed: {0}".format(b''.join(props_list_out))
             logger.error(msg)
             return (False, False)
         props_list = b''.join(props_list_out).decode("utf-8").split("\n")
@@ -100,6 +102,8 @@ class IPMITool(IPMI):
         common_props = {
             'Sensor ID',
             'Entity ID',
+            'Sensor Type (Discrete)',
+            'States Asserted',
         }
         # Whatever keys from common_props are present,
         # move them to the 'common' dict
@@ -113,7 +117,7 @@ class IPMITool(IPMI):
         """Returns FRU instances list using ipmitool sdr type command
             Params : self, fru_list, sensor_id_map
             Output Format : dictionary which have fru_instance mapping with fru id
-            Output Example : {"disk":{0:"HDD 1 Status", },"fan":{}}
+            Output Example : {"drive slot / bay":{0:"HDD 1 Status",}, "fan":{}}
         """
         for fru in fru_list:
             fru_detail = self.get_sensor_list_by_type(fru)
@@ -129,6 +133,15 @@ class IPMITool(IPMI):
 
     def _run_ipmitool_subcommand(self, subcommand, grep_args=None, out_file=subprocess.PIPE):
         """executes ipmitool sub-commands, and optionally greps the output"""
+
+        # A dummy file path check to select ipmi simulator if
+        # simulator is required, otherwise default ipmitool.
+        if os.path.exists("/tmp/activate_ipmisimtool"):
+            res, retcode = self._run_command(command=self.IPMISIMTOOL)
+            if retcode == 0:
+                self.IPMITOOL = self.IPMISIMTOOL
+                logger.info("IPMI simulator is activated")
+
         command = self.IPMITOOL + subcommand
         if grep_args is not None:
             command += " | grep "
