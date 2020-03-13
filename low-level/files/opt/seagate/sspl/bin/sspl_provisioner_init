@@ -35,6 +35,7 @@ fi
 CONSUL_PS=$(ps -aux | grep "consul" | grep -v "grep" || true)
 [ -z "$CONSUL_PS" ] && consul agent -dev &>/dev/null &
 
+$SCRIPT_DIR/bin/sspl_setup_rabbitmq_cluster
 $SCRIPT_DIR/bin/sspl_post_install -p EES
 $SCRIPT_DIR/bin/sspl_setup_init -r eos
 $SCRIPT_DIR/bin/sspl_config

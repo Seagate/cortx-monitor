@@ -1,5 +1,7 @@
 import time
 import random
+import subprocess
+import re
 
 import pika
 import pika.exceptions
@@ -31,6 +33,7 @@ def get_cluster_connection(username, password, virtual_host):
     hosts = config._get_value_list(
         RABBITMQ_CLUSTER_SECTION, RABBITMQ_CLUSTER_HOSTS_KEY
     )
+    logger.debug('Cluster nodes: {hosts}')
     ampq_hosts = [
         f'amqp://{username}:{password}@{host}/{virtual_host}' for host in hosts
     ]
@@ -75,6 +78,7 @@ class RabbitMQSafeConnection:
                 break
             except connection_exceptions as e:
                 logger.error(connection_error_msg.format(repr(e)))
+                logger.error('Connection closed while retrying...')
                 time.sleep(self.wait_time)
             except Exception:
                 raise
@@ -92,7 +96,8 @@ class RabbitMQSafeConnection:
             )
         except connection_exceptions as e:
             logger.error(connection_error_msg.format(e))
-            self._establish_connection()
+            logger.error(f'Connection closed while publising the message: {body}')
+            self._retry_connection()
             self.publish(exchange, routing_key, properties, body)
 
     def consume(self, callback):
@@ -111,6 +116,7 @@ class RabbitMQSafeConnection:
 
         except connection_exceptions as e:
             logger.error(connection_error_msg.format(e))
+            logger.error('Connection closed while consuming queue.')
             self._retry_connection()
             self.consume(callback)
 

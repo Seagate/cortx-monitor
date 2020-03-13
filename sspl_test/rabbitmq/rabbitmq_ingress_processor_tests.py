@@ -18,6 +18,7 @@ import pika
 import json
 import os
 import time
+import socket
 
 from jsonschema import Draft3Validator
 from jsonschema import validate
@@ -177,7 +178,12 @@ class RabbitMQingressProcessorTests(ScheduledModuleThread, InternalMsgQ):
                 # Ignore drive status messages when thread starts up during tests
                 if message.get("sensor_response_type").get("disk_status_drivemanager") is not None:
                     return
-
+            # If the message comes from other SSPL hosts, do not pass that
+            # message to internal queue. This happens as SSPL instances are
+            # listening to common queues in a RabbitMQ cluster.
+            if 'host_id' in msgType and socket.getfqdn() != msgType['host_id']:
+                self._connection.ack(ch, delivery_tag=method.delivery_tag)
+                return
             # Write to the msg queue so the lettuce tests can
             #  retrieve it and examine for accuracy during automated testing
             self._write_internal_msgQ("RabbitMQingressProcessorTests", message)

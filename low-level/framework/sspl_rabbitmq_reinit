@@ -88,18 +88,6 @@ def main(product):
         _check_rabbitmq_status()
         _start_rabbitmq()
 
-    # Always copy erlang cookie.
-    copy_erlang_cookie()
-
-    # Connect to cluster before creating user accounts.
-    cluster_nodes = config_reader._get_value_list(
-            CLUSTER_SECTION, 'cluster_nodes'
-        )
-    if len(cluster_nodes) > 1:
-        cluster_rabbit_mq()
-    else:
-        print('RabbitMQ is running in single node mode.')
-
     _create_vhost_if_necessary(virtual_host, product)
 
     # Decrypt password -----------------------
@@ -125,25 +113,6 @@ def main(product):
         elif secondary_rabbitmq_server in hostnames:
             _set_perms_erlang_key()
             _cluster_rabbitmq_servers(primary_rabbitmq_server, secondary_rabbitmq_server)
-
-
-def copy_erlang_cookie():
-    print('Creating erlang cookie...')
-    command = 'systemctl stop rabbitmq-server'
-    _send_command(command)
-    # all rabbitmq servers needs to have same erlang cookie for clustering.
-    cookie_value = config_reader._get_value(CLUSTER_SECTION, 'erlang_cookie')
-
-    command = f'chmod +w {ERLANG_COOKIE_PATH}'
-    _send_command(command)
-    command = f'echo "{cookie_value}" > {ERLANG_COOKIE_PATH}'
-    _send_command(command)
-    command = f'chmod -w {ERLANG_COOKIE_PATH}'
-    _send_command(command)
-    # restarting to make sure it starts in case it is not stopped already.
-    command = 'systemctl restart rabbitmq-server'
-    _send_command(command)
-    print('Done creating erlang cookie')
 
 
 def sync_queue(queue_name):
@@ -243,34 +212,6 @@ def create_queue(vhost, username, password, exchange_name, queue_name,
         routing_key=routing_key
     )
     connection.close()
-
-
-def cluster_rabbit_mq():
-    print('Joining to RabbitMQ cluster...')
-    nodes = config_reader._get_value_list(CLUSTER_SECTION, 'cluster_nodes')
-    fqdn = socket.getfqdn().split('.')[0]
-    clustered = False
-    for node in nodes:
-        if node != fqdn and not clustered:
-            command = "%s stop_app" % RABBITMQCTL
-            response = _send_command(command)
-            print("Stopping app: %s" % response)
-            command = f'{RABBITMQCTL} join_cluster rabbit@{node}'
-            response = _send_command(command, fail_on_error=False)
-            print(f"Join response: {response}")
-            if 'Error:' in response:
-                print(f'Unable to connect to {node} error: {response}')
-                print('Re-trying another node...')
-            else:
-                clustered = True
-            command = "rabbitmqctl start_app"
-            response = _send_command(command)
-            print("node started")
-            break
-    if clustered:
-        print('Clustering was successful.')
-    else:
-        print('Not connected any node. Please check configuration.')
 
 
 def _create_vhost_if_necessary(virtual_host, product):

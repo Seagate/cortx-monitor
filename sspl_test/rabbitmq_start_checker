@@ -4,6 +4,7 @@ import sys
 import pika
 import json
 import pprint
+import socket
 
 SSPL_USER = "sspluser"
 SSPL_PASS = "sspl4ever"
@@ -23,7 +24,10 @@ def process_msg(ch, method, properties, body):
     try:
         msg_dict = json.loads(body)
         received_msg = msg_dict["message"]["actuator_response_type"]["thread_controller"]["thread_response"]
-        if received_msg == successfull_msg:
+        # Validate SSPL service host too, because multiple SSPL instances
+        # may send the same message in the cluster.
+        host = msg_dict["message"]["actuator_response_type"]["host_id"]
+        if received_msg == successfull_msg and host == socket.getfqdn():
             print("Got message: {0}".format(received_msg))
             channel.stop_consuming()
             sys.exit(0)

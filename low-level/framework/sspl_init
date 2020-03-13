@@ -211,16 +211,6 @@ config_sspl() {
     # Create /tmp/dcs/hpi if required
     [ "$role" != "eos" ] && [ ! -d "/tmp/dcs/hpi" ] && mkdir -p /tmp/dcs/hpi && id -u zabbix > /dev/null 2>&1 && chown zabbix:zabbix /tmp/dcs/hpi
 
-    # Ensure rabbitmq-server has started
-    systemctl start rabbitmq-server
-
-    # Reset RabbitMQ configuration
-    [ -z "$rabbitmq_reset" ] || {
-        /sbin/rabbitmqctl stop_app;
-        /sbin/rabbitmqctl reset;
-        /sbin/rabbitmqctl start_app;
-    }
-
     # Add required user and vhost to RabbitMQ. Set user permissions etc.
     echo "Creating required RABBITMQ configuration.... "
     /opt/seagate/eos/sspl/bin/sspl_rabbitmq_reinit $product || {

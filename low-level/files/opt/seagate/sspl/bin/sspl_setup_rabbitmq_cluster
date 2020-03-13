@@ -1,0 +1,121 @@
+#!/usr/bin/python3.6
+
+import subprocess
+import sys
+import socket
+
+from config_reader import ConfigReader
+
+RABBITMQCTL = '/usr/sbin/rabbitmqctl'
+CLUSTER_SECTION = 'RABBITMQCLUSTER'
+ERLANG_COOKIE_PATH = '/var/lib/rabbitmq/.erlang.cookie'
+
+config_reader = ConfigReader(is_init=True)
+
+
+def _send_command(command, fail_on_error=True):
+    print(f'Executing: {command}')
+    process = subprocess.Popen(
+        command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    response, error = process.communicate()
+    if error is not None and \
+       len(error) > 0:
+        print("command '%s' failed with error\n%s" % (command, error))
+        if fail_on_error:
+            sys.exit(1)
+        else:
+            return str(error)
+    return str(response)
+
+
+def copy_erlang_cookie():
+    print('Creating erlang cookie...')
+    command = 'systemctl stop rabbitmq-server'
+    _send_command(command)
+    # all rabbitmq servers needs to have same erlang cookie for clustering.
+    cookie_value = config_reader._get_value(CLUSTER_SECTION, 'erlang_cookie')
+
+    command = f'chmod +w {ERLANG_COOKIE_PATH}'
+    _send_command(command)
+    command = f'echo "{cookie_value}" > {ERLANG_COOKIE_PATH}'
+    _send_command(command)
+    command = f'chmod -w {ERLANG_COOKIE_PATH}'
+    _send_command(command)
+    # restarting to make sure it starts in case it is not stopped already.
+    command = 'systemctl restart rabbitmq-server'
+    _send_command(command)
+    print('Done creating erlang cookie')
+
+
+def open_rabbitmq_ports():
+    command = "systemctl start firewalld"
+    _send_command(command)
+    command = "firewall-cmd --zone=public --permanent --add-port=4369/tcp"
+    _send_command(command, fail_on_error=False)
+    command = "firewall-cmd --zone=public --permanent --add-port=25672/tcp"
+    _send_command(command, fail_on_error=False)
+    command = "firewall-cmd --zone=public --permanent --add-port=25672/tcp"
+    _send_command(command, fail_on_error=False)
+    command = "firewall-cmd --zone=public --permanent --add-port=5671-5672/tcp"
+    _send_command(command, fail_on_error=False)
+    command = "firewall-cmd --zone=public --permanent --add-port=15672/tcp"
+    _send_command(command, fail_on_error=False)
+    command = "firewall-cmd --zone=public --permanent --add-port=15672/tcp"
+    _send_command(command, fail_on_error=False)
+    command = "firewall-cmd --zone=public --permanent --add-port=61613-61614/tcp"
+    _send_command(command, fail_on_error=False)
+    command = "firewall-cmd --zone=public --permanent --add-port=1883/tcp"
+    _send_command(command, fail_on_error=False)
+    command = "firewall-cmd --zone=public --permanent --add-port=8883/tcp"
+    _send_command(command, fail_on_error=False)
+    command = "firewall-cmd --reload"
+    _send_command(command)
+
+
+def cluster_rabbit_mq():
+    print('Joining to RabbitMQ cluster...')
+    nodes = config_reader._get_value_list(CLUSTER_SECTION, 'cluster_nodes')
+    fqdn = socket.getfqdn().split('.')[0]
+    clustered = False
+    for node in nodes:
+        if node != fqdn and not clustered:
+            command = "%s stop_app" % RABBITMQCTL
+            response = _send_command(command)
+            print("Stopping app: %s" % response)
+            command = f'{RABBITMQCTL} join_cluster rabbit@{node}'
+            response = _send_command(command, fail_on_error=False)
+            print(f"Join response: {response}")
+            if 'Error:' in response:
+                print(f'Unable to connect to {node} error: {response}')
+                print('Re-trying another node...')
+            else:
+                clustered = True
+            command = "rabbitmqctl start_app"
+            response = _send_command(command)
+            print("node started")
+            break
+    if clustered:
+        print('Clustering was successful.')
+    else:
+        print('Not connected any node. Please check configuration.')
+
+
+if __name__ == '__main__':
+    # Make sure RabbitMQ servier is running
+    command = "systemctl start rabbitmq-server"
+    _send_command(command)
+
+    # Open RabbitMQ ports
+    open_rabbitmq_ports()
+
+    # Always copy erlang cookie.
+    copy_erlang_cookie()
+
+    # Connect to cluster before creating user accounts.
+    cluster_nodes = config_reader._get_value_list(
+        CLUSTER_SECTION, 'cluster_nodes'
+    )
+    if len(cluster_nodes) > 1:
+        cluster_rabbit_mq()
+    else:
+        print('RabbitMQ is running in single node mode.')

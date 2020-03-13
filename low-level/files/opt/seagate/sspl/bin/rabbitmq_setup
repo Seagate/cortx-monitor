@@ -23,11 +23,6 @@ if [ "$status" = "false" ]; then
     systemctl start rabbitmq-server
 fi
 
-# Reset RabbitMQ configuration
-/sbin/rabbitmqctl stop_app;
-/sbin/rabbitmqctl reset;
-/sbin/rabbitmqctl start_app;
-
 # Get product
 product=$(sed -nr 's/^product=([^,]+)$/\1/p' $SSPL_CONF | head -1)
 [ -z "$product" ] && echo "No product specified in $SSPL_CONF" && exit 1
