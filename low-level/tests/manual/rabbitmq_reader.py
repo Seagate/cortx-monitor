@@ -10,7 +10,7 @@ SSPL_PASS = "sspl4ever"
 SSPL_VHOST = "SSPL"
 
 def process_msg(ch, method, properties, body):
-    print(body)
+    print(body.decode())
 
 try:
     if len(sys.argv) <= 2 or len(sys.argv) > 3:
