@@ -84,7 +84,7 @@ class NodeHWactuator(Actuator, Debug):
                     if sensor_id == '':
                         continue
                     sensor_common_info, sensor_specific_info = self._executor.get_sensor_props(sensor_id)
-                    self.fru_specific_info[sensor_id] = sensor_common_info
+                    self.fru_specific_info[sensor_id] = sensor_specific_info
                 if self.fru_specific_info is not None:
                     resource_info = self._parse_fru_info(fru)
                 if fru_instance == "*":

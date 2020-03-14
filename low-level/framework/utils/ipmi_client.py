@@ -102,8 +102,6 @@ class IPMITool(IPMI):
         common_props = {
             'Sensor ID',
             'Entity ID',
-            'Sensor Type (Discrete)',
-            'States Asserted',
         }
         # Whatever keys from common_props are present,
         # move them to the 'common' dict

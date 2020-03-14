@@ -8,6 +8,7 @@ import sys
 from sspl_test.default import *
 from sspl_test.rabbitmq.rabbitmq_ingress_processor_tests import RabbitMQingressProcessorTests
 from sspl_test.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
+from sspl_test.common import check_sspl_ll_is_running
 
 def init(args):
     pass
@@ -16,7 +17,7 @@ def test_node_fan_module_actuator(agrs):
     check_sspl_ll_is_running()
     fan_actuator_message_request("NDHW:node:fru:fan", "*")
     fan_module_actuator_msg = None
-    time.sleep(4)
+    time.sleep(10)
     while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
         ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
         time.sleep(2)
@@ -51,11 +52,12 @@ def test_node_fan_module_actuator(agrs):
     if fru_specific_infos:
         for fru_specific_info in fru_specific_infos:
             resource_id = fru_specific_info.get("resource_id")
-            if "PS2 Fan Fail" in resource_id:
+            if "Fan Fail" in resource_id:
                 assert(fru_specific_info.get("Sensor Type (Discrete)") is not None)
                 assert(fru_specific_info.get("resource_id") is not None)
-            elif  "System Fan" in resource_id:
+            elif "System Fan" in resource_id:
                 assert(fru_specific_info.get("Status") is not None)
+                assert(fru_specific_info.get("Sensor Type (Threshold)") is not None)
                 assert(fru_specific_info.get("Sensor Reading") is not None)
                 assert(fru_specific_info.get("Lower Non-Recoverable") is not None)
                 assert(fru_specific_info.get("Assertions Enabled") is not None)
@@ -68,34 +70,11 @@ def test_node_fan_module_actuator(agrs):
                 assert(fru_specific_info.get("Upper Critical") is not None)
                 assert(fru_specific_info.get("Negative Hysteresis") is not None)
                 assert(fru_specific_info.get("Assertion Events") is not None)
+                assert(fru_specific_info.get("resource_id") is not None)
             else:
                 assert(fru_specific_info.get("States Asserted") is not None)
                 assert(fru_specific_info.get("Sensor Type (Discrete)") is not None)
                 assert(fru_specific_info.get("resource_id") is not None)
-
-def check_sspl_ll_is_running():
-    # Check that the state for sspl service is active
-    found = False
-
-    # Support for python-psutil < 2.1.3
-    for proc in psutil.process_iter():
-        if proc.name == "sspl_ll_d" and \
-           proc.status in (psutil.STATUS_RUNNING, psutil.STATUS_SLEEPING):
-               found = True
-
-    # Support for python-psutil 2.1.3+
-    if found == False:
-        for proc in psutil.process_iter():
-            pinfo = proc.as_dict(attrs=['cmdline', 'status'])
-            if "sspl_ll_d" in str(pinfo['cmdline']) and \
-                pinfo['status'] in (psutil.STATUS_RUNNING, psutil.STATUS_SLEEPING):
-                    found = True
-
-    assert found == True
-
-    # Clear the message queue buffer out
-    while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
-        world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
 
 def fan_actuator_message_request(resource_type, resource_id):
     egressMsg = {
@@ -120,13 +99,12 @@ def fan_actuator_message_request(resource_type, resource_id):
             "request_path": {
                 "site_id": 1,
                 "rack_id": 1,
-                "cluster_id": 1,
                 "node_id": 1
             },
             "response_dest": {},
             "actuator_request_type": {
-                "storage_enclosure": {
-                    "enclosure_request": resource_type,
+                "node_controller": {
+                    "node_request": resource_type,
                     "resource": resource_id
                 }
             }
