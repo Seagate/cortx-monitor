@@ -18,7 +18,7 @@ def test_if_data_sensor(args):
     if_data_msg = None
     #create dummy interface to get network alerts
     mock_eth_interface.shuffle_nw_interface()
-    sleep(4)
+    sleep(10)
     while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
         ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
         sleep(4)
