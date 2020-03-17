@@ -63,6 +63,8 @@ class RealStorActuatorMsgHandler(ScheduledModuleThread, InternalMsgQ):
     def __init__(self):
         super(RealStorActuatorMsgHandler, self).__init__(self.MODULE_NAME,
                                                   self.PRIORITY)
+        # Flag to indicate suspension of module
+        self._suspended = False
 
     def initialize(self, conf_reader, msgQlist, product):
         """initialize configuration reader and internal msg queues"""
@@ -87,6 +89,11 @@ class RealStorActuatorMsgHandler(ScheduledModuleThread, InternalMsgQ):
         """Run the module periodically on its own thread."""
         self._set_debug(True)
         self._set_debug_persist(True)
+
+        # Do not proceed if module is suspended
+        if self._suspended == True:
+            self._scheduler.enter(1, self._priority, self.run, ())
+            return
         self._log_debug("Start accepting requests")
 
         try:
@@ -148,6 +155,16 @@ class RealStorActuatorMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
             json_msg = RealStorActuatorSensorMsg(real_stor_response, uuid).getJson()
             self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+
+    def suspend(self):
+        """Suspends the module thread. It should be non-blocking"""
+        super(RealStorActuatorMsgHandler, self).suspend()
+        self._suspended = True
+
+    def resume(self):
+        """Resumes the module thread. It should be non-blocking"""
+        super(RealStorActuatorMsgHandler, self).resume()
+        self._suspended = False
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""

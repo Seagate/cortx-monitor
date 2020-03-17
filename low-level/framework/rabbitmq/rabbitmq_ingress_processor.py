@@ -276,9 +276,13 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
             # Decrypt RabbitMQ Password
             decryption_key = encryptor.gen_key(str(int(cluster_id)), str(int(node_id)))
             self._password = encryptor.decrypt(decryption_key, self._password.encode('ascii'))
+
+            # Create a routing key unique to this instance
+            unique_routing_key = f'{self._routing_key}_node{node_id}'
+            logger.info(f"Connecting using routing key: {unique_routing_key}")
             self._connection = RabbitMQSafeConnection(
                 self._username, self._password, self._virtual_host,
-                self._exchange_name, self._routing_key, self._queue_name
+                self._exchange_name, unique_routing_key, self._queue_name
             )
         except Exception as ex:
             logger.error("RabbitMQingressProcessor, _configure_exchange: %r" % ex)
