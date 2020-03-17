@@ -12,6 +12,10 @@
 #
 # Example of a stateful OCF Resource Agent
 #
+# Return codes and its menaning
+# 0: OCF_SUCESS: Successful Execution
+# 9: OCF_MASTER_FAILED: Resource is failed in Master mode
+# 7: OCF_NOT_RUNNING: Resource is safely stopped.
 #######################################################################
 # Initialization:
 : ${OCF_FUNCTIONS:="${OCF_ROOT}/resource.d/heartbeat/.ocf-shellfuncs"}
@@ -45,12 +49,12 @@ Location to store the sspl mode. [ Active, Degraded ]
 </parameter>
 </parameters>
 <actions>
-<action name="start"   timeout="20s" interval="10s"/>
-<action name="stop"    timeout="20s" interval="10s"/>
-<action name="monitor" timeout="20s" interval="10s" role="Master"/>
-<action name="monitor" timeout="20s" interval="11s" role="Slave"/>
+<action name="start"   timeout="20s" />
+<action name="stop"    timeout="22s" />
+<action name="monitor" timeout="23s" interval="10s" role="Master"/>
+<action name="monitor" timeout="25s" interval="11s" role="Slave"/>
 <action name="promote" timeout="10s" />
-<action name="demote"  timeout="10s" />
+<action name="demote"  timeout="11s" />
 <action name="meta-data"  timeout="5s" />
 <action name="validate-all"  timeout="30s" />
 </actions>
@@ -81,82 +85,63 @@ stateful_check_state() {
             return 0
         fi
     fi
-    return 1
+    # At first stage,/run/Stateful-sspl.state this file will not be present
+    # So, resource will not be either Master or Slave
+    # So, we can return as Resource is safely stopped (OCF_NOT_RUNNING i.e 7)
+    # So that, pacemaker will take action to start it
+    return 7
 }
 set_master_score() {
     "${HA_SBIN_DIR}/crm_master" -l reboot -v "$1"
 }
 stateful_start() {
-    stateful_check_state master
+    stateful_check_state "master"
     if [ $? -eq 0 ]; then
         # CRM Error - Should never happen
         systemctl start sspl-ll
-        while sspl_monitor != $OCF_MASTER_RUNNING;
-        do
-            sleep 1
-        done
         return $OCF_RUNNING_MASTER
     fi
-    stateful_update slave
+    stateful_update "slave"
     set_master_score "${slave_score}"
     systemctl start sspl-ll
-    while sspl_monitor != "$OCF_SUCCESS";
-    do
-        sleep 1
-    done
     return $OCF_SUCCESS
 }
 stateful_demote() {
-    stateful_check_state
-    if [ $? -eq 0 ]; then
-        # CRM Error - Should never happen
-        return $OCF_NOT_RUNNING
-    fi
-    stateful_update slave
-    set_master_score "${slave_score}"
-    sspl_monitor
-    if [ $? -eq "{$OCF_FAILED_MASTER}" ]; then
-        stateful_update slave
+    # Here, 9 means OCF_FAILED_MASTER that is service is failed on Master node
+    # And so, we can change that to run in slave mode
+    stateful_monitor
+    if [ $? -eq 9 ]; then
+        stateful_update "slave"
         set_master_score "${slave_score}"
-        return $OCF_FAILED_MASTER
     fi
     if [ -z $OCF_RESKEY_sspl_mode ]; then
         OCF_RESKEY_sspl_mode="/var/eos/sspl/data/state.txt"
     fi
-    [ -f $OCF_RESKEY_sspl_mode ] && {
-        echo "state=degrade" > /var/eos/sspl/data/state.txt
-        sspl_pid=`systemctl status sspl-ll | grep PID | awk '{print $3}'`
-        usr/bin/kill -s SIGHUP $sspl_pid
-    }
+
+    echo "state=degrade" > /var/eos/sspl/data/state.txt
     return 0
 }
 stateful_promote() {
-    stateful_check_state
-    if [ $? -eq 0 ]; then
-        return $OCF_NOT_RUNNING
+    sleep 5
+    sspl_pid=`/sbin/pidof -s /usr/bin/sspl_ll_d`
+    if [ -z $sspl_pid ]; then
+        "${HA_SBIN_DIR}/crm_master" -v
+        return $OCF_FAILED_MASTER
     fi
-    stateful_update master
+    stateful_update "master"
     set_master_score "${master_score}"
 
     if [ -z $OCF_RESKEY_sspl_mode ]; then
         OCF_RESKEY_sspl_mode="/var/eos/sspl/data/state.txt"
     fi
-    [ -f $OCF_RESKEY_sspl_mode ] && {
-        echo "state=active" > /var/eos/sspl/data/state.txt
-        sspl_pid=`systemctl status sspl-ll | grep PID | awk '{print $3}'`
-        /usr/bin/kill -s SIGHUP $sspl_pid
-    }
+    echo "state=active" > /var/eos/sspl/data/state.txt
+    /usr/bin/kill -s SIGHUP $sspl_pid
     return 0
 }
 stateful_stop() {
     "${HA_SBIN_DIR}/crm_master" -l reboot -D
-    stateful_check_state master
-    if [ $? -eq 0 ]; then
-        # CRM Error - Should never happen
-        return $OCF_RUNNING_MASTER
-    fi
     systemctl stop sspl-ll
-    return 0
+    return $OCF_SUCESS
 }
 stateful_monitor() {
     stateful_check_state "master"
@@ -174,27 +159,21 @@ stateful_monitor() {
             return $OCF_ERR_GENERIC
         fi
     fi
-
-    stateful_check_state "slave"
+    set_master_score "${slave_score}"
+    systemctl status sspl-ll | grep "Active: failed"
     if [ $? -eq 0 ]; then
-        # Restore the master setting during probes
-        set_master_score "${slave_score}"
-        systemctl status sspl-ll | grep "Active: failed"
-        if [ $? -eq 0 ]; then
-            var=`date`
-            return $OCF_ERR_GENERIC
-        fi
-        systemctl status sspl-ll
-        if [ $? -eq 0 ]; then
-            return $OCF_SUCCESS
-        else
-            return $OCF_NOT_RUNNING
-        fi
+        return $OCF_ERR_GENERIC
+    fi
+    systemctl status sspl-ll
+    if [ $? -eq 0 ]; then
+        return $OCF_SUCCESS
+    else
+        return $OCF_NOT_RUNNING
     fi
 }
 
 stateful_validate() {
-    exit $OCF_SUCCESS
+    return $OCF_SUCCESS
 }
 
 : ${slave_score:=5}
