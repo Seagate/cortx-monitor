@@ -111,8 +111,14 @@ class RealStorActuator(Actuator, Debug):
         epoch_time = str(int(time.time()))
         alert_id = mon_utils.get_alert_id(epoch_time)
 
-        if component == "fru" and resource_id != self.RESOURCE_ALL:
-            resource_id = self.fru_response_manipulators[component_type](component_details)
+        if component == "fru":
+            if resource_id == self.RESOURCE_ALL:
+                for comp in component_details:
+                    comp['resource_id'] = self.fru_response_manipulators[
+                                            component_type](comp if component_type!=self.FRU_DISK else [comp])
+            else:
+                resource_id = self.fru_response_manipulators[component_type](component_details)
+
         response = {
           "alert_type":"GET",
           "severity":"informational",
@@ -386,6 +392,10 @@ class RealStorActuator(Actuator, Debug):
                     else:
                         sensors = [sensor for sensor in sensors
                                 if sensor["sensor-type"] == sensor_type.title()]
+
+                        for sensor in sensors:
+                            sensor['resource_id'] = sensor["sensor-name"]
+
                         return sensors
 
     def _get_psu(self, psu_name):
@@ -543,6 +553,8 @@ class RealStorActuator(Actuator, Debug):
                 if self._resource_id == self.RESOURCE_ALL:
                     response['specific_info'] = []
                     response['specific_info'].extend(json_response.get("expander-ports"))
+                    for interfc in response['specific_info']:
+                        interfc['resource_id'] = interfc['name']
                 else:
                     response['specific_info'] = {}
                     for port_enclr in json_response.get("expander-ports"):
