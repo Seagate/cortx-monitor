@@ -33,3 +33,18 @@ class BaseMsg(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def getJson(self):
         raise NotImplementedError("Subclasses should implement this!")
+
+    def normalize_dict_keys(self, jsonMsg):
+        """Normalize all keys coming from firmware from - to _"""
+        new_dic = {}
+        for k, v in jsonMsg.items():
+            if isinstance(v, dict):
+                v = self.normalize_dict_keys(v)
+            elif isinstance(v, list):
+                new_lst = []
+                for d in v:
+                    d = self.normalize_dict_keys(d)
+                    new_lst.append(d)
+                v = new_lst
+            new_dic[k.replace('-', '_')] = v
+        return new_dic

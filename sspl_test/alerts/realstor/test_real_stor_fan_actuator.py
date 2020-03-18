@@ -55,66 +55,66 @@ def test_real_stor_fan_module_actuator(agrs):
         return
 
     if fru_specific_info:
-        assert(fru_specific_info.get("durable-id") is not None)
+        assert(fru_specific_info.get("durable_id") is not None)
         assert(fru_specific_info.get("status") is not None)
         assert(fru_specific_info.get("name") is not None)
-        assert(fru_specific_info.get("enclosure-id") is not None)
+        assert(fru_specific_info.get("enclosure_id") is not None)
         assert(fru_specific_info.get("health") is not None)
-        assert(fru_specific_info.get("health-reason") is not None)
+        assert(fru_specific_info.get("health_reason") is not None)
         assert(fru_specific_info.get("location") is not None)
-        assert(fru_specific_info.get("health-recommendation") is not None)
+        assert(fru_specific_info.get("health_recommendation") is not None)
         assert(fru_specific_info.get("position") is not None)
 
     fans = fan_module_actuator_msg.get("specific_info").get("fans", [])
     if fans:
         for fan in fans:
-            assert(fan.get("durable-id") is not None)
+            assert(fan.get("durable_id") is not None)
             assert(fan.get("status") is not None)
             assert(fan.get("name") is not None)
             assert(fan.get("speed") is not None)
-            assert(fan.get("locator-led") is not None)
+            assert(fan.get("locator_led") is not None)
             assert(fan.get("position") is not None)
             assert(fan.get("location") is not None)
-            assert(fan.get("part-number") is not None)
-            assert(fan.get("serial-number") is not None)
-            assert(fan.get("fw-revision") is not None)
-            assert(fan.get("hw-revision") is not None)
+            assert(fan.get("part_number") is not None)
+            assert(fan.get("serial_number") is not None)
+            assert(fan.get("fw_revision") is not None)
+            assert(fan.get("hw_revision") is not None)
             assert(fan.get("health") is not None)
-            assert(fan.get("health-reason") is not None)
-            assert(fan.get("health-recommendation") is not None)
+            assert(fan.get("health_reason") is not None)
+            assert(fan.get("health_recommendation") is not None)
 
 def verify_fan_module_specific_info(fru_specific_info):
     """Verify fan_module specific info"""
 
     if fru_specific_info:
         for fru_info in fru_specific_info:
-            assert(fru_info.get("durable-id") is not None)
+            assert(fru_info.get("durable_id") is not None)
             assert(fru_info.get("status") is not None)
             assert(fru_info.get("name") is not None)
-            assert(fru_info.get("enclosure-id") is not None)
+            assert(fru_info.get("enclosure_id") is not None)
             assert(fru_info.get("health") is not None)
-            assert(fru_info.get("health-reason") is not None)
+            assert(fru_info.get("health_reason") is not None)
             assert(fru_info.get("location") is not None)
-            assert(fru_info.get("health-recommendation") is not None)
+            assert(fru_info.get("health_recommendation") is not None)
             assert(fru_info.get("position") is not None)
 
             fans = fru_info.get("fans", [])
             if fans:
                 for fan in fans:
-                    assert(fan.get("durable-id") is not None)
+                    assert(fan.get("durable_id") is not None)
                     assert(fan.get("status") is not None)
                     assert(fan.get("name") is not None)
                     assert(fan.get("speed") is not None)
-                    assert(fan.get("locator-led") is not None)
+                    assert(fan.get("locator_led") is not None)
                     assert(fan.get("position") is not None)
                     assert(fan.get("location") is not None)
-                    assert(fan.get("part-number") is not None)
-                    assert(fan.get("serial-number") is not None)
-                    assert(fan.get("fw-revision") is not None)
-                    assert(fan.get("hw-revision") is not None)
+                    assert(fan.get("part_number") is not None)
+                    assert(fan.get("serial_number") is not None)
+                    assert(fan.get("fw_revision") is not None)
+                    assert(fan.get("hw_revision") is not None)
                     assert(fan.get("health") is not None)
-                    assert(fan.get("health-reason") is not None)
-                    assert(fan.get("health-recommendation") is not None)
+                    assert(fan.get("health_reason") is not None)
+                    assert(fan.get("health_recommendation") is not None)
 
 def check_sspl_ll_is_running():
     # Check that the state for sspl service is active

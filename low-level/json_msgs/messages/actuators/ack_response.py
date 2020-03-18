@@ -78,7 +78,7 @@ class AckResponseMsg(BaseActuatorMsg):
     def getJson(self):
         """Return a validated JSON object"""
         # Validate the current message
-        self.validateMsg(self._json)
+        self._json = self.validateMsg(self._json)
         return json.dumps(self._json)
 
     def get_ack_type(self):

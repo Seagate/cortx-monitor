@@ -794,7 +794,7 @@
 											"type": "object",
 											"required": true,
 											"properties":{
-												"enclosure-id": {
+												"enclosure_id": {
 													"description": "Enclosure ID",
 													"type": "integer",
 													"required": true
@@ -819,17 +819,17 @@
 													"type": "string",
 													"required": true
 												},
-												"health-reason": {
+												"health_reason": {
 													"description": "reason of FRU failure",
 													"type": "string",
 													"required": true
 												},
-												"health-recommendation": {
+												"health_recommendation": {
 													"description": "Health recommendation to resolve faults",
 													"type": "string",
 													"required": true
 												},
-												"unhealthy-components":{
+												"unhealthy_components":{
 													"type": "array",
 													"required": false
 												}

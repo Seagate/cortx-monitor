@@ -126,7 +126,7 @@ class HostUpdateMsg(BaseSensorMsg):
     def getJson(self):
         """Return a validated JSON object"""
         # Validate the current message
-        self.validateMsg(self._json)
+        self._json = self.validateMsg(self._json)
         return json.dumps(self._json)
     def set_uuid(self, _uuid):
         self._json["message"]["sspl_ll_msg_header"]["uuid"] = _uuid

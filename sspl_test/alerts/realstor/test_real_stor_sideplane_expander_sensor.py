@@ -51,15 +51,15 @@ def test_real_stor_sideplane_expander_sensor(agrs):
 
     if sideplane_expander_specific_info_data:
         assert(sideplane_expander_specific_info_data.get("position") is not None)
-        assert(sideplane_expander_specific_info_data.get("durable-id") is not None)
-        assert(sideplane_expander_specific_info_data.get("drawer-id") is not None)
+        assert(sideplane_expander_specific_info_data.get("durable_id") is not None)
+        assert(sideplane_expander_specific_info_data.get("drawer_id") is not None)
         assert(sideplane_expander_specific_info_data.get("status") is not None)
         assert(sideplane_expander_specific_info_data.get("name") is not None)
-        assert(sideplane_expander_specific_info_data.get("enclosure-id") is not None)
-        assert(sideplane_expander_specific_info_data.get("health-reason") is not None)
+        assert(sideplane_expander_specific_info_data.get("enclosure_id") is not None)
+        assert(sideplane_expander_specific_info_data.get("health_reason") is not None)
         assert(sideplane_expander_specific_info_data.get("health") is not None)
         assert(sideplane_expander_specific_info_data.get("location") is not None)
-        assert(sideplane_expander_specific_info_data.get("health-recommendation") is not None)
+        assert(sideplane_expander_specific_info_data.get("health_recommendation") is not None)
 
 
 def check_sspl_ll_is_running():

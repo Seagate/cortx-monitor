@@ -130,21 +130,21 @@ def test_real_stor_sensor_temperature(agrs):
 
 def generic_specific_info(specific_info):
     for resource in specific_info:
-        assert(resource.get("drawer-id-numeric") is not None)
-        assert(resource.get("sensor-type") is not None)
+        assert(resource.get("drawer_id_numeric") is not None)
+        assert(resource.get("sensor_type") is not None)
         assert(resource.get("container") is not None)
-        assert(resource.get("enclosure-id") is not None)
-        assert(resource.get("durable-id") is not None)
+        assert(resource.get("enclosure_id") is not None)
+        assert(resource.get("durable_id") is not None)
         assert(resource.get("value") is not None)
         assert(resource.get("status") is not None)
-        assert(resource.get("controller-id-numeric") is not None)
-        assert(resource.get("object-name") is not None)
-        assert(resource.get("container-numeric") is not None)
-        assert(resource.get("controller-id") is not None)
-        assert(resource.get("sensor-type-numeric") is not None)
-        assert(resource.get("sensor-name") is not None)
-        assert(resource.get("drawer-id") is not None)
-        assert(resource.get("status-numeric") is not None)
+        assert(resource.get("controller_id_numeric") is not None)
+        assert(resource.get("object_name") is not None)
+        assert(resource.get("container_numeric") is not None)
+        assert(resource.get("controller_id") is not None)
+        assert(resource.get("sensor_type_numeric") is not None)
+        assert(resource.get("sensor_name") is not None)
+        assert(resource.get("drawer_id") is not None)
+        assert(resource.get("status_numeric") is not None)
 
 def check_sspl_ll_is_running():
     # Check that the state for sspl service is active
