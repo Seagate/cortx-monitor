@@ -633,7 +633,7 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
                         "cluster_id":self._cluster_id ,
                         "resource_type": resource_type,
                         "resource_id": sensor_name,
-                        "event_time": str(int(time.time()))
+                        "event_time": self._get_epoch_time_from_date_and_time(date, _time)
                     }
 
         if is_last:
@@ -671,7 +671,7 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
             "cluster_id": self._cluster_id,
             "resource_type": resource_type,
             "resource_id": sensor,
-            "event_time": str(int(time.time()))
+            "event_time": self._get_epoch_time_from_date_and_time(date, _time)
         }
 
         try:
@@ -748,7 +748,7 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
             "cluster_id": self._cluster_id,
             "resource_type": resource_type,
             "resource_id": sensor,
-            "event_time": str(int(time.time()))
+            "event_time": self._get_epoch_time_from_date_and_time(date, _time)
         }
 
         try:
@@ -803,7 +803,7 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
                 "cluster_id": self._cluster_id,
                 "resource_type": resource_type,
                 "resource_id": sensor,
-                "event_time": str(int(time.time()))
+                "event_time": self._get_epoch_time_from_date_and_time(date, _time)
             }
             if (event, status) in alert_severity_dict:
                 alert_type = alert_severity_dict[(event, status)][0]
@@ -881,6 +881,11 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
         salt = str(uuid.uuid4().hex)
         alert_id = epoch_time + salt
         return alert_id
+
+    def _get_epoch_time_from_date_and_time(self, _date, _time):
+        timestamp_format = '%m/%d/%Y %H:%M:%S'
+        timestamp = time.strptime('{} {}'.format(_date,_time), timestamp_format)
+        return str(int(time.mktime(timestamp)))
 
     def suspend(self):
         """Suspends the module thread. It should be non-blocking"""
