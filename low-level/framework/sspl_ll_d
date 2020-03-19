@@ -39,6 +39,7 @@ os.sys.path.insert(0, parentdir)
 from framework.utils.config_reader import ConfigReader
 from framework.utils.service_logging import init_logging
 from framework.utils.service_logging import logger
+from framework.utils.store_factory import store
 
 # Modules for handling RabbitMQ messages and manipulating internal threads
 from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
@@ -590,6 +591,21 @@ def signal_handler(signal_number, frame):
         logger.error("thread_controller_queue is None")
 
 
+def set_log_level(signal_number, frame):
+    """Handles SIGUSR1 for dynamic log level setting.
+       Key log_level should be registered in consul.
+       On SIGHUP signal reception, this function lookup
+       consul for latest value set with log_level key.
+    """
+    key='sspl.SYSTEM_INFORMATION.log_level'
+    logger.debug("signal handler is called with {0}".format(signal_number))
+    log_level = store.get(key)
+    if log_level and isinstance(log_level, bytes):
+        log_level = log_level.decode('utf-8')
+    logger.debug(f"Received SIGUSR1 signal to set log level to '{log_level}'")
+    logger.setLevel(log_level)
+
+
 if __name__ == "__main__":
     # Retrieve configuration file for sspl-ll service
     try:
@@ -638,6 +654,9 @@ if __name__ == "__main__":
         print(err)
         print("Exiting ...")
         sys.exit(os.EX_USAGE)
+
+    # Handle signals for log level change
+    signal.signal(signal.SIGUSR1, set_log_level)
 
     try:
         # Create a PID file for systemd

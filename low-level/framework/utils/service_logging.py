@@ -85,10 +85,10 @@ def init_logging(dcs_service_name, log_level=LOG_INFO, syslog_host="localhost", 
                 print("Warning: Unable to connect to syslog for logging")
                 break
     _logger.addHandler(handler)
-    logger.info(f"Logging has been initialized for sspl {dcs_service_name}"
-                f"service after {num_attempts} attempts to level {log_level}")
+    _logger.info(f"Logging has been initialized for sspl {dcs_service_name} \
+                  service after {num_attempts} attempts to level {log_level}")
     if warning_message is not None:
-        logger.warning(warning_message)
+        _logger.warning(warning_message)
 
 
 class Logger:
@@ -119,6 +119,9 @@ class Logger:
 
     def critical(self, *args, **kwargs):
         self._logger.critical(*args, **kwargs)
+
+    def setLevel(self, *args, **kwargs):
+        self._logger.setLevel(*args, **kwargs)
 
 
 logger = Logger(_logger)
