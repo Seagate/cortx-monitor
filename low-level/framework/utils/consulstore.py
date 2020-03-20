@@ -34,12 +34,13 @@ class ConsulStore(Store):
         else:
             return key
 
-    def put(self, value, key):
+    def put(self, value, key, pickled=True):
         """ write data to given key"""
 
         try:
             key = self._get_key(key)
-            value = pickle.dumps(value)
+            if pickled:
+                value = pickle.dumps(value)
             self.consul_conn.kv.put(key, value)
 
         except Exception as gerr:
@@ -54,7 +55,10 @@ class ConsulStore(Store):
             data = self.consul_conn.kv.get(key)[1]
             if data:
                 data = data["Value"]
-                data = pickle.loads(data)
+                try:
+                    data = pickle.loads(data)
+                except:
+                    pass
 
         except Exception as gerr:
             logger.warn("Error{0} while reading data from consul {1}"\

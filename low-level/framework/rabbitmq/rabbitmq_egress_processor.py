@@ -17,12 +17,16 @@
 import json
 import pika
 import time
+import sys
 
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
-from .rabbitmq_connector import RabbitMQSafeConnection
+from .rabbitmq_connector import RabbitMQSafeConnection, connection_exceptions
 from framework.utils import encryptor
+from framework.utils.store_factory import store
+from framework.utils import mon_utils
+from framework.utils.store_queue import store_queue
 
 import ctypes
 try:
@@ -84,8 +88,6 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
         #  into our message queue from the main sspl_ll_d handler
         self._request_shutdown = False
 
-        self._msg_sent_succesfull = True
-
         self._product = product
 
         # Configure RabbitMQ Exchange to transmit messages
@@ -123,9 +125,7 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
         try:
             # Loop thru all messages in queue until and transmit
             while not self._is_my_msgQ_empty():
-                # Only get a new msg if we've successfully processed the current one
-                if self._msg_sent_succesfull:
-                    self._jsonMsg, self._event = self._read_my_msgQ()
+                self._jsonMsg, self._event = self._read_my_msgQ()
 
                 if self._jsonMsg is not None:
                     self._transmit_msg_on_exchange()
@@ -133,10 +133,6 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
         except Exception:
             # Log it and restart the whole process when a failure occurs
             logger.error("RabbitMQegressProcessor restarting")
-
-            # Configure RabbitMQ Exchange to receive messages
-            self._get_connection(host_addr=self._primary_rabbitmq_host, retry=True)
-            self._get_ack_connection(host_addr=self._primary_rabbitmq_host, retry=True)
 
         self._log_debug("Finished processing successfully")
 
@@ -205,7 +201,6 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
 
             node_id = self._conf_reader._get_value_with_default(self.SYSTEM_INFORMATION_KEY,
                                                                 self.NODE_ID_KEY, '')
-
             # Decrypt RabbitMQ Password
             decryption_key = encryptor.gen_key(str(int(cluster_id)), str(int(node_id)))
             self._password = encryptor.decrypt(decryption_key, self._password.encode('ascii'))
@@ -291,20 +286,23 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
             else:
                 self._add_signature()
                 jsonMsg = json.dumps(self._jsonMsg).encode('utf8')
-                self._connection.publish(exchange=self._exchange_name,
-                                         routing_key=self._routing_key,
-                                         properties=msg_props,
-                                         body=jsonMsg)
+                try:
+                    self._connection.publish(exchange=self._exchange_name,
+                                            routing_key=self._routing_key,
+                                            properties=msg_props,
+                                            body=jsonMsg)
+                except connection_exceptions:
+                    logger.error("RabbitMQegressProcessor, _transmit_msg_on_exchange, rabbitmq connectivity lost, adding message to consul %s" % self._jsonMsg)
+                    store_queue.put(jsonMsg)
 
             # No exceptions thrown so success
             self._log_debug("_transmit_msg_on_exchange, Successfully Sent: %s" % self._jsonMsg)
             # If event is added by sensors, set it
             if self._event:
                 self._event.set()
-            self._msg_sent_succesfull = True
+
         except Exception as ex:
             logger.error("RabbitMQegressProcessor, _transmit_msg_on_exchange: %r" % ex)
-            self._msg_sent_succesfull = False
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""

@@ -39,7 +39,7 @@ class FileStore(Store):
         else:
             logger.error("config path can be either filepath or dict for filestore config operations")
 
-    def put(self, value, key):
+    def put(self, value, key, pickled=True):
         """ Dump value to given absolute file path"""
 
         absfilepath = key
@@ -58,7 +58,11 @@ class FileStore(Store):
 
         try:
             fh = open(absfilepath,"wb")
-            pickle.dump(value, fh)
+            if pickled:
+                pickle.dump(value, fh)
+            else:
+                fh.write(value)
+
         except IOError as err:
             errno, strerror = err.args
             logger.warn("I/O error[{0}] while dumping data to file {1}): {2}"\
@@ -100,7 +104,10 @@ class FileStore(Store):
 
         try:
             fh = open(absfilepath,"rb")
-            value = pickle.load(fh)
+            try:
+                value = pickle.load(fh)
+            except:
+                value = fh.read()
         except IOError as err:
             errno, strerror = err.args
             logger.warn("I/O error[{0}] while loading data from file {1}): {2}"\
@@ -136,7 +143,6 @@ class FileStore(Store):
             return []
         else:
             return os.listdir(prefix)
-
 
 if __name__ == '__main__':
     store = FileStore()

@@ -27,7 +27,7 @@ class Store(object):
         super(Store, self).__init__()
 
     @abc.abstractmethod
-    def put(self, value, key):
+    def put(self, value, key, pickled=True):
         """Write data to store
         """
         raise NotImplementedError("sub class should implement this")

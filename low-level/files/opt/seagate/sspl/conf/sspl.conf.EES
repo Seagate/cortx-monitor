@@ -52,6 +52,7 @@ message_signature_expires=3600
 iem_route_addr=
 iem_route_exchange_name=sspl-out
 primary_rabbitmq_host=localhost
+limit_consul_memory=50000000
 
 [LOGGINGPROCESSOR]
 virtual_host=SSPL

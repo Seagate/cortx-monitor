@@ -18,6 +18,7 @@ connection_exceptions = (
     pika.exceptions.AMQPConnectionError,
     pika.exceptions.ChannelClosedByBroker,
     pika.exceptions.ChannelWrongStateError,
+    AttributeError
 )
 connection_error_msg = (
     'RabbitMQ channel closed with error {}. Retrying with another host...'
@@ -61,7 +62,7 @@ class RabbitMQSafeConnection:
         self.routing_key = routing_key
         self.queue_name = queue_name
         self.wait_time = 10
-        self.connection = self._retry_connection()
+        self.connection = self._establish_connection(raise_err=False)
 
     def _retry_connection(self):
         """Retries to establish the connection until a connection is made
@@ -91,7 +92,7 @@ class RabbitMQSafeConnection:
             )
         except connection_exceptions as e:
             logger.error(connection_error_msg.format(e))
-            self._retry_connection()
+            self._establish_connection()
             self.publish(exchange, routing_key, properties, body)
 
     def consume(self, callback):
@@ -124,23 +125,27 @@ class RabbitMQSafeConnection:
             self._retry_connection()
             self.ack(ch, delivery_tag)
 
-    def _establish_connection(self):
+    def _establish_connection(self, raise_err=True):
         """Connects to a RabbitMQ node and binds the queues if available.
         """
-        self._connection = get_cluster_connection(
-            self.username, self.password, self.virtual_host
-        )
-        self._channel = self._connection.channel()
-        self._channel.exchange_declare(
-            exchange=self.exchange_name, exchange_type='topic', durable=True
-        )
-        if self.queue_name:
-            self._channel.queue_declare(queue=self.queue_name, durable=True)
-            self._channel.queue_bind(
-                queue=self.queue_name,
-                exchange=self.exchange_name,
-                routing_key=self.routing_key,
+        try:
+            self._connection = get_cluster_connection(
+                self.username, self.password, self.virtual_host
             )
+            self._channel = self._connection.channel()
+            self._channel.exchange_declare(
+                exchange=self.exchange_name, exchange_type='topic', durable=True
+            )
+            if self.queue_name:
+                self._channel.queue_declare(queue=self.queue_name, durable=True)
+                self._channel.queue_bind(
+                    queue=self.queue_name,
+                    exchange=self.exchange_name,
+                    routing_key=self.routing_key,
+                )
+        except Exception as e:
+            if raise_err:
+                raise e
 
     def cleanup(self):
         """Cleans up the connection.

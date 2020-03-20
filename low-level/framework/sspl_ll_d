@@ -52,6 +52,8 @@ from framework.actuator_state_manager import actuator_state_manager
 
 from framework.rabbitmq.logging_processor import LoggingProcessor
 from framework.rabbitmq.thread_controller import ThreadController
+from framework.rabbitmq.rabbitmq_egress_accumulated_msgs_processor import \
+    RabbitMQEgressAccumulatedMsgsProcessor
 
 from actuators.impl.actuator import Actuator
 from message_handlers.node_controller_msg_handler import NodeControllerMsgHandler
@@ -270,6 +272,10 @@ def main(conf_reader, systemd_support):
         # Create mappings of modules and their message queues
         sspl_threaded_modules[klass.name()] = klass()
         msgQlist[klass.name()] = queue.Queue()
+
+    # Add rabbitmq_egress_accumulated_msgs_processor.py in sspl_threaded_modules
+    sspl_threaded_modules[RabbitMQEgressAccumulatedMsgsProcessor] = RabbitMQEgressAccumulatedMsgsProcessor()
+    msgQlist[RabbitMQEgressAccumulatedMsgsProcessor.name()] = queue.Queue()
 
     message_handlers = conf_reader._get_value_list(SSPL_SETTING,
                                                    MSG_HANDLERS)
