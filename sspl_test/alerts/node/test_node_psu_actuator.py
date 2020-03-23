@@ -9,6 +9,8 @@ from sspl_test.rabbitmq.rabbitmq_ingress_processor_tests import RabbitMQingressP
 from sspl_test.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 from sspl_test.common import check_sspl_ll_is_running
 
+UUID="16476007-a739-4785-b5c6-f3de189cdf12"
+
 def init(args):
     pass
 
@@ -16,7 +18,8 @@ def test_node_psu_module_actuator(agrs):
     check_sspl_ll_is_running()
     psu_actuator_message_request("NDHW:node:fru:psu", "*")
     psu_module_actuator_msg = None
-    time.sleep(10)
+    time.sleep(6)
+    ingressMsg = {}
     while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
         ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
         time.sleep(2)
@@ -31,6 +34,7 @@ def test_node_psu_module_actuator(agrs):
             time.sleep(4)
             print(exception)
 
+    assert(ingressMsg.get("sspl_ll_msg_header").get("uuid") == UUID)
     assert(psu_module_actuator_msg is not None)
     assert(psu_module_actuator_msg.get("alert_type") is not None)
     assert(psu_module_actuator_msg.get("severity") is not None)
@@ -69,7 +73,8 @@ def psu_actuator_message_request(resource_type, resource_id):
             "sspl_ll_msg_header": {
                 "schema_version": "1.0.0",
                 "sspl_version": "1.0.0",
-                "msg_version": "1.0.0"
+                "msg_version": "1.0.0",
+                "uuid": UUID
             },
              "sspl_ll_debug": {
                 "debug_component" : "sensor",

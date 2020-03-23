@@ -20,7 +20,7 @@ filename=""
 
 # handle 'sel' commands
 if [ "$1" == "sel" ]; then
-        command=${@:2}
+        command=$2
         case $command in
                 "list")
                         filename="$BASE_PATH/sspl_test/ipmi_simulator/ipmi_mock_data/sel_list.txt"
@@ -28,10 +28,12 @@ if [ "$1" == "sel" ]; then
                 "info")
                         filename="$BASE_PATH/sspl_test/ipmi_simulator/ipmi_mock_data/sel_info.txt"
                         ;;
-                *)
-                        echo "Invalid command: $@. IPMISIMTOOL can't process it."
-                        exit 1
         esac
+        if [ "$filename" == "" ]; then
+                echo "Invalid command: $@. IPMISIMTOOL can't process it."
+                exit 1
+        fi
+        printf "$(cat $filename)"
 fi
 
 # handle 'sdr type' commands
@@ -51,15 +53,17 @@ if [ "$1 $2" == "sdr type" ]; then
                         filename="$BASE_PATH/sspl_test/ipmi_simulator/ipmi_mock_data/disk.txt"
                         ;;
                 *)
-                        echo "Invalid command: $@. IPMISIMTOOL can't process it."
+                        echo "No records found for given sdr or Invalid command - $@. IPMISIMTOOL can't process it."
                         exit 1
         esac
+        printf "$(cat $filename)"
 fi
 
 
 # handle 'sensor list' commands
 if [ "$1 $2" == "sensor list" ]; then
         filename="$BASE_PATH/sspl_test/ipmi_simulator/ipmi_mock_data/sensor_list.txt"
+        printf "$(cat $filename)"
 fi
 
 
@@ -76,13 +80,14 @@ if [ "$1 $2" == "sensor get" ]; then
                 "HDD 0 Status")
                         filename="$BASE_PATH/sspl_test/ipmi_simulator/ipmi_mock_data/sensor_hdd0.txt"
                         ;;
-                "Pwr Unit Status")
+                "Pwr Unit Redund")
                         filename="$BASE_PATH/sspl_test/ipmi_simulator/ipmi_mock_data/sensor_pw_unit.txt"
                         ;;
                 *)
-                        echo "Invalid command: $@. IPMISIMTOOL can't process it."
+                        echo "No records found for the sensor or Invalid command - $@. IPMISIMTOOL can't process it."
                         exit 1
         esac
+        printf "$(cat $filename)"
 fi
 
 
@@ -92,9 +97,13 @@ if [ "$1 $2" == "sdr entity" ]; then
                 echo "Invalid command: $@. IPMISIMTOOL can't process it."
                 exit 1
         fi
+        if [ "$3" == "" ] | [ "$3" == "None" ]; then
+                echo "No records found for the entity id. IPMISIMTOOL can't process it."
+                exit 1
+        fi
         res=`egrep "\|[ ]+$3 \|" $BASE_PATH/sspl_test/ipmi_simulator/ipmi_mock_data/entity.txt`
         if [ "$res" == "" ]; then
-                echo "No fru found for given entity"
+                echo "No fru found for given entity id $3"
                 exit 1
         fi
         echo $res
@@ -114,18 +123,12 @@ if [ "$1 $2" == "sdr get" ]; then
                 "HDD 0 Status")
                         filename="$BASE_PATH/sspl_test/ipmi_simulator/ipmi_mock_data/sdr_hdd0.txt"
                         ;;
-                "Pwr Unit Status")
+                "Pwr Unit Redund")
                         filename="$BASE_PATH/sspl_test/ipmi_simulator/ipmi_mock_data/sdr_pw_unit.txt"
                         ;;
                 *)
-                        echo "Invalid command: $@. IPMISIMTOOL can't process it."
+                        echo "No records found for the sensor or Invalid command - $@. IPMISIMTOOL can't process it."
                         exit 1
         esac
-fi
-
-
-if [ "$filename" != "" ]; then
-        while IFS= read -r LINE; do
-                echo $LINE
-        done < $filename
+        printf "$(cat $filename)"
 fi

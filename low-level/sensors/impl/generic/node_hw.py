@@ -232,7 +232,7 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
         sel_out, retcode = self._run_ipmitool_subcommand("sel list", grep_args=f"-E '{available_fru}'",
                                                              out_file=tmp_fd)
         if retcode != 0:
-            msg = f"ipmitool sel list command failed: {''.join(sel_out)}"
+            msg = f"ipmitool sel list command failed: {b''.join(sel_out)}"
             logger.error(msg)
             raise Exception(msg)
 
@@ -456,7 +456,7 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
 
         sensor_list_out, retcode = self._run_ipmitool_subcommand(f"sdr type '{sensor_type}'")
         if retcode != 0:
-            msg = f"ipmitool sdr type command failed: {''.join(sensor_list_out)}"
+            msg = f"ipmitool sdr type command failed: {b''.join(sensor_list_out)}"
             logger.error(msg)
             return
         sensor_list = b''.join(sensor_list_out).decode("utf-8").split("\n")
@@ -482,7 +482,7 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
 
         sensor_list_out, retcode = self._run_ipmitool_subcommand(f"sdr entity '{entity_id}'")
         if retcode != 0:
-            msg = f"ipmitool sdr entity command failed: {''.join(sensor_list_out)}"
+            msg = f"ipmitool sdr entity command failed: {b''.join(sensor_list_out)}"
             logger.error(msg)
             return
         sensor_list = b''.join(sensor_list_out).decode("utf-8").split("\n")
@@ -502,7 +502,7 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
     def _get_sensor_sdr_props(self, sensor_id):
         props_list_out, retcode = self._run_ipmitool_subcommand(f"sdr get '{sensor_id}'")
         if retcode != 0:
-            msg = f"ipmitool sensor get command failed: {''.join(props_list_out)}"
+            msg = f"ipmitool sensor get command failed: {b''.join(props_list_out)}"
             logger.error(msg)
             return
         props_list = b''.join(props_list_out).decode("utf-8").split("\n")
@@ -539,7 +539,7 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
            specific is a dict of the properties specific to this sensor"""
         props_list_out, retcode = self._run_ipmitool_subcommand(f"sensor get '{sensor_id}'")
         if retcode != 0:
-            msg = f"ipmitool sensor get command failed: {''.join(props_list_out)}"
+            msg = f"ipmitool sensor get command failed: {b''.join(props_list_out)}"
             logger.error(msg)
             return (False, False)
         props_list = b''.join(props_list_out).decode("utf-8").split("\n")

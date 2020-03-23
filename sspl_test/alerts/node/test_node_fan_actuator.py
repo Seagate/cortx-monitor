@@ -10,6 +10,8 @@ from sspl_test.rabbitmq.rabbitmq_ingress_processor_tests import RabbitMQingressP
 from sspl_test.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 from sspl_test.common import check_sspl_ll_is_running
 
+UUID="16476007-a739-4785-b5c6-f3de189cdf11"
+
 def init(args):
     pass
 
@@ -17,7 +19,8 @@ def test_node_fan_module_actuator(agrs):
     check_sspl_ll_is_running()
     fan_actuator_message_request("NDHW:node:fru:fan", "*")
     fan_module_actuator_msg = None
-    time.sleep(10)
+    time.sleep(6)
+    ingressMsg = {}
     while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
         ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
         time.sleep(2)
@@ -31,6 +34,8 @@ def test_node_fan_module_actuator(agrs):
         except Exception as exception:
             time.sleep(4)
             print(exception)
+
+    assert(ingressMsg.get("sspl_ll_msg_header").get("uuid") == UUID)
 
     assert(fan_module_actuator_msg is not None)
     assert(fan_module_actuator_msg.get("alert_type") is not None)
@@ -59,14 +64,14 @@ def test_node_fan_module_actuator(agrs):
                 assert(fru_specific_info.get("Status") is not None)
                 assert(fru_specific_info.get("Sensor Type (Threshold)") is not None)
                 assert(fru_specific_info.get("Sensor Reading") is not None)
-                assert(fru_specific_info.get("Lower Non_Recoverable") is not None)
+                assert(fru_specific_info.get("Lower Non-Recoverable") is not None)
                 assert(fru_specific_info.get("Assertions Enabled") is not None)
-                assert(fru_specific_info.get("Upper Non_Critical") is not None)
-                assert(fru_specific_info.get("Upper Non_Recoverable") is not None)
+                assert(fru_specific_info.get("Upper Non-Critical") is not None)
+                assert(fru_specific_info.get("Upper Non-Recoverable") is not None)
                 assert(fru_specific_info.get("Positive Hysteresis") is not None)
                 assert(fru_specific_info.get("Lower Critical") is not None)
                 assert(fru_specific_info.get("Deassertions Enabled") is not None)
-                assert(fru_specific_info.get("Lower Non_Critical") is not None)
+                assert(fru_specific_info.get("Lower Non-Critical") is not None)
                 assert(fru_specific_info.get("Upper Critical") is not None)
                 assert(fru_specific_info.get("Negative Hysteresis") is not None)
                 assert(fru_specific_info.get("Assertion Events") is not None)
@@ -90,7 +95,8 @@ def fan_actuator_message_request(resource_type, resource_id):
             "sspl_ll_msg_header": {
                 "schema_version": "1.0.0",
                 "sspl_version": "1.0.0",
-                "msg_version": "1.0.0"
+                "msg_version": "1.0.0",
+                "uuid": UUID
             },
              "sspl_ll_debug": {
                 "debug_component" : "sensor",

@@ -83,7 +83,8 @@ class IPMITool(IPMI):
         if retcode != 0:
             msg = "ipmitool sensor get command failed: {0}".format(b''.join(props_list_out))
             logger.error(msg)
-            return (False, False)
+            err_response = {sensor_id: {"ERROR": msg}}
+            return (False, err_response)
         props_list = b''.join(props_list_out).decode("utf-8").split("\n")
         props_list = props_list[1:] # The first line is 'Locating sensor record...'
 
