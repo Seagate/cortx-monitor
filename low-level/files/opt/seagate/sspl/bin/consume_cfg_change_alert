@@ -1,0 +1,5 @@
+#!/bin/bash
+
+SSPL_PID=`/sbin/pidof -s /usr/bin/sspl_ll_d`
+kill -SIGUSR1 $SSPL_PID
+echo "Signal sent to $SSPL_PID to update sspl log level"
