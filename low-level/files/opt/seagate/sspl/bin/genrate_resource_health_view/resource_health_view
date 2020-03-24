@@ -5,18 +5,22 @@ import os
 import sys
 import socket
 import time
+import argparse
+import warnings
+warnings.filterwarnings(action='ignore',module='cryptography')
 
 # Add the top level directories
-parentdir = os.path.dirname(os.path.abspath(__file__))
+op = os.path
+parentdir = op.dirname(op.dirname(op.dirname(op.dirname(op.dirname(op.dirname(op.dirname(op.abspath(__file__))))))))
 sys.path.insert(0, parentdir)
-from common.utils.store_factory import store
-from common.platforms.realstor.realstor_enclosure import realstor_enclosure
-from common.utils.ipmi_client import IpmiFactory
+from framework.utils.store_factory import store
+from framework.platforms.realstor.realstor_enclosure import singleton_realstorencl
+from framework.utils.ipmi_client import IpmiFactory
 
 class SSPLHealthView(object):
     """docstring for SSPLHealthView"""
 
-    persistent_data_location = '/var/eos/sspl/data/'
+    persistent_data_location = singleton_realstorencl.vol_ras
     storage_encl_dir = persistent_data_location+'encl/frus/'
 
     encl_disks_filename = storage_encl_dir+'disks/'
@@ -34,13 +38,13 @@ class SSPLHealthView(object):
     encl_logical_volume_resource_type = "enclosure:eos:logical_volume"
     encl_sas_resource_type = "enclosure:interface:sas"
 
-    SYSTEM_INFORMATION = "SYSTEM_INFORMATION"
-    SITE_ID = "1"
-    RACK_ID = "1"
+    SITE_ID = singleton_realstorencl.site_id
+    RACK_ID = singleton_realstorencl.rack_id
     NODE_ID = socket.getfqdn()
-    CLUSTER_ID = "1"
-    RESOURCE_HEALTH_VIEW_PATH = '/tmp/sspl/data/resource_health_view.json'
-    TEMPLATE_SCHEMA_FILE = parentdir+'/resource_health_view_template.json'
+    CLUSTER_ID = singleton_realstorencl.cluster_id
+    RESOURCE_HEALTH_VIEW_FILE = 'resource_health_view.json'
+    RESOURCE_HEALTH_VIEW_PATH = '/tmp/'+RESOURCE_HEALTH_VIEW_FILE
+    TEMPLATE_SCHEMA_FILE = '/opt/seagate/eos/sspl/bin/genrate_resource_health_view/resource_health_view_template.json'
 
     NODE_REQUEST_MAP = {
         "disk" : "Drive Slot / Bay",
@@ -50,7 +54,6 @@ class SSPLHealthView(object):
 
     def __init__(self):
 
-        self.sspl_service_status = os.system('systemctl status sspl-ll > /dev/null')
         self.fru_id_map = None
         self.sensor_id_map = None
         self.ipmi_fru_lst = ['disk', 'fan', 'psu']
@@ -74,21 +77,78 @@ class SSPLHealthView(object):
             [self.RACK_ID]['nodes'][self.NODE_ID] = self._resource_health_view['cluster']\
                 ['sites'][self.SITE_ID]['rack'][self.RACK_ID]['nodes'].pop('node_id')
 
+    def run(self, parser):
+        args = parser.parse_args()
+        health_view_created = False
+        # Display help if no or invalid args are passed in
+        if args.help or len(sys.argv) == 1 or (len(sys.argv) == 3 and '--path' in sys.argv):
+            print('Missing arguments')
+            parser.print_help()
+            sys.exit(1)
+
+        if args.path:
+            self.RESOURCE_HEALTH_VIEW_PATH = args.path
+            if os.path.exists(args.path):
+                self.RESOURCE_HEALTH_VIEW_PATH = args.path if args.path.endswith('/') else args.path+'/'
+                self.RESOURCE_HEALTH_VIEW_PATH += self.RESOURCE_HEALTH_VIEW_FILE
+            else:
+                print("Given path doesn't exist")
+                sys.exit(1)
+
         if os.path.exists(self.RESOURCE_HEALTH_VIEW_PATH):
             print("Resource Health view JSON file already exists, overriding ...!")
 
-        if self.sspl_service_status == 0:
-            print("SSPL services is already running, ignoring persistent cache creation ..!")
+        if args.encl:
+            try:
+                storage_encl_health_json = self._resource_health_view['cluster']['sites']\
+                                                    [self.SITE_ID]['rack'][self.RACK_ID]\
+                                                    ['nodes'][self.NODE_ID]['storage_encl']
+            except Exception as e:
+                print("Error while extracting values from health view json % : " % e)
+                return False
+            self.build_health_view_storage_encl_cache(storage_encl_health_json, 'hw')
+            self.build_health_view_storage_encl_cache(storage_encl_health_json, 'sw')
+            self.build_health_view_storage_encl_cache(storage_encl_health_json, 'interfaces')
+            self.build_health_view_storage_encl_cache(storage_encl_health_json, 'platform_sensors')
+            health_view_created = True
 
-    def build_health_view_storage_encl_cache(self, category):
+        elif not args.encl:
+            del self._resource_health_view['cluster']['sites']\
+                                                    [self.SITE_ID]['rack'][self.RACK_ID]\
+                                                    ['nodes'][self.NODE_ID]['storage_encl']
+
+        if args.node:
+            try:
+                node_health_json = self._resource_health_view['cluster']['sites']\
+                                                    [self.SITE_ID]['rack'][self.RACK_ID]\
+                                                    ['nodes'][self.NODE_ID]['node:'+self.NODE_ID] =\
+                                                    self._resource_health_view['cluster']['sites']\
+                                                    [self.SITE_ID]['rack'][self.RACK_ID]\
+                                                    ['nodes'][self.NODE_ID].pop('node')
+            except Exception as e:
+                print("Error while extracting values from health view json % : " % e)
+                return False
+            self.build_health_view_node_server_cache(node_health_json, 'hw')
+            self.build_health_view_node_server_cache(node_health_json, 'platform_sensors')
+            health_view_created = True
+
+        elif not args.node:
+            del self._resource_health_view['cluster']['sites']\
+                                 [self.SITE_ID]['rack'][self.RACK_ID]\
+                                 ['nodes'][self.NODE_ID]['node']
 
         try:
-            storage_encl_health_json = self._resource_health_view['cluster']['sites']\
-                                                [self.SITE_ID]['rack'][self.RACK_ID]\
-                                                ['nodes'][self.NODE_ID]['storage_encl']
+            with open(self.RESOURCE_HEALTH_VIEW_PATH, 'w+') as fp:
+                json.dump(self._resource_health_view, fp,  indent=4)
+
         except Exception as e:
-            print("Error while extracting values from health view json % : " % e)
+            print("Error in writing resource health view file: {0}".format(e))
             return False
+
+        if health_view_created:
+            print('Resource Health View Json Created Successfully..! :%s' % self.RESOURCE_HEALTH_VIEW_PATH)
+
+    def build_health_view_storage_encl_cache(self, storage_encl_health_json, category):
 
         if category == 'hw':
             disk_data = storage_encl_health_json['hw']['fru']['disks']
@@ -137,27 +197,29 @@ class SSPLHealthView(object):
             print("Error in writing resource health view file: {0}".format(e))
             return False
 
-    def build_health_view_node_server_cache(self, category):
+    def build_health_view_node_server_cache(self, node_health_json, category):
 
-        try:
-            node_health_json = self._resource_health_view['cluster']['sites']\
-                                                [self.SITE_ID]['rack'][self.RACK_ID]\
-                                                ['nodes'][self.NODE_ID]['node_server_1']
-        except Exception as e:
-            print("Error while extracting values from health view json % : " % e)
-            return False
+        ipmitool_cli = False
 
         if category == 'hw':
             hw_data = self.build_ipmi_fru_instances(self.ipmi_fru_lst)
             for fru in self.ipmi_fru_lst:
-                fru_data = node_health_json['hw']['fru'][fru+'s']
-                fru_data.update({"health": "", fru+"s_info": hw_data[fru]})
+                if fru in hw_data:
+                    ipmitool_cli = True
+                    fru_data = node_health_json['hw']['fru'][fru+'s']
+                    fru_data.update({"health": "", fru+"s_info": hw_data[fru]})
 
         elif category == 'platform_sensors':
             ps_data = self.build_ipmi_sensor_instances(self.sensor_list)
             for fru in self.sensor_list:
-                fru_data = node_health_json['platform_sensors'][fru]
-                fru_data.update({"health": "", fru+"_info": ps_data[fru]})
+                if fru in ps_data:
+                    ipmitool_cli = True
+                    fru_data = node_health_json['platform_sensors'][fru]
+                    fru_data.update({"health": "", fru+"_info": ps_data[fru]})
+
+        if not ipmitool_cli:
+            print('Required ipmitool missing on Node to fetch %s data..!' % category)
+            return False
 
         try:
             with open(self.RESOURCE_HEALTH_VIEW_PATH, 'w+') as fp:
@@ -170,15 +232,10 @@ class SSPLHealthView(object):
 
     def build_encl_disks_cache(self):
         """Retreive realstor disk info using cli api /show/disks"""
-        disks_existing_cache = True
-        if self.sspl_service_status == 0:
-            disks_existing_cache = True
-
-        elif realstor_enclosure.check_prcache(self.storage_encl_dir+'disks/'):
-            disks_existing_cache = False
 
         disk_data = {}
-        drives = realstor_enclosure._get_realstor_show_data("drives")
+        drives = self.get_realstor_show_data("drives")
+        disks_existing_cache = True
 
         for drive in drives:
             slot = drive.get("slot", -1)
@@ -197,25 +254,28 @@ class SSPLHealthView(object):
                         "fetch_time" : int(time.time())
                     }
                     })
-                if not disks_existing_cache:
-                    dcache_path = self.encl_disks_filename + \
-                                     "disk_{0}.json".format(slot)
+                dcache_path = self.encl_disks_filename + \
+                                 "disk_{0}.json".format(slot)
+                if store.get(dcache_path) is None:
+                    disks_existing_cache = False
                     store.put(drive, dcache_path)
+        if not disks_existing_cache:
+            print('Persistent cache does not exist, Building cache %s '\
+                    % self.encl_disks_filename)
         return disk_data
 
     def build_encl_psus_cache(self):
 
         psus_existing_cache = True
-        if self.sspl_service_status == 0:
-            psus_existing_cache = True
-
-        elif realstor_enclosure.check_prcache(self.storage_encl_dir+'psus/'):
+        if store.get(self.encl_psus_filename) is None:
+            print('Persistent cache does not exist, Building cache %s '\
+                    % self.encl_psus_filename)
             psus_existing_cache = False
 
         psu_data = {}
         psus_dict = {}
 
-        psus = realstor_enclosure._get_realstor_show_data("power-supplies")
+        psus = self.get_realstor_show_data("power-supplies")
 
         for psu in psus:
             resource_id = psu.get("durable-id")
@@ -244,16 +304,15 @@ class SSPLHealthView(object):
     def build_encl_controllers_cache(self):
 
         controllers_existing_cache = True
-        if self.sspl_service_status == 0:
-            controllers_existing_cache = True
-
-        elif realstor_enclosure.check_prcache(self.storage_encl_dir+'controllers/'):
+        if store.get(self.encl_controllers_filename) is None:
+            print('Persistent cache does not exist, Building cache %s '\
+                    % self.encl_controllers_filename)
             controllers_existing_cache = False
 
         controller_data = {}
         controllers_dict = {}
 
-        controllers = realstor_enclosure._get_realstor_show_data("controllers")
+        controllers = self.get_realstor_show_data("controllers")
 
         for controller in controllers:
             resource_id = controller.get("durable-id")
@@ -281,16 +340,15 @@ class SSPLHealthView(object):
     def build_encl_fans_cache(self):
 
         fans_existing_cache = True
-        if self.sspl_service_status == 0:
-            fans_existing_cache = True
-
-        elif realstor_enclosure.check_prcache(self.storage_encl_dir+'fanmodules/'):
+        if store.get(self.encl_fans_filename) is None:
+            print('Persistent cache does not exist, Building cache %s '\
+                    % self.encl_fans_filename)
             fans_existing_cache = False
 
         fan_data = {}
         fans_dict = {}
 
-        fans = realstor_enclosure._get_realstor_show_data("fan-modules")
+        fans = self.get_realstor_show_data("fan-modules")
 
         for fan in fans:
             resource_id = fan.get("durable-id")
@@ -319,17 +377,16 @@ class SSPLHealthView(object):
     def build_encl_sideplane_expander_cache(self):
 
         spln_existing_cache = True
-        if self.sspl_service_status == 0:
-            spln_existing_cache = True
-
-        elif realstor_enclosure.check_prcache(self.storage_encl_dir+'sideplane_expanders/'):
+        if store.get(self.encl_sideplane_exp_filename) is None:
+            print('Persistent cache does not exist, Building cache %s '\
+                    % self.encl_sideplane_exp_filename)
             spln_existing_cache = False
 
         spln_data = {}
         sideplane_dict = {}
         sideplane_expanders = []
 
-        encl_info = realstor_enclosure._get_realstor_show_data("enclosures")
+        encl_info = self.get_realstor_show_data("enclosures")
         encl_drawers = encl_info[0]["drawers"]
         if encl_drawers:
             for drawer in encl_drawers:
@@ -364,17 +421,16 @@ class SSPLHealthView(object):
     def build_encl_logical_volume_cache(self):
 
         logvol_existing_cache = True
-        if self.sspl_service_status == 0:
-            logvol_existing_cache = True
-
-        elif realstor_enclosure.check_prcache(self.storage_encl_dir+'logical_volumes/'):
+        if store.get(self.encl_logical_volumes_filename) is None:
+            print('Persistent cache does not exist, Building cache %s '\
+                    % self.encl_logical_volumes_filename)
             logvol_existing_cache = False
 
         logvol_data = {}
         logicalvolume_dict = {}
 
-        diskgroups = realstor_enclosure._get_realstor_show_data("disk-groups")
-        logicalvolumes = realstor_enclosure._get_realstor_show_data("volumes")
+        diskgroups = self.get_realstor_show_data("disk-groups")
+        logicalvolumes = self.get_realstor_show_data("volumes")
 
         for logicalvolume in logicalvolumes:
             resource_id = logicalvolume.get("volume-name", "NA")
@@ -405,7 +461,7 @@ class SSPLHealthView(object):
     def build_encl_sas_port_instances(self):
 
         sas_data = {}
-        sas_ports = realstor_enclosure._get_realstor_show_data("sas-link-health")
+        sas_ports = self.get_realstor_show_data("sas-link-health")
 
         for sas_port in sas_ports:
             resource_id = sas_port.get("durable-id")
@@ -427,8 +483,7 @@ class SSPLHealthView(object):
     def build_encl_platform_sensors_instances(self, platform_sensors):
 
         sensors_data = {}
-
-        sensors = realstor_enclosure._get_realstor_show_data("sensor-status")
+        sensors = self.get_realstor_show_data("sensor-status")
 
         for platform_sensor in platform_sensors:
             resource_type = "enclosure:sensor:{0}".format(platform_sensor)
@@ -457,119 +512,185 @@ class SSPLHealthView(object):
         """Retreive realstor system state info using cli api /show/system"""
 
         system_existing_cache = True
-        if self.sspl_service_status == 0:
-            system_existing_cache = True
-
-        elif realstor_enclosure.check_prcache(realstor_enclosure.system_persistent_cache):
+        if store.get(singleton_realstorencl.faults_persistent_cache) is None:
+            print('Persistent cache does not exist, Building cache %s '\
+                     % singleton_realstorencl.faults_persistent_cache)
             system_existing_cache = False
 
         if not system_existing_cache:
-            system = realstor_enclosure._get_realstor_show_data("system")[0]
+            system = self.get_realstor_show_data("system")[0]
             if system:
                 # Check if fault exists
                 # TODO: use self.FAULT_KEY in system: system.key() generates
                 # list and find item in that.
-                if not realstor_enclosure.FAULT_KEY in system.keys():
-                    print("{0} Healthy, no faults seen".format(realstor_enclosure.EES_ENCL))
+                if not singleton_realstorencl.FAULT_KEY in system.keys():
+                    print("{0} Healthy, no faults seen".format(singleton_realstorencl.EES_ENCL))
                     return
 
                 # Extract system faults and build memcache_faults
-                store.put(system[realstor_enclosure.FAULT_KEY],
-                    realstor_enclosure.faults_persistent_cache)
+                store.put(system[singleton_realstorencl.FAULT_KEY],
+                    singleton_realstorencl.faults_persistent_cache)
+
+    def get_realstor_show_data(self, fru):
+        """Receives fru data from API.
+           URL: http://<host>/api/show/<fru>
+        """
+        if fru == "controllers":
+            show_fru = singleton_realstorencl.URI_CLIAPI_SHOWCONTROLLERS
+        elif fru == "fan-modules":
+            show_fru = singleton_realstorencl.URI_CLIAPI_SHOWFANMODULES
+        elif fru == "power-supplies":
+            show_fru = singleton_realstorencl.URI_CLIAPI_SHOWPSUS
+        elif fru == "drives":
+            show_fru = singleton_realstorencl.URI_CLIAPI_SHOWDISKS
+        elif fru == "enclosures":
+            show_fru = singleton_realstorencl.URI_CLIAPI_SHOWENCLOSURE
+        elif fru == "disk-groups":
+            show_fru = singleton_realstorencl.URI_CLIAPI_SHOWDISKGROUPS
+        elif fru == "volumes":
+            show_fru = singleton_realstorencl.URI_CLIAPI_SHOWVOLUMES
+        elif fru == "system":
+            show_fru = singleton_realstorencl.URI_CLIAPI_SHOWSYSTEM
+        elif fru == "sensor-status":
+            show_fru = singleton_realstorencl.URI_CLIAPI_SHOWSENSORSTATUS
+            fru = "sensors"
+        elif fru == "sas-link-health":
+            show_fru = singleton_realstorencl.URI_CLIAPI_SASHEALTHSTATUS
+            fru = "expander-ports"
+
+        url = singleton_realstorencl.build_url(show_fru)
+
+        response = singleton_realstorencl.ws_request(url, singleton_realstorencl.ws.HTTP_GET)
+
+        if not response:
+            print("{0}:: {2} status unavailable as ws request {1}"
+                " failed".format(singleton_realstorencl.EES_ENCL, url, fru))
+            return
+
+        if response.status_code != singleton_realstorencl.ws.HTTP_OK:
+            if url.find(singleton_realstorencl.ws.LOOPBACK) == -1:
+                print("{0}:: http request {1} to get {3} failed with"
+                    " err {2}".format(singleton_realstorencl.EES_ENCL, url, response.status_code, fru))
+            return
+
+        response_data = json.loads(response.text)
+        fru_data = response_data.get(fru)
+        return fru_data
 
     def build_ipmi_fru_instances(self, frus):
         """Get the fru information based on fru_type and instance"""
 
-        fru_id_map = self._executor.get_fru_list_by_type(
-            ['Fan', 'Power Supply', 'Drive Slot / Bay'],
+        fru_id_map = self.get_fru_list_by_type(
+            list(self.NODE_REQUEST_MAP.values()),
             sensor_id_map={})
         response = {}
-        for fru in frus:
-            resource_type = "node:fru:{0}".format(fru)
-            fru_data = {}
-            try:
-                fru_type = self.NODE_REQUEST_MAP.get(fru)
-                fru_dict = fru_id_map[fru_type]
-                for sensor_id in fru_dict.values():
-                    if fru == 'fan':
+        if fru_id_map:
+            for fru in frus:
+                resource_type = "node:fru:{0}".format(fru)
+                fru_data = {}
+                try:
+                    fru_type = self.NODE_REQUEST_MAP.get(fru)
+                    if fru_type not in fru_id_map:
+                        continue
+                    fru_dict = fru_id_map[fru_type]
+                    for sensor_id in fru_dict.values():
+                        if fru == 'fan':
+                            fru_data.update({
+                            resource_type+'-'+sensor_id:{
+                                "alert_type": "NA",
+                                "severity": "NA",
+                                "alert_uuid": "NA",
+                                "durable_id": "NA",
+                                "health": "NA",
+                                "fetch_time" : int(time.time())
+                            }})
+                            continue
+                        if sensor_id == '':
+                            continue
+                        common, sensor_specific_info = self._executor.get_sensor_props(sensor_id)
+                        # Converting Fru ID From "HDD 0 Status (0xf0)" to "Drive Slot / Bay #0xf0"
+                        resource_id = fru_type+" #"+common['Sensor ID'].split('(')[1][:-1]
                         fru_data.update({
-                        resource_type+'-'+sensor_id:{
-                            "alert_type": "NA",
-                            "severity": "NA",
-                            "alert_uuid": "NA",
-                            "durable_id": "NA",
-                            "health": "NA",
-                            "fetch_time" : int(time.time())
-                        }})
-                        continue
-                    if sensor_id == '':
-                        continue
-                    common, sensor_specific_info = self._executor.get_sensor_props(sensor_id)
-                    # Converting Fru ID From "HDD 0 Status (0xf0)" to "Drive Slot / Bay #0xf0"
-                    resource_id = fru_type+" #"+common['Sensor ID'].split('(')[1][:-1]
-                    fru_data.update({
-                        resource_type+'-'+resource_id:{
-                            "alert_type": "NA",
-                            "severity": "NA",
-                            "alert_uuid": "NA",
-                            "durable_id": "NA",
-                            "health": "NA",
-                            "fetch_time" : int(time.time())
-                        }})
-            except KeyError as e:
-                print('IPMIHealthView, _get_ipmi_fru_instances, \
-                                Unable to process the FRU type: %s' % e)
-                return response
-            except Exception as e:
-                print('IPMIHealthView, _get_ipmi_fru_instances, \
-                                Error occured during request parsing %s' % e)
-                return response
+                            resource_type+'-'+resource_id:{
+                                "alert_type": "NA",
+                                "severity": "NA",
+                                "alert_uuid": "NA",
+                                "durable_id": "NA",
+                                "health": "NA",
+                                "fetch_time" : int(time.time())
+                            }})
+                except KeyError as e:
+                    print('IPMIHealthView, _get_ipmi_fru_instances, \
+                                    Unable to process the FRU type: %s' % e)
+                    return response
+                except Exception as e:
+                    print('IPMIHealthView, _get_ipmi_fru_instances, \
+                                    Error occured during request parsing %s' % e)
+                    return response
 
-            response.update({fru: fru_data})
+                response.update({fru: fru_data})
         return response
 
     def build_ipmi_sensor_instances(self, sensors):
         """Get the sensor information based on sensor_type and instance"""
 
-        sensor_id_map = self._executor.get_fru_list_by_type(
+        sensor_id_map = self.get_fru_list_by_type(
             self.sensor_list,
             sensor_id_map={})
         response = {}
-        for sensor in sensors:
-            resource_type = "node:sensor:{0}".format(sensor)
-            sensor_data = {}
-            response.update({sensor: sensor_data})
-            try:
-                sensor_dict = sensor_id_map[sensor]
-                for sensor_id in sensor_dict.values():
-                    if sensor_id == '':
+        if sensor_id_map:
+            for sensor in sensors:
+                resource_type = "node:sensor:{0}".format(sensor)
+                sensor_data = {}
+                try:
+                    if sensor not in sensor_id_map:
                         continue
-                    sensor_data.update({
-                        resource_type+'-'+sensor_id:{
-                            "alert_type": "NA",
-                            "severity": "NA",
-                            "alert_uuid": "NA",
-                            "durable_id": "NA",
-                            "health": "NA",
-                            "fetch_time" : int(time.time())
-                        }})
-            except KeyError as e:
-                print('IPMIHealthView, _get_ipmi_sensor_instances, \
-                                Unable to process the Sensor type: %s' % e)
-                return response
-            except Exception as e:
-                print('IPMIHealthView, _get_ipmi_sensor_instances, \
-                                Error occured during request parsing %s' % e)
-                return response
+                    sensor_dict = sensor_id_map[sensor]
+                    for sensor_id in sensor_dict.values():
+                        if sensor_id == '':
+                            continue
+                        sensor_data.update({
+                            resource_type+'-'+sensor_id:{
+                                "alert_type": "NA",
+                                "severity": "NA",
+                                "alert_uuid": "NA",
+                                "durable_id": "NA",
+                                "health": "NA",
+                                "fetch_time" : int(time.time())
+                            }})
+                except KeyError as e:
+                    print('IPMIHealthView, _get_ipmi_sensor_instances, \
+                                    Unable to process the Sensor type: %s' % e)
+                    return response
+                except Exception as e:
+                    print('IPMIHealthView, _get_ipmi_sensor_instances, \
+                                    Error occured during request parsing %s' % e)
+                    return response
 
-            response.update({sensor: sensor_data})
+                response.update({sensor: sensor_data})
         return response
 
+    def get_fru_list_by_type(self, fru_list, sensor_id_map):
+        for fru in fru_list:
+            fru_detail = self._executor.get_sensor_list_by_type(fru)
+            if fru_detail:
+                sensor_id_map[fru] = {fru_detail.index(fru): fru[0].strip()
+                    for fru in fru_detail}
+        return sensor_id_map
 
-sspl_health_view = SSPLHealthView()
-sspl_health_view.build_health_view_storage_encl_cache('hw')
-sspl_health_view.build_health_view_storage_encl_cache('sw')
-sspl_health_view.build_health_view_storage_encl_cache('interfaces')
-sspl_health_view.build_health_view_storage_encl_cache('platform_sensors')
-sspl_health_view.build_health_view_node_server_cache('hw')
-sspl_health_view.build_health_view_node_server_cache('platform_sensors')
+
+if __name__ == "__main__":
+    sspl_service_status = os.system('systemctl status sspl-ll > /dev/null')
+    if sspl_service_status != 0:
+        description = "Resource Health View Schema"
+        parser = argparse.ArgumentParser(description=description, formatter_class=\
+                    argparse.RawDescriptionHelpFormatter, add_help=False, allow_abbrev=False)
+        parser.add_argument("-h", "--help", action="store_true", help="Availabe arugumets")
+        parser.add_argument("-n", "--node", action="store_true", help="fetch current node data")
+        parser.add_argument("-e", "--encl", action="store_true", help="fetch current node enclouser data")
+        parser.add_argument("--path", metavar="<path> eg. --path '/tmp/sspl/'", help="Health view\
+             schema destination path (Note: Path need to be already exist)")
+
+        sys.exit(SSPLHealthView().run(parser))
+    else:
+        print("SSPL services is already running, ignoring resource health view JSON creation ..!")

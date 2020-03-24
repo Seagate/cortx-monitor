@@ -73,6 +73,7 @@ CFG_DIR=$SSPL_DIR/conf
 [ -d "${SSPL_DIR}/lib" ] && {
     ln -sf $SSPL_DIR/lib/sspl_ll_d /usr/bin/sspl_ll_d
     ln -sf $SSPL_DIR/lib/sspl_ll_cli /usr/bin/sspl_ll_cli
+    ln -sf $SSPL_DIR/lib/resource_health_view /usr/bin/resource_health_view
     ln -sf $SSPL_DIR/lib/sspl_ll_d $SSPL_DIR/bin/sspl_ll_d
     ln -sf $SSPL_DIR/lib/sspl_ll_cli $SSPL_DIR/bin/sspl_ll_cli
 }

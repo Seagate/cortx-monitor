@@ -39,7 +39,7 @@
                                         "voltage": {}
                                     }
                                 },
-                                "node_server_1": {
+                                "node": {
                                     "health": "",
                                     "hw": {
                                         "health": "",

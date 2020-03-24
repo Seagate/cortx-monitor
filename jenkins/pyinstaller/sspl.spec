@@ -1,5 +1,5 @@
 # -*- mode: python ; coding: utf-8 -*-
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3
 import sys
 import os
 import re
@@ -55,9 +55,26 @@ sspl_ll_d = Analysis([sspl_path + '/low-level/framework/sspl_ll_d'],
              cipher=block_cipher,
              noarchive=False)
 
+resource_health_view  = Analysis([sspl_path + '/low-level/files/opt/seagate/sspl/bin/genrate_resource_health_view/resource_health_view'],
+             pathex=[spec_root + '/sspl', spec_root + '/sspl/low-level', spec_root + '/sspl/low-level/framework'],
+             binaries=[],
+             datas=[(sspl_path + '/low-level/json_msgs/schemas/actuators/*.json', '.'),
+                    (sspl_path + '/low-level/json_msgs/schemas/sensors/*.json', '.'),
+                    (sspl_path + '/low-level/tests/manual/actuator_msgs/*.json', '.'),
+                    (sspl_path + '/low-level/tests/manual/actuator_msgs/*.conf', '.')],
+             hiddenimports=product_module_list,
+             hookspath=[],
+             runtime_hooks=[],
+             excludes=[],
+             win_no_prefer_redirects=False,
+             win_private_assemblies=False,
+             cipher=block_cipher,
+             noarchive=False)
+
 #merge
 MERGE( (sspl_ll_cli, 'sspl_ll_cli', 'sspl_ll_cli'),
-       (sspl_ll_d, 'sspl_ll_d', 'sspl_ll_d') )
+       (sspl_ll_d, 'sspl_ll_d', 'sspl_ll_d'),
+       (resource_health_view, 'resource_health_view', 'resource_health_view') )
 
 
 #sspl_ll_cli
@@ -91,6 +108,21 @@ sspl_ll_d_exe = EXE(sspl_ll_d_pyz,
           upx=True,
           console=True )
 
+#resource_health_view
+resource_health_view_pyz = PYZ(resource_health_view.pure, resource_health_view.zipped_data,
+             cipher=block_cipher)
+
+resource_health_view_exe = EXE(resource_health_view_pyz,
+          resource_health_view.scripts,
+          [],
+          exclude_binaries=True,
+          name='resource_health_view',
+          debug=False,
+          bootloader_ignore_signals=False,
+          strip=False,
+          upx=True,
+          console=True )
+
 coll = COLLECT(
                #sspl_ll_cli
                sspl_ll_cli_exe,
@@ -103,6 +135,12 @@ coll = COLLECT(
                sspl_ll_d.binaries,
                sspl_ll_d.zipfiles,
                sspl_ll_d.datas,
+
+               #resource_health_view
+               resource_health_view_exe,
+               resource_health_view.binaries,
+               resource_health_view.zipfiles,
+               resource_health_view.datas,
 
                #sspl_tests_exe,
                #sspl_tests.binaries,
