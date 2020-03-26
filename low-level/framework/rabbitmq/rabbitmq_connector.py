@@ -33,7 +33,7 @@ def get_cluster_connection(username, password, virtual_host):
     hosts = config._get_value_list(
         RABBITMQ_CLUSTER_SECTION, RABBITMQ_CLUSTER_HOSTS_KEY
     )
-    logger.debug('Cluster nodes: {hosts}')
+    logger.debug(f'Cluster nodes: {hosts}')
     ampq_hosts = [
         f'amqp://{username}:{password}@{host}/{virtual_host}' for host in hosts
     ]
