@@ -51,6 +51,6 @@ class BaseActuatorMsg(BaseMsg):
 
     def validateMsg(self, _jsonMsg):
         """Validate the json message against the schema"""
-        _jsonMsg = self.normalize_dict_keys(_jsonMsg)
+        _jsonMsg = self.normalize_kv(_jsonMsg)
         validate(_jsonMsg, self._schema)
         return _jsonMsg
