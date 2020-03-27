@@ -16,7 +16,7 @@
 """
 import json
 
-from framework.base.module_thread import ScheduledModuleThread
+from framework.base.module_thread import SensorThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
 
@@ -38,7 +38,7 @@ from zope.interface import implementer
 from sensors.INode_data import INodeData
 
 @implementer(INodeData)
-class SNMPtraps(ScheduledModuleThread, InternalMsgQ):
+class SNMPtraps(SensorThread, InternalMsgQ):
 
     SENSOR_NAME       = "SNMPtraps"
     PRIORITY          = 1
@@ -74,6 +74,8 @@ class SNMPtraps(ScheduledModuleThread, InternalMsgQ):
         self._set_debug_persist(True)
 
         self._get_config()
+
+        return True
 
     def read_data(self):
         """Return the most recent trap information"""

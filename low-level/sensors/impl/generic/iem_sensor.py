@@ -25,7 +25,7 @@ import csv
 
 from functools import lru_cache
 
-from framework.base.module_thread import ScheduledModuleThread
+from framework.base.module_thread import SensorThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.sspl_constants import iem_severity_types, iem_source_types
 from framework.utils.service_logging import logger
@@ -34,7 +34,7 @@ from json_msgs.messages.sensors.iem_data import IEMDataMsg
 from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 
 
-class IEMSensor(ScheduledModuleThread, InternalMsgQ):
+class IEMSensor(SensorThread, InternalMsgQ):
     """Monitors Rsyslog for IEMs"""
 
     SENSOR_NAME = "IEMSensor"
@@ -128,6 +128,8 @@ class IEMSensor(ScheduledModuleThread, InternalMsgQ):
 
         self._node_id = self._conf_reader._get_value_with_default(
             self.SYSTEM_INFORMATION.upper(), self.NODE_ID_KEY, self.DEFAULT_NODE_ID)
+
+        return True
 
     def read_data(self):
         """This method is part of interface. Currently it is not

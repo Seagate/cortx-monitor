@@ -23,7 +23,7 @@ import uuid
 from threading import Event
 import re
 
-from framework.base.module_thread import ScheduledModuleThread
+from framework.base.module_thread import SensorThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
@@ -39,7 +39,7 @@ from sensors.IRealStor_disk_sensor import IRealStorDiskSensor
 
 
 @implementer(IRealStorDiskSensor)
-class RealStorDiskSensor(ScheduledModuleThread, InternalMsgQ):
+class RealStorDiskSensor(SensorThread, InternalMsgQ):
     """Monitors RealStor enclosure disks state and raise sspl events for
        detected faults, insertion,removal events """
 
@@ -114,6 +114,8 @@ class RealStorDiskSensor(ScheduledModuleThread, InternalMsgQ):
 
         # Initialize internal message queues for this module
         super(RealStorDiskSensor, self).initialize_msgQ(msgQlist)
+
+        return True
 
     def read_data(self):
         """Return the last raised alert, none otherwise"""

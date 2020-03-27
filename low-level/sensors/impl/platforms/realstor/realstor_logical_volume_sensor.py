@@ -22,7 +22,7 @@ from threading import Event
 
 from zope.interface import implementer
 
-from framework.base.module_thread import ScheduledModuleThread
+from framework.base.module_thread import SensorThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
@@ -36,7 +36,7 @@ from sensors.Ilogicalvolume import ILogicalVolumesensor
 
 
 @implementer(ILogicalVolumesensor)
-class RealStorLogicalVolumeSensor(ScheduledModuleThread, InternalMsgQ):
+class RealStorLogicalVolumeSensor(SensorThread, InternalMsgQ):
     """Monitors Logical Volume data using RealStor API"""
 
 
@@ -138,6 +138,8 @@ class RealStorLogicalVolumeSensor(ScheduledModuleThread, InternalMsgQ):
             self._previously_faulty_disk_groups = {}
             store.put(self._previously_faulty_disk_groups,\
                 self._faulty_disk_group_file_path)
+
+        return True
 
     def read_data(self):
         """This method is part of interface. Currently it is not

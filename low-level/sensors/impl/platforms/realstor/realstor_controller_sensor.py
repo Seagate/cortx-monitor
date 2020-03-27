@@ -22,7 +22,7 @@ from threading import Event
 
 from zope.interface import implementer
 
-from framework.base.module_thread import ScheduledModuleThread
+from framework.base.module_thread import SensorThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
@@ -35,7 +35,7 @@ from message_handlers.real_stor_encl_msg_handler import RealStorEnclMsgHandler
 from sensors.Icontroller import IControllersensor
 
 @implementer(IControllersensor)
-class RealStorControllerSensor(ScheduledModuleThread, InternalMsgQ):
+class RealStorControllerSensor(SensorThread, InternalMsgQ):
     """Monitors Controller data using RealStor API"""
 
 
@@ -118,6 +118,8 @@ class RealStorControllerSensor(ScheduledModuleThread, InternalMsgQ):
             self._previously_faulty_controllers = {}
             store.put(self._previously_faulty_controllers,\
                 self._faulty_controller_file_path)
+
+        return True
 
     def read_data(self):
         """This method is part of interface. Currently it is not

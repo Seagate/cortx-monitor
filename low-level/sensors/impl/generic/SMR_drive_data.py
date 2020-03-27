@@ -20,7 +20,7 @@ import subprocess
 
 from sensors.impl.c_api.ATA_SG_IO import AtaCmd, SgioHdr
 
-from framework.base.module_thread import ScheduledModuleThread
+from framework.base.module_thread import SensorThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
 from systemd import journal
@@ -34,7 +34,7 @@ from sensors.INode_data import INodeData
 libc = ctypes.CDLL('libc.so.6')
 
 @implementer(INodeData)
-class SMRdriveData(ScheduledModuleThread, InternalMsgQ):
+class SMRdriveData(SensorThread, InternalMsgQ):
 
     SENSOR_NAME       = "SMRdriveData"
     PRIORITY          = 1
@@ -42,6 +42,11 @@ class SMRdriveData(ScheduledModuleThread, InternalMsgQ):
     # Section and keys in configuration file
     SMRDRIVEDATA      = SENSOR_NAME.upper()
     LOGGING_INTERVAL  = 'logging_interval'
+
+    # Dependency list
+    DEPENDENCIES = {
+                    "init": ["SystemdWatchdog"],
+    }
 
     @staticmethod
     def name():
@@ -67,6 +72,15 @@ class SMRdriveData(ScheduledModuleThread, InternalMsgQ):
 
         self._get_config()
 
+        # TODO: Do more thorough testing for the below code segment which was moved
+        # here from the 'run()' function, since this sensor is not part of EES and
+        # is hence rarely exercised.
+
+        # Slight pause so we don't clutter up logs with other threads initializing
+        #time.sleep(80)
+
+        return True
+
     def read_data(self):
         """Return the Current Cache information"""
         return self._cache_state
@@ -76,9 +90,6 @@ class SMRdriveData(ScheduledModuleThread, InternalMsgQ):
 
         # Check for debug mode being activated
         self._read_my_msgQ_noWait()
-
-        # Slight pause so we don't clutter up logs with other threads initializing
-        time.sleep(80)
 
         try:
             # Loop thru all the devices starting with an sg

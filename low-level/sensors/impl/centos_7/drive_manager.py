@@ -25,7 +25,7 @@ import time
 import subprocess
 import pyinotify
 
-from framework.base.module_thread import ScheduledModuleThread
+from framework.base.module_thread import SensorThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
 
@@ -36,7 +36,7 @@ from zope.interface import implementer
 from sensors.IDrive_manager import IDriveManager
 
 @implementer(IDriveManager)
-class DriveManager(ScheduledModuleThread, InternalMsgQ):
+class DriveManager(SensorThread, InternalMsgQ):
 
     SENSOR_NAME     = "DriveManager"
     PRIORITY        = 1
@@ -71,6 +71,8 @@ class DriveManager(ScheduledModuleThread, InternalMsgQ):
 
         self._drive_mngr_base_dir  = self._getDrive_Mngr_Dir()
         self._start_delay          = self._getStart_delay()
+
+        return True
 
     def read_data(self):
         """Return the dict of drive status'"""

@@ -48,6 +48,7 @@ from framework.rabbitmq.rabbitmq_ingress_processor import RabbitMQingressProcess
 from framework.rabbitmq.plane_cntrl_rmq_egress_processor import PlaneCntrlRMQegressProcessor
 from framework.rabbitmq.plane_cntrl_rmq_ingress_processor import PlaneCntrlRMQingressProcessor
 from framework.base.sspl_constants import enabled_products
+from framework.base.module_thread import SensorThread
 from framework.actuator_state_manager import actuator_state_manager
 
 from framework.rabbitmq.logging_processor import LoggingProcessor
@@ -220,6 +221,40 @@ def check_dependencies(sspl_threaded_modules):
             logger.info("No dependencies specified for {0}".format(name))
     return dependency_broken_modules
 
+def verify_sensor_dependency_graph(stm):
+    sensor_modules = { m for m in stm.keys() if isinstance(stm[m], SensorThread) }
+    reachable = { m : set(get_sensor_thread_deps(m, stm)) for m in sensor_modules }
+
+    progress = True
+    while progress:
+        progress = False
+        for (m, deps) in reachable.items():
+            if m in deps:
+                raise Exception("Cycle detected from {} to {}".format(m, m))
+            new_deps = set(deps)
+            for d in deps:
+                new_deps |= reachable[d]
+            if deps < new_deps:
+                progress = True
+                reachable[d] = new_deps
+
+def get_sensor_thread_deps(name, sspl_threaded_modules):
+    curr_module = sspl_threaded_modules[name]
+    if not hasattr(curr_module, "dependencies"):
+        return []
+    dep_names = curr_module.dependencies().get("init")
+    if not dep_names:
+        return []
+
+    logger.error("dep_names for {} are {}".format(name, dep_names))
+
+    deps = []
+    for n in dep_names:
+        m = sspl_threaded_modules.get(n)
+        if m and isinstance(m, SensorThread):
+            deps.append(n)
+    return deps
+
 
 def main(conf_reader, systemd_support):
     """The main bootstrap for sspl"""
@@ -317,6 +352,12 @@ def main(conf_reader, systemd_support):
         logger.info("SSPL has started initialization")
     resume_module = False
     try:
+        for name, curr_module in sspl_threaded_modules.items():
+            if isinstance(curr_module, SensorThread):
+                deps = get_sensor_thread_deps(name, sspl_threaded_modules)
+                logger.debug("sensor dependencies for {} are {}".format(name, deps))
+                curr_module.prepare([sspl_threaded_modules[n] for n in deps])
+        verify_sensor_dependency_graph(sspl_threaded_modules)
         # Loop through the list of instanced modules and start them on threads
         for name, curr_module in sspl_threaded_modules.items():
             if name in dependency_broken_modules:
@@ -324,6 +365,8 @@ def main(conf_reader, systemd_support):
                     "SSPL Bootstrap: Unable to load plugin {0} due to "
                     "failed dependency resolution".format(name))
                 continue
+            logger.info("Starting: %s" % curr_module.name())
+
             # SSPL will be started in degrade mode by default.
             # Run module only if either it is allowed to run in degraded mode
             # or it is defined in core modules.
@@ -484,8 +527,7 @@ def _run_thread_capture_errors(curr_module, sspl_threaded_modules, msgQlist, con
         # Each module is passed a reference list to message queues so it can transmit
         # internal messages to other modules as desired
         logger.info("Starting: %s" % curr_module.name())
-        curr_module.initialize(conf_reader, msgQlist, product)
-        curr_module.start()
+        curr_module.start_thread(conf_reader, msgQlist, product)
 
     except Exception as ex:
         # Populate an actuator response message and transmit back to HAlon that we have a fatal error

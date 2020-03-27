@@ -29,7 +29,8 @@ from framework.utils.severity_reader import SeverityReader
 from message_handlers.node_data_msg_handler import NodeDataMsgHandler
 from message_handlers.logging_msg_handler import LoggingMsgHandler
 
-from framework.base.module_thread import ScheduledModuleThread
+from framework.base.debug import Debug
+from framework.base.module_thread import SensorThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.config_reader import ConfigReader
 from framework.utils.service_logging import logger
@@ -38,9 +39,8 @@ from sensors.INode_hw import INodeHWsensor
 # bash exit codes
 BASH_ILLEGAL_CMD = 127
 
-
 @implementer(INodeHWsensor)
-class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
+class NodeHWsensor(SensorThread, InternalMsgQ):
     """Obtains data about the FRUs and logical sensors and updates
        if any state change occurs"""
 
@@ -223,6 +223,8 @@ class NodeHWsensor(ScheduledModuleThread, InternalMsgQ):
                     self.sensor_id_map[fru] = { sensor_num: sensor_id
                         for (sensor_id, sensor_num) in
                         self._get_sensor_list_by_type(fru)}
+
+        return True
 
     def _update_list_file(self):
         (tmp_fd, tmp_name) = tempfile.mkstemp(dir=self.cache_dir_path)

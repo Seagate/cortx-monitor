@@ -21,7 +21,7 @@ import subprocess
 import socket
 import uuid
 
-from framework.base.module_thread import ScheduledModuleThread
+from framework.base.module_thread import SensorThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
@@ -34,7 +34,7 @@ from zope.interface import implementer
 from sensors.Iraid import IRAIDsensor
 
 @implementer(IRAIDsensor)
-class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
+class RAIDsensor(SensorThread, InternalMsgQ):
 
 
     SENSOR_NAME       = "RAIDsensor"
@@ -62,6 +62,11 @@ class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
     FAULT = "fault"
     MISSING = "missing"
     INSERTION = "insertion"
+
+    # Dependency list
+    DEPENDENCIES = {
+                    "init": ["SystemdWatchdog"],
+    }
 
     @staticmethod
     def name():
@@ -110,6 +115,10 @@ class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
                                 self.SYSTEM_INFORMATION, self.RACK_ID, 0))
         self._node_id = int(self._conf_reader._get_value_with_default(
                                 self.SYSTEM_INFORMATION, self.NODE_ID, 0))
+        # Allow systemd to process all the drives so we can map device name to serial numbers
+        #time.sleep(120)
+
+        return True
 
     def read_data(self):
         """Return the Current RAID status information"""
@@ -123,8 +132,6 @@ class RAIDsensor(ScheduledModuleThread, InternalMsgQ):
             self._scheduler.enter(30, self._priority, self.run, ())
             return
 
-        # Allow systemd to process all the drives so we can map device name to serial numbers
-        time.sleep(120)
 
         # Check for debug mode being activated
         self._read_my_msgQ_noWait()

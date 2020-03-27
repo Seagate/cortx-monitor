@@ -24,7 +24,7 @@ from threading import Event
 
 from zope.interface import implementer
 
-from framework.base.module_thread import ScheduledModuleThread
+from framework.base.module_thread import SensorThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
@@ -37,7 +37,7 @@ from message_handlers.real_stor_encl_msg_handler import RealStorEnclMsgHandler
 from sensors.Ifan import IFANsensor
 
 @implementer(IFANsensor)
-class RealStorFanSensor(ScheduledModuleThread, InternalMsgQ):
+class RealStorFanSensor(SensorThread, InternalMsgQ):
 
 
     SENSOR_NAME = "RealStorFanSensor"
@@ -117,6 +117,8 @@ class RealStorFanSensor(ScheduledModuleThread, InternalMsgQ):
             self._faulty_fan_modules_list = {}
             store.put(self._faulty_fan_modules_list,\
                 self._faulty_fan_file_path)
+
+        return True
 
     def read_data(self):
         """Return the Current fan_module information"""

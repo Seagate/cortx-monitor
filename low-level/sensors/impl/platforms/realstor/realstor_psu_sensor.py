@@ -23,7 +23,7 @@ from threading import Event
 
 from zope.interface import implementer
 
-from framework.base.module_thread import ScheduledModuleThread
+from framework.base.module_thread import SensorThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
@@ -36,7 +36,7 @@ from message_handlers.real_stor_encl_msg_handler import RealStorEnclMsgHandler
 from sensors.Ipsu import IPSUsensor
 
 @implementer(IPSUsensor)
-class RealStorPSUSensor(ScheduledModuleThread, InternalMsgQ):
+class RealStorPSUSensor(SensorThread, InternalMsgQ):
     """Monitors PSU data using RealStor API"""
 
 
@@ -118,6 +118,8 @@ class RealStorPSUSensor(ScheduledModuleThread, InternalMsgQ):
             self._previously_faulty_psus = {}
             store.put(self._previously_faulty_psus,\
                 self._faulty_psu_file_path)
+
+        return True
 
     def read_data(self):
         """This method is part of interface. Currently it is not

@@ -20,7 +20,7 @@ import time
 import pyinotify
 import subprocess
 
-from framework.base.module_thread import ScheduledModuleThread
+from framework.base.module_thread import SensorThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
 
@@ -31,7 +31,7 @@ from zope.interface import implementer
 from sensors.IHpi_monitor import IHPIMonitor
 
 @implementer(IHPIMonitor)
-class HPIMonitor(ScheduledModuleThread, InternalMsgQ):
+class HPIMonitor(SensorThread, InternalMsgQ):
 
 
     SENSOR_NAME      = "HPIMonitor"
@@ -64,6 +64,8 @@ class HPIMonitor(ScheduledModuleThread, InternalMsgQ):
 
         self._hpi_mntr_base_dir  = self._getHpi_Monitor_Dir()
         self._start_delay        = self._getStart_delay()
+
+        return True
 
     def read_data(self):
         """Send a dict of drive status to the DiskMsgHandler"""

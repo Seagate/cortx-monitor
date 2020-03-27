@@ -21,7 +21,7 @@ import json
 from threading import Thread
 from socket import gethostname
 
-from framework.base.module_thread import ScheduledModuleThread
+from framework.base.module_thread import ScheduledModuleThread, SensorThread, SensorThreadState
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
 
@@ -51,10 +51,9 @@ def _run_thread_capture_errors(curr_module, sspl_modules, msgQlist,
     """Run the given thread and log any errors that happen on it.
     Will stop all sspl_modules if one of them fails."""
     try:
-        # Each module is passed a reference list to message queues so it can
-        # transmit internal messages to other modules as desired.
-        curr_module.initialize(conf_reader, msgQlist, product)
-        curr_module.start()
+        # Each module is passed a reference list to message queues so it can transmit
+        #  internal messages to other modules as desired
+        curr_module.start_thread(conf_reader, msgQlist, product)
 
     except BaseException as ex:
         logger.critical(
@@ -169,8 +168,24 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
                         "ThreadController, rechecking in %s secs" % self._start_delay)
                     time.sleep(int(self._start_delay))
 
+            logger.debug("ThreadController._sspl_modules is {}".format(
+                self._sspl_modules))
             # Allow other threads to initialize
-            time.sleep(185)
+            continue_waiting = False
+            for (n,m) in self._sspl_modules.items():
+                if not isinstance(m, SensorThread):
+                    continue
+                thread_init_status = m.get_thread_init_status()
+                logger.debug("Thread status for {} is {}".format(
+                    m.__class__, thread_init_status))
+                if thread_init_status == SensorThreadState.FAILED:
+                    m.shutdown()
+                elif thread_init_status == SensorThreadState.WAITING:
+                    continue_waiting = True
+
+            if continue_waiting:
+                self._scheduler.enter(10, self._priority, self.run, ())
+                return
 
             # Notify external applications that've started up successfully
             startup_msg = "SSPL-LL service has started successfully"
@@ -374,6 +389,9 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
 
             self._thread_response = "Start Successful"
 
+            # NOTE: This is internal code that is currently unused.
+            # If this is brought into use again its interaction
+            # with the init dependency code will need to be considered
             module_thread = Thread(target=_run_thread_capture_errors,
                                       args=(self._sspl_modules[module_name], self._sspl_modules,
                                       self._msgQlist, self._conf_reader, self._product))

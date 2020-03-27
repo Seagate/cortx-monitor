@@ -136,7 +136,7 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
         # self._set_debug(True)
         # self._set_debug_persist(True)
 
-        time.sleep(180)
+        #time.sleep(180)
         logger.info("RabbitMQingressProcessor, Initialization complete, accepting requests")
 
         try:

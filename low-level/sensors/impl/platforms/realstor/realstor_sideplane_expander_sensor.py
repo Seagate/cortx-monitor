@@ -23,7 +23,7 @@ from threading import Event
 
 from zope.interface import implementer
 
-from framework.base.module_thread import ScheduledModuleThread
+from framework.base.module_thread import SensorThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
@@ -37,7 +37,7 @@ from sensors.ISideplane_expander import ISideplaneExpandersensor
 
 
 @implementer(ISideplaneExpandersensor)
-class RealStorSideplaneExpanderSensor(ScheduledModuleThread, InternalMsgQ):
+class RealStorSideplaneExpanderSensor(SensorThread, InternalMsgQ):
 
 
     SENSOR_NAME = "RealStorSideplaneExpanderSensor"
@@ -119,6 +119,8 @@ class RealStorSideplaneExpanderSensor(ScheduledModuleThread, InternalMsgQ):
             store.put(\
                 self._faulty_sideplane_expander_dict,\
                 self._faulty_sideplane_expander_file_path)
+
+        return True
 
     def read_data(self):
         """Returns the current sideplane expander information"""

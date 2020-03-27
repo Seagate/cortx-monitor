@@ -26,7 +26,7 @@ import subprocess
 from datetime import datetime, timedelta
 
 from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
-from framework.base.module_thread import ScheduledModuleThread
+from framework.base.module_thread import SensorThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
 from framework.base.sspl_constants import cs_products
@@ -47,7 +47,7 @@ from gi.repository import GObject as gobject
 from dbus.mainloop.glib import DBusGMainLoop
 
 @implementer(IServiceWatchdog)
-class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
+class SystemdWatchdog(SensorThread, InternalMsgQ):
 
 
     SENSOR_NAME       = "SystemdWatchdog"
@@ -67,6 +67,7 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
     # Dependency list
     DEPENDENCIES = {
                     "plugins": ["ServiceMsgHandler", "DiskMsgHandler", "NodeDataMsgHandler"],
+                    "init": ["HPIMonitor"],
                     "rpms": ["smartmontools"]
     }
 
@@ -136,16 +137,6 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
 
         self._product = product
 
-    def read_data(self):
-        """Return the dict of service status'"""
-        return self._service_status
-
-    def run(self):
-        """Run the monitoring periodically on its own thread."""
-
-        #self._set_debug(True)
-        #self._set_debug_persist(True)
-
         # Integrate into the main dbus loop to catch events
         DBusGMainLoop(set_as_default=True)
 
@@ -157,7 +148,19 @@ class SystemdWatchdog(ScheduledModuleThread, InternalMsgQ):
                 time.sleep(int(self._start_delay))
 
         # Allow time for the hpi_monitor to come up
-        time.sleep(60)
+        #time.sleep(60)
+
+        return True
+
+    def read_data(self):
+        """Return the dict of service status'"""
+        return self._service_status
+
+    def run(self):
+        """Run the monitoring periodically on its own thread."""
+
+        #self._set_debug(True)
+        #self._set_debug_persist(True)
 
         # Check for debug mode being activated
         self._read_my_msgQ_noWait()
