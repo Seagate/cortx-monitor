@@ -224,7 +224,7 @@ class RabbitMQingressProcessorTests(ScheduledModuleThread, InternalMsgQ):
                 self._virtual_host,
                 self._exchange_name,
                 self._routing_key,
-                self._queue_name,
+                self._queue_name
             )
         except Exception as ex:
             logger.exception("_configure_exchange: %r" % ex)

@@ -4,6 +4,11 @@ MOCK_SERVER_PORT=28200
 RMQ_SELF_STARTED=0
 SSPL_STORE_TYPE=${SSPL_STORE_TYPE:-consul}
 
+rack_id=$(/opt/seagate/eos/hare/bin/consul kv get sspl.SYSTEM_INFORMATION.rack_id)
+site_id=$(/opt/seagate/eos/hare/bin/consul kv get sspl.SYSTEM_INFORMATION.site_id)
+node_id=$(/opt/seagate/eos/hare/bin/consul kv get sspl.SYSTEM_INFORMATION.node_id)
+cluster_id=$(/opt/seagate/eos/hare/bin/consul kv get sspl.SYSTEM_INFORMATION.cluster_id)
+
 [[ $EUID -ne 0 ]] && sudo=sudo
 script_dir=$(dirname $0)
 
@@ -51,6 +56,20 @@ pre_requisites()
 
     # clearing /opt/seagate/eos/hare/bin/consul keys.
     /opt/seagate/eos/hare/bin/consul kv delete -recurse var/eos/sspl/data
+    # clearing consul keys.
+    /opt/seagate/eos/hare/bin/consul kv delete -recurse var/eos/sspl/data
+
+    # Update sspl_tests.conf with Updated System Information
+    if [ -f /opt/seagate/eos/sspl/sspl_test/conf/sspl_tests.conf ]; then
+
+        # append above parsed key-value pairs in sspl_tests.conf under
+        # [SYSTEM_INFORMATION] section
+        sed -i 's/node_id=000/node_id='"$node_id"'/g' /opt/seagate/eos/sspl/sspl_test/conf/sspl_tests.conf
+        sed -i 's/site_id=000/site_id='"$site_id"'/g' /opt/seagate/eos/sspl/sspl_test/conf/sspl_tests.conf
+        sed -i 's/rack_id=000/rack_id='"$rack_id"'/g' /opt/seagate/eos/sspl/sspl_test/conf/sspl_tests.conf
+        sed -i 's/cluster_id=000/cluster_id='"$cluster_id"'/g' /opt/seagate/eos/sspl/sspl_test/conf/sspl_tests.conf
+
+    fi
 }
 
 deleteMockedInterface()
@@ -110,6 +129,15 @@ restore_cfg_services()
 cleanup()
 {
     restore_cfg_services
+
+    # Removing updated system information from sspl_tests.conf
+    # This is required otherwise, everytime if we run sanity, key-value
+    # pairs will be appended which will break the sanity.
+    # Also, everytime, updated values from /etc/sspl.conf should be updated.
+    sed -i 's/node_id='"$node_id"'/node_id=000/g' /opt/seagate/eos/sspl/sspl_test/conf/sspl_tests.conf
+    sed -i 's/rack_id='"$rack_id"'/rack_id=000/g' /opt/seagate/eos/sspl/sspl_test/conf/sspl_tests.conf
+    sed -i 's/site_id='"$site_id"'/site_id=000/g' /opt/seagate/eos/sspl/sspl_test/conf/sspl_tests.conf
+    sed -i 's/cluster_id='"$cluster_id"'/cluster_id=000/g' /opt/seagate/eos/sspl/sspl_test/conf/sspl_tests.conf
     echo "Exiting..."
     exit 1
 }
@@ -209,5 +237,16 @@ $sudo $script_dir/set_threshold.sh $transmit_interval $disk_usage_threshold $hos
 
 echo "Tests completed, restored configs and services .."
 restore_cfg_services
+
+# Removing updated system information from sspl_tests.conf
+# This is required otherwise, everytime if we run sanity, key-value
+# pairs will be appended which will break the sanity.
+# Also, everytime, updated values from /etc/sspl.conf should be updated.
+sed -i 's/node_id='"$node_id"'/node_id=000/g' /opt/seagate/eos/sspl/sspl_test/conf/sspl_tests.conf
+sed -i 's/rack_id='"$rack_id"'/rack_id=000/g' /opt/seagate/eos/sspl/sspl_test/conf/sspl_tests.conf
+sed -i 's/site_id='"$site_id"'/site_id=000/g' /opt/seagate/eos/sspl/sspl_test/conf/sspl_tests.conf
+sed -i 's/cluster_id='"$cluster_id"'/cluster_id=000/g' /opt/seagate/eos/sspl/sspl_test/conf/sspl_tests.conf
+
+
 echo "Cleaned Up .."
 exit $retcode

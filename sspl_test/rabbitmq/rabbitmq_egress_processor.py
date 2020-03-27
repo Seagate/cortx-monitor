@@ -39,6 +39,12 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
     PRIORITY    = 1
 
     # Section and keys in configuration file
+    SYSTEM_INFORMATION = "SYSTEM_INFORMATION"
+    RACK_ID = "rack_id"
+    NODE_ID = "node_id"
+    CLUSTER_ID = "cluster_id"
+    SITE_ID = "site_id"
+
     RABBITMQPROCESSOR       = MODULE_NAME.upper()
     VIRT_HOST               = 'virtual_host'
 
@@ -190,6 +196,18 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
             self._iem_route_exchange_name = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
                                                                  self.IEM_ROUTE_EXCHANGE_NAME,
                                                                  'sspl-in')
+            self._rack_id = self._conf_reader._get_value_with_default(
+                self.SYSTEM_INFORMATION, self.RACK_ID, '')
+
+            self._node_id = self._conf_reader._get_value_with_default(
+                self.SYSTEM_INFORMATION, self.NODE_ID, '')
+
+            self._cluster_id = self._conf_reader._get_value_with_default(
+                self.SYSTEM_INFORMATION, self.CLUSTER_ID, '')
+
+            self._site_id = self._conf_reader._get_value_with_default(
+                self.SYSTEM_INFORMATION, self.SITE_ID, '')
+
 
             if self._iem_route_addr != "":
                 logger.info("         Routing IEMs to host: %s" % self._iem_route_addr)
@@ -268,6 +286,22 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
                                                  body=str(log_msg))
                 else:
                     logger.warn("RabbitMQegressProcessor, Attempted to route IEM without a valid 'iem_route_addr' set.")
+
+            elif self._jsonMsg.get("message") is not None:
+                message = self._jsonMsg.get("message")
+                if message.get("actuator_request_type") or \
+                    message.get("sensor_request_type") is not None:
+                    logger.error("inside egress, test actuator")
+                    unique_routing_key = f'{self._routing_key}_node{self._node_id}'
+                    logger.info(f"Connecting using routing key: {unique_routing_key}")
+                    logger.error(f"Connecting using routing key: {unique_routing_key}")
+                    self._add_signature()
+                    jsonMsg = json.dumps(self._jsonMsg).encode('utf8')
+                    self._connection.publish(exchange=self._exchange_name,
+                                            routing_key=unique_routing_key,
+                                            properties=msg_props,
+                                            body=jsonMsg)
+
             else:
                 self._add_signature()
                 jsonMsg = json.dumps(self._jsonMsg).encode('utf8')
