@@ -34,7 +34,7 @@ fi
 
 # Start /opt/seagate/eos/hare/bin/consul if not running
 CONSUL_PS=$(ps -aux | grep "consul" | grep -v "grep" || true)
-[ -z "$CONSUL_PS" ] && /opt/seagate/eos/hare/bin/consul agent -dev &>/dev/null &
+[ -z "$CONSUL_PS" ] && /opt/seagate/eos/hare/bin/consul agent -dev -config-file=$SCRIPT_DIR/bin/consul_config.json &>/dev/null &
 
 $SCRIPT_DIR/bin/sspl_setup_rabbitmq_cluster
 $SCRIPT_DIR/bin/sspl_post_install -p EES
