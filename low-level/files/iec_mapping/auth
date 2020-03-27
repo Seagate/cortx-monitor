@@ -1,0 +1,10 @@
+0040010001,LDAP,LDAP exception occurred
+0040020001,Encoding,UTF-8 encoding is not supported
+0040020002,JRE,JRE HmacSHA256 not available
+0040020003,JRE,JRE HmacSHA1 not available
+0040020004,JRE,JRE SHA-256 not available
+0040030001,Date,Unparseable date
+0040040001,Code,Failed to get required class
+0040040002,Code,Failed to invoke method
+0040050001,XML,Invalid xml
+0040060001,URI,URI is empty or null
