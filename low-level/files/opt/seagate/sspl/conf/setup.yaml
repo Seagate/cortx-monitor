@@ -10,7 +10,7 @@ sspl:
     config:
          script: /opt/seagate/eos/sspl/bin/sspl_setup
          args:
-            - config
+            - config -f
     test:
          script: /opt/seagate/eos/sspl/bin/sspl_setup
          args:

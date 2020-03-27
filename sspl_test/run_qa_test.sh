@@ -46,11 +46,11 @@ pre_requisites()
     # Enable ipmi simulator
     cp -Rp $script_dir/ipmi_simulator/ipmisimtool /usr/bin
     touch /tmp/activate_ipmisimtool
-    # Backup consul data before deleting
-    consul kv export var/eos/sspl/data/ > /tmp/consul_backup.json
+    # Backup /opt/seagate/eos/hare/bin/consul data before deleting
+    /opt/seagate/eos/hare/bin/consul kv export var/eos/sspl/data/ > /tmp/consul_backup.json
 
-    # clearing consul keys.
-    consul kv delete -recurse var/eos/sspl/data
+    # clearing /opt/seagate/eos/hare/bin/consul keys.
+    /opt/seagate/eos/hare/bin/consul kv delete -recurse var/eos/sspl/data
 }
 
 deleteMockedInterface()
@@ -79,10 +79,10 @@ restore_cfg_services()
             sed -i 's/primary_controller_port='"$MOCK_SERVER_PORT"'/primary_controller_port='"$primary_port"'/g' /etc/sspl.conf
         fi
     else
-        port=$(consul kv get sspl.STORAGE_ENCLOSURE.primary_controller_port)
+        port=$(/opt/seagate/eos/hare/bin/consul kv get sspl.STORAGE_ENCLOSURE.primary_controller_port)
         if [ "$port" == "$MOCK_SERVER_PORT" ]
         then
-            consul kv put sspl.STORAGE_ENCLOSURE.primary_controller_port $primary_port
+            /opt/seagate/eos/hare/bin/consul kv put sspl.STORAGE_ENCLOSURE.primary_controller_port $primary_port
         fi
     fi
 
@@ -101,9 +101,9 @@ restore_cfg_services()
     rm -f /usr/bin/ipmisimtool
     rm -f /tmp/activate_ipmisimtool
 
-    # Restore consul data
-    consul kv delete -recurse var/eos/sspl/data
-    consul kv import @/tmp/consul_backup.json
+    # Restore /opt/seagate/eos/hare/bin/consul data
+    /opt/seagate/eos/hare/bin/consul kv delete -recurse var/eos/sspl/data
+    /opt/seagate/eos/hare/bin/consul kv import @/tmp/consul_backup.json
     $sudo rm -f /tmp/consul_backup.json
 }
 
@@ -137,10 +137,10 @@ flask_installed=$(python3.6 -c 'import pkgutil; print(1 if pkgutil.find_loader("
 # change the port to $MOCK_SERVER_PORT as mock_server runs on $MOCK_SERVER_PORT
 if [ "$SSPL_STORE_TYPE" == "consul" ]
 then
-    primary_port=$(consul kv get sspl.STORAGE_ENCLOSURE.primary_controller_port)
+    primary_port=$(/opt/seagate/eos/hare/bin/consul kv get sspl.STORAGE_ENCLOSURE.primary_controller_port)
     if [ "$primary_port" != "$MOCK_SERVER_PORT" ]
     then
-        consul kv put sspl.STORAGE_ENCLOSURE.primary_controller_port $MOCK_SERVER_PORT
+        /opt/seagate/eos/hare/bin/consul kv put sspl.STORAGE_ENCLOSURE.primary_controller_port $MOCK_SERVER_PORT
     fi
 else
     primary_port=$(sed -n -e '/primary_controller_port/ s/.*\= *//p' /etc/sspl.conf)
@@ -163,10 +163,10 @@ $script_dir/mock_server &
 # Restart SSPL to re-read configuration
 if [ "$SSPL_STORE_TYPE" == "consul" ]
 then
-    transmit_interval=$(consul kv get sspl.NODEDATAMSGHANDLER.transmit_interval)
-    disk_usage_threshold=$(consul kv get sspl.NODEDATAMSGHANDLER.disk_usage_threshold)
-    host_memory_usage_threshold=$(consul kv get sspl.NODEDATAMSGHANDLER.host_memory_usage_threshold)
-    cpu_usage_threshold=$(consul kv get sspl.NODEDATAMSGHANDLER.cpu_usage_threshold)
+    transmit_interval=$(/opt/seagate/eos/hare/bin/consul kv get sspl.NODEDATAMSGHANDLER.transmit_interval)
+    disk_usage_threshold=$(/opt/seagate/eos/hare/bin/consul kv get sspl.NODEDATAMSGHANDLER.disk_usage_threshold)
+    host_memory_usage_threshold=$(/opt/seagate/eos/hare/bin/consul kv get sspl.NODEDATAMSGHANDLER.host_memory_usage_threshold)
+    cpu_usage_threshold=$(/opt/seagate/eos/hare/bin/consul kv get sspl.NODEDATAMSGHANDLER.cpu_usage_threshold)
 else
     transmit_interval=$(sed -n -e '/transmit_interval/ s/.*\= *//p' /etc/sspl.conf)
     disk_usage_threshold=$(sed -n -e '/disk_usage_threshold/ s/.*\= *//p' /etc/sspl.conf)

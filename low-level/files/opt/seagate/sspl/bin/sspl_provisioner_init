@@ -12,7 +12,7 @@ set -e -u -o pipefail
 SCRIPT_DIR=$(dirname $0)
 
 # Install consul if not available
-if ! [ -x "$(command -v consul)" ]; then
+if ! [ -x "$(command -v /opt/seagate/eos/hare/bin/consul)" ]; then
     if ! [ -x "$(command -v wget)" ]; then
         yum install -y wget
     fi
@@ -21,7 +21,8 @@ if ! [ -x "$(command -v consul)" ]; then
         yum install -y unzip
     fi
     unzip consul_1.7.0_linux_amd64.zip
-    mv ./consul /usr/bin
+    mkdir -p /opt/seagate/eos/hare/bin
+    mv ./consul /opt/seagate/eos/hare/bin/consul
     rm consul_1.7.0_linux_amd64.zip
 fi
 
@@ -31,9 +32,9 @@ if ! [ "$(rpm -qa | grep eos-prvsnr-cli)" ]; then
     sh /opt/seagate/eos-prvsnr/cli/setup-provisioner -S
 fi
 
-# Start consul if not running
+# Start /opt/seagate/eos/hare/bin/consul if not running
 CONSUL_PS=$(ps -aux | grep "consul" | grep -v "grep" || true)
-[ -z "$CONSUL_PS" ] && consul agent -dev -config-file=$SCRIPT_DIR/bin/consul_config.json &>/dev/null &
+[ -z "$CONSUL_PS" ] && /opt/seagate/eos/hare/bin/consul agent -dev &>/dev/null &
 
 $SCRIPT_DIR/bin/sspl_setup_rabbitmq_cluster
 $SCRIPT_DIR/bin/sspl_post_install -p EES
