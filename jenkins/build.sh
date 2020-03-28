@@ -141,6 +141,7 @@ then
     cp -R $BASE_DIR/sspl_test/rabbitmq_start_checker $DIST/sspl_test
     cp -R $BASE_DIR/sspl_test/sspl_tests.conf $DIST/sspl_test/conf
     cp -R $BASE_DIR/sspl_test/ipmi_simulator $DIST/sspl_test
+    cp -R $BASE_DIR/sspl_test/put_config_to_consul.py $DIST/sspl_test
 
     echo "Executing pyinstaller..."
     sed -i -e "s|<PRODUCT>|${PRODUCT}|g" \

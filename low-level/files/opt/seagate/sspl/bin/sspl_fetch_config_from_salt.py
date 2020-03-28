@@ -47,7 +47,7 @@ class SaltConfig(object):
          parser = ConfigParser()
          parser.read_dict(new_conf)
          for sect in parser.sections():
-            consul_conn.kv.put(component + '.' + sect + '.' + '*', sect)
+            consul_conn.kv.put(component + '.' + sect + '.' + '*', str(parser.items(sect)))
             for k, v in parser.items(sect):
                   consul_conn.kv.put(component + '.' + sect + '.' + k, v)
 

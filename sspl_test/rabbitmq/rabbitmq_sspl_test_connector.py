@@ -14,7 +14,7 @@ from sspl_test.framework.utils.config_reader import ConfigReader
 RABBITMQCTL = '/usr/sbin/rabbitmqctl'
 
 
-config = ConfigReader('/etc/sspl.conf')
+config = ConfigReader()
 connection_exceptions = (
     pika.exceptions.AMQPConnectionError,
     pika.exceptions.ChannelClosedByBroker,

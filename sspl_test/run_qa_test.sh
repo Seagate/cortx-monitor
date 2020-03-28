@@ -4,11 +4,6 @@ MOCK_SERVER_PORT=28200
 RMQ_SELF_STARTED=0
 SSPL_STORE_TYPE=${SSPL_STORE_TYPE:-consul}
 
-rack_id=$(/opt/seagate/eos/hare/bin/consul kv get sspl.SYSTEM_INFORMATION.rack_id)
-site_id=$(/opt/seagate/eos/hare/bin/consul kv get sspl.SYSTEM_INFORMATION.site_id)
-node_id=$(/opt/seagate/eos/hare/bin/consul kv get sspl.SYSTEM_INFORMATION.node_id)
-cluster_id=$(/opt/seagate/eos/hare/bin/consul kv get sspl.SYSTEM_INFORMATION.cluster_id)
-
 [[ $EUID -ne 0 ]] && sudo=sudo
 script_dir=$(dirname $0)
 
@@ -59,17 +54,6 @@ pre_requisites()
     # clearing consul keys.
     /opt/seagate/eos/hare/bin/consul kv delete -recurse var/eos/sspl/data
 
-    # Update sspl_tests.conf with Updated System Information
-    if [ -f /opt/seagate/eos/sspl/sspl_test/conf/sspl_tests.conf ]; then
-
-        # append above parsed key-value pairs in sspl_tests.conf under
-        # [SYSTEM_INFORMATION] section
-        sed -i 's/node_id=000/node_id='"$node_id"'/g' /opt/seagate/eos/sspl/sspl_test/conf/sspl_tests.conf
-        sed -i 's/site_id=000/site_id='"$site_id"'/g' /opt/seagate/eos/sspl/sspl_test/conf/sspl_tests.conf
-        sed -i 's/rack_id=000/rack_id='"$rack_id"'/g' /opt/seagate/eos/sspl/sspl_test/conf/sspl_tests.conf
-        sed -i 's/cluster_id=000/cluster_id='"$cluster_id"'/g' /opt/seagate/eos/sspl/sspl_test/conf/sspl_tests.conf
-
-    fi
 }
 
 deleteMockedInterface()
@@ -97,12 +81,24 @@ restore_cfg_services()
         then
             sed -i 's/primary_controller_port='"$MOCK_SERVER_PORT"'/primary_controller_port='"$primary_port"'/g' /etc/sspl.conf
         fi
+        # Removing updated system information from sspl_tests.conf
+        # This is required otherwise, everytime if we run sanity, key-value
+        # pairs will be appended which will break the sanity.
+        # Also, everytime, updated values from /etc/sspl.conf should be updated.
+        sed -i 's/node_id='"$node_id"'/node_id=001/g' /opt/seagate/eos/sspl/sspl_test/conf/sspl_tests.conf
+        sed -i 's/rack_id='"$rack_id"'/rack_id=001/g' /opt/seagate/eos/sspl/sspl_test/conf/sspl_tests.conf
+        sed -i 's/site_id='"$site_id"'/site_id=001/g' /opt/seagate/eos/sspl/sspl_test/conf/sspl_tests.conf
+        sed -i 's/cluster_id='"$cluster_id"'/cluster_id=001/g' /opt/seagate/eos/sspl/sspl_test/conf/sspl_tests.conf
     else
         port=$(/opt/seagate/eos/hare/bin/consul kv get sspl.STORAGE_ENCLOSURE.primary_controller_port)
         if [ "$port" == "$MOCK_SERVER_PORT" ]
         then
             /opt/seagate/eos/hare/bin/consul kv put sspl.STORAGE_ENCLOSURE.primary_controller_port $primary_port
         fi
+        /opt/seagate/eos/hare/bin/consul kv put sspl_test.SYSTEM_INFORMATION.node_id '001'
+        /opt/seagate/eos/hare/bin/consul kv put sspl_test.SYSTEM_INFORMATION.site_id '001'
+        /opt/seagate/eos/hare/bin/consul kv put sspl_test.SYSTEM_INFORMATION.rack_id '001'
+        /opt/seagate/eos/hare/bin/consul kv put sspl_test.SYSTEM_INFORMATION.cluster_id '001'
     fi
 
     echo "Stopping mock server"
@@ -129,17 +125,6 @@ restore_cfg_services()
 cleanup()
 {
     restore_cfg_services
-
-    # Removing updated system information from sspl_tests.conf
-    # This is required otherwise, everytime if we run sanity, key-value
-    # pairs will be appended which will break the sanity.
-    # Also, everytime, updated values from /etc/sspl.conf should be updated.
-    sed -i 's/node_id='"$node_id"'/node_id=000/g' /opt/seagate/eos/sspl/sspl_test/conf/sspl_tests.conf
-    sed -i 's/rack_id='"$rack_id"'/rack_id=000/g' /opt/seagate/eos/sspl/sspl_test/conf/sspl_tests.conf
-    sed -i 's/site_id='"$site_id"'/site_id=000/g' /opt/seagate/eos/sspl/sspl_test/conf/sspl_tests.conf
-    sed -i 's/cluster_id='"$cluster_id"'/cluster_id=000/g' /opt/seagate/eos/sspl/sspl_test/conf/sspl_tests.conf
-    echo "Exiting..."
-    exit 1
 }
 
 trap cleanup 1 2 3 6 9 15
@@ -157,6 +142,8 @@ flask_installed=$(python3.6 -c 'import pkgutil; print(1 if pkgutil.find_loader("
     echo -e "\n"
     exit 1
 }
+
+python3 $script_dir/put_config_to_consul.py
 
 # Take backup of original sspl.conf
 [[ -f /etc/sspl.conf ]] && $sudo cp /etc/sspl.conf /etc/sspl.conf.back
@@ -195,16 +182,41 @@ then
     disk_usage_threshold=$(/opt/seagate/eos/hare/bin/consul kv get sspl.NODEDATAMSGHANDLER.disk_usage_threshold)
     host_memory_usage_threshold=$(/opt/seagate/eos/hare/bin/consul kv get sspl.NODEDATAMSGHANDLER.host_memory_usage_threshold)
     cpu_usage_threshold=$(/opt/seagate/eos/hare/bin/consul kv get sspl.NODEDATAMSGHANDLER.cpu_usage_threshold)
+    rack_id=$(/opt/seagate/eos/hare/bin/consul kv get sspl.SYSTEM_INFORMATION.rack_id)
+    site_id=$(/opt/seagate/eos/hare/bin/consul kv get sspl.SYSTEM_INFORMATION.site_id)
+    node_id=$(/opt/seagate/eos/hare/bin/consul kv get sspl.SYSTEM_INFORMATION.node_id)
+    cluster_id=$(/opt/seagate/eos/hare/bin/consul kv get sspl.SYSTEM_INFORMATION.cluster_id)
 else
     transmit_interval=$(sed -n -e '/transmit_interval/ s/.*\= *//p' /etc/sspl.conf)
     disk_usage_threshold=$(sed -n -e '/disk_usage_threshold/ s/.*\= *//p' /etc/sspl.conf)
     host_memory_usage_threshold=$(sed -n -e '/host_memory_usage_threshold/ s/.*\= *//p' /etc/sspl.conf)
     cpu_usage_threshold=$(sed -n -e '/cpu_usage_threshold/ s/.*\= *//p' /etc/sspl.conf)
+    rack_id=$(sed -n -e '/rack_id/ s/.*\= *//p' /etc/sspl.conf)
+    site_id=$(sed -n -e '/site_id/ s/.*\= *//p' /etc/sspl.conf)
+    node_id=$(sed -n -e '/node_id/ s/.*\= *//p' /etc/sspl.conf)
+    cluster_id=$(sed -n -e '/cluster_id/ s/.*\= *//p' /etc/sspl.conf)
 fi
 
 # setting values for testing
 disk_out=`python3.6 -c "import psutil; print(int(psutil.disk_usage('/')[3]-2))"`
 $sudo $script_dir/set_threshold.sh "10" $disk_out "0" "0"
+
+if [ "$SSPL_STORE_TYPE" == "consul" ]
+then
+    # Update consul with updated System Information
+    # append above parsed key-value pairs in consul under [SYSTEM_INFORMATION] section
+    /opt/seagate/eos/hare/bin/consul kv put sspl_test.SYSTEM_INFORMATION.node_id $node_id
+    /opt/seagate/eos/hare/bin/consul kv put sspl_test.SYSTEM_INFORMATION.site_id $site_id
+    /opt/seagate/eos/hare/bin/consul kv put sspl_test.SYSTEM_INFORMATION.rack_id $rack_id
+    /opt/seagate/eos/hare/bin/consul kv put sspl_test.SYSTEM_INFORMATION.cluster_id $cluster_id
+else
+    # Update sspl_tests.conf with updated System Information
+    # append above parsed key-value pairs in sspl_tests.conf under [SYSTEM_INFORMATION] section
+    sed -i 's/node_id=001/node_id='"$node_id"'/g' /opt/seagate/eos/sspl/sspl_test/conf/sspl_tests.conf
+    sed -i 's/site_id=001/site_id='"$site_id"'/g' /opt/seagate/eos/sspl/sspl_test/conf/sspl_tests.conf
+    sed -i 's/rack_id=001/rack_id='"$rack_id"'/g' /opt/seagate/eos/sspl/sspl_test/conf/sspl_tests.conf
+    sed -i 's/cluster_id=001/cluster_id='"$cluster_id"'/g' /opt/seagate/eos/sspl/sspl_test/conf/sspl_tests.conf
+fi
 
 echo "Restarting SSPL"
 $sudo systemctl restart sspl-ll
@@ -237,16 +249,6 @@ $sudo $script_dir/set_threshold.sh $transmit_interval $disk_usage_threshold $hos
 
 echo "Tests completed, restored configs and services .."
 restore_cfg_services
-
-# Removing updated system information from sspl_tests.conf
-# This is required otherwise, everytime if we run sanity, key-value
-# pairs will be appended which will break the sanity.
-# Also, everytime, updated values from /etc/sspl.conf should be updated.
-sed -i 's/node_id='"$node_id"'/node_id=000/g' /opt/seagate/eos/sspl/sspl_test/conf/sspl_tests.conf
-sed -i 's/rack_id='"$rack_id"'/rack_id=000/g' /opt/seagate/eos/sspl/sspl_test/conf/sspl_tests.conf
-sed -i 's/site_id='"$site_id"'/site_id=000/g' /opt/seagate/eos/sspl/sspl_test/conf/sspl_tests.conf
-sed -i 's/cluster_id='"$cluster_id"'/cluster_id=000/g' /opt/seagate/eos/sspl/sspl_test/conf/sspl_tests.conf
-
 
 echo "Cleaned Up .."
 exit $retcode

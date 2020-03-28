@@ -27,6 +27,10 @@ if ! [ -x "$(command -v /opt/seagate/eos/hare/bin/consul)" ]; then
 fi
 
 if ! [ "$(rpm -qa | grep eos-prvsnr-cli)" ]; then
+    # salt minion config has eosnode-1 as master node name hence adding same in /etc/hosts
+    if ! [ "$(cat /etc/hosts | grep eosnode-1)" ]; then
+        echo "127.0.0.1 eosnode-1" >> /etc/hosts
+    fi
     pkg_name=$(curl -s http://ci-storage.mero.colo.seagate.com/releases/eos/integration/centos-7.7.1908/last_successful/|grep eos-prvsnr-cli-1.0.0| sed 's/<\/*[^>]*>//g'|cut -d' ' -f1)
     yum install -y http://ci-storage.mero.colo.seagate.com/releases/eos/integration/centos-7.7.1908/last_successful/$pkg_name
     sh /opt/seagate/eos-prvsnr/cli/setup-provisioner -S

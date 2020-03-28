@@ -15,9 +15,10 @@
 """
 
 import os
+import sys
+import consul
 import configparser
-
-from sspl_test.framework.utils.service_logging import logger
+from framework.base.sspl_constants import component, file_store_config_path, SSPL_STORE_TYPE, StoreTypes, CONSUL_HOST, CONSUL_PORT
 
 
 class ConfigReader(object):
@@ -29,21 +30,27 @@ class ConfigReader(object):
     NoOptionError               = configparser.NoOptionError
     Error                       = configparser.Error
 
-    def __init__(self, config):
+    def __init__(self):
         """Constructor for ConfigReader
-
         @param config: configuration file name
         """
-        self._config_parser = configparser.RawConfigParser()
-        if not os.path.isfile(config):
-            raise IOError("config file %s does not exist." %
-                          config)
-        elif not os.access(config, os.R_OK):
-            raise IOError("config file %s is not readable. "
-                          "Please check permission." %
-                          config)
-        else:
-            self._config_parser.read(config)
+        self.store = None
+        try:
+            store_type = os.getenv('SSPL_STORE_TYPE', SSPL_STORE_TYPE)
+            if store_type == StoreTypes.FILE.value:
+                self.store = configparser.RawConfigParser()
+                self.store.read(file_store_config_path)
+            elif store_type == StoreTypes.CONSUL.value:
+                host = os.getenv('CONSUL_HOST', CONSUL_HOST)
+                port = os.getenv('CONSUL_PORT', CONSUL_PORT)
+                self.store = consul.Consul(host=host, port=port)
+            else:
+                raise Exception("{} type store is not supported".format(store_type))
+
+        except Exception as serror:
+            print("Error in connecting either with file or consul store: {}".format(serror))
+            print("Exiting ...")
+            sys.exit(os.EX_USAGE)
 
     def _get_value(self, section, key):
         """Get a single value by section and key
@@ -56,11 +63,24 @@ class ConfigReader(object):
 
             exist
         """
-        value = self._config_parser.get(section, key)
-        if value == ['']:
+        value = None
+        try:
+            if self.store is not None and isinstance(self.store, configparser.RawConfigParser):
+                value = self.store.get(section, key)
+            elif self.store is not None and isinstance(self.store, consul.Consul):
+                value = self.kv_get(component + '.' + section + '.' + key)
+            else:
+                raise Exception("{} Invalid store type object.".format(self.store))
+        except (RuntimeError, Exception) as e:
+            # Taking values from normal configparser in dev env
+            value = self.store.get(section, key)
+
+        if value in [None, '', ['']]:
             return ''
-        else:
+        elif isinstance(value, str):
             return value.strip()
+        else:
+            return value.decode('utf-8').strip()
 
     def _get_value_list(self, section, key):
         """Get a list of values given the section name and key
@@ -82,21 +102,56 @@ class ConfigReader(object):
 
     def _get_value_with_default(self, section, key, default_value):
         """helper function to read value with default function
-
         in case there is exception or incomplete configuration file
         we do provide default value for certain settings
         """
         try:
-            return self._get_value(section, key)
-        except configparser.Error as ex:
-            logger.warn("ConfigReader, _get_value_with_default: %s" % ex)
+            val = self._get_value(section, key)
+            if val == '':
+                return default_value
+            return val
+        except Exception as ex:
+            print(f'Error reading config value: {ex}. Returning default value')
             return default_value
 
     def _get_all_values_for_section(self, section):
         """Get all values for all the keys in the section"""
         value_list = list()
-        pairs = self._config_parser.items(section)
+        try:
+            if self.store is not None and isinstance(self.store, configparser.RawConfigParser):
+                pairs = self.store.items(section)
+            elif self.store is not None and isinstance(self.store, consul.Consul):
+                pairs = self.kv_get(component + '.' + section + '.' + '*')
+            else:
+                raise Exception("{} Invalid store type object.".format(self.store))
+        except (RuntimeError, Exception) as e:
+            # Taking values from normal configparser in dev env
+            pairs = self.store.items(section)
+
         for item in pairs:
             value_list.append(item[1])
         return value_list
 
+    def _get_key(self, key):
+        """remove '/' from begining of the key"""
+
+        if key[:1] ==  "/":
+            return key[1:]
+        else:
+            return key
+
+    def kv_get(self, key):
+        try:
+            key = self._get_key(key)
+            data = self.store.kv.get(key)[1]
+            if data:
+                data = data["Value"]
+                try:
+                    data = pickle.loads(data)
+                except:
+                    pass
+        except Exception as gerr:
+            logger.warn("Error{0} while reading data from consul {1}"\
+                .format(gerr, key))
+
+        return data

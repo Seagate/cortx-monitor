@@ -63,16 +63,8 @@ def init_rabbitMQ_msg_processors():
     """The main bootstrap for sspl automated tests"""
 
     # Retrieve configuration file for sspl-ll service
-    path_to_conf_file = "/opt/seagate/eos/sspl/sspl_test/conf/sspl_tests.conf"
-    if os.path.exists(path_to_conf_file):
-        print("Using conf file : {}".format(path_to_conf_file))
-    else:
-        conf_directory = os.path.dirname(os.path.abspath(__file__))
-        path_to_conf_file = os.path.join(conf_directory, "sspl_tests.conf")
-        print("Using conf file : {}".format(path_to_conf_file))
-
     try:
-        conf_reader = ConfigReader(path_to_conf_file)
+        conf_reader = ConfigReader()
     except (IOError, ConfigReader.Error) as err:
         # We don't have logger yet, need to find log_level from conf file first
         print("[ Error ] when validating the configuration file %s :" % \

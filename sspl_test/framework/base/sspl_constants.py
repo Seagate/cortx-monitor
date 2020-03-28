@@ -6,6 +6,15 @@ cs_products = ["CS-A"]
 cs_legacy_products = ["CS-L", "CS-G"]
 RESOURCE_PATH = "/opt/seagate/eos/sspl/resources/"
 
+SSPL_STORE_TYPE = 'consul'
+CONSUL_HOST = '127.0.0.1'
+CONSUL_PORT = '8500'
+
+# required only for init
+component = 'sspl_test'
+file_store_config_path = '/opt/seagate/eos/sspl/sspl_test/conf/sspl_tests.conf'
+salt_provisioner_pillar_sls = 'sspl'
+
 class AlertTypes(Enum):
     GET = "get"
 
@@ -27,6 +36,12 @@ class ResourceTypes(Enum):
 
 class EnclInterface(Enum):
     SAS = "SAS"
+
+
+class StoreTypes(Enum):
+    FILE = "file"
+    CONSUL = "consul"
+
 
 if __name__ == "__main__":
     print(' '.join(enabled_products))
