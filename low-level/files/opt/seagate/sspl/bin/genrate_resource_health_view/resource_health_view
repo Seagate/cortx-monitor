@@ -73,10 +73,6 @@ class SSPLHealthView(object):
             [self.RACK_ID] = self._resource_health_view['cluster']['sites']\
                 [self.SITE_ID]['rack'].pop('rack_id')
 
-        self._resource_health_view['cluster']['sites'][self.SITE_ID]['rack']\
-            [self.RACK_ID]['nodes'][self.NODE_ID] = self._resource_health_view['cluster']\
-                ['sites'][self.SITE_ID]['rack'][self.RACK_ID]['nodes'].pop('node_id')
-
     def run(self, parser):
         args = parser.parse_args()
         health_view_created = False
@@ -102,7 +98,7 @@ class SSPLHealthView(object):
             try:
                 storage_encl_health_json = self._resource_health_view['cluster']['sites']\
                                                     [self.SITE_ID]['rack'][self.RACK_ID]\
-                                                    ['nodes'][self.NODE_ID]['storage_encl']
+                                                    ['nodes']['storage_encl']
             except Exception as e:
                 print("Error while extracting values from health view json % : " % e)
                 return False
@@ -115,16 +111,16 @@ class SSPLHealthView(object):
         elif not args.encl:
             del self._resource_health_view['cluster']['sites']\
                                                     [self.SITE_ID]['rack'][self.RACK_ID]\
-                                                    ['nodes'][self.NODE_ID]['storage_encl']
+                                                    ['nodes']['storage_encl']
 
         if args.node:
             try:
                 node_health_json = self._resource_health_view['cluster']['sites']\
                                                     [self.SITE_ID]['rack'][self.RACK_ID]\
-                                                    ['nodes'][self.NODE_ID]['node:'+self.NODE_ID] =\
+                                                    ['nodes']['node:'+self.NODE_ID] =\
                                                     self._resource_health_view['cluster']['sites']\
                                                     [self.SITE_ID]['rack'][self.RACK_ID]\
-                                                    ['nodes'][self.NODE_ID].pop('node')
+                                                    ['nodes'].pop('node')
             except Exception as e:
                 print("Error while extracting values from health view json % : " % e)
                 return False
@@ -135,7 +131,7 @@ class SSPLHealthView(object):
         elif not args.node:
             del self._resource_health_view['cluster']['sites']\
                                  [self.SITE_ID]['rack'][self.RACK_ID]\
-                                 ['nodes'][self.NODE_ID]['node']
+                                 ['nodes']['node']
 
         try:
             with open(self.RESOURCE_HEALTH_VIEW_PATH, 'w+') as fp:

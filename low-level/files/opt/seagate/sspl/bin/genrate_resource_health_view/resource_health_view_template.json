@@ -8,64 +8,62 @@
                     "rack_id" : {
                         "health": "",
                         "nodes": {
-                            "node_id" : {
+                            "health": "",
+                            "storage_encl": {
                                 "health": "",
-                                "storage_encl": {
+                                "hw": {
                                     "health": "",
-                                    "hw": {
+                                    "fru": {
                                         "health": "",
-                                        "fru": {
-                                            "health": "",
-                                            "disks": {},
-                                            "psus": {},
-                                            "controllers": {},
-                                            "fans": {},
-                                            "sideplane_expander": {}
-                                        }
-                                    },
-                                    "sw": {
-                                        "health": "",
-                                        "logical_volume": {}
-                                    },
-                                    "interfaces": {
-                                        "health": "",
-                                        "sas_port": {},
-                                        "fc_port": {}
-                                    },
-                                    "platform_sensors": {
-                                        "health": "",
-                                        "current": {},
-                                        "temperature": {},
-                                        "voltage": {}
+                                        "disks": {},
+                                        "psus": {},
+                                        "controllers": {},
+                                        "fans": {},
+                                        "sideplane_expander": {}
                                     }
                                 },
-                                "node": {
+                                "sw": {
                                     "health": "",
-                                    "hw": {
+                                    "logical_volume": {}
+                                },
+                                "interfaces": {
+                                    "health": "",
+                                    "sas_port": {},
+                                    "fc_port": {}
+                                },
+                                "platform_sensors": {
+                                    "health": "",
+                                    "current": {},
+                                    "temperature": {},
+                                    "voltage": {}
+                                }
+                            },
+                            "node": {
+                                "health": "",
+                                "hw": {
+                                    "health": "",
+                                    "fru": {
                                         "health": "",
-                                        "fru": {
-                                            "health": "",
-                                            "disks": {},
-                                            "psus": {},
-                                            "fans": {}
-                                        }
-                                    },
-                                    "os": {
-                                        "health": "",
-                                        "host_data": {},
-                                        "disk_space": {},
-                                        "network_data": {},
-                                        "cpu_data": {},
-                                        "iem": {},
-                                        "mdraid": {},
-                                        "main_memory": {}
-                                    },
-                                    "platform_sensors": {
-                                        "health": "",
-                                        "current": {},
-                                        "temperature": {},
-                                        "voltage": {}
+                                        "disks": {},
+                                        "psus": {},
+                                        "fans": {}
                                     }
+                                },
+                                "os": {
+                                    "health": "",
+                                    "host_data": {},
+                                    "disk_space": {},
+                                    "network_data": {},
+                                    "cpu_data": {},
+                                    "iem": {},
+                                    "mdraid": {},
+                                    "main_memory": {}
+                                },
+                                "platform_sensors": {
+                                    "health": "",
+                                    "current": {},
+                                    "temperature": {},
+                                    "voltage": {}
                                 }
                             }
                         }
