@@ -236,7 +236,7 @@ class RealStorDiskSensor(SensorThread, InternalMsgQ):
         self._event = Event()
         for slot in removed_disks:
             #get removed drive data from disk cache
-            disk_datafile = f"self.disks_prcache disk_{slot}.json.prev"
+            disk_datafile = f"{self.disks_prcache}disk_{slot}.json.prev"
 
             if not store.exists(disk_datafile):
                 disk_datafile = f"{self.disks_prcache}disk_{slot}.json"
