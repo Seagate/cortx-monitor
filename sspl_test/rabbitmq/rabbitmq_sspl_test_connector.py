@@ -33,7 +33,7 @@ def get_cluster_nodes():
     stdout, stdin = process.communicate()
     for line in stdout.decode('utf-8').split('\n'):
         if 'running_nodes' in line:
-            nodes = re.findall(r"'rabbit@([-\w]+)'", line)
+            nodes = re.findall(r"rabbit@([-\w]+)", line)
             return nodes
 
 
