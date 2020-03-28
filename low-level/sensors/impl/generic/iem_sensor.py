@@ -22,12 +22,13 @@ import subprocess
 import datetime
 import os
 import csv
+import time
 
 from functools import lru_cache
 
 from framework.base.module_thread import SensorThread
 from framework.base.internal_msgQ import InternalMsgQ
-from framework.base.sspl_constants import iem_severity_types, iem_source_types
+from framework.base.sspl_constants import iem_severity_types, iem_source_types, iem_severity_to_alert_mapping
 from framework.utils.service_logging import logger
 
 from json_msgs.messages.sensors.iem_data import IEMDataMsg
@@ -47,6 +48,7 @@ class IEMSensor(SensorThread, InternalMsgQ):
     SITE_ID_KEY = "site_id"
     RACK_ID_KEY = "rack_id"
     NODE_ID_KEY = "node_id"
+    CLUSTER_ID_KEY = "cluster_id"
 
     # Default values for config  settings
     DEFAULT_LOG_FILE_PATH = "/var/log/eos/iem/iem_messages"
@@ -54,9 +56,10 @@ class IEMSensor(SensorThread, InternalMsgQ):
     DEFAULT_SITE_ID = "001"
     DEFAULT_RACK_ID = "001"
     DEFAULT_NODE_ID = "001"
+    DEFAULT_CLUSTER_ID= "001"
 
     # RANGE/VALID VALUES for IEC Components
-    # NOTE: Ranges are in hex number system.
+    # NOTE: Ranges are   in hex number system.
     SEVERITY_LEVELS = ["A", "X", "E", "W", "N", "C", "I", "D", "B"]
     SOURCE_IDS = ["S", "H", "F", "O"]
     ID_MIN = "1"
@@ -101,6 +104,8 @@ class IEMSensor(SensorThread, InternalMsgQ):
         self._site_id = None
         self._rack_id = None
         self._node_id = None
+        self._cluster_id = None
+        self._event_time = None
 
     def initialize(self, conf_reader, msgQlist, products):
         """initialize configuration reader and internal msg queues"""
@@ -120,14 +125,17 @@ class IEMSensor(SensorThread, InternalMsgQ):
             self.SENSOR_NAME.upper(), self.TIMESTAMP_FILE_PATH_KEY,
             self.DEFAULT_TIMESTAMP_FILE_PATH)
 
-        self._site_id = self._conf_reader._get_value_with_default(
-            self.SYSTEM_INFORMATION.upper(), self.SITE_ID_KEY, self.DEFAULT_SITE_ID)
+        self._site_id = int(self._conf_reader._get_value_with_default(
+            self.SYSTEM_INFORMATION.upper(), self.SITE_ID_KEY, self.DEFAULT_SITE_ID))
 
-        self._rack_id = self._conf_reader._get_value_with_default(
-            self.SYSTEM_INFORMATION.upper(), self.RACK_ID_KEY, self.DEFAULT_RACK_ID)
+        self._rack_id = int(self._conf_reader._get_value_with_default(
+            self.SYSTEM_INFORMATION.upper(), self.RACK_ID_KEY, self.DEFAULT_RACK_ID))
 
-        self._node_id = self._conf_reader._get_value_with_default(
-            self.SYSTEM_INFORMATION.upper(), self.NODE_ID_KEY, self.DEFAULT_NODE_ID)
+        self._node_id = int(self._conf_reader._get_value_with_default(
+            self.SYSTEM_INFORMATION.upper(), self.NODE_ID_KEY, self.DEFAULT_NODE_ID))
+
+        self._cluster_id = int(self._conf_reader._get_value_with_default(
+            self.SYSTEM_INFORMATION.upper(), self.CLUSTER_ID_KEY, self.DEFAULT_CLUSTER_ID))
 
         return True
 
@@ -157,6 +165,7 @@ class IEMSensor(SensorThread, InternalMsgQ):
                     self._log_debug("Received line {0}".format(data[5:]))
                     if data:
                         log_timestamp = data[:data.index(" ")]
+                        self._event_time = self._get_epoch_time_from_timestamp(log_timestamp)
                         last_processed_log_timestamp = datetime.datetime.now().isoformat()
                         timestamp_file = open(self._timestamp_file_path, "r")
                         last_processed_log_timestamp = timestamp_file.read().strip()
@@ -235,9 +244,6 @@ class IEMSensor(SensorThread, InternalMsgQ):
 
         # Check for other components
         args = {
-            "_site_id": self._site_id,
-            "_rack_id": self._rack_id,
-            "_node_id": self._node_id,
             "_comp_id": component_id,
             "_module_id": module_id,
             "_event_id": event_id
@@ -246,6 +252,7 @@ class IEMSensor(SensorThread, InternalMsgQ):
             return
 
         # Update severity and source_id
+        alert_type = iem_severity_to_alert_mapping.get(severity)
         severity = iem_severity_types.get(severity, severity)
         source_id = iem_source_types.get(source_id, source_id)
 
@@ -256,12 +263,15 @@ class IEMSensor(SensorThread, InternalMsgQ):
             "site_id": self._site_id,
             "rack_id": self._rack_id,
             "node_id": self._node_id,
+            "cluster_id" : self._cluster_id,
             "source_id": source_id,
             "component_id": component_id,
             "module_id": module_id,
             "event_id": event_id,
             "severity": severity,
-            "description": description
+            "description": description,
+            "alert_type": alert_type,
+            "event_time":self._event_time
         }
         iem_data_msg = IEMDataMsg(info)
         json_msg = iem_data_msg.getJson()
@@ -314,7 +324,7 @@ class IEMSensor(SensorThread, InternalMsgQ):
             ret = log[iec_keyword_index:]
         return ret
 
-    def _are_components_in_range(self, _site_id, _rack_id, _node_id, _comp_id, _module_id, _event_id):
+    def _are_components_in_range(self, _comp_id, _module_id, _event_id):
         """Validates various components of IEM against a predefined range.
             Returns True/False based on that check.
             TODO: Iterate directly over hex range instead of converting
@@ -323,33 +333,9 @@ class IEMSensor(SensorThread, InternalMsgQ):
         components_in_range = True
 
         # Convert compoenents to int from hex string for comparison
-        site_id = int(_site_id, 16)
-        rack_id = int(_rack_id, 16)
-        node_id = int(_node_id, 16)
         comp_id = int(_comp_id, 16)
         module_id = int(_module_id, 16)
         event_id = int(_event_id, 16)
-
-        # Check if site id out of range
-        min_site_id = int(self.ID_MIN, 16)
-        max_site_id = int(self.SITE_ID_MAX, 16)
-        if site_id not in range(min_site_id, max_site_id + 1):
-            logger.warn(f"Site Id {_site_id} is not in range {self.ID_MIN}-{self.SITE_ID_MAX}")
-            components_in_range = False
-
-        # Check if rack id out of range
-        min_rack_id = int(self.ID_MIN, 16)
-        max_rack_id = int(self.RACK_ID_MAX, 16)
-        if rack_id not in range(min_rack_id, max_rack_id + 1):
-            logger.warn(f"Rack Id {_rack_id} is not in range {self.ID_MIN}-{self.RACK_ID_MAX}")
-            components_in_range = False
-
-        # Check if node id out of range
-        min_node_id = int(self.ID_MIN, 16)
-        max_node_id = int(self.NODE_ID_MAX, 16)
-        if node_id not in range(min_node_id, max_node_id + 1):
-            logger.warn(f"Node Id {_node_id} is not in range {self.ID_MIN}-{self.NODE_ID_MAX}")
-            components_in_range = False
 
         # Check if component id out of range
         min_comp_id = int(self.ID_MIN, 16)
@@ -406,6 +392,13 @@ class IEMSensor(SensorThread, InternalMsgQ):
         if not os.path.exists(path):
             file = open(path, "w+")
             file.close()
+
+    def _get_epoch_time_from_timestamp(self, timestamp):
+        timestamp_format = '%Y-%m-%dT%H:%M:%S.%f%z'
+        # Remove ":" from timezone. %z supports +0000. In timestamp it is +00:00
+        timestamp = timestamp[:-3:] + timestamp[-2:]
+        timestamp = time.strptime(timestamp, timestamp_format)
+        return str(int(time.mktime(timestamp)))
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""

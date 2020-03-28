@@ -56,58 +56,6 @@
 					"type": "object",
 					"required": true,
 					"properties": {
-						"iem_alert": {
-							"type": "object",
-							"properties": {
-								"site_id": {
-									"type": "string",
-									"required": true,
-									"description": "A number that uniquely identifies a single data center site"
-								},
-								"rack_id": {
-									"type": "string",
-									"required": true,
-									"description": "A numerical value that identifies a single Rack in a single site"
-								},
-								"node_id": {
-									"type": "string",
-									"required": true,
-									"description": "A numerical value that indicates type of node in cluster. i.e 1-Mero,2-GW in EOS"
-								},
-								"source_id": {
-									"type": "string",
-									"required": true,
-									"description": "A string that indicates type of component. i.e H-Hardware, S-Software, F-Firmware, O-OS"
-								},
-								"component_id": {
-									"type": "string",
-									"required": true,
-									"description": "A number that indicates component that generated IEM. Component can be software applications like S3, SSPL or hardware components like PODS"
-								},
-								"module_id": {
-									"type": "string",
-									"required": true,
-									"description": "A number that indicates sub module of a component that generated IEM. i.e SSPL submodule like HPI"
-								},
-								"event_id": {
-									"type": "string",
-									"required": true,
-									"description": "A numerical value that uniquely identifies an event. i.e  1-drive removal, 2-drive insertion and alike. Each team will be given a range to be used"
-								},
-								"severity": {
-									"type": "string",
-									"required": true,
-									"description": "The degree of impact an event has on the operation of a component. i.e A, X, E, W"
-								},
-								"description": {
-									"type": "string",
-									"required": true,
-									"description": "Short summary of an event"
-								}
-							}
-						},
-
-
 						"disk_status_drivemanager": {
 							"type": "object",
 							"properties": {

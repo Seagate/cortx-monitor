@@ -16,6 +16,7 @@ salt_provisioner_pillar_sls = 'sspl'
 
 class AlertTypes(Enum):
     GET = "get"
+    FAULT = "fault"
 
 
 class SensorTypes(Enum):
@@ -50,6 +51,18 @@ iem_severity_types = {
     "I": "informational",
     "D": "detail",
     "B": "debug"
+}
+
+iem_severity_to_alert_mapping = {
+    "A": AlertTypes.FAULT.value,
+    "X": AlertTypes.FAULT.value,
+    "E": AlertTypes.FAULT.value,
+    "W": AlertTypes.GET.value,
+    "N": AlertTypes.GET.value,
+    "C": AlertTypes.GET.value,
+    "I": AlertTypes.GET.value,
+    "D": AlertTypes.GET.value,
+    "B": AlertTypes.GET.value
 }
 
 iem_source_types = {
