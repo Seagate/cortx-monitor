@@ -97,7 +97,7 @@ class RabbitMQSafeConnection:
         except connection_exceptions as e:
             logger.error(connection_error_msg.format(e))
             logger.error(f'Connection closed while publising the message: {body}')
-            self._retry_connection()
+            self._establish_connection()
             self.publish(exchange, routing_key, properties, body)
 
     def consume(self, callback):

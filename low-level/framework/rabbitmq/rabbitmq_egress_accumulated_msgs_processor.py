@@ -21,6 +21,8 @@
 import sys
 
 import pika
+import json
+import time
 
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
@@ -117,10 +119,15 @@ class RabbitMQEgressAccumulatedMsgsProcessor(ScheduledModuleThread, InternalMsgQ
                 msg_props.content_type = "text/plain"
                 while not store_queue.is_empty():
                     message = store_queue.get()
-                    self._connection.publish(exchange=self._exchange_name,
-                                    routing_key=self._routing_key,
-                                    properties=msg_props,
-                                    body=message)
+                    dict_msg = json.loads(message)
+                    alert_type = dict_msg["message"]["sensor_response_type"]["alert_type"]
+                    event_time = dict_msg["message"]["sensor_response_type"]["info"]["event_time"]
+                    time_diff = int(time.time()) - int(event_time)
+                    if "sensor_response_type" in dict_msg["message"]:
+                        if alert_type == "GET" and time_diff > self.MSG_TIMEOUT:
+                            continue
+                    self._connection.publish(exchange=self._exchange_name,routing_key=self._routing_key,properties=msg_props,body=message)
+
                 self._connection.cleanup()
         except connection_exceptions as e:
             logger.error(connection_error_msg.format(e))
