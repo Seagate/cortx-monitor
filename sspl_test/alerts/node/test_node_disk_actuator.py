@@ -35,7 +35,6 @@ def test_node_disk_module_actuator(agrs):
 
         if disk_actuator_msg:
             break
-        print("WWWW: Waiting in outside loop\n")
         time.sleep(2)
 
     assert(disk_actuator_msg is not None)
