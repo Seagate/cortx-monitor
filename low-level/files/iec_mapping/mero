@@ -1,0 +1,3 @@
+0020000000,TestIEM,EOS Core test IEM
+0020010001,STOBIOQ,EOS Core IO error
+0020020002,FrSpace,EOS Core free space warning
