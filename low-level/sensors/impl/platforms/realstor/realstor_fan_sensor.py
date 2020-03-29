@@ -193,10 +193,14 @@ class RealStorFanSensor(SensorThread, InternalMsgQ):
                     internal_json_message = \
                         self._create_internal_json_msg(fan_module, alert_type)
                     self._send_json_message(internal_json_message)
-                    # Wait till msg is sent to rabbitmq
-                    self._event.wait()
-                    store.put(self._faulty_fan_modules_list,\
-                        self._faulty_fan_file_path)
+                    # Wait till msg is sent to rabbitmq or added in consul for resending.
+                    # If timed out, do not update cache and revert in-memory cache.
+                    # So, in next iteration change can be detectedcted
+                    if self._event.wait(self.rssencl.PERSISTENT_DATA_UPDATE_TIMEOUT):
+                        store.put(self._faulty_fan_modules_list,\
+                            self._faulty_fan_file_path)
+                    else:
+                        self._faulty_fan_modules_list = store.get(self._faulty_fan_file_path)
                     alert_type = None
         except Exception as e:
             logger.exception(e)

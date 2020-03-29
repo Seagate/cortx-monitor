@@ -235,7 +235,6 @@ class RealStorLogicalVolumeSensor(SensorThread, InternalMsgQ):
 
         if not disk_groups:
             return
-
         for disk_group in disk_groups:
             disk_group_health = disk_group["health"].lower()
             pool_serial_number = disk_group["pool-serial-number"]
@@ -294,11 +293,14 @@ class RealStorLogicalVolumeSensor(SensorThread, InternalMsgQ):
                     state_changed = True
             # Persist faulty Logical Volume list to file only if something is changed
             if state_changed:
-                # TODO: Handle timeout scenario
-                # Wait till msg is sent to rabbitmq
-                self._event.wait()
-                store.put(self._previously_faulty_disk_groups,\
-                    self._faulty_disk_group_file_path)
+                # Wait till msg is sent to rabbitmq or added in consul for resending.
+                # If timed out, do not update cache and revert in-memory cache.
+                # So, in next iteration change can be detected
+                if self._event.wait(self.rssencl.PERSISTENT_DATA_UPDATE_TIMEOUT):
+                    store.put(self._previously_faulty_disk_groups,\
+                        self._faulty_disk_group_file_path)
+                else:
+                    self._previously_faulty_disk_groups = store.get(self._faulty_disk_group_file_path)
                 state_changed = False
             alert_type = ""
         return faulty_disk_group_messages

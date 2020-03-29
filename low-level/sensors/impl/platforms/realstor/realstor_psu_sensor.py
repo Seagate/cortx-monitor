@@ -193,7 +193,6 @@ class RealStorPSUSensor(SensorThread, InternalMsgQ):
 
         if not psus:
             return
-
         for psu in psus:
             psu_health = psu["health"].lower()
             durable_id = psu["durable-id"]
@@ -250,11 +249,14 @@ class RealStorPSUSensor(SensorThread, InternalMsgQ):
                     del self._previously_faulty_psus[durable_id]
             # Persist faulty PSU list to file only if something is changed
             if state_changed:
-                # TODO: Handle timeout scenario
-                # Wait till msg is sent to rabbitmq
-                self._event.wait()
-                store.put(self._previously_faulty_psus,\
-                    self._faulty_psu_file_path)
+                # Wait till msg is sent to rabbitmq or added in consul for resending.
+                # If timed out, do not update cache and revert in-memory cache.
+                # So, in next iteration change can be detected
+                if self._event.wait(self.rssencl.PERSISTENT_DATA_UPDATE_TIMEOUT):
+                    store.put(self._previously_faulty_psus,\
+                        self._faulty_psu_file_path)
+                else:
+                    self._previously_faulty_psus = store.get(self._faulty_psu_file_path)
                 state_changed = False
             alert_type = ""
         return faulty_psu_messages

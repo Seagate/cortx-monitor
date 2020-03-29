@@ -228,12 +228,15 @@ class RealStorSideplaneExpanderSensor(SensorThread, InternalMsgQ):
                             sideplane_expander, self.unhealthy_components,
                             alert_type)
                     self._send_json_message(internal_json_message)
-                    # TODO: Handle timeout scenario
-                    # Wait till msg is sent to rabbitmq
-                    self._event.wait()
-                    store.put(\
-                        self._faulty_sideplane_expander_dict,\
-                        self._faulty_sideplane_expander_file_path)
+                    # Wait till msg is sent to rabbitmq or added in consul for resending.
+                    # If timed out, do not update cache and revert in-memory cache.
+                    # So, in next iteration change can be detected
+                    if self._event.wait(self.rssencl.PERSISTENT_DATA_UPDATE_TIMEOUT):
+                        store.put(\
+                            self._faulty_sideplane_expander_dict,\
+                            self._faulty_sideplane_expander_file_path)
+                    else:
+                        self._faulty_sideplane_expander_dict = store.get(self._faulty_sideplane_expander_file_path)
                     alert_type = None
 
             except Exception as ae:

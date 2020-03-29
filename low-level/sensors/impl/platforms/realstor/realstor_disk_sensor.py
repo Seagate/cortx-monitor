@@ -105,6 +105,7 @@ class RealStorDiskSensor(SensorThread, InternalMsgQ):
         self._suspended = False
 
         self._event = None
+        self._event_wait_results = set()
 
     def initialize(self, conf_reader, msgQlist, products):
         """initialize configuration reader and internal msg queues"""
@@ -246,9 +247,10 @@ class RealStorDiskSensor(SensorThread, InternalMsgQ):
             
             #raise alert for missing drive
             self._rss_raise_disk_alert(self.rssencl.FRU_MISSING, disk_info)
-            # Wait till msg is sent to rabbitmq
-            self._event.wait()
-            store.delete(disk_datafile)
+            # Wait till msg is sent to rabbitmq or added in consul for resending.
+            # If timed out, do not update cache
+            if self._event.wait(self.rssencl.PERSISTENT_DATA_UPDATE_TIMEOUT):
+                store.delete(disk_datafile)
             self._event.clear()
         self._event = None
 
@@ -415,8 +417,9 @@ class RealStorDiskSensor(SensorThread, InternalMsgQ):
 
                                 # raise alert for disk fault
                                 self._rss_raise_disk_alert(self.rssencl.FRU_FAULT, disk_info)
-                                # To ensure all msg is sent to rabbitmq before updating cache
-                                self._event.wait()
+                                # To ensure all msg is sent to rabbitmq or added in consul for resending.
+                                self._event_wait_results.add(
+                                    self._event.wait(self.rssencl.PERSISTENT_DATA_UPDATE_TIMEOUT))
                                 self._event.clear() 
 
             # Check for resolved faults
@@ -435,10 +438,15 @@ class RealStorDiskSensor(SensorThread, InternalMsgQ):
                             self.disks_prcache+"disk_{0}.json".format(slot))
                         # raise alert for resolved disk fault
                         self._rss_raise_disk_alert(self.rssencl.FRU_FAULT_RESOLVED, disk_info)
-                        # To ensure all msg is sent to rabbitmq before updating cache
-                        self._event.wait()
+                        # To ensure all msg is sent to rabbitmq or added in consul for resending.
+                        self._event_wait_results.add(
+                                    self._event.wait(self.rssencl.PERSISTENT_DATA_UPDATE_TIMEOUT))
                         self._event.clear()
-            self.rssencl.update_memcache_faults()
+            # If all messages are sent to rabbitmq or added in consul for resending.
+            # then only update cache
+            if all(self.self._event_wait_results):
+                self.rssencl.update_memcache_faults()
+            self.self._event_wait_results.clear()
             self._event = None
 
         except Exception as e:
