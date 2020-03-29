@@ -16,6 +16,7 @@ localTempPath = "/tmp/support_bundle/"
 sspl_log_default = "/var/log/eos/sspl"
 iem_log_default = "/var/log/eos/iem"
 onGoingRequestPath = "/tmp/sspl-sb-req.txt"
+sspl_conf_dir = "/opt/seagate/eos-prvsnr/pillar/components/sspl.sls"
 
 def make_sspl_log_tarfile(parser, tmpFile):
     file_name = "sspl_%s.tar.gz" % parser[1]
@@ -49,9 +50,12 @@ def make_sspl_log_tarfile(parser, tmpFile):
     try:
         with tarfile.open(localTempPath+file_name, "w:gz") as tar:
             file_dir = file_name.replace(".tar.gz","")
-            tar.add(sspl_log_dir, arcname=file_dir+"/sspl/")
-            tar.add(sspl_conf_dir, arcname=file_dir+"/conf/sspl.conf")
-            tar.add(iem_log_dir, arcname=file_dir+"/iem/")
+            if os.path.exists(sspl_log_dir):
+                tar.add(sspl_log_dir, arcname=file_dir+"/sspl/")
+            if os.path.exists(sspl_conf_dir):
+                tar.add(sspl_conf_dir, arcname=file_dir+"/conf/sspl.sls")
+            if os.path.exists(iem_log_dir):
+                tar.add(iem_log_dir, arcname=file_dir+"/iem/")
             tar.close()
     except (OSError, tarfile.TarError) as err:
         print("Facing problem while creating sspl support bundle : %s" % err)
