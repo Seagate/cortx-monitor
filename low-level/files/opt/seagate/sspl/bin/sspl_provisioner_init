@@ -44,17 +44,39 @@ $SCRIPT_DIR/bin/sspl_post_install -p EES
 $SCRIPT_DIR/bin/sspl_setup_rabbitmq_cluster
 $SCRIPT_DIR/bin/sspl_setup_init -r eos
 $SCRIPT_DIR/bin/sspl_config
-sudo systemctl start sspl-ll.service
-sudo systemctl start rabbitmq-server.service
+systemctl start rabbitmq-server.service
+systemctl start sspl-ll.service
 
 # TODO: Temporary change until HA integration is in place
 # Switch SSPL to active state to resume all the suspended plugins. If SSPL is
 # not switched to active state then plugins will not respond and tests will
 # fail. Sending SIGUP to SSPL makes SSPL to read state file and switch state.
-echo "*************************************************************************"
-echo "Changing SSPL state to 'active', disable step once HA integration complete"
-echo "*************************************************************************"
-echo "state=active" > /var/eos/sspl/data/state.txt
-PID=`ps -aux| grep "sspl_ll_d" | grep -v "grep" | awk '{print $2}'`
-kill -s SIGHUP $PID
+TRIES=0
+SSPL_STATUS=$(systemctl show -p ActiveState sspl-ll | sed 's/ActiveState=//g')
+while [ $SSPL_STATUS != "active" ]
+do
+    echo SSPL Service not started. Waiting...
+    sleep 2
+    TRIES=$((TRIES+1))
+    SSPL_STATUS=$(systemctl show -p ActiveState sspl-ll | sed 's/ActiveState=//g')
+    if [ $TRIES -gt 4 ]
+    then
+        break
+    fi
+done
 
+if [ $SSPL_STATUS = "active" ]
+then
+    echo SSPL Service started.
+    echo Waiting 5 seconds to initialize.
+    sleep 5
+    echo "*************************************************************************"
+    echo "Changing SSPL state to 'active', disable step once HA integration complete"
+    echo "*************************************************************************"
+    echo "state=active" > /var/eos/sspl/data/state.txt
+    PID=`/sbin/pidof -s /usr/bin/sspl_ll_d`
+    kill -s SIGHUP $PID
+else
+    echo SSPL Service not started after 10 seconds.
+    echo Failed to make SSPL state ACTIVE
+fi
