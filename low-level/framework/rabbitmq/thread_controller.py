@@ -152,6 +152,8 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
                 import RealStorSideplaneExpanderSensor
             from sensors.impl.platforms.realstor.realstor_logical_volume_sensor \
                 import RealStorLogicalVolumeSensor
+            from sensors.impl.platforms.realstor.realstor_enclosure_sensor \
+                import RealStorEnclosureSensor
         if product in enabled_products:
             from sensors.impl.generic.raid import RAIDsensor
 

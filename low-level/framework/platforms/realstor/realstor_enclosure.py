@@ -42,6 +42,7 @@ class RealStorEnclosure(StorageEnclosure):
     CONF_REALSTORPSUSENSOR = "REALSTORPSUSENSOR"
     CONF_REALSTORLOGICALVOLUMESENSOR = "REALSTORLOGICALVOLUMESENSOR"
     CONF_REALSTORSIDEPLANEEXPANDERSENSOR = "REALSTORSIDEPLANEEXPANDERSENSOR"
+    CONF_REALSTORENCLOSURESENSOR = "REALSTORENCLOSURESENSOR"
     CONF_REALSTORSENSORS = "REALSTORSENSORS"
     DEFAULT_POLL = 30
     SITE_ID = "site_id"
@@ -64,6 +65,7 @@ class RealStorEnclosure(StorageEnclosure):
     URI_CLIAPI_SHOWVOLUMES = "/show/volumes"
     URI_CLIAPI_SHOWSENSORSTATUS = "/show/sensor-status"
     URI_CLIAPI_SASHEALTHSTATUS = "/show/sas-link-health"
+    URI_CLIAPI_SHOWEVENTS = "/show/events"
 
     # Realstor generic health states
     HEALTH_OK = "ok"
@@ -80,6 +82,7 @@ class RealStorEnclosure(StorageEnclosure):
     realstor_supported_interfaces = ['cliapi']
 
     poll_system_ts = 0
+    mc_timeout_counter = 0
 
     # resource inmemory cache
     latest_faults = {}
@@ -225,7 +228,11 @@ class RealStorEnclosure(StorageEnclosure):
                          and tried_alt_ip is False:
                     self.switch_to_alt_mc()
                     tried_alt_ip = True
+                    self.mc_timeout_counter += 1
                     continue
+            else:
+                self.mc_timeout_counter = 0
+
             break
 
         return response
@@ -248,6 +255,8 @@ class RealStorEnclosure(StorageEnclosure):
             return
 
         if response.status_code != self.ws.HTTP_OK:
+            if response.status_code == self.ws.HTTP_TIMEOUT:
+                self.mc_timeout_counter += 1
             logger.error("{0}:: http request for login failed with err {1}"\
                 .format(self.EES_ENCL, response.status_code))
             return

@@ -4,7 +4,7 @@ core_processors=RabbitMQegressProcessor, RabbitMQingressProcessor, LoggingProces
 
 message_handlers=DiskMsgHandler, LoggingMsgHandler, ServiceMsgHandler, NodeDataMsgHandler, NodeControllerMsgHandler, RealStorEnclMsgHandler
 
-sensors=ServiceWatchdog, NodeData, RAIDsensor, SNMPtraps, HPIMonitor, RealStorFanSensor, RealStorPSUSensor, RealStorControllerSensor, RealStorDiskSensor, RealStorSideplaneExpanderSensor, IEMSensor, NodeHWsensor
+sensors=ServiceWatchdog, NodeData, RAIDsensor, SNMPtraps, HPIMonitor, RealStorFanSensor, RealStorPSUSensor, RealStorControllerSensor, RealStorDiskSensor, RealStorSideplaneExpanderSensor, IEMSensor, NodeHWsensor, RealStorEnclosureSensor
 
 actuators=Service, RAIDactuator, Hdparm, RaritanPDU, CommandLine, Login, IPMI, HPIactuator, NodeHWactuator, Smartctl
 # List of modules to run in degraded mode
@@ -170,6 +170,9 @@ polling_frequency_override=0
 threaded=true
 
 [NODEHWSENSOR]
+threaded=true
+
+[REALSTORENCLOSURESENSOR]
 threaded=true
 
 [IEMSENSOR]
