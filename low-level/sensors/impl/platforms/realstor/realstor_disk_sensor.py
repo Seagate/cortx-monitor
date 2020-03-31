@@ -244,7 +244,6 @@ class RealStorDiskSensor(SensorThread, InternalMsgQ):
 
             disk_info = store.get(disk_datafile)
 
-            
             #raise alert for missing drive
             self._rss_raise_disk_alert(self.rssencl.FRU_MISSING, disk_info)
             # Wait till msg is sent to rabbitmq or added in consul for resending.
@@ -444,9 +443,9 @@ class RealStorDiskSensor(SensorThread, InternalMsgQ):
                         self._event.clear()
             # If all messages are sent to rabbitmq or added in consul for resending.
             # then only update cache
-            if all(self.self._event_wait_results):
+            if all(self._event_wait_results):
                 self.rssencl.update_memcache_faults()
-            self.self._event_wait_results.clear()
+            self._event_wait_results.clear()
             self._event = None
 
         except Exception as e:

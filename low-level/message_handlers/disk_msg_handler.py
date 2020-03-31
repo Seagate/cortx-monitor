@@ -480,7 +480,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
     def _transmit_all_HPI_responses(self):
         """Transmit all HPI data for every drive"""
-        for drive in self.self._hpi_drives:
+        for drive in self._hpi_drives:
             # Obtain json message containing all relevant data
             internal_json_msg = drive.toHPIjsonMsg().getJson()
 
