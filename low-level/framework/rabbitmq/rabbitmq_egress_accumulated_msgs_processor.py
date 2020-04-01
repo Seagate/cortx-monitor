@@ -101,7 +101,7 @@ class RabbitMQEgressAccumulatedMsgsProcessor(ScheduledModuleThread, InternalMsgQ
 
     def run(self):
         """Run the sensor on its own thread"""
-        logger.info("Consul accumulated messages processing started")
+        logger.debug("Consul accumulated messages processing started")
         if not self._is_my_msgQ_empty():
             # Check for shut down message from sspl_ll_d and set a flag to shutdown
             #  once our message queue is empty
@@ -134,7 +134,7 @@ class RabbitMQEgressAccumulatedMsgsProcessor(ScheduledModuleThread, InternalMsgQ
         except connection_exceptions as e:
             logger.error(connection_error_msg.format(e))
         finally:
-            logger.info("Consul accumulated processing ended")
+            logger.debug("Consul accumulated processing ended")
             self._scheduler.enter(30, self._priority, self.run, ())
 
     def _read_config(self):

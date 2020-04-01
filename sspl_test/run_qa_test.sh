@@ -228,7 +228,7 @@ echo "Initialization completed. Starting tests"
 # not switched to active state then plugins will not respond and tests will
 # fail. Sending SIGUP to SSPL makes SSPL to read state file and switch state.
 echo "state=active" > /var/eos/sspl/data/state.txt
-PID=`ps -aux| grep "sspl_ll_d" | grep -v "grep" | awk '{print $2}'`
+PID=`/sbin/pidof -s /usr/bin/sspl_ll_d`
 kill -s SIGHUP $PID
 
 # Start tests
