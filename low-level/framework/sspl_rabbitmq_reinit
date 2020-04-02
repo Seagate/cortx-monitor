@@ -43,16 +43,14 @@ NODE_ID_KEY = 'node_id'
 parentdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.sys.path.insert(0,parentdir)
 
-from sspl_constants import cs_legacy_products, enabled_products
+from sspl_constants import cs_legacy_products, enabled_products, ServiceTypes
 
 config_reader = ConfigReader(is_init=True)
 
 
-def gen_key(cluster_id, node_id):
+def gen_key(cluster_id, service_name):
     # Generate key for decryption
-    username = 'sspl'
-    service_name = 'sspl'
-    key = Cipher.generate_key(cluster_id, node_id, username, service_name)
+    key = Cipher.generate_key(cluster_id, service_name)
     return key
 
 
@@ -92,10 +90,9 @@ def main(product):
 
     # Decrypt password -----------------------
     cluster_id = config_reader._get_value(section=SYSTEM_INFORMATION_KEY, key=CLUSTER_ID_KEY)
-    node_id = config_reader._get_value(section=SYSTEM_INFORMATION_KEY, key=NODE_ID_KEY)
 
     # Generate key
-    key = gen_key(str(int(cluster_id)), str(int(node_id)))
+    key = gen_key(cluster_id, ServiceTypes.RABBITMQ.value)
     password = decrypt(key, password.encode('ascii'))
     _create_user_if_necessary(username, password, virtual_host, product)
 

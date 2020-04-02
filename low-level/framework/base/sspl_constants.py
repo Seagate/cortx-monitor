@@ -41,6 +41,10 @@ class StoreTypes(Enum):
     FILE = "file"
     CONSUL = "consul"
 
+class ServiceTypes(Enum):
+    RABBITMQ = "rabbitmq"
+    STORAGE_ENCLOSURE = "storage_enclosure"
+
 iem_severity_types = {
     "A": "alert",
     "X": "critical",

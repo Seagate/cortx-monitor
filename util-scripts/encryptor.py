@@ -26,11 +26,9 @@ except ImportError as import_error:
           'Please install using yum install -y eos-py-utils')
 
 
-def gen_key(cluster_id, node_id):
+def gen_key(cluster_id, service_name):
     ''' Generate key for decryption '''
-    username = 'sspl'
-    service_name = 'sspl'
-    key = Cipher.generate_key(cluster_id, node_id, username, service_name)
+    key = Cipher.generate_key(cluster_id, service_name)
     return key
 
 
@@ -48,7 +46,7 @@ def decrypt(key, text):
 
 def usage():
     ''' Print usage '''
-    print("encryptor.py <encrypt|decrypt> <text> <cluster-id> <node-id>")
+    print("encryptor.py <encrypt|decrypt> <text> <cluster-id> <service-name>")
 
 
 def main(args):
@@ -63,9 +61,9 @@ def main(args):
             operation = args[0].lower()
             text = args[1]
             cluster_id = args[2]
-            node_id = args[3]
+            service_name = args[3]
             print(f'operation: {text}')
-            key = gen_key(str(cluster_id), str(node_id))
+            key = gen_key(str(cluster_id), service_name)
             print(f'Key => {key.decode()}\n')
             if operation == 'encrypt':
                 encrypted_text = encrypt(key, text)

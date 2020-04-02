@@ -32,6 +32,7 @@ from framework.utils import encryptor
 from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 from json_msgs.messages.actuators.ack_response import AckResponseMsg
 from framework.base.sspl_constants import RESOURCE_PATH
+from framework.base.sspl_constants import ServiceTypes
 
 
 try:
@@ -274,7 +275,7 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
             node_id = get_value_with_default(self.SYSTEM_INFORMATION_KEY,
                                              self.NODE_ID_KEY, '')
             # Decrypt RabbitMQ Password
-            decryption_key = encryptor.gen_key(str(int(cluster_id)), str(int(node_id)))
+            decryption_key = encryptor.gen_key(cluster_id, ServiceTypes.RABBITMQ.value)
             self._password = encryptor.decrypt(decryption_key, self._password.encode('ascii'))
 
             # Create a routing key unique to this instance

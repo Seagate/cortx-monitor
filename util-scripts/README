@@ -1,0 +1,16 @@
+
+Utility scripts used for sspl development purpose.
+
+####################################################################
+# encryptor.py
+####################################################################
+- This script is useful to encrypt or decrypt passwords
+  used in sspl config
+- Requirements
+  - eos-py-utils
+- Usage
+  - ./encryptor.py <encrypt|decrypt> <text> <cluster-id> <service-name>
+  - Ex. encryptor.py encrypt foo 001 rabbitmq
+  - Services being used in sspl
+     - rabbitmq
+     - storage_enclosure

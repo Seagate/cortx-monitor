@@ -17,11 +17,9 @@
 from eos.utils.security.cipher import Cipher
 
 
-def gen_key(cluster_id, node_id):
+def gen_key(cluster_id, service_name):
     # Generate key for decryption
-    username = 'sspl'
-    service_name = 'sspl'
-    key = Cipher.generate_key(cluster_id, node_id, username, service_name)
+    key = Cipher.generate_key(cluster_id, service_name)
     return key
 
 

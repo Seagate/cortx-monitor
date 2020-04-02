@@ -33,6 +33,7 @@ from framework.rabbitmq.rabbitmq_connector import RabbitMQSafeConnection, connec
 from framework.utils import encryptor
 from framework.utils.store_factory import store
 from framework.utils.store_queue import store_queue
+from framework.base.sspl_constants import ServiceTypes
 
 
 class RabbitMQEgressAccumulatedMsgsProcessor(ScheduledModuleThread, InternalMsgQ):
@@ -191,11 +192,8 @@ class RabbitMQEgressAccumulatedMsgsProcessor(ScheduledModuleThread, InternalMsgQ
             cluster_id = self._conf_reader._get_value_with_default(self.SYSTEM_INFORMATION_KEY,
                                                                    self.CLUSTER_ID_KEY, '')
 
-            node_id = self._conf_reader._get_value_with_default(self.SYSTEM_INFORMATION_KEY,
-                                                                self.NODE_ID_KEY, '')
-
             # Decrypt RabbitMQ Password
-            decryption_key = encryptor.gen_key(str(int(cluster_id)), str(int(node_id)))
+            decryption_key = encryptor.gen_key(cluster_id, ServiceTypes.RABBITMQ.value)
             self._password = encryptor.decrypt(decryption_key, self._password.encode('ascii'))
 
             if self._iem_route_addr != "":

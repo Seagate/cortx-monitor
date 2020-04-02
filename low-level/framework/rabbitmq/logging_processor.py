@@ -31,6 +31,7 @@ from framework.utils.service_logging import logger
 from framework.utils.autoemail import AutoEmail
 from .rabbitmq_connector import RabbitMQSafeConnection
 from framework.utils import encryptor
+from framework.base.sspl_constants import ServiceTypes
 
 # Modules that receive messages from this module
 from message_handlers.logging_msg_handler import LoggingMsgHandler
@@ -197,11 +198,8 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
             cluster_id = self._conf_reader._get_value_with_default(self.SYSTEM_INFORMATION_KEY,
                                                                    self.CLUSTER_ID_KEY, '')
 
-            node_id = self._conf_reader._get_value_with_default(self.SYSTEM_INFORMATION_KEY,
-                                                                self.NODE_ID_KEY, '')
-
             # Decrypt RabbitMQ Password
-            decryption_key = encryptor.gen_key(str(int(cluster_id)), str(int(node_id)))
+            decryption_key = encryptor.gen_key(cluster_id, ServiceTypes.RABBITMQ.value)
             self._password = encryptor.decrypt(decryption_key, self._password.encode('ascii'))
 
             self._connection = RabbitMQSafeConnection(
