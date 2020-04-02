@@ -12,6 +12,8 @@ SCRIPT_NAME=$(basename $0)
 
 RSYSLOG_CONF="/etc/rsyslog.d/0-iemfwd.conf"
 RSYSLOG_SSPL_CONF="/etc/rsyslog.d/1-ssplfwd.conf"
+PACEMAKER_INSTALLATION_PATH="/lib/ocf/resource.d/seagate/"
+SSPL_RA_PATH="/opt/seagate/eos/sspl/bin/pacemaker/sspl_stateful_resource_agent"
 
 usage() {
     cat << EOF
@@ -64,3 +66,13 @@ cp -R $SSPL_BASE_DIR/resources/iem/iec_mapping/* $BASE_DIR/iem/iec_mapping
 
 # Configure rabbitmq
 $script_dir/rabbitmq_setup
+
+# Copy SSPL Resource agent script from SSPL repo to
+# /lib/ocf/resource.d/seagate which is the installation
+# path for Pacemaker
+echo "copying SSPL resource agent to pacemaker installation path"
+# Check whether Pacemaker installation path exist or not
+[ ! -d $PACEMAKER_INSTALLATION_PATH ] && mkdir -p $PACEMAKER_INSTALLATION_PATH
+[ -f $SSPL_RA_PATH ] &&
+    cp $SSPL_RA_PATH $PACEMAKER_INSTALLATION_PATH
+
