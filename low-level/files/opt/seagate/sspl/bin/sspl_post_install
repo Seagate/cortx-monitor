@@ -74,5 +74,5 @@ echo "copying SSPL resource agent to pacemaker installation path"
 # Check whether Pacemaker installation path exist or not
 [ ! -d $PACEMAKER_INSTALLATION_PATH ] && mkdir -p $PACEMAKER_INSTALLATION_PATH
 [ -f $SSPL_RA_PATH ] &&
-    cp $SSPL_RA_PATH $PACEMAKER_INSTALLATION_PATH
+    cp -f $SSPL_RA_PATH $PACEMAKER_INSTALLATION_PATH
 
