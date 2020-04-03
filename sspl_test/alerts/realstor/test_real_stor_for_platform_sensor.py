@@ -21,7 +21,7 @@ def test_real_stor_sensor_current(agrs):
         time.sleep(2)
         print("Received: %s" % ingressMsg)
         try:
-            msg_type = ingressMsg.get("sensor_response_type")
+            msg_type = ingressMsg.get("actuator_response_type")
             if msg_type["info"]["resource_type"] == "enclosure:sensor:current":
                 current_module_actuator_msg = msg_type
                 break
@@ -60,7 +60,7 @@ def test_real_stor_sensor_voltage(agrs):
         time.sleep(2)
         print("Received: %s" % ingressMsg)
         try:
-            msg_type = ingressMsg.get("sensor_response_type")
+            msg_type = ingressMsg.get("actuator_response_type")
             if msg_type["info"]["resource_type"] == "enclosure:sensor:voltage":
                 voltage_module_actuator_msg = msg_type
                 break
@@ -99,7 +99,7 @@ def test_real_stor_sensor_temperature(agrs):
         time.sleep(2)
         print("Received: %s" % ingressMsg)
         try:
-            msg_type = ingressMsg.get("sensor_response_type")
+            msg_type = ingressMsg.get("actuator_response_type")
             if msg_type["info"]["resource_type"] == "enclosure:sensor:temperature":
                 temperature_module_actuator_msg = msg_type
                 break

@@ -23,7 +23,7 @@ from framework.utils.service_logging import logger
 from framework.base.sspl_constants import enabled_products
 
 from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
-from json_msgs.messages.sensors.realstor_actuator_response import RealStorActuatorSensorMsg
+from json_msgs.messages.actuators.realstor_actuator_response import RealStorActuatorMsg
 
 
 class RealStorActuatorMsgHandler(ScheduledModuleThread, InternalMsgQ):
@@ -145,15 +145,13 @@ class RealStorActuatorMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     self._real_stor_actuator = RealStorActuator()
                 except ImportError as e:
                     logger.warn("RealStor Actuator not loaded")
-                    json_msg = RealStorActuatorAckMsg(enclosure_request, RealStorActuatorMsgHandler.UNSUPPORTED_REQUEST, uuid).getJson()
-                    self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
                     return
 
             # Perform the request and get the response
             real_stor_response = self._real_stor_actuator.perform_request(jsonMsg)
             self._log_debug(f"_process_msg, RealStor response: {real_stor_response}")
 
-            json_msg = RealStorActuatorSensorMsg(real_stor_response, uuid).getJson()
+            json_msg = RealStorActuatorMsg(real_stor_response, uuid).getJson()
             self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
 
     def suspend(self):

@@ -22,9 +22,9 @@
 
 import json
 
-from json_msgs.messages.sensors.base_sensors_msg import BaseSensorMsg
+from json_msgs.messages.actuators.base_actuators_msg import BaseActuatorMsg
 
-class RealStorActuatorSensorMsg(BaseSensorMsg):
+class RealStorActuatorMsg(BaseActuatorMsg):
     '''
     The JSON message transmitted by the RealStorActuatorMsgHandler
     '''
@@ -37,7 +37,7 @@ class RealStorActuatorSensorMsg(BaseSensorMsg):
                        signature = "N/A",
                        time      = "N/A",
                        expires   = -1):
-        super(RealStorActuatorSensorMsg, self).__init__()
+        super(RealStorActuatorMsg, self).__init__()
 
         self._username      = username
         self._signature     = signature
@@ -74,7 +74,7 @@ class RealStorActuatorSensorMsg(BaseSensorMsg):
                               "msg_version" : self.MESSAGE_VERSION,
                               "uuid" : self._uuid
                           },
-                          "sensor_response_type": {
+                          "actuator_response_type": {
                               "host_id": self._host_id,
                               "alert_type": self._alert_type,
                               "alert_id": self._alert_id,

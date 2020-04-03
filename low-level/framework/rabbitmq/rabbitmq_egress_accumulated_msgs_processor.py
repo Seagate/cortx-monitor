@@ -122,11 +122,10 @@ class RabbitMQEgressAccumulatedMsgsProcessor(ScheduledModuleThread, InternalMsgQ
                 while not store_queue.is_empty():
                     message = store_queue.get()
                     dict_msg = json.loads(message)
-                    if "sensor_response_type" in dict_msg["message"]:
-                        alert_type = dict_msg["message"]["sensor_response_type"]["alert_type"]
-                        event_time = dict_msg["message"]["sensor_response_type"]["info"]["event_time"]
+                    if "actuator_response_type" in dict_msg["message"]:
+                        event_time = dict_msg["message"]["actuator_response_type"]["info"]["event_time"]
                         time_diff = int(time.time()) - int(event_time)
-                        if alert_type == "GET" and time_diff > self.MSG_TIMEOUT:
+                        if time_diff > self.MSG_TIMEOUT:
                             continue
                     self._connection.publish(exchange=self._exchange_name,routing_key=self._routing_key,properties=msg_props,body=message)
 

@@ -22,7 +22,7 @@ def test_real_stor_psu_actuator(agrs):
         print("Received: %s" % ingressMsg)
         try:
             # Make sure we get back the message type that matches the request
-            msg_type = ingressMsg.get("sensor_response_type")
+            msg_type = ingressMsg.get("actuator_response_type")
             time.sleep(2)
             if msg_type['info']['resource_type'] == "enclosure:fru:psu":
                 psu_actuator_msg = msg_type
