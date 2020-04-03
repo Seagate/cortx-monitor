@@ -17,7 +17,7 @@ class TestConfig(object):
 
             # for test configs
             print("reading test conf file and inserting data to consul.")
-            test_component='sspl_test'
+            test_component='sspl_test/config'
             path_to_conf_file = "/opt/seagate/eos/sspl/sspl_test/conf/sspl_tests.conf"
             if os.path.exists(path_to_conf_file):
                 print("Using conf file : {}".format(path_to_conf_file))
@@ -29,9 +29,8 @@ class TestConfig(object):
             parser = ConfigParser()
             parser.read(path_to_conf_file)
             for sect in parser.sections():
-                consul_conn.kv.put(test_component + '.' + sect + '.' + '*', str(parser.items(sect)))
                 for k, v in parser.items(sect):
-                    consul_conn.kv.put(test_component + '.' + sect + '.' + k, v)
+                    consul_conn.kv.put(test_component + '/' + sect + '/' + k, v)
 
         except Exception as serror:
             print("Error occured: {}".format(serror))

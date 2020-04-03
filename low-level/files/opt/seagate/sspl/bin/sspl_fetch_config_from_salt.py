@@ -40,16 +40,15 @@ class SaltConfig(object):
          # for the pattern key : 'value'
          str_keys = [k for k,v in new_conf.items() if isinstance(v, str)]
          for k in str_keys:
-               consul_conn.kv.put(component + '.' + k, new_conf[k])
+               consul_conn.kv.put(component + '/' + k, new_conf[k])
                del new_conf[k]
 
          # for the pattern section : { 'key' : 'value' }
          parser = ConfigParser()
          parser.read_dict(new_conf)
          for sect in parser.sections():
-            consul_conn.kv.put(component + '.' + sect + '.' + '*', str(parser.items(sect)))
             for k, v in parser.items(sect):
-                  consul_conn.kv.put(component + '.' + sect + '.' + k, v)
+                  consul_conn.kv.put(component + '/' + sect + '/' + k, v)
 
       except Exception as serror:
             print("Error in connecting salt | consul: {}".format(serror))

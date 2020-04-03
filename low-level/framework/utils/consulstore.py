@@ -47,12 +47,13 @@ class ConsulStore(Store):
             logger.warn("Error[{0}] while writing data to consul {1}"\
                 .format(gerr, key))
 
-    def get(self, key):
+    def get(self, key, **kwargs):
         """ Load data from given key"""
         data = None
         try:
+            _opt_recurse = kwargs.get("recurse", False)
             key = self._get_key(key)
-            data = self.consul_conn.kv.get(key)[1]
+            data = self.consul_conn.kv.get(key, recurse=_opt_recurse)[1]
             if data:
                 data = data["Value"]
                 try:

@@ -9,7 +9,7 @@ if [ "$SSPL_STORE_TYPE" == "file" ]
 then
     [[ -f /etc/sspl.conf ]] && sed -i -e "s/\(transmit_interval=\).*/\1$transmit_interval/" /etc/sspl.conf
 else
-    /opt/seagate/eos/hare/bin/consul kv put sspl.NODEDATAMSGHANDLER.transmit_interval $transmit_interval
+    /opt/seagate/eos/hare/bin/consul kv put sspl/config/NODEDATAMSGHANDLER/transmit_interval $transmit_interval
 fi
 
 #Taking the current disk usage value and modify disk_usage_threshold in /opt/seagate/eos/hare/bin/consul config les than current value
@@ -20,7 +20,7 @@ if [ "$SSPL_STORE_TYPE" == "file" ]
 then
     [[ -f /etc/sspl.conf ]] && sed -i -e "s/\(disk_usage_threshold=\).*/\1$out/" /etc/sspl.conf
 else
-    /opt/seagate/eos/hare/bin/consul kv put sspl.NODEDATAMSGHANDLER.disk_usage_threshold $out
+    /opt/seagate/eos/hare/bin/consul kv put sspl/config/NODEDATAMSGHANDLER/disk_usage_threshold $out    
 fi
 
 #Taking the current memory usage value and modify disk_usage_threshold in /opt/seagate/eos/hare/bin/consul config les than current value
@@ -31,7 +31,7 @@ if [ "$SSPL_STORE_TYPE" == "file" ]
 then
     [[ -f /etc/sspl.conf ]] && sed -i -e "s/\(host_memory_usage_threshold=\).*/\1$host_out/" /etc/sspl.conf
 else
-    /opt/seagate/eos/hare/bin/consul kv put sspl.NODEDATAMSGHANDLER.host_memory_usage_threshold $host_out
+    /opt/seagate/eos/hare/bin/consul kv put sspl/config/NODEDATAMSGHANDLER/host_memory_usage_threshold $host_out
 fi
 
 #Taking the current cpu usage value and modify disk_usage_threshold in /opt/seagate/eos/hare/bin/consul config les than current value
@@ -42,5 +42,5 @@ if [ "$SSPL_STORE_TYPE" == "file" ]
 then
     [[ -f /etc/sspl.conf ]] && sed -i -e "s/\(cpu_usage_threshold=\).*/\1$cpu_out/" /etc/sspl.conf
 else
-    /opt/seagate/eos/hare/bin/consul kv put sspl.NODEDATAMSGHANDLER.cpu_usage_threshold $cpu_out
+    /opt/seagate/eos/hare/bin/consul kv put sspl/config/NODEDATAMSGHANDLER/cpu_usage_threshold $cpu_out
 fi

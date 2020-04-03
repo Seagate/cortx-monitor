@@ -154,4 +154,4 @@ esac
 # Updating RabbitMQ cluster nodes.
 out=$(rabbitmqctl cluster_status | grep running_nodes | cut -d '[' -f2 | cut -d ']' -f1 | sed 's/rabbit@//g' | sed 's/,/, /g')
 pout=$(echo $out | sed  "s/'//g")
-/opt/seagate/eos/hare/bin/consul kv put sspl.RABBITMQCLUSTER.cluster_nodes $pout
+/opt/seagate/eos/hare/bin/consul kv put sspl/config/RABBITMQCLUSTER/cluster_nodes $pout

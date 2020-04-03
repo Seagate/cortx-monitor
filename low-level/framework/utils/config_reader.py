@@ -126,7 +126,7 @@ class ConfigReader(object):
             if self.store is not None and isinstance(self.store, FileStore):
                 value = self.store.get(section, key)
             elif self.store is not None and isinstance(self.store, ConsulStore):
-                value = self.store.get(component + '.' + section + '.' + key)
+                value = self.store.get(component + '/' + section + '/' + key)
             else:
                 raise Exception("{} Invalid store type object.".format(self.store))
         except (RuntimeError, Exception) as e:
@@ -179,7 +179,7 @@ class ConfigReader(object):
             if self.store is not None and isinstance(self.store, FileStore):
                 pairs = self.store.items(section)
             elif self.store is not None and isinstance(self.store, ConsulStore):
-                pairs = self.store.get(component + '.' + section + '.' + '*')
+                pairs = self.store.get(component + '/' + section + '/' , recurse=True)
             else:
                 raise Exception("{} Invalid store type object.".format(self.store))
         except (RuntimeError, Exception) as e:

@@ -90,15 +90,15 @@ restore_cfg_services()
         sed -i 's/site_id='"$site_id"'/site_id=001/g' /opt/seagate/eos/sspl/sspl_test/conf/sspl_tests.conf
         sed -i 's/cluster_id='"$cluster_id"'/cluster_id=001/g' /opt/seagate/eos/sspl/sspl_test/conf/sspl_tests.conf
     else
-        port=$(/opt/seagate/eos/hare/bin/consul kv get sspl.STORAGE_ENCLOSURE.primary_controller_port)
+        port=$(/opt/seagate/eos/hare/bin/consul kv get sspl/config/STORAGE_ENCLOSURE/primary_controller_port)
         if [ "$port" == "$MOCK_SERVER_PORT" ]
         then
-            /opt/seagate/eos/hare/bin/consul kv put sspl.STORAGE_ENCLOSURE.primary_controller_port $primary_port
+            /opt/seagate/eos/hare/bin/consul kv put sspl/config/STORAGE_ENCLOSURE/primary_controller_port $primary_port
         fi
-        /opt/seagate/eos/hare/bin/consul kv put sspl_test.SYSTEM_INFORMATION.node_id '001'
-        /opt/seagate/eos/hare/bin/consul kv put sspl_test.SYSTEM_INFORMATION.site_id '001'
-        /opt/seagate/eos/hare/bin/consul kv put sspl_test.SYSTEM_INFORMATION.rack_id '001'
-        /opt/seagate/eos/hare/bin/consul kv put sspl_test.SYSTEM_INFORMATION.cluster_id '001'
+        /opt/seagate/eos/hare/bin/consul kv put sspl_test/config/SYSTEM_INFORMATION/node_id '001'
+        /opt/seagate/eos/hare/bin/consul kv put sspl_test/config/SYSTEM_INFORMATION/site_id '001'
+        /opt/seagate/eos/hare/bin/consul kv put sspl_test/config/SYSTEM_INFORMATION/rack_id '001'
+        /opt/seagate/eos/hare/bin/consul kv put sspl_test/config/SYSTEM_INFORMATION/cluster_id '001'
     fi
 
     echo "Stopping mock server"
@@ -152,10 +152,10 @@ python3 $script_dir/put_config_to_consul.py
 # change the port to $MOCK_SERVER_PORT as mock_server runs on $MOCK_SERVER_PORT
 if [ "$SSPL_STORE_TYPE" == "consul" ]
 then
-    primary_port=$(/opt/seagate/eos/hare/bin/consul kv get sspl.STORAGE_ENCLOSURE.primary_controller_port)
+    primary_port=$(/opt/seagate/eos/hare/bin/consul kv get sspl/config/STORAGE_ENCLOSURE/primary_controller_port)
     if [ "$primary_port" != "$MOCK_SERVER_PORT" ]
     then
-        /opt/seagate/eos/hare/bin/consul kv put sspl.STORAGE_ENCLOSURE.primary_controller_port $MOCK_SERVER_PORT
+        /opt/seagate/eos/hare/bin/consul kv put sspl/config/STORAGE_ENCLOSURE/primary_controller_port $MOCK_SERVER_PORT
     fi
 else
     primary_port=$(sed -n -e '/primary_controller_port/ s/.*\= *//p' /etc/sspl.conf)
@@ -178,14 +178,14 @@ $script_dir/mock_server &
 # Restart SSPL to re-read configuration
 if [ "$SSPL_STORE_TYPE" == "consul" ]
 then
-    transmit_interval=$(/opt/seagate/eos/hare/bin/consul kv get sspl.NODEDATAMSGHANDLER.transmit_interval)
-    disk_usage_threshold=$(/opt/seagate/eos/hare/bin/consul kv get sspl.NODEDATAMSGHANDLER.disk_usage_threshold)
-    host_memory_usage_threshold=$(/opt/seagate/eos/hare/bin/consul kv get sspl.NODEDATAMSGHANDLER.host_memory_usage_threshold)
-    cpu_usage_threshold=$(/opt/seagate/eos/hare/bin/consul kv get sspl.NODEDATAMSGHANDLER.cpu_usage_threshold)
-    rack_id=$(/opt/seagate/eos/hare/bin/consul kv get sspl.SYSTEM_INFORMATION.rack_id)
-    site_id=$(/opt/seagate/eos/hare/bin/consul kv get sspl.SYSTEM_INFORMATION.site_id)
-    node_id=$(/opt/seagate/eos/hare/bin/consul kv get sspl.SYSTEM_INFORMATION.node_id)
-    cluster_id=$(/opt/seagate/eos/hare/bin/consul kv get sspl.SYSTEM_INFORMATION.cluster_id)
+    transmit_interval=$(/opt/seagate/eos/hare/bin/consul kv get sspl/config/NODEDATAMSGHANDLER/transmit_interval)
+    disk_usage_threshold=$(/opt/seagate/eos/hare/bin/consul kv get sspl/config/NODEDATAMSGHANDLER/disk_usage_threshold)
+    host_memory_usage_threshold=$(/opt/seagate/eos/hare/bin/consul kv get sspl/config/NODEDATAMSGHANDLER/host_memory_usage_threshold)
+    cpu_usage_threshold=$(/opt/seagate/eos/hare/bin/consul kv get sspl/config/NODEDATAMSGHANDLER/cpu_usage_threshold)
+    rack_id=$(/opt/seagate/eos/hare/bin/consul kv get sspl/config/SYSTEM_INFORMATION/rack_id)
+    site_id=$(/opt/seagate/eos/hare/bin/consul kv get sspl/config/SYSTEM_INFORMATION/site_id)
+    node_id=$(/opt/seagate/eos/hare/bin/consul kv get sspl/config/SYSTEM_INFORMATION/node_id)
+    cluster_id=$(/opt/seagate/eos/hare/bin/consul kv get sspl/config/SYSTEM_INFORMATION/cluster_id)
 else
     transmit_interval=$(sed -n -e '/transmit_interval/ s/.*\= *//p' /etc/sspl.conf)
     disk_usage_threshold=$(sed -n -e '/disk_usage_threshold/ s/.*\= *//p' /etc/sspl.conf)
@@ -205,10 +205,10 @@ if [ "$SSPL_STORE_TYPE" == "consul" ]
 then
     # Update consul with updated System Information
     # append above parsed key-value pairs in consul under [SYSTEM_INFORMATION] section
-    /opt/seagate/eos/hare/bin/consul kv put sspl_test.SYSTEM_INFORMATION.node_id $node_id
-    /opt/seagate/eos/hare/bin/consul kv put sspl_test.SYSTEM_INFORMATION.site_id $site_id
-    /opt/seagate/eos/hare/bin/consul kv put sspl_test.SYSTEM_INFORMATION.rack_id $rack_id
-    /opt/seagate/eos/hare/bin/consul kv put sspl_test.SYSTEM_INFORMATION.cluster_id $cluster_id
+    /opt/seagate/eos/hare/bin/consul kv put sspl_test/config/SYSTEM_INFORMATION/node_id $node_id
+    /opt/seagate/eos/hare/bin/consul kv put sspl_test/config/SYSTEM_INFORMATION/site_id $site_id
+    /opt/seagate/eos/hare/bin/consul kv put sspl_test/config/SYSTEM_INFORMATION/rack_id $rack_id
+    /opt/seagate/eos/hare/bin/consul kv put sspl_test/config/SYSTEM_INFORMATION/cluster_id $cluster_id
 else
     # Update sspl_tests.conf with updated System Information
     # append above parsed key-value pairs in sspl_tests.conf under [SYSTEM_INFORMATION] section

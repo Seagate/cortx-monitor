@@ -68,7 +68,7 @@ class ConfigReader(object):
             if self.store is not None and isinstance(self.store, configparser.RawConfigParser):
                 value = self.store.get(section, key)
             elif self.store is not None and isinstance(self.store, consul.Consul):
-                value = self.kv_get(component + '.' + section + '.' + key)
+                value = self.kv_get(component + '/' + section + '/' + key)
             else:
                 raise Exception("{} Invalid store type object.".format(self.store))
         except (RuntimeError, Exception) as e:
@@ -121,7 +121,7 @@ class ConfigReader(object):
             if self.store is not None and isinstance(self.store, configparser.RawConfigParser):
                 pairs = self.store.items(section)
             elif self.store is not None and isinstance(self.store, consul.Consul):
-                pairs = self.kv_get(component + '.' + section + '.' + '*')
+                pairs = self.kv_get(component + '/' + section + '/', recurse=True)
             else:
                 raise Exception("{} Invalid store type object.".format(self.store))
         except (RuntimeError, Exception) as e:
@@ -140,10 +140,11 @@ class ConfigReader(object):
         else:
             return key
 
-    def kv_get(self, key):
+    def kv_get(self, key, **kwargs):
         try:
+            _opt_recurse = kwargs.get("recurse", False)
             key = self._get_key(key)
-            data = self.store.kv.get(key)[1]
+            data = self.store.kv.get(key, recurse=_opt_recurse)[1]
             if data:
                 data = data["Value"]
                 try:

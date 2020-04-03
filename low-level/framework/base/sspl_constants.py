@@ -10,7 +10,7 @@ CONSUL_HOST = '127.0.0.1'
 CONSUL_PORT = '8500'
 
 # required only for init
-component = 'sspl'
+component = 'sspl/config'
 file_store_config_path = '/etc/sspl.conf'
 salt_provisioner_pillar_sls = 'sspl'
 

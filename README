@@ -27,14 +27,14 @@
    ~~~~~~~~~~~~~~
 
    -> All eos configs will be available through salt API's, then stored in consul in paticular format i.e.
-      component.section.key = value
+      component/section/key = value where component = 'sspl/config'
 
    -> Get value from consul:
 
-      consul kv get component.section.key
-      Example: consul kv get sspl.NODEDATAMSGHANDLER.disk_usage_threshold
+      consul kv get component/section/key
+      Example: consul kv get sspl/config/NODEDATAMSGHANDLER/disk_usage_threshold
 
    -> Put(Update) value in consul:
 
-      consul kv put sspl.NODEDATAMSGHANDLER.disk_usage_threshold $out
-      Where key='sspl.NODEDATAMSGHANDLER.disk_usage_threshold' and value='$out'
+      consul kv put sspl/config/NODEDATAMSGHANDLER/disk_usage_threshold $out
+      Where key='sspl/config/NODEDATAMSGHANDLER/disk_usage_threshold' and value='$out'
