@@ -107,13 +107,14 @@ stateful_start() {
     return $OCF_SUCCESS
 }
 stateful_demote() {
-    # Here, 9 means OCF_FAILED_MASTER that is service is failed on Master node
-    # And so, we can change that to run in slave mode
     stateful_monitor
-    if [ $? -eq 9 ]; then
-        stateful_update "slave"
-        set_master_score "${slave_score}"
+    sspl_state=`systemctl is-active sspl-ll`
+    if [ $sspl_state != 'active' ]; then
+       systemctl start sspl-ll
     fi
+    stateful_update "slave"
+    set_master_score "${slave_score}"
+
     if [ -z $OCF_RESKEY_sspl_mode ]; then
         OCF_RESKEY_sspl_mode="/var/eos/sspl/data/state.txt"
     fi
@@ -126,7 +127,11 @@ stateful_promote() {
     sspl_pid=`/sbin/pidof -s /usr/bin/sspl_ll_d`
     if [ -z $sspl_pid ]; then
         "${HA_SBIN_DIR}/crm_master" -v
-        return $OCF_FAILED_MASTER
+        return stateful_monitor
+    fi
+    sspl_state=`systemctl is-active sspl-ll`
+    if [ $sspl_state != 'active' ]; then
+       systemctl start sspl-ll
     fi
     stateful_update "master"
     set_master_score "${master_score}"
@@ -135,6 +140,10 @@ stateful_promote() {
         OCF_RESKEY_sspl_mode="/var/eos/sspl/data/state.txt"
     fi
     echo "state=active" > /var/eos/sspl/data/state.txt
+    # This is required in promote in order to switch SSPL to active mode.
+    # Here active mode means, some of the SSPL modules will be resumed after
+    # this signal is received by SSPL. Without this sspl won't read updated
+    # configuration.
     /usr/bin/kill -s SIGHUP $sspl_pid
     return 0
 }
@@ -144,32 +153,25 @@ stateful_stop() {
     return $OCF_SUCESS
 }
 stateful_monitor() {
+    sspl_state=`systemctl is-active sspl-ll`
     stateful_check_state "master"
     if [ $? -eq 0 ]; then
         # Restore the master setting during probes
         set_master_score "${master_score}"
-        systemctl status sspl-ll | grep "Active: failed"
-        if [ $? -eq 0 ]; then
-            return $OCF_FAILED_MASTER
-        fi
-        systemctl status sspl-ll
-        if [ $? -eq 0 ]; then
-            return $OCF_RUNNING_MASTER
-        else
-            return $OCF_ERR_GENERIC
-        fi
+        case "$sspl_state" in
+              active) return $OCF_RUNNING_MASTER;;
+              failed) return $OCF_FAILED_MASTER;;
+              inactive) return $OCF_NOT_RUNNING;;
+                     *) return $OCF_ERR_GENERIC;;
+        esac
     fi
+
     set_master_score "${slave_score}"
-    systemctl status sspl-ll | grep "Active: failed"
-    if [ $? -eq 0 ]; then
-        return $OCF_ERR_GENERIC
-    fi
-    systemctl status sspl-ll
-    if [ $? -eq 0 ]; then
-        return $OCF_SUCCESS
-    else
-        return $OCF_NOT_RUNNING
-    fi
+    case "$sspl_state" in
+           active) return $OCF_SUCCESS;;
+           failed) return $OCF_ERR_GENERIC;;
+                *) return $OCF_NOT_RUNNING;;
+    esac
 }
 
 stateful_validate() {
