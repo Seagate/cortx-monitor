@@ -175,7 +175,7 @@ class IEMSensor(SensorThread, InternalMsgQ):
                             iem_components = self._extract_iem_components(
                                 iem_msg)
                             if iem_components:
-                                logger.info("IEM mesage {} {}".format(log_timestamp, iem_components))
+                                logger.debug("IEM mesage {} {}".format(log_timestamp, iem_components))
                                 self._send_msg(iem_components)
                                 timestamp_file = open(self._timestamp_file_path, "w")
                                 timestamp_file.write(log_timestamp)
@@ -382,7 +382,8 @@ class IEMSensor(SensorThread, InternalMsgQ):
             components.append(iem_parts[0][2:5]) # Component ID
             components.append(iem_parts[0][5:8]) # Module ID
             components.append(iem_parts[0][8:]) # Event ID
-            components.append(iem_parts[1]) # Description level
+            # if description is having ':'
+            components.append(":".join(iem_parts[1:])) # Description level
         return components
 
     def _create_file(self, path):

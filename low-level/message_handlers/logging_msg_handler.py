@@ -115,11 +115,13 @@ class LoggingMsgHandler(ScheduledModuleThread, InternalMsgQ):
         log_type = jsonMsg.get("actuator_request_type").get("logging").get("log_type")
 
         result = "N/A"
-        if log_type == "IEM":
-            self._log_debug("_process_msg, msg_type: IEM")
-            if self._iem_log_locally == "true":
-                result = self._iem_logger.log_msg(jsonMsg)
-                self._log_debug(f"Log IEM results: {result}")
+
+        # Disabled for EES
+        # if log_type == "IEM":
+        #     self._log_debug("_process_msg, msg_type: IEM")
+        #     if self._iem_log_locally == "true":
+        #         result = self._iem_logger.log_msg(jsonMsg)
+        #         self._log_debug(f"Log IEM results: {result}")
 
         if log_type == "HDS":
             # Retrieve the serial number of the drive
@@ -146,8 +148,9 @@ class LoggingMsgHandler(ScheduledModuleThread, InternalMsgQ):
             # Send the event to disk message handler to generate json message
             self._write_internal_msgQ("DiskMsgHandler", internal_json_msg)
 
+            # Disabled for EES
             # Hand off to the IEM logger
-            result = self._iem_logger.log_msg(jsonMsg)
+            # result = self._iem_logger.log_msg(jsonMsg)
 
             # Send ack about logging msg
             ack_msg = AckResponseMsg(log_type, result, uuid).getJson()
@@ -155,9 +158,10 @@ class LoggingMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
         # ... handle other logging types
 
+        # Disabled for EES
         # Route the IEM if enabled
-        if self._iem_routing_enabled == "true":
-            self._route_IEM(jsonMsg)
+        #if self._iem_routing_enabled == "true":
+        #    self._route_IEM(jsonMsg)
 
     def _route_IEM(self, jsonMsg):
         # Send the IEM to the logging msg handler to be processed
