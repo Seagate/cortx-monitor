@@ -274,6 +274,7 @@ class NodeHWactuator(Actuator, Debug):
         :param response:
         :return:
         """
+        response['host_id'] = self.host_id
         response['instance_id'] = self._resource_id
         response['alert_type'] = AlertTypes.GET.value
         response['severity'] = SeverityTypes.INFORMATIONAL.value
