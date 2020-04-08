@@ -68,17 +68,6 @@ hard_reset()
         /usr/sbin/userdel sspl-ll
     fi
 
-    # Remove rabbitmq configurations
-    systemctl status rabbitmq-server 1>/dev/null && export status=true || export status=false
-    if [ "$status" = "false" ]; then
-        systemctl start rabbitmq-server
-    fi
-
-    # Reset RabbitMQ configuration
-    /sbin/rabbitmqctl stop_app;
-    /sbin/rabbitmqctl reset;
-    /sbin/rabbitmqctl start_app;
-
     # Remove log directories
     rm -rf /var/log/eos/sspl
     rm -rf /var/log/eos/iem
