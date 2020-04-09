@@ -252,7 +252,20 @@ def _create_vhost_if_necessary(virtual_host, product):
         for vhost in vhosts[1:-1]:
             if vhost == virtual_host:
                 return
-        subprocess.check_call([RABBITMQCTL, 'add_vhost', virtual_host])
+        try:
+            subprocess.check_output(
+                    f'{RABBITMQCTL} add_vhost {virtual_host}',
+                    shell=True, stderr=subprocess.PIPE
+            )
+        except subprocess.CalledProcessError as e:
+            err_msg = e.stderr.decode('utf-8')
+            print(f'Sub process failed: error: {err_msg}')
+            if 'vhost_already_exists' in err_msg:
+                print(f'Not creating new virtual host in RabbitMQ')
+            else:
+                raise
+        else:
+            print(f'Created new virtual host {virtual_host} in RabbitMQ')
     else:
         raise ValueError("Product should be one of: %s" % (cs_legacy_products + enabled_products))
 
@@ -316,7 +329,20 @@ def _create_user_if_necessary(username, password, virtual_host, product):
                 found_user = True
                 break
         if not found_user:
-            subprocess.check_call([RABBITMQCTL, 'add_user', username, password])
+            try:
+                subprocess.check_output(
+                        f'{RABBITMQCTL} add_user {username} {password}',
+                        shell=True, stderr=subprocess.PIPE
+                )
+            except subprocess.CalledProcessError as e:
+                err_msg = e.stderr.decode('utf-8')
+                print(f'Sub process failed: error: {err_msg}')
+                if 'user_already_exists' in err_msg:
+                    print(f'Not creating new user in RabbitMQ')
+                else:
+                    raise
+            else:
+                print(f'Created new user {username} in RabbitMQ')
         subprocess.check_call(
             [
                 RABBITMQCTL, 'set_permissions',
