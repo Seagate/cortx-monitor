@@ -47,6 +47,8 @@ from framework.utils.service_logging import init_logging
 from framework.utils.service_logging import logger
 from framework.utils.config_reader import ConfigReader
 from framework.base.sspl_constants import RESOURCE_PATH
+from framework.base.sspl_constants import ServiceTypes
+from framework.utils import encryptor
 
 try:
     use_security_lib=True
@@ -56,6 +58,8 @@ except Exception as ae:
 
 class ManualTest():
     # Section and keys in configuration file
+    SYSTEM_INFORMATION   = "SYSTEM_INFORMATION"
+    CLUSTER_ID           = "cluster_id"
     VIRTUALHOST          = "virtual_host"
     INGRESSQUEU          = "queue_name"
     QUEUE_NAME           = "queue_name"
@@ -113,7 +117,7 @@ class ManualTest():
                                    self.JSON_SENSOR_SCHEMA)
         self._sensor_schema = self._load_schema(schema_file)
 
-        self._durable = False
+        self._durable = True
         if start_threads:
             # Start up threads to receive responses
             self._basic_consume_ackt = threading.Thread(target=self.basicConsumeAck)
@@ -167,6 +171,11 @@ class ManualTest():
                                                     self.module_name,
                                                     self.VIRTUALHOST,
                                                     'SSPL')
+        # Need to keep cluster_id string here to generate decryption key
+        self.cluster_id = conf_reader._get_value_with_default(
+                                                self.SYSTEM_INFORMATION,
+                                                self.CLUSTER_ID,
+                                                '001')
 
         # Ingress configuration
         if self.module_name == "RABBITMQINGRESSPROCESSOR":
@@ -216,15 +225,15 @@ class ManualTest():
                                                         'ras_control')
 
         self._ackexchangename = conf_reader._get_value_with_default(
-                                                    self.module_name,
+                                                    'RABBITMQEGRESSPROCESSOR',
                                                     self.ACKEXCHANGE_NAME,
                                                     'sspl-out')
         self._ackqueuename = conf_reader._get_value_with_default(
-                                                    self.module_name,
+                                                    'RABBITMQEGRESSPROCESSOR',
                                                     self.ACKQUEUE_NAME,
                                                     'actuator-resp-queue')
         self._ackroutingkey = conf_reader._get_value_with_default(
-                                                    self.module_name,
+                                                    'RABBITMQEGRESSPROCESSOR',
                                                     self.ACKROUTINGKEY,
                                                     'actuator-resp-key')
         self._exchangename = conf_reader._get_value_with_default(
@@ -244,15 +253,15 @@ class ManualTest():
                                                     self.PASSWORD,
                                                     'sspl4ever')
         self._signature_user = conf_reader._get_value_with_default(
-                                                    self.module_name,
+                                                    'RABBITMQEGRESSPROCESSOR',
                                                     self.SIGNATURE_USERNAME,
                                                     'sspl-ll')
         self._signature_token = conf_reader._get_value_with_default(
-                                                    self.module_name,
+                                                    'RABBITMQEGRESSPROCESSOR',
                                                     self.SIGNATURE_TOKEN,
                                                     'ALOIUD986798df69a8koDISLKJ282983')
         self._signature_expires = conf_reader._get_value_with_default(
-                                                    self.module_name,
+                                                    'RABBITMQEGRESSPROCESSOR',
                                                     self.SIGNATURE_EXPIRES,
                                                     "3600")
         if self.module_name == "PLANECNTRLRMQEGRESSPROCESSOR":
@@ -267,6 +276,9 @@ class ManualTest():
         else:
             self._primary_rabbitmq_server   = "localhost"
             self._secondary_rabbitmq_server = "localhost"
+
+        decryption_key = encryptor.gen_key(self.cluster_id, ServiceTypes.RABBITMQ.value)
+        self._password = encryptor.decrypt(decryption_key, self._password.encode('ascii'))
 
         self._current_rabbitmq_server  = self._primary_rabbitmq_server
 

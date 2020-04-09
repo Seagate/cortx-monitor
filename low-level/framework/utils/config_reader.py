@@ -89,7 +89,8 @@ class ConfigReader(object):
 
     def read_test_conf(self, test_config_path):
         print("ENV=test")
-        if not os.path.isfile(test_config_path):
+        config = test_config_path
+        if not os.path.isfile(config):
             raise IOError("config file %s does not exist." %
                         config)
         elif not os.access(config, os.R_OK):
