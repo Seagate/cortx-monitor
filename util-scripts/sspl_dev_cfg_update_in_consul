@@ -1,0 +1,46 @@
+#!/bin/bash
+
+# Make the below changes as per the need.
+######################################################
+encl_primary_controller_ip="127.0.0.1"
+encl_primary_controller_port="28200"
+encl_user="manage"
+encl_pass="!manage"
+rbmq_pass="sspl4ever"
+######################################################
+
+declare -A sspl_conf_update
+cluster_id=$(salt-call grains.get cluster_id --output=newline_values_only)
+rbmq_key=$(python3 -c 'from eos.utils.security.cipher import Cipher; print(Cipher.generate_key('"'$cluster_id'"', "rabbitmq"))')
+encl_key=$(python3 -c 'from eos.utils.security.cipher import Cipher; print(Cipher.generate_key('"'$cluster_id'"', "storage_enclosure"))')
+encl_encrypt_pass=$(python3 -c 'from eos.utils.security.cipher import Cipher; print(Cipher.encrypt('$encl_key', '"'$encl_pass'"'.encode()).decode("utf-8"))')
+rbmq_encrypt_pass=$(python3 -c 'from eos.utils.security.cipher import Cipher; print(Cipher.encrypt('$rbmq_key', '"'$rbmq_pass'"'.encode()).decode("utf-8"))')
+sspl_conf_update=(
+        ["sspl/config/STORAGE_ENCLOSURE/primary_controller_ip"]=$encl_primary_controller_ip
+        ["sspl/config/STORAGE_ENCLOSURE/primary_controller_port"]=$encl_primary_controller_port
+        ["sspl/config/STORAGE_ENCLOSURE/user"]=$encl_user
+        ["sspl/config/STORAGE_ENCLOSURE/password"]=$encl_encrypt_pass
+        ["sspl/config/SYSTEM_INFORMATION/cluster_id"]=$cluster_id
+        ["sspl/config/RABBITMQINGRESSPROCESSOR/password"]=$rbmq_encrypt_pass
+        ["sspl/config/RABBITMQEGRESSPROCESSOR/password"]=$rbmq_encrypt_pass
+        ["sspl/config/LOGGINGPROCESSOR/password"]=$rbmq_encrypt_pass
+)
+
+for conf_val in "${!sspl_conf_update[@]}";
+    do /opt/seagate/eos/hare/bin/consul kv put $conf_val ${sspl_conf_update[$conf_val]}; echo ${sspl_conf_update[$conf_val]}
+done
+
+echo "Restarting SSPL"
+$sudo systemctl restart sspl-ll
+
+echo "SSPL Service started."
+echo "Waiting 5 seconds to initialize."
+sleep 5
+
+# Switch SSPL to active state to resume all the suspended plugins.
+# Sending SIGHUP to SSPL makes SSPL to read state file and switch state.
+# Doesn't need below line for dual node setup.
+# Uncomment below line of code for a single node setup or dev environment.
+# echo "state=active" > /var/eos/sspl/data/state.txt
+PID=`/sbin/pidof -s /usr/bin/sspl_ll_d`
+kill -s SIGHUP $PID
