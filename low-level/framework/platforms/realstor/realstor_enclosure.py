@@ -67,6 +67,7 @@ class RealStorEnclosure(StorageEnclosure):
     URI_CLIAPI_SHOWSENSORSTATUS = "/show/sensor-status"
     URI_CLIAPI_SASHEALTHSTATUS = "/show/sas-link-health"
     URI_CLIAPI_SHOWEVENTS = "/show/events"
+    URI_CLIAPI_SHOWVERSION = "/show/version/detail"
 
     # Realstor generic health states
     HEALTH_OK = "ok"

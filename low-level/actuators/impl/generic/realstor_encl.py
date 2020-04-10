@@ -88,7 +88,7 @@ class RealStorActuator(Actuator, Debug):
                     resource), component ,component_type, resource)
             elif component == "sensor":
                 response = self.make_response(
-                            self._get_sensor_status(sensor_type=component_type, sensor_name=resource),
+                            self._get_sensor_data(sensor_type=component_type, sensor_name=resource),
                             component,
                             component_type,
                             resource)
@@ -98,6 +98,15 @@ class RealStorActuator(Actuator, Debug):
                     response = self._handle_ports_request(enclosure_request, resource)
                 else:
                     logger.error("Some unsupported interface passed, interface:{}".format(enclosure_type))
+            elif component == "system":
+                if component_type == 'info':
+                    response = self.make_response(
+                            self._get_system_info(),
+                            component,
+                            component_type,
+                            resource)
+                else:
+                    logger.error("Unsupported system request :{}".format(component_type))
 
         except Exception as e:
             logger.exception("Error while getting details for JSON: {}".format(jsonMsg))
@@ -347,56 +356,29 @@ class RealStorActuator(Actuator, Debug):
         resource_id = response.get("name", None)
         return resource_id
 
-    def _get_sensor_status(self, sensor_type, sensor_name):
-            """Retreive realstor sensor info using cli api /show/sensor-status"""
-
-            # make ws request
-            url = self.rssencl.build_url(
-                    self.rssencl.URI_CLIAPI_SHOWSENSORSTATUS)
-
-            response = self.rssencl.ws_request(url, self.rssencl.ws.HTTP_GET)
-
-            if not response:
-                logger.warn("{0}:: Sensor status unavailable as ws request {1}"
-                    " failed".format(self.rssencl.EES_ENCL, url))
-                return
-
-            if response.status_code != self.rssencl.ws.HTTP_OK:
-                if url.find(self.rssencl.ws.LOOPBACK) == -1:
-                    logger.error("{0}:: http request {1} to poll sensor failed with"
-                        " err {2}".format(self.rssencl.EES_ENCL, url, response.status_code))
-                return
-
-            try:
-                jresponse = json.loads(response.content)
-            except ValueError as badjson:
-                logger.error("%s returned mal-formed json:\n%s" % (url, badjson))
-
-            if jresponse:
-                api_resp = self.rssencl.get_api_status(jresponse['status'])
-
-                if ((api_resp == -1) and
-                    (response.status_code == self.rssencl.ws.HTTP_OK)):
-                    logger.warn("/show/sensor-status api response unavailable, "
-                        "marking success as http code is 200")
-                    api_resp = 0
-
-                if api_resp == 0:
-                    sensors = jresponse["sensors"]
-
-                    #TODO: optimize for specific sensor
-                    if sensor_name != self.RESOURCE_ALL:
-                        for sensor in sensors:
-                            if sensor["sensor-name"] == sensor_name:
-                                return sensor
-                    else:
-                        sensors = [sensor for sensor in sensors
-                                if sensor["sensor-type"] == sensor_type.title()]
-
-                        for sensor in sensors:
-                            sensor['resource_id'] = sensor["sensor-name"]
-
-                        return sensors
+    def _get_sensor_data(self, sensor_type, sensor_name):
+        """Retreive realstor sensor info using cli api /show/sensor-status"""
+        sensor_response = self._get_encl_response(
+                self.rssencl.URI_CLIAPI_SHOWSENSORSTATUS,
+                self.rssencl.ws.HTTP_GET
+        )
+        if sensor_response:
+            #TODO: optimize for specific sensor
+            if sensor_name != self.RESOURCE_ALL:
+                for sensor in sensor_response["sensors"]:
+                    if sensor["sensor-name"] == sensor_name:
+                        return sensor
+                else:
+                    return {}
+            else:
+                sensors = []
+                for sensor in sensor_response["sensors"]:
+                    if sensor["sensor-type"] == sensor_type.title():
+                        sensor["resource_id"] = sensor["sensor-name"]
+                        sensors.append(sensor)
+                return sensors
+        else:
+            return {"error": "failed to get data from enclosure"}
 
     def _get_psu(self, psu_name):
         #build url for fetching the psu type data
@@ -565,3 +547,63 @@ class RealStorActuator(Actuator, Debug):
                     else:
                         response['specific_info']["reason"] = "Data not available for port interface: {}.".format(
                             self._resource_id.lower())
+
+    def _get_system_info(self):
+        """ return data from /show/system and /show/version/detail api"""
+        system_data = self._get_encl_response(
+               self.rssencl.URI_CLIAPI_SHOWSYSTEM,
+               self.rssencl.ws.HTTP_GET
+        )
+        version_data = self._get_encl_response(
+            self.rssencl.URI_CLIAPI_SHOWVERSION,
+            self.rssencl.ws.HTTP_GET
+        )
+        error_data = {"error": "failed to get data from enclosure"}
+        if system_data:
+            try:
+                system_data = system_data["system"][0]
+                try:
+                    del system_data["unhealthy-component"]
+                except KeyError:
+                    pass
+            except (KeyError, IndexError):
+                system_data = error_data
+        else:
+            system_data = error_data
+
+        if version_data:
+            try:
+                version_data = version_data["versions"]
+            except KeyError:
+                version_data = error_data
+        else:
+            version_data = error_data
+
+        response = {
+            "system": system_data,
+            "versions": version_data
+        }
+        return response
+
+    def _get_encl_response(self, uri, request_type):
+        """ query enclosure and return json data"""
+        url = self.rssencl.build_url(uri)
+        response = self.rssencl.ws_request(url, request_type)
+        if not response:
+            logger.warn(f"Failed to get data for {uri}")
+            return None
+        if response.status_code != self.rssencl.ws.HTTP_OK:
+            logger.error(f"Failed to get data for {uri}")
+            return None
+        try:
+            response = json.loads(response.content)
+            api_response = self.rssencl.get_api_status(response.get('status'))
+            if api_response == 0 or \
+                (api_response == -1 and response.status_code == self.rssencl.ws.HTTP_OK):
+                return response
+            else:
+                logger.error(f"invalid data for {uri}")
+                return None
+        except ValueError as err:
+            logger.error(f"invalid data for {uri} {err}")
+            return None
