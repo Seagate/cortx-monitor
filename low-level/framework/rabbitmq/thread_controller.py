@@ -32,7 +32,7 @@ from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 from framework.rabbitmq.rabbitmq_ingress_processor import RabbitMQingressProcessor
 from framework.rabbitmq.plane_cntrl_rmq_egress_processor import PlaneCntrlRMQegressProcessor
 from framework.rabbitmq.logging_processor import LoggingProcessor
-from framework.base.sspl_constants import enabled_products, cs_legacy_products, cs_products
+from framework.base.sspl_constants import enabled_products, cs_legacy_products, cs_products, OperatingSystem
 
 # Note that all threaded message handlers must have an import here to be controlled
 from message_handlers.logging_msg_handler import LoggingMsgHandler
@@ -129,7 +129,7 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
         self._operating_system = operating_system
         self._systemd_support = systemd_support
 
-        if operating_system == "centos7":
+        if operating_system == OperatingSystem.CENTOS7.value or operating_system == OperatingSystem.RHEL7.value:
             # Note that all threaded sensors and actuators must have an
             # import here to be controlled
             from sensors.impl.centos_7.systemd_watchdog import SystemdWatchdog

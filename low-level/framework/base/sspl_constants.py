@@ -45,6 +45,13 @@ class ServiceTypes(Enum):
     RABBITMQ = "rabbitmq"
     STORAGE_ENCLOSURE = "storage_enclosure"
 
+class OperatingSystem(Enum):
+    CENTOS7 = "centos7"
+    CENTOS6 = "centos6"
+    RHEL7 = "rhel7"
+    RHEL6 = "rhel6"
+    OSX = "osX"
+
 iem_severity_types = {
     "A": "alert",
     "X": "critical",

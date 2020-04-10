@@ -55,6 +55,7 @@ from framework.rabbitmq.logging_processor import LoggingProcessor
 from framework.rabbitmq.thread_controller import ThreadController
 from framework.rabbitmq.rabbitmq_egress_accumulated_msgs_processor import \
     RabbitMQEgressAccumulatedMsgsProcessor
+from framework.base.sspl_constants import OperatingSystem
 
 from actuators.impl.actuator import Actuator
 from message_handlers.node_controller_msg_handler import NodeControllerMsgHandler
@@ -409,7 +410,7 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist, operating_system
     logger.info("sspl-ll Bootstrap: actuators to load: %s" % actuators)
 
     # Import in the proper classes based upon values from config file
-    if operating_system == "centos7":
+    if operating_system == OperatingSystem.CENTOS7.value or operating_system == OperatingSystem.RHEL7.value:
         from actuators.impl.centos_7.systemd_service import SystemdService as Service
         from actuators.impl.centos_7.command_line import CommandLine as CommandLine
         from actuators.impl.centos_7.systemd_login import SystemdLogin as Login
@@ -417,11 +418,11 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist, operating_system
         from sensors.impl.centos_7.systemd_watchdog import SystemdWatchdog as ServiceWatchdog
         from sensors.impl.centos_7.hpi_monitor import HPIMonitor as HPIMonitor
 
-    elif operating_system == "centos6":
+    elif operating_system == OperatingSystem.CENTOS6.value or operating_system == OperatingSystem.RHEL6.value:
         # Nothing yet
         pass
 
-    elif operating_system in ["osX", "osx"]:
+    elif operating_system in [OperatingSystem.OSX.value, OperatingSystem.OSX.value.lower()]:
         from actuators.impl.os_x.xinitd_service import XinitdService as Service
         from actuators.impl.os_x.xinitd_login import XinitdLogin as Login
         from sensors.impl.os_x.drive_manager import DriveManager as DriveManager
