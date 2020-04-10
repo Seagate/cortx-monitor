@@ -9,6 +9,7 @@ Group:      Libraries/System
 License:    Seagate Proprietary
 URL:        http://gerrit.mero.colo.seagate.com:8080/#/admin/projects/sspl
 Source0:    eos-sspl-%{version}.tgz
+Requires:   eos-sspl
 BuildRoot:  %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 Vendor:     Seagate Technology LLC
 #BuildArch:  x86_64
