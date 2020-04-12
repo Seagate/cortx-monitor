@@ -1,5 +1,13 @@
 #!/bin/bash
+set -eu -o pipefail
+
+# Redirect all printouts to the log file with the timestamp prefix:
+exec &>> /var/log/eos/sspl/consul-${0##*/}.log
+exec &> >(stdbuf -oL gawk '{ print strftime("%Y-%m-%d %H:%M:%S"), $0 }')
 
 SSPL_PID=`/sbin/pidof -s /usr/bin/sspl_ll_d`
+LOG_LEVEL=`curl -Ss -XGET \
+           http://127.0.0.1:8500/v1/kv/sspl/SYSTEM_INFORMATION/log_level | \
+           jq -r '.[].Value' | base64 -d`
 kill -SIGUSR1 $SSPL_PID
-echo "Signal sent to $SSPL_PID to update sspl log level"
+echo "Notifying $SSPL_PID, sspl log level changed to $LOG_LEVEL"
