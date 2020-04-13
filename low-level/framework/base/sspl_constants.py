@@ -4,10 +4,14 @@ from enum import Enum
 enabled_products = ["EES", "CS-A"]
 cs_products = ["CS-A"]
 cs_legacy_products = ["CS-L", "CS-G"]
+setups = ["eos"]
 RESOURCE_PATH = "/opt/seagate/eos/sspl/resources/"
 SSPL_STORE_TYPE = 'consul'
 CONSUL_HOST = '127.0.0.1'
 CONSUL_PORT = '8500'
+SYSINFO = "SYSTEM_INFORMATION"
+PRODUCT = "product"
+SETUP = "setup"
 
 # required only for init
 component = 'sspl/config'

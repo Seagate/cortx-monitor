@@ -63,7 +63,8 @@ case $cmd in
         ;;
 
     check )
-        [ -f $SSPL_CONFIGURED ]  && exit 0
+        python3 $SCRIPT_DIR/validate_consul_config.py
+        [ -f $SSPL_CONFIGURED ] && exit $?
         logger -i -p local3.err "SSPL is not configured. Run provisioner scripts in /opt/seagate/eos/sspl/bin."
         exit 1
         ;;
