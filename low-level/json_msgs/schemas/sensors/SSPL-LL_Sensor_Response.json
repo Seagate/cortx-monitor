@@ -314,7 +314,7 @@
 										},
 										"cluster_id": {
 											"description": "Cluster identification to locate enclosure",
-											"type": "integer",
+											"type": "string",
 											"required": true
 										},
 										"resource_type": {
@@ -671,7 +671,7 @@
 								},
 								"cluster_id": {
 									"description": "Cluster identification to locate enclosure",
-									"type": "integer",
+									"type": "string",
 									"required": true
 								},
 								"resource_type": {
@@ -836,7 +836,7 @@
                                                 },
                                         "cluster_id": {
                                             "description": "Cluster identification to locate sensor",
-                                            "type": "integer",
+                                            "type": "string",
                                             "required": true
                                                 },
                                         "resource_type": {

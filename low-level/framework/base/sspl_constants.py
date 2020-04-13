@@ -13,6 +13,8 @@ CONSUL_PORT = '8500'
 component = 'sspl/config'
 file_store_config_path = '/etc/sspl.conf'
 salt_provisioner_pillar_sls = 'sspl'
+salt_uniq_attr_per_node = ['cluster_id']
+salt_uniq_passwd_per_node = ['RABBITMQINGRESSPROCESSOR', 'RABBITMQEGRESSPROCESSOR', 'LOGGINGPROCESSOR']
 
 class AlertTypes(Enum):
     GET = "get"

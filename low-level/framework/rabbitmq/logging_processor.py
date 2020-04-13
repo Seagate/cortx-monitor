@@ -200,7 +200,7 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
 
             # Decrypt RabbitMQ Password
             decryption_key = encryptor.gen_key(cluster_id, ServiceTypes.RABBITMQ.value)
-            self._password = encryptor.decrypt(decryption_key, self._password.encode('ascii'))
+            self._password = encryptor.decrypt(decryption_key, self._password.encode('ascii'), "LoggingProcessor")
 
             self._connection = RabbitMQSafeConnection(
                 self._username, self._password, self._virtual_host,

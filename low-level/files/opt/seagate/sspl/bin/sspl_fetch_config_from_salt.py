@@ -19,7 +19,8 @@ import sys
 import salt.client
 import consul
 from configparser import ConfigParser
-from sspl_constants import component, salt_provisioner_pillar_sls, CONSUL_HOST, CONSUL_PORT
+from sspl_constants import component, salt_provisioner_pillar_sls, CONSUL_HOST, CONSUL_PORT, \
+     salt_uniq_attr_per_node, salt_uniq_passwd_per_node
 
 
 class SaltConfig(object):
@@ -46,9 +47,17 @@ class SaltConfig(object):
          # for the pattern section : { 'key' : 'value' }
          parser = ConfigParser()
          parser.read_dict(new_conf)
+         # Password is same for RABBITMQINGRESSPROCESSOR, RABBITMQEGRESSPROCESSOR & LOGGINGPROCESSOR
+         rbmq_pass = salt.client.Caller().function('pillar.get',
+                         'rabbitmq:sspl:RABBITMQINGRESSPROCESSOR:password')
          for sect in parser.sections():
             for k, v in parser.items(sect):
-                  consul_conn.kv.put(component + '/' + sect + '/' + k, v)
+                if k in salt_uniq_attr_per_node:
+                    v = salt.client.Caller().function('grains.get', k)
+                elif sect in salt_uniq_passwd_per_node and k == 'password':
+                    if rbmq_pass:
+                        v = rbmq_pass
+                consul_conn.kv.put(component + '/' + sect + '/' + k, v)
 
       except Exception as serror:
             print("Error in connecting salt | consul: {}".format(serror))

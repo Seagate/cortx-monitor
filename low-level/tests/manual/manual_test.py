@@ -278,7 +278,7 @@ class ManualTest():
             self._secondary_rabbitmq_server = "localhost"
 
         decryption_key = encryptor.gen_key(self.cluster_id, ServiceTypes.RABBITMQ.value)
-        self._password = encryptor.decrypt(decryption_key, self._password.encode('ascii'))
+        self._password = encryptor.decrypt(decryption_key, self._password.encode('ascii'), "TestRabbitmqEgressProcessor")
 
         self._current_rabbitmq_server  = self._primary_rabbitmq_server
 

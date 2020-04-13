@@ -119,7 +119,7 @@ def disk_actuator_message_request(resource_type):
             "request_path": {
                 "site_id": 1,
                 "rack_id": 1,
-                "cluster_id": 1,
+                "cluster_id": '1',
                 "node_id": 1
             },
             "response_dest": {},

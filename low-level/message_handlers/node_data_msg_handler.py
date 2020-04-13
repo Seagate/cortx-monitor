@@ -135,10 +135,10 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                                                 self.NODE_ID,
                                                 0))
 
-        self.cluster_id = int(self._conf_reader._get_value_with_default(
+        self.cluster_id = self._conf_reader._get_value_with_default(
                                                 self.SYSTEM_INFORMATION,
                                                 self.CLUSTER_ID,
-                                                0))
+                                                '0')
         self.nw_status = {}
         self._node_sensor    = None
         self._login_actuator = None

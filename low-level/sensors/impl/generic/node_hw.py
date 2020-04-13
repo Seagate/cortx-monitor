@@ -195,10 +195,10 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
                                                 self.NODE_ID,
                                                 0))
 
-        self._cluster_id = int(conf_reader._get_value_with_default(
+        self._cluster_id = conf_reader._get_value_with_default(
                                                 self.SYSTEM_INFORMATION,
                                                 self.CLUSTER_ID,
-                                                0))
+                                                '0')
 
         # A dummy file path check to select ipmi simulator if sanity test
         # intends to use simulator, otherwise default.

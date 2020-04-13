@@ -20,9 +20,11 @@ import consul
 import configparser
 try:
     import salt.client
-    from sspl_constants import component, file_store_config_path, salt_provisioner_pillar_sls, SSPL_STORE_TYPE, StoreTypes
+    from sspl_constants import component, file_store_config_path, salt_provisioner_pillar_sls, \
+         SSPL_STORE_TYPE, StoreTypes, salt_uniq_passwd_per_node
 except Exception as e:
-    from framework.base.sspl_constants import component, salt_provisioner_pillar_sls, file_store_config_path, SSPL_STORE_TYPE, StoreTypes
+    from framework.base.sspl_constants import component, salt_provisioner_pillar_sls, \
+         file_store_config_path, SSPL_STORE_TYPE, StoreTypes, salt_uniq_passwd_per_node
     from framework.utils.consulstore import ConsulStore
     from framework.utils.filestore import FileStore
 
@@ -63,6 +65,15 @@ class ConfigReader(object):
                 str_keys = [k for k,v in new_conf.items() if isinstance(v, str)]
                 for k in str_keys:
                     del new_conf[k]
+                common_cluster_id = salt.client.Caller().function('grains.get', 'cluster_id')
+                # Password is same for RABBITMQINGRESSPROCESSOR, RABBITMQEGRESSPROCESSOR & LOGGINGPROCESSOR
+                rbmq_pass = salt.client.Caller().function('pillar.get',
+                               'rabbitmq:sspl:RABBITMQINGRESSPROCESSOR:password')
+                if common_cluster_id:
+                    new_conf.get('SYSTEM_INFORMATION')['cluster_id'] = common_cluster_id
+                for sect in salt_uniq_passwd_per_node:
+                    if rbmq_pass:
+                        new_conf.get(sect)['password'] = rbmq_pass
                 self.store = configparser.ConfigParser(allow_no_value=True)
                 self.store.read_dict(new_conf)
             elif store_type == StoreTypes.FILE.value:

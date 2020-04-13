@@ -14,7 +14,8 @@
  ****************************************************************************
 """
 
-from eos.utils.security.cipher import Cipher
+from eos.utils.security.cipher import Cipher, CipherInvalidToken
+from framework.utils.service_logging import logger
 
 
 def gen_key(cluster_id, service_name):
@@ -30,6 +31,12 @@ def encrypt(key, text):
     return Cipher.encrypt(key, text.encode())
 
 
-def decrypt(key, text):
+def decrypt(key, text, caller=None):
     '''Decrypt the <text>'''
-    return Cipher.decrypt(key, text).decode()
+    decrypt_text = text
+    try:
+        decrypt_text = Cipher.decrypt(key, text).decode()
+        return decrypt_text
+    except CipherInvalidToken as e:
+        logger.error("{0}:Password decryption failed requested by {1}.".format(e, caller))
+        return decrypt_text.decode()

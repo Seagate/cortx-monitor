@@ -276,7 +276,7 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
                                              self.NODE_ID_KEY, '')
             # Decrypt RabbitMQ Password
             decryption_key = encryptor.gen_key(cluster_id, ServiceTypes.RABBITMQ.value)
-            self._password = encryptor.decrypt(decryption_key, self._password.encode('ascii'))
+            self._password = encryptor.decrypt(decryption_key, self._password.encode('ascii'), "RabbitMQingressProcessor")
 
             # Create a routing key unique to this instance
             unique_routing_key = f'{self._routing_key}_node{node_id}'

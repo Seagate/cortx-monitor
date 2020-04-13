@@ -194,7 +194,7 @@ def enclosure_sensor_message_request(resource_type, resource_id):
             "request_path": {
                 "site_id": 1,
                 "rack_id": 1,
-                "cluster_id": 1,
+                "cluster_id": '1',
                 "node_id": 1
             },
             "response_dest": {},

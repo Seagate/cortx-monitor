@@ -16,7 +16,7 @@ import pika
 
 from configparser import ConfigParser
 from config_reader import ConfigReader
-from eos.utils.security.cipher import Cipher
+from eos.utils.security.cipher import Cipher, CipherInvalidToken
 
 RABBITMQCTL = '/usr/sbin/rabbitmqctl'
 SECTION="RABBITMQEGRESSPROCESSOR"
@@ -56,7 +56,13 @@ def gen_key(cluster_id, service_name):
 
 def decrypt(key, text):
     '''Decrypt the <text>'''
-    return Cipher.decrypt(key, text).decode()
+    decrypt_text = text
+    try:
+        decrypt_text = Cipher.decrypt(key, text).decode()
+        return decrypt_text
+    except CipherInvalidToken as e:
+        print("Password decryption failed requested by %s" % SECTION)
+        return decrypt_text.decode()
 
 
 def main(product):

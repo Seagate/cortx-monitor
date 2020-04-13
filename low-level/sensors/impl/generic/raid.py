@@ -109,8 +109,8 @@ class RAIDsensor(SensorThread, InternalMsgQ):
 
         self._site_id = int(self._conf_reader._get_value_with_default(
                                 self.SYSTEM_INFORMATION, self.SITE_ID, 0))
-        self._cluster_id = int(self._conf_reader._get_value_with_default(
-                                self.SYSTEM_INFORMATION, self.CLUSTER_ID, 0))
+        self._cluster_id = self._conf_reader._get_value_with_default(
+                                self.SYSTEM_INFORMATION, self.CLUSTER_ID, '0')
         self._rack_id = int(self._conf_reader._get_value_with_default(
                                 self.SYSTEM_INFORMATION, self.RACK_ID, 0))
         self._node_id = int(self._conf_reader._get_value_with_default(

@@ -134,8 +134,8 @@ class IEMSensor(SensorThread, InternalMsgQ):
         self._node_id = int(self._conf_reader._get_value_with_default(
             self.SYSTEM_INFORMATION.upper(), self.NODE_ID_KEY, self.DEFAULT_NODE_ID))
 
-        self._cluster_id = int(self._conf_reader._get_value_with_default(
-            self.SYSTEM_INFORMATION.upper(), self.CLUSTER_ID_KEY, self.DEFAULT_CLUSTER_ID))
+        self._cluster_id = self._conf_reader._get_value_with_default(
+            self.SYSTEM_INFORMATION.upper(), self.CLUSTER_ID_KEY, self.DEFAULT_CLUSTER_ID)
 
         return True
 

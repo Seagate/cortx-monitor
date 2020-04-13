@@ -17,7 +17,7 @@ product=EES
 cli_type=CS-A
 setup=eos
 data_path=/var/eos/sspl/data/
-cluster_id=001
+cluster_id=86f7ed01-25a9-4ea3-ac83-419d61d80468
 site_id=001
 rack_id=001
 node_id=001
@@ -33,7 +33,7 @@ queue_name=actuator-req-queue
 exchange_name=sspl-in
 routing_key=actuator-req-key
 username=sspluser
-password=gAAAAABehkY0is--q2sOErCNQtM_cvgkvyquaun88KvUO20TcFkPG92d84g8BLIKkHlgTOGmo09IS4YwgymMawIjWj8SCJH55A==
+password=gAAAAABelEy2-hxLq8uThrKVZeb8ZY34cUPMYag8aMHJEHpXbaCie2cmeFsNx2nHBMCLLS2Bj9VUp9iSnyYDmywUHI7SsCoRIw==
 primary_rabbitmq_host=localhost
 
 [RABBITMQEGRESSPROCESSOR]
@@ -45,7 +45,7 @@ ack_queue_name=actuator-resp-queue
 ack_exchange_name=sspl-out
 ack_routing_key=actuator-resp-key
 username=sspluser
-password=gAAAAABehkY0is--q2sOErCNQtM_cvgkvyquaun88KvUO20TcFkPG92d84g8BLIKkHlgTOGmo09IS4YwgymMawIjWj8SCJH55A==
+password=gAAAAABelEy2-hxLq8uThrKVZeb8ZY34cUPMYag8aMHJEHpXbaCie2cmeFsNx2nHBMCLLS2Bj9VUp9iSnyYDmywUHI7SsCoRIw==
 message_signature_username=sspl-ll
 message_signature_token=ALOIUD986798df69a8koDISLKJ282983
 message_signature_expires=3600
@@ -60,7 +60,7 @@ queue_name=iem-queue
 exchange_name=sspl-in
 routing_key=iem-key
 username=sspluser
-password=gAAAAABehkY0is--q2sOErCNQtM_cvgkvyquaun88KvUO20TcFkPG92d84g8BLIKkHlgTOGmo09IS4YwgymMawIjWj8SCJH55A==
+password=gAAAAABelEy2-hxLq8uThrKVZeb8ZY34cUPMYag8aMHJEHpXbaCie2cmeFsNx2nHBMCLLS2Bj9VUp9iSnyYDmywUHI7SsCoRIw==
 primary_rabbitmq_host=localhost
 
 [RABBITMQCLUSTER]
@@ -127,7 +127,7 @@ primary_controller_port=28200
 secondary_controller_ip=127.0.0.1
 secondary_controller_port=28200
 user=xxxxx
-password=gAAAAABehkmVHStx337AN2g6OTALqA5BNejmWD6Nu__25DgYzauLz6iGLLCDzqs71pP7Z5AV-oEvnOPGKomJiTzyPwOHnmylEQ==
+password=gAAAAABelDwUnl72CcoHjENcV9KmPkZTd-YPrAn1BbS6AaNGtho-VztVhx0f1ZEfX3zRlMoR3rIefrwwf_9qhMeCZcepUwi7xQ==
 mgmt_interface=cliapi
 
 [REALSTORSENSORS]

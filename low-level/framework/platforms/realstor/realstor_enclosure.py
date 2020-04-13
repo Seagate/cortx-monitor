@@ -148,9 +148,7 @@ class RealStorEnclosure(StorageEnclosure):
                                                 '001')
         # Decrypt MC Password
         decryption_key = encryptor.gen_key(self.cluster_id, ServiceTypes.STORAGE_ENCLOSURE.value)
-        self.passwd = encryptor.decrypt(decryption_key, self.passwd.encode('ascii'))
-
-        self.cluster_id = int(self.cluster_id)
+        self.passwd = encryptor.decrypt(decryption_key, self.passwd.encode('ascii'), "RealStoreEncl")
 
         if self.mc_interface not in self.realstor_supported_interfaces:
             logger.error("Unspported Realstor interface configured,"
