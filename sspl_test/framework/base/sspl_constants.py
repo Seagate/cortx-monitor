@@ -11,7 +11,7 @@ CONSUL_HOST = '127.0.0.1'
 CONSUL_PORT = '8500'
 
 # required only for init
-component = 'sspl_test'
+component = 'sspl_test/config'
 file_store_config_path = '/opt/seagate/eos/sspl/sspl_test/conf/sspl_tests.conf'
 salt_provisioner_pillar_sls = 'sspl'
 
