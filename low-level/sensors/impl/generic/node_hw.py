@@ -207,9 +207,9 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
             logger.debug("IPMI simulator is activated")
 
         # Set flag 'request_shutdown' if ipmitool/simulator is non-functional
-        res, retcode = self._run_command(command=self.IPMITOOL)
+        res, retcode = self._run_command(command=f"{self.IPMITOOL} sel info")
         if retcode != 0:
-            logger.debug(f"{self.SENSOR_NAME}: ipmitool can't fetch monitoring data")
+            logger.debug(f"{self.SENSOR_NAME}: {self.IPMITOOL} can't fetch monitoring data")
             self.request_shutdown = True
         else:
             # Set flag 'request_shutdown' if ipmitool cmd trial errors out
