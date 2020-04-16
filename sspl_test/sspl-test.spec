@@ -35,8 +35,20 @@ cp -rp . ${RPM_BUILD_ROOT}/opt/seagate/eos/sspl/sspl_test
 SSPL_DIR=/opt/seagate/eos/sspl
 CFG_DIR=$SSPL_DIR/conf
 
-[ -d "${SSPL_DIR}/sspl_test/lib" ] && {
-    ln -sf $SSPL_DIR/sspl_test/lib/sspl_tests /usr/bin/sspl_tests
+# Check and install required flask version
+flask_installed=$(python3.6 -c 'import pkgutil; print(1 if pkgutil.find_loader("flask") else 0)')
+[ $flask_installed == "1" ] && touch ${SSPL_DIR}/sspl_test/keep_flask &&
+[ $(python3.6 -c 'import flask; print(flask.__version__)') = "1.1.1" ] || {
+    if [ $flask_installed == "1" ]; then
+        $sudo pip3.6 uninstall -y flask
+    fi
+    $sudo pip3.6 install flask==1.1.1
+}
+
+%preun
+# Uninstall flask and all its dependencies if it was not already installed
+[ -f /opt/seagate/eos/sspl/sspl_test/keep_flask ] && rm -f /opt/seagate/eos/sspl/sspl_test/keep_flask || {
+    $sudo pip3.6 uninstall -y flask Werkzeug itsdangerous Jinja2 click MarkupSafe
 }
 
 %files
