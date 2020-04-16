@@ -155,3 +155,13 @@ esac
 out=$(rabbitmqctl cluster_status | grep running_nodes | cut -d '[' -f2 | cut -d ']' -f1 | sed 's/rabbit@//g' | sed 's/,/, /g')
 pout=$(echo $out | sed  "s/'//g")
 /opt/seagate/eos/hare/bin/consul kv put sspl/config/RABBITMQCLUSTER/cluster_nodes $pout
+
+# Updating build requested log level
+log_level=`cat $DIR_NAME/conf/build-requested-loglevel | sed 's/ *$//'`
+case $log_level in
+    "DEBUG" | "INFO" | "WARNING" | "ERROR" | "CRITICAL")
+        /opt/seagate/eos/hare/bin/consul kv put sspl/config/SYSTEM_INFORMATION/log_level $log_level;;
+    "");;
+    *)
+        echo "Unexpected log level is requested, '$log_level'";;
+esac

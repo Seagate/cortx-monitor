@@ -12,11 +12,12 @@ DIST=$(realpath $BASE_DIR/dist)
 
 usage() {
     echo "usage: $PROG_NAME [-g <git version>] [-v <sspl version>] [-k <key>]
-                            [-p <product_name>] [-t <true|false>]" 1>&2;
+                            [-p <product_name>] [-t <true|false>]
+                            [-l <DEBUG|INFO|WARNING|ERROR|CRITICAL>]" 1>&2;
     exit 1;
 }
 
-while getopts ":g:v:p:k:t" o; do
+while getopts ":g:v:p:k:t:l:" o; do
     case "${o}" in
         g)
             GIT_VER=${OPTARG}
@@ -33,6 +34,9 @@ while getopts ":g:v:p:k:t" o; do
         t)
             TEST=true
             ;;
+        l)
+            LOG_LEVEL=${OPTARG}
+            ;;
         *)
             usage
             ;;
@@ -48,7 +52,16 @@ cd $BASE_DIR
 [ -z "$KEY" ] && KEY="eos@ees@sspl@pr0duct"
 [ -z "$TEST" ] && TEST=true
 
-echo "Using VERSION=${VERSION} GIT_VER=${GIT_VER} PRODUCT=${PRODUCT} TEST=${TEST} "
+# validate build requested log level
+case $LOG_LEVEL in
+    "DEBUG" | "INFO" | "WARNING" | "ERROR" | "CRITICAL")
+        echo "${LOG_LEVEL}" > $BASE_DIR/low-level/files/opt/seagate/sspl/conf/build-requested-loglevel;;
+    "");;
+    *)
+        echo "Invalid log level '$LOG_LEVEL' requested. Please use either of DEBUG, INFO, WARNING, ERROR, CRITICAL"
+        usage
+esac
+echo "Using VERSION=${VERSION} GIT_VER=${GIT_VER} PRODUCT=${PRODUCT} TEST=${TEST} LOG_LEVEL=${LOG_LEVEL} "
 
 ################### COPY FRESH DIR ##############################
 COPY_START_TIME=$(date +%s)
