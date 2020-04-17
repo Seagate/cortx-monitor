@@ -2,7 +2,7 @@
     "watches": [
           {
             "type": "key",
-            "key": "sspl/SYSTEM_INFORMATION/log_level",
+            "key": "sspl/config/SYSTEM_INFORMATION/log_level",
             "args": ["/opt/seagate/eos/sspl/bin/consume_cfg_change_alert"]
           }
     ]
