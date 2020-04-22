@@ -42,6 +42,8 @@ class IPMITool(IPMI):
         """
         sensor_list_out, retcode = self._run_ipmitool_subcommand(f"sdr type '{fru_type.title()}'")
         if retcode != 0:
+            if isinstance(sensor_list_out, tuple):
+                sensor_list_out = [val for val in sensor_list_out if val]
             msg = "ipmitool sdr type command failed: {0}".format(b''.join(sensor_list_out))
             logger.error(msg)
             return
@@ -81,6 +83,8 @@ class IPMITool(IPMI):
         """
         props_list_out, retcode = self._run_ipmitool_subcommand("sensor get '{0}'".format(sensor_id))
         if retcode != 0:
+            if isinstance(props_list_out, tuple):
+                props_list_out = [val for val in props_list_out if val]
             msg = "ipmitool sensor get command failed: {0}".format(b''.join(props_list_out))
             logger.error(msg)
             err_response = {sensor_id: {"ERROR": msg}}
@@ -133,15 +137,17 @@ class IPMITool(IPMI):
     def _run_ipmitool_subcommand(self, subcommand, grep_args=None, out_file=subprocess.PIPE):
         """executes ipmitool sub-commands, and optionally greps the output"""
 
+        ipmi_tool = self.IPMITOOL
+
         # A dummy file path check to select ipmi simulator if
         # simulator is required, otherwise default ipmitool.
         if os.path.exists("/tmp/activate_ipmisimtool"):
-            res, retcode = self._run_command(command=self.IPMISIMTOOL)
+            res, retcode = self._run_command(command=f"{self.IPMISIMTOOL} sel info")
             if retcode == 0:
-                self.IPMITOOL = self.IPMISIMTOOL
+                ipmi_tool = self.IPMISIMTOOL
                 logger.info("IPMI simulator is activated")
 
-        command = self.IPMITOOL + subcommand
+        command = ipmi_tool + subcommand
         if grep_args is not None:
             command += " | grep "
             if isinstance(grep_args, list):

@@ -200,20 +200,11 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
                                                 self.CLUSTER_ID,
                                                 '0')
 
-        # A dummy file path check to select ipmi simulator if sanity test
-        # intends to use simulator, otherwise default.
-        if os.path.exists("/tmp/activate_ipmisimtool"):
-            self.IPMITOOL = self.IPMISIMTOOL
-            logger.debug("IPMI simulator is activated")
-
-        # Set flag 'request_shutdown' if ipmitool/simulator is non-functional
-        res, retcode = self._run_command(command=f"{self.IPMITOOL} sel info")
+        # Set flag 'request_shutdown' to true if ipmitool/simulator is non-functional
+        res, retcode = self._run_ipmitool_subcommand(subcommand="sel info")
         if retcode != 0:
-            logger.debug(f"{self.SENSOR_NAME}: {self.IPMITOOL} can't fetch monitoring data")
             self.request_shutdown = True
         else:
-            # Set flag 'request_shutdown' if ipmitool cmd trial errors out
-            res, retcode = self._run_ipmitool_subcommand("")
 
             self._initialize_cache()
             self.sensor_id_map = dict()
@@ -234,6 +225,8 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         sel_out, retcode = self._run_ipmitool_subcommand("sel list", grep_args=f"-E '{available_fru}'",
                                                              out_file=tmp_fd)
         if retcode != 0:
+            if isinstance(sel_out, tuple):
+                sel_out = [val for val in sel_out if val]
             msg = f"ipmitool sel list command failed: {b''.join(sel_out)}"
             logger.error(msg)
             raise Exception(msg)
@@ -263,7 +256,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
             sel_info, retcode = self._run_ipmitool_subcommand("sel info")
             if retcode != 0:
                 logger.error(f"ipmitool sel info command failed,  \
-                    with err {retcode}")
+                    with err {sel_info}")
                 return (False)
 
             # record SEL last queried time
@@ -426,19 +419,30 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
     def _run_ipmitool_subcommand(self, subcommand, grep_args=None, out_file=subprocess.PIPE):
         """executes ipmitool sub-commands, and optionally greps the output"""
 
-        command = self.IPMITOOL + subcommand
+        ipmi_tool = self.IPMITOOL
+
+        # A dummy file path check to select ipmi simulator if
+        # simulator is required, otherwise default ipmitool.
+        if os.path.exists("/tmp/activate_ipmisimtool"):
+            res, retcode = self._run_command(command=f"{self.IPMISIMTOOL} sel info")
+            if retcode == 0:
+                ipmi_tool = self.IPMISIMTOOL
+                logger.debug("IPMI simulator is activated")
+
+        command = ipmi_tool + subcommand
         if grep_args is not None:
             command += " | grep " + grep_args
         res, retcode = self._run_command(command, out_file)
 
         # Detect if ipmitool removed or facing error after sensor initialized
         if retcode != 0:
+            logger.error(f"{ipmi_tool} can't fetch monitoring data for {self.SENSOR_NAME}")
             if retcode == 1:
                 if isinstance(res, tuple):
-                    resstr = b''.join(res)
+                    resstr = b''.join([val for val in res if val])
                     resstr = resstr.decode("utf-8")
                     if resstr.find(self.IPMI_ERRSTR) == 0:
-                        logger.error(f"{self.SENSOR_NAME}: ipmitool error:: {1}\n \
+                        logger.error(f"{self.SENSOR_NAME}: {ipmi_tool} error:: {resstr}\n \
                             Dependencies failed, shutting down sensor")
                         self.request_shutdown = True
             elif (retcode == BASH_ILLEGAL_CMD):
@@ -458,6 +462,8 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
 
         sensor_list_out, retcode = self._run_ipmitool_subcommand(f"sdr type '{sensor_type}'")
         if retcode != 0:
+            if isinstance(sensor_list_out, tuple):
+                sensor_list_out = [val for val in sensor_list_out if val]
             msg = f"ipmitool sdr type command failed: {b''.join(sensor_list_out)}"
             logger.error(msg)
             return
@@ -484,6 +490,8 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
 
         sensor_list_out, retcode = self._run_ipmitool_subcommand(f"sdr entity '{entity_id}'")
         if retcode != 0:
+            if isinstance(sensor_list_out, tuple):
+                sensor_list_out = [val for val in sensor_list_out if val]
             msg = f"ipmitool sdr entity command failed: {b''.join(sensor_list_out)}"
             logger.error(msg)
             return
@@ -504,6 +512,8 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
     def _get_sensor_sdr_props(self, sensor_id):
         props_list_out, retcode = self._run_ipmitool_subcommand(f"sdr get '{sensor_id}'")
         if retcode != 0:
+            if isinstance(props_list_out, tuple):
+                props_list_out = [val for val in props_list_out if val]
             msg = f"ipmitool sensor get command failed: {b''.join(props_list_out)}"
             logger.error(msg)
             return
@@ -541,6 +551,8 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
            specific is a dict of the properties specific to this sensor"""
         props_list_out, retcode = self._run_ipmitool_subcommand(f"sensor get '{sensor_id}'")
         if retcode != 0:
+            if isinstance(props_list_out, tuple):
+                props_list_out = [val for val in props_list_out if val]
             msg = f"ipmitool sensor get command failed: {b''.join(props_list_out)}"
             logger.error(msg)
             return (False, False)
