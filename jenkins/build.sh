@@ -51,6 +51,7 @@ cd $BASE_DIR
 [ -z "$PRODUCT" ] && PRODUCT="eos"
 [ -z "$KEY" ] && KEY="eos@ees@sspl@pr0duct"
 [ -z "$TEST" ] && TEST=true
+[ -z "$CLI" ] && CLI=true
 
 # validate build requested log level
 case $LOG_LEVEL in
@@ -71,7 +72,7 @@ TMPDIR="$DIST/tmp"
 [ -d "$TMPDIR" ] && {
     rm -rf ${TMPDIR}
 }
-mkdir -p $DIST/sspl/bin $DIST/sspl/conf $DIST/sspl/resources/actuators $DIST/sspl/resources/actuator_msgs $DIST/sspl/resources/sensors $DIST/sspl/resources/iem/iec_mapping $TMPDIR
+mkdir -p $DIST/sspl/bin $DIST/sspl/conf $DIST/sspl/resources/actuators $DIST/sspl/resources/sensors $DIST/sspl/resources/iem/iec_mapping $TMPDIR
 
 cp -R $BASE_DIR/low-level/snmp $DIST/sspl/conf
 cp -R $BASE_DIR/low-level/files/opt/seagate/sspl/bin/* $DIST/sspl/bin
@@ -82,11 +83,8 @@ cp -R $BASE_DIR/low-level/framework/utils/config_reader.py $DIST/sspl/bin/config
 cp -R $BASE_DIR/low-level/framework/sspl_init $DIST/sspl/bin
 cp -R $BASE_DIR/low-level/framework/sspl_reinit $DIST/sspl/bin
 cp -R $BASE_DIR/low-level/framework/sspl_rabbitmq_reinit $DIST/sspl/bin
-
 cp -R $BASE_DIR/low-level/json_msgs/schemas/actuators/*.json $DIST/sspl/resources/actuators
 cp -R $BASE_DIR/low-level/json_msgs/schemas/sensors/*.json $DIST/sspl/resources/sensors
-cp -R $BASE_DIR/low-level/tests/manual/actuator_msgs/*.json $DIST/sspl/resources/actuator_msgs
-cp -R $BASE_DIR/low-level/tests/manual/actuator_msgs/*.conf $DIST/sspl/resources/actuator_msgs
 
 cp -R $BASE_DIR/low-level/files/iec_mapping/* $DIST/sspl/resources/iem/iec_mapping
 
@@ -96,6 +94,7 @@ cp -R $BASE_DIR/systemd-python36/ $DIST/sspl
 CONF=$BASE_DIR/low-level/files
 cp -R $CONF/opt/seagate/sspl/conf/* $CONF/etc $DIST/sspl/conf
 cp $BASE_DIR/low-level/sspl-ll.spec $TMPDIR
+cp $BASE_DIR/low-level/cli/sspl_cli.spec $TMPDIR
 cp $BASE_DIR/libsspl_sec/libsspl_sec.spec $TMPDIR
 cp $BASE_DIR/sspl_test/sspl-test.spec $TMPDIR
 cp $BASE_DIR/systemd-python36/systemd-python36.spec $TMPDIR
@@ -163,6 +162,22 @@ then
     python3 -m PyInstaller --clean -y --distpath ${DIST}/sspl_test --key ${KEY} ${PYINSTALLER_FILE}
 fi
 
+if [ "$CLI" == true ]
+then
+    mkdir -p $TMPDIR/cli $DIST/cli $DIST/cli/actuator_msgs
+    cp -R $BASE_DIR/low-level/cli/* $TMPDIR/cli
+    cp -R $BASE_DIR/low-level/tests/manual/actuator_msgs/*.json $DIST/cli/actuator_msgs
+    cp -R $BASE_DIR/low-level/tests/manual/actuator_msgs/*.conf $DIST/cli/actuator_msgs
+
+    PYINSTALLER_FILE=$TMPDIR/${PRODUCT}_sspl.spec
+    cp $BASE_DIR/jenkins/pyinstaller/sspl_ll_cli.spec ${PYINSTALLER_FILE}
+    echo "Executing pyinstaller..."
+    sed -i -e "s|<PRODUCT>|${PRODUCT}|g" \
+        -e "s|<SSPL_CLI_PATH>|${TMPDIR}/cli|g" \
+        -e "s|<SSPL_PATH>|${TMPDIR}/sspl|g" ${PYINSTALLER_FILE}
+    python3 -m PyInstaller --clean -y --distpath ${DIST}/cli --key ${KEY} ${PYINSTALLER_FILE}
+fi
+
 # Create spec for pyinstaller
 PYINSTALLER_FILE=$TMPDIR/${PRODUCT}_sspl.spec
 cp $BASE_DIR/jenkins/pyinstaller/sspl.spec ${PYINSTALLER_FILE}
@@ -192,6 +207,12 @@ if [ "$TEST" == true ]
 then
     tar -czvf ${RPM_BUILD_PATH}/SOURCES/eos-sspl-test-${VERSION}.tgz -C ${DIST} sspl_test
 fi
+
+if [ "$CLI" == true ]
+then
+tar -czvf ${RPM_BUILD_PATH}/SOURCES/eos-sspl-cli-${VERSION}.tgz -C ${DIST} cli
+fi
+
 tar -czvf ${RPM_BUILD_PATH}/SOURCES/eos-sspl-${VERSION}.tgz -C ${DIST} sspl
 
 TAR_END_TIME=$(date +%s)
@@ -203,6 +224,10 @@ RPM_BUILD_START_TIME=$(date +%s)
 
 rpmbuild --define "version $VERSION" --define "git_rev $GIT_VER" --define "_topdir $TOPDIR" -bb $TMPDIR/sspl-ll.spec
 rpmbuild --define "version $VERSION" --define "git_rev $GIT_VER" --define "_topdir $TOPDIR" -bb $TMPDIR/libsspl_sec.spec
+if [ "$CLI" == true ]
+then
+rpmbuild --define "version $VERSION" --define "git_rev $GIT_VER" --define "_topdir $TOPDIR" -bb $TMPDIR/sspl_cli.spec
+fi
 
 if [ "$TEST" == true ]
 then
@@ -215,6 +240,7 @@ BUILD_END_TIME=$(date +%s)
 \rm -rf $TMPDIR
 \rm -rf $DIST/sspl
 \rm -rf $DIST/sspl_test
+\rm -rf $DIST/cli
 # remove systemd-python36
 yum erase -y systemd-python36-*
 

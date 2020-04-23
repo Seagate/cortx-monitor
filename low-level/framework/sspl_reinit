@@ -22,7 +22,7 @@
 chown -R sspl-ll:root /opt/seagate/eos/sspl
 
 # Create a link to low-level cli for easy global access
-ln -sf /opt/seagate/eos/sspl/lib/sspl_ll_cli /usr/bin/sspl_ll_cli
+ln -sf /opt/seagate/eos/sspl/cli/lib/sspl_ll_cli /usr/bin/sspl_ll_cli
 
 # Assign the required groups
 usermod -a -G systemd-journal sspl-ll

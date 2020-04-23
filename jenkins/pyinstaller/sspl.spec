@@ -23,22 +23,6 @@ product_module_list = import_list(sspl_path, product_path)
 
 block_cipher = None
 
-sspl_ll_cli = Analysis([sspl_path + '/low-level/cli/sspl-ll-cli'],
-             pathex=[spec_root + '/sspl', spec_root + '/sspl/low-level', spec_root + '/sspl/low-level/framework'],
-             binaries=[],
-             datas=[(sspl_path + '/low-level/json_msgs/schemas/actuators/*.json', '.'),
-                    (sspl_path + '/low-level/json_msgs/schemas/sensors/*.json', '.'),
-                    (sspl_path + '/low-level/tests/manual/actuator_msgs/*.json', '.'),
-                    (sspl_path + '/low-level/tests/manual/actuator_msgs/*.conf', '.')],
-             hiddenimports=product_module_list,
-             hookspath=[],
-             runtime_hooks=[],
-             excludes=[],
-             win_no_prefer_redirects=False,
-             win_private_assemblies=False,
-             cipher=block_cipher,
-             noarchive=False)
-
 sspl_ll_d = Analysis([sspl_path + '/low-level/framework/sspl_ll_d'],
              pathex=[spec_root + '/sspl', spec_root + '/sspl/low-level', spec_root + '/sspl/low-level/framework'],
              binaries=[],
@@ -72,26 +56,8 @@ resource_health_view  = Analysis([sspl_path + '/low-level/files/opt/seagate/sspl
              noarchive=False)
 
 #merge
-MERGE( (sspl_ll_cli, 'sspl_ll_cli', 'sspl_ll_cli'),
-       (sspl_ll_d, 'sspl_ll_d', 'sspl_ll_d'),
+MERGE( (sspl_ll_d, 'sspl_ll_d', 'sspl_ll_d'),
        (resource_health_view, 'resource_health_view', 'resource_health_view') )
-
-
-#sspl_ll_cli
-sspl_ll_cli_pyz = PYZ(sspl_ll_cli.pure, sspl_ll_cli.zipped_data,
-             cipher=block_cipher)
-
-sspl_ll_cli_exe = EXE(sspl_ll_cli_pyz,
-          sspl_ll_cli.scripts,
-          [],
-          exclude_binaries=True,
-          name='sspl_ll_cli',
-          debug=False,
-          bootloader_ignore_signals=False,
-          strip=False,
-          upx=True,
-          console=True )
-
 
 #sspl_ll_d
 sspl_ll_d_pyz = PYZ(sspl_ll_d.pure, sspl_ll_d.zipped_data,
@@ -124,12 +90,6 @@ resource_health_view_exe = EXE(resource_health_view_pyz,
           console=True )
 
 coll = COLLECT(
-               #sspl_ll_cli
-               sspl_ll_cli_exe,
-               sspl_ll_cli.binaries,
-               sspl_ll_cli.zipfiles,
-               sspl_ll_cli.datas,
-
                #sspl_ll_d
                sspl_ll_d_exe,
                sspl_ll_d.binaries,

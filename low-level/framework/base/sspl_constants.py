@@ -6,6 +6,7 @@ cs_products = ["CS-A"]
 cs_legacy_products = ["CS-L", "CS-G"]
 setups = ["eos"]
 RESOURCE_PATH = "/opt/seagate/eos/sspl/resources/"
+CLI_RESOURCE_PATH = "/opt/seagate/eos/sspl/cli"
 SSPL_STORE_TYPE = 'consul'
 CONSUL_HOST = '127.0.0.1'
 CONSUL_PORT = '8500'
