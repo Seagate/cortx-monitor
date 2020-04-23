@@ -6,6 +6,7 @@ import sys
 import socket
 import time
 import argparse
+import consul
 import warnings
 warnings.filterwarnings(action='ignore',module='cryptography')
 
@@ -13,6 +14,27 @@ warnings.filterwarnings(action='ignore',module='cryptography')
 op = os.path
 parentdir = op.dirname(op.dirname(op.dirname(op.dirname(op.dirname(op.dirname(op.dirname(op.abspath(__file__))))))))
 sys.path.insert(0, parentdir)
+from framework.base.sspl_constants import component, CONSUL_HOST, CONSUL_PORT
+base_info = {'/SYSTEM_INFORMATION/site_id':'system_information/site_id',
+             '/SYSTEM_INFORMATION/rack_id':'system_information/rack_id',
+             '/SYSTEM_INFORMATION/cluster_id':'system_information/cluster_id',
+             '/STORAGE_ENCLOSURE/primary_controller_ip':'storage_enclosure/controller/primary_mc/ip',
+             '/STORAGE_ENCLOSURE/secondary_controller_ip':'storage_enclosure/controller/secondary_mc/ip',
+             '/STORAGE_ENCLOSURE/primary_controller_port':'storage_enclosure/controller/primary_mc/port',
+             '/STORAGE_ENCLOSURE/secondary_controller_port':'storage_enclosure/controller/secondary_mc/port',
+             '/STORAGE_ENCLOSURE/user':'storage_enclosure/controller/user',
+             '/STORAGE_ENCLOSURE/password':'storage_enclosure/controller/password'}
+host = os.getenv('CONSUL_HOST', CONSUL_HOST)
+port = os.getenv('CONSUL_PORT', CONSUL_PORT)
+try:
+    consul_conn = consul.Consul(host=host, port=port)
+    for key, value in base_info.items():
+        value = consul_conn.kv.get(value)[1]["Value"].decode()
+        consul_conn.kv.put(component+key, value)
+except Exception as serror:
+    print("Error in connecting consul: {}".format(serror))
+    print("Exiting ...")
+    sys.exit(os.EX_USAGE)
 from framework.utils.store_factory import store
 from framework.platforms.realstor.realstor_enclosure import singleton_realstorencl
 from framework.utils.ipmi_client import IpmiFactory
