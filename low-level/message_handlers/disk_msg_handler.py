@@ -28,6 +28,7 @@ from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 from json_msgs.messages.sensors.drive_mngr import DriveMngrMsg
 from json_msgs.messages.sensors.hpi_data import HPIDataMsg
 from json_msgs.messages.sensors.expander_reset import ExpanderResetMsg
+from json_msgs.messages.sensors.node_hw_data import NodeIPMIDataMsg
 
 from json_msgs.messages.actuators.ack_response import AckResponseMsg
 
@@ -189,6 +190,9 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     else:
                         self._process_hpi_response(jsonMsg, serial_number)
 
+            elif sensor_response_type == "node_disk":
+                node_disk_msg = NodeIPMIDataMsg(jsonMsg.get("response"))
+                self._write_internal_msgQ(RabbitMQegressProcessor.name(), node_disk_msg.getJson())
             # ... handle other disk sensor response types
             else:
                 logger.warn(f"DiskMsgHandler, received unknown sensor response msg: {jsonMsg}")

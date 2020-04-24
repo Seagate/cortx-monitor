@@ -34,19 +34,13 @@ class BaseMsg(metaclass=abc.ABCMeta):
     def getJson(self):
         raise NotImplementedError("Subclasses should implement this!")
 
-    def normalize_kv(self, jsonMsg):
+    def normalize_kv(self, item):
         """Normalize all keys coming from firmware from - to _"""
-        new_dic = {}
-        for k, v in jsonMsg.items():
-            if isinstance(v, dict):
-                v = self.normalize_kv(v)
-            elif isinstance(v, list):
-                new_lst = []
-                for d in v:
-                    d = self.normalize_kv(d)
-                    new_lst.append(d)
-                v = new_lst
-            new_dic[k.replace('-', '_')] = v
-            if v == "N/A":
-                new_dic[k.replace('-', '_')] = "NA"
-        return new_dic
+        if isinstance(item, dict):
+            return {key.replace("-", "_"): self.normalize_kv(value) for key, value in item.items()}
+        elif isinstance(item, list):
+            return [self.normalize_kv(_) for _ in item]
+        elif item == "N/A":
+            return "NA"
+        else:
+            return item

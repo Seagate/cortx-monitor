@@ -22,6 +22,8 @@ import json
 import time
 import copy
 import subprocess
+import threading
+import uuid
 
 from datetime import datetime, timedelta
 
@@ -30,6 +32,8 @@ from framework.base.module_thread import SensorThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
 from framework.base.sspl_constants import cs_products, COMMON_CONFIGS
+from framework.utils.severity_reader import SeverityReader
+from framework.utils.store_factory import store
 
 # Modules that receive messages from this module
 from message_handlers.service_msg_handler import ServiceMsgHandler
@@ -45,6 +49,7 @@ import dbus
 from dbus import SystemBus, Interface, Array
 from gi.repository import GObject as gobject
 from dbus.mainloop.glib import DBusGMainLoop
+import socket
 
 @implementer(IServiceWatchdog)
 class SystemdWatchdog(SensorThread, InternalMsgQ):
@@ -61,6 +66,16 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
     SYSTEM_INFORMATION = 'SYSTEM_INFORMATION'
     SETUP              = 'setup'
 
+    DEFAULT_RAS_VOL = "/var/eos/sspl/data/"
+
+    SITE_ID = "site_id"
+    RACK_ID = "rack_id"
+    NODE_ID = "node_id"
+    CLUSTER_ID = "cluster_id"
+
+    DISK_INSERTED_ALERT_TYPE = "insertion"
+    DISK_REMOVED_ALERT_TYPE = "missing"
+
     # SMART test response
     SMART_STATUS_UNSUPPORTED = "Unsupported"
 
@@ -70,6 +85,14 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
                     "init": ["HPIMonitor"],
                     "rpms": ["smartmontools"]
     }
+
+    DISK_FAULT_ALERT_TYPE = "fault"
+    DISK_FAULT_RESOLVED_ALERT_TYPE = "fault_resolved"
+    DRIVE_DBUS_INFO = 'dbus_info'
+    DRIVE_FAULT_ATTR = 'smart_attributes'
+    NODE_DISK_RESOURCE_TYPE = "node:os:disk"
+
+    SMARTCTL_PASSED_RESPONSE = "SMART overall-health self-assessment test result: PASSED"
 
     @staticmethod
     def name():
@@ -99,11 +122,13 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
         self._simulated_smart_failures = []
 
         # Delay so thread doesn't spin unnecessarily when not in use.  Startup running quickly to process everything
-        self._thread_sleep = .10
+        self._thread_sleep = 20.0
 
         # Location of hpi data directory populated by dcs-collector
         self._hpi_base_dir = "/tmp/dcs/hpi"
         self._start_delay = 10
+
+
 
     def initialize(self, conf_reader, msgQlist, product):
         """initialize configuration reader and internal msg queues"""
@@ -129,6 +154,14 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
         # Dict of drives by device name from systemd
         self._drive_by_device_name = {}
 
+        # Dict of drives by path
+        self._drives = {}
+
+        # Lock for the above two variables,
+        # they will be concurrently accessed from both the _interface_added/_removed callbacks and
+        # the run() function.
+        self._drive_info_lock = threading.Lock()
+
         # Next time to run SMART tests
         self._next_smart_tm = datetime.now() + timedelta(seconds=self._smart_interval)
 
@@ -136,6 +169,37 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
         self._thread_speed_safeguard = -1000  # Init to a negative number to allow extra time at startup
 
         self._product = product
+
+        self._site_id = conf_reader._get_value_with_default(
+                                                self.SYSTEM_INFORMATION,
+                                                self.SITE_ID,
+                                                '0')
+        self._rack_id = conf_reader._get_value_with_default(
+                                                self.SYSTEM_INFORMATION,
+                                                self.RACK_ID,
+                                                '0')
+        self._node_id = conf_reader._get_value_with_default(
+                                                self.SYSTEM_INFORMATION,
+                                                self.NODE_ID,
+                                                '0')
+
+        self._cluster_id = conf_reader._get_value_with_default(
+                                                self.SYSTEM_INFORMATION,
+                                                self.CLUSTER_ID,
+                                                '0')
+
+        self.vol_ras = conf_reader._get_value_with_default(\
+            self.SYSTEM_INFORMATION, COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get("data_path"), self.DEFAULT_RAS_VOL)
+
+        self.server_cache = self.vol_ras + "server/"
+        self.disk_cache_path = self.server_cache + "systemd_watchdog/disks/disks.json"
+
+        # Existing drives
+        self._existing_drive = store.get(self.disk_cache_path)
+        if self._existing_drive is None:
+            self._existing_drive = {}
+            store.put(self._existing_drive, self.disk_cache_path)
+
 
         # Integrate into the main dbus loop to catch events
         DBusGMainLoop(set_as_default=True)
@@ -187,6 +251,18 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
 
             # Notify DiskMsgHandler of available drives and schedule SMART tests
             self._init_drives()
+
+            with self._drive_info_lock:
+                # Prepare drives to monitor
+                self._drives = self._get_local_drives()
+                # send msg for new drives
+                for drive_path in self._drives.keys():
+                    if drive_path not in self._existing_drive:
+                        drive = self._drives[drive_path][self.DRIVE_DBUS_INFO]
+                        self._send_msg(self.DISK_INSERTED_ALERT_TYPE, str(drive["Id"]), json.loads(json.dumps(drive)))
+                        self._existing_drive.update({drive_path: False})
+                self._update_drive_faults()
+                store.put(self._existing_drive, self.disk_cache_path)
 
             # Read in the list of services to monitor
             self._monitored_services = self._get_monitored_services()
@@ -295,14 +371,17 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
 
                 # Process any msgs sent to us
                 self._check_msg_queue()
+                with self._drive_info_lock:
+                    self._update_drive_faults()
+                    store.put(self._existing_drive, self.disk_cache_path)
 
                 # Safe guard to slow the thread down after busy exp resets
-                self._thread_speed_safeguard += 1
+                # self._thread_speed_safeguard += 1
                 # Only allow to run full throttle for 3 minutes (enough to handle exp resets)
-                if self._thread_speed_safeguard > 18_00:   # 1800 = 10 * 60 * 3 running at .10 delay full speed
-                    self._thread_speed_safeguard = 0
-                    # Slow the main thread down to save on CPU as it gets sped up on drive removal
-                    self._thread_sleep = 5.0
+                # if self._thread_speed_safeguard > 18_00:   # 1800 = 10 * 60 * 3 running at .10 delay full speed
+                #     self._thread_speed_safeguard = 0
+                #     # Slow the main thread down to save on CPU as it gets sped up on drive removal
+                #     self._thread_sleep = 5.0
 
             self._log_debug("SystemdWatchdog gracefully breaking out " \
                                 "of dbus Loop, not restarting.")
@@ -607,10 +686,25 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
 
     def _run_command(self, command):
         """Run the command and get the response and error returned"""
-        process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
         response, error = process.communicate()
 
         return response.rstrip('\n'), error.rstrip('\n')
+
+    def _get_local_drives(self):
+
+        drives = self._disk_manager.GetManagedObjects()
+
+        local_drives = {obj_path : { self.DRIVE_DBUS_INFO: interfaces_and_property["org.freedesktop.UDisks2.Drive"] }
+                        for obj_path, interfaces_and_property in drives.items()
+                        if "drive" in obj_path and self._is_local_drive(interfaces_and_property)}
+        return local_drives
+
+    # TODO : Improvise local disk detaction.
+    # Remove fw version dependency for detecting local disk
+    def _is_local_drive(self, interfaces_and_property):
+        return "org.freedesktop.UDisks2.Drive.Ata" in interfaces_and_property and \
+            str(interfaces_and_property["org.freedesktop.UDisks2.Drive"]["Revision"]) != "G265"
 
     def _init_drives(self, stagger=False):
         """Notifies DiskMsgHanlder of available drives and schedules a short SMART test"""
@@ -629,7 +723,7 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
                   if m]
 
         # Loop through all the drives and initiate a SMART test
-        self._smart_jobs : Dict[str, str] = {}
+        self._smart_jobs : {}
         for drive in drives:
             try:
                 if self._disk_objects[drive['path']].get('org.freedesktop.UDisks2.Drive') is not None:
@@ -828,11 +922,11 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
             self._log_debug("  Object Path: %r" % object_path)
 
             # Handle drives added
-            if interfaces_and_properties.get("org.freedesktop.UDisks2.Drive") is not None:
-                # Update the drive's by-id symlink paths
+            if interfaces_and_properties.get("org.freedesktop.UDisks2.Drive") is not None and \
+                self._is_local_drive(interfaces_and_properties):
                 self._update_by_id_paths()
 
-                serial_number = f"{str(interfaces_and_properties['org.freedesktop.UDisks2.Drive']['Serial'])}"
+                serial_number = str(interfaces_and_properties['org.freedesktop.UDisks2.Drive']['Serial'])
 
                 # If serial number is not present then use the ending of by-id symlink
                 if len(serial_number) == 0:
@@ -840,27 +934,19 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
 
                     # Serial numbers are limited to 20 chars string with drive keyword
                     serial_number = tmp_serial[tmp_serial.rfind("drive"):]
+                    interfaces_and_properties['org.freedesktop.UDisks2.Drive']['Serial'] = serial_number
 
-                #self._log_debug("  Serial number: %s" % serial_number)
+                with self._drive_info_lock:
+                    # Update drives
+                    self._drives[object_path][self.DRIVE_DBUS_INFO] = interfaces_and_properties['org.freedesktop.UDisks2.Drive']
 
-                # Generate and send an internal msg to DiskMsgHandler
-                self._notify_disk_msg_handler(object_path, "OK_None", serial_number)
+                    drive = self._drives[object_path][self.DRIVE_DBUS_INFO]
+                    self._send_msg(self.DISK_INSERTED_ALERT_TYPE, str(drive["Id"]), json.loads(json.dumps(drive)))
 
-                # Notify internal msg handlers who need to map device name to serial numbers
-                self._notify_msg_handler_sn_device_mappings(object_path, serial_number)
-
-                # Display info about the added device
-                #self._print_interfaces_and_properties(interfaces_and_properties)
-
-                # Restart openhpid to update HPI data if it's not available
-                # Note: This is problematic during expander resets b/c it cycles too many times
-                #internal_json_msg = json.dumps(
-                #                        {"actuator_request_type": {
-                #                            "service_controller": {
-                #                                "service_name" : "openhpid.service",
-                #                                "service_request": "restart"
-                #                        }}})
-                #self._write_internal_msgQ(ServiceMsgHandler.name(), internal_json_msg)
+                    # Update cache with latest info
+                    self._existing_drive.update({object_path: False})
+                    self._update_drive_faults()
+                    store.put(self._existing_drive, self.disk_cache_path)
 
             # Handle jobs like SMART tests being initiated
             elif interfaces_and_properties.get("org.freedesktop.UDisks2.Job") is not None:
@@ -883,36 +969,35 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
             try:
                 # Handle drives removed
                 if interface == "org.freedesktop.UDisks2.Drive":
-                    # Speed thread up in case we have multiple drive removal events queued up
-                    self._thread_sleep = .10
+                    with self._drive_info_lock:
+                        # Speed thread up in case we have multiple drive removal events queued up
+                        self._thread_sleep = .10
 
-                    # Only allow it to run full speed temporarily in order to handle exp resets
-                    self._thread_speed_safeguard = 0
+                        # Only allow it to run full speed temporarily in order to handle exp resets
+                        self._thread_speed_safeguard = 0
 
-                    # Attempt to retrieve the serial number
-                    serial_number = None
-                    try:
-                        udisk_drive = self._disk_objects[object_path]['org.freedesktop.UDisks2.Drive']
-                        serial_number = str(udisk_drive["Serial"])
-                    except Exception as ae:
-                        self._log_debug("Drive not found, manually parsing serial number from object path.")
-                        last_underscore = object_path.split("/")[-1]
-                        serial_number = last_underscore.split("_")[-1]
+                        # If object_path is not in self._drives. No need to generate alert
+                        # as removed disk is remote disk
+                        try:
+                            drive = self._drives[object_path][self.DRIVE_DBUS_INFO]
+                        except KeyError:
+                            continue
+                        serial_number = str(drive["Serial"])
 
-                    # If serial number is not present then use the ending of by-id symlink
-                    if serial_number is None or \
-                        len(serial_number) == 0:
-                        tmp_serial = str(self._drive_by_id[object_path].split("/")[-1])
+                        self._log_debug("Drive Interface Removed")
+                        self._log_debug(f"  Object Path: {object_path}")
+                        self._log_debug(f"  Serial Number: {serial_number}")
 
-                        # Serial numbers are limited to 20 chars string with drive keyword
-                        serial_number = tmp_serial[tmp_serial.rfind("drive"):]
+                        # Generate and send an internal msg to DiskMsgHandler
+                        self._send_msg(self.DISK_REMOVED_ALERT_TYPE, str(drive["Id"]), json.loads(json.dumps(drive)))
 
-                    self._log_debug("Drive Interface Removed")
-                    self._log_debug(f"  Object Path: {object_path}")
-                    self._log_debug(f"  Serial Number: {serial_number}")
+                        # Remove drive
+                        del self._drives[object_path]
 
-                    # Generate and send an internal msg to DiskMsgHandler
-                    self._notify_disk_msg_handler(object_path, "EMPTY_None", serial_number)
+                        # Update cache with latest info
+                        del self._existing_drive[object_path]
+                        self._update_drive_faults()
+                        store.put(self._existing_drive, self.disk_cache_path)
 
                 # Handle jobs completed like SMART tests
                 elif interface == "org.freedesktop.UDisks2.Job":
@@ -1040,6 +1125,39 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
         # Send the event to disk message handler to generate json message
         self._write_internal_msgQ(DiskMsgHandler.name(), internal_json_msg)
 
+    def _send_msg(self, alert_type, resource_id, specific_info):
+        """Sends an internal msg to DiskMsgHandler"""
+
+        event_time = str(time.time())
+        severity_reader = SeverityReader()
+        msg =  {"sensor_response_type" : "node_disk",
+               "response" : {
+                    "alert_type": alert_type,
+                    "severity": severity_reader.map_severity(alert_type),
+                    "alert_id": self._get_alert_id(event_time),
+                    "host_id": socket.getfqdn(),
+                    "info": {
+                        "site_id": self._site_id,
+                        "rack_id": self._rack_id,
+                        "node_id": self._node_id,
+                        "cluster_id": self._cluster_id,
+                        "resource_type": self.NODE_DISK_RESOURCE_TYPE,
+                        "resource_id": resource_id,
+                        "event_time": event_time},
+                    "specific_info": specific_info
+                    }
+                }
+        # Send the event to disk message handler to generate json message
+        self._write_internal_msgQ(DiskMsgHandler.name(), msg)
+
+    def _get_alert_id(self, epoch_time):
+        """Returns alert id which is a combination of
+           epoch_time and salt value
+        """
+        salt = str(uuid.uuid4().hex)
+        alert_id = epoch_time + salt
+        return alert_id
+
     def _notify_msg_handler_sn_device_mappings(self, disk_path, serial_number):
         """Sends an internal msg to handlers who need to maintain a
             mapping of serial numbers to device names
@@ -1151,6 +1269,38 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
                                                           COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.SETUP),
                                                           "ssu")
         return False if setup == "vm" else True
+
+    def _update_drive_faults(self):
+
+        # This function makes 2 assumptions:
+        # 1. self._drive_info_lock is held by the caller
+        # 2. self._drives and self._existing_drive are consistent with each other.
+
+        for object_path in self._drives.keys():
+            if not self._existing_drive[object_path] and self._is_drive_faulty(object_path):
+                self._existing_drive[object_path] = True
+                self._drives[object_path][self.DRIVE_FAULT_ATTR] = self._get_drive_fault_info(object_path)
+                self._send_msg(self.DISK_FAULT_ALERT_TYPE, 
+                               str(self._drives[object_path][self.DRIVE_DBUS_INFO]["Id"]),
+                               {"health_status": self._drives[object_path][self.DRIVE_FAULT_ATTR]})
+            elif self._existing_drive[object_path] and not self._is_drive_faulty(object_path):
+                self._existing_drive[object_path] = False
+                del self._drives[object_path][self.DRIVE_FAULT_ATTR]
+                self._send_msg(self.DISK_FAULT_RESOLVED_ALERT_TYPE,
+                               str(self._drives[object_path][self.DRIVE_DBUS_INFO]["Id"]),
+                               {"health_status": self._get_drive_fault_info(object_path)})
+            # else no change
+
+
+    def _is_drive_faulty(self, path):
+        cmd = f"sudo smartctl -H {self._drive_by_device_name[path]}"
+        response, _ = self._run_command(cmd)
+        return not self.SMARTCTL_PASSED_RESPONSE in response
+
+    def _get_drive_fault_info(self, path):
+        cmd = f"sudo smartctl -A {self._drive_by_device_name[path]}"
+        response, _ = self._run_command(cmd)
+        return response
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""
