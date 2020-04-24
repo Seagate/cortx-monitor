@@ -39,6 +39,7 @@ class IFdataMsg(BaseSensorMsg):
     def __init__(self, host_id,
                        local_time,
                        interfaces,
+                       resource_id,
                        site_id,
                        node_id,
                        cluster_id,
@@ -57,6 +58,7 @@ class IFdataMsg(BaseSensorMsg):
         self._host_id           = host_id
         self._local_time        = local_time
         self._interfaces        = interfaces
+        self._resource_id       = resource_id
         self._site_id           = site_id
         self._node_id           = node_id
         self._cluster_id        = cluster_id
@@ -81,7 +83,7 @@ class IFdataMsg(BaseSensorMsg):
                           "sensor_response_type": {
                              "info": {
                                 "event_time": epoch_time,
-                                "resource_id": self.RESOURCE_ID,
+                                "resource_id": self._resource_id,
                                 "site_id": self._site_id,
                                 "node_id": self._node_id,
                                 "cluster_id": self._cluster_id,

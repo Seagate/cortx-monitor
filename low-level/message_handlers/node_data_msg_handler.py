@@ -140,6 +140,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                                                 self.CLUSTER_ID,
                                                 '0')
         self.nw_status = {}
+        self.nw_resource_id = "0"
         self._node_sensor    = None
         self._login_actuator = None
         self.disk_sensor_data = None
@@ -535,6 +536,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 ifDataMsg = IFdataMsg(self._node_sensor.host_id,
                                 self._node_sensor.local_time,
                                 self._node_sensor.if_data,
+                                self.nw_resource_id,
                                 self.site_id, self.node_id, self.cluster_id, self.rack_id, self.FAULT)
                 # Add in uuid if it was present in the json request
                 if self._uuid is not None:
@@ -554,6 +556,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             ifDataMsg = IFdataMsg(self._node_sensor.host_id,
                             self._node_sensor.local_time,
                             self._node_sensor.if_data,
+                            self.nw_resource_id,
                             self.site_id, self.node_id, self.cluster_id, self.rack_id, self.FAULT_RESOLVED)
             # Add in uuid if it was present in the json request
             if self._uuid is not None:
@@ -574,12 +577,18 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         """This method checks conditions to trigger network alerts.
                 isup = True # for network is up and running and False for down"""
         res = False
-        nw_status_dict = {}
-        for interface in interfaces:
-            nw_status_dict[interface.get("ifId")] = interface.get("nwStatus")
-        if len(self.nw_status) != 0 and self.nw_status != nw_status_dict:
-                res = True
-        self.nw_status = nw_status_dict
+        try:
+            nw_status_dict = {}
+            for interface in interfaces:
+                iname = interface.get("ifId")
+                nw_status_dict[iname] = interface.get("nwStatus")
+                if len(self.nw_status) != 0 and ((iname in self.nw_status) and (self.nw_status[iname] != nw_status_dict[iname])):
+                    self.nw_resource_id = iname
+            if len(self.nw_status) != 0 and self.nw_status != nw_status_dict:
+                    res = True
+            self.nw_status = nw_status_dict
+        except Exception as e:
+            logger.error("Exception occurs while checking for network alert condition:{}".format(e))
         return res
 
     def _generate_disk_space_alert(self):
