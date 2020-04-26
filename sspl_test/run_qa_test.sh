@@ -1,5 +1,6 @@
 #!/bin/bash
 
+MOCK_SERVER_IP=127.0.0.1
 MOCK_SERVER_PORT=28200
 RMQ_SELF_STARTED=0
 SSPL_STORE_TYPE=${SSPL_STORE_TYPE:-consul}
@@ -90,6 +91,7 @@ restore_cfg_services()
         sed -i 's/site_id='"$site_id"'/site_id=001/g' /opt/seagate/eos/sspl/sspl_test/conf/sspl_tests.conf
         sed -i 's/cluster_id='"$cluster_id"'/cluster_id=001/g' /opt/seagate/eos/sspl/sspl_test/conf/sspl_tests.conf
     else
+        /opt/seagate/eos/hare/bin/consul kv put sspl/config/STORAGE_ENCLOSURE/primary_controller_ip $primary_ip
         port=$(/opt/seagate/eos/hare/bin/consul kv get sspl/config/STORAGE_ENCLOSURE/primary_controller_port)
         if [ "$port" == "$MOCK_SERVER_PORT" ]
         then
@@ -152,6 +154,8 @@ python3 $script_dir/put_config_to_consul.py
 # change the port to $MOCK_SERVER_PORT as mock_server runs on $MOCK_SERVER_PORT
 if [ "$SSPL_STORE_TYPE" == "consul" ]
 then
+    primary_ip=$(/opt/seagate/eos/hare/bin/consul kv get sspl/config/STORAGE_ENCLOSURE/primary_controller_ip)
+    /opt/seagate/eos/hare/bin/consul kv put sspl/config/STORAGE_ENCLOSURE/primary_controller_ip $MOCK_SERVER_IP
     primary_port=$(/opt/seagate/eos/hare/bin/consul kv get sspl/config/STORAGE_ENCLOSURE/primary_controller_port)
     if [ "$primary_port" != "$MOCK_SERVER_PORT" ]
     then
