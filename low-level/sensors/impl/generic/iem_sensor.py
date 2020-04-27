@@ -368,7 +368,7 @@ class IEMSensor(SensorThread, InternalMsgQ):
         if iem is None or len(iem.strip()) == 0:
             raise TypeError
         things_to_strip = f"{self.IEC_KEYWORD}:"
-        splitted_iem = iem.lstrip(things_to_strip).strip()
+        splitted_iem = iem[len(things_to_strip):].strip()
         # Split IEM by ":" delimieter. First part is IEC and second part
         # is description.
         iem_parts = splitted_iem.split(":")
