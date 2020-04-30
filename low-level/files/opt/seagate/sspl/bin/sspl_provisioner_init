@@ -31,16 +31,24 @@ if ! [ "$(rpm -qa | grep eos-prvsnr-cli)" ]; then
     if ! [ "$(cat /etc/hosts | grep eosnode-1)" ]; then
         echo "127.0.0.1 eosnode-1" >> /etc/hosts
     fi
-    pkg_name=$(curl -s http://ci-storage.mero.colo.seagate.com/releases/eos/integration/centos-7.7.1908/last_successful/|grep eos-prvsnr-cli-1.0.0| sed 's/<\/*[^>]*>//g'|cut -d' ' -f1)
-    yum install -y http://ci-storage.mero.colo.seagate.com/releases/eos/integration/centos-7.7.1908/last_successful/$pkg_name
-    sh /opt/seagate/eos-prvsnr/cli/setup-provisioner -S
+else
+    # It will remove already installed packages
+    yum remove -y eos-pr*
+    rm -rf /etc/salt/*
 fi
+
+# to install updated packages
+pkg_name=$(curl -s http://ci-storage.mero.colo.seagate.com/releases/eos/integration/centos-7.7.1908/last_successful/|grep eos-prvsnr-cli-1.0.0| sed 's/<\/*[^>]*>//g'|cut -d' ' -f1)
+yum install -y http://ci-storage.mero.colo.seagate.com/releases/eos/integration/centos-7.7.1908/last_successful/$pkg_name
+sh /opt/seagate/eos-prvsnr/cli/setup-provisioner -S
+salt-call state.apply components.system
+python3 /opt/seagate/eos-prvsnr/cli/pillar_encrypt
 
 # Start /opt/seagate/eos/hare/bin/consul if not running
 CONSUL_PS=$(ps -aux | grep "consul" | grep -v "grep" || true)
 [ -z "$CONSUL_PS" ] && /opt/seagate/eos/hare/bin/consul agent -dev -config-file=$SCRIPT_DIR/bin/consul_config.json &>/dev/null &
 
-$SCRIPT_DIR/bin/sspl_post_install -p EES
+$SCRIPT_DIR/bin/sspl_post_install -p EES -e DEV
 $SCRIPT_DIR/bin/sspl_setup_rabbitmq_cluster
 $SCRIPT_DIR/bin/sspl_setup_init -r eos
 $SCRIPT_DIR/bin/sspl_config

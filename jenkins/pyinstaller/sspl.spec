@@ -24,7 +24,7 @@ product_module_list = import_list(sspl_path, product_path)
 block_cipher = None
 
 sspl_ll_d = Analysis([sspl_path + '/low-level/framework/sspl_ll_d'],
-             pathex=[spec_root + '/sspl', spec_root + '/sspl/low-level', spec_root + '/sspl/low-level/framework'],
+             pathex=[spec_root + '/sspl', spec_root + '/sspl/low-level', spec_root + '/sspl/low-level/framework', spec_root + '/sspl/low-level/message_handlers'],
              binaries=[],
              datas=[(sspl_path + '/low-level/json_msgs/schemas/actuators/*.json', '.'),
                     (sspl_path + '/low-level/json_msgs/schemas/sensors/*.json', '.'),
@@ -40,7 +40,7 @@ sspl_ll_d = Analysis([sspl_path + '/low-level/framework/sspl_ll_d'],
              noarchive=False)
 
 resource_health_view  = Analysis([sspl_path + '/low-level/files/opt/seagate/sspl/bin/genrate_resource_health_view/resource_health_view'],
-             pathex=[spec_root + '/sspl', spec_root + '/sspl/low-level', spec_root + '/sspl/low-level/framework'],
+             pathex=[spec_root + '/sspl', spec_root + '/sspl/low-level', spec_root + '/sspl/low-level/framework', spec_root + '/sspl/low-level/message_handlers'],
              binaries=[],
              datas=[(sspl_path + '/low-level/json_msgs/schemas/actuators/*.json', '.'),
                     (sspl_path + '/low-level/json_msgs/schemas/sensors/*.json', '.'),

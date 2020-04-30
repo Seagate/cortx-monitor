@@ -6,9 +6,12 @@ import socket
 import salt.client
 
 from config_reader import ConfigReader
+from sspl_constants import COMMON_CONFIGS
 
+CLUSTER_SECTION = 'RABBITMQCLUSTER'
 RABBITMQCTL = '/usr/sbin/rabbitmqctl'
 ERLANG_COOKIE_PATH = '/var/lib/rabbitmq/.erlang.cookie'
+CLUSTER_SECTION = 'RABBITMQCLUSTER'
 
 config_reader = ConfigReader(is_init=True)
 CLUSTER_NODES = []
@@ -44,8 +47,7 @@ def copy_erlang_cookie():
     command = 'systemctl stop rabbitmq-server'
     _send_command(command)
     # all rabbitmq servers needs to have same erlang cookie for clustering.
-    cookie_value = ERLANG_COOKIE
-
+    cookie_value = config_reader._get_value(CLUSTER_SECTION, COMMON_CONFIGS.get(CLUSTER_SECTION).get('erlang_cookie'))
     command = f'chmod +w {ERLANG_COOKIE_PATH}'
     _send_command(command)
     command = f'echo "{cookie_value}" > {ERLANG_COOKIE_PATH}'
@@ -85,7 +87,7 @@ def open_rabbitmq_ports():
 
 def cluster_rabbit_mq():
     print('Joining to RabbitMQ cluster...')
-    nodes = CLUSTER_NODES
+    nodes = config_reader._get_value_list(CLUSTER_SECTION, COMMON_CONFIGS.get(CLUSTER_SECTION).get('cluster_nodes'))
     fqdn = socket.getfqdn().split('.')[0]
     clustered = False
     for node in nodes:
@@ -123,7 +125,9 @@ if __name__ == '__main__':
     copy_erlang_cookie()
 
     # Connect to cluster before creating user accounts.
-    cluster_nodes = CLUSTER_NODES
+    cluster_nodes = config_reader._get_value_list(
+        CLUSTER_SECTION, COMMON_CONFIGS.get(CLUSTER_SECTION).get('cluster_nodes')
+    )
     if len(cluster_nodes) > 1:
         cluster_rabbit_mq()
     else:

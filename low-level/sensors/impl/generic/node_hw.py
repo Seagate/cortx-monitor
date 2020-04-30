@@ -32,6 +32,7 @@ from message_handlers.logging_msg_handler import LoggingMsgHandler
 from framework.base.debug import Debug
 from framework.base.module_thread import SensorThread
 from framework.base.internal_msgQ import InternalMsgQ
+from framework.base.sspl_constants import COMMON_CONFIGS
 from framework.utils.config_reader import ConfigReader
 from framework.utils.service_logging import logger
 from sensors.INode_hw import INodeHWsensor
@@ -140,7 +141,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
 
     def _initialize_cache(self):
         data_dir =  self.conf_reader._get_value_with_default(
-            self.SYSINFO, self.DATA_PATH_KEY, self.DATA_PATH_VALUE_DEFAULT)
+            self.SYSINFO, COMMON_CONFIGS.get(self.SYSINFO).get(self.DATA_PATH_KEY), self.DATA_PATH_VALUE_DEFAULT)
         self.cache_dir_path = os.path.join(data_dir, self.CACHE_DIR_NAME)
 
         if not os.path.exists(self.cache_dir_path):
@@ -182,23 +183,22 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         # Initialize internal message queues for this module
         super(NodeHWsensor, self).initialize_msgQ(msgQlist)
 
-        self._site_id = int(conf_reader._get_value_with_default(
+        self._site_id = conf_reader._get_value_with_default(
                                                 self.SYSTEM_INFORMATION,
-                                                self.SITE_ID,
-                                                0))
-        self._rack_id = int(conf_reader._get_value_with_default(
+                                                COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.SITE_ID),
+                                                '001')
+        self._rack_id = conf_reader._get_value_with_default(
                                                 self.SYSTEM_INFORMATION,
-                                                self.RACK_ID,
-                                                0))
-        self._node_id = int(conf_reader._get_value_with_default(
+                                                COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.RACK_ID),
+                                                '001')
+        self._node_id = conf_reader._get_value_with_default(
                                                 self.SYSTEM_INFORMATION,
-                                                self.NODE_ID,
-                                                0))
-
+                                                COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.NODE_ID),
+                                                '001')
         self._cluster_id = conf_reader._get_value_with_default(
                                                 self.SYSTEM_INFORMATION,
-                                                self.CLUSTER_ID,
-                                                '0')
+                                                COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.CLUSTER_ID),
+                                                '001')
 
         # Set flag 'request_shutdown' to true if ipmitool/simulator is non-functional
         res, retcode = self._run_ipmitool_subcommand(subcommand="sel info")

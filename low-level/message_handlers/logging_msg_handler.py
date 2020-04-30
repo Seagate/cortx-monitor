@@ -65,7 +65,7 @@ class LoggingMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
     def _import_products(self, product):
         """Import classes based on which product is being used"""
-        if product in enabled_products:
+        if product.lower() in [x.lower() for x in enabled_products]:
             from loggers.impl.iem_logger import IEMlogger
             self._iem_logger = IEMlogger(self._conf_reader)
 

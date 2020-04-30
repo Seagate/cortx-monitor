@@ -160,17 +160,17 @@
 							"properties": {
 								"site_id": {
 									"description": "A number that uniquely identifies a single data center site.",
-									"type": "integer",
+									"type": "string",
 									"required": true
 								},
 								"rack_id": {
 									"description": "A numerical value that identifies a single Rack in a single site.",
-									"type": "integer",
+									"type": "string",
 									"required": true
 								},
 								"node_id": {
 									"description": "A numerical value that indicates type of node in cluster. i.e 1-Mero,2-GW in EOS.",
-									"type": "integer",
+									"type": "string",
 									"required": true
 								},
 								"resource_type": {

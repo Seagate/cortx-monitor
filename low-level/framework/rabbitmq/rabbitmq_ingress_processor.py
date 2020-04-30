@@ -31,8 +31,7 @@ from .rabbitmq_connector import RabbitMQSafeConnection
 from framework.utils import encryptor
 from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 from json_msgs.messages.actuators.ack_response import AckResponseMsg
-from framework.base.sspl_constants import RESOURCE_PATH
-from framework.base.sspl_constants import ServiceTypes
+from framework.base.sspl_constants import RESOURCE_PATH, ServiceTypes, COMMON_CONFIGS
 
 
 try:
@@ -269,11 +268,12 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
             self._password = get_value_with_default(self.RABBITMQPROCESSOR,
                                                     self.PASSWORD,
                                                     'sspl4ever')
-
             cluster_id = get_value_with_default(self.SYSTEM_INFORMATION_KEY,
-                                                self.CLUSTER_ID_KEY, '')
+                                                COMMON_CONFIGS.get(self.SYSTEM_INFORMATION_KEY).get(self.CLUSTER_ID_KEY),
+                                                '')
             node_id = get_value_with_default(self.SYSTEM_INFORMATION_KEY,
-                                             self.NODE_ID_KEY, '')
+                                             COMMON_CONFIGS.get(self.SYSTEM_INFORMATION_KEY).get(self.NODE_ID_KEY),
+                                             '')
             # Decrypt RabbitMQ Password
             decryption_key = encryptor.gen_key(cluster_id, ServiceTypes.RABBITMQ.value)
             self._password = encryptor.decrypt(decryption_key, self._password.encode('ascii'), "RabbitMQingressProcessor")

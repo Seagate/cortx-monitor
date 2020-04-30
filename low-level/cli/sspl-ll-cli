@@ -28,7 +28,7 @@ from pprint import pprint
 sys.path.insert(0, '/opt/seagate/eos/sspl/low-level')
 from framework.utils.config_reader import ConfigReader
 from tests.manual.manual_test import ManualTest
-from framework.base.sspl_constants import CLI_RESOURCE_PATH
+from framework.base.sspl_constants import CLI_RESOURCE_PATH, COMMON_CONFIGS
 
 __all__ = []
 __version__ = 0.3
@@ -90,10 +90,10 @@ def main():
 
     # Read in CLI type value from configuration file
     cli_type = conf_reader._get_value_with_default(SYS_INFORMATION, CLI_TYPE, 'CS-A').lower()
-    product = conf_reader._get_value(SYS_INFORMATION, PRODUCT)
+    product = conf_reader._get_value(SYS_INFORMATION, COMMON_CONFIGS.get(SYS_INFORMATION).get(PRODUCT))
     # Convert all string to lowercase in the list for ignore case sensitive
     global manTest
-    if product == "EES":
+    if product.lower() == "ees":
         # Setup argument parser
         parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawDescriptionHelpFormatter, \
                                          add_help=False, allow_abbrev=False)

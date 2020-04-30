@@ -65,9 +65,9 @@ def _run_thread_capture_errors(curr_module, sspl_modules, msgQlist,
                     ", Exception: " + logger.exception(ex)
         json_msg = ThreadControllerMsg(curr_module.name(), error_msg).getJson()
 
-        if product in enabled_products:
+        if product.lower() in [x.lower() for x in enabled_products]:
             self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
-        elif product in cs_legacy_products:
+        elif product.lower() in [x.lower() for x in cs_legacy_products]:
             self._write_internal_msgQ(
                 PlaneCntrlRMQegressProcessor.name(), json_msg)
 
@@ -129,7 +129,8 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
         self._operating_system = operating_system
         self._systemd_support = systemd_support
 
-        if operating_system == OperatingSystem.CENTOS7.value or operating_system == OperatingSystem.RHEL7.value:
+        if operating_system == OperatingSystem.CENTOS7.value or operating_system == OperatingSystem.RHEL7.value or \
+            operating_system.lower() in OperatingSystem.CENTOS7.value.lower() or operating_system.lower() in OperatingSystem.RHEL7.value.lower():
             # Note that all threaded sensors and actuators must have an
             # import here to be controlled
             from sensors.impl.centos_7.systemd_watchdog import SystemdWatchdog
@@ -137,9 +138,9 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
             from sensors.impl.centos_7.hpi_monitor import HPIMonitor
 
         # Handle configurations for specific products
-        if product == "CS-A":
+        if product.lower() == "cs-a":
             from sensors.impl.generic.SMR_drive_data import SMRdriveData
-        if product == "EES":
+        if product.lower() == "ees":
             from sensors.impl.platforms.realstor.realstor_disk_sensor \
                 import RealStorDiskSensor
             from sensors.impl.platforms.realstor.realstor_psu_sensor \
@@ -154,14 +155,14 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
                 import RealStorLogicalVolumeSensor
             from sensors.impl.platforms.realstor.realstor_enclosure_sensor \
                 import RealStorEnclosureSensor
-        if product in enabled_products:
+        if product.lower() in [x.lower() for x in enabled_products]:
             from sensors.impl.generic.raid import RAIDsensor
 
     def run(self):
         """Run the module periodically on its own thread."""
-        if (self._product in enabled_products) and \
+        if (self._product.lower() in [x.lower() for x in enabled_products]) and \
            not self._threads_initialized:
-            if self._product in cs_products:
+            if self._product.lower() in [x.lower() for x in cs_products]:
                 # Wait for the dcs-collector to populate the /tmp/dcs/hpi directory
                 while not os.path.isdir(self._hpi_base_dir):
                     logger.info(
@@ -295,9 +296,9 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
             threadControllerMsg.set_uuid(uuid)
         msgString = threadControllerMsg.getJson()
         logger.info("ThreadController, response: %s" % str(msgString))
-        if self._product in enabled_products:
+        if self._product.lower() in [x.lower() for x in enabled_products]:
             self._write_internal_msgQ(RabbitMQegressProcessor.name(), msgString)
-        elif self._product in cs_legacy_products:
+        elif self._product.lower() in [x.lower() for x in cs_legacy_products]:
             self._write_internal_msgQ(PlaneCntrlRMQegressProcessor.name(), msgString)
 
     def _restart_module(self, module_name):
@@ -448,9 +449,9 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
 
     def check_RabbitMQegressProcessor_is_running(self):
         """Used by the shutdown_handler to allow queued egress msgs to complete"""
-        if self._product in enabled_products:
+        if self._product.lower() in [x.lower() for x in enabled_products]:
             return self._sspl_modules[PlaneCntrlRMQegressProcessor.name()].is_running()
-        elif self._product in cs_legacy_products:
+        elif self._product.lower() in [x.lower() for x in cs_legacy_products]:
             return self._sspl_modules[RabbitMQegressProcessor.name()].is_running()
 
     def _get_degraded_state_modules_list(self):

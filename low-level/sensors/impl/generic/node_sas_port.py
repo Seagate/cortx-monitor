@@ -18,6 +18,7 @@ from message_handlers.node_data_msg_handler import NodeDataMsgHandler
 from framework.base.module_thread import SensorThread
 from framework.utils.severity_reader import SeverityReader
 from framework.utils.sysfs_interface import *
+from framework.base.sspl_constants import COMMON_CONFIGS
 
 class SASPortSensor(SensorThread, InternalMsgQ):
     """SAS Port Sensor which runs on its own thread periodically and
@@ -76,14 +77,14 @@ class SASPortSensor(SensorThread, InternalMsgQ):
 
         super(SASPortSensor, self).initialize_msgQ(msgQlist)
 
-        self._site_id = int(self._conf_reader._get_value_with_default(
-                                self.SYSTEM_INFORMATION, self.SITE_ID, 0))
+        self._site_id = self._conf_reader._get_value_with_default(
+                                self.SYSTEM_INFORMATION, COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.SITE_ID), '001')
         self._cluster_id = self._conf_reader._get_value_with_default(
-                                self.SYSTEM_INFORMATION, self.CLUSTER_ID, '0')
-        self._rack_id = int(self._conf_reader._get_value_with_default(
-                                self.SYSTEM_INFORMATION, self.RACK_ID, 0))
-        self._node_id = int(self._conf_reader._get_value_with_default(
-                                self.SYSTEM_INFORMATION, self.NODE_ID, 0))
+                                self.SYSTEM_INFORMATION, COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.CLUSTER_ID), '001')
+        self._rack_id = self._conf_reader._get_value_with_default(
+                                self.SYSTEM_INFORMATION, COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.RACK_ID), '001')
+        self._node_id = self._conf_reader._get_value_with_default(
+                                self.SYSTEM_INFORMATION, COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.NODE_ID), '001')
 
         # get the sas port implementor from configuration
         sas_port_utility = self._conf_reader._get_value_with_default(

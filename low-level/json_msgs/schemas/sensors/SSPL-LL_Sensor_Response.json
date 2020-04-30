@@ -299,17 +299,17 @@
 									"properties": {
 										"site_id": {
 											"description": "Site unique ID",
-											"type": "integer",
+											"type": "string",
 											"required": true
 										},
 										"rack_id": {
 											"description": "Unique Rack id in a site",
-											"type": "integer",
+											"type": "string",
 											"required": true
 										},
 										"node_id": {
 											"description": "Unique Node id in a rack",
-											"type": "integer",
+											"type": "string",
 											"required": true
 										},
 										"cluster_id": {
@@ -656,17 +656,17 @@
 							"properties":{
 								"site_id": {
 									"description": "Site unique ID",
-									"type": "integer",
+									"type": "string",
 									"required": true
 								},
 								"rack_id": {
 									"description": "Unique Rack id in a site",
-									"type": "integer",
+									"type": "string",
 									"required": true
 								},
 								"node_id": {
 									"description": "Unique Node id in a rack",
-									"type": "integer",
+									"type": "string",
 									"required": true
 								},
 								"cluster_id": {
@@ -821,17 +821,17 @@
                                     "properties": {
                                         "site_id": {
                                             "description": "Site unique ID",
-                                            "type": "integer",
+                                            "type": "string",
                                             "required": true
                                                 },
                                         "rack_id": {
                                             "description": "Unique Rack id in a site",
-                                            "type": "integer",
+                                            "type": "string",
                                             "required": true
                                                 },
                                         "node_id": {
                                             "description": "Unique Node id in a rack",
-                                            "type": "integer",
+                                            "type": "string",
                                             "required": true
                                                 },
                                         "cluster_id": {

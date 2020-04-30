@@ -136,9 +136,9 @@ def controller_actuator_message_request(resource_type):
             "sspl_version": "1.0.0"
         },
         "request_path": {
-            "site_id": 0,
-            "node_id": 1,
-            "rack_id": 0
+            "site_id": "0",
+            "node_id": "1",
+            "rack_id": "0"
         },
         "actuator_request_type": {
             "storage_enclosure": {

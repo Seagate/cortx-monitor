@@ -28,7 +28,7 @@ from functools import lru_cache
 
 from framework.base.module_thread import SensorThread
 from framework.base.internal_msgQ import InternalMsgQ
-from framework.base.sspl_constants import iem_severity_types, iem_source_types, iem_severity_to_alert_mapping
+from framework.base.sspl_constants import iem_severity_types, iem_source_types, iem_severity_to_alert_mapping, COMMON_CONFIGS
 from framework.utils.service_logging import logger
 
 from json_msgs.messages.sensors.iem_data import IEMDataMsg
@@ -125,17 +125,17 @@ class IEMSensor(SensorThread, InternalMsgQ):
             self.SENSOR_NAME.upper(), self.TIMESTAMP_FILE_PATH_KEY,
             self.DEFAULT_TIMESTAMP_FILE_PATH)
 
-        self._site_id = int(self._conf_reader._get_value_with_default(
-            self.SYSTEM_INFORMATION.upper(), self.SITE_ID_KEY, self.DEFAULT_SITE_ID))
+        self._site_id = self._conf_reader._get_value_with_default(
+            self.SYSTEM_INFORMATION.upper(), COMMON_CONFIGS.get(self.SYSTEM_INFORMATION.upper()).get(self.SITE_ID_KEY), self.DEFAULT_SITE_ID)
 
-        self._rack_id = int(self._conf_reader._get_value_with_default(
-            self.SYSTEM_INFORMATION.upper(), self.RACK_ID_KEY, self.DEFAULT_RACK_ID))
+        self._rack_id = self._conf_reader._get_value_with_default(
+            self.SYSTEM_INFORMATION.upper(), COMMON_CONFIGS.get(self.SYSTEM_INFORMATION.upper()).get(self.RACK_ID_KEY), self.DEFAULT_RACK_ID)
 
-        self._node_id = int(self._conf_reader._get_value_with_default(
-            self.SYSTEM_INFORMATION.upper(), self.NODE_ID_KEY, self.DEFAULT_NODE_ID))
+        self._node_id = self._conf_reader._get_value_with_default(
+            self.SYSTEM_INFORMATION.upper(), COMMON_CONFIGS.get(self.SYSTEM_INFORMATION.upper()).get(self.NODE_ID_KEY), self.DEFAULT_NODE_ID)
 
         self._cluster_id = self._conf_reader._get_value_with_default(
-            self.SYSTEM_INFORMATION.upper(), self.CLUSTER_ID_KEY, self.DEFAULT_CLUSTER_ID)
+            self.SYSTEM_INFORMATION.upper(), COMMON_CONFIGS.get(self.SYSTEM_INFORMATION.upper()).get(self.CLUSTER_ID_KEY), self.DEFAULT_CLUSTER_ID)
 
         return True
 

@@ -29,7 +29,7 @@ from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 from framework.base.module_thread import SensorThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
-from framework.base.sspl_constants import cs_products
+from framework.base.sspl_constants import cs_products, COMMON_CONFIGS
 
 # Modules that receive messages from this module
 from message_handlers.service_msg_handler import ServiceMsgHandler
@@ -1148,7 +1148,7 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
            in VM environment because virtual drives don't support SMART test.
         """
         setup = self._conf_reader._get_value_with_default(self.SYSTEM_INFORMATION,
-                                                          self.SETUP,
+                                                          COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.SETUP),
                                                           "ssu")
         return False if setup == "vm" else True
 
