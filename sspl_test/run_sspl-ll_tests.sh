@@ -9,4 +9,4 @@ systemctl start crond
 
 # Execute tests
 #$sudo ./$script_dir/run_test.py -t $script_dir/plans/$PLAN.pln
-$sudo /usr/bin/sspl_tests -t $script_dir/plans/$PLAN.pln
+sudo /opt/seagate/eos/sspl/sspl_test/lib/sspl_tests -t $script_dir/plans/$PLAN.pln
