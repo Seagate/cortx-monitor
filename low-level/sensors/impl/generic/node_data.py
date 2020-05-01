@@ -36,6 +36,7 @@ class NodeData(Debug):
 
 
     SENSOR_NAME = "NodeData"
+    CARRIER_FILE = "/sys/class/net/{}/carrier"
 
 
     @staticmethod
@@ -182,6 +183,7 @@ class NodeData(Debug):
         for interface, if_data in net_data.items():
             self._log_debug("_get_if_data, interface: %s %s" % (interface, net_data))
             nw_status = self._fetch_nw_status()
+            nw_cable_conn_status = self.fetch_nw_cable_conn_status(interface)
             if_data = {"ifId" : interface,
                        "networkErrors"      : (net_data[interface].errin +
                                                net_data[interface].errout),
@@ -191,7 +193,8 @@ class NodeData(Debug):
                        "droppedPacketsOut"  : net_data[interface].dropout,
                        "packetsOut"         : net_data[interface].packets_sent,
                        "trafficOut"         : net_data[interface].bytes_sent,
-                       "nwStatus": nw_status[interface]
+                       "nwStatus"           : nw_status[interface],
+                       "nwCableConnStatus"  : nw_cable_conn_status
                        }
             self.if_data.append(if_data)
 
@@ -202,6 +205,19 @@ class NodeData(Debug):
             nw_dict[nw.split(' ')[0]] = nw.split(' ')[1]
         logger.debug("network info going is : {}".format(nw_dict))
         return nw_dict
+
+    def fetch_nw_cable_conn_status(self, interface):
+        phy_link_state = {'0':'DOWN', '1':'UP', 'unknown':'UNKNOWN'}
+        carrier_indicator = 'unknown'
+        try:
+            with open(self.CARRIER_FILE.format(interface)) as cFile:
+                carrier_indicator = cFile.read().strip()
+            if carrier_indicator not in phy_link_state.keys():
+                carrier_indicator = 'unknown'
+        except Exception as err:
+            logger.warning("Node Data, unable to get cable connection state " +
+                          f"of '{interface}'. {str(err)}")
+        return phy_link_state[carrier_indicator]
 
     def _get_disk_space_alert_data(self):
         """Retrieves node information for the disk_space_alert_data json message"""

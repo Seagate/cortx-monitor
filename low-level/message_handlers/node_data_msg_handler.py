@@ -61,6 +61,8 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
     IPMI_RESOURCE_TYPE_PSU = "node:fru:psu"
     IPMI_RESOURCE_TYPE_FAN = "node:fru:fan"
     IPMI_RESOURCE_TYPE_DISK = "node:fru:disk"
+    NW_RESOURCE_TYPE = "node:interface:nw"
+    NW_CABLE_RESOURCE_TYPE = "node:interface:nw:cable"
     host_fault = False
     cpu_fault = False
     disk_fault = False
@@ -141,6 +143,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                                                 '0')
         self.nw_status = {}
         self.nw_resource_id = "0"
+        self.prev_cable_cnxns = {}
         self._node_sensor    = None
         self._login_actuator = None
         self.disk_sensor_data = None
@@ -520,6 +523,27 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
             self.cpu_fault = False
 
+    def _send_ifdata_json_msg(self, sensor_type, msg_sensor):
+        """A resuable method for transmitting IFDataMsg to RMQ and IEM logging"""
+        # Add in uuid if it was present in the json request
+        if self._uuid is not None:
+            msg_sensor.set_uuid(self._uuid)
+        jsonMsg = msg_sensor.getJson()
+        self.if_sensor_data = jsonMsg
+        self.os_sensor_type[sensor_type] = self.if_sensor_data
+
+        # Send the event to logging msg handler to send IEM message to journald
+        #internal_json_msg=json.dumps({
+        #                        'actuator_request_type': {
+        #                            'logging': {
+        #                                'log_level': 'LOG_WARNING',
+        #                                'log_type': 'IEM',
+        #                                'log_msg': '{}'.format(jsonMsg)}}})
+        #self._write_internal_msgQ(LoggingMsgHandler.name(), internal_json_msg)
+
+        # Transmit it out over rabbitMQ channel
+        self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
+
     def _generate_if_data(self):
         """Create & transmit a network interface data message as defined
             by the sensor response json schema"""
@@ -530,48 +554,38 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             logger.error("NodeDataMsgHandler, _generate_if_data was NOT successful.")
         interfaces = self._node_sensor.if_data
         is_alert = self._is_nwalert_exist(interfaces)
-        if is_alert:
-            if not self.if_fault:
-                self.if_fault = True
-                ifDataMsg = IFdataMsg(self._node_sensor.host_id,
-                                self._node_sensor.local_time,
-                                self._node_sensor.if_data,
-                                self.nw_resource_id,
-                                self.site_id, self.node_id, self.cluster_id, self.rack_id, self.FAULT)
-                # Add in uuid if it was present in the json request
-                if self._uuid is not None:
-                    ifDataMsg.set_uuid(self._uuid)
-                jsonMsg = ifDataMsg.getJson()
-                internal_json_msg=json.dumps(
-                        {'actuator_request_type': {'logging': {'log_level': 'LOG_WARNING', 'log_type': 'IEM', 'log_msg': '{}'.format(jsonMsg)}}})
-
-                # Send the event to logging msg handler to send IEM message to journald
-                self.if_sensor_data = jsonMsg
-                self.os_sensor_type["nw"] = self.if_sensor_data
-                self._write_internal_msgQ(LoggingMsgHandler.name(), internal_json_msg)
-                # Transmit it out over rabbitMQ channel
-                self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
+        if is_alert and (not self.if_fault):
+            self.if_fault = True
+            ifDataMsg = IFdataMsg(self._node_sensor.host_id,
+                            self._node_sensor.local_time,
+                            self._node_sensor.if_data,
+                            self.nw_resource_id,
+                            self.NW_RESOURCE_TYPE,
+                            self.site_id, self.node_id, self.cluster_id, self.rack_id, self.FAULT)
+            self._send_ifdata_json_msg("nw", ifDataMsg)
 
         if not is_alert and (self.if_fault == True):
             ifDataMsg = IFdataMsg(self._node_sensor.host_id,
                             self._node_sensor.local_time,
                             self._node_sensor.if_data,
                             self.nw_resource_id,
+                            self.NW_RESOURCE_TYPE,
                             self.site_id, self.node_id, self.cluster_id, self.rack_id, self.FAULT_RESOLVED)
-            # Add in uuid if it was present in the json request
-            if self._uuid is not None:
-                ifDataMsg.set_uuid(self._uuid)
-            jsonMsg = ifDataMsg.getJson()
-            internal_json_msg=json.dumps(
-                    {'actuator_request_type': {'logging': {'log_level': 'LOG_WARNING', 'log_type': 'IEM', 'log_msg': '{}'.format(jsonMsg)}}})
-
-            # Send the event to logging msg handler to send IEM message to journald
-            self.if_sensor_data = jsonMsg
-            self.os_sensor_type["nw"] = self.if_sensor_data
-            self._write_internal_msgQ(LoggingMsgHandler.name(), internal_json_msg)
-            # Transmit it out over rabbitMQ channel
-            self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
+            self._send_ifdata_json_msg("nw", ifDataMsg)
             self.if_fault = False
+
+        # Get all cable connections state and generate alert on
+        # cables identified for fault detected and resolved state
+        nw_cable_alerts = self._nw_cable_alert_exists(interfaces)
+
+        for nw_cable_resource_id, state in nw_cable_alerts.items():
+            ifDataMsg = IFdataMsg(self._node_sensor.host_id,
+                            self._node_sensor.local_time,
+                            self._node_sensor.if_data,
+                            nw_cable_resource_id,
+                            self.NW_CABLE_RESOURCE_TYPE,
+                            self.site_id, self.node_id, self.cluster_id, self.rack_id, state)
+            self._send_ifdata_json_msg("nw", ifDataMsg)
 
     def _is_nwalert_exist(self, interfaces):
         """This method checks conditions to trigger network alerts.
@@ -590,6 +604,38 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         except Exception as e:
             logger.error("Exception occurs while checking for network alert condition:{}".format(e))
         return res
+
+    def _nw_cable_alert_exists(self, interfaces):
+        """Checks cable connection status with physical link(carrier) state and
+        avoids duplicate alert reporting by comparing with its previous state.
+        Fault detection is identified by physical link state Down.
+        Fault resolved is identified by physical link state changed from Down to Up.
+        """
+        identified_cables = {}
+
+        for interface in interfaces:
+
+            interface_name = interface.get("ifId")
+            phy_link_status = interface.get("nwCableConnStatus")
+
+            # fault detected (Down, Up to Down)
+            if phy_link_status == 'DOWN':
+                if self.prev_cable_cnxns.get(interface_name) != phy_link_status:
+                    if self.prev_cable_cnxns.get(interface_name):
+                        logger.warning(f"Cable connection fault is detected with '{interface_name}'")
+                        identified_cables[interface_name] = self.FAULT
+                    self.prev_cable_cnxns[interface_name] = phy_link_status
+            # fault resolved (Down to Up)
+            elif phy_link_status == 'UP':
+                if self.prev_cable_cnxns.get(interface_name) != phy_link_status:
+                    if self.prev_cable_cnxns.get(interface_name):
+                        logger.info(f"Cable connection fault is resolved with '{interface_name}'")
+                        identified_cables[interface_name] = self.FAULT_RESOLVED
+                    self.prev_cable_cnxns[interface_name] = phy_link_status
+            else:
+                logger.warning(f"Cable connection state is unknown with '{interface_name}'")
+
+        return identified_cables
 
     def _generate_disk_space_alert(self):
         """Create & transmit a disk_space_alert message as defined

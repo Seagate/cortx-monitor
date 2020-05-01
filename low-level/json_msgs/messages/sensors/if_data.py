@@ -33,13 +33,13 @@ class IFdataMsg(BaseSensorMsg):
 
     MESSAGE_VERSION  = "1.0.0"
     RESOURCE_ID = "0"
-    RESOURCE_TYPE = "node:interface:nw"
     SEVERITY = "warning"
 
     def __init__(self, host_id,
                        local_time,
                        interfaces,
                        resource_id,
+                       resource_type,
                        site_id,
                        node_id,
                        cluster_id,
@@ -59,11 +59,12 @@ class IFdataMsg(BaseSensorMsg):
         self._local_time        = local_time
         self._interfaces        = interfaces
         self._resource_id       = resource_id
+        self._resource_type     = resource_type
         self._site_id           = site_id
         self._node_id           = node_id
         self._cluster_id        = cluster_id
         self._rack_id           = rack_id
-        self.alert_type        = alert_type
+        self.alert_type         = alert_type
 
         epoch_time = str(int(time.time()))
         alert_id = mon_utils.get_alert_id(epoch_time)
@@ -88,7 +89,7 @@ class IFdataMsg(BaseSensorMsg):
                                 "node_id": self._node_id,
                                 "cluster_id": self._cluster_id,
                                 "rack_id": self._rack_id,
-                                "resource_type": self.RESOURCE_TYPE
+                                "resource_type": self._resource_type
                              },
                              "specific_info": {
                                 "localtime": self._local_time,
