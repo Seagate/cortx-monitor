@@ -60,6 +60,8 @@ class SSPLHealthView(object):
     encl_logical_volume_resource_type = "enclosure:eos:logical_volume"
     encl_sas_resource_type = "enclosure:interface:sas"
 
+    undesired_vals = ["N/A", ""]
+
     SITE_ID = singleton_realstorencl.site_id
     RACK_ID = singleton_realstorencl.rack_id
     NODE_ID = socket.getfqdn()
@@ -262,6 +264,8 @@ class SSPLHealthView(object):
                 resource_id = drive.get("durable-id")
                 durable_id = resource_id
                 health = drive.get("health", "NA")
+                if health in self.undesired_vals:
+                    health = "NA"
                 disk_data.update({
                     self.encl_disk_resource_type+'-'+resource_id: {
                         "alert_type": "NA",
@@ -299,6 +303,8 @@ class SSPLHealthView(object):
             resource_id = psu.get("durable-id")
             durable_id = resource_id
             health = psu.get("health", "NA")
+            if health in self.undesired_vals:
+                health = "NA"
             psu_data.update({
                     self.encl_psu_resource_type+'-'+resource_id: {
                         "alert_type": "NA",
@@ -336,6 +342,8 @@ class SSPLHealthView(object):
             resource_id = controller.get("durable-id")
             durable_id = resource_id
             health = controller.get("health", "NA")
+            if health in self.undesired_vals:
+                health = "NA"
             controller_data.update({
                     self.encl_controller_resource_type+'-'+resource_id: {
                         "alert_type": "NA",
@@ -372,6 +380,8 @@ class SSPLHealthView(object):
             resource_id = fan.get("durable-id")
             durable_id = resource_id
             health = fan.get("health", "NA")
+            if health in self.undesired_vals:
+                health = "NA"
             fan_data.update({
                     self.encl_fan_resource_type+'-'+resource_id: {
                         "alert_type": "NA",
@@ -416,6 +426,8 @@ class SSPLHealthView(object):
             resource_id = spln.get("durable-id")
             durable_id = resource_id
             health = spln.get("health", "NA")
+            if health in self.undesired_vals:
+                health = "NA"
             spln_data.update({
                     self.encl_sideplane_resource_type+'-'+resource_id: {
                         "alert_type": "NA",
@@ -454,6 +466,8 @@ class SSPLHealthView(object):
             resource_id = logicalvolume.get("volume-name", "NA")
             durable_id = logicalvolume.get("virtual-disk-serial", "NA")
             health = logicalvolume.get("health", "NA")
+            if health in self.undesired_vals:
+                health = "NA"
             logvol_data.update({
                     self.encl_logical_volume_resource_type+'-'+resource_id: {
                         "alert_type": "NA",
@@ -467,6 +481,8 @@ class SSPLHealthView(object):
         if not logvol_existing_cache:
             for diskgroup in diskgroups:
                 health = diskgroup.get("health", "NA")
+                if health in self.undesired_vals:
+                    health = "NA"
                 if health != 'OK':
                     serial_number = diskgroup.get("serial-number") # Disk Group Serial Number
                     alert_type = ""
@@ -485,6 +501,8 @@ class SSPLHealthView(object):
             resource_id = sas_port.get("durable-id")
             durable_id = resource_id
             health = sas_port.get("health", "NA")
+            if health in self.undesired_vals:
+                health = "NA"
             sas_data.update({
                     self.encl_sas_resource_type+'-'+resource_id: {
                         "alert_type": "NA",
@@ -511,6 +529,8 @@ class SSPLHealthView(object):
                     resource_id = sensor.get("durable-id")
                     durable_id = resource_id
                     health = sensor.get("status", "NA")
+                    if health in self.undesired_vals:
+                        health = "NA"
                     plsn_data.update({
                             resource_type+'-'+resource_id: {
                                 "alert_type": "NA",
