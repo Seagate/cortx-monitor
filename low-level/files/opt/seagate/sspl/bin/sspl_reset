@@ -10,7 +10,7 @@ source $script_dir/constants.sh
 
 SCRIPT_NAME=$(basename $0)
 
-SSPL_CONFIGURED="/var/eos/sspl/sspl-configured"
+SSPL_CONFIGURED="/var/$PRODUCT/sspl/sspl-configured"
 
 if [ -f $SSPL_CONF ]; then
     IFS='=' dp=`grep data_path $SSPL_CONF`; datapath=( $dp )
@@ -18,8 +18,8 @@ if [ -f $SSPL_CONF ]; then
     IFS='=' lfp=`grep log_file_path $SSPL_CONF`; datapath=( $lfp )
     IEM_FILE_PATH=`echo ${datapath[1]}`
 else
-    SSPL_DATA_DIR="/var/eos/sspl/data"
-    IEM_FILE_PATH="/var/eos/sspl/data/iem/iem_messages"
+    SSPL_DATA_DIR="/var/$PRODUCT/sspl/data"
+    IEM_FILE_PATH="/var/$PRODUCT/sspl/data/iem/iem_messages"
 fi
 
 usage() {
@@ -33,23 +33,6 @@ EOF
 
 hard_reset()
 {
-    PRODUCT=EES
-
-    while [ $# -gt 0 ]; do
-        case $1 in
-            -p )
-                [ $# -lt 2 ] && usage
-                shift 1 && PRODUCT=$1
-                [[ $PRODUCTS =~ (^| )$PRODUCT($| ) ]] || usage
-                ;;
-            * )
-                usage
-                ;;
-        esac
-        shift 1
-    done
-
-
     # stop sspl service
     systemctl stop sspl-ll.service
 
@@ -69,8 +52,8 @@ hard_reset()
     fi
 
     # Remove log directories
-    rm -rf /var/log/eos/sspl
-    rm -rf /var/log/eos/iem
+    rm -rf /var/log/$PRODUCT/sspl
+    rm -rf /var/log/$PRODUCT/iem
 
     # Remove rsyslog config files
     rm -f /etc/rsyslog.d/0-iemfwd.conf

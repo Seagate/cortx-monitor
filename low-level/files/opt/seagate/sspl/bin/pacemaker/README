@@ -1,21 +1,21 @@
 1. Install following latest sspl RPMs on both the node
-    - eos-libsspl_sec-<version>_<git-id>.el7.centos.x86_64
-    - eos-libsspl_sec-method_none-<version>_<git-id>.el7.centos.x86_64
-    - eos-sspl-<version>_<git-id>.el7.centos.noarch
+    - cortx-libsspl_sec-<version>_<git-id>.el7.centos.x86_64
+    - cortx-libsspl_sec-method_none-<version>_<git-id>.el7.centos.x86_64
+    - cortx-sspl-<version>_<git-id>.el7.centos.noarch
 
 2. Initialization of SSPL
     - Make sure rabbitmq is installed on both the nodes.
 
     - If system is not provisioned, execute following steps to initialize SSPL:
-        /opt/seagate/eos/sspl/bin/sspl_post_install -p EES
-        /opt/seagate/eos/sspl/bin/sspl_setup_init -r eos
-        /opt/seagate/eos/sspl/bin/sspl_config
+        /opt/seagate/cortx/sspl/bin/sspl_post_install -p cortx
+        /opt/seagate/cortx/sspl/bin/sspl_setup_init -r cortx
+        /opt/seagate/cortx/sspl/bin/sspl_config
         systemctl start sspl-ll.service
         systemctl start rabbitmq-server.service
 
 3. Installation of SSPL resource agent script
     - Copy Resource Agent script from
-      "cp /opt/seagate/eos/sspl/bin/pacemaker/sspl_stateful_resource_agent /lib/ocf/resource.d/<provider>/sspl_stateful_resource_agent"
+      "cp /opt/seagate/cortx/sspl/bin/pacemaker/sspl_stateful_resource_agent /lib/ocf/resource.d/<provider>/sspl_stateful_resource_agent"
 
 4. Creation of the SSPL resource (Master/Slave approach)
     - "pcs resource create sspl ocf:<provider>:sspl_stateful_resource_agent master meta migration-threshold=10 failure-timeout=10"

@@ -1,8 +1,10 @@
 #!/bin/bash
 set -eu -o pipefail
+SCRIPT_DIR=$(dirname $0)
+. $SCRIPT_DIR/constants.sh
 
 # Redirect all printouts to the log file with the timestamp prefix:
-exec &>> /var/log/eos/sspl/consul-${0##*/}.log
+exec &>> /var/log/$PRODUCT/sspl/consul-${0##*/}.log
 exec &> >(stdbuf -oL gawk '{ print strftime("%Y-%m-%d %H:%M:%S"), $0 }')
 
 SSPL_PID=`/sbin/pidof -s /usr/bin/sspl_ll_d`

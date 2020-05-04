@@ -1,12 +1,13 @@
 #!/usr/bin/python3.6
 from enum import Enum
 
-enabled_products = ["EES", "CS-A"]
+PRODUCT_NAME = 'cortx'
+enabled_products = ['cortx', "CS-A"]
 cs_products = ["CS-A"]
 cs_legacy_products = ["CS-L", "CS-G"]
-setups = ["eos"]
-RESOURCE_PATH = "/opt/seagate/eos/sspl/resources/"
-CLI_RESOURCE_PATH = "/opt/seagate/eos/sspl/cli"
+setups = [PRODUCT_NAME]
+RESOURCE_PATH = f"/opt/seagate/{PRODUCT_NAME}/sspl/resources/"
+CLI_RESOURCE_PATH = f"/opt/seagate/{PRODUCT_NAME}/sspl/cli"
 SSPL_STORE_TYPE = 'consul'
 CONSUL_HOST = '127.0.0.1'
 CONSUL_PORT = '8500'

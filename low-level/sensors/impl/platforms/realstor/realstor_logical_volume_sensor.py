@@ -28,6 +28,7 @@ from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
 from framework.platforms.realstor.realstor_enclosure import singleton_realstorencl
 from framework.utils.store_factory import store
+from framework.base.sspl_constants import PRODUCT_NAME
 
 # Modules that receive messages from this module
 from message_handlers.real_stor_encl_msg_handler import RealStorEnclMsgHandler
@@ -42,8 +43,8 @@ class RealStorLogicalVolumeSensor(SensorThread, InternalMsgQ):
 
     SENSOR_NAME = "RealStorLogicalVolumeSensor"
     SENSOR_RESP_TYPE = "enclosure_logical_volume_alert"
-    RESOURCE_CATEGORY = "eos"
-    RESOURCE_TYPE = "enclosure:eos:logical_volume"
+    RESOURCE_CATEGORY = f"{PRODUCT_NAME}"
+    RESOURCE_TYPE = f"enclosure:{PRODUCT_NAME}:logical_volume"
 
     PRIORITY = 1
 

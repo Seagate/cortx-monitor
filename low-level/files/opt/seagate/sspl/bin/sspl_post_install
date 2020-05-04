@@ -13,7 +13,7 @@ SCRIPT_NAME=$(basename $0)
 RSYSLOG_CONF="/etc/rsyslog.d/0-iemfwd.conf"
 RSYSLOG_SSPL_CONF="/etc/rsyslog.d/1-ssplfwd.conf"
 PACEMAKER_INSTALLATION_PATH="/lib/ocf/resource.d/seagate/"
-SSPL_RA_PATH="/opt/seagate/eos/sspl/bin/pacemaker/sspl_stateful_resource_agent"
+SSPL_RA_PATH="/opt/seagate/$PRODUCT/sspl/bin/pacemaker/sspl_stateful_resource_agent"
 
 usage() {
     cat << EOF
@@ -22,22 +22,6 @@ $SCRIPT_NAME [[-p <EES>]]
 EOF
     exit 1
 }
-
-PRODUCT=EES
-
-while [ $# -gt 0 ]; do
-    case $1 in
-        -p )
-            [ $# -lt 2 ] && usage
-            shift 1 && PRODUCT=$1
-            [[ $PRODUCTS =~ (^| )$PRODUCT($| ) ]] || usage
-            ;;
-        * )
-            usage
-            ;;
-    esac
-    shift 1
-done
 
 # Install packages which are not available in YUM repo, from PIP
 python3 -m pip install -r $SSPL_BASE_DIR/conf/requirements.txt
@@ -61,8 +45,8 @@ systemctl enable sspl-ll.service
 systemctl daemon-reload
 
 # Copy IEC mapping files
-mkdir -p $BASE_DIR/iem/iec_mapping
-cp -R $SSPL_BASE_DIR/resources/iem/iec_mapping/* $BASE_DIR/iem/iec_mapping
+mkdir -p $PRODUCT_BASE_DIR/iem/iec_mapping
+cp -R $SSPL_BASE_DIR/resources/iem/iec_mapping/* $PRODUCT_BASE_DIR/iem/iec_mapping
 
 # Configure rabbitmq
 $script_dir/rabbitmq_setup

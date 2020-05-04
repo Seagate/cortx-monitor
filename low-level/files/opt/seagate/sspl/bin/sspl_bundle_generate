@@ -5,18 +5,20 @@ import os
 import time
 import sys
 
+from sspl_constants import PRODUCT_NAME
 # Add the top level directories
-sys.path.insert(0, '/opt/seagate/eos/sspl/low-level')
+sys.path.insert(0, f'/opt/seagate/{PRODUCT_NAME}/sspl/low-level')
 from config_reader import ConfigReader
 
 SYS_INFORMATION = "SYSTEM_INFORMATION"
 IEM_SENSOR = "IEMSENSOR"
 
 localTempPath = "/tmp/support_bundle/"
-sspl_log_default = "/var/log/eos/sspl"
-iem_log_default = "/var/log/eos/iem"
+sspl_log_default = f"/var/log/{PRODUCT_NAME}/sspl"
+iem_log_default = f"/var/log/{PRODUCT_NAME}/iem"
 onGoingRequestPath = "/tmp/sspl-sb-req.txt"
-sspl_conf_dir = "/opt/seagate/eos-prvsnr/pillar/components/sspl.sls"
+sspl_conf_dir = f"/opt/seagate/eos-prvsnr/pillar/components/sspl.sls"
+#TODO CORTEX_RENAME to cortx-prvsnr
 
 def make_sspl_log_tarfile(parser, tmpFile):
     file_name = "sspl_%s.tar.gz" % parser[1]

@@ -16,6 +16,7 @@
 
    TODO: Understand fernet terminologies and provide hint for errors based on
          those terminologies.
+   #TODO CORTEX_RENAME to cortx-py-utils
 """
 import sys
 

@@ -55,6 +55,7 @@ from framework.rabbitmq.thread_controller import ThreadController
 from framework.rabbitmq.rabbitmq_egress_accumulated_msgs_processor import \
     RabbitMQEgressAccumulatedMsgsProcessor
 from framework.base.sspl_constants import OperatingSystem
+from framework.base.sspl_constants import PRODUCT_NAME
 
 from actuators.impl.actuator import Actuator
 from message_handlers.node_controller_msg_handler import NodeControllerMsgHandler
@@ -81,7 +82,7 @@ DEGRADED_STATE_MODULES = 'degraded_state_modules'
 # Section containing information about the system we're running on
 SYS_INFORMATION = 'SYSTEM_INFORMATION'
 OPER_SYSTEM     = 'operating_system'
-PRODUCT_NAME    = 'product'
+PRODUCT_NAME_KEY    = 'product'
 SETUP           = 'setup'
 LOG_LEVEL       = 'log_level'
 SYSLOG_HOST_KEY = "syslog_host"
@@ -90,7 +91,7 @@ DEFAULT_SYSLOG_HOST = "localhost"
 DEFAULT_SYSLOG_PORT = 514
 
 # State file
-STATE_FILE = "/var/eos/sspl/data/state.txt"
+STATE_FILE = f"/var/{PRODUCT_NAME}/sspl/data/state.txt"
 STATES = ["active", "degrade"]
 DEFAULT_STATE = "degrade"
 
@@ -272,7 +273,7 @@ def main(conf_reader, systemd_support):
     logger.info("sspl-ll Bootstrap: configuring for OS: %s" % operating_system)
 
     # Read in product value from configuration file
-    product = conf_reader._get_value(SYS_INFORMATION, PRODUCT_NAME)
+    product = conf_reader._get_value(SYS_INFORMATION, PRODUCT_NAME_KEY)
 
     # Read in setup value from configuration file
     try:
@@ -442,7 +443,7 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist, operating_system
 
         from sensors.impl.generic.SNMP_traps import SNMPtraps
 
-    if product == "EES":
+    if product == "cortx":
         from sensors.impl.platforms.realstor.realstor_disk_sensor \
         import RealStorDiskSensor
         from sensors.impl.platforms.realstor.realstor_psu_sensor \

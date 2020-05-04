@@ -5,7 +5,7 @@ variables:
   GIT_DEPTH: 1  # clone only the current commit
   GIT_STRATEGY: clone  # make a fresh `git clone` of the repo for every new CI job
   GIT_SUBMODULE_STRATEGY: normal  # init and check out submodules
-  CENTOS_RELEASE: eos
+  CENTOS_RELEASE: eos  #TODO CORTEX_RENAME may break gitlab ci
   M0_VG_NO_SYMLINKS: 'true'
   WORKSPACE_NAME: "${CI_PROJECT_NAME}${CI_PIPELINE_ID}"
   WORKSPACE_DIR:  "/home/gitlab-runner/workspaces/${CI_PROJECT_NAME}${CI_PIPELINE_ID}"
@@ -29,7 +29,7 @@ build:
   stage: build
   tags: [ docker-build ]
   except: [ master, tags ]
-  image: registry.gitlab.mero.colo.seagate.com/eos/sspl:$CENTOS_RELEASE
+  image: registry.gitlab.mero.colo.seagate.com/eos/sspl:$CENTOS_RELEASE #TODO CORTEX_RENAME may break gitlab ci
   script: |
     time ./jenkins/build.sh
 
@@ -57,10 +57,10 @@ docker:rebuild-images:76:
     DOCKER_IMAGE_TAG: '7.6'
 
 
-docker:rebuild-images:eos:
+docker:rebuild-images:cortx:
   extends: docker:rebuild-images
   variables:
-    DOCKER_IMAGE_TAG: eos
+    DOCKER_IMAGE_TAG: cortx
 
 
 # vim: foldmethod=marker shiftwidth=2 tabstop=2 expandtab

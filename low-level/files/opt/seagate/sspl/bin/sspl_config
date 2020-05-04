@@ -15,12 +15,12 @@ script_dir=$(dirname $0)
 source $script_dir/constants.sh
 
 SCRIPT_NAME=$(basename $0)
-DIR_NAME="/opt/seagate/eos/sspl"
+DIR_NAME="/opt/seagate/$PRODUCT/sspl"
 RSYSLOG_CONF="/etc/rsyslog.d/0-iemfwd.conf"
 RSYSLOG_SSPL_CONF="/etc/rsyslog.d/1-ssplfwd.conf"
 LOGROTATE_CONF="/etc/logrotate.d/iem_messages"
 LOGROTATE_SSPL_CONF="/etc/logrotate.d/sspl_logs"
-SSPL_CONFIGURED="/var/eos/sspl/sspl-configured"
+SSPL_CONFIGURED="/var/$PRODUCT/sspl/sspl-configured"
 
 $script_dir/sspl_fetch_config_from_salt.py
 usage() {
@@ -115,7 +115,7 @@ config_sspl() {
     LOG_FILE_PATH=`echo ${datapath[1]}`
     if [ -z "$LOG_FILE_PATH" ]
     then
-        sed -i "s|File=.*|File=\/var/log/eos/iem/iem_messages\"|g" $RSYSLOG_CONF
+        sed -i "s|File=.*|File=\/var/log/$PRODUCT/iem/iem_messages\"|g" $RSYSLOG_CONF
     else
         sed -i "s|File=.*|File=\"${LOG_FILE_PATH}\"|g" $RSYSLOG_CONF
         sed -i "1 s|^.*$|${LOG_FILE_PATH}|g" $DIR_NAME/conf/etc/logrotate.d/iem_messages
@@ -126,7 +126,7 @@ config_sspl() {
     # This rsyslog restart will happen after successful updation of rsyslog
     # conf file and before sspl starts. If at all this will be removed from
     # here, there will be a chance that SSPL intial logs will not be present in
-    # "/var/log/eos/sspl/sspl.log" file. So, initial logs needs to be collected from
+    # "/var/log/<product>/sspl/sspl.log" file. So, initial logs needs to be collected from
     # "/var/log/messages"
     systemctl restart rsyslog
 
@@ -154,13 +154,13 @@ esac
 # Updating RabbitMQ cluster nodes.
 out=$(rabbitmqctl cluster_status | grep running_nodes | cut -d '[' -f2 | cut -d ']' -f1 | sed 's/rabbit@//g' | sed 's/,/, /g')
 pout=$(echo $out | sed  "s/'//g")
-/opt/seagate/eos/hare/bin/consul kv put sspl/config/RABBITMQCLUSTER/cluster_nodes $pout
+/opt/seagate/$PRODUCT/hare/bin/consul kv put sspl/config/RABBITMQCLUSTER/cluster_nodes $pout
 
 # Updating build requested log level
 log_level=`cat $DIR_NAME/conf/build-requested-loglevel | sed 's/ *$//'`
 case $log_level in
     "DEBUG" | "INFO" | "WARNING" | "ERROR" | "CRITICAL")
-        /opt/seagate/eos/hare/bin/consul kv put sspl/config/SYSTEM_INFORMATION/log_level $log_level;;
+        /opt/seagate/$PRODUCT/hare/bin/consul kv put sspl/config/SYSTEM_INFORMATION/log_level $log_level;;
     "");;
     *)
         echo "Unexpected log level is requested, '$log_level'";;

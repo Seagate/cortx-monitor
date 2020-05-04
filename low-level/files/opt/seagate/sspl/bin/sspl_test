@@ -2,8 +2,11 @@
 
 # Stop the script if any command fails
 set -e -u -o pipefail
+BASE_DIR=$(dirname $0)
+source $BASE_DIR/constants.sh
 
-TEST_DIR=/opt/seagate/eos/sspl/sspl_test
+TEST_DIR=/opt/seagate/$PRODUCT/sspl/sspl_test
+
 if rpm -qa | grep -q sspl-test ;
 then
     $TEST_DIR/run_tests.sh test $*

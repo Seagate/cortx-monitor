@@ -14,6 +14,7 @@ import socket
 
 import pika
 
+from sspl_constants import PRODUCT_NAME
 from configparser import ConfigParser
 from config_reader import ConfigReader
 from eos.utils.security.cipher import Cipher, CipherInvalidToken

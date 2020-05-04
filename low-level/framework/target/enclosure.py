@@ -19,6 +19,7 @@ import errno
 
 from framework.utils.config_reader import ConfigReader
 from framework.utils.service_logging import logger
+from framework.base.sspl_constants import PRODUCT_NAME
 
 class StorageEnclosure(object):
 
@@ -29,7 +30,7 @@ class StorageEnclosure(object):
 
     # SSPL Data path
     SYSINFO = "SYSTEM_INFORMATION"
-    DEFAULT_RAS_VOL = "/var/eos/sspl/data/"
+    DEFAULT_RAS_VOL = f"/var/{PRODUCT_NAME}/sspl/data/"
 
     # RAS FRU alert types
     FRU_MISSING = "missing"
