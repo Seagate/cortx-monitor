@@ -109,7 +109,7 @@ class RAIDdataMsg(BaseSensorMsg):
     def get_host_id(self):
         return self.host_id
 
-    def set_host_ide(self, host_id):
+    def set_host_id(self, host_id):
         self._host_id = host_id
 
     def set_uuid(self, _uuid):
