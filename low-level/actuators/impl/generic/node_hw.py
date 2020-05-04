@@ -309,6 +309,13 @@ class NodeHWactuator(Actuator, Debug):
         if return_code != 0:
             msg = "sdr type '{0}' : command failed with error {1}".format(sensor_type, sdr_type_response)
             logger.error(msg)
+            errlist = [i.decode() for i in sdr_type_response]
+            if any(errlist):
+                errormsg = "{}".format(sdr_type_response)
+            else:
+                errormsg = sensor_name + " sensor is not available"
+            error_resp = {'sensor_status': errormsg}
+            response['specific_info'] = error_resp
         else:
             if many_sensors:
                 # for all sensors specific info response will be list
