@@ -143,6 +143,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                                                 '0')
         self.nw_status = {}
         self.nw_resource_id = "0"
+        self.bmcNwStatus = None
         self.prev_cable_cnxns = {}
         self._node_sensor    = None
         self._login_actuator = None
@@ -564,6 +565,10 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         interfaces = self._node_sensor.if_data
         is_alert = self._is_nwalert_exist(interfaces)
         if is_alert and (not self.if_fault):
+            """
+            TODO: self.if_fault needs to be a dictionary, maintaining fault status for all eth interfaces individually 
+            and raise separate alerts for each fault or fault_resolved situation.
+            """
             self.if_fault = True
             ifDataMsg = IFdataMsg(self._node_sensor.host_id,
                             self._node_sensor.local_time,
@@ -602,14 +607,19 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         res = False
         try:
             nw_status_dict = {}
+            bmcinfo = interfaces[-1]
             for interface in interfaces:
                 iname = interface.get("ifId")
                 nw_status_dict[iname] = interface.get("nwStatus")
                 if len(self.nw_status) != 0 and ((iname in self.nw_status) and (self.nw_status[iname] != nw_status_dict[iname])):
                     self.nw_resource_id = iname
+            if ((bmcinfo['ipV4Prev'] != bmcinfo['ipV4']) or (self.bmcNwStatus != None and self.bmcNwStatus != bmcinfo['nwStatus'])):
+                res = True
+                self.nw_resource_id = bmcinfo.get("ifId")
             if len(self.nw_status) != 0 and self.nw_status != nw_status_dict:
                     res = True
             self.nw_status = nw_status_dict
+            self.bmcNwStatus = bmcinfo['nwStatus']
         except Exception as e:
             logger.error("Exception occurs while checking for network alert condition:{}".format(e))
         return res

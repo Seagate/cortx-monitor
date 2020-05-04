@@ -19,6 +19,8 @@ import math
 import socket
 import psutil
 import threading
+import subprocess as sp
+import re
 
 from datetime import datetime
 import time
@@ -36,6 +38,7 @@ class NodeData(Debug):
 
 
     SENSOR_NAME = "NodeData"
+    # TODO: revisit Eth interface career file path construction from base sysfs class path
     CARRIER_FILE = "/sys/class/net/{}/carrier"
 
 
@@ -56,6 +59,7 @@ class NodeData(Debug):
         self.load_1min_average  = []
         self.load_5min_average  = []
         self.load_15min_average = []
+        self.prev_bmcip = None
         load_1min_avg  = threading.Thread(target=self._load_1min_avg).start()
         load_5min_avg  = threading.Thread(target=self._load_5min_avg).start()
         load_15min_avg = threading.Thread(target=self._load_15min_avg).start()
@@ -180,6 +184,7 @@ class NodeData(Debug):
         net_data = psutil.net_io_counters(pernic=True)
         # Array to hold data about each network interface
         self.if_data = []
+        bmc_data = self._get_bmc_info()
         for interface, if_data in net_data.items():
             self._log_debug("_get_if_data, interface: %s %s" % (interface, net_data))
             nw_status = self._fetch_nw_status()
@@ -193,16 +198,22 @@ class NodeData(Debug):
                        "droppedPacketsOut"  : net_data[interface].dropout,
                        "packetsOut"         : net_data[interface].packets_sent,
                        "trafficOut"         : net_data[interface].bytes_sent,
-                       "nwStatus"           : nw_status[interface],
+                       "nwStatus"           : nw_status[interface][0],
+                       "ipV4"               : nw_status[interface][1],
                        "nwCableConnStatus"  : nw_cable_conn_status
                        }
             self.if_data.append(if_data)
+        self.if_data.append(bmc_data)
 
     def _fetch_nw_status(self):
         nw_dict = {}
-        nws = os.popen("ip --br a | awk '{print $1, $2}'").read().split('\n')[:-1]
+        nws = os.popen("ip --br a | awk '{print $1, $2, $3}'").read().split('\n')[:-1]
         for nw in nws:
-            nw_dict[nw.split(' ')[0]] = nw.split(' ')[1]
+            if nw.split(' ')[2]:
+                ip = nw.split(' ')[2].split("/")[0]
+            else:
+                ip = ""
+            nw_dict[nw.split(' ')[0]] = [nw.split(' ')[1], ip]
         logger.debug("network info going is : {}".format(nw_dict))
         return nw_dict
 
@@ -218,6 +229,34 @@ class NodeData(Debug):
             logger.warning("Node Data, unable to get cable connection state " +
                           f"of '{interface}'. {str(err)}")
         return phy_link_state[carrier_indicator]
+
+    def _get_bmc_info(self):
+        """
+        nwCableConnection will be default UNKNOWN,
+        Until solution to find bmc eth port cable connection status is found.
+        """
+        try:
+            bmcdata = {'ifId': 'ebmc0', 'ipV4Prev': "", 'ipV4': "", 'nwStatus': "DOWN", 'nwCableConnStatus': 'UNKNOWN'}
+            ipdata = sp.Popen("sudo ipmitool lan print", shell=True, stdout=sp.PIPE, stderr=sp.PIPE).communicate()[0].decode().strip()
+            bmcip = re.findall("\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}", ipdata)[0]
+            if bmcip:
+                pingbmchost = "ping -c1 -W1 -q "+bmcip
+                child = sp.Popen(pingbmchost.split(), stdout=sp.PIPE)
+                streamdata = child.communicate()[0] #child must be communicated before fetching return code.
+                retcode = child.returncode
+                if self.prev_bmcip is not None and self.prev_bmcip != bmcip:
+                    bmcdata['ipV4Prev'] = self.prev_bmcip
+                    bmcdata['ipV4'] = bmcip
+                    self.prev_bmcip = bmcip
+                else:
+                    self.prev_bmcip = bmcdata['ipV4Prev'] = bmcdata['ipV4'] = bmcip
+                if retcode == 0:
+                    bmcdata['nwStatus'] = "UP"
+                else:
+                    logger.warning("BMC Host:{0} is not reachable".format(bmcip))
+        except Exception as e:
+            logger.error("Exception occurs while fetching bmc_info:{}".format(e))
+        return bmcdata
 
     def _get_disk_space_alert_data(self):
         """Retrieves node information for the disk_space_alert_data json message"""
