@@ -151,7 +151,11 @@ class RealStorEnclMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 # serves the request coming from sspl CLI
                 sensor_type = json_msg.get("sensor_request_type").\
                                 get("enclosure_alert").get("info").\
-                                    get("resource_type").split(":")[2]
+                                    get("resource_type")
+                if ":" in sensor_type:
+                    sensor_type = sensor_type.split(":")[2]
+                else:
+                    sensor_type = sensor_type
                 sensor_message_type = self._fru_type.get(sensor_type, "")
 
                 # get the previously saved json message for the sensor type
