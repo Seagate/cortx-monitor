@@ -39,7 +39,7 @@ class RAIDsensor(SensorThread, InternalMsgQ):
 
     SENSOR_NAME       = "RAIDsensor"
     PRIORITY          = 1
-    RESOURCE_TYPE     = "node:os:raid"
+    RESOURCE_TYPE     = "node:os:raid_data"
 
     # Section and keys in configuration file
     RAIDSENSOR        = SENSOR_NAME.upper()
@@ -95,7 +95,7 @@ class RAIDsensor(SensorThread, InternalMsgQ):
         super(RAIDsensor, self).initialize_msgQ(msgQlist)
 
         self._RAID_status_file = self._get_RAID_status_file()
-        logger.info(f"          Monitoring RAID status file: {self._RAID_status_file}")
+        logger.info(f"Monitoring RAID status file: {self._RAID_status_file}")
 
         # The status file contents
         self._RAID_status_contents = "N/A"
@@ -175,7 +175,7 @@ class RAIDsensor(SensorThread, InternalMsgQ):
         self._RAID_status_contents = status
 
         # Process mdstat file and send json msg to NodeDataMsgHandler
-        md_device_list, drive_list,drive_status_chnaged = self._process_mdstat()
+        md_device_list, drive_list, drive_status_changed = self._process_mdstat()
 
         # checks mdadm conf file for missing raid array and send json message to NodeDataMsgHandler
         self._process_missing_md_devices(md_device_list)
@@ -207,7 +207,7 @@ class RAIDsensor(SensorThread, InternalMsgQ):
                     self._resource_id = resource_id
                 self._send_json_msg(self.alert_type,self._resource_id)
 
-            if drive_status_chnaged:
+            if drive_status_changed:
                 for drive in self._drives:
                     if drive.get("identity") is not None:
                         drive_path = drive.get("identity").get("path")
@@ -235,7 +235,7 @@ class RAIDsensor(SensorThread, InternalMsgQ):
         mdlines = []
         # select 1st raid device to monitor
         monitored_device = []
-        drive_status_chnaged = False
+        drive_status_changed = False
         # Array of optional identity json sections for drives in array
         self._identity = {}
 
@@ -259,7 +259,7 @@ class RAIDsensor(SensorThread, InternalMsgQ):
             # The line following the mdXXX : ... contains the [UU] status that we need
             if md_line_parsed is True:
                 # Format is [x/y][UUUU____...]
-                drive_status_chnaged = self._parse_raid_status(line)
+                drive_status_changed = self._parse_raid_status(line)
                 # Reset in case their are multiple configs in file
                 md_line_parsed = False
 
@@ -281,7 +281,7 @@ class RAIDsensor(SensorThread, InternalMsgQ):
                             drive_list.append(drive_name)
                         self._add_drive(field)
                 md_line_parsed = True
-        return md_device_list,drive_list, drive_status_chnaged
+        return md_device_list, drive_list, drive_status_changed
 
     def _add_drive(self, field):
         """Adds a drive to the list"""
@@ -324,7 +324,7 @@ class RAIDsensor(SensorThread, InternalMsgQ):
         self._total_drives = int(status_line[first_bracket_index + 1])
         self._log_debug("_parse_raid_status, total_drives: %d" % self._total_drives)
 
-        # Break the  line apart into separate fields
+        # Break the line apart into separate fields
         fields = status_line.split(" ")
 
         # The last field is the list of U & _
@@ -428,7 +428,7 @@ class RAIDsensor(SensorThread, InternalMsgQ):
             {"sensor_request_type" : {
                 "node_data": {
                     "status": "update",
-                    "sensor_type" : "raid_data",
+                    "sensor_type" : "node:os:raid_data",
                     "host_id": host_name,
                     "alert_type": alert_type,
                     "alert_id": self._alert_id,
@@ -452,7 +452,7 @@ class RAIDsensor(SensorThread, InternalMsgQ):
             {"sensor_request_type": {
                 "node_data": {
                     "status": "update",
-                    "sensor_type": "raid_data",
+                    "sensor_type": "node:os:raid_data",
                     "device": self._device,
                     "drives": self._drives
                     }
