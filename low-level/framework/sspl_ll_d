@@ -459,6 +459,7 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist, operating_system
         import RealStorEnclosureSensor
         from sensors.impl.generic.iem_sensor import IEMSensor
         from sensors.impl.generic.node_hw import NodeHWsensor
+        from sensors.impl.generic.node_sas_port import SASPortSensor
 
     if product in enabled_products:
         import inspect

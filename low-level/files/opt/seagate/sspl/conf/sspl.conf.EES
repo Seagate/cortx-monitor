@@ -4,12 +4,12 @@ core_processors=RabbitMQegressProcessor, RabbitMQingressProcessor, LoggingProces
 
 message_handlers=DiskMsgHandler, LoggingMsgHandler, ServiceMsgHandler, NodeDataMsgHandler, NodeControllerMsgHandler, RealStorEnclMsgHandler, RealStorActuatorMsgHandler
 
-sensors=ServiceWatchdog, RAIDsensor, NodeData, RealStorFanSensor, RealStorPSUSensor, RealStorControllerSensor, RealStorDiskSensor, RealStorSideplaneExpanderSensor, RealStorLogicalVolumeSensor, IEMSensor, NodeHWsensor, RealStorEnclosureSensor
+sensors=ServiceWatchdog, RAIDsensor, NodeData, RealStorFanSensor, RealStorPSUSensor, RealStorControllerSensor, RealStorDiskSensor, RealStorSideplaneExpanderSensor, RealStorLogicalVolumeSensor, IEMSensor, NodeHWsensor, RealStorEnclosureSensor, SASPortSensor
 
 actuators=Service, RAIDactuator, Smartctl, NodeHWactuator, RealStorActuator
 
 # List of modules to run in degraded mode
-degraded_state_modules=ServiceWatchdog, RAIDsensor, NodeData, IEMSensor, NodeHWsensor, DiskMsgHandler, LoggingMsgHandler, ServiceMsgHandler, NodeDataMsgHandler, NodeControllerMsgHandler, RealStorActuatorMsgHandler
+degraded_state_modules=ServiceWatchdog, RAIDsensor, NodeData, IEMSensor, NodeHWsensor, DiskMsgHandler, LoggingMsgHandler, ServiceMsgHandler, NodeDataMsgHandler, NodeControllerMsgHandler, RealStorActuatorMsgHandler, SASPortSensor
 
 [SYSTEM_INFORMATION]
 operating_system=centos7
@@ -177,3 +177,7 @@ ipmi_client=ipmitool
 store_type=consul
 consul_host=127.0.0.1
 consul_port=8500
+
+[SASPORTSENSOR]
+threaded=true
+probe=sysfs
