@@ -146,6 +146,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         self.host_sensor_data = None
         self.if_sensor_data = None
         self.cpu_sensor_data = None
+        self.raid_sensor_data = None
         self.sensor_type = None
         self._epoch_time = str(int(time.time()))
         self._raid_drives = []
@@ -154,7 +155,8 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             "disk_space" : self.disk_sensor_data,
             "system" : self.host_sensor_data,
             "nw"   : self.if_sensor_data,
-            "cpu"  : self.cpu_sensor_data
+            "cpu"  : self.cpu_sensor_data,
+            "raid_data" : self.raid_sensor_data
         }
 
         # UUID used in json msgs
@@ -292,7 +294,14 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                         No past data found for {self.sensor_type} sensor type")
 
             elif self.sensor_type == "raid_data":
-                self._generate_RAID_status(jsonMsg)
+                self._generate_raid_data(jsonMsg)
+                sensor_message_type = self.os_sensor_type.get(self.sensor_type, "")
+                if sensor_message_type:
+                    self._write_internal_msgQ(RabbitMQegressProcessor.name(),
+                                            sensor_message_type)
+                else:
+                    self._log_debug("NodeDataMsgHandler, _process_msg " +
+                            f"No past data found for {self.sensor_type} sensor type")
 
         # Update mapping of device names to serial numbers for global use
         elif jsonMsg.get("sensor_response_type") is not None:
@@ -655,14 +664,13 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
             self.disk_fault = False
 
-    def _generate_RAID_status(self, jsonMsg):
+    def _generate_raid_data(self, jsonMsg):
         """Create & transmit a RAID status data message as defined
             by the sensor response json schema"""
-        # Get the host_id
-        if self._node_sensor.host_id is None:
-            successful = self._node_sensor.read_data("None", self._get_debug(), self._units)
-            if not successful:
-                logger.error("NodeDataMsgHandler, updating host information was NOT successful.")
+        successful = self._node_sensor.read_data("raid", self._get_debug(), self._units)
+        if not successful:
+            logger.error("NodeDataMsgHandler, updating RAID information was NOT successful.")
+            return
 
         # See if status is in the msg; ie it's an internal msg from the RAID sensor
         if jsonMsg.get("sensor_request_type").get("node_data").get("status") is not None:
@@ -675,37 +683,35 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             specific_info = sensor_request.get("specific_info")
             self._raid_device = jsonMsg.get("sensor_request_type").get("node_data").get("specific_info").get("device")
             self._raid_drives = list(jsonMsg.get("sensor_request_type").get("node_data").get("specific_info").get("drives"))
+            raidDataMsg = RAIDdataMsg(host_name, alert_type, alert_id, severity, info, specific_info)
+            # Add in uuid if it was present in the json request
+            if self._uuid is not None:
+                raidDataMsg.set_uuid(self._uuid)
+            jsonMsg = raidDataMsg.getJson()
+            self.raid_sensor_data = jsonMsg
+            self.os_sensor_type["raid_data"] = self.raid_sensor_data
 
-        # Loop thru each index of drives containing only paths and fill in with s/n
-        for drive in self._raid_drives:
-            self._log_debug("drive: %s" % str(drive))
+            # Loop thru each index of drives containing only paths and fill in with s/n
+            for drive in self._raid_drives:
+                self._log_debug("drive: %s" % str(drive))
 
-            if drive.get("identity") is not None:
-                path = drive.get("identity").get("path")
-                self._log_debug("path: %s" % str(path))
+                if drive.get("identity") is not None:
+                    path = drive.get("identity").get("path")
+                    self._log_debug("path: %s" % str(path))
 
-                # Lookup the serial number from the path
-                serial_number = str(self._drive_by_device_name.get(path))
-                self._log_debug("serial_number: %s" % str(serial_number))
-                if serial_number != "None":
-                    drive["identity"]["serialNumber"] = serial_number
+                    # Lookup the serial number from the path
+                    serial_number = str(self._drive_by_device_name.get(path))
+                    self._log_debug("serial_number: %s" % str(serial_number))
+                    if serial_number != "None":
+                        drive["identity"]["serialNumber"] = serial_number
 
-                # Change device path to path-byid
-                drive_byid = str(self._drive_byid_by_serial_number.get(serial_number))
-                if drive_byid != "None":
-                    drive["identity"]["path"] = drive_byid
+                    # Change device path to path-byid
+                    drive_byid = str(self._drive_byid_by_serial_number.get(serial_number))
+                    if drive_byid != "None":
+                        drive["identity"]["path"] = drive_byid
 
-        self._log_debug("_generate_RAID_status, host_id: %s, device: %s, drives: %s" %
+            self._log_debug("_generate_raid_data, host_id: %s, device: %s, drives: %s" %
                     (self._node_sensor.host_id, self._raid_device, str(self._raid_drives)))
-
-        raidDataMsg = RAIDdataMsg(host_name, alert_type, alert_id, severity, info, specific_info)
-        # Add in uuid if it was present in the json request
-        if self._uuid is not None:
-            raidDataMsg.set_uuid(self._uuid)
-        jsonMsg = raidDataMsg.getJson()
-
-        # Transmit it out over rabbitMQ channel
-        self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
 
     def _generate_node_fru_data(self, jsonMsg):
         """Create & transmit a FRU IPMI data message as defined
