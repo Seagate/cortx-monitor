@@ -144,18 +144,18 @@ def create_mirrored_queues(decryption_key):
                  queue_name, routing_key)
     sync_queue(queue_name)
 
-    # creating actuator-resp-queue queue
-    vhost, username, password, exchange_name, queue_name, routing_key = \
-        _get_connection_config(
-            EGRESS_CONFIG_SECTION,
-            exchange_key=ACK_QUEUE_NAME_KEY,
-            queue_key=ACK_QUEUE_NAME_KEY,
-            routing_key=ACK_ROUTING_KEY
-        )
-    _set_ha_policy(queue_name)
-    create_queue(vhost, username, decrypt(decryption_key, password.encode('ascii')), exchange_name,
-                 queue_name, routing_key)
-    sync_queue(queue_name)
+    # # creating actuator-resp-queue queue
+    # vhost, username, password, exchange_name, queue_name, routing_key = \
+    #     _get_connection_config(
+    #         EGRESS_CONFIG_SECTION,
+    #         exchange_key=ACK_QUEUE_NAME_KEY,
+    #         queue_key=ACK_QUEUE_NAME_KEY,
+    #         routing_key=ACK_ROUTING_KEY
+    #     )
+    # _set_ha_policy(queue_name)
+    # create_queue(vhost, username, decrypt(decryption_key, password.encode('ascii')), exchange_name,
+    #              queue_name, routing_key)
+    # sync_queue(queue_name)
 
     # creating iem-queue queue
     vhost, username, password, exchange_name, queue_name, routing_key = \

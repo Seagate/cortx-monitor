@@ -225,7 +225,7 @@ fi
 echo "Restarting SSPL"
 $sudo systemctl restart sspl-ll
 echo "Waiting for SSPL to complete initialization of all the plugins"
-$script_dir/rabbitmq_start_checker sspl-out actuator-resp-key
+$script_dir/rabbitmq_start_checker sspl-out sensor-key
 echo "Initialization completed. Starting tests"
 
 # Switch SSPL to active state to resume all the suspended plugins. If SSPL is

@@ -41,9 +41,9 @@ virtual_host=SSPL
 queue_name=sensor-queue
 exchange_name=sspl-out
 routing_key=sensor-key
-ack_queue_name=actuator-resp-queue
+ack_queue_name=sensor-queue
 ack_exchange_name=sspl-out
-ack_routing_key=actuator-resp-key
+ack_routing_key=sensor-key
 username=sspluser
 password=gAAAAABelEy2-hxLq8uThrKVZeb8ZY34cUPMYag8aMHJEHpXbaCie2cmeFsNx2nHBMCLLS2Bj9VUp9iSnyYDmywUHI7SsCoRIw==
 message_signature_username=sspl-ll

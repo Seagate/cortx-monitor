@@ -170,10 +170,10 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
             # Read RabbitMQ configuration for Ack messages
             self._ack_queue_name = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
                                                                  self.ACK_QUEUE_NAME,
-                                                                 'actuator-resp-queue')
+                                                                 'sensor-queue')
             self._ack_routing_key = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
                                                                  self.ACK_ROUTING_KEY,
-                                                                 'actuator-resp-key')
+                                                                 'sensor-key')
 
             self._username      = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
                                                                  self.USER_NAME,
