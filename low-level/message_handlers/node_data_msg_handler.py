@@ -139,10 +139,9 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
         self.cluster_id = self._conf_reader._get_value_with_default(
                                                 self.SYSTEM_INFORMATION,
-                                                COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.CLUSTER_ID),
-                                                0)
-        self.nw_status = {}
-        self.nw_resource_id = "0"
+                                                self.CLUSTER_ID,
+                                                '0')
+        self.prev_nw_status = {}
         self.bmcNwStatus = None
         self.prev_cable_cnxns = {}
         self._node_sensor    = None
@@ -563,30 +562,15 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         if not successful:
             logger.error("NodeDataMsgHandler, _generate_if_data was NOT successful.")
         interfaces = self._node_sensor.if_data
-        is_alert = self._is_nwalert_exist(interfaces)
-        if is_alert and (not self.if_fault):
-            """
-            TODO: self.if_fault needs to be a dictionary, maintaining fault status for all eth interfaces individually 
-            and raise separate alerts for each fault or fault_resolved situation.
-            """
-            self.if_fault = True
+        nw_alerts = self._get_nwalert(interfaces)
+        for nw_resource_id, nw_state in nw_alerts.items():
             ifDataMsg = IFdataMsg(self._node_sensor.host_id,
                             self._node_sensor.local_time,
                             self._node_sensor.if_data,
-                            self.nw_resource_id,
+                            nw_resource_id,
                             self.NW_RESOURCE_TYPE,
-                            self.site_id, self.node_id, self.cluster_id, self.rack_id, self.FAULT)
+                            self.site_id, self.node_id, self.cluster_id, self.rack_id, nw_state)
             self._send_ifdata_json_msg("nw", ifDataMsg)
-
-        if not is_alert and (self.if_fault == True):
-            ifDataMsg = IFdataMsg(self._node_sensor.host_id,
-                            self._node_sensor.local_time,
-                            self._node_sensor.if_data,
-                            self.nw_resource_id,
-                            self.NW_RESOURCE_TYPE,
-                            self.site_id, self.node_id, self.cluster_id, self.rack_id, self.FAULT_RESOLVED)
-            self._send_ifdata_json_msg("nw", ifDataMsg)
-            self.if_fault = False
 
         # Get all cable connections state and generate alert on
         # cables identified for fault detected and resolved state
@@ -601,28 +585,40 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                             self.site_id, self.node_id, self.cluster_id, self.rack_id, state)
             self._send_ifdata_json_msg("nw", ifDataMsg)
 
-    def _is_nwalert_exist(self, interfaces):
-        """This method checks conditions to trigger network alerts.
-                isup = True # for network is up and running and False for down"""
-        res = False
+    def _get_nwalert(self, interfaces):
+        """
+        Get network interfaces with fault/OK state for each interface.
+        Parameters:
+                    interfaces(list) : List of availabel network interfaces
+
+        Returns: Dictionary of network interfaces having key as interface name and value as fault state.
+
+        Return type: dict
+        """
+        nw_alerts = {}
         try:
-            nw_status_dict = {}
-            bmcinfo = interfaces[-1]
             for interface in interfaces:
-                iname = interface.get("ifId")
-                nw_status_dict[iname] = interface.get("nwStatus")
-                if len(self.nw_status) != 0 and ((iname in self.nw_status) and (self.nw_status[iname] != nw_status_dict[iname])):
-                    self.nw_resource_id = iname
-            if ((bmcinfo['ipV4Prev'] != bmcinfo['ipV4']) or (self.bmcNwStatus != None and self.bmcNwStatus != bmcinfo['nwStatus'])):
-                res = True
-                self.nw_resource_id = bmcinfo.get("ifId")
-            if len(self.nw_status) != 0 and self.nw_status != nw_status_dict:
-                    res = True
-            self.nw_status = nw_status_dict
-            self.bmcNwStatus = bmcinfo['nwStatus']
+                interface_name = interface.get("ifId")
+                nw_status = interface.get("nwStatus")
+                # fault detected (Down/UNKNOWN, Up/UNKNOWN to Down, Up/Down to UNKNOWN)
+                if nw_status == 'DOWN' or nw_status == 'UNKNOWN':
+                    if self.prev_nw_status.get(interface_name) != nw_status:
+                        if self.prev_nw_status.get(interface_name) and self.prev_nw_status.get(interface_name) == 'UP':
+                            logger.warning(f"Network connection fault is detected for interface:'{interface_name}'")
+                            nw_alerts[interface_name] = self.FAULT
+                        self.prev_nw_status[interface_name] = nw_status
+                # fault resolved (Down to Up)
+                elif nw_status == 'UP':
+                    if self.prev_nw_status.get(interface_name) != nw_status:
+                        if self.prev_nw_status.get(interface_name):
+                            logger.info(f"Network connection fault is resolved for interface:'{interface_name}'")
+                            nw_alerts[interface_name] = self.FAULT_RESOLVED
+                        self.prev_nw_status[interface_name] = nw_status
+                else:
+                    logger.warning(f"Network connection state is:'{nw_status}', for interface:'{interface_name}'")
         except Exception as e:
-            logger.error("Exception occurs while checking for network alert condition:{}".format(e))
-        return res
+            logger.error(f"Exception occurs while checking for network alert condition:'{e}'")
+        return nw_alerts
 
     def _nw_cable_alert_exists(self, interfaces):
         """Checks cable connection status with physical link(carrier) state and
