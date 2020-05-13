@@ -16,6 +16,7 @@ import pika
 
 from configparser import ConfigParser
 from config_reader import ConfigReader
+from sspl_constants import COMMON_CONFIGS
 from eos.utils.security.cipher import Cipher, CipherInvalidToken
 
 RABBITMQCTL = '/usr/sbin/rabbitmqctl'
@@ -80,7 +81,7 @@ def main(product):
         key='password'
         )
 
-    if product in cs_legacy_products:
+    if product.lower() in [x.lower() for x in cs_legacy_products]:
         primary_rabbitmq_server = config_reader._get_value(
             section=SECTION,
             key='primary_rabbitmq_server'
@@ -95,7 +96,7 @@ def main(product):
     _create_vhost_if_necessary(virtual_host, product)
 
     # Decrypt password -----------------------
-    cluster_id = config_reader._get_value(section=SYSTEM_INFORMATION_KEY, key=CLUSTER_ID_KEY)
+    cluster_id = config_reader._get_value(section=SYSTEM_INFORMATION_KEY, key=COMMON_CONFIGS.get(SYSTEM_INFORMATION_KEY).get(CLUSTER_ID_KEY))
 
     # Generate key
     key = gen_key(cluster_id, ServiceTypes.RABBITMQ.value)
@@ -105,7 +106,7 @@ def main(product):
     # create durable/mirrored queues in either single or clustered mode.
     create_mirrored_queues(key)
 
-    if product in cs_legacy_products:
+    if product.lower() in [x.lower() for x in cs_legacy_products]:
         # Copy the erlang key from primary server to secondary and mirror queues
         if primary_rabbitmq_server in hostnames:
             _set_perms_erlang_key()
@@ -228,7 +229,7 @@ def _create_vhost_if_necessary(virtual_host, product):
     @param product:               The product for which initialization is
                                   being done.
     """
-    if product in cs_legacy_products:
+    if product.lower() in [x.lower() for x in cs_legacy_products]:
         command = "%s list_vhosts" % RABBITMQCTL
         response = _send_command(command, fail_on_error=False)
         # Try restarting service
@@ -248,7 +249,7 @@ def _create_vhost_if_necessary(virtual_host, product):
         _send_command(command)
         print("Successfully created vhost: %s" % virtual_host)
 
-    elif product in enabled_products:
+    elif product.lower() in [x.lower() for x in enabled_products]:
         vhosts = subprocess.check_output(
             [RABBITMQCTL, 'list_vhosts']
             ).decode("utf-8").split('\n')
@@ -301,7 +302,7 @@ def _create_user_if_necessary(username, password, virtual_host, product):
     @param product:               The product for which initialization is
                                   being done.
     """
-    if product in cs_legacy_products:
+    if product.lower() in [x.lower() for x in cs_legacy_products]:
         command = "%s list_users" % RABBITMQCTL
         response = _send_command(command)
 
@@ -321,7 +322,7 @@ def _create_user_if_necessary(username, password, virtual_host, product):
             _send_command(command)
             command = "%s set_user_tags %s administrator" % (RABBITMQCTL, username)
             _send_command(command)
-    elif product in enabled_products:
+    elif product.lower() in [x.lower() for x in enabled_products]:
         users = subprocess.check_output(
             [RABBITMQCTL, 'list_users']
             ).decode("utf-8").split('\n')

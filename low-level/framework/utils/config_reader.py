@@ -21,10 +21,11 @@ import configparser
 try:
     import salt.client
     from sspl_constants import component, file_store_config_path, salt_provisioner_pillar_sls, \
-         SSPL_STORE_TYPE, StoreTypes, salt_uniq_passwd_per_node
+         file_store_config_path, SSPL_STORE_TYPE, StoreTypes, salt_uniq_passwd_per_node, COMMON_CONFIGS, \
+         CONSUL_HOST, CONSUL_PORT, SSPL_CONFIGS
 except Exception as e:
     from framework.base.sspl_constants import component, salt_provisioner_pillar_sls, \
-         file_store_config_path, SSPL_STORE_TYPE, StoreTypes, salt_uniq_passwd_per_node
+         file_store_config_path, SSPL_STORE_TYPE, StoreTypes, salt_uniq_passwd_per_node, COMMON_CONFIGS, SSPL_CONFIGS
     from framework.utils.consulstore import ConsulStore
     from framework.utils.filestore import FileStore
 
@@ -43,8 +44,13 @@ class ConfigReader(object):
         @param config: configuration file name
         """
         self.store = None
+        self.consul_conn = None
+        self.is_init = is_init
         if is_init:
             self.read_dev_conf()
+            host = os.getenv('CONSUL_HOST', CONSUL_HOST)
+            port = os.getenv('CONSUL_PORT', CONSUL_PORT)
+            self.consul_conn = consul.Consul(host=host, port=port)
         elif is_test:
             self.read_test_conf(test_config_path)
         else:
@@ -137,12 +143,20 @@ class ConfigReader(object):
             if self.store is not None and isinstance(self.store, FileStore):
                 value = self.store.get(section, key)
             elif self.store is not None and isinstance(self.store, ConsulStore):
-                value = self.store.get(component + '/' + section + '/' + key)
+                if section not in COMMON_CONFIGS:
+                    value = self.store.get(component + '/' + section + '/' + key)
+                elif key in SSPL_CONFIGS or section.lower() in SSPL_CONFIGS:
+                    value = self.store.get(component + '/' + section + '/' + key)
+                else:
+                    value = self.get_from_common_config(section, key)
             else:
                 raise Exception("{} Invalid store type object.".format(self.store))
         except (RuntimeError, Exception) as e:
             # Taking values from normal configparser in dev env
-            value = self.store.get(section, key)
+            if section in COMMON_CONFIGS:
+                value = self.get_from_common_config(section, key)
+            else:
+                value = self.store.get(section, key)
 
         if value in [None, '', ['']]:
             return ''
@@ -190,13 +204,64 @@ class ConfigReader(object):
             if self.store is not None and isinstance(self.store, FileStore):
                 pairs = self.store.items(section)
             elif self.store is not None and isinstance(self.store, ConsulStore):
-                pairs = self.store.get(component + '/' + section + '/' , recurse=True)
+                if section not in COMMON_CONFIGS:
+                    pairs = self.store.get(component + '/' + section + '/' , recurse=True)
+                else:
+                    pairs = self.get_from_common_config(section)
             else:
                 raise Exception("{} Invalid store type object.".format(self.store))
         except (RuntimeError, Exception) as e:
             # Taking values from normal configparser in dev env
-            pairs = self.store.items(section)
+            if section in COMMON_CONFIGS:
+                pairs = self.get_from_common_config(section)
+            else:
+                pairs = self.store.items(section)
 
         for item in pairs:
             value_list.append(item[1])
         return value_list
+
+    def get_from_common_config(self, section, key=None):
+        if self.is_init:
+            if self.consul_conn is not None and section in COMMON_CONFIGS:
+                if key is None:
+                    val = self.kv_get(section.lower() + '/', recurse=True)
+                else:
+                    if section.lower() == 'rabbitmqcluster':
+                        val = self.kv_get(key)
+                    else:
+                        val = self.kv_get(section.lower() + '/' + key)
+            elif self.store is not None and isinstance(self.store, configparser.RawConfigParser):
+                val = self.store.get(section, key)
+        else:
+            if key is None:
+                val = self.store.get(section.lower() + '/', recurse=True)
+            else:
+                if section.lower() == 'rabbitmqcluster':
+                    val = self.store.get(key)
+                else:
+                    val = self.store.get(section.lower() + '/' + key)
+        return val
+
+    def _get_key(self, key):
+        """remove '/' from begining of the key"""
+        if key[:1] ==  "/":
+            return key[1:]
+        else:
+            return key
+    
+    def kv_get(self, key, **kwargs):
+        try:
+            _opt_recurse = kwargs.get("recurse", False)
+            key = self._get_key(key)
+            data = self.consul_conn.kv.get(key, recurse=_opt_recurse)[1]
+            if data:
+                data = data["Value"]
+                try:
+                    data = pickle.loads(data)
+                except:
+                    pass
+        except Exception as gerr:
+            print(f'Error{gerr} while reading data from consul {key}')
+        
+        return data

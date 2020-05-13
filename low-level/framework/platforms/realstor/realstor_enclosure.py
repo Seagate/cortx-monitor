@@ -24,7 +24,7 @@ from framework.utils.service_logging import logger
 from framework.utils.webservices import WebServices
 from framework.utils.store_factory import store
 from framework.utils import encryptor
-from framework.base.sspl_constants import ServiceTypes
+from framework.base.sspl_constants import ServiceTypes, COMMON_CONFIGS
 
 class RealStorEnclosure(StorageEnclosure):
     """RealStor Enclosure Monitor functions using CLI API Webservice Interface"""
@@ -107,44 +107,44 @@ class RealStorEnclosure(StorageEnclosure):
 
         # Read in mc value from configuration file
         self.mc1 = self.conf_reader._get_value_with_default(
-            self.encl_conf, "primary_controller_ip", self.DEFAULT_MC_IP)
+            self.encl_conf, COMMON_CONFIGS.get(self.encl_conf).get("primary_controller_ip"), self.DEFAULT_MC_IP)
         self.mc1_wsport = self.conf_reader._get_value_with_default(
-            self.encl_conf, "primary_controller_port", '')
+            self.encl_conf, COMMON_CONFIGS.get(self.encl_conf).get("primary_controller_port"), '')
         self.mc2 = self.conf_reader._get_value_with_default(
-            self.encl_conf, "secondary_controller_ip", self.DEFAULT_MC_IP)
+            self.encl_conf, COMMON_CONFIGS.get(self.encl_conf).get("secondary_controller_ip"), self.DEFAULT_MC_IP)
         self.mc2_wsport = self.conf_reader._get_value_with_default(
-            self.encl_conf, "secondary_controller_port", '')
+            self.encl_conf, COMMON_CONFIGS.get(self.encl_conf).get("secondary_controller_port"), '')
 
         self.active_ip = self.mc1
         self.active_wsport = self.mc1_wsport
 
         self.user = self.conf_reader._get_value_with_default(
-            self.encl_conf, "user", self.DEFAULT_USER)
+            self.encl_conf, COMMON_CONFIGS.get(self.encl_conf).get("user"), self.DEFAULT_USER)
         self.passwd = self.conf_reader._get_value_with_default(
-            self.encl_conf, "password", self.DEFAULT_PASSWD)
+            self.encl_conf, COMMON_CONFIGS.get(self.encl_conf).get("password"), self.DEFAULT_PASSWD)
 
         self.mc_interface = self.conf_reader._get_value_with_default(
-                                self.encl_conf, "mgmt_interface", "cliapi")
+                                self.encl_conf, COMMON_CONFIGS.get(self.encl_conf).get("mgmt_interface"), "cliapi")
 
         self.pollfreq = int(self.conf_reader._get_value_with_default(
             self.CONF_REALSTORSENSORS, "polling_frequency", self.DEFAULT_POLL))
 
-        self.site_id = int(self.conf_reader._get_value_with_default(
+        self.site_id = self.conf_reader._get_value_with_default(
                                                 self.SYSTEM_INFORMATION,
-                                                self.SITE_ID,
-                                                0))
-        self.rack_id = int(self.conf_reader._get_value_with_default(
+                                                COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.SITE_ID),
+                                                '001')
+        self.rack_id = self.conf_reader._get_value_with_default(
                                                 self.SYSTEM_INFORMATION,
-                                                self.RACK_ID,
-                                                0))
-        self.node_id = int(self.conf_reader._get_value_with_default(
+                                                COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.RACK_ID),
+                                                '001')
+        self.node_id = self.conf_reader._get_value_with_default(
                                                 self.SYSTEM_INFORMATION,
-                                                self.NODE_ID,
-                                                0))
+                                                COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.NODE_ID),
+                                                '001')
         # Need to keep cluster_id string here to generate decryption key
         self.cluster_id = self.conf_reader._get_value_with_default(
                                                 self.SYSTEM_INFORMATION,
-                                                self.CLUSTER_ID,
+                                                COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.CLUSTER_ID),
                                                 '001')
         # Decrypt MC Password
         decryption_key = encryptor.gen_key(self.cluster_id, ServiceTypes.STORAGE_ENCLOSURE.value)

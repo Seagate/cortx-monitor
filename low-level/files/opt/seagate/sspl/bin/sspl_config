@@ -22,7 +22,6 @@ LOGROTATE_CONF="/etc/logrotate.d/iem_messages"
 LOGROTATE_SSPL_CONF="/etc/logrotate.d/sspl_logs"
 SSPL_CONFIGURED="/var/eos/sspl/sspl-configured"
 
-$script_dir/sspl_fetch_config_from_salt.py
 usage() {
     cat << EOF
 $SCRIPT_NAME [{config [-f] [-r <ssu|gw|cmu|vm>]]

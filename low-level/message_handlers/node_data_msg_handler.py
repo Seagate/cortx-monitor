@@ -20,7 +20,7 @@ import time
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
-from framework.base.sspl_constants import enabled_products
+from framework.base.sspl_constants import enabled_products, COMMON_CONFIGS
 
 from json_msgs.messages.sensors.host_update import HostUpdateMsg
 from json_msgs.messages.sensors.local_mount_data import LocalMountDataMsg
@@ -122,23 +122,23 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                                                 self.HOST_MEMORY_USAGE_THRESHOLD,
                                                 self.DEFAULT_HOST_MEMORY_USAGE_THRESHOLD)
 
-        self.site_id = int(self._conf_reader._get_value_with_default(
+        self.site_id = self._conf_reader._get_value_with_default(
                                                 self.SYSTEM_INFORMATION,
-                                                self.SITE_ID,
-                                                0))
-        self.rack_id = int(self._conf_reader._get_value_with_default(
+                                                COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.SITE_ID),
+                                                '001')
+        self.rack_id = self._conf_reader._get_value_with_default(
                                                 self.SYSTEM_INFORMATION,
-                                                self.RACK_ID,
-                                                0))
-        self.node_id = int(self._conf_reader._get_value_with_default(
+                                                COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.RACK_ID),
+                                                '001')
+        self.node_id = self._conf_reader._get_value_with_default(
                                                 self.SYSTEM_INFORMATION,
-                                                self.NODE_ID,
-                                                0))
+                                                COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.NODE_ID),
+                                                '001')
 
         self.cluster_id = self._conf_reader._get_value_with_default(
                                                 self.SYSTEM_INFORMATION,
-                                                self.CLUSTER_ID,
-                                                '0')
+                                                COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.CLUSTER_ID),
+                                                0)
         self.nw_status = {}
         self._node_sensor    = None
         self._login_actuator = None
@@ -172,7 +172,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
     def _import_products(self, product):
         """Import classes based on which product is being used"""
-        if product in enabled_products:
+        if product.lower() in [x.lower() for x in enabled_products]:
             from zope.component import queryUtility
             self._queryUtility = queryUtility
 

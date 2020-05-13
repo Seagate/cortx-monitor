@@ -55,7 +55,7 @@ class PlaneCntrlMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
     def _import_products(self, product):
         """Import classes based on which product is being used"""
-        if product in cs_legacy_products:
+        if product.lower() in [x.lower() for x in cs_legacy_products]:
             from sedutil.sedDispatch import SedOpDispatch
             self._SedOpDispatch = SedOpDispatch
             self._SedOpDispatch.setLogger(logger)

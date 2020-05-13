@@ -161,10 +161,10 @@ def fan_actuator_message_request(resource_type, resource_id):
                 "debug_enabled" : True
             },
             "request_path": {
-                "site_id": 1,
-                "rack_id": 1,
-                "cluster_id": '1',
-                "node_id": 1
+                "site_id": "1",
+                "rack_id": "1",
+                "cluster_id": "1",
+                "node_id": "1"
             },
             "response_dest": {},
             "actuator_request_type": {

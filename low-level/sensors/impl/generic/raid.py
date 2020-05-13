@@ -23,6 +23,7 @@ import uuid
 
 from framework.base.module_thread import SensorThread
 from framework.base.internal_msgQ import InternalMsgQ
+from framework.base.sspl_constants import COMMON_CONFIGS
 from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
 
@@ -107,14 +108,14 @@ class RAIDsensor(SensorThread, InternalMsgQ):
 
         self._faulty_device_list = {}
 
-        self._site_id = int(self._conf_reader._get_value_with_default(
-                                self.SYSTEM_INFORMATION, self.SITE_ID, 0))
+        self._site_id = self._conf_reader._get_value_with_default(
+                                self.SYSTEM_INFORMATION, COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.SITE_ID), '001')
         self._cluster_id = self._conf_reader._get_value_with_default(
-                                self.SYSTEM_INFORMATION, self.CLUSTER_ID, '0')
-        self._rack_id = int(self._conf_reader._get_value_with_default(
-                                self.SYSTEM_INFORMATION, self.RACK_ID, 0))
-        self._node_id = int(self._conf_reader._get_value_with_default(
-                                self.SYSTEM_INFORMATION, self.NODE_ID, 0))
+                                self.SYSTEM_INFORMATION, COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.CLUSTER_ID), '001')
+        self._rack_id = self._conf_reader._get_value_with_default(
+                                self.SYSTEM_INFORMATION, COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.RACK_ID), '001')
+        self._node_id = self._conf_reader._get_value_with_default(
+                                self.SYSTEM_INFORMATION, COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.NODE_ID), '001')
         # Allow systemd to process all the drives so we can map device name to serial numbers
         #time.sleep(120)
 
