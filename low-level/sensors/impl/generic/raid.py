@@ -47,7 +47,7 @@ class RAIDsensor(SensorThread, InternalMsgQ):
     RAID_STATUS_FILE  = 'RAID_status_file'
 
     RAID_CONF_FILE    = '/etc/mdadm.conf'
-    RAID_DOWN_DRIVE_STATUS = [ { "status" : "_" }, { "status" : "_" } ]
+    RAID_DOWN_DRIVE_STATUS = [ { "status" : "Down/Missing" }, { "status" : "Down/Missing" } ]
 
     SYSTEM_INFORMATION = "SYSTEM_INFORMATION"
     SITE_ID = "site_id"
@@ -55,7 +55,7 @@ class RAIDsensor(SensorThread, InternalMsgQ):
     NODE_ID = "node_id"
     RACK_ID = "rack_id"
 
-    prev_alert_type = None
+    prev_alert_type = {}
     alert_type = None
 
     # alerts
@@ -102,11 +102,21 @@ class RAIDsensor(SensorThread, InternalMsgQ):
         self._RAID_status_contents = "N/A"
 
         # The mdX status line in the status file
-        self._RAID_status = "N/A"
+        self._RAID_status = {}
 
         self._faulty_drive_list = {}
 
         self._faulty_device_list = {}
+
+        self._drives = {}
+
+        self._total_drives = {}
+
+        self._devices = []
+
+        self._missing_drv = {}
+
+        self._prev_drive_dict = {}
 
         self._site_id = self._conf_reader._get_value_with_default(
                                 self.SYSTEM_INFORMATION, COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.SITE_ID), '001')
@@ -156,7 +166,6 @@ class RAIDsensor(SensorThread, InternalMsgQ):
         """See if the status files changed and notify node data message handler
             for generating JSON message"""
         self._drive_state_changed = False
-        self._device_state_changed = False
         # resource_id for drive alerts
         resource_id = None
         if not os.path.isfile(self._RAID_status_file):
@@ -176,91 +185,81 @@ class RAIDsensor(SensorThread, InternalMsgQ):
         self._RAID_status_contents = status
 
         # Process mdstat file and send json msg to NodeDataMsgHandler
-        md_device_list, drive_list, drive_status_changed = self._process_mdstat()
+        md_device_list, drive_dict, drive_status_changed = self._process_mdstat()
 
         # checks mdadm conf file for missing raid array and send json message to NodeDataMsgHandler
-        self._process_missing_md_devices(md_device_list)
+        self._process_missing_md_devices(md_device_list, drive_dict)
 
-        if md_device_list:
-            device = md_device_list[0]
-            if device in self._faulty_device_list:
-                self.alert_type = self.FAULT_RESOLVED
-                self._device_state_changed = True
-                del self._faulty_device_list[device]
+        for device in md_device_list:
+            if drive_dict:
+                if len(drive_dict[device]) < self._total_drives[device] and \
+                    device in self.prev_alert_type and self.prev_alert_type[device] != self.MISSING:
+                    self.alert_type = self.MISSING
+                    if device in self._prev_drive_dict:
+                        missing_drive = set(self._prev_drive_dict[device]).difference(set(drive_dict[device]))
+                        missing_drive = "/dev/"+list(missing_drive)[0]
+                    else:
+                        missing_drive = "NA"
+                    resource_id = device+":"+missing_drive
+                    self._missing_drv = {"path": missing_drive, "serialNumber": "None"}
+                    self._map_drive_status(device, drive_dict, "Missing")
+                    self._drive_state_changed = True
 
-        if drive_list:
-            if len(drive_list) < self._total_drives and \
-                self.prev_alert_type != self.MISSING:
-                self.alert_type = self.MISSING
-                resource_id = self._device+":"
-                self._drive_state_changed = True
-            if len(drive_list) >= self._total_drives and \
-                self.prev_alert_type == self.MISSING:
-                self.alert_type = self.INSERTION
-                resource_id = self._device+":/dev/"+drive_list[0]
-                if drive_list[0] in self._faulty_drive_list:
-                    del self._faulty_drive_list[drive_list[0]]
-                self._drive_state_changed = True
-            if self.alert_type is not None:
-                if self._device_state_changed == True:
-                    self._resource_id = self._device
-                if self._drive_state_changed == True:
-                    self._resource_id = resource_id
-                self._send_json_msg(self.alert_type,self._resource_id)
+                elif len(drive_dict[device]) >= self._total_drives[device] and \
+                    device in self.prev_alert_type and self.prev_alert_type[device] == self.MISSING:
+                    self.alert_type = self.INSERTION
+                    resource_id = device+":/dev/"+drive_dict[device][0]
+                    self._map_drive_status(device, drive_dict[device][0], "Down/Recovery")
+                    self._drive_state_changed = True
 
-            if drive_status_changed:
-                for drive in self._drives:
-                    if drive.get("identity") is not None:
-                        drive_path = drive.get("identity").get("path")
-                        drive_name = drive_path[5:]
-                        resource_id = self._device+":/dev/"+drive_name
-                        drive_status = drive.get("status")
-                        if drive_status != "U" and drive_name not in self._faulty_drive_list:
-                            self.alert_type = self.FAULT
-                            self._drive_state_changed = True
-                            self._faulty_drive_list[drive_name] = self.alert_type
-                        if drive_status == "U" and drive_name in self._faulty_drive_list:
-                            self.alert_type = self.FAULT_RESOLVED
-                            self._drive_state_changed = True
-                            del self._faulty_drive_list[drive_name]
-                        if self.alert_type is not None and self._drive_state_changed == True:
-                            self._send_json_msg(self.alert_type,resource_id)
+                if self.alert_type is not None and self._drive_state_changed == True:
+                    self._prev_drive_dict[device] = drive_dict[device]
+                    self._send_json_msg(self.alert_type, resource_id, device, self._drives[device])
+
+                if drive_status_changed[device]:
+                    for drive in self._drives[device]:
+                        if drive.get("identity") is not None:
+                            drive_path = drive.get("identity").get("path")
+                            drive_name = drive_path[5:]
+                            resource_id = device+":/dev/"+drive_name
+                            drive_status = drive.get("status")
+                            if drive_status not in ["U", "UP"] and device in self._faulty_drive_list and \
+                                drive_name not in self._faulty_drive_list[device]:
+                                self.alert_type = self.FAULT
+                                self._map_drive_status(device, drive_name, "Down")
+                                self._drive_state_changed = True
+                                self._faulty_drive_list[device][drive_name] = self.alert_type
+
+                            elif drive_status in ["U", "UP", "Down/Recovery"] and device in self._faulty_drive_list and \
+                                drive_name in self._faulty_drive_list[device]:
+                                self.alert_type = self.FAULT_RESOLVED
+                                self._map_drive_status(device, drive_name, "UP")
+                                self._drive_state_changed = True
+                                del self._faulty_drive_list[device][drive_name]
+
+                            if self.alert_type is not None and self._drive_state_changed == True:
+                                self._prev_drive_dict[device] = drive_dict[device]
+                                self._send_json_msg(self.alert_type, resource_id, device, self._drives[device])
 
     def _process_mdstat(self):
         """Parse out status' and path info for each drive"""
         # Replace new line chars with spaces
         mdstat = self._RAID_status_contents.strip().split("\n")
         md_device_list = []
-        drive_list = []
-        # list of lines in mdstat which contains "md"
-        mdlines = []
-        # select 1st raid device to monitor
-        monitored_device = []
-        drive_status_changed = False
+        drive_dict = {}
+        monitored_device = mdstat
+        drive_status_changed = {}
         # Array of optional identity json sections for drives in array
         self._identity = {}
 
         # Read in each line looking for a 'mdXXX' value
         md_line_parsed = False
-        for line in mdstat:
-            fields = line.split(" ")
-            if "md" in fields[0]:
-                mdlines.append(line)
-                self._device = "/dev/{}".format(fields[0])
-                self._log_debug("md device found: %s" % self._device)
-                md_device_list.append(self._device)
-        if len(md_device_list) > 1:
-            logger.warning("Multiple RAID arrays are not supported,%s device not monitored." %self._device)
-        if mdlines:
-            # find 1st mdarray in mdstat to monitor
-            index = mdstat.index(mdlines[-1])
-            monitored_device = mdstat[index:]
 
         for line in monitored_device:
             # The line following the mdXXX : ... contains the [UU] status that we need
             if md_line_parsed is True:
                 # Format is [x/y][UUUU____...]
-                drive_status_changed = self._parse_raid_status(line)
+                drive_status_changed[self._device] = self._parse_raid_status(line, self._device)
                 # Reset in case their are multiple configs in file
                 md_line_parsed = False
 
@@ -270,21 +269,29 @@ class RAIDsensor(SensorThread, InternalMsgQ):
             # Parse out status' and path info for each drive
             if "md" in fields[0]:
                 self._device = f"/dev/{fields[0]}"
+                self._devices.append(self._device)
                 self._log_debug(f"md device found: {self._device}")
                 md_device_list.append(self._device)
+                drive_dict[self._device] = []
+                if self._device not in self.prev_alert_type:
+                    self.prev_alert_type[self._device] = None
+                if self._device not in self._faulty_drive_list:
+                    self._faulty_drive_list[self._device] = {}
 
                 # Parse out raid drive paths if they're present
+                self._identity[self._device] = {}
                 for field in fields:
                     if "[" in field:
-                        if field not in drive_list:
+                        if field not in drive_dict[self._device]:
                             index = field.find("[")
                             drive_name = field[:index]
-                            drive_list.append(drive_name)
-                        self._add_drive(field)
+                            drive_dict[self._device].append(drive_name)
+                        self._add_drive(field, self._device)
                 md_line_parsed = True
-        return md_device_list, drive_list, drive_status_changed
 
-    def _add_drive(self, field):
+        return md_device_list, drive_dict, drive_status_changed
+
+    def _add_drive(self, field, device):
         """Adds a drive to the list"""
         first_bracket_index = field.find('[')
 
@@ -309,9 +316,9 @@ class RAIDsensor(SensorThread, InternalMsgQ):
                         "path" : drive_path,
                         "serialNumber" : "None"
                         }
-        self._identity[drive_index] = identity_data
+        self._identity[device][drive_index] = identity_data
 
-    def _parse_raid_status(self, status_line):
+    def _parse_raid_status(self, status_line, device):
         """Parses the status of each drive denoted by U & _
             for drive being Up or Down in raid
         """
@@ -322,8 +329,8 @@ class RAIDsensor(SensorThread, InternalMsgQ):
         if first_bracket_index == -1:
             return False
 
-        self._total_drives = int(status_line[first_bracket_index + 1])
-        self._log_debug("_parse_raid_status, total_drives: %d" % self._total_drives)
+        self._total_drives[device] = int(status_line[first_bracket_index + 1])
+        self._log_debug("_parse_raid_status, total_drives: %d" % self._total_drives[device])
 
         # Break the line apart into separate fields
         fields = status_line.split(" ")
@@ -331,24 +338,16 @@ class RAIDsensor(SensorThread, InternalMsgQ):
         # The last field is the list of U & _
         status = fields[-1]
         self._log_debug("_parse_raid_status, status: %s, total drives: %d" %
-                        (status, self._total_drives))
-
-        # See if the status line has changed, if not there's nothing to do
-        if self._RAID_status == status:
-            self._log_debug(f"RAID status has not changed, ignoring: {status}")
-            return False
-        else:
-            self._log_debug(f"RAID status has changed, old: {self._RAID_status}, new: {status}")
-            self._RAID_status = status
+                        (status, self._total_drives[device]))
 
         # Array of raid drives in json format based on schema
-        self._drives = []
+        self._drives[device] = []
 
         drive_index = 0
-        while drive_index < self._total_drives:
+        while drive_index < self._total_drives[device]:
             # Create the json msg and append it to the list
-            if self._identity.get(drive_index) is not None:
-                path = self._identity.get(drive_index).get("path")
+            if self._identity.get(device).get(drive_index) is not None:
+                path = self._identity.get(device).get(drive_index).get("path")
                 drive_status_msg = {
                                  "status" : status[drive_index + 1],  # Move past '['
                                  "identity": {
@@ -361,13 +360,21 @@ class RAIDsensor(SensorThread, InternalMsgQ):
 
             self._log_debug(f"_parse_raid_status, drive_index: {drive_index}")
             self._log_debug(f"_parse_raid_status, drive_status_msg: {drive_status_msg}")
-            self._drives.append(drive_status_msg)
+            self._drives[device].append(drive_status_msg)
 
             drive_index = drive_index + 1
 
+        # See if the status line has changed, if not there's nothing to do
+        if device in self._RAID_status and self._RAID_status[device] == status:
+            self._log_debug(f"RAID status has not changed, ignoring: {status}")
+            return False
+        else:
+            self._log_debug(f"RAID status has changed, old: {self._RAID_status}, new: {status}")
+            self._RAID_status[device] = status
+
         return True
 
-    def _process_missing_md_devices(self, md_device_list):
+    def _process_missing_md_devices(self, md_device_list, drive_dict):
         """ checks the md raid configuration file, compares all it's
             entries with list of arrays from mdstat file and sends
             missing entry in RabbitMQ channel
@@ -392,17 +399,37 @@ class RAIDsensor(SensorThread, InternalMsgQ):
 
         # compare conf file raid array list with mdstat raid array list
         for device in conf_device_list:
-            if device not in md_device_list:
+            if device not in md_device_list and device not in self._faulty_device_list:
                 # add that missing raid array entry into the list of raid devices
-                self._device = device
-                prev_drive_status = self._drives
-                self._drives  = self.RAID_DOWN_DRIVE_STATUS
                 self.alert_type = self.FAULT
+                self._send_json_msg(self.alert_type, device, device, self.RAID_DOWN_DRIVE_STATUS)
                 self._faulty_device_list[device] = self.FAULT
-                self._send_json_msg(self.alert_type,self._device)
-                self._drives = prev_drive_status
 
-    def _send_json_msg(self,alert_type, resource_id):
+            elif device in md_device_list and device in self._faulty_device_list:
+                # add that missing raid array entry into the list of raid devices
+                self.alert_type = self.FAULT_RESOLVED
+                self._map_drive_status(device, drive_dict, "Down/Recovery")
+                self._send_json_msg(self.alert_type, device, device, self._drives[device])
+                del self._faulty_device_list[device]
+
+    def _map_drive_status(self, device, drives, drv_status):
+        for drv in self._drives[device]:
+            if isinstance(drives, str):
+                if drv["status"] not in ["U", "UP"] and drv["identity"]["path"] == '/dev/'+drives:
+                    drv["status"] = drv_status
+            else:
+                for drive in drives[device]:
+                    # Drive info is not available in missing case.
+                    if drv_status == "Missing" and drv["status"] == "_":
+                        drv["status"] = drv_status
+                        drv["identity"] = self._missing_drv
+                    elif drv["status"] not in ["U", "UP"] and drv["identity"]["path"] == '/dev/'+drive:
+                        drv["status"] = drv_status
+
+            if drv["status"] == "U":
+                drv["status"] = "UP"
+
+    def _send_json_msg(self, alert_type, resource_id, device, drives):
         """Transmit data to NodeDataMsgHandler to be processed and sent out"""
 
         epoch_time = str(int(time.time()))
@@ -421,8 +448,8 @@ class RAIDsensor(SensorThread, InternalMsgQ):
                 "event_time": epoch_time
                }
         specific_info = {
-            "device": self._device,
-            "drives": self._drives
+            "device": device,
+            "drives": drives
                 }
 
         internal_json_msg = json.dumps(
@@ -439,7 +466,7 @@ class RAIDsensor(SensorThread, InternalMsgQ):
                     }
                 }
             })
-        self.prev_alert_type = alert_type
+        self.prev_alert_type[device] = alert_type
         self.alert_type = None
 
         self._log_debug("_send_json_msg, internal_json_msg: %s" %(internal_json_msg))
@@ -454,7 +481,7 @@ class RAIDsensor(SensorThread, InternalMsgQ):
                 "node_data": {
                     "status": "update",
                     "sensor_type": "node:os:raid_data",
-                    "device": self._device,
+                    "device": self._devices,
                     "drives": self._drives
                     }
                 }
