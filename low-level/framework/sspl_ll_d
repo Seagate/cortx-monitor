@@ -656,6 +656,14 @@ def set_log_level(signal_number, frame):
     logger.setLevel(log_level)
 
 
+def refresh_iem_log_file(signal_number, frame):
+    iem_sensor = threadController.get_sspl_module("IEMSensor")
+    if iem_sensor:
+        iem_sensor.refresh_file()
+    else:
+        logger.info(f"IEMSensor is not in running, ignoring signal to refresh file")
+
+
 if __name__ == "__main__":
     # Retrieve configuration file for sspl-ll service
     try:
@@ -707,6 +715,8 @@ if __name__ == "__main__":
 
     # Handle signals for log level change
     signal.signal(signal.SIGUSR1, set_log_level)
+    # Handle signal for iem file refresh
+    signal.signal(signal.SIGUSR2, refresh_iem_log_file)
 
     try:
         # Create a PID file for systemd
