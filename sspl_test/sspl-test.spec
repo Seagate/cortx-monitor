@@ -36,20 +36,39 @@ SSPL_DIR=/opt/seagate/eos/sspl
 CFG_DIR=$SSPL_DIR/conf
 
 # Check and install required flask version
-flask_installed=$(python3.6 -c 'import pkgutil; print(1 if pkgutil.find_loader("flask") else 0)')
-[ $flask_installed == "1" ] && touch ${SSPL_DIR}/sspl_test/keep_flask &&
-[ $(python3.6 -c 'import flask; print(flask.__version__)') = "1.1.1" ] || {
-    if [ $flask_installed == "1" ]; then
-        $sudo pip3.6 uninstall -y flask
+fl=`pip3.6 freeze | grep Flask`
+if [[ -n $fl ]]; then
+    ver=${fl##*=}
+    if [[ "$ver" != "1.1.1" ]]; then
+        # TODO: EOS-8145
+        # Before uninstalling flask and its depedencies, add check if they are
+        # installed already or version mismatch found during EOS run time.
+        # Jinja2 & MarkupSafe are already installed for salt configuration by provisioner.
+        # Removing them would cause other resources to fail.
+        pip3.6 uninstall -y flask
+        pip3.6 install Flask==1.1.1
+        #touch ${SSPL_DIR}/sspl_test/keep_flask
+        #echo "$ver" > ${SSPL_DIR}/sspl_test/keep_flask
     fi
-    $sudo pip3.6 install flask==1.1.1
-}
+else
+    pip3.6 install Flask==1.1.1
+    #touch ${SSPL_DIR}/sspl_test/keep_flask
+fi
 
 %preun
-# Uninstall flask and all its dependencies if it was not already installed
-[ -f /opt/seagate/eos/sspl/sspl_test/keep_flask ] && rm -f /opt/seagate/eos/sspl/sspl_test/keep_flask || {
-    $sudo pip3.6 uninstall -y flask Werkzeug itsdangerous Jinja2 click MarkupSafe
-}
+# Restore previous flask and its dependencies
+# TODO: EOS-8145
+#if [ -f /opt/seagate/eos/sspl/sspl_test/keep_flask ]; then
+#    ver=`cat /opt/seagate/eos/sspl/sspl_test/keep_flask | sed 's/ *$//'`
+#    rm -f /opt/seagate/eos/sspl/sspl_test/keep_flask
+#    fl=`pip3.6 freeze | grep Flask`
+#    if [[ -n $fl ]]; then
+#        pip3.6 uninstall -y flask
+#    fi
+#    if [ "$ver" != "" ]; then
+#        pip3.6 install Flask==$ver
+#    fi
+#fi
 
 %files
 %defattr(-,sspl-ll,root,-)
