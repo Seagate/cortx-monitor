@@ -19,7 +19,6 @@ import subprocess
 import time
 import json
 import re
-import tempfile
 import socket
 import uuid
 
@@ -69,6 +68,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
     # This file stores the last index from the SEL list for which we have issued an event.
     INDEX_FILE = "last_sel_index"
     LIST_FILE  = "sel_list"
+    LIST_FILE_COLLECT = "sel_list_collect"
 
     UPDATE_CREATE_MODE = "w+"
     UPDATE_ONLY_MODE   = "r+"
@@ -160,6 +160,8 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         self.list_file_name = os.path.join(self.cache_dir_path, self.LIST_FILE)
         self.list_file = self._get_file(self.list_file_name)
 
+        self.list_file_collect_name = os.path.join(self.cache_dir_path, self.LIST_FILE_COLLECT)
+
     def _write_index_file(self, index):
         if not isinstance(index, int):
             index = int(index, base=16)
@@ -212,27 +214,31 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         return True
 
     def _update_list_file(self):
-        (tmp_fd, tmp_name) = tempfile.mkstemp(dir=self.cache_dir_path)
-        # make sel list filter only for available frus. no extra data needed
-        # 'Power Supply|Power Unit|Fan|Drive Slot / Bay'
-        available_fru = '|'.join(self.fru_types.keys())
-        sel_out, retcode = self._run_ipmitool_subcommand("sel list", grep_args=f"-E '{available_fru}'",
-                                                             out_file=tmp_fd)
-        if retcode != 0:
-            if isinstance(sel_out, tuple):
-                sel_out = [val for val in sel_out if val]
-            msg = f"ipmitool sel list command failed: {b''.join(sel_out)}"
-            logger.error(msg)
-            raise Exception(msg)
+        with open(self.list_file_collect_name, self.UPDATE_CREATE_MODE) as f:
+            # make sel list filter only for available frus. no extra data needed
+            # 'Power Supply|Power Unit|Fan|Drive Slot / Bay'
+            f.seek(0)
+            f.truncate()
+            available_fru = '|'.join(self.fru_types.keys())
+            sel_out, retcode = self._run_ipmitool_subcommand(
+                    "sel list", grep_args=f"-E '{available_fru}'",
+                    out_file=f.fileno())
+            if retcode != 0:
+                if isinstance(sel_out, tuple):
+                    sel_out = [val for val in sel_out if val]
+                msg = f"ipmitool sel list command failed: {b''.join(sel_out)}"
+                logger.error(msg)
+                raise Exception(msg)
 
         # os.rename() is required to be atomic on POSIX,
         # (from here: https://docs.python.org/2/library/os.html#os.rename)
         # which means that even if the current python process crashes
         # the SEL list in the self.list_file_name file
         # will always be in a consistent state.
-        os.rename(tmp_name, self.list_file_name)
+        os.rename(self.list_file_collect_name, self.list_file_name)
+
         self.list_file.close()
-        self.list_file = os.fdopen(tmp_fd, self.UPDATE_ONLY_MODE)
+        self.list_file = self._get_file(self.list_file_name)
 
     def _check_and_clear_sel(self):
         """ Clear SEL Table if SEL used memory seen above threshold
