@@ -1,7 +1,6 @@
 alerts.os.test_disk_space_alert
 alerts.os.test_node_cpu_data_sensor
 alerts.os.test_node_host_data_sensor
-alerts.os.test_node_if_data_sensor
 alerts.realstor.test_real_stor_controller_sensor
 alerts.realstor.test_real_stor_disk_sensor
 alerts.realstor.test_real_stor_psu_sensor

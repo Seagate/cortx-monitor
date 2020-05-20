@@ -1,5 +1,6 @@
 #!/usr/bin/python3.6
 from enum import Enum
+import os
 
 enabled_products = ["EES", "CS-A"]
 cs_products = ["CS-A"]
@@ -20,28 +21,26 @@ SYSINFO = "SYSTEM_INFORMATION"
 PRODUCT = "product"
 SETUP = "setup"
 
+GRAINS_GET_NODE_CMD = "salt-call grains.get id --output=newline_values_only"
+MINION_GET_NODE_CMD = "cat /etc/salt/minion_id"
+
 # TODO : need to fetch node_key using salt python API.
 # Facing issue of service is going in loop till it eat's all the memory
 import subprocess
-subout = subprocess.Popen('salt-call grains.get id --output=newline_values_only', shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+subout = subprocess.Popen(GRAINS_GET_NODE_CMD, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 result = subout.stdout.readlines()
 if result == [] or result == "":
-    subout = subprocess.Popen('hostname', shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    print(f"WARN : Command '{GRAINS_GET_NODE_CMD}' failed to fetch grain id or hostname.")
+    subout = subprocess.Popen(MINION_GET_NODE_CMD, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     result = subout.stdout.readlines()
     if result == [] or result == "":
-        print("CRITICAL: using node_id ('srvnode-1') as we are not able to fetch it from hostname command.")
+        print(f"WARN : Command '{MINION_GET_NODE_CMD}' failed to fetch minion id or hostname.")
+        print("WARN : using node_id ('srvnode-1') as we are not able to fetch it from hostname command.")
         node_key_id = 'srvnode-1'
     else:
-        if result[0].decode().rstrip('\n') in ['eosnode-1', 'srvnode-1']:
-            node_key_id = 'srvnode-1'
-        elif result[0].decode().rstrip('\n') in ['eosnode-2', 'srvnode-2']:
-            node_key_id = 'srvnode-2'
-        else:
-            print("CRITICAL: using node_id ('srvnode-1') as hostname not able to match with required node name.")
-            node_key_id = 'srvnode-1'
+        node_key_id = result[0].decode().rstrip('\n').lower()
 else:
     node_key_id = result[0].decode().rstrip('\n')
-
 
 COMMON_CONFIGS = {
     "SYSTEM_INFORMATION": {
@@ -75,7 +74,7 @@ COMMON_CONFIGS = {
     }
 }
 
-SSPL_CONFIGS = ['log_level', 'cli_type', 'sspl_log_file_path', 'cluster_id', 'storage_enclosure', 'setup']
+SSPL_CONFIGS = ['log_level', 'cli_type', 'sspl_log_file_path', 'cluster_id', 'storage_enclosure', 'setup', 'operating_system']
 
 # required only for init
 component = 'sspl/config'
@@ -118,7 +117,7 @@ class ServiceTypes(Enum):
 class OperatingSystem(Enum):
     CENTOS7 = "centos7"
     CENTOS6 = "centos6"
-    RHEL7 = "Red Hat Enterprise Linux Server 7.7 (Maipo)"
+    RHEL7 = "rhel7"
     RHEL6 = "rhel6"
     OSX = "osX"
 
