@@ -383,6 +383,7 @@ class RealStorDiskSensor(SensorThread, InternalMsgQ):
     def _rss_check_disk_faults(self):
         """Retreive realstor system state info using cli api /show/system"""
 
+        alert_sent = False
         if not self.rssencl.check_system_faults_changed():
             #logger.debug("System faults state _NOT_ changed !!! ")
             return
@@ -416,6 +417,7 @@ class RealStorDiskSensor(SensorThread, InternalMsgQ):
 
                                 # raise alert for disk fault
                                 self._rss_raise_disk_alert(self.rssencl.FRU_FAULT, disk_info)
+                                alert_sent = True
                                 # To ensure all msg is sent to rabbitmq or added in consul for resending.
                                 self._event_wait_results.add(
                                     self._event.wait(self.rssencl.PERSISTENT_DATA_UPDATE_TIMEOUT))
@@ -437,13 +439,14 @@ class RealStorDiskSensor(SensorThread, InternalMsgQ):
                             self.disks_prcache+"disk_{0}.json".format(slot))
                         # raise alert for resolved disk fault
                         self._rss_raise_disk_alert(self.rssencl.FRU_FAULT_RESOLVED, disk_info)
+                        alert_sent = True
                         # To ensure all msg is sent to rabbitmq or added in consul for resending.
                         self._event_wait_results.add(
                                     self._event.wait(self.rssencl.PERSISTENT_DATA_UPDATE_TIMEOUT))
                         self._event.clear()
             # If all messages are sent to rabbitmq or added in consul for resending.
             # then only update cache
-            if all(self._event_wait_results):
+            if all(self._event_wait_results) and alert_sent==True:
                 self.rssencl.update_memcache_faults()
             self._event_wait_results.clear()
             self._event = None
