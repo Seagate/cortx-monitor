@@ -226,7 +226,8 @@ class RealStorEnclosure(StorageEnclosure):
                     continue
 
                 elif (response.status_code == self.ws.HTTP_TIMEOUT or \
-                         response.status_code == self.ws.HTTP_CONN_REFUSED) \
+                         response.status_code == self.ws.HTTP_CONN_REFUSED or \
+                         response.status_code == self.ws.HTTP_NO_ROUTE_TO_HOST) \
                          and tried_alt_ip is False:
                     self.switch_to_alt_mc()
                     tried_alt_ip = True
@@ -387,7 +388,7 @@ class RealStorEnclosure(StorageEnclosure):
                 # TODO: use self.FAULT_KEY in system: system.key() generates
                 # list and find item in that.
                 if not self.FAULT_KEY in system.keys():
-                    logger.info("{0} Healthy, no faults seen".format(self.EES_ENCL))
+                    logger.debug("{0} Healthy, no faults seen".format(self.EES_ENCL))
                     return
 
                 # Extract system faults
