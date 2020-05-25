@@ -99,6 +99,7 @@ $script_dir/mock_server &
 deleteMockedInterface()
 {
     ip link delete eth-mocked
+    ip link delete br0
 }
 
 # IMP NOTE: Please make sure that SSPL conf file has

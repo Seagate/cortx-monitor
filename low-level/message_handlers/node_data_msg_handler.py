@@ -600,6 +600,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             for interface in interfaces:
                 interface_name = interface.get("ifId")
                 nw_status = interface.get("nwStatus")
+                logger.debug("{0}:{1}".format(interface_name, nw_status))
                 # fault detected (Down/UNKNOWN, Up/UNKNOWN to Down, Up/Down to UNKNOWN)
                 if nw_status == 'DOWN' or nw_status == 'UNKNOWN':
                     if self.prev_nw_status.get(interface_name) != nw_status:
@@ -618,6 +619,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     logger.warning(f"Network connection state is:'{nw_status}', for interface:'{interface_name}'")
         except Exception as e:
             logger.error(f"Exception occurs while checking for network alert condition:'{e}'")
+        logger.debug("nw_alerts existed for:{}".format(nw_alerts))
         return nw_alerts
 
     def _nw_cable_alert_exists(self, interfaces):
