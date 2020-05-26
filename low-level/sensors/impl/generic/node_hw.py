@@ -81,6 +81,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
     NODE_ID = "node_id"
     CLUSTER_ID = "cluster_id"
 
+    sdr_reset_required = False
     request_shutdown = False
     sel_last_queried = None
     SEL_QUERY_FREQ = 300
@@ -205,15 +206,8 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         if retcode != 0:
             self.request_shutdown = True
         else:
-
             self._initialize_cache()
-            self.sensor_id_map = dict()
-
-            if self.request_shutdown is False:
-                for fru in self.fru_types:
-                    self.sensor_id_map[fru] = { sensor_num: sensor_id
-                        for (sensor_id, sensor_num) in
-                        self._get_sensor_list_by_type(fru)}
+            self._read_sensor_list()
 
         return True
 
@@ -304,6 +298,13 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         except Exception as ae:
             logger.exception(ae)
 
+    def _read_sensor_list(self):
+        self.sensor_id_map = dict()
+        for fru in self.fru_types:
+            self.sensor_id_map[fru] = { sensor_num: sensor_id
+                for (sensor_id, sensor_num) in
+                self._get_sensor_list_by_type(fru)}
+
     def run(self):
         """Run the sensor on its own thread"""
 
@@ -316,6 +317,15 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
 
         if self.request_shutdown is False:
             try:
+                # Reset sensor_map_id after ipmi simulation
+                if not os.path.exists("/tmp/activate_ipmisimtool"):
+                    # Sensor numbers set by ipmisimtool would cause key lookup
+                    # failure with actual ipmitool SDRs. So sensor_map_id needs
+                    # to be refreshed with current SDRs.
+                    if self.sdr_reset_required:
+                        self.sdr_reset_required = False
+                        self._read_sensor_list()
+
                 # Check for a change in ipmi sel list and notify the node data
                 # msg handler
                 if os.path.getsize(self.list_file_name) != 0:
@@ -411,7 +421,6 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
 
     def _run_command(self, command, out_file=subprocess.PIPE):
         """executes commands"""
-
         process = subprocess.Popen(command, shell=True, stdout=out_file, stderr=subprocess.PIPE)
         result = process.communicate()
         return result, process.returncode
@@ -428,6 +437,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
             if retcode == 0:
                 ipmi_tool = self.IPMISIMTOOL
                 logger.debug("IPMI simulator is activated")
+                self.sdr_reset_required = True
 
         command = ipmi_tool + subcommand
         if grep_args is not None:
@@ -465,7 +475,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
             if isinstance(sensor_list_out, tuple):
                 sensor_list_out = [val for val in sensor_list_out if val]
             msg = f"ipmitool sdr type command failed: {b''.join(sensor_list_out)}"
-            logger.error(msg)
+            logger.warning(msg)
             return
         sensor_list = b''.join(sensor_list_out).decode("utf-8").split("\n")
 
@@ -515,7 +525,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
             if isinstance(props_list_out, tuple):
                 props_list_out = [val for val in props_list_out if val]
             msg = f"ipmitool sensor get command failed: {b''.join(props_list_out)}"
-            logger.error(msg)
+            logger.warning(msg)
             return
         props_list = b''.join(props_list_out).decode("utf-8").split("\n")
 
@@ -554,7 +564,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
             if isinstance(props_list_out, tuple):
                 props_list_out = [val for val in props_list_out if val]
             msg = f"ipmitool sensor get command failed: {b''.join(props_list_out)}"
-            logger.error(msg)
+            logger.warning(msg)
             return (False, False)
         props_list = b''.join(props_list_out).decode("utf-8").split("\n")
         props_list = props_list[1:] # The first line is 'Locating sensor record...'

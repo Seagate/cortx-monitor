@@ -45,7 +45,7 @@ class IPMITool(IPMI):
             if isinstance(sensor_list_out, tuple):
                 sensor_list_out = [val for val in sensor_list_out if val]
             msg = "ipmitool sdr type command failed: {0}".format(b''.join(sensor_list_out))
-            logger.error(msg)
+            logger.warning(msg)
             return
         sensor_list = b''.join(sensor_list_out).decode("utf-8").split("\n")
 
@@ -86,7 +86,7 @@ class IPMITool(IPMI):
             if isinstance(props_list_out, tuple):
                 props_list_out = [val for val in props_list_out if val]
             msg = "ipmitool sensor get command failed: {0}".format(b''.join(props_list_out))
-            logger.error(msg)
+            logger.warning(msg)
             err_response = {sensor_id: {"ERROR": msg}}
             return (False, err_response)
         props_list = b''.join(props_list_out).decode("utf-8").split("\n")
