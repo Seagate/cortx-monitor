@@ -197,7 +197,10 @@ class RAIDsensor(SensorThread, InternalMsgQ):
                     self.alert_type = self.MISSING
                     if device in self._prev_drive_dict:
                         missing_drive = set(self._prev_drive_dict[device]).difference(set(drive_dict[device]))
-                        missing_drive = "/dev/"+list(missing_drive)[0]
+                        try:
+                            missing_drive = "/dev/"+list(missing_drive)[0]
+                        except IndexError:
+                            missing_drive = "NA"
                     else:
                         missing_drive = "NA"
                     resource_id = device+":"+missing_drive
@@ -224,7 +227,8 @@ class RAIDsensor(SensorThread, InternalMsgQ):
                             resource_id = device+":/dev/"+drive_name
                             drive_status = drive.get("status")
                             if drive_status not in ["U", "UP"] and device in self._faulty_drive_list and \
-                                drive_name not in self._faulty_drive_list[device]:
+                                drive_name not in self._faulty_drive_list[device] and \
+                                self.prev_alert_type[device] != self.MISSING:
                                 self.alert_type = self.FAULT
                                 self._map_drive_status(device, drive_name, "Down")
                                 self._drive_state_changed = True
@@ -390,8 +394,14 @@ class RAIDsensor(SensorThread, InternalMsgQ):
         for line in raid_conf_data:
             try:
                 raid_conf_field = line.split(" ")
-                if "md" in raid_conf_field[1]:
-                    conf_device_list.append(raid_conf_field[1])
+                if "#" not in raid_conf_field[0] and "ARRAY" in raid_conf_field[0] and \
+                    "/md" in raid_conf_field[1]:
+                    # Mapped the device i.e. /dev/md/1 and /dev/md1 will be the same device.
+                    map_device = raid_conf_field[1].split('md/')
+                    if len(map_device)>1:
+                        conf_device_list.append(map_device[0]+'md'+map_device[1])
+                    else:
+                        conf_device_list.append(raid_conf_field[1])
             except Exception as ae:
                 self._log_debug(f"_process_missing_md_devices, error retrieving raid entry    \
                  from {self.RAID_CONF_FILE} file: {str(ae)}")
