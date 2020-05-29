@@ -33,7 +33,6 @@ class IFdataMsg(BaseSensorMsg):
 
     MESSAGE_VERSION  = "1.0.0"
     RESOURCE_ID = "0"
-    SEVERITY = "warning"
 
     def __init__(self, host_id,
                        local_time,
@@ -45,6 +44,7 @@ class IFdataMsg(BaseSensorMsg):
                        cluster_id,
                        rack_id,
                        alert_type,
+                       severity,
                        username  = "SSPL-LL",
                        signature = "N/A",
                        in_time      = "N/A",
@@ -65,6 +65,7 @@ class IFdataMsg(BaseSensorMsg):
         self._cluster_id        = cluster_id
         self._rack_id           = rack_id
         self.alert_type         = alert_type
+        self._severity          = severity
 
         epoch_time = str(int(time.time()))
         alert_id = mon_utils.get_alert_id(epoch_time)
@@ -97,7 +98,7 @@ class IFdataMsg(BaseSensorMsg):
                              },
                              "host_id": self._host_id,
                              "alert_type":self.alert_type,
-                             "severity": self.SEVERITY,
+                             "severity": self._severity,
                              "alert_id": alert_id
                           }
                        }

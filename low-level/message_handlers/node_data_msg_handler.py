@@ -33,6 +33,7 @@ from json_msgs.messages.sensors.node_hw_data import NodeIPMIDataMsg
 from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 
 from message_handlers.logging_msg_handler import LoggingMsgHandler
+from framework.utils.severity_reader import SeverityReader
 
 class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
     """Message Handler for generic node requests and generating
@@ -143,6 +144,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                                                 '0')
         self.prev_nw_status = {}
         self.bmcNwStatus = None
+        self.severity_reader = SeverityReader()
         self.prev_cable_cnxns = {}
         self._node_sensor    = None
         self._login_actuator = None
@@ -201,6 +203,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
             # Delay for the desired interval if it's greater than zero
             if self._transmit_interval > 0:
+                logger.debug("self._transmit_interval:{}".format(self._transmit_interval))
                 timer = self._transmit_interval
                 while timer > 0:
                     # See if the message queue contains an entry and process
@@ -564,25 +567,26 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         interfaces = self._node_sensor.if_data
         nw_alerts = self._get_nwalert(interfaces)
         for nw_resource_id, nw_state in nw_alerts.items():
+            severity = self.severity_reader.map_severity(nw_state)
             ifDataMsg = IFdataMsg(self._node_sensor.host_id,
                             self._node_sensor.local_time,
                             self._node_sensor.if_data,
                             nw_resource_id,
                             self.NW_RESOURCE_TYPE,
-                            self.site_id, self.node_id, self.cluster_id, self.rack_id, nw_state)
+                            self.site_id, self.node_id, self.cluster_id, self.rack_id, nw_state, severity)
             self._send_ifdata_json_msg("nw", ifDataMsg)
 
         # Get all cable connections state and generate alert on
         # cables identified for fault detected and resolved state
         nw_cable_alerts = self._nw_cable_alert_exists(interfaces)
-
         for nw_cable_resource_id, state in nw_cable_alerts.items():
+            severity = self.severity_reader.map_severity(state)
             ifDataMsg = IFdataMsg(self._node_sensor.host_id,
                             self._node_sensor.local_time,
                             self._node_sensor.if_data,
                             nw_cable_resource_id,
                             self.NW_CABLE_RESOURCE_TYPE,
-                            self.site_id, self.node_id, self.cluster_id, self.rack_id, state)
+                            self.site_id, self.node_id, self.cluster_id, self.rack_id, state, severity)
             self._send_ifdata_json_msg("nw", ifDataMsg)
 
     def _get_nwalert(self, interfaces):
