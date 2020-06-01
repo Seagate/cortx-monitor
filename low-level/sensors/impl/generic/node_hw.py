@@ -74,6 +74,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
     UPDATE_ONLY_MODE   = "r+"
 
     IPMI_ERRSTR = "Could not open device at "
+    IPMI_ENCODING = 'utf-8'
 
     SYSTEM_INFORMATION = "SYSTEM_INFORMATION"
     SITE_ID = "site_id"
@@ -204,7 +205,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
                                                 '001')
 
         # Set flag 'request_shutdown' to true if ipmitool/simulator is non-functional
-        res, retcode = self._run_ipmitool_subcommand(subcommand="sel info")
+        res, retcode = self._run_ipmitool_subcommand("sel info")
         if retcode != 0:
             self.request_shutdown = True
         else:
@@ -221,8 +222,8 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
             f.truncate()
             available_fru = '|'.join(self.fru_types.keys())
             sel_out, retcode = self._run_ipmitool_subcommand(
-                    "sel list", grep_args=f"-E '{available_fru}'",
-                    out_file=f.fileno())
+                    "sel list", grep_args=f"{available_fru}",
+                    out_file=f)
             if retcode != 0:
                 if isinstance(sel_out, tuple):
                     sel_out = [val for val in sel_out if val]
@@ -263,7 +264,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
             self.sel_last_queried = time.time()
 
             key = val = None
-            info_list = b''.join(sel_info).decode("utf-8").split("\n")
+            info_list = b''.join(sel_info).decode(self.IPMI_ENCODING).split("\n")
 
             for info in info_list:
                 if ':' in info:
@@ -446,9 +447,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
                 self.sdr_reset_required = True
 
         command = ipmi_tool + subcommand
-        if grep_args is not None:
-            command += " | grep " + grep_args
-        res, retcode = self._run_command(command, out_file)
+        res, retcode = self._run_command(command, subprocess.PIPE)
 
         # Detect if ipmitool removed or facing error after sensor initialized
         if retcode != 0:
@@ -456,7 +455,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
             if retcode == 1:
                 if isinstance(res, tuple):
                     resstr = b''.join([val for val in res if val])
-                    resstr = resstr.decode("utf-8")
+                    resstr = resstr.decode(self.IPMI_ENCODING)
                     if resstr.find(self.IPMI_ERRSTR) == 0:
                         logger.error(f"{self.SENSOR_NAME}: {ipmi_tool} error:: {resstr}\n \
                             Dependencies failed, shutting down sensor")
@@ -464,6 +463,17 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
             elif (retcode == BASH_ILLEGAL_CMD):
                 logger.error(f"{self.SENSOR_NAME}: Required ipmitool missing on Node. Dependencies failed, shutting down sensor")
                 self.request_shutdown = True
+
+        if grep_args is not None and retcode == 0 and isinstance(res, tuple):
+            import re
+            final_list = []
+            for l in res[0].decode(encoding=self.IPMI_ENCODING).split('\n'):
+                if re.search(grep_args, l) is not None:
+                    final_list += [l]
+            res = ('\n'.join(final_list), res[1])
+        if out_file != subprocess.PIPE:
+            out_file.write(res[0])
+
 
         return res, retcode
 
@@ -483,7 +493,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
             msg = f"ipmitool sdr type command failed: {b''.join(sensor_list_out)}"
             logger.warning(msg)
             return
-        sensor_list = b''.join(sensor_list_out).decode("utf-8").split("\n")
+        sensor_list = b''.join(sensor_list_out).decode(self.IPMI_ENCODING).split("\n")
 
         out = []
         for sensor in sensor_list:
@@ -511,7 +521,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
             msg = f"ipmitool sdr entity command failed: {b''.join(sensor_list_out)}"
             logger.error(msg)
             return
-        sensor_list = b''.join(sensor_list_out).decode("utf-8").split("\n")
+        sensor_list = b''.join(sensor_list_out).decode(self.IPMI_ENCODING).split("\n")
 
         out = []
         for sensor in sensor_list:
@@ -533,7 +543,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
             msg = f"ipmitool sensor get command failed: {b''.join(props_list_out)}"
             logger.warning(msg)
             return
-        props_list = b''.join(props_list_out).decode("utf-8").split("\n")
+        props_list = b''.join(props_list_out).decode(self.IPMI_ENCODING).split("\n")
 
         static_keys = {}
         curr_key = None
@@ -572,7 +582,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
             msg = f"ipmitool sensor get command failed: {b''.join(props_list_out)}"
             logger.warning(msg)
             return (False, False)
-        props_list = b''.join(props_list_out).decode("utf-8").split("\n")
+        props_list = b''.join(props_list_out).decode(self.IPMI_ENCODING).split("\n")
         props_list = props_list[1:] # The first line is 'Locating sensor record...'
 
         specific_static = {}
