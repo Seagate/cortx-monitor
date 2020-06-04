@@ -19,7 +19,7 @@ def test_disk_space_alert(agrs):
     time.sleep(4)
     while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
         ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
-        time.sleep(4)
+        time.sleep(0.1)
         print("Received: {0}".format(ingressMsg))
 
         try:
@@ -29,7 +29,7 @@ def test_disk_space_alert(agrs):
                 disk_space_sensor_msg = msg_type
                 break
         except Exception as exception:
-            time.sleep(4)
+            time.sleep(0.1)
             print(exception)
 
     assert(disk_space_sensor_msg is not None)

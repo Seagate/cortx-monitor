@@ -19,7 +19,7 @@ def test_real_stor_controller_sensor(agrs):
     time.sleep(4)
     while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
         ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
-        time.sleep(2)
+        time.sleep(0.1)
         print("Received: %s" % ingressMsg)
         try:
             msg_type = ingressMsg.get("sensor_response_type")
@@ -27,7 +27,7 @@ def test_real_stor_controller_sensor(agrs):
                 controller_sensor_msg = msg_type
                 break
         except Exception as exception:
-            time.sleep(4)
+            time.sleep(0.1)
             print(exception)
 
     assert(controller_sensor_msg is not None)

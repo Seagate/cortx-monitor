@@ -22,7 +22,7 @@ def test_real_stor_enclosure_sensor(agrs):
     encl_sensor_msg = None
     while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
         ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
-        time.sleep(2)
+        time.sleep(0.1)
         print("Received: %s" % ingressMsg)
         try:
             # Make sure we get back the message type that matches the request
@@ -31,7 +31,7 @@ def test_real_stor_enclosure_sensor(agrs):
                 encl_sensor_msg = ingressMsg.get("sensor_response_type")
                 break
         except Exception as exception:
-            time.sleep(4)
+            time.sleep(0.1)
             print(exception)
         if time.time() > timeout:
             print("Timeout Error, Test Failed")

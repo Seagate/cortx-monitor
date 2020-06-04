@@ -23,12 +23,12 @@ def test_real_stor_disk_sensor(agrs):
         try:
             # Make sure we get back the message type that matches the request
             msg_type = ingressMsg.get("sensor_response_type")
-            time.sleep(2)
+            time.sleep(0.1)
             if msg_type['info']['resource_type'] == "enclosure:fru:disk":
                 disk_sensor_msg = msg_type
                 break
         except Exception as exception:
-            time.sleep(4)
+            time.sleep(0.1)
             print(exception)
 
     assert(disk_sensor_msg is not None)

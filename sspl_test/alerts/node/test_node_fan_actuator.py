@@ -23,7 +23,7 @@ def test_node_fan_module_actuator(agrs):
     ingressMsg = {}
     while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
         ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
-        time.sleep(2)
+        time.sleep(0.1)
         print("Received: %s" % ingressMsg)
         try:
             # Make sure we get back the message type that matches the request
@@ -32,7 +32,7 @@ def test_node_fan_module_actuator(agrs):
                 fan_module_actuator_msg = msg_type
                 break
         except Exception as exception:
-            time.sleep(4)
+            time.sleep(0.1)
             print(exception)
 
     assert(ingressMsg.get("sspl_ll_msg_header").get("uuid") == UUID)
