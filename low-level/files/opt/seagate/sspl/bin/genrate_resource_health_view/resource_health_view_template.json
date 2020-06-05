@@ -64,6 +64,11 @@
                                     "current": {},
                                     "temperature": {},
                                     "voltage": {}
+                                },
+                                "interfaces": {
+                                    "health": "",
+                                    "sas_port": {},
+                                    "network_cable": {}
                                 }
                             }
                         }
@@ -73,3 +78,4 @@
         }
     }
 }
+

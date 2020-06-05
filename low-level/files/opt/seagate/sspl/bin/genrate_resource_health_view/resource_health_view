@@ -7,6 +7,7 @@ import socket
 import time
 import argparse
 import consul
+import psutil
 import warnings
 warnings.filterwarnings(action='ignore',module='cryptography')
 
@@ -14,16 +15,17 @@ warnings.filterwarnings(action='ignore',module='cryptography')
 op = os.path
 parentdir = op.dirname(op.dirname(op.dirname(op.dirname(op.dirname(op.dirname(op.dirname(op.abspath(__file__))))))))
 sys.path.insert(0, parentdir)
-from framework.base.sspl_constants import component, CONSUL_HOST, CONSUL_PORT
+from framework.base.sspl_constants import component, CONSUL_HOST, CONSUL_PORT, node_key_id
 base_info = {'/SYSTEM_INFORMATION/site_id':'system_information/site_id',
              '/SYSTEM_INFORMATION/rack_id':'system_information/rack_id',
+             '/SYSTEM_INFORMATION/node_id':f'system_information/{node_key_id}/node_id',
              '/SYSTEM_INFORMATION/cluster_id':'system_information/cluster_id',
-             '/STORAGE_ENCLOSURE/primary_controller_ip':'storage_enclosure/controller/primary_mc/ip',
-             '/STORAGE_ENCLOSURE/secondary_controller_ip':'storage_enclosure/controller/secondary_mc/ip',
-             '/STORAGE_ENCLOSURE/primary_controller_port':'storage_enclosure/controller/primary_mc/port',
-             '/STORAGE_ENCLOSURE/secondary_controller_port':'storage_enclosure/controller/secondary_mc/port',
-             '/STORAGE_ENCLOSURE/user':'storage_enclosure/controller/user',
-             '/STORAGE_ENCLOSURE/password':'storage_enclosure/controller/password'}
+             '/STORAGE_ENCLOSURE/controller/primary_mc/ip':'storage_enclosure/controller/primary_mc/ip',
+             '/STORAGE_ENCLOSURE/controller/secondary_mc/ip':'storage_enclosure/controller/secondary_mc/ip',
+             '/STORAGE_ENCLOSURE/controller/primary_mc/port':'storage_enclosure/controller/primary_mc/port',
+             '/STORAGE_ENCLOSURE/controller/secondary_mc/port':'storage_enclosure/controller/secondary_mc/port',
+             '/STORAGE_ENCLOSURE/controller/user':'storage_enclosure/controller/user',
+             '/STORAGE_ENCLOSURE/controller/secret':'storage_enclosure/controller/password'}
 host = os.getenv('CONSUL_HOST', CONSUL_HOST)
 port = os.getenv('CONSUL_PORT', CONSUL_PORT)
 try:
@@ -38,6 +40,7 @@ except Exception as serror:
 from framework.utils.store_factory import store
 from framework.platforms.realstor.realstor_enclosure import singleton_realstorencl
 from framework.utils.ipmi_client import IpmiFactory
+from framework.utils.sysfs_interface import *
 
 class SSPLHealthView(object):
     """docstring for SSPLHealthView"""
@@ -64,7 +67,8 @@ class SSPLHealthView(object):
 
     SITE_ID = singleton_realstorencl.site_id
     RACK_ID = singleton_realstorencl.rack_id
-    NODE_ID = socket.getfqdn()
+    HOST_NAME = socket.getfqdn()
+    NODE_ID = singleton_realstorencl.node_id
     CLUSTER_ID = singleton_realstorencl.cluster_id
     RESOURCE_HEALTH_VIEW_FILE = 'resource_health_view.json'
     RESOURCE_HEALTH_VIEW_PATH = '/tmp/'+RESOURCE_HEALTH_VIEW_FILE
@@ -75,6 +79,9 @@ class SSPLHealthView(object):
         "fan" : "Fan",
         "psu" : "Power Supply"
     }
+    SAS_RESOURCE_ID = "SASHBA-0"
+    node_interface_data = ['sas_port', 'network_cable']
+    NW_CBL_CARRIER_FILE = "/sys/class/net/{}/carrier"
 
     def __init__(self):
 
@@ -90,6 +97,8 @@ class SSPLHealthView(object):
         except Exception as e:
             print("Error in reading resource health view template file: {0}".format(e))
             sys.exit(1)
+
+        self._resource_health_view['cluster'].update({'cluster_id':self.CLUSTER_ID})
         self._resource_health_view['cluster']['sites'][self.SITE_ID] =\
             self._resource_health_view['cluster']['sites'].pop('site_id')
 
@@ -141,15 +150,17 @@ class SSPLHealthView(object):
             try:
                 node_health_json = self._resource_health_view['cluster']['sites']\
                                                     [self.SITE_ID]['rack'][self.RACK_ID]\
-                                                    ['nodes']['node:'+self.NODE_ID] =\
+                                                    ['nodes']['node:'+self.HOST_NAME] =\
                                                     self._resource_health_view['cluster']['sites']\
                                                     [self.SITE_ID]['rack'][self.RACK_ID]\
                                                     ['nodes'].pop('node')
+                node_health_json.update({'node_id':self.NODE_ID})
             except Exception as e:
                 print("Error while extracting values from health view json % : " % e)
                 return False
             self.build_health_view_node_server_cache(node_health_json, 'hw')
             self.build_health_view_node_server_cache(node_health_json, 'platform_sensors')
+            self.build_health_view_node_server_cache(node_health_json, 'interfaces')
             health_view_created = True
 
         elif not args.node:
@@ -237,7 +248,13 @@ class SSPLHealthView(object):
                     fru_data = node_health_json['platform_sensors'][fru]
                     fru_data.update({"health": "", fru+"_info": ps_data[fru]})
 
-        if not ipmitool_cli:
+        elif category == 'interfaces':
+            interfaces_data = self.build_node_interfaces_instances()
+            for interface in self.node_interface_data:
+                interface_data = node_health_json['interfaces'][interface]
+                interface_data.update({"health": "", interface+"s_info": interfaces_data[interface]})
+
+        if not ipmitool_cli and category != 'interfaces':
             print('Required ipmitool missing on Node to fetch %s data..!' % category)
             return False
 
@@ -716,6 +733,79 @@ class SSPLHealthView(object):
                     for fru in fru_detail}
         return sensor_id_map
 
+    def build_node_interfaces_instances(self):
+        interfaces_json = {}
+        for interface in self.node_interface_data:
+            if interface == 'sas_port':
+                sas_data_json = self.build_node_sas_port_instances()
+                interfaces_json.update({interface:sas_data_json})
+            if interface == 'network_cable':
+                network_cable_json = self.build_node_network_cable_instances()
+                interfaces_json.update({interface:network_cable_json})
+        return interfaces_json
+
+    def build_node_sas_port_instances(self):
+        sas_port_data = {}
+        resource_type = "node:interface:sas"
+        tool_factory = ToolFactory()
+        utility_instance = tool_factory.get_instance('sysfs')
+        utility_instance.initialize()
+        sas_ports_dict = utility_instance.get_phy_negotiated_link_rate()
+        if sas_ports_dict:
+            for key, value in sas_ports_dict.items():
+                link_rate = value.strip()
+                phy_number = key.split(":")[1]
+                resource_id = self.SAS_RESOURCE_ID + ':' + "phy-" + phy_number
+                if 'Gbit'.lower() in link_rate.lower():
+                    health = "OK"
+                elif 'Unknown'.lower() in link_rate.lower():
+                    health = "NA"
+                else:
+                    health = "Fault"
+
+                sas_port_data.update({
+                    resource_type+'-'+resource_id:{
+                        "alert_type": "NA",
+                        "severity": "NA",
+                        "alert_uuid": "NA",
+                        "durable_id": "NA",
+                        "health": health,
+                        "fetch_time" : int(time.time())
+                    }})
+        return sas_port_data
+
+    def build_node_network_cable_instances(self):
+        network_cable_json = {}
+        NW_CABLE_RESOURCE_TYPE = "node:interface:nw:cable"
+        """Retrieves node information for the if_data json message"""
+        net_data = psutil.net_io_counters(pernic=True)
+        # Array to hold data about each network interface
+        for interface in net_data.keys():
+            nw_cable_conn_status = self.fetch_nw_cable_conn_status(interface)
+            network_cable_json.update({
+                    NW_CABLE_RESOURCE_TYPE+'-'+interface:{
+                        "alert_type": "NA",
+                        "severity": "NA",
+                        "alert_uuid": "NA",
+                        "durable_id": "NA",
+                        "health": nw_cable_conn_status,
+                        "fetch_time" : int(time.time())
+                    }})
+
+        return network_cable_json
+
+    def fetch_nw_cable_conn_status(self, interface):
+        phy_link_state = {'0':'Fault', '1':'OK', 'unknown':'NA'}
+        carrier_indicator = 'unknown'
+        try:
+            with open(self.NW_CBL_CARRIER_FILE.format(interface)) as cFile:
+                carrier_indicator = cFile.read().strip()
+            if carrier_indicator not in phy_link_state.keys():
+                carrier_indicator = 'unknown'
+        except Exception as err:
+            print("Node Data, unable to get cable connection state " +
+                        f"of '{interface}'. {str(err)}")
+        return phy_link_state[carrier_indicator]
 
 if __name__ == "__main__":
     sspl_service_status = os.system('systemctl status sspl-ll > /dev/null')
@@ -732,3 +822,4 @@ if __name__ == "__main__":
         sys.exit(SSPLHealthView().run(parser))
     else:
         print("SSPL services is already running, ignoring resource health view JSON creation ..!")
+
