@@ -57,6 +57,14 @@ python3 -m pip install -r $SSPL_BASE_DIR/conf/requirements.txt
 [ -f $RSYSLOG_SSPL_CONF ] ||
     cp $SSPL_BASE_DIR/conf/$RSYSLOG_SSPL_CONF $RSYSLOG_SSPL_CONF
 
+# Create soft link for SINGLE product name service to existing EES service
+# Instead of keeping separate service file for SINGLE product with same content.
+currentProduct=$SSPL_BASE_DIR/conf/sspl-ll.service.$PRODUCT
+echo "currentProduct name $currentProduct"
+if [ $PRODUCT == 'SINGLE' -a ! -f $currentProduct ]; then
+    ln -s $SSPL_BASE_DIR/conf/sspl-ll.service.EES $SSPL_BASE_DIR/conf/sspl-ll.service.$PRODUCT
+fi
+
 # Copy sspl-ll.service file and enable service
 cp $SSPL_BASE_DIR/conf/sspl-ll.service.$PRODUCT /etc/systemd/system/sspl-ll.service
 systemctl enable sspl-ll.service

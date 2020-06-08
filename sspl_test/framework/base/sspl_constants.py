@@ -1,7 +1,7 @@
 #!/usr/bin/python3.6
 from enum import Enum
 
-enabled_products = ["EES", "CS-A"]
+enabled_products = ["EES", "ECS", "CS-A", "SINGLE"]
 cs_products = ["CS-A"]
 cs_legacy_products = ["CS-L", "CS-G"]
 RESOURCE_PATH = "/opt/seagate/eos/sspl/resources/"
