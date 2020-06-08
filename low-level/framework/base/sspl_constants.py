@@ -20,6 +20,8 @@ SYSLOG_PORT = '514'
 SYSINFO = "SYSTEM_INFORMATION"
 PRODUCT = "product"
 SETUP = "setup"
+MAX_CONSUL_RETRY = 12
+WAIT_BEFORE_RETRY = 5
 
 GRAINS_GET_NODE_CMD = "salt-call grains.get id --output=newline_values_only"
 MINION_GET_NODE_CMD = "cat /etc/salt/minion_id"

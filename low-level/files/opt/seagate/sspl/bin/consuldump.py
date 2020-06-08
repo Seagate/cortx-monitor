@@ -6,6 +6,8 @@ import pickle
 import json
 import argparse
 import time
+import requests
+from sspl_constants import MAX_CONSUL_RETRY, WAIT_BEFORE_RETRY
 
 class ConsulDump():
 
@@ -13,9 +15,18 @@ class ConsulDump():
         self.time = str(int(time.time()))
         self.dir_prefix = dir_prefix
         self.location = localtion
-        self.consul = consul.Consul()
         self.keys = keys
         self.existing = existing
+        for retry_index in range(0, MAX_CONSUL_RETRY):
+            try:
+                self.consul = consul.Consul()
+                break
+            except requests.exceptions.ConnectionError as connerr:
+                print(f'Error[{connerr}] consul connection refused Retry Index {retry_index}')
+                time.sleep(WAIT_BEFORE_RETRY)
+            except Exception as gerr:
+                print(f'Error[{gerr}] consul error')
+                break
 
     def get_dir(self):
         if not self.existing:
@@ -32,9 +43,19 @@ class ConsulDump():
         os.makedirs(path, exist_ok=True)
 
     def get_values(self, key):
-        value = self.consul.kv.get(key, recurse=True)
-        if value and value[1]:
-            return value[1]
+        for retry_index in range(0, MAX_CONSUL_ENTRY):
+            try:
+                value = self.consul.kv.get(key, recurse=True)
+                if value is not None:
+                    value = value[1]
+                break
+            except requests.exceptions.ConnectionError as connerr:
+                print(f'Error[{connerr}] consul connection refused Retry Index {retry_index}')
+                time.sleep(WAIT_BEFORE_RETRY)
+            except Exception as gerr:
+                print(f'Error{gerr} while reading data from consul {key}')
+                break
+        return value
 
     def get_pretty_file_content(self, data):
         try:
