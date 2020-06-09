@@ -136,8 +136,11 @@ class RealStorSideplaneExpanderSensor(SensorThread, InternalMsgQ):
         # Check for debug mode being activated
         self._read_my_msgQ_noWait()
 
-        # periodically check are there any faults found in sideplane expanders
-        self._check_for_sideplane_expander_fault()
+        try:
+            # periodically check are there any faults found in sideplane expanders
+            self._check_for_sideplane_expander_fault()
+        except Exception as exception:
+            logger.exception(exception)
 
         self._scheduler.enter(self.pollfreq_sideplane_expander_sensor,
                 self._priority, self.run, ())

@@ -133,6 +133,8 @@ class RabbitMQEgressAccumulatedMsgsProcessor(ScheduledModuleThread, InternalMsgQ
                 self._connection.cleanup()
         except connection_exceptions as e:
             logger.error(connection_error_msg.format(e))
+        except Exception as e:
+            logger.error(e)
         finally:
             logger.debug("Consul accumulated processing ended")
             self._scheduler.enter(30, self._priority, self.run, ())

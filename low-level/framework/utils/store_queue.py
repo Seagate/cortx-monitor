@@ -67,9 +67,10 @@ class StoreQueue:
         store.put(index, "SSPL_MESSAGE_TAIL_INDEX")
 
     def is_empty(self):
-        if self.current_size == 0 and self.tail == self.head:
+        if self.tail == self.head:
             self.head = 0
             self.tail = 0
+            self.current_size = 0
             return True
         else:
             return False
