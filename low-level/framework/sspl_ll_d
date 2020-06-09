@@ -533,20 +533,23 @@ def _run_thread_capture_errors(curr_module, sspl_threaded_modules, msgQlist, con
 
     except Exception as ex:
         # Populate an actuator response message and transmit back to HAlon that we have a fatal error
-        error_msg = "SSPL-LL encountered an error, terminating service Error, restarting daemon:{}" \
-                    .format(str(logger.exception(ex)))
-        jsonMsg   = ThreadControllerMsg(curr_module.name(), error_msg).getJson()
-        curr_module._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
+        # error_msg = "SSPL-LL encountered an error, terminating service Error, restarting daemon:{}" \
+        #             .format(str(logger.exception(ex)))
+        # jsonMsg   = ThreadControllerMsg(curr_module.name(), error_msg).getJson()
+        # curr_module._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
 
         # Shut down any running threads, error is non-recoverable
-        shutdown_handler()
+        # shutdown_handler()
 
         # Pause for threads to cleanup and kill main process
-        logger.info("Killing main process in 10 seconds to allow thread cleanup time")
-        time.sleep(10)
-        logger.info("Systemd will restart SSPL-LL momentarily")
-        os.kill(os.getpid(), signal.SIGKILL)
+        # logger.info("Killing main process in 10 seconds to allow thread cleanup time")
+        # time.sleep(10)
+        # logger.info("Systemd will restart SSPL-LL momentarily")
+        # os.kill(os.getpid(), signal.SIGKILL)
 
+        #TODO: Restart thread instead of shutdown
+        logger.error(f"{curr_module.name()} has encountered an error {ex}, error is unrecoverable , shutting down {curr_module.name()}")
+        curr_module.shutdown()
 
 def shutdown_handler(signum=None, frame=None):
     """Handler called when shutting down"""
