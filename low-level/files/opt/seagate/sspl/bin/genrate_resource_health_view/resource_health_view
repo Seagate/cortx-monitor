@@ -808,18 +808,13 @@ class SSPLHealthView(object):
         return phy_link_state[carrier_indicator]
 
 if __name__ == "__main__":
-    sspl_service_status = os.system('systemctl status sspl-ll > /dev/null')
-    if sspl_service_status != 0:
-        description = "Resource Health View Schema"
-        parser = argparse.ArgumentParser(description=description, formatter_class=\
-                    argparse.RawDescriptionHelpFormatter, add_help=False, allow_abbrev=False)
-        parser.add_argument("-h", "--help", action="store_true", help="Availabe arugumets")
-        parser.add_argument("-n", "--node", action="store_true", help="fetch current node data")
-        parser.add_argument("-e", "--encl", action="store_true", help="fetch current node enclouser data")
-        parser.add_argument("--path", metavar="<path> eg. --path '/tmp/sspl/'", help="Health view\
-             schema destination path (Note: Path need to be already exist)")
+    description = "Resource Health View Schema"
+    parser = argparse.ArgumentParser(description=description, formatter_class=\
+                argparse.RawDescriptionHelpFormatter, add_help=False, allow_abbrev=False)
+    parser.add_argument("-h", "--help", action="store_true", help="Availabe arugumets")
+    parser.add_argument("-n", "--node", action="store_true", help="fetch current node data")
+    parser.add_argument("-e", "--encl", action="store_true", help="fetch current node enclouser data")
+    parser.add_argument("--path", metavar="<path> eg. --path '/tmp/sspl/'", help="Health view\
+            schema destination path (Note: Path need to be already exist)")
 
-        sys.exit(SSPLHealthView().run(parser))
-    else:
-        print("SSPL services is already running, ignoring resource health view JSON creation ..!")
-
+    sys.exit(SSPLHealthView().run(parser))
