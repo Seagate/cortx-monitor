@@ -1,0 +1,15 @@
+************** GitHub Quick Start Guide *******************************
+
+Follow below steps to clone sspl repo from GitHub
+1. git clone https://github.com/Seagate/sspl.git
+2. Username - 'GitHub's UserId'
+3. password - 'Access Token'
+
+Follow below link to generate access token
+https://help.github.com/en/github/authenticating-to-github/creating-a-personal-access-token-for-the-command-line
+
+Quick start by hello world
+https://guides.github.com/activities/hello-world/ 
+
+GitHub workflow document link
+https://seagatetechnology-my.sharepoint.com/:w:/r/personal/mukul_malhotra_seagate_com/_layouts/15/Doc.aspx?sourcedoc=%7BCEDB6D97-C102-4D76-8B14-4A520AD83388%7D&file=Git%20Workflow.docx&action=default&mobileredirect=true&cid=481958c3-70a1-4ef2-9425-4489421171a5
