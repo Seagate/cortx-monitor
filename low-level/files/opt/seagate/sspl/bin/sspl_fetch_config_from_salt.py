@@ -99,13 +99,8 @@ class SaltConfig(object):
     def set_config(self):
         try:
             new_conf = salt.client.Caller().function('pillar.get', salt_provisioner_pillar_sls)
-            consul_data = new_conf.get('DATASTORE')
-            if consul_data and consul_data.get('consul_host'):
-                host = consul_data['consul_host']
-                port = consul_data['consul_port']
-            else:
-                host = os.getenv('CONSUL_HOST', CONSUL_HOST)
-                port = os.getenv('CONSUL_PORT', CONSUL_PORT)
+            host = os.getenv('CONSUL_HOST', CONSUL_HOST)
+            port = os.getenv('CONSUL_PORT', CONSUL_PORT)
             self.consul_conn = consul.Consul(host=host, port=port)
 
             # for the pattern key : 'value'

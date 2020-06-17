@@ -7,7 +7,7 @@ import json
 import argparse
 import time
 import requests
-from sspl_constants import MAX_CONSUL_RETRY, WAIT_BEFORE_RETRY
+from sspl_constants import MAX_CONSUL_RETRY, WAIT_BEFORE_RETRY, CONSUL_HOST, CONSUL_PORT
 
 class ConsulDump():
 
@@ -19,7 +19,7 @@ class ConsulDump():
         self.existing = existing
         for retry_index in range(0, MAX_CONSUL_RETRY):
             try:
-                self.consul = consul.Consul()
+                self.consul = consul.Consul(host=CONSUL_HOST, post=CONSUL_PORT)
                 break
             except requests.exceptions.ConnectionError as connerr:
                 print(f'Error[{connerr}] consul connection refused Retry Index {retry_index}')
@@ -92,7 +92,7 @@ examples:
 
   Dump keys having prefix var/ in consuldump-{timestamp}
 
-  consuldump.py -l /home/root/  var/ 
+  consuldump.py -l /home/root/  var/
 
   Dump data at different location
 
@@ -118,7 +118,7 @@ examples:
     my_parser.add_argument('-p','--prefix', action='store', default='',
                            help='add prefix in dump directory, usefull when you need to differentiate between two \
                                  dumps.')
-    my_parser.add_argument('--existing', action='store_true', help="use existing directory, instead of creating new with consuldump_{timestamp}")    
+    my_parser.add_argument('--existing', action='store_true', help="use existing directory, instead of creating new with consuldump_{timestamp}")
     my_parser.add_argument('--hierarchy', action='store_true', help="create directory tree, if key is having '/'")
     my_parser.add_argument('-d', '--dir', action='store',default='', help='create dump for a key in dir, if passed along with --hierarchy. if --hierarchy is not passed, all matching keys data will be dumped in this file')
     my_parser.add_argument('key', action='store')
