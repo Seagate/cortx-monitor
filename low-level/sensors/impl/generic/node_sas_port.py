@@ -18,6 +18,7 @@ from message_handlers.node_data_msg_handler import NodeDataMsgHandler
 from framework.base.module_thread import SensorThread
 from framework.utils.severity_reader import SeverityReader
 from framework.utils.sysfs_interface import *
+from framework.utils.tool_factory import ToolFactory
 from framework.base.sspl_constants import COMMON_CONFIGS
 
 class SASPortSensor(SensorThread, InternalMsgQ):
