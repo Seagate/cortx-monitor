@@ -366,10 +366,11 @@ def main(conf_reader, systemd_support):
             logger.info("Starting: %s" % curr_module.name())
 
             # SSPL will be started in degrade mode by default.
-            # Run module only if either it is allowed to run in degraded mode
-            # or it is defined in core modules.
+            # Run module only if it is allowed to run in degraded mode
+            # or it is defined in core modules or prodcut is ECS
             resume = False
-            if name in modules_to_resume or name in ThreadController.ALWAYS_ACTIVE_MODULES:
+            if name in modules_to_resume or name in ThreadController.ALWAYS_ACTIVE_MODULES \
+                or product.upper() == "ECS":
                 resume = True
 
             thread = Thread(target=_run_thread_capture_errors,
@@ -441,7 +442,7 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist, operating_system
 
         from sensors.impl.generic.SNMP_traps import SNMPtraps
 
-    if product.lower() == "ees":
+    if product.upper() in enabled_products:
         from sensors.impl.platforms.realstor.realstor_disk_sensor \
         import RealStorDiskSensor
         from sensors.impl.platforms.realstor.realstor_psu_sensor \

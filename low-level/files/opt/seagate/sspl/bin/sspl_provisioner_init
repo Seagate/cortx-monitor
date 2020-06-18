@@ -48,7 +48,7 @@ python3 /opt/seagate/eos-prvsnr/cli/pillar_encrypt
 CONSUL_PS=$(ps -aux | grep "consul" | grep -v "grep" || true)
 [ -z "$CONSUL_PS" ] && /opt/seagate/eos/hare/bin/consul agent -dev -config-file=$SCRIPT_DIR/bin/consul_config.json &>/dev/null &
 
-$SCRIPT_DIR/bin/sspl_post_install -p EES -e DEV
+$SCRIPT_DIR/bin/sspl_post_install -p ECS -e DEV
 $SCRIPT_DIR/bin/sspl_setup_rabbitmq_cluster
 $SCRIPT_DIR/bin/sspl_setup_init -r eos
 $SCRIPT_DIR/bin/sspl_config

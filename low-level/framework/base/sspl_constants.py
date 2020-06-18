@@ -2,7 +2,7 @@
 from enum import Enum
 import os
 
-enabled_products = ["EES", "CS-A"]
+enabled_products = ["EES", "ECS", "CS-A"]
 cs_products = ["CS-A"]
 cs_legacy_products = ["CS-L", "CS-G"]
 setups = ["eos"]

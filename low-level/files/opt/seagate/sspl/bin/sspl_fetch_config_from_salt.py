@@ -62,12 +62,12 @@ class SaltConfig(object):
             elif k == 'erlang_cookie':
                 self.consul_conn.kv.put(component + '/' + 'RABBITMQCLUSTER' + '/' + k, new_rabbitmqcluster_conf[k])
 
-    def insert_dev_common_config(self):
+    def insert_dev_common_config(self, product):
         try:
             print("inserting common config for DEV environment")
             sys_info_default_data = {
                 "operating_system": OperatingSystem.RHEL7.value,
-                "product": enabled_products[0],
+                "product": product,
                 "setup": setups[0],
                 "data_path": DATA_PATH,
                 f"{node_key_id}/node_id": NODE_ID,
@@ -147,5 +147,6 @@ sc.sync_sspl_config()
 # for prod -> provisioner is responsible to insert the common config data into consul
 if len(sys.argv) >= 2:
     environment = sys.argv[1]
+    product = sys.argv[2]
     if environment == 'DEV':
-        sc.insert_dev_common_config()
+        sc.insert_dev_common_config(product)

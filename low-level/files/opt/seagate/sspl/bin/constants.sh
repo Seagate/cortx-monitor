@@ -2,7 +2,7 @@
 
 SSPL_CONF="/etc/sspl.conf"
 ROLES="gw ssu vm cmu eos"
-PRODUCTS="EES"
+PRODUCTS="EES ECS"
 BASE_DIR="/opt/seagate/eos/"
 SSPL_BASE_DIR="/opt/seagate/eos/sspl/"
 SSPL_STORE_TYPE="consul"
