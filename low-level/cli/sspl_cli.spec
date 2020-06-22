@@ -4,7 +4,7 @@
 # build number
 %define build_num  %( test -n "$build_number" && echo "$build_number" || echo 1 )
 
-Name:		eos-sspl-cli
+Name:		%{product_family}-sspl-cli
 Version:	%{version}
 Release:	%{build_num}_git%{git_rev}%{?dist}
 Summary:	Installs sspl_ll_cli
@@ -13,7 +13,7 @@ Group:		System Management
 License:	Seagate Proprietary
 URL:		http://gerrit.mero.colo.seagate.com:8080/#/admin/projects/sspl
 Source0:	%{name}-%{version}.tgz
-Requires:   eos-sspl
+Requires:   %{product_family}-sspl
 BuildRoot:	%(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 
 %description
@@ -26,11 +26,11 @@ Installs sspl_ll_cli
 [ "${RPM_BUILD_ROOT}" != "/" ] && rm -rf ${RPM_BUILD_ROOT}
 
 %install
-mkdir -p ${RPM_BUILD_ROOT}/opt/seagate/eos/sspl/cli
-cp -rp . ${RPM_BUILD_ROOT}/opt/seagate/eos/sspl/cli
+mkdir -p ${RPM_BUILD_ROOT}/opt/seagate/%{product_family}/sspl/cli
+cp -rp . ${RPM_BUILD_ROOT}/opt/seagate/%{product_family}/sspl/cli
 
 %post
-SSPL_DIR=/opt/seagate/eos/sspl
+SSPL_DIR=/opt/seagate/%{product_family}/sspl
 CFG_DIR=$SSPL_DIR/conf
 
 [ -d "${SSPL_DIR}/cli/lib" ] && {
@@ -40,5 +40,5 @@ CFG_DIR=$SSPL_DIR/conf
 
 %files
 %defattr(-,sspl-ll,root,-)
-/opt/seagate/eos/sspl/cli
+/opt/seagate/%{product_family}/sspl/cli
 

@@ -25,15 +25,14 @@ fi
 
 # Get product
 product=$(sed -nr 's/^product=([^,]+)$/\1/p' $SSPL_CONF | head -1)
-[ -z "$product" ] && echo "No product specified in $SSPL_CONF" && exit 1
+[ -z "$PRODUCT_NAME" ] && echo "No product specified in $SSPL_CONF" && exit 1
 
 # Add required user and vhost to RabbitMQ. Set user permissions etc.
 echo "Creating required RABBITMQ configuration.... "
-#/opt/seagate/eos/sspl/low-level/framework/sspl_rabbitmq_reinit $product || {
-/opt/seagate/eos/sspl/bin/sspl_rabbitmq_reinit $product || {
+/opt/seagate/$PRODUCT_FAMILY/sspl/bin/sspl_rabbitmq_reinit $PRODUCT_NAME || {
     reinit_err="$?";
-    echo -n "/opt/seagate/eos/sspl/bin/sspl_rabbitmq_reinit failed ";
-    echo "with exit code ${reinit_err} for product $product";
+    echo -n "/opt/seagate/$PRODUCT_FAMILY/sspl/bin/sspl_rabbitmq_reinit failed ";
+    echo "with exit code ${reinit_err} for product $PRODUCT_NAME";
     exit 1;
 }
 

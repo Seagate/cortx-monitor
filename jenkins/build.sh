@@ -6,6 +6,7 @@ BUILD_START_TIME=$(date +%s)
 BASE_DIR=$(realpath $(dirname $0)/..)
 
 PROG_NAME=$(basename $0)
+. "$BASE_DIR/low-level/files/opt/seagate/sspl/bin/constants.sh"
 # keeping the rpmbuild path as it is to make the build green.
 RPM_BUILD_PATH=${DIST:-$HOME/rpmbuild}
 DIST=$(realpath $BASE_DIR/dist)
@@ -146,6 +147,7 @@ then
     cp -R $BASE_DIR/sspl_test/* $TMPDIR/sspl_test
     PYINSTALLER_FILE=$TMPDIR/${PRODUCT}_sspl_test.spec
     cp $BASE_DIR/jenkins/pyinstaller/run_test.spec ${PYINSTALLER_FILE}
+    cp -R $BASE_DIR/sspl_test/constants.sh $DIST/sspl_test
     cp -R $BASE_DIR/sspl_test/mock_data $DIST/sspl_test
     cp -R $BASE_DIR/sspl_test/plans $DIST/sspl_test
     cp -R $BASE_DIR/sspl_test/run_tests.sh $DIST/sspl_test
@@ -208,15 +210,15 @@ TAR_START_TIME=$(date +%s)
 echo "Creating tar for sspl build"
 if [ "$TEST" == true ]
 then
-    tar -czvf ${RPM_BUILD_PATH}/SOURCES/eos-sspl-test-${VERSION}.tgz -C ${DIST} sspl_test
+    tar -czvf ${RPM_BUILD_PATH}/SOURCES/$PRODUCT_FAMILY-sspl-test-${VERSION}.tgz -C ${DIST} sspl_test
 fi
 
 if [ "$CLI" == true ]
 then
-tar -czvf ${RPM_BUILD_PATH}/SOURCES/eos-sspl-cli-${VERSION}.tgz -C ${DIST} cli
+tar -czvf ${RPM_BUILD_PATH}/SOURCES/$PRODUCT_FAMILY-sspl-cli-${VERSION}.tgz -C ${DIST} cli
 fi
 
-tar -czvf ${RPM_BUILD_PATH}/SOURCES/eos-sspl-${VERSION}.tgz -C ${DIST} sspl
+tar -czvf ${RPM_BUILD_PATH}/SOURCES/$PRODUCT_FAMILY-sspl-${VERSION}.tgz -C ${DIST} sspl
 
 TAR_END_TIME=$(date +%s)
 echo "Generated tar for sspl build"
@@ -225,16 +227,21 @@ echo "Generated tar for sspl build"
 echo "Generating rpm's for sspl build"
 RPM_BUILD_START_TIME=$(date +%s)
 
-rpmbuild --define "version $VERSION" --define "git_rev $GIT_VER" --define "_topdir $TOPDIR" -bb $TMPDIR/sspl-ll.spec
-rpmbuild --define "version $VERSION" --define "git_rev $GIT_VER" --define "_topdir $TOPDIR" -bb $TMPDIR/libsspl_sec.spec
+rpmbuild --define "version $VERSION" --define "git_rev $GIT_VER" \
+    --define "_topdir $TOPDIR" --define "product_family $PRODUCT_FAMILY" -bb $TMPDIR/sspl-ll.spec
+rpmbuild --define "version $VERSION" --define "git_rev $GIT_VER" \
+    --define "_topdir $TOPDIR" --define "product_family $PRODUCT_FAMILY" -bb $TMPDIR/libsspl_sec.spec
+
 if [ "$CLI" == true ]
 then
-rpmbuild --define "version $VERSION" --define "git_rev $GIT_VER" --define "_topdir $TOPDIR" -bb $TMPDIR/sspl_cli.spec
+rpmbuild --define "version $VERSION" --define "git_rev $GIT_VER" \
+    --define "_topdir $TOPDIR" --define "product_family $PRODUCT_FAMILY" -bb $TMPDIR/sspl_cli.spec
 fi
 
 if [ "$TEST" == true ]
 then
-    rpmbuild --define "version $VERSION" --define "git_rev $GIT_VER" --define "_topdir $TOPDIR" -bb $TMPDIR/sspl-test.spec
+    rpmbuild --define "version $VERSION" --define "git_rev $GIT_VER" \
+        --define "_topdir $TOPDIR" --define "product_family $PRODUCT_FAMILY" -bb $TMPDIR/sspl-test.spec
 fi
 echo "Generated rpm's for sspl build"
 

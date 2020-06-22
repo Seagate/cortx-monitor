@@ -4,10 +4,10 @@ KVM configuration to support HPI simulated data
 yum install openhpi-dynamic_simulator zabbix-virtual-openhpi
 
 2) Copy openhpi.conf.sspl to /etc/openhpi
-cp /opt/seagate/eos/sspl/low-level/kvm/openhpi.conf.sspl /etc/openhpi/openhpi.conf
+cp /opt/seagate/<product>/sspl/low-level/kvm/openhpi.conf.sspl /etc/openhpi/openhpi.conf
 
 3) Monitor rabbitmq json msgs by running in a separate window:
-/opt/seagate/eos/sspl/low-level/tests/manual/consume_rabbitmq.py
+/opt/seagate/<product>/sspl/low-level/tests/manual/consume_rabbitmq.py
 
 4) Align disks by-id to match entries in 2u24_kvm.data
 	a) ls /dev/disk/by-id/*

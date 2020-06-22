@@ -54,6 +54,7 @@ from framework.rabbitmq.logging_processor import LoggingProcessor
 from framework.rabbitmq.thread_controller import ThreadController
 from framework.rabbitmq.rabbitmq_egress_accumulated_msgs_processor import \
     RabbitMQEgressAccumulatedMsgsProcessor
+from framework.base.sspl_constants import PRODUCT_FAMILY
 
 from actuators.impl.actuator import Actuator
 from message_handlers.node_controller_msg_handler import NodeControllerMsgHandler
@@ -89,7 +90,7 @@ DEFAULT_SYSLOG_HOST = "localhost"
 DEFAULT_SYSLOG_PORT = 514
 
 # State file
-STATE_FILE = "/var/eos/sspl/data/state.txt"
+STATE_FILE =  f"/var/{PRODUCT_FAMILY}/sspl/data/state.txt"
 STATES = ["active", "degrade"]
 DEFAULT_STATE = "degrade"
 

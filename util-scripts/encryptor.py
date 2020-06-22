@@ -67,11 +67,11 @@ def main(args):
             print(f'Key => {key.decode()}\n')
             if operation == 'encrypt':
                 encrypted_text = encrypt(key, text)
-                print(f'Encryptext Text:')
+                print('Encryptext Text:')
                 print(encrypted_text)
             elif operation == 'decrypt':
                 decrypted_text = decrypt(key, text.encode('ascii'))
-                print(f'Decryptext Text:')
+                print('Decryptext Text:')
                 print(decrypted_text)
         except Exception as exc:
             ret_code = 1

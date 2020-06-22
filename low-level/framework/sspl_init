@@ -3,13 +3,14 @@
 set -u -o pipefail
 
 SCRIPT_NAME=$(basename $0)
-DIR_NAME="/opt/seagate/eos/sspl"
+. $SCRIPT_NAME/constants.sh
+DIR_NAME="/opt/seagate/$PRODUCT_FAMILY/sspl"
 SSPL_CONF="/etc/sspl.conf"
 RSYSLOG_CONF="/etc/rsyslog.d/0-iemfwd.conf"
 RSYSLOG_SSPL_CONF="/etc/rsyslog.d/1-ssplfwd.conf"
 LOGROTATE_CONF="/etc/logrotate.d/iem_messages"
 SSPL_LOGROTATE_CONF="/etc/logrotate.d/sspl_logs"
-SSPL_CONFIGURED="/var/eos/sspl/sspl-configured"
+SSPL_CONFIGURED="/var/$PRODUCT_FAMILY/sspl/sspl-configured"
 ROLES="gw ssu vm cmu eos"
 
 SSU_DEPENDENCY_RPMS=(
@@ -125,19 +126,19 @@ create_req() {
 config_sspl() {
 
     # Install packages which are not available in YUM repo, from PIP
-    pip3.6 install -r /opt/seagate/eos/sspl/conf/requirements.txt
+    pip3.6 install -r /opt/seagate/$PRODUCT_FAMILY/sspl/conf/requirements.txt
 
     # steps from %post section of sspl-ll.spec
 
     # Copy sspl conf
-    [ -f /etc/sspl.conf ] || cp /opt/seagate/eos/sspl/conf/sspl.conf.EES /etc/sspl.conf
+    [ -f /etc/sspl.conf ] || cp /opt/seagate/$PRODUCT_FAMILY/sspl/conf/sspl.conf.EES /etc/sspl.conf
 
     # Copy rsyslog configuration
     [ -f /etc/rsyslog.d/0-iemfwd.conf ] ||
-       cp /opt/seagate/eos/sspl/conf/etc/rsyslog.d/0-iemfwd.conf /etc/rsyslog.d/0-iemfwd.conf
+       cp /opt/seagate/$PRODUCT_FAMILY/sspl/conf/etc/rsyslog.d/0-iemfwd.conf /etc/rsyslog.d/0-iemfwd.conf
 
     [ -f $RSYSLOG_SSPL_CONF ] ||
-       cp /opt/seagate/eos/sspl/conf/$RSYSLOG_SSPL_CONF $RSYSLOG_SSPL_CONF
+       cp /opt/seagate/$PRODUCT_FAMILY/sspl/conf/$RSYSLOG_SSPL_CONF $RSYSLOG_SSPL_CONF
 
     force=0
     role=
@@ -201,9 +202,9 @@ config_sspl() {
 
     # Add sspl-ll user to required groups and sudoers file etc.
     echo "Initializing SSPL configuration ... "
-    /opt/seagate/eos/sspl/bin/sspl_reinit $product || {
+    /opt/seagate/$PRODUCT_FAMILY/sspl/bin/sspl_reinit $product || {
         reinit_err="$?";
-        echo -n "/opt/seagate/eos/sspl/bin/sspl_reinit failed ";
+        echo -n "/opt/seagate/$PRODUCT_FAMILY/sspl/bin/sspl_reinit failed ";
         echo "with exit code ${reinit_err} for product $product";
         exit 1;
     }
@@ -213,9 +214,9 @@ config_sspl() {
 
     # Add required user and vhost to RabbitMQ. Set user permissions etc.
     echo "Creating required RABBITMQ configuration.... "
-    /opt/seagate/eos/sspl/bin/sspl_rabbitmq_reinit $product || {
+    /opt/seagate/$PRODUCT_FAMILY/sspl/bin/sspl_rabbitmq_reinit $product || {
         reinit_err="$?";
-        echo -n "/opt/seagate/eos/sspl/bin/sspl_rabbitmq_reinit failed ";
+        echo -n "/opt/seagate/$PRODUCT_FAMILY/sspl/bin/sspl_rabbitmq_reinit failed ";
         echo "with exit code ${reinit_err} for product $product";
         exit 1;
     }
@@ -227,7 +228,7 @@ config_sspl() {
     touch /etc/mdadm.conf
     setfacl -m u:sspl-ll:rw /etc/mdadm.conf
 
-    cp /opt/seagate/eos/sspl/conf/sspl-ll.service.$product /etc/systemd/system/sspl-ll.service
+    cp /opt/seagate/$PRODUCT_FAMILY/sspl/conf/sspl-ll.service.$product /etc/systemd/system/sspl-ll.service
     touch $SSPL_CONFIGURED
 
     # SSPL Log file configuration
@@ -237,7 +238,7 @@ config_sspl() {
     [ ! -z "$SSPL_LOG_FILE_PATH" ] &&
     {
         sed -i "s|File=.*|File=\"$SSPL_LOG_FILE_PATH\")|g" $RSYSLOG_SSPL_CONF
-        sed -i "1 s|^.*$|${SSPL_LOG_FILE_PATH}|g" /opt/seagate/eos/sspl/conf/etc/logrotate.d/sspl_logs
+        sed -i "1 s|^.*$|${SSPL_LOG_FILE_PATH}|g" /opt/seagate/$PRODUCT_FAMILY/sspl/conf/etc/logrotate.d/sspl_logs
     }
 
 
@@ -247,19 +248,19 @@ config_sspl() {
 
     if [ -z "$LOG_FILE_PATH" ]
     then
-        sed -i "s|File=.*|File=\/var/log/eos/iem/iem_messages\"|g" $RSYSLOG_CONF
+        sed -i "s|File=.*|File=\/var/log/$PRODUCT_FAMILY/iem/iem_messages\"|g" $RSYSLOG_CONF
     else
         sed -i "s|File=.*|File=\"${LOG_FILE_PATH}\"|g" $RSYSLOG_CONF
-        sed -i "1 s|^.*$|${LOG_FILE_PATH}|g" /opt/seagate/eos/sspl/conf/etc/logrotate.d/iem_messages
+        sed -i "1 s|^.*$|${LOG_FILE_PATH}|g" /opt/seagate/$PRODUCT_FAMILY/sspl/conf/etc/logrotate.d/iem_messages
     fi
 
-    cp /opt/seagate/eos/sspl/conf/etc/logrotate.d/iem_messages $LOGROTATE_CONF
-    cp /opt/seagate/eos/sspl/conf/etc/logrotate.d/sspl_logs $SSPL_LOGROTATE_CONF
+    cp /opt/seagate/$PRODUCT_FAMILY/sspl/conf/etc/logrotate.d/iem_messages $LOGROTATE_CONF
+    cp /opt/seagate/$PRODUCT_FAMILY/sspl/conf/etc/logrotate.d/sspl_logs $SSPL_LOGROTATE_CONF
 
     # This rsyslog restart will happen after successful updation of rsyslog
     # conf file and before sspl starts. If at all this will be removed from
     # here, there will be a chance that SSPL intial logs will not be present in
-    # /var/log/eos/sspl/sspl.log file. So, initial logs needs to be collected from
+    # /var/log/<product>/sspl/sspl.log file. So, initial logs needs to be collected from
     # /var/log/messages
     systemctl restart rsyslog
     systemctl enable sspl-ll.service
@@ -272,7 +273,7 @@ cmd="config"
 case $cmd in
     check )
         [ -f $SSPL_CONFIGURED ]  && exit 0
-        logger -i -p local3.err "SSPL is not configured. Run /opt/seagate/eos/sspl/sspl_init"
+        logger -i -p local3.err "SSPL is not configured. Run /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_init"
         exit 1
         ;;
 

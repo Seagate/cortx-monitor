@@ -28,6 +28,7 @@ import pyinotify
 from framework.base.module_thread import SensorThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
+from framework.base.sspl_constants import PRODUCT_FAMILY
 
 # Modules that receive messages from this module
 from message_handlers.disk_msg_handler import DiskMsgHandler
@@ -225,7 +226,7 @@ class DriveManager(SensorThread, InternalMsgQ):
            logger.info(f"DriveManager sensor, rechecking in {(int(self._start_delay))} secs")
 
            # Attempt to initialize gemhpi
-           command = "sudo /opt/seagate/eos/sspl/low-level/framework/init_gemhpi"
+           command = f"sudo /opt/seagate/{PRODUCT_FAMILY}/sspl/low-level/framework/init_gemhpi"
            process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE,
                                        stderr=subprocess.PIPE)
            response, error = process.communicate()

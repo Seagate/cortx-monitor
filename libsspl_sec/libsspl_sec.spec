@@ -1,15 +1,15 @@
 # build number
 %define build_num  %( test -n "$build_number" && echo "$build_number" || echo 1 )
 
-Name:       eos-libsspl_sec
+Name:       %{product_family}-libsspl_sec
 Version:    %{version}
 Release:    %{build_num}_git%{git_rev}%{?dist}
 Summary:    Segate System Platform Library - Security
 Group:      Libraries/System
 License:    Seagate Proprietary
 URL:        http://gerrit.mero.colo.seagate.com:8080/#/admin/projects/sspl
-Source0:    eos-sspl-%{version}.tgz
-Requires:   eos-sspl
+Source0:    %{product_family}-sspl-%{version}.tgz
+Requires:   %{product_family}-sspl
 BuildRoot:  %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 Vendor:     Seagate Technology LLC
 #BuildArch:  x86_64

@@ -6,13 +6,15 @@ try:
 except Exception as e:
     from framework.utils.salt_util import node_id, consulhost, consulport
 
-enabled_products = ["EES", "ECS", "CS-A", "SINGLE"]
+PRODUCT_NAME = 'EES'
+PRODUCT_FAMILY = 'eos'
+enabled_products = ["CS-A", "SINGLE", "EES", "ECS"]
 cs_products = ["CS-A"]
 cs_legacy_products = ["CS-L", "CS-G"]
 setups = ["eos"]
-RESOURCE_PATH = "/opt/seagate/eos/sspl/resources/"
-CLI_RESOURCE_PATH = "/opt/seagate/eos/sspl/cli"
-DATA_PATH = "/var/eos/sspl/data/"
+RESOURCE_PATH = f"/opt/seagate/{PRODUCT_FAMILY}/sspl/resources/"
+CLI_RESOURCE_PATH = f"/opt/seagate/{PRODUCT_FAMILY}/sspl/cli"
+DATA_PATH = f"/var/{PRODUCT_FAMILY}/sspl/data/"
 NODE_ID = "001"
 SITE_ID = "001"
 RACK_ID = "001"

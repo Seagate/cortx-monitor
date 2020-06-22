@@ -5,7 +5,7 @@ set -e -u -o pipefail
 #################################################################
 # This script performs following operations.
 # - Creates datapath as defined in /etc/sspl.conf
-# - Check dependencies for roles other than 'eos'
+# - Check dependencies for roles other than '<product>'
 #################################################################
 
 script_dir=$(dirname $0)
@@ -131,7 +131,7 @@ create_req() {
         shift 1
     done
 
-    # Create /tmp/dcs/hpi if required. Not needed for 'eos' role
+    # Create /tmp/dcs/hpi if required. Not needed for '<product>' role
     [ "$role" != "eos" ] && [ ! -d "/tmp/dcs/hpi" ] && mkdir -p /tmp/dcs/hpi && id -u zabbix > /dev/null 2>&1 && chown zabbix:zabbix /tmp/dcs/hpi
 
     # Check for sspl required processes and misc dependencies like installation, etc based on 'role'

@@ -5,16 +5,17 @@ import os
 import time
 import sys
 
+from sspl_constants import PRODUCT_FAMILY
 # Add the top level directories
-sys.path.insert(0, '/opt/seagate/eos/sspl/low-level')
+sys.path.insert(0, f'/opt/seagate/{PRODUCT_FAMILY}/sspl/low-level')
 from config_reader import ConfigReader
 
 SYS_INFORMATION = "SYSTEM_INFORMATION"
 IEM_SENSOR = "IEMSENSOR"
 
 localTempPath = "/tmp/support_bundle/"
-sspl_log_default = "/var/log/eos/sspl"
-iem_log_default = "/var/log/eos/iem"
+sspl_log_default = f"/var/log/{PRODUCT_FAMILY}/sspl"
+iem_log_default = f"/var/log/{PRODUCT_FAMILY}/iem"
 onGoingRequestPath = "/tmp/sspl-sb-req.txt"
 sspl_conf_dir = "/opt/seagate/eos-prvsnr/pillar/components/sspl.sls"
 rabbitmq_conf_dir = "/etc/rabbitmq/rabbitmq.config"

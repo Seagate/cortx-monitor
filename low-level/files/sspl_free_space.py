@@ -5,7 +5,7 @@
  ****************************************************************************
  Filename:          sspl_free_space.py
  Description:       Report free space as IEM to be sent back to Seagate periodically via RAS & SPS
-                    SSPL IEMs are maintained in /opt/seagate/eos/sspl/low-level/iec_log_messages.csv
+                    SSPL IEMs are maintained in /opt/seagate/<product>/sspl/low-level/iec_log_messages.csv
  Creation Date:     05/23/2017
  Author:            Jake Abernathy
 

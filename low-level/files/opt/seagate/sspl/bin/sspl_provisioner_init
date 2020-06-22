@@ -10,9 +10,10 @@ set -e -u -o pipefail
 ##############################################################################
 
 SCRIPT_DIR=$(dirname $0)
+. $SCRIPT_DIR/bin/constants.sh
 
 # Install consul if not available
-if ! [ -x "$(command -v /opt/seagate/eos/hare/bin/consul)" ]; then
+if ! [ -x "$(command -v /opt/seagate/$PRODUCT_FAMILY/hare/bin/consul)" ]; then
     if ! [ -x "$(command -v wget)" ]; then
         yum install -y wget
     fi
@@ -21,8 +22,8 @@ if ! [ -x "$(command -v /opt/seagate/eos/hare/bin/consul)" ]; then
         yum install -y unzip
     fi
     unzip consul_1.7.0_linux_amd64.zip
-    mkdir -p /opt/seagate/eos/hare/bin
-    mv ./consul /opt/seagate/eos/hare/bin/consul
+    mkdir -p /opt/seagate/$PRODUCT_FAMILY/hare/bin
+    mv ./consul /opt/seagate/$PRODUCT_FAMILY/hare/bin/consul
     rm consul_1.7.0_linux_amd64.zip
 fi
 
@@ -44,13 +45,13 @@ sh /opt/seagate/eos-prvsnr/cli/setup-provisioner -S
 salt-call state.apply components.system
 python3 /opt/seagate/eos-prvsnr/cli/pillar_encrypt
 
-# Start /opt/seagate/eos/hare/bin/consul if not running
+# Start /opt/seagate/<product>/hare/bin/consul if not running
 CONSUL_PS=$(ps -aux | grep "consul" | grep -v "grep" || true)
-[ -z "$CONSUL_PS" ] && /opt/seagate/eos/hare/bin/consul agent -dev -config-file=$SCRIPT_DIR/bin/consul_config.json &>/dev/null &
+[ -z "$CONSUL_PS" ] && /opt/seagate/$PRODUCT_FAMILY/hare/bin/consul agent -dev -config-file=$SCRIPT_DIR/bin/consul_config.json &>/dev/null &
 
-$SCRIPT_DIR/bin/sspl_post_install -p ECS -e DEV
+$SCRIPT_DIR/bin/sspl_post_install -p $PRODUCT_NAME -e DEV
 $SCRIPT_DIR/bin/sspl_setup_rabbitmq_cluster
-$SCRIPT_DIR/bin/sspl_setup_init -r eos
+$SCRIPT_DIR/bin/sspl_setup_init -r $PRODUCT_FAMILY
 $SCRIPT_DIR/bin/sspl_config
 systemctl start rabbitmq-server.service
 systemctl start sspl-ll.service
@@ -81,7 +82,7 @@ then
     echo "*************************************************************************"
     echo "Changing SSPL state to 'active', disable step once HA integration complete"
     echo "*************************************************************************"
-    echo "state=active" > /var/eos/sspl/data/state.txt
+    echo "state=active" > /var/$PRODUCT_FAMILY/sspl/data/state.txt
     PID=`/sbin/pidof -s /usr/bin/sspl_ll_d`
     kill -s SIGHUP $PID
 else

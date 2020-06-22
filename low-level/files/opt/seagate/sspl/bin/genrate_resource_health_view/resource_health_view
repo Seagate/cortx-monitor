@@ -15,7 +15,7 @@ warnings.filterwarnings(action='ignore',module='cryptography')
 op = os.path
 parentdir = op.dirname(op.dirname(op.dirname(op.dirname(op.dirname(op.dirname(op.dirname(op.abspath(__file__))))))))
 sys.path.insert(0, parentdir)
-from framework.base.sspl_constants import component, CONSUL_HOST, CONSUL_PORT, node_key_id
+from framework.base.sspl_constants import component, CONSUL_HOST, CONSUL_PORT, node_key_id, PRODUCT_FAMILY
 base_info = {'/SYSTEM_INFORMATION/site_id':'system_information/site_id',
              '/SYSTEM_INFORMATION/rack_id':'system_information/rack_id',
              '/SYSTEM_INFORMATION/node_id':f'system_information/{node_key_id}/node_id',
@@ -60,7 +60,7 @@ class SSPLHealthView(object):
     encl_fan_resource_type = "enclosure:fru:fan"
     encl_psu_resource_type = "enclosure:fru:psu"
     encl_sideplane_resource_type = "enclosure:fru:sideplane"
-    encl_logical_volume_resource_type = "enclosure:eos:logical_volume"
+    encl_logical_volume_resource_type = f"enclosure:{PRODUCT_FAMILY}:logical_volume"
     encl_sas_resource_type = "enclosure:interface:sas"
 
     undesired_vals = ["N/A", ""]
@@ -72,7 +72,7 @@ class SSPLHealthView(object):
     CLUSTER_ID = singleton_realstorencl.cluster_id
     RESOURCE_HEALTH_VIEW_FILE = 'resource_health_view.json'
     RESOURCE_HEALTH_VIEW_PATH = '/tmp/'+RESOURCE_HEALTH_VIEW_FILE
-    TEMPLATE_SCHEMA_FILE = '/opt/seagate/eos/sspl/bin/genrate_resource_health_view/resource_health_view_template.json'
+    TEMPLATE_SCHEMA_FILE = f'/opt/seagate/{PRODUCT_FAMILY}/sspl/bin/genrate_resource_health_view/resource_health_view_template.json'
 
     NODE_REQUEST_MAP = {
         "disk" : "Drive Slot / Bay",

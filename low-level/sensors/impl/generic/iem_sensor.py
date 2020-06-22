@@ -30,6 +30,7 @@ from framework.base.module_thread import SensorThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.sspl_constants import iem_severity_types, iem_source_types, iem_severity_to_alert_mapping, COMMON_CONFIGS
 from framework.utils.service_logging import logger
+from framework.base.sspl_constants import PRODUCT_FAMILY
 
 from json_msgs.messages.sensors.iem_data import IEMDataMsg
 from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
@@ -51,8 +52,8 @@ class IEMSensor(SensorThread, InternalMsgQ):
     CLUSTER_ID_KEY = "cluster_id"
 
     # Default values for config  settings
-    DEFAULT_LOG_FILE_PATH = "/var/log/eos/iem/iem_messages"
-    DEFAULT_TIMESTAMP_FILE_PATH = "/var/eos/sspl/data/iem/last_processed_msg_time"
+    DEFAULT_LOG_FILE_PATH = f"/var/log/{PRODUCT_FAMILY}/iem/iem_messages"
+    DEFAULT_TIMESTAMP_FILE_PATH = f"/var/{PRODUCT_FAMILY}/sspl/data/iem/last_processed_msg_time"
     DEFAULT_SITE_ID = "001"
     DEFAULT_RACK_ID = "001"
     DEFAULT_NODE_ID = "001"
@@ -76,7 +77,7 @@ class IEMSensor(SensorThread, InternalMsgQ):
     PRIORITY = 1
     IEC_KEYWORD = "IEC"
 
-    IEC_MAPPING_DIR_PATH="/opt/seagate/eos/iem/iec_mapping"
+    IEC_MAPPING_DIR_PATH=f"/opt/seagate/{PRODUCT_FAMILY}/iem/iec_mapping"
 
     # Dependency list
     DEPENDENCIES = {
