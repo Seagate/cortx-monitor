@@ -1,4 +1,5 @@
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/5a56c90ed9f8434287f54ccdcce0189b)](https://www.codacy.com?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=Seagate/cortx-sspl&amp;utm_campaign=Badge_Grade)
+
 => SSPL states
    ~~~~~~~~~~~
 
