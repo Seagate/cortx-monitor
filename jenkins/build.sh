@@ -135,7 +135,7 @@ mkdir -p ${RPM_BUILD_PATH}/SOURCES
 TOPDIR=$(realpath $RPM_BUILD_PATH)
 echo $TOPDIR
 
-tar -czvf ${RPM_BUILD_PATH}/SOURCES/systemd-python36-${VERSION}.tgz -C ${BASE_DIR}/.. sspl/systemd-python36
+tar -czvf ${RPM_BUILD_PATH}/SOURCES/systemd-python36-${VERSION}.tgz -C ${BASE_DIR}/.. cortx-sspl/systemd-python36
 rpmbuild --define "version $VERSION" --define "git_rev $GIT_VER" --define "_topdir $TOPDIR" -bb $BASE_DIR/systemd-python36/systemd-python36.spec
 
 echo 'Installing systemd-python36*...'
