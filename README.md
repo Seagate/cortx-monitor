@@ -1,7 +1,7 @@
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/5a56c90ed9f8434287f54ccdcce0189b)](https://www.codacy.com?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=Seagate/cortx-sspl&amp;utm_campaign=Badge_Grade)
 
 => SSPL states
-   ~~~~~~~~~~~
+   
 
    -> Active state:
       When SSPL is in active state, all the configured plugins including Storage
@@ -13,7 +13,7 @@
       components state change and no alerts are raised.
 
 => Steps to switch SSPL state
-   ~~~~~~~~~~~~~~~~~~~~~~~~~~
+   
 
    -> Switch to Active state:
 
@@ -26,7 +26,7 @@
       $ kill -s SIGHUP <SSPL-PID>
 
 => Consul Configs
-   ~~~~~~~~~~~~~~
+   
 
    -> All eos configs will be available through salt API's, then stored in consul in paticular format i.e.
       component/section/key = value where component = 'sspl/config'
