@@ -52,6 +52,10 @@ class ConfigReader(object):
             print("Exiting ...")
             sys.exit(os.EX_USAGE)
 
+    def get_value(self, section, key):
+        '''public method to get_value'''
+        return self._get_value(section, key)
+
     def _get_value(self, section, key):
         """Get a single value by section and key
 
@@ -81,6 +85,10 @@ class ConfigReader(object):
             return value.strip()
         else:
             return value.decode('utf-8').strip()
+
+    def get_value_list(self, section, key):
+        '''public method to _get_value_list'''
+        return self._get_value_list(section, key)
 
     def _get_value_list(self, section, key):
         """Get a list of values given the section name and key

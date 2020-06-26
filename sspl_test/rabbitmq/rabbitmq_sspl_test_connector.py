@@ -11,8 +11,8 @@ from sspl_test.framework.utils.service_logging import logger
 from sspl_test.framework.utils.config_reader import ConfigReader
 
 
-RABBITMQCTL = '/usr/sbin/rabbitmqctl'
-
+RABBITMQ_CLUSTER_SECTION = 'RABBITMQCLUSTER'
+RABBITMQ_CLUSTER_HOSTS_KEY = 'cluster_nodes'
 
 config = ConfigReader()
 connection_exceptions = (
@@ -25,22 +25,11 @@ connection_error_msg = (
 )
 
 
-def get_cluster_nodes():
-    process = subprocess.Popen(
-        [f'{RABBITMQCTL} cluster_status'], stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE, shell=True
-    )
-    stdout, stdin = process.communicate()
-    for line in stdout.decode('utf-8').split('\n'):
-        if 'running_nodes' in line:
-            nodes = re.findall(r"rabbit@([-\w]+)", line)
-            return nodes
-
-
 def get_cluster_connection(username, password, virtual_host):
     """Makes connection with one of the rabbitmq node.
     """
-    hosts = get_cluster_nodes()
+    hosts = config.get_value_list(RABBITMQ_CLUSTER_SECTION, RABBITMQ_CLUSTER_HOSTS_KEY)
+    logger.debug(f'Cluster nodes [SSPL TEST]: {hosts}')
     ampq_hosts = [
         f'amqp://{username}:{password}@{host}/{virtual_host}' for host in hosts
     ]

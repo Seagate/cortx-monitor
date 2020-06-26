@@ -223,6 +223,10 @@ else
     sed -i 's/cluster_id=001/cluster_id='"$cluster_id"'/g' /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/conf/sspl_tests.conf
 fi
 
+# updateing rabbitmq cluster
+CLUSTER_NODES=$(/opt/seagate/eos/hare/bin/consul kv get sspl/config/RABBITMQCLUSTER/cluster_nodes)
+/opt/seagate/$PRODUCT_FAMILY/hare/bin/consul kv put sspl_test/config/RABBITMQCLUSTER/cluster_nodes $CLUSTER_NODES
+
 echo "Restarting SSPL"
 $sudo systemctl restart sspl-ll
 echo "Waiting for SSPL to complete initialization of all the plugins"
