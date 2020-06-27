@@ -111,7 +111,6 @@ setup_provisioner_prereq
 
 $SCRIPT_DIR/bin/sspl_setup_consul
 $SCRIPT_DIR/bin/sspl_post_install -p $PRODUCT_NAME -e DEV
-$SCRIPT_DIR/bin/sspl_setup_rabbitmq_cluster
 $SCRIPT_DIR/bin/sspl_setup_init -r $PRODUCT_FAMILY
 if [ "$PRODUCT_NAME" == "ECS" ]; then
     [ -z "$rmq_nodes" ] && $SCRIPT_DIR/bin/sspl_config -c $rmq_cluster
@@ -119,4 +118,5 @@ if [ "$PRODUCT_NAME" == "ECS" ]; then
 else
     $SCRIPT_DIR/bin/sspl_config
 fi
+$SCRIPT_DIR/bin/sspl_setup_rabbitmq_cluster
 start_req_services
