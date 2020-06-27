@@ -118,5 +118,5 @@ if [ "$PRODUCT_NAME" == "ECS" ]; then
     [ -n "$rmq_nodes" ] && $SCRIPT_DIR/bin/sspl_config -c $rmq_cluster -n $rmq_nodes
 else
     $SCRIPT_DIR/bin/sspl_config
-
+fi
 start_req_services
