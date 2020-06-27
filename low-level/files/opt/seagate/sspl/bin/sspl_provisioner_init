@@ -10,82 +10,113 @@ set -e -u -o pipefail
 ##############################################################################
 
 SCRIPT_DIR=$(dirname $0)
+SCRIPT_NAME=$(basename $0)
+
 . $SCRIPT_DIR/bin/constants.sh
 
-# Install consul if not available
-if ! [ -x "$(command -v /opt/seagate/$PRODUCT_FAMILY/hare/bin/consul)" ]; then
-    if ! [ -x "$(command -v wget)" ]; then
-        yum install -y wget
+rmq_cluster=true
+rmq_nodes=""
+
+usage() {
+    cat << EOF
+    $SCRIPT_NAME
+        [-p|--product_name <EES|ECS>]
+        [-c|--rmq_cluster <true|false>]
+        [-n|--rmq_nodes <srvnode1|srvnode1,srvnode-2>]
+EOF
+    exit 1
+}
+
+
+for i in "$@"; do
+    case $i in
+        -p=*|--product_name=* )
+            PRODUCT_NAME=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
+            ;;
+        -c=*|--rmq_cluster=* )
+            rmq_cluster=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
+            ;;
+        -n=*|--rmq_nodes=* )
+            rmq_nodes=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
+            ;;
+        * )
+            usage
+            ;;
+    esac
+done
+
+
+setup_provisioner_prereq(){
+    if ! [ "$(rpm -qa | grep eos-prvsnr-cli)" ]; then
+        # salt minion config has eosnode-1 as master node name hence adding same in /etc/hosts
+        if ! [ "$(cat /etc/hosts | grep eosnode-1)" ]; then
+            echo "127.0.0.1 eosnode-1" >> /etc/hosts
+        fi
+    else
+        # It will remove already installed packages
+        yum remove -y eos-pr*
+        rm -rf /etc/salt/*
     fi
-    wget https://releases.hashicorp.com/consul/1.7.0/consul_1.7.0_linux_amd64.zip
-    if ! [ -x "$(command -v unzip)" ]; then
-        yum install -y unzip
+
+    # to install updated packages
+    pkg_name=$(curl -s http://ci-storage.mero.colo.seagate.com/releases/eos/integration/centos-7.7.1908/last_successful/|grep eos-prvsnr-cli-1.0.0| sed 's/<\/*[^>]*>//g'|cut -d' ' -f1)
+    yum install -y http://ci-storage.mero.colo.seagate.com/releases/eos/integration/centos-7.7.1908/last_successful/$pkg_name
+    sh /opt/seagate/eos-prvsnr/cli/setup-provisioner -S
+    salt-call state.apply components.system
+    python3 /opt/seagate/eos-prvsnr/cli/pillar_encrypt
+}
+
+
+start_req_services(){
+    [ "$rmq_cluster" == true ] && systemctl start rabbitmq-server.service
+    systemctl start sspl-ll.service
+
+    # TODO: Temporary change until HA integration is in place
+    # Switch SSPL to active state to resume all the suspended plugins. If SSPL is
+    # not switched to active state then plugins will not respond and tests will
+    # fail. Sending SIGUP to SSPL makes SSPL to read state file and switch state.
+    TRIES=0
+    SSPL_STATUS=$(systemctl show -p ActiveState sspl-ll | sed 's/ActiveState=//g')
+    while [ $SSPL_STATUS != "active" ]
+    do
+        echo SSPL Service not started. Waiting...
+        sleep 2
+        TRIES=$((TRIES+1))
+        SSPL_STATUS=$(systemctl show -p ActiveState sspl-ll | sed 's/ActiveState=//g')
+        if [ $TRIES -gt 4 ]
+        then
+            break
+        fi
+    done
+
+    if [ $SSPL_STATUS = "active" ]
+    then
+        echo SSPL Service started.
+        echo Waiting 5 seconds to initialize.
+        sleep 5
+        echo "*************************************************************************"
+        echo "Changing SSPL state to 'active', disable step once HA integration complete"
+        echo "*************************************************************************"
+        echo "state=active" > /var/$PRODUCT_FAMILY/sspl/data/state.txt
+        PID=`/sbin/pidof -s /usr/bin/sspl_ll_d`
+        kill -s SIGHUP $PID
+    else
+        echo SSPL Service not started after 10 seconds.
+        echo Failed to make SSPL state ACTIVE
     fi
-    unzip consul_1.7.0_linux_amd64.zip
-    mkdir -p /opt/seagate/$PRODUCT_FAMILY/hare/bin
-    mv ./consul /opt/seagate/$PRODUCT_FAMILY/hare/bin/consul
-    rm consul_1.7.0_linux_amd64.zip
-fi
+}
 
-if ! [ "$(rpm -qa | grep eos-prvsnr-cli)" ]; then
-    # salt minion config has eosnode-1 as master node name hence adding same in /etc/hosts
-    if ! [ "$(cat /etc/hosts | grep eosnode-1)" ]; then
-        echo "127.0.0.1 eosnode-1" >> /etc/hosts
-    fi
-else
-    # It will remove already installed packages
-    yum remove -y eos-pr*
-    rm -rf /etc/salt/*
-fi
 
-# to install updated packages
-pkg_name=$(curl -s http://ci-storage.mero.colo.seagate.com/releases/eos/integration/centos-7.7.1908/last_successful/|grep eos-prvsnr-cli-1.0.0| sed 's/<\/*[^>]*>//g'|cut -d' ' -f1)
-yum install -y http://ci-storage.mero.colo.seagate.com/releases/eos/integration/centos-7.7.1908/last_successful/$pkg_name
-sh /opt/seagate/eos-prvsnr/cli/setup-provisioner -S
-salt-call state.apply components.system
-python3 /opt/seagate/eos-prvsnr/cli/pillar_encrypt
+setup_provisioner_prereq
 
-# Start /opt/seagate/<product>/hare/bin/consul if not running
-CONSUL_PS=$(ps -aux | grep "consul" | grep -v "grep" || true)
-[ -z "$CONSUL_PS" ] && /opt/seagate/$PRODUCT_FAMILY/hare/bin/consul agent -dev -config-file=$SCRIPT_DIR/bin/consul_config.json &>/dev/null &
-
+$SCRIPT_DIR/bin/sspl_setup_consul
 $SCRIPT_DIR/bin/sspl_post_install -p $PRODUCT_NAME -e DEV
 $SCRIPT_DIR/bin/sspl_setup_rabbitmq_cluster
 $SCRIPT_DIR/bin/sspl_setup_init -r $PRODUCT_FAMILY
-$SCRIPT_DIR/bin/sspl_config
-systemctl start rabbitmq-server.service
-systemctl start sspl-ll.service
-
-# TODO: Temporary change until HA integration is in place
-# Switch SSPL to active state to resume all the suspended plugins. If SSPL is
-# not switched to active state then plugins will not respond and tests will
-# fail. Sending SIGUP to SSPL makes SSPL to read state file and switch state.
-TRIES=0
-SSPL_STATUS=$(systemctl show -p ActiveState sspl-ll | sed 's/ActiveState=//g')
-while [ $SSPL_STATUS != "active" ]
-do
-    echo SSPL Service not started. Waiting...
-    sleep 2
-    TRIES=$((TRIES+1))
-    SSPL_STATUS=$(systemctl show -p ActiveState sspl-ll | sed 's/ActiveState=//g')
-    if [ $TRIES -gt 4 ]
-    then
-        break
-    fi
-done
-
-if [ $SSPL_STATUS = "active" ]
-then
-    echo SSPL Service started.
-    echo Waiting 5 seconds to initialize.
-    sleep 5
-    echo "*************************************************************************"
-    echo "Changing SSPL state to 'active', disable step once HA integration complete"
-    echo "*************************************************************************"
-    echo "state=active" > /var/$PRODUCT_FAMILY/sspl/data/state.txt
-    PID=`/sbin/pidof -s /usr/bin/sspl_ll_d`
-    kill -s SIGHUP $PID
+if [ "$PRODUCT_NAME" == "ECS" ]; then
+    [ -z "$rmq_nodes" ] && $SCRIPT_DIR/bin/sspl_config -c $rmq_cluster
+    [ -n "$rmq_nodes" ] && $SCRIPT_DIR/bin/sspl_config -c $rmq_cluster -n $rmq_nodes
 else
-    echo SSPL Service not started after 10 seconds.
-    echo Failed to make SSPL state ACTIVE
-fi
+    $SCRIPT_DIR/bin/sspl_config
+
+start_req_services
