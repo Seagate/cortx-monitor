@@ -1,0 +1,35 @@
+#!/bin/bash
+
+set -e -u -o pipefail
+
+#######################################################################
+# This script performs following operations.
+# - Creates consul binary file and move it to /opt/seagate/eos/sspl/bin
+# - Creates consul agent and cluster
+#######################################################################
+
+SCRIPT_DIR=$(dirname $0)
+# Import common constants
+. $SCRIPT_DIR/constants.sh
+
+# Install consul if not available
+if ! [ -x "$(command -v $SSPL_BASE_DIR/bin/consul)" ]; then
+    if ! [ -x "$(command -v wget)" ]; then
+        yum install -y wget
+    fi
+    curl -O https://releases.hashicorp.com/consul/1.7.0/consul_1.7.0_linux_amd64.zip
+    if ! [ -x "$(command -v unzip)" ]; then
+        yum install -y unzip
+    fi
+    unzip consul_1.7.0_linux_amd64.zip
+    mkdir -p $SSPL_BASE_DIR/bin
+    mv ./consul $SSPL_BASE_DIR/bin/consul
+    rm -rf consul_1.7.0_linux_amd64.zip
+fi
+
+# Start /opt/seagate/eos/sspl/bin/consul if not running
+CONSUL_PS=$(ps -aux | grep "sspl\/bin\/consul" | grep -v "grep" || true)
+[ -z "$CONSUL_PS" ] && $SSPL_BASE_DIR/bin/consul agent -dev -config-file=$SSPL_BASE_DIR/bin/consul_config.json &>/dev/null &
+
+# TODO:
+# This setup consul script should support on joining another node(s) and form a consul cluster
