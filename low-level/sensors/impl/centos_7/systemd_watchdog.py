@@ -66,7 +66,7 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
     SYSTEM_INFORMATION = 'SYSTEM_INFORMATION'
     SETUP              = 'setup'
 
-    DEFAULT_RAS_VOL = "/var/eos/sspl/data/"
+    DEFAULT_RAS_VOL = "/var/cortx/sspl/data/"
 
     SITE_ID = "site_id"
     RACK_ID = "rack_id"

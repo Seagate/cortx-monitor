@@ -3,7 +3,7 @@
           {
             "type": "key",
             "key": "sspl/config/SYSTEM_INFORMATION/log_level",
-            "args": ["/opt/seagate/eos/sspl/bin/consume_cfg_change_alert"]
+            "args": ["/opt/seagate/cortx/sspl/bin/consume_cfg_change_alert"]
           }
     ]
 }

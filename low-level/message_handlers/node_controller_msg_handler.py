@@ -612,7 +612,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     logger.warn("HPI operations are not supported in current environment")
                     return
 
-                if self.setup == 'eos':
+                if self.setup == 'cortx':
                     logger.warn("HPIMonitor not loaded")
                     json_msg = AckResponseMsg(node_request, NodeControllerMsgHandler.UNSUPPORTED_REQUEST, uuid).getJson()
                     self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)

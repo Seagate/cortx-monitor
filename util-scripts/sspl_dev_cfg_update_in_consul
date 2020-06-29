@@ -27,7 +27,7 @@ sspl_conf_update=(
 )
 
 for conf_val in "${!sspl_conf_update[@]}";
-    do /opt/seagate/eos/hare/bin/consul kv put $conf_val ${sspl_conf_update[$conf_val]}; echo ${sspl_conf_update[$conf_val]}
+    do /opt/seagate/cortx/hare/bin/consul kv put $conf_val ${sspl_conf_update[$conf_val]}; echo ${sspl_conf_update[$conf_val]}
 done
 
 echo "Restarting SSPL"
@@ -41,6 +41,6 @@ sleep 5
 # Sending SIGHUP to SSPL makes SSPL to read state file and switch state.
 # Doesn't need below line for dual node setup.
 # Uncomment below line of code for a single node setup or dev environment.
-# echo "state=active" > /var/eos/sspl/data/state.txt
+# echo "state=active" > /var/cortx/sspl/data/state.txt
 PID=`/sbin/pidof -s /usr/bin/sspl_ll_d`
 kill -s SIGHUP $PID

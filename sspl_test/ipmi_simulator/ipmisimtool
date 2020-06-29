@@ -14,7 +14,7 @@
 #        Note: Have some entries in SEL.
 
 
-BASE_PATH="/opt/seagate/eos/sspl"
+BASE_PATH="/opt/seagate/cortx/sspl"
 
 filename=""
 
