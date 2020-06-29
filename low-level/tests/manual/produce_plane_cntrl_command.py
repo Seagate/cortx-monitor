@@ -13,7 +13,7 @@ parameters = {'drive_id': None, 'raid_id': None, 'node_id': 'cslco1800', 'debug_
 #arguments = {'uuid':'tester'}
 #parameters = {}
 
-file = "/opt/seagate/eos/sspl/low-level/tests/manual/actuator_msgs/plane_cntrl_request.json"
+file = "/opt/seagate/cortx/sspl/low-level/tests/manual/actuator_msgs/plane_cntrl_request.json"
 jsonMsg = json.loads(open(file).read())
 jsonMsg["message"]["actuator_request_type"]["plane_controller"]["command"] = "%s" % request
 jsonMsg["message"]["actuator_request_type"]["plane_controller"]["parameters"] = parameters
