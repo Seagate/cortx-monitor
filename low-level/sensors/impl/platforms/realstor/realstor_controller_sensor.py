@@ -188,6 +188,7 @@ class RealStorControllerSensor(SensorThread, InternalMsgQ):
         alert_type = ""
         # Flag to indicate if there is a change in _previously_faulty_controllers
         state_changed = False
+        prev_alert_type = None
 
         if not controllers:
             return
@@ -226,10 +227,12 @@ class RealStorControllerSensor(SensorThread, InternalMsgQ):
                 if (durable_id in self._previously_faulty_controllers and \
                         self._previously_faulty_controllers[durable_id]['health']=="fault") or \
                         (durable_id not in self._previously_faulty_controllers):
-                    prev_alert_type = self._previously_faulty_controllers[durable_id]["alert_type"]
+                    if self._previously_faulty_controllers and \
+                            self._previously_faulty_controllers.get(durable_id).get('alert_type'):
+                        prev_alert_type = self._previously_faulty_controllers[durable_id]["alert_type"]
 
                     # If prev_alert_type is missing, then the next alert type will be insertion
-                    if prev_alert_type.lower() == self.rssencl.FRU_MISSING:
+                    if prev_alert_type and prev_alert_type.lower() == self.rssencl.FRU_MISSING:
                         alert_type.append(self.rssencl.FRU_INSERTION)
 
                     # And 2nd in the list of alert_type will be fault.
