@@ -1,32 +1,32 @@
 sspl:
     post_install:
-         script: /opt/seagate/eos/sspl/bin/sspl_setup
+         script: /opt/seagate/cortx/sspl/bin/sspl_setup
          args:
             - post_install -p EES
     init:
-         script: /opt/seagate/eos/sspl/bin/sspl_setup
+         script: /opt/seagate/cortx/sspl/bin/sspl_setup
          args:
-            - init -r eos
+            - init -r cortx
     config:
-         script: /opt/seagate/eos/sspl/bin/sspl_setup
+         script: /opt/seagate/cortx/sspl/bin/sspl_setup
          args:
             - config -f
     test:
-         script: /opt/seagate/eos/sspl/bin/sspl_setup
+         script: /opt/seagate/cortx/sspl/bin/sspl_setup
          args:
             - test self
     reset:
-         script: /opt/seagate/eos/sspl/bin/sspl_setup
+         script: /opt/seagate/cortx/sspl/bin/sspl_setup
          args:
             - reset hard -p EES
     ha:
-         script: /opt/seagate/eos/hare/libexec/build-ees-ha-sspl
+         script: /opt/seagate/cortx/hare/libexec/build-ees-ha-sspl
          args:
             - /var/lib/hare/build-ees-ha-args.yaml
 
     ha-cleanup:
-         script: /opt/seagate/eos/hare/libexec/prov-ha-sspl-reset
+         script: /opt/seagate/cortx/hare/libexec/prov-ha-sspl-reset
          args: null
 
 support_bundle:
-    - /opt/seagate/eos/sspl/bin/sspl_bundle_generate
+    - /opt/seagate/cortx/sspl/bin/sspl_bundle_generate

@@ -17,18 +17,18 @@
 
    -> Switch to Active state:
 
-      $ echo "state=active" > /var/eos/sspl/data/state.txt
+      $ echo "state=active" > /var/cortx/sspl/data/state.txt
       $ kill -s SIGHUP <SSPL-PID>
 
    -> Switch to Degraded state:
 
-      $ echo "state=degrade" > /var/eos/sspl/data/state.txt
+      $ echo "state=degrade" > /var/cortx/sspl/data/state.txt
       $ kill -s SIGHUP <SSPL-PID>
 
 => Consul Configs
    ~~~~~~~~~~~~~~
 
-   -> All eos configs will be available through salt API's, then stored in consul in paticular format i.e.
+   -> All product configs will be available through salt API's, then stored in consul in paticular format i.e.
       component/section/key = value where component = 'sspl/config'
 
    -> Get value from consul:
