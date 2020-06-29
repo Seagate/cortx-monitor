@@ -25,7 +25,7 @@ from json import JSONDecoder
 from pprint import pprint
 
 # Add the top level directories
-sys.path.insert(0, '/opt/seagate/eos/sspl/low-level')
+sys.path.insert(0, '/opt/seagate/cortx/sspl/low-level')
 from framework.utils.config_reader import ConfigReader
 from tests.manual.manual_test import ManualTest
 from framework.base.sspl_constants import CLI_RESOURCE_PATH, COMMON_CONFIGS

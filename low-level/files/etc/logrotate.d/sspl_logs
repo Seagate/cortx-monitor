@@ -1,4 +1,4 @@
-/var/log/eos/sspl/sspl.log
+/var/log/cortx/sspl/sspl.log
 {
         size 10K
         rotate 20

@@ -7,7 +7,7 @@ except Exception as e:
     from framework.utils.salt_util import node_id, consulhost, consulport
 
 PRODUCT_NAME = 'EES'
-PRODUCT_FAMILY = 'eos'
+PRODUCT_FAMILY = 'cortx'
 enabled_products = ["CS-A", "SINGLE", "EES", "ECS"]
 cs_products = ["CS-A"]
 cs_legacy_products = ["CS-L", "CS-G"]

@@ -5,7 +5,7 @@ from .manual_test import ManualTest
 
 manTest = ManualTest("PLANECNTRLRMQEGRESSPROCESSOR")
 
-file = "/opt/seagate/eos/sspl/low-level/tests/manual/actuator_msgs/thread_cntrl_restart.json"
+file = "/opt/seagate/cortx/sspl/low-level/tests/manual/actuator_msgs/thread_cntrl_restart.json"
 jsonMsg = json.loads(open(file).read())
 jsonMsg["message"]["actuator_request_type"]["thread_controller"]["module_name"] = "PlaneCntrlMsgHandler"
 jsonMsg["message"]["actuator_request_type"]["thread_controller"]["thread_request"] = "restart"
