@@ -241,11 +241,11 @@ class RealStorControllerSensor(SensorThread, InternalMsgQ):
 
                     # And set alert_type as fault
                     alert_type = self.rssencl.FRU_FAULT
-
                     self._previously_faulty_controllers[durable_id] = {
                         "health": controller_health, "alert_type": alert_type}
 
                     internal_json_msg = self._create_internal_msg(controller, alert_type)
+                    faulty_controller_messages.append(internal_json_msg)
 
                     state_changed = True
 
