@@ -249,6 +249,7 @@ class RealStorControllerSensor(SensorThread, InternalMsgQ):
 
                     state_changed = True
 
+                    # send the message to the handler
                     if send_message:
                         self._send_json_msg(internal_json_msg)
 
