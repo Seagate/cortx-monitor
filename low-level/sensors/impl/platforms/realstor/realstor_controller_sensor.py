@@ -196,8 +196,8 @@ class RealStorControllerSensor(SensorThread, InternalMsgQ):
             controller_health = controller["health"].lower()
             controller_status = controller["status"].lower()
             durable_id = controller["durable-id"]
-            # Check for missing and fault case
 
+            # Check for missing and fault case
             if controller_health == self.rssencl.HEALTH_FAULT:
                 # Status change from Degraded ==> Fault or OK ==> Fault
                 if (durable_id in self._previously_faulty_controllers and \
@@ -220,10 +220,7 @@ class RealStorControllerSensor(SensorThread, InternalMsgQ):
             elif controller_health == self.rssencl.HEALTH_DEGRADED:
                 # Status change from Fault ==> Degraded or OK ==> Degraded
                 # Controller can also go into degraded state after installation as well
-                # So, Degrade state can be after missing alert as well. Hence maintaining the
-                # list of alert_type.
-                alert_type = []
-                logger.error('#### Inside Degraded ####')
+                # So, Degrade state can be after missing alert as well.
                 if (durable_id in self._previously_faulty_controllers and \
                         self._previously_faulty_controllers[durable_id]['health']=="fault") or \
                         (durable_id not in self._previously_faulty_controllers):
@@ -231,30 +228,30 @@ class RealStorControllerSensor(SensorThread, InternalMsgQ):
                             self._previously_faulty_controllers.get(durable_id).get('alert_type'):
                         prev_alert_type = self._previously_faulty_controllers[durable_id]["alert_type"]
 
-                    # If prev_alert_type is missing, then the next alert type will be insertion
+                    # If prev_alert_type is missing, then the next alert type will be insertion first
                     if prev_alert_type and prev_alert_type.lower() == self.rssencl.FRU_MISSING:
-                        alert_type.append(self.rssencl.FRU_INSERTION)
+                        alert_type = self.rssencl.FRU_INSERTION
 
-                    # And 2nd in the list of alert_type will be fault.
-                    alert_type.append(self.rssencl.FRU_FAULT)
+                        internal_json_msg = self._create_internal_msg(
+                                    controller, alert_type)
+
+                        # send the message to the handler
+                        if send_message:
+                            self._send_json_msg(internal_json_msg)
+
+                    # And set alert_type as fault
+                    alert_type = self.rssencl.FRU_FAULT
 
                     self._previously_faulty_controllers[durable_id] = {
-                        "health": controller_health, "alert_type": self.rssencl.FRU_FAULT}
-                    logger.error(f'#### {alert_type} ####')
+                        "health": controller_health, "alert_type": alert_type}
+
+                    internal_json_msg = self._create_internal_msg(controller, alert_type)
+
                     state_changed = True
 
-                    # Get the list of the internal_json_message structure
-                    internal_json_message_list = \
-                            self._get_internal_json_message_list(
-                            controller, alert_type)
-                    logger.error(f'#### {internal_json_message_list} ####')
-                    # Send message to handler
-                    if internal_json_message_list:
-                        for json_msg in internal_json_message_list:
-                            faulty_controller_messages.append(json_msg)
-                            if send_message:
-                                logger.error(f'### Inside For: {json_msg} ###')
-                                self._send_json_msg(json_msg)
+                    if send_message:
+                        self._send_json_msg(internal_json_msg)
+
             # Check for healthy case
             elif controller_health == self.rssencl.HEALTH_OK:
                 # Status change from Fault ==> OK or Degraded ==> OK
@@ -286,20 +283,6 @@ class RealStorControllerSensor(SensorThread, InternalMsgQ):
                 state_changed = False
             alert_type = ""
         return faulty_controller_messages
-
-    def _get_internal_json_message_list(self, controller, alert_type_list):
-        '''
-           Iterates over a list of alert_types and returns the list of
-           json_message structure
-        '''
-
-        internal_json_message_list = []
-        if alert_type_list and isinstance(alert_type_list, list):
-            for alert_type in alert_type_list:
-                internal_json_msg = self._create_internal_msg(
-                                    controller, alert_type)
-                internal_json_message_list.append(internal_json_msg)
-        return internal_json_message_list
 
     def _create_internal_msg(self, controller_detail, alert_type):
         """Forms a dictionary containing info about Controllers to send to
