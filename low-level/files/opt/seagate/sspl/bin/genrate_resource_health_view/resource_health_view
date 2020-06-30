@@ -40,7 +40,8 @@ except Exception as serror:
 from framework.utils.store_factory import store
 from framework.platforms.realstor.realstor_enclosure import singleton_realstorencl
 from framework.utils.ipmi_client import IpmiFactory
-from framework.utils.sysfs_interface import *
+from framework.utils.sysfs_interface import SysFS
+from framework.utils.tool_factory import ToolFactory
 
 class SSPLHealthView(object):
     """docstring for SSPLHealthView"""
