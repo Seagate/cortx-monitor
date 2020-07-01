@@ -15,14 +15,14 @@ SCRIPT_NAME=$(basename $0)
 . $SCRIPT_DIR/bin/constants.sh
 
 rmq_cluster=false
-rmq_secondary_node=
+rmq_cluster_node=
 
 usage() {
     cat << EOF
     $SCRIPT_NAME
         [-p|--product-name <EES|ECS>]
         [-c|--rmq-cluster <true|false>]
-        [-s|--rmq-secondary-nodes <srvnode1|srvnode1,srvnode-2>]
+        [-n|--rmq-cluster-node <fqdn of the node>]
 EOF
     exit 1
 }
@@ -36,8 +36,8 @@ for i in "$@"; do
         -c=*|--rmq-cluster=* )
             rmq_cluster=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
             ;;
-        -s=*|--rmq-secondary-node=* )
-            rmq_secondary_node=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
+        -n=*|--rmq-cluster-node=* )
+            rmq_cluster_node=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
             ;;
         * )
             usage
@@ -118,8 +118,8 @@ $SCRIPT_DIR/bin/sspl_setup_consul
 $SCRIPT_DIR/bin/sspl_post_install -p $PRODUCT_NAME -e DEV
 $SCRIPT_DIR/bin/sspl_setup_init -r $PRODUCT_FAMILY
 if [ "$PRODUCT_NAME" == "ECS" ]; then
-    [ -z "$rmq_secondary_node" ] && $SCRIPT_DIR/bin/sspl_config -c $rmq_cluster
-    [ -n "$rmq_secondary_node" ] && $SCRIPT_DIR/bin/sspl_config -c $rmq_cluster -s $rmq_secondary_node
+    [ -z "$rmq_cluster_node" ] && $SCRIPT_DIR/bin/sspl_config -c $rmq_cluster
+    [ -n "$rmq_cluster_node" ] && $SCRIPT_DIR/bin/sspl_config -c $rmq_cluster -n $rmq_cluster_node
 else
     $SCRIPT_DIR/bin/sspl_config
 fi

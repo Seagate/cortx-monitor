@@ -43,9 +43,9 @@ config_sspl() {
     force=0
     role=
     rmq_cluster=false
-    rmq_secondary_node=
+    rmq_cluster_node=
 
-    while getopts ":f:r:c:s:" OPTION; do
+    while getopts ":f:r:c:n:" OPTION; do
         case $OPTION in
             f )
                 force=1
@@ -57,12 +57,12 @@ config_sspl() {
                 ;;
             c )
                 rmq_cluster=$OPTARG
-                rmq_cluster_nodes=`$CONSUL_PATH/consul kv get sspl/config/RABBITMQCLUSTER/cluster_nodes`
-                nodes=`echo $rmq_cluster_nodes | tr "," " " | wc -w`
+                existing_cluster_nodes=`$CONSUL_PATH/consul kv get sspl/config/RABBITMQCLUSTER/cluster_nodes`
+                nodes=`echo $existing_cluster_nodes | tr "," " " | wc -w`
                 [ "$nodes" == "2" ] && rmq_cluster=false
                 ;;
-            s )
-                rmq_secondary_node=$OPTARG
+            n )
+                rmq_cluster_node=$OPTARG
                 ;;
             * )
                 usage
@@ -169,9 +169,9 @@ esac
 
 # Updating RabbitMQ cluster nodes.
 if [ "$product" == "ECS" ]; then
-    if [ "$rmq_cluster" == true ] & [ -n "$rmq_secondary_node" ]; then
-        [ "$nodes" == "1" ] && rmq_primary_node=$rmq_cluster_nodes && rmq_cluster_nodes=$rmq_secondary_node,$rmq_primary_node
-        $CONSUL_PATH/consul kv put sspl/config/RABBITMQCLUSTER/cluster_nodes $rmq_cluster_nodes
+    if [ "$rmq_cluster" == true ] & [ -n "$rmq_cluster_node" ]; then
+        [ "$nodes" == "1" ] && rmq_primary_node=$existing_cluster_nodes && existing_cluster_nodes=$rmq_cluster_node,$rmq_primary_node
+        $CONSUL_PATH/consul kv put sspl/config/RABBITMQCLUSTER/cluster_nodes $existing_cluster_nodes
     fi
 else
     out=$(rabbitmqctl cluster_status | grep running_nodes | cut -d '[' -f2 | cut -d ']' -f1 | sed 's/rabbit@//g' | sed 's/,/, /g')
