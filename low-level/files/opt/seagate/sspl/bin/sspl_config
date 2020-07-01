@@ -33,7 +33,7 @@ config options:
     -f  Force reinitialization. Do not prompt
     -r  Role to be configured on the current node
     -c  Cluster setup for rabbitmq required(yes|no)
-    -n  Nodes added to rabbitmq cluster
+    -s  Secondary node to add into rabbitmq cluster
 EOF
     exit 1
 }
@@ -42,10 +42,10 @@ config_sspl() {
 
     force=0
     role=
-    rmq_cluster=true
-    rmq_nodes=
+    rmq_cluster=false
+    rmq_secondary_node=
 
-    while getopts ":f:r:c:n:" OPTION; do
+    while getopts ":f:r:c:s:" OPTION; do
         case $OPTION in
             f )
                 force=1
@@ -57,12 +57,12 @@ config_sspl() {
                 ;;
             c )
                 rmq_cluster=$OPTARG
-                nodes=`$SSPL_BASE_DIR/bin/consul kv get sspl/config/RABBITMQCLUSTER/cluster_nodes`
-                num_nodes=`echo $nodes | tr "," " " | wc -w`
-                [ "$num_nodes" == 2 ] && rmq_cluster=false
+                rmq_cluster_nodes=`$CONSUL_PATH/consul kv get sspl/config/RABBITMQCLUSTER/cluster_nodes`
+                nodes=`echo $rmq_cluster_nodes | tr "," " " | wc -w`
+                [ "$nodes" == "2" ] && rmq_cluster=false
                 ;;
-            n )
-                rmq_nodes=$OPTARG
+            s )
+                rmq_secondary_node=$OPTARG
                 ;;
             * )
                 usage
@@ -147,7 +147,7 @@ config_sspl() {
     systemctl restart rsyslog
 
     # If consul is not running, exit
-    CONSUL_PS=$(ps -aux | grep "sspl\/bin\/consul" | grep -v "grep" || true)
+    CONSUL_PS=$(ps -aux | grep "consul" | grep -v "grep" || true)
     if [ -z "$CONSUL_PS" ]; then
         echo "Consul is not running, exiting..";
         exit 1
@@ -169,18 +169,21 @@ esac
 
 # Updating RabbitMQ cluster nodes.
 if [ "$product" == "ECS" ]; then
-    [ "$rmq_cluster" == true ] && [ -n "$rmq_nodes" ] && $SSPL_BASE_DIR/bin/consul kv put sspl/config/RABBITMQCLUSTER/cluster_nodes $rmq_nodes
+    if [ "$rmq_cluster" == true ] & [ -n "$rmq_secondary_node" ]; then
+        [ "$nodes" == "1" ] && rmq_primary_node=$rmq_cluster_nodes && rmq_cluster_nodes=$rmq_secondary_node,$rmq_primary_node
+        $CONSUL_PATH/consul kv put sspl/config/RABBITMQCLUSTER/cluster_nodes $rmq_cluster_nodes
+    fi
 else
     out=$(rabbitmqctl cluster_status | grep running_nodes | cut -d '[' -f2 | cut -d ']' -f1 | sed 's/rabbit@//g' | sed 's/,/, /g')
     pout=$(echo $out | sed  "s/'//g")
-    $SSPL_BASE_DIR/bin/consul kv put sspl/config/RABBITMQCLUSTER/cluster_nodes $pout
+    $CONSUL_PATH/consul kv put sspl/config/RABBITMQCLUSTER/cluster_nodes $pout
 fi
 
 # Updating build requested log level
 log_level=`cat $DIR_NAME/conf/build-requested-loglevel | sed 's/ *$//'`
 case $log_level in
     "DEBUG" | "INFO" | "WARNING" | "ERROR" | "CRITICAL")
-        $SSPL_BASE_DIR/bin/consul kv put sspl/config/SYSTEM_INFORMATION/log_level $log_level;;
+        $CONSUL_PATH/consul kv put sspl/config/SYSTEM_INFORMATION/log_level $log_level;;
     "");;
     *)
         echo "Unexpected log level is requested, '$log_level'";;

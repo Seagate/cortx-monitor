@@ -14,15 +14,15 @@ SCRIPT_NAME=$(basename $0)
 
 . $SCRIPT_DIR/bin/constants.sh
 
-rmq_cluster=true
-rmq_nodes=""
+rmq_cluster=false
+rmq_secondary_node=
 
 usage() {
     cat << EOF
     $SCRIPT_NAME
-        [-p|--product_name <EES|ECS>]
-        [-c|--rmq_cluster <true|false>]
-        [-n|--rmq_nodes <srvnode1|srvnode1,srvnode-2>]
+        [-p|--product-name <EES|ECS>]
+        [-c|--rmq-cluster <true|false>]
+        [-s|--rmq-secondary-nodes <srvnode1|srvnode1,srvnode-2>]
 EOF
     exit 1
 }
@@ -30,14 +30,14 @@ EOF
 
 for i in "$@"; do
     case $i in
-        -p=*|--product_name=* )
+        -p=*|--product-name=* )
             PRODUCT_NAME=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
             ;;
-        -c=*|--rmq_cluster=* )
+        -c=*|--rmq-cluster=* )
             rmq_cluster=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
             ;;
-        -n=*|--rmq_nodes=* )
-            rmq_nodes=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
+        -s=*|--rmq-secondary-node=* )
+            rmq_secondary_node=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
             ;;
         * )
             usage
@@ -48,9 +48,9 @@ done
 
 setup_provisioner_prereq(){
     if ! [ "$(rpm -qa | grep eos-prvsnr-cli)" ]; then
-        # salt minion config has eosnode-1 as master node name hence adding same in /etc/hosts
-        if ! [ "$(cat /etc/hosts | grep eosnode-1)" ]; then
-            echo "127.0.0.1 eosnode-1" >> /etc/hosts
+        # salt minion config has srvnode-1 as master node name hence adding same in /etc/hosts
+        if ! [ "$(cat /etc/hosts | grep srvnode-1)" ]; then
+            echo "127.0.0.1 srvnode-1" >> /etc/hosts
         fi
     else
         # It will remove already installed packages
@@ -89,7 +89,7 @@ start_req_services(){
         fi
     done
 
-    if [ $SSPL_STATUS = "active" ]
+    if [ $SSPL_STATUS = "active" ] & [ $PRODUCT_NAME = "EES" ]
     then
         echo SSPL Service started.
         echo Waiting 5 seconds to initialize.
@@ -100,6 +100,11 @@ start_req_services(){
         echo "state=active" > /var/$PRODUCT_FAMILY/sspl/data/state.txt
         PID=`/sbin/pidof -s /usr/bin/sspl_ll_d`
         kill -s SIGHUP $PID
+    elif [ $SSPL_STATUS = "active" ] & [ $PRODUCT_NAME = "ECS" ]
+    then
+        echo "*************************************************************************"
+        echo "SSPL state is 'active'"
+        echo "*************************************************************************"
     else
         echo SSPL Service not started after 10 seconds.
         echo Failed to make SSPL state ACTIVE
@@ -113,8 +118,8 @@ $SCRIPT_DIR/bin/sspl_setup_consul
 $SCRIPT_DIR/bin/sspl_post_install -p $PRODUCT_NAME -e DEV
 $SCRIPT_DIR/bin/sspl_setup_init -r $PRODUCT_FAMILY
 if [ "$PRODUCT_NAME" == "ECS" ]; then
-    [ -z "$rmq_nodes" ] && $SCRIPT_DIR/bin/sspl_config -c $rmq_cluster
-    [ -n "$rmq_nodes" ] && $SCRIPT_DIR/bin/sspl_config -c $rmq_cluster -n $rmq_nodes
+    [ -z "$rmq_secondary_node" ] && $SCRIPT_DIR/bin/sspl_config -c $rmq_cluster
+    [ -n "$rmq_secondary_node" ] && $SCRIPT_DIR/bin/sspl_config -c $rmq_cluster -s $rmq_secondary_node
 else
     $SCRIPT_DIR/bin/sspl_config
 fi

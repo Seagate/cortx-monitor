@@ -18,7 +18,15 @@ sspl:
     reset:
          script: /opt/seagate/eos/sspl/bin/sspl_setup
          args:
-            - reset hard -p EES
+            - reset hard -p ECS
+    ha:
+         script: /opt/seagate/eos/hare/libexec/build-ees-ha-sspl
+         args:
+            - /var/lib/hare/build-ees-ha-args.yaml
+
+    ha-cleanup:
+         script: /opt/seagate/eos/hare/libexec/prov-ha-sspl-reset
+         args: null
 
 support_bundle:
     - /opt/seagate/eos/sspl/bin/sspl_bundle_generate

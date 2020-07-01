@@ -5,9 +5,12 @@
 
 2. Initialization of SSPL
     - Make sure rabbitmq is installed on both the nodes.
+    - Make sure consul service is running on nodes.
 
     - If system is not provisioned, execute following steps to initialize SSPL:
-        /opt/seagate/eos/sspl/bin/sspl_post_install -p EES
+      - Create and use consul binary if consul is not running already.
+        /opt/seagate/eos/sspl/bin/sspl_setup_consul
+        /opt/seagate/eos/sspl/bin/sspl_post_install -p <EES|ECS>
         /opt/seagate/eos/sspl/bin/sspl_setup_init -r eos
         /opt/seagate/eos/sspl/bin/sspl_config
         systemctl start sspl-ll.service
