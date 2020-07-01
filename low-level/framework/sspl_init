@@ -202,9 +202,9 @@ config_sspl() {
 
     # Add sspl-ll user to required groups and sudoers file etc.
     echo "Initializing SSPL configuration ... "
-    /opt/seagate/$PRODUCT_FAMILY/sspl/bin/sspl_reinit $product || {
+    $SSPL_BASE_DIR/bin/sspl_reinit $product || {
         reinit_err="$?";
-        echo -n "/opt/seagate/$PRODUCT_FAMILY/sspl/bin/sspl_reinit failed ";
+        echo -n "$SSPL_BASE_DIR/bin/sspl_reinit failed ";
         echo "with exit code ${reinit_err} for product $product";
         exit 1;
     }
@@ -214,9 +214,9 @@ config_sspl() {
 
     # Add required user and vhost to RabbitMQ. Set user permissions etc.
     echo "Creating required RABBITMQ configuration.... "
-    /opt/seagate/$PRODUCT_FAMILY/sspl/bin/sspl_rabbitmq_reinit $product || {
+    $SSPL_BASE_DIR/bin/sspl_rabbitmq_reinit $product || {
         reinit_err="$?";
-        echo -n "/opt/seagate/$PRODUCT_FAMILY/sspl/bin/sspl_rabbitmq_reinit failed ";
+        echo -n "$SSPL_BASE_DIR/bin/sspl_rabbitmq_reinit failed ";
         echo "with exit code ${reinit_err} for product $product";
         exit 1;
     }

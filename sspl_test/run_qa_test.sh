@@ -49,12 +49,12 @@ pre_requisites()
     cp -Rp $script_dir/ipmi_simulator/ipmisimtool /usr/bin
     touch /tmp/activate_ipmisimtool
     # Backup /opt/seagate/<product>/sspl/bin/consul data before deleting
-    /opt/seagate/$PRODUCT_FAMILY/sspl/bin/consul kv export var/$PRODUCT_FAMILY/sspl/data/ > /tmp/consul_backup.json
+    $CONSUL_PATH/consul kv export var/$PRODUCT_FAMILY/sspl/data/ > /tmp/consul_backup.json
 
     # clearing /opt/seagate/<product>/sspl/bin/consul keys.
-    /opt/seagate/$PRODUCT_FAMILY/sspl/bin/consul kv delete -recurse var/$PRODUCT_FAMILY/sspl/data
+    $CONSUL_PATH/consul kv delete -recurse var/$PRODUCT_FAMILY/sspl/data
     # clearing consul keys.
-    /opt/seagate/$PRODUCT_FAMILY/sspl/bin/consul kv delete -recurse var/$PRODUCT_FAMILY/sspl/data
+    $CONSUL_PATH/consul kv delete -recurse var/$PRODUCT_FAMILY/sspl/data
 
 }
 
@@ -92,16 +92,16 @@ restore_cfg_services()
         sed -i 's/site_id='"$site_id"'/site_id=001/g' /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/conf/sspl_tests.conf
         sed -i 's/cluster_id='"$cluster_id"'/cluster_id=001/g' /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/conf/sspl_tests.conf
     else
-        /opt/seagate/$PRODUCT_FAMILY/sspl/bin/consul kv put sspl/config/STORAGE_ENCLOSURE/controller/primary_mc/ip $primary_ip
-        port=$(/opt/seagate/$PRODUCT_FAMILY/sspl/bin/consul kv get sspl/config/STORAGE_ENCLOSURE/controller/primary_mc/port)
+        $CONSUL_PATH/consul kv put sspl/config/STORAGE_ENCLOSURE/controller/primary_mc/ip $primary_ip
+        port=$($CONSUL_PATH/consul kv get sspl/config/STORAGE_ENCLOSURE/controller/primary_mc/port)
         if [ "$port" == "$MOCK_SERVER_PORT" ]
         then
-            /opt/seagate/$PRODUCT_FAMILY/sspl/bin/consul kv put sspl/config/STORAGE_ENCLOSURE/controller/primary_mc/port $primary_port
+            $CONSUL_PATH/consul kv put sspl/config/STORAGE_ENCLOSURE/controller/primary_mc/port $primary_port
         fi
-        /opt/seagate/$PRODUCT_FAMILY/sspl/bin/consul kv put sspl_test/config/SYSTEM_INFORMATION/node_id '001'
-        /opt/seagate/$PRODUCT_FAMILY/sspl/bin/consul kv put sspl_test/config/SYSTEM_INFORMATION/site_id '001'
-        /opt/seagate/$PRODUCT_FAMILY/sspl/bin/consul kv put sspl_test/config/SYSTEM_INFORMATION/rack_id '001'
-        /opt/seagate/$PRODUCT_FAMILY/sspl/bin/consul kv put sspl_test/config/SYSTEM_INFORMATION/cluster_id '001'
+        $CONSUL_PATH/consul kv put sspl_test/config/SYSTEM_INFORMATION/node_id '001'
+        $CONSUL_PATH/consul kv put sspl_test/config/SYSTEM_INFORMATION/site_id '001'
+        $CONSUL_PATH/consul kv put sspl_test/config/SYSTEM_INFORMATION/rack_id '001'
+        $CONSUL_PATH/consul kv put sspl_test/config/SYSTEM_INFORMATION/cluster_id '001'
     fi
 
     echo "Stopping mock server"
@@ -120,8 +120,8 @@ restore_cfg_services()
     rm -f /tmp/activate_ipmisimtool
 
     # Restore /opt/seagate/<product>/sspl/bin/consul data
-    /opt/seagate/$PRODUCT_FAMILY/sspl/bin/consul kv delete -recurse var/$PRODUCT_FAMILY/sspl/data
-    /opt/seagate/$PRODUCT_FAMILY/sspl/bin/consul kv import @/tmp/consul_backup.json
+    $CONSUL_PATH/consul kv delete -recurse var/$PRODUCT_FAMILY/sspl/data
+    $CONSUL_PATH/consul kv import @/tmp/consul_backup.json
     $sudo rm -f /tmp/consul_backup.json
 }
 
@@ -155,12 +155,12 @@ python3 $script_dir/put_config_to_consul.py
 # change the port to $MOCK_SERVER_PORT as mock_server runs on $MOCK_SERVER_PORT
 if [ "$SSPL_STORE_TYPE" == "consul" ]
 then
-    primary_ip=$(/opt/seagate/$PRODUCT_FAMILY/sspl/bin/consul kv get sspl/config/STORAGE_ENCLOSURE/controller/primary_mc/ip)
-    /opt/seagate/$PRODUCT_FAMILY/sspl/bin/consul kv put sspl/config/STORAGE_ENCLOSURE/controller/primary_mc/ip $MOCK_SERVER_IP
-    primary_port=$(/opt/seagate/$PRODUCT_FAMILY/sspl/bin/consul kv get sspl/config/STORAGE_ENCLOSURE/controller/primary_mc/port)
+    primary_ip=$($CONSUL_PATH/consul kv get sspl/config/STORAGE_ENCLOSURE/controller/primary_mc/ip)
+    $CONSUL_PATH/consul kv put sspl/config/STORAGE_ENCLOSURE/controller/primary_mc/ip $MOCK_SERVER_IP
+    primary_port=$($CONSUL_PATH/consul kv get sspl/config/STORAGE_ENCLOSURE/controller/primary_mc/port)
     if [ "$primary_port" != "$MOCK_SERVER_PORT" ]
     then
-        /opt/seagate/$PRODUCT_FAMILY/sspl/bin/consul kv put sspl/config/STORAGE_ENCLOSURE/controller/primary_mc/port $MOCK_SERVER_PORT
+        $CONSUL_PATH/consul kv put sspl/config/STORAGE_ENCLOSURE/controller/primary_mc/port $MOCK_SERVER_PORT
     fi
 else
     primary_port=$(sed -n -e '/primary_controller_port/ s/.*\= *//p' /etc/sspl.conf)
@@ -183,14 +183,14 @@ $script_dir/mock_server &
 # Restart SSPL to re-read configuration
 if [ "$SSPL_STORE_TYPE" == "consul" ]
 then
-    transmit_interval=$(/opt/seagate/$PRODUCT_FAMILY/sspl/bin/consul kv get sspl/config/NODEDATAMSGHANDLER/transmit_interval)
-    disk_usage_threshold=$(/opt/seagate/$PRODUCT_FAMILY/sspl/bin/consul kv get sspl/config/NODEDATAMSGHANDLER/disk_usage_threshold)
-    host_memory_usage_threshold=$(/opt/seagate/$PRODUCT_FAMILY/sspl/bin/consul kv get sspl/config/NODEDATAMSGHANDLER/host_memory_usage_threshold)
-    cpu_usage_threshold=$(/opt/seagate/$PRODUCT_FAMILY/sspl/bin/consul kv get sspl/config/NODEDATAMSGHANDLER/cpu_usage_threshold)
-    rack_id=$(/opt/seagate/$PRODUCT_FAMILY/sspl/bin/consul kv get system_information/rack_id)
-    site_id=$(/opt/seagate/$PRODUCT_FAMILY/sspl/bin/consul kv get system_information/site_id)
-    node_id=$(/opt/seagate/$PRODUCT_FAMILY/sspl/bin/consul kv get system_information/srvnode-1/node_id)
-    cluster_id=$(/opt/seagate/$PRODUCT_FAMILY/sspl/bin/consul kv get system_information/cluster_id)
+    transmit_interval=$($CONSUL_PATH/consul kv get sspl/config/NODEDATAMSGHANDLER/transmit_interval)
+    disk_usage_threshold=$($CONSUL_PATH/consul kv get sspl/config/NODEDATAMSGHANDLER/disk_usage_threshold)
+    host_memory_usage_threshold=$($CONSUL_PATH/consul kv get sspl/config/NODEDATAMSGHANDLER/host_memory_usage_threshold)
+    cpu_usage_threshold=$($CONSUL_PATH/consul kv get sspl/config/NODEDATAMSGHANDLER/cpu_usage_threshold)
+    rack_id=$($CONSUL_PATH/consul kv get system_information/rack_id)
+    site_id=$($CONSUL_PATH/consul kv get system_information/site_id)
+    node_id=$($CONSUL_PATH/consul kv get system_information/srvnode-1/node_id)
+    cluster_id=$($CONSUL_PATH/consul kv get system_information/cluster_id)
 else
     transmit_interval=$(sed -n -e '/transmit_interval/ s/.*\= *//p' /etc/sspl.conf)
     disk_usage_threshold=$(sed -n -e '/disk_usage_threshold/ s/.*\= *//p' /etc/sspl.conf)
@@ -210,10 +210,10 @@ if [ "$SSPL_STORE_TYPE" == "consul" ]
 then
     # Update consul with updated System Information
     # append above parsed key-value pairs in consul under [SYSTEM_INFORMATION] section
-    /opt/seagate/$PRODUCT_FAMILY/sspl/bin/consul kv put sspl_test/config/SYSTEM_INFORMATION/node_id $node_id
-    /opt/seagate/$PRODUCT_FAMILY/sspl/bin/consul kv put sspl_test/config/SYSTEM_INFORMATION/site_id $site_id
-    /opt/seagate/$PRODUCT_FAMILY/sspl/bin/consul kv put sspl_test/config/SYSTEM_INFORMATION/rack_id $rack_id
-    /opt/seagate/$PRODUCT_FAMILY/sspl/bin/consul kv put sspl_test/config/SYSTEM_INFORMATION/cluster_id $cluster_id
+    $CONSUL_PATH/consul kv put sspl_test/config/SYSTEM_INFORMATION/node_id $node_id
+    $CONSUL_PATH/consul kv put sspl_test/config/SYSTEM_INFORMATION/site_id $site_id
+    $CONSUL_PATH/consul kv put sspl_test/config/SYSTEM_INFORMATION/rack_id $rack_id
+    $CONSUL_PATH/consul kv put sspl_test/config/SYSTEM_INFORMATION/cluster_id $cluster_id
 else
     # Update sspl_tests.conf with updated System Information
     # append above parsed key-value pairs in sspl_tests.conf under [SYSTEM_INFORMATION] section
