@@ -76,7 +76,7 @@ cp -R $SSPL_BASE_DIR/resources/iem/iec_mapping/* $PRODUCT_BASE_DIR/iem/iec_mappi
 
 # Running script for fetching the config using salt and feeding values to consul
 $script_dir/sspl_fetch_config_from_salt.py $ENVIRONMENT $PRODUCT
- 
+
 # Configure rabbitmq
 $script_dir/rabbitmq_setup
 

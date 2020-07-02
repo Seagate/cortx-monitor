@@ -28,12 +28,12 @@ SSPL_CONFIGURED="/var/$PRODUCT_FAMILY/sspl/sspl-configured"
 
 usage() {
     cat << EOF
-$SCRIPT_NAME [{config [-f] [-r <ssu|gw|cmu|vm>] [-c <true|false>] [-n <srvmod1,srvnode2>]}]
+$SCRIPT_NAME [{config [-f] [-r <ssu|gw|cmu|vm>] [-c <true|false>] [-s <srvnode-2 hostname>]}]
 config options:
     -f  Force reinitialization. Do not prompt
     -r  Role to be configured on the current node
     -c  Cluster setup for rabbitmq required(yes|no)
-    -s  Secondary node to add into rabbitmq cluster
+    -s  Secondary node that add into rabbitmq cluster
 EOF
     exit 1
 }
@@ -43,9 +43,9 @@ config_sspl() {
     force=0
     role=
     rmq_cluster=false
-    rmq_cluster_node=
+    srvnode2=
 
-    while getopts ":f:r:c:n:" OPTION; do
+    while getopts ":f:r:c:s:" OPTION; do
         case $OPTION in
             f )
                 force=1
@@ -59,10 +59,10 @@ config_sspl() {
                 rmq_cluster=$OPTARG
                 existing_cluster_nodes=`$CONSUL_PATH/consul kv get sspl/config/RABBITMQCLUSTER/cluster_nodes`
                 nodes=`echo $existing_cluster_nodes | tr "," " " | wc -w`
-                [ "$nodes" == "2" ] && rmq_cluster=false
+                [ "$nodes" == "2" ] && rc_primary_node=`echo $existing_cluster_nodes | cut -d"," -f2`
                 ;;
-            n )
-                rmq_cluster_node=$OPTARG
+            s )
+                srvnode2=$OPTARG
                 ;;
             * )
                 usage
@@ -169,8 +169,10 @@ esac
 
 # Updating RabbitMQ cluster nodes.
 if [ "$product" == "ECS" ]; then
-    if [ "$rmq_cluster" == true ] & [ -n "$rmq_cluster_node" ]; then
-        [ "$nodes" == "1" ] && rmq_primary_node=$existing_cluster_nodes && existing_cluster_nodes=$rmq_cluster_node,$rmq_primary_node
+    if [ "$rmq_cluster" == true ] & [ -n "$srvnode2" ]; then
+        [ "$nodes" == "1" ] && srvnode1=$existing_cluster_nodes
+        [ "$nodes" == "2" ] && srvnode1=$rc_primary_node
+        existing_cluster_nodes=$srvnode2,$srvnode1
         $CONSUL_PATH/consul kv put sspl/config/RABBITMQCLUSTER/cluster_nodes $existing_cluster_nodes
     fi
 else
