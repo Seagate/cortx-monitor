@@ -4,26 +4,26 @@ core_processors=RabbitMQegressProcessor, RabbitMQingressProcessor, LoggingProces
 
 message_handlers=DiskMsgHandler, LoggingMsgHandler, ServiceMsgHandler, NodeDataMsgHandler, NodeControllerMsgHandler, RealStorEnclMsgHandler, RealStorActuatorMsgHandler
 
-sensors=ServiceWatchdog, RAIDsensor, NodeData, RealStorFanSensor, RealStorPSUSensor, RealStorControllerSensor, RealStorDiskSensor, RealStorSideplaneExpanderSensor, RealStorLogicalVolumeSensor, IEMSensor, NodeHWsensor, RealStorEnclosureSensor, SASPortSensor, MemFaultSensor
+sensors=ServiceWatchdog, RAIDsensor, NodeData, RealStorFanSensor, RealStorPSUSensor, RealStorControllerSensor, RealStorDiskSensor, RealStorSideplaneExpanderSensor, RealStorLogicalVolumeSensor, IEMSensor, NodeHWsensor, RealStorEnclosureSensor, SASPortSensor, MemFaultSensor, CPUFaultSensor
 
 actuators=Service, RAIDactuator, Smartctl, NodeHWactuator, RealStorActuator
 
 # List of modules to run in degraded mode
-degraded_state_modules=ServiceWatchdog, RAIDsensor, NodeData, IEMSensor, NodeHWsensor, DiskMsgHandler, LoggingMsgHandler, ServiceMsgHandler, NodeDataMsgHandler, NodeControllerMsgHandler, RealStorActuatorMsgHandler, SASPortSensor, MemFaultSensor
+degraded_state_modules=ServiceWatchdog, RAIDsensor, NodeData, IEMSensor, NodeHWsensor, DiskMsgHandler, LoggingMsgHandler, ServiceMsgHandler, NodeDataMsgHandler, NodeControllerMsgHandler, RealStorActuatorMsgHandler, SASPortSensor, MemFaultSensor, CPUFaultSensor
 
 [SYSTEM_INFORMATION]
 operating_system=centos7
 product=ECS
 cli_type=CS-A
-setup=eos
-data_path=/var/eos/sspl/data/
+setup=cortx
+data_path=/var/cortx/sspl/data/
 cluster_id=001
 site_id=001
 rack_id=001
 node_id=001
 # Possible log levels are CRITICAL, ERROR, WARNING, INFO, DEBUG and NOTSET
 log_level=INFO
-sspl_log_file_path=/var/log/eos/sspl/sspl.log
+sspl_log_file_path=/var/log/cortx/sspl/sspl.log
 syslog_host=localhost
 syslog_port=514
 
@@ -107,6 +107,14 @@ RAID_status_file=/proc/mdstat
 user=admin
 pass=admin
 
+[BMC_INTERFACE]
+system=kcs
+lan=rmcp
+default=system
+bmc_lan_ip=
+bmc_lan_user=ADMIN
+bmc_lan_passwd=ADMIN
+
 [SMTPSETTING]
 smptserver=mailhost.seagate.com
 recipient=malhar.vora@seagate.com
@@ -161,8 +169,8 @@ threaded=true
 
 [IEMSENSOR]
 threaded=true
-log_file_path=/var/log/eos/iem/iem_messages
-timestamp_file_path=/var/eos/sspl/data/iem/last_processed_msg_time
+log_file_path=/var/log/cortx/iem/iem_messages
+timestamp_file_path=/var/cortx/sspl/data/iem/last_processed_msg_time
 
 [SYSTEMDWATCHDOG]
 threaded=true
@@ -183,5 +191,9 @@ threaded=true
 probe=sysfs
 
 [MEMFAULTSENSOR]
+threaded=true
+probe=sysfs
+
+[CPUFAULTSENSOR]
 threaded=true
 probe=sysfs

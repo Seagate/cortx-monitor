@@ -7,11 +7,11 @@ except Exception as e:
     from framework.utils.salt_util import node_id, consulhost, consulport
 
 PRODUCT_NAME = 'EES'
-PRODUCT_FAMILY = 'eos'
+PRODUCT_FAMILY = 'cortx'
 enabled_products = ["CS-A", "SINGLE", "EES", "ECS"]
 cs_products = ["CS-A"]
 cs_legacy_products = ["CS-L", "CS-G"]
-setups = ["eos"]
+setups = ["cortx"]
 RESOURCE_PATH = f"/opt/seagate/{PRODUCT_FAMILY}/sspl/resources/"
 CLI_RESOURCE_PATH = f"/opt/seagate/{PRODUCT_FAMILY}/sspl/cli"
 DATA_PATH = f"/var/{PRODUCT_FAMILY}/sspl/data/"

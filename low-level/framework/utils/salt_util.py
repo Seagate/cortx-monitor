@@ -40,15 +40,34 @@ class SaltInterface:
             logger.warning(f"Can't read node id, using 'srvnode-1' : {e}")
         return node_key
 
+    def is_single_node(self):
+        """
+        Returns true if single node, false otherwise
+        """
+        is_single_node = True
+        try:
+            SALT_CMD = "sudo salt-call pillar.get cluster:type --output=newline_values_only"
+            subout = subprocess.Popen(SALT_CMD, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            result = subout.stdout.readlines()
+            if result == [] or result == "":
+                logger.warning("Cluster type fetch failed, assuming single node setup.")
+            else:
+                if result[0].decode().rstrip('\n') != "single":
+                    is_single_node = False
+        except Exception as e:
+            logger.warning(f"Cluster type read failed, assuming single node setup : {e}")
+        return is_single_node
+
     def get_consul_vip(self, node_name):
         """
         Returns IP used to connect to Consul
         """
         is_env_vm = self.utility.is_env_vm()
+        is_single_node = self.is_single_node()
         # Initialize to localhost
         consul_vip = "127.0.0.1"
-        # Get vip if not a vm, default to localhost otherwise
-        if not is_env_vm:
+        # Get vip if not a vm or single node, default to localhost otherwise
+        if not is_env_vm and not is_single_node:
             # Read vip from cluster.sls
             try:
                 SALT_CMD = f"sudo salt-call pillar.get cluster:{node_name}:network:data_nw:roaming_ip --output=newline_values_only"

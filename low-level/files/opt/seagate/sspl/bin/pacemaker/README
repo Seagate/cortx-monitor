@@ -8,17 +8,15 @@
     - Make sure consul service is running on nodes.
 
     - If system is not provisioned, execute following steps to initialize SSPL:
-      - Create and use consul binary if consul is not running already.
-        /opt/seagate/eos/sspl/bin/sspl_setup_consul
-        /opt/seagate/eos/sspl/bin/sspl_post_install -p <EES|ECS>
-        /opt/seagate/eos/sspl/bin/sspl_setup_init -r eos
-        /opt/seagate/eos/sspl/bin/sspl_config
+        /opt/seagate/cortx/sspl/bin/sspl_post_install -p EES
+        /opt/seagate/cortx/sspl/bin/sspl_setup_init -r eos
+        /opt/seagate/cortx/sspl/bin/sspl_config
         systemctl start sspl-ll.service
         systemctl start rabbitmq-server.service
 
 3. Installation of SSPL resource agent script
     - Copy Resource Agent script from
-      "cp /opt/seagate/eos/sspl/bin/pacemaker/sspl_stateful_resource_agent /lib/ocf/resource.d/<provider>/sspl_stateful_resource_agent"
+      "cp /opt/seagate/cortx/sspl/bin/pacemaker/sspl_stateful_resource_agent /lib/ocf/resource.d/<provider>/sspl_stateful_resource_agent"
 
 4. Creation of the SSPL resource (Master/Slave approach)
     - "pcs resource create sspl ocf:<provider>:sspl_stateful_resource_agent master meta migration-threshold=10 failure-timeout=10"
