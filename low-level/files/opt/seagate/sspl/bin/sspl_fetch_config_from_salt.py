@@ -19,10 +19,9 @@ import sys
 import salt.client
 import consul
 from configparser import ConfigParser
-from sspl_constants import component, salt_provisioner_pillar_sls, CONSUL_HOST, CONSUL_PORT, \
-     salt_uniq_attr_per_node, salt_uniq_passwd_per_node, COMMON_CONFIGS, OperatingSystem, \
-     enabled_products, SSPL_CONFIGS, setups, DATA_PATH, NODE_ID, SITE_ID, RACK_ID, SYSLOG_HOST, SYSLOG_PORT, \
-     node_key_id
+from sspl_constants import (component, salt_provisioner_pillar_sls, CONSUL_HOST, CONSUL_PORT,salt_uniq_attr_per_node,
+    salt_uniq_passwd_per_node, COMMON_CONFIGS, OperatingSystem,enabled_products, SSPL_CONFIGS, setups, DATA_PATH,NODE_ID,
+    SITE_ID, RACK_ID, SYSLOG_HOST, SYSLOG_PORT,node_key_id)
 
 
 class SaltConfig(object):
@@ -61,6 +60,17 @@ class SaltConfig(object):
                 self.consul_conn.kv.put(component + '/' + 'RABBITMQCLUSTER' + '/' + k, new_rabbitmqcluster_conf[k])
             elif k == 'erlang_cookie':
                 self.consul_conn.kv.put(component + '/' + 'RABBITMQCLUSTER' + '/' + k, new_rabbitmqcluster_conf[k])
+
+        # read cluster.sls and fetch bmc config for node
+        new_cluster_conf = salt.client.Caller().function('pillar.get', 'cluster')
+        BMC_CONFIG = [v.get('bmc') for k,v in new_cluster_conf.items() if node_key_id == k]
+        for k,v in BMC_CONFIG[0].items():
+            if k == 'ip':
+                self.consul_conn.kv.put(component + '/' + 'BMC_INTERFACE' + '/' + k, v)
+            elif k == 'user':
+                self.consul_conn.kv.put(component + '/' + 'BMC_INTERFACE' + '/' + k, v)
+            elif k == 'secret':
+                self.consul_conn.kv.put(component + '/' + 'BMC_INTERFACE' + '/' + k, v)
 
     def insert_dev_common_config(self, product):
         try:

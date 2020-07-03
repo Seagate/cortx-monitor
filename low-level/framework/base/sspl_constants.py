@@ -6,7 +6,7 @@ try:
 except Exception as e:
     from framework.utils.salt_util import node_id, consulhost, consulport
 
-PRODUCT_NAME = 'EES'
+PRODUCT_NAME = 'ECS'
 PRODUCT_FAMILY = 'cortx'
 enabled_products = ["CS-A", "SINGLE", "EES", "ECS"]
 cs_products = ["CS-A"]
@@ -102,6 +102,7 @@ class StoreTypes(Enum):
 class ServiceTypes(Enum):
     RABBITMQ = "rabbitmq"
     STORAGE_ENCLOSURE = "storage_enclosure"
+    CLUSTER = "cluster"
 
 class OperatingSystem(Enum):
     CENTOS7 = "centos7"
