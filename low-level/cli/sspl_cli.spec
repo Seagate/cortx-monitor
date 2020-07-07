@@ -13,7 +13,7 @@ Group:		System Management
 License:	Seagate Proprietary
 URL:		http://gerrit.mero.colo.seagate.com:8080/#/admin/projects/sspl
 Source0:	%{name}-%{version}.tgz
-Requires:   %{product_family}-sspl
+Requires:   %{product_family}-sspl = %{version}-%{release}
 BuildRoot:	%(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 
 %description
