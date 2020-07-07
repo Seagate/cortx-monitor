@@ -68,10 +68,10 @@ class IEMDataMsg(BaseSensorMsg):
                     "alert_type": info.get("alert_type"),
                     "severity": info.get("severity"),
                     "specific_info": {
-                        "source_id": info.get("source_id"),
-                        "component_id": info.get("component_id"),
-                        "module_id": info.get("module_id"),
-                        "event_id": info.get("event_id"),
+                        "source": info.get("source_id"),
+                        "component": info.get("component_id"),
+                        "module": info.get("module_id"),
+                        "event": info.get("event_id"),
                         "description": info.get("description"),
                         "IEC": info.get("IEC")
                     },
