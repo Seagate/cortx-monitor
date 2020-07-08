@@ -22,6 +22,7 @@ import traceback
 import errno
 import re
 import argparse
+from generate_test_report import generate_html_report
 
 # Adding sspl and sspl_test path
 test_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -29,9 +30,11 @@ os.sys.path.append(os.path.join(test_path))
 
 from sspl_test.common import TestFailed, init_rabbitMQ_msg_processors, stop_rabbitMQ_msg_processors
 
+found_fail = False
+result = {}
+
 def tmain(argp, argv):
 
-    result = {}
     # Import required TEST modules
     ts_path = os.path.dirname(argv)
     os.sys.path.append(os.path.join(ts_path, '..', '..'))
@@ -69,6 +72,7 @@ def tmain(argp, argv):
             print('FAILED: Error: %s #@#@#@' %e)
             fail_count += 1
             result.update({ts: {"Fail": 0}})
+            found_fail = True
             continue
 
         # Actual test execution
@@ -87,6 +91,7 @@ def tmain(argp, argv):
                 print('    %s\n' %e)
                 fail_count += 1
                 result.update({ts: {"Fail": 0}})
+                found_fail = True
 
     # View of consolidated test suite status
     print('\n', '*'*80)
@@ -113,8 +118,8 @@ if __name__ == '__main__':
         args = argParser.parse_args()
         init_rabbitMQ_msg_processors()
         tmain(args, sys.argv[0])
+        generate_html_report(result)
         stop_rabbitMQ_msg_processors()
     except Exception as e:
         print(e, traceback.format_exc())
         stop_rabbitMQ_msg_processors()
-
