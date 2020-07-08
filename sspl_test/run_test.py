@@ -30,6 +30,8 @@ os.sys.path.append(os.path.join(test_path))
 from sspl_test.common import TestFailed, init_rabbitMQ_msg_processors, stop_rabbitMQ_msg_processors
 
 def tmain(argp, argv):
+
+    result = {}
     # Import required TEST modules
     ts_path = os.path.dirname(argv)
     os.sys.path.append(os.path.join(ts_path, '..', '..'))
@@ -66,6 +68,7 @@ def tmain(argp, argv):
         except Exception as e:
             print('FAILED: Error: %s #@#@#@' %e)
             fail_count += 1
+            result.update({ts: {"Fail": 0}})
             continue
 
         # Actual test execution
@@ -77,17 +80,26 @@ def tmain(argp, argv):
                 duration = time.time() - start_time
                 print('%s:%s: PASSED (Time: %ds)' %(ts, test.__name__, duration))
                 pass_count += 1
+                result.update({ts: {"Pass": duration}})
 
             except (TestFailed, Exception) as e:
                 print('%s:%s: FAILED #@#@#@' %(ts, test.__name__))
                 print('    %s\n' %e)
                 fail_count += 1
+                result.update({ts: {"Fail": 0}})
+
+    # View of consolidated test suite status
+    print('\n', '*'*80)
+    print('{:56} {:10} {:10}'.format("TestSuite", "Status", "Duration(secs)"))
+    print('*'*80)
+    for k,v in result.items():
+        print('{:56} {:10} {:10}s'.format(k, list(v.keys())[0], int(list(v.values())[0])))
 
     duration = time.time() - ts_start_time
-    print('\n***************************************')
+    print('\n***********************************************')
     print('TestSuite:%d Tests:%d Passed:%d Failed:%d TimeTaken:%ds' \
         %(ts_count, test_count, pass_count, fail_count, duration))
-    print('***************************************')
+    print('************************************************')
 
 if __name__ == '__main__':
     try:
@@ -105,3 +117,4 @@ if __name__ == '__main__':
     except Exception as e:
         print(e, traceback.format_exc())
         stop_rabbitMQ_msg_processors()
+
