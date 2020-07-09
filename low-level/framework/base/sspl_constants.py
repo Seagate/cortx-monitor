@@ -72,6 +72,18 @@ salt_provisioner_pillar_sls = 'sspl'
 salt_uniq_attr_per_node = ['cluster_id']
 salt_uniq_passwd_per_node = ['RABBITMQINGRESSPROCESSOR', 'RABBITMQEGRESSPROCESSOR', 'LOGGINGPROCESSOR']
 
+class RaidData(Enum):
+    DEVICE_ARRAY = ['md0','md1', 'md2']
+    DIR = "/sys/block/"
+    SYNC_ACTION_FILE = "/md/sync_action"
+    MISMATCH_COUNT_FILE = "/md/mismatch_cnt"
+    STATE_COMMAND_RESPONSE = 'idle'
+    MISMATCH_COUNT_RESPONSE = '0'
+    RAID_RESULT_FILE_PATH = "/tmp/result_raid_health_file.txt"
+    RAID_CHECK = True
+    PRIORITY = 1
+
+
 class AlertTypes(Enum):
     GET = "get"
     FAULT = "fault"

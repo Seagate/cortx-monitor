@@ -26,6 +26,7 @@ from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.sspl_constants import COMMON_CONFIGS
 from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
+from framework.utils.validate_raid_data import RAIDSensorValidate
 
 # Modules that receive messages from this module
 from message_handlers.node_data_msg_handler import NodeDataMsgHandler
@@ -151,6 +152,9 @@ class RAIDsensor(SensorThread, InternalMsgQ):
         # self._set_debug_persist(True)
 
         try:
+            # Validate the RAID data
+            RAIDSensorValidate().run()
+
             # Check for a change in status file and notify the node data msg handler
             self._notify_NodeDataMsgHandler()
         except Exception as ae:
