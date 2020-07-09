@@ -64,7 +64,7 @@ def generate_html_report(test_result):
         time_taken += duration
     footer = footer_template.format(overall_status, total_ts, total_ts-total_failed, total_failed, time_taken)
     html = header_template + result_table + footer
-    with open('/tmp/test_result.html', 'w') as fObj:
+    with open('/tmp/sspl_test_result.html', 'w') as fObj:
         fObj.write(html)
 
 

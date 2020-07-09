@@ -30,7 +30,6 @@ os.sys.path.append(os.path.join(test_path))
 
 from sspl_test.common import TestFailed, init_rabbitMQ_msg_processors, stop_rabbitMQ_msg_processors
 
-found_fail = False
 result = {}
 
 def tmain(argp, argv):
@@ -72,7 +71,6 @@ def tmain(argp, argv):
             print('FAILED: Error: %s #@#@#@' %e)
             fail_count += 1
             result.update({ts: {"Fail": 0}})
-            found_fail = True
             continue
 
         # Actual test execution
@@ -91,7 +89,6 @@ def tmain(argp, argv):
                 print('    %s\n' %e)
                 fail_count += 1
                 result.update({ts: {"Fail": 0}})
-                found_fail = True
 
     # View of consolidated test suite status
     print('\n', '*'*80)
