@@ -91,17 +91,17 @@ def tmain(argp, argv):
                 result.update({ts: {"Fail": 0}})
 
     # View of consolidated test suite status
-    print('\n', '*'*80)
-    print('{:56} {:10} {:10}'.format("TestSuite", "Status", "Duration(secs)"))
-    print('*'*80)
+    print('\n', '*'*90)
+    print('{:60} {:10} {:10}'.format("TestSuite", "Status", "Duration(secs)"))
+    print('*'*90)
     for k,v in result.items():
-        print('{:56} {:10} {:10}s'.format(k, list(v.keys())[0], int(list(v.values())[0])))
+        print('{:60} {:10} {:10}s'.format(k, list(v.keys())[0], int(list(v.values())[0])))
 
     duration = time.time() - ts_start_time
-    print('\n***********************************************')
+    print('\n****************************************************')
     print('TestSuite:%d Tests:%d Passed:%d Failed:%d TimeTaken:%ds' \
         %(ts_count, test_count, pass_count, fail_count, duration))
-    print('************************************************')
+    print('******************************************************')
 
 if __name__ == '__main__':
     try:
