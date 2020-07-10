@@ -170,9 +170,8 @@ esac
 # Updating RabbitMQ cluster nodes.
 if [ "$product" == "ECS" ]; then
     if [ "$rmq_cluster" == true ] & [ -n "$srvnode2" ]; then
-        [ "$nodes" == "1" ] && srvnode1=$existing_cluster_nodes
-        [ "$nodes" == "2" ] && srvnode1=$rc_primary_node
-        existing_cluster_nodes=$srvnode2,$srvnode1
+        [ "$nodes" == "1" ] && existing_cluster_nodes=$srvnode2,$existing_cluster_nodes
+        [ "$nodes" == "2" ] && existing_cluster_nodes=$srvnode2,$rc_primary_node
         $CONSUL_PATH/consul kv put sspl/config/RABBITMQCLUSTER/cluster_nodes $existing_cluster_nodes
     fi
 else

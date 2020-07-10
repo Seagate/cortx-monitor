@@ -210,7 +210,7 @@ config_sspl() {
     }
 
     # Create /tmp/dcs/hpi if required
-    [ "$role" != "eos" ] && [ ! -d "/tmp/dcs/hpi" ] && mkdir -p /tmp/dcs/hpi && id -u zabbix > /dev/null 2>&1 && chown zabbix:zabbix /tmp/dcs/hpi
+    [ "$role" != "cortx" ] && [ ! -d "/tmp/dcs/hpi" ] && mkdir -p /tmp/dcs/hpi && id -u zabbix > /dev/null 2>&1 && chown zabbix:zabbix /tmp/dcs/hpi
 
     # Add required user and vhost to RabbitMQ. Set user permissions etc.
     echo "Creating required RABBITMQ configuration.... "
