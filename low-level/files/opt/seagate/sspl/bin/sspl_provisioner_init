@@ -11,10 +11,11 @@ set -e -u -o pipefail
 
 SCRIPT_DIR=$(dirname $0)
 SCRIPT_NAME=$(basename $0)
+PRODUCT_NAME=
 
 . $SCRIPT_DIR/bin/constants.sh
 
-rmq_cluster=false
+rmq_cluster=true
 srvnode2=
 
 usage() {
@@ -125,5 +126,5 @@ if [ "$PRODUCT_NAME" == "ECS" ]; then
 else
     $SCRIPT_DIR/bin/sspl_config
 fi
-$SCRIPT_DIR/bin/sspl_setup_rabbitmq_cluster
+[ "$rmq_cluster" == true ] && $SCRIPT_DIR/bin/sspl_setup_rabbitmq_cluster
 start_req_services

@@ -23,6 +23,8 @@ EOF
     exit 1
 }
 
+ENVIRONMENT=
+
 while [ $# -gt 0 ]; do
     case $1 in
         -p )
@@ -49,6 +51,8 @@ python3 -m pip install -r $SSPL_BASE_DIR/conf/requirements.txt
 # on product/env and start SSPL with it.
 # TODO: Disable this default copy once the provisioners are ready.
 [ -f $SSPL_CONF ] || cp $SSPL_BASE_DIR/conf/sspl.conf.$PRODUCT $SSPL_CONF
+# For Dev environment
+[ "$ENVIRONMENT" == "DEV" ] && cp $SSPL_BASE_DIR/conf/sspl.conf.$PRODUCT $SSPL_CONF
 
 # Copy rsyslog configuration
 [ -f $RSYSLOG_CONF ] ||
