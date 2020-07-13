@@ -22,7 +22,6 @@ import traceback
 import errno
 import re
 import argparse
-from generate_test_report import generate_html_report
 
 # Adding sspl and sspl_test path
 test_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -30,10 +29,7 @@ os.sys.path.append(os.path.join(test_path))
 
 from sspl_test.common import TestFailed, init_rabbitMQ_msg_processors, stop_rabbitMQ_msg_processors
 
-result = {}
-
 def tmain(argp, argv):
-
     # Import required TEST modules
     ts_path = os.path.dirname(argv)
     os.sys.path.append(os.path.join(ts_path, '..', '..'))
@@ -70,7 +66,6 @@ def tmain(argp, argv):
         except Exception as e:
             print('FAILED: Error: %s #@#@#@' %e)
             fail_count += 1
-            result.update({ts: {"Fail": 0}})
             continue
 
         # Actual test execution
@@ -82,26 +77,17 @@ def tmain(argp, argv):
                 duration = time.time() - start_time
                 print('%s:%s: PASSED (Time: %ds)' %(ts, test.__name__, duration))
                 pass_count += 1
-                result.update({ts: {"Pass": duration}})
 
             except (TestFailed, Exception) as e:
                 print('%s:%s: FAILED #@#@#@' %(ts, test.__name__))
                 print('    %s\n' %e)
                 fail_count += 1
-                result.update({ts: {"Fail": 0}})
-
-    # View of consolidated test suite status
-    print('\n', '*'*90)
-    print('{:60} {:10} {:10}'.format("TestSuite", "Status", "Duration(secs)"))
-    print('*'*90)
-    for k,v in result.items():
-        print('{:60} {:10} {:10}s'.format(k, list(v.keys())[0], int(list(v.values())[0])))
 
     duration = time.time() - ts_start_time
-    print('\n****************************************************')
+    print('\n***************************************')
     print('TestSuite:%d Tests:%d Passed:%d Failed:%d TimeTaken:%ds' \
         %(ts_count, test_count, pass_count, fail_count, duration))
-    print('******************************************************')
+    print('***************************************')
 
 if __name__ == '__main__':
     try:
@@ -115,7 +101,6 @@ if __name__ == '__main__':
         args = argParser.parse_args()
         init_rabbitMQ_msg_processors()
         tmain(args, sys.argv[0])
-        generate_html_report(result)
         stop_rabbitMQ_msg_processors()
     except Exception as e:
         print(e, traceback.format_exc())
