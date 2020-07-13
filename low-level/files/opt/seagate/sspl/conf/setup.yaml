@@ -20,12 +20,12 @@ sspl:
          args:
             - reset hard -p EES
     ha:
-         script: /opt/seagate/cortx/hare/libexec/build-ees-ha-sspl
+         script: /opt/seagate/cortx/ha/conf/script/build-ees-ha-sspl
          args:
-            - /var/lib/hare/build-ees-ha-args.yaml
+            - /opt/seagate/cortx/ha/conf/build-ees-ha-args.yaml
 
     ha-cleanup:
-         script: /opt/seagate/cortx/hare/libexec/prov-ha-sspl-reset
+         script: /opt/seagate/cortx/ha/conf/script/prov-ha-sspl-reset
          args: null
 
 support_bundle:
