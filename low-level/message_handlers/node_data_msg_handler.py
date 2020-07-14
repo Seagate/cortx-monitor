@@ -16,6 +16,7 @@
 
 import json
 import time
+import subprocess
 
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
@@ -556,6 +557,37 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         # Transmit it out over rabbitMQ channel
         self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
 
+        logger.info("************before Json tyep :- %s" %(type(jsonMsg)))
+        jsonMsg_new = json.loads(jsonMsg)
+        logger.info("***************after Json type :- %s" %(type(jsonMsg_new)))
+        logger.info("jsonMsg_new :- %s" %(jsonMsg_new))     
+        nw_alert_type = jsonMsg_new.get("message").get("sensor_response_type").get("alert_type")
+        logger.info("network Type:- %s" %(nw_alert_type))
+        if nw_alert_type == "fault_resolved":
+            logger.info("inside loop")
+            rabbimq_cluster_state = self.check_rabbitmq_cluster_partition_status()
+            if rabbimq_cluster_state:
+                process = subprocess.Popen("systemctl restart rabbitmq-server", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                response, error = process.communicate()
+                rabbimq_cluster_state_after_service_restart = self.check_rabbitmq_cluster_partition_status()
+                if not rabbimq_cluster_state_after_service_restart:
+                    logger.info("partition issue has reolved")
+                else:
+                    logger.error("The issue still persisted please check the rabbitmq service log")
+
+    def check_rabbitmq_cluster_partition_status(self):
+        process = subprocess.Popen("sudo rabbitmqctl cluster_status", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        response, error = process.communicate()
+        logger.info("Response -> %s   Error -> %s" %(response, error))
+        partition_state = [each[:-1].strip() for each in (response.decode("utf-8")).split("\n")[4:-2] if each]
+        logger.info("Partition State:- %s" %(partition_state))
+        partition_list = partition_state[0].split(",")
+        is_partition = len(eval(partition_list[1][:-1]))
+        if is_partition == 0:
+            return True
+        else:
+            return False
+
     def _generate_if_data(self):
         """Create & transmit a network interface data message as defined
             by the sensor response json schema"""
@@ -619,6 +651,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                             logger.info(f"Network connection fault is resolved for interface:'{interface_name}'")
                             nw_alerts[interface_name] = self.FAULT_RESOLVED
                         self.prev_nw_status[interface_name] = nw_status
+
                 else:
                     logger.warning(f"Network connection state is:'{nw_status}', for interface:'{interface_name}'")
         except Exception as e:
