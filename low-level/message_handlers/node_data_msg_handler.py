@@ -174,6 +174,8 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         # Dict of drive path by-ids by serial number from systemd
         self._drive_byid_by_serial_number = {}
 
+        self._nw_cable_flag = False
+
         self._import_products(product)
 
     def _import_products(self, product):
@@ -535,12 +537,18 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
             self.cpu_fault = False
 
-    def _send_ifdata_json_msg(self, sensor_type, msg_sensor):
+    def _send_ifdata_json_msg(self, sensor_type, resource_id, resource_type, state, severity):
         """A resuable method for transmitting IFDataMsg to RMQ and IEM logging"""
+        ifDataMsg = IFdataMsg(self._node_sensor.host_id,
+                                self._node_sensor.local_time,
+                                self._node_sensor.if_data,
+                                resource_id,
+                                resource_type,
+                                self.site_id, self.node_id, self.cluster_id, self.rack_id, state, severity)
         # Add in uuid if it was present in the json request
         if self._uuid is not None:
-            msg_sensor.set_uuid(self._uuid)
-        jsonMsg = msg_sensor.getJson()
+            ifDataMsg.set_uuid(self._uuid)
+        jsonMsg = ifDataMsg.getJson()
         self.if_sensor_data = jsonMsg
         self.os_sensor_type[sensor_type] = self.if_sensor_data
 
@@ -560,34 +568,44 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         """Create & transmit a network interface data message as defined
             by the sensor response json schema"""
 
+        interface_fault_detected = False
+        interface_dir = {}
+
         # Notify the node sensor to update its data required for the if_data message
         successful = self._node_sensor.read_data("if_data", self._get_debug())
         if not successful:
             logger.error("NodeDataMsgHandler, _generate_if_data was NOT successful.")
         interfaces = self._node_sensor.if_data
+
         nw_alerts = self._get_nwalert(interfaces)
-        for nw_resource_id, nw_state in nw_alerts.items():
-            severity = self.severity_reader.map_severity(nw_state)
-            ifDataMsg = IFdataMsg(self._node_sensor.host_id,
-                            self._node_sensor.local_time,
-                            self._node_sensor.if_data,
-                            nw_resource_id,
-                            self.NW_RESOURCE_TYPE,
-                            self.site_id, self.node_id, self.cluster_id, self.rack_id, nw_state, severity)
-            self._send_ifdata_json_msg("nw", ifDataMsg)
 
         # Get all cable connections state and generate alert on
         # cables identified for fault detected and resolved state
         nw_cable_alerts = self._nw_cable_alert_exists(interfaces)
         for nw_cable_resource_id, state in nw_cable_alerts.items():
             severity = self.severity_reader.map_severity(state)
-            ifDataMsg = IFdataMsg(self._node_sensor.host_id,
-                            self._node_sensor.local_time,
-                            self._node_sensor.if_data,
-                            nw_cable_resource_id,
-                            self.NW_CABLE_RESOURCE_TYPE,
-                            self.site_id, self.node_id, self.cluster_id, self.rack_id, state, severity)
-            self._send_ifdata_json_msg("nw", ifDataMsg)
+
+            # Check if any nw interface fault is there because of cable pull
+            if nw_alerts and nw_alerts[nw_cable_resource_id] == state:
+                interface_fault_detected = True
+
+                # if yes, then mark the flag detection True for the respective interface
+                interface_dir[nw_cable_resource_id] = interface_fault_detected
+            # Send the cable alert
+            self._send_ifdata_json_msg("nw", nw_cable_resource_id, self.NW_CABLE_RESOURCE_TYPE, state, severity)
+
+        # Check for Nw interface fault
+        for nw_resource_id, nw_state in nw_alerts.items():
+
+            # Check if interface fault is already detected because of cable pull
+            if interface_dir.get(nw_cable_resource_id):
+                # If yes, then don't repeat the alert.
+                continue
+
+            # In no or for othe interface, send the alert
+            severity = self.severity_reader.map_severity(nw_state)
+            self._send_ifdata_json_msg("nw", nw_resource_id, self.NW_RESOURCE_TYPE, state, severity)
+
 
     def _get_nwalert(self, interfaces):
         """
@@ -645,6 +663,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     if self.prev_cable_cnxns.get(interface_name):
                         logger.warning(f"Cable connection fault is detected with '{interface_name}'")
                         identified_cables[interface_name] = self.FAULT
+                        # self._nw_cable_flag = True
                     self.prev_cable_cnxns[interface_name] = phy_link_status
             # fault resolved (Down to Up)
             elif phy_link_status == 'UP':
@@ -652,6 +671,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     if self.prev_cable_cnxns.get(interface_name):
                         logger.info(f"Cable connection fault is resolved with '{interface_name}'")
                         identified_cables[interface_name] = self.FAULT_RESOLVED
+                        # self._nw_cable_flag = False
                     self.prev_cable_cnxns[interface_name] = phy_link_status
             else:
                 logger.warning(f"Cable connection state is unknown with '{interface_name}'")

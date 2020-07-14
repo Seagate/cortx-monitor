@@ -24,12 +24,13 @@ import re
 
 from datetime import datetime
 import time
+from zope.interface import implementer
 
 from framework.base.debug import Debug
 from framework.utils.service_logging import logger
-
-from zope.interface import implementer
 from sensors.INode_data import INodeData
+from framework.utils.sysfs_interface import SysFS
+from framework.utils.tool_factory import ToolFactory
 
 
 @implementer(INodeData)
@@ -63,6 +64,30 @@ class NodeData(Debug):
         load_1min_avg  = threading.Thread(target=self._load_1min_avg).start()
         load_5min_avg  = threading.Thread(target=self._load_5min_avg).start()
         load_15min_avg = threading.Thread(target=self._load_15min_avg).start()
+
+        nw_fault_utility = self._conf_reader._get_value_with_default(
+                                              self.name().capitalize(),
+                                              self.PROBE,
+                                              "sysfs")
+
+        self._utility_instance = None
+
+        try:
+            # Creating the instance of ToolFactory class
+            self.tool_factory = ToolFactory()
+            # Get the instance of the utility using ToolFactory
+            self._utility_instance = self._utility_instance or \
+                                self.tool_factory.get_instance(nw_fault_utility)
+            if self._utility_instance:
+                # Initialize the path as /sys/class/net/
+                self.nw_interface_path = self._utility_instance.get_sys_dir_path('net')
+        except KeyError as key_error:
+            logger.error(f'NodeData, Unable to get the instance of {nw_fault_utility} Utility')
+        except Exception as err:
+            logger.error(f'NodeData, Problem occured while getting the instance of {nw_fault_utility}')
+
+        return True
+
 
     def read_data(self, subset, debug, units="MB"):
         """Updates data based on a subset"""
@@ -218,17 +243,41 @@ class NodeData(Debug):
         return nw_dict
 
     def fetch_nw_cable_conn_status(self, interface):
-        phy_link_state = {'0':'DOWN', '1':'UP', 'unknown':'UNKNOWN'}
-        carrier_indicator = 'unknown'
+        #phy_link_state = {'0':'DOWN', '1':'UP', 'unknown':'UNKNOWN'}
+        #carrier_indicator = 'unknown'
+        #try:
+        #    with open(self.CARRIER_FILE.format(interface)) as cFile:
+        #        carrier_indicator = cFile.read().strip()
+        #    if carrier_indicator not in phy_link_state.keys():
+        #        carrier_indicator = 'unknown'
+        #except Exception as err:
+        #    logger.warning("Node Data, unable to get cable connection state " +
+        #                  f"of '{interface}'. {str(err)}")
+        #return phy_link_state[carrier_indicator]
+        carrier_status = None
         try:
-            with open(self.CARRIER_FILE.format(interface)) as cFile:
-                carrier_indicator = cFile.read().strip()
-            if carrier_indicator not in phy_link_state.keys():
-                carrier_indicator = 'unknown'
-        except Exception as err:
-            logger.warning("Node Data, unable to get cable connection state " +
-                          f"of '{interface}'. {str(err)}")
-        return phy_link_state[carrier_indicator]
+            carrier_status = self._utility_instance.fetch_nw_cable_status(self.nw_interface_path, interface)
+        except Exception as e:
+            if e == errno.ENOENT:
+                logger.error(
+                    "Problem occured while reading from nw carrier file:"+ \
+                    f" {self.nw_interface_path}/{interface}/carrier." + \
+                    "file path doesn't exist")
+            elif e == errno.EACCES:
+                logger.error(
+                    "Problem occured while reading from nw carrier file:" + \
+                    f" {self.nw_interface_path}/{interface}/carrier." + \
+                    "Not enough permission to read from the file.")
+            elif e == errno.EPERM:
+                logger.error(
+                    "Problem occured while reading from nw carrier file:" + \
+                    f" {self.nw_interface_path}/{interface}/carrier." + \
+                    "Operation is not permitted.")
+            else:
+                logger.error(
+                    "Problem occured while reading from nw carrier file:" + \
+                    f" {self.nw_interface_path}/{interface}/carrier. Error: {e}")
+        return carrier_status
 
     def _get_bmc_info(self):
         """

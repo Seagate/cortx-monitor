@@ -17,6 +17,7 @@ class SysFS(Utility):
 
     sysfs = "/sys/class/"
     cpu_online_fp = "/sys/devices/system/cpu/online"
+    nw_phy_link_state = {'0':'DOWN', '1':'UP', 'unknown':'UNKNOWN'}
 
     def __init__(self):
         """init method"""
@@ -101,3 +102,23 @@ class SysFS(Utility):
         # Convert the string to list of indexes
         cpu_list = self.convert_cpu_info_list(cpu_info)
         return cpu_list
+
+    def fetch_nw_cable_status(self, nw_interface_path, interface):
+        '''
+           Gets the status of nw carrier cable from the path:
+           /sys/class/net/<interface>/carrier. This file may have following
+           values: <'1', '0', 'unknown'>. So, beased on its value, returns the
+           status such as : <'DOWN', 'UP', 'UNKNOWN'> respectively.
+        '''
+        carrier_file_path = os.path.join(nw_interface_path, \
+                                         'f{interface}/carrier')
+        carrier_indicator = 'unknown'
+        try:
+            with open(carrier_file_path) as cFile:
+                carrier_indicator = cFile.read().strip()
+            if carrier_indicator not in phy_link_state.keys():
+                carrier_indicator = 'unknown'
+        except OSError as os_err:
+            return os_error.errno
+        return self.nw_phy_link_state[carrier_indicator]
+
