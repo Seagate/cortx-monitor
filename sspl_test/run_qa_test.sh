@@ -183,13 +183,20 @@ $script_dir/mock_server &
 # Restart SSPL to re-read configuration
 if [ "$SSPL_STORE_TYPE" == "consul" ]
 then
+    SRVNODE="$(salt-call grains.get id --output=newline_values_only)"
+    if [ -z "$SRVNODE" ];then
+        SRVNODE="$(cat /etc/salt/minion_id)"
+        if [ -z "$SRVNODE" ];then
+            SRVNODE="srvnode-1"
+        fi
+    fi
     transmit_interval=$(/opt/seagate/$PRODUCT_FAMILY/hare/bin/consul kv get sspl/config/NODEDATAMSGHANDLER/transmit_interval)
     disk_usage_threshold=$(/opt/seagate/$PRODUCT_FAMILY/hare/bin/consul kv get sspl/config/NODEDATAMSGHANDLER/disk_usage_threshold)
     host_memory_usage_threshold=$(/opt/seagate/$PRODUCT_FAMILY/hare/bin/consul kv get sspl/config/NODEDATAMSGHANDLER/host_memory_usage_threshold)
     cpu_usage_threshold=$(/opt/seagate/$PRODUCT_FAMILY/hare/bin/consul kv get sspl/config/NODEDATAMSGHANDLER/cpu_usage_threshold)
     rack_id=$(/opt/seagate/$PRODUCT_FAMILY/hare/bin/consul kv get system_information/rack_id)
     site_id=$(/opt/seagate/$PRODUCT_FAMILY/hare/bin/consul kv get system_information/site_id)
-    node_id=$(/opt/seagate/$PRODUCT_FAMILY/hare/bin/consul kv get system_information/srvnode-1/node_id)
+    node_id=$(/opt/seagate/$PRODUCT_FAMILY/hare/bin/consul kv get system_information/$SRVNODE/node_id)
     cluster_id=$(/opt/seagate/$PRODUCT_FAMILY/hare/bin/consul kv get system_information/cluster_id)
 else
     transmit_interval=$(sed -n -e '/transmit_interval/ s/.*\= *//p' /etc/sspl.conf)
