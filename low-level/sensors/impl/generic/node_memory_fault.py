@@ -35,6 +35,9 @@ class MemFaultSensor(SensorThread, InternalMsgQ):
     NODE_ID_KEY = "node_id"
     RACK_ID_KEY = "rack_id"
     POLLING_INTERVAL_KEY = "polling_interval"
+    FAULT_ALERT_STATE = "Nutral State"
+    MEM_FAULT_ALERT = "fault"
+    MEM_FAULT_RESOLVED = "fault_resolved"    
 
     RESOURCE_ID = "0"
     DEFAULT_POLLING_INTERVAL = '0'
@@ -89,7 +92,8 @@ class MemFaultSensor(SensorThread, InternalMsgQ):
 
         # key for the current node : MEM_FAULT_SENSOR_DATA_<node_id>
         # each node_id -  memory pair is added as separate entry in consul
-        self.consul_key = "MEM_FAULT_SENSOR_DATA_{}".format(self._node_id)
+        self.consul_key_for_mem = "MEM_FAULT_SENSOR_DATA_{}".format(self._node_id)
+        self.consule_key_for_fault_status = "MEM_FAULT_STATUS_{}".format(self._node_id)
 
         # get the mem fault implementor from configuration
         mem_fault_utility = self._conf_reader._get_value_with_default(
@@ -119,16 +123,16 @@ class MemFaultSensor(SensorThread, InternalMsgQ):
     def get_stored_mem_info(self):
         """ Get the memory info from consul"""
         if self.prev_mem is None:
-            self.prev_mem = store.get(self.consul_key)
+            self.prev_mem = store.get(self.consul_key_for_mem)
+        self.FAULT_ALERT_STATE = store.get(self.consule_key_for_fault_status)
 
     def put_mem_info(self):
         """ Store the current memory in Consul"""
-        store.put(self.total_mem, self.consul_key)
+        store.put(self.total_mem, self.consul_key_for_mem)
+        store.put(self.FAULT_ALERT_STATE, self.consule_key_for_fault_status)
 
     def run(self):
         """Run the sensor on its own thread"""
-
-        alert_type = "fault"
 
         mem_path = self._utility_instance.get_proc_memory('meminfo')
         if mem_path.is_file():
@@ -151,8 +155,15 @@ class MemFaultSensor(SensorThread, InternalMsgQ):
                     # This logic will  be changed when fault_resolved is handled and
                     # complete solution is in place.
                     if int(self.prev_mem) > int(self.total_mem):
-                        # update the store with new value, raise an alert of type "fault"
-                        self._generate_alert(alert_type)
+                        if self.FAULT_ALERT_STATE == "Nutral State":
+                            # update the store with new value, raise an alert of type "fault"
+                            self.FAULT_ALERT_STATE = "Fault Generated"
+                            self._generate_alert(self.MEM_FAULT_ALERT)
+                            self.put_mem_info()
+                    if (int(self.prev_memory) <= int(self.total_mem)) and 
+                                                            (self.FAULT_ALERT_STATE == "Fault Generated"):
+                        self.FAULT_ALERT_STATE = "Nutral State"
+                        self._generate_alert(self.MEM_FAULT_RESOLVED)
                         self.put_mem_info()
                 else:
                     self.put_mem_info()
