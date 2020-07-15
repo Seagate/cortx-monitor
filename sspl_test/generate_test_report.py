@@ -59,7 +59,9 @@ def generate_html_report(test_result):
         if status.lower() in ["fail", "failed"]:
             overall_status = "Failed"
             total_failed += 1
-            status = f"""<p style="color:red">{status}</p>"""
+            st_style = """<p style="color:red">"""
+            st_end = """</p>"""
+            status = st_style + status + st_end
         result_table += result_template.format(testsuite=ts, status=status, duration=duration)
         total_ts += 1
         time_taken += duration
