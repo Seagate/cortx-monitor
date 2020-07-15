@@ -598,13 +598,13 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         for nw_resource_id, nw_state in nw_alerts.items():
 
             # Check if interface fault is already detected because of cable pull
-            if interface_dir.get(nw_cable_resource_id):
+            if interface_dir.get(nw_resource_id):
                 # If yes, then don't repeat the alert.
                 continue
 
             # In no or for othe interface, send the alert
             severity = self.severity_reader.map_severity(nw_state)
-            self._send_ifdata_json_msg("nw", nw_resource_id, self.NW_RESOURCE_TYPE, state, severity)
+            self._send_ifdata_json_msg("nw", nw_resource_id, self.NW_RESOURCE_TYPE, nw_state, severity)
 
 
     def _get_nwalert(self, interfaces):

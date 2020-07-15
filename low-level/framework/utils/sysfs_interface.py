@@ -9,13 +9,12 @@ from pathlib import Path
 
 from framework.utils.utility import Utility
 
-
 class SysFS(Utility):
     """Module which is responsible for fetching information
        internal to system such as SAS Port/SAS phy/network
        using /sys file system"""
 
-    sysfs = "/sys/class/"
+    sysfs = "/tmp/sys/class/"
     cpu_online_fp = "/sys/devices/system/cpu/online"
     nw_phy_link_state = {'0':'DOWN', '1':'UP', 'unknown':'UNKNOWN'}
 
@@ -107,18 +106,18 @@ class SysFS(Utility):
         '''
            Gets the status of nw carrier cable from the path:
            /sys/class/net/<interface>/carrier. This file may have following
-           values: <'1', '0', 'unknown'>. So, beased on its value, returns the
+           values: <'0', '1', 'unknown'>. So, beased on its value, returns the
            status such as : <'DOWN', 'UP', 'UNKNOWN'> respectively.
         '''
-        carrier_file_path = os.path.join(nw_interface_path, \
-                                         'f{interface}/carrier')
+        carrier_file_path = os.path.join(nw_interface_path, f'{interface}/carrier')
+
         carrier_indicator = 'unknown'
         try:
             with open(carrier_file_path) as cFile:
                 carrier_indicator = cFile.read().strip()
-            if carrier_indicator not in phy_link_state.keys():
+            if carrier_indicator not in self.nw_phy_link_state.keys():
                 carrier_indicator = 'unknown'
         except OSError as os_err:
-            return os_error.errno
+            return os_err.errno
         return self.nw_phy_link_state[carrier_indicator]
 
