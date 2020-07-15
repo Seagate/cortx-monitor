@@ -174,8 +174,6 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         # Dict of drive path by-ids by serial number from systemd
         self._drive_byid_by_serial_number = {}
 
-        self._nw_cable_flag = False
-
         self._import_products(product)
 
     def _import_products(self, product):
@@ -663,7 +661,6 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     if self.prev_cable_cnxns.get(interface_name):
                         logger.warning(f"Cable connection fault is detected with '{interface_name}'")
                         identified_cables[interface_name] = self.FAULT
-                        # self._nw_cable_flag = True
                     self.prev_cable_cnxns[interface_name] = phy_link_status
             # fault resolved (Down to Up)
             elif phy_link_status == 'UP':
@@ -671,7 +668,6 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     if self.prev_cable_cnxns.get(interface_name):
                         logger.info(f"Cable connection fault is resolved with '{interface_name}'")
                         identified_cables[interface_name] = self.FAULT_RESOLVED
-                        # self._nw_cable_flag = False
                     self.prev_cable_cnxns[interface_name] = phy_link_status
             else:
                 logger.warning(f"Cable connection state is unknown with '{interface_name}'")

@@ -14,7 +14,7 @@ class SysFS(Utility):
        internal to system such as SAS Port/SAS phy/network
        using /sys file system"""
 
-    sysfs = "/tmp/sys/class/"
+    sysfs = "/sys/class/"
     cpu_online_fp = "/sys/devices/system/cpu/online"
     nw_phy_link_state = {'0':'DOWN', '1':'UP', 'unknown':'UNKNOWN'}
 
