@@ -14,7 +14,7 @@ from message_handlers.logging_msg_handler import LoggingMsgHandler
 from message_handlers.node_data_msg_handler import NodeDataMsgHandler
 from framework.base.module_thread import SensorThread
 from framework.utils.severity_reader import SeverityReader
-from framework.utils.procfs_interface import *
+from framework.utils.procfs_interface import ProcFS
 from framework.utils.tool_factory import ToolFactory
 from framework.utils.store_factory import store
 from framework.base.sspl_constants import COMMON_CONFIGS
@@ -61,7 +61,7 @@ class MemFaultSensor(SensorThread, InternalMsgQ):
         self._utility_instance = utility_instance
         self.total_mem = None
         self.mem_path_file = None
-        self.prev_memory = None
+        self.prev_mem = None
         # Flag to indicate suspension of module
         self._suspended = False
 
@@ -87,6 +87,10 @@ class MemFaultSensor(SensorThread, InternalMsgQ):
             self.SYSTEM_INFORMATION_KEY,
             COMMON_CONFIGS.get(self.SYSTEM_INFORMATION_KEY).get(self.NODE_ID_KEY), '001')
 
+        # key for the current node : MEM_FAULT_SENSOR_DATA_<node_id>
+        # each node_id -  memory pair is added as separate entry in consul
+        self.consul_key = "MEM_FAULT_SENSOR_DATA_{}".format(self._node_id)
+
         # get the mem fault implementor from configuration
         mem_fault_utility = self._conf_reader._get_value_with_default(
             self.name().capitalize(), self.PROBE,
@@ -106,10 +110,20 @@ class MemFaultSensor(SensorThread, InternalMsgQ):
         except KeyError as key_error:
             logger.error(
                 "Unable to get the instance of {} \
-                Utility. Hence shutting down the sensor {}".format(mem_fault_utility))
+                Utility. Hence shutting down the sensor {}"\
+                .format(mem_fault_utility, MemFaultSensor.SENSOR_NAME))
             self.shutdown()
 
         return True
+
+    def get_stored_mem_info(self):
+        """ Get the memory info from consul"""
+        if self.prev_mem is None:
+            self.prev_mem = store.get(self.consul_key)
+
+    def put_mem_info(self):
+        """ Store the current memory in Consul"""
+        store.put(self.total_mem, self.consul_key)
 
     def run(self):
         """Run the sensor on its own thread"""
@@ -125,8 +139,9 @@ class MemFaultSensor(SensorThread, InternalMsgQ):
                 self.total_mem = mem_info_fields[1]
 
                 # Get data from store if available and compare to the current value
-                if store.exists("MEM_FAULT_SENSOR_DATA"):
-                    self.prev_memory = store.get("MEM_FAULT_SENSOR_DATA")
+                self.get_stored_mem_info()
+
+                if self.prev_mem is not None:
                     # At present only fault alert case is handled.
                     # Fault is raised when the total RAM memory decreases.
                     # TODO : the memory increased i.e. fault_resolved case needs to be
@@ -135,12 +150,12 @@ class MemFaultSensor(SensorThread, InternalMsgQ):
                     # The reduced memory value is currently written to consul
                     # This logic will  be changed when fault_resolved is handled and
                     # complete solution is in place.
-                    if int(self.prev_memory) > int(self.total_mem):
+                    if int(self.prev_mem) > int(self.total_mem):
                         # update the store with new value, raise an alert of type "fault"
                         self._generate_alert(alert_type)
-                        store.put(self.total_mem, "MEM_FAULT_SENSOR_DATA")
+                        self.put_mem_info()
                 else:
-                    store.put(self.total_mem, "MEM_FAULT_SENSOR_DATA")
+                    self.put_mem_info()
             else:
                 logger.error("MemFaultSensor: invalid file, shutting down the sensor")
                 self.shutdown()
@@ -184,7 +199,7 @@ class MemFaultSensor(SensorThread, InternalMsgQ):
 
         specific_info["event"] = \
                 "Total available main memory value decreased from {} kB to {} kB"\
-                .format(self.prev_memory, self.total_mem)
+                .format(self.prev_mem, self.total_mem)
 
         # populate all the data from /proc/meminfo
         split_strs = [s.split(maxsplit=1) for s in self.mem_path_file.splitlines()]
