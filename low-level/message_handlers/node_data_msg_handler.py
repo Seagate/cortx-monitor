@@ -595,7 +595,12 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 self.INTERFACE_FAULT_DETECTED = True
                 # if yes, then mark the flag detection True for the respective interface
                 self.interface_fault_state[nw_cable_resource_id] = self.INTERFACE_FAULT_DETECTED
-                event_field = f'Network interface: {nw_cable_resource_id} is also down because of cable fault'
+                if state == self.FAULT:
+                    event_field = f'Network interface: {nw_cable_resource_id} \
+                                    is also down because of cable fault'
+                else:
+                    event_field = f'Network interface: {nw_cable_resource_id} \
+                                    is also up after cable insertion'
                 logger.error(f'#### Interface Fault also detected {nw_cable_resource_id}: {state} ####')
 
             # Send the cable alert
