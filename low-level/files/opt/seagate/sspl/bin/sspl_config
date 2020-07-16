@@ -28,12 +28,11 @@ SSPL_CONFIGURED="/var/$PRODUCT_FAMILY/sspl/sspl-configured"
 
 usage() {
     cat << EOF
-$SCRIPT_NAME [{config [-f] [-r <ssu|gw|cmu|vm>] [-c <true|false>] [-s <srvnode-2 hostname>]}]
+$SCRIPT_NAME [{config [-f] [-r <ssu|gw|cmu|vm>] [-n <node1, node2 name>]}]
 config options:
     -f  Force reinitialization. Do not prompt
     -r  Role to be configured on the current node
-    -c  Cluster setup for rabbitmq required(yes|no)
-    -s  Secondary node that add into rabbitmq cluster
+    -n  Nodes that needs to be added into rabbitmq cluster
 EOF
     exit 1
 }
@@ -43,9 +42,9 @@ config_sspl() {
     force=0
     role=
     rmq_cluster=false
-    srvnode2=
+    rmq_cluster_nodes=
 
-    while getopts ":f:r:c:s:" OPTION; do
+    while getopts ":f:r:n:" OPTION; do
         case $OPTION in
             f )
                 force=1
@@ -55,14 +54,8 @@ config_sspl() {
                 role=$OPTARG
                 [[ $ROLES =~ (^| )$role($| ) ]] || usage
                 ;;
-            c )
-                rmq_cluster=$OPTARG
-                existing_cluster_nodes=`$CONSUL_PATH/consul kv get sspl/config/RABBITMQCLUSTER/cluster_nodes`
-                nodes=`echo $existing_cluster_nodes | tr "," " " | wc -w`
-                [ "$nodes" == "2" ] && rc_primary_node=`echo $existing_cluster_nodes | cut -d"," -f2`
-                ;;
-            s )
-                srvnode2=$OPTARG
+            n )
+                rmq_cluster_nodes=$OPTARG
                 ;;
             * )
                 usage
@@ -169,11 +162,7 @@ esac
 
 # Updating RabbitMQ cluster nodes.
 if [ "$product" == "ECS" ]; then
-    if [ "$rmq_cluster" == true ] & [ -n "$srvnode2" ]; then
-        [ "$nodes" == "1" ] && existing_cluster_nodes=$srvnode2,$existing_cluster_nodes
-        [ "$nodes" == "2" ] && existing_cluster_nodes=$srvnode2,$rc_primary_node
-        $CONSUL_PATH/consul kv put sspl/config/RABBITMQCLUSTER/cluster_nodes $existing_cluster_nodes
-    fi
+    [ -n "$rmq_cluster_nodes" ] && $CONSUL_PATH/consul kv put sspl/config/RABBITMQCLUSTER/cluster_nodes $rmq_cluster_nodes
 else
     out=$(rabbitmqctl cluster_status | grep running_nodes | cut -d '[' -f2 | cut -d ']' -f1 | sed 's/rabbit@//g' | sed 's/,/, /g')
     pout=$(echo $out | sed  "s/'//g")

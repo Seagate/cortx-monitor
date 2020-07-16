@@ -11,34 +11,32 @@ set -e -u -o pipefail
 
 SCRIPT_DIR=$(dirname $0)
 SCRIPT_NAME=$(basename $0)
-PRODUCT_NAME=
 
 . $SCRIPT_DIR/bin/constants.sh
 
 rmq_cluster=true
-srvnode2=
+rmq_cluster_nodes=
 
 usage() {
     cat << EOF
     $SCRIPT_NAME
         [-p|--product-name <EES|ECS>]
         [-c|--rmq-cluster <true|false>]
-        [-s|--srvnode2 <fqdn of the node>]
+        [-n|--rmq-nodes <name of the nodes>]
 EOF
     exit 1
 }
 
-
-for i in "$@"; do
-    case $i in
-        -p=*|--product-name=* )
-            PRODUCT_NAME=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
+while getopts ":p:c:n:" OPTION; do
+    case $OPTION in
+        p )
+            PRODUCT_NAME=$OPTARG
             ;;
-        -c=*|--rmq-cluster=* )
-            rmq_cluster=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
+        c )
+            rmq_cluster=$OPTARG
             ;;
-        -s=*|--srvnode2=* )
-            srvnode2=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
+        n )
+            rmq_cluster_nodes=$OPTARG
             ;;
         * )
             usage
@@ -46,6 +44,8 @@ for i in "$@"; do
     esac
 done
 
+[ -z "$rmq_cluster" ] && rmq_cluster=true
+[ -z "$PRODUCT_NAME" ] && PRODUCT_NAME="EES"
 
 setup_provisioner_prereq(){
     if ! [ "$(rpm -qa | grep cortx-prvsnr-cli)" ]; then
@@ -92,7 +92,7 @@ start_req_services(){
         fi
     done
 
-    if [ $SSPL_STATUS = "active" ] & [ $PRODUCT_NAME = "EES" ]
+    if [ $SSPL_STATUS == "active" -a $PRODUCT_NAME == "EES" ]
     then
         echo SSPL Service started.
         echo Waiting 5 seconds to initialize.
@@ -103,8 +103,11 @@ start_req_services(){
         echo "state=active" > /var/$PRODUCT_FAMILY/sspl/data/state.txt
         PID=`/sbin/pidof -s /usr/bin/sspl_ll_d`
         kill -s SIGHUP $PID
-    elif [ $SSPL_STATUS = "active" ] & [ $PRODUCT_NAME = "ECS" ]
+    elif [ $SSPL_STATUS == "active" -a $PRODUCT_NAME == "ECS" ]
     then
+        echo SSPL Service started.
+        echo Waiting 5 seconds to initialize.
+        sleep 5
         echo "*************************************************************************"
         echo "SSPL state is 'active'"
         echo "*************************************************************************"
@@ -117,14 +120,13 @@ start_req_services(){
 
 setup_provisioner_prereq
 
-$SCRIPT_DIR/bin/sspl_setup_consul
-$SCRIPT_DIR/bin/sspl_post_install -p $PRODUCT_NAME -e DEV
+$SCRIPT_DIR/bin/sspl_post_install -p $PRODUCT_NAME -e DEV -c $rmq_cluster
 $SCRIPT_DIR/bin/sspl_setup_init -r $PRODUCT_FAMILY
 if [ "$PRODUCT_NAME" == "ECS" ]; then
-    [ -z "$srvnode2" ] && $SCRIPT_DIR/bin/sspl_config -c $rmq_cluster
-    [ -n "$srvnode2" ] && $SCRIPT_DIR/bin/sspl_config -c $rmq_cluster -s $srvnode2
+    [ -z "$rmq_cluster_nodes" ] && $SCRIPT_DIR/bin/sspl_config || $SCRIPT_DIR/bin/sspl_config -n $rmq_cluster_nodes
+    [ "$rmq_cluster" == true ] && $SCRIPT_DIR/bin/sspl_setup_rabbitmq_cluster
 else
     $SCRIPT_DIR/bin/sspl_config
+    $SCRIPT_DIR/bin/sspl_setup_rabbitmq_cluster
 fi
-[ "$rmq_cluster" == true ] && $SCRIPT_DIR/bin/sspl_setup_rabbitmq_cluster
 start_req_services
