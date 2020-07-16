@@ -45,6 +45,7 @@ class IFdataMsg(BaseSensorMsg):
                        rack_id,
                        alert_type,
                        severity,
+                       event,
                        username  = "SSPL-LL",
                        signature = "N/A",
                        in_time      = "N/A",
@@ -94,7 +95,8 @@ class IFdataMsg(BaseSensorMsg):
                              },
                              "specific_info": {
                                 "localtime": self._local_time,
-                                "interfaces": self._interfaces
+                                "interfaces": self._interfaces,
+                                "event": event
                              },
                              "host_id": self._host_id,
                              "alert_type":self.alert_type,
