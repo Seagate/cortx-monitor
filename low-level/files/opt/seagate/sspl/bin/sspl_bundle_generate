@@ -4,6 +4,8 @@ import tarfile
 import os
 import time
 import sys
+import socket
+import json
 
 from sspl_constants import PRODUCT_FAMILY
 # Add the top level directories
@@ -21,6 +23,9 @@ sspl_conf_dir = "/opt/seagate/eos-prvsnr/pillar/components/sspl.sls"
 rabbitmq_conf_dir = "/etc/rabbitmq/rabbitmq.config"
 rabbitmq_log_dir = "/var/log/rabbitmq"
 rabbitmq_status = "/tmp/rabbitmq_status.txt"
+encl_manifest = "/tmp/encl_manifest.json"
+node_manifest = "/tmp/node_manifest.json"
+node_hostname = 'node_'+socket.gethostname().split('.', 1)[0]
 rabbitmq_cmd = {
     "Rabbitmq status": "systemctl status rabbitmq-server",
     "Rabbitmq cluster status": "rabbitmqctl cluster_status",
@@ -35,7 +40,6 @@ rabbitmq_cmd = {
 }
 
 def make_sspl_log_tarfile(parser, tmpFile):
-    file_name = "sspl_%s.tar.gz" % parser[1]
     try:
         conf_reader = ConfigReader(is_init=True)
 
@@ -64,6 +68,17 @@ def make_sspl_log_tarfile(parser, tmpFile):
     if not os.path.exists(localTempPath):
         os.makedirs(localTempPath)
     try:
+        sspl_state = ""
+        try:
+            sspl_state=open(f"/var/{PRODUCT_FAMILY}/sspl/data/state.txt").readline().rstrip()
+            # Capturing enclosure data only when sspl state is active
+            sspl_state = sspl_state[1] if len(sspl_state)==2 else ''
+            if sspl_state == 'active':
+                os.system(f"/opt/seagate/{PRODUCT_FAMILY}/sspl/lib/resource_health_view -n -e -s")
+            else:
+                os.system(f"/opt/seagate/{PRODUCT_FAMILY}/sspl/lib/resource_health_view -n -s")
+        except (FileNotFoundError, OSError) as e:
+            os.system(f"/opt/seagate/{PRODUCT_FAMILY}/sspl/lib/resource_health_view -n -e -s")
         rmq_file = open(rabbitmq_status, "w+")
         for key, value in rabbitmq_cmd.items():
             rmq_file.write(key+':\nCommand: '+value+'\n')
@@ -75,20 +90,33 @@ def make_sspl_log_tarfile(parser, tmpFile):
             rmq_file.write("======================================================= \n")
         rmq_file.close()
 
+        if os.path.exists(encl_manifest) and sspl_state == 'active':
+            with open(encl_manifest) as json_file:
+                data = json.load(json_file)
+                enclosure_wwn = data["enclosure_wwn"]
+            file_name = "sspl_{0}_plus_encl_{1}_{2}.tar.gz".format(node_hostname, enclosure_wwn, parser[1])
+
+        else:
+            file_name = "sspl_{0}_{1}.tar.gz".format(node_hostname, parser[1])
+
         with tarfile.open(localTempPath+file_name, "w:gz") as tar:
             file_dir = file_name.replace(".tar.gz","")
             if os.path.exists(sspl_log_dir):
-                tar.add(sspl_log_dir, arcname=file_dir+"/sspl/log/")
+                tar.add(sspl_log_dir, arcname=file_dir+"/"+node_hostname+"/sspl/logs/")
             if os.path.exists(sspl_conf_dir):
-                tar.add(sspl_conf_dir, arcname=file_dir+"/sspl/conf/sspl.sls")
+                tar.add(sspl_conf_dir, arcname=file_dir+"/"+node_hostname+"/sspl/config/sspl.sls")
             if os.path.exists(rabbitmq_status):
-                tar.add(rabbitmq_status, arcname=file_dir+"/rabbitmq/status/rabbitmq_status.txt")
+                tar.add(rabbitmq_status, arcname=file_dir+"/"+node_hostname+"/rabbitmq/status/rabbitmq_status.txt")
             if os.path.exists(rabbitmq_conf_dir):
-                tar.add(rabbitmq_conf_dir, arcname=file_dir+"/rabbitmq/conf/rabbitmq.config")
+                tar.add(rabbitmq_conf_dir, arcname=file_dir+"/"+node_hostname+"/rabbitmq/config/rabbitmq.config")
             if os.path.exists(rabbitmq_log_dir):
-                tar.add(rabbitmq_log_dir, arcname=file_dir+"/rabbitmq/log/")
+                tar.add(rabbitmq_log_dir, arcname=file_dir+"/"+node_hostname+"/rabbitmq/logs/")
             if os.path.exists(iem_log_dir):
-                tar.add(iem_log_dir, arcname=file_dir+"/iem/")
+                tar.add(iem_log_dir, arcname=file_dir+"/"+node_hostname+"/iems/")
+            if os.path.exists(node_manifest):
+                tar.add(node_manifest, arcname=file_dir+"/{0}/manifest/{0}-manifest.json".format(node_hostname))
+            if os.path.exists(encl_manifest) and sspl_state == 'active':
+                tar.add(encl_manifest, arcname=file_dir+"/encl_{0}/manifest/enclosure-wwn-{0}-manifest.json".format(enclosure_wwn))
             tar.close()
     except (OSError, tarfile.TarError) as err:
         print("Facing problem while creating sspl support bundle : %s" % err)
@@ -111,4 +139,5 @@ if __name__ == "__main__":
     else:
         print("Already SSPL Support Bundle request is going on, So skipping current request..!")
         sys.exit(1)
+
 
