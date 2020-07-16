@@ -77,6 +77,9 @@ mkdir -p $DIST/sspl/bin $DIST/sspl/conf $DIST/sspl/resources/actuators $DIST/ssp
 cp -R $BASE_DIR/low-level/snmp $DIST/sspl/conf
 cp -R $BASE_DIR/low-level/files/opt/seagate/sspl/bin/* $DIST/sspl/bin
 cp -R $BASE_DIR/low-level/requirements.txt $DIST/sspl/conf/requirements.txt
+cp -R $BASE_DIR/low-level/framework/utils/service_logging.py $DIST/sspl/bin/service_logging.py
+cp -R $BASE_DIR/low-level/framework/utils/utility.py $DIST/sspl/bin/utility.py
+cp -R $BASE_DIR/low-level/framework/utils/salt_util.py $DIST/sspl/bin/salt_util.py
 cp -R $BASE_DIR/low-level/framework/base/sspl_constants.py $DIST/sspl/bin/sspl_constants.py
 cp -R $BASE_DIR/low-level/framework/base/sspl_conf_adopt.py $DIST/sspl/bin/sspl_conf_adopt.py
 cp -R $BASE_DIR/low-level/framework/utils/config_reader.py $DIST/sspl/bin/config_reader.py
@@ -131,7 +134,7 @@ mkdir -p ${RPM_BUILD_PATH}/SOURCES
 TOPDIR=$(realpath $RPM_BUILD_PATH)
 echo $TOPDIR
 
-tar -czvf ${RPM_BUILD_PATH}/SOURCES/systemd-python36-${VERSION}.tgz -C ${BASE_DIR}/.. sspl/systemd-python36
+tar -czvf ${RPM_BUILD_PATH}/SOURCES/systemd-python36-${VERSION}.tgz -C ${BASE_DIR}/.. cortx-sspl/systemd-python36
 rpmbuild --define "version $VERSION" --define "git_rev $GIT_VER" --define "_topdir $TOPDIR" -bb $BASE_DIR/systemd-python36/systemd-python36.spec
 
 echo 'Installing systemd-python36*...'

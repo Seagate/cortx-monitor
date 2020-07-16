@@ -18,14 +18,17 @@ import os
 import sys
 import consul
 import configparser
+import time
+import requests
 try:
     import salt.client
     from sspl_constants import component, file_store_config_path, salt_provisioner_pillar_sls, \
          file_store_config_path, SSPL_STORE_TYPE, StoreTypes, salt_uniq_passwd_per_node, COMMON_CONFIGS, \
-         CONSUL_HOST, CONSUL_PORT, SSPL_CONFIGS
+         CONSUL_HOST, CONSUL_PORT, SSPL_CONFIGS, MAX_CONSUL_RETRY, WAIT_BEFORE_RETRY
 except Exception as e:
     from framework.base.sspl_constants import component, salt_provisioner_pillar_sls, \
-         file_store_config_path, SSPL_STORE_TYPE, StoreTypes, salt_uniq_passwd_per_node, COMMON_CONFIGS, SSPL_CONFIGS
+         file_store_config_path, SSPL_STORE_TYPE, StoreTypes, salt_uniq_passwd_per_node, COMMON_CONFIGS, SSPL_CONFIGS \
+         MAX_CONSUL_RETRY, WAIT_BEFORE_RETRY
     from framework.utils.consulstore import ConsulStore
     from framework.utils.filestore import FileStore
 
@@ -50,7 +53,16 @@ class ConfigReader(object):
             self.read_dev_conf()
             host = os.getenv('CONSUL_HOST', CONSUL_HOST)
             port = os.getenv('CONSUL_PORT', CONSUL_PORT)
-            self.consul_conn = consul.Consul(host=host, port=port)
+            for retry_index in range(0, MAX_CONSUL_RETRY):
+                try:
+                    self.consul_conn = consul.Consul(host=host, port=port)
+                    break
+                except requests.exceptions.ConnectionError as connerr:
+                    print(f'Error[{connerr}] consul connection refused Retry Index {retry_index}')
+                    time.sleep(WAIT_BEFORE_RETRY)
+                except Exception as gerr:
+                    print(f'Error[{gerr}] consul error')
+                    break
         elif is_test:
             self.read_test_conf(test_config_path)
         else:
@@ -251,17 +263,22 @@ class ConfigReader(object):
             return key
     
     def kv_get(self, key, **kwargs):
-        try:
-            _opt_recurse = kwargs.get("recurse", False)
-            key = self._get_key(key)
-            data = self.consul_conn.kv.get(key, recurse=_opt_recurse)[1]
-            if data:
-                data = data["Value"]
-                try:
-                    data = pickle.loads(data)
-                except:
-                    pass
-        except Exception as gerr:
-            print(f'Error{gerr} while reading data from consul {key}')
-        
+        for retry_index in range(0, MAX_CONSUL_RETRY):
+            try:
+                _opt_recurse = kwargs.get("recurse", False)
+                key = self._get_key(key)
+                data = self.consul_conn.kv.get(key, recurse=_opt_recurse)[1]
+                if data:
+                    data = data["Value"]
+                    try:
+                        data = pickle.loads(data)
+                    except:
+                        pass
+                break
+            except requests.exceptions.ConnectionError as connerr:
+                print(f'Error[{connerr}] consul connection refused Retry Index {retry_index}')
+                time.sleep(WAIT_BEFORE_RETRY)
+            except Exception as gerr:
+                print(f'Error{gerr} while reading data from consul {key}')
+                break
         return data
