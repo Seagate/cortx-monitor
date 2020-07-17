@@ -629,7 +629,6 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             severity = self.severity_reader.map_severity(nw_state)
             self._send_ifdata_json_msg("nw", nw_resource_id, self.NW_RESOURCE_TYPE, nw_state, severity)
 
-
     def _get_nwalert(self, interfaces):
         """
         Get network interfaces with fault/OK state for each interface.
@@ -694,13 +693,14 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                         logger.info(f"Cable connection fault is resolved with '{interface_name}'")
                         identified_cables[interface_name] = self.FAULT_RESOLVED
 
-                        # After the cable fault is resolved, unset the flag for interface
-                        # So that, it can be tracked further for any failure
-                        self.INTERFACE_FAULT_DETECTED = False
-                        self.interface_fault_state[interface_name] = self.INTERFACE_FAULT_DETECTED
+                        if self.interface_fault_state and interface_name in self.interface_fault_state:
+                            # After the cable fault is resolved, unset the flag for interface
+                            # So that, it can be tracked further for any failure
+                            self.INTERFACE_FAULT_DETECTED = False
+                            self.interface_fault_state[interface_name] = self.INTERFACE_FAULT_DETECTED
 
-                        # Also clear the global nw interface dictionary
-                        self.prev_nw_status[interface_name] = phy_link_status
+                            # Also clear the global nw interface dictionary
+                            self.prev_nw_status[interface_name] = phy_link_status
 
                     self.prev_cable_cnxns[interface_name] = phy_link_status
             else:
