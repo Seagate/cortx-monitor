@@ -27,6 +27,7 @@ from json_msgs.messages.sensors.local_mount_data import LocalMountDataMsg
 from json_msgs.messages.sensors.cpu_data import CPUdataMsg
 from json_msgs.messages.sensors.if_data import IFdataMsg
 from json_msgs.messages.sensors.raid_data import RAIDdataMsg
+from json_msgs.messages.sensors.raid_integrity_msg import RAIDIntegrityMsg
 from json_msgs.messages.sensors.disk_space_alert import DiskSpaceAlertMsg
 from json_msgs.messages.sensors.node_hw_data import NodeIPMIDataMsg
 
@@ -309,6 +310,17 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 else:
                     self._log_debug("NodeDataMsgHandler, _process_msg " +
                             f"No past data found for {self.sensor_type} sensor type")
+            
+            elif self.sensor_type == "raid_integrity":
+                self._generate_raid_integrity_data(jsonMsg)
+                sensor_message_type = self.os_sensor_type.get(self.sensor_type, "")
+                if sensor_message_type:
+                    self._write_internal_msgQ(RabbitMQegressProcessor.name(),
+                                            sensor_message_type)
+                else:
+                    self._log_debug("NodeDataMsgHandler, _process_msg " +
+                            f"No past data found for {self.sensor_type} sensor type")
+
 
         # Update mapping of device names to serial numbers for global use
         elif jsonMsg.get("sensor_response_type") is not None:
@@ -779,6 +791,32 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
             self._log_debug("_generate_raid_data, host_id: %s, device: %s, drives: %s" %
                     (self._node_sensor.host_id, self._raid_device, str(self._raid_drives)))
+
+    def _generate_raid_integrity_data(self, jsonMsg):
+        """Create & transmit a Validate RAID result data message as defined
+            by the sensor response json schema"""
+        logger.debug("NodeDataMsgHandler, Validating RAID information")
+
+        # See if status is in the msg; ie it's an internal msg from the RAID sensor
+        if jsonMsg.get("sensor_request_type").get("node_data").get("status") is not None:
+            sensor_request = jsonMsg.get("sensor_request_type").get("node_data")
+            host_name = sensor_request.get("host_id")
+            alert_type = sensor_request.get("alert_type")
+            alert_id = sensor_request.get("alert_id")
+            severity = sensor_request.get("severity")
+            info = sensor_request.get("info")
+            specific_info = sensor_request.get("specific_info")
+            self._alert = jsonMsg.get("sensor_request_type").get("node_data").get("specific_info").get("error")
+            RAIDintegrityMsg = RAIDIntegrityMsg(host_name, alert_type, alert_id, severity, info, specific_info)
+            # Add in uuid if it was present in the json request
+            if self._uuid is not None:
+                RAIDintegrityMsg.set_uuid(self._uuid)
+            jsonMsg = RAIDintegrityMsg.getJson()
+            self.raid_integrity_data = jsonMsg
+            self.os_sensor_type["raid_integrity"] = self.raid_integrity_data
+             
+            self._log_debug("_generate_raid_integrity_data, host_id: %s" %
+                    (self._node_sensor.host_id))
 
     def _generate_node_fru_data(self, jsonMsg):
         """Create & transmit a FRU IPMI data message as defined
