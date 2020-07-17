@@ -175,9 +175,11 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         logger.info(f"Using cache dir: {self.cache_dir_path}")
 
         self.index_file_name = os.path.join(self.cache_dir_path, self.INDEX_FILE)
-        self.index_file = self._get_file(self.index_file_name)
 
-        if os.path.getsize(self.index_file_name) == 0:
+        bad_index_file = \
+                not os.path.exists(self.index_file_name) or \
+                os.path.getsize(self.index_file_name) == 0
+        if bad_index_file:
             self._write_index_file(0)
         # Now self.index_file has a valid sel index in it
 
@@ -191,15 +193,17 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
             index = int(index, base=16)
         literal = "{0:x}\n".format(index)
 
-        self.index_file.seek(0)
-        self.index_file.truncate()
-        self.index_file.write(literal)
-        self.index_file.flush()
+        with self._get_file(self.index_file_name) as index_file :
+            index_file.seek(0)
+            index_file.truncate()
+            index_file.write(literal)
+            index_file.flush()
 
     def _read_index_file(self):
-        self.index_file.seek(0)
-        index_line = self.index_file.readline().strip()
-        return int(index_line, base=16)
+        with self._get_file(self.index_file_name) as index_file :
+            index_file.seek(0)
+            index_line = index_file.readline().strip()
+            return int(index_line, base=16)
 
     def initialize(self, conf_reader, msgQlist, products):
         """initialize configuration reader and internal msg queues"""
