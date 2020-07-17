@@ -45,7 +45,7 @@ while getopts ":p:c:n:" OPTION; do
 done
 
 [ -z "$rmq_cluster" ] && rmq_cluster=true
-[ -z "$PRODUCT_NAME" ] && PRODUCT_NAME="EES"
+[ -z "$PRODUCT_NAME" ] && PRODUCT_NAME="ECS"
 
 setup_provisioner_prereq(){
     if ! [ "$(rpm -qa | grep cortx-prvsnr-cli)" ]; then
@@ -92,7 +92,15 @@ start_req_services(){
         fi
     done
 
-    if [ $SSPL_STATUS == "active" -a $PRODUCT_NAME == "EES" ]
+    if [ $SSPL_STATUS == "active" -a $PRODUCT_NAME == "ECS" ]
+    then
+        echo SSPL Service started.
+        echo Waiting 5 seconds to initialize.
+        sleep 5
+        echo "*************************************************************************"
+        echo "SSPL state is 'active'"
+        echo "*************************************************************************"
+    elif [ $SSPL_STATUS == "active" -a $PRODUCT_NAME == "EES" ]
     then
         echo SSPL Service started.
         echo Waiting 5 seconds to initialize.
@@ -103,14 +111,6 @@ start_req_services(){
         echo "state=active" > /var/$PRODUCT_FAMILY/sspl/data/state.txt
         PID=`/sbin/pidof -s /usr/bin/sspl_ll_d`
         kill -s SIGHUP $PID
-    elif [ $SSPL_STATUS == "active" -a $PRODUCT_NAME == "ECS" ]
-    then
-        echo SSPL Service started.
-        echo Waiting 5 seconds to initialize.
-        sleep 5
-        echo "*************************************************************************"
-        echo "SSPL state is 'active'"
-        echo "*************************************************************************"
     else
         echo SSPL Service not started after 10 seconds.
         echo Failed to make SSPL state ACTIVE
@@ -119,7 +119,9 @@ start_req_services(){
 
 
 setup_provisioner_prereq
-
+echo "################################"
+echo "#### PRODUCT_NAME: $PRODUCT_NAME"
+echo "################################"
 $SCRIPT_DIR/bin/sspl_post_install -p $PRODUCT_NAME -e DEV -c $rmq_cluster
 $SCRIPT_DIR/bin/sspl_setup_init -r $PRODUCT_FAMILY
 if [ "$PRODUCT_NAME" == "ECS" ]; then

@@ -1,6 +1,6 @@
 # This script contains common constants used by various provisioner scripts
 
-PRODUCT_NAME='EES'
+PRODUCT_NAME='ECS'
 PRODUCT_FAMILY='cortx'
 PRODUCTS="SINGLE EES ECS"
 SSPL_CONF="/etc/sspl.conf"
