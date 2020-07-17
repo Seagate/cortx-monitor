@@ -30,7 +30,7 @@ BuildRequires: python36
 Python wrapper for Systemd functionality
 
 %prep
-%setup -n cortx-sspl/systemd-python36
+%setup -n sspl/systemd-python36
 
 %clean
 [ "${RPM_BUILD_ROOT}" != "/" ] && rm -rf ${RPM_BUILD_ROOT}
