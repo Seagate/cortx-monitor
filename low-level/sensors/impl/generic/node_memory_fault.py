@@ -35,9 +35,6 @@ class MemFaultSensor(SensorThread, InternalMsgQ):
     NODE_ID_KEY = "node_id"
     RACK_ID_KEY = "rack_id"
     POLLING_INTERVAL_KEY = "polling_interval"
-    FAULT_ALERT_STATE = "Nutral State"
-    MEM_FAULT_ALERT = "fault"
-    MEM_FAULT_RESOLVED = "fault_resolved"    
 
     RESOURCE_ID = "0"
     DEFAULT_POLLING_INTERVAL = '0'
@@ -65,6 +62,8 @@ class MemFaultSensor(SensorThread, InternalMsgQ):
         self.total_mem = None
         self.mem_path_file = None
         self.prev_mem = None
+        self.total_memory_size = None
+        self.fault_alert_state = "Neutral State"
         # Flag to indicate suspension of module
         self._suspended = False
 
@@ -92,8 +91,7 @@ class MemFaultSensor(SensorThread, InternalMsgQ):
 
         # key for the current node : MEM_FAULT_SENSOR_DATA_<node_id>
         # each node_id -  memory pair is added as separate entry in consul
-        self.consul_key_for_mem = "MEM_FAULT_SENSOR_DATA_{}".format(self._node_id)
-        self.consule_key_for_fault_status = "MEM_FAULT_STATUS_{}".format(self._node_id)
+        self.consul_key = "MEM_FAULT_SENSOR_DATA_{}".format(self._node_id)
 
         # get the mem fault implementor from configuration
         mem_fault_utility = self._conf_reader._get_value_with_default(
@@ -122,17 +120,22 @@ class MemFaultSensor(SensorThread, InternalMsgQ):
 
     def get_stored_mem_info(self):
         """ Get the memory info from consul"""
-        if self.prev_mem is None:
-            self.prev_mem = store.get(self.consul_key_for_mem)
-        self.FAULT_ALERT_STATE = store.get(self.consule_key_for_fault_status)
 
+        if store.exists(self.consul_key):
+            consul_data = (store.get(self.consul_key)).split(":")
+            self.prev_mem = consul_data[0].strip()
+            self.fault_alert_state = consul_data[1].strip()
+            self.total_memory_size = consul_data[2].strip()
+        
     def put_mem_info(self):
         """ Store the current memory in Consul"""
-        store.put(self.total_mem, self.consul_key_for_mem)
-        store.put(self.FAULT_ALERT_STATE, self.consule_key_for_fault_status)
+
+        store.put(f"{self.total_mem}:{self.fault_alert_state}:{self.total_memory_size}", self.consul_key)
 
     def run(self):
         """Run the sensor on its own thread"""
+
+        alert_type = "fault"
 
         mem_path = self._utility_instance.get_proc_memory('meminfo')
         if mem_path.is_file():
@@ -155,17 +158,19 @@ class MemFaultSensor(SensorThread, InternalMsgQ):
                     # This logic will  be changed when fault_resolved is handled and
                     # complete solution is in place.
                     if int(self.prev_mem) > int(self.total_mem):
-                        if self.FAULT_ALERT_STATE == "Nutral State":
-                            # update the store with new value, raise an alert of type "fault"
-                            self.FAULT_ALERT_STATE = "Fault Generated"
-                            self._generate_alert(self.MEM_FAULT_ALERT)
+                        # update the store with new value, raise an alert of type "fault"
+                        if self.fault_alert_state == "Neutral State":
+                            self.fault_alert_state = "Fault Generated"
+                            self._generate_alert(alert_type)
                             self.put_mem_info()
-                    if (int(self.prev_memory) <= int(self.total_mem)) and 
-                                                            (self.FAULT_ALERT_STATE == "Fault Generated"):
-                        self.FAULT_ALERT_STATE = "Nutral State"
-                        self._generate_alert(self.MEM_FAULT_RESOLVED)
+
+                    elif (int(self.total_memory_size) <= int(self.total_mem)) and (self.fault_alert_state == "Fault Generated"):
+                        self.fault_alert_state = "Neutral State"
+                        alert_type = "fault_resolved"
+                        self._generate_alert(alert_type)
                         self.put_mem_info()
                 else:
+                    self.total_memory_size = self.total_mem
                     self.put_mem_info()
             else:
                 logger.error("MemFaultSensor: invalid file, shutting down the sensor")
@@ -207,10 +212,14 @@ class MemFaultSensor(SensorThread, InternalMsgQ):
 
         specific_info = {}
         specific_info_list = []
-
-        specific_info["event"] = \
-                "Total available main memory value decreased from {} kB to {} kB"\
-                .format(self.prev_mem, self.total_mem)
+        if alert_type == "fault":
+            specific_info["event"] = \
+                    "Total available main memory value decreased from {} kB to {} kB"\
+                    .format(self.prev_mem, self.total_mem)
+        elif alert_type == "fault_resolved":
+            specific_info["event"] = \
+                    "Total main memory value available {} kB"\
+                    .format(self.total_mem)
 
         # populate all the data from /proc/meminfo
         split_strs = [s.split(maxsplit=1) for s in self.mem_path_file.splitlines()]
