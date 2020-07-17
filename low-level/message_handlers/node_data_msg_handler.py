@@ -589,34 +589,43 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         for nw_cable_resource_id, state in nw_cable_alerts.items():
             severity = self.severity_reader.map_severity(state)
 
-            logger.error(f'#### Cable Fault detected {nw_cable_resource_id}: {state} ####')
             # Check if any nw interface fault is there because of cable pull
             if nw_alerts and nw_alerts[nw_cable_resource_id] == state:
-                self.INTERFACE_FAULT_DETECTED = True
-                # if yes, then mark the flag detection True for the respective interface
-                self.interface_fault_state[nw_cable_resource_id] = self.INTERFACE_FAULT_DETECTED
                 if state == self.FAULT:
-                    event_field = f'Network interface: {nw_cable_resource_id} \
-                                    is also down because of cable fault'
+                    self.INTERFACE_FAULT_DETECTED = True
+
+                    # if yes, then mark the flag detection True for the respective interface
+                    self.interface_fault_state[nw_cable_resource_id] = self.INTERFACE_FAULT_DETECTED
+                    event_field = f'Network interface: {nw_cable_resource_id}' + ' ' \
+                                   'is also down because of cable fault'
                 else:
-                    event_field = f'Network interface: {nw_cable_resource_id} \
-                                    is also up after cable insertion'
-                logger.error(f'#### Interface Fault also detected {nw_cable_resource_id}: {state} ####')
+                    event_field = f'Network interface: {nw_cable_resource_id}' + ' ' \
+                                   'is also up after cable insertion'
 
             # Send the cable alert
             self._send_ifdata_json_msg("nw", nw_cable_resource_id, self.NW_CABLE_RESOURCE_TYPE, state, severity, event_field)
 
         # Check for Nw interface fault
         for nw_resource_id, nw_state in nw_alerts.items():
+            # Check if nw interface fault is resolved. If resolved, check whether its
+            # resolved by cable insertion by checking the self.interface_fault_state
+            # dictionary.
+            if (self.interface_fault_state and nw_state == self.FAULT_RESOLVED and not \
+               self.interface_fault_state.get(nw_resource_id)):
 
-            # Check if interface fault is already detected because of cable pull
-            if self.interface_fault_state.get(nw_resource_id):
+                # delete the entry for that interface from the interface
+                # directory specifically maintaned to track interface
+                # fault in case of cable fault. This is imp because otherwise
+                # if fault occurs for the same nw interface after cable insertion case,
+                # fault_resolved alert for the same nw interface will not be seen.
+                del self.interface_fault_state[nw_resource_id]
+                continue
+
+            elif self.interface_fault_state.get(nw_resource_id):
                 # If yes, then don't repeat the alert.
-                logger.error(f'### interface fault is already detected for {nw_resource_id} ###')
                 continue
 
             # If no or for othe interface, send the alert
-            logger.error(f'### interface fault is detected for {nw_resource_id} ###')
             severity = self.severity_reader.map_severity(nw_state)
             self._send_ifdata_json_msg("nw", nw_resource_id, self.NW_RESOURCE_TYPE, nw_state, severity)
 
