@@ -165,7 +165,8 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             "cpu"  : self.cpu_sensor_data,
             "raid_data" : self.raid_sensor_data
         }
-
+        # setting environment variable for identification of partition issue.
+        os.environ["CORTX_ERR_RMQ_CLUSTER_PARTITION_DETECTED"] = "0" 
         # UUID used in json msgs
         self._uuid = None
 
@@ -557,30 +558,20 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         # Transmit it out over rabbitMQ channel
         self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
 
-        logger.info("************before Json tyep :- %s" %(type(jsonMsg)))
-        jsonMsg_new = json.loads(jsonMsg)
-        logger.info("***************after Json type :- %s" %(type(jsonMsg_new)))
-        logger.info("jsonMsg_new :- %s" %(jsonMsg_new))     
+        jsonMsg_new = json.loads(jsonMsg)     
         nw_alert_type = jsonMsg_new.get("message").get("sensor_response_type").get("alert_type")
         logger.info("network Type:- %s" %(nw_alert_type))
         if nw_alert_type == "fault_resolved":
-            logger.info("inside loop")
+            time.sleep(10)
             rabbimq_cluster_state = self.check_rabbitmq_cluster_partition_status()
             if rabbimq_cluster_state:
-                process = subprocess.Popen("systemctl restart rabbitmq-server", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                response, error = process.communicate()
-                rabbimq_cluster_state_after_service_restart = self.check_rabbitmq_cluster_partition_status()
-                if not rabbimq_cluster_state_after_service_restart:
-                    logger.info("partition issue has reolved")
-                else:
-                    logger.error("The issue still persisted please check the rabbitmq service log")
+                os.environ["CORTX_ERR_RMQ_CLUSTER_PARTITION_DETECTED"] = "1"
+                
 
     def check_rabbitmq_cluster_partition_status(self):
         process = subprocess.Popen("sudo rabbitmqctl cluster_status", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         response, error = process.communicate()
-        logger.info("Response -> %s   Error -> %s" %(response, error))
         partition_state = [each[:-1].strip() for each in (response.decode("utf-8")).split("\n")[4:-2] if each]
-        logger.info("Partition State:- %s" %(partition_state))
         partition_list = partition_state[0].split(",")
         is_partition = len(eval(partition_list[1][:-1]))
         if is_partition == 0:
