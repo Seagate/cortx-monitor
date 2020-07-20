@@ -268,8 +268,10 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
 
         # define variable in consul to check for bmc channel interface fallback
         self.consul_key = f"ACTIVE_BMC_IF_{self._node_id}"
-        # save current IF value to consul
+        self.consul_lan_fault = f"LAN_ALERT_{self._node_id}"
+        # save current channel interface value to consul
         self.active_bmc_if = store.get(self.consul_key)
+        self.lan_fault = store.get(self.consul_lan_fault)
         if self.active_bmc_if is None:
             self.active_bmc_if = self._channel_interface
             store.put(self.active_bmc_if,self.consul_key)
@@ -299,7 +301,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
             self.CHANNEL_INFO = channel_info
 
         # check  for lan falut resolved alert
-        if self.lan_channel_err:
+        if self.lan_channel_err or self.lan_fault == "fault":
             command = self.IPMITOOL + " -H " + self._bmc_ip + " -U " + self._bmc_user + \
                         " -P " + self._bmc_passwd + " -I " + "lan " + "channel info"
             res, retcode = self._run_command(command)
@@ -414,7 +416,8 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
 
         if self.request_shutdown is False:
             try:
-                if self.channel_err:
+		# check channel interface is accessible or not
+                if self.channel_err or self.lan_fault is not None:
                     self._fetch_channel_info()
 
                 # Reset sensor_map_id after ipmi simulation
@@ -575,6 +578,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
                 if re.search(grep_args, l) is not None:
                     final_list += [l]
             res = ('\n'.join(final_list), res[1])
+        # write res to out_file only if there is no channel error
         if not self.channel_err:
             if out_file != subprocess.PIPE:
                 out_file.write(res[0])
@@ -605,7 +609,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         if self.active_bmc_if == self.SYSTEM_IF:
             self._check_kcs_if_alert(err,retcode)
             channel_info = self.KCS_CHANNEL_INFO
-        elif self.active_bmc_if == self.LAN_IF:
+        elif self.active_bmc_if == self.LAN_IF or self.lan_fault is None:
             self._check_lan_if_alert(err,retcode)
             channel_info = self.LAN_CHANNEL_INFO
 
@@ -621,23 +625,28 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
                 resource_type = "node:bmc:interface:kcs"
                 self.kcs_interface_alert = False
                 self.kcs_channel_err = False
-            elif self.lan_channel_err and self.lan_cmd_retcode == 0:
+            elif self.lan_cmd_retcode == 0 and self.lan_fault == "fault":
                 alert_type = "fault_resolved"
                 resource_type = "node:bmc:interface:rmcp"
                 self.lan_interface_alert = False
                 raise_fault_resolved_lan = True
                 self.lan_channel_err = False
+                self.lan_fault = None
+                store.put(self.lan_fault,self.consul_lan_fault)
 
         if (self.kcs_interface_alert or self.lan_interface_alert)  and not self.channel_err:
             self.channel_err = True
             channel_status = "Server BMC is unreachable, possible cause: " + err
-            if self.lan_interface_alert and not self.lan_channel_err:
+            if self.lan_interface_alert and not self.lan_channel_err and self.lan_fault is None:
                 alert_type = "fault"
                 resource_type = "node:bmc:interface:rmcp"
                 self.lan_channel_err = True
                 logger.warning("BMC is unreachable through lan IF, ipmitool fallback to KCS IF")
                 self.active_bmc_if = self.SYSTEM_IF
                 store.put(self.active_bmc_if,self.consul_key)
+                if self.lan_fault is None:
+                    self.lan_fault = alert_type
+                    store.put(self.lan_fault, self.consul_lan_fault)
             elif self.kcs_interface_alert and not self.kcs_channel_err:
                 resource_type = "node:bmc:interface:kcs"
                 alert_type = "fault"
