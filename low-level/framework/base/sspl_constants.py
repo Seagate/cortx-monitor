@@ -26,7 +26,6 @@ PRODUCT = "product"
 SETUP = "setup"
 MAX_CONSUL_RETRY = 12
 WAIT_BEFORE_RETRY = 5
-
 node_key_id = node_id
 CONSUL_HOST = consulhost
 CONSUL_PORT = consulport
@@ -60,6 +59,12 @@ COMMON_CONFIGS = {
         "sspl_key" : "key_provided_by_provisioner",
         "cluster_nodes" : "rabbitmq/cluster_nodes",
         "erlang_cookie" : "rabbitmq/erlang_cookie"
+    },
+    "BMC": {
+        "sspl_key" : "key_provided_by_provisioner",
+        f"ip_{node_id}" : f"{node_id}/ip",
+        f"user_{node_id}" : f"{node_id}/user",
+        f"secret_{node_id}" : f"{node_id}/secret"
     }
 }
 

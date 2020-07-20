@@ -61,16 +61,15 @@ class SaltConfig(object):
             elif k == 'erlang_cookie':
                 self.consul_conn.kv.put(component + '/' + 'RABBITMQCLUSTER' + '/' + k, new_rabbitmqcluster_conf[k])
 
-        # read cluster.sls and fetch bmc config for node
-        new_cluster_conf = salt.client.Caller().function('pillar.get', 'cluster')
-        BMC_CONFIG = [v.get('bmc') for k,v in new_cluster_conf.items() if node_key_id == k]
-        for k,v in BMC_CONFIG[0].items():
+        # read bmc config
+        BMC_CONFIG = salt.client.Caller().function('pillar.get', f'cluster:{node_key_id}:bmc')
+        for k,v in BMC_CONFIG.items():
             if k == 'ip':
-                self.consul_conn.kv.put(component + '/' + 'BMC_INTERFACE' + '/' + k, v)
+                self.consul_conn.kv.put(component + '/' + f'BMC/{node_key_id}' + '/' + k, v)
             elif k == 'user':
-                self.consul_conn.kv.put(component + '/' + 'BMC_INTERFACE' + '/' + k, v)
+                self.consul_conn.kv.put(component + '/' + f'BMC/{node_key_id}' + '/' + k, v)
             elif k == 'secret':
-                self.consul_conn.kv.put(component + '/' + 'BMC_INTERFACE' + '/' + k, v)
+                self.consul_conn.kv.put(component + '/' + f'BMC/{node_key_id}' + '/' + k, v)
 
     def insert_dev_common_config(self, product):
         try:
@@ -100,6 +99,15 @@ class SaltConfig(object):
                     self.consul_conn.kv.put('rabbitmq/cluster_nodes', new_rabbitmqcluster_conf[k])
                 elif k == 'erlang_cookie':
                     self.consul_conn.kv.put('rabbitmq/erlang_cookie', new_rabbitmqcluster_conf[k])
+
+            BMC_CONFIG = salt.client.Caller().function('pillar.get', f'cluster:{node_key_id}:bmc')
+            for k,v in BMC_CONFIG.items():
+                if k == 'ip':
+                    self.consul_conn.kv.put(f'bmc/{node_key_id}/ip', v)
+                elif k == 'user':
+                    self.consul_conn.kv.put(f'bmc/{node_key_id}/user', v)
+                elif k == 'secret':
+                    self.consul_conn.kv.put(f'bmc/{node_key_id}/secret', v)
 
         except Exception as serror:
             print("Error in connecting salt | consul: {}".format(serror))
