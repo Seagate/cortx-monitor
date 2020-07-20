@@ -125,10 +125,10 @@ class MemFaultSensor(SensorThread, InternalMsgQ):
             self.prev_mem = consul_data[0].strip()
             self.fault_alert_state = consul_data[1].strip()
         
-    def put_mem_info(self):
+    def put_mem_info(self, total_memory_size):
         """ Store the current memory in Consul"""
 
-        store.put(f"{self.total_mem}:{self.fault_alert_state}", self.consul_key)
+        store.put(f"{total_memory_size}:{self.fault_alert_state}", self.consul_key)
 
     def run(self):
         """Run the sensor on its own thread"""
@@ -153,15 +153,15 @@ class MemFaultSensor(SensorThread, InternalMsgQ):
                         if self.fault_alert_state == "Neutral State":
                             self.fault_alert_state = "Fault Generated"
                             self._generate_alert(alert_type)
-                            self.put_mem_info()
+                            self.put_mem_info(self.prev_mem)
 
                     elif (int(self.prev_mem) <= int(self.total_mem)) and (self.fault_alert_state == "Fault Generated"):
                         self.fault_alert_state = "Neutral State"
                         alert_type = "fault_resolved"
                         self._generate_alert(alert_type)
-                        self.put_mem_info()
+                        self.put_mem_info(self.total_mem)
                 else:
-                    self.put_mem_info()
+                    self.put_mem_info(self.total_mem)
             else:
                 logger.error("MemFaultSensor: invalid file, shutting down the sensor")
                 self.shutdown()
