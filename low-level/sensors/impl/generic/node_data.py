@@ -40,8 +40,6 @@ class NodeData(Debug):
 
 
     SENSOR_NAME = "NodeData"
-    # TODO: revisit Eth interface career file path construction from base sysfs class path
-    # CARRIER_FILE = "/sys/class/net/{}/carrier"
 
     # conf attribute initialization
     PROBE = 'probe'
