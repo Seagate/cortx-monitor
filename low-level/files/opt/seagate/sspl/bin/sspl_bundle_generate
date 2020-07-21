@@ -6,6 +6,7 @@ import time
 import sys
 import socket
 import json
+import subprocess
 
 from sspl_constants import PRODUCT_FAMILY
 # Add the top level directories
@@ -70,15 +71,19 @@ def make_sspl_log_tarfile(parser, tmpFile):
     try:
         sspl_state = ""
         try:
-            sspl_state=open(f"/var/{PRODUCT_FAMILY}/sspl/data/state.txt").readline().rstrip()
+            sspl_state=open(f"/var/{PRODUCT_FAMILY}/sspl/data/state.txt").readline().rstrip().split("=")
             # Capturing enclosure data only when sspl state is active
             sspl_state = sspl_state[1] if len(sspl_state)==2 else ''
             if sspl_state == 'active':
-                os.system(f"/opt/seagate/{PRODUCT_FAMILY}/sspl/lib/resource_health_view -n -e -s")
+                subprocess.call([f"/opt/seagate/{PRODUCT_FAMILY}/sspl/lib/resource_health_view", "-n", "-e", "-s"], shell=False)
             else:
-                os.system(f"/opt/seagate/{PRODUCT_FAMILY}/sspl/lib/resource_health_view -n -s")
+                print("SSPL state is not active, So enclosure logs are ignored to collecte.")
+                subprocess.call([f"/opt/seagate/{PRODUCT_FAMILY}/sspl/lib/resource_health_view", "-n", "-s"], shell=False)
         except (FileNotFoundError, OSError) as e:
-            os.system(f"/opt/seagate/{PRODUCT_FAMILY}/sspl/lib/resource_health_view -n -e -s")
+            print(f"Failed to open the SSPL 'state.txt' file with an error '{e}',\
+                Can't determine the SSPL state, So enclosure logs also being collected.")
+            sspl_state == 'active'
+            subprocess.call([f"/opt/seagate/{PRODUCT_FAMILY}/sspl/lib/resource_health_view", "-n", "-e", "-s"], shell=False)
         rmq_file = open(rabbitmq_status, "w+")
         for key, value in rabbitmq_cmd.items():
             rmq_file.write(key+':\nCommand: '+value+'\n')
