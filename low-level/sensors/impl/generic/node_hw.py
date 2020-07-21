@@ -32,10 +32,12 @@ from framework.base.debug import Debug
 from framework.base.module_thread import SensorThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.sspl_constants import PRODUCT_FAMILY
-from framework.base.sspl_constants import COMMON_CONFIGS
+from framework.base.sspl_constants import COMMON_CONFIGS,ServiceTypes,node_key_id
 from framework.utils.config_reader import ConfigReader
 from framework.utils.service_logging import logger
+from framework.utils import encryptor
 from sensors.INode_hw import INodeHWsensor
+from framework.utils.store_factory import store
 
 # bash exit codes
 BASH_ILLEGAL_CMD = 127
@@ -75,6 +77,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
     UPDATE_ONLY_MODE   = "r+"
 
     IPMI_ERRSTR = "Could not open device at "
+    IPMI_SDR_ERR = "command failed"
     IPMI_ENCODING = 'utf-8'
 
     SYSTEM_INFORMATION = "SYSTEM_INFORMATION"
@@ -84,26 +87,38 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
     CLUSTER_ID = "cluster_id"
 
     BMC_INTERFACE = "BMC_INTERFACE"
-    BMC_LAN_USER = "bmc_lan_user"
-    BMC_LAN_PASSWD = "bmc_lan_passwd"
-    BMC_LAN_IP = "bmc_lan_ip"
+    BMC = "BMC"
+    BMC_LAN_USER = f"user_{node_key_id}"
+    BMC_LAN_PASSWD = f"secret_{node_key_id}"
+    BMC_LAN_IP = f"ip_{node_key_id}"
     BMC_CHANNEL_IF = "default"
 
     SYSTEM_IF = "system"
     LAN_IF = "lan"
 
-    RMCP_ERRS = ["Unable to establish LAN session", "Unable to establish IPMI v1.5 / RMCP session",\
-                    "Unable to establish IPMI v2 / RMCP+ session" ,"connection timeout", \
-                    "session timeout", "driver timeout","message timeout",\
-                    "BMC busy","username invalid","password invalid","password verification timeout",\
-                    "k_g invalid","privilege level insufficient", "privilege level cannot be obtained for this user",\
-                    "authentication type unavailable for attempted privilege level" ]
+    RMCP_ERRS = ("Unable to establish LAN session", "Unable to establish IPMI v1.5 / RMCP session",
+                "Unable to establish IPMI v2 / RMCP+ session" ,"connection timeout","session timeout",
+                "driver timeout","message timeout","Address lookup for -U failed","BMC busy","invalid user name",
+                "password invalid","password verification timeout","k_g invalid","privilege level insufficient",
+                "privilege level cannot be obtained for this user","authentication type unavailable for attempted privilege level" )
 
-    KCS_ERRS = ["could not find inband device", "driver timeout"]
+    KCS_ERRS = ("could not find inband device", "driver timeout")
+
     CHANNEL_INFO = {}
 
+    LAN_CHANNEL_INFO = {"Channel Medium Type": "802.3 LAN","Channel Protocol Type": "IPMB-1.0",
+                    "Session Support": "multi-session","Active Session Count": "1","Protocol Vendor ID": "7154",
+                    "Alerting": "enabled", "Per_message Auth": "enabled", "User Level Auth": "enabled",
+                    "Access Mode": "always available"}
+
+    KCS_CHANNEL_INFO = {"Channel Medium Type": "System Interface","Channel Protocol Type": "KCS",
+                    "Session Support": "session-less", "Active Session Count": "0", "Protocol Vendor ID": "7154"}
     channel_err = False
+    kcs_channel_err = False
     kcs_interface_alert = False
+    lan_channel_err = False
+    lan_interface_alert = False
+    lan_cmd_retcode = 1
 
     sdr_reset_required = False
     request_shutdown = False
@@ -214,6 +229,9 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         # Initialize internal message queues for this module
         super(NodeHWsensor, self).initialize_msgQ(msgQlist)
 
+        # read bmc interface value from sspl.conf
+        self.file_conf_reader = ConfigReader(is_test=True, test_config_path='/etc/sspl.conf')
+
         self._site_id = conf_reader._get_value_with_default(
                                                 self.SYSTEM_INFORMATION,
                                                 COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.SITE_ID),
@@ -231,21 +249,34 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
                                                 COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.CLUSTER_ID),
                                                 '001')
         self._bmc_user = conf_reader._get_value_with_default(
-                                                self.BMC_INTERFACE,
-                                                self.BMC_LAN_USER,
+                                                self.BMC,
+                                                COMMON_CONFIGS.get(self.BMC).get(self.BMC_LAN_USER),
                                                 'ADMIN')
         self._bmc_passwd = conf_reader._get_value_with_default(
-                                                self.BMC_INTERFACE,
-                                                self.BMC_LAN_PASSWD,
-                                                'ADMIN')
+                                                self.BMC,
+                                                COMMON_CONFIGS.get(self.BMC).get(self.BMC_LAN_PASSWD),
+                                               'ADMIN')
         self._bmc_ip = conf_reader._get_value_with_default(
-                                                self.BMC_INTERFACE,
-                                                self.BMC_LAN_IP,
+                                                self.BMC,
+                                                COMMON_CONFIGS.get(self.BMC).get(self.BMC_LAN_IP),
                                                 '')
-        self._channel_interface = conf_reader._get_value_with_default(
+        self._channel_interface = self.file_conf_reader._get_value_with_default(
                                                 self.BMC_INTERFACE,
                                                 self.BMC_CHANNEL_IF,
                                                 'system')
+
+        decryption_key = encryptor.gen_key(self._cluster_id, ServiceTypes.CLUSTER.value)
+        self._bmc_passwd = encryptor.decrypt(decryption_key, self._bmc_passwd.encode('ascii'), 'Node_hw')
+
+        # define variable in consul to check for bmc channel interface fallback
+        self.consul_key = f"ACTIVE_BMC_IF_{self._node_id}"
+        self.consul_lan_fault = f"LAN_ALERT_{self._node_id}"
+        # save current channel interface value to consul
+        self.active_bmc_if = store.get(self.consul_key)
+        self.lan_fault = store.get(self.consul_lan_fault)
+        if self.active_bmc_if is None:
+            self.active_bmc_if = self._channel_interface
+            store.put(self.active_bmc_if,self.consul_key)
 
         # Set flag 'request_shutdown' to true if ipmitool/simulator is non-functional
         res, retcode = self._run_ipmitool_subcommand("sel info")
@@ -253,8 +284,9 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
                 self.request_shutdown = True
         else:
             self._initialize_cache()
-            self._read_sensor_list()
             self._fetch_channel_info()
+            if self.channel_err is False:
+                self._read_sensor_list()
 
         return True
 
@@ -265,8 +297,17 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         if retcode == 0:
             resstr = b''.join([val for val in res if val]).decode(self.IPMI_ENCODING)
             channel_info = resstr.strip().split("\n")
-            channel_info = {k:v for k,v in (x.split(":") for x in channel_info[1:])}
+            # convert channel_info into dict
+            channel_info = {k.strip():v.strip() for k,v in (x.split(":") for x in channel_info[1:]\
+                            if ":" in x)}
             self.CHANNEL_INFO = channel_info
+
+        # check  for lan falut resolved alert
+        if self.lan_channel_err or self.lan_fault == "fault":
+            command = self.IPMITOOL + " -H " + self._bmc_ip + " -U " + self._bmc_user + \
+                        " -P " + self._bmc_passwd + " -I " + "lan " + "channel info"
+            res, retcode = self._run_command(command)
+            self.lan_cmd_retcode = retcode
 
     def _update_list_file(self):
         with open(self.list_file_collect_name, self.UPDATE_CREATE_MODE) as f:
@@ -368,7 +409,6 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
 
     def run(self):
         """Run the sensor on its own thread"""
-
         # Do not proceed if module is suspended
         if self._suspended == True:
             self._scheduler.enter(self.polling_interval, self._priority, self.run, ())
@@ -378,25 +418,31 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
 
         if self.request_shutdown is False:
             try:
+		# check channel interface is accessible or not
+                if self.channel_err or self.lan_fault is not None:
+                    self._fetch_channel_info()
+
                 # Reset sensor_map_id after ipmi simulation
                 if not os.path.exists("/tmp/activate_ipmisimtool"):
                     # Sensor numbers set by ipmisimtool would cause key lookup
                     # failure with actual ipmitool SDRs. So sensor_map_id needs
                     # to be refreshed with current SDRs.
                     if self.sdr_reset_required:
-                        self.sdr_reset_required = False
-                        self._read_sensor_list()
+                        if self.channel_err is False:
+                            self.sdr_reset_required = False
+                            self._read_sensor_list()
 
-                # Check for a change in ipmi sel list and notify the node data
-                # msg handler
-                if os.path.getsize(self.list_file_name) != 0:
-                    # If the SEL list file is not empty, that means that some
-                    # of the processing from the last iteration is incomplete.
-                    # Complete that before getting the new SEL events.
+                if self.channel_err is False:
+                    # Check for a change in ipmi sel list and notify the node data
+                    # msg handler
+                    if os.path.getsize(self.list_file_name) != 0:
+                        # If the SEL list file is not empty, that means that some
+                        # of the processing from the last iteration is incomplete.
+                        # Complete that before getting the new SEL events.
+                        self._notify_NodeDataMsgHandler()
+
+                    self._update_list_file()
                     self._notify_NodeDataMsgHandler()
-
-                self._update_list_file()
-                self._notify_NodeDataMsgHandler()
 
                 self._check_and_clear_sel()
             except Exception as ae:
@@ -500,8 +546,16 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
                 logger.debug("IPMI simulator is activated")
                 self.sdr_reset_required = True
 
-        if self._channel_interface == self.SYSTEM_IF:
+        if ipmi_tool==self.IPMISIMTOOL:
             command = ipmi_tool + subcommand
+        else:
+            if self._channel_interface == self.SYSTEM_IF or self.active_bmc_if==self.SYSTEM_IF:
+                command = ipmi_tool + subcommand
+            elif self._channel_interface == self.LAN_IF and self.active_bmc_if != self.SYSTEM_IF:
+                command = ipmi_tool + " -H " + self._bmc_ip + " -U " + self._bmc_user + \
+                        " -P " + self._bmc_passwd + " -I " + "lan " + subcommand
+            else:
+                logger.error("Invalid BMC channel interface")
 
         res, retcode = self._run_command(command, subprocess.PIPE)
 
@@ -530,54 +584,88 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
                 if re.search(grep_args, l) is not None:
                     final_list += [l]
             res = ('\n'.join(final_list), res[1])
-        if out_file != subprocess.PIPE:
-            out_file.write(res[0])
+        # write res to out_file only if there is no channel error
+        if not self.channel_err:
+            if out_file != subprocess.PIPE:
+                out_file.write(res[0])
 
         return res, retcode
 
     def _check_channel_error(self, res, retcode):
         # check res present in possible errors or not
 
-        KCS_CHANNEL_INFO = {"Channel Medium Type": "System Interface","Channel Protocol Type": "KCS",
-                            "Session Support": "session-less", "Active Session Count": "0", "Protocol Vendor ID": "7154"}
-
-        resource_id = "0"
+        resource_id = None
         resource_type = None
         alert_type = None
         channel_info = {}
         channel_status = None
         epoch_time = str(int(time.time()))
+        raise_fault_resolved_lan = False
 
-        # kcs_interface_alert=True when fault alert raised
-        # retcode == 0 means ipmitool cmd executed successfully
-        # when both condition satisfied raise falut resolved alert
-        if self.kcs_interface_alert and retcode == 0:
-            alert_type = "fault_resolved"
-            channel_status = "Server BMC is reachable"
-            self.kcs_interface_alert = False
-            self.channel_err = False
-
+        res = b''.join([val for val in res if val]).decode(self.IPMI_ENCODING)
         if retcode != 0:
-            res = b''.join([val for val in res if val]).decode(self.IPMI_ENCODING)
             err_index = res.find("Error")
             if err_index >= 0:
                 err = res[err_index:].split("Error:")[1].strip()
             else:
-                err = res
-            # TODO: search for error codes which ipmitool returns in case of channel error
-            if err in self.KCS_ERRS:
-                channel_info = KCS_CHANNEL_INFO
-                self.kcs_interface_alert = True
+                err = res.split("\n")[0]
+        else:
+            err = res
 
-        if self.kcs_interface_alert  and not self.channel_err:
-            resource_type = "node:bmc:interface:kcs"
-            alert_type = "fault"
+        if self.active_bmc_if == self.SYSTEM_IF:
+            self._check_kcs_if_alert(err,retcode)
+            channel_info = self.KCS_CHANNEL_INFO
+        elif self.active_bmc_if == self.LAN_IF or self.lan_fault is None:
+            self._check_lan_if_alert(err,retcode)
+            channel_info = self.LAN_CHANNEL_INFO
+
+        # kcs_interface_alert=True and self.lan_interface_alert=True when fault alert raised
+        # retcode == 0 means ipmitool cmd executed successfully
+        # when both condition satisfied raise falut resolved alert
+        if self.channel_err:
+            if retcode == 0:
+                self.channel_err = False
+                channel_status = "Server BMC is reachable"
+            if self.kcs_channel_err and retcode == 0:
+                alert_type = "fault_resolved"
+                resource_type = "node:bmc:interface:kcs"
+                self.kcs_interface_alert = False
+                self.kcs_channel_err = False
+            elif self.lan_cmd_retcode == 0 and self.lan_fault == "fault":
+                alert_type = "fault_resolved"
+                resource_type = "node:bmc:interface:rmcp"
+                self.lan_interface_alert = False
+                raise_fault_resolved_lan = True
+                self.lan_channel_err = False
+                self.lan_fault = None
+                store.put(self.lan_fault,self.consul_lan_fault)
+
+        if (self.kcs_interface_alert or self.lan_interface_alert)  and not self.channel_err:
             self.channel_err = True
             channel_status = "Server BMC is unreachable, possible cause: " + err
+            if self.lan_interface_alert and not self.lan_channel_err and self.lan_fault is None:
+                alert_type = "fault"
+                resource_type = "node:bmc:interface:rmcp"
+                self.lan_channel_err = True
+                logger.warning("BMC is unreachable through lan interface ip, \
+                                ipmitool fallback to KCS interface if local server is being monitored")
+                self.active_bmc_if = self.SYSTEM_IF
+                store.put(self.active_bmc_if,self.consul_key)
+                if self.lan_fault is None:
+                    self.lan_fault = alert_type
+                    store.put(self.lan_fault, self.consul_lan_fault)
+            elif self.kcs_interface_alert and not self.kcs_channel_err:
+                resource_type = "node:bmc:interface:kcs"
+                alert_type = "fault"
+                self.kcs_channel_err = True
 
         if self.CHANNEL_INFO:
             channel_info = self.CHANNEL_INFO
 
+        if self.active_bmc_if != self.LAN_IF and raise_fault_resolved_lan:
+            channel_info = self.LAN_CHANNEL_INFO
+
+        resource_id = channel_info.get('Channel Medium Type')
         severity_reader = SeverityReader()
 
         info = {
@@ -595,9 +683,27 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
                 "channel info": channel_info
             }
 
+        if channel_info.get('Channel Medium Type'):
+            if_type = channel_info.get('Channel Medium Type')
+            if if_type == "802.3 LAN":
+                specific_info["bmc_lan_user"] = self._bmc_user
+
         if alert_type is not None:
             severity = severity_reader.map_severity(alert_type)
             self._send_json_msg(resource_type, alert_type, severity, info, specific_info)
+
+    def _check_kcs_if_alert(self,err,retcode):
+
+        if retcode != 0:
+            # TODO: search for error codes which ipmitool returns in case of channel error
+            if err in self.KCS_ERRS:
+                self.kcs_interface_alert = True
+
+    def _check_lan_if_alert(self,err,retcode):
+
+        if retcode !=0:
+            if err in self.RMCP_ERRS:
+                self.lan_interface_alert = True
 
     def read_data(self):
         return self.sel_event_info
@@ -609,16 +715,21 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
            the second is the number."""
 
         sensor_list_out, retcode = self._run_ipmitool_subcommand(f"sdr type '{sensor_type}'")
+        out = []
+
         if retcode != 0:
             if isinstance(sensor_list_out, tuple):
                 sensor_list_out = [val for val in sensor_list_out if val]
             msg = f"ipmitool sdr type command failed: {b''.join(sensor_list_out)}"
             logger.warning(msg)
-            return
+            return out
+
         sensor_list = b''.join(sensor_list_out).decode(self.IPMI_ENCODING).split("\n")
 
-        out = []
         for sensor in sensor_list:
+            if self.IPMI_SDR_ERR in sensor:
+                self.sdr_reset_required = True
+                return out
             if sensor == "":
                 break
             # Example of output form 'sdr type' command:
@@ -647,6 +758,8 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
 
         out = []
         for sensor in sensor_list:
+            if self.IPMI_SDR_ERR in sensor:
+                return out
             if sensor == '':
                 continue
             # Output from 'sdr entity' command is same as from 'sdr type' command.
@@ -668,8 +781,11 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         props_list = b''.join(props_list_out).decode(self.IPMI_ENCODING).split("\n")
 
         static_keys = {}
+        dynamic = {}
         curr_key = None
         for prop in props_list:
+            if self.IPMI_SDR_ERR in prop:
+                return (dynamic, static_keys)
             if prop == '':
                 continue
             if ':' in prop and '[' not in prop and ']' not in prop:
@@ -678,7 +794,6 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
             else:
                 static_keys[curr_key] += "\n" + prop
 
-        dynamic = {}
         common_props = {
             'Sensor ID',
             'Entity ID',
@@ -708,8 +823,12 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         props_list = props_list[1:] # The first line is 'Locating sensor record...'
 
         specific_static = {}
+        common = {}
+        specific_dynamic = {}
         curr_key = None
         for prop in props_list:
+            if self.IPMI_SDR_ERR in prop:
+                return (common, specific_static, specific_dynamic)
             if prop == '':
                 continue
             if ':' in prop:
@@ -718,7 +837,6 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
             else:
                 specific_static[curr_key] += "\n" + prop
 
-        common = {}
         common_props = {
             'Sensor ID',
             'Entity ID',
@@ -729,7 +847,6 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
             common[c] = specific_static[c]
             del specific_static[c]
 
-        specific_dynamic = {}
         for c in (set(specific_static.keys()) & self.DYNAMIC_KEYS):
             specific_dynamic[c] = specific_static[c]
             del specific_static[c]

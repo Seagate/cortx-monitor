@@ -6,7 +6,7 @@ try:
 except Exception as e:
     from framework.utils.salt_util import node_id, consulhost, consulport
 
-PRODUCT_NAME = 'EES'
+PRODUCT_NAME = 'ECS'
 PRODUCT_FAMILY = 'cortx'
 enabled_products = ["CS-A", "SINGLE", "EES", "ECS"]
 cs_products = ["CS-A"]
@@ -26,7 +26,6 @@ PRODUCT = "product"
 SETUP = "setup"
 MAX_CONSUL_RETRY = 12
 WAIT_BEFORE_RETRY = 5
-
 node_key_id = node_id
 CONSUL_HOST = consulhost
 CONSUL_PORT = consulport
@@ -60,6 +59,12 @@ COMMON_CONFIGS = {
         "sspl_key" : "key_provided_by_provisioner",
         "cluster_nodes" : "rabbitmq/cluster_nodes",
         "erlang_cookie" : "rabbitmq/erlang_cookie"
+    },
+    "BMC": {
+        "sspl_key" : "key_provided_by_provisioner",
+        f"ip_{node_id}" : f"{node_id}/ip",
+        f"user_{node_id}" : f"{node_id}/user",
+        f"secret_{node_id}" : f"{node_id}/secret"
     }
 }
 
@@ -102,6 +107,7 @@ class StoreTypes(Enum):
 class ServiceTypes(Enum):
     RABBITMQ = "rabbitmq"
     STORAGE_ENCLOSURE = "storage_enclosure"
+    CLUSTER = "cluster"
 
 class OperatingSystem(Enum):
     CENTOS7 = "centos7"
