@@ -165,7 +165,6 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         # Validate configuration file for required valid values
         try:
             self.conf_reader = ConfigReader()
-            self.file_conf_reader = ConfigReader(is_test=True, test_config_path='/etc/sspl.conf')
 
         except (IOError, ConfigReader.Error) as err:
             logger.error("[ Error ] when validating the config file {0} - {1}"\
@@ -229,6 +228,9 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
 
         # Initialize internal message queues for this module
         super(NodeHWsensor, self).initialize_msgQ(msgQlist)
+
+        # read bmc interface value from sspl.conf
+        self.file_conf_reader = ConfigReader(is_test=True, test_config_path='/etc/sspl.conf')
 
         self._site_id = conf_reader._get_value_with_default(
                                                 self.SYSTEM_INFORMATION,
@@ -544,11 +546,13 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
                 logger.debug("IPMI simulator is activated")
                 self.sdr_reset_required = True
 
-        if self._channel_interface == self.SYSTEM_IF or ipmi_tool==self.IPMISIMTOOL or self.active_bmc_if==self.SYSTEM_IF:
+        if ipmi_tool==self.IPMISIMTOOL:
             command = ipmi_tool + subcommand
-        elif self._channel_interface == self.LAN_IF and ipmi_tool != self.IPMISIMTOOL and \
-            self.active_bmc_if != self.SYSTEM_IF:
-            command = ipmi_tool + " -H " + self._bmc_ip + " -U " + self._bmc_user + \
+        else:
+            if self._channel_interface == self.SYSTEM_IF or self.active_bmc_if==self.SYSTEM_IF:
+                command = ipmi_tool + subcommand
+            elif self._channel_interface == self.LAN_IF and self.active_bmc_if != self.SYSTEM_IF:
+                command = ipmi_tool + " -H " + self._bmc_ip + " -U " + self._bmc_user + \
                         " -P " + self._bmc_passwd + " -I " + "lan " + subcommand
 
         res, retcode = self._run_command(command, subprocess.PIPE)
@@ -641,7 +645,8 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
                 alert_type = "fault"
                 resource_type = "node:bmc:interface:rmcp"
                 self.lan_channel_err = True
-                logger.warning("BMC is unreachable through lan IF, ipmitool fallback to KCS IF")
+                logger.warning("BMC is unreachable through lan interface ip, \
+                                ipmitool fallback to KCS interface if local server is being monitored")
                 self.active_bmc_if = self.SYSTEM_IF
                 store.put(self.active_bmc_if,self.consul_key)
                 if self.lan_fault is None:
