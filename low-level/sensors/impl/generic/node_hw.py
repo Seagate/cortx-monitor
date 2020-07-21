@@ -554,6 +554,8 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
             elif self._channel_interface == self.LAN_IF and self.active_bmc_if != self.SYSTEM_IF:
                 command = ipmi_tool + " -H " + self._bmc_ip + " -U " + self._bmc_user + \
                         " -P " + self._bmc_passwd + " -I " + "lan " + subcommand
+            else:
+                logger.error("Invalid BMC channel interface")
 
         res, retcode = self._run_command(command, subprocess.PIPE)
 
