@@ -1,6 +1,6 @@
 # Version 1.0.0
 [SSPL-LL_SETTING]
-core_processors=PlaneCntrlRMQingressProcessor, PlaneCntrlRMQegressProcessor
+core_processors=PlaneCntrlIngressProcessor, PlaneCntrlEgressProcessor
 
 message_handlers=PlaneCntrlMsgHandler
 

@@ -1,6 +1,6 @@
 """
  ****************************************************************************
- Filename:          plane_cntrl_rmq_ingress_processor.py
+ Filename:          plane_cntrl_ingress_processor.py
  Description:       Handles incoming messages for plane controller
                      via rabbitMQ over network
  Creation Date:     11/14/2016
@@ -28,9 +28,11 @@ from pika.exceptions import AMQPError
 
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
+from framework.base.sspl_constants import ServiceTypes, COMMON_CONFIGS
 from framework.utils.service_logging import logger
-from .rabbitmq_connector import RabbitMQSafeConnection
-from framework.rabbitmq.plane_cntrl_rmq_egress_processor import PlaneCntrlRMQegressProcessor
+from framework.utils import encryptor
+from framework.utils.amqp_factory import amqp_factory
+from framework.amqp.plane_cntrl_egress_processor import PlaneCntrlEgressProcessor
 from framework.base.sspl_constants import RESOURCE_PATH
 
 from json_msgs.messages.actuators.ack_response import AckResponseMsg
@@ -44,10 +46,10 @@ except Exception as ae:
     use_security_lib=False
 
 
-class PlaneCntrlRMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
+class PlaneCntrlIngressProcessor(ScheduledModuleThread, InternalMsgQ):
     """Handles incoming messages via rabbitMQ over network"""
 
-    MODULE_NAME = "PlaneCntrlRMQingressProcessor"
+    MODULE_NAME = "PlaneCntrlIngressProcessor"
     PRIORITY    = 1
 
     # Section and keys in configuration file
@@ -63,14 +65,19 @@ class PlaneCntrlRMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
 
     JSON_ACTUATOR_SCHEMA = "SSPL-LL_Actuator_Request.json"
     JSON_SENSOR_SCHEMA   = "SSPL-LL_Sensor_Request.json"
+    SYSTEM_INFORMATION_KEY = 'SYSTEM_INFORMATION'
+    CLUSTER_ID_KEY = 'cluster_id'
+    NODE_ID_KEY = 'node_id'
+    RABBITMQ_CLUSTER_SECTION = 'RABBITMQCLUSTER'
+    RABBITMQ_CLUSTER_HOSTS_KEY = 'cluster_nodes'
 
     @staticmethod
     def name():
         """ @return: name of the module."""
-        return PlaneCntrlRMQingressProcessor.MODULE_NAME
+        return PlaneCntrlIngressProcessor.MODULE_NAME
 
     def __init__(self):
-        super(PlaneCntrlRMQingressProcessor, self).__init__(self.MODULE_NAME,
+        super(PlaneCntrlIngressProcessor, self).__init__(self.MODULE_NAME,
                                                        self.PRIORITY)
 
         # Read in the actuator schema for validating messages
@@ -107,17 +114,21 @@ class PlaneCntrlRMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
     def initialize(self, conf_reader, msgQlist, products):
         """initialize configuration reader and internal msg queues"""
         # Initialize ScheduledMonitorThread
-        super(PlaneCntrlRMQingressProcessor, self).initialize(conf_reader)
+        super(PlaneCntrlIngressProcessor, self).initialize(conf_reader)
 
         # Initialize internal message queues for this module
-        super(PlaneCntrlRMQingressProcessor, self).initialize_msgQ(msgQlist)
+        super(PlaneCntrlIngressProcessor, self).initialize_msgQ(msgQlist)
 
         self._current_rabbitMQ_server = None
 
         self._hostname = gethostname()
 
-        # Configure RabbitMQ Exchange to receive messages
-        self._configure_exchange()
+        self._read_config()
+
+        # Get common amqp config
+        amqp_config = self._get_default_amqp_config()
+        self._comm = amqp_factory.get_amqp_consumer(**amqp_config)
+        self._comm.init()
 
         # Display values used to configure pika from the config file
         self._log_debug("RabbitMQ user: %s" % self._username)
@@ -129,24 +140,24 @@ class PlaneCntrlRMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
         #self._set_debug(True)
         #self._set_debug_persist(True)
 
-        logger.info("PlaneCntrlRMQingressProcessor, Initialization complete, accepting requests")
+        logger.info(f"{self.MODULE_NAME}, Initialization complete, accepting requests")
 
         try:
             # Start consuming and processing ingress msgs
-            self._connection.consume(callback=self._process_msg)
+            self._comm.consume(callback_fn=self._process_msg)
         except AMQPError as e:
             if self.is_running() is True:
-                logger.info("PlaneCntrlRMQingressProcessor ungracefully breaking out of run loop, restarting.")
-                logger.exception("PlaneCntrlRMQingressProcessor, AMQPError: %s" % str(e))
+                logger.info(f"{self.MODULE_NAME} ungracefully breaking out of run loop, restarting.")
+                logger.exception(f"{self.MODULE_NAME}, AMQPError: {e}")
                 self._toggle_rabbitMQ_servers()
-                self._configure_exchange()
+                self._comm.init()
                 self._scheduler.enter(10, self._priority, self.run, ())
             else:
-                logger.info("PlaneCntrlRMQingressProcessor gracefully breaking out of run Loop, not restarting.")
+                logger.info(f"{self.MODULE_NAME} gracefully breaking out of run Loop, not restarting.")
 
         self._log_debug("Finished processing successfully")
 
-    def _process_msg(self, ch, method, properties, body):
+    def _process_msg(self, body):
         """Parses the incoming message and hands off to the appropriate module"""
 
         ingressMsg = {}
@@ -168,7 +179,7 @@ class PlaneCntrlRMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
 
             if use_security_lib and \
                SSPL_SEC.sspl_verify_message(msg_len, str(message), username, signature) != 0:
-                logger.warn("PlaneCntrlRMQingressProcessor, Authentication failed on message: %s" % ingressMsg)
+                logger.warn(f"{self.MODULE_NAME}, Authentication failed on message: {ingressMsg}")
                 return
 
             # Get the incoming message type
@@ -196,7 +207,7 @@ class PlaneCntrlRMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
             if msgType.get("plane_controller") is not None:
                 command = message.get("actuator_request_type").get("plane_controller").get("command")
 
-                # For a job status request forward over to PlaneCntrlRMQegressProcessor
+                # For a job status request forward over to PlaneCntrlEgressProcessor
                 if command is not None and \
                    command == "job_status":
                     job_uuid = message.get("actuator_request_type").get("plane_controller").get("arguments").get("uuid", None)
@@ -228,15 +239,15 @@ class PlaneCntrlRMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
             # ... handle other incoming messages that have been validated
             else:
                 # Log a msg about not being able to process the message
-                logger.info("PlaneCntrlRMQingressProcessor, _process_msg, unrecognized message: %s" % str(ingressMsg))
+                logger.info(f"{self.MODULE_NAME}, _process_msg, unrecognized message: {str(ingressMsg)}")
 
         except Exception as ex:
-            logger.exception("PlaneCntrlRMQingressProcessor, _process_msg unrecognized message: %r" % ingressMsg)
+            logger.exception(f"{self.MODULE_NAME}, _process_msg unrecognized message: {ingressMsg}")
             ack_msg = AckResponseMsg("Error Processing Msg", "Msg Handler Not Found", uuid).getJson()
-            self._write_internal_msgQ(PlaneCntrlRMQegressProcessor.name(), ack_msg)
+            self._write_internal_msgQ(PlaneCntrlEgressProcessor.name(), ack_msg)
 
         # Acknowledge message was received
-        self._connection.ack(ch, delivery_tag=method.delivery_tag)
+        self._comm.acknowledge()
 
     def _process_job_status(self, uuid, job_uuid):
         """Send the current job status requested"""
@@ -260,9 +271,9 @@ class PlaneCntrlRMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
 
             # The uuid is either not found or it's in the queue to be worked
             ack_msg = AckResponseMsg(json.dumps(ack_type), response, uuid).getJson()
-            self._write_internal_msgQ(PlaneCntrlRMQegressProcessor.name(), ack_msg)
+            self._write_internal_msgQ(PlaneCntrlEgressProcessor.name(), ack_msg)
         except Exception as ex:
-            logger.exception("PlaneCntrlRMQingressProcessor, _process_job_status exception: %s" % str(ex))
+            logger.exception(f"{self.MODULE_NAME}, _process_job_status exception: {ex}")
 
     def _toggle_rabbitMQ_servers(self):
         """Toggle between hosts when a connection fails"""
@@ -271,49 +282,64 @@ class PlaneCntrlRMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
         else:
             self._current_rabbitMQ_server = self._primary_rabbitMQ_server
 
-    def _configure_exchange(self):
+    def _read_config(self):
         """Configure the RabbitMQ exchange with defaults available"""
         try:
-            self._virtual_host = self._conf_reader._get_value_with_default(
-                self.RABBITMQPROCESSOR, self.VIRT_HOST, 'SSPL'
-            )
-            self._exchange_name = self._conf_reader._get_value_with_default(
-                self.RABBITMQPROCESSOR, self.EXCHANGE_NAME, 'ras_sspl'
-            )
-            self._queue_name = self._conf_reader._get_value_with_default(
-                self.RABBITMQPROCESSOR, self.QUEUE_NAME, 'ras_control'
-            )
-            self._routing_key = self._conf_reader._get_value_with_default(
-                self.RABBITMQPROCESSOR, self.ROUTING_KEY, 'sspl_ll'
-            )
-            self._username = self._conf_reader._get_value_with_default(
-                self.RABBITMQPROCESSOR, self.USER_NAME, 'sspluser'
-            )
-            self._password = self._conf_reader._get_value_with_default(
-               self.RABBITMQPROCESSOR, self.PASSWORD, 'sspl4ever'
-            )
-            self._primary_rabbitMQ_server = self._conf_reader._get_value_with_default(
-                self.RABBITMQPROCESSOR, self.PRIMARY_RABBITMQ, 'localhost'
-            )
-            self._secondary_rabbitMQ_server = self._conf_reader._get_value_with_default(
-                self.RABBITMQPROCESSOR, self.SECONDARY_RABBITMQ, 'localhost'
-            )
-            self._connection = RabbitMQSafeConnection(
-                self._username, self._password, self._virtual_host,
-                self._exchange_name, self._routing_key, self._queue_name
-            )
-            if self._current_rabbitMQ_server is None:
-                self._current_rabbitMQ_server = self._primary_rabbitMQ_server
+            self._virtual_host  = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
+                                                                 self.VIRT_HOST,
+                                                                 'SSPL')
+            self._queue_name    = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
+                                                                 self.QUEUE_NAME,
+                                                                 'ras_control')
+            self._exchange_name = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
+                                                                 self.EXCHANGE_NAME,
+                                                                 'ras_sspl')
+            self._routing_key   = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
+                                                                 self.ROUTING_KEY,
+                                                                 'sspl_ll')
+            self._username      = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
+                                                                 self.USER_NAME,
+                                                                 'sspluser')
+            self._password      = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
+                                                                 self.PASSWORD,
+                                                                 'sspl4ever')
+            self._hosts = self._conf_reader._get_value_list(self.RABBITMQ_CLUSTER_SECTION, 
+                                COMMON_CONFIGS.get(self.RABBITMQ_CLUSTER_SECTION).get(self.RABBITMQ_CLUSTER_HOSTS_KEY))
+            cluster_id = self._conf_reader._get_value_with_default(self.SYSTEM_INFORMATION_KEY,
+                                                                   COMMON_CONFIGS.get(self.SYSTEM_INFORMATION_KEY).get(self.CLUSTER_ID_KEY),
+                                                                   '')
+
+            # Decrypt RabbitMQ Password
+            decryption_key = encryptor.gen_key(cluster_id, ServiceTypes.RABBITMQ.value)
+            self._password = encryptor.decrypt(decryption_key, self._password.encode('ascii'), self.RABBITMQPROCESSOR)
+
+
         except Exception as ex:
-            logger.exception("PlaneCntrlRMQingressProcessor, _configure_exchange: %r" % ex)
+            logger.exception(f"{self.MODULE_NAME}, _read_config: {ex}")
+
+    def _get_default_amqp_config(self):
+        return {
+                    "virtual_host": self._virtual_host,
+                    "exchange": self._exchange_name,
+                    "username": self._username,
+                    "password": self._password,
+                    "hosts": self._hosts,
+                    "exchange_queue": self._queue_name,
+                    "exchange_type": "topic",
+                    "routing_key": self._routing_key,
+                    "durable": True,
+                    "exclusive": False,
+                    "retry_count": 5,
+                    "port": 5672
+                }
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""
-        super(PlaneCntrlRMQingressProcessor, self).shutdown()
+        super(PlaneCntrlIngressProcessor, self).shutdown()
         try:
-            self._connection.cleanup()
+            self._comm.stop()
         except pika.exceptions.ConnectionClosed:
-            logger.info("PlaneCntrlRMQingressProcessor, shutdown, RabbitMQ ConnectionClosed")
+            logger.info(f"{self.MODULE_NAME}, shutdown, RabbitMQ ConnectionClosed")
         except Exception as err:
-            logger.info("PlaneCntrlRMQingressProcessor, shutdown, RabbitMQ {}".format(str(err)))
+            logger.info(f"{self.MODULE_NAME}, shutdown, RabbitMQ {err}")
 

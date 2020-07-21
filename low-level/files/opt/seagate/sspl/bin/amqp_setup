@@ -1,0 +1,13 @@
+#!/bin/bash
+
+# Stop the script if any command fails
+set -e -u -o pipefail
+
+script_dir=$(dirname $0)
+
+# Import common constants
+source $script_dir/constants.sh
+
+amqp_type=$($CONSUL_PATH/consul kv get sspl/config/AMQP/type)
+
+$script_dir/${amqp_type}_setup

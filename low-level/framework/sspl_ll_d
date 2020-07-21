@@ -41,18 +41,18 @@ from framework.utils.service_logging import logger
 from framework.utils.store_factory import store
 
 # Modules for handling RabbitMQ messages and manipulating internal threads
-from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
-from framework.rabbitmq.rabbitmq_ingress_processor import RabbitMQingressProcessor
+from framework.amqp.egress_processor import EgressProcessor
+from framework.amqp.ingress_processor import IngressProcessor
 
-from framework.rabbitmq.plane_cntrl_rmq_egress_processor import PlaneCntrlRMQegressProcessor
-from framework.rabbitmq.plane_cntrl_rmq_ingress_processor import PlaneCntrlRMQingressProcessor
+from framework.amqp.plane_cntrl_egress_processor import PlaneCntrlEgressProcessor
+from framework.amqp.plane_cntrl_ingress_processor import PlaneCntrlIngressProcessor
 from framework.base.sspl_constants import enabled_products, OperatingSystem, COMMON_CONFIGS, SSPL_SETTINGS
 from framework.base.module_thread import SensorThread
 from framework.actuator_state_manager import actuator_state_manager
 
-from framework.rabbitmq.logging_processor import LoggingProcessor
-from framework.rabbitmq.thread_controller import ThreadController
-from framework.rabbitmq.rabbitmq_egress_accumulated_msgs_processor import \
+from framework.amqp.logging_processor import LoggingProcessor
+from framework.amqp.thread_controller import ThreadController
+from framework.amqp.egress_accumulated_msgs_processor import \
     RabbitMQEgressAccumulatedMsgsProcessor
 from framework.base.sspl_constants import PRODUCT_FAMILY
 
@@ -305,7 +305,7 @@ def main(conf_reader, systemd_support):
         sspl_threaded_modules[klass.name()] = klass()
         msgQlist[klass.name()] = queue.Queue()
 
-    # Add rabbitmq_egress_accumulated_msgs_processor.py in sspl_threaded_modules
+    # Add egress_accumulated_msgs_processor.py in sspl_threaded_modules
     sspl_threaded_modules[RabbitMQEgressAccumulatedMsgsProcessor] = RabbitMQEgressAccumulatedMsgsProcessor()
     msgQlist[RabbitMQEgressAccumulatedMsgsProcessor.name()] = queue.Queue()
 
@@ -538,7 +538,7 @@ def _run_thread_capture_errors(curr_module, sspl_threaded_modules, msgQlist, con
         # error_msg = "SSPL-LL encountered an error, terminating service Error, restarting daemon:{}" \
         #             .format(str(logger.exception(ex)))
         # jsonMsg   = ThreadControllerMsg(curr_module.name(), error_msg).getJson()
-        # curr_module._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
+        # curr_module._write_internal_msgQ(EgressProcessor.name(), jsonMsg)
 
         # Shut down any running threads, error is non-recoverable
         # shutdown_handler()
@@ -559,11 +559,11 @@ def shutdown_handler(signum=None, frame=None):
 
     shutdown_msg = "SSPL-LL is shutting down"
     jsonMsg   = ThreadControllerMsg(threadController.name(), shutdown_msg).getJson()
-    threadController._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
+    threadController._write_internal_msgQ(EgressProcessor.name(), jsonMsg)
 
-    # Wait for the RabbitMQegressProcessor to finish processing
+    # Wait for the EgressProcessor to finish processing
     # any messages which it may have in its queue
-    while threadController.check_RabbitMQegressProcessor_is_running() is True:
+    while threadController.check_EgressProcessor_is_running() is True:
         logger.info("Waiting for rabbitMQegress to finish sending queued msgs")
         time.sleep(2)
 

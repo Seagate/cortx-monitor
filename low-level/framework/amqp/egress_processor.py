@@ -1,6 +1,6 @@
 """
  ****************************************************************************
- Filename:          rabbitmq_egress_processor.py
+ Filename:          egress_processor.py
  Description:       Handles outgoing messages via rabbitMQ over localhost
  Creation Date:     01/14/2015
  Author:            Jake Abernathy
@@ -19,13 +19,14 @@ import pika
 import time
 import sys
 
+from eos.utils.amqp import AmqpConnectionError
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
-from .rabbitmq_connector import RabbitMQSafeConnection, connection_exceptions
 from framework.utils import encryptor
 from framework.utils.store_factory import store
 from framework.utils import mon_utils
+from framework.utils.amqp_factory import amqp_factory
 from framework.utils.store_queue import store_queue
 from framework.base.sspl_constants import ServiceTypes, COMMON_CONFIGS
 
@@ -34,14 +35,14 @@ try:
     use_security_lib=True
     SSPL_SEC = ctypes.cdll.LoadLibrary('libsspl_sec.so.0')
 except Exception as ae:
-    logger.info("RabbitMQegressProcessor, libsspl_sec not found, disabling authentication on egress msgs")
+    logger.info("EgressProcessor, libsspl_sec not found, disabling authentication on egress msgs")
     use_security_lib=False
 
 
-class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
+class EgressProcessor(ScheduledModuleThread, InternalMsgQ):
     """Handles outgoing messages via rabbitMQ over localhost"""
 
-    MODULE_NAME = "RabbitMQegressProcessor"
+    MODULE_NAME = "EgressProcessor"
     PRIORITY    = 1
 
     # Section and keys in configuration file
@@ -67,61 +68,65 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
     SYSTEM_INFORMATION_KEY = 'SYSTEM_INFORMATION'
     CLUSTER_ID_KEY = 'cluster_id'
     NODE_ID_KEY = 'node_id'
+    RABBITMQ_CLUSTER_SECTION = 'RABBITMQCLUSTER'
+    RABBITMQ_CLUSTER_HOSTS_KEY = 'cluster_nodes'
 
     @staticmethod
     def name():
         """ @return: name of the module."""
-        return RabbitMQegressProcessor.MODULE_NAME
+        return EgressProcessor.MODULE_NAME
 
     def __init__(self):
-        super(RabbitMQegressProcessor, self).__init__(self.MODULE_NAME,
+        super(EgressProcessor, self).__init__(self.MODULE_NAME,
                                                       self.PRIORITY)
 
     def initialize(self, conf_reader, msgQlist, product):
         """initialize configuration reader and internal msg queues"""
         # Initialize ScheduledMonitorThread
-        super(RabbitMQegressProcessor, self).initialize(conf_reader)
+        super(EgressProcessor, self).initialize(conf_reader)
 
         # Initialize internal message queues for this module
-        super(RabbitMQegressProcessor, self).initialize_msgQ(msgQlist)
+        super(EgressProcessor, self).initialize_msgQ(msgQlist)
 
         # Flag denoting that a shutdown message has been placed
         #  into our message queue from the main sspl_ll_d handler
         self._request_shutdown = False
 
-        self._product = product
-
-        # Configure RabbitMQ Exchange to transmit messages
-        self._connection = None
         self._read_config()
 
-        self._connection = RabbitMQSafeConnection(
-            self._username, self._password, self._virtual_host,
-            self._exchange_name, self._routing_key, self._queue_name
-        )
+        # Get common amqp config
+        amqp_config = self._get_default_amqp_config()
+        self._default_comm = amqp_factory.get_amqp_producer(**amqp_config)
+        try:
+            self._default_comm.init()
+        except AmqpConnectionError:
+            logger.warning(f"{self.MODULE_NAME} amqp connection is not initialized, \
+                 messages will be stored in consul")
 
-        self._ack_connection = RabbitMQSafeConnection(
-            self._username, self._password, self._virtual_host,
-            self._exchange_name, self._ack_routing_key, self._ack_queue_name
-        )
+        # Update ack specific amqp config
+        ack_amqp_config = {"exchange_queue" : self._ack_queue_name,
+                           "routing_key": self._ack_routing_key}
+        ack_amqp_config = {**amqp_config, **ack_amqp_config}
+        self._ack_comm = amqp_factory.get_amqp_producer(**ack_amqp_config)
+        try:
+            self._ack_comm.init()
+        except AmqpConnectionError:
+            logger.warning(f"{self.MODULE_NAME} amqp connection is not initialized, \
+                 messages will be stored in consul")
 
-        self._iem_connection = RabbitMQSafeConnection(
-            self._username, self._password, self._virtual_host,
-            self._iem_route_exchange_name, self._routing_key,
-            self._queue_name
-        )
-
-        # Display values used to configure pika from the config file
-        self._log_debug("RabbitMQ user: %s" % self._username)
-        self._log_debug("RabbitMQ exchange: %s, routing_key: %s, vhost: %s" %
-                       (self._exchange_name, self._routing_key, self._virtual_host))
+        # Update IEM specifc amqp config
+        iem_amqp_config = {"exchange": self._iem_route_exchange_name}
+        iem_amqp_config = {**amqp_config, **iem_amqp_config}
+        self._iem_comm = amqp_factory.get_amqp_producer(**amqp_config)
+        try:
+            self._iem_comm.init()
+        except AmqpConnectionError:
+            logger.warning(f"{self.MODULE_NAME} amqp connection is not initialized, \
+                 messages will be stored in consul")
 
     def run(self):
         """Run the module periodically on its own thread. """
         self._log_debug("Start accepting requests")
-
-        #self._set_debug(True)
-        #self._set_debug_persist(True)
 
         try:
             # Loop thru all messages in queue until and transmit
@@ -133,7 +138,7 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
 
         except Exception:
             # Log it and restart the whole process when a failure occurs
-            logger.error("RabbitMQegressProcessor restarting")
+            logger.error(f"{self.MODULE_NAME} restarting")
 
         self._log_debug("Finished processing successfully")
 
@@ -151,11 +156,6 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
             self._virtual_host  = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
                                                                  self.VIRT_HOST,
                                                                  'SSPL')
-
-            # Read common RabbitMQ configuration
-            self._primary_rabbitmq_host = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
-                                                                 self.PRIMARY_RABBITMQ_HOST,
-                                                                 'localhost')
 
             # Read RabbitMQ configuration for sensor messages
             self._queue_name    = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
@@ -196,20 +196,37 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
             self._iem_route_exchange_name = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
                                                                  self.IEM_ROUTE_EXCHANGE_NAME,
                                                                  'sspl-in')
-
+            self._hosts = self._conf_reader._get_value_list(self.RABBITMQ_CLUSTER_SECTION, 
+                                COMMON_CONFIGS.get(self.RABBITMQ_CLUSTER_SECTION).get(self.RABBITMQ_CLUSTER_HOSTS_KEY))
             cluster_id = self._conf_reader._get_value_with_default(self.SYSTEM_INFORMATION_KEY,
                                                                    COMMON_CONFIGS.get(self.SYSTEM_INFORMATION_KEY).get(self.CLUSTER_ID_KEY),
                                                                    '')
 
             # Decrypt RabbitMQ Password
             decryption_key = encryptor.gen_key(cluster_id, ServiceTypes.RABBITMQ.value)
-            self._password = encryptor.decrypt(decryption_key, self._password.encode('ascii'), "RabbitMQegressProcessor")
+            self._password = encryptor.decrypt(decryption_key, self._password.encode('ascii'), "EgressProcessor")
 
             if self._iem_route_addr != "":
                 logger.info("         Routing IEMs to host: %s" % self._iem_route_addr)
                 logger.info("         Using IEM exchange: %s" % self._iem_route_exchange_name)
         except Exception as ex:
-            logger.error("RabbitMQegressProcessor, _read_config: %r" % ex)
+            logger.error(f"{self.MODULE_NAME}, _read_config: %r" % ex)
+
+    def _get_default_amqp_config(self):
+        return {
+                    "virtual_host": self._virtual_host,
+                    "exchange": self._exchange_name,
+                    "username": self._username,
+                    "password": self._password,
+                    "hosts": self._hosts,
+                    "exchange_queue": self._queue_name,
+                    "exchange_type": "topic",
+                    "routing_key": self._routing_key,
+                    "durable": True,
+                    "exclusive": False,
+                    "retry_count": 1,
+                    "port": 5672
+                }
 
     def _add_signature(self):
         """Adds the authentication signature to the message"""
@@ -252,9 +269,6 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
                                     "global shutdown message from sspl_ll_d")
                     self._request_shutdown = True
 
-            msg_props = pika.BasicProperties()
-            msg_props.content_type = "text/plain"
-
             # Publish json message to the correct channel
             # NOTE: We need to route ThreadController messages to ACK channel.
             # We can't modify schema as it will affect other modules too. As a
@@ -266,34 +280,23 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
               (self._jsonMsg.get("message").get("actuator_response_type").get("ack") is not None or \
                 self._jsonMsg.get("message").get("actuator_response_type").get("thread_controller") is not None):
                 self._add_signature()
-                jsonMsg = json.dumps(self._jsonMsg).encode('utf8')
-                self._ack_connection.publish(exchange=self._exchange_name,
-                                             routing_key=self._ack_routing_key,
-                                             properties=msg_props,
-                                             body=jsonMsg)
+                self._ack_comm.send(message=self._jsonMsg)
 
             # Routing requests for IEM msgs sent from the LoggingMsgHandler
             elif self._jsonMsg.get("message").get("IEM_routing") is not None:
                 log_msg = self._jsonMsg.get("message").get("IEM_routing").get("log_msg")
                 self._log_debug("Routing IEM: %s" % log_msg)
                 if self._iem_route_addr != "":
-                    self._iem_connection.publish(exchange=self._iem_route_exchange_name,
-                                                 routing_key=self._routing_key,
-                                                 properties=msg_props,
-                                                 body=str(log_msg))
+                    self._iem_comm.send(message=str(log_msg))
                 else:
-                    logger.warn("RabbitMQegressProcessor, Attempted to route IEM without a valid 'iem_route_addr' set.")
+                    logger.warn(f"{self.MODULE_NAME}, Attempted to route IEM without a valid 'iem_route_addr' set.")
             else:
                 self._add_signature()
-                jsonMsg = json.dumps(self._jsonMsg).encode('utf8')
                 try:
-                    self._connection.publish(exchange=self._exchange_name,
-                                            routing_key=self._routing_key,
-                                            properties=msg_props,
-                                            body=jsonMsg)
-                except connection_exceptions:
-                    logger.error("RabbitMQegressProcessor, _transmit_msg_on_exchange, rabbitmq connectivity lost, adding message to consul %s" % self._jsonMsg)
-                    store_queue.put(jsonMsg)
+                    self._default_comm.send(message=self._jsonMsg)
+                except AmqpConnectionError:
+                    logger.error(f"{self.MODULE_NAME}, _transmit_msg_on_exchange, amqp connectivity lost, adding message to consul {self._jsonMsg}")
+                    store_queue.put(json.dumps(self._jsonMsg))
 
             # No exceptions thrown so success
             self._log_debug("_transmit_msg_on_exchange, Successfully Sent: %s" % self._jsonMsg)
@@ -302,8 +305,8 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
                 self._event.set()
 
         except Exception as ex:
-            logger.error("RabbitMQegressProcessor, _transmit_msg_on_exchange: %r" % ex)
+            logger.error(f"{self.MODULE_NAME}, _transmit_msg_on_exchange: %r" % ex)
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""
-        super(RabbitMQegressProcessor, self).shutdown()
+        super(EgressProcessor, self).shutdown()

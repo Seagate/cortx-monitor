@@ -22,7 +22,7 @@ from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
 from framework.base.sspl_constants import enabled_products, COMMON_CONFIGS
 
-from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
+from amqp.egress_processor import EgressProcessor
 from json_msgs.messages.actuators.realstor_actuator_response import RealStorActuatorMsg
 
 
@@ -41,7 +41,7 @@ class RealStorActuatorMsgHandler(ScheduledModuleThread, InternalMsgQ):
     DEPENDENCIES = {
                     "plugins": [
                         "ServiceMsgHandler",
-                        "RabbitMQegressProcessor",
+                        "EgressProcessor",
                         "DiskMsgHandler"
                     ],
                     "rpms": []
@@ -154,7 +154,7 @@ class RealStorActuatorMsgHandler(ScheduledModuleThread, InternalMsgQ):
             self._log_debug(f"_process_msg, RealStor response: {real_stor_response}")
 
             json_msg = RealStorActuatorMsg(real_stor_response, uuid).getJson()
-            self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+            self._write_internal_msgQ(EgressProcessor.name(), json_msg)
 
     def suspend(self):
         """Suspends the module thread. It should be non-blocking"""

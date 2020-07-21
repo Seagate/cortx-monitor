@@ -23,7 +23,7 @@ from framework.utils.service_logging import logger
 
 class StoreQueue:
 
-    RABBITMQPROCESSOR    = 'RABBITMQEGRESSPROCESSOR'
+    RABBITMQPROCESSOR    = 'EGRESSPROCESSOR'
     LIMIT_CONSUL_MEMORY  = 'limit_consul_memory'
 
     def __init__(self):

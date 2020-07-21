@@ -29,8 +29,8 @@ from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
 from framework.utils.autoemail import AutoEmail
-from .rabbitmq_connector import RabbitMQSafeConnection
 from framework.utils import encryptor
+from framework.utils.amqp_factory import amqp_factory
 from framework.base.sspl_constants import ServiceTypes, COMMON_CONFIGS
 
 # Modules that receive messages from this module
@@ -66,6 +66,8 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
     SYSTEM_INFORMATION_KEY = 'SYSTEM_INFORMATION'
     CLUSTER_ID_KEY = 'cluster_id'
     NODE_ID_KEY = 'node_id'
+    RABBITMQ_CLUSTER_SECTION = 'RABBITMQCLUSTER'
+    RABBITMQ_CLUSTER_HOSTS_KEY = 'cluster_nodes'
 
     @staticmethod
     def name():
@@ -85,8 +87,13 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
         super(LoggingProcessor, self).initialize_msgQ(msgQlist)
 
         self._autoemailer = AutoEmail(conf_reader)
-        # Configure RabbitMQ Exchange to receive messages
-        self._configure_exchange(retry=False)
+        
+        self._read_config()
+
+        # Get common amqp config
+        amqp_config = self._get_default_amqp_config()
+        self._comm = amqp_factory.get_amqp_consumer(**amqp_config)
+        self._comm.init()
 
     def run(self):
         """Run the module periodically on its own thread."""
@@ -95,19 +102,18 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
 
         self._log_debug("Start accepting requests")
         try:
-            self._connection.consume(callback=self._process_msg)
+            self._comm.recv(callback_fn=self._process_msg)
         except Exception as ae:
             if self.is_running() is True:
-                logger.info("LoggingProcessor ungracefully breaking out of run loop, restarting: %s"
-                            % ae)
+                logger.info(f"{self.MODULE_NAME} ungracefully breaking out of run loop, restarting: {ae}")
                 self._configure_exchange(retry=True)
                 self._scheduler.enter(10, self._priority, self.run, ())
             else:
-                logger.info("LoggingProcessor gracefully breaking out of run Loop, not restarting.")
+                logger.info(f"{self.MODULE_NAME} gracefully breaking out of run Loop, not restarting.")
 
         self._log_debug("Finished processing successfully")
 
-    def _process_msg(self, ch, method, properties, body):
+    def _process_msg(self, body):
         """Parses the incoming message and hands off to the appropriate module"""
         try:
             # Encode and remove blankspace,\n,\t - Leaving as it might be useful
@@ -169,53 +175,65 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
                 self._write_internal_msgQ(LoggingMsgHandler.name(), internal_json_msg)
 
             # Acknowledge message was received
-            self._connection.ack(ch, delivery_tag=method.delivery_tag)
+            self._comm.acknowledge()
         except Exception as ex:
             logger.error("_process_msg: %r" % ex)
 
-    def _configure_exchange(self, retry=False):
+    def _read_config(self):
         """Configure the RabbitMQ exchange with defaults available"""
         try:
             self._virtual_host  = self._conf_reader._get_value_with_default(self.LOGGINGPROCESSOR,
-                                                                 self.VIRT_HOST,
-                                                                 'SSPL')
-            self._exchange_name = self._conf_reader._get_value_with_default(self.LOGGINGPROCESSOR,
-                                                                 self.EXCHANGE_NAME,
-                                                                 'sspl-in')
+                                                                self.VIRT_HOST,
+                                                                'SSPL')
+            # Read RabbitMQ configuration for sensor messages
             self._queue_name    = self._conf_reader._get_value_with_default(self.LOGGINGPROCESSOR,
-                                                                 self.QUEUE_NAME,
-                                                                 'iem-queue')
+                                                                self.QUEUE_NAME,
+                                                                'iem-queue')
+            self._exchange_name = self._conf_reader._get_value_with_default(
+                                            self.LOGGINGPROCESSOR, self.EXCHANGE_NAME, 'sspl-in')
             self._routing_key   = self._conf_reader._get_value_with_default(self.LOGGINGPROCESSOR,
-                                                                 self.ROUTING_KEY,
-                                                                 'iem-key')
-            self._username      = self._conf_reader._get_value_with_default(self.LOGGINGPROCESSOR,
-                                                                 self.USER_NAME,
-                                                                 'sspluser')
-            self._password      = self._conf_reader._get_value_with_default(self.LOGGINGPROCESSOR,
-                                                                 self.PASSWORD,
-                                                                 'sspl4ever')
-
+                                                                self.ROUTING_KEY,
+                                                                'iem-key')
+            
+            self._username = self._conf_reader._get_value_with_default(self.LOGGINGPROCESSOR,
+                                                                self.USER_NAME,
+                                                                'sspluser')
+            self._password = self._conf_reader._get_value_with_default(self.LOGGINGPROCESSOR,
+                                                                self.PASSWORD,
+                                                                '')
+            self._hosts = self._conf_reader._get_value_list(self.RABBITMQ_CLUSTER_SECTION, 
+                                COMMON_CONFIGS.get(self.RABBITMQ_CLUSTER_SECTION).get(self.RABBITMQ_CLUSTER_HOSTS_KEY))
             cluster_id = self._conf_reader._get_value_with_default(self.SYSTEM_INFORMATION_KEY,
-                                                                   COMMON_CONFIGS.get(self.SYSTEM_INFORMATION_KEY).get(self.CLUSTER_ID_KEY),
-                                                                   '')
-
+                                                                COMMON_CONFIGS.get(self.SYSTEM_INFORMATION_KEY).get(self.CLUSTER_ID_KEY),
+                                                                '')
             # Decrypt RabbitMQ Password
             decryption_key = encryptor.gen_key(cluster_id, ServiceTypes.RABBITMQ.value)
-            self._password = encryptor.decrypt(decryption_key, self._password.encode('ascii'), "LoggingProcessor")
-
-            self._connection = RabbitMQSafeConnection(
-                self._username, self._password, self._virtual_host,
-                self._exchange_name, self._routing_key, self._queue_name
-            )
+            self._password = encryptor.decrypt(decryption_key, self._password.encode('ascii'), self.MODULE_NAME)
         except Exception as ex:
-            logger.error("_configure_exchange: %s" % ex)
+            logger.error(f"{self.LOGGINGPROCESSOR,} _read_config: {ex}")
+
+    def _get_default_amqp_config(self):
+        return {
+                    "virtual_host": self._virtual_host,
+                    "exchange": self._exchange_name,
+                    "username": self._username,
+                    "password": self._password,
+                    "hosts": self._hosts,
+                    "exchange_queue": self._queue_name,
+                    "exchange_type": "topic",
+                    "routing_key": self._routing_key,
+                    "durable": True,
+                    "exclusive": False,
+                    "retry_count": 5,
+                    "port": 5672
+                }
 
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""
         super(LoggingProcessor, self).shutdown()
         try:
-            self._connection.cleanup()
+            self._comm.stop()
         except pika.exceptions.ConnectionClosed:
-            logger.info("LoggingProcessor, shutdown, RabbitMQ ConnectionClosed")
+            logger.info(f"{self.MODULE_NAME}, shutdown, RabbitMQ ConnectionClosed")
 

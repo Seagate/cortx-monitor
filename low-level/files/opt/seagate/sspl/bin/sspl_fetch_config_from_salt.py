@@ -130,9 +130,9 @@ class SaltConfig(object):
             # for the pattern section : { 'key' : 'value' }
             parser = ConfigParser()
             parser.read_dict(new_conf)
-            # Password is same for RABBITMQINGRESSPROCESSOR, RABBITMQEGRESSPROCESSOR & LOGGINGPROCESSOR
+            # Password is same for INGRESSPROCESSOR, EGRESSPROCESSOR & LOGGINGPROCESSOR
             rbmq_pass = salt.client.Caller().function('pillar.get',
-                            'rabbitmq:sspl:RABBITMQINGRESSPROCESSOR:password')
+                            'rabbitmq:sspl:INGRESSPROCESSOR:password')
             for sect in parser.sections():
                 for k, v in parser.items(sect):
                     if sect in COMMON_CONFIGS and k not in SSPL_CONFIGS:

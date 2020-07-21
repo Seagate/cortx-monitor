@@ -1,6 +1,6 @@
 """
  ****************************************************************************
- Filename:          plane_cntrl_rmq_egress_processor.py
+ Filename:          plane_cntrl_egress_processor.py
  Description:       Handles outgoing messages via rabbitMQ over network
  Creation Date:     11/14/2016
  Author:            Jake Abernathy
@@ -21,8 +21,10 @@ import time
 
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
+from framework.base.sspl_constants import ServiceTypes, COMMON_CONFIGS
 from framework.utils.service_logging import logger
-from .rabbitmq_connector import RabbitMQSafeConnection
+from framework.utils.amqp_factory import amqp_factory
+from framework.utils import encryptor
 from json_msgs.messages.actuators.thread_controller import ThreadControllerMsg
 from json_msgs.messages.actuators.ack_response import AckResponseMsg
 
@@ -31,14 +33,14 @@ try:
     use_security_lib=True
     SSPL_SEC = ctypes.cdll.LoadLibrary('libsspl_sec.so.0')
 except Exception as ae:
-    logger.info("PlaneCntrlRMQegressProcessor, libsspl_sec not found, disabling authentication on egress msgs")
+    logger.info("PlaneCntrlEgressProcessor, libsspl_sec not found, disabling authentication on egress msgs")
     use_security_lib=False
 
 
-class PlaneCntrlRMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
+class PlaneCntrlEgressProcessor(ScheduledModuleThread, InternalMsgQ):
     """Handles outgoing messages via rabbitMQ over network"""
 
-    MODULE_NAME = "PlaneCntrlRMQegressProcessor"
+    MODULE_NAME = "PlaneCntrlEgressProcessor"
     PRIORITY    = 1
 
     # Section and keys in configuration file
@@ -54,24 +56,29 @@ class PlaneCntrlRMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
     SIGNATURE_USERNAME      = 'message_signature_username'
     SIGNATURE_TOKEN         = 'message_signature_token'
     SIGNATURE_EXPIRES       = 'message_signature_expires'
+    SYSTEM_INFORMATION_KEY = 'SYSTEM_INFORMATION'
+    CLUSTER_ID_KEY = 'cluster_id'
+    NODE_ID_KEY = 'node_id'
+    RABBITMQ_CLUSTER_SECTION = 'RABBITMQCLUSTER'
+    RABBITMQ_CLUSTER_HOSTS_KEY = 'cluster_nodes'
 
 
     @staticmethod
     def name():
         """ @return: name of the module."""
-        return PlaneCntrlRMQegressProcessor.MODULE_NAME
+        return PlaneCntrlEgressProcessor.MODULE_NAME
 
     def __init__(self):
-        super(PlaneCntrlRMQegressProcessor, self).__init__(self.MODULE_NAME,
+        super(PlaneCntrlEgressProcessor, self).__init__(self.MODULE_NAME,
                                                       self.PRIORITY)
 
     def initialize(self, conf_reader, msgQlist, product):
         """initialize configuration reader and internal msg queues"""
         # Initialize ScheduledMonitorThread
-        super(PlaneCntrlRMQegressProcessor, self).initialize(conf_reader)
+        super(PlaneCntrlEgressProcessor, self).initialize(conf_reader)
 
         # Initialize internal message queues for this module
-        super(PlaneCntrlRMQegressProcessor, self).initialize_msgQ(msgQlist)
+        super(PlaneCntrlEgressProcessor, self).initialize_msgQ(msgQlist)
 
         # Flag denoting that a shutdown message has been placed
         #  into our message queue from the main sspl_ll_d handler
@@ -79,9 +86,12 @@ class PlaneCntrlRMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
 
         self._msg_sent_succesfull = True
 
-        # Configure RabbitMQ Exchange to transmit messages
-        self._connection = None
         self._read_config()
+
+        # Get common amqp config
+        amqp_config = self._get_default_amqp_config()
+        self._comm = amqp_factory.get_amqp_producer(**amqp_config)
+        self._comm.init()
 
         # UUID and command of the current task being worked
         self._working_uuid = "N/A"
@@ -119,7 +129,7 @@ class PlaneCntrlRMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
 
         except Exception:
             # Log it and restart the whole process when a failure occurs
-            logger.exception("PlaneCntrlRMQegressProcessor restarting")
+            logger.exception(f"{self.MODULE_NAME} restarting")
 
         self._log_debug("Finished processing successfully")
 
@@ -168,13 +178,35 @@ class PlaneCntrlRMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
                                                                  self.SECONDARY_RABBITMQ,
                                                                  'localhost')
             self._current_rabbitMQ_server = self._primary_rabbitMQ_server
-            self._connection = RabbitMQSafeConnection(
-                self._username, self._password, self._virtual_host,
-                self._exchange_name, self._routing_key, self._queue_name
-            )
+            self._hosts = self._conf_reader._get_value_list(self.RABBITMQ_CLUSTER_SECTION, 
+                                COMMON_CONFIGS.get(self.RABBITMQ_CLUSTER_SECTION).get(self.RABBITMQ_CLUSTER_HOSTS_KEY))
+            cluster_id = self._conf_reader._get_value_with_default(self.SYSTEM_INFORMATION_KEY,
+                                                                   COMMON_CONFIGS.get(self.SYSTEM_INFORMATION_KEY).get(self.CLUSTER_ID_KEY),
+                                                                   '')
+
+            # Decrypt RabbitMQ Password
+            decryption_key = encryptor.gen_key(cluster_id, ServiceTypes.RABBITMQ.value)
+            self._password = encryptor.decrypt(decryption_key, self._password.encode('ascii'), self.RABBITMQPROCESSOR)
+
 
         except Exception as ex:
-            logger.exception("PlaneCntrlRMQegressProcessor, _read_config: %r" % ex)
+            logger.exception(f"{self.MODULE_NAME}, _read_config: {ex}")
+
+    def _get_default_amqp_config(self):
+        return {
+                    "virtual_host": self._virtual_host,
+                    "exchange": self._exchange_name,
+                    "username": self._username,
+                    "password": self._password,
+                    "hosts": self._hosts,
+                    "exchange_queue": self._queue_name,
+                    "exchange_type": "topic",
+                    "routing_key": self._routing_key,
+                    "durable": True,
+                    "exclusive": False,
+                    "retry_count": 5,
+                    "port": 5672
+                }
 
     def _add_signature(self):
         """Adds the authentication signature to the message"""
@@ -208,8 +240,8 @@ class PlaneCntrlRMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
                self._jsonMsg.get("actuator_request_type").get("plane_controller") is not None:
                 self._working_command  = self._jsonMsg.get("actuator_request_type").get("plane_controller").get("command")
                 self._working_uuid = self._jsonMsg.get("sspl_ll_msg_header").get("uuid")
-                logger.info("PlaneCntrlMsgHandler is currently working job task command: %s, uuid: %s" % \
-                             (str(self._working_command ), str(self._working_uuid)))
+                logger.info(f"{self.MODULE_NAME} is currently working job task command:{str(self._working_command)}, \
+                     uuid: {str(self._working_uuid)}")
                 return
 
             # Check for a ack msg being sent and remove the currently working job uuid if job is completed
@@ -222,7 +254,7 @@ class PlaneCntrlRMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
                 try:
                     ack_type = json.loads(self._jsonMsg.get("message").get("actuator_response_type").get("ack").get("ack_type"))
                 except Exception as exi:
-                    logger.info("PlaneCntrlRMQegressProcessor, _transmit_msg_on_exchange no ack_type: %s" % str(self._jsonMsg))
+                    logger.info(f"{self.MODULE_NAME}, _transmit_msg_on_exchange no ack_type: {self._jsonMsg}")
                     return
 
                 # If it's a job status request then parse out the uuid from args that we're looking for
@@ -238,8 +270,8 @@ class PlaneCntrlRMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
                     # If the ack msg is Not Found then change it to In work
                     if ack_msg == "Not Found":
                         self._jsonMsg["message"]["actuator_response_type"]["ack"]["ack_msg"] = "In Work"
-                        logger.info("PlaneCntrlMsgHandler is working on job task command: %s, uuid: %s, ack_msg: %s" % \
-                                    (str(self._working_command), str(uuid), "In Work"))
+                        logger.info(f"{self.MODULE_NAME} is working on job task command: %s, \
+                            uuid: {str(self._working_command)}, ack_msg: {str(uuid)} In Work")
                     else:
                         # Task is no longer being worked on
                         if ack_msg is None or \
@@ -247,16 +279,15 @@ class PlaneCntrlRMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
                             ack_msg = "Completed"
                             self._jsonMsg["message"]["actuator_response_type"]["ack"]["ack_msg"] = ack_msg
 
-                        logger.info("PlaneCntrlMsgHandler has completed job task command: %s, uuid: %s, ack_msg: %s" % \
-                             (str(self._working_command), str(uuid), str(ack_msg)))
+                        logger.info(f"{self.MODULE_NAME} has completed job task command: \
+                            {str(self._working_command)}, uuid: {str(uuid)}, ack_msg: {str(ack_msg)}")
                         self._working_uuid = "N/A"
 
             msg_props = pika.BasicProperties()
             msg_props.content_type = "text/plain"
 
             self._add_signature()
-            self._jsonMsg = json.dumps(self._jsonMsg).encode('utf8')
-            self._connection.publish(exchange, routing_key, properties, body)
+            self._comm.send(self._jsonMsg)
             # No exceptions thrown so success
             self._log_debug("_transmit_msg_on_exchange, Successfully Sent: %s" % self._jsonMsg)
             # If event is added by sensors, set it
@@ -264,7 +295,7 @@ class PlaneCntrlRMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
                 self._event.set()
             self._msg_sent_succesfull = True
         except Exception as ex:
-            logger.exception("PlaneCntrlRMQegressProcessor, _transmit_msg_on_exchange: %r" % ex)
+            logger.exception(f"{self.MODULE_NAME}, _transmit_msg_on_exchange: {ex}")
             self._msg_sent_succesfull = False
 
     def _toggle_rabbitMQ_servers(self):
@@ -276,4 +307,4 @@ class PlaneCntrlRMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""
-        super(PlaneCntrlRMQegressProcessor, self).shutdown()
+        super(PlaneCntrlEgressProcessor, self).shutdown()

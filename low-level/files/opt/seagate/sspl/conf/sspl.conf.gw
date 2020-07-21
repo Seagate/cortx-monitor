@@ -1,6 +1,6 @@
 # Version 1.0.0
 [SSPL-LL_SETTING]
-core_processors=RabbitMQegressProcessor, RabbitMQingressProcessor, LoggingProcessor
+core_processors=EgressProcessor, IngressProcessor, LoggingProcessor
 
 message_handlers=DiskMsgHandler, LoggingMsgHandler, ServiceMsgHandler, NodeDataMsgHandler, NodeControllerMsgHandler
 
@@ -20,7 +20,7 @@ node_id=001
 syslog_host=localhost
 syslog_port=514
 
-[RABBITMQINGRESSPROCESSOR]
+[INGRESSPROCESSOR]
 virtual_host=SSPL
 queue_name=actuator-req-queue
 exchange_name=sspl-in
@@ -29,7 +29,7 @@ username=sspluser
 password=sspl4ever
 primary_rabbitmq_host=localhost
 
-[RABBITMQEGRESSPROCESSOR]
+[EGRESSPROCESSOR]
 virtual_host=SSPL
 queue_name=sensor-queue
 exchange_name=sspl-out
