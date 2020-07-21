@@ -5,7 +5,7 @@ SCRIPT_DIR=$(dirname $0)
 
 SSPL_STORE_TYPE=${SSPL_STORE_TYPE:-consul}
 
-#Modify transmit_interval in /opt/seagate/<product>/sspl/bin/consul config less than current value
+#Modify transmit_interval in $CONSUL_PATH/consul config less than current value
 #to generate the alerts.
 transmit_interval=$1
 if [ "$SSPL_STORE_TYPE" == "file" ]

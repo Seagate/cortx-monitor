@@ -18,24 +18,20 @@ def test_node_disk_module_actuator(agrs):
     disk_actuator_message_request("NDHW:node:fru:disk")
     disk_actuator_msg = None
     time.sleep(10)
-    for i in range(5):
-        while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
-            ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
-            time.sleep(0.0001)
-            print("Received: %s " % ingressMsg)
-            try:
-                # Make sure we get back the message type that matches the request
-                msg_type = ingressMsg.get("actuator_response_type")
-                if msg_type["info"]["resource_type"] == "node:fru:disk":
-                    disk_actuator_msg = msg_type
-                    break
-            except Exception as exception:
-                time.sleep(0.0001)
-                print(exception)
-
-        if disk_actuator_msg:
-            break
-        time.sleep(2)
+    ingressMsg = {}
+    while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
+        ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
+        time.sleep(0.1)
+        print("Received: %s " % ingressMsg)
+        try:
+            # Make sure we get back the message type that matches the request
+            msg_type = ingressMsg.get("actuator_response_type")
+            if msg_type["info"]["resource_type"] == "node:fru:disk":
+                disk_actuator_msg = msg_type
+                break
+        except Exception as exception:
+            time.sleep(0.1)
+            print(exception)
 
     assert(disk_actuator_msg is not None)
     assert(disk_actuator_msg.get("alert_type") is not None)

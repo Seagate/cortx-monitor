@@ -5,7 +5,7 @@ from configparser import ConfigParser
 from framework.utils.filestore import FileStore
 from framework.utils.consulstore import ConsulStore
 from framework.base.sspl_constants import StoreTypes, SSPL_STORE_TYPE, CONSUL_HOST, CONSUL_PORT, file_store_config_path
- 
+
 
 class StorFactory:
 
@@ -16,7 +16,6 @@ class StorFactory:
         if StorFactory.__store == None:
             try:
                 store_type = os.getenv('SSPL_STORE_TYPE', SSPL_STORE_TYPE)
-                print(f"#### store_type: {store_type}")
                 if store_type == StoreTypes.FILE.value:
                     StorFactory.__store = FileStore()
                     StorFactory.__store.read(file_store_config_path)

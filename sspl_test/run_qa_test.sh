@@ -9,6 +9,8 @@ SSPL_STORE_TYPE=${SSPL_STORE_TYPE:-consul}
 script_dir=$(dirname $0)
 . $script_dir/constants.sh
 
+avoid_rmq=${1:-avoid_rmq}
+
 flask_help()
 {
  echo "Check if prior Flask version was installed using yum
@@ -37,12 +39,14 @@ pre_requisites()
         $sudo mv /var/$PRODUCT_FAMILY/sspl/data/iem/last_processed_msg_time /var/$PRODUCT_FAMILY/sspl/orig-data/iem/last_processed_msg_time
     fi
 
-    # Start rabbitmq if not already running
-    systemctl status rabbitmq-server 1>/dev/null && export status=true || export status=false
-    if [ "$status" = "false" ]; then
-        echo "Starting rabbitmq server as needed for tests"
-        systemctl start rabbitmq-server
-        RMQ_SELF_STARTED=1
+    if [ -z "$avoid_rmq" ]; then
+        # Start rabbitmq if not already running
+        systemctl status rabbitmq-server 1>/dev/null && export status=true || export status=false
+        if [ "$status" = "false" ]; then
+            echo "Starting rabbitmq server as needed for tests"
+            systemctl start rabbitmq-server
+            RMQ_SELF_STARTED=1
+        fi
     fi
 
     # Enable ipmi simulator
@@ -134,7 +138,7 @@ trap cleanup 1 2 3 6 9 15
 
 execute_test()
 {
-    $sudo $script_dir/run_sspl-ll_tests.sh $*
+    $sudo $script_dir/run_sspl-ll_tests.sh ${@:2}
 }
 
 flask_installed=$(python3.6 -c 'import pkgutil; print(1 if pkgutil.find_loader("flask") else 0)')

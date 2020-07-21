@@ -35,7 +35,6 @@ def get_cluster_connection(username, password, virtual_host):
     ampq_hosts = [
         f'amqp://{username}:{password}@{host}/{virtual_host}' for host in hosts
     ]
-    print(f'ampq_hosts: {ampq_hosts}')
     ampq_hosts = [pika.URLParameters(host) for host in ampq_hosts]
     random.shuffle(ampq_hosts)
     connection = pika.BlockingConnection(ampq_hosts)
@@ -82,7 +81,6 @@ try:
         except Exception as e:
             time.sleep(4)
             if max_attempt == 0:
-                print(f"#### Conn Error: {e}")
                 raise e
     channel = connection.channel()
     result = channel.queue_declare(queue="", exclusive=True)

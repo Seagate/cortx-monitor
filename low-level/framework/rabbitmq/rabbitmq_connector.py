@@ -42,15 +42,9 @@ def get_cluster_connection(username, password, virtual_host):
     hosts = consul_conn.kv.get(consul_key)[1]["Value"].decode()
     if isinstance(hosts, str):
         hosts = hosts.strip().split(",")
-    print(f"Cluster Nodes: {hosts}")
-
-    logger.info(f'#### AMPQ CONNECTION')
-    logger.info(f'#### Cluster nodes: {hosts}')
-    logger.info(f'#### username: {username} password: {password} virtual_host: {virtual_host}')
     ampq_hosts = [
         f'amqp://{username}:{password}@{host}/{virtual_host}' for host in hosts
     ]
-    logger.info(f'ampq_hosts: {ampq_hosts}')
     ampq_hosts = [pika.URLParameters(host) for host in ampq_hosts]
     random.shuffle(ampq_hosts)
     connection = pika.BlockingConnection(ampq_hosts)

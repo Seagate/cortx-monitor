@@ -7,9 +7,11 @@ source $BASE_DIR/constants.sh
 
 TEST_DIR=/opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test
 
+avoid_rmq=${2:-avoid_rmq}
+
 if rpm -qa | grep -q sspl-test ;
 then
-    $TEST_DIR/run_tests.sh test $*
+    $TEST_DIR/run_tests.sh test $avoid_rmq $*
     exit $?
 else
     echo "Please install sspl-test RPM"
