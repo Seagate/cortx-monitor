@@ -5,10 +5,42 @@ import pika
 import json
 import pprint
 import socket
+import os
+import time
+import consul
+import random
 
 SSPL_USER = "sspluser"
 SSPL_PASS = "sspl4ever"
 SSPL_VHOST = "SSPL"
+
+CONSUL_HOST = '127.0.0.1'
+CONSUL_PORT = '8500'
+component = 'sspl/config'
+RABBITMQ_CLUSTER_SECTION = 'RABBITMQCLUSTER'
+host = os.getenv('CONSUL_HOST', CONSUL_HOST)
+port = os.getenv('CONSUL_PORT', CONSUL_PORT)
+consul_conn = consul.Consul(host=host, port=port)
+
+
+def get_cluster_connection(username, password, virtual_host):
+    """Makes connection with one of the rabbitmq node.
+    """
+    consul_key = component + '/' + RABBITMQ_CLUSTER_SECTION + '/' + 'cluster_nodes'
+    hosts = consul_conn.kv.get(consul_key)[1]["Value"].decode()
+    if isinstance(hosts, str):
+        hosts = hosts.strip().split(",")
+    print(f"Cluster Nodes: {hosts}")
+
+    ampq_hosts = [
+        f'amqp://{username}:{password}@{host}/{virtual_host}' for host in hosts
+    ]
+    print(f'ampq_hosts: {ampq_hosts}')
+    ampq_hosts = [pika.URLParameters(host) for host in ampq_hosts]
+    random.shuffle(ampq_hosts)
+    connection = pika.BlockingConnection(ampq_hosts)
+    return connection
+
 
 channel = None
 def process_msg(ch, method, properties, body):
@@ -42,18 +74,23 @@ try:
 
     SSPL_EXCHANGE = sys.argv[1]
     SSPL_KEY = sys.argv[2]
-
-    creds = pika.PlainCredentials(SSPL_USER, SSPL_PASS)
-    connection = pika.BlockingConnection(pika.\
-        ConnectionParameters(host="localhost", virtual_host=SSPL_VHOST, credentials=creds))
+    connection = None
+    max_attempt = 30
+    while not connection and max_attempt > 0:
+        try:
+            connection = get_cluster_connection(SSPL_USER, SSPL_PASS, SSPL_VHOST)
+        except Exception as e:
+            time.sleep(4)
+            if max_attempt == 0:
+                print(f"#### Conn Error: {e}")
+                raise e
     channel = connection.channel()
     result = channel.queue_declare(queue="", exclusive=True)
     channel.exchange_declare(exchange=SSPL_EXCHANGE, exchange_type='topic', durable=True)
     channel.queue_bind(queue=result.method.queue, exchange=SSPL_EXCHANGE, routing_key=SSPL_KEY)
-    try:
-        channel.basic_consume(on_message_callback=process_msg, queue=result.method.queue)
-        channel.start_consuming()
-    except KeyboardInterrupt:
-        channel.stop_consuming()
+    channel.basic_consume(on_message_callback=process_msg, queue=result.method.queue)
+    channel.start_consuming()
+except KeyboardInterrupt:
+    channel.stop_consuming()
 except Exception as e:
     print(e)

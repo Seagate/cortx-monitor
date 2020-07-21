@@ -119,9 +119,6 @@ start_req_services(){
 
 
 setup_provisioner_prereq
-echo "################################"
-echo "#### PRODUCT_NAME: $PRODUCT_NAME"
-echo "################################"
 $SCRIPT_DIR/bin/sspl_post_install -p $PRODUCT_NAME -e DEV -c $rmq_cluster
 $SCRIPT_DIR/bin/sspl_setup_init -r $PRODUCT_FAMILY
 if [ "$PRODUCT_NAME" == "ECS" ]; then
