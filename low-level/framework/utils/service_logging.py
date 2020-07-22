@@ -123,5 +123,15 @@ class Logger:
     def setLevel(self, *args, **kwargs):
         self._logger.setLevel(*args, **kwargs)
 
+# This wrapper class was defined with an intention to add other handle
+# to logger.
+# But, because of this Logger class object, The filenamwe and lineno is
+# getting set with current filename and lineno. Because of this, every info,
+# warning and debug message which is getting logged are with
+# filename service_logging.py and lineno as 103 for info as it is called
+# at line no 103 here in this file. WHich is not serving the actual purpose
+# of logging. So, switching back to default logging use.
+#logger = Logger(_logger)
 
-logger = Logger(_logger)
+# Make use of python logger
+logger = _logger
