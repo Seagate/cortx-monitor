@@ -18,7 +18,7 @@ sspl:
     reset:
          script: /opt/seagate/cortx/sspl/bin/sspl_setup
          args:
-            - reset hard -p EES
+            - reset hard -p ECS
     ha:
          script: /opt/seagate/cortx/ha/conf/script/build-ees-ha-sspl
          args:
