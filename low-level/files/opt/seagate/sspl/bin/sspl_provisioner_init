@@ -45,7 +45,7 @@ while getopts ":p:c:n:" OPTION; do
 done
 
 [ -z "$rmq_cluster" ] && rmq_cluster=true
-[ -z "$PRODUCT_NAME" ] && PRODUCT_NAME="ECS"
+[ -z "$PRODUCT_NAME" ] && PRODUCT_NAME="EES"
 
 setup_provisioner_prereq(){
     if ! [ "$(rpm -qa | grep cortx-prvsnr-cli)" ]; then

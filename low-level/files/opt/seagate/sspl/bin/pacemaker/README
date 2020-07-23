@@ -8,7 +8,7 @@
     - Make sure consul service is running on nodes.
 
     - If system is not provisioned, execute following steps to initialize SSPL:
-        /opt/seagate/cortx/sspl/bin/sspl_post_install -p ECS
+        /opt/seagate/cortx/sspl/bin/sspl_post_install -p EES
         /opt/seagate/cortx/sspl/bin/sspl_setup_init -r cortx
         /opt/seagate/cortx/sspl/bin/sspl_config
         systemctl start sspl-ll.service
