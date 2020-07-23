@@ -28,7 +28,7 @@ except ImportError:
 
 
 logger_facility = "sspl-ll"
-_logger = logging.getLogger(logger_facility)
+logger = logging.getLogger(logger_facility)
 
 MAX_SYSLOG_CONNECT_ATTEMPTS = 120
 RECONNECT_DELAY_INTERVAL_SECONDS = 1
@@ -62,7 +62,7 @@ def init_logging(dcs_service_name, log_level=LOG_INFO, syslog_host="localhost", 
             "Invalid log_level '{0}' specified. Using "
             "default log_level '{1}' instead.".format(log_level, LOG_INFO))
         log_level = LOG_INFO
-    _logger.setLevel(LOGLEVEL_NAME_TO_LEVEL_DICT[log_level])
+    logger.setLevel(LOGLEVEL_NAME_TO_LEVEL_DICT[log_level])
     num_attempts = 1
     handler = None
 
@@ -84,54 +84,11 @@ def init_logging(dcs_service_name, log_level=LOG_INFO, syslog_host="localhost", 
             else:
                 print("Warning: Unable to connect to syslog for logging")
                 break
-    _logger.addHandler(handler)
-    _logger.info(f"Logging has been initialized for sspl {dcs_service_name} \
+    logger.addHandler(handler)
+    logger.info(f"Logging has been initialized for sspl {dcs_service_name} \
                   service after {num_attempts} attempts to level {log_level}")
     if warning_message is not None:
-        _logger.warning(warning_message)
+        logger.warning(warning_message)
 
 
-class Logger:
-    """
-    A wrapper class to wrap logging functionality.
-    """
 
-    def __init__(self, _logger):
-        self._logger = _logger
-
-    def info(self, *args, **kwargs):
-        self._logger.info(*args, **kwargs)
-
-    def debug(self, *args, **kwargs):
-        self._logger.debug(*args, **kwargs)
-
-    def warn(self, *args, **kwargs):
-        self._logger.warn(*args, **kwargs)
-
-    def warning(self, *args, **kwargs):
-        self._logger.warn(*args, **kwargs)
-
-    def exception(self, *args, **kwargs):
-        self._logger.exception(*args, **kwargs)
-
-    def error(self, *args, **kwargs):
-        self._logger.error(*args, **kwargs)
-
-    def critical(self, *args, **kwargs):
-        self._logger.critical(*args, **kwargs)
-
-    def setLevel(self, *args, **kwargs):
-        self._logger.setLevel(*args, **kwargs)
-
-# This wrapper class was defined with an intention to add other handle
-# to logger.
-# But, because of this Logger class object, The filenamwe and lineno is
-# getting set with current filename and lineno. Because of this, every info,
-# warning and debug message which is getting logged are with
-# filename service_logging.py and lineno as 103 for info as it is called
-# at line no 103 here in this file. WHich is not serving the actual purpose
-# of logging. So, switching back to default logging use.
-#logger = Logger(_logger)
-
-# Make use of python logger
-logger = _logger
