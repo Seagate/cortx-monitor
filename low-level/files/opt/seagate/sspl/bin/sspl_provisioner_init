@@ -49,9 +49,11 @@ done
 
 setup_provisioner_prereq(){
     if ! [ "$(rpm -qa | grep cortx-prvsnr-cli)" ]; then
-        # salt minion config has srvnode-1 as master node name hence adding same in /etc/hosts
-        if ! [ "$(cat /etc/hosts | grep srvnode-1)" ]; then
-            echo "127.0.0.1 srvnode-1" >> /etc/hosts
+        # get defined host name from salt minion and update hosts file
+        SRVNODE=
+        [ -f "/etc/salt/minion_id" ] && SRVNODE="$(cat /etc/salt/minion_id)"
+        if [ -n "$SRVNODE" ]; then
+            [ -z "$(cat /etc/hosts | grep $SRVNODE)" ] && echo "127.0.0.1 $SRVNODE" >> /etc/hosts
         fi
     else
         # It will remove already installed packages
@@ -63,6 +65,8 @@ setup_provisioner_prereq(){
     pkg_name=$(curl -s http://ci-storage.mero.colo.seagate.com/releases/eos/github/master/rhel-7.7.1908/2629/dev/|grep cortx-prvsnr-cli-1.0.0.*.rpm -o)
     echo $pkg_name
     yum install -y http://ci-storage.mero.colo.seagate.com/releases/eos/github/master/rhel-7.7.1908/2629/dev/$pkg_name
+    # provisioner decides the setup(single or dual node) for deployment and
+    # they don't use this dev init script. This script supports only single node setup.
     sudo /opt/seagate/cortx/provisioner/cli/src/setup-provisioner -S http://ci-storage.mero.colo.seagate.com/releases/eos/github/master/rhel-7.7.1908/2629/dev/
     salt-call state.apply components.system
     python3 /opt/seagate/cortx/provisioner/cli/pillar_encrypt

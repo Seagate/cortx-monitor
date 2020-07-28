@@ -47,7 +47,7 @@ def _send_command(command, fail_on_error=True):
     return str(response)
 
 
-def copy_erlang_cookie(secondary_rabbitmq_server=None):
+def copy_erlang_cookie():
     print('Creating erlang cookie...')
     command = 'systemctl stop rabbitmq-server'
     _send_command(command)
@@ -61,12 +61,6 @@ def copy_erlang_cookie(secondary_rabbitmq_server=None):
     _send_command(command)
     command = f'chmod -w {ERLANG_COOKIE_PATH}'
     _send_command(command)
-    # Copy same cookie to node-2
-    if secondary_rabbitmq_server:
-        command = "scp /var/lib/rabbitmq/.erlang.cookie root@%s:/var/lib/rabbitmq/.erlang.cookie" % \
-                secondary_rabbitmq_server
-        response = _send_command(command)
-        print("Copy erlang key from primary host to secondary: %s" % response)
     # restarting to make sure it starts in case it is not stopped already.
     command = 'systemctl restart rabbitmq-server'
     _send_command(command)
@@ -150,12 +144,7 @@ if __name__ == '__main__':
     print(f"Cluster Nodes: {nodes}")
 
     # Always copy erlang cookie.
-    secondary_node = None
-    if nodes == 2:
-        secondary_node, primary_node = nodes
-    elif nodes == 1:
-        primary_node = nodes[0]
-    copy_erlang_cookie(secondary_node)
+    copy_erlang_cookie()
 
     if len(nodes) > 1:
         cluster_rabbit_mq(nodes)
