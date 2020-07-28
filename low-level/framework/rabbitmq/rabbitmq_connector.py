@@ -2,19 +2,23 @@ import time
 import random
 import subprocess
 import re
-
+import os
+import consul
 import pika
 import pika.exceptions
 import encodings.idna  # noqa
 
 from framework.utils.service_logging import logger
 from framework.utils.config_reader import ConfigReader
-from framework.base.sspl_constants import COMMON_CONFIGS
+from framework.base.sspl_constants import COMMON_CONFIGS, component, CONSUL_HOST, CONSUL_PORT
 
 
 RABBITMQ_CLUSTER_SECTION = 'RABBITMQCLUSTER'
 RABBITMQ_CLUSTER_HOSTS_KEY = 'cluster_nodes'
 
+host = os.getenv('CONSUL_HOST', CONSUL_HOST)
+port = os.getenv('CONSUL_PORT', CONSUL_PORT)
+consul_conn = consul.Consul(host=host, port=port)
 
 config = ConfigReader()
 connection_exceptions = (
@@ -35,6 +39,10 @@ def get_cluster_connection(username, password, virtual_host):
         RABBITMQ_CLUSTER_SECTION, COMMON_CONFIGS.get(RABBITMQ_CLUSTER_SECTION).get(RABBITMQ_CLUSTER_HOSTS_KEY)
     )
     logger.debug(f'Cluster nodes: {hosts}')
+    consul_key = component + '/' + RABBITMQ_CLUSTER_SECTION + '/' + 'cluster_nodes'
+    hosts = consul_conn.kv.get(consul_key)[1]["Value"].decode()
+    if isinstance(hosts, str):
+        hosts = hosts.strip().split(",")
     ampq_hosts = [
         f'amqp://{username}:{password}@{host}/{virtual_host}' for host in hosts
     ]

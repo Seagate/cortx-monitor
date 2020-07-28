@@ -4,14 +4,19 @@ import subprocess
 import sys
 import socket
 import salt.client
+import consul
+import os
 
 from config_reader import ConfigReader
-from sspl_constants import COMMON_CONFIGS
+from sspl_constants import component, CONSUL_HOST, CONSUL_PORT, COMMON_CONFIGS
 
 CLUSTER_SECTION = 'RABBITMQCLUSTER'
 RABBITMQCTL = '/usr/sbin/rabbitmqctl'
 ERLANG_COOKIE_PATH = '/var/lib/rabbitmq/.erlang.cookie'
-CLUSTER_SECTION = 'RABBITMQCLUSTER'
+
+host = os.getenv('CONSUL_HOST', CONSUL_HOST)
+port = os.getenv('CONSUL_PORT', CONSUL_PORT)
+consul_conn = consul.Consul(host=host, port=port)
 
 config_reader = ConfigReader(is_init=True)
 CLUSTER_NODES = []
@@ -47,7 +52,9 @@ def copy_erlang_cookie():
     command = 'systemctl stop rabbitmq-server'
     _send_command(command)
     # all rabbitmq servers needs to have same erlang cookie for clustering.
-    cookie_value = config_reader._get_value(CLUSTER_SECTION, COMMON_CONFIGS.get(CLUSTER_SECTION).get('erlang_cookie'))
+    #cookie_value = config_reader._get_value(CLUSTER_SECTION, COMMON_CONFIGS.get(CLUSTER_SECTION).get('erlang_cookie'))
+    consul_key = component + '/' + CLUSTER_SECTION + '/' + 'erlang_cookie'
+    cookie_value = consul_conn.kv.get(consul_key)[1]["Value"].decode()
     command = f'chmod +w {ERLANG_COOKIE_PATH}'
     _send_command(command)
     command = f'echo "{cookie_value}" > {ERLANG_COOKIE_PATH}'
@@ -85,9 +92,9 @@ def open_rabbitmq_ports():
     _send_command(command)
 
 
-def cluster_rabbit_mq():
+def cluster_rabbit_mq(nodes=[]):
     print('Joining to RabbitMQ cluster...')
-    nodes = config_reader._get_value_list(CLUSTER_SECTION, COMMON_CONFIGS.get(CLUSTER_SECTION).get('cluster_nodes'))
+    #nodes = config_reader._get_value_list(CLUSTER_SECTION, COMMON_CONFIGS.get(CLUSTER_SECTION).get('cluster_nodes'))
     fqdn = socket.getfqdn().split('.')[0]
     clustered = False
     for node in nodes:
@@ -121,14 +128,26 @@ if __name__ == '__main__':
     # Open RabbitMQ ports
     open_rabbitmq_ports()
 
+    # Connect to cluster before creating user accounts.
+    #nodes = config_reader._get_value_list(
+    #    CLUSTER_SECTION, COMMON_CONFIGS.get(CLUSTER_SECTION).get('cluster_nodes')
+    #)
+
+    # Config-reader uses common configs and no ways to syncup with sspl config
+    # at this time. As sspl_config alters cluster_nodes in consul based on inputs
+    # sspl config is preferrable than common config fed into consul.
+    consul_key = component + '/' + CLUSTER_SECTION + '/' + 'cluster_nodes'
+    nodes = consul_conn.kv.get(consul_key)[1]["Value"].decode()
+
+    if isinstance(nodes, str):
+        nodes = nodes.strip().split(",")
+    print(f"Cluster Nodes: {nodes}")
+
     # Always copy erlang cookie.
     copy_erlang_cookie()
 
-    # Connect to cluster before creating user accounts.
-    cluster_nodes = config_reader._get_value_list(
-        CLUSTER_SECTION, COMMON_CONFIGS.get(CLUSTER_SECTION).get('cluster_nodes')
-    )
-    if len(cluster_nodes) > 1:
-        cluster_rabbit_mq()
+    if len(nodes) > 1:
+        cluster_rabbit_mq(nodes)
+        print(f'RabbitMQ is running in {len(nodes)} nodes.')
     else:
         print('RabbitMQ is running in single node mode.')
