@@ -15,7 +15,7 @@ script_dir=$(dirname $0)
 Usage()
 {
     echo "Usage:
-    $0 [role] {[sspl_install_path] | [avoid_rmq]}
+    $0 [role] [plan] [avoid_rmq] [sspl_install_path]
 where:
     role - {dev|test}. Default is 'test'.
     sspl_install_path - Path where sspl will be configured on the target. Default is '/root'. Only applicable for dev env"
@@ -23,15 +23,16 @@ where:
 }
 
 role=${1:-test}
-avoid_rmq=${2:-avoid_rmq}
-sspl_install_path=${3:-/root}
+plan=${2:-sanity}
+avoid_rmq=${3:-}
+sspl_install_path=${4:-/root}
 
 case $role in
 "dev")
     $sudo $script_dir/run_dev_test.sh $sspl_install_path
     ;;
 "test")
-    $sudo $script_dir/run_qa_test.sh $avoid_rmq $3
+    $sudo $script_dir/run_qa_test.sh $plan $avoid_rmq
     ;;
 *)
     echo "Unknown role supplied"

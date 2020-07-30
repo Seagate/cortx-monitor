@@ -3,13 +3,15 @@
 MOCK_SERVER_IP=127.0.0.1
 MOCK_SERVER_PORT=28200
 RMQ_SELF_STARTED=0
+RMQ_SELF_STOPPED=0
 SSPL_STORE_TYPE=${SSPL_STORE_TYPE:-consul}
 
 [[ $EUID -ne 0 ]] && sudo=sudo
 script_dir=$(dirname $0)
 . $script_dir/constants.sh
 
-avoid_rmq=${1:-avoid_rmq}
+plan=${1:-}
+avoid_rmq=${2:-}
 
 flask_help()
 {
@@ -39,13 +41,21 @@ pre_requisites()
         $sudo mv /var/$PRODUCT_FAMILY/sspl/data/iem/last_processed_msg_time /var/$PRODUCT_FAMILY/sspl/orig-data/iem/last_processed_msg_time
     fi
 
+    systemctl status rabbitmq-server 1>/dev/null && export status=true || export status=false
+
     if [ -z "$avoid_rmq" ]; then
         # Start rabbitmq if not already running
-        systemctl status rabbitmq-server 1>/dev/null && export status=true || export status=false
         if [ "$status" = "false" ]; then
             echo "Starting rabbitmq server as needed for tests"
             systemctl start rabbitmq-server
             RMQ_SELF_STARTED=1
+        fi
+    else
+        # Stop rabbitmq if running already
+        if [ "$status" = "true" ]; then
+            echo "Stopping rabbitmq server as needed for tests"
+            systemctl stop rabbitmq-server
+            RMQ_SELF_STOPPED=1
         fi
     fi
 
@@ -119,6 +129,13 @@ restore_cfg_services()
         RMQ_SELF_STARTED=0
     fi
 
+    if [ "$RMQ_SELF_STOPPED" -eq 1 ]
+    then
+        echo "Starting rabbitmq server as was stopped for tests"
+        systemctl start rabbitmq-server
+        RMQ_SELF_STOPPED=0
+    fi
+
     # Remove ipmisimtool
     rm -f /usr/bin/ipmisimtool
     rm -f /tmp/activate_ipmisimtool
@@ -138,7 +155,7 @@ trap cleanup 1 2 3 6 9 15
 
 execute_test()
 {
-    $sudo $script_dir/run_sspl-ll_tests.sh ${@:2}
+    $sudo $script_dir/run_sspl-ll_tests.sh $plan
 }
 
 flask_installed=$(python3.6 -c 'import pkgutil; print(1 if pkgutil.find_loader("flask") else 0)')
@@ -252,7 +269,7 @@ PID=`/sbin/pidof -s /usr/bin/sspl_ll_d`
 kill -s SIGHUP $PID
 
 # Start tests
-execute_test $*
+execute_test $plan
 retcode=$?
 
 # Restoring original cache data
