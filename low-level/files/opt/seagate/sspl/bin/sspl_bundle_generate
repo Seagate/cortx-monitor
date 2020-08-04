@@ -31,7 +31,8 @@ node_hostname = 'node_'+socket.gethostname().split('.', 1)[0]
 encl_summary_filter={}
 encl_summary_fields=["object-name", "durable-id", "vendor-name", "product-id", "serial-number",
                      "model", "product-brand", "description", "status", "health", "health-reason",
-                     "platform-type", "platform-brand", "part-number", "enclosure-wwn"]
+                     "platform-type", "platform-brand", "part-number", "enclosure-wwn", "vendor",
+                     "vendor-name"]
 node_summary_fields=['id', 'class', 'description', 'product', 'serial', 'vendor',
                      'part-number', 'model-number','children', 'physid', 'version']
 rabbitmq_cmd = {
@@ -184,7 +185,7 @@ def fetch_node_summary_data(node_manifest_dict):
             post_node_filter_list.append(key)
 
     os_serial = subprocess.Popen(['uname', '-rvmpio'], stdout=subprocess.PIPE).communicate()[0].decode("utf-8").rstrip()
-    os_model = subprocess.Popen(['cat', '/etc/redhat-release'], stdout=subprocess.PIPE).communicate()[0].decode("utf-8").rstrip()
+    os_model = subprocess.Popen(['cat', '/etc/system-release'], stdout=subprocess.PIPE).communicate()[0].decode("utf-8").rstrip()
     os = {'id':'Operating System', 'version-number':os_model, 'system-info':os_serial}
     post_node_filter_list.append(os)
 
