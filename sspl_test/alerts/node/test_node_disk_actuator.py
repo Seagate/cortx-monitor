@@ -20,6 +20,8 @@ def test_node_disk_module_actuator(agrs):
     time.sleep(10)
     ingressMsg = {}
     for i in range(10):
+        if world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
+            time.sleep(2)
         while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
             ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
             time.sleep(0.1)

@@ -62,12 +62,12 @@ setup_provisioner_prereq(){
     fi
 
     # to install updated packages
-    pkg_name=$(curl -s http://ci-storage.mero.colo.seagate.com/releases/eos/github/master/rhel-7.7.1908/2629/dev/|grep cortx-prvsnr-cli-1.0.0.*.rpm -o)
-    echo $pkg_name
-    yum install -y http://ci-storage.mero.colo.seagate.com/releases/eos/github/master/rhel-7.7.1908/2629/dev/$pkg_name
+    pkg_name="cortx-prvsnr-cli-1.0.0"
+    build_url="http://cortx-storage.colo.seagate.com/releases/eos/github/dev/rhel-7.7.1908/provisioner_last_successful"
+    yum install -y $build_url/$(curl -s $build_url/|grep $pkg_name|sed 's/<\/*[^"]*"//g'|cut -d"\"" -f1)
     # provisioner decides the setup(single or dual node) for deployment and
     # they don't use this dev init script. This script supports only single node setup.
-    sudo /opt/seagate/cortx/provisioner/cli/src/setup-provisioner -S http://ci-storage.mero.colo.seagate.com/releases/eos/github/master/rhel-7.7.1908/2629/dev/
+    sudo /opt/seagate/cortx/provisioner/cli/src/setup-provisioner -S $build_url
     salt-call state.apply components.system
     python3 /opt/seagate/cortx/provisioner/cli/pillar_encrypt
 
