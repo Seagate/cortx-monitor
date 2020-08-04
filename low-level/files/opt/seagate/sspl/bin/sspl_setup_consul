@@ -11,13 +11,15 @@ set -e -u -o pipefail
 SCRIPT_DIR=$(dirname $0)
 # Import common constants
 . $SCRIPT_DIR/constants.sh
+SCRIPT_NAME=$(basename $0)
 
+mkdir -p $CONSUL_PATH
 mkdir -p $CONSUL_FALLBACK_PATH
 
 
 usage() {
     cat << EOF
-$SCRIPT_NAME [[-e <>]
+$SCRIPT_NAME [[-e <DEV|PROD>]
     -e Environment
 EOF
     exit 1
@@ -47,18 +49,20 @@ if ! [ -x "$(command -v $CONSUL_PATH/consul)" ]; then
         fi
         unzip consul_1.7.0_linux_amd64.zip
         rm -rf consul_1.7.0_linux_amd64.zip
-        mkdir -p $CONSUL_PATH
         mv ./consul $CONSUL_FALLBACK_PATH/consul
     fi
 
     ln -s $CONSUL_FALLBACK_PATH/consul $CONSUL_PATH/consul
 
-    # For Dev environment, start consul if not running
-    if [ "$ENVIRONMENT" == 'DEV' ]; then
-        CONSUL_PS=$(ps -aux | grep "consul" | grep -v "grep" | grep -v "bash" || true)
-        [ -z "$CONSUL_PS" ] &&
-            $CONSUL_PATH/consul agent -dev -config-file=$SSPL_BASE_DIR/bin/consul_config.json &>/dev/null &
+    if ! [ -x "$(command -v $CONSUL_PATH/consul)" ]; then
+        echo "Consul is not available, exiting..";
+        exit 1
     fi
+
+    # Invoke consul agent from fallback path
+    CONSUL_PS=$(ps -aux | grep "consul" | grep -v "grep" | grep -v "bash" || true)
+    [ -z "$CONSUL_PS" ] &&
+        $CONSUL_PATH/consul agent -dev -config-file=$SSPL_BASE_DIR/bin/consul_config.json &>/dev/null &
 
     # TODO:
     # This setup consul script should support on joining another node(s) and form a consul cluster
