@@ -8,18 +8,20 @@ spec_root = os.path.abspath(SPECPATH)
 
 def import_list(sspl_path, walk_path):
     import_list = []
+    keywords = ["json_msgs", "sensors", "framework", "actuators"]
     for root, directories, filenames in os.walk(walk_path):
         for filename in filenames:
             if re.match(r'.*.\.py$', filename) and filename != '__init__.py':
                 file = os.path.join(root, filename).rsplit('.', 1)[0]\
-                    .replace(sspl_path + "/", "").replace("/", ".")
-                import_list.append('sspl.' + file)
+                    .replace(sspl_path + "/low-level/", "").replace("/", ".")
+                for key in keywords:
+                    if key in file:
+                        import_list.append(file)
     return import_list
 
 product = '<PRODUCT>'
 sspl_path = '<SSPL_PATH>'
-product_path = '<SSPL_PATH>' + '/' + product
-product_module_list = import_list(sspl_path, product_path)
+product_module_list = import_list(sspl_path, sspl_path)
 
 block_cipher = None
 

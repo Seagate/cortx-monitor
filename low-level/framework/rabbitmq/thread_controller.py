@@ -163,6 +163,7 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
                 import RealStorEnclosureSensor
         if product.lower() in [x.lower() for x in enabled_products]:
             from sensors.impl.generic.raid import RAIDsensor
+            from sensors.impl.generic.raid_integrity_data import RAIDIntegritySensor
 
     def run(self):
         """Run the module periodically on its own thread."""
