@@ -33,12 +33,14 @@ class Debug(object):
 
     def _log_debug(self, message):
         """Logging messages"""
-        if self._debug:
-            log_msg = self.name() + ", " + message
-            if use_journal:
-                journal.send(log_msg, PRIORITY=7, SYSLOG_IDENTIFIER="sspl-ll")
-            else:
-                logger.debug(log_msg)
+        # if self._debug:
+        #     log_msg = self.name() + ", " + message
+        #     if use_journal:
+        #         journal.send(log_msg, PRIORITY=7, SYSLOG_IDENTIFIER="sspl-ll")
+        #     else:
+        #         logger.debug(log_msg)
+        log_msg = self.name() + ", " + message
+        logger.debug(log_msg)
 
     def _set_debug(self, debug):
         """Sets debug flag"""

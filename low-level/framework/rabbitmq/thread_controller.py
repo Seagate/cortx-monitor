@@ -112,6 +112,12 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
         self._hostname = gethostname()
         self._modules_to_resume = []
 
+    def get_sspl_module(self, module):
+        try:
+            return self._sspl_modules[module]
+        except KeyError:
+            return None
+
     def initialize(self, conf_reader, msgQlist, product):
         """initialize configuration reader and internal msg queues"""
         # Initialize ScheduledMonitorThread

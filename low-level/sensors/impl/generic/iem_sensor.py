@@ -1,9 +1,8 @@
 """
  ****************************************************************************
  Filename:          iem_sensor.py
- Description:       Reads IEMs from Rsyslog through named pipe configured
-                    in SSPL config file and sends them to RabbitMQ sensor
-                    channel.
+ Description:       Reads IEMs from RSyslog filtered file and sends
+                    to RabbitMQ sensor channel.
  Creation Date:     08/26/2019
  Author:            Malhar Vora
 
@@ -23,6 +22,7 @@ import datetime
 import os
 import csv
 import time
+import threading
 
 from functools import lru_cache
 
@@ -105,7 +105,8 @@ class IEMSensor(SensorThread, InternalMsgQ):
         self._rack_id = None
         self._node_id = None
         self._cluster_id = None
-        self._event_time = None
+        self._iem_logs = None
+        self._iem_log_file_lock = threading.Lock()
 
     def initialize(self, conf_reader, msgQlist, products):
         """initialize configuration reader and internal msg queues"""
@@ -150,76 +151,68 @@ class IEMSensor(SensorThread, InternalMsgQ):
 
         # Check for debug mode being activated
         self._read_my_msgQ_noWait()
-        iem_components = None
         try:
+            with self._iem_log_file_lock:
+                self._iem_logs = open(self._log_file_path)
             self._create_file(self._timestamp_file_path)
-            f = subprocess.Popen(['tail','-Fn+1', self._log_file_path],\
-            stdout=subprocess.PIPE,stderr=subprocess.PIPE)
-            p = select.poll()
-            p.register(f.stdout)
-            logger.info("Opened file to read IEM: {0}".format(self._log_file_path))
-            while True:
-                iem_components = iem_msg = None
-                if p.poll():
-                    data = f.stdout.readline().decode('utf-8').rstrip()
-                    self._log_debug("Received line {0}".format(data[5:]))
-                    if data:
-                        log_timestamp = data[:data.index(" ")]
-                        self._event_time = self._get_epoch_time_from_timestamp(log_timestamp)
-                        last_processed_log_timestamp = datetime.datetime.now().isoformat()
-                        timestamp_file = open(self._timestamp_file_path, "r")
-                        last_processed_log_timestamp = timestamp_file.read().strip()
-                        timestamp_file.close()
-                        if not last_processed_log_timestamp or log_timestamp > last_processed_log_timestamp:
-                            iem_msg = self._get_iem(data)
-                            iem_components = self._extract_iem_components(
-                                iem_msg)
-                            if iem_components:
-                                logger.debug("IEM mesage {} {}".format(log_timestamp, iem_components))
-                                self._send_msg(iem_components)
-                                timestamp_file = open(self._timestamp_file_path, "w")
-                                timestamp_file.write(log_timestamp)
-                                timestamp_file.close()
+
+            with open(self._timestamp_file_path, "r") as timestamp_file:
+                last_processed_log_timestamp = timestamp_file.read().strip()
+
+            # Read and send unprocessed messages
+            with self._iem_log_file_lock:
+                for iem_log in self._iem_logs:
+                    log = iem_log.rstrip()
+                    log_timestamp = log[:log.index(" ")]
+                    if not last_processed_log_timestamp or log_timestamp > last_processed_log_timestamp:
+                        self._process_iem(log)
+
+            # Reset debug mode if persistence is not enabled
+            self._disable_debug_if_persist_false()
+
+            # Read new messages
+            self._read_iem()
 
         except IOError as io_error:
             if io_error.errno == errno.ENOENT:
-                logger.error(
-                    "Unable to read IEM timestamp from file. "
-                    "File doesn't exist: {0}".format(self._log_file_path))
+                logger.error(f"IEMSensor, self.run, {io_error.args} {io_error.filename}")
             elif io_error.errno == errno.EACCES:
-                logger.error(
-                    "Unable to read IEM timestamp from file. "
-                    "Permission denied while reading from: {0}".format(
-                        self._log_file_path))
+                logger.error(f"IEMSensor, self.run, {io_error.args} {io_error.filename}")
             else:
-                logger.error(
-                    "Unable to read IEM timestamp from file. "
-                    "Error while reading from {0}:{1}".format(
-                        self._log_file_path, str(io_error)))
-        except ValueError as value_error:
-            error_msg = value_error.message.split(":")[1].strip()
-            logger.error(f"Invalid hex value: {error_msg}")
-
-        except IndexError as index_error:
-            # One major reason we get this error is some component is missing
-            # in IEM so splitting an IEM using ":" faces and issue.
-            logger.error("Missing component in IEM")
-
+                logger.error(f"IEMSensor, self.run, {io_error.args} {io_error.filename}")
+            self._scheduler.enter(10, self._priority, self.run, ())
         except Exception as exception:
-            logger.error(
-                "Unable to read IEM timestamp from file. "
-                "Error while reading from {0}:{1}".format(
-                    self._log_file_path, str(exception)))
-            logger.exception(exception)
+            logger.error(f"IEMSensor, self.run, {exception.args}")
+            self._scheduler.enter(10, self._priority, self.run, ())
 
-        # Reset debug mode if persistence is not enabled
-        self._disable_debug_if_persist_false()
+    def _read_iem(self):
+        try:
+            with self._iem_log_file_lock:
+                for iem_log in self._iem_logs:
+                    self._process_iem(iem_log.rstrip())
+        except IOError as io_error:
+            if io_error.errno == errno.ENOENT:
+                logger.error(f"IEMSensor, self._read_iem, {io_error.args} {io_error.filename}")
+            elif io_error.errno == errno.EACCES:
+                logger.error(f"IEMSensor, self._read_iem, {io_error.args} {io_error.filename}")
+            else:
+                logger.error(f"IEMSensor, self._read_iem, {io_error.args} {io_error.filename}")
+        except Exception as exception:
+            logger.error(f"IEMSensor, self._read_iem, {exception.args}")
+        finally:
+            self._scheduler.enter(10, self._priority, self._read_iem, ())
 
-        # Fire every 10 seconds
-        logger.info("Retrying after 10 seconds...")
-        self._scheduler.enter(10, self._priority, self.run, ())
+    def _process_iem(self, iem_log):
+        log_timestamp = iem_log[:iem_log.index(" ")]
+        iem_msg = self._get_iem(iem_log)
+        iem_components = self._extract_iem_components(iem_msg)
+        if iem_components:
+            logger.debug("IEM mesage {} {}".format(log_timestamp, iem_components))
+            self._send_msg(iem_components, log_timestamp)
+        with open(self._timestamp_file_path, "w") as timestamp_file:
+            timestamp_file.write(log_timestamp)
 
-    def _send_msg(self, iem_components):
+    def _send_msg(self, iem_components, log_timestamp):
         """Creates JSON message from iem components and sends to RabbitMQ
            channel.
         """
@@ -240,6 +233,12 @@ class IEMSensor(SensorThread, InternalMsgQ):
         # Check for valid source id
         if source_id not in self.SOURCE_IDS:
             logger.warn(f"Invalid Source ID level: {source_id}")
+            return
+
+        # Check for valid event time
+        event_time = self._get_epoch_time_from_timestamp(log_timestamp)
+        if not event_time:
+            logger.error("Timestamp is not in required format, discarding the message")
             return
 
         # Check for other components
@@ -271,7 +270,8 @@ class IEMSensor(SensorThread, InternalMsgQ):
             "severity": severity,
             "description": description,
             "alert_type": alert_type,
-            "event_time":self._event_time
+            "event_time": event_time,
+            "IEC": "".join(iem_components[:-1])
         }
         iem_data_msg = IEMDataMsg(info)
         json_msg = iem_data_msg.getJson()
@@ -333,9 +333,14 @@ class IEMSensor(SensorThread, InternalMsgQ):
         components_in_range = True
 
         # Convert compoenents to int from hex string for comparison
-        comp_id = int(_comp_id, 16)
-        module_id = int(_module_id, 16)
-        event_id = int(_event_id, 16)
+        try:
+            comp_id = int(_comp_id, 16)
+            module_id = int(_module_id, 16)
+            event_id = int(_event_id, 16)
+        except ValueError as e:
+            logger.warn(f"Invalide hex in iem messaage {e}")
+            components_in_range = False
+            return components_in_range
 
         # Check if component id out of range
         min_comp_id = int(self.ID_MIN, 16)
@@ -395,11 +400,21 @@ class IEMSensor(SensorThread, InternalMsgQ):
             file.close()
 
     def _get_epoch_time_from_timestamp(self, timestamp):
-        timestamp_format = '%Y-%m-%dT%H:%M:%S.%f%z'
-        # Remove ":" from timezone. %z supports +0000. In timestamp it is +00:00
-        timestamp = timestamp[:-3:] + timestamp[-2:]
-        timestamp = time.strptime(timestamp, timestamp_format)
-        return str(int(time.mktime(timestamp)))
+        try:
+            timestamp_format = '%Y-%m-%dT%H:%M:%S.%f%z'
+            # Remove ":" from timezone. %z supports +0000. In timestamp it is +00:00
+            timestamp = timestamp[:-3:] + timestamp[-2:]
+            timestamp = time.strptime(timestamp, timestamp_format)
+            return str(int(time.mktime(timestamp)))
+        except ValueError:
+            return None
+
+    def refresh_file(self):
+        if os.path.exists(self._log_file_path):
+            with self._iem_log_file_lock:
+                if self._iem_logs:
+                    self._iem_logs.close()
+                    self._iem_logs = open(self._log_file_path)
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""
