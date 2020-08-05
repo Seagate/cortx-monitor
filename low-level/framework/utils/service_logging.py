@@ -131,7 +131,10 @@ class Logger:
 # filename service_logging.py and lineno as 103 for info as it is called
 # at line no 103 here in this file. WHich is not serving the actual purpose
 # of logging. So, switching back to default logging use.
-#logger = Logger(_logger)
+# logger = Logger(_logger)
 
 # Make use of python logger
 logger = _logger
+
+# TODO: Instead of python logger, make use of this custom logger class and
+# which should also solve problem of line no and file name
