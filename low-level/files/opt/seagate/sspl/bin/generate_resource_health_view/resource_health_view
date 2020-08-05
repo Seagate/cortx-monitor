@@ -75,7 +75,7 @@ class SSPLHealthView(object):
     CLUSTER_ID = singleton_realstorencl.cluster_id
     RESOURCE_HEALTH_VIEW_FILE = 'resource_health_view.json'
     RESOURCE_HEALTH_VIEW_PATH = '/tmp/'+RESOURCE_HEALTH_VIEW_FILE
-    TEMPLATE_SCHEMA_FILE = f'/opt/seagate/{PRODUCT_FAMILY}/sspl/bin/genrate_resource_health_view/resource_health_view_template.json'
+    TEMPLATE_SCHEMA_FILE = f'/opt/seagate/{PRODUCT_FAMILY}/sspl/bin/generate_resource_health_view/resource_health_view_template.json'
 
     NODE_REQUEST_MAP = {
         "disk" : "Drive Slot / Bay",

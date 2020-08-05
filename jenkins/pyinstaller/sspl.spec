@@ -41,7 +41,7 @@ sspl_ll_d = Analysis([sspl_path + '/low-level/framework/sspl_ll_d'],
              cipher=block_cipher,
              noarchive=False)
 
-resource_health_view  = Analysis([sspl_path + '/low-level/files/opt/seagate/sspl/bin/genrate_resource_health_view/resource_health_view'],
+resource_health_view  = Analysis([sspl_path + '/low-level/files/opt/seagate/sspl/bin/generate_resource_health_view/resource_health_view'],
              pathex=[spec_root + '/sspl', spec_root + '/sspl/low-level', spec_root + '/sspl/low-level/framework', spec_root + '/sspl/low-level/message_handlers'],
              binaries=[],
              datas=[(sspl_path + '/low-level/json_msgs/schemas/actuators/*.json', '.'),
@@ -57,9 +57,25 @@ resource_health_view  = Analysis([sspl_path + '/low-level/files/opt/seagate/sspl
              cipher=block_cipher,
              noarchive=False)
 
+sspl_bundle_generate  = Analysis([sspl_path + '/low-level/files/opt/seagate/sspl/bin/generate_sspl_bundle/sspl_bundle_generate'],
+             pathex=[spec_root + '/sspl', spec_root + '/sspl/low-level', spec_root + '/sspl/low-level/framework', spec_root + '/sspl/low-level/message_handlers'],
+             binaries=[],
+             datas=[(sspl_path + '/low-level/json_msgs/schemas/actuators/*.json', '.'),
+                    (sspl_path + '/low-level/json_msgs/schemas/sensors/*.json', '.'),
+                    (sspl_path + '/low-level/tests/manual/actuator_msgs/*.json', '.'),
+                    (sspl_path + '/low-level/tests/manual/actuator_msgs/*.conf', '.')],
+             hiddenimports=product_module_list,
+             hookspath=[],
+             runtime_hooks=[],
+             excludes=[],
+             win_no_prefer_redirects=False,
+             win_private_assemblies=False,
+             cipher=block_cipher,
+             noarchive=False)
 #merge
 MERGE( (sspl_ll_d, 'sspl_ll_d', 'sspl_ll_d'),
-       (resource_health_view, 'resource_health_view', 'resource_health_view') )
+       (resource_health_view, 'resource_health_view', 'resource_health_view'),
+       (sspl_bundle_generate, 'sspl_bundle_generate', 'sspl_bundle_generate') )
 
 #sspl_ll_d
 sspl_ll_d_pyz = PYZ(sspl_ll_d.pure, sspl_ll_d.zipped_data,
@@ -91,6 +107,21 @@ resource_health_view_exe = EXE(resource_health_view_pyz,
           upx=True,
           console=True )
 
+#sspl_bundle_generate
+sspl_bundle_generate_pyz = PYZ(sspl_bundle_generate.pure, sspl_bundle_generate.zipped_data,
+             cipher=block_cipher)
+
+sspl_bundle_generate_exe = EXE(sspl_bundle_generate_pyz,
+          sspl_bundle_generate.scripts,
+          [],
+          exclude_binaries=True,
+          name='sspl_bundle_generate',
+          debug=False,
+          bootloader_ignore_signals=False,
+          strip=False,
+          upx=True,
+          console=True )
+
 coll = COLLECT(
                #sspl_ll_d
                sspl_ll_d_exe,
@@ -103,6 +134,12 @@ coll = COLLECT(
                resource_health_view.binaries,
                resource_health_view.zipfiles,
                resource_health_view.datas,
+
+               #sspl_bundle_generate
+               sspl_bundle_generate_exe,
+               sspl_bundle_generate.binaries,
+               sspl_bundle_generate.zipfiles,
+               sspl_bundle_generate.datas,
 
                #sspl_tests_exe,
                #sspl_tests.binaries,
