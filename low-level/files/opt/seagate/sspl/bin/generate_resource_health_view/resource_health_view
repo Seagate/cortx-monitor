@@ -306,6 +306,9 @@ class SSPLHealthView(object):
                 resource_id = drive.get("durable-id")
                 durable_id = resource_id
                 health = drive.get("health", "NA")
+                serialno = drive.get("serial-number", "NA")
+                vendor = drive.get("vendor", "NA")
+                model = drive.get("model", "NA")
                 if health in self.undesired_vals:
                     health = "NA"
                 disk_data.update({
@@ -315,6 +318,9 @@ class SSPLHealthView(object):
                         "alert_uuid": "NA",
                         "durable_id": durable_id,
                         "health": health,
+                        "serial-number": serialno,
+                        "vendor": vendor,
+                        "model": model,
                         "fetch_time" : int(time.time())
                     }
                     })
@@ -345,6 +351,9 @@ class SSPLHealthView(object):
             resource_id = psu.get("durable-id")
             durable_id = resource_id
             health = psu.get("health", "NA")
+            serialno = psu.get("serial-number", "NA")
+            vendor = psu.get("vendor", "NA")
+            model = psu.get("model", "NA")
             if health in self.undesired_vals:
                 health = "NA"
             psu_data.update({
@@ -354,6 +363,9 @@ class SSPLHealthView(object):
                         "alert_uuid": "NA",
                         "durable_id": durable_id,
                         "health": health,
+                        "serial-number": serialno,
+                        "vendor": vendor,
+                        "model": model,
                         "fetch_time" : int(time.time())
                     }
             })
@@ -384,6 +396,9 @@ class SSPLHealthView(object):
             resource_id = controller.get("durable-id")
             durable_id = resource_id
             health = controller.get("health", "NA")
+            serialno = controller.get("serial-number", "NA")
+            vendor = controller.get("vendor", "NA")
+            model = controller.get("model", "NA")
             if health in self.undesired_vals:
                 health = "NA"
             controller_data.update({
@@ -393,6 +408,9 @@ class SSPLHealthView(object):
                         "alert_uuid": "NA",
                         "durable_id": durable_id,
                         "health": health,
+                        "serial-number": serialno,
+                        "vendor": vendor,
+                        "model": model,
                         "fetch_time" : int(time.time())
                     }
             })
@@ -422,6 +440,9 @@ class SSPLHealthView(object):
             resource_id = fan.get("durable-id")
             durable_id = resource_id
             health = fan.get("health", "NA")
+            serialno = fan.get("serial-number", "NA")
+            vendor = fan.get("vendor", "NA")
+            model = fan.get("model", "NA")
             if health in self.undesired_vals:
                 health = "NA"
             fan_data.update({
@@ -431,6 +452,9 @@ class SSPLHealthView(object):
                         "alert_uuid": "NA",
                         "durable_id": durable_id,
                         "health": health,
+                        "serial-number": serialno,
+                        "vendor": vendor,
+                        "model": model,
                         "fetch_time" : int(time.time())
                     }
             })
@@ -468,6 +492,9 @@ class SSPLHealthView(object):
             resource_id = spln.get("durable-id")
             durable_id = resource_id
             health = spln.get("health", "NA")
+            serialno = spln.get("serial-number", "NA")
+            vendor = spln.get("vendor", "NA")
+            model = spln.get("model", "NA")
             if health in self.undesired_vals:
                 health = "NA"
             spln_data.update({
@@ -477,6 +504,9 @@ class SSPLHealthView(object):
                         "alert_uuid": "NA",
                         "durable_id": durable_id,
                         "health": health,
+                        "serial-number": serialno,
+                        "vendor": vendor,
+                        "model": model,
                         "fetch_time" : int(time.time())
                     }
             })
