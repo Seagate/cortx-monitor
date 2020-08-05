@@ -6,12 +6,12 @@ import time
 import sys
 import subprocess
 
-from sspl_test.default import *
+from sspl_test.default import world
 from sspl_test.rabbitmq.rabbitmq_ingress_processor_tests import RabbitMQingressProcessorTests
 from sspl_test.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 from sspl_test.common import check_sspl_ll_is_running
 
-from sspl_test.framework.base.sspl_constants import PRODUCT_FAMILY
+from sspl_test.framework.base.sspl_constants import CONSUL_PATH
 from sspl_test.alerts.node import simulate_bmc_interface_alert
 
 def init(args):
@@ -21,16 +21,16 @@ def test_bmc_interface(args):
     check_sspl_ll_is_running() 
     # backup active bmc interface
     BMC_IF_CONSUL_KEY,BMC_IF_CONSUL_VAL = backup_bmc_config()
+
     if BMC_IF_CONSUL_VAL == "lan":
         # backup lan fault value
         lan_fault_consul_key , lan_fault_val = backup_lan_fault()
-
         if lan_fault_consul_key and lan_fault_val is not None:
             simulate_bmc_interface_alert.clean_previous_lan_alert(lan_fault_consul_key , lan_fault_val)
-
         simulate_bmc_interface_alert.lan_channel_alert(BMC_IF_CONSUL_KEY,BMC_IF_CONSUL_VAL)
     else:
         simulate_bmc_interface_alert.kcs_channel_alert(BMC_IF_CONSUL_KEY,BMC_IF_CONSUL_VAL)
+
     bmc_interface_message = None
     time.sleep(6)
     while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
@@ -73,7 +73,7 @@ def test_bmc_interface(args):
 
 def backup_bmc_config():
     # read active bmc interface
-    cmd = f"/opt/seagate/{PRODUCT_FAMILY}/hare/bin/consul kv get --recurse ACTIVE_BMC_IF"
+    cmd = f"{CONSUL_PATH}/consul kv get --recurse ACTIVE_BMC_IF"
     bmc_interface,retcode = run_cmd(cmd)
     if retcode != 0:
         print(f"command:{cmd} not executed successfully")
@@ -93,7 +93,7 @@ def backup_bmc_config():
 def backup_lan_fault():
     # check for previous lan fault.
     # If already fault alert raised for lan, clear it to raise fault again for test case excution.
-    cmd = f"/opt/seagate/{PRODUCT_FAMILY}/hare/bin/consul kv get --recurse LAN_ALERT"
+    cmd = f"{CONSUL_PATH}/consul kv get --recurse LAN_ALERT"
     res, retcode = run_cmd(cmd)
     if retcode != 0:
         print(f"command:{cmd} not executed successfully")
