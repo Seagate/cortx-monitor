@@ -1,0 +1,69 @@
+#!/bin/bash
+
+set -e -u -o pipefail
+
+############################################################################
+# This script performs following operations.
+# - If consul found, use existing consul from CONSUL_PATH
+# - If consul not found, creates consul binary in CONSUL_PATH and runs agent
+############################################################################
+
+SCRIPT_DIR=$(dirname $0)
+# Import common constants
+. $SCRIPT_DIR/constants.sh
+SCRIPT_NAME=$(basename $0)
+
+mkdir -p $CONSUL_PATH
+mkdir -p $CONSUL_FALLBACK_PATH
+
+
+usage() {
+    cat << EOF
+$SCRIPT_NAME [[-e <DEV|PROD>]
+    -e Environment
+EOF
+    exit 1
+}
+
+while getopts ":e:" OPTION; do
+    case $OPTION in
+        e )
+            ENVIRONMENT=$OPTARG
+            ;;
+        * )
+            usage
+            ;;
+    esac
+done
+
+# Look consul in fallback path if not available in CONSUL_PATH
+if ! [ -x "$(command -v $CONSUL_PATH/consul)" ]; then
+    # For Dev environment, install consul
+    if [ "$ENVIRONMENT" == 'DEV' ]; then
+        if ! [ -x "$(command -v wget)" ]; then
+            yum install -y wget
+        fi
+        curl -O https://releases.hashicorp.com/consul/1.7.0/consul_1.7.0_linux_amd64.zip
+        if ! [ -x "$(command -v unzip)" ]; then
+            yum install -y unzip
+        fi
+        unzip consul_1.7.0_linux_amd64.zip
+        rm -rf consul_1.7.0_linux_amd64.zip
+        mv ./consul $CONSUL_FALLBACK_PATH/consul
+    fi
+
+    ln -s $CONSUL_FALLBACK_PATH/consul $CONSUL_PATH/consul
+
+    if ! [ -x "$(command -v $CONSUL_PATH/consul)" ]; then
+        echo "Consul is not available, exiting..";
+        exit 1
+    fi
+
+    # Invoke consul agent from fallback path
+    CONSUL_PS=$(ps -aux | grep "consul" | grep -v "grep" | grep -v "bash" || true)
+    [ -z "$CONSUL_PS" ] &&
+        $CONSUL_PATH/consul agent -dev -config-file=$SSPL_BASE_DIR/bin/consul_config.json &>/dev/null &
+
+    # TODO:
+    # This setup consul script should support on joining another node(s) and form a consul cluster
+fi

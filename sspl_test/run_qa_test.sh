@@ -3,11 +3,15 @@
 MOCK_SERVER_IP=127.0.0.1
 MOCK_SERVER_PORT=28200
 RMQ_SELF_STARTED=0
+RMQ_SELF_STOPPED=0
 SSPL_STORE_TYPE=${SSPL_STORE_TYPE:-consul}
 
 [[ $EUID -ne 0 ]] && sudo=sudo
 script_dir=$(dirname $0)
 . $script_dir/constants.sh
+
+plan=${1:-}
+avoid_rmq=${2:-}
 
 flask_help()
 {
@@ -37,24 +41,34 @@ pre_requisites()
         $sudo mv /var/$PRODUCT_FAMILY/sspl/data/iem/last_processed_msg_time /var/$PRODUCT_FAMILY/sspl/orig-data/iem/last_processed_msg_time
     fi
 
-    # Start rabbitmq if not already running
     systemctl status rabbitmq-server 1>/dev/null && export status=true || export status=false
-    if [ "$status" = "false" ]; then
-        echo "Starting rabbitmq server as needed for tests"
-        systemctl start rabbitmq-server
-        RMQ_SELF_STARTED=1
+
+    if [ -z "$avoid_rmq" ]; then
+        # Start rabbitmq if not already running
+        if [ "$status" = "false" ]; then
+            echo "Starting rabbitmq server as needed for tests"
+            systemctl start rabbitmq-server
+            RMQ_SELF_STARTED=1
+        fi
+    else
+        # Stop rabbitmq if running already
+        if [ "$status" = "true" ]; then
+            echo "Stopping rabbitmq server as needed for tests"
+            systemctl stop rabbitmq-server
+            RMQ_SELF_STOPPED=1
+        fi
     fi
 
     # Enable ipmi simulator
     cp -Rp $script_dir/ipmi_simulator/ipmisimtool /usr/bin
     touch /tmp/activate_ipmisimtool
-    # Backup /opt/seagate/<product>/hare/bin/consul data before deleting
-    /opt/seagate/$PRODUCT_FAMILY/hare/bin/consul kv export var/$PRODUCT_FAMILY/sspl/data/ > /tmp/consul_backup.json
+    # Backup $CONSUL_PATH/consul data before deleting
+    $CONSUL_PATH/consul kv export var/$PRODUCT_FAMILY/sspl/data/ > /tmp/consul_backup.json
 
-    # clearing /opt/seagate/<product>/hare/bin/consul keys.
-    /opt/seagate/$PRODUCT_FAMILY/hare/bin/consul kv delete -recurse var/$PRODUCT_FAMILY/sspl/data
+    # clearing $CONSUL_PATH/consul keys.
+    $CONSUL_PATH/consul kv delete -recurse var/$PRODUCT_FAMILY/sspl/data
     # clearing consul keys.
-    /opt/seagate/$PRODUCT_FAMILY/hare/bin/consul kv delete -recurse var/$PRODUCT_FAMILY/sspl/data
+    $CONSUL_PATH/consul kv delete -recurse var/$PRODUCT_FAMILY/sspl/data
 
 }
 
@@ -92,16 +106,16 @@ restore_cfg_services()
         sed -i 's/site_id='"$site_id"'/site_id=001/g' /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/conf/sspl_tests.conf
         sed -i 's/cluster_id='"$cluster_id"'/cluster_id=001/g' /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/conf/sspl_tests.conf
     else
-        /opt/seagate/$PRODUCT_FAMILY/hare/bin/consul kv put sspl/config/STORAGE_ENCLOSURE/controller/primary_mc/ip $primary_ip
-        port=$(/opt/seagate/$PRODUCT_FAMILY/hare/bin/consul kv get sspl/config/STORAGE_ENCLOSURE/controller/primary_mc/port)
+        $CONSUL_PATH/consul kv put sspl/config/STORAGE_ENCLOSURE/controller/primary_mc/ip $primary_ip
+        port=$($CONSUL_PATH/consul kv get sspl/config/STORAGE_ENCLOSURE/controller/primary_mc/port)
         if [ "$port" == "$MOCK_SERVER_PORT" ]
         then
-            /opt/seagate/$PRODUCT_FAMILY/hare/bin/consul kv put sspl/config/STORAGE_ENCLOSURE/controller/primary_mc/port $primary_port
+            $CONSUL_PATH/consul kv put sspl/config/STORAGE_ENCLOSURE/controller/primary_mc/port $primary_port
         fi
-        /opt/seagate/$PRODUCT_FAMILY/hare/bin/consul kv put sspl_test/config/SYSTEM_INFORMATION/node_id '001'
-        /opt/seagate/$PRODUCT_FAMILY/hare/bin/consul kv put sspl_test/config/SYSTEM_INFORMATION/site_id '001'
-        /opt/seagate/$PRODUCT_FAMILY/hare/bin/consul kv put sspl_test/config/SYSTEM_INFORMATION/rack_id '001'
-        /opt/seagate/$PRODUCT_FAMILY/hare/bin/consul kv put sspl_test/config/SYSTEM_INFORMATION/cluster_id '001'
+        $CONSUL_PATH/consul kv put sspl_test/config/SYSTEM_INFORMATION/node_id '001'
+        $CONSUL_PATH/consul kv put sspl_test/config/SYSTEM_INFORMATION/site_id '001'
+        $CONSUL_PATH/consul kv put sspl_test/config/SYSTEM_INFORMATION/rack_id '001'
+        $CONSUL_PATH/consul kv put sspl_test/config/SYSTEM_INFORMATION/cluster_id '001'
     fi
 
     echo "Stopping mock server"
@@ -115,13 +129,20 @@ restore_cfg_services()
         RMQ_SELF_STARTED=0
     fi
 
+    if [ "$RMQ_SELF_STOPPED" -eq 1 ]
+    then
+        echo "Starting rabbitmq server as was stopped for tests"
+        systemctl start rabbitmq-server
+        RMQ_SELF_STOPPED=0
+    fi
+
     # Remove ipmisimtool
     rm -f /usr/bin/ipmisimtool
     rm -f /tmp/activate_ipmisimtool
 
-    # Restore /opt/seagate/<product>/hare/bin/consul data
-    /opt/seagate/$PRODUCT_FAMILY/hare/bin/consul kv delete -recurse var/$PRODUCT_FAMILY/sspl/data
-    /opt/seagate/$PRODUCT_FAMILY/hare/bin/consul kv import @/tmp/consul_backup.json
+    # Restore $CONSUL_PATH/consul data
+    $CONSUL_PATH/consul kv delete -recurse var/$PRODUCT_FAMILY/sspl/data
+    $CONSUL_PATH/consul kv import @/tmp/consul_backup.json
     $sudo rm -f /tmp/consul_backup.json
 }
 
@@ -134,7 +155,7 @@ trap cleanup 1 2 3 6 9 15
 
 execute_test()
 {
-    $sudo $script_dir/run_sspl-ll_tests.sh $*
+    $sudo $script_dir/run_sspl-ll_tests.sh $plan
 }
 
 flask_installed=$(python3.6 -c 'import pkgutil; print(1 if pkgutil.find_loader("flask") else 0)')
@@ -155,12 +176,12 @@ python3 $script_dir/put_config_to_consul.py
 # change the port to $MOCK_SERVER_PORT as mock_server runs on $MOCK_SERVER_PORT
 if [ "$SSPL_STORE_TYPE" == "consul" ]
 then
-    primary_ip=$(/opt/seagate/$PRODUCT_FAMILY/hare/bin/consul kv get sspl/config/STORAGE_ENCLOSURE/controller/primary_mc/ip)
-    /opt/seagate/$PRODUCT_FAMILY/hare/bin/consul kv put sspl/config/STORAGE_ENCLOSURE/controller/primary_mc/ip $MOCK_SERVER_IP
-    primary_port=$(/opt/seagate/$PRODUCT_FAMILY/hare/bin/consul kv get sspl/config/STORAGE_ENCLOSURE/controller/primary_mc/port)
+    primary_ip=$($CONSUL_PATH/consul kv get sspl/config/STORAGE_ENCLOSURE/controller/primary_mc/ip)
+    $CONSUL_PATH/consul kv put sspl/config/STORAGE_ENCLOSURE/controller/primary_mc/ip $MOCK_SERVER_IP
+    primary_port=$($CONSUL_PATH/consul kv get sspl/config/STORAGE_ENCLOSURE/controller/primary_mc/port)
     if [ "$primary_port" != "$MOCK_SERVER_PORT" ]
     then
-        /opt/seagate/$PRODUCT_FAMILY/hare/bin/consul kv put sspl/config/STORAGE_ENCLOSURE/controller/primary_mc/port $MOCK_SERVER_PORT
+        $CONSUL_PATH/consul kv put sspl/config/STORAGE_ENCLOSURE/controller/primary_mc/port $MOCK_SERVER_PORT
     fi
 else
     primary_port=$(sed -n -e '/primary_controller_port/ s/.*\= *//p' /etc/sspl.conf)
@@ -190,14 +211,14 @@ then
             SRVNODE="srvnode-1"
         fi
     fi
-    transmit_interval=$(/opt/seagate/$PRODUCT_FAMILY/hare/bin/consul kv get sspl/config/NODEDATAMSGHANDLER/transmit_interval)
-    disk_usage_threshold=$(/opt/seagate/$PRODUCT_FAMILY/hare/bin/consul kv get sspl/config/NODEDATAMSGHANDLER/disk_usage_threshold)
-    host_memory_usage_threshold=$(/opt/seagate/$PRODUCT_FAMILY/hare/bin/consul kv get sspl/config/NODEDATAMSGHANDLER/host_memory_usage_threshold)
-    cpu_usage_threshold=$(/opt/seagate/$PRODUCT_FAMILY/hare/bin/consul kv get sspl/config/NODEDATAMSGHANDLER/cpu_usage_threshold)
-    rack_id=$(/opt/seagate/$PRODUCT_FAMILY/hare/bin/consul kv get system_information/rack_id)
-    site_id=$(/opt/seagate/$PRODUCT_FAMILY/hare/bin/consul kv get system_information/site_id)
-    node_id=$(/opt/seagate/$PRODUCT_FAMILY/hare/bin/consul kv get system_information/$SRVNODE/node_id)
-    cluster_id=$(/opt/seagate/$PRODUCT_FAMILY/hare/bin/consul kv get system_information/cluster_id)
+    transmit_interval=$($CONSUL_PATH/consul kv get sspl/config/NODEDATAMSGHANDLER/transmit_interval)
+    disk_usage_threshold=$($CONSUL_PATH/consul kv get sspl/config/NODEDATAMSGHANDLER/disk_usage_threshold)
+    host_memory_usage_threshold=$($CONSUL_PATH/consul kv get sspl/config/NODEDATAMSGHANDLER/host_memory_usage_threshold)
+    cpu_usage_threshold=$($CONSUL_PATH/consul kv get sspl/config/NODEDATAMSGHANDLER/cpu_usage_threshold)
+    rack_id=$($CONSUL_PATH/consul kv get system_information/rack_id)
+    site_id=$($CONSUL_PATH/consul kv get system_information/site_id)
+    node_id=$($CONSUL_PATH/consul kv get system_information/$SRVNODE/node_id)
+    cluster_id=$($CONSUL_PATH/consul kv get system_information/cluster_id)
 else
     transmit_interval=$(sed -n -e '/transmit_interval/ s/.*\= *//p' /etc/sspl.conf)
     disk_usage_threshold=$(sed -n -e '/disk_usage_threshold/ s/.*\= *//p' /etc/sspl.conf)
@@ -217,10 +238,10 @@ if [ "$SSPL_STORE_TYPE" == "consul" ]
 then
     # Update consul with updated System Information
     # append above parsed key-value pairs in consul under [SYSTEM_INFORMATION] section
-    /opt/seagate/$PRODUCT_FAMILY/hare/bin/consul kv put sspl_test/config/SYSTEM_INFORMATION/node_id $node_id
-    /opt/seagate/$PRODUCT_FAMILY/hare/bin/consul kv put sspl_test/config/SYSTEM_INFORMATION/site_id $site_id
-    /opt/seagate/$PRODUCT_FAMILY/hare/bin/consul kv put sspl_test/config/SYSTEM_INFORMATION/rack_id $rack_id
-    /opt/seagate/$PRODUCT_FAMILY/hare/bin/consul kv put sspl_test/config/SYSTEM_INFORMATION/cluster_id $cluster_id
+    $CONSUL_PATH/consul kv put sspl_test/config/SYSTEM_INFORMATION/node_id $node_id
+    $CONSUL_PATH/consul kv put sspl_test/config/SYSTEM_INFORMATION/site_id $site_id
+    $CONSUL_PATH/consul kv put sspl_test/config/SYSTEM_INFORMATION/rack_id $rack_id
+    $CONSUL_PATH/consul kv put sspl_test/config/SYSTEM_INFORMATION/cluster_id $cluster_id
 else
     # Update sspl_tests.conf with updated System Information
     # append above parsed key-value pairs in sspl_tests.conf under [SYSTEM_INFORMATION] section
@@ -229,6 +250,10 @@ else
     sed -i 's/rack_id=001/rack_id='"$rack_id"'/g' /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/conf/sspl_tests.conf
     sed -i 's/cluster_id=001/cluster_id='"$cluster_id"'/g' /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/conf/sspl_tests.conf
 fi
+
+# updateing rabbitmq cluster
+CLUSTER_NODES=$($CONSUL_PATH/consul kv get sspl/config/RABBITMQCLUSTER/cluster_nodes)
+$CONSUL_PATH/consul kv put sspl_test/config/RABBITMQCLUSTER/cluster_nodes $CLUSTER_NODES
 
 echo "Restarting SSPL"
 $sudo systemctl restart sspl-ll
@@ -244,7 +269,7 @@ PID=`/sbin/pidof -s /usr/bin/sspl_ll_d`
 kill -s SIGHUP $PID
 
 # Start tests
-execute_test $*
+execute_test $plan
 retcode=$?
 
 # Restoring original cache data

@@ -132,7 +132,7 @@ create_req() {
     done
 
     # Create /tmp/dcs/hpi if required. Not needed for '<product>' role
-    [ "$role" != "eos" ] && [ ! -d "/tmp/dcs/hpi" ] && mkdir -p /tmp/dcs/hpi && id -u zabbix > /dev/null 2>&1 && chown zabbix:zabbix /tmp/dcs/hpi
+    [ "$role" != "cortx" ] && [ ! -d "/tmp/dcs/hpi" ] && mkdir -p /tmp/dcs/hpi && id -u zabbix > /dev/null 2>&1 && chown zabbix:zabbix /tmp/dcs/hpi
 
     # Check for sspl required processes and misc dependencies like installation, etc based on 'role'
     [ -z "$role" ] || check_dependencies $role

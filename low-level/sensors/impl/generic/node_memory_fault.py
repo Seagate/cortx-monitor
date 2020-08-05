@@ -62,6 +62,7 @@ class MemFaultSensor(SensorThread, InternalMsgQ):
         self.total_mem = None
         self.mem_path_file = None
         self.prev_mem = None
+        self.fault_alert_state = "Neutral State"
         # Flag to indicate suspension of module
         self._suspended = False
 
@@ -118,12 +119,16 @@ class MemFaultSensor(SensorThread, InternalMsgQ):
 
     def get_stored_mem_info(self):
         """ Get the memory info from consul"""
-        if self.prev_mem is None:
-            self.prev_mem = store.get(self.consul_key)
 
-    def put_mem_info(self):
+        if store.exists(self.consul_key):
+            consul_data = (store.get(self.consul_key)).split(":")
+            self.prev_mem = consul_data[0].strip()
+            self.fault_alert_state = consul_data[1].strip()
+        
+    def put_mem_info(self, total_memory_size):
         """ Store the current memory in Consul"""
-        store.put(self.total_mem, self.consul_key)
+
+        store.put(f"{total_memory_size}:{self.fault_alert_state}", self.consul_key)
 
     def run(self):
         """Run the sensor on its own thread"""
@@ -142,20 +147,21 @@ class MemFaultSensor(SensorThread, InternalMsgQ):
                 self.get_stored_mem_info()
 
                 if self.prev_mem is not None:
-                    # At present only fault alert case is handled.
-                    # Fault is raised when the total RAM memory decreases.
-                    # TODO : the memory increased i.e. fault_resolved case needs to be
-                    # handled and will be done as part of a different jira
-
-                    # The reduced memory value is currently written to consul
-                    # This logic will  be changed when fault_resolved is handled and
-                    # complete solution is in place.
+                    # Fault and Fault_resolved Both conditions are handled.
                     if int(self.prev_mem) > int(self.total_mem):
                         # update the store with new value, raise an alert of type "fault"
+                        if self.fault_alert_state == "Neutral State":
+                            self.fault_alert_state = "Fault Generated"
+                            self._generate_alert(alert_type)
+                            self.put_mem_info(self.prev_mem)
+
+                    elif (int(self.prev_mem) <= int(self.total_mem)) and (self.fault_alert_state == "Fault Generated"):
+                        self.fault_alert_state = "Neutral State"
+                        alert_type = "fault_resolved"
                         self._generate_alert(alert_type)
-                        self.put_mem_info()
+                        self.put_mem_info(self.total_mem)
                 else:
-                    self.put_mem_info()
+                    self.put_mem_info(self.total_mem)
             else:
                 logger.error("MemFaultSensor: invalid file, shutting down the sensor")
                 self.shutdown()
@@ -196,10 +202,14 @@ class MemFaultSensor(SensorThread, InternalMsgQ):
 
         specific_info = {}
         specific_info_list = []
-
-        specific_info["event"] = \
-                "Total available main memory value decreased from {} kB to {} kB"\
-                .format(self.prev_mem, self.total_mem)
+        if alert_type == "fault":
+            specific_info["event"] = \
+                    "Total available main memory value decreased from {} kB to {} kB"\
+                    .format(self.prev_mem, self.total_mem)
+        elif alert_type == "fault_resolved":
+            specific_info["event"] = \
+                    "Total main memory value available {} kB"\
+                    .format(self.total_mem)
 
         # populate all the data from /proc/meminfo
         split_strs = [s.split(maxsplit=1) for s in self.mem_path_file.splitlines()]

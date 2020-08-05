@@ -1,7 +1,7 @@
 #!/usr/bin/python3.6
 from enum import Enum
 
-PRODUCT_NAME = 'ECS'
+PRODUCT_NAME = 'EES'
 PRODUCT_FAMILY = 'cortx'
 enabled_products = [ "CS-A", "SINGLE", "EES", "ECS"]
 cs_products = ["CS-A"]

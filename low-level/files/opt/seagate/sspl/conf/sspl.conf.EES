@@ -87,6 +87,8 @@ cpu_usage_threshold=80
 # Memory Usage Threshold value in terms of usage in percentage (i.e. 0 to 100%)
 host_memory_usage_threshold=80
 
+[NODEDATA]
+probe=sysfs
 
 [XINITDWATCHDOG]
 threaded=true
@@ -108,12 +110,7 @@ user=admin
 pass=admin
 
 [BMC_INTERFACE]
-system=kcs
-lan=rmcp
 default=system
-bmc_lan_ip=
-bmc_lan_user=ADMIN
-bmc_lan_passwd=ADMIN
 
 [SMTPSETTING]
 smptserver=mailhost.seagate.com

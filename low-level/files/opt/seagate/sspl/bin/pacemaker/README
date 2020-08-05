@@ -4,11 +4,12 @@
     - eos-sspl-<version>_<git-id>.el7.centos.noarch
 
 2. Initialization of SSPL
-    - Make sure rabbitmq is installed on both the nodes.
+    - Make sure rabbitmq is installed on nodes.
+    - Make sure consul service is running on nodes.
 
     - If system is not provisioned, execute following steps to initialize SSPL:
         /opt/seagate/cortx/sspl/bin/sspl_post_install -p EES
-        /opt/seagate/cortx/sspl/bin/sspl_setup_init -r eos
+        /opt/seagate/cortx/sspl/bin/sspl_setup_init -r cortx
         /opt/seagate/cortx/sspl/bin/sspl_config
         systemctl start sspl-ll.service
         systemctl start rabbitmq-server.service
@@ -17,29 +18,29 @@
     - Copy Resource Agent script from
       "cp /opt/seagate/cortx/sspl/bin/pacemaker/sspl_stateful_resource_agent /lib/ocf/resource.d/<provider>/sspl_stateful_resource_agent"
 
-4. Creation of the SSPL resource (Master/Slave approach)
+4. Creation of the SSPL resource (primary/secondary approach)
     - "pcs resource create sspl ocf:<provider>:sspl_stateful_resource_agent master meta migration-threshold=10 failure-timeout=10"
     - This should start the service on both the Nodes(By default SSPL will
-      start in Degraded state and one of the Node will be promoted to Master)
+      start in Degraded state and one of the Node will be promoted to primary)
 
 Scenarios to test:
 
-1. Master Node must be promoted and SSPL should switch to Active state.
+1. Primary Node must be promoted and SSPL should switch to Active state.
    - This we can validate with SSPL logs:
      "INFO Received SIGHUP to switch to active state (sspl_ll_d)"
 
-2. Stop the service on Slave Node:
+2. Stop the service on secondary Node:
    - "systemctl stop sspl-ll"
      Pacemaker should restart the service on same node.
 
-3. Kill the service on Master Node:
+3. Kill the service on primary Node:
    - kill -9 <PID>
      Pacemaker should restart the service on same node.
 
-4. Failure of the service on Master Node.
+4. Failure of the service on primary Node.
    - (changing sspl configuration file (/etc/sspl.conf) with unexpected changes
      will fail the service)
-   - After some time period, Master node should be demoted and Slave node
+   - After some time period, primary node should be demoted and secondary node
      should be promoted and SSPL should change state from degraded to active.
-   - This will might cause Demoted slave node resource in Stopped state. So, in order to start it,
+   - This will might cause Demoted secondary node resource in Stopped state. So, in order to start it,
      "pcs resource cleanup sspl" will work.

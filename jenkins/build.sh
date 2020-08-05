@@ -49,7 +49,7 @@ cd $BASE_DIR
 [ -z "$VERSION" ] && VERSION=$(cat $BASE_DIR/VERSION)
 
 #product and key for sspl pyinstaller
-[ -z "$PRODUCT" ] && PRODUCT="eos"
+[ -z "$PRODUCT" ] && PRODUCT="cortx"
 [ -z "$KEY" ] && KEY="eos@ees@sspl@pr0duct"
 [ -z "$TEST" ] && TEST=true
 [ -z "$CLI" ] && CLI=true

@@ -26,7 +26,6 @@ PRODUCT = "product"
 SETUP = "setup"
 MAX_CONSUL_RETRY = 12
 WAIT_BEFORE_RETRY = 5
-
 node_key_id = node_id
 CONSUL_HOST = consulhost
 CONSUL_PORT = consulport
@@ -60,6 +59,12 @@ COMMON_CONFIGS = {
         "sspl_key" : "key_provided_by_provisioner",
         "cluster_nodes" : "rabbitmq/cluster_nodes",
         "erlang_cookie" : "rabbitmq/erlang_cookie"
+    },
+    "BMC": {
+        "sspl_key" : "key_provided_by_provisioner",
+        f"ip_{node_id}" : f"{node_id}/ip",
+        f"user_{node_id}" : f"{node_id}/user",
+        f"secret_{node_id}" : f"{node_id}/secret"
     }
 }
 
@@ -71,6 +76,23 @@ file_store_config_path = '/etc/sspl.conf'
 salt_provisioner_pillar_sls = 'sspl'
 salt_uniq_attr_per_node = ['cluster_id']
 salt_uniq_passwd_per_node = ['RABBITMQINGRESSPROCESSOR', 'RABBITMQEGRESSPROCESSOR', 'LOGGINGPROCESSOR']
+
+class RaidDataConfig(Enum):
+    MDSTAT_FILE = "/proc/mdstat"
+    DIR = "/sys/block/"
+    SYNC_ACTION_FILE = "/md/sync_action"
+    MISMATCH_COUNT_FILE = "/md/mismatch_cnt"
+    STATE_COMMAND_RESPONSE = 'idle'
+    MISMATCH_COUNT_RESPONSE = '0'
+    RAID_RESULT_DIR = "/tmp"
+    RAID_RESULT_FILE_PATH = "/tmp/result_raid_health_file"
+    MAX_RETRIES = 50
+    PRIORITY = 1
+
+class RaidAlertMsgs(Enum):
+    STATE_MSG = "'idle' state not found after max retries."
+    MISMATCH_MSG = "MISMATCH COUNT is found, as count does not match to the default '0' value."
+
 
 class AlertTypes(Enum):
     GET = "get"
@@ -102,6 +124,7 @@ class StoreTypes(Enum):
 class ServiceTypes(Enum):
     RABBITMQ = "rabbitmq"
     STORAGE_ENCLOSURE = "storage_enclosure"
+    CLUSTER = "cluster"
 
 class OperatingSystem(Enum):
     CENTOS7 = "centos7"

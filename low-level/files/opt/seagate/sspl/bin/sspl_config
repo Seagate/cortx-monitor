@@ -7,6 +7,7 @@ set -e -u -o pipefail
 # - Check if product is one of the enabled products
 # - Configures role in sspl.conf if supplied
 # - Executes sspl_reinit script
+# - Updates cluster nodes passed in cli to consul
 #################################################################
 
 script_dir=$(dirname $0)
@@ -24,33 +25,39 @@ SSPL_CONFIGURED="/var/$PRODUCT_FAMILY/sspl/sspl-configured"
 
 usage() {
     cat << EOF
-$SCRIPT_NAME [{config [-f] [-r <ssu|gw|cmu|vm>]]
+$SCRIPT_NAME [{config [-f] [-r <ssu|gw|cmu|vm>] [-n <node1, node2 name>]}]
 config options:
     -f  Force reinitialization. Do not prompt
     -r  Role to be configured on the current node
+    -n  Nodes which needs to be added into rabbitmq cluster
 EOF
     exit 1
 }
 
 config_sspl() {
+
     force=0
     role=
+    rmq_cluster=false
+    rmq_cluster_nodes=
 
-    while [ $# -gt 0 ]; do
-        case $1 in
-            -f )
+    while getopts ":f:r:n:" OPTION; do
+        case $OPTION in
+            f )
                 force=1
                 ;;
-            -r )
+            r )
                 [ $# -lt 2 ] && usage
-                shift 1 && role=$1
+                role=$OPTARG
                 [[ $ROLES =~ (^| )$role($| ) ]] || usage
+                ;;
+            n )
+                rmq_cluster_nodes=$OPTARG
                 ;;
             * )
                 usage
                 ;;
         esac
-        shift 1
     done
 
     [ $(id -u) -ne 0 ] && echo "Run this command with root privileges!!" &&
@@ -151,15 +158,17 @@ case $cmd in
 esac
 
 # Updating RabbitMQ cluster nodes.
-out=$(rabbitmqctl cluster_status | grep running_nodes | cut -d '[' -f2 | cut -d ']' -f1 | sed 's/rabbit@//g' | sed 's/,/, /g')
-pout=$(echo $out | sed  "s/'//g")
-/opt/seagate/$PRODUCT_FAMILY/hare/bin/consul kv put sspl/config/RABBITMQCLUSTER/cluster_nodes $pout
+[ -n "$rmq_cluster_nodes" ] && $CONSUL_PATH/consul kv put sspl/config/RABBITMQCLUSTER/cluster_nodes $rmq_cluster_nodes
+# Getting node names using rabbitmqctl is depreciated (EOS-8860)
+#out=$(rabbitmqctl cluster_status | grep running_nodes | cut -d '[' -f2 | cut -d ']' -f1 | sed 's/rabbit@//g' | sed 's/,/, /g')
+#pout=$(echo $out | sed  "s/'//g")
+#$CONSUL_PATH/consul kv put sspl/config/RABBITMQCLUSTER/cluster_nodes $pout
 
 # Updating build requested log level
 log_level=`cat $DIR_NAME/conf/build-requested-loglevel | sed 's/ *$//'`
 case $log_level in
     "DEBUG" | "INFO" | "WARNING" | "ERROR" | "CRITICAL")
-        /opt/seagate/$PRODUCT_FAMILY/hare/bin/consul kv put sspl/config/SYSTEM_INFORMATION/log_level $log_level;;
+        $CONSUL_PATH/consul kv put sspl/config/SYSTEM_INFORMATION/log_level $log_level;;
     "");;
     *)
         echo "Unexpected log level is requested, '$log_level'";;

@@ -48,6 +48,7 @@ class RealStorEnclosureSensor(SensorThread, InternalMsgQ):
     RESOURCE_TYPE = "enclosure"
 
     ENCL_FAULT_RESOLVED_EVENTS = ["The network-port Ethernet link is down for controller A",\
+                            "The network-port Ethernet link is down for controller B",\
                             "The Management Controller IP address changed",\
                             "The Management Controller booted up.",\
                             "Both controllers have shut down; no restart",\
@@ -128,12 +129,11 @@ class RealStorEnclosureSensor(SensorThread, InternalMsgQ):
             elif mc_timeout_counter == 0 and self.previous_alert_type != self.rssencl.FRU_FAULT_RESOLVED \
                 and self.fault_alert == True:
 
-                self.alert_type = self.rssencl.FRU_FAULT_RESOLVED
-
                 # Check system status
                 self.system_status = self.check_system_status()
 
                 if self.system_status is not None:
+                    self.alert_type = self.rssencl.FRU_FAULT_RESOLVED
                     enclosure_status = self.system_status[0:5]
 
                     for status in enclosure_status:

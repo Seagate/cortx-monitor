@@ -67,7 +67,7 @@ case $cmd in
     check )
         sudo python3 $SCRIPT_DIR/validate_consul_config.py
         [ -f $SSPL_CONFIGURED ] && exit $?
-        logger -i -p local3.err "SSPL is not configured. Run provisioner scripts in /opt/seagate/$PRODUCT_FAMILY/sspl/bin."
+        logger -i -p local3.err "SSPL is not configured. Run provisioner scripts in $SSPL_BASE_DIR/bin."
         exit 1
         ;;
 

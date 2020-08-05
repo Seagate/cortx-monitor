@@ -4,7 +4,7 @@ set -e -u -o pipefail
 
 ##############################################################################
 # This script performs following operations
-# - Starts rabbitmq-server if not running, resets RabbitMQ and stop. 
+# - Starts rabbitmq-server if not running, resets RabbitMQ and stop.
 #   It does following in reset.
 #    - It returns a RabbitMQ node to its virgin state. Removes the node from any
 #      cluster it belongs to, removes all data from the management database,
@@ -29,9 +29,9 @@ product=$(sed -nr 's/^product=([^,]+)$/\1/p' $SSPL_CONF | head -1)
 
 # Add required user and vhost to RabbitMQ. Set user permissions etc.
 echo "Creating required RABBITMQ configuration.... "
-/opt/seagate/$PRODUCT_FAMILY/sspl/bin/sspl_rabbitmq_reinit $PRODUCT_NAME || {
+$SSPL_BASE_DIR/bin/sspl_rabbitmq_reinit $PRODUCT_NAME || {
     reinit_err="$?";
-    echo -n "/opt/seagate/$PRODUCT_FAMILY/sspl/bin/sspl_rabbitmq_reinit failed ";
+    echo -n "$SSPL_BASE_DIR/bin/sspl_rabbitmq_reinit failed ";
     echo "with exit code ${reinit_err} for product $PRODUCT_NAME";
     exit 1;
 }
