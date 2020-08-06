@@ -5,6 +5,7 @@ MOCK_SERVER_PORT=28200
 RMQ_SELF_STARTED=0
 RMQ_SELF_STOPPED=0
 SSPL_STORE_TYPE=${SSPL_STORE_TYPE:-consul}
+IS_VIRTUAL=$(facter is_virtual)
 
 [[ $EUID -ne 0 ]] && sudo=sudo
 script_dir=$(dirname $0)
@@ -60,10 +61,11 @@ pre_requisites()
     fi
 
     # Enable ipmi simulator
-    cp -Rp $script_dir/ipmi_simulator/ipmisimtool /usr/bin
-    touch /tmp/activate_ipmisimtool
-    # Backup $CONSUL_PATH/consul data before deleting
-    $CONSUL_PATH/consul kv export var/$PRODUCT_FAMILY/sspl/data/ > /tmp/consul_backup.json
+    if [ "$IS_VIRTUAL" == "true" ]
+    then
+        cp -Rp $script_dir/ipmi_simulator/ipmisimtool /usr/bin
+        touch /tmp/activate_ipmisimtool
+    fi
 
     # clearing $CONSUL_PATH/consul keys.
     $CONSUL_PATH/consul kv delete -recurse var/$PRODUCT_FAMILY/sspl/data
@@ -118,9 +120,12 @@ restore_cfg_services()
         $CONSUL_PATH/consul kv put sspl_test/config/SYSTEM_INFORMATION/cluster_id '001'
     fi
 
-    echo "Stopping mock server"
-    kill_mock_server
-    deleteMockedInterface
+    if [ "$IS_VIRTUAL" == "true" ]
+    then
+        echo "Stopping mock server"
+        kill_mock_server
+        deleteMockedInterface
+    fi
 
     if [ "$RMQ_SELF_STARTED" -eq 1 ]
     then
@@ -173,34 +178,43 @@ python3 $script_dir/put_config_to_consul.py
 [[ -f /etc/sspl.conf ]] && $sudo cp /etc/sspl.conf /etc/sspl.conf.back
 
 # check the port configured in consul
-# change the port to $MOCK_SERVER_PORT as mock_server runs on $MOCK_SERVER_PORT
+# if virtual machine, change the port to $MOCK_SERVER_PORT as mock_server runs on $MOCK_SERVER_PORT
 if [ "$SSPL_STORE_TYPE" == "consul" ]
 then
     primary_ip=$($CONSUL_PATH/consul kv get sspl/config/STORAGE_ENCLOSURE/controller/primary_mc/ip)
-    $CONSUL_PATH/consul kv put sspl/config/STORAGE_ENCLOSURE/controller/primary_mc/ip $MOCK_SERVER_IP
     primary_port=$($CONSUL_PATH/consul kv get sspl/config/STORAGE_ENCLOSURE/controller/primary_mc/port)
-    if [ "$primary_port" != "$MOCK_SERVER_PORT" ]
+    if [ "$IS_VIRTUAL" == "true" ]
     then
-        $CONSUL_PATH/consul kv put sspl/config/STORAGE_ENCLOSURE/controller/primary_mc/port $MOCK_SERVER_PORT
+        $CONSUL_PATH/consul kv put sspl/config/STORAGE_ENCLOSURE/controller/primary_mc/ip $MOCK_SERVER_IP
+        if [ "$primary_port" != "$MOCK_SERVER_PORT" ]
+        then
+            $CONSUL_PATH/consul kv put sspl/config/STORAGE_ENCLOSURE/controller/primary_mc/port $MOCK_SERVER_PORT
+        fi
     fi
 else
     primary_port=$(sed -n -e '/primary_controller_port/ s/.*\= *//p' /etc/sspl.conf)
-    if [ "$primary_port" != "$MOCK_SERVER_PORT" ]
+    if [ "$IS_VIRTUAL" == "true" ]
     then
-        sed -i 's/primary_controller_port='"$primary_port"'/primary_controller_port='"$MOCK_SERVER_PORT"'/g' /etc/sspl.conf
+        if [ "$primary_port" != "$MOCK_SERVER_PORT" ]
+        then
+            sed -i 's/primary_controller_port='"$primary_port"'/primary_controller_port='"$MOCK_SERVER_PORT"'/g' /etc/sspl.conf
+        fi
     fi
 fi
 
 # Setting pre-requisites first
 pre_requisites
 
-# Start mock API server
-echo "Starting mock server on 127.0.0.1:$MOCK_SERVER_PORT"
-$script_dir/mock_server &
+# Start mock API server if virtual machine
+if [ "$IS_VIRTUAL" == "true" ]
+then
+    echo "Starting mock server on 127.0.0.1:$MOCK_SERVER_PORT"
+    $script_dir/mock_server &
+fi
 
 # IMP NOTE: Please make sure that SSPL conf file has
-# primary_controller_ip=127.0.0.1 and primary_controller_port=$MOCK_SERVER_PORT.
-# For sanity test SSPL should connect to mock server instead of real server.
+# primary_controller_ip=127.0.0.1 and primary_controller_port=$MOCK_SERVER_PORT (for vm)
+# For sanity test SSPL should connect to mock server instead of real server (for vm)
 # Restart SSPL to re-read configuration
 if [ "$SSPL_STORE_TYPE" == "consul" ]
 then
@@ -258,6 +272,7 @@ $CONSUL_PATH/consul kv put sspl_test/config/RABBITMQCLUSTER/cluster_nodes $CLUST
 echo "Restarting SSPL"
 $sudo systemctl restart sspl-ll
 echo "Waiting for SSPL to complete initialization of all the plugins"
+# BMC Unreachable alert is also checked via start_checker, it will create a file if alert is found
 $script_dir/rabbitmq_start_checker sspl-out sensor-key
 echo "Initialization completed. Starting tests"
 
