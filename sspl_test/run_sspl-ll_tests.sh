@@ -5,6 +5,14 @@ script_dir=$(dirname $0)
 export PYTHONPATH=$script_dir/../..:$script_dir/../../low-level
 PLAN=${1:-sanity}
 
+IS_VIRTUAL=$(facter is_virtual)
+if [ "$IS_VIRTUAL" != "true" ]
+then
+    PLAN="self"
+    # clean up test files from previous run
+    rm -f /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/self_hw_bmc_error.txt
+fi
+
 systemctl start crond
 
 # Execute tests
