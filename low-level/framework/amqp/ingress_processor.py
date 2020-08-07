@@ -1,7 +1,7 @@
 """
  ****************************************************************************
  Filename:          ingress_processor.py
- Description:       Handles incoming messages via rabbitMQ
+ Description:       Handles incoming messages via Amqp
  Creation Date:     02/11/2015
  Author:            Jake Abernathy
 
@@ -19,21 +19,19 @@ import json
 import os
 import time
 
-from eos.utils.security.cipher import Cipher
 import pika
-
-from jsonschema import Draft3Validator
-from jsonschema import validate
 from eos.utils.amqp import AmqpConnectionError
-from framework.base.module_thread import ScheduledModuleThread
-from framework.base.internal_msgQ import InternalMsgQ
-from framework.utils.service_logging import logger
-from framework.utils import encryptor
-from framework.utils.amqp_factory import amqp_factory
-from framework.amqp.egress_processor import EgressProcessor
-from json_msgs.messages.actuators.ack_response import AckResponseMsg
-from framework.base.sspl_constants import RESOURCE_PATH, ServiceTypes, COMMON_CONFIGS
+from jsonschema import Draft3Validator, validate
 
+from framework.amqp.egress_processor import EgressProcessor
+from framework.amqp.utils import get_amqp_common_config
+from framework.base.internal_msgQ import InternalMsgQ
+from framework.base.module_thread import ScheduledModuleThread
+from framework.base.sspl_constants import COMMON_CONFIGS, RESOURCE_PATH
+                                           
+from framework.utils.amqp_factory import amqp_factory
+from framework.utils.service_logging import logger
+from json_msgs.messages.actuators.ack_response import AckResponseMsg
 
 try:
     use_security_lib = True
@@ -45,30 +43,23 @@ except Exception as ae:
 
 
 class IngressProcessor(ScheduledModuleThread, InternalMsgQ):
-    """Handles incoming messages via rabbitMQ"""
+    """Handles incoming messages via amqp"""
 
     MODULE_NAME = "IngressProcessor"
     PRIORITY = 1
 
     # Section and keys in configuration file
-    RABBITMQPROCESSOR = MODULE_NAME.upper()
-    PRIMARY_RABBITMQ_HOST = 'primary_rabbitmq_host'
+    AMQPPROCESSOR = MODULE_NAME.upper()
     EXCHANGE_NAME = 'exchange_name'
     QUEUE_NAME = 'queue_name'
     ROUTING_KEY = 'routing_key'
     VIRT_HOST = 'virtual_host'
-    USER_NAME = 'username'
-    PASSWORD = 'password'
 
     SYSTEM_INFORMATION_KEY = 'SYSTEM_INFORMATION'
-    CLUSTER_ID_KEY = 'cluster_id'
     NODE_ID_KEY = 'node_id'
 
     JSON_ACTUATOR_SCHEMA = "SSPL-LL_Actuator_Request.json"
     JSON_SENSOR_SCHEMA = "SSPL-LL_Sensor_Request.json"
-
-    RABBITMQ_CLUSTER_SECTION = 'RABBITMQCLUSTER'
-    RABBITMQ_CLUSTER_HOSTS_KEY = 'cluster_nodes'
 
     @staticmethod
     def name():
@@ -118,21 +109,12 @@ class IngressProcessor(ScheduledModuleThread, InternalMsgQ):
         # Initialize internal message queues for this module
         super(IngressProcessor, self).initialize_msgQ(msgQlist)
 
-        
-        self._read_config()
-
-        # Get common amqp config
-        amqp_config = self._get_default_amqp_config()
+        amqp_config = self._get_amqp_config()
         self._comm = amqp_factory.get_amqp_consumer(**amqp_config)
         try:
             self._comm.init()
         except AmqpConnectionError:
             logger.error(f"{self.MODULE_NAME} amqp connection is not initialized")
-
-        # Display values used to configure pika from the config file
-        self._log_debug("RabbitMQ user: %s" % self._username)
-        self._log_debug("RabbitMQ exchange: %s, routing_key: %s, vhost: %s" %
-                        (self._exchange_name, self._routing_key, self._virtual_host))
 
     def run(self):
         # self._set_debug(True)
@@ -240,63 +222,26 @@ class IngressProcessor(ScheduledModuleThread, InternalMsgQ):
             ack_msg = AckResponseMsg("Error Processing Msg", "Msg Handler Not Found", uuid).getJson()
             self._write_internal_msgQ(EgressProcessor.name(), ack_msg)
 
-    def _read_config(self):
-            """Configure the RabbitMQ exchange with defaults available"""
-            try:
-                self._virtual_host  = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
-                                                                    self.VIRT_HOST,
-                                                                    'SSPL')
-
-                # Read common RabbitMQ configuration
-                self._primary_rabbitmq_host = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
-                                                                    self.PRIMARY_RABBITMQ_HOST,
-                                                                    'localhost')
-
-                # Read RabbitMQ configuration for sensor messages
-                self._queue_name    = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
-                                                                    self.QUEUE_NAME,
-                                                                    'sensor-queue')
-                self._exchange_name = self._conf_reader._get_value_with_default(
-                                                self.RABBITMQPROCESSOR, self.EXCHANGE_NAME, 'sspl-in')
-                self._routing_key   = self._conf_reader._get_value_with_default(
-                    self.RABBITMQPROCESSOR, self.QUEUE_NAME, 'actuator-req-queue')
-                
-                self._username = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
-                                                                    self.USER_NAME,
-                                                                    'sspluser')
-                self._password = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
-                                                                    self.PASSWORD,
-                                                                    '')
-                self._hosts = self._conf_reader._get_value_list(self.RABBITMQ_CLUSTER_SECTION, 
-                                    COMMON_CONFIGS.get(self.RABBITMQ_CLUSTER_SECTION).get(self.RABBITMQ_CLUSTER_HOSTS_KEY))
-                cluster_id = self._conf_reader._get_value_with_default(self.SYSTEM_INFORMATION_KEY,
-                                                                    COMMON_CONFIGS.get(self.SYSTEM_INFORMATION_KEY).get(self.CLUSTER_ID_KEY),
-                                                                    '')
-                self._node_id = self._conf_reader._get_value_with_default(self.SYSTEM_INFORMATION_KEY,
-                                                COMMON_CONFIGS.get(self.SYSTEM_INFORMATION_KEY).get(self.NODE_ID_KEY),
-                                                '')
-                self._routing_key = f'{self._routing_key}_node{self._node_id}'
-                # Decrypt RabbitMQ Password
-                decryption_key = encryptor.gen_key(cluster_id, ServiceTypes.RABBITMQ.value)
-                self._password = encryptor.decrypt(decryption_key, self._password.encode('ascii'), self.MODULE_NAME)
-            except Exception as ex:
-                logger.error(f"{self.MODULE_NAME}, _read_config: %r" % ex)
-
-    def _get_default_amqp_config(self):
-        return {
-                    "virtual_host": self._virtual_host,
-                    "exchange": self._exchange_name,
-                    "username": self._username,
-                    "password": self._password,
-                    "hosts": self._hosts,
-                    "exchange_queue": self._queue_name,
-                    "exchange_type": "topic",
-                    "routing_key": self._routing_key,
-                    "durable": True,
-                    "exclusive": False,
-                    "retry_count": 1,
-                    "port": 5672
-                }
+    def _get_amqp_config(self):
+        amqp_config = {
+            "virtual_host": self._conf_reader._get_value_with_default(self.AMQPPROCESSOR,
+                                                            self.VIRT_HOST, 'SSPL'),
+            "exchange": self._conf_reader._get_value_with_default(self.AMQPPROCESSOR,
+                                                            self.EXCHANGE_NAME, 'sspl-in'),
+            "exchange_queue": self._conf_reader._get_value_with_default(self.AMQPPROCESSOR,
+                                                            self.QUEUE_NAME, 'sensor-queue'),
+            "exchange_type": "topic",
+            "routing_key": self._conf_reader._get_value_with_default(self.AMQPPROCESSOR,
+                                                            self.ROUTING_KEY, 'actuator-req-queue'),
+            "durable": True,
+            "exclusive": False,
+            "retry_count": 1,
+        }
+        node_id = self._conf_reader._get_value_with_default(self.SYSTEM_INFORMATION_KEY,
+                        COMMON_CONFIGS.get(self.SYSTEM_INFORMATION_KEY).get(self.NODE_ID_KEY),'')
+        amqp_config["routing_key"] = f'{amqp_config["routing_key"]}_node{node_id}'
+        amqp_common_config = get_amqp_common_config()
+        return { **amqp_config, **amqp_common_config }
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""
@@ -304,6 +249,6 @@ class IngressProcessor(ScheduledModuleThread, InternalMsgQ):
         try:
             self._comm.stop()
         except pika.exceptions.ConnectionClosed:
-            logger.info(f"{self.MODULE_NAME}, shutdown, RabbitMQ ConnectionClosed")
+            logger.info(f"{self.MODULE_NAME}, shutdown, amqp ConnectionClosed")
         except Exception as err:
-            logger.info(f"{self.MODULE_NAME}, shutdown, RabbitMQ {err}")
+            logger.info(f"{self.MODULE_NAME}, shutdown, amqp {err}")

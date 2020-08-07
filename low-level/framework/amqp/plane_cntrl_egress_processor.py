@@ -1,7 +1,7 @@
 """
  ****************************************************************************
  Filename:          plane_cntrl_egress_processor.py
- Description:       Handles outgoing messages via rabbitMQ over network
+ Description:       Handles outgoing messages via amqp over network
  Creation Date:     11/14/2016
  Author:            Jake Abernathy
 
@@ -14,21 +14,21 @@
  ****************************************************************************
 """
 
+import ctypes
 import json
-import pika
 import os
 import time
 
-from framework.base.module_thread import ScheduledModuleThread
-from framework.base.internal_msgQ import InternalMsgQ
-from framework.base.sspl_constants import ServiceTypes, COMMON_CONFIGS
-from framework.utils.service_logging import logger
-from framework.utils.amqp_factory import amqp_factory
-from framework.utils import encryptor
-from json_msgs.messages.actuators.thread_controller import ThreadControllerMsg
-from json_msgs.messages.actuators.ack_response import AckResponseMsg
+import pika
 
-import ctypes
+from framework.amqp.utils import get_amqp_common_config
+from framework.base.internal_msgQ import InternalMsgQ
+from framework.base.module_thread import ScheduledModuleThread
+from framework.utils.amqp_factory import amqp_factory
+from framework.utils.service_logging import logger
+from json_msgs.messages.actuators.ack_response import AckResponseMsg
+from json_msgs.messages.actuators.thread_controller import ThreadControllerMsg
+
 try:
     use_security_lib=True
     SSPL_SEC = ctypes.cdll.LoadLibrary('libsspl_sec.so.0')
@@ -38,30 +38,23 @@ except Exception as ae:
 
 
 class PlaneCntrlEgressProcessor(ScheduledModuleThread, InternalMsgQ):
-    """Handles outgoing messages via rabbitMQ over network"""
+    """Handles outgoing messages via amqp over network"""
 
     MODULE_NAME = "PlaneCntrlEgressProcessor"
     PRIORITY    = 1
 
     # Section and keys in configuration file
-    RABBITMQPROCESSOR       = MODULE_NAME.upper()
+    AMQPPROCESSOR       = MODULE_NAME.upper()
     EXCHANGE_NAME           = 'exchange_name'
     QUEUE_NAME              = 'queue_name'
     ROUTING_KEY             = 'routing_key'
     VIRT_HOST               = 'virtual_host'
-    USER_NAME               = 'username'
-    PASSWORD                = 'password'
-    PRIMARY_RABBITMQ        = 'primary_rabbitmq_server'
-    SECONDARY_RABBITMQ      = 'secondary_rabbitmq_server'
+    
+    PRIMARY_AMQP        = 'primary_amqp_server'
+    SECONDARY_AMQP      = 'secondary_amqp_server'
     SIGNATURE_USERNAME      = 'message_signature_username'
     SIGNATURE_TOKEN         = 'message_signature_token'
     SIGNATURE_EXPIRES       = 'message_signature_expires'
-    SYSTEM_INFORMATION_KEY = 'SYSTEM_INFORMATION'
-    CLUSTER_ID_KEY = 'cluster_id'
-    NODE_ID_KEY = 'node_id'
-    RABBITMQ_CLUSTER_SECTION = 'RABBITMQCLUSTER'
-    RABBITMQ_CLUSTER_HOSTS_KEY = 'cluster_nodes'
-
 
     @staticmethod
     def name():
@@ -89,7 +82,7 @@ class PlaneCntrlEgressProcessor(ScheduledModuleThread, InternalMsgQ):
         self._read_config()
 
         # Get common amqp config
-        amqp_config = self._get_default_amqp_config()
+        amqp_config = self._get_amqp_config()
         self._comm = amqp_factory.get_amqp_producer(**amqp_config)
         self._comm.init()
 
@@ -98,8 +91,8 @@ class PlaneCntrlEgressProcessor(ScheduledModuleThread, InternalMsgQ):
         self._working_command = "N/A"
 
         # Display values used to configure pika from the config file
-        self._log_debug("RabbitMQ user: %s" % self._username)
-        self._log_debug("RabbitMQ exchange: %s, routing_key: %s, vhost: %s" %
+        self._log_debug("amqp user: %s" % self._username)
+        self._log_debug("amqp exchange: %s, routing_key: %s, vhost: %s" %
                        (self._exchange_name, self._routing_key, self._virtual_host))
 
     def run(self):
@@ -142,71 +135,45 @@ class PlaneCntrlEgressProcessor(ScheduledModuleThread, InternalMsgQ):
             self._scheduler.enter(1, self._priority, self.run, ())
 
     def _read_config(self):
-        """Configure the RabbitMQ exchange with defaults available"""
+        """Configure the amqp exchange with defaults available"""
         try:
-            self._virtual_host  = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
-                                                                 self.VIRT_HOST,
-                                                                 'SSPL')
-            self._queue_name    = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
-                                                                 self.QUEUE_NAME,
-                                                                 'ras_status')
-            self._exchange_name = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
-                                                                 self.EXCHANGE_NAME,
-                                                                 'ras_sspl')
-            self._routing_key   = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
-                                                                 self.ROUTING_KEY,
-                                                                 'sspl_ll')
-            self._username      = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
-                                                                 self.USER_NAME,
-                                                                 'sspluser')
-            self._password      = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
-                                                                 self.PASSWORD,
-                                                                 'sspl4ever')
-            self._signature_user = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
+            self._signature_user = self._conf_reader._get_value_with_default(self.AMQPPROCESSOR,
                                                                  self.SIGNATURE_USERNAME,
                                                                  'sspl-ll')
-            self._signature_token = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
+            self._signature_token = self._conf_reader._get_value_with_default(self.AMQPPROCESSOR,
                                                                  self.SIGNATURE_TOKEN,
                                                                  'FAKETOKEN1234')
-            self._signature_expires = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
+            self._signature_expires = self._conf_reader._get_value_with_default(self.AMQPPROCESSOR,
                                                                  self.SIGNATURE_EXPIRES,
                                                                  "3600")
-            self._primary_rabbitMQ_server   = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
-                                                                 self.PRIMARY_RABBITMQ,
+            self._primary_amqp_server   = self._conf_reader._get_value_with_default(self.AMQPPROCESSOR,
+                                                                 self.PRIMARY_AMQP,
                                                                  'localhost')
-            self._secondary_rabbitMQ_server = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
-                                                                 self.SECONDARY_RABBITMQ,
+            self._secondary_amqp_server = self._conf_reader._get_value_with_default(self.AMQPPROCESSOR,
+                                                                 self.SECONDARY_AMQP,
                                                                  'localhost')
-            self._current_rabbitMQ_server = self._primary_rabbitMQ_server
-            self._hosts = self._conf_reader._get_value_list(self.RABBITMQ_CLUSTER_SECTION, 
-                                COMMON_CONFIGS.get(self.RABBITMQ_CLUSTER_SECTION).get(self.RABBITMQ_CLUSTER_HOSTS_KEY))
-            cluster_id = self._conf_reader._get_value_with_default(self.SYSTEM_INFORMATION_KEY,
-                                                                   COMMON_CONFIGS.get(self.SYSTEM_INFORMATION_KEY).get(self.CLUSTER_ID_KEY),
-                                                                   '')
-
-            # Decrypt RabbitMQ Password
-            decryption_key = encryptor.gen_key(cluster_id, ServiceTypes.RABBITMQ.value)
-            self._password = encryptor.decrypt(decryption_key, self._password.encode('ascii'), self.RABBITMQPROCESSOR)
-
+            self._current_amqp_server = self._primary_amqp_server
 
         except Exception as ex:
             logger.exception(f"{self.MODULE_NAME}, _read_config: {ex}")
 
-    def _get_default_amqp_config(self):
-        return {
-                    "virtual_host": self._virtual_host,
-                    "exchange": self._exchange_name,
-                    "username": self._username,
-                    "password": self._password,
-                    "hosts": self._hosts,
-                    "exchange_queue": self._queue_name,
-                    "exchange_type": "topic",
-                    "routing_key": self._routing_key,
-                    "durable": True,
-                    "exclusive": False,
-                    "retry_count": 5,
-                    "port": 5672
-                }
+    def _get_amqp_config(self):
+        amqp_config = {
+            "virtual_host": self._conf_reader._get_value_with_default(self.AMQPPROCESSOR,
+                                                        self.VIRT_HOST, 'SSPL'),
+            "exchange": self._conf_reader._get_value_with_default(self.AMQPPROCESSOR,
+                                                        self.EXCHANGE_NAME, 'ras_sspl'),
+            "exchange_queue": self._conf_reader._get_value_with_default(self.AMQPPROCESSOR,
+                                                        self.QUEUE_NAME, 'ras_status'),
+            "exchange_type": "topic",
+            "routing_key": self._conf_reader._get_value_with_default(self.AMQPPROCESSOR,
+                                                        self.ROUTING_KEY, 'sspl_ll'),
+            "durable": True,
+            "exclusive": False,
+            "retry_count": 5,
+        }
+        amqp_common_config = get_amqp_common_config()
+        return { **amqp_config, **amqp_common_config }
 
     def _add_signature(self):
         """Adds the authentication signature to the message"""
@@ -234,7 +201,7 @@ class PlaneCntrlEgressProcessor(ScheduledModuleThread, InternalMsgQ):
             self._jsonMsg["signature"] = "SecurityLibNotInstalled"
 
     def _transmit_msg_on_exchange(self):
-        """Transmit json message onto RabbitMQ exchange"""
+        """Transmit json message onto amqp exchange"""
         try:
             if self._jsonMsg.get("actuator_request_type") is not None and \
                self._jsonMsg.get("actuator_request_type").get("plane_controller") is not None:
@@ -298,12 +265,12 @@ class PlaneCntrlEgressProcessor(ScheduledModuleThread, InternalMsgQ):
             logger.exception(f"{self.MODULE_NAME}, _transmit_msg_on_exchange: {ex}")
             self._msg_sent_succesfull = False
 
-    def _toggle_rabbitMQ_servers(self):
+    def _toggle_amqp_servers(self):
         """Toggle between hosts when a connection fails"""
-        if self._current_rabbitMQ_server == self._primary_rabbitMQ_server:
-            self._current_rabbitMQ_server = self._secondary_rabbitMQ_server
+        if self._current_amqp_server == self._primary_amqp_server:
+            self._current_amqp_server = self._secondary_amqp_server
         else:
-            self._current_rabbitMQ_server = self._primary_rabbitMQ_server
+            self._current_amqp_server = self._primary_amqp_server
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""

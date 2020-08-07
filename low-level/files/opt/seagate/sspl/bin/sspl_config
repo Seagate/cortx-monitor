@@ -147,11 +147,11 @@ config_sspl() {
 
 config_rabbitmq() {
     # Updating RabbitMQ cluster nodes.
-    [ -n "$rmq_cluster_nodes" ] && $CONSUL_PATH/consul kv put sspl/config/RABBITMQCLUSTER/cluster_nodes $rmq_cluster_nodes
+    [ -n "$rmq_cluster_nodes" ] && $CONSUL_PATH/consul kv put sspl/config/AMQPCLUSTER/cluster_nodes $rmq_cluster_nodes
     # Getting node names using rabbitmqctl is depreciated (EOS-8860)
     #out=$(rabbitmqctl cluster_status | grep running_nodes | cut -d '[' -f2 | cut -d ']' -f1 | sed 's/rabbit@//g' | sed 's/,/, /g')
     #pout=$(echo $out | sed  "s/'//g")
-    #$CONSUL_PATH/consul kv put sspl/config/RABBITMQCLUSTER/cluster_nodes $pout
+    #$CONSUL_PATH/consul kv put sspl/config/AMQPCLUSTER/cluster_nodes $pout
 }
 
 cmd="config"

@@ -27,7 +27,7 @@ exchange_name=sspl-in
 routing_key=actuator-req-key
 username=sspluser
 password=sspl4ever
-primary_rabbitmq_host=localhost
+primary_amqp_host=localhost
 
 [EGRESSPROCESSOR]
 virtual_host=SSPL
@@ -44,7 +44,7 @@ message_signature_token=ALOIUD986798df69a8koDISLKJ282983
 message_signature_expires=3600
 iem_route_addr=
 iem_route_exchange_name=sspl-out
-primary_rabbitmq_host=localhost
+primary_amqp_host=localhost
 
 [LOGGINGPROCESSOR]
 virtual_host=SSPL
@@ -53,7 +53,7 @@ exchange_name=sspl-in
 routing_key=iem-key
 username=sspluser
 password=sspl4ever
-primary_rabbitmq_host=localhost
+primary_amqp_host=localhost
 
 [LOGGINGMSGHANDLER]
 iem_routing_enabled=false
@@ -144,3 +144,6 @@ timestamp_file_path=/var/cortx/sspl/data/iem/last_processed_msg_time
 store_type=consul
 consul_host=127.0.0.1
 consul_port=8500
+
+[AMQP]
+type=rabbitmq

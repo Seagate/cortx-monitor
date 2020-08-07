@@ -10,7 +10,7 @@ import os
 from config_reader import ConfigReader
 from sspl_constants import component, CONSUL_HOST, CONSUL_PORT, COMMON_CONFIGS
 
-CLUSTER_SECTION = 'RABBITMQCLUSTER'
+CLUSTER_SECTION = 'AMQPCLUSTER'
 RABBITMQCTL = '/usr/sbin/rabbitmqctl'
 ERLANG_COOKIE_PATH = '/var/lib/rabbitmq/.erlang.cookie'
 

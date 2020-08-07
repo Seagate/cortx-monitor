@@ -75,7 +75,7 @@ COMMON_CONFIGS = {
         "password" : "controller/secret",
         "mgmt_interface" : "controller/mgmt_interface"
     },
-    "RABBITMQCLUSTER": {
+    "AMQPCLUSTER": {
         "sspl_key" : "key_provided_by_provisioner",
         "cluster_nodes" : "rabbitmq/cluster_nodes",
         "erlang_cookie" : "rabbitmq/erlang_cookie"

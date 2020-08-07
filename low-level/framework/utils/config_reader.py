@@ -240,7 +240,7 @@ class ConfigReader(object):
                 if key is None:
                     val = self.kv_get(section.lower() + '/', recurse=True)
                 else:
-                    if section.lower() == 'rabbitmqcluster':
+                    if section.lower() == 'amqpcluster':
                         val = self.kv_get(key)
                     else:
                         val = self.kv_get(section.lower() + '/' + key)
@@ -250,7 +250,7 @@ class ConfigReader(object):
             if key is None:
                 val = self.store.get(section.lower() + '/', recurse=True)
             else:
-                if section.lower() == 'rabbitmqcluster':
+                if section.lower() == 'amqpcluster':
                     val = self.store.get(key)
                 else:
                     val = self.store.get(section.lower() + '/' + key)

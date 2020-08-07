@@ -13,7 +13,7 @@ from framework.utils.config_reader import ConfigReader
 from framework.base.sspl_constants import COMMON_CONFIGS, component, CONSUL_HOST, CONSUL_PORT
 
 
-RABBITMQ_CLUSTER_SECTION = 'RABBITMQCLUSTER'
+RABBITMQ_CLUSTER_SECTION = 'AMQPCLUSTER'
 RABBITMQ_CLUSTER_HOSTS_KEY = 'cluster_nodes'
 
 host = os.getenv('CONSUL_HOST', CONSUL_HOST)

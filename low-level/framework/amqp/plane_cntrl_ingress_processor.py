@@ -2,7 +2,7 @@
  ****************************************************************************
  Filename:          plane_cntrl_ingress_processor.py
  Description:       Handles incoming messages for plane controller
-                     via rabbitMQ over network
+                     via amqp over network
  Creation Date:     11/14/2016
  Author:            Jake Abernathy
 
@@ -15,29 +15,25 @@
  ****************************************************************************
 """
 
-import pika
+import ctypes
 import json
 import os
-
 from socket import gethostname
 
-from jsonschema import Draft3Validator
-from jsonschema import validate
-
+import pika
+from jsonschema import Draft3Validator, validate
 from pika.exceptions import AMQPError
 
-from framework.base.module_thread import ScheduledModuleThread
+from framework.amqp.plane_cntrl_egress_processor import \
+    PlaneCntrlEgressProcessor
+from framework.amqp.utils import get_amqp_common_config
 from framework.base.internal_msgQ import InternalMsgQ
-from framework.base.sspl_constants import ServiceTypes, COMMON_CONFIGS
-from framework.utils.service_logging import logger
-from framework.utils import encryptor
-from framework.utils.amqp_factory import amqp_factory
-from framework.amqp.plane_cntrl_egress_processor import PlaneCntrlEgressProcessor
+from framework.base.module_thread import ScheduledModuleThread
 from framework.base.sspl_constants import RESOURCE_PATH
-
+from framework.utils.amqp_factory import amqp_factory
+from framework.utils.service_logging import logger
 from json_msgs.messages.actuators.ack_response import AckResponseMsg
 
-import ctypes
 try:
     use_security_lib=True
     SSPL_SEC = ctypes.cdll.LoadLibrary('libsspl_sec.so.0')
@@ -47,29 +43,22 @@ except Exception as ae:
 
 
 class PlaneCntrlIngressProcessor(ScheduledModuleThread, InternalMsgQ):
-    """Handles incoming messages via rabbitMQ over network"""
+    """Handles incoming messages via amqp over network"""
 
     MODULE_NAME = "PlaneCntrlIngressProcessor"
     PRIORITY    = 1
 
     # Section and keys in configuration file
-    RABBITMQPROCESSOR   = MODULE_NAME.upper()
+    AMQPPROCESSOR   = MODULE_NAME.upper()
     EXCHANGE_NAME       = 'exchange_name'
     QUEUE_NAME          = 'queue_name'
     ROUTING_KEY         = 'routing_key'
     VIRT_HOST           = 'virtual_host'
-    USER_NAME           = 'username'
-    PASSWORD            = 'password'
-    PRIMARY_RABBITMQ    = 'primary_rabbitmq_server'
-    SECONDARY_RABBITMQ  = 'secondary_rabbitmq_server'
+    PRIMARY_AMQP        = 'primary_amqp_server'
+    SECONDARY_AMQP      = 'secondary_amqp_server'
 
     JSON_ACTUATOR_SCHEMA = "SSPL-LL_Actuator_Request.json"
     JSON_SENSOR_SCHEMA   = "SSPL-LL_Sensor_Request.json"
-    SYSTEM_INFORMATION_KEY = 'SYSTEM_INFORMATION'
-    CLUSTER_ID_KEY = 'cluster_id'
-    NODE_ID_KEY = 'node_id'
-    RABBITMQ_CLUSTER_SECTION = 'RABBITMQCLUSTER'
-    RABBITMQ_CLUSTER_HOSTS_KEY = 'cluster_nodes'
 
     @staticmethod
     def name():
@@ -119,20 +108,18 @@ class PlaneCntrlIngressProcessor(ScheduledModuleThread, InternalMsgQ):
         # Initialize internal message queues for this module
         super(PlaneCntrlIngressProcessor, self).initialize_msgQ(msgQlist)
 
-        self._current_rabbitMQ_server = None
+        self._current_amqp_server = None
 
         self._hostname = gethostname()
 
-        self._read_config()
-
         # Get common amqp config
-        amqp_config = self._get_default_amqp_config()
+        amqp_config = self._get_amqp_config()
         self._comm = amqp_factory.get_amqp_consumer(**amqp_config)
         self._comm.init()
 
         # Display values used to configure pika from the config file
-        self._log_debug("RabbitMQ user: %s" % self._username)
-        self._log_debug("RabbitMQ exchange: %s, routing_key: %s, vhost: %s" %
+        self._log_debug("amqp user: %s" % self._username)
+        self._log_debug("amqp exchange: %s, routing_key: %s, vhost: %s" %
                       (self._exchange_name, self._routing_key, self._virtual_host))
 
     def run(self):
@@ -149,7 +136,7 @@ class PlaneCntrlIngressProcessor(ScheduledModuleThread, InternalMsgQ):
             if self.is_running() is True:
                 logger.info(f"{self.MODULE_NAME} ungracefully breaking out of run loop, restarting.")
                 logger.exception(f"{self.MODULE_NAME}, AMQPError: {e}")
-                self._toggle_rabbitMQ_servers()
+                self._toggle_amqp_servers()
                 self._comm.init()
                 self._scheduler.enter(10, self._priority, self.run, ())
             else:
@@ -275,63 +262,30 @@ class PlaneCntrlIngressProcessor(ScheduledModuleThread, InternalMsgQ):
         except Exception as ex:
             logger.exception(f"{self.MODULE_NAME}, _process_job_status exception: {ex}")
 
-    def _toggle_rabbitMQ_servers(self):
+    def _toggle_amqp_servers(self):
         """Toggle between hosts when a connection fails"""
-        if self._current_rabbitMQ_server == self._primary_rabbitMQ_server:
-            self._current_rabbitMQ_server = self._secondary_rabbitMQ_server
+        if self._current_amqp_server == self._primary_amqp_server:
+            self._current_amqp_server = self._secondary_amqp_server
         else:
-            self._current_rabbitMQ_server = self._primary_rabbitMQ_server
+            self._current_amqp_server = self._primary_amqp_server
 
-    def _read_config(self):
-        """Configure the RabbitMQ exchange with defaults available"""
-        try:
-            self._virtual_host  = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
-                                                                 self.VIRT_HOST,
-                                                                 'SSPL')
-            self._queue_name    = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
-                                                                 self.QUEUE_NAME,
-                                                                 'ras_control')
-            self._exchange_name = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
-                                                                 self.EXCHANGE_NAME,
-                                                                 'ras_sspl')
-            self._routing_key   = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
-                                                                 self.ROUTING_KEY,
-                                                                 'sspl_ll')
-            self._username      = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
-                                                                 self.USER_NAME,
-                                                                 'sspluser')
-            self._password      = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
-                                                                 self.PASSWORD,
-                                                                 'sspl4ever')
-            self._hosts = self._conf_reader._get_value_list(self.RABBITMQ_CLUSTER_SECTION, 
-                                COMMON_CONFIGS.get(self.RABBITMQ_CLUSTER_SECTION).get(self.RABBITMQ_CLUSTER_HOSTS_KEY))
-            cluster_id = self._conf_reader._get_value_with_default(self.SYSTEM_INFORMATION_KEY,
-                                                                   COMMON_CONFIGS.get(self.SYSTEM_INFORMATION_KEY).get(self.CLUSTER_ID_KEY),
-                                                                   '')
-
-            # Decrypt RabbitMQ Password
-            decryption_key = encryptor.gen_key(cluster_id, ServiceTypes.RABBITMQ.value)
-            self._password = encryptor.decrypt(decryption_key, self._password.encode('ascii'), self.RABBITMQPROCESSOR)
-
-
-        except Exception as ex:
-            logger.exception(f"{self.MODULE_NAME}, _read_config: {ex}")
-
-    def _get_default_amqp_config(self):
-        return {
-                    "virtual_host": self._virtual_host,
-                    "exchange": self._exchange_name,
-                    "username": self._username,
-                    "password": self._password,
-                    "hosts": self._hosts,
-                    "exchange_queue": self._queue_name,
-                    "exchange_type": "topic",
-                    "routing_key": self._routing_key,
-                    "durable": True,
-                    "exclusive": False,
-                    "retry_count": 5,
-                    "port": 5672
-                }
+    def _get_amqp_config(self):
+        amqp_config = {
+            "virtual_host": self._conf_reader._get_value_with_default(self.AMQPPROCESSOR,
+                                                        self.VIRT_HOST, 'SSPL'),
+            "exchange": self._conf_reader._get_value_with_default(self.AMQPPROCESSOR,
+                                                        self.EXCHANGE_NAME, 'ras_sspl'),
+            "exchange_queue": self._conf_reader._get_value_with_default(self.AMQPPROCESSOR,
+                                                        self.QUEUE_NAME, 'ras_control'),
+            "exchange_type": "topic",
+            "routing_key": self._conf_reader._get_value_with_default(self.AMQPPROCESSOR,
+                                                        self.ROUTING_KEY, 'sspl_ll'),
+            "durable": True,
+            "exclusive": False,
+            "retry_count": 5,
+        }
+        amqp_common_config = get_amqp_common_config()
+        return { **amqp_config, **amqp_common_config }
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""
@@ -339,7 +293,6 @@ class PlaneCntrlIngressProcessor(ScheduledModuleThread, InternalMsgQ):
         try:
             self._comm.stop()
         except pika.exceptions.ConnectionClosed:
-            logger.info(f"{self.MODULE_NAME}, shutdown, RabbitMQ ConnectionClosed")
+            logger.info(f"{self.MODULE_NAME}, shutdown, amqp ConnectionClosed")
         except Exception as err:
-            logger.info(f"{self.MODULE_NAME}, shutdown, RabbitMQ {err}")
-
+            logger.info(f"{self.MODULE_NAME}, shutdown, amqp {err}")
