@@ -6,12 +6,16 @@ import sys
 from sspl_test.default import *
 from sspl_test.rabbitmq.rabbitmq_ingress_processor_tests import RabbitMQingressProcessorTests
 from sspl_test.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
-from sspl_test.common import check_sspl_ll_is_running
+from sspl_test.common import check_sspl_ll_is_running, check_os_platform
+
 
 def init(args):
     pass
 
 def test_raid_integrity_sensor(args):
+    platform = check_os_platform()
+    if platform == "vm":
+        return
     check_sspl_ll_is_running()
     node_data_sensor_message_request("node:os:raid_integrity")
     raid_data_msg = None
@@ -80,6 +84,5 @@ def node_data_sensor_message_request(sensor_type):
     }
 
     world.sspl_modules[RabbitMQegressProcessor.name()]._write_internal_msgQ(RabbitMQegressProcessor.name(), egressMsg)
-
 
 test_list = [test_raid_integrity_sensor]
