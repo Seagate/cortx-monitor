@@ -36,6 +36,19 @@ ENCL_DOWNLOAD_LOG_WAIT_BEFORE_RETRY = 15
 node_key_id = node_id
 CONSUL_HOST = consulhost
 CONSUL_PORT = consulport
+SSPL_SETTINGS = {
+        "ACTUATORS" : ["Service", "RAIDactuator", "Smartctl", "NodeHWactuator", "RealStorActuator"],
+        "CORE_PROCESSORS" : ["RabbitMQegressProcessor", "RabbitMQingressProcessor", "LoggingProcessor"],
+        "DEGRADED_STATE_MODULES" : ["ServiceWatchdog", "RAIDsensor", "NodeData", "IEMSensor", "NodeHWsensor",    \
+                            "DiskMsgHandler", "LoggingMsgHandler", "ServiceMsgHandler", "NodeDataMsgHandler",  \
+                            "NodeControllerMsgHandler", "SASPortSensor", "MemFaultSensor", "CPUFaultSensor"],
+        "MESSAGE_HANDLERS" : ["DiskMsgHandler", "LoggingMsgHandler", "ServiceMsgHandler", "NodeDataMsgHandler",   \
+                        "NodeControllerMsgHandler", "RealStorEnclMsgHandler", "RealStorActuatorMsgHandler"],
+        "SENSORS" : ["ServiceWatchdog", "RAIDsensor", "NodeData", "RealStorFanSensor", "RealStorPSUSensor",   \
+            "RealStorControllerSensor", "RealStorDiskSensor", "RealStorSideplaneExpanderSensor",    \
+            "RealStorLogicalVolumeSensor", "IEMSensor", "NodeHWsensor", "RealStorEnclosureSensor",     \
+            "SASPortSensor", "MemFaultSensor", "CPUFaultSensor"]
+}
 
 COMMON_CONFIGS = {
     "SYSTEM_INFORMATION": {
@@ -76,6 +89,21 @@ COMMON_CONFIGS = {
 }
 
 SSPL_CONFIGS = ['log_level', 'cli_type', 'sspl_log_file_path', 'cluster_id', 'storage_enclosure', 'setup', 'operating_system']
+
+SMTPSETTING = { "smptserver" : "mailhost.seagate.com",
+                "recipient" : "example@seagate.com", 
+                "smtp_port" : 25,
+                "username" : "",
+                "password" : ""
+}
+
+LOGEMAILER = {
+            "priority" : "LOG_ERR"
+}
+
+SMRDRIVEDATA = {
+    "logging_interval" : 3600
+}
 
 # required only for init
 component = 'sspl/config'

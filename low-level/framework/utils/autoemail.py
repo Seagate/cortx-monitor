@@ -20,6 +20,7 @@ import smtplib
 
 from socket import gethostname, gethostbyaddr, gaierror
 from socket import error as socket_error
+from framework.base.sspl_constants import SMTPSETTING, LOGEMAILER, SMRDRIVEDATA
 
 try:
    from systemd import journal
@@ -76,33 +77,21 @@ class AutoEmail(object):
     def _configure_email(self):
         """Get SMTP Email settings from the conf file"""
 
-        self._email_server = self._conf_reader._get_value_with_default(self.SMTPSETTING,
-                                                             self.SERVER,
-                                                             'mailhost.seagate.com')
+        self._email_server = SMRDRIVEDATA.get("smptserver")
 
         #Email recipients is a list
-        self._email_recipient = self._conf_reader._get_value_list(self.SMTPSETTING,
-                                                             self.RECIPIENT)
-
+        self._email_recipient = SMRDRIVEDATA.get("recipient")
         #Get the priority from conf and map it to a number from 0-7, most to least critical
-        self._log_priority = self.LOGLEVEL_NAME_TO_LEVEL_DICT[self._conf_reader._get_value_with_default(self.LOGEMAILER,
-                                                             self.PRIORITY,
-                                                             6)]
+        self._log_priority = self.LOGLEVEL_NAME_TO_LEVEL_DICT[LOGEMAILER.get("priority")]
 
         #OPTIONAL SETTINGS:
 
         #SMTP Port settings
-        self._tls_setting = self._conf_reader._get_value_with_default(self.SMTPSETTING,
-                                                             self.TLSSETTING,
-                                                             25)
+        self._tls_setting = SMRDRIVEDATA.get("smtp_port")
 
-        self._smtp_username = self._conf_reader._get_value_with_default(self.SMTPSETTING,
-                                                             self.SMTP_USERNAME,
-                                                             "")
+        self._smtp_username = SMRDRIVEDATA.get("username")
 
-        self._smtp_password = self._conf_reader._get_value_with_default(self.SMTPSETTING,
-                                                             self.SMTP_PASSWORD,
-                                                             "")
+        self._smtp_password = SMRDRIVEDATA.get("password")
 
 
     def _send_email(self, message, msgPriority):

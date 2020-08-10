@@ -88,10 +88,6 @@ cpu_usage_threshold=80
 host_memory_usage_threshold=80
 
 
-[XINITDWATCHDOG]
-threaded=true
-monitored_services=
-
 [RARITANPDU]
 user=admin
 pass=admin
@@ -109,20 +105,6 @@ pass=admin
 
 [BMC_INTERFACE]
 default=system
-
-[SMTPSETTING]
-smptserver=mailhost.seagate.com
-recipient=malhar.vora@seagate.com
-smtp_port=25
-username=
-password=
-
-[LOGEMAILER]
-priority=LOG_ERR
-
-[SMRDRIVEDATA]
-threaded=true
-logging_interval=3600
 
 [STORAGE_ENCLOSURE]
 primary_controller_ip=127.0.0.1
