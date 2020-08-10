@@ -33,10 +33,12 @@ manifest_summary = "/tmp/manifest_summary.json"
 enclosure_log = "/tmp/enclosure_logs.zip"
 node_hostname = 'node_'+socket.gethostname().split('.', 1)[0]
 encl_summary_filter={}
+cluster_id = subprocess.Popen(['salt-call', 'grains.get', 'cluster_id'], stdout=subprocess.PIPE).communicate()[0]
+cluster_id = cluster_id.decode("utf-8").rstrip().replace('local:\n    ', '')
 encl_summary_fields=["object-name", "durable-id", "vendor-name", "product-id", "serial-number",
                      "model", "product-brand", "description", "status", "health", "health-reason",
                      "platform-type", "platform-brand", "part-number", "enclosure-wwn", "vendor",
-                     "vendor-name"]
+                     "drive-serial-number"]
 node_summary_fields=['id', 'class', 'description', 'product', 'serial', 'vendor',
                      'part-number', 'model-number','children', 'physid', 'version']
 rabbitmq_cmd = {
@@ -194,18 +196,18 @@ def make_sspl_support_bundle_tarfile(parser, tmpFile):
 
         with tarfile.open(localTempPath+"manifest_"+file_name, "w:gz") as tar:
             file_dir = "manifest_"+file_name.replace(".tar.gz","")
-            node_encl_summary = {}
+            node_encl_summary = {"cluster_"+cluster_id:{}}
             if os.path.exists(encl_manifest) and sspl_state == 'active':
                 tar.add(encl_manifest, arcname=file_dir+"/enclosure-wwn-{0}-manifest.json".format(enclosure_wwn))
                 with open(encl_manifest, 'r') as j:
                     encl_manifest_dict = json.loads(j.read())
-                    node_encl_summary.update(fetch_encl_summary_data(encl_manifest_dict["hw_specifics"]))
+                    node_encl_summary["cluster_"+cluster_id].update(fetch_encl_summary_data(encl_manifest_dict["hw_specifics"]))
             
             if os.path.exists(node_manifest):
                 tar.add(node_manifest, arcname=file_dir+"/{0}-manifest.json".format(node_hostname))
                 with open(node_manifest, 'r') as j:
                     node_manifest_dict = json.loads(j.read())
-                    node_encl_summary.update(fetch_node_summary_data(node_manifest_dict["hw_specifics"]))
+                    node_encl_summary["cluster_"+cluster_id].update(fetch_node_summary_data(node_manifest_dict["hw_specifics"]))
             write_content_in_file(node_encl_summary, manifest_summary, "manifest_summary.json")
             if os.path.exists(manifest_summary):
                 tar.add(manifest_summary, arcname=file_dir+"/manifest_summary.json")
@@ -234,6 +236,26 @@ def fetch_node_summary_data(node_manifest_dict):
     node_summary_types = ('sata', 'power', 'cpu', 'memory', 'pci')
     post_node_filter_list = []
     final_node_summary_dict={}
+
+    cortx_build_version = 'NA'
+    cortx_build_cmd = f"sudo salt-call pillar.get release:target_build --output=newline_values_only"
+    try:
+        subout = subprocess.Popen(cortx_build_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        result = subout.stdout.readlines()
+        if result == [] or result == "":
+            print("Unable to fetch cortx build version.")
+        else:
+            cortx_build_version = result[0].decode().rstrip('\n').split('/')[-2]
+    except Exception as e:
+        print("Unable to fetch cortx build version.")
+    cortx = {'id':'Cortx SW', 'version':cortx_build_version, 'license-info': 'NA', 'cluster-id':cluster_id}
+    post_node_filter_list.append(cortx)
+
+    os_serial = subprocess.Popen(['uname', '-rvmpio'], stdout=subprocess.PIPE).communicate()[0].decode("utf-8").rstrip()
+    os_model = subprocess.Popen(['cat', '/etc/system-release'], stdout=subprocess.PIPE).communicate()[0].decode("utf-8").rstrip()
+    os = {'id':'Operating System', 'version':os_model, 'system-info':os_serial}
+    post_node_filter_list.append(os)
+
     try:
         filtered_data_all = filter_node_summary_dict(node_manifest_dict)
     except:
@@ -247,16 +269,6 @@ def fetch_node_summary_data(node_manifest_dict):
     for key in filtered_data_all['children']:
         if key['id'].lower().startswith(node_summary_types):
             post_node_filter_list.append(key)
-
-    os_serial = subprocess.Popen(['uname', '-rvmpio'], stdout=subprocess.PIPE).communicate()[0].decode("utf-8").rstrip()
-    os_model = subprocess.Popen(['cat', '/etc/system-release'], stdout=subprocess.PIPE).communicate()[0].decode("utf-8").rstrip()
-    os = {'id':'Operating System', 'version-number':os_model, 'system-info':os_serial}
-    post_node_filter_list.append(os)
-
-    cluster_id = subprocess.Popen(['salt-call', 'grains.get', 'cluster_id'], stdout=subprocess.PIPE).communicate()[0]
-    cluster_id = cluster_id.decode("utf-8").rstrip().replace('local:\n    ', '')
-    cortx = {'id':'Cortx SW', 'version-number':'NA', 'license-info': 'NA', 'cluster-id':cluster_id}
-    post_node_filter_list.append(cortx)
 
     filtered_data_all['children'] = post_node_filter_list
     final_node_summary_dict.update({'server_'+filtered_data_all['id']:filtered_data_all})
@@ -276,12 +288,14 @@ def filter_node_summary_dict(node_manifest_dict):
                         new_lst.append(d)
                 v = new_lst
             if k in node_summary_fields:
+                if k == "product" and ("To be filled by O.E.M." in v):
+                    v = v.replace(" (To be filled by O.E.M.)", "")
                 new_dic[k] = v
         return new_dic
 
 def fetch_encl_summary_data(node_manifest_dict):
     final_encl_summary_dict={}
-    encl_fields = ["controllers", "power-supplies", "fan-modules"]
+    encl_fields = ["controllers", "power-supplies", "fan-modules", "sideplane", "chassis-midplane"]
     enclosure = node_manifest_dict["enclosures"][0]
     enclosure_wwn = enclosure["enclosure-wwn"]
     server = node_manifest_dict["system"][0]
@@ -289,8 +303,9 @@ def fetch_encl_summary_data(node_manifest_dict):
     product_id = server.get("product-id", "NA") or "NA"
     product_brand = server.get("product-brand", "NA") or "NA"
     platform_brand = server.get("platform-brand", "NA") or "NA"
+    serial_number = server.get("midplane-serial-number", "NA") or "NA"
     final_encl_summary_dict.update({"enclosure_"+enclosure_wwn:{'vendor-name':vendor_name, 'product-id':product_id,
-                            'product-brand':product_brand, 'platform-brand':platform_brand}})
+                            'product-brand':product_brand, 'platform-brand':platform_brand, 'serial-number':serial_number}})
     for key in encl_summary_fields:
         value = enclosure.get(key)
         if value:
@@ -306,25 +321,19 @@ def fetch_encl_summary_data(node_manifest_dict):
 def filter_encl_summary_dict(encl_data, encl_type):
     encl_summary_filter.update({encl_type:{}})
     for encl in encl_data:
-        encl_durable_id = encl.get('durable-id')
+        encl_durable_id = encl.get('durable-id', encl.get('serial-number', 'NA'))
+        encl['vendor'] = encl.get("vendor", "NA") or "NA"
         encl_summary_filter[encl_type].update({encl_durable_id:{}})
-        if encl_type == 'fan-modules':
-            for fan in encl.get('fan'):
-                fan_durable_id = fan.get('durable-id')
-                encl_summary_filter[encl_type][encl_durable_id].update({fan_durable_id:{}})
-                update_encl_summary_dict(fan, encl_durable_id, encl_type, fan_durable_id)
-        else:
-            update_encl_summary_dict(encl, encl_durable_id, encl_type)
+        if encl_type == 'drives':
+            encl['drive-serial-number'] = encl.get("serial-number")[:8]
+        update_encl_summary_dict(encl, encl_durable_id, encl_type)
 
-def update_encl_summary_dict(encl, encl_durable_id, encl_type, fan_durable_id=None):
+def update_encl_summary_dict(encl, encl_durable_id, encl_type):
     for key in encl_summary_fields:
         value = encl.get(key)
         if value:
             if value == "N/A" : value = "NA"
-            if encl_type == 'fan-modules':
-                encl_summary_filter[encl_type][encl_durable_id][fan_durable_id].update({key:value})
-            else:
-                encl_summary_filter[encl_type][encl_durable_id].update({key:value})
+            encl_summary_filter[encl_type][encl_durable_id].update({key:value})
 
 if __name__ == "__main__":
     if not os.path.isfile(onGoingRequestPath):
