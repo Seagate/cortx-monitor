@@ -15,6 +15,9 @@ script_dir=$(dirname $0)
 # Import common constants
 source $script_dir/constants.sh
 
+# Import common functions
+source $script_dir/utils.sh
+
 SCRIPT_NAME=$(basename $0)
 DIR_NAME="/opt/seagate/$PRODUCT_FAMILY/sspl"
 RSYSLOG_CONF="/etc/rsyslog.d/0-iemfwd.conf"
@@ -167,7 +170,8 @@ case $cmd in
 esac
 
 # Update amqp config
-amqp_type=$($CONSUL_PATH/consul kv get sspl/config/AMQP/type)
+amqp_type=$(get_amqp_type)
+validate_amqp_type $amqp_type
 config_${amqp_type}
 
 # Updating build requested log level

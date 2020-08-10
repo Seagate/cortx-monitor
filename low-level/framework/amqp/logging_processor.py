@@ -23,7 +23,7 @@ from syslog import (LOG_ALERT, LOG_CRIT, LOG_DEBUG, LOG_EMERG, LOG_ERR,
 import pika
 from eos.utils.amqp import AmqpConnectionError
 
-from framework.amqp.utils import get_amqp_common_config
+from framework.amqp.utils import get_amqp_config
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.module_thread import ScheduledModuleThread
 from framework.utils.amqp_factory import amqp_factory
@@ -81,7 +81,9 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
         self._autoemailer = AutoEmail(conf_reader)
 
         # Get common amqp config
-        amqp_config = self._get_amqp_config()
+        amqp_config = get_amqp_config(section=self.LOGGINGPROCESSOR, 
+                    keys=[(self.VIRT_HOST, "SSPL"), (self.EXCHANGE_NAME, "sspl-in"), 
+                    (self.QUEUE_NAME, "iem-queue"), (self.ROUTING_KEY, "iem-key")])
         self._comm = amqp_factory.get_amqp_consumer(**amqp_config)
         try:
             self._comm.init()
@@ -170,25 +172,6 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
             self._comm.acknowledge()
         except Exception as ex:
             logger.error("_process_msg: %r" % ex)
-
-    def _get_amqp_config(self):
-        amqp_config = {
-            "virtual_host": self._conf_reader._get_value_with_default(self.LOGGINGPROCESSOR,
-                                                    self.VIRT_HOST, 'SSPL'),
-            "exchange": self._conf_reader._get_value_with_default(self.LOGGINGPROCESSOR,
-                                                    self.EXCHANGE_NAME, 'sspl-in'),
-            "exchange_queue": self._conf_reader._get_value_with_default(self.LOGGINGPROCESSOR,
-                                                    self.QUEUE_NAME, 'iem-queue'),
-            "exchange_type": "topic",
-            "routing_key": self._conf_reader._get_value_with_default(self.LOGGINGPROCESSOR,
-                                                    self.ROUTING_KEY, 'iem-key'),
-            "durable": True,
-            "exclusive": False,
-            "retry_count": 5,
-        }
-        amqp_common_config = get_amqp_common_config()
-        return { **amqp_config, **amqp_common_config }
-
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""

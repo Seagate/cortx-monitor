@@ -5,6 +5,7 @@ PRODUCT_FAMILY='cortx'
 PRODUCTS="SINGLE DUAL CLUSTER LDR_R1 LDR_R2"
 SSPL_CONF="/etc/sspl.conf"
 ROLES="gw ssu vm cmu cortx"
+AMQP_TYPES="rabbitmq"
 PRODUCT_BASE_DIR="/opt/seagate/$PRODUCT_FAMILY/"
 SSPL_BASE_DIR="/opt/seagate/$PRODUCT_FAMILY/sspl"
 SSPL_STORE_TYPE="consul"

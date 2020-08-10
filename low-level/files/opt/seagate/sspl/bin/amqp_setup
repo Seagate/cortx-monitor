@@ -8,6 +8,10 @@ script_dir=$(dirname $0)
 # Import common constants
 source $script_dir/constants.sh
 
-amqp_type=$($CONSUL_PATH/consul kv get sspl/config/AMQP/type)
+# Import common functions
+source $script_dir/utils.sh
+
+amqp_type=$(get_amqp_type)
+validate_amqp_type $amqp_type
 
 $script_dir/${amqp_type}_setup

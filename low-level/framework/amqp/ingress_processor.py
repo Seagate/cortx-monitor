@@ -1,7 +1,7 @@
 """
  ****************************************************************************
  Filename:          ingress_processor.py
- Description:       Handles incoming messages via Amqp
+ Description:       Handles outgoing messages via amqp based message brokers
  Creation Date:     02/11/2015
  Author:            Jake Abernathy
 
@@ -24,7 +24,7 @@ from eos.utils.amqp import AmqpConnectionError
 from jsonschema import Draft3Validator, validate
 
 from framework.amqp.egress_processor import EgressProcessor
-from framework.amqp.utils import get_amqp_common_config
+from framework.amqp.utils import get_amqp_config
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.sspl_constants import COMMON_CONFIGS, RESOURCE_PATH
@@ -109,7 +109,9 @@ class IngressProcessor(ScheduledModuleThread, InternalMsgQ):
         # Initialize internal message queues for this module
         super(IngressProcessor, self).initialize_msgQ(msgQlist)
 
-        amqp_config = self._get_amqp_config()
+        amqp_config = get_amqp_config(section=self.AMQPPROCESSOR, 
+                    keys=[(self.VIRT_HOST, "SSPL"), (self.EXCHANGE_NAME, "sspl-in"), 
+                    (self.QUEUE_NAME, "sensor-queue"), (self.ROUTING_KEY, "actuator-req-queue")])
         self._comm = amqp_factory.get_amqp_consumer(**amqp_config)
         try:
             self._comm.init()
@@ -221,27 +223,6 @@ class IngressProcessor(ScheduledModuleThread, InternalMsgQ):
             logger.error(f"{self.MODULE_NAME}, _process_msg unrecognized message: {ingressMsg}")
             ack_msg = AckResponseMsg("Error Processing Msg", "Msg Handler Not Found", uuid).getJson()
             self._write_internal_msgQ(EgressProcessor.name(), ack_msg)
-
-    def _get_amqp_config(self):
-        amqp_config = {
-            "virtual_host": self._conf_reader._get_value_with_default(self.AMQPPROCESSOR,
-                                                            self.VIRT_HOST, 'SSPL'),
-            "exchange": self._conf_reader._get_value_with_default(self.AMQPPROCESSOR,
-                                                            self.EXCHANGE_NAME, 'sspl-in'),
-            "exchange_queue": self._conf_reader._get_value_with_default(self.AMQPPROCESSOR,
-                                                            self.QUEUE_NAME, 'sensor-queue'),
-            "exchange_type": "topic",
-            "routing_key": self._conf_reader._get_value_with_default(self.AMQPPROCESSOR,
-                                                            self.ROUTING_KEY, 'actuator-req-queue'),
-            "durable": True,
-            "exclusive": False,
-            "retry_count": 1,
-        }
-        node_id = self._conf_reader._get_value_with_default(self.SYSTEM_INFORMATION_KEY,
-                        COMMON_CONFIGS.get(self.SYSTEM_INFORMATION_KEY).get(self.NODE_ID_KEY),'')
-        amqp_config["routing_key"] = f'{amqp_config["routing_key"]}_node{node_id}'
-        amqp_common_config = get_amqp_common_config()
-        return { **amqp_config, **amqp_common_config }
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""

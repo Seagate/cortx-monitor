@@ -1,7 +1,7 @@
 """
  ****************************************************************************
  Filename:          egress_processor.py
- Description:       Handles outgoing messages via amqp
+ Description:       Handles outgoing messages via amqp based message brokers
  Creation Date:     01/14/2015
  Author:            Jake Abernathy
 
@@ -22,7 +22,7 @@ import time
 import pika
 from eos.utils.amqp import AmqpConnectionError
 
-from framework.amqp.utils import get_amqp_common_config
+from framework.amqp.utils import get_amqp_config
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.sspl_constants import COMMON_CONFIGS, ServiceTypes
@@ -87,8 +87,9 @@ class EgressProcessor(ScheduledModuleThread, InternalMsgQ):
         self._read_config()
 
         # Get common amqp config
-        amqp_config = self._get_amqp_config()
-
+        amqp_config = get_amqp_config(section=self.AMQPPROCESSOR, 
+                    keys=[(self.VIRT_HOST, "SSPL"), (self.EXCHANGE_NAME, "sspl-out"), 
+                    (self.QUEUE_NAME, "sensor-queue"), (self.ROUTING_KEY, "sensor-key")])
         self._default_comm = amqp_factory.get_amqp_producer(**amqp_config)
         try:
             self._default_comm.init()
@@ -166,24 +167,6 @@ class EgressProcessor(ScheduledModuleThread, InternalMsgQ):
                 logger.info("         Using IEM exchange: %s" % self._iem_route_exchange_name)
         except Exception as ex:
             logger.error(f"{self.MODULE_NAME}, _read_config: %r" % ex)
-
-    def _get_amqp_config(self):
-        module_specific_config = {
-            "virtual_host": self._conf_reader._get_value_with_default(self.AMQPPROCESSOR,
-                                                            self.VIRT_HOST, 'SSPL'),
-            "exchange": self._conf_reader._get_value_with_default(self.AMQPPROCESSOR,
-                                                            self.EXCHANGE_NAME, 'sspl-out'),
-            "exchange_queue": self._conf_reader._get_value_with_default(self.AMQPPROCESSOR,
-                                                            self.QUEUE_NAME, 'sensor-queue'),
-            "exchange_type": "topic",
-            "routing_key": self._conf_reader._get_value_with_default(self.AMQPPROCESSOR,
-                                                            self.ROUTING_KEY, 'sensor-key'),
-            "durable": True,
-            "exclusive": False,
-            "retry_count": 1,
-        }
-        amqp_common_config = get_amqp_common_config()
-        return { **module_specific_config, **amqp_common_config }
 
     def _add_signature(self):
         """Adds the authentication signature to the message"""

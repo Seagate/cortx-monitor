@@ -3,9 +3,9 @@
  Filename:          egress_accumulated_msgs_processor.py
  Description:       This processor handles acuumalted messages in consul
                     This keeps on running periodicaly and check if there is
-                    any message to be sent to rabbtmq. If rabbitmq connection
-                    is availble message will be sent, else in next iteration
-                    it will be retried.
+                    any message to be sent to amqp based message broker. 
+                    If message broker connection is availble message will 
+                    be sent, else in next iteration it will be retried.
  Creation Date:     03/19/2020
  Author:            Sandeep Anjara
 
@@ -26,7 +26,7 @@ import time
 
 from eos.utils.amqp import AmqpConnectionError
 
-from framework.amqp.utils import get_amqp_common_config
+from framework.amqp.utils import get_amqp_config
 from framework.base.sspl_constants import ServiceTypes, COMMON_CONFIGS
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
@@ -71,9 +71,13 @@ class EgressAccumulatedMsgsProcessor(ScheduledModuleThread, InternalMsgQ):
         super(EgressAccumulatedMsgsProcessor, self).initialize_msgQ(msgQlist)
 
         # Get common amqp config
-        amqp_config = self._get_amqp_config()
+        amqp_config = get_amqp_config(section=self.AMQPPROCESSOR, 
+                    keys=[(self.VIRT_HOST, "SSPL"), (self.EXCHANGE_NAME, "sspl-out"), 
+                    (self.QUEUE_NAME, "sensor-queue"), (self.ROUTING_KEY, "sensor-key")])
         self._comm = amqp_factory.get_amqp_producer(**amqp_config)
-
+        
+        # No of message processed
+        self._message_count = 0
 
     def read_data(self):
         """This method is part of interface. Currently it is not
@@ -84,6 +88,7 @@ class EgressAccumulatedMsgsProcessor(ScheduledModuleThread, InternalMsgQ):
     def run(self):
         """Run the sensor on its own thread"""
         logger.debug(f"{self.MODULE_NAME} Consul accumulated messages processing started")
+        processed_message_count = 0
         try:
             if not store_queue.is_empty():
                 logger.debug(f"{self.MODULE_NAME} Found accumulated messages, trying to send again")
@@ -97,32 +102,16 @@ class EgressAccumulatedMsgsProcessor(ScheduledModuleThread, InternalMsgQ):
                         if time_diff > self.MSG_TIMEOUT:
                             continue
                     self._comm.send(dict_msg)
+                    processed_message_count += 1
                 self._comm.stop()
         except AmqpConnectionError as e:
             logger.error(f"{self.MODULE_NAME} {e}")
         except Exception as e:
             logger.error(f"{self.MODULE_NAME} {e}")
         finally:
+            logger.debug(f"{self.MODULE_NAME} {processed_message_count} message processed")
             logger.debug(f"{self.MODULE_NAME} Consul accumulated processing ended")
             self._scheduler.enter(30, self._priority, self.run, ())
-
-    def _get_amqp_config(self):
-        module_specific_config = {
-            "virtual_host": self._conf_reader._get_value_with_default(self.AMQPPROCESSOR,
-                                                            self.VIRT_HOST, 'SSPL'),
-            "exchange": self._conf_reader._get_value_with_default(self.AMQPPROCESSOR,
-                                                            self.EXCHANGE_NAME, 'sspl-out'),
-            "exchange_queue": self._conf_reader._get_value_with_default(self.AMQPPROCESSOR,
-                                                            self.QUEUE_NAME, 'sensor-queue'),
-            "exchange_type": "topic",
-            "routing_key": self._conf_reader._get_value_with_default(self.AMQPPROCESSOR,
-                                                            self.ROUTING_KEY, 'sensor-key'),
-            "durable": True,
-            "exclusive": False,
-            "retry_count": 1,
-        }
-        amqp_common_config = get_amqp_common_config()
-        return { **module_specific_config, **amqp_common_config }
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""
