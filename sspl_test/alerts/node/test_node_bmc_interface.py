@@ -18,7 +18,7 @@ def init(args):
     pass
 
 def test_bmc_interface(args):
-    check_sspl_ll_is_running() 
+    check_sspl_ll_is_running()
     # backup active bmc interface
     BMC_IF_CONSUL_KEY,BMC_IF_CONSUL_VAL = backup_bmc_config()
 
@@ -32,7 +32,7 @@ def test_bmc_interface(args):
         simulate_bmc_interface_alert.kcs_channel_alert(BMC_IF_CONSUL_KEY,BMC_IF_CONSUL_VAL)
 
     bmc_interface_message = None
-    time.sleep(6)
+    time.sleep(25)
     while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
         ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
         time.sleep(0.1)
