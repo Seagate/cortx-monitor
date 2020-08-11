@@ -114,7 +114,7 @@ def make_sspl_support_bundle_tarfile(parser, tmpFile):
         else:
             file_name = "{0}_{1}.tar.gz".format(node_hostname, parser[1])
 
-        if sspl_state == "active":
+        if sspl_state == "active" and "-noencl" not in parser:
             url = singleton_realstorencl.build_url("/")
             COLLECTING_DEBUG_LOG_STARTED = False
             for encl_trigger_log_retry_index in range(0, ENCL_TRIGGER_LOG_MAX_RETRY):
@@ -328,7 +328,7 @@ def update_encl_summary_dict(encl, encl_durable_id, encl_type, fan_durable_id=No
 
 if __name__ == "__main__":
     if not os.path.isfile(onGoingRequestPath):
-        if len(sys.argv) is not 3:
+        if len(sys.argv) < 3:
             print("Unrecognized arguments: %s" % sys.argv)
             sys.exit(1)
         tmpFile = open(onGoingRequestPath, "w")
