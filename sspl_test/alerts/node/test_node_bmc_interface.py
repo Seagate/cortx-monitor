@@ -55,6 +55,8 @@ def test_bmc_interface(args):
 
     assert(bmc_interface_message is not None)
     assert(bmc_interface_message.get("alert_type") is not None)
+    alert_type = bmc_interface_message.get("alert_type")
+    assert(alert_type=="fault")
     assert(bmc_interface_message.get("alert_id") is not None)
     assert(bmc_interface_message.get("severity") is not None)
     assert(bmc_interface_message.get("host_id") is not None)
