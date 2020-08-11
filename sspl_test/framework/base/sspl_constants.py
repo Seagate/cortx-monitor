@@ -11,6 +11,7 @@ RESOURCE_PATH = f"/opt/seagate/{PRODUCT_FAMILY}/sspl/resources/"
 SSPL_STORE_TYPE = 'consul'
 CONSUL_HOST = '127.0.0.1'
 CONSUL_PORT = '8500'
+CONSUL_PATH = f"/opt/seagate/{PRODUCT_FAMILY}/hare/bin"
 
 # required only for init
 component = 'sspl_test/config'

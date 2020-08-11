@@ -18,8 +18,20 @@ BASE_PATH="/opt/seagate/cortx/sspl"
 
 filename=""
 
-# handle 'sel' commands
-if [ "$1" == "sel" ]; then
+if [ -e /tmp/kcs_disable ]; then
+    kcs_err="could not find inband device"
+    echo "$kcs_err"
+    exit 2
+
+elif [ -e /tmp/lan_disable ]; then
+    lan_err="Activate Session error: Command response could not be provided
+            Error: Unable to establish LAN session
+            Error: Unable to establish IPMI v1.5 / RMCP session"
+    echo "$lan_err"
+    exit 2
+else
+    # handle 'sel' commands
+    if [ "$1" == "sel" ]; then
         command=$2
         case $command in
                 "list")
@@ -34,10 +46,10 @@ if [ "$1" == "sel" ]; then
                 exit 1
         fi
         printf "$(cat $filename)"
-fi
+    fi
 
-# handle 'sdr type' commands
-if [ "$1 $2" == "sdr type" ]; then
+    # handle 'sdr type' commands
+    if [ "$1 $2" == "sdr type" ]; then
         command=${@:3}
         case $command in
                 "Fan")
@@ -57,18 +69,18 @@ if [ "$1 $2" == "sdr type" ]; then
                         exit 1
         esac
         printf "$(cat $filename)"
-fi
+    fi
 
 
-# handle 'sensor list' commands
-if [ "$1 $2" == "sensor list" ]; then
+    # handle 'sensor list' commands
+    if [ "$1 $2" == "sensor list" ]; then
         filename="$BASE_PATH/sspl_test/ipmi_simulator/ipmi_mock_data/sensor_list.txt"
         printf "$(cat $filename)"
-fi
+    fi
 
 
-# handle 'sensor get' commands
-if [ "$1 $2" == "sensor get" ]; then
+    # handle 'sensor get' commands
+    if [ "$1 $2" == "sensor get" ]; then
         command=${@:3}
         case $command in
                 "Fan Redundancy")
@@ -88,11 +100,11 @@ if [ "$1 $2" == "sensor get" ]; then
                         exit 1
         esac
         printf "$(cat $filename)"
-fi
+    fi
 
 
-# handle 'sdr entity' commands
-if [ "$1 $2" == "sdr entity" ]; then
+    # handle 'sdr entity' commands
+    if [ "$1 $2" == "sdr entity" ]; then
         if [ "$#" -ne 3 ]; then
                 echo "Invalid command: $@. IPMISIMTOOL can't process it."
                 exit 1
@@ -107,11 +119,11 @@ if [ "$1 $2" == "sdr entity" ]; then
                 exit 1
         fi
         echo $res
-fi
+    fi
 
 
-# handle 'sdr get' commands
-if [ "$1 $2" == "sdr get" ]; then
+    # handle 'sdr get' commands
+    if [ "$1 $2" == "sdr get" ]; then
         command=${@:3}
         case $command in
                 "Fan Redundancy")
@@ -131,4 +143,5 @@ if [ "$1 $2" == "sdr get" ]; then
                         exit 1
         esac
         printf "$(cat $filename)"
+    fi
 fi
