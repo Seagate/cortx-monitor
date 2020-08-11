@@ -21,8 +21,8 @@ exchange_name=ras_sspl
 routing_key=sspl_ll
 username=sspluser
 password=sspl4ever
-primary_rabbitmq_server=puppet
-secondary_rabbitmq_server=nfsserv
+primary_amqp_server=puppet
+secondary_amqp_server=nfsserv
 
 [PLANECNTRLRMQEGRESSPROCESSOR]
 virtual_host=SSPL
@@ -34,7 +34,7 @@ password=sspl4ever
 message_signature_username=sspl-ll
 message_signature_token=ALOIUD986798df69a8koDISLKJ282983
 message_signature_expires=3600
-primary_rabbitmq_server=puppet
-secondary_rabbitmq_server=nfsserv
+primary_amqp_server=puppet
+secondary_amqp_server=nfsserv
 
 

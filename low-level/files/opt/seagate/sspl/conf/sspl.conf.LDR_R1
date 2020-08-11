@@ -23,7 +23,7 @@ exchange_name=sspl-in
 routing_key=actuator-req-key
 username=sspluser
 password=gAAAAABelEy2-hxLq8uThrKVZeb8ZY34cUPMYag8aMHJEHpXbaCie2cmeFsNx2nHBMCLLS2Bj9VUp9iSnyYDmywUHI7SsCoRIw==
-primary_rabbitmq_host=localhost
+primary_amqp_host=localhost
 
 [EGRESSPROCESSOR]
 virtual_host=SSPL
@@ -40,7 +40,7 @@ message_signature_token=ALOIUD986798df69a8koDISLKJ282983
 message_signature_expires=3600
 iem_route_addr=
 iem_route_exchange_name=sspl-out
-primary_rabbitmq_host=localhost
+primary_amqp_host=localhost
 limit_consul_memory=50000000
 
 [LOGGINGPROCESSOR]
@@ -50,7 +50,7 @@ exchange_name=sspl-in
 routing_key=iem-key
 username=sspluser
 password=gAAAAABelEy2-hxLq8uThrKVZeb8ZY34cUPMYag8aMHJEHpXbaCie2cmeFsNx2nHBMCLLS2Bj9VUp9iSnyYDmywUHI7SsCoRIw==
-primary_rabbitmq_host=localhost
+primary_amqp_host=localhost
 
 [AMQPCLUSTER]
 cluster_nodes=localhost

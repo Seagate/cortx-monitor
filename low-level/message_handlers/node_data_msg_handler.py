@@ -327,7 +327,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 self._generate_raid_integrity_data(jsonMsg)
                 sensor_message_type = self.os_sensor_type.get(self.sensor_type, "")
                 if sensor_message_type:
-                    self._write_internal_msgQ(RabbitMQegressProcessor.name(),
+                    self._write_internal_msgQ(EgressProcessor.name(),
                                             sensor_message_type)
                 else:
                     self._log_debug("NodeDataMsgHandler, _process_msg " +
