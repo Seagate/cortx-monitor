@@ -16,6 +16,7 @@ SCRIPT_NAME=$(basename $0)
 
 rmq_cluster=true
 rmq_cluster_nodes=
+install_provisioner=true
 
 usage() {
     cat << EOF
@@ -23,11 +24,12 @@ usage() {
         [-p|--product-name <EES|ECS>]
         [-c|--rmq-cluster <true|false>]
         [-n|--rmq-nodes <name of the nodes>]
+        [-i|--install-provisioner <true|false>]
 EOF
     exit 1
 }
 
-while getopts ":p:c:n:" OPTION; do
+while getopts ":p:c:n:i:" OPTION; do
     case $OPTION in
         p )
             PRODUCT_NAME=$OPTARG
@@ -37,6 +39,9 @@ while getopts ":p:c:n:" OPTION; do
             ;;
         n )
             rmq_cluster_nodes=$OPTARG
+            ;;
+        i )
+            install_provisioner=$OPTARG
             ;;
         * )
             usage
@@ -121,8 +126,9 @@ start_req_services(){
     fi
 }
 
-
-setup_provisioner_prereq
+if [ "$install_provisioner" == true ]; then
+    setup_provisioner_prereq
+fi
 $SCRIPT_DIR/bin/sspl_post_install -p $PRODUCT_NAME -e DEV -c $rmq_cluster
 $SCRIPT_DIR/bin/sspl_setup_init -r $PRODUCT_FAMILY
 if [ "$PRODUCT_NAME" == "ECS" ]; then
