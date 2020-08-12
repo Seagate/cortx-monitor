@@ -52,7 +52,7 @@ if ! [ -x "$(command -v $CONSUL_PATH/consul)" ]; then
         mv ./consul $CONSUL_FALLBACK_PATH/consul
     fi
 
-    ln -s $CONSUL_FALLBACK_PATH/consul $CONSUL_PATH/consul
+    ln -sv $CONSUL_FALLBACK_PATH/consul $CONSUL_PATH/consul
 
     if ! [ -x "$(command -v $CONSUL_PATH/consul)" ]; then
         echo "Consul is not available, exiting..";
@@ -63,6 +63,17 @@ if ! [ -x "$(command -v $CONSUL_PATH/consul)" ]; then
     CONSUL_PS=$(ps -aux | grep "consul" | grep -v "grep" | grep -v "bash" || true)
     [ -z "$CONSUL_PS" ] &&
         $CONSUL_PATH/consul agent -dev -config-file=$SSPL_BASE_DIR/bin/consul_config.json &>/dev/null &
+
+    TRIES=0
+    while [ -z "$CONSUL_PS" ]; do
+        sleep 2
+        TRIES=$((TRIES+1))
+        CONSUL_PS=$(ps -aux | grep "consul" | grep -v "grep" | grep -v "bash" || true)
+        if [ $TRIES -gt 5 ]; then
+            echo "Consul service is not started or not recognized by SSPL setup"
+            break
+        fi
+    done
 
     # TODO:
     # This setup consul script should support on joining another node(s) and form a consul cluster

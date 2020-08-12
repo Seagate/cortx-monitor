@@ -38,26 +38,26 @@ config_sspl() {
 
     force=0
     role=
-    rmq_cluster=false
     rmq_cluster_nodes=
 
-    while getopts ":f:r:n:" OPTION; do
-        case $OPTION in
-            f )
+    while [ $# -gt 0 ]; do
+        case $1 in
+            -f )
                 force=1
                 ;;
-            r )
+            -r )
                 [ $# -lt 2 ] && usage
-                role=$OPTARG
+                shift 1 && role=$1
                 [[ $ROLES =~ (^| )$role($| ) ]] || usage
                 ;;
-            n )
-                rmq_cluster_nodes=$OPTARG
+            -n )
+                shift 1 && rmq_cluster_nodes=$1
                 ;;
             * )
                 usage
                 ;;
         esac
+        shift 1
     done
 
     [ $(id -u) -ne 0 ] && echo "Run this command with root privileges!!" &&
