@@ -125,7 +125,7 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
 
         # Initialize internal message queues for this module
         super(ThreadController, self).initialize_msgQ(msgQlist)
-        self._modules_to_resume = SSPL_SETTINGS.get("DEGRADED_STATE_MODULES")
+        self._modules_to_resume = list(SSPL_SETTINGS.get("DEGRADED_STATE_MODULES"))
 
     def initialize_thread_list(self, sspl_modules, operating_system, product,
                                systemd_support):

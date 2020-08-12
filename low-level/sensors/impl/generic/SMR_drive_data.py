@@ -31,8 +31,6 @@ from message_handlers.node_data_msg_handler import NodeDataMsgHandler
 from zope.interface import implementer
 from sensors.INode_data import INodeData
 
-from framework.base.sspl_constants import SMRDRIVEDATA
-
 libc = ctypes.CDLL('libc.so.6')
 
 @implementer(INodeData)
@@ -213,7 +211,9 @@ class SMRdriveData(SensorThread, InternalMsgQ):
 
     def _get_config(self):
         """Retrieves the information in /etc/sspl.conf"""
-        self._logging_interval =  SMRDRIVEDATA.get("logging_interval")
+        self._logging_interval =  int(self._conf_reader._get_value_with_default(self.SMRDRIVEDATA,
+                                                        self.LOGGING_INTERVAL,
+                                                        3600))
         logger.info(f"Logging interval: {self._logging_interval}")
 
     def shutdown(self):
