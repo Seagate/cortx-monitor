@@ -266,8 +266,8 @@ else
 fi
 
 # updateing rabbitmq cluster
-CLUSTER_NODES=$($CONSUL_PATH/consul kv get sspl/config/RABBITMQCLUSTER/cluster_nodes)
-$CONSUL_PATH/consul kv put sspl_test/config/RABBITMQCLUSTER/cluster_nodes $CLUSTER_NODES
+CLUSTER_NODES=$($CONSUL_PATH/consul kv get sspl/config/MESSAGINGCLUSTER/cluster_nodes)
+$CONSUL_PATH/consul kv put sspl_test/config/MESSAGINGCLUSTER/cluster_nodes $CLUSTER_NODES
 
 echo "Restarting SSPL"
 $sudo systemctl restart sspl-ll

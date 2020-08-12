@@ -33,7 +33,7 @@ from framework.utils.service_logging import logger
 from framework.base.sspl_constants import PRODUCT_FAMILY
 
 from json_msgs.messages.sensors.iem_data import IEMDataMsg
-from amqp.egress_processor import EgressProcessor
+from messaging.egress_processor import EgressProcessor
 
 
 class IEMSensor(SensorThread, InternalMsgQ):

@@ -150,11 +150,11 @@ config_sspl() {
 
 config_rabbitmq() {
     # Updating RabbitMQ cluster nodes.
-    [ -n "$rmq_cluster_nodes" ] && $CONSUL_PATH/consul kv put sspl/config/AMQPCLUSTER/cluster_nodes $rmq_cluster_nodes
+    [ -n "$rmq_cluster_nodes" ] && $CONSUL_PATH/consul kv put sspl/config/MESSAGINGCLUSTER/cluster_nodes $rmq_cluster_nodes
     # Getting node names using rabbitmqctl is depreciated (EOS-8860)
     #out=$(rabbitmqctl cluster_status | grep running_nodes | cut -d '[' -f2 | cut -d ']' -f1 | sed 's/rabbit@//g' | sed 's/,/, /g')
     #pout=$(echo $out | sed  "s/'//g")
-    #$CONSUL_PATH/consul kv put sspl/config/AMQPCLUSTER/cluster_nodes $pout
+    #$CONSUL_PATH/consul kv put sspl/config/MESSAGINGCLUSTER/cluster_nodes $pout
 }
 
 cmd="config"
@@ -169,10 +169,10 @@ case $cmd in
         ;;
 esac
 
-# Update amqp config
-amqp_type=$(get_amqp_type)
-validate_amqp_type $amqp_type
-config_${amqp_type}
+# Update messaging config
+messaging_bus_type=$(get_messaging_bus_type)
+validate_messaging_bus_type $messaging_bus_type
+config_${messaging_bus_type}
 
 # Updating build requested log level
 log_level=`cat $DIR_NAME/conf/build-requested-loglevel | sed 's/ *$//'`

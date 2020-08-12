@@ -22,7 +22,7 @@ from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
 from framework.base.sspl_constants import enabled_products, COMMON_CONFIGS
 
-from amqp.egress_processor import EgressProcessor
+from messaging.egress_processor import EgressProcessor
 from json_msgs.messages.actuators.realstor_actuator_response import RealStorActuatorMsg
 
 

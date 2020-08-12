@@ -28,10 +28,10 @@ from framework.utils.service_logging import logger
 from json_msgs.messages.actuators.thread_controller import ThreadControllerMsg
 
 # Import modules to control
-from framework.amqp.egress_processor import EgressProcessor
-from framework.amqp.ingress_processor import IngressProcessor
-from framework.amqp.plane_cntrl_egress_processor import PlaneCntrlEgressProcessor
-from framework.amqp.logging_processor import LoggingProcessor
+from framework.messaging.egress_processor import EgressProcessor
+from framework.messaging.ingress_processor import IngressProcessor
+from framework.messaging.plane_cntrl_egress_processor import PlaneCntrlEgressProcessor
+from framework.messaging.logging_processor import LoggingProcessor
 from framework.base.sspl_constants import enabled_products, cs_legacy_products, cs_products, OperatingSystem, SSPL_SETTINGS
 
 # Note that all threaded message handlers must have an import here to be controlled

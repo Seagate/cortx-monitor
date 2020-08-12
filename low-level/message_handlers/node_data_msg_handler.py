@@ -31,7 +31,7 @@ from json_msgs.messages.sensors.raid_integrity_msg import RAIDIntegrityMsg
 from json_msgs.messages.sensors.disk_space_alert import DiskSpaceAlertMsg
 from json_msgs.messages.sensors.node_hw_data import NodeIPMIDataMsg
 
-from amqp.egress_processor import EgressProcessor
+from messaging.egress_processor import EgressProcessor
 
 from message_handlers.logging_msg_handler import LoggingMsgHandler
 from framework.utils.severity_reader import SeverityReader

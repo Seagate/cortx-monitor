@@ -2,7 +2,7 @@
  ****************************************************************************
  Filename:          plane_cntrl_ingress_processor.py
  Description:       Handles incoming messages for plane controller
-                    via amqp based message broker over network
+                    via messaging bus system over network
  Creation Date:     11/14/2016
  Author:            Jake Abernathy
 
@@ -24,13 +24,13 @@ import pika
 from jsonschema import Draft3Validator, validate
 from pika.exceptions import AMQPError
 
-from framework.amqp.plane_cntrl_egress_processor import \
+from framework.messaging.plane_cntrl_egress_processor import \
     PlaneCntrlEgressProcessor
-from framework.amqp.utils import get_amqp_config
+from framework.messaging.utils import get_messaging_config
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.sspl_constants import RESOURCE_PATH
-from framework.utils.amqp_factory import amqp_factory
+from framework.utils.messaging_factory import messaging_factory
 from framework.utils.service_logging import logger
 from json_msgs.messages.actuators.ack_response import AckResponseMsg
 
@@ -43,19 +43,19 @@ except Exception as ae:
 
 
 class PlaneCntrlIngressProcessor(ScheduledModuleThread, InternalMsgQ):
-    """Handles incoming messages via amqp over network"""
+    """via messaging bus system over network"""
 
     MODULE_NAME = "PlaneCntrlIngressProcessor"
     PRIORITY    = 1
 
     # Section and keys in configuration file
-    AMQPPROCESSOR   = MODULE_NAME.upper()
+    MESSAGINGPROCESSOR   = MODULE_NAME.upper()
     EXCHANGE_NAME       = 'exchange_name'
     QUEUE_NAME          = 'queue_name'
     ROUTING_KEY         = 'routing_key'
     VIRT_HOST           = 'virtual_host'
-    PRIMARY_AMQP        = 'primary_amqp_server'
-    SECONDARY_AMQP      = 'secondary_amqp_server'
+    PRIMARY_MESSAGING        = 'primary_messaging_server'
+    SECONDARY_MESSAGING      = 'secondary_messaging_server'
 
     JSON_ACTUATOR_SCHEMA = "SSPL-LL_Actuator_Request.json"
     JSON_SENSOR_SCHEMA   = "SSPL-LL_Sensor_Request.json"
@@ -108,20 +108,20 @@ class PlaneCntrlIngressProcessor(ScheduledModuleThread, InternalMsgQ):
         # Initialize internal message queues for this module
         super(PlaneCntrlIngressProcessor, self).initialize_msgQ(msgQlist)
 
-        self._current_amqp_server = None
+        self._current_messaging_server = None
 
         self._hostname = gethostname()
 
-        # Get common amqp config
-        amqp_config = get_amqp_config(section=self.AMQPPROCESSOR, 
+        # Get common messaging config
+        messaging_config = get_messaging_config(section=self.MESSAGINGPROCESSOR, 
                     keys=[(self.VIRT_HOST, "SSPL"), (self.EXCHANGE_NAME, "ras_sspl"), 
                     (self.QUEUE_NAME, "ras_control"), (self.ROUTING_KEY, "sspl_ll")])
-        self._comm = amqp_factory.get_amqp_consumer(**amqp_config)
+        self._comm = messaging_factory.get_messaging_consumer(**messaging_config)
         self._comm.init()
 
         # Display values used to configure pika from the config file
-        self._log_debug("amqp user: %s" % self._username)
-        self._log_debug("amqp exchange: %s, routing_key: %s, vhost: %s" %
+        self._log_debug("messaging user: %s" % self._username)
+        self._log_debug("messaging exchange: %s, routing_key: %s, vhost: %s" %
                       (self._exchange_name, self._routing_key, self._virtual_host))
 
     def run(self):
@@ -137,8 +137,8 @@ class PlaneCntrlIngressProcessor(ScheduledModuleThread, InternalMsgQ):
         except AMQPError as e:
             if self.is_running() is True:
                 logger.info(f"{self.MODULE_NAME} ungracefully breaking out of run loop, restarting.")
-                logger.exception(f"{self.MODULE_NAME}, AMQPError: {e}")
-                self._toggle_amqp_servers()
+                logger.exception(f"{self.MODULE_NAME}, MESSAGINGError: {e}")
+                self._toggle_messaging_servers()
                 self._comm.init()
                 self._scheduler.enter(10, self._priority, self.run, ())
             else:
@@ -264,12 +264,12 @@ class PlaneCntrlIngressProcessor(ScheduledModuleThread, InternalMsgQ):
         except Exception as ex:
             logger.exception(f"{self.MODULE_NAME}, _process_job_status exception: {ex}")
 
-    def _toggle_amqp_servers(self):
+    def _toggle_messaging_servers(self):
         """Toggle between hosts when a connection fails"""
-        if self._current_amqp_server == self._primary_amqp_server:
-            self._current_amqp_server = self._secondary_amqp_server
+        if self._current_messaging_server == self._primary_messaging_server:
+            self._current_messaging_server = self._secondary_messaging_server
         else:
-            self._current_amqp_server = self._primary_amqp_server
+            self._current_messaging_server = self._primary_messaging_server
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""
@@ -277,6 +277,6 @@ class PlaneCntrlIngressProcessor(ScheduledModuleThread, InternalMsgQ):
         try:
             self._comm.stop()
         except pika.exceptions.ConnectionClosed:
-            logger.info(f"{self.MODULE_NAME}, shutdown, amqp ConnectionClosed")
+            logger.info(f"{self.MODULE_NAME}, shutdown, messaging ConnectionClosed")
         except Exception as err:
-            logger.info(f"{self.MODULE_NAME}, shutdown, amqp {err}")
+            logger.info(f"{self.MODULE_NAME}, shutdown, messaging {err}")

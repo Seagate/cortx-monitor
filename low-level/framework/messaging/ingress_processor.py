@@ -1,7 +1,7 @@
 """
  ****************************************************************************
  Filename:          ingress_processor.py
- Description:       Handles outgoing messages via amqp based message brokers
+ Description:       Handles outgoing messages via messaging bus system
  Creation Date:     02/11/2015
  Author:            Jake Abernathy
 
@@ -23,13 +23,13 @@ import pika
 from eos.utils.amqp import AmqpConnectionError
 from jsonschema import Draft3Validator, validate
 
-from framework.amqp.egress_processor import EgressProcessor
-from framework.amqp.utils import get_amqp_config
+from framework.messaging.egress_processor import EgressProcessor
+from framework.messaging.utils import get_messaging_config
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.sspl_constants import COMMON_CONFIGS, RESOURCE_PATH
                                            
-from framework.utils.amqp_factory import amqp_factory
+from framework.utils.messaging_factory import messaging_factory
 from framework.utils.service_logging import logger
 from json_msgs.messages.actuators.ack_response import AckResponseMsg
 
@@ -43,13 +43,13 @@ except Exception as ae:
 
 
 class IngressProcessor(ScheduledModuleThread, InternalMsgQ):
-    """Handles incoming messages via amqp"""
+    """Handles outgoing messages via messaging bus system"""
 
     MODULE_NAME = "IngressProcessor"
     PRIORITY = 1
 
     # Section and keys in configuration file
-    AMQPPROCESSOR = MODULE_NAME.upper()
+    MESSAGINGPROCESSOR = MODULE_NAME.upper()
     EXCHANGE_NAME = 'exchange_name'
     QUEUE_NAME = 'queue_name'
     ROUTING_KEY = 'routing_key'
@@ -109,14 +109,14 @@ class IngressProcessor(ScheduledModuleThread, InternalMsgQ):
         # Initialize internal message queues for this module
         super(IngressProcessor, self).initialize_msgQ(msgQlist)
 
-        amqp_config = get_amqp_config(section=self.AMQPPROCESSOR, 
+        messaging_config = get_messaging_config(section=self.MESSAGINGPROCESSOR, 
                     keys=[(self.VIRT_HOST, "SSPL"), (self.EXCHANGE_NAME, "sspl-in"), 
                     (self.QUEUE_NAME, "sensor-queue"), (self.ROUTING_KEY, "actuator-req-queue")])
-        self._comm = amqp_factory.get_amqp_consumer(**amqp_config)
+        self._comm = messaging_factory.get_messaging_consumer(**messaging_config)
         try:
             self._comm.init()
         except AmqpConnectionError:
-            logger.error(f"{self.MODULE_NAME} amqp connection is not initialized")
+            logger.error(f"{self.MODULE_NAME} messaging connection is not initialized")
 
     def run(self):
         # self._set_debug(True)
@@ -230,6 +230,6 @@ class IngressProcessor(ScheduledModuleThread, InternalMsgQ):
         try:
             self._comm.stop()
         except pika.exceptions.ConnectionClosed:
-            logger.info(f"{self.MODULE_NAME}, shutdown, amqp ConnectionClosed")
+            logger.info(f"{self.MODULE_NAME}, shutdown, messaging ConnectionClosed")
         except Exception as err:
-            logger.info(f"{self.MODULE_NAME}, shutdown, amqp {err}")
+            logger.info(f"{self.MODULE_NAME}, shutdown, messaging {err}")

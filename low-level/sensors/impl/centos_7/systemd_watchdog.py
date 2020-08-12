@@ -27,7 +27,7 @@ import uuid
 
 from datetime import datetime, timedelta
 
-from framework.amqp.egress_processor import EgressProcessor
+from framework.messaging.egress_processor import EgressProcessor
 from framework.base.module_thread import SensorThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger

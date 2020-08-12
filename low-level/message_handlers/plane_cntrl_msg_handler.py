@@ -21,7 +21,7 @@ from framework.utils.service_logging import logger
 from framework.base.sspl_constants import cs_legacy_products
 
 # Modules that receive messages from this module
-from framework.amqp.plane_cntrl_egress_processor import PlaneCntrlEgressProcessor
+from framework.messaging.plane_cntrl_egress_processor import PlaneCntrlEgressProcessor
 from json_msgs.messages.actuators.ack_response import AckResponseMsg
 
 

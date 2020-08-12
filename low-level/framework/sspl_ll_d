@@ -41,18 +41,18 @@ from framework.utils.service_logging import logger
 from framework.utils.store_factory import store
 
 # Modules for handling RabbitMQ messages and manipulating internal threads
-from framework.amqp.egress_processor import EgressProcessor
-from framework.amqp.ingress_processor import IngressProcessor
+from framework.messaging.egress_processor import EgressProcessor
+from framework.messaging.ingress_processor import IngressProcessor
 
-from framework.amqp.plane_cntrl_egress_processor import PlaneCntrlEgressProcessor
-from framework.amqp.plane_cntrl_ingress_processor import PlaneCntrlIngressProcessor
+from framework.messaging.plane_cntrl_egress_processor import PlaneCntrlEgressProcessor
+from framework.messaging.plane_cntrl_ingress_processor import PlaneCntrlIngressProcessor
 from framework.base.sspl_constants import enabled_products, OperatingSystem, COMMON_CONFIGS, SSPL_SETTINGS
 from framework.base.module_thread import SensorThread
 from framework.actuator_state_manager import actuator_state_manager
 
-from framework.amqp.logging_processor import LoggingProcessor
-from framework.amqp.thread_controller import ThreadController
-from framework.amqp.egress_accumulated_msgs_processor import \
+from framework.messaging.logging_processor import LoggingProcessor
+from framework.messaging.thread_controller import ThreadController
+from framework.messaging.egress_accumulated_msgs_processor import \
     EgressAccumulatedMsgsProcessor
 from framework.base.sspl_constants import PRODUCT_FAMILY
 

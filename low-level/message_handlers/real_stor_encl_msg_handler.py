@@ -29,7 +29,7 @@ from json_msgs.messages.sensors.realstor_sideplane_expander_data import \
 from json_msgs.messages.sensors.realstor_logical_volume_data import \
     RealStorLogicalVolumeDataMsg
 from json_msgs.messages.sensors.realstor_encl_data_msg import RealStorEnclDataMsg
-from amqp.egress_processor import EgressProcessor
+from messaging.egress_processor import EgressProcessor
 
 
 class RealStorEnclMsgHandler(ScheduledModuleThread, InternalMsgQ):

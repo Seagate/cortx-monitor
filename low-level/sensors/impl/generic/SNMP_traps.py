@@ -21,7 +21,7 @@ from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
 
 # Modules that receive messages from this module
-from framework.amqp.egress_processor import EgressProcessor
+from framework.messaging.egress_processor import EgressProcessor
 from message_handlers.logging_msg_handler import LoggingMsgHandler
 
 from json_msgs.messages.sensors.snmp_trap import SNMPtrapMsg

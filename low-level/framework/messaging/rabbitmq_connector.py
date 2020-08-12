@@ -13,7 +13,7 @@ from framework.utils.config_reader import ConfigReader
 from framework.base.sspl_constants import COMMON_CONFIGS, component, CONSUL_HOST, CONSUL_PORT
 
 
-RABBITMQ_CLUSTER_SECTION = 'AMQPCLUSTER'
+RABBITMQ_CLUSTER_SECTION = 'MESSAGINGCLUSTER'
 RABBITMQ_CLUSTER_HOSTS_KEY = 'cluster_nodes'
 
 host = os.getenv('CONSUL_HOST', CONSUL_HOST)
@@ -44,7 +44,7 @@ def get_cluster_connection(username, password, virtual_host):
     if isinstance(hosts, str):
         hosts = hosts.strip().split(",")
     ampq_hosts = [
-        f'amqp://{username}:{password}@{host}/{virtual_host}' for host in hosts
+        f'messaging://{username}:{password}@{host}/{virtual_host}' for host in hosts
     ]
     ampq_hosts = [pika.URLParameters(host) for host in ampq_hosts]
     random.shuffle(ampq_hosts)

@@ -23,7 +23,7 @@ import subprocess
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
-from framework.amqp.egress_processor import EgressProcessor
+from framework.messaging.egress_processor import EgressProcessor
 
 from json_msgs.messages.sensors.drive_mngr import DriveMngrMsg
 from json_msgs.messages.sensors.hpi_data import HPIDataMsg

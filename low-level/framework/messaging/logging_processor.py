@@ -2,7 +2,7 @@
  ****************************************************************************
  Filename:          logging_processor.py
  Description:       Handles logging Messages to journald coming directly
-                    from the amqp exchange sspl_iem
+                    from the messaging bus exchange sspl_iem
  Creation Date:     02/18/2015
  Author:            Jake Abernathy
 
@@ -23,10 +23,10 @@ from syslog import (LOG_ALERT, LOG_CRIT, LOG_DEBUG, LOG_EMERG, LOG_ERR,
 import pika
 from eos.utils.amqp import AmqpConnectionError
 
-from framework.amqp.utils import get_amqp_config
+from framework.messaging.utils import get_messaging_config
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.module_thread import ScheduledModuleThread
-from framework.utils.amqp_factory import amqp_factory
+from framework.utils.messaging_factory import messaging_factory
 from framework.utils.autoemail import AutoEmail
 from framework.utils.service_logging import logger
 # Modules that receive messages from this module
@@ -80,15 +80,15 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
 
         self._autoemailer = AutoEmail(conf_reader)
 
-        # Get common amqp config
-        amqp_config = get_amqp_config(section=self.LOGGINGPROCESSOR, 
+        # Get common messaging config
+        messaging_config = get_messaging_config(section=self.LOGGINGPROCESSOR, 
                     keys=[(self.VIRT_HOST, "SSPL"), (self.EXCHANGE_NAME, "sspl-in"), 
                     (self.QUEUE_NAME, "iem-queue"), (self.ROUTING_KEY, "iem-key")])
-        self._comm = amqp_factory.get_amqp_consumer(**amqp_config)
+        self._comm = messaging_factory.get_messaging_consumer(**messaging_config)
         try:
             self._comm.init()
         except AmqpConnectionError:
-            logger.error(f"{self.MODULE_NAME} amqp connection is not initialized")
+            logger.error(f"{self.MODULE_NAME} messaging connection is not initialized")
 
     def run(self):
         """Run the module periodically on its own thread."""
@@ -179,4 +179,4 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
         try:
             self._comm.stop()
         except pika.exceptions.ConnectionClosed:
-            logger.info(f"{self.MODULE_NAME}, shutdown, amqp ConnectionClosed")
+            logger.info(f"{self.MODULE_NAME}, shutdown, messaging ConnectionClosed")

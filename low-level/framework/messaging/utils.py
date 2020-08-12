@@ -1,7 +1,7 @@
 """
  ****************************************************************************
  Filename:          utils.py
- Description:       Util functions for amqp
+ Description:       Util functions for messaging
  Creation Date:     08/06/2020
  Author:            Sandeep Anjara
 
@@ -17,23 +17,23 @@
 from framework.utils import encryptor
 from framework.utils.config_reader import ConfigReader
 from framework.base.sspl_constants import ServiceTypes, COMMON_CONFIGS, \
-                    AMQP_EXCHANGE_TYPE_TOPIC, AMQP_PORT
+    AMQP_EXCHANGE_TYPE_TOPIC, AMQP_PORT, MESSAGING, MESSAGING_TYPE_RABBITMQ, \
+    MESSAGING_CLUSTER_SECTION
 
 
 SYSTEM_INFORMATION_KEY = 'SYSTEM_INFORMATION'
 CLUSTER_ID_KEY = 'cluster_id'
-AMQP_CLUSTER_SECTION = 'AMQPCLUSTER'
-AMQP_CLUSTER_HOSTS_KEY = 'cluster_nodes'
+MESSAGING_CLUSTER_HOSTS_KEY = 'cluster_nodes'
 EGRESSPROCESSOR = 'EGRESSPROCESSOR'
 conf_reader = ConfigReader()
 
-amqp_type = conf_reader._get_value_with_default(section="AMQP", 
-                            key="type", default_value="rabbitmq")
+messaging_bus_type = conf_reader._get_value_with_default(section=MESSAGING, 
+                            key="type", default_value=MESSAGING_TYPE_RABBITMQ)
 
-# AMQP classes have diffrent attributes than sspl config
-# This mapping specifies what sspl config to use for AMQP
+# MESSAGING classes have diffrent attributes than sspl config
+# This mapping specifies what sspl config to use for MESSAGING
 # class attibute
-amqp_attibute_config_maping = {
+messaging_attibute_config_maping = {
     "exchange_name": "exchange",
     "queue_name": "exchange_queue"
 }
@@ -43,14 +43,14 @@ password = conf_reader._get_value_with_default(section=EGRESSPROCESSOR,
                                     key="password", default_value="sspl4ever")
 cluster_id = conf_reader._get_value_with_default(SYSTEM_INFORMATION_KEY,
                 COMMON_CONFIGS.get(SYSTEM_INFORMATION_KEY).get(CLUSTER_ID_KEY),'')
-decryption_key = encryptor.gen_key(cluster_id, ServiceTypes.__members__[amqp_type.upper()].value)
-hosts = conf_reader._get_value_list(AMQP_CLUSTER_SECTION, 
-                    COMMON_CONFIGS.get(AMQP_CLUSTER_SECTION).get(AMQP_CLUSTER_HOSTS_KEY))
+decryption_key = encryptor.gen_key(cluster_id, ServiceTypes.__members__[messaging_bus_type.upper()].value)
+hosts = conf_reader._get_value_list(MESSAGING_CLUSTER_SECTION, 
+                    COMMON_CONFIGS.get(MESSAGING_CLUSTER_SECTION).get(MESSAGING_CLUSTER_HOSTS_KEY))
 username = conf_reader._get_value_with_default(section=EGRESSPROCESSOR, 
                                     key="username", default_value="sspluser")
-password = encryptor.decrypt(decryption_key, password.encode('ascii'), "AMQP")
+password = encryptor.decrypt(decryption_key, password.encode('ascii'), MESSAGING)
 
-amqp_common_config = {
+messaging_common_config = {
         "hosts": hosts,
         "port": AMQP_PORT,
         "username": username,
@@ -61,7 +61,7 @@ amqp_common_config = {
         "retry_count": 1
         }
 
-def get_amqp_config(section, keys):
+def get_messaging_config(section, keys):
     """
     Merge common and module specific configs.
 
@@ -71,6 +71,6 @@ def get_amqp_config(section, keys):
     """
     config = {}
     for key, default_value in keys:
-        config[amqp_attibute_config_maping.get(key, key)] = \
+        config[messaging_attibute_config_maping.get(key, key)] = \
             conf_reader._get_value_with_default(section, key, default_value)
-    return {**amqp_common_config, **config}
+    return {**messaging_common_config, **config}

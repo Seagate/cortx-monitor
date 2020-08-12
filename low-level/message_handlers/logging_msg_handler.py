@@ -22,7 +22,7 @@ from framework.utils.service_logging import logger
 from framework.base.sspl_constants import enabled_products
 
 # Modules that receive messages from this module
-from framework.amqp.egress_processor import EgressProcessor
+from framework.messaging.egress_processor import EgressProcessor
 
 from json_msgs.messages.actuators.ack_response import AckResponseMsg
 

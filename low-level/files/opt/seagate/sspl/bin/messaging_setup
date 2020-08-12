@@ -11,7 +11,7 @@ source $script_dir/constants.sh
 # Import common functions
 source $script_dir/utils.sh
 
-amqp_type=$(get_amqp_type)
-validate_amqp_type $amqp_type
+messaging_bus_type=$(get_messaging_bus_type)
+validate_messaging_bus_type $messaging_bus_type
 
-$script_dir/${amqp_type}_setup
+$script_dir/${messaging_bus_type}_setup

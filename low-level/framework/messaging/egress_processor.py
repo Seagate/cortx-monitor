@@ -1,7 +1,7 @@
 """
  ****************************************************************************
  Filename:          egress_processor.py
- Description:       Handles outgoing messages via amqp based message brokers
+ Description:       Handles outgoing messages via messaging bus system
  Creation Date:     01/14/2015
  Author:            Jake Abernathy
 
@@ -22,12 +22,12 @@ import time
 import pika
 from eos.utils.amqp import AmqpConnectionError
 
-from framework.amqp.utils import get_amqp_config
+from framework.messaging.utils import get_messaging_config
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.sspl_constants import COMMON_CONFIGS, ServiceTypes
 from framework.utils import encryptor, mon_utils
-from framework.utils.amqp_factory import amqp_factory
+from framework.utils.messaging_factory import messaging_factory
 from framework.utils.service_logging import logger
 from framework.utils.store_factory import store
 from framework.utils.store_queue import store_queue
@@ -41,13 +41,13 @@ except Exception as ae:
 
 
 class EgressProcessor(ScheduledModuleThread, InternalMsgQ):
-    """Handles outgoing messages via amqp"""
+    """Handles outgoing messages via messaging bus system"""
 
     MODULE_NAME = "EgressProcessor"
     PRIORITY    = 1
 
     # Section and keys in configuration file
-    AMQPPROCESSOR           = MODULE_NAME.upper()
+    MESSAGINGPROCESSOR           = MODULE_NAME.upper()
     VIRT_HOST               = 'virtual_host'
 
     EXCHANGE_NAME           = 'exchange_name'
@@ -86,39 +86,39 @@ class EgressProcessor(ScheduledModuleThread, InternalMsgQ):
 
         self._read_config()
 
-        # Get common amqp config
-        amqp_config = get_amqp_config(section=self.AMQPPROCESSOR, 
+        # Get common messaging config
+        messaging_config = get_messaging_config(section=self.MESSAGINGPROCESSOR, 
                     keys=[(self.VIRT_HOST, "SSPL"), (self.EXCHANGE_NAME, "sspl-out"), 
                     (self.QUEUE_NAME, "sensor-queue"), (self.ROUTING_KEY, "sensor-key")])
-        self._default_comm = amqp_factory.get_amqp_producer(**amqp_config)
+        self._default_comm = messaging_factory.get_messaging_producer(**messaging_config)
         try:
             self._default_comm.init()
         except AmqpConnectionError:
-            logger.warning(f"{self.MODULE_NAME} amqp connection is not initialized, \
+            logger.warning(f"{self.MODULE_NAME} messaging connection is not initialized, \
                  messages will be stored in consul")
 
-        # Update ack specific amqp config
-        ack_amqp_config = {"exchange_queue" : self._conf_reader._get_value_with_default(self.AMQPPROCESSOR,
+        # Update ack specific messaging config
+        ack_messaging_config = {"exchange_queue" : self._conf_reader._get_value_with_default(self.MESSAGINGPROCESSOR,
                                                                  self.ACK_QUEUE_NAME, 'sensor-queue'),
-                           "routing_key": self._conf_reader._get_value_with_default(self.AMQPPROCESSOR,
+                           "routing_key": self._conf_reader._get_value_with_default(self.MESSAGINGPROCESSOR,
                                                                  self.ACK_ROUTING_KEY, 'sensor-key')}
-        ack_amqp_config = {**amqp_config, **ack_amqp_config}
-        self._ack_comm = amqp_factory.get_amqp_producer(**ack_amqp_config)
+        ack_messaging_config = {**messaging_config, **ack_messaging_config}
+        self._ack_comm = messaging_factory.get_messaging_producer(**ack_messaging_config)
         try:
             self._ack_comm.init()
         except AmqpConnectionError:
-            logger.warning(f"{self.MODULE_NAME} amqp connection is not initialized, \
+            logger.warning(f"{self.MODULE_NAME} messaging connection is not initialized, \
                  messages will be stored in consul")
 
-        # Update IEM specifc amqp config
-        iem_amqp_config = {"exchange": self._conf_reader._get_value_with_default(self.AMQPPROCESSOR,
+        # Update IEM specifc messaging config
+        iem_messaging_config = {"exchange": self._conf_reader._get_value_with_default(self.MESSAGINGPROCESSOR,
                                                         self.IEM_ROUTE_EXCHANGE_NAME, 'sspl-in')}
-        iem_amqp_config = {**amqp_config, **iem_amqp_config}
-        self._iem_comm = amqp_factory.get_amqp_producer(**amqp_config)
+        iem_messaging_config = {**messaging_config, **iem_messaging_config}
+        self._iem_comm = messaging_factory.get_messaging_producer(**messaging_config)
         try:
             self._iem_comm.init()
         except AmqpConnectionError:
-            logger.warning(f"{self.MODULE_NAME} amqp connection is not initialized, \
+            logger.warning(f"{self.MODULE_NAME} messaging connection is not initialized, \
                  messages will be stored in consul")
 
     def run(self):
@@ -148,18 +148,18 @@ class EgressProcessor(ScheduledModuleThread, InternalMsgQ):
             self._scheduler.enter(1, self._priority, self.run, ())
 
     def _read_config(self):
-        """Configure the amqp exchange with defaults available"""
+        """Configure the messaging exchange with defaults available"""
         try:
-            self._signature_user = self._conf_reader._get_value_with_default(self.AMQPPROCESSOR,
+            self._signature_user = self._conf_reader._get_value_with_default(self.MESSAGINGPROCESSOR,
                                                                  self.SIGNATURE_USERNAME,
                                                                  'sspl-ll')
-            self._signature_token = self._conf_reader._get_value_with_default(self.AMQPPROCESSOR,
+            self._signature_token = self._conf_reader._get_value_with_default(self.MESSAGINGPROCESSOR,
                                                                  self.SIGNATURE_TOKEN,
                                                                  'FAKETOKEN1234')
-            self._signature_expires = self._conf_reader._get_value_with_default(self.AMQPPROCESSOR,
+            self._signature_expires = self._conf_reader._get_value_with_default(self.MESSAGINGPROCESSOR,
                                                                  self.SIGNATURE_EXPIRES,
                                                                  "3600")
-            self._iem_route_addr = self._conf_reader._get_value_with_default(self.AMQPPROCESSOR,
+            self._iem_route_addr = self._conf_reader._get_value_with_default(self.MESSAGINGPROCESSOR,
                                                                  self.IEM_ROUTE_ADDR,
                                                                  '')
             if self._iem_route_addr != "":
@@ -195,7 +195,7 @@ class EgressProcessor(ScheduledModuleThread, InternalMsgQ):
             self._jsonMsg["signature"] = "SecurityLibNotInstalled"
 
     def _transmit_msg_on_exchange(self):
-        """Transmit json message onto amqp exchange"""
+        """Transmit json message onto messaging exchange"""
         self._log_debug("_transmit_msg_on_exchange, jsonMsg: %s" % self._jsonMsg)
 
         try:
@@ -235,7 +235,7 @@ class EgressProcessor(ScheduledModuleThread, InternalMsgQ):
                 try:
                     self._default_comm.send(message=self._jsonMsg)
                 except AmqpConnectionError:
-                    logger.error(f"{self.MODULE_NAME}, _transmit_msg_on_exchange, amqp connectivity lost, adding message to consul {self._jsonMsg}")
+                    logger.error(f"{self.MODULE_NAME}, _transmit_msg_on_exchange, messaging connectivity lost, adding message to consul {self._jsonMsg}")
                     store_queue.put(json.dumps(self._jsonMsg))
 
             # No exceptions thrown so success

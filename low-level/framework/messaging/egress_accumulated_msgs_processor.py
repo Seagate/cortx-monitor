@@ -3,7 +3,7 @@
  Filename:          egress_accumulated_msgs_processor.py
  Description:       This processor handles acuumalted messages in consul
                     This keeps on running periodicaly and check if there is
-                    any message to be sent to amqp based message broker. 
+                    any message to be sent to messaging bus system.
                     If message broker connection is availble message will 
                     be sent, else in next iteration it will be retried.
  Creation Date:     03/19/2020
@@ -26,22 +26,22 @@ import time
 
 from eos.utils.amqp import AmqpConnectionError
 
-from framework.amqp.utils import get_amqp_config
+from framework.messaging.utils import get_messaging_config
 from framework.base.sspl_constants import ServiceTypes, COMMON_CONFIGS
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
 from framework.utils.store_queue import store_queue
-from framework.utils.amqp_factory import amqp_factory
+from framework.utils.messaging_factory import messaging_factory
 
 class EgressAccumulatedMsgsProcessor(ScheduledModuleThread, InternalMsgQ):
-    """Send any unsent message to amqp"""
+    """Send any unsent message to messaging"""
 
     MODULE_NAME = "EgressAccumulatedMsgsProcessor"
     PRIORITY    = 1
 
-    AMQPPROCESSOR           = 'EGRESSPROCESSOR'
-    AMQPPROCESSOR           = MODULE_NAME.upper()
+    MESSAGINGPROCESSOR           = 'EGRESSPROCESSOR'
+    MESSAGINGPROCESSOR           = MODULE_NAME.upper()
     VIRT_HOST               = 'virtual_host'
 
     EXCHANGE_NAME           = 'exchange_name'
@@ -70,11 +70,11 @@ class EgressAccumulatedMsgsProcessor(ScheduledModuleThread, InternalMsgQ):
 
         super(EgressAccumulatedMsgsProcessor, self).initialize_msgQ(msgQlist)
 
-        # Get common amqp config
-        amqp_config = get_amqp_config(section=self.AMQPPROCESSOR, 
+        # Get common messaging config
+        messaging_config = get_messaging_config(section=self.MESSAGINGPROCESSOR, 
                     keys=[(self.VIRT_HOST, "SSPL"), (self.EXCHANGE_NAME, "sspl-out"), 
                     (self.QUEUE_NAME, "sensor-queue"), (self.ROUTING_KEY, "sensor-key")])
-        self._comm = amqp_factory.get_amqp_producer(**amqp_config)
+        self._comm = messaging_factory.get_messaging_producer(**messaging_config)
         
         # No of message processed
         self._message_count = 0
