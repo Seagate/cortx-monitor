@@ -61,7 +61,7 @@ def make_manifest_support_bundle_tarfile(parser, tmpFile):
             file_name = "manifest_{0}_SystemID-{1}_Node-{2}_plus_Encl-{3}_{4}.tar.gz".format(date_time, cluster_id,
                 node_hostname, enclosure_wwn, parser[1])
         else:
-            file_name = "manifest_{0}_SystemID-{1}_Node-{2}_{4}.tar.gz".format(date_time, cluster_id, node_hostname,
+            file_name = "manifest_{0}_SystemID-{1}_Node-{2}_{3}.tar.gz".format(date_time, cluster_id, node_hostname,
                 parser[1])
 
         with tarfile.open(localTempPath+file_name, "w:gz") as tar:
