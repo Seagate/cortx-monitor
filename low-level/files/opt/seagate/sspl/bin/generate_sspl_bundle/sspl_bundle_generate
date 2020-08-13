@@ -86,7 +86,9 @@ def make_sspl_support_bundle_tarfile(parser, tmpFile):
     try:
         sspl_state = ""
         try:
-            _, sspl_state=open(f"/var/{PRODUCT_FAMILY}/sspl/data/state.txt").readline().rstrip().split("=")
+            sspl_state=open(f"/var/{PRODUCT_FAMILY}/sspl/data/state.txt").readline().rstrip().split("=")
+            # Capturing enclosure logs only when sspl state is active
+            sspl_state = sspl_state[1] if len(sspl_state)==2 else ''
             if sspl_state == 'active':
                 subprocess.call([f"/opt/seagate/{PRODUCT_FAMILY}/sspl/lib/resource_health_view", "-n", "-e", "-s"], shell=False)
             else:
@@ -97,6 +99,7 @@ def make_sspl_support_bundle_tarfile(parser, tmpFile):
                 Can't determine the SSPL state, So enclosure logs also being collected.")
             sspl_state == 'active'
             subprocess.call([f"/opt/seagate/{PRODUCT_FAMILY}/sspl/lib/resource_health_view", "-n", "-e", "-s"], shell=False)
+        
         rmq_file = open(rabbitmq_status, "w+")
         for key, value in rabbitmq_cmd.items():
             rmq_file.write(key+':\nCommand: '+value+'\n')
@@ -193,7 +196,7 @@ def make_sspl_support_bundle_tarfile(parser, tmpFile):
                 tar.add(iem_log_dir, arcname=file_dir+"/"+node_hostname+"/iems/")
             tar.close()
 
-        if os.path.exists(enclosure_log) and sspl_state == 'active':
+        if os.path.exists(enclosure_log) and sspl_state == 'active' and "-noencl" not in parser:
             enclosure_zip_file = "enclosure-wwn-{0}-logs-{1}.zip".format(enclosure_wwn, str(int(time.time())))
             shutil.copy(enclosure_log, localTempPath+enclosure_zip_file)
 
@@ -226,7 +229,7 @@ def make_sspl_support_bundle_tarfile(parser, tmpFile):
     print("SSPL Support Bundle Files Uploaded Successfully..!")
     print("SSPL Support Bundle Location: %s" % localTempPath+"sspl_"+file_name)
     print("Manifest File Location: %s" % localTempPath+"manifest_"+file_name)
-    if os.path.exists(enclosure_log) and sspl_state == 'active':
+    if os.path.exists(enclosure_log) and sspl_state == 'active' and "-noencl" not in parser:
         print("Enclosure Log File Location: %s" % localTempPath+enclosure_zip_file)
 
 def write_content_in_file(file_data, file_path, instance):
