@@ -70,7 +70,7 @@ def make_manifest_support_bundle_tarfile(parser, tmpFile):
                 .replace(f"_{parser[1]}.tar.gz","").replace("plus_",""))
             node_encl_summary = {"cluster_"+cluster_id:{}}
             if os.path.exists(encl_manifest) and sspl_state == 'active':
-                tar.add(encl_manifest, arcname=file_dir+"/enclosure-wwn-{0}_manifest.json".format(enclosure_wwn))
+                tar.add(encl_manifest, arcname=file_dir+"/enclosure-{0}_manifest.json".format(enclosure_wwn))
                 with open(encl_manifest, 'r') as j:
                     encl_manifest_dict = json.loads(j.read())
                     node_encl_summary["cluster_"+cluster_id].update(fetch_encl_summary_data(encl_manifest_dict["hw_specifics"]))
