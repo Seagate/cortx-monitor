@@ -63,6 +63,11 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
     IPMI_RESOURCE_TYPE_PSU = "node:fru:psu"
     IPMI_RESOURCE_TYPE_FAN = "node:fru:fan"
     IPMI_RESOURCE_TYPE_DISK = "node:fru:disk"
+    IPMI_RESOURCE_TYPE_TEMPERATURE = "node:sensor:temperature"
+    IPMI_RESOURCE_TYPE_VOLTAGE = "node:sensor:voltage"
+    # TODO: Enable this code once Intel servers become available
+    # to test the current sensor
+    # IPMI_RESOURCE_TYPE_CURRENT = "node:sensor:current"
     NW_RESOURCE_TYPE = "node:interface:nw"
     NW_CABLE_RESOURCE_TYPE = "node:interface:nw:cable"
     host_fault = False
