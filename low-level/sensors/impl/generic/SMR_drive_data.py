@@ -211,7 +211,7 @@ class SMRdriveData(SensorThread, InternalMsgQ):
 
     def _get_config(self):
         """Retrieves the information in /etc/sspl.conf"""
-        self._logging_interval =  int(self._conf_reader._get_value_with_default(self.SMRDRIVEDATA,
+        self._logging_interval = int(self._conf_reader._get_value_with_default(self.SMRDRIVEDATA,
                                                         self.LOGGING_INTERVAL,
                                                         3600))
         logger.info(f"Logging interval: {self._logging_interval}")

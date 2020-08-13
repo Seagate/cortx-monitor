@@ -296,8 +296,8 @@ def main(conf_reader, systemd_support):
     logger.info("modules_to_resume: {0}".format(str(modules_to_resume)))
 
     # Use reflection to instantiate the classes based upon its class name in config file
-    core_processors = list(SSPL_SETTINGS.get("CORE_PROCESSORS"))
-    logger.info("sspl-ll Bootstrap: core processors to load: %s" % core_processors)
+    core_processors = SSPL_SETTINGS.get("CORE_PROCESSORS")
+    logger.info("sspl-ll Bootstrap: core processors to load: %s" % (core_processors, ))
     for core_processor in core_processors:
         klass = globals()[core_processor]
 
@@ -309,8 +309,8 @@ def main(conf_reader, systemd_support):
     sspl_threaded_modules[RabbitMQEgressAccumulatedMsgsProcessor] = RabbitMQEgressAccumulatedMsgsProcessor()
     msgQlist[RabbitMQEgressAccumulatedMsgsProcessor.name()] = queue.Queue()
 
-    message_handlers = list(SSPL_SETTINGS.get("MESSAGE_HANDLERS"))
-    logger.info("sspl-ll Bootstrap: message handlers to load: %s" % message_handlers)
+    message_handlers = SSPL_SETTINGS.get("MESSAGE_HANDLERS")
+    logger.info("sspl-ll Bootstrap: message handlers to load: %s" % (message_handlers, ))
 
     for message_handler in message_handlers:
         klass = globals()[message_handler]
@@ -396,14 +396,14 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist, operating_system
     """Loops thru list of sensors/actuators and instantiate"""
 
     # Read in list of sensors
-    sensors = list(SSPL_SETTINGS.get("SENSORS"))
-    logger.info("sspl-ll Bootstrap: sensors to load: %s" % sensors)
+    sensors = SSPL_SETTINGS.get("SENSORS")
+    logger.info("sspl-ll Bootstrap: sensors to load: %s" % (sensors, ))
 
     # Read in list of actuators
-    actuators = list(SSPL_SETTINGS.get("ACTUATORS"))
+    actuators = SSPL_SETTINGS.get("ACTUATORS")
     if setup in ['gw', 'cmu', 'vm'] and 'HPIactuator' in actuators:
         actuators.remove('HPIactuator')
-    logger.info("sspl-ll Bootstrap: actuators to load: %s" % actuators)
+    logger.info("sspl-ll Bootstrap: actuators to load: %s" % (actuators, ))
 
     # Import in the proper classes based upon values from config file
     if operating_system == OperatingSystem.CENTOS7.value or operating_system == OperatingSystem.RHEL7.value or \

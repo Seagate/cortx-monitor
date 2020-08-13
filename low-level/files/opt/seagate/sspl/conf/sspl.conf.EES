@@ -56,7 +56,7 @@ primary_rabbitmq_host=localhost
 cluster_nodes=localhost
 erlang_cookie=QLDZYPYEYGHECTHYQXFJ
 
-[LOGGINGMSGHANDLER] 
+[LOGGINGMSGHANDLER]
 iem_routing_enabled=false
 iem_log_locally=true
 
