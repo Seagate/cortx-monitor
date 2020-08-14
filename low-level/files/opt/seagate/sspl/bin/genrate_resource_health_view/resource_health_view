@@ -601,7 +601,35 @@ class SSPLHealthView(object):
                     singleton_realstorencl.faults_persistent_cache)
 
     def build_encl_hw_specifics_instances(self):
-        return self.get_realstor_show_data(self.encl_hw_specifics_api)
+        fan_module_list = []
+        sideplane_list = []
+        chassis_midplane_list = []
+        enclosure_data = self.get_realstor_show_data(self.encl_hw_specifics_api)
+        for encl_fru in enclosure_data['enclosure-fru']:
+            if encl_fru['name'] == 'FAN MODULE':
+                try:
+                    fan_number = encl_fru['fru-location'].split()[-1]
+                    for fan_module in enclosure_data['enclosures'][0]['fan-modules']:
+                        if fan_module['durable-id'].split('.')[-1] == fan_number:
+                            fan_module['part-number'] = encl_fru['part-number']
+                            fan_module['serial-number'] = encl_fru['serial-number']
+                            fan_module_list.append(fan_module)
+                except Exception as e:
+                    print("Error while updating fan module {0} information : {1}".format(fan_number, e))
+            elif encl_fru['name'] == 'SIDEPLANE':
+                encl_fru['object-name'] = encl_fru['name'].lower()
+                sideplane_list.append(encl_fru)
+            elif encl_fru['name'] == 'CHASSIS_MIDPLANE':
+                encl_fru['object-name'] = encl_fru['name'].lower()
+                chassis_midplane_list.append(encl_fru)
+
+        if len(fan_module_list) == len(enclosure_data['enclosures'][0]['fan-modules']):
+            enclosure_data['enclosures'][0]['fan-modules'] = fan_module_list
+        if sideplane_list:
+            enclosure_data['enclosures'][0].update({'sideplane':sideplane_list})
+        if chassis_midplane_list:
+            enclosure_data['enclosures'][0].update({'chassis-midplane':chassis_midplane_list})
+        return enclosure_data
 
     def write_content_in_file(self, file_path, file_data, instance):
         try:
