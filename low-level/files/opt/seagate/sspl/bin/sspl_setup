@@ -12,6 +12,7 @@ SCRIPT_DIR=$(dirname $0)
 . $SCRIPT_DIR/constants.sh
 
 SSPL_CONFIGURED="/var/$PRODUCT_FAMILY/sspl/sspl-configured"
+REPLACEMENT_NODE_ENV_VAR_FILE="/etc/profile.d/set_replacement_env.sh"
 
 usage() {
     cat << EOF
@@ -66,7 +67,22 @@ case $cmd in
 
     check )
         sudo python3 $SCRIPT_DIR/validate_consul_config.py
-        [ -f $SSPL_CONFIGURED ] && exit $?
+
+        # Check if sspl-configured file exists at /var/cortx/sspl location.
+        # If not, then check if its a replaced node by checking existence of
+        # a file /etc/profile.d/set_replacement_env.sh. If its a replaced
+        # node, this file will be present. Otherwise, this file will not be
+        # present on the system.
+        [ -f $SSPL_CONFIGURED ] && exit $? || {
+
+            [[ -f $REPLACEMENT_NODE_ENV_VAR_FILE ]] && {
+
+                # Its a replaced node..Create that file and exit successfully
+                sudo touch $SSPL_CONFIGURED && exit $?
+            }
+        }
+        # sspl-configured file is not present and its not a replaced node either
+        # Log the error and exit.
         logger -i -p local3.err "SSPL is not configured. Run provisioner scripts in $SSPL_BASE_DIR/bin."
         exit 1
         ;;
