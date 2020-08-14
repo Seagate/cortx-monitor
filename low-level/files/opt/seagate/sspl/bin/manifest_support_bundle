@@ -108,7 +108,7 @@ def fetch_node_summary_data(node_manifest_dict):
     final_node_summary_dict={}
 
     cortx_build_version = 'NA'
-    cortx_build_cmd = f"sudo salt-call pillar.get release:target_build --output=newline_values_only"
+    cortx_build_cmd = f"sudo salt-call pillar.get eos_release:target_build --output=newline_values_only"
     try:
         subout = subprocess.Popen(cortx_build_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         result = subout.stdout.readlines()
