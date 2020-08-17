@@ -200,6 +200,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         logger.info(f"Using cache dir: {self.cache_dir_path}")
 
         self.index_file_name = os.path.join(self.cache_dir_path, self.INDEX_FILE)
+        self.index_file = self._get_file(self.index_file_name)
 
         bad_index_file = \
                 not os.path.exists(self.index_file_name) or \
@@ -218,17 +219,15 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
             index = int(index, base=16)
         literal = "{0:x}\n".format(index)
 
-        with self._get_file(self.index_file_name) as index_file :
-            index_file.seek(0)
-            index_file.truncate()
-            index_file.write(literal)
-            index_file.flush()
+        self.index_file.seek(0)
+        self.index_file.truncate()
+        self.index_file.write(literal)
+        self.index_file.flush()
 
     def _read_index_file(self):
-        with self._get_file(self.index_file_name) as index_file :
-            index_file.seek(0)
-            index_line = index_file.readline().strip()
-            return int(index_line, base=16)
+        self.index_file.seek(0)
+        index_line = self.index_file.readline().strip()
+        return int(index_line, base=16)
 
     def initialize(self, conf_reader, msgQlist, products):
         """initialize configuration reader and internal msg queues"""
@@ -320,14 +319,13 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
             self.lan_cmd_retcode = retcode
 
     def _update_list_file(self):
-        with open(self.list_file_collect_name, self.UPDATE_CREATE_MODE) as f:
+        self.list_file.close()
+        with open(self.list_file_collect_name, 'w') as f:
             # make sel list filter only for available frus. no extra data needed
             # 'Power Supply|Power Unit|Fan|Drive Slot / Bay'
-            f.seek(0)
-            f.truncate()
             available_fru = '|'.join(self.fru_types.keys())
             sel_out, retcode = self._run_ipmitool_subcommand(
-                    "sel list", grep_args=f"{available_fru}",
+                    "sel list", grep_args=f"'{available_fru}'",
                     out_file=f)
             if retcode != 0:
                 if isinstance(sel_out, tuple):
@@ -342,8 +340,6 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         # the SEL list in the self.list_file_name file
         # will always be in a consistent state.
         os.rename(self.list_file_collect_name, self.list_file_name)
-
-        self.list_file.close()
         self.list_file = self._get_file(self.list_file_name)
 
     def _check_and_clear_sel(self):
@@ -542,7 +538,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         result = process.communicate()
         return result, process.returncode
 
-    def _run_ipmitool_subcommand(self, subcommand, grep_args=None, out_file=subprocess.PIPE):
+    def _run_ipmitool_subcommand(self, subcommand, grep_args=None, out_file=None):
         """executes ipmitool sub-commands, and optionally greps the output"""
 
         ipmi_tool = self.IPMITOOL
@@ -568,6 +564,9 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
             else:
                 logger.error("Invalid BMC channel interface")
 
+        if grep_args is not None:
+            command += " | grep -E " + grep_args
+
         res, retcode = self._run_command(command, subprocess.PIPE)
 
         # check channel fault and fault resolved alert
@@ -588,17 +587,10 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
                 logger.error(f"{self.SENSOR_NAME}: Required ipmitool missing on Node. Dependencies failed, shutting down sensor")
                 self.request_shutdown = True
 
-        if grep_args is not None and retcode == 0 and isinstance(res, tuple):
-            import re
-            final_list = []
-            for l in res[0].decode(encoding=self.IPMI_ENCODING).split('\n'):
-                if re.search(grep_args, l) is not None:
-                    final_list += [l]
-            res = ('\n'.join(final_list), res[1])
         # write res to out_file only if there is no channel error
-        if not self.channel_err and isinstance(res,str):
-            if out_file != subprocess.PIPE:
-                out_file.write(res[0])
+        if res[0] and not self.channel_err and isinstance(res[0], bytes):
+            if out_file:
+                out_file.write(res[0].decode(encoding=self.IPMI_ENCODING))
 
         return res, retcode
 
@@ -1314,4 +1306,5 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""
+        self.index_file.close()
         super(NodeHWsensor, self).shutdown()
