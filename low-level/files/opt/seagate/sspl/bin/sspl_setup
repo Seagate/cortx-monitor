@@ -60,6 +60,11 @@ case $cmd in
         exit $?
         ;;
 
+    manifest_support_bundle )
+        $SCRIPT_DIR/manifest_support_bundle $*
+        exit $?
+        ;;
+
     reset )
         $SCRIPT_DIR/sspl_reset $*
         exit $?
