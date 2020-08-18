@@ -12,7 +12,7 @@ ExecStart=/usr/bin/sspl_ll_d
 ExecStopPost=-/usr/bin/rm -Rf /var/run/sspl_ll
 PIDFile=/var/run/sspl_ll/sspl_ll.pid
 User=sspl-ll
-Restart=no
+Restart=on-failure
 TimeoutStartSec=190
 
 [Install]
