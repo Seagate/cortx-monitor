@@ -8,7 +8,7 @@ except Exception as e:
 
 PRODUCT_NAME = 'EES'
 PRODUCT_FAMILY = 'cortx'
-enabled_products = ["CS-A", "SINGLE", "EES", "ECS"]
+enabled_products = ["CS-A", "SINGLE","DUAL", "CLUSTER", "EES", "ECS"]
 cs_products = ["CS-A"]
 cs_legacy_products = ["CS-L", "CS-G"]
 setups = ["cortx"]
