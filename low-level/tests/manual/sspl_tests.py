@@ -38,7 +38,7 @@ from os.path import isfile, join
 from dbus import SystemBus, Interface, exceptions as debus_exceptions
 
 import sys
-sys.path.insert(0, '/opt/seagate/eos/sspl/low-level')
+sys.path.insert(0, '/opt/seagate/cortx/sspl/low-level')
 from framework.utils.config_reader import ConfigReader
 
 import ctypes
@@ -70,7 +70,7 @@ class SSPLtest():
 
     #This is a hardcoded file location used for all actuator_msgs and the config file
     #This is needed to be hardcoded to run through MCollective from cluster_check
-    actuator_msgs_folder = "/opt/seagate/eos/sspl/low-level/tests/manual/actuator_msgs/"
+    actuator_msgs_folder = "/opt/seagate/cortx/sspl/low-level/tests/manual/actuator_msgs/"
 
     def __init__(self, logger = None):
         """Sets the system in the right state for the tests
@@ -663,7 +663,7 @@ class SSPLtest():
             log_msg = json.loads(' '.join(log_msg.split()))
             uuid_start = log_msg.index("\'uuid\':") + 8
             uuid_stop  = log_msg.index(",", uuid_start)
-            # Parse out the uuid and remove any white spaces
+            # Parse out the uuid and remove any blank spaces
             #This is used as a unique value to search for
             uuid = log_msg[uuid_start : uuid_stop].strip('\'').strip()
             self.timeStart = self.current_Time()

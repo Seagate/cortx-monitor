@@ -50,7 +50,7 @@ cd $BASE_DIR
 
 #product and key for sspl pyinstaller
 [ -z "$PRODUCT" ] && PRODUCT="cortx"
-[ -z "$KEY" ] && KEY="eos@ees@sspl@pr0duct"
+[ -z "$KEY" ] && KEY="cortx@ldr_r1@sspl@pr0duct"
 [ -z "$TEST" ] && TEST=true
 [ -z "$CLI" ] && CLI=true
 

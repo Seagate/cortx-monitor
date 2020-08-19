@@ -58,7 +58,7 @@ class SupportBundleHandler(ExecutorSafe):
     def collect(self, bundle_name):
         # todo: collection info parameter should be added.
         """
-        Collect all the logs of the mero cluster system.
+        Collect all the logs of the motr cluster system.
         @:param collection_info (YET TO BE ADDED ): json in
         the following format:
         {"message": "Could be reason for the collection",

@@ -769,7 +769,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 # Status is first word before the first '_'
                 status, reason = str(drive.get_drive_status()).split("_", 1)
 
-                # Mero faults are passed to RAS as "EMPTY" for the status field
+                # Motr faults are passed to RAS as "EMPTY" for the status field
                 if "halon" in status.lower():
                     status = "EMPTY"
 

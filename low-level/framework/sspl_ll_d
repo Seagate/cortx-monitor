@@ -365,10 +365,10 @@ def main(conf_reader, systemd_support):
 
             # SSPL will be started in degrade mode by default.
             # Run module only if it is allowed to run in degraded mode
-            # or it is defined in core modules or prodcut is ECS
+            # or it is defined in core modules or prodcut is LDR_R2
             resume = False
             if name in modules_to_resume or name in ThreadController.ALWAYS_ACTIVE_MODULES \
-                or product.upper() == "ECS":
+                or product.upper() == "LDR_R2":
                 resume = True
 
             thread = Thread(target=_run_thread_capture_errors,

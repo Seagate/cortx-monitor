@@ -110,7 +110,7 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
     def _process_msg(self, ch, method, properties, body):
         """Parses the incoming message and hands off to the appropriate module"""
         try:
-            # Encode and remove whitespace,\n,\t - Leaving as it might be useful
+            # Encode and remove blankspace,\n,\t - Leaving as it might be useful
             #ingressMsgTxt = json.dumps(body, ensure_ascii=True).encode('utf8')
             #ingressMsg = json.loads(' '.join(ingressMsgTxt.split()))
 
@@ -140,7 +140,7 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
                 event_code_start = log_msg.index("IEC:") + 4
                 event_code_stop  = log_msg.index(":", event_code_start)
 
-                # Parse out the event code and remove any white spaces
+                # Parse out the event code and remove any blank spaces
                 event_code = log_msg[event_code_start : event_code_stop].strip()
                 self._log_debug("log_msg, event_code: %s" % event_code)
             except Exception as e:

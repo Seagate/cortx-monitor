@@ -26,7 +26,7 @@ import cstor.cli.errors as errors
 NAME_LENGTH = 64
 EMAIL_LENGTH = 200
 # regexp has two part : before@ and after@
-# before@ : expression should not have @ or a whitespace before @
+# before@ : expression should not have @ or a blankspace before @
 # after@  : validates expression like @abc.com, @abc.def.com
 EMAIL_REGEXP = r'^[^@\s]+@[a-z0-9]+((([-.])([a-z0-9]+))+)?(\.[a-z0-9])?$'
 NAME_REGEXP = r'^[^\W_]+(-[^\W_]+)?$'

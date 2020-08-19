@@ -35,7 +35,7 @@ VM_DEPENDENCY_RPMS=("")
 
 usage() {
     cat << EOF
-$SCRIPT_NAME [check|create [-dp] [-r <ssu|gw|cmu|vm|eos>]]
+$SCRIPT_NAME [check|create [-dp] [-r <ssu|gw|cmu|vm|cortx>]]
 create options:
     -dp Create configured datapath
     -r  Role to be configured on the current node

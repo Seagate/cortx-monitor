@@ -343,7 +343,7 @@ def when_i_send_in_the_enclosure_actuator_message_to_request_the_current_sensor_
 @step(u'Then I get the sensor JSON response message for "([^"]*)" "([^"]*)" sensor')
 def then_i_get_the_sensor_json_response_message(step, resource_id, sensor_type):
 
-    pods_sensor_actuator_msg = None
+    storage_enclosure_sensor_actuator_msg = None
     time.sleep(4)
     while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
         ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
@@ -353,20 +353,20 @@ def then_i_get_the_sensor_json_response_message(step, resource_id, sensor_type):
             # Make sure we get back the message type that matches the request
             msg_type = ingressMsg.get("sensor_response_type")
             if msg_type["info"]["resource_type"] == "enclosure:sensor:{}".format(sensor_type.lower()):
-                pods_sensor_actuator_msg = msg_type
+                storage_enclosure_sensor_actuator_msg = msg_type
                 break
 
         except Exception as exception:
             time.sleep(4)
             print(exception)
 
-    assert(pods_sensor_actuator_msg is not None)
-    assert(pods_sensor_actuator_msg.get("host_id") is not None)
-    assert(pods_sensor_actuator_msg.get("alert_type") is not None)
-    assert(pods_sensor_actuator_msg.get("alert_id") is not None)
-    assert(pods_sensor_actuator_msg.get("severity") is not None)
+    assert(storage_enclosure_sensor_actuator_msg is not None)
+    assert(storage_enclosure_sensor_actuator_msg.get("host_id") is not None)
+    assert(storage_enclosure_sensor_actuator_msg.get("alert_type") is not None)
+    assert(storage_enclosure_sensor_actuator_msg.get("alert_id") is not None)
+    assert(storage_enclosure_sensor_actuator_msg.get("severity") is not None)
 
-    sensor_info = pods_sensor_actuator_msg.get("info")
+    sensor_info = storage_enclosure_sensor_actuator_msg.get("info")
     assert(sensor_info is not None)
     assert(sensor_info.get("site_id") is not None)
     assert(sensor_info.get("cluster_id") is not None)
@@ -376,7 +376,7 @@ def then_i_get_the_sensor_json_response_message(step, resource_id, sensor_type):
     assert((sensor_info.get("resource_id") == resource_id) is True)
     assert(sensor_info.get("event_time") is not None)
 
-    sensor_specific_info = pods_sensor_actuator_msg.get("specific_info")
+    sensor_specific_info = storage_enclosure_sensor_actuator_msg.get("specific_info")
     assert(sensor_specific_info is not None)
 
     if resource_id == "*":

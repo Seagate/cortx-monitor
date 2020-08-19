@@ -1,6 +1,6 @@
 # Disabling this because thread controller is not being used as of now, and its tests failure
 # should not block realstor sensor tests stability changes, which are
-# EES major features.
+# LDR_R1 major features.
 
 Feature: Test Thread Controller Capabilities
     Send thread_controller actuator messages to SSPL and
