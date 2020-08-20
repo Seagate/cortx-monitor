@@ -71,9 +71,9 @@ TRACE_ENABLED_SSU_BUNDLING = True
 #     | --> MISC    : Contains the dictionary of files that
 #                     needs to be collected but put to some
 #                     specific folders inside bundle package.
-#                     E.g. {"mero": [list of mero files to be collected ]}
-#                     This would collect all the mero logs mentioned
-#                     to the mero directory inside bundle.
+#                     E.g. {"motr": [list of motr files to be collected ]}
+#                     This would collect all the motr logs mentioned
+#                     to the motr directory inside bundle.
 #    | --> CLEANUP  : List of all the commands for cleaning up the
 #                     tmp files. (NOTE: Yet to be added)
 #
@@ -152,8 +152,8 @@ ACTION_TO_TRIGGER_ON_LOCAL_NODE = [
     ] + COMMON_ACTION_FOR_CMU_SSU
 
 LOCAL_FILES_TO_COLLECT = [
-    '/etc/sysconfig/mero',
-    '/etc/mero/*',
+    '/etc/sysconfig/motr',
+    '/etc/motr/*',
     '/var/log/messages',
     '{}'.format(os.path.join(BUNDLE_TMP_DIR, 'm0reportbug-data.tar.gz')),
     '{}'.format(os.path.join(BUNDLE_TMP_DIR, 'm0reportbug-traces.tar.gz')),

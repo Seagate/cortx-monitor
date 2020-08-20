@@ -15,7 +15,7 @@ operating_system=centos7
 product=CS-A
 cli_type=CS-A
 setup=hw
-data_path=/var/eos/sspl/data/
+data_path=/var/cortx/sspl/data/
 site_id=001
 rack_id=001
 node_id=001
@@ -86,10 +86,10 @@ units=MB
 [SYSTEMDWATCHDOG]
 threaded=true
 monitored_services=
-    m0t1fs@*.service, m0d@*.service, mero.service, mero-kernel.service,
-    mero-trace@kernel.service, mero-trace@mero-kernel.service,
-    mero-server@kernel.service, mero-server@mero-kernel.service,
-    mero-mkfs@kernel.service, mero-mkfs@mero-kernel.service,
+    m0t1fs@*.service, m0d@*.service, motr.service, motr-kernel.service,
+    motr-trace@kernel.service, motr-trace@motr-kernel.service,
+    motr-server@kernel.service, motr-server@motr-kernel.service,
+    motr-mkfs@kernel.service, motr-mkfs@motr-kernel.service,
     systemd-user-sessions.service, systemd-logind.service,
     systemd-journald.service, systemd-sysctl.service,
     crond.service, syslog.service, sshd.service,
@@ -180,8 +180,8 @@ threaded=true
 
 [IEMSENSOR]
 threaded=true
-log_file_path=/var/log/eos/iem/iem_messages
-timestamp_file_path=/var/eos/sspl/data/iem/last_processed_msg_time
+log_file_path=/var/log/cortx/iem/iem_messages
+timestamp_file_path=/var/cortx/sspl/data/iem/last_processed_msg_time
 
 [NODEHWACTUATOR]
 ipmi_client=ipmitool

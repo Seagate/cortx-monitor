@@ -21,7 +21,7 @@ install_provisioner=true
 usage() {
     cat << EOF
     $SCRIPT_NAME
-        [-p|--product-name <EES|ECS>]
+        [-p|--product-name <LDR_R1|LDR_R2>]
         [-c|--rmq-cluster <true|false>]
         [-n|--rmq-nodes <name of the nodes>]
         [-i|--install-provisioner <true|false>]
@@ -50,7 +50,7 @@ while getopts ":p:c:n:i:" OPTION; do
 done
 
 [ -z "$rmq_cluster" ] && rmq_cluster=true
-[ -z "$PRODUCT_NAME" ] && PRODUCT_NAME="EES"
+[ -z "$PRODUCT_NAME" ] && PRODUCT_NAME="LDR_R1"
 
 setup_provisioner_prereq(){
     if ! [ "$(rpm -qa | grep cortx-prvsnr-cli)" ]; then
@@ -68,7 +68,7 @@ setup_provisioner_prereq(){
 
     # to install updated packages
     pkg_name="cortx-prvsnr-cli-1.0.0"
-    build_url="http://cortx-storage.colo.seagate.com/releases/eos/github/dev/rhel-7.7.1908/provisioner_last_successful"
+    build_url="http://cortx-storage.colo.seagate.com/releases/cortx/github/dev/rhel-7.7.1908/provisioner_last_successful"
     yum install -y $build_url/$(curl -s $build_url/|grep $pkg_name|sed 's/<\/*[^"]*"//g'|cut -d"\"" -f1)
     # provisioner decides the setup(single or dual node) for deployment and
     # they don't use this dev init script. This script supports only single node setup.
@@ -101,7 +101,7 @@ start_req_services(){
         fi
     done
 
-    if [ $SSPL_STATUS == "active" -a $PRODUCT_NAME == "ECS" ]
+    if [ $SSPL_STATUS == "active" -a $PRODUCT_NAME == "LDR_R2" ]
     then
         echo SSPL Service started.
         echo Waiting 5 seconds to initialize.
@@ -109,7 +109,7 @@ start_req_services(){
         echo "*************************************************************************"
         echo "SSPL state is 'active'"
         echo "*************************************************************************"
-    elif [ $SSPL_STATUS == "active" -a $PRODUCT_NAME == "EES" ]
+    elif [ $SSPL_STATUS == "active" -a $PRODUCT_NAME == "LDR_R1" ]
     then
         echo SSPL Service started.
         echo Waiting 5 seconds to initialize.
@@ -131,7 +131,7 @@ if [ "$install_provisioner" == true ]; then
 fi
 $SCRIPT_DIR/bin/sspl_post_install -p $PRODUCT_NAME -e DEV -c $rmq_cluster
 $SCRIPT_DIR/bin/sspl_setup_init -r $PRODUCT_FAMILY
-if [ "$PRODUCT_NAME" == "ECS" ]; then
+if [ "$PRODUCT_NAME" == "LDR_R2" ]; then
     [ -z "$rmq_cluster_nodes" ] && $SCRIPT_DIR/bin/sspl_config || $SCRIPT_DIR/bin/sspl_config -n $rmq_cluster_nodes
     [ "$rmq_cluster" == true ] && $SCRIPT_DIR/bin/sspl_setup_rabbitmq_cluster
 else

@@ -157,12 +157,12 @@ class RealStorSideplaneExpanderSensor(SensorThread, InternalMsgQ):
                         url, self.rssencl.ws.HTTP_GET)
 
         if not response:
-            logger.warn(f"{self.rssencl.EES_ENCL}:: Enclosure status unavailable as ws request {url} failed")
+            logger.warn(f"{self.rssencl.LDR_R1_ENCL}:: Enclosure status unavailable as ws request {url} failed")
             return
 
         if response.status_code != self.rssencl.ws.HTTP_OK:
             if url.find(self.rssencl.ws.LOOPBACK) == -1:
-                logger.error(f"{self.rssencl.EES_ENCL}:: http request {url} to get enclosure failed with  \
+                logger.error(f"{self.rssencl.LDR_R1_ENCL}:: http request {url} to get enclosure failed with  \
                                       err {response.status_code}")
             return
 

@@ -42,8 +42,8 @@ class RealStorLogicalVolumeSensor(SensorThread, InternalMsgQ):
 
     SENSOR_NAME = "RealStorLogicalVolumeSensor"
     SENSOR_RESP_TYPE = "enclosure_logical_volume_alert"
-    RESOURCE_CATEGORY = "eos"
-    RESOURCE_TYPE = "enclosure:eos:logical_volume"
+    RESOURCE_CATEGORY = "cortx"
+    RESOURCE_TYPE = "enclosure:cortx:logical_volume"
 
     PRIORITY = 1
 
@@ -183,12 +183,12 @@ class RealStorLogicalVolumeSensor(SensorThread, InternalMsgQ):
         response = self.rssencl.ws_request(url, self.rssencl.ws.HTTP_GET)
 
         if not response:
-            logger.warn(f"{self.rssencl.EES_ENCL}:: Disk Groups status unavailable as ws request {url} failed")
+            logger.warn(f"{self.rssencl.LDR_R1_ENCL}:: Disk Groups status unavailable as ws request {url} failed")
             return
 
         if response.status_code != self.rssencl.ws.HTTP_OK:
             if url.find(self.rssencl.ws.LOOPBACK) == -1:
-                logger.error(f"{self.rssencl.EES_ENCL}:: http request {url} to get disk groups failed with  \
+                logger.error(f"{self.rssencl.LDR_R1_ENCL}:: http request {url} to get disk groups failed with  \
                      err {response.status_code}")
             return
 
@@ -207,12 +207,12 @@ class RealStorLogicalVolumeSensor(SensorThread, InternalMsgQ):
         response = self.rssencl.ws_request(url, self.rssencl.ws.HTTP_GET)
 
         if not response:
-            logger.warn(f"{self.rssencl.EES_ENCL}:: Logical Volume status unavailable as ws request {url}"
+            logger.warn(f"{self.rssencl.LDR_R1_ENCL}:: Logical Volume status unavailable as ws request {url}"
                 " failed")
             return
 
         if response.status_code != self.rssencl.ws.HTTP_OK:
-            logger.error(f"{self.rssencl.EES_ENCL}:: http request {url} to get logical volumes failed with \
+            logger.error(f"{self.rssencl.LDR_R1_ENCL}:: http request {url} to get logical volumes failed with \
                  err {response.status_code}")
             return
 

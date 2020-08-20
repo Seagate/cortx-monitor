@@ -146,7 +146,7 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
         # Handle configurations for specific products
         if product.lower() == "cs-a":
             from sensors.impl.generic.SMR_drive_data import SMRdriveData
-        if product.lower() == "ees":
+        if product.lower() == "ldr_r1":
             from sensors.impl.platforms.realstor.realstor_disk_sensor \
                 import RealStorDiskSensor
             from sensors.impl.platforms.realstor.realstor_psu_sensor \

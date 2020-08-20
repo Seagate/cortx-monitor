@@ -8,7 +8,7 @@
    package internally uses a symmetric key encryption algorithm called fernet.
    Read more about fernet at
        1. https://cryptography.io/en/latest/fernet/
-       2. https://github.com/fernet/spec/blob/master/Spec.md
+       2. https://github.com/fernet/spec  in the Spec.md file
 
    Install package using following command:
 

@@ -83,10 +83,10 @@ units=MB
 [SYSTEMDWATCHDOG]
 threaded=true
 monitored_services=
-    m0t1fs@*.service, m0d@*.service, mero.service, mero-kernel.service,
-    mero-trace@kernel.service, mero-trace@mero-kernel.service,
-    mero-server@kernel.service, mero-server@mero-kernel.service,
-    mero-mkfs@kernel.service, mero-mkfs@mero-kernel.service,
+    m0t1fs@*.service, m0d@*.service, motr.service, motr-kernel.service,
+    motr-trace@kernel.service, motr-trace@motr-kernel.service,
+    motr-server@kernel.service, motr-server@motr-kernel.service,
+    motr-mkfs@kernel.service, motr-mkfs@motr-kernel.service,
     rabbitmq-server.service, lnet.service, network.service,
     openhpid.service, dcs-collector.service,
     systemd-user-sessions.service, systemd-logind.service,
@@ -137,8 +137,8 @@ bind_port=1620
 
 [IEMSENSOR]
 threaded=true
-log_file_path=/var/log/eos/iem/iem_messages
-timestamp_file_path=/var/eos/sspl/data/iem/last_processed_msg_time
+log_file_path=/var/log/cortx/iem/iem_messages
+timestamp_file_path=/var/cortx/sspl/data/iem/last_processed_msg_time
 
 [DATASTORE]
 store_type=consul

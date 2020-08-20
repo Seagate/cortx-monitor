@@ -25,14 +25,14 @@ flask_help()
 pre_requisites()
 {
     # Backing up original persistence data
-    $sudo rm -rf /var/eos/sspl/orig-data
-    $sudo mv /var/eos/sspl/data /var/eos/sspl/orig-data
+    $sudo rm -rf /var/cortx/sspl/orig-data
+    $sudo mv /var/cortx/sspl/data /var/cortx/sspl/orig-data
 
     # Need empty persitence cache dir
-    $sudo mkdir -p /var/eos/sspl/data
+    $sudo mkdir -p /var/cortx/sspl/data
 
-    if [ -f "/var/eos/sspl/orig-data/iem" ]; then
-        $sudo cp /var/eos/sspl/orig-data/iem /var/eos/sspl/data/iem
+    if [ -f "/var/cortx/sspl/orig-data/iem" ]; then
+        $sudo cp /var/cortx/sspl/orig-data/iem /var/cortx/sspl/data/iem
     fi
 }
 
@@ -131,7 +131,7 @@ retcode=$?
 $sudo mv /etc/sspl.conf.back /etc/sspl.conf
 
 # Restoring original cache data
-$sudo rm -rf /var/eos/sspl/data
-$sudo mv /var/eos/sspl/orig-data /var/eos/sspl/data
+$sudo rm -rf /var/cortx/sspl/data
+$sudo mv /var/cortx/sspl/orig-data /var/cortx/sspl/data
 
 exit $retcode

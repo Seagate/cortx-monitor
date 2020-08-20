@@ -1,6 +1,6 @@
 #!/usr/bin/python3.6
 """
-Setup rabbitmq for use by sspl_ll on EES systems
+Setup rabbitmq for use by sspl_ll on LDR_R1 systems
 
 This script uses /etc/sspl.conf as the source of the parameters.
 

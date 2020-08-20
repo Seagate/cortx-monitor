@@ -155,7 +155,7 @@ class RealStorActuator(Actuator, Debug):
                   self.rssencl.URI_CLIAPI_SHOWDISKS)
 
         # TODO: Add pagination to response for '*' case.
-        # PODS storage enclosures have will have
+        # storage enclosures will have
         # ~ 80 to 100 drives, which will make the
         # response huge.
         if(disk != self.RESOURCE_ALL):
@@ -176,13 +176,13 @@ class RealStorActuator(Actuator, Debug):
 
         if not response:
             logger.warn("{0}:: Disks status unavailable as ws request {1}"
-                " failed".format(self.rssencl.EES_ENCL, url))
+                " failed".format(self.rssencl.LDR_R1_ENCL, url))
             return
 
         if response.status_code != self.rssencl.ws.HTTP_OK:
             if url.find(self.rssencl.ws.LOOPBACK) == -1:
                 logger.error("{0}:: http request {1} to poll disks failed with"
-                    " err {2}".format(self.rssencl.EES_ENCL, url, response.status_code))
+                    " err {2}".format(self.rssencl.LDR_R1_ENCL, url, response.status_code))
             return
 
         try:
@@ -214,14 +214,14 @@ class RealStorActuator(Actuator, Debug):
 
         if not response:
             logger.warn("{0}:: Fan-modules status unavailable as ws request {1}"
-                            "failed".format(self.rssencl.EES_ENCL, url))
+                            "failed".format(self.rssencl.LDR_R1_ENCL, url))
             return
 
         if response.status_code != self.rssencl.ws.HTTP_OK:
             if url.find(self.rssencl.ws.LOOPBACK) == -1:
                 logger.error(
                     "{0}:: http request {1} to get fan-modules failed with http err"
-                    " {2}".format(self.rssencl.EES_ENCL, url, response.status_code))
+                    " {2}".format(self.rssencl.LDR_R1_ENCL, url, response.status_code))
             return
 
         response_data = json.loads(response.text)
@@ -302,14 +302,14 @@ class RealStorActuator(Actuator, Debug):
 
         if not response:
             logger.warn("{0}:: Controller status unavailable as ws request {1}"
-                            "failed".format(self.rssencl.EES_ENCL, url))
+                            "failed".format(self.rssencl.LDR_R1_ENCL, url))
             return
 
         if response.status_code != self.rssencl.ws.HTTP_OK:
             if url.find(self.rssencl.ws.LOOPBACK) == -1:
                 logger.error(
                     "{0}:: http request {1} to get controller failed with http err"
-                    " {2}".format(self.rssencl.EES_ENCL, url, response.status_code))
+                    " {2}".format(self.rssencl.LDR_R1_ENCL, url, response.status_code))
             return
 
         response_data = json.loads(response.text)
@@ -387,12 +387,12 @@ class RealStorActuator(Actuator, Debug):
         response = self.rssencl.ws_request( url, self.rssencl.ws.HTTP_GET)
         if not response:
             logger.warn("{0}: Psu status unavailable as ws request {1}"
-                    " failed".format(self.rssencl.EES_ENCL, url))
+                    " failed".format(self.rssencl.LDR_R1_ENCL, url))
             return
         if response.status_code != self.rssencl.ws.HTTP_OK:
             if url.find(self.rssencl.ws.LOOPBACK) == -1:
                 logger.error("{0}:: http request {1} to poll psu failed with"
-                        " err {2}".format(self.rssencl.EES_ENCL, url, response.status_code))
+                        " err {2}".format(self.rssencl.LDR_R1_ENCL, url, response.status_code))
             return
         try:
             jresponse = json.loads(response.content)
@@ -423,12 +423,12 @@ class RealStorActuator(Actuator, Debug):
         response = self.rssencl.ws_request( url, self.rssencl.ws.HTTP_GET)
         if not response:
             logger.warn("{0}: Psu status unavailable as ws request {1}"
-                    " failed".format(self.rssencl.EES_ENCL, url))
+                    " failed".format(self.rssencl.LDR_R1_ENCL, url))
             return
         if response.status_code != self.rssencl.ws.HTTP_OK:
             if url.find(self.rssencl.ws.LOOPBACK) == -1:
                 logger.error("{0}:: http request {1} to poll psu failed with"
-                        " err {2}".format(self.rssencl.EES_ENCL, url, response.status_code))
+                        " err {2}".format(self.rssencl.LDR_R1_ENCL, url, response.status_code))
             return
         try:
             jresponse = json.loads(response.text)
@@ -510,13 +510,13 @@ class RealStorActuator(Actuator, Debug):
 
         if not sas_response:
             logger.warn(
-                "{0}:: sas port status unavailable for request:{1} --gets failed".format(self.rssencl.EES_ENCL, url))
+                "{0}:: sas port status unavailable for request:{1} --gets failed".format(self.rssencl.LDR_R1_ENCL, url))
             return None
 
         if sas_response.status_code != self.rssencl.ws.HTTP_OK:
             if sasurl.find(self.rssencl.ws.LOOPBACK) == -1:
                 logger.error("{0}:: http request {1} to sas port health status failed with error:{2}".format(
-                    self.rssencl.EES_ENCL, sasurl, sasresponse.status_code))
+                    self.rssencl.LDR_R1_ENCL, sasurl, sasresponse.status_code))
             return None
 
         json_response = None

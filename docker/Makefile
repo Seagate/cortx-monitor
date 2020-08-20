@@ -1,5 +1,4 @@
 CENTOS_RELEASE  := 7
-NAMESPACE       := registry.gitlab.mero.colo.seagate.com
 DOCKER          := docker
 
 INAME = $(@:%-image=%)
@@ -8,7 +7,7 @@ CNAME = $(@:%-container=%)
 .PHONY: images
 images: docker-image-latest \
         docker-image-7.6 \
-        docker-image-eos
+        docker-image-cortx
 
 .PHONY: docker-image-latest docker-image-7
 docker-image-latest docker-image-7: sspl-devel-image
@@ -17,9 +16,9 @@ docker-image-latest docker-image-7: sspl-devel-image
 docker-image-7.6: CENTOS_RELEASE := 7.6
 docker-image-7.6: sspl-devel-image
 
-.PHONY: docker-image-eos
-docker-image-eos: CENTOS_RELEASE := eos
-docker-image-eos: sspl-devel-image
+.PHONY: docker-image-cortx
+docker-image-cortx: CENTOS_RELEASE := cortx
+docker-image-cortx: sspl-devel-image
 
 
 .PHONY: sspl-devel-image
@@ -29,7 +28,7 @@ sspl-devel-image:
 	   | $(DOCKER) build \
 			--build-arg CENTOS_RELEASE=$(CENTOS_RELEASE) \
 			-t $(NAMESPACE)/$(INAME):$(CENTOS_RELEASE) \
-			-t $(NAMESPACE)/eos/sspl:$(CENTOS_RELEASE) \
+			-t $(NAMESPACE)/cortx/sspl:$(CENTOS_RELEASE) \
 			$(DOCKER_OPTS) -
 
 .PHONY: push
@@ -38,7 +37,7 @@ tag  := *
 push:
 	@for img in $$(docker images --filter=reference='$(NAMESPACE)/$(name):$(tag)' \
 				    --format '{{.Repository}}:{{.Tag}}' | grep -v none) \
-		    $$(docker images --filter=reference='$(NAMESPACE)/eos/$(name):$(tag)' \
+		    $$(docker images --filter=reference='$(NAMESPACE)/cortx/$(name):$(tag)' \
 				    --format '{{.Repository}}:{{.Tag}}' | grep -v none) ; \
 	do \
 		echo "---> $$img" ; \
@@ -49,7 +48,7 @@ push:
 clean:
 	@for img in $$(docker images --filter=reference='$(NAMESPACE)/$(name):$(tag)' \
 				    --format '{{.Repository}}:{{.Tag}}') \
-		    $$(docker images --filter=reference='$(NAMESPACE)/eos/$(name):$(tag)' \
+		    $$(docker images --filter=reference='$(NAMESPACE)/cortx/$(name):$(tag)' \
 				    --format '{{.Repository}}:{{.Tag}}') ; \
 	do \
 		echo "---> $$img" ; \

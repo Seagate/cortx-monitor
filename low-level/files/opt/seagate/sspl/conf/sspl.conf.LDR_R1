@@ -2,7 +2,7 @@
 
 [SYSTEM_INFORMATION]
 operating_system=centos7
-product=EES
+product=LDR_R1
 cli_type=CS-A
 setup=cortx
 data_path=/var/cortx/sspl/data/

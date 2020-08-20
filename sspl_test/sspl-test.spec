@@ -11,7 +11,7 @@ Summary:    Installs SSPL test for common test framework
 BuildArch:  noarch
 Group:      System Management
 License:    Seagate Proprietary
-URL:        http://gerrit.mero.colo.seagate.com:8080/#/admin/projects/sspl
+URL:        https://github.com/Seagate/cortx-sspl
 Source0:    %{name}-%{version}.tgz
 Requires:   %{product_family}-sspl = %{version}-%{release}
 BuildRoot:  %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
@@ -42,7 +42,7 @@ if [[ -n $fl ]]; then
     if [[ "$ver" != "1.1.1" ]]; then
         # TODO: EOS-8145
         # Before uninstalling flask and its depedencies, add check if they are
-        # installed already or version mismatch found during EOS run time.
+        # installed already or version mismatch found during CORTX run time.
         # Jinja2 & MarkupSafe are already installed for salt configuration by provisioner.
         # Removing them would cause other resources to fail.
         pip3.6 uninstall -y flask

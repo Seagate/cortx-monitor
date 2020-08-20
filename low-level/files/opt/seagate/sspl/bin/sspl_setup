@@ -16,7 +16,7 @@ REPLACEMENT_NODE_ENV_VAR_FILE="/etc/profile.d/set_replacement_env.sh"
 
 usage() {
     cat << EOF
-$SCRIPT_NAME [post_install[-p <EES>]|init [-dp] [-r <ssu|gw|cmu|vm>]|config [-f] [-r <ssu|gw|cmu|vm>]|test [self|sanity]|reset [hard -p <EES>|soft]]
+$SCRIPT_NAME [post_install[-p <LDR_R1>]|init [-dp] [-r <ssu|gw|cmu|vm>]|config [-f] [-r <ssu|gw|cmu|vm>]|test [self|sanity]|reset [hard -p <LDR_R1>|soft]]
 init options:
     -dp Create configured datapath
     -r  Role to be configured on the current node

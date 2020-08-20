@@ -1,6 +1,6 @@
 # Disabling this because systemd watchdog sensor is not being used as of now, and its tests failure
 # should not block realstor sensor tests stability changes, which are
-# EES major features.
+# LDR_R1 major features.
 
 Feature: Test Systemd Watchdog Services Capabilities
 	Manipulate various services and verify that the watchdog sensor

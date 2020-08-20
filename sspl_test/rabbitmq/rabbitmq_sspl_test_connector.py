@@ -27,8 +27,8 @@ connection_error_msg = (
 
 
 # get_cluster_nodes method is 'depreciated' after product name change
-# from EES to ECS. Refer EOS-8860. This method was used to get node names from
-# rabbitmq cluster using rabbitmqctl command. Onwards ECS, get_cluster_connection
+# from LDR_R1 to LDR_R2. Refer EOS-8860. This method was used to get node names from
+# rabbitmq cluster using rabbitmqctl command. Onwards LDR_R2, get_cluster_connection
 # is used to get nodes from consul and create connections.
 def get_cluster_nodes():
     process = subprocess.Popen(
