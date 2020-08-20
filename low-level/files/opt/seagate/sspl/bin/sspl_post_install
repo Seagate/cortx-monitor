@@ -88,7 +88,7 @@ if [ $PRODUCT == 'SINGLE' -a ! -f $currentProduct ] || [ $PRODUCT == 'DUAL' -a !
     ln -s $SSPL_BASE_DIR/conf/sspl-ll.service.LDR_R1 $SSPL_BASE_DIR/conf/sspl-ll.service.$PRODUCT
 fi
 if [ $PRODUCT == 'CLUSTER' -a ! -f $currentProduct ]; then
-  ln -s $SSPL_BASE_DIR/conf/sspl-ll.service.ECS $SSPL_BASE_DIR/conf/sspl-ll.service.$PRODUCT
+  ln -s $SSPL_BASE_DIR/conf/sspl-ll.service.LDR_R2 $SSPL_BASE_DIR/conf/sspl-ll.service.$PRODUCT
 fi
 # Copy sspl-ll.service file and enable service
 cp $SSPL_BASE_DIR/conf/sspl-ll.service.$PRODUCT /etc/systemd/system/sspl-ll.service
