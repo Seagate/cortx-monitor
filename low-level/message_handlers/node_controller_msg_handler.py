@@ -159,7 +159,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
             # Handle generic command line requests
             if component == 'SSPL':
-                # Query the Zope GlobalSiteManager for an object implementing the IMERO actuator
+                # Query the Zope GlobalSiteManager for an object implementing the MOTR actuator
                 if self._command_line_actuator is None:
                     from actuators.Icommand_line import ICommandLine
 

@@ -73,7 +73,7 @@ class SMRdriveData(SensorThread, InternalMsgQ):
         self._get_config()
 
         # TODO: Do more thorough testing for the below code segment which was moved
-        # here from the 'run()' function, since this sensor is not part of EES and
+        # here from the 'run()' function, since this sensor is not part of LDR_R1 and
         # is hence rarely exercised.
 
         # Slight pause so we don't clutter up logs with other threads initializing

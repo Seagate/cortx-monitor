@@ -6,9 +6,9 @@ try:
 except Exception as e:
     from framework.utils.salt_util import node_id, consulhost, consulport
 
-PRODUCT_NAME = 'EES'
+PRODUCT_NAME = 'LDR_R1'
 PRODUCT_FAMILY = 'cortx'
-enabled_products = ["CS-A", "SINGLE","DUAL", "CLUSTER", "EES", "ECS"]
+enabled_products = ["CS-A", "SINGLE","DUAL", "CLUSTER", "LDR_R1", "LDR_R2"]
 cs_products = ["CS-A"]
 cs_legacy_products = ["CS-L", "CS-G"]
 setups = ["cortx"]

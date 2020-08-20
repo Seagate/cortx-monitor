@@ -73,7 +73,7 @@ class IEMlogger(Debug):
         # Get the message to log in format "IEC: EVENT_CODE: EVENT_STRING: JSON DATA"
         log_msg = jsonMsg.get("actuator_request_type").get("logging").get("log_msg")
 
-        # Encode and remove whitespace,\n,\t if present
+        # Encode and remove blankspace,\n,\t if present
         log_msg = json.dumps(log_msg, ensure_ascii=True).encode('utf8')
         log_msg = json.loads(b' '.join(log_msg.split()))
 
@@ -89,7 +89,7 @@ class IEMlogger(Debug):
             event_code_start = log_msg.index("IEC:") + 4
             event_code_stop  = log_msg.index(":", event_code_start)
 
-            # Parse out the event code and remove any white spaces
+            # Parse out the event code and remove any blank spaces
             event_code = log_msg[event_code_start : event_code_stop].strip()
             self._log_debug("log_msg: %s" % log_msg)
             self._log_debug("IEC: %s" % event_code)

@@ -11,7 +11,7 @@ RSYSLOG_SSPL_CONF="/etc/rsyslog.d/1-ssplfwd.conf"
 LOGROTATE_CONF="/etc/logrotate.d/iem_messages"
 SSPL_LOGROTATE_CONF="/etc/logrotate.d/sspl_logs"
 SSPL_CONFIGURED="/var/$PRODUCT_FAMILY/sspl/sspl-configured"
-ROLES="gw ssu vm cmu eos"
+ROLES="gw ssu vm cmu cortx"
 
 SSU_DEPENDENCY_RPMS=(
                 "sg3_utils"
@@ -131,7 +131,7 @@ config_sspl() {
     # steps from %post section of sspl-ll.spec
 
     # Copy sspl conf
-    [ -f /etc/sspl.conf ] || cp /opt/seagate/$PRODUCT_FAMILY/sspl/conf/sspl.conf.EES /etc/sspl.conf
+    [ -f /etc/sspl.conf ] || cp /opt/seagate/$PRODUCT_FAMILY/sspl/conf/sspl.conf.LDR_R1 /etc/sspl.conf
 
     # Copy rsyslog configuration
     [ -f /etc/rsyslog.d/0-iemfwd.conf ] ||

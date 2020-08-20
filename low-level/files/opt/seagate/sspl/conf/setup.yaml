@@ -2,7 +2,7 @@ sspl:
     post_install:
          script: /opt/seagate/cortx/sspl/bin/sspl_setup
          args:
-            - post_install -p EES
+            - post_install -p LDR_R1
     init:
          script: /opt/seagate/cortx/sspl/bin/sspl_setup
          args:
@@ -18,7 +18,7 @@ sspl:
     reset:
          script: /opt/seagate/cortx/sspl/bin/sspl_setup
          args:
-            - reset hard -p EES
+            - reset hard -p LDR_R1
     ha:
          script: /opt/seagate/cortx/ha/conf/script/build-ees-ha-sspl
          args:

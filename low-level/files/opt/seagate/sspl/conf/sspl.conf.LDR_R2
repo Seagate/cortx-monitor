@@ -13,7 +13,7 @@ degraded_state_modules=ServiceWatchdog, RAIDsensor, NodeData, IEMSensor, NodeHWs
 
 [SYSTEM_INFORMATION]
 operating_system=centos7
-product=ECS
+product=LDR_R2
 cli_type=CS-A
 setup=cortx
 data_path=/var/cortx/sspl/data/

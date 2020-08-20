@@ -8,7 +8,7 @@ export PYTHONPATH=$script_dir/../..:$script_dir/../../low-level
 # TODO: Remove this line. This file is not needed as it is used for a deprecated module
 # called "drive_manager"
 # cp ../../../installation/deps/drive_manager.json /tmp/dcs/drivemanager
-# Disabling for EES-non-requirement
+# Disabling for LDR_R1-non-requirement
 # chown -R zabbix:zabbix /tmp/dcs
 
 systemctl start crond

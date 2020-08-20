@@ -17,7 +17,7 @@ SSPL_RA_PATH="$SSPL_BASE_DIR/bin/pacemaker/sspl_stateful_resource_agent"
 
 usage() {
     cat << EOF
-$SCRIPT_NAME [[-p <EES|ECS>] [-e <DEV|PROD>] [-c|--rmq-cluster <true|false>]]
+$SCRIPT_NAME [[-p <LDR_R1|LDR_R2>] [-e <DEV|PROD>] [-c|--rmq-cluster <true|false>]]
     -p Product to be configured
     -e Environment
     -c Need rmq cluster? (true or false)
@@ -65,12 +65,12 @@ python3 -m pip install -r $SSPL_BASE_DIR/conf/requirements.txt
 [ -f $RSYSLOG_SSPL_CONF ] ||
     cp $SSPL_BASE_DIR/conf/$RSYSLOG_SSPL_CONF $RSYSLOG_SSPL_CONF
 
-# Create soft link for SINGLE product name service to existing EES service
+# Create soft link for SINGLE product name service to existing LDR_R1 service
 # Instead of keeping separate service file for SINGLE product with same content.
 currentProduct=$SSPL_BASE_DIR/conf/sspl-ll.service.$PRODUCT
 echo "currentProduct name $currentProduct"
 if [ $PRODUCT == 'SINGLE' -a ! -f $currentProduct ] || [ $PRODUCT == 'DUAL' -a ! -f $currentProduct ]; then
-    ln -s $SSPL_BASE_DIR/conf/sspl-ll.service.EES $SSPL_BASE_DIR/conf/sspl-ll.service.$PRODUCT
+    ln -s $SSPL_BASE_DIR/conf/sspl-ll.service.LDR_R1 $SSPL_BASE_DIR/conf/sspl-ll.service.$PRODUCT
 fi
 if [ $PRODUCT == 'CLUSTER' -a ! -f $currentProduct ]; then
   ln -s $SSPL_BASE_DIR/conf/sspl-ll.service.ECS $SSPL_BASE_DIR/conf/sspl-ll.service.$PRODUCT
