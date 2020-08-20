@@ -17,7 +17,7 @@ SSPL_VHOST = "SSPL"
 CONSUL_HOST = '127.0.0.1'
 CONSUL_PORT = '8500'
 component = 'sspl/config'
-RABBITMQ_CLUSTER_SECTION = 'RABBITMQCLUSTER'
+MESSAGING_CLUSTER_SECTION = 'MESSAGINGCLUSTER'
 host = os.getenv('CONSUL_HOST', CONSUL_HOST)
 port = os.getenv('CONSUL_PORT', CONSUL_PORT)
 consul_conn = consul.Consul(host=host, port=port)
@@ -25,7 +25,7 @@ consul_conn = consul.Consul(host=host, port=port)
 def get_cluster_connection(username, password, virtual_host):
     """Makes connection with one of the rabbitmq node.
     """
-    consul_key = component + '/' + RABBITMQ_CLUSTER_SECTION + '/' + 'cluster_nodes'
+    consul_key = component + '/' + MESSAGING_CLUSTER_SECTION + '/' + 'cluster_nodes'
     hosts = consul_conn.kv.get(consul_key)[1]["Value"].decode()
     if isinstance(hosts, str):
         hosts = hosts.strip().split(",")

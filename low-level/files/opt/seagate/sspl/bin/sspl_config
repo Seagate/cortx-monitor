@@ -15,6 +15,9 @@ script_dir=$(dirname $0)
 # Import common constants
 source $script_dir/constants.sh
 
+# Import common functions
+source $script_dir/utils.sh
+
 SCRIPT_NAME=$(basename $0)
 DIR_NAME="/opt/seagate/$PRODUCT_FAMILY/sspl"
 RSYSLOG_CONF="/etc/rsyslog.d/0-iemfwd.conf"
@@ -145,6 +148,15 @@ config_sspl() {
 
 }
 
+config_rabbitmq() {
+    # Updating RabbitMQ cluster nodes.
+    [ -n "$rmq_cluster_nodes" ] && $CONSUL_PATH/consul kv put sspl/config/MESSAGINGCLUSTER/cluster_nodes $rmq_cluster_nodes
+    # Getting node names using rabbitmqctl is depreciated (EOS-8860)
+    #out=$(rabbitmqctl cluster_status | grep running_nodes | cut -d '[' -f2 | cut -d ']' -f1 | sed 's/rabbit@//g' | sed 's/,/, /g')
+    #pout=$(echo $out | sed  "s/'//g")
+    #$CONSUL_PATH/consul kv put sspl/config/MESSAGINGCLUSTER/cluster_nodes $pout
+}
+
 cmd="config"
 case $cmd in
 
@@ -157,12 +169,10 @@ case $cmd in
         ;;
 esac
 
-# Updating RabbitMQ cluster nodes.
-[ -n "$rmq_cluster_nodes" ] && $CONSUL_PATH/consul kv put sspl/config/RABBITMQCLUSTER/cluster_nodes $rmq_cluster_nodes
-# Getting node names using rabbitmqctl is depreciated (EOS-8860)
-#out=$(rabbitmqctl cluster_status | grep running_nodes | cut -d '[' -f2 | cut -d ']' -f1 | sed 's/rabbit@//g' | sed 's/,/, /g')
-#pout=$(echo $out | sed  "s/'//g")
-#$CONSUL_PATH/consul kv put sspl/config/RABBITMQCLUSTER/cluster_nodes $pout
+# Update messaging config
+messaging_bus_type=$(get_messaging_bus_type)
+validate_messaging_bus_type $messaging_bus_type
+config_${messaging_bus_type}
 
 # Updating build requested log level
 log_level=`cat $DIR_NAME/conf/build-requested-loglevel | sed 's/ *$//'`

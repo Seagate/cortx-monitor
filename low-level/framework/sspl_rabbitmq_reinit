@@ -20,11 +20,11 @@ from sspl_constants import COMMON_CONFIGS
 from eos.utils.security.cipher import Cipher, CipherInvalidToken
 
 RABBITMQCTL = '/usr/sbin/rabbitmqctl'
-SECTION="RABBITMQEGRESSPROCESSOR"
-INGRESS_CONFIG_SECTION = 'RABBITMQINGRESSPROCESSOR'
-EGRESS_CONFIG_SECTION = 'RABBITMQEGRESSPROCESSOR'
+SECTION="EGRESSPROCESSOR"
+INGRESS_CONFIG_SECTION = 'INGRESSPROCESSOR'
+EGRESS_CONFIG_SECTION = 'EGRESSPROCESSOR'
 LOGGER_CONFIG_SECTION = 'LOGGINGPROCESSOR'
-CLUSTER_SECTION = 'RABBITMQCLUSTER'
+CLUSTER_SECTION = 'MESSAGINGCLUSTER'
 ERLANG_COOKIE_PATH = '/var/lib/rabbitmq/.erlang.cookie'
 
 EXCHANGE_NAME_KEY = 'exchange_name'
@@ -82,13 +82,13 @@ def main(product):
         )
 
     if product in cs_legacy_products:
-        primary_rabbitmq_server = config_reader._get_value(
+        primary_messaging_server = config_reader._get_value(
             section=SECTION,
-            key='primary_rabbitmq_server'
+            key='primary_messaging_server'
             )
-        secondary_rabbitmq_server = config_reader._get_value(
+        secondary_messaging_server = config_reader._get_value(
             section=SECTION,
-            key='secondary_rabbitmq_server'
+            key='secondary_messaging_server'
             )
         _check_rabbitmq_status()
         _start_rabbitmq()
@@ -108,15 +108,15 @@ def main(product):
 
     if product in cs_legacy_products:
         # Copy the erlang key from primary server to secondary and mirror queues
-        if primary_rabbitmq_server in hostnames:
+        if primary_messaging_server in hostnames:
             _set_perms_erlang_key()
-            _copy_erlang_key(secondary_rabbitmq_server)
+            _copy_erlang_key(secondary_messaging_server)
             _create_ha_queues()
 
         # Cluster the secondary server to the primary
-        elif secondary_rabbitmq_server in hostnames:
+        elif secondary_messaging_server in hostnames:
             _set_perms_erlang_key()
-            _cluster_rabbitmq_servers(primary_rabbitmq_server, secondary_rabbitmq_server)
+            _cluster_rabbitmq_servers(primary_messaging_server, secondary_messaging_server)
 
 
 def sync_queue(queue_name):
@@ -383,15 +383,15 @@ def _set_perms_erlang_key():
     command = "chmod 400 /var/lib/rabbitmq/.erlang.cookie"
     _send_command(command)
 
-def _copy_erlang_key(secondary_rabbitmq_server):
+def _copy_erlang_key(secondary_messaging_server):
     """Copy the erlang key from primary server to secondary"""
     # Copy the key from primary server to secondary
     command = "scp /var/lib/rabbitmq/.erlang.cookie root@%s:/var/lib/rabbitmq/.erlang.cookie" % \
-                secondary_rabbitmq_server
+                secondary_messaging_server
     response = _send_command(command)
     print("Copy erlang key from primary host to secondary: %s" % response)
 
-def _cluster_rabbitmq_servers(primary_rabbitmq_server, secondary_rabbitmq_server):
+def _cluster_rabbitmq_servers(primary_messaging_server, secondary_messaging_server):
     """Perform the steps to cluster the rabbitmq servers"""
     command = "service rabbitmq-server restart"
     response = _send_command(command)
