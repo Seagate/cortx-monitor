@@ -1,5 +1,6 @@
 import salt.client
-
+import salt.config
+import salt.loader
 try:
     from utility import Utility
     from service_logging import logger
@@ -34,6 +35,12 @@ class SaltInterface:
                 else:
                     node = result[0]
                     node_key = subout[node]
+            if len(result) > 1:
+                __opts__ = salt.config.minion_config('/etc/salt/minion')
+                __grains__ = salt.loader.grains(__opts__)
+                node_id =  __grains__['id']
+                node_key = str(node_id)
+
             else:
                 node = result[0]
                 node_key = subout[node]
@@ -41,14 +48,15 @@ class SaltInterface:
             logger.warning(f"Can't read node id, using 'srvnode-1' : {e}")
         return node_key
 
-    def is_single_node(self):
+
+    def is_single_node(self, node_name):
         """
         Returns true if single node, false otherwise
         """
         is_single_node = True
         try:
             SALT_CMD = "sudo salt-call pillar.get cluster:type --output=newline_values_only"
-            subout = self._client.cmd('*', 'cmd.run', [SALT_CMD])
+            subout = self._client.cmd(str(node_name), 'cmd.run', [SALT_CMD])
             result = list(subout.keys())
             if result == [] or result == "":
                 logger.warning("Cluster type fetch failed, assuming single node setup.")
@@ -66,7 +74,7 @@ class SaltInterface:
         Returns IP used to connect to Consul
         """
         is_env_vm = self.utility.is_env_vm()
-        is_single_node = self.is_single_node()
+        is_single_node = self.is_single_node(node_name)
         # Initialize to localhost
         consul_vip = "127.0.0.1"
         # Get vip if not a vm or single node, default to localhost otherwise
@@ -74,7 +82,7 @@ class SaltInterface:
             # Read vip from cluster.sls
             try:
                 SALT_CMD = f"sudo salt-call pillar.get cluster:{node_name}:network:data_nw:roaming_ip --output=newline_values_only"
-                subout = self._client.cmd('*', 'cmd.run', [SALT_CMD])
+                subout = self._client.cmd(str(node_name), 'cmd.run', [SALT_CMD])
                 result = list(subout.keys())
                 if result == [] or result == "":
                     logger.warning("Cluster VIP fetch failed, using localhost to connect to Consul.")
@@ -85,7 +93,7 @@ class SaltInterface:
                 logger.warning(f"Cluster VIP read failed, using localhost to connect to Consul : {e}")
         return consul_vip
 
-    def get_consul_port(self):
+    def get_consul_port(self, node_name):
         """
         Returns port used to connect to Consul
         """
@@ -94,7 +102,7 @@ class SaltInterface:
         # Read consul port from sspl.sls
         try:
             SALT_CMD = f"sudo salt-call pillar.get sspl:DATASTORE:consul_port --output=newline_values_only"
-            subout = self._client.cmd('*', 'cmd.run', [SALT_CMD])
+            subout = self._client.cmd(str(node_name), 'cmd.run', [SALT_CMD])
             result = list(subout.keys())
             if result == [] or result == "":
                 logger.warning("Consul Port fetch failed, using 8500 to connect.")
@@ -108,4 +116,4 @@ class SaltInterface:
 salt_int = SaltInterface()
 node_id = salt_int.get_node_id()
 consulhost = salt_int.get_consul_vip(node_id)
-consulport = salt_int.get_consul_port()
+consulport = salt_int.get_consul_port(node_id)

@@ -7,6 +7,8 @@ import sys
 import socket
 import json
 import salt.client
+import salt.config
+import salt.loader
 
 from sspl_constants import PRODUCT_FAMILY
 # Add the top level directories
@@ -44,7 +46,6 @@ rabbitmq_cmd = {
 }
 
 _client = salt.client.LocalClient()
-
 def make_sspl_support_bundle_tarfile(parser, tmpFile):
     try:
         conf_reader = ConfigReader(is_init=True)
@@ -185,8 +186,14 @@ def fetch_node_summary_data(node_manifest_dict):
 
     subout = _client.cmd('*', 'cmd.run', [GRAINS_GET_CLUSTER_CMD])
     result = list(subout.keys())
-    node = result[0]
-    cluster_id = subout[node]
+    if len(result) > 1:
+        __opts__ = salt.config.minion_config('/etc/salt/minion')
+        __grains__ = salt.loader.grains(__opts__)
+        node_id =  __grains__['id']
+        cluster_id = str(node_id)
+    else:
+        node = result[0]
+        cluster_id = subout[node]
 
     cortx = {'id':'Cortx SW', 'version-number':'NA', 'license-info': 'NA', 'cluster-id':cluster_id}
     post_node_filter_list.append(cortx)
@@ -267,4 +274,5 @@ if __name__ == "__main__":
         os.remove(onGoingRequestPath)
     else:
         print("Already Manifest Support Bundle request is going on, So skipping current request..!")
+        print("Already SSPL Support Bundle request is going on, So skipping current request..!")
         sys.exit(1)
