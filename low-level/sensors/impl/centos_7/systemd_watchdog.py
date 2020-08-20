@@ -27,7 +27,7 @@ import uuid
 
 from datetime import datetime, timedelta
 
-from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
+from framework.messaging.egress_processor import EgressProcessor
 from framework.base.module_thread import SensorThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
@@ -477,7 +477,7 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
                     request = f"SMART_TEST: {jsonMsg_serial_number}"
                     # Send an Ack msg back with SMART results as Unsupported
                     json_msg = AckResponseMsg(request, self.SMART_STATUS_UNSUPPORTED, "").getJson()
-                    self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+                    self._write_internal_msgQ(EgressProcessor.name(), json_msg)
                     return
 
                 self._log_debug("_processMsg, Starting SMART test")
@@ -529,7 +529,7 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
 
                                 # Send an Ack msg back with SMART results
                                 json_msg = AckResponseMsg(request, response, uuid).getJson()
-                                self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+                                self._write_internal_msgQ(EgressProcessor.name(), json_msg)
 
                                 # Remove from our list if it's present
                                 serial_number = self._smart_uuids.get(uuid)
@@ -679,7 +679,7 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
 
                     # Send an Ack msg back with SMART results
                     json_msg = AckResponseMsg(request, ack_response, smart_uuid).getJson()
-                    self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+                    self._write_internal_msgQ(EgressProcessor.name(), json_msg)
 
                     # Remove from our list
                     self._smart_uuids[smart_uuid] = None
@@ -1065,7 +1065,7 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
 
                                     # Send an Ack msg back with SMART results
                                     json_msg = AckResponseMsg(request, response, smart_uuid).getJson()
-                                    self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+                                    self._write_internal_msgQ(EgressProcessor.name(), json_msg)
 
                                     # Remove from our list
                                     self._smart_uuids[smart_uuid] = None

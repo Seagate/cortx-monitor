@@ -1,7 +1,7 @@
 """
  ****************************************************************************
- Filename:          rabbitmq_ingress_processor.py
- Description:       Handles incoming messages via rabbitMQ
+ Filename:          ingress_processor.py
+ Description:       Handles outgoing messages via messaging bus system
  Creation Date:     02/11/2015
  Author:            Jake Abernathy
 
@@ -19,20 +19,19 @@ import json
 import os
 import time
 
-from eos.utils.security.cipher import Cipher
 import pika
+from eos.utils.amqp import AmqpConnectionError
+from jsonschema import Draft3Validator, validate
 
-from jsonschema import Draft3Validator
-from jsonschema import validate
-from framework.base.module_thread import ScheduledModuleThread
+from framework.messaging.egress_processor import EgressProcessor
+from framework.messaging.utils import get_messaging_config
 from framework.base.internal_msgQ import InternalMsgQ
+from framework.base.module_thread import ScheduledModuleThread
+from framework.base.sspl_constants import COMMON_CONFIGS, RESOURCE_PATH
+                                           
+from framework.utils.messaging_factory import messaging_factory
 from framework.utils.service_logging import logger
-from .rabbitmq_connector import RabbitMQSafeConnection
-from framework.utils import encryptor
-from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 from json_msgs.messages.actuators.ack_response import AckResponseMsg
-from framework.base.sspl_constants import RESOURCE_PATH, ServiceTypes, COMMON_CONFIGS
-
 
 try:
     use_security_lib = True
@@ -43,24 +42,20 @@ except Exception as ae:
     use_security_lib = False
 
 
-class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
-    """Handles incoming messages via rabbitMQ"""
+class IngressProcessor(ScheduledModuleThread, InternalMsgQ):
+    """Handles outgoing messages via messaging bus system"""
 
-    MODULE_NAME = "RabbitMQingressProcessor"
+    MODULE_NAME = "IngressProcessor"
     PRIORITY = 1
 
     # Section and keys in configuration file
-    RABBITMQPROCESSOR = MODULE_NAME.upper()
-    PRIMARY_RABBITMQ_HOST = 'primary_rabbitmq_host'
+    MESSAGINGPROCESSOR = MODULE_NAME.upper()
     EXCHANGE_NAME = 'exchange_name'
     QUEUE_NAME = 'queue_name'
     ROUTING_KEY = 'routing_key'
     VIRT_HOST = 'virtual_host'
-    USER_NAME = 'username'
-    PASSWORD = 'password'
 
     SYSTEM_INFORMATION_KEY = 'SYSTEM_INFORMATION'
-    CLUSTER_ID_KEY = 'cluster_id'
     NODE_ID_KEY = 'node_id'
 
     JSON_ACTUATOR_SCHEMA = "SSPL-LL_Actuator_Request.json"
@@ -69,10 +64,10 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
     @staticmethod
     def name():
         """ @return: name of the module."""
-        return RabbitMQingressProcessor.MODULE_NAME
+        return IngressProcessor.MODULE_NAME
 
     def __init__(self):
-        super(RabbitMQingressProcessor, self).__init__(self.MODULE_NAME,
+        super(IngressProcessor, self).__init__(self.MODULE_NAME,
                                                        self.PRIORITY)
 
         # Read in the actuator schema for validating messages
@@ -92,16 +87,6 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
                                    self.JSON_SENSOR_SCHEMA)
         self._sensor_schema = self._load_schema(schema_file)
 
-        self._virtual_host = None
-        self._queue_name = None
-        self._routing_key = None
-        self._username = None
-        self._connection = None
-        self._primary_rabbitmq_host = None
-        self._exchange_name = None
-        self._password = None
-        self._channel = None
-
     def _load_schema(self, schema_file):
         """Loads a schema from a file and validates
 
@@ -119,40 +104,40 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
     def initialize(self, conf_reader, msgQlist, product):
         """initialize configuration reader and internal msg queues"""
         # Initialize ScheduledMonitorThread
-        super(RabbitMQingressProcessor, self).initialize(conf_reader)
+        super(IngressProcessor, self).initialize(conf_reader)
 
         # Initialize internal message queues for this module
-        super(RabbitMQingressProcessor, self).initialize_msgQ(msgQlist)
+        super(IngressProcessor, self).initialize_msgQ(msgQlist)
 
-        # Configure RabbitMQ Exchange to receive messages
-        self._configure_exchange(retry=False)
-
-        # Display values used to configure pika from the config file
-        self._log_debug("RabbitMQ user: %s" % self._username)
-        self._log_debug("RabbitMQ exchange: %s, routing_key: %s, vhost: %s" %
-                        (self._exchange_name, self._routing_key, self._virtual_host))
+        messaging_config = get_messaging_config(section=self.MESSAGINGPROCESSOR, 
+                    keys=[(self.VIRT_HOST, "SSPL"), (self.EXCHANGE_NAME, "sspl-in"), 
+                    (self.QUEUE_NAME, "sensor-queue"), (self.ROUTING_KEY, "actuator-req-queue")])
+        self._comm = messaging_factory.get_messaging_consumer(**messaging_config)
+        try:
+            self._comm.init()
+        except AmqpConnectionError:
+            logger.error(f"{self.MODULE_NAME} messaging connection is not initialized")
 
     def run(self):
         # self._set_debug(True)
         # self._set_debug_persist(True)
 
         #time.sleep(180)
-        logger.info("RabbitMQingressProcessor, Initialization complete, accepting requests")
+        logger.info(f"{self.MODULE_NAME}, Initialization complete, accepting requests")
 
         try:
-            self._connection.consume(callback=self._process_msg)
+            self._comm.recv(callback_fn=self._process_msg)
         except Exception as e:
             if self.is_running() is True:
-                logger.info("RabbitMQingressProcessor ungracefully breaking out of run loop, restarting.")
-                logger.error("RabbitMQingressProcessor, Exception: %s" % str(e))
-                self._configure_exchange(retry=True)
+                logger.info(f"{self.MODULE_NAME} ungracefully breaking out of run loop, restarting.")
+                logger.error(f"{self.MODULE_NAME}, Exception: {e}")
                 self._scheduler.enter(10, self._priority, self.run, ())
             else:
-                logger.info("RabbitMQingressProcessor gracefully breaking out of run Loop, not restarting.")
+                logger.info(f"{self.MODULE_NAME} gracefully breaking out of run Loop, not restarting.")
 
         self._log_debug("Finished processing successfully")
 
-    def _process_msg(self, ch, method, properties, body):
+    def _process_msg(self, body):
         """Parses the incoming message and hands off to the appropriate module"""
 
         ingressMsg = {}
@@ -175,7 +160,7 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
 
             if use_security_lib and \
                SSPL_SEC.sspl_verify_message(msg_len, str(message), username, signature) != 0:
-                logger.warn("RabbitMQingressProcessor, Authentication failed on message: %s" % ingressMsg)
+                logger.warn(f"{self.MODULE_NAME}, Authentication failed on message: {ingressMsg}")
                 return
 
             # Get the incoming message type
@@ -229,72 +214,22 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
             else:
                 # Send ack about not finding a msg handler
                 ack_msg = AckResponseMsg("Error Processing Message", "Message Handler Not Found", uuid).getJson()
-                self._write_internal_msgQ(RabbitMQegressProcessor.name(), ack_msg)
+                self._write_internal_msgQ(EgressProcessor.name(), ack_msg)
 
             # Acknowledge message was received
-            self._connection.ack(ch, delivery_tag=method.delivery_tag)
+            self._comm.acknowledge()
 
         except Exception as ex:
-            logger.error("RabbitMQingressProcessor, _process_msg unrecognized message: %r" % ingressMsg)
+            logger.error(f"{self.MODULE_NAME}, _process_msg unrecognized message: {ingressMsg}")
             ack_msg = AckResponseMsg("Error Processing Msg", "Msg Handler Not Found", uuid).getJson()
-            self._write_internal_msgQ(RabbitMQegressProcessor.name(), ack_msg)
-
-    def _configure_exchange(self, retry=False):
-        """Configure the RabbitMQ exchange with defaults available"""
-        # Make methods locally available
-        get_value_with_default = self._conf_reader._get_value_with_default
-        try:
-
-            self._virtual_host = get_value_with_default(self.RABBITMQPROCESSOR,
-                                                        self.VIRT_HOST, 'SSPL')
-
-            self._primary_rabbitmq_host = get_value_with_default(
-                self.RABBITMQPROCESSOR, self.PRIMARY_RABBITMQ_HOST,
-                'localhost')
-
-            self._exchange_name = get_value_with_default(
-                self.RABBITMQPROCESSOR, self.EXCHANGE_NAME, 'sspl-in')
-
-            self._queue_name = get_value_with_default(
-                self.RABBITMQPROCESSOR, self.QUEUE_NAME, 'actuator-req-queue')
-
-            self._routing_key = get_value_with_default(
-                self.RABBITMQPROCESSOR, self.ROUTING_KEY, 'actuator-req-key')
-
-            self._username = get_value_with_default(self.RABBITMQPROCESSOR,
-                                                    self.USER_NAME,
-                                                    'sspluser')
-
-            self._password = get_value_with_default(self.RABBITMQPROCESSOR,
-                                                    self.PASSWORD,
-                                                    'sspl4ever')
-            cluster_id = get_value_with_default(self.SYSTEM_INFORMATION_KEY,
-                                                COMMON_CONFIGS.get(self.SYSTEM_INFORMATION_KEY).get(self.CLUSTER_ID_KEY),
-                                                '')
-            node_id = get_value_with_default(self.SYSTEM_INFORMATION_KEY,
-                                             COMMON_CONFIGS.get(self.SYSTEM_INFORMATION_KEY).get(self.NODE_ID_KEY),
-                                             '')
-            # Decrypt RabbitMQ Password
-            decryption_key = encryptor.gen_key(cluster_id, ServiceTypes.RABBITMQ.value)
-            self._password = encryptor.decrypt(decryption_key, self._password.encode('ascii'), "RabbitMQingressProcessor")
-
-            # Create a routing key unique to this instance
-            unique_routing_key = f'{self._routing_key}_node{node_id}'
-            logger.info(f"Connecting using routing key: {unique_routing_key}")
-            self._connection = RabbitMQSafeConnection(
-                self._username, self._password, self._virtual_host,
-                self._exchange_name, unique_routing_key, self._queue_name
-            )
-        except Exception as ex:
-            logger.error("RabbitMQingressProcessor, _configure_exchange: %r" % ex)
+            self._write_internal_msgQ(EgressProcessor.name(), ack_msg)
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""
-        super(RabbitMQingressProcessor, self).shutdown()
+        super(IngressProcessor, self).shutdown()
         try:
-            self._connection.cleanup()
+            self._comm.stop()
         except pika.exceptions.ConnectionClosed:
-            logger.info("RabbitMQingressProcessorTests, shutdown, RabbitMQ ConnectionClosed")
+            logger.info(f"{self.MODULE_NAME}, shutdown, messaging ConnectionClosed")
         except Exception as err:
-            logger.info("RabbitMQingressProcessorTests, shutdown, RabbitMQ {}".format(str(err)))
-
+            logger.info(f"{self.MODULE_NAME}, shutdown, messaging {err}")

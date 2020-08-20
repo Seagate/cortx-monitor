@@ -53,13 +53,13 @@ class SaltConfig(object):
         self._insert_nested_dict_to_consul(new_enclosure_conf, prefix='sspl/config/STORAGE_ENCLOSURE')
 
         # read stoarge rabbitmq.sls
-        new_rabbitmqcluster_conf = salt.client.Caller().function('pillar.get', 'rabbitmq')
-        str_keys = [k for k,v in new_rabbitmqcluster_conf.items() if isinstance(v, str)]
+        new_messagingcluster_conf = salt.client.Caller().function('pillar.get', 'rabbitmq')
+        str_keys = [k for k,v in new_messagingcluster_conf.items() if isinstance(v, str)]
         for k in str_keys:
             if k == 'cluster_nodes':
-                self.consul_conn.kv.put(component + '/' + 'RABBITMQCLUSTER' + '/' + k, new_rabbitmqcluster_conf[k])
+                self.consul_conn.kv.put(component + '/' + 'MESSAGINGCLUSTER' + '/' + k, new_messagingcluster_conf[k])
             elif k == 'erlang_cookie':
-                self.consul_conn.kv.put(component + '/' + 'RABBITMQCLUSTER' + '/' + k, new_rabbitmqcluster_conf[k])
+                self.consul_conn.kv.put(component + '/' + 'MESSAGINGCLUSTER' + '/' + k, new_messagingcluster_conf[k])
 
         # read bmc config
         BMC_CONFIG = salt.client.Caller().function('pillar.get', f'cluster:{node_key_id}:bmc')
@@ -92,13 +92,13 @@ class SaltConfig(object):
             self._insert_nested_dict_to_consul(new_enclosure_conf, prefix='storage_enclosure')
 
             # read stoarge rabbitmq.sls
-            new_rabbitmqcluster_conf = salt.client.Caller().function('pillar.get', 'rabbitmq')
-            str_keys = [k for k,v in new_rabbitmqcluster_conf.items() if isinstance(v, str)]
+            new_messagingcluster_conf = salt.client.Caller().function('pillar.get', 'rabbitmq')
+            str_keys = [k for k,v in new_messagingcluster_conf.items() if isinstance(v, str)]
             for k in str_keys:
                 if k == 'cluster_nodes':
-                    self.consul_conn.kv.put('rabbitmq/cluster_nodes', new_rabbitmqcluster_conf[k])
+                    self.consul_conn.kv.put('rabbitmq/cluster_nodes', new_messagingcluster_conf[k])
                 elif k == 'erlang_cookie':
-                    self.consul_conn.kv.put('rabbitmq/erlang_cookie', new_rabbitmqcluster_conf[k])
+                    self.consul_conn.kv.put('rabbitmq/erlang_cookie', new_messagingcluster_conf[k])
 
             BMC_CONFIG = salt.client.Caller().function('pillar.get', f'cluster:{node_key_id}:bmc')
             for k,v in BMC_CONFIG.items():
@@ -130,9 +130,9 @@ class SaltConfig(object):
             # for the pattern section : { 'key' : 'value' }
             parser = ConfigParser()
             parser.read_dict(new_conf)
-            # Password is same for RABBITMQINGRESSPROCESSOR, RABBITMQEGRESSPROCESSOR & LOGGINGPROCESSOR
+            # Password is same for INGRESSPROCESSOR, EGRESSPROCESSOR & LOGGINGPROCESSOR
             rbmq_pass = salt.client.Caller().function('pillar.get',
-                            'rabbitmq:sspl:RABBITMQINGRESSPROCESSOR:password')
+                            'rabbitmq:sspl:INGRESSPROCESSOR:password')
             for sect in parser.sections():
                 for k, v in parser.items(sect):
                     if sect in COMMON_CONFIGS and k not in SSPL_CONFIGS:

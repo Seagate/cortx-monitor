@@ -22,7 +22,7 @@ from framework.utils.service_logging import logger
 from framework.base.sspl_constants import enabled_products
 
 # Modules that receive messages from this module
-from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
+from framework.messaging.egress_processor import EgressProcessor
 
 from json_msgs.messages.actuators.ack_response import AckResponseMsg
 
@@ -154,7 +154,7 @@ class LoggingMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
             # Send ack about logging msg
             ack_msg = AckResponseMsg(log_type, result, uuid).getJson()
-            self._write_internal_msgQ(RabbitMQegressProcessor.name(), ack_msg)
+            self._write_internal_msgQ(EgressProcessor.name(), ack_msg)
 
         # ... handle other logging types
 
@@ -182,8 +182,8 @@ class LoggingMsgHandler(ScheduledModuleThread, InternalMsgQ):
                         }
                     }
                  })
-        # Send the IEM to RabbitMQegressProcessor to be routed to another IEM listener
-        self._write_internal_msgQ(RabbitMQegressProcessor.name(), internal_json_msg)
+        # Send the IEM to EgressProcessor to be routed to another IEM listener
+        self._write_internal_msgQ(EgressProcessor.name(), internal_json_msg)
 
     def _read_config(self):
         """Read in configuration values"""

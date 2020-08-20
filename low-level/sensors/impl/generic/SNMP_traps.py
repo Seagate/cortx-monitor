@@ -21,7 +21,7 @@ from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
 
 # Modules that receive messages from this module
-from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
+from framework.messaging.egress_processor import EgressProcessor
 from message_handlers.logging_msg_handler import LoggingMsgHandler
 
 from json_msgs.messages.sensors.snmp_trap import SNMPtrapMsg
@@ -241,7 +241,7 @@ class SNMPtraps(SensorThread, InternalMsgQ):
         """Transmit message to halon by passing it to egress msg handler"""
         json_data["trapName"] = self._trap_name
         json_msg = SNMPtrapMsg(json_data).getJson()
-        self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+        self._write_internal_msgQ(EgressProcessor.name(), json_msg)
 
     def _get_config(self):
         """Retrieves the information in /etc/sspl.conf"""

@@ -49,7 +49,7 @@ SSPL_LL_SETTING = 'SSPL-LL_SETTING'
 CORE_PROCESSORS = 'core_processors'
 ACTUATORS       = 'actuators'
 SENSORS         = 'sensors'
-RABBITMQINGRESSPROCESSOR = 'RABBITMQINGRESSPROCESSOR'
+INGRESSPROCESSOR = 'INGRESSPROCESSOR'
 
 #GEM commands
 REBOOT_ALL_SAS_EXPANDERS_CMD = 'wbcli {} "gncli exp:all reboot"'
@@ -100,7 +100,7 @@ def main():
         parser.add_argument("-v", "--version", action="store_true", help="show cli version")
         try:
             # Create instance of ManualTest to publish messages
-            manTest = ManualTest("RABBITMQINGRESSPROCESSOR")
+            manTest = ManualTest("INGRESSPROCESSOR")
         except Exception:
             print("Products only useful for verifying packages\n")
         return _init_LDR_R1(parser, program_name)
@@ -125,7 +125,7 @@ def main():
             parser.add_argument("-v", "--version", action="store_true", help="show cli version")
             try:
                 # Create instance of ManualTest to publish messages
-                manTest = ManualTest("RABBITMQINGRESSPROCESSOR")
+                manTest = ManualTest("INGRESSPROCESSOR")
             except Exception:
                 print("CLI only useful for verifying packages\n")
             return _init_CS_A(parser, program_name)

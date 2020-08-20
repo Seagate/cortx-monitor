@@ -38,7 +38,7 @@ CONSUL_HOST = consulhost
 CONSUL_PORT = consulport
 SSPL_SETTINGS = {
         "ACTUATORS" : ["Service", "RAIDactuator", "Smartctl", "NodeHWactuator", "RealStorActuator"],
-        "CORE_PROCESSORS" : ("RabbitMQegressProcessor", "RabbitMQingressProcessor", "LoggingProcessor"),
+        "CORE_PROCESSORS" : ("EgressProcessor", "IngressProcessor", "LoggingProcessor"),
         "DEGRADED_STATE_MODULES" : ("ServiceWatchdog", "RAIDsensor", "NodeData", "IEMSensor", "NodeHWsensor",
                             "DiskMsgHandler", "LoggingMsgHandler", "ServiceMsgHandler", "NodeDataMsgHandler",
                             "NodeControllerMsgHandler", "SASPortSensor", "MemFaultSensor", "CPUFaultSensor"),
@@ -75,7 +75,7 @@ COMMON_CONFIGS = {
         "password" : "controller/secret",
         "mgmt_interface" : "controller/mgmt_interface"
     },
-    "RABBITMQCLUSTER": {
+    "MESSAGINGCLUSTER": {
         "sspl_key" : "key_provided_by_provisioner",
         "cluster_nodes" : "rabbitmq/cluster_nodes",
         "erlang_cookie" : "rabbitmq/erlang_cookie"
@@ -95,7 +95,12 @@ component = 'sspl/config'
 file_store_config_path = '/etc/sspl.conf'
 salt_provisioner_pillar_sls = 'sspl'
 salt_uniq_attr_per_node = ['cluster_id']
-salt_uniq_passwd_per_node = ['RABBITMQINGRESSPROCESSOR', 'RABBITMQEGRESSPROCESSOR', 'LOGGINGPROCESSOR']
+salt_uniq_passwd_per_node = ['INGRESSPROCESSOR', 'EGRESSPROCESSOR', 'LOGGINGPROCESSOR']
+AMQP_EXCHANGE_TYPE_TOPIC = "topic"
+AMQP_PORT = 5762
+MESSAGING = "MESSAGING"
+MESSAGING_TYPE_RABBITMQ = "rabbitmq"
+MESSAGING_CLUSTER_SECTION = 'MESSAGINGCLUSTER'
 
 class RaidDataConfig(Enum):
     MDSTAT_FILE = "/proc/mdstat"

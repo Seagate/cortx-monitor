@@ -16,16 +16,16 @@ sspl_log_file_path=/var/log/cortx/sspl/sspl.log
 syslog_host=localhost
 syslog_port=514
 
-[RABBITMQINGRESSPROCESSOR]
+[INGRESSPROCESSOR]
 virtual_host=SSPL
 queue_name=actuator-req-queue
 exchange_name=sspl-in
 routing_key=actuator-req-key
 username=sspluser
 password=gAAAAABelEy2-hxLq8uThrKVZeb8ZY34cUPMYag8aMHJEHpXbaCie2cmeFsNx2nHBMCLLS2Bj9VUp9iSnyYDmywUHI7SsCoRIw==
-primary_rabbitmq_host=localhost
+primary_messaging_host=localhost
 
-[RABBITMQEGRESSPROCESSOR]
+[EGRESSPROCESSOR]
 virtual_host=SSPL
 queue_name=sensor-queue
 exchange_name=sspl-out
@@ -40,7 +40,7 @@ message_signature_token=ALOIUD986798df69a8koDISLKJ282983
 message_signature_expires=3600
 iem_route_addr=
 iem_route_exchange_name=sspl-out
-primary_rabbitmq_host=localhost
+primary_messaging_host=localhost
 limit_consul_memory=50000000
 
 [LOGGINGPROCESSOR]
@@ -50,9 +50,9 @@ exchange_name=sspl-in
 routing_key=iem-key
 username=sspluser
 password=gAAAAABelEy2-hxLq8uThrKVZeb8ZY34cUPMYag8aMHJEHpXbaCie2cmeFsNx2nHBMCLLS2Bj9VUp9iSnyYDmywUHI7SsCoRIw==
-primary_rabbitmq_host=localhost
+primary_messaging_host=localhost
 
-[RABBITMQCLUSTER]
+[MESSAGINGCLUSTER]
 cluster_nodes=localhost
 erlang_cookie=QLDZYPYEYGHECTHYQXFJ
 
@@ -179,3 +179,6 @@ probe=sysfs
 [CPUFAULTSENSOR]
 threaded=true
 probe=sysfs
+
+[MESSAGING]
+type=rabbitmq
