@@ -155,6 +155,7 @@ config_rabbitmq() {
     #out=$(rabbitmqctl cluster_status | grep running_nodes | cut -d '[' -f2 | cut -d ']' -f1 | sed 's/rabbit@//g' | sed 's/,/, /g')
     #pout=$(echo $out | sed  "s/'//g")
     #$CONSUL_PATH/consul kv put sspl/config/MESSAGINGCLUSTER/cluster_nodes $pout
+    return 0
 }
 
 cmd="config"
