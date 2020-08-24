@@ -6,9 +6,18 @@ import time
 import sys
 import socket
 import json
-import subprocess
+import salt.client
+import salt.config
+import salt.loader
 
 from sspl_constants import PRODUCT_FAMILY
+# Add the top level directories
+sys.path.insert(0, f'/opt/seagate/{PRODUCT_FAMILY}/sspl/low-level')
+from config_reader import ConfigReader
+
+SYS_INFORMATION = "SYSTEM_INFORMATION"
+IEM_SENSOR = "IEMSENSOR"
+GRAINS_GET_CLUSTER_CMD = "salt-call grains.get cluster_id --output=newline_values_only"
 
 localTempPath = "/tmp/support_bundle/"
 onGoingRequestPath = "/tmp/sspl-msb-req.txt"
@@ -17,14 +26,42 @@ node_manifest = "/tmp/node_manifest.json"
 manifest_summary = "/tmp/manifest_summary.json"
 node_hostname = socket.gethostname().split('.', 1)[0]
 encl_summary_filter={}
-cluster_id = subprocess.Popen(['salt-call', 'grains.get', 'cluster_id'], stdout=subprocess.PIPE).communicate()[0]
-cluster_id = cluster_id.decode("utf-8").rstrip().replace('local:\n    ', '')
 encl_summary_fields=["object-name", "durable-id", "vendor-name", "product-id", "serial-number",
                      "model", "product-brand", "description", "status", "health", "health-reason",
                      "platform-type", "platform-brand", "part-number", "enclosure-wwn", "vendor",
                      "drive-serial-number"]
 node_summary_fields=['id', 'class', 'description', 'product', 'serial', 'vendor',
                      'part-number', 'model-number','children', 'physid', 'version']
+rabbitmq_cmd = {
+    "Rabbitmq status": "systemctl status rabbitmq-server",
+    "Rabbitmq cluster status": "rabbitmqctl cluster_status",
+    "Rabbitmq node status": "rabbitmqctl status",
+    "Rabbitmq environment": "rabbitmqctl environment",
+    "Rabbitmq report": "rabbitmqctl report",
+    "Lists all queues in the current node": "rabbitmqctl list_queues",
+    "Lists all queues in the vhost SSPL": "rabbitmqctl list_queues -p SSPL",
+    "Lists all vhosts in the current node": "rabbitmqctl list_vhosts",
+    "Lists all rabbitmq channels in virtual host SSPL": "rabbitmqctl list_channels -p SSPL",
+    "Lists all users": "rabbitmqctl list_users"
+}
+
+_client = salt.client.LocalClient()
+def make_sspl_support_bundle_tarfile(parser, tmpFile):
+    try:
+        conf_reader = ConfigReader(is_init=True)
+
+    except (IOError, ConfigReader.Error) as err:
+        print("[ Error ] when validating the configuration file %s :" % \
+            sspl_conf_dir)
+        print(err)
+        print("Exiting ...")
+        sys.exit(1)
+
+    sspl_log_dir = conf_reader._get_value_with_default(SYS_INFORMATION,
+        "sspl_log_file_path", sspl_log_default).replace("/sspl.log","")
+
+    iem_log_dir = conf_reader._get_value_with_default(IEM_SENSOR,
+        "log_file_path", iem_log_default).replace("/iem_messages","")
 
 def make_manifest_support_bundle_tarfile(parser, tmpFile):
     configure_path = parser[2]
@@ -142,6 +179,25 @@ def fetch_node_summary_data(node_manifest_dict):
         if key['id'].lower().startswith(node_summary_types):
             post_node_filter_list.append(key)
 
+    os_serial = subprocess.Popen(['uname', '-rvmpio'], stdout=subprocess.PIPE).communicate()[0].decode("utf-8").rstrip()
+    os_model = subprocess.Popen(['cat', '/etc/system-release'], stdout=subprocess.PIPE).communicate()[0].decode("utf-8").rstrip()
+    os = {'id':'Operating System', 'version-number':os_model, 'system-info':os_serial}
+    post_node_filter_list.append(os)
+
+    subout = _client.cmd('*', 'cmd.run', [GRAINS_GET_CLUSTER_CMD])
+    result = list(subout.keys())
+    if len(result) > 1:
+        __opts__ = salt.config.minion_config('/etc/salt/minion')
+        __grains__ = salt.loader.grains(__opts__)
+        node_id =  __grains__['id']
+        cluster_id = str(node_id)
+    else:
+        node = result[0]
+        cluster_id = subout[node]
+
+    cortx = {'id':'Cortx SW', 'version-number':'NA', 'license-info': 'NA', 'cluster-id':cluster_id}
+    post_node_filter_list.append(cortx)
+
     filtered_data_all['children'] = post_node_filter_list
     final_node_summary_dict.update({'server_'+filtered_data_all['id']:filtered_data_all})
 
@@ -218,4 +274,6 @@ if __name__ == "__main__":
         os.remove(onGoingRequestPath)
     else:
         print("Already Manifest Support Bundle request is going on, So skipping current request..!")
+        print("Already SSPL Support Bundle request is going on, So skipping current request..!")
         sys.exit(1)
+
