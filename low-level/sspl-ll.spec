@@ -73,6 +73,10 @@ mkdir -p /var/%{product_family}/sspl/bundle /var/log/%{product_family}/sspl /etc
 SSPL_DIR=/opt/seagate/%{product_family}/sspl
 CFG_DIR=$SSPL_DIR/conf
 
+# Update the sudoers file with the sspl-ll user and available commands
+SUDO_LINE="sspl-ll	ALL = NOPASSWD: /usr/sbin/smartctl, /usr/sbin/mdadm, /usr/bin/mount, /usr/bin/umount, /usr/sbin/swapon, /usr/sbin/swapoff, /usr/sbin/hdparm, /usr/bin/systemctl, /usr/sbin/wbcli, /usr/bin/ipmitool, /usr/bin/systemd-detect-virt, /usr/bin/salt-call, /usr/bin/echo"
+grep -q "$SUDO_LINE" /etc/sudoers || echo "$SUDO_LINE" >> /etc/sudoers
+
 [ -d "${SSPL_DIR}/lib" ] && {
     ln -sf $SSPL_DIR/lib/sspl_ll_d /usr/bin/sspl_ll_d
     ln -sf $SSPL_DIR/lib/resource_health_view /usr/bin/resource_health_view
