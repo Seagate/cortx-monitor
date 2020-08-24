@@ -39,7 +39,7 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
     DEPENDENCIES = {
         "plugins": [
             "LoggingMsgHandler",
-            "RabbitMQegressProcessor"],
+            "EgressProcessor"],
         "rpms": []
     }
 
@@ -149,7 +149,7 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 busy_json_msg = AckResponseMsg(
                     request, "BUSY", uuid, error_no=errno.EBUSY).getJson()
                 self._write_internal_msgQ(
-                    "RabbitMQegressProcessor", busy_json_msg)
+                    "EgressProcessor", busy_json_msg)
 
             elif actuator_state_manager.is_imported("Service"):
                 # This case will be for first request only. Subsequent
@@ -206,7 +206,7 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
             # Create a service watchdog message and send it out
             jsonMsg = ServiceWatchdogMsg(service_name, state, prev_state, substate, prev_substate, pid, prev_pid).getJson()
-            self._write_internal_msgQ("RabbitMQegressProcessor", jsonMsg)
+            self._write_internal_msgQ("EgressProcessor", jsonMsg)
 
             # Create an IEM if the resulting service state is failed
             if "fail" in state.lower() or \
@@ -255,7 +255,7 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
         if uuid is not None:
             service_controller_msg.set_uuid(uuid)
         json_msg = service_controller_msg.getJson()
-        self._write_internal_msgQ("RabbitMQegressProcessor", json_msg)
+        self._write_internal_msgQ("EgressProcessor", json_msg)
 
     def suspend(self):
         """Suspends the module thread. It should be non-blocking"""

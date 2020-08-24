@@ -2,7 +2,7 @@
 
 block_cipher = None
 
-a = Analysis(['../low-level/files/opt/seagate/sspl/bin/genrate_resource_health_view/resource_health_view'],
+a = Analysis(['../low-level/files/opt/seagate/sspl/bin/generate_resource_health_view/resource_health_view'],
              pathex=['/home/721836/sspl/jenkins/pyintstaller'],
              binaries=[],
              datas=[],

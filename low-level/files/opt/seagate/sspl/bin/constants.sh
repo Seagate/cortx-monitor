@@ -1,10 +1,11 @@
 # This script contains common constants used by various provisioner scripts
 
-PRODUCT_NAME='EES'
+PRODUCT_NAME='LDR_R1'
 PRODUCT_FAMILY='cortx'
-PRODUCTS="SINGLE EES ECS"
+PRODUCTS="SINGLE DUAL CLUSTER LDR_R1 LDR_R2"
 SSPL_CONF="/etc/sspl.conf"
 ROLES="gw ssu vm cmu cortx"
+MESSAGING_BUS_TYPES="rabbitmq"
 PRODUCT_BASE_DIR="/opt/seagate/$PRODUCT_FAMILY/"
 SSPL_BASE_DIR="/opt/seagate/$PRODUCT_FAMILY/sspl"
 SSPL_STORE_TYPE="consul"

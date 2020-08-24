@@ -75,7 +75,7 @@ class SSPLHealthView(object):
     CLUSTER_ID = singleton_realstorencl.cluster_id
     RESOURCE_HEALTH_VIEW_FILE = 'resource_health_view.json'
     RESOURCE_HEALTH_VIEW_PATH = '/tmp/'+RESOURCE_HEALTH_VIEW_FILE
-    TEMPLATE_SCHEMA_FILE = f'/opt/seagate/{PRODUCT_FAMILY}/sspl/bin/genrate_resource_health_view/resource_health_view_template.json'
+    TEMPLATE_SCHEMA_FILE = f'/opt/seagate/{PRODUCT_FAMILY}/sspl/bin/generate_resource_health_view/resource_health_view_template.json'
 
     NODE_REQUEST_MAP = {
         "disk" : "Drive Slot / Bay",
@@ -306,6 +306,9 @@ class SSPLHealthView(object):
                 resource_id = drive.get("durable-id")
                 durable_id = resource_id
                 health = drive.get("health", "NA")
+                serialno = drive.get("serial-number", "NA")
+                vendor = drive.get("vendor", "NA")
+                model = drive.get("model", "NA")
                 if health in self.undesired_vals:
                     health = "NA"
                 disk_data.update({
@@ -315,6 +318,9 @@ class SSPLHealthView(object):
                         "alert_uuid": "NA",
                         "durable_id": durable_id,
                         "health": health,
+                        "serial-number": serialno,
+                        "vendor": vendor,
+                        "model": model,
                         "fetch_time" : int(time.time())
                     }
                     })
@@ -345,6 +351,9 @@ class SSPLHealthView(object):
             resource_id = psu.get("durable-id")
             durable_id = resource_id
             health = psu.get("health", "NA")
+            serialno = psu.get("serial-number", "NA")
+            vendor = psu.get("vendor", "NA")
+            model = psu.get("model", "NA")
             if health in self.undesired_vals:
                 health = "NA"
             psu_data.update({
@@ -354,6 +363,9 @@ class SSPLHealthView(object):
                         "alert_uuid": "NA",
                         "durable_id": durable_id,
                         "health": health,
+                        "serial-number": serialno,
+                        "vendor": vendor,
+                        "model": model,
                         "fetch_time" : int(time.time())
                     }
             })
@@ -384,6 +396,9 @@ class SSPLHealthView(object):
             resource_id = controller.get("durable-id")
             durable_id = resource_id
             health = controller.get("health", "NA")
+            serialno = controller.get("serial-number", "NA")
+            vendor = controller.get("vendor", "NA")
+            model = controller.get("model", "NA")
             if health in self.undesired_vals:
                 health = "NA"
             controller_data.update({
@@ -393,6 +408,9 @@ class SSPLHealthView(object):
                         "alert_uuid": "NA",
                         "durable_id": durable_id,
                         "health": health,
+                        "serial-number": serialno,
+                        "vendor": vendor,
+                        "model": model,
                         "fetch_time" : int(time.time())
                     }
             })
@@ -422,6 +440,9 @@ class SSPLHealthView(object):
             resource_id = fan.get("durable-id")
             durable_id = resource_id
             health = fan.get("health", "NA")
+            serialno = fan.get("serial-number", "NA")
+            vendor = fan.get("vendor", "NA")
+            model = fan.get("model", "NA")
             if health in self.undesired_vals:
                 health = "NA"
             fan_data.update({
@@ -431,6 +452,9 @@ class SSPLHealthView(object):
                         "alert_uuid": "NA",
                         "durable_id": durable_id,
                         "health": health,
+                        "serial-number": serialno,
+                        "vendor": vendor,
+                        "model": model,
                         "fetch_time" : int(time.time())
                     }
             })
@@ -468,6 +492,9 @@ class SSPLHealthView(object):
             resource_id = spln.get("durable-id")
             durable_id = resource_id
             health = spln.get("health", "NA")
+            serialno = spln.get("serial-number", "NA")
+            vendor = spln.get("vendor", "NA")
+            model = spln.get("model", "NA")
             if health in self.undesired_vals:
                 health = "NA"
             spln_data.update({
@@ -477,6 +504,9 @@ class SSPLHealthView(object):
                         "alert_uuid": "NA",
                         "durable_id": durable_id,
                         "health": health,
+                        "serial-number": serialno,
+                        "vendor": vendor,
+                        "model": model,
                         "fetch_time" : int(time.time())
                     }
             })
@@ -604,7 +634,7 @@ class SSPLHealthView(object):
                 # TODO: use self.FAULT_KEY in system: system.key() generates
                 # list and find item in that.
                 if not singleton_realstorencl.FAULT_KEY in system.keys():
-                    print("{0} Healthy, no faults seen".format(singleton_realstorencl.EES_ENCL))
+                    print("{0} Healthy, no faults seen".format(singleton_realstorencl.LDR_R1_ENCL))
                     return
 
                 # Extract system faults and build memcache_faults
@@ -612,7 +642,35 @@ class SSPLHealthView(object):
                     singleton_realstorencl.faults_persistent_cache)
 
     def build_encl_hw_specifics_instances(self):
-        return self.get_realstor_show_data(self.encl_hw_specifics_api)
+        fan_module_list = []
+        sideplane_list = []
+        chassis_midplane_list = []
+        enclosure_data = self.get_realstor_show_data(self.encl_hw_specifics_api)
+        for encl_fru in enclosure_data['enclosure-fru']:
+            if encl_fru['name'] == 'FAN MODULE':
+                try:
+                    fan_number = encl_fru['fru-location'].split()[-1]
+                    for fan_module in enclosure_data['enclosures'][0]['fan-modules']:
+                        if fan_module['durable-id'].split('.')[-1] == fan_number:
+                            fan_module['part-number'] = encl_fru['part-number']
+                            fan_module['serial-number'] = encl_fru['serial-number']
+                            fan_module_list.append(fan_module)
+                except Exception as e:
+                    print("Error while updating fan module {0} information : {1}".format(fan_number, e))
+            elif encl_fru['name'] == 'SIDEPLANE':
+                encl_fru['object-name'] = encl_fru['name'].lower()
+                sideplane_list.append(encl_fru)
+            elif encl_fru['name'] == 'CHASSIS_MIDPLANE':
+                encl_fru['object-name'] = encl_fru['name'].lower()
+                chassis_midplane_list.append(encl_fru)
+
+        if len(fan_module_list) == len(enclosure_data['enclosures'][0]['fan-modules']):
+            enclosure_data['enclosures'][0]['fan-modules'] = fan_module_list
+        if sideplane_list:
+            enclosure_data['enclosures'][0].update({'sideplane':sideplane_list})
+        if chassis_midplane_list:
+            enclosure_data['enclosures'][0].update({'chassis-midplane':chassis_midplane_list})
+        return enclosure_data
 
     def write_content_in_file(self, file_path, file_data, instance):
         try:
@@ -658,13 +716,13 @@ class SSPLHealthView(object):
 
         if not response:
             print("{0}:: {2} status unavailable as ws request {1}"
-                " failed".format(singleton_realstorencl.EES_ENCL, url, fru))
+                " failed".format(singleton_realstorencl.LDR_R1_ENCL, url, fru))
             return
 
         if response.status_code != singleton_realstorencl.ws.HTTP_OK:
             if url.find(singleton_realstorencl.ws.LOOPBACK) == -1:
                 print("{0}:: http request {1} to get {3} failed with"
-                    " err {2}".format(singleton_realstorencl.EES_ENCL, url, response.status_code, fru))
+                    " err {2}".format(singleton_realstorencl.LDR_R1_ENCL, url, response.status_code, fru))
             return
 
         response_data = json.loads(response.text)

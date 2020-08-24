@@ -16,18 +16,20 @@ SCRIPT_NAME=$(basename $0)
 
 rmq_cluster=true
 rmq_cluster_nodes=
+install_provisioner=true
 
 usage() {
     cat << EOF
     $SCRIPT_NAME
-        [-p|--product-name <EES|ECS>]
+        [-p|--product-name <LDR_R1|LDR_R2>]
         [-c|--rmq-cluster <true|false>]
         [-n|--rmq-nodes <name of the nodes>]
+        [-i|--install-provisioner <true|false>]
 EOF
     exit 1
 }
 
-while getopts ":p:c:n:" OPTION; do
+while getopts ":p:c:n:i:" OPTION; do
     case $OPTION in
         p )
             PRODUCT_NAME=$OPTARG
@@ -38,6 +40,9 @@ while getopts ":p:c:n:" OPTION; do
         n )
             rmq_cluster_nodes=$OPTARG
             ;;
+        i )
+            install_provisioner=$OPTARG
+            ;;
         * )
             usage
             ;;
@@ -45,7 +50,7 @@ while getopts ":p:c:n:" OPTION; do
 done
 
 [ -z "$rmq_cluster" ] && rmq_cluster=true
-[ -z "$PRODUCT_NAME" ] && PRODUCT_NAME="EES"
+[ -z "$PRODUCT_NAME" ] && PRODUCT_NAME="LDR_R1"
 
 setup_provisioner_prereq(){
     if ! [ "$(rpm -qa | grep cortx-prvsnr-cli)" ]; then
@@ -62,12 +67,12 @@ setup_provisioner_prereq(){
     fi
 
     # to install updated packages
-    pkg_name=$(curl -s http://ci-storage.mero.colo.seagate.com/releases/eos/github/master/rhel-7.7.1908/2629/dev/|grep cortx-prvsnr-cli-1.0.0.*.rpm -o)
-    echo $pkg_name
-    yum install -y http://ci-storage.mero.colo.seagate.com/releases/eos/github/master/rhel-7.7.1908/2629/dev/$pkg_name
+    pkg_name="cortx-prvsnr-cli-1.0.0"
+    build_url="http://cortx-storage.colo.seagate.com/releases/cortx/github/dev/rhel-7.7.1908/provisioner_last_successful"
+    yum install -y $build_url/$(curl -s $build_url/|grep $pkg_name|sed 's/<\/*[^"]*"//g'|cut -d"\"" -f1)
     # provisioner decides the setup(single or dual node) for deployment and
     # they don't use this dev init script. This script supports only single node setup.
-    sudo /opt/seagate/cortx/provisioner/cli/src/setup-provisioner -S http://ci-storage.mero.colo.seagate.com/releases/eos/github/master/rhel-7.7.1908/2629/dev/
+    sudo /opt/seagate/cortx/provisioner/cli/src/setup-provisioner -S $build_url
     salt-call state.apply components.system
     python3 /opt/seagate/cortx/provisioner/cli/pillar_encrypt
 
@@ -96,7 +101,7 @@ start_req_services(){
         fi
     done
 
-    if [ $SSPL_STATUS == "active" -a $PRODUCT_NAME == "ECS" ]
+    if [ $SSPL_STATUS == "active" -a $PRODUCT_NAME == "LDR_R2" ]
     then
         echo SSPL Service started.
         echo Waiting 5 seconds to initialize.
@@ -104,7 +109,7 @@ start_req_services(){
         echo "*************************************************************************"
         echo "SSPL state is 'active'"
         echo "*************************************************************************"
-    elif [ $SSPL_STATUS == "active" -a $PRODUCT_NAME == "EES" ]
+    elif [ $SSPL_STATUS == "active" -a $PRODUCT_NAME == "LDR_R1" ]
     then
         echo SSPL Service started.
         echo Waiting 5 seconds to initialize.
@@ -121,11 +126,12 @@ start_req_services(){
     fi
 }
 
-
-setup_provisioner_prereq
+if [ "$install_provisioner" == true ]; then
+    setup_provisioner_prereq
+fi
 $SCRIPT_DIR/bin/sspl_post_install -p $PRODUCT_NAME -e DEV -c $rmq_cluster
 $SCRIPT_DIR/bin/sspl_setup_init -r $PRODUCT_FAMILY
-if [ "$PRODUCT_NAME" == "ECS" ]; then
+if [ "$PRODUCT_NAME" == "LDR_R2" ]; then
     [ -z "$rmq_cluster_nodes" ] && $SCRIPT_DIR/bin/sspl_config || $SCRIPT_DIR/bin/sspl_config -n $rmq_cluster_nodes
     [ "$rmq_cluster" == true ] && $SCRIPT_DIR/bin/sspl_setup_rabbitmq_cluster
 else

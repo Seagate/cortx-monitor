@@ -12,7 +12,7 @@ from sspl_test.framework.utils.config_reader import ConfigReader
 
 RABBITMQCTL = '/usr/sbin/rabbitmqctl'
 
-RABBITMQ_CLUSTER_SECTION = 'RABBITMQCLUSTER'
+MESSAGING_CLUSTER_SECTION = 'MESSAGINGCLUSTER'
 RABBITMQ_CLUSTER_HOSTS_KEY = 'cluster_nodes'
 
 config = ConfigReader()
@@ -27,8 +27,8 @@ connection_error_msg = (
 
 
 # get_cluster_nodes method is 'depreciated' after product name change
-# from EES to ECS. Refer EOS-8860. This method was used to get node names from
-# rabbitmq cluster using rabbitmqctl command. Onwards ECS, get_cluster_connection
+# from LDR_R1 to LDR_R2. Refer EOS-8860. This method was used to get node names from
+# rabbitmq cluster using rabbitmqctl command. Onwards LDR_R2, get_cluster_connection
 # is used to get nodes from consul and create connections.
 def get_cluster_nodes():
     process = subprocess.Popen(
@@ -46,7 +46,7 @@ def get_cluster_connection(username, password, virtual_host):
     """Makes connection with one of the rabbitmq node.
     """
     #hosts = get_cluster_nodes()  # Depreciated (EOS-8860)
-    hosts = config.get_value_list(RABBITMQ_CLUSTER_SECTION, RABBITMQ_CLUSTER_HOSTS_KEY)
+    hosts = config.get_value_list(MESSAGING_CLUSTER_SECTION, RABBITMQ_CLUSTER_HOSTS_KEY)
     logger.debug(f'Cluster nodes [SSPL TEST]: {hosts}')
     ampq_hosts = [
         f'amqp://{username}:{password}@{host}/{virtual_host}' for host in hosts

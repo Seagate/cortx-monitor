@@ -25,11 +25,11 @@ try:
     import salt.client
     from sspl_constants import component, file_store_config_path, salt_provisioner_pillar_sls, \
          file_store_config_path, SSPL_STORE_TYPE, StoreTypes, salt_uniq_passwd_per_node, COMMON_CONFIGS, \
-         CONSUL_HOST, CONSUL_PORT, SSPL_CONFIGS, MAX_CONSUL_RETRY, WAIT_BEFORE_RETRY
+         CONSUL_HOST, CONSUL_PORT, SSPL_CONFIGS, MAX_CONSUL_RETRY, WAIT_BEFORE_RETRY, MESSAGING_CLUSTER_SECTION
 except Exception as e:
     from framework.base.sspl_constants import component, salt_provisioner_pillar_sls, \
          SSPL_STORE_TYPE, StoreTypes, salt_uniq_passwd_per_node, COMMON_CONFIGS, SSPL_CONFIGS, \
-         MAX_CONSUL_RETRY, WAIT_BEFORE_RETRY
+         MAX_CONSUL_RETRY, WAIT_BEFORE_RETRY, MESSAGING_CLUSTER_SECTION
     from framework.utils.consulstore import ConsulStore
     from framework.utils.filestore import FileStore
 
@@ -85,9 +85,9 @@ class ConfigReader(object):
                 for k in str_keys:
                     del new_conf[k]
                 common_cluster_id = salt.client.Caller().function('grains.get', 'cluster_id')
-                # Password is same for RABBITMQINGRESSPROCESSOR, RABBITMQEGRESSPROCESSOR & LOGGINGPROCESSOR
+                # Password is same for INGRESSPROCESSOR, EGRESSPROCESSOR & LOGGINGPROCESSOR
                 rbmq_pass = salt.client.Caller().function('pillar.get',
-                               'rabbitmq:sspl:RABBITMQINGRESSPROCESSOR:password')
+                               'rabbitmq:sspl:INGRESSPROCESSOR:password')
                 if common_cluster_id:
                     new_conf.get('SYSTEM_INFORMATION')['cluster_id'] = common_cluster_id
                 for sect in salt_uniq_passwd_per_node:
@@ -240,7 +240,7 @@ class ConfigReader(object):
                 if key is None:
                     val = self.kv_get(section.lower() + '/', recurse=True)
                 else:
-                    if section.lower() == 'rabbitmqcluster':
+                    if section == MESSAGING_CLUSTER_SECTION:
                         val = self.kv_get(key)
                     else:
                         val = self.kv_get(section.lower() + '/' + key)
@@ -250,7 +250,7 @@ class ConfigReader(object):
             if key is None:
                 val = self.store.get(section.lower() + '/', recurse=True)
             else:
-                if section.lower() == 'rabbitmqcluster':
+                if section == MESSAGING_CLUSTER_SECTION:
                     val = self.store.get(key)
                 else:
                     val = self.store.get(section.lower() + '/' + key)

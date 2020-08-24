@@ -6,9 +6,9 @@ try:
 except Exception as e:
     from framework.utils.salt_util import node_id, consulhost, consulport
 
-PRODUCT_NAME = 'EES'
+PRODUCT_NAME = 'LDR_R1'
 PRODUCT_FAMILY = 'cortx'
-enabled_products = ["CS-A", "SINGLE", "EES", "ECS"]
+enabled_products = ["CS-A", "SINGLE","DUAL", "CLUSTER", "LDR_R1", "LDR_R2"]
 cs_products = ["CS-A"]
 cs_legacy_products = ["CS-L", "CS-G"]
 setups = ["cortx"]
@@ -26,9 +26,29 @@ PRODUCT = "product"
 SETUP = "setup"
 MAX_CONSUL_RETRY = 12
 WAIT_BEFORE_RETRY = 5
+SUPPORT_REQUESTOR_NAME = "cortx-support"
+SUPPORT_EMAIL_ID = "support@seagate.com"
+SUPPORT_CONTACT_NUMBER = "18007324283"
+ENCL_TRIGGER_LOG_MAX_RETRY = 10
+ENCL_DOWNLOAD_LOG_MAX_RETRY = 60
+ENCL_DOWNLOAD_LOG_WAIT_BEFORE_RETRY = 15
+
 node_key_id = node_id
 CONSUL_HOST = consulhost
 CONSUL_PORT = consulport
+SSPL_SETTINGS = {
+        "ACTUATORS" : ["Service", "RAIDactuator", "Smartctl", "NodeHWactuator", "RealStorActuator"],
+        "CORE_PROCESSORS" : ("EgressProcessor", "IngressProcessor", "LoggingProcessor"),
+        "DEGRADED_STATE_MODULES" : ("ServiceWatchdog", "RAIDsensor", "NodeData", "IEMSensor", "NodeHWsensor",
+                            "DiskMsgHandler", "LoggingMsgHandler", "ServiceMsgHandler", "NodeDataMsgHandler",
+                            "NodeControllerMsgHandler", "SASPortSensor", "MemFaultSensor", "CPUFaultSensor"),
+        "MESSAGE_HANDLERS" : ("DiskMsgHandler", "LoggingMsgHandler", "ServiceMsgHandler", "NodeDataMsgHandler",
+                        "NodeControllerMsgHandler", "RealStorEnclMsgHandler", "RealStorActuatorMsgHandler"),
+        "SENSORS" : ["ServiceWatchdog", "RAIDsensor", "NodeData", "RealStorFanSensor", "RealStorPSUSensor",
+            "RealStorControllerSensor", "RealStorDiskSensor", "RealStorSideplaneExpanderSensor",
+            "RealStorLogicalVolumeSensor", "IEMSensor", "NodeHWsensor", "RealStorEnclosureSensor",
+            "SASPortSensor", "MemFaultSensor", "CPUFaultSensor"]
+}
 
 COMMON_CONFIGS = {
     "SYSTEM_INFORMATION": {
@@ -55,7 +75,7 @@ COMMON_CONFIGS = {
         "password" : "controller/secret",
         "mgmt_interface" : "controller/mgmt_interface"
     },
-    "RABBITMQCLUSTER": {
+    "MESSAGINGCLUSTER": {
         "sspl_key" : "key_provided_by_provisioner",
         "cluster_nodes" : "rabbitmq/cluster_nodes",
         "erlang_cookie" : "rabbitmq/erlang_cookie"
@@ -75,7 +95,12 @@ component = 'sspl/config'
 file_store_config_path = '/etc/sspl.conf'
 salt_provisioner_pillar_sls = 'sspl'
 salt_uniq_attr_per_node = ['cluster_id']
-salt_uniq_passwd_per_node = ['RABBITMQINGRESSPROCESSOR', 'RABBITMQEGRESSPROCESSOR', 'LOGGINGPROCESSOR']
+salt_uniq_passwd_per_node = ['INGRESSPROCESSOR', 'EGRESSPROCESSOR', 'LOGGINGPROCESSOR']
+AMQP_EXCHANGE_TYPE_TOPIC = "topic"
+AMQP_PORT = 5762
+MESSAGING = "MESSAGING"
+MESSAGING_TYPE_RABBITMQ = "rabbitmq"
+MESSAGING_CLUSTER_SECTION = 'MESSAGINGCLUSTER'
 
 class RaidDataConfig(Enum):
     MDSTAT_FILE = "/proc/mdstat"

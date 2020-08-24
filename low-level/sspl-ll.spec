@@ -13,7 +13,7 @@ Summary:    Installs SSPL
 BuildArch:  noarch
 Group:      System Environment/Daemons
 License:    Seagate Proprietary
-URL:        http://gerrit.mero.colo.seagate.com:8080/#/admin/projects/sspl
+URL:        https://github.com/Seagate/cortx-sspl
 Source0:    %{name}-%{version}.tgz
 BuildRoot:  %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 BuildRequires: python36 rpm-build sudo
@@ -26,7 +26,7 @@ Requires:   %{product_family}-libsspl_sec-method_none = %{version}-%{release}
 Requires:   perl(Config::Any) eos-py-utils
 Requires(pre): shadow-utils
 
-# Disabling for EES-non-requirement
+# Disabling for LDR_R1-non-requirement
 # Requires:  zabbix22-agent
 
 %description
@@ -77,12 +77,13 @@ CFG_DIR=$SSPL_DIR/conf
     ln -sf $SSPL_DIR/lib/sspl_ll_d /usr/bin/sspl_ll_d
     ln -sf $SSPL_DIR/lib/resource_health_view /usr/bin/resource_health_view
     ln -sf $SSPL_DIR/lib/sspl_ll_d $SSPL_DIR/bin/sspl_ll_d
+    ln -sf $SSPL_DIR/lib/sspl_bundle_generate $SSPL_DIR/bin/sspl_bundle_generate
 }
 
 # run conf_diff.py script
 [ -f /opt/seagate/%{product_family}/sspl/bin/sspl_conf_adopt.py ] && python3 /opt/seagate/%{product_family}/sspl/bin/sspl_conf_adopt.py
 
-# restore /tmp/sspl_tmp.conf (its updated from previuos version of /etc/sspl.conf & new keys added in sspl.conf.EES)
+# restore /tmp/sspl_tmp.conf (its updated from previuos version of /etc/sspl.conf & new keys added in sspl.conf.LDR_R1)
 [ -f /tmp/sspl_tmp.conf ] && cp /tmp/sspl_tmp.conf /etc/sspl.conf
 
 # restore of data & iem folder

@@ -83,7 +83,6 @@ class AutoEmail(object):
         #Email recipients is a list
         self._email_recipient = self._conf_reader._get_value_list(self.SMTPSETTING,
                                                              self.RECIPIENT)
-
         #Get the priority from conf and map it to a number from 0-7, most to least critical
         self._log_priority = self.LOGLEVEL_NAME_TO_LEVEL_DICT[self._conf_reader._get_value_with_default(self.LOGEMAILER,
                                                              self.PRIORITY,

@@ -1,14 +1,14 @@
 1. Install following latest sspl RPMs on both the node
-    - eos-libsspl_sec-<version>_<git-id>.el7.centos.x86_64
-    - eos-libsspl_sec-method_none-<version>_<git-id>.el7.centos.x86_64
-    - eos-sspl-<version>_<git-id>.el7.centos.noarch
+    - cortx-libsspl_sec-<version>_<git-id>.el7.centos.x86_64
+    - cortx-libsspl_sec-method_none-<version>_<git-id>.el7.centos.x86_64
+    - cortx-sspl-<version>_<git-id>.el7.centos.noarch
 
 2. Initialization of SSPL
     - Make sure rabbitmq is installed on nodes.
     - Make sure consul service is running on nodes.
 
     - If system is not provisioned, execute following steps to initialize SSPL:
-        /opt/seagate/cortx/sspl/bin/sspl_post_install -p EES
+        /opt/seagate/cortx/sspl/bin/sspl_post_install -p LDR_R1
         /opt/seagate/cortx/sspl/bin/sspl_setup_init -r cortx
         /opt/seagate/cortx/sspl/bin/sspl_config
         systemctl start sspl-ll.service

@@ -25,6 +25,7 @@ import time
 import sys
 import os
 import psutil
+import subprocess
 from threading import Thread
 from sspl_test.default import *
 
@@ -189,3 +190,16 @@ def stop_rabbitMQ_msg_processors():
     for name, module in list(world.sspl_modules.items()):
         module.shutdown()
     os._exit(0)
+
+
+def check_os_platform():
+    """ Returns the os platform on which test-case is running"""
+    CHECK_PLATFORM = " hostnamectl status | grep Chassis"
+    process = subprocess.Popen(CHECK_PLATFORM, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    response, error = process.communicate()
+    if response:
+        output = response.decode().rstrip('\n')
+        platform = output.split(":")[1].lstrip()
+        return platform
+    if error:
+        print("Failed to get the os platform: error:{}".format(error.decode().rstrip('\n')))

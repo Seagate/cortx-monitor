@@ -181,7 +181,7 @@ class RealStorDiskSensor(SensorThread, InternalMsgQ):
                 disk[item] = disk_info[item]
 
         encl = self.rssencl.ENCL_FAMILY
-        disk[encl] = self.rssencl.EES_ENCL
+        disk[encl] = self.rssencl.LDR_R1_ENCL
 
         # Build data for platform specific fields in fru disk data
         # get remaining extra key value pairs from passed disk_info
@@ -284,12 +284,12 @@ class RealStorDiskSensor(SensorThread, InternalMsgQ):
                         url, self.rssencl.ws.HTTP_GET)
 
         if not response:
-            logger.warn(f"{self.rssencl.EES_ENCL}:: Disks status unavailable as ws request {url} failed")
+            logger.warn(f"{self.rssencl.LDR_R1_ENCL}:: Disks status unavailable as ws request {url} failed")
             return
 
         if response.status_code != self.rssencl.ws.HTTP_OK:
             if url.find(self.rssencl.ws.LOOPBACK) == -1:
-                logger.error(f"{self.rssencl.EES_ENCL}:: http request {url} to poll disks failed with \
+                logger.error(f"{self.rssencl.LDR_R1_ENCL}:: http request {url} to poll disks failed with \
                        err {response.status_code}")
             return
 

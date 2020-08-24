@@ -3,8 +3,8 @@
 set -e
 
 default_name="Seagate SSPL RAS"
-default_email="eos.ras@seagate.com"
-default_comment="EES RAS SSPL developer RPM signing key"
+default_email="CORTX.ras@seagate.com"
+default_comment="LDR_R1 RAS SSPL developer RPM signing key"
 
 if [ "$#" -eq 0 ]; then
     key_name="${default_name}"

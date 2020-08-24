@@ -21,7 +21,7 @@ from framework.utils.service_logging import logger
 from framework.base.sspl_constants import cs_legacy_products
 
 # Modules that receive messages from this module
-from framework.rabbitmq.plane_cntrl_rmq_egress_processor import PlaneCntrlRMQegressProcessor
+from framework.messaging.plane_cntrl_egress_processor import PlaneCntrlEgressProcessor
 from json_msgs.messages.actuators.ack_response import AckResponseMsg
 
 
@@ -117,7 +117,7 @@ class PlaneCntrlMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 return
 
             # Let the egress processor know the current task being worked
-            self._write_internal_msgQ(PlaneCntrlRMQegressProcessor.name(), jsonMsg)
+            self._write_internal_msgQ(PlaneCntrlEgressProcessor.name(), jsonMsg)
 
             hostname = self._sedOpDispatch.hostname
 
@@ -150,7 +150,7 @@ class PlaneCntrlMsgHandler(ScheduledModuleThread, InternalMsgQ):
             status, str(errors, 'utf-8')
         ack_msg = AckResponseMsg(json.dumps(ack_type), \
                                  str(response), self._uuid).getJson()
-        self._write_internal_msgQ(PlaneCntrlRMQegressProcessor.name(), ack_msg)
+        self._write_internal_msgQ(PlaneCntrlEgressProcessor.name(), ack_msg)
 
     def _parse_jsonMsg(self, jsonMsg):
         """Parse json msg into usable fields"""

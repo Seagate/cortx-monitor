@@ -169,7 +169,7 @@
 									"required": true
 								},
 								"node_id": {
-									"description": "A numerical value that indicates type of node in cluster. i.e 1-Mero,2-GW in EOS.",
+									"description": "A numerical value that indicates type of node in cluster. i.e 1-Motr,2-GW in CORTX.",
 									"type": "string",
 									"required": true
 								},

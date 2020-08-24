@@ -22,7 +22,7 @@ from framework.utils.service_logging import logger
 from framework.base.sspl_constants import enabled_products
 
 # Modules that receive messages from this module
-from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
+from framework.messaging.egress_processor import EgressProcessor
 
 from json_msgs.messages.actuators.ack_response import AckResponseMsg
 
@@ -116,7 +116,7 @@ class LoggingMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
         result = "N/A"
 
-        # Disabled for EES
+        # Disabled for LDR_R1
         # if log_type == "IEM":
         #     self._log_debug("_process_msg, msg_type: IEM")
         #     if self._iem_log_locally == "true":
@@ -148,17 +148,17 @@ class LoggingMsgHandler(ScheduledModuleThread, InternalMsgQ):
             # Send the event to disk message handler to generate json message
             self._write_internal_msgQ("DiskMsgHandler", internal_json_msg)
 
-            # Disabled for EES
+            # Disabled for LDR_R1
             # Hand off to the IEM logger
             # result = self._iem_logger.log_msg(jsonMsg)
 
             # Send ack about logging msg
             ack_msg = AckResponseMsg(log_type, result, uuid).getJson()
-            self._write_internal_msgQ(RabbitMQegressProcessor.name(), ack_msg)
+            self._write_internal_msgQ(EgressProcessor.name(), ack_msg)
 
         # ... handle other logging types
 
-        # Disabled for EES
+        # Disabled for LDR_R1
         # Route the IEM if enabled
         #if self._iem_routing_enabled == "true":
         #    self._route_IEM(jsonMsg)
@@ -182,8 +182,8 @@ class LoggingMsgHandler(ScheduledModuleThread, InternalMsgQ):
                         }
                     }
                  })
-        # Send the IEM to RabbitMQegressProcessor to be routed to another IEM listener
-        self._write_internal_msgQ(RabbitMQegressProcessor.name(), internal_json_msg)
+        # Send the IEM to EgressProcessor to be routed to another IEM listener
+        self._write_internal_msgQ(EgressProcessor.name(), internal_json_msg)
 
     def _read_config(self):
         """Read in configuration values"""

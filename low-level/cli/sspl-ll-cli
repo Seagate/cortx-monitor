@@ -38,7 +38,7 @@ program_name = os.path.basename(sys.argv[0])
 program_version_message = ('%s v%s (%s)' %(program_name, __version__, __updated__))
 
 FLAGS = re.VERBOSE | re.MULTILINE | re.DOTALL
-WHITESPACE = re.compile(r'[ \t\n\r]*', FLAGS)
+BLANKSPACE = re.compile(r'[ \t\n\r]*', FLAGS)
 
 # Section containing information about the system we're running on
 CONF_FILE_PATH  = '/etc/sspl.conf'
@@ -49,7 +49,7 @@ SSPL_LL_SETTING = 'SSPL-LL_SETTING'
 CORE_PROCESSORS = 'core_processors'
 ACTUATORS       = 'actuators'
 SENSORS         = 'sensors'
-RABBITMQINGRESSPROCESSOR = 'RABBITMQINGRESSPROCESSOR'
+INGRESSPROCESSOR = 'INGRESSPROCESSOR'
 
 #GEM commands
 REBOOT_ALL_SAS_EXPANDERS_CMD = 'wbcli {} "gncli exp:all reboot"'
@@ -93,17 +93,17 @@ def main():
     product = conf_reader._get_value(SYS_INFORMATION, COMMON_CONFIGS.get(SYS_INFORMATION).get(PRODUCT))
     # Convert all string to lowercase in the list for ignore case sensitive
     global manTest
-    if product.lower() == "ees":
+    if product.lower() == "ldr_r1":
         # Setup argument parser
         parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawDescriptionHelpFormatter, \
                                          add_help=False, allow_abbrev=False)
         parser.add_argument("-v", "--version", action="store_true", help="show cli version")
         try:
             # Create instance of ManualTest to publish messages
-            manTest = ManualTest("RABBITMQINGRESSPROCESSOR")
+            manTest = ManualTest("INGRESSPROCESSOR")
         except Exception:
             print("Products only useful for verifying packages\n")
-        return _init_EES(parser, program_name)
+        return _init_LDR_R1(parser, program_name)
 
     else:
         if cli_type == "sed":
@@ -125,7 +125,7 @@ def main():
             parser.add_argument("-v", "--version", action="store_true", help="show cli version")
             try:
                 # Create instance of ManualTest to publish messages
-                manTest = ManualTest("RABBITMQINGRESSPROCESSOR")
+                manTest = ManualTest("INGRESSPROCESSOR")
             except Exception:
                 print("CLI only useful for verifying packages\n")
             return _init_CS_A(parser, program_name)
@@ -441,7 +441,7 @@ def _init_CS_A(parser, program_name):
     parser.add_argument("--iemloglevel", metavar="LEVEL", help="IEM log level.  ie LOG_CRIT, LOG_ERR, LOG_WARNING")
     parser.add_argument("--iemhost", metavar="HOST", help="IEM receiver. ie 10.22.192.100, default localhost")
     parser.add_argument("--iemexchange", metavar="EXCHNG", help="RabbitMQ exchange. ie sspl_iem, default sspl-iem")
-    parser.add_argument("--fsstats", metavar="FSFIDKEY", help="display total/free space on Mero, ie --fsstats 4")
+    parser.add_argument("--fsstats", metavar="FSFIDKEY", help="display total/free space on Motr, ie --fsstats 4")
 
     group = parser.add_mutually_exclusive_group()
     group.add_argument("--smrdata", action="store_true", help="log SMR drive register data")
@@ -483,8 +483,8 @@ def _init_CS_A(parser, program_name):
     parser.add_argument("--autoinstall", action="store_true", help="Automatically attempt to install required packages.")
     return _process_arguments(parser, program_name)
 
-def _init_EES(parser, program_name):
-    """Initialize options for Castor EES project"""
+def _init_LDR_R1(parser, program_name):
+    """Initialize options for Castor LDR_R1 project"""
     parser.add_argument("--help", action="store_true", help="display this help message and exit")
     parser.add_argument("-a", "--all", action="store_true", help="display all the data received in responses")
     parser.add_argument("-h", "--human", action="store_true", help="display responses with indentation for readability")
@@ -497,7 +497,7 @@ def _init_EES(parser, program_name):
     parser.add_argument("--iemloglevel", metavar="LEVEL", help="IEM log level.  ie LOG_CRIT, LOG_ERR, LOG_WARNING")
     parser.add_argument("--iemhost", metavar="HOST", help="IEM receiver. ie 10.22.192.100, default localhost")
     parser.add_argument("--iemexchange", metavar="EXCHNG", help="RabbitMQ exchange. ie sspl_iem, default sspl-iem")
-    parser.add_argument("--fsstats", metavar="FSFIDKEY", help="display total/free space on Mero, ie --fsstats 4")
+    parser.add_argument("--fsstats", metavar="FSFIDKEY", help="display total/free space on Motr, ie --fsstats 4")
     group = parser.add_mutually_exclusive_group()
     group.add_argument("--cpudata", action="store_true", help="display CPU data")
     group.add_argument("--hostdata", action="store_true", help="display host data")
@@ -512,7 +512,7 @@ def _init_EES(parser, program_name):
     return _process_arguments(parser, program_name)
 
 def _process_arguments(parser, program_name):
-    # Processing arguments for _init_CS_A and _init_EES functions.
+    # Processing arguments for _init_CS_A and _init_LDR_R1 functions.
     try:
         args = parser.parse_args()
         if args.version:
@@ -785,11 +785,11 @@ def _process_arguments(parser, program_name):
             print("Check logs for new SMR drive register values")
 
         elif hasattr(args, 'fsstats') and args.fsstats:
-            # Load a node controller mero message and update it
-            file = CLI_RESOURCE_PATH + "/actuator_msgs/node_cntrl_mero.json"
+            # Load a node controller motr message and update it
+            file = CLI_RESOURCE_PATH + "/actuator_msgs/node_cntrl_motr.json"
             jsonMsg = json.loads(open(file).read())
             jsonMsg["message"]["actuator_request_type"]["node_controller"]["node_request"] = \
-                    "MERO: fsstats {}".format(args.fsstats)
+                    "MOTR: fsstats {}".format(args.fsstats)
             _send_raw_msg(jsonMsg, alldata=args.all, indent=args.human, response_wait_time=30)
 
         elif hasattr(args, 'cpudata') and args.cpudata:
@@ -867,7 +867,7 @@ def _process_arguments(parser, program_name):
             json_list = []
             decoder = JSONDecoder()
             s_len = len(json_txt)
-            _w=WHITESPACE.match
+            _w=BLANKSPACE.match
 
             end = 0
             while end != s_len:
@@ -885,7 +885,7 @@ def _process_arguments(parser, program_name):
             json_txt = open(args.fromfile).read()
             decoder = JSONDecoder()
             s_len = len(json_txt)
-            _w=WHITESPACE.match
+            _w=BLANKSPACE.match
 
             end = 0
             while end != s_len:

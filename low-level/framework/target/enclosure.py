@@ -25,7 +25,7 @@ from framework.base.sspl_constants import COMMON_CONFIGS
 class StorageEnclosure(object):
 
     ENCL_FAMILY = "enclosure-family"
-    EES_ENCL = "Realstor 5U84"
+    LDR_R1_ENCL = "Realstor Storage_enclosure"
 
     EXTENDED_INFO = "extended_info"
 

@@ -1,6 +1,6 @@
 [sspl-uploads]
 name=SSPL uploads
-baseurl=http://ci-storage.mero.colo.seagate.com/releases/master/sspl_uploads/
+baseurl=http://cortx-storage.colo.seagate.com/releases/cortx/sspl_uploads/
 gpgcheck=0
 enabled=1
 # highest priority

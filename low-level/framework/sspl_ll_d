@@ -41,19 +41,19 @@ from framework.utils.service_logging import logger
 from framework.utils.store_factory import store
 
 # Modules for handling RabbitMQ messages and manipulating internal threads
-from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
-from framework.rabbitmq.rabbitmq_ingress_processor import RabbitMQingressProcessor
+from framework.messaging.egress_processor import EgressProcessor
+from framework.messaging.ingress_processor import IngressProcessor
 
-from framework.rabbitmq.plane_cntrl_rmq_egress_processor import PlaneCntrlRMQegressProcessor
-from framework.rabbitmq.plane_cntrl_rmq_ingress_processor import PlaneCntrlRMQingressProcessor
-from framework.base.sspl_constants import enabled_products, OperatingSystem, COMMON_CONFIGS
+from framework.messaging.plane_cntrl_egress_processor import PlaneCntrlEgressProcessor
+from framework.messaging.plane_cntrl_ingress_processor import PlaneCntrlIngressProcessor
+from framework.base.sspl_constants import enabled_products, OperatingSystem, COMMON_CONFIGS, SSPL_SETTINGS
 from framework.base.module_thread import SensorThread
 from framework.actuator_state_manager import actuator_state_manager
 
-from framework.rabbitmq.logging_processor import LoggingProcessor
-from framework.rabbitmq.thread_controller import ThreadController
-from framework.rabbitmq.rabbitmq_egress_accumulated_msgs_processor import \
-    RabbitMQEgressAccumulatedMsgsProcessor
+from framework.messaging.logging_processor import LoggingProcessor
+from framework.messaging.thread_controller import ThreadController
+from framework.messaging.egress_accumulated_msgs_processor import \
+    EgressAccumulatedMsgsProcessor
 from framework.base.sspl_constants import PRODUCT_FAMILY
 
 from actuators.impl.actuator import Actuator
@@ -289,17 +289,15 @@ def main(conf_reader, systemd_support):
     modules_to_resume = []
     try:
         # Read list of modules from conf file to load in degraded mode
-        modules_to_resume = conf_reader._get_value_list(SSPL_SETTING,
-                                                      DEGRADED_STATE_MODULES)
+        modules_to_resume = SSPL_SETTINGS.get("DEGRADED_STATE_MODULES")
     except Exception as e:
         logger.warn("Configuration not found: degraded_state_modules")
         modules_to_resume = []
     logger.info("modules_to_resume: {0}".format(str(modules_to_resume)))
 
     # Use reflection to instantiate the classes based upon its class name in config file
-    core_processors = conf_reader._get_value_list(SSPL_SETTING,
-                                                  CORE_PROCESSORS)
-    logger.info("sspl-ll Bootstrap: core processors to load: %s" % core_processors)
+    core_processors = SSPL_SETTINGS.get("CORE_PROCESSORS")
+    logger.info("sspl-ll Bootstrap: core processors to load: %s" % (core_processors, ))
     for core_processor in core_processors:
         klass = globals()[core_processor]
 
@@ -307,13 +305,12 @@ def main(conf_reader, systemd_support):
         sspl_threaded_modules[klass.name()] = klass()
         msgQlist[klass.name()] = queue.Queue()
 
-    # Add rabbitmq_egress_accumulated_msgs_processor.py in sspl_threaded_modules
-    sspl_threaded_modules[RabbitMQEgressAccumulatedMsgsProcessor] = RabbitMQEgressAccumulatedMsgsProcessor()
-    msgQlist[RabbitMQEgressAccumulatedMsgsProcessor.name()] = queue.Queue()
+    # Add egress_accumulated_msgs_processor.py in sspl_threaded_modules
+    sspl_threaded_modules[EgressAccumulatedMsgsProcessor] = EgressAccumulatedMsgsProcessor()
+    msgQlist[EgressAccumulatedMsgsProcessor.name()] = queue.Queue()
 
-    message_handlers = conf_reader._get_value_list(SSPL_SETTING,
-                                                   MSG_HANDLERS)
-    logger.info("sspl-ll Bootstrap: message handlers to load: %s" % message_handlers)
+    message_handlers = SSPL_SETTINGS.get("MESSAGE_HANDLERS")
+    logger.info("sspl-ll Bootstrap: message handlers to load: %s" % (message_handlers, ))
 
     for message_handler in message_handlers:
         klass = globals()[message_handler]
@@ -368,10 +365,10 @@ def main(conf_reader, systemd_support):
 
             # SSPL will be started in degrade mode by default.
             # Run module only if it is allowed to run in degraded mode
-            # or it is defined in core modules or prodcut is ECS
+            # or it is defined in core modules or prodcut is LDR_R2
             resume = False
             if name in modules_to_resume or name in ThreadController.ALWAYS_ACTIVE_MODULES \
-                or product.upper() == "ECS":
+                or product.upper() == "LDR_R2":
                 resume = True
 
             thread = Thread(target=_run_thread_capture_errors,
@@ -399,14 +396,14 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist, operating_system
     """Loops thru list of sensors/actuators and instantiate"""
 
     # Read in list of sensors
-    sensors = conf_reader._get_value_list(SSPL_SETTING, SENSORS)
-    logger.info("sspl-ll Bootstrap: sensors to load: %s" % sensors)
+    sensors = SSPL_SETTINGS.get("SENSORS")
+    logger.info("sspl-ll Bootstrap: sensors to load: %s" % (sensors, ))
 
     # Read in list of actuators
-    actuators = conf_reader._get_value_list(SSPL_SETTING, ACTUATORS)
+    actuators = SSPL_SETTINGS.get("ACTUATORS")
     if setup in ['gw', 'cmu', 'vm'] and 'HPIactuator' in actuators:
         actuators.remove('HPIactuator')
-    logger.info("sspl-ll Bootstrap: actuators to load: %s" % actuators)
+    logger.info("sspl-ll Bootstrap: actuators to load: %s" % (actuators, ))
 
     # Import in the proper classes based upon values from config file
     if operating_system == OperatingSystem.CENTOS7.value or operating_system == OperatingSystem.RHEL7.value or \
@@ -541,7 +538,7 @@ def _run_thread_capture_errors(curr_module, sspl_threaded_modules, msgQlist, con
         # error_msg = "SSPL-LL encountered an error, terminating service Error, restarting daemon:{}" \
         #             .format(str(logger.exception(ex)))
         # jsonMsg   = ThreadControllerMsg(curr_module.name(), error_msg).getJson()
-        # curr_module._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
+        # curr_module._write_internal_msgQ(EgressProcessor.name(), jsonMsg)
 
         # Shut down any running threads, error is non-recoverable
         # shutdown_handler()
@@ -562,11 +559,11 @@ def shutdown_handler(signum=None, frame=None):
 
     shutdown_msg = "SSPL-LL is shutting down"
     jsonMsg   = ThreadControllerMsg(threadController.name(), shutdown_msg).getJson()
-    threadController._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
+    threadController._write_internal_msgQ(EgressProcessor.name(), jsonMsg)
 
-    # Wait for the RabbitMQegressProcessor to finish processing
+    # Wait for the EgressProcessor to finish processing
     # any messages which it may have in its queue
-    while threadController.check_RabbitMQegressProcessor_is_running() is True:
+    while threadController.check_EgressProcessor_is_running() is True:
         logger.info("Waiting for rabbitMQegress to finish sending queued msgs")
         time.sleep(2)
 

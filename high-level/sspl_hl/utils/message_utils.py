@@ -528,7 +528,7 @@ class ServiceListResponse(ListResponse):
     NO_OF_SERVICES = 2
     SERVICE_NAMES = [
         'halon',
-        'mero'
+        'motr'
     ]
 
     def __init__(self):
