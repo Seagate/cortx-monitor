@@ -6,10 +6,13 @@ import time
 import sys
 import socket
 import json
-import subprocess
+import salt.client
+import salt.config
+import salt.loader
 
 from sspl_constants import PRODUCT_FAMILY
 
+GRAINS_GET_CLUSTER_CMD = "salt-call grains.get cluster_id --output=newline_values_only"
 localTempPath = "/tmp/support_bundle/"
 onGoingRequestPath = "/tmp/sspl-msb-req.txt"
 encl_manifest = "/tmp/encl_manifest.json"
@@ -17,14 +20,25 @@ node_manifest = "/tmp/node_manifest.json"
 manifest_summary = "/tmp/manifest_summary.json"
 node_hostname = socket.gethostname().split('.', 1)[0]
 encl_summary_filter={}
-cluster_id = subprocess.Popen(['salt-call', 'grains.get', 'cluster_id'], stdout=subprocess.PIPE).communicate()[0]
-cluster_id = cluster_id.decode("utf-8").rstrip().replace('local:\n    ', '')
 encl_summary_fields=["object-name", "durable-id", "vendor-name", "product-id", "serial-number",
                      "model", "product-brand", "description", "status", "health", "health-reason",
                      "platform-type", "platform-brand", "part-number", "enclosure-wwn", "vendor",
                      "drive-serial-number"]
 node_summary_fields=['id', 'class', 'description', 'product', 'serial', 'vendor',
                      'part-number', 'model-number','children', 'physid', 'version']
+
+_client = salt.client.LocalClient()
+
+subout = _client.cmd('*', 'cmd.run', [GRAINS_GET_CLUSTER_CMD])
+result = list(subout.keys())
+if len(result) > 1:
+    __opts__ = salt.config.minion_config('/etc/salt/minion')
+    __grains__ = salt.loader.grains(__opts__)
+    node_id =  __grains__['id']
+    cluster_id = str(node_id)
+else:
+    node = result[0]
+    cluster_id = subout[node]
 
 def make_manifest_support_bundle_tarfile(parser, tmpFile):
     configure_path = parser[2]
