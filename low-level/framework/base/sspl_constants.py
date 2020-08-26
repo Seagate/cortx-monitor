@@ -47,7 +47,7 @@ SSPL_SETTINGS = {
         "SENSORS" : ["ServiceWatchdog", "RAIDsensor", "NodeData", "RealStorFanSensor", "RealStorPSUSensor",
             "RealStorControllerSensor", "RealStorDiskSensor", "RealStorSideplaneExpanderSensor",
             "RealStorLogicalVolumeSensor", "IEMSensor", "NodeHWsensor", "RealStorEnclosureSensor",
-            "SASPortSensor", "MemFaultSensor", "CPUFaultSensor"]
+            "SASPortSensor", "MemFaultSensor", "CPUFaultSensor", "RAIDIntegritySensor"]
 }
 
 COMMON_CONFIGS = {
