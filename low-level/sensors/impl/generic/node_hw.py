@@ -528,8 +528,11 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
             # 'ipmitool sel get <sel-entry-id>'
             # which gives more detailed information
             if device_type in self.fru_types:
-                self.fru_types[device_type](index, date, event_time, device_id,
-                        sensor_num, event, status, is_last)
+                try:
+                    self.fru_types[device_type](index, date, event_time, device_id,
+                            sensor_num, event, status, is_last)
+                except KeyError:
+                    logger.warn(f"Sensor {sensor_num} for {device_type} is not present, ignoring event")
 
         if last_index is not None:
             self._write_index_file(last_index)
@@ -596,7 +599,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
                     final_list += [l]
             res = ('\n'.join(final_list), res[1])
         # write res to out_file only if there is no channel error
-        if not self.channel_err and isinstance(res,str):
+        if not self.channel_err and isinstance(res,tuple):
             if out_file != subprocess.PIPE:
                 out_file.write(res[0])
 
