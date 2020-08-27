@@ -26,7 +26,7 @@ from sspl_test.rabbitmq.rabbitmq_ingress_processor_tests import RabbitMQingressP
 from sspl_test.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 from sspl_test.common import check_sspl_ll_is_running
 
-from sspl_test.framework.base.sspl_constants import CONSUL_PATH, DATA_PATH
+from sspl_test.framework.base.sspl_constants import DATA_PATH
 from sspl_test.alerts.node import simulate_bmc_interface_alert
 
 def init(args):

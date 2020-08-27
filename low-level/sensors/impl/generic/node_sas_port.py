@@ -35,7 +35,7 @@ from framework.base.module_thread import SensorThread
 from framework.utils.severity_reader import SeverityReader
 from framework.utils.sysfs_interface import SysFS
 from framework.utils.tool_factory import ToolFactory
-from framework.base.sspl_constants import COMMON_CONFIGS, PRODUCT_FAMILY, DATA_PATH
+from framework.base.sspl_constants import COMMON_CONFIGS, DATA_PATH
 from framework.utils.store_factory import file_store
 
 # Override default store

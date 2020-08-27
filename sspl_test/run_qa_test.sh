@@ -48,26 +48,16 @@ flask_help()
 
 pre_requisites()
 {
-<<<<<<< HEAD
     if [ "$IS_VIRTUAL" == "true" ]
     then
         # Backing up original persistence data
         $sudo rm -rf /var/$PRODUCT_FAMILY/sspl/orig-data
         $sudo mkdir -p /var/$PRODUCT_FAMILY/sspl/orig-data
-        $sudo find /var/$PRODUCT_FAMILY/sspl -maxdepth 2 -type d -path '/var/$PRODUCT_FAMILY/sspl/data/*' -not -name 'iem'  -exec bash -c 'mv -f ${0} ${0/data/orig-data}/' {} \;
+        $sudo find /var/$PRODUCT_FAMILY/sspl -maxdepth 2 -type d -path "/var/$PRODUCT_FAMILY/sspl/data/*" -not -name 'iem'  -exec bash -c 'mv -f ${0} ${0/data/orig-data}/' {} \;
         $sudo mkdir -p /var/$PRODUCT_FAMILY/sspl/orig-data/iem
         if [ -f /var/$PRODUCT_FAMILY/sspl/data/iem/last_processed_msg_time ]; then
             $sudo mv /var/$PRODUCT_FAMILY/sspl/data/iem/last_processed_msg_time /var/$PRODUCT_FAMILY/sspl/orig-data/iem/last_processed_msg_time
         fi
-=======
-    # Backing up original persistence data
-    $sudo rm -rf /var/$PRODUCT_FAMILY/sspl/orig-data
-    $sudo mkdir -p /var/$PRODUCT_FAMILY/sspl/orig-data
-    $sudo find /var/$PRODUCT_FAMILY/sspl -maxdepth 2 -type d -path "/var/$PRODUCT_FAMILY/sspl/data/*" -not -name 'iem'  -exec bash -c 'mv -f ${0} ${0/data/orig-data}/' {} \;
-    $sudo mkdir -p /var/$PRODUCT_FAMILY/sspl/orig-data/iem
-    if [ -f /var/$PRODUCT_FAMILY/sspl/data/iem/last_processed_msg_time ]; then
-        $sudo mv /var/$PRODUCT_FAMILY/sspl/data/iem/last_processed_msg_time /var/$PRODUCT_FAMILY/sspl/orig-data/iem/last_processed_msg_time
->>>>>>> EOS-11811: Use file store for CPU, Memory, SAS Port and Node HW sensors
     fi
 
     systemctl status rabbitmq-server 1>/dev/null && export status=true || export status=false

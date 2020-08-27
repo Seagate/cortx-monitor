@@ -33,7 +33,7 @@ from framework.utils.severity_reader import SeverityReader
 from framework.utils.procfs_interface import ProcFS
 from framework.utils.tool_factory import ToolFactory
 from framework.utils.store_factory import file_store
-from framework.base.sspl_constants import COMMON_CONFIGS, PRODUCT_FAMILY, DATA_PATH
+from framework.base.sspl_constants import COMMON_CONFIGS, DATA_PATH
 
 # Override default store
 store = file_store
