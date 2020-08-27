@@ -23,6 +23,7 @@ enabled_products = [ "CS-A", "SINGLE","DUAL","CLUSTER" ,"LDR_R1", "LDR_R2"]
 cs_products = ["CS-A"]
 cs_legacy_products = ["CS-L", "CS-G"]
 RESOURCE_PATH = f"/opt/seagate/{PRODUCT_FAMILY}/sspl/resources/"
+DATA_PATH = f"/var/{PRODUCT_FAMILY}/sspl/data/"
 
 SSPL_STORE_TYPE = 'consul'
 CONSUL_HOST = '127.0.0.1'
