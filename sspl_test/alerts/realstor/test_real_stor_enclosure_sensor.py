@@ -20,7 +20,10 @@ def test_real_stor_enclosure_sensor(agrs):
     kill_mock_server()
     encl_sensor_message_request("enclosure")
     encl_sensor_msg = None
-    while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
+    while time.time() < timeout:
+        if world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
+            time.sleep(1)
+            continue
         ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
         time.sleep(0.1)
         print("Received: %s" % ingressMsg)
@@ -33,11 +36,10 @@ def test_real_stor_enclosure_sensor(agrs):
         except Exception as exception:
             time.sleep(0.1)
             print(exception)
-        if time.time() > timeout:
-            print("Timeout Error, Test Failed")
+        if encl_sensor_msg:
             break
 
-    assert(encl_sensor_msg is not None)
+    assert(encl_sensor_msg is not None), "Timeout error, Real Store Enclosure Sensor test is failed."
     assert(encl_sensor_msg.get("alert_type") is not None)
     assert(encl_sensor_msg.get("alert_id") is not None)
     assert(encl_sensor_msg.get("severity") is not None)
