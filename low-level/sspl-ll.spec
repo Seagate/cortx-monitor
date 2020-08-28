@@ -54,13 +54,6 @@ id -u sspl-ll &>/dev/null || {
             -c "User account to run the sspl-ll service"
 }
 
-# Update the sudoers file with the sspl-ll user and available commands
-# Add or replace existing sudo line for sspl-ll user
-# Ref: EOS-12370/EOS-12279 - missing path caused issue during SW upgdare
-sed -i.bak '/sspl-ll.*/d' /etc/sudoers
-SUDO_LINE="sspl-ll      ALL = NOPASSWD: /usr/sbin/smartctl, /usr/sbin/mdadm, /usr/bin/mount, /usr/bin/umount, /usr/sbin/swapon, /usr/sbin/swapoff, /usr/sbin/hdparm, /usr/bin/systemctl, /usr/sbin/wbcli, /usr/bin/ipmitool, /usr/bin/systemd-detect-virt, /usr/bin/salt-call, /usr/bin/echo"
-grep -q "$SUDO_LINE" /etc/sudoers || echo "$SUDO_LINE" >> /etc/sudoers
-
 # take backup of cache folder if exists
 mkdir -p /opt/seagate/backup/%{version}
 [ -f /etc/sspl.conf ] && cp /etc/sspl.conf /opt/seagate/backup/%{version}/sspl.conf

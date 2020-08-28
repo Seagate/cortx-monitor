@@ -1,11 +1,6 @@
 #!/usr/bin/python3.6
 from enum import Enum
 
-try:
-    from salt_util import node_id, consulhost, consulport
-except Exception as e:
-    from framework.utils.salt_util import node_id, consulhost, consulport
-
 enabled_products = ["EES", "CS-A"]
 cs_products = ["CS-A"]
 cs_legacy_products = ["CS-L", "CS-G"]
@@ -17,17 +12,34 @@ NODE_ID = "001"
 SITE_ID = "001"
 RACK_ID = "001"
 SSPL_STORE_TYPE = 'consul'
+CONSUL_HOST = '127.0.0.1'
+CONSUL_PORT = '8500'
 SYSLOG_HOST = 'localhost'
 SYSLOG_PORT = '514'
 SYSINFO = "SYSTEM_INFORMATION"
 PRODUCT = "product"
 SETUP = "setup"
-MAX_CONSUL_RETRY = 12
-WAIT_BEFORE_RETRY = 5
 
-node_key_id = node_id
-CONSUL_HOST = consulhost
-CONSUL_PORT = consulport
+GRAINS_GET_NODE_CMD = "salt-call grains.get id --output=newline_values_only"
+MINION_GET_NODE_CMD = "cat /etc/salt/minion_id"
+
+# TODO : need to fetch node_key using salt python API.
+# Facing issue of service is going in loop till it eat's all the memory
+import subprocess
+subout = subprocess.Popen(GRAINS_GET_NODE_CMD, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+result = subout.stdout.readlines()
+if result == [] or result == "":
+    print(f"WARN : Command '{GRAINS_GET_NODE_CMD}' failed to fetch grain id or hostname.")
+    subout = subprocess.Popen(MINION_GET_NODE_CMD, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    result = subout.stdout.readlines()
+    if result == [] or result == "":
+        print(f"WARN : Command '{MINION_GET_NODE_CMD}' failed to fetch minion id or hostname.")
+        print("WARN : using node_id ('srvnode-1') as we are not able to fetch it from hostname command.")
+        node_key_id = 'srvnode-1'
+    else:
+        node_key_id = result[0].decode().rstrip('\n').lower()
+else:
+    node_key_id = result[0].decode().rstrip('\n')
 
 COMMON_CONFIGS = {
     "SYSTEM_INFORMATION": {
