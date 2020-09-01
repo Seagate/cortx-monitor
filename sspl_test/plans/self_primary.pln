@@ -1,5 +1,4 @@
 alerts.self_hw.test_self_hw_real_stor_enclosure_conn
-alerts.self_hw.test_self_hw_bmc_conn
 alerts.node.test_node_fan_actuator
 alerts.self_hw.test_self_hw_node_sel_event
 alerts.realstor.test_real_stor_fan_actuator
