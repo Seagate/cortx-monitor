@@ -33,13 +33,16 @@ flask_help()
 
 pre_requisites()
 {
-    # Backing up original persistence data
-    $sudo rm -rf /var/$PRODUCT_FAMILY/sspl/orig-data
-    $sudo mkdir -p /var/$PRODUCT_FAMILY/sspl/orig-data
-    $sudo find /var/$PRODUCT_FAMILY/sspl -maxdepth 2 -type d -path '/var/$PRODUCT_FAMILY/sspl/data/*' -not -name 'iem'  -exec bash -c 'mv -f ${0} ${0/data/orig-data}/' {} \;
-    $sudo mkdir -p /var/$PRODUCT_FAMILY/sspl/orig-data/iem
-    if [ -f /var/$PRODUCT_FAMILY/sspl/data/iem/last_processed_msg_time ]; then
-        $sudo mv /var/$PRODUCT_FAMILY/sspl/data/iem/last_processed_msg_time /var/$PRODUCT_FAMILY/sspl/orig-data/iem/last_processed_msg_time
+    if [ "$IS_VIRTUAL" == "true" ]
+    then
+        # Backing up original persistence data
+        $sudo rm -rf /var/$PRODUCT_FAMILY/sspl/orig-data
+        $sudo mkdir -p /var/$PRODUCT_FAMILY/sspl/orig-data
+        $sudo find /var/$PRODUCT_FAMILY/sspl -maxdepth 2 -type d -path '/var/$PRODUCT_FAMILY/sspl/data/*' -not -name 'iem'  -exec bash -c 'mv -f ${0} ${0/data/orig-data}/' {} \;
+        $sudo mkdir -p /var/$PRODUCT_FAMILY/sspl/orig-data/iem
+        if [ -f /var/$PRODUCT_FAMILY/sspl/data/iem/last_processed_msg_time ]; then
+            $sudo mv /var/$PRODUCT_FAMILY/sspl/data/iem/last_processed_msg_time /var/$PRODUCT_FAMILY/sspl/orig-data/iem/last_processed_msg_time
+        fi
     fi
 
     systemctl status rabbitmq-server 1>/dev/null && export status=true || export status=false
@@ -67,11 +70,13 @@ pre_requisites()
         touch /tmp/activate_ipmisimtool
     fi
 
-    # clearing $CONSUL_PATH/consul keys.
-    $CONSUL_PATH/consul kv delete -recurse var/$PRODUCT_FAMILY/sspl/data
-    # clearing consul keys.
-    $CONSUL_PATH/consul kv delete -recurse var/$PRODUCT_FAMILY/sspl/data
-
+    if [ "$IS_VIRTUAL" == "true" ]
+    then
+        # clearing $CONSUL_PATH/consul keys.
+        $CONSUL_PATH/consul kv delete -recurse var/$PRODUCT_FAMILY/sspl/data
+        # clearing consul keys.
+        $CONSUL_PATH/consul kv delete -recurse var/$PRODUCT_FAMILY/sspl/data
+    fi
 }
 
 deleteMockedInterface()
@@ -146,9 +151,12 @@ restore_cfg_services()
     rm -f /tmp/activate_ipmisimtool
 
     # Restore $CONSUL_PATH/consul data
-    $CONSUL_PATH/consul kv delete -recurse var/$PRODUCT_FAMILY/sspl/data
-    $CONSUL_PATH/consul kv import @/tmp/consul_backup.json
-    $sudo rm -f /tmp/consul_backup.json
+    if [ "$IS_VIRTUAL" == "true" ]
+    then
+        $CONSUL_PATH/consul kv delete -recurse var/$PRODUCT_FAMILY/sspl/data
+        $CONSUL_PATH/consul kv import @/tmp/consul_backup.json
+        $sudo rm -f /tmp/consul_backup.json
+    fi
 }
 
 cleanup()
@@ -245,8 +253,11 @@ else
 fi
 
 # setting values for testing
-disk_out=`python3.6 -c "import psutil; print(int(psutil.disk_usage('/')[3]-2))"`
-$sudo $script_dir/set_threshold.sh "10" $disk_out "0" "0"
+if [ "$IS_VIRTUAL" == "true" ]
+then
+    disk_out=`python3.6 -c "import psutil; print(int(psutil.disk_usage('/')[3]-2))"`
+    $sudo $script_dir/set_threshold.sh "10" $disk_out "0" "0"
+fi
 
 if [ "$SSPL_STORE_TYPE" == "consul" ]
 then
@@ -269,35 +280,47 @@ fi
 CLUSTER_NODES=$($CONSUL_PATH/consul kv get sspl/config/RABBITMQCLUSTER/cluster_nodes)
 $CONSUL_PATH/consul kv put sspl_test/config/RABBITMQCLUSTER/cluster_nodes $CLUSTER_NODES
 
-echo "Restarting SSPL"
-$sudo systemctl restart sspl-ll
-echo "Waiting for SSPL to complete initialization of all the plugins"
-# BMC Unreachable alert is also checked via start_checker, it will create a file if alert is found
-$script_dir/rabbitmq_start_checker sspl-out sensor-key
+if [ "$IS_VIRTUAL" == "true" ]
+then
+    echo "Restarting SSPL"
+    $sudo systemctl restart sspl-ll
+    echo "Waiting for SSPL to complete initialization of all the plugins"
+    $script_dir/rabbitmq_start_checker sspl-out sensor-key
+fi
+
 echo "Initialization completed. Starting tests"
 
 # Switch SSPL to active state to resume all the suspended plugins. If SSPL is
 # not switched to active state then plugins will not respond and tests will
 # fail. Sending SIGUP to SSPL makes SSPL to read state file and switch state.
-echo "state=active" > /var/$PRODUCT_FAMILY/sspl/data/state.txt
-PID=`/sbin/pidof -s /usr/bin/sspl_ll_d`
-kill -s SIGHUP $PID
+if [ "$IS_VIRTUAL" == "true" ]
+then
+    echo "state=active" > /var/$PRODUCT_FAMILY/sspl/data/state.txt
+    PID=`/sbin/pidof -s /usr/bin/sspl_ll_d`
+    kill -s SIGHUP $PID
+fi
 
 # Start tests
 execute_test $plan
 retcode=$?
 
-# Restoring original cache data
-$sudo find /var/$PRODUCT_FAMILY/sspl -maxdepth 2 -type d -path '/var/$PRODUCT_FAMILY/sspl/data/*' -not -name 'iem'  -exec bash -c 'rm -rf ${0}' {} \;
-$sudo find /var/$PRODUCT_FAMILY/sspl -maxdepth 2 -type d -path '/var/$PRODUCT_FAMILY/sspl/orig-data/*' -not -name 'iem'  -exec bash -c 'mv -f ${0} ${0/orig-data/data}/' {} \;
-if [ -f /var/$PRODUCT_FAMILY/sspl/orig-data/iem/last_processed_msg_time ]; then
-    $sudo mv /var/$PRODUCT_FAMILY/sspl/orig-data/iem/last_processed_msg_time /var/$PRODUCT_FAMILY/sspl/data/iem/last_processed_msg_time
+if [ "$IS_VIRTUAL" == "true" ]
+then
+    # Restoring original cache data
+    $sudo find /var/$PRODUCT_FAMILY/sspl -maxdepth 2 -type d -path '/var/$PRODUCT_FAMILY/sspl/data/*' -not -name 'iem'  -exec bash -c 'rm -rf ${0}' {} \;
+    $sudo find /var/$PRODUCT_FAMILY/sspl -maxdepth 2 -type d -path '/var/$PRODUCT_FAMILY/sspl/orig-data/*' -not -name 'iem'  -exec bash -c 'mv -f ${0} ${0/orig-data/data}/' {} \;
+    if [ -f /var/$PRODUCT_FAMILY/sspl/orig-data/iem/last_processed_msg_time ]; then
+        $sudo mv /var/$PRODUCT_FAMILY/sspl/orig-data/iem/last_processed_msg_time /var/$PRODUCT_FAMILY/sspl/data/iem/last_processed_msg_time
+    fi
+    $sudo rm -rf /var/$PRODUCT_FAMILY/sspl/orig-data
 fi
-$sudo rm -rf /var/$PRODUCT_FAMILY/sspl/orig-data
 
-# setting back the actual values
-$sudo $script_dir/set_threshold.sh $transmit_interval $disk_usage_threshold $host_memory_usage_threshold $cpu_usage_threshold
-[[ -f /etc/sspl.conf.back ]] && $sudo mv /etc/sspl.conf.back /etc/sspl.conf
+if [ "$IS_VIRTUAL" == "true" ]
+then
+    # setting back the actual values
+    $sudo $script_dir/set_threshold.sh $transmit_interval $disk_usage_threshold $host_memory_usage_threshold $cpu_usage_threshold
+    [[ -f /etc/sspl.conf.back ]] && $sudo mv /etc/sspl.conf.back /etc/sspl.conf
+fi
 
 echo "Tests completed, restored configs and services .."
 restore_cfg_services
