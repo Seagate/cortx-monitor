@@ -38,7 +38,7 @@ Requires:   %{product_family}-libsspl_sec-method_none = %{version}-%{release}
 
 #Requires:  python36-dbus python36-paramiko
 #Requires:  python36-psutil python36-gobject systemd-python36
-Requires:   perl(Config::Any) eos-py-utils
+Requires:   perl(Config::Any) cortx-py-utils
 Requires(pre): shadow-utils
 
 # Disabling for LDR_R1-non-requirement

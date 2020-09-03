@@ -19,7 +19,7 @@
  ****************************************************************************
 """
 
-from eos.utils.security.cipher import Cipher, CipherInvalidToken
+from cortx.utils.security.cipher import Cipher, CipherInvalidToken
 from framework.utils.service_logging import logger
 
 

@@ -26,10 +26,10 @@ rbmq_pass="sspl4ever"
 
 declare -A sspl_conf_update
 cluster_id=$(salt-call grains.get cluster_id --output=newline_values_only)
-rbmq_key=$(python3 -c 'from eos.utils.security.cipher import Cipher; print(Cipher.generate_key('"'$cluster_id'"', "rabbitmq"))')
-encl_key=$(python3 -c 'from eos.utils.security.cipher import Cipher; print(Cipher.generate_key('"'$cluster_id'"', "storage_enclosure"))')
-encl_encrypt_pass=$(python3 -c 'from eos.utils.security.cipher import Cipher; print(Cipher.encrypt('$encl_key', '"'$encl_pass'"'.encode()).decode("utf-8"))')
-rbmq_encrypt_pass=$(python3 -c 'from eos.utils.security.cipher import Cipher; print(Cipher.encrypt('$rbmq_key', '"'$rbmq_pass'"'.encode()).decode("utf-8"))')
+rbmq_key=$(python3 -c 'from cortx.utils.security.cipher import Cipher; print(Cipher.generate_key('"'$cluster_id'"', "rabbitmq"))')
+encl_key=$(python3 -c 'from cortx.utils.security.cipher import Cipher; print(Cipher.generate_key('"'$cluster_id'"', "storage_enclosure"))')
+encl_encrypt_pass=$(python3 -c 'from cortx.utils.security.cipher import Cipher; print(Cipher.encrypt('$encl_key', '"'$encl_pass'"'.encode()).decode("utf-8"))')
+rbmq_encrypt_pass=$(python3 -c 'from cortx.utils.security.cipher import Cipher; print(Cipher.encrypt('$rbmq_key', '"'$rbmq_pass'"'.encode()).decode("utf-8"))')
 sspl_conf_update=(
         ["sspl/config/STORAGE_ENCLOSURE/primary_controller_ip"]=$encl_primary_controller_ip
         ["sspl/config/STORAGE_ENCLOSURE/primary_controller_port"]=$encl_primary_controller_port

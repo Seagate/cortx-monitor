@@ -26,7 +26,7 @@ from alerts.self_hw.self_hw_utilities import run_cmd, get_from_consul, get_node_
 from sspl_test.framework.base.sspl_constants import GET_PRIMARY_IP, GET_PRIMARY_PORT, \
     GET_USERNAME, GET_PASSWD, GET_CLUSTER_ID, GET_SECONDARY_IP, GET_SECONDARY_PORT
 
-from eos.utils.security.cipher import Cipher
+from cortx.utils.security.cipher import Cipher
 
 def gen_key(cluster_id, service_name):
     ''' Generate key for decryption '''
