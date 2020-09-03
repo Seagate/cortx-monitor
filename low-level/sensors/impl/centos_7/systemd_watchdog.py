@@ -96,7 +96,7 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
     DRIVE_DBUS_INFO = 'dbus_info'
     DRIVE_FAULT_ATTR = 'smart_attributes'
     NODE_DISK_RESOURCE_TYPE = "node:os:disk"
-
+    ENCLOSURE_DISK_RESOURCE_TYPE = "enclosure:fru:disk"
     SMARTCTL_PASSED_RESPONSE = "SMART overall-health self-assessment test result: PASSED"
 
     @staticmethod
@@ -155,6 +155,9 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
 
         # Dict of drives by-id symlink from systemd
         self._drive_by_id = {}
+
+        # Dict of drives by-path symlink from systemd
+        self._drive_by_path = {}
 
         # Dict of drives by device name from systemd
         self._drive_by_device_name = {}
@@ -259,12 +262,15 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
 
             with self._drive_info_lock:
                 # Prepare drives to monitor
-                self._drives = self._get_local_drives()
+                self._drives = self._get_drives()
                 # send msg for new drives
                 for drive_path in self._drives.keys():
                     if drive_path not in self._existing_drive:
                         drive = self._drives[drive_path][self.DRIVE_DBUS_INFO]
-                        self._send_msg(self.DISK_INSERTED_ALERT_TYPE, str(drive["Id"]), json.loads(json.dumps(drive)))
+                        resource_type = self._get_resource_type(drive_path)
+                        specific_info = self._get_specific_info(drive_path, self.DISK_INSERTED_ALERT_TYPE)
+                        resource_id = self._drive_by_path.get(drive_path, str(drive["Id"]))
+                        self._send_msg(self.DISK_INSERTED_ALERT_TYPE, resource_type, resource_id, specific_info)
                         self._existing_drive.update({drive_path: False})
                 self._update_drive_faults()
                 store.put(self._existing_drive, self.disk_cache_path)
@@ -618,6 +624,12 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
                             self._drive_by_id[udisk_block["Drive"]] = symlink
                         elif "by-id" in symlink:
                             self._drive_by_id[udisk_block["Drive"]] = symlink
+                        # TODO:  Improve logic for getting resource_id
+                        # Current approch for getting resource_id is to check "phy" in by-path
+                        # symlink. If "phy" is in by-path use path of that drive for resource_id
+                        elif "by-path" in symlink:
+                            if "phy" in symlink:
+                                self._drive_by_path[udisk_block["Drive"]] = symlink[len("/dev/disk/by-path/"):]
 
                     # Maintain a dict of device names
                     device = self._sanitize_dbus_value(udisk_block["Device"])
@@ -693,23 +705,60 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
         """Run the command and get the response and error returned"""
         process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
         response, error = process.communicate()
-
         return response.rstrip('\n'), error.rstrip('\n')
 
-    def _get_local_drives(self):
-
+    def _get_drives(self):
+        """
+        Get physical drives(server+enclosure) atttached to server
+        This will only return server drives if setup is non-JBOD
+        returns {
+                    "/org/freedesktop/UDisks2/drives/drive_3": {
+                        "dbus_info": dbus_properties,
+                        "node_disk": False
+                    },
+                    "/org/freedesktop/UDisks2/drives/ST1000NM0055_1V410C_ZBS1VJHX": {
+                        "dbus_info": dbus_properties,
+                        "node_disk": True
+                    }
+                }
+        """
         drives = self._disk_manager.GetManagedObjects()
 
-        local_drives = {obj_path : { self.DRIVE_DBUS_INFO: interfaces_and_property["org.freedesktop.UDisks2.Drive"] }
+        return {obj_path : { self.DRIVE_DBUS_INFO: interfaces_and_property["org.freedesktop.UDisks2.Drive"],
+                             'node_disk': is_local_drive(interfaces_and_property)}
                         for obj_path, interfaces_and_property in drives.items()
-                        if "drive" in obj_path and self._is_local_drive(interfaces_and_property)}
-        return local_drives
+                        if "drive" in obj_path and is_physical_drive(interfaces_and_property["org.freedesktop.UDisks2.Drive"])}
 
-    # TODO : Improvise local disk detaction.
-    # Remove fw version dependency for detecting local disk
-    def _is_local_drive(self, interfaces_and_property):
-        return "org.freedesktop.UDisks2.Drive.Ata" in interfaces_and_property and \
-            str(interfaces_and_property["org.freedesktop.UDisks2.Drive"]["Revision"]) != "G265"
+    def _get_resource_type(self, object_path):
+        if self._drives[object_path]["node_disk"]:
+            return self.NODE_DISK_RESOURCE_TYPE
+        else:
+            return self.ENCLOSURE_DISK_RESOURCE_TYPE
+
+    def _get_specific_info(self, object_path, alert_type):
+        drive = self._drives[object_path]
+        drive_dbus_info = drive[self.DRIVE_DBUS_INFO]
+        response = {}
+        if alert_type in [self.DISK_INSERTED_ALERT_TYPE, self.DISK_REMOVED_ALERT_TYPE]:
+            response = json.loads(json.dumps(drive_dbus_info),
+                        object_hook=lambda obj : {key.lower(): value for key, value in obj.items()})
+        if drive["node_disk"]:
+            if alert_type in [self.DISK_FAULT_ALERT_TYPE, self.DISK_FAULT_RESOLVED_ALERT_TYPE]:
+                response = {"health_status" : drive[self.DRIVE_FAULT_ATTR]}
+            return response
+        else:
+            health = "Fault" if alert_type in [self.DISK_FAULT_ALERT_TYPE, \
+                                        self.DISK_REMOVED_ALERT_TYPE] else "OK"
+            size = '{0:.2f} TB'.format(int(drive_dbus_info["Size"])/ 1024 ** 4)
+            specific_info = {
+                    "location" : self._drive_by_path.get(object_path, ""),
+                    "serial_number" : str(drive_dbus_info["Serial"]),
+                    "size" : size,
+                    "slot" : "",
+                    "health" : health,
+                    "health_reason": "",
+                    "health_recommendation": ""}
+            return {**response, **specific_info}
 
     def _init_drives(self, stagger=False):
         """Notifies DiskMsgHanlder of available drives and schedules a short SMART test"""
@@ -928,7 +977,7 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
 
             # Handle drives added
             if interfaces_and_properties.get("org.freedesktop.UDisks2.Drive") is not None and \
-                self._is_local_drive(interfaces_and_properties):
+                is_physical_drive(interfaces_and_properties):
                 self._update_by_id_paths()
 
                 serial_number = str(interfaces_and_properties['org.freedesktop.UDisks2.Drive']['Serial'])
@@ -946,7 +995,13 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
                     self._drives[object_path][self.DRIVE_DBUS_INFO] = interfaces_and_properties['org.freedesktop.UDisks2.Drive']
 
                     drive = self._drives[object_path][self.DRIVE_DBUS_INFO]
-                    self._send_msg(self.DISK_INSERTED_ALERT_TYPE, str(drive["Id"]), json.loads(json.dumps(drive)))
+                    if is_local_drive(interfaces_and_properties):
+                        self._drives[object_path]["node_disk"] = True
+
+                    resource_type = self._get_resource_type(object_path)
+                    specific_info = self._get_specific_info(object_path, self.DISK_INSERTED_ALERT_TYPE)
+                    resource_id = self._drive_by_path.get(object_path, str(drive["Id"]))
+                    self._send_msg(self.DISK_INSERTED_ALERT_TYPE, resource_type, resource_id, specific_info)
 
                     # Update cache with latest info
                     self._existing_drive.update({object_path: False})
@@ -993,8 +1048,12 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
                         self._log_debug(f"  Object Path: {object_path}")
                         self._log_debug(f"  Serial Number: {serial_number}")
 
+                        resource_type = self._get_resource_type(object_path)
+
                         # Generate and send an internal msg to DiskMsgHandler
-                        self._send_msg(self.DISK_REMOVED_ALERT_TYPE, str(drive["Id"]), json.loads(json.dumps(drive)))
+                        specific_info = self._get_specific_info(object_path, self.DISK_REMOVED_ALERT_TYPE)
+                        resource_id = self._drive_by_path.get(object_path, str(drive["Id"]))
+                        self._send_msg(self.DISK_REMOVED_ALERT_TYPE, resource_type, resource_id, specific_info)
 
                         # Remove drive
                         del self._drives[object_path]
@@ -1130,7 +1189,7 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
         # Send the event to disk message handler to generate json message
         self._write_internal_msgQ(DiskMsgHandler.name(), internal_json_msg)
 
-    def _send_msg(self, alert_type, resource_id, specific_info):
+    def _send_msg(self, alert_type, resource_type, resource_id, specific_info):
         """Sends an internal msg to DiskMsgHandler"""
 
         event_time = str(int(time.time()))
@@ -1146,7 +1205,7 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
                         "rack_id": self._rack_id,
                         "node_id": self._node_id,
                         "cluster_id": self._cluster_id,
-                        "resource_type": self.NODE_DISK_RESOURCE_TYPE,
+                        "resource_type": resource_type,
                         "resource_id": resource_id,
                         "event_time": event_time},
                     "specific_info": specific_info
@@ -1291,28 +1350,75 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
             if not self._existing_drive[object_path] and self._is_drive_faulty(object_path):
                 self._existing_drive[object_path] = True
                 self._drives[object_path][self.DRIVE_FAULT_ATTR] = self._get_drive_fault_info(object_path)
+                resource_type = self._get_resource_type(object_path)
+                specific_info = self._get_specific_info(object_path, self.DISK_FAULT_ALERT_TYPE)
+                resource_id = self._drive_by_path.get(object_path,
+                                    str(self._drives[object_path][self.DRIVE_DBUS_INFO]["Id"]))
                 self._send_msg(self.DISK_FAULT_ALERT_TYPE,
-                               str(self._drives[object_path][self.DRIVE_DBUS_INFO]["Id"]),
-                               {"health_status": self._drives[object_path][self.DRIVE_FAULT_ATTR]})
+                               resource_type,
+                               resource_id,
+                               specific_info)
             elif self._existing_drive[object_path] and not self._is_drive_faulty(object_path):
                 self._existing_drive[object_path] = False
-                del self._drives[object_path][self.DRIVE_FAULT_ATTR]
+                self._drives[object_path][self.DRIVE_FAULT_ATTR] = self._get_drive_fault_info(object_path)
+                resource_type = self._get_resource_type(object_path)
+                specific_info = self._get_specific_info(object_path, self.DISK_FAULT_RESOLVED_ALERT_TYPE)
+                resource_id = self._drive_by_path.get(object_path,
+                                    str(self._drives[object_path][self.DRIVE_DBUS_INFO]["Id"]))
                 self._send_msg(self.DISK_FAULT_RESOLVED_ALERT_TYPE,
-                               str(self._drives[object_path][self.DRIVE_DBUS_INFO]["Id"]),
-                               {"health_status": self._get_drive_fault_info(object_path)})
+                                resource_type,
+                               resource_id,
+                               specific_info)
             # else no change
 
-
     def _is_drive_faulty(self, path):
-        cmd = f"sudo smartctl -H {self._drive_by_device_name[path]}"
+        if not self._drives[path]["node_disk"]:
+            cmd = f"sudo smartctl -d scsi -H {self._drive_by_device_name[path]} --json"
+        else:
+            cmd = f"sudo smartctl -H {self._drive_by_device_name[path]} --json"
         response, _ = self._run_command(cmd)
-        return not self.SMARTCTL_PASSED_RESPONSE in response
+        response = json.loads(response)
+        smart_status = response['smart_status']['passed']
+        return not smart_status
 
     def _get_drive_fault_info(self, path):
-        cmd = f"sudo smartctl -A {self._drive_by_device_name[path]}"
+        if not self._drives[path]["node_disk"]:
+            cmd = f"sudo smartctl -d scsi -A {self._drive_by_device_name[path]}"
+        else:
+            cmd = f"sudo smartctl -A {self._drive_by_device_name[path]}"
         response, _ = self._run_command(cmd)
         return response
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""
         super(SystemdWatchdog, self).shutdown()
+
+def is_physical_drive(interfaces_and_property):
+    """
+    Get the physical drives attached to server
+    WWN is 32 hex characters for the disk which is attached through RAID
+    controller and starts with 0x6. In JBOD setup drives will be directly
+    attached to server so it's WWN will be 16 hex charactes and will starts with 0x5
+    In JBOD setup this will return server+storage_enclosure drive and in normal
+    setup this will return only server drives.
+
+    Drives from JBOD setup (all drives start with 0x5)
+    [0:0:1:0]    disk    0x5000c500adff06d3                  /dev/sdb
+    [0:0:2:0]    disk    0x5000c500ae9e483f                  /dev/sdc
+    [0:0:3:0]    disk    0x5000c500adfed4df                  /dev/sdd
+
+    Drives from non-JBOD setup (drives coming from enclosure starts with 0x6,
+                              server drives start with 0x5)
+    [0:0:0:0]    disk    0x5000c500c2ecc4b8                  /dev/sda
+    [1:0:0:0]    disk    0x5000c500c2ec508b                  /dev/sdbn
+    [6:0:1:1]    disk    0x600c0ff00050f0bb13c7505f02000000  /dev/sdr
+    """
+    return interfaces_and_property["WWN"].startswith("0x5")
+
+# TODO : Improvise local disk detaction.
+# Remove fw version dependency for detecting local disk
+# Currently we consider SATA drives as local drives
+def is_local_drive(interfaces_and_property):
+    """Check if drive is SATA."""
+    return "org.freedesktop.UDisks2.Drive.Ata" in interfaces_and_property and \
+        str(interfaces_and_property["org.freedesktop.UDisks2.Drive"]["Revision"]) != "G265"
