@@ -1,8 +1,8 @@
 0030010001,Connection,Auth server connection failed
 0030020001,Code,Chunk parsing failed
-0030030001,Clovis,Clovis connection failed
+0030030001,Motr,Motr connection failed
 0030040001,System,Collision resolution failed
 0030050001,Handler,Fatal handler triggered
-0030060001,Data,Delete object failed causing stale data in Mero
-0030060002,Data,Delete index failed causing stale data in Mero
+0030060001,Data,Delete object failed causing stale data in Motr
+0030060002,Data,Delete index failed causing stale data in Motr
 0030060003,Data,Metadata corrupted

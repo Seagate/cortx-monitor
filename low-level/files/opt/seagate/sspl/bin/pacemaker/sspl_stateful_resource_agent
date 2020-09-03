@@ -20,6 +20,9 @@
 # 9: OCF_MASTER_FAILED: Resource is failed in Master mode
 # 7: OCF_NOT_RUNNING: Resource is safely stopped.
 
+# TODO: Replace with non-offensive terms when
+# https://bugs.clusterlabs.org/show_bug.cgi?id=5437 is resolved
+
 # Initialization:
 : ${OCF_FUNCTIONS:="${OCF_ROOT}/resource.d/heartbeat/.ocf-shellfuncs"}
 . "${OCF_FUNCTIONS}"

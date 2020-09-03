@@ -19,6 +19,8 @@
       "cp /opt/seagate/cortx/sspl/bin/pacemaker/sspl_stateful_resource_agent /lib/ocf/resource.d/<provider>/sspl_stateful_resource_agent"
 
 4. Creation of the SSPL resource (primary/secondary approach)
+    # TODO: Replace with non-offensive term when
+    # https://bugs.clusterlabs.org/show_bug.cgi?id=5437 is resolved
     - "pcs resource create sspl ocf:<provider>:sspl_stateful_resource_agent master meta migration-threshold=10 failure-timeout=10"
     - This should start the service on both the Nodes(By default SSPL will
       start in Degraded state and one of the Node will be promoted to primary)

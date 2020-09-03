@@ -27,6 +27,8 @@ def create_nw_interface():
     sleep(.1)
     call("ip link add br0 type bridge".split())
     sleep(.1)
+    # TODO: Replace with non-offensive terms when possible.
+    # An email was sent on 18082020 to stephen@networkplumber.org requesting this
     call("ip link set dev eth-mocked master br0".split())
 
 
