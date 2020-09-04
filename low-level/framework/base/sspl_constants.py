@@ -57,13 +57,13 @@ SSPL_SETTINGS = {
         "CORE_PROCESSORS" : ("RabbitMQegressProcessor", "RabbitMQingressProcessor", "LoggingProcessor"),
         "DEGRADED_STATE_MODULES" : ("ServiceWatchdog", "RAIDsensor", "NodeData", "IEMSensor", "NodeHWsensor",
                             "DiskMsgHandler", "LoggingMsgHandler", "ServiceMsgHandler", "NodeDataMsgHandler",
-                            "NodeControllerMsgHandler", "SASPortSensor", "MemFaultSensor", "CPUFaultSensor"),
+                            "NodeControllerMsgHandler", "SASPortSensor", "MemFaultSensor", "CPUFaultSensor", "SNMPtraps"),
         "MESSAGE_HANDLERS" : ("DiskMsgHandler", "LoggingMsgHandler", "ServiceMsgHandler", "NodeDataMsgHandler",
                         "NodeControllerMsgHandler", "RealStorEnclMsgHandler", "RealStorActuatorMsgHandler"),
         "SENSORS" : ["ServiceWatchdog", "RAIDsensor", "NodeData", "RealStorFanSensor", "RealStorPSUSensor",
             "RealStorControllerSensor", "RealStorDiskSensor", "RealStorSideplaneExpanderSensor",
             "RealStorLogicalVolumeSensor", "IEMSensor", "NodeHWsensor", "RealStorEnclosureSensor",
-            "SASPortSensor", "MemFaultSensor", "CPUFaultSensor", "RAIDIntegritySensor"]
+            "SASPortSensor", "MemFaultSensor", "CPUFaultSensor", "RAIDIntegritySensor", "SNMPtraps"]
 }
 
 COMMON_CONFIGS = {
