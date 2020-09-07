@@ -35,7 +35,7 @@ sspl:
          args:
             - reset hard -p LDR_R1
     ha:
-         script: /opt/seagate/cortx/ha/conf/script/build-ees-ha-sspl
+         script: /opt/seagate/cortx/ha/conf/script/build-ha-sspl
          args:
             - /opt/seagate/cortx/ha/conf/build-ees-ha-args.yaml
 
