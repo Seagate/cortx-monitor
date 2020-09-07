@@ -99,13 +99,14 @@ try:
     SSPL_EXCHANGE = sys.argv[1]
     SSPL_KEY = sys.argv[2]
     connection = None
-    max_attempt = 30
-    while not connection and max_attempt > 0:
+    max_attempt = 10
+    while not connection:
         try:
             connection = get_cluster_connection(SSPL_USER, SSPL_PASS, SSPL_VHOST)
         except Exception as e:
             time.sleep(4)
-            if max_attempt == 0:
+            max_attempt -= 1
+            if max_attempt < 0:
                 raise e
     channel = connection.channel()
     result = channel.queue_declare(queue="", exclusive=True)
