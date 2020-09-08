@@ -22,6 +22,7 @@ import json
 import socket
 import time
 import uuid
+import os
 
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
@@ -30,9 +31,12 @@ from message_handlers.node_data_msg_handler import NodeDataMsgHandler
 from framework.base.module_thread import SensorThread
 from framework.utils.severity_reader import SeverityReader
 from framework.utils.sysfs_interface import SysFS
-from framework.utils.store_factory import store
+from framework.utils.store_factory import file_store
 from framework.utils.tool_factory import ToolFactory
-from framework.base.sspl_constants import COMMON_CONFIGS
+from framework.base.sspl_constants import COMMON_CONFIGS, DATA_PATH
+
+# Override default store
+store = file_store
 
 class CPUFaultSensor(SensorThread, InternalMsgQ):
     """CPU Fault Sensor which runs on its own thread on each boot up and
@@ -49,6 +53,7 @@ class CPUFaultSensor(SensorThread, InternalMsgQ):
     CLUSTER_ID_KEY = "cluster_id"
     NODE_ID_KEY = "node_id"
     RACK_ID_KEY = "rack_id"
+    CACHE_DIR_NAME  = "server"
 
     RESOURCE_ID = "CPU-"
 
@@ -116,13 +121,16 @@ class CPUFaultSensor(SensorThread, InternalMsgQ):
             logger.error(f"Error while initializing, shutting down CPUFaultSensor : {e}")
             self.shutdown()
 
+        cache_dir_path = os.path.join(DATA_PATH, self.CACHE_DIR_NAME)
+        self.CPU_FAULT_SENSOR_DATA = os.path.join(cache_dir_path, f'CPU_FAULT_SENSOR_DATA_{self._node_id}')
+
         return True
 
     def read_stored_cpu_info(self):
         """Read the most recent stored cpu info"""
         try:
             if self.stored_cpu_info is None:
-                self.stored_cpu_info = store.get('CPU_FAULT_SENSOR_DATA')
+                self.stored_cpu_info = store.get(self.CPU_FAULT_SENSOR_DATA)
             if self.stored_cpu_info is not None and self._node_id in self.stored_cpu_info.keys():
                 self.prev_cpu_info = self.stored_cpu_info[self._node_id]['CPU_LIST']
         except Exception as e:
@@ -198,7 +206,7 @@ class CPUFaultSensor(SensorThread, InternalMsgQ):
 
         # Update stored cpu info
         if to_update:
-            store.put(self.stored_cpu_info, 'CPU_FAULT_SENSOR_DATA')
+            store.put(self.stored_cpu_info, self.CPU_FAULT_SENSOR_DATA)
 
     def fill_specific_info(self):
         """Fills the specific info to be sent via alert"""

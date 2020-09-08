@@ -42,10 +42,13 @@ from framework.utils.config_reader import ConfigReader
 from framework.utils.service_logging import logger
 from framework.utils import encryptor
 from sensors.INode_hw import INodeHWsensor
-from framework.utils.store_factory import store
+from framework.utils.store_factory import file_store
 
 # bash exit codes
 BASH_ILLEGAL_CMD = 127
+
+# Override default store
+store = file_store
 
 @implementer(INodeHWsensor)
 class NodeHWsensor(SensorThread, InternalMsgQ):
@@ -195,10 +198,6 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         return open(name, mode)
 
     def _initialize_cache(self):
-        data_dir =  self.conf_reader._get_value_with_default(
-            self.SYSINFO, COMMON_CONFIGS.get(self.SYSINFO).get(self.DATA_PATH_KEY), self.DATA_PATH_VALUE_DEFAULT)
-        self.cache_dir_path = os.path.join(data_dir, self.CACHE_DIR_NAME)
-
         if not os.path.exists(self.cache_dir_path):
             logger.info(f"Creating cache dir: {self.cache_dir_path}")
             os.makedirs(self.cache_dir_path)
@@ -283,15 +282,20 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         decryption_key = encryptor.gen_key(self._cluster_id, ServiceTypes.CLUSTER.value)
         self._bmc_passwd = encryptor.decrypt(decryption_key, self._bmc_passwd.encode('ascii'), 'Node_hw')
 
+        data_dir =  self.conf_reader._get_value_with_default(self.SYSINFO,
+                    COMMON_CONFIGS.get(self.SYSINFO).get(self.DATA_PATH_KEY),
+                    self.DATA_PATH_VALUE_DEFAULT)
+        self.cache_dir_path = os.path.join(data_dir, self.CACHE_DIR_NAME)
+
         # define variable in consul to check for bmc channel interface fallback
-        self.consul_key = f"ACTIVE_BMC_IF_{self._node_id}"
-        self.consul_lan_fault = f"LAN_ALERT_{self._node_id}"
+        self.ACTIVE_BMC_IF = os.path.join(self.cache_dir_path, f'ACTIVE_BMC_IF_{self._node_id}')
+        self.LAN_ALERT = os.path.join(self.cache_dir_path, f'LAN_ALERT_{self._node_id}')
         # save current channel interface value to consul
-        self.active_bmc_if = store.get(self.consul_key)
-        self.lan_fault = store.get(self.consul_lan_fault)
+        self.active_bmc_if = store.get(self.ACTIVE_BMC_IF)
+        self.lan_fault = store.get(self.LAN_ALERT)
         if self.active_bmc_if is None:
             self.active_bmc_if = self._channel_interface
-            store.put(self.active_bmc_if,self.consul_key)
+            store.put(self.active_bmc_if,self.ACTIVE_BMC_IF)
 
         # Set flag 'request_shutdown' to true if ipmitool/simulator is non-functional
         res, retcode = self._run_ipmitool_subcommand("sel info")
@@ -661,7 +665,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
             raise_fault_resolved_lan = True
             self.lan_channel_err = False
             self.lan_fault = None
-            store.put(self.lan_fault,self.consul_lan_fault)
+            store.put(self.lan_fault,self.LAN_ALERT)
 
         if (self.kcs_interface_alert or self.lan_interface_alert) and not self.channel_err:
             self.channel_err = True
@@ -673,10 +677,10 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
                 logger.warning("BMC is unreachable through lan interface ip, \
                                 ipmitool fallback to KCS interface if local server is being monitored")
                 self.active_bmc_if = self.SYSTEM_IF
-                store.put(self.active_bmc_if,self.consul_key)
+                store.put(self.active_bmc_if,self.ACTIVE_BMC_IF)
                 if self.lan_fault is None:
                     self.lan_fault = alert_type
-                    store.put(self.lan_fault, self.consul_lan_fault)
+                    store.put(self.lan_fault, self.LAN_ALERT)
             elif self.kcs_interface_alert and not self.kcs_channel_err:
                 resource_type = "node:bmc:interface:kcs"
                 alert_type = "fault"

@@ -48,4 +48,6 @@ class StorFactory:
                 sys.exit(os.EX_USAGE)
         return StorFactory.__store
 
+file_store=FileStore()
+#store based on configuration
 store=StorFactory.get_store()

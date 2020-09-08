@@ -23,6 +23,7 @@ import json
 import socket
 import time
 import uuid
+import os
 
 from framework.utils.config_reader import ConfigReader
 from framework.base.debug import Debug
@@ -34,8 +35,11 @@ from framework.base.module_thread import SensorThread
 from framework.utils.severity_reader import SeverityReader
 from framework.utils.sysfs_interface import SysFS
 from framework.utils.tool_factory import ToolFactory
-from framework.base.sspl_constants import COMMON_CONFIGS
-from framework.utils.store_factory import store
+from framework.base.sspl_constants import COMMON_CONFIGS, DATA_PATH
+from framework.utils.store_factory import file_store
+
+# Override default store
+store = file_store
 
 class SASPortSensor(SensorThread, InternalMsgQ):
     """SAS Port Sensor which runs on its own thread periodically and
@@ -53,6 +57,7 @@ class SASPortSensor(SensorThread, InternalMsgQ):
     NODE_ID = "node_id"
     RACK_ID = "rack_id"
     POLLING_INTERVAL = "polling_interval"
+    CACHE_DIR_NAME  = "server"
 
     RESOURCE_ID = "SASHBA-0"
     DEFAULT_POLLING_INTERVAL = '30'
@@ -104,9 +109,6 @@ class SASPortSensor(SensorThread, InternalMsgQ):
         self._node_id = self._conf_reader._get_value_with_default(
                                 self.SYSTEM_INFORMATION, COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.NODE_ID), '001')
 
-        # Consul key for sensor data
-        self.consul_key = f"SAS_PORT_SENSOR_DATA_{self._node_id}"
-
         # Get the sas port implementor from configuration
         sas_port_utility = self._conf_reader._get_value_with_default(
                                     self.name().capitalize(), self.PROBE,
@@ -117,6 +119,9 @@ class SASPortSensor(SensorThread, InternalMsgQ):
 
         # Creating the instance of ToolFactory class
         self.tool_factory = ToolFactory()
+
+        cache_dir_path = os.path.join(DATA_PATH, self.CACHE_DIR_NAME)
+        self.SAS_PORT_SENSOR_DATA = os.path.join(cache_dir_path, f'SAS_PORT_SENSOR_DATA_{self._node_id}')
 
         alert_type = None
 
@@ -149,7 +154,7 @@ class SASPortSensor(SensorThread, InternalMsgQ):
                 self.phy_dir_to_linkrate_mapping[phy] = link_value_phy_status_collection
 
             # Get the stored previous alert info
-            self.sas_phy_stored_alert = store.get(self.consul_key)
+            self.sas_phy_stored_alert = store.get(self.SAS_PORT_SENSOR_DATA)
             self.check_and_send_alert(self.phy_link_count)
 
         except KeyError as key_error:
@@ -190,7 +195,7 @@ class SASPortSensor(SensorThread, InternalMsgQ):
             # Initialize alert_type to dummy fault_resolved
             self.sas_phy_stored_alert = ('fault_resolved', new_phy_link_count)
             # Save data to Consul
-            store.put(self.sas_phy_stored_alert, self.consul_key)
+            store.put(self.sas_phy_stored_alert, self.SAS_PORT_SENSOR_DATA)
         elif self.sas_phy_stored_alert[0] == 'fault':
             # Previous alert sent for this node was fault, check if fault is resolved
             if new_phy_link_count >= self.MIN_PHY_COUNT:
@@ -199,7 +204,7 @@ class SASPortSensor(SensorThread, InternalMsgQ):
                 self._generate_alert(alert_type)
                 # Save data to Consul
                 self.sas_phy_stored_alert = (alert_type, new_phy_link_count)
-                store.put(self.sas_phy_stored_alert, self.consul_key)
+                store.put(self.sas_phy_stored_alert, self.SAS_PORT_SENSOR_DATA)
         elif self.sas_phy_stored_alert[0] in ['fault_resolved','insertion']:
             # Check if we need to send informational alert
             if new_phy_link_count > self.sas_phy_stored_alert[1] and new_phy_link_count % self.MIN_PHY_COUNT == 0:
@@ -208,7 +213,7 @@ class SASPortSensor(SensorThread, InternalMsgQ):
                 self._generate_alert(alert_type)
                 # Save data to Consul
                 self.sas_phy_stored_alert = (alert_type, new_phy_link_count)
-                store.put(self.sas_phy_stored_alert, self.consul_key)
+                store.put(self.sas_phy_stored_alert, self.SAS_PORT_SENSOR_DATA)
             # Check to see if we need to send fault alert
             if new_phy_link_count == 0:
                 alert_type = 'fault'
@@ -216,7 +221,7 @@ class SASPortSensor(SensorThread, InternalMsgQ):
                 self._generate_alert(alert_type)
                 # Save data to Consul
                 self.sas_phy_stored_alert = (alert_type, new_phy_link_count)
-                store.put(self.sas_phy_stored_alert, self.consul_key)
+                store.put(self.sas_phy_stored_alert, self.SAS_PORT_SENSOR_DATA)
 
     def run(self):
         """Run the sensor on its own thread"""
@@ -278,7 +283,7 @@ class SASPortSensor(SensorThread, InternalMsgQ):
 
                 # Get the last sent alert info
                 # It is a tuple of (alert_type, phy_link_count)
-                self.sas_phy_stored_alert = store.get(self.consul_key)
+                self.sas_phy_stored_alert = store.get(self.SAS_PORT_SENSOR_DATA)
                 self.check_and_send_alert(new_phy_link_count)
                 # Update current active phy count for next iteration
                 self.phy_link_count = new_phy_link_count

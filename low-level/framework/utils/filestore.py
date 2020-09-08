@@ -69,9 +69,8 @@ class FileStore(Store):
                 fh.write(value)
 
         except IOError as err:
-            errno, strerror = err.args
             logger.warn("I/O error[{0}] while dumping data to file {1}): {2}"\
-                .format(errno,absfilepath,strerror))
+                .format(err.errno,absfilepath,err))
         except Exception as gerr:
             logger.warn("Error[{0}] while dumping data to file {1}"\
                 .format(gerr, absfilepath))
@@ -114,9 +113,8 @@ class FileStore(Store):
             except:
                 value = fh.read()
         except IOError as err:
-            errno, strerror = err.args
             logger.warn("I/O error[{0}] while loading data from file {1}): {2}"\
-                .format(errno,absfilepath,strerror))
+                .format(err.errno,absfilepath,err))
         except ValueError as jsonerr:
             logger.warn("JSON error{0} while loading from {1}".format(jsonerr, absfilepath))
             value = None

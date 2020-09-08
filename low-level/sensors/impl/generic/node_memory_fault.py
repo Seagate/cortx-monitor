@@ -22,6 +22,7 @@ import json
 import socket
 import time
 import uuid
+import os
 
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
@@ -31,8 +32,11 @@ from framework.base.module_thread import SensorThread
 from framework.utils.severity_reader import SeverityReader
 from framework.utils.procfs_interface import ProcFS
 from framework.utils.tool_factory import ToolFactory
-from framework.utils.store_factory import store
-from framework.base.sspl_constants import COMMON_CONFIGS
+from framework.utils.store_factory import file_store
+from framework.base.sspl_constants import COMMON_CONFIGS, DATA_PATH
+
+# Override default store
+store = file_store
 
 class MemFaultSensor(SensorThread, InternalMsgQ):
     """Memory fault Sensor which runs on its own thread once every power cycle and
@@ -50,6 +54,8 @@ class MemFaultSensor(SensorThread, InternalMsgQ):
     NODE_ID_KEY = "node_id"
     RACK_ID_KEY = "rack_id"
     POLLING_INTERVAL_KEY = "polling_interval"
+    CACHE_DIR_NAME  = "server"
+
 
     RESOURCE_ID = "0"
     DEFAULT_POLLING_INTERVAL = '0'
@@ -103,10 +109,6 @@ class MemFaultSensor(SensorThread, InternalMsgQ):
             self.SYSTEM_INFORMATION_KEY,
             COMMON_CONFIGS.get(self.SYSTEM_INFORMATION_KEY).get(self.NODE_ID_KEY), '001')
 
-        # key for the current node : MEM_FAULT_SENSOR_DATA_<node_id>
-        # each node_id -  memory pair is added as separate entry in consul
-        self.consul_key = "MEM_FAULT_SENSOR_DATA_{}".format(self._node_id)
-
         # get the mem fault implementor from configuration
         mem_fault_utility = self._conf_reader._get_value_with_default(
             self.name().capitalize(), self.PROBE,
@@ -130,20 +132,23 @@ class MemFaultSensor(SensorThread, InternalMsgQ):
                 .format(mem_fault_utility, MemFaultSensor.SENSOR_NAME))
             self.shutdown()
 
+        cache_dir_path = os.path.join(DATA_PATH, self.CACHE_DIR_NAME)
+        self.MEM_FAULT_SENSOR_DATA = os.path.join(cache_dir_path, f'MEM_FAULT_SENSOR_DATA_{self._node_id}')
+
         return True
 
     def get_stored_mem_info(self):
         """ Get the memory info from consul"""
 
-        if store.exists(self.consul_key):
-            consul_data = (store.get(self.consul_key)).split(":")
+        if store.exists(self.MEM_FAULT_SENSOR_DATA):
+            consul_data = (store.get(self.MEM_FAULT_SENSOR_DATA)).split(":")
             self.prev_mem = consul_data[0].strip()
             self.fault_alert_state = consul_data[1].strip()
         
     def put_mem_info(self, total_memory_size):
         """ Store the current memory in Consul"""
 
-        store.put(f"{total_memory_size}:{self.fault_alert_state}", self.consul_key)
+        store.put(f"{total_memory_size}:{self.fault_alert_state}", self.MEM_FAULT_SENSOR_DATA)
 
     def run(self):
         """Run the sensor on its own thread"""
