@@ -1273,6 +1273,11 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
         setup = self._conf_reader._get_value_with_default(self.SYSTEM_INFORMATION,
                                                           COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.SETUP),
                                                           "ssu")
+        # additional check on environment
+        result = self._run_command("sudo facter is_virtual")
+        if result:
+            if 'true' in result[0]:
+                setup = "vm"
         return False if setup == "vm" else True
 
     def _update_drive_faults(self):
@@ -1281,11 +1286,14 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
         # 1. self._drive_info_lock is held by the caller
         # 2. self._drives and self._existing_drive are consistent with each other.
 
+        if not self._smart_supported:
+            return
+
         for object_path in self._drives.keys():
             if not self._existing_drive[object_path] and self._is_drive_faulty(object_path):
                 self._existing_drive[object_path] = True
                 self._drives[object_path][self.DRIVE_FAULT_ATTR] = self._get_drive_fault_info(object_path)
-                self._send_msg(self.DISK_FAULT_ALERT_TYPE, 
+                self._send_msg(self.DISK_FAULT_ALERT_TYPE,
                                str(self._drives[object_path][self.DRIVE_DBUS_INFO]["Id"]),
                                {"health_status": self._drives[object_path][self.DRIVE_FAULT_ATTR]})
             elif self._existing_drive[object_path] and not self._is_drive_faulty(object_path):
