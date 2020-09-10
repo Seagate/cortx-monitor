@@ -33,9 +33,9 @@ test_resource = "*" # Use * if virtual machine
 result = run_cmd('ipmitool sdr type Fan')
 if result and not is_virtual():
         for resource in result:
-            if 'ok' in resource.decode():
+            if 'ok' in resource.decode().lower():
                 # this is the first ok resource, use it in case of real HW
-                test_resource = resource.decode().split(' ')[0]
+                test_resource = resource.decode().split('|')[0].strip()
                 break
 
 def init(args):

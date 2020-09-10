@@ -82,13 +82,13 @@ def test_self_hw_node_sel_event(args):
     test_resource = None
     if result:
         for resource in result:
-            if 'ok' in resource.decode():
+            if 'ok' in resource.decode().lower():
                 # this is the first ok resource, use it
-                test_resource = resource.decode().split(' ')[0]
+                test_resource = resource.decode().split('|')[0].strip()
                 break
         # inject event into sel list and wait for alert
         print(f"Using test resource {test_resource}")
-        run_cmd(f'ipmitool event {test_resource} lcr')
+        run_cmd(f"ipmitool event '{test_resource}' lcr")
         # wait for fault alert
         start_time = time.time()
         asserted = False
@@ -100,7 +100,7 @@ def test_self_hw_node_sel_event(args):
             print("Did not get asserted event alert.")
             assert(False)
         # revert the event
-        run_cmd(f'ipmitool event {test_resource} lcr deassert')
+        run_cmd(f"ipmitool event '{test_resource}' lcr deassert")
         # wait for alert
         start_time = time.time()
         deasserted = False
