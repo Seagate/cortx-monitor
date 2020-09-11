@@ -482,6 +482,7 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist, operating_system
         from sensors.impl.generic.raid_integrity_data import RAIDIntegritySensor
         from sensors.impl.generic.node_data import NodeData as NodeData
         # from sensors.impl.generic.SMR_drive_data import SMRdriveData
+        from sensors.impl.generic.SNMP_traps2 import SNMPtraps
 
         from zope.component import getGlobalSiteManager
         from zope.interface import implementedBy
