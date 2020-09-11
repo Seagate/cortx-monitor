@@ -108,7 +108,6 @@ cp -R $BASE_DIR/low-level/json_msgs/schemas/sensors/*.json $DIST/sspl/resources/
 cp -R $BASE_DIR/low-level/files/iec_mapping/* $DIST/sspl/resources/iem/iec_mapping
 
 cp -R $BASE_DIR/libsspl_sec/ $DIST/sspl
-cp -R $BASE_DIR/systemd-python36/ $DIST/sspl
 
 CONF=$BASE_DIR/low-level/files
 cp -R $CONF/opt/seagate/sspl/conf/* $CONF/etc $DIST/sspl/conf
@@ -116,7 +115,6 @@ cp $BASE_DIR/low-level/sspl-ll.spec $TMPDIR
 cp $BASE_DIR/low-level/cli/sspl_cli.spec $TMPDIR
 cp $BASE_DIR/libsspl_sec/libsspl_sec.spec $TMPDIR
 cp $BASE_DIR/sspl_test/sspl-test.spec $TMPDIR
-cp $BASE_DIR/systemd-python36/systemd-python36.spec $TMPDIR
 COPY_END_TIME=$(date +%s)
 
 ################### PYINSTALLER for SSPL ##############################
@@ -150,11 +148,8 @@ mkdir -p ${RPM_BUILD_PATH}/SOURCES
 TOPDIR=$(realpath $RPM_BUILD_PATH)
 echo $TOPDIR
 
-tar -czvf ${RPM_BUILD_PATH}/SOURCES/systemd-python36-${VERSION}.tgz -C ${BASE_DIR}/.. cortx-sspl/systemd-python36
-rpmbuild --define "version $VERSION" --define "git_rev $GIT_VER" --define "_topdir $TOPDIR" -bb $BASE_DIR/systemd-python36/systemd-python36.spec
-
 echo 'Installing systemd-python36*...'
-yum install -y ${RPM_BUILD_PATH}/RPMS/x86_64/systemd-python36-*
+yum install -y systemd-python36-*
 
 if [ "$TEST" == true ]
 then
