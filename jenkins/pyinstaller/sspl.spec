@@ -33,6 +33,7 @@ def import_list(sspl_path, walk_path):
                 for key in keywords:
                     if key in file:
                         import_list.append(file)
+    import_list+=['pysnmp']
     return import_list
 
 product = '<PRODUCT>'

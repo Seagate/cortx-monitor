@@ -445,7 +445,7 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist, operating_system
             except ImportError:
                 logger.info("Could not import HPIactuator")
 
-        from sensors.impl.generic.SNMP_traps import SNMPtraps
+        #from sensors.impl.generic.SNMP_traps import SNMPtraps
 
     if product.upper() in enabled_products:
         from sensors.impl.platforms.realstor.realstor_disk_sensor \

@@ -26,6 +26,8 @@ from message_handlers.logging_msg_handler import LoggingMsgHandler
 
 from json_msgs.messages.sensors.snmp_trap import SNMPtrapMsg
 
+import pysnmp
+import pyasn1
 from pysnmp.entity import engine, config
 from pysnmp.carrier.asyncore.dgram import udp, udp6
 from pysnmp.entity.rfc3413 import ntfrcv
@@ -85,8 +87,8 @@ class SNMPtraps(SensorThread, InternalMsgQ):
         self._read_my_msgQ_noWait()
 
         try:
-            self._log_debug("Start processing")
-
+            #self._log_debug("Start processing")
+            logger.debug("Start processing")
             # Create MIB loader to lookup oids sent in traps
             self._mib_builder()
 
@@ -125,10 +127,13 @@ class SNMPtraps(SensorThread, InternalMsgQ):
                 # Dispatcher will never finish as job #1 never reaches zero
                 snmpEngine.transportDispatcher.runDispatcher()
             except Exception as ae:
-                self._log_debug("Exception: %r" % ae)
+                #self._log_debug("Exception: %r" % ae)
+                logger.debug("Exception: %r" % ae)
+
                 snmpEngine.transportDispatcher.closeDispatcher()
 
-            self._log_debug("Finished processing, restarting SNMP listener")
+            #self._log_debug("Finished processing, restarting SNMP listener")
+            logger.debug("Finished processing, restarting SNMP listener")
 
             # Reset debug mode if persistence is not enabled
             self._disable_debug_if_persist_false()
