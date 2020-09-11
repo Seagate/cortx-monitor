@@ -241,7 +241,7 @@ fi
 # Restart SSPL to re-read configuration
 if [ "$SSPL_STORE_TYPE" == "consul" ]
 then
-    SRVNODE="$(salt-call grains.get id --output=newline_values_only)"
+    SRVNODE="$(sudo salt-call grains.get id --output=newline_values_only)"
     if [ -z "$SRVNODE" ];then
         SRVNODE="$(cat /etc/salt/minion_id)"
         if [ -z "$SRVNODE" ];then

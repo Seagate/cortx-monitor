@@ -28,7 +28,7 @@ class SaltInterface:
     """
 
     def __init__(self):
-        self.GRAINS_GET_NODE_CMD = "salt-call grains.get id --output=newline_values_only"
+        self.GRAINS_GET_NODE_CMD = "sudo salt-call grains.get id --output=newline_values_only"
         self.MINION_GET_NODE_CMD = "cat /etc/salt/minion_id"
         self.utility = Utility()
 

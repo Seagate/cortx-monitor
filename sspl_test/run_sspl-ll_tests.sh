@@ -27,7 +27,7 @@ IS_VIRTUAL=$(facter is_virtual)
 if [ "$IS_VIRTUAL" != "true" ]
 then
     # Find the nodename
-    SRVNODE="$(salt-call grains.get id --output=newline_values_only)"
+    SRVNODE="$(sudo salt-call grains.get id --output=newline_values_only)"
     if [ -z "$SRVNODE" ];then
         SRVNODE="$(cat /etc/salt/minion_id)"
         if [ -z "$SRVNODE" ];then
