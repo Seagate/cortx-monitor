@@ -36,7 +36,7 @@ def is_virtual():
     return retVal
 
 def get_node_id():
-        GRAINS_GET_NODE_CMD = "salt-call grains.get id --output=newline_values_only"
+        GRAINS_GET_NODE_CMD = "sudo salt-call grains.get id --output=newline_values_only"
         MINION_GET_NODE_CMD = "cat /etc/salt/minion_id"
         node_key = 'srvnode-1'
         try:
