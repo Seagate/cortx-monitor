@@ -89,6 +89,7 @@ class SNMPtraps(SensorThread, InternalMsgQ):
         try:
             #self._log_debug("Start processing")
             logger.debug("Start processing")
+            logger.info("Start processing")
             # Create MIB loader to lookup oids sent in traps
             self._mib_builder()
 
@@ -129,11 +130,13 @@ class SNMPtraps(SensorThread, InternalMsgQ):
             except Exception as ae:
                 #self._log_debug("Exception: %r" % ae)
                 logger.debug("Exception: %r" % ae)
+                logger.info("Exception : %r" % ae)
 
                 snmpEngine.transportDispatcher.closeDispatcher()
 
             #self._log_debug("Finished processing, restarting SNMP listener")
             logger.debug("Finished processing, restarting SNMP listener")
+            logger.info("Finished processing, restarting SNMP listener")
 
             # Reset debug mode if persistence is not enabled
             self._disable_debug_if_persist_false()
@@ -145,6 +148,8 @@ class SNMPtraps(SensorThread, InternalMsgQ):
         except Exception as ae:
             self._log_debug("Unable to process SNMP traps from this node, closing module.")
             self._log_debug(f"SNMP Traps sensor attempted to bind to {self._bind_ip}:{self._bind_port}")
+            logger.info("Unable to process SNMP traps from this node, closing module.")
+            logger.info(f"SNMP Traps sensor attempted to bind to {self._bind_ip}:{self._bind_port}")
 
     def _mib_builder(self):
         """Loads the MIB files and creates dicts with hierarchical structure"""
@@ -153,12 +158,14 @@ class SNMPtraps(SensorThread, InternalMsgQ):
         mibBuilder = builder.MibBuilder()
 
         self._log_debug('Reading MIB sources...')
+        logger.info('Reading MIB sources...')
         compiler.addMibCompiler(mibBuilder, sources=['/etc/sspl-ll/templates/snmp'])
         # mibSources = mibBuilder.getMibSources() + (
         #     builder.DirMibSource('/etc/sspl-ll/templates/snmp'),)
         # mibBuilder.setMibSources(*mibSources)
 
         self._log_debug("MIB sources: %s" % str(mibBuilder.getMibSources()))
+        logger.info("MIB sources: %s" % str(mibBuilder.getMibSources()))
         # for module in self._enabled_MIBS:
         #     mibBuilder.loadModules(module)
         mibBuilder.loadModules(self._enabled_MIBS)
@@ -173,7 +180,7 @@ class SNMPtraps(SensorThread, InternalMsgQ):
             modName, nodeDesc, suffix = self._mibView.getNodeLocation(oid)
             ret_val = val
             self._log_debug(f'module: {modName}, {nodeDesc}: <{type(val).__name__}> {val.prettyPrint()}, oid: {oid.prettyPrint()}')
-
+            logger.info(f'module: {modName}, {nodeDesc}: <{type(val).__name__}> {val.prettyPrint()}, oid: {oid.prettyPrint()}')
             # Lookup the trap name from the SNMP Modules MIB
             if(type(val).__name__ == 'ObjectIdentifier'):
                 # Convert the dot notated str oid to a tuple of ints for getNodeName API call
@@ -184,8 +191,10 @@ class SNMPtraps(SensorThread, InternalMsgQ):
                 oid, label, suffix = self._mibView.getNodeName(tuple_oid)
                 self._trap_name = str(label[-1]) + '.'.join(tuple([str(x) for x in suffix]))
                 self._log_debug(f'Trap Notification: {self._trap_name}')
+                logger.info(f'Trap Notification: {self._trap_name}')
         except Exception as ae:
             self._log_debug("_mib_oid_value: %r" % ae)
+            logger.info("_mib_oid_value: %r" % ae)
         return (nodeDesc, ret_val)
 
     def _trap_catcher(self,snmpEngine, stateReference, contextEngineId, contextName, varBinds, cbCtx):
@@ -193,7 +202,7 @@ class SNMPtraps(SensorThread, InternalMsgQ):
         json_data = {}
         self._trap_name = ""
 
-        print('Notification from ContextEngineId "%s", ContextName "%s"' % (contextEngineId.prettyPrint(), contextName.prettyPrint()))            
+        logger.info('Notification from ContextEngineId "%s", ContextName "%s"' % (contextEngineId.prettyPrint(), contextName.prettyPrint()))            
         for oid, val in varBinds:
             nodeDesc, ret_val = self._mib_oid_value(oid, val)
 
@@ -203,6 +212,8 @@ class SNMPtraps(SensorThread, InternalMsgQ):
 
         self._log_debug(f"trap_name: {self._trap_name}")
         self._log_debug(f"enabled_traps: {self._enabled_traps}")
+        logger.infof"trap_name: {self._trap_name}")
+        logger.info(f"enabled_traps: {self._enabled_traps}")
 
         # Apply filter unless there is an asterisk in the list
         if '*' in self._enabled_traps or self._trap_name in self._enabled_traps:
