@@ -135,6 +135,7 @@ password=gAAAAABelDwUnl72CcoHjENcV9KmPkZTd-YPrAn1BbS6AaNGtho-VztVhx0f1ZEfX3zRlMo
 mgmt_interface=cliapi
 
 [REALSTORSENSORS]
+should_monitor=false
 polling_frequency=30
 
 [REALSTORPSUSENSOR]
@@ -154,6 +155,7 @@ polling_frequency_override=0
 threaded=true
 
 [NODEHWSENSOR]
+should_monitor=false
 threaded=true
 polling_interval=30
 
