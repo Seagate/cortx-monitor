@@ -7,7 +7,7 @@ Utility scripts used for sspl development purpose.
 - This script is useful to encrypt or decrypt passwords
   used in sspl config
 - Requirements
-  - eos-py-utils
+  - cortx-py-utils
 - Usage
   - ./encryptor.py <encrypt|decrypt> <text> <cluster-id> <service-name>
   - Ex. encryptor.py encrypt foo 001 rabbitmq
