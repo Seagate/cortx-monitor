@@ -19,12 +19,12 @@ core_processors=RabbitMQegressProcessor, RabbitMQingressProcessor, LoggingProces
 
 message_handlers=DiskMsgHandler, LoggingMsgHandler, ServiceMsgHandler, NodeDataMsgHandler, NodeControllerMsgHandler, RealStorEnclMsgHandler, RealStorActuatorMsgHandler
 
-sensors=ServiceWatchdog, RAIDsensor, NodeData, RealStorFanSensor, RealStorPSUSensor, RealStorControllerSensor, RealStorDiskSensor, RealStorSideplaneExpanderSensor, RealStorLogicalVolumeSensor, IEMSensor, NodeHWsensor, RealStorEnclosureSensor, SASPortSensor, MemFaultSensor, CPUFaultSensor
+sensors=ServiceWatchdog, RAIDsensor, NodeData, RealStorFanSensor, RealStorPSUSensor, RealStorControllerSensor, RealStorDiskSensor, RealStorSideplaneExpanderSensor, RealStorLogicalVolumeSensor, IEMSensor, NodeHWsensor, RealStorEnclosureSensor, SASPortSensor, MemFaultSensor, CPUFaultSensor, SNMPtraps
 
 actuators=Service, RAIDactuator, Smartctl, NodeHWactuator, RealStorActuator
 
 # List of modules to run in degraded mode
-degraded_state_modules=ServiceWatchdog, RAIDsensor, NodeData, IEMSensor, NodeHWsensor, DiskMsgHandler, LoggingMsgHandler, ServiceMsgHandler, NodeDataMsgHandler, NodeControllerMsgHandler, RealStorActuatorMsgHandler, SASPortSensor, MemFaultSensor, CPUFaultSensor
+degraded_state_modules=ServiceWatchdog, RAIDsensor, NodeData, IEMSensor, NodeHWsensor, DiskMsgHandler, LoggingMsgHandler, ServiceMsgHandler, NodeDataMsgHandler, NodeControllerMsgHandler, RealStorActuatorMsgHandler, SASPortSensor, MemFaultSensor, CPUFaultSensor, SNMPtraps
 
 [SYSTEM_INFORMATION]
 operating_system=centos7
@@ -187,5 +187,9 @@ threaded=true
 probe=sysfs
 
 [CPUFAULTSENSOR]
+threaded=true
+probe=sysfs
+
+[SNMPTRAPS]
 threaded=true
 probe=sysfs

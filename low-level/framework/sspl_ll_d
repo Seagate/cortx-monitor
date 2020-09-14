@@ -445,7 +445,7 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist, operating_system
             except ImportError:
                 logger.info("Could not import HPIactuator")
 
-        from sensors.impl.generic.SNMP_traps import SNMPtraps
+        #from sensors.impl.generic.SNMP_traps import SNMPtraps
 
     if product.upper() in enabled_products:
         from sensors.impl.platforms.realstor.realstor_disk_sensor \
@@ -467,6 +467,7 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist, operating_system
         from sensors.impl.generic.node_sas_port import SASPortSensor
         from sensors.impl.generic.node_memory_fault import MemFaultSensor
         from sensors.impl.generic.cpu_fault_sensor import CPUFaultSensor
+        from sensors.impl.generic.SNMP_traps2 import SNMPtraps
 
     if product.lower() in [x.lower() for x in enabled_products]:
         import inspect
@@ -480,6 +481,7 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist, operating_system
         from sensors.impl.generic.raid import RAIDsensor
         from sensors.impl.generic.raid_integrity_data import RAIDIntegritySensor
         from sensors.impl.generic.node_data import NodeData as NodeData
+        from sensors.impl.generic.SNMP_traps2 import SNMPtraps
         # from sensors.impl.generic.SMR_drive_data import SMRdriveData
 
         from zope.component import getGlobalSiteManager

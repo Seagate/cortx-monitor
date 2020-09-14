@@ -10,3 +10,4 @@ pyinotify==0.9.4
 python-consul==1.1.0
 PyInstaller==3.5
 cryptography==2.8
+pysnmp==4.4.12

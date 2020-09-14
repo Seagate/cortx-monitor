@@ -193,3 +193,7 @@ probe=sysfs
 [CPUFAULTSENSOR]
 threaded=true
 probe=sysfs
+
+[SNMPTRAPS]
+threaded=true
+probe=sysfs
