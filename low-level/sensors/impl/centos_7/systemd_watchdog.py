@@ -1270,15 +1270,13 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
         """Retrieves the current setup. This was added to not to run actual SMART test
            in VM environment because virtual drives don't support SMART test.
         """
-        setup = self._conf_reader._get_value_with_default(self.SYSTEM_INFORMATION,
-                                                          COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.SETUP),
-                                                          "ssu")
-        # additional check on environment
+        smart_supported = True
+        # check on environment
         result = self._run_command("sudo facter is_virtual")
         if result:
             if 'true' in result[0]:
-                setup = "vm"
-        return False if setup == "vm" else True
+                smart_supported = False
+        return smart_supported
 
     def _update_drive_faults(self):
 
