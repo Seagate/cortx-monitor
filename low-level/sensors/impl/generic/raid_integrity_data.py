@@ -189,7 +189,7 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
 
                 if self._alert_resolved:
                     self.alert_type = self.FAULT_RESOLVED
-                    self._alert_msg = None
+                    self._alert_msg = "null"
                     self._send_json_msg(self.alert_type, device, self._alert_msg)
 
         except Exception as ae:
