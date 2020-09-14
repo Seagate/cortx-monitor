@@ -194,12 +194,11 @@ Creating a pull request automatically triggers Jenkins jobs and System tests. To
 
 ```shell
 
-$ git pull origin master
-$ git submodule update --init --recursive
+$ git checkout main
+$ git fetch upstream
+$ git pull upstream main
 $ git checkout 'your-local-branch'
-$ git pull origin 'your-remote-branch-name'
-$ git submodule update --init --recursive
-$ git rebase origin/master
+$ git rebase upstream/main
 ```
 
 **Q** How do I address reviewer comments?
