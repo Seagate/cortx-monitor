@@ -21,6 +21,7 @@ import json
 import re
 import socket
 import uuid
+import calendar
 
 from zope.interface import implementer
 
@@ -905,7 +906,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
     def _get_epoch_time_from_date_and_time(self, _date, _time):
         timestamp_format = '%m/%d/%Y %H:%M:%S'
         timestamp = time.strptime('{} {}'.format(_date,_time), timestamp_format)
-        return str(int(time.mktime(timestamp)))
+        return str(int(calendar.timegm(timestamp)))
 
     def suspend(self):
         """Suspends the module thread. It should be non-blocking"""
