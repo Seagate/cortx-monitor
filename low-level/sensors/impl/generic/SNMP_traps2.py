@@ -202,7 +202,7 @@ class SNMPtraps(SensorThread, InternalMsgQ):
         json_data = {}
         self._trap_name = ""
 
-        logger.info('Notification from ContextEngineId "%s", ContextName "%s"' % (contextEngineId.prettyPrint(), contextName.prettyPrint()))            
+        logger.info('Notification from ContextEngineId "%s", ContextName "%s"' % (contextEngineId.prettyPrint(), contextName.prettyPrint()))
         for oid, val in varBinds:
             nodeDesc, ret_val = self._mib_oid_value(oid, val)
 
