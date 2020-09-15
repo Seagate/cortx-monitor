@@ -1133,7 +1133,7 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
     def _send_msg(self, alert_type, resource_id, specific_info):
         """Sends an internal msg to DiskMsgHandler"""
 
-        event_time = str(time.time())
+        event_time = str(int(time.time()))
         severity_reader = SeverityReader()
         msg =  {"sensor_response_type" : "node_disk",
                "response" : {
