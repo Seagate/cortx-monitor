@@ -394,6 +394,7 @@ class RealStorEnclosure(StorageEnclosure):
                 # list and find item in that.
                 if not self.FAULT_KEY in system.keys():
                     logger.debug("{0} Healthy, no faults seen".format(self.LDR_R1_ENCL))
+                    self.latest_faults = {}
                     return
 
                 # Extract system faults
