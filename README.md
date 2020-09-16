@@ -2,7 +2,7 @@
 
 # CORTX-Monitor
 
-The CORTX-Monitor tracks platform health for any unintended states and sends alerts on sensing any deviances. The CORTX-Monitor tracks ad detects hardware faults, removals, and replacements by continuously monitoring storage sub-systems like Storage Enclosure, Node Servers, Components and Network Interfaces, etc.
+CORTX Monitor tracks platform health and raises alerts on sensing any unintended state. It can detect hardware faults, removal or replacement by continuously sensing sub-systems like Storage Enclosure, Node Servers and Components, and Network Interfaces.
 
 ## Get CORTX-Monitor Ready! 
 
