@@ -3,7 +3,7 @@
 - [1.0 Prerequisites](#10-Prerequisites)
 - [1.2 Set up Git on your Development Box](#12-Set-Up-Git-on-your-Development-Box)
 - [1.3 Submit your changes](#13-Submit-your-Changes)
-   * [1.3.1 Clone the cortx-sspl repository](#131-Clone-the-cortx-sspl-repository)
+   * [1.3.1 Clone the cortx-monitor repository](#131-Clone-the-cortx-monitor-repository)
    * [1.3.2 Code Commits](#132-Code-commits)
    * [1.3.3 Create a Pull Request](#133-Create-a-Pull-Request)
 - [1.4 Run Jenkins and System Tests](#14-Run-Jenkins-and-System-Tests)
@@ -11,7 +11,7 @@
 
 Contributing to the sspl repository is a three-step process where you'll need to:
 
-1. [Clone the cortx-sspl repository](#131-Clone-the-cortx-sspl-repository)
+1. [Clone the cortx-monitor repository](#131-Clone-the-cortx-monitor-repository)
 2. [Commit your Code](#132-Code-commits)
 3. [Create a Pull Request](#133-Create-a-Pull-Request)
 
@@ -89,16 +89,16 @@ Once you've installed the prerequisites, follow these steps to set up Git on you
    ```
 ## 1.3. Submit your Changes
 
-Before you can work on a GitHub feature, you'll need to clone the cortx-sspl repository.
+Before you can work on a GitHub feature, you'll need to clone the cortx-monitor repository.
 
-### 1.3.1 Clone the cortx-sspl repository
+### 1.3.1 Clone the cortx-monitor repository
 
-You'll need to **Fork** the cortx-sspl repository to clone it into your private GitHub repository. Follow these steps to clone the repository to your gitHub account:
-1. Navigate to the 'cortx-sspl' repository homepage on GitHub.
+You'll need to **Fork** the cortx-monitor repository to clone it into your private GitHub repository. Follow these steps to clone the repository to your gitHub account:
+1. Navigate to the 'cortx-monitor' repository homepage on GitHub.
 2. Click **Fork**
 3. Run the following commands in Shell:
 
-   `$ git clone git@github.com:"your-github-id"/cortx-sspl.git`
+   `$ git clone git@github.com:"your-github-id"/cortx-monitor.git`
 
 4. Setup upstream repository in the remote list. This is a one-time activity:
 
@@ -108,13 +108,13 @@ You'll need to **Fork** the cortx-sspl repository to clone it into your private 
 
       ```shell 
 
-      origin git@github.com:<gitgub-id>/cortx-sspl.git (fetch)
-      origin git@github.com:<github-id>/cortx-sspl.git (push)
+      origin git@github.com:<gitgub-id>/cortx-monitor.git (fetch)
+      origin git@github.com:<github-id>/cortx-monitor.git (push)
       ```
    
    - Run the commands:
       
-      `$ git remote add upstream git@github.com:Seagate/cortx-sspl.git`
+      `$ git remote add upstream git@github.com:Seagate/cortx-monitor.git`
       `$ git remote -v`
       
       Your upstream repo will now be visible.
@@ -123,10 +123,10 @@ You'll need to **Fork** the cortx-sspl repository to clone it into your private 
 
       ```shell
       
-         origin git@github.com:<gitgub-id>/cortx-sspl.git (fetch)
-         origin git@github.com:<github-id>/cortx-sspl.git (push)
-         upstream git@github.com:Seagate/cortx-sspl.git (fetch)
-         upstream git@github.com:Seagate/cortx-sspl.git (push)
+         origin git@github.com:<gitgub-id>/cortx-monitor.git (fetch)
+         origin git@github.com:<github-id>/cortx-monitor.git (push)
+         upstream git@github.com:Seagate/cortx-monitor.git (fetch)
+         upstream git@github.com:Seagate/cortx-monitor.git (push)
       ```
 
 5. Check out to the “main” branch using:

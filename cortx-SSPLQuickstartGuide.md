@@ -3,7 +3,7 @@
 This guide provides a step-by-step walkthrough for getting you CORTX-SSPL Server-ready.
 
 - [1.0 Prerequisites](#10-Prerequisites)
-- [1.2 Clone the cortx-sspl repository](#12-Clone-the-cortx-sspl-repository)
+- [1.2 Clone the cortx-monitor repository](#12-Clone-the-cortx-monitor-repository)
 - [1.3 Build the cortx-sspl source code](#13-Build-the-cortx-sspl-source-code)
 - [1.4 Run Tests](#14-Run-Tests)
 
@@ -72,12 +72,12 @@ This guide provides a step-by-step walkthrough for getting you CORTX-SSPL Server
     </details>
 
 
-## 1.2 Clone the cortx-sspl repository
+## 1.2 Clone the cortx-monitor repository
 
-1. Run the following commands to clone the cortx-sspl repository to your local VM:
+1. Run the following commands to clone the cortx-monitor repository to your local VM:
 
     ```shell
-    $ git clone --recursive git@github.com:Seagate/cortx-sspl.git
+    $ git clone --recursive git@github.com:Seagate/cortx-monitor.git
     $ cd cortx-sspl
     ```
 
@@ -89,6 +89,24 @@ This guide provides a step-by-step walkthrough for getting you CORTX-SSPL Server
     
     $ yum install rpm-build
     $ yum install autoconf automake libtool check-devel doxygen gcc graphviz openssl-devel python-pep8
+    ```
+
+    :page_with_curl: **Notes:**
+
+    - If you faced following issue
+
+    ```shell
+
+    Error: Package: glibc-headers-2.17-307.el7.1.x86_64 (cortx_platform_base)
+    Requires: kernel-headers >= 2.2.1
+    ```
+
+    Try this solution.
+
+    ```shell
+
+    sudo vim /etc/yum.conf
+    comment  #exclude=kernel* (or remove the 'kernel*' part)
     ```
 
 2. Build RPMs
