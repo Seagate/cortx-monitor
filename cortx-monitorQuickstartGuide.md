@@ -13,7 +13,7 @@ This guide provides a step-by-step walkthrough for getting you CORTX-SSPL Server
 <summary>Click to expand!</summary>
 <p>
 
-1. You'll need to [Build and Test your VM Environment](../main/doc/BUILD_ENVIRONMENT.md) and setup [CORTX on Virtual Appliance](https://github.com/Seagate/cortx/blob/main/doc/CORTX%20on%20VA.rst).
+1. You'll need to [Build and Test your VM Environment](https://github.com/Seagate/cortx/blob/main/doc/BUILD_ENVIRONMENT.md).
 2. As a CORTX contributor you will need to refer, clone, contribute, and commit changes via the GitHub server. You can access the latest code via [Github](https://github.com/Seagate/cortx).
 3. You'll need a valid GitHub Account.
 4. Before you clone your Git repository, you'll need to create the following:
