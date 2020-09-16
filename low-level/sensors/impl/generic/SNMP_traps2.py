@@ -26,8 +26,7 @@ from message_handlers.logging_msg_handler import LoggingMsgHandler
 
 from json_msgs.messages.sensors.snmp_trap import SNMPtrapMsg
 
-import pysnmp
-import pyasn1
+import pysmi
 from pysnmp.entity import engine, config
 from pysnmp.carrier.asyncore.dgram import udp, udp6
 from pysnmp.entity.rfc3413 import ntfrcv
@@ -80,76 +79,120 @@ class SNMPtraps(SensorThread, InternalMsgQ):
         """Return the most recent trap information"""
         return self._latest_trap
 
+    # def run(self):
+    #     """Run the sensor on its own thread"""
+
+    #     # Check for debug mode being activated/deactivated
+    #     self._read_my_msgQ_noWait()
+
+    #     try:
+    #         #self._log_debug("Start processing")
+    #         logger.debug("Start processing")
+    #         logger.info("Start processing")
+    #         # Create MIB loader to lookup oids sent in traps
+    #         # self._mib_builder()
+    #         # logger.info(" successfully exited from _mib_builder() ")
+
+    #         # to socket transport dispatcher
+    #         snmpEngine = engine.SnmpEngine(v2c.OctetString(hexValue='80001f8880ec70e17424be1f5f00000000'))
+    #         logger.info("snmp engine created")
+    #         # Transport setup
+    #         # UDP over IPv4
+    #         config.addTransport(
+    #             snmpEngine,
+    #             udp.domainName,
+    #             udp.UdpTransport().openServerMode((self._bind_ip, self._bind_port))
+    #         )
+    #         logger.info('udp4 binded')
+
+    #         # UDP over IPv6
+    #         # config.addTransport(
+    #         #     snmpEngine,
+    #         #     udp6.domainName,
+    #         #     udp6.Udp6Transport().openServerMode(('::1', self._bind_port))
+    #         # )
+    #         # logger.info('udp6 binded')
+    #         # SNMPv3/USM setup
+    #         # this USM entry is used for TRAP receiving purpose 
+    #         config.addV3User(snmpEngine, 'inform_sender', 
+    #             config.usmHMACSHAAuthProtocol, 'authpass',
+    #             config.usmAesCfb128Protocol, 'privpass',
+    #         )
+    #         logger.info("snmp v3 user added")
+    #         # Create an asynchronous dispatcher and register a callback method to handle incoming traps
+    #         # Register SNMP Application at the SNMP engine
+    #         ntfrcv.NotificationReceiver(snmpEngine, self._trap_catcher)
+    #         logger.info("callback function registered.")
+
+    #         snmpEngine.transportDispatcher.jobStarted(1)  # this job would never finish
+    #         logger.info("transport Dispatcher job Started")
+    #         # Run I/O dispatcher which would receive queries and send confirmations
+    #         try:
+    #             # Dispatcher will never finish as job #1 never reaches zero
+    #             snmpEngine.transportDispatcher.runDispatcher()
+    #             logger.info("transport Dispatcher run dispatcher()")
+    #         except Exception as ae:
+    #             #self._log_debug("Exception: %r" % ae)
+    #             logger.debug("Exception: %r" % ae)
+    #             logger.info("Exception : %r" % ae)
+    #             snmpEngine.transportDispatcher.closeDispatcher()
+
+    #         #self._log_debug("Finished processing, restarting SNMP listener")
+    #         logger.debug("Finished processing, restarting SNMP listener")
+    #         logger.info("Finished processing, restarting SNMP listener")
+
+    #         # Reset debug mode if persistence is not enabled
+    #         self._disable_debug_if_persist_false()
+
+    #         # Schedule the next time to run thread
+    #         self._scheduler.enter(10, self._priority, self.run, ())
+
+    #     # Could not bind to IP:port, log it and exit out module
+    #     except Exception as ae:
+    #         self._log_debug("Unable to process SNMP traps from this node, closing module.")
+    #         self._log_debug(f"SNMP Traps sensor attempted to bind to {self._bind_ip}:{self._bind_port}")
+    #         logger.info("Unable to process SNMP traps from this node, closing module.")
+    #         logger.info(f"SNMP Traps sensor attempted to bind to {self._bind_ip}:{self._bind_port}")
+    #         logger.info("Exception : %r " % ae)
+
     def run(self):
-        """Run the sensor on its own thread"""
-
-        # Check for debug mode being activated/deactivated
-        self._read_my_msgQ_noWait()
-
         try:
-            #self._log_debug("Start processing")
-            logger.debug("Start processing")
-            logger.info("Start processing")
-            # Create MIB loader to lookup oids sent in traps
-            self._mib_builder()
-
-            # to socket transport dispatcher
+            logger.info("Start of run()")
             snmpEngine = engine.SnmpEngine(v2c.OctetString(hexValue='80001f8880ec70e17424be1f5f00000000'))
-
-            # Transport setup
-            # UDP over IPv4
+            logger.info("snmpEngine regiestered.")
             config.addTransport(
                 snmpEngine,
                 udp.domainName,
                 udp.UdpTransport().openServerMode((self._bind_ip, self._bind_port))
             )
-            # UDP over IPv6
-            config.addTransport(
-                snmpEngine,
-                udp6.domainName,
-                udp6.Udp6SocketTransport().openServerMode(('::1', self._bind_port))
-            )
-
-            # SNMPv3/USM setup
-            # this USM entry is used for TRAP receiving purpose 
+            logger.info("upd4 registered at %s:%s" %self._bind_ip, self._bind_port)
             config.addV3User(snmpEngine, 'inform_sender', 
                 config.usmHMACSHAAuthProtocol, 'authpass',
                 config.usmAesCfb128Protocol, 'privpass',
             )
-
-            # Create an asynchronous dispatcher and register a callback method to handle incoming traps
+            logger.info("v3 user registered")
             # Register SNMP Application at the SNMP engine
-            ntfrcv.NotificationReceiver(snmpEngine, self._trap_catcher)
+            ntfrcv.NotificationReceiver(snmpEngine, self.cbFun)
 
             snmpEngine.transportDispatcher.jobStarted(1)  # this job would never finish
 
             # Run I/O dispatcher which would receive queries and send confirmations
             try:
-                # Dispatcher will never finish as job #1 never reaches zero
                 snmpEngine.transportDispatcher.runDispatcher()
             except Exception as ae:
-                #self._log_debug("Exception: %r" % ae)
-                logger.debug("Exception: %r" % ae)
-                logger.info("Exception : %r" % ae)
-
+                logger.error("Exception : %r" %ae)
                 snmpEngine.transportDispatcher.closeDispatcher()
-
-            #self._log_debug("Finished processing, restarting SNMP listener")
-            logger.debug("Finished processing, restarting SNMP listener")
-            logger.info("Finished processing, restarting SNMP listener")
-
-            # Reset debug mode if persistence is not enabled
-            self._disable_debug_if_persist_false()
-
-            # Schedule the next time to run thread
+                raise
+            logger.info("run() methond finished. restarting SNMP")
             self._scheduler.enter(10, self._priority, self.run, ())
 
-        # Could not bind to IP:port, log it and exit out module
         except Exception as ae:
-            self._log_debug("Unable to process SNMP traps from this node, closing module.")
-            self._log_debug(f"SNMP Traps sensor attempted to bind to {self._bind_ip}:{self._bind_port}")
-            logger.info("Unable to process SNMP traps from this node, closing module.")
-            logger.info(f"SNMP Traps sensor attempted to bind to {self._bind_ip}:{self._bind_port}")
+            logger.error("Exception : %r" %ae)
+
+    def cbFun(self, snmpEngine, stateReference, contextEngineId, contextName, varBinds, cbCtx):
+        logger.info('Notification from ContextEngineId "%s", ContextName "%s"' % (contextEngineId.prettyPrint(), contextName.prettyPrint()))
+        for name, val in varBinds:
+            logger.info('%s = %s' % (name.prettyPrint(), val.prettyPrint()))
 
     def _mib_builder(self):
         """Loads the MIB files and creates dicts with hierarchical structure"""
@@ -168,7 +211,9 @@ class SNMPtraps(SensorThread, InternalMsgQ):
         logger.info("MIB sources: %s" % str(mibBuilder.getMibSources()))
         # for module in self._enabled_MIBS:
         #     mibBuilder.loadModules(module)
-        mibBuilder.loadModules(self._enabled_MIBS)
+        mibBuilder.loadModules('IF-MIB', 'LM-SENSORS-MIB', 'DISMAN-EVENT-MIB', 'SNMPv2-MIB', 'HOST-RESOURCES-MIB')
+        #mibBuilder.loadModules(self._enabled_MIBS)
+        logger.info("All mib modules loaded.")
         self._mibView = view.MibViewController(mibBuilder)
 
     def _mib_oid_value(self, oid, val):
@@ -204,8 +249,9 @@ class SNMPtraps(SensorThread, InternalMsgQ):
 
         logger.info('Notification from ContextEngineId "%s", ContextName "%s"' % (contextEngineId.prettyPrint(), contextName.prettyPrint()))
         for oid, val in varBinds:
-            nodeDesc, ret_val = self._mib_oid_value(oid, val)
-
+            # nodeDesc, ret_val = self._mib_oid_value(oid, val)
+            nodeDesc, ret_val = oid, val
+            logger.info(f"{oid} => {val}")
             # Build up JSON data to be logged in IEM and sent to Halon
             if nodeDesc != "N/A" and ret_val != "N/A":
                 json_data[nodeDesc] = ret_val

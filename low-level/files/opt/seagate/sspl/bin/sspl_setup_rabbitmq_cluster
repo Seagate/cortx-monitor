@@ -104,6 +104,10 @@ def open_rabbitmq_ports():
     _send_command(command, fail_on_error=False)
     command = "firewall-cmd --zone=public --permanent --add-port=8883/tcp"
     _send_command(command, fail_on_error=False)
+    command = "firewall-cmd --zone=public --permanent --add-port=162/udp"
+    _send_command(command, fail_on_error=False)
+    command = "firewall-cmd --zone=public --permanent --add-port=161/udp"
+    _send_command(command, fail_on_error=False)
     command = "firewall-cmd --reload"
     _send_command(command)
 
