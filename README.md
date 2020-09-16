@@ -8,7 +8,7 @@ The CORTX-Monitor tracks platform health for any unintended states and sends ale
 
 Jump to the [CORTX-Monitor Quickstart Guide](cortx-SSPLQuickstartGuide.md) to set up CORTX-Monitor. 
 
-## Contribute to CORTX-HA
+## Contribute to CORTX-Monitor
 
 We welcome all Source Code and Documentation contributions to the CORTX-Monitor repositories. Refer to the [CORTX-Monitor Contribution Guide](ContributingToCortxSSPL.md) to submit your contributions. 
 
