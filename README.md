@@ -6,11 +6,11 @@ CORTX Monitor tracks platform health and raises alerts on sensing any unintended
 
 ## Get CORTX-Monitor Ready! 
 
-Jump to the [CORTX-Monitor Quickstart Guide](cortx-SSPLQuickstartGuide.md) to set up CORTX-Monitor. 
+Jump to the [CORTX-Monitor Quickstart Guide](cortx-monitorQuickstartGuide.md) to set up CORTX-Monitor. 
 
 ## Contribute to CORTX-Monitor
 
-We welcome all Source Code and Documentation contributions to the CORTX-Monitor repositories. Refer to the [CORTX-Monitor Contribution Guide](ContributingToCortxSSPL.md) to submit your contributions. 
+We welcome all Source Code and Documentation contributions to the CORTX-Monitor repositories. Refer to the [CORTX-Monitor Contribution Guide](ContributingToCortx-Monitor.md) to submit your contributions. 
 
 ## CORTX Community
 
