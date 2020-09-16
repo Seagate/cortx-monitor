@@ -58,6 +58,11 @@ except Exception as err:
     print(f"Considering default storage type : '{storage_type}'")
     print(f"Considering default server type : '{server_type}'")
 
+if storage_type == 'virtual' and server_type == 'virtual':
+    print("Resource Health View does not support for virtual server and virtual storage deployment")
+    print("Exiting ...")
+    sys.exit(os.EX_USAGE)
+
 if storage_type == '5u84':
     base_info.update({
         '/STORAGE_ENCLOSURE/controller/primary_mc/ip':'storage_enclosure/controller/primary_mc/ip',
