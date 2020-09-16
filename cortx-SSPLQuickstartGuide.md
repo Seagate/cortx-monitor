@@ -13,7 +13,7 @@ This guide provides a step-by-step walkthrough for getting you CORTX-SSPL Server
 <summary>Click to expand!</summary>
 <p>
 
-1. You'll need to set up SSC, Cloud VM, or a local VM on VMWare Fusion or Oracle VirtualBox. To know more, refer to the [LocalVMSetup](https://github.com/Seagate/cortx/blob/main/doc/LocalVMSetup.md) section.
+1. You'll need to [Build and Test your VM Environment](../main/doc/BUILD_ENVIRONMENT.md) and setup [CORTX on Virtual Appliance](https://github.com/Seagate/cortx/blob/main/doc/CORTX%20on%20VA.rst).
 2. As a CORTX contributor you will need to refer, clone, contribute, and commit changes via the GitHub server. You can access the latest code via [Github](https://github.com/Seagate/cortx).
 3. You'll need a valid GitHub Account.
 4. Before you clone your Git repository, you'll need to create the following:
@@ -197,7 +197,8 @@ This guide provides a step-by-step walkthrough for getting you CORTX-SSPL Server
       `/opt/seagate/cortx/sspl/sspl_test/run_tests.sh`
 
       **Sample Output:**
-    ```shell
+    
+ ```shell
     
     ******************************************************************************************
     TestSuite                                                    Status     Duration(secs)
@@ -221,7 +222,7 @@ This guide provides a step-by-step walkthrough for getting you CORTX-SSPL Server
     ****************************************************
     TestSuite:15 Tests:17 Passed:17 Failed:0 TimeTaken:108s
     ******************************************************
-    ```
+ ```
 
 ## You're All Set & You're Awesome!
 
