@@ -1,6 +1,6 @@
 /var/log/cortx/sspl/sspl.log
 {
-        size 10K
+        size 100k
         rotate 20
         copytruncate
         missingok
