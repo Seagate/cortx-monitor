@@ -54,6 +54,11 @@ usermod -a -G disk sspl-ll
 SUDO_LINE="sspl-ll	ALL = NOPASSWD: /usr/sbin/smartctl, /usr/sbin/mdadm, /usr/bin/mount, /usr/bin/umount, /usr/sbin/swapon, /usr/sbin/swapoff, /usr/sbin/hdparm, /usr/bin/systemctl, /usr/sbin/wbcli, /usr/bin/ipmitool, /usr/bin/systemd-detect-virt, /bin/salt-call, /usr/bin/echo, /usr/bin/facter"
 echo "$SUDO_LINE" | tee /etc/sudoers.d/sspl > /dev/null
 chmod 440 /etc/sudoers.d/sspl
+# Set noop = true in puppet conf file to avoid the sspl auth file getting
+# removed by puppet-agent (Ref: LRL-495)
+PUPPET_CONF="/etc/puppetlabs/puppet/puppet.conf"
+PUPPET_NOOP="noop = true"
+grep -q "$PUPPET_NOOP" $PUPPET_CONF || echo "$PUPPET_NOOP" >> $PUPPET_CONF
 
 # Automatically install dependencies based on config file
 # There is no --checkdeps and --autoinstall implemented in sspl-ll-cli.
