@@ -151,12 +151,18 @@ config_sspl() {
     # "/var/log/messages"
     systemctl restart rsyslog
 
+    # For node replacement scenario consul will not be running on the new node. But,
+    # there will be two instance of consul running on healthy node. When new node is configured
+    # consul will be brought back on it. We are using VIP to connect to consul. So, if consul
+    # is not running on new node, we dont need to error out.
     # If consul is not running, exit
-    CONSUL_PS=$(ps -aux | grep "consul" | grep -v "grep" || true)
-    if [ -z "$CONSUL_PS" ]; then
-        echo "Consul is not running, exiting..";
-        exit 1
-    fi
+    [ -f $REPLACEMENT_NODE_ENV_VAR_FILE ] || {
+        CONSUL_PS=$(ps -aux | grep "consul" | grep -v "grep" || true)
+        if [ -z "$CONSUL_PS" ]; then
+            echo "Consul is not running, exiting..";
+            exit 1
+        fi
+    }
 
 }
 
@@ -172,19 +178,27 @@ case $cmd in
         ;;
 esac
 
+# Skip this step if sspl is being configured for node replacement scenario as consul data is already
+# available on healthy node
 # Updating RabbitMQ cluster nodes.
-[ -n "$rmq_cluster_nodes" ] && $CONSUL_PATH/consul kv put sspl/config/RABBITMQCLUSTER/cluster_nodes $rmq_cluster_nodes
+[ -f $REPLACEMENT_NODE_ENV_VAR_FILE ] || {
+    [ -n "$rmq_cluster_nodes" ] && $CONSUL_PATH/consul kv put sspl/config/RABBITMQCLUSTER/cluster_nodes $rmq_cluster_nodes
+}
 # Getting node names using rabbitmqctl is depreciated (EOS-8860)
 #out=$(rabbitmqctl cluster_status | grep running_nodes | cut -d '[' -f2 | cut -d ']' -f1 | sed 's/rabbit@//g' | sed 's/,/, /g')
 #pout=$(echo $out | sed  "s/'//g")
 #$CONSUL_PATH/consul kv put sspl/config/RABBITMQCLUSTER/cluster_nodes $pout
 
+# Skip this step if sspl is being configured for node replacement scenario as consul data is already
+# available on healthy node
 # Updating build requested log level
-log_level=`cat $DIR_NAME/conf/build-requested-loglevel | sed 's/ *$//'`
-case $log_level in
-    "DEBUG" | "INFO" | "WARNING" | "ERROR" | "CRITICAL")
-        $CONSUL_PATH/consul kv put sspl/config/SYSTEM_INFORMATION/log_level $log_level;;
-    "");;
-    *)
-        echo "Unexpected log level is requested, '$log_level'";;
-esac
+[ -f $REPLACEMENT_NODE_ENV_VAR_FILE ] || {
+    log_level=`cat $DIR_NAME/conf/build-requested-loglevel | sed 's/ *$//'`
+    case $log_level in
+        "DEBUG" | "INFO" | "WARNING" | "ERROR" | "CRITICAL")
+            $CONSUL_PATH/consul kv put sspl/config/SYSTEM_INFORMATION/log_level $log_level;;
+        "");;
+        *)
+            echo "Unexpected log level is requested, '$log_level'";;
+    esac
+}
