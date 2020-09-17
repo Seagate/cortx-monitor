@@ -1,4 +1,4 @@
-# Contribute to SSPL
+# Contribute to CORTX-Monitor
 
 - [1.0 Prerequisites](#10-Prerequisites)
 - [1.2 Set up Git on your Development Box](#12-Set-Up-Git-on-your-Development-Box)
@@ -9,7 +9,7 @@
 - [1.4 Run Jenkins and System Tests](#14-Run-Jenkins-and-System-Tests)
 - [FAQs](#FAQs)
 
-Contributing to the sspl repository is a three-step process where you'll need to:
+Contributing to the cortx-monitor repository is a three-step process where you'll need to:
 
 1. [Clone the cortx-monitor repository](#131-Clone-the-cortx-monitor-repository)
 2. [Commit your Code](#132-Code-commits)
@@ -167,8 +167,8 @@ You can make changes to the code and save them in your files.
    remote: Resolving deltas: 100% (1/1), completed with 1 local object.
    remote:
    remote: Create a pull request for 'your-local-branch-name' on GitHub by visiting:
-   remote: https://github.com/<your-GitHub-Id>/cortx-sspl/pull/new/<your-local-branch-name>
-   remote: To github.com:<your-GitHub-Id>/cortx-sspl.git
+   remote: https://github.com/<your-GitHub-Id>/cortx-monitor/pull/new/<your-local-branch-name>
+   remote: To github.com:<your-GitHub-Id>/cortx-monitor.git
    * [new branch] <your-local-branch-name> -> <your-local-branch-name>
    ```
 
@@ -215,9 +215,9 @@ Github will automatically update your review request.
 
 We thank you for stopping by to check out the CORTX Community. We are fully dedicated to our mission to build open source technologies that help the world save unlimited data and solve challenging data problems. Join our mission to help reinvent a data-driven world. 
 
-### Contribute to CORTX SSPL
+### Contribute to CORTX-Monitor
 
-Please [contribute to the CORTX SSPL](https://github.com/Seagate/cortx/blob/main/doc/SuggestedContributions.md) initiative and join our movement to make data storage better, efficient, and more accessible. 
+Please [contribute to the CORTX-Monitor](https://github.com/Seagate/cortx/blob/main/doc/SuggestedContributions.md) initiative and join our movement to make data storage better, efficient, and more accessible.
 
 Refer to the [CORTX Contribution Guide](https://github.com/Seagate/cortx/blob/main/doc/CORTXContributionGuide.md) to get started with your first contribution.
 

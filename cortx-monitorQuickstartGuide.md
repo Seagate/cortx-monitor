@@ -1,10 +1,10 @@
-# Cortx-SSPL Quickstart Guide
+# CORTX-Monitor Quickstart Guide
 
-This guide provides a step-by-step walkthrough for getting you CORTX-SSPL Server-ready.
+This guide provides a step-by-step walkthrough for getting you CORTX-Monitor Server-ready.
 
 - [1.0 Prerequisites](#10-Prerequisites)
 - [1.2 Clone the cortx-monitor repository](#12-Clone-the-cortx-monitor-repository)
-- [1.3 Build the cortx-sspl source code](#13-Build-the-cortx-sspl-source-code)
+- [1.3 Build the cortx-monitor source code](#13-Build-the-cortx-monitor-source-code)
 - [1.4 Run Tests](#14-Run-Tests)
 
 ## 1.0 Prerequisites
@@ -78,10 +78,10 @@ This guide provides a step-by-step walkthrough for getting you CORTX-SSPL Server
 
     ```shell
     $ git clone --recursive git@github.com:Seagate/cortx-monitor.git
-    $ cd cortx-sspl
+    $ cd cortx-monitor
     ```
 
-## 1.3 Build the cortx-sspl source code
+## 1.3 Build the cortx-monitor source code
 
 1. Before you build the RPM, you'll need to install the dependecies using:
 
@@ -111,7 +111,7 @@ This guide provides a step-by-step walkthrough for getting you CORTX-SSPL Server
 
 2. Build RPMs
     
-   1. Switch to the directory where you've cloned cortx-sspl and run the command:
+   1. Switch to the directory where you've cloned cortx-monitor and run the command:
    
         `$ jenkins/build.sh`  
     
@@ -128,14 +128,14 @@ This guide provides a step-by-step walkthrough for getting you CORTX-SSPL Server
     
     ```shell
 
-    [root@ssc-vm-c-466 cortx-sspl]# ls -lrt /root/rpmbuild/RPMS/noarch/
+    [root@ssc-vm-c-466 cortx-monitor]# ls -lrt /root/rpmbuild/RPMS/noarch/
     total 59056
     -rw-r--r-- 1 root root 34025516 Aug 18 07:26 cortx-sspl-1.0.0-1_git8907300.el7.noarch.rpm
     -rw-r--r-- 1 root root 16795340 Aug 18 07:27 cortx-sspl-cli-1.0.0-1_git8907300.el7.noarch.rpm
     -rw-r--r-- 1 root root  9643028 Aug 18 07:27 cortx-sspl-test-1.0.0-1_git8907300.el7.noarch.rpm
 
 
-    [root@ssc-vm-c-466 cortx-sspl]# ls -lrt /root/rpmbuild/RPMS/x86_64/
+    [root@ssc-vm-c-466 cortx-monitor]# ls -lrt /root/rpmbuild/RPMS/x86_64/
     total 284
     -rw-r--r-- 1 root root  65968 Aug 18 07:23 systemd-python36-1.0.0-1_git8907300.el7.x86_64.rpm
     -rw-r--r-- 1 root root  60904 Aug 18 07:23 systemd-python36-debuginfo-1.0.0-1_git8907300.el7.x86_64.rpm
@@ -226,11 +226,11 @@ This guide provides a step-by-step walkthrough for getting you CORTX-SSPL Server
 
 ## You're All Set & You're Awesome!
 
-We thank you for stopping by to check out the CORTX Community. We are fully dedicated to our mission to build open source technologies that help the world save unlimited data and solve challenging data problems. Join our mission to help reinvent a data-driven world. 
+We thank you for stopping by to check out the CORTX Community. We are fully dedicated to our mission to build open source technologies that help the world save unlimited data and solve challenging data problems. Join our mission to help reinvent a data-driven world.
 
-### Contribute to CORTX SSPL 
+### Contribute to CORTX-Monitor
 
-Please [contribute to the CORTX SSPL](https://github.com/Seagate/cortx/blob/main/doc/SuggestedContributions.md) initiative and join our movement to make data storage better, efficient, and more accessible. 
+Please [contribute to the CORTX-Monitor](https://github.com/Seagate/cortx/blob/main/doc/SuggestedContributions.md) initiative and join our movement to make data storage better, efficient, and more accessible.
 
 Refer to the [CORTX Contribution Guide](https://github.com/Seagate/cortx/blob/main/doc/CORTXContributionGuide.md) to get started with your first contribution.
 
