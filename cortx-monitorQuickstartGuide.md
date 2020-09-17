@@ -83,6 +83,12 @@ This guide provides a step-by-step walkthrough for getting you CORTX-Monitor Ser
 
 ## 1.3 Build the cortx-monitor source code
 
+:page_with_curl: **Notes:**
+
+- cortx-monitor RPMS named as cortx-sspl.
+
+- cortx-monitor service named as sspl-ll.
+
 1. Before you build the RPM, you'll need to install the dependecies using:
 
     ```shell
@@ -146,7 +152,7 @@ This guide provides a step-by-step walkthrough for getting you CORTX-Monitor Ser
     -rw-r--r-- 1 root root 101004 Aug 18 07:27 cortx-libsspl_sec-devel-1.0.0-1_git8907300.el7.x86_64.rpm
     ```
 
-3. Install cortx-sspl RPMs
+3. Install CORTX-Monitor RPMs
 
    You'll need to create a repository and copy all the required RPMs to it. Run the commands:
 
@@ -157,7 +163,7 @@ This guide provides a step-by-step walkthrough for getting you CORTX-Monitor Ser
     $ find MYRPMS -name \*.rpm -print0 | sudo xargs -0 yum install -y
     ```
 
-4. To start the SSPL service, run the commands:
+4. To start the CORTX-Monitor service, run the commands:
 
     ```shell
     
@@ -172,7 +178,7 @@ This guide provides a step-by-step walkthrough for getting you CORTX-Monitor Ser
 
 ## 1.4 Run Tests
   
-  1. Ensure that the following RPMs are installed and SSPL service is Active. 
+  1. Ensure that the following RPMs are installed and CORTX-Monitor service is Active. 
   
      - `cortx-sspl-1.0.0-XXXX.el7.noarch.rpm` and, 
      - `cortx-sspl-test-1.0.0-XXXX.el7.noarch.rpm` 
