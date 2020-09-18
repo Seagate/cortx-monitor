@@ -2,8 +2,8 @@ import subprocess
 import ast
 from eos.utils.product_features import unsupported_features
 
-storage_type = "physical"
-server_type = "Virtual"
+storage_type = "virtual"
+server_type = "virtual"
 
 try:
     setup_info = subprocess.Popen(['sudo', 'provisioner', 'get_setup_info'],
