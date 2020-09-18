@@ -19,6 +19,7 @@
 import sys
 import os
 import re
+import PyInstaller.utils.hooks
 
 spec_root = os.path.abspath(SPECPATH)
 
@@ -38,8 +39,32 @@ def import_list(sspl_path, walk_path):
 product = '<PRODUCT>'
 sspl_path = '<SSPL_PATH>'
 product_module_list = import_list(sspl_path, sspl_path)
+#product_module_list+=['pysnmp.smi.exval','pysnmp.cache'] + PyInstaller.utils.hooks.collect_submodules('pysnmp.smi.mibs') + PyInstaller.utils.hooks.collect_submodules('pysnmp.smi.mibs.instances')
 
 block_cipher = None
+
+# test code for pysnmp.smi.mib ##############################
+import PyInstaller.utils.hooks
+hiddenimports = ['pysnmp.smi.exval','pysnmp.cache'] + PyInstaller.utils.hooks.collect_submodules('pysnmp.smi.mibs') + PyInstaller.utils.hooks.collect_submodules('pysnmp.smi.mibs.instances')
+pysnmp_smi = Analysis([sspl_path + '/low-level/sensors/impl/generic/SNMP_traps2.py'],
+            pathex=[spec_root + '/sspl', spec_root + '/sspl/low-level', spec_root + '/sspl/low-level/framework', spec_root + '/sspl/low-level/message_handlers'],
+            hiddenimports=hiddenimports,
+            hookspath=None,
+            runtime_hooks=None)
+x = Tree('/usr/local/lib/python3.6/site-packages/pysnmp/smi/mibs',prefix='pysnmp/smi/mibs',excludes='.py')
+pysnmp_smi_pyz = PYZ(pysnmp_smi.pure)
+pysnmp_smi_exe = EXE(pysnmp_smi_pyz,
+         pysnmp_smi.scripts,
+         pysnmp_smi.binaries,
+         pysnmp_smi.zipfiles,
+         pysnmp_smi.datas,
+         x,
+         name='testSNMP',
+         debug=False,
+         strip=None,
+         upx=True,
+         console=True )
+####################################################
 
 sspl_ll_d = Analysis([sspl_path + '/low-level/framework/sspl_ll_d'],
              pathex=[spec_root + '/sspl', spec_root + '/sspl/low-level', spec_root + '/sspl/low-level/framework', spec_root + '/sspl/low-level/message_handlers'],
@@ -161,6 +186,12 @@ coll = COLLECT(
                #sspl_tests.binaries,
                #sspl_tests.zipfiles,
                #sspl_tests.datas,
+
+               ## pysnmp_smi
+               pysnmp_smi_exe,
+               pysnmp_smi.binaries,
+               pysnmp_smi.zipfiles,
+               pysnmp_smi.datas,
 
                strip=False,
                upx=True,

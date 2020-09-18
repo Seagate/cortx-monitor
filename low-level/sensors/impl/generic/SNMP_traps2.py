@@ -1,24 +1,36 @@
-"""
- ****************************************************************************
- Filename:          SNMP_Traps.py
- Description:       Catches SNMP traps, determines PDU or Switch and
-                    notifies the appropriate trap msg handler.
- Creation Date:     3/08/2016
- Author:            Jake Abernathy
+# Copyright (c) 2019-2020 Seagate Technology LLC and/or its Affiliates
+#
+# This program is free software: you can redistribute it and/or modify it under the
+# terms of the GNU Affero General Public License as published by the Free Software
+# Foundation, either version 3 of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+# PARTICULAR PURPOSE. See the GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License along
+# with this program. If not, see <https://www.gnu.org/licenses/>. For any questions
+# about this software or licensing, please email opensource@seagate.com or
+# cortx-questions@seagate.com.
 
- Do NOT modify or remove this copyright and confidentiality notice!
- Copyright (c) 2001 - $Date: 2015/01/14 $ Seagate Technology, LLC.
- The code contained herein is CONFIDENTIAL to Seagate Technology, LLC.
- Portions are also trade secret. Any use, duplication, derivation, distribution
- or disclosure of this code, for any reason, not expressly authorized is
- prohibited. All other rights are expressly reserved by Seagate Technology, LLC.
- ****************************************************************************
 """
+ *****************************************************************************
+  Description:        This is a SNMP trap and inform receiver, it receives all
+                v1/v2c/v3 traps or informs from configured devices like switch
+                and redirects it to the appropriate msg handler
+ *****************************************************************************
+"""
+
 import json
+import os
+import time
+import socket
 
 from framework.base.module_thread import SensorThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
+from framework.utils.severity_reader import SeverityReader
+from framework.base.sspl_constants import ServiceTypes, COMMON_CONFIGS
 
 # Modules that receive messages from this module 
 from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
@@ -42,6 +54,11 @@ class SNMPtraps(SensorThread, InternalMsgQ):
     SENSOR_NAME       = "SNMPtraps"
     PRIORITY          = 1
 
+    SYSTEM_INFORMATION = "SYSTEM_INFORMATION"
+    SITE_ID = "site_id"
+    CLUSTER_ID = "cluster_id"
+    NODE_ID = "node_id"
+    RACK_ID = "rack_id"
     # Section and keys in configuration file
     SNMPTRAPS         = SENSOR_NAME.upper()
     ENABLED_TRAPS     = 'enabled_traps'
@@ -49,11 +66,24 @@ class SNMPtraps(SensorThread, InternalMsgQ):
     BIND_PORT         = 'bind_port'
     ENABLED_MIBS      = 'enabled_MIBS'
 
+    # Dependency list
+    DEPENDENCIES = {
+                    "plugins": [],
+                    "rpms": []
+    }
+
 
     @staticmethod
     def name():
         """@return: name of the monitoring module."""
         return SNMPtraps.SENSOR_NAME
+
+    @staticmethod
+    def dependencies():
+        """Returns a list of plugins and RPMs this module requires
+           to function.
+        """
+        return SNMPtraps.DEPENDENCIES
 
     def __init__(self):
         super(SNMPtraps, self).__init__(self.SENSOR_NAME, self.PRIORITY)
@@ -70,7 +100,7 @@ class SNMPtraps(SensorThread, InternalMsgQ):
 
         self._set_debug(True)
         self._set_debug_persist(True)
-
+        self.conf_reader = conf_reader
         self._get_config()
 
         return True
@@ -158,6 +188,8 @@ class SNMPtraps(SensorThread, InternalMsgQ):
     def run(self):
         try:
             logger.info("Start of run()")
+            #self._mib_builder()
+            #logger.info("exited from mib builder")
             snmpEngine = engine.SnmpEngine(v2c.OctetString(hexValue='80001f8880ec70e17424be1f5f00000000'))
             logger.info("snmpEngine regiestered.")
             config.addTransport(
@@ -196,7 +228,7 @@ class SNMPtraps(SensorThread, InternalMsgQ):
 
     def _mib_builder(self):
         """Loads the MIB files and creates dicts with hierarchical structure"""
-
+        os.system('chown sspl-ll -R /home/sspl-ll/*')
         # Create MIB loader/builder
         mibBuilder = builder.MibBuilder()
 
@@ -269,18 +301,54 @@ class SNMPtraps(SensorThread, InternalMsgQ):
             # Transmit to Halon
             self._transmit_json_msg(json_data)
 
+    def _gen_json_msg(self, alert_type, details):
+        severity_reader = SeverityReader()
+        severity = severity_reader.map_severity(alert_type)
+        epoch_time = str(int(time.time()))
+
+        #alert_id = self._get_alert_id(epoch_time)
+        #resource_id = ext.get("durable-id")
+        host_name = socket.gethostname()
+
+        info = {
+                "site_id": self.site_id,
+                "cluster_id": self.cluster_id,
+                "rack_id": self.rack_id,
+                "node_id": self.node_id,
+                #"resource_type": self.RESOURCE_TYPE,
+                #"resource_id": resource_id,
+                "event_time": epoch_time
+                }
+        specific_info = json.dumps(details, sort_keys=True)
+
+        json_msg = json.dumps(
+            {"sensor_request_type" : {
+                "enclosure_alert" : {
+                    "status": "update",
+                    "host_id": host_name,
+                    "alert_type": alert_type,
+                    "severity": severity,
+                    #"alert_id": alert_id,
+                    "info": info,
+                    "specific_info": specific_info
+                },
+            }})
+
+        return json_msg
+
     def _log_iem(self, json_data):
         """Create IEM and send to logging msg handler"""
-        log_msg = f"IEC: 020004001: SNMP Trap Received, {self._trap_name}"
-        internal_json_msg = json.dumps(
-                    {"actuator_request_type" : {
-                        "logging": {
-                            "log_level": "LOG_WARNING",
-                            "log_type": "IEM",
-                            "log_msg": f"{log_msg}:{json.dumps(json_data, sort_keys=True)}"
-                            }
-                        }
-                     })
+        # log_msg = f"IEC: 020004001: SNMP Trap Received, {self._trap_name}"
+        # internal_json_msg = json.dumps(
+        #             {"actuator_request_type" : {
+        #                 "logging": {
+        #                     "log_level": "LOG_WARNING",
+        #                     "log_type": "IEM",
+        #                     "log_msg": f"{log_msg}:{json.dumps(json_data, sort_keys=True)}"
+        #                     }
+        #                 }
+        #              })
+        internal_json_msg = self._gen_json_msg("threshold_breached:high",json_data)
 
         # Send the event to logging msg handler to send IEM message to journald
         self._write_internal_msgQ(LoggingMsgHandler.name(), internal_json_msg)
@@ -288,7 +356,7 @@ class SNMPtraps(SensorThread, InternalMsgQ):
     def _transmit_json_msg(self, json_data):
         """Transmit message to halon by passing it to egress msg handler"""
         json_data["trapName"] = self._trap_name
-        json_msg = SNMPtrapMsg(json_data).getJson()
+        json_msg = SNMPtrapMsg(self._gen_json_msg("threshold_breached:high",json_data)).getJson()
         self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
 
     def _get_config(self):
@@ -321,6 +389,23 @@ class SNMPtraps(SensorThread, InternalMsgQ):
         # self._bind_port = int(self._conf_reader._get_value_with_default(self.SNMPTRAPS,
         #                                                 self.BIND_PORT,
         #                                                 1620))
+        self.site_id = self.conf_reader._get_value_with_default(
+                                                self.SYSTEM_INFORMATION,
+                                                COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.SITE_ID),
+                                                '001')
+        self.rack_id = self.conf_reader._get_value_with_default(
+                                                self.SYSTEM_INFORMATION,
+                                                COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.RACK_ID),
+                                                '001')
+        self.node_id = self.conf_reader._get_value_with_default(
+                                                self.SYSTEM_INFORMATION,
+                                                COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.NODE_ID),
+                                                '001')
+        # Need to keep cluster_id string here to generate decryption key
+        self.cluster_id = self.conf_reader._get_value_with_default(
+                                                self.SYSTEM_INFORMATION,
+                                                COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.CLUSTER_ID),
+                                                '001')
 
         logger.info("          Listening on %s:%s" % (self._bind_ip, self._bind_port))
         logger.info("          Enabled traps: %s" % str(self._enabled_traps))
