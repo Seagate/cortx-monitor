@@ -480,10 +480,15 @@ class SSPLHealthView(object):
                         [re_blocks.match(path) for path in list(disk_objects.keys())]
                         if m]
 
+        drive_by_path = {}
         for block_dev in block_devs:
             try:
                 if disk_objects[block_dev['path']].get('org.freedesktop.UDisks2.Block') is not None:
                     udisk_block = disk_objects[block_dev['path']]["org.freedesktop.UDisks2.Block"]
+                    symlinks = self._sanitize_dbus_value(udisk_block["Symlinks"])
+                    for symlink in symlinks:
+                        if "by-path" in symlink:
+                            drive_by_path[udisk_block["Drive"]] = symlink[len("/dev/disk/by-path/"):]
                     device = self._sanitize_dbus_value(udisk_block["Device"])
                     self.jbod_drive_by_device_name[udisk_block["Drive"]] = device
             except Exception as ae:
@@ -496,12 +501,13 @@ class SSPLHealthView(object):
                 jbod_cache.update({obj_path: False if self._is_drive_faulty(obj_path, interfaces_and_property) == "OK" else True})
                 if not self._is_local_drive(interfaces_and_property):
                     drive_obj = interfaces_and_property["org.freedesktop.UDisks2.Drive"]
+                    resource_id = drive_by_path.get(obj_path, str(drive_obj["Id"]))
                     jbod_drives.update({
-                        self.encl_disk_resource_type+'-'+str(drive_obj["Id"]):{
+                        self.encl_disk_resource_type+'-'+resource_id:{
                             "alert_type": "NA",
                             "severity": "NA",
                             "alert_uuid": "NA",
-                            "durable_id": str(drive_obj["Id"]),
+                            "durable_id": resource_id,
                             "health": self._is_drive_faulty(obj_path, interfaces_and_property),
                             "serial-number": str(drive_obj["Serial"]),
                             "vendor": str(drive_obj["Vendor"]),
