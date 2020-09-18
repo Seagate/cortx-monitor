@@ -24,9 +24,11 @@ import argparse
 import consul
 import psutil
 import subprocess
+import traceback
 import tempfile
 import dbus
 from dbus import SystemBus, Interface, Array
+from framework.utils.service_logging import logger
 import warnings
 warnings.filterwarnings(action='ignore',module='cryptography')
 
@@ -37,6 +39,9 @@ sys.path.insert(0, parentdir)
 from framework.base.sspl_constants import (component, CONSUL_HOST, CONSUL_PORT, node_key_id, PRODUCT_FAMILY,
     storage_type, server_type
 )
+
+print(f"Storage Type : '{storage_type}'")
+print(f"Server Type '{server_type}'")
 
 if storage_type == 'virtual' and server_type == 'virtual':
     print("Resource Health View does not support for virtual server and virtual storage deployment")
@@ -1049,7 +1054,9 @@ class SSPLHealthView(object):
             else:
                 cortx_build_version = result[0].decode().rstrip('\n').split('/')[-2]
         except Exception as e:
+            logger.error(f"Unable to fetch cortx build version. : {traceback.format_exc()}")
             print("Unable to fetch cortx build version.")
+            print(e, traceback.format_exc())
 
         cluster_id = 'NA'
         cluster_id_cmd = f"sudo salt-call grains.get cluster_id --output=newline_values_only"
@@ -1061,7 +1068,9 @@ class SSPLHealthView(object):
             else:
                 cluster_id = result[0].decode().rstrip('\n')
         except Exception as e:
+            logger.error(f"Unable to fetch cluster id. : {traceback.format_exc()}")
             print("Unable to fetch cluster id.")
+            print(e, traceback.format_exc())
 
         os_sw_info_dict.update({'cortx_sw':{'version':cortx_build_version,
                                             'license-info': 'NA',

@@ -21,8 +21,10 @@ from enum import Enum
 
 try:
     from salt_util import node_id, consulhost, consulport
+    from service_logging import logger
 except Exception as e:
     from framework.utils.salt_util import node_id, consulhost, consulport
+    from framework.utils.service_logging import logger
 
 PRODUCT_NAME = 'LDR_R1'
 PRODUCT_FAMILY = 'cortx'
@@ -116,20 +118,21 @@ salt_uniq_attr_per_node = ['cluster_id']
 salt_uniq_passwd_per_node = ['RABBITMQINGRESSPROCESSOR', 'RABBITMQEGRESSPROCESSOR', 'LOGGINGPROCESSOR']
 
 try:
-    setup_info = subprocess.Popen(['sudo', 'provisioner', 'get_setup_info'],
+    setup_info = subprocess.Popen(['sudo', '/usr/bin/provisioner', 'get_setup_info'],
         stdout=subprocess.PIPE).communicate()[0].decode("utf-8").rstrip()
     setup_info = ast.literal_eval(setup_info)
     storage_type = setup_info['storage_type'].lower()
     server_type = setup_info['server_type'].lower()
-    print(f"Storage Type : '{storage_type}'")
-    print(f"Server Type '{server_type}'")
-    
+    logger.info(f"Storage Type : '{storage_type}'")
+    logger.info(f"Server Type '{server_type}'")
+
 except Exception as err:
+    logger.debug(f"Error in getting setup information of server and storage type : {err}")
     print(f"Error in getting setup information of server and storage type : {err}")
-    storage_type = '5u84'
+    storage_type = 'virtual'
     server_type = 'virtual'
-    print(f"Considering default storage type : '{storage_type}'")
-    print(f"Considering default server type : '{server_type}'")
+    logger.debug(f"Considering default storage type : '{storage_type}'")
+    logger.debug(f"Considering default server type : '{server_type}'")
 
 
 class RaidDataConfig(Enum):

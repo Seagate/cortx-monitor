@@ -51,7 +51,7 @@ usermod -a -G disk sspl-ll
 usermod -a -G disk sspl-ll
 
 # Update the sudoers file with the sspl-ll user and available commands
-SUDO_LINE="sspl-ll	ALL = NOPASSWD: /usr/sbin/smartctl, /usr/sbin/mdadm, /usr/bin/mount, /usr/bin/umount, /usr/sbin/swapon, /usr/sbin/swapoff, /usr/sbin/hdparm, /usr/bin/systemctl, /usr/sbin/wbcli, /usr/bin/ipmitool, /usr/bin/systemd-detect-virt, /bin/salt-call, /usr/bin/echo, /usr/bin/facter"
+SUDO_LINE="sspl-ll	ALL = NOPASSWD: /usr/sbin/smartctl, /usr/sbin/mdadm, /usr/bin/mount, /usr/bin/umount, /usr/sbin/swapon, /usr/sbin/swapoff, /usr/sbin/hdparm, /usr/bin/systemctl, /usr/sbin/wbcli, /usr/bin/ipmitool, /usr/bin/systemd-detect-virt, /bin/salt-call, /usr/bin/echo, /usr/bin/facter, /usr/bin/provisioner"
 echo "$SUDO_LINE" | tee /etc/sudoers.d/sspl > /dev/null
 chmod 440 /etc/sudoers.d/sspl
 
