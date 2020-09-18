@@ -18,7 +18,7 @@
 """
    Encryption utility for information for SSPL.
 
-   This script uses a Seagate proprietary package called eos-py-utils. This
+   This script uses a Seagate proprietary package called cortx-py-utils. This
    package internally uses a symmetric key encryption algorithm called fernet.
    Read more about fernet at
        1. https://cryptography.io/en/latest/fernet/
@@ -26,7 +26,7 @@
 
    Install package using following command:
 
-   yum install -y eos-py-utils
+   yum install -y cortx-py-utils
 
    TODO: Understand fernet terminologies and provide hint for errors based on
          those terminologies.
@@ -34,10 +34,10 @@
 import sys
 
 try:
-    from eos.utils.security.cipher import Cipher
+    from cortx.utils.security.cipher import Cipher
 except ImportError as import_error:
-    print('Error: eos-py-utils is not installed.',
-          'Please install using yum install -y eos-py-utils')
+    print('Error: cortx-py-utils is not installed.',
+          'Please install using yum install -y cortx-py-utils')
 
 
 def gen_key(cluster_id, service_name):

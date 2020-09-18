@@ -34,7 +34,7 @@ import pika
 from configparser import ConfigParser
 from config_reader import ConfigReader
 from sspl_constants import COMMON_CONFIGS
-from eos.utils.security.cipher import Cipher, CipherInvalidToken
+from cortx.utils.security.cipher import Cipher, CipherInvalidToken
 
 RABBITMQCTL = '/usr/sbin/rabbitmqctl'
 SECTION="RABBITMQEGRESSPROCESSOR"

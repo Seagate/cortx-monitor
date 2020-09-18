@@ -24,7 +24,7 @@ import json
 import os
 import time
 
-from eos.utils.security.cipher import Cipher
+from cortx.utils.security.cipher import Cipher
 import pika
 
 from jsonschema import Draft3Validator
