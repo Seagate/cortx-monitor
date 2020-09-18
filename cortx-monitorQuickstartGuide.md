@@ -85,7 +85,7 @@ This guide provides a step-by-step walkthrough for getting you CORTX-Monitor Ser
 
 :page_with_curl: **Notes:**
 
-- cortx-monitor RPMS named as cortx-sspl.
+- cortx-monitor RPMs named as cortx-sspl.
 
 - cortx-monitor service named as sspl-ll.
 
@@ -124,7 +124,7 @@ This guide provides a step-by-step walkthrough for getting you CORTX-Monitor Ser
     :page_with_curl: **Notes:** 
     
     - It takes 2-3 minutes to generate RPMs.
-    - Once the RPMS is successfully generated, you can view it from:
+    - Once the RPMs are successfully generated, you can view it from:
     
         `/root/rpmbuild/RPMS/noarch/` and,
      
