@@ -25,7 +25,6 @@ import consul
 import psutil
 import subprocess
 import tempfile
-import ast
 import dbus
 from dbus import SystemBus, Interface, Array
 import warnings
@@ -49,7 +48,7 @@ base_info = {'/SYSTEM_INFORMATION/site_id':'system_information/site_id',
              '/SYSTEM_INFORMATION/node_id':f'system_information/{node_key_id}/node_id',
              '/SYSTEM_INFORMATION/cluster_id':'system_information/cluster_id',
              '/SYSTEM_INFORMATION/data_path':'system_information/data_path'}
-             
+
 if storage_type == '5u84':
     base_info.update({
         '/STORAGE_ENCLOSURE/controller/primary_mc/ip':'storage_enclosure/controller/primary_mc/ip',
