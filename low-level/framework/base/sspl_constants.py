@@ -15,6 +15,8 @@
 # about this software or licensing, please email opensource@seagate.com or
 # cortx-questions@seagate.com.
 
+import subprocess
+import ast
 from enum import Enum
 
 try:
@@ -112,6 +114,23 @@ file_store_config_path = '/etc/sspl.conf'
 salt_provisioner_pillar_sls = 'sspl'
 salt_uniq_attr_per_node = ['cluster_id']
 salt_uniq_passwd_per_node = ['RABBITMQINGRESSPROCESSOR', 'RABBITMQEGRESSPROCESSOR', 'LOGGINGPROCESSOR']
+
+try:
+    setup_info = subprocess.Popen(['sudo', 'provisioner', 'get_setup_info'],
+        stdout=subprocess.PIPE).communicate()[0].decode("utf-8").rstrip()
+    setup_info = ast.literal_eval(setup_info)
+    storage_type = setup_info['storage_type'].lower()
+    server_type = setup_info['server_type'].lower()
+    print(f"Storage Type : '{storage_type}'")
+    print(f"Server Type '{server_type}'")
+    
+except Exception as err:
+    print(f"Error in getting setup information of server and storage type : {err}")
+    storage_type = '5u84'
+    server_type = 'virtual'
+    print(f"Considering default storage type : '{storage_type}'")
+    print(f"Considering default server type : '{server_type}'")
+
 
 class RaidDataConfig(Enum):
     MDSTAT_FILE = "/proc/mdstat"

@@ -35,34 +35,21 @@ warnings.filterwarnings(action='ignore',module='cryptography')
 op = os.path
 parentdir = op.dirname(op.dirname(op.dirname(op.dirname(op.dirname(op.dirname(op.dirname(op.abspath(__file__))))))))
 sys.path.insert(0, parentdir)
-from framework.base.sspl_constants import component, CONSUL_HOST, CONSUL_PORT, node_key_id, PRODUCT_FAMILY
-
-base_info = {'/SYSTEM_INFORMATION/site_id':'system_information/site_id',
-             '/SYSTEM_INFORMATION/rack_id':'system_information/rack_id',
-             '/SYSTEM_INFORMATION/node_id':f'system_information/{node_key_id}/node_id',
-             '/SYSTEM_INFORMATION/cluster_id':'system_information/cluster_id',
-             '/SYSTEM_INFORMATION/data_path':'system_information/data_path'}
-
-storage_type = '5u84'
-server_type = 'virtual'
-try:
-    setup_info = subprocess.Popen(['sudo', 'provisioner', 'get_setup_info'],
-        stdout=subprocess.PIPE).communicate()[0].decode("utf-8").rstrip()
-    setup_info = ast.literal_eval(setup_info)
-    storage_type = setup_info['storage_type'].lower()
-    server_type = setup_info['server_type'].lower()
-    print(f"Storage Type : '{storage_type}'")
-    print(f"Server Type '{server_type}'")
-except Exception as err:
-    print(f"Error in getting setup information : {err}")
-    print(f"Considering default storage type : '{storage_type}'")
-    print(f"Considering default server type : '{server_type}'")
+from framework.base.sspl_constants import (component, CONSUL_HOST, CONSUL_PORT, node_key_id, PRODUCT_FAMILY,
+    storage_type, server_type
+)
 
 if storage_type == 'virtual' and server_type == 'virtual':
     print("Resource Health View does not support for virtual server and virtual storage deployment")
     print("Exiting ...")
     sys.exit(os.EX_USAGE)
 
+base_info = {'/SYSTEM_INFORMATION/site_id':'system_information/site_id',
+             '/SYSTEM_INFORMATION/rack_id':'system_information/rack_id',
+             '/SYSTEM_INFORMATION/node_id':f'system_information/{node_key_id}/node_id',
+             '/SYSTEM_INFORMATION/cluster_id':'system_information/cluster_id',
+             '/SYSTEM_INFORMATION/data_path':'system_information/data_path'}
+             
 if storage_type == '5u84':
     base_info.update({
         '/STORAGE_ENCLOSURE/controller/primary_mc/ip':'storage_enclosure/controller/primary_mc/ip',
