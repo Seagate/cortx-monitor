@@ -1,17 +1,17 @@
-# Contribute to SSPL
+# Contribute to CORTX-Monitor
 
 - [1.0 Prerequisites](#10-Prerequisites)
 - [1.2 Set up Git on your Development Box](#12-Set-Up-Git-on-your-Development-Box)
 - [1.3 Submit your changes](#13-Submit-your-Changes)
-   * [1.3.1 Clone the cortx-sspl repository](#131-Clone-the-cortx-sspl-repository)
+   * [1.3.1 Clone the cortx-monitor repository](#131-Clone-the-cortx-monitor-repository)
    * [1.3.2 Code Commits](#132-Code-commits)
    * [1.3.3 Create a Pull Request](#133-Create-a-Pull-Request)
 - [1.4 Run Jenkins and System Tests](#14-Run-Jenkins-and-System-Tests)
-- [FAQs](FAQs)
+- [FAQs](#FAQs)
 
-Contributing to the sspl repository is a three-step process where you'll need to:
+Contributing to the cortx-monitor repository is a three-step process where you'll need to:
 
-1. [Clone the cortx-sspl repository](#131-Clone-the-cortx-sspl-repository)
+1. [Clone the cortx-monitor repository](#131-Clone-the-cortx-monitor-repository)
 2. [Commit your Code](#132-Code-commits)
 3. [Create a Pull Request](#133-Create-a-Pull-Request)
 
@@ -89,16 +89,16 @@ Once you've installed the prerequisites, follow these steps to set up Git on you
    ```
 ## 1.3. Submit your Changes
 
-Before you can work on a GitHub feature, you'll need to clone the cortx-sspl repository.
+Before you can work on a GitHub feature, you'll need to clone the cortx-monitor repository.
 
-### 1.3.1 Clone the cortx-sspl repository
+### 1.3.1 Clone the cortx-monitor repository
 
-You'll need to **Fork** the cortx-sspl repository to clone it into your private GitHub repository. Follow these steps to clone the repository to your gitHub account:
-1. Navigate to the 'cortx-sspl' repository homepage on GitHub.
+You'll need to **Fork** the cortx-monitor repository to clone it into your private GitHub repository. Follow these steps to clone the repository to your gitHub account:
+1. Navigate to the 'cortx-monitor' repository homepage on GitHub.
 2. Click **Fork**
 3. Run the following commands in Shell:
 
-   `$ git clone git@github.com:"your-github-id"/cortx-sspl.git`
+   `$ git clone git@github.com:"your-github-id"/cortx-monitor.git`
 
 4. Setup upstream repository in the remote list. This is a one-time activity:
 
@@ -108,13 +108,13 @@ You'll need to **Fork** the cortx-sspl repository to clone it into your private 
 
       ```shell 
 
-      origin git@github.com:<gitgub-id>/cortx-sspl.git (fetch)
-      origin git@github.com:<github-id>/cortx-sspl.git (push)
+      origin git@github.com:<gitgub-id>/cortx-monitor.git (fetch)
+      origin git@github.com:<github-id>/cortx-monitor.git (push)
       ```
    
    - Run the commands:
       
-      `$ git remote add upstream git@github.com:Seagate/cortx-sspl.git`
+      `$ git remote add upstream git@github.com:Seagate/cortx-monitor.git`
       `$ git remote -v`
       
       Your upstream repo will now be visible.
@@ -123,10 +123,10 @@ You'll need to **Fork** the cortx-sspl repository to clone it into your private 
 
       ```shell
       
-         origin git@github.com:<gitgub-id>/cortx-sspl.git (fetch)
-         origin git@github.com:<github-id>/cortx-sspl.git (push)
-         upstream git@github.com:Seagate/cortx-sspl.git (fetch)
-         upstream git@github.com:Seagate/cortx-sspl.git (push)
+         origin git@github.com:<gitgub-id>/cortx-monitor.git (fetch)
+         origin git@github.com:<github-id>/cortx-monitor.git (push)
+         upstream git@github.com:Seagate/cortx-monitor.git (fetch)
+         upstream git@github.com:Seagate/cortx-monitor.git (push)
       ```
 
 5. Check out to the “main” branch using:
@@ -167,8 +167,8 @@ You can make changes to the code and save them in your files.
    remote: Resolving deltas: 100% (1/1), completed with 1 local object.
    remote:
    remote: Create a pull request for 'your-local-branch-name' on GitHub by visiting:
-   remote: https://github.com/<your-GitHub-Id>/cortx-sspl/pull/new/<your-local-branch-name>
-   remote: To github.com:<your-GitHub-Id>/cortx-sspl.git
+   remote: https://github.com/<your-GitHub-Id>/cortx-monitor/pull/new/<your-local-branch-name>
+   remote: To github.com:<your-GitHub-Id>/cortx-monitor.git
    * [new branch] <your-local-branch-name> -> <your-local-branch-name>
    ```
 
@@ -176,7 +176,9 @@ You can make changes to the code and save them in your files.
 
 
 1. Once you Push changes to GitHub, the output will display a URL for creating a Pull Request, as shown in the sample code above.
-:page_with_curl:**Note:** To resolve conflicts, follow the troubleshooting steps mentioned in git error messages.
+
+   :page_with_curl:**Note:** To resolve conflicts, follow the troubleshooting steps mentioned in git error messages.
+   
 2. You'll be redirected to GitHib remote.
 3. Select **main** from the Branches/Tags drop-down list.
 4. Click **Create pull request** to create the pull request.
@@ -213,9 +215,9 @@ Github will automatically update your review request.
 
 We thank you for stopping by to check out the CORTX Community. We are fully dedicated to our mission to build open source technologies that help the world save unlimited data and solve challenging data problems. Join our mission to help reinvent a data-driven world. 
 
-### Contribute to CORTX SSPL
+### Contribute to CORTX-Monitor
 
-Please [contribute to the CORTX SSPL](https://github.com/Seagate/cortx/blob/main/doc/SuggestedContributions.md) initiative and join our movement to make data storage better, efficient, and more accessible. 
+Please [contribute to the CORTX-Monitor](https://github.com/Seagate/cortx/blob/main/doc/SuggestedContributions.md) initiative and join our movement to make data storage better, efficient, and more accessible.
 
 Refer to the [CORTX Contribution Guide](https://github.com/Seagate/cortx/blob/main/doc/CORTXContributionGuide.md) to get started with your first contribution.
 
