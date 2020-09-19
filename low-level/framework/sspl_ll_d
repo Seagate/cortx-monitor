@@ -417,15 +417,14 @@ def _tune_modules_for_env(modlist):
                         stdout=subprocess.PIPE).communicate()[0].decode("utf-8").rstrip()
         setup_info = ast.literal_eval(setup_info)
         storage_type = setup_info['storage_type'].lower()
-        logger.info(f"#### storage_type: {storage_type}")
-        logger.info(f"sspl-ll Bootstrap: deployment environment: storage_type : %s" % (storage_type))
+        logger.info(f"sspl-ll Bootstrap: deployment environment: storage_type : {storage_type}")
     except Exception as err:
         logger.warn(f"Error in getting setup information of storage type : {err}")
 
     if storage_type == "virtual":
         modlist = [x for x in modlist if not x.startswith(DISABLE_FOR_VIRTUAL_STORAGE)]
 
-    logger.info("sspl-ll Bootstrap: enabling modules based on deployment env: %s" % (modlist))
+    logger.info(f"sspl-ll Bootstrap: enabling modules based on deployment env: {modlist}")
 
     return modlist
 
