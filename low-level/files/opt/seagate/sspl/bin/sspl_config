@@ -92,8 +92,9 @@ config_sspl() {
         rm -f $SSPL_CONFIGURED;
     }
 
-    # Get installation type
-    python3.6 $DIR_NAME/bin/sspl_fetch_unsupported_list.py
+    # Get unsupported feature list
+    chmod +x $DIR_NAME/bin/sspl_fetch_unsupported_list.py
+    $DIR_NAME/bin/sspl_fetch_unsupported_list.py
 
     # Get product
     product=$(sed -nr 's/^product=([^,]+)$/\1/p' $SSPL_CONF | head -1)
