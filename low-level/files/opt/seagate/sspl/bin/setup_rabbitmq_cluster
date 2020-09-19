@@ -184,7 +184,7 @@ class RMQClusterConfiguration:
                 self._send_command(command)
                 self._copy_erlang_cookie()
 
-    def update_rmq_cluster_nodes_in_consul(self):
+    def _update_rmq_cluster_nodes_in_consul(self):
         """
         Updates RMQ cluster nodes in consul
         """
@@ -192,7 +192,7 @@ class RMQClusterConfiguration:
         self.consul_conn.kv.put(self.CLUSTER_SECTION, nodes)
         cluster_nodes = self.consul_conn.kv.get(self.CLUSTER_SECTION)[1]["Value"].decode()
         if nodes != cluster_nodes:
-            print("ERROR: RMQ cluster nodes in consul is not matched.")
+            print("ERROR: Updating RMQ cluster nodes in consul failed")
             sys.exit()
         print("Successfully updated RMQ cluster nodes in consul")
 
@@ -225,6 +225,7 @@ class RMQClusterConfiguration:
                 break
         if clustered:
             print(f'RabbitMQ clustering is successfully formed with nodes {requested_nodes}.')
+            self._update_rmq_cluster_nodes_in_consul()
         else:
             if node_fqdn is not None and node_fqdn != localhost_fqdn:
                 print("ERROR: Unable to clustering with any node. Please check the node health or configuration.")
@@ -248,9 +249,6 @@ if __name__ == '__main__':
 
     # Reset previous cluster setup
     rmq_cluster_config.reset_rmq_cluster()
-
-    # Update cluster_nodes key in consul
-    rmq_cluster_config.update_rmq_cluster_nodes_in_consul()
 
     # Add nodes in rabbitmq cluster
     rmq_cluster_config.make_rmq_cluster()
