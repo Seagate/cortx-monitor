@@ -57,16 +57,15 @@ node_key_id = node_id
 CONSUL_HOST = consulhost
 CONSUL_PORT = consulport
 SSPL_SETTINGS = {
-        "ACTUATORS" : ["Service", "RAIDactuator", "Smartctl", "NodeHWactuator", "RealStorActuator"],
+        "ACTUATORS" : ["Service", "RAIDactuator", "Smartctl", "NodeHWactuator"],
         "CORE_PROCESSORS" : ("RabbitMQegressProcessor", "RabbitMQingressProcessor", "LoggingProcessor"),
         "DEGRADED_STATE_MODULES" : ("ServiceWatchdog", "RAIDsensor", "NodeData", "IEMSensor", "NodeHWsensor",
                             "DiskMsgHandler", "LoggingMsgHandler", "ServiceMsgHandler", "NodeDataMsgHandler",
                             "NodeControllerMsgHandler", "SASPortSensor", "MemFaultSensor", "CPUFaultSensor"),
         "MESSAGE_HANDLERS" : ("DiskMsgHandler", "LoggingMsgHandler", "ServiceMsgHandler", "NodeDataMsgHandler",
-                        "NodeControllerMsgHandler", "RealStorEnclMsgHandler", "RealStorActuatorMsgHandler"),
-        "SENSORS" : ["ServiceWatchdog", "RAIDsensor", "NodeData", "RealStorFanSensor", "RealStorPSUSensor",
-            "RealStorControllerSensor", "RealStorDiskSensor", "RealStorSideplaneExpanderSensor",
-            "RealStorLogicalVolumeSensor", "IEMSensor", "NodeHWsensor", "RealStorEnclosureSensor",
+                        "NodeControllerMsgHandler"),
+        "SENSORS" : ["ServiceWatchdog", "RAIDsensor", "NodeData",
+            "IEMSensor", "NodeHWsensor",
             "SASPortSensor", "MemFaultSensor", "CPUFaultSensor", "RAIDIntegritySensor"]
 }
 
