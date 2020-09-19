@@ -29,6 +29,8 @@ import errno
 import re
 import argparse
 from generate_test_report import generate_html_report
+import subprocess
+import ast
 
 # Adding sspl and sspl_test path
 test_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -37,6 +39,17 @@ os.sys.path.append(os.path.join(test_path))
 from sspl_test.common import TestFailed, init_rabbitMQ_msg_processors, stop_rabbitMQ_msg_processors
 
 result = {}
+
+storage_type = None
+
+try:
+    setup_info = subprocess.Popen("sudo /usr/bin/provisioner get_setup_info", shell=True,
+                    stdout=subprocess.PIPE).communicate()[0].decode("utf-8").rstrip()
+    setup_info = ast.literal_eval(setup_info)
+    storage_type = setup_info['storage_type'].lower()
+except Exception as err:
+    logger.warn(f"Error in getting setup information of storage type : {err}")
+
 
 def tmain(argp, argv):
 
@@ -63,7 +76,7 @@ def tmain(argp, argv):
                         .replace(file_path + "/", "").replace("/", ".")
                     ts_list.append(file)
 
-    ts_count = test_count = pass_count = fail_count = 0
+    ts_count = test_count = pass_count = fail_count = skip_count = 0
     ts_start_time = time.time()
     for ts in ts_list:
         print('\n####### Test Suite: %s ######' %ts)
@@ -84,6 +97,14 @@ def tmain(argp, argv):
             test_count += 1
             try:
                 start_time = time.time()
+                if storage_type == 'virtual':
+                    if 'realstore' in test.__name__ or 'real_stor' in test.__name__:
+                        duration = 0
+                        print(f"Test is set to be skipped for storage type '{storage_type}'")
+                        print('%s:%s: SKIPPED (Time: %ds)' %(ts, test.__name__, duration))
+                        skip_count += 1
+                        result.update({ts: {"Skip": duration}})
+                        continue
                 test(args)
                 duration = time.time() - start_time
                 print('%s:%s: PASSED (Time: %ds)' %(ts, test.__name__, duration))
@@ -104,10 +125,10 @@ def tmain(argp, argv):
         print('{:60} {:10} {:10}s'.format(k, list(v.keys())[0], int(list(v.values())[0])))
 
     duration = time.time() - ts_start_time
-    print('\n****************************************************')
-    print('TestSuite:%d Tests:%d Passed:%d Failed:%d TimeTaken:%ds' \
-        %(ts_count, test_count, pass_count, fail_count, duration))
-    print('******************************************************')
+    print('\n****************************************************************')
+    print('TestSuite:%d Tests:%d Passed:%d Failed:%d Skipped: %d TimeTaken:%ds' \
+        %(ts_count, test_count, pass_count, fail_count, skip_count, duration))
+    print('*****************************************************************')
 
 if __name__ == '__main__':
     try:

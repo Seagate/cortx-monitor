@@ -67,6 +67,7 @@ def generate_html_report(test_result):
     overall_status = "Passed"
     total_ts = 0
     total_failed = 0
+    total_skipped = 0
     time_taken=0
     for ts, value in test_result.items():
         status = list(value.keys())[0]
@@ -77,10 +78,12 @@ def generate_html_report(test_result):
             st_style = """<p style="color:red">"""
             st_end = """</p>"""
             status = st_style + status + st_end
+        if status.lower() in ["skip", "skipped"]:
+            total_skipped += 1
         result_table += result_template.format(testsuite=ts, status=status, duration=duration)
         total_ts += 1
         time_taken += duration
-    footer = footer_template.format(overall_status, total_ts, total_ts-total_failed, total_failed, time_taken)
+    footer = footer_template.format(overall_status, total_ts, total_ts-total_failed-total_skipped, total_failed, time_taken)
     html = header_template + result_table + footer
     with open('/tmp/sspl_test_result.html', 'w') as fObj:
         fObj.write(html)

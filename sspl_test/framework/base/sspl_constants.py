@@ -14,7 +14,6 @@
 # with this program. If not, see <https://www.gnu.org/licenses/>. For any questions
 # about this software or licensing, please email opensource@seagate.com or
 # cortx-questions@seagate.com.
-
 from enum import Enum
 
 PRODUCT_NAME = 'LDR_R1'
@@ -34,6 +33,8 @@ CONSUL_PATH = f"/opt/seagate/{PRODUCT_FAMILY}/hare/bin"
 component = 'sspl_test/config'
 file_store_config_path = f'/opt/seagate/{PRODUCT_FAMILY}/sspl/sspl_test/conf/sspl_tests.conf'
 salt_provisioner_pillar_sls = 'sspl'
+
+DISABLE_FOR_VIRTUAL_STORAGE = ('RealStor')
 
 class AlertTypes(Enum):
     GET = "get"

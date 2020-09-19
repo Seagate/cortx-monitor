@@ -36,6 +36,8 @@ from threading import Thread
 import time
 import uuid
 import json
+import traceback
+import ast
 
 # Add the top level directories
 parentdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -53,7 +55,8 @@ from framework.rabbitmq.rabbitmq_ingress_processor import RabbitMQingressProcess
 
 from framework.rabbitmq.plane_cntrl_rmq_egress_processor import PlaneCntrlRMQegressProcessor
 from framework.rabbitmq.plane_cntrl_rmq_ingress_processor import PlaneCntrlRMQingressProcessor
-from framework.base.sspl_constants import enabled_products, OperatingSystem, COMMON_CONFIGS, SSPL_SETTINGS
+from framework.base.sspl_constants import enabled_products, OperatingSystem, \
+    COMMON_CONFIGS, SSPL_SETTINGS, DISABLE_FOR_VIRTUAL_STORAGE
 from framework.base.module_thread import SensorThread
 from framework.actuator_state_manager import actuator_state_manager
 
@@ -304,7 +307,9 @@ def main(conf_reader, systemd_support):
 
     # Use reflection to instantiate the classes based upon its class name in config file
     core_processors = SSPL_SETTINGS.get("CORE_PROCESSORS")
-    logger.info("sspl-ll Bootstrap: core processors to load: %s" % (core_processors, ))
+    logger.info("sspl-ll Bootstrap: core processors from config: %s" % (core_processors, ))
+    core_processors = _tune_modules_for_env(core_processors)
+
     for core_processor in core_processors:
         klass = globals()[core_processor]
 
@@ -317,7 +322,8 @@ def main(conf_reader, systemd_support):
     msgQlist[RabbitMQEgressAccumulatedMsgsProcessor.name()] = queue.Queue()
 
     message_handlers = SSPL_SETTINGS.get("MESSAGE_HANDLERS")
-    logger.info("sspl-ll Bootstrap: message handlers to load: %s" % (message_handlers, ))
+    logger.info("sspl-ll Bootstrap: message handlers from config: %s" % (message_handlers, ))
+    message_handlers = _tune_modules_for_env(message_handlers)
 
     for message_handler in message_handlers:
         klass = globals()[message_handler]
@@ -397,6 +403,30 @@ def main(conf_reader, systemd_support):
     except Exception as ex:
         logger.exception(ex)
 
+def _tune_modules_for_env(modlist):
+    """Enable modules based on environment"""
+    if not modlist:
+        return modlist
+
+    # current deployment env declared here, Extend checks based on need in future
+    # like server_type, etc
+
+    storage_type = None
+    try:
+        setup_info = subprocess.Popen("sudo /usr/bin/provisioner get_setup_info", shell=True,
+                        stdout=subprocess.PIPE).communicate()[0].decode("utf-8").rstrip()
+        setup_info = ast.literal_eval(setup_info)
+        storage_type = setup_info['storage_type'].lower()
+        logger.info(f"sspl-ll Bootstrap: deployment environment: storage_type : {storage_type}")
+    except Exception as err:
+        logger.warn(f"Error in getting setup information of storage type : {err}")
+
+    if storage_type == "virtual":
+        modlist = [x for x in modlist if not x.startswith(DISABLE_FOR_VIRTUAL_STORAGE)]
+
+    logger.info(f"sspl-ll Bootstrap: enabling modules based on deployment env: {modlist}")
+
+    return modlist
 
 # TODO: Create a factory class instead of a method
 def _sensors_actuators_factory(sspl_threaded_modules, msgQlist, operating_system, product, setup):
@@ -494,6 +524,9 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist, operating_system
     # Loop through the list of sensors/actuators and instantiate appropriately
     #  based upon whether or not it is threaded
     modules = sensors + actuators
+    logger.info("sspl-ll Bootstrap: sensors & actuators from config: %s" % (modules))
+    modules = _tune_modules_for_env(modules)
+
     for module in modules:
         # Instantiate the class using reflection on the module's name; must match class name
         klass = locals()[module]
@@ -752,6 +785,7 @@ if __name__ == "__main__":
         main(conf_reader, systemd_support)
 
     except (Exception) as err:
+        traceback.print_exc()
         logger.critical("While spawning sspl-ll process :%r" % err)
         sys.exit(os.EX_USAGE)
 
