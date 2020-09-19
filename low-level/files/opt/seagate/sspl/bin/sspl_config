@@ -93,7 +93,6 @@ config_sspl() {
     }
 
     # Get unsupported feature list
-    chmod +x $DIR_NAME/bin/sspl_fetch_unsupported_list.py
     $DIR_NAME/bin/sspl_fetch_unsupported_list.py
 
     # Get product
