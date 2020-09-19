@@ -57,7 +57,9 @@
                                     "cpu_data": {},
                                     "iem": {},
                                     "mdraid": {},
-                                    "main_memory": {}
+                                    "main_memory": {},
+                                    "cortx_sw": {},
+                                    "operating_system": {}
                                 },
                                 "platform_sensors": {
                                     "health": "",

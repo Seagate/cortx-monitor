@@ -24,7 +24,11 @@ import argparse
 import consul
 import psutil
 import subprocess
+import traceback
 import tempfile
+import dbus
+from dbus import SystemBus, Interface, Array
+from framework.utils.service_logging import logger
 import warnings
 warnings.filterwarnings(action='ignore',module='cryptography')
 
@@ -32,30 +36,58 @@ warnings.filterwarnings(action='ignore',module='cryptography')
 op = os.path
 parentdir = op.dirname(op.dirname(op.dirname(op.dirname(op.dirname(op.dirname(op.dirname(op.abspath(__file__))))))))
 sys.path.insert(0, parentdir)
-from framework.base.sspl_constants import component, CONSUL_HOST, CONSUL_PORT, node_key_id, PRODUCT_FAMILY
+from framework.base.sspl_constants import (component, CONSUL_HOST, CONSUL_PORT, node_key_id, PRODUCT_FAMILY,
+    storage_type, server_type
+)
+
+print(f"Storage Type : '{storage_type}'")
+print(f"Server Type '{server_type}'")
+
+if storage_type == 'virtual' and server_type == 'virtual':
+    print("Resource Health View does not support for virtual server and virtual storage deployment")
+    print("Exiting ...")
+    sys.exit(os.EX_USAGE)
+
 base_info = {'/SYSTEM_INFORMATION/site_id':'system_information/site_id',
              '/SYSTEM_INFORMATION/rack_id':'system_information/rack_id',
              '/SYSTEM_INFORMATION/node_id':f'system_information/{node_key_id}/node_id',
              '/SYSTEM_INFORMATION/cluster_id':'system_information/cluster_id',
-             '/STORAGE_ENCLOSURE/controller/primary_mc/ip':'storage_enclosure/controller/primary_mc/ip',
-             '/STORAGE_ENCLOSURE/controller/secondary_mc/ip':'storage_enclosure/controller/secondary_mc/ip',
-             '/STORAGE_ENCLOSURE/controller/primary_mc/port':'storage_enclosure/controller/primary_mc/port',
-             '/STORAGE_ENCLOSURE/controller/secondary_mc/port':'storage_enclosure/controller/secondary_mc/port',
-             '/STORAGE_ENCLOSURE/controller/user':'storage_enclosure/controller/user',
-             '/STORAGE_ENCLOSURE/controller/secret':'storage_enclosure/controller/password'}
+             '/SYSTEM_INFORMATION/data_path':'system_information/data_path'}
+
+if storage_type == '5u84':
+    base_info.update({
+        '/STORAGE_ENCLOSURE/controller/primary_mc/ip':'storage_enclosure/controller/primary_mc/ip',
+        '/STORAGE_ENCLOSURE/controller/secondary_mc/ip':'storage_enclosure/controller/secondary_mc/ip',
+        '/STORAGE_ENCLOSURE/controller/primary_mc/port':'storage_enclosure/controller/primary_mc/port',
+        '/STORAGE_ENCLOSURE/controller/secondary_mc/port':'storage_enclosure/controller/secondary_mc/port',
+        '/STORAGE_ENCLOSURE/controller/user':'storage_enclosure/controller/user',
+        '/STORAGE_ENCLOSURE/controller/secret':'storage_enclosure/controller/password'
+    })
 host = os.getenv('CONSUL_HOST', CONSUL_HOST)
 port = os.getenv('CONSUL_PORT', CONSUL_PORT)
 try:
     consul_conn = consul.Consul(host=host, port=port)
     for key, value in base_info.items():
         value = consul_conn.kv.get(value)[1]["Value"].decode()
+        if key.endswith('site_id'):
+            sys_site_id = value
+        elif key.endswith('rack_id'):
+            sys_rack_id = value
+        elif key.endswith('node_id'):
+            sys_node_id = value
+        elif key.endswith('cluster_id'):
+            sys_cluster_id = value
+        elif key.endswith('data_path'):
+            sys_data_path = value
         consul_conn.kv.put(component+key, value)
 except Exception as serror:
     print("Error in connecting consul: {}".format(serror))
     print("Exiting ...")
     sys.exit(os.EX_USAGE)
 from framework.utils.store_factory import store
-from framework.platforms.realstor.realstor_enclosure import singleton_realstorencl
+
+if storage_type == '5u84':
+    from framework.platforms.realstor.realstor_enclosure import singleton_realstorencl
 from framework.utils.ipmi_client import IpmiFactory
 from framework.utils.sysfs_interface import SysFS
 from framework.utils.tool_factory import ToolFactory
@@ -63,7 +95,7 @@ from framework.utils.tool_factory import ToolFactory
 class SSPLHealthView(object):
     """docstring for SSPLHealthView"""
 
-    persistent_data_location = singleton_realstorencl.vol_ras
+    persistent_data_location = sys_data_path
     storage_encl_dir = persistent_data_location+'encl/frus/'
 
     encl_disks_filename = storage_encl_dir+'disks/'
@@ -72,6 +104,8 @@ class SSPLHealthView(object):
     encl_fans_filename = storage_encl_dir+'fanmodules/fanmodule_data.json'
     encl_sideplane_exp_filename = storage_encl_dir+'sideplane_expanders/sideplane_expanders_data.json'
     encl_logical_volumes_filename = storage_encl_dir+'logical_volumes/logicalvolumedata.json'
+
+    jbod_disks_filename = persistent_data_location+'server/systemd_watchdog/disks/disks.json'
 
     encl_disk_resource_type = "enclosure:fru:disk"
     encl_controller_resource_type = "enclosure:fru:controller"
@@ -83,11 +117,11 @@ class SSPLHealthView(object):
 
     undesired_vals = ["N/A", ""]
 
-    SITE_ID = singleton_realstorencl.site_id
-    RACK_ID = singleton_realstorencl.rack_id
+    SITE_ID = sys_site_id
+    RACK_ID = sys_rack_id
     HOST_NAME = socket.getfqdn()
-    NODE_ID = singleton_realstorencl.node_id
-    CLUSTER_ID = singleton_realstorencl.cluster_id
+    NODE_ID = sys_node_id
+    CLUSTER_ID = sys_cluster_id
     RESOURCE_HEALTH_VIEW_FILE = 'resource_health_view.json'
     RESOURCE_HEALTH_VIEW_PATH = '/tmp/'+RESOURCE_HEALTH_VIEW_FILE
     TEMPLATE_SCHEMA_FILE = f'/opt/seagate/{PRODUCT_FAMILY}/sspl/bin/generate_resource_health_view/resource_health_view_template.json'
@@ -105,6 +139,14 @@ class SSPLHealthView(object):
     ENCL_MANIFEST_PATH = '/tmp/encl_manifest.json'
     NODE_MANIFEST_PATH = '/tmp/node_manifest.json'
 
+    STORAGE_TYPE_JBOD = 'jbod'
+    STORAGE_TYPE_5U84 = '5u84'
+    STORAGE_TYPE_VIRTUAL = 'virtual'
+    STORAGE_TYPE_PODS = 'pods'
+
+    SERVER_TYPE_VIRTUAL = 'virtual'
+    SERVER_TYPE_PHYSICAL = 'physical'
+
     def __init__(self):
 
         self.fru_id_map = None
@@ -113,6 +155,9 @@ class SSPLHealthView(object):
         self.sensor_list = ['temperature', 'current', 'voltage']
         self.tried_alt_ip = False
         self.correct_mc_config = True
+        self.storage_type = storage_type
+        self.server_type = server_type
+        self.jbod_drive_by_device_name = {}
         ipmi_factory = IpmiFactory()
         self._executor = ipmi_factory.get_implementor("ipmitool")
         try:
@@ -158,7 +203,27 @@ class SSPLHealthView(object):
             if os.path.exists(self.RESOURCE_HEALTH_VIEW_PATH):
                 print("Resource Health view JSON file already exists, overriding ...!")
 
-            if args.encl:
+            if args.encl and self.storage_type == self.STORAGE_TYPE_JBOD:
+                try:
+                    storage_encl_health_json = self._resource_health_view['cluster']['sites']\
+                                                        [self.SITE_ID]['rack'][self.RACK_ID]\
+                                                        ['nodes']['storage_encl']
+                except Exception as e:
+                    print("Error while extracting values from health view json % : " % e)
+                    return False
+                
+                for category in ['sw', 'interfaces', 'platform_sensors']:
+                    del self._resource_health_view['cluster']['sites']\
+                                                            [self.SITE_ID]['rack'][self.RACK_ID]\
+                                                            ['nodes']['storage_encl'][category]
+                for sub_category in ['psus', 'controllers', 'fans', 'sideplane_expander']:
+                    del self._resource_health_view['cluster']['sites']\
+                                                            [self.SITE_ID]['rack'][self.RACK_ID]\
+                                                            ['nodes']['storage_encl']['hw']['fru'][sub_category]
+                self.build_health_view_storage_jbod_cache(storage_encl_health_json)
+                health_view_created = True
+            
+            elif args.encl and self.storage_type == self.STORAGE_TYPE_5U84:
                 try:
                     storage_encl_health_json = self._resource_health_view['cluster']['sites']\
                                                         [self.SITE_ID]['rack'][self.RACK_ID]\
@@ -177,12 +242,37 @@ class SSPLHealthView(object):
                     print("or it is inaccessible for the current node.")
                     print("Ignored to collect enclosure health view data.")
 
+            elif self.storage_type in [self.STORAGE_TYPE_VIRTUAL, self.STORAGE_TYPE_PODS]:
+                self._resource_health_view['cluster']['sites']\
+                                                    [self.SITE_ID]['rack'][self.RACK_ID]\
+                                                    ['nodes']['storage_encl'].clear()
+
             elif not args.encl:
                 del self._resource_health_view['cluster']['sites']\
                                                         [self.SITE_ID]['rack'][self.RACK_ID]\
                                                         ['nodes']['storage_encl']
 
-            if args.node:
+            if args.node and self.server_type == self.SERVER_TYPE_VIRTUAL:
+                try:
+                    node_health_json = self._resource_health_view['cluster']['sites']\
+                                                        [self.SITE_ID]['rack'][self.RACK_ID]\
+                                                        ['nodes']['node:'+self.HOST_NAME] =\
+                                                        self._resource_health_view['cluster']['sites']\
+                                                        [self.SITE_ID]['rack'][self.RACK_ID]\
+                                                        ['nodes'].pop('node')
+                    node_health_json.update({'node_id':self.NODE_ID})
+                except Exception as e:
+                    print("Error while extracting values from health view json % : " % e)
+                    return False
+
+                for category in ['hw', 'interfaces', 'platform_sensors']:
+                    del self._resource_health_view['cluster']['sites']\
+                                                        [self.SITE_ID]['rack'][self.RACK_ID]\
+                                                        ['nodes']['node:'+self.HOST_NAME][category]
+                self.build_health_view_node_server_cache(node_health_json, 'os')
+                health_view_created = True
+            
+            elif args.node:
                 try:
                     node_health_json = self._resource_health_view['cluster']['sites']\
                                                         [self.SITE_ID]['rack'][self.RACK_ID]\
@@ -197,6 +287,7 @@ class SSPLHealthView(object):
                 self.build_health_view_node_server_cache(node_health_json, 'hw')
                 self.build_health_view_node_server_cache(node_health_json, 'platform_sensors')
                 self.build_health_view_node_server_cache(node_health_json, 'interfaces')
+                self.build_health_view_node_server_cache(node_health_json, 'os')
                 health_view_created = True
 
             elif not args.node:
@@ -287,6 +378,15 @@ class SSPLHealthView(object):
         if self.correct_mc_config:
             self.write_content_in_file(self.RESOURCE_HEALTH_VIEW_PATH, self._resource_health_view,
                                         'resource health view')
+        
+    def build_health_view_storage_jbod_cache(self, storage_encl_health_json):
+
+        disk_data = storage_encl_health_json['hw']['fru']['disks']
+        disks_info = self.build_jbod_disks_cache()
+        disk_data.update({"health": "", "disks_info": disks_info})
+
+        self.write_content_in_file(self.RESOURCE_HEALTH_VIEW_PATH, self._resource_health_view,
+                                    'resource health view')
 
     def build_health_view_node_server_cache(self, node_health_json, category):
 
@@ -313,8 +413,14 @@ class SSPLHealthView(object):
             for interface in self.node_interface_data:
                 interface_data = node_health_json['interfaces'][interface]
                 interface_data.update({"health": "", interface+"s_info": interfaces_data[interface]})
+        
+        elif category == 'os':
+            os_sw_info = self.build_node_os_instances()
+            for os_info in ['cortx_sw', 'operating_system']:
+                os_data = node_health_json['os'][os_info]
+                os_data.update(os_sw_info[os_info])
 
-        if not ipmitool_cli and category != 'interfaces':
+        if not ipmitool_cli and category not in ['interfaces', 'os']:
             print('Required ipmitool missing on Node to fetch %s data..!' % category)
             return False
 
@@ -361,6 +467,60 @@ class SSPLHealthView(object):
                 print('Persistent cache does not exist, Building cache %s '\
                         % self.encl_disks_filename)
         return disk_data
+
+    def build_jbod_disks_cache(self):
+        """Retreive jbod disk info using dbus library"""
+
+        bus = SystemBus()
+        disk_systemd = bus.get_object('org.freedesktop.UDisks2', '/org/freedesktop/UDisks2')
+        disk_manager = Interface(disk_systemd, dbus_interface='org.freedesktop.DBus.ObjectManager')
+        disk_objects = disk_manager.GetManagedObjects()
+        re_blocks = re.compile('(?P<path>.*?/block_devices/(?P<id>.*))')
+        block_devs = [m.groupdict() for m in
+                        [re_blocks.match(path) for path in list(disk_objects.keys())]
+                        if m]
+
+        drive_by_path = {}
+        for block_dev in block_devs:
+            try:
+                if disk_objects[block_dev['path']].get('org.freedesktop.UDisks2.Block') is not None:
+                    udisk_block = disk_objects[block_dev['path']]["org.freedesktop.UDisks2.Block"]
+                    symlinks = self._sanitize_dbus_value(udisk_block["Symlinks"])
+                    for symlink in symlinks:
+                        if "by-path" in symlink:
+                            drive_by_path[udisk_block["Drive"]] = symlink[len("/dev/disk/by-path/"):]
+                    device = self._sanitize_dbus_value(udisk_block["Device"])
+                    self.jbod_drive_by_device_name[udisk_block["Drive"]] = device
+            except Exception as ae:
+                print(ae)
+
+        jbod_drives = {}
+        jbod_cache = {}
+        for obj_path, interfaces_and_property in disk_objects.items():
+            if "drive" in obj_path and self._is_physical_drive(interfaces_and_property["org.freedesktop.UDisks2.Drive"]):
+                jbod_cache.update({obj_path: False if self._is_drive_faulty(obj_path, interfaces_and_property) == "OK" else True})
+                if not self._is_local_drive(interfaces_and_property):
+                    drive_obj = interfaces_and_property["org.freedesktop.UDisks2.Drive"]
+                    resource_id = drive_by_path.get(obj_path, str(drive_obj["Id"]))
+                    jbod_drives.update({
+                        self.encl_disk_resource_type+'-'+resource_id:{
+                            "alert_type": "NA",
+                            "severity": "NA",
+                            "alert_uuid": "NA",
+                            "durable_id": resource_id,
+                            "health": self._is_drive_faulty(obj_path, interfaces_and_property),
+                            "serial-number": str(drive_obj["Serial"]),
+                            "vendor": str(drive_obj["Vendor"]),
+                            "model": str(drive_obj["Model"]),
+                            "fetch_time": int(time.time())
+                        }
+                    })
+        if store.get(self.jbod_disks_filename) is None:
+            print('Persistent cache does not exist, Building cache %s '\
+                    % self.jbod_disks_filename)
+            store.put(jbod_cache, self.jbod_disks_filename)
+
+        return jbod_drives
 
     def build_encl_psus_cache(self):
 
@@ -887,6 +1047,47 @@ class SSPLHealthView(object):
                 interfaces_json.update({interface:network_cable_json})
         return interfaces_json
 
+    def build_node_os_instances(self):
+
+        os_sw_info_dict = {}
+        cortx_build_version = 'NA'
+        cortx_build_cmd = f"sudo salt-call pillar.get release:target_build --output=newline_values_only"
+        try:
+            subout = subprocess.Popen(cortx_build_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            result = subout.stdout.readlines()
+            if result == [] or result == "":
+                print("Unable to fetch cortx build version.")
+            else:
+                cortx_build_version = result[0].decode().rstrip('\n').split('/')[-2]
+        except Exception as e:
+            logger.error(f"Unable to fetch cortx build version. : {traceback.format_exc()}")
+            print("Unable to fetch cortx build version.")
+            print(e, traceback.format_exc())
+
+        cluster_id = 'NA'
+        cluster_id_cmd = f"sudo salt-call grains.get cluster_id --output=newline_values_only"
+        try:
+            subout = subprocess.Popen(cluster_id_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            result = subout.stdout.readlines()
+            if result == [] or result == "":
+                print("Unable to fetch cluster id.")
+            else:
+                cluster_id = result[0].decode().rstrip('\n')
+        except Exception as e:
+            logger.error(f"Unable to fetch cluster id. : {traceback.format_exc()}")
+            print("Unable to fetch cluster id.")
+            print(e, traceback.format_exc())
+
+        os_sw_info_dict.update({'cortx_sw':{'version':cortx_build_version,
+                                            'license-info': 'NA',
+                                            'cluster-id':cluster_id}})
+
+        os_serial = subprocess.Popen(['uname', '-rvmpio'], stdout=subprocess.PIPE).communicate()[0].decode("utf-8").rstrip()
+        os_model = subprocess.Popen(['cat', '/etc/system-release'], stdout=subprocess.PIPE).communicate()[0].decode("utf-8").rstrip()
+        os_sw_info_dict.update({'operating_system':{'version':os_model, 'system-info':os_serial}})
+
+        return os_sw_info_dict
+
     def build_node_hw_specifics_instances(self):
         lshw_dict = {}
         with tempfile.TemporaryFile() as tempf:
@@ -960,6 +1161,55 @@ class SSPLHealthView(object):
             print("Node Data, unable to get cable connection state " +
                         f"of '{interface}'. {str(err)}")
         return phy_link_state[carrier_indicator]
+
+    def _sanitize_dbus_value(self, value):
+        """Convert certain DBus type combinations so that they are easier to read"""
+        if isinstance(value, Array) and value.signature == "ay":
+            try:
+                return self._decode_ay(value)
+            except:
+                # Try an array of arrays; 'aay' which is the symlinks
+                return list(map(self._decode_ay, value or ()))
+        elif isinstance(value, Array) and value.signature == "y":
+            return bytearray(value).rstrip(bytearray((0,))).decode('utf-8')
+        else:
+            return value
+
+    def _decode_ay(self, value):
+        """Convert binary blob from DBus queries to strings"""
+        if len(value) == 0 or \
+            value is None:
+            return ''
+        elif isinstance(value, str):
+            return value
+        elif isinstance(value, bytes):
+            return value.decode('utf-8')
+        else:
+            return bytearray(value).rstrip(bytearray((0,))).decode('utf-8')
+
+    def _is_physical_drive(self, interfaces_and_property):
+        """If wwn starts with 0x5 then it is physical drive"""
+        return interfaces_and_property["WWN"].startswith("0x5")
+
+    def _is_local_drive(self, interfaces_and_property):
+        return "org.freedesktop.UDisks2.Drive.Ata" in interfaces_and_property and \
+            str(interfaces_and_property["org.freedesktop.UDisks2.Drive"]["Revision"]) != "G265"
+
+    def _run_command(self, command):
+        """Run the command and get the response and error returned"""
+        process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
+        response, error = process.communicate()
+        return response.rstrip('\n'), error.rstrip('\n')
+
+    def _is_drive_faulty(self, path, interfaces_and_property):
+        if self._is_local_drive(interfaces_and_property):
+            cmd = f"sudo smartctl -H {self.jbod_drive_by_device_name[path]} --json"
+        else:
+            cmd = f"sudo smartctl -d scsi -H {self.jbod_drive_by_device_name[path]} --json"
+        response, _ = self._run_command(cmd)
+        response = json.loads(response)
+        smart_status = response['smart_status']['passed']
+        return 'OK' if smart_status else 'Fault'
 
 if __name__ == "__main__":
     description = "Resource Health View Schema"

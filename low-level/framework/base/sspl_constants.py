@@ -15,12 +15,16 @@
 # about this software or licensing, please email opensource@seagate.com or
 # cortx-questions@seagate.com.
 
+import subprocess
+import ast
 from enum import Enum
 
 try:
     from salt_util import node_id, consulhost, consulport
+    from service_logging import logger
 except Exception as e:
     from framework.utils.salt_util import node_id, consulhost, consulport
+    from framework.utils.service_logging import logger
 
 PRODUCT_NAME = 'LDR_R1'
 PRODUCT_FAMILY = 'cortx'
@@ -114,6 +118,24 @@ file_store_config_path = '/etc/sspl.conf'
 salt_provisioner_pillar_sls = 'sspl'
 salt_uniq_attr_per_node = ['cluster_id']
 salt_uniq_passwd_per_node = ['RABBITMQINGRESSPROCESSOR', 'RABBITMQEGRESSPROCESSOR', 'LOGGINGPROCESSOR']
+
+try:
+    setup_info = subprocess.Popen(['sudo', '/usr/bin/provisioner', 'get_setup_info'],
+        stdout=subprocess.PIPE).communicate()[0].decode("utf-8").rstrip()
+    setup_info = ast.literal_eval(setup_info)
+    storage_type = setup_info['storage_type'].lower()
+    server_type = setup_info['server_type'].lower()
+    logger.info(f"Storage Type : '{storage_type}'")
+    logger.info(f"Server Type '{server_type}'")
+
+except Exception as err:
+    logger.debug(f"Error in getting setup information of server and storage type : {err}")
+    print(f"Error in getting setup information of server and storage type : {err}")
+    storage_type = 'virtual'
+    server_type = 'virtual'
+    logger.debug(f"Considering default storage type : '{storage_type}'")
+    logger.debug(f"Considering default server type : '{server_type}'")
+
 
 class RaidDataConfig(Enum):
     MDSTAT_FILE = "/proc/mdstat"
