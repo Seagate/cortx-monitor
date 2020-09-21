@@ -51,7 +51,7 @@ pysnmp_smi = Analysis([sspl_path + '/low-level/sensors/impl/generic/SNMP_traps2.
             hiddenimports=hiddenimports,
             hookspath=None,
             runtime_hooks=None)
-x = Tree('/usr/local/lib/python3.6/site-packages/pysnmp/smi/mibs',prefix='pysnmp/smi/mibs',excludes='.py')
+x = Tree('/root/.local/lib/python3.6/site-packages/pysnmp/smi/mibs',prefix='pysnmp/smi/mibs',excludes='.py')
 pysnmp_smi_pyz = PYZ(pysnmp_smi.pure)
 pysnmp_smi_exe = EXE(pysnmp_smi_pyz,
          pysnmp_smi.scripts,
