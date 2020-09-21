@@ -127,7 +127,6 @@ try:
 
 except Exception as err:
     logger.debug(f"Error in getting setup information of server and storage type : {err}")
-    print(f"Error in getting setup information of server and storage type : {err}")
     storage_type = 'virtual'
     server_type = 'virtual'
     logger.debug(f"Considering default storage type : '{storage_type}'")
