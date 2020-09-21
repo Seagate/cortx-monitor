@@ -644,8 +644,9 @@ def signal_handler(signal_number, frame):
     if thread_controller_queue:
         send_thread_controller_request(state)
     else:
-        logger.info(f'thread_controller_queue is None, saving the sspl \
-                     role switch request state, State: {state}')
+        logger.warning(f'thread_controller_queue is not ready, saving the \
+                        sspl role switch request state, State: {state} to \
+                        process again later.')
 
         # This can be the edge case. SSPL is not yet fully initialized and it
         # received the signal to promote or may be demote. So, as the thread is
