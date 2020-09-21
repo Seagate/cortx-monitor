@@ -663,7 +663,7 @@ def send_thread_controller_request(state):
     state_change_msg = {
                 "sspl_ll_debug": {
                     "debug_component": "sensor",
-                    "debug_enabled": (logger.level == 'DEBUG')
+                    "debug_enabled": (logger.level == logging.DEBUG)
                 },
                 "sspl_ll_msg_header": {
                     "msg_version": "1.0.0",
