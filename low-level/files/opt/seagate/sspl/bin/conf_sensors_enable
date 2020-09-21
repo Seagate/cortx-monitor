@@ -1,0 +1,44 @@
+#!/bin/bash
+set -e -u -o pipefail
+
+to_lower_case() {
+    tr '[:upper:]' '[:lower:]'
+}
+
+declare -a sed_expr=(-e '')
+storage_type="$(provisioner get_setup_info --output json | jq -r .ret.storage_type | to_lower_case)"
+server_type="$(provisioner get_setup_info --output json | jq -r .ret.server_type | to_lower_case)"
+
+declare -A should_monitor=(
+    [REALSTORSENSORS]="true"
+    [NODEHWSENSOR]="true"
+    [SYSTEMDWATCHDOG]="true" # This is the 'server disks' sensor
+    [RAIDSENSOR]="true"
+
+)
+
+case "${storage_type}" in
+    virtual) 
+        should_monitor[REALSTORSENSORS]="false"
+        should_monitor[SYSTEMDWATCHDOG]="false"
+        ;;
+    jbod)
+        should_monitor[REALSTORSENSORS]="false"
+        ;;
+esac
+
+case "${server_type}" in
+    virtual)
+        should_monitor[NODEHWSENSOR]="false"
+        ;;
+esac
+
+for group in "${!should_monitor[@]}"; do
+    sed_expr+=(-e 's/^should_monitor=XXXXXX # '"${group}"'$/should_monitor='"${should_monitor[${group}]}"'/')
+done
+
+[ -f "${SSPL_CONF}" ] && {
+    sed -i "${sed_expr[@]}" $SSPL_CONF
+}
+
+

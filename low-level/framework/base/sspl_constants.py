@@ -38,7 +38,7 @@ DATA_PATH = f"/var/{PRODUCT_FAMILY}/sspl/data/"
 NODE_ID = "001"
 SITE_ID = "001"
 RACK_ID = "001"
-SSPL_STORE_TYPE = 'consul'
+SSPL_STORE_TYPE = 'file'
 SYSLOG_HOST = 'localhost'
 SYSLOG_PORT = '514'
 SYSINFO = "SYSTEM_INFORMATION"
@@ -57,16 +57,47 @@ node_key_id = node_id
 CONSUL_HOST = consulhost
 CONSUL_PORT = consulport
 SSPL_SETTINGS = {
-        "ACTUATORS" : ["Service", "RAIDactuator", "Smartctl", "NodeHWactuator"],
-        "CORE_PROCESSORS" : ("RabbitMQegressProcessor", "RabbitMQingressProcessor", "LoggingProcessor"),
-        "DEGRADED_STATE_MODULES" : ("ServiceWatchdog", "RAIDsensor", "NodeData", "IEMSensor", "NodeHWsensor",
-                            "DiskMsgHandler", "LoggingMsgHandler", "ServiceMsgHandler", "NodeDataMsgHandler",
-                            "NodeControllerMsgHandler", "SASPortSensor", "MemFaultSensor", "CPUFaultSensor"),
-        "MESSAGE_HANDLERS" : ("DiskMsgHandler", "LoggingMsgHandler", "ServiceMsgHandler", "NodeDataMsgHandler",
-                        "NodeControllerMsgHandler"),
-        "SENSORS" : ["ServiceWatchdog", "RAIDsensor", "NodeData",
-            "IEMSensor", "NodeHWsensor",
-            "SASPortSensor", "MemFaultSensor", "CPUFaultSensor", "RAIDIntegritySensor"]
+        "REALSTORSENSORS": {
+            "ACTUATORS": [],
+            "CORE_PROCESSORS": [],
+            "DEGRADED_STATE_MODULES": [],
+            "MESSAGE_HANDLERS": [],
+            "SENSORS": ["RealStorFanSensor", "RealStorPSUSensor",
+                "RealStorControllerSensor", "RealStorDiskSensor", "RealStorSideplaneExpanderSensor",
+                "RealStorLogicalVolumeSensor", "RealStorEnclosureSensor",],
+        },
+        "NODEHWSENSOR": {
+            "ACTUATORS": [],
+            "CORE_PROCESSORS": [],
+            "DEGRADED_STATE_MODULES": [ "NodeHWsensor",],
+            "MESSAGE_HANDLERS": [],
+            "SENSORS": [ "NodeHWsensor",],
+        },
+        "SYSTEMDWATCHDOG": {
+            "ACTUATORS": [],
+            "CORE_PROCESSORS": [],
+            "DEGRADED_STATE_MODULES": [],
+            "MESSAGE_HANDLERS": [],
+            "SENSORS": [],
+        },
+        "RAIDSENSOR": {
+            "ACTUATORS": [],
+            "CORE_PROCESSORS": [],
+            "DEGRADED_STATE_MODULES": ["RAIDsensor", ],
+            "MESSAGE_HANDLERS": [],
+            "SENSORS": ["RAIDsensor", "RAIDIntegritySensor"],
+        },
+        "CATCHALL": {
+            "ACTUATORS" : ["Service", "RAIDactuator", "Smartctl", "NodeHWactuator", "RealStorActuator"],
+            "CORE_PROCESSORS" : ("RabbitMQegressProcessor", "RabbitMQingressProcessor", "LoggingProcessor"),
+            "DEGRADED_STATE_MODULES" : ("ServiceWatchdog", "NodeData", "IEMSensor",
+                "DiskMsgHandler", "LoggingMsgHandler", "ServiceMsgHandler", "NodeDataMsgHandler",
+                "NodeControllerMsgHandler", "SASPortSensor", "MemFaultSensor", "CPUFaultSensor"),
+            "MESSAGE_HANDLERS" : ("DiskMsgHandler", "LoggingMsgHandler", "ServiceMsgHandler", "NodeDataMsgHandler",
+                "NodeControllerMsgHandler", "RealStorEnclMsgHandler", "RealStorActuatorMsgHandler"),
+            "SENSORS" : ["ServiceWatchdog", "NodeData",  "IEMSensor",
+                "SASPortSensor", "MemFaultSensor", "CPUFaultSensor", ]
+        }
 }
 
 COMMON_CONFIGS = {
