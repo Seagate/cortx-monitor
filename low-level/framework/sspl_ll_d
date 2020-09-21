@@ -343,7 +343,7 @@ def main(conf_reader, systemd_support):
     # Check if there is any pending request for thread_controller
     if sspl_role_state is not None:
         logger.info('thread controller queue is ready and serving the sspl \
-                     role switch {sspl_role_state} request received earlier')
+                     role switch State: {sspl_role_state} request received earlier')
 
         send_thread_controller_request(sspl_role_state)
 
@@ -644,16 +644,22 @@ def signal_handler(signal_number, frame):
     if thread_controller_queue:
         send_thread_controller_request(state)
     else:
-        logger.error(f'thread_controller_queue is None, saving the sspl \
-                     role switch request state: {state}')
+        logger.info(f'thread_controller_queue is None, saving the sspl \
+                     role switch request state, State: {state}')
 
-        # Save the promote state in order to serve this later
+        # This can be the edge case. SSPL is not yet fully initialized and it
+        # received the signal to promote or may be demote. So, as the thread is
+        # not ready to accept that request, it will not be served and will be
+        # lost if not saved. So, to avoid this, once SSPL receives the request and
+        # thread is not yet ready,save the request to serve it later when thread
+        # will be ready.
         sspl_role_state = state
 
 def send_thread_controller_request(state):
     '''Creates a internal request for thread controller
        and puts in into its own queue'''
-    logger.debug(f'Creating and sending the sspl role switch request: {state}')
+    logger.debug(f'Creating and sending the sspl role switch request to \
+                 switch to {state} state')
     state_change_msg = {
                 "sspl_ll_debug": {
                     "debug_component": "sensor",
