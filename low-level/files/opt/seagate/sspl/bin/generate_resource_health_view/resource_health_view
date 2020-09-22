@@ -123,16 +123,8 @@ class SSPLHealthView(object):
             [self.RACK_ID] = self._resource_health_view['cluster']['sites']\
                 [self.SITE_ID]['rack'].pop('rack_id')
 
-    def run(self, parser):
-        args = parser.parse_args()
+    def run(self, args):
         health_view_created = False
-        # Display help if no or invalid args are passed in
-        if args.help or len(sys.argv) == 1 or \
-            ('--path' in sys.argv and '/' not in sys.argv[sys.argv.index('--path')+1]):
-            print('Missing arguments')
-            parser.print_help()
-            sys.exit(1)
-
         if args.path:
             self.RESOURCE_HEALTH_VIEW_PATH = args.path
             if os.path.exists(args.path):
@@ -1160,7 +1152,7 @@ class SSPLHealthView(object):
         return 'OK' if smart_status else 'Fault'
 
     @staticmethod
-    def _update_required_data_to_consul():
+    def _update_required_data_to_consul(args):
         
         base_info = {'/SYSTEM_INFORMATION/site_id': 'system_information/site_id',
                 '/SYSTEM_INFORMATION/rack_id': 'system_information/rack_id',
@@ -1168,7 +1160,7 @@ class SSPLHealthView(object):
                 '/SYSTEM_INFORMATION/cluster_id': 'system_information/cluster_id',
                 '/SYSTEM_INFORMATION/data_path': 'system_information/data_path'}
 
-        if storage_type == '5u84':
+        if storage_type == '5u84' and args.encl:
             base_info.update({
                 '/STORAGE_ENCLOSURE/controller/primary_mc/ip': 'storage_enclosure/controller/primary_mc/ip',
                 '/STORAGE_ENCLOSURE/controller/secondary_mc/ip': 'storage_enclosure/controller/secondary_mc/ip',
@@ -1236,6 +1228,13 @@ if __name__ == "__main__":
     parser.add_argument("--path", metavar="<path> eg. --path '/tmp/sspl/'", help="Health view\
             schema destination path (Note: Path need to be already exist)")
 
+    args = parser.parse_args()
+    # Display help if no or invalid args are passed in
+    if args.help or len(sys.argv) == 1 or \
+        ('--path' in sys.argv and '/' not in sys.argv[sys.argv.index('--path')+1]):
+        print('Missing arguments')
+        parser.print_help()
+        sys.exit(1)
     print(f"Storage Type : '{storage_type}'")
     print(f"Server Type '{server_type}'")
 
@@ -1245,7 +1244,7 @@ if __name__ == "__main__":
         sys.exit(os.EX_USAGE)
 
     sys_site_id, sys_rack_id, sys_node_id, sys_cluster_id, sys_data_path = \
-        SSPLHealthView._update_required_data_to_consul()
-    if storage_type == '5u84':
+        SSPLHealthView._update_required_data_to_consul(args)
+    if storage_type == '5u84' and args.encl:
         from framework.platforms.realstor.realstor_enclosure import singleton_realstorencl
-    sys.exit(SSPLHealthView().run(parser))
+    sys.exit(SSPLHealthView().run(args))
