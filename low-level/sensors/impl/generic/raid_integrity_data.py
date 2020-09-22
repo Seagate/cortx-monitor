@@ -32,6 +32,7 @@ from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.sspl_constants import COMMON_CONFIGS, RaidDataConfig, RaidAlertMsgs, WAIT_BEFORE_RETRY
 from framework.utils.severity_reader import SeverityReader
 from framework.utils.service_logging import logger
+from framework.utils.utility import Utility
 
 # Modules that receive messages from this module
 from message_handlers.node_data_msg_handler import NodeDataMsgHandler
@@ -99,6 +100,9 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
                                 self.SYSTEM_INFORMATION, COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.NODE_ID), '001')  
         self._polling_interval = int(self._conf_reader._get_value_with_default(
                                 self.RAIDIntegritySensor, self.POLLING_INTERVAL, self.DEFAULT_POLLING_INTERVAL))
+        self.utility = Utility()
+        if self.utility.is_env_vm():
+            self.shutdown()
         return True
 
     def read_data(self):
