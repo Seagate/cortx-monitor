@@ -91,6 +91,7 @@ class SASPortSensor(SensorThread, InternalMsgQ):
         self._suspended = False
         self._count = 0
         self.phy_link_count = 0
+        self.sas_ports_status = {}
 
     def initialize(self, conf_reader, msgQlist, product):
         """initialize configuration reader and internal msg queues"""
@@ -155,7 +156,7 @@ class SASPortSensor(SensorThread, InternalMsgQ):
 
             # Get the stored previous alert info
             self.sas_phy_stored_alert = store.get(self.SAS_PORT_SENSOR_DATA)
-            self.check_and_send_alert(self.phy_link_count)
+            self.check_and_send_alert()
 
         except KeyError as key_error:
             logger.error(
@@ -181,47 +182,70 @@ class SASPortSensor(SensorThread, InternalMsgQ):
 
         return True
 
-    def check_and_send_alert(self, new_phy_link_count):
+    def update_sas_ports_status(self):
+        # Assumption : phys will be present in multiples of 4
+        phy_list = []
+        for phy in self.phy_dir_to_linkrate_mapping.keys():
+            phy_list.append(phy)
+        phy_list.sort()
+        # Now we have a sorted list of phys
+        # Phys 0-3 for the 0th sas port, and so on in groups of 4 phys
+        self.num_sas_ports = len(phy_list)/4
+        # Counter tracking sas port number and status
+        i = 0
+        while i < self.num_sas_ports:
+            port_phy_list = phy_list[4*i:4*i+4]
+            if port_phy_list == []:
+                # No elements, break the loop
+                break
+            port_phy_status_list = []
+            for phy in port_phy_list:
+                port_phy_status_list.append(self.phy_dir_to_linkrate_mapping[phy][1])
+            # Now we have a list containing Up/fault status of 4 phys belonging to port number i
+            if port_phy_status_list == ['fault','fault','fault','fault']:
+                port_status = 'all_down'
+            elif port_phy_status_list == ['Up','Up','Up','Up']:
+                port_status = 'all_up'
+            else:
+                port_status = 'partial'
+            # Store the data
+            self.sas_ports_status[i] = port_status
+            # Increase i for next while loop iteration
+            i += 1
+
+    def check_and_send_alert(self):
         """Checks whether conditions are met and sends alert if required
         Alerts will be sent if -
-        1. All phys are down -> fault alert
-        2. 4 phys are up -> fault_resolved alert
-        3. Next group of 4 phys comes up -> informational alert
-
-        Sensor data stored in Consul is a tuple (alert_type, phy_link_count)
+        1. All 4 phys of a sas port go up -> down : fault alert
+        2. All 4 phys of a sas port come down -> up : fault_resolved alert
+        Sensor data stored in Consul is a dict of { sas_port_number : alert_type }
         """
+        # Update sas ports status
+        self.update_sas_ports_status()
+
         if self.sas_phy_stored_alert == None:
             # No info is stored for this node in Consul
-            # Initialize alert_type to dummy fault_resolved
-            self.sas_phy_stored_alert = ('fault_resolved', new_phy_link_count)
-            # Save data to Consul
+            # Initialize alert_type to dummy fault_resolved for all sas ports
+            self.sas_phy_stored_alert = {}
+            for i in range(0,self.num_sas_ports):
+                self.sas_phy_stored_alert[i] = 'fault_resolved'
+            # Save data to store
             store.put(self.sas_phy_stored_alert, self.SAS_PORT_SENSOR_DATA)
-        elif self.sas_phy_stored_alert[0] == 'fault':
-            # Previous alert sent for this node was fault, check if fault is resolved
-            if new_phy_link_count >= self.MIN_PHY_COUNT:
-                alert_type = 'fault_resolved'
-                # Send alert
-                self._generate_alert(alert_type)
-                # Save data to Consul
-                self.sas_phy_stored_alert = (alert_type, new_phy_link_count)
-                store.put(self.sas_phy_stored_alert, self.SAS_PORT_SENSOR_DATA)
-        elif self.sas_phy_stored_alert[0] in ['fault_resolved','insertion']:
-            # Check if we need to send informational alert
-            if new_phy_link_count > self.sas_phy_stored_alert[1] and new_phy_link_count % self.MIN_PHY_COUNT == 0:
-                alert_type = 'insertion'
-                # Send alert
-                self._generate_alert(alert_type)
-                # Save data to Consul
-                self.sas_phy_stored_alert = (alert_type, new_phy_link_count)
-                store.put(self.sas_phy_stored_alert, self.SAS_PORT_SENSOR_DATA)
-            # Check to see if we need to send fault alert
-            if new_phy_link_count == 0:
-                alert_type = 'fault'
-                # Send alert
-                self._generate_alert(alert_type)
-                # Save data to Consul
-                self.sas_phy_stored_alert = (alert_type, new_phy_link_count)
-                store.put(self.sas_phy_stored_alert, self.SAS_PORT_SENSOR_DATA)
+        else:
+            # Compare current status of each port with previous alert_type
+            for port, value in self.sas_phy_stored_alert.items():
+                if value == 'fault_resolved' and \
+                            self.sas_ports_status[port] == 'all_down':
+                    alert_type = 'fault'
+                    self.generate_alert(alert_type, port)
+                    self.sas_phy_stored_alert[port] = alert_type
+                elif value == 'fault' and \
+                            self.sas_ports_status[port] == 'all_up':
+                    alert_type = 'fault_resolved'
+                    self.generate_alert(alert_type, port)
+                    self.sas_phy_stored_alert[port] = alert_type
+            # Save data to store
+            store.put(self.sas_phy_stored_alert, self.SAS_PORT_SENSOR_DATA)
 
     def run(self):
         """Run the sensor on its own thread"""
@@ -253,7 +277,7 @@ class SASPortSensor(SensorThread, InternalMsgQ):
                     status = prev_alert_type
 
                     # Compare local dict wrt global dictionary for change in the
-                    # negitiated link rate
+                    # negotiated link rate
                     if link_rate.lower() != prev_linkrate_value.lower():
                         # If current link rate has no value like 12/6/3 Gbit
                         # and previously it was up, then it's a fault condition
@@ -282,9 +306,8 @@ class SASPortSensor(SensorThread, InternalMsgQ):
                 new_phy_link_count = self.phy_link_count + new_phy_up - new_phy_down
 
                 # Get the last sent alert info
-                # It is a tuple of (alert_type, phy_link_count)
                 self.sas_phy_stored_alert = store.get(self.SAS_PORT_SENSOR_DATA)
-                self.check_and_send_alert(new_phy_link_count)
+                self.check_and_send_alert()
                 # Update current active phy count for next iteration
                 self.phy_link_count = new_phy_link_count
 
@@ -294,7 +317,7 @@ class SASPortSensor(SensorThread, InternalMsgQ):
         # Fire every 30 seconds to see if there's a change in the phy status
         self._scheduler.enter(self.polling_interval, self._priority, self.run, ())
 
-    def _create_json_message(self, alert_type):
+    def _create_json_message(self, alert_type, port):
         """Creates a defined json message structure which can flow inside SSPL
            modules"""
 
@@ -326,7 +349,7 @@ class SASPortSensor(SensorThread, InternalMsgQ):
                 "rack_id": self._rack_id,
                 "node_id": self._node_id,
                 "resource_type": self.RESOURCE_TYPE,
-                "resource_id": self.RESOURCE_ID,
+                "resource_id": self.RESOURCE_ID + f':{port}',
                 "event_time": epoch_time
                 }
 
@@ -354,10 +377,10 @@ class SASPortSensor(SensorThread, InternalMsgQ):
         alert_id = epoch_time + salt
         return alert_id
 
-    def _generate_alert(self, alert_type):
+    def _generate_alert(self, alert_type, port):
         """Queues the message to NodeData Message Handler"""
 
-        json_msg = self._create_json_message(alert_type)
+        json_msg = self._create_json_message(alert_type, port)
         if json_msg:
             self._write_internal_msgQ(NodeDataMsgHandler.name(), json_msg)
 
