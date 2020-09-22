@@ -90,7 +90,7 @@ class SSPLHealthView(object):
         self.node_interface_data = ['sas_port', 'network_cable']
         self.NW_CBL_CARRIER_FILE = "/sys/class/net/{}/carrier"
         
-        encl_hw_specifics_api = 'configuration'
+        self.encl_hw_specifics_api = 'configuration'
 
         self.SITE_ID = sys_site_id
         self.RACK_ID = sys_rack_id
@@ -256,7 +256,7 @@ class SSPLHealthView(object):
                 "rack_id": self.RACK_ID,
                 "node_id": self.NODE_ID
             }
-            if args.encl and args.support:
+            if args.encl and args.support and self.storage_type == self.STORAGE_TYPE_5U84:
                 encl_support_data = {}
                 encl_support_data.update(support_common_data)
                 encl_data_response = self.build_encl_hw_specifics_instances()
