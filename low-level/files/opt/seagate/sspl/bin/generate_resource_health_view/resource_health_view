@@ -36,14 +36,14 @@ from framework.utils.ipmi_client import IpmiFactory
 from framework.utils.sysfs_interface import SysFS
 from framework.utils.tool_factory import ToolFactory
 from framework.base.sspl_constants import (component, CONSUL_HOST, CONSUL_PORT, node_key_id, PRODUCT_FAMILY,
-    storage_type, server_type
+    storage_type, server_type, NODE_ID, SITE_ID, RACK_ID, DATA_PATH
 )
 
 class SSPLHealthView(object):
     """docstring for SSPLHealthView"""
 
     RESOURCE_HEALTH_VIEW_FILE = 'resource_health_view.json'
-    RESOURCE_HEALTH_VIEW_PATH = '/tmp/'+RESOURCE_HEALTH_VIEW_FILE
+    RESOURCE_HEALTH_VIEW_PATH = '/tmp/' + RESOURCE_HEALTH_VIEW_FILE
     TEMPLATE_SCHEMA_FILE = f'/opt/seagate/{PRODUCT_FAMILY}/sspl/bin/generate_resource_health_view/resource_health_view_template.json'
 
     ENCL_MANIFEST_PATH = '/tmp/encl_manifest.json'
@@ -60,21 +60,22 @@ class SSPLHealthView(object):
     def __init__(self):
 
         persistent_data_location = sys_data_path
-        storage_encl_dir = persistent_data_location+'encl/frus/'
-        self.encl_disks_filename = storage_encl_dir+'disks/'
-        self.encl_psus_filename = storage_encl_dir+'psus/psudata.json'
-        self.encl_controllers_filename = storage_encl_dir+'controllers/controllerdata.json'
-        self.encl_fans_filename = storage_encl_dir+'fanmodules/fanmodule_data.json'
-        self.encl_sideplane_exp_filename = storage_encl_dir+'sideplane_expanders/sideplane_expanders_data.json'
-        self.encl_logical_volumes_filename = storage_encl_dir+'logical_volumes/logicalvolumedata.json'
+        storage_encl_dir = persistent_data_location + 'encl/frus/'
+        self.encl_disks_filename = storage_encl_dir + 'disks/'
+        self.encl_psus_filename = storage_encl_dir + 'psus/psudata.json'
+        self.encl_controllers_filename = storage_encl_dir + 'controllers/controllerdata.json'
+        self.encl_fans_filename = storage_encl_dir + 'fanmodules/fanmodule_data.json'
+        self.encl_sideplane_exp_filename = storage_encl_dir + 'sideplane_expanders/sideplane_expanders_data.json'
+        self.encl_logical_volumes_filename = storage_encl_dir + 'logical_volumes/logicalvolumedata.json'
 
-        self.jbod_disks_filename = persistent_data_location+'server/systemd_watchdog/disks/disks.json'
+        self.jbod_disks_filename = persistent_data_location + 'server/systemd_watchdog/disks/disks.json'
 
-        self.encl_disk_resource_type = "enclosure:fru:disk"
-        self.encl_controller_resource_type = "enclosure:fru:controller"
-        self.encl_fan_resource_type = "enclosure:fru:fan"
-        self.encl_psu_resource_type = "enclosure:fru:psu"
-        self.encl_sideplane_resource_type = "enclosure:fru:sideplane"
+        encl_fru = 'enclosure:fru'
+        self.encl_disk_resource_type = encl_fru + ":disk"
+        self.encl_controller_resource_type = encl_fru + ":controller"
+        self.encl_fan_resource_type = encl_fru + ":fan"
+        self.encl_psu_resource_type = encl_fru + ":psu"
+        self.encl_sideplane_resource_type = encl_fru + ":sideplane"
         self.encl_logical_volume_resource_type = f"enclosure:{PRODUCT_FAMILY}:logical_volume"
         self.encl_sas_resource_type = "enclosure:interface:sas"
 
@@ -1161,23 +1162,29 @@ class SSPLHealthView(object):
     @staticmethod
     def _update_required_data_to_consul():
         
-        base_info = {'/SYSTEM_INFORMATION/site_id':'system_information/site_id',
-                '/SYSTEM_INFORMATION/rack_id':'system_information/rack_id',
-                '/SYSTEM_INFORMATION/node_id':f'system_information/{node_key_id}/node_id',
-                '/SYSTEM_INFORMATION/cluster_id':'system_information/cluster_id',
-                '/SYSTEM_INFORMATION/data_path':'system_information/data_path'}
+        base_info = {'/SYSTEM_INFORMATION/site_id': 'system_information/site_id',
+                '/SYSTEM_INFORMATION/rack_id': 'system_information/rack_id',
+                '/SYSTEM_INFORMATION/node_id': f'system_information/{node_key_id}/node_id',
+                '/SYSTEM_INFORMATION/cluster_id': 'system_information/cluster_id',
+                '/SYSTEM_INFORMATION/data_path': 'system_information/data_path'}
 
         if storage_type == '5u84':
             base_info.update({
-                '/STORAGE_ENCLOSURE/controller/primary_mc/ip':'storage_enclosure/controller/primary_mc/ip',
-                '/STORAGE_ENCLOSURE/controller/secondary_mc/ip':'storage_enclosure/controller/secondary_mc/ip',
-                '/STORAGE_ENCLOSURE/controller/primary_mc/port':'storage_enclosure/controller/primary_mc/port',
-                '/STORAGE_ENCLOSURE/controller/secondary_mc/port':'storage_enclosure/controller/secondary_mc/port',
-                '/STORAGE_ENCLOSURE/controller/user':'storage_enclosure/controller/user',
-                '/STORAGE_ENCLOSURE/controller/secret':'storage_enclosure/controller/password'
+                '/STORAGE_ENCLOSURE/controller/primary_mc/ip': 'storage_enclosure/controller/primary_mc/ip',
+                '/STORAGE_ENCLOSURE/controller/secondary_mc/ip': 'storage_enclosure/controller/secondary_mc/ip',
+                '/STORAGE_ENCLOSURE/controller/primary_mc/port': 'storage_enclosure/controller/primary_mc/port',
+                '/STORAGE_ENCLOSURE/controller/secondary_mc/port': 'storage_enclosure/controller/secondary_mc/port',
+                '/STORAGE_ENCLOSURE/controller/user': 'storage_enclosure/controller/user',
+                '/STORAGE_ENCLOSURE/controller/secret': 'storage_enclosure/controller/password'
             })
         host = os.getenv('CONSUL_HOST', CONSUL_HOST)
         port = os.getenv('CONSUL_PORT', CONSUL_PORT)
+        print(f"Consul Host : {host}")
+        print(f"Consul Port : {port}")
+        sys_site_id = SITE_ID
+        sys_rack_id = RACK_ID
+        sys_node_id = NODE_ID
+        sys_data_path = DATA_PATH
         try:
             consul_conn = consul.Consul(host=host, port=port)
             for key, value in base_info.items():
@@ -1194,10 +1201,22 @@ class SSPLHealthView(object):
                     elif key.endswith('data_path'):
                         sys_data_path = consul_value
                     consul_conn.kv.put(component+key, consul_value)
+
                 except TypeError as e:
                     print(f"Unable get value from common config : {value} with error: {e}")
-                    print("Exiting ...")
-                    sys.exit(os.EX_USAGE)
+                    if key.endswith('site_id'):
+                        consul_value = sys_site_id
+                    elif key.endswith('rack_id'):
+                        consul_value = sys_rack_id
+                    elif key.endswith('node_id'):
+                        consul_value = sys_node_id
+                    elif key.endswith('data_path'):
+                        consul_value = sys_data_path
+                    else:
+                        print("Exiting ...")
+                        sys.exit(os.EX_USAGE)
+                    print(f"Setting default value for {component+key} : {consul_value}")
+                    consul_conn.kv.put(component+key, consul_value)
                 print(f"Inserting common config {component+key}")
 
             return sys_site_id, sys_rack_id, sys_node_id, sys_cluster_id, sys_data_path
