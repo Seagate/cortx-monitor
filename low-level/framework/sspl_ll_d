@@ -56,7 +56,7 @@ from framework.rabbitmq.rabbitmq_ingress_processor import RabbitMQingressProcess
 from framework.rabbitmq.plane_cntrl_rmq_egress_processor import PlaneCntrlRMQegressProcessor
 from framework.rabbitmq.plane_cntrl_rmq_ingress_processor import PlaneCntrlRMQingressProcessor
 from framework.base.sspl_constants import enabled_products, OperatingSystem, \
-    COMMON_CONFIGS, SSPL_SETTINGS, DISABLE_FOR_VIRTUAL_STORAGE
+    COMMON_CONFIGS, SSPL_SETTINGS, DISABLE_FOR_VIRTUAL_STORAGE, DISABLE_FOR_VIRTUAL_SERVER
 from framework.base.module_thread import SensorThread
 from framework.actuator_state_manager import actuator_state_manager
 
@@ -412,18 +412,28 @@ def _tune_modules_for_env(modlist):
     # like server_type, etc
 
     storage_type = None
+    server_type = None
     try:
         setup_info = subprocess.Popen("sudo /usr/bin/provisioner get_setup_info", shell=True,
                         stdout=subprocess.PIPE).communicate()[0].decode("utf-8").rstrip()
         setup_info = ast.literal_eval(setup_info)
         storage_type = setup_info['storage_type'].lower()
         logger.info(f"sspl-ll Bootstrap: deployment environment: storage_type : {storage_type}")
+        try:
+            server_type = setup_info['server_type'].lower()
+            logger.info(f"sspl-ll Bootstrap: deployment environment: server_type : {server_type}")
+        except Exception as err:
+            logger.warn(f"Error in getting setup information of server type : {err}")
     except Exception as err:
         logger.warn(f"Error in getting setup information of storage type : {err}")
 
     if storage_type == "virtual":
         modlist = [x for x in modlist if not x.startswith(DISABLE_FOR_VIRTUAL_STORAGE)]
+    
+    if server_type == "virtual":
+        modlist = [x for x in modlist if not x.startswith(DISABLE_FOR_VIRTUAL_SERVER)]
 
+    logger.info(f"sspl-ll Bootstrap: storage_type : {storage_type}, server_type : {server_type}")
     logger.info(f"sspl-ll Bootstrap: enabling modules based on deployment env: {modlist}")
 
     return modlist

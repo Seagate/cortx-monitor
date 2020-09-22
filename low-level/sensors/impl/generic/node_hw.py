@@ -44,6 +44,7 @@ from framework.utils.service_logging import logger
 from framework.utils import encryptor
 from sensors.INode_hw import INodeHWsensor
 from framework.utils.store_factory import file_store
+from framework.utils.utility import Utility
 
 # bash exit codes
 BASH_ILLEGAL_CMD = 127
@@ -184,6 +185,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         # Validate configuration file for required valid values
         try:
             self.conf_reader = ConfigReader()
+            self.utility = Utility()
 
         except (IOError, ConfigReader.Error) as err:
             logger.error("[ Error ] when validating the config file {0} - {1}"\
@@ -304,7 +306,10 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
                 self.request_shutdown = True
         else:
             self._initialize_cache()
-            self._fetch_channel_info()
+            if not self.utility.is_env_vm():
+                self._fetch_channel_info()
+            else:
+                logger.warn("we detected virtual env, KCS channel sensor is meant for physical environment.So we are disabling this sensor")
             if self.channel_err is False:
                 self._read_sensor_list()
 
@@ -440,7 +445,10 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
             try:
                 # check channel interface is accessible or not
                 if self.channel_err or self.lan_fault is not None:
-                    self._fetch_channel_info()
+                    if not self.utility.is_env_vm():
+                        self._fetch_channel_info()
+                    else:
+                        logger.warn("we detected virtual env, if_data sensor is meant for physical environment.So we are disabling this sensor")
 
                 # Reset sensor_map_id after ipmi simulation
                 if not os.path.exists("/tmp/activate_ipmisimtool"):

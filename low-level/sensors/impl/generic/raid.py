@@ -38,6 +38,7 @@ from message_handlers.logging_msg_handler import LoggingMsgHandler
 
 from zope.interface import implementer
 from sensors.Iraid import IRAIDsensor
+from framework.utils.utility import Utility
 
 @implementer(IRAIDsensor)
 class RAIDsensor(SensorThread, InternalMsgQ):
@@ -133,6 +134,11 @@ class RAIDsensor(SensorThread, InternalMsgQ):
                                 self.SYSTEM_INFORMATION, COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.NODE_ID), '001')
         # Allow systemd to process all the drives so we can map device name to serial numbers
         #time.sleep(120)
+
+        # Creating the instance of Utility class
+        self.utility = Utility()
+        if self.utility.is_env_vm():
+            self.shutdown()
 
         return True
 

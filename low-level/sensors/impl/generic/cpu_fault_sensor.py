@@ -33,6 +33,7 @@ from framework.utils.severity_reader import SeverityReader
 from framework.utils.sysfs_interface import SysFS
 from framework.utils.store_factory import file_store
 from framework.utils.tool_factory import ToolFactory
+from framework.utils.utility import Utility
 from framework.base.sspl_constants import COMMON_CONFIGS, DATA_PATH
 
 # Override default store
@@ -113,12 +114,19 @@ class CPUFaultSensor(SensorThread, InternalMsgQ):
         # Creating the instance of ToolFactory class
         self.tool_factory = ToolFactory()
 
+        # Creating the instance of Utility class
+        self.utility = Utility()
+
+
         try:
             # Get the instance of the utility using ToolFactory
             self._utility_instance = self._utility_instance or \
                                 self.tool_factory.get_instance(cpu_fault_utility)
         except Exception as e:
             logger.error(f"Error while initializing, shutting down CPUFaultSensor : {e}")
+            self.shutdown()
+
+        if self.utility.is_env_vm():
             self.shutdown()
 
         cache_dir_path = os.path.join(DATA_PATH, self.CACHE_DIR_NAME)
