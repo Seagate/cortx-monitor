@@ -83,6 +83,13 @@ mkdir -p /opt/seagate/backup/%{version}
 mkdir -p /var/%{product_family}/sspl/data/
 chown -R sspl-ll /var/%{product_family}/sspl/
 
+# Create state file and grant required permission
+# This state file will be used later by SSPL resourse agent(HA)
+STATE_FILE=/var/%{product_family}/sspl/data/state.txt
+[ -f $STATE_FILE ] || touch $STATE_FILE
+chown sspl-ll:sspl-ll $STATE_FILE
+chmod 644 $STATE_FILE
+
 %post
 mkdir -p /var/%{product_family}/sspl/bundle /var/log/%{product_family}/sspl /etc/sspl
 SSPL_DIR=/opt/seagate/%{product_family}/sspl
