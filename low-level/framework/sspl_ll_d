@@ -56,7 +56,7 @@ from framework.rabbitmq.rabbitmq_ingress_processor import RabbitMQingressProcess
 from framework.rabbitmq.plane_cntrl_rmq_egress_processor import PlaneCntrlRMQegressProcessor
 from framework.rabbitmq.plane_cntrl_rmq_ingress_processor import PlaneCntrlRMQingressProcessor
 from framework.base.sspl_constants import enabled_products, OperatingSystem, \
-    COMMON_CONFIGS, SSPL_SETTINGS, DISABLE_FOR_VIRTUAL_STORAGE
+    COMMON_CONFIGS, SSPL_SETTINGS, DISABLE_FOR_VIRTUAL_STORAGE, DISABLE_FOR_VIRTUAL_SERVER
 from framework.base.module_thread import SensorThread
 from framework.actuator_state_manager import actuator_state_manager
 
@@ -307,7 +307,7 @@ def main(conf_reader, systemd_support):
 
     # Use reflection to instantiate the classes based upon its class name in config file
     core_processors = SSPL_SETTINGS.get("CORE_PROCESSORS")
-    logger.info("sspl-ll Bootstrap: core processors from config: %s" % (core_processors, ))
+    logger.info("sspl-ll Bootstrap: default core processors to start: %s" % (core_processors, ))
     core_processors = _tune_modules_for_env(core_processors)
 
     for core_processor in core_processors:
@@ -322,7 +322,8 @@ def main(conf_reader, systemd_support):
     msgQlist[RabbitMQEgressAccumulatedMsgsProcessor.name()] = queue.Queue()
 
     message_handlers = SSPL_SETTINGS.get("MESSAGE_HANDLERS")
-    logger.info("sspl-ll Bootstrap: message handlers from config: %s" % (message_handlers, ))
+    logger.info("sspl-ll Bootstrap: default message handlers to start: %s" % (message_handlers, ))
+    
     message_handlers = _tune_modules_for_env(message_handlers)
 
     for message_handler in message_handlers:
@@ -411,21 +412,40 @@ def _tune_modules_for_env(modlist):
     # current deployment env declared here, Extend checks based on need in future
     # like server_type, etc
 
-    storage_type = None
+    storage_type = "virtual"
+    server_type = "virtual"
+    server_per_node = 2
+    nodes = 1
+    err = None
     try:
         setup_info = subprocess.Popen("sudo /usr/bin/provisioner get_setup_info", shell=True,
                         stdout=subprocess.PIPE).communicate()[0].decode("utf-8").rstrip()
         setup_info = ast.literal_eval(setup_info)
-        storage_type = setup_info['storage_type'].lower()
-        logger.info(f"sspl-ll Bootstrap: deployment environment: storage_type : {storage_type}")
+        try:
+            storage_type = setup_info['storage_type'].lower()
+            server_type = setup_info['server_type'].lower()
+            server_per_node = setup_info['servers_per_node'].lower()
+            nodes = setup_info['nodes']
+            logger.info(f"sspl-ll Bootstrap: deployment environment: storage_type : {storage_type}, server_type : {server_type}")
+            logger.info(f"sspl-ll Bootstrap: deployment environment: server_per_node : {server_per_node}, nodes : {nodes}")
+        except Exception as err:
+            err = err
+            logger.error(f"Error in getting setup info: {err}")
+
     except Exception as err:
-        logger.warn(f"Error in getting setup information of storage type : {err}")
+        err = err
+        logger.error(f"Error in getting setup information: {err}")
+    if(err):
+        logger.warn(f"sspl-ll Bootstrap: considering deployment environment: storage_type : {storage_type}, server_type : {server_type}")
+        logger.warn(f"sspl-ll Bootstrap: considering deployment environment: server_per_node : {server_per_node}, nodes : {nodes}")
 
     if storage_type == "virtual":
         modlist = [x for x in modlist if not x.startswith(DISABLE_FOR_VIRTUAL_STORAGE)]
+    
+    if server_type == "virtual":
+        modlist = [x for x in modlist if not x.startswith(DISABLE_FOR_VIRTUAL_SERVER)]
 
     logger.info(f"sspl-ll Bootstrap: enabling modules based on deployment env: {modlist}")
-
     return modlist
 
 # TODO: Create a factory class instead of a method
@@ -434,13 +454,11 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist, operating_system
 
     # Read in list of sensors
     sensors = SSPL_SETTINGS.get("SENSORS")
-    logger.info("sspl-ll Bootstrap: sensors to load: %s" % (sensors, ))
 
     # Read in list of actuators
     actuators = SSPL_SETTINGS.get("ACTUATORS")
     if setup in ['gw', 'cmu', 'vm'] and 'HPIactuator' in actuators:
         actuators.remove('HPIactuator')
-    logger.info("sspl-ll Bootstrap: actuators to load: %s" % (actuators, ))
 
     # Import in the proper classes based upon values from config file
     if operating_system == OperatingSystem.CENTOS7.value or operating_system == OperatingSystem.RHEL7.value or \
@@ -524,7 +542,7 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist, operating_system
     # Loop through the list of sensors/actuators and instantiate appropriately
     #  based upon whether or not it is threaded
     modules = sensors + actuators
-    logger.info("sspl-ll Bootstrap: sensors & actuators from config: %s" % (modules))
+    logger.info("sspl-ll Bootstrap: default sensors & actuators to start: %s" % (modules))
     modules = _tune_modules_for_env(modules)
 
     for module in modules:

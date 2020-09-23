@@ -34,6 +34,7 @@ from framework.utils.procfs_interface import ProcFS
 from framework.utils.tool_factory import ToolFactory
 from framework.utils.store_factory import file_store
 from framework.base.sspl_constants import COMMON_CONFIGS, DATA_PATH
+from framework.utils.utility import Utility
 
 # Override default store
 store = file_store
@@ -119,6 +120,9 @@ class MemFaultSensor(SensorThread, InternalMsgQ):
 
         # Creating the instance of ToolFactory class
         self.tool_factory = ToolFactory()
+        self.utility = Utility()
+        if self.utility.is_env_vm():
+            self.shutdown()
 
         try:
             # Get the instance of the utility using ToolFactory
