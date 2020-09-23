@@ -416,7 +416,7 @@ def _tune_modules_for_env(modlist):
     server_type = "virtual"
     server_per_node = 2
     nodes = 1
-    err = None
+    info_err = None
     try:
         setup_info = subprocess.Popen("sudo /usr/bin/provisioner get_setup_info", shell=True,
                         stdout=subprocess.PIPE).communicate()[0].decode("utf-8").rstrip()
@@ -429,13 +429,13 @@ def _tune_modules_for_env(modlist):
             logger.info(f"sspl-ll Bootstrap: deployment environment: storage_type : {storage_type}, server_type : {server_type}")
             logger.info(f"sspl-ll Bootstrap: deployment environment: server_per_node : {server_per_node}, nodes : {nodes}")
         except Exception as err:
-            err = err
+            info_err = err
             logger.error(f"Error in getting setup info: {err}")
 
     except Exception as err:
-        err = err
+        info_err = err
         logger.error(f"Error in getting setup information: {err}")
-    if(err):
+    if(info_err):
         logger.warn(f"sspl-ll Bootstrap: considering deployment environment: storage_type : {storage_type}, server_type : {server_type}")
         logger.warn(f"sspl-ll Bootstrap: considering deployment environment: server_per_node : {server_per_node}, nodes : {nodes}")
 
