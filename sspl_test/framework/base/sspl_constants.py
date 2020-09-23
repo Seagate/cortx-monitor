@@ -35,6 +35,9 @@ component = 'sspl_test/config'
 file_store_config_path = f'/opt/seagate/{PRODUCT_FAMILY}/sspl/sspl_test/conf/sspl_tests.conf'
 salt_provisioner_pillar_sls = 'sspl'
 
+DISABLE_FOR_VIRTUAL_STORAGE = ('RealStor')
+DISABLE_FOR_VIRTUAL_SERVER = ("CPUFaultSensor", "RAIDIntegritySensor",  "RAIDsensor", "MemFaultSensor", "NodeHWsensor")
+
 class AlertTypes(Enum):
     GET = "get"
 

@@ -44,6 +44,7 @@ from framework.utils.service_logging import logger
 from framework.utils import encryptor
 from sensors.INode_hw import INodeHWsensor
 from framework.utils.store_factory import file_store
+from framework.utils.utility import Utility
 
 # bash exit codes
 BASH_ILLEGAL_CMD = 127
@@ -184,7 +185,9 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         # Validate configuration file for required valid values
         try:
             self.conf_reader = ConfigReader()
-
+            self.utility = Utility()
+            self.is_env_vm = self.utility.is_env_vm()
+            
         except (IOError, ConfigReader.Error) as err:
             logger.error("[ Error ] when validating the config file {0} - {1}"\
                  .format(self.CONF_FILE, err))
@@ -297,14 +300,16 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         if self.active_bmc_if is None:
             self.active_bmc_if = self._channel_interface
             store.put(self.active_bmc_if,self.ACTIVE_BMC_IF)
-
+        if self.is_env_vm:
+            logger.warn("Detected virtual environment, node server monitoring using ipmi is applicable for physical servers with BMC only, disabling sensor.")
+            self.request_shutdown = True
+        
         # Set flag 'request_shutdown' to true if ipmitool/simulator is non-functional
         res, retcode = self._run_ipmitool_subcommand("sel info")
         if retcode != 0 and self.channel_err is False:
                 self.request_shutdown = True
         else:
             self._initialize_cache()
-            self._fetch_channel_info()
             if self.channel_err is False:
                 self._read_sensor_list()
 

@@ -109,6 +109,9 @@ COMMON_CONFIGS = {
 
 SSPL_CONFIGS = ['log_level', 'cli_type', 'sspl_log_file_path', 'cluster_id', 'storage_enclosure', 'setup', 'operating_system']
 
+DISABLE_FOR_VIRTUAL_STORAGE = ('RealStor')
+DISABLE_FOR_VIRTUAL_SERVER = ("CPUFaultSensor", "RAIDIntegritySensor",  "RAIDsensor", "MemFaultSensor", "NodeHWsensor")
+
 # required only for init
 component = 'sspl/config'
 file_store_config_path = '/etc/sspl.conf'

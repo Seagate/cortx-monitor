@@ -38,6 +38,7 @@ from sensors.INode_data import INodeData
 from framework.utils.sysfs_interface import SysFS
 from framework.utils.tool_factory import ToolFactory
 from framework.utils.config_reader import ConfigReader
+from framework.utils.utility import Utility
 
 @implementer(INodeData)
 class NodeData(Debug):
@@ -72,6 +73,8 @@ class NodeData(Debug):
         load_15min_avg = threading.Thread(target=self._load_15min_avg).start()
 
         self.conf_reader = ConfigReader()
+        self.utility = Utility()
+        self.is_env_vm = self.utility.is_env_vm()
 
         nw_fault_utility = self.conf_reader._get_value_with_default(
                                               self.name().capitalize(),
@@ -131,7 +134,10 @@ class NodeData(Debug):
                 self._get_cpu_data()
 
             elif subset == "if_data":
-                self._get_if_data()
+                if not self.is_env_vm:
+                    self._get_if_data()
+                else:
+                    logger.warn("Detected virtual env, and If_data sensor is applicable for physical environment, disabling this sensor.")
 
             elif subset == "disk_space_alert":
                 self._get_disk_space_alert_data()
