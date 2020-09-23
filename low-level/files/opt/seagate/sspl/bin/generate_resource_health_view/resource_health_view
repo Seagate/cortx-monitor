@@ -50,9 +50,8 @@ class SSPLHealthView(object):
     NODE_MANIFEST_PATH = '/tmp/node_manifest.json'
 
     STORAGE_TYPE_JBOD = 'jbod'
-    STORAGE_TYPE_5U84 = '5u84'
+    STORAGE_TYPE_RBOD = 'rbod'
     STORAGE_TYPE_VIRTUAL = 'virtual'
-    STORAGE_TYPE_PODS = 'pods'
 
     SERVER_TYPE_VIRTUAL = 'virtual'
     SERVER_TYPE_PHYSICAL = 'physical'
@@ -163,7 +162,7 @@ class SSPLHealthView(object):
                 self.build_health_view_storage_jbod_cache(storage_encl_health_json)
                 health_view_created = True
             
-            elif args.encl and self.storage_type == self.STORAGE_TYPE_5U84:
+            elif args.encl and self.storage_type == self.STORAGE_TYPE_RBOD:
                 try:
                     storage_encl_health_json = self._resource_health_view['cluster']['sites']\
                                                         [self.SITE_ID]['rack'][self.RACK_ID]\
@@ -182,7 +181,7 @@ class SSPLHealthView(object):
                     print("or it is inaccessible for the current node.")
                     print("Ignored to collect enclosure health view data.")
 
-            elif self.storage_type in [self.STORAGE_TYPE_VIRTUAL, self.STORAGE_TYPE_PODS]:
+            elif self.storage_type == self.STORAGE_TYPE_VIRTUAL:
                 self._resource_health_view['cluster']['sites']\
                                                     [self.SITE_ID]['rack'][self.RACK_ID]\
                                                     ['nodes']['storage_encl'].clear()
@@ -248,7 +247,7 @@ class SSPLHealthView(object):
                 "rack_id": self.RACK_ID,
                 "node_id": self.NODE_ID
             }
-            if args.encl and args.support and self.storage_type == self.STORAGE_TYPE_5U84:
+            if args.encl and args.support and self.storage_type == self.STORAGE_TYPE_RBOD:
                 encl_support_data = {}
                 encl_support_data.update(support_common_data)
                 encl_data_response = self.build_encl_hw_specifics_instances()
@@ -1160,7 +1159,7 @@ class SSPLHealthView(object):
                 '/SYSTEM_INFORMATION/cluster_id': 'system_information/cluster_id',
                 '/SYSTEM_INFORMATION/data_path': 'system_information/data_path'}
 
-        if storage_type == '5u84' and args.encl:
+        if storage_type == 'rbod' and args.encl:
             base_info.update({
                 '/STORAGE_ENCLOSURE/controller/primary_mc/ip': 'storage_enclosure/controller/primary_mc/ip',
                 '/STORAGE_ENCLOSURE/controller/secondary_mc/ip': 'storage_enclosure/controller/secondary_mc/ip',
@@ -1245,6 +1244,6 @@ if __name__ == "__main__":
 
     sys_site_id, sys_rack_id, sys_node_id, sys_cluster_id, sys_data_path = \
         SSPLHealthView._update_required_data_to_consul(args)
-    if storage_type == '5u84' and args.encl:
+    if storage_type == 'rbod' and args.encl:
         from framework.platforms.realstor.realstor_enclosure import singleton_realstorencl
     sys.exit(SSPLHealthView().run(args))
