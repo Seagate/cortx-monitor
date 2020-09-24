@@ -38,7 +38,7 @@ This guide provides a step-by-step walkthrough for getting you CORTX-Monitor Ser
         
                 `$ sh cortx-prereqs.sh --disable-sub-mgr`
 
-      2. Run the commands:
+      2. Run the following commands if you are using a Seagate Internal VM:
 
             ```shell
             
@@ -52,8 +52,8 @@ This guide provides a step-by-step walkthrough for getting you CORTX-Monitor Ser
       - If the https://raw.githubusercontent.com/Seagate/cortx-prvsnr/dev/cli/src/cortx-prereqs.sh?token=APA75GY34Y2F5DJSOKDCZAK7ITSZC link is not accessible, generate new one.
 
       - Visit https://github.com/Seagate/cortx-prvsnr/blob/dev/cli/src/cortx-prereqs.sh  and naviagte to **RAW** **>** **Copy URL** > **Use the URL for deployment**.
-
-6. Follow the instructions [here to install dependencies](https://github.com/Seagate/cortx/blob/main/doc/InstallingDependencies.md)
+      
+    3. Follow these instructions to [install dependencies](https://github.com/Seagate/cortx/blob/main/doc/InstallingDependencies.md) if you are using an external VM.
 
     </p>
     </details>
