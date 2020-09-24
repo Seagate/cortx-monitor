@@ -50,8 +50,7 @@ This guide provides a step-by-step walkthrough for getting you CORTX-Monitor Ser
         :page_with_curl: **Notes:** 
         
       - If the https://raw.githubusercontent.com/Seagate/cortx-prvsnr/dev/cli/src/cortx-prereqs.sh?token=APA75GY34Y2F5DJSOKDCZAK7ITSZC link is not accessible, generate new one.
-
-      - Visit https://github.com/Seagate/cortx-prvsnr/blob/dev/cli/src/cortx-prereqs.sh  and naviagte to **RAW** **>** **Copy URL** > **Use the URL for deployment**.
+      - Visit https://github.com/Seagate/cortx-prvsnr/blob/dev/cli/src/cortx-prereqs.sh and naviagte to RAW > Copy URL > Use the URL for deployment.
       
     3. Follow these instructions to [install dependencies](https://github.com/Seagate/cortx/blob/main/doc/InstallingDependencies.md) if you are using an external VM.
 
