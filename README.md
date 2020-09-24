@@ -10,13 +10,9 @@ Jump to the [CORTX-Monitor Quickstart Guide](cortx-monitorQuickstartGuide.md) to
 
 ## Contribute to CORTX-Monitor
 
-We welcome all Source Code and Documentation contributions to the CORTX-Monitor repositories. Refer to the [CORTX-Monitor Contribution Guide](ContributingToCortx-Monitor.md) to submit your contributions. 
+We welcome all Source Code and Documentation contributions to the CORTX-Monitor repositories. Refer to the [CORTX Contribution Guide](CONTRIBUTING.md) that hosts all information about community values, code of conduct, how to contribute code and documentation, community and code style guide, and how to reach out to us. 
 
-## CORTX Community
-
-We are excited about your interest in CORTX and hope you will join us. Refer to the [CORTX Contribution Guide](https://github.com/Seagate/cortx/blob/main/doc/CORTXContributionGuide.md) that hosts all information about community values, code of conduct, how to contribute code and documentation, community and code style guide, and how to reach out to us. 
-
-We take community very seriously and we are committed to creating a community built on respectful interactions and inclusivity as documented in our [Code of Conduct](https://github.com/Seagate/cortx/blob/main/CODE_OF_CONDUCT.md).
+We take community very seriously and we are committed to creating a community built on respectful interactions and inclusivity as documented in our [Code of Conduct](CODE_OF_CONDUCT).
 
 ## Reach Out To Us
 

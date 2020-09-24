@@ -15,23 +15,18 @@ This guide provides a step-by-step walkthrough for getting you CORTX-Monitor Ser
 
 1. You'll need to [Build and Test your VM Environment](https://github.com/Seagate/cortx/blob/main/doc/BUILD_ENVIRONMENT.md).
 2. As a CORTX contributor you will need to refer, clone, contribute, and commit changes via the GitHub server. You can access the latest code via [Github](https://github.com/Seagate/cortx).
-3. You'll need a valid GitHub Account.
-4. Before you clone your Git repository, you'll need to create the following:
-    1. Follow the link to generate the [SSH Public Key](https://git-scm.com/book/en/v2/Git-on-the-Server-Generating-Your-SSH-Public-Key).
-    2. Add the newly created SSH Public Key to [Github](https://github.com/settings/keys) and [Enable SSO](https://docs.github.com/en/github/authenticating-to-github/authorizing-an-ssh-key-for-use-with-saml-single-sign-on).
-    3. When you clone your Github repository, you'll be prompted to enter your GitHub Username and Password. Refer to the article to [Generate Personal Access Token or PAT](https://docs.github.com/en/github/authenticating-to-github/creating-a-personal-access-token). Once you generate your Personal Access Token, enable SSO.
-    4. Copy your newly generated [PAT](https://github.com/settings/tokens) and enter it when prompted.
+3. You'll need a valid GitHub Account. Follow the instructions to create an [SSH](https://github.com/Seagate/cortx/blob/Working_with_github/doc/SSH_Public_Key.rst) and [PAT](https://github.com/Seagate/cortx/blob/Working_with_github/doc/Tools.rst#personal-access-token-pat) access keys on your GitHub account.
 
-       :page_with_curl: **Note:** From this point onwards, you'll need to execute all steps logged in as a **Root User**.
+:page_with_curl: **Note:** From this point onwards, you'll need to execute all steps logged in as a **Root User**.
 
-    5. We've assumed that `git` is preinstalled. If not then follow these steps to install [Git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git).
+4. We've assumed that `git` is preinstalled. If not then follow these steps to install [Git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git).
    * To check your Git Version, use the command: `$ git --version`
+   
+   :page_with_curl:**Note:** We recommended that you install Git Version 2.x.x.
 
-     :page_with_curl:**Note:** We recommended that you install Git Version 2.x.x.
-
-    6. Setup yum repos.
+5. Setup yum repos.
     
-        1. Run the command:
+     1. Run the command:
             
             `$ curl https://raw.githubusercontent.com/Seagate/cortx-prvsnr/dev/cli/src/cortx-prereqs.sh?token=APA75GY34Y2F5DJSOKDCZAK7ITSZC -o cortx-prereqs.sh; chmod a+x cortx-prereqs.sh`
         
@@ -43,7 +38,7 @@ This guide provides a step-by-step walkthrough for getting you CORTX-Monitor Ser
         
                 `$ sh cortx-prereqs.sh --disable-sub-mgr`
 
-        2. Run the commands:
+      2. Run the following commands if you are using a Seagate Internal VM:
 
             ```shell
             
@@ -54,19 +49,10 @@ This guide provides a step-by-step walkthrough for getting you CORTX-Monitor Ser
 
         :page_with_curl: **Notes:** 
         
-        - If the https://raw.githubusercontent.com/Seagate/cortx-prvsnr/dev/cli/src/cortx-prereqs.sh?token=APA75GY34Y2F5DJSOKDCZAK7ITSZC link is not accessible, generate new one.
-
-        - Visit https://github.com/Seagate/cortx-prvsnr/blob/dev/cli/src/cortx-prereqs.sh  and naviagte to **RAW** **>** **Copy URL** > **Use the URL for deployment**.
-
-    7. Ensure that you've installed the following packages on your VM instance:
-
-    * Python Version 3.0
-      * To check whether Python is installed on your VM, use one of the following commands: `--version`  , `-V` , or `-VV`
-      * To install Python version 3.0, use: `$ yum install -y python3`
-    * pip version 3.0:
-      * To check if pip is installed, use: `$ pip --version`
-      * To install pip3 use: `$ yum install python-pip3`
-    * Verify if kernel-devel-3.10.0-1062 version package is installed, using: `$ uname -r`
+      - If the https://raw.githubusercontent.com/Seagate/cortx-prvsnr/dev/cli/src/cortx-prereqs.sh?token=APA75GY34Y2F5DJSOKDCZAK7ITSZC link is not accessible, generate new one.
+      - Visit https://github.com/Seagate/cortx-prvsnr/blob/dev/cli/src/cortx-prereqs.sh and naviagte to RAW > Copy URL > Use the URL for deployment.
+      
+    3. Follow these instructions to [install dependencies](https://github.com/Seagate/cortx/blob/main/doc/InstallingDependencies.md) if you are using an external VM.
 
     </p>
     </details>
@@ -77,7 +63,7 @@ This guide provides a step-by-step walkthrough for getting you CORTX-Monitor Ser
 1. Run the following commands to clone the cortx-monitor repository to your local VM:
 
     ```shell
-    $ git clone --recursive git@github.com:Seagate/cortx-monitor.git
+    $ git clone --recursive https://github.com/Seagate/cortx-monitor.git -b main
     $ cd cortx-monitor
     ```
 
@@ -134,14 +120,14 @@ This guide provides a step-by-step walkthrough for getting you CORTX-Monitor Ser
     
     ```shell
 
-    [root@ssc-vm-c-466 cortx-monitor]# ls -lrt /root/rpmbuild/RPMS/noarch/
+    [local_host cortx-monitor]# ls -lrt /root/rpmbuild/RPMS/noarch/
     total 59056
     -rw-r--r-- 1 root root 34025516 Aug 18 07:26 cortx-sspl-1.0.0-1_git8907300.el7.noarch.rpm
     -rw-r--r-- 1 root root 16795340 Aug 18 07:27 cortx-sspl-cli-1.0.0-1_git8907300.el7.noarch.rpm
     -rw-r--r-- 1 root root  9643028 Aug 18 07:27 cortx-sspl-test-1.0.0-1_git8907300.el7.noarch.rpm
 
 
-    [root@ssc-vm-c-466 cortx-monitor]# ls -lrt /root/rpmbuild/RPMS/x86_64/
+    [local_host cortx-monitor]# ls -lrt /root/rpmbuild/RPMS/x86_64/
     total 284
     -rw-r--r-- 1 root root  65968 Aug 18 07:23 systemd-python36-1.0.0-1_git8907300.el7.x86_64.rpm
     -rw-r--r-- 1 root root  60904 Aug 18 07:23 systemd-python36-debuginfo-1.0.0-1_git8907300.el7.x86_64.rpm
@@ -191,7 +177,7 @@ This guide provides a step-by-step walkthrough for getting you CORTX-Monitor Ser
        
       ```shell
 
-        [root@ssc-vm-c-466 cortx-sspl]# rpm -qa | grep cortx-sspl
+        [local_host cortx-sspl]# rpm -qa | grep cortx-sspl
         cortx-sspl-1.0.0-1_git8907300.el7.noarch
         cortx-sspl-test-1.0.0-1_git8907300.el7.noarch
       ```
@@ -236,13 +222,8 @@ We thank you for stopping by to check out the CORTX Community. We are fully dedi
 
 ### Contribute to CORTX-Monitor
 
-Please [contribute to the CORTX-Monitor](https://github.com/Seagate/cortx/blob/main/doc/SuggestedContributions.md) initiative and join our movement to make data storage better, efficient, and more accessible.
-
-Refer to the [CORTX Contribution Guide](https://github.com/Seagate/cortx/blob/main/doc/CORTXContributionGuide.md) to get started with your first contribution.
+Please refer to the [CORTX Contribution Guide](https://github.com/Seagate/cortx/blob/main/CONTRIBUTING.md) to contribute to the CORTX Project and join our movement to make data storage better, efficient, and more accessible.
 
 ### Reach Out to Us
 
-You can reach out to us with your questions, feedback, and comments through our CORTX Communication Channels:
-
-- Join our CORTX-Open Source Slack Channel to interact with your fellow community members and gets your questions answered. [![Slack Channel](https://img.shields.io/badge/chat-on%20Slack-blue)](https://join.slack.com/t/cortxcommunity/shared_invite/zt-femhm3zm-yiCs5V9NBxh89a_709FFXQ?)
-- If you'd like to contact us directly, drop us a mail at cortx-questions@seagate.com.
+Please refer to the [Support](SUPPORT.md) section to reach out to us with your questions, feedback, and issues.
