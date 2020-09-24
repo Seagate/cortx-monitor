@@ -114,7 +114,7 @@ threadController = ThreadController()
 # need ThreadController queue which can be accessible out of main function and
 # so We need to take this global variable.
 thread_controller_queue = None
-
+sspl_role_state = None
 
 def _dropPrivileges(user):
     """Remove root privileges to control possible access"""
@@ -337,7 +337,18 @@ def main(conf_reader, systemd_support):
 
     # Make ThreadController queue globally accessible
     global thread_controller_queue
+    global sspl_role_state
     thread_controller_queue = msgQlist[ThreadController.name()]
+
+    # Check if there is any pending request for thread_controller
+    if sspl_role_state is not None:
+        logger.info('thread controller queue is ready and serving the sspl \
+                     role switch State: {sspl_role_state} request received earlier')
+
+        send_thread_controller_request(sspl_role_state)
+
+        # Reset the variable
+        sspl_role_state = None
 
     # Check dependencies for each plugin and get a list of plugins with
     # missing dependencies.
@@ -604,6 +615,7 @@ def signal_handler(signal_number, frame):
     logger.debug("signal_handler called with {0}".format(signal_number))
     entries = dict()
     state = "active"
+    global sspl_role_state
     try:
         with open(STATE_FILE) as state_file:
 
@@ -630,28 +642,44 @@ def signal_handler(signal_number, frame):
 
     logger.info("Received SIGHUP to switch to {0} state".format(state))
     if thread_controller_queue:
-        state_change_msg = {
-                    "sspl_ll_debug": {
-                        "debug_component": "sensor",
-                        "debug_enabled": True
-                    },
-                    "sspl_ll_msg_header": {
-                        "msg_version": "1.0.0",
-                        "uuid": str(uuid.uuid4()),
-                        "schema_version": "1.0.0",
-                        "sspl_version": "1.0.0",
-                    },
-                    "actuator_request_type": {
-                        "thread_controller": {
-                            "module_name": "all",
-                            "thread_request": state
-                        }
-                    }
-        }
-        thread_controller_queue.put((json.dumps(state_change_msg), None))
+        send_thread_controller_request(state)
     else:
-        logger.error("thread_controller_queue is None")
+        logger.warning(f'thread_controller_queue is not ready, saving the \
+                        sspl role switch request state, State: {state} to \
+                        process again later.')
 
+        # This can be the edge case. SSPL is not yet fully initialized and it
+        # received the signal to promote or may be demote. So, as the thread is
+        # not ready to accept that request, it will not be served and will be
+        # lost if not saved. So, to avoid this, once SSPL receives the request and
+        # thread is not yet ready,save the request to serve it later when thread
+        # will be ready.
+        sspl_role_state = state
+
+def send_thread_controller_request(state):
+    '''Creates a internal request for thread controller
+       and puts in into its own queue'''
+    logger.debug(f'Creating and sending the sspl role switch request to \
+                 switch to {state} state')
+    state_change_msg = {
+                "sspl_ll_debug": {
+                    "debug_component": "sensor",
+                    "debug_enabled": (logger.level == logging.DEBUG)
+                },
+                "sspl_ll_msg_header": {
+                    "msg_version": "1.0.0",
+                    "uuid": str(uuid.uuid4()),
+                    "schema_version": "1.0.0",
+                    "sspl_version": "1.0.0",
+                },
+                "actuator_request_type": {
+                    "thread_controller": {
+                        "module_name": "all",
+                        "thread_request": state
+                    }
+                }
+        }
+    thread_controller_queue.put((json.dumps(state_change_msg), None))
 
 def set_log_level(signal_number, frame):
     """Handles SIGUSR1 for dynamic log level setting.
