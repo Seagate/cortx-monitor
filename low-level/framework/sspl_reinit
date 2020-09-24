@@ -61,6 +61,8 @@ PUPPET_CONF="/etc/puppetlabs/puppet/puppet.conf"
     PUPPET_NOOP="noop = true"
     grep -q "$PUPPET_NOOP" $PUPPET_CONF || echo "$PUPPET_NOOP" >> $PUPPET_CONF
 }
+PUPPET_NOOP="noop = true"
+grep -q "$PUPPET_NOOP" $PUPPET_CONF || echo "$PUPPET_NOOP" >> $PUPPET_CONF
 
 # Automatically install dependencies based on config file
 # There is no --checkdeps and --autoinstall implemented in sspl-ll-cli.
