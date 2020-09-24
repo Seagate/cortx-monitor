@@ -543,6 +543,9 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
                             sensor_num, event, status, is_last)
                 except KeyError:
                     logger.warn(f"Sensor {sensor_num} for {device_type} is not present, ignoring event")
+                except Exception as e:
+                    logger.error(f"_notify_NodeDataMsgHandler, error {e} while processing \
+                        sel_event: {(index, date, event_time, device_id, device_type, sensor_num, event, status)}, ignoring event")
 
         if last_index is not None:
             self._write_index_file(last_index)
@@ -846,7 +849,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
                 props_list_out = [val for val in props_list_out if val]
             msg = f"ipmitool sensor get command failed: {b''.join(props_list_out)}"
             logger.warning(msg)
-            return (False, False)
+            return (False, False, False)
         props_list = b''.join(props_list_out).decode(self.IPMI_ENCODING).split("\n")
         props_list = props_list[1:] # The first line is 'Locating sensor record...'
 

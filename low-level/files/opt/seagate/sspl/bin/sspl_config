@@ -181,13 +181,15 @@ esac
 # Skip this step if sspl is being configured for node replacement scenario as consul data is already
 # available on healthy node
 # Updating RabbitMQ cluster nodes.
+# In node replacement scenario, avoiding feeding again to avoid over writing already configured values
+# with which rabbitmq cluster may have been created
 [ -f $REPLACEMENT_NODE_ENV_VAR_FILE ] || {
+    # Update cluster_nodes key in consul
+    out=$(rabbitmqctl cluster_status | grep running_nodes | cut -d '[' -f2 | cut -d ']' -f1 | sed 's/rabbit@//g' | sed 's/,/, /g')
+    pout=$(echo $out | sed  "s/'//g" | sed  "s/ //g")
+    $CONSUL_PATH/consul kv put sspl/config/RABBITMQCLUSTER/cluster_nodes $pout
     [ -n "$rmq_cluster_nodes" ] && $CONSUL_PATH/consul kv put sspl/config/RABBITMQCLUSTER/cluster_nodes $rmq_cluster_nodes
 }
-# Getting node names using rabbitmqctl is depreciated (EOS-8860)
-#out=$(rabbitmqctl cluster_status | grep running_nodes | cut -d '[' -f2 | cut -d ']' -f1 | sed 's/rabbit@//g' | sed 's/,/, /g')
-#pout=$(echo $out | sed  "s/'//g")
-#$CONSUL_PATH/consul kv put sspl/config/RABBITMQCLUSTER/cluster_nodes $pout
 
 # Skip this step if sspl is being configured for node replacement scenario as consul data is already
 # available on healthy node

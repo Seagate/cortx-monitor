@@ -50,14 +50,11 @@ connection_error_msg = (
 def get_cluster_connection(username, password, virtual_host):
     """Makes connection with one of the rabbitmq node.
     """
-    hosts = config._get_value_list(
-        RABBITMQ_CLUSTER_SECTION, COMMON_CONFIGS.get(RABBITMQ_CLUSTER_SECTION).get(RABBITMQ_CLUSTER_HOSTS_KEY)
-    )
-    logger.debug(f'Cluster nodes: {hosts}')
-    consul_key = component + '/' + RABBITMQ_CLUSTER_SECTION + '/' + 'cluster_nodes'
+    consul_key = component + '/' + RABBITMQ_CLUSTER_SECTION + '/' + RABBITMQ_CLUSTER_HOSTS_KEY
     hosts = consul_conn.kv.get(consul_key)[1]["Value"].decode()
     if isinstance(hosts, str):
         hosts = hosts.strip().split(",")
+    logger.debug(f'Cluster nodes: {hosts}')
     ampq_hosts = [
         f'amqp://{username}:{password}@{host}/{virtual_host}' for host in hosts
     ]

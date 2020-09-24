@@ -63,7 +63,10 @@ class SaltConfig(object):
         str_keys = [k for k,v in new_rabbitmqcluster_conf.items() if isinstance(v, str)]
         for k in str_keys:
             if k == 'cluster_nodes':
-                self.consul_conn.kv.put(component + '/' + 'RABBITMQCLUSTER' + '/' + k, new_rabbitmqcluster_conf[k])
+                pass
+                # Commenting this due to the cluster_nodes from pillar is 'localhost' always.
+                # However sspl_config script already takes care of feeding values to cluster_nodes in consul.
+                #self.consul_conn.kv.put(component + '/' + 'RABBITMQCLUSTER' + '/' + k, new_rabbitmqcluster_conf[k])
             elif k == 'erlang_cookie':
                 self.consul_conn.kv.put(component + '/' + 'RABBITMQCLUSTER' + '/' + k, new_rabbitmqcluster_conf[k])
 
