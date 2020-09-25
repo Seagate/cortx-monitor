@@ -564,7 +564,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
             self.cpu_fault = False
 
-    def _send_ifdata_json_msg(self, sensor_type, resource_id, resource_type, state, severity, event=None):
+    def _send_ifdata_json_msg(self, sensor_type, resource_id, resource_type, state, severity, event=""):
         """A resuable method for transmitting IFDataMsg to RMQ and IEM logging"""
         ifDataMsg = IFdataMsg(self._node_sensor.host_id,
                                 self._node_sensor.local_time,
@@ -595,7 +595,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         """Create & transmit a network interface data message as defined
             by the sensor response json schema"""
 
-        event_field = None
+        event_field = ""
 
         # Notify the node sensor to update its data required for the if_data message
         successful = self._node_sensor.read_data("if_data", self._get_debug())
@@ -647,9 +647,14 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 # If yes, then don't repeat the alert.
                 continue
 
+            if nw_state == self.FAULT:
+                event_field = f'Network interface {nw_resource_id} is down'
+            else:
+                event_field = f'Network interface {nw_resource_id} is up'
+
             # If no or for othe interface, send the alert
             severity = self.severity_reader.map_severity(nw_state)
-            self._send_ifdata_json_msg("nw", nw_resource_id, self.NW_RESOURCE_TYPE, nw_state, severity)
+            self._send_ifdata_json_msg("nw", nw_resource_id, self.NW_RESOURCE_TYPE, nw_state, severity, event_field)
 
     def _get_nwalert(self, interfaces):
         """
