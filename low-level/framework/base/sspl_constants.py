@@ -19,6 +19,7 @@ import subprocess
 import ast
 from enum import Enum
 
+from framework.utils.utility import Utility
 try:
     from salt_util import node_id, consulhost, consulport
     from service_logging import logger
@@ -119,22 +120,36 @@ salt_provisioner_pillar_sls = 'sspl'
 salt_uniq_attr_per_node = ['cluster_id']
 salt_uniq_passwd_per_node = ['RABBITMQINGRESSPROCESSOR', 'RABBITMQEGRESSPROCESSOR', 'LOGGINGPROCESSOR']
 
-try:
-    setup_info = subprocess.Popen(['sudo', '/usr/bin/provisioner', 'get_setup_info'],
-        stdout=subprocess.PIPE).communicate()[0].decode("utf-8").rstrip()
-    setup_info = ast.literal_eval(setup_info)
-    storage_type = setup_info['storage_type'].lower()
-    server_type = setup_info['server_type'].lower()
-    logger.info(f"Storage Type : '{storage_type}'")
-    logger.info(f"Server Type '{server_type}'")
+# Provisioner API Call Keys
+NODE_KEY = 'nodes'
+SERVER_PER_NODE_KEY = 'servers_per_node'
+STORAGE_TYPE_KEY = 'storage_type'
+SERVER_TYPE_KEY = 'server_type'
+STORAGE_TYPE = 'virtual'
+SERVER_TYPE = 'virtual'
 
+try:
+    # get the instance of Utility class
+    util = Utility()
 except Exception as err:
-    logger.debug(f"Error in getting setup information of server and storage type : {err}")
-    print(f"Error in getting setup information of server and storage type : {err}")
-    storage_type = 'virtual'
-    server_type = 'virtual'
-    logger.debug(f"Considering default storage type : '{storage_type}'")
-    logger.debug(f"Considering default server type : '{server_type}'")
+    logger.error(f'Can not instantiate Utility class, Error:{err}')
+
+
+try:
+    _result, _ret_code = util.execute_cmd(['sudo', '/usr/local/bin/provisioner', 'get_setup_info'])
+    if _ret_code == 0:
+        setup_info = eval(_result.decode("utf-8").rstrip())
+        STORAGE_TYPE = setup_info[STORAGE_TYPE_KEY].lower()
+        SERVER_TYPE = setup_info[SERVER_TYPE_KEY].lower()
+    logger.info(f'Storage Type: {STORAGE_TYPE}, Server Type: {SERVER_TYPE}')
+except KeyError as key_err:
+    logger.debug(f'Error in fetching key,value pair from setup info. setup_info: {setup_info}')
+    print(f'Error in fetching key,value pair from setup info. setup_info: {setup_info}')
+    logger.debug(f'Considering default values for Storage Type: {STORAGE_TYPE} and Server Type: {SERVER_TYPE}')
+except Exception as err:
+    logger.debug(f'Error in getting setup information of server and storage type : {err}')
+    print(f'Error in getting setup information of server and storage type : {err}')
+    logger.debug(f'Considering default values for Storage Type: {STORAGE_TYPE} and Server Type: {SERVER_TYPE}')
 
 
 class RaidDataConfig(Enum):
