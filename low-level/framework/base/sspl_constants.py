@@ -19,7 +19,6 @@ import subprocess
 import ast
 from enum import Enum
 
-from framework.utils.utility import Utility
 try:
     from salt_util import node_id, consulhost, consulport
     from service_logging import logger
@@ -125,8 +124,8 @@ NODE_KEY = 'nodes'
 SERVER_PER_NODE_KEY = 'servers_per_node'
 STORAGE_TYPE_KEY = 'storage_type'
 SERVER_TYPE_KEY = 'server_type'
-STORAGE_TYPE = 'virtual'
-SERVER_TYPE = 'virtual'
+STORAGE_TYPE = 'physical'
+SERVER_TYPE = 'rbod'
 
 try:
     # get the instance of Utility class
@@ -136,7 +135,10 @@ except Exception as err:
 
 
 try:
-    _result, _ret_code = util.execute_cmd(['sudo', '/usr/local/bin/provisioner', 'get_setup_info'])
+    process = subprocess.Popen(['sudo', '/usr/local/bin/provisioner', 'get_setup_info'], \
+                shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+    _result, _ret_code = process.communicate()[0],process.returncode
     if _ret_code == 0:
         setup_info = eval(_result.decode("utf-8").rstrip())
         STORAGE_TYPE = setup_info[STORAGE_TYPE_KEY].lower()
