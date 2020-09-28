@@ -127,14 +127,9 @@ SERVER_TYPE_KEY = 'server_type'
 STORAGE_TYPE = 'physical'
 SERVER_TYPE = 'rbod'
 
-try:
-    # get the instance of Utility class
-    util = Utility()
-except Exception as err:
-    logger.error(f'Can not instantiate Utility class, Error:{err}')
-
 
 try:
+    print('fetching the setup values:')
     process = subprocess.Popen(['sudo', '/usr/local/bin/provisioner', 'get_setup_info'], \
                 shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
@@ -144,6 +139,7 @@ try:
         STORAGE_TYPE = setup_info[STORAGE_TYPE_KEY].lower()
         SERVER_TYPE = setup_info[SERVER_TYPE_KEY].lower()
     logger.info(f'Storage Type: {STORAGE_TYPE}, Server Type: {SERVER_TYPE}')
+    print(f'values: {STORAGE_TYPE} {SERVER_TYPE}')
 except KeyError as key_err:
     logger.debug(f'Error in fetching key,value pair from setup info. setup_info: {setup_info}')
     print(f'Error in fetching key,value pair from setup info. setup_info: {setup_info}')
