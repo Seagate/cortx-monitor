@@ -120,34 +120,34 @@ salt_uniq_attr_per_node = ['cluster_id']
 salt_uniq_passwd_per_node = ['RABBITMQINGRESSPROCESSOR', 'RABBITMQEGRESSPROCESSOR', 'LOGGINGPROCESSOR']
 
 # Provisioner API Call Keys
-NODE_KEY = 'nodes'
-SERVER_PER_NODE_KEY = 'servers_per_node'
-STORAGE_TYPE_KEY = 'storage_type'
-SERVER_TYPE_KEY = 'server_type'
-STORAGE_TYPE = 'physical'
-SERVER_TYPE = 'rbod'
-
-
-try:
-    print('fetching the setup values:')
-    process = subprocess.Popen(['sudo', '/usr/local/bin/provisioner', 'get_setup_info'], \
-                shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
-    _result, _ret_code = process.communicate()[0],process.returncode
-    if _ret_code == 0:
-        setup_info = eval(_result.decode("utf-8").rstrip())
-        STORAGE_TYPE = setup_info[STORAGE_TYPE_KEY].lower()
-        SERVER_TYPE = setup_info[SERVER_TYPE_KEY].lower()
-    logger.info(f'Storage Type: {STORAGE_TYPE}, Server Type: {SERVER_TYPE}')
-    print(f'values: {STORAGE_TYPE} {SERVER_TYPE}')
-except KeyError as key_err:
-    logger.debug(f'Error in fetching key,value pair from setup info. setup_info: {setup_info}')
-    print(f'Error in fetching key,value pair from setup info. setup_info: {setup_info}')
-    logger.debug(f'Considering default values for Storage Type: {STORAGE_TYPE} and Server Type: {SERVER_TYPE}')
-except Exception as err:
-    logger.debug(f'Error in getting setup information of server and storage type : {err}')
-    print(f'Error in getting setup information of server and storage type : {err}')
-    logger.debug(f'Considering default values for Storage Type: {STORAGE_TYPE} and Server Type: {SERVER_TYPE}')
+#NODE_KEY = 'nodes'
+#SERVER_PER_NODE_KEY = 'servers_per_node'
+#STORAGE_TYPE_KEY = 'storage_type'
+#SERVER_TYPE_KEY = 'server_type'
+#STORAGE_TYPE = 'physical'
+#SERVER_TYPE = 'rbod'
+#
+#
+#try:
+#    print('fetching the setup values:')
+#    process = subprocess.Popen(['sudo', '/usr/local/bin/provisioner', 'get_setup_info'], \
+#                shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+#
+#    _result, _ret_code = process.communicate()[0],process.returncode
+#    if _ret_code == 0:
+#        setup_info = eval(_result.decode("utf-8").rstrip())
+#        STORAGE_TYPE = setup_info[STORAGE_TYPE_KEY].lower()
+#        SERVER_TYPE = setup_info[SERVER_TYPE_KEY].lower()
+#    logger.info(f'Storage Type: {STORAGE_TYPE}, Server Type: {SERVER_TYPE}')
+#    print(f'values: {STORAGE_TYPE} {SERVER_TYPE}')
+#except KeyError as key_err:
+#    logger.debug(f'Error in fetching key,value pair from setup info. setup_info: {setup_info}')
+#    print(f'Error in fetching key,value pair from setup info. setup_info: {setup_info}')
+#    logger.debug(f'Considering default values for Storage Type: {STORAGE_TYPE} and Server Type: {SERVER_TYPE}')
+#except Exception as err:
+#    logger.debug(f'Error in getting setup information of server and storage type : {err}')
+#    print(f'Error in getting setup information of server and storage type : {err}')
+#    logger.debug(f'Considering default values for Storage Type: {STORAGE_TYPE} and Server Type: {SERVER_TYPE}')
 
 
 class RaidDataConfig(Enum):
