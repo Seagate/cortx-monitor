@@ -1238,7 +1238,7 @@ if __name__ == "__main__":
     print(f"Server Type '{server_type}'")
 
     if storage_type == 'virtual' and server_type == 'virtual':
-        print("Resource Health View not supported for virtual server and virtual storage deployment")
+        print("Resource health view is not supported in virtual server and virtual storage deployment")
         print("Exiting ...")
         sys.exit(os.EX_USAGE)
 
