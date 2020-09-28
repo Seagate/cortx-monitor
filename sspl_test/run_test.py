@@ -48,7 +48,8 @@ try:
     setup_info = ast.literal_eval(setup_info)
     storage_type = setup_info['storage_type'].lower()
 except Exception as err:
-    logger.warn(f"Error in getting setup information of storage type : {err}")
+    print(f"ERROR: Failed to get setup information from provisioner API : {err}")
+    print("Test starts for non-virtual storage type")
 
 
 def tmain(argp, argv):
