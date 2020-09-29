@@ -125,7 +125,8 @@ class RaidDataConfig(Enum):
     MISMATCH_COUNT_RESPONSE = '0'
     RAID_RESULT_DIR = "/tmp"
     RAID_RESULT_FILE_PATH = "/tmp/result_raid_health_file"
-    MAX_RETRIES = 50
+    MAX_RETRIES = 10
+    NEXT_ITERATION_TIME = 3600
     PRIORITY = 1
 
 class RaidAlertMsgs(Enum):
