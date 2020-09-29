@@ -65,6 +65,7 @@ from framework.rabbitmq.thread_controller import ThreadController
 from framework.rabbitmq.rabbitmq_egress_accumulated_msgs_processor import \
     RabbitMQEgressAccumulatedMsgsProcessor
 from framework.base.sspl_constants import PRODUCT_FAMILY
+from framework.utils.utility import Utility
 
 from actuators.impl.actuator import Actuator
 from message_handlers.node_controller_msg_handler import NodeControllerMsgHandler
@@ -323,7 +324,7 @@ def main(conf_reader, systemd_support):
 
     message_handlers = SSPL_SETTINGS.get("MESSAGE_HANDLERS")
     logger.info("sspl-ll Bootstrap: default message handlers to start: %s" % (message_handlers, ))
-    
+
     message_handlers = _tune_modules_for_env(message_handlers)
 
     for message_handler in message_handlers:
@@ -423,37 +424,54 @@ def _tune_modules_for_env(modlist):
     # current deployment env declared here, Extend checks based on need in future
     # like server_type, etc
 
-    storage_type = "virtual"
-    server_type = "virtual"
-    server_per_node = 2
-    nodes = 1
-    info_err = None
-    try:
-        setup_info = subprocess.Popen("sudo /usr/bin/provisioner get_setup_info", shell=True,
-                        stdout=subprocess.PIPE).communicate()[0].decode("utf-8").rstrip()
-        setup_info = ast.literal_eval(setup_info)
-        try:
-            storage_type = setup_info['storage_type'].lower()
-            server_type = setup_info['server_type'].lower()
-            server_per_node = setup_info['servers_per_node'].lower()
-            nodes = setup_info['nodes']
-            logger.info(f"sspl-ll Bootstrap: deployment environment: storage_type : {storage_type}, server_type : {server_type}")
-            logger.info(f"sspl-ll Bootstrap: deployment environment: server_per_node : {server_per_node}, nodes : {nodes}")
-        except Exception as err:
-            info_err = err
-            logger.error(f"Error in getting setup info: {err}")
+    NODE_KEY = 'nodes'
+    SERVER_PER_NODE_KEY = 'servers_per_node'
+    STORAGE_TYPE_KEY = 'storage_type'
+    SERVER_TYPE_KEY = 'server_type'
 
+    STORAGE_TYPE = 'physical'
+    SERVER_TYPE = 'rbod'
+    SERVER_PER_NODE = 2
+    NODES = 1
+
+    info_err = None
+
+    try:
+        util = Utility()
+    except Exception as err:
+        logger.error(f'Can not instantiate Utility class, Error:{err}')
+
+    try:
+        if not util:
+            # IF for any reason util class fails to instantiate, without blocking the execution
+            # Go ahead with excution using subprocess module here directly
+            process = subprocess.Popen(['sudo', '/usr/local/bin/provisioner', 'get_setup_info'], \
+                                 shell=False, stdout=subprocess.PIPE)
+            _result, _ret_code = process.communicate()[0], process.returncode
+        else:
+            _result, _err, _ret_code = util.execute_cmd(['sudo', '/usr/local/bin/provisioner', 'get_setup_info'])
+            _err = _err.decode("utf-8").rstrip()
+        if _ret_code == 0 and _err is '':
+            setup_info = eval(_result.decode("utf-8").rstrip())
+            STORAGE_TYPE = setup_info[STORAGE_TYPE_KEY].lower()
+            SERVER_TYPE = setup_info[SERVER_TYPE_KEY].lower()
+            SERVER_PER_NODE = setup_info[SERVER_PER_NODE_KEY]
+            NODES = setup_info[NODE_KEY]
+        else:
+            logger.error(f'sspl-ll Bootstrap: Problem occured while retrieving setup information: {_err}')
+        logger.info(f'sspl-ll Bootstrap: deployment environment: Storage Type: {STORAGE_TYPE}, \
+                     Server Type: {SERVER_TYPE}, Servers per Node: {SERVER_PER_NODE}, Number Of Nodes: {NODES}')
     except Exception as err:
         info_err = err
         logger.error(f"Error in getting setup information: {err}")
     if(info_err):
-        logger.warn(f"sspl-ll Bootstrap: considering deployment environment: storage_type : {storage_type}, server_type : {server_type}")
-        logger.warn(f"sspl-ll Bootstrap: considering deployment environment: server_per_node : {server_per_node}, nodes : {nodes}")
+            logger.warn(f'sspl-ll Bootstrap: considering deployment environment: Storage Type: {STORAGE_TYPE}, \
+                     Server Type: {SERVER_TYPE}, Servers per Node: {SERVER_PER_NODE}, Number Of Nodes: {NODES}')
 
-    if storage_type == "virtual":
+    if STORAGE_TYPE == "virtual":
         modlist = [x for x in modlist if not x.startswith(DISABLE_FOR_VIRTUAL_STORAGE)]
-    
-    if server_type == "virtual":
+
+    if SERVER_TYPE == "virtual":
         modlist = [x for x in modlist if not x.startswith(DISABLE_FOR_VIRTUAL_SERVER)]
 
     logger.info(f"sspl-ll Bootstrap: enabling modules based on deployment env: {modlist}")
