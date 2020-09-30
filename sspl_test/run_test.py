@@ -43,7 +43,7 @@ result = {}
 storage_type = None
 
 try:
-    setup_info = subprocess.Popen("sudo /usr/bin/provisioner get_setup_info", shell=True,
+    setup_info = subprocess.Popen(['sudo', 'provisioner', 'get_setup_info'], shell=False,
                     stdout=subprocess.PIPE).communicate()[0].decode("utf-8").rstrip()
     setup_info = ast.literal_eval(setup_info)
     storage_type = setup_info['storage_type'].lower()
@@ -99,7 +99,8 @@ def tmain(argp, argv):
             try:
                 start_time = time.time()
                 if storage_type == 'virtual':
-                    if 'realstore' in test.__name__ or 'real_stor' in test.__name__:
+                    test_disable_module_substrings = ['realstore', 'real_stor', 'realstor', 'bmc']
+                    if any([test_module in test.__name__ for test_module in test_disable_module_substrings]):
                         duration = 0
                         print(f"Test is set to be skipped for storage type '{storage_type}'")
                         print('%s:%s: SKIPPED (Time: %ds)' %(ts, test.__name__, duration))
