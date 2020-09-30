@@ -312,7 +312,10 @@ class SSPLHealthView(object):
             interfaces_data = self.build_node_interfaces_instances()
             for interface in self.node_interface_data:
                 interface_data = node_health_json['interfaces'][interface]
-                interface_data.update({"health": "", interface+"s_info": interfaces_data[interface]})
+                if interface == 'sas_port':
+                    interface_data.update(interfaces_data[interface])
+                else:
+                    interface_data.update({"health": "", interface+"s_info": interfaces_data[interface]})
 
         if not ipmitool_cli and category != 'interfaces':
             print('Required ipmitool missing on Node to fetch %s data..!' % category)
@@ -905,27 +908,66 @@ class SSPLHealthView(object):
         utility_instance = tool_factory.get_instance('sysfs')
         utility_instance.initialize()
         sas_ports_dict = utility_instance.get_phy_negotiated_link_rate()
+        sas_phy_dict = {}
         if sas_ports_dict:
             for key, value in sas_ports_dict.items():
                 link_rate = value.strip()
-                phy_number = key.split(":")[1]
-                resource_id = self.SAS_RESOURCE_ID + ':' + "phy-" + phy_number
+                phy_number = int(key.split(":")[1])
                 if 'Gbit'.lower() in link_rate.lower():
                     health = "OK"
-                elif 'Unknown'.lower() in link_rate.lower():
-                    health = "NA"
                 else:
                     health = "Fault"
+                sas_phy_dict.update({phy_number:health})
 
-                sas_port_data.update({
-                    resource_type+'-'+resource_id:{
-                        "alert_type": "NA",
-                        "severity": "NA",
+            # For SASHBA-0
+            if 'OK' in sas_phy_dict.values():
+                sas_hba_health = "OK"
+                sas_hba_severity = "NA"
+                sas_hba_alert_type = "NA"
+            else:
+                sas_hba_health = "Fault"
+                sas_hba_severity = "critical"
+                sas_hba_alert_type = "fault"
+
+            sas_port_data.update({
+                'sas_hbas':{
+                    resource_type+'-'+self.SAS_RESOURCE_ID:{
+                        "alert_type": sas_hba_alert_type,
+                        "severity": sas_hba_severity,
                         "alert_uuid": "NA",
                         "durable_id": "NA",
-                        "health": health,
+                        "health": sas_hba_health,
                         "fetch_time" : int(time.time())
-                    }})
+                    }
+                },
+                'sas_ports':{}
+            })
+
+            # For SAS Port
+            phy_lst_tpl = sorted([(k, v) for k, v in sas_phy_dict.items()])
+            phy_hlt = [phy[1] for phy in phy_lst_tpl]
+            # Make group of 4 phy for every port
+            phy_group = [phy_hlt[n:n+4] for n in range(0, len(phy_hlt), 4)]
+            for idx, phy_ports in enumerate(phy_group):
+                if 'OK' in phy_ports:
+                    sas_port_health = "OK"
+                    sas_port_severity = "NA"
+                    sas_port_alert_type = "NA"
+                else:
+                    sas_port_health = "Fault"
+                    sas_port_severity = "critical"
+                    sas_port_alert_type = "fault"
+                sas_port_data['sas_ports'].update({
+                    resource_type+':port-'+self.SAS_RESOURCE_ID+'-port-'+str(idx):{
+                        "alert_type": sas_port_alert_type,
+                        "severity": sas_port_severity,
+                        "alert_uuid": "NA",
+                        "durable_id": "NA",
+                        "health": sas_port_health,
+                        "fetch_time" : int(time.time())
+                    }
+                })
+
         return sas_port_data
 
     def build_node_network_cable_instances(self):
