@@ -43,7 +43,7 @@ result = {}
 storage_type = None
 
 try:
-    setup_info = subprocess.Popen("sudo /usr/bin/provisioner get_setup_info", shell=True,
+    setup_info = subprocess.Popen(['sudo', 'provisioner', 'get_setup_info'], shell=False,
                     stdout=subprocess.PIPE).communicate()[0].decode("utf-8").rstrip()
     setup_info = ast.literal_eval(setup_info)
     storage_type = setup_info['storage_type'].lower()

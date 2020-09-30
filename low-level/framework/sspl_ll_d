@@ -445,11 +445,11 @@ def _tune_modules_for_env(modlist):
         if not util:
             # IF for any reason util class fails to instantiate, without blocking the execution
             # Go ahead with excution using subprocess module here directly
-            process = subprocess.Popen(['sudo', '/usr/local/bin/provisioner', 'get_setup_info'], \
+            process = subprocess.Popen(['sudo', 'provisioner', 'get_setup_info'], \
                                  shell=False, stdout=subprocess.PIPE)
             _result, _ret_code = process.communicate()[0], process.returncode
         else:
-            _result, _err, _ret_code = util.execute_cmd(['sudo', '/usr/local/bin/provisioner', 'get_setup_info'])
+            _result, _err, _ret_code = util.execute_cmd(['sudo', 'provisioner', 'get_setup_info'])
             _err = _err.decode("utf-8").rstrip()
         if _ret_code == 0 and _err is '':
             setup_info = eval(_result.decode("utf-8").rstrip())
