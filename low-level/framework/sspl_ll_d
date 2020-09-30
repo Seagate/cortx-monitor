@@ -435,7 +435,7 @@ def _tune_modules_for_env(modlist):
     NODES = 1
 
     info_err = None
-
+    util = None
     try:
         util = Utility()
     except Exception as err:
@@ -447,7 +447,8 @@ def _tune_modules_for_env(modlist):
             # Go ahead with excution using subprocess module here directly
             process = subprocess.Popen(['sudo', 'provisioner', 'get_setup_info'], \
                                  shell=False, stdout=subprocess.PIPE)
-            _result, _ret_code = process.communicate()[0], process.returncode
+            _result, _err, _ret_code = process.communicate(), process.returncode
+            _err = _err.decode("utf-8").rstrip()
         else:
             _result, _err, _ret_code = util.execute_cmd(['sudo', 'provisioner', 'get_setup_info'])
             _err = _err.decode("utf-8").rstrip()
