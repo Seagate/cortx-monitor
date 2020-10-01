@@ -143,6 +143,7 @@ systemctl stop sspl-ll.service 2> /dev/null
 rm -f /etc/polkit-1/rules.d/sspl-ll_dbus_policy.rules
 rm -f /etc/dbus-1/system.d/sspl-ll_dbus_policy.conf
 [ "$1" == "0" ] && rm -f /opt/seagate/%{product_family}/sspl/sspl_init
+rm -f /var/cortx/sspl/data/server/SAS_PORT_SENSOR_DATA*
 
 %files
 %defattr(-,sspl-ll,root,-)
