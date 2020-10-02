@@ -47,6 +47,7 @@ try:
                     stdout=subprocess.PIPE).communicate()[0].decode("utf-8").rstrip()
     setup_info = ast.literal_eval(setup_info)
     storage_type = setup_info['storage_type'].lower()
+    server_type = setup_info['server_type'].lower()
 except Exception as err:
     print(f"ERROR: Failed to get setup information from provisioner API : {err}")
     print("Test starts for non-virtual storage type")
@@ -98,15 +99,18 @@ def tmain(argp, argv):
             test_count += 1
             try:
                 start_time = time.time()
+                test_disable_module_substrings = []
                 if storage_type == 'virtual':
-                    test_disable_module_substrings = ['realstore', 'real_stor', 'realstor', 'bmc']
-                    if any([test_module in test.__name__ for test_module in test_disable_module_substrings]):
-                        duration = 0
-                        print(f"Test is set to be skipped for storage type '{storage_type}'")
-                        print('%s:%s: SKIPPED (Time: %ds)' %(ts, test.__name__, duration))
-                        skip_count += 1
-                        result.update({ts: {"Skip": duration}})
-                        continue
+                    test_disable_module_substrings.extend(['realstore', 'real_stor', 'realstor'])
+                if server_type == "virtual":
+                    test_disable_module_substrings.extend(['bmc'])
+                if any([test_module in test.__name__ for test_module in test_disable_module_substrings]):
+                    duration = 0
+                    print(f"Test is set to be skipped for storage type '{storage_type}'")
+                    print('%s:%s: SKIPPED (Time: %ds)' %(ts, test.__name__, duration))
+                    skip_count += 1
+                    result.update({ts: {"Skip": duration}})
+                    continue
                 test(args)
                 duration = time.time() - start_time
                 print('%s:%s: PASSED (Time: %ds)' %(ts, test.__name__, duration))
