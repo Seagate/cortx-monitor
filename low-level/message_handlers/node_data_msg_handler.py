@@ -731,7 +731,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
                     self.prev_cable_cnxns[interface_name] = phy_link_status
             else:
-                logger.warning(f"Cable connection state is unknown with '{interface_name}'")
+                logger.debug(f"Cable connection state is unknown with '{interface_name}'")
 
         return identified_cables
 

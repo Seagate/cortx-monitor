@@ -38,7 +38,7 @@ from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
 from framework.base.sspl_constants import cs_products, COMMON_CONFIGS
 from framework.utils.severity_reader import SeverityReader
-from framework.utils.store_factory import store
+from framework.utils.store_factory import store, file_store
 
 # Modules that receive messages from this module
 from message_handlers.service_msg_handler import ServiceMsgHandler
@@ -55,6 +55,8 @@ from dbus import SystemBus, Interface, Array
 from gi.repository import GObject as gobject
 from dbus.mainloop.glib import DBusGMainLoop
 import socket
+
+store = file_store
 
 @implementer(IServiceWatchdog)
 class SystemdWatchdog(SensorThread, InternalMsgQ):
@@ -177,21 +179,20 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
 
         self._site_id = conf_reader._get_value_with_default(
                                                 self.SYSTEM_INFORMATION,
-                                                self.SITE_ID,
-                                                '0')
+                                                COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.SITE_ID),
+                                                '001')
         self._rack_id = conf_reader._get_value_with_default(
                                                 self.SYSTEM_INFORMATION,
-                                                self.RACK_ID,
-                                                '0')
+                                                COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.RACK_ID),
+                                                '001')
         self._node_id = conf_reader._get_value_with_default(
                                                 self.SYSTEM_INFORMATION,
-                                                self.NODE_ID,
-                                                '0')
-
+                                                COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.NODE_ID),
+                                                '001')
         self._cluster_id = conf_reader._get_value_with_default(
                                                 self.SYSTEM_INFORMATION,
-                                                self.CLUSTER_ID,
-                                                '0')
+                                                COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.CLUSTER_ID),
+                                                '001')
 
         self.vol_ras = conf_reader._get_value_with_default(\
             self.SYSTEM_INFORMATION, COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get("data_path"), self.DEFAULT_RAS_VOL)
@@ -923,9 +924,7 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
     def _interface_added(self, object_path, interfaces_and_properties):
         """Callback for when an interface like drive or SMART job has been added"""
         try:
-            self._log_debug("Interface Added")
-            self._log_debug("  Object Path: %r" % object_path)
-
+            self._log_debug(f"Interface Added, Object Path: {object_path}, interfaces_and_properties {interfaces_and_properties}")
             # Handle drives added
             if interfaces_and_properties.get("org.freedesktop.UDisks2.Drive") is not None and \
                 self._is_local_drive(interfaces_and_properties):
@@ -943,6 +942,7 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
 
                 with self._drive_info_lock:
                     # Update drives
+                    self._drives[object_path] = {}
                     self._drives[object_path][self.DRIVE_DBUS_INFO] = interfaces_and_properties['org.freedesktop.UDisks2.Drive']
 
                     drive = self._drives[object_path][self.DRIVE_DBUS_INFO]
@@ -970,6 +970,7 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
 
     def _interface_removed(self, object_path, interfaces):
         """Callback for when an interface like drive or SMART job has been removed"""
+        self._log_debug(f"Interface Removed, Object Path: {object_path}, interfaces: {interfaces}")
         for interface in interfaces:
             try:
                 # Handle drives removed
@@ -986,6 +987,7 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
                         try:
                             drive = self._drives[object_path][self.DRIVE_DBUS_INFO]
                         except KeyError:
+                            self._log_debug(f"Object is not present in drives info {self._drives.keys()}, ignoring signal")
                             continue
                         serial_number = str(drive["Serial"])
 
