@@ -38,7 +38,7 @@ from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
 from framework.base.sspl_constants import cs_products, COMMON_CONFIGS
 from framework.utils.severity_reader import SeverityReader
-from framework.utils.store_factory import store
+from framework.utils.store_factory import file_store
 
 # Modules that receive messages from this module
 from message_handlers.service_msg_handler import ServiceMsgHandler
@@ -55,6 +55,8 @@ from dbus import SystemBus, Interface, Array
 from gi.repository import GObject as gobject
 from dbus.mainloop.glib import DBusGMainLoop
 import socket
+
+store = file_store
 
 @implementer(IServiceWatchdog)
 class SystemdWatchdog(SensorThread, InternalMsgQ):
@@ -126,8 +128,8 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
         # List of serial numbers which have been flagged for simulated failure of SMART tests from CLI
         self._simulated_smart_failures = []
 
-        # Delay so thread doesn't spin unnecessarily when not in use.  Startup running quickly to process everything
-        self._thread_sleep = 20.0
+        # Keep sleep 1 second to avoid delay for disk insertion/removal alerts
+        self._thread_sleep = 1
 
         # Location of hpi data directory populated by dcs-collector
         self._hpi_base_dir = "/tmp/dcs/hpi"
@@ -180,21 +182,20 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
 
         self._site_id = conf_reader._get_value_with_default(
                                                 self.SYSTEM_INFORMATION,
-                                                self.SITE_ID,
-                                                '0')
+                                                COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.SITE_ID),
+                                                '001')
         self._rack_id = conf_reader._get_value_with_default(
                                                 self.SYSTEM_INFORMATION,
-                                                self.RACK_ID,
-                                                '0')
+                                                COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.RACK_ID),
+                                                '001')
         self._node_id = conf_reader._get_value_with_default(
                                                 self.SYSTEM_INFORMATION,
-                                                self.NODE_ID,
-                                                '0')
-
+                                                COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.NODE_ID),
+                                                '001')
         self._cluster_id = conf_reader._get_value_with_default(
                                                 self.SYSTEM_INFORMATION,
-                                                self.CLUSTER_ID,
-                                                '0')
+                                                COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.CLUSTER_ID),
+                                                '001')
 
         self.vol_ras = conf_reader._get_value_with_default(\
             self.SYSTEM_INFORMATION, COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get("data_path"), self.DEFAULT_RAS_VOL)
@@ -972,12 +973,10 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
     def _interface_added(self, object_path, interfaces_and_properties):
         """Callback for when an interface like drive or SMART job has been added"""
         try:
-            self._log_debug("Interface Added")
-            self._log_debug("  Object Path: %r" % object_path)
-
+            self._log_debug(f"Interface Added, Object Path: {object_path}, interfaces_and_properties {interfaces_and_properties}")
             # Handle drives added
             if interfaces_and_properties.get("org.freedesktop.UDisks2.Drive") is not None and \
-                is_physical_drive(interfaces_and_properties):
+                is_physical_drive(interfaces_and_properties.get("org.freedesktop.UDisks2.Drive")):
                 self._update_by_id_paths()
 
                 serial_number = str(interfaces_and_properties['org.freedesktop.UDisks2.Drive']['Serial'])
@@ -992,6 +991,7 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
 
                 with self._drive_info_lock:
                     # Update drives
+                    self._drives[object_path] = {}
                     self._drives[object_path][self.DRIVE_DBUS_INFO] = interfaces_and_properties['org.freedesktop.UDisks2.Drive']
 
                     drive = self._drives[object_path][self.DRIVE_DBUS_INFO]
@@ -1025,22 +1025,27 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
 
     def _interface_removed(self, object_path, interfaces):
         """Callback for when an interface like drive or SMART job has been removed"""
+        self._log_debug(f"Interface Removed, Object Path: {object_path}, interfaces: {interfaces}")
         for interface in interfaces:
             try:
                 # Handle drives removed
                 if interface == "org.freedesktop.UDisks2.Drive":
                     with self._drive_info_lock:
+                        # If drive is removed, thread will run with .10 sleep
+                        # commenting this to save CPU time
                         # Speed thread up in case we have multiple drive removal events queued up
-                        self._thread_sleep = .10
+                        # self._thread_sleep = .10
 
+                        # Commenting below code as we dont have .10 sleep on drive removal
                         # Only allow it to run full speed temporarily in order to handle exp resets
-                        self._thread_speed_safeguard = 0
+                        # self._thread_speed_safeguard = 0
 
                         # If object_path is not in self._drives. No need to generate alert
                         # as removed disk is remote disk
                         try:
                             drive = self._drives[object_path][self.DRIVE_DBUS_INFO]
                         except KeyError:
+                            self._log_debug(f"Object is not present in drives info {self._drives.keys()}, ignoring signal")
                             continue
                         serial_number = str(drive["Serial"])
 
@@ -1066,7 +1071,7 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
                 # Handle jobs completed like SMART tests
                 elif interface == "org.freedesktop.UDisks2.Job":
                     # If we're doing SMART tests then slow the thread down to save on CPU
-                    self._thread_sleep = 1.0
+                    # self._thread_sleep = 1.0
 
                     # Retrieve the saved SMART data when the test was started
                     smart_job = self._smart_jobs.get(object_path)
@@ -1347,7 +1352,29 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
             return
 
         for object_path in self._drives.keys():
-            if not self._existing_drive[object_path] and self._is_drive_faulty(object_path):
+
+            # To handle case when drvie is removed, but interface_removed function is not yet
+            # called, so drive will be still in self._drives, but smartctl command will fail as
+            # device is removed.
+            if not self._drives[object_path]["node_disk"]:
+                cmd = f"sudo smartctl -d scsi -H {self._drive_by_device_name[object_path]} --json"
+            else:
+                cmd = f"sudo smartctl -H {self._drive_by_device_name[object_path]} --json"
+            response, _ = self._run_command(cmd)
+            response = json.loads(response)
+            try:
+                if "No such device" in response["smartctl"]["message"][0]["string"]:
+                    logger.debug(f"SystemdWatchdog, _update_drive_faults, drive {object_path} is removed, ignoring SMART test")
+                    continue
+            # If smratctl command is not failing there will be no ["smartctl"]["message"][0]["string"] in response
+            except (KeyError, IndexError):
+                try:
+                    is_drive_faulty = not response['smart_status']['passed']
+                # If ['smart_status']['passed'] not present in response, consider it as fault
+                except KeyError:
+                    is_drive_faulty = True
+
+            if not self._existing_drive[object_path] and is_drive_faulty:
                 self._existing_drive[object_path] = True
                 self._drives[object_path][self.DRIVE_FAULT_ATTR] = self._get_drive_fault_info(object_path)
                 resource_type = self._get_resource_type(object_path)
@@ -1358,7 +1385,7 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
                                resource_type,
                                resource_id,
                                specific_info)
-            elif self._existing_drive[object_path] and not self._is_drive_faulty(object_path):
+            elif self._existing_drive[object_path] and not is_drive_faulty:
                 self._existing_drive[object_path] = False
                 self._drives[object_path][self.DRIVE_FAULT_ATTR] = self._get_drive_fault_info(object_path)
                 resource_type = self._get_resource_type(object_path)
