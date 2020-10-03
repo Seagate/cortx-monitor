@@ -128,8 +128,8 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
         # List of serial numbers which have been flagged for simulated failure of SMART tests from CLI
         self._simulated_smart_failures = []
 
-        # Delay so thread doesn't spin unnecessarily when not in use.  Startup running quickly to process everything
-        self._thread_sleep = 20.0
+        # Keep sleep 1 second to avoid delay for disk insertion/removal alerts
+        self._thread_sleep = 1
 
         # Location of hpi data directory populated by dcs-collector
         self._hpi_base_dir = "/tmp/dcs/hpi"
@@ -976,11 +976,14 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
                 # Handle drives removed
                 if interface == "org.freedesktop.UDisks2.Drive":
                     with self._drive_info_lock:
+                        # If drive is removed, thread will run with .10 sleep
+                        # commenting this to save CPU time
                         # Speed thread up in case we have multiple drive removal events queued up
-                        self._thread_sleep = .10
+                        # self._thread_sleep = .10
 
+                        # Commenting below code as we dont have .10 sleep on drive removal
                         # Only allow it to run full speed temporarily in order to handle exp resets
-                        self._thread_speed_safeguard = 0
+                        # self._thread_speed_safeguard = 0
 
                         # If object_path is not in self._drives. No need to generate alert
                         # as removed disk is remote disk
@@ -1009,7 +1012,7 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
                 # Handle jobs completed like SMART tests
                 elif interface == "org.freedesktop.UDisks2.Job":
                     # If we're doing SMART tests then slow the thread down to save on CPU
-                    self._thread_sleep = 1.0
+                    # self._thread_sleep = 1.0
 
                     # Retrieve the saved SMART data when the test was started
                     smart_job = self._smart_jobs.get(object_path)
@@ -1290,13 +1293,24 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
             return
 
         for object_path in self._drives.keys():
-            if not self._existing_drive[object_path] and self._is_drive_faulty(object_path):
+
+            # To handle case when drvie is removed, but interface_removed function is not yet 
+            # called, so drive will be still in self._drives, but smartctl command will fail as
+            # device is removed.
+            response, _ = self._run_command(f"sudo smartctl -H {self._drive_by_device_name[object_path]}")
+            if "No such device" in response:
+                logger.debug(f"SystemdWatchdog, _update_drive_faults, drive {object_path} is removed, ignoring SMART test")
+                continue
+            else:
+                is_drive_faulty = not self.SMARTCTL_PASSED_RESPONSE in response
+
+            if not self._existing_drive[object_path] and is_drive_faulty:
                 self._existing_drive[object_path] = True
                 self._drives[object_path][self.DRIVE_FAULT_ATTR] = self._get_drive_fault_info(object_path)
                 self._send_msg(self.DISK_FAULT_ALERT_TYPE,
                                str(self._drives[object_path][self.DRIVE_DBUS_INFO]["Id"]),
                                {"health_status": self._drives[object_path][self.DRIVE_FAULT_ATTR]})
-            elif self._existing_drive[object_path] and not self._is_drive_faulty(object_path):
+            elif self._existing_drive[object_path] and not is_drive_faulty:
                 self._existing_drive[object_path] = False
                 del self._drives[object_path][self.DRIVE_FAULT_ATTR]
                 self._send_msg(self.DISK_FAULT_RESOLVED_ALERT_TYPE,
