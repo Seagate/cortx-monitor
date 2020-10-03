@@ -71,7 +71,7 @@ class CommonConfig:
         _node_id = 'srvnode-1'
         try:
             with open(CommonConfig.SALT_FILE, 'r') as salt_file:
-                _node_id = salt_file.read()
+                _node_id = salt_file.read().rstrip()
             if _node_id is None:
                 _node_id = 'srvnode-1'
             logger.info(f'salt_util, Server minion ID: {_node_id}')
