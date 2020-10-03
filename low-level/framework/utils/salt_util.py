@@ -17,6 +17,8 @@
 '''Module which provides common config information using Provisioner API'''
 
 
+import errno
+
 try:
     from service_logging import logger
     from utility import Utility
@@ -32,6 +34,8 @@ class CommonConfig:
     """
 
     __instance = None
+    SALT_FILE = '/etc/salt/minion_id'
+
     CLUSTER_KEY = 'cluster'
     CLUSTER_TYPE_KEY = 'type'
     SSPL_KEY = 'sspl'
@@ -42,15 +46,15 @@ class CommonConfig:
         if CommonConfig.__instance is None:
             self.utility = Utility()
             self.pillar_info = None
+            self.node_id = None or self.get_node_id()
             _result, _err, _ret_code = \
                     self.utility.execute_cmd(['sudo', 'provisioner', 'pillar_get'])
             _err = _err.decode("utf-8").rstrip()
-            if _ret_code == 0 and _err is '':
+            if _ret_code == 0 and _err == '':
                 self.pillar_info = eval(_result.decode("utf-8").rstrip())
-            self.node_id = None or self.get_node_id()
-            self._is_single_node = None or self._is_single_node()
-            self.consul_host = None or self.get_consul_vip()
-            self.consul_port = None or self.get_consul_port()
+            self._is_single_node = None or self._is_server_single(_err)
+            self.consul_host = None or self.get_consul_vip(_err)
+            self.consul_port = None or self.get_consul_port(_err)
             CommonConfig.__instance = self
 
     @staticmethod
@@ -66,83 +70,110 @@ class CommonConfig:
 
         _node_id = 'srvnode-1'
         try:
-            with open('/etc/salt/minion_id', 'r') as salt_file:
+            with open(CommonConfig.SALT_FILE, 'r') as salt_file:
                 _node_id = salt_file.read()
-            if _node_id is not None:
+            if _node_id is None:
                 _node_id = 'srvnode-1'
+            logger.info(f'salt_util, Server minion ID: {_node_id}')
+        except OSError as err:
+            if err.errno == errno.ENOENT:
+                logger.error(
+                    f'Problem occured while reading from salt file. \
+                     File path: {CommonConfig.SALT_FILE} does not exist')
+            elif err == errno.EACCES:
+                logger.error(
+                    f'Problem occured while reading from salt file. \
+                     Permission issue while reading from: {CommonConfig.SALT_FILE}')
+            else:
+                logger.error(
+                    f'Problem occured while reading from salt file with \
+                     the issue: {err}')
         except Exception as err:
-            logger.warning(f'sspl_constants, Fail to read node-id with error: {err}, \
+            logger.warning(f'salt_util, Fail to read node-id with error: {err}, \
                              Keeping default value as srvnode-1')
-            _node_id = 'srvnode-1'
         return _node_id
 
-    def _is_single_node(self):
+    def _is_server_single(self, _err=None):
         """
         Returns true if single node, false otherwise
         """
         _is_single_node = False
+
         try:
             if self.pillar_info:
                 cluster_type = \
                     self.pillar_info[self.node_id][self.CLUSTER_KEY][self.CLUSTER_TYPE_KEY]
                 if cluster_type is not None and cluster_type.lower() == 'single':
                     _is_single_node = True
+                logger.info(f'salt_util, Node type: {_is_single_node}')
             else:
-                logger.warning(f'sspl_constants, Fail to read cluster type with \
-                               this error: {_err}, Assuming single node')
+                logger.warning(f'salt_util, Fail to read cluster type with \
+                                 this error: {_err}. Assuming single node')
+        except KeyError as key_err:
+            logger.warning(f'salt_util, Fail to read cluster type with \
+                             this key error: {key_err}, Assuming single node')
         except Exception as err:
-            logger.warning(f'sspl_constants, Fail to read cluster type with \
-                               this error: {err}, Assuming single node')
-        logger.info(f'sspl_constants, Node type: {_is_single_node}')
+            logger.warning(f'salt_util, Fail to read cluster type with \
+                             this error: {err}, Assuming single node')
         return _is_single_node
 
-    def get_consul_vip(self):
+    def get_consul_vip(self, _err=None):
         """
         Returns IP used to connect to Consul
         """
         _is_env_vm = self.utility.is_env_vm()
-        _is_single_node = self._is_single_node
+        _is_single_server = self._is_single_node
+
         # Initialize to localhost
         _consul_vip = "127.0.0.1"
-        # Get vip if not a vm or single node, default to localhost otherwise if not _is_env_vm and not _is_single_node:
-        try:
-            if self.pillar_info is not None:
-                data_store_config = \
-                    self.pillar_info[self.node_id][self.SSPL_KEY][self.DATASTORE_KEY]
-                if data_store_config is not None:
-                    _consul_vip = data_store_config['consul_host']
-            else:
-                logger.warning(f'sspl_constants, Fail to read consul VIP with \
-                                 this error: {_err}, Assuming localhost: \
+
+        # Get vip if not a vm or single node, default to localhost otherwise
+        if not _is_env_vm or not _is_single_server:
+            try:
+                if self.pillar_info is not None:
+                    data_store_config = \
+                        self.pillar_info[self.node_id][self.SSPL_KEY][self.DATASTORE_KEY]
+                    if data_store_config is not None:
+                        _consul_vip = data_store_config['consul_host']
+                    logger.info(f'salt_util, consul VIP: {_consul_vip}')
+                else:
+                    logger.warning(f'salt_util, Fail to read consul VIP with \
+                                     this error: {_err}, Assuming localhost: \
+                                     {_consul_vip} connection')
+            except KeyError as key_err:
+                logger.warning(f'salt_util, fail to read consul vip with \
+                                 this key error: {key_err}, assuming localhost: \
                                  {_consul_vip} connection')
-        except Exception as err:
-            logger.warning(f'sspl_constants, Fail to read consul VIP with \
-                             this error: {err}, Assuming localhost: \
-                             {_consul_vip} connection')
-        logger.info(f'sspl_constants, consul VIP: {_consul_vip}')
+            except Exception as err:
+                logger.warning(f'salt_util, fail to read consul vip with \
+                                 this error: {err}, assuming localhost: \
+                                 {_consul_vip} connection')
         return _consul_vip
 
-    def get_consul_port(self):
+    def get_consul_port(self, _err=None):
         """
         Returns port used to connect to Consul
         """
         # Initialize to default
-        consul_port = '8500'
+        _consul_port = '8500'
         # Read consul port from sspl.sls
         try:
             if self.pillar_info is not None:
                 data_store_config = \
                     self.pillar_info[self.node_id][self.SSPL_KEY][self.DATASTORE_KEY]
                 if data_store_config is not None:
-                    consul_vip = data_store_config['consul_port']
+                    _consul_port = data_store_config['consul_port']
+                logger.info(f'salt_util, consul port: {_consul_port}')
             else:
-                logger.warning(f'sspl_constants, Fail to read consul VIP port with \
-                                 this error: {_err}, Assuming localhost: {consul_port} connection')
+                logger.warning(f'salt_util, Fail to read consul port with \
+                                 this error: {_err}, Assuming the port: {_consul_port}')
+        except KeyError as key_err:
+            logger.warning(f'salt_util, Fail to read consul port with \
+                             this error: {key_err}, Assuming the port: {_consul_port}')
         except Exception as err:
-            logger.warning(f'sspl_constants, Fail to read consul VIP with \
-                             this error: {err}, Assuming localhost: {consul_vip} connection')
-        logger.info(f'sspl_constants, consul port: {consul_port}')
-        return consul_port
+            logger.warning(f'salt_util, Fail to read consul port with \
+                             this error: {err}, Assuming the port: {_consul_port}')
+        return _consul_port
 
 
 comm_conf = CommonConfig.get_singleton_instance()
