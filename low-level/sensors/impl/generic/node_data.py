@@ -302,7 +302,7 @@ class NodeData(Debug):
                 if retcode == 0:
                     bmcdata['nwStatus'] = "UP"
                 else:
-                    logger.warning("BMC Host:{0} is not reachable".format(bmcip))
+                    logger.debug("BMC Host:{0} is not reachable".format(bmcip))
         except Exception as e:
             logger.error("Exception occurs while fetching bmc_info:{}".format(e))
         return bmcdata
