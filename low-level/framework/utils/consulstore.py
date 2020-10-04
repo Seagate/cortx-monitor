@@ -33,32 +33,40 @@ class ConsulStore(Store):
 
     def __init__(self, host, port):
         super(Store, self).__init__()
-        self._consul_connection = True
         self._data_sync_required = False
+        self._consul_conn_status = False
+
         for retry_index in range(0, MAX_CONSUL_RETRY):
             try:
                 self.consul_conn = consul.Consul(host=host, port=port)
-                self._consul_connection = True
+                self._consul_conn_status = True
                 break
 
             except requests.exceptions.ConnectionError as connerr:
                 logger.warn("Error[{0}] consul connection refused Retry Index {1}" \
                     .format(connerr, retry_index))
-                self._consul_connection = False
-                self._data_sync_required = True
+                self._consul_conn_status = False
                 time.sleep(WAIT_BEFORE_RETRY)
 
             except Exception as gerr:
                 logger.warn("Error[{0}] consul error".format(gerr))
-                self._consul_connection = False
-                self._data_sync_required = True
+                self._consul_conn_status = False
                 break
 
-        self._file_store=FileStore()
+        self._file_store = FileStore()
 
     def _dump_filestore_to_consulstore(self):
         # Dump data from filestore to consulstore
         self._data_sync_required = False
+
+    def _establish_consul_connection(self):
+        try:
+            self.consul_conn = consul.Consul(self._host, self._port)
+            self._consul_conn_status = True
+
+        except Exception as gerr:
+            logger.warn("Error[{0}] consul error".format(gerr))
+            self._consul_conn_status = False
 
     def _get_key(self, key):
         """remove '/' from begining of the key"""
@@ -72,41 +80,45 @@ class ConsulStore(Store):
         """ write data to given key"""
         for retry_index in range(0, MAX_CONSUL_RETRY):
             try:
-                key = self._get_key(key)
+                consul_key = self._get_key(key)
                 if pickled:
-                    value = pickle.dumps(value)
-                self.consul_conn.kv.put(key, value)
-                self._consul_connection = True
+                    consul_value = pickle.dumps(value)
+                self.consul_conn.kv.put(consul_key, consul_value)
+                self._consul_conn_status = True
+                self._file_store.put(value, key, pickled)
                 break
 
             except requests.exceptions.ConnectionError as connerr:
                 logger.warn("Error[{0}] consul connection refused Retry Index {1}" \
                     .format(connerr, retry_index))
-                self._consul_connection = False
-                self._data_sync_required = True
+                self._consul_conn_status = False
                 time.sleep(WAIT_BEFORE_RETRY)
 
             except Exception as gerr:
                 logger.warn("Error[{0}] while writing data to consul {1}" \
                     .format(gerr, key))
-                self._consul_connection = False
-                self._data_sync_required = True
+                self._consul_conn_status = False
                 break
-        
-        self._file_store.put(value, key, pickled)
 
-        if self._data_sync_required and self._consul_connection:
-            self._dump_filestore_to_consulstore()
+        if self._consul_conn_status is False:
+            self._data_sync_required = True
 
     def get(self, key, **kwargs):
         """ Load data from given key"""
         data = None
+
+        if self._consul_conn_status is False:
+            self._establish_consul_connection()
+
+        if self._consul_conn_status and self._data_sync_required:
+            self._dump_filestore_to_consulstore()
+
         for retry_index in range(0, MAX_CONSUL_RETRY):
             try:
                 _opt_recurse = kwargs.get("recurse", False)
-                key = self._get_key(key)
-                data = self.consul_conn.kv.get(key, recurse=_opt_recurse)[1]
-                self._consul_connection = True
+                consul_key = self._get_key(key)
+                data = self.consul_conn.kv.get(consul_key, recurse=_opt_recurse)[1]
+                self._consul_conn_status = True
                 if data:
                     data = data["Value"]
                     try:
@@ -118,19 +130,17 @@ class ConsulStore(Store):
             except requests.exceptions.ConnectionError as connerr:
                 logger.warn("Error[{0}] consul connection refused Retry Index {1}" \
                     .format(connerr, retry_index))
-                self._consul_connection = False
-                self._data_sync_required = True
+                self._consul_conn_status = False
                 time.sleep(WAIT_BEFORE_RETRY)
 
             except Exception as gerr:
                 logger.warn("Error[{0}] while reading data from consul {1}" \
                     .format(gerr, key))
-                self._consul_connection = False
-                self._data_sync_required = True
+                self._consul_conn_status = False
                 break
         
-        if data is None:
-            self._file_store.get(key,kwargs)
+        if self._consul_conn_status is False:
+            data = self._file_store.get(key,kwargs)
 
         return data
 
@@ -149,24 +159,24 @@ class ConsulStore(Store):
             try:
                 key = self._get_key(key)
                 self.consul_conn.kv.delete(key)
-                self._consul_connection = True
+                self._file_store.delete(key)
+                self._consul_conn_status = True
                 break
 
             except requests.exceptions.ConnectionError as connerr:
                 logger.warn("Error[{0}] consul connection refused Retry Index {1}" \
                     .format(connerr, retry_index))
-                self._consul_connection = False
-                self._data_sync_required = True
+                self._consul_conn_status = False
                 time.sleep(WAIT_BEFORE_RETRY)
 
             except Exception as gerr:
                 logger.warn("Error[{0}] while deleting key from consul {1}" \
                     .format(gerr, key))
-                self._consul_connection = False
-                self._data_sync_required = True
+                self._consul_conn_status = False
                 break
         
-        self._file_store.delete(key)
+        if self._consul_conn_status is False:
+            self._data_sync_required = True
 
     def get_keys_with_prefix(self, prefix):
         """ get keys with given prefix
@@ -175,7 +185,7 @@ class ConsulStore(Store):
             try:
                 prefix = self._get_key(prefix)
                 data = self.consul_conn.kv.get(prefix, recurse=True)[1]
-                self._consul_connection = True
+                self._consul_conn_status = True
                 if data:
                     return [item["Key"][item["Key"].rindex("/")+1:] for item in data]
                 else:
@@ -185,15 +195,14 @@ class ConsulStore(Store):
             except requests.exceptions.ConnectionError as connerr:
                 logger.warn("Error[{0}] consul connection refused Retry Index {1}" \
                     .format(connerr, retry_index))
-                self._consul_connection = False
-                self._data_sync_required = True
+                self._consul_conn_status = False
                 time.sleep(WAIT_BEFORE_RETRY)
 
             except Exception as gerr:
                 logger.warn("Error[{0}] while getting keys with given prefix {1}" \
                     .format(gerr, prefix))
-                self._consul_connection = False
-                self._data_sync_required = True
+                self._consul_conn_status = False
                 break
         
-        return self._file_store.get_keys_with_prefix(prefix)
+        if self._consul_conn_status is False:
+            return self._file_store.get_keys_with_prefix(prefix)
