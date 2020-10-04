@@ -58,15 +58,6 @@ class ConsulStore(Store):
                 self._consul_conn_status = False
                 break
 
-    def _dump_filestore_to_consulstore(self):
-        """Pop entries from the file list and update consul store"""
-        self._data_sync_required = False
-
-    def _add_entry_in_file_list(self, key, value):
-        """Prepare list of entries which are added or deleted when consul was down"""
-        self._file_store.put(key, value)
-
-
     def _get_key(self, key):
         """remove '/' from begining of the key"""
 
@@ -74,6 +65,30 @@ class ConsulStore(Store):
             return key[1:]
         else:
             return key
+
+    def _dump_filestore_to_consulstore(self):
+        """Pop entries from the file list and update consul store"""
+        # Get a list of modified entries in a filestore
+        files = self._file_store.get_keys_with_prefix("/_M")
+
+        for file in files:
+            key = os.path.relpath(file, "/_M")
+            value = self._file_store.get("/" + key)
+            self.consul_conn.kv.put(key, value)
+
+        # Get a list of deleted entries in a filestore
+        files = self._file_store.get_keys_with_prefix("/_D")
+
+        for file in files:
+            key = os.path.relpath(file, "/_D")
+            value = self._file_store.get(key)
+            self.consul_conn.kv.delete(key)
+
+        self._data_sync_required = False
+
+    def _add_entry_in_file_list(self, key, value):
+        """Prepare list of entries which are added or deleted when consul was down"""
+        self._file_store.put(key, value)
 
     def _consul_store_put(self, key, value, pickled):
         "write data to giver key in consul"
