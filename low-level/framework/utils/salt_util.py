@@ -27,7 +27,7 @@ except Exception as err:
     from framework.utils.utility import Utility
 
 
-class CommonConfig:
+class SaltInterface:
     """
     Interface class to get common config from common pillar using
     Provisioner API
@@ -43,7 +43,7 @@ class CommonConfig:
 
     def __init__(self):
         '''init method'''
-        if CommonConfig.__instance is None:
+        if SaltInterface.__instance is None:
             self.utility = Utility()
             self.pillar_info = None
             self.node_id = None or self.get_node_id()
@@ -55,14 +55,14 @@ class CommonConfig:
             self._is_single_node = None or self._is_server_single(_err)
             self.consul_host = None or self.get_consul_vip(_err)
             self.consul_port = None or self.get_consul_port(_err)
-            CommonConfig.__instance = self
+            SaltInterface.__instance = self
 
     @staticmethod
     def get_singleton_instance():
         '''Returns an instance of this class'''
-        if CommonConfig.__instance is None:
-            CommonConfig()
-        return CommonConfig.__instance
+        if SaltInterface.__instance is None:
+            SaltInterface()
+        return SaltInterface.__instance
 
     @staticmethod
     def get_node_id():
@@ -70,20 +70,20 @@ class CommonConfig:
 
         _node_id = 'srvnode-1'
         try:
-            with open(CommonConfig.SALT_FILE, 'r') as salt_file:
+            with open(SaltInterface.SALT_FILE, 'r') as salt_file:
                 _node_id = salt_file.read().rstrip()
-            if _node_id is None:
+            if _node_id is None or _node_id == '':
                 _node_id = 'srvnode-1'
             logger.info(f'salt_util, Server minion ID: {_node_id}')
         except OSError as err:
             if err.errno == errno.ENOENT:
                 logger.error(
                     f'Problem occured while reading from salt file. \
-                     File path: {CommonConfig.SALT_FILE} does not exist')
+                     File path: {SaltInterface.SALT_FILE} does not exist')
             elif err == errno.EACCES:
                 logger.error(
                     f'Problem occured while reading from salt file. \
-                     Permission issue while reading from: {CommonConfig.SALT_FILE}')
+                     Permission issue while reading from: {SaltInterface.SALT_FILE}')
             else:
                 logger.error(
                     f'Problem occured while reading from salt file with \
@@ -176,8 +176,8 @@ class CommonConfig:
         return _consul_port
 
 
-comm_conf = CommonConfig.get_singleton_instance()
-if comm_conf:
-    node_id = comm_conf.node_id
-    consulhost = comm_conf.consul_host
-    consulport = comm_conf.consul_port
+salt_util = SaltInterface.get_singleton_instance()
+if salt_util:
+    node_id = salt_util.node_id
+    consulhost = salt_util.consul_host
+    consulport = salt_util.consul_port
