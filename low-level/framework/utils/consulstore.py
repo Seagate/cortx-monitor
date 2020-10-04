@@ -64,7 +64,8 @@ class ConsulStore(Store):
 
     def _add_entry_in_file_list(self, key, value):
         """Prepare list of entries which are added or deleted when consul was down"""
-        pass
+        self._file_store.put(key, value)
+
 
     def _get_key(self, key):
         """remove '/' from begining of the key"""
@@ -102,7 +103,7 @@ class ConsulStore(Store):
         self._file_store.put(value, key, pickled)
 
         if self._consul_conn_status is False:
-            self._add_entry_in_file_list("_M" + key, value)
+            self._add_entry_in_file_list(os.path.join("/_M", key), value)
             self._data_sync_required = True
 
     def _consul_store_get(self, key, kwargs):
@@ -186,7 +187,7 @@ class ConsulStore(Store):
         self._consul_store_delete(key)
         self._file_store.delete(key)
         if self._consul_conn_status is False:
-            self._add_entry_in_file_list("_D" + key, None)
+            self._add_entry_in_file_list(os.path.join("/_D", key), None)
             self._data_sync_required = True
 
     def _consul_store_get_keys_with_prefix(self, prefix):
