@@ -35,6 +35,8 @@ class ConsulStore(Store):
         super(Store, self).__init__()
         self._data_sync_required = False
         self._consul_conn_status = False
+        self._host = host
+        self._port = port
 
         for retry_index in range(0, MAX_CONSUL_RETRY):
             try:
