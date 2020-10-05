@@ -68,7 +68,6 @@ class ConsulStore(Store):
 
     def _dump_filestore_to_consulstore(self):
         """Pop entries from the file list and update consul store."""
-
         # Get a list of modified entries in a filestore
         files = self._file_store.get_keys_with_prefix("/_M")
 
@@ -92,7 +91,7 @@ class ConsulStore(Store):
         self._file_store.put(key, value)
 
     def _consul_store_put(self, key, value, pickled):
-        """write data to giver key in consul."""
+        """Write data to giver key in consul."""
         for retry_index in range(0, MAX_CONSUL_RETRY):
             try:
                 consul_key = self._get_key(key)
@@ -114,7 +113,7 @@ class ConsulStore(Store):
                 break
 
     def put(self, value, key, pickled=True):
-        """write data to given key."""
+        """Write data to given key."""
         self._consul_store_put(key, value, pickled)
         self._file_store.put(value, key, pickled)
 
@@ -161,7 +160,7 @@ class ConsulStore(Store):
 
         if self._consul_conn_status and self._data_sync_required:
             self._dump_filestore_to_consulstore()
-        
+
         data = self._consul_store_get(key, kwargs)
 
         if self._consul_conn_status is False:
@@ -170,14 +169,14 @@ class ConsulStore(Store):
         return data
 
     def exists(self, key):
-        """check if key exists."""
+        """Check if key exists."""
         if self.get(key):
             return True
         else:
             return self._file_store.exists(key)
 
     def _consul_store_delete(self, key):
-        """delete a key from consul store."""
+        """Delete a key from consul store."""
 
         for retry_index in range(0, MAX_CONSUL_RETRY):
             try:
@@ -199,7 +198,7 @@ class ConsulStore(Store):
                 break
 
     def delete(self, key):
-        """delete a key."""
+        """Delete a key."""
         self._consul_store_delete(key)
         self._file_store.delete(key)
         if self._consul_conn_status is False:
@@ -207,7 +206,7 @@ class ConsulStore(Store):
             self._data_sync_required = True
 
     def _consul_store_get_keys_with_prefix(self, prefix):
-        """get keys with given prefix from consulstore."""
+        """Get keys with given prefix from consulstore."""
         for retry_index in range(0, MAX_CONSUL_RETRY):
             try:
                 prefix = self._get_key(prefix)
@@ -232,7 +231,7 @@ class ConsulStore(Store):
                 break
 
     def get_keys_with_prefix(self, prefix):
-        """get keys with given prefix."""
+        """Get keys with given prefix."""
         files = None
         if self._consul_conn_status is False:
             self._establish_consul_connection(self._host, self._port)
