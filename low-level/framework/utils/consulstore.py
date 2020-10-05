@@ -269,7 +269,7 @@ class ConsulStore(Store):
             if self._data_sync_required:
                 # Dump data from the file store to consul store once the consul connection is restored.
                 # TODO: Need to make this asynchronous task, trigger can happen here but current get() should not get delayed
-                self._dump_filestore_to_consulstore()
+                self._dump_filestore_to_consulstore(self._affected_files_list_path)
             # Get data from the consul store
             files = self._consul_store_get_keys_with_prefix(prefix)
         else:
