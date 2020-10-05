@@ -234,7 +234,7 @@ config_sspl() {
 
     # Add required user and vhost to RabbitMQ. Set user permissions etc.
     echo "Creating required RABBITMQ configuration.... "
-    $SSPL_BASE_DIR/bin/sspl_rabbitmq_reinit $product || {
+    python3 $SSPL_BASE_DIR/bin/sspl_rabbitmq_reinit $product || {
         reinit_err="$?";
         echo -n "$SSPL_BASE_DIR/bin/sspl_rabbitmq_reinit failed ";
         echo "with exit code ${reinit_err} for product $product";

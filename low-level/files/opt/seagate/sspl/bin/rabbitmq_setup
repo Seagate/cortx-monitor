@@ -44,7 +44,7 @@ product=$(sed -nr 's/^product=([^,]+)$/\1/p' $SSPL_CONF | head -1)
 
 # Add required user and vhost to RabbitMQ. Set user permissions etc.
 echo "Creating required RABBITMQ configuration.... "
-$SSPL_BASE_DIR/bin/sspl_rabbitmq_reinit $PRODUCT_NAME || {
+python3 $SSPL_BASE_DIR/bin/sspl_rabbitmq_reinit $PRODUCT_NAME || {
     reinit_err="$?";
     echo -n "$SSPL_BASE_DIR/bin/sspl_rabbitmq_reinit failed ";
     echo "with exit code ${reinit_err} for product $PRODUCT_NAME";
