@@ -613,6 +613,11 @@ def signal_handler(signal_number, frame):
        The entries in text file should be in form of <key=value>.
     """
     logger.debug("signal_handler called with {0}".format(signal_number))
+
+    # Ignore a new  SIGHUP while handling current SIGHUP
+    # Signal will be enabled at the end of this handler
+    signal.signal(signal.SIGHUP, signal.SIG_IGN)
+
     entries = dict()
     state = "active"
     global sspl_role_state
@@ -655,6 +660,9 @@ def signal_handler(signal_number, frame):
         # thread is not yet ready,save the request to serve it later when thread
         # will be ready.
         sspl_role_state = state
+
+    # Enable the signal handler 
+    signal.signal(signal.SIGHUP, signal_handler)
 
 def send_thread_controller_request(state):
     '''Creates a internal request for thread controller
