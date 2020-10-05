@@ -33,17 +33,19 @@ class ConsulStore(Store):
 
     def __init__(self, host, port):
         super(Store, self).__init__()
+        # Indication of the synchronization if there is a mismatch of the stored data between file store and consul store
         self._data_sync_required = False
+        #Indicates whether consul connection is up/down
         self._consul_conn_status = False
-        self._host = host
-        self._port = port
-        self._establish_consul_connection(self._host, self._port)
+        self._consul_host = host
+        self._consul_port = port
+        self._establish_consul_connection(self._consul_host, self._consul_port)
         self._file_store = FileStore()
 
-    def _establish_consul_connection(self, host, port):
+    def _establish_consul_connection(self, consul_host, consul_port):
         for retry_index in range(0, MAX_CONSUL_RETRY):
             try:
-                self.consul_conn = consul.Consul(host=host, port=port)
+                self.consul_conn = consul.Consul(consul_host, consul_port)
                 self._consul_conn_status = True
                 break
 
@@ -112,14 +114,19 @@ class ConsulStore(Store):
                 self._consul_conn_status = False
                 break
 
+        if self._consul_conn_status is False:
+            logger.warn("Consul conn is down: key {0} value {1}".format(key, value))
+            self._add_entry_in_file_list(os.path.join("/_M", key), value)
+            self._data_sync_required = True
+
+
     def put(self, value, key, pickled=True):
         """Write data to given key."""
         self._consul_store_put(key, value, pickled)
+        # Needs back of the stored data in the consul.
+        # There is an issue when consul is down as sspl's alerts are dependent on the consul.So, writing data
+        # in filestore along with consulstore. It would be getting used when consul connection is down
         self._file_store.put(value, key, pickled)
-
-        if self._consul_conn_status is False:
-            self._add_entry_in_file_list(os.path.join("/_M", key), value)
-            self._data_sync_required = True
 
     def _consul_store_get(self, key, kwargs):
         """Load data from given key from consul."""
@@ -155,15 +162,21 @@ class ConsulStore(Store):
     def get(self, key, **kwargs):
         """Load data from given key."""
         data = None
+
+        # Try to restores consul connection in case it went down
         if self._consul_conn_status is False:
-            self._establish_consul_connection(self._host, self._port)
+            self._establish_consul_connection(self._consul_host, self._consul_port)
 
-        if self._consul_conn_status and self._data_sync_required:
-            self._dump_filestore_to_consulstore()
-
-        data = self._consul_store_get(key, kwargs)
-
-        if self._consul_conn_status is False:
+        if self._consul_conn_status:
+            if self._data_sync_required:
+                # Dump data from the file store to consul store once the consul connection is restored.
+                # TODO: Need to make this asynchronous task, trigger can happen here but current get() should not get delayed
+                self._dump_filestore_to_consulstore()
+            # Get data from the consul store
+            data = self._consul_store_get(key, kwargs)
+        else:
+            # Consul connetion is down. So, get data from the file store
+            logger.warn("Consul conn is down, filestore is being used to get data: key {0}".format(key))
             data = self._file_store.get(key,kwargs)
 
         return data
@@ -196,13 +209,17 @@ class ConsulStore(Store):
                 self._consul_conn_status = False
                 break
 
-    def delete(self, key):
-        """Delete a key."""
-        self._consul_store_delete(key)
-        self._file_store.delete(key)
         if self._consul_conn_status is False:
             self._add_entry_in_file_list(os.path.join("/_D", key), None)
             self._data_sync_required = True
+
+    def delete(self, key):
+        """Delete a key."""
+        self._consul_store_delete(key)
+        # Needs back of the stored data in the consul.
+        # There is an issue when consul is down as sspl's alerts  are dependent on the consul. So, deleting data
+        # from the filestore along with consulstore.
+        self._file_store.delete(key)
 
     def _consul_store_get_keys_with_prefix(self, prefix):
         """Get keys with given prefix from consulstore."""
@@ -232,15 +249,20 @@ class ConsulStore(Store):
     def get_keys_with_prefix(self, prefix):
         """Get keys with given prefix."""
         files = None
+
+        # Try to restore consul connection in case it went down
         if self._consul_conn_status is False:
-            self._establish_consul_connection(self._host, self._port)
+            self._establish_consul_connection(self._consul_host, self._consul_port)
 
-        if self._consul_conn_status and self._data_sync_required:
-            self._dump_filestore_to_consulstore()
-
-        files = self._consul_store_get_keys_with_prefix(prefix)
-
-        if self._consul_conn_status is False:
+        if self._consul_conn_status:
+            if self._data_sync_required:
+                # Dump data from the file store to consul store once the consul connection is restored.
+                # TODO: Need to make this asynchronous task, trigger can happen here but current get() should not get delayed
+                self._dump_filestore_to_consulstore()
+            # Get data from the consul store
+            files = self._consul_store_get_keys_with_prefix(prefix)
+        else:
+            # Consul connetion is down. So, get data from the file store
             files = self._file_store.get_keys_with_prefix(prefix)
 
         return files
