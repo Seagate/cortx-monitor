@@ -177,7 +177,6 @@ class ConsulStore(Store):
 
     def _consul_store_delete(self, key):
         """Delete a key from consul store."""
-
         for retry_index in range(0, MAX_CONSUL_RETRY):
             try:
                 consul_key = self._get_key(key)
