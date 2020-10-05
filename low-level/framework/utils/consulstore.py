@@ -25,7 +25,7 @@ from framework.utils.store import Store
 from framework.utils.filestore import FileStore
 from framework.utils.service_logging import logger
 import pickle
-from framework.base.sspl_constants import MAX_CONSUL_RETRY, WAIT_BEFORE_RETRY
+from framework.base.sspl_constants import MAX_CONSUL_RETRY, WAIT_BEFORE_RETRY, DATA_PATH
 import time
 import requests
 
@@ -41,6 +41,8 @@ class ConsulStore(Store):
         self._consul_port = port
         self._establish_consul_connection(self._consul_host, self._consul_port)
         self._file_store = FileStore()
+        #List of the files which are affected when consul was down
+        self._affected_files_list_path = os.path.join(DATA_PATH, "affected_files_list")
 
     def _establish_consul_connection(self, consul_host, consul_port):
         for retry_index in range(0, MAX_CONSUL_RETRY):
@@ -68,29 +70,37 @@ class ConsulStore(Store):
         else:
             return key
 
-    def _dump_filestore_to_consulstore(self):
+    def _dump_filestore_to_consulstore(self, path):
         """Pop entries from the file list and update consul store."""
-        # Get a list of modified entries in a filestore
-        files = self._file_store.get_keys_with_prefix("/_M")
+        # Get a list of modified entries which are not present in consulstore
+        key_list = self._file_store.get(path)
 
-        for file in files:
-            key = os.path.relpath(file, "/_M")
-            value = self._file_store.get("/" + key)
-            self.consul_conn.kv.put(key, value)
+        for key in key_list:
+            #get prefix of the key
+            action = key.split("/")
 
-        # Get a list of deleted entries in a filestore
-        files = self._file_store.get_keys_with_prefix("/_D")
+            if action[1] == "_M":
+                actual_key = os.path.relpath(key, "/_M")
+                value = self._file_store.get("/" + actual_key)
+                self.consul_conn.kv.put(actual_key, value)
 
-        for file in files:
-            key = os.path.relpath(file, "/_D")
-            value = self._file_store.get(key)
-            self.consul_conn.kv.delete(key)
+            elif action[1] == "_D":
+                actual_key = os.path.relpath(key, "/_D")
+                value = self._file_store.get(actual_key)
+                self.consul_conn.kv.delete(actual_key)
 
+        self._file_store.delete(path)
         self._data_sync_required = False
 
-    def _add_entry_in_file_list(self, key, value):
+    def _update_file_list(self, path, entry):
         """Prepare list of entries which are added or deleted when consul was down."""
-        self._file_store.put(key, value)
+        if self._file_store.exists(path):
+            key_list = self._file_store.get(path)
+            key_list.append(entry)
+            self._file_store.put(key_list, path)
+        else:
+            key_list = [f"{entry}"]
+            self._file_store.put(key_list, path)
 
     def _consul_store_put(self, key, value, pickled):
         """Write data to giver key in consul."""
@@ -116,9 +126,9 @@ class ConsulStore(Store):
 
         if self._consul_conn_status is False:
             logger.warn("Consul conn is down: key {0} value {1}".format(key, value))
-            self._add_entry_in_file_list(os.path.join("/_M", key), value)
+            file_entry = os.path.join("/_M", key)
+            self._update_file_list(self._affected_files_list_path, file_entry)
             self._data_sync_required = True
-
 
     def put(self, value, key, pickled=True):
         """Write data to given key."""
@@ -171,7 +181,7 @@ class ConsulStore(Store):
             if self._data_sync_required:
                 # Dump data from the file store to consul store once the consul connection is restored.
                 # TODO: Need to make this asynchronous task, trigger can happen here but current get() should not get delayed
-                self._dump_filestore_to_consulstore()
+                self._dump_filestore_to_consulstore(self._affected_files_list)
             # Get data from the consul store
             data = self._consul_store_get(key, kwargs)
         else:
@@ -210,14 +220,15 @@ class ConsulStore(Store):
                 break
 
         if self._consul_conn_status is False:
-            self._add_entry_in_file_list(os.path.join("/_D", key), None)
+            file_entry = os.path.join("/_D", key)
+            self._update_file_list(self._affected_files_list_path, file_entry)
             self._data_sync_required = True
 
     def delete(self, key):
         """Delete a key."""
         self._consul_store_delete(key)
         # Needs back of the stored data in the consul.
-        # There is an issue when consul is down as sspl's alerts  are dependent on the consul. So, deleting data
+        # There is an issue when consul is down as sspl's alerts are dependent on the consul. So, deleting data
         # from the filestore along with consulstore.
         self._file_store.delete(key)
 
