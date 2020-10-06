@@ -682,11 +682,16 @@ def signal_handler(signal_number, frame):
        ThreadController methods to switch to different mode.
        The entries in text file should be in form of <key=value>.
     """
+    # Ignore a new  SIGHUP while handling current SIGHUP
+    # Signal will be enabled at the end of this handler
+    signal.signal(signal.SIGHUP, signal.SIG_IGN)
+
     logger.debug("signal_handler called with {0}".format(signal_number))
-    entries = dict()
-    state = "active"
-    global sspl_role_state
+
     try:
+        entries = dict()
+        state = "active"
+        global sspl_role_state
         with open(STATE_FILE) as state_file:
 
             for line in state_file.readlines():
@@ -703,28 +708,33 @@ def signal_handler(signal_number, frame):
 
         state = entries[STATE_KEY]
         logger.debug("state contains {0}".format(state))
+
+        if state.strip().lower() not in STATES:
+            logger.warn("Invalid state found: {0}. Falling back to default state {1}".format(state, DEFAULT_STATE))
+            state = DEFAULT_STATE
+
+        logger.info("Received SIGHUP to switch to {0} state".format(state))
+        if thread_controller_queue:
+            send_thread_controller_request(state)
+        else:
+            logger.warning(f'thread_controller_queue is not ready, saving the \
+                            sspl role switch request state, State: {state} to \
+                            process again later.')
+
+            # This can be the edge case. SSPL is not yet fully initialized and it
+            # received the signal to promote or may be demote. So, as the thread is
+            # not ready to accept that request, it will not be served and will be
+            # lost if not saved. So, to avoid this, once SSPL receives the request and
+            # thread is not yet ready,save the request to serve it later when thread
+            # will be ready.
+            sspl_role_state = state
+
     except Exception as e:
-        logger.warn("Error in reading state file: {0}".format(e))
+        logger.warn("Error in signal_handler processing {} ".format(e))
 
-    if state.strip().lower() not in STATES:
-        logger.warn("Invalid state found: {0}. Falling back to default state {1}".format(state, DEFAULT_STATE))
-        state = DEFAULT_STATE
-
-    logger.info("Received SIGHUP to switch to {0} state".format(state))
-    if thread_controller_queue:
-        send_thread_controller_request(state)
-    else:
-        logger.warning(f'thread_controller_queue is not ready, saving the \
-                        sspl role switch request state, State: {state} to \
-                        process again later.')
-
-        # This can be the edge case. SSPL is not yet fully initialized and it
-        # received the signal to promote or may be demote. So, as the thread is
-        # not ready to accept that request, it will not be served and will be
-        # lost if not saved. So, to avoid this, once SSPL receives the request and
-        # thread is not yet ready,save the request to serve it later when thread
-        # will be ready.
-        sspl_role_state = state
+    finally:
+        # Enable the signal handler 
+        signal.signal(signal.SIGHUP, signal_handler)
 
 def send_thread_controller_request(state):
     '''Creates a internal request for thread controller
