@@ -612,11 +612,11 @@ def signal_handler(signal_number, frame):
        ThreadController methods to switch to different mode.
        The entries in text file should be in form of <key=value>.
     """
-    logger.debug("signal_handler called with {0}".format(signal_number))
-
     # Ignore a new  SIGHUP while handling current SIGHUP
     # Signal will be enabled at the end of this handler
     signal.signal(signal.SIGHUP, signal.SIG_IGN)
+
+    logger.debug("signal_handler called with {0}".format(signal_number))
 
     entries = dict()
     state = "active"
