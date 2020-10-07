@@ -40,7 +40,8 @@ class Utility(object):
         #TODO Handle exception at caller side
         process = subprocess.Popen(command, shell=False, stdout=subprocess.PIPE,\
                                     stderr=subprocess.PIPE)
-        return process.communicate()[0], process.returncode
+        _result, _err = process.communicate()
+        return _result, _err, process.returncode
 
     def is_env_vm(self):
         """
