@@ -26,7 +26,6 @@ try:
     from service_logging import logger
     from utility import Utility
 except Exception as err:
-    logger.warning(f'Problem occured while importing the module: {err}')
     from framework.utils.service_logging import logger
     from framework.utils.utility import Utility
 

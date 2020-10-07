@@ -180,7 +180,7 @@ class IEMSensor(SensorThread, InternalMsgQ):
 
         except IOError as io_error:
             if io_error.errno == errno.ENOENT:
-                logger.error(f"IEMSensor, self.run, {io_error.args} {io_error.filename}")
+                logger.debug(f"IEMSensor, self.run, {io_error.args} {io_error.filename}")
             elif io_error.errno == errno.EACCES:
                 logger.error(f"IEMSensor, self.run, {io_error.args} {io_error.filename}")
             else:
