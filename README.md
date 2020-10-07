@@ -1,4 +1,4 @@
-[![Codacy Badge](https://api.codacy.com/project/badge/Grade/4d251d6e46e4445a978b1616516a3bc7)](https://app.codacy.com/gh/Seagate/cortx-monitor?utm_source=github.com&utm_medium=referral&utm_content=Seagate/cortx-monitor&utm_campaign=Badge_Grade)
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/4d251d6e46e4445a978b1616516a3bc7)](https://app.codacy.com/gh/Seagate/cortx-monitor?utm_source=github.com&utm_medium=referral&utm_content=Seagate/cortx-monitor&utm_campaign=Badge_Grade) [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://github.com/Seagate/cortx-monitor/blob/main/LICENSE)
 
 # CORTX-Monitor
 
