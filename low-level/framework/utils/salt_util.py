@@ -131,11 +131,10 @@ class SaltInterface:
         if not _is_env_vm or not _is_single_server:
             try:
                 if self.pillar_info is not None:
-                    data_store_config = \
-                        self.pillar_info[self.node_id][self.SSPL_KEY][self.DATASTORE_KEY]
-                    if data_store_config is not None:
-                        _consul_vip = data_store_config['consul_host']
-                    logger.info(f'salt_util, consul VIP: {_consul_vip}')
+                    _consul_vip = \
+                        self.pillar_info[self.node_id][self.CLUSTER_KEY][self.node_id]\
+                        ['network']['date_nw']['roaming_ip']
+                    logger.debug(f'salt_util, consul VIP: {_consul_vip}')
                 else:
                     logger.warning(f'salt_util, Fail to read consul VIP with \
                                      this error: {_err}, Assuming localhost: \
