@@ -14,7 +14,10 @@
 # cortx-questions@seagate.com.
 
 
-"""Module which provides common config information using Provisioner API"""
+"""
+Module which provides common config information using Provisioner API
+"""
+
 
 import ast
 import errno
@@ -43,7 +46,7 @@ class SaltInterface:
     DATASTORE_KEY = 'DATASTORE'
 
     def __init__(self):
-        """init method"""
+        """init method."""
         if SaltInterface.__instance is None:
             self.utility = Utility()
             self.pillar_info = None
@@ -60,15 +63,18 @@ class SaltInterface:
 
     @staticmethod
     def get_singleton_instance():
-        """Returns an instance of this class"""
+        """
+        Returns an instance of this class
+        """
         if SaltInterface.__instance is None:
             SaltInterface()
         return SaltInterface.__instance
 
     @staticmethod
     def get_node_id():
-        """Returns salt minion_id using salt config file"""
-
+        """
+        Returns salt minion_id using salt config file
+        """
         _node_id = 'srvnode-1'
         try:
             with open(SaltInterface.SALT_FILE, 'r') as salt_file:
