@@ -46,7 +46,9 @@ class SaltInterface:
     DATASTORE_KEY = 'DATASTORE'
 
     def __init__(self):
-        """init method."""
+        """
+        init method
+        """
         if SaltInterface.__instance is None:
             self.utility = Utility()
             self.pillar_info = None
