@@ -14,15 +14,16 @@
 # cortx-questions@seagate.com.
 
 
-'''Module which provides common config information using Provisioner API'''
+"""Module which provides common config information using Provisioner API"""
 
-
+import ast
 import errno
 
 try:
     from service_logging import logger
     from utility import Utility
 except Exception as err:
+    logger.warning(f'Problem occured while importing the module: {err}')
     from framework.utils.service_logging import logger
     from framework.utils.utility import Utility
 
@@ -42,7 +43,7 @@ class SaltInterface:
     DATASTORE_KEY = 'DATASTORE'
 
     def __init__(self):
-        '''init method'''
+        """init method"""
         if SaltInterface.__instance is None:
             self.utility = Utility()
             self.pillar_info = None
@@ -51,7 +52,7 @@ class SaltInterface:
                     self.utility.execute_cmd(['sudo', 'provisioner', 'pillar_get'])
             _err = _err.decode("utf-8").rstrip()
             if _ret_code == 0 and _err == '':
-                self.pillar_info = eval(_result.decode("utf-8").rstrip())
+                self.pillar_info = ast.literal_eval(_result.decode("utf-8").rstrip())
             self._is_single_node = None or self._is_server_single(_err)
             self.consul_host = None or self.get_consul_vip(_err)
             self.consul_port = None or self.get_consul_port(_err)
@@ -59,14 +60,14 @@ class SaltInterface:
 
     @staticmethod
     def get_singleton_instance():
-        '''Returns an instance of this class'''
+        """Returns an instance of this class"""
         if SaltInterface.__instance is None:
             SaltInterface()
         return SaltInterface.__instance
 
     @staticmethod
     def get_node_id():
-        '''Returns salt minion_id using salt config file'''
+        """Returns salt minion_id using salt config file"""
 
         _node_id = 'srvnode-1'
         try:
