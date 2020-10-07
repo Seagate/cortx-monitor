@@ -133,7 +133,7 @@ class SaltInterface:
                 if self.pillar_info is not None:
                     _consul_vip = \
                         self.pillar_info[self.node_id][self.CLUSTER_KEY][self.node_id]\
-                        ['network']['date_nw']['roaming_ip']
+                        ['network']['data_nw']['roaming_ip']
                     logger.debug(f'salt_util, consul VIP: {_consul_vip}')
                 else:
                     logger.warning(f'salt_util, Fail to read consul VIP with \
