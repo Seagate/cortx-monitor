@@ -138,7 +138,8 @@ python3 -m pip install --user -r $req_file  > /dev/null || {
 #Check & install required RPM packages
 echo "Installing build required RPM packages..."
 yum install -y python36-dbus python36-paramiko \
-    python36-psutil python36-gobject cortx-py-utils
+    python36-psutil python36-gobject 
+python3 -m pip install git+https://github.com/Seagate/cortx-utils.git#subdirectory=py-utils
 
 echo "Generating tar & RPM's for pre requisite packages systemd_python."
 yum erase -y systemd-python36-*
