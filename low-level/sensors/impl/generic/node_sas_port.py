@@ -92,6 +92,10 @@ class SASPortSensor(SensorThread, InternalMsgQ):
 
     # Number of SAS Ports
     NUM_SAS_PORTS = 4
+    # Number of Phys in a Port
+    NUM_PHYS_PER_PORT = 4
+    # Current Data Version
+    CURRENT_DATA_VERSION = 1
 
     @staticmethod
     def name():
@@ -225,9 +229,10 @@ class SASPortSensor(SensorThread, InternalMsgQ):
 
         for i in range(0,self.NUM_SAS_PORTS):
             # Save phy names forming this port for future use
-            self.port_phy_list_dict[i] = phy_list[4*i:4*i+4]
+            self.port_phy_list_dict[i] = phy_list[ self.NUM_PHYS_PER_PORT * i : \
+                                                        self.NUM_PHYS_PER_PORT * i + self.NUM_PHYS_PER_PORT ]
             # Check port status
-            s = set(hba[4*i:4*i+4])
+            s = set( hba[ self.NUM_PHYS_PER_PORT * i : self.NUM_PHYS_PER_PORT * i + self.NUM_PHYS_PER_PORT ])
             if len(s) == 1 and 0 in s:
                 port_status = 'down'
             elif len(s) == 1 and 1 in s:
@@ -253,7 +258,7 @@ class SASPortSensor(SensorThread, InternalMsgQ):
 
         # Current
         for port, value in self.sas_phy_stored_alert.items():
-            if port == 'conn':
+            if port in ['version','conn']:
                 # This is key for conn alert, skip
                 continue
 
@@ -277,6 +282,28 @@ class SASPortSensor(SensorThread, InternalMsgQ):
             self._generate_alert(alert_type,-1)
             self.sas_phy_stored_alert['conn'] = alert_type
 
+    def handle_current_version_data(self):
+        """Contains logic to check and send alert if data has version == 1."""
+        # Compare current status of each port with previous alert_type
+        for port, value in self.sas_phy_stored_alert.items():
+            if port in ['version','conn']:
+                # Skip
+                continue
+            if value == 'fault_resolved' and \
+                        self.sas_ports_status[port] == 'down':
+                alert_type = 'fault'
+                self._generate_alert(alert_type, port)
+                self.sas_phy_stored_alert[port] = alert_type
+            elif value == 'fault' and \
+                        self.sas_ports_status[port] == 'up':
+                alert_type = 'fault_resolved'
+                self._generate_alert(alert_type, port)
+                self.sas_phy_stored_alert[port] = alert_type
+        # See if conn failure/conn resolved alert needs to be sent
+        self.check_and_send_conn_alert()
+        # Save data to store
+        store.put(self.sas_phy_stored_alert, self.SAS_PORT_SENSOR_DATA)
+
     def check_and_send_alert(self):
         """Checks whether conditions are met and sends alert if required
         Alerts will be sent if -
@@ -287,35 +314,27 @@ class SASPortSensor(SensorThread, InternalMsgQ):
         # Update sas ports status
         self.update_sas_ports_status()
 
-        if self.sas_phy_stored_alert == None:
-            # No info is stored for this node in Consul
+        # Check the version of stored alert
+        version = None
+        try:
+            # Try to get the version
+            # Exception will be raised if stored alert is None or no Version is available
+            version = self.sas_phy_stored_alert['version']
+        except Exception:
+            logger.warning(f"Found no data or old data format for SASPortSensor, \
+                            updating data format to version {self.CURRENT_DATA_VERSION}")
+            # Versioning is not implemented or there is no data, write new data
             # Initialize dummy fault_resolved for all sas ports and conn
             self.sas_phy_stored_alert = {}
+            self.sas_phy_stored_alert['version'] = self.CURRENT_DATA_VERSION
             self.sas_phy_stored_alert['conn'] = 'fault_resolved'
             for i in range(0,self.NUM_SAS_PORTS):
                 self.sas_phy_stored_alert[i] = 'fault_resolved'
             # Save data to store
             store.put(self.sas_phy_stored_alert, self.SAS_PORT_SENSOR_DATA)
-        else:
-            # Compare current status of each port with previous alert_type
-            for port, value in self.sas_phy_stored_alert.items():
-                # Skip if key is 'conn'
-                if port == 'conn':
-                    continue
-                if value == 'fault_resolved' and \
-                            self.sas_ports_status[port] == 'down':
-                    alert_type = 'fault'
-                    self._generate_alert(alert_type, port)
-                    self.sas_phy_stored_alert[port] = alert_type
-                elif value == 'fault' and \
-                            self.sas_ports_status[port] == 'up':
-                    alert_type = 'fault_resolved'
-                    self._generate_alert(alert_type, port)
-                    self.sas_phy_stored_alert[port] = alert_type
-            # See if conn failure/conn resolved alert needs to be sent
-            self.check_and_send_conn_alert()
-            # Save data to store
-            store.put(self.sas_phy_stored_alert, self.SAS_PORT_SENSOR_DATA)
+
+        if version == self.CURRENT_DATA_VERSION:
+            self.handle_current_version_data()
 
     def run(self):
         """Run the sensor on its own thread"""
