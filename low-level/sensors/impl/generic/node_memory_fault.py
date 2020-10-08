@@ -144,7 +144,8 @@ class MemFaultSensor(SensorThread, InternalMsgQ):
     def get_stored_mem_info(self):
         """ Get the memory info from consul"""
 
-        if store.exists(self.MEM_FAULT_SENSOR_DATA):
+        path_exists, _ = store.exists(self.MEM_FAULT_SENSOR_DATA)
+        if path_exists:
             consul_data = (store.get(self.MEM_FAULT_SENSOR_DATA)).split(":")
             self.prev_mem = consul_data[0].strip()
             self.fault_alert_state = consul_data[1].strip()

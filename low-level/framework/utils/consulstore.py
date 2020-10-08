@@ -60,8 +60,8 @@ class ConsulStore(Store):
             try:
                 key = self._get_key(key)
                 if pickled:
-                    value = pickle.dumps(value)
-                self.consul_conn.kv.put(key, value)
+                    pickled_value = pickle.dumps(value)
+                self.consul_conn.kv.put(key, pickled_value)
                 break
 
             except requests.exceptions.ConnectionError as connerr:
@@ -104,10 +104,37 @@ class ConsulStore(Store):
     def exists(self, key):
         """check if key exists
         """
-        if self.get(key):
-            return True
-        else:
-            return False
+        data = None
+        status = "Failure"
+        is_exists = False
+
+        for retry_index in range(0, MAX_CONSUL_RETRY):
+            try:
+                key = self._get_key(key)
+                data = self.consul_conn.kv.get(key)[1]
+                if data:
+                    data = data["Value"]
+                    try:
+                        data = pickle.loads(data)
+                    except:
+                        pass
+                status = "Success"
+                break
+
+            except requests.exceptions.ConnectionError as connerr:
+                logger.warn("Error[{0}] consul connection refused Retry Index {1}" \
+                    .format(connerr, retry_index))
+                time.sleep(WAIT_BEFORE_RETRY)
+
+            except Exception as gerr:
+                logger.warn("Error[{0}] while reading data from consul {1}" \
+                    .format(gerr, key))
+                break
+
+        if data is not None:
+            is_exists = True
+
+        return is_exists, status
 
     def delete(self, key):
         """ delete a key

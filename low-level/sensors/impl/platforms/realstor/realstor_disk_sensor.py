@@ -69,6 +69,7 @@ class RealStorDiskSensor(SensorThread, InternalMsgQ):
     memcache_disks = {}
     DISK_IDENTIFIER = "Disk 0."
     NUMERIC_IDENTIFIER = "numeric"
+    invalidate_latest_disks_info = False
 
     # Dependency list
     DEPENDENCIES = {
@@ -146,11 +147,15 @@ class RealStorDiskSensor(SensorThread, InternalMsgQ):
             # insertion/removal detected
             self._rss_check_disks_presence()
 
-            # Polling system status
-            self.rssencl.get_system_status()
+            #Do not proceed further if latest disks info is not valid due to consul connection error
+            if not self.invalidate_latest_disks_info:
+                # Polling system status
+                self.rssencl.get_system_status()
 
-            # check for disk faults & raise if found
-            self._rss_check_disk_faults()
+                # check for disk faults & raise if found
+                self._rss_check_disk_faults()
+            else:
+                logger.warn("Ignore disk faults check due to consul error")
 
         except Exception as ae:
             logger.exception(ae)
@@ -244,7 +249,8 @@ class RealStorDiskSensor(SensorThread, InternalMsgQ):
             #get removed drive data from disk cache
             disk_datafile = f"{self.disks_prcache}disk_{slot}.json.prev"
 
-            if not store.exists(disk_datafile):
+            path_exists, _ = store.exists(disk_datafile)
+            if not path_exists:
                 disk_datafile = f"{self.disks_prcache}disk_{slot}.json"
 
             disk_info = store.get(disk_datafile)
@@ -318,6 +324,7 @@ class RealStorDiskSensor(SensorThread, InternalMsgQ):
 
                 # reset latest drive cache to build new
                 self.latest_disks = {}
+                self.invalidate_latest_disks_info = False
 
                 for drive in drives:
                     slot = drive.get("slot", -1)
@@ -333,19 +340,31 @@ class RealStorDiskSensor(SensorThread, InternalMsgQ):
                         # If drive is replaced, previous drive info needs
                         # to be retained in disk_<slot>.json.prev file and
                         # then only dump new data to disk_<slot>.json
-                        if store.exists(dcache_path):
+                        path_exists, ret_val = store.exists(dcache_path)
+                        if path_exists and ret_val == "Success":
                             prevdrive = store.get(dcache_path)
-                            prevsn = prevdrive.get("serial-number","NA")
-                            prevhealth = prevdrive.get("health", "NA")
 
-                            if prevsn != sn or prevhealth != health:
-                                # Rename path
-                                store.put(store.get(dcache_path), dcache_path + ".prev")
-                                store.delete(dcache_path)
+                            if prevdrive is not None:
+                                prevsn = prevdrive.get("serial-number","NA")
+                                prevhealth = prevdrive.get("health", "NA")
 
-                                store.put(drive, dcache_path)
-                        else:
+                                if prevsn != sn or prevhealth != health:
+                                    # Rename path
+                                    store.put(store.get(dcache_path), dcache_path + ".prev")
+                                    store.delete(dcache_path)
+
+                                    store.put(drive, dcache_path)
+                        elif not path_exists and ret_val == "Success":
                             store.put(drive, dcache_path)
+                        else:
+                            # Invalidate latest disks info if consul connection error is found
+                            logger.warn(f"store.exists {dcache_path} return value {ret_val}")
+                            self.invalidate_latest_disks_info = True
+                            break
+
+                if self.invalidate_latest_disks_info is True:
+                    # Reset latest disks info
+                    self.latest_disks = {}
 
             #If no in-memory cache, build from persistent cache
             if not self.memcache_disks:

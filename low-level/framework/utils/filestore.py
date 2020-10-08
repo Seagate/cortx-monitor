@@ -131,7 +131,7 @@ class FileStore(Store):
     def exists(self, key):
         """check if key exists
         """
-        return os.path.exists(key)
+        return os.path.exists(key), "Success"
 
     def delete(self, key):
         """ delete a file
