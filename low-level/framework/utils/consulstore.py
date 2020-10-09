@@ -56,11 +56,12 @@ class ConsulStore(Store):
 
     def put(self, value, key, pickled=True):
         """ write data to given key"""
+        key = self._get_key(key)
+        if pickled:
+            value = pickle.dumps(value)
+
         for retry_index in range(0, MAX_CONSUL_RETRY):
             try:
-                key = self._get_key(key)
-                if pickled:
-                    value = pickle.dumps(value)
                 self.consul_conn.kv.put(key, value)
                 break
 
@@ -74,9 +75,11 @@ class ConsulStore(Store):
                     .format(gerr, key))
                 break
 
-    def get(self, key, **kwargs):
-        """ Load data from given key"""
+    def _consul_get(self, key, **kwargs):
+        """Load consul data from the given key."""
         data = None
+        status = "Failure"
+
         for retry_index in range(0, MAX_CONSUL_RETRY):
             try:
                 _opt_recurse = kwargs.get("recurse", False)
@@ -88,6 +91,7 @@ class ConsulStore(Store):
                         data = pickle.loads(data)
                     except:
                         pass
+                status = "Success"
                 break
 
             except requests.exceptions.ConnectionError as connerr:
@@ -99,15 +103,24 @@ class ConsulStore(Store):
                 logger.warn("Error[{0}] while reading data from consul {1}" \
                     .format(gerr, key))
                 break
+
+        return data, status
+
+    def get(self, key, **kwargs):
+        """ Load data from given key"""
+        data, _ = self._consul_get(key, **kwargs)
         return data
 
     def exists(self, key):
         """check if key exists
         """
-        if self.get(key):
-            return True
-        else:
-            return False
+        key_present = False
+        data, status = self._consul_get(key)
+
+        if data is not None:
+            key_present = True
+
+        return key_present, status
 
     def delete(self, key):
         """ delete a key
