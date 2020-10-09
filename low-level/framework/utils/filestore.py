@@ -137,7 +137,7 @@ class FileStore(Store):
             key_present = os.path.exists(key)
             status = "Success"
         except Exception as gerr:
-            logger.warn("Error{0} while checking if key is present".format(gerr))
+            logger.warn("Error while checking if {0} is present".format(gerr))
 
         return key_present, status
 

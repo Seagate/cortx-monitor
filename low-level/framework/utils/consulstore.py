@@ -83,7 +83,7 @@ class ConsulStore(Store):
         for retry_index in range(0, MAX_CONSUL_RETRY):
             try:
                 key = self._get_key(key)
-                data = self.consul_conn.kv.get(key)[1]
+                data = self.consul_conn.kv.get(key, recurse=_opt_recurse)[1]
                 if data:
                     data = data["Value"]
                     try:
