@@ -147,7 +147,7 @@ class RealStorDiskSensor(SensorThread, InternalMsgQ):
             # insertion/removal detected
             self._rss_check_disks_presence()
 
-            #Do not proceed further if latest disks info is not valid due to consul connection error
+            #Do not proceed further if latest disks info can't be validated due to store function error
             if not self.invalidate_latest_disks_info:
                 # Polling system status
                 self.rssencl.get_system_status()
@@ -155,7 +155,7 @@ class RealStorDiskSensor(SensorThread, InternalMsgQ):
                 # check for disk faults & raise if found
                 self._rss_check_disk_faults()
             else:
-                logger.warn("Ignore disk faults check due to consul error")
+                logger.warn("Can not validate disk faults or presence due to persistence store error")
 
         except Exception as ae:
             logger.exception(ae)
@@ -357,7 +357,7 @@ class RealStorDiskSensor(SensorThread, InternalMsgQ):
                         elif not path_exists and ret_val == "Success":
                             store.put(drive, dcache_path)
                         else:
-                            # Invalidate latest disks info if consul connection error is found
+                            # Invalidate latest disks info if persistence store error encountered
                             logger.warn(f"store.exists {dcache_path} return value {ret_val}")
                             self.invalidate_latest_disks_info = True
                             break

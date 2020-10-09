@@ -56,12 +56,13 @@ class ConsulStore(Store):
 
     def put(self, value, key, pickled=True):
         """ write data to given key"""
+        key = self._get_key(key)
+        if pickled:
+            value = pickle.dumps(value)
+
         for retry_index in range(0, MAX_CONSUL_RETRY):
             try:
-                key = self._get_key(key)
-                if pickled:
-                    pickled_value = pickle.dumps(value)
-                self.consul_conn.kv.put(key, pickled_value)
+                self.consul_conn.kv.put(key, value)
                 break
 
             except requests.exceptions.ConnectionError as connerr:
@@ -74,39 +75,10 @@ class ConsulStore(Store):
                     .format(gerr, key))
                 break
 
-    def get(self, key, **kwargs):
-        """ Load data from given key"""
-        data = None
-        for retry_index in range(0, MAX_CONSUL_RETRY):
-            try:
-                _opt_recurse = kwargs.get("recurse", False)
-                key = self._get_key(key)
-                data = self.consul_conn.kv.get(key, recurse=_opt_recurse)[1]
-                if data:
-                    data = data["Value"]
-                    try:
-                        data = pickle.loads(data)
-                    except:
-                        pass
-                break
-
-            except requests.exceptions.ConnectionError as connerr:
-                logger.warn("Error[{0}] consul connection refused Retry Index {1}" \
-                    .format(connerr, retry_index))
-                time.sleep(WAIT_BEFORE_RETRY)
-
-            except Exception as gerr:
-                logger.warn("Error[{0}] while reading data from consul {1}" \
-                    .format(gerr, key))
-                break
-        return data
-
-    def exists(self, key):
-        """check if key exists
-        """
+    def _consul_get(self, key, **kwargs):
+        """Load consul data from the given key"""
         data = None
         status = "Failure"
-        is_exists = False
 
         for retry_index in range(0, MAX_CONSUL_RETRY):
             try:
@@ -131,10 +103,23 @@ class ConsulStore(Store):
                     .format(gerr, key))
                 break
 
-        if data is not None:
-            is_exists = True
+        return data, status
 
-        return is_exists, status
+    def get(self, key, **kwargs):
+        """ Load data from given key"""
+        data, _ = self._consul_get(key, **kwargs)
+        return data
+
+    def exists(self, key):
+        """check if key exists
+        """
+        key_present = False
+        data, status = self._consul_get(key)
+
+        if data is not None:
+            key_present = True
+
+        return key_present, status
 
     def delete(self, key):
         """ delete a key

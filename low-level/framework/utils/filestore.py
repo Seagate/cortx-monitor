@@ -129,9 +129,17 @@ class FileStore(Store):
         return value
 
     def exists(self, key):
-        """check if key exists
+        """check if key is present
         """
-        return os.path.exists(key), "Success"
+        key_present = False
+        status = "Failure"
+        try:
+            key_present = os.path.exists(key)
+            status = "Success"
+        except Exception as gerr:
+            logger.warn("Error{0} while checking if key is present".format(gerr))
+
+        return key_present, status
 
     def delete(self, key):
         """ delete a file
