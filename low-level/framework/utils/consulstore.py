@@ -82,6 +82,7 @@ class ConsulStore(Store):
 
         for retry_index in range(0, MAX_CONSUL_RETRY):
             try:
+                _opt_recurse = kwargs.get("recurse", False)
                 key = self._get_key(key)
                 data = self.consul_conn.kv.get(key, recurse=_opt_recurse)[1]
                 if data:
