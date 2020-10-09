@@ -76,7 +76,7 @@ class ConsulStore(Store):
                 break
 
     def _consul_get(self, key, **kwargs):
-        """Load consul data from the given key"""
+        """Load consul data from the given key."""
         data = None
         status = "Failure"
 
