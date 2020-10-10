@@ -122,6 +122,11 @@ class SSPLHealthView(object):
             print("Error in reading resource health view template file: {0}".format(e))
             sys.exit(1)
 
+        self._resource_health_view.update({
+            "healthview_metadata": {
+                "version": "1.0"
+            }
+        })
         self._resource_health_view['cluster'].update({'cluster_id':self.CLUSTER_ID})
         self._resource_health_view['cluster']['sites'][self.SITE_ID] =\
             self._resource_health_view['cluster']['sites'].pop('site_id')
@@ -186,7 +191,7 @@ class SSPLHealthView(object):
                 try:
                     node_health_json = self._resource_health_view['cluster']['sites']\
                                                         [self.SITE_ID]['rack'][self.RACK_ID]\
-                                                        ['nodes']['node:'+self.HOST_NAME] =\
+                                                        ['nodes']['node:'+node_key_id] =\
                                                         self._resource_health_view['cluster']['sites']\
                                                         [self.SITE_ID]['rack'][self.RACK_ID]\
                                                         ['nodes'].pop('node')
