@@ -903,15 +903,21 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
                              "Upper Critical", "Fully Redundant", "State Asserted",
                              "State Deasserted"]
 
-        threshold_event = event.split(" ")
-        threshold = threshold_event[len(threshold_event)-1]
+        # Strip spaces just to be sure
+        event = event.strip()
+        status = status.strip()
 
         if status.lower() == "deasserted" and event.lower() == "fully redundant":
             alert_type = "fault"
         elif status.lower() == "asserted" and event.lower() == "fully redundant":
             alert_type = "fault_resolved"
-        elif threshold.lower() in ['low', 'high']:
-            alert_type = f"threshold_breached:{threshold}"
+        elif "going high" in event.lower() or "going low" in event.lower():
+            if status.lower() == "deasserted":
+                alert_type = "fault_resolved"
+                event = "Deasserted - " + event
+            elif status.lower() == "asserted":
+                alert_type = "fault"
+                event = "Asserted - " + event
 
         sensor_name = self.sensor_id_map[self.TYPE_FAN][sensor_id]
 
@@ -927,8 +933,6 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         severity_reader = SeverityReader()
         if alert_type:
             severity = severity_reader.map_severity(alert_type)
-            if threshold.lower() in ['low', 'high'] and status.lower() == "deasserted":
-                severity = "informational"
         else:
             # Else section will handle some unknown as well as known events like
             # "State Asserted", "State Deasserted" or "Sensor Reading" and also it is
