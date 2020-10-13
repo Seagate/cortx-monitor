@@ -23,8 +23,9 @@ DIR_NAME="/opt/seagate/$PRODUCT_FAMILY/sspl"
 SSPL_CONF="/etc/sspl.conf"
 RSYSLOG_CONF="/etc/rsyslog.d/0-iemfwd.conf"
 RSYSLOG_SSPL_CONF="/etc/rsyslog.d/1-ssplfwd.conf"
-LOGROTATE_CONF="/etc/logrotate_hourly.d/iem_messages"
-SSPL_LOGROTATE_CONF="/etc/logrotate_hourly.d/sspl_logs"
+LOGROTATE_DIR="/etc/logrotate_hourly.d"
+IEM_LOGROTATE_CONF="$LOGROTATE_DIR/iem_messages"
+SSPL_LOGROTATE_CONF="$LOGROTATE_DIR/sspl_logs"
 SSPL_CONFIGURED="/var/$PRODUCT_FAMILY/sspl/sspl-configured"
 ROLES="gw ssu vm cmu cortx"
 
@@ -269,7 +270,12 @@ config_sspl() {
         sed -i "1 s|^.*$|${LOG_FILE_PATH}|g" /opt/seagate/$PRODUCT_FAMILY/sspl/conf/etc/logrotate_hourly.d/iem_messages
     fi
 
-    cp /opt/seagate/$PRODUCT_FAMILY/sspl/conf/etc/logrotate_hourly.d/iem_messages $LOGROTATE_CONF
+    # Create logrotate dir in case it's not present for dev environment
+    if [ ! -d "${LOGROTATE_DIR}" ]; then
+        mkdir -p ${LOGROTATE_DIR}
+    fi
+
+    cp /opt/seagate/$PRODUCT_FAMILY/sspl/conf/etc/logrotate_hourly.d/iem_messages $IEM_LOGROTATE_CONF
     cp /opt/seagate/$PRODUCT_FAMILY/sspl/conf/etc/logrotate_hourly.d/sspl_logs $SSPL_LOGROTATE_CONF
 
     # This rsyslog restart will happen after successful updation of rsyslog
