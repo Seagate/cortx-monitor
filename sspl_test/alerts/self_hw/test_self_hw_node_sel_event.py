@@ -42,7 +42,7 @@ def wait_for_asserted_event():
                 info = msg_type["info"]
                 specific_info = msg_type["specific_info"]
                 if info["resource_type"] == "node:fru:fan" and \
-                        specific_info["event"] == "Lower Critical going low":
+                        specific_info["event"] == "Asserted - Lower Critical going low":
                     # We got the expected alert
                     got_alert = True
                     break
@@ -66,7 +66,7 @@ def wait_for_deasserted_event():
                 info = msg_type["info"]
                 specific_info = msg_type["specific_info"]
                 if info["resource_type"] == "node:fru:fan" and \
-                        specific_info["event"] == "Lower Critical going high":
+                        specific_info["event"] == "Deasserted - Lower Critical going high":
                     # We got the expected alert
                     got_alert = True
                     break
