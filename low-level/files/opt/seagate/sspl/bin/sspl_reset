@@ -90,8 +90,8 @@ hard_reset()
     rm -f /etc/rsyslog.d/1-ssplfwd.conf
 
     # Remove logrotate config files
-    rm -f /etc/logrotate.d/iem_messages
-    rm -f /etc/logrotate.d/sspl_logs
+    rm -f /etc/logrotate_hourly.d/iem_messages
+    rm -f /etc/logrotate_hourly.d/sspl_logs
 
     # Remove SSPL configuration files
     rm -f /etc/sspl.conf
