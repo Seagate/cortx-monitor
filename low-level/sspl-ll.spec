@@ -74,8 +74,8 @@ id -u sspl-ll &>/dev/null || {
 
 # take backup of cache folder if exists
 mkdir -p /opt/seagate/backup/%{version}
-[ -f /etc/sspl.conf ] && cp /etc/sspl.conf /opt/seagate/backup/%{version}/sspl.conf
-[ -d /var/%{product_family}/sspl ] && cp -R /var/%{product_family}/sspl /opt/seagate/backup/%{version}/
+[ -f /etc/sspl.conf ] && cp -p /etc/sspl.conf /opt/seagate/backup/%{version}/sspl.conf
+[ -d /var/%{product_family}/sspl ] && cp -Rp /var/%{product_family}/sspl /opt/seagate/backup/%{version}/
 
 # Create ras persistent cache folder
 # TODO: In production this directory will be created by provisioner
@@ -109,7 +109,7 @@ CFG_DIR=$SSPL_DIR/conf
 [ -f /tmp/sspl_tmp.conf ] && cp /tmp/sspl_tmp.conf /etc/sspl.conf
 
 # restore of data & iem folder
-[ -d /opt/seagate/backup/%{version}/sspl ] && cp -R /opt/seagate/backup/%{version}/sspl/* /var/%{product_family}/sspl/
+[ -d /opt/seagate/backup/%{version}/sspl ] && cp -Rp /opt/seagate/backup/%{version}/sspl/* /var/%{product_family}/sspl/
 
 # Copy rsyslog configuration
 # [ -f /etc/rsyslog.d/0-iemfwd.conf ] ||
