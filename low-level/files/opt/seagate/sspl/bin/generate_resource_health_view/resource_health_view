@@ -71,7 +71,7 @@ class SSPLHealthView(object):
     encl_controllers_filename = storage_encl_dir+'controllers/controllerdata.json'
     encl_fans_filename = storage_encl_dir+'fanmodules/fanmodule_data.json'
     encl_sideplane_exp_filename = storage_encl_dir+'sideplane_expanders/sideplane_expanders_data.json'
-    encl_logical_volumes_filename = storage_encl_dir+'logical_volumes/logicalvolumedata.json'
+    encl_logical_volumes_filename = storage_encl_dir+'logical_volumes/logical_volume_data.json'
 
     encl_disk_resource_type = "enclosure:fru:disk"
     encl_controller_resource_type = "enclosure:fru:controller"
@@ -100,7 +100,7 @@ class SSPLHealthView(object):
     SAS_RESOURCE_ID = "SASHBA-0"
     node_interface_data = ['sas_port', 'network_cable']
     NW_CBL_CARRIER_FILE = "/sys/class/net/{}/carrier"
-    
+
     encl_hw_specifics_api = 'configuration'
     ENCL_MANIFEST_PATH = '/tmp/encl_manifest.json'
     NODE_MANIFEST_PATH = '/tmp/node_manifest.json'
@@ -558,7 +558,6 @@ class SSPLHealthView(object):
         logvol_data = {}
         logicalvolume_dict = {}
 
-        diskgroups = self.get_realstor_show_data("disk-groups")
         logicalvolumes = self.get_realstor_show_data("volumes")
         if logicalvolumes:
             logvol_existing_cache = True
@@ -582,17 +581,16 @@ class SSPLHealthView(object):
                             "fetch_time" : int(time.time())
                         }
                 })
-            if not logvol_existing_cache:
-                for diskgroup in diskgroups:
-                    health = diskgroup.get("health", "NA")
-                    if health in self.undesired_vals:
-                        health = "NA"
+
+                # If cache does not already exist, build it
+                if not logvol_existing_cache:
                     if health != 'OK':
-                        serial_number = diskgroup.get("serial-number") # Disk Group Serial Number
+                        serial_number = logicalvolume.get("serial-number") # Logical Volume Serial Number
                         alert_type = ""
                         logicalvolume_dict.update({serial_number:{'health':health.lower(),
                                                                 'alert_type':alert_type}})
 
+            if not logvol_existing_cache:
                 store.put(logicalvolume_dict, self.encl_logical_volumes_filename)
         return logvol_data
 
@@ -754,7 +752,7 @@ class SSPLHealthView(object):
                 singleton_realstorencl.login()
                 self.tried_alt_ip = True
                 response = self.fetch_ws_request_data(show_fru, fru)
-        
+
         if response.status_code != singleton_realstorencl.ws.HTTP_OK and self.tried_alt_ip is True:
             self.correct_mc_config = False
             return []
