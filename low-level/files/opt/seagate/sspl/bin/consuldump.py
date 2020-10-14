@@ -35,7 +35,7 @@ class ConsulDump():
         self.existing = existing
         for retry_index in range(0, MAX_CONSUL_RETRY):
             try:
-                self.consul = consul.Consul(host=CONSUL_HOST, post=CONSUL_PORT)
+                self.consul = consul.Consul(host=CONSUL_HOST, port=CONSUL_PORT)
                 break
             except requests.exceptions.ConnectionError as connerr:
                 print(f'Error[{connerr}] consul connection refused Retry Index {retry_index}')
@@ -59,11 +59,12 @@ class ConsulDump():
         os.makedirs(path, exist_ok=True)
 
     def get_values(self, key):
-        for retry_index in range(0, MAX_CONSUL_ENTRY):
+        value = []
+        for retry_index in range(0, MAX_CONSUL_RETRY):
             try:
-                value = self.consul.kv.get(key, recurse=True)
-                if value is not None:
-                    value = value[1]
+                value = self.consul.kv.get(key, recurse=True)[1]
+                if not value:
+                    value = []
                 break
             except requests.exceptions.ConnectionError as connerr:
                 print(f'Error[{connerr}] consul connection refused Retry Index {retry_index}')
@@ -74,6 +75,7 @@ class ConsulDump():
         return value
 
     def get_pretty_file_content(self, data):
+        deserialized = ""
         try:
             deserialized = pickle.loads(data)
             return json.dumps(deserialized, indent=4)

@@ -23,11 +23,10 @@ import sys
 import shutil
 import json
 import subprocess
-import consul
 
 from framework.platforms.realstor.realstor_enclosure import singleton_realstorencl
 from framework.base.sspl_constants import PRODUCT_FAMILY, SUPPORT_REQUESTOR_NAME, SUPPORT_EMAIL_ID, SUPPORT_CONTACT_NUMBER, \
-     ENCL_TRIGGER_LOG_MAX_RETRY, ENCL_DOWNLOAD_LOG_MAX_RETRY, ENCL_DOWNLOAD_LOG_WAIT_BEFORE_RETRY, CONSUL_HOST, CONSUL_PORT
+     ENCL_TRIGGER_LOG_MAX_RETRY, ENCL_DOWNLOAD_LOG_MAX_RETRY, ENCL_DOWNLOAD_LOG_WAIT_BEFORE_RETRY
 
 # Add the top level directories
 sys.path.insert(0, f'/opt/seagate/{PRODUCT_FAMILY}/sspl/low-level')
@@ -49,6 +48,9 @@ class SSPLBundleGenerate(object):
         self.rabbitmq_status = "/tmp/rabbitmq_status.txt"
         self.ipmi_sel_data = "/tmp/ipmi_sel_data.txt"
         self.consul_path = "/tmp/consul_data.txt"
+        self.consul_sspl_config = "/tmp/consuldump_sspl_config/"
+        self.consul_sspl_data = "/tmp/consuldump_sspl_cache/"
+        self.boot_drvs_dta = '/tmp/Server_OS_boot_drives_SMART_data'
         self.enclosure_log = "/tmp/enclosure_logs.zip"
         self.enclosure_wwn = "NA"
         self.rabbitmq_cmd = {
@@ -107,7 +109,7 @@ class SSPLBundleGenerate(object):
                 sspl_state == 'active'
 
             ipmi_sel_cmd = f"ipmitool sel list > {self.ipmi_sel_data}"
-            subout = subprocess.Popen(ipmi_sel_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            subout = self._run_command(ipmi_sel_cmd)
             del subout
             self.get_consul_data()
             self.get_drives_smart_data()
@@ -120,8 +122,12 @@ class SSPLBundleGenerate(object):
                     tar.add(sspl_log_dir, arcname=file_dir+"/sspl/logs/")
                 if os.path.exists(self.sspl_conf_dir):
                     tar.add(self.sspl_conf_dir, arcname=file_dir+"/sspl/config/sspl.sls")
-                if os.path.exists(self.consul_path):
-                    tar.add(self.consul_path, arcname=file_dir+"/sspl/consul/consul_data.txt")
+                if os.path.exists(self.consul_sspl_config):
+                    tar.add(self.consul_sspl_config, arcname=file_dir+"/sspl/consul/consul_sspl_config.txt")
+                if os.path.exists(self.consul_sspl_data):
+                    tar.add(self.consul_sspl_data, arcname=file_dir+"/sspl/consul/consul_sspl_cache.txt")
+                if os.path.exists(self.boot_drvs_dta):
+                    tar.add(self.boot_drvs_dta, arcname=file_dir+"/drives_SMART_data/")
                 if os.path.exists(self.ipmi_sel_data):
                     tar.add(self.ipmi_sel_data, arcname=file_dir+"/ipmi/ipmi_sel_data.txt")
                 if os.path.exists(self.rabbitmq_status):
@@ -162,29 +168,42 @@ class SSPLBundleGenerate(object):
         rmq_file.close()
 
     def get_consul_data(self):
-        host = os.getenv('CONSUL_HOST', CONSUL_HOST)
-        port = os.getenv('CONSUL_PORT', CONSUL_PORT)
-        consul_data = {}
-        try:
-            consul_conn = consul.Consul(host=host, port=port)
-            consul_values = consul_conn.kv.get('sspl/', recurse=True)[1]
-            for data_dict in consul_values:
-                if data_dict["Value"] is None:
-                    value = "NA"
-                else:
-                    value = data_dict["Value"].decode("utf-8")
-                consul_data.update({
-                    data_dict["Key"]: value
-                })
-        except Exception as serror:
-            print(f"Error in consul: {serror}")
-            consul_data.update({'Error' : f"Error in consul: {serror}"})
-
-        with open(self.consul_path, 'w+') as fp:
-            json.dump(consul_data, fp,  indent=4)
+        consul_sspl_cfg_cmd = f"/opt/seagate/{PRODUCT_FAMILY}/sspl/bin/consuldump.py -p sspl_config -l /tmp/ sspl/"
+        consul_sspl_cache_cmd = f"/opt/seagate/{PRODUCT_FAMILY}/sspl/bin/consuldump.py -p sspl_cache -l /tmp/ var/{PRODUCT_FAMILY}/sspl"
+        subout = self._run_command(consul_sspl_cfg_cmd)
+        subout = self._run_command(consul_sspl_cache_cmd)
+        del subout
+        # waiting to 2 to 3 second to genrate consul dump file.
+        time.sleep(3)
+        # Get latest consul sspl data from tmp directory.
+        all_subdirs = ['/tmp/'+d for d in os.listdir("/tmp/") if os.path.isdir('/tmp/'+d)]
+        self.consul_sspl_config = max([x for x in all_subdirs if x.startswith('/tmp/consuldump_sspl_config')], 
+                            key=os.path.getmtime)+'/sspl_'
+        self.consul_sspl_data = max([x for x in all_subdirs if x.startswith('/tmp/consuldump_sspl_cache')], 
+                            key=os.path.getmtime)+f'/var_{PRODUCT_FAMILY}_sspl'
 
     def get_drives_smart_data(self):
-        pass
+        lsscsi_cmd = "lsscsi | grep disk"
+        lsscsi_response, _ = self._run_command(lsscsi_cmd)
+        if not os.path.exists(self.boot_drvs_dta):
+            os.makedirs(self.boot_drvs_dta)
+        for res in lsscsi_response.split("\n"):
+            smartctl_cmd = f"sudo smartctl -a {res.split(' ')[-2]} --json"
+            response, _ = self._run_command(smartctl_cmd)
+            response = json.loads(response)
+            try:
+                file_name = res.split(' ')[-2].replace('/', '_')[1:]
+                with open(f"{self.boot_drvs_dta}/{file_name}.json", "w+") as fp:
+                    json.dump(response, fp,  indent=4)
+
+            except Exception as e:
+                print("Error in writing {0} file: {1}".format(response, e))
+    
+    def _run_command(self, command):
+        """Run the command and get the response and error returned"""
+        process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
+        response, error = process.communicate()
+        return response.rstrip('\n'), error.rstrip('\n')
 
     def get_enclosure_logs(self):
         url = singleton_realstorencl.build_url("/")
