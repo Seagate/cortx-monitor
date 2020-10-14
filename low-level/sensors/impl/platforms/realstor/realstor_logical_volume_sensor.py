@@ -97,6 +97,7 @@ class RealStorLogicalVolumeSensor(SensorThread, InternalMsgQ):
             self.SENSOR_NAME, self.PRIORITY)
 
         self._faulty_disk_group_file_path = None
+        self._faulty_logical_volume_file_path = None
 
         self.rssencl = singleton_realstorencl
 
@@ -104,7 +105,11 @@ class RealStorLogicalVolumeSensor(SensorThread, InternalMsgQ):
         self._logical_volume_prcache = None
 
         # Holds Logical Volumes with faults. Used for future reference.
+        # Disk group fault detection code disabled as not applicable in current release.
         self._previously_faulty_disk_groups = {}
+
+        # Holds Logical Volumes with faults. Used for future reference.
+        self._previously_faulty_logical_volumes = {}
 
         self.pollfreq_logical_volume_sensor = \
             int(self.rssencl.conf_reader._get_value_with_default(\
@@ -132,17 +137,18 @@ class RealStorLogicalVolumeSensor(SensorThread, InternalMsgQ):
              self.LOGICAL_VOLUMES_DIR)
 
         # Persistence file location. This file stores faulty Logical Volume data
-        self._faulty_disk_group_file_path = os.path.join(
-            self._logical_volume_prcache, "logicalvolumedata.json")
+        # for logical volume alerts
+        self._faulty_logical_volume_file_path = os.path.join(
+            self._logical_volume_prcache, "logical_volume_data.json")
 
         # Load faulty Logical Volume data from file if available
-        self._previously_faulty_disk_groups = store.get(\
-                                                  self._faulty_disk_group_file_path)
+        self._previously_faulty_logical_volumes = store.get(\
+                                                  self._faulty_logical_volume_file_path)
 
-        if self._previously_faulty_disk_groups is None:
-            self._previously_faulty_disk_groups = {}
-            store.put(self._previously_faulty_disk_groups,\
-                self._faulty_disk_group_file_path)
+        if self._previously_faulty_logical_volumes is None:
+            self._previously_faulty_logical_volumes = {}
+            store.put(self._previously_faulty_logical_volumes,\
+                self._faulty_logical_volume_file_path)
 
         return True
 
@@ -163,11 +169,19 @@ class RealStorLogicalVolumeSensor(SensorThread, InternalMsgQ):
         self._read_my_msgQ_noWait()
 
         disk_groups = None
+        logical_volumes = None
+
         try:
             disk_groups = self._get_disk_groups()
 
             if disk_groups:
-                self._get_msgs_for_faulty_disk_groups(disk_groups)
+                # Disabling disk group level alerts in R1
+                # self._get_msgs_for_faulty_disk_groups(disk_groups)
+                for disk_group in disk_groups:
+                    pool_serial_number = disk_group["pool-serial-number"]
+                    logical_volumes = self._get_logical_volumes(pool_serial_number)
+                    if logical_volumes:
+                        self._get_msgs_for_faulty_logical_volumes(logical_volumes, disk_group)
 
         except Exception as exception:
             logger.exception(exception)
@@ -309,6 +323,78 @@ class RealStorLogicalVolumeSensor(SensorThread, InternalMsgQ):
                 state_changed = False
             alert_type = ""
         return faulty_disk_group_messages
+
+    def _get_msgs_for_faulty_logical_volumes(self, logical_volumes, disk_group, send_message=True):
+        """Checks for health of logical volumes and returns list of messages to be
+           sent to handler if there are any.
+        """
+        faulty_logical_volume_messages = []
+        internal_json_msg = None
+        logical_volume_health = None
+        serial_number = None
+        alert_type = ""
+        # Flag to indicate if there is a change in _previously_faulty_logical_volumes
+        state_changed = False
+
+        if not logical_volumes:
+            return
+
+        for logical_volume in logical_volumes:
+            logical_volume_health = logical_volume["health"].lower()
+            serial_number = logical_volume["serial-number"]
+
+            # Check for missing and fault case
+            if logical_volume_health == self.rssencl.HEALTH_FAULT:
+                # Status change from Degraded ==> Fault or OK ==> Fault
+                if (serial_number in self._previously_faulty_logical_volumes and \
+                        self._previously_faulty_logical_volumes[serial_number]['health']=="degraded") or \
+                        (serial_number not in self._previously_faulty_logical_volumes):
+                    alert_type = self.rssencl.FRU_FAULT
+                    self._previously_faulty_logical_volumes[serial_number] = {
+                        "health": logical_volume_health, "alert_type": alert_type}
+                    state_changed = True
+
+            # Check for degraded case
+            elif logical_volume_health == self.rssencl.HEALTH_DEGRADED:
+                # Status change from Fault ==> Degraded or OK ==> Degraded
+                if (serial_number in self._previously_faulty_logical_volumes and \
+                        self._previously_faulty_logical_volumes[serial_number]['health']=="fault") or \
+                        (serial_number not in self._previously_faulty_logical_volumes):
+                    alert_type = self.rssencl.FRU_FAULT
+                    self._previously_faulty_logical_volumes[serial_number] = {
+                        "health": logical_volume_health, "alert_type": alert_type}
+                    state_changed = True
+
+            # Check for healthy case
+            elif logical_volume_health == self.rssencl.HEALTH_OK:
+                # Status change from Fault ==> OK or Degraded ==> OK
+                if serial_number in self._previously_faulty_logical_volumes:
+                    # Send message to handler
+                    alert_type = self.rssencl.FRU_FAULT_RESOLVED
+                    del self._previously_faulty_logical_volumes[serial_number]
+                    state_changed = True
+
+            if state_changed:
+                # Generate the alert contents
+                internal_json_msg = self._create_internal_msg(
+                    logical_volume, alert_type, disk_group)
+                faulty_logical_volume_messages.append(internal_json_msg)
+                # Send message to handler
+                if send_message:
+                    self._send_json_msg(internal_json_msg)
+                # Persist faulty Logical Volume list to file only if something is changed
+                # Wait till msg is sent to rabbitmq or added in consul for resending.
+                # If timed out, do not update cache and revert in-memory cache.
+                # So, in next iteration change can be detected
+                if self._event.wait(self.rssencl.PERSISTENT_DATA_UPDATE_TIMEOUT):
+                    store.put(self._previously_faulty_logical_volumes,\
+                        self._faulty_logical_volume_file_path)
+                else:
+                    self._previously_faulty_logical_volumes = store.get(self._faulty_logical_volume_file_path)
+                state_changed = False
+            alert_type = ""
+
+        return faulty_logical_volume_messages
 
     def _create_internal_msg(self, logical_volume_detail, alert_type, disk_group):
         """Forms a dictionary containing info about Logical Volumes to send to

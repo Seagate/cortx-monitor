@@ -89,7 +89,7 @@ class SSPLHealthView(object):
         self.SAS_RESOURCE_ID = "SASHBA-0"
         self.node_interface_data = ['sas_port', 'network_cable']
         self.NW_CBL_CARRIER_FILE = "/sys/class/net/{}/carrier"
-        
+
         self.encl_hw_specifics_api = 'configuration'
 
         self.SITE_ID = sys_site_id
@@ -158,7 +158,7 @@ class SSPLHealthView(object):
                 except Exception as e:
                     print("Error while extracting values from health view json % : " % e)
                     return False
-                
+
                 for category in ['sw', 'interfaces', 'platform_sensors']:
                     del self._resource_health_view['cluster']['sites']\
                                                             [self.SITE_ID]['rack'][self.RACK_ID]\
@@ -169,7 +169,7 @@ class SSPLHealthView(object):
                                                             ['nodes']['storage_encl']['hw']['fru'][sub_category]
                 self.build_health_view_storage_jbod_cache(storage_encl_health_json)
                 health_view_created = True
-            
+
             elif args.encl and self.storage_type == self.STORAGE_TYPE_RBOD:
                 try:
                     storage_encl_health_json = self._resource_health_view['cluster']['sites']\
@@ -218,7 +218,7 @@ class SSPLHealthView(object):
                                                         ['nodes']['node:'+node_key_id][category]
                 self.build_health_view_node_server_cache(node_health_json, 'os')
                 health_view_created = True
-            
+
             elif args.node:
                 try:
                     node_health_json = self._resource_health_view['cluster']['sites']\
@@ -325,7 +325,7 @@ class SSPLHealthView(object):
         if self.correct_mc_config:
             self.write_content_in_file(self.RESOURCE_HEALTH_VIEW_PATH, self._resource_health_view,
                                         'resource health view')
-        
+
     def build_health_view_storage_jbod_cache(self, storage_encl_health_json):
 
         disk_data = storage_encl_health_json['hw']['fru']['disks']
@@ -363,7 +363,7 @@ class SSPLHealthView(object):
                     interface_data.update(interfaces_data[interface])
                 else:
                     interface_data.update({"health": "", interface+"s_info": interfaces_data[interface]})
-        
+
         elif category == 'os':
             os_sw_info = self.build_node_os_instances()
             for os_info in ['cortx_sw', 'operating_system', 'disks']:
@@ -680,7 +680,6 @@ class SSPLHealthView(object):
         logvol_data = {}
         logicalvolume_dict = {}
 
-        diskgroups = self.get_realstor_show_data("disk-groups")
         logicalvolumes = self.get_realstor_show_data("volumes")
         if logicalvolumes:
             logvol_existing_cache = True
@@ -704,17 +703,16 @@ class SSPLHealthView(object):
                             "fetch_time" : int(time.time())
                         }
                 })
-            if not logvol_existing_cache:
-                for diskgroup in diskgroups:
-                    health = diskgroup.get("health", "NA")
-                    if health in self.undesired_vals:
-                        health = "NA"
+
+                # If cache does not already exist, build it
+                if not logvol_existing_cache:
                     if health != 'OK':
-                        serial_number = diskgroup.get("serial-number") # Disk Group Serial Number
+                        serial_number = logicalvolume.get("serial-number") # Logical Volume Serial Number
                         alert_type = ""
                         logicalvolume_dict.update({serial_number:{'health':health.lower(),
                                                                 'alert_type':alert_type}})
 
+            if not logvol_existing_cache:
                 store.put(logicalvolume_dict, self.encl_logical_volumes_filename)
         return logvol_data
 
@@ -876,7 +874,7 @@ class SSPLHealthView(object):
                 singleton_realstorencl.login()
                 self.tried_alt_ip = True
                 response = self.fetch_ws_request_data(show_fru, fru)
-        
+
         if response.status_code != singleton_realstorencl.ws.HTTP_OK and self.tried_alt_ip is True:
             self.correct_mc_config = False
             return []
@@ -1240,7 +1238,7 @@ class SSPLHealthView(object):
 
     @staticmethod
     def _update_required_data_to_consul(args):
-        
+
         base_info = {'/SYSTEM_INFORMATION/site_id': 'system_information/site_id',
                 '/SYSTEM_INFORMATION/rack_id': 'system_information/rack_id',
                 '/SYSTEM_INFORMATION/node_id': f'system_information/{node_key_id}/node_id',
