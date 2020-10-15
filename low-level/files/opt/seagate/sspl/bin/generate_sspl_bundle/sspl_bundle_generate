@@ -46,11 +46,11 @@ class SSPLBundleGenerate(object):
         self.rabbitmq_conf_dir = "/etc/rabbitmq/rabbitmq.config"
         self.rabbitmq_log_dir = "/var/log/rabbitmq"
         self.rabbitmq_status = "/tmp/rabbitmq_status.txt"
-        self.ipmi_sel_data = "/tmp/ipmi_sel_data.txt"
-        self.consul_path = "/tmp/consul_data.txt"
+        self.ipmi_sel_data = f"/tmp/ipmi_sel_data_{str(int(time.time()))}.txt"
+        self.consul_folder_name = 'consul_sspl_data'
         self.consul_sspl_config = "/tmp/consuldump_sspl_config/"
         self.consul_sspl_data = "/tmp/consuldump_sspl_cache/"
-        self.boot_drvs_dta = '/tmp/Server_OS_boot_drives_SMART_data'
+        self.boot_drvs_dta = f'/tmp/Server_OS_boot_drives_SMART_data_{str(int(time.time()))}'
         self.enclosure_log = "/tmp/enclosure_logs.zip"
         self.enclosure_wwn = "NA"
         self.rabbitmq_cmd = {
@@ -101,16 +101,14 @@ class SSPLBundleGenerate(object):
                 # Capturing enclosure logs only when sspl state is active
                 sspl_state = sspl_state[1] if len(sspl_state)==2 else ''
                 if not sspl_state == 'active':
-                    print("SSPL state is not active, So enclosure data are ignored to collecte.")
+                    print("SSPL is in 'degraded' mode, so enclosure data not collected as part of this node support bundle.")
 
             except (FileNotFoundError, OSError) as e:
                 print(f"Failed to open the SSPL 'state.txt' file with an error '{e}',\
                     Can't determine the SSPL state, So enclosure logs also being collected.")
                 sspl_state == 'active'
 
-            ipmi_sel_cmd = f"ipmitool sel list > {self.ipmi_sel_data}"
-            subout = self._run_command(ipmi_sel_cmd)
-            del subout
+            self.get_ipmi_sel_data()
             self.get_consul_data()
             self.get_drives_smart_data()
             if sspl_state == "active" and "-noencl" not in parser:
@@ -167,43 +165,54 @@ class SSPLBundleGenerate(object):
             rmq_file.write("======================================================= \n")
         rmq_file.close()
 
-    def get_consul_data(self):
-        consul_sspl_cfg_cmd = f"/opt/seagate/{PRODUCT_FAMILY}/sspl/bin/consuldump.py -p sspl_config -l /tmp/ sspl/"
-        consul_sspl_cache_cmd = f"/opt/seagate/{PRODUCT_FAMILY}/sspl/bin/consuldump.py -p sspl_cache -l /tmp/ var/{PRODUCT_FAMILY}/sspl"
-        subout = self._run_command(consul_sspl_cfg_cmd)
-        subout = self._run_command(consul_sspl_cache_cmd)
+    def get_ipmi_sel_data(self):
+        ipmi_sel_cmd = f"ipmitool sel list > {self.ipmi_sel_data}"
+        subout = self._run_command(ipmi_sel_cmd)
+        if subout[2] != 0:
+            print("Required ipmitool is missing from the Node server to fetch sel data..!")
         del subout
-        # waiting to 2 to 3 second to genrate consul dump file.
-        time.sleep(3)
-        # Get latest consul sspl data from tmp directory.
-        all_subdirs = ['/tmp/'+d for d in os.listdir("/tmp/") if os.path.isdir('/tmp/'+d)]
-        self.consul_sspl_config = max([x for x in all_subdirs if x.startswith('/tmp/consuldump_sspl_config')], 
-                            key=os.path.getmtime)+'/sspl_'
-        self.consul_sspl_data = max([x for x in all_subdirs if x.startswith('/tmp/consuldump_sspl_cache')], 
-                            key=os.path.getmtime)+f'/var_{PRODUCT_FAMILY}_sspl'
+
+    def get_consul_data(self):
+        self.consul_folder_name = f"consul_sspl_data-{str(int(time.time()))}"
+        consuldump = f"/opt/seagate/{PRODUCT_FAMILY}/sspl/bin/consuldump.py -n {self.consul_folder_name} -l /tmp/ -d"
+        consul_sspl_cfg_cmd = f"{consuldump} consul_sspl_config sspl/"
+        consul_sspl_cache_cmd = f"{consuldump} consul_sspl_cache var/{PRODUCT_FAMILY}/sspl"
+        subout = self._run_command(consul_sspl_cfg_cmd)
+        if subout[2] != 0:
+            print("Unable to get consul data of sspl config...!")
+        subout = self._run_command(consul_sspl_cache_cmd)
+        if subout[2] != 0:
+            print("Unable to get consul data of sspl cache...!")
+        del subout
+        self.consul_sspl_config = f"{self.consul_folder_name}/consul_sspl_config"
+        self.consul_sspl_data = f"{self.consul_folder_name}/consul_sspl_cache"
 
     def get_drives_smart_data(self):
         lsscsi_cmd = "lsscsi | grep disk"
-        lsscsi_response, _ = self._run_command(lsscsi_cmd)
+        lsscsi_response, _, return_code = self._run_command(lsscsi_cmd)
         if not os.path.exists(self.boot_drvs_dta):
             os.makedirs(self.boot_drvs_dta)
         for res in lsscsi_response.split("\n"):
-            smartctl_cmd = f"sudo smartctl -a {res.split(' ')[-2]} --json"
-            response, _ = self._run_command(smartctl_cmd)
+            drive_path = res.strip().split(' ')[-1]
+            smartctl_cmd = f"sudo smartctl -a {drive_path} --json"
+            response, _, return_code = self._run_command(smartctl_cmd)
             response = json.loads(response)
-            try:
-                file_name = res.split(' ')[-2].replace('/', '_')[1:]
-                with open(f"{self.boot_drvs_dta}/{file_name}.json", "w+") as fp:
-                    json.dump(response, fp,  indent=4)
+            # Filtering out local disk
+            if response['device']['protocol'] == 'ATA':
+                try:
+                    file_name = drive_path.replace('/', '_')[1:]
+                    with open(f"{self.boot_drvs_dta}/{file_name}.json", "w+") as fp:
+                        json.dump(response, fp,  indent=4)
 
-            except Exception as e:
-                print("Error in writing {0} file: {1}".format(response, e))
+                except Exception as e:
+                    print("Error in writing {0} file: {1}".format(response, e))
     
     def _run_command(self, command):
         """Run the command and get the response and error returned"""
         process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
+        return_code = process.wait()
         response, error = process.communicate()
-        return response.rstrip('\n'), error.rstrip('\n')
+        return response.rstrip('\n'), error.rstrip('\n'), return_code
 
     def get_enclosure_logs(self):
         url = singleton_realstorencl.build_url("/")
