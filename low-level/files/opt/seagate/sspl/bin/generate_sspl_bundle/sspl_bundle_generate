@@ -184,8 +184,8 @@ class SSPLBundleGenerate(object):
         if subout[2] != 0:
             print("Unable to get consul data of sspl cache...!")
         del subout
-        self.consul_sspl_config = f"{self.consul_folder_name}/consul_sspl_config"
-        self.consul_sspl_data = f"{self.consul_folder_name}/consul_sspl_cache"
+        self.consul_sspl_config = f"/tmp/{self.consul_folder_name}/consul_sspl_config"
+        self.consul_sspl_data = f"/tmp/{self.consul_folder_name}/consul_sspl_cache"
 
     def get_drives_smart_data(self):
         lsscsi_cmd = "lsscsi | grep disk"
