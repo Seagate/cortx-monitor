@@ -329,8 +329,8 @@ class RealStorFanSensor(SensorThread, InternalMsgQ):
         """Transmit data to RealStorMsgHandler to be processed and sent out"""
 
         self._event.clear()
-
-        logger.info(f"RealStorFanSensor: _send_json_message, json_msg: {json_msg}")
+        # RAAL stands for - RAise ALert
+        logger.info(f"RAAL: {json_msg}")
 
         # Send the event to real stor message handler
         # to generate json message and send out

@@ -483,6 +483,8 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
                     request = f"SMART_TEST: {jsonMsg_serial_number}"
                     # Send an Ack msg back with SMART results as Unsupported
                     json_msg = AckResponseMsg(request, self.SMART_STATUS_UNSUPPORTED, "").getJson()
+                    # RAAL stands for - RAise ALert
+                    logger.info(f"RAAL: {json_msg}")
                     self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
                     return
 
@@ -685,6 +687,7 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
 
                     # Send an Ack msg back with SMART results
                     json_msg = AckResponseMsg(request, ack_response, smart_uuid).getJson()
+                    logger.info(f"RAAL: {json_msg}")
                     self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
 
                     # Remove from our list
@@ -1075,6 +1078,7 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
 
                                     # Send an Ack msg back with SMART results
                                     json_msg = AckResponseMsg(request, response, smart_uuid).getJson()
+                                    logger.info(f"RAAL: {json_msg}")
                                     self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
 
                                     # Remove from our list
@@ -1132,6 +1136,7 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
                              "serial_number" : serial_number,
                              "path_id" : path_id
                              }
+        logger.info(f"RAAL: {internal_json_msg}")
         # Send the event to disk message handler to generate json message
         self._write_internal_msgQ(DiskMsgHandler.name(), internal_json_msg)
 
@@ -1157,6 +1162,8 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
                     "specific_info": specific_info
                     }
                 }
+
+        logger.info(f"RAAL: {msg}")
         # Send the event to disk message handler to generate json message
         self._write_internal_msgQ(DiskMsgHandler.name(), msg)
 

@@ -533,8 +533,8 @@ class RealStorDiskSensor(SensorThread, InternalMsgQ):
 
         internal_json_msg = self._gen_json_msg(alert_type, details, ext)
         self.last_alert = internal_json_msg
-
-        logger.info(f"RealStorDiskSensor:_send_json_msg, internal_json_msg: {internal_json_msg}")
+        # RAAL stands for - RAise ALert
+        logger.info(f"RAAL: {internal_json_msg}")
         # Send the event to storage encl message handler to generate json message and send out
         self._write_internal_msgQ(RealStorEnclMsgHandler.name(), internal_json_msg, self._event)
 
@@ -551,8 +551,6 @@ class RealStorDiskSensor(SensorThread, InternalMsgQ):
                           'log_msg': f'{json_data}'}
                     }
                 })
-
-        logger.info(f"RealStorDiskSensor:_log_IEM, internal_json_msg: {internal_json_msg}")
 
         # Send the event to logging msg handler to send IEM message to journald
         self._write_internal_msgQ(LoggingMsgHandler.name(), internal_json_msg)
