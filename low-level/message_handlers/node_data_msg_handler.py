@@ -412,6 +412,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 # Transmit it out over rabbitMQ channel
                 self.host_sensor_data = jsonMsg
                 self.os_sensor_type["system"] = self.host_sensor_data
+                logger.info(f"_generate_host_update, jsonMsg: {jsonMsg}")
                 self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
 
         if (self._node_sensor.total_memory["percent"] < self._host_memory_usage_threshold) and (self.host_fault == True):
@@ -440,6 +441,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 # Transmit it out over rabbitMQ channel
                 self.host_sensor_data = jsonMsg
                 self.os_sensor_type["system"] = self.host_sensor_data
+                logger.info(f"_generate_host_update, jsonMsg: {jsonMsg}")
                 self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
                 self.host_fault = False
 
@@ -467,6 +469,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             localMountDataMsg.set_uuid(self._uuid)
         jsonMsg = localMountDataMsg.getJson()
 
+        logger.info(f"_generate_local_mount_data, jsonMsg: {jsonMsg}")
         # Transmit it out over rabbitMQ channel
         self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
 
@@ -525,6 +528,8 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 jsonMsg = cpuDataMsg.getJson()
                 self.cpu_sensor_data = jsonMsg
                 self.os_sensor_type["cpu"] = self.cpu_sensor_data
+                logger.info(f"_generate_cpu_data, jsonMsg: {jsonMsg}")
+
                 # Transmit it out over rabbitMQ channel
                 self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
 
@@ -560,6 +565,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             jsonMsg = cpuDataMsg.getJson()
             self.cpu_sensor_data = jsonMsg
             self.os_sensor_type["cpu"] = self.cpu_sensor_data
+            logger.info(f"_generate_cpu_data, jsonMsg: {jsonMsg}")
             # Transmit it out over rabbitMQ channel
             self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
             self.cpu_fault = False
@@ -589,6 +595,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         #self._write_internal_msgQ(LoggingMsgHandler.name(), internal_json_msg)
 
         # Transmit it out over rabbitMQ channel
+        logger.info(f"_send_ifdata_json_msg, jsonMsg: {jsonMsg}")
         self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
 
     def _generate_if_data(self):
@@ -778,6 +785,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 jsonMsg = diskSpaceAlertMsg.getJson()
                 self.disk_sensor_data = jsonMsg
                 self.os_sensor_type["disk_space"] = self.disk_sensor_data
+                logger.info(f"_generate_disk_space_alert, jsonMsg: {jsonMsg}")
                 # Transmit it out over rabbitMQ channel
                 self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
 
@@ -804,6 +812,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             jsonMsg = diskSpaceAlertMsg.getJson()
             self.disk_sensor_data = jsonMsg
             self.os_sensor_type["disk_space"] = self.disk_sensor_data
+            logger.info(f"_generate_disk_space_alert, jsonMsg: {jsonMsg}")
             # Transmit it out over rabbitMQ channel
             self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
             self.disk_fault = False
@@ -899,7 +908,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         if self._uuid is not None:
             node_ipmi_data_msg.set_uuid(self._uuid)
         jsonMsg = node_ipmi_data_msg.getJson()
-
+        logger.info(f"_generate_node_fru_data, jsonMsg: {jsonMsg}")
         self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
 
     def suspend(self):
