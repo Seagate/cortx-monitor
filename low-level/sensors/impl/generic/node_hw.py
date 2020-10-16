@@ -1280,6 +1280,8 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
             }
           })
 
+        logger.info(f"NodeHWsensor:_send_json_msg, internal_json_msg: {internal_json_msg}")
+
         # Send the event to node data message handler to generate json message and send out
         self._write_internal_msgQ(NodeDataMsgHandler.name(), internal_json_msg)
 
@@ -1302,6 +1304,8 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         # Send the event to node data message handler to generate json message and send out
         internal_json_msg = json.dumps(
                 {'actuator_request_type': {'logging': {'log_level': 'LOG_WARNING', 'log_type': 'IEM', 'log_msg': f'{json_data}'}}})
+
+        logger.info(f"NodeHWsensor:_log_IEM, internal_json_msg: {internal_json_msg}")
 
         # Send the event to logging msg handler to send IEM message to journald
         self._write_internal_msgQ(LoggingMsgHandler.name(), internal_json_msg)

@@ -330,6 +330,7 @@ class RealStorFanSensor(SensorThread, InternalMsgQ):
 
         self._event.clear()
 
+        logger.info(f"RealStorFanSensor: _send_json_message, json_msg: {json_msg}")
         # Send the event to real stor message handler
         # to generate json message and send out
         self._write_internal_msgQ(RealStorEnclMsgHandler.name(), json_msg, self._event)

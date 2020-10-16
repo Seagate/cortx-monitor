@@ -342,6 +342,7 @@ class RealStorControllerSensor(SensorThread, InternalMsgQ):
         if not json_msg:
             return
         self._event.clear()
+        logger.info(f"RealStorControllerSensor: _send_json_msg, json_msg: {json_msg}")
         self._write_internal_msgQ(RealStorEnclMsgHandler.name(), json_msg, self._event)
 
     def suspend(self):

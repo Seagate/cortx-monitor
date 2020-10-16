@@ -501,6 +501,7 @@ causes could be missing SAS cable, bad cable connection, faulty cable or SAS por
 
         json_msg = self._create_json_message(alert_type, port)
         if json_msg:
+            logger.info(f"SASPortSensor: _generate_alert, json_msg: {json_msg}")
             self._write_internal_msgQ(NodeDataMsgHandler.name(), json_msg)
 
     def suspend(self):

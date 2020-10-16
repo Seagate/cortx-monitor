@@ -368,7 +368,7 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
             })
         self.alert_type = None
 
-        logger.debug("_send_json_msg, internal_json_msg: %s" %(internal_json_msg))
+        logger.info("_send_json_msg, internal_json_msg: %s" %(internal_json_msg))
 
         # Send the event to node data message handler to generate json message and send out
         self._write_internal_msgQ(NodeDataMsgHandler.name(), internal_json_msg)
