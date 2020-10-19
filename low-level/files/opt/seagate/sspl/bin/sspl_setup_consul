@@ -29,7 +29,6 @@ SCRIPT_DIR=$(dirname $0)
 SCRIPT_NAME=$(basename $0)
 
 mkdir -p $CONSUL_PATH
-mkdir -p $CONSUL_FALLBACK_PATH
 
 
 usage() {
@@ -64,10 +63,8 @@ if ! [ -x "$(command -v $CONSUL_PATH/consul)" ]; then
         fi
         unzip consul_1.7.0_linux_amd64.zip
         rm -rf consul_1.7.0_linux_amd64.zip
-        mv ./consul $CONSUL_FALLBACK_PATH/consul
+        mv ./consul $CONSUL_PATH
     fi
-
-    ln -sv $CONSUL_FALLBACK_PATH/consul $CONSUL_PATH/consul
 
     if ! [ -x "$(command -v $CONSUL_PATH/consul)" ]; then
         echo "Consul is not available, exiting..";
