@@ -207,6 +207,7 @@ class SSPLBundleGenerate(object):
             smartctl_cmd = f"sudo smartctl -a {drive_path} --json"
             response, _, return_code = self._run_command(smartctl_cmd)
             response = json.loads(response)
+            # TODO: Find better way to get local disk.
             # Filtering out local disk
             if response['device']['protocol'] == 'ATA':
                 try:
