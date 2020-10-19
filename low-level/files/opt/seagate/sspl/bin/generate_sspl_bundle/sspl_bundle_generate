@@ -226,7 +226,7 @@ class SSPLBundleGenerate(object):
         return response.rstrip('\n'), error.rstrip('\n'), return_code
 
     def get_enclosure_logs(self):
-        url = singleton_realstorencl.build_url("/")
+        url = singleton_realstorencl.build_url(singleton_realstorencl.URI_CLIAPI_BASE)
         COLLECTING_DEBUG_LOG_STARTED = False
         for encl_trigger_log_retry_index in range(0, ENCL_TRIGGER_LOG_MAX_RETRY):
             response = singleton_realstorencl.ws_request(url, singleton_realstorencl.ws.HTTP_POST, \
@@ -254,7 +254,7 @@ class SSPLBundleGenerate(object):
 
         if COLLECTING_DEBUG_LOG_STARTED == True:
             self.enclosure_wwn = self.get_enclosure_wwn()
-            url = singleton_realstorencl.build_url("/downloadDebugData")
+            url = singleton_realstorencl.build_url(singleton_realstorencl.URI_CLIAPI_DOWNLOADDEBUGDATA)
             for encl_download_retry_index in range(0, ENCL_DOWNLOAD_LOG_MAX_RETRY):
                 response = singleton_realstorencl.ws_request(url, singleton_realstorencl.ws.HTTP_GET)
                 if not response:
