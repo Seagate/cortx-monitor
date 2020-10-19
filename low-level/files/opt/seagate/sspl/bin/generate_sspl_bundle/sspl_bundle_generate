@@ -32,6 +32,7 @@ from framework.base.sspl_constants import PRODUCT_FAMILY, SUPPORT_REQUESTOR_NAME
 sys.path.insert(0, f'/opt/seagate/{PRODUCT_FAMILY}/sspl/low-level')
 from framework.utils.config_reader import ConfigReader
 onGoingRequestPath = "/tmp/sspl-sb-req.txt"
+sspl_bundle_tmp = f"sspl_bundle_{str(int(time.time()))}"
 
 class SSPLBundleGenerate(object):
 
@@ -45,13 +46,16 @@ class SSPLBundleGenerate(object):
         self.sspl_conf_dir = f"/opt/seagate/{PRODUCT_FAMILY}/provisioner/pillar/components/sspl.sls"
         self.rabbitmq_conf_dir = "/etc/rabbitmq/rabbitmq.config"
         self.rabbitmq_log_dir = "/var/log/rabbitmq"
-        self.rabbitmq_status = "/tmp/rabbitmq_status.txt"
-        self.ipmi_sel_data = f"/tmp/ipmi_sel_data_{str(int(time.time()))}.txt"
+        self.rabbitmq_status = f"/tmp/{sspl_bundle_tmp}/rabbitmq_status.txt"
+        self.ipmi_sel_data = f"/tmp/{sspl_bundle_tmp}/ipmi_sel_data_{str(int(time.time()))}.txt"
         self.consul_folder_name = 'consul_sspl_data'
-        self.consul_sspl_config = "/tmp/consuldump_sspl_config/"
-        self.consul_sspl_data = "/tmp/consuldump_sspl_cache/"
-        self.boot_drvs_dta = f'/tmp/Server_OS_boot_drives_SMART_data_{str(int(time.time()))}'
-        self.enclosure_log = "/tmp/enclosure_logs.zip"
+        self.consul_sspl_config = f"/tmp/{sspl_bundle_tmp}/consuldump_sspl_config/"
+        self.consul_sspl_cache = f"/tmp/{sspl_bundle_tmp}/consuldump_sspl_cache/"
+        self.consul_system_information_data = f"/tmp/{sspl_bundle_tmp}/consuldump_system_information/"
+        self.consul_storage_enclosure_data = f"/tmp/{sspl_bundle_tmp}/consuldump_storage_enclosure/"
+        self.consul_rabbitmq_data = f"/tmp/{sspl_bundle_tmp}/consuldump_rabbitmq/"
+        self.boot_drvs_dta = f'/tmp/{sspl_bundle_tmp}/Server_OS_boot_drives_SMART_data_{str(int(time.time()))}'
+        self.enclosure_log = f"/tmp/{sspl_bundle_tmp}/enclosure_logs.zip"
         self.enclosure_wwn = "NA"
         self.rabbitmq_cmd = {
             "Rabbitmq status": "systemctl status rabbitmq-server",
@@ -113,29 +117,28 @@ class SSPLBundleGenerate(object):
             self.get_drives_smart_data()
             if sspl_state == "active" and "-noencl" not in parser:
                 self.get_enclosure_logs()
+
+            file_dir = file_name.replace(".tar.gz","")
+            tarfile_data = {
+                sspl_log_dir: file_dir+"/sspl/logs/",
+                self.sspl_conf_dir: file_dir+"/sspl/config/sspl.sls",
+                self.consul_sspl_config: file_dir+"/sspl/consul/consul_sspl_config.txt",
+                self.consul_sspl_cache: file_dir+"/sspl/consul/consul_sspl_cache.txt",
+                self.consul_system_information: file_dir+"/sspl/consul/consul_system_information.txt",
+                self.consul_storage_enclosure: file_dir+"/sspl/consul/consul_storage_enclosure.txt",
+                self.consul_rabbitmq: file_dir+"/sspl/consul/consul_rabbitmq.txt",
+                self.boot_drvs_dta: file_dir+"/drives_SMART_data/",
+                self.ipmi_sel_data: file_dir+"/ipmi/ipmi_sel_data.txt",
+                self.rabbitmq_status: file_dir+"/rabbitmq/status/rabbitmq_status.txt",
+                self.rabbitmq_conf_dir: file_dir+"/rabbitmq/config/rabbitmq.config",
+                self.rabbitmq_log_dir: file_dir+"/rabbitmq/logs/",
+                iem_log_dir: file_dir+"/iems/"
+            }
                 
             with tarfile.open(self.localTempPath+file_name, "w:gz") as tar:
-                file_dir = file_name.replace(".tar.gz","")
-                if os.path.exists(sspl_log_dir):
-                    tar.add(sspl_log_dir, arcname=file_dir+"/sspl/logs/")
-                if os.path.exists(self.sspl_conf_dir):
-                    tar.add(self.sspl_conf_dir, arcname=file_dir+"/sspl/config/sspl.sls")
-                if os.path.exists(self.consul_sspl_config):
-                    tar.add(self.consul_sspl_config, arcname=file_dir+"/sspl/consul/consul_sspl_config.txt")
-                if os.path.exists(self.consul_sspl_data):
-                    tar.add(self.consul_sspl_data, arcname=file_dir+"/sspl/consul/consul_sspl_cache.txt")
-                if os.path.exists(self.boot_drvs_dta):
-                    tar.add(self.boot_drvs_dta, arcname=file_dir+"/drives_SMART_data/")
-                if os.path.exists(self.ipmi_sel_data):
-                    tar.add(self.ipmi_sel_data, arcname=file_dir+"/ipmi/ipmi_sel_data.txt")
-                if os.path.exists(self.rabbitmq_status):
-                    tar.add(self.rabbitmq_status, arcname=file_dir+"/rabbitmq/status/rabbitmq_status.txt")
-                if os.path.exists(self.rabbitmq_conf_dir):
-                    tar.add(self.rabbitmq_conf_dir, arcname=file_dir+"/rabbitmq/config/rabbitmq.config")
-                if os.path.exists(self.rabbitmq_log_dir):
-                    tar.add(self.rabbitmq_log_dir, arcname=file_dir+"/rabbitmq/logs/")
-                if os.path.exists(iem_log_dir):
-                    tar.add(iem_log_dir, arcname=file_dir+"/iems/")
+                for key, value in tarfile_data.items():
+                    if os.path.exists(key):
+                        tar.add(key, arcname=value)
                 tar.close()
 
             if os.path.exists(self.enclosure_log) and sspl_state == 'active' and "-noencl" not in parser:
@@ -174,18 +177,25 @@ class SSPLBundleGenerate(object):
 
     def get_consul_data(self):
         self.consul_folder_name = f"consul_sspl_data-{str(int(time.time()))}"
-        consuldump = f"/opt/seagate/{PRODUCT_FAMILY}/sspl/bin/consuldump.py -n {self.consul_folder_name} -l /tmp/ -d"
-        consul_sspl_cfg_cmd = f"{consuldump} consul_sspl_config sspl/"
-        consul_sspl_cache_cmd = f"{consuldump} consul_sspl_cache var/{PRODUCT_FAMILY}/sspl"
-        subout = self._run_command(consul_sspl_cfg_cmd)
-        if subout[2] != 0:
-            print("Unable to get consul data of sspl config...!")
-        subout = self._run_command(consul_sspl_cache_cmd)
-        if subout[2] != 0:
-            print("Unable to get consul data of sspl cache...!")
-        del subout
-        self.consul_sspl_config = f"/tmp/{self.consul_folder_name}/consul_sspl_config"
-        self.consul_sspl_data = f"/tmp/{self.consul_folder_name}/consul_sspl_cache"
+        consuldump = f"/opt/seagate/{PRODUCT_FAMILY}/sspl/bin/consuldump.py -n {self.consul_folder_name} -l /tmp/{sspl_bundle_tmp}/ -d"
+        consuldump_cmd = {
+            "sspl_config": f"{consuldump} consul_sspl_config sspl/",
+            "sspl_cache": f"{consuldump} consul_sspl_cache var/{PRODUCT_FAMILY}/sspl",
+            "system_information": f"{consuldump} consul_system_information system_information/",
+            "storage_enclosure": f"{consuldump} consul_storage_enclosure storage_enclosure/",
+            "rabbitmq": f"{consuldump} consul_rabbitmq rabbitmq/"
+        }
+        for key, value in consuldump_cmd.items():
+            subout = self._run_command(value)
+            if subout[2] != 0:
+                print(f"Unable to get consul data of {key}...!")
+            del subout
+        consul_folder_path = f"/tmp/{sspl_bundle_tmp}/{self.consul_folder_name}"
+        self.consul_sspl_config = f"{consul_folder_path}/consul_sspl_config"
+        self.consul_sspl_cache = f"{consul_folder_path}/consul_sspl_cache"
+        self.consul_system_information = f"{consul_folder_path}/consul_system_information"
+        self.consul_storage_enclosure = f"{consul_folder_path}/consul_storage_enclosure"
+        self.consul_rabbitmq = f"{consul_folder_path}/consul_rabbitmq"
 
     def get_drives_smart_data(self):
         lsscsi_cmd = "lsscsi | grep disk"
@@ -300,9 +310,12 @@ if __name__ == "__main__":
             print("Unrecognized arguments: %s" % sys.argv)
             sys.exit(1)
         tmpFile = open(onGoingRequestPath, "w")
+        os.makedirs(f"/tmp/{sspl_bundle_tmp}")
         SSPLBundleObj = SSPLBundleGenerate()
         SSPLBundleObj.generate_sspl_support_bundle(sys.argv, tmpFile)
         tmpFile.close()
+        # Removed sspl support bundle temp folder.
+        shutil.rmtree(f"/tmp/{sspl_bundle_tmp}")
         os.remove(onGoingRequestPath)
     else:
         print("Already SSPL Support Bundle request is going on, So skipping current request..!")
