@@ -37,7 +37,7 @@ sspl:
     ha:
          script: /opt/seagate/cortx/ha/conf/script/build-ha-sspl
          args:
-            - /opt/seagate/cortx/ha/conf/build-ees-ha-args.yaml
+            - /opt/seagate/cortx/iostack-ha/conf/build-ha-args.yaml
 
     ha-cleanup:
          script: /opt/seagate/cortx/ha/conf/script/prov-ha-sspl-reset
