@@ -230,7 +230,7 @@ class SSPLBundleGenerate(object):
         COLLECTING_DEBUG_LOG_STARTED = False
         for encl_trigger_log_retry_index in range(0, ENCL_TRIGGER_LOG_MAX_RETRY):
             response = singleton_realstorencl.ws_request(url, singleton_realstorencl.ws.HTTP_POST, \
-                post_data=f'/api/collectDebugData/"{SUPPORT_REQUESTOR_NAME}"{SUPPORT_EMAIL_ID}"{SUPPORT_CONTACT_NUMBER}')
+                post_data=f'{singleton_realstorencl.URL_ENCLLOGS_POSTDATA}/"{SUPPORT_REQUESTOR_NAME}"{SUPPORT_EMAIL_ID}"{SUPPORT_CONTACT_NUMBER}')
 
             if not response:
                 print("{0}:: {2} status unavailable as ws request {1}"

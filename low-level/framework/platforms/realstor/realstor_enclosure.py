@@ -76,6 +76,8 @@ class RealStorEnclosure(StorageEnclosure):
     URI_CLIAPI_BASE = "/"
     URI_CLIAPI_DOWNLOADDEBUGDATA = "/downloadDebugData"
 
+    URL_ENCLLOGS_POSTDATA = "/api/collectDebugData"
+
     # Realstor generic health states
     HEALTH_OK = "ok"
     HEALTH_FAULT = "fault"
