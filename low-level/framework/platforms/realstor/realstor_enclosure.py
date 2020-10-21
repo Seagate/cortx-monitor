@@ -73,6 +73,10 @@ class RealStorEnclosure(StorageEnclosure):
     URI_CLIAPI_SASHEALTHSTATUS = "/show/sas-link-health"
     URI_CLIAPI_SHOWEVENTS = "/show/events"
     URI_CLIAPI_SHOWVERSION = "/show/version/detail"
+    URI_CLIAPI_BASE = "/"
+    URI_CLIAPI_DOWNLOADDEBUGDATA = "/downloadDebugData"
+
+    URL_ENCLLOGS_POSTDATA = "/api/collectDebugData"
 
     # Realstor generic health states
     HEALTH_OK = "ok"
