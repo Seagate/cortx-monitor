@@ -27,15 +27,16 @@ from sspl_constants import MAX_CONSUL_RETRY, WAIT_BEFORE_RETRY, CONSUL_HOST, CON
 
 class ConsulDump():
 
-    def __init__(self, localtion=os.getcwd(), dir_prefix="", existing=False, keys={}):
+    def __init__(self, localtion=os.getcwd(), dir_prefix="", existing=False, name=None, keys={}):
         self.time = str(int(time.time()))
         self.dir_prefix = dir_prefix
         self.location = localtion
+        self.file_name = name
         self.keys = keys
         self.existing = existing
         for retry_index in range(0, MAX_CONSUL_RETRY):
             try:
-                self.consul = consul.Consul(host=CONSUL_HOST, post=CONSUL_PORT)
+                self.consul = consul.Consul(host=CONSUL_HOST, port=CONSUL_PORT)
                 break
             except requests.exceptions.ConnectionError as connerr:
                 print(f'Error[{connerr}] consul connection refused Retry Index {retry_index}')
@@ -46,7 +47,9 @@ class ConsulDump():
 
     def get_dir(self):
         if not self.existing:
-            if "/" in self.dir_prefix:
+            if self.file_name:
+                return f"{self.location}/{self.file_name}"
+            elif "/" in self.dir_prefix:
                 raise TypeError("/ is not accepted as dir_prefix")
             elif self.dir_prefix:
                 return f"{self.location}/consuldump_{self.dir_prefix}_{self.time}"
@@ -59,11 +62,12 @@ class ConsulDump():
         os.makedirs(path, exist_ok=True)
 
     def get_values(self, key):
-        for retry_index in range(0, MAX_CONSUL_ENTRY):
+        value = []
+        for retry_index in range(0, MAX_CONSUL_RETRY):
             try:
-                value = self.consul.kv.get(key, recurse=True)
-                if value is not None:
-                    value = value[1]
+                value = self.consul.kv.get(key, recurse=True)[1]
+                if not value:
+                    value = []
                 break
             except requests.exceptions.ConnectionError as connerr:
                 print(f'Error[{connerr}] consul connection refused Retry Index {retry_index}')
@@ -74,6 +78,7 @@ class ConsulDump():
         return value
 
     def get_pretty_file_content(self, data):
+        deserialized = ""
         try:
             deserialized = pickle.loads(data)
             return json.dumps(deserialized, indent=4)
@@ -128,12 +133,17 @@ examples:
   consuldump.py --existing var/
 
   Use existing directory instead of creating new(consuldump_{timestamp})
+
+  consuldump.py -n dump_sample var/
+
+  generate consuldump folder with the name of dump_sample
 """
     my_parser = argparse.ArgumentParser(description="Dump consul data", epilog=example, formatter_class=argparse.RawDescriptionHelpFormatter)
     my_parser.add_argument('-l', '--location', action='store',default=os.getcwd(), help='dump data at given location')
     my_parser.add_argument('-p','--prefix', action='store', default='',
                            help='add prefix in dump directory, usefull when you need to differentiate between two \
                                  dumps.')
+    my_parser.add_argument('-n', '--name', action='store', default='', help="rename dump file with given name")
     my_parser.add_argument('--existing', action='store_true', help="use existing directory, instead of creating new with consuldump_{timestamp}")
     my_parser.add_argument('--hierarchy', action='store_true', help="create directory tree, if key is having '/'")
     my_parser.add_argument('-d', '--dir', action='store',default='', help='create dump for a key in dir, if passed along with --hierarchy. if --hierarchy is not passed, all matching keys data will be dumped in this file')
@@ -146,4 +156,5 @@ examples:
     # limiting to only one key in cli mode as it requires different optional args per positional arg
     # need hierarchy and dir for every key
     keys = {args.key: {"hierarchy": args.hierarchy, "dir":args.dir}}
-    ConsulDump(localtion=args.location, dir_prefix=args.prefix, keys=keys, existing=args.existing).dump()
+    ConsulDump(localtion=args.location, dir_prefix=args.prefix, keys=keys,
+                existing=args.existing, name=args.name).dump()
