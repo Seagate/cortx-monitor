@@ -131,7 +131,7 @@ if __name__ == "__main__":
             },
             "sensor_request_type": {
                 "node_data": {
-                    "sensor_type": "node:os:system_memory"
+                    "sensor_type": "node:os:memory_usage"
                 }
             }
         }

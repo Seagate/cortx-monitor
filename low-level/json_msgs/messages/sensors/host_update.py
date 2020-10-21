@@ -39,7 +39,7 @@ class HostUpdateMsg(BaseSensorMsg):
     MESSAGE_VERSION  = "1.0.0"
 
     SEVERITY = "warning"
-    RESOURCE_TYPE = "node:os:system_memory"
+    RESOURCE_TYPE = "node:os:memory_usage"
     RESOURCE_ID = "0"
 
     def __init__(self, host_id,
