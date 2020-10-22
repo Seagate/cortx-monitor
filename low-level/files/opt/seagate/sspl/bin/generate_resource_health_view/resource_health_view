@@ -868,6 +868,7 @@ class SSPLHealthView(object):
         if response.status_code != singleton_realstorencl.ws.HTTP_OK:
             if (response.status_code == singleton_realstorencl.ws.HTTP_TIMEOUT or \
                 response.status_code == singleton_realstorencl.ws.HTTP_CONN_REFUSED or \
+                response.status_code == singleton_realstorencl.ws.HTTP_FORBIDDEN or \
                 response.status_code == singleton_realstorencl.ws.HTTP_NO_ROUTE_TO_HOST) \
                 and self.tried_alt_ip is False:
                 print("Retrying to fetch data from another mc IP....: {}".format(singleton_realstorencl.active_ip))
