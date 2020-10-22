@@ -56,6 +56,7 @@ ENCL_DOWNLOAD_LOG_WAIT_BEFORE_RETRY = 15
 node_key_id = node_id
 CONSUL_HOST = consulhost
 CONSUL_PORT = consulport
+pvt_data_nw_if_name = pvt_data_nw_if
 SSPL_SETTINGS = {
         "ACTUATORS" : ["Service", "RAIDactuator", "Smartctl", "NodeHWactuator"],
         "CORE_PROCESSORS" : ("RabbitMQegressProcessor", "RabbitMQingressProcessor", "LoggingProcessor"),

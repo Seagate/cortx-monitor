@@ -25,7 +25,9 @@ import time
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
-from framework.base.sspl_constants import enabled_products, COMMON_CONFIGS
+from framework.base.sspl_constants import enabled_products, \
+COMMON_CONFIGS, node_key_id, pvt_data_nw_if_name
+from framework.utils.utility import Utility
 
 from json_msgs.messages.sensors.host_update import HostUpdateMsg
 from json_msgs.messages.sensors.local_mount_data import LocalMountDataMsg
@@ -193,6 +195,13 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         self._drive_byid_by_serial_number = {}
 
         self._import_products(product)
+        self.utility = Utility()
+
+        # Flags describing ping status to the other node over pvt data nw
+        self.prev_is_other_node_reachable = False
+        self.is_other_node_reachable = False
+        # Variable to track connection level alert due to unknown reason
+        self.pvt_data_nw_conn_unknown_fault = None
 
     def _import_products(self, product):
         """Import classes based on which product is being used"""
@@ -327,7 +336,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 else:
                     self._log_debug("NodeDataMsgHandler, _process_msg " +
                             f"No past data found for {self.sensor_type} sensor type")
-            
+
             elif self.sensor_type == "raid_integrity":
                 self._generate_raid_integrity_data(jsonMsg)
                 sensor_message_type = self.os_sensor_type.get(self.sensor_type, "")
@@ -564,6 +573,23 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
             self.cpu_fault = False
 
+    def _check_ping_to(self, ip):
+        """Checks whether end-to-end ping is working to the given ip."""
+        is_ping_successful = False
+        # Check if ping is successful
+        # Send 1 request with timeout = 2
+        PING_CMD = ['ping',ip,'-c','1','-W','2']
+        try:
+            _result, _err, retcode = self.utility.execute_cmd(PING_CMD)
+            if retcode == 0 and "0% packet loss" in _result.decode():
+                is_ping_successful = True
+            else:
+                logger.error(f"Can't reach the other node on pvt data nw: {_result.decode()}, {_err.decode()}")
+        except Exception as e:
+            logger.error(f"Exception while pinging other node on pvt data nw: {e}")
+
+        return is_ping_successful
+
     def _send_ifdata_json_msg(self, sensor_type, resource_id, resource_type, state, severity, event=""):
         """A resuable method for transmitting IFDataMsg to RMQ and IEM logging"""
         ifDataMsg = IFdataMsg(self._node_sensor.host_id,
@@ -605,6 +631,12 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
         nw_alerts = self._get_nwalert(interfaces)
 
+        # Check if other node is reachable on the pvt data nw
+        # Before that, take a copy of prev value
+        other_node = 'srvnode-2' if node_key_id == 'srvnode-1' else 'srvnode-1'
+        self.prev_is_other_node_reachable = self.is_other_node_reachable
+        self.is_other_node_reachable = self._check_ping_to(other_node)
+
         # Get all cable connections state and generate alert on
         # cables identified for fault detected and resolved state
         nw_cable_alerts = self._nw_cable_alert_exists(interfaces)
@@ -620,9 +652,29 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     self.interface_fault_state[nw_cable_resource_id] = self.INTERFACE_FAULT_DETECTED
                     event_field = f'Network interface: {nw_cable_resource_id}' + ' ' \
                                    'is also down because of cable fault'
+
+                    if nw_cable_resource_id == pvt_data_nw_if_name and not self.is_other_node_reachable:
+                        event_field = f'{other_node}' + ' is not reachable over private ' + \
+                            'data network, possible cause is cable fault'
+
                 else:
                     event_field = f'Network interface: {nw_cable_resource_id}' + ' ' \
                                    'is also up after cable insertion'
+
+                    if nw_cable_resource_id == pvt_data_nw_if_name:
+                        # If the other node is reachable
+                        if self.is_other_node_reachable:
+                            event_field = f'{other_node}' + ' is reachable over private ' + \
+                                'data network after cable insertion'
+                        else:
+                            # We need to send a connection level fault alert
+                            self.pvt_data_nw_conn_unknown_fault = True
+                            # Send conn level alert
+                            event_field_2 = f'{other_node}' + ' is not reachable over ' + \
+                                'private data network because of unknown reason'
+                            severity_2 = self.severity_reader.map_severity(self.FAULT)
+                            self._send_ifdata_json_msg("nw", nw_cable_resource_id, self.NW_RESOURCE_TYPE,
+                                    self.FAULT, severity_2, event_field_2)
 
             # Send the cable alert
             self._send_ifdata_json_msg("nw", nw_cable_resource_id, self.NW_CABLE_RESOURCE_TYPE, state, severity, event_field)
@@ -649,12 +701,46 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
             if nw_state == self.FAULT:
                 event_field = f'Network interface {nw_resource_id} is down'
+                if nw_resource_id == pvt_data_nw_if_name:
+                    if not self.is_other_node_reachable:
+                        event_field = f'{other_node}' + ' is not reachable over ' + \
+                                'private data network because of interface fault'
             else:
                 event_field = f'Network interface {nw_resource_id} is up'
+                if nw_resource_id == pvt_data_nw_if_name:
+                    # If the other node is now reachable
+                    if self.is_other_node_reachable:
+                        event_field = f'{other_node}' + ' is reachable over ' + \
+                                'private data network after interface is up'
+                    else:
+                        # We need to send a connection level fault alert
+                        self.pvt_data_nw_conn_unknown_fault = True
+                        # Send conn level alert
+                        event_field_2 = f'{other_node}' + ' is not reachable over ' + \
+                                'private data network because of unknown reason'
+                        severity_2 = self.severity_reader.map_severity(self.FAULT)
+                        self._send_ifdata_json_msg("nw", nw_resource_id, self.NW_RESOURCE_TYPE,
+                                    self.FAULT, severity_2, event_field_2)
 
             # If no or for othe interface, send the alert
             severity = self.severity_reader.map_severity(nw_state)
             self._send_ifdata_json_msg("nw", nw_resource_id, self.NW_RESOURCE_TYPE, nw_state, severity, event_field)
+
+        # Check for conn level faults due to unknown reason
+        if not self.is_other_node_reachable and self.prev_is_other_node_reachable and not self.pvt_data_nw_conn_unknown_fault:
+            self.pvt_data_nw_conn_unknown_fault = True
+            event_field = f'{other_node}' + ' is not reachable over ' + \
+                                'private data network because of unknown reason'
+            severity = self.severity_reader.map_severity(self.FAULT)
+            self._send_ifdata_json_msg("nw", nw_resource_id, self.NW_RESOURCE_TYPE,
+                                    self.FAULT, severity, event_field)
+        elif self.is_other_node_reachable and not self.prev_is_other_node_reachable and self.pvt_data_nw_conn_unknown_fault:
+            self.pvt_data_nw_conn_unknown_fault = False
+            event_field = f'{other_node}' + ' is reachable over ' + \
+                                'private data network'
+            severity = self.severity_reader.map_severity(self.FAULT_RESOLVED)
+            self._send_ifdata_json_msg("nw", nw_resource_id, self.NW_RESOURCE_TYPE,
+                                    self.FAULT_RESOLVED, severity, event_field)
 
     def _get_nwalert(self, interfaces):
         """
@@ -671,6 +757,9 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             for interface in interfaces:
                 interface_name = interface.get("ifId")
                 nw_status = interface.get("nwStatus")
+                if interface_name == pvt_data_nw_if_name and self.pvt_data_nw_conn_unknown_fault:
+                    # Don't create alert for this
+                    continue
                 logger.debug("{0}:{1}".format(interface_name, nw_status))
                 # fault detected (Down/UNKNOWN, Up/UNKNOWN to Down, Up/Down to UNKNOWN)
                 if nw_status == 'DOWN' or nw_status == 'UNKNOWN':
@@ -705,6 +794,10 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
             interface_name = interface.get("ifId")
             phy_link_status = interface.get("nwCableConnStatus")
+
+            if interface_name == pvt_data_nw_if_name and self.pvt_data_nw_conn_unknown_fault:
+                # Don't create alert for this
+                continue
 
             # fault detected (Down, Up to Down)
             if phy_link_status == 'DOWN':
@@ -879,7 +972,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             jsonMsg = RAIDintegrityMsg.getJson()
             self.raid_integrity_data = jsonMsg
             self.os_sensor_type["raid_integrity"] = self.raid_integrity_data
-             
+
             self._log_debug("_generate_raid_integrity_data, host_id: %s" %
                     (self._node_sensor.host_id))
 

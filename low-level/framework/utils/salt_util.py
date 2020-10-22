@@ -58,7 +58,8 @@ class SaltInterface:
             if _ret_code == 0 and _err == '':
                 self.pillar_info = ast.literal_eval(_result.decode("utf-8").rstrip())
             self._is_single_node = None or self._is_server_single(_err)
-            self.consul_host = None or self.get_consul_vip(_err)
+            self.consul_host, self._pvt_data_nw_if_name = \
+                None or self.get_consul_vip_and_pvt_data_nw_iface(_err)
             self.consul_port = None or self.get_consul_port(_err)
             SaltInterface.__instance = self
 
@@ -125,37 +126,43 @@ class SaltInterface:
                              this error: {err}, Assuming single node')
         return _is_single_node
 
-    def get_consul_vip(self, _err=None):
+    def get_consul_vip_and_pvt_data_nw_iface(self, _err=None):
         """
-        Returns IP used to connect to Consul
+        Returns IP used to connect to Consul and
+        name of pvt data nw iface
         """
         _is_env_vm = self.utility.is_env_vm()
         _is_single_server = self._is_single_node
 
-        # Initialize to localhost
+        # Initialize to default values
         _consul_vip = "127.0.0.1"
+        _pvt_data_nw_if = "enp175s0f1"
 
-        # Get vip if not a vm or single node, default to localhost otherwise
+        # Get values from pillar if not a vm or single node, default to localhost otherwise
         if not _is_env_vm or not _is_single_server:
             try:
                 if self.pillar_info is not None:
                     _consul_vip = \
                         self.pillar_info[self.node_id][self.CLUSTER_KEY][self.node_id]\
                         ['network']['data_nw']['roaming_ip']
-                    logger.debug(f'salt_util, consul VIP: {_consul_vip}')
+                    _pvt_data_nw_if = \
+                        self.pillar_info[self.node_id][self.CLUSTER_KEY][self.node_id]\
+                        ['network']['data_nw']['iface']
+                    logger.debug(f'salt_util, consul VIP: {_consul_vip}, \
+pvt data nw iface: {_pvt_data_nw_if}')
                 else:
-                    logger.warning(f'salt_util, Fail to read consul VIP with \
-                                     this error: {_err}, Assuming localhost: \
-                                     {_consul_vip} connection')
+                    logger.warning(f'salt_util, Failed to read consul VIP and pvt data nw iface \
+with this error: {_err}, Assuming default values: \
+{_consul_vip} for consul VIP and {_pvt_data_nw_if} for pvt data nw iface')
             except KeyError as key_err:
-                logger.warning(f'salt_util, fail to read consul vip with \
-                                 this key error: {key_err}, assuming localhost: \
-                                 {_consul_vip} connection')
+                logger.warning(f'salt_util, failed to read consul VIP and pvt data nw iface with \
+this key error: {key_err}, assuming default values: \
+{_consul_vip} for consul VIP and {_pvt_data_nw_if} for pvt data nw iface')
             except Exception as err:
-                logger.warning(f'salt_util, fail to read consul vip with \
-                                 this error: {err}, assuming localhost: \
-                                 {_consul_vip} connection')
-        return _consul_vip
+                logger.warning(f'salt_util, failed to read consul VIP and pvt data nw iface with \
+this error: {err}, assuming default values: \
+{_consul_vip} for consul VIP and {_pvt_data_nw_if} for pvt data nw iface')
+        return _consul_vip, _pvt_data_nw_if
 
     def get_consul_port(self, _err=None):
         """
@@ -188,3 +195,4 @@ if salt_util:
     node_id = salt_util.node_id
     consulhost = salt_util.consul_host
     consulport = salt_util.consul_port
+    pvt_data_nw_if = salt_util._pvt_data_nw_if_name
