@@ -1,4 +1,2 @@
-0080010001,NodeFailure,The cluster has lost srvnode-1 server; System is running in degraded mode.
-0080010002,NodeFailure,The cluster has lost srvnode-2 server; System is running in degraded mode.
-0080020001,NodeRecovery,Server srvnode-1 has joined back the cluster; System is restored.
-0080020002,NodeRecovery,Server srvnode-2 has joined back the cluster; System is restored.
+0080010001,NodeFailure,The cluster has lost one server. System is running in degraded mode.
+0080020001,NodeRecovery,Server has joined back the cluster. System is restored.
