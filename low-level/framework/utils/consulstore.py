@@ -43,8 +43,13 @@ class ConsulStore(Store):
                 time.sleep(WAIT_BEFORE_RETRY)
 
             except Exception as gerr:
-                logger.warn("Error[{0}] consul error".format(gerr))
-                break
+                if 'no cluster leader' in gerr.lower():
+                    logger.warn("Error[{0}] consul connection refused Retry Index {1}" \
+                        .format(connerr, retry_index))
+                    time.sleep(WAIT_BEFORE_RETRY)
+                else:
+                    logger.warn("Error[{0}] consul error".format(gerr))
+                    break
 
     def _get_key(self, key):
         """remove '/' from begining of the key"""
@@ -142,9 +147,14 @@ class ConsulStore(Store):
                 time.sleep(WAIT_BEFORE_RETRY)
 
             except Exception as gerr:
-                logger.warn("Error[{0}] while deleting key from consul {1}" \
-                    .format(gerr, key))
-                break
+                if 'no cluster leader' in gerr.lower():
+                    logger.warn("Error[{0}] consul connection refused Retry Index {1}" \
+                        .format(connerr, retry_index))
+                    time.sleep(WAIT_BEFORE_RETRY)
+                else:
+                    logger.warn("Error[{0}] while deleting key from consul {1}" \
+                        .format(gerr, key))
+                    break
 
     def get_keys_with_prefix(self, prefix):
         """ get keys with given prefix
@@ -165,6 +175,11 @@ class ConsulStore(Store):
                 time.sleep(WAIT_BEFORE_RETRY)
 
             except Exception as gerr:
-                logger.warn("Error[{0}] while getting keys with given prefix {1}" \
-                    .format(gerr, prefix))
-                break
+                if 'no cluster leader' in gerr.lower():
+                    logger.warn("Error[{0}] consul connection refused Retry Index {1}" \
+                        .format(connerr, retry_index))
+                    time.sleep(WAIT_BEFORE_RETRY)
+                else:
+                    logger.warn("Error[{0}] while getting keys with given prefix {1}" \
+                        .format(gerr, prefix))
+                    break
