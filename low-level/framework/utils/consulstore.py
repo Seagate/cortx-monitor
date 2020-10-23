@@ -100,9 +100,14 @@ class ConsulStore(Store):
                 time.sleep(WAIT_BEFORE_RETRY)
 
             except Exception as gerr:
-                logger.warn("Error[{0}] while reading data from consul {1}" \
-                    .format(gerr, key))
-                break
+                if 'no cluster leader' in gerr.lower():
+                    logger.warn("Error[{0}] consul connection refused Retry Index {1}" \
+                        .format(connerr, retry_index))
+                    time.sleep(WAIT_BEFORE_RETRY)
+                else:
+                    logger.warn("Error[{0}] while reading data from consul {1}" \
+                        .format(gerr, key))
+                    break
 
         return data, status
 
