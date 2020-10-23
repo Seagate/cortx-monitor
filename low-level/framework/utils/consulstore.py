@@ -45,7 +45,7 @@ class ConsulStore(Store):
             except Exception as gerr:
                 if 'no cluster leader' in gerr.lower():
                     logger.warn("Error[{0}] consul connection refused Retry Index {1}" \
-                        .format(connerr, retry_index))
+                        .format(gerr, retry_index))
                     time.sleep(WAIT_BEFORE_RETRY)
                 else:
                     logger.warn("Error[{0}] consul error".format(gerr))
@@ -76,9 +76,14 @@ class ConsulStore(Store):
                 time.sleep(WAIT_BEFORE_RETRY)
 
             except Exception as gerr:
-                logger.warn("Error[{0}] while writing data to consul {1}" \
-                    .format(gerr, key))
-                break
+                if 'no cluster leader' in gerr.lower():
+                    logger.warn("Error[{0}] consul connection refused Retry Index {1}" \
+                        .format(gerr, retry_index))
+                    time.sleep(WAIT_BEFORE_RETRY)
+                else:
+                    logger.warn("Error[{0}] while writing data to consul {1}" \
+                        .format(gerr, key))
+                    break
 
     def _consul_get(self, key, **kwargs):
         """Load consul data from the given key."""
@@ -107,7 +112,7 @@ class ConsulStore(Store):
             except Exception as gerr:
                 if 'no cluster leader' in gerr.lower():
                     logger.warn("Error[{0}] consul connection refused Retry Index {1}" \
-                        .format(connerr, retry_index))
+                        .format(gerr, retry_index))
                     time.sleep(WAIT_BEFORE_RETRY)
                 else:
                     logger.warn("Error[{0}] while reading data from consul {1}" \
@@ -149,7 +154,7 @@ class ConsulStore(Store):
             except Exception as gerr:
                 if 'no cluster leader' in gerr.lower():
                     logger.warn("Error[{0}] consul connection refused Retry Index {1}" \
-                        .format(connerr, retry_index))
+                        .format(gerr, retry_index))
                     time.sleep(WAIT_BEFORE_RETRY)
                 else:
                     logger.warn("Error[{0}] while deleting key from consul {1}" \
@@ -177,7 +182,7 @@ class ConsulStore(Store):
             except Exception as gerr:
                 if 'no cluster leader' in gerr.lower():
                     logger.warn("Error[{0}] consul connection refused Retry Index {1}" \
-                        .format(connerr, retry_index))
+                        .format(gerr, retry_index))
                     time.sleep(WAIT_BEFORE_RETRY)
                 else:
                     logger.warn("Error[{0}] while getting keys with given prefix {1}" \

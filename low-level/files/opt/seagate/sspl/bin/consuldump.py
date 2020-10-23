@@ -42,8 +42,12 @@ class ConsulDump():
                 print(f'Error[{connerr}] consul connection refused Retry Index {retry_index}')
                 time.sleep(WAIT_BEFORE_RETRY)
             except Exception as gerr:
-                print(f'Error[{gerr}] consul error')
-                break
+                if 'no cluster leader' in gerr.lower():
+                    print(f'Error[{gerr}] consul connection refused Retry Index {retry_index}')
+                    time.sleep(WAIT_BEFORE_RETRY)
+                else:
+                    print(f'Error[{gerr}] consul error')
+                    break
 
     def get_dir(self):
         if not self.existing:
@@ -73,8 +77,12 @@ class ConsulDump():
                 print(f'Error[{connerr}] consul connection refused Retry Index {retry_index}')
                 time.sleep(WAIT_BEFORE_RETRY)
             except Exception as gerr:
-                print(f'Error{gerr} while reading data from consul {key}')
-                break
+                if 'no cluster leader' in gerr.lower():
+                    print(f'Error[{gerr}] consul connection refused Retry Index {retry_index}')
+                    time.sleep(WAIT_BEFORE_RETRY)
+                else:
+                    print(f'Error{gerr} while reading data from consul {key}')
+                    break
         return value
 
     def get_pretty_file_content(self, data):
