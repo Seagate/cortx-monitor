@@ -35,7 +35,7 @@ class ManifestSupportBundle(object):
         self.encl_manifest = "/tmp/encl_manifest.json"
         self.node_manifest = "/tmp/node_manifest.json"
         self.manifest_summary = "/tmp/manifest_summary.json"
-        self.lr_serial_number_path = "/tmp/sample-lr-serial-number.txt"
+        self.lr_serial_number_path = "/opt/seagate/lr-serial-number"
         self.node_hostname = socket.gethostname().split('.', 1)[0]
         self.encl_summary_filter={}
         cluster_id = subprocess.Popen(['salt-call', 'grains.get', 'cluster_id'], stdout=subprocess.PIPE).communicate()[0]
