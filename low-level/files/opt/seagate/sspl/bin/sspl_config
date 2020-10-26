@@ -34,13 +34,9 @@ SCRIPT_NAME=$(basename $0)
 DIR_NAME="/opt/seagate/$PRODUCT_FAMILY/sspl"
 RSYSLOG_CONF="/etc/rsyslog.d/0-iemfwd.conf"
 RSYSLOG_SSPL_CONF="/etc/rsyslog.d/1-ssplfwd.conf"
-LOGROTATE_DIR_DEST="/etc/cortx-sspl/logrotate"
-CRON_DIR_HOURLY="/etc/cron.hourly"
-SOURCE_CONF_DIR_LOGROTATE="$DIR_NAME/conf/etc/logrotate_conf"
-SOURCE_CRON_DIR_LOGROTATE="$DIR_NAME/conf/$CRON_DIR_HOURLY"
-SOURCE_CRON_PATH_LOGROTATE="$SOURCE_CRON_DIR_LOGROTATE/sspl_logrotate"
-DEST_CRON_PATH_LOGROTATE="$CRON_DIR_HOURLY/sspl_logrotate"
-
+LOGROTATE_DIR="/etc/logrotate.d"
+IEM_LOGROTATE_CONF="$LOGROTATE_DIR/iem_messages"
+SSPL_LOGROTATE_CONF="$LOGROTATE_DIR/sspl_logs"
 SSPL_CONFIGURED="/var/$PRODUCT_FAMILY/sspl/sspl-configured"
 
 usage() {
@@ -132,7 +128,7 @@ config_sspl() {
     [ ! -z "$SSPL_LOG_FILE_PATH" ] &&
     {
         sed -i "s|File=.*|File=\"$SSPL_LOG_FILE_PATH\")|g" $RSYSLOG_SSPL_CONF
-        sed -i "1 s|^.*$|${SSPL_LOG_FILE_PATH}|g" $SOURCE_CONF_DIR_LOGROTATE/sspl_logs
+        sed -i "1 s|^.*$|${SSPL_LOG_FILE_PATH}|g" $DIR_NAME/conf/etc/logrotate.d/sspl_logs
     }
 
     # IEM configuration
@@ -144,27 +140,16 @@ config_sspl() {
         sed -i "s|File=.*|File=\/var/log/$PRODUCT_FAMILY/iem/iem_messages\"|g" $RSYSLOG_CONF
     else
         sed -i "s|File=.*|File=\"${LOG_FILE_PATH}\"|g" $RSYSLOG_CONF
-        sed -i "1 s|^.*$|${LOG_FILE_PATH}|g" $SOURCE_CONF_DIR_LOGROTATE/iem_messages
+        sed -i "1 s|^.*$|${LOG_FILE_PATH}|g" $DIR_NAME/conf/etc/logrotate.d/iem_messages
     fi
 
-    # Trigger logotate hourly basis
-    if [ ! -d "${LOGROTATE_DIR_DEST}" ]; then
-        mkdir -p ${LOGROTATE_DIR_DEST}
+    # Create logrotate dir in case it's not present for dev environment
+    if [ ! -d "${LOGROTATE_DIR}" ]; then
+        mkdir -p ${LOGROTATE_DIR}
     fi
 
-    if [ -d "${LOGROTATE_DIR_DEST}" ]; then
-        cp -f  ${SOURCE_CONF_DIR_LOGROTATE}/iem_messages ${LOGROTATE_DIR_DEST}
-        chmod 644 ${LOGROTATE_DIR_DEST}/iem_messages
-
-        cp -f  ${SOURCE_CONF_DIR_LOGROTATE}/sspl_logs ${LOGROTATE_DIR_DEST}
-        chmod 644 ${LOGROTATE_DIR_DEST}/sspl_logs
-    fi
-
-    if [ -d "${CRON_DIR_HOURLY}" ]; then
-        cp -f ${SOURCE_CRON_PATH_LOGROTATE} ${DEST_CRON_PATH_LOGROTATE}
-    else
-        echo "${CRON_DIR_HOURLY} is not present"
-    fi
+    cp $DIR_NAME/conf/etc/logrotate.d/iem_messages $IEM_LOGROTATE_CONF
+    cp $DIR_NAME/conf/etc/logrotate.d/sspl_logs $SSPL_LOGROTATE_CONF
 
     # This rsyslog restart will happen after successful updation of rsyslog
     # conf file and before sspl starts. If at all this will be removed from
