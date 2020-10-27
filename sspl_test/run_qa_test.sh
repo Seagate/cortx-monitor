@@ -48,6 +48,12 @@ flask_help()
 
 pre_requisites()
 {
+    # copy RMQ password to sspl_test/config
+    pw=$($CONSUL_PATH/consul kv get sspl/config/RABBITMQINGRESSPROCESSOR/password)
+    $CONSUL_PATH/consul kv put sspl_test/config/RABBITMQINGRESSPROCESSORTESTS/password $pw
+    pw=$($CONSUL_PATH/consul kv get sspl/config/RABBITMQEGRESSPROCESSOR/password)
+    $CONSUL_PATH/consul kv put sspl_test/config/RABBITMQEGRESSPROCESSOR/password $pw
+
     if [ "$IS_VIRTUAL" == "true" ]
     then
         # Backing up original persistence data
