@@ -14,6 +14,9 @@
 # with this program. If not, see <https://www.gnu.org/licenses/>. For any questions
 # about this software or licensing, please email opensource@seagate.com or
 # cortx-questions@seagate.com.
+
+# TODO - Avoid duplicate code between sspl and sspl_test
+
 from enum import Enum
 
 PRODUCT_NAME = 'LDR_R1'
@@ -64,6 +67,8 @@ class StoreTypes(Enum):
     FILE = "file"
     CONSUL = "consul"
 
+class ServiceTypes(Enum):
+    RABBITMQ = "rabbitmq"
 
 if __name__ == "__main__":
     print(' '.join(enabled_products))
