@@ -1,0 +1,2 @@
+0080010001,NodeFailure,The cluster has lost one server. System is running in degraded mode.
+0080020001,NodeRecovery,Server has joined back the cluster. System is restored.
