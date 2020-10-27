@@ -42,7 +42,7 @@ sspl_conf_update=(
 )
 
 for conf_val in "${!sspl_conf_update[@]}";
-    do /opt/seagate/cortx/hare/bin/consul kv put $conf_val ${sspl_conf_update[$conf_val]}; echo ${sspl_conf_update[$conf_val]}
+    do /usr/bin/consul kv put $conf_val ${sspl_conf_update[$conf_val]}; echo ${sspl_conf_update[$conf_val]}
 done
 
 echo "Restarting SSPL"
