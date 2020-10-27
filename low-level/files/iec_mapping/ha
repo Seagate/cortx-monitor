@@ -1,4 +1,4 @@
 0080010001,NodeFailure,The cluster has lost one server. System is running in degraded mode.
 0080020001,NodeRecovery,Server has joined back the cluster. System is restored.
-0080030001,IOServiceStop,IO services are getting restored on current server.
-0080030002,IOServiceStart,IO services are failing on current server due to hardware or service failure.
+0080030001,IOService,IO services are getting started on current server.
+0080030002,IOService,IO services are stopping on current server due to hardware or service failure.
