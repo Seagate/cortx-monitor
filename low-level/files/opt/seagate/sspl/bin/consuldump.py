@@ -27,6 +27,8 @@ from sspl_constants import MAX_CONSUL_RETRY, WAIT_BEFORE_RETRY, CONSUL_HOST, CON
 
 class ConsulDump():
 
+    Err_string = '500 No cluster leader'
+
     def __init__(self, localtion=os.getcwd(), dir_prefix="", existing=False, name=None, keys={}):
         self.time = str(int(time.time()))
         self.dir_prefix = dir_prefix
@@ -42,8 +44,8 @@ class ConsulDump():
                 print(f'Error[{connerr}] consul connection refused Retry Index {retry_index}')
                 time.sleep(WAIT_BEFORE_RETRY)
             except Exception as gerr:
-                gerr = str(gerr)
-                if 'no cluster leader' in gerr.lower():
+                consulerr = str(gerr)
+                if self.Err_string == consulerr:
                     print(f'Error[{gerr}] consul connection refused Retry Index {retry_index}')
                     time.sleep(WAIT_BEFORE_RETRY)
                 else:
@@ -78,8 +80,8 @@ class ConsulDump():
                 print(f'Error[{connerr}] consul connection refused Retry Index {retry_index}')
                 time.sleep(WAIT_BEFORE_RETRY)
             except Exception as gerr:
-                gerr = str(gerr)
-                if 'no cluster leader' in gerr.lower():
+                consulerr = str(gerr)
+                if self.Err_string == consulerr:
                     print(f'Error[{gerr}] consul connection refused Retry Index {retry_index}')
                     time.sleep(WAIT_BEFORE_RETRY)
                 else:

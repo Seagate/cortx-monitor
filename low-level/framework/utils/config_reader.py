@@ -47,6 +47,7 @@ class ConfigReader(object):
     NoSectionError              = configparser.NoSectionError
     NoOptionError               = configparser.NoOptionError
     Error                       = configparser.Error
+    Err_string = '500 No cluster leader'
 
     def __init__(self, is_init=False, is_test=False, test_config_path=None):
         """Constructor for ConfigReader
@@ -67,8 +68,8 @@ class ConfigReader(object):
                     print(f'Error[{connerr}] consul connection refused Retry Index {retry_index}')
                     time.sleep(WAIT_BEFORE_RETRY)
                 except Exception as gerr:
-                    gerr = str(gerr)
-                    if 'no cluster leader' in gerr.lower():
+                    consulerr = str(gerr)
+                    if self.Err_string == consulerr:
                         print(f'Error[{gerr}] consul connection refused Retry Index {retry_index}')
                         time.sleep(WAIT_BEFORE_RETRY)
                     else:
@@ -290,8 +291,8 @@ class ConfigReader(object):
                 print(f'Error[{connerr}] consul connection refused Retry Index {retry_index}')
                 time.sleep(WAIT_BEFORE_RETRY)
             except Exception as gerr:
-                gerr = str(gerr)
-                if 'no cluster leader' in gerr.lower():
+                consulerr = str(gerr)
+                if self.Err_string == consulerr:
                     print(f'Error[{gerr}] consul connection refused Retry Index {retry_index}')
                     time.sleep(WAIT_BEFORE_RETRY)
                 else:
