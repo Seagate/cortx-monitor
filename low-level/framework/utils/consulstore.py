@@ -43,7 +43,7 @@ class ConsulStore(Store):
                 time.sleep(WAIT_BEFORE_RETRY)
 
             except Exception as gerr:
-                if 'no cluster leader' in gerr.lower():
+                if 'No cluster leader' in gerr:
                     logger.warn("Error[{0}] consul connection refused Retry Index {1}" \
                         .format(gerr, retry_index))
                     time.sleep(WAIT_BEFORE_RETRY)
@@ -76,7 +76,7 @@ class ConsulStore(Store):
                 time.sleep(WAIT_BEFORE_RETRY)
 
             except Exception as gerr:
-                if 'no cluster leader' in gerr.lower():
+                if 'No cluster leader' in gerr:
                     logger.warn("Error[{0}] consul connection refused Retry Index {1}" \
                         .format(gerr, retry_index))
                     time.sleep(WAIT_BEFORE_RETRY)
@@ -110,7 +110,7 @@ class ConsulStore(Store):
                 time.sleep(WAIT_BEFORE_RETRY)
 
             except Exception as gerr:
-                if 'no cluster leader' in gerr.lower():
+                if 'No cluster leader' in gerr:
                     logger.warn("Error[{0}] consul connection refused Retry Index {1}" \
                         .format(gerr, retry_index))
                     time.sleep(WAIT_BEFORE_RETRY)
@@ -152,7 +152,7 @@ class ConsulStore(Store):
                 time.sleep(WAIT_BEFORE_RETRY)
 
             except Exception as gerr:
-                if 'no cluster leader' in gerr.lower():
+                if 'No cluster leader' in gerr:
                     logger.warn("Error[{0}] consul connection refused Retry Index {1}" \
                         .format(gerr, retry_index))
                     time.sleep(WAIT_BEFORE_RETRY)
@@ -180,7 +180,7 @@ class ConsulStore(Store):
                 time.sleep(WAIT_BEFORE_RETRY)
 
             except Exception as gerr:
-                if 'no cluster leader' in gerr.lower():
+                if 'No cluster leader' in gerr:
                     logger.warn("Error[{0}] consul connection refused Retry Index {1}" \
                         .format(gerr, retry_index))
                     time.sleep(WAIT_BEFORE_RETRY)

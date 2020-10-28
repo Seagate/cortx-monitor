@@ -42,7 +42,7 @@ class ConsulDump():
                 print(f'Error[{connerr}] consul connection refused Retry Index {retry_index}')
                 time.sleep(WAIT_BEFORE_RETRY)
             except Exception as gerr:
-                if 'no cluster leader' in gerr.lower():
+                if 'No cluster leader' in gerr:
                     print(f'Error[{gerr}] consul connection refused Retry Index {retry_index}')
                     time.sleep(WAIT_BEFORE_RETRY)
                 else:
@@ -77,7 +77,7 @@ class ConsulDump():
                 print(f'Error[{connerr}] consul connection refused Retry Index {retry_index}')
                 time.sleep(WAIT_BEFORE_RETRY)
             except Exception as gerr:
-                if 'no cluster leader' in gerr.lower():
+                if 'No cluster leader' in gerr:
                     print(f'Error[{gerr}] consul connection refused Retry Index {retry_index}')
                     time.sleep(WAIT_BEFORE_RETRY)
                 else:
