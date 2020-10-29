@@ -311,7 +311,6 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
 
         except Exception as ex:
             logger.error(f'RabbitMQegressProcessor, _transmit_msg_on_exchange, problem while publishing the message:{ex}, adding message to consul: {self._jsonMsg}')
-            store_queue.put(jsonMsg)
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""
