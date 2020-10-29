@@ -66,7 +66,7 @@ SSPL_SETTINGS = {
                         "NodeControllerMsgHandler"),
         "SENSORS" : ["ServiceWatchdog", "RAIDsensor", "NodeData",
             "IEMSensor", "NodeHWsensor",
-            "SASPortSensor", "MemFaultSensor", "CPUFaultSensor", "RAIDIntegritySensor"]
+            "SASPortSensor", "MemFaultSensor", "CPUFaultSensor"]
 }
 
 COMMON_CONFIGS = {
