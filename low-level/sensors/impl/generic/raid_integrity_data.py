@@ -265,7 +265,7 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
                     else:
                         raid_check += 1
                         time.sleep(WAIT_BEFORE_RETRY)
-        
+ 
             if raid_check > RaidDataConfig.MAX_RETRIES.value:
                     self._alert_resolved = False
                     self.alert_type = self.FAULT

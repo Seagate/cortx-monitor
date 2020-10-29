@@ -228,6 +228,13 @@ class RabbitMQingressProcessorTests(ScheduledModuleThread, InternalMsgQ):
             self._password = self._conf_reader._get_value_with_default(
                 self.RABBITMQPROCESSORTEST, self.PASSWORD, "sspl4ever"
             )
+            self.cluster_id = self._conf_reader._get_value_with_default(
+                self.SYSTEM_INFORMATION_KEY, self.CLUSTER_ID_KEY, '')
+
+            # Decrypt RabbitMQ Password
+            decryption_key = encryptor.gen_key(self.cluster_id, ServiceTypes.RABBITMQ.value)
+            self._password = encryptor.decrypt(decryption_key, self._password.encode('ascii'), "RabbitMQingressProcessor")
+
             self._connection = RabbitMQSafeConnection(
                 self._username,
                 self._password,
@@ -236,11 +243,6 @@ class RabbitMQingressProcessorTests(ScheduledModuleThread, InternalMsgQ):
                 self._routing_key,
                 self._queue_name
             )
-            self.cluster_id = self._conf_reader._get_value_with_default(
-                self.SYSTEM_INFORMATION_KEY, self.CLUSTER_ID_KEY, '')
-            # Decrypt RabbitMQ Password
-            decryption_key = encryptor.gen_key(self.cluster_id, ServiceTypes.RABBITMQ.value)
-            self._password = encryptor.decrypt(decryption_key, self._password.encode('ascii'), "RabbitMQingressProcessor")
         except Exception as ex:
             logger.exception("_configure_exchange: %r" % ex)
             raise

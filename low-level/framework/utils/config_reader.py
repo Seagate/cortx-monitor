@@ -34,7 +34,7 @@ try:
 except Exception as e:
     from framework.base.sspl_constants import component, salt_provisioner_pillar_sls, \
          SSPL_STORE_TYPE, StoreTypes, salt_uniq_passwd_per_node, COMMON_CONFIGS, SSPL_CONFIGS, \
-         MAX_CONSUL_RETRY, WAIT_BEFORE_RETRY
+         MAX_CONSUL_RETRY, WAIT_BEFORE_RETRY, CONSUL_ERR_STRING
     from framework.utils.consulstore import ConsulStore
     from framework.utils.filestore import FileStore
 
@@ -67,8 +67,13 @@ class ConfigReader(object):
                     print(f'Error[{connerr}] consul connection refused Retry Index {retry_index}')
                     time.sleep(WAIT_BEFORE_RETRY)
                 except Exception as gerr:
-                    print(f'Error[{gerr}] consul error')
-                    break
+                    consulerr = str(gerr)
+                    if CONSUL_ERR_STRING == consulerr:
+                        print(f'Error[{gerr}] consul connection refused Retry Index {retry_index}')
+                        time.sleep(WAIT_BEFORE_RETRY)
+                    else:
+                        print(f'Error[{gerr}] consul error')
+                        break
         elif is_test:
             self.read_test_conf(test_config_path)
         else:
@@ -285,6 +290,11 @@ class ConfigReader(object):
                 print(f'Error[{connerr}] consul connection refused Retry Index {retry_index}')
                 time.sleep(WAIT_BEFORE_RETRY)
             except Exception as gerr:
-                print(f'Error{gerr} while reading data from consul {key}')
-                break
+                consulerr = str(gerr)
+                if CONSUL_ERR_STRING == consulerr:
+                    print(f'Error[{gerr}] consul connection refused Retry Index {retry_index}')
+                    time.sleep(WAIT_BEFORE_RETRY)
+                else:
+                    print(f'Error{gerr} while reading data from consul {key}')
+                    break
         return data
