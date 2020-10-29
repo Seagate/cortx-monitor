@@ -34,7 +34,7 @@ try:
 except Exception as e:
     from framework.base.sspl_constants import component, salt_provisioner_pillar_sls, \
          SSPL_STORE_TYPE, StoreTypes, salt_uniq_passwd_per_node, COMMON_CONFIGS, SSPL_CONFIGS, \
-         MAX_CONSUL_RETRY, WAIT_BEFORE_RETRY
+         MAX_CONSUL_RETRY, WAIT_BEFORE_RETRY, CONSUL_ERR_STRING
     from framework.utils.consulstore import ConsulStore
     from framework.utils.filestore import FileStore
 
@@ -47,7 +47,6 @@ class ConfigReader(object):
     NoSectionError              = configparser.NoSectionError
     NoOptionError               = configparser.NoOptionError
     Error                       = configparser.Error
-    Err_string = '500 No cluster leader'
 
     def __init__(self, is_init=False, is_test=False, test_config_path=None):
         """Constructor for ConfigReader
@@ -69,7 +68,7 @@ class ConfigReader(object):
                     time.sleep(WAIT_BEFORE_RETRY)
                 except Exception as gerr:
                     consulerr = str(gerr)
-                    if self.Err_string == consulerr:
+                    if CONSUL_ERR_STRING == consulerr:
                         print(f'Error[{gerr}] consul connection refused Retry Index {retry_index}')
                         time.sleep(WAIT_BEFORE_RETRY)
                     else:
@@ -292,7 +291,7 @@ class ConfigReader(object):
                 time.sleep(WAIT_BEFORE_RETRY)
             except Exception as gerr:
                 consulerr = str(gerr)
-                if self.Err_string == consulerr:
+                if CONSUL_ERR_STRING == consulerr:
                     print(f'Error[{gerr}] consul connection refused Retry Index {retry_index}')
                     time.sleep(WAIT_BEFORE_RETRY)
                 else:

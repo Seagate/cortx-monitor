@@ -23,11 +23,9 @@ import json
 import argparse
 import time
 import requests
-from sspl_constants import MAX_CONSUL_RETRY, WAIT_BEFORE_RETRY, CONSUL_HOST, CONSUL_PORT
+from sspl_constants import MAX_CONSUL_RETRY, WAIT_BEFORE_RETRY, CONSUL_HOST, CONSUL_PORT, CONSUL_ERR_STRING
 
 class ConsulDump():
-
-    Err_string = '500 No cluster leader'
 
     def __init__(self, localtion=os.getcwd(), dir_prefix="", existing=False, name=None, keys={}):
         self.time = str(int(time.time()))
@@ -44,8 +42,9 @@ class ConsulDump():
                 print(f'Error[{connerr}] consul connection refused Retry Index {retry_index}')
                 time.sleep(WAIT_BEFORE_RETRY)
             except Exception as gerr:
+                # TODO: optimize the if-else here and wherever this similar code is used
                 consulerr = str(gerr)
-                if self.Err_string == consulerr:
+                if CONSUL_ERR_STRING == consulerr:
                     print(f'Error[{gerr}] consul connection refused Retry Index {retry_index}')
                     time.sleep(WAIT_BEFORE_RETRY)
                 else:
@@ -81,7 +80,7 @@ class ConsulDump():
                 time.sleep(WAIT_BEFORE_RETRY)
             except Exception as gerr:
                 consulerr = str(gerr)
-                if self.Err_string == consulerr:
+                if CONSUL_ERR_STRING == consulerr:
                     print(f'Error[{gerr}] consul connection refused Retry Index {retry_index}')
                     time.sleep(WAIT_BEFORE_RETRY)
                 else:

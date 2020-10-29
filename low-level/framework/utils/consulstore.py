@@ -24,13 +24,11 @@ import consul
 from framework.utils.store import Store
 from framework.utils.service_logging import logger
 import pickle
-from framework.base.sspl_constants import MAX_CONSUL_RETRY, WAIT_BEFORE_RETRY
+from framework.base.sspl_constants import MAX_CONSUL_RETRY, WAIT_BEFORE_RETRY, CONSUL_ERR_STRING
 import time
 import requests
 
 class ConsulStore(Store):
-
-    Err_string = '500 No cluster leader'
 
     def __init__(self, host, port):
         super(Store, self).__init__()
@@ -46,7 +44,7 @@ class ConsulStore(Store):
 
             except Exception as gerr:
                 consuerr = str(gerr)
-                if self.Err_string == consuerr:
+                if CONSUL_ERR_STRING == consuerr:
                     logger.warn("Error[{0}] consul connection refused Retry Index {1}" \
                         .format(gerr, retry_index))
                     time.sleep(WAIT_BEFORE_RETRY)
@@ -80,7 +78,7 @@ class ConsulStore(Store):
 
             except Exception as gerr:
                 consulerr = str(gerr)
-                if self.Err_string == consulerr:
+                if CONSUL_ERR_STRING == consulerr:
                     logger.warn("Error[{0}] consul connection refused Retry Index {1}" \
                         .format(gerr, retry_index))
                     time.sleep(WAIT_BEFORE_RETRY)
@@ -115,7 +113,7 @@ class ConsulStore(Store):
 
             except Exception as gerr:
                 consulerr = str(gerr)
-                if self.Err_string == consulerr:
+                if CONSUL_ERR_STRING == consulerr:
                     logger.warn("Error[{0}] consul connection refused Retry Index {1}" \
                         .format(gerr, retry_index))
                     time.sleep(WAIT_BEFORE_RETRY)
@@ -158,7 +156,7 @@ class ConsulStore(Store):
 
             except Exception as gerr:
                 consulerr = str(gerr)
-                if self.Err_string == consulerr:
+                if CONSUL_ERR_STRING == consulerr:
                     logger.warn("Error[{0}] consul connection refused Retry Index {1}" \
                         .format(gerr, retry_index))
                     time.sleep(WAIT_BEFORE_RETRY)
@@ -187,7 +185,7 @@ class ConsulStore(Store):
 
             except Exception as gerr:
                 consulerr = str(gerr)
-                if self.Err_string == consulerr:
+                if CONSUL_ERR_STRING == consulerr:
                     logger.warn("Error[{0}] consul connection refused Retry Index {1}" \
                         .format(gerr, retry_index))
                     time.sleep(WAIT_BEFORE_RETRY)
