@@ -23,205 +23,222 @@ import sys
 import socket
 import json
 import subprocess
+from sspl_constants import PRODUCT_FAMILY, node_key_id
 
-from sspl_constants import PRODUCT_FAMILY
-
-localTempPath = "/tmp/support_bundle/"
 onGoingRequestPath = "/tmp/sspl-msb-req.txt"
-encl_manifest = "/tmp/encl_manifest.json"
-node_manifest = "/tmp/node_manifest.json"
-manifest_summary = "/tmp/manifest_summary.json"
-node_hostname = socket.gethostname().split('.', 1)[0]
-encl_summary_filter={}
-cluster_id = subprocess.Popen(['salt-call', 'grains.get', 'cluster_id'], stdout=subprocess.PIPE).communicate()[0]
-cluster_id = cluster_id.decode("utf-8").rstrip().replace('local:\n    ', '')
-encl_summary_fields=["object-name", "durable-id", "vendor-name", "product-id", "serial-number",
-                     "model", "product-brand", "description", "status", "health", "health-reason",
-                     "platform-type", "platform-brand", "part-number", "enclosure-wwn", "vendor",
-                     "drive-serial-number"]
-node_summary_fields=['id', 'class', 'description', 'product', 'serial', 'vendor',
-                     'part-number', 'model-number','children', 'physid', 'version']
 
-def make_manifest_support_bundle_tarfile(parser, tmpFile):
-    configure_path = parser[2]
-    if configure_path:
-        if os.path.exists(configure_path):
-            localTempPath = configure_path+"manifest/"
-        else:
-            print("Given path doesn't exist")
+class ManifestSupportBundle(object):
+
+    def __init__(self):
+
+        self.localTempPath = "/tmp/support_bundle/"
+        self.encl_manifest = "/tmp/encl_manifest.json"
+        self.node_manifest = "/tmp/node_manifest.json"
+        self.manifest_summary = "/tmp/manifest_summary.json"
+        self.lr_serial_number_path = "/opt/seagate/lr-serial-number"
+        self.node_hostname = socket.gethostname().split('.', 1)[0]
+        self.encl_summary_filter={}
+        cluster_id = subprocess.Popen(['salt-call', 'grains.get', 'cluster_id'], stdout=subprocess.PIPE).communicate()[0]
+        self.cluster_id = cluster_id.decode("utf-8").rstrip().replace('local:\n    ', '')
+        self.encl_summary_fields = ["object-name", "durable-id", "vendor-name", "product-id", "serial-number",
+                            "model", "product-brand", "description", "status", "health", "health-reason",
+                            "platform-type", "platform-brand", "part-number", "enclosure-wwn", "vendor",
+                            "drive-serial-number"]
+        self.node_summary_fields = ['id', 'class', 'description', 'product', 'serial', 'vendor',
+                            'part-number', 'model-number','children', 'physid', 'version']
+
+
+    def make_manifest_support_bundle_tarfile(self, parser, tmpFile):
+        configure_path = parser[2]
+        if configure_path:
+            if os.path.exists(configure_path):
+                self.localTempPath = configure_path+"manifest/"
+            else:
+                print("Given path doesn't exist")
+                tmpFile.close()
+                os.remove(onGoingRequestPath)
+                sys.exit(1)
+        if not os.path.exists(self.localTempPath):
+            os.makedirs(self.localTempPath)
+        try:
+            sspl_state = ""
+            try:
+                lr_serial_number = open(self.lr_serial_number_path).readline().rstrip()
+            except (FileNotFoundError, OSError) as e:
+                print(f"Unable to get lr serial number from the given path : {self.lr_serial_number_path}")
+                lr_serial_number = "NA"
+
+            try:
+                sspl_state=open(f"/var/{PRODUCT_FAMILY}/sspl/data/state.txt").readline().rstrip().split("=")
+                # Capturing enclosure data only when sspl state is active
+                sspl_state = sspl_state[1] if len(sspl_state)==2 else ''
+                if sspl_state == 'active':
+                    subprocess.call([f"/opt/seagate/{PRODUCT_FAMILY}/sspl/lib/resource_health_view", "-n", "-e", "-s"], shell=False)
+                else:
+                    print("SSPL state is not active, So enclosure data are ignored to collecte.")
+                    subprocess.call([f"/opt/seagate/{PRODUCT_FAMILY}/sspl/lib/resource_health_view", "-n", "-s"], shell=False)
+            except (FileNotFoundError, OSError) as e:
+                print(f"Failed to open the SSPL 'state.txt' file with an error '{e}',\
+                    Can't determine the SSPL state, So enclosure data also being collected.")
+                sspl_state == 'active'
+                subprocess.call([f"/opt/seagate/{PRODUCT_FAMILY}/sspl/lib/resource_health_view", "-n", "-e", "-s"], shell=False)
+            
+            date_time = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
+            if os.path.exists(self.encl_manifest) and sspl_state == 'active':
+                with open(self.encl_manifest) as json_file:
+                    data = json.load(json_file)
+                    enclosure_wwn = data["enclosure_wwn"]
+                file_name = "manifest_{0}_SN-{1}_Node-{2}_plus_Encl-{3}_{4}.tar.gz".format(date_time, lr_serial_number,
+                    self.node_hostname, enclosure_wwn, parser[1])
+            else:
+                file_name = "manifest_{0}_SN-{1}_Node-{2}_{3}.tar.gz".format(date_time, lr_serial_number, self.node_hostname,
+                    parser[1])
+
+            with tarfile.open(self.localTempPath+file_name, "w:gz") as tar:
+                file_dir = file_name.replace(".tar.gz","")
+                manifest_file_name = "{0}.json".format(file_name.replace("manifest_", "MS_")\
+                    .replace(f"_{parser[1]}.tar.gz","").replace("plus_",""))
+                node_encl_summary = {
+                    "cluster":{
+                        "lr-serial-number": lr_serial_number,
+                        "cluster-id": self.cluster_id
+                    }
+                }
+                if os.path.exists(self.encl_manifest) and sspl_state == 'active':
+                    tar.add(self.encl_manifest, arcname=file_dir+"/enclosure-{0}_manifest.json".format(enclosure_wwn))
+                    with open(self.encl_manifest, 'r') as j:
+                        encl_manifest_dict = json.loads(j.read())
+                        node_encl_summary["cluster"].update(self.fetch_encl_summary_data(encl_manifest_dict["hw_specifics"]))
+                
+                if os.path.exists(self.node_manifest):
+                    tar.add(self.node_manifest, arcname=file_dir+"/node-{0}_manifest.json".format(self.node_hostname))
+                    with open(self.node_manifest, 'r') as j:
+                        node_manifest_dict = json.loads(j.read())
+                        node_encl_summary["cluster"].update(self.fetch_node_summary_data(node_manifest_dict["hw_specifics"]))
+                self.write_content_in_file(node_encl_summary, self.manifest_summary, "manifest_summary.json")
+                if os.path.exists(self.manifest_summary):
+                    tar.add(self.manifest_summary, arcname=file_dir+"/"+manifest_file_name)
+                tar.close()
+
+        except (OSError, tarfile.TarError) as err:
+            print("Facing problem while creating manifest support bundle : %s" % err)
             tmpFile.close()
             os.remove(onGoingRequestPath)
             sys.exit(1)
-    if not os.path.exists(localTempPath):
-        os.makedirs(localTempPath)
-    try:
-        sspl_state = ""
+
+        print("Manifest Support Bundle Location: %s" % self.localTempPath+file_name)
+
+    def write_content_in_file(self, file_data, file_path, instance):
         try:
-            sspl_state=open(f"/var/{PRODUCT_FAMILY}/sspl/data/state.txt").readline().rstrip().split("=")
-            # Capturing enclosure data only when sspl state is active
-            sspl_state = sspl_state[1] if len(sspl_state)==2 else ''
-            if sspl_state == 'active':
-                subprocess.call([f"/opt/seagate/{PRODUCT_FAMILY}/sspl/lib/resource_health_view", "-n", "-e", "-s"], shell=False)
+            with open(file_path, 'w+') as fp:
+                json.dump(file_data, fp,  indent=4)
+
+        except Exception as e:
+            print("Error in writing {0} file: {1}".format(instance, e))
+            return False
+
+    def fetch_node_summary_data(self, node_manifest_dict):
+        node_summary_types = ('sata', 'power', 'cpu', 'memory', 'pci')
+        post_node_filter_list = []
+        final_node_summary_dict={}
+
+        cortx_build_version = 'NA'
+        cortx_build_cmd = f"sudo salt-call pillar.get release:target_build --output=newline_values_only"
+        try:
+            subout = subprocess.Popen(cortx_build_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            result = subout.stdout.readlines()
+            if result == [] or result == "":
+                print("Unable to fetch cortx build version.")
             else:
-                print("SSPL state is not active, So enclosure data are ignored to collecte.")
-                subprocess.call([f"/opt/seagate/{PRODUCT_FAMILY}/sspl/lib/resource_health_view", "-n", "-s"], shell=False)
-        except (FileNotFoundError, OSError) as e:
-            print(f"Failed to open the SSPL 'state.txt' file with an error '{e}',\
-                Can't determine the SSPL state, So enclosure data also being collected.")
-            sspl_state == 'active'
-            subprocess.call([f"/opt/seagate/{PRODUCT_FAMILY}/sspl/lib/resource_health_view", "-n", "-e", "-s"], shell=False)
-        
-        date_time = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
-        if os.path.exists(encl_manifest) and sspl_state == 'active':
-            with open(encl_manifest) as json_file:
-                data = json.load(json_file)
-                enclosure_wwn = data["enclosure_wwn"]
-            file_name = "manifest_{0}_SystemID-{1}_Node-{2}_plus_Encl-{3}_{4}.tar.gz".format(date_time, cluster_id,
-                node_hostname, enclosure_wwn, parser[1])
-        else:
-            file_name = "manifest_{0}_SystemID-{1}_Node-{2}_{3}.tar.gz".format(date_time, cluster_id, node_hostname,
-                parser[1])
-
-        with tarfile.open(localTempPath+file_name, "w:gz") as tar:
-            file_dir = file_name.replace(".tar.gz","")
-            manifest_file_name = "{0}.json".format(file_name.replace("manifest_", "MS_")\
-                .replace(f"_{parser[1]}.tar.gz","").replace("plus_",""))
-            node_encl_summary = {"cluster_"+cluster_id:{}}
-            if os.path.exists(encl_manifest) and sspl_state == 'active':
-                tar.add(encl_manifest, arcname=file_dir+"/enclosure-{0}_manifest.json".format(enclosure_wwn))
-                with open(encl_manifest, 'r') as j:
-                    encl_manifest_dict = json.loads(j.read())
-                    node_encl_summary["cluster_"+cluster_id].update(fetch_encl_summary_data(encl_manifest_dict["hw_specifics"]))
-            
-            if os.path.exists(node_manifest):
-                tar.add(node_manifest, arcname=file_dir+"/node-{0}_manifest.json".format(node_hostname))
-                with open(node_manifest, 'r') as j:
-                    node_manifest_dict = json.loads(j.read())
-                    node_encl_summary["cluster_"+cluster_id].update(fetch_node_summary_data(node_manifest_dict["hw_specifics"]))
-            write_content_in_file(node_encl_summary, manifest_summary, "manifest_summary.json")
-            if os.path.exists(manifest_summary):
-                tar.add(manifest_summary, arcname=file_dir+"/"+manifest_file_name)
-            tar.close()
-
-    except (OSError, tarfile.TarError) as err:
-        print("Facing problem while creating manifest support bundle : %s" % err)
-        tmpFile.close()
-        os.remove(onGoingRequestPath)
-        sys.exit(1)
-
-    print("Manifest Support Bundle Location: %s" % localTempPath+file_name)
-
-def write_content_in_file(file_data, file_path, instance):
-    try:
-        with open(file_path, 'w+') as fp:
-            json.dump(file_data, fp,  indent=4)
-
-    except Exception as e:
-        print("Error in writing {0} file: {1}".format(instance, e))
-        return False
-
-def fetch_node_summary_data(node_manifest_dict):
-    node_summary_types = ('sata', 'power', 'cpu', 'memory', 'pci')
-    post_node_filter_list = []
-    final_node_summary_dict={}
-
-    cortx_build_version = 'NA'
-    cortx_build_cmd = f"sudo salt-call pillar.get release:target_build --output=newline_values_only"
-    try:
-        subout = subprocess.Popen(cortx_build_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        result = subout.stdout.readlines()
-        if result == [] or result == "":
+                cortx_build_version = result[0].decode().rstrip('\n').split('/')[-2]
+        except Exception as e:
             print("Unable to fetch cortx build version.")
-        else:
-            cortx_build_version = result[0].decode().rstrip('\n').split('/')[-2]
-    except Exception as e:
-        print("Unable to fetch cortx build version.")
-    cortx = {'id':'Cortx SW', 'version':cortx_build_version, 'license-info': 'NA', 'cluster-id':cluster_id}
-    post_node_filter_list.append(cortx)
+        cortx = {'id':'Cortx SW', 'version':cortx_build_version, 'license-info': 'NA', 'cluster-id':self.cluster_id}
+        post_node_filter_list.append(cortx)
 
-    os_serial = subprocess.Popen(['uname', '-rvmpio'], stdout=subprocess.PIPE).communicate()[0].decode("utf-8").rstrip()
-    os_model = subprocess.Popen(['cat', '/etc/system-release'], stdout=subprocess.PIPE).communicate()[0].decode("utf-8").rstrip()
-    os = {'id':'Operating System', 'version':os_model, 'system-info':os_serial}
-    post_node_filter_list.append(os)
+        os_serial = subprocess.Popen(['uname', '-rvmpio'], stdout=subprocess.PIPE).communicate()[0].decode("utf-8").rstrip()
+        os_model = subprocess.Popen(['cat', '/etc/system-release'], stdout=subprocess.PIPE).communicate()[0].decode("utf-8").rstrip()
+        os = {'id':'Operating System', 'version':os_model, 'system-info':os_serial}
+        post_node_filter_list.append(os)
 
-    try:
-        filtered_data_all = filter_node_summary_dict(node_manifest_dict)
-    except:
-        print ('Unable to create manifest summary file')
-        exit()
+        try:
+            filtered_data_all = self.filter_node_summary_dict(node_manifest_dict)
+        except:
+            print ('Unable to create manifest summary file')
+            exit()
 
-    for key in filtered_data_all['children'][0]['children']:
-        if key['id'].lower().startswith(node_summary_types):
-            post_node_filter_list.append(key)
+        for key in filtered_data_all['children'][0]['children']:
+            if key['id'].lower().startswith(node_summary_types):
+                post_node_filter_list.append(key)
 
-    for key in filtered_data_all['children']:
-        if key['id'].lower().startswith(node_summary_types):
-            post_node_filter_list.append(key)
+        for key in filtered_data_all['children']:
+            if key['id'].lower().startswith(node_summary_types):
+                post_node_filter_list.append(key)
 
-    filtered_data_all['children'] = post_node_filter_list
-    final_node_summary_dict.update({'server_'+filtered_data_all['id']:filtered_data_all})
+        filtered_data_all['children'] = post_node_filter_list
+        filtered_data_all['hostname'] = filtered_data_all.pop('id')
+        final_node_summary_dict.update({node_key_id:filtered_data_all})
 
-    return final_node_summary_dict
+        return final_node_summary_dict
 
-def filter_node_summary_dict(node_manifest_dict):
-        new_dic = {}
-        for k, v in node_manifest_dict.items():
-            if isinstance(v, dict):
-                v = filter_node_summary_dict(v)
-            elif isinstance(v, list):
-                new_lst = []
-                for d in v:
-                    if isinstance(d, dict):
-                        d = filter_node_summary_dict(d)
-                        new_lst.append(d)
-                v = new_lst
-            if k in node_summary_fields:
-                if k == "product" and ("To be filled by O.E.M." in v):
-                    v = v.replace(" (To be filled by O.E.M.)", "")
-                new_dic[k] = v
-        return new_dic
+    def filter_node_summary_dict(self, node_manifest_dict):
+            new_dic = {}
+            for k, v in node_manifest_dict.items():
+                if isinstance(v, dict):
+                    v = self.filter_node_summary_dict(v)
+                elif isinstance(v, list):
+                    new_lst = []
+                    for d in v:
+                        if isinstance(d, dict):
+                            d = self.filter_node_summary_dict(d)
+                            new_lst.append(d)
+                    v = new_lst
+                if k in self.node_summary_fields:
+                    if k == "product" and ("To be filled by O.E.M." in v):
+                        v = v.replace(" (To be filled by O.E.M.)", "")
+                    new_dic[k] = v
+            return new_dic
 
-def fetch_encl_summary_data(node_manifest_dict):
-    final_encl_summary_dict={}
-    encl_fields = ["controllers", "power-supplies", "fan-modules"]
-    enclosure = node_manifest_dict["enclosures"][0]
-    enclosure_wwn = enclosure["enclosure-wwn"]
-    server = node_manifest_dict["system"][0]
-    vendor_name = server.get("vendor-name", "NA") or "NA"
-    product_id = server.get("product-id", "NA") or "NA"
-    product_brand = server.get("product-brand", "NA") or "NA"
-    platform_brand = server.get("platform-brand", "NA") or "NA"
-    serial_number = server.get("midplane-serial-number", "NA") or "NA"
-    final_encl_summary_dict.update({"enclosure_"+enclosure_wwn:{'vendor-name':vendor_name, 'product-id':product_id,
-                            'product-brand':product_brand, 'platform-brand':platform_brand, 'serial-number':serial_number}})
-    for key in encl_summary_fields:
-        value = enclosure.get(key)
-        if value:
-            if value == "N/A" : value = "NA"
-            final_encl_summary_dict["enclosure_"+enclosure_wwn].update({key:value})
-    for encl in encl_fields:
-        filter_encl_summary_dict(enclosure[encl], encl)
-    filter_encl_summary_dict(node_manifest_dict["drives"], "drives")
-    final_encl_summary_dict["enclosure_"+enclosure_wwn].update(encl_summary_filter)
+    def fetch_encl_summary_data(self, node_manifest_dict):
+        final_encl_summary_dict={}
+        encl_fields = ["controllers", "power-supplies", "fan-modules"]
+        server = node_manifest_dict["system"][0]
+        enclosure = node_manifest_dict["enclosures"][0]
+        vendor_name = server.get("vendor-name", "NA") or "NA"
+        product_id = server.get("product-id", "NA") or "NA"
+        product_brand = server.get("product-brand", "NA") or "NA"
+        platform_brand = server.get("platform-brand", "NA") or "NA"
+        serial_number = server.get("midplane-serial-number", "NA") or "NA"
+        final_encl_summary_dict.update({"enclosure":{'vendor-name':vendor_name, 'product-id':product_id,
+                                'product-brand':product_brand, 'platform-brand':platform_brand, 'serial-number':serial_number}})
+        for key in self.encl_summary_fields:
+            value = enclosure.get(key)
+            if value:
+                if value == "N/A" : value = "NA"
+                final_encl_summary_dict["enclosure"].update({key:value})
+        for encl in encl_fields:
+            self.filter_encl_summary_dict(enclosure[encl], encl)
+        self.filter_encl_summary_dict(node_manifest_dict["drives"], "drives")
+        final_encl_summary_dict["enclosure"].update(self.encl_summary_filter)
 
-    return final_encl_summary_dict
+        return final_encl_summary_dict
 
-def filter_encl_summary_dict(encl_data, encl_type):
-    encl_summary_filter.update({encl_type:{}})
-    for encl in encl_data:
-        encl_durable_id = encl.get('durable-id', encl.get('serial-number', 'NA'))
-        encl['vendor'] = encl.get("vendor", "NA") or "NA"
-        encl_summary_filter[encl_type].update({encl_durable_id:{}})
-        if encl_type == 'drives':
-            encl['drive-serial-number'] = encl.get("serial-number")[:8]
-        update_encl_summary_dict(encl, encl_durable_id, encl_type)
+    def filter_encl_summary_dict(self, encl_data, encl_type):
+        self.encl_summary_filter.update({encl_type:{}})
+        for encl in encl_data:
+            encl_durable_id = encl.get('durable-id', encl.get('serial-number', 'NA'))
+            encl['vendor'] = encl.get("vendor", "NA") or "NA"
+            self.encl_summary_filter[encl_type].update({encl_durable_id:{}})
+            if encl_type == 'drives':
+                encl['drive-serial-number'] = encl.get("serial-number")[:8]
+            self.update_encl_summary_dict(encl, encl_durable_id, encl_type)
 
-def update_encl_summary_dict(encl, encl_durable_id, encl_type):
-    for key in encl_summary_fields:
-        value = encl.get(key)
-        if value:
-            if value == "N/A" : value = "NA"
-            encl_summary_filter[encl_type][encl_durable_id].update({key:value})
+    def update_encl_summary_dict(self, encl, encl_durable_id, encl_type):
+        for key in self.encl_summary_fields:
+            value = encl.get(key)
+            if value:
+                if value == "N/A" : value = "NA"
+                self.encl_summary_filter[encl_type][encl_durable_id].update({key:value})
                 
 if __name__ == "__main__":
     if not os.path.isfile(onGoingRequestPath):
@@ -229,7 +246,7 @@ if __name__ == "__main__":
             print("Unrecognized arguments: %s" % sys.argv)
             sys.exit(1)
         tmpFile = open(onGoingRequestPath, "w")
-        make_manifest_support_bundle_tarfile(sys.argv, tmpFile)
+        ManifestSupportBundle().make_manifest_support_bundle_tarfile(sys.argv, tmpFile)
         tmpFile.close()
         os.remove(onGoingRequestPath)
     else:
