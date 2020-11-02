@@ -1,0 +1,13 @@
+/var/log/cortx/sspl/sspl.log
+{
+    size 10M
+    rotate 20
+    compress
+    dateext
+    dateformat -%Y-%m-%d-%s.log
+    copytruncate
+    missingok
+    postrotate
+        /bin/kill -HUP `cat /var/run/syslogd.pid 2> /dev/null` 2> /dev/null || true
+    endscript
+}
