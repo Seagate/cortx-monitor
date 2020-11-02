@@ -61,7 +61,8 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
 
     # check once a week (below time is in seconds), the integrity of raid data
     DEFAULT_POLLING_INTERVAL = "604800"
-    DEFAULT_TIMESTAMP_FILE_PATH = f"/var/{PRODUCT_FAMILY}/sspl/data/raid_integrity/last_execution_time"
+    DEFAULT_RAID_DATA_PATH = f"/var/{PRODUCT_FAMILY}/sspl/data/raid_integrity/"
+    DEFAULT_TIMESTAMP_FILE_PATH = DEFAULT_RAID_DATA_PATH + "last_execution_time"
 
     alert_type = None
 
@@ -92,7 +93,7 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
         super(RAIDIntegritySensor, self).initialize_msgQ(msgQlist)
         
         self._alert_msg = None
-        self._alert_resolved = True
+        self._fault_state = None
         self._suspended = False
         self._site_id = self._conf_reader._get_value_with_default(
                                 self.SYSTEM_INFORMATION, COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.SITE_ID), '001')
@@ -109,6 +110,7 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
         self.utility = Utility()
         if self.utility.is_env_vm():
             self.shutdown()
+
         return True
 
     def read_data(self):
@@ -125,7 +127,7 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
                     last_processed_log_timestamp = timestamp_file.read().strip()
                 current_time = int(time.time())
                 if current_time > int(last_processed_log_timestamp):
-                    self._polling_interval = DEFAULT_POLLING_INTERVAL - (current_time - int(last_processed_log_timestamp))
+                    self._polling_interval = int(DEFAULT_POLLING_INTERVAL) - (current_time - int(last_processed_log_timestamp))
             logger.info("Scheduling RAID validate again after:{} seconds".format(self._polling_interval))
             self._scheduler.enter(self._polling_interval, self._priority, self.run, ())
             return
@@ -149,7 +151,7 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
                 last_processed_log_timestamp = timestamp_file.read().strip()
                 current_time = int(time.time())
                 if current_time > int(last_processed_log_timestamp):
-                    self._polling_interval = DEFAULT_POLLING_INTERVAL - (current_time - int(last_processed_log_timestamp))
+                    self._polling_interval = int(DEFAULT_POLLING_INTERVAL) - (current_time - int(last_processed_log_timestamp))
             logger.info("Scheduling RAID validate again after:{} seconds".format(self._polling_interval))
             self._scheduler.enter(self._polling_interval, self._priority, self.run, ())
         except Exception as ae:
@@ -158,6 +160,8 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
     def _raid_health_monitor(self):
         try:
             devices = self._get_devices()
+            if len(devices) == 0:
+                return
             logger.debug("Fetched devices:{}".format(devices))
             
             for device in devices:
@@ -170,21 +174,36 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
                 # Check RAID device array state is 'idle' or not
                 result = self._check_raid_state(device)
                 if result == "failed":
+                    logger.warning("'Idle' state not found for RAID device:{}"
+                                    .format(device))
+                    # Retry to check RAID state
                     self._retry_execution(self._check_raid_state, device)
-                logger.debug("'idle' state is found in Raid device:{}."
+                logger.info("'idle' state is found in Raid device:{}."
                              .format(device))
 
                 # Check Mismatch count in RAID device files.
                 result = self._check_mismatch_count(device)
                 if result == "failed":
+                    # Persist RAID device fault state and send alert
+                    fault_status_file = self.DEFAULT_RAID_DATA_PATH + device + "_" + RaidDataConfig.RAID_MISMATCH_FAULT_STATUS.value
+                    if os.path.exists(fault_status_file):
+                        with open(fault_status_file, 'r') as fs:
+                            data = fs.read().rstrip()
+                        if self.FAULT_RESOLVED in data:
+                            self.alert_type = self.FAULT
+                            self._alert_msg = RaidAlertMsgs.MISMATCH_MSG.value
+                            self._send_json_msg(self.alert_type, device, self._alert_msg)
+                            self._update_fault_state_file(device, self.FAULT, fault_status_file)
+                    else:
+                        self.alert_type = self.FAULT
+                        self._alert_msg = RaidAlertMsgs.MISMATCH_MSG.value
+                        self._send_json_msg(self.alert_type, device, self._alert_msg)
+                        self._update_fault_state_file(device, self.FAULT, fault_status_file)
+
+                    # Retry to check mismatch_cnt
                     self._retry_execution(self._check_mismatch_count, device)
                 logger.debug("No mismatch count is found in Raid device:{}"
                             .format(device))
-
-                if self._alert_resolved:
-                    self.alert_type = self.FAULT_RESOLVED
-                    self._alert_msg = "null"
-                    self._send_json_msg(self.alert_type, device, self._alert_msg)
 
         except Exception as ae:
             logger.error("Failed in monitoring RAID health. ERROR:{}"
@@ -201,11 +220,7 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
                     device = line.split(":")[0].rstrip()
                     device_array.append(device)
             if len(device_array) == 0:
-                self._alert_resolved = False
-                self.alert_type = self.MISSING
-                device = "N/A"
-                self._alert_msg = "No Device Found"
-                self._send_json_msg(self.alert_type, device, self._alert_msg)
+                logger.error("No RAID device found in mdstat file.")
             return device_array
         except Exception as ae:
             logger.error("Failed to get the device array. ERROR:{}"
@@ -214,7 +229,7 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
 
     def _check_mismatch_count(self, device):
         try:
-            status = "failed"
+            status = None
             raid_dir = RaidDataConfig.DIR.value
             mismatch_cnt_file = RaidDataConfig.MISMATCH_COUNT_FILE.value
             MISMATCH_COUNT_COMMAND = 'cat ' + raid_dir + device + mismatch_cnt_file
@@ -229,21 +244,30 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
                 status = "success"
                 with open(self.output_file, 'a') as raid_file:
                     raid_file.write(RaidDataConfig.MISMATCH_COUNT_RESPONSE.value)
+                fault_status_file = self.DEFAULT_RAID_DATA_PATH + device + "_"+ RaidDataConfig.RAID_MISMATCH_FAULT_STATUS.value
+                if os.path.exists(fault_status_file):
+                    with open(fault_status_file, 'r') as fs:
+                        data = fs.read().rstrip()
+                    if self.FAULT in data:
+                        faulty_device = data.split(":")[0].rstrip()
+                        if device == faulty_device:
+                            self.alert_type = self.FAULT_RESOLVED
+                            self._alert_msg = "Mismatch_cnt found '0' for " + device
+                            self._send_json_msg(self.alert_type, device, self._alert_msg)
+                            self._update_fault_state_file(device, self.FAULT_RESOLVED, fault_status_file)
             else:
+                status = "failed"
                 logger.debug("Mismatch found in {} file in raid_integrity_data!"
                              .format(mismatch_cnt_file))
-                self._alert_resolved = False
-                self.alert_type = self.FAULT
-                self._alert_msg = RaidAlertMsgs.MISMATCH_MSG.value
-                self._send_json_msg(self.alert_type, device, self._alert_msg)
             return status
         except Exception as ae:
             logger.error("Failed in checking mismatch_cnt in RAID file. ERROR:{}"
                          .format(str(ae)))
+            raise
 
     def _check_raid_state(self, device):
         try:
-            status = "failed"
+            status = None
             raid_check = 0
             raid_dir = RaidDataConfig.DIR.value
             sync_action_file = RaidDataConfig.SYNC_ACTION_FILE.value
@@ -263,14 +287,9 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
                             raid_file.write(RaidDataConfig.STATE_COMMAND_RESPONSE.value + "\n")
                         break
                     else:
+                        status = "failed"
                         raid_check += 1
                         time.sleep(WAIT_BEFORE_RETRY)
- 
-            if raid_check > RaidDataConfig.MAX_RETRIES.value:
-                    self._alert_resolved = False
-                    self.alert_type = self.FAULT
-                    self._alert_msg = RaidAlertMsgs.STATE_MSG.value
-                    self._send_json_msg(self.alert_type, device, self._alert_msg)
             return status
         except Exception as ae:
             logger.error("Failed in checking RAID device state. ERROR:{}"
@@ -408,6 +427,13 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
         with open(self._timestamp_file_path, "w") as timestamp_file:
             timestamp_file.write(current_time)
 
+    def _update_fault_state_file(self, device, fstate, fault_state_file):
+        self._fault_state = fstate
+        data = device + ":" + self._fault_state
+        self._create_file(fault_state_file)
+        with open(fault_state_file, 'w') as fs:
+            fs.write(data)
+ 
     def _cleanup(self):
         """Clean up the validate raid result files"""
         if os.path.exists(self._timestamp_file_path):
@@ -419,3 +445,4 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
             if os.path.getmtime(os.path.join(path, file)) < (current_time - 24*60*60) :
                 if os.path.isfile(os.path.join(path, file)):
                     os.remove(os.path.join(path, file))
+
