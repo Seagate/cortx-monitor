@@ -143,12 +143,12 @@ class RaidDataConfig(Enum):
     MISMATCH_COUNT_RESPONSE = '0'
     RAID_RESULT_DIR = "/tmp"
     RAID_RESULT_FILE_PATH = "/tmp/result_raid_health_file"
+    RAID_MISMATCH_FAULT_STATUS = "mismatch_cnt_fault_status"
     MAX_RETRIES = 10
     NEXT_ITERATION_TIME = 3600
     PRIORITY = 1
 
 class RaidAlertMsgs(Enum):
-    STATE_MSG = "'idle' state not found after max retries."
     MISMATCH_MSG = "MISMATCH COUNT is found, as count does not match to the default '0' value."
 
 
