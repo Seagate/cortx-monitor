@@ -25,6 +25,9 @@ import consul
 import psutil
 import subprocess
 import tempfile
+import re
+import dbus
+from dbus import SystemBus, Interface, Array
 import warnings
 warnings.filterwarnings(action='ignore',module='cryptography')
 
@@ -54,7 +57,7 @@ except Exception as serror:
     print("Error in connecting consul: {}".format(serror))
     print("Exiting ...")
     sys.exit(os.EX_USAGE)
-from framework.utils.store_factory import store
+from framework.utils.store_factory import store, file_store
 from framework.platforms.realstor.realstor_enclosure import singleton_realstorencl
 from framework.utils.ipmi_client import IpmiFactory
 from framework.utils.sysfs_interface import SysFS
@@ -72,6 +75,9 @@ class SSPLHealthView(object):
     encl_fans_filename = storage_encl_dir+'fanmodules/fanmodule_data.json'
     encl_sideplane_exp_filename = storage_encl_dir+'sideplane_expanders/sideplane_expanders_data.json'
     encl_logical_volumes_filename = storage_encl_dir+'logical_volumes/logical_volume_data.json'
+
+    node_os_disks_filename = persistent_data_location + 'server/systemd_watchdog/disks/disks.json'
+    node_disk_resource_type = "node:os:disk"
 
     encl_disk_resource_type = "enclosure:fru:disk"
     encl_controller_resource_type = "enclosure:fru:controller"
@@ -113,6 +119,7 @@ class SSPLHealthView(object):
         self.sensor_list = ['temperature', 'current', 'voltage']
         self.tried_alt_ip = False
         self.correct_mc_config = True
+        self.os_drive_by_device_name = {}
         ipmi_factory = IpmiFactory()
         self._executor = ipmi_factory.get_implementor("ipmitool")
         try:
@@ -202,6 +209,7 @@ class SSPLHealthView(object):
                 self.build_health_view_node_server_cache(node_health_json, 'hw')
                 self.build_health_view_node_server_cache(node_health_json, 'platform_sensors')
                 self.build_health_view_node_server_cache(node_health_json, 'interfaces')
+                self.build_health_view_node_server_cache(node_health_json, 'os')
                 health_view_created = True
 
             elif not args.node:
@@ -321,6 +329,13 @@ class SSPLHealthView(object):
                     interface_data.update(interfaces_data[interface])
                 else:
                     interface_data.update({"health": "", interface+"s_info": interfaces_data[interface]})
+
+        elif category == 'os':
+            os_disk_info = self.build_node_os_instances()
+            node_health_json['os'].update({'disks':{
+                "health": "",
+                "disks_info": os_disk_info
+            }})
 
         if not ipmitool_cli and category != 'interfaces':
             print('Required ipmitool missing on Node to fetch %s data..!' % category)
@@ -746,6 +761,7 @@ class SSPLHealthView(object):
         if response.status_code != singleton_realstorencl.ws.HTTP_OK:
             if (response.status_code == singleton_realstorencl.ws.HTTP_TIMEOUT or \
                 response.status_code == singleton_realstorencl.ws.HTTP_CONN_REFUSED or \
+                response.status_code == singleton_realstorencl.ws.HTTP_FORBIDDEN or \
                 response.status_code == singleton_realstorencl.ws.HTTP_NO_ROUTE_TO_HOST) \
                 and self.tried_alt_ip is False:
                 print("Retrying to fetch data from another mc IP....: {}".format(singleton_realstorencl.active_ip))
@@ -893,6 +909,63 @@ class SSPLHealthView(object):
                 interfaces_json.update({interface:network_cable_json})
         return interfaces_json
 
+    def build_node_os_instances(self):
+        os_drives_data = self.get_node_os_drive_data()
+        return os_drives_data
+
+    def get_node_os_drive_data(self):
+        """Retreive os disk info using dbus library"""
+
+        bus = SystemBus()
+        disk_systemd = bus.get_object('org.freedesktop.UDisks2', '/org/freedesktop/UDisks2')
+        disk_manager = Interface(disk_systemd, dbus_interface='org.freedesktop.DBus.ObjectManager')
+        disk_objects = disk_manager.GetManagedObjects()
+        re_blocks = re.compile('(?P<path>.*?/block_devices/(?P<id>.*))')
+        block_devs = [m.groupdict() for m in
+                        [re_blocks.match(path) for path in list(disk_objects.keys())]
+                        if m]
+
+        drive_by_path = {}
+        for block_dev in block_devs:
+            try:
+                if disk_objects[block_dev['path']].get('org.freedesktop.UDisks2.Block') is not None:
+                    udisk_block = disk_objects[block_dev['path']]["org.freedesktop.UDisks2.Block"]
+                    symlinks = self._sanitize_dbus_value(udisk_block["Symlinks"])
+                    for symlink in symlinks:
+                        if "by-path" in symlink:
+                            drive_by_path[udisk_block["Drive"]] = symlink[len("/dev/disk/by-path/"):]
+                    device = self._sanitize_dbus_value(udisk_block["Device"])
+                    self.os_drive_by_device_name[udisk_block["Drive"]] = device
+            except Exception as ae:
+                print(ae)
+
+        os_drives = {}
+        os_drives_cache = {}
+        for obj_path, interfaces_and_property in disk_objects.items():
+            if "drive" in obj_path and self._is_local_drive(interfaces_and_property):
+                os_drives_cache.update({obj_path: False if self._is_drive_faulty(obj_path, interfaces_and_property) == "OK" else True})
+                drive_obj = interfaces_and_property["org.freedesktop.UDisks2.Drive"]
+                resource_id = drive_by_path.get(obj_path, str(drive_obj["Id"]))
+                os_drives.update({
+                    self.node_disk_resource_type+'-'+resource_id:{
+                        "alert_type": "NA",
+                        "severity": "NA",
+                        "alert_uuid": "NA",
+                        "durable_id": resource_id,
+                        "health": self._is_drive_faulty(obj_path, interfaces_and_property),
+                        "serial-number": str(drive_obj["Serial"]),
+                        "vendor": str(drive_obj["Vendor"]),
+                        "model": str(drive_obj["Model"]),
+                        "fetch_time": int(time.time())
+                    }
+                })
+        if file_store.get(self.node_os_disks_filename) is None:
+            print('Persistent cache does not exist, Building cache %s '\
+                    % self.node_os_disks_filename)
+            file_store.put(os_drives_cache, self.node_os_disks_filename)
+
+        return os_drives
+
     def build_node_hw_specifics_instances(self):
         lshw_dict = {}
         with tempfile.TemporaryFile() as tempf:
@@ -1005,6 +1078,55 @@ class SSPLHealthView(object):
             print("Node Data, unable to get cable connection state " +
                         f"of '{interface}'. {str(err)}")
         return phy_link_state[carrier_indicator]
+
+    def _sanitize_dbus_value(self, value):
+        """Convert certain DBus type combinations so that they are easier to read"""
+        if isinstance(value, Array) and value.signature == "ay":
+            try:
+                return self._decode_ay(value)
+            except:
+                # Try an array of arrays; 'aay' which is the symlinks
+                return list(map(self._decode_ay, value or ()))
+        elif isinstance(value, Array) and value.signature == "y":
+            return bytearray(value).rstrip(bytearray((0,))).decode('utf-8')
+        else:
+            return value
+
+    def _decode_ay(self, value):
+        """Convert binary blob from DBus queries to strings"""
+        if len(value) == 0 or \
+            value is None:
+            return ''
+        elif isinstance(value, str):
+            return value
+        elif isinstance(value, bytes):
+            return value.decode('utf-8')
+        else:
+            return bytearray(value).rstrip(bytearray((0,))).decode('utf-8')
+
+    def _is_physical_drive(self, interfaces_and_property):
+        """If wwn starts with 0x5 then it is physical drive"""
+        return interfaces_and_property["WWN"].startswith("0x5")
+
+    def _is_local_drive(self, interfaces_and_property):
+        return "org.freedesktop.UDisks2.Drive.Ata" in interfaces_and_property and \
+            str(interfaces_and_property["org.freedesktop.UDisks2.Drive"]["Revision"]) != "G265"
+
+    def _run_command(self, command):
+        """Run the command and get the response and error returned"""
+        process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
+        response, error = process.communicate()
+        return response.rstrip('\n'), error.rstrip('\n')
+
+    def _is_drive_faulty(self, path, interfaces_and_property):
+        if self._is_local_drive(interfaces_and_property):
+            cmd = f"sudo smartctl -H {self.os_drive_by_device_name[path]} --json"
+        else:
+            cmd = f"sudo smartctl -d scsi -H {self.os_drive_by_device_name[path]} --json"
+        response, _ = self._run_command(cmd)
+        response = json.loads(response)
+        smart_status = response['smart_status']['passed']
+        return 'OK' if smart_status else 'Fault'
 
 if __name__ == "__main__":
     description = "Resource Health View Schema"
