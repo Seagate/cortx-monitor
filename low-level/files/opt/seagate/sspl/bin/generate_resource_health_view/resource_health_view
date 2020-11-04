@@ -1105,7 +1105,7 @@ class SSPLHealthView(object):
 
     def _is_local_drive(self, interfaces_and_property):
         return "org.freedesktop.UDisks2.Drive.Ata" in interfaces_and_property and \
-            str(interfaces_and_property["org.freedesktop.UDisks2.Drive"]["Revision"]) != "G265"
+            str(interfaces_and_property["org.freedesktop.UDisks2.Drive"]["Revision"]) not in ["G265", "G280"]
 
     def _run_command(self, command):
         """Run the command and get the response and error returned"""
