@@ -710,7 +710,7 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
     # Remove fw version dependency for detecting local disk
     def _is_local_drive(self, interfaces_and_property):
         return "org.freedesktop.UDisks2.Drive.Ata" in interfaces_and_property and \
-            str(interfaces_and_property["org.freedesktop.UDisks2.Drive"]["Revision"]) != "G265"
+            str(interfaces_and_property["org.freedesktop.UDisks2.Drive"]["Revision"]) not in ["G265", "G280"]
 
     def _init_drives(self, stagger=False):
         """Notifies DiskMsgHanlder of available drives and schedules a short SMART test"""
