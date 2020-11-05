@@ -54,6 +54,7 @@ class FileStore(Store):
         if not os.path.isdir(directory_path):
             try:
                 os.makedirs(directory_path, exist_ok=True)
+                os.chown(directory_path, 'sspl-ll', 'sspl-ll')
             except OSError as exc:
                 if exc.errno == errno.EACCES:
                     logger.critical(f"Permission denied while creating dir: {directory_path}")
