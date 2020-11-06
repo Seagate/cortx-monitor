@@ -242,7 +242,6 @@ class RealStorEnclosure(StorageEnclosure):
                             # if call fails with invalid session key request
                             # seen in G280 fw version
                             if self.CLIAPI_RESP_INVSESSION in response_status:
-                               logger.error("{0} need_relogin".format(url))
                                need_relogin = True
 
                 except ValueError as badjson:
