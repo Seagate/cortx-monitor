@@ -238,7 +238,7 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
             SSPL_SEC.sspl_sign_message(msg_len, str(self._jsonMsg), self._signature_user,
                                        token, sig)
 
-            self._jsonMsg["signature"] = str(sig.raw)
+            self._jsonMsg["signature"] = str(sig.raw, encoding='utf-8')
         else:
             self._jsonMsg["signature"] = "SecurityLibNotInstalled"
 
