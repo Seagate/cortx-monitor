@@ -213,6 +213,7 @@ class RealStorEnclosure(StorageEnclosure):
         """Make webservice requests using common utils"""
         response = None
         retried_login = False
+        need_relogin = False
         tried_alt_ip = False
 
         while retry_count:
