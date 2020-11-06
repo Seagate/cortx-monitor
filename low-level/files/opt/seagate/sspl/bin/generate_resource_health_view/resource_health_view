@@ -911,9 +911,7 @@ class SSPLHealthView(object):
 
     def build_node_os_instances(self):
         os_drives_data = self.get_node_os_drive_data()
-        sspl_data_permission = f"chown -R sspl-ll:sspl-ll /var/{PRODUCT_FAMILY}/sspl/"
-        subout = self._run_command(sspl_data_permission)
-        del subout
+        self._run_command(f"chown -R sspl-ll:sspl-ll /var/{PRODUCT_FAMILY}/sspl/")
         return os_drives_data
 
     def get_node_os_drive_data(self):
