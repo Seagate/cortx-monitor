@@ -1134,5 +1134,6 @@ if __name__ == "__main__":
     parser.add_argument("--path", metavar="<path> eg. --path '/tmp/sspl/'", help="Health view\
             schema destination path (Note: Path need to be already exist)")
 
-    sys.exit(SSPLHealthView().run(parser))
+    SSPLHealthView().run(parser)
+    sys.exit(file_store.chown(f'/var/{PRODUCT_FAMILY}/sspl/', user='sspl-ll', group='sspl-ll', recursive=True))
 
