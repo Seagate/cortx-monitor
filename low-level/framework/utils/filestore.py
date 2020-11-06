@@ -23,7 +23,6 @@ import os
 import errno
 import json
 import pickle
-import shutil
 from configparser import ConfigParser
 from framework.utils.store import Store
 from framework.utils.service_logging import logger
@@ -55,7 +54,6 @@ class FileStore(Store):
         if not os.path.isdir(directory_path):
             try:
                 os.makedirs(directory_path, exist_ok=True)
-                
             except OSError as exc:
                 if exc.errno == errno.EACCES:
                     logger.critical(f"Permission denied while creating dir: {directory_path}")
@@ -156,29 +154,6 @@ class FileStore(Store):
             return []
         else:
             return os.listdir(prefix)
-
-    def chown(self, path, user, group=None, recursive=False):
-        """
-        Change user/group ownership of file
-    
-        :param path: path of file or directory
-        :param str user: new owner username
-        :param str group: new owner group name
-        :param bool recursive: set files/dirs recursively
-    
-        """
-        try:
-            if not recursive or os.path.isfile(path):
-                shutil.chown(path, user, group)
-            else:
-                for root, dirs, files in os.walk(path):
-                    shutil.chown(root, user, group)
-                    for item in dirs:
-                        shutil.chown(os.path.join(root, item), user, group)
-                    for item in files:
-                        shutil.chown(os.path.join(root, item), user, group)
-        except OSError as e:
-            raise UtilsException(e)
 
 if __name__ == '__main__':
     store = FileStore()

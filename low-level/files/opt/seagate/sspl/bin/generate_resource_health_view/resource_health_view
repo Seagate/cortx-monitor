@@ -911,6 +911,9 @@ class SSPLHealthView(object):
 
     def build_node_os_instances(self):
         os_drives_data = self.get_node_os_drive_data()
+        sspl_data_permission = f"chown -R sspl-ll:sspl-ll /var/{PRODUCT_FAMILY}/sspl/"
+        subout = self._run_command(sspl_data_permission)
+        del subout
         return os_drives_data
 
     def get_node_os_drive_data(self):
@@ -1134,6 +1137,4 @@ if __name__ == "__main__":
     parser.add_argument("--path", metavar="<path> eg. --path '/tmp/sspl/'", help="Health view\
             schema destination path (Note: Path need to be already exist)")
 
-    SSPLHealthView().run(parser)
-    sys.exit(file_store.chown(f'/var/{PRODUCT_FAMILY}/sspl/', user='sspl-ll', group='sspl-ll', recursive=True))
-
+    sys.exit(SSPLHealthView().run(parser))
