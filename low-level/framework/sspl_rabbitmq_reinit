@@ -257,8 +257,8 @@ def _create_vhost_if_necessary(virtual_host, product):
             response = _send_command(command)
 
         vhosts = response.split('\n')
-        # assert vhosts[0] == 'Listing vhosts ...'
         for vhost in vhosts[1:-1]:
+            print(vhosts)
             if vhost == virtual_host:
                 return
 
@@ -270,10 +270,8 @@ def _create_vhost_if_necessary(virtual_host, product):
         vhosts = subprocess.check_output(
             [RABBITMQCTL, 'list_vhosts']
             ).decode("utf-8").split('\n')
-        # assert vhosts[0] == 'Listing vhosts ...'
-        # assert vhosts[-2] == '...done.'
-        # assert vhosts[-1] == ''
         for vhost in vhosts[1:-1]:
+            print(vhost)
             if vhost == virtual_host:
                 return
         try:
@@ -324,10 +322,10 @@ def _create_user_if_necessary(username, password, virtual_host, product):
         response = _send_command(command)
 
         users = response.split("\n")
-        # assert users[0] == 'Listing users ...'
         found_user = False
         for userspec in users[1:-1]:
             user = userspec.split()[0]
+            print(user)
             if user == username:
                 found_user = True
                 break
@@ -343,12 +341,10 @@ def _create_user_if_necessary(username, password, virtual_host, product):
         users = subprocess.check_output(
             [RABBITMQCTL, 'list_users']
             ).decode("utf-8").split('\n')
-        # assert users[0] == 'Listing users ...'
-        # assert users[-2] == '...done.'
-        # assert users[-1] == ''
         found_user = False
         for userspec in users[1:-1]:
             user = userspec.split()[0]
+            print(user)
             if user == username:
                 found_user = True
                 break

@@ -188,6 +188,11 @@ case $cmd in
         ;;
 esac
 
+rabbitmq_version=$(rpm -qi rabbitmq-server | awk -F': ' '/Version/ {print $2}')
+rabbitmq_base_version=$(echo "${rabbitmq_version:0:-3}" | sed 's/.$//')
+rabbitmq_updated_version=$(echo "${rabbitmq_version::-1}" | sed 's/.$//')
+rabbitmq_middle_version=$(echo "${rabbitmq_updated_version:2:3}")
+
 # Skip this step if sspl is being configured for node replacement scenario as consul data is already
 # available on healthy node
 # Updating RabbitMQ cluster nodes.
@@ -195,8 +200,16 @@ esac
 # with which rabbitmq cluster may have been created
 [ -f $REPLACEMENT_NODE_ENV_VAR_FILE ] || {
     # Update cluster_nodes key in consul
-    out=$(rabbitmqctl cluster_status | grep running_nodes | cut -d '[' -f2 | cut -d ']' -f1 | sed 's/rabbit@//g' | sed 's/,/, /g')
-    pout=$(echo $out | sed  "s/'//g" | sed  "s/ //g")
+    if [ $rabbitmq_base_version -eq 3 ] && [ $rabbitmq_middle_version -ge 8 ];
+    then
+        rabbitmq_cluster_status=$(/usr/sbin/rabbitmqctl cluster_status --formatter json)
+        cluster_running_nodes=$(python3 -c "rabbitmq_status=$rabbitmq_cluster_status; print(rabbitmq_status['running_nodes'])")
+        pout=$(echo $cluster_running_nodes | sed 's/rabbit@//g' | cut -d '[' -f2 | cut -d ']' -f1 | tr -d \'\" | tr -d ' ')
+    else
+        out=$(rabbitmqctl cluster_status | grep running_nodes | cut -d '[' -f2 | cut -d ']' -f1 | sed 's/rabbit@//g' | sed 's/,/, /g')
+        pout=$(echo $out | sed  "s/'//g" | sed  "s/ //g")
+    fi
+
     $CONSUL_PATH/consul kv put sspl/config/RABBITMQCLUSTER/cluster_nodes $pout
     [ -n "$rmq_cluster_nodes" ] && $CONSUL_PATH/consul kv put sspl/config/RABBITMQCLUSTER/cluster_nodes $rmq_cluster_nodes
 }
