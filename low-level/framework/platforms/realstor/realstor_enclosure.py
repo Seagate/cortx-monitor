@@ -75,8 +75,10 @@ class RealStorEnclosure(StorageEnclosure):
     URI_CLIAPI_SHOWVERSION = "/show/version/detail"
     URI_CLIAPI_BASE = "/"
     URI_CLIAPI_DOWNLOADDEBUGDATA = "/downloadDebugData"
-
     URL_ENCLLOGS_POSTDATA = "/api/collectDebugData"
+
+    # CLI APIs Response status strings
+    CLIAPI_RESP_INVSESSION = "Invalid sessionkey"
 
     # Realstor generic health states
     HEALTH_OK = "ok"
@@ -210,7 +212,7 @@ class RealStorEnclosure(StorageEnclosure):
             post_data=""):
         """Make webservice requests using common utils"""
         response = None
-        relogin = False
+        retried_login = False
         tried_alt_ip = False
 
         while retry_count:
@@ -218,32 +220,52 @@ class RealStorEnclosure(StorageEnclosure):
                        self.common_reqheaders, post_data,
                        self.WEBSERVICE_TIMEOUT)
 
+            #TMP
+            logger.error("CSDERR retry_count {0}".format(retry_count))
+            logger.error("CSDERR {0} status code {1}".format(url,response.status_code))
+
             retry_count -= 1
 
             if response is None:
                 continue
 
-            if response.status_code != self.ws.HTTP_OK:
+            if response.status_code == self.ws.HTTP_OK:
 
-                # if call fails with invalid session key request or http 403
-                # forbidden request, login & retry
-                if response.status_code == self.ws.HTTP_FORBIDDEN and relogin is False:
-                    logger.info("%s failed, retrying after login " % (url))
-
-                    self.login()
-                    relogin = True
-                    continue
-
-                elif (response.status_code == self.ws.HTTP_TIMEOUT or \
-                         response.status_code == self.ws.HTTP_CONN_REFUSED or \
-                         response.status_code == self.ws.HTTP_NO_ROUTE_TO_HOST) \
-                         and tried_alt_ip is False:
-                    self.switch_to_alt_mc()
-                    tried_alt_ip = True
-                    self.mc_timeout_counter += 1
-                    continue
-            else:
                 self.mc_timeout_counter = 0
+
+                try:
+                    jresponse = json.loads(response.content)
+
+                    if jresponse:
+                        if jresponse['status'][0]['return-code'] == 2:
+                            response_status = jresponse['status'][0]['response']
+
+                            # if call fails with invalid session key request
+                            # seen in G280 fw version
+                            if self.CLIAPI_RESP_INVSESSION in response_status:
+                               need_relogin = True
+
+                except ValueError as badjson:
+                    logger.error("%s returned mal-formed json:\n%s" % (url, badjson))
+
+            # http 403 forbidden request, login & retry
+            if (response.status_code == self.ws.HTTP_FORBIDDEN or \
+                need_relogin) and retried_login is False:
+                logger.info("%s failed, retrying after login " % (url))
+
+                self.login()
+                retried_login = True
+                need_relogin = False
+                continue
+
+            elif (response.status_code == self.ws.HTTP_TIMEOUT or \
+                     response.status_code == self.ws.HTTP_CONN_REFUSED or \
+                     response.status_code == self.ws.HTTP_NO_ROUTE_TO_HOST) \
+                     and tried_alt_ip is False:
+                self.switch_to_alt_mc()
+                tried_alt_ip = True
+                self.mc_timeout_counter += 1
+                continue
 
             break
 
