@@ -61,10 +61,12 @@ salt_uniq_passwd_per_node = ['RABBITMQINGRESSPROCESSOR', 'RABBITMQEGRESSPROCESSO
 
 # Initialize to default values
 node_key_id = 'srvnode-1'
-CONSUL_HOST = 'consulhost'
+CONSUL_HOST = '127.0.0.1'
 CONSUL_PORT = '8500'
 CONSUL_ERR_STRING = '500 No cluster leader'
 
+# TODO Keep only constants in this file.
+# other values(configs) should come from cofig.
 # Check if SSPL is configured
 if os.path.exists(SSPL_CONFIGURED):
     try:

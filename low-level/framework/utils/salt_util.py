@@ -51,7 +51,7 @@ class SaltInterface:
         try:
             CMD = ['sudo', 'salt-call', '--local', 'grains.get', 'id', '--output=newline_values_only']
             _result, _err, _ret_code = self.execute_cmd(CMD)
-            if _ret_code == 0 and _err.decode('utf-8') == '':
+            if _ret_code == 0:
                 _node_id = _result.decode('utf-8').rstrip()
             else:
                 print(f'salt_util, Failed to read node-id with error : {_err},' + \
@@ -160,7 +160,7 @@ class SaltInterface:
                 print(f'salt_util, Failed to update consul host and port in {conf_file}')
             # Write the config to file
             with open(conf_file, 'w') as configfile:
-                self.config.write(configfile)
+                self.config.write(configfile, space_around_delimiters=False)
         except Exception as err:
             print(f'salt_util, Failed to update conf_file {conf_file} with error : {err}')
 
