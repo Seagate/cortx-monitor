@@ -911,6 +911,7 @@ class SSPLHealthView(object):
 
     def build_node_os_instances(self):
         os_drives_data = self.get_node_os_drive_data()
+        self._run_command(f"chown -R sspl-ll:sspl-ll /var/{PRODUCT_FAMILY}/sspl/")
         return os_drives_data
 
     def get_node_os_drive_data(self):
@@ -1135,4 +1136,3 @@ if __name__ == "__main__":
             schema destination path (Note: Path need to be already exist)")
 
     sys.exit(SSPLHealthView().run(parser))
-
