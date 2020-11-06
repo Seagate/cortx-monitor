@@ -206,7 +206,7 @@ class RealStorEnclosure(StorageEnclosure):
             self.active_wsport = self.mc1_wsport
 
         self.login()
-        logger.debug("CSDERR Current MC active ip {0}, active wsport {1}. Logged-in\
+        logger.debug("Current MC active ip {0}, active wsport {1}. Logged-in\
             ".format(self.active_ip, self.active_wsport))
 
     def ws_request(self, url, method, retry_count=MAX_RETRIES,
@@ -222,10 +222,6 @@ class RealStorEnclosure(StorageEnclosure):
                        self.common_reqheaders, post_data,
                        self.WEBSERVICE_TIMEOUT)
 
-            #TMP
-            logger.error("CSDERR {0} status code {1} headers {2}".format(url,\
-                response.status_code,response.headers))
-
             retry_count -= 1
 
             if response is None:
@@ -237,11 +233,8 @@ class RealStorEnclosure(StorageEnclosure):
 
                 try:
                     jresponse = json.loads(response.content)
-                    logger.error("CSDERR {0} -> {1}".format(url,jresponse))
 
                     if jresponse:
-
-                        logger.error("CSDERR {0} -> resp status {1}".format(url,jresponse['status']))
 
                         if jresponse['status'][0]['return-code'] == 2:
                             response_status = jresponse['status'][0]['response']
@@ -249,16 +242,16 @@ class RealStorEnclosure(StorageEnclosure):
                             # if call fails with invalid session key request
                             # seen in G280 fw version
                             if self.CLIAPI_RESP_INVSESSION in response_status:
-                               logger.error("CSDERR {0} need_relogin".format(url))
+                               logger.error("{0} need_relogin".format(url))
                                need_relogin = True
 
                 except ValueError as badjson:
-                    logger.error("CSDERR %s returned mal-formed json:\n%s" % (url, badjson))
+                    logger.error("%s returned mal-formed json:\n%s" % (url, badjson))
 
             # http 403 forbidden request, login & retry
             if (response.status_code == self.ws.HTTP_FORBIDDEN or \
                 need_relogin) and retried_login is False:
-                logger.info("CSDERR %s failed, retrying after login " % (url))
+                logger.info("%s failed, retrying after login " % (url))
 
                 self.login()
                 retried_login = True
@@ -295,8 +288,6 @@ class RealStorEnclosure(StorageEnclosure):
             logger.warn("Login webservice request failed {0}".format(url))
             return
 
-        logger.error("CSDERR %s response:\n%s" % (url, response))
-
         if response.status_code != self.ws.HTTP_OK:
             if response.status_code == self.ws.HTTP_TIMEOUT:
                 self.mc_timeout_counter += 1
@@ -310,7 +301,6 @@ class RealStorEnclosure(StorageEnclosure):
             logger.error("%s returned mal-formed json:\n%s" % (url, badjson))
 
         if jresponse:
-        logger.error("CSDERR %s jresponse:\n%s" % (url, jresponse))
 
             if jresponse['status'][0]['return-code'] == 1:
                 sessionKey = jresponse['status'][0]['response']
