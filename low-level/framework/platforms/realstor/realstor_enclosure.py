@@ -79,6 +79,7 @@ class RealStorEnclosure(StorageEnclosure):
 
     # CLI APIs Response status strings
     CLIAPI_RESP_INVSESSION = "Invalid sessionkey"
+    CLIAPI_RESP_FAILURE = 2
 
     # Realstor generic health states
     HEALTH_OK = "ok"
@@ -234,9 +235,11 @@ class RealStorEnclosure(StorageEnclosure):
                 try:
                     jresponse = json.loads(response.content)
 
+                    #TODO: Need a way to check return-code 2 in more optimal way if possible, 
+                    # currently being checked for all http 200 responses
                     if jresponse:
 
-                        if jresponse['status'][0]['return-code'] == 2:
+                        if jresponse['status'][0]['return-code'] == self.CLIAPI_RESP_FAILURE:
                             response_status = jresponse['status'][0]['response']
 
                             # if call fails with invalid session key request
