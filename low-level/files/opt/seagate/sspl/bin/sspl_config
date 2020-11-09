@@ -217,7 +217,7 @@ rabbitmq_maintenance_release=$(echo "${rabbitmq_minor_release:2:3}")
         out=$(rabbitmqctl cluster_status | grep running_nodes | cut -d '[' -f2 | cut -d ']' -f1 | sed 's/rabbit@//g' | sed 's/,/, /g')
         pout=$(echo $out | sed  "s/'//g" | sed  "s/ //g")
     else
-        echo "Not a supported version"
+        echo "This RabbitMQ version: $rabbitmq_version is not supported"
         exit 1
     fi
 
