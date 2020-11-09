@@ -15,12 +15,14 @@
 # about this software or licensing, please email opensource@seagate.com or
 # cortx-questions@seagate.com.
 
+import configparser
 from enum import Enum
+import os
 
 try:
-    from salt_util import node_id, consulhost, consulport
+    from salt_util import SaltInterface
 except Exception as e:
-    from framework.utils.salt_util import node_id, consulhost, consulport
+    from framework.utils.salt_util import SaltInterface
 
 PRODUCT_NAME = 'LDR_R1'
 PRODUCT_FAMILY = 'cortx'
@@ -31,6 +33,7 @@ setups = ["cortx"]
 RESOURCE_PATH = f"/opt/seagate/{PRODUCT_FAMILY}/sspl/resources/"
 CLI_RESOURCE_PATH = f"/opt/seagate/{PRODUCT_FAMILY}/sspl/cli"
 DATA_PATH = f"/var/{PRODUCT_FAMILY}/sspl/data/"
+SSPL_CONFIGURED=f"/var/{PRODUCT_FAMILY}/sspl/sspl-configured"
 NODE_ID = "001"
 SITE_ID = "001"
 RACK_ID = "001"
@@ -49,10 +52,41 @@ ENCL_TRIGGER_LOG_MAX_RETRY = 10
 ENCL_DOWNLOAD_LOG_MAX_RETRY = 60
 ENCL_DOWNLOAD_LOG_WAIT_BEFORE_RETRY = 15
 
-node_key_id = node_id
-CONSUL_HOST = consulhost
-CONSUL_PORT = consulport
+# required only for init
+component = 'sspl/config'
+file_store_config_path = '/etc/sspl.conf'
+salt_provisioner_pillar_sls = 'sspl'
+salt_uniq_attr_per_node = ['cluster_id']
+salt_uniq_passwd_per_node = ['RABBITMQINGRESSPROCESSOR', 'RABBITMQEGRESSPROCESSOR', 'LOGGINGPROCESSOR']
+
+# Initialize to default values
+node_key_id = 'srvnode-1'
+CONSUL_HOST = '127.0.0.1'
+CONSUL_PORT = '8500'
 CONSUL_ERR_STRING = '500 No cluster leader'
+
+# TODO Keep only constants in this file.
+# other values(configs) should come from cofig.
+# Check if SSPL is configured
+if os.path.exists(SSPL_CONFIGURED):
+    try:
+        config = configparser.ConfigParser()
+        config.read(file_store_config_path)
+        node_key_id = config['SYSTEM_INFORMATION']['salt_minion_id']
+        CONSUL_HOST = config['DATASTORE']['consul_host']
+        CONSUL_PORT = config['DATASTORE']['consul_port']
+    except Exception as err:
+        print(f'sspl_constants : Failed to read from {file_store_config_path} due to error - {err}')
+# If not configured, use salt interface
+else:
+    try:
+        salt_int = SaltInterface()
+        node_key_id = salt_int.get_node_id()
+        CONSUL_HOST = salt_int.get_consul_vip()
+        CONSUL_PORT = salt_int.get_consul_port()
+    except Exception as err:
+        print(f'sspl_constants : Failed to read from SaltInterface due to error - {err}')
+
 SSPL_SETTINGS = {
         "ACTUATORS" : ["Service", "RAIDactuator", "Smartctl", "NodeHWactuator", "RealStorActuator"],
         "CORE_PROCESSORS" : ("RabbitMQegressProcessor", "RabbitMQingressProcessor", "LoggingProcessor"),
@@ -99,9 +133,9 @@ COMMON_CONFIGS = {
     },
     "BMC": {
         "sspl_key" : "key_provided_by_provisioner",
-        f"ip_{node_id}" : f"{node_id}/ip",
-        f"user_{node_id}" : f"{node_id}/user",
-        f"secret_{node_id}" : f"{node_id}/secret"
+        f"ip_{node_key_id}" : f"{node_key_id}/ip",
+        f"user_{node_key_id}" : f"{node_key_id}/user",
+        f"secret_{node_key_id}" : f"{node_key_id}/secret"
     }
 }
 
@@ -109,13 +143,6 @@ SSPL_CONFIGS = ['log_level', 'cli_type', 'sspl_log_file_path', 'cluster_id', 'st
 
 DISABLE_FOR_VIRTUAL_STORAGE = ('RealStor')
 DISABLE_FOR_VIRTUAL_SERVER = ("CPUFaultSensor", "RAIDIntegritySensor",  "RAIDsensor", "MemFaultSensor", "NodeHWsensor")
-
-# required only for init
-component = 'sspl/config'
-file_store_config_path = '/etc/sspl.conf'
-salt_provisioner_pillar_sls = 'sspl'
-salt_uniq_attr_per_node = ['cluster_id']
-salt_uniq_passwd_per_node = ['RABBITMQINGRESSPROCESSOR', 'RABBITMQEGRESSPROCESSOR', 'LOGGINGPROCESSOR']
 
 class RaidDataConfig(Enum):
     MDSTAT_FILE = "/proc/mdstat"
