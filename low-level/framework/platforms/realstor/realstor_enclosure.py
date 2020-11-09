@@ -251,7 +251,7 @@ class RealStorEnclosure(StorageEnclosure):
                     logger.error("%s returned mal-formed json:\n%s" % (url, badjson))
 
             # http 403 forbidden request, login & retry
-            if (response.status_code == self.ws.HTTP_FORBIDDEN or \
+            elif (response.status_code == self.ws.HTTP_FORBIDDEN or \
                 need_relogin) and retried_login is False:
                 logger.info("%s failed, retrying after login " % (url))
 
