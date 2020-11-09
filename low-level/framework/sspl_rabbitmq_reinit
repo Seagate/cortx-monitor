@@ -258,7 +258,7 @@ def _create_vhost_if_necessary(virtual_host, product):
 
         vhosts = response.split('\n')
         for vhost in vhosts[1:-1]:
-            print(vhosts)
+            print(f'vhost: {vhost}')
             if vhost == virtual_host:
                 return
 
@@ -271,7 +271,7 @@ def _create_vhost_if_necessary(virtual_host, product):
             [RABBITMQCTL, 'list_vhosts']
             ).decode("utf-8").split('\n')
         for vhost in vhosts[1:-1]:
-            print(vhost)
+            print(f'vhost: {vhost}')
             if vhost == virtual_host:
                 return
         try:
@@ -325,7 +325,7 @@ def _create_user_if_necessary(username, password, virtual_host, product):
         found_user = False
         for userspec in users[1:-1]:
             user = userspec.split()[0]
-            print(user)
+            print(f'User: {user}')
             if user == username:
                 found_user = True
                 break
@@ -344,7 +344,7 @@ def _create_user_if_necessary(username, password, virtual_host, product):
         found_user = False
         for userspec in users[1:-1]:
             user = userspec.split()[0]
-            print(user)
+            print('User: {user}')
             if user == username:
                 found_user = True
                 break

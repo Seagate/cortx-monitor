@@ -188,10 +188,17 @@ case $cmd in
         ;;
 esac
 
+# Get the version. Output can be 3.3.5 or 3.8.9 or in this format
 rabbitmq_version=$(rpm -qi rabbitmq-server | awk -F': ' '/Version/ {print $2}')
-rabbitmq_base_version=$(echo "${rabbitmq_version:0:-3}" | sed 's/.$//')
-rabbitmq_updated_version=$(echo "${rabbitmq_version::-1}" | sed 's/.$//')
-rabbitmq_middle_version=$(echo "${rabbitmq_updated_version:2:3}")
+
+# Get the Major release version parsed. (Eg: 3 from 3.8.9)
+rabbitmq_major_release=$(echo "${rabbitmq_version:0:-3}" | sed 's/.$//')
+
+# Get the Minor release version parsed. (Eg: 3.8 from 3.8.9)
+rabbitmq_minor_release=$(echo "${rabbitmq_version::-1}" | sed 's/.$//')
+
+# Get the Maitenance release version parsed from minor release. (Eg: 8 from 3.8)
+rabbitmq_maintenance_release=$(echo "${rabbitmq_minor_release:2:3}")
 
 # Skip this step if sspl is being configured for node replacement scenario as consul data is already
 # available on healthy node
@@ -200,7 +207,7 @@ rabbitmq_middle_version=$(echo "${rabbitmq_updated_version:2:3}")
 # with which rabbitmq cluster may have been created
 [ -f $REPLACEMENT_NODE_ENV_VAR_FILE ] || {
     # Update cluster_nodes key in consul
-    if [ $rabbitmq_base_version -eq 3 ] && [ $rabbitmq_middle_version -ge 8 ];
+    if [ $rabbitmq_major_release -eq 3 ] && [ $rabbitmq_maintenance_release -eq 8 ];
     then
         rabbitmq_cluster_status=$(/usr/sbin/rabbitmqctl cluster_status --formatter json)
         cluster_running_nodes=$(python3 -c "rabbitmq_status=$rabbitmq_cluster_status; print(rabbitmq_status['running_nodes'])")
