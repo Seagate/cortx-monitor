@@ -257,7 +257,7 @@ def _create_vhost_if_necessary(virtual_host, product):
             response = _send_command(command)
 
         vhosts = response.split('\n')
-        print(f'vhosts: {vhost}')
+        print(f'vhosts: {vhosts}')
         for vhost in vhosts[1:-1]:
             if vhost == virtual_host:
                 return
