@@ -442,8 +442,7 @@ def _send_command(command, fail_on_error=True):
     print(f'Executing: {command}')
     process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     response, error = process.communicate()
-    if error is not None and \
-       len(error) > 0:
+    if process.returncode != 0:
         print("command '%s' failed with error\n%s" % (command, error))
         if fail_on_error:
             sys.exit(1)
