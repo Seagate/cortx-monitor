@@ -212,9 +212,13 @@ rabbitmq_maintenance_release=$(echo "${rabbitmq_minor_release:2:3}")
         rabbitmq_cluster_status=$(/usr/sbin/rabbitmqctl cluster_status --formatter json)
         cluster_running_nodes=$(python3 -c "rabbitmq_status=$rabbitmq_cluster_status; print(rabbitmq_status['running_nodes'])")
         pout=$(echo $cluster_running_nodes | sed 's/rabbit@//g' | cut -d '[' -f2 | cut -d ']' -f1 | tr -d \'\" | tr -d ' ')
-    else
+    elif [ $rabbitmq_version == "3.3.5" ];
+    then
         out=$(rabbitmqctl cluster_status | grep running_nodes | cut -d '[' -f2 | cut -d ']' -f1 | sed 's/rabbit@//g' | sed 's/,/, /g')
         pout=$(echo $out | sed  "s/'//g" | sed  "s/ //g")
+    else
+        echo "Not a supported version"
+        exit 1
     fi
 
     $CONSUL_PATH/consul kv put sspl/config/RABBITMQCLUSTER/cluster_nodes $pout
