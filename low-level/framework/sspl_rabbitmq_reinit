@@ -257,7 +257,7 @@ def _create_vhost_if_necessary(virtual_host, product):
             response = _send_command(command)
 
         vhosts = response.split('\n')
-        assert vhosts[0] == 'Listing vhosts ...'
+        print(f'vhosts: {vhosts}')
         for vhost in vhosts[1:-1]:
             if vhost == virtual_host:
                 return
@@ -270,9 +270,7 @@ def _create_vhost_if_necessary(virtual_host, product):
         vhosts = subprocess.check_output(
             [RABBITMQCTL, 'list_vhosts']
             ).decode("utf-8").split('\n')
-        assert vhosts[0] == 'Listing vhosts ...'
-        assert vhosts[-2] == '...done.'
-        assert vhosts[-1] == ''
+        print(f'vhosts: {vhosts}')
         for vhost in vhosts[1:-1]:
             if vhost == virtual_host:
                 return
@@ -324,7 +322,7 @@ def _create_user_if_necessary(username, password, virtual_host, product):
         response = _send_command(command)
 
         users = response.split("\n")
-        assert users[0] == 'Listing users ...'
+        print(f'Users: {users}')
         found_user = False
         for userspec in users[1:-1]:
             user = userspec.split()[0]
@@ -343,9 +341,7 @@ def _create_user_if_necessary(username, password, virtual_host, product):
         users = subprocess.check_output(
             [RABBITMQCTL, 'list_users']
             ).decode("utf-8").split('\n')
-        assert users[0] == 'Listing users ...'
-        assert users[-2] == '...done.'
-        assert users[-1] == ''
+        print('Users: {users}')
         found_user = False
         for userspec in users[1:-1]:
             user = userspec.split()[0]
@@ -446,8 +442,7 @@ def _send_command(command, fail_on_error=True):
     print(f'Executing: {command}')
     process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     response, error = process.communicate()
-    if error is not None and \
-       len(error) > 0:
+    if process.returncode != 0:
         print("command '%s' failed with error\n%s" % (command, error))
         if fail_on_error:
             sys.exit(1)
