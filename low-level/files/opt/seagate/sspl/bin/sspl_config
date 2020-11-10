@@ -200,13 +200,23 @@ rabbitmq_minor_release=$(echo "${rabbitmq_version::-1}" | sed 's/.$//')
 # Get the Maitenance release version parsed from minor release. (Eg: 8 from 3.8)
 rabbitmq_maintenance_release=$(echo "${rabbitmq_minor_release:2:3}")
 
-# Skip this step if sspl is being configured for node replacement scenario as consul data is already
-# available on healthy node
-# Updating RabbitMQ cluster nodes.
-# In node replacement scenario, avoiding feeding again to avoid over writing already configured values
-# with which rabbitmq cluster may have been created
-[ -f $REPLACEMENT_NODE_ENV_VAR_FILE ] || {
-    # Update cluster_nodes key in consul
+get_cluster_running_nodes() {
+    pout=""
+    case $1 in
+
+    "rabbitmq" )
+        pout=$( get_rabbitmq_cluster_nodes )
+        echo "$pout"
+        ;;
+
+    * )
+        usage
+        ;;
+    esac
+
+}
+
+get_rabbitmq_cluster_nodes() {
     if [ $rabbitmq_major_release -eq 3 ] && [ $rabbitmq_maintenance_release -eq 8 ];
     then
         rabbitmq_cluster_status=$(/usr/sbin/rabbitmqctl cluster_status --formatter json)
@@ -220,7 +230,22 @@ rabbitmq_maintenance_release=$(echo "${rabbitmq_minor_release:2:3}")
         echo "This RabbitMQ version: $rabbitmq_version is not supported"
         exit 1
     fi
+    echo "$pout"
+}
 
+# Skip this step if sspl is being configured for node replacement scenario as consul data is already
+# available on healthy node
+# Updating RabbitMQ cluster nodes.
+# In node replacement scenario, avoiding feeding again to avoid over writing already configured values
+# with which rabbitmq cluster may have been created
+[ -f $REPLACEMENT_NODE_ENV_VAR_FILE ] || {
+
+    message_broker="rabbitmq"
+
+    # Get the running nodes from a cluster
+    pout=$( get_cluster_running_nodes "$message_broker")
+
+    # Update cluster_nodes key in consul
     $CONSUL_PATH/consul kv put sspl/config/RABBITMQCLUSTER/cluster_nodes $pout
     [ -n "$rmq_cluster_nodes" ] && $CONSUL_PATH/consul kv put sspl/config/RABBITMQCLUSTER/cluster_nodes $rmq_cluster_nodes
 }
