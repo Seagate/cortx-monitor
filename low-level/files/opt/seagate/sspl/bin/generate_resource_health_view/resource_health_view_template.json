@@ -58,6 +58,7 @@
                                     "iem": {},
                                     "mdraid": {},
                                     "main_memory": {},
+                                    "disks":{},
                                     "cortx_sw": {},
                                     "operating_system": {}
                                 },
