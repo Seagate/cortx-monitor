@@ -199,16 +199,16 @@ class ManifestSupportBundle(object):
                     new_dic[k] = v
             return new_dic
 
-    def fetch_encl_summary_data(self, node_manifest_dict):
+    def fetch_encl_summary_data(self, encl_manifest_dict):
         final_encl_summary_dict={}
         encl_fields = ["controllers", "power-supplies", "fan-modules"]
-        server = node_manifest_dict["system"][0]
-        enclosure = node_manifest_dict["enclosures"][0]
-        vendor_name = server.get("vendor-name", "NA") or "NA"
-        product_id = server.get("product-id", "NA") or "NA"
-        product_brand = server.get("product-brand", "NA") or "NA"
-        platform_brand = server.get("platform-brand", "NA") or "NA"
-        serial_number = server.get("midplane-serial-number", "NA") or "NA"
+        system_dict = encl_manifest_dict["system"][0]
+        enclosure = encl_manifest_dict["enclosures"][0]
+        vendor_name = system_dict.get("vendor-name", "NA") or "NA"
+        product_id = system_dict.get("product-id", "NA") or "NA"
+        product_brand = system_dict.get("product-brand", "NA") or "NA"
+        platform_brand = system_dict.get("platform-brand", "NA") or "NA"
+        serial_number = enclosure['chassis-midplane'][0].get("serial-number", "NA") or "NA"
         final_encl_summary_dict.update({"enclosure":{'vendor-name':vendor_name, 'product-id':product_id,
                                 'product-brand':product_brand, 'platform-brand':platform_brand, 'serial-number':serial_number}})
         for key in self.encl_summary_fields:
@@ -218,7 +218,7 @@ class ManifestSupportBundle(object):
                 final_encl_summary_dict["enclosure"].update({key:value})
         for encl in encl_fields:
             self.filter_encl_summary_dict(enclosure[encl], encl)
-        self.filter_encl_summary_dict(node_manifest_dict["drives"], "drives")
+        self.filter_encl_summary_dict(encl_manifest_dict["drives"], "drives")
         final_encl_summary_dict["enclosure"].update(self.encl_summary_filter)
 
         return final_encl_summary_dict
