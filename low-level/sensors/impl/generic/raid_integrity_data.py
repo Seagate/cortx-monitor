@@ -373,7 +373,6 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
             })
         self.alert_type = None
 
-        # RAAL stands for - RAise ALert
         logger.info(f"RAAL: {internal_json_msg}")
 
         # Send the event to node data message handler to generate json message and send out
