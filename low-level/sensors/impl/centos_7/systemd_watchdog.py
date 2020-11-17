@@ -1448,4 +1448,4 @@ def is_physical_drive(interfaces_and_property):
 def is_local_drive(interfaces_and_property):
     """Check if drive is SATA."""
     return "org.freedesktop.UDisks2.Drive.Ata" in interfaces_and_property and \
-        str(interfaces_and_property["org.freedesktop.UDisks2.Drive"]["Revision"]) != "G265"
+        str(interfaces_and_property["org.freedesktop.UDisks2.Drive"]["Revision"]) not in ["G265", "G280"]
