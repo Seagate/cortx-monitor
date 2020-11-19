@@ -115,5 +115,5 @@ cp -R $SSPL_BASE_DIR/resources/iem/iec_mapping/* $PRODUCT_BASE_DIR/iem/iec_mappi
 # already configured on the healthy node
 # Configure rabbitmq
 [ -f $REPLACEMENT_NODE_ENV_VAR_FILE ] || {
-    [ "$RMQ_CLUSTER" == true ] && $script_dir/rabbitmq_setup
+    [ "$RMQ_CLUSTER" != true ] || $script_dir/rabbitmq_setup
 }

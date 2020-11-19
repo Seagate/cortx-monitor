@@ -1,0 +1,61 @@
+#!/bin/bash
+
+# Copyright (c) 2020 Seagate Technology LLC and/or its Affiliates
+#
+# This program is free software: you can redistribute it and/or modify it under the
+# terms of the GNU Affero General Public License as published by the Free Software
+# Foundation, either version 3 of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+# PARTICULAR PURPOSE. See the GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License along
+# with this program. If not, see <https://www.gnu.org/licenses/>. For any questions
+# about this software or licensing, please email opensource@seagate.com or
+# cortx-questions@seagate.com.
+
+set -e -u -o pipefail
+
+PRODUCT_NAME='LDR_R1'
+PRODUCT_FAMILY='cortx'
+
+[ -f /var/cortx/sspl/data/state.txt ] && {
+    if [[ $(cat /var/cortx/sspl/data/state.txt ) == "state=active" ]]; 
+    then
+        # TODO Failover to other node, avoid pcs
+        echo "Doing failover"
+    fi
+}
+
+# Disable sspl service
+pcs resource disable sspl-master
+
+# Make sure service is in inactive state
+while [[ $( systemctl show -p ActiveState sspl-ll ) != "ActiveState=inactive" ]];
+do
+    echo "Service is still active, sleeping for some time"
+    sleep 3
+done
+
+
+# Remove SSPL
+yum remove -y cortx-sspl
+
+# Install new RPM
+yum install -y "$@"
+
+# Run SSPL config steps
+/opt/seagate/cortx/sspl/bin/sspl_post_install -p $PRODUCT_NAME -c false
+/opt/seagate/cortx/sspl/bin/sspl_setup_init -r $PRODUCT_FAMILY
+/opt/seagate/cortx/sspl/bin/sspl_config -f
+
+# Enable pcs
+pcs resource enable sspl-master
+
+# Make sure service is in active state
+while [[ $( systemctl show -p ActiveState sspl-ll ) != "ActiveState=active" ]];
+do
+    echo "Service is still not active, waiting for some time"
+    sleep 3
+done
