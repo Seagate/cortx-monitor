@@ -908,7 +908,6 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         if self._uuid is not None:
             node_ipmi_data_msg.set_uuid(self._uuid)
         jsonMsg = node_ipmi_data_msg.getJson()
-        logger.info(f"RAAL: {jsonMsg}")
         self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
 
     def suspend(self):
