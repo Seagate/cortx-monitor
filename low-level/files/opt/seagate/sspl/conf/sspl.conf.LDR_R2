@@ -111,6 +111,7 @@ IP_addr=172.16.1.222
 max_login_attempts=2
 
 [RAIDSENSOR]
+monitor=true
 threaded=true
 RAID_status_file=/proc/mdstat
 
@@ -131,6 +132,7 @@ password=gAAAAABelDwUnl72CcoHjENcV9KmPkZTd-YPrAn1BbS6AaNGtho-VztVhx0f1ZEfX3zRlMo
 mgmt_interface=cliapi
 
 [REALSTORSENSORS]
+monitor=true
 polling_frequency=30
 
 [REALSTORPSUSENSOR]
@@ -150,6 +152,7 @@ polling_frequency_override=0
 threaded=true
 
 [NODEHWSENSOR]
+monitor=true
 threaded=true
 polling_interval=30
 
@@ -165,6 +168,7 @@ log_file_path=/var/log/cortx/iem/iem_messages
 timestamp_file_path=/var/cortx/sspl/data/iem/last_processed_msg_time
 
 [SYSTEMDWATCHDOG]
+monitor=true
 threaded=true
 monitored_services=
 smart_test_interval=999999999
@@ -179,13 +183,16 @@ consul_host=127.0.0.1
 consul_port=8500
 
 [SASPORTSENSOR]
+monitor=true
 threaded=true
 probe=sysfs
 
 [MEMFAULTSENSOR]
+monitor=true
 threaded=true
 probe=sysfs
 
 [CPUFAULTSENSOR]
+monitor=true
 threaded=true
 probe=sysfs

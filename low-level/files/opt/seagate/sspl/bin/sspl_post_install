@@ -79,6 +79,10 @@ python3 -m pip install -r $SSPL_BASE_DIR/conf/requirements.txt
 # For Dev environment
 [ "$ENVIRONMENT" == "DEV" ] && cp $SSPL_BASE_DIR/conf/sspl.conf.$PRODUCT $SSPL_CONF
 
+# Get the types of server and storage we are currently running on and
+# enable/disable sensor groups in the conf file accordingly.
+source $script_dir/conf_based_sensors_enable
+
 # Copy rsyslog configuration
 [ -f $RSYSLOG_CONF ] ||
     cp $SSPL_BASE_DIR/conf/$RSYSLOG_CONF $RSYSLOG_CONF

@@ -37,7 +37,7 @@ from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 from framework.rabbitmq.rabbitmq_ingress_processor import RabbitMQingressProcessor
 from framework.rabbitmq.plane_cntrl_rmq_egress_processor import PlaneCntrlRMQegressProcessor
 from framework.rabbitmq.logging_processor import LoggingProcessor
-from framework.base.sspl_constants import enabled_products, cs_legacy_products, cs_products, OperatingSystem, SSPL_SETTINGS
+from framework.base.sspl_constants import enabled_products, cs_legacy_products, cs_products, OperatingSystem, SSPL_SETTINGS, sspl_settings_configured_groups
 
 # Note that all threaded message handlers must have an import here to be controlled
 from message_handlers.logging_msg_handler import LoggingMsgHandler
@@ -130,7 +130,9 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
 
         # Initialize internal message queues for this module
         super(ThreadController, self).initialize_msgQ(msgQlist)
-        self._modules_to_resume = list(SSPL_SETTINGS.get("DEGRADED_STATE_MODULES"))
+        self._modules_to_resume = []
+        for group in sspl_settings_configured_groups:
+            self._modules_to_resume.extend(SSPL_SETTINGS[group].get("DEGRADED_STATE_MODULES"))
 
     def initialize_thread_list(self, sspl_modules, operating_system, product,
                                systemd_support):
