@@ -164,6 +164,33 @@ COMMON_CONFIGS = {
 
 SSPL_CONFIGS = ['log_level', 'cli_type', 'sspl_log_file_path', 'cluster_id', 'storage_enclosure', 'setup', 'operating_system']
 
+MODULES = {"CPUFAULTSENSOR": {"probe" : "sysfs", "threaded": "true"},
+            "IEMSENSOR" : {"log_file_path": "/var/log/cortx/iem/iem_messages", "threaded" : "true", "timestamp_file_path" : "/var/cortx/sspl/data/iem/last_processed_msg_time"},
+            "IPMI": {"pass": "admin", "user": "admin"},
+            "LOGEMAILER" : {"priority" : "LOG_ERR"},
+            "LOGGINGMSGHANDLER" : {"iem_log_locally" : "true", "iem_routing_enabled" : "false"},
+            "MEMFAULTSENSOR" : {"probe" : "procfs", "threaded" : "true"},
+            "NODEDATA" : {"probe" : "sysfs"},
+            "NODEDATAMSGHANDLER" : {"cpu_usage_threshold" : "80", "disk_usage_threshold" : "80", "host_memory_usage_threshold" : "80", "transmit_interval" : "10", "units" : "MB"},
+            "NODEHWACTUATOR" : {"ipmi_client" : "ipmitool"},
+            "NODEHWSENSOR" : {"polling_interval" : '30', "threaded" : "true"},
+            "RAIDINTEGRITYSENSOR": {"polling_interval": "604800", "threaded": "true"},
+            "RAIDSENSOR" : { "RAID_status_file" : "/proc/mdstat", "threaded": "true"},
+            "RARITANPDU": { "IP_addr" : "172.16.1.222", "comm_port" : "/dev/ttyACM0", "max_login_attempts" : "2", "pass" : "admin","user" : "admin"},
+            "REALSTORCONTROLLERSENSOR" : {"threaded" : "true"},
+            "REALSTORDISKSENSOR" : { "polling_frequency_override" : "0", "threaded" : "true"},
+            "REALSTORENCLOSURESENSOR" : {"threaded": "true"},
+            "REALSTORFANSENSOR" : {"threaded" : "true"},
+            "REALSTORLOGICALVOLUMESENSOR" : {"threaded" : "true"},
+            "REALSTORPSUSENSOR" : {"threaded" : "true"},
+            "REALSTORSENSORS" : {"polling_frequency" : "30"},
+            "REALSTORSIDEPLANEEXPANDERSENSOR" : {"threaded" : "true"},
+            "SASPORTSENSOR" : {"polling_frequency" : "30", "probe" : "sysfs", "threaded" : "true"},
+            "SMRDRIVEDATA" : {"logging_interval" : "3600", "threaded": "true"},
+            "SMTPSETTING" : {"recipient" : "example@seagate.com", "smptserver" : "mailhost.seagate.com", "smtp_port" : "25"},
+            "SYSTEMDWATCHDOG" : {"run_smart_on_start": 'False', "smart_test_interval" : "999999999", "threaded" : "true"}
+            }
+
 # required only for init
 component = 'sspl/config'
 file_store_config_path = '/etc/sspl.conf'

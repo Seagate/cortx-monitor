@@ -53,7 +53,8 @@ from framework.rabbitmq.rabbitmq_ingress_processor import RabbitMQingressProcess
 
 from framework.rabbitmq.plane_cntrl_rmq_egress_processor import PlaneCntrlRMQegressProcessor
 from framework.rabbitmq.plane_cntrl_rmq_ingress_processor import PlaneCntrlRMQingressProcessor
-from framework.base.sspl_constants import enabled_products, OperatingSystem, COMMON_CONFIGS, SSPL_SETTINGS, sspl_settings_configured_groups
+from framework.base.sspl_constants import enabled_products, OperatingSystem, COMMON_CONFIGS, \
+     SSPL_SETTINGS, sspl_settings_configured_groups, MODULES
 from framework.base.module_thread import SensorThread
 from framework.actuator_state_manager import actuator_state_manager
 
@@ -532,8 +533,9 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist, operating_system
         # Look at module's configuration section and determine if it's threaded
         threaded = 'True'
         try:
-            threaded = conf_reader._get_value(klass.name().upper(), 'threaded')
-            if threaded == '':
+            module_info = MODULES.get(klass.name().upper())
+            threaded = module_info.get("threaded")
+            if threaded == None:
                 threaded = 'False'
         except Exception as e:
             threaded = 'False'  # Wasn't present so default to False
