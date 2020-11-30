@@ -216,6 +216,8 @@ class RealStorEnclosureSensor(SensorThread, InternalMsgQ):
                 }})
 
         self.previous_alert_type = alert_type
+        # RAAL stands for - RAise ALert
+        logger.info(f"RAAL: {internal_json_msg}")
         self._write_internal_msgQ(RealStorEnclMsgHandler.name(), internal_json_msg)
 
     def _get_alert_id(self, epoch_time):
