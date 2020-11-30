@@ -23,7 +23,6 @@ declare -A monitor=(
 case "${storage_type}" in
     virtual) 
         monitor[REALSTORSENSORS]="false"
-        monitor[SYSTEMDWATCHDOG]="false"
         ;;
     jbod)
         monitor[REALSTORSENSORS]="false"
