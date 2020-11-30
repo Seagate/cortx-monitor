@@ -1191,6 +1191,7 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
                              "serial_number" : serial_number,
                              "path_id" : path_id
                              }
+
         # Send the event to disk message handler to generate json message
         self._write_internal_msgQ(DiskMsgHandler.name(), internal_json_msg)
 
@@ -1216,6 +1217,7 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
                     "specific_info": specific_info
                     }
                 }
+        logger.info(f"RAAL: {msg}")
         # Send the event to disk message handler to generate json message
         self._write_internal_msgQ(DiskMsgHandler.name(), msg)
 

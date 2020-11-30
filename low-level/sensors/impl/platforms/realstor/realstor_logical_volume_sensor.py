@@ -379,6 +379,8 @@ class RealStorLogicalVolumeSensor(SensorThread, InternalMsgQ):
             return
 
         self._event.clear()
+        # RAAL stands for - RAise ALert
+        logger.info(f"RAAL: {json_msg}")
         self._write_internal_msgQ(RealStorEnclMsgHandler.name(), json_msg, self._event)
 
     def suspend(self):
