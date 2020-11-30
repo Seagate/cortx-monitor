@@ -101,7 +101,6 @@ class SSPLHealthView(object):
         self.sensor_id_map = None
         self.ipmi_fru_lst = ['disk', 'fan', 'psu']
         self.sensor_list = ['temperature', 'current', 'voltage']
-        self.tried_alt_ip = False
         self.correct_mc_config = True
         self.storage_type = storage_type
         self.server_type = server_type
@@ -865,19 +864,9 @@ class SSPLHealthView(object):
             show_fru = "/show/configuration"
 
         response = self.fetch_ws_request_data(show_fru, fru)
-        if response.status_code != singleton_realstorencl.ws.HTTP_OK:
-            if (response.status_code == singleton_realstorencl.ws.HTTP_TIMEOUT or \
-                response.status_code == singleton_realstorencl.ws.HTTP_CONN_REFUSED or \
-                response.status_code == singleton_realstorencl.ws.HTTP_FORBIDDEN or \
-                response.status_code == singleton_realstorencl.ws.HTTP_NO_ROUTE_TO_HOST) \
-                and self.tried_alt_ip is False:
-                print("Retrying to fetch data from another mc IP....: {}".format(singleton_realstorencl.active_ip))
-                singleton_realstorencl.login()
-                self.tried_alt_ip = True
-                response = self.fetch_ws_request_data(show_fru, fru)
-
-        if response.status_code != singleton_realstorencl.ws.HTTP_OK and self.tried_alt_ip is True:
-            self.correct_mc_config = False
+        if not response or response.status_code != singleton_realstorencl.ws.HTTP_OK:
+            if singleton_realstorencl.active_ip == singleton_realstorencl.mc2:
+                self.correct_mc_config = False
             return []
         else:
             response_data = json.loads(response.text)
