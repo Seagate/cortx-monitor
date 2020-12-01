@@ -26,8 +26,6 @@ case "${storage_type}" in
         ;;
     jbod)
         monitor[REALSTORSENSORS]="false"
-        monitor[SYSTEMDWATCHDOG]="false"
-        monitor[RAIDSENSOR]="false"
         ;;
 esac
 
@@ -37,6 +35,7 @@ case "${server_type}" in
         monitor[SASPORTSENSOR]="false"
         monitor[MEMFAULTSENSOR]="false"
         monitor[CPUFAULTSENSOR]="false"
+        monitor[RAIDSENSOR]="false"
         ;;
 esac
 
