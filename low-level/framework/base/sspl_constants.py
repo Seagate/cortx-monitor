@@ -57,17 +57,72 @@ node_key_id = node_id
 CONSUL_HOST = consulhost
 CONSUL_PORT = consulport
 SSPL_SETTINGS = {
-        "ACTUATORS" : ["Service", "RAIDactuator", "Smartctl", "NodeHWactuator"],
-        "CORE_PROCESSORS" : ("RabbitMQegressProcessor", "RabbitMQingressProcessor", "LoggingProcessor"),
-        "DEGRADED_STATE_MODULES" : ("ServiceWatchdog", "RAIDsensor", "NodeData", "IEMSensor", "NodeHWsensor",
-                            "DiskMsgHandler", "LoggingMsgHandler", "ServiceMsgHandler", "NodeDataMsgHandler",
-                            "NodeControllerMsgHandler", "SASPortSensor", "MemFaultSensor", "CPUFaultSensor"),
-        "MESSAGE_HANDLERS" : ("DiskMsgHandler", "LoggingMsgHandler", "ServiceMsgHandler", "NodeDataMsgHandler",
-                        "NodeControllerMsgHandler"),
-        "SENSORS" : ["ServiceWatchdog", "RAIDsensor", "NodeData",
-            "IEMSensor", "NodeHWsensor",
-            "SASPortSensor", "MemFaultSensor", "CPUFaultSensor", "RAIDIntegritySensor"]
+        "REALSTORSENSORS": {
+            "ACTUATORS": [],
+            "CORE_PROCESSORS": [],
+            "DEGRADED_STATE_MODULES": [],
+            "MESSAGE_HANDLERS": [],
+            "SENSORS": ["RealStorFanSensor", "RealStorPSUSensor",
+                "RealStorControllerSensor", "RealStorDiskSensor", "RealStorSideplaneExpanderSensor",
+                "RealStorLogicalVolumeSensor", "RealStorEnclosureSensor"],
+        },
+        "NODEHWSENSOR": {
+            "ACTUATORS": [],
+            "CORE_PROCESSORS": [],
+            "DEGRADED_STATE_MODULES": [ "NodeHWsensor"],
+            "MESSAGE_HANDLERS": [],
+            "SENSORS": [ "NodeHWsensor"],
+        },
+        "SYSTEMDWATCHDOG": {
+            "ACTUATORS": [],
+            "CORE_PROCESSORS": [],
+            "DEGRADED_STATE_MODULES": [],
+            "MESSAGE_HANDLERS": [],
+            "SENSORS": [],
+        },
+        "RAIDSENSOR": {
+            "ACTUATORS": [],
+            "CORE_PROCESSORS": [],
+            "DEGRADED_STATE_MODULES": ["RAIDsensor"],
+            "MESSAGE_HANDLERS": [],
+            "SENSORS": ["RAIDsensor", "RAIDIntegritySensor"],
+        },
+        "SASPORTSENSOR": {
+            "ACTUATORS": [],
+            "CORE_PROCESSORS": [],
+            "DEGRADED_STATE_MODULES": ["SASPortSensor"],
+            "MESSAGE_HANDLERS": [],
+            "SENSORS": ["SASPortSensor"],
+        },
+        "MEMFAULTSENSOR": {
+            "ACTUATORS": [],
+            "CORE_PROCESSORS": [],
+            "DEGRADED_STATE_MODULES": ["MemFaultSensor"],
+            "MESSAGE_HANDLERS": [],
+            "SENSORS": ["MemFaultSensor"],
+        },
+        "CPUFAULTSENSOR": {
+            "ACTUATORS": [],
+            "CORE_PROCESSORS": [],
+            "DEGRADED_STATE_MODULES": ["CPUFaultSensor"],
+            "MESSAGE_HANDLERS": [],
+            "SENSORS": ["CPUFaultSensor"],
+        },
+
+        "_ENABLE_ALWAYS": {
+            "ACTUATORS" : ["Service", "RAIDactuator", "Smartctl", "NodeHWactuator", "RealStorActuator"],
+            "CORE_PROCESSORS" : ("RabbitMQegressProcessor", "RabbitMQingressProcessor", "LoggingProcessor"),
+            "DEGRADED_STATE_MODULES" : ("ServiceWatchdog", "NodeData", "IEMSensor",
+                "DiskMsgHandler", "LoggingMsgHandler", "ServiceMsgHandler", "NodeDataMsgHandler",
+                "NodeControllerMsgHandler"),
+            "MESSAGE_HANDLERS" : ("DiskMsgHandler", "LoggingMsgHandler", "ServiceMsgHandler", "NodeDataMsgHandler",
+                "NodeControllerMsgHandler", "RealStorEnclMsgHandler", "RealStorActuatorMsgHandler"),
+            "SENSORS" : ["ServiceWatchdog", "NodeData",  "IEMSensor"]
+        }
 }
+
+# The keys which are actually active
+sspl_settings_configured_groups = set()
 
 COMMON_CONFIGS = {
     "SYSTEM_INFORMATION": {

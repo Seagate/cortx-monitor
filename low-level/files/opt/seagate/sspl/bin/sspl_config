@@ -46,6 +46,7 @@ config options:
     -f  Force reinitialization. Do not prompt
     -r  Role to be configured on the current node
     -n  Nodes which needs to be added into rabbitmq cluster
+    -d  Disable reading of config from the provisioner
 EOF
     exit 1
 }
@@ -55,6 +56,7 @@ config_sspl() {
     force=0
     role=
     rmq_cluster_nodes=
+    read_provisioner_config="true"
 
     while [ $# -gt 0 ]; do
         case $1 in
@@ -68,6 +70,9 @@ config_sspl() {
                 ;;
             -n )
                 shift 1 && rmq_cluster_nodes=$1
+                ;;
+            -d )
+                read_provisioner_config="false"
                 ;;
             * )
                 usage
@@ -171,6 +176,12 @@ config_sspl() {
         fi
     }
 
+    # Get the types of server and storage we are currently running on and
+    # enable/disable sensor groups in the conf file accordingly.
+    if [ "${read_provisioner_config}" == "true" ]; then
+        source $script_dir/conf_based_sensors_enable
+    fi
+
 }
 
 cmd="config"
@@ -211,3 +222,4 @@ esac
             echo "Unexpected log level is requested, '$log_level'";;
     esac
 }
+
