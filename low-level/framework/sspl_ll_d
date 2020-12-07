@@ -53,12 +53,8 @@ from framework.rabbitmq.rabbitmq_ingress_processor import RabbitMQingressProcess
 
 from framework.rabbitmq.plane_cntrl_rmq_egress_processor import PlaneCntrlRMQegressProcessor
 from framework.rabbitmq.plane_cntrl_rmq_ingress_processor import PlaneCntrlRMQingressProcessor
-<<<<<<< HEAD
 from framework.base.sspl_constants import enabled_products, OperatingSystem, COMMON_CONFIGS, \
      SSPL_SETTINGS, sspl_settings_configured_groups, MODULES
-=======
-from framework.base.sspl_constants import enabled_products, OperatingSystem, COMMON_CONFIGS, SSPL_SETTINGS, MODULES
->>>>>>> 57d31ab... EOS-10911 Move all configs except common configs out of provisioner to /etc/sspl.conf
 from framework.base.module_thread import SensorThread
 from framework.actuator_state_manager import actuator_state_manager
 
