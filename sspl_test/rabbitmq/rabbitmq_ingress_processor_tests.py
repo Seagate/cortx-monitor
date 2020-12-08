@@ -29,6 +29,7 @@ from jsonschema import Draft3Validator
 from jsonschema import validate
 
 from pika import exceptions
+from sspl_test.framework.utils import encryptor
 from sspl_test.framework.base.module_thread import ScheduledModuleThread
 from sspl_test.framework.base.internal_msgQ import InternalMsgQ
 from sspl_test.framework.utils.service_logging import logger
