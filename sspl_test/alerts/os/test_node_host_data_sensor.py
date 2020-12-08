@@ -28,7 +28,7 @@ def init(args):
 
 def test_host_update_data_sensor(args):
     check_sspl_ll_is_running()
-    node_data_sensor_message_request("node:os:system")
+    node_data_sensor_message_request("node:os:memory_usage")
     host_update_msg = None
     sleep(10)
     while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
@@ -38,7 +38,7 @@ def test_host_update_data_sensor(args):
         try:
             # Make sure we get back the message type that matches the request
             msg_type = ingressMsg.get("sensor_response_type")
-            if msg_type.get("info").get("resource_type") == "node:os:system":
+            if msg_type.get("info").get("resource_type") == "node:os:memory_usage":
                 host_update_msg = msg_type
                 break
         except Exception as exception:
