@@ -88,6 +88,9 @@ config_sspl() {
         exit 1;
     }
 
+    # Put minion id, consul_host and consul_port in conf file
+    python3 $script_dir/salt_util.py $SSPL_CONF;
+
     [ -f $SSPL_CONFIGURED ] && {
         [ "$force" = "1" ] && ans="y" || ans=;
         while [ "$ans" != "y" -a "$ans" != "n" ]; do
