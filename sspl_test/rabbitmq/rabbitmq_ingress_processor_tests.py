@@ -57,7 +57,8 @@ class RabbitMQingressProcessorTests(ScheduledModuleThread, InternalMsgQ):
     PASSWORD              = 'password'
 
     SYSTEM_INFORMATION_KEY = "SYSTEM_INFORMATION"
-    CLUSTER_ID_KEY = "cluster_id"
+    
+CLUSTER_ID_KEY = "cluster_id"
 
     JSON_ACTUATOR_SCHEMA = "SSPL-LL_Actuator_Response.json"
     JSON_SENSOR_SCHEMA   = "SSPL-LL_Sensor_Response.json"
