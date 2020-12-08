@@ -230,6 +230,7 @@ class RabbitMQingressProcessorTests(ScheduledModuleThread, InternalMsgQ):
             )
             self.cluster_id = self._conf_reader._get_value_with_default(
                 self.SYSTEM_INFORMATION_KEY, self.CLUSTER_ID_KEY, '')
+
             # Decrypt RabbitMQ Password
             decryption_key = encryptor.gen_key(self.cluster_id, ServiceTypes.RABBITMQ.value)
             self._password = encryptor.decrypt(decryption_key, self._password.encode('ascii'), "RabbitMQingressProcessor")
