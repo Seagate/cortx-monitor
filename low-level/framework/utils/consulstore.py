@@ -143,7 +143,6 @@ class ConsulStore(Store):
         """
         for retry_index in range(0, MAX_CONSUL_RETRY):
             try:
-                key = key
                 key = self._get_key(key)
                 self.consul_conn.kv.delete(key)
                 break
