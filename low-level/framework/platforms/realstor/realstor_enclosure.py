@@ -239,7 +239,7 @@ class RealStorEnclosure(StorageEnclosure):
                 try:
                     jresponse = json.loads(response.content)
 
-                    #TODO: Need a way to check return-code 2 in more optimal way if possible, 
+                    #TODO: Need a way to check return-code 2 in more optimal way if possible,
                     # currently being checked for all http 200 responses
                     if jresponse:
 
