@@ -29,11 +29,11 @@ from jsonschema import Draft3Validator
 from jsonschema import validate
 
 from pika import exceptions
+from sspl_test.framework.utils import encryptor
 from sspl_test.framework.base.module_thread import ScheduledModuleThread
 from sspl_test.framework.base.internal_msgQ import InternalMsgQ
 from sspl_test.framework.utils.service_logging import logger
 from sspl_test.framework.base.sspl_constants import RESOURCE_PATH
-from sspl_test.framework.utils import encryptor
 from sspl_test.framework.base.sspl_constants import ServiceTypes
 from .rabbitmq_sspl_test_connector import RabbitMQSafeConnection
 import ctypes
@@ -230,6 +230,7 @@ class RabbitMQingressProcessorTests(ScheduledModuleThread, InternalMsgQ):
             )
             self.cluster_id = self._conf_reader._get_value_with_default(
                 self.SYSTEM_INFORMATION_KEY, self.CLUSTER_ID_KEY, '')
+
             # Decrypt RabbitMQ Password
             decryption_key = encryptor.gen_key(self.cluster_id, ServiceTypes.RABBITMQ.value)
             self._password = encryptor.decrypt(decryption_key, self._password.encode('ascii'), "RabbitMQingressProcessor")

@@ -23,7 +23,7 @@ import json
 import argparse
 import time
 import requests
-from sspl_constants import MAX_CONSUL_RETRY, WAIT_BEFORE_RETRY, CONSUL_HOST, CONSUL_PORT
+from sspl_constants import MAX_CONSUL_RETRY, WAIT_BEFORE_RETRY, CONSUL_HOST, CONSUL_PORT, CONSUL_ERR_STRING
 
 class ConsulDump():
 
@@ -42,8 +42,14 @@ class ConsulDump():
                 print(f'Error[{connerr}] consul connection refused Retry Index {retry_index}')
                 time.sleep(WAIT_BEFORE_RETRY)
             except Exception as gerr:
-                print(f'Error[{gerr}] consul error')
-                break
+                # TODO: optimize the if-else here and wherever this similar code is used
+                consulerr = str(gerr)
+                if CONSUL_ERR_STRING == consulerr:
+                    print(f'Error[{gerr}] consul connection refused Retry Index {retry_index}')
+                    time.sleep(WAIT_BEFORE_RETRY)
+                else:
+                    print(f'Error[{gerr}] consul error')
+                    break
 
     def get_dir(self):
         if not self.existing:
@@ -73,8 +79,13 @@ class ConsulDump():
                 print(f'Error[{connerr}] consul connection refused Retry Index {retry_index}')
                 time.sleep(WAIT_BEFORE_RETRY)
             except Exception as gerr:
-                print(f'Error{gerr} while reading data from consul {key}')
-                break
+                consulerr = str(gerr)
+                if CONSUL_ERR_STRING == consulerr:
+                    print(f'Error[{gerr}] consul connection refused Retry Index {retry_index}')
+                    time.sleep(WAIT_BEFORE_RETRY)
+                else:
+                    print(f'Error{gerr} while reading data from consul {key}')
+                    break
         return value
 
     def get_pretty_file_content(self, data):

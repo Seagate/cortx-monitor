@@ -90,6 +90,8 @@ else:
     except Exception as err:
         print(f'sspl_constants : Failed to read from SaltInterface due to error - {err}')
 
+CONSUL_ERR_STRING = '500 No cluster leader'
+
 SSPL_SETTINGS = {
         "REALSTORSENSORS": {
             "ACTUATORS": [],
