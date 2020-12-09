@@ -189,6 +189,6 @@ class ConsulStore(Store):
                         .format(gerr, retry_index))
                     time.sleep(WAIT_BEFORE_RETRY)
                 else:
-                    logger.warn("Error[{0}] while deleting key from consul {1}" \
-                        .format(gerr, key))
+                    logger.warn("Error[{0}] while getting the keys from consul" \
+                        .format(gerr))
                     break
