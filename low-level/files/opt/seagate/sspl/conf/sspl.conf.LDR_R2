@@ -16,31 +16,17 @@
 # Version 1.0.0
 [SSPL-LL_SETTING]
 core_processors=RabbitMQegressProcessor, RabbitMQingressProcessor, LoggingProcessor
-
 message_handlers=DiskMsgHandler, LoggingMsgHandler, ServiceMsgHandler, NodeDataMsgHandler, NodeControllerMsgHandler, RealStorEnclMsgHandler, RealStorActuatorMsgHandler
-
 sensors=ServiceWatchdog, RAIDsensor, NodeData, RealStorFanSensor, RealStorPSUSensor, RealStorControllerSensor, RealStorDiskSensor, RealStorSideplaneExpanderSensor, RealStorLogicalVolumeSensor, IEMSensor, NodeHWsensor, RealStorEnclosureSensor, SASPortSensor, MemFaultSensor, CPUFaultSensor
-
 actuators=Service, RAIDactuator, Smartctl, NodeHWactuator, RealStorActuator
 
 # List of modules to run in degraded mode
 degraded_state_modules=ServiceWatchdog, RAIDsensor, NodeData, IEMSensor, NodeHWsensor, DiskMsgHandler, LoggingMsgHandler, ServiceMsgHandler, NodeDataMsgHandler, NodeControllerMsgHandler, RealStorActuatorMsgHandler, SASPortSensor, MemFaultSensor, CPUFaultSensor
 
-[SYSTEM_INFORMATION]
-operating_system=centos7
-product=LDR_R2
-cli_type=CS-A
-setup=cortx
-data_path=/var/cortx/sspl/data/
-cluster_id=001
-site_id=001
-rack_id=001
-node_id=001
-# Possible log levels are CRITICAL, ERROR, WARNING, INFO, DEBUG and NOTSET
-log_level=INFO
-sspl_log_file_path=/var/log/cortx/sspl/sspl.log
-syslog_host=localhost
-syslog_port=514
+[SSPL_CONSTANTS]
+enabled_products=CS-A, SINGLE, DUAL, CLUSTER, LDR_R1, LDR_R2
+cs_products=CS-A,
+cs_legacy_products=CS-L, CS-G
 
 [RABBITMQINGRESSPROCESSOR]
 virtual_host=SSPL
@@ -102,7 +88,6 @@ cpu_usage_threshold=80
 # Memory Usage Threshold value in terms of usage in percentage (i.e. 0 to 100%)
 host_memory_usage_threshold=80
 
-
 [RARITANPDU]
 user=admin
 pass=admin
@@ -121,15 +106,6 @@ pass=admin
 
 [BMC_INTERFACE]
 default=system
-
-[STORAGE_ENCLOSURE]
-primary_controller_ip=127.0.0.1
-primary_controller_port=28200
-secondary_controller_ip=127.0.0.1
-secondary_controller_port=28200
-user=xxxxx
-password=gAAAAABelDwUnl72CcoHjENcV9KmPkZTd-YPrAn1BbS6AaNGtho-VztVhx0f1ZEfX3zRlMoR3rIefrwwf_9qhMeCZcepUwi7xQ==
-mgmt_interface=cliapi
 
 [REALSTORSENSORS]
 monitor=true
