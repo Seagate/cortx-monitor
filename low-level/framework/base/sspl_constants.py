@@ -17,13 +17,15 @@
 
 import subprocess
 import ast
+import configparser
 from enum import Enum
+import os
 
 try:
-    from salt_util import node_id, consulhost, consulport
+    from salt_util import SaltInterface
     from service_logging import logger
 except Exception as e:
-    from framework.utils.salt_util import node_id, consulhost, consulport
+    from framework.utils.salt_util import SaltInterface
     from framework.utils.service_logging import logger
 
 PRODUCT_NAME = 'LDR_R1'
@@ -35,6 +37,7 @@ setups = ["cortx"]
 RESOURCE_PATH = f"/opt/seagate/{PRODUCT_FAMILY}/sspl/resources/"
 CLI_RESOURCE_PATH = f"/opt/seagate/{PRODUCT_FAMILY}/sspl/cli"
 DATA_PATH = f"/var/{PRODUCT_FAMILY}/sspl/data/"
+SSPL_CONFIGURED=f"/var/{PRODUCT_FAMILY}/sspl/sspl-configured"
 NODE_ID = "001"
 SITE_ID = "001"
 RACK_ID = "001"
@@ -53,21 +56,109 @@ ENCL_TRIGGER_LOG_MAX_RETRY = 10
 ENCL_DOWNLOAD_LOG_MAX_RETRY = 60
 ENCL_DOWNLOAD_LOG_WAIT_BEFORE_RETRY = 15
 
-node_key_id = node_id
-CONSUL_HOST = consulhost
-CONSUL_PORT = consulport
+# required only for init
+component = 'sspl/config'
+file_store_config_path = '/etc/sspl.conf'
+salt_provisioner_pillar_sls = 'sspl'
+salt_uniq_attr_per_node = ['cluster_id']
+salt_uniq_passwd_per_node = ['RABBITMQINGRESSPROCESSOR', 'RABBITMQEGRESSPROCESSOR', 'LOGGINGPROCESSOR']
+
+# Initialize to default values
+node_key_id = 'srvnode-1'
+CONSUL_HOST = '127.0.0.1'
+CONSUL_PORT = '8500'
+
+# TODO Keep only constants in this file.
+# other values(configs) should come from cofig.
+# Check if SSPL is configured
+if os.path.exists(SSPL_CONFIGURED):
+    try:
+        config = configparser.ConfigParser()
+        config.read(file_store_config_path)
+        node_key_id = config['SYSTEM_INFORMATION']['salt_minion_id']
+        CONSUL_HOST = config['DATASTORE']['consul_host']
+        CONSUL_PORT = config['DATASTORE']['consul_port']
+    except Exception as err:
+        print(f'sspl_constants : Failed to read from {file_store_config_path} due to error - {err}')
+# If not configured, use salt interface
+else:
+    try:
+        salt_int = SaltInterface()
+        node_key_id = salt_int.get_node_id()
+        CONSUL_HOST = salt_int.get_consul_vip()
+        CONSUL_PORT = salt_int.get_consul_port()
+    except Exception as err:
+        print(f'sspl_constants : Failed to read from SaltInterface due to error - {err}')
+
+CONSUL_ERR_STRING = '500 No cluster leader'
+
 SSPL_SETTINGS = {
-        "ACTUATORS" : ["Service", "RAIDactuator", "Smartctl", "NodeHWactuator"],
-        "CORE_PROCESSORS" : ("RabbitMQegressProcessor", "RabbitMQingressProcessor", "LoggingProcessor"),
-        "DEGRADED_STATE_MODULES" : ("ServiceWatchdog", "RAIDsensor", "NodeData", "IEMSensor", "NodeHWsensor",
-                            "DiskMsgHandler", "LoggingMsgHandler", "ServiceMsgHandler", "NodeDataMsgHandler",
-                            "NodeControllerMsgHandler", "SASPortSensor", "MemFaultSensor", "CPUFaultSensor"),
-        "MESSAGE_HANDLERS" : ("DiskMsgHandler", "LoggingMsgHandler", "ServiceMsgHandler", "NodeDataMsgHandler",
-                        "NodeControllerMsgHandler"),
-        "SENSORS" : ["ServiceWatchdog", "RAIDsensor", "NodeData",
-            "IEMSensor", "NodeHWsensor",
-            "SASPortSensor", "MemFaultSensor", "CPUFaultSensor", "RAIDIntegritySensor"]
+        "REALSTORSENSORS": {
+            "ACTUATORS": [],
+            "CORE_PROCESSORS": [],
+            "DEGRADED_STATE_MODULES": [],
+            "MESSAGE_HANDLERS": [],
+            "SENSORS": ["RealStorFanSensor", "RealStorPSUSensor",
+                "RealStorControllerSensor", "RealStorDiskSensor", "RealStorSideplaneExpanderSensor",
+                "RealStorLogicalVolumeSensor", "RealStorEnclosureSensor"],
+        },
+        "NODEHWSENSOR": {
+            "ACTUATORS": [],
+            "CORE_PROCESSORS": [],
+            "DEGRADED_STATE_MODULES": [ "NodeHWsensor"],
+            "MESSAGE_HANDLERS": [],
+            "SENSORS": [ "NodeHWsensor"],
+        },
+        "SYSTEMDWATCHDOG": {
+            "ACTUATORS": [],
+            "CORE_PROCESSORS": [],
+            "DEGRADED_STATE_MODULES": [],
+            "MESSAGE_HANDLERS": [],
+            "SENSORS": [],
+        },
+        "RAIDSENSOR": {
+            "ACTUATORS": [],
+            "CORE_PROCESSORS": [],
+            "DEGRADED_STATE_MODULES": ["RAIDsensor"],
+            "MESSAGE_HANDLERS": [],
+            "SENSORS": ["RAIDsensor", "RAIDIntegritySensor"],
+        },
+        "SASPORTSENSOR": {
+            "ACTUATORS": [],
+            "CORE_PROCESSORS": [],
+            "DEGRADED_STATE_MODULES": ["SASPortSensor"],
+            "MESSAGE_HANDLERS": [],
+            "SENSORS": ["SASPortSensor"],
+        },
+        "MEMFAULTSENSOR": {
+            "ACTUATORS": [],
+            "CORE_PROCESSORS": [],
+            "DEGRADED_STATE_MODULES": ["MemFaultSensor"],
+            "MESSAGE_HANDLERS": [],
+            "SENSORS": ["MemFaultSensor"],
+        },
+        "CPUFAULTSENSOR": {
+            "ACTUATORS": [],
+            "CORE_PROCESSORS": [],
+            "DEGRADED_STATE_MODULES": ["CPUFaultSensor"],
+            "MESSAGE_HANDLERS": [],
+            "SENSORS": ["CPUFaultSensor"],
+        },
+
+        "_ENABLE_ALWAYS": {
+            "ACTUATORS" : ["Service", "RAIDactuator", "Smartctl", "NodeHWactuator", "RealStorActuator"],
+            "CORE_PROCESSORS" : ("RabbitMQegressProcessor", "RabbitMQingressProcessor", "LoggingProcessor"),
+            "DEGRADED_STATE_MODULES" : ("ServiceWatchdog", "NodeData", "IEMSensor",
+                "DiskMsgHandler", "LoggingMsgHandler", "ServiceMsgHandler", "NodeDataMsgHandler",
+                "NodeControllerMsgHandler"),
+            "MESSAGE_HANDLERS" : ("DiskMsgHandler", "LoggingMsgHandler", "ServiceMsgHandler", "NodeDataMsgHandler",
+                "NodeControllerMsgHandler", "RealStorEnclMsgHandler", "RealStorActuatorMsgHandler"),
+            "SENSORS" : ["ServiceWatchdog", "NodeData",  "IEMSensor"]
+        }
 }
+
+# The keys which are actually active
+sspl_settings_configured_groups = set()
 
 COMMON_CONFIGS = {
     "SYSTEM_INFORMATION": {
@@ -101,20 +192,13 @@ COMMON_CONFIGS = {
     },
     "BMC": {
         "sspl_key" : "key_provided_by_provisioner",
-        f"ip_{node_id}" : f"{node_id}/ip",
-        f"user_{node_id}" : f"{node_id}/user",
-        f"secret_{node_id}" : f"{node_id}/secret"
+        f"ip_{node_key_id}" : f"{node_key_id}/ip",
+        f"user_{node_key_id}" : f"{node_key_id}/user",
+        f"secret_{node_key_id}" : f"{node_key_id}/secret"
     }
 }
 
 SSPL_CONFIGS = ['log_level', 'cli_type', 'sspl_log_file_path', 'cluster_id', 'storage_enclosure', 'setup', 'operating_system']
-
-# required only for init
-component = 'sspl/config'
-file_store_config_path = '/etc/sspl.conf'
-salt_provisioner_pillar_sls = 'sspl'
-salt_uniq_attr_per_node = ['cluster_id']
-salt_uniq_passwd_per_node = ['RABBITMQINGRESSPROCESSOR', 'RABBITMQEGRESSPROCESSOR', 'LOGGINGPROCESSOR']
 
 try:
     setup_info = subprocess.Popen(['sudo', '/usr/bin/provisioner', 'get_setup_info'],
@@ -133,7 +217,6 @@ except Exception as err:
     logger.debug(f"Considering default storage type : '{storage_type}'")
     logger.debug(f"Considering default server type : '{server_type}'")
 
-
 class RaidDataConfig(Enum):
     MDSTAT_FILE = "/proc/mdstat"
     DIR = "/sys/block/"
@@ -143,12 +226,12 @@ class RaidDataConfig(Enum):
     MISMATCH_COUNT_RESPONSE = '0'
     RAID_RESULT_DIR = "/tmp"
     RAID_RESULT_FILE_PATH = "/tmp/result_raid_health_file"
+    RAID_MISMATCH_FAULT_STATUS = "mismatch_cnt_fault_status"
     MAX_RETRIES = 10
     NEXT_ITERATION_TIME = 3600
     PRIORITY = 1
 
 class RaidAlertMsgs(Enum):
-    STATE_MSG = "'idle' state not found after max retries."
     MISMATCH_MSG = "MISMATCH COUNT is found, as count does not match to the default '0' value."
 
 

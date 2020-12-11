@@ -24,7 +24,7 @@ import consul
 from framework.utils.store import Store
 from framework.utils.service_logging import logger
 import pickle
-from framework.base.sspl_constants import MAX_CONSUL_RETRY, WAIT_BEFORE_RETRY
+from framework.base.sspl_constants import MAX_CONSUL_RETRY, WAIT_BEFORE_RETRY, CONSUL_ERR_STRING
 import time
 import requests
 
@@ -43,8 +43,14 @@ class ConsulStore(Store):
                 time.sleep(WAIT_BEFORE_RETRY)
 
             except Exception as gerr:
-                logger.warn("Error[{0}] consul error".format(gerr))
-                break
+                consuerr = str(gerr)
+                if CONSUL_ERR_STRING == consuerr:
+                    logger.warn("Error[{0}] consul connection refused Retry Index {1}" \
+                        .format(gerr, retry_index))
+                    time.sleep(WAIT_BEFORE_RETRY)
+                else:
+                    logger.warn("Error[{0}] consul error".format(gerr))
+                    break
 
     def _get_key(self, key):
         """remove '/' from begining of the key"""
@@ -71,9 +77,14 @@ class ConsulStore(Store):
                 time.sleep(WAIT_BEFORE_RETRY)
 
             except Exception as gerr:
-                logger.warn("Error[{0}] while writing data to consul {1}" \
-                    .format(gerr, key))
-                break
+                consuerr = str(gerr)
+                if CONSUL_ERR_STRING == consuerr:
+                    logger.warn("Error[{0}] consul connection refused Retry Index {1}" \
+                        .format(gerr, retry_index))
+                    time.sleep(WAIT_BEFORE_RETRY)
+                else:
+                    logger.warn("Error[{0}] consul error".format(gerr))
+                    break
 
     def _consul_get(self, key, **kwargs):
         """Load consul data from the given key."""
@@ -100,9 +111,14 @@ class ConsulStore(Store):
                 time.sleep(WAIT_BEFORE_RETRY)
 
             except Exception as gerr:
-                logger.warn("Error[{0}] while reading data from consul {1}" \
-                    .format(gerr, key))
-                break
+                consuerr = str(gerr)
+                if CONSUL_ERR_STRING == consuerr:
+                    logger.warn("Error[{0}] consul connection refused Retry Index {1}" \
+                        .format(gerr, retry_index))
+                    time.sleep(WAIT_BEFORE_RETRY)
+                else:
+                    logger.warn("Error[{0}] consul error".format(gerr))
+                    break
 
         return data, status
 
@@ -137,9 +153,15 @@ class ConsulStore(Store):
                 time.sleep(WAIT_BEFORE_RETRY)
 
             except Exception as gerr:
-                logger.warn("Error[{0}] while deleting key from consul {1}" \
-                    .format(gerr, key))
-                break
+                consulerr = str(gerr)
+                if CONSUL_ERR_STRING == consulerr:
+                    logger.warn("Error[{0}] consul connection refused Retry Index {1}" \
+                        .format(gerr, retry_index))
+                    time.sleep(WAIT_BEFORE_RETRY)
+                else:
+                    logger.warn("Error[{0}] while deleting key from consul {1}" \
+                        .format(gerr, key))
+                    break
 
     def get_keys_with_prefix(self, prefix):
         """ get keys with given prefix
@@ -160,6 +182,12 @@ class ConsulStore(Store):
                 time.sleep(WAIT_BEFORE_RETRY)
 
             except Exception as gerr:
-                logger.warn("Error[{0}] while getting keys with given prefix {1}" \
-                    .format(gerr, prefix))
-                break
+                consulerr = str(gerr)
+                if CONSUL_ERR_STRING == consulerr:
+                    logger.warn("Error[{0}] consul connection refused Retry Index {1}" \
+                        .format(gerr, retry_index))
+                    time.sleep(WAIT_BEFORE_RETRY)
+                else:
+                    logger.warn("Error[{0}] while getting the keys from consul" \
+                        .format(gerr))
+                    break

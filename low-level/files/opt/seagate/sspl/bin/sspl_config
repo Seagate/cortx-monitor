@@ -34,13 +34,9 @@ SCRIPT_NAME=$(basename $0)
 DIR_NAME="/opt/seagate/$PRODUCT_FAMILY/sspl"
 RSYSLOG_CONF="/etc/rsyslog.d/0-iemfwd.conf"
 RSYSLOG_SSPL_CONF="/etc/rsyslog.d/1-ssplfwd.conf"
-LOGROTATE_DIR_DEST="/etc/cortx-sspl/logrotate"
-CRON_DIR_HOURLY="/etc/cron.hourly"
-SOURCE_CONF_DIR_LOGROTATE="$DIR_NAME/conf/etc/logrotate_conf"
-SOURCE_CRON_DIR_LOGROTATE="$DIR_NAME/conf/$CRON_DIR_HOURLY"
-SOURCE_CRON_PATH_LOGROTATE="$SOURCE_CRON_DIR_LOGROTATE/sspl_logrotate"
-DEST_CRON_PATH_LOGROTATE="$CRON_DIR_HOURLY/sspl_logrotate"
-
+LOGROTATE_DIR="/etc/logrotate.d"
+IEM_LOGROTATE_CONF="$LOGROTATE_DIR/iem_messages"
+SSPL_LOGROTATE_CONF="$LOGROTATE_DIR/sspl_logs"
 SSPL_CONFIGURED="/var/$PRODUCT_FAMILY/sspl/sspl-configured"
 
 usage() {
@@ -50,6 +46,7 @@ config options:
     -f  Force reinitialization. Do not prompt
     -r  Role to be configured on the current node
     -n  Nodes which needs to be added into rabbitmq cluster
+    -d  Disable reading of config from the provisioner
 EOF
     exit 1
 }
@@ -59,6 +56,7 @@ config_sspl() {
     force=0
     role=
     rmq_cluster_nodes=
+    read_provisioner_config="true"
 
     while [ $# -gt 0 ]; do
         case $1 in
@@ -73,6 +71,9 @@ config_sspl() {
             -n )
                 shift 1 && rmq_cluster_nodes=$1
                 ;;
+            -d )
+                read_provisioner_config="false"
+                ;;
             * )
                 usage
                 ;;
@@ -86,6 +87,9 @@ config_sspl() {
         echo "Missing configuration!! Create $SSPL_CONF and rerun.";
         exit 1;
     }
+
+    # Put minion id, consul_host and consul_port in conf file
+    python3 $script_dir/salt_util.py $SSPL_CONF;
 
     [ -f $SSPL_CONFIGURED ] && {
         [ "$force" = "1" ] && ans="y" || ans=;
@@ -132,7 +136,7 @@ config_sspl() {
     [ ! -z "$SSPL_LOG_FILE_PATH" ] &&
     {
         sed -i "s|File=.*|File=\"$SSPL_LOG_FILE_PATH\")|g" $RSYSLOG_SSPL_CONF
-        sed -i "1 s|^.*$|${SSPL_LOG_FILE_PATH}|g" $SOURCE_CONF_DIR_LOGROTATE/sspl_logs
+        sed -i "1 s|^.*$|${SSPL_LOG_FILE_PATH}|g" $DIR_NAME/conf/etc/logrotate.d/sspl_logs
     }
 
     # IEM configuration
@@ -144,27 +148,16 @@ config_sspl() {
         sed -i "s|File=.*|File=\/var/log/$PRODUCT_FAMILY/iem/iem_messages\"|g" $RSYSLOG_CONF
     else
         sed -i "s|File=.*|File=\"${LOG_FILE_PATH}\"|g" $RSYSLOG_CONF
-        sed -i "1 s|^.*$|${LOG_FILE_PATH}|g" $SOURCE_CONF_DIR_LOGROTATE/iem_messages
+        sed -i "1 s|^.*$|${LOG_FILE_PATH}|g" $DIR_NAME/conf/etc/logrotate.d/iem_messages
     fi
 
-    # Trigger logotate hourly basis
-    if [ ! -d "${LOGROTATE_DIR_DEST}" ]; then
-        mkdir -p ${LOGROTATE_DIR_DEST}
+    # Create logrotate dir in case it's not present for dev environment
+    if [ ! -d "${LOGROTATE_DIR}" ]; then
+        mkdir -p ${LOGROTATE_DIR}
     fi
 
-    if [ -d "${LOGROTATE_DIR_DEST}" ]; then
-        cp -f  ${SOURCE_CONF_DIR_LOGROTATE}/iem_messages ${LOGROTATE_DIR_DEST}
-        chmod 644 ${LOGROTATE_DIR_DEST}/iem_messages
-
-        cp -f  ${SOURCE_CONF_DIR_LOGROTATE}/sspl_logs ${LOGROTATE_DIR_DEST}
-        chmod 644 ${LOGROTATE_DIR_DEST}/sspl_logs
-    fi
-
-    if [ -d "${CRON_DIR_HOURLY}" ]; then
-        cp -f ${SOURCE_CRON_PATH_LOGROTATE} ${DEST_CRON_PATH_LOGROTATE}
-    else
-        echo "${CRON_DIR_HOURLY} is not present"
-    fi
+    cp $DIR_NAME/conf/etc/logrotate.d/iem_messages $IEM_LOGROTATE_CONF
+    cp $DIR_NAME/conf/etc/logrotate.d/sspl_logs $SSPL_LOGROTATE_CONF
 
     # This rsyslog restart will happen after successful updation of rsyslog
     # conf file and before sspl starts. If at all this will be removed from
@@ -186,6 +179,12 @@ config_sspl() {
         fi
     }
 
+    # Get the types of server and storage we are currently running on and
+    # enable/disable sensor groups in the conf file accordingly.
+    if [ "${read_provisioner_config}" == "true" ]; then
+        source $script_dir/conf_based_sensors_enable
+    fi
+
 }
 
 cmd="config"
@@ -200,15 +199,64 @@ case $cmd in
         ;;
 esac
 
+# Get the version. Output can be 3.3.5 or 3.8.9 or in this format
+rabbitmq_version=$(rpm -qi rabbitmq-server | awk -F': ' '/Version/ {print $2}')
+
+# Get the Major release version parsed. (Eg: 3 from 3.8.9)
+rabbitmq_major_release=$(echo "${rabbitmq_version:0:-3}" | sed 's/.$//')
+
+# Get the Minor release version parsed. (Eg: 3.8 from 3.8.9)
+rabbitmq_minor_release=$(echo "${rabbitmq_version::-1}" | sed 's/.$//')
+
+# Get the Maitenance release version parsed from minor release. (Eg: 8 from 3.8)
+rabbitmq_maintenance_release=$(echo "${rabbitmq_minor_release:2:3}")
+
+get_cluster_running_nodes() {
+    pout=""
+    case $1 in
+
+    "rabbitmq" )
+        pout=$( get_rabbitmq_cluster_nodes )
+        echo "$pout"
+        ;;
+
+    * )
+        usage
+        ;;
+    esac
+
+}
+
+get_rabbitmq_cluster_nodes() {
+    if [ $rabbitmq_major_release -eq 3 ] && [ $rabbitmq_maintenance_release -eq 8 ];
+    then
+        rabbitmq_cluster_status=$(/usr/sbin/rabbitmqctl cluster_status --formatter json)
+        cluster_running_nodes=$(python3 -c "rabbitmq_status=$rabbitmq_cluster_status; print(rabbitmq_status['running_nodes'])")
+        pout=$(echo $cluster_running_nodes | sed 's/rabbit@//g' | cut -d '[' -f2 | cut -d ']' -f1 | tr -d \'\" | tr -d ' ')
+    elif [ $rabbitmq_version == "3.3.5" ];
+    then
+        out=$(rabbitmqctl cluster_status | grep running_nodes | cut -d '[' -f2 | cut -d ']' -f1 | sed 's/rabbit@//g' | sed 's/,/, /g')
+        pout=$(echo $out | sed  "s/'//g" | sed  "s/ //g")
+    else
+        echo "This RabbitMQ version: $rabbitmq_version is not supported"
+        exit 1
+    fi
+    echo "$pout"
+}
+
 # Skip this step if sspl is being configured for node replacement scenario as consul data is already
 # available on healthy node
 # Updating RabbitMQ cluster nodes.
 # In node replacement scenario, avoiding feeding again to avoid over writing already configured values
 # with which rabbitmq cluster may have been created
 [ -f $REPLACEMENT_NODE_ENV_VAR_FILE ] || {
+
+    message_broker="rabbitmq"
+
+    # Get the running nodes from a cluster
+    pout=$( get_cluster_running_nodes "$message_broker")
+
     # Update cluster_nodes key in consul
-    out=$(rabbitmqctl cluster_status | grep running_nodes | cut -d '[' -f2 | cut -d ']' -f1 | sed 's/rabbit@//g' | sed 's/,/, /g')
-    pout=$(echo $out | sed  "s/'//g" | sed  "s/ //g")
     $CONSUL_PATH/consul kv put sspl/config/RABBITMQCLUSTER/cluster_nodes $pout
     [ -n "$rmq_cluster_nodes" ] && $CONSUL_PATH/consul kv put sspl/config/RABBITMQCLUSTER/cluster_nodes $rmq_cluster_nodes
 }
@@ -226,3 +274,4 @@ esac
             echo "Unexpected log level is requested, '$log_level'";;
     esac
 }
+

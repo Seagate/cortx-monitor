@@ -279,6 +279,8 @@ class MemFaultSensor(SensorThread, InternalMsgQ):
 
         json_msg = self._create_json_message(alert_type)
         if json_msg:
+            # RAAL stands for - RAise ALert
+            logger.info(f"RAAL: {json_msg}")
             self._write_internal_msgQ(NodeDataMsgHandler.name(), json_msg)
 
     def suspend(self):

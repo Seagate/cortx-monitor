@@ -238,7 +238,7 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
             SSPL_SEC.sspl_sign_message(msg_len, str(self._jsonMsg), self._signature_user,
                                        token, sig)
 
-            self._jsonMsg["signature"] = str(sig.raw)
+            self._jsonMsg["signature"] = str(sig.raw, encoding='utf-8')
         else:
             self._jsonMsg["signature"] = "SecurityLibNotInstalled"
 
@@ -299,6 +299,10 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
                 except connection_exceptions:
                     logger.error("RabbitMQegressProcessor, _transmit_msg_on_exchange, rabbitmq connectivity lost, adding message to consul %s" % self._jsonMsg)
                     store_queue.put(jsonMsg)
+                except Exception as err:
+                    logger.error(f'RabbitMQegressProcessor, _transmit_msg_on_exchange, Unknown error {err} while publishing the message, adding to persistent store {self._jsonMsg}')
+                    store_queue.put(jsonMsg)
+
 
             # No exceptions thrown so success
             self._log_debug("_transmit_msg_on_exchange, Successfully Sent: %s" % self._jsonMsg)
@@ -307,7 +311,7 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
                 self._event.set()
 
         except Exception as ex:
-            logger.error("RabbitMQegressProcessor, _transmit_msg_on_exchange: %r" % ex)
+            logger.error(f'RabbitMQegressProcessor, _transmit_msg_on_exchange, problem while publishing the message:{ex}, adding message to consul: {self._jsonMsg}')
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""

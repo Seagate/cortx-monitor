@@ -29,12 +29,28 @@ import errno
 import re
 import argparse
 from generate_test_report import generate_html_report
+from framework.utils.config_reader import ConfigReader
 
 # Adding sspl and sspl_test path
 test_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.sys.path.append(os.path.join(test_path))
 
 from sspl_test.common import TestFailed, init_rabbitMQ_msg_processors, stop_rabbitMQ_msg_processors
+
+skip_group_prefixes = {
+    "REALSTORSENSORS": "alerts.realstor",
+    "NODEHWSENSOR": "alerts.node",
+    "SYSTEMDWATCHDOG": None,
+    "RAIDSENSOR": None,
+}
+
+def conf_skipped_prefixes():
+    conf_reader = ConfigReader()
+    for group in skip_group_prefixes.keys():
+        monitor = conf_reader._get_value_with_default(
+                group, 'monitor', 'true')
+        if monitor != 'true':
+            yield skip_group_prefixes[group]
 
 result = {}
 
@@ -63,11 +79,19 @@ def tmain(argp, argv):
                         .replace(file_path + "/", "").replace("/", ".")
                     ts_list.append(file)
 
-    ts_count = test_count = pass_count = fail_count = 0
+    ts_count = test_count = pass_count = fail_count = skip_count = 0
     ts_start_time = time.time()
+
+    skipped_prefixes = list(conf_skipped_prefixes())
     for ts in ts_list:
         print('\n####### Test Suite: %s ######' %ts)
         ts_count += 1
+        if any( (ts.startswith(p) for p in skipped_prefixes if p is not None) ):
+            skip_count += 1
+            result.update({ts: {"Skip": 0}})
+            print("%s: Skipped" % ts)
+            continue
+
         try:
             ts_module = __import__('sspl_test.%s' %ts, fromlist=[ts])
             # Initialization
@@ -105,8 +129,8 @@ def tmain(argp, argv):
 
     duration = time.time() - ts_start_time
     print('\n****************************************************')
-    print('TestSuite:%d Tests:%d Passed:%d Failed:%d TimeTaken:%ds' \
-        %(ts_count, test_count, pass_count, fail_count, duration))
+    print('TestSuite:%d Tests:%d Passed:%d Failed:%d Skipped:%d TimeTaken:%ds' \
+        %(ts_count, test_count, pass_count, fail_count, skip_count, duration))
     print('******************************************************')
 
 if __name__ == '__main__':

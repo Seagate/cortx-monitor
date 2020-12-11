@@ -1,0 +1,14 @@
+/var/log/cortx/iem/iem_messages
+{
+    size 10k
+    rotate 10
+    compress
+    dateext
+    dateformat -%Y-%m-%d-%s.log
+    copytruncate
+    missingok
+    postrotate
+        /bin/kill -HUP `cat /var/run/syslogd.pid 2> /dev/null` 2> /dev/null || true
+        /bin/kill -SIGUSR2 `cat /var/run/sspl_ll/sspl_ll.pid 2> /dev/null` 2> /dev/null || true
+    endscript
+}

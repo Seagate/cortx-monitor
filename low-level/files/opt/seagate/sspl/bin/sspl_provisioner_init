@@ -32,6 +32,7 @@ SCRIPT_NAME=$(basename $0)
 rmq_cluster=true
 rmq_cluster_nodes=
 install_provisioner=true
+read_provisioner_config=true
 
 usage() {
     cat << EOF
@@ -40,11 +41,12 @@ usage() {
         [-c|--rmq-cluster <true|false>]
         [-n|--rmq-nodes <name of the nodes>]
         [-i|--install-provisioner <true|false>]
+        [-P|--read-provisioner-config <true|false>]
 EOF
     exit 1
 }
 
-while getopts ":p:c:n:i:" OPTION; do
+while getopts ":p:c:n:i:P:" OPTION; do
     case $OPTION in
         p )
             PRODUCT_NAME=$OPTARG
@@ -57,6 +59,9 @@ while getopts ":p:c:n:i:" OPTION; do
             ;;
         i )
             install_provisioner=$OPTARG
+            ;;
+        P )
+            read_provisioner_config=$OPTARG
             ;;
         * )
             usage
@@ -83,7 +88,8 @@ setup_provisioner_prereq(){
 
     # to install updated packages
     pkg_name="cortx-prvsnr-cli-1.0.0"
-    build_url="http://cortx-storage.colo.seagate.com/releases/cortx/github/dev/rhel-7.7.1908/provisioner_last_successful"
+    # build_url="http://cortx-storage.colo.seagate.com/releases/cortx/github/dev/rhel-7.7.1908/provisioner_last_successful"
+    build_url="http://cortx-storage.colo.seagate.com/releases/cortx/github/release/rhel-7.7.1908/last_successful/"
     yum install -y $build_url/$(curl -s $build_url/|grep $pkg_name|sed 's/<\/*[^"]*"//g'|cut -d"\"" -f1)
     # provisioner decides the setup(single or dual node) for deployment and
     # they don't use this dev init script. This script supports only single node setup.
@@ -146,11 +152,29 @@ if [ "$install_provisioner" == true ]; then
 fi
 $SCRIPT_DIR/bin/sspl_post_install -p $PRODUCT_NAME -e DEV -c $rmq_cluster
 $SCRIPT_DIR/bin/sspl_setup_init -r $PRODUCT_FAMILY
+
+declare -a sspl_config_args=()
+if [ "${read_provisioner_config}" == "false" ]; then
+    sspl_config_args+=(-d)
+fi
+
 if [ "$PRODUCT_NAME" == "LDR_R2" ]; then
-    [ -z "$rmq_cluster_nodes" ] && $SCRIPT_DIR/bin/sspl_config || $SCRIPT_DIR/bin/sspl_config -n $rmq_cluster_nodes
+    if ! [ -z "$rmq_cluster_nodes" ]; then
+        sspl_config_args+=(-n $rmq_cluster_nodes)
+    fi
+    if [ "${#sspl_config_args[@]}" -eq 0 ]; then
+        $SCRIPT_DIR/bin/sspl_config
+    else
+        $SCRIPT_DIR/bin/sspl_config "${sspl_config_args[@]}"
+    fi
+
     [ "$rmq_cluster" == true ] && $SCRIPT_DIR/bin/sspl_setup_rabbitmq_cluster
 else
-    $SCRIPT_DIR/bin/sspl_config
+    if [ "${#sspl_config_args[@]}" -eq 0 ]; then
+        $SCRIPT_DIR/bin/sspl_config
+    else
+        $SCRIPT_DIR/bin/sspl_config "${sspl_config_args[@]}"
+    fi
     $SCRIPT_DIR/bin/sspl_setup_rabbitmq_cluster
 fi
 start_req_services

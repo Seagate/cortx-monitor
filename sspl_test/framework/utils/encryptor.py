@@ -13,46 +13,28 @@
 # about this software or licensing, please email opensource@seagate.com or
 # cortx-questions@seagate.com.
 
-[SYSTEM_INFORMATION]
-rack_id=001
-site_id=001
-cluster_id=001
-node_id=001
-product=LDR_R1
 
-[SSPL-TESTS_SETTING]
-modules=RabbitMQingressProcessorTests, RabbitMQegressProcessor
+#****************************************************************************
+# Description:       Common utility functions required for encryption purpose
+#****************************************************************************
+# TODO - Avoid duplicate code between sspl and sspl_test
 
-[RABBITMQEGRESSPROCESSOR]
-virtual_host=SSPL
-queue_name=actuator-req-queue
-exchange_name=sspl-in
-routing_key=actuator-req-key
-username=sspluser
-password=sspl4ever
-message_signature_username=sspl-ll
-message_signature_token=ALOIUD986798df69a8koDISLKJ282983
-message_signature_expires=3600
-primary_rabbitmq_host=localhost
+from cortx.utils.security.cipher import Cipher
 
-[RABBITMQINGRESSPROCESSORTESTS]
-virtual_host=SSPL
-queue_name=sensor-queue
-exchange_name=sspl-out
-routing_key=sensor-key
-username=sspluser
-password=sspl4ever
-primary_rabbitmq_host=localhost
+def gen_key(cluster_id, service_name):
+    # Generate key for decryption
+    key = Cipher.generate_key(cluster_id, service_name)
+    return key
 
-[RAIDSENSOR]
-monitor=true
 
-[REALSTORSENSORS]
-monitor=true
+def encrypt(key, text):
+    """Encrypt sensitive data. Ex: RabbitMQ credentials."""
+    # Before encrypting text we need to convert string to bytes using encode()
+    # method
+    return Cipher.encrypt(key, text.encode())
 
-[NODEHWSENSOR]
-monitor=true
 
-[SYSTEMDWATCHDOG]
-monitor=true
-
+def decrypt(key, text, caller=None):
+    """Decrypt the <text>."""
+    decrypt_text = Cipher.decrypt(key, text).decode()
+    return decrypt_text

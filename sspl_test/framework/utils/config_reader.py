@@ -44,7 +44,7 @@ class ConfigReader(object):
             store_type = os.getenv('SSPL_STORE_TYPE', SSPL_STORE_TYPE)
             if store_type == StoreTypes.FILE.value:
                 self.store = configparser.RawConfigParser()
-                self.store.read(file_store_config_path)
+                self.store.read([file_store_config_path])
             elif store_type == StoreTypes.CONSUL.value:
                 host = os.getenv('CONSUL_HOST', CONSUL_HOST)
                 port = os.getenv('CONSUL_PORT', CONSUL_PORT)
