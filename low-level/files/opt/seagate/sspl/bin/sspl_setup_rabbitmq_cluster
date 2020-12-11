@@ -22,9 +22,10 @@ import socket
 import salt.client
 import consul
 import os
-
-from config_reader import ConfigReader
-from sspl_constants import component, CONSUL_HOST, CONSUL_PORT, COMMON_CONFIGS
+# Add the top level directories
+sys.path.insert(0, f'/opt/seagate/cortx/sspl/low-level')
+from framework.utils.config_reader import ConfigReader
+from framework.base.sspl_constants import component, CONSUL_HOST, CONSUL_PORT, COMMON_CONFIGS
 
 CLUSTER_SECTION = 'RABBITMQCLUSTER'
 RABBITMQCTL = '/usr/sbin/rabbitmqctl'
@@ -167,3 +168,4 @@ if __name__ == '__main__':
         print(f'RabbitMQ is running in {len(nodes)} nodes.')
     else:
         print('RabbitMQ is running in single node mode.')
+        

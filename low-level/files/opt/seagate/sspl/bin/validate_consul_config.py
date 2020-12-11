@@ -15,7 +15,9 @@
 
 import sys
 import consul
-import sspl_constants as sc
+# Add the top level directories
+sys.path.insert(0, f'/opt/seagate/cortx/sspl/low-level')
+import framework.base.sspl_constants as sc
 
 
 def validate_config():
@@ -44,3 +46,4 @@ def validate_config():
 
 if __name__ == '__main__':
     validate_config()
+    

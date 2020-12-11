@@ -23,7 +23,7 @@ import json
 import argparse
 import time
 import requests
-from sspl_constants import MAX_CONSUL_RETRY, WAIT_BEFORE_RETRY, CONSUL_HOST, CONSUL_PORT, CONSUL_ERR_STRING
+from framework.base.sspl_constants import MAX_CONSUL_RETRY, WAIT_BEFORE_RETRY, CONSUL_HOST, CONSUL_PORT, CONSUL_ERR_STRING
 
 class ConsulDump():
 

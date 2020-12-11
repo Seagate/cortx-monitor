@@ -27,7 +27,7 @@ set -e -u -o pipefail
 SCRIPT_DIR=$(dirname $0)
 SCRIPT_NAME=$(basename $0)
 
-. $SCRIPT_DIR/bin/constants.sh
+. $SCRIPT_DIR/low-level/files/opt/seagate/sspl/bin/constants.sh
 
 rmq_cluster=true
 rmq_cluster_nodes=
@@ -88,7 +88,6 @@ setup_provisioner_prereq(){
 
     # to install updated packages
     pkg_name="cortx-prvsnr-cli-1.0.0"
-    # build_url="http://cortx-storage.colo.seagate.com/releases/cortx/github/dev/rhel-7.7.1908/provisioner_last_successful"
     build_url="http://cortx-storage.colo.seagate.com/releases/cortx/github/release/rhel-7.7.1908/last_successful/"
     yum install -y $build_url/$(curl -s $build_url/|grep $pkg_name|sed 's/<\/*[^"]*"//g'|cut -d"\"" -f1)
     # provisioner decides the setup(single or dual node) for deployment and
@@ -150,8 +149,8 @@ start_req_services(){
 if [ "$install_provisioner" == true ]; then
     setup_provisioner_prereq
 fi
-$SCRIPT_DIR/bin/sspl_post_install -p $PRODUCT_NAME -e DEV -c $rmq_cluster
-$SCRIPT_DIR/bin/sspl_setup_init -r $PRODUCT_FAMILY
+$SCRIPT_DIR/low-level/files/opt/seagate/sspl/bin/sspl_post_install -p $PRODUCT_NAME -e DEV -c $rmq_cluster
+$SCRIPT_DIR/low-level/files/opt/seagate/sspl/bin/sspl_setup_init -r $PRODUCT_FAMILY
 
 declare -a sspl_config_args=()
 if [ "${read_provisioner_config}" == "false" ]; then
@@ -163,18 +162,18 @@ if [ "$PRODUCT_NAME" == "LDR_R2" ]; then
         sspl_config_args+=(-n $rmq_cluster_nodes)
     fi
     if [ "${#sspl_config_args[@]}" -eq 0 ]; then
-        $SCRIPT_DIR/bin/sspl_config
+        $SCRIPT_DIR/low-level/files/opt/seagate/sspl/bin/sspl_config
     else
-        $SCRIPT_DIR/bin/sspl_config "${sspl_config_args[@]}"
+        $SCRIPT_DIR/low-level/files/opt/seagate/sspl/bin/sspl_config "${sspl_config_args[@]}"
     fi
 
-    [ "$rmq_cluster" == true ] && $SCRIPT_DIR/bin/sspl_setup_rabbitmq_cluster
+    [ "$rmq_cluster" == true ] && $SCRIPT_DIR/low-level/files/opt/seagate/sspl/bin/sspl_setup_rabbitmq_cluster
 else
     if [ "${#sspl_config_args[@]}" -eq 0 ]; then
-        $SCRIPT_DIR/bin/sspl_config
+        $SCRIPT_DIR/low-level/files/opt/seagate/sspl/bin/sspl_config
     else
-        $SCRIPT_DIR/bin/sspl_config "${sspl_config_args[@]}"
+        $SCRIPT_DIR/low-level/files/opt/seagate/sspl/bin/sspl_config "${sspl_config_args[@]}"
     fi
-    $SCRIPT_DIR/bin/sspl_setup_rabbitmq_cluster
+    $SCRIPT_DIR/low-level/files/opt/seagate/sspl/bin/sspl_setup_rabbitmq_cluster
 fi
 start_req_services

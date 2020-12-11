@@ -47,8 +47,7 @@ except ImportError:
     print("Error importing python-jsonschema package")
 
 sys.path.insert(0, '../..')
-from framework.utils.service_logging import init_logging
-from framework.utils.service_logging import logger
+from framework.utils.service_logging import init_logging, logger
 from framework.utils.config_reader import ConfigReader
 from framework.base.sspl_constants import RESOURCE_PATH, ServiceTypes
 from framework.utils import encryptor
@@ -704,3 +703,4 @@ class ManualTest():
 
     def get_msg_received(self):
         return self._msg_received
+        

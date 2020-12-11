@@ -24,7 +24,7 @@ PRODUCT_FAMILY = 'cortx'
 enabled_products = [ "CS-A", "SINGLE","DUAL","CLUSTER" ,"LDR_R1", "LDR_R2"]
 cs_products = ["CS-A"]
 cs_legacy_products = ["CS-L", "CS-G"]
-RESOURCE_PATH = f"/opt/seagate/{PRODUCT_FAMILY}/sspl/resources/"
+RESOURCE_PATH = f"/opt/seagate/{PRODUCT_FAMILY}/sspl/low-level/json_msgs/schemas/"
 DATA_PATH = f"/var/{PRODUCT_FAMILY}/sspl/data/"
 
 SSPL_STORE_TYPE = 'consul'
@@ -34,7 +34,7 @@ CONSUL_PATH = '/usr/bin/'
 
 # required only for init
 component = 'sspl_test/config'
-file_store_config_path = f'/opt/seagate/{PRODUCT_FAMILY}/sspl/sspl_test/conf/sspl_tests.conf'
+file_store_config_path = f'/opt/seagate/{PRODUCT_FAMILY}/sspl/sspl_test/sspl_tests.conf'
 salt_provisioner_pillar_sls = 'sspl'
 
 class AlertTypes(Enum):

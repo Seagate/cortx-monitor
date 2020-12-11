@@ -23,7 +23,7 @@ import sys
 import socket
 import json
 import subprocess
-from sspl_constants import PRODUCT_FAMILY, node_key_id
+from framework.base.sspl_constants import PRODUCT_FAMILY, node_key_id
 
 onGoingRequestPath = "/tmp/sspl-msb-req.txt"
 
@@ -73,15 +73,15 @@ class ManifestSupportBundle(object):
                 # Capturing enclosure data only when sspl state is active
                 sspl_state = sspl_state[1] if len(sspl_state)==2 else ''
                 if sspl_state == 'active':
-                    subprocess.call([f"/opt/seagate/{PRODUCT_FAMILY}/sspl/lib/resource_health_view", "-n", "-e", "-s"], shell=False)
+                    subprocess.call([f"/usr/bin/resource_health_view", "-n", "-e", "-s"], shell=False)
                 else:
                     print("SSPL state is not active, So enclosure data are ignored to collecte.")
-                    subprocess.call([f"/opt/seagate/{PRODUCT_FAMILY}/sspl/lib/resource_health_view", "-n", "-s"], shell=False)
+                    subprocess.call([f"/usr/bin/resource_health_view", "-n", "-s"], shell=False)
             except (FileNotFoundError, OSError) as e:
                 print(f"Failed to open the SSPL 'state.txt' file with an error '{e}',\
                     Can't determine the SSPL state, So enclosure data also being collected.")
                 sspl_state == 'active'
-                subprocess.call([f"/opt/seagate/{PRODUCT_FAMILY}/sspl/lib/resource_health_view", "-n", "-e", "-s"], shell=False)
+                subprocess.call([f"/usr/bin/resource_health_view", "-n", "-e", "-s"], shell=False)
             
             date_time = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
             if os.path.exists(self.encl_manifest) and sspl_state == 'active':

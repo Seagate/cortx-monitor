@@ -89,7 +89,7 @@ config_sspl() {
     }
 
     # Put minion id, consul_host and consul_port in conf file
-    python3 $script_dir/salt_util.py $SSPL_CONF;
+    python3 $DIR_NAME/low-level/framework/utils/salt_util.py $SSPL_CONF;
 
     [ -f $SSPL_CONFIGURED ] && {
         [ "$force" = "1" ] && ans="y" || ans=;
@@ -105,7 +105,7 @@ config_sspl() {
     product=$(sed -nr 's/^product=([^,]+)$/\1/p' $SSPL_CONF | head -1)
     [ -z "$product" ] && echo "No product specified in $SSPL_CONF" && exit 1
 
-    enabled_products=$(python3.6 $DIR_NAME/bin/sspl_constants.py)
+    enabled_products=$(python3.6 $DIR_NAME/low-level/framework/base/sspl_constants.py)
     [ -z "$enabled_products" ] && echo "No enabled products!" && exit 1
     [[ $enabled_products =~ (^| )$product($| ) ]] || {
         echo "Product '$product' is not in enabled products list: $enabled_products";
@@ -117,9 +117,9 @@ config_sspl() {
 
     # Add sspl-ll user to required groups and sudoers file etc.
     echo "Initializing SSPL configuration ... "
-    $DIR_NAME/bin/sspl_reinit $product || {
+    $DIR_NAME/low-level/framework/sspl_reinit $product || {
         reinit_err="$?";
-        echo -n "$DIR_NAME/bin/sspl_reinit failed ";
+        echo -n "$DIR_NAME/low-level/framework/sspl_reinit failed ";
         echo "with exit code ${reinit_err} for product $product";
         exit 1;
     }
@@ -136,7 +136,7 @@ config_sspl() {
     [ ! -z "$SSPL_LOG_FILE_PATH" ] &&
     {
         sed -i "s|File=.*|File=\"$SSPL_LOG_FILE_PATH\")|g" $RSYSLOG_SSPL_CONF
-        sed -i "1 s|^.*$|${SSPL_LOG_FILE_PATH}|g" $DIR_NAME/conf/etc/logrotate.d/sspl_logs
+        sed -i "1 s|^.*$|${SSPL_LOG_FILE_PATH}|g" $DIR_NAME/low-level/files/etc/logrotate.d/sspl_logs
     }
 
     # IEM configuration
@@ -148,7 +148,7 @@ config_sspl() {
         sed -i "s|File=.*|File=\/var/log/$PRODUCT_FAMILY/iem/iem_messages\"|g" $RSYSLOG_CONF
     else
         sed -i "s|File=.*|File=\"${LOG_FILE_PATH}\"|g" $RSYSLOG_CONF
-        sed -i "1 s|^.*$|${LOG_FILE_PATH}|g" $DIR_NAME/conf/etc/logrotate.d/iem_messages
+        sed -i "1 s|^.*$|${LOG_FILE_PATH}|g" $DIR_NAME/low-level/files/etc/logrotate.d/iem_messages
     fi
 
     # Create logrotate dir in case it's not present for dev environment
@@ -156,8 +156,8 @@ config_sspl() {
         mkdir -p ${LOGROTATE_DIR}
     fi
 
-    cp $DIR_NAME/conf/etc/logrotate.d/iem_messages $IEM_LOGROTATE_CONF
-    cp $DIR_NAME/conf/etc/logrotate.d/sspl_logs $SSPL_LOGROTATE_CONF
+    cp $DIR_NAME/low-level/files/etc/logrotate.d/iem_messages $IEM_LOGROTATE_CONF
+    cp $DIR_NAME/low-level/files/etc/logrotate.d/sspl_logs $SSPL_LOGROTATE_CONF
 
     # This rsyslog restart will happen after successful updation of rsyslog
     # conf file and before sspl starts. If at all this will be removed from
@@ -265,7 +265,7 @@ get_rabbitmq_cluster_nodes() {
 # available on healthy node
 # Updating build requested log level
 [ -f $REPLACEMENT_NODE_ENV_VAR_FILE ] || {
-    log_level=`cat $DIR_NAME/conf/build-requested-loglevel | sed 's/ *$//'`
+    log_level=`cat $DIR_NAME/low-level/files/opt/seagate/sspl/conf/build-requested-loglevel | sed 's/ *$//'`
     case $log_level in
         "DEBUG" | "INFO" | "WARNING" | "ERROR" | "CRITICAL")
             $CONSUL_PATH/consul kv put sspl/config/SYSTEM_INFORMATION/log_level $log_level;;

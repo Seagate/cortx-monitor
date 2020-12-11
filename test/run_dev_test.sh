@@ -101,7 +101,7 @@ $sudo lxc-attach -n $vm_name  -- pip install Flask==1.1.1
 $sudo lxc-attach -n $vm_name  -- yum --enablerepo=updates clean metadata
 $sudo lxc-attach -n $vm_name  -- bash -c "yum -y localinstall $rpms_dir/x86_64/libsspl_sec-*.rpm"
 $sudo lxc-attach -n $vm_name  -- bash -c "yum -y localinstall $rpms_dir/noarch/sspl-*.rpm"
-$sudo lxc-attach -n $vm_name  -- cp /opt/seagate/cortx/sspl/conf/sspl.conf."${product}" /etc/sspl.conf
+$sudo lxc-attach -n $vm_name  -- cp /opt/seagate/cortx/sspl/low-level/files/opt/seagate/sspl/conf/sspl.conf."${product}" /etc/sspl.conf
 #Taking the backup of /etc/sspl.conf before running test cases and place back as it is after test.
 #for testing purpose need to generating the alerts for CPU usage, Memory Usage and disk usage the
 #making the threshold value less than the actual usage for HOst, CPU and DIsk we update the the

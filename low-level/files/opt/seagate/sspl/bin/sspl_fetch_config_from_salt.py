@@ -25,7 +25,9 @@ import sys
 import salt.client
 import consul
 from configparser import ConfigParser
-from sspl_constants import (component, salt_provisioner_pillar_sls, CONSUL_HOST, CONSUL_PORT,salt_uniq_attr_per_node,
+# Add the top level directories
+sys.path.insert(0, f'/opt/seagate/cortx/sspl/low-level')
+from framework.base.sspl_constants import (component, salt_provisioner_pillar_sls, CONSUL_HOST, CONSUL_PORT,salt_uniq_attr_per_node,
     salt_uniq_passwd_per_node, COMMON_CONFIGS, OperatingSystem,enabled_products, SSPL_CONFIGS, setups, DATA_PATH,NODE_ID,
     SITE_ID, RACK_ID, SYSLOG_HOST, SYSLOG_PORT,node_key_id)
 
@@ -172,3 +174,4 @@ if len(sys.argv) >= 2:
     product = sys.argv[2]
     if environment == 'DEV':
         sc.insert_dev_common_config(product)
+        

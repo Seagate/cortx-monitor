@@ -28,13 +28,11 @@ import traceback
 import errno
 import re
 import argparse
-from generate_test_report import generate_html_report
-from framework.utils.config_reader import ConfigReader
-
 # Adding sspl and sspl_test path
 test_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.sys.path.append(os.path.join(test_path))
-
+from sspl_test.generate_test_report import generate_html_report
+from sspl_test.framework.utils.config_reader import ConfigReader
 from sspl_test.common import TestFailed, init_rabbitMQ_msg_processors, stop_rabbitMQ_msg_processors
 
 skip_group_prefixes = {

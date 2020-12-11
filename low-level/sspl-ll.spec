@@ -38,7 +38,7 @@ Requires:   %{product_family}-libsspl_sec-method_none = %{version}-%{release}
 
 #Requires:  python36-dbus python36-paramiko
 #Requires:  python36-psutil python36-gobject systemd-python36
-Requires:   perl(Config::Any) cortx-py-utils
+Requires:   perl(Config::Any) cortx-py-utils systemd-python36
 Requires(pre): shadow-utils
 
 # Disabling for LDR_R1-non-requirement
@@ -48,7 +48,7 @@ Requires(pre): shadow-utils
 Installs SSPL
 
 %prep
-%setup -n sspl
+%setup -n %{product_family}-sspl
 
 %build
 # Required to generate RPM targeted for Python3 even when default Python is 2.
@@ -93,17 +93,15 @@ chmod 644 $STATE_FILE
 %post
 mkdir -p /var/%{product_family}/sspl/bundle /var/log/%{product_family}/sspl /etc/sspl
 SSPL_DIR=/opt/seagate/%{product_family}/sspl
-CFG_DIR=$SSPL_DIR/conf
 
-[ -d "${SSPL_DIR}/lib" ] && {
-    ln -sf $SSPL_DIR/lib/sspl_ll_d /usr/bin/sspl_ll_d
-    ln -sf $SSPL_DIR/lib/resource_health_view /usr/bin/resource_health_view
-    ln -sf $SSPL_DIR/lib/sspl_ll_d $SSPL_DIR/bin/sspl_ll_d
-    ln -sf $SSPL_DIR/lib/sspl_bundle_generate $SSPL_DIR/bin/sspl_bundle_generate
+[ -d "${SSPL_DIR}" ] && {
+    ln -sf $SSPL_DIR/low-level/framework/sspl_ll_d /usr/bin/sspl_ll_d
+    ln -sf $SSPL_DIR/low-level/files/opt/seagate/sspl/bin/generate_resource_health_view/resource_health_view /usr/bin/resource_health_view
+    ln -sf $SSPL_DIR/low-level/files/opt/seagate/sspl/bin/generate_sspl_bundle/sspl_bundle_generate /usr/bin/sspl_bundle_generate
 }
 
 # run conf_diff.py script
-[ -f /opt/seagate/%{product_family}/sspl/bin/sspl_conf_adopt.py ] && python3 /opt/seagate/%{product_family}/sspl/bin/sspl_conf_adopt.py
+[ -f $SSPL_DIR/low-level/framework/base/sspl_conf_adopt.py ] && python3 $SSPL_DIR/low-level/framework/base/sspl_conf_adopt.py
 
 # restore /tmp/sspl_tmp.conf (its updated from previuos version of /etc/sspl.conf & new keys added in sspl.conf.LDR_R1)
 [ -f /tmp/sspl_tmp.conf ] && cp /tmp/sspl_tmp.conf /etc/sspl.conf
@@ -119,8 +117,8 @@ CFG_DIR=$SSPL_DIR/conf
 #    cp /opt/seagate/%{product_family}/sspl/low-level/files/etc/rsyslog.d/1-ssplfwd.conf /etc/rsyslog.d/1-ssplfwd.conf
 
 # Copy init script
-[ -f /opt/seagate/%{product_family}/sspl/sspl_init ] ||
-    ln -s $SSPL_DIR/bin/sspl_provisioner_init /opt/seagate/%{product_family}/sspl/sspl_init
+[ -f $SSPL_DIR/sspl_init ] ||
+    ln -s $SSPL_DIR/low-level/files/opt/seagate/sspl/bin/sspl_provisioner_init $SSPL_DIR/sspl_init
 
 # In case of upgrade start sspl-ll after upgrade
 if [ "$1" == "2" ]; then
@@ -130,7 +128,7 @@ fi
 
 if [ "$1" = "1" ]; then
     echo "Installation complete. Follow the instructions."
-    echo "Run pip3.6 install -r /opt/seagate/%{product_family}/sspl/conf/requirements.txt"
+    echo "Run pip3.6 install -r /opt/seagate/%{product_family}/sspl/low-level/requirements.txt"
     echo "Run /opt/seagate/%{product_family}/sspl/sspl_init to configure SSPL"
 fi
 

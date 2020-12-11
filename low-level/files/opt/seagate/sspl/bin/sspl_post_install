@@ -69,41 +69,41 @@ done
     $script_dir/sspl_setup_consul -e $ENVIRONMENT
 
 # Install packages which are not available in YUM repo, from PIP
-python3 -m pip install -r $SSPL_BASE_DIR/conf/requirements.txt
+pip3.6 install -r $SSPL_BASE_DIR/low-level/requirements.txt
 
 # NOTE: By default the sspl default conf file will not be copied.
 # The provisioner is supposed to copy the appropriate conf file based
 # on product/env and start SSPL with it.
 # TODO: Disable this default copy once the provisioners are ready.
-[ -f $SSPL_CONF ] || cp $SSPL_BASE_DIR/conf/sspl.conf.$PRODUCT $SSPL_CONF
+[ -f $SSPL_CONF ] || cp $SSPL_BASE_DIR/low-level/files/opt/seagate/sspl/conf/sspl.conf.$PRODUCT $SSPL_CONF
 # For Dev environment
-[ "$ENVIRONMENT" == "DEV" ] && cp $SSPL_BASE_DIR/conf/sspl.conf.$PRODUCT $SSPL_CONF
+[ "$ENVIRONMENT" == "DEV" ] && cp $SSPL_BASE_DIR/low-level/files/opt/seagate/sspl/conf/sspl.conf.$PRODUCT $SSPL_CONF
 
 # Copy rsyslog configuration
 [ -f $RSYSLOG_CONF ] ||
-    cp $SSPL_BASE_DIR/conf/$RSYSLOG_CONF $RSYSLOG_CONF
+    cp $SSPL_BASE_DIR/low-level/files/$RSYSLOG_CONF $RSYSLOG_CONF
 
 [ -f $RSYSLOG_SSPL_CONF ] ||
-    cp $SSPL_BASE_DIR/conf/$RSYSLOG_SSPL_CONF $RSYSLOG_SSPL_CONF
+    cp $SSPL_BASE_DIR/low-level/files/$RSYSLOG_SSPL_CONF $RSYSLOG_SSPL_CONF
 
 # Create soft link for SINGLE product name service to existing LDR_R1 service
 # Instead of keeping separate service file for SINGLE product with same content.
-currentProduct=$SSPL_BASE_DIR/conf/sspl-ll.service.$PRODUCT
+currentProduct=$SSPL_BASE_DIR/low-level/files/opt/seagate/sspl/conf/sspl-ll.service.$PRODUCT
 echo "currentProduct name $currentProduct"
 if [ $PRODUCT == 'SINGLE' -a ! -f $currentProduct ] || [ $PRODUCT == 'DUAL' -a ! -f $currentProduct ]; then
-    ln -s $SSPL_BASE_DIR/conf/sspl-ll.service.LDR_R1 $SSPL_BASE_DIR/conf/sspl-ll.service.$PRODUCT
+    ln -s $SSPL_BASE_DIR/low-level/files/opt/seagate/sspl/conf/sspl-ll.service.LDR_R1 $SSPL_BASE_DIR/low-level/files/opt/seagate/sspl/conf/sspl-ll.service.$PRODUCT
 fi
 if [ $PRODUCT == 'CLUSTER' -a ! -f $currentProduct ]; then
-  ln -s $SSPL_BASE_DIR/conf/sspl-ll.service.LDR_R2 $SSPL_BASE_DIR/conf/sspl-ll.service.$PRODUCT
+  ln -s $SSPL_BASE_DIR/low-level/files/opt/seagate/sspl/conf/sspl-ll.service.LDR_R2 $SSPL_BASE_DIR/low-level/files/opt/seagate/sspl/conf/sspl-ll.service.$PRODUCT
 fi
 # Copy sspl-ll.service file and enable service
-cp $SSPL_BASE_DIR/conf/sspl-ll.service.$PRODUCT /etc/systemd/system/sspl-ll.service
+cp $SSPL_BASE_DIR/low-level/files/opt/seagate/sspl/conf/sspl-ll.service.$PRODUCT /etc/systemd/system/sspl-ll.service
 systemctl enable sspl-ll.service
 systemctl daemon-reload
 
 # Copy IEC mapping files
 mkdir -p $PRODUCT_BASE_DIR/iem/iec_mapping
-cp -R $SSPL_BASE_DIR/resources/iem/iec_mapping/* $PRODUCT_BASE_DIR/iem/iec_mapping
+cp -R $SSPL_BASE_DIR/low-level/files/iec_mapping/* $PRODUCT_BASE_DIR/iem/iec_mapping
 
 # Skip this step if sspl is being configured for node replacement scenario as sspl configurations are
 # already available in consul on the healthy node
