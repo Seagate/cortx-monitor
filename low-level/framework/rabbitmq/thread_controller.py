@@ -164,7 +164,7 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
                 import RealStorControllerSensor
             from sensors.impl.platforms.realstor.realstor_sideplane_expander_sensor \
                 import RealStorSideplaneExpanderSensor
-            from sensors.impl.platforms.realstor.realstor_logical_volume_sensor \
+            from sensors.impl.platforms.realstor.realstor_dg_volume_sensor \
                 import RealStorLogicalVolumeSensor
             from sensors.impl.platforms.realstor.realstor_enclosure_sensor \
                 import RealStorEnclosureSensor
