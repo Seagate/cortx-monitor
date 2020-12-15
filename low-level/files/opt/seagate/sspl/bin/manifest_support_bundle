@@ -23,6 +23,8 @@ import sys
 import socket
 import json
 import subprocess
+# Add the top level directories
+sys.path.insert(0, f'/opt/seagate/cortx/sspl/low-level')
 from framework.base.sspl_constants import PRODUCT_FAMILY, node_key_id
 
 onGoingRequestPath = "/tmp/sspl-msb-req.txt"

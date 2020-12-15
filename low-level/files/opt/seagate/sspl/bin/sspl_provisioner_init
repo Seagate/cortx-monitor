@@ -138,7 +138,7 @@ start_req_services(){
         echo "Changing SSPL state to 'active', disable step once HA integration complete"
         echo "*************************************************************************"
         echo "state=active" > /var/$PRODUCT_FAMILY/sspl/data/state.txt
-        PID=`/sbin/pidof -s /usr/bin/sspl_ll_d`
+        PID=`/usr/bin/pgrep -d " " -f /usr/bin/sspl_ll_d`
         kill -s SIGHUP $PID
     else
         echo SSPL Service not started after 10 seconds.

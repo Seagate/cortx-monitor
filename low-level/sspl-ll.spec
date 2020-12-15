@@ -98,6 +98,7 @@ SSPL_DIR=/opt/seagate/%{product_family}/sspl
     ln -sf $SSPL_DIR/low-level/framework/sspl_ll_d /usr/bin/sspl_ll_d
     ln -sf $SSPL_DIR/low-level/files/opt/seagate/sspl/bin/generate_resource_health_view/resource_health_view /usr/bin/resource_health_view
     ln -sf $SSPL_DIR/low-level/files/opt/seagate/sspl/bin/generate_sspl_bundle/sspl_bundle_generate /usr/bin/sspl_bundle_generate
+    ln -sf $SSPL_DIR/low-level/files/opt/seagate/sspl/bin/manifest_support_bundle /usr/bin/manifest_support_bundle
 }
 
 # run conf_diff.py script

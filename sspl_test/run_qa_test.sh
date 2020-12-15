@@ -317,7 +317,7 @@ echo "Initialization completed. Starting tests"
 if [ "$IS_VIRTUAL" == "true" ]
 then
     echo "state=active" > /var/$PRODUCT_FAMILY/sspl/data/state.txt
-    PID=`/sbin/pidof -s /usr/bin/sspl_ll_d`
+    PID=`/usr/bin/pgrep -d " " -f /usr/bin/sspl_ll_d`
     kill -s SIGHUP $PID
 fi
 
