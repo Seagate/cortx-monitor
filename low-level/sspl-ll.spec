@@ -48,7 +48,7 @@ Requires(pre): shadow-utils
 Installs SSPL
 
 %prep
-%setup -n %{product_family}-sspl
+%setup -n %{product_family}-sspl/low-level
 
 %build
 # Required to generate RPM targeted for Python3 even when default Python is 2.
@@ -60,7 +60,16 @@ Installs SSPL
 %install
 # Copy config file and service startup to correct locations
 mkdir -p ${RPM_BUILD_ROOT}/opt/seagate/%{product_family}/sspl
-cp -rp . ${RPM_BUILD_ROOT}/opt/seagate/%{product_family}/sspl
+mkdir -p ${RPM_BUILD_ROOT}/etc/{systemd/system,dbus-1/system.d,polkit-1/rules.d,sspl-ll/templates/snmp}
+cp -afv files/etc ${RPM_BUILD_ROOT}/
+# mkdir -p ${RPM_BUILD_ROOT}/opt/seagate/%{product_family}/sspl/conf
+# mkdir -p ${RPM_BUILD_ROOT}/opt/seagate/%{product_family}/sspl/bin
+cp -afv files/opt/seagate/sspl/* ${RPM_BUILD_ROOT}/opt/seagate/%{product_family}/sspl/
+
+# Copy the service into /opt/seagate/%{product_family}/sspl where it will execute from
+cp -rp __init__.py ${RPM_BUILD_ROOT}/opt/seagate/%{product_family}/sspl
+mkdir -p ${RPM_BUILD_ROOT}/opt/seagate/%{product_family}/sspl/low-level
+cp -rp . ${RPM_BUILD_ROOT}/opt/seagate/%{product_family}/sspl/low-level
 
 %pre
 # Add the sspl-ll user during first install if it doesnt exist

@@ -113,7 +113,7 @@ then
     tar -czvf ${RPM_BUILD_PATH}/SOURCES/$PRODUCT_FAMILY-sspl-cli-${VERSION}.tgz -C ${BASE_DIR}/.. ${PRODUCT_FAMILY}-sspl/low-level/cli
 fi
 
-tar -czvf ${RPM_BUILD_PATH}/SOURCES/$PRODUCT_FAMILY-sspl-${VERSION}.tgz -C ${BASE_DIR}/.. ${PRODUCT_FAMILY}-sspl
+tar -czvf ${RPM_BUILD_PATH}/SOURCES/$PRODUCT_FAMILY-sspl-${VERSION}.tgz -C ${BASE_DIR}/.. ${PRODUCT_FAMILY}-sspl/low-level ${PRODUCT_FAMILY}-sspl/libsspl_sec
 
 echo "Generated tar for sspl build"
 

@@ -44,8 +44,6 @@ class BaseSensorMsg(BaseMsg):
         super(BaseSensorMsg, self).__init__()
 
         # Read in the sensor schema for validating messages
-        #fileName = os.path.join(sensors.__path__[0],
-        #                        self.JSON_SENSOR_SCHEMA)
         fileName = os.path.join(RESOURCE_PATH + '/sensors',
                                 self.JSON_SENSOR_SCHEMA)
         with open(fileName, 'r') as f:
