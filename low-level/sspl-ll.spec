@@ -62,8 +62,6 @@ Installs SSPL
 mkdir -p ${RPM_BUILD_ROOT}/opt/seagate/%{product_family}/sspl
 mkdir -p ${RPM_BUILD_ROOT}/etc/{systemd/system,dbus-1/system.d,polkit-1/rules.d,sspl-ll/templates/snmp}
 cp -afv files/etc ${RPM_BUILD_ROOT}/
-# mkdir -p ${RPM_BUILD_ROOT}/opt/seagate/%{product_family}/sspl/conf
-# mkdir -p ${RPM_BUILD_ROOT}/opt/seagate/%{product_family}/sspl/bin
 cp -afv files/opt/seagate/sspl/* ${RPM_BUILD_ROOT}/opt/seagate/%{product_family}/sspl/
 
 # Copy the service into /opt/seagate/%{product_family}/sspl where it will execute from
