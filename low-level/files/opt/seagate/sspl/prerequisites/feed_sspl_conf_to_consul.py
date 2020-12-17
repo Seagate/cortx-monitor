@@ -16,19 +16,20 @@
 # cortx-questions@seagate.com.
 
 """
- ****************************************************************************
-  Description:       Getting config data from salt API and feeding to consul
- ****************************************************************************
+ ******************************************************************************
+  Description:   Parse config file and arguments to set common & SSPL config
+  Purpose    :   To feed sspl and common configuration to consul
+  Usage      :   python3 feed_sspl_conf_to_consul.py [-F] [-C] [-N] [-Ru] [-Rp]
+ ******************************************************************************
 """
+
 import os
 import sys
 import consul
 import argparse
-import traceback
 from configobj import ConfigObj
 
 from cortx.utils.process import SimpleProcess
-from cortx.utils.security.cipher import Cipher
 
 CONSUL_HOST = '127.0.0.1'
 CONSUL_PORT = '8500'
@@ -37,19 +38,20 @@ CONSUL_PORT = '8500'
 class LoadConfig(object):
 
     def __init__(self):
+        """ Establish consul connection
+        """
         host = os.getenv('CONSUL_HOST', CONSUL_HOST)
         port = os.getenv('CONSUL_PORT', CONSUL_PORT)
         self.consul_conn = consul.Consul(host=host, port=port)
-        self.rmq_same_pass_sect = ["LOGGINGPROCESSOR/",
-                                   "RABBITMQEGRESSPROCESSOR/",
-                                   "RABBITMQINGRESSPROCESSOR/"]
-        self.rmq_comm_pass = None
-        self.cntrlr_pass = None
-        self.bmc_pass = None
+        self.rmq_same_pass_sect = ["LOGGINGPROCESSOR",
+                                   "RABBITMQEGRESSPROCESSOR",
+                                   "RABBITMQINGRESSPROCESSOR"]
         self.cluster_id = None
         super().__init__()
 
     def _get_result(self, cmd):
+        """ Execute command and return output
+        """
         result = None
         out, _, rc = SimpleProcess(cmd).run()
         if rc == 0:
@@ -57,6 +59,8 @@ class LoadConfig(object):
         return result
 
     def _insert_nested_dict_to_consul(self, v, prefix=''):
+        """ Parse v and insert kv in consul
+        """
         if isinstance(v, dict):
             for k, v2 in v.items():
                 p2 = "{}/{}".format(prefix, k)
@@ -67,22 +71,16 @@ class LoadConfig(object):
                 self._insert_nested_dict_to_consul(v2, p2)
         else:
             if self.consul_conn is not None:
-                # Handle password encryption for unique sections
-                rmq_same_pass = any(sect for sect in self.rmq_same_pass_sect if sect in prefix)
-                if rmq_same_pass and '/password' in prefix:
-                    v = self.rmq_comm_pass
-                elif 'bmc/' in prefix and '/secret' in prefix:
-                    v = self.bmc_pass
-                else:
-                    pass
                 self.consul_conn.kv.put(prefix, str(v))
             else:
                 print('Consul connection issue, consul_conn is None. Exiting..')
                 sys.exit()
 
-    def set_config(self, filename, node, component=None, rpmq_pass=None, primary_mc=None,\
-                    secondary_mc=None, primary_mc_port=None, secondary_mc_port=None,\
+    def set_config(self, filename, node, component=None, rmq_user=None, rmq_passwd=None,\
+                    primary_mc=None, secondary_mc=None, primary_mc_port=None, secondary_mc_port=None,\
                     mc_user=None, mc_passwd=None, bmc_ip=None, bmc_user=None, bmc_pass=None):
+        """ Read config file and insert common config and sspl config
+        """
         try:
             if self.consul_conn is None:
                 raise Exception(f"Failed to establish connection to {CONSUL_HOST}:{CONSUL_PORT}")
@@ -93,12 +91,10 @@ class LoadConfig(object):
         else:
             parser = ConfigObj(filename, list_values=False)
             # Update same value to unique keys in consul
-            if rpmq_pass:
-                self.rmq_comm_pass = rpmq_pass
-            if mc_passwd:
-                self.cntrlr_pass = mc_passwd
-            if bmc_pass:
-                self.bmc_pass = bmc_pass
+            if rmq_user and rmq_passwd:
+                for key in self.rmq_same_pass_sect:
+                    parser[key]['password'] = rmq_passwd
+                    parser[key]['username'] = rmq_user
             # Update common config
             if not component:
                 parser['system_information']['operating_system'] = self._get_result('cat /etc/system-release')
@@ -113,9 +109,10 @@ class LoadConfig(object):
                 parser['storage_enclosure']['controller']['secondary_mc']['ip'] = secondary_mc
                 parser['storage_enclosure']['controller']['primary_mc']['port'] = primary_mc_port
                 parser['storage_enclosure']['controller']['secondary_mc']['port'] = secondary_mc_port
-                parser['bmc'][node]['ip'] = bmc_ip
-                parser['bmc'][node]['user'] = bmc_user
-                parser['bmc'][node]['secret'] = bmc_pass
+                if not bmc_ip:
+                    parser['bmc'][node]['ip'] = bmc_ip
+                    parser['bmc'][node]['user'] = bmc_user
+                    parser['bmc'][node]['secret'] = bmc_pass
             # Load config from file
             for k, v in parser.items():
                 if component:
@@ -125,29 +122,32 @@ class LoadConfig(object):
 
 if __name__ == '__main__':
     argParser = argparse.ArgumentParser(
-        usage = "%(prog)s [-h] [-F] [-N] [-C] [-R] [-A] [-B] [-U] [-P] [-bi] [-bu] [-bp]",
+        usage = "%(prog)s [-h] [-F] [-C] [-N] [-Ru] [-Rp] [-A] [-B] \
+                    [-Ap] [-Bp] [-U] [-P] [--bmc_ip] [--bmc_user] [--bmc_passwd]",
         formatter_class = argparse.RawDescriptionHelpFormatter)
-    argParser.add_argument("-F", "--file", help="File or file path")
-    argParser.add_argument("-C", "--component", help="Component name")
+    argParser.add_argument("-F", "--file", help="Config file path")
+    argParser.add_argument("-C", "--component", help="Keys will be stored with this prefix")
     argParser.add_argument("-N", "--node", help="Node name")
-    argParser.add_argument("-R", "--rpmq_pass", help="Rabbitmq password")
+    argParser.add_argument("-Ru", "--rmq_user", help="Rabbitmq username")
+    argParser.add_argument("-Rp", "--rmq_passwd", help="Rabbitmq password")
     argParser.add_argument("-A", "--primary_mc", help="Controller-A IP")
     argParser.add_argument("-B", "--secondary_mc", help="Controller-B IP")
     argParser.add_argument("-Ap", "--primary_mc_port", help="Controller-A Port")
     argParser.add_argument("-Bp", "--secondary_mc_port", help="Controller-B Port")
     argParser.add_argument("-U", "--user", help="Controller Username")
     argParser.add_argument("-P", "--passwd", help="Controller Password")
-    argParser.add_argument("-bi", "--bmc_ip", help="BMC IP")
-    argParser.add_argument("-bu", "--bmc_user", help="BMC User")
-    argParser.add_argument("-bp", "--bmc_pass", help="BMC Password")
+    argParser.add_argument("--bmc_ip", default="", help="BMC IP")
+    argParser.add_argument("--bmc_user", default="", help="BMC User")
+    argParser.add_argument("--bmc_passwd", default="", help="BMC Password")
     args = argParser.parse_args()
     sc = LoadConfig()
     # Load component config in consul else load common config
     if args.component:
         sc.set_config(filename=args.file,
                       node=args.node,
-                      component=args.component + '/config',
-                      rpmq_pass=args.rpmq_pass)
+                      component= args.component.lower() + '/config',
+                      rmq_user=args.rmq_user,
+                      rmq_passwd=args.rmq_passwd)
     else:
         sc.set_config(filename=args.file,
                       node=args.node,
@@ -159,4 +159,4 @@ if __name__ == '__main__':
                       secondary_mc_port=args.secondary_mc_port,
                       bmc_ip=args.bmc_ip,
                       bmc_user=args.bmc_user,
-                      bmc_pass=args.bmc_pass)
+                      bmc_pass=args.bmc_passwd)

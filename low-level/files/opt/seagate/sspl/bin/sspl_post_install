@@ -111,7 +111,7 @@ cp -R $SSPL_BASE_DIR/low-level/files/iec_mapping/* $PRODUCT_BASE_DIR/iem/iec_map
 [ -f $REPLACEMENT_NODE_ENV_VAR_FILE ] ||
     $script_dir/sspl_fetch_config_from_salt.py $ENVIRONMENT $PRODUCT
 
-# Skip this step if sspl is being configured for node replacement scenario as rabbitmq cluster is
+# Skip this step if sspl is being configured for node replacement scenario as rabbitmq cluster is 
 # already configured on the healthy node
 # Configure rabbitmq
 [ -f $REPLACEMENT_NODE_ENV_VAR_FILE ] || {

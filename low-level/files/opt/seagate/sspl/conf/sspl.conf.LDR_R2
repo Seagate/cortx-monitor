@@ -16,17 +16,23 @@
 # Version 1.0.0
 [SSPL-LL_SETTING]
 core_processors=RabbitMQegressProcessor, RabbitMQingressProcessor, LoggingProcessor
+
 message_handlers=DiskMsgHandler, LoggingMsgHandler, ServiceMsgHandler, NodeDataMsgHandler, NodeControllerMsgHandler, RealStorEnclMsgHandler, RealStorActuatorMsgHandler
+
 sensors=ServiceWatchdog, RAIDsensor, NodeData, RealStorFanSensor, RealStorPSUSensor, RealStorControllerSensor, RealStorDiskSensor, RealStorSideplaneExpanderSensor, RealStorLogicalVolumeSensor, IEMSensor, NodeHWsensor, RealStorEnclosureSensor, SASPortSensor, MemFaultSensor, CPUFaultSensor
+
 actuators=Service, RAIDactuator, Smartctl, NodeHWactuator, RealStorActuator
 
 # List of modules to run in degraded mode
 degraded_state_modules=ServiceWatchdog, RAIDsensor, NodeData, IEMSensor, NodeHWsensor, DiskMsgHandler, LoggingMsgHandler, ServiceMsgHandler, NodeDataMsgHandler, NodeControllerMsgHandler, RealStorActuatorMsgHandler, SASPortSensor, MemFaultSensor, CPUFaultSensor
 
-[SSPL_CONSTANTS]
-enabled_products=CS-A, SINGLE, DUAL, CLUSTER, LDR_R1, LDR_R2
-cs_products=CS-A,
-cs_legacy_products=CS-L, CS-G
+[SYSTEM_INFORMATION]
+cli_type=CS-A
+setup=cortx
+data_path=/var/cortx/sspl/data/
+# Possible log levels are CRITICAL, ERROR, WARNING, INFO, DEBUG and NOTSET
+log_level=INFO
+sspl_log_file_path=/var/log/cortx/sspl/sspl.log
 
 [RABBITMQINGRESSPROCESSOR]
 virtual_host=SSPL
