@@ -21,7 +21,7 @@ Version:    %{version}
 Release:    %{build_num}_git%{git_rev}%{?dist}
 Summary:    Segate System Platform Library - Security
 Group:      Libraries/System
-License:    Seagate Proprietary
+License:    Seagate
 URL:        https://github.com/Seagate/cortx-sspl
 Source0:    %{product_family}-sspl-%{version}.tgz
 Requires:   %{product_family}-sspl = %{version}-%{release}
