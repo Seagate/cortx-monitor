@@ -48,7 +48,8 @@ class RealStorLogicalVolumeSensor(SensorThread, InternalMsgQ):
     SENSOR_NAME = "RealStorLogicalVolumeSensor"
     SENSOR_RESP_TYPE = "enclosure_logical_volume_alert"
     RESOURCE_CATEGORY = "cortx"
-    RESOURCE_TYPE = "enclosure:cortx:logical_volume"
+    RESOURCE_TYPE_LVOL = "enclosure:cortx:logical_volume"
+    RESOURCE_TYPE_DG = "enclosure:cortx:disk_group"
 
     PRIORITY = 1
 
@@ -62,6 +63,25 @@ class RealStorLogicalVolumeSensor(SensorThread, InternalMsgQ):
          "pool-serial-number", "pool-percentage", "owner", "raidtype", "status", "create-date",
          "disk-description", "serial-number", "pool-sector-format", "health", "health-reason",
          "health-recommendation"]
+
+    disk_groups_extended = ['blocksize', 'size-numeric', 'freespace-numeric', 'raw-size',
+        'raw-size-numeric', 'storage-type-numeric', 'storage-tier', 'storage-tier-numeric',
+        'total-pages', 'allocated-pages', 'available-pages', 'performance-rank', 'owner-numeric',
+        'preferred-owner', 'preferred-owner-numeric', 'raidtype-numeric', 'diskcount', 'sparecount',
+        'chunksize', 'status-numeric', 'lun', 'min-drive-size', 'min-drive-size-numeric',
+        'create-date-numeric', 'cache-read-ahead', 'cache-read-ahead-numeric', 'cache-flush-period',
+        'read-ahead-enabled', 'read-ahead-enabled-numeric', 'write-back-enabled',
+        'write-back-enabled-numeric', 'job-running', 'current-job', 'current-job-numeric',
+        'current-job-completion', 'num-array-partitions', 'largest-free-partition-space',
+        'largest-free-partition-space-numeric', 'num-drives-per-low-level-array',
+        'num-expansion-partitions', 'num-partition-segments', 'new-partition-lba',
+        'new-partition-lba-numeric', 'array-drive-type', 'array-drive-type-numeric',
+        'disk-description-numeric', 'is-job-auto-abortable', 'is-job-auto-abortable-numeric',
+        'blocks', 'disk-dsd-enable-vdisk', 'disk-dsd-enable-vdisk-numeric', 'disk-dsd-delay-vdisk',
+        'scrub-duration-goal', 'adapt-target-spare-capacity', 'adapt-target-spare-capacity-numeric',
+        'adapt-actual-spare-capacity', 'adapt-actual-spare-capacity-numeric', 'adapt-critical-capacity',
+        'adapt-critical-capacity-numeric', 'adapt-degraded-capacity', 'adapt-degraded-capacity-numeric',
+        'adapt-linear-volume-boundary', 'pool-sector-format-numeric', 'health-numeric']
 
     volumes_generic = ["volume-description", "blocks", "health", "size", "volume-name", "wwn",
          "storage-pool-name", "total-size", "volume-class", "allocated-size", "owner", "object-name",
@@ -79,6 +99,8 @@ class RealStorLogicalVolumeSensor(SensorThread, InternalMsgQ):
 
     # Logical Volumes directory name
     LOGICAL_VOLUMES_DIR = "logical_volumes"
+    # Disk Groups directory name
+    DISK_GROUPS_DIR = "disk_groups"
 
     @staticmethod
     def name():
@@ -103,11 +125,11 @@ class RealStorLogicalVolumeSensor(SensorThread, InternalMsgQ):
 
         # logical volumes persistent cache
         self._logical_volume_prcache = None
+        # disk groups persistent cache
+        self._disk_group_prcache = None
 
-        # Holds Logical Volumes with faults. Used for future reference.
-        # Disk group fault detection code disabled as not applicable in current release.
+        # Holds Disk Groups with faults. Used for future reference.
         self._previously_faulty_disk_groups = {}
-
         # Holds Logical Volumes with faults. Used for future reference.
         self._previously_faulty_logical_volumes = {}
 
@@ -135,20 +157,32 @@ class RealStorLogicalVolumeSensor(SensorThread, InternalMsgQ):
 
         self._logical_volume_prcache = os.path.join(self.rssencl.frus,\
              self.LOGICAL_VOLUMES_DIR)
+        self._disk_group_prcache = os.path.join(self.rssencl.frus,\
+             self.DISK_GROUPS_DIR)
 
         # Persistence file location. This file stores faulty Logical Volume data
-        # for logical volume alerts
         self._faulty_logical_volume_file_path = os.path.join(
             self._logical_volume_prcache, "logical_volume_data.json")
+        # Persistence file location. This file stores faulty Disk Group data
+        self._faulty_disk_group_file_path = os.path.join(
+            self._disk_group_prcache, "disk_group_data.json")
 
         # Load faulty Logical Volume data from file if available
         self._previously_faulty_logical_volumes = store.get(\
                                                   self._faulty_logical_volume_file_path)
+        # Load faulty Disk Group data from file if available
+        self._previously_faulty_disk_groups = store.get(\
+                                                  self._faulty_disk_group_file_path)
 
         if self._previously_faulty_logical_volumes is None:
             self._previously_faulty_logical_volumes = {}
             store.put(self._previously_faulty_logical_volumes,\
                 self._faulty_logical_volume_file_path)
+
+        if self._previously_faulty_disk_groups is None:
+            self._previously_faulty_disk_groups = {}
+            store.put(self._previously_faulty_disk_groups,\
+                self._faulty_disk_group_file_path)
 
         return True
 
@@ -175,8 +209,7 @@ class RealStorLogicalVolumeSensor(SensorThread, InternalMsgQ):
             disk_groups = self._get_disk_groups()
 
             if disk_groups:
-                # Disabling disk group level alerts in R1
-                # self._get_msgs_for_faulty_disk_groups(disk_groups)
+                self._get_msgs_for_faulty_disk_groups(disk_groups)
                 for disk_group in disk_groups:
                     pool_serial_number = disk_group["pool-serial-number"]
                     logical_volumes = self._get_logical_volumes(pool_serial_number)
@@ -240,7 +273,7 @@ class RealStorLogicalVolumeSensor(SensorThread, InternalMsgQ):
         return logical_volumes
 
     def _get_msgs_for_faulty_disk_groups(self, disk_groups, send_message=True):
-        """Checks for health of logical volumes and returns list of messages to be
+        """Checks for health of disk groups and returns list of messages to be
            sent to handler if there are any.
         """
         faulty_disk_group_messages = []
@@ -248,15 +281,14 @@ class RealStorLogicalVolumeSensor(SensorThread, InternalMsgQ):
         disk_group_health = None
         serial_number = None
         alert_type = ""
-        logical_volumes = None
         # Flag to indicate if there is a change in _previously_faulty_disk_groups
         state_changed = False
 
         if not disk_groups:
             return
+
         for disk_group in disk_groups:
             disk_group_health = disk_group["health"].lower()
-            pool_serial_number = disk_group["pool-serial-number"]
             serial_number = disk_group["serial-number"]
             # Check for missing and fault case
             if disk_group_health == self.rssencl.HEALTH_FAULT:
@@ -267,16 +299,8 @@ class RealStorLogicalVolumeSensor(SensorThread, InternalMsgQ):
                     alert_type = self.rssencl.FRU_FAULT
                     self._previously_faulty_disk_groups[serial_number] = {
                         "health": disk_group_health, "alert_type": alert_type}
-                    state_changed : bool = True
-                    logical_volumes = self._get_logical_volumes(pool_serial_number)
-                    for logical_volume in logical_volumes:
-                        internal_json_msg = self._create_internal_msg(
-                            logical_volume, alert_type, disk_group)
-                        faulty_disk_group_messages.append(internal_json_msg)
-                        # Send message to handler
-                        if send_message:
-                            self._send_json_msg(internal_json_msg)
-                            internal_json_msg = None
+                    state_changed = True
+
             # Check for fault case
             elif disk_group_health == self.rssencl.HEALTH_DEGRADED:
                 # Status change from Fault ==> Degraded or OK ==> Degraded
@@ -286,15 +310,8 @@ class RealStorLogicalVolumeSensor(SensorThread, InternalMsgQ):
                     alert_type = self.rssencl.FRU_FAULT
                     self._previously_faulty_disk_groups[serial_number] = {
                         "health": disk_group_health, "alert_type": alert_type}
-                    state_changed : bool = True
-                    logical_volumes = self._get_logical_volumes(pool_serial_number)
-                    for logical_volume in logical_volumes:
-                        internal_json_msg = self._create_internal_msg(
-                            logical_volume, alert_type, disk_group)
-                        faulty_disk_group_messages.append(internal_json_msg)
-                        # Send message to handler
-                        if send_message:
-                            self._send_json_msg(internal_json_msg)
+                    state_changed = True
+
             # Check for healthy case
             elif disk_group_health == self.rssencl.HEALTH_OK:
                 # Status change from Fault ==> OK or Degraded ==> OK
@@ -302,16 +319,17 @@ class RealStorLogicalVolumeSensor(SensorThread, InternalMsgQ):
                     # Send message to handler
                     if send_message:
                         alert_type = self.rssencl.FRU_FAULT_RESOLVED
-                        logical_volumes = self._get_logical_volumes(pool_serial_number)
-                        for logical_volume in logical_volumes:
-                            internal_json_msg = self._create_internal_msg(
-                                logical_volume, alert_type, disk_group)
-                            faulty_disk_group_messages.append(internal_json_msg)
-                            self._send_json_msg(internal_json_msg)
                     del self._previously_faulty_disk_groups[serial_number]
                     state_changed = True
-            # Persist faulty Logical Volume list to file only if something is changed
+
+            # Persist faulty Disk Group list to file only if something is changed
             if state_changed:
+                # Generate the alert contents
+                internal_json_msg = self._create_internal_msg_dg(alert_type, disk_group)
+                faulty_disk_group_messages.append(internal_json_msg)
+                # Send message to handler
+                if send_message:
+                    self._send_json_msg(internal_json_msg)
                 # Wait till msg is sent to rabbitmq or added in consul for resending.
                 # If timed out, do not update cache and revert in-memory cache.
                 # So, in next iteration change can be detected
@@ -376,7 +394,7 @@ class RealStorLogicalVolumeSensor(SensorThread, InternalMsgQ):
 
             if state_changed:
                 # Generate the alert contents
-                internal_json_msg = self._create_internal_msg(
+                internal_json_msg = self._create_internal_msg_lvol(
                     logical_volume, alert_type, disk_group)
                 faulty_logical_volume_messages.append(internal_json_msg)
                 # Send message to handler
@@ -396,7 +414,7 @@ class RealStorLogicalVolumeSensor(SensorThread, InternalMsgQ):
 
         return faulty_logical_volume_messages
 
-    def _create_internal_msg(self, logical_volume_detail, alert_type, disk_group):
+    def _create_internal_msg_lvol(self, logical_volume_detail, alert_type, disk_group):
         """Forms a dictionary containing info about Logical Volumes to send to
            message handler.
         """
@@ -432,7 +450,57 @@ class RealStorLogicalVolumeSensor(SensorThread, InternalMsgQ):
                 "cluster_id": self.rssencl.cluster_id,
                 "rack_id": self.rssencl.rack_id,
                 "node_id": self.rssencl.node_id,
-                "resource_type": self.RESOURCE_TYPE,
+                "resource_type": self.RESOURCE_TYPE_LVOL,
+                "resource_id": resource_id,
+                "event_time": epoch_time
+                }
+
+        internal_json_msg = json.dumps(
+            {"sensor_request_type": {
+                "enclosure_alert": {
+                    "host_id": host_name,
+                    "severity": severity,
+                    "alert_id": alert_id,
+                    "alert_type": alert_type,
+                    "status": "update",
+                    "info": info,
+                    "specific_info": generic_info
+                }
+            }})
+        return internal_json_msg
+
+    def _create_internal_msg_dg(self, alert_type, disk_group_detail):
+        """Forms a dictionary containing info about Disk Groups to send to
+           message handler.
+        """
+        if not disk_group_detail:
+            return {}
+
+        generic_info = dict.fromkeys(self.disk_groups_generic, "NA")
+        extended_info = dict.fromkeys(self.disk_groups_extended, "NA")
+
+        severity_reader = SeverityReader()
+        severity = severity_reader.map_severity(alert_type)
+        epoch_time = str(int(time.time()))
+
+        alert_id = self._get_alert_id(epoch_time)
+        resource_id = disk_group_detail.get("name", "")
+        host_name = socket.gethostname()
+
+        for key, value in disk_group_detail.items():
+            if key in self.disk_groups_generic:
+                generic_info.update({key : value})
+            elif key in self.disk_groups_extended:
+                extended_info.update({key : value})
+
+        generic_info.update(extended_info)
+
+        info = {
+                "site_id": self.rssencl.site_id,
+                "cluster_id": self.rssencl.cluster_id,
+                "rack_id": self.rssencl.rack_id,
+                "node_id": self.rssencl.node_id,
+                "resource_type": self.RESOURCE_TYPE_DG,
                 "resource_id": resource_id,
                 "event_time": epoch_time
                 }

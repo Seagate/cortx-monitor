@@ -489,7 +489,7 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist, operating_system
         import RealStorControllerSensor
         from sensors.impl.platforms.realstor.realstor_sideplane_expander_sensor \
         import RealStorSideplaneExpanderSensor
-        from sensors.impl.platforms.realstor.realstor_logical_volume_sensor \
+        from sensors.impl.platforms.realstor.realstor_dg_volume_sensor \
         import RealStorLogicalVolumeSensor
         from sensors.impl.platforms.realstor.realstor_enclosure_sensor \
         import RealStorEnclosureSensor
@@ -683,7 +683,7 @@ def signal_handler(signal_number, frame):
         logger.warn("Error in signal_handler processing {} ".format(e))
 
     finally:
-        # Enable the signal handler 
+        # Enable the signal handler
         signal.signal(signal.SIGHUP, signal_handler)
 
 def send_thread_controller_request(state):
