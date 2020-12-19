@@ -172,7 +172,7 @@ config_sspl() {
     # is not running on new node, we dont need to error out.
     # If consul is not running, exit
     [ -f $REPLACEMENT_NODE_ENV_VAR_FILE ] || {
-        CONSUL_PS=$(ps -aux | grep "consul" | grep -v "grep" || true)
+        CONSUL_PS=$(pgrep "consul" || true)
         if [ -z "$CONSUL_PS" ]; then
             echo "Consul is not running, exiting..";
             exit 1

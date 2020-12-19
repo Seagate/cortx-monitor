@@ -66,12 +66,12 @@ if ! [ -x "$(command -v $CONSUL_PATH/consul)" ]; then
     fi
 
     if ! [ -x "$(command -v $CONSUL_PATH/consul)" ]; then
-        echo "Consul is not available, exiting..";
+        echo "ERROR: Consul is not available, exiting..";
         exit 1
     fi
 
     # Invoke consul agent from fallback path
-    CONSUL_PS=$(ps -aux | grep "consul" | grep -v "grep" | grep -v "bash" || true)
+    CONSUL_PS=$(pgrep "consul" || true)
     [ -z "$CONSUL_PS" ] &&
         $CONSUL_PATH/consul agent -dev -config-file=$SSPL_BASE_DIR/bin/consul_config.json &>/dev/null &
 
@@ -79,9 +79,9 @@ if ! [ -x "$(command -v $CONSUL_PATH/consul)" ]; then
     while [ -z "$CONSUL_PS" ]; do
         sleep 2
         TRIES=$((TRIES+1))
-        CONSUL_PS=$(ps -aux | grep "consul" | grep -v "grep" | grep -v "bash" || true)
+        CONSUL_PS=$(pgrep "consul" || true)
         if [ $TRIES -gt 5 ]; then
-            echo "Consul service is not started or not recognized by SSPL setup"
+            echo "ERROR: Consul service is not started or not recognized by SSPL setup"
             break
         fi
     done

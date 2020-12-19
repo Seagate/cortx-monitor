@@ -41,6 +41,8 @@ log_level=INFO
 sspl_log_file_path=/var/log/cortx/sspl/sspl.log
 syslog_host=localhost
 syslog_port=514
+server_type=virtual
+storage_type=virtual
 
 [RABBITMQINGRESSPROCESSOR]
 virtual_host=SSPL

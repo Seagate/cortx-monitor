@@ -26,7 +26,7 @@ sys.path.insert(0, '/opt/seagate/cortx/sspl/low-level')
 from framework.utils.salt_util import SaltInterface
 from framework.utils.service_logging import logger
 
-PRODUCT_NAME = 'LDR_R1'
+PRODUCT_NAME = 'LDR_R2'
 PRODUCT_FAMILY = 'cortx'
 enabled_products = ["CS-A", "SINGLE","DUAL", "CLUSTER", "LDR_R1", "LDR_R2"]
 cs_products = ["CS-A"]
@@ -212,8 +212,18 @@ try:
 except Exception as err:
     logger.debug(f"Error in getting setup information of server and storage type : {err}")
     print(f"Error in getting setup information of server and storage type : {err}")
-    storage_type = 'virtual'
-    server_type = 'virtual'
+    result = subprocess.Popen(['consul',
+                                'kv',
+                                'get',
+                                'sspl/config/SYSTEM_INFORMATION/server_type'],
+                               stdout=subprocess.PIPE).communicate()[0]
+    server_type = result.decode("utf-8").rstrip() or 'virtual'
+    result = subprocess.Popen(['consul',
+                                'kv',
+                                'get',
+                                'sspl/config/SYSTEM_INFORMATION/storage_type'],
+                               stdout=subprocess.PIPE).communicate()[0]
+    storage_type = result.decode("utf-8").rstrip() or 'virtual'
     logger.debug(f"Considering default storage type : '{storage_type}'")
     logger.debug(f"Considering default server type : '{server_type}'")
 

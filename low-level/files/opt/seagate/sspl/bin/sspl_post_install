@@ -108,8 +108,11 @@ cp -R $SSPL_BASE_DIR/low-level/files/iec_mapping/* $PRODUCT_BASE_DIR/iem/iec_map
 # Skip this step if sspl is being configured for node replacement scenario as sspl configurations are
 # already available in consul on the healthy node
 # Running script for fetching the config using salt and feeding values to consul
-[ -f $REPLACEMENT_NODE_ENV_VAR_FILE ] ||
-    $script_dir/sspl_fetch_config_from_salt.py $ENVIRONMENT $PRODUCT
+# Onward LDR_R2, system will work even if salt won't be available
+[ "$PRODUCT" == "LDR_R1" ] && {
+    [ -f $REPLACEMENT_NODE_ENV_VAR_FILE ] ||
+        $script_dir/sspl_fetch_config_from_salt.py $ENVIRONMENT $PRODUCT
+}
 
 # Skip this step if sspl is being configured for node replacement scenario as rabbitmq cluster is 
 # already configured on the healthy node

@@ -25,7 +25,10 @@ import consul
 import configparser
 import time
 import requests
-import salt.client
+try:
+    import salt.client
+except ModuleNotFoundError:
+    pass
 from framework.base.sspl_constants import (component, salt_provisioner_pillar_sls, file_store_config_path,
         SSPL_STORE_TYPE, StoreTypes, salt_uniq_passwd_per_node, COMMON_CONFIGS, SSPL_CONFIGS, CONSUL_PORT,
         MAX_CONSUL_RETRY, WAIT_BEFORE_RETRY, CONSUL_ERR_STRING, CONSUL_HOST)
@@ -50,7 +53,8 @@ class ConfigReader(object):
         self.consul_conn = None
         self.is_init = is_init
         if is_init:
-            self.read_dev_conf()
+            if PRODUCT_NAME == "LDR_R1":
+                self.read_dev_conf()
             host = os.getenv('CONSUL_HOST', CONSUL_HOST)
             port = os.getenv('CONSUL_PORT', CONSUL_PORT)
             for retry_index in range(0, MAX_CONSUL_RETRY):
@@ -71,7 +75,7 @@ class ConfigReader(object):
         elif is_test:
             self.read_test_conf(test_config_path)
         else:
-            self.read_salt_conf()
+            self.read_prod_conf()
 
     def read_dev_conf(self):
         """
@@ -91,7 +95,7 @@ class ConfigReader(object):
                 common_cluster_id = salt.client.Caller().function('grains.get', 'cluster_id')
                 # Password is same for RABBITMQINGRESSPROCESSOR, RABBITMQEGRESSPROCESSOR & LOGGINGPROCESSOR
                 rbmq_pass = salt.client.Caller().function('pillar.get',
-                               'rabbitmq:sspl:RABBITMQINGRESSPROCESSOR:password')
+                            'rabbitmq:sspl:RABBITMQINGRESSPROCESSOR:password')
                 if common_cluster_id:
                     new_conf.get('SYSTEM_INFORMATION')['cluster_id'] = common_cluster_id
                 for sect in salt_uniq_passwd_per_node:
@@ -135,7 +139,7 @@ class ConfigReader(object):
             self.store = configparser.RawConfigParser()
             self.store.read(config)
 
-    def read_salt_conf(self):
+    def read_prod_conf(self):
         """
         Specific function for executable binary.
         """
@@ -166,6 +170,13 @@ class ConfigReader(object):
                     value = self.store.get(component + '/' + section + '/' + key)
                 else:
                     value = self.get_from_common_config(section, key)
+            elif self.store is None and self.consul_conn:
+                if section not in COMMON_CONFIGS:
+                    value = self.consul_conn.kv.get(component + '/' + section + '/' + key)[1]
+                else:
+                    value = self.consul_conn.kv.get(section.lower() + '/' + key)[1]
+                if value and value["Value"]:
+                    value = value["Value"]
             else:
                 raise Exception("{} Invalid store type object.".format(self.store))
         except (RuntimeError, Exception) as e:

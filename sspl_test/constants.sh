@@ -13,6 +13,6 @@
 # about this software or licensing, please email opensource@seagate.com or
 # cortx-questions@seagate.com.
 
-PRODUCT_NAME='LDR_R1'
+PRODUCT_NAME='LDR_R2'
 PRODUCT_FAMILY='cortx'
 CONSUL_PATH="/usr/bin/"

@@ -84,7 +84,7 @@ def decrypt(key, text):
 
 
 def main(product):
-    """ Main line for this program. """
+    """ Main method of this program. """
     virtual_host = config_reader._get_value(
         section=SECTION,
         key='virtual_host'
@@ -107,8 +107,9 @@ def main(product):
             section=SECTION,
             key='secondary_rabbitmq_server'
             )
-        _check_rabbitmq_status()
-        _start_rabbitmq()
+
+    _start_rabbitmq()
+    _check_and_reset_rabbitmq()
 
     _create_vhost_if_necessary(virtual_host, product)
 
@@ -122,6 +123,7 @@ def main(product):
 
     # create durable/mirrored queues in either single or clustered mode.
     create_mirrored_queues(key)
+    _set_perms_erlang_key()
 
     if product in cs_legacy_products:
         # Copy the erlang key from primary server to secondary and mirror queues
@@ -375,18 +377,18 @@ def _create_user_if_necessary(username, password, virtual_host, product):
     else:
         raise ValueError("Product should be one of: %s" % (cs_legacy_products + enabled_products))
 
-def _check_rabbitmq_status():
+def _check_and_reset_rabbitmq():
     """Reset if the node is down"""
-    command = "service rabbitmq-server status"
+    command = "systemctl status rabbitmq-server"
     response = _send_command(command)
     if "nodedown" in response:
-        print("Nodedown, resetting")
+        print("WARN: Nodedown, resetting")
         command = "pkill beam.smp"
         _send_command(command)
 
 def _start_rabbitmq():
     """Ensure rabbitmq-server is started"""
-    command = "service rabbitmq-server start"
+    command = "systemctl start rabbitmq-server"
     _send_command(command)
 
 def _set_perms_erlang_key():

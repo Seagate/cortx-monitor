@@ -6,8 +6,13 @@ to_lower_case() {
 }
 
 declare -a sed_expr=(-e '/^\[[A-Z]\+\]$/h')
-storage_type="$(provisioner get_setup_info --output json | jq -r .ret.storage_type | to_lower_case)"
-server_type="$(provisioner get_setup_info --output json | jq -r .ret.server_type | to_lower_case)"
+
+default_storage_type="virtual"
+default_server_type="virtual"
+storage_type="$(consul kv get sspl/config/SYSTEM_INFORMATION/storage_type 2>/dev/null)"
+[ -z "$storage_type" ] && storage_type=$default_storage_type
+server_type="$(consul kv get sspl/config/SYSTEM_INFORMATION/server_type 2>/dev/null)"
+[ -z "$server_type" ] && server_type=$default_server_type
 
 declare -A monitor=(
     [REALSTORSENSORS]="true"
@@ -21,7 +26,7 @@ declare -A monitor=(
 )
 
 case "${storage_type}" in
-    virtual) 
+    virtual)
         monitor[REALSTORSENSORS]="false"
         ;;
     jbod)

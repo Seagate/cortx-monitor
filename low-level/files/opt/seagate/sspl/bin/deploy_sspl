@@ -1,0 +1,126 @@
+#!/bin/bash
+
+# Copyright (c) 2020 Seagate Technology LLC and/or its Affiliates
+#
+# This program is free software: you can redistribute it and/or modify it under the
+# terms of the GNU Affero General Public License as published by the Free Software
+# Foundation, either version 3 of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+# PARTICULAR PURPOSE. See the GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License along
+# with this program. If not, see <https://www.gnu.org/licenses/>. For any questions
+# about this software or licensing, please email opensource@seagate.com or
+# cortx-questions@seagate.com.
+
+set -e -u -o pipefail
+
+PRODUCT="LDR_R2"
+RPMS_PATH=
+SSPL_BASE_DIR="/opt/seagate/cortx/sspl"
+
+
+usage()
+{
+    echo "\
+    Standalone SSPL deploy script.
+    (Bounded to single node deployment)
+    Usage:
+         $0
+            [-P|--product <LDR_R2>]
+            [-R|--local_rpms_path <local RPMS path>]
+            [-h|--help]
+    OPTION:
+    -P      <PRODUCT>           Product name (LDR_R1 | LDR_R2)
+    -R      <LOCAL RPMS PATH>   Path to local RPMS. If this is not passed,
+                                SSPL RPMS will be installed using yum repos.
+    "
+    exit 0
+}
+
+parse_args()
+{
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+        -h|--help)
+            usage ;;
+        -P|--product)
+            [ -z "$2" ] && echo "ERROR: Product not provided" && exit 1;
+            PRODUCT="$2"
+            shift ;;
+        -R|--local_rpms_path)
+            [ -z "$2" ] && echo "ERROR: Local RPMS path not provided" && exit 1;
+            RPMS_PATH="$2"
+            shift 2 ;;
+        *)
+            echo "ERROR: Unknown option provided: $1"
+            exit 1 ;;
+        esac
+    done
+}
+
+parse_args "$@"
+
+[ "$PRODUCT" != "LDR_R2" ] && {
+    echo "ERROR: deploy_sspl doesn't have support for product '$PRODUCT'"
+    exit 1
+}
+
+# If not local RPMS path is not passed, this will install
+# sspl specific RPMS using yum repos.
+if [ -n "$RPMS_PATH" ]
+then
+    echo -e "INFO: Installing SSPL RPMS from local path... \ncd ${RPMS_PATH}"
+    cd $RPMS_PATH
+    sudo yum install -y cortx-libsspl_sec-[12]* \
+                        cortx-libsspl_sec-method_none* \
+                        cortx-sspl-[12]* cortx-sspl-test*
+else
+    echo "INFO: Installing SSPL RPMS using yum repos..."
+    yum install -y cortx-sspl.noarch
+    yum install -y cortx-sspl-test
+fi
+
+if [ -z "$(rpm -qa | grep cortx-sspl)" ]
+then
+    echo "ERROR: Failed to locate SSPL RPMS."
+    echo "Please check sspl related repo files are \
+            available in target location";
+    exit 1
+fi
+
+$SSPL_BASE_DIR/bin/sspl_post_install -p "$PRODUCT"
+$SSPL_BASE_DIR/bin/sspl_setup_init -r cortx
+$SSPL_BASE_DIR/bin/sspl_config -f
+$SSPL_BASE_DIR/bin/sspl_setup_rabbitmq_cluster
+
+systemctl start rabbitmq-server.service
+systemctl start sspl-ll.service
+
+# Wait till sspl-ll service become active
+TRIES=0
+SSPL_STATUS=$(systemctl show -p ActiveState sspl-ll | sed 's/ActiveState=//g')
+while [ $SSPL_STATUS != "active" ]
+do
+    echo "sspl-ll service is not started. Waiting..."
+    sleep 2
+    TRIES=$((TRIES+1))
+    SSPL_STATUS=$(systemctl show -p ActiveState sspl-ll | sed 's/ActiveState=//g')
+    if [ $TRIES -gt 4 ]
+    then
+        break
+    fi
+done
+
+if [ "$SSPL_STATUS" == "active" ]
+then
+    echo "sspl-ll service is started."
+    sleep 5
+    echo "**********************************************************************"
+    echo "SSPL state is 'active'"
+    echo "**********************************************************************"
+else
+    echo "ERROR: sspl-ll service is not started."
+fi
