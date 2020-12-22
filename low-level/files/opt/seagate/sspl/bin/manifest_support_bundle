@@ -224,21 +224,21 @@ class ManifestSupportBundle(object):
         return final_encl_summary_dict
 
     def filter_encl_summary_dict(self, encl_data, encl_type):
-        self.encl_summary_filter.update({encl_type:{}})
+        self.encl_summary_filter.update({encl_type:[]})
         for encl in encl_data:
-            encl_durable_id = encl.get('durable-id', encl.get('serial-number', 'NA'))
             encl['vendor'] = encl.get("vendor", "NA") or "NA"
-            self.encl_summary_filter[encl_type].update({encl_durable_id:{}})
             if encl_type == 'drives':
                 encl['drive-serial-number'] = encl.get("serial-number")[:8]
-            self.update_encl_summary_dict(encl, encl_durable_id, encl_type)
+            self.encl_summary_filter[encl_type].append(self.update_encl_summary_dict(encl, encl_type))
 
-    def update_encl_summary_dict(self, encl, encl_durable_id, encl_type):
+    def update_encl_summary_dict(self, encl, encl_type):
+        encl_dict = {}
         for key in self.encl_summary_fields:
             value = encl.get(key)
             if value:
                 if value == "N/A" : value = "NA"
-                self.encl_summary_filter[encl_type][encl_durable_id].update({key:value})
+                encl_dict.update({key:value})
+        return encl_dict
                 
 if __name__ == "__main__":
     if not os.path.isfile(onGoingRequestPath):
