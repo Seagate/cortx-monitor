@@ -327,7 +327,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 else:
                     self._log_debug("NodeDataMsgHandler, _process_msg " +
                             f"No past data found for {self.sensor_type} sensor type")
-            
+
             elif self.sensor_type == "raid_integrity":
                 self._generate_raid_integrity_data(jsonMsg)
                 sensor_message_type = self.os_sensor_type.get(self.sensor_type, "")
@@ -670,6 +670,9 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         try:
             for interface in interfaces:
                 interface_name = interface.get("ifId")
+                # LDR R1 : Skip 'eno2' network interface monitoring as it is unused, so no alerts should come for same
+                if interface_name.lower() == "eno2":
+                    continue
                 nw_status = interface.get("nwStatus")
                 logger.debug("{0}:{1}".format(interface_name, nw_status))
                 # fault detected (Down/UNKNOWN, Up/UNKNOWN to Down, Up/Down to UNKNOWN)
@@ -705,6 +708,10 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
             interface_name = interface.get("ifId")
             phy_link_status = interface.get("nwCableConnStatus")
+
+            # LDR R1 : Skip 'eno2' network interface monitoring as it is unused, so no alerts should come for same
+            if interface_name.lower() == "eno2":
+                continue
 
             # fault detected (Down, Up to Down)
             if phy_link_status == 'DOWN':
@@ -879,7 +886,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             jsonMsg = RAIDintegrityMsg.getJson()
             self.raid_integrity_data = jsonMsg
             self.os_sensor_type["raid_integrity"] = self.raid_integrity_data
-             
+
             self._log_debug("_generate_raid_integrity_data, host_id: %s" %
                     (self._node_sensor.host_id))
 

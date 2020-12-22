@@ -1049,6 +1049,10 @@ class SSPLHealthView(object):
         net_data = psutil.net_io_counters(pernic=True)
         # Array to hold data about each network interface
         for interface in net_data.keys():
+            # LDR R1 : Skip 'eno2' network interface monitoring as it is unused
+            # so no alerts should come for same
+            if interface.lower() == "eno2":
+                continue
             nw_cable_conn_status = self.fetch_nw_cable_conn_status(interface)
             network_cable_json.update({
                     NW_CABLE_RESOURCE_TYPE+'-'+interface:{
