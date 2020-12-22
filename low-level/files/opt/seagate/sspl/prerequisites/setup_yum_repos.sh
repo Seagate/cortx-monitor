@@ -301,13 +301,13 @@ elif grep -q "CentOS Linux release 7.7" /etc/*-release; then
 elif grep -q "CentOS Linux release 7.8" /etc/*-release; then
     req_kernel_version='3.10.0-1127.el7.x86_64'
 else
-    echo "OS version not supported. Supported OS: RedHat-7.7, CentOS-7.7 and CentOS-7.8"
+    echo -e "\nERROR: OS version not supported. Supported OS: RedHat-7.7, CentOS-7.7 and CentOS-7.8"
     exit 1
 fi
 
 kernel_version=$(uname -r)
 if [[ "$kernel_version" != "$req_kernel_version" ]]; then
-    echo "ERROR: Kernel version is not supported. Required: $req_kernel_version installed: $kernel_version"
+    echo -e "\nERROR: Kernel version is not supported. Required: $req_kernel_version installed: $kernel_version"
     exit 1
 else
     echo "Done."

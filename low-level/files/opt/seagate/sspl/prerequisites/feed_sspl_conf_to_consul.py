@@ -46,13 +46,17 @@ class LoadConfig(object):
         self.rmq_same_pass_sect = ["LOGGINGPROCESSOR",
                                    "RABBITMQEGRESSPROCESSOR",
                                    "RABBITMQINGRESSPROCESSOR"]
+        self.common_config_sect = ['system_information',
+                                   'storage_enclosure',
+                                   'bmc',
+                                   'rabbitmq']
         self.cluster_id = None
         super().__init__()
 
     def _get_result(self, cmd):
         """ Execute command and return output
         """
-        result = None
+        result = ""
         out, _, rc = SimpleProcess(cmd).run()
         if rc == 0:
             result = out.decode('utf-8').strip()
@@ -78,7 +82,8 @@ class LoadConfig(object):
 
     def set_config(self, filename, node, component=None, rmq_user=None, rmq_passwd=None,\
                     primary_mc=None, secondary_mc=None, primary_mc_port=None, secondary_mc_port=None,\
-                    mc_user=None, mc_passwd=None, bmc_ip=None, bmc_user=None, bmc_pass=None):
+                    mc_user=None, mc_passwd=None, bmc_ip=None, bmc_user=None, bmc_passwd=None,\
+                    storage_type=None, server_type=None):
         """ Read config file and insert common config and sspl config
         """
         try:
@@ -95,28 +100,39 @@ class LoadConfig(object):
                 for key in self.rmq_same_pass_sect:
                     parser[key]['password'] = rmq_passwd
                     parser[key]['username'] = rmq_user
-            # Update common config
-            if not component:
-                parser['system_information']['operating_system'] = self._get_result('cat /etc/system-release')
-                parser['system_information']['kernel_version'] = self._get_result('uname -r')
-                cluster_id = self._get_result('consul kv get system_information/cluster_id')
-                parser['system_information']['cluster_id'] = cluster_id or self._get_result('uuidgen')
-                node_id = self._get_result('consul kv get system_information/srvnode-1/node_id')
-                parser['system_information']['srvnode-1']['node_id'] = node_id or self._get_result('uuidgen')
-                parser['storage_enclosure']['controller']['user'] = mc_user
-                parser['storage_enclosure']['controller']['password'] = mc_passwd
-                parser['storage_enclosure']['controller']['primary_mc']['ip'] = primary_mc
-                parser['storage_enclosure']['controller']['secondary_mc']['ip'] = secondary_mc
-                parser['storage_enclosure']['controller']['primary_mc']['port'] = primary_mc_port
-                parser['storage_enclosure']['controller']['secondary_mc']['port'] = secondary_mc_port
-                if not bmc_ip:
-                    parser['bmc'][node]['ip'] = bmc_ip
-                    parser['bmc'][node]['user'] = bmc_user
-                    parser['bmc'][node]['secret'] = bmc_pass
-            # Load config from file
+            # Include common configuration
+            parser['SYSTEM_INFORMATION']['kernel_version'] = self._get_result('uname -r')
+            cluster_id = self._get_result('consul kv get system_information/cluster_id')
+            parser['SYSTEM_INFORMATION']['cluster_id'] = cluster_id or self._get_result('uuidgen')
+            node_id = self._get_result(f'consul kv get system_information/{node}/node_id')
+            parser['SYSTEM_INFORMATION']['storage_type'] = storage_type
+            parser['SYSTEM_INFORMATION']['server_type'] = server_type
+            # Storage enclosure information
+            parser['STORAGE_ENCLOSURE'] = {'controller': {
+                                                'user': mc_user,
+                                                'password': mc_passwd,
+                                                'primary_mc': {
+                                                    'ip': primary_mc,
+                                                    'port': primary_mc_port
+                                                },
+                                                'secondary_mc': {
+                                                    'ip': secondary_mc,
+                                                    'port': secondary_mc_port
+                                                }
+                                            }
+                                        }
+            # BMC information
+            parser['BMC'] = { node: {
+                                'ip': bmc_ip or self._get_result(f'consul kv get bmc/{node}/ip'),
+                                'user': bmc_user or self._get_result(f'consul kv get bmc/{node}/user'),
+                                'secret': bmc_passwd or self._get_result(f'consul kv get bmc/{node}/secret')
+                                }
+                            }
+            prefix = component.lower() + '/config/'
             for k, v in parser.items():
-                if component:
-                    k = component + '/' + k
+                if k.lower() in self.common_config_sect:
+                    self._insert_nested_dict_to_consul(v, prefix=k.lower())
+                k = prefix + k
                 self._insert_nested_dict_to_consul(v, prefix=k)
 
 
@@ -128,35 +144,35 @@ if __name__ == '__main__':
     argParser.add_argument("-F", "--file", help="Config file path")
     argParser.add_argument("-C", "--component", help="Keys will be stored with this prefix")
     argParser.add_argument("-N", "--node", help="Node name")
-    argParser.add_argument("-Ru", "--rmq_user", help="Rabbitmq username")
-    argParser.add_argument("-Rp", "--rmq_passwd", help="Rabbitmq password")
-    argParser.add_argument("-A", "--primary_mc", help="Controller-A IP")
-    argParser.add_argument("-B", "--secondary_mc", help="Controller-B IP")
-    argParser.add_argument("-Ap", "--primary_mc_port", help="Controller-A Port")
-    argParser.add_argument("-Bp", "--secondary_mc_port", help="Controller-B Port")
-    argParser.add_argument("-U", "--user", help="Controller Username")
-    argParser.add_argument("-P", "--passwd", help="Controller Password")
+    argParser.add_argument("-Ru", "--rmq_user", default="sspluser", help="Rabbitmq username")
+    argParser.add_argument("-Rp", "--rmq_passwd", default="", help="Rabbitmq password")
+    argParser.add_argument("-A", "--primary_mc", default="10.0.0.2", help="Controller-A IP")
+    argParser.add_argument("-B", "--secondary_mc", default="10.0.0.3", help="Controller-B IP")
+    argParser.add_argument("-Ap", "--primary_mc_port", default="80", help="Controller-A Port")
+    argParser.add_argument("-Bp", "--secondary_mc_port", default="80", help="Controller-B Port")
+    argParser.add_argument("-U", "--user", default="", help="Controller Username")
+    argParser.add_argument("-P", "--passwd", default="", help="Controller Password")
     argParser.add_argument("--bmc_ip", default="", help="BMC IP")
     argParser.add_argument("--bmc_user", default="", help="BMC User")
     argParser.add_argument("--bmc_passwd", default="", help="BMC Password")
+    argParser.add_argument("-St", "--storage_type", default="virtual", help="Storage Type")
+    argParser.add_argument("-Sr", "--server_type", default="virtual", help="Server Type")
     args = argParser.parse_args()
     sc = LoadConfig()
-    # Load component config in consul else load common config
-    if args.component:
-        sc.set_config(filename=args.file,
-                      node=args.node,
-                      component= args.component.lower() + '/config',
-                      rmq_user=args.rmq_user,
-                      rmq_passwd=args.rmq_passwd)
-    else:
-        sc.set_config(filename=args.file,
-                      node=args.node,
-                      mc_user=args.user,
-                      mc_passwd=args.passwd,
-                      primary_mc=args.primary_mc,
-                      secondary_mc=args.secondary_mc,
-                      primary_mc_port=args.primary_mc_port,
-                      secondary_mc_port=args.secondary_mc_port,
-                      bmc_ip=args.bmc_ip,
-                      bmc_user=args.bmc_user,
-                      bmc_pass=args.bmc_passwd)
+    # Load configs in consul
+    sc.set_config(filename=args.file,
+                  node=args.node,
+                  component= args.component,
+                  rmq_user=args.rmq_user,
+                  rmq_passwd=args.rmq_passwd,
+                  mc_user=args.user,
+                  mc_passwd=args.passwd,
+                  primary_mc=args.primary_mc,
+                  secondary_mc=args.secondary_mc,
+                  primary_mc_port=args.primary_mc_port,
+                  secondary_mc_port=args.secondary_mc_port,
+                  bmc_ip=args.bmc_ip,
+                  bmc_user=args.bmc_user,
+                  bmc_passwd=args.bmc_passwd,
+                  storage_type=args.storage_type,
+                  server_type=args.server_type)

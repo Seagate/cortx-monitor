@@ -40,7 +40,7 @@ INGRESS_CONFIG_SECTION = 'RABBITMQINGRESSPROCESSOR'
 EGRESS_CONFIG_SECTION = 'RABBITMQEGRESSPROCESSOR'
 LOGGER_CONFIG_SECTION = 'LOGGINGPROCESSOR'
 CLUSTER_SECTION = 'RABBITMQCLUSTER'
-SYSTEM_INFORMATION = 'system_information'
+SYSTEM_INFORMATION = 'SYSTEM_INFORMATION'
 ERLANG_COOKIE_PATH = '/var/lib/rabbitmq/.erlang.cookie'
 
 # Required keys
@@ -73,19 +73,6 @@ def get_sspl_config_value(key, sect="", prefix="sspl/config", default=None):
         v = default
     return v
 
-def get_common_config_value(key, sect="", default=None):
-    v = None
-    if sect:
-        k = sect + "/" + key
-    res = consul_conn.kv.get(k)[1]
-    if res and res['Value']:
-        v = res['Value'].decode()
-        if "," in v:
-            v = v.replace(" ", "").split(",")
-    if not v:
-        v = default
-    return v
-
 def _gen_key(cluster_id, service_name):
     # Generate key for decryption
     key = Cipher.generate_key(cluster_id, service_name)
@@ -104,8 +91,8 @@ def _decrypt(key, text):
 def main():
     """ Main method of this program. """
 
-    _check_and_reset_rabbitmq()
     _start_rabbitmq()
+    _check_and_reset_rabbitmq()
 
     virtual_host = get_sspl_config_value(key=VIRT_HOST_KEY, sect=SECTION, default='SSPL')
     username = get_sspl_config_value(key=RPMQ_USERNAME_KEY, sect=SECTION, default='sspluser')
@@ -114,7 +101,7 @@ def main():
     _create_vhost_if_necessary(virtual_host)
 
     # Decrypt password
-    cluster_id = get_common_config_value(key=CLUSTER_ID_KEY, sect=SYSTEM_INFORMATION)
+    cluster_id = get_sspl_config_value(key=CLUSTER_ID_KEY, sect=SYSTEM_INFORMATION)
     key = _gen_key(cluster_id, 'rabbitmq')
     password = _decrypt(key, password.encode('ascii'))
     _create_user_if_necessary(username, password, virtual_host)

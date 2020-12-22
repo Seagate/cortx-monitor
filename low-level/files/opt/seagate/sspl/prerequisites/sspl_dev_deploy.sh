@@ -23,10 +23,9 @@
 #  Usage      :   ./sspl_dev_deploy.sh --help
 # *******************************************************************
 
-
 set -eE
 
-LOG_FILE="${LOG_FILE:-/var/log/cortx/sspl/sspl-prereqs.log}"
+LOG_FILE="${LOG_FILE:-/var/log/cortx/sspl/sspl_dev_deploy.log}"
 export LOG_FILE
 
 if [[ ! -e "$LOG_FILE" ]]; then
@@ -46,6 +45,7 @@ echo "INFO: Date: $(date)" 2>&1 | tee -a "${LOG_FILE}"
 do_cleanup=false
 install_3rd_party_packages=false
 disable_sub_mgr=false
+skip_bmc=false
 TARGET_BUILD=
 COMPONENT="SSPL"
 PRODUCT_VERSION="LDR_R2"
@@ -57,9 +57,9 @@ CNTRLR_A_PORT="80"
 CNTRLR_B_PORT="80"
 CNTRLR_USER=
 CNTRLR_PASSWD=
-BMC_IP=
-BMC_USER=
-BMC_PASSWD=
+BMC_IP=""
+BMC_USER=""
+BMC_PASSWD=""
 
 
 usage()
@@ -84,6 +84,8 @@ usage()
             [--p|--bmc_passwd <bmc password>]
             [--Ru|--rmq_user    <rabbitmq username>]
             [--Rp|--rmq_passwd  <rabbitmq password>]
+            [--St|--storage_type  <storage type>]
+            [--Sr|--server_type    <server type>]
             [-D|--disable-sub-mgr]
             [--standalone-installation]
             [--cleanup]
@@ -110,6 +112,8 @@ usage()
                     3rd_party              <- CORTX 3rd party ISO is mounted here
                     cortx_iso              <- CORTX ISO (main) is mounted here
     --standalone_installation   Configure SSPL 3rd party dependencies like consul, rabbitmq
+    --St    <STORAGE TYPE>      Storage type  ie. jbod, rbod
+    --Sr    <SERVER TYPE>       Server type   ie. physical, virtual
     -D|--disable-sub-mgr        For RHEL. To install prerequisites by disabling
                                 subscription manager (usually, not recommended).
                                 If this option is not provided it is expected that
@@ -191,6 +195,14 @@ parse_args()
             [ -z "$2" ] && echo "ERROR: BMC password not provided" && exit 1;
             BMC_PASSWD="$2"
             shift 2 ;;
+        --St|--storage_type)
+            [ -z "$2" ] && echo "ERROR: Storage type not provided" && exit 1;
+            STORAGE_TYPE="$2"
+            shift 2 ;;
+        --Sr|--server_type)
+            [ -z "$2" ] && echo "ERROR: Server type not provided" && exit 1;
+            SERVER_TYPE="$2"
+            shift 2 ;;
         *)
             echo "ERROR: Unknown option provided: $1"
             exit 1 ;;
@@ -203,13 +215,17 @@ parse_args "$@"
 # Check for required arguments
 [ -z "$CNTRLR_USER" ] && echo "ERROR: -U <controller user name> is required." && exit 1;
 [ -z "$CNTRLR_PASSWD" ] && echo "ERROR: -P <controller password> is required." && exit 1;
-[ "$PRODUCT_VERSION" == "LDR_R2" ] && {
+[ -z "$STORAGE_TYPE" ] && echo "ERROR: --storage_type <type> is required." && exit 1;
+[ -z "$SERVER_TYPE" ] && echo "ERROR: --server_type <type> is required." && exit 1;
+if [ "$PRODUCT_VERSION" == "LDR_R2" ] &&  [ -z "$BMC_IP" ]
+then
+    skip_bmc=true
     echo "Skipping BMC information for LDR_R2..." 2>&1 | tee -a "${LOG_FILE}" ;
-    }|| {
+else
     [ -z "$BMC_IP" ] && echo "ERROR: --i <BMC IPV4> is required." && exit 1;
     [ -z "$BMC_USER" ] && echo "ERROR: --u <BMC user> is required." && exit 1;
     [ -z "$BMC_PASSWD" ] && echo "ERROR: --p <BMC password> is required." && exit 1;
-}
+fi
 
 # Cleanup
 cleanup(){
@@ -268,9 +284,10 @@ setup_consul(){
     # Create config file for consul agent
     CONSUL_CONFIG_DIR='/opt/seagate/cortx/sspl/bin'
     CONSUL_CONFIG_FILE="$CONSUL_CONFIG_DIR/consul_config.json"
-    if [[ ! -e "$CONSUL_CONFIG_DIR" ]]; then
-        mkdir -p $(dirname "${CONSUL_CONFIG_DIR}")
+    if [ ! -d "$CONSUL_CONFIG_DIR" ]; then
+        mkdir -p "${CONSUL_CONFIG_DIR}"
     fi
+    rm -rf $CONSUL_CONFIG_FILE
     cat << EOF >> $CONSUL_CONFIG_FILE
         {
             "watches": [
@@ -289,27 +306,25 @@ EOF
 
     TRIES=0
     while [ -z "$CONSUL_PS" ]; do
-        sleep 2
+        sleep 3
         TRIES=$((TRIES+1))
         CONSUL_PS=$(pgrep "consul" || true)
-        if [ $TRIES -gt 5 ]; then
+        if [ $TRIES -gt 10 ]; then
             echo "ERROR: Consul service is not started"
             break
         fi
     done
 
     # Choose sspl.conf file based on component version
-    SSPL_CONF='/etc/sspl.conf'
-    curl $CORTX_MONITOR_BASE_URL/conf/sspl.conf.${PRODUCT_VERSION} -o sspl.conf;
-    mv sspl.conf $SSPL_CONF
+    SSPL_CONF="sspl.conf.${PRODUCT_VERSION}"
+    curl $CORTX_MONITOR_BASE_URL/conf/${SSPL_CONF} -o ${SSPL_CONF};
 
     # Load sspl conf to consul
-    curl $CORTX_MONITOR_BASE_URL/prerequisites/common_config_SN.ini -o common_config_SN.ini;
     curl $CORTX_MONITOR_BASE_URL/prerequisites/feed_sspl_conf_to_consul.py -o feed_sspl_conf_to_consul.py;
     chmod a+x feed_sspl_conf_to_consul.py
 
     # Update persistent cluster_id and node_id in common config if not already present
-    [ -z "$(consul kv get system_information/cluster_id)" ] && {
+    [ -z "$(consul kv get system_information/cluster_id 2>/dev/null)" ] && {
         cluster_id=$(sed -nr 's/^cluster_id=([^,]+)$/\1/p' $CONFIG_FILE | head -1)
         [ -z "$cluster_id" ] && cluster_id=$(uuidgen)
         consul kv put system_information/cluster_id "$cluster_id"
@@ -318,7 +333,7 @@ EOF
     }
 
     # Update persistent node_id in common config if not already present
-    [ -z "$(consul kv get system_information/$NODE/node_id)" ] && {
+    [ -z "$(consul kv get system_information/$NODE/node_id 2>/dev/null)" ] && {
         node_id=$(sed -nr 's/^node_id=([^,]+)$/\1/p' $CONFIG_FILE | head -1)
         [ -z "$node_id" ] && node_id=$(uuidgen)
         [ -z $NODE ] && NODE="srvnode-1"
@@ -330,22 +345,22 @@ EOF
     # Update CONFIG_FILE wih identified cluster_id & node_id
     echo -e "cluster_id=$cluster_id\nnode_id=$node_id" > "$CONFIG_FILE"
 
-    echo "INFO: Inserting common config in consul.."
-    [ "$PRODUCT_VERSION" == "LDR_R2" ] && {
-        python3 feed_sspl_conf_to_consul.py -F common_config_SN.ini -N $NODE \
-                    -A $CNTRLR_A -B $CNTRLR_B -U $CNTRLR_USER -P $CNTRLR_PASSWD \
-                    -Ap $CNTRLR_A_PORT -Bp $CNTRLR_B_PORT ;
-    } || {
-        python3 feed_sspl_conf_to_consul.py -F common_config_SN.ini -N $NODE \
-                    --bmc_ip $BMC_IP --bmc_user $BMC_USER --bmc_passwd $BMC_PASS \
-                    -Ru $RMQ_USER -Rp $RMQ_PASSWD \
-                    -A $CNTRLR_A -B $CNTRLR_B -U $CNTRLR_USER -P $CNTRLR_PASSWD \
-                    -Ap $CNTRLR_A_PORT -Bp $CNTRLR_B_PORT ;
-    }
-
     echo "INFO: Inserting $COMPONENT config in consul.."
-    python3 feed_sspl_conf_to_consul.py -F $SSPL_CONF -N $NODE \
-                    -C $COMPONENT -Ru $RMQ_USER -Rp $RMQ_PASSWD
+    if [ "$skip_bmc" == "true" ];
+    then
+        python3 feed_sspl_conf_to_consul.py -F $SSPL_CONF -N $NODE \
+                    -C $COMPONENT -Ru $RMQ_USER -Rp $RMQ_PASSWD \
+                    -A $CNTRLR_A -Ap $CNTRLR_A_PORT -B $CNTRLR_B -Bp $CNTRLR_B_PORT \
+                    -U $CNTRLR_USER -P $CNTRLR_PASSWD \
+                    -St $STORAGE_TYPE -Sr $SERVER_TYPE ;
+    else
+        python3 feed_sspl_conf_to_consul.py -F $SSPL_CONF -N $NODE \
+                    -C $COMPONENT -Ru $RMQ_USER -Rp $RMQ_PASSWD \
+                    -A $CNTRLR_A -Ap $CNTRLR_A_PORT -B $CNTRLR_B -Bp $CNTRLR_B_PORT \
+                    -U $CNTRLR_USER -P $CNTRLR_PASSWD \
+                    -St $STORAGE_TYPE -Sr $SERVER_TYPE \
+                    --bmc_ip $BMC_IP --bmc_user $BMC_USER --bmc_passwd $BMC_PASS ;
+    fi
     echo "Done consul setup."
 }
 
@@ -359,7 +374,7 @@ setup_rabbitmq(){
         echo "with exit code ${reinit_err} for product $product"
         exit 1
     }
-    echo "Done rabbitmq setup."
+    echo "Done rabbitmq setup.";
 }
 
 # Configure consul
