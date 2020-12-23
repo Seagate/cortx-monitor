@@ -53,7 +53,7 @@ for group in "${!monitor[@]}"; do
     ${CONSUL_PATH}/consul kv put sspl/config/"${group}"/monitor "${monitor["${group}"]}"
 done
 
-file_store_config_path="/opt/seagate/${PRODUCT_FAMILY}/sspl/sspl_test/sspl_tests.conf"
+file_store_config_path="/opt/seagate/${PRODUCT_FAMILY}/sspl/sspl_test/conf/sspl_tests.conf"
 [ -f "${file_store_config_path}" ] && {
     sed -i "${sed_expr[@]}" $file_store_config_path
 }

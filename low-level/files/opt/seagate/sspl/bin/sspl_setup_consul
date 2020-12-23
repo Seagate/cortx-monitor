@@ -25,7 +25,7 @@ set -e -u -o pipefail
 
 SCRIPT_DIR=$(dirname $0)
 # Import common constants
-. $SCRIPT_DIR/constants.sh
+source $SCRIPT_DIR/constants.sh
 SCRIPT_NAME=$(basename $0)
 
 mkdir -p $CONSUL_PATH
@@ -73,7 +73,7 @@ if ! [ -x "$(command -v $CONSUL_PATH/consul)" ]; then
     # Invoke consul agent from fallback path
     CONSUL_PS=$(ps -aux | grep "consul" | grep -v "grep" | grep -v "bash" || true)
     [ -z "$CONSUL_PS" ] &&
-        $CONSUL_PATH/consul agent -dev -config-file=$SSPL_BASE_DIR/low-level/files/opt/seagate/sspl/bin/consul_config.json &>/dev/null &
+        $CONSUL_PATH/consul agent -dev -config-file=$SSPL_BASE_DIR/bin/consul_config.json &>/dev/null &
 
     TRIES=0
     while [ -z "$CONSUL_PS" ]; do

@@ -168,4 +168,3 @@ if __name__ == '__main__':
         print(f'RabbitMQ is running in {len(nodes)} nodes.')
     else:
         print('RabbitMQ is running in single node mode.')
-        

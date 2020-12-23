@@ -24,7 +24,7 @@ set -e -u -o pipefail
 
 SCRIPT_NAME=$(basename $0)
 SCRIPT_DIR=$(dirname $0)
-. $SCRIPT_DIR/constants.sh
+source $SCRIPT_DIR/constants.sh
 
 SSPL_CONFIGURED="/var/$PRODUCT_FAMILY/sspl/sspl-configured"
 
@@ -87,7 +87,7 @@ case $cmd in
     check )
         sudo python3 $SCRIPT_DIR/validate_consul_config.py
         [ -f $SSPL_CONFIGURED ] && exit $?
-        logger -i -p local3.err "SSPL is not configured. Run provisioner scripts in $SSPL_BASE_DIR/low-level/files/opt/seagate/sspl/bin."
+        logger -i -p local3.err "SSPL is not configured. Run provisioner scripts in $SSPL_BASE_DIR/bin."
         exit 1
         ;;
 

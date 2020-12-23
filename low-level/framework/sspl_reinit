@@ -23,9 +23,9 @@
 # Usage:
 #    ./sspl_reinit <product>
 #
-script_dir=$(realpath $(dirname $0)/..)
+script_dir=$(dirname $0)
 # Import common constants
-. $script_dir/files/opt/seagate/sspl/bin/constants.sh
+source $script_dir/constants.sh
 
 [ "${1}" = "CS-L" -o "${1}" = "CS-G" ] && {
     id -u sspl-ll &>/dev/null || /usr/sbin/useradd \

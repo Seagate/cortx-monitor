@@ -185,7 +185,7 @@ This guide provides a step-by-step walkthrough for getting you CORTX-Monitor Ser
 
   2. Run sanity test using:
 
-      `$ /opt/seagate/cortx/sspl/low-level/files/opt/seagate/sspl/bin/sspl_test sanity` or,
+      `$ /opt/seagate/cortx/sspl/bin/sspl_test sanity` or,
       `/opt/seagate/cortx/sspl/sspl_test/run_tests.sh`
 
       **Sample Output:**

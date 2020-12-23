@@ -16,7 +16,7 @@
 # cortx-questions@seagate.com.
 
 SCRIPT_DIR=$(dirname $0)
-. $SCRIPT_DIR/constants.sh
+source $SCRIPT_DIR/constants.sh
 
 SSPL_STORE_TYPE=${SSPL_STORE_TYPE:-consul}
 

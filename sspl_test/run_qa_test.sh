@@ -24,7 +24,7 @@ IS_VIRTUAL=$(facter is_virtual)
 
 [[ $EUID -ne 0 ]] && sudo=sudo
 script_dir=$(dirname $0)
-. $script_dir/constants.sh
+source $script_dir/constants.sh
 
 plan=${1:-}
 avoid_rmq=${2:-}
@@ -129,10 +129,10 @@ restore_cfg_services()
         # This is required otherwise, everytime if we run sanity, key-value
         # pairs will be appended which will break the sanity.
         # Also, everytime, updated values from /etc/sspl.conf should be updated.
-        sed -i 's/node_id='"$node_id"'/node_id=001/g' /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/sspl_tests.conf
-        sed -i 's/rack_id='"$rack_id"'/rack_id=001/g' /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/sspl_tests.conf
-        sed -i 's/site_id='"$site_id"'/site_id=001/g' /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/sspl_tests.conf
-        sed -i 's/cluster_id='"$cluster_id"'/cluster_id=001/g' /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/sspl_tests.conf
+        sed -i 's/node_id='"$node_id"'/node_id=001/g' /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/conf/sspl_tests.conf
+        sed -i 's/rack_id='"$rack_id"'/rack_id=001/g' /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/conf/sspl_tests.conf
+        sed -i 's/site_id='"$site_id"'/site_id=001/g' /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/conf/sspl_tests.conf
+        sed -i 's/cluster_id='"$cluster_id"'/cluster_id=001/g' /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/conf/sspl_tests.conf
     else
         $CONSUL_PATH/consul kv put sspl/config/STORAGE_ENCLOSURE/controller/primary_mc/ip $primary_ip
         port=$($CONSUL_PATH/consul kv get sspl/config/STORAGE_ENCLOSURE/controller/primary_mc/port)
@@ -291,10 +291,10 @@ then
 else
     # Update sspl_tests.conf with updated System Information
     # append above parsed key-value pairs in sspl_tests.conf under [SYSTEM_INFORMATION] section
-    sed -i 's/node_id=001/node_id='"$node_id"'/g' /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/sspl_tests.conf
-    sed -i 's/site_id=001/site_id='"$site_id"'/g' /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/sspl_tests.conf
-    sed -i 's/rack_id=001/rack_id='"$rack_id"'/g' /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/sspl_tests.conf
-    sed -i 's/cluster_id=001/cluster_id='"$cluster_id"'/g' /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/sspl_tests.conf
+    sed -i 's/node_id=001/node_id='"$node_id"'/g' /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/conf/sspl_tests.conf
+    sed -i 's/site_id=001/site_id='"$site_id"'/g' /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/conf/sspl_tests.conf
+    sed -i 's/rack_id=001/rack_id='"$rack_id"'/g' /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/conf/sspl_tests.conf
+    sed -i 's/cluster_id=001/cluster_id='"$cluster_id"'/g' /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/conf/sspl_tests.conf
 fi
 
 # updateing rabbitmq cluster

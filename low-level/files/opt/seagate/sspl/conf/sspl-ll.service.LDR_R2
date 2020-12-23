@@ -20,7 +20,7 @@ After=syslog.target
 [Service]
 #Type=notify
 PermissionsStartOnly=true
-ExecStartPre=/opt/seagate/cortx/sspl/low-level/files/opt/seagate/sspl/bin/sspl_setup check
+ExecStartPre=/opt/seagate/cortx/sspl/bin/sspl_setup check
 ExecStartPre=-/usr/bin/mkdir -p /var/run/sspl_ll
 ExecStartPre=/usr/bin/chown sspl-ll:root /var/run/sspl_ll
 ExecStart=/usr/bin/sspl_ll_d

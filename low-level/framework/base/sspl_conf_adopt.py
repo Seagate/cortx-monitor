@@ -39,7 +39,7 @@ class ConfDiff(object):
 
 if __name__ == '__main__':
     print('comparing conf files.')
-    conf_diff = ConfDiff('/opt/seagate/cortx/sspl/low-level/files/opt/seagate/sspl/conf/sspl.conf.LDR_R1', '/etc/sspl.conf')
+    conf_diff = ConfDiff('/opt/seagate/cortx/sspl/conf/sspl.conf.LDR_R1', '/etc/sspl.conf')
     print('writing destination conf file to tmp dir.')
     conf_diff.update_sub_section_diff()
     with open('/tmp/sspl_tmp.conf', 'w') as configfile:

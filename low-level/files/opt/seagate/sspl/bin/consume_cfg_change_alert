@@ -17,7 +17,7 @@
 
 set -eu -o pipefail
 SCRIPT_DIR=$(dirname $0)
-. $SCRIPT_DIR/constants.sh
+source $SCRIPT_DIR/constants.sh
 
 # Redirect all printouts to the log file with the timestamp prefix:
 exec &>> /var/log/$PRODUCT_FAMILY/sspl/consul-${0##*/}.log

@@ -20,7 +20,7 @@ set -e
 BASE_DIR=$(realpath $(dirname $0)/..)
 
 PROG_NAME=$(basename $0)
-. "$BASE_DIR/low-level/files/opt/seagate/sspl/bin/constants.sh"
+source "$BASE_DIR/low-level/files/opt/seagate/sspl/bin/constants.sh"
 
 RPM_BUILD_PATH=${DIST:-$HOME/rpmbuild}
 

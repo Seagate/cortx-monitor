@@ -14,4 +14,4 @@
 # cortx-questions@seagate.com.
 
 support_bundle:
-    - /opt/seagate/cortx/sspl/low-level/files/opt/seagate/sspl/bin/manifest_support_bundle
+    - /usr/bin/manifest_support_bundle
