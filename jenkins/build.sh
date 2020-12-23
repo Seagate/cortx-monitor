@@ -139,7 +139,7 @@ fi
 echo "Generated rpm's for sspl build"
 
 # remove systemd-python36
-# yum erase -y systemd-python36-*
+yum erase -y systemd-python36-*
 
 echo -e "\nGenerated RPMs..."
 find $RPM_BUILD_PATH -name "*.rpm"
