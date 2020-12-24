@@ -27,7 +27,7 @@ set -e -u -o pipefail
 SCRIPT_DIR=$(dirname $0)
 SCRIPT_NAME=$(basename $0)
 
-source $SCRIPT_DIR/low-level/files/opt/seagate/sspl/bin/constants.sh
+source $SCRIPT_DIR/bin/constants.sh
 
 rmq_cluster=true
 rmq_cluster_nodes=
