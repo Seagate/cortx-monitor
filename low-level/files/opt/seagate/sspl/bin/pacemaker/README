@@ -46,4 +46,3 @@ Scenarios to test:
      should be promoted and SSPL should change state from degraded to active.
    - This will might cause Demoted secondary node resource in Stopped state. So, in order to start it,
      "pcs resource cleanup sspl" will work.
-     

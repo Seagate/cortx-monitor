@@ -17,6 +17,7 @@
 
 set -e
 
+BUILD_START_TIME=$(date +%s)
 BASE_DIR=$(realpath $(dirname $0)/..)
 
 PROG_NAME=$(basename $0)
@@ -72,12 +73,12 @@ case $LOG_LEVEL in
 esac
 echo "Using VERSION=${VERSION} GIT_VER=${GIT_VER} PRODUCT=${PRODUCT} TEST=${TEST} LOG_LEVEL=${LOG_LEVEL} "
 
-################### COPY FRESH DIR ##############################
+################### INSTALL REQUIRED RPM PACKAGES ##############################
 
 # Check python package
 req_file=$BASE_DIR/low-level/requirements.txt
 echo "Installing python packages..."
-pip3.6 install -r $req_file  > /dev/null || {
+python3 -m pip install --user -r $req_file  > /dev/null || {
     echo "Unable to install package from $req_file"; exit 1;
 };
 
@@ -95,6 +96,7 @@ yum install -y systemd-python36-*
 ################### TAR & RPM BUILD ##############################
 
 # Remove existing directory tree and create fresh one.
+TAR_START_TIME=$(date +%s)
 cd $BASE_DIR
 rm -rf ${RPM_BUILD_PATH}
 mkdir -p ${RPM_BUILD_PATH}/SOURCES
@@ -115,10 +117,12 @@ fi
 
 tar -czvf ${RPM_BUILD_PATH}/SOURCES/$PRODUCT_FAMILY-sspl-${VERSION}.tgz -C ${BASE_DIR}/.. ${PRODUCT_FAMILY}-sspl/low-level ${PRODUCT_FAMILY}-sspl/libsspl_sec
 
+TAR_END_TIME=$(date +%s)
 echo "Generated tar for sspl build"
 
 ################### RPM builds for SSPL ##############################
 echo "Generating rpm's for sspl build"
+RPM_BUILD_START_TIME=$(date +%s)
 
 rpmbuild --define "version $VERSION" --define "git_rev $GIT_VER" \
     --define "_topdir $TOPDIR" --define "product_family $PRODUCT_FAMILY" -bb $BASE_DIR/low-level/sspl-ll.spec
@@ -136,10 +140,26 @@ then
     rpmbuild --define "version $VERSION" --define "git_rev $GIT_VER" \
         --define "_topdir $TOPDIR" --define "product_family $PRODUCT_FAMILY" -bb $BASE_DIR/sspl_test/sspl-test.spec
 fi
+
+RPM_BUILD_END_TIME=$(date +%s)
 echo "Generated rpm's for sspl build"
 
 # remove systemd-python36
 yum erase -y systemd-python36-*
+
+BUILD_END_TIME=$(date +%s)
+
+TAR_DIFF=$(( $TAR_END_TIME - $TAR_START_TIME ))
+printf "TAR CREATION TIME ==========> "
+printf "%02d:%02d:%02d\n" $(( TAR_DIFF / 3600 )) $(( ( TAR_DIFF / 60 ) % 60 )) $(( TAR_DIFF % 60 ))
+
+RPM_BUILD_DIFF=$(( $RPM_BUILD_END_TIME - $RPM_BUILD_START_TIME ))
+printf "RPM BUILD TIME ==========> "
+printf "%02d:%02d:%02d\n" $(( RPM_BUILD_DIFF / 3600 )) $(( ( RPM_BUILD_DIFF / 60 ) % 60 )) $(( RPM_BUILD_DIFF % 60 ))
+
+BUILD_DIFF=$(( $BUILD_END_TIME - $BUILD_START_TIME ))
+printf "COMPLETE BUILD TIME ==========> "
+printf "%02d:%02d:%02d\n" $(( BUILD_DIFF / 3600 )) $(( ( BUILD_DIFF / 60 ) % 60 )) $(( BUILD_DIFF % 60 ))
 
 echo -e "\nGenerated RPMs..."
 find $RPM_BUILD_PATH -name "*.rpm"

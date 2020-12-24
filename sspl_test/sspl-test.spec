@@ -60,12 +60,12 @@ if [[ -n $fl ]]; then
         # Jinja2 & MarkupSafe are already installed for salt configuration by provisioner.
         # Removing them would cause other resources to fail.
         pip3.6 uninstall -y flask
-        pip3.6 install Flask==1.1.1
+        pip3.6 install --user Flask==1.1.1
         #touch ${SSPL_DIR}/sspl_test/keep_flask
         #echo "$ver" > ${SSPL_DIR}/sspl_test/keep_flask
     fi
 else
-    pip3.6 install Flask==1.1.1
+    pip3.6 install --user Flask==1.1.1
     #touch ${SSPL_DIR}/sspl_test/keep_flask
 fi
 

@@ -44,4 +44,3 @@ if __name__ == '__main__':
     conf_diff.update_sub_section_diff()
     with open('/tmp/sspl_tmp.conf', 'w') as configfile:
         conf_diff.conf_file2_dict.write(configfile, space_around_delimiters=False)
-        

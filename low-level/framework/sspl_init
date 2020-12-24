@@ -141,7 +141,7 @@ create_req() {
 config_sspl() {
 
     # Install packages which are not available in YUM repo, from PIP
-    pip3.6 install -r /opt/seagate/$PRODUCT_FAMILY/sspl/low-level/requirements.txt
+    pip3.6 install --user -r /opt/seagate/$PRODUCT_FAMILY/sspl/low-level/requirements.txt
 
     # steps from %post section of sspl-ll.spec
 

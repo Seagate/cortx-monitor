@@ -69,7 +69,7 @@ done
     $script_dir/sspl_setup_consul -e $ENVIRONMENT
 
 # Install packages which are not available in YUM repo, from PIP
-pip3.6 install -r $SSPL_BASE_DIR/low-level/requirements.txt
+python3 -m pip install --user -r $SSPL_BASE_DIR/low-level/requirements.txt
 
 # NOTE: By default the sspl default conf file will not be copied.
 # The provisioner is supposed to copy the appropriate conf file based
