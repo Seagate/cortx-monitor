@@ -110,6 +110,7 @@ SSPL_DIR=/opt/seagate/%{product_family}/sspl
     ln -sf $SSPL_DIR/low-level/files/opt/seagate/sspl/bin/manifest_support_bundle /usr/bin/manifest_support_bundle
     ln -sf $SSPL_DIR/low-level/framework/sspl_rabbitmq_reinit $SSPL_DIR/bin/sspl_rabbitmq_reinit
     ln -sf $SSPL_DIR/low-level/framework/base/sspl_constants.py $SSPL_DIR/bin/sspl_constants.py
+    ln -sf $SSPL_DIR/low-level/framework/sspl_init $SSPL_DIR/bin/sspl_init
     ln -sf $SSPL_DIR/low-level/framework/sspl_reinit $SSPL_DIR/bin/sspl_reinit
     ln -sf $SSPL_DIR/low-level/framework/utils/salt_util.py $SSPL_DIR/bin/salt_util.py
 }
@@ -132,7 +133,7 @@ SSPL_DIR=/opt/seagate/%{product_family}/sspl
 
 # Copy init script
 [ -f $SSPL_DIR/sspl_init ] ||
-    ln -s $SSPL_DIR/low-level/files/opt/seagate/sspl/bin/sspl_provisioner_init $SSPL_DIR/sspl_init
+    ln -s $SSPL_DIR/bin/sspl_provisioner_init $SSPL_DIR/sspl_init
 
 # In case of upgrade start sspl-ll after upgrade
 if [ "$1" == "2" ]; then
