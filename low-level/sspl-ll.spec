@@ -143,7 +143,7 @@ fi
 
 if [ "$1" = "1" ]; then
     echo "Installation complete. Follow the instructions."
-    echo "Run pip3.6 install --user -r /opt/seagate/%{product_family}/sspl/low-level/requirements.txt"
+    echo "Run pip3.6 install -r /opt/seagate/%{product_family}/sspl/low-level/requirements.txt"
     echo "Run /opt/seagate/%{product_family}/sspl/sspl_init to configure SSPL"
 fi
 

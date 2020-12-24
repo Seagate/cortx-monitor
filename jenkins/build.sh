@@ -78,7 +78,7 @@ echo "Using VERSION=${VERSION} GIT_VER=${GIT_VER} PRODUCT=${PRODUCT} TEST=${TEST
 # Check python package
 req_file=$BASE_DIR/low-level/requirements.txt
 echo "Installing python packages..."
-python3 -m pip install --user -r $req_file  > /dev/null || {
+python3 -m pip install -r $req_file  > /dev/null || {
     echo "Unable to install package from $req_file"; exit 1;
 };
 

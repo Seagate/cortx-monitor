@@ -174,4 +174,3 @@ if len(sys.argv) >= 2:
     product = sys.argv[2]
     if environment == 'DEV':
         sc.insert_dev_common_config(product)
-        

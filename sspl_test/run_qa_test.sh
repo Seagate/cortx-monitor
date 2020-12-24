@@ -196,7 +196,7 @@ flask_installed=$(python3.6 -c 'import pkgutil; print(1 if pkgutil.find_loader("
 [ $flask_installed = "1" ] && [ $(python3.6 -c 'import flask; print(flask.__version__)') = "1.1.1" ] || {
     flask_help
     echo "Please install Flask 1.1.1 using
-          pip3.6 install --user flask==1.1.1"
+          pip3.6 install flask==1.1.1"
     echo -e "\n"
     exit 1
 }

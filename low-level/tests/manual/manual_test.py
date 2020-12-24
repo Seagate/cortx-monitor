@@ -696,4 +696,3 @@ class ManualTest():
 
     def get_msg_received(self):
         return self._msg_received
-        
