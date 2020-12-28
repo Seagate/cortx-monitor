@@ -74,6 +74,7 @@ usage()
             [-N|--node  <Node name/id>]
             [-A|--cntrlr_a  <controller A IP>]
             [-B|--cntrlr_b  <controller B IP>]
+            [-L|--local_rpms_path   <sspl rpms location>]
             [-T|--target_build_url  <target build url>]
             [--Ap|--cntrlr_a_port  <controller A Port>]
             [--Bp|--cntrlr_b_port  <controller B Port>]
@@ -105,6 +106,7 @@ usage()
     --i     <BMC IP>            BMC IPV4 for Node-1
     --u     <BMC USER>          BMC User for Node-1
     --p     <BMC PASSWORD>      BMC Password for Node-1 (Encrypted)
+    -L      <LOCAL RPMS PATH>   Local RPMS location
     -T      <TARGET BUILD>      Target build base url pointed to release bundle base directory,
                 if specified the following directory structure is assumed:
                 <base_url>/
@@ -112,7 +114,7 @@ usage()
                     3rd_party              <- CORTX 3rd party ISO is mounted here
                     cortx_iso              <- CORTX ISO (main) is mounted here
     --standalone_installation   Configure SSPL 3rd party dependencies like consul, rabbitmq
-    --St    <STORAGE TYPE>      Storage type  ie. jbod, rbod
+    --St    <STORAGE TYPE>      Storage type  ie. jbod, rbod, 5u84
     --Sr    <SERVER TYPE>       Server type   ie. physical, virtual
     -D|--disable-sub-mgr        For RHEL. To install prerequisites by disabling
                                 subscription manager (usually, not recommended).
@@ -182,6 +184,10 @@ parse_args()
         -T|--target_build_url)
             [ -z "$2" ] && echo "ERROR: Target build not provided" && exit 1;
             TARGET_BUILD="$2"
+            shift 2 ;;
+        -L|--local_rpms_path)
+            [ -z "$2" ] && echo "ERROR: Local RPMS not provided" && exit 1;
+            RPMS_PATH="$2"
             shift 2 ;;
         --i|--bmc_ip)
             [ -z "$2" ] && echo "ERROR: BMC IP not provided" && exit 1;
@@ -317,45 +323,26 @@ EOF
 
     # Choose sspl.conf file based on component version
     SSPL_CONF="sspl.conf.${PRODUCT_VERSION}"
+    COMM_CONF="common_config.ini"
     curl $CORTX_MONITOR_BASE_URL/conf/${SSPL_CONF} -o ${SSPL_CONF};
+    curl $CORTX_MONITOR_BASE_URL/conf/${COMM_CONF} -o ${COMM_CONF};
 
     # Load sspl conf to consul
     curl $CORTX_MONITOR_BASE_URL/prerequisites/feed_sspl_conf_to_consul.py -o feed_sspl_conf_to_consul.py;
     chmod a+x feed_sspl_conf_to_consul.py
 
-    # Update persistent cluster_id and node_id in common config if not already present
-    [ -z "$(consul kv get system_information/cluster_id 2>/dev/null)" ] && {
-        cluster_id=$(sed -nr 's/^cluster_id=([^,]+)$/\1/p' $CONFIG_FILE | head -1)
-        [ -z "$cluster_id" ] && cluster_id=$(uuidgen)
-        consul kv put system_information/cluster_id "$cluster_id"
-    } || {
-        cluster_id=$(consul kv get system_information/cluster_id)
-    }
-
-    # Update persistent node_id in common config if not already present
-    [ -z "$(consul kv get system_information/$NODE/node_id 2>/dev/null)" ] && {
-        node_id=$(sed -nr 's/^node_id=([^,]+)$/\1/p' $CONFIG_FILE | head -1)
-        [ -z "$node_id" ] && node_id=$(uuidgen)
-        [ -z $NODE ] && NODE="srvnode-1"
-        consul kv put system_information/$NODE/node_id "$node_id"
-    } || {
-        node_id=$(consul kv get system_information/$NODE/node_id)
-    }
-
-    # Update CONFIG_FILE wih identified cluster_id & node_id
-    echo -e "cluster_id=$cluster_id\nnode_id=$node_id" > "$CONFIG_FILE"
-
     echo "INFO: Inserting $COMPONENT config in consul.."
+    python3 feed_sspl_conf_to_consul.py -F $SSPL_CONF -N $NODE \
+                    -C $COMPONENT -Ru $RMQ_USER -Rp $RMQ_PASSWD;
+    echo "INFO: Inserting common config in consul.."
     if [ "$skip_bmc" == "true" ];
     then
-        python3 feed_sspl_conf_to_consul.py -F $SSPL_CONF -N $NODE \
-                    -C $COMPONENT -Ru $RMQ_USER -Rp $RMQ_PASSWD \
+        python3 feed_sspl_conf_to_consul.py -F $COMM_CONF -N $NODE \
                     -A $CNTRLR_A -Ap $CNTRLR_A_PORT -B $CNTRLR_B -Bp $CNTRLR_B_PORT \
                     -U $CNTRLR_USER -P $CNTRLR_PASSWD \
                     -St $STORAGE_TYPE -Sr $SERVER_TYPE ;
     else
-        python3 feed_sspl_conf_to_consul.py -F $SSPL_CONF -N $NODE \
-                    -C $COMPONENT -Ru $RMQ_USER -Rp $RMQ_PASSWD \
+        python3 feed_sspl_conf_to_consul.py -F $COMM_CONF -N $NODE \
                     -A $CNTRLR_A -Ap $CNTRLR_A_PORT -B $CNTRLR_B -Bp $CNTRLR_B_PORT \
                     -U $CNTRLR_USER -P $CNTRLR_PASSWD \
                     -St $STORAGE_TYPE -Sr $SERVER_TYPE \
@@ -377,11 +364,31 @@ setup_rabbitmq(){
     echo "Done rabbitmq setup.";
 }
 
+# If local RPMS location is specified, SSPL RPMS will be
+# installed from the speicifed path. Otherwise yum repos.
+install_sspl_rpms(){
+    if [ -n "$RPMS_PATH" ]; then
+        echo -e "INFO: Installing SSPL RPMS from local path... \ncd ${RPMS_PATH}"
+        sudo yum localinstall -y $RPMS_PATH/cortx-libsspl_sec-2* \
+                            $RPMS_PATH/cortx-libsspl_sec-method_none* \
+                            $RPMS_PATH/cortx-sspl-2* \
+                            $RPMS_PATH/cortx-sspl-test*
+    else
+        echo "INFO: Installing SSPL RPMS using yum repos..."
+        yum install -y cortx-sspl.noarch
+        yum install -y cortx-sspl-test
+    fi
+    echo "Done installing SSPL RPMS.";
+}
+
 # Configure consul
-setup_consul 2>&1 | tee -a "${LOG_FILE}"
+setup_consul
 
 # Configure rabbitmq-server
-setup_rabbitmq 2>&1 | tee -a "${LOG_FILE}"
+setup_rabbitmq
+
+# Install SSPL
+install_sspl_rpms
 
 echo "For more details see: $LOG_FILE"
 echo -e "\n***** SUCCESS!!! *****" 2>&1 | tee -a "${LOG_FILE}"
