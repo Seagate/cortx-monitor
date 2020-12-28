@@ -19,7 +19,6 @@ set -e -u -o pipefail
 
 PRODUCT="LDR_R2"
 RPMS_PATH=
-SSPL_BASE_DIR="/opt/seagate/cortx/sspl"
 
 
 usage()
@@ -30,11 +29,11 @@ usage()
     Usage:
          $0
             [-P|--product <LDR_R2>]
-            [-R|--local_rpms_path <local RPMS path>]
+            [-L|--local_rpms_path <local RPMS location>]
             [-h|--help]
     OPTION:
     -P      <PRODUCT>           Product name (LDR_R1 | LDR_R2)
-    -R      <LOCAL RPMS PATH>   Path to local RPMS. If this is not passed,
+    -L      <LOCAL RPMS PATH>   Path to local RPMS. If this is not passed,
                                 SSPL RPMS will be installed using yum repos.
     "
     exit 0
@@ -50,8 +49,8 @@ parse_args()
             [ -z "$2" ] && echo "ERROR: Product not provided" && exit 1;
             PRODUCT="$2"
             shift ;;
-        -R|--local_rpms_path)
-            [ -z "$2" ] && echo "ERROR: Local RPMS path not provided" && exit 1;
+        -L|--local_rpms_path)
+            [ -z "$2" ] && echo "ERROR: Local RPMS location not provided" && exit 1;
             RPMS_PATH="$2"
             shift 2 ;;
         *)
@@ -68,15 +67,20 @@ parse_args "$@"
     exit 1
 }
 
-# If not local RPMS path is not passed, this will install
-# sspl specific RPMS using yum repos.
-if [ -n "$RPMS_PATH" ]
-then
+# Check for installed SSPL RPMS
+if [ -z "$(rpm -qa | grep cortx-sspl)" ]; then
+    echo "Removing already installed cortx-sspl..."
+    yum remove -y cortx-sspl
+fi
+
+# If local RPMS location is specified, SSPL RPMS will be
+# installed from the speicifed path. Otherwise yum repos.
+if [ -n "$RPMS_PATH" ]; then
     echo -e "INFO: Installing SSPL RPMS from local path... \ncd ${RPMS_PATH}"
-    cd $RPMS_PATH
-    sudo yum install -y cortx-libsspl_sec-[12]* \
-                        cortx-libsspl_sec-method_none* \
-                        cortx-sspl-[12]* cortx-sspl-test*
+    sudo yum localinstall -y $RPMS_PATH/cortx-libsspl_sec-[12]* \
+                             $RPMS_PATH/cortx-libsspl_sec-method_none* \
+                             $RPMS_PATH/cortx-sspl-[12]* \
+                             $RPMS_PATH/cortx-sspl-test*
 else
     echo "INFO: Installing SSPL RPMS using yum repos..."
     yum install -y cortx-sspl.noarch
@@ -85,18 +89,16 @@ fi
 
 if [ -z "$(rpm -qa | grep cortx-sspl)" ]
 then
-    echo "ERROR: Failed to locate SSPL RPMS."
-    echo "Please check sspl related repo files are \
-            available in target location";
+    echo "ERROR: Failed to install SSPL RPMS."
     exit 1
 fi
 
+SSPL_BASE_DIR="/opt/seagate/cortx/sspl"
 $SSPL_BASE_DIR/bin/sspl_post_install -p "$PRODUCT"
 $SSPL_BASE_DIR/bin/sspl_setup_init -r cortx
 $SSPL_BASE_DIR/bin/sspl_config -f
 $SSPL_BASE_DIR/bin/sspl_setup_rabbitmq_cluster
 
-systemctl start rabbitmq-server.service
 systemctl start sspl-ll.service
 
 # Wait till sspl-ll service become active

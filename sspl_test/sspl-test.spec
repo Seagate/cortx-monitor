@@ -66,8 +66,12 @@ if [[ -n $fl ]]; then
     else
         # Even correct Falsk version found, its depedencies (Jinja, MarkupSafe)
         # may not exist. Installing Falsk=1.1.1 again will get its depedencies.
-        [ -z "$(pip3.6 freeze | grep Jinja2)" ] && pip3.6 install Flask==1.1.1
-        [ -z "$(pip3.6 freeze | grep MarkupSafe)" ] && pip3.6 install Flask==1.1.1
+        if [[ -z "$(pip3.6 freeze | grep Jinja2)" ]]; then
+            pip3.6 install Flask==1.1.1
+        fi
+        if [[ -z "$(pip3.6 freeze | grep MarkupSafe)" ]]; then
+            pip3.6 install Flask==1.1.1
+        fi
     fi
 else
     pip3.6 install Flask==1.1.1
