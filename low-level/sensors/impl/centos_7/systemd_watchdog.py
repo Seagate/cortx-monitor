@@ -1439,7 +1439,7 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
         if retcode == 0:
             return True
         else:
-            logger.debug(f"Error for drive {drive_name}, ERROR: {err}")
+            logger.debug(f"SystemdWatchdog, _is_local_drive: Error for drive {drive_name}, ERROR: {err}")
             if ENCL_DISK_ERR not in err:
                 return True
             else:
