@@ -706,8 +706,7 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
         """Run the command and get the response and error returned"""
         process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
         response, error = process.communicate()
-        retcode = process.returncode
-        return response.rstrip('\n'), error.rstrip('\n'), retcode
+        return response.rstrip('\n'), error.rstrip('\n'), process.returncode
 
     def _get_drives(self):
         """
@@ -1423,15 +1422,11 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
         Detect Node server local drives using Hdparm tool.
         Hdparm tool give information only for node drive.
         For external JBOD/virtual drives it will give output as:
-        "SG_IO: bad/missing sense data, sb[]:  70 00 05 00 00 00
-        00 0e 00 00 00 00 20 00 00 00 00 00 00 00 00 00 00 00 00 00 00
-        00 00 00 00 00\n HDIO_GET_IDENTITY failed: Invalid argument"
+        "SG_IO: bad/missing sense data "
         Hdparm does not have support for NVME drives, for this drives it gives o/p as:
         "failed: Inappropriate ioctl for device"
         """
-        ENCL_DISK_ERR = "SG_IO: bad/missing sense data, sb[]:  70 00 05" + \
-                        " 00 00 00 00 0e 00 00 00 00 20 00 00 00 00 00 00 00 00" + \
-                        " 00 00 00 00 00 00 00 00 00 00 00\n HDIO_GET_IDENTITY failed: Invalid argument"
+        ENCL_DISK_ERR = "SG_IO: bad/missing sense data"
 
         drive_name = self._drive_by_device_name[object_path]
         cmd = f'sudo hdparm -i {drive_name}'
@@ -1440,6 +1435,8 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
             return True
         else:
             logger.debug(f"SystemdWatchdog, _is_local_drive: Error for drive {drive_name}, ERROR: {err}")
+            # TODO : In case of different error(other than "SG_IO: bad/missing sense data") for local drives, 
+            # this check would fail.
             if ENCL_DISK_ERR not in err:
                 return True
             else:
