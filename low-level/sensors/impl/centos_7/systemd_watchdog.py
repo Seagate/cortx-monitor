@@ -1426,8 +1426,8 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
         Hdparm does not have support for NVME drives, for this drives it gives o/p as:
         "failed: Inappropriate ioctl for device"
         """
-        ENCL_DISK_ERR = "SG_IO: bad/missing sense data"
-
+        DISK_ERR_MISSING_SENSE_DATA = "SG_IO: bad/missing sense data"
+        DISK_ERR_GET_ID_FAILURE = "HDIO_GET_IDENTITY failed: Invalid argument"
         drive_name = self._drive_by_device_name[object_path]
         cmd = f'sudo hdparm -i {drive_name}'
         _, err, retcode = self._run_command(cmd)
@@ -1435,9 +1435,9 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
             return True
         else:
             logger.debug(f"SystemdWatchdog, _is_local_drive: Error for drive {drive_name}, ERROR: {err}")
-            # TODO : In case of different error(other than "SG_IO: bad/missing sense data") for local drives, 
+            # TODO : In case of different error(other than "SG_IO: bad/missing sense data") for local drives,
             # this check would fail.
-            if ENCL_DISK_ERR not in err:
+            if DISK_ERR_MISSING_SENSE_DATA not in err and DISK_ERR_GET_ID_FAILURE not in err:
                 return True
             else:
                 return False
