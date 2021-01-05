@@ -323,32 +323,30 @@ EOF
 
     # Choose sspl.conf file based on component version
     SSPL_CONF="sspl.conf.${PRODUCT_VERSION}"
-    COMM_CONF="common_config.ini"
     curl $CORTX_MONITOR_BASE_URL/conf/${SSPL_CONF} -o ${SSPL_CONF};
-    curl $CORTX_MONITOR_BASE_URL/conf/${COMM_CONF} -o ${COMM_CONF};
 
     # Load sspl conf to consul
-    curl $CORTX_MONITOR_BASE_URL/prerequisites/feed_sspl_conf_to_consul.py -o feed_sspl_conf_to_consul.py;
+    curl $CORTX_MONITOR_BASE_URL/bin/feed_sspl_conf_to_consul.py -o feed_sspl_conf_to_consul.py;
     chmod a+x feed_sspl_conf_to_consul.py
 
     echo "INFO: Inserting $COMPONENT config in consul.."
-    python3 feed_sspl_conf_to_consul.py -F $SSPL_CONF -N $NODE \
-                    -C $COMPONENT -Ru $RMQ_USER -Rp $RMQ_PASSWD;
-    echo "INFO: Inserting common config in consul.."
     if [ "$skip_bmc" == "true" ];
     then
-        python3 feed_sspl_conf_to_consul.py -F $COMM_CONF -N $NODE \
+        python3 feed_sspl_conf_to_consul.py -F $SSPL_CONF -N $NODE \
+                    -C $COMPONENT -Ru $RMQ_USER -Rp $RMQ_PASSWD \
                     -A $CNTRLR_A -Ap $CNTRLR_A_PORT -B $CNTRLR_B -Bp $CNTRLR_B_PORT \
                     -U $CNTRLR_USER -P $CNTRLR_PASSWD \
                     -St $STORAGE_TYPE -Sr $SERVER_TYPE ;
     else
-        python3 feed_sspl_conf_to_consul.py -F $COMM_CONF -N $NODE \
+        python3 feed_sspl_conf_to_consul.py -F $SSPL_CONF -N $NODE \
+                    -C $COMPONENT -Ru $RMQ_USER -Rp $RMQ_PASSWD \
                     -A $CNTRLR_A -Ap $CNTRLR_A_PORT -B $CNTRLR_B -Bp $CNTRLR_B_PORT \
                     -U $CNTRLR_USER -P $CNTRLR_PASSWD \
                     -St $STORAGE_TYPE -Sr $SERVER_TYPE \
                     --bmc_ip $BMC_IP --bmc_user $BMC_USER --bmc_passwd $BMC_PASS ;
     fi
     echo "Done consul setup."
+
 }
 
 

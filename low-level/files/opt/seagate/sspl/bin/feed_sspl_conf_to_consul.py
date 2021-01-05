@@ -141,10 +141,8 @@ class LoadConfig:
             'kernel_version': self._get_result('uname -r'),
             'cluster_id': self.cluster_id,
             node: {'node_id': self.node_id},
-            'storage_type': storage_type or self._get_result(
-                        f'consul kv get system_information/storage_type'),
-            'server_type': server_type or self._get_result(
-                        f'consul kv get system_information/server_type')
+            'type': server_type or self._get_result(
+                'consul kv get system_information/type')
         }
         # Storage enclosure information
         parser['STORAGE_ENCLOSURE'] = {
@@ -165,7 +163,9 @@ class LoadConfig:
                     'port': secondary_mc_port or self._get_result(
                         'consul kv get storage_enclosure/controller/secondary_mc/port')
                 }
-            }
+            },
+            'type': storage_type or self._get_result(
+                'consul kv get storage_enclosure/type'),
         }
         # BMC information
         parser['BMC'] = { node: {
