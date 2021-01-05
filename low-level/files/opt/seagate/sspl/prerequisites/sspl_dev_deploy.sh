@@ -377,16 +377,19 @@ install_sspl_rpms(){
         yum install -y cortx-sspl-test
     fi
     echo "Done installing SSPL RPMS.";
+
+    # Initialize SSPL
+    /opt/seagate/cortx/sspl/bin/sspl_setup setup -p $PRODUCT_VERSION
 }
 
 # Configure consul
-setup_consul
+setup_consul 2>&1 | tee -a "${LOG_FILE}"
 
 # Configure rabbitmq-server
-setup_rabbitmq
+setup_rabbitmq 2>&1 | tee -a "${LOG_FILE}"
 
 # Install SSPL
-install_sspl_rpms
+setup_sspl 2>&1 | tee -a "${LOG_FILE}"
 
 echo "For more details see: $LOG_FILE"
 echo -e "\n***** SUCCESS!!! *****" 2>&1 | tee -a "${LOG_FILE}"
