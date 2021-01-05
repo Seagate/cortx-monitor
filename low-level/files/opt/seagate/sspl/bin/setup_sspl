@@ -63,7 +63,7 @@ parse_args "$@"
 
 if [ -z "$(rpm -qa | grep cortx-sspl)" ]
 then
-    echo "ERROR: SSPL RPMS are not installed on this system."
+    echo "ERROR: Failed to locate any installed SSPL RPMS."
     exit 1
 fi
 
@@ -75,15 +75,16 @@ $SSPL_BASE_DIR/bin/sspl_config -f
 systemctl start sspl-ll.service
 
 # Wait till sspl-ll service become active
+MAX_RETRY=4
 TRIES=0
 SSPL_STATUS=$(systemctl show -p ActiveState sspl-ll | sed 's/ActiveState=//g')
 while [ $SSPL_STATUS != "active" ]
 do
     echo "sspl-ll service is not started. Waiting..."
-    sleep 2
+    sleep 3
     TRIES=$((TRIES+1))
     SSPL_STATUS=$(systemctl show -p ActiveState sspl-ll | sed 's/ActiveState=//g')
-    if [ $TRIES -gt 4 ]
+    if [ $TRIES -gt $MAX_RETRY ]
     then
         break
     fi

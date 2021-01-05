@@ -108,7 +108,7 @@ cp -R $SSPL_BASE_DIR/low-level/files/iec_mapping/* $PRODUCT_BASE_DIR/iem/iec_map
 # Skip this step if sspl is being configured for node replacement scenario as sspl configurations are
 # already available in consul on the healthy node
 # Running script for fetching the config using salt and feeding values to consul
-# Onward LDR_R2, system will work even if salt won't be available
+# Onward LDR_R2, dependencies on salt will be abstracted out and so no hard dependencies would exist
 if [ "$PRODUCT" == "LDR_R1" ]; then
     [ -f $REPLACEMENT_NODE_ENV_VAR_FILE ] ||
         $script_dir/sspl_fetch_config_from_salt.py $ENVIRONMENT $PRODUCT

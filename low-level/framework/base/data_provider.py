@@ -42,12 +42,12 @@ def read_common_config(key):
 
 setup_info = get_setup_info()
 
-# get server_type
+# get server_type i.e. "physical"", "virtual"
 value_from_consul = get_consul_value('sspl/config/STORAGE_ENCLOSURE/type')
 value_from_setup = setup_info.get('server_type', SERVER_TYPE).lower()
 server_type =  value_from_consul or value_from_setup
 
-# get storage_type
+# get storage_type i.e. "jbod", "rbod", "virtual"
 value_from_consul = get_consul_value('sspl/config/SYSTEM_INFORMATION/type')
 value_from_setup = setup_info.get('storage_type', STORAGE_TYPE).lower()
 storage_type =  value_from_consul or value_from_setup

@@ -110,6 +110,7 @@ def main(product):
 
     _start_rabbitmq()
     _check_and_reset_rabbitmq()
+    _start_rabbitmq()
 
     _create_vhost_if_necessary(virtual_host, product)
 

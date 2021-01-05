@@ -153,7 +153,7 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
         # Handle configurations for specific products
         if product.lower() == "cs-a":
             from sensors.impl.generic.SMR_drive_data import SMRdriveData
-        if product.lower() in ["ldr_r1", "ldr_r2"]:
+        if product.lower() in [x.lower() for x in enabled_products]:
             from sensors.impl.platforms.realstor.realstor_disk_sensor \
                 import RealStorDiskSensor
             from sensors.impl.platforms.realstor.realstor_psu_sensor \
@@ -168,7 +168,6 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
                 import RealStorLogicalVolumeSensor
             from sensors.impl.platforms.realstor.realstor_enclosure_sensor \
                 import RealStorEnclosureSensor
-        if product.lower() in [x.lower() for x in enabled_products]:
             from sensors.impl.generic.raid import RAIDsensor
             from sensors.impl.generic.raid_integrity_data import RAIDIntegritySensor
 
