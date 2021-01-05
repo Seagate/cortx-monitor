@@ -19,7 +19,6 @@
 import subprocess
 import sys
 import socket
-import salt.client
 import consul
 import os
 import argparse
@@ -102,12 +101,13 @@ class RMQClusterConfiguration:
         Read rabbitmq.sls and load data into consul
         """
         try:
+            import salt.client
             rabbitmq_conf = salt.client.Caller().function('pillar.get', 'rabbitmq')
             self._insert_nested_dict_to_consul(rabbitmq_conf, prefix='rabbitmq')
         except Exception as e:
             print(f"ERROR: '{e}' in reading value from salt, appending default value")
-            sys.exit()
-        print("Rabbitmq config data is inserted into consul.")
+        else:
+            print("Rabbitmq config data is inserted into consul.")
 
     def _open_rabbitmq_ports(self):
         """

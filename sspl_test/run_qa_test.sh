@@ -247,7 +247,12 @@ fi
 # Restart SSPL to re-read configuration
 if [ "$SSPL_STORE_TYPE" == "consul" ]
 then
-    SRVNODE="$(sudo salt-call grains.get id --output=newline_values_only)"
+    # Find the nodename
+    if [ "$PRODUCT_NAME" == "LDR_R1" ]; then
+        SRVNODE="$(sudo salt-call grains.get id --output=newline_values_only)"
+    else
+        SRVNODE="$(consul kv get system_information/salt_minion_id)"
+    fi
     if [ -z "$SRVNODE" ];then
         SRVNODE="$(cat /etc/salt/minion_id)"
         if [ -z "$SRVNODE" ];then

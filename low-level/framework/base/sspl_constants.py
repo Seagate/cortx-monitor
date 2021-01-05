@@ -25,6 +25,7 @@ from enum import Enum
 sys.path.insert(0, '/opt/seagate/cortx/sspl/low-level')
 from framework.utils.salt_util import SaltInterface
 from framework.utils.service_logging import logger
+from framework.base.data_provider import storage_type, server_type, cluster_id, node_id
 
 PRODUCT_NAME = 'LDR_R2'
 PRODUCT_FAMILY = 'cortx'
@@ -67,6 +68,11 @@ salt_uniq_passwd_per_node = ['RABBITMQINGRESSPROCESSOR', 'RABBITMQEGRESSPROCESSO
 node_key_id = 'srvnode-1'
 CONSUL_HOST = '127.0.0.1'
 CONSUL_PORT = '8500'
+
+storage_type = storage_type
+server_type = server_type
+cluster_id = cluster_id
+node_id = node_id
 
 # TODO Keep only constants in this file.
 # other values(configs) should come from cofig.
@@ -200,32 +206,6 @@ COMMON_CONFIGS = {
 
 SSPL_CONFIGS = ['log_level', 'cli_type', 'sspl_log_file_path', 'cluster_id', 'storage_enclosure', 'setup', 'operating_system']
 
-try:
-    setup_info = subprocess.Popen(['sudo', '/usr/bin/provisioner', 'get_setup_info'],
-        stdout=subprocess.PIPE).communicate()[0].decode("utf-8").rstrip()
-    setup_info = ast.literal_eval(setup_info)
-    storage_type = setup_info['storage_type'].lower()
-    server_type = setup_info['server_type'].lower()
-    logger.info(f"Storage Type : '{storage_type}'")
-    logger.info(f"Server Type '{server_type}'")
-
-except Exception as err:
-    logger.debug(f"Error in getting setup information of server and storage type : {err}")
-    print(f"Error in getting setup information of server and storage type : {err}")
-    result = subprocess.Popen(['consul',
-                                'kv',
-                                'get',
-                                'sspl/config/SYSTEM_INFORMATION/server_type'],
-                               stdout=subprocess.PIPE).communicate()[0]
-    server_type = result.decode("utf-8").rstrip() or 'virtual'
-    result = subprocess.Popen(['consul',
-                                'kv',
-                                'get',
-                                'sspl/config/SYSTEM_INFORMATION/storage_type'],
-                               stdout=subprocess.PIPE).communicate()[0]
-    storage_type = result.decode("utf-8").rstrip() or 'virtual'
-    logger.debug(f"Considering default storage type : '{storage_type}'")
-    logger.debug(f"Considering default server type : '{server_type}'")
 
 class RaidDataConfig(Enum):
     MDSTAT_FILE = "/proc/mdstat"

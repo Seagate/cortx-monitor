@@ -39,7 +39,7 @@ from framework.utils.ipmi_client import IpmiFactory
 from framework.utils.sysfs_interface import SysFS
 from framework.utils.tool_factory import ToolFactory
 from framework.base.sspl_constants import (component, CONSUL_HOST, CONSUL_PORT, node_key_id, PRODUCT_FAMILY,
-    storage_type, server_type, NODE_ID, SITE_ID, RACK_ID, DATA_PATH
+    storage_type, server_type, NODE_ID, SITE_ID, RACK_ID, DATA_PATH, cluster_id, node_id
 )
 
 class SSPLHealthView(object):
@@ -1023,6 +1023,7 @@ class SSPLHealthView(object):
             'disks': {}
         }
         cortx_build_version = 'NA'
+        # TODO: Remove salt dependency
         cortx_build_cmd = f"sudo salt-call pillar.get release:target_build --output=newline_values_only"
         try:
             subout = subprocess.Popen(cortx_build_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -1034,20 +1035,6 @@ class SSPLHealthView(object):
         except Exception as e:
             logger.error(f"Unable to fetch cortx build version. : {traceback.format_exc()}")
             print("Unable to fetch cortx build version.")
-            print(e, traceback.format_exc())
-
-        cluster_id = 'NA'
-        cluster_id_cmd = f"sudo salt-call grains.get cluster_id --output=newline_values_only"
-        try:
-            subout = subprocess.Popen(cluster_id_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            result = subout.stdout.readlines()
-            if result == [] or result == "":
-                print("Unable to fetch cluster id.")
-            else:
-                cluster_id = result[0].decode().rstrip('\n')
-        except Exception as e:
-            logger.error(f"Unable to fetch cluster id. : {traceback.format_exc()}")
-            print("Unable to fetch cluster id.")
             print(e, traceback.format_exc())
 
         os_sw_info_dict['cortx_sw']['cortx_sw_info'].update({'version':cortx_build_version,
