@@ -207,7 +207,8 @@ class RMQClusterConfiguration:
         clustered = False
         node_fqdn = None
         for node_fqdn in requested_nodes:
-            if node_fqdn != localhost_fqdn and not clustered:
+            node_fqdn = node_fqdn.split('.')[0]
+            if node_fqdn != localhost_fqdn:
                 command = "%s stop_app" % self.RABBITMQCTL
                 response = self._send_command(command)
                 print("Stopping app: %s" % response)

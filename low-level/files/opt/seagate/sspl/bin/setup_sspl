@@ -17,7 +17,11 @@
 
 set -e -u -o pipefail
 
-PRODUCT="LDR_R2"
+
+script_dir=$(dirname $0)
+
+# Import common constants
+source $script_dir/constants.sh
 
 
 usage()
@@ -30,7 +34,7 @@ usage()
             [-p <Product name>]
             [-h|--help]
     OPTION:
-    -p      <PRODUCT>           Product name (LDR_R1 | LDR_R2)
+    -p      <PRODUCT NAME>           Product name (LDR_R1 | LDR_R2)
     "
     exit 0
 }
@@ -40,7 +44,7 @@ parse_args()
     while getopts ":p:h:" OPTION; do
         case $OPTION in
             p )
-                PRODUCT=$OPTARG
+                PRODUCT_NAME=$OPTARG
                 ;;
             h )
                 usage
@@ -54,7 +58,7 @@ parse_args()
 
 parse_args "$@"
 
-[ "$PRODUCT" != "LDR_R2" ] && {
+[ "$PRODUCT_NAME" != "LDR_R2" ] && {
     # For LDR_R1, SSPL should be running in active state on master node
     # and degraded state on slave node.
     echo "ERROR: deploy_sspl doesn't have support for product '$PRODUCT'"
@@ -67,27 +71,29 @@ then
     exit 1
 fi
 
-SSPL_BASE_DIR="/opt/seagate/cortx/sspl"
-$SSPL_BASE_DIR/bin/sspl_post_install -p "$PRODUCT"
+# configure sspl
+$SSPL_BASE_DIR/bin/sspl_post_install -p "$PRODUCT_NAME"
 $SSPL_BASE_DIR/bin/sspl_setup_init -r cortx
 $SSPL_BASE_DIR/bin/sspl_config -f
 
+# Start SSPL serice
 systemctl start sspl-ll.service
 
 # Wait till sspl-ll service become active
-MAX_RETRY=4
+MAX_RETRY=6
 TRIES=0
 SSPL_STATUS=$(systemctl show -p ActiveState sspl-ll | sed 's/ActiveState=//g')
 while [ $SSPL_STATUS != "active" ]
 do
     echo "sspl-ll service is not started. Waiting..."
-    sleep 3
+    sleep 5
     TRIES=$((TRIES+1))
     SSPL_STATUS=$(systemctl show -p ActiveState sspl-ll | sed 's/ActiveState=//g')
     if [ $TRIES -gt $MAX_RETRY ]
     then
         break
     fi
+    systemctl start sspl-ll.service
 done
 
 if [ "$SSPL_STATUS" == "active" ]

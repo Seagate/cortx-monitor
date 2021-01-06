@@ -29,7 +29,7 @@ try:
     import salt.client
 except ModuleNotFoundError:
     pass
-from framework.base.sspl_constants import (component, salt_provisioner_pillar_sls, file_store_config_path,
+from framework.base.sspl_constants import (component, PRODUCT_NAME, salt_provisioner_pillar_sls, file_store_config_path,
         SSPL_STORE_TYPE, StoreTypes, salt_uniq_passwd_per_node, COMMON_CONFIGS, SSPL_CONFIGS, CONSUL_PORT,
         MAX_CONSUL_RETRY, WAIT_BEFORE_RETRY, CONSUL_ERR_STRING, CONSUL_HOST)
 from framework.utils.consulstore import ConsulStore
