@@ -22,7 +22,7 @@ import sys
 import os
 from enum import Enum
 # Add the top level directories
-sys.path.insert(0, f'/opt/seagate/cortx/sspl/low-level')
+sys.path.insert(0, '/opt/seagate/cortx/sspl/low-level')
 from framework.utils.salt_util import SaltInterface
 from framework.utils.service_logging import logger
 

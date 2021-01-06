@@ -78,7 +78,7 @@ echo "Using VERSION=${VERSION} GIT_VER=${GIT_VER} PRODUCT=${PRODUCT} TEST=${TEST
 # Check python package
 req_file=$BASE_DIR/low-level/requirements.txt
 echo "Installing python packages..."
-python3 -m pip install -r $req_file  > /dev/null || {
+python3 -m pip install -r "$req_file"  > /dev/null || {
     echo "Unable to install package from $req_file"; exit 1;
 };
 
@@ -107,15 +107,15 @@ echo $TOPDIR
 echo "Creating tar for sspl build"
 if [ "$TEST" == true ]
 then
-    tar -czvf ${RPM_BUILD_PATH}/SOURCES/$PRODUCT_FAMILY-sspl-test-${VERSION}.tgz -C ${BASE_DIR}/.. ${PRODUCT_FAMILY}-sspl/sspl_test
+    tar -czvf "${RPM_BUILD_PATH}"/SOURCES/"$PRODUCT_FAMILY"-sspl-test-"${VERSION}".tgz -C "${BASE_DIR}"/.. "${PRODUCT_FAMILY}"-sspl/sspl_test
 fi
 
 if [ "$CLI" == true ]
 then
-    tar -czvf ${RPM_BUILD_PATH}/SOURCES/$PRODUCT_FAMILY-sspl-cli-${VERSION}.tgz -C ${BASE_DIR}/.. ${PRODUCT_FAMILY}-sspl/low-level/cli
+    tar -czvf "${RPM_BUILD_PATH}"/SOURCES/"$PRODUCT_FAMILY"-sspl-cli-"${VERSION}".tgz -C "${BASE_DIR}"/.. "${PRODUCT_FAMILY}"-sspl/low-level/cli
 fi
 
-tar -czvf ${RPM_BUILD_PATH}/SOURCES/$PRODUCT_FAMILY-sspl-${VERSION}.tgz -C ${BASE_DIR}/.. ${PRODUCT_FAMILY}-sspl/low-level ${PRODUCT_FAMILY}-sspl/libsspl_sec
+tar -czvf "${RPM_BUILD_PATH}"/SOURCES/"$PRODUCT_FAMILY"-sspl-"${VERSION}".tgz -C "${BASE_DIR}"/.. "${PRODUCT_FAMILY}"-sspl/low-level "${PRODUCT_FAMILY}"-sspl/libsspl_sec
 
 TAR_END_TIME=$(date +%s)
 echo "Generated tar for sspl build"
@@ -125,20 +125,20 @@ echo "Generating rpm's for sspl build"
 RPM_BUILD_START_TIME=$(date +%s)
 
 rpmbuild --define "version $VERSION" --define "git_rev $GIT_VER" \
-    --define "_topdir $TOPDIR" --define "product_family $PRODUCT_FAMILY" -bb $BASE_DIR/low-level/sspl-ll.spec
+    --define "_topdir $TOPDIR" --define "product_family $PRODUCT_FAMILY" -bb "$BASE_DIR"/low-level/sspl-ll.spec
 rpmbuild --define "version $VERSION" --define "git_rev $GIT_VER" \
-    --define "_topdir $TOPDIR" --define "product_family $PRODUCT_FAMILY" -bb $BASE_DIR/libsspl_sec/libsspl_sec.spec
+    --define "_topdir $TOPDIR" --define "product_family $PRODUCT_FAMILY" -bb "$BASE_DIR"/libsspl_sec/libsspl_sec.spec
 
 if [ "$CLI" == true ]
 then
     rpmbuild --define "version $VERSION" --define "git_rev $GIT_VER" \
-        --define "_topdir $TOPDIR" --define "product_family $PRODUCT_FAMILY" -bb $BASE_DIR/low-level/cli/sspl_cli.spec
+        --define "_topdir $TOPDIR" --define "product_family $PRODUCT_FAMILY" -bb "$BASE_DIR"/low-level/cli/sspl_cli.spec
 fi
 
 if [ "$TEST" == true ]
 then
     rpmbuild --define "version $VERSION" --define "git_rev $GIT_VER" \
-        --define "_topdir $TOPDIR" --define "product_family $PRODUCT_FAMILY" -bb $BASE_DIR/sspl_test/sspl-test.spec
+        --define "_topdir $TOPDIR" --define "product_family $PRODUCT_FAMILY" -bb "$BASE_DIR"/sspl_test/sspl-test.spec
 fi
 
 RPM_BUILD_END_TIME=$(date +%s)
@@ -149,15 +149,15 @@ yum erase -y systemd-python36-*
 
 BUILD_END_TIME=$(date +%s)
 
-TAR_DIFF=$(( $TAR_END_TIME - $TAR_START_TIME ))
+TAR_DIFF=$(( "$TAR_END_TIME" - "$TAR_START_TIME" ))
 printf "TAR CREATION TIME ==========> "
 printf "%02d:%02d:%02d\n" $(( TAR_DIFF / 3600 )) $(( ( TAR_DIFF / 60 ) % 60 )) $(( TAR_DIFF % 60 ))
 
-RPM_BUILD_DIFF=$(( $RPM_BUILD_END_TIME - $RPM_BUILD_START_TIME ))
+RPM_BUILD_DIFF=$(( "$RPM_BUILD_END_TIME" - "$RPM_BUILD_START_TIME" ))
 printf "RPM BUILD TIME ==========> "
 printf "%02d:%02d:%02d\n" $(( RPM_BUILD_DIFF / 3600 )) $(( ( RPM_BUILD_DIFF / 60 ) % 60 )) $(( RPM_BUILD_DIFF % 60 ))
 
-BUILD_DIFF=$(( $BUILD_END_TIME - $BUILD_START_TIME ))
+BUILD_DIFF=$(( "$BUILD_END_TIME" - "$BUILD_START_TIME" ))
 printf "COMPLETE BUILD TIME ==========> "
 printf "%02d:%02d:%02d\n" $(( BUILD_DIFF / 3600 )) $(( ( BUILD_DIFF / 60 ) % 60 )) $(( BUILD_DIFF % 60 ))
 

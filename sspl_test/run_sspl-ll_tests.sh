@@ -17,8 +17,8 @@
 
 echo "Running Automated Integration Tests for SSPL-LL"
 script_dir=$(dirname $0)
-source $script_dir/constants.sh
-export PYTHONPATH=$script_dir/../..:$script_dir/../../low-level
+source "$script_dir"/constants.sh
+export PYTHONPATH="$script_dir"/../..:"$script_dir"/../../low-level
 # Default test plan is sanity
 PLAN=${1:-sanity}
 
@@ -48,4 +48,4 @@ fi
 systemctl start crond
 
 # Execute tests
-sudo /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/run_test.py -t $script_dir/plans/$PLAN.pln
+sudo /opt/seagate/"$PRODUCT_FAMILY"/sspl/sspl_test/run_test.py -t "$script_dir"/plans/"$PLAN".pln
