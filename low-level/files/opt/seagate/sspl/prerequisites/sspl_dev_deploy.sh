@@ -46,6 +46,7 @@ do_cleanup=false
 install_3rd_party_packages=false
 disable_sub_mgr=false
 skip_bmc=false
+initialize_sspl=false
 TARGET_BUILD=
 COMPONENT="SSPL"
 PRODUCT_VERSION="LDR_R2"
@@ -70,7 +71,7 @@ usage()
 
     Usage:
          $0
-            [-V|--product_version  <LDR_R1, LDR_R2>]
+            [-V|--product_version  <LDR_R2>]
             [-N|--node  <Node name/id>]
             [-A|--cntrlr_a  <controller A IP>]
             [-B|--cntrlr_b  <controller B IP>]
@@ -88,24 +89,25 @@ usage()
             [--St|--storage_type  <storage type>]
             [--Sr|--server_type    <server type>]
             [-D|--disable-sub-mgr]
-            [--standalone-installation]
+            [--standalone_installation]
+            [--initialize_sspl]
             [--cleanup]
             [-h|--help]
 
     OPTION:
-    -V      <PRODUCT VERSION>   Product version (LDR_R1 | LDR_R2)
+    -V      <PRODUCT VERSION>   Product version (Default 'LDR_R2')
     -N      <NODE NAME>         Default 'srvnode-1'
-    -A      <IP ADDRESS>        IP address of controller A (default 10.0.0.2)
-    -B      <IP ADDRESS>        IP address of controller B (default 10.0.0.3)
-    --Ap    <CNTRLR A PORT>     Controller A port (default 80)
-    --Bp    <CNTRLR A PORT>     Controller B port (default 80)
+    -A      <IP ADDRESS>        IP address of controller A (default '10.0.0.2')
+    -B      <IP ADDRESS>        IP address of controller B (default '10.0.0.3')
+    --Ap    <CNTRLR A PORT>     Controller A port (default '80')
+    --Bp    <CNTRLR A PORT>     Controller B port (default '80')
     -U      <USER NAME>         Username for controller
     -P      <PASSWORD>          Password for controller (Encrypted)
-    --Ru    <RMQ USER>          User for Rabbitmq (Encrypted)
+    --Ru    <RMQ USER>          Username for Rabbitmq
     --Rp    <RMQ PASSWORD>      Password for Rabbitmq (Encrypted)
     --i     <BMC IP>            BMC IPV4 for Node-1
     --u     <BMC USER>          BMC User for Node-1
-    --p     <BMC PASSWORD>      BMC Password for Node-1 (Encrypted)
+    --p     <BMC PASSWORD>      BMC Password for node (Encrypted)
     -L      <LOCAL RPMS PATH>   Local RPMS location
     -T      <TARGET BUILD>      Target build base url pointed to release bundle base directory,
                 if specified the following directory structure is assumed:
@@ -114,6 +116,7 @@ usage()
                     3rd_party              <- CORTX 3rd party ISO is mounted here
                     cortx_iso              <- CORTX ISO (main) is mounted here
     --standalone_installation   Configure SSPL 3rd party dependencies like consul, rabbitmq
+    --initialize_sspl           Initialize SSPL
     --St    <STORAGE TYPE>      Storage type  ie. jbod, rbod, 5u84
     --Sr    <SERVER TYPE>       Server type   ie. physical, virtual
     -D|--disable-sub-mgr        For RHEL. To install prerequisites by disabling
@@ -138,8 +141,11 @@ parse_args()
         -D|--disable-sub-mgr)
             disable_sub_mgr=true
             shift ;;
-        --standalone-installation)
+        --standalone_installation)
             install_3rd_party_packages=true
+            shift ;;
+        --initialize_sspl)
+            initialize_sspl=true
             shift ;;
         -V|--product_version)
             [ -z "$2" ] && echo "ERROR: Product version(LDR_R1/LDR_R2) not provided" && exit 1;
@@ -242,8 +248,8 @@ cleanup(){
 [ "$do_cleanup" == "true" ] && cleanup
 
 # Setup common & 3rd_party repos
-CORTX_MONITOR_BASE_URL="https://raw.githubusercontent.com/mariyappanp/cortx-monitor/EOS-15396_self_prv/low-level/files/opt/seagate/sspl"
-curl $CORTX_MONITOR_BASE_URL/prerequisites/setup_yum_repos.sh -o setup_yum_repos.sh
+CORTX_MONITOR_BASE_URL="https://raw.githubusercontent.com/mariyappanp/cortx-monitor/EOS-15396_self_prv"
+curl ${CORTX_MONITOR_BASE_URL}/low-level/files/opt/seagate/sspl/prerequisites/setup_yum_repos.sh -o setup_yum_repos.sh
 chmod a+x setup_yum_repos.sh
 
 if [ "$disable_sub_mgr" == "true" ] && [ -n "$TARGET_BUILD" ]; then
@@ -261,7 +267,9 @@ echo -e "\nDone setup repos" 2>&1 | tee -a "${LOG_FILE}"
 
 # Install prereq script dependencies
 yum install -y python3
+python3 -m pip install -r ${CORTX_MONITOR_BASE_URL}/low-level/requirements.txt
 pip3 install configobj
+
 
 # Install required RPMS if not available
 "$install_3rd_party_packages" && {
@@ -277,6 +285,24 @@ pip3 install configobj
         echo "INFO: INSTALLING rabbitmq-server..." 2>&1 | tee -a "${LOG_FILE}"
         yum install -y rabbitmq-server 2>&1 | tee -a "${LOG_FILE}"
     }
+}
+
+
+# If local RPMS location is specified, SSPL RPMS will be
+# installed from the speicifed path. Otherwise yum repos.
+install_sspl_rpms(){
+    if [ -n "$RPMS_PATH" ]; then
+        echo -e "INFO: Installing SSPL RPMS from local path - ${RPMS_PATH}"
+        sudo yum localinstall -y $RPMS_PATH/cortx-libsspl_sec-2* \
+                            $RPMS_PATH/cortx-libsspl_sec-method_none-2* \
+                            $RPMS_PATH/cortx-sspl-2* \
+                            $RPMS_PATH/cortx-sspl-test-2*
+    else
+        echo "INFO: Installing SSPL RPMS using yum repos..."
+        yum install -y cortx-sspl.noarch
+        yum install -y cortx-sspl-test
+    fi
+    echo "Done installing SSPL RPMS.";
 }
 
 
@@ -320,13 +346,14 @@ EOF
             break
         fi
     done
+    echo "Done consul setup."
 
     # Choose sspl.conf file based on component version
     SSPL_CONF="sspl.conf.${PRODUCT_VERSION}"
-    curl $CORTX_MONITOR_BASE_URL/conf/${SSPL_CONF} -o ${SSPL_CONF};
+    curl ${CORTX_MONITOR_BASE_URL}/low-level/files/opt/seagate/sspl/conf/${SSPL_CONF} -o ${SSPL_CONF};
 
     # Load sspl conf to consul
-    curl $CORTX_MONITOR_BASE_URL/bin/feed_sspl_conf_to_consul.py -o feed_sspl_conf_to_consul.py;
+    curl ${CORTX_MONITOR_BASE_URL}/low-level/files/opt/seagate/sspl/bin/feed_sspl_conf_to_consul.py -o feed_sspl_conf_to_consul.py;
     chmod a+x feed_sspl_conf_to_consul.py
 
     echo "INFO: Inserting $COMPONENT config in consul.."
@@ -345,13 +372,12 @@ EOF
                     -St $STORAGE_TYPE -Sr $SERVER_TYPE \
                     --bmc_ip $BMC_IP --bmc_user $BMC_USER --bmc_passwd $BMC_PASS ;
     fi
-    echo "Done consul setup."
 
 }
 
 
 setup_rabbitmq(){
-    curl $CORTX_MONITOR_BASE_URL/prerequisites/sspl_rabbitmq_reinit -o sspl_rabbitmq_reinit;
+    curl ${CORTX_MONITOR_BASE_URL}/low-level/files/opt/seagate/sspl/prerequisites/sspl_rabbitmq_reinit -o sspl_rabbitmq_reinit;
     chmod a+x sspl_rabbitmq_reinit;
     python3 ./sspl_rabbitmq_reinit || {
         reinit_err="$?"
@@ -362,25 +388,15 @@ setup_rabbitmq(){
     echo "Done rabbitmq setup.";
 }
 
-# If local RPMS location is specified, SSPL RPMS will be
-# installed from the speicifed path. Otherwise yum repos.
-install_sspl_rpms(){
-    if [ -n "$RPMS_PATH" ]; then
-        echo -e "INFO: Installing SSPL RPMS from local path... \ncd ${RPMS_PATH}"
-        sudo yum localinstall -y $RPMS_PATH/cortx-libsspl_sec-2* \
-                            $RPMS_PATH/cortx-libsspl_sec-method_none* \
-                            $RPMS_PATH/cortx-sspl-2* \
-                            $RPMS_PATH/cortx-sspl-test*
-    else
-        echo "INFO: Installing SSPL RPMS using yum repos..."
-        yum install -y cortx-sspl.noarch
-        yum install -y cortx-sspl-test
-    fi
-    echo "Done installing SSPL RPMS.";
 
-    # Initialize SSPL
-    /opt/seagate/cortx/sspl/bin/sspl_setup setup -p $PRODUCT_VERSION
+setup_sspl(){
+    [ "$initialize_sspl" == true ] &&
+        /opt/seagate/cortx/sspl/bin/sspl_setup setup -p $PRODUCT_VERSION
 }
+
+
+# Install SSPL
+install_sspl_rpms 2>&1 | tee -a "${LOG_FILE}"
 
 # Configure consul
 setup_consul 2>&1 | tee -a "${LOG_FILE}"
@@ -388,7 +404,7 @@ setup_consul 2>&1 | tee -a "${LOG_FILE}"
 # Configure rabbitmq-server
 setup_rabbitmq 2>&1 | tee -a "${LOG_FILE}"
 
-# Install SSPL
+# Configure SSPL
 setup_sspl 2>&1 | tee -a "${LOG_FILE}"
 
 echo "For more details see: $LOG_FILE"

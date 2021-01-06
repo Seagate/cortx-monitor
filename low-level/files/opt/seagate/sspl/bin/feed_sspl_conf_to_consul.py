@@ -140,7 +140,7 @@ class LoadConfig:
         parser['SYSTEM_INFORMATION'] = {
             'kernel_version': self._get_result('uname -r'),
             'cluster_id': self.cluster_id,
-            node: {'node_id': self.node_id},
+             node: {'node_id': self.node_id},
             'type': server_type or self._get_result(
                 'consul kv get system_information/type')
         }
