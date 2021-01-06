@@ -73,20 +73,12 @@ class RabbitMQingressProcessorTests(ScheduledModuleThread, InternalMsgQ):
                                                        self.PRIORITY)
 
         # Read in the actuator schema for validating messages
-        dir = os.path.dirname(__file__)
-        #fileName = os.path.join(dir, '..', '..', 'low-level', 'json_msgs',
-        #                        'schemas', 'actuators',
-        #                        self.JSON_ACTUATOR_SCHEMA)
         fileName = os.path.join(RESOURCE_PATH + '/actuators',
                                 self.JSON_ACTUATOR_SCHEMA)
 
         self._actuator_schema = self._load_schema(fileName)
 
         # Read in the sensor schema for validating messages
-        dir = os.path.dirname(__file__)
-        #fileName = os.path.join(dir, '..', '..', 'low-level', 'json_msgs',
-        #                        'schemas', 'sensors',
-        #                        self.JSON_SENSOR_SCHEMA)
         fileName = os.path.join(RESOURCE_PATH + '/sensors',
                                 self.JSON_SENSOR_SCHEMA)
 

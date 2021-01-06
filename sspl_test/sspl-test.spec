@@ -13,9 +13,6 @@
 # about this software or licensing, please email opensource@seagate.com or
 # cortx-questions@seagate.com.
 
-%define _unpackaged_files_terminate_build 0
-%define _binaries_in_noarch_packages_terminate_build   0
-
 # build number
 %define build_num  %( test -n "$build_number" && echo "$build_number" || echo 1 )
 
@@ -37,7 +34,10 @@ Requires:  python36-psutil
 Installs SSPL sanity test ctf scripts
 
 %prep
-%setup -n sspl_test
+%setup -n %{product_family}-sspl/sspl_test
+
+%build
+%global __python %{__python3}
 
 %clean
 [ "${RPM_BUILD_ROOT}" != "/" ] && rm -rf ${RPM_BUILD_ROOT}
@@ -48,7 +48,6 @@ cp -rp . ${RPM_BUILD_ROOT}/opt/seagate/%{product_family}/sspl/sspl_test
 
 %post
 SSPL_DIR=/opt/seagate/%{product_family}/sspl
-CFG_DIR=$SSPL_DIR/conf
 
 # Check and install required flask version
 fl=`pip3.6 freeze | grep Flask`

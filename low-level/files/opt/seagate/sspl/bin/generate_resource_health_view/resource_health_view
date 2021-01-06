@@ -29,9 +29,11 @@ import tempfile
 import re
 import dbus
 from dbus import SystemBus, Interface, Array
-from framework.utils.service_logging import logger
 import warnings
 warnings.filterwarnings(action='ignore',module='cryptography')
+# Add the top level directories
+sys.path.insert(0, f'/opt/seagate/cortx/sspl/low-level')
+from framework.utils.service_logging import logger
 from framework.utils.store_factory import store, file_store
 from framework.utils.ipmi_client import IpmiFactory
 from framework.utils.sysfs_interface import SysFS

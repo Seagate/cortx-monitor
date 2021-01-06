@@ -32,8 +32,10 @@ import socket
 import pika
 
 from configparser import ConfigParser
-from config_reader import ConfigReader
-from sspl_constants import COMMON_CONFIGS
+# Add the top level directories
+sys.path.insert(0, f'/opt/seagate/cortx/sspl/low-level')
+from framework.utils.config_reader import ConfigReader
+from framework.base.sspl_constants import COMMON_CONFIGS, cs_legacy_products, enabled_products, ServiceTypes
 from cortx.utils.security.cipher import Cipher, CipherInvalidToken
 
 RABBITMQCTL = '/usr/sbin/rabbitmqctl'
@@ -60,8 +62,6 @@ NODE_ID_KEY = 'node_id'
 # Add the top level directories
 parentdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.sys.path.insert(0,parentdir)
-
-from sspl_constants import cs_legacy_products, enabled_products, ServiceTypes
 
 config_reader = ConfigReader(is_init=True)
 
@@ -454,3 +454,4 @@ def _send_command(command, fail_on_error=True):
 if __name__ == '__main__':
     product = sys.argv[1]
     main(product)
+    

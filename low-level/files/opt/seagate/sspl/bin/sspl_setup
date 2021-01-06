@@ -24,7 +24,7 @@ set -e -u -o pipefail
 
 SCRIPT_NAME=$(basename $0)
 SCRIPT_DIR=$(dirname $0)
-. $SCRIPT_DIR/constants.sh
+source $SCRIPT_DIR/constants.sh
 
 SSPL_CONFIGURED="/var/$PRODUCT_FAMILY/sspl/sspl-configured"
 

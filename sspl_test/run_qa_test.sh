@@ -24,7 +24,7 @@ IS_VIRTUAL=$(facter is_virtual)
 
 [[ $EUID -ne 0 ]] && sudo=sudo
 script_dir=$(dirname $0)
-. $script_dir/constants.sh
+source $script_dir/constants.sh
 
 plan=${1:-}
 avoid_rmq=${2:-}
@@ -317,7 +317,7 @@ echo "Initialization completed. Starting tests"
 if [ "$IS_VIRTUAL" == "true" ]
 then
     echo "state=active" > /var/$PRODUCT_FAMILY/sspl/data/state.txt
-    PID=`/sbin/pidof -s /usr/bin/sspl_ll_d`
+    PID=`/usr/bin/pgrep -d " " -f /usr/bin/sspl_ll_d`
     kill -s SIGHUP $PID
 fi
 

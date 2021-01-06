@@ -49,7 +49,7 @@ Segate System Platform Library - Security
 A library used to sign and verify messages within SSPL.
 
 %prep
-%setup -n sspl/libsspl_sec
+%setup -n %{product_family}-sspl/libsspl_sec
 
 %build
 [ -f ./autogen.sh ] && bash ./autogen.sh

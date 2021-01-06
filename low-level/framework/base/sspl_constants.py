@@ -18,15 +18,13 @@
 import subprocess
 import ast
 import configparser
-from enum import Enum
+import sys
 import os
-
-try:
-    from salt_util import SaltInterface
-    from service_logging import logger
-except Exception as e:
-    from framework.utils.salt_util import SaltInterface
-    from framework.utils.service_logging import logger
+from enum import Enum
+# Add the top level directories
+sys.path.insert(0, '/opt/seagate/cortx/sspl/low-level')
+from framework.utils.salt_util import SaltInterface
+from framework.utils.service_logging import logger
 
 PRODUCT_NAME = 'LDR_R1'
 PRODUCT_FAMILY = 'cortx'
@@ -34,10 +32,12 @@ enabled_products = ["CS-A", "SINGLE","DUAL", "CLUSTER", "LDR_R1", "LDR_R2"]
 cs_products = ["CS-A"]
 cs_legacy_products = ["CS-L", "CS-G"]
 setups = ["cortx"]
-RESOURCE_PATH = f"/opt/seagate/{PRODUCT_FAMILY}/sspl/resources/"
-CLI_RESOURCE_PATH = f"/opt/seagate/{PRODUCT_FAMILY}/sspl/cli"
+RESOURCE_PATH = f"/opt/seagate/{PRODUCT_FAMILY}/sspl/low-level/json_msgs/schemas/"
+CLI_RESOURCE_PATH = f"/opt/seagate/{PRODUCT_FAMILY}/sspl/low-level/tests/manual"
 DATA_PATH = f"/var/{PRODUCT_FAMILY}/sspl/data/"
 SSPL_CONFIGURED=f"/var/{PRODUCT_FAMILY}/sspl/sspl-configured"
+RESOURCE_HEALTH_VIEW = "/usr/bin/resource_health_view"
+CONSUL_DUMP = f"/opt/seagate/{PRODUCT_FAMILY}/sspl/bin/consuldump.py"
 NODE_ID = "001"
 SITE_ID = "001"
 RACK_ID = "001"

@@ -25,7 +25,7 @@ set -e -u -o pipefail
 
 SCRIPT_DIR=$(dirname $0)
 # Import common constants
-. $SCRIPT_DIR/constants.sh
+source $SCRIPT_DIR/constants.sh
 SCRIPT_NAME=$(basename $0)
 
 mkdir -p $CONSUL_PATH

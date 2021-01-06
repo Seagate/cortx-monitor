@@ -44,4 +44,4 @@ sspl:
          args: null
 
 support_bundle:
-    - /opt/seagate/cortx/sspl/bin/sspl_bundle_generate
+    - /usr/bin/sspl_bundle_generate

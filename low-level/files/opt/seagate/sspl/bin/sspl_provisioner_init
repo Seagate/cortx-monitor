@@ -27,7 +27,7 @@ set -e -u -o pipefail
 SCRIPT_DIR=$(dirname $0)
 SCRIPT_NAME=$(basename $0)
 
-. $SCRIPT_DIR/bin/constants.sh
+source $SCRIPT_DIR/bin/constants.sh
 
 rmq_cluster=true
 rmq_cluster_nodes=
@@ -88,7 +88,6 @@ setup_provisioner_prereq(){
 
     # to install updated packages
     pkg_name="cortx-prvsnr-cli-1.0.0"
-    # build_url="http://cortx-storage.colo.seagate.com/releases/cortx/github/dev/rhel-7.7.1908/provisioner_last_successful"
     build_url="http://cortx-storage.colo.seagate.com/releases/cortx/github/release/rhel-7.7.1908/last_successful/"
     yum install -y $build_url/$(curl -s $build_url/|grep $pkg_name|sed 's/<\/*[^"]*"//g'|cut -d"\"" -f1)
     # provisioner decides the setup(single or dual node) for deployment and
@@ -139,7 +138,7 @@ start_req_services(){
         echo "Changing SSPL state to 'active', disable step once HA integration complete"
         echo "*************************************************************************"
         echo "state=active" > /var/$PRODUCT_FAMILY/sspl/data/state.txt
-        PID=`/sbin/pidof -s /usr/bin/sspl_ll_d`
+        PID=`/usr/bin/pgrep -d " " -f /usr/bin/sspl_ll_d`
         kill -s SIGHUP $PID
     else
         echo SSPL Service not started after 10 seconds.

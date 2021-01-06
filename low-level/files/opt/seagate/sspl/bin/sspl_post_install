@@ -69,7 +69,7 @@ done
     $script_dir/sspl_setup_consul -e $ENVIRONMENT
 
 # Install packages which are not available in YUM repo, from PIP
-python3 -m pip install -r $SSPL_BASE_DIR/conf/requirements.txt
+python3 -m pip install -r $SSPL_BASE_DIR/low-level/requirements.txt
 
 # NOTE: By default the sspl default conf file will not be copied.
 # The provisioner is supposed to copy the appropriate conf file based
@@ -81,10 +81,10 @@ python3 -m pip install -r $SSPL_BASE_DIR/conf/requirements.txt
 
 # Copy rsyslog configuration
 [ -f $RSYSLOG_CONF ] ||
-    cp $SSPL_BASE_DIR/conf/$RSYSLOG_CONF $RSYSLOG_CONF
+    cp $SSPL_BASE_DIR/low-level/files/$RSYSLOG_CONF $RSYSLOG_CONF
 
 [ -f $RSYSLOG_SSPL_CONF ] ||
-    cp $SSPL_BASE_DIR/conf/$RSYSLOG_SSPL_CONF $RSYSLOG_SSPL_CONF
+    cp $SSPL_BASE_DIR/low-level/files/$RSYSLOG_SSPL_CONF $RSYSLOG_SSPL_CONF
 
 # Create soft link for SINGLE product name service to existing LDR_R1 service
 # Instead of keeping separate service file for SINGLE product with same content.
@@ -103,7 +103,7 @@ systemctl daemon-reload
 
 # Copy IEC mapping files
 mkdir -p $PRODUCT_BASE_DIR/iem/iec_mapping
-cp -R $SSPL_BASE_DIR/resources/iem/iec_mapping/* $PRODUCT_BASE_DIR/iem/iec_mapping
+cp -R $SSPL_BASE_DIR/low-level/files/iec_mapping/* $PRODUCT_BASE_DIR/iem/iec_mapping
 
 # Skip this step if sspl is being configured for node replacement scenario as sspl configurations are
 # already available in consul on the healthy node

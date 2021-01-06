@@ -23,7 +23,10 @@ import json
 import argparse
 import time
 import requests
-from sspl_constants import MAX_CONSUL_RETRY, WAIT_BEFORE_RETRY, CONSUL_HOST, CONSUL_PORT, CONSUL_ERR_STRING
+import sys
+# Add the top level directories
+sys.path.insert(0, '/opt/seagate/cortx/sspl/low-level')
+from framework.base.sspl_constants import MAX_CONSUL_RETRY, WAIT_BEFORE_RETRY, CONSUL_HOST, CONSUL_PORT, CONSUL_ERR_STRING
 
 class ConsulDump():
 
