@@ -32,7 +32,7 @@ BuildRoot:	%(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 Installs sspl_ll_cli
 
 %prep
-%setup -n %{product_family}-sspl/low-level/cli
+%setup -n %{parent_dir}/low-level/cli
 
 %clean
 [ "${RPM_BUILD_ROOT}" != "/" ] && rm -rf ${RPM_BUILD_ROOT}
