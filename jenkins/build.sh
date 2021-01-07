@@ -74,26 +74,6 @@ case $LOG_LEVEL in
 esac
 echo "Using VERSION=${VERSION} GIT_VER=${GIT_VER} PRODUCT=${PRODUCT} TEST=${TEST} LOG_LEVEL=${LOG_LEVEL} "
 
-################### INSTALL REQUIRED RPM PACKAGES ##############################
-
-# Check python package
-req_file=$BASE_DIR/low-level/requirements.txt
-echo "Installing python packages..."
-python3 -m pip install -r "$req_file"  > /dev/null || {
-    echo "Unable to install package from $req_file"; exit 1;
-};
-
-#Check & install required RPM packages
-echo "Installing build required RPM packages..."
-yum install -y python36-dbus python36-paramiko \
-    python36-psutil python36-gobject cortx-py-utils
-
-echo "Generating tar & RPM's for pre requisite packages systemd_python."
-yum erase -y systemd-python36-*
-
-echo 'Installing systemd-python36*...'
-yum install -y systemd-python36-*
-
 ################### TAR & RPM BUILD ##############################
 
 # Remove existing directory tree and create fresh one.
