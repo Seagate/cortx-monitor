@@ -1,22 +1,22 @@
 from coverage import Coverage
 co = Coverage(
- 			data_file='/tmp/sspl/.sspl_report',
- 			include="/opt/seagate/*",
- 			omit=['*/.local/*', '*/usr/*'],
- 			# config_file='/tmp/sspl/.coveragerc',
+            data_file='/tmp/sspl/.sspl_report',
+            include="/opt/seagate/*",
+            omit=['*/.local/*', '*/usr/*'],
+            # config_file='/tmp/sspl/.coveragerc',
  			)
         logger.info("Starting coverage report scope")
- 		co.start()
- 	logger.info("Ending Coverage Scope")
- 	co.stop()
- 	logger.info("coverage object stopped.")
- 	co.save()
- 	logger.info("coverage info saved.")
- 	cov_per = co.xml_report(
+        co.start()
+    logger.info("Ending Coverage Scope")
+    co.stop()
+    logger.info("coverage object stopped.")
+    co.save()
+    logger.info("coverage info saved.")
+    cov_per = co.xml_report(
  						outfile='/tmp/sspl/sspl_xml_coverage_report.xml',
  						ignore_errors=True,
  					)
- 	logger.info(f"XML coverage report generated with coverage of {cov_per}%")
+    logger.info(f"XML coverage report generated with coverage of {cov_per}%")
  	## Enable below code to inable HTML report generation
  	# html_cov_per = co.html_report(
  	#                     directory='/tmp/sspl/sspl_html_coverage',
