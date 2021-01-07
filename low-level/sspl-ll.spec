@@ -48,7 +48,7 @@ Requires(pre): shadow-utils
 Installs SSPL
 
 %prep
-%setup -n %{product_family}-sspl/low-level
+%setup -n %{parent_dir}/low-level
 
 %build
 # Required to generate RPM targeted for Python3 even when default Python is 2.

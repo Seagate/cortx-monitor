@@ -34,7 +34,7 @@ Requires:  python36-psutil
 Installs SSPL sanity test ctf scripts
 
 %prep
-%setup -n %{product_family}-sspl/sspl_test
+%setup -n %{parent_dir}/sspl_test
 
 %build
 %global __python %{__python3}
