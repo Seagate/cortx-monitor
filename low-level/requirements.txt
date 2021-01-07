@@ -9,3 +9,4 @@ zope.interface==4.7.1
 pyinotify==0.9.4
 python-consul==1.1.0
 cryptography==2.8
+configobj==5.0.6

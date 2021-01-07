@@ -99,18 +99,11 @@ class LoadConfig:
             # Remove duplicate configs
             if 'STORAGE_ENCLOSURE' in parser.sections:
                  del parser['STORAGE_ENCLOSURE']
-            elif 'BMC' in parser.sections:
+            if 'BMC' in parser.sections:
                 del parser['BMC']
-            elif 'SYSTEM_INFORMATION' in parser.sections:
+            if 'SYSTEM_INFORMATION' in parser.sections:
                 if 'node_id' in parser['SYSTEM_INFORMATION'].keys():
                     del parser['SYSTEM_INFORMATION']['node_id']
-            # Insert config
-            prefix = component.lower() + '/config/'
-            for k, v in parser.items():
-                if k.lower() in self.common_config_sect:
-                    self._insert_nested_dict_to_consul(v, prefix=k.lower())
-                k = prefix + k
-                self._insert_nested_dict_to_consul(v, prefix=k)
             # TODO: Get common way of fetching cluster_id, node_id and RMQ password
             persistent_data = ""
             if os.path.isfile(self.persistent_data_file):
@@ -130,6 +123,13 @@ class LoadConfig:
                 self.cluster_id = cluster_id  or self._get_result('uuidgen')
                 node_id = self._get_result(f'consul kv get system_information/{node}/node_id')
                 self.node_id = node_id or self._get_result('uuidgen')
+            # Insert config
+            prefix = component.lower() + '/config/'
+            for k, v in parser.items():
+                if k.lower() in self.common_config_sect:
+                    self._insert_nested_dict_to_consul(v, prefix=k.lower())
+                k = prefix + k
+                self._insert_nested_dict_to_consul(v, prefix=k)
 
     def sync_config(self, node, component=None, rmq_user=None, rmq_passwd=None,\
                     primary_mc=None, secondary_mc=None, primary_mc_port=None, secondary_mc_port=None,\

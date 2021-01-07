@@ -25,6 +25,9 @@
 
 set -eE
 
+CORTX_MONITOR_BASE_URL="https://raw.githubusercontent.com/mariyappanp/cortx-monitor/EOS-15396_self_prv"
+SSPL_BASE_DIR="/opt/seagate/cortx/sspl"
+
 LOG_FILE="${LOG_FILE:-/var/log/cortx/sspl/sspl_dev_deploy.log}"
 export LOG_FILE
 
@@ -44,14 +47,17 @@ echo "INFO: Date: $(date)" 2>&1 | tee -a "${LOG_FILE}"
 
 do_cleanup=false
 install_3rd_party_packages=false
+setup_repo=false
 disable_sub_mgr=false
 skip_bmc=false
 initialize_sspl=false
 TARGET_BUILD=
+RPMS_PATH=
 COMPONENT="SSPL"
 PRODUCT_VERSION="LDR_R2"
 NODE="srvnode-1"
 RMQ_USER="sspluser"
+RMQ_PASSWD=""
 CNTRLR_A="10.0.0.2"
 CNTRLR_B="10.0.0.3"
 CNTRLR_A_PORT="80"
@@ -91,6 +97,7 @@ usage()
             [-D|--disable-sub-mgr]
             [--standalone_installation]
             [--initialize_sspl]
+            [--setup_repo]
             [--cleanup]
             [-h|--help]
 
@@ -102,12 +109,12 @@ usage()
     --Ap    <CNTRLR A PORT>     Controller A port (default '80')
     --Bp    <CNTRLR A PORT>     Controller B port (default '80')
     -U      <USER NAME>         Username for controller
-    -P      <PASSWORD>          Password for controller (Encrypted)
+    -P      <PASSWORD>          Password for controller
     --Ru    <RMQ USER>          Username for Rabbitmq
-    --Rp    <RMQ PASSWORD>      Password for Rabbitmq (Encrypted)
+    --Rp    <RMQ PASSWORD>      Password for Rabbitmq
     --i     <BMC IP>            BMC IPV4 for Node-1
     --u     <BMC USER>          BMC User for Node-1
-    --p     <BMC PASSWORD>      BMC Password for node (Encrypted)
+    --p     <BMC PASSWORD>      BMC Password for node
     -L      <LOCAL RPMS PATH>   Local RPMS location
     -T      <TARGET BUILD>      Target build base url pointed to release bundle base directory,
                 if specified the following directory structure is assumed:
@@ -117,6 +124,7 @@ usage()
                     cortx_iso              <- CORTX ISO (main) is mounted here
     --standalone_installation   Configure SSPL 3rd party dependencies like consul, rabbitmq
     --initialize_sspl           Initialize SSPL
+    --setup_repo                Setup yum repos
     --St    <STORAGE TYPE>      Storage type  ie. jbod, rbod, 5u84
     --Sr    <SERVER TYPE>       Server type   ie. physical, virtual
     -D|--disable-sub-mgr        For RHEL. To install prerequisites by disabling
@@ -124,7 +132,7 @@ usage()
                                 If this option is not provided it is expected that
                                 either the system is not RHEL or system is already
                                 registered with subscription manager
-    --cleanup                   Remove dependencies
+    --cleanup                   Stop sspl-ll and remove installed SSPL RPMs
     "
     exit 0
 }
@@ -146,6 +154,9 @@ parse_args()
             shift ;;
         --initialize_sspl)
             initialize_sspl=true
+            shift ;;
+        --setup_repo)
+            setup_repo=true
             shift ;;
         -V|--product_version)
             [ -z "$2" ] && echo "ERROR: Product version(LDR_R1/LDR_R2) not provided" && exit 1;
@@ -224,6 +235,34 @@ parse_args()
 
 parse_args "$@"
 
+# Cleanup
+[ "$do_cleanup" == "true" ] && {
+    systemctl stop sspl-ll ||:
+    yum remove -y cortx-sspl.noarch
+    exit ;
+}
+
+
+# Setup common, 3rd_party and build specific repos
+[ "$setup_repo" == true ] && {
+    curl ${CORTX_MONITOR_BASE_URL}/low-level/files/opt/seagate/sspl/prerequisites/setup_yum_repos.sh -o setup_yum_repos.sh
+    chmod a+x setup_yum_repos.sh
+
+    if [ "$disable_sub_mgr" == "true" ] && [ -n "$TARGET_BUILD" ]; then
+        ./setup_yum_repos.sh -d -t $TARGET_BUILD 2>&1 | tee -a "${LOG_FILE}"
+    elif [ "$disable_sub_mgr" == "true" ]; then
+        ./setup_yum_repos.sh -d 2>&1 | tee -a "${LOG_FILE}"
+    elif [ -n "$TARGET_BUILD" ]; then
+        ./setup_yum_repos.sh -t $TARGET_BUILD 2>&1 | tee -a "${LOG_FILE}"
+    else
+        ./setup_yum_repos.sh 2>&1 | tee -a "${LOG_FILE}"
+    fi
+
+    echo -e "\nDone setup repos" 2>&1 | tee -a "${LOG_FILE}"
+    exit ;
+}
+
+
 # Check for required arguments
 [ -z "$CNTRLR_USER" ] && echo "ERROR: -U <controller user name> is required." && exit 1;
 [ -z "$CNTRLR_PASSWD" ] && echo "ERROR: -P <controller password> is required." && exit 1;
@@ -239,52 +278,22 @@ else
     [ -z "$BMC_PASSWD" ] && echo "ERROR: --p <BMC password> is required." && exit 1;
 fi
 
-# Cleanup
-cleanup(){
-    systemctl stop rabbitmq-server
-    yum remove -y consul rabbitmq-server cortx-utils
-    yum remove -y cortx-sspl.noarch
-}
-[ "$do_cleanup" == "true" ] && cleanup
-
-# Setup common & 3rd_party repos
-CORTX_MONITOR_BASE_URL="https://raw.githubusercontent.com/mariyappanp/cortx-monitor/EOS-15396_self_prv"
-curl ${CORTX_MONITOR_BASE_URL}/low-level/files/opt/seagate/sspl/prerequisites/setup_yum_repos.sh -o setup_yum_repos.sh
-chmod a+x setup_yum_repos.sh
-
-if [ "$disable_sub_mgr" == "true" ] && [ -n "$TARGET_BUILD" ]; then
-    ./setup_yum_repos.sh -d -t $TARGET_BUILD 2>&1 | tee -a "${LOG_FILE}"
-elif [ "$disable_sub_mgr" == "true" ]; then
-    ./setup_yum_repos.sh -d 2>&1 | tee -a "${LOG_FILE}"
-elif [ -n "$TARGET_BUILD" ]; then
-    ./setup_yum_repos.sh -t $TARGET_BUILD 2>&1 | tee -a "${LOG_FILE}"
-else
-    ./setup_yum_repos.sh 2>&1 | tee -a "${LOG_FILE}"
-fi
-
-echo -e "\nDone setup repos" 2>&1 | tee -a "${LOG_FILE}"
-
-
-# Install prereq script dependencies
-yum install -y python3
-python3 -m pip install -r ${CORTX_MONITOR_BASE_URL}/low-level/requirements.txt
-pip3 install configobj
-
 
 # Install required RPMS if not available
 "$install_3rd_party_packages" && {
-    rpm -qa | grep "cortx-py-utils" || {
-        echo "INFO: INSTALLING cortx-py-utils..." 2>&1 | tee -a "${LOG_FILE}"
-        yum install -y cortx-py-utils 2>&1 | tee -a "${LOG_FILE}"
-    }
-    rpm -qa | grep "consul" || {
-        echo "INFO: INSTALLING consul..." 2>&1 | tee -a "${LOG_FILE}"
-        yum install -y consul 2>&1 | tee -a "${LOG_FILE}"
-    }
-    rpm -qa | grep "rabbitmq-server" || {
-        echo "INFO: INSTALLING rabbitmq-server..." 2>&1 | tee -a "${LOG_FILE}"
-        yum install -y rabbitmq-server 2>&1 | tee -a "${LOG_FILE}"
-    }
+
+    echo "INFO: INSTALLING python3..." 2>&1 | tee -a "${LOG_FILE}"
+    yum install -y python3 2>&1 | tee -a "${LOG_FILE}"
+
+    echo "INFO: INSTALLING cortx-py-utils..." 2>&1 | tee -a "${LOG_FILE}"
+    yum install -y cortx-py-utils 2>&1 | tee -a "${LOG_FILE}"
+
+    echo "INFO: INSTALLING consul..." 2>&1 | tee -a "${LOG_FILE}"
+    yum install -y consul 2>&1 | tee -a "${LOG_FILE}"
+
+    echo "INFO: INSTALLING rabbitmq-server..." 2>&1 | tee -a "${LOG_FILE}"
+    yum install -y rabbitmq-server 2>&1 | tee -a "${LOG_FILE}"
+
 }
 
 
@@ -307,10 +316,15 @@ install_sspl_rpms(){
 
 
 setup_consul(){
+
+    # Install required version of python-consul
+    consul_req="$(grep python-consul ${SSPL_BASE_DIR}/low-level/requirements.txt)"
+    [ -n "$consul_req" ] && python3 -m pip install $consul_req
+
     if ! [ -x "$(command -v consul)" ]; then
         echo "ERROR: Consul is not available. \
         For consul and other 3rd party package installation, \
-        check prereq script usage. Exiting."
+        check prereq script usage. Exiting."  2>&1 | tee -a "${LOG_FILE}"
         exit 1
     fi
     # Create config file for consul agent
@@ -331,7 +345,7 @@ setup_consul(){
             ]
         }
 EOF
-    # Invoke consul agent from fallback path
+    # Invoke consul agent
     CONSUL_PS=$(pgrep "consul" || true)
     [ -z "$CONSUL_PS" ] &&
         consul agent -dev -config-file=$CONSUL_CONFIG_FILE &>/dev/null &
@@ -342,56 +356,111 @@ EOF
         TRIES=$((TRIES+1))
         CONSUL_PS=$(pgrep "consul" || true)
         if [ $TRIES -gt 10 ]; then
-            echo "ERROR: Consul service is not started"
+            echo "ERROR: Consul service is not started"  2>&1 | tee -a "${LOG_FILE}"
             break
         fi
     done
-    echo "Done consul setup."
+    echo "Done consul setup."  2>&1 | tee -a "${LOG_FILE}"
+
+}
+
+
+insert_config_in_consul(){
+
+    # Install configobj
+    configobj_req="$(grep configobj ${SSPL_BASE_DIR}/low-level/requirements.txt)"
+    [ -n "$configobj_req" ] && python3 -m pip install $configobj_req
+
+    # Update persistent cluster_id
+    consul_cluster_id="$(consul kv get system_information/cluster_id ||:)"
+    config_cluster_id="$(sed -nr 's/^cluster_id=([^,]+)$/\1/p' $CONFIG_FILE | head -1)"
+    if [ -n "$consul_cluster_id" ]; then
+        cluster_id=$consul_cluster_id
+    elif [ -n "$config_cluster_id" ]; then
+        cluster_id=$config_cluster_id
+    else
+        cluster_id=$(uuidgen)
+    fi
+    consul kv put system_information/cluster_id "$cluster_id"
+    echo "cluster_id: $cluster_id"
+
+    # Update persistent node_id
+    consul_node_id="$(consul kv get system_information/${NODE}/node_id ||:)"
+    config_node_id="$(sed -nr 's/^node_id=([^,]+)$/\1/p' $CONFIG_FILE | head -1)"
+    if [ -n "$consul_node_id" ]; then
+        node_id=$consul_node_id
+    elif [ -n "$config_node_id" ]; then
+        node_id=$config_node_id
+    else
+        node_id=$(uuidgen)
+    fi
+    consul kv put system_information/${NODE}/node_id "$node_id"
+    echo "node_id: $node_id"
+
+    # Encrypt passwords
+    if [ -n "$RMQ_PASSWD" ]; then
+        rbmq_key=$(python3 -c 'from cortx.utils.security.cipher import Cipher; \
+            print(Cipher.generate_key('"'$cluster_id'"', "rabbitmq"))')
+        RMQ_PASSWD=$(python3 -c 'from cortx.utils.security.cipher import Cipher; \
+            print(Cipher.encrypt('$rbmq_key', '"'$RMQ_PASSWD'"'.encode()).decode("utf-8"))')
+    fi
+    if [ -n "$CNTRLR_PASSWD" ]; then
+        encl_key=$(python3 -c 'from cortx.utils.security.cipher import Cipher; \
+            print(Cipher.generate_key('"'$cluster_id'"', "storage_enclosure"))')
+        CNTRLR_PASSWD=$(python3 -c 'from cortx.utils.security.cipher import Cipher; \
+            print(Cipher.encrypt('$encl_key', '"'$CNTRLR_PASSWD'"'.encode()).decode("utf-8"))')
+    fi
 
     # Choose sspl.conf file based on component version
-    SSPL_CONF="sspl.conf.${PRODUCT_VERSION}"
-    curl ${CORTX_MONITOR_BASE_URL}/low-level/files/opt/seagate/sspl/conf/${SSPL_CONF} -o ${SSPL_CONF};
+    SSPL_CONF_FILE=sspl.conf.${PRODUCT_VERSION}
+    SSPL_CONF=${SSPL_BASE_DIR}/low-level/files/opt/seagate/sspl/conf/${SSPL_CONF_FILE}
 
     # Load sspl conf to consul
-    curl ${CORTX_MONITOR_BASE_URL}/low-level/files/opt/seagate/sspl/bin/feed_sspl_conf_to_consul.py -o feed_sspl_conf_to_consul.py;
-    chmod a+x feed_sspl_conf_to_consul.py
+    CONFIG_FEEDER=$SSPL_BASE_DIR/low-level/files/opt/seagate/sspl/bin/feed_sspl_conf_to_consul.py
 
-    echo "INFO: Inserting $COMPONENT config in consul.."
+    echo "INFO: Inserting $SSPL_CONF_FILE config in consul.."
     if [ "$skip_bmc" == "true" ];
     then
-        python3 feed_sspl_conf_to_consul.py -F $SSPL_CONF -N $NODE \
-                    -C $COMPONENT -Ru $RMQ_USER -Rp $RMQ_PASSWD \
-                    -A $CNTRLR_A -Ap $CNTRLR_A_PORT -B $CNTRLR_B -Bp $CNTRLR_B_PORT \
-                    -U $CNTRLR_USER -P $CNTRLR_PASSWD \
-                    -St $STORAGE_TYPE -Sr $SERVER_TYPE ;
+        python3 $CONFIG_FEEDER -F $SSPL_CONF -N $NODE \
+                -C $COMPONENT -Ru $RMQ_USER -Rp $RMQ_PASSWD \
+                -A $CNTRLR_A -Ap $CNTRLR_A_PORT -B $CNTRLR_B -Bp $CNTRLR_B_PORT \
+                -U $CNTRLR_USER -P $CNTRLR_PASSWD \
+                -St $STORAGE_TYPE -Sr $SERVER_TYPE ;
     else
-        python3 feed_sspl_conf_to_consul.py -F $SSPL_CONF -N $NODE \
-                    -C $COMPONENT -Ru $RMQ_USER -Rp $RMQ_PASSWD \
-                    -A $CNTRLR_A -Ap $CNTRLR_A_PORT -B $CNTRLR_B -Bp $CNTRLR_B_PORT \
-                    -U $CNTRLR_USER -P $CNTRLR_PASSWD \
-                    -St $STORAGE_TYPE -Sr $SERVER_TYPE \
-                    --bmc_ip $BMC_IP --bmc_user $BMC_USER --bmc_passwd $BMC_PASS ;
+        python3 $CONFIG_FEEDER -F $SSPL_CONF -N $NODE \
+                -C $COMPONENT -Ru $RMQ_USER -Rp $RMQ_PASSWD \
+                -A $CNTRLR_A -Ap $CNTRLR_A_PORT -B $CNTRLR_B -Bp $CNTRLR_B_PORT \
+                -U $CNTRLR_USER -P $CNTRLR_PASSWD \
+                -St $STORAGE_TYPE -Sr $SERVER_TYPE \
+                --bmc_ip $BMC_IP --bmc_user $BMC_USER --bmc_passwd $BMC_PASS ;
     fi
 
 }
 
 
 setup_rabbitmq(){
-    curl ${CORTX_MONITOR_BASE_URL}/low-level/files/opt/seagate/sspl/prerequisites/sspl_rabbitmq_reinit -o sspl_rabbitmq_reinit;
-    chmod a+x sspl_rabbitmq_reinit;
-    python3 ./sspl_rabbitmq_reinit || {
+
+    # Install pika
+    pika_req="$(grep pika ${SSPL_BASE_DIR}/low-level/requirements.txt)"
+    [ -n "$pika_req" ] && python3 -m pip install $pika_req
+
+    RMQ_REINIT=$SSPL_BASE_DIR/low-level/files/opt/seagate/sspl/prerequisites/sspl_rabbitmq_reinit
+    python3 $RMQ_REINIT || {
         reinit_err="$?"
         echo -n "ERROR: sspl_rabbitmq_reinit failed "
         echo "with exit code ${reinit_err} for product $product"
         exit 1
     }
     echo "Done rabbitmq setup.";
+
 }
 
 
 setup_sspl(){
+
     [ "$initialize_sspl" == true ] &&
         /opt/seagate/cortx/sspl/bin/sspl_setup setup -p $PRODUCT_VERSION
+
 }
 
 
@@ -399,13 +468,17 @@ setup_sspl(){
 install_sspl_rpms 2>&1 | tee -a "${LOG_FILE}"
 
 # Configure consul
-setup_consul 2>&1 | tee -a "${LOG_FILE}"
+setup_consul
+
+# Insert config in consul
+insert_config_in_consul 2>&1 | tee -a "${LOG_FILE}"
 
 # Configure rabbitmq-server
 setup_rabbitmq 2>&1 | tee -a "${LOG_FILE}"
 
 # Configure SSPL
 setup_sspl 2>&1 | tee -a "${LOG_FILE}"
+
 
 echo "For more details see: $LOG_FILE"
 echo -e "\n***** SUCCESS!!! *****" 2>&1 | tee -a "${LOG_FILE}"

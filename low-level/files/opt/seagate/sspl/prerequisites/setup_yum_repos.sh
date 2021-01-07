@@ -328,8 +328,8 @@ if grep -E -q "Red Hat.*7.7" /etc/*-release; then
         create_commons_repos "$url_local_repo_commons_rhel"
         [ -n "$tgt_build" ] && {
             create_sspl_repo "$url_sspl_repo"
-            create_sspl_uploads_repo "$url_uploads_repo"
         }
+        create_sspl_uploads_repo "$url_uploads_repo"
     else
         echo "INFO: Checking if RHEL subscription manager is enabled"
         subc_list=$(subscription-manager list | grep Status: | awk '{ print $2 }')
@@ -440,8 +440,8 @@ else
     create_commons_repos "$url_local_repo_commons"
     [ -n "$tgt_build" ] && {
         create_sspl_repo "$url_sspl_repo"
-        create_sspl_uploads_repo "$url_uploads_repo"
     }
+    create_sspl_uploads_repo "$url_uploads_repo"
 fi
 
 echo -n "INFO: Cleaning yum cache............................................."
