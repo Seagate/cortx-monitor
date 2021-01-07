@@ -125,9 +125,6 @@ fi
 RPM_BUILD_END_TIME=$(date +%s)
 echo "Generated rpm's for sspl build"
 
-# remove systemd-python36
-yum erase -y systemd-python36-*
-
 BUILD_END_TIME=$(date +%s)
 
 TAR_DIFF=$(( TAR_END_TIME - TAR_START_TIME ))
