@@ -1,6 +1,6 @@
 #! /bin/sh
 
-echo "Stoping sspl-ll.service for enabling code coverage"
+echo "Stopping sspl-ll.service for enabling code coverage"
 systemctl stop sspl-ll.service
 
 echo "Checking and installing coverage.py"
@@ -46,7 +46,7 @@ ln -sf $target_dir/sspl_ll_d_coverage /usr/bin/sspl_ll_d
 chmod 777 /tmp/sspl/* 
 chown sspl-ll:sspl-ll /tmp/sspl/ -R
 
-echo "Staring the sspl-ll.service back.."
+echo "Starting the sspl-ll.service back.."
 systemctl start sspl-ll.service
 
 echo "Environment is set for testing.. "
