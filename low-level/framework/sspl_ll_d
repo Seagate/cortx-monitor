@@ -74,7 +74,7 @@ from message_handlers.real_stor_actuator_msg_handler import RealStorActuatorMsgH
 # Message to send to HAlon upon critical thread errors
 from json_msgs.messages.actuators.thread_controller import ThreadControllerMsg
 
-# Creating Coverage instance for coverage report generation
+#DO NOT EDIT: Marker comment to dynamically add code to initialize coverage obj for code coverage report generation
 
 # Section and key in config file for bootstrap
 SSPL_SETTING    = 'SSPL-LL_SETTING'
@@ -723,7 +723,7 @@ def set_log_level(signal_number, frame):
         log_level = log_level.decode('utf-8')
     logger.info(f"Received SIGUSR1 signal to set log level to '{log_level}'")
     logger.setLevel(log_level)
-    # Coverage report commands to stop, save and generate coverage report
+    #DO NOT EDIT: Marker comment to dynamically add code to stop coverage, save and generate code coverage report
 
 
 def refresh_iem_log_file(signal_number, frame):
@@ -806,7 +806,7 @@ if __name__ == "__main__":
             with open(pidfile, "w") as fileObj:
                 fileObj.write(str(os.getpid()))
 
-        #Staring coverage report scope
+        #DO NOT EDIT: Marker comment to dynamically add code to start the code coverage scope
 
         # Start sspl-ll as a main process running multiple threads
         main(conf_reader, systemd_support)

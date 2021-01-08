@@ -1,6 +1,6 @@
 #! /bin/sh
 
-echo "Stoping sspl-ll.service for setting up coverage"
+echo "Stoping sspl-ll.service for enabling code coverage"
 systemctl stop sspl-ll.service
 
 echo "Checking and installing coverage.py"
@@ -15,35 +15,33 @@ then
 fi
 
 echo "Creating required files for coverage.."
-iofdir='/opt/seagate/cortx/sspl/low-level/framework'
-# iofdir='/opt/sumedh/withoutpyi/cortx-sspl/low-level/framework'
-usdir='/opt/seagate/cortx/sspl/sspl_test/coverage'
-# usdir='/opt/sumedh/withoutpyi/cortx-sspl/sspl_test/coverage'
+target_dir='/opt/seagate/cortx/sspl/low-level/framework'
+cov_code_dir='/opt/seagate/cortx/sspl/sspl_test/coverage'
 
-sudo cp $iofdir/sspl_ll_d $iofdir/sspl_ll_d_coverage
+sudo cp $target_dir/sspl_ll_d $target_dir/sspl_ll_d_coverage
 
 copy_lines() {
     for line_num in `seq $1 $2` 
     do 
-        str=`sed $((line_num))!d $usdir/coverage_code`; fix='\';
+        str=`sed $((line_num))!d $cov_code_dir/coverage_code`; fix='\';
         str="${fix}${str}";
         curr_line=$((curr_line+1));
         echo $curr_line $str;
-        sed -i "$curr_line i $str" $iofdir/sspl_ll_d_coverage;
+        sed -i "$curr_line i $str" $target_dir/sspl_ll_d_coverage;
     done    
 }
 
-curr_line=`grep -n "# Creating Coverage instance for coverage report generation" $iofdir/sspl_ll_d_coverage | cut -d : -f1`
+curr_line=`grep -n "#DO NOT EDIT: Marker comment to dynamically add code to initialize coverage obj for code coverage report generation" $target_dir/sspl_ll_d_coverage | cut -d : -f1`
 copy_lines 1 7
 
-curr_line=`grep -n "#Staring coverage report scope" $iofdir/sspl_ll_d_coverage | cut -d : -f1`
+curr_line=`grep -n "#DO NOT EDIT: Marker comment to dynamically add code to start the code coverage scope" $target_dir/sspl_ll_d_coverage | cut -d : -f1`
 copy_lines 8 9
 
-curr_line=`grep -n "# Coverage report commands to stop, save and generate coverage report" $iofdir/sspl_ll_d_coverage | cut -d : -f1`
+curr_line=`grep -n "#DO NOT EDIT: Marker comment to dynamically add code to stop coverage, save and generate code coverage report" $target_dir/sspl_ll_d_coverage | cut -d : -f1`
 copy_lines 10 25
 
 echo "Changing the soft link and adding permission for /tmp/sspl/ folder"
-ln -sf $iofdir/sspl_ll_d_coverage /usr/bin/sspl_ll_d
+ln -sf $target_dir/sspl_ll_d_coverage /usr/bin/sspl_ll_d
 
 chmod 777 /tmp/sspl/* 
 chown sspl-ll:sspl-ll /tmp/sspl/ -R
