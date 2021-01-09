@@ -23,24 +23,24 @@ import traceback
 from cortx.utils.conf_store import Conf
 
 class Cmd:
-    """Factory for all kinds of validations"""
+    """Setup Command"""
     _index = "conf"
 
-    def __init__(self, args):
+    def __init__(self, args: dict):
         self._url = args.url
         Conf.load(self._index, self._url)
         self._args = args.args
 
     @property
-    def args(self):
+    def args(self) -> str:
         return self._args
 
     @property
-    def url(self):
+    def url(self) -> str:
         return self._url
 
     @staticmethod
-    def usage(prog):
+    def usage(prog: str):
         """Print usage instructions"""
 
         sys.stderr.write(
@@ -50,7 +50,7 @@ class Cmd:
             f"url   Config URL\n")
 
     @staticmethod
-    def get_command(desc, argv):
+    def get_command(desc: str, argv: dict):
         """Return the Command after parsing the command line."""
 
         parser = argparse.ArgumentParser(desc)
@@ -65,7 +65,7 @@ class Cmd:
         return args.command(args)
 
     @staticmethod
-    def add_args(parser, cls, name):
+    def add_args(parser: str, cls: str, name: str):
         """Add Command args for parsing."""
 
         parser1 = parser.add_parser(cls.name, help='setup %s' % name)
@@ -92,7 +92,7 @@ class PostInstallCmd(Cmd):
     """PostInstall Setup Cmd"""
     name = "postinstall"
 
-    def __init__(self, args):
+    def __init__(self, args: dict):
         super().__init__(args)
 
     def process(self):
@@ -110,12 +110,10 @@ class InitCmd(Cmd):
         pass # TBD
 
 
-
-def main(argv):
+def main(argv: dict):
     try:
         desc = "SSPL Setup command"
         command = Cmd.get_command(desc, argv[1:])
-
         command.process()
 
     except Exception as e:
