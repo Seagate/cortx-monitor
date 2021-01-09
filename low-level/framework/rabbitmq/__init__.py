@@ -14,3 +14,9 @@
 # cortx-questions@seagate.com.
 
 """Modules for handling rabbitMQ processing"""
+from threading import Event
+from cortx.utils.message_bus import MessageBus
+
+
+message_bus = MessageBus()
+producer_initialized = Event()
