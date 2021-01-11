@@ -26,7 +26,7 @@ sys.path.insert(0, '/opt/seagate/cortx/sspl/low-level')
 from framework.utils.salt_util import SaltInterface
 from framework.utils.service_logging import logger
 
-PRODUCT_NAME = 'LDR_R1'
+PRODUCT_NAME = 'LDR_R2'
 PRODUCT_FAMILY = 'cortx'
 enabled_products = ["CS-A", "SINGLE","DUAL", "CLUSTER", "LDR_R1", "LDR_R2"]
 cs_products = ["CS-A"]
@@ -41,7 +41,7 @@ CONSUL_DUMP = f"/opt/seagate/{PRODUCT_FAMILY}/sspl/bin/consuldump.py"
 NODE_ID = "001"
 SITE_ID = "001"
 RACK_ID = "001"
-SSPL_STORE_TYPE = 'consul'
+SSPL_STORE_TYPE = 'file'
 SYSLOG_HOST = 'localhost'
 SYSLOG_PORT = '514'
 SYSINFO = "SYSTEM_INFORMATION"

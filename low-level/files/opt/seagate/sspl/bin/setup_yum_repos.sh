@@ -91,7 +91,6 @@ if [[ ! -e "$LOG_FILE" ]]; then
 fi
 
 do_reboot=false
-disable_sub_mgr_opt=false
 
 usage()
 {
@@ -100,18 +99,13 @@ usage()
     Cortx Prerequisite script.
 
     Usage:
-         $0 [-t|--target-build-url <url>] [-d|--disable-sub-mgr] [-h|--help]
+         $0 [-t|--target-build-url <url>] [-h|--help]
 
     OPTION:
-    -d|--disable-sub-mgr    For RHEL. To install prerequisites by disabling
-                            subscription manager (usually, not recommended).
-                            If this option is not provided it is expected that
-                            either the system is not RHEL or system is already
-                            registered with subscription manager.
     -t|--target-build-url   Target build url pointed to release bundle base directory,
                               if specified the following directory structure is assumed:
                               <base_url>/
-                                 rhel7.7 or centos7.7   <- OS ISO is mounted here
+                                 centos7.7   <- OS ISO is mounted here
                                  3rd_party              <- CORTX 3rd party ISO is mounted here
                                  cortx_iso              <- CORTX ISO (main) is mounted here
     "
@@ -122,10 +116,6 @@ parse_args()
 {
     while [[ $# -gt 0 ]]; do
         case "$1" in
-        -d|--disable-sub-mgr)
-            disable_sub_mgr_opt=true
-            shift
-        ;;
         -h|--help)
             usage
         ;;
@@ -313,136 +303,13 @@ else
     echo "Done."
 fi
 
-if grep -E -q "Red Hat.*7.7" /etc/*-release; then
-    if [[ "$disable_sub_mgr_opt" == true ]]; then
-        echo -n "INFO: disabling the Red Hat Subscription Manager....................."
+echo "INFO: Creating repos for Cotrx"
+create_commons_repos "$url_local_repo_commons"
+[ -n "$tgt_build" ] && {
+    create_sspl_repo "$url_sspl_repo"
+}
 
-        subscription-manager auto-attach --disable || true
-        subscription-manager remove --all || true
-        subscription-manager unregister || true
-        subscription-manager clean || true
-        subscription-manager config --rhsm.manage_repos=0
-        puppet agent --disable "Cortx Stack Deploy Automation" || true
-        echo "Done." && sleep 1
-        echo "INFO: Creating repos for Cotrx"
-        create_commons_repos "$url_local_repo_commons_rhel"
-        [ -n "$tgt_build" ] && {
-            create_sspl_repo "$url_sspl_repo"
-        }
-        create_sspl_uploads_repo "$url_uploads_repo"
-    else
-        echo "INFO: Checking if RHEL subscription manager is enabled"
-        subc_list=$(subscription-manager list | grep Status: | awk '{ print $2 }')
-        subc_status=$(subscription-manager status | grep "Overall Status:" | awk '{ print $3 }')
-        if echo "$subc_list" | grep -q "Subscribed"; then
-            if [[  "$subc_status" != "Current" ]]; then
-                echo -e "\nERROR: RedHat subscription manager is disabled."
-                echo "       Please register the system with Subscription Manager and rerun the command."
-                exit 1
-            fi
-            # Ensure required repos are enabled in subscription
-            echo "INFO: subscription-manager is enabled."
-            repos_list=(
-                "rhel-7-server-optional-rpms"
-                "rhel-7-server-satellite-tools-6.7-rpms"
-                "rhel-7-server-rpms"
-                "rhel-7-server-extras-rpms"
-                "rhel-7-server-supplementary-rpms"
-            )
-            subscription-manager config --rhsm.manage_repos=1
-            echo "INFO: Checking available repos through subscription"
-            echo -ne "\t This might take some time..................................." | tee -a "${LOG_FILE}"
-
-            repos_all="${tmpdir}/repos.all"
-            repos_enabled="${tmpdir}/repos.enabled"
-            subscription-manager repos --list > "${repos_all}"
-            subscription-manager repos --list-enabled > "${repos_enabled}"
-            echo "Done." && sleep 1
-            echo "INFO: Checking if required repos are enabled."
-            for repo in "${repos_list[@]}"
-            do
-                cat "${repos_enabled}" | grep ID | grep -q "$repo" && {
-                    echo -e "\trepo:$repo......enabled."
-                } || {
-                    echo -e "\trepo:$repo......not enabled, checking if it's available"
-                    cat "${repos_all}" | grep ID | grep -q "$repo" && {
-                        echo -ne "\tRepo:$repo is available, enabling it......"
-                        subscription-manager repos --enable "$repo"  >> "${LOG_FILE}"
-                        echo "Done." && sleep 1
-                    } || {
-                        echo -e "\n\nERROR: Repo $repo is not available, exiting..."
-                        exit 1
-                    }
-                }
-            done
-            _bkpdir=/etc/yum.repos.d.bkp
-            echo "INFO: Taking backup of /etc/yum.repos.d/*.repo to ${_bkpdir}"
-            mkdir -p ${_bkpdir}
-            yes | cp -rf /etc/yum.repos.d/*.repo "${_bkpdir}"
-            find /etc/yum.repos.d/ -type f ! -name 'redhat.repo' -delete
-
-            #Set repo for Mellanox drivers
-            cat "${repos_enabled}" | grep ID: | grep -q EOS_Mellanox && {
-                echo -n "INFO: Disabling Mellanox repository from Satellite subscription..."
-                subscription-manager repos --disable=EOS_Mellanox* >> "${LOG_FILE}"
-                echo "Done." && sleep 1
-            }
-            cat "${repos_enabled}" | grep ID: | grep -q EOS_EPEL && {
-                echo "INFO: CORTX_EPEL repository is enabled from Satellite subscription"
-            } || {
-                #echo "INFO: Installing the Public Epel repository"
-                echo "INFO: Creating custom Epel repository"
-                #yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
-                if [[ "$bundled_release" == true ]]; then
-                    create_commons_repo_rhel "3rd_party_epel" "$epel_repo"
-                else
-                    create_commons_repo_rhel "satellite-epel" "http://ssc-satellite1.colo.seagate.com/pulp/repos/EOS/Library/custom/EPEL-7/EPEL-7/"
-                fi
-            }
-            cat "${repos_all}" | grep -q rhel-ha-for-rhel-7-server-rpms && {
-                echo -n "INFO: RHEL HA repository is available from subscription, enabling it...."
-                subscription-manager repos --enable rhel-ha-for-rhel-7-server-rpms >> "${LOG_FILE}"
-                echo "Done." && sleep 1
-            } || {
-                echo "ERROR: RHEL HA license is not available... Can not proceed" | tee -a "${LOG_FILE}"
-                echo "Please:" | tee -a "${LOG_FILE}"
-                echo "   1. Install RHEL High Availability license on the cluster nodes & rerun the command" | tee -a "${LOG_FILE}"
-                echo "       OR" | tee -a "${LOG_FILE}"
-                echo "   2. Disable subscription manager. Rerun the command with --disable-sub-mgr option" | tee -a "${LOG_FILE}"
-                echo "exiting..." | tee -a "${LOG_FILE}"
-                exit 1
-                #echo "INFO: Creating repo for in house built HA packages"
-                #create_commons_repo_rhel "cortx_rhel_ha" "$url_local_repo_rhel_ha"
-            }
-
-            # Create commons repo for installing mellanox drivers
-            echo "INFO: Enabling repo for in house built commons packages for Cortx"
-            create_commons_repo_rhel "cortx_commons" "$url_local_repo_commons_rhel"
-
-            echo "INFO: Taking backup of /etc/yum.repos.d/*.repo to ${_bkpdir}"
-            yes | cp -rf /etc/yum.repos.d/*.repo "${_bkpdir}"
-
-            #echo "INFO: Installing yum-plugin-versionlock" 2>&1 | tee ${LOG_FILE}
-            #yum install -y yum-plugin-versionlock
-            #echo "INFO: Restricting the kernel updates to current kernel version"
-            #yum versionlock kernel-3.10.0-1062.el7.x86_64
-        else
-            echo -e "\nERROR: RedHat subscription manager is disabled."
-            echo "       Please register the system with Subscription Manager and rerun the command."
-            exit 1
-        fi
-    fi
-else
-    if [[ "$disable_sub_mgr_opt" == true ]]; then
-        echo "INFO: Ignoring --disable-sub-mgr since it's not applicable for CentOS.."
-    fi
-    echo "INFO: Creating repos for Cotrx"
-    create_commons_repos "$url_local_repo_commons"
-    [ -n "$tgt_build" ] && {
-        create_sspl_repo "$url_sspl_repo"
-    }
-    create_sspl_uploads_repo "$url_uploads_repo"
-fi
+create_sspl_uploads_repo "$url_uploads_repo"
 
 echo -n "INFO: Cleaning yum cache............................................."
 yum autoremove -y >> ${LOG_FILE}
