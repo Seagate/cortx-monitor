@@ -19,12 +19,12 @@ MOCK_SERVER_IP=127.0.0.1
 MOCK_SERVER_PORT=28200
 RMQ_SELF_STARTED=0
 RMQ_SELF_STOPPED=0
-SSPL_STORE_TYPE=${SSPL_STORE_TYPE:-consul}
 IS_VIRTUAL=$(facter is_virtual)
 
 [[ $EUID -ne 0 ]] && sudo=sudo
 script_dir=$(dirname $0)
 source $script_dir/constants.sh
+SSPL_STORE_TYPE=${SSPL_STORE_TYPE:-consul}
 
 plan=${1:-}
 avoid_rmq=${2:-}
@@ -49,11 +49,12 @@ flask_help()
 pre_requisites()
 {
     # copy RMQ password to sspl_test/config
-    pw=$($CONSUL_PATH/consul kv get sspl/config/RABBITMQINGRESSPROCESSOR/password)
-    $CONSUL_PATH/consul kv put sspl_test/config/RABBITMQINGRESSPROCESSORTESTS/password $pw
-    pw=$($CONSUL_PATH/consul kv get sspl/config/RABBITMQEGRESSPROCESSOR/password)
-    $CONSUL_PATH/consul kv put sspl_test/config/RABBITMQEGRESSPROCESSOR/password $pw
-
+    if [ "$SSPL_STORE_TYPE" == "consul" ]; then
+        pw=$($CONSUL_PATH/consul kv get sspl/config/RABBITMQINGRESSPROCESSOR/password)
+        $CONSUL_PATH/consul kv put sspl_test/config/RABBITMQINGRESSPROCESSORTESTS/password $pw
+        pw=$($CONSUL_PATH/consul kv get sspl/config/RABBITMQEGRESSPROCESSOR/password)
+        $CONSUL_PATH/consul kv put sspl_test/config/RABBITMQEGRESSPROCESSOR/password $pw
+    fi
     if [ "$IS_VIRTUAL" == "true" ]
     then
         # Backing up original persistence data
@@ -91,7 +92,7 @@ pre_requisites()
         touch /tmp/activate_ipmisimtool
     fi
 
-    if [ "$IS_VIRTUAL" == "true" ]
+    if [ "$IS_VIRTUAL" == "true" -a "$SSPL_STORE_TYPE" == "consul" ]
     then
         # clearing $CONSUL_PATH/consul keys.
         $CONSUL_PATH/consul kv delete -recurse var/$PRODUCT_FAMILY/sspl/data
@@ -201,7 +202,8 @@ flask_installed=$(python3.6 -c 'import pkgutil; print(1 if pkgutil.find_loader("
     exit 1
 }
 
-python3 $script_dir/put_config_to_consul.py
+# Onward LDR_R2, consul will be abstracted out and won't exist as hard dependency of SSPL
+[ "$PRODUCT_NAME" == "LDR_R1" ] && python3 $script_dir/put_config_to_consul.py
 
 # Take backup of original sspl.conf
 [[ -f /etc/sspl.conf ]] && $sudo cp /etc/sspl.conf /etc/sspl.conf.back
@@ -293,6 +295,9 @@ then
     $CONSUL_PATH/consul kv put sspl_test/config/SYSTEM_INFORMATION/site_id $site_id
     $CONSUL_PATH/consul kv put sspl_test/config/SYSTEM_INFORMATION/rack_id $rack_id
     $CONSUL_PATH/consul kv put sspl_test/config/SYSTEM_INFORMATION/cluster_id $cluster_id
+    # updateing rabbitmq cluster
+    CLUSTER_NODES=$($CONSUL_PATH/consul kv get sspl/config/RABBITMQCLUSTER/cluster_nodes)
+    $CONSUL_PATH/consul kv put sspl_test/config/RABBITMQCLUSTER/cluster_nodes $CLUSTER_NODES
 else
     # Update sspl_tests.conf with updated System Information
     # append above parsed key-value pairs in sspl_tests.conf under [SYSTEM_INFORMATION] section
@@ -301,10 +306,6 @@ else
     sed -i 's/rack_id=001/rack_id='"$rack_id"'/g' /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/conf/sspl_tests.conf
     sed -i 's/cluster_id=001/cluster_id='"$cluster_id"'/g' /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/conf/sspl_tests.conf
 fi
-
-# updateing rabbitmq cluster
-CLUSTER_NODES=$($CONSUL_PATH/consul kv get sspl/config/RABBITMQCLUSTER/cluster_nodes)
-$CONSUL_PATH/consul kv put sspl_test/config/RABBITMQCLUSTER/cluster_nodes $CLUSTER_NODES
 
 if [ "$IS_VIRTUAL" == "true" ]
 then

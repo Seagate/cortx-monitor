@@ -235,12 +235,12 @@ class RealStorLogicalVolumeSensor(SensorThread, InternalMsgQ):
         response = self.rssencl.ws_request(url, self.rssencl.ws.HTTP_GET)
 
         if not response:
-            logger.warn(f"{self.rssencl.LDR_R1_ENCL}:: Disk Groups status unavailable as ws request {url} failed")
+            logger.warn(f"{self.rssencl.LDR_R2_ENCL}:: Disk Groups status unavailable as ws request {url} failed")
             return
 
         if response.status_code != self.rssencl.ws.HTTP_OK:
             if url.find(self.rssencl.ws.LOOPBACK) == -1:
-                logger.error(f"{self.rssencl.LDR_R1_ENCL}:: http request {url} to get disk groups failed with  \
+                logger.error(f"{self.rssencl.LDR_R2_ENCL}:: http request {url} to get disk groups failed with  \
                      err {response.status_code}")
             return
 
@@ -259,12 +259,12 @@ class RealStorLogicalVolumeSensor(SensorThread, InternalMsgQ):
         response = self.rssencl.ws_request(url, self.rssencl.ws.HTTP_GET)
 
         if not response:
-            logger.warn(f"{self.rssencl.LDR_R1_ENCL}:: Logical Volume status unavailable as ws request {url}"
+            logger.warn(f"{self.rssencl.LDR_R2_ENCL}:: Logical Volume status unavailable as ws request {url}"
                 " failed")
             return
 
         if response.status_code != self.rssencl.ws.HTTP_OK:
-            logger.error(f"{self.rssencl.LDR_R1_ENCL}:: http request {url} to get logical volumes failed with \
+            logger.error(f"{self.rssencl.LDR_R2_ENCL}:: http request {url} to get logical volumes failed with \
                  err {response.status_code}")
             return
 

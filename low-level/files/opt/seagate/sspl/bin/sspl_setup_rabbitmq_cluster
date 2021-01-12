@@ -34,7 +34,7 @@ host = os.getenv('CONSUL_HOST', CONSUL_HOST)
 port = os.getenv('CONSUL_PORT', CONSUL_PORT)
 consul_conn = consul.Consul(host=host, port=port)
 
-#config_reader = ConfigReader(is_init=True)
+config_reader = ConfigReader(is_init=True)
 
 
 def _send_command(command, fail_on_error=True):

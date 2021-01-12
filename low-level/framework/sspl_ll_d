@@ -813,7 +813,7 @@ if __name__ == "__main__":
         main(conf_reader, systemd_support)
 
     except (Exception) as err:
-        logger.debug(f"{traceback.print_exc()}")
+        logger.info(f"{traceback.print_exc()}")
         logger.critical("While spawning sspl-ll process :%r" % err)
         sys.exit(os.EX_USAGE)
 

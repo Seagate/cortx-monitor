@@ -786,7 +786,7 @@ class SSPLHealthView(object):
                 # TODO: use self.FAULT_KEY in system: system.key() generates
                 # list and find item in that.
                 if not singleton_realstorencl.FAULT_KEY in system.keys():
-                    print("{0} Healthy, no faults seen".format(singleton_realstorencl.LDR_R1_ENCL))
+                    print("{0} Healthy, no faults seen".format(singleton_realstorencl.LDR_R2_ENCL))
                     return
 
                 # Extract system faults and build memcache_faults
@@ -884,13 +884,13 @@ class SSPLHealthView(object):
 
         if not response:
             print("{0}:: {2} status unavailable as ws request {1}"
-                " failed".format(singleton_realstorencl.LDR_R1_ENCL, url, fru))
+                " failed".format(singleton_realstorencl.LDR_R2_ENCL, url, fru))
             return response
 
         if response.status_code != singleton_realstorencl.ws.HTTP_OK:
             if url.find(singleton_realstorencl.ws.LOOPBACK) == -1:
                 print("{0}:: http request {1} to get {3} failed with"
-                    " err {2}".format(singleton_realstorencl.LDR_R1_ENCL, url, response.status_code, fru))
+                    " err {2}".format(singleton_realstorencl.LDR_R2_ENCL, url, response.status_code, fru))
             return response
 
         return response

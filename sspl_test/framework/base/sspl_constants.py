@@ -27,7 +27,7 @@ cs_legacy_products = ["CS-L", "CS-G"]
 RESOURCE_PATH = f"/opt/seagate/{PRODUCT_FAMILY}/sspl/low-level/json_msgs/schemas/"
 DATA_PATH = f"/var/{PRODUCT_FAMILY}/sspl/data/"
 
-SSPL_STORE_TYPE = 'consul'
+SSPL_STORE_TYPE = 'file'
 CONSUL_HOST = '127.0.0.1'
 CONSUL_PORT = '8500'
 CONSUL_PATH = '/usr/bin/'

@@ -89,7 +89,11 @@ config_sspl() {
     }
 
     # Put minion id, consul_host and consul_port in conf file
-    python3 $DIR_NAME/bin/salt_util.py $SSPL_CONF;
+    # Onward LDR_R2, salt will be abstracted out and it won't
+    # exit as hard dependeny of SSPL
+    if [ "$PRODUCT_NAME" == "LDR_R1" ]; then
+        python3 $DIR_NAME/bin/salt_util.py $SSPL_CONF;
+    fi
 
     [ -f $SSPL_CONFIGURED ] && {
         [ "$force" = "1" ] && ans="y" || ans=;
@@ -171,18 +175,22 @@ config_sspl() {
     # consul will be brought back on it. We are using VIP to connect to consul. So, if consul
     # is not running on new node, we dont need to error out.
     # If consul is not running, exit
-    [ -f $REPLACEMENT_NODE_ENV_VAR_FILE ] || {
-        CONSUL_PS=$(pgrep "consul" || true)
-        if [ -z "$CONSUL_PS" ]; then
-            echo "Consul is not running, exiting..";
-            exit 1
-        fi
-    }
+    # Onward LDR_R2, consul will be abstracted out and it won't
+    # exit as hard dependeny of SSPL
+    if [ "$PRODUCT_NAME" == "LDR_R1" ]; then
+        [ -f $REPLACEMENT_NODE_ENV_VAR_FILE ] || {
+            CONSUL_PS=$(pgrep "consul" || true)
+            if [ -z "$CONSUL_PS" ]; then
+                echo "Consul is not running, exiting..";
+                exit 1
+            fi
+        }
+    fi
 
     # Get the types of server and storage we are currently running on and
     # enable/disable sensor groups in the conf file accordingly.
     if [ "${read_provisioner_config}" == "true" ]; then
-        source $script_dir/conf_based_sensors_enable
+        python3 $script_dir/conf_based_sensors_enable
     fi
 
 }
@@ -257,8 +265,12 @@ get_rabbitmq_cluster_nodes() {
     pout=$( get_cluster_running_nodes "$message_broker")
 
     # Update cluster_nodes key in consul
-    $CONSUL_PATH/consul kv put sspl/config/RABBITMQCLUSTER/cluster_nodes $pout
-    [ -n "$rmq_cluster_nodes" ] && $CONSUL_PATH/consul kv put sspl/config/RABBITMQCLUSTER/cluster_nodes $rmq_cluster_nodes
+    if [ "$PRODUCT_NAME" == "LDR_R1" ]; then
+        $CONSUL_PATH/consul kv put sspl/config/RABBITMQCLUSTER/cluster_nodes $pout
+        [ -n "$rmq_cluster_nodes" ] && $CONSUL_PATH/consul kv put sspl/config/RABBITMQCLUSTER/cluster_nodes $rmq_cluster_nodes
+    else
+        sed -i "s/cluster_nodes=.*/cluster_nodes=$pout/" $SSPL_CONF
+    fi
 }
 
 # Skip this step if sspl is being configured for node replacement scenario as consul data is already
@@ -268,7 +280,12 @@ get_rabbitmq_cluster_nodes() {
     log_level=`cat $DIR_NAME/low-level/files/opt/seagate/sspl/conf/build-requested-loglevel | sed 's/ *$//'`
     case $log_level in
         "DEBUG" | "INFO" | "WARNING" | "ERROR" | "CRITICAL")
-            $CONSUL_PATH/consul kv put sspl/config/SYSTEM_INFORMATION/log_level $log_level;;
+            if [ "$PRODUCT_NAME" == "LDR_R1" ]; then
+                $CONSUL_PATH/consul kv put sspl/config/SYSTEM_INFORMATION/log_level $log_level
+            else
+                sed -i "s/log_level=/log_level = $log_level/" $SSPL_CONF
+            fi
+            ;;
         "");;
         *)
             echo "Unexpected log level is requested, '$log_level'";;

@@ -298,7 +298,7 @@ class RealStorEnclosure(StorageEnclosure):
             if response.status_code == self.ws.HTTP_TIMEOUT:
                 self.mc_timeout_counter += 1
             logger.error("{0}:: http request for login failed with err {1}"\
-                .format(self.LDR_R1_ENCL, response.status_code))
+                .format(self.LDR_R2_ENCL, response.status_code))
             return
 
         try:
@@ -397,7 +397,7 @@ class RealStorEnclosure(StorageEnclosure):
 
         if response.status_code != self.ws.HTTP_OK:
             logger.info("{0}:: http request {1} polling system status failed"
-                " with http err {2}".format(self.LDR_R1_ENCL, url, \
+                " with http err {2}".format(self.LDR_R2_ENCL, url, \
                 response.status_code))
             return
 
@@ -426,7 +426,7 @@ class RealStorEnclosure(StorageEnclosure):
                 # TODO: use self.FAULT_KEY in system: system.key() generates
                 # list and find item in that.
                 if not self.FAULT_KEY in system.keys():
-                    logger.debug("{0} Healthy, no faults seen".format(self.LDR_R1_ENCL))
+                    logger.debug("{0} Healthy, no faults seen".format(self.LDR_R2_ENCL))
                     self.latest_faults = {}
                     return
 

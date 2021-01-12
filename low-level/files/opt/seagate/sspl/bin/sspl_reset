@@ -39,7 +39,7 @@ fi
 
 usage() {
     cat << EOF
-$SCRIPT_NAME [hard [-p <LDR_R1>]|soft]
+$SCRIPT_NAME [hard [-p <LDR_R2>]|soft]
 hard options:
     -p product to be configured
 EOF

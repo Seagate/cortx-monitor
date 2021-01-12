@@ -22,31 +22,34 @@ export PYTHONPATH="$script_dir"/../..:"$script_dir"/../../low-level
 # Default test plan is sanity
 PLAN=${1:-sanity}
 
+SRVNODE=""
+
 # Decide the test plan
 IS_VIRTUAL=$(facter is_virtual)
 if [ "$IS_VIRTUAL" != "true" ]
 then
     # Find the nodename
+    # Onward LDR_R2, consul and salt will be abstracted out and
+    # won't exist as hard dependencies of SSPL
     if [ "$PRODUCT_NAME" == "LDR_R1" ]; then
         SRVNODE="$(sudo salt-call grains.get id --output=newline_values_only)"
-    else
-        SRVNODE="$(consul kv get system_information/salt_minion_id)"
-    fi
-    if [ -z "$SRVNODE" ];then
-        SRVNODE="$(cat /etc/salt/minion_id)"
+        [ -z "$SRVNODE" ] && SRVNODE="$(consul kv get system_information/salt_minion_id)"
         if [ -z "$SRVNODE" ];then
-            SRVNODE="srvnode-1"
+            SRVNODE="$(cat /etc/salt/minion_id)"
+        fi
+        [ -z "$SRVNODE" ] && SRVNODE="srvnode-1"
+
+        # Get the primary node
+        PRIMARY="$(pcs status | grep 'Masters')"
+        # Check if current node is primary
+        if [[ "$PRIMARY" == *"$SRVNODE"* ]]
+        then
+            PLAN="self_primary"
+        else
+            PLAN="self_secondary"
         fi
     fi
-    # Get the primary node
-    PRIMARY="$(pcs status | grep 'Masters')"
-    # Check if current node is primary
-    if [[ "$PRIMARY" == *"$SRVNODE"* ]]
-    then
-        PLAN="self_primary"
-    else
-        PLAN="self_secondary"
-    fi
+    [ -z "$PLAN" ] && PLAN="self_primary"
 fi
 
 systemctl start crond

@@ -1,65 +1,76 @@
-#!/bin/bash
-set -e -u -o pipefail
+#!/usr/bin/python3.6
 
-to_lower_case() {
-    tr '[:upper:]' '[:lower:]'
-}
+# Copyright (c) 2020 Seagate Technology LLC and/or its Affiliates
+#
+# This program is free software: you can redistribute it and/or modify it under the
+# terms of the GNU Affero General Public License as published by the Free Software
+# Foundation, either version 3 of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+# PARTICULAR PURPOSE. See the GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License along
+# with this program. If not, see <https://www.gnu.org/licenses/>. For any questions
+# about this software or licensing, please email opensource@seagate.com or
+# cortx-questions@seagate.com.
 
-declare -a sed_expr=(-e '/^\[[A-Z]\+\]$/h')
+from configparser import ConfigParser
+import sys
+import os
 
-default_storage_type="virtual"
-default_server_type="virtual"
-storage_type="$(consul kv get sspl/config/SYSTEM_INFORMATION/storage_type 2>/dev/null)"
-[ -z "$storage_type" ] && storage_type=$default_storage_type
-server_type="$(consul kv get sspl/config/SYSTEM_INFORMATION/server_type 2>/dev/null)"
-[ -z "$server_type" ] && server_type=$default_server_type
+# Add the top level directories
+sys.path.insert(0, f'/opt/seagate/cortx/sspl/low-level')
+from framework.base.sspl_constants import CONSUL_HOST, CONSUL_PORT, PRODUCT_NAME, PRODUCT_FAMILY, file_store_config_path, storage_type, server_type
 
-declare -A monitor=(
-    [REALSTORSENSORS]="true"
-    [NODEHWSENSOR]="true"
-    [SYSTEMDWATCHDOG]="true" # This is the 'server disks' sensor
-    [RAIDSENSOR]="true"
-    [SASPORTSENSOR]="true"
-    [MEMFAULTSENSOR]="true"
-    [CPUFAULTSENSOR]="true"
-
-)
-
-case "${storage_type}" in
-    virtual)
-        monitor[REALSTORSENSORS]="false"
-        ;;
-    jbod)
-        monitor[REALSTORSENSORS]="false"
-        ;;
-esac
-
-case "${server_type}" in
-    virtual)
-        monitor[NODEHWSENSOR]="false"
-        monitor[SASPORTSENSOR]="false"
-        monitor[MEMFAULTSENSOR]="false"
-        monitor[CPUFAULTSENSOR]="false"
-        monitor[RAIDSENSOR]="false"
-        ;;
-esac
-
-for group in "${!monitor[@]}"; do
-    # We remove comments after the value since those are improperly parsed by the ConfigReader
-    # in sspl_test.
-    sed_expr+=(-e '/^monitor=.*$/{ x ; /^\['"${group}"'\]$/{ x ; s/^monitor=.*$/monitor='"${monitor[${group}]}"'/;  b} ; x }')
-done
+# TODO: Update sensor information in ConfStore
+# from cortx.utils.conf_store import Conf
 
 
-[ -f "${SSPL_CONF}" ] && {
-    sed -i "${sed_expr[@]}" $SSPL_CONF
-}
-for group in "${!monitor[@]}"; do
-    ${CONSUL_PATH}/consul kv put sspl/config/"${group}"/monitor "${monitor["${group}"]}"
-done
+config = ConfigParser(allow_no_value=True)
+config.read(file_store_config_path)
 
-file_store_config_path="/opt/seagate/${PRODUCT_FAMILY}/sspl/sspl_test/conf/sspl_tests.conf"
-[ -f "${file_store_config_path}" ] && {
-    sed -i "${sed_expr[@]}" $file_store_config_path
-}
+key = 'monitor'
 
+sensors = dict()
+sensors["REALSTORSENSORS"] = "true"
+sensors["NODEHWSENSOR"] = "true"
+sensors["SYSTEMDWATCHDOG"] = "true"
+sensors["RAIDSENSOR"] = "true"
+sensors["SASPORTSENSOR"] = "true"
+sensors["MEMFAULTSENSOR"] = "true"
+sensors["CPUFAULTSENSOR"] = "true"
+
+if storage_type.lower() in ["virtual", "jbod"]:
+    sensors["REALSTORSENSORS"] = "false"
+
+if server_type.lower() in ["virtual"]:
+    sensors["NODEHWSENSOR"] = "false"
+    sensors["SASPORTSENSOR"] = "false"
+    sensors["MEMFAULTSENSOR"] = "false"
+    sensors["CPUFAULTSENSOR"] = "false"
+    sensors["RAIDSENSOR"] = "false"
+
+for sect, value in sensors.items():
+    config.set(sect, key, value)
+
+if os.path.exists(file_store_config_path):
+    with open(file_store_config_path, "w") as configFile:
+        config.write(configFile, space_around_delimiters=False)
+
+# Onward LDR_R2, consul will be abstracted out and it won't exit as hard dependeny of SSPL
+if PRODUCT_NAME == "LDR_R1":
+    import consul
+    host = os.getenv('CONSUL_HOST', CONSUL_HOST)
+    port = os.getenv('CONSUL_PORT', CONSUL_PORT)
+    try:
+        consul_conn = consul.Consul(host=host, port=port)
+        for sect, value in sensors.items():
+            consul_conn.kv.put(f"sspl/config/{sect}/monitor", value)
+    except Exception as cerror:
+        print("Error in connecting with consul: {}".format(cerror))
+
+test_file_config_path=f"/opt/seagate/{PRODUCT_FAMILY}/sspl/sspl_test/conf/sspl_tests.conf"
+if os.path.exists(test_file_config_path):
+    with open(test_file_config_path, "w") as configFile:
+        config.write(configFile, space_around_delimiters=False)

@@ -80,12 +80,12 @@ $SSPL_BASE_DIR/bin/sspl_config -f
 systemctl start sspl-ll.service
 
 # Wait till sspl-ll service become active
-MAX_RETRY=6
+MAX_RETRY=3
 TRIES=0
 SSPL_STATUS=$(systemctl show -p ActiveState sspl-ll | sed 's/ActiveState=//g')
 while [ $SSPL_STATUS != "active" ]
 do
-    echo "sspl-ll service is not started. Waiting..."
+    echo "Waiting for sspl-ll.service to start..."
     sleep 5
     TRIES=$((TRIES+1))
     SSPL_STATUS=$(systemctl show -p ActiveState sspl-ll | sed 's/ActiveState=//g')
@@ -93,7 +93,6 @@ do
     then
         break
     fi
-    systemctl start sspl-ll.service
 done
 
 if [ "$SSPL_STATUS" == "active" ]

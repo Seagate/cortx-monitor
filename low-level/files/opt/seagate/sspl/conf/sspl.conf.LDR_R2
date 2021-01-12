@@ -32,7 +32,7 @@ queue_name=actuator-req-queue
 exchange_name=sspl-in
 routing_key=actuator-req-key
 username=sspluser
-password=gAAAAABelEy2-hxLq8uThrKVZeb8ZY34cUPMYag8aMHJEHpXbaCie2cmeFsNx2nHBMCLLS2Bj9VUp9iSnyYDmywUHI7SsCoRIw==
+password=gAAAAABf_F2Xh3y0x2rPTRGL0ld4f_u1AwI5pRHOOEk49-lSNsq339Mn8m9bSBsGH-U8bCaPnTJPW-LR4yQHc_CpSbhU3AL5wQ==
 primary_rabbitmq_host=localhost
 
 [RABBITMQEGRESSPROCESSOR]
@@ -44,7 +44,7 @@ ack_queue_name=sensor-queue
 ack_exchange_name=sspl-out
 ack_routing_key=sensor-key
 username=sspluser
-password=gAAAAABelEy2-hxLq8uThrKVZeb8ZY34cUPMYag8aMHJEHpXbaCie2cmeFsNx2nHBMCLLS2Bj9VUp9iSnyYDmywUHI7SsCoRIw==
+password=gAAAAABf_F2Xh3y0x2rPTRGL0ld4f_u1AwI5pRHOOEk49-lSNsq339Mn8m9bSBsGH-U8bCaPnTJPW-LR4yQHc_CpSbhU3AL5wQ==
 message_signature_username=sspl-ll
 message_signature_token=ALOIUD986798df69a8koDISLKJ282983
 message_signature_expires=3600
@@ -59,7 +59,7 @@ queue_name=iem-queue
 exchange_name=sspl-in
 routing_key=iem-key
 username=sspluser
-password=gAAAAABelEy2-hxLq8uThrKVZeb8ZY34cUPMYag8aMHJEHpXbaCie2cmeFsNx2nHBMCLLS2Bj9VUp9iSnyYDmywUHI7SsCoRIw==
+password=gAAAAABf_F2Xh3y0x2rPTRGL0ld4f_u1AwI5pRHOOEk49-lSNsq339Mn8m9bSBsGH-U8bCaPnTJPW-LR4yQHc_CpSbhU3AL5wQ==
 primary_rabbitmq_host=localhost
 
 [RABBITMQCLUSTER]
@@ -164,19 +164,20 @@ monitor=true
 threaded=true
 probe=sysfs
 
+# Common Config - maintained here temporarily until Confstore integration
 [STORAGE_ENCLOSURE]
 type=
 primary_controller_ip=10.0.0.2
 primary_controller_port=80
 secondary_controller_ip=10.0.0.3
 secondary_controller_port=80
-user=
-password=
+user=manage
+password=****
 mgmt_interface=cliapi
 
 [BMC]
 ip=
-secret=
+secret=****
 user=
 
 [RABBITMQ]
@@ -184,7 +185,6 @@ cluster_nodes=localhost
 erlang_cookie=QLDZYPYEYGHECTHYQXFJ
 
 [SYSTEM_INFORMATION]
-type=
 cli_type=CS-A
 data_path=/var/cortx/sspl/data/
 sspl_log_file_path=/var/log/cortx/sspl/sspl.log
@@ -200,3 +200,4 @@ rack_id=001
 node_id=001
 syslog_host=localhost
 syslog_port=514
+type=

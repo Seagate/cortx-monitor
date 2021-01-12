@@ -64,9 +64,12 @@ done
 # consul will be brought back on it. We are using VIP to connect to consul. So, if consul
 # is not running on new node, we dont need to error out. So, need to skip this step for 
 # node replacement case
-# setup consul if not running already
-[ -f $REPLACEMENT_NODE_ENV_VAR_FILE ] ||
-    $script_dir/sspl_setup_consul -e $ENVIRONMENT
+# Onward LDR_R2, consul will be abstracted out and it won't exit as hard dependeny of SSPL
+if [ "$PRODUCT_NAME" == "LDR_R1" ]; then
+    # setup consul if not running already
+    [ -f $REPLACEMENT_NODE_ENV_VAR_FILE ] ||
+        $script_dir/sspl_setup_consul -e $ENVIRONMENT
+fi
 
 # Install packages which are not available in YUM repo, from PIP
 python3 -m pip install -r $SSPL_BASE_DIR/low-level/requirements.txt
@@ -86,12 +89,12 @@ python3 -m pip install -r $SSPL_BASE_DIR/low-level/requirements.txt
 [ -f $RSYSLOG_SSPL_CONF ] ||
     cp $SSPL_BASE_DIR/low-level/files/$RSYSLOG_SSPL_CONF $RSYSLOG_SSPL_CONF
 
-# Create soft link for SINGLE product name service to existing LDR_R1 service
+# Create soft link for SINGLE product name service to existing LDR_R1, LDR_R2 service
 # Instead of keeping separate service file for SINGLE product with same content.
 currentProduct=$SSPL_BASE_DIR/conf/sspl-ll.service.$PRODUCT
 echo "currentProduct name $currentProduct"
 if [ $PRODUCT == 'SINGLE' -a ! -f $currentProduct ] || [ $PRODUCT == 'DUAL' -a ! -f $currentProduct ]; then
-    ln -s $SSPL_BASE_DIR/conf/sspl-ll.service.LDR_R1 $SSPL_BASE_DIR/conf/sspl-ll.service.$PRODUCT
+    ln -s $SSPL_BASE_DIR/conf/sspl-ll.service.$PRODUCT_NAME $SSPL_BASE_DIR/conf/sspl-ll.service.$PRODUCT
 fi
 if [ $PRODUCT == 'CLUSTER' -a ! -f $currentProduct ]; then
   ln -s $SSPL_BASE_DIR/conf/sspl-ll.service.LDR_R2 $SSPL_BASE_DIR/conf/sspl-ll.service.$PRODUCT
@@ -108,12 +111,12 @@ cp -R $SSPL_BASE_DIR/low-level/files/iec_mapping/* $PRODUCT_BASE_DIR/iem/iec_map
 # Skip this step if sspl is being configured for node replacement scenario as sspl configurations are
 # already available in consul on the healthy node
 # Running script for fetching the config using salt and feeding values to consul
-# Onward LDR_R2, dependencies on salt will be abstracted out and so no hard dependencies would exist
-if [ "$PRODUCT" == "LDR_R1" ]; then
+# Onward LDR_R2, consul will be abstracted out and it won't exit as hard dependeny of SSPL
+if [ "$PRODUCT_NAME" == "LDR_R1" ]; then
     [ -f $REPLACEMENT_NODE_ENV_VAR_FILE ] ||
-        $script_dir/sspl_fetch_config_from_salt.py $ENVIRONMENT $PRODUCT
+        $script_dir/sspl_fetch_config_from_salt.py $ENVIRONMENT $PRODUCT_NAME
 else
-    $script_dir/feed_sspl_conf_to_consul.py -F $SSPL_CONF
+    $script_dir/load_sspl_config.py -C $SSPL_CONF
 fi
 
 # Skip this step if sspl is being configured for node replacement scenario as rabbitmq cluster is

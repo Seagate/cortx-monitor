@@ -17,7 +17,7 @@
 
 
 """
-Setup rabbitmq for use by sspl_ll on LDR_R1 systems
+Setup rabbitmq for use by sspl_ll on LDR_R1, LDR_R2 systems
 
 This script uses /etc/sspl.conf as the source of the parameters.
 
@@ -28,10 +28,8 @@ import os
 import subprocess
 import sys
 import socket
-
 import pika
 
-from configparser import ConfigParser
 # Add the top level directories
 sys.path.insert(0, f'/opt/seagate/cortx/sspl/low-level')
 from framework.utils.config_reader import ConfigReader
@@ -63,7 +61,7 @@ NODE_ID_KEY = 'node_id'
 parentdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.sys.path.insert(0,parentdir)
 
-config_reader = ConfigReader(is_init=True)
+config_reader = ConfigReader()
 
 
 def gen_key(cluster_id, service_name):
@@ -84,7 +82,7 @@ def decrypt(key, text):
 
 
 def main(product):
-    """ Main method of this program. """
+    """ Main line for this program. """
     virtual_host = config_reader._get_value(
         section=SECTION,
         key='virtual_host'
@@ -107,9 +105,7 @@ def main(product):
             section=SECTION,
             key='secondary_rabbitmq_server'
             )
-
-    _start_rabbitmq()
-    _check_and_reset_rabbitmq()
+    _check_rabbitmq_status()
     _start_rabbitmq()
 
     _create_vhost_if_necessary(virtual_host, product)
@@ -124,7 +120,6 @@ def main(product):
 
     # create durable/mirrored queues in either single or clustered mode.
     create_mirrored_queues(key)
-    _set_perms_erlang_key()
 
     if product in cs_legacy_products:
         # Copy the erlang key from primary server to secondary and mirror queues
@@ -378,18 +373,18 @@ def _create_user_if_necessary(username, password, virtual_host, product):
     else:
         raise ValueError("Product should be one of: %s" % (cs_legacy_products + enabled_products))
 
-def _check_and_reset_rabbitmq():
+def _check_rabbitmq_status():
     """Reset if the node is down"""
-    command = "systemctl status rabbitmq-server"
-    response = _send_command(command)
+    command = "service rabbitmq-server status"
+    response = _send_command(command, fail_on_error=False)
     if "nodedown" in response:
-        print("WARN: Nodedown, resetting")
+        print("Nodedown, resetting")
         command = "pkill beam.smp"
         _send_command(command)
 
 def _start_rabbitmq():
     """Ensure rabbitmq-server is started"""
-    command = "systemctl start rabbitmq-server"
+    command = "service rabbitmq-server start"
     _send_command(command)
 
 def _set_perms_erlang_key():
@@ -457,4 +452,3 @@ def _send_command(command, fail_on_error=True):
 if __name__ == '__main__':
     product = sys.argv[1]
     main(product)
-    

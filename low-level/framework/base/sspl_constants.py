@@ -15,17 +15,19 @@
 # about this software or licensing, please email opensource@seagate.com or
 # cortx-questions@seagate.com.
 
+import configparser
 import subprocess
 import ast
-import configparser
 import sys
 import os
 from enum import Enum
+
 # Add the top level directories
 sys.path.insert(0, '/opt/seagate/cortx/sspl/low-level')
 from framework.utils.salt_util import SaltInterface
 from framework.utils.service_logging import logger
-from framework.base.data_provider import storage_type, server_type, cluster_id, node_id
+from cortx.utils.conf_store import Conf
+
 
 PRODUCT_NAME = 'LDR_R2'
 PRODUCT_FAMILY = 'cortx'
@@ -42,7 +44,7 @@ CONSUL_DUMP = f"/opt/seagate/{PRODUCT_FAMILY}/sspl/bin/consuldump.py"
 NODE_ID = "001"
 SITE_ID = "001"
 RACK_ID = "001"
-SSPL_STORE_TYPE = 'consul'
+SSPL_STORE_TYPE = 'file'
 SYSLOG_HOST = 'localhost'
 SYSLOG_PORT = '514'
 SYSINFO = "SYSTEM_INFORMATION"
@@ -69,10 +71,13 @@ node_key_id = 'srvnode-1'
 CONSUL_HOST = '127.0.0.1'
 CONSUL_PORT = '8500'
 
-storage_type = storage_type
-server_type = server_type
-cluster_id = cluster_id
-node_id = node_id
+# Load config data to confStore
+Conf.load('sspl', 'ini:///etc/sspl.conf')
+
+storage_type = Conf.get('sspl', 'STORAGE_ENCLOSURE>type')
+server_type = Conf.get('sspl', 'SYSTEM_INFORMATION>type')
+cluster_id = Conf.get('sspl', 'SYSTEM_INFORMATION>cluster_id')
+node_id = Conf.get('sspl', 'SYSTEM_INFORMATION>node_id')
 
 # TODO Keep only constants in this file.
 # other values(configs) should come from cofig.

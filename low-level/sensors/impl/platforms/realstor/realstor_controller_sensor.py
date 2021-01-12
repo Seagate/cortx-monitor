@@ -169,12 +169,12 @@ class RealStorControllerSensor(SensorThread, InternalMsgQ):
         response = self.rssencl.ws_request(url, self.rssencl.ws.HTTP_GET)
 
         if not response:
-            logger.warn(f"{self.rssencl.LDR_R1_ENCL}:: Controllers status unavailable as ws request {url}")
+            logger.warn(f"{self.rssencl.LDR_R2_ENCL}:: Controllers status unavailable as ws request {url}")
             return
 
         if response.status_code != self.rssencl.ws.HTTP_OK:
             if url.find(self.rssencl.ws.LOOPBACK) == -1:
-                logger.error(f"{self.rssencl.LDR_R1_ENCL}:: http request {url} to get controllers failed with \
+                logger.error(f"{self.rssencl.LDR_R2_ENCL}:: http request {url} to get controllers failed with \
                      err {response.status_code}")
             return
 

@@ -99,7 +99,7 @@ def main():
     product = conf_reader._get_value(SYS_INFORMATION, COMMON_CONFIGS.get(SYS_INFORMATION).get(PRODUCT))
     # Convert all string to lowercase in the list for ignore case sensitive
     global manTest
-    if product.lower() == "ldr_r1":
+    if product.lower() == "ldr_r2":
         # Setup argument parser
         parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawDescriptionHelpFormatter, \
                                          add_help=False, allow_abbrev=False)
@@ -109,7 +109,7 @@ def main():
             manTest = ManualTest("RABBITMQINGRESSPROCESSOR")
         except Exception:
             print("Products only useful for verifying packages\n")
-        return _init_LDR_R1(parser, program_name)
+        return _init_LDR_R2(parser, program_name)
 
     else:
         if cli_type == "sed":
@@ -489,8 +489,8 @@ def _init_CS_A(parser, program_name):
     parser.add_argument("--autoinstall", action="store_true", help="Automatically attempt to install required packages.")
     return _process_arguments(parser, program_name)
 
-def _init_LDR_R1(parser, program_name):
-    """Initialize options for Castor LDR_R1 project"""
+def _init_LDR_R2(parser, program_name):
+    """Initialize options for Castor LDR_R2 project"""
     parser.add_argument("--help", action="store_true", help="display this help message and exit")
     parser.add_argument("-a", "--all", action="store_true", help="display all the data received in responses")
     parser.add_argument("-h", "--human", action="store_true", help="display responses with indentation for readability")
@@ -518,7 +518,7 @@ def _init_LDR_R1(parser, program_name):
     return _process_arguments(parser, program_name)
 
 def _process_arguments(parser, program_name):
-    # Processing arguments for _init_CS_A and _init_LDR_R1 functions.
+    # Processing arguments for _init_CS_A and _init_LDR_R2 functions.
     try:
         args = parser.parse_args()
         if args.version:
