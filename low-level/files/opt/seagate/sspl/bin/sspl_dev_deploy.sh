@@ -268,7 +268,12 @@ fi
     yum install -y python3 2>&1 | tee -a "${LOG_FILE}"
 
     echo "INFO: INSTALLING cortx-py-utils..." 2>&1 | tee -a "${LOG_FILE}"
-    yum install -y cortx-py-utils 2>&1 | tee -a "${LOG_FILE}"
+    # yum install -y cortx-py-utils 2>&1 | tee -a "${LOG_FILE}"
+    # TODO: When RE brings main branch as same strucure as cortx_builds,
+    # below shoudl be rmeoved and setup_yum_repo should be able to give cortx-py-utils.
+    pkg_name="cortx-py-utils"
+    build_url="http://cortx-storage.colo.seagate.com/releases/cortx/github/main/centos-7.8.2003/cortx-utils_last_successful/"
+    yum install -y $build_url/$(curl -s $build_url/|grep $pkg_name|sed 's/<\/*[^"]*"//g'|cut -d"\"" -f1) ||:
 
     echo "INFO: INSTALLING rabbitmq-server..." 2>&1 | tee -a "${LOG_FILE}"
     yum install -y rabbitmq-server 2>&1 | tee -a "${LOG_FILE}"
@@ -326,6 +331,12 @@ update_sspl_config(){
 
 
 setup_rabbitmq(){
+
+    # Start rabbitmq
+    systemctl status rabbitmq-server 1>/dev/null && export status=true || export status=false
+    if [ "$status" = "false" ]; then
+        systemctl start rabbitmq-server
+    fi
 
     RMQ_REINIT=$SSPL_BASE_DIR/low-level/framework/sspl_rabbitmq_reinit
     python3 $RMQ_REINIT $PRODUCT_VERSION || {

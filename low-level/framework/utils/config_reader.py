@@ -29,7 +29,7 @@ from framework.base.sspl_constants import (component, salt_provisioner_pillar_sl
         MAX_CONSUL_RETRY, WAIT_BEFORE_RETRY, CONSUL_ERR_STRING, CONSUL_HOST, PRODUCT_NAME)
 from framework.utils.consulstore import ConsulStore
 from framework.utils.filestore import FileStore
-
+# Onward LDR_R2, hard dependencies such as consul and salt would not be exist
 try:
     import salt.client
     import consul
