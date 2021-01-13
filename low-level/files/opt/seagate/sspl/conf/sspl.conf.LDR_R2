@@ -32,7 +32,7 @@ queue_name=actuator-req-queue
 exchange_name=sspl-in
 routing_key=actuator-req-key
 username=sspluser
-password=gAAAAABf_F2Xh3y0x2rPTRGL0ld4f_u1AwI5pRHOOEk49-lSNsq339Mn8m9bSBsGH-U8bCaPnTJPW-LR4yQHc_CpSbhU3AL5wQ==
+password=gAAAAABelEy2-hxLq8uThrKVZeb8ZY34cUPMYag8aMHJEHpXbaCie2cmeFsNx2nHBMCLLS2Bj9VUp9iSnyYDmywUHI7SsCoRIw==
 primary_rabbitmq_host=localhost
 
 [RABBITMQEGRESSPROCESSOR]
@@ -44,7 +44,7 @@ ack_queue_name=sensor-queue
 ack_exchange_name=sspl-out
 ack_routing_key=sensor-key
 username=sspluser
-password=gAAAAABf_F2Xh3y0x2rPTRGL0ld4f_u1AwI5pRHOOEk49-lSNsq339Mn8m9bSBsGH-U8bCaPnTJPW-LR4yQHc_CpSbhU3AL5wQ==
+password=gAAAAABelEy2-hxLq8uThrKVZeb8ZY34cUPMYag8aMHJEHpXbaCie2cmeFsNx2nHBMCLLS2Bj9VUp9iSnyYDmywUHI7SsCoRIw==
 message_signature_username=sspl-ll
 message_signature_token=ALOIUD986798df69a8koDISLKJ282983
 message_signature_expires=3600
@@ -59,7 +59,7 @@ queue_name=iem-queue
 exchange_name=sspl-in
 routing_key=iem-key
 username=sspluser
-password=gAAAAABf_F2Xh3y0x2rPTRGL0ld4f_u1AwI5pRHOOEk49-lSNsq339Mn8m9bSBsGH-U8bCaPnTJPW-LR4yQHc_CpSbhU3AL5wQ==
+password=gAAAAABelEy2-hxLq8uThrKVZeb8ZY34cUPMYag8aMHJEHpXbaCie2cmeFsNx2nHBMCLLS2Bj9VUp9iSnyYDmywUHI7SsCoRIw==
 primary_rabbitmq_host=localhost
 
 [RABBITMQCLUSTER]
@@ -86,6 +86,9 @@ cpu_usage_threshold=80
 # Memory Usage Threshold value in terms of usage in percentage (i.e. 0 to 100%)
 host_memory_usage_threshold=80
 
+[NODEDATA]
+probe=sysfs
+
 [RAIDSENSOR]
 monitor=true
 threaded=true
@@ -97,6 +100,20 @@ pass=admin
 
 [BMC_INTERFACE]
 default=system
+
+[SMTPSETTING]
+smptserver=mailhost.seagate.com
+recipient=malhar.vora@seagate.com
+smtp_port=25
+username=
+password=
+
+[LOGEMAILER]
+priority=LOG_ERR
+
+[SMRDRIVEDATA]
+threaded=true
+logging_interval=3600
 
 [REALSTORSENSORS]
 monitor=true

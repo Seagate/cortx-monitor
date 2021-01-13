@@ -232,12 +232,12 @@ class SSPLBundleGenerate(object):
 
             if not response:
                 print("{0}:: {2} status unavailable as ws request {1}"
-                    " failed".format(singleton_realstorencl.LDR_R2_ENCL, url, "Debug log"))
+                    " failed".format(singleton_realstorencl.LDR_R1_ENCL, url, "Debug log"))
                 break
 
             elif response.status_code != singleton_realstorencl.ws.HTTP_OK:
                 print("{0}:: http request {1} to get {3} failed with"
-                    " err {2} enclosure trigger log retry index {4}".format(singleton_realstorencl.LDR_R2_ENCL, url, response.status_code, \
+                    " err {2} enclosure trigger log retry index {4}".format(singleton_realstorencl.LDR_R1_ENCL, url, response.status_code, \
                         "Debug log", encl_trigger_log_retry_index))
 
             else:
@@ -248,7 +248,7 @@ class SSPLBundleGenerate(object):
                     break
                 else:
                     print("{0}:: http request {1} to get {3} failed with"
-                        " response-type {2}".format(singleton_realstorencl.LDR_R2_ENCL, url, response_data["status"][0]["response-type"], "Debug log"))
+                        " response-type {2}".format(singleton_realstorencl.LDR_R1_ENCL, url, response_data["status"][0]["response-type"], "Debug log"))
 
         if COLLECTING_DEBUG_LOG_STARTED == True:
             self.enclosure_wwn = self.get_enclosure_wwn()
@@ -257,10 +257,10 @@ class SSPLBundleGenerate(object):
                 response = singleton_realstorencl.ws_request(url, singleton_realstorencl.ws.HTTP_GET)
                 if not response:
                     print("{0}:: {2} status unavailable as ws request {1}"
-                        " failed".format(singleton_realstorencl.LDR_R2_ENCL, url, "Debug log"))
+                        " failed".format(singleton_realstorencl.LDR_R1_ENCL, url, "Debug log"))
                 elif response.status_code != singleton_realstorencl.ws.HTTP_OK:
                     print("{0}:: http request {1} to get {3} failed with"
-                        " err {2}".format(singleton_realstorencl.LDR_R2_ENCL, url, response.status_code, "Debug log"))
+                        " err {2}".format(singleton_realstorencl.LDR_R1_ENCL, url, response.status_code, "Debug log"))
                 else:
                     if response.headers.get('Content-Type') == 'application/json; charset="utf-8"':
                         response_data = response.json()

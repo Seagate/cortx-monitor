@@ -26,7 +26,6 @@ from enum import Enum
 sys.path.insert(0, '/opt/seagate/cortx/sspl/low-level')
 from framework.utils.salt_util import SaltInterface
 from framework.utils.service_logging import logger
-from cortx.utils.conf_store import Conf
 
 
 PRODUCT_NAME = 'LDR_R2'
@@ -71,14 +70,6 @@ node_key_id = 'srvnode-1'
 CONSUL_HOST = '127.0.0.1'
 CONSUL_PORT = '8500'
 
-# Load config data to confStore
-Conf.load('sspl', 'ini:///etc/sspl.conf')
-
-storage_type = Conf.get('sspl', 'STORAGE_ENCLOSURE>type')
-server_type = Conf.get('sspl', 'SYSTEM_INFORMATION>type')
-cluster_id = Conf.get('sspl', 'SYSTEM_INFORMATION>cluster_id')
-node_id = Conf.get('sspl', 'SYSTEM_INFORMATION>node_id')
-
 # TODO Keep only constants in this file.
 # other values(configs) should come from cofig.
 # Check if SSPL is configured
@@ -86,6 +77,10 @@ if os.path.exists(SSPL_CONFIGURED):
     try:
         config = configparser.ConfigParser()
         config.read(file_store_config_path)
+        storage_type = config['STORAGE_ENCLOSURE']['type']
+        server_type = config['SYSTEM_INFORMATION']['type']
+        cluster_id = config['SYSTEM_INFORMATION']['cluster_id']
+        node_id = config['SYSTEM_INFORMATION']['node_id']
         node_key_id = config['SYSTEM_INFORMATION']['salt_minion_id']
         CONSUL_HOST = config['DATASTORE']['consul_host']
         CONSUL_PORT = config['DATASTORE']['consul_port']
@@ -171,43 +166,83 @@ SSPL_SETTINGS = {
 # The keys which are actually active
 sspl_settings_configured_groups = set()
 
-COMMON_CONFIGS = {
-    "SYSTEM_INFORMATION": {
-        "sspl_key" : "key_provided_by_provisioner",
-        "operating_system" : "operating_system",
-        "kernel_version" : "kernel_version",
-        "product" : "product",
-        "site_id" : "site_id",
-        "rack_id" : "rack_id",
-        "node_id" : f"{node_key_id}/node_id",
-        "cluster_id" : "cluster_id",
-        "syslog_host" : "syslog_host",
-        "syslog_port" : "syslog_port",
-        "setup" : "setup",
-        "data_path" : "data_path"
-    },
-    "STORAGE_ENCLOSURE": {
-        "sspl_key" : "key_provided_by_provisioner",
-        "primary_controller_ip" : "controller/primary_mc/ip",
-        "primary_controller_port" : "controller/primary_mc/port",
-        "secondary_controller_ip" : "controller/secondary_mc/ip",
-        "secondary_controller_port" : "controller/secondary_mc/port",
-        "user" : "controller/user",
-        "password" : "controller/secret",
-        "mgmt_interface" : "controller/mgmt_interface"
-    },
-    "RABBITMQCLUSTER": {
-        "sspl_key" : "key_provided_by_provisioner",
-        "cluster_nodes" : "rabbitmq/cluster_nodes",
-        "erlang_cookie" : "rabbitmq/erlang_cookie"
-    },
-    "BMC": {
-        "sspl_key" : "key_provided_by_provisioner",
-        f"ip_{node_key_id}" : f"{node_key_id}/ip",
-        f"user_{node_key_id}" : f"{node_key_id}/user",
-        f"secret_{node_key_id}" : f"{node_key_id}/secret"
+if SSPL_STORE_TYPE == 'consul':
+    COMMON_CONFIGS = {
+        "SYSTEM_INFORMATION": {
+            "sspl_key" : "key_provided_by_provisioner",
+            "operating_system" : "operating_system",
+            "kernel_version" : "kernel_version",
+            "product" : "product",
+            "site_id" : "site_id",
+            "rack_id" : "rack_id",
+            "node_id" : f"{node_key_id}/node_id",
+            "cluster_id" : "cluster_id",
+            "syslog_host" : "syslog_host",
+            "syslog_port" : "syslog_port",
+            "setup" : "setup",
+            "data_path" : "data_path"
+        },
+        "STORAGE_ENCLOSURE": {
+            "sspl_key" : "key_provided_by_provisioner",
+            "primary_controller_ip" : "controller/primary_mc/ip",
+            "primary_controller_port" : "controller/primary_mc/port",
+            "secondary_controller_ip" : "controller/secondary_mc/ip",
+            "secondary_controller_port" : "controller/secondary_mc/port",
+            "user" : "controller/user",
+            "password" : "controller/secret",
+            "mgmt_interface" : "controller/mgmt_interface"
+        },
+        "RABBITMQCLUSTER": {
+            "sspl_key" : "key_provided_by_provisioner",
+            "cluster_nodes" : "rabbitmq/cluster_nodes",
+            "erlang_cookie" : "rabbitmq/erlang_cookie"
+        },
+        "BMC": {
+            "sspl_key" : "key_provided_by_provisioner",
+            f"ip_{node_key_id}" : f"{node_key_id}/ip",
+            f"user_{node_key_id}" : f"{node_key_id}/user",
+            f"secret_{node_key_id}" : f"{node_key_id}/secret"
+        }
     }
-}
+else:
+    COMMON_CONFIGS = {
+        "SYSTEM_INFORMATION": {
+            "sspl_key" : "key_provided_by_provisioner",
+            "operating_system" : "operating_system",
+            "kernel_version" : "kernel_version",
+            "product" : "product",
+            "site_id" : "site_id",
+            "rack_id" : "rack_id",
+            "node_id" : "node_id",
+            "cluster_id" : "cluster_id",
+            "syslog_host" : "syslog_host",
+            "syslog_port" : "syslog_port",
+            "setup" : "setup",
+            "data_path" : "data_path"
+        },
+        "STORAGE_ENCLOSURE": {
+            "sspl_key" : "key_provided_by_provisioner",
+            "primary_controller_ip" : "primary_controller_ip",
+            "primary_controller_port" : "primary_controller_port",
+            "secondary_controller_ip" : "secondary_controller_ip",
+            "secondary_controller_port" : "secondary_controller_port",
+            "user" : "user",
+            "password" : "password",
+            "mgmt_interface" : "mgmt_interface"
+        },
+        "RABBITMQCLUSTER": {
+            "sspl_key" : "key_provided_by_provisioner",
+            "cluster_nodes" : "cluster_nodes",
+            "erlang_cookie" : "erlang_cookie"
+        },
+        "BMC": {
+            "sspl_key" : "key_provided_by_provisioner",
+            f"ip" : f"ip",
+            f"user" : f"user",
+            f"secret" : f"secret"
+        }
+    }
+
 
 SSPL_CONFIGS = ['log_level', 'cli_type', 'sspl_log_file_path', 'cluster_id', 'storage_enclosure', 'setup', 'operating_system']
 

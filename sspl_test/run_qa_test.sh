@@ -124,6 +124,7 @@ restore_cfg_services()
         port=$(sed -n -e '/primary_controller_port/ s/.*\= *//p' /etc/sspl.conf)
         if [ "$port" == "$MOCK_SERVER_PORT" ]
         then
+            sed -i 's/primary_controller_ip='"$MOCK_SERVER_IP"'/primary_controller_ip='"$primary_ip"'/g' /etc/sspl.conf
             sed -i 's/primary_controller_port='"$MOCK_SERVER_PORT"'/primary_controller_port='"$primary_port"'/g' /etc/sspl.conf
         fi
         # Removing updated system information from sspl_tests.conf
@@ -223,11 +224,13 @@ then
         fi
     fi
 else
+    primary_ip=$(sed -n -e '/primary_controller_ip/ s/.*\= *//p' /etc/sspl.conf)
     primary_port=$(sed -n -e '/primary_controller_port/ s/.*\= *//p' /etc/sspl.conf)
     if [ "$IS_VIRTUAL" == "true" ]
     then
         if [ "$primary_port" != "$MOCK_SERVER_PORT" ]
         then
+            sed -i 's/primary_controller_ip='"$primary_ip"'/primary_controller_ip='"$MOCK_SERVER_IP"'/g' /etc/sspl.conf
             sed -i 's/primary_controller_port='"$primary_port"'/primary_controller_port='"$MOCK_SERVER_PORT"'/g' /etc/sspl.conf
         fi
     fi
@@ -279,6 +282,7 @@ else
     node_id=$(sed -n -e '/node_id/ s/.*\= *//p' /etc/sspl.conf)
     cluster_id=$(sed -n -e '/cluster_id/ s/.*\= *//p' /etc/sspl.conf)
     cluster_nodes=$(sed -n -e '/cluster_nodes/ s/.*\= *//p' /etc/sspl.conf)
+    primary_controller_ip=$(sed -n -e '/primary_controller_ip/ s/.*\= *//p' /etc/sspl.conf)
 fi
 
 # setting values for testing
@@ -302,10 +306,10 @@ then
 else
     # Update sspl_tests.conf with updated System Information
     # append above parsed key-value pairs in sspl_tests.conf under [SYSTEM_INFORMATION] section
-    sed -i 's/node_id=001/node_id='"$node_id"'/g' /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/conf/sspl_tests.conf
+    sed -i 's/node_id=.*/node_id='"$node_id"'/g' /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/conf/sspl_tests.conf
     sed -i 's/site_id=001/site_id='"$site_id"'/g' /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/conf/sspl_tests.conf
     sed -i 's/rack_id=001/rack_id='"$rack_id"'/g' /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/conf/sspl_tests.conf
-    sed -i 's/cluster_id=001/cluster_id='"$cluster_id"'/g' /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/conf/sspl_tests.conf
+    sed -i 's/cluster_id=.*/cluster_id='"$cluster_id"'/g' /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/conf/sspl_tests.conf
     sed -i 's/cluster_nodes=localhost/cluster_nodes='"$cluster_nodes"'/g' /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/conf/sspl_tests.conf
 fi
 

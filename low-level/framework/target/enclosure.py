@@ -30,7 +30,7 @@ from framework.base.sspl_constants import COMMON_CONFIGS
 class StorageEnclosure(object):
 
     ENCL_FAMILY = "enclosure-family"
-    LDR_R2_ENCL = "Realstor Storage_enclosure"
+    LDR_R1_ENCL = "Realstor Storage_enclosure"
 
     EXTENDED_INFO = "extended_info"
 

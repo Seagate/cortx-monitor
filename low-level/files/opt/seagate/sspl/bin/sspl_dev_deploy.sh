@@ -25,7 +25,7 @@
 
 set -eE
 
-CORTX_MONITOR_BASE_URL="https://raw.githubusercontent.com/mariyappanp/cortx-monitor/EOS-15396_self_prv"
+CORTX_MONITOR_BASE_URL="https://raw.githubusercontent.com/mariyappanp/cortx-monitor/EOS-15630_self_prv_setup"
 SSPL_BASE_DIR="/opt/seagate/cortx/sspl"
 
 LOG_FILE="${LOG_FILE:-/tmp/sspl_dev_deploy.log}"
@@ -270,7 +270,7 @@ fi
     echo "INFO: INSTALLING cortx-py-utils..." 2>&1 | tee -a "${LOG_FILE}"
     # yum install -y cortx-py-utils 2>&1 | tee -a "${LOG_FILE}"
     # TODO: When RE brings main branch as same strucure as cortx_builds,
-    # below shoudl be rmeoved and setup_yum_repo should be able to give cortx-py-utils.
+    # below should be removed and setup_yum_repo should be able to give cortx-py-utils.
     pkg_name="cortx-py-utils"
     build_url="http://cortx-storage.colo.seagate.com/releases/cortx/github/main/centos-7.8.2003/cortx-utils_last_successful/"
     yum install -y $build_url/$(curl -s $build_url/|grep $pkg_name|sed 's/<\/*[^"]*"//g'|cut -d"\"" -f1) ||:

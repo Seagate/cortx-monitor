@@ -30,7 +30,7 @@ from framework.base.sspl_constants import COMMON_CONFIGS, component, CONSUL_HOST
 RABBITMQ_CLUSTER_SECTION = 'RABBITMQCLUSTER'
 RABBITMQ_CLUSTER_HOSTS_KEY = 'cluster_nodes'
 
-# Onward LDR_R2, consul will nbe abstracted out and won't exist as hard dependency for SSPL
+# Onward LDR_R2, consul will be abstracted out and won't exist as hard dependency for SSPL
 if SSPL_STORE_TYPE == 'consul':
     import consul
     host = os.getenv('CONSUL_HOST', CONSUL_HOST)

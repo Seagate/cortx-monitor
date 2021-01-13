@@ -19,8 +19,9 @@
   ****************************************************************************
  """
 
+import os
 import sys
-
+from framework.base.sspl_constants import DATA_PATH
 from framework.utils.store_factory import store
 from framework.utils.config_reader import ConfigReader
 from framework.utils.service_logging import logger
@@ -29,46 +30,52 @@ class StoreQueue:
 
     RABBITMQPROCESSOR    = 'RABBITMQEGRESSPROCESSOR'
     LIMIT_CONSUL_MEMORY  = 'limit_consul_memory'
+    CACHE_DIR_NAME       = "server/queue"
 
     def __init__(self):
         self._conf_reader = ConfigReader()
         self._max_size = int(self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
                                                                 self.LIMIT_CONSUL_MEMORY, 50000000))
-        self._current_size = store.get("SSPL_MEMORY_USAGE")
+
+        self.cache_dir_path = os.path.join(DATA_PATH, self.CACHE_DIR_NAME)
+        self.SSPL_MEMORY_USAGE = os.path.join(self.cache_dir_path, 'SSPL_MEMORY_USAGE')
+        self._current_size = store.get(self.SSPL_MEMORY_USAGE)
         if self._current_size is None:
-            store.put(0, "SSPL_MEMORY_USAGE")
+            store.put(0, self.SSPL_MEMORY_USAGE)
 
-        self._head = store.get("SSPL_MESSAGE_HEAD_INDEX")
+        self.SSPL_MESSAGE_HEAD_INDEX = os.path.join(self.cache_dir_path, 'SSPL_MESSAGE_HEAD_INDEX')
+        self._head = store.get(self.SSPL_MESSAGE_HEAD_INDEX)
         if self._head is None:
-            store.put(0, "SSPL_MESSAGE_HEAD_INDEX")
+            store.put(0, self.SSPL_MESSAGE_HEAD_INDEX)
 
-        self._tail = store.get("SSPL_MESSAGE_TAIL_INDEX")
+        self.SSPL_MESSAGE_TAIL_INDEX = os.path.join(self.cache_dir_path, 'SSPL_MESSAGE_TAIL_INDEX')
+        self._tail = store.get(self.SSPL_MESSAGE_TAIL_INDEX)
         if self._tail is None:
-            store.put(0, "SSPL_MESSAGE_TAIL_INDEX")
+            store.put(0, self.SSPL_MESSAGE_TAIL_INDEX)
 
     @property
     def current_size(self):
-        return store.get("SSPL_MEMORY_USAGE")
+        return store.get(self.SSPL_MEMORY_USAGE)
 
     @current_size.setter
     def current_size(self, size):
-        store.put(size, "SSPL_MEMORY_USAGE")
+        store.put(size, self.SSPL_MEMORY_USAGE)
 
     @property
     def head(self):
-        return store.get("SSPL_MESSAGE_HEAD_INDEX")
+        return store.get(self.SSPL_MESSAGE_HEAD_INDEX)
 
     @head.setter
     def head(self, index):
-        store.put(index, "SSPL_MESSAGE_HEAD_INDEX")
+        store.put(index, self.SSPL_MESSAGE_HEAD_INDEX)
 
     @property
     def tail(self):
-        return store.get("SSPL_MESSAGE_TAIL_INDEX")
+        return store.get(self.SSPL_MESSAGE_TAIL_INDEX)
 
     @tail.setter
     def tail(self, index):
-        store.put(index, "SSPL_MESSAGE_TAIL_INDEX")
+        store.put(index, self.SSPL_MESSAGE_TAIL_INDEX)
 
     def is_empty(self):
         if self.tail == self.head:
@@ -92,8 +99,11 @@ class StoreQueue:
     def get(self):
         if self.is_empty():
             return
-        item = store.get(f"SSPL_UNSENT_MESSAGES/{self.head}")
-        store.delete(f"SSPL_UNSENT_MESSAGES/{self.head}")
+        # item = store.get(f"SSPL_UNSENT_MESSAGES/{self.head}")
+        # store.delete(f"SSPL_UNSENT_MESSAGES/{self.head}")
+        SSPL_UNSENT_MESSAGES = os.path.join(self.cache_dir_path, f"SSPL_UNSENT_MESSAGES_{self.head}")
+        item = store.get(SSPL_UNSENT_MESSAGES)
+        store.delete(SSPL_UNSENT_MESSAGES)
         self.head += 1
         self.current_size -= sys.getsizeof(item)
         return item
@@ -104,7 +114,10 @@ class StoreQueue:
             logger.debug("StoreQueue, put, consul memory usage exceded limit, \
                 removing old message")
             self._create_space(size_of_item)
-        store.put(item, f"SSPL_UNSENT_MESSAGES/{self.tail}", pickled=False)
+        # store.put(item, f"SSPL_UNSENT_MESSAGES/{self.tail}", pickled=False)
+        SSPL_UNSENT_MESSAGES = os.path.join(self.cache_dir_path, f"SSPL_UNSENT_MESSAGES_{self.tail}")
+        #store.put(item, SSPL_UNSENT_MESSAGES, pickled=False)
+        store.put(item, SSPL_UNSENT_MESSAGES)
         self.tail += 1
         self.current_size += size_of_item
         logger.debug("StoreQueue, put, current memory usage %s" % self.current_size)

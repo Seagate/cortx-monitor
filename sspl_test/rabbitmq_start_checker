@@ -39,7 +39,7 @@ port = os.getenv('CONSUL_PORT', CONSUL_PORT)
 SSPL_STORE_TYPE = 'file'
 sspl_config_file = '/etc/sspl.conf'
 
-# Onward LDR_R2, consul will nbe abstracted out and won't exist as hard dependency for SSPL
+# Onward LDR_R2, consul will be abstracted out and won't exist as hard dependency for SSPL
 if SSPL_STORE_TYPE == 'consul':
     import consul
     consul_conn = consul.Consul(host=host, port=port)
