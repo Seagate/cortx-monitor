@@ -15,19 +15,20 @@
 # about this software or licensing, please email opensource@seagate.com or
 # cortx-questions@seagate.com.
 
-from configparser import ConfigParser
+import configparser
 import sys
 import os
 
 # Add the top level directories
 sys.path.insert(0, f'/opt/seagate/cortx/sspl/low-level')
-from framework.base.sspl_constants import CONSUL_HOST, CONSUL_PORT, PRODUCT_NAME, PRODUCT_FAMILY, file_store_config_path, storage_type, server_type
+from framework.base.sspl_constants import (CONSUL_HOST, CONSUL_PORT, PRODUCT_NAME,
+    PRODUCT_FAMILY, file_store_config_path, storage_type, server_type, SSPL_STORE_TYPE)
 
 # TODO: Update sensor information in ConfStore
 # from cortx.utils.conf_store import Conf
 
 
-config = ConfigParser(allow_no_value=True)
+config = configparser.ConfigParser(allow_no_value=True)
 config.read(file_store_config_path)
 
 key = 'monitor'
@@ -59,7 +60,7 @@ if os.path.exists(file_store_config_path):
         config.write(configFile, space_around_delimiters=False)
 
 # Onward LDR_R2, consul will be abstracted out and it won't exit as hard dependeny of SSPL
-if PRODUCT_NAME == "LDR_R1":
+if SSPL_STORE_TYPE == "consul":
     import consul
     host = os.getenv('CONSUL_HOST', CONSUL_HOST)
     port = os.getenv('CONSUL_PORT', CONSUL_PORT)
@@ -70,7 +71,15 @@ if PRODUCT_NAME == "LDR_R1":
     except Exception as cerror:
         print("Error in connecting with consul: {}".format(cerror))
 
+# Update sensor information for sspl_test
 test_file_config_path=f"/opt/seagate/{PRODUCT_FAMILY}/sspl/sspl_test/conf/sspl_tests.conf"
+config = configparser.ConfigParser(allow_no_value=True)
+config.read(test_file_config_path)
+for sect, value in sensors.items():
+    try:
+        config.set(sect, key, value)
+    except configparser.NoSectionError:
+        config[sect] = {key: value}
 if os.path.exists(test_file_config_path):
     with open(test_file_config_path, "w") as configFile:
         config.write(configFile, space_around_delimiters=False)

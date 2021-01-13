@@ -28,7 +28,7 @@ set -eE
 CORTX_MONITOR_BASE_URL="https://raw.githubusercontent.com/mariyappanp/cortx-monitor/EOS-15396_self_prv"
 SSPL_BASE_DIR="/opt/seagate/cortx/sspl"
 
-LOG_FILE="${LOG_FILE:-/var/log/cortx/sspl/sspl_dev_deploy.log}"
+LOG_FILE="${LOG_FILE:-/tmp/sspl_dev_deploy.log}"
 export LOG_FILE
 
 if [[ ! -e "$LOG_FILE" ]]; then
@@ -274,6 +274,7 @@ fi
     pkg_name="cortx-py-utils"
     build_url="http://cortx-storage.colo.seagate.com/releases/cortx/github/main/centos-7.8.2003/cortx-utils_last_successful/"
     yum install -y $build_url/$(curl -s $build_url/|grep $pkg_name|sed 's/<\/*[^"]*"//g'|cut -d"\"" -f1) ||:
+    python3 -m pip install toml pyyaml
 
     echo "INFO: INSTALLING rabbitmq-server..." 2>&1 | tee -a "${LOG_FILE}"
     yum install -y rabbitmq-server 2>&1 | tee -a "${LOG_FILE}"

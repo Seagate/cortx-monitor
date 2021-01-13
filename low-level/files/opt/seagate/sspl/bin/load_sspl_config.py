@@ -41,6 +41,7 @@ class LoadConfig:
     def __init__(self, config_file):
         """ Initialize required config """
         self.config_file = config_file
+        self.test_config_file = "/opt/seagate/cortx/sspl/sspl_test/conf/sspl_tests.conf"
         self.rmq_same_pass_sect = ["LOGGINGPROCESSOR",
                                    "RABBITMQEGRESSPROCESSOR",
                                    "RABBITMQINGRESSPROCESSOR"]
@@ -158,6 +159,16 @@ class LoadConfig:
 
         # Load config data to confStore
         Conf.load('sspl', 'ini:///etc/sspl.conf')
+
+        # Update test configs
+        ## TODO: Need to replace this by ConfStore
+        if os.path.isfile(self.test_config_file):
+            config = ConfigParser(allow_no_value=True)
+            config.read(self.test_config_file)
+            config.set('RABBITMQEGRESSPROCESSOR', 'password', rmq_epasswd)
+            config.set('RABBITMQINGRESSPROCESSORTESTS', 'password', rmq_epasswd)
+            with open(self.test_config_file, "w") as configFile:
+                config.write(configFile, space_around_delimiters=False)
 
 
 if __name__ == '__main__':

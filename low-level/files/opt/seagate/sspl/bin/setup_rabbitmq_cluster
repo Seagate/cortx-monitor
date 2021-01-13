@@ -31,7 +31,7 @@ class RMQClusterConfiguration:
 
     """Update RabbitMQ configuration in /etc/sspl.conf and form RabbitMQ cluster"""
 
-    SECTION = "RABBITMQ"
+    SECTION = "RABBITMQCLUSTER"
     CLUSTER_NODES = "cluster_nodes"
     ERLANG_COOKIE = "erlang_cookie"
     RABBITMQCTL = "/usr/sbin/rabbitmqctl"

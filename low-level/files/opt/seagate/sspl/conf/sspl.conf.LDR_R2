@@ -180,10 +180,6 @@ ip=
 secret=****
 user=
 
-[RABBITMQ]
-cluster_nodes=localhost
-erlang_cookie=QLDZYPYEYGHECTHYQXFJ
-
 [SYSTEM_INFORMATION]
 cli_type=CS-A
 data_path=/var/cortx/sspl/data/

@@ -283,7 +283,7 @@ get_rabbitmq_cluster_nodes() {
             if [ "$PRODUCT_NAME" == "LDR_R1" ]; then
                 $CONSUL_PATH/consul kv put sspl/config/SYSTEM_INFORMATION/log_level $log_level
             else
-                sed -i "s/log_level=/log_level = $log_level/" $SSPL_CONF
+                sed -i "s/log_level=.*/log_level=$log_level/" $SSPL_CONF
             fi
             ;;
         "");;

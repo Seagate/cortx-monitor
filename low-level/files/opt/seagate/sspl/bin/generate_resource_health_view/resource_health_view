@@ -21,7 +21,6 @@ import sys
 import socket
 import time
 import argparse
-import consul
 import psutil
 import subprocess
 import traceback
@@ -39,8 +38,12 @@ from framework.utils.ipmi_client import IpmiFactory
 from framework.utils.sysfs_interface import SysFS
 from framework.utils.tool_factory import ToolFactory
 from framework.base.sspl_constants import (component, CONSUL_HOST, CONSUL_PORT, node_key_id, PRODUCT_FAMILY,
-    storage_type, server_type, NODE_ID, SITE_ID, RACK_ID, DATA_PATH, cluster_id, node_id
+    storage_type, server_type, NODE_ID, SITE_ID, RACK_ID, DATA_PATH, cluster_id, node_id, SSPL_STORE_TYPE
 )
+# Onward LDR_R2, consul will nbe abstracted out and won't exist as hard dependency for SSPL
+if SSPL_STORE_TYPE == "consul":
+    import consul
+
 
 class SSPLHealthView(object):
     """docstring for SSPLHealthView"""

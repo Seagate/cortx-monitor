@@ -173,7 +173,7 @@ restore_cfg_services()
     rm -f /tmp/activate_ipmisimtool
 
     # Restore $CONSUL_PATH/consul data
-    if [ "$IS_VIRTUAL" == "true" ]
+    if [ "$IS_VIRTUAL" == "true" -a "$SSPL_STORE_TYPE" == "consul" ]
     then
         $CONSUL_PATH/consul kv delete -recurse var/$PRODUCT_FAMILY/sspl/data
         $CONSUL_PATH/consul kv import @/tmp/consul_backup.json
@@ -278,6 +278,7 @@ else
     site_id=$(sed -n -e '/site_id/ s/.*\= *//p' /etc/sspl.conf)
     node_id=$(sed -n -e '/node_id/ s/.*\= *//p' /etc/sspl.conf)
     cluster_id=$(sed -n -e '/cluster_id/ s/.*\= *//p' /etc/sspl.conf)
+    cluster_nodes=$(sed -n -e '/cluster_nodes/ s/.*\= *//p' /etc/sspl.conf)
 fi
 
 # setting values for testing
@@ -305,13 +306,14 @@ else
     sed -i 's/site_id=001/site_id='"$site_id"'/g' /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/conf/sspl_tests.conf
     sed -i 's/rack_id=001/rack_id='"$rack_id"'/g' /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/conf/sspl_tests.conf
     sed -i 's/cluster_id=001/cluster_id='"$cluster_id"'/g' /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/conf/sspl_tests.conf
+    sed -i 's/cluster_nodes=localhost/cluster_nodes='"$cluster_nodes"'/g' /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/conf/sspl_tests.conf
 fi
 
 if [ "$IS_VIRTUAL" == "true" ]
 then
     echo "Restarting SSPL"
     $sudo systemctl restart sspl-ll
-    echo "Waiting for SSPL to complete initialization of all the plugins"
+    echo "Waiting for SSPL to complete initialization of all the plugins.."
     $script_dir/rabbitmq_start_checker sspl-out sensor-key
 fi
 
