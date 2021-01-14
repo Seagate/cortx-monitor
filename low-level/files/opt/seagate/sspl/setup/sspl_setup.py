@@ -212,8 +212,8 @@ class TestCmd(Cmd):
         pass
 
     def process(self):
-        # TODO: Import relevant python script here for further execution.
-        pass
+        from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.sspl_test import SSPLTestCmd
+        SSPLTestCmd(self.args).process()
 
 
 class SupportBundleCmd(Cmd):
