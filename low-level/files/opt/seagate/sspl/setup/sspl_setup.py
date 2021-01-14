@@ -31,6 +31,7 @@ import time
 from cortx.utils.process import SimpleProcess
 from cortx.utils.conf_store import Conf
 from cortx.utils.service import Service
+from cortx.utils.validator.v_pkg import PkgV
 from cortx.utils.validator.v_service import ServiceV
 from cortx.utils.validator.error import VError
 from cortx.sspl.bin.error import SetupError
@@ -54,7 +55,7 @@ class Cmd:
             [ post_install --config [<global_config_url>] ]
             [ init --config [<global_config_url>] ]
             [ config --config [<global_config_url>] ]
-            [ test [sanity|alerts] ]
+            [ test --config [<global_config_url>] --plan [sanity|alerts|self_primary|self_secondary] ]
             [ reset [hard|soft] ]
             [ join_cluster --nodes [<nodes>] ]
             [ manifest_support_bundle [<id>] [<path>] ]
@@ -182,20 +183,46 @@ class ConfigCmd(Cmd):
 
 
 class TestCmd(Cmd):
-    """Starts test based on plan (sanity | alerts)."""
+    """Starts test based on plan:
+    (sanity|alerts|self_primary|self_secondary)."""
 
     name = "test"
+    test_plan_found=False
+    sspl_test_plans = ["sanity", "alerts", "self_primary","self_secondary"] 
 
     def __init__(self, args):
         super().__init__(args)
 
     def validate(self):
-        # Common validator classes to check Cortx/system wide validator
-        pass
+        if self.args:
+            i=0
+            while i < len(self.args):
+                # Provision for --config <global_config_url> for future use-case.
+                if self.args[i] == "--config":
+                    try:
+                        global_config = self.args[i+1]
+                        Conf.load('global_config', global_config)
+                    except (IndexError):
+                        raise SetupError(1, "global_config_url not specified. Please check usage")
+                elif self.args[i] == "--plan":
+                    if self.args[i+1] in self.sspl_test_plans:
+                        self.test_plan_found=True
+                        break
+                    else:
+                        raise SetupError(1, "Invalid plan type specified. Please check usage")
+                i=+1
+        if not self.test_plan_found:
+            default_plan = "self_primary"
+            self.args.insert(0, default_plan)
+        if "--plan" in self.args:
+            self.args.remove("--plan")
+        result = PkgV().validate("rpms", "sspl-test")
+        if result == -1:
+            raise SetupError(1, "'sspl-test' rpm pkg not found.")
 
     def process(self):
-        # TODO: Import relevant python script here for further execution.
-        pass
+        from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.sspl_test import SSPLTestCmd
+        SSPLTestCmd(self.args).process()
 
 
 class SupportBundleCmd(Cmd):
