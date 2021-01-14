@@ -21,7 +21,7 @@ import json
 import shutil
 import sys
 
-sys.path.append('../low-level/files/opt/seagate/sspl/bin/')
+sys.path.append('../low-level/files/opt/seagate/sspl/setup/')
 
 from consuldump import ConsulDump
 

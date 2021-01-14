@@ -25,11 +25,10 @@ import argparse
 import inspect
 import traceback
 import os
+import syslog
 import subprocess
 # Add the top level directories
 sys.path.insert(0, '/opt/seagate/cortx/sspl/low-level')
-from framework.base.sspl_constants import PRODUCT_FAMILY
-from files.opt.seagate.sspl.bin import validate_consul_config
 
 class Cmd:
     """Setup Command"""
@@ -47,7 +46,7 @@ class Cmd:
         """Print usage instructions"""
 
         sys.stderr.write(
-            f"{prog} [post_install[-p <LDR_R1>]|init [-dp] [-r <ssu|gw|cmu|vm>]\n|config [-f] [-r <ssu|gw|cmu|vm>]|test [self|sanity]|reset [hard -p <LDR_R1>|soft]]\n"
+            f"{prog} [post_install [-p <LDR_R1>]|init [-dp] [-r <vm>]\n|config [-f] [-r <vm>]|test [self|sanity]|reset [hard -p <LDR_R1>|soft]]\n"
             "init options:\n"
             "\t -dp Create configured datapath\n"
             "\t -r  Role to be configured on the current node\n"
@@ -85,6 +84,9 @@ class Cmd:
 
     @staticmethod
     def _send_command(command: str, fail_on_error=True):
+        # Note: This function uses subprocess to execute commands, scripts which are not possible to execute
+        # through any python routines available. So its usage MUST be limited and used only when no other 
+        # alternative found.
         process = subprocess.Popen(
             command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         response, error = process.communicate()
@@ -97,66 +99,75 @@ class Cmd:
                 return str(error)
         return str(response)
 
-    # @staticmethod
-    # def _call_script(script_dir: str, name: str, args: list):
-    #     script_path = f"{script_dir} {name} {' '.join(args)}"
-    #     Cmd._send_command(script_path)
+    @staticmethod
+    def _call_script(script_dir: str, args: list):
+        script_path = f"{script_dir} {' '.join(args)}"
+        Cmd._send_command(script_path)
 
 
 class PostInstallCmd(Cmd):
     """PostInstall Setup Cmd"""
     name = "post_install"
-    script = "sspl_post_install"
 
     def __init__(self, args: dict):
         super().__init__(args)
 
+    def validate(self):
+        # Common validator classes to check Cortx/system wide validator
+        pass
+
     def process(self):
+        # TODO: Add validator method to validate arguments
         # TODO: Import relevant python script here for further execution.
-        print(f"{self._script_dir}/{self.script}", self.name, ' '.join(self._args))
-        # Cmd._call_script(f"{self._script_dir}/{self.script}", self.name, self._args)
+        pass
 
 
 class InitCmd(Cmd):
     """Init Setup Cmd"""
     name = "init"
-    script = "sspl_setup_init"
 
     def __init__(self, args):
         super().__init__(args)
 
+    def validate(self):
+        # Common validator classes to check Cortx/system wide validator
+        pass
+
     def process(self):
         # TODO: Import relevant python script here for further execution.
-        print(f"{self._script_dir}/{self.script}", self.name, ' '.join(self._args))
-        # Cmd._call_script(f"{self._script_dir}/{self.script}", self.name, self._args)
+        pass
 
 
 class ConfigCmd(Cmd):
     """Setup Config Cmd"""
     name = "config"
-    script = "sspl_config"
 
     def __init__(self, args):
         super().__init__(args)
 
+    def validate(self):
+        # Common validator classes to check Cortx/system wide validator
+        pass
+
     def process(self):
         # TODO: Import relevant python script here for further execution.
-        print(f"{self._script_dir}/{self.script}", self.name, ' '.join(self._args))
-        # Cmd._call_script(f"{self._script_dir}/{self.script}", self.name, self._args)
+        pass
 
 
 class TestCmd(Cmd):
     """SSPL Test Cmd"""
     name = "test"
-    script = "sspl_test"
 
     def __init__(self, args):
         super().__init__(args)
 
+    def validate(self):
+        # Common validator classes to check Cortx/system wide validator
+        pass
+
     def process(self):
         # TODO: Import relevant python script here for further execution.
-        print(f"{self._script_dir}/{self.script}", self.name, ' '.join(self._args))
-        # Cmd._call_script(f"{self._script_dir}/{self.script}", self.name, self._args)
+        pass
 
 
 class SupportBundleCmd(Cmd):
@@ -167,10 +178,12 @@ class SupportBundleCmd(Cmd):
     def __init__(self, args):
         super().__init__(args)
 
+    def validate(self):
+        # Common validator classes to check Cortx/system wide validator
+        pass
+
     def process(self):
-        # TODO: Import relevant python script here for further execution.
-        print(f"{self._script_dir}/{self.script}", self.name, ' '.join(self._args))
-        # Cmd._call_script(f"{self._script_dir}/{self.script}", self.name, self._args)
+        Cmd._call_script(f"{self._script_dir}/{self.script}", self._args)
 
 
 class ManifestSupportBundleCmd(Cmd):
@@ -181,10 +194,12 @@ class ManifestSupportBundleCmd(Cmd):
     def __init__(self, args):
         super().__init__(args)
 
+    def validate(self):
+        # Common validator classes to check Cortx/system wide validator
+        pass
+
     def process(self):
-        # TODO: Import relevant python script here for further execution.
-        print(f"{self._script_dir}/{self.script}", self.name, ' '.join(self._args))
-        # Cmd._call_script(f"{self._script_dir}/{self.script}", self.name, self._args)
+        Cmd._call_script(f"{self._script_dir}/{self.script}", self._args)
 
 
 class ResetCmd(Cmd):
@@ -195,33 +210,44 @@ class ResetCmd(Cmd):
     def __init__(self, args):
         super().__init__(args)
 
+    def validate(self):
+        # Common validator classes to check Cortx/system wide validator
+        pass
+
     def process(self):
         # TODO: Import relevant python script here for further execution.
-        print(f"{self._script_dir}/{self.script}", self.name, ' '.join(self._args))
-        # Cmd._call_script(f"{self._script_dir}/{self.script}", self.name, self._args)
+        pass
 
 
 class CheckCmd(Cmd):
     """SSPL Check Cmd"""
     name = "check"
-    SSPL_CONFIGURED=f"/var/{PRODUCT_FAMILY}/sspl/sspl-configured"
 
     def __init__(self, args):
         super().__init__(args)
 
+        from framework.base.sspl_constants import PRODUCT_FAMILY
+
+        self.SSPL_CONFIGURED=f"/var/{PRODUCT_FAMILY}/sspl/sspl-configured"
+
+    def validate(self):
+        # Common validator classes to check Cortx/system wide validator
+        from files.opt.seagate.sspl.setup import validate_consul_config
+        self.validate_consul_config = validate_consul_config
+
     def process(self):
-        validate_consul_config.validate_config()
+        self.validate_consul_config.validate_config()
         if os.path.exists(self.SSPL_CONFIGURED):
             sys.exit(0)
-
-        logger_cmd = f"logger -i -p local3.err 'SSPL is not configured. Run provisioner scripts in {self._script_dir}.'"
-        Cmd._send_command(logger_cmd)
+        syslog.openlog(logoption=syslog.LOG_PID, facility=syslog.LOG_LOCAL3)
+        syslog.syslog(syslog.LOG_ERR, f"SSPL is not configured. Run provisioner scripts in {self._script_dir}.")
         sys.exit(1)
 
 def main(argv: dict):
     try:
-        desc = "SSPL Setup command"
+        desc = "SSPL Setup Interface"
         command = Cmd.get_command(desc, argv[1:])
+        command.validate()
         command.process()
 
     except Exception as e:
