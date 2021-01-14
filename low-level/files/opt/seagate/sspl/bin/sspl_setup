@@ -1,113 +1,234 @@
-#!/bin/bash
+#!/bin/env python3
 
 # Copyright (c) 2020 Seagate Technology LLC and/or its Affiliates
-#
-# This program is free software: you can redistribute it and/or modify it under the
-# terms of the GNU Affero General Public License as published by the Free Software
-# Foundation, either version 3 of the License, or (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful, but WITHOUT ANY
-# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
-# PARTICULAR PURPOSE. See the GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License along
-# with this program. If not, see <https://www.gnu.org/licenses/>. For any questions
-# about this software or licensing, please email opensource@seagate.com or
-# cortx-questions@seagate.com.
-
-set -e -u -o pipefail
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU Affero General Public License for more details.
+# You should have received a copy of the GNU Affero General Public License
+# along with this program. If not, see <https://www.gnu.org/licenses/>.
+# For any questions about this software or licensing,
+# please email opensource@seagate.com or cortx-questions@seagate.com.
 
 ######################################################################
 # This script serves as an entry point for various operations for SSPL
 # as needed by provisioner.
 ######################################################################
 
-SCRIPT_NAME=$(basename $0)
-SCRIPT_DIR=$(dirname $0)
-source $SCRIPT_DIR/constants.sh
+import sys
+import errno
+import argparse
+import inspect
+import traceback
+import os
+import subprocess
+# Add the top level directories
+sys.path.insert(0, '/opt/seagate/cortx/sspl/low-level')
+from framework.base.sspl_constants import PRODUCT_FAMILY
+from files.opt.seagate.sspl.bin import validate_consul_config
 
-SSPL_CONFIGURED="/var/$PRODUCT_FAMILY/sspl/sspl-configured"
+class Cmd:
+    """Setup Command"""
 
-usage() {
-    cat << EOF
-$SCRIPT_NAME [setup [-p <LDR_R2>]|post_install [-p <LDR_R2>]|init [-dp] [-r <ssu|gw|cmu|vm>]|config [-f] [-r <ssu|gw|cmu|vm>]|test [self|sanity]|reset [hard -p <LDR_R21>|soft]|join_cluster [-n <nodes>]]
-setup options:
-    -p Product name
-join_cluster options:
-    -n Node names
-init options:
-    -dp Create configured datapath
-    -r  Role to be configured on the current node
-config options:
-    -f  Force reinitialization. Do not prompt
-    -r  Role to be configured on the current node
-post_install options:
-    -p Product to be configured
-reset options:
-    -p product to be configured
-EOF
-    exit 1
-}
+    def __init__(self, args: dict):
+        self._args = args.args
+        self._script_dir = os.path.dirname(os.path.abspath(__file__))
 
-cmd=
-[ $# -ge 1 ] && cmd=$1 && shift 1
+    @property
+    def args(self) -> str:
+        return self._args
 
-case $cmd in
-    setup )
-        $SCRIPT_DIR/setup_sspl $*
-        exit $?
-        ;;
+    @staticmethod
+    def usage(prog: str):
+        """Print usage instructions"""
 
-    join_cluster )
-        $SCRIPT_DIR/setup_rabbitmq_cluster $*
-        $SCRIPT_DIR/sspl_config -f
-        exit $?
-        ;;
+        sys.stderr.write(
+            f"{prog} [post_install[-p <LDR_R1>]|init [-dp] [-r <ssu|gw|cmu|vm>]\n|config [-f] [-r <ssu|gw|cmu|vm>]|test [self|sanity]|reset [hard -p <LDR_R1>|soft]]\n"
+            "init options:\n"
+            "\t -dp Create configured datapath\n"
+            "\t -r  Role to be configured on the current node\n"
+            "config options:\n"
+            "\t -f  Force reinitialization. Do not prompt\n"
+            "\t -r  Role to be configured on the current node"
+            "post_install options:\n"
+            "\t -p Product to be configured\n"
+            "reset options:\n"
+            "\t -p Product to be configured\n")
 
-    post_install )
-        $SCRIPT_DIR/sspl_post_install $*
-        exit $?
-        ;;
+    @staticmethod
+    def get_command(desc: str, argv: dict):
+        """Return the Command after parsing the command line."""
 
-    init )
-        $SCRIPT_DIR/sspl_setup_init $*
-        exit $?
-        ;;
+        parser = argparse.ArgumentParser(desc)
+        subparsers = parser.add_subparsers()
+        cmds = inspect.getmembers(sys.modules[__name__])
+        cmds = [(x, y) for x, y in cmds
+            if x.endswith("Cmd") and x != "Cmd"]
+        for name, cmd in cmds:
+            cmd.add_args(subparsers, cmd, name)
 
-    config )
-        $SCRIPT_DIR/sspl_config $*
-        exit $?
-        ;;
+        args, unknown = parser.parse_known_args(argv)
+        args.args = unknown + args.args
+        return args.command(args)
 
-    test )
-        $SCRIPT_DIR/sspl_test $*
-        exit $?
-        ;;
+    @staticmethod
+    def add_args(parser: str, cls: str, name: str):
+        """Add Command args for parsing."""
 
-    support_bundle )
-        $SCRIPT_DIR/sspl_bundle_generate $*
-        exit $?
-        ;;
+        parsers = parser.add_parser(cls.name, help='setup %s' % name)
+        parsers.add_argument('args', nargs='*', default=[], help='args')
+        parsers.set_defaults(command=cls)
 
-    manifest_support_bundle )
-        $SCRIPT_DIR/manifest_support_bundle $*
-        exit $?
-        ;;
+    @staticmethod
+    def _send_command(command: str, fail_on_error=True):
+        process = subprocess.Popen(
+            command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        response, error = process.communicate()
+        if error is not None and \
+        len(error) > 0:
+            print("command '%s' failed with error\n%s" % (command, error))
+            if fail_on_error:
+                sys.exit(1)
+            else:
+                return str(error)
+        return str(response)
 
-    reset )
-        $SCRIPT_DIR/sspl_reset $*
-        exit $?
-        ;;
+    # @staticmethod
+    # def _call_script(script_dir: str, name: str, args: list):
+    #     script_path = f"{script_dir} {name} {' '.join(args)}"
+    #     Cmd._send_command(script_path)
 
-    check )
-        # Onward LDR_R2, consul will be abstracted out and won't exist as hard dependency for SSPL
-        # sudo python3 $SCRIPT_DIR/validate_consul_config.py
-        [ -f $SSPL_CONFIGURED ] && exit $?
-        logger -i -p local3.err "SSPL is not configured. Run provisioner scripts in $SSPL_BASE_DIR/bin."
-        exit 1
-        ;;
 
-    * )
-        usage
-        ;;
-esac
+class PostInstallCmd(Cmd):
+    """PostInstall Setup Cmd"""
+    name = "post_install"
+    script = "sspl_post_install"
+
+    def __init__(self, args: dict):
+        super().__init__(args)
+
+    def process(self):
+        # TODO: Import relevant python script here for further execution.
+        print(f"{self._script_dir}/{self.script}", self.name, ' '.join(self._args))
+        # Cmd._call_script(f"{self._script_dir}/{self.script}", self.name, self._args)
+
+
+class InitCmd(Cmd):
+    """Init Setup Cmd"""
+    name = "init"
+    script = "sspl_setup_init"
+
+    def __init__(self, args):
+        super().__init__(args)
+
+    def process(self):
+        # TODO: Import relevant python script here for further execution.
+        print(f"{self._script_dir}/{self.script}", self.name, ' '.join(self._args))
+        # Cmd._call_script(f"{self._script_dir}/{self.script}", self.name, self._args)
+
+
+class ConfigCmd(Cmd):
+    """Setup Config Cmd"""
+    name = "config"
+    script = "sspl_config"
+
+    def __init__(self, args):
+        super().__init__(args)
+
+    def process(self):
+        # TODO: Import relevant python script here for further execution.
+        print(f"{self._script_dir}/{self.script}", self.name, ' '.join(self._args))
+        # Cmd._call_script(f"{self._script_dir}/{self.script}", self.name, self._args)
+
+
+class TestCmd(Cmd):
+    """SSPL Test Cmd"""
+    name = "test"
+    script = "sspl_test"
+
+    def __init__(self, args):
+        super().__init__(args)
+
+    def process(self):
+        # TODO: Import relevant python script here for further execution.
+        print(f"{self._script_dir}/{self.script}", self.name, ' '.join(self._args))
+        # Cmd._call_script(f"{self._script_dir}/{self.script}", self.name, self._args)
+
+
+class SupportBundleCmd(Cmd):
+    """SSPL Support Bundle Cmd"""
+    name = "support_bundle"
+    script = "sspl_bundle_generate"
+
+    def __init__(self, args):
+        super().__init__(args)
+
+    def process(self):
+        # TODO: Import relevant python script here for further execution.
+        print(f"{self._script_dir}/{self.script}", self.name, ' '.join(self._args))
+        # Cmd._call_script(f"{self._script_dir}/{self.script}", self.name, self._args)
+
+
+class ManifestSupportBundleCmd(Cmd):
+    """Manifest Support Bundle Cmd"""
+    name = "manifest_support_bundle"
+    script = "manifest_support_bundle"
+
+    def __init__(self, args):
+        super().__init__(args)
+
+    def process(self):
+        # TODO: Import relevant python script here for further execution.
+        print(f"{self._script_dir}/{self.script}", self.name, ' '.join(self._args))
+        # Cmd._call_script(f"{self._script_dir}/{self.script}", self.name, self._args)
+
+
+class ResetCmd(Cmd):
+    """Setup Reset Cmd"""
+    name = "reset"
+    script = "sspl_reset"
+
+    def __init__(self, args):
+        super().__init__(args)
+
+    def process(self):
+        # TODO: Import relevant python script here for further execution.
+        print(f"{self._script_dir}/{self.script}", self.name, ' '.join(self._args))
+        # Cmd._call_script(f"{self._script_dir}/{self.script}", self.name, self._args)
+
+
+class CheckCmd(Cmd):
+    """SSPL Check Cmd"""
+    name = "check"
+    SSPL_CONFIGURED=f"/var/{PRODUCT_FAMILY}/sspl/sspl-configured"
+
+    def __init__(self, args):
+        super().__init__(args)
+
+    def process(self):
+        validate_consul_config.validate_config()
+        if os.path.exists(self.SSPL_CONFIGURED):
+            sys.exit(0)
+
+        logger_cmd = f"logger -i -p local3.err 'SSPL is not configured. Run provisioner scripts in {self._script_dir}.'"
+        Cmd._send_command(logger_cmd)
+        sys.exit(1)
+
+def main(argv: dict):
+    try:
+        desc = "SSPL Setup command"
+        command = Cmd.get_command(desc, argv[1:])
+        command.process()
+
+    except Exception as e:
+        sys.stderr.write("error: %s\n\n" % str(e))
+        sys.stderr.write("%s\n" % traceback.format_exc())
+        Cmd.usage(argv[0])
+        return errno.EINVAL
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv))
