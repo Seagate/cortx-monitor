@@ -4,8 +4,9 @@ import subprocess
 import pwd
 
 sys.path.insert(0, '/opt/seagate/cortx/sspl/low-level/')
+# sys.path.insert(0, '/op/sumedh/cortx-sspl/low-level')
 
-from framework.base import sspl_constants 
+from framework.base.sspl_constants import file_store_config_path, roles
 import psutil
 
 
@@ -34,7 +35,7 @@ class Init:
 
     VM_DEPENDENCY_RPMS = []
 
-    def __init__(self, *args):
+    def __init__(self, args : list):
         self.args = args
 
     def usage(self):
@@ -110,7 +111,7 @@ class Init:
             if self.args[i] == '-dp':
                 # Extract the data path
                 sspldp = ''
-                with open(sspl_constants.file_store_config_path, mode='rt') as confile:
+                with open(file_store_config_path, mode='rt') as confile:
                     for line in confile:
                         if line.find('data_path') != -1:
                             sspldp = line.split('=')[1]
@@ -133,7 +134,7 @@ class Init:
 
             elif self.args[i] == '-r':
                 i+=1
-                if i>= len(self.args) or self.args[i] not in sspl_constants.roles:
+                if i>= len(self.args) or self.args[i] not in roles:
                     self.usage()
                 else:
                     self.role = self.args[i]
@@ -169,5 +170,5 @@ class Init:
         
 
 if __name__ == "__main__":
-    ic = Init('-r', 'ssu')
+    ic = Init(sys.argv[1:])
     ic.process()
