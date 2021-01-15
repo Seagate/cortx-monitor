@@ -3,8 +3,7 @@ import os
 import subprocess
 import pwd
 
-# sys.path.insert(0, '/opt/seagate/cortx/sspl/low-level/')
-sys.path.insert(0, '/opt/sumedh/cortx-sspl/low-level/')
+sys.path.insert(0, '/opt/seagate/cortx/sspl/low-level/')
 
 from framework.base import sspl_constants 
 import psutil
@@ -36,7 +35,6 @@ class Init:
     VM_DEPENDENCY_RPMS = []
 
     def __init__(self, *args):
-        print(args)
         self.args = args
 
     def usage(self):
@@ -105,7 +103,6 @@ class Init:
 
     def process(self):
         if not self.args:
-            print("calling usage() 1")
             self.usage()
 
         i =0
@@ -137,12 +134,10 @@ class Init:
             elif self.args[i] == '-r':
                 i+=1
                 if i>= len(self.args) or self.args[i] not in sspl_constants.roles:
-                    print("calling usage() 2")
                     self.usage()
                 else:
                     self.role = self.args[i]
             else:
-                print("calling usage() 3... i = ", i , " : " , self.args[i])
                 self.usage()
             i+=1
         
@@ -163,8 +158,9 @@ class Init:
         # Create mdadm.conf to set ACL on it.
         with open('/etc/mdadm.conf', 'a'):
             os.utime('/etc/mdadm.conf')
+
         # self._send_command('setfacl -m u:sspl-ll:rw /etc/mdadm.conf') 
-        #  What should be the file permissions need here ??
+        #  What should be the file permissions need here and are `setfacl` and below impl equivalent??
         os.chmod('/etc/mdadm.conf', mode=0o666)
         sspl_ll_uid = self.get_uid('sspl-ll')
         if sspl_ll_uid == -1:
