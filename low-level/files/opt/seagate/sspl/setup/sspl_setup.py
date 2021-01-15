@@ -30,7 +30,6 @@ import subprocess
 sys.path.insert(0, '/opt/seagate/cortx/sspl/low-level')
 
 class Cmd:
-
     """Setup Command"""
 
     def __init__(self, args: dict):
@@ -44,6 +43,7 @@ class Cmd:
     @staticmethod
     def usage(prog: str):
         """Print usage instructions"""
+
         sys.stderr.write(
             f"{prog} [setup [-p <LDR_R2>]|post_install [-p <LDR_R2>]|init [-dp] [-r <vm>]|config [-f] [-r <vm>]\n"
             "|test [self|sanity]|reset [hard -p <LDR_R21>|soft]|join_cluster [-n <nodes>]\n"
@@ -66,6 +66,7 @@ class Cmd:
     @staticmethod
     def get_command(desc: str, argv: dict):
         """Return the Command after parsing the command line."""
+
         if not argv:
             return
         parser = argparse.ArgumentParser(desc)
@@ -83,6 +84,7 @@ class Cmd:
     @staticmethod
     def add_args(parser: str, cls: str, name: str):
         """Add Command args for parsing."""
+
         parsers = parser.add_parser(cls.name, help='setup %s' % name)
         parsers.add_argument('args', nargs='*', default=[], help='args')
         parsers.set_defaults(command=cls)
@@ -111,8 +113,8 @@ class Cmd:
 
 
 class SetupCmd(Cmd):
-
     """SSPL Setup Cmd"""
+
     name = "setup"
     script = "setup_sspl"
 
@@ -128,8 +130,8 @@ class SetupCmd(Cmd):
 
 
 class JoinClusterCmd(Cmd):
-
     """Setup Join Cluster Cmd"""
+
     name = "join_cluster"
     script = "setup_rabbitmq_cluster"
 
@@ -147,8 +149,8 @@ class JoinClusterCmd(Cmd):
 
 
 class PostInstallCmd(Cmd):
-
     """PostInstall Setup Cmd"""
+
     name = "post_install"
 
     def __init__(self, args: dict):
@@ -164,8 +166,8 @@ class PostInstallCmd(Cmd):
 
 
 class InitCmd(Cmd):
-
     """Init Setup Cmd"""
+
     name = "init"
 
     def __init__(self, args):
@@ -181,8 +183,8 @@ class InitCmd(Cmd):
 
 
 class ConfigCmd(Cmd):
-
     """Setup Config Cmd"""
+
     name = "config"
 
     def __init__(self, args):
@@ -198,8 +200,8 @@ class ConfigCmd(Cmd):
 
 
 class TestCmd(Cmd):
-
     """SSPL Test Cmd"""
+
     name = "test"
 
     def __init__(self, args):
@@ -215,8 +217,8 @@ class TestCmd(Cmd):
 
 
 class SupportBundleCmd(Cmd):
-
     """SSPL Support Bundle Cmd"""
+
     name = "support_bundle"
     script = "sspl_bundle_generate"
 
@@ -232,8 +234,8 @@ class SupportBundleCmd(Cmd):
 
 
 class ManifestSupportBundleCmd(Cmd):
-
     """Manifest Support Bundle Cmd"""
+
     name = "manifest_support_bundle"
     script = "manifest_support_bundle"
 
@@ -249,8 +251,8 @@ class ManifestSupportBundleCmd(Cmd):
 
 
 class ResetCmd(Cmd):
-
     """Setup Reset Cmd"""
+
     name = "reset"
     script = "sspl_reset"
 
@@ -267,8 +269,8 @@ class ResetCmd(Cmd):
 
 
 class CheckCmd(Cmd):
-    
     """SSPL Check Cmd"""
+
     name = "check"
 
     def __init__(self, args):
