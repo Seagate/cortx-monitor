@@ -285,8 +285,8 @@ class ResetCmd(Cmd):
         pass
 
     def process(self):
-        # TODO: Import relevant python script here for further execution.
-        pass
+        from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.sspl_reset import SSPLResetCmd
+        SSPLResetCmd(self.args).process()
 
 
 class CheckCmd(Cmd):
