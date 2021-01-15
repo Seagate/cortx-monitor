@@ -30,7 +30,11 @@ SSPL_CONFIGURED="/var/$PRODUCT_FAMILY/sspl/sspl-configured"
 
 usage() {
     cat << EOF
-$SCRIPT_NAME [post_install[-p <LDR_R1>]|init [-dp] [-r <ssu|gw|cmu|vm>]|config [-f] [-r <ssu|gw|cmu|vm>]|test [self|sanity]|reset [hard -p <LDR_R1>|soft]]
+$SCRIPT_NAME [setup [-p <LDR_R2>]|post_install [-p <LDR_R2>]|init [-dp] [-r <ssu|gw|cmu|vm>]|config [-f] [-r <ssu|gw|cmu|vm>]|test [self|sanity]|reset [hard -p <LDR_R21>|soft]|join_cluster [-n <nodes>]]
+setup options:
+    -p Product name
+join_cluster options:
+    -n Node names
 init options:
     -dp Create configured datapath
     -r  Role to be configured on the current node
@@ -49,6 +53,17 @@ cmd=
 [ $# -ge 1 ] && cmd=$1 && shift 1
 
 case $cmd in
+    setup )
+        $SCRIPT_DIR/setup_sspl $*
+        exit $?
+        ;;
+
+    join_cluster )
+        $SCRIPT_DIR/setup_rabbitmq_cluster $*
+        $SCRIPT_DIR/sspl_config -f
+        exit $?
+        ;;
+
     post_install )
         $SCRIPT_DIR/sspl_post_install $*
         exit $?
@@ -85,7 +100,8 @@ case $cmd in
         ;;
 
     check )
-        sudo python3 $SCRIPT_DIR/validate_consul_config.py
+        # Onward LDR_R2, consul will be abstracted out and won't exist as hard dependency for SSPL
+        # sudo python3 $SCRIPT_DIR/validate_consul_config.py
         [ -f $SSPL_CONFIGURED ] && exit $?
         logger -i -p local3.err "SSPL is not configured. Run provisioner scripts in $SSPL_BASE_DIR/bin."
         exit 1

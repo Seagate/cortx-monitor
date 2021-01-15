@@ -15,18 +15,20 @@
 # about this software or licensing, please email opensource@seagate.com or
 # cortx-questions@seagate.com.
 
+import configparser
 import subprocess
 import ast
-import configparser
 import sys
 import os
 from enum import Enum
+
 # Add the top level directories
 sys.path.insert(0, '/opt/seagate/cortx/sspl/low-level')
 from framework.utils.salt_util import SaltInterface
 from framework.utils.service_logging import logger
 
-PRODUCT_NAME = 'LDR_R1'
+
+PRODUCT_NAME = 'LDR_R2'
 PRODUCT_FAMILY = 'cortx'
 enabled_products = ["CS-A", "SINGLE","DUAL", "CLUSTER", "LDR_R1", "LDR_R2"]
 cs_products = ["CS-A"]
@@ -41,7 +43,7 @@ CONSUL_DUMP = f"/opt/seagate/{PRODUCT_FAMILY}/sspl/bin/consuldump.py"
 NODE_ID = "001"
 SITE_ID = "001"
 RACK_ID = "001"
-SSPL_STORE_TYPE = 'consul'
+SSPL_STORE_TYPE = 'file'
 SYSLOG_HOST = 'localhost'
 SYSLOG_PORT = '514'
 SYSINFO = "SYSTEM_INFORMATION"
@@ -75,6 +77,10 @@ if os.path.exists(SSPL_CONFIGURED):
     try:
         config = configparser.ConfigParser()
         config.read(file_store_config_path)
+        storage_type = config['STORAGE_ENCLOSURE']['type']
+        server_type = config['SYSTEM_INFORMATION']['type']
+        cluster_id = config['SYSTEM_INFORMATION']['cluster_id']
+        node_id = config['SYSTEM_INFORMATION']['node_id']
         node_key_id = config['SYSTEM_INFORMATION']['salt_minion_id']
         CONSUL_HOST = config['DATASTORE']['consul_host']
         CONSUL_PORT = config['DATASTORE']['consul_port']
@@ -160,62 +166,86 @@ SSPL_SETTINGS = {
 # The keys which are actually active
 sspl_settings_configured_groups = set()
 
-COMMON_CONFIGS = {
-    "SYSTEM_INFORMATION": {
-        "sspl_key" : "key_provided_by_provisioner",
-        "operating_system" : "operating_system",
-        "kernel_version" : "kernel_version",
-        "product" : "product",
-        "site_id" : "site_id",
-        "rack_id" : "rack_id",
-        "node_id" : f"{node_key_id}/node_id",
-        "cluster_id" : "cluster_id",
-        "syslog_host" : "syslog_host",
-        "syslog_port" : "syslog_port",
-        "setup" : "setup",
-        "data_path" : "data_path"
-    },
-    "STORAGE_ENCLOSURE": {
-        "sspl_key" : "key_provided_by_provisioner",
-        "primary_controller_ip" : "controller/primary_mc/ip",
-        "primary_controller_port" : "controller/primary_mc/port",
-        "secondary_controller_ip" : "controller/secondary_mc/ip",
-        "secondary_controller_port" : "controller/secondary_mc/port",
-        "user" : "controller/user",
-        "password" : "controller/secret",
-        "mgmt_interface" : "controller/mgmt_interface"
-    },
-    "RABBITMQCLUSTER": {
-        "sspl_key" : "key_provided_by_provisioner",
-        "cluster_nodes" : "rabbitmq/cluster_nodes",
-        "erlang_cookie" : "rabbitmq/erlang_cookie"
-    },
-    "BMC": {
-        "sspl_key" : "key_provided_by_provisioner",
-        f"ip_{node_key_id}" : f"{node_key_id}/ip",
-        f"user_{node_key_id}" : f"{node_key_id}/user",
-        f"secret_{node_key_id}" : f"{node_key_id}/secret"
+if SSPL_STORE_TYPE == 'consul':
+    COMMON_CONFIGS = {
+        "SYSTEM_INFORMATION": {
+            "sspl_key" : "key_provided_by_provisioner",
+            "operating_system" : "operating_system",
+            "kernel_version" : "kernel_version",
+            "product" : "product",
+            "site_id" : "site_id",
+            "rack_id" : "rack_id",
+            "node_id" : f"{node_key_id}/node_id",
+            "cluster_id" : "cluster_id",
+            "syslog_host" : "syslog_host",
+            "syslog_port" : "syslog_port",
+            "setup" : "setup",
+            "data_path" : "data_path"
+        },
+        "STORAGE_ENCLOSURE": {
+            "sspl_key" : "key_provided_by_provisioner",
+            "primary_controller_ip" : "controller/primary_mc/ip",
+            "primary_controller_port" : "controller/primary_mc/port",
+            "secondary_controller_ip" : "controller/secondary_mc/ip",
+            "secondary_controller_port" : "controller/secondary_mc/port",
+            "user" : "controller/user",
+            "password" : "controller/secret",
+            "mgmt_interface" : "controller/mgmt_interface"
+        },
+        "RABBITMQCLUSTER": {
+            "sspl_key" : "key_provided_by_provisioner",
+            "cluster_nodes" : "rabbitmq/cluster_nodes",
+            "erlang_cookie" : "rabbitmq/erlang_cookie"
+        },
+        "BMC": {
+            "sspl_key" : "key_provided_by_provisioner",
+            f"ip_{node_key_id}" : f"{node_key_id}/ip",
+            f"user_{node_key_id}" : f"{node_key_id}/user",
+            f"secret_{node_key_id}" : f"{node_key_id}/secret"
+        }
     }
-}
+else:
+    COMMON_CONFIGS = {
+        "SYSTEM_INFORMATION": {
+            "sspl_key" : "key_provided_by_provisioner",
+            "operating_system" : "operating_system",
+            "kernel_version" : "kernel_version",
+            "product" : "product",
+            "site_id" : "site_id",
+            "rack_id" : "rack_id",
+            "node_id" : "node_id",
+            "cluster_id" : "cluster_id",
+            "syslog_host" : "syslog_host",
+            "syslog_port" : "syslog_port",
+            "setup" : "setup",
+            "data_path" : "data_path"
+        },
+        "STORAGE_ENCLOSURE": {
+            "sspl_key" : "key_provided_by_provisioner",
+            "primary_controller_ip" : "primary_controller_ip",
+            "primary_controller_port" : "primary_controller_port",
+            "secondary_controller_ip" : "secondary_controller_ip",
+            "secondary_controller_port" : "secondary_controller_port",
+            "user" : "user",
+            "password" : "password",
+            "mgmt_interface" : "mgmt_interface"
+        },
+        "RABBITMQCLUSTER": {
+            "sspl_key" : "key_provided_by_provisioner",
+            "cluster_nodes" : "cluster_nodes",
+            "erlang_cookie" : "erlang_cookie"
+        },
+        "BMC": {
+            "sspl_key" : "key_provided_by_provisioner",
+            f"ip" : f"ip",
+            f"user" : f"user",
+            f"secret" : f"secret"
+        }
+    }
+
 
 SSPL_CONFIGS = ['log_level', 'cli_type', 'sspl_log_file_path', 'cluster_id', 'storage_enclosure', 'setup', 'operating_system']
 
-try:
-    setup_info = subprocess.Popen(['sudo', '/usr/bin/provisioner', 'get_setup_info'],
-        stdout=subprocess.PIPE).communicate()[0].decode("utf-8").rstrip()
-    setup_info = ast.literal_eval(setup_info)
-    storage_type = setup_info['storage_type'].lower()
-    server_type = setup_info['server_type'].lower()
-    logger.info(f"Storage Type : '{storage_type}'")
-    logger.info(f"Server Type '{server_type}'")
-
-except Exception as err:
-    logger.debug(f"Error in getting setup information of server and storage type : {err}")
-    print(f"Error in getting setup information of server and storage type : {err}")
-    storage_type = 'virtual'
-    server_type = 'virtual'
-    logger.debug(f"Considering default storage type : '{storage_type}'")
-    logger.debug(f"Considering default server type : '{server_type}'")
 
 class RaidDataConfig(Enum):
     MDSTAT_FILE = "/proc/mdstat"

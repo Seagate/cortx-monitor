@@ -21,16 +21,21 @@
 
 import os
 import sys
-import consul
 import configparser
 import time
 import requests
-import salt.client
 from framework.base.sspl_constants import (component, salt_provisioner_pillar_sls, file_store_config_path,
         SSPL_STORE_TYPE, StoreTypes, salt_uniq_passwd_per_node, COMMON_CONFIGS, SSPL_CONFIGS, CONSUL_PORT,
-        MAX_CONSUL_RETRY, WAIT_BEFORE_RETRY, CONSUL_ERR_STRING, CONSUL_HOST)
+        MAX_CONSUL_RETRY, WAIT_BEFORE_RETRY, CONSUL_ERR_STRING, CONSUL_HOST, PRODUCT_NAME)
 from framework.utils.consulstore import ConsulStore
 from framework.utils.filestore import FileStore
+# Onward LDR_R2, consul and salt will be abstracted out and won't exist as hard dependencies of SSPL
+try:
+    import salt.client
+    import consul
+except ModuleNotFoundError:
+    if PRODUCT_NAME == "LDR_R1":
+        raise
 
 
 class ConfigReader(object):
@@ -71,7 +76,7 @@ class ConfigReader(object):
         elif is_test:
             self.read_test_conf(test_config_path)
         else:
-            self.read_salt_conf()
+            self.read_from_config_store()
 
     def read_dev_conf(self):
         """
@@ -135,11 +140,10 @@ class ConfigReader(object):
             self.store = configparser.RawConfigParser()
             self.store.read(config)
 
-    def read_salt_conf(self):
+    def read_from_config_store(self):
         """
         Specific function for executable binary.
         """
-        print("ENV=prod")
         print("Running via sspl service and taking key values from store factory")
         from framework.utils.store_factory import store
         self.store = store

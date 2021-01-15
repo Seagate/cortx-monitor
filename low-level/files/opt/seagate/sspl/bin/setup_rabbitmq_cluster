@@ -19,37 +19,34 @@
 import subprocess
 import sys
 import socket
-import salt.client
-import consul
 import os
 import argparse
 import re
-
+from configparser import ConfigParser
 
 localhost_fqdn = socket.getfqdn().split('.')[0]
 
 
 class RMQClusterConfiguration:
 
-    """Update RabbitMQ configuration in consul and form RabbitMQ cluster"""
+    """Update RabbitMQ configuration in /etc/sspl.conf and form RabbitMQ cluster"""
 
-    CONSUL_HOST = "127.0.0.1"
-    CONSUL_PORT = 8500
-    CLUSTER_SECTION = "rabbitmq/cluster_nodes"
-    ERLANG_COOKIE_SECTION = "rabbitmq/erlang_cookie"
+    SECTION = "RABBITMQCLUSTER"
+    CLUSTER_NODES = "cluster_nodes"
+    ERLANG_COOKIE = "erlang_cookie"
     RABBITMQCTL = "/usr/sbin/rabbitmqctl"
     ERLANG_COOKIE_PATH = "/var/lib/rabbitmq/.erlang.cookie"
 
     def __init__(self, nodes):
-        host = os.getenv('CONSUL_HOST', self.CONSUL_HOST)
-        port = os.getenv('CONSUL_PORT', self.CONSUL_PORT)
-        self.consul_conn = consul.Consul(host=host, port=port)
         self.requested_nodes = nodes
+        self.config_file = "/etc/sspl.conf"
+        # Initialize config parser
+        self.config = ConfigParser(allow_no_value=True)
+        self.config.read(self.config_file)
 
     def setup_rabbitmq(self):
         command = "systemctl start rabbitmq-server"
         self._send_command(command)
-        self._load_rabbitmq_config_in_consul()
         self._open_rabbitmq_ports()
         self._copy_erlang_cookie()
 
@@ -73,41 +70,6 @@ class RMQClusterConfiguration:
                 print("WARNING: Command '%s' failed with error\n  %s" % (command, error))
                 return str(error)
         return str(response.decode())
-
-    def _insert_nested_dict_to_consul(self, v, prefix=''):
-        """
-        Insert values into consul
-        parameters:
-            v: nested dictionary value
-            prefix: key to map to value in consul
-        """
-        if isinstance(v, dict):
-            for k, v2 in v.items():
-                p2 = "{}/{}".format(prefix, k)
-                self._insert_nested_dict_to_consul(v2, p2)
-        elif isinstance(v, list):
-            for i, v2 in enumerate(v):
-                p2 = "{}/{}".format(prefix, i)
-                self._insert_nested_dict_to_consul(v2, p2)
-        else:
-            if self.consul_conn is not None:
-                print("Inserting common config {}".format(prefix))
-                self.consul_conn.kv.put(prefix, str(v))
-            else:
-                print("ERROR: Consul connection issue, consul_conn is None. Exiting..")
-                sys.exit()
-
-    def _load_rabbitmq_config_in_consul(self):
-        """
-        Read rabbitmq.sls and load data into consul
-        """
-        try:
-            rabbitmq_conf = salt.client.Caller().function('pillar.get', 'rabbitmq')
-            self._insert_nested_dict_to_consul(rabbitmq_conf, prefix='rabbitmq')
-        except Exception as e:
-            print(f"ERROR: '{e}' in reading value from salt, appending default value")
-            sys.exit()
-        print("Rabbitmq config data is inserted into consul.")
 
     def _open_rabbitmq_ports(self):
         """
@@ -144,9 +106,8 @@ class RMQClusterConfiguration:
         command = 'systemctl stop rabbitmq-server'
         self._send_command(command)
         # all rabbitmq servers needs to have same erlang cookie for clustering.
-        cookie_value = self.consul_conn.kv.get(self.ERLANG_COOKIE_SECTION)[1]["Value"].decode()
-        if not cookie_value:
-            cookie_value = 'QLDZYPYEYGHECTHYQXFJ'
+        cookie_value = 'QLDZYPYEYGHECTHYQXFJ'
+        cookie_value = self.config.get(self.SECTION, self.ERLANG_COOKIE, fallback=cookie_value)
         command = f'chmod +w {self.ERLANG_COOKIE_PATH}'
         self._send_command(command)
         command = f'echo "{cookie_value}" > {self.ERLANG_COOKIE_PATH}'
@@ -184,17 +145,14 @@ class RMQClusterConfiguration:
                 self._send_command(command)
                 self._copy_erlang_cookie()
 
-    def _update_rmq_cluster_nodes_in_consul(self):
+    def _update_rmq_cluster_nodes_in_config(self):
         """
-        Updates RMQ cluster nodes in consul
+        Updates RMQ cluster nodes in sspl config file
         """
-        nodes = self.requested_nodes.strip()
-        self.consul_conn.kv.put(self.CLUSTER_SECTION, nodes)
-        cluster_nodes = self.consul_conn.kv.get(self.CLUSTER_SECTION)[1]["Value"].decode()
-        if nodes != cluster_nodes:
-            print("ERROR: Updating RMQ cluster nodes in consul failed")
-            sys.exit()
-        print("Successfully updated RMQ cluster nodes in consul")
+        self.config.set(self.SECTION, self.CLUSTER_NODES, self.requested_nodes)
+        with open(self.config_file, "w") as configFile:
+            self.config.write(configFile, space_around_delimiters=False)
+        print(f"Successfully updated RMQ cluster nodes in {self.config_file}")
 
     def make_rmq_cluster(self):
         """
@@ -225,10 +183,11 @@ class RMQClusterConfiguration:
                 break
         if clustered:
             print(f'RabbitMQ clustering is successfully formed with nodes {requested_nodes}.')
-            self._update_rmq_cluster_nodes_in_consul()
+            self._update_rmq_cluster_nodes_in_config()
         else:
             if node_fqdn is not None and node_fqdn != localhost_fqdn:
-                print("ERROR: Unable to clustering with any node. Please check the node health or configuration.")
+                print("ERROR: Unable to clustering with any node. \
+                    Please check the node health or configuration.")
                 sys.exit()
             else:
                 print(f"RabbitMQ cluster is formed only with current host: {node_fqdn}")
@@ -241,10 +200,10 @@ if __name__ == '__main__':
                                                 Default value is fqdn of the localhost""",
                                         action="store", default=localhost_fqdn)
     args = parser.parse_args()
+    nodes = args.nodes.replace(" ", "")
+    rmq_cluster_config = RMQClusterConfiguration(nodes)
 
-    rmq_cluster_config = RMQClusterConfiguration(args.nodes)
-
-    # Setup RMQ config in consul, rabbitmq ports and erlang cookie
+    # Setup RMQ config - rabbitmq ports and erlang cookie
     rmq_cluster_config.setup_rabbitmq()
 
     # Reset previous cluster setup

@@ -45,4 +45,6 @@ def validate_config():
             print("[ Error ] when validating the sspl config file in consul:{}".format(err))
 
 if __name__ == '__main__':
-    validate_config()
+    # Onward LDR_R2, consul will be extracted out and won't be exit as hard dependency of SSPL
+    if sc.PRODUCT_NAME == "LDR_R1":
+        validate_config()

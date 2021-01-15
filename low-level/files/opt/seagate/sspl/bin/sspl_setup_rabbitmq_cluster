@@ -19,7 +19,6 @@
 import subprocess
 import sys
 import socket
-import salt.client
 import consul
 import os
 # Add the top level directories
@@ -36,18 +35,7 @@ port = os.getenv('CONSUL_PORT', CONSUL_PORT)
 consul_conn = consul.Consul(host=host, port=port)
 
 config_reader = ConfigReader(is_init=True)
-CLUSTER_NODES = []
-try:
-    NODES = salt.client.Caller().function('pillar.get','rabbitmq:cluster_nodes')
-    CLUSTER_NODES.extend([node.strip() for node in NODES.split(',')])
-except Exception as e:
-    print(f"Error {e} in reading value from salt, appending default value")
-    CLUSTER_NODES.append("localhost")
-try:
-    ERLANG_COOKIE = salt.client.Caller().function('pillar.get','rabbitmq:erlang_cookie')
-except Exception as e:
-    print(f"Error {e} in reading value from salt, appending default value")
-    ERLANG_COOKIE = 'QLDZYPYEYGHECTHYQXFJ'
+
 
 def _send_command(command, fail_on_error=True):
     print(f'Executing: {command}')

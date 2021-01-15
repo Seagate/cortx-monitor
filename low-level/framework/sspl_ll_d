@@ -36,6 +36,7 @@ from threading import Thread
 import time
 import uuid
 import json
+import traceback
 
 # Add the top level directories
 sys.path.insert(0, f'/opt/seagate/cortx/sspl/low-level')
@@ -812,6 +813,7 @@ if __name__ == "__main__":
         main(conf_reader, systemd_support)
 
     except (Exception) as err:
+        logger.debug(f"{traceback.print_exc()}")
         logger.critical("While spawning sspl-ll process :%r" % err)
         sys.exit(os.EX_USAGE)
 

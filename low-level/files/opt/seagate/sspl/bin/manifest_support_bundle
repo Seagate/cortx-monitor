@@ -25,7 +25,7 @@ import json
 import subprocess
 # Add the top level directories
 sys.path.insert(0, f'/opt/seagate/cortx/sspl/low-level')
-from framework.base.sspl_constants import PRODUCT_FAMILY, node_key_id, RESOURCE_HEALTH_VIEW
+from framework.base.sspl_constants import PRODUCT_FAMILY, node_key_id, cluster_id, RESOURCE_HEALTH_VIEW
 
 onGoingRequestPath = "/tmp/sspl-msb-req.txt"
 
@@ -40,8 +40,7 @@ class ManifestSupportBundle(object):
         self.lr_serial_number_path = "/opt/seagate/lr-serial-number"
         self.node_hostname = socket.gethostname().split('.', 1)[0]
         self.encl_summary_filter={}
-        cluster_id = subprocess.Popen(['salt-call', 'grains.get', 'cluster_id'], stdout=subprocess.PIPE).communicate()[0]
-        self.cluster_id = cluster_id.decode("utf-8").rstrip().replace('local:\n    ', '')
+        self.cluster_id = cluster_id
         self.encl_summary_fields = ["object-name", "durable-id", "vendor-name", "product-id", "serial-number",
                             "model", "product-brand", "description", "status", "health", "health-reason",
                             "platform-type", "platform-brand", "part-number", "enclosure-wwn", "vendor",
