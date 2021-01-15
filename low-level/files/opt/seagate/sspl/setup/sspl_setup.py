@@ -45,9 +45,13 @@ class Cmd:
         """Print usage instructions"""
 
         sys.stderr.write(
-            f"{prog} [post_install [-p <LDR_R1>]|init [-dp] [-r <vm>]\n"
-            "|config [-f] [-r <vm>]|test [self|sanity]|reset [hard -p <LDR_R1>|soft]\n"
+            f"{prog} [setup [-p <LDR_R2>]|post_install [-p <LDR_R2>]|init [-dp] [-r <vm>]|config [-f] [-r <vm>]\n"
+            "|test [self|sanity]|reset [hard -p <LDR_R21>|soft]|join_cluster [-n <nodes>]\n"
             "|manifest_support_bundle [<id>] [<path>]|support_bundle [<id>] [<path>]]\n"
+            "setup options:\n"
+            "\t -p Product name\n"
+            "join_cluster options:\n"
+            "\t -n Node names\n"
             "init options:\n"
             "\t -dp Create configured datapath\n"
             "\t -r  Role to be configured on the current node\n"
@@ -104,8 +108,42 @@ class Cmd:
 
     @staticmethod
     def _call_script(script_dir: str, args: list):
-        script_path = f"{script_dir} {' '.join(args)}"
-        Cmd._send_command(script_path)
+        script_args_lst = [script_dir]+args
+        subprocess.call(script_args_lst, shell=False)
+
+
+class SetupCmd(Cmd):
+    """SSPL Setup Cmd"""
+    name = "setup"
+    script = "setup_sspl"
+
+    def __init__(self, args):
+        super().__init__(args)
+
+    def validate(self):
+        # Common validator classes to check Cortx/system wide validator
+        pass
+
+    def process(self):
+        Cmd._call_script(f"{self._script_dir}/{self.script}", self._args)
+
+
+class JoinClusterCmd(Cmd):
+    """Setup Join Cluster Cmd"""
+    name = "join_cluster"
+    script = "setup_rabbitmq_cluster"
+
+    def __init__(self, args):
+        super().__init__(args)
+
+    def validate(self):
+        # Common validator classes to check Cortx/system wide validator
+        pass
+
+    def process(self):
+        Cmd._call_script(f"{self._script_dir}/{self.script}", self._args)
+        # TODO: Replace the below code once sspl_config script implementation is done.
+        Cmd._call_script(f"{self._script_dir}/sspl_config", ['-f'])
 
 
 class PostInstallCmd(Cmd):
@@ -120,7 +158,6 @@ class PostInstallCmd(Cmd):
         pass
 
     def process(self):
-        # TODO: Add validator method to validate arguments
         # TODO: Import relevant python script here for further execution.
         pass
 
@@ -235,11 +272,13 @@ class CheckCmd(Cmd):
 
     def validate(self):
         # Common validator classes to check Cortx/system wide validator
-        from files.opt.seagate.sspl.setup import validate_consul_config
-        self.validate_consul_config = validate_consul_config
+        # Onward LDR_R2, consul will be abstracted out and won't exist as hard dependency for SSPL
+        #from files.opt.seagate.sspl.setup import validate_consul_config
+        #self.validate_consul_config = validate_consul_config
+        pass
 
     def process(self):
-        self.validate_consul_config.validate_config()
+        #self.validate_consul_config.validate_config()
         if os.path.exists(self.SSPL_CONFIGURED):
             sys.exit(0)
         syslog.openlog(logoption=syslog.LOG_PID, facility=syslog.LOG_LOCAL3)

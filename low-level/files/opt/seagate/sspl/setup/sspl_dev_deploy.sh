@@ -236,7 +236,7 @@ parse_args "$@"
 
 # Setup common, 3rd_party and build specific repos
 [ "$setup_repo" == true ] && {
-    curl ${CORTX_MONITOR_BASE_URL}/low-level/files/opt/seagate/sspl/bin/setup_yum_repos.sh -o setup_yum_repos.sh
+    curl ${CORTX_MONITOR_BASE_URL}/low-level/files/opt/seagate/sspl/setup/setup_yum_repos.sh -o setup_yum_repos.sh
     chmod a+x setup_yum_repos.sh
 
     if [ -n "$TARGET_BUILD" ]; then
@@ -309,9 +309,10 @@ update_sspl_config(){
     SOURCE_CONF=${SSPL_BASE_DIR}/low-level/files/opt/seagate/sspl/conf/sspl.conf.${PRODUCT_VERSION}
     cp $SOURCE_CONF $SSPL_CONF
 
-    CONFIG_FEEDER=$SSPL_BASE_DIR/low-level/files/opt/seagate/sspl/bin/load_sspl_config.py
+    CONFIG_FEEDER=$SSPL_BASE_DIR/low-level/files/opt/seagate/sspl/setup/load_sspl_config.py
 
     echo "INFO: Loading $SSPL_CONF config file.."
+    echo "$CONFIG_FEEDER $NODE $RMQ_USER"
     if [ "$skip_bmc" == "true" ];
     then
         python3 $CONFIG_FEEDER -N $NODE -C $SSPL_CONF \
