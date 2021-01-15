@@ -15,8 +15,7 @@
 # please email opensource@seagate.com or cortx-questions@seagate.com.
 
 ######################################################################
-# This script serves as an entry point for various operations for SSPL
-# as needed by provisioner.
+# SSPL Mini provisioner interfaces for component provisioning
 ######################################################################
 
 import sys
@@ -46,7 +45,9 @@ class Cmd:
         """Print usage instructions"""
 
         sys.stderr.write(
-            f"{prog} [post_install [-p <LDR_R1>]|init [-dp] [-r <vm>]\n|config [-f] [-r <vm>]|test [self|sanity]|reset [hard -p <LDR_R1>|soft]]\n"
+            f"{prog} [post_install [-p <LDR_R1>]|init [-dp] [-r <vm>]\n"
+            "|config [-f] [-r <vm>]|test [self|sanity]|reset [hard -p <LDR_R1>|soft]\n"
+            "|manifest_support_bundle [<id>] [<path>]|support_bundle [<id>] [<path>]]\n"
             "init options:\n"
             "\t -dp Create configured datapath\n"
             "\t -r  Role to be configured on the current node\n"
@@ -62,6 +63,8 @@ class Cmd:
     def get_command(desc: str, argv: dict):
         """Return the Command after parsing the command line."""
 
+        if not argv:
+            return
         parser = argparse.ArgumentParser(desc)
         subparsers = parser.add_subparsers()
         cmds = inspect.getmembers(sys.modules[__name__])
@@ -247,6 +250,9 @@ def main(argv: dict):
     try:
         desc = "SSPL Setup Interface"
         command = Cmd.get_command(desc, argv[1:])
+        if not command:
+            Cmd.usage(argv[0])
+            return errno.EINVAL
         command.validate()
         command.process()
 
