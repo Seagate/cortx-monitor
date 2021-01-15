@@ -30,7 +30,7 @@ class StoreQueue:
 
     RABBITMQPROCESSOR    = 'RABBITMQEGRESSPROCESSOR'
     LIMIT_CONSUL_MEMORY  = 'limit_consul_memory'
-    CACHE_DIR_NAME       = "server/queue"
+    CACHE_DIR_NAME       = "SSPL_UNSENT_MESSAGES"
 
     def __init__(self):
         self._conf_reader = ConfigReader()
@@ -52,6 +52,7 @@ class StoreQueue:
         self._tail = store.get(self.SSPL_MESSAGE_TAIL_INDEX)
         if self._tail is None:
             store.put(0, self.SSPL_MESSAGE_TAIL_INDEX)
+        self.SSPL_UNSENT_MESSAGES = os.path.join(self.cache_dir_path, 'MESSAGES')
 
     @property
     def current_size(self):
@@ -99,11 +100,8 @@ class StoreQueue:
     def get(self):
         if self.is_empty():
             return
-        # item = store.get(f"SSPL_UNSENT_MESSAGES/{self.head}")
-        # store.delete(f"SSPL_UNSENT_MESSAGES/{self.head}")
-        SSPL_UNSENT_MESSAGES = os.path.join(self.cache_dir_path, f"SSPL_UNSENT_MESSAGES_{self.head}")
-        item = store.get(SSPL_UNSENT_MESSAGES)
-        store.delete(SSPL_UNSENT_MESSAGES)
+        item = store.get(f"{self.SSPL_UNSENT_MESSAGES}/{self.head}")
+        store.delete(f"{self.SSPL_UNSENT_MESSAGES}/{self.head}")
         self.head += 1
         self.current_size -= sys.getsizeof(item)
         return item
@@ -114,10 +112,7 @@ class StoreQueue:
             logger.debug("StoreQueue, put, consul memory usage exceded limit, \
                 removing old message")
             self._create_space(size_of_item)
-        # store.put(item, f"SSPL_UNSENT_MESSAGES/{self.tail}", pickled=False)
-        SSPL_UNSENT_MESSAGES = os.path.join(self.cache_dir_path, f"SSPL_UNSENT_MESSAGES_{self.tail}")
-        #store.put(item, SSPL_UNSENT_MESSAGES, pickled=False)
-        store.put(item, SSPL_UNSENT_MESSAGES)
+        store.put(item, f"{self.SSPL_UNSENT_MESSAGES}/{self.tail}", pickled=False)
         self.tail += 1
         self.current_size += size_of_item
         logger.debug("StoreQueue, put, current memory usage %s" % self.current_size)
