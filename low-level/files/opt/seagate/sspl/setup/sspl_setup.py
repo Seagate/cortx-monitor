@@ -166,8 +166,8 @@ class PostInstallCmd(Cmd):
         pass
 
     def process(self):
-        # TODO: Import relevant python script here for further execution.
-        pass
+        from files.opt.seagate.sspl.setup import sspl_post_install
+        sspl_post_install.SSPLPostInstallCmd(self.args).process()
 
 
 class InitCmd(Cmd):

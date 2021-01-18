@@ -57,6 +57,11 @@ SUPPORT_CONTACT_NUMBER = "18007324283"
 ENCL_TRIGGER_LOG_MAX_RETRY = 10
 ENCL_DOWNLOAD_LOG_MAX_RETRY = 60
 ENCL_DOWNLOAD_LOG_WAIT_BEFORE_RETRY = 15
+SSPL_BASE_DIR = f"/opt/seagate/{PRODUCT_FAMILY}/sspl"
+PRODUCT_BASE_DIR="/opt/seagate/$PRODUCT_FAMILY/"
+
+# This file will be created when sspl is being configured for node replacement case
+REPLACEMENT_NODE_ENV_VAR_FILE = "/etc/profile.d/set_replacement_env.sh"
 
 # required only for init
 component = 'sspl/config'
