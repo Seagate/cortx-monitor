@@ -59,15 +59,20 @@ Installs SSPL
 
 %install
 # Copy config file and service startup to correct locations
-mkdir -p ${RPM_BUILD_ROOT}/opt/seagate/%{product_family}/sspl
+SSPL_BASE=${RPM_BUILD_ROOT}/opt/seagate/%{product_family}/sspl
+mkdir -p $SSPL_BASE
 mkdir -p ${RPM_BUILD_ROOT}/etc/{systemd/system,dbus-1/system.d,polkit-1/rules.d,sspl-ll/templates/snmp}
 cp -afv files/etc ${RPM_BUILD_ROOT}/
-cp -afv files/opt/seagate/sspl/* ${RPM_BUILD_ROOT}/opt/seagate/%{product_family}/sspl/
+cp -afv files/opt/seagate/sspl/* $SSPL_BASE/
+
+# Rename setup directory to bin directory and remove .py extension of sspl_setup files.
+mv $SSPL_BASE/setup $SSPL_BASE/bin
+mv $SSPL_BASE/bin/sspl_setup.py $SSPL_BASE/bin/sspl_setup
 
 # Copy the service into /opt/seagate/%{product_family}/sspl where it will execute from
-cp -rp __init__.py ${RPM_BUILD_ROOT}/opt/seagate/%{product_family}/sspl
-mkdir -p ${RPM_BUILD_ROOT}/opt/seagate/%{product_family}/sspl/low-level
-cp -rp . ${RPM_BUILD_ROOT}/opt/seagate/%{product_family}/sspl/low-level
+cp -rp __init__.py $SSPL_BASE
+mkdir -p $SSPL_BASE/low-level
+cp -rp . $SSPL_BASE/low-level
 
 %pre
 # Add the sspl-ll user during first install if it doesnt exist
@@ -104,10 +109,10 @@ SSPL_DIR=/opt/seagate/%{product_family}/sspl
 [ -d "${SSPL_DIR}" ] && {
     ln -sf $SSPL_DIR/low-level/framework/sspl_ll_d /usr/bin/sspl_ll_d
     ln -sf $SSPL_DIR/low-level/framework/sspl_ll_d $SSPL_DIR/bin/sspl_ll_d
-    ln -sf $SSPL_DIR/low-level/files/opt/seagate/sspl/bin/generate_resource_health_view/resource_health_view /usr/bin/resource_health_view
-    ln -sf $SSPL_DIR/low-level/files/opt/seagate/sspl/bin/generate_sspl_bundle/sspl_bundle_generate /usr/bin/sspl_bundle_generate
-    ln -sf $SSPL_DIR/low-level/files/opt/seagate/sspl/bin/generate_sspl_bundle/sspl_bundle_generate $SSPL_DIR/bin/sspl_bundle_generate
-    ln -sf $SSPL_DIR/low-level/files/opt/seagate/sspl/bin/manifest_support_bundle /usr/bin/manifest_support_bundle
+    ln -sf $SSPL_DIR/low-level/files/opt/seagate/sspl/setup/generate_resource_health_view/resource_health_view /usr/bin/resource_health_view
+    ln -sf $SSPL_DIR/low-level/files/opt/seagate/sspl/setup/generate_sspl_bundle/sspl_bundle_generate /usr/bin/sspl_bundle_generate
+    ln -sf $SSPL_DIR/low-level/files/opt/seagate/sspl/setup/generate_sspl_bundle/sspl_bundle_generate $SSPL_DIR/bin/sspl_bundle_generate
+    ln -sf $SSPL_DIR/low-level/files/opt/seagate/sspl/setup/manifest_support_bundle /usr/bin/manifest_support_bundle
     ln -sf $SSPL_DIR/low-level/framework/sspl_rabbitmq_reinit $SSPL_DIR/bin/sspl_rabbitmq_reinit
     ln -sf $SSPL_DIR/low-level/framework/base/sspl_constants.py $SSPL_DIR/bin/sspl_constants.py
     ln -sf $SSPL_DIR/low-level/framework/sspl_init $SSPL_DIR/bin/sspl_init
