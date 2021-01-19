@@ -30,10 +30,9 @@ sys.path.insert(0, '/opt/seagate/cortx/sspl/low-level/')
 
 from framework.base.sspl_constants import file_store_config_path, roles
 from files.opt.seagate.sspl.setup.sspl_setup import Cmd as SSPLSetup
-import psutil
 
+import psutil
 import rpm 
-ts = rpm.TransactionSet()
 
 class Init:
     """Init Setup Interface"""
@@ -59,12 +58,13 @@ class Init:
 
     VM_DEPENDENCY_RPMS = []
 
-    hpi_path = '/tmp/dcs/hpi'
-    mdadm_path = '/etc/mdadm.conf'
+    HPI_PATH = '/tmp/dcs/hpi'
+    MDADM_PATH = '/etc/mdadm.conf'
 
     def __init__(self, args : list):
         self.args = args
         self.role = None
+        self.ts = rpm.TransactionSet()
 
     def usage(self):
         sys.stderr.write(
@@ -77,7 +77,7 @@ class Init:
 
     def check_for_dep_rpms(self, rpm_list : list):
         for dep in rpm_list:
-            mi = ts.dbMatch('name', dep)
+            mi = self.ts.dbMatch('name', dep)
             ispresent = False
             for k in mi:
                 if(k['name'] == dep):
@@ -160,10 +160,10 @@ class Init:
         # Create /tmp/dcs/hpi if required. Not needed for '<product>' role
         if self.role != "cortx":
             try:
-                os.makedirs(self.hpi_path, mode=0o777, exist_ok=True)
+                os.makedirs(self.HPI_PATH, mode=0o777, exist_ok=True)
                 zabbix_uid = self.get_uid('zabbix')
                 if zabbix_uid != -1:
-                    os.chown(self.hpi_path, zabbix_uid, -1)
+                    os.chown(self.HPI_PATH, zabbix_uid, -1)
             except OSError as error:
                 print(error)
 
@@ -172,17 +172,17 @@ class Init:
             self.check_dependencies(self.role)
         
         # Create mdadm.conf to set ACL on it.
-        with open(self.mdadm_path, 'a'):
-            os.utime(self.mdadm_path)
+        with open(self.MDADM_PATH, 'a'):
+            os.utime(self.MDADM_PATH)
 
         # TODO : verify or find accurate replacement for setfacl command which
         #        gives rw permission to sspl-ll user for mdadm.conf file.
         # SSPLSetup._send_command('setfacl -m u:sspl-ll:rw /etc/mdadm.conf')
-        os.chmod(self.mdadm_path, mode=0o666)
+        os.chmod(self.MDADM_PATH, mode=0o666)
         sspl_ll_uid = self.get_uid('sspl-ll')
         if sspl_ll_uid == -1:
             sys.exit(1)
-        os.chown(self.mdadm_path, sspl_ll_uid, -1)
+        os.chown(self.MDADM_PATH, sspl_ll_uid, -1)
         
 if __name__ == "__main__":
     ic = Init(sys.argv[1:])
