@@ -25,7 +25,7 @@
 
 set -eE
 
-CORTX_MONITOR_BASE_URL="https://raw.githubusercontent.com/mariyappanp/cortx-monitor/EOS-15630_self_prv_setup"
+CORTX_MONITOR_BASE_URL="https://raw.githubusercontent.com/Seagate/cortx-monitor/main"
 SSPL_BASE_DIR="/opt/seagate/cortx/sspl"
 
 LOG_FILE="${LOG_FILE:-/tmp/sspl_dev_deploy.log}"
@@ -309,7 +309,7 @@ update_sspl_config(){
     SOURCE_CONF=${SSPL_BASE_DIR}/low-level/files/opt/seagate/sspl/conf/sspl.conf.${PRODUCT_VERSION}
     cp $SOURCE_CONF $SSPL_CONF
 
-    CONFIG_FEEDER=$SSPL_BASE_DIR/low-level/files/opt/seagate/sspl/setup/load_sspl_config.py
+    CONFIG_FEEDER=$SSPL_BASE_DIR/low-level/files/opt/seagate/sspl/bin/load_sspl_config.py
 
     echo "INFO: Loading $SSPL_CONF config file.."
     echo "$CONFIG_FEEDER $NODE $RMQ_USER"
@@ -364,7 +364,7 @@ setup_sspl(){
 # Install SSPL
 install_sspl_rpms 2>&1 | tee -a "${LOG_FILE}"
 
-# Insert config in consul
+# Update sspl config
 update_sspl_config 2>&1 | tee -a "${LOG_FILE}"
 
 # Configure rabbitmq-server
