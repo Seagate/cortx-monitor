@@ -23,7 +23,7 @@ import pprint
 import socket
 import os
 import time
-import consul
+import re
 import random
 
 SSPL_USER = "sspluser"
@@ -36,13 +36,27 @@ component = 'sspl/config'
 RABBITMQ_CLUSTER_SECTION = 'RABBITMQCLUSTER'
 host = os.getenv('CONSUL_HOST', CONSUL_HOST)
 port = os.getenv('CONSUL_PORT', CONSUL_PORT)
-consul_conn = consul.Consul(host=host, port=port)
+SSPL_STORE_TYPE = 'file'
+sspl_config_file = '/etc/sspl.conf'
+
+# Onward LDR_R2, consul will be abstracted out and won't exist as hard dependency for SSPL
+if SSPL_STORE_TYPE == 'consul':
+    import consul
+    consul_conn = consul.Consul(host=host, port=port)
 
 def get_cluster_connection(username, password, virtual_host):
     """Makes connection with one of the rabbitmq node.
     """
-    consul_key = component + '/' + RABBITMQ_CLUSTER_SECTION + '/' + 'cluster_nodes'
-    hosts = consul_conn.kv.get(consul_key)[1]["Value"].decode()
+    hosts = ""
+    if SSPL_STORE_TYPE == 'consul':
+        consul_key = component + '/' + RABBITMQ_CLUSTER_SECTION + '/' + 'cluster_nodes'
+        hosts = consul_conn.kv.get(consul_key)[1]["Value"].decode()
+    else:
+        with open(sspl_config_file) as fObj:
+            config = fObj.read()
+        cluster_nodes = re.findall(r"cluster_nodes=(.*)\n", config)
+    if cluster_nodes:
+        hosts = cluster_nodes[0]
     if isinstance(hosts, str):
         hosts = hosts.strip().split(",")
     print(f"Cluster Nodes: {hosts}")

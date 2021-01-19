@@ -26,6 +26,8 @@ import time
 from sspl_test.framework.base.module_thread import ScheduledModuleThread
 from sspl_test.framework.base.internal_msgQ import InternalMsgQ
 from sspl_test.framework.utils.service_logging import logger
+from sspl_test.framework.utils import encryptor
+from sspl_test.framework.base.sspl_constants import ServiceTypes
 from .rabbitmq_sspl_test_connector import RabbitMQSafeConnection
 
 import ctypes
@@ -213,12 +215,16 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
             self._site_id = self._conf_reader._get_value_with_default(
                 self.SYSTEM_INFORMATION, self.SITE_ID, '')
 
+            # Decrypt RabbitMQ Password
+            decryption_key = encryptor.gen_key(self._cluster_id, ServiceTypes.RABBITMQ.value)
+            self._password = encryptor.decrypt(decryption_key, self._password.encode('ascii'), "RabbitMQegressProcessor")
 
             if self._iem_route_addr != "":
                 logger.info("         Routing IEMs to host: %s" % self._iem_route_addr)
                 logger.info("         Using IEM exchange: %s" % self._iem_route_exchange_name)
         except Exception as ex:
             logger.exception("RabbitMQegressProcessor, _read_config: %r" % ex)
+            raise
 
     def _add_signature(self):
         """Adds the authentication signature to the message"""
@@ -296,10 +302,9 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
                 message = self._jsonMsg.get("message")
                 if message.get("actuator_request_type") or \
                     message.get("sensor_request_type") is not None:
-                    logger.error("inside egress, test actuator")
+                    logger.info("inside egress, test actuator")
                     unique_routing_key = f'{self._routing_key}_node{self._node_id}'
                     logger.info(f"Connecting using routing key: {unique_routing_key}")
-                    logger.error(f"Connecting using routing key: {unique_routing_key}")
                     self._add_signature()
                     jsonMsg = json.dumps(self._jsonMsg).encode('utf8')
                     self._connection.publish(exchange=self._exchange_name,

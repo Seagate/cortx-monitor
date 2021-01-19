@@ -17,7 +17,7 @@
 
 
 """
-Setup rabbitmq for use by sspl_ll on LDR_R1 systems
+Setup rabbitmq for use by sspl_ll on LDR_R1, LDR_R2 systems
 
 This script uses /etc/sspl.conf as the source of the parameters.
 
@@ -28,12 +28,12 @@ import os
 import subprocess
 import sys
 import socket
-
 import pika
 
-from configparser import ConfigParser
-from config_reader import ConfigReader
-from sspl_constants import COMMON_CONFIGS
+# Add the top level directories
+sys.path.insert(0, f'/opt/seagate/cortx/sspl/low-level')
+from framework.utils.config_reader import ConfigReader
+from framework.base.sspl_constants import COMMON_CONFIGS, cs_legacy_products, enabled_products, ServiceTypes
 from cortx.utils.security.cipher import Cipher, CipherInvalidToken
 
 RABBITMQCTL = '/usr/sbin/rabbitmqctl'
@@ -61,9 +61,7 @@ NODE_ID_KEY = 'node_id'
 parentdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.sys.path.insert(0,parentdir)
 
-from sspl_constants import cs_legacy_products, enabled_products, ServiceTypes
-
-config_reader = ConfigReader(is_init=True)
+config_reader = ConfigReader()
 
 
 def gen_key(cluster_id, service_name):
@@ -107,8 +105,8 @@ def main(product):
             section=SECTION,
             key='secondary_rabbitmq_server'
             )
-        _check_rabbitmq_status()
-        _start_rabbitmq()
+    _check_rabbitmq_status()
+    _start_rabbitmq()
 
     _create_vhost_if_necessary(virtual_host, product)
 
@@ -257,7 +255,7 @@ def _create_vhost_if_necessary(virtual_host, product):
             response = _send_command(command)
 
         vhosts = response.split('\n')
-        assert vhosts[0] == 'Listing vhosts ...'
+        print(f'vhosts: {vhosts}')
         for vhost in vhosts[1:-1]:
             if vhost == virtual_host:
                 return
@@ -270,9 +268,7 @@ def _create_vhost_if_necessary(virtual_host, product):
         vhosts = subprocess.check_output(
             [RABBITMQCTL, 'list_vhosts']
             ).decode("utf-8").split('\n')
-        assert vhosts[0] == 'Listing vhosts ...'
-        assert vhosts[-2] == '...done.'
-        assert vhosts[-1] == ''
+        print(f'vhosts: {vhosts}')
         for vhost in vhosts[1:-1]:
             if vhost == virtual_host:
                 return
@@ -324,7 +320,7 @@ def _create_user_if_necessary(username, password, virtual_host, product):
         response = _send_command(command)
 
         users = response.split("\n")
-        assert users[0] == 'Listing users ...'
+        print(f'Users: {users}')
         found_user = False
         for userspec in users[1:-1]:
             user = userspec.split()[0]
@@ -343,9 +339,7 @@ def _create_user_if_necessary(username, password, virtual_host, product):
         users = subprocess.check_output(
             [RABBITMQCTL, 'list_users']
             ).decode("utf-8").split('\n')
-        assert users[0] == 'Listing users ...'
-        assert users[-2] == '...done.'
-        assert users[-1] == ''
+        print('Users: {users}')
         found_user = False
         for userspec in users[1:-1]:
             user = userspec.split()[0]
@@ -382,7 +376,7 @@ def _create_user_if_necessary(username, password, virtual_host, product):
 def _check_rabbitmq_status():
     """Reset if the node is down"""
     command = "service rabbitmq-server status"
-    response = _send_command(command)
+    response = _send_command(command, fail_on_error=False)
     if "nodedown" in response:
         print("Nodedown, resetting")
         command = "pkill beam.smp"
@@ -446,8 +440,7 @@ def _send_command(command, fail_on_error=True):
     print(f'Executing: {command}')
     process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     response, error = process.communicate()
-    if error is not None and \
-       len(error) > 0:
+    if process.returncode != 0:
         print("command '%s' failed with error\n%s" % (command, error))
         if fail_on_error:
             sys.exit(1)

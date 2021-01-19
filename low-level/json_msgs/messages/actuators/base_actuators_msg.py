@@ -46,8 +46,6 @@ class BaseActuatorMsg(BaseMsg):
         # Read in the schema for validating messages
         fileName = os.path.join(RESOURCE_PATH + '/actuators',
                                 self.JSON_ACTUATOR_SCHEMA)
-        #fileName = os.path.join(actuators.__path__[0],
-        #                        self.JSON_ACTUATOR_SCHEMA)
         with open(fileName, 'r') as f:
             self._schema = json.load(f)
 

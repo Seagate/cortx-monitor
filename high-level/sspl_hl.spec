@@ -34,7 +34,7 @@ Release:    %{_xyr_build_number}
 Summary:    Seagate System Platform Library - High Level
 
 Group:      Applications/System
-License:    Seagate Proprietary
+License:    Seagate
 URL:        %{_xyr_pkg_url}
 Source0:    %{_xyr_package_source}
 Vendor:     Seagate Technology LLC

@@ -21,10 +21,13 @@
 
 import os
 import sys
-import consul
 import configparser
-from framework.base.sspl_constants import component, file_store_config_path, SSPL_STORE_TYPE, StoreTypes, CONSUL_HOST, CONSUL_PORT
+from sspl_test.framework.base.sspl_constants import component, file_store_config_path, SSPL_STORE_TYPE, StoreTypes, CONSUL_HOST, CONSUL_PORT
+from sspl_test.framework.utils.service_logging import logger
 
+# Onward LDR_R2, consul will be abstracted out and won't exist as hard dependency for SSPL
+if SSPL_STORE_TYPE == 'consul':
+    import consul
 
 class ConfigReader(object):
     """Configuration reader for notification sender"""
@@ -44,7 +47,7 @@ class ConfigReader(object):
             store_type = os.getenv('SSPL_STORE_TYPE', SSPL_STORE_TYPE)
             if store_type == StoreTypes.FILE.value:
                 self.store = configparser.RawConfigParser()
-                self.store.read(file_store_config_path)
+                self.store.read([file_store_config_path])
             elif store_type == StoreTypes.CONSUL.value:
                 host = os.getenv('CONSUL_HOST', CONSUL_HOST)
                 port = os.getenv('CONSUL_PORT', CONSUL_PORT)

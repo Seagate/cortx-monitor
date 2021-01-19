@@ -13,7 +13,7 @@
 # about this software or licensing, please email opensource@seagate.com or
 # cortx-questions@seagate.com.
 
-PRODUCT_NAME='LDR_R1'
+PRODUCT_NAME='LDR_R2'
 PRODUCT_FAMILY='cortx'
-CONSUL_PATH="/opt/seagate/$PRODUCT_FAMILY/hare/bin"
-CONSUL_FALLBACK_PATH="/opt/seagate/$PRODUCT_FAMILY/sspl/bin"
+CONSUL_PATH="/usr/bin/"
+SSPL_STORE_TYPE='file'

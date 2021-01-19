@@ -706,7 +706,7 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
         """Run the command and get the response and error returned"""
         process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
         response, error = process.communicate()
-        return response.rstrip('\n'), error.rstrip('\n')
+        return response.rstrip('\n'), error.rstrip('\n'), process.returncode
 
     def _get_drives(self):
         """
@@ -726,7 +726,7 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
         drives = self._disk_manager.GetManagedObjects()
 
         return {obj_path : { self.DRIVE_DBUS_INFO: interfaces_and_property["org.freedesktop.UDisks2.Drive"],
-                             'node_disk': is_local_drive(interfaces_and_property)}
+                             'node_disk': self._is_local_drive(obj_path)}
                         for obj_path, interfaces_and_property in drives.items()
                         if "drive" in obj_path and is_physical_drive(interfaces_and_property["org.freedesktop.UDisks2.Drive"])}
 
@@ -995,7 +995,7 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
                     self._drives[object_path][self.DRIVE_DBUS_INFO] = interfaces_and_properties['org.freedesktop.UDisks2.Drive']
 
                     drive = self._drives[object_path][self.DRIVE_DBUS_INFO]
-                    if is_local_drive(interfaces_and_properties):
+                    if self._is_local_drive(object_path):
                         self._drives[object_path]["node_disk"] = True
 
                     resource_type = self._get_resource_type(object_path)
@@ -1191,6 +1191,7 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
                              "serial_number" : serial_number,
                              "path_id" : path_id
                              }
+
         # Send the event to disk message handler to generate json message
         self._write_internal_msgQ(DiskMsgHandler.name(), internal_json_msg)
 
@@ -1216,6 +1217,7 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
                     "specific_info": specific_info
                     }
                 }
+        logger.info(f"RAAL: {msg}")
         # Send the event to disk message handler to generate json message
         self._write_internal_msgQ(DiskMsgHandler.name(), msg)
 
@@ -1336,14 +1338,13 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
         """
         smart_supported = True
         # check on environment
-        result = self._run_command("sudo facter is_virtual")
+        result, _, _ = self._run_command("sudo facter is_virtual")
         if result:
             if 'true' in result[0]:
                 smart_supported = False
         return smart_supported
 
     def _update_drive_faults(self):
-
         # This function makes 2 assumptions:
         # 1. self._drive_info_lock is held by the caller
         # 2. self._drives and self._existing_drive are consistent with each other.
@@ -1360,7 +1361,7 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
                 cmd = f"sudo smartctl -d scsi -H {self._drive_by_device_name[object_path]} --json"
             else:
                 cmd = f"sudo smartctl -H {self._drive_by_device_name[object_path]} --json"
-            response, _ = self._run_command(cmd)
+            response, _, _ = self._run_command(cmd)
             response = json.loads(response)
             try:
                 if "No such device" in response["smartctl"]["message"][0]["string"]:
@@ -1403,7 +1404,7 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
             cmd = f"sudo smartctl -d scsi -H {self._drive_by_device_name[path]} --json"
         else:
             cmd = f"sudo smartctl -H {self._drive_by_device_name[path]} --json"
-        response, _ = self._run_command(cmd)
+        response, _, _ = self._run_command(cmd)
         response = json.loads(response)
         smart_status = response['smart_status']['passed']
         return not smart_status
@@ -1413,8 +1414,33 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
             cmd = f"sudo smartctl -d scsi -A {self._drive_by_device_name[path]}"
         else:
             cmd = f"sudo smartctl -A {self._drive_by_device_name[path]}"
-        response, _ = self._run_command(cmd)
+        response, _, _ = self._run_command(cmd)
         return response
+
+    def _is_local_drive(self, object_path):
+        """
+        Detect Node server local drives using Hdparm tool.
+        Hdparm tool give information only for node drive.
+        For external JBOD/virtual drives it will give output as:
+        "SG_IO: bad/missing sense data "
+        Hdparm does not have support for NVME drives, for this drives it gives o/p as:
+        "failed: Inappropriate ioctl for device"
+        """
+        DISK_ERR_MISSING_SENSE_DATA = "SG_IO: bad/missing sense data"
+        DISK_ERR_GET_ID_FAILURE = "HDIO_GET_IDENTITY failed: Invalid argument"
+        drive_name = self._drive_by_device_name[object_path]
+        cmd = f'sudo hdparm -i {drive_name}'
+        _, err, retcode = self._run_command(cmd)
+        if retcode == 0:
+            return True
+        else:
+            logger.debug(f"SystemdWatchdog, _is_local_drive: Error for drive {drive_name}, ERROR: {err}")
+            # TODO : In case of different error(other than "SG_IO: bad/missing sense data") for local drives,
+            # this check would fail.
+            if DISK_ERR_MISSING_SENSE_DATA not in err and DISK_ERR_GET_ID_FAILURE not in err:
+                return True
+            else:
+                return False
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""
@@ -1442,10 +1468,3 @@ def is_physical_drive(interfaces_and_property):
     """
     return interfaces_and_property["WWN"].startswith("0x5")
 
-# TODO : Improvise local disk detaction.
-# Remove fw version dependency for detecting local disk
-# Currently we consider SATA drives as local drives
-def is_local_drive(interfaces_and_property):
-    """Check if drive is SATA."""
-    return "org.freedesktop.UDisks2.Drive.Ata" in interfaces_and_property and \
-        str(interfaces_and_property["org.freedesktop.UDisks2.Drive"]["Revision"]) != "G265"

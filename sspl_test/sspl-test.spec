@@ -13,9 +13,6 @@
 # about this software or licensing, please email opensource@seagate.com or
 # cortx-questions@seagate.com.
 
-%define _unpackaged_files_terminate_build 0
-%define _binaries_in_noarch_packages_terminate_build   0
-
 # build number
 %define build_num  %( test -n "$build_number" && echo "$build_number" || echo 1 )
 
@@ -25,7 +22,7 @@ Release:    %{build_num}_git%{git_rev}%{?dist}
 Summary:    Installs SSPL test for common test framework
 BuildArch:  noarch
 Group:      System Management
-License:    Seagate Proprietary
+License:    Seagate
 URL:        https://github.com/Seagate/cortx-sspl
 Source0:    %{name}-%{version}.tgz
 Requires:   %{product_family}-sspl = %{version}-%{release}
@@ -37,7 +34,10 @@ Requires:  python36-psutil
 Installs SSPL sanity test ctf scripts
 
 %prep
-%setup -n sspl_test
+%setup -n %{parent_dir}/sspl_test
+
+%build
+%global __python %{__python3}
 
 %clean
 [ "${RPM_BUILD_ROOT}" != "/" ] && rm -rf ${RPM_BUILD_ROOT}
@@ -48,7 +48,6 @@ cp -rp . ${RPM_BUILD_ROOT}/opt/seagate/%{product_family}/sspl/sspl_test
 
 %post
 SSPL_DIR=/opt/seagate/%{product_family}/sspl
-CFG_DIR=$SSPL_DIR/conf
 
 # Check and install required flask version
 fl=`pip3.6 freeze | grep Flask`
@@ -64,6 +63,15 @@ if [[ -n $fl ]]; then
         pip3.6 install Flask==1.1.1
         #touch ${SSPL_DIR}/sspl_test/keep_flask
         #echo "$ver" > ${SSPL_DIR}/sspl_test/keep_flask
+    else
+        # Even correct Falsk version found, its depedencies (Jinja, MarkupSafe)
+        # may not exist. Installing Falsk=1.1.1 again will get its depedencies.
+        if [[ -z "$(pip3.6 freeze | grep Jinja2)" ]]; then
+            pip3.6 install Flask==1.1.1
+        fi
+        if [[ -z "$(pip3.6 freeze | grep MarkupSafe)" ]]; then
+            pip3.6 install Flask==1.1.1
+        fi
     fi
 else
     pip3.6 install Flask==1.1.1

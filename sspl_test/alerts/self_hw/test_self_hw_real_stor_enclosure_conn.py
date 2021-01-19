@@ -23,8 +23,8 @@ import time
 import json
 
 from alerts.self_hw.self_hw_utilities import run_cmd, get_from_consul, get_node_id
-from sspl_test.framework.base.sspl_constants import GET_PRIMARY_IP, GET_PRIMARY_PORT, \
-    GET_USERNAME, GET_PASSWD, GET_CLUSTER_ID, GET_SECONDARY_IP, GET_SECONDARY_PORT
+from sspl_test.framework.base.sspl_constants import (GET_PRIMARY_IP, GET_PRIMARY_PORT,
+    GET_USERNAME, GET_PASSWD, GET_CLUSTER_ID, GET_SECONDARY_IP, GET_SECONDARY_PORT)
 
 from cortx.utils.security.cipher import Cipher
 

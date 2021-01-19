@@ -281,8 +281,9 @@ class NodeData(Debug):
         try:
             bmcdata = {'ifId': 'ebmc0', 'ipV4Prev': "", 'ipV4': "", 'nwStatus': "DOWN", 'nwCableConnStatus': 'UNKNOWN'}
             ipdata = sp.Popen("sudo ipmitool lan print", shell=True, stdout=sp.PIPE, stderr=sp.PIPE).communicate()[0].decode().strip()
-            bmcip = re.findall("\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}", ipdata)[0]
+            bmcip = re.findall("\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}", ipdata)
             if bmcip:
+                bmcip = bmcip[0]
                 pingbmchost = "ping -c1 -W1 -q "+bmcip
                 child = sp.Popen(pingbmchost.split(), stdout=sp.PIPE)
                 streamdata = child.communicate()[0] #child must be communicated before fetching return code.

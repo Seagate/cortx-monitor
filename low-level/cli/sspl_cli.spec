@@ -13,9 +13,6 @@
 # about this software or licensing, please email opensource@seagate.com or
 # cortx-questions@seagate.com.
 
-%define _unpackaged_files_terminate_build 0
-%define _binaries_in_noarch_packages_terminate_build   0
-
 # build number
 %define build_num  %( test -n "$build_number" && echo "$build_number" || echo 1 )
 
@@ -25,7 +22,7 @@ Release:	%{build_num}_git%{git_rev}%{?dist}
 Summary:	Installs sspl_ll_cli
 BuildArch:  noarch
 Group:		System Management
-License:	Seagate Proprietary
+License:	Seagate
 URL:		https://github.com/Seagate/cortx-sspl
 Source0:	%{name}-%{version}.tgz
 Requires:   %{product_family}-sspl = %{version}-%{release}
@@ -35,25 +32,22 @@ BuildRoot:	%(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 Installs sspl_ll_cli
 
 %prep
-%setup -n cli
+%setup -n %{parent_dir}/low-level/cli
 
 %clean
 [ "${RPM_BUILD_ROOT}" != "/" ] && rm -rf ${RPM_BUILD_ROOT}
 
 %install
-mkdir -p ${RPM_BUILD_ROOT}/opt/seagate/%{product_family}/sspl/cli
-cp -rp . ${RPM_BUILD_ROOT}/opt/seagate/%{product_family}/sspl/cli
+mkdir -p ${RPM_BUILD_ROOT}/opt/seagate/%{product_family}/sspl/low-level/cli
+cp -rp . ${RPM_BUILD_ROOT}/opt/seagate/%{product_family}/sspl/low-level/cli
 
 %post
 SSPL_DIR=/opt/seagate/%{product_family}/sspl
-CFG_DIR=$SSPL_DIR/conf
 
-[ -d "${SSPL_DIR}/cli/lib" ] && {
-    ln -sf $SSPL_DIR/cli/lib/sspl_ll_cli /usr/bin/sspl_ll_cli
-    ln -sf $SSPL_DIR/cli/lib/sspl_ll_cli $SSPL_DIR/cli/sspl_ll_cli
+[ -d "${SSPL_DIR}/low-level/cli" ] && {
+    ln -sf $SSPL_DIR/low-level/cli/sspl_ll_cli /usr/bin/sspl_ll_cli
 }
 
 %files
 %defattr(-,sspl-ll,root,-)
-/opt/seagate/%{product_family}/sspl/cli
-
+/opt/seagate/%{product_family}/sspl/low-level/cli

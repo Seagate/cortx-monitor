@@ -1,0 +1,31 @@
+#!/bin/bash
+
+# Copyright (c) 2020 Seagate Technology LLC and/or its Affiliates
+#
+# This program is free software: you can redistribute it and/or modify it under the
+# terms of the GNU Affero General Public License as published by the Free Software
+# Foundation, either version 3 of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+# PARTICULAR PURPOSE. See the GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License along
+# with this program. If not, see <https://www.gnu.org/licenses/>. For any questions
+# about this software or licensing, please email opensource@seagate.com or
+# cortx-questions@seagate.com.
+
+set -eu -o pipefail
+SCRIPT_DIR=$(dirname $0)
+source $SCRIPT_DIR/constants.sh
+
+# Redirect all printouts to the log file with the timestamp prefix:
+exec &>> /var/log/$PRODUCT_FAMILY/sspl/consul-${0##*/}.log
+exec &> >(stdbuf -oL gawk '{ print strftime("%Y-%m-%d %H:%M:%S"), $0 }')
+
+SSPL_PID=`/usr/bin/pgrep -d " " -f /usr/bin/sspl_ll_d`
+LOG_LEVEL=`curl -Ss -XGET \
+           http://127.0.0.1:8500/v1/kv/sspl/config/SYSTEM_INFORMATION/log_level | \
+           jq -r '.[].Value' | base64 -d`
+kill -SIGUSR1 $SSPL_PID
+echo "Notifying $SSPL_PID, sspl log level changed to $LOG_LEVEL"

@@ -38,7 +38,7 @@ class RealStorEnclosure(StorageEnclosure):
     DEFAULT_MC_IP = "127.0.0.1"
     WEBSERVICE_TIMEOUT = 20
     PERSISTENT_DATA_UPDATE_TIMEOUT = 5
-    MAX_RETRIES = 1
+    MAX_RETRIES = 2
 
     CONF_SECTION_MC = "STORAGE_ENCLOSURE"
     SYSTEM_INFORMATION = "SYSTEM_INFORMATION"
@@ -73,6 +73,13 @@ class RealStorEnclosure(StorageEnclosure):
     URI_CLIAPI_SASHEALTHSTATUS = "/show/sas-link-health"
     URI_CLIAPI_SHOWEVENTS = "/show/events"
     URI_CLIAPI_SHOWVERSION = "/show/version/detail"
+    URI_CLIAPI_BASE = "/"
+    URI_CLIAPI_DOWNLOADDEBUGDATA = "/downloadDebugData"
+    URL_ENCLLOGS_POSTDATA = "/api/collectDebugData"
+
+    # CLI APIs Response status strings
+    CLIAPI_RESP_INVSESSION = "Invalid sessionkey"
+    CLIAPI_RESP_FAILURE = 2
 
     # Realstor generic health states
     HEALTH_OK = "ok"
@@ -199,17 +206,23 @@ class RealStorEnclosure(StorageEnclosure):
             self.active_ip = self.mc1
             self.active_wsport = self.mc1_wsport
 
-        logger.debug("Current MC active ip {0}, active wsport {1}\
+        self.login()
+        logger.debug("Current MC active ip {0}, active wsport {1}. Logged-in\
             ".format(self.active_ip, self.active_wsport))
 
     def ws_request(self, url, method, retry_count=MAX_RETRIES,
             post_data=""):
         """Make webservice requests using common utils"""
         response = None
-        relogin = False
+        retried_login = False
+        need_relogin = False
         tried_alt_ip = False
 
         while retry_count:
+            if tried_alt_ip:
+                # Extract show fru name from old URL to update alternative IP.
+                url = self.build_url(url[url.index('/api/'):].replace('/api',''))
+
             response = self.ws.ws_request(method, url,
                        self.common_reqheaders, post_data,
                        self.WEBSERVICE_TIMEOUT)
@@ -219,27 +232,46 @@ class RealStorEnclosure(StorageEnclosure):
             if response is None:
                 continue
 
-            if response.status_code != self.ws.HTTP_OK:
+            if response.status_code == self.ws.HTTP_OK:
 
-                # if call fails with invalid session key request or http 403
-                # forbidden request, login & retry
-                if response.status_code == self.ws.HTTP_FORBIDDEN and relogin is False:
-                    logger.info("%s failed, retrying after login " % (url))
-
-                    self.login()
-                    relogin = True
-                    continue
-
-                elif (response.status_code == self.ws.HTTP_TIMEOUT or \
-                         response.status_code == self.ws.HTTP_CONN_REFUSED or \
-                         response.status_code == self.ws.HTTP_NO_ROUTE_TO_HOST) \
-                         and tried_alt_ip is False:
-                    self.switch_to_alt_mc()
-                    tried_alt_ip = True
-                    self.mc_timeout_counter += 1
-                    continue
-            else:
                 self.mc_timeout_counter = 0
+
+                try:
+                    jresponse = json.loads(response.content)
+
+                    #TODO: Need a way to check return-code 2 in more optimal way if possible,
+                    # currently being checked for all http 200 responses
+                    if jresponse:
+
+                        if jresponse['status'][0]['return-code'] == self.CLIAPI_RESP_FAILURE:
+                            response_status = jresponse['status'][0]['response']
+
+                            # if call fails with invalid session key request
+                            # seen in G280 fw version
+                            if self.CLIAPI_RESP_INVSESSION in response_status:
+                               need_relogin = True
+
+                except ValueError as badjson:
+                    logger.error("%s returned mal-formed json:\n%s" % (url, badjson))
+
+            # http 403 forbidden request, login & retry
+            elif (response.status_code == self.ws.HTTP_FORBIDDEN or \
+                need_relogin) and retried_login is False:
+                logger.info("%s failed, retrying after login " % (url))
+
+                self.login()
+                retried_login = True
+                need_relogin = False
+                continue
+
+            elif (response.status_code == self.ws.HTTP_TIMEOUT or \
+                     response.status_code == self.ws.HTTP_CONN_REFUSED or \
+                     response.status_code == self.ws.HTTP_NO_ROUTE_TO_HOST) \
+                     and tried_alt_ip is False:
+                self.switch_to_alt_mc()
+                tried_alt_ip = True
+                self.mc_timeout_counter += 1
+                continue
 
             break
 
@@ -275,6 +307,7 @@ class RealStorEnclosure(StorageEnclosure):
             logger.error("%s returned mal-formed json:\n%s" % (url, badjson))
 
         if jresponse:
+
             if jresponse['status'][0]['return-code'] == 1:
                 sessionKey = jresponse['status'][0]['response']
                 self._add_request_headers(sessionKey)

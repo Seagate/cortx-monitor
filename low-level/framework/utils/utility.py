@@ -19,10 +19,7 @@ Base class for all the Utility implementation
 
 import subprocess
 
-try:
-    from service_logging import logger
-except Exception as e:
-    from framework.utils.service_logging import logger
+from framework.utils.service_logging import logger
 
 class Utility(object):
     """Base class for all the utilities

@@ -1,0 +1,321 @@
+#!/usr/bin/python3.6
+
+# Copyright (c) 2020 Seagate Technology LLC and/or its Affiliates
+#
+# This program is free software: you can redistribute it and/or modify it under the
+# terms of the GNU Affero General Public License as published by the Free Software
+# Foundation, either version 3 of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+# PARTICULAR PURPOSE. See the GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License along
+# with this program. If not, see <https://www.gnu.org/licenses/>. For any questions
+# about this software or licensing, please email opensource@seagate.com or
+# cortx-questions@seagate.com.
+
+
+import tarfile
+import os
+import time
+import sys
+import shutil
+import json
+import subprocess
+# Add the top level directories
+sys.path.insert(0, f'/opt/seagate/cortx/sspl/low-level')
+from framework.platforms.realstor.realstor_enclosure import singleton_realstorencl
+from framework.base.sspl_constants import (PRODUCT_FAMILY, SUPPORT_REQUESTOR_NAME, SUPPORT_EMAIL_ID, SUPPORT_CONTACT_NUMBER,
+     ENCL_TRIGGER_LOG_MAX_RETRY, ENCL_DOWNLOAD_LOG_MAX_RETRY, ENCL_DOWNLOAD_LOG_WAIT_BEFORE_RETRY, CONSUL_DUMP)
+from framework.utils.config_reader import ConfigReader
+onGoingRequestPath = "/tmp/sspl-sb-req.txt"
+sspl_bundle_tmp = f"sspl_bundle_{str(int(time.time()))}"
+
+class SSPLBundleGenerate(object):
+
+    def __init__(self):
+
+        self.SYS_INFORMATION = "SYSTEM_INFORMATION"
+        self.IEM_SENSOR = "IEMSENSOR"
+        self.localTempPath = "/tmp/support_bundle/"
+        self.sspl_log_default = f"/var/log/{PRODUCT_FAMILY}/sspl"
+        self.iem_log_default = f"/var/log/{PRODUCT_FAMILY}/iem"
+        self.sspl_conf_dir = f"/opt/seagate/{PRODUCT_FAMILY}/provisioner/pillar/components/sspl.sls"
+        self.rabbitmq_conf_dir = "/etc/rabbitmq/rabbitmq.config"
+        self.rabbitmq_log_dir = "/var/log/rabbitmq"
+        self.rabbitmq_status = f"/tmp/{sspl_bundle_tmp}/rabbitmq_status.txt"
+        self.ipmi_sel_data = f"/tmp/{sspl_bundle_tmp}/ipmi_sel_data_{str(int(time.time()))}.txt"
+        self.consul_folder_name = 'consul_sspl_data'
+        self.consul_sspl_config = f"/tmp/{sspl_bundle_tmp}/consuldump_sspl_config/"
+        self.consul_sspl_cache = f"/tmp/{sspl_bundle_tmp}/consuldump_sspl_cache/"
+        self.consul_system_information_data = f"/tmp/{sspl_bundle_tmp}/consuldump_system_information/"
+        self.consul_storage_enclosure_data = f"/tmp/{sspl_bundle_tmp}/consuldump_storage_enclosure/"
+        self.consul_rabbitmq_data = f"/tmp/{sspl_bundle_tmp}/consuldump_rabbitmq/"
+        self.boot_drvs_dta = f'/tmp/{sspl_bundle_tmp}/Server_OS_boot_drives_SMART_data_{str(int(time.time()))}'
+        self.enclosure_log = f"/tmp/{sspl_bundle_tmp}/enclosure_logs.zip"
+        self.enclosure_wwn = "NA"
+        self.rabbitmq_cmd = {
+            "Rabbitmq status": "systemctl status rabbitmq-server",
+            "Rabbitmq cluster status": "rabbitmqctl cluster_status",
+            "Rabbitmq node status": "rabbitmqctl status",
+            "Rabbitmq environment": "rabbitmqctl environment",
+            "Rabbitmq report": "rabbitmqctl report",
+            "Lists all queues in the current node": "rabbitmqctl list_queues",
+            "Lists all vhosts in the current node": "rabbitmqctl list_vhosts",
+            "Lists all rabbitmq channels in virtual host": "rabbitmqctl list_channels",
+            "Lists all users": "rabbitmqctl list_users"
+        }
+
+    def generate_sspl_support_bundle(self, parser, tmpFile):
+        file_name = "sspl_%s.tar.gz" % parser[1]
+        try:
+            conf_reader = ConfigReader()
+
+        except (IOError, ConfigReader.Error) as err:
+            print("[ Error ] when validating the configuration file %s :" % \
+                self.sspl_conf_dir)
+            print(err)
+            print("Exiting ...")
+            sys.exit(1)
+
+        sspl_log_dir = conf_reader._get_value_with_default(self.SYS_INFORMATION,
+            "sspl_log_file_path", self.sspl_log_default).replace("/sspl.log","")
+
+        iem_log_dir = conf_reader._get_value_with_default(self.IEM_SENSOR,
+            "log_file_path", self.iem_log_default).replace("/iem_messages","")
+
+        configure_path = parser[2]
+        if configure_path:
+            if os.path.exists(configure_path):
+                self.localTempPath = configure_path+"sspl/"
+            else:
+                print("Given path doesn't exist")
+                tmpFile.close()
+                os.remove(onGoingRequestPath)
+                sys.exit(1)
+        if not os.path.exists(self.localTempPath):
+            os.makedirs(self.localTempPath)
+        try:
+            sspl_state = ""
+            try:
+                sspl_state=open(f"/var/{PRODUCT_FAMILY}/sspl/data/state.txt").readline().rstrip().split("=")
+                # Capturing enclosure logs only when sspl state is active
+                sspl_state = sspl_state[1] if len(sspl_state)==2 else ''
+                if not sspl_state == 'active':
+                    print("SSPL is in 'degraded' mode, so enclosure data not collected as part of this node support bundle.")
+
+            except (FileNotFoundError, OSError) as e:
+                print(f"Failed to open the SSPL 'state.txt' file with an error '{e}',\
+                    Can't determine the SSPL state, So enclosure logs also being collected.")
+                sspl_state == 'active'
+
+            self.get_ipmi_sel_data()
+            self.get_consul_data()
+            self.get_drives_smart_data()
+            if sspl_state == "active" and "-noencl" not in parser:
+                self.get_enclosure_logs()
+
+            file_dir = file_name.replace(".tar.gz","")
+            tarfile_data = {
+                sspl_log_dir: file_dir+"/sspl/logs/",
+                self.sspl_conf_dir: file_dir+"/sspl/config/sspl.sls",
+                self.consul_sspl_config: file_dir+"/sspl/consul/consul_sspl_config.txt",
+                self.consul_sspl_cache: file_dir+"/sspl/consul/consul_sspl_cache.txt",
+                self.consul_system_information: file_dir+"/sspl/consul/consul_system_information.txt",
+                self.consul_storage_enclosure: file_dir+"/sspl/consul/consul_storage_enclosure.txt",
+                self.consul_rabbitmq: file_dir+"/sspl/consul/consul_rabbitmq.txt",
+                self.boot_drvs_dta: file_dir+"/drives_SMART_data/",
+                self.ipmi_sel_data: file_dir+"/ipmi/ipmi_sel_data.txt",
+                self.rabbitmq_status: file_dir+"/rabbitmq/status/rabbitmq_status.txt",
+                self.rabbitmq_conf_dir: file_dir+"/rabbitmq/config/rabbitmq.config",
+                self.rabbitmq_log_dir: file_dir+"/rabbitmq/logs/",
+                iem_log_dir: file_dir+"/iems/"
+            }
+                
+            with tarfile.open(self.localTempPath+file_name, "w:gz") as tar:
+                for key, value in tarfile_data.items():
+                    if os.path.exists(key):
+                        tar.add(key, arcname=value)
+                tar.close()
+
+            if os.path.exists(self.enclosure_log) and sspl_state == 'active' and "-noencl" not in parser:
+                enclosure_zip_file = "enclosure-wwn-{0}-logs-{1}.zip".format(self.enclosure_wwn, str(int(time.time())))
+                shutil.copy(self.enclosure_log, self.localTempPath+enclosure_zip_file)
+
+        except (OSError, tarfile.TarError) as err:
+            print("Facing problem while creating sspl support bundle : %s" % err)
+            tmpFile.close()
+            os.remove(onGoingRequestPath)
+            sys.exit(1)
+
+        print("SSPL Support Bundle Files Uploaded Successfully..!")
+        print("SSPL Support Bundle Location: %s" % self.localTempPath+file_name)
+        if os.path.exists(self.enclosure_log) and sspl_state == 'active' and "-noencl" not in parser:
+            print("Enclosure Log File Location: %s" % self.localTempPath+enclosure_zip_file)
+
+    def get_rabbitmq_data(self):
+        rmq_file = open(self.rabbitmq_status, "w+")
+        for key, value in self.rabbitmq_cmd.items():
+            rmq_file.write(key+':\nCommand: '+value+'\n')
+            try:
+                out = os.popen(value).read()
+                rmq_file.write(out+'\n\n')
+            except IOError as e:
+                rmq_file.write("Information is not available : %s \n\n" % e)
+            rmq_file.write("======================================================= \n")
+        rmq_file.close()
+
+    def get_ipmi_sel_data(self):
+        ipmi_sel_cmd = f"ipmitool sel list > {self.ipmi_sel_data}"
+        subout = self._run_command(ipmi_sel_cmd)
+        if subout[2] != 0:
+            print("Required ipmitool is missing from the Node server to fetch sel data..!")
+        del subout
+
+    def get_consul_data(self):
+        self.consul_folder_name = f"consul_sspl_data-{str(int(time.time()))}"
+        consuldump = f"{CONSUL_DUMP} -n {self.consul_folder_name} -l /tmp/{sspl_bundle_tmp}/ -d"
+        consuldump_cmd = {
+            "sspl_config": f"{consuldump} consul_sspl_config sspl/",
+            "sspl_cache": f"{consuldump} consul_sspl_cache var/{PRODUCT_FAMILY}/sspl",
+            "system_information": f"{consuldump} consul_system_information system_information/",
+            "storage_enclosure": f"{consuldump} consul_storage_enclosure storage_enclosure/",
+            "rabbitmq": f"{consuldump} consul_rabbitmq rabbitmq/"
+        }
+        for key, value in consuldump_cmd.items():
+            subout = self._run_command(value)
+            if subout[2] != 0:
+                print(f"Unable to get consul data of {key}...!")
+            del subout
+        consul_folder_path = f"/tmp/{sspl_bundle_tmp}/{self.consul_folder_name}"
+        self.consul_sspl_config = f"{consul_folder_path}/consul_sspl_config"
+        self.consul_sspl_cache = f"{consul_folder_path}/consul_sspl_cache"
+        self.consul_system_information = f"{consul_folder_path}/consul_system_information"
+        self.consul_storage_enclosure = f"{consul_folder_path}/consul_storage_enclosure"
+        self.consul_rabbitmq = f"{consul_folder_path}/consul_rabbitmq"
+
+    def get_drives_smart_data(self):
+        lsscsi_cmd = "lsscsi | grep disk"
+        lsscsi_response, _, return_code = self._run_command(lsscsi_cmd)
+        if not os.path.exists(self.boot_drvs_dta):
+            os.makedirs(self.boot_drvs_dta)
+        for res in lsscsi_response.split("\n"):
+            drive_path = res.strip().split(' ')[-1]
+            smartctl_cmd = f"sudo smartctl -a {drive_path} --json"
+            response, _, return_code = self._run_command(smartctl_cmd)
+            response = json.loads(response)
+            # TODO: Find better way to get local disk.
+            # Filtering out local disk
+            if response['device']['protocol'] == 'ATA':
+                try:
+                    file_name = drive_path.replace('/', '_')[1:]
+                    with open(f"{self.boot_drvs_dta}/{file_name}.json", "w+") as fp:
+                        json.dump(response, fp,  indent=4)
+
+                except Exception as e:
+                    print("Error in writing {0} file: {1}".format(response, e))
+    
+    def _run_command(self, command):
+        """Run the command and get the response and error returned"""
+        process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
+        return_code = process.wait()
+        response, error = process.communicate()
+        return response.rstrip('\n'), error.rstrip('\n'), return_code
+
+    def get_enclosure_logs(self):
+        url = singleton_realstorencl.build_url(singleton_realstorencl.URI_CLIAPI_BASE)
+        COLLECTING_DEBUG_LOG_STARTED = False
+        for encl_trigger_log_retry_index in range(0, ENCL_TRIGGER_LOG_MAX_RETRY):
+            response = singleton_realstorencl.ws_request(url, singleton_realstorencl.ws.HTTP_POST, \
+                post_data=f'{singleton_realstorencl.URL_ENCLLOGS_POSTDATA}/"{SUPPORT_REQUESTOR_NAME}"{SUPPORT_EMAIL_ID}"{SUPPORT_CONTACT_NUMBER}')
+
+            if not response:
+                print("{0}:: {2} status unavailable as ws request {1}"
+                    " failed".format(singleton_realstorencl.LDR_R1_ENCL, url, "Debug log"))
+                break
+
+            elif response.status_code != singleton_realstorencl.ws.HTTP_OK:
+                print("{0}:: http request {1} to get {3} failed with"
+                    " err {2} enclosure trigger log retry index {4}".format(singleton_realstorencl.LDR_R1_ENCL, url, response.status_code, \
+                        "Debug log", encl_trigger_log_retry_index))
+
+            else:
+                response_data = response.json()
+                if response_data["status"][0]["response-type"] == "Success" and response_data["status"][0]["response"] == "Collecting debug logs.":
+                    print("INFO: Collecting enclosure debug logs in progress")
+                    COLLECTING_DEBUG_LOG_STARTED = True
+                    break
+                else:
+                    print("{0}:: http request {1} to get {3} failed with"
+                        " response-type {2}".format(singleton_realstorencl.LDR_R1_ENCL, url, response_data["status"][0]["response-type"], "Debug log"))
+
+        if COLLECTING_DEBUG_LOG_STARTED == True:
+            self.enclosure_wwn = self.get_enclosure_wwn()
+            url = singleton_realstorencl.build_url(singleton_realstorencl.URI_CLIAPI_DOWNLOADDEBUGDATA)
+            for encl_download_retry_index in range(0, ENCL_DOWNLOAD_LOG_MAX_RETRY):
+                response = singleton_realstorencl.ws_request(url, singleton_realstorencl.ws.HTTP_GET)
+                if not response:
+                    print("{0}:: {2} status unavailable as ws request {1}"
+                        " failed".format(singleton_realstorencl.LDR_R1_ENCL, url, "Debug log"))
+                elif response.status_code != singleton_realstorencl.ws.HTTP_OK:
+                    print("{0}:: http request {1} to get {3} failed with"
+                        " err {2}".format(singleton_realstorencl.LDR_R1_ENCL, url, response.status_code, "Debug log"))
+                else:
+                    if response.headers.get('Content-Type') == 'application/json; charset="utf-8"':
+                        response_data = response.json()
+                        if response_data["status"][0]["response-type"] == "Error":
+                            time.sleep(ENCL_DOWNLOAD_LOG_WAIT_BEFORE_RETRY)
+                        else:
+                            print("ERR: Unexpected response-type {0} URL {1}".format(response_data["status"][0]["response-type"],url))
+                            break
+                    elif response.headers.get('Content-Type') == 'IntentionallyUnknownMimeType; charset="utf-8"':
+                        if response.headers.get('content-disposition') == 'attachment; filename="store.zip"':
+                            with open(self.enclosure_log,'wb') as enclosure_resp:
+                                enclosure_resp.write(response.content)
+                                enclosure_resp.close()
+                                print("INFO: Enclosure debug logs saved successfully")
+                        else:
+                            print("ERR: No attachment found::{0}".format(url))
+                        break
+                    else:
+                        print("ERR: Unknown Content-Type::{0}".format(url))
+                        break
+                if encl_download_retry_index == ( ENCL_DOWNLOAD_LOG_MAX_RETRY - 1 ):
+                    print("ERR: Enclosure debug logs retry count exceeded::{0}".format(url))
+
+    def get_enclosure_wwn(self):
+        url = singleton_realstorencl.build_url(singleton_realstorencl.URI_CLIAPI_SHOWENCLOSURE)
+        response = singleton_realstorencl.ws_request(url, singleton_realstorencl.ws.HTTP_GET)
+
+        if not response:
+            print("{0}:: {2} status unavailable as ws request {1}"
+                " failed".format(singleton_realstorencl.EES_ENCL, url, fru))
+            return
+
+        if response.status_code != singleton_realstorencl.ws.HTTP_OK:
+            if url.find(singleton_realstorencl.ws.LOOPBACK) == -1:
+                print("{0}:: http request {1} to get {3} failed with"
+                    " err {2}".format(singleton_realstorencl.EES_ENCL, url, response.status_code, fru))
+            return
+
+        response_data = json.loads(response.text)
+        enclosure_wwn = response_data.get("enclosures")[0]["enclosure-wwn"]
+        return enclosure_wwn
+
+if __name__ == "__main__":
+    if not os.path.isfile(onGoingRequestPath):
+        if len(sys.argv) < 3:
+            print("Unrecognized arguments: %s" % sys.argv)
+            sys.exit(1)
+        tmpFile = open(onGoingRequestPath, "w")
+        os.makedirs(f"/tmp/{sspl_bundle_tmp}")
+        SSPLBundleObj = SSPLBundleGenerate()
+        SSPLBundleObj.generate_sspl_support_bundle(sys.argv, tmpFile)
+        tmpFile.close()
+        # Removed sspl support bundle temp folder.
+        shutil.rmtree(f"/tmp/{sspl_bundle_tmp}")
+        os.remove(onGoingRequestPath)
+    else:
+        print("Already SSPL Support Bundle request is going on, So skipping current request..!")
+        sys.exit(1)

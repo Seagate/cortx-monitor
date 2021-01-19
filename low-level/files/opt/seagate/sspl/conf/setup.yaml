@@ -17,7 +17,7 @@ sspl:
     post_install:
          script: /opt/seagate/cortx/sspl/bin/sspl_setup
          args:
-            - post_install -p LDR_R1
+            - post_install -p LDR_R2
     init:
          script: /opt/seagate/cortx/sspl/bin/sspl_setup
          args:
@@ -33,7 +33,7 @@ sspl:
     reset:
          script: /opt/seagate/cortx/sspl/bin/sspl_setup
          args:
-            - reset hard -p LDR_R1
+            - reset hard -p LDR_R2
     ha:
          script: /opt/seagate/cortx/ha/conf/script/build-ha-sspl
          args:
@@ -44,4 +44,4 @@ sspl:
          args: null
 
 support_bundle:
-    - /opt/seagate/cortx/sspl/bin/sspl_bundle_generate
+    - /usr/bin/sspl_bundle_generate

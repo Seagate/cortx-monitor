@@ -22,7 +22,7 @@ Release:    %{build_num}_git%{git_rev}%{?dist}
 Summary:    Installs sspl-test scripts
 BuildArch:  noarch
 Group:      System Management
-License:    Seagate Proprietary
+License:    Seagate
 URL:        https://github.com/Seagate/cortx-sspl
 Source0:    %{name}-%{version}.tgz
 Requires:   sspl

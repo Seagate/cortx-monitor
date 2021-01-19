@@ -36,11 +36,10 @@ from threading import Thread
 import time
 import uuid
 import json
+import traceback
 
 # Add the top level directories
-parentdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-os.sys.path.insert(0, parentdir)
-
+sys.path.insert(0, f'/opt/seagate/cortx/sspl/low-level')
 
 from framework.utils.config_reader import ConfigReader
 from framework.utils.service_logging import init_logging
@@ -53,7 +52,7 @@ from framework.rabbitmq.rabbitmq_ingress_processor import RabbitMQingressProcess
 
 from framework.rabbitmq.plane_cntrl_rmq_egress_processor import PlaneCntrlRMQegressProcessor
 from framework.rabbitmq.plane_cntrl_rmq_ingress_processor import PlaneCntrlRMQingressProcessor
-from framework.base.sspl_constants import enabled_products, OperatingSystem, COMMON_CONFIGS, SSPL_SETTINGS
+from framework.base.sspl_constants import enabled_products, OperatingSystem, COMMON_CONFIGS, SSPL_SETTINGS, sspl_settings_configured_groups
 from framework.base.module_thread import SensorThread
 from framework.actuator_state_manager import actuator_state_manager
 
@@ -76,6 +75,7 @@ from message_handlers.real_stor_actuator_msg_handler import RealStorActuatorMsgH
 # Message to send to HAlon upon critical thread errors
 from json_msgs.messages.actuators.thread_controller import ThreadControllerMsg
 
+#DO NOT EDIT: Marker comment to dynamically add code to initialize coverage obj for code coverage report generation
 
 # Section and key in config file for bootstrap
 SSPL_SETTING    = 'SSPL-LL_SETTING'
@@ -292,18 +292,32 @@ def main(conf_reader, systemd_support):
     if product not in enabled_products:
         _dropPrivileges("sspl-ll")
 
+    global sspl_settings_configured_groups
+    sspl_settings_configured_groups |= SSPL_SETTINGS.keys()
+
+    conf_reader = ConfigReader()
+    for group in SSPL_SETTINGS.keys():
+        monitor = conf_reader._get_value_with_default(
+                group, 'monitor', 'true')
+        if monitor != 'true':
+            sspl_settings_configured_groups -= {group}
+
+
     # List of modules to run in degraded mode
     modules_to_resume = []
     try:
         # Read list of modules from conf file to load in degraded mode
-        modules_to_resume = SSPL_SETTINGS.get("DEGRADED_STATE_MODULES")
+        for group in sspl_settings_configured_groups:
+            modules_to_resume.extend(SSPL_SETTINGS[group].get("DEGRADED_STATE_MODULES"))
     except Exception as e:
         logger.warn("Configuration not found: degraded_state_modules")
         modules_to_resume = []
     logger.info("modules_to_resume: {0}".format(str(modules_to_resume)))
 
     # Use reflection to instantiate the classes based upon its class name in config file
-    core_processors = SSPL_SETTINGS.get("CORE_PROCESSORS")
+    core_processors = []
+    for group in sspl_settings_configured_groups:
+        core_processors.extend(SSPL_SETTINGS[group].get("CORE_PROCESSORS"))
     logger.info("sspl-ll Bootstrap: core processors to load: %s" % (core_processors, ))
     for core_processor in core_processors:
         klass = globals()[core_processor]
@@ -316,7 +330,9 @@ def main(conf_reader, systemd_support):
     sspl_threaded_modules[RabbitMQEgressAccumulatedMsgsProcessor] = RabbitMQEgressAccumulatedMsgsProcessor()
     msgQlist[RabbitMQEgressAccumulatedMsgsProcessor.name()] = queue.Queue()
 
-    message_handlers = SSPL_SETTINGS.get("MESSAGE_HANDLERS")
+    message_handlers = []
+    for group in sspl_settings_configured_groups:
+        message_handlers.extend(SSPL_SETTINGS[group].get("MESSAGE_HANDLERS"))
     logger.info("sspl-ll Bootstrap: message handlers to load: %s" % (message_handlers, ))
 
     for message_handler in message_handlers:
@@ -414,11 +430,15 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist, operating_system
     """Loops thru list of sensors/actuators and instantiate"""
 
     # Read in list of sensors
-    sensors = SSPL_SETTINGS.get("SENSORS")
+    sensors = []
+    for group in sspl_settings_configured_groups:
+        sensors.extend(SSPL_SETTINGS[group].get("SENSORS"))
     logger.info("sspl-ll Bootstrap: sensors to load: %s" % (sensors, ))
 
     # Read in list of actuators
-    actuators = SSPL_SETTINGS.get("ACTUATORS")
+    actuators = []
+    for group in sspl_settings_configured_groups:
+        actuators.extend(SSPL_SETTINGS[group].get("ACTUATORS"))
     if setup in ['gw', 'cmu', 'vm'] and 'HPIactuator' in actuators:
         actuators.remove('HPIactuator')
     logger.info("sspl-ll Bootstrap: actuators to load: %s" % (actuators, ))
@@ -469,7 +489,7 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist, operating_system
         import RealStorControllerSensor
         from sensors.impl.platforms.realstor.realstor_sideplane_expander_sensor \
         import RealStorSideplaneExpanderSensor
-        from sensors.impl.platforms.realstor.realstor_logical_volume_sensor \
+        from sensors.impl.platforms.realstor.realstor_dg_volume_sensor \
         import RealStorLogicalVolumeSensor
         from sensors.impl.platforms.realstor.realstor_enclosure_sensor \
         import RealStorEnclosureSensor
@@ -663,7 +683,7 @@ def signal_handler(signal_number, frame):
         logger.warn("Error in signal_handler processing {} ".format(e))
 
     finally:
-        # Enable the signal handler 
+        # Enable the signal handler
         signal.signal(signal.SIGHUP, signal_handler)
 
 def send_thread_controller_request(state):
@@ -704,6 +724,7 @@ def set_log_level(signal_number, frame):
         log_level = log_level.decode('utf-8')
     logger.info(f"Received SIGUSR1 signal to set log level to '{log_level}'")
     logger.setLevel(log_level)
+    #DO NOT EDIT: Marker comment to dynamically add code to stop coverage, save and generate code coverage report
 
 
 def refresh_iem_log_file(signal_number, frame):
@@ -786,10 +807,13 @@ if __name__ == "__main__":
             with open(pidfile, "w") as fileObj:
                 fileObj.write(str(os.getpid()))
 
+        #DO NOT EDIT: Marker comment to dynamically add code to start the code coverage scope
+
         # Start sspl-ll as a main process running multiple threads
         main(conf_reader, systemd_support)
 
     except (Exception) as err:
+        logger.debug(f"{traceback.print_exc()}")
         logger.critical("While spawning sspl-ll process :%r" % err)
         sys.exit(os.EX_USAGE)
 

@@ -19,12 +19,12 @@ MOCK_SERVER_IP=127.0.0.1
 MOCK_SERVER_PORT=28200
 RMQ_SELF_STARTED=0
 RMQ_SELF_STOPPED=0
-SSPL_STORE_TYPE=${SSPL_STORE_TYPE:-consul}
 IS_VIRTUAL=$(facter is_virtual)
 
 [[ $EUID -ne 0 ]] && sudo=sudo
 script_dir=$(dirname $0)
-. $script_dir/constants.sh
+source $script_dir/constants.sh
+SSPL_STORE_TYPE=${SSPL_STORE_TYPE:-consul}
 
 plan=${1:-}
 avoid_rmq=${2:-}
@@ -48,6 +48,13 @@ flask_help()
 
 pre_requisites()
 {
+    # copy RMQ password to sspl_test/config
+    if [ "$SSPL_STORE_TYPE" == "consul" ]; then
+        pw=$($CONSUL_PATH/consul kv get sspl/config/RABBITMQINGRESSPROCESSOR/password)
+        $CONSUL_PATH/consul kv put sspl_test/config/RABBITMQINGRESSPROCESSORTESTS/password $pw
+        pw=$($CONSUL_PATH/consul kv get sspl/config/RABBITMQEGRESSPROCESSOR/password)
+        $CONSUL_PATH/consul kv put sspl_test/config/RABBITMQEGRESSPROCESSOR/password $pw
+    fi
     if [ "$IS_VIRTUAL" == "true" ]
     then
         # Backing up original persistence data
@@ -85,7 +92,7 @@ pre_requisites()
         touch /tmp/activate_ipmisimtool
     fi
 
-    if [ "$IS_VIRTUAL" == "true" ]
+    if [ "$IS_VIRTUAL" == "true" -a "$SSPL_STORE_TYPE" == "consul" ]
     then
         # clearing $CONSUL_PATH/consul keys.
         $CONSUL_PATH/consul kv delete -recurse var/$PRODUCT_FAMILY/sspl/data
@@ -117,6 +124,7 @@ restore_cfg_services()
         port=$(sed -n -e '/primary_controller_port/ s/.*\= *//p' /etc/sspl.conf)
         if [ "$port" == "$MOCK_SERVER_PORT" ]
         then
+            sed -i 's/primary_controller_ip='"$MOCK_SERVER_IP"'/primary_controller_ip='"$primary_ip"'/g' /etc/sspl.conf
             sed -i 's/primary_controller_port='"$MOCK_SERVER_PORT"'/primary_controller_port='"$primary_port"'/g' /etc/sspl.conf
         fi
         # Removing updated system information from sspl_tests.conf
@@ -166,7 +174,7 @@ restore_cfg_services()
     rm -f /tmp/activate_ipmisimtool
 
     # Restore $CONSUL_PATH/consul data
-    if [ "$IS_VIRTUAL" == "true" ]
+    if [ "$IS_VIRTUAL" == "true" -a "$SSPL_STORE_TYPE" == "consul" ]
     then
         $CONSUL_PATH/consul kv delete -recurse var/$PRODUCT_FAMILY/sspl/data
         $CONSUL_PATH/consul kv import @/tmp/consul_backup.json
@@ -195,7 +203,8 @@ flask_installed=$(python3.6 -c 'import pkgutil; print(1 if pkgutil.find_loader("
     exit 1
 }
 
-python3 $script_dir/put_config_to_consul.py
+# Onward LDR_R2, consul will be abstracted out and won't exist as hard dependency of SSPL
+[ "$PRODUCT_NAME" == "LDR_R1" ] && python3 $script_dir/put_config_to_consul.py
 
 # Take backup of original sspl.conf
 [[ -f /etc/sspl.conf ]] && $sudo cp /etc/sspl.conf /etc/sspl.conf.back
@@ -215,11 +224,13 @@ then
         fi
     fi
 else
+    primary_ip=$(sed -n -e '/primary_controller_ip/ s/.*\= *//p' /etc/sspl.conf)
     primary_port=$(sed -n -e '/primary_controller_port/ s/.*\= *//p' /etc/sspl.conf)
     if [ "$IS_VIRTUAL" == "true" ]
     then
         if [ "$primary_port" != "$MOCK_SERVER_PORT" ]
         then
+            sed -i 's/primary_controller_ip='"$primary_ip"'/primary_controller_ip='"$MOCK_SERVER_IP"'/g' /etc/sspl.conf
             sed -i 's/primary_controller_port='"$primary_port"'/primary_controller_port='"$MOCK_SERVER_PORT"'/g' /etc/sspl.conf
         fi
     fi
@@ -241,7 +252,12 @@ fi
 # Restart SSPL to re-read configuration
 if [ "$SSPL_STORE_TYPE" == "consul" ]
 then
-    SRVNODE="$(sudo salt-call grains.get id --output=newline_values_only)"
+    # Find the nodename
+    if [ "$PRODUCT_NAME" == "LDR_R1" ]; then
+        SRVNODE="$(sudo salt-call grains.get id --output=newline_values_only)"
+    else
+        SRVNODE="$(consul kv get system_information/salt_minion_id)"
+    fi
     if [ -z "$SRVNODE" ];then
         SRVNODE="$(cat /etc/salt/minion_id)"
         if [ -z "$SRVNODE" ];then
@@ -265,6 +281,8 @@ else
     site_id=$(sed -n -e '/site_id/ s/.*\= *//p' /etc/sspl.conf)
     node_id=$(sed -n -e '/node_id/ s/.*\= *//p' /etc/sspl.conf)
     cluster_id=$(sed -n -e '/cluster_id/ s/.*\= *//p' /etc/sspl.conf)
+    cluster_nodes=$(sed -n -e '/cluster_nodes/ s/.*\= *//p' /etc/sspl.conf)
+    primary_controller_ip=$(sed -n -e '/primary_controller_ip/ s/.*\= *//p' /etc/sspl.conf)
 fi
 
 # setting values for testing
@@ -282,24 +300,24 @@ then
     $CONSUL_PATH/consul kv put sspl_test/config/SYSTEM_INFORMATION/site_id $site_id
     $CONSUL_PATH/consul kv put sspl_test/config/SYSTEM_INFORMATION/rack_id $rack_id
     $CONSUL_PATH/consul kv put sspl_test/config/SYSTEM_INFORMATION/cluster_id $cluster_id
+    # updateing rabbitmq cluster
+    CLUSTER_NODES=$($CONSUL_PATH/consul kv get sspl/config/RABBITMQCLUSTER/cluster_nodes)
+    $CONSUL_PATH/consul kv put sspl_test/config/RABBITMQCLUSTER/cluster_nodes $CLUSTER_NODES
 else
     # Update sspl_tests.conf with updated System Information
     # append above parsed key-value pairs in sspl_tests.conf under [SYSTEM_INFORMATION] section
-    sed -i 's/node_id=001/node_id='"$node_id"'/g' /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/conf/sspl_tests.conf
+    sed -i 's/node_id=.*/node_id='"$node_id"'/g' /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/conf/sspl_tests.conf
     sed -i 's/site_id=001/site_id='"$site_id"'/g' /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/conf/sspl_tests.conf
     sed -i 's/rack_id=001/rack_id='"$rack_id"'/g' /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/conf/sspl_tests.conf
-    sed -i 's/cluster_id=001/cluster_id='"$cluster_id"'/g' /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/conf/sspl_tests.conf
+    sed -i 's/cluster_id=.*/cluster_id='"$cluster_id"'/g' /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/conf/sspl_tests.conf
+    sed -i 's/cluster_nodes=localhost/cluster_nodes='"$cluster_nodes"'/g' /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/conf/sspl_tests.conf
 fi
-
-# updateing rabbitmq cluster
-CLUSTER_NODES=$($CONSUL_PATH/consul kv get sspl/config/RABBITMQCLUSTER/cluster_nodes)
-$CONSUL_PATH/consul kv put sspl_test/config/RABBITMQCLUSTER/cluster_nodes $CLUSTER_NODES
 
 if [ "$IS_VIRTUAL" == "true" ]
 then
     echo "Restarting SSPL"
     $sudo systemctl restart sspl-ll
-    echo "Waiting for SSPL to complete initialization of all the plugins"
+    echo "Waiting for SSPL to complete initialization of all the plugins.."
     $script_dir/rabbitmq_start_checker sspl-out sensor-key
 fi
 
@@ -311,7 +329,7 @@ echo "Initialization completed. Starting tests"
 if [ "$IS_VIRTUAL" == "true" ]
 then
     echo "state=active" > /var/$PRODUCT_FAMILY/sspl/data/state.txt
-    PID=`/sbin/pidof -s /usr/bin/sspl_ll_d`
+    PID=`/usr/bin/pgrep -d " " -f /usr/bin/sspl_ll_d`
     kill -s SIGHUP $PID
 fi
 
