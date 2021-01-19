@@ -175,7 +175,7 @@ class InitCmd(Cmd):
 
     def process(self):
         from files.opt.seagate.sspl.setup import sspl_setup_init
-        sspl_setup_init.Init(self.args).process
+        sspl_setup_init.Init(self.args).process()
 
 
 class ConfigCmd(Cmd):
