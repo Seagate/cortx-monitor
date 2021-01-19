@@ -17,19 +17,20 @@
 import os
 import sys
 import errno
-import traceback
 import subprocess
 import shutil
 import distutils.dir_util
 
 # Add the top level directories
 sys.path.insert(0, '/opt/seagate/cortx/sspl/low-level')
-from framework.base.sspl_constants import (PRODUCT_FAMILY, REPLACEMENT_NODE_ENV_VAR_FILE, PRODUCT_NAME,
-    SSPL_BASE_DIR, file_store_config_path, PRODUCT_BASE_DIR)
+from framework.base.sspl_constants import (REPLACEMENT_NODE_ENV_VAR_FILE, PRODUCT_NAME, SSPL_BASE_DIR,
+    file_store_config_path, PRODUCT_BASE_DIR)
 from files.opt.seagate.sspl.setup.sspl_setup import Cmd as SSPLSetup
 
 class SSPLPostInstallCmd:
-    "SSPL Post Install"
+    """SSPL Post Install.
+    
+    """
 
     name = "sspl_post_install"
 
@@ -72,11 +73,11 @@ class SSPLPostInstallCmd:
                 self.usage()
             i+=1
 
-        # sspl_setup_consul script install consul in dev env and checks if consul process is running 
+        # sspl_setup_consul script install consul in dev env and checks if consul process is running
         # on prod. For node replacement scenario consul will not be running on the new node. But,
         # there will be two instance of consul running on healthy node. When new node is configured
         # consul will be brought back on it. We are using VIP to connect to consul. So, if consul
-        # is not running on new node, we dont need to error out. So, need to skip this step for 
+        # is not running on new node, we dont need to error out. So, need to skip this step for
         # node replacement case
         # Onward LDR_R2, consul will be abstracted out and it won't exit as hard dependeny of SSPL
         if PRODUCT_NAME == "LDR_R1":
