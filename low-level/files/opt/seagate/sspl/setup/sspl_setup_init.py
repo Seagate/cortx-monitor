@@ -34,7 +34,7 @@ from files.opt.seagate.sspl.setup.sspl_setup import Cmd as SSPLSetup
 import psutil
 import rpm 
 
-class Init:
+class SetupInit:
     """Init Setup Interface"""
 
     name = "init"
@@ -185,5 +185,5 @@ class Init:
         os.chown(self.MDADM_PATH, sspl_ll_uid, -1)
         
 if __name__ == "__main__":
-    ic = Init(sys.argv[1:])
+    ic = SetupInit(sys.argv[1:])
     ic.process()
