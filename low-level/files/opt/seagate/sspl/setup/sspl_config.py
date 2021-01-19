@@ -32,12 +32,7 @@ import json
 sys.path.insert(0, '/opt/seagate/cortx/sspl/low-level/')
 
 import rpm
-ts = rpm.TransactionSet()
-
 import dbus
-sysbus = dbus.SystemBus()
-systemd1 = sysbus.get_object('org.freedesktop.systemd1', '/org/freedesktop/systemd1')
-manager = dbus.Interface(systemd1, 'org.freedesktop.systemd1.Manager')
 
 from framework.base import sspl_constants as consts
 from framework.utils.salt_util import SaltInterface
@@ -59,6 +54,12 @@ class Config:
     def __init__(self, args : list):
         self.args = args
         self._script_dir = os.path.dirname(os.path.abspath(__file__))
+        # to get rpm info
+        self.ts = rpm.TransactionSet()
+        # to interact with systemd
+        self.sysbus = dbus.SystemBus()
+        self.systemd1 = sysbus.get_object('org.freedesktop.systemd1', '/org/freedesktop/systemd1')
+        self.manager = dbus.Interface(systemd1, 'org.freedesktop.systemd1.Manager')
 
     def usage(self): 
         sys.stderr.write(
@@ -74,13 +75,15 @@ class Config:
     def _send_command(self, command : str, fail_on_error=True):
         process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         response, error = process.communicate()
-        if error is not None and \
-        len(error) > 0:
+        if error is not None and len(error) > 0:
             print("command '%s' failed with error\n%s" % (command, error))
             if fail_on_error:
                 sys.exit(1)
             else:
                 return str(error)
+
+        if type(response) == bytes:
+            response = bytes.decode(response)
         return str(response)
 
     def getval_from_ssplconf(self, varname : str) -> str:
@@ -230,7 +233,7 @@ class Config:
         # "/var/log/messages"
 
         # subprocess.call(['systemctl', 'restart rsyslog'], shell=False)
-        job = manager.RestartUnit('rsyslog')
+        job = self.manager.RestartUnit('rsyslog')
 
         # For node replacement scenario consul will not be running on the new node. But,
         # there will be two instance of consul running on healthy node. When new node is configured
@@ -284,7 +287,7 @@ class Config:
             self.usage()
 
         # Get the version. Output can be 3.3.5 or 3.8.9 or in this format
-        mi = ts.dbMatch( 'name', 'rabbitmq-server' )
+        mi = self.ts.dbMatch( 'name', 'rabbitmq-server' )
         for h in mi:
             self.rabbitmq_version = bytes.decode(h['version'])
         
@@ -330,25 +333,8 @@ class Config:
                 else:
                     self.append_val(consts.file_store_config_path, f'log_level={log_level}', 'log_level')
             else:
-                sys.stderr.write(f"Unexpected log level is requested, '{log_level}'")
-
-# def _send_command(command : str, fail_on_error=True):
-#     process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-#     response, error = process.communicate()
-#     if error is not None and \
-#     len(error) > 0:
-#         print("command '%s' failed with error\n%s" % (command, error))
-#         if fail_on_error:
-#             sys.exit(1)
-#         else:
-#             return str(error)
-        
-#     if type(response) == bytes:
-#         response = bytes.decode(response)
-#     return str(response)          
+                sys.stderr.write(f"Unexpected log level is requested, '{log_level}'")        
 
 if __name__ == "__main__":
-    conf = Config(sys.argv)
+    conf = Config(sys.argv[1:])
     conf.process()
-    # rabbitmq_cluster_status = _send_command('/usr/sbin/rabbitmqctl cluster_status --formatter json')
-    # print(json.loads(rabbitmq_cluster_status)['running_nodes'])
