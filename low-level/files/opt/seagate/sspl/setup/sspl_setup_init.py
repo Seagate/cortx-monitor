@@ -29,7 +29,7 @@ import pwd
 sys.path.insert(0, '/opt/seagate/cortx/sspl/low-level/')
 
 from framework.base.sspl_constants import file_store_config_path, roles
-from files.opt.seagate.sspl.setup.sspl_setup import _send_command
+from files.opt.seagate.sspl.setup.sspl_setup import Cmd as SSPLSetup
 import psutil
 
 import rpm 
@@ -177,7 +177,7 @@ class Init:
 
         # TODO : verify or find accurate replacement for setfacl command which
         #        gives rw permission to sspl-ll user for mdadm.conf file.
-        # _send_command('setfacl -m u:sspl-ll:rw /etc/mdadm.conf')
+        # SSPLSetup._send_command('setfacl -m u:sspl-ll:rw /etc/mdadm.conf')
         os.chmod(self.mdadm_path, mode=0o666)
         sspl_ll_uid = self.get_uid('sspl-ll')
         if sspl_ll_uid == -1:
