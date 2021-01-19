@@ -185,8 +185,8 @@ class InitCmd(Cmd):
         pass
 
     def process(self):
-        # TODO: Import relevant python script here for further execution.
-        pass
+        from files.opt.seagate.sspl.setup import sspl_setup_init
+        sspl_setup_init.Init(self.args).process
 
 
 class ConfigCmd(Cmd):
