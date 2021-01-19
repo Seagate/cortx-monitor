@@ -18,7 +18,7 @@
 #################################################################
 # This script performs following operations.
 # - Creates datapath as defined in /etc/sspl.conf
-# - Check dependencies for roles other than '<product>'
+# - Check dependencies for consts.roles other than '<product>'
 #################################################################
 
 import sys
@@ -26,14 +26,16 @@ import os
 import subprocess
 import pwd
 
-sys.path.insert(0, '/opt/seagate/cortx/sspl/low-level/')
+# sys.path.insert(0, '/opt/seagate/cortx/sspl/low-level/')
+sys.path.insert(0, '/opt/sumedh/cortx-sspl/low-level/')
 
 from framework.base.sspl_constants import file_store_config_path, roles
 import psutil
 
+import rpm 
+ts = rpm.TransactionSet()
 
 class Init:
-
     """Init Setup Interface"""
 
     name = "init"
@@ -86,12 +88,14 @@ class Init:
         return str(response)
 
     def check_for_dep_rpms(self, rpm_list : list):
-        # there is a way to do it using 'yum' pkg but curretly not working with python3, working on python2
-        # implemented using cmd command 'rpm -q pkgname'
-        for rpm in rpm_list:
-            name = self._send_command('rpm -q ' + rpm)
-            if 'not installed' in name:
-                print(f"- Required rpm '{rpm}' not installed, exiting")
+        for dep in rpm_list:
+            mi = ts.dbMatch('name', dep)
+            ispresent = False
+            for k in mi:
+                if(k['name'] == dep):
+                    ispresent = True
+            if not ispresent:
+                sys.stderr.write(f"- Required rpm '{dep}' not installed, exiting\n")
                 sys.exit(1)
     
     def check_for_active_processes(self, process_list : list):
@@ -183,6 +187,8 @@ class Init:
         with open(self.mdadm_path, 'a'):
             os.utime(self.mdadm_path)
 
+        # TODO : verify or find accurate replacement for setfacl command which
+        #        gives rw permission to sspl-ll user for mdadm.conf file.
         # self._send_command('setfacl -m u:sspl-ll:rw /etc/mdadm.conf')
         os.chmod(self.mdadm_path, mode=0o666)
         sspl_ll_uid = self.get_uid('sspl-ll')

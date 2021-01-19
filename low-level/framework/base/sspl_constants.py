@@ -64,7 +64,7 @@ REPLACEMENT_NODE_ENV_VAR_FILE = "/etc/profile.d/set_replacement_env.sh"
 # required only for init
 component = 'sspl/config'
 file_store_config_path = '/etc/sspl.conf'
-roles=['vm', 'cortx']
+roles = ['vm', 'cortx', 'ssu', 'gw', 'cmu']
 salt_provisioner_pillar_sls = 'sspl'
 salt_uniq_attr_per_node = ['cluster_id']
 salt_uniq_passwd_per_node = ['RABBITMQINGRESSPROCESSOR', 'RABBITMQEGRESSPROCESSOR', 'LOGGINGPROCESSOR']
