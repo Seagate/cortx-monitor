@@ -86,6 +86,52 @@ class Cmd:
         parsers.add_argument('args', nargs='*', default=[], help='args')
         parsers.set_defaults(command=cls)
 
+<<<<<<< HEAD
+=======
+    @staticmethod
+    def _send_command(command: str, fail_on_error=True):
+        # Note: This function uses subprocess to execute commands, scripts which are not possible to execute
+        # through any python routines available. So its usage MUST be limited and used only when no other
+        # alternative found.
+        process = subprocess.Popen(
+            command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        response, error = process.communicate()
+        if error is not None and \
+        len(error) > 0:
+            print("command '%s' failed with error\n%s" % (command, error))
+            if fail_on_error:
+                sys.exit(1)
+            else:
+                return str(error)
+        if type(response) == bytes:
+            response = bytes.decode(response)
+        return str(response)
+
+    @staticmethod
+    def _call_script(script_dir: str, args: list):
+        script_args_lst = [script_dir]+args
+        subprocess.call(script_args_lst, shell=False)
+
+
+class SetupCmd(Cmd):
+    """SSPL Setup Cmd.
+    
+    """
+
+    name = "setup"
+    script = "setup_sspl"
+
+    def __init__(self, args):
+        super().__init__(args)
+
+    def validate(self):
+        # Common validator classes to check Cortx/system wide validator
+        pass
+
+    def process(self):
+        Cmd._call_script(f"{self._script_dir}/{self.script}", self._args)
+
+>>>>>>> EOS-16524: sspl_conf.sh to python (import of conf_vased_sensors_enable and few changes)
 
 class JoinClusterCmd(Cmd):
     """Join nodes in cluster. To join mutiple nodes, use delimeter ","

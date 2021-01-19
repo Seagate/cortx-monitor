@@ -36,6 +36,8 @@ import dbus
 
 from framework.base import sspl_constants as consts
 from framework.utils.salt_util import SaltInterface
+from files.opt.seagate.sspl.setup.sspl_setup import Cmd as SSPLSetup
+from files.opt.seagate.sspl.setup.conf_based_sensors_enable import update_sensor_info
 
 class Config:
     """ Config Interface """
@@ -58,8 +60,8 @@ class Config:
         self.ts = rpm.TransactionSet()
         # to interact with systemd
         self.sysbus = dbus.SystemBus()
-        self.systemd1 = sysbus.get_object('org.freedesktop.systemd1', '/org/freedesktop/systemd1')
-        self.manager = dbus.Interface(systemd1, 'org.freedesktop.systemd1.Manager')
+        self.systemd1 = self.sysbus.get_object('org.freedesktop.systemd1', '/org/freedesktop/systemd1')
+        self.manager = dbus.Interface(self.systemd1, 'org.freedesktop.systemd1.Manager')
 
     def usage(self): 
         sys.stderr.write(
@@ -72,24 +74,10 @@ class Config:
         )
         sys.exit(1)
 
-    def _send_command(self, command : str, fail_on_error=True):
-        process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        response, error = process.communicate()
-        if error is not None and len(error) > 0:
-            print("command '%s' failed with error\n%s" % (command, error))
-            if fail_on_error:
-                sys.exit(1)
-            else:
-                return str(error)
-
-        if type(response) == bytes:
-            response = bytes.decode(response)
-        return str(response)
-
     def getval_from_ssplconf(self, varname : str) -> str:
         with open(consts.file_store_config_path, mode='rt') as confile:
             for line in confile:
-                if line.find(varname) != -1:
+                if line.startswith(varname):
                     return line.split('=')[1]
         return None
 
@@ -138,7 +126,7 @@ class Config:
             sys.stderr.write("Run this command with root privileges!!")
             sys.exit(1)
         
-        if os.path.isfile(consts.file_store_config_path):
+        if not os.path.isfile(consts.file_store_config_path):
             sys.stderr.write(f"Missing configuration!! Create {consts.file_store_config_path} and rerun.")
             sys.exit(1)
 
@@ -181,7 +169,7 @@ class Config:
 
         # Configure role
         if role:
-            self.append_val(consts.file_store_config_path, f'setup={role}', 'setup')
+            self.append_val(consts.file_store_config_path, f'setup={role}', 'setup=')
 
         # Add sspl-ll user to required groups and sudoers file etc.
         print("Initializing SSPL configuration ... ")
@@ -202,8 +190,6 @@ class Config:
         SSPL_LOG_FILE_PATH = self.getval_from_ssplconf('sspl_log_file_path')
         if SSPL_LOG_FILE_PATH:
             self.append_val(self.RSYSLOG_SSPL_CONF, f'action(type="omfile" File="{SSPL_LOG_FILE_PATH}")', 'File')
-            ## understand below line and convert
-            # sed -i "1 s|^.*$|${SSPL_LOG_FILE_PATH}|g" $DIR_NAME/low-level/files/etc/logrotate.d/sspl_logs
             self.append_val(f"{self.DIR_NAME}/low-level/files/etc/logrotate.d/sspl_logs", SSPL_LOG_FILE_PATH, 0)
 
         # IEM configuration
@@ -211,12 +197,9 @@ class Config:
         LOG_FILE_PATH = self.getval_from_ssplconf('log_file_path')
 
         if LOG_FILE_PATH:
-            # sed -i "s|File=.*|File=\"${LOG_FILE_PATH}\"|g" $RSYSLOG_CONF
             self.append_val(self.RSYSLOG_CONF, f'File="{LOG_FILE_PATH}"', 'File=')
-            # sed -i "1 s|^.*$|${LOG_FILE_PATH}|g" $DIR_NAME/low-level/files/etc/logrotate.d/iem_messages
             self.append_val(f'{self.DIR_NAME}/low-level/files/etc/logrotate.d/iem_messages', LOG_FILE_PATH, 0)
         else:
-            # sed -i "s|File=.*|File=\/var/log/$consts.PRODUCT_FAMILY/iem/iem_messages\"|g" $RSYSLOG_CONF
             self.append_val(self.RSYSLOG_CONF, f'File=/var/log/{consts.PRODUCT_FAMILY}/iem/iem_messages', 'File=')
 
         # Create logrotate dir in case it's not present for dev environment
@@ -256,17 +239,21 @@ class Config:
         # Get the types of server and storage we are currently running on and
         # enable/disable sensor groups in the conf file accordingly.
         if read_provisioner_config:
-            subprocess.call(['python3', f'{self._script_dir}/conf_based_sensors_enable'])       
+            # subprocess.call(['python3', f'{self._script_dir}/conf_based_sensors_enable'])   
+            update_sensor_info()    
             
     def get_rabbitmq_cluster_nodes(self):
         pout = None
         if self.rabbitmq_major_release == '3' and self.rabbitmq_maintenance_release == '8':
-            rabbitmq_cluster_status = self._send_command('/usr/sbin/rabbitmqctl cluster_status --formatter json')
+            rabbitmq_cluster_status = SSPLSetup._send_command('/usr/sbin/rabbitmqctl cluster_status --formatter json')
             rabbitmq_cluster_status = json.loads(rabbitmq_cluster_status)
-            pout = " ".join(rabbitmq_cluster_status['running_nodes'])
+            running_nodes = rabbitmq_cluster_status['running_nodes']
+            for i, node in enumerate(running_nodes):
+                running_nodes[i] = node.replace('rabbit@', '')
+            pout = " ".join(running_nodes)
         elif self.rabbitmq_version == '3.3.5':
-            out = self._send_command("rabbitmqctl cluster_status | grep running_nodes | cut -d '[' -f2 | cut -d ']' -f1 | sed 's/rabbit@//g' | sed 's/,/, /g'")
-            pout = self._send_command(f'echo {out} | sed  "s/\'//g" | sed  "s/ //g"')
+            out = SSPLSetup._send_command("rabbitmqctl cluster_status | grep running_nodes | cut -d '[' -f2 | cut -d ']' -f1 | sed 's/rabbit@//g' | sed 's/,/, /g'")
+            pout = SSPLSetup._send_command(f'echo {out} | sed  "s/\'//g" | sed  "s/ //g"')
         else:
             sys.stderr.write("This RabbitMQ version: $rabbitmq_version is not supported")
             sys.exit(1)
@@ -312,9 +299,9 @@ class Config:
 
             # Update cluster_nodes key in consul
             if consts.PRODUCT_NAME == 'LDR_R1':
-                self._send_command(f'{consts.CONSUL_PATH}/consul kv put sspl/config/RABBITMQCLUSTER/cluster_nodes {pout}')
+                SSPLSetup._send_command(f'{consts.CONSUL_PATH}/consul kv put sspl/config/RABBITMQCLUSTER/cluster_nodes {pout}')
                 if not self.rmq_cluster_nodes:
-                    self._send_command(f'{consts.CONSUL_PATH}/consul kv put sspl/config/RABBITMQCLUSTER/cluster_nodes {self.rmq_cluster_nodes}')
+                    SSPLSetup._send_command(f'{consts.CONSUL_PATH}/consul kv put sspl/config/RABBITMQCLUSTER/cluster_nodes {self.rmq_cluster_nodes}')
                 else:
                     # sed -i "s/cluster_nodes=.*/cluster_nodes=$pout/" $SSPL_CONF
                     self.append_val(consts.file_store_config_path, f'cluster_nodes={pout}', 'cluster_nodes=')
@@ -329,7 +316,7 @@ class Config:
             
             if(log_level == "DEBUG" or log_level == "INFO" or log_level == "WARNING" or log_level == "ERROR" or log_level == "CRITICAL"):
                 if consts.PRODUCT_NAME == "LDR_R1":
-                    self._send_command(f'{consts.CONSUL_PATH}/consul kv put sspl/config/SYSTEM_INFORMATION/log_level {log_level}')
+                    SSPLSetup._send_command(f'{consts.CONSUL_PATH}/consul kv put sspl/config/SYSTEM_INFORMATION/log_level {log_level}')
                 else:
                     self.append_val(consts.file_store_config_path, f'log_level={log_level}', 'log_level')
             else:
