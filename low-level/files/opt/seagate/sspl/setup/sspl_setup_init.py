@@ -26,10 +26,10 @@ import os
 import subprocess
 import pwd
 
-# sys.path.insert(0, '/opt/seagate/cortx/sspl/low-level/')
-sys.path.insert(0, '/opt/sumedh/cortx-sspl/low-level/')
+sys.path.insert(0, '/opt/seagate/cortx/sspl/low-level/')
 
 from framework.base.sspl_constants import file_store_config_path, roles
+from files.opt.seagate.sspl.setup.sspl_setup import _send_command
 import psutil
 
 import rpm 
@@ -74,18 +74,6 @@ class Init:
             "\t -r  Role to be configured on the current node\n"
             )
         sys.exit(1)
-
-    def _send_command(self, command : str, fail_on_error=True):
-        process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        response, error = process.communicate()
-        if error is not None and \
-        len(error) > 0:
-            print("command '%s' failed with error\n%s" % (command, error))
-            if fail_on_error:
-                sys.exit(1)
-            else:
-                return str(error)
-        return str(response)
 
     def check_for_dep_rpms(self, rpm_list : list):
         for dep in rpm_list:
@@ -189,7 +177,7 @@ class Init:
 
         # TODO : verify or find accurate replacement for setfacl command which
         #        gives rw permission to sspl-ll user for mdadm.conf file.
-        # self._send_command('setfacl -m u:sspl-ll:rw /etc/mdadm.conf')
+        # _send_command('setfacl -m u:sspl-ll:rw /etc/mdadm.conf')
         os.chmod(self.mdadm_path, mode=0o666)
         sspl_ll_uid = self.get_uid('sspl-ll')
         if sspl_ll_uid == -1:
