@@ -61,15 +61,18 @@ ENCL_DOWNLOAD_LOG_WAIT_BEFORE_RETRY = 15
 # required only for init
 component = 'sspl/config'
 file_store_config_path = '/etc/sspl.conf'
-roles=['vm', 'cortx']
+roles = ['vm', 'cortx', 'ssu', 'gw', 'cmu']
 salt_provisioner_pillar_sls = 'sspl'
 salt_uniq_attr_per_node = ['cluster_id']
 salt_uniq_passwd_per_node = ['RABBITMQINGRESSPROCESSOR', 'RABBITMQEGRESSPROCESSOR', 'LOGGINGPROCESSOR']
+# This file will be created when sspl is being configured for node replacement case
+# REPLACEMENT_NODE_ENV_VAR_FILE = '/etc/profile.d/set_replacement_env.sh'
 
 # Initialize to default values
 node_key_id = 'srvnode-1'
 CONSUL_HOST = '127.0.0.1'
 CONSUL_PORT = '8500'
+# CONSUL_PATH = '/usr/bin/'
 
 # TODO Keep only constants in this file.
 # other values(configs) should come from cofig.
