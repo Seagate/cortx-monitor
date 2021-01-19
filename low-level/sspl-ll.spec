@@ -32,7 +32,7 @@ URL:        https://github.com/Seagate/cortx-sspl
 Source0:    %{name}-%{version}.tgz
 BuildRoot:  %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 BuildRequires: python36 rpm-build sudo
-Requires:   rabbitmq-server udisks2 hdparm python36 ipmitool smartmontools lshw
+Requires:   rabbitmq-server udisks2 hdparm python36 ipmitool smartmontools lshw python36-rpm
 Requires:   %{product_family}-libsspl_sec = %{version}-%{release}
 Requires:   %{product_family}-libsspl_sec-method_none = %{version}-%{release}
 
@@ -68,6 +68,7 @@ cp -afv files/opt/seagate/sspl/* $SSPL_BASE/
 # Rename setup directory to bin directory and remove .py extension of sspl_setup files.
 mv $SSPL_BASE/setup $SSPL_BASE/bin
 mv $SSPL_BASE/bin/sspl_setup.py $SSPL_BASE/bin/sspl_setup
+mv $SSPL_BASE/bin/sspl_config.py $SSPL_BASE/bin/sspl_config
 
 # Copy the service into /opt/seagate/%{product_family}/sspl where it will execute from
 cp -rp __init__.py $SSPL_BASE
