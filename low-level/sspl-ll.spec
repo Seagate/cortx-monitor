@@ -69,6 +69,7 @@ cp -afv files/opt/seagate/sspl/* $SSPL_BASE/
 mv $SSPL_BASE/setup $SSPL_BASE/bin
 mv $SSPL_BASE/bin/sspl_setup.py $SSPL_BASE/bin/sspl_setup
 mv $SSPL_BASE/bin/sspl_config.py $SSPL_BASE/bin/sspl_config
+mv $SSPL_BASE/bin/sspl_setup_init.py $SSPL_BASE/bin/sspl_setup_init
 
 # Copy the service into /opt/seagate/%{product_family}/sspl where it will execute from
 cp -rp __init__.py $SSPL_BASE
