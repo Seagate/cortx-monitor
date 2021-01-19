@@ -86,7 +86,9 @@ class SSPLPostInstallCmd:
 
         # Install packages which are not available in YUM repo, from PIP
         pip_cmd = f"python3 -m pip install -r {SSPL_BASE_DIR}/low-level/requirements.txt"
-        subprocess.call(pip_cmd.split(" "), shell=False)
+        is_error = subprocess.call(pip_cmd.split(" "), shell=False)
+        if is_error:
+            sys.exit(1)
 
         # NOTE: By default the sspl default conf file will not be copied.
         # The provisioner is supposed to copy the appropriate conf file based
@@ -118,7 +120,7 @@ class SSPLPostInstallCmd:
         
         # Copy sspl-ll.service file and enable service
         shutil.copyfile(currentProduct, "/etc/systemd/system/sspl-ll.service")
-        SSPLSetup._send_command("systemctl enable sspl-ll.service")
+        SSPLSetup.enable_disable_service(service='sspl-ll.service', action='enable')
         SSPLSetup._send_command("systemctl daemon-reload")
 
         # Copy IEC mapping files
