@@ -28,6 +28,7 @@ import csv
 import time
 import threading
 
+from cortx.utils.conf_store import Conf
 from functools import lru_cache
 
 from framework.base.module_thread import SensorThread
@@ -123,25 +124,18 @@ class IEMSensor(SensorThread, InternalMsgQ):
         super(IEMSensor, self).initialize_msgQ(msgQlist)
 
         # Read configurations
-        self._log_file_path = self._conf_reader._get_value_with_default(
-            self.SENSOR_NAME.upper(), self.LOG_FILE_PATH_KEY,
-            self.DEFAULT_LOG_FILE_PATH)
 
-        self._timestamp_file_path = self._conf_reader._get_value_with_default(
-            self.SENSOR_NAME.upper(), self.TIMESTAMP_FILE_PATH_KEY,
-            self.DEFAULT_TIMESTAMP_FILE_PATH)
+        self._log_file_path = Conf.get("index1", f"{self.SENSOR_NAME.upper()}>{self.LOG_FILE_PATH_KEY}",
+                self.DEFAULT_LOG_FILE_PATH)
 
-        self._site_id = self._conf_reader._get_value_with_default(
-            self.SYSTEM_INFORMATION.upper(), COMMON_CONFIGS.get(self.SYSTEM_INFORMATION.upper()).get(self.SITE_ID_KEY), self.DEFAULT_SITE_ID)
+        self._timestamp_file_path = Conf.get("index1", f"{self.SENSOR_NAME.upper()}>{self.TIMESTAMP_FILE_PATH_KEY}",
+                self.DEFAULT_TIMESTAMP_FILE_PATH)
 
-        self._rack_id = self._conf_reader._get_value_with_default(
-            self.SYSTEM_INFORMATION.upper(), COMMON_CONFIGS.get(self.SYSTEM_INFORMATION.upper()).get(self.RACK_ID_KEY), self.DEFAULT_RACK_ID)
-
-        self._node_id = self._conf_reader._get_value_with_default(
-            self.SYSTEM_INFORMATION.upper(), COMMON_CONFIGS.get(self.SYSTEM_INFORMATION.upper()).get(self.NODE_ID_KEY), self.DEFAULT_NODE_ID)
-
-        self._cluster_id = self._conf_reader._get_value_with_default(
-            self.SYSTEM_INFORMATION.upper(), COMMON_CONFIGS.get(self.SYSTEM_INFORMATION.upper()).get(self.CLUSTER_ID_KEY), self.DEFAULT_CLUSTER_ID)
+        minion_id = Conf.get('index1', 'cluster>minion_id')
+        self._site_id = Conf.get("index1", f"cluster>{minion_id}>{self.SITE_ID_KEY}",'001')
+        self._rack_id = Conf.get("index1", f"cluster>{minion_id}>{self.RACK_ID_KEY}",'001')
+        self._node_id = Conf.get("index1", f"cluster>{minion_id}>{self.NODE_ID_KEY}",'001')
+        self._cluster_id = Conf.get("index1", f"cluster>{self.CLUSTER_ID_KEY}",'001')
 
         return True
 

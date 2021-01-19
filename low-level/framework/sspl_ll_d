@@ -41,6 +41,7 @@ import traceback
 # Add the top level directories
 sys.path.insert(0, f'/opt/seagate/cortx/sspl/low-level')
 
+from cortx.utils.conf_store import Conf
 from framework.utils.config_reader import ConfigReader
 from framework.utils.service_logging import init_logging
 from framework.utils.service_logging import logger
@@ -275,14 +276,14 @@ def main(conf_reader, systemd_support):
     sspl_threaded_modules = {}
 
     # Read in operating system value from configuration file
-    operating_system = conf_reader._get_value(SYS_INFORMATION, COMMON_CONFIGS.get(SYS_INFORMATION).get(OPER_SYSTEM))
+    operating_system = Conf.get("index1", f"cluster>{Conf.get('index1', 'cluster>minion_id')}>{OPER_SYSTEM}",'001')
     logger.info("sspl-ll Bootstrap: configuring for OS: %s" % operating_system)
 
     # Read in product value from configuration file
-    product = conf_reader._get_value(SYS_INFORMATION, COMMON_CONFIGS.get(SYS_INFORMATION).get(PRODUCT_NAME))
+    product = Conf.get("index1", f"cluster>{PRODUCT_NAME}")
     # Read in setup value from configuration file
     try:
-        setup = conf_reader._get_value(SYS_INFORMATION, COMMON_CONFIGS.get(SYS_INFORMATION).get(SETUP))
+        setup = Conf.get("index1", f"cluster>{SETUP}")
     except Exception:
         setup = 'hw'
 
@@ -297,8 +298,7 @@ def main(conf_reader, systemd_support):
 
     conf_reader = ConfigReader()
     for group in SSPL_SETTINGS.keys():
-        monitor = conf_reader._get_value_with_default(
-                group, 'monitor', 'true')
+        monitor = Conf.get("index1", f"{group}>monitor", 'true')
         if monitor != 'true':
             sspl_settings_configured_groups -= {group}
 
@@ -532,7 +532,7 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist, operating_system
         # Look at module's configuration section and determine if it's threaded
         threaded = 'True'
         try:
-            threaded = conf_reader._get_value(klass.name().upper(), 'threaded')
+            threaded = Conf.get("index1", f"{klass.name().upper()}>threaded")
             if threaded == '':
                 threaded = 'False'
         except Exception as e:
@@ -542,7 +542,7 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist, operating_system
                         % (module, threaded, klass.name()))
 
         # If it's threaded then add it to the list which will be handled by the ThreadController
-        if threaded in ['True', 'true']:
+        if threaded in ['True', 'true', True]:
             sspl_threaded_modules[klass.name()] = klass()
             msgQlist[klass.name()] = queue.Queue()
         elif issubclass(klass, Actuator):
@@ -759,6 +759,7 @@ if __name__ == "__main__":
     # Validate configuration file for required valid values
     try:
         conf_reader = ConfigReader()
+        Conf.load("index1", "yaml:///etc/cortx/sspl.conf")
     except (IOError, ConfigReader.Error) as err:
         # We don't have logger yet, need to find log_level from conf file first
         print("[ Error ] when validating the configuration : ")
@@ -772,13 +773,9 @@ if __name__ == "__main__":
 
     # Initialize logging
     try:
-        logging_level = conf_reader._get_value_with_default(SYS_INFORMATION, LOG_LEVEL, "INFO")
-        syslog_host = conf_reader._get_value_with_default(SYS_INFORMATION,
-                                                          COMMON_CONFIGS.get(SYS_INFORMATION).get(SYSLOG_HOST_KEY),
-                                                          DEFAULT_SYSLOG_HOST)
-        syslog_port = int(conf_reader._get_value_with_default(SYS_INFORMATION,
-                                                              COMMON_CONFIGS.get(SYS_INFORMATION).get(SYSLOG_PORT_KEY),
-                                                              DEFAULT_SYSLOG_PORT))
+        logging_level = Conf.get("index1", f"{SYS_INFORMATION}>{LOG_LEVEL}", "INFO")
+        syslog_host = Conf.get("index1", "rsyslog>host", DEFAULT_SYSLOG_HOST)
+        syslog_port = int(Conf.get("index1", "rsyslog>port", DEFAULT_SYSLOG_PORT))
         init_logging("SSPL-LL", logging_level, syslog_host, syslog_port)
 
     except Exception as err:

@@ -40,6 +40,7 @@ from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 
 from message_handlers.logging_msg_handler import LoggingMsgHandler
 from framework.utils.severity_reader import SeverityReader
+from cortx.utils.conf_store import Conf
 
 class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
     """Message Handler for generic node requests and generating
@@ -116,46 +117,26 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         # Initialize internal message queues for this module
         super(NodeDataMsgHandler, self).initialize_msgQ(msgQlist)
 
-        self._transmit_interval = int(self._conf_reader._get_value_with_default(
-                                                self.NODEDATAMSGHANDLER,
-                                                self.TRANSMIT_INTERVAL,
+        self._transmit_interval = int(Conf.get("index1", f"{self.NODEDATAMSGHANDLER}>{self.TRANSMIT_INTERVAL}",
                                                 60))
-        self._units = self._conf_reader._get_value_with_default(
-                                                self.NODEDATAMSGHANDLER,
-                                                self.UNITS,
+        self._units = Conf.get("index1", f"{self.NODEDATAMSGHANDLER}>{self.UNITS}",
                                                 "MB")
-        self._disk_usage_threshold = self._conf_reader._get_value_with_default(
-                                                self.NODEDATAMSGHANDLER,
-                                                self.DISK_USAGE_THRESHOLD,
+        self._disk_usage_threshold = Conf.get("index1", f"{self.NODEDATAMSGHANDLER}>{self.DISK_USAGE_THRESHOLD}",
                                                 self.DEFAULT_DISK_USAGE_THRESHOLD)
 
-        self._cpu_usage_threshold = self._conf_reader._get_value_with_default(
-                                                self.NODEDATAMSGHANDLER,
-                                                self.CPU_USAGE_THRESHOLD,
+        self._cpu_usage_threshold = Conf.get("index1", f"{self.NODEDATAMSGHANDLER}>{self.CPU_USAGE_THRESHOLD}",
                                                 self.DEFAULT_CPU_USAGE_THRESHOLD)
 
-        self._host_memory_usage_threshold = self._conf_reader._get_value_with_default(
-                                                self.NODEDATAMSGHANDLER,
-                                                self.HOST_MEMORY_USAGE_THRESHOLD,
+        self._host_memory_usage_threshold = Conf.get("index1", f"{self.NODEDATAMSGHANDLER}>{self.HOST_MEMORY_USAGE_THRESHOLD}",
                                                 self.DEFAULT_HOST_MEMORY_USAGE_THRESHOLD)
 
-        self.site_id = self._conf_reader._get_value_with_default(
-                                                self.SYSTEM_INFORMATION,
-                                                COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.SITE_ID),
-                                                '001')
-        self.rack_id = self._conf_reader._get_value_with_default(
-                                                self.SYSTEM_INFORMATION,
-                                                COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.RACK_ID),
-                                                '001')
-        self.node_id = self._conf_reader._get_value_with_default(
-                                                self.SYSTEM_INFORMATION,
-                                                COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.NODE_ID),
-                                                '001')
+        minion_id = Conf.get('index1', 'cluster>minion_id')
+        self._site_id = Conf.get("index1", f"cluster>{minion_id}>{self.SITE_ID}",'001')
+        self._rack_id = Conf.get("index1", f"cluster>{minion_id}>{self.RACK_ID}",'001')
+        self._node_id = Conf.get("index1", f"cluster>{minion_id}>{self.NODE_ID}",'001')
 
-        self.cluster_id = self._conf_reader._get_value_with_default(
-                                                self.SYSTEM_INFORMATION,
-                                                self.CLUSTER_ID,
-                                                '0')
+        cluster_id = Conf.get("index1", f"cluster>{self.CLUSTER_ID}",'001')
+
         self.prev_nw_status = {}
         self.bmcNwStatus = None
         self.severity_reader = SeverityReader()

@@ -37,6 +37,7 @@ from framework.utils.store_factory import store
 
 # Modules that receive messages from this module
 from message_handlers.real_stor_encl_msg_handler import RealStorEnclMsgHandler
+from cortx.utils.conf_store import Conf
 
 from sensors.Ifan import IFANsensor
 
@@ -84,9 +85,8 @@ class RealStorFanSensor(SensorThread, InternalMsgQ):
         self._fanmodule_prcache = None
 
         self.pollfreq_fansensor = \
-            int(self.rssencl.conf_reader._get_value_with_default(\
-                self.rssencl.CONF_REALSTORFANSENSOR,\
-                "polling_frequency_override", 0))
+            int(Conf.get("index1", f"{self.rssencl.CONF_REALSTORFANSENSOR}>polling_frequency_override",
+                        0))
 
         if self.pollfreq_fansensor == 0:
                 self.pollfreq_fansensor = self.rssencl.pollfreq

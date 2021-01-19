@@ -34,6 +34,7 @@ from framework.utils.sysfs_interface import SysFS
 from framework.utils.store_factory import file_store
 from framework.utils.tool_factory import ToolFactory
 from framework.base.sspl_constants import COMMON_CONFIGS, DATA_PATH
+from cortx.utils.conf_store import Conf
 
 # Override default store
 store = file_store
@@ -92,22 +93,14 @@ class CPUFaultSensor(SensorThread, InternalMsgQ):
 
         super(CPUFaultSensor, self).initialize_msgQ(msgQlist)
 
-        self._site_id = self._conf_reader._get_value_with_default(
-                                self.SYSTEM_INFORMATION_KEY,
-                                COMMON_CONFIGS.get(self.SYSTEM_INFORMATION_KEY).get(self.SITE_ID_KEY), '001')
-        self._cluster_id = self._conf_reader._get_value_with_default(
-                                self.SYSTEM_INFORMATION_KEY,
-                                COMMON_CONFIGS.get(self.SYSTEM_INFORMATION_KEY).get(self.CLUSTER_ID_KEY), '001')
-        self._rack_id = self._conf_reader._get_value_with_default(
-                                self.SYSTEM_INFORMATION_KEY,
-                                COMMON_CONFIGS.get(self.SYSTEM_INFORMATION_KEY).get(self.RACK_ID_KEY), '001')
-        self._node_id = self._conf_reader._get_value_with_default(
-                                self.SYSTEM_INFORMATION_KEY,
-                                COMMON_CONFIGS.get(self.SYSTEM_INFORMATION_KEY).get(self.NODE_ID_KEY), '001')
+        minion_id = Conf.get('index1', 'cluster>minion_id')
+        self._site_id = Conf.get("index1", f"cluster>{minion_id}>{self.SITE_ID}",'001')
+        self._rack_id = Conf.get("index1", f"cluster>{minion_id}>{self.RACK_ID}",'001')
+        self._node_id = Conf.get("index1", f"cluster>{minion_id}>{self.NODE_ID}",'001')
+        self._cluster_id = Conf.get("index1", f"cluster>{self.CLUSTER_ID_KEY}",'001')
 
         # get the cpu fault implementor from configuration
-        cpu_fault_utility = self._conf_reader._get_value_with_default(
-                                    self.name().capitalize(), self.PROBE,
+        cpu_fault_utility = Conf.get("index1", f"{self.name().capitalize()}>{self.PROBE}",
                                     'sysfs')
 
         # Creating the instance of ToolFactory class

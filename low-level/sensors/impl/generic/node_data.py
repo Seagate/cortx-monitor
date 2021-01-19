@@ -38,6 +38,7 @@ from sensors.INode_data import INodeData
 from framework.utils.sysfs_interface import SysFS
 from framework.utils.tool_factory import ToolFactory
 from framework.utils.config_reader import ConfigReader
+from cortx.utils.conf_store import Conf
 
 @implementer(INodeData)
 class NodeData(Debug):
@@ -73,9 +74,7 @@ class NodeData(Debug):
 
         self.conf_reader = ConfigReader()
 
-        nw_fault_utility = self.conf_reader._get_value_with_default(
-                                              self.name().capitalize(),
-                                              self.PROBE,
+        nw_fault_utility = Conf.get("index1", f"{self.name().capitalize()}>{self.PROBE}",
                                               "sysfs")
 
         self._utility_instance = None

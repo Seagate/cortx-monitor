@@ -39,6 +39,8 @@ from message_handlers.node_data_msg_handler import NodeDataMsgHandler
 from zope.interface import implementer
 from sensors.Iraid import IRAIDsensor
 
+from cortx.utils.conf_store import Conf
+
 @implementer(IRAIDsensor)
 class RAIDIntegritySensor(SensorThread, InternalMsgQ):
 
@@ -94,18 +96,15 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
         self._alert_msg = None
         self._fault_state = None
         self._suspended = False
-        self._site_id = self._conf_reader._get_value_with_default(
-                                self.SYSTEM_INFORMATION, COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.SITE_ID), '001')
-        self._cluster_id = self._conf_reader._get_value_with_default(
-                                self.SYSTEM_INFORMATION, COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.CLUSTER_ID), '001')
-        self._rack_id = self._conf_reader._get_value_with_default(
-                                self.SYSTEM_INFORMATION, COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.RACK_ID), '001')
-        self._node_id = self._conf_reader._get_value_with_default(
-                                self.SYSTEM_INFORMATION, COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.NODE_ID), '001')  
-        self._timestamp_file_path = self._conf_reader._get_value_with_default(
-                                    self.RAIDIntegritySensor, self.TIMESTAMP_FILE_PATH_KEY, self.DEFAULT_TIMESTAMP_FILE_PATH)
-        self._polling_interval = int(self._conf_reader._get_value_with_default(
-                                self.RAIDIntegritySensor, self.POLLING_INTERVAL, self.DEFAULT_POLLING_INTERVAL))
+        minion_id = Conf.get('index1', 'cluster>minion_id')
+        self._site_id = Conf.get("index1", f"cluster>{minion_id}>{self.SITE_ID}",'001')
+        self._rack_id = Conf.get("index1", f"cluster>{minion_id}>{self.RACK_ID}",'001')
+        self._node_id = Conf.get("index1", f"cluster>{minion_id}>{self.NODE_ID}",'001')
+        self._cluster_id = Conf.get("index1", f"cluster>{self.CLUSTER_ID_KEY}",'001')
+        self._timestamp_file_path = Conf.get("index1", f"{self.RAIDIntegritySensor}>{self.TIMESTAMP_FILE_PATH_KEY}",
+                                        self.DEFAULT_TIMESTAMP_FILE_PATH)
+        self._polling_interval = Conf.get("index1", f"{self.RAIDIntegritySensor}>{self.POLLING_INTERVAL}",
+                                    self.DEFAULT_POLLING_INTERVAL)
         return True
 
     def read_data(self):

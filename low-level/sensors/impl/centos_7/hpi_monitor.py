@@ -33,6 +33,7 @@ from message_handlers.disk_msg_handler import DiskMsgHandler
 
 from zope.interface import implementer
 from sensors.IHpi_monitor import IHPIMonitor
+from cortx.utils.conf_store import Conf
 
 @implementer(IHPIMonitor)
 class HPIMonitor(SensorThread, InternalMsgQ):
@@ -347,15 +348,13 @@ class HPIMonitor(SensorThread, InternalMsgQ):
 
     def _getHpi_Monitor_Dir(self):
         """Retrieves the hpi monitor path to monitor on the file system"""
-        return self._conf_reader._get_value_with_default(self.HPIMONITOR,
-                                                         self.HPI_MONITOR_DIR,
-                                                         '/tmp/dcs/hpi')
+        return Conf.get("index1", f"{self.HPIMONITOR}>{self.HPI_MONITOR_DIR}",
+                                                '/tmp/dcs/hpi')
 
     def _getStart_delay(self):
         """Retrieves the start delay used to allow dcs-collector to startup first"""
-        return self._conf_reader._get_value_with_default(self.HPIMONITOR,
-                                                         self.START_DELAY,
-                                                         '20')
+        return Conf.get("index1", f"{self.HPIMONITOR}>{self.START_DELAY}",
+                                                    '20')
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""

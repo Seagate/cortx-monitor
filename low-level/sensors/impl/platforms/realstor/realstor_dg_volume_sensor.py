@@ -38,6 +38,7 @@ from framework.utils.store_factory import store
 from message_handlers.real_stor_encl_msg_handler import RealStorEnclMsgHandler
 
 from sensors.Ilogicalvolume import ILogicalVolumesensor
+from cortx.utils.conf_store import Conf
 
 
 @implementer(ILogicalVolumesensor)
@@ -134,9 +135,8 @@ class RealStorLogicalVolumeSensor(SensorThread, InternalMsgQ):
         self._previously_faulty_logical_volumes = {}
 
         self.pollfreq_logical_volume_sensor = \
-            int(self.rssencl.conf_reader._get_value_with_default(\
-                self.rssencl.CONF_REALSTORLOGICALVOLUMESENSOR,\
-                "polling_frequency_override", 0))
+            int(Conf.get("index1", f"{self.rssencl.CONF_REALSTORLOGICALVOLUMESENSOR}>polling_frequency_override",
+                            0))
 
         if self.pollfreq_logical_volume_sensor == 0:
                 self.pollfreq_logical_volume_sensor = self.rssencl.pollfreq

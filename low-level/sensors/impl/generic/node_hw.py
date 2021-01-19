@@ -44,6 +44,7 @@ from framework.utils.service_logging import logger
 from framework.utils import encryptor
 from sensors.INode_hw import INodeHWsensor
 from framework.utils.store_factory import file_store
+from cortx.utils.conf_store import Conf
 
 # bash exit codes
 BASH_ILLEGAL_CMD = 127
@@ -188,8 +189,8 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         except (IOError, ConfigReader.Error) as err:
             logger.error("[ Error ] when validating the config file {0} - {1}"\
                  .format(self.CONF_FILE, err))
-        self.polling_interval = int(self.conf_reader._get_value_with_default(
-            self.NODEHWSENSOR, self.POLLING_INTERVAL, self.DEFAULT_POLLING_INTERVAL))
+        self.polling_interval = int(Conf.get("index1", f"{self.NODEHWSENSOR}>{self.POLLING_INTERVAL}",
+                            self.DEFAULT_POLLING_INTERVAL))
 
     def _get_file(self, name):
         if os.path.exists(name):
@@ -247,45 +248,24 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         # read bmc interface value from sspl.conf
         self.file_conf_reader = ConfigReader(is_test=True, test_config_path='/etc/sspl.conf')
 
-        self._site_id = conf_reader._get_value_with_default(
-                                                self.SYSTEM_INFORMATION,
-                                                COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.SITE_ID),
-                                                '001')
-        self._rack_id = conf_reader._get_value_with_default(
-                                                self.SYSTEM_INFORMATION,
-                                                COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.RACK_ID),
-                                                '001')
-        self._node_id = conf_reader._get_value_with_default(
-                                                self.SYSTEM_INFORMATION,
-                                                COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.NODE_ID),
-                                                '001')
-        self._cluster_id = conf_reader._get_value_with_default(
-                                                self.SYSTEM_INFORMATION,
-                                                COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.CLUSTER_ID),
-                                                '001')
-        self._bmc_user = conf_reader._get_value_with_default(
-                                                self.BMC,
-                                                COMMON_CONFIGS.get(self.BMC).get(self.BMC_LAN_USER),
+        minion_id = Conf.get('index1', 'cluster>minion_id')
+        self._site_id = Conf.get("index1", f"cluster>{minion_id}>{self.SITE_ID}",'001')
+        self._rack_id = Conf.get("index1", f"cluster>{minion_id}>{self.RACK_ID}",'001')
+        self._node_id = Conf.get("index1", f"cluster>{minion_id}>{self.NODE_ID}",'001')
+        self._cluster_id = Conf.get("index1", f"cluster>{self.CLUSTER_ID_KEY}",'001')
+        self._bmc_user = Conf.get("index1", f"cluster>{minion_id}>{self.BMC}>user",
                                                 'ADMIN')
-        self._bmc_passwd = conf_reader._get_value_with_default(
-                                                self.BMC,
-                                                COMMON_CONFIGS.get(self.BMC).get(self.BMC_LAN_PASSWD),
+        self._bmc_passwd = Conf.get("index1", f"cluster>{minion_id}>{self.BMC}>secret",
                                                'ADMIN')
-        self._bmc_ip = conf_reader._get_value_with_default(
-                                                self.BMC,
-                                                COMMON_CONFIGS.get(self.BMC).get(self.BMC_LAN_IP),
+        self._bmc_ip = Conf.get("index1", f"cluster>{minion_id}>{self.BMC}>ip",
                                                 '')
-        self._channel_interface = self.file_conf_reader._get_value_with_default(
-                                                self.BMC_INTERFACE,
-                                                self.BMC_CHANNEL_IF,
+        self._channel_interface = Conf.get("index1", f"{self.BMC_INTERFACE}>{self.BMC_CHANNEL_IF}",
                                                 'system')
 
         decryption_key = encryptor.gen_key(self._cluster_id, ServiceTypes.CLUSTER.value)
         self._bmc_passwd = encryptor.decrypt(decryption_key, self._bmc_passwd.encode('ascii'), 'Node_hw')
 
-        data_dir =  self.conf_reader._get_value_with_default(self.SYSINFO,
-                    COMMON_CONFIGS.get(self.SYSINFO).get(self.DATA_PATH_KEY),
-                    self.DATA_PATH_VALUE_DEFAULT)
+        data_dir =  Conf.get("index1", f"{self.SYSINFO}>{self.DATA_PATH_KEY}", self.DATA_PATH_VALUE_DEFAULT)
         self.cache_dir_path = os.path.join(data_dir, self.CACHE_DIR_NAME)
 
         # define variable in consul to check for bmc channel interface fallback

@@ -38,6 +38,7 @@ from framework.utils.store_factory import store
 from message_handlers.real_stor_encl_msg_handler import RealStorEnclMsgHandler
 
 from sensors.Icontroller import IControllersensor
+from cortx.utils.conf_store import Conf
 
 @implementer(IControllersensor)
 class RealStorControllerSensor(SensorThread, InternalMsgQ):
@@ -87,9 +88,8 @@ class RealStorControllerSensor(SensorThread, InternalMsgQ):
         self._previously_faulty_controllers = {}
 
         self.pollfreq_controllersensor = \
-            int(self.rssencl.conf_reader._get_value_with_default(\
-                self.rssencl.CONF_REALSTORCONTROLLERSENSOR,\
-                "polling_frequency_override", 0))
+            int(Conf.get("index1",f"{self.rssencl.CONF_REALSTORCONTROLLERSENSOR}>polling_frequency_override",
+                                0))
 
         if self.pollfreq_controllersensor == 0:
                 self.pollfreq_controllersensor = self.rssencl.pollfreq

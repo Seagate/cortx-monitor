@@ -48,6 +48,7 @@ from message_handlers.node_controller_msg_handler import NodeControllerMsgHandle
 from message_handlers.real_stor_actuator_msg_handler import RealStorActuatorMsgHandler
 from message_handlers.plane_cntrl_msg_handler import PlaneCntrlMsgHandler
 from message_handlers.real_stor_encl_msg_handler import RealStorEnclMsgHandler
+from cortx.utils.conf_store import Conf
 
 
 # Global method used by Thread to capture and log errors.  This must be global.
@@ -95,7 +96,7 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
     ]
 
     # Constats for keys to read from conf file
-    SSPL_SETTING = 'SSPL-LL_SETTING'
+    SSPL_SETTING = 'SSPL_LL_SETTING'
     DEGRADED_STATE_MODULES = 'degraded_state_modules'
 
     @staticmethod
@@ -475,8 +476,7 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
         modules_to_resume = []
         try:
             # Read list of modules from conf file to load in degraded mode
-            modules_to_resume = self._conf_reader._get_value_list(self.SSPL_SETTING,
-                                                          self.DEGRADED_STATE_MODULES)
+            modules_to_resume = Conf.get("index1", f"{self.SSPL_SETTING}>{self.DEGRADED_STATE_MODULES}")
         except Exception as e:
             logger.warn("ThreadController: Configuration not found, degraded_state_modules")
         return modules_to_resume
