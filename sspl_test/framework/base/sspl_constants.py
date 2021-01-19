@@ -27,14 +27,14 @@ cs_legacy_products = ["CS-L", "CS-G"]
 RESOURCE_PATH = f"/opt/seagate/{PRODUCT_FAMILY}/sspl/low-level/json_msgs/schemas/"
 DATA_PATH = f"/var/{PRODUCT_FAMILY}/sspl/data/"
 
-SSPL_STORE_TYPE = 'file'
+SSPL_STORE_TYPE = 'confstor'
 CONSUL_HOST = '127.0.0.1'
 CONSUL_PORT = '8500'
 CONSUL_PATH = '/usr/bin/'
 
 # required only for init
 component = 'sspl_test/config'
-file_store_config_path = f'/opt/seagate/{PRODUCT_FAMILY}/sspl/sspl_test/conf/sspl_tests.conf'
+file_store_config_path = f'/opt/seagate/{PRODUCT_FAMILY}/sspl/sspl_test/conf/sspl_tests.yml'
 salt_provisioner_pillar_sls = 'sspl'
 
 class AlertTypes(Enum):
@@ -63,6 +63,7 @@ class EnclInterface(Enum):
 class StoreTypes(Enum):
     FILE = "file"
     CONSUL = "consul"
+    CONF = "confstor"
 
 class ServiceTypes(Enum):
     RABBITMQ = "rabbitmq"

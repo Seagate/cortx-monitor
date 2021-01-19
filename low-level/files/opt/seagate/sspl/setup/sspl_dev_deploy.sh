@@ -272,7 +272,7 @@ fi
     # TODO: When RE brings main branch as same strucure as cortx_builds,
     # below should be removed and setup_yum_repo should be able to give cortx-py-utils.
     pkg_name="cortx-py-utils"
-    build_url="http://cortx-storage.colo.seagate.com/releases/cortx/github/main/centos-7.8.2003/cortx-utils_last_successful/"
+    build_url="http://cortx-storage.colo.seagate.com/releases/cortx/components/github/main/centos-7.8.2003/dev/cortx-utils/last_successful/"
     yum install -y $build_url/$(curl -s $build_url/|grep $pkg_name|sed 's/<\/*[^"]*"//g'|cut -d"\"" -f1) ||:
     python3 -m pip install toml pyyaml
 

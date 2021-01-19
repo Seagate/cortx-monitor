@@ -24,8 +24,8 @@ sys.path.insert(0, f'/opt/seagate/cortx/sspl/low-level')
 from framework.base.sspl_constants import (CONSUL_HOST, CONSUL_PORT, PRODUCT_NAME,
     PRODUCT_FAMILY, file_store_config_path, storage_type, server_type, SSPL_STORE_TYPE)
 
-# TODO: Update sensor information in ConfStore
-# from cortx.utils.conf_store import Conf
+
+from cortx.utils.conf_store import Conf
 
 
 config = configparser.ConfigParser(allow_no_value=True)
@@ -73,14 +73,12 @@ if SSPL_STORE_TYPE == "consul":
         print("Error in connecting with consul: {}".format(cerror))
 
 # Update sensor information for sspl_test
-test_file_config_path=f"/opt/seagate/{PRODUCT_FAMILY}/sspl/sspl_test/conf/sspl_tests.conf"
-config = configparser.ConfigParser(allow_no_value=True)
-config.read(test_file_config_path)
+test_file_config_path=f"/opt/seagate/{PRODUCT_FAMILY}/sspl/sspl_test/conf/sspl_tests.yml"
+Conf.load('test', f'yaml://{test_file_config_path}')
 for sect, value in sensors.items():
     try:
-        config.set(sect, key, value)
-    except configparser.NoSectionError:
-        config[sect] = {key: value}
-if os.path.exists(test_file_config_path):
-    with open(test_file_config_path, "w") as configFile:
-        config.write(configFile, space_around_delimiters=False)
+        Conf.set('test',f'{sect}>{key}', value)
+        Conf.save('test')
+    except Exception as err:
+        print("Error in updating values in conf_stor: {}".format(err))
+

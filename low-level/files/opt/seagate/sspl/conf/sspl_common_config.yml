@@ -13,48 +13,39 @@
 # about this software or licensing, please email opensource@seagate.com or
 # cortx-questions@seagate.com.
 
-[SYSTEM_INFORMATION]
-rack_id=001
-site_id=001
-cluster_id=001
-node_id=001
-product=LDR_R2
+cluster:
+   minion_id: srvnode_1
+   cluster_id: '001'
+   server_nodes:
+   srvnode_1:
+      site_id: '001'
+      rack_id: '001'
+      node_id: '001'
+      machine_id:
+      storage_set_id: 'storageset_1'
 
-[SSPL-TESTS_SETTING]
-modules=RabbitMQingressProcessorTests, RabbitMQegressProcessor
+      storage:
+         enclosure_id: enclosure_1
 
-[RABBITMQEGRESSPROCESSOR]
-virtual_host=SSPL
-queue_name=actuator-req-queue
-exchange_name=sspl-in
-routing_key=actuator-req-key
-username=sspluser
-password=sspl4ever
-message_signature_username=sspl-ll
-message_signature_token=ALOIUD986798df69a8koDISLKJ282983
-message_signature_expires=3600
-primary_rabbitmq_host=localhost
+      bmc:
+         ip:
+         secret: '****'
+         user:
 
-[RABBITMQINGRESSPROCESSORTESTS]
-virtual_host=SSPL
-queue_name=sensor-queue
-exchange_name=sspl-out
-routing_key=sensor-key
-username=sspluser
-password=sspl4ever
-primary_rabbitmq_host=localhost
+storage:
+   enclosure_1:
+      type:
+      controller:
+         primary:
+            ip: 10.0.0.2
+            port: 80
+         secondary:
+            ip: 10.0.0.3
+            port: 80
+         user: manage
+         password: '****'
+         type:
 
-[RAIDSENSOR]
-monitor=true
-
-[REALSTORSENSORS]
-monitor=true
-
-[NODEHWSENSOR]
-monitor=true
-
-[SYSTEMDWATCHDOG]
-monitor=true
-
-[RABBITMQCLUSTER]
-cluster_nodes=localhost
+rsyslog:
+   host: localhost
+   port: 514

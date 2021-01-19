@@ -16,4 +16,7 @@
 PRODUCT_NAME='LDR_R2'
 PRODUCT_FAMILY='cortx'
 CONSUL_PATH="/usr/bin/"
-SSPL_STORE_TYPE='file'
+SSPL_STORE_TYPE='confstor'
+common_config=yaml:///etc/sspl_common_cofing.conf
+test_config=yaml:///opt/seagate/cortx/$PRODUCT_FAMILY/sspl_test/conf/sspl_test.yml
+sspl_config=yaml:///etc/sspl.conf

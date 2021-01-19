@@ -16,7 +16,7 @@
 import os
 import sys
 import consul
-from configparser import ConfigParser
+import yaml
 
 CONSUL_HOST = '127.0.0.1'
 CONSUL_PORT = '8500'
@@ -33,19 +33,21 @@ class TestConfig(object):
             # for test configs
             print("reading test conf file and inserting data to consul.")
             test_component='sspl_test/config'
-            path_to_conf_file = "/opt/seagate/cortx/sspl/sspl_test/conf/sspl_tests.conf"
+            path_to_conf_file = "/opt/seagate/cortx/sspl/sspl_test/conf/sspl_tests.yml"
             if os.path.exists(path_to_conf_file):
                 print("Using conf file : {}".format(path_to_conf_file))
             else:
                 conf_directory = os.path.dirname(os.path.abspath(__file__))
-                path_to_conf_file = os.path.join(conf_directory, "sspl_tests.conf")
+                path_to_conf_file = os.path.join(conf_directory, "sspl_tests.yml")
                 print("Using conf file : {}".format(path_to_conf_file))
 
-            parser = ConfigParser()
-            parser.read(path_to_conf_file)
-            for sect in parser.sections():
-                for k, v in parser.items(sect):
-                    consul_conn.kv.put(test_component + '/' + sect + '/' + k, v)
+            with open(path_to_conf_file, "r") as fd:
+                conf_dict = yaml.safe_load(fd)
+                for key, val in conf_dict.items():
+                    for k, v in val.items():
+                        if (type(v)) is list:
+                            v = ','.join(v)
+                        consul_conn.kv.put(test_component + '/' + key + '/' + k, v)
 
         except Exception as serror:
             print("Error occured: {}".format(serror))

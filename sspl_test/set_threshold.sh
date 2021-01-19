@@ -25,7 +25,10 @@ SSPL_STORE_TYPE=${SSPL_STORE_TYPE:-consul}
 transmit_interval=$1
 if [ "$SSPL_STORE_TYPE" == "file" ]
 then
-    [[ -f /etc/sspl.conf ]] && sed -i -e "s/\(transmit_interval=\).*/\1$transmit_interval/" /etc/sspl.conf
+    [[ -f /etc/sspl.conf ]] && sed -i -e "s/\(transmit_interval: \).*/\1$transmit_interval/" /etc/sspl.conf
+elif [ "$SSPL_STORE_TYPE" == "confstor" ]
+then
+    conf $sspl_config set "NODEDATAMSGHANDLER>transmit_interval=$transmit_interval"
 else
     $CONSUL_PATH/consul kv put sspl/config/NODEDATAMSGHANDLER/transmit_interval $transmit_interval
 fi
@@ -36,7 +39,10 @@ fi
 out=$2
 if [ "$SSPL_STORE_TYPE" == "file" ]
 then
-    [[ -f /etc/sspl.conf ]] && sed -i -e "s/\(disk_usage_threshold=\).*/\1$out/" /etc/sspl.conf
+    [[ -f /etc/sspl.conf ]] && sed -i -e "s/\(disk_usage_threshold: \).*/\1$out/" /etc/sspl.conf
+elif [ "$SSPL_STORE_TYPE" == "confstor" ]
+then
+    conf $sspl_config set "NODEDATAMSGHANDLER>disk_usage_threshold=$disk_usage_threshold"
 else
     $CONSUL_PATH/consul kv put sspl/config/NODEDATAMSGHANDLER/disk_usage_threshold $out
 fi
@@ -47,7 +53,10 @@ fi
 host_out=$3
 if [ "$SSPL_STORE_TYPE" == "file" ]
 then
-    [[ -f /etc/sspl.conf ]] && sed -i -e "s/\(host_memory_usage_threshold=\).*/\1$host_out/" /etc/sspl.conf
+    [[ -f /etc/sspl.conf ]] && sed -i -e "s/\(host_memory_usage_threshold: \).*/\1$host_out/" /etc/sspl.conf
+elif [ "$SSPL_STORE_TYPE" == "confstor" ]
+then
+    conf $sspl_config set "NODEDATAMSGHANDLER>host_memory_usage_threshold=$host_memory_usage_threshold"
 else
     $CONSUL_PATH/consul kv put sspl/config/NODEDATAMSGHANDLER/host_memory_usage_threshold $host_out
 fi
@@ -57,8 +66,10 @@ fi
 #cpu_out=`python3.6 -c "import psutil; print((psutil.cpu_percent(interval=1, percpu=False)-5))"`
 cpu_out=$4
 if [ "$SSPL_STORE_TYPE" == "file" ]
+    [[ -f /etc/sspl.conf ]] && sed -i -e "s/\(cpu_usage_threshold: \).*/\1$cpu_out/" /etc/sspl.conf
+elif [ "$SSPL_STORE_TYPE" == "confstor" ]
 then
-    [[ -f /etc/sspl.conf ]] && sed -i -e "s/\(cpu_usage_threshold=\).*/\1$cpu_out/" /etc/sspl.conf
+    conf $sspl_config set "NODEDATAMSGHANDLER>cpu_usage_threshold=$cpu_usage_threshold"
 else
     $CONSUL_PATH/consul kv put sspl/config/NODEDATAMSGHANDLER/cpu_usage_threshold $cpu_out
 fi
