@@ -109,7 +109,9 @@ class Cmd:
     @staticmethod
     def _call_script(script_dir: str, args: list):
         script_args_lst = [script_dir]+args
-        subprocess.call(script_args_lst, shell=False)
+        is_error = subprocess.call(script_args_lst, shell=False)
+        if is_error:
+            sys.exit(1)
 
     @staticmethod
     def _initialize_dbus():
@@ -136,16 +138,12 @@ class Cmd:
         dbus_manager = Cmd._initialize_dbus()
         if action == 'start':
             dbus_manager.StartUnit(f'{service}', 'fail')
-
         elif action == 'stop':
             dbus_manager.StopUnit(f'{service}', 'fail')
-
         elif action == 'restart':
             dbus_manager.RestartUnit(f'{service}', 'fail')
-        
         else:
             print(f"Invalid action: f'{service}' :Please provide an appropriate action name for the service.")
-
 
 class SetupCmd(Cmd):
     """SSPL Setup Cmd.
