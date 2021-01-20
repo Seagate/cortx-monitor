@@ -86,6 +86,27 @@ class Cmd:
         parsers.add_argument('args', nargs='*', default=[], help='args')
         parsers.set_defaults(command=cls)
 
+    @staticmethod
+    def _send_command(command , fail_on_error=True):
+        # Note: This function uses subprocess to execute commands, scripts which are not possible to execute
+        # through any python routines available. So its usage MUST be limited and used only when no other
+        # alternative found.
+        output, error, returncode = SimpleProcess(command).run()
+        if returncode != 0:
+            print("command '%s' failed with error\n%s" % (command, error))
+            if fail_on_error:
+                sys.exit(1)
+            else:
+                return str(error)
+        if type(output) == bytes:
+            output = bytes.decode(output)
+        return str(output)
+
+    @staticmethod
+    def _call_script(script_dir: str, args: list):
+        script_args_lst = [script_dir]+args
+        subprocess.call(script_args_lst, shell=False)
+
 
 class SetupCmd(Cmd):
     """SSPL Setup Cmd.
@@ -193,7 +214,7 @@ class ConfigCmd(Cmd):
         pass
 
     def process(self):
-        from files.opt.seagate.sspl.setup import sspl_config
+        from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup import sspl_config
         sspl_config.Config(self.args).process()
 
 
@@ -293,7 +314,11 @@ class CheckCmd(Cmd):
     def __init__(self, args):
         super().__init__(args)
 
+<<<<<<< HEAD
         from cortx.sspl.bin.sspl_constants import PRODUCT_FAMILY
+=======
+        from cortx.sspl.lowlevel.framework.base.sspl_constants import PRODUCT_FAMILY
+>>>>>>> EOS-16524: sspl_conf.sh to python (import paths changed and simpleProcess implemented)
 
         self.SSPL_CONFIGURED=f"/var/{PRODUCT_FAMILY}/sspl/sspl-configured"
 

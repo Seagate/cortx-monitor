@@ -30,15 +30,14 @@ import shutil
 import psutil
 import json
 
-sys.path.insert(0, '/opt/seagate/cortx/sspl/low-level/')
 # sys.path.insert(0, '/opt/sumedh/cortx-sspl/low-level/')
 
 import dbus
 
-from framework.base import sspl_constants as consts
-from framework.utils.salt_util import SaltInterface
-from files.opt.seagate.sspl.setup.sspl_setup import Cmd as SSPLSetup
-from files.opt.seagate.sspl.setup.conf_based_sensors_enable import update_sensor_info
+from cortx.sspl.lowlevel.framework.base import sspl_constants as consts
+from cortx.sspl.lowlevel.framework.utils.salt_util import SaltInterface
+from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.sspl_setup import Cmd as SSPLSetup
+from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.conf_based_sensors_enable import update_sensor_info
 
 class Config:
     """ Config Interface """
@@ -151,6 +150,7 @@ class Config:
 
             try:
                 os.remove(self.SSPL_CONFIGURED)
+                print(f'removed {self.SSPL_CONFIGURED}')
             except OSError as error:
                 sys.stderr.write(error)
                 sys.exit(1)
@@ -185,6 +185,8 @@ class Config:
             sys.exit(1)
 
         print("SSPL configured successfully.")
+
+        print(f'touching {self.SSPL_CONFIGURED}')
         os.makedirs(self.SSPL_CONFIGURED_DIR, exist_ok=True)
         with open(self.SSPL_CONFIGURED, 'a'):
             os.utime(self.SSPL_CONFIGURED)
@@ -282,7 +284,7 @@ class Config:
             self.usage()
 
         # Get the version. Output can be 3.3.5 or 3.8.9 or in this format
-        self.rabbitmq_version = SSPLSetup._send_command("rpm -qi rabbitmq-server | awk -F': ' '/Version/ {print $2}'")
+        self.rabbitmq_version = SSPLSetup._send_command("rpm -qi rabbitmq-server | awk -F': ' '/Version/ {print $2}")
         self.rabbitmq_version = self.rabbitmq_version[2:7]
 
         # Get the Major release version parsed. (Eg: 3 from 3.8.9)
