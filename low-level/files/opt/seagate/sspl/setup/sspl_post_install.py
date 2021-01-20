@@ -76,7 +76,9 @@ class SSPLPostInstall:
         # Install packages which are not available in YUM repo, from PIP
         pip_cmd = f"python3 -m pip install -r {SSPL_BASE_DIR}/low-level/requirements.txt"
         Utility.send_command(pip_cmd)
+        self.make_file_operations(PRODUCT, ENVIRONMENT, RMQ_CLUSTER)
 
+    def make_file_operations(self, PRODUCT, ENVIRONMENT, RMQ_CLUSTER):
         # NOTE: By default the sspl default conf file will not be copied.
         # The provisioner is supposed to copy the appropriate conf file based
         # on product/env and start SSPL with it.
