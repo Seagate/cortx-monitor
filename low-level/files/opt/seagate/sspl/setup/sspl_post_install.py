@@ -17,7 +17,6 @@
 import os
 import sys
 import errno
-import subprocess
 import shutil
 import distutils.dir_util
 from cortx.sspl.bin.sspl_constants import (REPLACEMENT_NODE_ENV_VAR_FILE, PRODUCT_NAME, SSPL_BASE_DIR,
@@ -56,13 +55,10 @@ class SSPLPostInstall:
             try:
                 if self.args[i] == '-p':
                     PRODUCT = self.args[i+1]
-
                 elif self.args[i] == '-e':
                     ENVIRONMENT = self.args[i+1]
-
                 elif self.args[i] == '-c':
                     RMQ_CLUSTER = self.args[i+1]
-                    
             except (IndexError, ValueError):
                 self.usage()
             i+=1

@@ -25,7 +25,6 @@ import inspect
 import traceback
 import os
 import syslog
-import dbus
 import subprocess
 from cortx.sspl.bin.utility import Utility
 
