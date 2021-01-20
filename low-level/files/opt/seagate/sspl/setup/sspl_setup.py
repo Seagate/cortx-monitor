@@ -28,7 +28,8 @@ import syslog
 import dbus
 import subprocess
 # Add the top level directories
-sys.path.insert(0, '/opt/seagate/cortx/sspl/low-level')
+# sys.path.insert(0, '/opt/seagate/cortx/sspl/low-level')
+from cortx.utils.process import SimpleProcess
 
 class Cmd:
     """Setup Command.
@@ -94,17 +95,14 @@ class Cmd:
         # Note: This function uses subprocess to execute commands, scripts which are not possible to execute
         # through any python routines available. So its usage MUST be limited and used only when no other
         # alternative found.
-        process = subprocess.Popen(
-            command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        response, error = process.communicate()
-        if error is not None and \
-        len(error) > 0:
+        output, error, returncode = SimpleProcess(command).run()
+        if returncode != 0:
             print("command '%s' failed with error\n%s" % (command, error))
             if fail_on_error:
                 sys.exit(1)
             else:
                 return str(error)
-        return str(response)
+        return str(output)
 
     @staticmethod
     def _call_script(script_dir: str, args: list):
@@ -200,8 +198,8 @@ class PostInstallCmd(Cmd):
         pass
 
     def process(self):
-        from files.opt.seagate.sspl.setup import sspl_post_install
-        sspl_post_install.SSPLPostInstallCmd(self.args).process()
+        from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup import sspl_post_install
+        sspl_post_install.SSPLPostInstall(self.args).process()
 
 
 class InitCmd(Cmd):
@@ -329,7 +327,7 @@ class CheckCmd(Cmd):
     def __init__(self, args):
         super().__init__(args)
 
-        from framework.base.sspl_constants import PRODUCT_FAMILY
+        from cortx.sspl.lowlevel.framework.base.sspl_constants import PRODUCT_FAMILY
 
         self.SSPL_CONFIGURED=f"/var/{PRODUCT_FAMILY}/sspl/sspl-configured"
 

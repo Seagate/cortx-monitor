@@ -22,17 +22,15 @@ import shutil
 import distutils.dir_util
 
 # Add the top level directories
-sys.path.insert(0, '/opt/seagate/cortx/sspl/low-level')
-from framework.base.sspl_constants import (REPLACEMENT_NODE_ENV_VAR_FILE, PRODUCT_NAME, SSPL_BASE_DIR,
+# sys.path.insert(0, '/opt/seagate/cortx/sspl/low-level')
+from cortx.sspl.lowlevel.framework.base.sspl_constants import (REPLACEMENT_NODE_ENV_VAR_FILE, PRODUCT_NAME, SSPL_BASE_DIR,
     file_store_config_path, PRODUCT_BASE_DIR)
-from files.opt.seagate.sspl.setup.sspl_setup import Cmd as SSPLSetup
+from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.sspl_setup import Cmd as SSPLSetup
 
-class SSPLPostInstallCmd:
+class SSPLPostInstall:
     """SSPL Post Install.
     
     """
-
-    name = "sspl_post_install"
 
     def __init__(self, args: list):
         self.args = args
@@ -43,7 +41,7 @@ class SSPLPostInstallCmd:
 
     def usage(self):
         sys.stderr.write(
-            f"{self.name} [[-p <LDR_R1|LDR_R2>] [-e <DEV|PROD>] [-c|--rmq-cluster <true|false>]]\n"
+            "sspl_post_install [[-p <LDR_R1|LDR_R2>] [-e <DEV|PROD>] [-c|--rmq-cluster <true|false>]]\n"
             "-p Product to be configured\n"
             "-e Environment\n"
             "-c Need rmq cluster? (true or false)\n"
@@ -150,7 +148,7 @@ class SSPLPostInstallCmd:
 
 def main(argv: list):
     try:
-        SSPLPostInstallCmd(argv[1:]).process()
+        SSPLPostInstall(argv[1:]).process()
     except Exception as e:
         sys.stderr.write("error: %s\n\n" % str(e))
         return errno.EINVAL
