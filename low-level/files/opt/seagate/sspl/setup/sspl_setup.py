@@ -27,7 +27,7 @@ import os
 import syslog
 import dbus
 import subprocess
-from cortx.utils.process import SimpleProcess
+from cortx.sspl.bin.utility import Utility
 
 class Cmd:
     """Setup Command.
@@ -88,58 +88,6 @@ class Cmd:
         parsers.add_argument('args', nargs='*', default=[], help='args')
         parsers.set_defaults(command=cls)
 
-    @staticmethod
-    def _send_command(command: str, fail_on_error=True):
-        # Note: This function uses subprocess to execute commands, scripts which are not possible to execute
-        # through any python routines available. So its usage MUST be limited and used only when no other
-        # alternative found.
-        output, error, returncode = SimpleProcess(command).run()
-        if returncode != 0:
-            print("command '%s' failed with error\n%s" % (command, error))
-            if fail_on_error:
-                sys.exit(1)
-            else:
-                return str(error)
-        return str(output)
-
-    @staticmethod
-    def _call_script(script_dir: str, args: list):
-        script_args_lst = [script_dir]+args
-        is_error = subprocess.call(script_args_lst, shell=False)
-        if is_error:
-            sys.exit(1)
-
-    @staticmethod
-    def _initialize_dbus():
-        """Initialization of dbus object."""
-        system_bus = dbus.SystemBus()
-        systemd1 = system_bus.get_object('org.freedesktop.systemd1', '/org/freedesktop/systemd1')
-        dbus_manager = dbus.Interface(systemd1, 'org.freedesktop.systemd1.Manager')
-        return dbus_manager
-
-
-    @staticmethod
-    def enable_disable_service(service, action = 'enable'):
-        """Enable/Disable systemd services."""
-        dbus_manager = Cmd._initialize_dbus()
-        if action == 'enable':
-            dbus_manager.EnableUnitFiles([f'{service}'], False, True)
-        else:
-            dbus_manager.DisableUnitFiles([f'{service}'], False)
-        dbus_manager.Reload()
-
-    @staticmethod
-    def systemctl_service_action(service, action = 'start'):
-        """Start/Stop/Restart systemctl services."""
-        dbus_manager = Cmd._initialize_dbus()
-        if action == 'start':
-            dbus_manager.StartUnit(f'{service}', 'fail')
-        elif action == 'stop':
-            dbus_manager.StopUnit(f'{service}', 'fail')
-        elif action == 'restart':
-            dbus_manager.RestartUnit(f'{service}', 'fail')
-        else:
-            print(f"Invalid action: f'{service}' :Please provide an appropriate action name for the service.")
 
 class SetupCmd(Cmd):
     """SSPL Setup Cmd.
@@ -157,7 +105,7 @@ class SetupCmd(Cmd):
         pass
 
     def process(self):
-        Cmd._call_script(f"{self._script_dir}/{self.script}", self._args)
+        Utility._call_script(f"{self._script_dir}/{self.script}", self._args)
 
 
 class JoinClusterCmd(Cmd):
@@ -176,9 +124,9 @@ class JoinClusterCmd(Cmd):
         pass
 
     def process(self):
-        Cmd._call_script(f"{self._script_dir}/{self.script}", self._args)
+        Utility._call_script(f"{self._script_dir}/{self.script}", self._args)
         # TODO: Replace the below code once sspl_config script implementation is done.
-        Cmd._call_script(f"{self._script_dir}/sspl_config", ['-f'])
+        Utility._call_script(f"{self._script_dir}/sspl_config", ['-f'])
 
 
 class PostInstallCmd(Cmd):
@@ -273,7 +221,7 @@ class SupportBundleCmd(Cmd):
         pass
 
     def process(self):
-        Cmd._call_script(f"{self._script_dir}/{self.script}", self._args)
+        Utility._call_script(f"{self._script_dir}/{self.script}", self._args)
 
 
 class ManifestSupportBundleCmd(Cmd):
@@ -292,7 +240,7 @@ class ManifestSupportBundleCmd(Cmd):
         pass
 
     def process(self):
-        Cmd._call_script(f"{self._script_dir}/{self.script}", self._args)
+        Utility._call_script(f"{self._script_dir}/{self.script}", self._args)
 
 
 class ResetCmd(Cmd):
@@ -325,7 +273,7 @@ class CheckCmd(Cmd):
     def __init__(self, args):
         super().__init__(args)
 
-        from cortx.sspl.lowlevel.framework.base.sspl_constants import PRODUCT_FAMILY
+        from cortx.sspl.bin.sspl_constants import PRODUCT_FAMILY
 
         self.SSPL_CONFIGURED=f"/var/{PRODUCT_FAMILY}/sspl/sspl-configured"
 

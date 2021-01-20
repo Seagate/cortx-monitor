@@ -20,14 +20,12 @@ import errno
 import subprocess
 import shutil
 import distutils.dir_util
-from cortx.sspl.lowlevel.framework.base.sspl_constants import (REPLACEMENT_NODE_ENV_VAR_FILE, PRODUCT_NAME, SSPL_BASE_DIR,
+from cortx.sspl.bin.sspl_constants import (REPLACEMENT_NODE_ENV_VAR_FILE, PRODUCT_NAME, SSPL_BASE_DIR,
     file_store_config_path, PRODUCT_BASE_DIR)
-from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.sspl_setup import Cmd as SSPLSetup
+from cortx.sspl.bin.utility import Utility
 
 class SSPLPostInstall:
-    """SSPL Post Install.
-    
-    """
+    """SSPL Post Install."""
 
     def __init__(self, args: list):
         self.args = args
@@ -79,7 +77,7 @@ class SSPLPostInstall:
         if PRODUCT_NAME == "LDR_R1":
             # setup consul if not running already
             if not os.path.exists(REPLACEMENT_NODE_ENV_VAR_FILE):
-                SSPLSetup._call_script(f"{self._script_dir}/sspl_setup_consul", ["-e", f"{ENVIRONMENT}"])
+                Utility._call_script(f"{self._script_dir}/sspl_setup_consul", ["-e", f"{ENVIRONMENT}"])
 
         # Install packages which are not available in YUM repo, from PIP
         pip_cmd = f"python3 -m pip install -r {SSPL_BASE_DIR}/low-level/requirements.txt"
@@ -117,8 +115,8 @@ class SSPLPostInstall:
 
         # Copy sspl-ll.service file and enable service
         shutil.copyfile(currentProduct, "/etc/systemd/system/sspl-ll.service")
-        SSPLSetup.enable_disable_service(service='sspl-ll.service', action='enable')
-        SSPLSetup._send_command("systemctl daemon-reload")
+        Utility.enable_disable_service(service='sspl-ll.service', action='enable')
+        Utility._send_command("systemctl daemon-reload")
 
         # Copy IEC mapping files
         os.makedirs(f"{PRODUCT_BASE_DIR}/iem/iec_mapping", exist_ok=True)
@@ -131,17 +129,17 @@ class SSPLPostInstall:
         # Onward LDR_R2, consul will be abstracted out and it won't exit as hard dependeny of SSPL
         if PRODUCT_NAME == "LDR_R1":
             if not os.path.exists(REPLACEMENT_NODE_ENV_VAR_FILE):
-                SSPLSetup._call_script(f"{self._script_dir}/sspl_fetch_config_from_salt.py",
+                Utility._call_script(f"{self._script_dir}/sspl_fetch_config_from_salt.py",
                     [f"{ENVIRONMENT}", f"{PRODUCT_NAME}"])
         else:
-            SSPLSetup._call_script(f"{self._script_dir}/load_sspl_config.py", ["-C", f"{file_store_config_path}"])
+            Utility._call_script(f"{self._script_dir}/load_sspl_config.py", ["-C", f"{file_store_config_path}"])
 
         # Skip this step if sspl is being configured for node replacement scenario as rabbitmq cluster is
         # already configured on the healthy node
         # Configure rabbitmq
         if not os.path.exists(REPLACEMENT_NODE_ENV_VAR_FILE):
             if RMQ_CLUSTER == "true":
-                SSPLSetup._call_script(f"{self._script_dir}/rabbitmq_setup", [])
+                Utility._call_script(f"{self._script_dir}/rabbitmq_setup", [])
 
 
 def main(argv: list):
