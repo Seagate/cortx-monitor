@@ -119,7 +119,6 @@ SSPL_DIR=/opt/seagate/%{product_family}/sspl
     ln -sf $SSPL_DIR/low-level/framework/sspl_init $SSPL_DIR/bin/sspl_init
     ln -sf $SSPL_DIR/low-level/framework/sspl_reinit $SSPL_DIR/bin/sspl_reinit
     ln -sf $SSPL_DIR/low-level/framework/utils/salt_util.py $SSPL_DIR/bin/salt_util.py
-    ln -sf $SSPL_DIR/low-level/framework/utils/utility.py $SSPL_DIR/bin/utility.py
 }
 
 # run conf_diff.py script
