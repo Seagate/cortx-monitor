@@ -27,7 +27,7 @@ import os
 import syslog
 import subprocess
 
-from cortx.utils.process import SimpleProcess
+from cortx.sspl.lowlevel.framework.utils.utility import Utility
 
 class Cmd:
     """Setup Command.
@@ -88,26 +88,6 @@ class Cmd:
         parsers.add_argument('args', nargs='*', default=[], help='args')
         parsers.set_defaults(command=cls)
 
-    @staticmethod
-    def _send_command(command, fail_on_error=True):
-        # Note: This function uses subprocess to execute commands, scripts which are not possible to execute
-        # through any python routines available. So its usage MUST be limited and used only when no other
-        # alternative found.
-        output, error, returncode = SimpleProcess(command).run()
-        if returncode != 0:
-            print("command '%s' failed with error\n%s" % (command, error))
-            if fail_on_error:
-                sys.exit(1)
-            else:
-                return str(error)
-        return str(output)
-
-    @staticmethod
-    def _call_script(script_dir: str, args: list):
-        script_args_lst = [script_dir]+args
-        subprocess.call(script_args_lst, shell=False)
-
-
 class SetupCmd(Cmd):
     """SSPL Setup Cmd.
     
@@ -124,7 +104,7 @@ class SetupCmd(Cmd):
         pass
 
     def process(self):
-        Cmd._call_script(f"{self._script_dir}/{self.script}", self._args)
+        Utility.(f"{self._script_dir}/{self.script}", self._args)
 
 
 class JoinClusterCmd(Cmd):
@@ -143,9 +123,9 @@ class JoinClusterCmd(Cmd):
         pass
 
     def process(self):
-        Cmd._call_script(f"{self._script_dir}/{self.script}", self._args)
+        Utility.(f"{self._script_dir}/{self.script}", self._args)
         # TODO: Replace the below code once sspl_config script implementation is done.
-        Cmd._call_script(f"{self._script_dir}/sspl_config", ['-f'])
+        Utility.(f"{self._script_dir}/sspl_config", ['-f'])
 
 
 class PostInstallCmd(Cmd):
@@ -240,7 +220,7 @@ class SupportBundleCmd(Cmd):
         pass
 
     def process(self):
-        Cmd._call_script(f"{self._script_dir}/{self.script}", self._args)
+        Utility.call_script(f"{self._script_dir}/{self.script}", self._args)
 
 
 class ManifestSupportBundleCmd(Cmd):
@@ -259,7 +239,7 @@ class ManifestSupportBundleCmd(Cmd):
         pass
 
     def process(self):
-        Cmd._call_script(f"{self._script_dir}/{self.script}", self._args)
+        Utility.(f"{self._script_dir}/{self.script}", self._args)
 
 
 class ResetCmd(Cmd):
