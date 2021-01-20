@@ -76,7 +76,9 @@ class Utility(object):
 
     @staticmethod
     def call_script(script_dir: str, args: list):
-        # This function gives script execution o/p on screen, which is not fulfilled by any cortx utils function
+        # This function uses subprocess.call(), which gives script execution o/p on screen.
+        # This functionality not fulfilled by SimpleProcess() or any cortx utils function.
+        # TODO merge this function code in cortx-utils
         script_args_lst = [script_dir]+args
         is_error = subprocess.call(script_args_lst, shell=False)
         if is_error:
