@@ -61,7 +61,7 @@ class Utility(object):
         return is_vm
 
     @staticmethod
-    def _send_command(command: str, fail_on_error=True):
+    def send_command(command: str, fail_on_error=True):
         # Note: This function uses subprocess to execute commands, scripts which are not possible to execute
         # through any python routines available. So its usage MUST be limited and used only when no other
         # alternative found.
@@ -75,7 +75,7 @@ class Utility(object):
         return str(output)
 
     @staticmethod
-    def _call_script(script_dir: str, args: list):
+    def call_script(script_dir: str, args: list):
         script_args_lst = [script_dir]+args
         is_error = subprocess.call(script_args_lst, shell=False)
         if is_error:

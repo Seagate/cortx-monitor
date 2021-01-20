@@ -25,7 +25,6 @@ import inspect
 import traceback
 import os
 import syslog
-import subprocess
 from cortx.sspl.bin.utility import Utility
 
 class Cmd:
@@ -104,7 +103,7 @@ class SetupCmd(Cmd):
         pass
 
     def process(self):
-        Utility._call_script(f"{self._script_dir}/{self.script}", self._args)
+        Utility.call_script(f"{self._script_dir}/{self.script}", self._args)
 
 
 class JoinClusterCmd(Cmd):
@@ -123,9 +122,9 @@ class JoinClusterCmd(Cmd):
         pass
 
     def process(self):
-        Utility._call_script(f"{self._script_dir}/{self.script}", self._args)
+        Utility.call_script(f"{self._script_dir}/{self.script}", self._args)
         # TODO: Replace the below code once sspl_config script implementation is done.
-        Utility._call_script(f"{self._script_dir}/sspl_config", ['-f'])
+        Utility.call_script(f"{self._script_dir}/sspl_config", ['-f'])
 
 
 class PostInstallCmd(Cmd):
@@ -220,7 +219,7 @@ class SupportBundleCmd(Cmd):
         pass
 
     def process(self):
-        Utility._call_script(f"{self._script_dir}/{self.script}", self._args)
+        Utility.call_script(f"{self._script_dir}/{self.script}", self._args)
 
 
 class ManifestSupportBundleCmd(Cmd):
@@ -239,7 +238,7 @@ class ManifestSupportBundleCmd(Cmd):
         pass
 
     def process(self):
-        Utility._call_script(f"{self._script_dir}/{self.script}", self._args)
+        Utility.call_script(f"{self._script_dir}/{self.script}", self._args)
 
 
 class ResetCmd(Cmd):
