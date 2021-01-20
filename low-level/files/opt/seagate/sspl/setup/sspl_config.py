@@ -35,10 +35,10 @@ import re
 
 import dbus
 
-from cortx.sspl.lowlevel.framework.base import sspl_constants as consts
-from cortx.sspl.lowlevel.framework.utils.salt_util import SaltInterface
-from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.sspl_setup import Cmd as SSPLSetup
-from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.conf_based_sensors_enable import update_sensor_info
+from cortx.sspl.bin import sspl_constants as consts
+from cortx.sspl.bin.salt_util import SaltInterface
+from cortx.sspl.bin.utility import Utility
+from cortx.sspl.bin.conf_based_sensors_enable import update_sensor_info
 
 class Config:
     """ Config Interface """
@@ -254,15 +254,14 @@ class Config:
     def get_rabbitmq_cluster_nodes(self):
         pout = None
         if self.rabbitmq_major_release == '3' and self.rabbitmq_maintenance_release == '8':
-            rabbitmq_cluster_status = SSPLSetup._send_command('/usr/sbin/rabbitmqctl cluster_status --formatter json')
+            rabbitmq_cluster_status = Utility.send_command('/usr/sbin/rabbitmqctl cluster_status --formatter json')
             rabbitmq_cluster_status = json.loads(rabbitmq_cluster_status)
             running_nodes = rabbitmq_cluster_status['running_nodes']
             for i, node in enumerate(running_nodes):
                 running_nodes[i] = node.replace('rabbit@', '')
             pout = " ".join(running_nodes)
         elif self.rabbitmq_version == '3.3.5':
-            out = SSPLSetup._send_command("rabbitmqctl cluster_status | grep running_nodes | cut -d '[' -f2 | cut -d ']' -f1 | sed 's/rabbit@//g' | sed 's/,/, /g'")
-            # pout = SSPLSetup._send_command(f'echo {out} | sed  "s/\'//g" | sed  "s/ //g"')
+            out = Utility.send_command("rabbitmqctl cluster_status | grep running_nodes | cut -d '[' -f2 | cut -d ']' -f1 | sed 's/rabbit@//g' | sed 's/,/, /g'")
             out = out.replace("'", '')
             pout = out.replace(' ', '')
         else:
@@ -285,7 +284,7 @@ class Config:
             self.usage()
 
         # Get the version. Output can be 3.3.5 or 3.8.9 or in this format
-        self.rabbitmq_version = SSPLSetup._send_command("rpm -qi rabbitmq-server")
+        self.rabbitmq_version = Utility.send_command("rpm -qi rabbitmq-server")
         self.rabbitmq_version = re.search(r'Version     :\s*([\d.]+)', str(self.rabbitmq_version)).group(1)
 
         # Get the Major release version parsed. (Eg: 3 from 3.8.9)
@@ -309,9 +308,9 @@ class Config:
 
             # Update cluster_nodes key in consul
             if consts.PRODUCT_NAME == 'LDR_R1':
-                SSPLSetup._send_command(f'{consts.CONSUL_PATH}/consul kv put sspl/config/RABBITMQCLUSTER/cluster_nodes {pout}')
+                Utility.send_command(f'{consts.CONSUL_PATH}/consul kv put sspl/config/RABBITMQCLUSTER/cluster_nodes {pout}')
                 if not self.rmq_cluster_nodes:
-                    SSPLSetup._send_command(f'{consts.CONSUL_PATH}/consul kv put sspl/config/RABBITMQCLUSTER/cluster_nodes {self.rmq_cluster_nodes}')
+                    Utility.send_command(f'{consts.CONSUL_PATH}/consul kv put sspl/config/RABBITMQCLUSTER/cluster_nodes {self.rmq_cluster_nodes}')
                 else:
                     # sed -i "s/cluster_nodes=.*/cluster_nodes=$pout/" $SSPL_CONF
                     self.append_val(consts.file_store_config_path, f'cluster_nodes={pout}', 'cluster_nodes=')
@@ -326,7 +325,7 @@ class Config:
             
             if(log_level == "DEBUG" or log_level == "INFO" or log_level == "WARNING" or log_level == "ERROR" or log_level == "CRITICAL"):
                 if consts.PRODUCT_NAME == "LDR_R1":
-                    SSPLSetup._send_command(f'{consts.CONSUL_PATH}/consul kv put sspl/config/SYSTEM_INFORMATION/log_level {log_level}')
+                    Utility.send_command(f'{consts.CONSUL_PATH}/consul kv put sspl/config/SYSTEM_INFORMATION/log_level {log_level}')
                 else:
                     self.append_val(consts.file_store_config_path, f'log_level={log_level}', 'log_level')
             else:

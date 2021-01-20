@@ -20,9 +20,7 @@ import sys
 import os
 import consul
 
-# sys.path.insert(0, '/opt/sumedh/cortx-sspl/low-level/')
-
-from cortx.sspl.lowlevel.framework.base.sspl_constants import (CONSUL_HOST, CONSUL_PORT, PRODUCT_NAME,
+from cortx.sspl.bin.sspl_constants import (CONSUL_HOST, CONSUL_PORT, PRODUCT_NAME,
     PRODUCT_FAMILY, file_store_config_path, storage_type, server_type, SSPL_STORE_TYPE)
 
 

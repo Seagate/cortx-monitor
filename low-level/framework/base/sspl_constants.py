@@ -22,10 +22,8 @@ import sys
 import os
 from enum import Enum
 
-# Add the top level directories
-sys.path.insert(0, '/opt/seagate/cortx/sspl/low-level')
-from framework.utils.salt_util import SaltInterface
-from framework.utils.service_logging import logger
+from cortx.sspl.bin.salt_util import SaltInterface
+from cortx.sspl.lowlevel.framework.utils.service_logging import logger
 
 
 PRODUCT_NAME = 'LDR_R2'
