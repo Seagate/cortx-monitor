@@ -25,6 +25,7 @@ from cortx.sspl.lowlevel.framework.utils.utility import Utility
 
 class SSPLPostInstall:
     def __init__(self, args: list):
+        """SSPLPostInstall Init."""
         self.args = args
         self.name = "sspl_post_install"
         self._script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -76,6 +77,7 @@ class SSPLPostInstall:
         # Install packages which are not available in YUM repo, from PIP
         pip_cmd = f"python3 -m pip install -r {SSPL_BASE_DIR}/low-level/requirements.txt"
         Utility.send_command(pip_cmd)
+        # Splitting current function into 2 functions to reduce the complexity of the code.
         self.make_file_operations(PRODUCT, ENVIRONMENT, RMQ_CLUSTER)
 
     def make_file_operations(self, PRODUCT, ENVIRONMENT, RMQ_CLUSTER):
