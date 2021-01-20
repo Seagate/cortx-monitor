@@ -24,6 +24,7 @@ from cortx.sspl.bin.sspl_constants import (REPLACEMENT_NODE_ENV_VAR_FILE, PRODUC
 from cortx.sspl.lowlevel.framework.utils.utility import Utility
 
 class SSPLPostInstall:
+
     """SSPL Post Install."""
     def __init__(self, args: list):
         self.args = args
