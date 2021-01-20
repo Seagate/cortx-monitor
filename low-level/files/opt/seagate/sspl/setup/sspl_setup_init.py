@@ -26,13 +26,10 @@ import os
 import subprocess
 import pwd
 
-sys.path.insert(0, '/opt/seagate/cortx/sspl/low-level/')
-
-from framework.base.sspl_constants import file_store_config_path, roles
-from files.opt.seagate.sspl.setup.sspl_setup import Cmd as SSPLSetup
+from cortx.sspl.lowlevel.framework.base.sspl_constants import file_store_config_path, roles
+from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.sspl_setup import Cmd as SSPLSetup
 
 import psutil
-import rpm 
 
 class SetupInit:
     """Init Setup Interface"""
@@ -64,7 +61,6 @@ class SetupInit:
     def __init__(self, args : list):
         self.args = args
         self.role = None
-        self.ts = rpm.TransactionSet()
 
     def usage(self):
         sys.stderr.write(
@@ -77,13 +73,9 @@ class SetupInit:
 
     def check_for_dep_rpms(self, rpm_list : list):
         for dep in rpm_list:
-            mi = self.ts.dbMatch('name', dep)
-            ispresent = False
-            for k in mi:
-                if(k['name'] == dep):
-                    ispresent = True
-            if not ispresent:
-                sys.stderr.write(f"- Required rpm '{dep}' not installed, exiting\n")
+            name = SSPLSetup._send_command(f'rpm -q {dep}', fail_on_error=False)
+            if "b''" in name:
+                print(f"- Required rpm '{dep}' not installed, exiting")
                 sys.exit(1)
     
     def check_for_active_processes(self, process_list : list):

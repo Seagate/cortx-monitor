@@ -174,7 +174,7 @@ class InitCmd(Cmd):
         pass
 
     def process(self):
-        from files.opt.seagate.sspl.setup import sspl_setup_init
+        from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup import sspl_setup_init
         sspl_setup_init.SetupInit(self.args).process()
 
 
