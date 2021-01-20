@@ -24,12 +24,14 @@ from cortx.sspl.bin.sspl_constants import (REPLACEMENT_NODE_ENV_VAR_FILE, PRODUC
 from cortx.sspl.lowlevel.framework.utils.utility import Utility
 
 class SSPLPostInstall:
+    """SSPL Post Install.
+    
+    """
 
-    """SSPL Post Install."""
+    name = "sspl_post_install"
 
     def __init__(self, args: list):
         self.args = args
-        self.name = "sspl_post_install"
         self._script_dir = os.path.dirname(os.path.abspath(__file__))
         self.RSYSLOG_CONF="/etc/rsyslog.d/0-iemfwd.conf"
         self.RSYSLOG_SSPL_CONF="/etc/rsyslog.d/1-ssplfwd.conf"
