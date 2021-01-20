@@ -25,12 +25,14 @@ from cortx.sspl.lowlevel.framework.base.sspl_constants import (REPLACEMENT_NODE_
 from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.sspl_setup import Cmd as SSPLSetup
 
 class SSPLPostInstall:
-    """SSPL Post Install."""
+    """SSPL Post Install.
+    
+    """
 
     def __init__(self, args: list):
         self.args = args
-        self._script_dir = os.path.dirname(os.path.abspath(__file__))
         self.name = "sspl_post_install"
+        self._script_dir = os.path.dirname(os.path.abspath(__file__))
         self.RSYSLOG_CONF="/etc/rsyslog.d/0-iemfwd.conf"
         self.RSYSLOG_SSPL_CONF="/etc/rsyslog.d/1-ssplfwd.conf"
         self.PACEMAKER_INSTALLATION_PATH="/lib/ocf/resource.d/seagate/"
@@ -43,7 +45,7 @@ class SSPLPostInstall:
             "-c Need rmq cluster? (true or false)\n"
             )
         sys.exit(1)
-    
+
     def process(self):
         if not self.args or len({'-p', '-e', '-c'} & set(self.args)) == 0:
             self.usage()
@@ -91,7 +93,7 @@ class SSPLPostInstall:
         # TODO: Disable this default copy once the provisioners are ready.
         if not os.path.exists(file_store_config_path):
             shutil.copyfile(f"{SSPL_BASE_DIR}/conf/sspl.conf.{PRODUCT}", file_store_config_path)
-        
+
         # For Dev environment
         if ENVIRONMENT == "DEV":
             shutil.copyfile(f"{SSPL_BASE_DIR}/conf/sspl.conf.{PRODUCT}", file_store_config_path)
@@ -112,7 +114,7 @@ class SSPLPostInstall:
 
         if PRODUCT == "CLUSTER" and not os.path.exists(currentProduct):
             os.symlink(f"{SSPL_BASE_DIR}/conf/sspl-ll.service.LDR_R2", currentProduct)
-        
+
         # Copy sspl-ll.service file and enable service
         shutil.copyfile(currentProduct, "/etc/systemd/system/sspl-ll.service")
         SSPLSetup.enable_disable_service(service='sspl-ll.service', action='enable')
@@ -122,7 +124,7 @@ class SSPLPostInstall:
         os.makedirs(f"{PRODUCT_BASE_DIR}/iem/iec_mapping", exist_ok=True)
         distutils.dir_util.copy_tree(f"{SSPL_BASE_DIR}/low-level/files/iec_mapping/",
             f"{PRODUCT_BASE_DIR}/iem/iec_mapping")
-        
+
         # Skip this step if sspl is being configured for node replacement scenario as sspl configurations are
         # already available in consul on the healthy node
         # Running script for fetching the config using salt and feeding values to consul
