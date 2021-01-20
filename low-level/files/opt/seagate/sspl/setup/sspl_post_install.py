@@ -26,6 +26,7 @@ from cortx.sspl.lowlevel.framework.utils.utility import Utility
 class SSPLPostInstall:
 
     """SSPL Post Install."""
+
     def __init__(self, args: list):
         self.args = args
         self.name = "sspl_post_install"
