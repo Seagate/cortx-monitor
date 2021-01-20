@@ -18,28 +18,28 @@
   Description:       Validates raid data for data corruption.
  ****************************************************************************
 """
-import os
 import json
-import time
-import subprocess
+import os
 import socket
+import subprocess
+import time
 import uuid
-
 from datetime import datetime
 
-from framework.base.module_thread import SensorThread
-from framework.base.internal_msgQ import InternalMsgQ
-from framework.base.sspl_constants import COMMON_CONFIGS, RaidDataConfig, RaidAlertMsgs, WAIT_BEFORE_RETRY, PRODUCT_FAMILY
-from framework.utils.severity_reader import SeverityReader
-from framework.utils.service_logging import logger
+from zope.interface import implementer
 
+from framework.base.internal_msgQ import InternalMsgQ
+from framework.base.module_thread import SensorThread
+from framework.base.sspl_constants import (COMMON_CONFIGS, PRODUCT_FAMILY,
+                                           WAIT_BEFORE_RETRY, RaidAlertMsgs,
+                                           RaidDataConfig)
+from framework.utils.conf_utils import (CLUSTER, GLOBAL_CONF, SRVNODE,
+                                        SSPL_CONF, Conf)
+from framework.utils.service_logging import logger
+from framework.utils.severity_reader import SeverityReader
 # Modules that receive messages from this module
 from message_handlers.node_data_msg_handler import NodeDataMsgHandler
-
-from zope.interface import implementer
 from sensors.Iraid import IRAIDsensor
-
-from framework.utils.conf_utils import *
 
 
 @implementer(IRAIDsensor)
@@ -439,4 +439,3 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
             if os.path.getmtime(os.path.join(path, file)) < (current_time - 24*60*60) :
                 if os.path.isfile(os.path.join(path, file)):
                     os.remove(os.path.join(path, file))
-

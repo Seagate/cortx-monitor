@@ -24,6 +24,7 @@ cluster:
       rack_id: RC01
       node_id: SN01
       storage_set_id: ST01
+      operating_system: centos7
       storage:
          enclosure_id: enclosure_1
       bmc:
@@ -43,6 +44,7 @@ storage:
             port: 28200
          user: manage
          password: gAAAAABgB8k2R7NuvqUc0wvwac8kfmEQpVNYUEN2iZTTuqX7lzHTKxEyDvd26MKJPgQrB14sDEfW067PAG1w-vki3zmVvn6zKA==
+         type:
 
 rsyslog:
    host: localhost

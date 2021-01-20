@@ -13,6 +13,8 @@
 # about this software or licensing, please email opensource@seagate.com or
 # cortx-questions@seagate.com.
 
+# Version 2.0.0
+
 SSPL_LL_SETTING:
    core_processors:
       - RabbitMQegressProcessor
@@ -108,12 +110,6 @@ LOGGINGMSGHANDLER:
    iem_routing_enabled: false
    iem_log_locally: true
 
-DISKMSGHANDLER:
-   dmreport_file: /tmp/sspl/drivemanager/drive_manager.json
-   always_log_iem: false
-   max_drivemanager_events: 14
-   max_drivemanager_event_interval: 10
-
 NODEDATAMSGHANDLER:
    transmit_interval: 10
    units: MB
@@ -136,6 +132,7 @@ BMC_INTERFACE:
 REALSTORSENSORS:
    monitor: true
    polling_frequency: 30
+   polling_frequency_override: 0
 
 REALSTORPSUSENSOR:
    threaded: true
@@ -212,5 +209,4 @@ SYSTEM_INFORMATION:
     cli_type: CS-A
     data_path: /var/cortx/sspl/data/
     sspl_log_file_path: /var/log/cortx/sspl/sspl.log
-    operating_system: centos7
     log_level: INFO

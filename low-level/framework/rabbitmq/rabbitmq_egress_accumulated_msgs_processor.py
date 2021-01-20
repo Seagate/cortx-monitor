@@ -18,23 +18,24 @@
  Seagate Technology, LLC.
  ****************************************************************************
 """
-import sys
-
-import pika
 import json
+import sys
 import time
 
-from framework.base.module_thread import ScheduledModuleThread
+import pika
+
 from framework.base.internal_msgQ import InternalMsgQ
-
-from framework.utils.service_logging import logger
-
-from framework.rabbitmq.rabbitmq_connector import RabbitMQSafeConnection, connection_exceptions, connection_error_msg
+from framework.base.module_thread import ScheduledModuleThread
+from framework.base.sspl_constants import COMMON_CONFIGS, ServiceTypes
+from framework.rabbitmq.rabbitmq_connector import (RabbitMQSafeConnection,
+                                                   connection_error_msg,
+                                                   connection_exceptions)
 from framework.utils import encryptor
+from framework.utils.conf_utils import CLUSTER, GLOBAL_CONF, SSPL_CONF, Conf
+from framework.utils.service_logging import logger
 from framework.utils.store_factory import store
 from framework.utils.store_queue import StoreQueue
-from framework.base.sspl_constants import ServiceTypes, COMMON_CONFIGS
-from framework.utils.conf_utils import *
+
 
 class RabbitMQEgressAccumulatedMsgsProcessor(ScheduledModuleThread, InternalMsgQ):
     """Send any unsent message to rabbitmq"""

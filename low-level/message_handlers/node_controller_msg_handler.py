@@ -23,21 +23,18 @@ import errno
 import json
 import socket
 
-from framework.base.module_thread import ScheduledModuleThread
-from framework.base.internal_msgQ import InternalMsgQ
-from framework.utils.service_logging import logger
-from framework.base.sspl_constants import enabled_products, COMMON_CONFIGS
-
-from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
-from json_msgs.messages.actuators.ack_response import AckResponseMsg
-from json_msgs.messages.actuators.ndhw_ack_response import NodeHwAckResponseMsg
-
-from message_handlers.disk_msg_handler import DiskMsgHandler
-from message_handlers.service_msg_handler import ServiceMsgHandler
-
 # Import Actuator states table
 from framework.actuator_state_manager import actuator_state_manager
-from framework.utils.conf_utils import *
+from framework.base.internal_msgQ import InternalMsgQ
+from framework.base.module_thread import ScheduledModuleThread
+from framework.base.sspl_constants import COMMON_CONFIGS, enabled_products
+from framework.utils.conf_utils import CLUSTER, GLOBAL_CONF, SSPL_CONF, Conf
+from framework.utils.service_logging import logger
+from json_msgs.messages.actuators.ack_response import AckResponseMsg
+from json_msgs.messages.actuators.ndhw_ack_response import NodeHwAckResponseMsg
+from message_handlers.disk_msg_handler import DiskMsgHandler
+from message_handlers.service_msg_handler import ServiceMsgHandler
+from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 
 
 class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):

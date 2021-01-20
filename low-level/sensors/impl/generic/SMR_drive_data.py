@@ -19,23 +19,21 @@
                     logs them to journal
  ****************************************************************************
 """
-import time
 import ctypes
 import subprocess
+import time
 
-from sensors.impl.c_api.ATA_SG_IO import AtaCmd, SgioHdr
-
-from framework.base.module_thread import SensorThread
-from framework.base.internal_msgQ import InternalMsgQ
-from framework.utils.service_logging import logger
 from systemd import journal
+from zope.interface import implementer
 
+from framework.base.internal_msgQ import InternalMsgQ
+from framework.base.module_thread import SensorThread
+from framework.utils.conf_utils import SSPL_CONF, Conf
+from framework.utils.service_logging import logger
 # Modules that receive messages from this module
 from message_handlers.node_data_msg_handler import NodeDataMsgHandler
-
-from zope.interface import implementer
+from sensors.impl.c_api.ATA_SG_IO import AtaCmd, SgioHdr
 from sensors.INode_data import INodeData
-from framework.utils.conf_utils import *
 
 libc = ctypes.CDLL('libc.so.6')
 

@@ -21,27 +21,24 @@
 """
 import json
 
-from framework.base.module_thread import SensorThread
-from framework.base.internal_msgQ import InternalMsgQ
-from framework.utils.service_logging import logger
-
-# Modules that receive messages from this module
-from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
-from message_handlers.logging_msg_handler import LoggingMsgHandler
-
-from json_msgs.messages.sensors.snmp_trap import SNMPtrapMsg
-
-from pysnmp.smi import builder, view
-
-from pysnmp.carrier.asynsock.dispatch import AsynsockDispatcher
-from pysnmp.carrier.asynsock.dgram import udp, udp6
 from pyasn1.codec.ber import decoder
-from pysnmp.proto import api
-
-
 from zope.interface import implementer
+
+from framework.base.internal_msgQ import InternalMsgQ
+from framework.base.module_thread import SensorThread
+# Modules that receive messages from this module
+from framework.rabbitmq.rabbitmq_egress_processor import \
+    RabbitMQegressProcessor
+from framework.utils.conf_utils import SSPL_CONF, Conf
+from framework.utils.service_logging import logger
+from json_msgs.messages.sensors.snmp_trap import SNMPtrapMsg
+from message_handlers.logging_msg_handler import LoggingMsgHandler
+from pysnmp.carrier.asynsock.dgram import udp, udp6
+from pysnmp.carrier.asynsock.dispatch import AsynsockDispatcher
+from pysnmp.proto import api
+from pysnmp.smi import builder, view
 from sensors.INode_data import INodeData
-from framework.utils.conf_utils import *
+
 
 @implementer(INodeData)
 class SNMPtraps(SensorThread, InternalMsgQ):

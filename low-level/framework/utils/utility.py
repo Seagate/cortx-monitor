@@ -56,3 +56,8 @@ class Utility(object):
         except Exception as e:
             logger.warning("Error while reading whether env is vm or not, assuming VM env : {e}")
         return is_vm
+
+    def get_machine_id(self):
+        with open("/etc/machine-id") as f:
+            return f.read().strip("\n")
+

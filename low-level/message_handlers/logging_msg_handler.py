@@ -21,16 +21,15 @@
 
 import json
 
-from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
-from framework.utils.service_logging import logger
+from framework.base.module_thread import ScheduledModuleThread
 from framework.base.sspl_constants import enabled_products
-
 # Modules that receive messages from this module
-from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
-
+from framework.rabbitmq.rabbitmq_egress_processor import \
+    RabbitMQegressProcessor
+from framework.utils.conf_utils import SSPL_CONF, Conf
+from framework.utils.service_logging import logger
 from json_msgs.messages.actuators.ack_response import AckResponseMsg
-from framework.utils.conf_utils import *
 
 
 class LoggingMsgHandler(ScheduledModuleThread, InternalMsgQ):

@@ -19,26 +19,27 @@
                     the node_data_msg_handler when a change is detected
  ****************************************************************************
 """
-import os
 import json
-import time
-import subprocess
+import os
 import socket
+import subprocess
+import time
 import uuid
 
-from framework.base.module_thread import SensorThread
+from zope.interface import implementer
+
 from framework.base.internal_msgQ import InternalMsgQ
+from framework.base.module_thread import SensorThread
 from framework.base.sspl_constants import COMMON_CONFIGS
+from framework.utils.conf_utils import (CLUSTER, GLOBAL_CONF, SRVNODE,
+                                        SSPL_CONF, Conf)
 from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
-
+from message_handlers.logging_msg_handler import LoggingMsgHandler
 # Modules that receive messages from this module
 from message_handlers.node_data_msg_handler import NodeDataMsgHandler
-from message_handlers.logging_msg_handler import LoggingMsgHandler
-
-from zope.interface import implementer
 from sensors.Iraid import IRAIDsensor
-from framework.utils.conf_utils import *
+
 
 @implementer(IRAIDsensor)
 class RAIDsensor(SensorThread, InternalMsgQ):
@@ -124,7 +125,6 @@ class RAIDsensor(SensorThread, InternalMsgQ):
 
         self._prev_drive_dict = {}
 
-        minion_id = Conf.get('index1', 'cluster>minion_id')
         self._site_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.SITE_ID}",'001')
         self._rack_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.RACK_ID}",'001')
         self._node_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.NODE_ID}",'001')

@@ -278,7 +278,7 @@ def main(conf_reader, systemd_support):
     sspl_threaded_modules = {}
 
     # Read in operating system value from configuration file
-    operating_system = Conf.get(SSPL_CONF, f"{SYS_INFORMATION}>{OPERATING_SYSTEM}",'001')
+    operating_system = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{OPERATING_SYSTEM}",'001')
     logger.info("sspl-ll Bootstrap: configuring for OS: %s" % operating_system)
 
     # Read in product value from configuration file

@@ -22,26 +22,27 @@
 """
 
 import json
-import time
+import re
 import socket
+import time
 import uuid
 from threading import Event
-import re
-
-from framework.base.module_thread import SensorThread
-from framework.base.internal_msgQ import InternalMsgQ
-from framework.utils.service_logging import logger
-from framework.utils.severity_reader import SeverityReader
-from framework.platforms.realstor.realstor_enclosure import singleton_realstorencl
-from framework.utils.store_factory import store
-
-# Modules that receive messages from this module
-from message_handlers.real_stor_encl_msg_handler import RealStorEnclMsgHandler
-from message_handlers.logging_msg_handler import LoggingMsgHandler
 
 from zope.interface import implementer
+
+from framework.base.internal_msgQ import InternalMsgQ
+from framework.base.module_thread import SensorThread
+from framework.platforms.realstor.realstor_enclosure import \
+    singleton_realstorencl
+from framework.utils.conf_utils import (POLLING_FREQUENCY_OVERRIDE, SSPL_CONF,
+                                        Conf)
+from framework.utils.service_logging import logger
+from framework.utils.severity_reader import SeverityReader
+from framework.utils.store_factory import store
+from message_handlers.logging_msg_handler import LoggingMsgHandler
+# Modules that receive messages from this module
+from message_handlers.real_stor_encl_msg_handler import RealStorEnclMsgHandler
 from sensors.IRealStor_disk_sensor import IRealStorDiskSensor
-from framework.utils.conf_utils import *
 
 
 @implementer(IRealStorDiskSensor)

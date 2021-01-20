@@ -20,25 +20,25 @@ on the Node server
 
 import errno
 import json
+import os
 import socket
 import time
 import uuid
-import os
 
-from framework.utils.config_reader import ConfigReader
 from framework.base.debug import Debug
 from framework.base.internal_msgQ import InternalMsgQ
-from framework.utils.service_logging import logger
-from message_handlers.logging_msg_handler import LoggingMsgHandler
-from message_handlers.node_data_msg_handler import NodeDataMsgHandler
 from framework.base.module_thread import SensorThread
+from framework.base.sspl_constants import COMMON_CONFIGS, DATA_PATH
+from framework.utils.conf_utils import (CLUSTER, GLOBAL_CONF, SRVNODE,
+                                        SSPL_CONF, Conf)
+from framework.utils.config_reader import ConfigReader
+from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
+from framework.utils.store_factory import file_store
 from framework.utils.sysfs_interface import SysFS
 from framework.utils.tool_factory import ToolFactory
-from framework.base.sspl_constants import COMMON_CONFIGS, DATA_PATH
-from framework.utils.store_factory import file_store
-from framework.utils.conf_utils import *
-
+from message_handlers.logging_msg_handler import LoggingMsgHandler
+from message_handlers.node_data_msg_handler import NodeDataMsgHandler
 
 # Override default store
 store = file_store
@@ -515,4 +515,3 @@ causes could be missing SAS cable, bad cable connection, faulty cable or SAS por
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""
         super(SASPortSensor, self).shutdown()
-

@@ -24,23 +24,23 @@
 
 """
 
-import os
 import json
-import time
+import os
 import subprocess
+import time
+
 import pyinotify
+from zope.interface import implementer
 
-from framework.base.module_thread import SensorThread
 from framework.base.internal_msgQ import InternalMsgQ
-from framework.utils.service_logging import logger
+from framework.base.module_thread import SensorThread
 from framework.base.sspl_constants import PRODUCT_FAMILY
-
+from framework.utils.conf_utils import SSPL_CONF, Conf
+from framework.utils.service_logging import logger
 # Modules that receive messages from this module
 from message_handlers.disk_msg_handler import DiskMsgHandler
-
-from zope.interface import implementer
 from sensors.IDrive_manager import IDriveManager
-from framework.utils.conf_utils import *
+
 
 @implementer(IDriveManager)
 class DriveManager(SensorThread, InternalMsgQ):

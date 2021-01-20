@@ -23,10 +23,11 @@ import os
 import sys
 
 from framework.base.sspl_constants import DATA_PATH
-from framework.utils.store_factory import store
+from framework.utils.conf_utils import SSPL_CONF, Conf
 from framework.utils.config_reader import ConfigReader
 from framework.utils.service_logging import logger
-from framework.utils.conf_utils import *
+from framework.utils.store_factory import store
+
 
 class StoreQueue:
 
@@ -116,4 +117,3 @@ class StoreQueue:
         self.tail += 1
         self.current_size += size_of_item
         logger.debug("StoreQueue, put, current memory usage %s" % self.current_size)
-

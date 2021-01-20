@@ -24,21 +24,23 @@ import json
 import os
 import time
 
-from cortx.utils.security.cipher import Cipher
 import pika
+from cortx.utils.security.cipher import Cipher
+from jsonschema import Draft3Validator, validate
 
-from jsonschema import Draft3Validator
-from jsonschema import validate
-from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
-from framework.utils.service_logging import logger
-from .rabbitmq_connector import RabbitMQSafeConnection
+from framework.base.module_thread import ScheduledModuleThread
+from framework.base.sspl_constants import (COMMON_CONFIGS, RESOURCE_PATH,
+                                           ServiceTypes)
+from framework.rabbitmq.rabbitmq_egress_processor import \
+    RabbitMQegressProcessor
 from framework.utils import encryptor
-from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
+from framework.utils.conf_utils import (CLUSTER, GLOBAL_CONF, SRVNODE,
+                                        SSPL_CONF, Conf)
+from framework.utils.service_logging import logger
 from json_msgs.messages.actuators.ack_response import AckResponseMsg
-from framework.base.sspl_constants import RESOURCE_PATH, ServiceTypes, COMMON_CONFIGS
-from framework.utils.conf_utils import *
 
+from .rabbitmq_connector import RabbitMQSafeConnection
 
 try:
     use_security_lib = True
@@ -259,7 +261,7 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
             self._username = Conf.get(SSPL_CONF, f"{self.RABBITMQPROCESSOR}>{self.USER_NAME}",
                                                                  'sspluser')
             self._password = Conf.get(SSPL_CONF, f"{self.RABBITMQPROCESSOR}>{self.PASSWORD}",'')
-            
+
             cluster_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{self.CLUSTER_ID_KEY}",'001')
         
             node_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.NODE_ID_KEY}",'001')
@@ -286,4 +288,3 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
             logger.info("RabbitMQingressProcessorTests, shutdown, RabbitMQ ConnectionClosed")
         except Exception as err:
             logger.info("RabbitMQingressProcessorTests, shutdown, RabbitMQ {}".format(str(err)))
-

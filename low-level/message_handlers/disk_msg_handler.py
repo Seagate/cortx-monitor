@@ -19,27 +19,25 @@
  ****************************************************************************
 """
 
-import os
 import json
-import time
+import os
 import socket
 import subprocess
+import time
 
-from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
+from framework.base.module_thread import ScheduledModuleThread
+from framework.rabbitmq.rabbitmq_egress_processor import \
+    RabbitMQegressProcessor
+from framework.utils.conf_utils import SSPL_CONF, Conf
 from framework.utils.service_logging import logger
-from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
-
-from json_msgs.messages.sensors.drive_mngr import DriveMngrMsg
-from json_msgs.messages.sensors.hpi_data import HPIDataMsg
-from json_msgs.messages.sensors.expander_reset import ExpanderResetMsg
-from json_msgs.messages.sensors.node_hw_data import NodeIPMIDataMsg
-
 from json_msgs.messages.actuators.ack_response import AckResponseMsg
-
+from json_msgs.messages.sensors.drive_mngr import DriveMngrMsg
+from json_msgs.messages.sensors.expander_reset import ExpanderResetMsg
+from json_msgs.messages.sensors.hpi_data import HPIDataMsg
+from json_msgs.messages.sensors.node_hw_data import NodeIPMIDataMsg
 # Modules that receive messages from this module
 from message_handlers.logging_msg_handler import LoggingMsgHandler
-from framework.utils.conf_utils import *
 
 
 class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):

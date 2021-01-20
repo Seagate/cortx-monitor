@@ -20,35 +20,41 @@
  ****************************************************************************
 """
 
+import json
 import os
 import time
-import json
-from threading import Thread
 from socket import gethostname
+from threading import Thread
 
-from framework.base.module_thread import ScheduledModuleThread, SensorThread, SensorThreadState
 from framework.base.internal_msgQ import InternalMsgQ
-from framework.utils.service_logging import logger
-
-from json_msgs.messages.actuators.thread_controller import ThreadControllerMsg
-
-# Import modules to control
-from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
-from framework.rabbitmq.rabbitmq_ingress_processor import RabbitMQingressProcessor
-from framework.rabbitmq.plane_cntrl_rmq_egress_processor import PlaneCntrlRMQegressProcessor
+from framework.base.module_thread import (ScheduledModuleThread, SensorThread,
+                                          SensorThreadState)
+from framework.base.sspl_constants import (SSPL_SETTINGS, OperatingSystem,
+                                           cs_legacy_products, cs_products,
+                                           enabled_products,
+                                           sspl_settings_configured_groups)
 from framework.rabbitmq.logging_processor import LoggingProcessor
-from framework.base.sspl_constants import enabled_products, cs_legacy_products, cs_products, OperatingSystem, SSPL_SETTINGS, sspl_settings_configured_groups
-
+from framework.rabbitmq.plane_cntrl_rmq_egress_processor import \
+    PlaneCntrlRMQegressProcessor
+# Import modules to control
+from framework.rabbitmq.rabbitmq_egress_processor import \
+    RabbitMQegressProcessor
+from framework.rabbitmq.rabbitmq_ingress_processor import \
+    RabbitMQingressProcessor
+from framework.utils.conf_utils import SSPL_CONF, Conf
+from framework.utils.service_logging import logger
+from json_msgs.messages.actuators.thread_controller import ThreadControllerMsg
+from message_handlers.disk_msg_handler import DiskMsgHandler
 # Note that all threaded message handlers must have an import here to be controlled
 from message_handlers.logging_msg_handler import LoggingMsgHandler
-from message_handlers.disk_msg_handler import DiskMsgHandler
-from message_handlers.service_msg_handler import ServiceMsgHandler
+from message_handlers.node_controller_msg_handler import \
+    NodeControllerMsgHandler
 from message_handlers.node_data_msg_handler import NodeDataMsgHandler
-from message_handlers.node_controller_msg_handler import NodeControllerMsgHandler
-from message_handlers.real_stor_actuator_msg_handler import RealStorActuatorMsgHandler
 from message_handlers.plane_cntrl_msg_handler import PlaneCntrlMsgHandler
+from message_handlers.real_stor_actuator_msg_handler import \
+    RealStorActuatorMsgHandler
 from message_handlers.real_stor_encl_msg_handler import RealStorEnclMsgHandler
-from framework.utils.conf_utils import *
+from message_handlers.service_msg_handler import ServiceMsgHandler
 
 
 # Global method used by Thread to capture and log errors.  This must be global.

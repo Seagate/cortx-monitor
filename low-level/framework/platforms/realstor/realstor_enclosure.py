@@ -20,17 +20,22 @@
 """
 
 import errno
-import json
 import hashlib
+import json
 import time
 
+from framework.base.sspl_constants import COMMON_CONFIGS, ServiceTypes
 from framework.target.enclosure import StorageEnclosure
-from framework.utils.service_logging import logger
-from framework.utils.webservices import WebServices
-from framework.utils.store_factory import store
 from framework.utils import encryptor
-from framework.base.sspl_constants import ServiceTypes, COMMON_CONFIGS
-from framework.utils.conf_utils import *
+from framework.utils.conf_utils import (CLUSTER, CONTROLLER, ENCLOSURE,
+                                        GLOBAL_CONF, IP, MGMT_INTERFACE,
+                                        PASSWORD, POLLING_FREQUENCY, PORT,
+                                        PRIMARY, SECONDARY, SRVNODE, SSPL_CONF,
+                                        STORAGE, STORAGE_ENCLOSURE, USER, Conf)
+from framework.utils.service_logging import logger
+from framework.utils.store_factory import store
+from framework.utils.webservices import WebServices
+
 
 class RealStorEnclosure(StorageEnclosure):
     """RealStor Enclosure Monitor functions using CLI API Webservice Interface"""
@@ -129,10 +134,10 @@ class RealStorEnclosure(StorageEnclosure):
 
         self.user = Conf.get(GLOBAL_CONF, f"{STORAGE}>{ENCLOSURE}>{CONTROLLER}>{USER}", self.DEFAULT_USER)
         self.passwd = Conf.get(GLOBAL_CONF, f"{STORAGE}>{ENCLOSURE}>{CONTROLLER}>{PASSWORD}", self.DEFAULT_PASSWD)
-        logger.error(f"PASSWORD {self.passwd}")
-        self.mc_interface = Conf.get(GLOBAL_CONF, f"{STORAGE}>{ENCLOSURE}>{MGMT_INTERFACE}", "cliapi")
 
-        self.pollfreq = int(Conf.get(SSPL_CONF, f"{self.CONF_REALSTORSENSORS}>{POLLING_FREQUENCY}", 
+        self.mc_interface = Conf.get(SSPL_CONF, f"{STORAGE_ENCLOSURE}>{MGMT_INTERFACE}", "cliapi")
+
+        self.pollfreq = int(Conf.get(SSPL_CONF, f"{self.CONF_REALSTORSENSORS}>{POLLING_FREQUENCY}",
                         self.DEFAULT_POLL))
 
         self.site_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.SITE_ID}",'001')

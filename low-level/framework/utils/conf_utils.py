@@ -17,11 +17,9 @@
 
 from cortx.utils.conf_store import Conf
 
-def get_machine_id():
-    with open("/etc/machine-id") as f:
-        return f.read().strip("\n")
+from framework.utils.utility import Utility
 
-# Indexs
+# Indexes
 GLOBAL_CONF = "GLOBAL"
 SSPL_CONF = "SSPL"
 
@@ -136,9 +134,9 @@ USER="user"
 USERNAME="username"
 VIRTUAL_HOST="virtual_host"
 
-# Get SRVNODE and ENCLOSUE so it can be used in other files to get 
+# Get SRVNODE and ENCLOSURE so it can be used in other files to get
 # server_node and enclosure specific config
-MACHINE_ID = get_machine_id()
+MACHINE_ID = Utility().get_machine_id()
 
 Conf.load("GLOBAL", "yaml:///etc/cortx/sample_global_cortx_config.yaml")
 Conf.load("SSPL", "yaml:///etc/cortx/sspl.conf")

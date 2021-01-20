@@ -19,33 +19,32 @@
  ****************************************************************************
 """
 
-import os
-import subprocess
-import time
+import calendar
 import json
+import os
 import re
 import socket
+import subprocess
+import time
 import uuid
-import calendar
 
 from zope.interface import implementer
 
-from framework.utils.severity_reader import SeverityReader
-from message_handlers.node_data_msg_handler import NodeDataMsgHandler
-from message_handlers.logging_msg_handler import LoggingMsgHandler
-
 from framework.base.debug import Debug
-from framework.base.module_thread import SensorThread
 from framework.base.internal_msgQ import InternalMsgQ
-from framework.base.sspl_constants import PRODUCT_FAMILY
-from framework.base.sspl_constants import COMMON_CONFIGS,ServiceTypes,node_key_id
+from framework.base.module_thread import SensorThread
+from framework.base.sspl_constants import (COMMON_CONFIGS, PRODUCT_FAMILY,
+                                           ServiceTypes, node_key_id)
+from framework.utils import encryptor
+from framework.utils.conf_utils import (CLUSTER, GLOBAL_CONF, IP, SECRET,
+                                        SRVNODE, SSPL_CONF, USER, Conf)
 from framework.utils.config_reader import ConfigReader
 from framework.utils.service_logging import logger
-from framework.utils import encryptor
-from sensors.INode_hw import INodeHWsensor
+from framework.utils.severity_reader import SeverityReader
 from framework.utils.store_factory import file_store
-from framework.utils.conf_utils import *
-
+from message_handlers.logging_msg_handler import LoggingMsgHandler
+from message_handlers.node_data_msg_handler import NodeDataMsgHandler
+from sensors.INode_hw import INodeHWsensor
 
 # bash exit codes
 BASH_ILLEGAL_CMD = 127

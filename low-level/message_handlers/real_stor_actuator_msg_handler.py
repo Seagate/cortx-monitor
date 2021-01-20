@@ -22,14 +22,15 @@
 import json
 import time
 
-from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
+from framework.base.module_thread import ScheduledModuleThread
+from framework.base.sspl_constants import COMMON_CONFIGS, enabled_products
+from framework.utils.conf_utils import CLUSTER, GLOBAL_CONF, Conf
 from framework.utils.service_logging import logger
-from framework.base.sspl_constants import enabled_products, COMMON_CONFIGS
-
+from json_msgs.messages.actuators.realstor_actuator_response import \
+    RealStorActuatorMsg
 from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
-from json_msgs.messages.actuators.realstor_actuator_response import RealStorActuatorMsg
-from framework.utils.conf_utils import *
+
 
 class RealStorActuatorMsgHandler(ScheduledModuleThread, InternalMsgQ):
     """Message Handler for controlling the RealStor actuator"""
@@ -173,4 +174,3 @@ class RealStorActuatorMsgHandler(ScheduledModuleThread, InternalMsgQ):
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""
         super(RealStorActuatorMsgHandler, self).shutdown()
-

@@ -21,41 +21,40 @@
 
  ****************************************************************************
 """
-import re
-import os
-import json
-import time
 import copy
+import json
+import os
+import re
+import socket
 import subprocess
 import threading
+import time
 import uuid
-
 from datetime import datetime, timedelta
 
-from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
-from framework.base.module_thread import SensorThread
+import dbus
+from dbus import Array, Interface, SystemBus
+from dbus.mainloop.glib import DBusGMainLoop
+from gi.repository import GObject as gobject
+from zope.interface import implementer
+
 from framework.base.internal_msgQ import InternalMsgQ
+from framework.base.module_thread import SensorThread
+from framework.base.sspl_constants import COMMON_CONFIGS, cs_products
+from framework.rabbitmq.rabbitmq_egress_processor import \
+    RabbitMQegressProcessor
+from framework.utils.conf_utils import (CLUSTER, DATA_PATH_KEY, GLOBAL_CONF,
+                                        NODE_ID, RACK_ID, SITE_ID, SRVNODE,
+                                        SSPL_CONF, Conf)
 from framework.utils.service_logging import logger
-from framework.base.sspl_constants import cs_products, COMMON_CONFIGS
 from framework.utils.severity_reader import SeverityReader
 from framework.utils.store_factory import file_store
-
-# Modules that receive messages from this module
-from message_handlers.service_msg_handler import ServiceMsgHandler
+from json_msgs.messages.actuators.ack_response import AckResponseMsg
 from message_handlers.disk_msg_handler import DiskMsgHandler
 from message_handlers.node_data_msg_handler import NodeDataMsgHandler
-
-from json_msgs.messages.actuators.ack_response import AckResponseMsg
-
-from zope.interface import implementer
+# Modules that receive messages from this module
+from message_handlers.service_msg_handler import ServiceMsgHandler
 from sensors.IService_watchdog import IServiceWatchdog
-
-import dbus
-from dbus import SystemBus, Interface, Array
-from gi.repository import GObject as gobject
-from dbus.mainloop.glib import DBusGMainLoop
-import socket
-from framework.utils.conf_utils import *
 
 store = file_store
 
@@ -184,7 +183,6 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
         self._site_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{SITE_ID}",'001')
         self._rack_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{RACK_ID}",'001')
         self._node_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{NODE_ID}",'001')
-        cluster_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{CLUSTER_ID}",'001')
 
         self.vol_ras = Conf.get(SSPL_CONF, f"{self.SYSTEM_INFORMATION}>{DATA_PATH_KEY}", self.DEFAULT_RAS_VOL)
 
@@ -1450,4 +1448,3 @@ def is_physical_drive(interfaces_and_property):
     [6:0:1:1]    disk    0x600c0ff00050f0bb13c7505f02000000  /dev/sdr
     """
     return interfaces_and_property["WWN"].startswith("0x5")
-
