@@ -32,7 +32,7 @@ URL:        https://github.com/Seagate/cortx-sspl
 Source0:    %{name}-%{version}.tgz
 BuildRoot:  %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 BuildRequires: python36 rpm-build sudo
-Requires:   rabbitmq-server udisks2 hdparm python36 ipmitool smartmontools lshw python36-rpm
+Requires:   rabbitmq-server udisks2 hdparm python36 ipmitool smartmontools lshw
 Requires:   %{product_family}-libsspl_sec = %{version}-%{release}
 Requires:   %{product_family}-libsspl_sec-method_none = %{version}-%{release}
 

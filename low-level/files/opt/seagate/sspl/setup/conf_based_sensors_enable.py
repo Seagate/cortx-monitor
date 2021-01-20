@@ -22,6 +22,8 @@ import consul
 
 # Add the top level directories
 sys.path.insert(0, f'/opt/seagate/cortx/sspl/low-level')
+# sys.path.insert(0, '/opt/sumedh/cortx-sspl/low-level/')
+
 from framework.base.sspl_constants import (CONSUL_HOST, CONSUL_PORT, PRODUCT_NAME,
     PRODUCT_FAMILY, file_store_config_path, storage_type, server_type, SSPL_STORE_TYPE)
 
