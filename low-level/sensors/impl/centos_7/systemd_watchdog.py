@@ -40,12 +40,12 @@ from zope.interface import implementer
 
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.module_thread import SensorThread
-from framework.base.sspl_constants import COMMON_CONFIGS, cs_products
+from framework.base.sspl_constants import cs_products
 from framework.rabbitmq.rabbitmq_egress_processor import \
     RabbitMQegressProcessor
-from framework.utils.conf_utils import (CLUSTER, DATA_PATH_KEY, GLOBAL_CONF,
-                                        NODE_ID, RACK_ID, SITE_ID, SRVNODE,
-                                        SSPL_CONF, Conf)
+from framework.utils.conf_utils import (
+    CLUSTER, CLUSTER_ID, DATA_PATH_KEY, GLOBAL_CONF, NODE_ID, RACK_ID, SITE_ID,
+    SRVNODE, SSPL_CONF, Conf)
 from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
 from framework.utils.store_factory import file_store
@@ -183,6 +183,7 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
         self._site_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{SITE_ID}",'001')
         self._rack_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{RACK_ID}",'001')
         self._node_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{NODE_ID}",'001')
+        self._cluster_id = Conf.get(GLOBAL_CONF, f'{CLUSTER}>{CLUSTER_ID}','001')
 
         self.vol_ras = Conf.get(SSPL_CONF, f"{self.SYSTEM_INFORMATION}>{DATA_PATH_KEY}", self.DEFAULT_RAS_VOL)
 

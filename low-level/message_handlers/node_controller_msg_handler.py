@@ -27,7 +27,7 @@ import socket
 from framework.actuator_state_manager import actuator_state_manager
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.module_thread import ScheduledModuleThread
-from framework.base.sspl_constants import COMMON_CONFIGS, enabled_products
+from framework.base.sspl_constants import enabled_products
 from framework.utils.conf_utils import CLUSTER, GLOBAL_CONF, SSPL_CONF, Conf
 from framework.utils.service_logging import logger
 from json_msgs.messages.actuators.ack_response import AckResponseMsg

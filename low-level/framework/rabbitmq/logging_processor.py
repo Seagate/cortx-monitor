@@ -29,7 +29,7 @@ import pika
 
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.module_thread import ScheduledModuleThread
-from framework.base.sspl_constants import COMMON_CONFIGS, ServiceTypes
+from framework.base.sspl_constants import ServiceTypes
 from framework.utils import encryptor
 from framework.utils.autoemail import AutoEmail
 from framework.utils.conf_utils import CLUSTER, GLOBAL_CONF, SSPL_CONF, Conf

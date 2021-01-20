@@ -30,8 +30,7 @@ from jsonschema import Draft3Validator, validate
 
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.module_thread import ScheduledModuleThread
-from framework.base.sspl_constants import (COMMON_CONFIGS, RESOURCE_PATH,
-                                           ServiceTypes)
+from framework.base.sspl_constants import RESOURCE_PATH, ServiceTypes
 from framework.rabbitmq.rabbitmq_egress_processor import \
     RabbitMQegressProcessor
 from framework.utils import encryptor
@@ -263,7 +262,7 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
             self._password = Conf.get(SSPL_CONF, f"{self.RABBITMQPROCESSOR}>{self.PASSWORD}",'')
 
             cluster_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{self.CLUSTER_ID_KEY}",'001')
-        
+
             node_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.NODE_ID_KEY}",'001')
             # Decrypt RabbitMQ Password
             decryption_key = encryptor.gen_key(cluster_id, ServiceTypes.RABBITMQ.value)

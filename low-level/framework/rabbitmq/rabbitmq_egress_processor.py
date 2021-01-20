@@ -28,8 +28,8 @@ import pika
 
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.module_thread import ScheduledModuleThread
-from framework.base.sspl_constants import COMMON_CONFIGS, ServiceTypes
-from framework.utils import encryptor, mon_utils
+from framework.base.sspl_constants import ServiceTypes
+from framework.utils import encryptor
 from framework.utils.conf_utils import CLUSTER, GLOBAL_CONF, SSPL_CONF, Conf
 from framework.utils.service_logging import logger
 from framework.utils.store_factory import store

@@ -24,7 +24,7 @@ import hashlib
 import json
 import time
 
-from framework.base.sspl_constants import COMMON_CONFIGS, ServiceTypes
+from framework.base.sspl_constants import ServiceTypes
 from framework.target.enclosure import StorageEnclosure
 from framework.utils import encryptor
 from framework.utils.conf_utils import (CLUSTER, CONTROLLER, ENCLOSURE,

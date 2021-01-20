@@ -24,7 +24,7 @@ import time
 
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.module_thread import ScheduledModuleThread
-from framework.base.sspl_constants import COMMON_CONFIGS, enabled_products
+from framework.base.sspl_constants import enabled_products
 from framework.utils.conf_utils import (CLUSTER, GLOBAL_CONF, SRVNODE,
                                         SSPL_CONF, Conf)
 from framework.utils.service_logging import logger
@@ -132,6 +132,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         self.site_id = Conf.get(GLOBAL_CONF, f'{CLUSTER}>{SRVNODE}>{self.SITE_ID}','001')
         self.rack_id = Conf.get(GLOBAL_CONF, f'{CLUSTER}>{SRVNODE}>{self.RACK_ID}','001')
         self.node_id = Conf.get(GLOBAL_CONF, f'{CLUSTER}>{SRVNODE}>{self.NODE_ID}','001')
+        self.cluster_id = Conf.get(GLOBAL_CONF, f'{CLUSTER}>{self.CLUSTER_ID}','001')
 
         self.prev_nw_status = {}
         self.bmcNwStatus = None

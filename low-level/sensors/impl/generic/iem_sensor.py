@@ -31,7 +31,7 @@ from functools import lru_cache
 
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.module_thread import SensorThread
-from framework.base.sspl_constants import (COMMON_CONFIGS, PRODUCT_FAMILY,
+from framework.base.sspl_constants import (PRODUCT_FAMILY,
                                            iem_severity_to_alert_mapping,
                                            iem_severity_types,
                                            iem_source_types)
