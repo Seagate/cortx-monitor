@@ -27,8 +27,6 @@ import os
 import syslog
 import dbus
 import subprocess
-# Add the top level directories
-# sys.path.insert(0, '/opt/seagate/cortx/sspl/low-level')
 from cortx.utils.process import SimpleProcess
 
 class Cmd:
