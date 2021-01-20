@@ -79,6 +79,7 @@ CONSUL_PORT = '8500'
 CONSUL_PATH = '/usr/bin/'
 
 # TODO Keep only constants in this file.
+<<<<<<< HEAD
 # other values(configs) should come from config.
 
 # TODO: Below finding machine id/node_key_id code will be replaced by PR #281 [EO-16515]
@@ -103,6 +104,25 @@ rack_id = Conf.get('global_config',
 
 # If SSPL is not configured, use salt interface
 if not os.path.exists(SSPL_CONFIGURED) and PRODUCT_NAME=="LDR_R1":
+=======
+# other values(configs) should come from cofig.
+# Check if SSPL is configured
+if os.path.exists(SSPL_CONFIGURED) or True:
+    try:
+        config = configparser.ConfigParser()
+        config.read(file_store_config_path)
+        storage_type = config['STORAGE_ENCLOSURE']['type']
+        server_type = config['SYSTEM_INFORMATION']['type']
+        cluster_id = config['SYSTEM_INFORMATION']['cluster_id']
+        node_id = config['SYSTEM_INFORMATION']['node_id']
+        node_key_id = config['SYSTEM_INFORMATION']['salt_minion_id']
+        CONSUL_HOST = config['DATASTORE']['consul_host']
+        CONSUL_PORT = config['DATASTORE']['consul_port']
+    except Exception as err:
+        print(f'sspl_constants : Failed to read from {file_store_config_path} due to error - {err}')
+# If not configured, use salt interface
+else:
+>>>>>>> EOS-16524: sspl_conf.sh to python (import paths changed and simpleProcess implemented)
     try:
         salt_int = SaltInterface()
         node_key_id = salt_int.get_node_id()

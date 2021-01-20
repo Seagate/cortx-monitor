@@ -141,12 +141,20 @@ SSPL_DIR=/opt/seagate/%{product_family}/sspl
 [ -f $SSPL_DIR/sspl_init ] ||
     ln -s $SSPL_DIR/bin/sspl_provisioner_init $SSPL_DIR/sspl_init
 
+<<<<<<< HEAD
 # Creating softlink under site-packages to use sspl module easier way.
 PYTHON_BASE_DIR=/usr/lib/python3.6/site-packages/cortx/sspl
 [ -d "${SSPL_DIR}" ] && {
     mkdir -p $PYTHON_BASE_DIR
     ln -sf $SSPL_DIR/bin $PYTHON_BASE_DIR/bin
     ln -sf $SSPL_DIR/low-level $PYTHON_BASE_DIR/lowlevel
+=======
+# Creating softlink uinder site-packages to use sspl module easier way.
+[ -d "${SSPL_DIR}" ] && {
+    mkdir -p /usr/lib/python3.6/site-packages/cortx/sspl
+    ln -s /opt/seagate/cortx/sspl/bin /usr/lib/python3.6/site-packages/cortx/sspl/bin
+    ln -s /opt/seagate/cortx/sspl/low-level /usr/lib/python3.6/site-packages/cortx/sspl/lowlevel
+>>>>>>> EOS-16524: sspl_conf.sh to python (import paths changed and simpleProcess implemented)
 }
 
 # In case of upgrade start sspl-ll after upgrade

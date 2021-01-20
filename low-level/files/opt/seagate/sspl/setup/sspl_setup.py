@@ -25,6 +25,7 @@ import inspect
 import traceback
 import os
 import syslog
+<<<<<<< HEAD
 import time
 
 # using cortx package
@@ -34,6 +35,11 @@ from cortx.utils.service import Service
 from cortx.utils.validator.v_service import ServiceV
 from cortx.utils.validator.error import VError
 from cortx.sspl.bin.error import SetupError
+=======
+import subprocess
+
+from cortx.utils.process import SimpleProcess
+>>>>>>> EOS-16524: sspl_conf.sh to python (import paths changed and simpleProcess implemented)
 
 class Cmd:
     """Setup Command."""
@@ -89,23 +95,20 @@ class Cmd:
 <<<<<<< HEAD
 =======
     @staticmethod
-    def _send_command(command: str, fail_on_error=True):
+    def _send_command(command , fail_on_error=True):
         # Note: This function uses subprocess to execute commands, scripts which are not possible to execute
         # through any python routines available. So its usage MUST be limited and used only when no other
         # alternative found.
-        process = subprocess.Popen(
-            command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        response, error = process.communicate()
-        if error is not None and \
-        len(error) > 0:
+        output, error, returncode = SimpleProcess(command).run()
+        if returncode != 0:
             print("command '%s' failed with error\n%s" % (command, error))
             if fail_on_error:
                 sys.exit(1)
             else:
                 return str(error)
-        if type(response) == bytes:
-            response = bytes.decode(response)
-        return str(response)
+        if type(output) == bytes:
+            output = bytes.decode(output)
+        return str(output)
 
     @staticmethod
     def _call_script(script_dir: str, args: list):
@@ -223,7 +226,7 @@ class ConfigCmd(Cmd):
         pass
 
     def process(self):
-        from files.opt.seagate.sspl.setup import sspl_config
+        from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup import sspl_config
         sspl_config.Config(self.args).process()
 
 
@@ -318,7 +321,11 @@ class CheckCmd(Cmd):
     def __init__(self, args):
         super().__init__(args)
 
+<<<<<<< HEAD
         from cortx.sspl.bin.sspl_constants import PRODUCT_FAMILY
+=======
+        from cortx.sspl.lowlevel.framework.base.sspl_constants import PRODUCT_FAMILY
+>>>>>>> EOS-16524: sspl_conf.sh to python (import paths changed and simpleProcess implemented)
 
         self.SSPL_CONFIGURED="/var/%s/sspl/sspl-configured" % (PRODUCT_FAMILY)
         self.services = ["rabbitmq-server", "sspl-ll"]
