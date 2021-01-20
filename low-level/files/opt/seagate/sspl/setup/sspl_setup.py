@@ -159,8 +159,14 @@ class JoinClusterCmd(Cmd):
                              "Check usage.")
 
     def process(self):
+<<<<<<< HEAD
         from cortx.sspl.bin.setup_rabbitmq_cluster import RMQClusterConfiguration
         RMQClusterConfiguration(self.args[1]).process()
+=======
+        Cmd._call_script(f"{self._script_dir}/{self.script}", self._args)
+        from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.sspl_config import Config
+        Config(self.args).process()
+>>>>>>> EOS-16524: sspl_conf.sh to python (changed imports in sspl_setup)
 
 
 class PostInstallCmd(Cmd):
@@ -226,9 +232,8 @@ class ConfigCmd(Cmd):
         pass
 
     def process(self):
-        from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup import sspl_config
-        sspl_config.Config(self.args).process()
-
+        from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.sspl_config import Config
+        Config(self.args).process()
 
 
 class TestCmd(Cmd):
