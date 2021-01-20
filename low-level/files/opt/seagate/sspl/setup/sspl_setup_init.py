@@ -26,8 +26,8 @@ import os
 import subprocess
 import pwd
 
-from cortx.sspl.lowlevel.framework.base.sspl_constants import file_store_config_path, roles
-from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.sspl_setup import Cmd as SSPLSetup
+from cortx.sspl.bin.sspl_constants import file_store_config_path, roles
+from cortx.sspl.lowlevel.framework.utils.utility import Utility
 
 import psutil
 
@@ -71,32 +71,18 @@ class SetupInit:
             )
         sys.exit(1)
 
-    def check_for_dep_rpms(self, rpm_list : list):
-        for dep in rpm_list:
-            name = SSPLSetup._send_command(f'rpm -q {dep}', fail_on_error=False)
-            if "b''" in name:
-                print(f"- Required rpm '{dep}' not installed, exiting")
-                sys.exit(1)
-    
-    def check_for_active_processes(self, process_list : list):
-        running_pl = [procObj.name() for procObj in psutil.process_iter() if procObj.name() in process_list ]
-        for process in process_list:
-            if(process not in running_pl):
-                print(f"- Required process '{process}' not running, exiting")
-                sys.exit(1)
-
     def check_dependencies(self, role : str):
         # Check for dependency rpms and required processes active state based on role
         if role == "ssu":
             print(f"Checking for dependency rpms for role '{role}'")
-            self.check_for_dep_rpms(self.SSU_DEPENDENCY_RPMS)
+            Utility.check_for_dep_rpms(self.SSU_DEPENDENCY_RPMS)
             print(f"Checking for required processes running state for role '{role}'")
-            self.check_for_active_processes(self.SSU_REQUIRED_PROCESSES)
+            Utility.check_for_active_processes(self.SSU_REQUIRED_PROCESSES)
         elif role == "vm" or role == "gw" or role == "cmu":
             print(f"Checking for dependency rpms for role '{role}'")
             # No dependency currently. Keeping this section as it may be
             # needed in future.
-            self.check_for_dep_rpms(self.VM_DEPENDENCY_RPMS)
+            Utility.check_for_dep_rpms(self.VM_DEPENDENCY_RPMS)
             # No processes to check in vm env
         else:
             print(f"No rpm or process dependencies set, to check for supplied role {role}, skipping checks.\n")
@@ -169,7 +155,7 @@ class SetupInit:
 
         # TODO : verify or find accurate replacement for setfacl command which
         #        gives rw permission to sspl-ll user for mdadm.conf file.
-        # SSPLSetup._send_command('setfacl -m u:sspl-ll:rw /etc/mdadm.conf')
+        # Utility.send_command('setfacl -m u:sspl-ll:rw /etc/mdadm.conf')
         os.chmod(self.MDADM_PATH, mode=0o666)
         sspl_ll_uid = self.get_uid('sspl-ll')
         if sspl_ll_uid == -1:
