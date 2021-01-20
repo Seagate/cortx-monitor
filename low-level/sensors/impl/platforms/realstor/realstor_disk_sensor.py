@@ -41,7 +41,7 @@ from message_handlers.logging_msg_handler import LoggingMsgHandler
 
 from zope.interface import implementer
 from sensors.IRealStor_disk_sensor import IRealStorDiskSensor
-from cortx.utils.conf_store import Conf
+from framework.utils.conf_utils import *
 
 
 @implementer(IRealStorDiskSensor)
@@ -101,7 +101,7 @@ class RealStorDiskSensor(SensorThread, InternalMsgQ):
         self.disks_prcache = f"{self.rssencl.frus}disks/"
 
         self.pollfreq_disksensor = \
-            int(Conf.get("index1", f"{self.rssencl.CONF_REALSTORDISKSENSOR}>polling_frequency_override",
+            int(Conf.get(SSPL_CONF, f"{self.rssencl.CONF_REALSTORDISKSENSOR}>{POLLING_FREQUENCY_OVERRIDE}",
                         0))
 
         if self.pollfreq_disksensor == 0:

@@ -44,7 +44,8 @@ from framework.utils.service_logging import logger
 from framework.utils import encryptor
 from sensors.INode_hw import INodeHWsensor
 from framework.utils.store_factory import file_store
-from cortx.utils.conf_store import Conf
+from framework.utils.conf_utils import *
+
 
 # bash exit codes
 BASH_ILLEGAL_CMD = 127
@@ -189,7 +190,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         except (IOError, ConfigReader.Error) as err:
             logger.error("[ Error ] when validating the config file {0} - {1}"\
                  .format(self.CONF_FILE, err))
-        self.polling_interval = int(Conf.get("index1", f"{self.NODEHWSENSOR}>{self.POLLING_INTERVAL}",
+        self.polling_interval = int(Conf.get(SSPL_CONF, f"{self.NODEHWSENSOR}>{self.POLLING_INTERVAL}",
                             self.DEFAULT_POLLING_INTERVAL))
 
     def _get_file(self, name):
@@ -248,24 +249,23 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         # read bmc interface value from sspl.conf
         self.file_conf_reader = ConfigReader(is_test=True, test_config_path='/etc/sspl.conf')
 
-        minion_id = Conf.get('index1', 'cluster>minion_id')
-        self._site_id = Conf.get("index1", f"cluster>{minion_id}>{self.SITE_ID}",'001')
-        self._rack_id = Conf.get("index1", f"cluster>{minion_id}>{self.RACK_ID}",'001')
-        self._node_id = Conf.get("index1", f"cluster>{minion_id}>{self.NODE_ID}",'001')
-        self._cluster_id = Conf.get("index1", f"cluster>{self.CLUSTER_ID_KEY}",'001')
-        self._bmc_user = Conf.get("index1", f"cluster>{minion_id}>{self.BMC}>user",
+        self._site_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.SITE_ID}",'001')
+        self._rack_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.RACK_ID}",'001')
+        self._node_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.NODE_ID}",'001')
+        self._cluster_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{self.CLUSTER_ID}",'001')
+        self._bmc_user = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.BMC}>{USER}",
                                                 'ADMIN')
-        self._bmc_passwd = Conf.get("index1", f"cluster>{minion_id}>{self.BMC}>secret",
+        self._bmc_passwd = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.BMC}>{SECRET}",
                                                'ADMIN')
-        self._bmc_ip = Conf.get("index1", f"cluster>{minion_id}>{self.BMC}>ip",
+        self._bmc_ip = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.BMC}>{IP}",
                                                 '')
-        self._channel_interface = Conf.get("index1", f"{self.BMC_INTERFACE}>{self.BMC_CHANNEL_IF}",
+        self._channel_interface = Conf.get(SSPL_CONF, f"{self.BMC_INTERFACE}>{self.BMC_CHANNEL_IF}",
                                                 'system')
 
         decryption_key = encryptor.gen_key(self._cluster_id, ServiceTypes.CLUSTER.value)
         self._bmc_passwd = encryptor.decrypt(decryption_key, self._bmc_passwd.encode('ascii'), 'Node_hw')
 
-        data_dir =  Conf.get("index1", f"{self.SYSINFO}>{self.DATA_PATH_KEY}", self.DATA_PATH_VALUE_DEFAULT)
+        data_dir =  Conf.get(SSPL_CONF, f"{self.SYSINFO}>{self.DATA_PATH_KEY}", self.DATA_PATH_VALUE_DEFAULT)
         self.cache_dir_path = os.path.join(data_dir, self.CACHE_DIR_NAME)
 
         # define variable in consul to check for bmc channel interface fallback

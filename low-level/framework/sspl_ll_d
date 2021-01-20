@@ -41,7 +41,9 @@ import traceback
 # Add the top level directories
 sys.path.insert(0, f'/opt/seagate/cortx/sspl/low-level')
 
-from cortx.utils.conf_store import Conf
+from framework.utils.conf_utils import Conf, GLOBAL_CONF, SSPL_CONF, CLUSTER, SRVNODE, OPERATING_SYSTEM, PRODUCT, \
+    SETUP, MONITOR, THREADED, RSYSLOG, HOST, PORT
+
 from framework.utils.config_reader import ConfigReader
 from framework.utils.service_logging import init_logging
 from framework.utils.service_logging import logger
@@ -276,14 +278,14 @@ def main(conf_reader, systemd_support):
     sspl_threaded_modules = {}
 
     # Read in operating system value from configuration file
-    operating_system = Conf.get("index1", f"cluster>{Conf.get('index1', 'cluster>minion_id')}>{OPER_SYSTEM}",'001')
+    operating_system = Conf.get(SSPL_CONF, f"{SYS_INFORMATION}>{OPERATING_SYSTEM}",'001')
     logger.info("sspl-ll Bootstrap: configuring for OS: %s" % operating_system)
 
     # Read in product value from configuration file
-    product = Conf.get("index1", f"cluster>{PRODUCT_NAME}")
+    product = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{PRODUCT}")
     # Read in setup value from configuration file
     try:
-        setup = Conf.get("index1", f"cluster>{SETUP}")
+        setup = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SETUP}")
     except Exception:
         setup = 'hw'
 
@@ -298,7 +300,7 @@ def main(conf_reader, systemd_support):
 
     conf_reader = ConfigReader()
     for group in SSPL_SETTINGS.keys():
-        monitor = Conf.get("index1", f"{group}>monitor", 'true')
+        monitor = Conf.get(SSPL_CONF, f"{group}>{MONITOR}", 'true')
         if monitor != 'true':
             sspl_settings_configured_groups -= {group}
 
@@ -532,7 +534,7 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist, operating_system
         # Look at module's configuration section and determine if it's threaded
         threaded = 'True'
         try:
-            threaded = Conf.get("index1", f"{klass.name().upper()}>threaded")
+            threaded = Conf.get(SSPL_CONF, f"{klass.name().upper()}>{THREADED}")
             if threaded == '':
                 threaded = 'False'
         except Exception as e:
@@ -759,7 +761,6 @@ if __name__ == "__main__":
     # Validate configuration file for required valid values
     try:
         conf_reader = ConfigReader()
-        Conf.load("index1", "yaml:///etc/cortx/sspl.conf")
     except (IOError, ConfigReader.Error) as err:
         # We don't have logger yet, need to find log_level from conf file first
         print("[ Error ] when validating the configuration : ")
@@ -773,9 +774,9 @@ if __name__ == "__main__":
 
     # Initialize logging
     try:
-        logging_level = Conf.get("index1", f"{SYS_INFORMATION}>{LOG_LEVEL}", "INFO")
-        syslog_host = Conf.get("index1", "rsyslog>host", DEFAULT_SYSLOG_HOST)
-        syslog_port = int(Conf.get("index1", "rsyslog>port", DEFAULT_SYSLOG_PORT))
+        logging_level = Conf.get(SSPL_CONF, f"{SYS_INFORMATION}>{LOG_LEVEL}", "INFO")
+        syslog_host = Conf.get(GLOBAL_CONF, f"{RSYSLOG}>{HOST}", DEFAULT_SYSLOG_HOST)
+        syslog_port = int(Conf.get(GLOBAL_CONF, f"{RSYSLOG}>{PORT}", DEFAULT_SYSLOG_PORT))
         init_logging("SSPL-LL", logging_level, syslog_host, syslog_port)
 
     except Exception as err:

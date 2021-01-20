@@ -34,7 +34,7 @@ from framework.utils.sysfs_interface import SysFS
 from framework.utils.store_factory import file_store
 from framework.utils.tool_factory import ToolFactory
 from framework.base.sspl_constants import COMMON_CONFIGS, DATA_PATH
-from cortx.utils.conf_store import Conf
+from framework.utils.conf_utils import *
 
 # Override default store
 store = file_store
@@ -93,14 +93,13 @@ class CPUFaultSensor(SensorThread, InternalMsgQ):
 
         super(CPUFaultSensor, self).initialize_msgQ(msgQlist)
 
-        minion_id = Conf.get('index1', 'cluster>minion_id')
-        self._site_id = Conf.get("index1", f"cluster>{minion_id}>{self.SITE_ID}",'001')
-        self._rack_id = Conf.get("index1", f"cluster>{minion_id}>{self.RACK_ID}",'001')
-        self._node_id = Conf.get("index1", f"cluster>{minion_id}>{self.NODE_ID}",'001')
-        self._cluster_id = Conf.get("index1", f"cluster>{self.CLUSTER_ID_KEY}",'001')
+        self._site_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.SITE_ID}",'001')
+        self._rack_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.RACK_ID}",'001')
+        self._node_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.NODE_ID}",'001')
+        self._cluster_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{self.CLUSTER_ID}",'001')
 
         # get the cpu fault implementor from configuration
-        cpu_fault_utility = Conf.get("index1", f"{self.name().capitalize()}>{self.PROBE}",
+        cpu_fault_utility = Conf.get(SSPL_CONF, f"{self.name().capitalize()}>{self.PROBE}",
                                     'sysfs')
 
         # Creating the instance of ToolFactory class

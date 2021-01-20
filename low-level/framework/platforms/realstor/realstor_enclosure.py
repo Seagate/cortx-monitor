@@ -30,7 +30,7 @@ from framework.utils.webservices import WebServices
 from framework.utils.store_factory import store
 from framework.utils import encryptor
 from framework.base.sspl_constants import ServiceTypes, COMMON_CONFIGS
-from cortx.utils.conf_store import Conf
+from framework.utils.conf_utils import *
 
 class RealStorEnclosure(StorageEnclosure):
     """RealStor Enclosure Monitor functions using CLI API Webservice Interface"""
@@ -119,29 +119,27 @@ class RealStorEnclosure(StorageEnclosure):
         self.faults_persistent_cache = self.system_persistent_cache + "faults.json"
 
         # Read in mc value from configuration file
-        minion_id = Conf.get('index1', 'cluster>minion_id')
-        enclosure_id = Conf.get("index1", f"cluster>{minion_id}>storage>enclosure_id")
-        self.mc1 = Conf.get("index1", f"storage>{enclosure_id}>controller>primary>ip", self.DEFAULT_MC_IP)
-        self.mc1_wsport = Conf.get("index1", f"storage>{enclosure_id}>controller>primary>port", '')
-        self.mc2 = Conf.get("index1", f"storage>{enclosure_id}>secondary>ip", self.DEFAULT_MC_IP)
-        self.mc2_wsport = Conf.get("index1", f"storage>{enclosure_id}>controller>secondary>port", '')
+        self.mc1 = Conf.get(GLOBAL_CONF, f"{STORAGE}>{ENCLOSURE}>{CONTROLLER}>{PRIMARY}>{IP}", self.DEFAULT_MC_IP)
+        self.mc1_wsport = str(Conf.get(GLOBAL_CONF, f"{STORAGE}>{ENCLOSURE}>{CONTROLLER}>{PRIMARY}>{PORT}", ''))
+        self.mc2 = Conf.get(GLOBAL_CONF, f"{STORAGE}>{ENCLOSURE}>{SECONDARY}>{IP}", self.DEFAULT_MC_IP)
+        self.mc2_wsport = str(Conf.get(GLOBAL_CONF, f"{STORAGE}>{ENCLOSURE}>{CONTROLLER}>{SECONDARY}>{PORT}", ''))
 
         self.active_ip = self.mc1
         self.active_wsport = self.mc1_wsport
 
-        self.user = Conf.get("index1", f"storage>{enclosure_id}>user", self.DEFAULT_USER)
-        self.passwd = Conf.get("index1", f"storage>{enclosure_id}>password", self.DEFAULT_PASSWD)
+        self.user = Conf.get(GLOBAL_CONF, f"{STORAGE}>{ENCLOSURE}>{CONTROLLER}>{USER}", self.DEFAULT_USER)
+        self.passwd = Conf.get(GLOBAL_CONF, f"{STORAGE}>{ENCLOSURE}>{CONTROLLER}>{PASSWORD}", self.DEFAULT_PASSWD)
+        logger.error(f"PASSWORD {self.passwd}")
+        self.mc_interface = Conf.get(GLOBAL_CONF, f"{STORAGE}>{ENCLOSURE}>{MGMT_INTERFACE}", "cliapi")
 
-        self.mc_interface = Conf.get("index1", f"storage>{enclosure_id}>mgmt_interface", "cliapi")
-
-        self.pollfreq = int(Conf.get("index1", f"{self.CONF_REALSTORSENSORS}>polling_frequency", 
+        self.pollfreq = int(Conf.get(SSPL_CONF, f"{self.CONF_REALSTORSENSORS}>{POLLING_FREQUENCY}", 
                         self.DEFAULT_POLL))
 
-        self.site_id = Conf.get("index1", f"cluster>{minion_id}>{self.SITE_ID}",'001')
-        self.rack_id = Conf.get("index1", f"cluster>{minion_id}>{self.RACK_ID}",'001')
-        self.node_id = Conf.get("index1", f"cluster>{minion_id}>{self.NODE_ID}",'001')
+        self.site_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.SITE_ID}",'001')
+        self.rack_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.RACK_ID}",'001')
+        self.node_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.NODE_ID}",'001')
         # Need to keep cluster_id string here to generate decryption key
-        self.cluster_id = Conf.get("index1", f"cluster>{self.CLUSTER_ID}",'001')
+        self.cluster_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{self.CLUSTER_ID}",'001')
         # Decrypt MC Password
         decryption_key = encryptor.gen_key(self.cluster_id, ServiceTypes.STORAGE_ENCLOSURE.value)
         self.passwd = encryptor.decrypt(decryption_key, self.passwd.encode('ascii'), "RealStoreEncl")

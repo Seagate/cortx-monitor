@@ -27,7 +27,7 @@ from actuators.impl.actuator import Actuator
 from framework.base.debug import Debug
 from framework.utils.service_logging import logger
 from framework.base.sspl_constants import AlertTypes, SensorTypes, SeverityTypes, COMMON_CONFIGS
-from cortx.utils.conf_store import Conf
+from framework.utils.conf_utils import Conf, CLUSTER, GLOBAL_CONF, SITE_ID, RACK_ID, NODE_ID, SRVNODE
 
 
 class NodeHWactuator(Actuator, Debug):
@@ -52,10 +52,9 @@ class NodeHWactuator(Actuator, Debug):
 
     def __init__(self, executor, conf_reader):
         super(NodeHWactuator, self).__init__()
-        minion_id = Conf.get('index1', 'cluster>minion_id')
-        self._site_id = Conf.get("index1", f"cluster>{minion_id}>{self.SITE_ID}",'001')
-        self._rack_id = Conf.get("index1", f"cluster>{minion_id}>{self.RACK_ID}",'001')
-        self._node_id = Conf.get("index1", f"cluster>{minion_id}>{self.NODE_ID}",'001')
+        self._site_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{SITE_ID}",'001')
+        self._rack_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{RACK_ID}",'001')
+        self._node_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{NODE_ID}",'001')
         self.host_id = socket.getfqdn()
         self.sensor_id_map = None
         self._executor = executor

@@ -38,7 +38,7 @@ from message_handlers.logging_msg_handler import LoggingMsgHandler
 
 from zope.interface import implementer
 from sensors.Iraid import IRAIDsensor
-from cortx.utils.conf_store import Conf
+from framework.utils.conf_utils import *
 
 @implementer(IRAIDsensor)
 class RAIDsensor(SensorThread, InternalMsgQ):
@@ -125,10 +125,10 @@ class RAIDsensor(SensorThread, InternalMsgQ):
         self._prev_drive_dict = {}
 
         minion_id = Conf.get('index1', 'cluster>minion_id')
-        self._site_id = Conf.get("index1", f"cluster>{minion_id}>{self.SITE_ID}",'001')
-        self._rack_id = Conf.get("index1", f"cluster>{minion_id}>{self.RACK_ID}",'001')
-        self._node_id = Conf.get("index1", f"cluster>{minion_id}>{self.NODE_ID}",'001')
-        self._cluster_id = Conf.get("index1", f"cluster>{self.CLUSTER_ID_KEY}",'001')
+        self._site_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.SITE_ID}",'001')
+        self._rack_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.RACK_ID}",'001')
+        self._node_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.NODE_ID}",'001')
+        self._cluster_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{self.CLUSTER_ID}",'001')
         # Allow systemd to process all the drives so we can map device name to serial numbers
         #time.sleep(120)
 
@@ -539,7 +539,7 @@ class RAIDsensor(SensorThread, InternalMsgQ):
 
     def _get_RAID_status_file(self):
         """Retrieves the file containing the RAID status information"""
-        return Conf.get("index1", f"{self.RAIDSENSOR}>{self.RAID_STATUS_FILE}",
+        return Conf.get(SSPL_CONF, f"{self.RAIDSENSOR}>{self.RAID_STATUS_FILE}",
                                                         '/proc/mdstat')
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""

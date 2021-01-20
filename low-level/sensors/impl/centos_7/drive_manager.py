@@ -40,7 +40,7 @@ from message_handlers.disk_msg_handler import DiskMsgHandler
 
 from zope.interface import implementer
 from sensors.IDrive_manager import IDriveManager
-from cortx.utils.conf_store import Conf
+from framework.utils.conf_utils import *
 
 @implementer(IDriveManager)
 class DriveManager(SensorThread, InternalMsgQ):
@@ -246,12 +246,12 @@ class DriveManager(SensorThread, InternalMsgQ):
 
     def _getDrive_Mngr_Dir(self):
         """Retrieves the drivemanager path to monitor on the file system"""
-        return Conf.get("index1", f"{self.DRIVEMANAGER}>{self.DRIVE_MANAGER_DIR}",
+        return Conf.get(SSPL_CONF, f"{self.DRIVEMANAGER}>{self.DRIVE_MANAGER_DIR}",
                                                     '/tmp/dcs/drivemanager')
 
     def _getStart_delay(self):
         """Retrieves the start delay used to allow dcs-collector to startup first"""
-        return Conf.get("index1", f"{self.DRIVEMANAGER}>{self.START_DELAY}",
+        return Conf.get(SSPL_CONF, f"{self.DRIVEMANAGER}>{self.START_DELAY}",
                                                     '20')
 
     def _notify_DiskMsgHandler(self, status_file : str, serial_num_file):

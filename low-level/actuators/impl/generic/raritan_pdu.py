@@ -27,7 +27,7 @@ from actuators.Ipdu import IPDU
 
 from framework.base.debug import Debug
 from framework.utils.service_logging import logger
-from cortx.utils.conf_store import Conf
+from framework.utils.conf_utils import Conf, SSPL_CONF
 
 @implementer(IPDU)
 class RaritanPDU(Debug):
@@ -206,11 +206,11 @@ class RaritanPDU(Debug):
     def _read_config(self):
         """Read in configuration values"""
         try:
-            self._user = Conf.get("index1", f"{self.RARITANPDU}>{self.USER}",'admin')
-            self._pass = Conf.get("index1", f"{self.RARITANPDU}>{self.PASS}",'admin')
-            self._comm_port = Conf.get("index1", f"{self.RARITANPDU}>{self.COMM_PORT}",'/dev/ttyACM0')
-            self._ip_addr = Conf.get("index1", f"{self.RARITANPDU}>{self.IP_ADDR}",'172.16.1.222')
-            self._max_login_attempts = int(Conf.get("index1", f"{self.RARITANPDU}>{self.MAX_LOGIN_TRIES}",5))
+            self._user = Conf.get(SSPL_CONF, f"{self.RARITANPDU}>{self.USER}",'admin')
+            self._pass = Conf.get(SSPL_CONF, f"{self.RARITANPDU}>{self.PASS}",'admin')
+            self._comm_port = Conf.get(SSPL_CONF, f"{self.RARITANPDU}>{self.COMM_PORT}",'/dev/ttyACM0')
+            self._ip_addr = Conf.get(SSPL_CONF, f"{self.RARITANPDU}>{self.IP_ADDR}",'172.16.1.222')
+            self._max_login_attempts = int(Conf.get(SSPL_CONF, f"{self.RARITANPDU}>{self.MAX_LOGIN_TRIES}",5))
 
             logger.info("PDU Config: user: %s, Comm Port: %s, max login attempts: %s, IP: %s" %
                             (self._user, self._comm_port, self._max_login_attempts, self._ip_addr))

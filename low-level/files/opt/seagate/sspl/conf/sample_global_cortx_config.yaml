@@ -14,42 +14,36 @@
 # cortx-questions@seagate.com.
 
 cluster:
-   cluster_id: 'CortxCluster001'
+   product: LDR_R2
+   setup: cortx
+   cluster_id: CC01
    server_nodes:
-      abc25957545942cfa728b74cead1a882: srvnode_1
-   srvnode_1:
-      site_id: 'Site001'
-      rack_id: 'Rack001'
-      node_id: 'Node001'
-      machine_id:
-      storage_set_id: 'storageset_1'
-
+     abc25957545942cfa728b74cead1a882: srvnode1
+   srvnode1:
+      site_id: DC01
+      rack_id: RC01
+      node_id: SN01
+      storage_set_id: ST01
       storage:
          enclosure_id: enclosure_1
-
       bmc:
-         ip:
-         secret:
-         user:
+         ip: 127.0.0.1
+         secret: admin
+         user: admin
 
 storage:
    enclosure_1:
       type:
       controller:
          primary:
-            ip: 10.0.0.2
-            port: 80
+            ip: 127.0.0.1
+            port: 28200
          secondary:
-            ip: 10.0.0.3
-            port: 80
+            ip: 127.0.0.1
+            port: 28200
          user: manage
-         secret:
-         type:
+         password: gAAAAABgB8k2R7NuvqUc0wvwac8kfmEQpVNYUEN2iZTTuqX7lzHTKxEyDvd26MKJPgQrB14sDEfW067PAG1w-vki3zmVvn6zKA==
 
 rsyslog:
    host: localhost
    port: 514
-
-release:
-   setup: cortx
-   product: LR2

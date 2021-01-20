@@ -55,7 +55,7 @@ from dbus import SystemBus, Interface, Array
 from gi.repository import GObject as gobject
 from dbus.mainloop.glib import DBusGMainLoop
 import socket
-from cortx.utils.conf_store import Conf
+from framework.utils.conf_utils import *
 
 store = file_store
 
@@ -181,13 +181,12 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
 
         self._product = product
 
-        minion_id = Conf.get('index1', 'cluster>minion_id')
-        self._site_id = Conf.get("index1", f"cluster>{minion_id}>{self.SITE_ID}",'001')
-        self._rack_id = Conf.get("index1", f"cluster>{minion_id}>{self.RACK_ID}",'001')
-        self._node_id = Conf.get("index1", f"cluster>{minion_id}>{self.NODE_ID}",'001')
-        cluster_id = Conf.get("index1", f"cluster>{self.CLUSTER_ID}",'001')
+        self._site_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{SITE_ID}",'001')
+        self._rack_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{RACK_ID}",'001')
+        self._node_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{NODE_ID}",'001')
+        cluster_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{CLUSTER_ID}",'001')
 
-        self.vol_ras = Conf.get("index1", f"{self.SYSTEM_INFORMATION}>data_path", self.DEFAULT_RAS_VOL)
+        self.vol_ras = Conf.get(SSPL_CONF, f"{self.SYSTEM_INFORMATION}>{DATA_PATH_KEY}", self.DEFAULT_RAS_VOL)
 
         self.server_cache = self.vol_ras + "server/"
         self.disk_cache_path = self.server_cache + "systemd_watchdog/disks/disks.json"
@@ -956,7 +955,7 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
 
     def _get_monitored_services(self):
         """Retrieves the list of services to be monitored"""
-        return Conf.get("index1", f"{self.SYSTEMDWATCHDOG}>{self.MONITORED_SERVICES}")
+        return Conf.get(SSPL_CONF, f"{self.SYSTEMDWATCHDOG}>{self.MONITORED_SERVICES}")
 
     def _interface_added(self, object_path, interfaces_and_properties):
         """Callback for when an interface like drive or SMART job has been added"""
@@ -1279,7 +1278,7 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
 
     def _getSMART_interval(self):
         """Retrieves the frequency to run SMART tests on all the drives"""
-        smart_interval = int(Conf.get("index1", f"{self.SYSTEMDWATCHDOG}>{self.SMART_TEST_INTERVAL}",
+        smart_interval = int(Conf.get(SSPL_CONF, f"{self.SYSTEMDWATCHDOG}>{self.SMART_TEST_INTERVAL}",
                                                          86400))
         # Add a sanity check to avoid constant looping, 15 minute minimum (900 secs)
         if smart_interval < 900:
@@ -1290,7 +1289,7 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
         """Retrieves value of "run_smart_on_start" from configuration file.Returns
            True|False based on that.
         """
-        run_smart_on_start = Conf.get("index1", f"{self.SYSTEMDWATCHDOG}>{self.SMART_ON_START}",
+        run_smart_on_start = Conf.get(SSPL_CONF, f"{self.SYSTEMDWATCHDOG}>{self.SMART_ON_START}",
                                                          "False")
         run_smart_on_start = run_smart_on_start.lower()
         if run_smart_on_start == 'true':
@@ -1303,13 +1302,13 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
     # TODO handle boolean values from conf file
     def _getShort_SMART_enabled(self):
         """Retrieves the flag indicating to run short tests periodically"""
-        smart_interval = int(Conf.get("index1", f"{self.SYSTEMDWATCHDOG}>{self.SMART_SHORT_ENABLED}",
+        smart_interval = int(Conf.get(SSPL_CONF, f"{self.SYSTEMDWATCHDOG}>{self.SMART_SHORT_ENABLED}",
                                                          86400))
         return smart_interval
 
     def _getConveyance_SMART_enabled(self):
         """Retrieves the flag indicating to run conveyance tests when a disk is inserted"""
-        smart_interval = int(Conf.get("index1", f"{self.SYSTEMDWATCHDOG}>{self.SMART_CONVEYANCE_ENABLED}",
+        smart_interval = int(Conf.get(SSPL_CONF, f"{self.SYSTEMDWATCHDOG}>{self.SMART_CONVEYANCE_ENABLED}",
                                                          86400))
         # Add a sanity check to avoid constant looping, 15 minute minimum (900 secs)
         if smart_interval < 900:

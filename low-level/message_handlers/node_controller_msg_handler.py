@@ -37,7 +37,7 @@ from message_handlers.service_msg_handler import ServiceMsgHandler
 
 # Import Actuator states table
 from framework.actuator_state_manager import actuator_state_manager
-from cortx.utils.conf_store import Conf
+from framework.utils.conf_utils import *
 
 
 class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
@@ -102,7 +102,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
         self._NodeHW_actuator       = None
 
         self._import_products(product)
-        self.setup = Conf.get("index1", f"cluster>{self.SETUP}","ssu")
+        self.setup = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{self.SETUP}","ssu")
         self.ipmi_client_name = None
 
     def _import_products(self, product):
@@ -715,7 +715,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     if self._NodeHW_actuator is None:
                         from actuators.impl.generic.node_hw import NodeHWactuator
                         from framework.utils.ipmi_client import IpmiFactory
-                        self.ipmi_client_name = Conf.get("index1", f"{self.NODE_HW_ACTUATOR}>{self.IPMI_IMPLEMENTOR}",
+                        self.ipmi_client_name = Conf.get(SSPL_CONF, f"{self.NODE_HW_ACTUATOR}>{self.IPMI_IMPLEMENTOR}",
                             "ipmitool")
                         ipmi_factory = IpmiFactory()
                         ipmi_client = \
@@ -819,7 +819,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
     def _is_env_vm(self):
         """Retrieves the current setup and returns True|False based on setup value."""
-        setup = Conf.get("index1", f"{self.SYS_INFORMATION}>{self.SETUP}",
+        setup = Conf.get(SSPL_CONF, f"{self.SYS_INFORMATION}>{self.SETUP}",
                                                           "ssu")
         return setup.lower() in ['gw', 'cmu', 'vm']
 

@@ -29,7 +29,7 @@ from framework.base.sspl_constants import enabled_products, COMMON_CONFIGS
 
 from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 from json_msgs.messages.actuators.realstor_actuator_response import RealStorActuatorMsg
-from cortx.utils.conf_store import Conf
+from framework.utils.conf_utils import *
 
 class RealStorActuatorMsgHandler(ScheduledModuleThread, InternalMsgQ):
     """Message Handler for controlling the RealStor actuator"""
@@ -82,7 +82,7 @@ class RealStorActuatorMsgHandler(ScheduledModuleThread, InternalMsgQ):
         self._real_stor_actuator    = None
 
         self._import_products(product)
-        self.setup = Conf.get("index1", f"cluster>{self.SETUP}",
+        self.setup = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{self.SETUP}",
                                                 "ssu")
 
     def _import_products(self, product):

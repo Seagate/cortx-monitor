@@ -38,7 +38,7 @@ from framework.utils.store_factory import store
 from message_handlers.real_stor_encl_msg_handler import RealStorEnclMsgHandler
 
 from sensors.ISideplane_expander import ISideplaneExpandersensor
-from cortx.utils.conf_store import Conf
+from framework.utils.conf_utils import *
 
 
 @implementer(ISideplaneExpandersensor)
@@ -78,7 +78,7 @@ class RealStorSideplaneExpanderSensor(SensorThread, InternalMsgQ):
         self._sideplane_exp_prcache = None
 
         self.pollfreq_sideplane_expander_sensor = \
-            int(Conf.get("index1",f"{self.rssencl.CONF_REALSTORSIDEPLANEEXPANDERSENSOR}>polling_frequency_override",
+            int(Conf.get(SSPL_CONF,f"{self.rssencl.CONF_REALSTORSIDEPLANEEXPANDERSENSOR}>{POLLING_FREQUENCY_OVERRIDE}",
                     0))
 
         if self.pollfreq_sideplane_expander_sensor == 0:

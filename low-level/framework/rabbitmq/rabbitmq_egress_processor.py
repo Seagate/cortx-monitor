@@ -33,7 +33,7 @@ from framework.utils.store_factory import store
 from framework.utils import mon_utils
 from framework.utils.store_queue import StoreQueue
 from framework.base.sspl_constants import ServiceTypes, COMMON_CONFIGS
-from cortx.utils.conf_store import Conf
+from framework.utils.conf_utils import *
 
 import ctypes
 try:
@@ -154,40 +154,40 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
     def _read_config(self):
         """Configure the RabbitMQ exchange with defaults available"""
         try:
-            self._virtual_host  = Conf.get('index1', f"{self.RABBITMQPROCESSOR}>{self.VIRT_HOST}",
+            self._virtual_host  = Conf.get(SSPL_CONF, f"{self.RABBITMQPROCESSOR}>{self.VIRT_HOST}",
                                                             'SSPL')
 
             # Read common RabbitMQ configuration
-            self._primary_rabbitmq_host = Conf.get('index1', f"{self.RABBITMQPROCESSOR}>{self.PRIMARY_RABBITMQ_HOST}",
+            self._primary_rabbitmq_host = Conf.get(SSPL_CONF, f"{self.RABBITMQPROCESSOR}>{self.PRIMARY_RABBITMQ_HOST}",
                                                                  'localhost')
 
             # Read RabbitMQ configuration for sensor messages
-            self._queue_name    = Conf.get('index1', f"{self.RABBITMQPROCESSOR}>{self.QUEUE_NAME}",
+            self._queue_name    = Conf.get(SSPL_CONF, f"{self.RABBITMQPROCESSOR}>{self.QUEUE_NAME}",
                                                                  'sensor-queue')
-            self._exchange_name = Conf.get('index1', f"{self.RABBITMQPROCESSOR}>{self.EXCHANGE_NAME}",
+            self._exchange_name = Conf.get(SSPL_CONF, f"{self.RABBITMQPROCESSOR}>{self.EXCHANGE_NAME}",
                                                                  'sspl-out')
-            self._routing_key   = Conf.get('index1', f"{self.RABBITMQPROCESSOR}>{self.ROUTING_KEY}",
+            self._routing_key   = Conf.get(SSPL_CONF, f"{self.RABBITMQPROCESSOR}>{self.ROUTING_KEY}",
                                                                  'sensor-key')
             # Read RabbitMQ configuration for Ack messages
-            self._ack_queue_name = Conf.get('index1', f"{self.RABBITMQPROCESSOR}>{self.ACK_QUEUE_NAME}",
+            self._ack_queue_name = Conf.get(SSPL_CONF, f"{self.RABBITMQPROCESSOR}>{self.ACK_QUEUE_NAME}",
                                                                  'sensor-queue')
-            self._ack_routing_key = Conf.get('index1', f"{self.RABBITMQPROCESSOR}>{self.ACK_ROUTING_KEY}",
+            self._ack_routing_key = Conf.get(SSPL_CONF, f"{self.RABBITMQPROCESSOR}>{self.ACK_ROUTING_KEY}",
                                                                  'sensor-key')
 
-            self._username = Conf.get('index1', f"{self.RABBITMQPROCESSOR}>{self.USER_NAME}",
+            self._username = Conf.get(SSPL_CONF, f"{self.RABBITMQPROCESSOR}>{self.USER_NAME}",
                                                                  'sspluser')
-            self._password = Conf.get('index1', f"{self.RABBITMQPROCESSOR}>{self.PASSWORD}",'')
-            self._signature_user = Conf.get('index1', f"{self.RABBITMQPROCESSOR}>{self.SIGNATURE_USERNAME}",
+            self._password = Conf.get(SSPL_CONF, f"{self.RABBITMQPROCESSOR}>{self.PASSWORD}",'')
+            self._signature_user = Conf.get(SSPL_CONF, f"{self.RABBITMQPROCESSOR}>{self.SIGNATURE_USERNAME}",
                                                                  'sspl-ll')
-            self._signature_token = Conf.get('index1', f"{self.RABBITMQPROCESSOR}>{self.SIGNATURE_TOKEN}",
+            self._signature_token = Conf.get(SSPL_CONF, f"{self.RABBITMQPROCESSOR}>{self.SIGNATURE_TOKEN}",
                                                                  'FAKETOKEN1234')
-            self._signature_expires = Conf.get('index1', f"{self.RABBITMQPROCESSOR}>{self.SIGNATURE_EXPIRES}",
+            self._signature_expires = Conf.get(SSPL_CONF, f"{self.RABBITMQPROCESSOR}>{self.SIGNATURE_EXPIRES}",
                                                                  "3600")
-            self._iem_route_addr = Conf.get('index1', f"{self.RABBITMQPROCESSOR}>{self.IEM_ROUTE_ADDR}",'')
-            self._iem_route_exchange_name = Conf.get('index1', f"{self.RABBITMQPROCESSOR}>{self.IEM_ROUTE_EXCHANGE_NAME}",
+            self._iem_route_addr = Conf.get(SSPL_CONF, f"{self.RABBITMQPROCESSOR}>{self.IEM_ROUTE_ADDR}",'')
+            self._iem_route_exchange_name = Conf.get(SSPL_CONF, f"{self.RABBITMQPROCESSOR}>{self.IEM_ROUTE_EXCHANGE_NAME}",
                                                                  'sspl-in')
 
-            cluster_id = Conf.get("index1", f"cluster>{self.CLUSTER_ID_KEY}",'001')
+            cluster_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{self.CLUSTER_ID_KEY}",'001')
 
             # Decrypt RabbitMQ Password
             decryption_key = encryptor.gen_key(cluster_id, ServiceTypes.RABBITMQ.value)

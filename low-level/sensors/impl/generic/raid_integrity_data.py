@@ -39,7 +39,8 @@ from message_handlers.node_data_msg_handler import NodeDataMsgHandler
 from zope.interface import implementer
 from sensors.Iraid import IRAIDsensor
 
-from cortx.utils.conf_store import Conf
+from framework.utils.conf_utils import *
+
 
 @implementer(IRAIDsensor)
 class RAIDIntegritySensor(SensorThread, InternalMsgQ):
@@ -96,14 +97,13 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
         self._alert_msg = None
         self._fault_state = None
         self._suspended = False
-        minion_id = Conf.get('index1', 'cluster>minion_id')
-        self._site_id = Conf.get("index1", f"cluster>{minion_id}>{self.SITE_ID}",'001')
-        self._rack_id = Conf.get("index1", f"cluster>{minion_id}>{self.RACK_ID}",'001')
-        self._node_id = Conf.get("index1", f"cluster>{minion_id}>{self.NODE_ID}",'001')
-        self._cluster_id = Conf.get("index1", f"cluster>{self.CLUSTER_ID_KEY}",'001')
-        self._timestamp_file_path = Conf.get("index1", f"{self.RAIDIntegritySensor}>{self.TIMESTAMP_FILE_PATH_KEY}",
+        self._site_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.SITE_ID}",'001')
+        self._rack_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.RACK_ID}",'001')
+        self._node_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.NODE_ID}",'001')
+        self._cluster_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{self.CLUSTER_ID}",'001')
+        self._timestamp_file_path = Conf.get(SSPL_CONF, f"{self.RAIDIntegritySensor}>{self.TIMESTAMP_FILE_PATH_KEY}",
                                         self.DEFAULT_TIMESTAMP_FILE_PATH)
-        self._polling_interval = Conf.get("index1", f"{self.RAIDIntegritySensor}>{self.POLLING_INTERVAL}",
+        self._polling_interval = Conf.get(SSPL_CONF, f"{self.RAIDIntegritySensor}>{self.POLLING_INTERVAL}",
                                     self.DEFAULT_POLLING_INTERVAL)
         return True
 

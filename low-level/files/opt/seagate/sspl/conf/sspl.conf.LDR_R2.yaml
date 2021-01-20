@@ -1,10 +1,23 @@
-SSPL_LL_SETTING:
+# Copyright (c) 2020 Seagate Technology LLC and/or its Affiliates
+#
+# This program is free software: you can redistribute it and/or modify it under the
+# terms of the GNU Affero General Public License as published by the Free Software
+# Foundation, either version 3 of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+# PARTICULAR PURPOSE. See the GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License along
+# with this program. If not, see <https://www.gnu.org/licenses/>. For any questions
+# about this software or licensing, please email opensource@seagate.com or
+# cortx-questions@seagate.com.
 
+SSPL_LL_SETTING:
    core_processors:
       - RabbitMQegressProcessor
       - RabbitMQingressProcessor
       - LoggingProcessor
-
    message_handlers:
       - DiskMsgHandler
       - LoggingMsgHandler
@@ -13,7 +26,6 @@ SSPL_LL_SETTING:
       - NodeControllerMsgHandler
       - RealStorEnclMsgHandler
       - RealStorActuatorMsgHandler
-
    sensors:
       - ServiceWatchdog
       - RAIDsensor
@@ -30,14 +42,12 @@ SSPL_LL_SETTING:
       - SASPortSensor
       - MemFaultSensor
       - CPUFaultSensor
-
    actuators:
       - Service
       - RAIDactuator
       - Smartctl
       - NodeHWactuator
       - RealStorActuator
-
    degraded_state_modules:
       - ServiceWatchdog
       - RAIDsensor
@@ -60,7 +70,7 @@ RABBITMQINGRESSPROCESSOR:
    exchange_name: sspl-in
    routing_key: actuator-req-key
    username: sspluser
-   password: gAAAAABgBrJSxD2j1TI2HpQCY9yqvsp3Zxcaqt6mvD7Kz8uoOsx-PWrYOBBFHuSqYKvR1qIbL7ivOfEiUaly-8mwqtSslhwHGg==
+   password: gAAAAABgB8tRJLZBfI6uCAtt4B8YYjveDvhHnFCbeKYsXuYxSLl3KZE5Tp94Jl2qQq9-X7x7_CinZZSh4cm9rMJ4G3HKz36I-Q==
    primary_rabbitmq_host: localhost
 
 RABBITMQEGRESSPROCESSOR:
@@ -72,7 +82,7 @@ RABBITMQEGRESSPROCESSOR:
    ack_exchange_name: sspl-out
    ack_routing_key: sensor-key
    username: sspluser
-   password: gAAAAABgBrJSxD2j1TI2HpQCY9yqvsp3Zxcaqt6mvD7Kz8uoOsx-PWrYOBBFHuSqYKvR1qIbL7ivOfEiUaly-8mwqtSslhwHGg==
+   password: gAAAAABgB8tRJLZBfI6uCAtt4B8YYjveDvhHnFCbeKYsXuYxSLl3KZE5Tp94Jl2qQq9-X7x7_CinZZSh4cm9rMJ4G3HKz36I-Q==
    message_signature_username: sspl-ll
    message_signature_token: ALOIUD986798df69a8koDISLKJ282983
    message_signature_expires: 3600
@@ -87,7 +97,7 @@ LOGGINGPROCESSOR:
    exchange_name: sspl-in
    routing_key: iem-key
    username: sspluser
-   password: gAAAAABgBrJSxD2j1TI2HpQCY9yqvsp3Zxcaqt6mvD7Kz8uoOsx-PWrYOBBFHuSqYKvR1qIbL7ivOfEiUaly-8mwqtSslhwHGg==
+   password: gAAAAABgB8tRJLZBfI6uCAtt4B8YYjveDvhHnFCbeKYsXuYxSLl3KZE5Tp94Jl2qQq9-X7x7_CinZZSh4cm9rMJ4G3HKz36I-Q==
    primary_rabbitmq_host: localhost
 
 RABBITMQCLUSTER:
@@ -129,12 +139,15 @@ REALSTORSENSORS:
 
 REALSTORPSUSENSOR:
    threaded: true
+   polling_frequency_override: 0
 
 REALSTORFANSENSOR:
    threaded: true
+   polling_frequency_override: 0
 
 REALSTORCONTROLLERSENSOR:
    threaded: true
+   polling_frequency_override: 0
 
 REALSTORDISKSENSOR:
    threaded: true
@@ -142,6 +155,7 @@ REALSTORDISKSENSOR:
 
 REALSTORSIDEPLANEEXPANDERSENSOR:
    threaded: true
+   polling_frequency_override: 0
 
 NODEHWSENSOR:
    monitor: true
@@ -150,9 +164,11 @@ NODEHWSENSOR:
 
 REALSTORLOGICALVOLUMESENSOR:
    threaded: true
+   polling_frequency_override: 0
 
 REALSTORENCLOSURESENSOR:
    threaded: true
+   polling_frequency_override: 0
 
 IEMSENSOR:
    threaded: true
@@ -170,7 +186,7 @@ NODEHWACTUATOR:
    ipmi_client: ipmitool
 
 DATASTORE:
-   store_type: consul
+   store_type: file
    consul_host: 127.0.0.1
    consul_port: 8500
 

@@ -30,7 +30,7 @@ from framework.base.sspl_constants import enabled_products
 from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 
 from json_msgs.messages.actuators.ack_response import AckResponseMsg
-from cortx.utils.conf_store import Conf
+from framework.utils.conf_utils import *
 
 
 class LoggingMsgHandler(ScheduledModuleThread, InternalMsgQ):
@@ -194,9 +194,9 @@ class LoggingMsgHandler(ScheduledModuleThread, InternalMsgQ):
     def _read_config(self):
         """Read in configuration values"""
         try:
-            self._iem_routing_enabled = Conf.get("index1", f"{self.LOGGINGMSGHANDLER}>{self.IEM_ROUTING_ENABLED}",
+            self._iem_routing_enabled = Conf.get(SSPL_CONF, f"{self.LOGGINGMSGHANDLER}>{self.IEM_ROUTING_ENABLED}",
                                                                  'false')
-            self._iem_log_locally     = Conf.get("index1", f"{self.LOGGINGMSGHANDLER}>{self.IEM_LOG_LOCALLY}",
+            self._iem_log_locally     = Conf.get(SSPL_CONF, f"{self.LOGGINGMSGHANDLER}>{self.IEM_LOG_LOCALLY}",
                                                                  'true')
             logger.info(f"IEM routing enabled: {str(self._iem_routing_enabled)}")
             logger.info(f"IEM log locally: {str(self._iem_log_locally)}")

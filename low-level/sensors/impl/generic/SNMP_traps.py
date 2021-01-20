@@ -41,7 +41,7 @@ from pysnmp.proto import api
 
 from zope.interface import implementer
 from sensors.INode_data import INodeData
-from cortx.utils.conf_store import Conf
+from framework.utils.conf_utils import *
 
 @implementer(INodeData)
 class SNMPtraps(SensorThread, InternalMsgQ):
@@ -251,12 +251,12 @@ class SNMPtraps(SensorThread, InternalMsgQ):
 
     def _get_config(self):
         """Retrieves the information in /etc/sspl.conf"""
-        self._enabled_traps = Conf.get("index1", f"{self.SNMPTRAPS}>{self.ENABLED_TRAPS}")
-        self._enabled_MIBS  = Conf.get("index1", f"{self.SNMPTRAPS}>{self.ENABLED_MIBS}")
+        self._enabled_traps = Conf.get(SSPL_CONF, f"{self.SNMPTRAPS}>{self.ENABLED_TRAPS}")
+        self._enabled_MIBS  = Conf.get(SSPL_CONF, f"{self.SNMPTRAPS}>{self.ENABLED_MIBS}")
 
-        self._bind_ip = Conf.get("index1", f"{self.SNMPTRAPS}>{self.BIND_IP}",
+        self._bind_ip = Conf.get(SSPL_CONF, f"{self.SNMPTRAPS}>{self.BIND_IP}",
                                                         'service')
-        self._bind_port = int(Conf.get("index1", f"{self.SNMPTRAPS}>{self.BIND_PORT}",
+        self._bind_port = int(Conf.get(SSPL_CONF, f"{self.SNMPTRAPS}>{self.BIND_PORT}",
                                                         1620))
 
         logger.info("          Listening on %s:%s" % (self._bind_ip, self._bind_port))

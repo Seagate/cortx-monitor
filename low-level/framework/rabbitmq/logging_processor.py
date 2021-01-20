@@ -37,7 +37,7 @@ from framework.utils.autoemail import AutoEmail
 from .rabbitmq_connector import RabbitMQSafeConnection
 from framework.utils import encryptor
 from framework.base.sspl_constants import ServiceTypes, COMMON_CONFIGS
-from cortx.utils.conf_store import Conf
+from framework.utils.conf_utils import *
 
 # Modules that receive messages from this module
 from message_handlers.logging_msg_handler import LoggingMsgHandler
@@ -182,20 +182,20 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
     def _configure_exchange(self, retry=False):
         """Configure the RabbitMQ exchange with defaults available"""
         try:
-            self._virtual_host  = Conf.get("index1", f"{self.LOGGINGPROCESSOR}>{self.VIRT_HOST}",
+            self._virtual_host  = Conf.get(SSPL_CONF, f"{self.LOGGINGPROCESSOR}>{self.VIRT_HOST}",
                                                                  'SSPL')
-            self._exchange_name = Conf.get("index1", f"{self.LOGGINGPROCESSOR}>{self.EXCHANGE_NAME}",
+            self._exchange_name = Conf.get(SSPL_CONF, f"{self.LOGGINGPROCESSOR}>{self.EXCHANGE_NAME}",
                                                                  'sspl-in')
-            self._queue_name    = Conf.get("index1", f"{self.LOGGINGPROCESSOR}>{self.QUEUE_NAME}",
+            self._queue_name    = Conf.get(SSPL_CONF, f"{self.LOGGINGPROCESSOR}>{self.QUEUE_NAME}",
                                                                  'iem-queue')
-            self._routing_key   = Conf.get("index1", f"{self.LOGGINGPROCESSOR}>{self.ROUTING_KEY}",
+            self._routing_key   = Conf.get(SSPL_CONF, f"{self.LOGGINGPROCESSOR}>{self.ROUTING_KEY}",
                                                                  'iem-key')
-            self._username      = Conf.get("index1", f"{self.LOGGINGPROCESSOR}>{self.USER_NAME}",
+            self._username      = Conf.get(SSPL_CONF, f"{self.LOGGINGPROCESSOR}>{self.USER_NAME}",
                                                                  'sspluser')
-            self._password      = Conf.get("index1", f"{self.LOGGINGPROCESSOR}>{self.PASSWORD}",
+            self._password      = Conf.get(SSPL_CONF, f"{self.LOGGINGPROCESSOR}>{self.PASSWORD}",
                                                                  'sspl4ever')
 
-            cluster_id = Conf.get("index1", f"cluster>{Conf.get('index1', 'cluster>minion_id')}>{self.CLUSTER_ID_KEY}",'001')
+            cluster_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{self.CLUSTER_ID_KEY}",'001')
 
             # Decrypt RabbitMQ Password
             decryption_key = encryptor.gen_key(cluster_id, ServiceTypes.RABBITMQ.value)

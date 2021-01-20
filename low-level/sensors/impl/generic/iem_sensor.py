@@ -28,7 +28,7 @@ import csv
 import time
 import threading
 
-from cortx.utils.conf_store import Conf
+from framework.utils.conf_utils import *
 from functools import lru_cache
 
 from framework.base.module_thread import SensorThread
@@ -125,17 +125,16 @@ class IEMSensor(SensorThread, InternalMsgQ):
 
         # Read configurations
 
-        self._log_file_path = Conf.get("index1", f"{self.SENSOR_NAME.upper()}>{self.LOG_FILE_PATH_KEY}",
+        self._log_file_path = Conf.get(SSPL_CONF, f"{self.SENSOR_NAME.upper()}>{self.LOG_FILE_PATH_KEY}",
                 self.DEFAULT_LOG_FILE_PATH)
 
-        self._timestamp_file_path = Conf.get("index1", f"{self.SENSOR_NAME.upper()}>{self.TIMESTAMP_FILE_PATH_KEY}",
+        self._timestamp_file_path = Conf.get(SSPL_CONF, f"{self.SENSOR_NAME.upper()}>{self.TIMESTAMP_FILE_PATH_KEY}",
                 self.DEFAULT_TIMESTAMP_FILE_PATH)
 
-        minion_id = Conf.get('index1', 'cluster>minion_id')
-        self._site_id = Conf.get("index1", f"cluster>{minion_id}>{self.SITE_ID_KEY}",'001')
-        self._rack_id = Conf.get("index1", f"cluster>{minion_id}>{self.RACK_ID_KEY}",'001')
-        self._node_id = Conf.get("index1", f"cluster>{minion_id}>{self.NODE_ID_KEY}",'001')
-        self._cluster_id = Conf.get("index1", f"cluster>{self.CLUSTER_ID_KEY}",'001')
+        self._site_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{SITE_ID}",'001')
+        self._rack_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{RACK_ID}",'001')
+        self._node_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{NODE_ID}",'001')
+        self._cluster_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{CLUSTER_ID}",'001')
 
         return True
 

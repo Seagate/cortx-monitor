@@ -25,7 +25,7 @@ from actuators.Iipmi import Iipmi
 
 from framework.base.debug import Debug
 from framework.utils.service_logging import logger
-from cortx.utils.conf_store import Conf
+from framework.utils.conf_utils import Conf, SSPL_CONF, IPMI, USER, PASSWORD
 
 @implementer(Iipmi)
 class IPMI(Debug):
@@ -106,8 +106,8 @@ class IPMI(Debug):
     def _read_config(self):
         """Read in configuration values"""
         try:
-            self._user = Conf.get("index1", f"{self.IPMI}>{self.USER}",'admin')
-            self._pass = Conf.get("index1", f"{self.IPMI}>{self.PASS}",'admin')
+            self._user = Conf.get(SSPL_CONF, f"{IPMI}>{USER}",'admin')
+            self._pass = Conf.get(SSPL_CONF, f"{IPMI}>{PASSWORD}",'admin')
             logger.info("IPMI Config: user: %s" % self._user)
         except Exception as e:
             logger.exception(e)

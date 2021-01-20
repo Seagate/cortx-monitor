@@ -39,7 +39,7 @@ from framework.utils.store_factory import store
 from message_handlers.real_stor_encl_msg_handler import RealStorEnclMsgHandler
 
 from sensors.Ipsu import IPSUsensor
-from cortx.utils.conf_store import Conf
+from framework.utils.conf_utils import *
 
 @implementer(IPSUsensor)
 class RealStorPSUSensor(SensorThread, InternalMsgQ):
@@ -87,7 +87,7 @@ class RealStorPSUSensor(SensorThread, InternalMsgQ):
         self._previously_faulty_psus = {}
 
         self.pollfreq_psusensor = \
-            int(Conf.get("index1", f"{self.rssencl.CONF_REALSTORPSUSENSOR}>polling_frequency_override",
+            int(Conf.get(SSPL_CONF, f"{self.rssencl.CONF_REALSTORPSUSENSOR}>{POLLING_FREQUENCY_OVERRIDE}",
                         0))
 
         if self.pollfreq_psusensor == 0:
