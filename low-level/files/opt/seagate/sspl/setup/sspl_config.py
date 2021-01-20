@@ -29,9 +29,10 @@ import subprocess
 import shutil
 import psutil
 import json
-sys.path.insert(0, '/opt/seagate/cortx/sspl/low-level/')
 
-import rpm
+sys.path.insert(0, '/opt/seagate/cortx/sspl/low-level/')
+# sys.path.insert(0, '/opt/sumedh/cortx-sspl/low-level/')
+
 import dbus
 
 from framework.base import sspl_constants as consts
@@ -56,12 +57,10 @@ class Config:
     def __init__(self, args : list):
         self.args = args
         self._script_dir = os.path.dirname(os.path.abspath(__file__))
-        # to get rpm info
-        self.ts = rpm.TransactionSet()
         # to interact with systemd
-        self.sysbus = dbus.SystemBus()
-        self.systemd1 = self.sysbus.get_object('org.freedesktop.systemd1', '/org/freedesktop/systemd1')
-        self.manager = dbus.Interface(self.systemd1, 'org.freedesktop.systemd1.Manager')
+        self.bus = dbus.SystemBus()
+        self.systemd = self.bus.get_object('org.freedesktop.systemd1', '/org/freedesktop/systemd1')
+        self.manager = dbus.Interface(self.systemd, 'org.freedesktop.systemd1.Manager')
 
     def usage(self): 
         sys.stderr.write(
@@ -78,7 +77,11 @@ class Config:
         with open(consts.file_store_config_path, mode='rt') as confile:
             for line in confile:
                 if line.startswith(varname):
-                    return line.split('=')[1]
+                    rets = line.split('=')[1]
+                    if(rets.endswith('\n')):
+                        rets = rets.replace('\n', '')
+                    print('product : ', rets)
+                    return rets
         return None
 
     def append_val(self, filename:str, new_str:str , key):
@@ -122,7 +125,7 @@ class Config:
                 self.usage()
             i+=1
 
-        if(os.geteuid != 0):
+        if(os.geteuid() != 0):
             sys.stderr.write("Run this command with root privileges!!")
             sys.exit(1)
         
@@ -140,10 +143,10 @@ class Config:
         if os.path.isfile(self.SSPL_CONFIGURED):
             ans = 'y' if force == 1 else None
 
-            while ans!='y' or ans!='n':
+            while ans!='y' and ans!='n':
                 ans = input("SSPL is already initialized. Reinitialize SSPL? [y/n]: ")
             
-            if(ans!='y'):
+            if(ans == 'n'):
                 sys.exit(1)
 
             try:
@@ -182,7 +185,7 @@ class Config:
             sys.exit(1)
 
         print("SSPL configured successfully.")
-        os.makedirs(self.SSPL_CONFIGURED_DIR)
+        os.makedirs(self.SSPL_CONFIGURED_DIR, exist_ok=True)
         with open(self.SSPL_CONFIGURED, 'a'):
             os.utime(self.SSPL_CONFIGURED)
 
@@ -216,7 +219,10 @@ class Config:
         # "/var/log/messages"
 
         # subprocess.call(['systemctl', 'restart rsyslog'], shell=False)
-        job = self.manager.RestartUnit('rsyslog')
+        try :
+            self.manager.RestartUnit('rsyslog.service', 'replace')
+        except OSError as error:
+            sys.exit("Error: Failed to restart rsyslog.service with an error : \n", error)
 
         # For node replacement scenario consul will not be running on the new node. But,
         # there will be two instance of consul running on healthy node. When new node is configured
@@ -253,9 +259,11 @@ class Config:
             pout = " ".join(running_nodes)
         elif self.rabbitmq_version == '3.3.5':
             out = SSPLSetup._send_command("rabbitmqctl cluster_status | grep running_nodes | cut -d '[' -f2 | cut -d ']' -f1 | sed 's/rabbit@//g' | sed 's/,/, /g'")
-            pout = SSPLSetup._send_command(f'echo {out} | sed  "s/\'//g" | sed  "s/ //g"')
+            # pout = SSPLSetup._send_command(f'echo {out} | sed  "s/\'//g" | sed  "s/ //g"')
+            out = out.replace("'", '')
+            pout = out.replace(' ', '')
         else:
-            sys.stderr.write("This RabbitMQ version: $rabbitmq_version is not supported")
+            sys.stderr.write(f"This RabbitMQ version: {self.rabbitmq_version} is not supported")
             sys.exit(1)
         return pout
 
@@ -274,10 +282,9 @@ class Config:
             self.usage()
 
         # Get the version. Output can be 3.3.5 or 3.8.9 or in this format
-        mi = self.ts.dbMatch( 'name', 'rabbitmq-server' )
-        for h in mi:
-            self.rabbitmq_version = bytes.decode(h['version'])
-        
+        self.rabbitmq_version = SSPLSetup._send_command("rpm -qi rabbitmq-server | awk -F': ' '/Version/ {print $2}'")
+        self.rabbitmq_version = self.rabbitmq_version[2:7]
+
         # Get the Major release version parsed. (Eg: 3 from 3.8.9)
         self.rabbitmq_major_release = self.rabbitmq_version[0]
 
