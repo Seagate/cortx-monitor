@@ -21,10 +21,15 @@ import sys
 import os
 from enum import Enum
 
+<<<<<<< HEAD
 # using cortx package
 from cortx.sspl.lowlevel.framework.utils.salt_util import SaltInterface
 from cortx.sspl.lowlevel.framework.utils.service_logging import logger
 from cortx.utils.conf_store import Conf
+=======
+from cortx.sspl.bin.salt_util import SaltInterface
+from cortx.sspl.lowlevel.framework.utils.service_logging import logger
+>>>>>>> EOS-16524: sspl_conf.sh to python (import and utility change)
 
 
 PRODUCT_NAME = 'LR2'
