@@ -145,8 +145,8 @@ SSPL_DIR=/opt/seagate/%{product_family}/sspl
 # Creating softlink under site-packages to use sspl module easier way.
 [ -d "${SSPL_DIR}" ] && {
     mkdir -p /usr/lib/python3.6/site-packages/cortx/sspl
-    ln -s /opt/seagate/cortx/sspl/bin /usr/lib/python3.6/site-packages/cortx/sspl/bin
-    ln -s /opt/seagate/cortx/sspl/low-level /usr/lib/python3.6/site-packages/cortx/sspl/lowlevel
+    ln -sf $SSPL_DIR/bin /usr/lib/python3.6/site-packages/cortx/sspl/bin
+    ln -sf $SSPL_DIR/low-level /usr/lib/python3.6/site-packages/cortx/sspl/lowlevel
 }
 
 # In case of upgrade start sspl-ll after upgrade

@@ -81,9 +81,7 @@ class SSPLPostInstall:
 
         # Install packages which are not available in YUM repo, from PIP
         pip_cmd = f"python3 -m pip install -r {SSPL_BASE_DIR}/low-level/requirements.txt"
-        is_error = subprocess.call(pip_cmd.split(" "), shell=False)
-        if is_error:
-            sys.exit(1)
+        Utility._send_command(pip_cmd)
 
         # NOTE: By default the sspl default conf file will not be copied.
         # The provisioner is supposed to copy the appropriate conf file based
