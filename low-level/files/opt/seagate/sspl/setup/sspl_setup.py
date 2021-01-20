@@ -25,7 +25,7 @@ import inspect
 import traceback
 import os
 import syslog
-from cortx.sspl.bin.utility import Utility
+from cortx.sspl.lowlevel.framework.utils.utility import Utility
 
 class Cmd:
     """Setup Command.

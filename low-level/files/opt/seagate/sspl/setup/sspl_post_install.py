@@ -21,13 +21,10 @@ import shutil
 import distutils.dir_util
 from cortx.sspl.bin.sspl_constants import (REPLACEMENT_NODE_ENV_VAR_FILE, PRODUCT_NAME, SSPL_BASE_DIR,
     file_store_config_path, PRODUCT_BASE_DIR)
-from cortx.sspl.bin.utility import Utility
+from cortx.sspl.lowlevel.framework.utils.utility import Utility
 
 class SSPLPostInstall:
-    """SSPL Post Install.
-    
-    """
-
+    """SSPL Post Install."""
     def __init__(self, args: list):
         self.args = args
         self.name = "sspl_post_install"

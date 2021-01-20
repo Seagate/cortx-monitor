@@ -62,9 +62,9 @@ class Utility(object):
 
     @staticmethod
     def send_command(command: str, fail_on_error=True):
-        # Note: This function uses subprocess to execute commands, scripts which are not possible to execute
-        # through any python routines available. So its usage MUST be limited and used only when no other
-        # alternative found.
+        # This function uses subprocess() module to execute commands, scripts which are not possible
+        # to execute through any python module interfaces available in default site packages.
+        # So its usage MUST be limited and used only when no other alternative found.
         output, error, returncode = SimpleProcess(command).run()
         if returncode != 0:
             print("command '%s' failed with error\n%s" % (command, error))
@@ -76,6 +76,7 @@ class Utility(object):
 
     @staticmethod
     def call_script(script_dir: str, args: list):
+        # This function gives script execution o/p on screen, which is not fulfilled by any cortx utils function
         script_args_lst = [script_dir]+args
         is_error = subprocess.call(script_args_lst, shell=False)
         if is_error:
