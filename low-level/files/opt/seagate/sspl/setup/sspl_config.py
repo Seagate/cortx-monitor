@@ -37,7 +37,7 @@ import dbus
 
 from cortx.sspl.bin import sspl_constants as consts
 from cortx.sspl.bin.salt_util import SaltInterface
-from cortx.sspl.bin.utility import Utility
+from cortx.sspl.lowlevel.framework.utils.utility import Utility
 from cortx.sspl.bin.conf_based_sensors_enable import update_sensor_info
 
 class Config:
@@ -138,7 +138,7 @@ class Config:
 
         if os.path.isfile(self.SSPL_CONFIGURED):
             ans = 'y' if force == 1 else None
-            
+
             while ans!='y' and ans!='n':
                 ans = input("SSPL is already initialized. Reinitialize SSPL? [y/n]: ")
             

@@ -38,8 +38,12 @@ from cortx.sspl.bin.error import SetupError
 =======
 import subprocess
 
+<<<<<<< HEAD
 from cortx.utils.process import SimpleProcess
 >>>>>>> EOS-16524: sspl_conf.sh to python (import paths changed and simpleProcess implemented)
+=======
+from cortx.sspl.lowlevel.framework.utils.utility import Utility
+>>>>>>> EOS-16524: sspl_conf.sh to python (changed path to utility.py)
 
 class Cmd:
     """Setup Command."""
@@ -93,6 +97,7 @@ class Cmd:
         parsers.set_defaults(command=cls)
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
     @staticmethod
     def _send_command(command , fail_on_error=True):
@@ -115,6 +120,8 @@ class Cmd:
         script_args_lst = [script_dir]+args
         subprocess.call(script_args_lst, shell=False)
 
+=======
+>>>>>>> EOS-16524: sspl_conf.sh to python (changed path to utility.py)
 
 class SetupCmd(Cmd):
     """SSPL Setup Cmd.
@@ -132,7 +139,7 @@ class SetupCmd(Cmd):
         pass
 
     def process(self):
-        Cmd._call_script(f"{self._script_dir}/{self.script}", self._args)
+        Utility.call_script(f"{self._script_dir}/{self.script}", self._args)
 
 >>>>>>> EOS-16524: sspl_conf.sh to python (import of conf_vased_sensors_enable and few changes)
 
@@ -160,10 +167,14 @@ class JoinClusterCmd(Cmd):
 
     def process(self):
 <<<<<<< HEAD
+<<<<<<< HEAD
         from cortx.sspl.bin.setup_rabbitmq_cluster import RMQClusterConfiguration
         RMQClusterConfiguration(self.args[1]).process()
 =======
         Cmd._call_script(f"{self._script_dir}/{self.script}", self._args)
+=======
+        Utility.call_script(f"{self._script_dir}/{self.script}", self._args)
+>>>>>>> EOS-16524: sspl_conf.sh to python (changed path to utility.py)
         from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.sspl_config import Config
         Config(self.args).process()
 >>>>>>> EOS-16524: sspl_conf.sh to python (changed imports in sspl_setup)
@@ -267,11 +278,15 @@ class SupportBundleCmd(Cmd):
         pass
 
     def process(self):
+<<<<<<< HEAD
         args = ' '.join(self._args)
         sspl_bundle_generate = "%s/%s %s" % (self._script_dir, self.script, args)
         output, error, returncode = SimpleProcess(sspl_bundle_generate).run()
         if returncode != 0:
             raise SetupError(returncode, "%s - validation failure. %s", self.name, error)
+=======
+        Utility.call_script(f"{self._script_dir}/{self.script}", self._args)
+>>>>>>> EOS-16524: sspl_conf.sh to python (changed path to utility.py)
 
 
 class ManifestSupportBundleCmd(Cmd):
@@ -289,11 +304,15 @@ class ManifestSupportBundleCmd(Cmd):
         pass
 
     def process(self):
+<<<<<<< HEAD
         args = ' '.join(self._args)
         manifest_support_bundle = "%s/%s %s" % (self._script_dir, self.script, args)
         output, error, returncode = SimpleProcess(manifest_support_bundle).run()
         if returncode != 0:
             raise SetupError(returncode, "%s - validation failure. %s", self.name, error)
+=======
+        Utility.call_script(f"{self._script_dir}/{self.script}", self._args)
+>>>>>>> EOS-16524: sspl_conf.sh to python (changed path to utility.py)
 
 
 class ResetCmd(Cmd):
