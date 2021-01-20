@@ -32,7 +32,7 @@ URL:        https://github.com/Seagate/cortx-sspl
 Source0:    %{name}-%{version}.tgz
 BuildRoot:  %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 BuildRequires: python36 rpm-build sudo
-Requires:   rabbitmq-server udisks2 hdparm python36 ipmitool smartmontools lshw python36-rpm
+Requires:   rabbitmq-server udisks2 hdparm python36 ipmitool smartmontools lshw
 Requires:   %{product_family}-libsspl_sec = %{version}-%{release}
 Requires:   %{product_family}-libsspl_sec-method_none = %{version}-%{release}
 
@@ -140,6 +140,13 @@ SSPL_DIR=/opt/seagate/%{product_family}/sspl
 # Copy init script
 [ -f $SSPL_DIR/sspl_init ] ||
     ln -s $SSPL_DIR/bin/sspl_provisioner_init $SSPL_DIR/sspl_init
+
+# Creating softlink uinder site-packages to use sspl module easier way.
+[ -d "${SSPL_DIR}" ] && {
+    mkdir -p /usr/lib/python3.6/site-packages/cortx/sspl
+    ln -s /opt/seagate/cortx/sspl/bin /usr/lib/python3.6/site-packages/cortx/sspl/bin
+    ln -s /opt/seagate/cortx/sspl/low-level /usr/lib/python3.6/site-packages/cortx/sspl/lowlevel
+}
 
 # In case of upgrade start sspl-ll after upgrade
 if [ "$1" == "2" ]; then
