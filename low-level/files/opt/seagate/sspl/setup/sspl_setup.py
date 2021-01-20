@@ -214,9 +214,8 @@ class ConfigCmd(Cmd):
         pass
 
     def process(self):
-        from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup import sspl_config
-        sspl_config.Config(self.args).process()
-
+        from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.sspl_config import Config
+        Config(self.args).process()
 
 
 class TestCmd(Cmd):
@@ -314,11 +313,7 @@ class CheckCmd(Cmd):
     def __init__(self, args):
         super().__init__(args)
 
-<<<<<<< HEAD
         from cortx.sspl.bin.sspl_constants import PRODUCT_FAMILY
-=======
-        from cortx.sspl.lowlevel.framework.base.sspl_constants import PRODUCT_FAMILY
->>>>>>> EOS-16524: sspl_conf.sh to python (import paths changed and simpleProcess implemented)
 
         self.SSPL_CONFIGURED=f"/var/{PRODUCT_FAMILY}/sspl/sspl-configured"
 
