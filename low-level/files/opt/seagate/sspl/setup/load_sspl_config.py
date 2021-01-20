@@ -41,7 +41,7 @@ class LoadConfig:
     def __init__(self, config_file):
         """ Initialize required config """
         self.config_file = config_file
-        self.test_config_file = "/opt/seagate/cortx/sspl/sspl_test/conf/sspl_tests.yml"
+        self.test_config_file = "/opt/seagate/cortx/sspl/sspl_test/conf/sspl_tests.yaml"
         self.rmq_same_pass_sect = ["LOGGINGPROCESSOR",
                                    "RABBITMQEGRESSPROCESSOR",
                                    "RABBITMQINGRESSPROCESSOR"]

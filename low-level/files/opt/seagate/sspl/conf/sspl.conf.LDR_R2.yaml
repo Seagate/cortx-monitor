@@ -77,7 +77,7 @@ RABBITMQINGRESSPROCESSOR:
    exchange_name: sspl-in
    routing_key: actuator-req-key
    username: sspluser
-   password: gAAAAABf_F2Xh3y0x2rPTRGL0ld4f_u1AwI5pRHOOEk49-lSNsq339Mn8m9bSBsGH-U8bCaPnTJPW-LR4yQHc_CpSbhU3AL5wQ==
+   password:
    primary_rabbitmq_host: localhost
 
 RABBITMQEGRESSPROCESSOR:
@@ -89,7 +89,7 @@ RABBITMQEGRESSPROCESSOR:
    ack_exchange_name: sspl-out
    ack_routing_key: sensor-key
    username: sspluser
-   password: gAAAAABf_F2Xh3y0x2rPTRGL0ld4f_u1AwI5pRHOOEk49-lSNsq339Mn8m9bSBsGH-U8bCaPnTJPW-LR4yQHc_CpSbhU3AL5wQ==
+   password: 
    message_signature_username: sspl-ll
    message_signature_token: ALOIUD986798df69a8koDISLKJ282983
    message_signature_expires: 3600
@@ -104,7 +104,7 @@ LOGGINGPROCESSOR:
    exchange_name: sspl-in
    routing_key: iem-key
    username: sspluser
-   password: gAAAAABf_F2Xh3y0x2rPTRGL0ld4f_u1AwI5pRHOOEk49-lSNsq339Mn8m9bSBsGH-U8bCaPnTJPW-LR4yQHc_CpSbhU3AL5wQ==
+   password:
    primary_rabbitmq_host: localhost
 
 RABBITMQCLUSTER:
@@ -143,15 +143,19 @@ BMC_INTERFACE:
 REALSTORSENSORS:
    monitor: true
    polling_frequency: 30
+   polling_frequency_override: 0
 
 REALSTORPSUSENSOR:
    threaded: true
+   polling_frequency_override: 0
 
 REALSTORFANSENSOR:
    threaded: true
+   polling_frequency_override: 0
 
 REALSTORCONTROLLERSENSOR:
    threaded: true
+   polling_frequency_override: 0
 
 REALSTORDISKSENSOR:
    threaded: true
@@ -159,6 +163,7 @@ REALSTORDISKSENSOR:
 
 REALSTORSIDEPLANEEXPANDERSENSOR:
    threaded: true
+   polling_frequency_override: 0
 
 NODEHWSENSOR:
    monitor: true
@@ -167,9 +172,11 @@ NODEHWSENSOR:
 
 REALSTORLOGICALVOLUMESENSOR:
    threaded: true
+   polling_frequency_override: 0
 
 REALSTORENCLOSURESENSOR:
    threaded: true
+   polling_frequency_override: 0
 
 IEMSENSOR:
    threaded: true
@@ -187,7 +194,7 @@ NODEHWACTUATOR:
    ipmi_client: ipmitool
 
 DATASTORE:
-   store_type: consul
+   store_type: file
    consul_host: 127.0.0.1
    consul_port: 8500
 
@@ -211,10 +218,7 @@ STORAGE_ENCLOSURE:
 
 SYSTEM_INFORMATION:
     cli_type: CS-A
-    product: LDR_R2
-    setup: cortx
     data_path: /var/cortx/sspl/data/
     sspl_log_file_path: /var/log/cortx/sspl/sspl.log
-    operating_system: centos7
     log_level: INFO
 

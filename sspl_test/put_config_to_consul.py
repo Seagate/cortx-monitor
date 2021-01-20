@@ -33,19 +33,19 @@ class TestConfig(object):
             # for test configs
             print("reading test conf file and inserting data to consul.")
             test_component='sspl_test/config'
-            path_to_conf_file = "/opt/seagate/cortx/sspl/sspl_test/conf/sspl_tests.yml"
+            path_to_conf_file = "/opt/seagate/cortx/sspl/sspl_test/conf/sspl_tests.yaml"
             if os.path.exists(path_to_conf_file):
                 print("Using conf file : {}".format(path_to_conf_file))
             else:
                 conf_directory = os.path.dirname(os.path.abspath(__file__))
-                path_to_conf_file = os.path.join(conf_directory, "sspl_tests.yml")
+                path_to_conf_file = os.path.join(conf_directory, "sspl_tests.yaml")
                 print("Using conf file : {}".format(path_to_conf_file))
 
             with open(path_to_conf_file, "r") as fd:
                 conf_dict = yaml.safe_load(fd)
                 for key, val in conf_dict.items():
                     for k, v in val.items():
-                        if (type(v)) is list:
+                        if (isinstance(v, list)):
                             v = ','.join(v)
                         consul_conn.kv.put(test_component + '/' + key + '/' + k, v)
 

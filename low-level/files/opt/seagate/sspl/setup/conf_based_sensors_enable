@@ -22,7 +22,7 @@ import os
 # Add the top level directories
 sys.path.insert(0, f'/opt/seagate/cortx/sspl/low-level')
 from framework.base.sspl_constants import (CONSUL_HOST, CONSUL_PORT, PRODUCT_NAME,
-    PRODUCT_FAMILY, file_store_config_path, storage_type, server_type, SSPL_STORE_TYPE)
+    PRODUCT_FAMILY, file_store_config_path, test_file_config_path, storage_type, server_type, SSPL_STORE_TYPE)
 
 
 from cortx.utils.conf_store import Conf
@@ -73,12 +73,11 @@ if SSPL_STORE_TYPE == "consul":
         print("Error in connecting with consul: {}".format(cerror))
 
 # Update sensor information for sspl_test
-test_file_config_path=f"/opt/seagate/{PRODUCT_FAMILY}/sspl/sspl_test/conf/sspl_tests.yml"
 Conf.load('sspl_test', f'yaml://{test_file_config_path}')
 for sect, value in sensors.items():
     try:
-        Conf.set('test',f'{sect}>{key}', value)
-        Conf.save('test')
+        Conf.set('sspl_test',f'{sect}>{key}', value)
+        Conf.save('sspl_test')
     except Exception as err:
         print("Error in updating values in conf_stor: {}".format(err))
 

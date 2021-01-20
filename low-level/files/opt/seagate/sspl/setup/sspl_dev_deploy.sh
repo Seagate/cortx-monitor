@@ -273,8 +273,9 @@ fi
     # below should be removed and setup_yum_repo should be able to give cortx-py-utils.
     pkg_name="cortx-py-utils"
     build_url="http://cortx-storage.colo.seagate.com/releases/cortx/components/github/main/centos-7.8.2003/dev/cortx-utils/last_successful/"
+    yum install -y gcc rpm-build python36 python36-pip python36-devel python36-setuptools openssl-devel libffi-devel
     yum install -y $build_url/$(curl -s $build_url/|grep $pkg_name|sed 's/<\/*[^"]*"//g'|cut -d"\"" -f1) ||:
-    python3 -m pip install toml pyyaml
+    python3 -m pip install toml pyyaml idna==2.8 
 
     echo "INFO: INSTALLING rabbitmq-server..." 2>&1 | tee -a "${LOG_FILE}"
     yum install -y rabbitmq-server 2>&1 | tee -a "${LOG_FILE}"

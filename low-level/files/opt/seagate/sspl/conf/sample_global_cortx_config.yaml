@@ -15,12 +15,15 @@
 
 cluster:
    minion_id: srvnode_1
-   cluster_id: '001'
+   cluster_id: 'CortxCluster001'
+   product: LDR_R2
+   setup: cortx
    server_nodes:
    srvnode_1:
-      site_id: '001'
-      rack_id: '001'
-      node_id: '001'
+      operating_system: centos7
+      site_id: 'Site001'
+      rack_id: 'Rack001'
+      node_id: 'Node001'
       machine_id:
       storage_set_id: 'storageset_1'
 
@@ -29,7 +32,7 @@ cluster:
 
       bmc:
          ip:
-         secret: '****'
+         secret:
          user:
 
 storage:
@@ -43,7 +46,7 @@ storage:
             ip: 10.0.0.3
             port: 80
          user: manage
-         password: '****'
+         password:
          type:
 
 rsyslog:
