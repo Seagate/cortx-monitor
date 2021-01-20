@@ -129,3 +129,19 @@ class Utility(object):
             if(process not in running_pl):
                 print(f"- Required process '{process}' not running, exiting")
                 sys.exit(1)
+
+    @staticmethod
+    def check_for_dep_rpms(rpm_list : list):
+        for dep in rpm_list:
+            name = Utility.send_command(f'rpm -q {dep}', fail_on_error=False)
+            if "b''" in name:
+                print(f"- Required rpm '{dep}' not installed, exiting")
+                sys.exit(1)
+    
+    @staticmethod
+    def check_for_active_processes(process_list : list):
+        running_pl = [procObj.name() for procObj in psutil.process_iter() if procObj.name() in process_list ]
+        for process in process_list:
+            if(process not in running_pl):
+                print(f"- Required process '{process}' not running, exiting")
+                sys.exit(1)
