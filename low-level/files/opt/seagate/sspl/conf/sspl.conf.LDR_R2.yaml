@@ -96,6 +96,8 @@ RABBITMQEGRESSPROCESSOR:
    iem_route_addr: 
    iem_route_exchange_name: sspl-out
    primary_rabbitmq_host: localhost
+   # TODO: Rename limit_consul_memory to limit_persistent_memory_use
+   # and move it to DATASTORE
    limit_consul_memory: 50000000
 
 LOGGINGPROCESSOR:
@@ -114,12 +116,6 @@ RABBITMQCLUSTER:
 LOGGINGMSGHANDLER:
    iem_routing_enabled: false
    iem_log_locally: true
-
-DISKMSGHANDLER:
-   dmreport_file: /tmp/sspl/drivemanager/drive_manager.json
-   always_log_iem: false
-   max_drivemanager_events: 14
-   max_drivemanager_event_interval: 10
 
 NODEDATAMSGHANDLER:
    transmit_interval: 10

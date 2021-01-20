@@ -66,6 +66,7 @@ fi
 #cpu_out=`python3.6 -c "import psutil; print((psutil.cpu_percent(interval=1, percpu=False)-5))"`
 cpu_out=$4
 if [ "$SSPL_STORE_TYPE" == "file" ]
+then
     [[ -f /etc/sspl.conf ]] && sed -i -e "s/\(cpu_usage_threshold: \).*/\1$cpu_out/" /etc/sspl.conf
 elif [ "$SSPL_STORE_TYPE" == "confstor" ]
 then

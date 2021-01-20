@@ -16,15 +16,8 @@
 # Version 1.0.0
 
 SYSTEM_INFORMATION:
-    operating_system: centos7
-    product: LDR_R1
     cli_type: CS_A
-    setup: cortx
     data_path: /var/cortx/sspl/data/
-    cluster_id: '001'
-    site_id: '001'
-    rack_id: '001'
-    node_id: '001'
     log_level: INFO
     sspl_log_file_path: /var/log/cortx/sspl/sspl.log
     syslog_host: localhost
@@ -74,12 +67,6 @@ LOGGINGMSGHANDLER:
     iem_routing_enabled: false
     iem_log_locally: true
 
-DISKMSGHANDLER:
-    dmreport_file: /tmp/sspl/drivemanager/drive_manager.json
-    always_log_iem: false
-    max_drivemanager_events: 14
-    max_drivemanager_event_interval: 10
-
 NODEDATAMSGHANDLER:
    transmit_interval: 10
    units: MB
@@ -89,13 +76,6 @@ NODEDATAMSGHANDLER:
 
 NODEDATA:
    probe: sysfs
-
-RARITANPDU:
-   user: admin
-   pass: admin
-   comm_port: /dev/ttyACM0
-   IP_addr: 172.16.1.222
-   max_login_attempts: 2
 
 RAIDSENSOR:
    monitor: true
@@ -109,20 +89,6 @@ IPMI:
 BMC_INTERFACE:
    default: system
 
-SMTPSETTING:
-   smptserver: mailhost.seagate.com
-   recipient: malhar.vora@seagate.com
-   smtp_port: 25
-   username: 
-   password: 
-
-LOGEMAILER:
-   priority: LOG_ERR
-
-SMRDRIVEDATA:
-   threaded: true
-   logging_interval: 3600
-
 STORAGE_ENCLOSURE:
    primary_controller_ip: 127.0.0.1
    primary_controller_port: 28200
@@ -135,15 +101,19 @@ STORAGE_ENCLOSURE:
 REALSTORSENSORS:
    monitor: true
    polling_frequency: 30
+   polling_frequency_override: 0
 
 REALSTORPSUSENSOR:
    threaded: true
+   polling_frequency_override: 0
 
 REALSTORFANSENSOR:
    threaded: true
+   polling_frequency_override: 0
 
 REALSTORCONTROLLERSENSOR:
    threaded: true
+   polling_frequency_override: 0
 
 REALSTORDISKSENSOR:
    threaded: true
@@ -151,6 +121,7 @@ REALSTORDISKSENSOR:
 
 REALSTORSIDEPLANEEXPANDERSENSOR:
    threaded: true
+   polling_frequency_override: 0
 
 NODEHWSENSOR:
    monitor: true
@@ -159,9 +130,11 @@ NODEHWSENSOR:
 
 REALSTORLOGICALVOLUMESENSOR:
    threaded: true
+   polling_frequency_override: 0
 
 REALSTORENCLOSURESENSOR:
    threaded: true
+   polling_frequency_override: 0
 
 IEMSENSOR:
    threaded: true

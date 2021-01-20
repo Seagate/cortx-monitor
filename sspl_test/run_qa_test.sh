@@ -26,10 +26,6 @@ script_dir=$(dirname $0)
 source $script_dir/constants.sh
 SSPL_STORE_TYPE=${SSPL_STORE_TYPE:-consul}
 
-common_config=yaml:///etc/sample_global_cortx_config.conf
-test_config=yaml:///opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/conf/sspl_tests.yaml
-sspl_config=yaml:///etc/sspl.conf
-
 plan=${1:-}
 avoid_rmq=${2:-}
 
@@ -142,6 +138,7 @@ restore_cfg_services()
     elif [ "$SSPL_STORE_TYPE" == "confstor" ]
     then
         port=`conf $common_config get "storage>$encl_id>controller>primary>port"`
+        port=$(echo $port | tr -d "['" | tr -d "']")
         if [ "$port" == "$MOCK_SERVER_PORT" ]
         then
             conf $common_config set "storage>$encl_id>controller>primary>port=$primary_port"
@@ -214,8 +211,9 @@ if [ "$SSPL_STORE_TYPE" == "confstor" ]
 then
     # Read common key which are needed to fetch confstor config.
     machine_id=`cat /etc/machine-id`
-    minion_id=$(sed -n -e "/"$machine_id"/ s/.*\: *//p" /etc/sample_global_cortx_config.conf)
+    minion_id=$(sed -n -e "/"$machine_id"/ s/.*\: *//p" /etc/sample_global_cortx_config.conf) | echo $minion_id | tr -d '"'
     encl_id=`conf $common_config get "cluster>$minion_id>storage>enclosure_id"`
+    encl_id=$(echo $encl_id | tr -d "['" | tr -d "']")
 fi
 
 flask_installed=$(python3.6 -c 'import pkgutil; print(1 if pkgutil.find_loader("flask") else 0)')
@@ -251,7 +249,9 @@ then
 elif [ "$SSPL_STORE_TYPE" == "confstor" ]
 then
     primary_ip=`conf $common_config get "storage>$encl_id>controller>primary>ip"`
+    primary_ip=$(echo $primary_ip | tr -d "['" | tr -d "']")
     primary_port=`conf $common_config get "storage>$encl_id>controller>primary>port"`
+    primary_port=$(echo $primary_port | tr -d "['" | tr -d "']")
     if [ "$IS_VIRTUAL" == "true" ]
     then
         if [ "$primary_port" != "$MOCK_SERVER_PORT" ]
@@ -312,14 +312,23 @@ then
 elif [ "$SSPL_STORE_TYPE" == "confstor" ]
 then
     transmit_interval=`conf $sspl_config get "NODEDATAMSGHANDLER>transmit_interval"`
+    transmit_interval=$(echo $transmit_interval | tr -d "['" | tr -d "']")
     disk_usage_threshold=`conf $sspl_config get "NODEDATAMSGHANDLER>disk_usage_threshold"`
+    disk_usage_threshold=$(echo $disk_usage_threshold | tr -d "['" | tr -d "']")
     host_memory_usage_threshold=`conf $sspl_config get "NODEDATAMSGHANDLER>host_memory_usage_threshold"`
+    host_memory_usage_threshold=$(echo $host_memory_usage_threshold| tr -d "['" | tr -d "']")
     cpu_usage_threshold=`conf $sspl_config get "NODEDATAMSGHANDLER>cpu_usage_threshold"`
+    cpu_usage_threshold=$(echo $cpu_usage_threshold | tr -d "['" | tr -d "']")
     node_id=`conf $common_config get "cluster>$minion_id>node_id"`
+    node_id=$(echo $node_id | tr -d "['" | tr -d "']")
     site_id=`conf $common_config get "cluster>$minion_id>site_id"`
+    site_id=$(echo $site_id | tr -d "['" | tr -d "']")
     rack_id=`conf $common_config get "cluster>$minion_id>rack_id"`
+    rack_id=$(echo $rack_id | tr -d "['" | tr -d "']")
     cluster_id=`conf $common_config get "cluster>cluster_id"`
+    cluster_id=$(echo $cluster_id | tr -d "['" | tr -d "']")
     primary_controller_ip=`conf $common_config get "storage>$encl_id>controller>primary>ip"`
+    primary_controller_ip=$(echo $primary_controller_ip | tr -d "['" | tr -d "']")
 else
     transmit_interval=$(sed -n -e '/transmit_interval/ s/.*\: *//p' /etc/sspl.conf)
     disk_usage_threshold=$(sed -n -e '/disk_usage_threshold/ s/.*\: *//p' /etc/sspl.conf)
@@ -353,11 +362,12 @@ then
     $CONSUL_PATH/consul kv put sspl_test/config/RABBITMQCLUSTER/cluster_nodes $CLUSTER_NODES
 elif [ "$SSPL_STORE_TYPE" == "confstor" ]
 then
-    conf $test_config set "SYSTEM_INFORMATION>node_id='001'"
-    conf $test_config set "SYSTEM_INFORMATION>site_id='001'"
-    conf $test_config set "SYSTEM_INFORMATION>rack_id='001'"
-    conf $test_config set "SYSTEM_INFORMATION>cluster_id='001'"
+    conf $test_config set "SYSTEM_INFORMATION>node_id=001"
+    conf $test_config set "SYSTEM_INFORMATION>site_id=001"
+    conf $test_config set "SYSTEM_INFORMATION>rack_id=001"
+    conf $test_config set "SYSTEM_INFORMATION>cluster_id=001"
     CLUSTER_NODES=`conf $sspl_config get "RABBITMQCLUSTER>cluster_nodes"`
+    CLUSTER_NODES=$(echo $CLUSTER_NODES | tr -d "['" | tr -d "']")
     conf $test_config set "RABBITMQCLUSTER>cluster_nodes=$CLUSTER_NODES"
 else
     # Update sspl_tests.yaml with updated System Information
