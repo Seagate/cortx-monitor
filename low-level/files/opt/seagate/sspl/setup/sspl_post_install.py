@@ -25,20 +25,19 @@ from cortx.sspl.lowlevel.framework.base.sspl_constants import (REPLACEMENT_NODE_
 from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.sspl_setup import Cmd as SSPLSetup
 
 class SSPLPostInstall:
-    """SSPL Post Install.
-    
-    """
+    """SSPL Post Install."""
 
     def __init__(self, args: list):
         self.args = args
         self._script_dir = os.path.dirname(os.path.abspath(__file__))
+        self.name = "sspl_post_install"
         self.RSYSLOG_CONF="/etc/rsyslog.d/0-iemfwd.conf"
         self.RSYSLOG_SSPL_CONF="/etc/rsyslog.d/1-ssplfwd.conf"
         self.PACEMAKER_INSTALLATION_PATH="/lib/ocf/resource.d/seagate/"
 
     def usage(self):
         sys.stderr.write(
-            "sspl_post_install [[-p <LDR_R1|LDR_R2>] [-e <DEV|PROD>] [-c|--rmq-cluster <true|false>]]\n"
+            f"{self.name} [[-p <LDR_R1|LDR_R2>] [-e <DEV|PROD>] [-c|--rmq-cluster <true|false>]]\n"
             "-p Product to be configured\n"
             "-e Environment\n"
             "-c Need rmq cluster? (true or false)\n"

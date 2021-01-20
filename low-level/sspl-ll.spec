@@ -141,7 +141,7 @@ SSPL_DIR=/opt/seagate/%{product_family}/sspl
 [ -f $SSPL_DIR/sspl_init ] ||
     ln -s $SSPL_DIR/bin/sspl_provisioner_init $SSPL_DIR/sspl_init
 
-# Creating softlink uinder site-packages to use sspl module easier way.
+# Creating softlink under site-packages to use sspl module easier way.
 [ -d "${SSPL_DIR}" ] && {
     mkdir -p /usr/lib/python3.6/site-packages/cortx/sspl
     ln -s /opt/seagate/cortx/sspl/bin /usr/lib/python3.6/site-packages/cortx/sspl/bin
