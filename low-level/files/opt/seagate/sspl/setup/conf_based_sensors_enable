@@ -74,7 +74,7 @@ if SSPL_STORE_TYPE == "consul":
 
 # Update sensor information for sspl_test
 test_file_config_path=f"/opt/seagate/{PRODUCT_FAMILY}/sspl/sspl_test/conf/sspl_tests.yml"
-Conf.load('test', f'yaml://{test_file_config_path}')
+Conf.load('sspl_test', f'yaml://{test_file_config_path}')
 for sect, value in sensors.items():
     try:
         Conf.set('test',f'{sect}>{key}', value)
