@@ -144,8 +144,8 @@ class PostInstallCmd(Cmd):
         pass
 
     def process(self):
-        from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup import sspl_post_install
-        sspl_post_install.SSPLPostInstall(self.args).process()
+        from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.sspl_post_install import SSPLPostInstall
+        SSPLPostInstall(self.args).process()
 
 
 class InitCmd(Cmd):
