@@ -29,6 +29,7 @@ import subprocess
 import shutil
 import psutil
 import json
+import re
 
 # sys.path.insert(0, '/opt/sumedh/cortx-sspl/low-level/')
 
@@ -284,8 +285,8 @@ class Config:
             self.usage()
 
         # Get the version. Output can be 3.3.5 or 3.8.9 or in this format
-        self.rabbitmq_version = SSPLSetup._send_command("rpm -qi rabbitmq-server | awk -F': ' '/Version/ {print $2}")
-        self.rabbitmq_version = self.rabbitmq_version[2:7]
+        self.rabbitmq_version = SSPLSetup._send_command("rpm -qi rabbitmq-server")
+        self.rabbitmq_version = re.search(r'Version     :\s*([\d.]+)', str(self.rabbitmq_version)).group(1)
 
         # Get the Major release version parsed. (Eg: 3 from 3.8.9)
         self.rabbitmq_major_release = self.rabbitmq_version[0]
