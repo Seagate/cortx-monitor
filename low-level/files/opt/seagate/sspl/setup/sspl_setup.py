@@ -86,7 +86,10 @@ class Cmd:
         parsers.add_argument('args', nargs='*', default=[], help='args')
         parsers.set_defaults(command=cls)
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> EOS-16522: sspl_setup_init.sh to python (removed common functions from sspl_setup.py)
 class SetupCmd(Cmd):
     """SSPL Setup Cmd.
     
