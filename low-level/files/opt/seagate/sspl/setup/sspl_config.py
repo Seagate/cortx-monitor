@@ -57,10 +57,6 @@ class Config:
     def __init__(self, args : list):
         self.args = args
         self._script_dir = os.path.dirname(os.path.abspath(__file__))
-        # to interact with systemd
-        self.bus = dbus.SystemBus()
-        self.systemd = self.bus.get_object('org.freedesktop.systemd1', '/org/freedesktop/systemd1')
-        self.manager = dbus.Interface(self.systemd, 'org.freedesktop.systemd1.Manager')
 
     def usage(self): 
         sys.stderr.write(
@@ -142,7 +138,7 @@ class Config:
 
         if os.path.isfile(self.SSPL_CONFIGURED):
             ans = 'y' if force == 1 else None
-
+            
             while ans!='y' and ans!='n':
                 ans = input("SSPL is already initialized. Reinitialize SSPL? [y/n]: ")
             
@@ -220,10 +216,8 @@ class Config:
         # here, there will be a chance that SSPL intial logs will not be present in
         # "/var/log/<product>/sspl/sspl.log" file. So, initial logs needs to be collected from
         # "/var/log/messages"
-
-        # subprocess.call(['systemctl', 'restart rsyslog'], shell=False)
         try :
-            self.manager.RestartUnit('rsyslog.service', 'replace')
+            Utility.systemctl_service_action('rsyslog.service', action='restart')
         except OSError as error:
             sys.exit("Error: Failed to restart rsyslog.service with an error : \n", error)
 
