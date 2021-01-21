@@ -25,7 +25,7 @@ from cortx.sspl.lowlevel.framework.utils.utility import Utility
 
 class SSPLPostInstall:
     def __init__(self, args: list):
-        """SSPLPostInstall Init."""
+        """Ssplpostinstall init."""
         self.args = args
         self.name = "sspl_post_install"
         self._script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -33,18 +33,11 @@ class SSPLPostInstall:
         self.RSYSLOG_SSPL_CONF="/etc/rsyslog.d/1-ssplfwd.conf"
         self.PACEMAKER_INSTALLATION_PATH="/lib/ocf/resource.d/seagate/"
 
-    def usage(self):
-        sys.stderr.write(
-            f"{self.name} [[-p <LDR_R1|LDR_R2>] [-e <DEV|PROD>] [-c|--rmq-cluster <true|false>]]\n"
-            "-p Product to be configured\n"
-            "-e Environment\n"
-            "-c Need rmq cluster? (true or false)\n"
-            )
-        sys.exit(1)
-
     def process(self):
         if not self.args or len({'-p', '-e', '-c'} & set(self.args)) == 0:
-            self.usage()
+            print(f"Invalid Argument for {self.name}")
+            print("Exiting ...")
+            sys.exit(1)
 
         PRODUCT = ""
         ENVIRONMENT = ""
@@ -59,7 +52,9 @@ class SSPLPostInstall:
                 elif self.args[i] == '-c':
                     RMQ_CLUSTER = self.args[i+1]
             except (IndexError, ValueError):
-                self.usage()
+                print(f"Invalid Argument for {self.name}")
+                print("Exiting ...")
+                sys.exit(1)
             i+=1
 
         # sspl_setup_consul script install consul in dev env and checks if consul process is running
