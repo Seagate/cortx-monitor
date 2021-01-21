@@ -80,7 +80,7 @@ CONSUL_PATH = '/usr/bin/'
 # TODO Keep only constants in this file.
 # other values(configs) should come from cofig.
 # Check if SSPL is configured
-if os.path.exists(SSPL_CONFIGURED) or True:
+if os.path.exists(SSPL_CONFIGURED):
     try:
         config = configparser.ConfigParser()
         config.read(file_store_config_path)

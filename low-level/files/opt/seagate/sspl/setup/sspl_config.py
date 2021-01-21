@@ -25,22 +25,31 @@
 
 import os
 import sys
-import subprocess
 import shutil
 import psutil
 import json
 import re
-
-# sys.path.insert(0, '/opt/sumedh/cortx-sspl/low-level/')
-
-import dbus
+import errno
 
 from cortx.sspl.bin import sspl_constants as consts
 from cortx.sspl.bin.salt_util import SaltInterface
-from cortx.sspl.lowlevel.framework.utils.utility import Utility
-from cortx.sspl.bin.conf_based_sensors_enable import update_sensor_info
+from cortx.utils.service import Service
+from cortx.utils.process import SimpleProcess
 
-class Config:
+class SSPLConfigError(Exception):
+    """ Generic Exception with error code and output """
+
+    def __init__(self, rc, message, *args):
+        """SSPLConfigError init."""
+        self._rc = rc
+        self._desc = message % (args)
+
+    def __str__(self):
+        """SSPLConfigError str."""
+        if self._rc == 0: return self._desc
+        return "error(%d): %s" %(self._rc, self._desc)
+
+class SSPLConfig:
     """ Config Interface """
 
     name = "config"
@@ -57,17 +66,6 @@ class Config:
     def __init__(self, args : list):
         self.args = args
         self._script_dir = os.path.dirname(os.path.abspath(__file__))
-
-    def usage(self): 
-        sys.stderr.write(
-            f"{self.name} [config [-f] [-r <ssu|gw|cmu|vm|cortx>] [-n <node1, node2 name>]]\n"
-            "  config options:\n"
-            "\t -f  Force reinitialization. Do not prompt\n"
-            "\t -r  Role to be configured on the current node\n"
-            "\t -n  Nodes which needs to be added into rabbitmq cluster\n"
-            "\t -d  Disable reading of config from the provisioner\n"
-        )
-        sys.exit(1)
 
     def getval_from_ssplconf(self, varname : str) -> str:
         with open(consts.file_store_config_path, mode='rt') as confile:
@@ -105,29 +103,37 @@ class Config:
                 force = 1
             elif self.args[i] == '-r':
                 i+=1
-                if i >= len(self.args) or self.args[i] not in consts.roles:
-                    self.usage()
+                if i >= len(self.args):
+                    raise SSPLConfigError(errno.EINVAL, 
+                                "Role is not provided with -r option") 
+                if self.args[i] not in consts.roles:
+                    raise SSPLConfigError(errno.EINVAL, 
+                                "Provided role '%s' is not supported", 
+                                self.args[i])
                 else:
                     role = self.args[i]
             elif self.args[i] == '-n':
                 i+=1
                 if i >= len(self.args):
-                    self.usage()
+                    raise SSPLConfigError(errno.EINVAL, 
+                                "Node is not provided with -n option") 
                 else:
                     self.rmq_cluster_nodes = self.args[i]
             elif self.args[i] == '-d':
                 read_provisioner_config = False
             else:
-                self.usage()
+                raise SSPLConfigError(errno.EINVAL, "Unknown option '%s'", self.args[i])
             i+=1
 
         if(os.geteuid() != 0):
-            sys.stderr.write("Run this command with root privileges!!")
-            sys.exit(1)
+            raise SSPLConfigError(errno.EINVAL, "Run this command with root privileges!!")
         
         if not os.path.isfile(consts.file_store_config_path):
-            sys.stderr.write(f"Missing configuration!! Create {consts.file_store_config_path} and rerun.")
-            sys.exit(1)
+            raise SSPLConfigError(errno.EINVAL, 
+                                    "Missing configuration!! Create\
+                                    and rerun.",
+                                    consts.file_store_config_path
+                    )
 
         # Put minion id, consul_host and consul_port in conf file
         # Onward LDR_R2, salt will be abstracted out and it won't
@@ -143,51 +149,52 @@ class Config:
                 ans = input("SSPL is already initialized. Reinitialize SSPL? [y/n]: ")
             
             if(ans == 'n'):
-                sys.exit(1)
+                raise SSPLConfigError(errno.EINVAL, 
+                        "SSPL already initialized, reinitialization cancled.")
 
             try:
                 os.remove(self.SSPL_CONFIGURED)
-                print(f'removed {self.SSPL_CONFIGURED}')
-            except OSError as error:
-                sys.stderr.write(error)
-                sys.exit(1)
+            except OSError:
+                raise
 
         # Get Product
         product = self.getval_from_ssplconf('product')
         
         if not product:
-            sys.stderr.write(f"No product specified in {consts.file_store_config_path}")
-            sys.exit(1)
+            raise SSPLConfigError(errno.EINVAL, 
+                                "No product specified in %s",
+                                consts.file_store_config_path
+                    )
         
         if not consts.enabled_products:
-            sys.stderr.write("No enabled products!")
-            sys.exit(1)
+            raise SSPLConfigError(errno.EINVAL, "No enabled products!")
         
         if product not in consts.enabled_products:
-            sys.stderr.write(f"Product '{product}' is not in enabled products list: {consts.enabled_products}")
-            sys.exit(1)
+            raise SSPLConfigError(errno.EINVAL, 
+                            f"Product '{product}' is not in enabled \
+                                products list: {consts.enabled_products}"
+                            )
 
         # Configure role
         if role:
-            print('role :', role)
             self.append_val(consts.file_store_config_path, '^setup=.*', f'setup={role}')
 
         # Add sspl-ll user to required groups and sudoers file etc.
         print("Initializing SSPL configuration ... ")
-        reinit_out = subprocess.run([f"{self.DIR_NAME}/bin/sspl_reinit", product], stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
-        if reinit_out.returncode:
-            sys.stderr.write(
-                    f"{self.DIR_NAME}/bin/sspl_reinit failed"
-                    f"with exit code {reinit_out.returncode} for product {product}"
+        sspl_reinit = [f"{self.DIR_NAME}/bin/sspl_reinit", product]
+        output, error, returncode = SimpleProcess(sspl_reinit).run()
+        if returncode:
+            raise SSPLConfigError(returncode, 
+                    "%s/bin/sspl_reinit failed for product %s",
+                      self.DIR_NAME, product
                     )
-            sys.exit(1)
 
         print("SSPL configured successfully.")
 
-        print(f'touching {self.SSPL_CONFIGURED}')
         os.makedirs(self.SSPL_CONFIGURED_DIR, exist_ok=True)
         with open(self.SSPL_CONFIGURED, 'a'):
             os.utime(self.SSPL_CONFIGURED)
+        print(f'touched file : {self.SSPL_CONFIGURED}')
 
         # SSPL Log file configuration
         SSPL_LOG_FILE_PATH = self.getval_from_ssplconf('sspl_log_file_path')
@@ -219,9 +226,9 @@ class Config:
         # "/var/log/<product>/sspl/sspl.log" file. So, initial logs needs to be collected from
         # "/var/log/messages"
         try :
-            Utility.systemctl_service_action('rsyslog.service', action='restart')
-        except OSError as error:
-            sys.exit("Error: Failed to restart rsyslog.service with an error : \n", error)
+            Service('dbus').process("restart", 'rsyslog.service')
+        except Exception:
+            raise
 
         # For node replacement scenario consul will not be running on the new node. But,
         # there will be two instance of consul running on healthy node. When new node is configured
@@ -238,37 +245,44 @@ class Config:
                     if 'consul' in proc.name():
                         CONSUL_PS = proc.pid
                 if not CONSUL_PS:
-                    sys.stderr.write("Consul is not running, exiting..")
-                    sys.exit(1)
+                    raise SSPLConfigError(errno.EINVAL, "Consul is not running, exiting..")
 
         # Get the types of server and storage we are currently running on and
         # enable/disable sensor groups in the conf file accordingly.
         if read_provisioner_config:
+            from cortx.sspl.bin.conf_based_sensors_enable import update_sensor_info
             # subprocess.call(['python3', f'{self._script_dir}/conf_based_sensors_enable'])   
             update_sensor_info()    
             
     def get_rabbitmq_cluster_nodes(self):
         pout = None
         if self.rabbitmq_major_release == '3' and self.rabbitmq_maintenance_release == '8':
-            rabbitmq_cluster_status = Utility.send_command('/usr/sbin/rabbitmqctl cluster_status --formatter json')
-            rabbitmq_cluster_status = json.loads(rabbitmq_cluster_status)
+            rmq_cluster_status_cmd = '/usr/sbin/rabbitmqctl cluster_status --formatter json'
+            output, error, returncode = SimpleProcess(rmq_cluster_status_cmd).run()
+            rabbitmq_cluster_status = json.loads(output)
+            if returncode:
+                raise SSPLConfigError(returncode, error)
             running_nodes = rabbitmq_cluster_status['running_nodes']
             for i, node in enumerate(running_nodes):
                 running_nodes[i] = node.replace('rabbit@', '')
             pout = " ".join(running_nodes)
         elif self.rabbitmq_version == '3.3.5':
-            out = Utility.send_command("rabbitmqctl cluster_status | grep running_nodes | cut -d '[' -f2 | cut -d ']' -f1 | sed 's/rabbit@//g' | sed 's/,/, /g'")
-            pout = out.replace("'", '').replace(' ', '')
+            rmq_cluster_status_cmd = "rabbitmqctl cluster_status | grep running_nodes | cut -d '[' -f2 | cut -d ']' -f1 | sed 's/rabbit@//g' | sed 's/,/, /g'"
+            output, error, returncode = SimpleProcess(rmq_cluster_status_cmd).run()
+            pout = output.replace("'", '').replace(' ', '')
         else:
-            sys.stderr.write(f"This RabbitMQ version: {self.rabbitmq_version} is not supported")
-            sys.exit(1)
+            raise SSPLConfigError(errno.EINVAL, "This RabbitMQ version : %s is not supported", self.rabbitmq_version)
+
         return pout
 
     def get_cluster_running_nodes(self, msg_broker : str):
         if(msg_broker == 'rabbitmq'):
             return self.get_rabbitmq_cluster_nodes()
         else:
-            self.usage()       
+            raise SSPLConfigError(errno.EINVAL, 
+                        "Provided message broker '%s' is not supported", 
+                        msg_broker
+                        )       
             
 
     def process(self):
@@ -276,11 +290,14 @@ class Config:
         if(cmd == "config"):
             self.config_sspl()
         else:
-            self.usage()
+            raise SSPLConfigError(errno.EINVAL, "cmd val should be config")
 
         # Get the version. Output can be 3.3.5 or 3.8.9 or in this format
-        self.rabbitmq_version = Utility.send_command("rpm -qi rabbitmq-server")
-        self.rabbitmq_version = re.search(r'Version     :\s*([\d.]+)', str(self.rabbitmq_version)).group(1)
+        rmq_cmd = "rpm -qi rabbitmq-server"
+        output, error, returncode = SimpleProcess(rmq_cmd).run()
+        if returncode:
+            raise SSPLConfigError(returncode, error)
+        self.rabbitmq_version = re.search(r'Version     :\s*([\d.]+)', str(output)).group(1)
 
         # Get the Major release version parsed. (Eg: 3 from 3.8.9)
         self.rabbitmq_major_release = self.rabbitmq_version[0]
@@ -303,9 +320,16 @@ class Config:
 
             # Update cluster_nodes key in consul
             if consts.PRODUCT_NAME == 'LDR_R1':
-                Utility.send_command(f'{consts.CONSUL_PATH}/consul kv put sspl/config/RABBITMQCLUSTER/cluster_nodes {pout}')
+                consul_cmd = f'{consts.CONSUL_PATH}/consul kv put sspl/config/RABBITMQCLUSTER/cluster_nodes {pout}'
+                output, error, returncode = SimpleProcess(consul_cmd).run()
+                if returncode:
+                    raise SSPLConfigError(returncode, error, consul_cmd)
                 if self.rmq_cluster_nodes:
-                    Utility.send_command(f'{consts.CONSUL_PATH}/consul kv put sspl/config/RABBITMQCLUSTER/cluster_nodes {self.rmq_cluster_nodes}')
+                    consul_cmd = f'{consts.CONSUL_PATH}/consul kv put sspl\
+                        /config/RABBITMQCLUSTER/cluster_nodes {self.rmq_cluster_nodes}'
+                    output, error, returncode = SimpleProcess(consul_cmd).run()
+                    if returncode:
+                        raise SSPLConfigError(returncode, error, consul_cmd)
                 else:
                     self.append_val(consts.file_store_config_path, 'cluster_nodes=.*', f'cluster_nodes={pout}')
             
@@ -317,14 +341,20 @@ class Config:
             with open(f'{self.DIR_NAME}/low-level/files/opt/seagate/sspl/conf/build-requested-loglevel', 'r') as f:
                 log_level = f.readline()
             
-            if(log_level == "DEBUG" or log_level == "INFO" or log_level == "WARNING" or log_level == "ERROR" or log_level == "CRITICAL"):
+            if( log_level == "DEBUG" or log_level == "INFO" or \
+                log_level == "WARNING" or log_level == "ERROR" or \
+                log_level == "CRITICAL"                     
+                ):
                 if consts.PRODUCT_NAME == "LDR_R1":
-                    Utility.send_command(f'{consts.CONSUL_PATH}/consul kv put sspl/config/SYSTEM_INFORMATION/log_level {log_level}')
+                    consul_cmd = f'{consts.CONSUL_PATH}/consul kv put sspl/config/SYSTEM_INFORMATION/log_level {log_level}'
+                    output, error, returncode = SimpleProcess(consul_cmd).run()
+                    if returncode:
+                        raise SSPLConfigError(returncode, error, consul_cmd)
                 else:
                     self.append_val(consts.file_store_config_path, 'log_level.*[=,",\']', f'log_level={log_level}')
             else:
                 sys.stderr.write(f"Unexpected log level is requested, '{log_level}'")        
 
 if __name__ == "__main__":
-    conf = Config(sys.argv[1:])
+    conf = SSPLConfig(sys.argv[1:])
     conf.process()
