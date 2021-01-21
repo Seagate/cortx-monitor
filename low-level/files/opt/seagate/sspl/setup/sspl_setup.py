@@ -178,7 +178,11 @@ class InitCmd(Cmd):
 
     def process(self):
         from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.sspl_setup_init import SetupInit
-        SetupInit(self.args).process()
+        try :
+            SetupInit(self.args).process()
+        except Exception as error:
+            print(error)
+            sys.exit(1)
 
 
 class ConfigCmd(Cmd):
