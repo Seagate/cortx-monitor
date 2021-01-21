@@ -24,6 +24,7 @@ import encodings.idna  # noqa
 
 from sspl_test.framework.utils.service_logging import logger
 from sspl_test.framework.utils.config_reader import ConfigReader
+from cortx.utils.conf_store import Conf
 
 RABBITMQCTL = '/usr/sbin/rabbitmqctl'
 
@@ -61,7 +62,8 @@ def get_cluster_connection(username, password, virtual_host):
     """Makes connection with one of the rabbitmq node.
     """
     #hosts = get_cluster_nodes()  # Depreciated (EOS-8860)
-    hosts = config.get_value_list(RABBITMQ_CLUSTER_SECTION, RABBITMQ_CLUSTER_HOSTS_KEY)
+    hosts = Conf.get("SSPL-Test", f"{RABBITMQ_CLUSTER_SECTION}>{RABBITMQ_CLUSTER_HOSTS_KEY}")
+    
     logger.debug(f'Cluster nodes [SSPL TEST]: {hosts}')
     ampq_hosts = [
         f'amqp://{username}:{password}@{host}/{virtual_host}' for host in hosts

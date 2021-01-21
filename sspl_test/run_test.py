@@ -32,8 +32,10 @@ import argparse
 test_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.sys.path.append(os.path.join(test_path))
 from sspl_test.generate_test_report import generate_html_report
-from sspl_test.framework.utils.config_reader import ConfigReader
 from sspl_test.common import TestFailed, init_rabbitMQ_msg_processors, stop_rabbitMQ_msg_processors
+from cortx.utils.conf_store import Conf
+
+Conf.load("SSPL-Test", "yaml:///home/730724/projects/cortx-monitor/sspl_test/conf/sspl_tests.conf.yaml")
 
 skip_group_prefixes = {
     "REALSTORSENSORS": "alerts.realstor",
@@ -43,11 +45,9 @@ skip_group_prefixes = {
 }
 
 def conf_skipped_prefixes():
-    conf_reader = ConfigReader()
     for group in skip_group_prefixes.keys():
-        monitor = conf_reader._get_value_with_default(
-                group, 'monitor', 'true')
-        if monitor != 'true':
+        monitor = Conf.get("SSPL-Test",f"{group}>monitor", 'true')
+        if monitor not in ['true', True]:
             yield skip_group_prefixes[group]
 
 result = {}

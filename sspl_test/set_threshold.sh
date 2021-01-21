@@ -18,14 +18,18 @@
 SCRIPT_DIR=$(dirname $0)
 source "$SCRIPT_DIR"/constants.sh
 
-SSPL_STORE_TYPE=${SSPL_STORE_TYPE:-consul}
+SSPL_STORE_TYPE=confstor
+sspl_config=$5
 
 #Modify transmit_interval in $CONSUL_PATH/consul config less than current value
 #to generate the alerts.
 transmit_interval=$1
 if [ "$SSPL_STORE_TYPE" == "file" ]
 then
-    [[ -f /etc/sspl.conf ]] && sed -i -e "s/\(transmit_interval=\).*/\1$transmit_interval/" /etc/sspl.conf
+    [[ -f /etc/cortx/sspl.conf ]] && sed -i -e "s/\(transmit_interval: \).*/\1$transmit_interval/" /etc/cortx/sspl.conf
+elif [ "$SSPL_STORE_TYPE" == "confstor" ]
+then
+    conf $sspl_config set "NODEDATAMSGHANDLER>transmit_interval=$transmit_interval"
 else
     $CONSUL_PATH/consul kv put sspl/config/NODEDATAMSGHANDLER/transmit_interval $transmit_interval
 fi
@@ -36,7 +40,10 @@ fi
 out=$2
 if [ "$SSPL_STORE_TYPE" == "file" ]
 then
-    [[ -f /etc/sspl.conf ]] && sed -i -e "s/\(disk_usage_threshold=\).*/\1$out/" /etc/sspl.conf
+    [[ -f /etc/cortx/sspl.conf ]] && sed -i -e "s/\(disk_usage_threshold: \).*/\1$out/" /etc/cortx/sspl.conf
+elif [ "$SSPL_STORE_TYPE" == "confstor" ]
+then
+    conf $sspl_config set "NODEDATAMSGHANDLER>disk_usage_threshold=$out"
 else
     $CONSUL_PATH/consul kv put sspl/config/NODEDATAMSGHANDLER/disk_usage_threshold $out
 fi
@@ -47,7 +54,10 @@ fi
 host_out=$3
 if [ "$SSPL_STORE_TYPE" == "file" ]
 then
-    [[ -f /etc/sspl.conf ]] && sed -i -e "s/\(host_memory_usage_threshold=\).*/\1$host_out/" /etc/sspl.conf
+    [[ -f /etc/cortx/sspl.conf ]] && sed -i -e "s/\(host_memory_usage_threshold: \).*/\1$host_out/" /etc/cortx/sspl.conf
+elif [ "$SSPL_STORE_TYPE" == "confstor" ]
+then
+    conf $sspl_config set "NODEDATAMSGHANDLER>host_memory_usage_threshold=$host_out"
 else
     $CONSUL_PATH/consul kv put sspl/config/NODEDATAMSGHANDLER/host_memory_usage_threshold $host_out
 fi
@@ -58,7 +68,10 @@ fi
 cpu_out=$4
 if [ "$SSPL_STORE_TYPE" == "file" ]
 then
-    [[ -f /etc/sspl.conf ]] && sed -i -e "s/\(cpu_usage_threshold=\).*/\1$cpu_out/" /etc/sspl.conf
+    [[ -f /etc/cortx/sspl.conf ]] && sed -i -e "s/\(cpu_usage_threshold: \).*/\1$cpu_out/" /etc/cortx/sspl.conf
+elif [ "$SSPL_STORE_TYPE" == "confstor" ]
+then
+    conf $sspl_config set "NODEDATAMSGHANDLER>cpu_usage_threshold=$cpu_out"
 else
     $CONSUL_PATH/consul kv put sspl/config/NODEDATAMSGHANDLER/cpu_usage_threshold $cpu_out
 fi
