@@ -25,11 +25,22 @@ import sys
 import os
 import subprocess
 import pwd
+import errno
 
 from cortx.sspl.bin.sspl_constants import file_store_config_path, roles
-from cortx.sspl.lowlevel.framework.utils.utility import Utility
+from cortx.utils.validator.v_service import ServiceV
+from cortx.utils.validator.v_pkg import PkgV
 
 import psutil
+
+class InitException(Exception):
+    def __init__(self, rc, message, *args):
+        self._rc = rc
+        self._desc = message % (args)
+
+    def __str__(self):
+        if self._rc == 0: return self._desc
+        return "error(%d): %s" %(self._rc, self._desc)
 
 class SetupInit:
     """Init Setup Interface"""
@@ -61,79 +72,100 @@ class SetupInit:
     def __init__(self, args : list):
         self.args = args
         self.role = None
-
-    def usage(self):
-        sys.stderr.write(
-            f"{self.name} [check|create [-dp] [-r <ssu|gw|cmu|vm|cortx>]]\n"
-            "create options:\n"
-            "\t -dp Create configured datapath\n"
-            "\t -r  Role to be configured on the current node\n"
-            )
-        sys.exit(1)
+        self.dp = False
 
     def check_dependencies(self, role : str):
         # Check for dependency rpms and required processes active state based on role
         if role == "ssu":
-            print(f"Checking for dependency rpms for role '{role}'")
-            Utility.check_for_dep_rpms(self.SSU_DEPENDENCY_RPMS)
-            print(f"Checking for required processes running state for role '{role}'")
-            Utility.check_for_active_processes(self.SSU_REQUIRED_PROCESSES)
+            try:
+                print(f"Checking for dependency rpms for role '{role}'")
+                PkgV().validate("rpms", self.SSU_DEPENDENCY_RPMS)
+
+                print(f"Checking for required processes running state for role '{role}'")
+                ServiceV().validate("isrunning", self.SSU_REQUIRED_PROCESSES)
+            except Exception:
+                raise
         elif role == "vm" or role == "gw" or role == "cmu":
-            print(f"Checking for dependency rpms for role '{role}'")
-            # No dependency currently. Keeping this section as it may be
-            # needed in future.
-            Utility.check_for_dep_rpms(self.VM_DEPENDENCY_RPMS)
-            # No processes to check in vm env
+            try:
+                print(f"Checking for dependency rpms for role '{role}'")
+                # No dependency currently. Keeping this section as it may be
+                # needed in future.
+                PkgV().validate("isrunning", self.VM_DEPENDENCY_RPMS)
+                # No processes to check in vm env
+            except Exception:
+                raise
         else:
             print(f"No rpm or process dependencies set, to check for supplied role {role}, skipping checks.\n")
 
-    def get_uid(self, proc_name : str) -> int:
+    def get_uid(self, user_name : str) -> int:
         uid = -1
         try :
-            uid = pwd.getpwnam(proc_name).pw_uid
+            uid =  pwd.getpwnam(user_name).pw_uid
         except KeyError :
-            print(f"No such User: {proc_name}")
+            # raise InitException(45, "No User Found with name : %s", user_name)
+            pass
         return uid
 
-    def process(self):
+    def validate_args(self):
         if not self.args:
-            self.usage()
-
+            raise InitException(10, "No arguments to init call.\n expected options : [-dp] [-r <ssu|gw|cmu|vm|cortx>]]")
+        
         i = 0
         while i < len(self.args):
             if self.args[i] == '-dp':
-                # Extract the data path
-                sspldp = ''
-                with open(file_store_config_path, mode='rt') as confile:
-                    for line in confile:
-                        if line.find('data_path') != -1:
-                            sspldp = line.split('=')[1]
-                            break
-                # Crete the directory and assign permissions
-                try:
-                    os.makedirs(sspldp, mode=0o766, exist_ok=True)
-                    sspl_ll_uid = self.get_uid('sspl-ll')
-                    if sspl_ll_uid == -1:
-                        sys.exit(1)
-                    os.chown(sspldp, sspl_ll_uid, -1)
-                    for root, dirs, files in os.walk(sspldp):
-                        for item in dirs:
-                            os.chown(os.path.join(root, item), sspl_ll_uid, -1)
-                        for item in files:
-                            os.chown(os.path.join(root, item), sspl_ll_uid, -1)
-                except OSError as error:
-                    print(error)
-                    sys.exit(1)
-
+                self.dp = True
             elif self.args[i] == '-r':
                 i+=1
-                if i>= len(self.args) or self.args[i] not in roles:
-                    self.usage()
+                if i == len(self.args):
+                    raise InitException(15, "No role provided with -r option")
+                elif  self.args[i] not in roles:
+                    raise InitException(20, "Provided role '%s' is not supported", self.args[i])
                 else:
                     self.role = self.args[i]
             else:
-                self.usage()
+                raise InitException(30, "Unknown option '%s'", self.args[i])
             i+=1
+
+    def getval_from_ssplconf(self, varname : str) -> str:
+        with open(file_store_config_path, mode='rt') as confile:
+            for line in confile:
+                if line.startswith(varname):
+                    rets = line.split('=')[1]
+                    if(rets.endswith('\n')):
+                        rets = rets.replace('\n', '')
+                    return rets
+        return None
+
+    def recursive_chown(self, path : str, user : str, grpid: int = -1):
+        try:
+            uid = self.get_uid(user)
+            if uid == -1:
+                raise InitException(45, "No User Found with name : %s", user)
+            os.chown(path, uid, grpid)
+            for root, dirs, files in os.walk(path):
+                for item in dirs:
+                    os.chown(os.path.join(root, item), uid, grpid)
+                for item in files:
+                    os.chown(os.path.join(root, item), uid, grpid)
+        except OSError:
+            raise
+
+    def process(self):
+        
+        self.validate_args()
+
+        if self.dp:
+            # Extract the data path
+            sspldp = self.getval_from_ssplconf('data_path')
+            if not sspldp :
+                raise InitException(25, "Data Path Not set in sspl.conf")
+
+            # Crete the directory and assign permissions
+            try:
+                os.makedirs(sspldp, mode=0o766, exist_ok=True)
+            except OSError:
+                raise
+            self.recursive_chown(sspldp, 'sspl-ll')
         
         # Create /tmp/dcs/hpi if required. Not needed for '<product>' role
         if self.role != "cortx":
@@ -142,8 +174,8 @@ class SetupInit:
                 zabbix_uid = self.get_uid('zabbix')
                 if zabbix_uid != -1:
                     os.chown(self.HPI_PATH, zabbix_uid, -1)
-            except OSError as error:
-                print(error)
+            except OSError:
+                raise
 
         # Check for sspl required processes and misc dependencies like installation, etc based on 'role'
         if self.role:
@@ -159,7 +191,7 @@ class SetupInit:
         os.chmod(self.MDADM_PATH, mode=0o666)
         sspl_ll_uid = self.get_uid('sspl-ll')
         if sspl_ll_uid == -1:
-            sys.exit(1)
+            raise InitException(45, "No User Found with name : %s", 'sspl-ll')
         os.chown(self.MDADM_PATH, sspl_ll_uid, -1)
         
 if __name__ == "__main__":

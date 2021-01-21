@@ -104,7 +104,7 @@ class SetupCmd(Cmd):
         pass
 
     def process(self):
-        Utility.(f"{self._script_dir}/{self.script}", self._args)
+        Utility.call_script(f"{self._script_dir}/{self.script}", self._args)
 
 
 class JoinClusterCmd(Cmd):
@@ -123,9 +123,9 @@ class JoinClusterCmd(Cmd):
         pass
 
     def process(self):
-        Utility.(f"{self._script_dir}/{self.script}", self._args)
+        Utility.call_script(f"{self._script_dir}/{self.script}", self._args)
         # TODO: Replace the below code once sspl_config script implementation is done.
-        Utility.(f"{self._script_dir}/sspl_config", ['-f'])
+        Utility.call_script(f"{self._script_dir}/sspl_config", ['-f'])
 
 
 class PostInstallCmd(Cmd):
@@ -163,7 +163,11 @@ class InitCmd(Cmd):
 
     def process(self):
         from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.sspl_setup_init import SetupInit
-        SetupInit(self.args).process()
+        try :
+            SetupInit(self.args).process()
+        except Exception as error:
+            print(error)
+            sys.exit(1)
 
 
 class ConfigCmd(Cmd):
@@ -239,7 +243,7 @@ class ManifestSupportBundleCmd(Cmd):
         pass
 
     def process(self):
-        Utility.(f"{self._script_dir}/{self.script}", self._args)
+        Utility.call_script(f"{self._script_dir}/{self.script}", self._args)
 
 
 class ResetCmd(Cmd):
