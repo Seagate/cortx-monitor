@@ -102,13 +102,13 @@ class SetupInit:
         try :
             uid =  pwd.getpwnam(user_name).pw_uid
         except KeyError :
-            # raise InitException(45, "No User Found with name : %s", user_name)
+            # raise InitException(errno.EINVAL, "No User Found with name : %s", user_name)
             pass
         return uid
 
     def validate_args(self):
         if not self.args:
-            raise InitException(10, "No arguments to init call.\n expected options : [-dp] [-r <ssu|gw|cmu|vm|cortx>]]")
+            raise InitException(errno.EINVAL, "No arguments to init call.\n expected options : [-dp] [-r <ssu|gw|cmu|vm|cortx>]]")
         
         i = 0
         while i < len(self.args):
@@ -117,13 +117,13 @@ class SetupInit:
             elif self.args[i] == '-r':
                 i+=1
                 if i == len(self.args):
-                    raise InitException(15, "No role provided with -r option")
+                    raise InitException(errno.EINVAL, "No role provided with -r option")
                 elif  self.args[i] not in roles:
-                    raise InitException(20, "Provided role '%s' is not supported", self.args[i])
+                    raise InitException(errno.EINVAL, "Provided role '%s' is not supported", self.args[i])
                 else:
                     self.role = self.args[i]
             else:
-                raise InitException(30, "Unknown option '%s'", self.args[i])
+                raise InitException(errno.EINVAL, "Unknown option '%s'", self.args[i])
             i+=1
 
     def getval_from_ssplconf(self, varname : str) -> str:
@@ -140,7 +140,7 @@ class SetupInit:
         try:
             uid = self.get_uid(user)
             if uid == -1:
-                raise InitException(45, "No User Found with name : %s", user)
+                raise InitException(errno.EINVAL, "No User Found with name : %s", user)
             os.chown(path, uid, grpid)
             for root, dirs, files in os.walk(path):
                 for item in dirs:
@@ -158,7 +158,7 @@ class SetupInit:
             # Extract the data path
             sspldp = self.getval_from_ssplconf('data_path')
             if not sspldp :
-                raise InitException(25, "Data Path Not set in sspl.conf")
+                raise InitException(errno.EINVAL, "Data Path Not set in sspl.conf")
 
             # Crete the directory and assign permissions
             try:
@@ -191,7 +191,7 @@ class SetupInit:
         os.chmod(self.MDADM_PATH, mode=0o666)
         sspl_ll_uid = self.get_uid('sspl-ll')
         if sspl_ll_uid == -1:
-            raise InitException(45, "No User Found with name : %s", 'sspl-ll')
+            raise InitException(errno.EINVAL, "No User Found with name : %s", 'sspl-ll')
         os.chown(self.MDADM_PATH, sspl_ll_uid, -1)
         
 if __name__ == "__main__":
