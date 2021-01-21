@@ -21,8 +21,8 @@ import shutil
 import distutils.dir_util
 from cortx.sspl.bin.sspl_constants import (REPLACEMENT_NODE_ENV_VAR_FILE, PRODUCT_NAME, SSPL_BASE_DIR,
     file_store_config_path, PRODUCT_BASE_DIR)
-from cortx.sspl.lowlevel.framework.utils.utility import Utility
 from cortx.utils.process import SimpleProcess
+from cortx.utils.service import Service
 
 
 class PostInstallError(Exception):
@@ -88,9 +88,9 @@ class SSPLPostInstall:
         if returncode != 0:
             raise PostInstallError(returncode, error, pip_cmd)
         # Splitting current function into 2 functions to reduce the complexity of the code.
-        self.make_file_operations(PRODUCT, ENVIRONMENT, RMQ_CLUSTER)
+        self.install_files(PRODUCT, ENVIRONMENT, RMQ_CLUSTER)
 
-    def make_file_operations(self, PRODUCT, ENVIRONMENT, RMQ_CLUSTER):
+    def install_files(self, PRODUCT, ENVIRONMENT, RMQ_CLUSTER):
         # NOTE: By default the sspl default conf file will not be copied.
         # The provisioner is supposed to copy the appropriate conf file based
         # on product/env and start SSPL with it.
@@ -120,7 +120,7 @@ class SSPLPostInstall:
 
         # Copy sspl-ll.service file and enable service
         shutil.copyfile(currentProduct, "/etc/systemd/system/sspl-ll.service")
-        Utility.enable_disable_service(service='sspl-ll.service', action='enable')
+        Service('dbus').process(action='enable', service_name='sspl-ll.service')
         daemon_reload_cmd = "systemctl daemon-reload"
         output, error, returncode = SimpleProcess(daemon_reload_cmd).run()
         if returncode != 0:
@@ -156,13 +156,3 @@ class SSPLPostInstall:
                 output, error, returncode = SimpleProcess(rabbitmq_setup).run()
                 if returncode != 0:
                     raise PostInstallError(returncode, error, rabbitmq_setup)
-
-
-def main(argv: list):
-    try:
-        SSPLPostInstall(argv[1:]).process()
-    except Exception as e:
-        raise PostInstallError(errno.EINVAL, "error: %s\n\n" % str(e))
-
-if __name__ == '__main__':
-    sys.exit(main(sys.argv))

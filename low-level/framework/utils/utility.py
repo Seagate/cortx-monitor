@@ -59,35 +59,3 @@ class Utility(object):
         except Exception as e:
             logger.warning("Error while reading whether env is vm or not, assuming VM env : {e}")
         return is_vm
-
-    @staticmethod
-    def _initialize_dbus():
-        """Initialization of dbus object."""
-        system_bus = dbus.SystemBus()
-        systemd1 = system_bus.get_object('org.freedesktop.systemd1', '/org/freedesktop/systemd1')
-        dbus_manager = dbus.Interface(systemd1, 'org.freedesktop.systemd1.Manager')
-        return dbus_manager
-
-    @staticmethod
-    def enable_disable_service(service, action = 'enable'):
-        """Enable/Disable systemd services."""
-        dbus_manager = Utility._initialize_dbus()
-        if action == 'enable':
-            dbus_manager.EnableUnitFiles([f'{service}'], False, True)
-        else:
-            dbus_manager.DisableUnitFiles([f'{service}'], False)
-        dbus_manager.Reload()
-
-    @staticmethod
-    def systemctl_service_action(service, action = 'start'):
-        """Start/Stop/Restart systemctl services."""
-        dbus_manager = Utility._initialize_dbus()
-        if action == 'start':
-            dbus_manager.StartUnit(f'{service}', 'fail')
-        elif action == 'stop':
-            dbus_manager.StopUnit(f'{service}', 'fail')
-        elif action == 'restart':
-            dbus_manager.RestartUnit(f'{service}', 'fail')
-        else:
-            print(f"Invalid action: f'{service}' :Please provide an appropriate action name for the service.")
-
