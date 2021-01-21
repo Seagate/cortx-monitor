@@ -16,6 +16,7 @@
 
 import os
 import errno
+import sys
 import shutil
 import distutils.dir_util
 from cortx.sspl.bin.sspl_constants import (REPLACEMENT_NODE_ENV_VAR_FILE, PRODUCT_NAME, SSPL_BASE_DIR,
@@ -121,7 +122,7 @@ class SSPLPostInstall:
 
         # Copy sspl-ll.service file and enable service
         shutil.copyfile(currentProduct, "/etc/systemd/system/sspl-ll.service")
-        Service('dbus').process(action='enable', service_name='sspl-ll.service')
+        Service('dbus').process('enable', 'sspl-ll.service')
         daemon_reload_cmd = "systemctl daemon-reload"
         output, error, returncode = SimpleProcess(daemon_reload_cmd).run()
         if returncode != 0:
