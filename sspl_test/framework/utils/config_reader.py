@@ -48,7 +48,7 @@ class ConfigReader(object):
         self.store = None
         try:
             store_type = os.getenv('SSPL_STORE_TYPE', SSPL_STORE_TYPE)
-            if PRODUCT_NAME == 'LDR_R2': 
+            if PRODUCT_NAME == 'LDR_R2':
                 self.store = Conf()
             else:
                 if store_type == StoreTypes.FILE.value:
@@ -148,7 +148,7 @@ class ConfigReader(object):
         """Get all values for all the keys in the section"""
         value_list = list()
         try:
-            if SSPL_STORE_TYPE == 'consul': 
+            if SSPL_STORE_TYPE == 'consul':
                 if self.store is not None and isinstance(self.store, consul.Consul):
                     pairs = self.kv_get(component + '/' + section + '/', recurse=True)
             else:

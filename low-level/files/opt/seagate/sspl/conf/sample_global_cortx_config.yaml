@@ -14,10 +14,8 @@
 # cortx-questions@seagate.com.
 
 cluster:
-   minion_id: srvnode_1
    cluster_id: 'CortxCluster001'
    product: LDR_R2
-   setup: cortx
    server_nodes:
    srvnode_1:
       operating_system: centos7
