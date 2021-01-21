@@ -275,7 +275,6 @@ fi
     build_url="http://cortx-storage.colo.seagate.com/releases/cortx/components/github/main/centos-7.8.2003/dev/cortx-utils/last_successful/"
     yum install -y gcc rpm-build python36-devel openssl-devel libffi-devel
     yum install -y $build_url/$(curl -s $build_url/|grep $pkg_name|sed 's/<\/*[^"]*"//g'|cut -d"\"" -f1) ||:
-    python3 -m pip install toml pyyaml
 
     echo "INFO: INSTALLING rabbitmq-server..." 2>&1 | tee -a "${LOG_FILE}"
     yum install -y rabbitmq-server 2>&1 | tee -a "${LOG_FILE}"
@@ -305,12 +304,17 @@ install_sspl_rpms(){
 
 update_sspl_config(){
 
-    # update sspl config file
+    mkdir -p /etc/cortx
+    # TODO update SSPL_CONF path to /etc/cortx/sspl.conf during conf stor intreagation with setup script
     SSPL_CONF="/etc/sspl.conf"
+    GLOBAL_CONF="/etc/cortx/sample_global_cortx_config.yaml"
+    # TODO SOURCE_CONF replcae with sspl.conf.LDR_R2.yaml yaml remo sspl.conf.LDR_R2 ini file.
     SOURCE_CONF=${SSPL_BASE_DIR}/low-level/files/opt/seagate/sspl/conf/sspl.conf.${PRODUCT_VERSION}
+    GLOBAL_CONF_SOURCE=${SSPL_BASE_DIR}/low-level/files/opt/seagate/sspl/conf/sample_global_cortx_config.yaml
     cp $SOURCE_CONF $SSPL_CONF
+    cp $GLOBAL_CONF_SOURCE $GLOBAL_CONF
 
-    CONFIG_FEEDER=$SSPL_BASE_DIR/low-level/files/opt/seagate/sspl/bin/load_sspl_config.py
+    CONFIG_FEEDER=$SSPL_BASE_DIR/low-level/files/opt/seagate/sspl/setup/load_sspl_config.py
 
     echo "INFO: Loading $SSPL_CONF config file.."
     echo "$CONFIG_FEEDER $NODE $RMQ_USER"

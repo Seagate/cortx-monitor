@@ -1,3 +1,5 @@
+#!/bin/env python3.6
+
 # Copyright (c) 2020 Seagate Technology LLC and/or its Affiliates
 #
 # This program is free software: you can redistribute it and/or modify it under the
@@ -13,7 +15,9 @@
 # about this software or licensing, please email opensource@seagate.com or
 # cortx-questions@seagate.com.
 
-PRODUCT_NAME='LDR_R2'
-PRODUCT_FAMILY='cortx'
-CONSUL_PATH="/usr/bin/"
-SSPL_STORE_TYPE='confstor'
+
+from cortx.utils.conf_store import Conf
+from sspl_test.framework.base.sspl_constants import file_store_config_path
+
+SSPL_TEST="SSPL_TEST"
+Conf.load("SSPL_TEST", f"yaml://{file_store_config_path}")

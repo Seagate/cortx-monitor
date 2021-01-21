@@ -25,6 +25,8 @@ import os
 import time
 import re
 import random
+from cortx.utils.conf_store import Conf
+
 
 SSPL_USER = "sspluser"
 SSPL_PASS = "sspl4ever"
@@ -37,7 +39,7 @@ RABBITMQ_CLUSTER_SECTION = 'RABBITMQCLUSTER'
 host = os.getenv('CONSUL_HOST', CONSUL_HOST)
 port = os.getenv('CONSUL_PORT', CONSUL_PORT)
 SSPL_STORE_TYPE = 'file'
-sspl_config_file = '/etc/sspl.conf'
+sspl_config_file = '/etc/cortx/sspl.conf'
 
 # Onward LDR_R2, consul will be abstracted out and won't exist as hard dependency for SSPL
 if SSPL_STORE_TYPE == 'consul':
@@ -52,13 +54,12 @@ def get_cluster_connection(username, password, virtual_host):
         consul_key = component + '/' + RABBITMQ_CLUSTER_SECTION + '/' + 'cluster_nodes'
         hosts = consul_conn.kv.get(consul_key)[1]["Value"].decode()
     else:
-        with open(sspl_config_file) as fObj:
-            config = fObj.read()
-        cluster_nodes = re.findall(r"cluster_nodes=(.*)\n", config)
-    if cluster_nodes:
+        Conf.load('SSPL_CONFIG', f'yaml://{sspl_config_file}')
+        cluster_nodes=Conf.get('SSPL_CONFIG', f'{RABBITMQ_CLUSTER_SECTION}>cluster_nodes')
+    if isinstance(cluster_nodes, list):
         hosts = cluster_nodes[0]
-    if isinstance(hosts, str):
-        hosts = hosts.strip().split(",")
+    if isinstance(cluster_nodes, str):
+        hosts = cluster_nodes.strip().split(",")
     print(f"Cluster Nodes: {hosts}")
 
     ampq_hosts = [

@@ -22,8 +22,10 @@
 import os
 import sys
 import configparser
+
 from cortx.utils.conf_store import Conf
-from sspl_test.framework.base.sspl_constants import component, file_store_config_path, SSPL_STORE_TYPE, StoreTypes, CONSUL_HOST, CONSUL_PORT
+from sspl_test.framework.utils.load_conf_store import SSPL_TEST
+from sspl_test.framework.base.sspl_constants import PRODUCT_NAME, component, file_store_config_path, SSPL_STORE_TYPE, StoreTypes, CONSUL_HOST, CONSUL_PORT
 from sspl_test.framework.utils.service_logging import logger
 
 # Onward LDR_R2, consul will be abstracted out and won't exist as hard dependency for SSPL
@@ -44,30 +46,25 @@ class ConfigReader(object):
         @param config: configuration file name
         """
         self.store = None
-        self.load_conf = False
         try:
             store_type = os.getenv('SSPL_STORE_TYPE', SSPL_STORE_TYPE)
-            if store_type == StoreTypes.FILE.value:
-                self.store = configparser.RawConfigParser()
-                self.store.read([file_store_config_path])
-            elif store_type == StoreTypes.CONSUL.value:
-                host = os.getenv('CONSUL_HOST', CONSUL_HOST)
-                port = os.getenv('CONSUL_PORT', CONSUL_PORT)
-                self.store = consul.Consul(host=host, port=port)
-            elif store_type == StoreTypes.CONF.value:
+            if PRODUCT_NAME == 'LDR_R2': 
                 self.store = Conf()
             else:
-                raise Exception("{} type store is not supported".format(store_type))
+                if store_type == StoreTypes.FILE.value:
+                    self.store = configparser.RawConfigParser()
+                    self.store.read([file_store_config_path])
+                elif store_type == StoreTypes.CONSUL.value:
+                    host = os.getenv('CONSUL_HOST', CONSUL_HOST)
+                    port = os.getenv('CONSUL_PORT', CONSUL_PORT)
+                    self.store = consul.Consul(host=host, port=port)
+                else:
+                    raise Exception("{} type store is not supported".format(store_type))
 
         except Exception as serror:
             print("Error in connecting either with file or consul store: {}".format(serror))
             print("Exiting ...")
             sys.exit(os.EX_USAGE)
-
-    def load_conf_store(self):
-        if not self.load_conf:
-            Conf.load('test_config', f'yaml://{file_store_config_path}')
-            self.load_conf = True
 
     def get_value(self, section, key):
         '''public method to get_value'''
@@ -86,16 +83,16 @@ class ConfigReader(object):
         """
         value = None
         try:
-            if self.store is not None and isinstance(self.store, configparser.RawConfigParser):
-                value = self.store.get(section, key)
-            elif self.store is not None and isinstance(self.store, consul.Consul):
-                value = self.kv_get(component + '/' + section + '/' + key)
-            elif self.store is not None and isinstance(self.store, Conf):
-                if not self.load_conf:
-                    self.load_conf_store()
-                value = self.store.get('test_config', f'{section}>{key}')
+            if SSPL_STORE_TYPE == 'consul':
+                if self.store is not None and isinstance(self.store, consul.Consul):
+                    value = self.kv_get(component + '/' + section + '/' + key)
             else:
-                raise Exception("{} Invalid store type object.".format(self.store))
+                if self.store is not None and isinstance(self.store, configparser.RawConfigParser):
+                    value = self.store.get(section, key)
+                elif self.store is not None and isinstance(self.store, Conf):
+                    value = Conf.get(SSPL_TEST, f'{section}>{key}')
+                else:
+                    raise Exception("{} Invalid store type object.".format(self.store))
         except (RuntimeError, Exception) as e:
             # Taking values from normal configparser in dev env
             value = self.store.get(section, key)
@@ -104,6 +101,8 @@ class ConfigReader(object):
             return ''
         elif isinstance(value, str):
             return value.strip()
+        elif isinstance(value, list):
+            return value
         else:
             return value.decode('utf-8').strip()
 
@@ -149,12 +148,14 @@ class ConfigReader(object):
         """Get all values for all the keys in the section"""
         value_list = list()
         try:
-            if self.store is not None and isinstance(self.store, configparser.RawConfigParser):
-                pairs = self.store.items(section)
-            elif self.store is not None and isinstance(self.store, consul.Consul):
-                pairs = self.kv_get(component + '/' + section + '/', recurse=True)
+            if SSPL_STORE_TYPE == 'consul': 
+                if self.store is not None and isinstance(self.store, consul.Consul):
+                    pairs = self.kv_get(component + '/' + section + '/', recurse=True)
             else:
-                raise Exception("{} Invalid store type object.".format(self.store))
+                if self.store is not None and isinstance(self.store, configparser.RawConfigParser):
+                    pairs = self.store.items(section)
+                else:
+                    raise Exception("{} Invalid store type object.".format(self.store))
         except (RuntimeError, Exception) as e:
             # Taking values from normal configparser in dev env
             pairs = self.store.items(section)
