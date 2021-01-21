@@ -301,7 +301,7 @@ def main(conf_reader, systemd_support):
     conf_reader = ConfigReader()
     for group in SSPL_SETTINGS.keys():
         monitor = Conf.get(SSPL_CONF, f"{group}>{MONITOR}", 'true')
-        if monitor != 'true':
+        if monitor not in ['true', True]:
             sspl_settings_configured_groups -= {group}
 
 
@@ -410,6 +410,7 @@ def main(conf_reader, systemd_support):
             thread = Thread(target=_run_thread_capture_errors,
                             args=(curr_module, sspl_threaded_modules, msgQlist, conf_reader, product, resume))
             thread.start()
+            logger.info(f"Started: {curr_module}")
 
         # Start the ThreadController module with the list of threads
         logger.info("Starting: %s" % ThreadController.name())

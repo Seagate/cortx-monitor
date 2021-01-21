@@ -103,7 +103,8 @@ LOGGINGPROCESSOR:
    primary_rabbitmq_host: localhost
 
 RABBITMQCLUSTER:
-   cluster_nodes: localhost
+   cluster_nodes: 
+      - localhost
    erlang_cookie: QLDZYPYEYGHECTHYQXFJ
 
 LOGGINGMSGHANDLER:
