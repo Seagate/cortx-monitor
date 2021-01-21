@@ -25,7 +25,7 @@ import inspect
 import traceback
 import os
 import syslog
-from cortx.sspl.lowlevel.framework.utils.utility import Utility
+from cortx.utils.process import SimpleProcess
 
 class Cmd:
     """Setup Command.
@@ -103,7 +103,11 @@ class SetupCmd(Cmd):
         pass
 
     def process(self):
-        Utility.call_script(f"{self._script_dir}/{self.script}", self._args)
+        setup_sspl = f"{self._script_dir}/{self.script} {' '.join(self._args)}"
+        output, error, returncode = SimpleProcess(setup_sspl).run()
+        if returncode != 0:
+            sys.stderr.write("error: %s\n\n" % str(error))
+            sys.exit(errno.EINVAL)
 
 
 class JoinClusterCmd(Cmd):
@@ -122,9 +126,18 @@ class JoinClusterCmd(Cmd):
         pass
 
     def process(self):
-        Utility.call_script(f"{self._script_dir}/{self.script}", self._args)
+        setup_rabbitmq_cluster = f"{self._script_dir}/{self.script} {' '.join(self._args)}"
+        output, error, returncode = SimpleProcess(setup_rabbitmq_cluster).run()
+        if returncode != 0:
+            sys.stderr.write("error: %s\n\n" % str(error))
+            sys.exit(errno.EINVAL)
+
         # TODO: Replace the below code once sspl_config script implementation is done.
-        Utility.call_script(f"{self._script_dir}/sspl_config", ['-f'])
+        sspl_config = f"{self._script_dir}/{self.script} {' '.join(self._args)}"
+        output, error, returncode = SimpleProcess(sspl_config).run()
+        if returncode != 0:
+            sys.stderr.write("error: %s\n\n" % str(error))
+            sys.exit(errno.EINVAL)
 
 
 class PostInstallCmd(Cmd):
@@ -219,7 +232,11 @@ class SupportBundleCmd(Cmd):
         pass
 
     def process(self):
-        Utility.call_script(f"{self._script_dir}/{self.script}", self._args)
+        sspl_bundle_generate = f"{self._script_dir}/{self.script} {' '.join(self._args)}"
+        output, error, returncode = SimpleProcess(sspl_bundle_generate).run()
+        if returncode != 0:
+            sys.stderr.write("error: %s\n\n" % str(error))
+            sys.exit(errno.EINVAL)
 
 
 class ManifestSupportBundleCmd(Cmd):
@@ -238,7 +255,11 @@ class ManifestSupportBundleCmd(Cmd):
         pass
 
     def process(self):
-        Utility.call_script(f"{self._script_dir}/{self.script}", self._args)
+        manifest_support_bundle = f"{self._script_dir}/{self.script} {' '.join(self._args)}"
+        output, error, returncode = SimpleProcess(manifest_support_bundle).run()
+        if returncode != 0:
+            sys.stderr.write("error: %s\n\n" % str(error))
+            sys.exit(errno.EINVAL)
 
 
 class ResetCmd(Cmd):

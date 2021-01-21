@@ -61,30 +61,6 @@ class Utility(object):
         return is_vm
 
     @staticmethod
-    def send_command(command: str, fail_on_error=True):
-        # This function uses subprocess() module to execute commands, scripts which are not possible
-        # to execute through any python module interfaces available in default site packages.
-        # So its usage MUST be limited and used only when no other alternative found.
-        output, error, returncode = SimpleProcess(command).run()
-        if returncode != 0:
-            print("command '%s' failed with error\n%s" % (command, error))
-            if fail_on_error:
-                sys.exit(1)
-            else:
-                return str(error)
-        return str(output)
-
-    @staticmethod
-    def call_script(script_dir: str, args: list):
-        # This function uses subprocess.call(), which gives script execution o/p on screen.
-        # This functionality not fulfilled by SimpleProcess() or any cortx utils function.
-        # TODO merge this function code in cortx-utils
-        script_args_lst = [script_dir]+args
-        is_error = subprocess.call(script_args_lst, shell=False)
-        if is_error:
-            sys.exit(1)
-
-    @staticmethod
     def _initialize_dbus():
         """Initialization of dbus object."""
         system_bus = dbus.SystemBus()

@@ -22,6 +22,20 @@ import distutils.dir_util
 from cortx.sspl.bin.sspl_constants import (REPLACEMENT_NODE_ENV_VAR_FILE, PRODUCT_NAME, SSPL_BASE_DIR,
     file_store_config_path, PRODUCT_BASE_DIR)
 from cortx.sspl.lowlevel.framework.utils.utility import Utility
+from cortx.utils.process import SimpleProcess
+
+
+class PostInstallError(Exception):
+    """ Generic Exception with error code and output """
+
+    def __init__(self, rc, message, *args):
+        self._rc = rc
+        self._desc = message % (args)
+
+    def __str__(self):
+        if self._rc == 0: return self._desc
+        return "error(%d): %s" %(self._rc, self._desc)
+
 
 class SSPLPostInstall:
     def __init__(self, args: list):
@@ -35,9 +49,7 @@ class SSPLPostInstall:
 
     def process(self):
         if not self.args or len({'-p', '-e', '-c'} & set(self.args)) == 0:
-            print(f"Invalid Argument for {self.name}")
-            print("Exiting ...")
-            sys.exit(1)
+            raise PostInstallError(errno.EINVAL, f"Invalid Argument for {self.name}")
 
         PRODUCT = ""
         ENVIRONMENT = ""
@@ -52,9 +64,7 @@ class SSPLPostInstall:
                 elif self.args[i] == '-c':
                     RMQ_CLUSTER = self.args[i+1]
             except (IndexError, ValueError):
-                print(f"Invalid Argument for {self.name}")
-                print("Exiting ...")
-                sys.exit(1)
+                raise PostInstallError(errno.EINVAL, f"Invalid Argument for {self.name}")
             i+=1
 
         # sspl_setup_consul script install consul in dev env and checks if consul process is running
@@ -67,11 +77,16 @@ class SSPLPostInstall:
         if PRODUCT_NAME == "LDR_R1":
             # setup consul if not running already
             if not os.path.exists(REPLACEMENT_NODE_ENV_VAR_FILE):
-                Utility.call_script(f"{self._script_dir}/sspl_setup_consul", ["-e", f"{ENVIRONMENT}"])
+                sspl_setup_consul = f"{self._script_dir}/sspl_setup_consul -e {ENVIRONMENT}"
+                output, error, returncode = SimpleProcess(sspl_setup_consul).run()
+                if returncode != 0:
+                    raise PostInstallError(returncode, error, sspl_setup_consul)
 
         # Install packages which are not available in YUM repo, from PIP
         pip_cmd = f"python3 -m pip install -r {SSPL_BASE_DIR}/low-level/requirements.txt"
-        Utility.send_command(pip_cmd)
+        output, error, returncode = SimpleProcess(pip_cmd).run()
+        if returncode != 0:
+            raise PostInstallError(returncode, error, pip_cmd)
         # Splitting current function into 2 functions to reduce the complexity of the code.
         self.make_file_operations(PRODUCT, ENVIRONMENT, RMQ_CLUSTER)
 
@@ -97,7 +112,6 @@ class SSPLPostInstall:
         # Create soft link for SINGLE product name service to existing LDR_R1, LDR_R2 service
         # Instead of keeping separate service file for SINGLE product with same content.
         currentProduct = f"{SSPL_BASE_DIR}/conf/sspl-ll.service.{PRODUCT}"
-        print(f"currentProduct name {currentProduct}")
         if (PRODUCT == "SINGLE" and not os.path.exists(currentProduct)) or (PRODUCT == "DUAL" and not os.path.exists(currentProduct)):
             os.symlink(f"{SSPL_BASE_DIR}/conf/sspl-ll.service.{PRODUCT_NAME}", currentProduct)
 
@@ -107,7 +121,10 @@ class SSPLPostInstall:
         # Copy sspl-ll.service file and enable service
         shutil.copyfile(currentProduct, "/etc/systemd/system/sspl-ll.service")
         Utility.enable_disable_service(service='sspl-ll.service', action='enable')
-        Utility.send_command("systemctl daemon-reload")
+        daemon_reload_cmd = "systemctl daemon-reload"
+        output, error, returncode = SimpleProcess(daemon_reload_cmd).run()
+        if returncode != 0:
+            raise PostInstallError(returncode, error, daemon_reload_cmd)
 
         # Copy IEC mapping files
         os.makedirs(f"{PRODUCT_BASE_DIR}/iem/iec_mapping", exist_ok=True)
@@ -120,25 +137,32 @@ class SSPLPostInstall:
         # Onward LDR_R2, consul will be abstracted out and it won't exit as hard dependeny of SSPL
         if PRODUCT_NAME == "LDR_R1":
             if not os.path.exists(REPLACEMENT_NODE_ENV_VAR_FILE):
-                Utility.call_script(f"{self._script_dir}/sspl_fetch_config_from_salt.py",
-                    [f"{ENVIRONMENT}", f"{PRODUCT_NAME}"])
+                config_from_salt = f"{self._script_dir}/sspl_fetch_config_from_salt.py {ENVIRONMENT} {PRODUCT_NAME}"
+                output, error, returncode = SimpleProcess(config_from_salt).run()
+                if returncode != 0:
+                    raise PostInstallError(returncode, error, config_from_salt)
         else:
-            Utility.call_script(f"{self._script_dir}/load_sspl_config.py", ["-C", f"{file_store_config_path}"])
+            load_sspl_config = f"{self._script_dir}/load_sspl_config.py -C {file_store_config_path}"
+            output, error, returncode = SimpleProcess(load_sspl_config).run()
+            if returncode != 0:
+                raise PostInstallError(returncode, error, load_sspl_config)
 
         # Skip this step if sspl is being configured for node replacement scenario as rabbitmq cluster is
         # already configured on the healthy node
         # Configure rabbitmq
         if not os.path.exists(REPLACEMENT_NODE_ENV_VAR_FILE):
             if RMQ_CLUSTER == "true":
-                Utility.call_script(f"{self._script_dir}/rabbitmq_setup", [])
+                rabbitmq_setup = f"{self._script_dir}/rabbitmq_setup"
+                output, error, returncode = SimpleProcess(rabbitmq_setup).run()
+                if returncode != 0:
+                    raise PostInstallError(returncode, error, rabbitmq_setup)
 
 
 def main(argv: list):
     try:
         SSPLPostInstall(argv[1:]).process()
     except Exception as e:
-        sys.stderr.write("error: %s\n\n" % str(e))
-        return errno.EINVAL
+        raise PostInstallError(errno.EINVAL, "error: %s\n\n" % str(e))
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv))
