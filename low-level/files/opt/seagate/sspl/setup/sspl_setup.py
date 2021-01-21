@@ -174,10 +174,19 @@ class JoinClusterCmd(Cmd):
         Cmd._call_script(f"{self._script_dir}/{self.script}", self._args)
 =======
         Utility.call_script(f"{self._script_dir}/{self.script}", self._args)
+<<<<<<< HEAD
 >>>>>>> EOS-16524: sspl_conf.sh to python (changed path to utility.py)
         from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.sspl_config import Config
         Config(self.args).process()
 >>>>>>> EOS-16524: sspl_conf.sh to python (changed imports in sspl_setup)
+=======
+        try :
+            from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.sspl_config import SSPLConfig
+            SSPLConfig(self.args).process()
+        except Exception as error:
+            print(error)
+            sys.exit(1)
+>>>>>>> EOS-16524: sspl_config.sh to python (removed usage(), added Expection handling)
 
 
 class PostInstallCmd(Cmd):

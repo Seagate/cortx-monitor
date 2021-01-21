@@ -112,7 +112,7 @@ if not os.path.exists(SSPL_CONFIGURED) and PRODUCT_NAME=="LDR_R1":
 =======
 # other values(configs) should come from cofig.
 # Check if SSPL is configured
-if os.path.exists(SSPL_CONFIGURED) or True:
+if os.path.exists(SSPL_CONFIGURED):
     try:
         config = configparser.ConfigParser()
         config.read(file_store_config_path)
