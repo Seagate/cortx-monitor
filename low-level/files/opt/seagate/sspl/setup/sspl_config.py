@@ -76,19 +76,19 @@ class Config:
                     rets = line.split('=')[1]
                     if(rets.endswith('\n')):
                         rets = rets.replace('\n', '')
-                    print('product : ', rets)
                     return rets
         return None
 
-    def append_val(self, filename:str, new_str:str , key):
+    def append_val(self, filename:str, key, new_str:str):
         with open(filename, 'r+') as f: 
             lines = f.readlines()
             if type(key) == str:
-                for i, line in enumerate(lines):
-                    if line.find(key) != -1:
-                        lines[i] = new_str + '\n'
+                for i, line in enumerate(lines):                 
+                    if re.search(key, line):
+                        lines[i] = re.sub(key, new_str, lines[i])
             elif type(key) == int:
-                lines.insert(key, new_str)
+                if not re.search(new_str, lines[key]):
+                    lines.insert(key, new_str)
             f.seek(0)
             for line in lines:
                 f.write(line)
@@ -169,7 +169,8 @@ class Config:
 
         # Configure role
         if role:
-            self.append_val(consts.file_store_config_path, f'setup={role}', 'setup=')
+            print('role :', role)
+            self.append_val(consts.file_store_config_path, '^setup=.*', f'setup={role}')
 
         # Add sspl-ll user to required groups and sudoers file etc.
         print("Initializing SSPL configuration ... ")
@@ -191,18 +192,19 @@ class Config:
         # SSPL Log file configuration
         SSPL_LOG_FILE_PATH = self.getval_from_ssplconf('sspl_log_file_path')
         if SSPL_LOG_FILE_PATH:
-            self.append_val(self.RSYSLOG_SSPL_CONF, f'action(type="omfile" File="{SSPL_LOG_FILE_PATH}")', 'File')
-            self.append_val(f"{self.DIR_NAME}/low-level/files/etc/logrotate.d/sspl_logs", SSPL_LOG_FILE_PATH, 0)
+            self.append_val(self.RSYSLOG_SSPL_CONF, 'File.*[=,"]', f'File="{SSPL_LOG_FILE_PATH}"')
+            self.append_val(f"{self.DIR_NAME}/low-level/files/etc/logrotate.d/sspl_logs", 0, SSPL_LOG_FILE_PATH)
 
         # IEM configuration
         # Configure log file path in Rsyslog and logrotate configuration file
         LOG_FILE_PATH = self.getval_from_ssplconf('log_file_path')
 
         if LOG_FILE_PATH:
-            self.append_val(self.RSYSLOG_CONF, f'File="{LOG_FILE_PATH}"', 'File=')
-            self.append_val(f'{self.DIR_NAME}/low-level/files/etc/logrotate.d/iem_messages', LOG_FILE_PATH, 0)
+            self.append_val(self.RSYSLOG_CONF, 'File.*[=,"]', f'File="{LOG_FILE_PATH}"')
+            self.append_val(f'{self.DIR_NAME}/low-level/files/etc/logrotate.d/iem_messages', 0, LOG_FILE_PATH)
         else:
-            self.append_val(self.RSYSLOG_CONF, f'File=/var/log/{consts.PRODUCT_FAMILY}/iem/iem_messages', 'File=')
+            self.append_val(self.RSYSLOG_CONF, 'File.*[=,"]', f'File=/var/log/{consts.PRODUCT_FAMILY}/iem/iem_messages')
+
 
         # Create logrotate dir in case it's not present for dev environment
         if not os.path.exists(self.LOGROTATE_DIR):
@@ -256,8 +258,7 @@ class Config:
             pout = " ".join(running_nodes)
         elif self.rabbitmq_version == '3.3.5':
             out = Utility.send_command("rabbitmqctl cluster_status | grep running_nodes | cut -d '[' -f2 | cut -d ']' -f1 | sed 's/rabbit@//g' | sed 's/,/, /g'")
-            out = out.replace("'", '')
-            pout = out.replace(' ', '')
+            pout = out.replace("'", '').replace(' ', '')
         else:
             sys.stderr.write(f"This RabbitMQ version: {self.rabbitmq_version} is not supported")
             sys.exit(1)
@@ -303,11 +304,10 @@ class Config:
             # Update cluster_nodes key in consul
             if consts.PRODUCT_NAME == 'LDR_R1':
                 Utility.send_command(f'{consts.CONSUL_PATH}/consul kv put sspl/config/RABBITMQCLUSTER/cluster_nodes {pout}')
-                if not self.rmq_cluster_nodes:
+                if self.rmq_cluster_nodes:
                     Utility.send_command(f'{consts.CONSUL_PATH}/consul kv put sspl/config/RABBITMQCLUSTER/cluster_nodes {self.rmq_cluster_nodes}')
                 else:
-                    # sed -i "s/cluster_nodes=.*/cluster_nodes=$pout/" $SSPL_CONF
-                    self.append_val(consts.file_store_config_path, f'cluster_nodes={pout}', 'cluster_nodes=')
+                    self.append_val(consts.file_store_config_path, 'cluster_nodes=.*', f'cluster_nodes={pout}')
             
         # Skip this step if sspl is being configured for node replacement scenario as consul data is already
         # available on healthy node
@@ -321,7 +321,7 @@ class Config:
                 if consts.PRODUCT_NAME == "LDR_R1":
                     Utility.send_command(f'{consts.CONSUL_PATH}/consul kv put sspl/config/SYSTEM_INFORMATION/log_level {log_level}')
                 else:
-                    self.append_val(consts.file_store_config_path, f'log_level={log_level}', 'log_level')
+                    self.append_val(consts.file_store_config_path, 'log_level.*[=,",\']', f'log_level={log_level}')
             else:
                 sys.stderr.write(f"Unexpected log level is requested, '{log_level}'")        
 
