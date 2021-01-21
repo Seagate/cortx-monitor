@@ -29,7 +29,7 @@ from cortx.utils.process import SimpleProcess
 
 class Cmd:
     """Setup Command.
-    
+
     """
 
     def __init__(self, args: dict):
@@ -89,7 +89,7 @@ class Cmd:
 
 class SetupCmd(Cmd):
     """SSPL Setup Cmd.
-    
+
     """
 
     name = "setup"
@@ -112,7 +112,7 @@ class SetupCmd(Cmd):
 
 class JoinClusterCmd(Cmd):
     """Setup Join Cluster Cmd.
-    
+
     """
 
     name = "join_cluster"
@@ -142,7 +142,7 @@ class JoinClusterCmd(Cmd):
 
 class PostInstallCmd(Cmd):
     """PostInstall Setup Cmd.
-    
+
     """
 
     name = "post_install"
@@ -161,7 +161,7 @@ class PostInstallCmd(Cmd):
 
 class InitCmd(Cmd):
     """Init Setup Cmd.
-    
+
     """
 
     name = "init"
@@ -184,7 +184,7 @@ class InitCmd(Cmd):
 
 class ConfigCmd(Cmd):
     """Setup Config Cmd.
-    
+
     """
 
     name = "config"
@@ -203,7 +203,7 @@ class ConfigCmd(Cmd):
 
 class TestCmd(Cmd):
     """SSPL Test Cmd.
-    
+
     """
 
     name = "test"
@@ -222,7 +222,7 @@ class TestCmd(Cmd):
 
 class SupportBundleCmd(Cmd):
     """SSPL Support Bundle Cmd.
-    
+
     """
 
     name = "support_bundle"
@@ -245,7 +245,7 @@ class SupportBundleCmd(Cmd):
 
 class ManifestSupportBundleCmd(Cmd):
     """Manifest Support Bundle Cmd.
-    
+
     """
 
     name = "manifest_support_bundle"
@@ -268,7 +268,7 @@ class ManifestSupportBundleCmd(Cmd):
 
 class ResetCmd(Cmd):
     """Setup Reset Cmd.
-    
+
     """
 
     name = "reset"
@@ -288,7 +288,7 @@ class ResetCmd(Cmd):
 
 class CheckCmd(Cmd):
     """SSPL Check Cmd.
-    
+
     """
 
     name = "check"
