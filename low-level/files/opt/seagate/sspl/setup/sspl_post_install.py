@@ -15,7 +15,6 @@
 # please email opensource@seagate.com or cortx-questions@seagate.com.
 
 import os
-import sys
 import errno
 import shutil
 import distutils.dir_util
@@ -29,10 +28,12 @@ class PostInstallError(Exception):
     """ Generic Exception with error code and output """
 
     def __init__(self, rc, message, *args):
+        """Postinstallerror init."""
         self._rc = rc
         self._desc = message % (args)
 
     def __str__(self):
+        """Postinstallerror str."""
         if self._rc == 0: return self._desc
         return "error(%d): %s" %(self._rc, self._desc)
 
