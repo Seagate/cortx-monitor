@@ -157,3 +157,12 @@ class SSPLPostInstall:
                 output, error, returncode = SimpleProcess(rabbitmq_setup).run()
                 if returncode != 0:
                     raise PostInstallError(returncode, error, rabbitmq_setup)
+
+def main(argv: list):
+    try:
+        SSPLPostInstall(argv[1:]).process()
+    except Exception as e:
+        raise PostInstallError(errno.EINVAL, "error: %s\n\n" % str(e))
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv))
