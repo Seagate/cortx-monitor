@@ -72,7 +72,7 @@ then
 fi
 
 # configure sspl
-$SSPL_BASE_DIR/bin/sspl_post_install -p "$PRODUCT_NAME"
+$SSPL_BASE_DIR/bin/sspl_setup post_install -p "$PRODUCT_NAME"
 $SSPL_BASE_DIR/bin/sspl_setup_init -r cortx
 $SSPL_BASE_DIR/bin/sspl_config -f
 
