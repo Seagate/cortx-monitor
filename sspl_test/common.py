@@ -89,9 +89,9 @@ def init_rabbitMQ_msg_processors():
     world.sspl_modules = {}
 
     # Read in product value from configuration file
-    product = Conf.get("SSPL-Test", f"{SYS_INFORMATION}>{PRODUCT_NAME}")
+    Conf.load("GLOBAL", "yaml:///etc/cortx/sample_global_cortx_config.yaml")
+    product = Conf.get("GLOBAL", f"release>{PRODUCT_NAME}")
     logger.info("sspl-ll Bootstrap: product name supported: %s" % product)
-    print(conf_modules)
     # Use reflection to instantiate the class based upon its class name in config file
     for conf_thread in conf_modules:
         klass = globals()[conf_thread]

@@ -14,8 +14,6 @@
 # cortx-questions@seagate.com.
 
 cluster:
-   product: LDR_R2
-   setup: cortx
    cluster_id: CC01
    server_nodes:
      abc25957545942cfa728b74cead1a882: srvnode1
@@ -49,3 +47,7 @@ storage:
 rsyslog:
    host: localhost
    port: 514
+
+release:
+   product: LDR_R2
+   setup: cortx

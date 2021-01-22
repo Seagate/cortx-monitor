@@ -35,7 +35,7 @@ from sspl_test.generate_test_report import generate_html_report
 from sspl_test.common import TestFailed, init_rabbitMQ_msg_processors, stop_rabbitMQ_msg_processors
 from cortx.utils.conf_store import Conf
 
-Conf.load("SSPL-Test", "yaml:///home/730724/projects/cortx-monitor/sspl_test/conf/sspl_tests.conf.yaml")
+Conf.load("SSPL-Test", "yaml:///opt/seagate/cortx/sspl/sspl_test/conf/sspl_tests.conf.yaml")
 
 skip_group_prefixes = {
     "REALSTORSENSORS": "alerts.realstor",

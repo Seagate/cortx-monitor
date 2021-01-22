@@ -98,7 +98,6 @@ MGMT_INTERFACE="mgmt_interface"
 MONITOR="monitor"
 MONITORED_SERVICES="monitored_services"
 NODE_ID="node_id"
-OPERATING_SYSTEM="operating_system"
 PASS="pass"
 PASSWORD="password"
 POLLING_FREQUENCY="polling_frequency"
@@ -111,6 +110,7 @@ PROBE="probe"
 PRODUCT="product"
 QUEUE_NAME="queue_name"
 RACK_ID="rack_id"
+RELEASE="release"
 ROUTING_KEY="routing_key"
 RSYSLOG="rsyslog"
 RUN_SMART_ON_START="run_smart_on_start"
@@ -136,7 +136,9 @@ VIRTUAL_HOST="virtual_host"
 
 # Get SRVNODE and ENCLOSURE so it can be used in other files to get
 # server_node and enclosure specific config
-MACHINE_ID = Utility().get_machine_id()
+utility = Utility()
+MACHINE_ID = utility.get_machine_id()
+OPERATING_SYSTEM = utility.get_os()
 
 Conf.load("GLOBAL", "yaml:///etc/cortx/sample_global_cortx_config.yaml")
 Conf.load("SSPL", "yaml:///etc/cortx/sspl.conf")

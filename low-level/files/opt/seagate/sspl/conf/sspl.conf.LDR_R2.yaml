@@ -15,6 +15,9 @@
 
 # Version 2.0.0
 
+# TODO: Rename limit_consul_memory to limit_persistent_memory_use
+# and move it to DATASTORE
+
 SSPL_LL_SETTING:
    core_processors:
       - RabbitMQegressProcessor
@@ -103,8 +106,7 @@ LOGGINGPROCESSOR:
    primary_rabbitmq_host: localhost
 
 RABBITMQCLUSTER:
-   cluster_nodes: 
-      - localhost
+   cluster_nodes: localhost
    erlang_cookie: QLDZYPYEYGHECTHYQXFJ
 
 LOGGINGMSGHANDLER:
@@ -207,7 +209,7 @@ STORAGE_ENCLOSURE:
    mgmt_interface: cliapi
 
 SYSTEM_INFORMATION:
-    cli_type: CS-A
-    data_path: /var/cortx/sspl/data/
-    sspl_log_file_path: /var/log/cortx/sspl/sspl.log
-    log_level: INFO
+   cli_type: CS-A
+   data_path: /var/cortx/sspl/data/
+   sspl_log_file_path: /var/log/cortx/sspl/sspl.log
+   log_level: INFO

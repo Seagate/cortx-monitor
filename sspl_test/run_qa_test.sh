@@ -148,10 +148,10 @@ restore_cfg_services()
             conf $common_config set "storage>$encl_id>controller>primary>port=$primary_port"
             conf $common_config set "storage>$encl_id>controller>primary>ip=$primary_ip"
         fi
-        conf $test_config set "SYSTEM_INFORMATION>node_id=001"
-        conf $test_config set "SYSTEM_INFORMATION>site_id=001"
-        conf $test_config set "SYSTEM_INFORMATION>rack_id=001"
-        conf $test_config set "SYSTEM_INFORMATION>cluster_id=001"
+        conf $test_config set "SYSTEM_INFORMATION>node_id=SN01"
+        conf $test_config set "SYSTEM_INFORMATION>site_id=DC01"
+        conf $test_config set "SYSTEM_INFORMATION>rack_id=RC01"
+        conf $test_config set "SYSTEM_INFORMATION>cluster_id=CC01"
     else
         $CONSUL_PATH/consul kv put sspl/config/STORAGE_ENCLOSURE/controller/primary_mc/ip $primary_ip
         port=$($CONSUL_PATH/consul kv get sspl/config/STORAGE_ENCLOSURE/controller/primary_mc/port)
@@ -215,9 +215,9 @@ if [ "$SSPL_STORE_TYPE" == "confstor" ]
 then
     # Read common key which are needed to fetch confstor config.
     machine_id=`cat /etc/machine-id`
-    minion_id=`conf $common_config get "cluster>server_nodes>$machine_id"`
-    minion_id=$(echo $minion_id | tr -d "["\" | tr -d "\"]")
-    encl_id=`conf $common_config get "cluster>$minion_id>storage>enclosure_id"`
+    srvnode=`conf $common_config get "cluster>server_nodes>$machine_id"`
+    srvnode=$(echo $srvnode | tr -d "["\" | tr -d "\"]")
+    encl_id=`conf $common_config get "cluster>$srvnode>storage>enclosure_id"`
     encl_id=$(echo $encl_id | tr -d "["\" | tr -d "\"]")
 fi
 
@@ -324,11 +324,11 @@ then
     host_memory_usage_threshold=$(echo $host_memory_usage_threshold| tr -d "["\" | tr -d "\"]")
     cpu_usage_threshold=`conf $sspl_config get "NODEDATAMSGHANDLER>cpu_usage_threshold"`
     cpu_usage_threshold=$(echo $cpu_usage_threshold | tr -d "["\" | tr -d "\"]")
-    node_id=`conf $common_config get "cluster>$minion_id>node_id"`
+    node_id=`conf $common_config get "cluster>$srvnode>node_id"`
     node_id=$(echo $node_id | tr -d "["\" | tr -d "\"]")
-    site_id=`conf $common_config get "cluster>$minion_id>site_id"`
+    site_id=`conf $common_config get "cluster>$srvnode>site_id"`
     site_id=$(echo $site_id | tr -d "["\" | tr -d "\"]")
-    rack_id=`conf $common_config get "cluster>$minion_id>rack_id"`
+    rack_id=`conf $common_config get "cluster>$srvnode>rack_id"`
     rack_id=$(echo $rack_id | tr -d "["\" | tr -d "\"]")
     cluster_id=`conf $common_config get "cluster>cluster_id"`
     cluster_id=$(echo $cluster_id | tr -d "["\" | tr -d "\"]")

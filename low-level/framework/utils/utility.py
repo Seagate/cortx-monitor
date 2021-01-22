@@ -17,8 +17,10 @@
 Base class for all the Utility implementation
 """
 
+import re
 import subprocess
 from cortx.sspl.lowlevel.framework.utils.service_logging import logger
+
 
 class Utility(object):
     """Base class for all the utilities
@@ -58,6 +60,22 @@ class Utility(object):
         return is_vm
 
     def get_machine_id(self):
+        """
+        Returns machine-id from /etc/machine-id.
+        """
         with open("/etc/machine-id") as f:
             return f.read().strip("\n")
+
+    def get_os(self):
+        """
+        Returns os name({ID}{VERSION_ID}) from /etc/os-release.
+        """
+        with open("/etc/os-release") as f:
+            os_release = f.read()
+            os_id = re.findall('^ID=(.*)\n', os_release, flags=re.MULTILINE)
+            os_version_id = re.findall('^VERSION_ID=(.*)\n', os_release, flags=re.MULTILINE)
+            if os_id and os_version_id:
+                return "".join([_.strip('"') for _ in os_id+os_version_id])
+            else:
+                return None
 

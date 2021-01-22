@@ -63,7 +63,8 @@ def get_cluster_connection(username, password, virtual_host):
     """
     #hosts = get_cluster_nodes()  # Depreciated (EOS-8860)
     hosts = Conf.get("SSPL-Test", f"{RABBITMQ_CLUSTER_SECTION}>{RABBITMQ_CLUSTER_HOSTS_KEY}")
-    
+    if isinstance(hosts, str):
+        hosts = hosts.strip().split(",")
     logger.debug(f'Cluster nodes [SSPL TEST]: {hosts}')
     ampq_hosts = [
         f'amqp://{username}:{password}@{host}/{virtual_host}' for host in hosts

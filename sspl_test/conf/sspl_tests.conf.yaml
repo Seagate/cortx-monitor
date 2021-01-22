@@ -3,7 +3,6 @@ SYSTEM_INFORMATION:
    site_id: 'DC01'
    cluster_id: 'CC01'
    node_id: 'SN01'
-   product: LDR_R2
 SSPL-TESTS_SETTING:
    modules:
       - RabbitMQingressProcessorTests
@@ -36,5 +35,5 @@ NODEHWSENSOR:
 SYSTEMDWATCHDOG:
    monitor: true
 RABBITMQCLUSTER:
-   cluster_nodes: 
-      - ssc-vm-1166
+   cluster_nodes: localhost
+
