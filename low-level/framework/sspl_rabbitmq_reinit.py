@@ -16,33 +16,29 @@
 # cortx-questions@seagate.com.
 
 
-"""
-Setup rabbitmq for use by sspl_ll on LDR_R1, LDR_R2 systems
+#############################################################
+# Setup rabbitmq for use by sspl_ll on LDR_R1, LDR_R2 systems
+# This script uses ConfStore as the source of the parameters.
+# Usage:
+#    python3 sspl_rabbitmq_reinit.py <product>
+#############################################################
 
-This script uses /etc/sspl.conf as the source of the parameters.
-
-Usage:
-    ./sspl_rabbitmq_reinit <product>
-"""
 import os
 import subprocess
 import sys
 import socket
 import pika
 
-# Add the top level directories
-sys.path.insert(0, f'/opt/seagate/cortx/sspl/low-level')
-from framework.utils.config_reader import ConfigReader
-from framework.base.sspl_constants import COMMON_CONFIGS, cs_legacy_products, enabled_products, ServiceTypes
+# using cortx package
+from cortx.sspl.bin.sspl_constants import COMMON_CONFIGS, cs_legacy_products, enabled_products, ServiceTypes
 from cortx.utils.security.cipher import Cipher, CipherInvalidToken
+from cortx.utils.conf_store import Conf
 
 RABBITMQCTL = '/usr/sbin/rabbitmqctl'
 SECTION="RABBITMQEGRESSPROCESSOR"
 INGRESS_CONFIG_SECTION = 'RABBITMQINGRESSPROCESSOR'
 EGRESS_CONFIG_SECTION = 'RABBITMQEGRESSPROCESSOR'
 LOGGER_CONFIG_SECTION = 'LOGGINGPROCESSOR'
-CLUSTER_SECTION = 'RABBITMQCLUSTER'
-ERLANG_COOKIE_PATH = '/var/lib/rabbitmq/.erlang.cookie'
 
 EXCHANGE_NAME_KEY = 'exchange_name'
 QUEUE_NAME_KEY = 'queue_name'
@@ -53,15 +49,7 @@ ACK_EXCHANGE_NAME_KEY = 'ack_exchange_name'
 VIRT_HOST_KEY = 'virtual_host'
 USER_NAME_KEY = 'username'
 PASSWORD_KEY = 'password'
-
-SYSTEM_INFORMATION_KEY = 'SYSTEM_INFORMATION'
 CLUSTER_ID_KEY = 'cluster_id'
-NODE_ID_KEY = 'node_id'
-# Add the top level directories
-parentdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-os.sys.path.insert(0,parentdir)
-
-config_reader = ConfigReader()
 
 
 def gen_key(cluster_id, service_name):
@@ -83,36 +71,22 @@ def decrypt(key, text):
 
 def main(product):
     """ Main line for this program. """
-    virtual_host = config_reader._get_value(
-        section=SECTION,
-        key='virtual_host'
-        )
-    username = config_reader._get_value(
-        section=SECTION,
-        key='username'
-        )
-    password = config_reader._get_value(
-        section=SECTION,
-        key='password'
-        )
+    virtual_host = Conf.get("sspl", "%s>%s" % (SECTION, VIRT_HOST_KEY))
+    username = Conf.get("sspl", "%s>%s" % (SECTION, USER_NAME_KEY))
+    password = Conf.get("sspl", "%s>%s" % (SECTION, PASSWORD_KEY))
 
     if product in cs_legacy_products:
-        primary_rabbitmq_server = config_reader._get_value(
-            section=SECTION,
-            key='primary_rabbitmq_server'
-            )
-        secondary_rabbitmq_server = config_reader._get_value(
-            section=SECTION,
-            key='secondary_rabbitmq_server'
-            )
+        primary_rabbitmq_server = Conf.get("sspl",
+                                           "%s>%s" % (SECTION, "primary_rabbitmq_host"))
+        secondary_rabbitmq_server = Conf.get("sspl",
+                                             "%s>%s" % (SECTION, "secondary_rabbitmq_server"))
     _check_rabbitmq_status()
     _start_rabbitmq()
 
     _create_vhost_if_necessary(virtual_host, product)
 
     # Decrypt password -----------------------
-    cluster_id = config_reader._get_value(section=SYSTEM_INFORMATION_KEY,
-                                          key=COMMON_CONFIGS.get(SYSTEM_INFORMATION_KEY).get(CLUSTER_ID_KEY))
+    cluster_id = Conf.get("global_config", "%s>%s" % ("cluster", CLUSTER_ID_KEY))
     # Generate key
     key = gen_key(cluster_id, ServiceTypes.RABBITMQ.value)
     password = decrypt(key, password.encode('ascii'))
@@ -192,13 +166,12 @@ def _set_ha_policy(queue_name):
 
 def _get_connection_config(section, exchange_key=EXCHANGE_NAME_KEY,
                            queue_key=QUEUE_NAME_KEY, routing_key=ROUTING_KEY):
-    vhost = config_reader._get_value(section, VIRT_HOST_KEY)
-    exchange_name = config_reader._get_value(section, exchange_key)
-    queue_name = config_reader._get_value(section, queue_key)
-    routing_key = config_reader._get_value(section, routing_key)
-
-    username = config_reader._get_value(section, USER_NAME_KEY)
-    password = config_reader._get_value(section, PASSWORD_KEY)
+    vhost = Conf.get("sspl", "%s>%s" % (section, VIRT_HOST_KEY))
+    exchange_name = Conf.get("sspl", "%s>%s" % (section, exchange_key))
+    queue_name = Conf.get("sspl", "%s>%s" % (section, queue_key))
+    routing_key = Conf.get("sspl", "%s>%s" % (section, routing_key))
+    username =  Conf.get("sspl", "%s>%s" % (section, USER_NAME_KEY))
+    password = Conf.get("sspl", "%s>%s" % (section, PASSWORD_KEY))
     return vhost, username, password, exchange_name, queue_name, routing_key
 
 

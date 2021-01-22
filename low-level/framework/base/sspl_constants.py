@@ -15,17 +15,16 @@
 # about this software or licensing, please email opensource@seagate.com or
 # cortx-questions@seagate.com.
 
-import configparser
 import subprocess
 import ast
 import sys
 import os
 from enum import Enum
 
-# Add the top level directories
-sys.path.insert(0, '/opt/seagate/cortx/sspl/low-level')
-from framework.utils.salt_util import SaltInterface
-from framework.utils.service_logging import logger
+# using cortx package
+from cortx.sspl.lowlevel.framework.utils.salt_util import SaltInterface
+from cortx.sspl.lowlevel.framework.utils.service_logging import logger
+from cortx.utils.conf_store import Conf
 
 
 PRODUCT_NAME = 'LDR_R2'
@@ -65,7 +64,7 @@ REPLACEMENT_NODE_ENV_VAR_FILE = "/etc/profile.d/set_replacement_env.sh"
 
 # required only for init
 component = 'sspl/config'
-file_store_config_path = '/etc/sspl.conf'
+file_store_config_path = f'/etc/sspl.conf.{PRODUCT_NAME}.yaml'
 salt_provisioner_pillar_sls = 'sspl'
 salt_uniq_attr_per_node = ['cluster_id']
 salt_uniq_passwd_per_node = ['RABBITMQINGRESSPROCESSOR', 'RABBITMQEGRESSPROCESSOR', 'LOGGINGPROCESSOR']
@@ -76,23 +75,30 @@ CONSUL_HOST = '127.0.0.1'
 CONSUL_PORT = '8500'
 
 # TODO Keep only constants in this file.
-# other values(configs) should come from cofig.
-# Check if SSPL is configured
-if os.path.exists(SSPL_CONFIGURED):
-    try:
-        config = configparser.ConfigParser()
-        config.read(file_store_config_path)
-        storage_type = config['STORAGE_ENCLOSURE']['type']
-        server_type = config['SYSTEM_INFORMATION']['type']
-        cluster_id = config['SYSTEM_INFORMATION']['cluster_id']
-        node_id = config['SYSTEM_INFORMATION']['node_id']
-        node_key_id = config['SYSTEM_INFORMATION']['salt_minion_id']
-        CONSUL_HOST = config['DATASTORE']['consul_host']
-        CONSUL_PORT = config['DATASTORE']['consul_port']
-    except Exception as err:
-        print(f'sspl_constants : Failed to read from {file_store_config_path} due to error - {err}')
-# If not configured, use salt interface
-else:
+# other values(configs) should come from config.
+
+# TODO: Below finding machine id/node_key_id code will be replaced by PR #281 [EO-16515]
+try:
+    with open("/etc/machine-id") as f:
+        node_key_id = f.read().strip("\n")
+except Exception as err:
+    print(f"Failed to get machine-id. - {err}")
+
+storage_type = Conf.get('global_config',
+                        'storage>enclosure_1>type')
+server_type = Conf.get('global_config',
+                        f'cluster>{node_key_id}>node_type')
+cluster_id = Conf.get('global_config',
+                        'cluster>cluster_id')
+node_id = Conf.get('global_config',
+                        f'cluster>{node_key_id}>node_id')
+site_id = Conf.get('global_config',
+                        f'cluster>{node_key_id}>site_id')
+rack_id = Conf.get('global_config',
+                        f'cluster>{node_key_id}>site_id')
+
+# If SSPL is not configured, use salt interface
+if not os.path.exists(SSPL_CONFIGURED) and PRODUCT_NAME=="LDR_R1":
     try:
         salt_int = SaltInterface()
         node_key_id = salt_int.get_node_id()

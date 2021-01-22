@@ -25,11 +25,15 @@ import inspect
 import traceback
 import os
 import syslog
+
+# using cortx package
+from cortx.sspl.bin.error import SetupError
 from cortx.utils.process import SimpleProcess
+from cortx.utils.conf_store import Conf
 
 class Cmd:
     """Setup Command.
-    
+
     """
 
     def __init__(self, args: dict):
@@ -43,24 +47,18 @@ class Cmd:
     @staticmethod
     def usage(prog: str):
         """Print usage instructions."""
-        sys.stderr.write(
-            f"{prog} [setup [-p <LDR_R2>]|post_install [-p <LDR_R2>]|init [-dp] [-r <vm>]|config [-f] [-r <vm>]\n"
-            "|test [self|sanity]|reset [hard -p <LDR_R21>|soft]|join_cluster [-n <nodes>]\n"
-            "|manifest_support_bundle [<id>] [<path>]|support_bundle [<id>] [<path>]]\n"
-            "setup options:\n"
-            "\t -p Product name\n"
-            "join_cluster options:\n"
-            "\t -n Node names\n"
-            "init options:\n"
-            "\t -dp Create configured datapath\n"
-            "\t -r  Role to be configured on the current node\n"
-            "config options:\n"
-            "\t -f  Force reinitialization. Do not prompt\n"
-            "\t -r  Role to be configured on the current node"
-            "post_install options:\n"
-            "\t -p Product to be configured\n"
-            "reset options:\n"
-            "\t -p Product to be configured\n")
+        sys.stderr.write(f"""{prog}
+            [ -h|--help ]
+            [ post_install [<global_config_url>] ]
+            [ init [<global_config_url>] ]
+            [ config [<global_config_url>] ]
+            [ test [sanity|alerts] ]
+            [ reset [hard|soft] ]
+            [ join_cluster [<nodes>] ]
+            [ manifest_support_bundle [<id>] [<path>] ]
+            [ support_bundle [<id>] [<path>] ]
+            [ check ]
+            \n""")
 
     @staticmethod
     def get_command(desc: str, argv: dict):
@@ -82,37 +80,14 @@ class Cmd:
     @staticmethod
     def add_args(parser: str, cls: str, name: str):
         """Add Command args for parsing."""
-        parsers = parser.add_parser(cls.name, help='setup %s' % name)
+        parsers = parser.add_parser(cls.name, help='%s' % cls.__doc__)
         parsers.add_argument('args', nargs='*', default=[], help='args')
         parsers.set_defaults(command=cls)
 
 
-class SetupCmd(Cmd):
-    """SSPL Setup Cmd.
-    
-    """
-
-    name = "setup"
-    script = "setup_sspl"
-
-    def __init__(self, args):
-        super().__init__(args)
-
-    def validate(self):
-        # Common validator classes to check Cortx/system wide validator
-        pass
-
-    def process(self):
-        setup_sspl = f"{self._script_dir}/{self.script} {' '.join(self._args)}"
-        output, error, returncode = SimpleProcess(setup_sspl).run()
-        if returncode != 0:
-            sys.stderr.write("error: %s\n\n" % str(error))
-            sys.exit(errno.EINVAL)
-
-
 class JoinClusterCmd(Cmd):
-    """Setup Join Cluster Cmd.
-    
+    """Join nodes in cluster. To join mutiple nodes, use delimeter ","
+    between node names. ie.node1,node2
     """
 
     name = "join_cluster"
@@ -129,20 +104,17 @@ class JoinClusterCmd(Cmd):
         setup_rabbitmq_cluster = f"{self._script_dir}/{self.script} {' '.join(self._args)}"
         output, error, returncode = SimpleProcess(setup_rabbitmq_cluster).run()
         if returncode != 0:
-            sys.stderr.write("error: %s\n\n" % str(error))
-            sys.exit(errno.EINVAL)
+            raise SetupError(returncode, "%s - validation failure. %s", self.name, error)
 
         # TODO: Replace the below code once sspl_config script implementation is done.
         sspl_config = f"{self._script_dir}/{self.script} {' '.join(self._args)}"
         output, error, returncode = SimpleProcess(sspl_config).run()
         if returncode != 0:
-            sys.stderr.write("error: %s\n\n" % str(error))
-            sys.exit(errno.EINVAL)
+            raise SetupError(returncode, "%s - validation failure. %s", self.name, error)
 
 
 class PostInstallCmd(Cmd):
-    """PostInstall Setup Cmd.
-    
+    """Prepare the environment for sspl service.
     """
 
     name = "post_install"
@@ -151,8 +123,19 @@ class PostInstallCmd(Cmd):
         super().__init__(args)
 
     def validate(self):
-        # Common validator classes to check Cortx/system wide validator
-        pass
+        if not self.args:
+            raise SetupError(1,
+                             "%s - validation failure. %s",
+                             self.name,
+                             "Post install requires global config.")
+        global_config = self.args[0]
+        Conf.load('global_config', global_config)
+        product = Conf.get('global_config', 'cluster>product')
+        if not product:
+            raise SetupError(1,
+                             "%s - validation failure. %s",
+                             self.name,
+                             "Product not found in %s" % (global_config))
 
     def process(self):
         from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.sspl_post_install import SSPLPostInstall
@@ -160,8 +143,7 @@ class PostInstallCmd(Cmd):
 
 
 class InitCmd(Cmd):
-    """Init Setup Cmd.
-    
+    """Creates data path and checks required role.
     """
 
     name = "init"
@@ -179,8 +161,7 @@ class InitCmd(Cmd):
 
 
 class ConfigCmd(Cmd):
-    """Setup Config Cmd.
-    
+    """Configues SSPL role, logs and sensors needs to be enabled.
     """
 
     name = "config"
@@ -198,8 +179,7 @@ class ConfigCmd(Cmd):
 
 
 class TestCmd(Cmd):
-    """SSPL Test Cmd.
-    
+    """Starts test based on plan (sanity | alerts).
     """
 
     name = "test"
@@ -217,8 +197,7 @@ class TestCmd(Cmd):
 
 
 class SupportBundleCmd(Cmd):
-    """SSPL Support Bundle Cmd.
-    
+    """Collects SSPL support bundle.
     """
 
     name = "support_bundle"
@@ -235,13 +214,11 @@ class SupportBundleCmd(Cmd):
         sspl_bundle_generate = f"{self._script_dir}/{self.script} {' '.join(self._args)}"
         output, error, returncode = SimpleProcess(sspl_bundle_generate).run()
         if returncode != 0:
-            sys.stderr.write("error: %s\n\n" % str(error))
-            sys.exit(errno.EINVAL)
+            raise SetupError(returncode, "%s - validation failure. %s", self.name, error)
 
 
 class ManifestSupportBundleCmd(Cmd):
-    """Manifest Support Bundle Cmd.
-    
+    """Collects enclosure, cluster and node information.
     """
 
     name = "manifest_support_bundle"
@@ -258,13 +235,13 @@ class ManifestSupportBundleCmd(Cmd):
         manifest_support_bundle = f"{self._script_dir}/{self.script} {' '.join(self._args)}"
         output, error, returncode = SimpleProcess(manifest_support_bundle).run()
         if returncode != 0:
-            sys.stderr.write("error: %s\n\n" % str(error))
-            sys.exit(errno.EINVAL)
+            raise SetupError(returncode, "%s - validation failure. %s", self.name, error)
 
 
 class ResetCmd(Cmd):
-    """Setup Reset Cmd.
-    
+    """Performs SSPL config reset. Options: hard, soft.
+    'hard' is used to reset configs and clean log directory where
+    'soft' is to clean only the data path.
     """
 
     name = "reset"
@@ -283,8 +260,7 @@ class ResetCmd(Cmd):
 
 
 class CheckCmd(Cmd):
-    """SSPL Check Cmd.
-    
+    """Validates configs and environment prepared for SSPL initialization.
     """
 
     name = "check"
@@ -298,18 +274,15 @@ class CheckCmd(Cmd):
 
     def validate(self):
         # Common validator classes to check Cortx/system wide validator
-        # Onward LDR_R2, consul will be abstracted out and won't exist as hard dependency for SSPL
-        #from files.opt.seagate.sspl.setup import validate_consul_config
-        #self.validate_consul_config = validate_consul_config
-        pass
+        if not os.path.exists(self.SSPL_CONFIGURED):
+            error = f"SSPL is not configured. Run provisioner scripts in {self._script_dir}"
+            syslog.openlog(logoption=syslog.LOG_PID, facility=syslog.LOG_LOCAL3)
+            syslog.syslog(syslog.LOG_ERR, error)
+            raise SetupError(1, "%s - validation failure. %s", self.name, error)
 
     def process(self):
-        #self.validate_consul_config.validate_config()
-        if os.path.exists(self.SSPL_CONFIGURED):
-            sys.exit(0)
-        syslog.openlog(logoption=syslog.LOG_PID, facility=syslog.LOG_LOCAL3)
-        syslog.syslog(syslog.LOG_ERR, f"SSPL is not configured. Run provisioner scripts in {self._script_dir}.")
-        sys.exit(1)
+        pass
+
 
 def main(argv: dict):
     try:

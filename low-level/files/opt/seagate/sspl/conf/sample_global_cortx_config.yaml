@@ -1,0 +1,36 @@
+cluster:
+   product: LDR_R2
+   cluster_id: CC01
+   server_nodes:
+     abc25957545942cfa728b74cead1a882: srvnode1
+   srvnode1:
+      node_type: physical
+      site_id: DC01
+      rack_id: RC01
+      node_id: SN01
+      storage_set_id: ST01
+      operating_system: centos7
+      storage:
+         enclosure_id: enclosure_1
+      bmc:
+         ip: 127.0.0.1
+         secret: admin
+         user: admin
+
+storage:
+   enclosure_1:
+      type:
+      controller:
+         primary:
+            ip: 127.0.0.1
+            port: 28200
+         secondary:
+            ip: 127.0.0.1
+            port: 28200
+         user: manage
+         password: gAAAAABgB8k2R7NuvqUc0wvwac8kfmEQpVNYUEN2iZTTuqX7lzHTKxEyDvd26MKJPgQrB14sDEfW067PAG1w-vki3zmVvn6zKA==
+         type:
+
+rsyslog:
+   host: localhost
+   port: 514
