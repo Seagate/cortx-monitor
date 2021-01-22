@@ -18,13 +18,12 @@
 #################################################################
 # This script performs following operations
 # - Check if product is one of the enabled products
-# - Configures role in sspl.conf if supplied
+# - Configures self.role in sspl.conf if supplied
 # - Executes sspl_reinit script
 # - Updates cluster nodes passed in cli to consul
 #################################################################
 
 import os
-import sys
 import shutil
 import psutil
 import json
@@ -50,7 +49,7 @@ class SSPLConfigError(Exception):
         return "error(%d): %s" %(self._rc, self._desc)
 
 class SSPLConfig:
-    """ Config Interface """
+    """ SSPL Setup Config Interface """
 
     name = "config"
     DIR_NAME= f"/opt/seagate/{consts.PRODUCT_FAMILY}/sspl"
@@ -59,13 +58,17 @@ class SSPLConfig:
     LOGROTATE_DIR  ="/etc/logrotate.d"
     IEM_LOGROTATE_CONF = f"{LOGROTATE_DIR}/iem_messages"
     SSPL_LOGROTATE_CONF = f"{LOGROTATE_DIR}/sspl_logs"
-    SSPL_CONFIGURED = f"/var/{consts.PRODUCT_FAMILY}/sspl/sspl-configured"
     SSPL_CONFIGURED_DIR = f"/var/{consts.PRODUCT_FAMILY}/sspl"
+    SSPL_CONFIGURED = f"{SSPL_CONFIGURED_DIR}/sspl-configured"
 
 
     def __init__(self, args : list):
         self.args = args
         self._script_dir = os.path.dirname(os.path.abspath(__file__))
+        self.force = 0
+        self.role = None
+        self.rmq_cluster_nodes = None
+        self.read_provisioner_config = True
 
     def getval_from_ssplconf(self, varname : str) -> str:
         with open(consts.file_store_config_path, mode='rt') as confile:
@@ -77,7 +80,7 @@ class SSPLConfig:
                     return rets
         return None
 
-    def append_val(self, filename:str, key, new_str:str):
+    def replace_expr(self, filename:str, key, new_str:str):
         with open(filename, 'r+') as f: 
             lines = f.readlines()
             if type(key) == str:
@@ -87,31 +90,31 @@ class SSPLConfig:
             elif type(key) == int:
                 if not re.search(new_str, lines[key]):
                     lines.insert(key, new_str)
+            else 
+                raise SSPLConfigError(
+                            errno.EINVAL,
+                            "Key data type : '%s', should be string or int",
+                            type(key))
             f.seek(0)
             for line in lines:
                 f.write(line)
 
-    def config_sspl(self):
-        force = 0
-        role = None
-        self.rmq_cluster_nodes = None
-        read_provisioner_config = True
-
+    def validate_args(self):
         i = 0
         while i < len(self.args):
             if self.args[i] == '-f':
-                force = 1
+                self.force = 1
             elif self.args[i] == '-r':
                 i+=1
                 if i >= len(self.args):
                     raise SSPLConfigError(errno.EINVAL, 
-                                "Role is not provided with -r option") 
-                if self.args[i] not in consts.roles:
+                                "self.Role is not provided with -r option") 
+                if self.args[i] not in consts.self.roles:
                     raise SSPLConfigError(errno.EINVAL, 
-                                "Provided role '%s' is not supported", 
+                                "Provided self.role '%s' is not supported", 
                                 self.args[i])
                 else:
-                    role = self.args[i]
+                    self.role = self.args[i]
             elif self.args[i] == '-n':
                 i+=1
                 if i >= len(self.args):
@@ -120,20 +123,24 @@ class SSPLConfig:
                 else:
                     self.rmq_cluster_nodes = self.args[i]
             elif self.args[i] == '-d':
-                read_provisioner_config = False
+                self.read_provisioner_config = False
             else:
-                raise SSPLConfigError(errno.EINVAL, "Unknown option '%s'", self.args[i])
+                raise SSPLConfigError(errno.EINVAL, 
+                                "Unknown option '%s'", self.args[i])
             i+=1
 
+    def config_sspl(self):
+        self.validate_args()
         if(os.geteuid() != 0):
-            raise SSPLConfigError(errno.EINVAL, "Run this command with root privileges!!")
+            raise SSPLConfigError(
+                        errno.EINVAL, 
+                        "Run this command with root privileges!!")
         
         if not os.path.isfile(consts.file_store_config_path):
-            raise SSPLConfigError(errno.EINVAL, 
-                                    "Missing configuration!! Create\
-                                    and rerun.",
-                                    consts.file_store_config_path
-                    )
+            raise SSPLConfigError(
+                        errno.EINVAL, 
+                        "Missing configuration!! Create and rerun.",
+                        consts.file_store_config_path)
 
         # Put minion id, consul_host and consul_port in conf file
         # Onward LDR_R2, salt will be abstracted out and it won't
@@ -143,13 +150,15 @@ class SSPLConfig:
             salt_util.update_config_file(consts.file_store_config_path)
 
         if os.path.isfile(self.SSPL_CONFIGURED):
-            ans = 'y' if force == 1 else None
+            ans = 'y' if self.force == 1 else None
 
             while ans!='y' and ans!='n':
-                ans = input("SSPL is already initialized. Reinitialize SSPL? [y/n]: ")
+                ans = input("SSPL is already initialized. \
+                            Reinitialize SSPL? [y/n]: ")
             
             if(ans == 'n'):
-                raise SSPLConfigError(errno.EINVAL, 
+                raise SSPLConfigError(
+                        errno.EINVAL, 
                         "SSPL already initialized, reinitialization cancled.")
 
             try:
@@ -161,23 +170,24 @@ class SSPLConfig:
         product = self.getval_from_ssplconf('product')
         
         if not product:
-            raise SSPLConfigError(errno.EINVAL, 
-                                "No product specified in %s",
-                                consts.file_store_config_path
-                    )
+            raise SSPLConfigError(
+                        errno.EINVAL, 
+                        "No product specified in %s",
+                        consts.file_store_config_path)
         
         if not consts.enabled_products:
             raise SSPLConfigError(errno.EINVAL, "No enabled products!")
         
         if product not in consts.enabled_products:
-            raise SSPLConfigError(errno.EINVAL, 
-                            f"Product '{product}' is not in enabled \
-                                products list: {consts.enabled_products}"
-                            )
+            raise SSPLConfigError(
+                        errno.EINVAL, 
+                        "Product '%s' is not in enabled products list: %s",
+                        product, consts.enabled_products)
 
-        # Configure role
-        if role:
-            self.append_val(consts.file_store_config_path, '^setup=.*', f'setup={role}')
+        # Configure self.role
+        if self.role:
+            self.replace_expr(consts.file_store_config_path, 
+                            '^setup=.*', f'setup={self.role}')
 
         # Add sspl-ll user to required groups and sudoers file etc.
         print("Initializing SSPL configuration ... ")
@@ -199,18 +209,25 @@ class SSPLConfig:
         # SSPL Log file configuration
         SSPL_LOG_FILE_PATH = self.getval_from_ssplconf('sspl_log_file_path')
         if SSPL_LOG_FILE_PATH:
-            self.append_val(self.RSYSLOG_SSPL_CONF, 'File.*[=,"]', f'File="{SSPL_LOG_FILE_PATH}"')
-            self.append_val(f"{self.DIR_NAME}/low-level/files/etc/logrotate.d/sspl_logs", 0, SSPL_LOG_FILE_PATH)
+            self.replace_expr(self.RSYSLOG_SSPL_CONF, 
+                        'File.*[=,"]', f'File="{SSPL_LOG_FILE_PATH}"')
+            self.replace_expr(
+                    f"{self.DIR_NAME}/low-level/files/etc/logrotate.d/sspl_logs", 
+                    0, SSPL_LOG_FILE_PATH)
 
         # IEM configuration
         # Configure log file path in Rsyslog and logrotate configuration file
         LOG_FILE_PATH = self.getval_from_ssplconf('log_file_path')
 
         if LOG_FILE_PATH:
-            self.append_val(self.RSYSLOG_CONF, 'File.*[=,"]', f'File="{LOG_FILE_PATH}"')
-            self.append_val(f'{self.DIR_NAME}/low-level/files/etc/logrotate.d/iem_messages', 0, LOG_FILE_PATH)
+            self.replace_expr(self.RSYSLOG_CONF, 
+                    'File.*[=,"]', f'File="{LOG_FILE_PATH}"')
+            self.replace_expr(
+                    f'{self.DIR_NAME}/low-level/files/etc/logrotate.d/iem_messages', 
+                    0, LOG_FILE_PATH)
         else:
-            self.append_val(self.RSYSLOG_CONF, 'File.*[=,"]', f'File=/var/log/{consts.PRODUCT_FAMILY}/iem/iem_messages')
+            self.replace_expr(self.RSYSLOG_CONF, 
+                    'File.*[=,"]', f'File=/var/log/{consts.PRODUCT_FAMILY}/iem/iem_messages')
 
 
         # Create logrotate dir in case it's not present for dev environment
@@ -245,19 +262,23 @@ class SSPLConfig:
                     if 'consul' in proc.name():
                         CONSUL_PS = proc.pid
                 if not CONSUL_PS:
-                    raise SSPLConfigError(errno.EINVAL, "Consul is not running, exiting..")
+                    raise SSPLConfigError(
+                            errno.EINVAL,
+                            "Consul is not running, exiting..")
 
         # Get the types of server and storage we are currently running on and
         # enable/disable sensor groups in the conf file accordingly.
-        if read_provisioner_config:
+        if self.read_provisioner_config:
             from cortx.sspl.bin.conf_based_sensors_enable import update_sensor_info
-            # subprocess.call(['python3', f'{self._script_dir}/conf_based_sensors_enable'])   
             update_sensor_info()    
             
     def get_rabbitmq_cluster_nodes(self):
         pout = None
-        if self.rabbitmq_major_release == '3' and self.rabbitmq_maintenance_release == '8':
-            rmq_cluster_status_cmd = '/usr/sbin/rabbitmqctl cluster_status --formatter json'
+        if  self.rabbitmq_major_release == '3' and \
+            self.rabbitmq_maintenance_release == '8':
+
+            rmq_cluster_status_cmd = '/usr/sbin/rabbitmqctl cluster_status \
+                                    --formatter json'
             output, error, returncode = SimpleProcess(rmq_cluster_status_cmd).run()
             rabbitmq_cluster_status = json.loads(output)
             if returncode:
@@ -331,7 +352,7 @@ class SSPLConfig:
                     if returncode:
                         raise SSPLConfigError(returncode, error, consul_cmd)
                 else:
-                    self.append_val(consts.file_store_config_path, 'cluster_nodes=.*', f'cluster_nodes={pout}')
+                    self.replace_expr(consts.file_store_config_path, 'cluster_nodes=.*', f'cluster_nodes={pout}')
             
         # Skip this step if sspl is being configured for node replacement scenario as consul data is already
         # available on healthy node
@@ -351,10 +372,10 @@ class SSPLConfig:
                     if returncode:
                         raise SSPLConfigError(returncode, error, consul_cmd)
                 else:
-                    self.append_val(consts.file_store_config_path, 'log_level.*[=,",\']', f'log_level={log_level}')
+                    self.replace_expr(consts.file_store_config_path, 'log_level.*[=,",\']', f'log_level={log_level}')
             else:
-                sys.stderr.write(f"Unexpected log level is requested, '{log_level}'")        
-
-if __name__ == "__main__":
-    conf = SSPLConfig(sys.argv[1:])
-    conf.process()
+                raise SSPLConfigError(
+                            errno.EINVAL,
+                            "Unexpected log level is requested, '%s'",
+                            log_level
+                            )      

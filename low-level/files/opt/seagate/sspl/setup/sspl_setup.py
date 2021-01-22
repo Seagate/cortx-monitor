@@ -26,6 +26,7 @@ import traceback
 import os
 import syslog
 <<<<<<< HEAD
+<<<<<<< HEAD
 import time
 
 # using cortx package
@@ -44,6 +45,9 @@ from cortx.utils.process import SimpleProcess
 =======
 from cortx.sspl.lowlevel.framework.utils.utility import Utility
 >>>>>>> EOS-16524: sspl_conf.sh to python (changed path to utility.py)
+=======
+from cortx.utils.process import SimpleProcess
+>>>>>>> EOS-16524: sspl_conf.sh to python (minor change)
 
 class Cmd:
     """Setup Command."""
@@ -139,7 +143,11 @@ class SetupCmd(Cmd):
         pass
 
     def process(self):
-        Utility.call_script(f"{self._script_dir}/{self.script}", self._args)
+        setup_sspl = f"{self._script_dir}/{self.script} {' '.join(self._args)}"
+        output, error, returncode = SimpleProcess(setup_sspl).run()
+        if returncode != 0:
+            sys.stderr.write("error: %s\n\n" % str(error))
+            sys.exit(errno.EINVAL)
 
 >>>>>>> EOS-16524: sspl_conf.sh to python (import of conf_vased_sensors_enable and few changes)
 
@@ -168,6 +176,7 @@ class JoinClusterCmd(Cmd):
     def process(self):
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
         from cortx.sspl.bin.setup_rabbitmq_cluster import RMQClusterConfiguration
         RMQClusterConfiguration(self.args[1]).process()
 =======
@@ -187,6 +196,20 @@ class JoinClusterCmd(Cmd):
             print(error)
             sys.exit(1)
 >>>>>>> EOS-16524: sspl_config.sh to python (removed usage(), added Expection handling)
+=======
+        setup_rabbitmq_cluster = f"{self._script_dir}/{self.script} {' '.join(self._args)}"
+        output, error, returncode = SimpleProcess(setup_rabbitmq_cluster).run()
+        if returncode != 0:
+            sys.stderr.write("error: %s\n\n" % str(error))
+            sys.exit(errno.EINVAL)
+
+        # TODO: Replace the below code once sspl_config script implementation is done.
+        sspl_config = f"{self._script_dir}/{self.script} {' '.join(self._args)}"
+        output, error, returncode = SimpleProcess(sspl_config).run()
+        if returncode != 0:
+            sys.stderr.write("error: %s\n\n" % str(error))
+            sys.exit(errno.EINVAL)
+>>>>>>> EOS-16524: sspl_conf.sh to python (minor change)
 
 
 class PostInstallCmd(Cmd):
@@ -222,6 +245,7 @@ class PostInstallCmd(Cmd):
         SSPLPostInstall(self.args[1]).process()
 
 
+
 class InitCmd(Cmd):
     """Creates data path and checks required role."""
 
@@ -252,8 +276,11 @@ class ConfigCmd(Cmd):
         pass
 
     def process(self):
-        from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.sspl_config import Config
-        Config(self.args).process()
+        from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.sspl_config import SSPLConfig
+        try:
+            SSPLConfig(self.args).process()
+        except Exception:
+            raise
 
 
 class TestCmd(Cmd):
@@ -288,6 +315,7 @@ class SupportBundleCmd(Cmd):
 
     def process(self):
 <<<<<<< HEAD
+<<<<<<< HEAD
         args = ' '.join(self._args)
         sspl_bundle_generate = "%s/%s %s" % (self._script_dir, self.script, args)
         output, error, returncode = SimpleProcess(sspl_bundle_generate).run()
@@ -296,6 +324,13 @@ class SupportBundleCmd(Cmd):
 =======
         Utility.call_script(f"{self._script_dir}/{self.script}", self._args)
 >>>>>>> EOS-16524: sspl_conf.sh to python (changed path to utility.py)
+=======
+        sspl_bundle_generate = f"{self._script_dir}/{self.script} {' '.join(self._args)}"
+        output, error, returncode = SimpleProcess(sspl_bundle_generate).run()
+        if returncode != 0:
+            sys.stderr.write("error: %s\n\n" % str(error))
+            sys.exit(errno.EINVAL)
+>>>>>>> EOS-16524: sspl_conf.sh to python (minor change)
 
 
 class ManifestSupportBundleCmd(Cmd):
@@ -314,6 +349,7 @@ class ManifestSupportBundleCmd(Cmd):
 
     def process(self):
 <<<<<<< HEAD
+<<<<<<< HEAD
         args = ' '.join(self._args)
         manifest_support_bundle = "%s/%s %s" % (self._script_dir, self.script, args)
         output, error, returncode = SimpleProcess(manifest_support_bundle).run()
@@ -322,6 +358,13 @@ class ManifestSupportBundleCmd(Cmd):
 =======
         Utility.call_script(f"{self._script_dir}/{self.script}", self._args)
 >>>>>>> EOS-16524: sspl_conf.sh to python (changed path to utility.py)
+=======
+        manifest_support_bundle = f"{self._script_dir}/{self.script} {' '.join(self._args)}"
+        output, error, returncode = SimpleProcess(manifest_support_bundle).run()
+        if returncode != 0:
+            sys.stderr.write("error: %s\n\n" % str(error))
+            sys.exit(errno.EINVAL)
+>>>>>>> EOS-16524: sspl_conf.sh to python (minor change)
 
 
 class ResetCmd(Cmd):
@@ -355,10 +398,14 @@ class CheckCmd(Cmd):
         super().__init__(args)
 
 <<<<<<< HEAD
+<<<<<<< HEAD
         from cortx.sspl.bin.sspl_constants import PRODUCT_FAMILY
 =======
         from cortx.sspl.lowlevel.framework.base.sspl_constants import PRODUCT_FAMILY
 >>>>>>> EOS-16524: sspl_conf.sh to python (import paths changed and simpleProcess implemented)
+=======
+        from cortx.sspl.bin.sspl_constants import PRODUCT_FAMILY
+>>>>>>> EOS-16524: sspl_conf.sh to python (minor change)
 
         self.SSPL_CONFIGURED="/var/%s/sspl/sspl-configured" % (PRODUCT_FAMILY)
         self.services = ["rabbitmq-server", "sspl-ll"]
