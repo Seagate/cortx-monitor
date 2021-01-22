@@ -21,9 +21,7 @@
 # - Check dependencies for consts.roles other than '<product>'
 #################################################################
 
-import sys
 import os
-import subprocess
 import pwd
 import errno
 
@@ -31,9 +29,8 @@ from cortx.sspl.bin.sspl_constants import file_store_config_path, roles
 from cortx.utils.validator.v_service import ServiceV
 from cortx.utils.validator.v_pkg import PkgV
 
-import psutil
-
 class InitException(Exception):
+    """ SSPL Setup Init Exception class """
     def __init__(self, rc, message, *args):
         self._rc = rc
         self._desc = message % (args)
@@ -75,13 +72,15 @@ class SetupInit:
         self.dp = False
 
     def check_dependencies(self, role : str):
-        # Check for dependency rpms and required processes active state based on role
+        # Check for dependency rpms and required processes active state based 
+        # on role
         if role == "ssu":
             try:
                 print(f"Checking for dependency rpms for role '{role}'")
                 PkgV().validate("rpms", self.SSU_DEPENDENCY_RPMS)
 
-                print(f"Checking for required processes running state for role '{role}'")
+                print(f"Checking for required processes running state for role\
+                     '{role}'")
                 ServiceV().validate("isrunning", self.SSU_REQUIRED_PROCESSES)
             except Exception:
                 raise
@@ -95,21 +94,24 @@ class SetupInit:
             except Exception:
                 raise
         else:
-            print(f"No rpm or process dependencies set, to check for supplied role {role}, skipping checks.\n")
+            print(f"No rpm or process dependencies set, to check for supplied \
+                    role {role}, skipping checks.\n")
 
     def get_uid(self, user_name : str) -> int:
         uid = -1
         try :
             uid =  pwd.getpwnam(user_name).pw_uid
         except KeyError :
-            # raise InitException(errno.EINVAL, "No User Found with name : %s", user_name)
             pass
         return uid
 
     def validate_args(self):
         if not self.args:
-            raise InitException(errno.EINVAL, "No arguments to init call.\n expected options : [-dp] [-r <ssu|gw|cmu|vm|cortx>]]")
-        
+            raise InitException(
+                        errno.EINVAL, 
+                        "No arguments to init call.\n \
+                        expected options : [-dp] [-r <ssu|gw|cmu|vm|cortx>]]"
+                        )
         i = 0
         while i < len(self.args):
             if self.args[i] == '-dp':
@@ -117,13 +119,20 @@ class SetupInit:
             elif self.args[i] == '-r':
                 i+=1
                 if i == len(self.args):
-                    raise InitException(errno.EINVAL, "No role provided with -r option")
+                    raise InitException(
+                                errno.EINVAL, 
+                                "No role provided with -r option")
                 elif  self.args[i] not in roles:
-                    raise InitException(errno.EINVAL, "Provided role '%s' is not supported", self.args[i])
+                    raise InitException(
+                                errno.EINVAL, 
+                                "Provided role '%s' is not supported", 
+                                self.args[i])
                 else:
                     self.role = self.args[i]
             else:
-                raise InitException(errno.EINVAL, "Unknown option '%s'", self.args[i])
+                raise InitException(
+                                errno.EINVAL, 
+                                "Unknown option '%s'", self.args[i])
             i+=1
 
     def getval_from_ssplconf(self, varname : str) -> str:
@@ -140,7 +149,9 @@ class SetupInit:
         try:
             uid = self.get_uid(user)
             if uid == -1:
-                raise InitException(errno.EINVAL, "No User Found with name : %s", user)
+                raise InitException(
+                            errno.EINVAL, 
+                            "No User Found with name : %s", user)
             os.chown(path, uid, grpid)
             for root, dirs, files in os.walk(path):
                 for item in dirs:
@@ -158,7 +169,9 @@ class SetupInit:
             # Extract the data path
             sspldp = self.getval_from_ssplconf('data_path')
             if not sspldp :
-                raise InitException(errno.EINVAL, "Data Path Not set in sspl.conf")
+                raise InitException(
+                            errno.EINVAL, 
+                            "Data Path Not set in sspl.conf")
 
             # Crete the directory and assign permissions
             try:
@@ -177,7 +190,8 @@ class SetupInit:
             except OSError:
                 raise
 
-        # Check for sspl required processes and misc dependencies like installation, etc based on 'role'
+        # Check for sspl required processes and misc dependencies like
+        # installation, etc based on 'role'
         if self.role:
             self.check_dependencies(self.role)
         
@@ -185,15 +199,13 @@ class SetupInit:
         with open(self.MDADM_PATH, 'a'):
             os.utime(self.MDADM_PATH)
 
-        # TODO : verify or find accurate replacement for setfacl command which
+        # TODO : verify for below replacement of setfacl command which
         #        gives rw permission to sspl-ll user for mdadm.conf file.
-        # Utility.send_command('setfacl -m u:sspl-ll:rw /etc/mdadm.conf')
         os.chmod(self.MDADM_PATH, mode=0o666)
         sspl_ll_uid = self.get_uid('sspl-ll')
         if sspl_ll_uid == -1:
-            raise InitException(errno.EINVAL, "No User Found with name : %s", 'sspl-ll')
+            raise InitException(
+                        errno.EINVAL, 
+                        "No User Found with name : %s", 'sspl-ll')
         os.chown(self.MDADM_PATH, sspl_ll_uid, -1)
         
-if __name__ == "__main__":
-    ic = SetupInit(sys.argv[1:])
-    ic.process()
