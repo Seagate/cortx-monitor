@@ -236,8 +236,7 @@ class SupportBundleCmd(Cmd):
         sspl_bundle_generate = f"{self._script_dir}/{self.script} {' '.join(self._args)}"
         output, error, returncode = SimpleProcess(sspl_bundle_generate).run()
         if returncode != 0:
-            sys.stderr.write("error: %s\n\n" % str(error))
-            sys.exit(errno.EINVAL)
+            raise SetupError(returncode, error)
 
 
 class ManifestSupportBundleCmd(Cmd):
