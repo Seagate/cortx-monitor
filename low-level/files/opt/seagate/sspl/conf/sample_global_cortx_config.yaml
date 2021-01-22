@@ -9,7 +9,6 @@ cluster:
       rack_id: RC01
       node_id: SN01
       storage_set_id: ST01
-      operating_system: centos7
       storage:
          enclosure_id: enclosure_1
       bmc:

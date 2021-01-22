@@ -14,6 +14,11 @@
 # For any questions about this software or licensing,
 # please email opensource@seagate.com or cortx-questions@seagate.com.
 
+#####################################################################
+# Base exception class for commands invoked from sspl_setup script.
+# SetupError takes more than one args & returns custom error message.
+#####################################################################
+
 
 class SetupError(Exception):
     """Generic Exception with error code and output"""

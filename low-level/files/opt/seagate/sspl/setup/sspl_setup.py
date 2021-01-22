@@ -97,20 +97,14 @@ class JoinClusterCmd(Cmd):
         super().__init__(args)
 
     def validate(self):
-        # Common validator classes to check Cortx/system wide validator
-        pass
+        if not self.args:
+            raise SetupError(1,
+                             "Validation failure. %s",
+                             "join_cluster requires comma separated node names as argument.")
 
     def process(self):
-        setup_rabbitmq_cluster = f"{self._script_dir}/{self.script} {' '.join(self._args)}"
-        output, error, returncode = SimpleProcess(setup_rabbitmq_cluster).run()
-        if returncode != 0:
-            raise SetupError(returncode, "%s - validation failure. %s", self.name, error)
-
-        # TODO: Replace the below code once sspl_config script implementation is done.
-        sspl_config = f"{self._script_dir}/{self.script} {' '.join(self._args)}"
-        output, error, returncode = SimpleProcess(sspl_config).run()
-        if returncode != 0:
-            raise SetupError(returncode, "%s - validation failure. %s", self.name, error)
+        from cortx.sspl.bin.setup_rabbitmq_cluster import RMQClusterConfiguration
+        RMQClusterConfiguration(nodes).process()
 
 
 class PostInstallCmd(Cmd):
@@ -211,7 +205,8 @@ class SupportBundleCmd(Cmd):
         pass
 
     def process(self):
-        sspl_bundle_generate = f"{self._script_dir}/{self.script} {' '.join(self._args)}"
+        args = ' '.join(self._args)
+        sspl_bundle_generate = "%s/%s %s" % (self._script_dir, self.script, args)
         output, error, returncode = SimpleProcess(sspl_bundle_generate).run()
         if returncode != 0:
             raise SetupError(returncode, "%s - validation failure. %s", self.name, error)
@@ -232,7 +227,8 @@ class ManifestSupportBundleCmd(Cmd):
         pass
 
     def process(self):
-        manifest_support_bundle = f"{self._script_dir}/{self.script} {' '.join(self._args)}"
+        args = ' '.join(self._args)
+        manifest_support_bundle = "%s/%s %s" % (self._script_dir, self.script, args)
         output, error, returncode = SimpleProcess(manifest_support_bundle).run()
         if returncode != 0:
             raise SetupError(returncode, "%s - validation failure. %s", self.name, error)
@@ -270,12 +266,12 @@ class CheckCmd(Cmd):
 
         from cortx.sspl.bin.sspl_constants import PRODUCT_FAMILY
 
-        self.SSPL_CONFIGURED=f"/var/{PRODUCT_FAMILY}/sspl/sspl-configured"
+        self.SSPL_CONFIGURED="/var/%s/sspl/sspl-configured" % (PRODUCT_FAMILY)
 
     def validate(self):
         # Common validator classes to check Cortx/system wide validator
         if not os.path.exists(self.SSPL_CONFIGURED):
-            error = f"SSPL is not configured. Run provisioner scripts in {self._script_dir}"
+            error = "SSPL is not configured. Run provisioner scripts in %s" % (self._script_dir)
             syslog.openlog(logoption=syslog.LOG_PID, facility=syslog.LOG_LOCAL3)
             syslog.syslog(syslog.LOG_ERR, error)
             raise SetupError(1, "%s - validation failure. %s", self.name, error)

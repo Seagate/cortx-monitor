@@ -33,12 +33,12 @@ enabled_products = ["CS-A", "SINGLE","DUAL", "CLUSTER", "LDR_R1", "LDR_R2"]
 cs_products = ["CS-A"]
 cs_legacy_products = ["CS-L", "CS-G"]
 setups = ["cortx"]
-RESOURCE_PATH = f"/opt/seagate/{PRODUCT_FAMILY}/sspl/low-level/json_msgs/schemas/"
-CLI_RESOURCE_PATH = f"/opt/seagate/{PRODUCT_FAMILY}/sspl/low-level/tests/manual"
-DATA_PATH = f"/var/{PRODUCT_FAMILY}/sspl/data/"
-SSPL_CONFIGURED=f"/var/{PRODUCT_FAMILY}/sspl/sspl-configured"
+RESOURCE_PATH = "/opt/seagate/%s/sspl/low-level/json_msgs/schemas/" % (PRODUCT_FAMILY)
+CLI_RESOURCE_PATH = "/opt/seagate/%s/sspl/low-level/tests/manual" % (PRODUCT_FAMILY)
+DATA_PATH = "/var/%s/sspl/data/" % (PRODUCT_FAMILY)
+SSPL_CONFIGURED= "/var/%s/sspl/sspl-configured" % (PRODUCT_FAMILY)
 RESOURCE_HEALTH_VIEW = "/usr/bin/resource_health_view"
-CONSUL_DUMP = f"/opt/seagate/{PRODUCT_FAMILY}/sspl/bin/consuldump.py"
+CONSUL_DUMP = "/opt/seagate/%s/sspl/bin/consuldump.py" % (PRODUCT_FAMILY)
 NODE_ID = "001"
 SITE_ID = "001"
 RACK_ID = "001"
@@ -56,7 +56,7 @@ SUPPORT_CONTACT_NUMBER = "18007324283"
 ENCL_TRIGGER_LOG_MAX_RETRY = 10
 ENCL_DOWNLOAD_LOG_MAX_RETRY = 60
 ENCL_DOWNLOAD_LOG_WAIT_BEFORE_RETRY = 15
-SSPL_BASE_DIR = f"/opt/seagate/{PRODUCT_FAMILY}/sspl"
+SSPL_BASE_DIR = "/opt/seagate/%s/sspl" % (PRODUCT_FAMILY)
 PRODUCT_BASE_DIR="/opt/seagate/$PRODUCT_FAMILY/"
 
 # This file will be created when sspl is being configured for node replacement case
@@ -64,7 +64,8 @@ REPLACEMENT_NODE_ENV_VAR_FILE = "/etc/profile.d/set_replacement_env.sh"
 
 # required only for init
 component = 'sspl/config'
-file_store_config_path = f'/etc/sspl.conf.{PRODUCT_NAME}.yaml'
+file_store_config_path = '/etc/sspl.conf'
+sample_global_config = '/etc/sample_global_cortx_config.yaml'
 salt_provisioner_pillar_sls = 'sspl'
 salt_uniq_attr_per_node = ['cluster_id']
 salt_uniq_passwd_per_node = ['RABBITMQINGRESSPROCESSOR', 'RABBITMQEGRESSPROCESSOR', 'LOGGINGPROCESSOR']
@@ -82,20 +83,20 @@ try:
     with open("/etc/machine-id") as f:
         node_key_id = f.read().strip("\n")
 except Exception as err:
-    print(f"Failed to get machine-id. - {err}")
+    print("Failed to get machine-id. - %s" % (err))
 
 storage_type = Conf.get('global_config',
                         'storage>enclosure_1>type')
 server_type = Conf.get('global_config',
-                        f'cluster>{node_key_id}>node_type')
+                       'cluster>%s>node_type' % (node_key_id))
 cluster_id = Conf.get('global_config',
-                        'cluster>cluster_id')
+                      'cluster>cluster_id')
 node_id = Conf.get('global_config',
-                        f'cluster>{node_key_id}>node_id')
+                   'cluster>%s>node_id' % (node_key_id))
 site_id = Conf.get('global_config',
-                        f'cluster>{node_key_id}>site_id')
+                   'cluster>%s>site_id' % (node_key_id))
 rack_id = Conf.get('global_config',
-                        f'cluster>{node_key_id}>site_id')
+                   'cluster>%s>site_id' % (node_key_id))
 
 # If SSPL is not configured, use salt interface
 if not os.path.exists(SSPL_CONFIGURED) and PRODUCT_NAME=="LDR_R1":
@@ -105,7 +106,7 @@ if not os.path.exists(SSPL_CONFIGURED) and PRODUCT_NAME=="LDR_R1":
         CONSUL_HOST = salt_int.get_consul_vip()
         CONSUL_PORT = salt_int.get_consul_port()
     except Exception as err:
-        print(f'sspl_constants : Failed to read from SaltInterface due to error - {err}')
+        print('sspl_constants : Failed to read from SaltInterface due to error - %s' % (err))
 
 CONSUL_ERR_STRING = '500 No cluster leader'
 
