@@ -26,6 +26,7 @@ import traceback
 import os
 import syslog
 from cortx.utils.process import SimpleProcess
+from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.error import SetupError
 
 class Cmd:
     """Setup Command.
@@ -106,8 +107,7 @@ class SetupCmd(Cmd):
         setup_sspl = f"{self._script_dir}/{self.script} {' '.join(self._args)}"
         output, error, returncode = SimpleProcess(setup_sspl).run()
         if returncode != 0:
-            sys.stderr.write("error: %s\n\n" % str(error))
-            sys.exit(errno.EINVAL)
+            raise SetupError(returncode, error)
 
 
 class JoinClusterCmd(Cmd):
@@ -129,15 +129,13 @@ class JoinClusterCmd(Cmd):
         setup_rabbitmq_cluster = f"{self._script_dir}/{self.script} {' '.join(self._args)}"
         output, error, returncode = SimpleProcess(setup_rabbitmq_cluster).run()
         if returncode != 0:
-            sys.stderr.write("error: %s\n\n" % str(error))
-            sys.exit(errno.EINVAL)
+            raise SetupError(returncode, error)
 
         # TODO: Replace the below code once sspl_config script implementation is done.
         sspl_config = f"{self._script_dir}/{self.script} {' '.join(self._args)}"
         output, error, returncode = SimpleProcess(sspl_config).run()
         if returncode != 0:
-            sys.stderr.write("error: %s\n\n" % str(error))
-            sys.exit(errno.EINVAL)
+            raise SetupError(returncode, error)
 
 
 class PostInstallCmd(Cmd):
@@ -261,8 +259,7 @@ class ManifestSupportBundleCmd(Cmd):
         manifest_support_bundle = f"{self._script_dir}/{self.script} {' '.join(self._args)}"
         output, error, returncode = SimpleProcess(manifest_support_bundle).run()
         if returncode != 0:
-            sys.stderr.write("error: %s\n\n" % str(error))
-            sys.exit(errno.EINVAL)
+            raise SetupError(returncode, error)
 
 
 class ResetCmd(Cmd):
@@ -309,10 +306,12 @@ class CheckCmd(Cmd):
     def process(self):
         #self.validate_consul_config.validate_config()
         if os.path.exists(self.SSPL_CONFIGURED):
-            sys.exit(0)
+            return
         syslog.openlog(logoption=syslog.LOG_PID, facility=syslog.LOG_LOCAL3)
         syslog.syslog(syslog.LOG_ERR, f"SSPL is not configured. Run provisioner scripts in {self._script_dir}.")
-        sys.exit(1)
+        raise SetupError(errno.EINVAL, 
+                "SSPL is not configured. Run provisioner scripts in %s.",
+                self._script_dir)
 
 def main(argv: dict):
     try:
