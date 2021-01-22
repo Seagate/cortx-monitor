@@ -175,8 +175,8 @@ class InitCmd(Cmd):
 
     def process(self):
         try:
-            from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.sspl_setup_init import SetupInit
-            SetupInit(self.args).process()
+            from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.sspl_setup_init import SSPLInit
+            SSPLInit(self.args).process()
         except Exception:
             raise
 

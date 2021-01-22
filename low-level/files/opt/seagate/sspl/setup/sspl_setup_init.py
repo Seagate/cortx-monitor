@@ -28,18 +28,9 @@ import errno
 from cortx.sspl.bin.sspl_constants import file_store_config_path, roles
 from cortx.utils.validator.v_service import ServiceV
 from cortx.utils.validator.v_pkg import PkgV
+from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.error import SetupError
 
-class InitException(Exception):
-    """ SSPL Setup Init Exception class """
-    def __init__(self, rc, message, *args):
-        self._rc = rc
-        self._desc = message % (args)
-
-    def __str__(self):
-        if self._rc == 0: return self._desc
-        return "error(%d): %s" %(self._rc, self._desc)
-
-class SetupInit:
+class SSPLInit:
     """Init Setup Interface"""
 
     name = "init"
@@ -76,26 +67,18 @@ class SetupInit:
         # on role
         if role == "ssu":
             try:
-                print(f"Checking for dependency rpms for role '{role}'")
                 PkgV().validate("rpms", self.SSU_DEPENDENCY_RPMS)
-
-                print(f"Checking for required processes running state for role\
-                     '{role}'")
                 ServiceV().validate("isrunning", self.SSU_REQUIRED_PROCESSES)
             except Exception:
                 raise
         elif role == "vm" or role == "gw" or role == "cmu":
             try:
-                print(f"Checking for dependency rpms for role '{role}'")
                 # No dependency currently. Keeping this section as it may be
                 # needed in future.
                 PkgV().validate("isrunning", self.VM_DEPENDENCY_RPMS)
                 # No processes to check in vm env
             except Exception:
                 raise
-        else:
-            print(f"No rpm or process dependencies set, to check for supplied \
-                    role {role}, skipping checks.\n")
 
     def get_uid(self, user_name : str) -> int:
         uid = -1
@@ -107,7 +90,7 @@ class SetupInit:
 
     def validate_args(self):
         if not self.args:
-            raise InitException(
+            raise SetupError(
                         errno.EINVAL, 
                         "No arguments to init call.\n \
                         expected options : [-dp] [-r <ssu|gw|cmu|vm|cortx>]]"
@@ -119,18 +102,18 @@ class SetupInit:
             elif self.args[i] == '-r':
                 i+=1
                 if i == len(self.args):
-                    raise InitException(
+                    raise SetupError(
                                 errno.EINVAL, 
                                 "No role provided with -r option")
                 elif  self.args[i] not in roles:
-                    raise InitException(
+                    raise SetupError(
                                 errno.EINVAL, 
                                 "Provided role '%s' is not supported", 
                                 self.args[i])
                 else:
                     self.role = self.args[i]
             else:
-                raise InitException(
+                raise SetupError(
                                 errno.EINVAL, 
                                 "Unknown option '%s'", self.args[i])
             i+=1
@@ -149,7 +132,7 @@ class SetupInit:
         try:
             uid = self.get_uid(user)
             if uid == -1:
-                raise InitException(
+                raise SetupError(
                             errno.EINVAL, 
                             "No User Found with name : %s", user)
             os.chown(path, uid, grpid)
@@ -169,7 +152,7 @@ class SetupInit:
             # Extract the data path
             sspldp = self.getval_from_ssplconf('data_path')
             if not sspldp :
-                raise InitException(
+                raise SetupError(
                             errno.EINVAL, 
                             "Data Path Not set in sspl.conf")
 
@@ -204,7 +187,7 @@ class SetupInit:
         os.chmod(self.MDADM_PATH, mode=0o666)
         sspl_ll_uid = self.get_uid('sspl-ll')
         if sspl_ll_uid == -1:
-            raise InitException(
+            raise SetupError(
                         errno.EINVAL, 
                         "No User Found with name : %s", 'sspl-ll')
         os.chown(self.MDADM_PATH, sspl_ll_uid, -1)
