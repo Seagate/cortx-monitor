@@ -34,19 +34,7 @@ from cortx.sspl.bin import sspl_constants as consts
 from cortx.sspl.bin.salt_util import SaltInterface
 from cortx.utils.service import Service
 from cortx.utils.process import SimpleProcess
-
-class SSPLConfigError(Exception):
-    """ Generic Exception with error code and output """
-
-    def __init__(self, rc, message, *args):
-        """SSPLConfigError init."""
-        self._rc = rc
-        self._desc = message % (args)
-
-    def __str__(self):
-        """SSPLConfigError str."""
-        if self._rc == 0: return self._desc
-        return "error(%d): %s" %(self._rc, self._desc)
+from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.error import SetupError
 
 class SSPLConfig:
     """ SSPL Setup Config Interface """
@@ -90,8 +78,8 @@ class SSPLConfig:
             elif type(key) == int:
                 if not re.search(new_str, lines[key]):
                     lines.insert(key, new_str)
-            else 
-                raise SSPLConfigError(
+            else:
+                raise SetupError(
                             errno.EINVAL,
                             "Key data type : '%s', should be string or int",
                             type(key))
@@ -107,10 +95,10 @@ class SSPLConfig:
             elif self.args[i] == '-r':
                 i+=1
                 if i >= len(self.args):
-                    raise SSPLConfigError(errno.EINVAL, 
+                    raise SetupError(errno.EINVAL, 
                                 "self.Role is not provided with -r option") 
-                if self.args[i] not in consts.self.roles:
-                    raise SSPLConfigError(errno.EINVAL, 
+                if self.args[i] not in consts.roles:
+                    raise SetupError(errno.EINVAL, 
                                 "Provided self.role '%s' is not supported", 
                                 self.args[i])
                 else:
@@ -118,26 +106,26 @@ class SSPLConfig:
             elif self.args[i] == '-n':
                 i+=1
                 if i >= len(self.args):
-                    raise SSPLConfigError(errno.EINVAL, 
+                    raise SetupError(errno.EINVAL, 
                                 "Node is not provided with -n option") 
                 else:
                     self.rmq_cluster_nodes = self.args[i]
             elif self.args[i] == '-d':
                 self.read_provisioner_config = False
             else:
-                raise SSPLConfigError(errno.EINVAL, 
+                raise SetupError(errno.EINVAL, 
                                 "Unknown option '%s'", self.args[i])
             i+=1
 
     def config_sspl(self):
         self.validate_args()
         if(os.geteuid() != 0):
-            raise SSPLConfigError(
+            raise SetupError(
                         errno.EINVAL, 
                         "Run this command with root privileges!!")
         
         if not os.path.isfile(consts.file_store_config_path):
-            raise SSPLConfigError(
+            raise SetupError(
                         errno.EINVAL, 
                         "Missing configuration!! Create and rerun.",
                         consts.file_store_config_path)
@@ -157,7 +145,7 @@ class SSPLConfig:
                             Reinitialize SSPL? [y/n]: ")
             
             if(ans == 'n'):
-                raise SSPLConfigError(
+                raise SetupError(
                         errno.EINVAL, 
                         "SSPL already initialized, reinitialization cancled.")
 
@@ -170,16 +158,16 @@ class SSPLConfig:
         product = self.getval_from_ssplconf('product')
         
         if not product:
-            raise SSPLConfigError(
+            raise SetupError(
                         errno.EINVAL, 
                         "No product specified in %s",
                         consts.file_store_config_path)
         
         if not consts.enabled_products:
-            raise SSPLConfigError(errno.EINVAL, "No enabled products!")
+            raise SetupError(errno.EINVAL, "No enabled products!")
         
         if product not in consts.enabled_products:
-            raise SSPLConfigError(
+            raise SetupError(
                         errno.EINVAL, 
                         "Product '%s' is not in enabled products list: %s",
                         product, consts.enabled_products)
@@ -190,21 +178,17 @@ class SSPLConfig:
                             '^setup=.*', f'setup={self.role}')
 
         # Add sspl-ll user to required groups and sudoers file etc.
-        print("Initializing SSPL configuration ... ")
         sspl_reinit = [f"{self.DIR_NAME}/bin/sspl_reinit", product]
         output, error, returncode = SimpleProcess(sspl_reinit).run()
         if returncode:
-            raise SSPLConfigError(returncode, 
-                    "%s/bin/sspl_reinit failed for product %s",
-                      self.DIR_NAME, product
+            raise SetupError(returncode, 
+                    "%s/bin/sspl_reinit failed for product %s with error : %e",
+                      self.DIR_NAME, product, error
                     )
-
-        print("SSPL configured successfully.")
 
         os.makedirs(self.SSPL_CONFIGURED_DIR, exist_ok=True)
         with open(self.SSPL_CONFIGURED, 'a'):
             os.utime(self.SSPL_CONFIGURED)
-        print(f'touched file : {self.SSPL_CONFIGURED}')
 
         # SSPL Log file configuration
         SSPL_LOG_FILE_PATH = self.getval_from_ssplconf('sspl_log_file_path')
@@ -262,7 +246,7 @@ class SSPLConfig:
                     if 'consul' in proc.name():
                         CONSUL_PS = proc.pid
                 if not CONSUL_PS:
-                    raise SSPLConfigError(
+                    raise SetupError(
                             errno.EINVAL,
                             "Consul is not running, exiting..")
 
@@ -282,17 +266,22 @@ class SSPLConfig:
             output, error, returncode = SimpleProcess(rmq_cluster_status_cmd).run()
             rabbitmq_cluster_status = json.loads(output)
             if returncode:
-                raise SSPLConfigError(returncode, error)
+                raise SetupError(returncode, error)
             running_nodes = rabbitmq_cluster_status['running_nodes']
             for i, node in enumerate(running_nodes):
                 running_nodes[i] = node.replace('rabbit@', '')
             pout = " ".join(running_nodes)
         elif self.rabbitmq_version == '3.3.5':
-            rmq_cluster_status_cmd = "rabbitmqctl cluster_status | grep running_nodes | cut -d '[' -f2 | cut -d ']' -f1 | sed 's/rabbit@//g' | sed 's/,/, /g'"
+            rmq_cluster_status_cmd = "rabbitmqctl cluster_status | \
+                    grep running_nodes | cut -d '[' -f2 | cut -d ']' -f1 | \
+                    sed 's/rabbit@//g' | sed 's/,/, /g'"
             output, error, returncode = SimpleProcess(rmq_cluster_status_cmd).run()
             pout = output.replace("'", '').replace(' ', '')
         else:
-            raise SSPLConfigError(errno.EINVAL, "This RabbitMQ version : %s is not supported", self.rabbitmq_version)
+            raise SetupError(
+                        errno.EINVAL, 
+                        "This RabbitMQ version : %s is not supported", 
+                        self.rabbitmq_version)
 
         return pout
 
@@ -300,7 +289,7 @@ class SSPLConfig:
         if(msg_broker == 'rabbitmq'):
             return self.get_rabbitmq_cluster_nodes()
         else:
-            raise SSPLConfigError(errno.EINVAL, 
+            raise SetupError(errno.EINVAL, 
                         "Provided message broker '%s' is not supported", 
                         msg_broker
                         )       
@@ -311,14 +300,15 @@ class SSPLConfig:
         if(cmd == "config"):
             self.config_sspl()
         else:
-            raise SSPLConfigError(errno.EINVAL, "cmd val should be config")
+            raise SetupError(errno.EINVAL, "cmd val should be config")
 
         # Get the version. Output can be 3.3.5 or 3.8.9 or in this format
         rmq_cmd = "rpm -qi rabbitmq-server"
         output, error, returncode = SimpleProcess(rmq_cmd).run()
         if returncode:
-            raise SSPLConfigError(returncode, error)
-        self.rabbitmq_version = re.search(r'Version     :\s*([\d.]+)', str(output)).group(1)
+            raise SetupError(returncode, error)
+        self.rabbitmq_version = re.search(  r'Version     :\s*([\d.]+)', 
+                                            str(output)).group(1)
 
         # Get the Major release version parsed. (Eg: 3 from 3.8.9)
         self.rabbitmq_major_release = self.rabbitmq_version[0]
@@ -326,13 +316,16 @@ class SSPLConfig:
         # Get the Minor release version parsed. (Eg: 3.8 from 3.8.9)
         self.rabbitmq_minor_release = self.rabbitmq_version[:3] 
 
-        # Get the Maitenance release version parsed from minor release. (Eg: 8 from 3.8)
+        # Get the Maitenance release version parsed from minor release. 
+        # (Eg: 8 from 3.8)
         self.rabbitmq_maintenance_release = self.rabbitmq_minor_release[-1]
 
-        # Skip this step if sspl is being configured for node replacement scenario as consul data is already
+        # Skip this step if sspl is being configured for node replacement 
+        # scenario as consul data is already
         # available on healthy node
         # Updating RabbitMQ cluster nodes.
-        # In node replacement scenario, avoiding feeding again to avoid over writing already configured values
+        # In node replacement scenario, avoiding feeding again to avoid 
+        # over writing already configured values
         # with which rabbitmq cluster may have been created
         if not consts.REPLACEMENT_NODE_ENV_VAR_FILE:
             message_broker="rabbitmq"
@@ -341,40 +334,48 @@ class SSPLConfig:
 
             # Update cluster_nodes key in consul
             if consts.PRODUCT_NAME == 'LDR_R1':
-                consul_cmd = f'{consts.CONSUL_PATH}/consul kv put sspl/config/RABBITMQCLUSTER/cluster_nodes {pout}'
+                consul_cmd = f'{consts.CONSUL_PATH}/consul kv put sspl/config/\
+                                RABBITMQCLUSTER/cluster_nodes {pout}'
                 output, error, returncode = SimpleProcess(consul_cmd).run()
                 if returncode:
-                    raise SSPLConfigError(returncode, error, consul_cmd)
+                    raise SetupError(returncode, error, consul_cmd)
                 if self.rmq_cluster_nodes:
                     consul_cmd = f'{consts.CONSUL_PATH}/consul kv put sspl\
                         /config/RABBITMQCLUSTER/cluster_nodes {self.rmq_cluster_nodes}'
                     output, error, returncode = SimpleProcess(consul_cmd).run()
                     if returncode:
-                        raise SSPLConfigError(returncode, error, consul_cmd)
+                        raise SetupError(returncode, error, consul_cmd)
                 else:
-                    self.replace_expr(consts.file_store_config_path, 'cluster_nodes=.*', f'cluster_nodes={pout}')
+                    self.replace_expr(
+                                consts.file_store_config_path, 
+                                'cluster_nodes=.*', 
+                                f'cluster_nodes={pout}')
             
         # Skip this step if sspl is being configured for node replacement scenario as consul data is already
         # available on healthy node
         # Updating build requested log level
         if not consts.REPLACEMENT_NODE_ENV_VAR_FILE:
             log_level = None
-            with open(f'{self.DIR_NAME}/low-level/files/opt/seagate/sspl/conf/build-requested-loglevel', 'r') as f:
+            with open(f'{self.DIR_NAME}/low-level/files/opt/seagate\
+                /sspl/conf/build-requested-loglevel', 'r') as f:
                 log_level = f.readline()
             
-            if( log_level == "DEBUG" or log_level == "INFO" or \
+            if  log_level == "DEBUG" or log_level == "INFO" or \
                 log_level == "WARNING" or log_level == "ERROR" or \
-                log_level == "CRITICAL"                     
-                ):
+                log_level == "CRITICAL":
                 if consts.PRODUCT_NAME == "LDR_R1":
-                    consul_cmd = f'{consts.CONSUL_PATH}/consul kv put sspl/config/SYSTEM_INFORMATION/log_level {log_level}'
+                    consul_cmd = f'{consts.CONSUL_PATH}/consul kv put sspl/config/\
+                                    SYSTEM_INFORMATION/log_level {log_level}'
                     output, error, returncode = SimpleProcess(consul_cmd).run()
                     if returncode:
-                        raise SSPLConfigError(returncode, error, consul_cmd)
+                        raise SetupError(returncode, error, consul_cmd)
                 else:
-                    self.replace_expr(consts.file_store_config_path, 'log_level.*[=,",\']', f'log_level={log_level}')
+                    self.replace_expr(
+                            consts.file_store_config_path, 
+                            'log_level.*[=,",\']', 
+                            f'log_level={log_level}')
             else:
-                raise SSPLConfigError(
+                raise SetupError(
                             errno.EINVAL,
                             "Unexpected log level is requested, '%s'",
                             log_level

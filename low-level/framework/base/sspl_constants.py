@@ -28,9 +28,12 @@ from cortx.sspl.lowlevel.framework.utils.service_logging import logger
 from cortx.utils.conf_store import Conf
 =======
 from cortx.sspl.bin.salt_util import SaltInterface
+<<<<<<< HEAD
 from cortx.sspl.lowlevel.framework.utils.service_logging import logger
 >>>>>>> EOS-16524: sspl_conf.sh to python (import and utility change)
 
+=======
+>>>>>>> EOS-16524: sspl_conf.sh to python (removed utils.py changes, added error.py)
 
 PRODUCT_NAME = 'LR2'
 PRODUCT_FAMILY = 'cortx'

@@ -47,7 +47,11 @@ from cortx.sspl.lowlevel.framework.utils.utility import Utility
 >>>>>>> EOS-16524: sspl_conf.sh to python (changed path to utility.py)
 =======
 from cortx.utils.process import SimpleProcess
+<<<<<<< HEAD
 >>>>>>> EOS-16524: sspl_conf.sh to python (minor change)
+=======
+from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.error import SetupError
+>>>>>>> EOS-16524: sspl_conf.sh to python (removed utils.py changes, added error.py)
 
 class Cmd:
     """Setup Command."""
@@ -62,6 +66,7 @@ class Cmd:
 
     @staticmethod
     def usage(prog: str):
+<<<<<<< HEAD
         """Print usage instructions."""
         sys.stderr.write(f"""{prog}
             [ -h|--help ]
@@ -75,6 +80,27 @@ class Cmd:
             [ support_bundle [<id>] [<path>] ]
             [ check ]
             \n""")
+=======
+        """ Print usage instructions."""
+        sys.stderr.write(
+            f"{prog} [setup [-p <LDR_R2>]|post_install [-p <LDR_R2>]|init [-dp] [-r <vm>]|config [-f] [-r <vm>]\n"
+            "|test [self|sanity]|reset [hard -p <LDR_R21>|soft]|join_cluster [-n <nodes>]\n"
+            "|manifest_support_bundle [<id>] [<path>]|support_bundle [<id>] [<path>]]\n"
+            "setup options:\n"
+            "\t -p Product name\n"
+            "join_cluster options:\n"
+            "\t -n Node names\n"
+            "init options:\n"
+            "\t -dp Create configured datapath\n"
+            "\t -r  Role to be configured on the current node\n"
+            "config options:\n"
+            "\t -f  Force reinitialization. Do not prompt\n"
+            "\t -r  Role to be configured on the current node"
+            "post_install options:\n"
+            "\t -p Product to be configured\n"
+            "reset options:\n"
+            "\t -p Product to be configured\n")
+>>>>>>> EOS-16524: sspl_conf.sh to python (removed utils.py changes, added error.py)
 
     @staticmethod
     def get_command(desc: str, argv: dict):
@@ -146,8 +172,7 @@ class SetupCmd(Cmd):
         setup_sspl = f"{self._script_dir}/{self.script} {' '.join(self._args)}"
         output, error, returncode = SimpleProcess(setup_sspl).run()
         if returncode != 0:
-            sys.stderr.write("error: %s\n\n" % str(error))
-            sys.exit(errno.EINVAL)
+            raise SetupError(returncode, error)
 
 >>>>>>> EOS-16524: sspl_conf.sh to python (import of conf_vased_sensors_enable and few changes)
 
@@ -200,16 +225,19 @@ class JoinClusterCmd(Cmd):
         setup_rabbitmq_cluster = f"{self._script_dir}/{self.script} {' '.join(self._args)}"
         output, error, returncode = SimpleProcess(setup_rabbitmq_cluster).run()
         if returncode != 0:
-            sys.stderr.write("error: %s\n\n" % str(error))
-            sys.exit(errno.EINVAL)
+            raise SetupError(returncode, error)
 
         # TODO: Replace the below code once sspl_config script implementation is done.
         sspl_config = f"{self._script_dir}/{self.script} {' '.join(self._args)}"
         output, error, returncode = SimpleProcess(sspl_config).run()
         if returncode != 0:
+<<<<<<< HEAD
             sys.stderr.write("error: %s\n\n" % str(error))
             sys.exit(errno.EINVAL)
 >>>>>>> EOS-16524: sspl_conf.sh to python (minor change)
+=======
+            raise SetupError(returncode, error)
+>>>>>>> EOS-16524: sspl_conf.sh to python (removed utils.py changes, added error.py)
 
 
 class PostInstallCmd(Cmd):
@@ -243,7 +271,6 @@ class PostInstallCmd(Cmd):
     def process(self):
         from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.sspl_post_install import SSPLPostInstall
         SSPLPostInstall(self.args[1]).process()
-
 
 
 class InitCmd(Cmd):
@@ -328,9 +355,13 @@ class SupportBundleCmd(Cmd):
         sspl_bundle_generate = f"{self._script_dir}/{self.script} {' '.join(self._args)}"
         output, error, returncode = SimpleProcess(sspl_bundle_generate).run()
         if returncode != 0:
+<<<<<<< HEAD
             sys.stderr.write("error: %s\n\n" % str(error))
             sys.exit(errno.EINVAL)
 >>>>>>> EOS-16524: sspl_conf.sh to python (minor change)
+=======
+            raise SetupError(returncode, error)
+>>>>>>> EOS-16524: sspl_conf.sh to python (removed utils.py changes, added error.py)
 
 
 class ManifestSupportBundleCmd(Cmd):
@@ -362,9 +393,13 @@ class ManifestSupportBundleCmd(Cmd):
         manifest_support_bundle = f"{self._script_dir}/{self.script} {' '.join(self._args)}"
         output, error, returncode = SimpleProcess(manifest_support_bundle).run()
         if returncode != 0:
+<<<<<<< HEAD
             sys.stderr.write("error: %s\n\n" % str(error))
             sys.exit(errno.EINVAL)
 >>>>>>> EOS-16524: sspl_conf.sh to python (minor change)
+=======
+            raise SetupError(returncode, error)
+>>>>>>> EOS-16524: sspl_conf.sh to python (removed utils.py changes, added error.py)
 
 
 class ResetCmd(Cmd):
@@ -431,8 +466,19 @@ class CheckCmd(Cmd):
         ServiceV().validate('isrunning', self.services)
 
     def process(self):
+<<<<<<< HEAD
         pass
 
+=======
+        #self.validate_consul_config.validate_config()
+        if os.path.exists(self.SSPL_CONFIGURED):
+            return
+        syslog.openlog(logoption=syslog.LOG_PID, facility=syslog.LOG_LOCAL3)
+        syslog.syslog(syslog.LOG_ERR, f"SSPL is not configured. Run provisioner scripts in {self._script_dir}.")
+        raise SetupError(errno.EINVAL,
+                "SSPL is not configured. Run provisioner scripts in %s.",
+                self._script_dir)
+>>>>>>> EOS-16524: sspl_conf.sh to python (removed utils.py changes, added error.py)
 
 def main(argv: dict):
     try:
