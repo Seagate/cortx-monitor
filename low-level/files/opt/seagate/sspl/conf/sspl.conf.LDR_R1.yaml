@@ -17,7 +17,6 @@
 
 SYSTEM_INFORMATION:
     cli_type: CS_A
-    setup: cortx
     data_path: /var/cortx/sspl/data/
     log_level: INFO
     sspl_log_file_path: /var/log/cortx/sspl/sspl.log

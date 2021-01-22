@@ -15,10 +15,9 @@
 
 cluster:
    cluster_id: 'CortxCluster001'
-   product: LDR_R2
    server_nodes:
+      abc25957545942cfa728b74cead1a882: srvnode_1
    srvnode_1:
-      operating_system: centos7
       site_id: 'Site001'
       rack_id: 'Rack001'
       node_id: 'Node001'
@@ -44,9 +43,13 @@ storage:
             ip: 10.0.0.3
             port: 80
          user: manage
-         password:
+         secret:
          type:
 
 rsyslog:
    host: localhost
    port: 514
+
+release:
+   setup: cortx
+   product: LR2

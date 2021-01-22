@@ -34,7 +34,7 @@ CONSUL_PATH = '/usr/bin/'
 
 # required only for init
 component = 'sspl_test/config'
-file_store_config_path = f'/opt/seagate/{PRODUCT_FAMILY}/sspl/sspl_test/conf/sspl_tests.yaml'
+file_store_config_path = f'/opt/seagate/{PRODUCT_FAMILY}/sspl/sspl_test/conf/sspl_tests.conf'
 salt_provisioner_pillar_sls = 'sspl'
 
 class AlertTypes(Enum):

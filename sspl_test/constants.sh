@@ -16,4 +16,4 @@
 PRODUCT_NAME='LDR_R2'
 PRODUCT_FAMILY='cortx'
 CONSUL_PATH="/usr/bin/"
-SSPL_STORE_TYPE='confstor'
+SSPL_STORE_TYPE='file'

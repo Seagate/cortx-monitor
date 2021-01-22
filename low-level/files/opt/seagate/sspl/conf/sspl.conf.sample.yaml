@@ -77,10 +77,7 @@ SSPL-LL_SETTING:
      - CPUFaultSensor
 
 SYSTEM_INFORMATION:
-    operating_system: centos7
-    product: LDR_R2
     cli_type: CS_A
-    setup: cortx
     data_path: /var/cortx/sspl/data/
     cluster_id: '001'
     site_id: '001'

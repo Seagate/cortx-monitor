@@ -61,7 +61,7 @@ ENCL_DOWNLOAD_LOG_WAIT_BEFORE_RETRY = 15
 # required only for init
 component = 'sspl/config'
 file_store_config_path = '/etc/sspl.conf'
-test_file_config_path=f'/opt/seagate/{PRODUCT_FAMILY}/sspl/sspl_test/conf/sspl_tests.yaml'
+test_file_config_path=f'/opt/seagate/{PRODUCT_FAMILY}/sspl/sspl_test/conf/sspl_tests.conf'
 salt_provisioner_pillar_sls = 'sspl'
 salt_uniq_attr_per_node = ['cluster_id']
 salt_uniq_passwd_per_node = ['RABBITMQINGRESSPROCESSOR', 'RABBITMQEGRESSPROCESSOR', 'LOGGINGPROCESSOR']

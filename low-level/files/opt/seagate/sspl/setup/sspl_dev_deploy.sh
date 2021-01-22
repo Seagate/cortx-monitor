@@ -304,17 +304,14 @@ install_sspl_rpms(){
 
 update_sspl_config(){
 
-    mkdir -p /etc/cortx
-    # TODO update SSPL_CONF path to /etc/cortx/sspl.conf during conf stor intreagation with setup script
     SSPL_CONF="/etc/sspl.conf"
-    GLOBAL_CONF="/etc/cortx/sample_global_cortx_config.yaml"
-    # TODO SOURCE_CONF replcae with sspl.conf.LDR_R2.yaml yaml remo sspl.conf.LDR_R2 ini file.
+    GLOBAL_CONF="/etc/sample_global_cortx_config.conf"
+    # TODO: replcace "SOURCE_CONF" with sspl.conf.LDR_R2.yaml and remove sspl.conf.LDR_R2 ini file.
     SOURCE_CONF=${SSPL_BASE_DIR}/low-level/files/opt/seagate/sspl/conf/sspl.conf.${PRODUCT_VERSION}
     GLOBAL_CONF_SOURCE=${SSPL_BASE_DIR}/low-level/files/opt/seagate/sspl/conf/sample_global_cortx_config.yaml
     cp $SOURCE_CONF $SSPL_CONF
-    cp $GLOBAL_CONF_SOURCE $GLOBAL_CONF
 
-    CONFIG_FEEDER=$SSPL_BASE_DIR/low-level/files/opt/seagate/sspl/setup/load_sspl_config.py
+    CONFIG_FEEDER=$SSPL_BASE_DIR/low-level/files/opt/seagate/sspl/bin/load_sspl_config.py
 
     echo "INFO: Loading $SSPL_CONF config file.."
     echo "$CONFIG_FEEDER $NODE $RMQ_USER"

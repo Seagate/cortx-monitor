@@ -33,12 +33,12 @@ class TestConfig(object):
             # for test configs
             print("reading test conf file and inserting data to consul.")
             test_component='sspl_test/config'
-            path_to_conf_file = "/opt/seagate/cortx/sspl/sspl_test/conf/sspl_tests.yaml"
+            path_to_conf_file = "/opt/seagate/cortx/sspl/sspl_test/conf/sspl_tests.conf"
             if os.path.exists(path_to_conf_file):
                 print("Using conf file : {}".format(path_to_conf_file))
             else:
                 conf_directory = os.path.dirname(os.path.abspath(__file__))
-                path_to_conf_file = os.path.join(conf_directory, "sspl_tests.yaml")
+                path_to_conf_file = os.path.join(conf_directory, "sspl_tests.conf")
                 print("Using conf file : {}".format(path_to_conf_file))
 
             with open(path_to_conf_file, "r") as fd:

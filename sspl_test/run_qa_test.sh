@@ -23,15 +23,15 @@ IS_VIRTUAL=$(facter is_virtual)
 
 [[ $EUID -ne 0 ]] && sudo=sudo
 script_dir=$(dirname $0)
-source $script_dir/constants.sh
-SSPL_STORE_TYPE=${SSPL_STORE_TYPE:-consul}
+source "$script_dir"/constants.sh
+SSPL_STORE_TYPE=confstor
 
 plan=${1:-}
 avoid_rmq=${2:-}
 
-common_config=yaml:///etc/cortx/sample_global_cortx_config.yaml
-test_config=yaml:///opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/conf/sspl_tests.yaml
-sspl_config=yaml:///etc/cortx/sspl.conf
+common_config=yaml:///etc/sample_global_cortx_config.conf
+test_config=yaml:///opt/seagate/"$PRODUCT_FAMILY"/sspl/sspl_test/conf/sspl_tests.conf
+sspl_config=yaml:///etc/sspl.conf
 
 flask_help()
 {
@@ -125,20 +125,20 @@ restore_cfg_services()
     # Restoring MC port to value stored before tests
     if [ "$SSPL_STORE_TYPE" == "file" ]
     then
-        port=$(sed -n -e '/primary_controller_port/ s/.*\: *//p' /etc/cortx/sspl.conf)
+        port=$(sed -n -e '/primary_controller_port/ s/.*\: *//p' /etc/sspl.conf)
         if [ "$port" == "$MOCK_SERVER_PORT" ]
         then
-            sed -i 's/primary_controller_ip: '"$MOCK_SERVER_IP"'/primary_controller_ip: '"$primary_ip"'/g' /etc/cortx/sspl.conf
-            sed -i 's/primary_controller_port: '"$MOCK_SERVER_PORT"'/primary_controller_port: '"$primary_port"'/g' /etc/cortx/sspl.conf
+            sed -i 's/primary_controller_ip: '"$MOCK_SERVER_IP"'/primary_controller_ip: '"$primary_ip"'/g' /etc/sspl.conf
+            sed -i 's/primary_controller_port: '"$MOCK_SERVER_PORT"'/primary_controller_port: '"$primary_port"'/g' /etc/sspl.conf
         fi
-        # Removing updated system information from sspl_tests.yaml
+        # Removing updated system information from sspl_tests.conf
         # This is required otherwise, everytime if we run sanity, key-value
         # pairs will be appended which will break the sanity.
-        # Also, everytime, updated values from /etc/cortx/sspl.conf should be updated.
-        sed -i 's/node_id: '"$node_id"'/node_id: 001/g' /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/conf/sspl_tests.yaml
-        sed -i 's/rack_id: '"$rack_id"'/rack_id: 001/g' /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/conf/sspl_tests.yaml
-        sed -i 's/site_id: '"$site_id"'/site_id: 001/g' /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/conf/sspl_tests.yaml
-        sed -i 's/cluster_id: '"$cluster_id"'/cluster_id: 001/g' /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/conf/sspl_tests.yaml
+        # Also, everytime, updated values from /etc/sspl.conf should be updated.
+        sed -i 's/node_id: '"$node_id"'/node_id: 001/g' /opt/seagate/"$PRODUCT_FAMILY"/sspl/sspl_test/conf/sspl_tests.conf
+        sed -i 's/rack_id: '"$rack_id"'/rack_id: 001/g' /opt/seagate/"$PRODUCT_FAMILY"/sspl/sspl_test/conf/sspl_tests.conf
+        sed -i 's/site_id: '"$site_id"'/site_id: 001/g' /opt/seagate/"$PRODUCT_FAMILY"/sspl/sspl_test/conf/sspl_tests.conf
+        sed -i 's/cluster_id: '"$cluster_id"'/cluster_id: 001/g' /opt/seagate/"$PRODUCT_FAMILY"/sspl/sspl_test/conf/sspl_tests.conf
     elif [ "$SSPL_STORE_TYPE" == "confstor" ]
     then
         port=`conf $common_config get "storage>$encl_id>controller>primary>port"`
@@ -215,9 +215,9 @@ if [ "$SSPL_STORE_TYPE" == "confstor" ]
 then
     # Read common key which are needed to fetch confstor config.
     machine_id=`cat /etc/machine-id`
-    minion_id=`conf $common_config get "cluster>server_nodes>$machine_id"`
-    minion_id=$(echo $minion_id | tr -d "["\" | tr -d "\"]")
-    encl_id=`conf $common_config get "cluster>$minion_id>storage>enclosure_id"`
+    srvnode=`conf $common_config get "cluster>server_nodes>$machine_id"`
+    srvnode=$(echo $node_id | tr -d "["\" | tr -d "\"]")
+    encl_id=`conf $common_config get "cluster>$srvnode>storage>enclosure_id"`
     encl_id=$(echo $encl_id | tr -d "["\" | tr -d "\"]")
 fi
 
@@ -234,8 +234,8 @@ flask_installed=$(python3.6 -c 'import pkgutil; print(1 if pkgutil.find_loader("
 [ "$PRODUCT_NAME" == "LDR_R1" ] && python3 $script_dir/put_config_to_consul.py
 
 # Take backup of original sspl.conf
-[[ -f /etc/cortx/sspl.conf ]] && $sudo cp /etc/cortx/sspl.conf /etc/cortx/sspl.conf.back
-[[ -f /etc/cortx/sample_global_cortx_config.yaml ]] && $sudo cp /etc/cortx/sample_global_cortx_config.yaml /etc/cortx/sample_global_cortx_config.yaml.back
+[[ -f /etc/sspl.conf ]] && $sudo cp /etc/sspl.conf /etc/sspl.conf.back
+[[ -f /etc/sample_global_cortx_config.conf ]] && $sudo cp /etc/sample_global_cortx_config.conf /etc/sample_global_cortx_config.conf.back
 
 # check the port configured in consul
 # if virtual machine, change the port to $MOCK_SERVER_PORT as mock_server runs on $MOCK_SERVER_PORT
@@ -266,14 +266,14 @@ then
         fi
     fi
 else
-    primary_ip=$(sed -n -e '/primary_controller_ip/ s/.*\: *//p' /etc/cortx/sspl.conf)
-    primary_port=$(sed -n -e '/primary_controller_port/ s/.*\: *//p' /etc/cortx/sspl.conf)
+    primary_ip=$(sed -n -e '/primary_controller_ip/ s/.*\: *//p' /etc/sspl.conf)
+    primary_port=$(sed -n -e '/primary_controller_port/ s/.*\: *//p' /etc/sspl.conf)
     if [ "$IS_VIRTUAL" == "true" ]
     then
         if [ "$primary_port" != "$MOCK_SERVER_PORT" ]
         then
-            sed -i 's/primary_controller_ip: '"$primary_ip"'/primary_controller_ip: '"$MOCK_SERVER_IP"'/g' /etc/cortx/sspl.conf
-            sed -i 's/primary_controller_port: '"$primary_port"'/primary_controller_port: '"$MOCK_SERVER_PORT"'/g' /etc/cortx/sspl.conf
+            sed -i 's/primary_controller_ip: '"$primary_ip"'/primary_controller_ip: '"$MOCK_SERVER_IP"'/g' /etc/sspl.conf
+            sed -i 's/primary_controller_port: '"$primary_port"'/primary_controller_port: '"$MOCK_SERVER_PORT"'/g' /etc/sspl.conf
         fi
     fi
 fi
@@ -324,27 +324,27 @@ then
     host_memory_usage_threshold=$(echo $host_memory_usage_threshold| tr -d "["\" | tr -d "\"]")
     cpu_usage_threshold=`conf $sspl_config get "NODEDATAMSGHANDLER>cpu_usage_threshold"`
     cpu_usage_threshold=$(echo $cpu_usage_threshold | tr -d "["\" | tr -d "\"]")
-    node_id=`conf $common_config get "cluster>$minion_id>node_id"`
+    node_id=`conf $common_config get "cluster>$srvnode>node_id"`
     node_id=$(echo $node_id | tr -d "["\" | tr -d "\"]")
-    site_id=`conf $common_config get "cluster>$minion_id>site_id"`
+    site_id=`conf $common_config get "cluster>$srvnode>site_id"`
     site_id=$(echo $site_id | tr -d "["\" | tr -d "\"]")
-    rack_id=`conf $common_config get "cluster>$minion_id>rack_id"`
+    rack_id=`conf $common_config get "cluster>$srvnode>rack_id"`
     rack_id=$(echo $rack_id | tr -d "["\" | tr -d "\"]")
     cluster_id=`conf $common_config get "cluster>cluster_id"`
     cluster_id=$(echo $cluster_id | tr -d "["\" | tr -d "\"]")
     primary_controller_ip=`conf $common_config get "storage>$encl_id>controller>primary>ip"`
     primary_controller_ip=$(echo $primary_controller_ip | tr -d "["\" | tr -d "\"]")
 else
-    transmit_interval=$(sed -n -e '/transmit_interval/ s/.*\: *//p' /etc/cortx/sspl.conf)
-    disk_usage_threshold=$(sed -n -e '/disk_usage_threshold/ s/.*\: *//p' /etc/cortx/sspl.conf)
-    host_memory_usage_threshold=$(sed -n -e '/host_memory_usage_threshold/ s/.*\: *//p' /etc/cortx/sspl.conf)
-    cpu_usage_threshold=$(sed -n -e '/cpu_usage_threshold/ s/.*\: *//p' /etc/cortx/sspl.conf)
-    rack_id=$(sed -n -e '/rack_id/ s/.*\: *//p' /etc/cortx/sspl.conf)
-    site_id=$(sed -n -e '/site_id/ s/.*\: *//p' /etc/cortx/sspl.conf)
-    node_id=$(sed -n -e '/node_id/ s/.*\: *//p' /etc/cortx/sspl.conf)
-    cluster_id=$(sed -n -e '/cluster_id/ s/.*\: *//p' /etc/cortx/sspl.conf)
-    cluster_nodes=$(sed -n -e '/cluster_nodes/ s/.*\: *//p' /etc/cortx/sspl.conf)
-    primary_controller_ip=$(sed -n -e '/primary_controller_ip/ s/.*\: *//p' /etc/cortx/sspl.conf)
+    transmit_interval=$(sed -n -e '/transmit_interval/ s/.*\: *//p' /etc/sspl.conf)
+    disk_usage_threshold=$(sed -n -e '/disk_usage_threshold/ s/.*\: *//p' /etc/sspl.conf)
+    host_memory_usage_threshold=$(sed -n -e '/host_memory_usage_threshold/ s/.*\: *//p' /etc/sspl.conf)
+    cpu_usage_threshold=$(sed -n -e '/cpu_usage_threshold/ s/.*\: *//p' /etc/sspl.conf)
+    rack_id=$(sed -n -e '/rack_id/ s/.*\: *//p' /etc/sspl.conf)
+    site_id=$(sed -n -e '/site_id/ s/.*\: *//p' /etc/sspl.conf)
+    node_id=$(sed -n -e '/node_id/ s/.*\: *//p' /etc/sspl.conf)
+    cluster_id=$(sed -n -e '/cluster_id/ s/.*\: *//p' /etc/sspl.conf)
+    cluster_nodes=$(sed -n -e '/cluster_nodes/ s/.*\: *//p' /etc/sspl.conf)
+    primary_controller_ip=$(sed -n -e '/primary_controller_ip/ s/.*\: *//p' /etc/sspl.conf)
 fi
 
 # setting values for testing
@@ -375,13 +375,13 @@ then
     CLUSTER_NODES=$(echo $CLUSTER_NODES | tr -d "["\" | tr -d "\"]")
     conf $test_config set "RABBITMQCLUSTER>cluster_nodes=$CLUSTER_NODES"
 else
-    # Update sspl_tests.yaml with updated System Information
-    # append above parsed key-value pairs in sspl_tests.yaml under [SYSTEM_INFORMATION] section
-    sed -i 's/node_id: .*/node_id: '"$node_id"'/g' /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/conf/sspl_tests.yaml
-    sed -i 's/site_id: 001/site_id: '"$site_id"'/g' /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/conf/sspl_tests.yaml
-    sed -i 's/rack_id: 001/rack_id: '"$rack_id"'/g' /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/conf/sspl_tests.yaml
-    sed -i 's/cluster_id: .*/cluster_id: '"$cluster_id"'/g' /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/conf/sspl_tests.yaml
-    sed -i 's/cluster_nodes: localhost/cluster_nodes: '"$cluster_nodes"'/g' /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/conf/sspl_tests.yaml
+    # Update sspl_tests.conf with updated System Information
+    # append above parsed key-value pairs in sspl_tests.conf under [SYSTEM_INFORMATION] section
+    sed -i 's/node_id: .*/node_id: '"$node_id"'/g' /opt/seagate/"$PRODUCT_FAMILY"/sspl/sspl_test/conf/sspl_tests.conf
+    sed -i 's/site_id: 001/site_id: '"$site_id"'/g' /opt/seagate/"$PRODUCT_FAMILY"/sspl/sspl_test/conf/sspl_tests.conf
+    sed -i 's/rack_id: 001/rack_id: '"$rack_id"'/g' /opt/seagate/"$PRODUCT_FAMILY"/sspl/sspl_test/conf/sspl_tests.conf
+    sed -i 's/cluster_id: .*/cluster_id: '"$cluster_id"'/g' /opt/seagate/"$PRODUCT_FAMILY"/sspl/sspl_test/conf/sspl_tests.conf
+    sed -i 's/cluster_nodes: localhost/cluster_nodes: '"$cluster_nodes"'/g' /opt/seagate/"$PRODUCT_FAMILY"/sspl/sspl_test/conf/sspl_tests.conf
 fi
 
 if [ "$IS_VIRTUAL" == "true" ]
@@ -399,7 +399,7 @@ echo "Initialization completed. Starting tests"
 # fail. Sending SIGUP to SSPL makes SSPL to read state file and switch state.
 if [ "$IS_VIRTUAL" == "true" ]
 then
-    echo "state=active" > /var/$PRODUCT_FAMILY/sspl/data/state.txt
+    echo "state=active" > /var/"$PRODUCT_FAMILY"/sspl/data/state.txt
     PID=`/usr/bin/pgrep -d " " -f /usr/bin/sspl_ll_d`
     kill -s SIGHUP $PID
 fi
@@ -423,8 +423,8 @@ if [ "$IS_VIRTUAL" == "true" ]
 then
     # setting back the actual values
     $sudo $script_dir/set_threshold.sh $transmit_interval $disk_usage_threshold $host_memory_usage_threshold $cpu_usage_threshold $sspl_config
-    [[ -f /etc/cortx/sspl.conf.back ]] && $sudo mv /etc/cortx/sspl.conf.back /etc/cortx/sspl.conf
-    [[ -f /etc/cortx/sample_global_cortx_config.yaml.back ]] && $sudo mv /etc/cortx/sample_global_cortx_config.yaml.back /etc/cortx/sample_global_cortx_config.yaml
+    [[ -f /etc/sspl.conf.back ]] && $sudo mv /etc/sspl.conf.back /etc/sspl.conf
+    [[ -f /etc/sample_global_cortx_config.conf.back ]] && $sudo mv /etc/sample_global_cortx_config.conf.back /etc/sample_global_cortx_config.conf
 fi
 
 echo "Tests completed, restored configs and services .."
