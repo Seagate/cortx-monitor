@@ -22,10 +22,13 @@
 
 class SetupError(Exception):
     """ Generic Exception class for SSPL Setup  """
+ 
     def __init__(self, rc, message, *args):
+        """ init method for SetupError """
         self._rc = rc
         self._desc = message % (args)
 
     def __str__(self):
+        """ method to print output on SetupError """
         if self._rc == 0: return self._desc
         return "error(%d): %s" %(self._rc, self._desc)

@@ -58,12 +58,13 @@ class SSPLInit:
     MDADM_PATH = '/etc/mdadm.conf'
 
     def __init__(self, args : list):
+        """ init methond for SSPL Setup Init Class"""
         self.args = args
         self.role = None
         self.dp = False
 
     def check_dependencies(self, role : str):
-        # Check for dependency rpms and required processes active state based 
+        # Check for dependency rpms and required processes active state based
         # on role
         if role == "ssu":
             try:
@@ -91,7 +92,7 @@ class SSPLInit:
     def validate_args(self):
         if not self.args:
             raise SetupError(
-                        errno.EINVAL, 
+                        errno.EINVAL,
                         "No arguments to init call.\n \
                         expected options : [-dp] [-r <ssu|gw|cmu|vm|cortx>]]"
                         )
@@ -107,8 +108,8 @@ class SSPLInit:
                                 "No role provided with -r option")
                 elif  self.args[i] not in roles:
                     raise SetupError(
-                                errno.EINVAL, 
-                                "Provided role '%s' is not supported", 
+                                errno.EINVAL,
+                                "Provided role '%s' is not supported",
                                 self.args[i])
                 else:
                     self.role = self.args[i]
@@ -145,7 +146,7 @@ class SSPLInit:
             raise
 
     def process(self):
-        
+
         self.validate_args()
 
         if self.dp:

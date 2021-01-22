@@ -308,7 +308,7 @@ class CheckCmd(Cmd):
             return
         syslog.openlog(logoption=syslog.LOG_PID, facility=syslog.LOG_LOCAL3)
         syslog.syslog(syslog.LOG_ERR, f"SSPL is not configured. Run provisioner scripts in {self._script_dir}.")
-        raise SetupError(errno.EINVAL, 
+        raise SetupError(errno.EINVAL,
                 "SSPL is not configured. Run provisioner scripts in %s.",
                 self._script_dir)
 

@@ -23,8 +23,6 @@ import os
 from enum import Enum
 
 from cortx.sspl.lowlevel.framework.utils.salt_util import SaltInterface
-from cortx.sspl.lowlevel.framework.utils.service_logging import logger
-
 
 PRODUCT_NAME = 'LDR_R2'
 PRODUCT_FAMILY = 'cortx'
