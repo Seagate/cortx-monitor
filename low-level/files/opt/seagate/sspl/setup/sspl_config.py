@@ -41,15 +41,14 @@ class SSPLConfig:
     """ SSPL Setup Config Interface """
 
     name = "config"
-    DIR_NAME= f"/opt/seagate/{consts.PRODUCT_FAMILY}/sspl"
+    DIR_NAME= "/opt/seagate/%s/sspl" % consts.PRODUCT_FAMILY
     RSYSLOG_CONF ="/etc/rsyslog.d/0-iemfwd.conf"
     RSYSLOG_SSPL_CONF = "/etc/rsyslog.d/1-ssplfwd.conf"
     LOGROTATE_DIR  ="/etc/logrotate.d"
-    IEM_LOGROTATE_CONF = f"{LOGROTATE_DIR}/iem_messages"
-    SSPL_LOGROTATE_CONF = f"{LOGROTATE_DIR}/sspl_logs"
-    SSPL_CONFIGURED_DIR = f"/var/{consts.PRODUCT_FAMILY}/sspl"
-    SSPL_CONFIGURED = f"{SSPL_CONFIGURED_DIR}/sspl-configured"
-
+    IEM_LOGROTATE_CONF = "%s/iem_messages" % LOGROTATE_DIR
+    SSPL_LOGROTATE_CONF = "%s/sspl_logs" % LOGROTATE_DIR
+    SSPL_CONFIGURED_DIR = "/var/%s/sspl" % consts.PRODUCT_FAMILY
+    SSPL_CONFIGURED = "%s/sspl-configured" % SSPL_CONFIGURED_DIR
 
     def __init__(self, args : list):
         self.args = args
@@ -175,7 +174,7 @@ class SSPLConfig:
         # Configure self.role
         if self.role:
             self.replace_expr(consts.file_store_config_path, 
-                            '^setup=.*', f'setup={self.role}')
+                            '^setup=.*', 'setup=%s' % self.role)
 
         # Add sspl-ll user to required groups and sudoers file etc.
         sspl_reinit = [f"{self.DIR_NAME}/bin/sspl_reinit", product]
@@ -194,7 +193,7 @@ class SSPLConfig:
         SSPL_LOG_FILE_PATH = self.getval_from_ssplconf('sspl_log_file_path')
         if SSPL_LOG_FILE_PATH:
             self.replace_expr(self.RSYSLOG_SSPL_CONF, 
-                        'File.*[=,"]', f'File="{SSPL_LOG_FILE_PATH}"')
+                        'File.*[=,"]', 'File="%s"' % SSPL_LOG_FILE_PATH)
             self.replace_expr(
                     f"{self.DIR_NAME}/low-level/files/etc/logrotate.d/sspl_logs", 
                     0, SSPL_LOG_FILE_PATH)
@@ -205,21 +204,26 @@ class SSPLConfig:
 
         if LOG_FILE_PATH:
             self.replace_expr(self.RSYSLOG_CONF, 
-                    'File.*[=,"]', f'File="{LOG_FILE_PATH}"')
+                    'File.*[=,"]', 'File="%s"' % LOG_FILE_PATH)
             self.replace_expr(
                     f'{self.DIR_NAME}/low-level/files/etc/logrotate.d/iem_messages', 
                     0, LOG_FILE_PATH)
         else:
             self.replace_expr(self.RSYSLOG_CONF, 
-                    'File.*[=,"]', f'File=/var/log/{consts.PRODUCT_FAMILY}/iem/iem_messages')
+                    'File.*[=,"]', 'File=/var/log/%s/iem/iem_messages' % consts.PRODUCT_FAMILY)
 
 
         # Create logrotate dir in case it's not present for dev environment
         if not os.path.exists(self.LOGROTATE_DIR):
             os.makedirs(self.LOGROTATE_DIR)
 
-        shutil.copy2(f'{self.DIR_NAME}/low-level/files/etc/logrotate.d/iem_messages', self.IEM_LOGROTATE_CONF)
-        shutil.copy2(f'{self.DIR_NAME}/low-level/files/etc/logrotate.d/sspl_logs', self.SSPL_LOGROTATE_CONF)
+        shutil.copy2(
+            '%s/low-level/files/etc/logrotate.d/iem_messages' % self.DIR_NAME,
+            self.IEM_LOGROTATE_CONF)
+
+        shutil.copy2(
+            '%s/low-level/files/etc/logrotate.d/sspl_logs' % self.DIR_NAME,
+            self.SSPL_LOGROTATE_CONF)
         
         # This rsyslog restart will happen after successful updation of rsyslog
         # conf file and before sspl starts. If at all this will be removed from
@@ -378,7 +382,7 @@ class SSPLConfig:
                     self.replace_expr(
                             consts.file_store_config_path, 
                             'log_level.*[=,",\']', 
-                            f'log_level={log_level}')
+                            'log_level=%s' % log_level)
             else:
                 raise SetupError(
                             errno.EINVAL,
