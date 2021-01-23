@@ -29,6 +29,7 @@ import psutil
 import json
 import re
 import errno
+import consul
 
 from cortx.sspl.bin import sspl_constants as consts
 from cortx.sspl.bin.salt_util import SaltInterface
@@ -141,8 +142,7 @@ class SSPLConfig:
             ans = 'y' if self.force == 1 else None
 
             while ans!='y' and ans!='n':
-                ans = input("SSPL is already initialized. \
-                            Reinitialize SSPL? [y/n]: ")
+                ans = input("SSPL is already initialized.Reinitialize SSPL? [y/n]: ")
             
             if(ans == 'n'):
                 raise SetupError(
@@ -261,8 +261,8 @@ class SSPLConfig:
         if  self.rabbitmq_major_release == '3' and \
             self.rabbitmq_maintenance_release == '8':
 
-            rmq_cluster_status_cmd = '/usr/sbin/rabbitmqctl cluster_status \
-                                    --formatter json'
+            rmq_cluster_status_cmd = '/usr/sbin/rabbitmqctl cluster_status' + \
+                                    '--formatter json'
             output, error, returncode = SimpleProcess(rmq_cluster_status_cmd).run()
             rabbitmq_cluster_status = json.loads(output)
             if returncode:
@@ -272,17 +272,15 @@ class SSPLConfig:
                 running_nodes[i] = node.replace('rabbit@', '')
             pout = " ".join(running_nodes)
         elif self.rabbitmq_version == '3.3.5':
-            rmq_cluster_status_cmd = "rabbitmqctl cluster_status | \
-                    grep running_nodes | cut -d '[' -f2 | cut -d ']' -f1 | \
-                    sed 's/rabbit@//g' | sed 's/,/, /g'"
+            rmq_cluster_status_cmd = "rabbitmqctl cluster_status | " + \
+                    "grep running_nodes | cut -d '[' -f2 | cut -d ']' -f1"
             output, error, returncode = SimpleProcess(rmq_cluster_status_cmd).run()
-            pout = output.replace("'", '').replace(' ', '')
+            pout = output.replace('rabbit@', '').replace(',',', ').replace("'", '').replace(' ', '')
         else:
             raise SetupError(
                         errno.EINVAL, 
                         "This RabbitMQ version : %s is not supported", 
                         self.rabbitmq_version)
-
         return pout
 
     def get_cluster_running_nodes(self, msg_broker : str):
@@ -334,41 +332,48 @@ class SSPLConfig:
 
             # Update cluster_nodes key in consul
             if consts.PRODUCT_NAME == 'LDR_R1':
-                consul_cmd = f'{consts.CONSUL_PATH}/consul kv put sspl/config/\
-                                RABBITMQCLUSTER/cluster_nodes {pout}'
-                output, error, returncode = SimpleProcess(consul_cmd).run()
-                if returncode:
-                    raise SetupError(returncode, error, consul_cmd)
-                if self.rmq_cluster_nodes:
-                    consul_cmd = f'{consts.CONSUL_PATH}/consul kv put sspl\
-                        /config/RABBITMQCLUSTER/cluster_nodes {self.rmq_cluster_nodes}'
-                    output, error, returncode = SimpleProcess(consul_cmd).run()
-                    if returncode:
-                        raise SetupError(returncode, error, consul_cmd)
-                else:
-                    self.replace_expr(
-                                consts.file_store_config_path, 
-                                'cluster_nodes=.*', 
-                                f'cluster_nodes={pout}')
+                host = os.getenv('CONSUL_HOST', consts.CONSUL_HOST)
+                port = os.getenv('CONSUL_PORT', consts.CONSUL_PORT)
+                try:
+                    consul_conn = consul.Consul(host=host, port=port)
+                    consul_conn.kv.put(
+                            "sspl/config/RABBITMQCLUSTER/cluster_nodes", pout)
+                    if self.rmq_cluster_nodes:
+                        consul_conn.kv.put(
+                                "sspl/config/RABBITMQCLUSTER/cluster_nodes",
+                                self.rmq_cluster_nodes)
+
+                except Exception:
+                    raise
+            else:
+                self.replace_expr(
+                            consts.file_store_config_path, 
+                            'cluster_nodes=.*', 
+                            f'cluster_nodes={pout}')
             
-        # Skip this step if sspl is being configured for node replacement scenario as consul data is already
+        # Skip this step if sspl is being configured for node replacement
+        # scenario as consul data is already
         # available on healthy node
         # Updating build requested log level
         if not consts.REPLACEMENT_NODE_ENV_VAR_FILE:
             log_level = None
-            with open(f'{self.DIR_NAME}/low-level/files/opt/seagate\
-                /sspl/conf/build-requested-loglevel', 'r') as f:
+            with open(f'{self.DIR_NAME}/low-level/files/opt/seagate' + \
+                '/sspl/conf/build-requested-loglevel', 'r') as f:
                 log_level = f.readline()
             
             if  log_level == "DEBUG" or log_level == "INFO" or \
                 log_level == "WARNING" or log_level == "ERROR" or \
                 log_level == "CRITICAL":
                 if consts.PRODUCT_NAME == "LDR_R1":
-                    consul_cmd = f'{consts.CONSUL_PATH}/consul kv put sspl/config/\
-                                    SYSTEM_INFORMATION/log_level {log_level}'
-                    output, error, returncode = SimpleProcess(consul_cmd).run()
-                    if returncode:
-                        raise SetupError(returncode, error, consul_cmd)
+                    host = os.getenv('CONSUL_HOST', consts.CONSUL_HOST)
+                    port = os.getenv('CONSUL_PORT', consts.CONSUL_PORT)
+                    try:
+                        consul_conn = consul.Consul(host=host, port=port)
+                        consul_conn.kv.put(
+                                "sspl/config/SYSTEM_INFORMATION/log_level", 
+                                log_level)
+                    except Exception:
+                        raise
                 else:
                     self.replace_expr(
                             consts.file_store_config_path, 

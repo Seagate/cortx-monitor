@@ -84,6 +84,7 @@ REPLACEMENT_NODE_ENV_VAR_FILE = '/etc/profile.d/set_replacement_env.sh'
 node_key_id = 'srvnode-1'
 CONSUL_HOST = '127.0.0.1'
 CONSUL_PORT = '8500'
+CONSUL_PATH="/usr/bin/"
 
 # TODO Keep only constants in this file.
 <<<<<<< HEAD

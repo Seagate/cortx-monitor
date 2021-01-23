@@ -171,7 +171,7 @@ class SetupCmd(Cmd):
     def process(self):
         setup_sspl = f"{self._script_dir}/{self.script} {' '.join(self._args)}"
         output, error, returncode = SimpleProcess(setup_sspl).run()
-        if returncode != 0:
+        if returncode != 0 and 'WARNING' not in bytes.decode(error):
             raise SetupError(returncode, error)
 
 >>>>>>> EOS-16524: sspl_conf.sh to python (import of conf_vased_sensors_enable and few changes)
