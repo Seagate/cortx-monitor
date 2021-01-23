@@ -35,6 +35,7 @@ from cortx.sspl.bin import sspl_constants as consts
 from cortx.sspl.bin.salt_util import SaltInterface
 from cortx.utils.service import Service
 from cortx.utils.process import SimpleProcess
+from cortx.utils.validator.v_process import ProcessV
 from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.error import SetupError
 
 class SSPLConfig:
@@ -245,14 +246,10 @@ class SSPLConfig:
 
         if consts.PRODUCT_NAME == 'LDR_R1':
             if not os.path.exists(consts.REPLACEMENT_NODE_ENV_VAR_FILE):
-                CONSUL_PS = None
-                for proc in psutil.process_iter():
-                    if 'consul' in proc.name():
-                        CONSUL_PS = proc.pid
-                if not CONSUL_PS:
-                    raise SetupError(
-                            errno.EINVAL,
-                            "Consul is not running, exiting..")
+                try: 
+                    ProcessV().validate('isrunning', ['consul'])
+                except Exception:
+                    raise
 
         # Get the types of server and storage we are currently running on and
         # enable/disable sensor groups in the conf file accordingly.
