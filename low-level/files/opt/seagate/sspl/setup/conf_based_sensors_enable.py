@@ -16,7 +16,6 @@
 # cortx-questions@seagate.com.
 
 import configparser
-import sys
 import os
 import consul
 
@@ -67,12 +66,12 @@ def update_sensor_info():
         try:
             consul_conn = consul.Consul(host=host, port=port)
             for sect, value in sensors.items():
-                consul_conn.kv.put(f"sspl/config/{sect}/monitor", value)
+                consul_conn.kv.put("sspl/config/%s/monitor" % sect, value)
         except Exception as cerror:
             print("Error in connecting with consul: {}".format(cerror))
 
     # Update sensor information for sspl_test
-    test_file_config_path=f"/opt/seagate/{PRODUCT_FAMILY}/sspl/sspl_test/conf/sspl_tests.conf"
+    test_file_config_path="/opt/seagate/%s/sspl/sspl_test/conf/sspl_tests.conf" % PRODUCT_FAMILY
     config = configparser.ConfigParser(allow_no_value=True)
     config.read(test_file_config_path)
     for sect, value in sensors.items():
