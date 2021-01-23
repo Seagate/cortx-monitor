@@ -25,7 +25,6 @@
 
 import os
 import shutil
-import psutil
 import json
 import re
 import errno
