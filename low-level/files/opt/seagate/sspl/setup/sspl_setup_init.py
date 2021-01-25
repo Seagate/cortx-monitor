@@ -26,11 +26,13 @@ import pwd
 import errno
 
 from cortx.sspl.bin.sspl_constants import file_store_config_path, roles
-from cortx.utils.validator.v_process import ProcessV
+from cortx.utils.validator.v_service import ServiceV
 from cortx.utils.validator.v_pkg import PkgV
 from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.error import SetupError
+from cortx.utils.conf_store import Conf
 
 class SSPLInit:
+
     """Init Setup Interface"""
 
     name = "init"
@@ -58,10 +60,11 @@ class SSPLInit:
     MDADM_PATH = '/etc/mdadm.conf'
 
     def __init__(self, args : list):
-        """ init methond for SSPL Setup Init Class"""
+        """init methond for SSPL Setup Init Class"""
         self.args = args
         self.role = None
         self.dp = False
+        Conf.load('sspl', f"yaml://{file_store_config_path}")
 
     def check_dependencies(self, role : str):
         # Check for dependency rpms and required processes active state based
@@ -69,7 +72,7 @@ class SSPLInit:
         if role == "ssu":
             try:
                 PkgV().validate("rpms", self.SSU_DEPENDENCY_RPMS)
-                ProcessV().validate("isrunning", self.SSU_REQUIRED_PROCESSES)
+                ServiceV().validate("isrunning", self.SSU_REQUIRED_PROCESSES, is_process=True)
             except Exception:
                 raise
         elif role == "vm" or role == "gw" or role == "cmu":
@@ -104,7 +107,7 @@ class SSPLInit:
                 i+=1
                 if i == len(self.args):
                     raise SetupError(
-                                errno.EINVAL, 
+                                errno.EINVAL,
                                 "No role provided with -r option")
                 elif  self.args[i] not in roles:
                     raise SetupError(
@@ -118,16 +121,6 @@ class SSPLInit:
                                 errno.EINVAL, 
                                 "Unknown option '%s'", self.args[i])
             i+=1
-
-    def getval_from_ssplconf(self, varname : str) -> str:
-        with open(file_store_config_path, mode='rt') as confile:
-            for line in confile:
-                if line.startswith(varname):
-                    rets = line.split('=')[1]
-                    if(rets.endswith('\n')):
-                        rets = rets.replace('\n', '')
-                    return rets
-        return None
 
     def recursive_chown(self, path : str, user : str, grpid: int = -1):
         try:
@@ -151,11 +144,12 @@ class SSPLInit:
 
         if self.dp:
             # Extract the data path
-            sspldp = self.getval_from_ssplconf('data_path')
+            sspldp = Conf.get('sspl', 'SYSTEM_INFORMATION>data_path')
             if not sspldp :
                 raise SetupError(
                             errno.EINVAL, 
-                            "Data Path Not set in sspl.conf")
+                            "Data Path Not set in %s" 
+                            % file_store_config_path)
 
             # Crete the directory and assign permissions
             try:
@@ -163,7 +157,7 @@ class SSPLInit:
             except OSError:
                 raise
             self.recursive_chown(sspldp, 'sspl-ll')
-        
+
         # Create /tmp/dcs/hpi if required. Not needed for '<product>' role
         if self.role != "cortx":
             try:
