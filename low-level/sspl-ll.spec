@@ -140,6 +140,14 @@ SSPL_DIR=/opt/seagate/%{product_family}/sspl
 [ -f $SSPL_DIR/sspl_init ] ||
     ln -s $SSPL_DIR/bin/sspl_provisioner_init $SSPL_DIR/sspl_init
 
+# Creating softlink under site-packages to use sspl module easier way.
+PYTHON_BASE_DIR=/usr/lib/python3.6/site-packages/cortx/sspl
+[ -d "${SSPL_DIR}" ] && {
+    mkdir -p $PYTHON_BASE_DIR
+    ln -sf $SSPL_DIR/bin $PYTHON_BASE_DIR/bin
+    ln -sf $SSPL_DIR/low-level $PYTHON_BASE_DIR/lowlevel
+}
+
 # In case of upgrade start sspl-ll after upgrade
 if [ "$1" == "2" ]; then
     echo "Restarting sspl-ll service..."

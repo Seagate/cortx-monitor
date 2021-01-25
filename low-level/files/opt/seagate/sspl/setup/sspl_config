@@ -89,7 +89,7 @@ config_sspl() {
     }
 
     # Put minion id, consul_host and consul_port in conf file
-    # Onward LDR_R2, salt will be abstracted out and it won't
+    # Onward LR2, salt will be abstracted out and it won't
     # exit as hard dependeny of SSPL
     if [ "$PRODUCT_NAME" == "LDR_R1" ]; then
         python3 $DIR_NAME/bin/salt_util.py $SSPL_CONF;

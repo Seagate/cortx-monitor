@@ -59,7 +59,7 @@ if os.path.exists(file_store_config_path):
     with open(file_store_config_path, "w") as configFile:
         config.write(configFile, space_around_delimiters=False)
 
-# Onward LDR_R2, consul will be abstracted out and it won't exit as hard dependeny of SSPL
+# Onward LR2, consul will be abstracted out and it won't exit as hard dependeny of SSPL
 # Note: SSPL has backward compatibility to LDR_R1 and there consul is a dependency of SSPL.
 if SSPL_STORE_TYPE == "consul":
     import consul

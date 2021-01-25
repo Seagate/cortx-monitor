@@ -15,21 +15,27 @@
 # about this software or licensing, please email opensource@seagate.com or
 # cortx-questions@seagate.com.
 
+###############################################
+# Joins nodes in current node Rabbitmq cluster
+###############################################
 
-import subprocess
 import sys
 import socket
-import os
 import argparse
 import re
-from configparser import ConfigParser
+
+# using cortx library
+from cortx.utils.conf_store import Conf
+from cortx.utils.process import SimpleProcess
+from cortx.sspl.bin.sspl_constants import file_store_config_path
+from cortx.sspl.bin.error import SetupError
 
 localhost_fqdn = socket.getfqdn().split('.')[0]
 
 
 class RMQClusterConfiguration:
 
-    """Update RabbitMQ configuration in /etc/sspl.conf and form RabbitMQ cluster"""
+    """Use RabbitMQ configuration to form RabbitMQ cluster."""
 
     SECTION = "RABBITMQCLUSTER"
     CLUSTER_NODES = "cluster_nodes"
@@ -39,10 +45,7 @@ class RMQClusterConfiguration:
 
     def __init__(self, nodes):
         self.requested_nodes = nodes
-        self.config_file = "/etc/sspl.conf"
-        # Initialize config parser
-        self.config = ConfigParser(allow_no_value=True)
-        self.config.read(self.config_file)
+        Conf.load('sspl', f"yaml://{file_store_config_path}")
 
     def setup_rabbitmq(self):
         command = "systemctl start rabbitmq-server"
@@ -58,18 +61,13 @@ class RMQClusterConfiguration:
             fail_on_error: Set to False will ignore command failure
         """
         print(f"Executing: {command}")
-        process = subprocess.Popen(
-            command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        response, error = process.communicate()
-        if error is not None and \
-        len(error) > 0:
-            if fail_on_error:
-                print("ERROR: Command '%s' failed with error\n  %s" % (command, error))
-                sys.exit(1)
-            else:
-                print("WARNING: Command '%s' failed with error\n  %s" % (command, error))
-                return str(error)
-        return str(response.decode())
+        output, error, returncode = SimpleProcess(command).run()
+        if fail_on_error and returncode != 0:
+            raise SetupError(returncode,
+                             "ERROR: Command '%s' failed with error\n  %s",
+                             command,
+                             error)
+        return output.decode('utf-8')
 
     def _open_rabbitmq_ports(self):
         """
@@ -106,8 +104,7 @@ class RMQClusterConfiguration:
         command = 'systemctl stop rabbitmq-server'
         self._send_command(command)
         # all rabbitmq servers needs to have same erlang cookie for clustering.
-        cookie_value = 'QLDZYPYEYGHECTHYQXFJ'
-        cookie_value = self.config.get(self.SECTION, self.ERLANG_COOKIE, fallback=cookie_value)
+        cookie_value = Conf.get('sspl', "%s>%s" % (self.SECTION, self.ERLANG_COOKIE))
         command = f'chmod +w {self.ERLANG_COOKIE_PATH}'
         self._send_command(command)
         command = f'echo "{cookie_value}" > {self.ERLANG_COOKIE_PATH}'
@@ -149,10 +146,8 @@ class RMQClusterConfiguration:
         """
         Updates RMQ cluster nodes in sspl config file
         """
-        self.config.set(self.SECTION, self.CLUSTER_NODES, self.requested_nodes)
-        with open(self.config_file, "w") as configFile:
-            self.config.write(configFile, space_around_delimiters=False)
-        print(f"Successfully updated RMQ cluster nodes in {self.config_file}")
+        Conf.set("sspl", "%s>%s" % (self.SECTION, self.CLUSTER_NODES), self.requested_nodes)
+        print("Successfully updated RMQ cluster nodes in config.")
 
     def make_rmq_cluster(self):
         """
@@ -192,22 +187,22 @@ class RMQClusterConfiguration:
             else:
                 print(f"RabbitMQ cluster is formed only with current host: {node_fqdn}")
 
+    def process(self):
+        # Setup RMQ config - rabbitmq ports and erlang cookie
+        self.setup_rabbitmq()
+
+        # Reset previous cluster setup
+        self.reset_rmq_cluster()
+
+        # Add nodes in rabbitmq cluster
+        self.make_rmq_cluster()
+
 
 if __name__ == '__main__':
-
     parser = argparse.ArgumentParser()
     parser.add_argument("-n", "--nodes", help="""Comma separated cluster nodes. This is optional.
                                                 Default value is fqdn of the localhost""",
                                         action="store", default=localhost_fqdn)
     args = parser.parse_args()
     nodes = args.nodes.replace(" ", "")
-    rmq_cluster_config = RMQClusterConfiguration(nodes)
-
-    # Setup RMQ config - rabbitmq ports and erlang cookie
-    rmq_cluster_config.setup_rabbitmq()
-
-    # Reset previous cluster setup
-    rmq_cluster_config.reset_rmq_cluster()
-
-    # Add nodes in rabbitmq cluster
-    rmq_cluster_config.make_rmq_cluster()
+    RMQClusterConfiguration(nodes).process()
