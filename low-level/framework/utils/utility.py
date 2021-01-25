@@ -18,9 +18,7 @@ Base class for all the Utility implementation
 """
 
 import subprocess
-
 from cortx.sspl.lowlevel.framework.utils.service_logging import logger
-from cortx.utils.process import SimpleProcess
 
 class Utility(object):
     """Base class for all the utilities
@@ -58,4 +56,3 @@ class Utility(object):
         except Exception as e:
             logger.warning("Error while reading whether env is vm or not, assuming VM env : {e}")
         return is_vm
-        

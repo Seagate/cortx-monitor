@@ -40,7 +40,8 @@ from cortx.sspl.bin.conf_based_sensors_enable import update_sensor_info
 
 
 class SSPLConfig:
-    """ SSPL Setup Config Interface """
+
+    """SSPL Setup Config Interface."""
 
     name = "config"
     DIR_NAME= "/opt/seagate/%s/sspl" % consts.PRODUCT_FAMILY
@@ -53,19 +54,20 @@ class SSPLConfig:
     SSPL_CONFIGURED = "%s/sspl-configured" % SSPL_CONFIGURED_DIR
 
     def __init__(self, args : list):
+        """Init method for sspl setup config."""
         self.args = args
         self._script_dir = os.path.dirname(os.path.abspath(__file__))
         self.role = None
         Conf.load('sspl', 'yaml://%s' % consts.file_store_config_path)
 
     def replace_expr(self, filename:str, key, new_str:str):
-        with open(filename, 'r+') as f: 
+        with open(filename, 'r+') as f:
             lines = f.readlines()
-            if type(key) == str:
+            if isinstance(key, str):
                 for i, line in enumerate(lines):                 
                     if re.search(key, line):
                         lines[i] = re.sub(key, new_str, lines[i])
-            elif type(key) == int:
+            elif isinstance(key, int):
                 if not re.search(new_str, lines[key]):
                     lines.insert(key, new_str)
             else:
@@ -80,9 +82,9 @@ class SSPLConfig:
     def config_sspl(self):
         if(os.geteuid() != 0):
             raise SetupError(
-                        errno.EINVAL, 
+                        errno.EINVAL,
                         "Run this command with root privileges!!")
-        
+
         if not os.path.isfile(consts.file_store_config_path):
             raise SetupError(
                         errno.EINVAL, 
@@ -102,7 +104,7 @@ class SSPLConfig:
 
         # Get Product
         # product = self.getval_from_ssplconf('product')
-        product = Conf.get('sspl', 'SYSTEM_INFORMATION>product')
+        product = Conf.get('global_config', 'release>product')
         
         if not product:
             raise SetupError(
@@ -115,7 +117,7 @@ class SSPLConfig:
         
         if product not in consts.enabled_products:
             raise SetupError(
-                        errno.EINVAL, 
+                        errno.EINVAL,
                         "Product '%s' is not in enabled products list: %s",
                         product, consts.enabled_products)
 
@@ -123,7 +125,7 @@ class SSPLConfig:
         sspl_reinit = [f"{self.DIR_NAME}/bin/sspl_reinit", product]
         output, error, returncode = SimpleProcess(sspl_reinit).run()
         if returncode:
-            raise SetupError(returncode, 
+            raise SetupError(returncode,
                     "%s/bin/sspl_reinit failed for product %s with error : %e",
                       self.DIR_NAME, product, error
                     )
@@ -137,7 +139,7 @@ class SSPLConfig:
         # SSPL_LOG_FILE_PATH = self.getval_from_ssplconf('sspl_log_file_path')
         SSPL_LOG_FILE_PATH = Conf.get('sspl', 'SYSTEM_INFORMATION>sspl_log_file_path')
         if SSPL_LOG_FILE_PATH:
-            self.replace_expr(self.RSYSLOG_SSPL_CONF, 
+            self.replace_expr(self.RSYSLOG_SSPL_CONF,
                         'File.*[=,"]', 'File="%s"' % SSPL_LOG_FILE_PATH)
             self.replace_expr(
                     f"{self.DIR_NAME}/low-level/files/etc/logrotate.d/sspl_logs", 
@@ -149,7 +151,7 @@ class SSPLConfig:
         LOG_FILE_PATH = Conf.get('sspl', 'SYSTEM_INFORMATION>log_file_path')
 
         if LOG_FILE_PATH:
-            self.replace_expr(self.RSYSLOG_CONF, 
+            self.replace_expr(self.RSYSLOG_CONF,
                     'File.*[=,"]', 'File="%s"' % LOG_FILE_PATH)
             self.replace_expr(
                     f'{self.DIR_NAME}/low-level/files/etc/logrotate.d/iem_messages', 
@@ -157,7 +159,6 @@ class SSPLConfig:
         else:
             self.replace_expr(self.RSYSLOG_CONF, 
                     'File.*[=,"]', 'File=/var/log/%s/iem/iem_messages' % consts.PRODUCT_FAMILY)
-
 
         # Create logrotate dir in case it's not present for dev environment
         if not os.path.exists(self.LOGROTATE_DIR):
@@ -191,14 +192,14 @@ class SSPLConfig:
 
         if consts.PRODUCT_NAME == 'LDR_R1':
             if not os.path.exists(consts.REPLACEMENT_NODE_ENV_VAR_FILE):
-                try: 
+                try:
                     ServiceV().validate('isrunning', ['consul'], is_process=True)
                 except Exception:
                     raise
 
         # Get the types of server and storage we are currently running on and
         # enable/disable sensor groups in the conf file accordingly.
-        update_sensor_info()    
+        update_sensor_info()
 
     def get_rabbitmq_cluster_nodes(self):
         pout = None
@@ -222,8 +223,8 @@ class SSPLConfig:
             pout = output.replace('rabbit@', '').replace(',',', ').replace("'", '').replace(' ', '')
         else:
             raise SetupError(
-                        errno.EINVAL, 
-                        "This RabbitMQ version : %s is not supported", 
+                        errno.EINVAL,
+                        "This RabbitMQ version : %s is not supported",
                         self.rabbitmq_version)
         return pout
 
@@ -231,10 +232,9 @@ class SSPLConfig:
         if(msg_broker == 'rabbitmq'):
             return self.get_rabbitmq_cluster_nodes()
         else:
-            raise SetupError(errno.EINVAL, 
-                        "Provided message broker '%s' is not supported", 
-                        msg_broker
-                        )              
+            raise SetupError(errno.EINVAL,
+                        "Provided message broker '%s' is not supported",
+                        msg_broker)
 
     def process(self):
         cmd = "config"
@@ -249,16 +249,16 @@ class SSPLConfig:
         output, error, returncode = SimpleProcess(rmq_cmd).run()
         if returncode:
             raise SetupError(returncode, error)
-        self.rabbitmq_version = re.search(  r'Version     :\s*([\d.]+)', 
+        self.rabbitmq_version = re.search(  r'Version     :\s*([\d.]+)',
                                             str(output)).group(1)
 
         # Get the Major release version parsed. (Eg: 3 from 3.8.9)
         self.rabbitmq_major_release = self.rabbitmq_version[0]
 
         # Get the Minor release version parsed. (Eg: 3.8 from 3.8.9)
-        self.rabbitmq_minor_release = self.rabbitmq_version[:3] 
+        self.rabbitmq_minor_release = self.rabbitmq_version[:3]
 
-        # Get the Maitenance release version parsed from minor release. 
+        # Get the Maitenance release version parsed from minor release.
         # (Eg: 8 from 3.8)
         self.rabbitmq_maintenance_release = self.rabbitmq_minor_release[-1]
 
@@ -266,7 +266,7 @@ class SSPLConfig:
         # scenario as consul data is already
         # available on healthy node
         # Updating RabbitMQ cluster nodes.
-        # In node replacement scenario, avoiding feeding again to avoid 
+        # In node replacement scenario, avoiding feeding again to avoid
         # over writing already configured values
         # with which rabbitmq cluster may have been created
         if not consts.REPLACEMENT_NODE_ENV_VAR_FILE:
@@ -285,10 +285,8 @@ class SSPLConfig:
                 except Exception:
                     raise
             else:
-                self.replace_expr(
-                            consts.file_store_config_path, 
-                            'cluster_nodes=.*', 
-                            f'cluster_nodes={pout}')
+                Conf.set('sspl', 'RABBITMQCLUSTER>cluster_nodes', pout)
+                Conf.save('sspl')
             
         # Skip this step if sspl is being configured for node replacement
         # scenario as consul data is already
@@ -309,15 +307,13 @@ class SSPLConfig:
                     try:
                         consul_conn = consul.Consul(host=host, port=port)
                         consul_conn.kv.put(
-                                "sspl/config/SYSTEM_INFORMATION/log_level", 
+                                "sspl/config/SYSTEM_INFORMATION/log_level",
                                 log_level)
                     except Exception:
                         raise
                 else:
-                    self.replace_expr(
-                            consts.file_store_config_path, 
-                            'log_level.*[=,",\']', 
-                            'log_level=%s' % log_level)
+                    Conf.set('sspl', 'SYSTEM_INFORMATION>log_level', log_level)
+                    Conf.save()
             else:
                 raise SetupError(
                             errno.EINVAL,
