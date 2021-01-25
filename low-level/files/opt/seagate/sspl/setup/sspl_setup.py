@@ -25,11 +25,15 @@ import inspect
 import traceback
 import os
 import syslog
+import time
 
 # using cortx package
-from cortx.sspl.bin.error import SetupError
 from cortx.utils.process import SimpleProcess
 from cortx.utils.conf_store import Conf
+from cortx.utils.service import Service
+from cortx.utils.validator.v_service import ServiceV
+from cortx.utils.validator.error import VError
+from cortx.sspl.bin.error import SetupError
 
 class Cmd:
     """Setup Command.
@@ -49,12 +53,12 @@ class Cmd:
         """Print usage instructions."""
         sys.stderr.write(f"""{prog}
             [ -h|--help ]
-            [ post_install [<global_config_url>] ]
-            [ init [<global_config_url>] ]
-            [ config [<global_config_url>] ]
+            [ post_install --config [<global_config_url>] ]
+            [ init --config [<global_config_url>] ]
+            [ config --config [<global_config_url>] ]
             [ test [sanity|alerts] ]
             [ reset [hard|soft] ]
-            [ join_cluster [<nodes>] ]
+            [ join_cluster --nodes [<nodes>] ]
             [ manifest_support_bundle [<id>] [<path>] ]
             [ support_bundle [<id>] [<path>] ]
             [ check ]
@@ -101,10 +105,15 @@ class JoinClusterCmd(Cmd):
             raise SetupError(1,
                              "Validation failure. %s",
                              "join_cluster requires comma separated node names as argument.")
+        if (len(self.args) != 2) or (self.args[0] != "--nodes"):
+            raise SetupError(1,
+                             "%s - Argument validation failure. %s",
+                             self.name,
+                             "Check usage.")
 
     def process(self):
         from cortx.sspl.bin.setup_rabbitmq_cluster import RMQClusterConfiguration
-        RMQClusterConfiguration(nodes).process()
+        RMQClusterConfiguration(self.args[1]).process()
 
 
 class PostInstallCmd(Cmd):
@@ -119,12 +128,17 @@ class PostInstallCmd(Cmd):
     def validate(self):
         if not self.args:
             raise SetupError(1,
-                             "%s - validation failure. %s",
+                             "%s - Argument validation failure. %s",
                              self.name,
                              "Post install requires global config.")
-        global_config = self.args[0]
+        if (len(self.args) != 2) or (self.args[0] != "--config"):
+            raise SetupError(1,
+                             "%s - Argument validation failure. %s",
+                             self.name,
+                             "Check usage.")
+        global_config = self.args[1]
         Conf.load('global_config', global_config)
-        product = Conf.get('global_config', 'cluster>product')
+        product = Conf.get('global_config', 'release>product')
         if not product:
             raise SetupError(1,
                              "%s - validation failure. %s",
@@ -133,7 +147,7 @@ class PostInstallCmd(Cmd):
 
     def process(self):
         from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.sspl_post_install import SSPLPostInstall
-        SSPLPostInstall(self.args).process()
+        SSPLPostInstall(self.args[1]).process()
 
 
 class InitCmd(Cmd):
@@ -267,6 +281,8 @@ class CheckCmd(Cmd):
         from cortx.sspl.bin.sspl_constants import PRODUCT_FAMILY
 
         self.SSPL_CONFIGURED="/var/%s/sspl/sspl-configured" % (PRODUCT_FAMILY)
+        self.services = ["rabbitmq-server", "sspl-ll"]
+        Service('dbus').process('start', 'sspl-ll.service')
 
     def validate(self):
         # Common validator classes to check Cortx/system wide validator
@@ -275,6 +291,17 @@ class CheckCmd(Cmd):
             syslog.openlog(logoption=syslog.LOG_PID, facility=syslog.LOG_LOCAL3)
             syslog.syslog(syslog.LOG_ERR, error)
             raise SetupError(1, "%s - validation failure. %s", self.name, error)
+        # Validate required services are running
+        retry = 3
+        while retry > 0:
+            try:
+                ServiceV().validate('isrunning', self.services)
+            except VError:
+                retry -= 1
+                time.sleep(5)
+            else:
+                break
+        ServiceV().validate('isrunning', self.services)
 
     def process(self):
         pass

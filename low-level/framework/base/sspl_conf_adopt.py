@@ -18,12 +18,14 @@ import yaml
 from configparser import ConfigParser
 
 class IniConfDiff(object):
+    """Update ini config difference in bakcup config file"""
 
     def __init__(self, conf_file1, conf_file2):
         self.conf_file1_dict = self._to_dict(conf_file1)
         self.conf_file2_dict = self._to_dict(conf_file2)
 
     def _to_dict(self, file_name):
+        """Convert ini file to dict"""
         config = ConfigParser()
         config.read(file_name)
         return config
@@ -41,11 +43,14 @@ class IniConfDiff(object):
 
 
 class YamlConfDiff(object):
+    """Update yaml config difference in bakcup config file"""
+
     def __init__(self, conf_file1, conf_file2):
         self.conf_file1_dict = self._to_dict(conf_file1)
         self.conf_file2_dict = self._to_dict(conf_file2)
 
     def _to_dict(self, file1):
+        """Convert yaml file to dict"""
         config = yaml.safe_load(open(file1))
         return config
 

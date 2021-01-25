@@ -21,7 +21,6 @@
 
 import sys
 import socket
-import os
 import argparse
 import re
 
@@ -36,7 +35,7 @@ localhost_fqdn = socket.getfqdn().split('.')[0]
 
 class RMQClusterConfiguration:
 
-    """Use RabbitMQ configuration to form RabbitMQ cluster"""
+    """Use RabbitMQ configuration to form RabbitMQ cluster."""
 
     SECTION = "RABBITMQCLUSTER"
     CLUSTER_NODES = "cluster_nodes"

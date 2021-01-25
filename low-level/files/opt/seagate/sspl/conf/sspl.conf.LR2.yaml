@@ -210,7 +210,6 @@ STORAGE_ENCLOSURE:
    mgmt_interface: cliapi
 
 SYSTEM_INFORMATION:
-   setup: cortx
    cli_type: CS-A
    data_path: /var/cortx/sspl/data/
    sspl_log_file_path: /var/log/cortx/sspl/sspl.log

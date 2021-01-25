@@ -27,9 +27,9 @@ from cortx.sspl.lowlevel.framework.utils.service_logging import logger
 from cortx.utils.conf_store import Conf
 
 
-PRODUCT_NAME = 'LDR_R2'
+PRODUCT_NAME = 'LR2'
 PRODUCT_FAMILY = 'cortx'
-enabled_products = ["CS-A", "SINGLE","DUAL", "CLUSTER", "LDR_R1", "LDR_R2"]
+enabled_products = ["CS-A", "SINGLE","DUAL", "CLUSTER", "LDR_R1", "LR2"]
 cs_products = ["CS-A"]
 cs_legacy_products = ["CS-L", "CS-G"]
 setups = ["cortx"]

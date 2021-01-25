@@ -15,9 +15,9 @@
 
 # This script contains common constants used by various provisioner scripts
 
-PRODUCT_NAME='LDR_R2'
+PRODUCT_NAME='LR2'
 PRODUCT_FAMILY='cortx'
-PRODUCTS="SINGLE DUAL CLUSTER LDR_R1 LDR_R2"
+PRODUCTS="SINGLE DUAL CLUSTER LDR_R1 LR2"
 SSPL_CONF="/etc/sspl.conf"
 ROLES="gw ssu vm cmu cortx"
 PRODUCT_BASE_DIR="/opt/seagate/$PRODUCT_FAMILY/"

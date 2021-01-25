@@ -21,14 +21,14 @@
 
 
 class SetupError(Exception):
-    """Generic Exception with error code and output"""
+    """Generic Exception with error code and output."""
 
     def __init__(self, rc, message, *args):
-        """Initialize with custom error message and return code"""
+        """Initialize with custom error message and return code."""
         self._rc = rc
         self._desc = message % (args)
 
     def __str__(self):
-        """Format error string"""
+        """Format error string."""
         if self._rc == 0: return self._desc
         return "SetupError(%d): %s" %(self._rc, self._desc)
