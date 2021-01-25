@@ -15,12 +15,11 @@
 # about this software or licensing, please email opensource@seagate.com or
 # cortx-questions@seagate.com.
 
-import configparser
 import os
 import consul
 from cortx.utils.conf_store import Conf
 
-from cortx.sspl.bin.sspl_constants import (CONSUL_HOST, CONSUL_PORT, PRODUCT_NAME,
+from cortx.sspl.bin.sspl_constants import (CONSUL_HOST, CONSUL_PORT,
     PRODUCT_FAMILY, file_store_config_path, storage_type, server_type, SSPL_STORE_TYPE)
 
 

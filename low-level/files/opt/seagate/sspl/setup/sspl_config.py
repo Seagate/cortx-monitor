@@ -127,6 +127,7 @@ class SSPLConfig:
                     "%s/bin/sspl_reinit failed for product %s with error : %e",
                       self.DIR_NAME, product, error
                     )
+        output = output
 
         os.makedirs(self.SSPL_CONFIGURED_DIR, exist_ok=True)
         with open(self.SSPL_CONFIGURED, 'a'):
@@ -233,8 +234,7 @@ class SSPLConfig:
             raise SetupError(errno.EINVAL, 
                         "Provided message broker '%s' is not supported", 
                         msg_broker
-                        )       
-            
+                        )              
 
     def process(self):
         cmd = "config"
@@ -282,11 +282,6 @@ class SSPLConfig:
                     consul_conn = consul.Consul(host=host, port=port)
                     consul_conn.kv.put(
                             "sspl/config/RABBITMQCLUSTER/cluster_nodes", pout)
-                    if self.rmq_cluster_nodes:
-                        consul_conn.kv.put(
-                                "sspl/config/RABBITMQCLUSTER/cluster_nodes",
-                                self.rmq_cluster_nodes)
-
                 except Exception:
                     raise
             else:
