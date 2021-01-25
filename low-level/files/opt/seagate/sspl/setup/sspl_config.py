@@ -31,11 +31,13 @@ import errno
 import consul
 
 from cortx.sspl.bin import sspl_constants as consts
-from cortx.sspl.bin.salt_util import SaltInterface
 from cortx.utils.service import Service
 from cortx.utils.process import SimpleProcess
-from cortx.utils.validator.v_process import ProcessV
+from cortx.utils.validator.v_service import ServiceV
 from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.error import SetupError
+from cortx.utils.conf_store import Conf
+from cortx.sspl.bin.conf_based_sensors_enable import update_sensor_info
+
 
 class SSPLConfig:
     """ SSPL Setup Config Interface """
@@ -53,20 +55,8 @@ class SSPLConfig:
     def __init__(self, args : list):
         self.args = args
         self._script_dir = os.path.dirname(os.path.abspath(__file__))
-        self.force = 0
         self.role = None
-        self.rmq_cluster_nodes = None
-        self.read_provisioner_config = True
-
-    def getval_from_ssplconf(self, varname : str) -> str:
-        with open(consts.file_store_config_path, mode='rt') as confile:
-            for line in confile:
-                if line.startswith(varname):
-                    rets = line.split('=')[1]
-                    if(rets.endswith('\n')):
-                        rets = rets.replace('\n', '')
-                    return rets
-        return None
+        Conf.load('sspl', 'yaml://%s' % consts.file_store_config_path)
 
     def replace_expr(self, filename:str, key, new_str:str):
         with open(filename, 'r+') as f: 
@@ -87,38 +77,7 @@ class SSPLConfig:
             for line in lines:
                 f.write(line)
 
-    def validate_args(self):
-        i = 0
-        while i < len(self.args):
-            if self.args[i] == '-f':
-                self.force = 1
-            elif self.args[i] == '-r':
-                i+=1
-                if i >= len(self.args):
-                    raise SetupError(errno.EINVAL, 
-                                "self.Role is not provided with -r option") 
-                if self.args[i] not in consts.roles:
-                    raise SetupError(errno.EINVAL, 
-                                "Provided self.role '%s' is not supported", 
-                                self.args[i])
-                else:
-                    self.role = self.args[i]
-            elif self.args[i] == '-n':
-                i+=1
-                if i >= len(self.args):
-                    raise SetupError(errno.EINVAL, 
-                                "Node is not provided with -n option") 
-                else:
-                    self.rmq_cluster_nodes = self.args[i]
-            elif self.args[i] == '-d':
-                self.read_provisioner_config = False
-            else:
-                raise SetupError(errno.EINVAL, 
-                                "Unknown option '%s'", self.args[i])
-            i+=1
-
     def config_sspl(self):
-        self.validate_args()
         if(os.geteuid() != 0):
             raise SetupError(
                         errno.EINVAL, 
@@ -134,27 +93,16 @@ class SSPLConfig:
         # Onward LDR_R2, salt will be abstracted out and it won't
         # exist as a hard dependeny of SSPL
         if consts.PRODUCT_NAME == "LDR_R1":
+            from cortx.sspl.bin.salt_util import SaltInterface
             salt_util = SaltInterface()
             salt_util.update_config_file(consts.file_store_config_path)
 
         if os.path.isfile(self.SSPL_CONFIGURED):
-            ans = 'y' if self.force == 1 else None
-
-            while ans!='y' and ans!='n':
-                ans = input("SSPL is already initialized.Reinitialize SSPL? [y/n]: ")
-            
-            if(ans == 'n'):
-                raise SetupError(
-                        errno.EINVAL, 
-                        "SSPL already initialized, reinitialization cancled.")
-
-            try:
-                os.remove(self.SSPL_CONFIGURED)
-            except OSError:
-                raise
+            os.remove(self.SSPL_CONFIGURED)
 
         # Get Product
-        product = self.getval_from_ssplconf('product')
+        # product = self.getval_from_ssplconf('product')
+        product = Conf.get('sspl', 'SYSTEM_INFORMATION>product')
         
         if not product:
             raise SetupError(
@@ -171,11 +119,6 @@ class SSPLConfig:
                         "Product '%s' is not in enabled products list: %s",
                         product, consts.enabled_products)
 
-        # Configure self.role
-        if self.role:
-            self.replace_expr(consts.file_store_config_path, 
-                            '^setup=.*', 'setup=%s' % self.role)
-
         # Add sspl-ll user to required groups and sudoers file etc.
         sspl_reinit = [f"{self.DIR_NAME}/bin/sspl_reinit", product]
         output, error, returncode = SimpleProcess(sspl_reinit).run()
@@ -190,7 +133,8 @@ class SSPLConfig:
             os.utime(self.SSPL_CONFIGURED)
 
         # SSPL Log file configuration
-        SSPL_LOG_FILE_PATH = self.getval_from_ssplconf('sspl_log_file_path')
+        # SSPL_LOG_FILE_PATH = self.getval_from_ssplconf('sspl_log_file_path')
+        SSPL_LOG_FILE_PATH = Conf.get('sspl', 'SYSTEM_INFORMATION>sspl_log_file_path')
         if SSPL_LOG_FILE_PATH:
             self.replace_expr(self.RSYSLOG_SSPL_CONF, 
                         'File.*[=,"]', 'File="%s"' % SSPL_LOG_FILE_PATH)
@@ -200,7 +144,8 @@ class SSPLConfig:
 
         # IEM configuration
         # Configure log file path in Rsyslog and logrotate configuration file
-        LOG_FILE_PATH = self.getval_from_ssplconf('log_file_path')
+        # LOG_FILE_PATH = self.getval_from_ssplconf('log_file_path')
+        LOG_FILE_PATH = Conf.get('sspl', 'SYSTEM_INFORMATION>log_file_path')
 
         if LOG_FILE_PATH:
             self.replace_expr(self.RSYSLOG_CONF, 
@@ -246,16 +191,14 @@ class SSPLConfig:
         if consts.PRODUCT_NAME == 'LDR_R1':
             if not os.path.exists(consts.REPLACEMENT_NODE_ENV_VAR_FILE):
                 try: 
-                    ProcessV().validate('isrunning', ['consul'])
+                    ServiceV().validate('isrunning', ['consul'], is_process=True)
                 except Exception:
                     raise
 
         # Get the types of server and storage we are currently running on and
         # enable/disable sensor groups in the conf file accordingly.
-        if self.read_provisioner_config:
-            from cortx.sspl.bin.conf_based_sensors_enable import update_sensor_info
-            update_sensor_info()    
-            
+        update_sensor_info()    
+
     def get_rabbitmq_cluster_nodes(self):
         pout = None
         if  self.rabbitmq_major_release == '3' and \
@@ -295,6 +238,7 @@ class SSPLConfig:
 
     def process(self):
         cmd = "config"
+        self.role = Conf.get('global_config', 'release>setup')
         if(cmd == "config"):
             self.config_sspl()
         else:

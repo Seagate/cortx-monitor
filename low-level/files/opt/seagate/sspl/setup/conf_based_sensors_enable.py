@@ -18,6 +18,7 @@
 import configparser
 import os
 import consul
+from cortx.utils.conf_store import Conf
 
 from cortx.sspl.bin.sspl_constants import (CONSUL_HOST, CONSUL_PORT, PRODUCT_NAME,
     PRODUCT_FAMILY, file_store_config_path, storage_type, server_type, SSPL_STORE_TYPE)
@@ -27,8 +28,7 @@ from cortx.sspl.bin.sspl_constants import (CONSUL_HOST, CONSUL_PORT, PRODUCT_NAM
 # from cortx.utils.conf_store import Conf
 
 def update_sensor_info():
-    config = configparser.ConfigParser(allow_no_value=True)
-    config.read(file_store_config_path)
+    Conf.load('sspl', file_store_config_path)
 
     key = 'monitor'
 
@@ -52,11 +52,9 @@ def update_sensor_info():
         sensors["RAIDSENSOR"] = "false"
 
     for sect, value in sensors.items():
-        config.set(sect, key, value)
+        Conf.set('sspl', '%s>%s' % (sect, key), value)
 
-    if os.path.exists(file_store_config_path):
-        with open(file_store_config_path, "w") as configFile:
-            config.write(configFile, space_around_delimiters=False)
+    Conf.save('sspl')
 
     # Onward LDR_R2, consul will be abstracted out and it won't exit as hard dependeny of SSPL
     # Note: SSPL has backward compatibility to LDR_R1 and there consul is a dependency of SSPL.
@@ -72,13 +70,8 @@ def update_sensor_info():
 
     # Update sensor information for sspl_test
     test_file_config_path="/opt/seagate/%s/sspl/sspl_test/conf/sspl_tests.conf" % PRODUCT_FAMILY
-    config = configparser.ConfigParser(allow_no_value=True)
-    config.read(test_file_config_path)
+    Conf.load('sspl_test', test_file_config_path)
     for sect, value in sensors.items():
-        try:
-            config.set(sect, key, value)
-        except configparser.NoSectionError:
-            config[sect] = {key: value}
-    if os.path.exists(test_file_config_path):
-        with open(test_file_config_path, "w") as configFile:
-            config.write(configFile, space_around_delimiters=False)
+        Conf.set('sspl_test', '%s>%s' % (sect, key), value)
+
+    Conf.save('sspl_test')
