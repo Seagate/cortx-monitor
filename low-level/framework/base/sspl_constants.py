@@ -21,19 +21,11 @@ import sys
 import os
 from enum import Enum
 
-<<<<<<< HEAD
 # using cortx package
 from cortx.sspl.lowlevel.framework.utils.salt_util import SaltInterface
 from cortx.sspl.lowlevel.framework.utils.service_logging import logger
 from cortx.utils.conf_store import Conf
-=======
-from cortx.sspl.bin.salt_util import SaltInterface
-<<<<<<< HEAD
-from cortx.sspl.lowlevel.framework.utils.service_logging import logger
->>>>>>> EOS-16524: sspl_conf.sh to python (import and utility change)
 
-=======
->>>>>>> EOS-16524: sspl_conf.sh to python (removed utils.py changes, added error.py)
 
 PRODUCT_NAME = 'LR2'
 PRODUCT_FAMILY = 'cortx'
@@ -73,21 +65,17 @@ REPLACEMENT_NODE_ENV_VAR_FILE = "/etc/profile.d/set_replacement_env.sh"
 # required only for init
 component = 'sspl/config'
 file_store_config_path = '/etc/sspl.conf'
-roles = ['vm', 'cortx', 'ssu', 'gw', 'cmu']
+sample_global_config = '/etc/sample_global_cortx_config.yaml'
 salt_provisioner_pillar_sls = 'sspl'
 salt_uniq_attr_per_node = ['cluster_id']
 salt_uniq_passwd_per_node = ['RABBITMQINGRESSPROCESSOR', 'RABBITMQEGRESSPROCESSOR', 'LOGGINGPROCESSOR']
-# This file will be created when sspl is being configured for node replacement case
-REPLACEMENT_NODE_ENV_VAR_FILE = '/etc/profile.d/set_replacement_env.sh'
 
 # Initialize to default values
 node_key_id = 'srvnode-1'
 CONSUL_HOST = '127.0.0.1'
 CONSUL_PORT = '8500'
-CONSUL_PATH="/usr/bin/"
 
 # TODO Keep only constants in this file.
-<<<<<<< HEAD
 # other values(configs) should come from config.
 
 # TODO: Below finding machine id/node_key_id code will be replaced by PR #281 [EO-16515]
@@ -112,25 +100,6 @@ rack_id = Conf.get('global_config',
 
 # If SSPL is not configured, use salt interface
 if not os.path.exists(SSPL_CONFIGURED) and PRODUCT_NAME=="LDR_R1":
-=======
-# other values(configs) should come from cofig.
-# Check if SSPL is configured
-if os.path.exists(SSPL_CONFIGURED):
-    try:
-        config = configparser.ConfigParser()
-        config.read(file_store_config_path)
-        storage_type = config['STORAGE_ENCLOSURE']['type']
-        server_type = config['SYSTEM_INFORMATION']['type']
-        cluster_id = config['SYSTEM_INFORMATION']['cluster_id']
-        node_id = config['SYSTEM_INFORMATION']['node_id']
-        node_key_id = config['SYSTEM_INFORMATION']['salt_minion_id']
-        CONSUL_HOST = config['DATASTORE']['consul_host']
-        CONSUL_PORT = config['DATASTORE']['consul_port']
-    except Exception as err:
-        print(f'sspl_constants : Failed to read from {file_store_config_path} due to error - {err}')
-# If not configured, use salt interface
-else:
->>>>>>> EOS-16524: sspl_conf.sh to python (import paths changed and simpleProcess implemented)
     try:
         salt_int = SaltInterface()
         node_key_id = salt_int.get_node_id()

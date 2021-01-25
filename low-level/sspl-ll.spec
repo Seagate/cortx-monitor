@@ -68,7 +68,6 @@ cp -afv files/opt/seagate/sspl/* $SSPL_BASE/
 # Rename setup directory to bin directory and remove .py extension of sspl_setup files.
 mv $SSPL_BASE/setup $SSPL_BASE/bin
 mv $SSPL_BASE/bin/sspl_setup.py $SSPL_BASE/bin/sspl_setup
-mv $SSPL_BASE/bin/sspl_config.py $SSPL_BASE/bin/sspl_config
 
 # Copy the service into /opt/seagate/%{product_family}/sspl where it will execute from
 cp -rp __init__.py $SSPL_BASE
@@ -141,20 +140,12 @@ SSPL_DIR=/opt/seagate/%{product_family}/sspl
 [ -f $SSPL_DIR/sspl_init ] ||
     ln -s $SSPL_DIR/bin/sspl_provisioner_init $SSPL_DIR/sspl_init
 
-<<<<<<< HEAD
 # Creating softlink under site-packages to use sspl module easier way.
 PYTHON_BASE_DIR=/usr/lib/python3.6/site-packages/cortx/sspl
 [ -d "${SSPL_DIR}" ] && {
     mkdir -p $PYTHON_BASE_DIR
     ln -sf $SSPL_DIR/bin $PYTHON_BASE_DIR/bin
     ln -sf $SSPL_DIR/low-level $PYTHON_BASE_DIR/lowlevel
-=======
-# Creating softlink uinder site-packages to use sspl module easier way.
-[ -d "${SSPL_DIR}" ] && {
-    mkdir -p /usr/lib/python3.6/site-packages/cortx/sspl
-    ln -s /opt/seagate/cortx/sspl/bin /usr/lib/python3.6/site-packages/cortx/sspl/bin
-    ln -s /opt/seagate/cortx/sspl/low-level /usr/lib/python3.6/site-packages/cortx/sspl/lowlevel
->>>>>>> EOS-16524: sspl_conf.sh to python (import paths changed and simpleProcess implemented)
 }
 
 # In case of upgrade start sspl-ll after upgrade
