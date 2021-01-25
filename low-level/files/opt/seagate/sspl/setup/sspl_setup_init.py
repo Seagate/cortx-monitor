@@ -26,7 +26,7 @@ import pwd
 import errno
 
 from cortx.sspl.bin.sspl_constants import file_store_config_path, roles
-from cortx.utils.validator.v_service import ServiceV
+from cortx.utils.validator.v_process import ProcessV
 from cortx.utils.validator.v_pkg import PkgV
 from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.error import SetupError
 
@@ -69,7 +69,7 @@ class SSPLInit:
         if role == "ssu":
             try:
                 PkgV().validate("rpms", self.SSU_DEPENDENCY_RPMS)
-                ServiceV().validate("isrunning", self.SSU_REQUIRED_PROCESSES)
+                ProcessV().validate("isrunning", self.SSU_REQUIRED_PROCESSES)
             except Exception:
                 raise
         elif role == "vm" or role == "gw" or role == "cmu":
