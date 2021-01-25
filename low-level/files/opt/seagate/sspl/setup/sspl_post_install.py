@@ -27,7 +27,6 @@ import distutils.dir_util
 from cortx.utils.process import SimpleProcess
 from cortx.utils.service import Service
 from cortx.utils.conf_store import Conf
-from cortx.utils.conf_store.error import ConfError
 from cortx.sspl.bin.error import SetupError
 from cortx.sspl.bin.sspl_constants import (REPLACEMENT_NODE_ENV_VAR_FILE,
                                            SSPL_BASE_DIR,
@@ -51,7 +50,7 @@ class SSPLPostInstall:
         self.ENVIRONMENT = "PROD"
 
     def process(self):
-        """Configure SSPL logs and service based on config"""
+        """Configure SSPL logs and service based on config."""
         PRODUCT_NAME = Conf.get('global_config', 'release>product')
 
         # Copy and load product specific sspl config
@@ -93,6 +92,7 @@ class SSPLPostInstall:
         self.install_files(PRODUCT_NAME)
 
     def install_files(self, PRODUCT):
+        """Configure required log files."""
 
         # Copy rsyslog configuration
         if not os.path.exists(self.RSYSLOG_CONF):

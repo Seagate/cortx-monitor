@@ -23,14 +23,12 @@
 #    python3 sspl_rabbitmq_reinit.py <product>
 #############################################################
 
-import os
 import subprocess
 import sys
-import socket
 import pika
 
 # using cortx package
-from cortx.sspl.bin.sspl_constants import COMMON_CONFIGS, cs_legacy_products, enabled_products, ServiceTypes
+from cortx.sspl.bin.sspl_constants import cs_legacy_products, enabled_products, ServiceTypes
 from cortx.utils.security.cipher import Cipher, CipherInvalidToken
 from cortx.utils.conf_store import Conf
 
@@ -70,7 +68,7 @@ def decrypt(key, text):
 
 
 def main(product):
-    """ Main line for this program. """
+    """Main line for this program."""
     virtual_host = Conf.get("sspl", "%s>%s" % (SECTION, VIRT_HOST_KEY))
     username = Conf.get("sspl", "%s>%s" % (SECTION, USER_NAME_KEY))
     password = Conf.get("sspl", "%s>%s" % (SECTION, PASSWORD_KEY))

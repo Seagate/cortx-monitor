@@ -36,9 +36,7 @@ from cortx.utils.validator.error import VError
 from cortx.sspl.bin.error import SetupError
 
 class Cmd:
-    """Setup Command.
-
-    """
+    """Setup Command."""
 
     def __init__(self, args: dict):
         self._args = args.args
@@ -117,8 +115,7 @@ class JoinClusterCmd(Cmd):
 
 
 class PostInstallCmd(Cmd):
-    """Prepare the environment for sspl service.
-    """
+    """Prepare the environment for sspl service."""
 
     name = "post_install"
 
@@ -151,8 +148,7 @@ class PostInstallCmd(Cmd):
 
 
 class InitCmd(Cmd):
-    """Creates data path and checks required role.
-    """
+    """Creates data path and checks required role."""
 
     name = "init"
 
@@ -169,8 +165,7 @@ class InitCmd(Cmd):
 
 
 class ConfigCmd(Cmd):
-    """Configues SSPL role, logs and sensors needs to be enabled.
-    """
+    """Configues SSPL role, logs and sensors needs to be enabled."""
 
     name = "config"
 
@@ -187,8 +182,7 @@ class ConfigCmd(Cmd):
 
 
 class TestCmd(Cmd):
-    """Starts test based on plan (sanity | alerts).
-    """
+    """Starts test based on plan (sanity | alerts)."""
 
     name = "test"
 
@@ -205,8 +199,7 @@ class TestCmd(Cmd):
 
 
 class SupportBundleCmd(Cmd):
-    """Collects SSPL support bundle.
-    """
+    """Collects SSPL support bundle."""
 
     name = "support_bundle"
     script = "sspl_bundle_generate"
