@@ -309,7 +309,7 @@ update_sspl_config(){
     SOURCE_CONF=${SSPL_BASE_DIR}/low-level/files/opt/seagate/sspl/conf/sspl.conf.${PRODUCT_VERSION}
     cp $SOURCE_CONF $SSPL_CONF
 
-    CONFIG_FEEDER=$SSPL_BASE_DIR/low-level/files/opt/seagate/sspl/setup/load_sspl_config.py
+    CONFIG_FEEDER=$SSPL_BASE_DIR/low-level/files/opt/seagate/sspl/bin/load_sspl_config.py
 
     echo "INFO: Loading $SSPL_CONF config file.."
     echo "$CONFIG_FEEDER $NODE $RMQ_USER"
