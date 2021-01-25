@@ -13,9 +13,11 @@
 # about this software or licensing, please email opensource@seagate.com or
 # cortx-questions@seagate.com.
 
+import os
+import yaml
 from configparser import ConfigParser
 
-class ConfDiff(object):
+class IniConfDiff(object):
 
     def __init__(self, conf_file1, conf_file2):
         self.conf_file1_dict = self._to_dict(conf_file1)
@@ -37,10 +39,50 @@ class ConfDiff(object):
             else:
                 conf_file2_section[item] = conf_file1_section[item]
 
+
+class YamlConfDiff(object):
+    def __init__(self, conf_file1, conf_file2):
+        self.conf_file1_dict = self._to_dict(conf_file1)
+        self.conf_file2_dict = self._to_dict(conf_file2)
+
+    def _to_dict(self, file1):
+        config = yaml.safe_load(open(file1))
+        return config
+
+    def update_diff(self, d1, d2):
+        for k in d1:
+            if type(d1[k]) is list:
+                d2[k] = d1[k]
+            elif type(d1[k]) is dict and type(d2[k]) is dict:
+                v1 = d1[k]
+                v2 = d2[k]
+                self.update_diff(v1, v2)
+            else:
+                if d1[k] != d2[k]:
+                    d2[k] = d1[k]
+
 if __name__ == '__main__':
+    config_file1 = '/opt/seagate/cortx/sspl/conf/sspl.conf.LDR_R2.yaml'
+    config_file2 = '/etc/sspl.conf'
+    tmp_config_file = '/tmp/sspl_tmp.conf'
+    file_type = "yaml"
     print('comparing conf files.')
-    conf_diff = ConfDiff('/opt/seagate/cortx/sspl/conf/sspl.conf.LDR_R2', '/etc/sspl.conf')
-    print('writing destination conf file to tmp dir.')
-    conf_diff.update_sub_section_diff()
-    with open('/tmp/sspl_tmp.conf', 'w') as configfile:
-        conf_diff.conf_file2_dict.write(configfile, space_around_delimiters=False)
+    if os.path.exists(config_file1) and os.path.exists(config_file2):
+        if file_type == "ini":
+            conf_diff = IniConfDiff(config_file1, config_file2)
+            print('writing destination conf file to tmp dir.')
+            conf_diff.update_sub_section_diff()
+            with open(tmp_config_file, 'w') as configfile:
+                conf_diff.conf_file2_dict.write(configfile, space_around_delimiters=False)
+        elif file_type == "yaml":
+            conf_diff = YamlConfDiff(config_file1, config_file2)
+            print('writing destination conf file to tmp dir.')
+            conf_diff.update_diff(conf_diff.conf_file1_dict,
+                                conf_diff.conf_file2_dict)
+            json_to_yaml = yaml.dump(conf_diff.conf_file2_dict)
+            with open(tmp_config_file, 'w') as configfile:
+                configfile.write(json_to_yaml)
+            with open(config_file2, 'w') as configfile:
+                configfile.write(json_to_yaml)
+        else:
+            print("Unknown config file type.")
