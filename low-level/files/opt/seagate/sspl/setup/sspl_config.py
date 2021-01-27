@@ -284,10 +284,10 @@ class SSPLConfig:
             with open(f'{consts.SSPL_BASE_DIR}/low-level/files/opt/seagate' + \
                 '/sspl/conf/build-requested-loglevel', 'r') as f:
                 log_level = f.readline()
-            
+
             if not log_level:
                 log_level = "INFO"
-            
+
             if  log_level == "DEBUG" or log_level == "INFO" or \
                 log_level == "WARNING" or log_level == "ERROR" or \
                 log_level == "CRITICAL":
