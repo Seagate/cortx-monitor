@@ -25,7 +25,8 @@ import os
 import pwd
 import errno
 
-from cortx.sspl.bin.sspl_constants import file_store_config_path
+from cortx.sspl.bin.sspl_constants import (file_store_config_path,
+                                          HPI_PATH, MDADM_PATH)
 from cortx.utils.validator.v_service import ServiceV
 from cortx.utils.validator.v_pkg import PkgV
 from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.error import SetupError
@@ -57,9 +58,6 @@ class SSPLInit:
     ]
 
     VM_DEPENDENCY_RPMS = []
-
-    HPI_PATH = '/tmp/dcs/hpi'
-    MDADM_PATH = '/etc/mdadm.conf'
 
     def __init__(self):
 
@@ -119,10 +117,10 @@ class SSPLInit:
 
         # Create /tmp/dcs/hpi if required. Not needed for '<product>' role
         if self.role != "cortx":
-            os.makedirs(self.HPI_PATH, mode=0o777, exist_ok=True)
+            os.makedirs(HPI_PATH, mode=0o777, exist_ok=True)
             zabbix_uid = self.get_uid('zabbix')
             if zabbix_uid != -1:
-                os.chown(self.HPI_PATH, zabbix_uid, -1)
+                os.chown(HPI_PATH, zabbix_uid, -1)
 
         # Check for sspl required processes and misc dependencies like
         # installation, etc based on 'role'
@@ -130,16 +128,16 @@ class SSPLInit:
             self.check_dependencies()
 
         # Create mdadm.conf to set ACL on it.
-        with open(self.MDADM_PATH, 'a'):
-            os.utime(self.MDADM_PATH)
+        with open(MDADM_PATH, 'a'):
+            os.utime(MDADM_PATH)
 
         # TODO : verify for below replacement of setfacl command which
         #        gives rw permission to sspl-ll user for mdadm.conf file.
-        os.chmod(self.MDADM_PATH, mode=0o666)
+        os.chmod(MDADM_PATH, mode=0o666)
         sspl_ll_uid = self.get_uid('sspl-ll')
         if sspl_ll_uid == -1:
             raise SetupError(
                         errno.EINVAL,
                         "No User Found with name : %s", 'sspl-ll')
-        os.chown(self.MDADM_PATH, sspl_ll_uid, -1)
+        os.chown(MDADM_PATH, sspl_ll_uid, -1)
         
