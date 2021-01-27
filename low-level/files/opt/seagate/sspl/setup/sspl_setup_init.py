@@ -33,7 +33,9 @@ from cortx.utils.conf_store import Conf
 
 class SSPLInit:
 
-    """Init Setup Interface."""
+    """Creates Data Path and checks for process and 
+       rpm dependencies based on role.
+    """
 
     name = "init"
 
@@ -61,7 +63,7 @@ class SSPLInit:
 
     def __init__(self):
 
-        """init methond for SSPL Setup Init Class."""
+        """initial variables and ConfStor setup."""
         self.role = None
         self.dp = True
         Conf.load('sspl', f"yaml://{file_store_config_path}")
