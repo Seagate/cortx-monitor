@@ -281,18 +281,37 @@ class ResetCmd(Cmd):
 
     name = "reset"
     script = "sspl_reset"
+    process_class=None
 
     def __init__(self, args):
         super().__init__(args)
 
     def validate(self):
-        # Common validator classes to check Cortx/system wide validator
-        pass
+        if not self.args:
+            raise SetupError(1,
+                             "%s - validation failure. %s",
+                             self.name,
+                             "SSPL Reset requires the type of reset(hard|soft).")
+
+        if self.args[0] not in ["hard", "soft"]:
+            raise SetupError(1, "Invalid reset type specified. %s", self.args[0])
+
+        try:
+            if self.args[0] == "hard":
+                self.process_class = "HardReset"
+            elif self.args[0] == "soft":
+                self.process_class = "SoftReset"
+        except (IndexError, ValueError):
+            raise SetupError(errno.EINVAL, "Invalid Argument for %s"% self.name)
+
 
     def process(self):
-        # TODO: Import relevant python script here for further execution.
-        pass
-
+        if self.process_class == "HardReset":
+            from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.sspl_reset import HardReset
+            HardReset().process()
+        elif self.process_class == "SoftReset":
+            from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.sspl_reset import SoftReset
+            SoftReset().process()
 
 class CheckCmd(Cmd):
     """Validates configs and environment prepared for SSPL initialization.
