@@ -173,13 +173,45 @@ class ConfigCmd(Cmd):
         super().__init__(args)
 
     def validate(self):
-        # Common validator classes to check Cortx/system wide validator
-        pass
+        if not self.args:
+            raise SetupError(
+                    errno.EINVAL,
+                    "%s - Argument validation failure. Global config is needed",
+                    self.name)
+        if (len(self.args) != 2) or (self.args[0] != "--config"):
+            raise SetupError(
+                    errno.EINVAL,
+                    "%s - Argument validation failure. Check Usage.",
+                    self.name)
+        global_config = self.args[1]
+        Conf.load('global_config', global_config)
+
+        role = Conf.get('global_config', 'release>setup')
+        if not role:
+            raise SetupError(
+                    errno.EINVAL,
+                    "%s - validation failure. %s",
+                    self.name,
+                    "Role not found in %s" % (global_config))
+        from cortx.sspl.bin.sspl_constants import setups
+        if role not in setups:
+            raise SetupError(
+                    errno.EINVAL,
+                    "%s - validataion failure. %s",
+                    self.name,
+                    "Role %s is not supported. Check Usage" % role)
+
+        product = Conf.get('global_config', 'release>product')
+        if not product:
+            raise SetupError(
+                    errno.EINVAL,
+                    "%s - validation failure. %s",
+                    self.name,
+                    "Product not found in %s" % (global_config))
 
     def process(self):
-        # TODO: Import relevant python script here for further execution.
-        pass
-
+        from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.sspl_config import SSPLConfig
+        SSPLConfig().process()
 
 class TestCmd(Cmd):
     """Starts test based on plan (sanity | alerts)."""
