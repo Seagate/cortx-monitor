@@ -62,7 +62,7 @@ class SSPLInit:
     def __init__(self):
         """init methond for SSPL Setup Init Class"""
         self.role = None
-        self.dp = False
+        self.dp = True
         Conf.load('sspl', f"yaml://{file_store_config_path}")
 
     def check_dependencies(self, role : str):
@@ -74,7 +74,7 @@ class SSPLInit:
         elif role == "vm" or role == "gw" or role == "cmu":
             # No dependency currently. Keeping this section as it may be
             # needed in future.
-            PkgV().validate("isrunning", self.VM_DEPENDENCY_RPMS)
+            PkgV().validate("rpms", self.VM_DEPENDENCY_RPMS)
             # No processes to check in vm env
 
     def get_uid(self, user_name : str) -> int:
@@ -99,6 +99,8 @@ class SSPLInit:
                 os.chown(os.path.join(root, item), uid, grpid)
 
     def process(self):
+        self.role = Conf.get('global_config', 'release>setup')
+
         if self.dp:
             # Extract the data path
             sspldp = Conf.get('sspl', 'SYSTEM_INFORMATION>data_path')

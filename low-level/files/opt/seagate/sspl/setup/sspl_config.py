@@ -192,7 +192,7 @@ class SSPLConfig:
             self.rabbitmq_maintenance_release == '8':
 
             rmq_cluster_status_cmd = '/usr/sbin/rabbitmqctl cluster_status' + \
-                                    '--formatter json'
+                                    ' --formatter json'
             output, error, returncode = SimpleProcess(rmq_cluster_status_cmd).run()
             try:
                 rabbitmq_cluster_status = json.loads(output)
