@@ -61,7 +61,7 @@ class SSPLInit:
 
     def __init__(self):
 
-        """init methond for SSPL Setup Init Class"""   
+        """init methond for SSPL Setup Init Class"""
         self.role = None
         self.dp = True
         Conf.load('sspl', f"yaml://{file_store_config_path}")
@@ -108,7 +108,7 @@ class SSPLInit:
             if not sspldp :
                 raise SetupError(
                             errno.EINVAL,
-                            "Data Path Not set in %s" 
+                            "Data Path Not set in %s"
                             % file_store_config_path)
 
             # Crete the directory and assign permissions
@@ -137,7 +137,7 @@ class SSPLInit:
         sspl_ll_uid = self.get_uid('sspl-ll')
         if sspl_ll_uid == -1:
             raise SetupError(
-                        errno.EINVAL, 
+                        errno.EINVAL,
                         "No User Found with name : %s", 'sspl-ll')
         os.chown(self.MDADM_PATH, sspl_ll_uid, -1)
         
