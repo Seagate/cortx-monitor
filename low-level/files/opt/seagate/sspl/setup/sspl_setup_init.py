@@ -18,14 +18,14 @@
 #################################################################
 # This script performs following operations.
 # - Creates datapath as defined in /etc/sspl.conf
-# - Check dependencies for consts.roles other than '<product>'
+# - Check dependencies for roles other than '<product>'
 #################################################################
 
 import os
 import pwd
 import errno
 
-from cortx.sspl.bin.sspl_constants import file_store_config_path, roles
+from cortx.sspl.bin.sspl_constants import file_store_config_path
 from cortx.utils.validator.v_service import ServiceV
 from cortx.utils.validator.v_pkg import PkgV
 from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.error import SetupError
@@ -59,9 +59,8 @@ class SSPLInit:
     HPI_PATH = '/tmp/dcs/hpi'
     MDADM_PATH = '/etc/mdadm.conf'
 
-    def __init__(self, args : list):
+    def __init__(self):
         """init methond for SSPL Setup Init Class"""
-        self.args = args
         self.role = None
         self.dp = False
         Conf.load('sspl', f"yaml://{file_store_config_path}")
@@ -70,19 +69,13 @@ class SSPLInit:
         # Check for dependency rpms and required processes active state based
         # on role
         if role == "ssu":
-            try:
-                PkgV().validate("rpms", self.SSU_DEPENDENCY_RPMS)
-                ServiceV().validate("isrunning", self.SSU_REQUIRED_PROCESSES, is_process=True)
-            except Exception:
-                raise
+            PkgV().validate("rpms", self.SSU_DEPENDENCY_RPMS)
+            ServiceV().validate("isrunning", self.SSU_REQUIRED_PROCESSES, is_process=True)
         elif role == "vm" or role == "gw" or role == "cmu":
-            try:
-                # No dependency currently. Keeping this section as it may be
-                # needed in future.
-                PkgV().validate("isrunning", self.VM_DEPENDENCY_RPMS)
-                # No processes to check in vm env
-            except Exception:
-                raise
+            # No dependency currently. Keeping this section as it may be
+            # needed in future.
+            PkgV().validate("isrunning", self.VM_DEPENDENCY_RPMS)
+            # No processes to check in vm env
 
     def get_uid(self, user_name : str) -> int:
         uid = -1
@@ -92,56 +85,20 @@ class SSPLInit:
             pass
         return uid
 
-    def validate_args(self):
-        if not self.args:
-            raise SetupError(
-                        errno.EINVAL,
-                        "No arguments to init call.\n \
-                        expected options : [-dp] [-r <ssu|gw|cmu|vm|cortx>]]"
-                        )
-        i = 0
-        while i < len(self.args):
-            if self.args[i] == '-dp':
-                self.dp = True
-            elif self.args[i] == '-r':
-                i+=1
-                if i == len(self.args):
-                    raise SetupError(
-                                errno.EINVAL,
-                                "No role provided with -r option")
-                elif  self.args[i] not in roles:
-                    raise SetupError(
-                                errno.EINVAL,
-                                "Provided role '%s' is not supported",
-                                self.args[i])
-                else:
-                    self.role = self.args[i]
-            else:
-                raise SetupError(
-                                errno.EINVAL, 
-                                "Unknown option '%s'", self.args[i])
-            i+=1
-
     def recursive_chown(self, path : str, user : str, grpid: int = -1):
-        try:
-            uid = self.get_uid(user)
-            if uid == -1:
-                raise SetupError(
-                            errno.EINVAL, 
-                            "No User Found with name : %s", user)
-            os.chown(path, uid, grpid)
-            for root, dirs, files in os.walk(path):
-                for item in dirs:
-                    os.chown(os.path.join(root, item), uid, grpid)
-                for item in files:
-                    os.chown(os.path.join(root, item), uid, grpid)
-        except OSError:
-            raise
+        uid = self.get_uid(user)
+        if uid == -1:
+            raise SetupError(
+                        errno.EINVAL, 
+                        "No User Found with name : %s", user)
+        os.chown(path, uid, grpid)
+        for root, dirs, files in os.walk(path):
+            for item in dirs:
+                os.chown(os.path.join(root, item), uid, grpid)
+            for item in files:
+                os.chown(os.path.join(root, item), uid, grpid)
 
     def process(self):
-
-        self.validate_args()
-
         if self.dp:
             # Extract the data path
             sspldp = Conf.get('sspl', 'SYSTEM_INFORMATION>data_path')
@@ -152,21 +109,15 @@ class SSPLInit:
                             % file_store_config_path)
 
             # Crete the directory and assign permissions
-            try:
-                os.makedirs(sspldp, mode=0o766, exist_ok=True)
-            except OSError:
-                raise
+            os.makedirs(sspldp, mode=0o766, exist_ok=True)
             self.recursive_chown(sspldp, 'sspl-ll')
 
         # Create /tmp/dcs/hpi if required. Not needed for '<product>' role
         if self.role != "cortx":
-            try:
-                os.makedirs(self.HPI_PATH, mode=0o777, exist_ok=True)
-                zabbix_uid = self.get_uid('zabbix')
-                if zabbix_uid != -1:
-                    os.chown(self.HPI_PATH, zabbix_uid, -1)
-            except OSError:
-                raise
+            os.makedirs(self.HPI_PATH, mode=0o777, exist_ok=True)
+            zabbix_uid = self.get_uid('zabbix')
+            if zabbix_uid != -1:
+                os.chown(self.HPI_PATH, zabbix_uid, -1)
 
         # Check for sspl required processes and misc dependencies like
         # installation, etc based on 'role'
