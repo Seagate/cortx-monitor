@@ -181,10 +181,7 @@ class SSPLConfig:
 
         if consts.PRODUCT_NAME == 'LDR_R1':
             if not os.path.exists(consts.REPLACEMENT_NODE_ENV_VAR_FILE):
-                try:
-                    ServiceV().validate('isrunning', ['consul'], is_process=True)
-                except Exception:
-                    raise
+                ServiceV().validate('isrunning', ['consul'], is_process=True)
 
         # Get the types of server and storage we are currently running on and
         # enable/disable sensor groups in the conf file accordingly.
@@ -267,12 +264,9 @@ class SSPLConfig:
             if consts.PRODUCT_NAME == 'LDR_R1':
                 host = os.getenv('CONSUL_HOST', consts.CONSUL_HOST)
                 port = os.getenv('CONSUL_PORT', consts.CONSUL_PORT)
-                try:
-                    consul_conn = consul.Consul(host=host, port=port)
-                    consul_conn.kv.put(
-                            "sspl/config/RABBITMQCLUSTER/cluster_nodes", pout)
-                except Exception:
-                    raise
+                consul_conn = consul.Consul(host=host, port=port)
+                consul_conn.kv.put(
+                        "sspl/config/RABBITMQCLUSTER/cluster_nodes", pout)
             else:
                 Conf.set('sspl', 'RABBITMQCLUSTER>cluster_nodes', pout)
                 Conf.save('sspl')
@@ -293,13 +287,10 @@ class SSPLConfig:
                 if consts.PRODUCT_NAME == "LDR_R1":
                     host = os.getenv('CONSUL_HOST', consts.CONSUL_HOST)
                     port = os.getenv('CONSUL_PORT', consts.CONSUL_PORT)
-                    try:
-                        consul_conn = consul.Consul(host=host, port=port)
-                        consul_conn.kv.put(
-                                "sspl/config/SYSTEM_INFORMATION/log_level",
-                                log_level)
-                    except Exception:
-                        raise
+                    consul_conn = consul.Consul(host=host, port=port)
+                    consul_conn.kv.put(
+                            "sspl/config/SYSTEM_INFORMATION/log_level",
+                            log_level)
                 else:
                     Conf.set('sspl', 'SYSTEM_INFORMATION>log_level', log_level)
                     Conf.save('sspl')
