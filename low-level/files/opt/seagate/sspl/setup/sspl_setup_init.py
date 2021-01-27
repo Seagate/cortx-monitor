@@ -65,13 +65,13 @@ class SSPLInit:
         self.dp = True
         Conf.load('sspl', f"yaml://{file_store_config_path}")
 
-    def check_dependencies(self, role : str):
+    def check_dependencies(self):
         # Check for dependency rpms and required processes active state based
         # on role
-        if role == "ssu":
+        if self.role == "ssu":
             PkgV().validate("rpms", self.SSU_DEPENDENCY_RPMS)
             ServiceV().validate("isrunning", self.SSU_REQUIRED_PROCESSES, is_process=True)
-        elif role == "vm" or role == "gw" or role == "cmu":
+        elif self.role == "vm" or self.role == "gw" or self.role == "cmu":
             # No dependency currently. Keeping this section as it may be
             # needed in future.
             PkgV().validate("rpms", self.VM_DEPENDENCY_RPMS)
@@ -124,7 +124,7 @@ class SSPLInit:
         # Check for sspl required processes and misc dependencies like
         # installation, etc based on 'role'
         if self.role:
-            self.check_dependencies(self.role)
+            self.check_dependencies()
         
         # Create mdadm.conf to set ACL on it.
         with open(self.MDADM_PATH, 'a'):
