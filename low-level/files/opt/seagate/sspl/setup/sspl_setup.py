@@ -25,13 +25,18 @@ import inspect
 import traceback
 import os
 import syslog
+import time
+
+# using cortx package
 from cortx.utils.process import SimpleProcess
-from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.error import SetupError
+from cortx.utils.conf_store import Conf
+from cortx.utils.service import Service
+from cortx.utils.validator.v_service import ServiceV
+from cortx.utils.validator.error import VError
+from cortx.sspl.bin.error import SetupError
 
 class Cmd:
-    """Setup Command.
-    
-    """
+    """Setup Command."""
 
     def __init__(self, args: dict):
         self._args = args.args
@@ -44,24 +49,18 @@ class Cmd:
     @staticmethod
     def usage(prog: str):
         """Print usage instructions."""
-        sys.stderr.write(
-            f"{prog} [setup [-p <LDR_R2>]|post_install [-p <LDR_R2>]|init [-dp] [-r <vm>]|config [-f] [-r <vm>]\n"
-            "|test [self|sanity]|reset [hard -p <LDR_R21>|soft]|join_cluster [-n <nodes>]\n"
-            "|manifest_support_bundle [<id>] [<path>]|support_bundle [<id>] [<path>]]\n"
-            "setup options:\n"
-            "\t -p Product name\n"
-            "join_cluster options:\n"
-            "\t -n Node names\n"
-            "init options:\n"
-            "\t -dp Create configured datapath\n"
-            "\t -r  Role to be configured on the current node\n"
-            "config options:\n"
-            "\t -f  Force reinitialization. Do not prompt\n"
-            "\t -r  Role to be configured on the current node"
-            "post_install options:\n"
-            "\t -p Product to be configured\n"
-            "reset options:\n"
-            "\t -p Product to be configured\n")
+        sys.stderr.write(f"""{prog}
+            [ -h|--help ]
+            [ post_install --config [<global_config_url>] ]
+            [ init --config [<global_config_url>] ]
+            [ config --config [<global_config_url>] ]
+            [ test [sanity|alerts] ]
+            [ reset [hard|soft] ]
+            [ join_cluster --nodes [<nodes>] ]
+            [ manifest_support_bundle [<id>] [<path>] ]
+            [ support_bundle [<id>] [<path>] ]
+            [ check ]
+            \n""")
 
     @staticmethod
     def get_command(desc: str, argv: dict):
@@ -83,36 +82,14 @@ class Cmd:
     @staticmethod
     def add_args(parser: str, cls: str, name: str):
         """Add Command args for parsing."""
-        parsers = parser.add_parser(cls.name, help='setup %s' % name)
+        parsers = parser.add_parser(cls.name, help='%s' % cls.__doc__)
         parsers.add_argument('args', nargs='*', default=[], help='args')
         parsers.set_defaults(command=cls)
 
 
-class SetupCmd(Cmd):
-    """SSPL Setup Cmd.
-    
-    """
-
-    name = "setup"
-    script = "setup_sspl"
-
-    def __init__(self, args):
-        super().__init__(args)
-
-    def validate(self):
-        # Common validator classes to check Cortx/system wide validator
-        pass
-
-    def process(self):
-        setup_sspl = f"{self._script_dir}/{self.script} {' '.join(self._args)}"
-        output, error, returncode = SimpleProcess(setup_sspl).run()
-        if returncode != 0:
-            raise SetupError(returncode, error)
-
-
 class JoinClusterCmd(Cmd):
-    """Setup Join Cluster Cmd.
-    
+    """Join nodes in cluster. To join mutiple nodes, use delimeter ","
+    between node names. ie.node1,node2
     """
 
     name = "join_cluster"
@@ -122,26 +99,23 @@ class JoinClusterCmd(Cmd):
         super().__init__(args)
 
     def validate(self):
-        # Common validator classes to check Cortx/system wide validator
-        pass
+        if not self.args:
+            raise SetupError(1,
+                             "Validation failure. %s",
+                             "join_cluster requires comma separated node names as argument.")
+        if (len(self.args) != 2) or (self.args[0] != "--nodes"):
+            raise SetupError(1,
+                             "%s - Argument validation failure. %s",
+                             self.name,
+                             "Check usage.")
 
     def process(self):
-        setup_rabbitmq_cluster = f"{self._script_dir}/{self.script} {' '.join(self._args)}"
-        output, error, returncode = SimpleProcess(setup_rabbitmq_cluster).run()
-        if returncode != 0:
-            raise SetupError(returncode, error)
-
-        # TODO: Replace the below code once sspl_config script implementation is done.
-        sspl_config = f"{self._script_dir}/{self.script} {' '.join(self._args)}"
-        output, error, returncode = SimpleProcess(sspl_config).run()
-        if returncode != 0:
-            raise SetupError(returncode, error)
+        from cortx.sspl.bin.setup_rabbitmq_cluster import RMQClusterConfiguration
+        RMQClusterConfiguration(self.args[1]).process()
 
 
 class PostInstallCmd(Cmd):
-    """PostInstall Setup Cmd.
-    
-    """
+    """Prepare the environment for sspl service."""
 
     name = "post_install"
 
@@ -149,18 +123,32 @@ class PostInstallCmd(Cmd):
         super().__init__(args)
 
     def validate(self):
-        # Common validator classes to check Cortx/system wide validator
-        pass
+        if not self.args:
+            raise SetupError(1,
+                             "%s - Argument validation failure. %s",
+                             self.name,
+                             "Post install requires global config.")
+        if (len(self.args) != 2) or (self.args[0] != "--config"):
+            raise SetupError(1,
+                             "%s - Argument validation failure. %s",
+                             self.name,
+                             "Check usage.")
+        global_config = self.args[1]
+        Conf.load('global_config', global_config)
+        product = Conf.get('global_config', 'release>product')
+        if not product:
+            raise SetupError(1,
+                             "%s - validation failure. %s",
+                             self.name,
+                             "Product not found in %s" % (global_config))
 
     def process(self):
         from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.sspl_post_install import SSPLPostInstall
-        SSPLPostInstall(self.args).process()
+        SSPLPostInstall(self.args[1]).process()
 
 
 class InitCmd(Cmd):
-    """Init Setup Cmd.
-    
-    """
+    """Creates data path and checks required role."""
 
     name = "init"
 
@@ -180,9 +168,7 @@ class InitCmd(Cmd):
 
 
 class ConfigCmd(Cmd):
-    """Setup Config Cmd.
-    
-    """
+    """Configues SSPL role, logs and sensors needs to be enabled."""
 
     name = "config"
 
@@ -190,18 +176,48 @@ class ConfigCmd(Cmd):
         super().__init__(args)
 
     def validate(self):
-        # Common validator classes to check Cortx/system wide validator
-        pass
+        if not self.args:
+            raise SetupError(
+                    errno.EINVAL,
+                    "%s - Argument validation failure. Global config is needed",
+                    self.name)
+        if (len(self.args) != 2) or (self.args[0] != "--config"):
+            raise SetupError(
+                    errno.EINVAL,
+                    "%s - Argument validation failure. Check Usage.",
+                    self.name)
+        global_config = self.args[1]
+        Conf.load('global_config', global_config)
+
+        role = Conf.get('global_config', 'release>setup')
+        if not role:
+            raise SetupError(
+                    errno.EINVAL,
+                    "%s - validation failure. %s",
+                    self.name,
+                    "Role not found in %s" % (global_config))
+        from cortx.sspl.bin.sspl_constants import setups
+        if role not in setups:
+            raise SetupError(
+                    errno.EINVAL,
+                    "%s - validataion failure. %s",
+                    self.name,
+                    "Role %s is not supported. Check Usage" % role)
+
+        product = Conf.get('global_config', 'release>product')
+        if not product:
+            raise SetupError(
+                    errno.EINVAL,
+                    "%s - validation failure. %s",
+                    self.name,
+                    "Product not found in %s" % (global_config))
 
     def process(self):
-        # TODO: Import relevant python script here for further execution.
-        pass
-
+        from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.sspl_config import SSPLConfig
+        SSPLConfig().process()
 
 class TestCmd(Cmd):
-    """SSPL Test Cmd.
-    
-    """
+    """Starts test based on plan (sanity | alerts)."""
 
     name = "test"
 
@@ -218,9 +234,7 @@ class TestCmd(Cmd):
 
 
 class SupportBundleCmd(Cmd):
-    """SSPL Support Bundle Cmd.
-    
-    """
+    """Collects SSPL support bundle."""
 
     name = "support_bundle"
     script = "sspl_bundle_generate"
@@ -233,15 +247,15 @@ class SupportBundleCmd(Cmd):
         pass
 
     def process(self):
-        sspl_bundle_generate = f"{self._script_dir}/{self.script} {' '.join(self._args)}"
+        args = ' '.join(self._args)
+        sspl_bundle_generate = "%s/%s %s" % (self._script_dir, self.script, args)
         output, error, returncode = SimpleProcess(sspl_bundle_generate).run()
         if returncode != 0:
-            raise SetupError(returncode, error)
+            raise SetupError(returncode, "%s - validation failure. %s", self.name, error)
 
 
 class ManifestSupportBundleCmd(Cmd):
-    """Manifest Support Bundle Cmd.
-    
+    """Collects enclosure, cluster and node information.
     """
 
     name = "manifest_support_bundle"
@@ -255,35 +269,55 @@ class ManifestSupportBundleCmd(Cmd):
         pass
 
     def process(self):
-        manifest_support_bundle = f"{self._script_dir}/{self.script} {' '.join(self._args)}"
+        args = ' '.join(self._args)
+        manifest_support_bundle = "%s/%s %s" % (self._script_dir, self.script, args)
         output, error, returncode = SimpleProcess(manifest_support_bundle).run()
         if returncode != 0:
-            raise SetupError(returncode, error)
+            raise SetupError(returncode, "%s - validation failure. %s", self.name, error)
 
 
 class ResetCmd(Cmd):
-    """Setup Reset Cmd.
-    
+    """Performs SSPL config reset. Options: hard, soft.
+    'hard' is used to reset configs and clean log directory where
+    'soft' is to clean only the data path.
     """
 
     name = "reset"
     script = "sspl_reset"
+    process_class=None
 
     def __init__(self, args):
         super().__init__(args)
 
     def validate(self):
-        # Common validator classes to check Cortx/system wide validator
-        pass
+        if not self.args:
+            raise SetupError(1,
+                             "%s - validation failure. %s",
+                             self.name,
+                             "SSPL Reset requires the type of reset(hard|soft).")
+
+        if self.args[0] not in ["hard", "soft"]:
+            raise SetupError(1, "Invalid reset type specified. %s", self.args[0])
+
+        try:
+            if self.args[0] == "hard":
+                self.process_class = "HardReset"
+            elif self.args[0] == "soft":
+                self.process_class = "SoftReset"
+        except (IndexError, ValueError):
+            raise SetupError(errno.EINVAL, "Invalid Argument for %s"% self.name)
+
 
     def process(self):
-        # TODO: Import relevant python script here for further execution.
-        pass
-
+        if self.process_class == "HardReset":
+            from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.sspl_reset import HardReset
+            HardReset().process()
+        elif self.process_class == "SoftReset":
+            from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.sspl_reset import SoftReset
+            SoftReset().process()
 
 class CheckCmd(Cmd):
-    """SSPL Check Cmd.
-    
+    """Validates configs and environment prepared for SSPL initialization.
     """
 
     name = "check"
@@ -293,24 +327,32 @@ class CheckCmd(Cmd):
 
         from cortx.sspl.bin.sspl_constants import PRODUCT_FAMILY
 
-        self.SSPL_CONFIGURED=f"/var/{PRODUCT_FAMILY}/sspl/sspl-configured"
+        self.SSPL_CONFIGURED="/var/%s/sspl/sspl-configured" % (PRODUCT_FAMILY)
+        self.services = ["rabbitmq-server", "sspl-ll"]
+        Service('dbus').process('start', 'sspl-ll.service')
 
     def validate(self):
         # Common validator classes to check Cortx/system wide validator
-        # Onward LDR_R2, consul will be abstracted out and won't exist as hard dependency for SSPL
-        #from files.opt.seagate.sspl.setup import validate_consul_config
-        #self.validate_consul_config = validate_consul_config
-        pass
+        if not os.path.exists(self.SSPL_CONFIGURED):
+            error = "SSPL is not configured. Run provisioner scripts in %s" % (self._script_dir)
+            syslog.openlog(logoption=syslog.LOG_PID, facility=syslog.LOG_LOCAL3)
+            syslog.syslog(syslog.LOG_ERR, error)
+            raise SetupError(1, "%s - validation failure. %s", self.name, error)
+        # Validate required services are running
+        retry = 3
+        while retry > 0:
+            try:
+                ServiceV().validate('isrunning', self.services)
+            except VError:
+                retry -= 1
+                time.sleep(5)
+            else:
+                break
+        ServiceV().validate('isrunning', self.services)
 
     def process(self):
-        #self.validate_consul_config.validate_config()
-        if os.path.exists(self.SSPL_CONFIGURED):
-            return
-        syslog.openlog(logoption=syslog.LOG_PID, facility=syslog.LOG_LOCAL3)
-        syslog.syslog(syslog.LOG_ERR, f"SSPL is not configured. Run provisioner scripts in {self._script_dir}.")
-        raise SetupError(errno.EINVAL,
-                "SSPL is not configured. Run provisioner scripts in %s.",
-                self._script_dir)
+        pass
+
 
 def main(argv: dict):
     try:

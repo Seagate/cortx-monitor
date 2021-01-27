@@ -15,27 +15,31 @@
 # about this software or licensing, please email opensource@seagate.com or
 # cortx-questions@seagate.com.
 
-import configparser
 import subprocess
 import ast
 import sys
 import os
 from enum import Enum
 
+# using cortx package
 from cortx.sspl.lowlevel.framework.utils.salt_util import SaltInterface
+from cortx.sspl.lowlevel.framework.utils.service_logging import logger
+from cortx.utils.conf_store import Conf
 
-PRODUCT_NAME = 'LDR_R2'
+
+PRODUCT_NAME = 'LR2'
 PRODUCT_FAMILY = 'cortx'
-enabled_products = ["CS-A", "SINGLE","DUAL", "CLUSTER", "LDR_R1", "LDR_R2"]
+enabled_products = ["CS-A", "SINGLE","DUAL", "CLUSTER", "LDR_R1", "LR2"]
 cs_products = ["CS-A"]
 cs_legacy_products = ["CS-L", "CS-G"]
-setups = ["cortx"]
-RESOURCE_PATH = f"/opt/seagate/{PRODUCT_FAMILY}/sspl/low-level/json_msgs/schemas/"
-CLI_RESOURCE_PATH = f"/opt/seagate/{PRODUCT_FAMILY}/sspl/low-level/tests/manual"
-DATA_PATH = f"/var/{PRODUCT_FAMILY}/sspl/data/"
-SSPL_CONFIGURED=f"/var/{PRODUCT_FAMILY}/sspl/sspl-configured"
+setups = ["vm", "cortx", "ssu", "gw", "cmu"]
+RESOURCE_PATH = "/opt/seagate/%s/sspl/low-level/json_msgs/schemas/" % (PRODUCT_FAMILY)
+CLI_RESOURCE_PATH = "/opt/seagate/%s/sspl/low-level/tests/manual" % (PRODUCT_FAMILY)
+DATA_PATH = "/var/%s/sspl/data/" % (PRODUCT_FAMILY)
+SSPL_CONFIGURED_DIR = "/var/%s/sspl" % (PRODUCT_FAMILY)
+SSPL_CONFIGURED = "%s/sspl-configured" % SSPL_CONFIGURED_DIR
 RESOURCE_HEALTH_VIEW = "/usr/bin/resource_health_view"
-CONSUL_DUMP = f"/opt/seagate/{PRODUCT_FAMILY}/sspl/bin/consuldump.py"
+CONSUL_DUMP = "/opt/seagate/%s/sspl/bin/consuldump.py" % (PRODUCT_FAMILY)
 NODE_ID = "001"
 SITE_ID = "001"
 RACK_ID = "001"
@@ -53,11 +57,21 @@ SUPPORT_CONTACT_NUMBER = "18007324283"
 ENCL_TRIGGER_LOG_MAX_RETRY = 10
 ENCL_DOWNLOAD_LOG_MAX_RETRY = 60
 ENCL_DOWNLOAD_LOG_WAIT_BEFORE_RETRY = 15
+SSPL_BASE_DIR = "/opt/seagate/%s/sspl" % (PRODUCT_FAMILY)
+PRODUCT_BASE_DIR="/opt/seagate/$PRODUCT_FAMILY/"
+RSYSLOG_CONF ="/etc/rsyslog.d/0-iemfwd.conf"
+RSYSLOG_SSPL_CONF = "/etc/rsyslog.d/1-ssplfwd.conf"
+LOGROTATE_DIR  ="/etc/logrotate.d"
+IEM_LOGROTATE_CONF = "%s/iem_messages" % LOGROTATE_DIR
+SSPL_LOGROTATE_CONF = "%s/sspl_logs" % LOGROTATE_DIR
+
+# This file will be created when sspl is being configured for node replacement case
+REPLACEMENT_NODE_ENV_VAR_FILE = "/etc/profile.d/set_replacement_env.sh"
 
 # required only for init
 component = 'sspl/config'
 file_store_config_path = '/etc/sspl.conf'
-roles = ['vm', 'cortx', 'ssu', 'gw', 'cmu']
+sample_global_config = '/etc/sample_global_cortx_config.yaml'
 salt_provisioner_pillar_sls = 'sspl'
 salt_uniq_attr_per_node = ['cluster_id']
 salt_uniq_passwd_per_node = ['RABBITMQINGRESSPROCESSOR', 'RABBITMQEGRESSPROCESSOR', 'LOGGINGPROCESSOR']
@@ -68,30 +82,37 @@ CONSUL_HOST = '127.0.0.1'
 CONSUL_PORT = '8500'
 
 # TODO Keep only constants in this file.
-# other values(configs) should come from cofig.
-# Check if SSPL is configured
-if os.path.exists(SSPL_CONFIGURED):
-    try:
-        config = configparser.ConfigParser()
-        config.read(file_store_config_path)
-        storage_type = config['STORAGE_ENCLOSURE']['type']
-        server_type = config['SYSTEM_INFORMATION']['type']
-        cluster_id = config['SYSTEM_INFORMATION']['cluster_id']
-        node_id = config['SYSTEM_INFORMATION']['node_id']
-        node_key_id = config['SYSTEM_INFORMATION']['salt_minion_id']
-        CONSUL_HOST = config['DATASTORE']['consul_host']
-        CONSUL_PORT = config['DATASTORE']['consul_port']
-    except Exception as err:
-        print(f'sspl_constants : Failed to read from {file_store_config_path} due to error - {err}')
-# If not configured, use salt interface
-else:
+# other values(configs) should come from config.
+
+# TODO: Below finding machine id/node_key_id code will be replaced by PR #281 [EO-16515]
+try:
+    with open("/etc/machine-id") as f:
+        node_key_id = f.read().strip("\n")
+except Exception as err:
+    print("Failed to get machine-id. - %s" % (err))
+
+storage_type = Conf.get('global_config',
+                        'storage>enclosure_1>type')
+server_type = Conf.get('global_config',
+                       'cluster>%s>node_type' % (node_key_id))
+cluster_id = Conf.get('global_config',
+                      'cluster>cluster_id')
+node_id = Conf.get('global_config',
+                   'cluster>%s>node_id' % (node_key_id))
+site_id = Conf.get('global_config',
+                   'cluster>%s>site_id' % (node_key_id))
+rack_id = Conf.get('global_config',
+                   'cluster>%s>site_id' % (node_key_id))
+
+# If SSPL is not configured, use salt interface
+if not os.path.exists(SSPL_CONFIGURED) and PRODUCT_NAME=="LDR_R1":
     try:
         salt_int = SaltInterface()
         node_key_id = salt_int.get_node_id()
         CONSUL_HOST = salt_int.get_consul_vip()
         CONSUL_PORT = salt_int.get_consul_port()
     except Exception as err:
-        print(f'sspl_constants : Failed to read from SaltInterface due to error - {err}')
+        print('sspl_constants : Failed to read from SaltInterface due to error - %s' % (err))
 
 CONSUL_ERR_STRING = '500 No cluster leader'
 

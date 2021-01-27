@@ -13,19 +13,43 @@
 # about this software or licensing, please email opensource@seagate.com or
 # cortx-questions@seagate.com.
 
-# This script contains common constants used by various provisioner scripts
+cluster:
+   cluster_id: 'CortxCluster001'
+   server_nodes:
+      abc25957545942cfa728b74cead1a882: srvnode_1
+   srvnode_1:
+      site_id: 'Site001'
+      rack_id: 'Rack001'
+      node_id: 'Node001'
+      machine_id:
+      storage_set_id: 'storageset_1'
 
-PRODUCT_NAME='LR2'
-PRODUCT_FAMILY='cortx'
-PRODUCTS="SINGLE DUAL CLUSTER LDR_R1 LR2"
-SSPL_CONF="/etc/sspl.conf"
-ROLES="gw ssu vm cmu cortx"
-PRODUCT_BASE_DIR="/opt/seagate/$PRODUCT_FAMILY/"
-SSPL_BASE_DIR="/opt/seagate/$PRODUCT_FAMILY/sspl"
-SSPL_STORE_TYPE="file"
-CONSUL_HOST="127.0.0.1"
-CONSUL_PORT="8500"
-ENVIRONMENT="PROD"
-CONSUL_PATH="/usr/bin/"
-# This file will be created when sspl is being configured for node replacement case
-REPLACEMENT_NODE_ENV_VAR_FILE="/etc/profile.d/set_replacement_env.sh"
+      storage:
+         enclosure_id: enclosure_1
+
+      bmc:
+         ip:
+         secret:
+         user:
+
+storage:
+   enclosure_1:
+      type:
+      controller:
+         primary:
+            ip: 10.0.0.2
+            port: 80
+         secondary:
+            ip: 10.0.0.3
+            port: 80
+         user: manage
+         secret:
+         type:
+
+rsyslog:
+   host: localhost
+   port: 514
+
+release:
+   setup: cortx
+   product: LR2
