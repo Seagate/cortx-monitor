@@ -275,7 +275,7 @@ class SSPLConfig:
             else:
                 Conf.set('sspl', 'RABBITMQCLUSTER>cluster_nodes', pout)
                 Conf.save('sspl')
-            
+
         # Skip this step if sspl is being configured for node replacement
         # scenario as consul data is already
         # available on healthy node
