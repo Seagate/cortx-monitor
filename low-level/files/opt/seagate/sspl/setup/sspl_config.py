@@ -44,14 +44,6 @@ class SSPLConfig:
     """SSPL Setup Config Interface."""
 
     name = "config"
-    DIR_NAME= "/opt/seagate/%s/sspl" % consts.PRODUCT_FAMILY
-    RSYSLOG_CONF ="/etc/rsyslog.d/0-iemfwd.conf"
-    RSYSLOG_SSPL_CONF = "/etc/rsyslog.d/1-ssplfwd.conf"
-    LOGROTATE_DIR  ="/etc/logrotate.d"
-    IEM_LOGROTATE_CONF = "%s/iem_messages" % LOGROTATE_DIR
-    SSPL_LOGROTATE_CONF = "%s/sspl_logs" % LOGROTATE_DIR
-    SSPL_CONFIGURED_DIR = "/var/%s/sspl" % consts.PRODUCT_FAMILY
-    SSPL_CONFIGURED = "%s/sspl-configured" % SSPL_CONFIGURED_DIR
 
     def __init__(self):
         """Init method for sspl setup config."""
@@ -60,6 +52,12 @@ class SSPLConfig:
         Conf.load('sspl', 'yaml://%s' % consts.file_store_config_path)
 
     def replace_expr(self, filename:str, key, new_str:str):
+        """The function helps to replace the expression provided as key
+            with new string in the file provided in filename
+            OR
+            It inserts the new string at given line as a key in the 
+            provided file.
+        """
         with open(filename, 'r+') as f:
             lines = f.readlines()
             if isinstance(key, str):
@@ -98,15 +96,15 @@ class SSPLConfig:
             salt_util = SaltInterface()
             salt_util.update_config_file(consts.file_store_config_path)
 
-        if os.path.isfile(self.SSPL_CONFIGURED):
-            os.remove(self.SSPL_CONFIGURED)
+        if os.path.isfile(consts.SSPL_CONFIGURED):
+            os.remove(consts.SSPL_CONFIGURED)
 
         # validate Product
         product = Conf.get('global_config', 'release>product')
 
         if not consts.enabled_products:
             raise SetupError(errno.EINVAL, "No enabled products!")
-        
+
         if product not in consts.enabled_products:
             raise SetupError(
                         errno.EINVAL,
@@ -114,54 +112,53 @@ class SSPLConfig:
                         product, consts.enabled_products)
 
         # Add sspl-ll user to required groups and sudoers file etc.
-        sspl_reinit = [f"{self.DIR_NAME}/bin/sspl_reinit", product]
+        sspl_reinit = [f"{consts.SSPL_BASE_DIR}/bin/sspl_reinit", product]
         _ , error, returncode = SimpleProcess(sspl_reinit).run()
         if returncode:
             raise SetupError(returncode,
                     "%s/bin/sspl_reinit failed for product %s with error : %e",
-                      self.DIR_NAME, product, error
+                      consts.SSPL_BASE_DIR, product, error
                     )
 
-        os.makedirs(self.SSPL_CONFIGURED_DIR, exist_ok=True)
-        with open(self.SSPL_CONFIGURED, 'a'):
-            os.utime(self.SSPL_CONFIGURED)
+        os.makedirs(consts.SSPL_CONFIGURED_DIR, exist_ok=True)
+        with open(consts.SSPL_CONFIGURED, 'a'):
+            os.utime(consts.SSPL_CONFIGURED)
 
         # SSPL Log file configuration
         # SSPL_LOG_FILE_PATH = self.getval_from_ssplconf('sspl_log_file_path')
         SSPL_LOG_FILE_PATH = Conf.get('sspl', 'SYSTEM_INFORMATION>sspl_log_file_path')
         if SSPL_LOG_FILE_PATH:
-            self.replace_expr(self.RSYSLOG_SSPL_CONF,
+            self.replace_expr(consts.RSYSLOG_SSPL_CONF,
                         'File.*[=,"]', 'File="%s"' % SSPL_LOG_FILE_PATH)
             self.replace_expr(
-                    f"{self.DIR_NAME}/low-level/files/etc/logrotate.d/sspl_logs",
+                    f"{consts.SSPL_BASE_DIR}/low-level/files/etc/logrotate.d/sspl_logs",
                     0, SSPL_LOG_FILE_PATH)
 
         # IEM configuration
         # Configure log file path in Rsyslog and logrotate configuration file
-        # LOG_FILE_PATH = self.getval_from_ssplconf('log_file_path')
         LOG_FILE_PATH = Conf.get('sspl', 'SYSTEM_INFORMATION>log_file_path')
 
         if LOG_FILE_PATH:
-            self.replace_expr(self.RSYSLOG_CONF,
+            self.replace_expr(consts.RSYSLOG_CONF,
                     'File.*[=,"]', 'File="%s"' % LOG_FILE_PATH)
             self.replace_expr(
-                    f'{self.DIR_NAME}/low-level/files/etc/logrotate.d/iem_messages',
+                    f'{consts.SSPL_BASE_DIR}/low-level/files/etc/logrotate.d/iem_messages',
                     0, LOG_FILE_PATH)
         else:
-            self.replace_expr(self.RSYSLOG_CONF,
+            self.replace_expr(consts.RSYSLOG_CONF,
                     'File.*[=,"]', 'File=/var/log/%s/iem/iem_messages' % consts.PRODUCT_FAMILY)
 
         # Create logrotate dir in case it's not present for dev environment
-        if not os.path.exists(self.LOGROTATE_DIR):
-            os.makedirs(self.LOGROTATE_DIR)
+        if not os.path.exists(consts.LOGROTATE_DIR):
+            os.makedirs(consts.LOGROTATE_DIR)
 
         shutil.copy2(
-            '%s/low-level/files/etc/logrotate.d/iem_messages' % self.DIR_NAME,
-            self.IEM_LOGROTATE_CONF)
+            '%s/low-level/files/etc/logrotate.d/iem_messages' % consts.SSPL_BASE_DIR,
+            consts.IEM_LOGROTATE_CONF)
 
         shutil.copy2(
-            '%s/low-level/files/etc/logrotate.d/sspl_logs' % self.DIR_NAME,
-            self.SSPL_LOGROTATE_CONF)
+            '%s/low-level/files/etc/logrotate.d/sspl_logs' % consts.SSPL_BASE_DIR,
+            consts.SSPL_LOGROTATE_CONF)
         
         # This rsyslog restart will happen after successful updation of rsyslog
         # conf file and before sspl starts. If at all this will be removed from
@@ -195,7 +192,13 @@ class SSPLConfig:
             rmq_cluster_status_cmd = '/usr/sbin/rabbitmqctl cluster_status' + \
                                     '--formatter json'
             output, error, returncode = SimpleProcess(rmq_cluster_status_cmd).run()
-            rabbitmq_cluster_status = json.loads(output)
+            try:
+                rabbitmq_cluster_status = json.loads(output)
+            except Exception as error:
+                raise SetupError(
+                            errno.EINVAL,
+                            "RabbitMQ cluster status is not okay! \n, status : %s",
+                            output)
             if returncode:
                 raise SetupError(returncode, error)
             running_nodes = rabbitmq_cluster_status['running_nodes']
@@ -255,7 +258,7 @@ class SSPLConfig:
         # In node replacement scenario, avoiding feeding again to avoid
         # over writing already configured values
         # with which rabbitmq cluster may have been created
-        if not consts.REPLACEMENT_NODE_ENV_VAR_FILE:
+        if not os.path.exists(consts.REPLACEMENT_NODE_ENV_VAR_FILE):
             message_broker="rabbitmq"
             # Get the running nodes from a cluster
             pout = self.get_cluster_running_nodes(message_broker)
@@ -275,11 +278,13 @@ class SSPLConfig:
         # scenario as consul data is already
         # available on healthy node
         # Updating build requested log level
-        if not consts.REPLACEMENT_NODE_ENV_VAR_FILE:
-            log_level = "INFO"
-            with open(f'{self.DIR_NAME}/low-level/files/opt/seagate' + \
+        if not os.path.exists(consts.REPLACEMENT_NODE_ENV_VAR_FILE):
+            with open(f'{consts.SSPL_BASE_DIR}/low-level/files/opt/seagate' + \
                 '/sspl/conf/build-requested-loglevel', 'r') as f:
                 log_level = f.readline()
+            
+            if not log_level:
+                log_level = "INFO"
             
             if  log_level == "DEBUG" or log_level == "INFO" or \
                 log_level == "WARNING" or log_level == "ERROR" or \
