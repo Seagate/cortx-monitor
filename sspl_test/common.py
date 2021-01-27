@@ -33,7 +33,6 @@ import subprocess
 from threading import Thread
 from sspl_test.default import *
 
-from sspl_test.framework.utils.config_reader import ConfigReader
 from sspl_test.framework.utils.service_logging import init_logging
 from sspl_test.framework.utils.service_logging import logger
 
@@ -44,7 +43,7 @@ os.sys.path.append(os.path.join(test_path + "/../"))
 
 from sspl_test.rabbitmq.rabbitmq_ingress_processor_tests import RabbitMQingressProcessorTests
 from sspl_test.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
-from cortx.utils.conf_store import Conf
+from sspl_test.framework.utils.conf_utils import Conf, SSPL_TEST_CONF, GLOBAL_CONF
 
 PY2 = sys.version_info[0] == 2
 PY3 = sys.version_info[0] == 3
@@ -79,7 +78,7 @@ def init_rabbitMQ_msg_processors():
         exit(os.EX_USAGE)
 
     # Modules to be used for testing
-    conf_modules = Conf.get("SSPL-Test", f"{SSPL_SETTING}>{MODULES}")
+    conf_modules = Conf.get(SSPL_TEST_CONF, f"{SSPL_SETTING}>{MODULES}")
 
     # Create a map of references to all the module's message queues.  Each module
     #  is passed this mapping so that it can send messages to other modules.
@@ -89,8 +88,7 @@ def init_rabbitMQ_msg_processors():
     world.sspl_modules = {}
 
     # Read in product value from configuration file
-    Conf.load("GLOBAL", "yaml:///etc/cortx/sample_global_cortx_config.yaml")
-    product = Conf.get("GLOBAL", f"release>{PRODUCT_NAME}")
+    product = Conf.get(GLOBAL_CONF, f"release>{PRODUCT_NAME}")
     logger.info("sspl-ll Bootstrap: product name supported: %s" % product)
     # Use reflection to instantiate the class based upon its class name in config file
     for conf_thread in conf_modules:

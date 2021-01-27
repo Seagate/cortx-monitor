@@ -192,9 +192,9 @@ DATASTORE:
    consul_port: 8500
 
 SASPORTSENSOR:
-  monitor: true
-  threaded: true
-  probe: sysfs
+   monitor: true
+   threaded: true
+   probe: sysfs
 
 MEMFAULTSENSOR:
    monitor: true

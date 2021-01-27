@@ -187,7 +187,7 @@ class SSPLConfig:
         update_sensor_info()
 
     def get_rabbitmq_cluster_nodes(self):
-        pout = None
+        cluster_nodes = None
         if  self.rabbitmq_major_release == '3' and \
             self.rabbitmq_maintenance_release == '8':
 
@@ -206,18 +206,19 @@ class SSPLConfig:
             running_nodes = rabbitmq_cluster_status['running_nodes']
             for i, node in enumerate(running_nodes):
                 running_nodes[i] = node.replace('rabbit@', '')
-            pout = " ".join(running_nodes)
+            cluster_nodes = " ".join(running_nodes)
         elif self.rabbitmq_version == '3.3.5':
-            rmq_cluster_status_cmd = "rabbitmqctl cluster_status | " + \
-                    "grep running_nodes | cut -d '[' -f2 | cut -d ']' -f1"
+            rmq_cluster_status_cmd = "rabbitmqctl cluster_status"
             output, error, returncode = SimpleProcess(rmq_cluster_status_cmd).run()
-            pout = output.replace('rabbit@', '').replace(',',', ').replace("'", '').replace(' ', '')
+            cluster_nodes = re.search(
+                        r"running_nodes,\['rabbit@(?P<cluster_nodes>.+?)'\]", 
+                        output.decode()).groupdict()["cluster_nodes"]
         else:
             raise SetupError(
                         errno.EINVAL,
                         "This RabbitMQ version : %s is not supported",
                         self.rabbitmq_version)
-        return pout
+        return cluster_nodes
 
     def get_cluster_running_nodes(self, msg_broker : str):
         if(msg_broker == 'rabbitmq'):

@@ -17,11 +17,10 @@
 
 from cortx.utils.conf_store import Conf
 
-from framework.utils.utility import Utility
-
 # Indexes
 GLOBAL_CONF = "GLOBAL"
 SSPL_CONF = "SSPL"
+SSPL_TEST_CONF = "SSPL-Test"
 
 # Keys constans
 BMC_INTERFACE="BMC_INTERFACE"
@@ -136,12 +135,12 @@ VIRTUAL_HOST="virtual_host"
 
 # Get SRVNODE and ENCLOSURE so it can be used in other files to get
 # server_node and enclosure specific config
-utility = Utility()
-MACHINE_ID = utility.get_machine_id()
-OPERATING_SYSTEM = utility.get_os()
+with open("/etc/machine-id") as f:
+    MACHINE_ID = f.read().strip("\n")
 
-Conf.load("GLOBAL", "yaml:///etc/sample_global_cortx_config.yaml")
-Conf.load("SSPL", "yaml:///etc/sspl.conf")
+Conf.load(GLOBAL_CONF, "yaml:///etc/sample_global_cortx_config.yaml")
+Conf.load(SSPL_CONF, "yaml:///etc/sspl.conf")
+Conf.load(SSPL_TEST_CONF, "yaml:///opt/seagate/cortx/sspl/sspl_test/conf/sspl_tests.conf.yaml")
 
 SRVNODE = Conf.get("GLOBAL", f'{CLUSTER}>{SERVER_NODES}')[MACHINE_ID]
 ENCLOSURE = Conf.get("GLOBAL", f"{CLUSTER}>{SRVNODE}>{STORAGE}>{ENCLOSURE_ID}")

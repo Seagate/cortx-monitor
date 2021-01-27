@@ -407,7 +407,7 @@ def main(conf_reader, systemd_support):
             # or it is defined in core modules or prodcut is LDR_R2
             resume = False
             if name in modules_to_resume or name in ThreadController.ALWAYS_ACTIVE_MODULES \
-                or product.upper() == "LDR_R2":
+                or product.upper() == "LR2":
                 resume = True
 
             thread = Thread(target=_run_thread_capture_errors,

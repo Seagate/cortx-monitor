@@ -86,26 +86,6 @@ CONSUL_PORT = '8500'
 # TODO Keep only constants in this file.
 # other values(configs) should come from config.
 
-# TODO: Below finding machine id/node_key_id code will be replaced by PR #281 [EO-16515]
-try:
-    with open("/etc/machine-id") as f:
-        node_key_id = f.read().strip("\n")
-except Exception as err:
-    print("Failed to get machine-id. - %s" % (err))
-
-storage_type = Conf.get('global_config',
-                        'storage>enclosure_1>type')
-server_type = Conf.get('global_config',
-                       'cluster>%s>node_type' % (node_key_id))
-cluster_id = Conf.get('global_config',
-                      'cluster>cluster_id')
-node_id = Conf.get('global_config',
-                   'cluster>%s>node_id' % (node_key_id))
-site_id = Conf.get('global_config',
-                   'cluster>%s>site_id' % (node_key_id))
-rack_id = Conf.get('global_config',
-                   'cluster>%s>site_id' % (node_key_id))
-
 # If SSPL is not configured, use salt interface
 if not os.path.exists(SSPL_CONFIGURED) and PRODUCT_NAME=="LDR_R1":
     try:

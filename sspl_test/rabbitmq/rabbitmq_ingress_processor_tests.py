@@ -36,7 +36,7 @@ from sspl_test.framework.utils.service_logging import logger
 from sspl_test.framework.base.sspl_constants import RESOURCE_PATH
 from sspl_test.framework.base.sspl_constants import ServiceTypes
 from .rabbitmq_sspl_test_connector import RabbitMQSafeConnection
-from cortx.utils.conf_store import Conf
+from sspl_test.framework.utils.conf_utils import Conf, SSPL_TEST_CONF
 import ctypes
 SSPL_SEC = ctypes.cdll.LoadLibrary('libsspl_sec.so.0')
 
@@ -200,28 +200,28 @@ class RabbitMQingressProcessorTests(ScheduledModuleThread, InternalMsgQ):
     def _configure_exchange(self):
         """Configure the RabbitMQ exchange with defaults available"""
         try:
-            self._virtual_host = Conf.get("SSPL-Test", 
+            self._virtual_host = Conf.get(SSPL_TEST_CONF, 
                             f"{self.RABBITMQPROCESSORTEST}>{self.VIRT_HOST}","SSPL"
             )
-            self._primary_rabbitmq_host = Conf.get("SSPL-Test", 
+            self._primary_rabbitmq_host = Conf.get(SSPL_TEST_CONF, 
             f"{self.RABBITMQPROCESSORTEST}>{self.PRIMARY_RABBITMQ_HOST}", "localhost"
             )
-            self._exchange_name = Conf.get("SSPL-Test", 
+            self._exchange_name = Conf.get(SSPL_TEST_CONF, 
                 f"{self.RABBITMQPROCESSORTEST}>{self.EXCHANGE_NAME}", "sspl-in"
             )
-            self._queue_name = Conf.get("SSPL-Test",
+            self._queue_name = Conf.get(SSPL_TEST_CONF,
              f"{self.RABBITMQPROCESSORTEST}>{self.QUEUE_NAME}", "actuator-req-queue"
             )
-            self._routing_key = Conf.get("SSPL-Test", 
+            self._routing_key = Conf.get(SSPL_TEST_CONF, 
             f"{self.RABBITMQPROCESSORTEST}>{self.ROUTING_KEY}", "actuator-req-key"
             )
-            self._username = Conf.get("SSPL-Test", 
+            self._username = Conf.get(SSPL_TEST_CONF, 
             f"{self.RABBITMQPROCESSORTEST}>{self.USER_NAME}", "sspluser"
             )
-            self._password = Conf.get("SSPL-Test", 
+            self._password = Conf.get(SSPL_TEST_CONF, 
             f"{self.RABBITMQPROCESSORTEST}>{self.PASSWORD}", "sspl4ever"
             )
-            self.cluster_id = Conf.get("SSPL-Test", 
+            self.cluster_id = Conf.get(SSPL_TEST_CONF, 
                 f"{self.SYSTEM_INFORMATION_KEY}>{self.CLUSTER_ID_KEY}", '')
     
             # Decrypt RabbitMQ Password

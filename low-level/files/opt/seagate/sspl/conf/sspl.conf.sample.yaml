@@ -3,7 +3,7 @@
 # This program is free software: you can redistribute it and/or modify it under the
 # terms of the GNU Affero General Public License as published by the Free Software
 # Foundation, either version 3 of the License, or (at your option) any later version.
-#
+# 
 # This program is distributed in the hope that it will be useful, but WITHOUT ANY
 # WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
 # PARTICULAR PURPOSE. See the GNU Affero General Public License for more details.
@@ -13,17 +13,14 @@
 # about this software or licensing, please email opensource@seagate.com or
 # cortx-questions@seagate.com.
 
-# Version 2.0.0
+SSPL-LL_SETTING:
 
-# TODO: Rename limit_consul_memory to limit_persistent_memory_use
-# and move it to DATASTORE
-
-SSPL_LL_SETTING:
-   core_processors:
+   core_processors: 
       - RabbitMQegressProcessor
       - RabbitMQingressProcessor
       - LoggingProcessor
-   message_handlers:
+
+   message_handlers: 
       - DiskMsgHandler
       - LoggingMsgHandler
       - ServiceMsgHandler
@@ -31,7 +28,8 @@ SSPL_LL_SETTING:
       - NodeControllerMsgHandler
       - RealStorEnclMsgHandler
       - RealStorActuatorMsgHandler
-   sensors:
+
+   sensors: 
       - ServiceWatchdog
       - RAIDsensor
       - NodeData
@@ -47,27 +45,51 @@ SSPL_LL_SETTING:
       - SASPortSensor
       - MemFaultSensor
       - CPUFaultSensor
-   actuators:
+      - HPIMonitor
+      - SNMPtraps
+
+   actuators: 
       - Service
       - RAIDactuator
-      - Smartctl
+      - Hdparm
+      - RaritanPDU
+      - CommandLine
+      - Login
+      - IPMI
+      - HPIactuator
       - NodeHWactuator
-      - RealStorActuator
-   degraded_state_modules:
-      - ServiceWatchdog
-      - RAIDsensor
-      - NodeData
-      - IEMSensor
-      - NodeHWsensor
-      - DiskMsgHandler
-      - LoggingMsgHandler
-      - ServiceMsgHandler
-      - NodeDataMsgHandler
-      - NodeControllerMsgHandler
-      - RealStorActuatorMsgHandler
-      - SASPortSensor
-      - MemFaultSensor
-      - CPUFaultSensor
+      - Smartctl
+
+   degraded_state_modules: 
+     - ServiceWatchdog
+     - RAIDsensor
+     - NodeData
+     - IEMSensor
+     - NodeHWsensor
+     - DiskMsgHandler
+     - LoggingMsgHandler
+     - ServiceMsgHandler
+     - NodeDataMsgHandler
+     - NodeControllerMsgHandler
+     - RealStorActuatorMsgHandler
+     - SASPortSensor
+     - MemFaultSensor
+     - CPUFaultSensor
+
+SYSTEM_INFORMATION:
+    operating_system: centos7
+    product: LDR_R2
+    cli_type: CS_A
+    setup: cortx
+    data_path: /var/cortx/sspl/data/
+    cluster_id: '001'
+    site_id: '001'
+    rack_id: '001'
+    node_id: '001'
+    log_level: INFO
+    sspl_log_file_path: /var/log/cortx/sspl/sspl.log
+    syslog_host: localhost
+    syslog_port: 514
 
 RABBITMQINGRESSPROCESSOR:
    virtual_host: SSPL
@@ -75,7 +97,7 @@ RABBITMQINGRESSPROCESSOR:
    exchange_name: sspl-in
    routing_key: actuator-req-key
    username: sspluser
-   password: gAAAAABgB8tRJLZBfI6uCAtt4B8YYjveDvhHnFCbeKYsXuYxSLl3KZE5Tp94Jl2qQq9-X7x7_CinZZSh4cm9rMJ4G3HKz36I-Q==
+   password: gAAAAABf_F2Xh3y0x2rPTRGL0ld4f_u1AwI5pRHOOEk49-lSNsq339Mn8m9bSBsGH-U8bCaPnTJPW-LR4yQHc_CpSbhU3AL5wQ==
    primary_rabbitmq_host: localhost
 
 RABBITMQEGRESSPROCESSOR:
@@ -87,11 +109,11 @@ RABBITMQEGRESSPROCESSOR:
    ack_exchange_name: sspl-out
    ack_routing_key: sensor-key
    username: sspluser
-   password: gAAAAABgB8tRJLZBfI6uCAtt4B8YYjveDvhHnFCbeKYsXuYxSLl3KZE5Tp94Jl2qQq9-X7x7_CinZZSh4cm9rMJ4G3HKz36I-Q==
+   password: gAAAAABf_F2Xh3y0x2rPTRGL0ld4f_u1AwI5pRHOOEk49-lSNsq339Mn8m9bSBsGH-U8bCaPnTJPW-LR4yQHc_CpSbhU3AL5wQ==
    message_signature_username: sspl-ll
    message_signature_token: ALOIUD986798df69a8koDISLKJ282983
    message_signature_expires: 3600
-   iem_route_addr:
+   iem_route_addr: 
    iem_route_exchange_name: sspl-out
    primary_rabbitmq_host: localhost
    limit_consul_memory: 50000000
@@ -102,26 +124,77 @@ LOGGINGPROCESSOR:
    exchange_name: sspl-in
    routing_key: iem-key
    username: sspluser
-   password: gAAAAABgB8tRJLZBfI6uCAtt4B8YYjveDvhHnFCbeKYsXuYxSLl3KZE5Tp94Jl2qQq9-X7x7_CinZZSh4cm9rMJ4G3HKz36I-Q==
+   password: gAAAAABf_F2Xh3y0x2rPTRGL0ld4f_u1AwI5pRHOOEk49-lSNsq339Mn8m9bSBsGH-U8bCaPnTJPW-LR4yQHc_CpSbhU3AL5wQ==
    primary_rabbitmq_host: localhost
-
-RABBITMQCLUSTER:
-   cluster_nodes: localhost
-   erlang_cookie: QLDZYPYEYGHECTHYQXFJ
 
 LOGGINGMSGHANDLER:
    iem_routing_enabled: false
    iem_log_locally: true
 
+DISKMSGHANDLER:
+   dmreport_file: /tmp/sspl/drivemanager/drive_manager.json
+   always_log_iem: false
+   max_drivemanager_events: 14
+   max_drivemanager_event_interval: 10
+
+DRIVEMANAGER:
+   threaded: true
+   drivemanager_dir: /tmp/dcs/drivemanager
+   diskinfo_file: /tmp/dcs/disk_info.json
+   start_delay: 300
+
+HPIMONITOR:
+   threaded: true
+   hpimonitor_dir: /tmp/dcs/hpi
+   start_delay: 10
+
 NODEDATAMSGHANDLER:
-   transmit_interval: 10
+   transmit_interval: 300
    units: MB
-   disk_usage_threshold: 80
-   cpu_usage_threshold: 80
-   host_memory_usage_threshold: 80
+
+SYSTEMDWATCHDOG:
+   threaded: true
+   monitored_services: 
+      - m0t1fs@*.service
+      - m0d@*.service
+      - motr.service
+      - motr-kernel.service
+      - motr-trace@kernel.service
+      - motr-trace@motr-kernel.service
+      - motr-server@kernel.service
+      - motr-server@motr-kernel.service
+      - motr-mkfs@kernel.service
+      - motr-mkfs@motr-kernel.service
+      - systemd-user-sessions.service
+      - systemd-logind.services
+      - systemd-journald.service
+      - systemd-sysctl.service
+      - crond.service
+      - syslog.service
+      - sshd.service
+      - rabbitmq-server.service
+      - lnet.service
+      - network.service
+      - mcollective.service
+      - dbus.service
+      - openhpid.service
+      - dcs-collector.service
+      - zabbix*.service
+   smart_test_interval: 999999999
+   run_smart_on_start: 'False'
+
+XINITDWATCHDOG:
+   threaded: true
+   monitored_services: 
+
+RARITANPDU:
+   user: admin
+   pass: admin
+   comm_port: /dev/ttyACM0
+   IP_addr: 172.16.1.222
+   max_login_attempts: 2
 
 RAIDSENSOR:
-   monitor: true
    threaded: true
    RAID_status_file: /proc/mdstat
 
@@ -132,22 +205,39 @@ IPMI:
 BMC_INTERFACE:
    default: system
 
+SMTPSETTING:
+   smptserver: mailhost.seagate.com
+   recipient: malhar.vora@seagate.com
+   smtp_port: 25
+   username: 
+   password: 
+
+LOGEMAILER:
+   priority: LOG_ERR
+
+SMRDRIVEDATA:
+   threaded: true
+   logging_interval: 3600
+   
+SNMPTRAPS:
+   threaded: true
+   enabled_traps: '*'
+   enabled_MIBS: PDU2-MIB
+   bind_ip: service
+   bind_port: 1620
+
 REALSTORSENSORS:
    monitor: true
    polling_frequency: 30
-   polling_frequency_override: 0
 
 REALSTORPSUSENSOR:
    threaded: true
-   polling_frequency_override: 0
 
 REALSTORFANSENSOR:
    threaded: true
-   polling_frequency_override: 0
 
 REALSTORCONTROLLERSENSOR:
    threaded: true
-   polling_frequency_override: 0
 
 REALSTORDISKSENSOR:
    threaded: true
@@ -155,7 +245,6 @@ REALSTORDISKSENSOR:
 
 REALSTORSIDEPLANEEXPANDERSENSOR:
    threaded: true
-   polling_frequency_override: 0
 
 NODEHWSENSOR:
    monitor: true
@@ -164,29 +253,20 @@ NODEHWSENSOR:
 
 REALSTORLOGICALVOLUMESENSOR:
    threaded: true
-   polling_frequency_override: 0
 
 REALSTORENCLOSURESENSOR:
    threaded: true
-   polling_frequency_override: 0
 
 IEMSENSOR:
    threaded: true
    log_file_path: /var/log/cortx/iem/iem_messages
    timestamp_file_path: /var/cortx/sspl/data/iem/last_processed_msg_time
 
-SYSTEMDWATCHDOG:
-   monitor: true
-   threaded: true
-   monitored_services:
-   smart_test_interval: 999999999
-   run_smart_on_start: 'False'
-
 NODEHWACTUATOR:
    ipmi_client: ipmitool
 
 DATASTORE:
-   store_type: file
+   store_type: consul
    consul_host: 127.0.0.1
    consul_port: 8500
 
@@ -206,10 +286,10 @@ CPUFAULTSENSOR:
    probe: sysfs
 
 STORAGE_ENCLOSURE:
+   primary_controller_ip: 127.0.0.1
+   primary_controller_port: 28200
+   secondary_controller_ip: 127.0.0.1
+   secondary_controller_port: 28200
+   user: xxxxx
+   password: xxxxx
    mgmt_interface: cliapi
-
-SYSTEM_INFORMATION:
-   cli_type: CS-A
-   data_path: /var/cortx/sspl/data/
-   sspl_log_file_path: /var/log/cortx/sspl/sspl.log
-   log_level: INFO
