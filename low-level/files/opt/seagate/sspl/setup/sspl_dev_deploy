@@ -32,25 +32,32 @@ import urllib.request
 import re
 import shutil
 import socket
-from cortx.sspl.bin.error import SetupError
-from cortx.utils.service import Service
-from cortx.utils.process import SimpleProcess
-from cortx.utils.validator.v_service import ServiceV
-from cortx.utils.validator.error import VError
-from cortx.sspl.lowlevel.framework import sspl_rabbitmq_reinit
-from cortx.sspl.bin.setup_rabbitmq_cluster import RMQClusterConfiguration
-from cortx.sspl.bin.sspl_constants import SSPL_BASE_DIR, file_store_config_path
+import subprocess
 
 localhost_fqdn = socket.getfqdn().split('.')[0]
 LOG_FILE = "/tmp/sspl_dev_deploy.log"
 if not os.path.exists(LOG_FILE):
     open(LOG_FILE, 'a').close()
 
+class DeployError(Exception):
+    """Generic Exception with error code and output."""
+
+    def __init__(self, rc, message, *args):
+        """Initialize with custom error message and return code."""
+        self._rc = rc
+        self._desc = message % (args)
+
+    def __str__(self):
+        """Format error string."""
+        if self._rc == 0: return self._desc
+        return "DeployError(%d): %s" %(self._rc, self._desc)
+
 
 class SSPLDevDeploy:
     """ SSPL Dev Deploy Script """
 
     def __init__(self, args):
+        self.args = args
         self.CORTX_MONITOR_BASE_URL = "https://raw.githubusercontent.com/Seagate/cortx-monitor/main"
         self.PERSISTENT_CONFIG_FILE = "/opt/seagate/cortx/sspl/generated_configs"
         self.do_cleanup = False
@@ -75,96 +82,113 @@ class SSPLDevDeploy:
         self.BMC_PASSWD = "xxxx"
         self.SERVER_TYPE = "virtual"
         self.STORAGE_TYPE = "virtual"
-        if args.cleanup:
+        Conf.load("sspl", "yaml:///opt/seagate/cortx/sspl/conf/sspl.conf.LR2.yaml")
+        Conf.load("cortx", "yum:///opt/seagate/cortx/sspl/conf/sample_global_cortx_config.yaml")
+
+    def parse_args(self):
+        if self.args.cleanup:
             self.do_cleanup = True
-        if args.standalone_installation:
+        if self.args.standalone_installation:
             self.install_3rd_party_packages = True
-        if args.initialize_sspl:
+        if self.args.initialize_sspl:
             self.initialize_sspl = True
-        if args.setup_repo:
+        if self.args.setup_repo:
             self.setup_repo = True
-        if args.product_version:
-            self.PRODUCT_VERSION = args.product_version
+        if self.args.product_version:
+            self.PRODUCT_VERSION = self.args.product_version
+            Conf.set("cortx", "release>product", self.PRODUCT_VERSION)
         else:
-            print("ERROR: Product version(LDR_R1/LDR_R2) not provided")
+            print("ERROR: Product version(LDR_R1/LR2) not provided")
             sys.exit(1)
-        if args.node:
-            self.NODE = args.node
+        if self.args.node:
+            self.NODE = self.args.node
+            Conf.set("sspl", "RABBITMQCLUSTER>cluster_nodes", self.NODE)
         else:
             print("ERROR: Node name not provided")
             sys.exit(1)
-        if args.rmq_user:
-            self.RMQ_USER = args.rmq_user
+        if self.args.rmq_user:
+            self.RMQ_USER = self.args.rmq_user
+            Conf.set("sspl", "RABBITMQINGRESSPROCESSOR>username", self.RMQ_USER)
+            Conf.set("sspl", "RABBITMQEGRESSPROCESSOR>username", self.RMQ_USER)
         else:
             print("ERROR: Rabbitmq user not provided")
             sys.exit(1)
-        if args.rmq_passwd:
-            self.RMQ_PASSWD = args.rmq_passwd
+        if self.args.rmq_passwd:
+            self.RMQ_PASSWD = self.args.rmq_passwd
+            Conf.set("sspl", "RABBITMQINGRESSPROCESSOR>password", self.RMQ_PASSWD)
+            Conf.set("sspl", "RABBITMQEGRESSPROCESSOR>password", self.RMQ_PASSWD)
         else:
             print("ERROR: Rabbitmq password not provided")
             sys.exit(1)
-        if args.cntrlr_a:
-            self.CNTRLR_A = args.cntrlr_a
+        if self.args.cntrlr_a:
+            self.CNTRLR_A = self.args.cntrlr_a
+            Conf.set("cortx", "storage>enclosure_1>controller>primary>ip", self.CNTRLR_A)
         else:
             print("ERROR: Controller A IP not provided")
             sys.exit(1)
-        if args.cntrlr_a_port:
-            self.CNTRLR_A_PORT = args.cntrlr_a_port
+        if self.args.cntrlr_a_port:
+            self.CNTRLR_A_PORT = self.args.cntrlr_a_port
+            Conf.set("cortx", "storage>enclosure_1>controller>primary>port", self.CNTRLR_A_PORT)
         else:
             print("ERROR: Controller A Port not provided")
             sys.exit(1)
-        if args.cntrlr_b:
-            self.CNTRLR_B = args.cntrlr_b
+        if self.args.cntrlr_b:
+            self.CNTRLR_B = self.args.cntrlr_b
+            Conf.set("cortx", "storage>enclosure_1>controller>secondary>ip", self.CNTRLR_A)
         else:
             print("ERROR: Controller B IP not provided")
             sys.exit(1)
-        if args.cntrlr_b_port:
-            self.CNTRLR_B_PORT = args.cntrlr_b_port
+        if self.args.cntrlr_b_port:
+            self.CNTRLR_B_PORT = self.args.cntrlr_b_port
+            Conf.set("cortx", "storage>enclosure_1>controller>secondary>port", self.CNTRLR_B_PORT)
         else:
             print("ERROR: Controller B Port not provided")
             sys.exit(1)
-        if args.cntrlr_user:
-            self.CNTRLR_USER = args.cntrlr_user
+        if self.args.cntrlr_user:
+            self.CNTRLR_USER = self.args.cntrlr_user
+            Conf.set("cortx", "storage>enclosure_1>controller>user", self.CNTRLR_USER)
         else:
             print("ERROR: Controller user name not provided")
             sys.exit(1)
-        if args.cntrlr_pass:
-            self.CNTRLR_PASSWD = args.cntrlr_pass
+        if self.args.cntrlr_pass:
+            self.CNTRLR_PASSWD = self.args.cntrlr_pass
+            Conf.set("cortx", "storage>enclosure_1>controller>secret", self.CNTRLR_PASSWD)
         else:
             print("ERROR: Controller password not provided")
             sys.exit(1)
-        if args.target_build_url:
-            self.TARGET_BUILD = args.target_build_url
+        if self.args.target_build_url:
+            self.TARGET_BUILD = self.args.target_build_url
         else:
             print("ERROR: Target build not provided")
             sys.exit(1)
-        if args.local_rpms_path:
-            self.RPMS_PATH = args.local_rpms_path
+        if self.args.local_rpms_path:
+            self.RPMS_PATH = self.args.local_rpms_path
         else:
             print("ERROR: Local RPMS not provided")
             sys.exit(1)
-        if args.bmc_ip:
-            self.BMC_IP = args.bmc_ip
+        if self.args.bmc_ip:
+            self.BMC_IP = self.args.bmc_ip
         else:
             print("ERROR: BMC IP not provided")
             sys.exit(1)
-        if args.bmc_user:
-            self.BMC_USER = args.bmc_user
+        if self.args.bmc_user:
+            self.BMC_USER = self.args.bmc_user
         else:
             print("ERROR: BMC user not provided")
             sys.exit(1)
-        if args.bmc_passwd:
-            self.BMC_PASSWD = args.bmc_passwd
+        if self.args.bmc_passwd:
+            self.BMC_PASSWD = self.args.bmc_passwd
         else:
             print("ERROR: BMC password not provided")
             sys.exit(1)
-        if args.storage_type:
-            self.STORAGE_TYPE = args.storage_type
+        if self.args.storage_type:
+            self.STORAGE_TYPE = self.args.storage_type
+            Conf.set("cortx", "storage>enclosure_1>type", self.STORAGE_TYPE)
         else:
             print("ERROR: Storage type not provided")
             sys.exit(1)
-        if args.server_type:
-            self.SERVER_TYPE = args.server_type
+        if self.args.server_type:
+            self.SERVER_TYPE = self.args.server_type
         else:
             print("ERROR: Server type not provided")
             sys.exit(1)
@@ -173,34 +197,6 @@ class SSPLDevDeploy:
         if not os.path.exists("/opt/seagate/cortx/sspl"):
             os.makedirs("/opt/seagate/cortx/sspl")
             open(self.PERSISTENT_CONFIG_FILE, 'a').close()
-
-        # Cleanup
-        if self.do_cleanup:
-            Service('dbus').process('stop', 'sspl-ll.service')
-            output, error, returncode = SimpleProcess("yum remove -y cortx-sspl.noarch").run()
-            if returncode != 0:
-                raise SetupError(returncode, "%s - validation failure. %s", "Do Cleanup", error)
-            sys.exit(0)
-
-        # Setup common, 3rd_party and build specific repos
-        if self.setup_repo:
-            setup_repo_url = self.CORTX_MONITOR_BASE_URL + \
-                "/low-level/files/opt/seagate/sspl/setup/setup_yum_repos.sh"
-            setup_repo_txt = requests.get(setup_repo_url, allow_redirects=True)
-            with open('setup_yum_repos.sh', 'w+') as fle:
-                fle.write(setup_repo_txt.content)
-            os.chmod("setup_yum_repos.sh", 0o775)
-
-            if self.TARGET_BUILD:
-                output, error, returncode = SimpleProcess(f"./setup_yum_repos.sh -t {self.TARGET_BUILD}").run()
-            else:
-                output, error, returncode = SimpleProcess("./setup_yum_repos.sh").run()
-            if returncode != 0:
-                raise SetupError(returncode, "%s - building yum repo failure. %s",
-                    "setup_yum_repos.sh", error)
-            else:
-                print("\nDone setup repos")
-                sys.exit(0)
 
         if self.PRODUCT_VERSION == "LR2" and not self.BMC_IP:
             self.skip_bmc = True
@@ -215,10 +211,49 @@ class SSPLDevDeploy:
             if not self.BMC_PASSWD:
                 print("ERROR: --p <BMC password> is required.")
                 sys.exit(1)
+    
+    def build_common_repos(self):
+        # Cleanup
+        if self.do_cleanup:
+            subprocess.call("systemctl stop sspl-ll.service".split(),
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False)
+            returncode = subprocess.call("yum remove -y cortx-sspl.noarch".split(),
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False)
+            if returncode != 0:
+                raise DeployError(returncode, "%s - failure. %s", "Do Cleanup")
+            sys.exit(0)
 
+        # Setup common, 3rd_party and build specific repos
+        if self.setup_repo:
+            setup_repo_url = self.CORTX_MONITOR_BASE_URL + \
+                "/low-level/files/opt/seagate/sspl/setup/setup_yum_repos.py"
+            setup_repo_txt = requests.get(setup_repo_url, allow_redirects=True)
+            with open('setup_yum_repos.py', 'w+') as fle:
+                fle.write(setup_repo_txt.content)
+            os.chmod("setup_yum_repos.py", 0o775)
+
+            if self.TARGET_BUILD:
+                returncode = subprocess.call(f"./setup_yum_repos.py -t {self.TARGET_BUILD}".split(),
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False)
+            else:
+                returncode = subprocess.call("./setup_yum_repos.py".split(),
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False)
+            if returncode != 0:
+                raise DeployError(returncode, "%s - building yum repo failure",
+                    "setup_yum_repos.py")
+            else:
+                print("\nDone setup repos")
+                sys.exit(0)
+
+    def install_sspl_rpms(self):
+        # Install common and 3rd_party application
+        self.build_common_repos()
+        subprocess.call(f"python3 -m pip install -r {SSPL_BASE_DIR}/low-level/requirements.txt".split(),
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False)
         if self.install_3rd_party_packages:
             print("INFO: INSTALLING python3...")
-            SimpleProcess("yum install -y python3").run()
+            subprocess.call("yum install -y python3".split(), stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE, shell=False)
 
             print("INFO: INSTALLING cortx-py-utils...")
             # yum install -y cortx-py-utils 2>&1 | tee -a "${LOG_FILE}"
@@ -228,29 +263,34 @@ class SSPLDevDeploy:
             build_url="http://cortx-storage.colo.seagate.com/releases/cortx/github/main/centos-7.8.2003/cortx-utils_last_successful/"
             pkg = [re.findall("<a .*>(.*?)</a>", str(line))[0] for line in urllib.request.urlopen(build_url).readlines() if pkg_name in str(line)]
             if pkg:
-                SimpleProcess(f"yum install -y {build_url}{pkg[0]}").run()
+                subprocess.call(f"yum install -y {build_url}{pkg[0]}".split(), stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE, shell=False)
             else:
                 print(f"Unable to download {pkg_name}.")
-            SimpleProcess("python3 -m pip install toml pyyaml").run()
+            subprocess.call("python3 -m pip install toml pyyaml".split(), stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE, shell=False)
             print("INFO: INSTALLING rabbitmq-server...")
-            SimpleProcess("yum install -y rabbitmq-server").run()
+            subprocess.call("yum install -y rabbitmq-server".split(), stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE, shell=False)
 
-    def install_sspl_rpms(self):
         # If local RPMS location is specified, SSPL RPMS will be
         # installed from the speicifed path. Otherwise yum repos.
         if self.RPMS_PATH:
             print(f"INFO: Installing SSPL RPMS from local path - {self.RPMS_PATH}")
-            SimpleProcess(f"sudo yum localinstall -y {self.RPMS_PATH}/cortx-libsspl_sec-2* \
+            sspl_rpm_cmd = f"sudo yum localinstall -y {self.RPMS_PATH}/cortx-libsspl_sec-2* \
                 {self.RPMS_PATH}/cortx-libsspl_sec-method_none-2* \
                     {self.RPMS_PATH}/cortx-sspl-2* \
-                        {self.RPMS_PATH}/cortx-sspl-test-2*").run()
+                        {self.RPMS_PATH}/cortx-sspl-test-2*"
+            subprocess.call(sspl_rpm_cmd.split(), stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE, shell=False)
         else:
             print("INFO: Installing SSPL RPMS using yum repos...")
-            SimpleProcess("yum install -y cortx-sspl.noarch").run()
-            SimpleProcess("yum install -y cortx-sspl-test").run()
+            subprocess.call("yum install -y cortx-sspl.noarch".split(), stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE, shell=False)
+            subprocess.call("yum install -y cortx-sspl-test".split(), stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE, shell=False)
 
         print("Done installing SSPL RPMS.")
-        SimpleProcess(f"python3 -m pip install -r {SSPL_BASE_DIR}/low-level/requirements.txt").run()
 
     def update_sspl_config(self):
         # update sspl config file
@@ -326,10 +366,19 @@ if __name__ == '__main__':
         argParser.print_help()
         sys.exit(1)
     deploy = SSPLDevDeploy(args)
-    deploy.process()
+    deploy.parse_args()
     deploy.install_sspl_rpms()
+    from cortx.utils.service import Service
+    from cortx.utils.process import SimpleProcess
+    from cortx.utils.validator.v_service import ServiceV
+    from cortx.utils.validator.error import VError
+    from cortx.utils.conf_store import Conf
+    from cortx.sspl.lowlevel.framework import sspl_rabbitmq_reinit
+    from cortx.sspl.bin.setup_rabbitmq_cluster import RMQClusterConfiguration
+    from cortx.sspl.bin.sspl_constants import SSPL_BASE_DIR, file_store_config_path
     deploy.update_sspl_config()
     deploy.setup_rabbitmq()
+    deploy.process()
     deploy.setup_sspl()
     print(f"For more details see: {LOG_FILE}")
     print("***** COMPLETED!!! *****")
