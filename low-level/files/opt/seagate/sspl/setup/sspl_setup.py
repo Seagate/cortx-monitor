@@ -204,7 +204,7 @@ class ConfigCmd(Cmd):
         product = Conf.get('global_config', 'release>product')
         if not product:
             raise SetupError(
-                    errno.EINVAL, 
+                    errno.EINVAL,
                     "%s - validation failure. %s",
                     self.name,
                     "Product not found in %s" % (global_config))

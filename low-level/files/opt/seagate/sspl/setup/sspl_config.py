@@ -52,12 +52,14 @@ class SSPLConfig:
         Conf.load('sspl', 'yaml://%s' % consts.file_store_config_path)
 
     def replace_expr(self, filename:str, key, new_str:str):
+
         """The function helps to replace the expression provided as key
             with new string in the file provided in filename
             OR
-            It inserts the new string at given line as a key in the 
+            It inserts the new string at given line as a key in the
             provided file.
         """
+
         with open(filename, 'r+') as f:
             lines = f.readlines()
             if isinstance(key, str):
@@ -159,13 +161,13 @@ class SSPLConfig:
         shutil.copy2(
             '%s/low-level/files/etc/logrotate.d/sspl_logs' % consts.SSPL_BASE_DIR,
             consts.SSPL_LOGROTATE_CONF)
-        
+
         # This rsyslog restart will happen after successful updation of rsyslog
         # conf file and before sspl starts. If at all this will be removed from
         # here, there will be a chance that SSPL intial logs will not be present in
         # "/var/log/<product>/sspl/sspl.log" file. So, initial logs needs to be collected from
         # "/var/log/messages"
-        
+
         Service('dbus').process("restart", 'rsyslog.service')
 
         # For node replacement scenario consul will not be running on the new node. But,
@@ -194,7 +196,7 @@ class SSPLConfig:
             output, error, returncode = SimpleProcess(rmq_cluster_status_cmd).run()
             try:
                 rabbitmq_cluster_status = json.loads(output)
-            except Exception as error:
+            except Exception:
                 raise SetupError(
                             errno.EINVAL,
                             "RabbitMQ cluster status is not okay! \n, status : %s",
