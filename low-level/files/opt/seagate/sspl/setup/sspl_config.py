@@ -129,6 +129,7 @@ class SSPLConfig:
         # SSPL Log file configuration
         # SSPL_LOG_FILE_PATH = self.getval_from_ssplconf('sspl_log_file_path')
         SSPL_LOG_FILE_PATH = Conf.get('sspl', 'SYSTEM_INFORMATION>sspl_log_file_path')
+        IEM_LOG_FILE_PATH = Conf.get('sspl', 'IEMSENSOR>log_file_path')
         if SSPL_LOG_FILE_PATH:
             self.replace_expr(consts.RSYSLOG_SSPL_CONF,
                         'File.*[=,"]', 'File="%s"' % SSPL_LOG_FILE_PATH)
@@ -138,17 +139,17 @@ class SSPLConfig:
 
         # IEM configuration
         # Configure log file path in Rsyslog and logrotate configuration file
-        LOG_FILE_PATH = Conf.get('sspl', 'SYSTEM_INFORMATION>log_file_path')
+        IEM_LOG_FILE_PATH = Conf.get('sspl', 'IEMSENSOR>log_file_path')
 
-        if LOG_FILE_PATH:
-            self.replace_expr(consts.RSYSLOG_CONF,
-                    'File.*[=,"]', 'File="%s"' % LOG_FILE_PATH)
+        if IEM_LOG_FILE_PATH:
+            self.replace_expr(consts.RSYSLOG_IEM_CONF,
+                    'File.*[=,"]', 'File="%s"' % IEM_LOG_FILE_PATH)
             self.replace_expr(
                     f'{consts.SSPL_BASE_DIR}/low-level/files/etc/logrotate.d/iem_messages',
-                    0, LOG_FILE_PATH)
+                    0, IEM_LOG_FILE_PATH)
         else:
-            self.replace_expr(consts.RSYSLOG_CONF,
-                    'File.*[=,"]', 'File=/var/log/%s/iem/iem_messages' % consts.PRODUCT_FAMILY)
+            self.replace_expr(consts.RSYSLOG_IEM_CONF,
+                    'File.*[=,"]', 'File="/var/log/%s/iem/iem_messages"' % consts.PRODUCT_FAMILY)
 
         # Create logrotate dir in case it's not present for dev environment
         if not os.path.exists(consts.LOGROTATE_DIR):

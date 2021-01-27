@@ -16,7 +16,7 @@
 cluster:
    cluster_id: CC01
    server_nodes:
-     abc25957545942cfa728b74cead1a882: srvnode1
+     30512e5ae6df9f1ea02327bab45e499d: srvnode1
    srvnode1:
       site_id: DC01
       rack_id: RC01
