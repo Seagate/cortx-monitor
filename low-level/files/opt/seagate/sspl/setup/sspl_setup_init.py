@@ -33,7 +33,7 @@ from cortx.utils.conf_store import Conf
 
 class SSPLInit:
 
-    """Creates Data Path and checks for process and 
+    """Creates Data Path and checks for process and
        rpm dependencies based on role.
     """
 
