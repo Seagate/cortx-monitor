@@ -60,7 +60,8 @@ class SSPLInit:
     MDADM_PATH = '/etc/mdadm.conf'
 
     def __init__(self):
-        """init methond for SSPL Setup Init Class"""
+
+        """init methond for SSPL Setup Init Class"""   
         self.role = None
         self.dp = True
         Conf.load('sspl', f"yaml://{file_store_config_path}")
@@ -89,7 +90,7 @@ class SSPLInit:
         uid = self.get_uid(user)
         if uid == -1:
             raise SetupError(
-                        errno.EINVAL, 
+                        errno.EINVAL,
                         "No User Found with name : %s", user)
         os.chown(path, uid, grpid)
         for root, dirs, files in os.walk(path):
@@ -106,7 +107,7 @@ class SSPLInit:
             sspldp = Conf.get('sspl', 'SYSTEM_INFORMATION>data_path')
             if not sspldp :
                 raise SetupError(
-                            errno.EINVAL, 
+                            errno.EINVAL,
                             "Data Path Not set in %s" 
                             % file_store_config_path)
 
@@ -125,7 +126,7 @@ class SSPLInit:
         # installation, etc based on 'role'
         if self.role:
             self.check_dependencies()
-        
+
         # Create mdadm.conf to set ACL on it.
         with open(self.MDADM_PATH, 'a'):
             os.utime(self.MDADM_PATH)
