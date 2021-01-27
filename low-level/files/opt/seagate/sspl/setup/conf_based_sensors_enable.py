@@ -19,9 +19,9 @@ import os
 import consul
 from cortx.utils.conf_store import Conf
 
-from cortx.sspl.bin.sspl_constants import (CONSUL_HOST, CONSUL_PORT, 
-                PRODUCT_FAMILY, file_store_config_path, storage_type,
-                server_type, SSPL_STORE_TYPE)
+from cortx.sspl.bin.sspl_constants import (CONSUL_HOST, CONSUL_PORT,
+                                        PRODUCT_FAMILY, storage_type,
+                                        server_type, SSPL_STORE_TYPE)
 
 def update_sensor_info():
 
