@@ -33,7 +33,7 @@ from cortx.utils.conf_store import Conf
 
 class SSPLInit:
 
-    """Init Setup Interface"""
+    """Init Setup Interface."""
 
     name = "init"
 
@@ -61,7 +61,7 @@ class SSPLInit:
 
     def __init__(self):
 
-        """init methond for SSPL Setup Init Class"""
+        """init methond for SSPL Setup Init Class."""
         self.role = None
         self.dp = True
         Conf.load('sspl', f"yaml://{file_store_config_path}")
