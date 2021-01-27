@@ -64,7 +64,7 @@ class SSPLConfig:
         with open(filename, 'r+') as f:
             lines = f.readlines()
             if isinstance(key, str):
-                for i, line in enumerate(lines):                 
+                for i, line in enumerate(lines):
                     if re.search(key, line):
                         lines[i] = re.sub(key, new_str, lines[i])
             elif isinstance(key, int):
@@ -87,7 +87,7 @@ class SSPLConfig:
 
         if not os.path.isfile(consts.file_store_config_path):
             raise SetupError(
-                        errno.EINVAL, 
+                        errno.EINVAL,
                         "Missing configuration!! Create and rerun.",
                         consts.file_store_config_path)
 
@@ -105,7 +105,7 @@ class SSPLConfig:
         # Get Product
         # product = self.getval_from_ssplconf('product')
         product = Conf.get('global_config', 'release>product')
-        
+
         if not product:
             raise SetupError(
                         errno.EINVAL, 
@@ -142,7 +142,7 @@ class SSPLConfig:
             self.replace_expr(self.RSYSLOG_SSPL_CONF,
                         'File.*[=,"]', 'File="%s"' % SSPL_LOG_FILE_PATH)
             self.replace_expr(
-                    f"{self.DIR_NAME}/low-level/files/etc/logrotate.d/sspl_logs", 
+                    f"{self.DIR_NAME}/low-level/files/etc/logrotate.d/sspl_logs",
                     0, SSPL_LOG_FILE_PATH)
 
         # IEM configuration
@@ -154,10 +154,10 @@ class SSPLConfig:
             self.replace_expr(self.RSYSLOG_CONF,
                     'File.*[=,"]', 'File="%s"' % LOG_FILE_PATH)
             self.replace_expr(
-                    f'{self.DIR_NAME}/low-level/files/etc/logrotate.d/iem_messages', 
+                    f'{self.DIR_NAME}/low-level/files/etc/logrotate.d/iem_messages',
                     0, LOG_FILE_PATH)
         else:
-            self.replace_expr(self.RSYSLOG_CONF, 
+            self.replace_expr(self.RSYSLOG_CONF,
                     'File.*[=,"]', 'File=/var/log/%s/iem/iem_messages' % consts.PRODUCT_FAMILY)
 
         # Create logrotate dir in case it's not present for dev environment
@@ -262,7 +262,7 @@ class SSPLConfig:
         # (Eg: 8 from 3.8)
         self.rabbitmq_maintenance_release = self.rabbitmq_minor_release[-1]
 
-        # Skip this step if sspl is being configured for node replacement 
+        # Skip this step if sspl is being configured for node replacement
         # scenario as consul data is already
         # available on healthy node
         # Updating RabbitMQ cluster nodes.
@@ -293,7 +293,7 @@ class SSPLConfig:
         # available on healthy node
         # Updating build requested log level
         if not consts.REPLACEMENT_NODE_ENV_VAR_FILE:
-            log_level = None
+            log_level = "INFO"
             with open(f'{self.DIR_NAME}/low-level/files/opt/seagate' + \
                 '/sspl/conf/build-requested-loglevel', 'r') as f:
                 log_level = f.readline()
@@ -313,10 +313,10 @@ class SSPLConfig:
                         raise
                 else:
                     Conf.set('sspl', 'SYSTEM_INFORMATION>log_level', log_level)
-                    Conf.save()
+                    Conf.save('sspl')
             else:
                 raise SetupError(
                             errno.EINVAL,
                             "Unexpected log level is requested, '%s'",
                             log_level
-                            )      
+                            )

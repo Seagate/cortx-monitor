@@ -19,15 +19,11 @@ import os
 import consul
 from cortx.utils.conf_store import Conf
 
-from cortx.sspl.bin.sspl_constants import (CONSUL_HOST, CONSUL_PORT,
-    PRODUCT_FAMILY, file_store_config_path, storage_type, server_type, SSPL_STORE_TYPE)
-
-
-# TODO: Update sensor information in ConfStore
-# from cortx.utils.conf_store import Conf
+from cortx.sspl.bin.sspl_constants import (CONSUL_HOST, CONSUL_PORT, 
+                PRODUCT_FAMILY, file_store_config_path, storage_type,
+                server_type, SSPL_STORE_TYPE)
 
 def update_sensor_info():
-    Conf.load('sspl', file_store_config_path)
 
     key = 'monitor'
 
@@ -40,10 +36,10 @@ def update_sensor_info():
     sensors["MEMFAULTSENSOR"] = "true"
     sensors["CPUFAULTSENSOR"] = "true"
 
-    if storage_type.lower() in ["virtual", "jbod"]:
+    if storage_type and storage_type.lower() in ["virtual", "jbod"]:
         sensors["REALSTORSENSORS"] = "false"
 
-    if server_type.lower() in ["virtual"]:
+    if server_type and server_type.lower() in ["virtual"]:
         sensors["NODEHWSENSOR"] = "false"
         sensors["SASPORTSENSOR"] = "false"
         sensors["MEMFAULTSENSOR"] = "false"
@@ -69,7 +65,7 @@ def update_sensor_info():
 
     # Update sensor information for sspl_test
     test_file_config_path="/opt/seagate/%s/sspl/sspl_test/conf/sspl_tests.conf" % PRODUCT_FAMILY
-    Conf.load('sspl_test', test_file_config_path)
+    Conf.load('sspl_test', 'yaml://%s' % test_file_config_path)
     for sect, value in sensors.items():
         Conf.set('sspl_test', '%s>%s' % (sect, key), value)
 

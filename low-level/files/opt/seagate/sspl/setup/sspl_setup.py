@@ -192,6 +192,13 @@ class ConfigCmd(Cmd):
                     "%s - validation failure. %s",
                     self.name,
                     "Role not found in %s" % (global_config))
+        from cortx.sspl.bin.sspl_constants import setups
+        if role not in setups:
+            raise SetupError(
+                    errno.EINVAL,
+                    "%s - validataion failure. %s",
+                    self.name,
+                    "Role %s is not supported. Check Usage" % role)
 
     def process(self):
         from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.sspl_config import SSPLConfig
