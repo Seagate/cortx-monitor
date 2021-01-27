@@ -53,9 +53,8 @@ class SSPLConfig:
     SSPL_CONFIGURED_DIR = "/var/%s/sspl" % consts.PRODUCT_FAMILY
     SSPL_CONFIGURED = "%s/sspl-configured" % SSPL_CONFIGURED_DIR
 
-    def __init__(self, args : list):
+    def __init__(self):
         """Init method for sspl setup config."""
-        self.args = args
         self._script_dir = os.path.dirname(os.path.abspath(__file__))
         self.role = None
         Conf.load('sspl', 'yaml://%s' % consts.file_store_config_path)
@@ -102,16 +101,9 @@ class SSPLConfig:
         if os.path.isfile(self.SSPL_CONFIGURED):
             os.remove(self.SSPL_CONFIGURED)
 
-        # Get Product
-        # product = self.getval_from_ssplconf('product')
+        # validate Product
         product = Conf.get('global_config', 'release>product')
 
-        if not product:
-            raise SetupError(
-                        errno.EINVAL, 
-                        "No product specified in %s",
-                        consts.file_store_config_path)
-        
         if not consts.enabled_products:
             raise SetupError(errno.EINVAL, "No enabled products!")
         
@@ -123,13 +115,12 @@ class SSPLConfig:
 
         # Add sspl-ll user to required groups and sudoers file etc.
         sspl_reinit = [f"{self.DIR_NAME}/bin/sspl_reinit", product]
-        output, error, returncode = SimpleProcess(sspl_reinit).run()
+        _ , error, returncode = SimpleProcess(sspl_reinit).run()
         if returncode:
             raise SetupError(returncode,
                     "%s/bin/sspl_reinit failed for product %s with error : %e",
                       self.DIR_NAME, product, error
                     )
-        output = output
 
         os.makedirs(self.SSPL_CONFIGURED_DIR, exist_ok=True)
         with open(self.SSPL_CONFIGURED, 'a'):
@@ -177,10 +168,8 @@ class SSPLConfig:
         # here, there will be a chance that SSPL intial logs will not be present in
         # "/var/log/<product>/sspl/sspl.log" file. So, initial logs needs to be collected from
         # "/var/log/messages"
-        try :
-            Service('dbus').process("restart", 'rsyslog.service')
-        except Exception:
-            raise
+        
+        Service('dbus').process("restart", 'rsyslog.service')
 
         # For node replacement scenario consul will not be running on the new node. But,
         # there will be two instance of consul running on healthy node. When new node is configured

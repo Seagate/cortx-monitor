@@ -185,6 +185,7 @@ class ConfigCmd(Cmd):
                     self.name)
         global_config = self.args[1]
         Conf.load('global_config', global_config)
+
         role = Conf.get('global_config', 'release>setup')
         if not role:
             raise SetupError(
@@ -200,13 +201,17 @@ class ConfigCmd(Cmd):
                     self.name,
                     "Role %s is not supported. Check Usage" % role)
 
+        product = Conf.get('global_config', 'release>product')
+        if not product:
+            raise SetupError(
+                    errno.EINVAL, 
+                    "%s - validation failure. %s",
+                    self.name,
+                    "Product not found in %s" % (global_config))
+
     def process(self):
         from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.sspl_config import SSPLConfig
-        try:
-            SSPLConfig(self.args[1]).process()
-        except Exception:
-            raise
-
+        SSPLConfig().process()
 
 class TestCmd(Cmd):
     """Starts test based on plan (sanity | alerts)."""
