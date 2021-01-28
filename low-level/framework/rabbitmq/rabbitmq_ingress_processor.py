@@ -24,20 +24,22 @@ import json
 import os
 import time
 
-from cortx.utils.security.cipher import Cipher
 import pika
+from cortx.utils.security.cipher import Cipher
+from jsonschema import Draft3Validator, validate
 
-from jsonschema import Draft3Validator
-from jsonschema import validate
-from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
-from framework.utils.service_logging import logger
-from .rabbitmq_connector import RabbitMQSafeConnection
+from framework.base.module_thread import ScheduledModuleThread
+from framework.base.sspl_constants import RESOURCE_PATH, ServiceTypes
+from framework.rabbitmq.rabbitmq_egress_processor import \
+    RabbitMQegressProcessor
 from framework.utils import encryptor
-from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
+from framework.utils.conf_utils import (CLUSTER, GLOBAL_CONF, SRVNODE,
+                                        SSPL_CONF, Conf)
+from framework.utils.service_logging import logger
 from json_msgs.messages.actuators.ack_response import AckResponseMsg
-from framework.base.sspl_constants import RESOURCE_PATH, ServiceTypes, COMMON_CONFIGS
 
+from .rabbitmq_connector import RabbitMQSafeConnection
 
 try:
     use_security_lib = True
@@ -240,38 +242,28 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
     def _configure_exchange(self, retry=False):
         """Configure the RabbitMQ exchange with defaults available"""
         # Make methods locally available
-        get_value_with_default = self._conf_reader._get_value_with_default
         try:
+            self._virtual_host  = Conf.get(SSPL_CONF, f"{self.RABBITMQPROCESSOR}>{self.VIRT_HOST}",
+                                                            'SSPL')
 
-            self._virtual_host = get_value_with_default(self.RABBITMQPROCESSOR,
-                                                        self.VIRT_HOST, 'SSPL')
+            # Read common RabbitMQ configuration
+            self._primary_rabbitmq_host = Conf.get(SSPL_CONF, f"{self.RABBITMQPROCESSOR}>{self.PRIMARY_RABBITMQ_HOST}",
+                                                                 'localhost')
 
-            self._primary_rabbitmq_host = get_value_with_default(
-                self.RABBITMQPROCESSOR, self.PRIMARY_RABBITMQ_HOST,
-                'localhost')
+            # Read RabbitMQ configuration for sensor messages
+            self._queue_name    = Conf.get(SSPL_CONF, f"{self.RABBITMQPROCESSOR}>{self.QUEUE_NAME}",
+                                                                 'actuator-req-queue')
+            self._exchange_name = Conf.get(SSPL_CONF, f"{self.RABBITMQPROCESSOR}>{self.EXCHANGE_NAME}",
+                                                                 'sspl-in')
+            self._routing_key   = Conf.get(SSPL_CONF, f"{self.RABBITMQPROCESSOR}>{self.ROUTING_KEY}",
+                                                                 'actuator-req-key')
+            self._username = Conf.get(SSPL_CONF, f"{self.RABBITMQPROCESSOR}>{self.USER_NAME}",
+                                                                 'sspluser')
+            self._password = Conf.get(SSPL_CONF, f"{self.RABBITMQPROCESSOR}>{self.PASSWORD}",'')
 
-            self._exchange_name = get_value_with_default(
-                self.RABBITMQPROCESSOR, self.EXCHANGE_NAME, 'sspl-in')
+            cluster_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{self.CLUSTER_ID_KEY}",'CC01')
 
-            self._queue_name = get_value_with_default(
-                self.RABBITMQPROCESSOR, self.QUEUE_NAME, 'actuator-req-queue')
-
-            self._routing_key = get_value_with_default(
-                self.RABBITMQPROCESSOR, self.ROUTING_KEY, 'actuator-req-key')
-
-            self._username = get_value_with_default(self.RABBITMQPROCESSOR,
-                                                    self.USER_NAME,
-                                                    'sspluser')
-
-            self._password = get_value_with_default(self.RABBITMQPROCESSOR,
-                                                    self.PASSWORD,
-                                                    'sspl4ever')
-            cluster_id = get_value_with_default(self.SYSTEM_INFORMATION_KEY,
-                                                COMMON_CONFIGS.get(self.SYSTEM_INFORMATION_KEY).get(self.CLUSTER_ID_KEY),
-                                                '')
-            node_id = get_value_with_default(self.SYSTEM_INFORMATION_KEY,
-                                             COMMON_CONFIGS.get(self.SYSTEM_INFORMATION_KEY).get(self.NODE_ID_KEY),
-                                             '')
+            node_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.NODE_ID_KEY}",'SN01')
             # Decrypt RabbitMQ Password
             decryption_key = encryptor.gen_key(cluster_id, ServiceTypes.RABBITMQ.value)
             self._password = encryptor.decrypt(decryption_key, self._password.encode('ascii'), "RabbitMQingressProcessor")
@@ -295,4 +287,3 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
             logger.info("RabbitMQingressProcessorTests, shutdown, RabbitMQ ConnectionClosed")
         except Exception as err:
             logger.info("RabbitMQingressProcessorTests, shutdown, RabbitMQ {}".format(str(err)))
-

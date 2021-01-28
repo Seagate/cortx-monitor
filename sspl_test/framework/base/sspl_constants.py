@@ -70,13 +70,4 @@ class ServiceTypes(Enum):
 if __name__ == "__main__":
     print(' '.join(enabled_products))
 
-# Consul paths for enclosure connection
-GET_USERNAME = CONSUL_PATH + "consul kv get sspl/config/STORAGE_ENCLOSURE/controller/user"
-GET_PASSWD = CONSUL_PATH + "consul kv get sspl/config/STORAGE_ENCLOSURE/controller/secret"
-GET_PRIMARY_IP = CONSUL_PATH + "consul kv get sspl/config/STORAGE_ENCLOSURE/controller/primary_mc/ip"
-GET_PRIMARY_PORT = CONSUL_PATH + "consul kv get sspl/config/STORAGE_ENCLOSURE/controller/primary_mc/port"
-GET_SECONDARY_IP = CONSUL_PATH + "consul kv get sspl/config/STORAGE_ENCLOSURE/controller/secondary_mc/ip"
-GET_SECONDARY_PORT = CONSUL_PATH + "consul kv get sspl/config/STORAGE_ENCLOSURE/controller/secondary_mc/port"
-GET_CLUSTER_ID = CONSUL_PATH + "consul kv get sspl/config/SYSTEM_INFORMATION/cluster_id"
-
 SSPL_TEST_PATH = "/opt/seagate/cortx/sspl/sspl_test"

@@ -21,14 +21,14 @@
 
 import json
 
-from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
-from framework.utils.service_logging import logger
+from framework.base.module_thread import ScheduledModuleThread
 from framework.base.sspl_constants import enabled_products
-
 # Modules that receive messages from this module
-from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
-
+from framework.rabbitmq.rabbitmq_egress_processor import \
+    RabbitMQegressProcessor
+from framework.utils.conf_utils import SSPL_CONF, Conf
+from framework.utils.service_logging import logger
 from json_msgs.messages.actuators.ack_response import AckResponseMsg
 
 
@@ -193,11 +193,9 @@ class LoggingMsgHandler(ScheduledModuleThread, InternalMsgQ):
     def _read_config(self):
         """Read in configuration values"""
         try:
-            self._iem_routing_enabled = self._conf_reader._get_value_with_default(self.LOGGINGMSGHANDLER,
-                                                                 self.IEM_ROUTING_ENABLED,
+            self._iem_routing_enabled = Conf.get(SSPL_CONF, f"{self.LOGGINGMSGHANDLER}>{self.IEM_ROUTING_ENABLED}",
                                                                  'false')
-            self._iem_log_locally     = self._conf_reader._get_value_with_default(self.LOGGINGMSGHANDLER,
-                                                                 self.IEM_LOG_LOCALLY,
+            self._iem_log_locally     = Conf.get(SSPL_CONF, f"{self.LOGGINGMSGHANDLER}>{self.IEM_LOG_LOCALLY}",
                                                                  'true')
             logger.info(f"IEM routing enabled: {str(self._iem_routing_enabled)}")
             logger.info(f"IEM log locally: {str(self._iem_log_locally)}")

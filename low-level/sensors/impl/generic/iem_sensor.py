@@ -19,23 +19,26 @@
                     to RabbitMQ sensor channel.
   ****************************************************************************
 """
+import csv
+import datetime
 import errno
+import os
 import select
 import subprocess
-import datetime
-import os
-import csv
-import time
 import threading
-
+import time
 from functools import lru_cache
 
-from framework.base.module_thread import SensorThread
 from framework.base.internal_msgQ import InternalMsgQ
-from framework.base.sspl_constants import iem_severity_types, iem_source_types, iem_severity_to_alert_mapping, COMMON_CONFIGS
+from framework.base.module_thread import SensorThread
+from framework.base.sspl_constants import (PRODUCT_FAMILY,
+                                           iem_severity_to_alert_mapping,
+                                           iem_severity_types,
+                                           iem_source_types)
+from framework.utils.conf_utils import (CLUSTER, CLUSTER_ID, GLOBAL_CONF,
+                                        NODE_ID, RACK_ID, SITE_ID, SRVNODE,
+                                        SSPL_CONF, Conf)
 from framework.utils.service_logging import logger
-from framework.base.sspl_constants import PRODUCT_FAMILY
-
 from json_msgs.messages.sensors.iem_data import IEMDataMsg
 from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 
@@ -58,10 +61,10 @@ class IEMSensor(SensorThread, InternalMsgQ):
     # Default values for config  settings
     DEFAULT_LOG_FILE_PATH = f"/var/log/{PRODUCT_FAMILY}/iem/iem_messages"
     DEFAULT_TIMESTAMP_FILE_PATH = f"/var/{PRODUCT_FAMILY}/sspl/data/iem/last_processed_msg_time"
-    DEFAULT_SITE_ID = "001"
-    DEFAULT_RACK_ID = "001"
-    DEFAULT_NODE_ID = "001"
-    DEFAULT_CLUSTER_ID= "001"
+    DEFAULT_SITE_ID = "DC01"
+    DEFAULT_RACK_ID = "RC01"
+    DEFAULT_NODE_ID = "SN01"
+    DEFAULT_CLUSTER_ID= "CC01"
 
     # RANGE/VALID VALUES for IEC Components
     # NOTE: Ranges are   in hex number system.
@@ -123,25 +126,17 @@ class IEMSensor(SensorThread, InternalMsgQ):
         super(IEMSensor, self).initialize_msgQ(msgQlist)
 
         # Read configurations
-        self._log_file_path = self._conf_reader._get_value_with_default(
-            self.SENSOR_NAME.upper(), self.LOG_FILE_PATH_KEY,
-            self.DEFAULT_LOG_FILE_PATH)
 
-        self._timestamp_file_path = self._conf_reader._get_value_with_default(
-            self.SENSOR_NAME.upper(), self.TIMESTAMP_FILE_PATH_KEY,
-            self.DEFAULT_TIMESTAMP_FILE_PATH)
+        self._log_file_path = Conf.get(SSPL_CONF, f"{self.SENSOR_NAME.upper()}>{self.LOG_FILE_PATH_KEY}",
+                self.DEFAULT_LOG_FILE_PATH)
 
-        self._site_id = self._conf_reader._get_value_with_default(
-            self.SYSTEM_INFORMATION.upper(), COMMON_CONFIGS.get(self.SYSTEM_INFORMATION.upper()).get(self.SITE_ID_KEY), self.DEFAULT_SITE_ID)
+        self._timestamp_file_path = Conf.get(SSPL_CONF, f"{self.SENSOR_NAME.upper()}>{self.TIMESTAMP_FILE_PATH_KEY}",
+                self.DEFAULT_TIMESTAMP_FILE_PATH)
 
-        self._rack_id = self._conf_reader._get_value_with_default(
-            self.SYSTEM_INFORMATION.upper(), COMMON_CONFIGS.get(self.SYSTEM_INFORMATION.upper()).get(self.RACK_ID_KEY), self.DEFAULT_RACK_ID)
-
-        self._node_id = self._conf_reader._get_value_with_default(
-            self.SYSTEM_INFORMATION.upper(), COMMON_CONFIGS.get(self.SYSTEM_INFORMATION.upper()).get(self.NODE_ID_KEY), self.DEFAULT_NODE_ID)
-
-        self._cluster_id = self._conf_reader._get_value_with_default(
-            self.SYSTEM_INFORMATION.upper(), COMMON_CONFIGS.get(self.SYSTEM_INFORMATION.upper()).get(self.CLUSTER_ID_KEY), self.DEFAULT_CLUSTER_ID)
+        self._site_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{SITE_ID}",'DC01')
+        self._rack_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{RACK_ID}",'RC01')
+        self._node_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{NODE_ID}",'SN01')
+        self._cluster_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{CLUSTER_ID}",'CC01')
 
         return True
 

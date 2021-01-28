@@ -19,24 +19,23 @@
  ****************************************************************************
 """
 
-import os
 import json
-import time
+import os
 import socket
 import subprocess
+import time
 
-from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
+from framework.base.module_thread import ScheduledModuleThread
+from framework.rabbitmq.rabbitmq_egress_processor import \
+    RabbitMQegressProcessor
+from framework.utils.conf_utils import SSPL_CONF, Conf
 from framework.utils.service_logging import logger
-from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
-
-from json_msgs.messages.sensors.drive_mngr import DriveMngrMsg
-from json_msgs.messages.sensors.hpi_data import HPIDataMsg
-from json_msgs.messages.sensors.expander_reset import ExpanderResetMsg
-from json_msgs.messages.sensors.node_hw_data import NodeIPMIDataMsg
-
 from json_msgs.messages.actuators.ack_response import AckResponseMsg
-
+from json_msgs.messages.sensors.drive_mngr import DriveMngrMsg
+from json_msgs.messages.sensors.expander_reset import ExpanderResetMsg
+from json_msgs.messages.sensors.hpi_data import HPIDataMsg
+from json_msgs.messages.sensors.node_hw_data import NodeIPMIDataMsg
 # Modules that receive messages from this module
 from message_handlers.logging_msg_handler import LoggingMsgHandler
 
@@ -1002,28 +1001,23 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
     def _getDMreport_File(self):
         """Retrieves the file location"""
-        return self._conf_reader._get_value_with_default(self.DISKMSGHANDLER,
-                                                         self.DMREPORT_FILE,
-                                                         '/tmp/sspl/drivemanager/drive_manager.json')
+        return Conf.get(SSPL_CONF, f"{self.DISKMSGHANDLER}>{self.DMREPORT_FILE}",
+                                    '/tmp/sspl/drivemanager/drive_manager.json')
     def _getDiskInfo_File(self):
         """Retrieves the file location"""
-        return self._conf_reader._get_value_with_default(self.DISKMSGHANDLER,
-                                                         self.DISKINFO_FILE,
-                                                         '/tmp/dcs/disk_info.json')
+        return Conf.get(SSPL_CONF, f"{self.DISKMSGHANDLER}>{self.DISKINFO_FILE}",
+                                    '/tmp/dcs/disk_info.json')
     def _getAlways_log_IEM(self):
         """Retrieves flag signifying we should always log disk status as an IEM even if they
             haven't changed.  This is useful for always logging SMART results"""
-        val = bool(self._conf_reader._get_value_with_default(self.DISKMSGHANDLER,
-                                                              self.ALWAYS_LOG_IEM,
-                                                              False))
+        val = bool(Conf.get(SSPL_CONF, f"{self.DISKMSGHANDLER}>{self.ALWAYS_LOG_IEM}",
+                                        False))
     def _getDM_exp_reset_values(self):
         """Retrieves the values used to determine partial expander resets"""
-        self._max_drivemanager_events = int(self._conf_reader._get_value_with_default(self.DISKMSGHANDLER,
-                                                         self.MAX_DM_EVENTS,
+        self._max_drivemanager_events = int(Conf.get(SSPL_CONF, f"{self.DISKMSGHANDLER}>{self.MAX_DM_EVENTS}",
                                                          14))
 
-        self._max_drivemanager_event_interval = int(self._conf_reader._get_value_with_default(self.DISKMSGHANDLER,
-                                                         self.MAX_DM_EVENTS_INT,
+        self._max_drivemanager_event_interval = int(Conf.get(SSPL_CONF, f"{self.DISKMSGHANDLER}>{self.MAX_DM_EVENTS_INT}",
                                                          10))
 
         logger.info(f"Expander Reset will be triggered with {self._max_drivemanager_events}       \

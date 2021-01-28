@@ -22,24 +22,24 @@
 import json
 import time
 
-from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
+from framework.base.module_thread import ScheduledModuleThread
+from framework.base.sspl_constants import enabled_products
+from framework.utils.conf_utils import (CLUSTER, GLOBAL_CONF, SRVNODE,
+                                        SSPL_CONF, Conf)
 from framework.utils.service_logging import logger
-from framework.base.sspl_constants import enabled_products, COMMON_CONFIGS
-
-from json_msgs.messages.sensors.host_update import HostUpdateMsg
-from json_msgs.messages.sensors.local_mount_data import LocalMountDataMsg
+from framework.utils.severity_reader import SeverityReader
 from json_msgs.messages.sensors.cpu_data import CPUdataMsg
+from json_msgs.messages.sensors.disk_space_alert import DiskSpaceAlertMsg
+from json_msgs.messages.sensors.host_update import HostUpdateMsg
 from json_msgs.messages.sensors.if_data import IFdataMsg
+from json_msgs.messages.sensors.local_mount_data import LocalMountDataMsg
+from json_msgs.messages.sensors.node_hw_data import NodeIPMIDataMsg
 from json_msgs.messages.sensors.raid_data import RAIDdataMsg
 from json_msgs.messages.sensors.raid_integrity_msg import RAIDIntegrityMsg
-from json_msgs.messages.sensors.disk_space_alert import DiskSpaceAlertMsg
-from json_msgs.messages.sensors.node_hw_data import NodeIPMIDataMsg
-
+from message_handlers.logging_msg_handler import LoggingMsgHandler
 from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 
-from message_handlers.logging_msg_handler import LoggingMsgHandler
-from framework.utils.severity_reader import SeverityReader
 
 class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
     """Message Handler for generic node requests and generating
@@ -116,46 +116,24 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         # Initialize internal message queues for this module
         super(NodeDataMsgHandler, self).initialize_msgQ(msgQlist)
 
-        self._transmit_interval = int(self._conf_reader._get_value_with_default(
-                                                self.NODEDATAMSGHANDLER,
-                                                self.TRANSMIT_INTERVAL,
+        self._transmit_interval = int(Conf.get(SSPL_CONF, f"{self.NODEDATAMSGHANDLER}>{self.TRANSMIT_INTERVAL}",
                                                 60))
-        self._units = self._conf_reader._get_value_with_default(
-                                                self.NODEDATAMSGHANDLER,
-                                                self.UNITS,
+        self._units = Conf.get(SSPL_CONF, f"{self.NODEDATAMSGHANDLER}>{self.UNITS}",
                                                 "MB")
-        self._disk_usage_threshold = self._conf_reader._get_value_with_default(
-                                                self.NODEDATAMSGHANDLER,
-                                                self.DISK_USAGE_THRESHOLD,
+        self._disk_usage_threshold = Conf.get(SSPL_CONF, f"{self.NODEDATAMSGHANDLER}>{self.DISK_USAGE_THRESHOLD}",
                                                 self.DEFAULT_DISK_USAGE_THRESHOLD)
 
-        self._cpu_usage_threshold = self._conf_reader._get_value_with_default(
-                                                self.NODEDATAMSGHANDLER,
-                                                self.CPU_USAGE_THRESHOLD,
+        self._cpu_usage_threshold = Conf.get(SSPL_CONF, f"{self.NODEDATAMSGHANDLER}>{self.CPU_USAGE_THRESHOLD}",
                                                 self.DEFAULT_CPU_USAGE_THRESHOLD)
 
-        self._host_memory_usage_threshold = self._conf_reader._get_value_with_default(
-                                                self.NODEDATAMSGHANDLER,
-                                                self.HOST_MEMORY_USAGE_THRESHOLD,
+        self._host_memory_usage_threshold = Conf.get(SSPL_CONF, f"{self.NODEDATAMSGHANDLER}>{self.HOST_MEMORY_USAGE_THRESHOLD}",
                                                 self.DEFAULT_HOST_MEMORY_USAGE_THRESHOLD)
 
-        self.site_id = self._conf_reader._get_value_with_default(
-                                                self.SYSTEM_INFORMATION,
-                                                COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.SITE_ID),
-                                                '001')
-        self.rack_id = self._conf_reader._get_value_with_default(
-                                                self.SYSTEM_INFORMATION,
-                                                COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.RACK_ID),
-                                                '001')
-        self.node_id = self._conf_reader._get_value_with_default(
-                                                self.SYSTEM_INFORMATION,
-                                                COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.NODE_ID),
-                                                '001')
+        self.site_id = Conf.get(GLOBAL_CONF, f'{CLUSTER}>{SRVNODE}>{self.SITE_ID}','DC01')
+        self.rack_id = Conf.get(GLOBAL_CONF, f'{CLUSTER}>{SRVNODE}>{self.RACK_ID}','RC01')
+        self.node_id = Conf.get(GLOBAL_CONF, f'{CLUSTER}>{SRVNODE}>{self.NODE_ID}','SN01')
+        self.cluster_id = Conf.get(GLOBAL_CONF, f'{CLUSTER}>{self.CLUSTER_ID}','CC01')
 
-        self.cluster_id = self._conf_reader._get_value_with_default(
-                                                self.SYSTEM_INFORMATION,
-                                                self.CLUSTER_ID,
-                                                '0')
         self.prev_nw_status = {}
         self.bmcNwStatus = None
         self.severity_reader = SeverityReader()
@@ -535,7 +513,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
         if (self._node_sensor.cpu_usage <= self._cpu_usage_threshold) and (self.cpu_fault == True):
             # Create the cpu usage data message and hand it over to the egress processor to transmit
-            logger.warning("CPU usage decrised to {}%, lesser than configured threshold of {}%".\
+            logger.warning("CPU usage decreased to {}%, lesser than configured threshold of {}%".\
                 format(self._cpu_usage_threshold, self._node_sensor.cpu_usage))
 
             # Create the local mount data message and hand it over to the egress processor to transmit
@@ -791,7 +769,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
         if (self._node_sensor.disk_used_percentage <= self._disk_usage_threshold) and (self.disk_fault == True):
             # Create the disk space data message and hand it over to the egress processor to transmit
-            logger.warning("Disk usage decrised to {}%, lesser than threshold of {}%".\
+            logger.warning("Disk usage decreased to {}%, lesser than threshold of {}%".\
                 format(self._disk_usage_threshold, self._node_sensor.disk_used_percentage, ))
             diskSpaceAlertMsg = DiskSpaceAlertMsg(self._node_sensor.host_id,
                                     self._epoch_time,
@@ -923,4 +901,3 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""
         super(NodeDataMsgHandler, self).shutdown()
-

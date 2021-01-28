@@ -13,20 +13,23 @@
 # about this software or licensing, please email opensource@seagate.com or
 # cortx-questions@seagate.com.
 
+import hashlib
+import json
+import time
+
 # Checks connectivity to hw enclosure as part of hw self test
 # Read current sspl config (ip, port, username, pw)
 # Login to enclosure via webservice api request
 # Retrive show system cmd info
 import requests
-import hashlib
-import time
-import json
-
-from alerts.self_hw.self_hw_utilities import run_cmd, get_from_consul, get_node_id
-from sspl_test.framework.base.sspl_constants import (GET_PRIMARY_IP, GET_PRIMARY_PORT,
-    GET_USERNAME, GET_PASSWD, GET_CLUSTER_ID, GET_SECONDARY_IP, GET_SECONDARY_PORT)
-
 from cortx.utils.security.cipher import Cipher
+
+from alerts.self_hw.self_hw_utilities import get_node_id
+from framework.utils.conf_utils import (CLUSTER, CLUSTER_ID, CONTROLLER,
+                                        ENCLOSURE, GLOBAL_CONF, IP, PORT,
+                                        PRIMARY, SECONDARY, SECRET, SRVNODE,
+                                        STORAGE, STORAGE_ENCLOSURE, USER, Conf)
+
 
 def gen_key(cluster_id, service_name):
     ''' Generate key for decryption '''
@@ -67,15 +70,15 @@ def init(args):
 
 def test_self_hw_real_stor_enclosure_conn(args):
     # Default to srvnode-1
-    ip = get_from_consul(GET_PRIMARY_IP)
-    port = get_from_consul(GET_PRIMARY_PORT)
+    ip = Conf.get(GLOBAL_CONF, f"{STORAGE}>{ENCLOSURE}>{CONTROLLER}>{PRIMARY}>{IP}")
+    port = Conf.get(GLOBAL_CONF, f"{STORAGE}>{ENCLOSURE}>{CONTROLLER}>{PRIMARY}>{PORT}")
     if get_node_id() == "srvnode-2":
         # Update
-        ip = get_from_consul(GET_SECONDARY_IP)
-        port = get_from_consul(GET_SECONDARY_PORT)
-    username = get_from_consul(GET_USERNAME)
-    passwd = get_from_consul(GET_PASSWD)
-    cluster_id = get_from_consul(GET_CLUSTER_ID)
+        ip = Conf.get(GLOBAL_CONF, f"{STORAGE}>{ENCLOSURE}>{CONTROLLER}>{SECONDARY}>{IP}")
+        port = Conf.get(GLOBAL_CONF, f"{STORAGE}>{ENCLOSURE}>{CONTROLLER}>{SECONDARY}>{PORT}")
+    username = Conf.get(GLOBAL_CONF, f"{STORAGE}>{ENCLOSURE}>{CONTROLLER}>{USER}")
+    passwd = Conf.get(GLOBAL_CONF, f"{STORAGE}>{ENCLOSURE}>{CONTROLLER}>{SECRET}")
+    cluster_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{CLUSTER_ID}",'CC01')
 
     # decrypt the passwd
     decryption_key = gen_key(cluster_id, 'storage_enclosure')

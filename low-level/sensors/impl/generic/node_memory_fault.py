@@ -19,21 +19,23 @@ Sensor Module Thread responsible for sensing RAM memory faults on the Node serve
 """
 
 import json
+import os
 import socket
 import time
 import uuid
-import os
 
 from framework.base.internal_msgQ import InternalMsgQ
+from framework.base.module_thread import SensorThread
+from framework.base.sspl_constants import DATA_PATH
+from framework.utils.conf_utils import (CLUSTER, GLOBAL_CONF, SRVNODE,
+                                        SSPL_CONF, Conf)
+from framework.utils.procfs_interface import ProcFS
 from framework.utils.service_logging import logger
+from framework.utils.severity_reader import SeverityReader
+from framework.utils.store_factory import file_store
+from framework.utils.tool_factory import ToolFactory
 from message_handlers.logging_msg_handler import LoggingMsgHandler
 from message_handlers.node_data_msg_handler import NodeDataMsgHandler
-from framework.base.module_thread import SensorThread
-from framework.utils.severity_reader import SeverityReader
-from framework.utils.procfs_interface import ProcFS
-from framework.utils.tool_factory import ToolFactory
-from framework.utils.store_factory import file_store
-from framework.base.sspl_constants import COMMON_CONFIGS, DATA_PATH
 
 # Override default store
 store = file_store
@@ -96,26 +98,17 @@ class MemFaultSensor(SensorThread, InternalMsgQ):
 
         super(MemFaultSensor, self).initialize_msgQ(msgQlist)
 
-        self._site_id = self._conf_reader._get_value_with_default(
-            self.SYSTEM_INFORMATION_KEY,
-            COMMON_CONFIGS.get(self.SYSTEM_INFORMATION_KEY).get(self.SITE_ID_KEY), '001')
-        self._cluster_id = self._conf_reader._get_value_with_default(
-            self.SYSTEM_INFORMATION_KEY,
-            COMMON_CONFIGS.get(self.SYSTEM_INFORMATION_KEY).get(self.CLUSTER_ID_KEY), '001')
-        self._rack_id = self._conf_reader._get_value_with_default(
-            self.SYSTEM_INFORMATION_KEY,
-            COMMON_CONFIGS.get(self.SYSTEM_INFORMATION_KEY).get(self.RACK_ID_KEY), '001')
-        self._node_id = self._conf_reader._get_value_with_default(
-            self.SYSTEM_INFORMATION_KEY,
-            COMMON_CONFIGS.get(self.SYSTEM_INFORMATION_KEY).get(self.NODE_ID_KEY), '001')
+        self._site_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.SITE_ID_KEY}",'DC01')
+        self._rack_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.RACK_ID_KEY}",'RC01')
+        self._node_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.NODE_ID_KEY}",'SN01')
+        self._cluster_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{self.CLUSTER_ID_KEY}",'CC01')
 
         # get the mem fault implementor from configuration
-        mem_fault_utility = self._conf_reader._get_value_with_default(
-            self.name().capitalize(), self.PROBE,
+        mem_fault_utility = Conf.get(SSPL_CONF, f"{self.name().capitalize()}>{self.PROBE}",
             "procfs")
 
-        self.polling_interval = int(self._conf_reader._get_value_with_default(
-            self.SENSOR_NAME.upper(), self.POLLING_INTERVAL_KEY, self.DEFAULT_POLLING_INTERVAL))
+        self.polling_interval = int(Conf.get(SSPL_CONF,f"{self.SENSOR_NAME.upper()}>{self.POLLING_INTERVAL_KEY}",
+                    self.DEFAULT_POLLING_INTERVAL))
 
         # Creating the instance of ToolFactory class
         self.tool_factory = ToolFactory()

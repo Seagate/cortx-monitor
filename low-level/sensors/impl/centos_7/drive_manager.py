@@ -24,22 +24,23 @@
 
 """
 
-import os
 import json
-import time
+import os
 import subprocess
+import time
+
 import pyinotify
+from zope.interface import implementer
 
-from framework.base.module_thread import SensorThread
 from framework.base.internal_msgQ import InternalMsgQ
-from framework.utils.service_logging import logger
+from framework.base.module_thread import SensorThread
 from framework.base.sspl_constants import PRODUCT_FAMILY
-
+from framework.utils.conf_utils import SSPL_CONF, Conf
+from framework.utils.service_logging import logger
 # Modules that receive messages from this module
 from message_handlers.disk_msg_handler import DiskMsgHandler
-
-from zope.interface import implementer
 from sensors.IDrive_manager import IDriveManager
+
 
 @implementer(IDriveManager)
 class DriveManager(SensorThread, InternalMsgQ):
@@ -245,15 +246,13 @@ class DriveManager(SensorThread, InternalMsgQ):
 
     def _getDrive_Mngr_Dir(self):
         """Retrieves the drivemanager path to monitor on the file system"""
-        return self._conf_reader._get_value_with_default(self.DRIVEMANAGER,
-                                                                 self.DRIVE_MANAGER_DIR,
-                                                                 '/tmp/dcs/drivemanager')
+        return Conf.get(SSPL_CONF, f"{self.DRIVEMANAGER}>{self.DRIVE_MANAGER_DIR}",
+                                                    '/tmp/dcs/drivemanager')
 
     def _getStart_delay(self):
         """Retrieves the start delay used to allow dcs-collector to startup first"""
-        return self._conf_reader._get_value_with_default(self.DRIVEMANAGER,
-                                                                 self.START_DELAY,
-                                                                 '20')
+        return Conf.get(SSPL_CONF, f"{self.DRIVEMANAGER}>{self.START_DELAY}",
+                                                    '20')
 
     def _notify_DiskMsgHandler(self, status_file : str, serial_num_file):
         """Send the event to the disk message handler for generating JSON message"""

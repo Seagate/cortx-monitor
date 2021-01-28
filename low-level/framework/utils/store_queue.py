@@ -21,10 +21,13 @@
 
 import os
 import sys
+
 from framework.base.sspl_constants import DATA_PATH
-from framework.utils.store_factory import store
+from framework.utils.conf_utils import SSPL_CONF, Conf
 from framework.utils.config_reader import ConfigReader
 from framework.utils.service_logging import logger
+from framework.utils.store_factory import store
+
 
 class StoreQueue:
 
@@ -33,9 +36,7 @@ class StoreQueue:
     CACHE_DIR_NAME       = "SSPL_UNSENT_MESSAGES"
 
     def __init__(self):
-        self._conf_reader = ConfigReader()
-        self._max_size = int(self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
-                                                                self.LIMIT_CONSUL_MEMORY, 50000000))
+        self._max_size = int(Conf.get(SSPL_CONF, f"{self.RABBITMQPROCESSOR}>{self.LIMIT_CONSUL_MEMORY}", 50000000))
 
         self.cache_dir_path = os.path.join(DATA_PATH, self.CACHE_DIR_NAME)
         self.SSPL_MEMORY_USAGE = os.path.join(self.cache_dir_path, 'SSPL_MEMORY_USAGE')
@@ -116,5 +117,3 @@ class StoreQueue:
         self.tail += 1
         self.current_size += size_of_item
         logger.debug("StoreQueue, put, current memory usage %s" % self.current_size)
-
-store_queue = StoreQueue()

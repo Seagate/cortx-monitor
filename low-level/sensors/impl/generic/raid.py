@@ -19,25 +19,27 @@
                     the node_data_msg_handler when a change is detected
  ****************************************************************************
 """
-import os
 import json
-import time
-import subprocess
+import os
 import socket
+import subprocess
+import time
 import uuid
 
-from framework.base.module_thread import SensorThread
+from zope.interface import implementer
+
 from framework.base.internal_msgQ import InternalMsgQ
+from framework.base.module_thread import SensorThread
 from framework.base.sspl_constants import COMMON_CONFIGS
+from framework.utils.conf_utils import (CLUSTER, GLOBAL_CONF, SRVNODE,
+                                        SSPL_CONF, Conf)
 from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
-
+from message_handlers.logging_msg_handler import LoggingMsgHandler
 # Modules that receive messages from this module
 from message_handlers.node_data_msg_handler import NodeDataMsgHandler
-from message_handlers.logging_msg_handler import LoggingMsgHandler
-
-from zope.interface import implementer
 from sensors.Iraid import IRAIDsensor
+
 
 @implementer(IRAIDsensor)
 class RAIDsensor(SensorThread, InternalMsgQ):
@@ -123,14 +125,10 @@ class RAIDsensor(SensorThread, InternalMsgQ):
 
         self._prev_drive_dict = {}
 
-        self._site_id = self._conf_reader._get_value_with_default(
-                                self.SYSTEM_INFORMATION, COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.SITE_ID), '001')
-        self._cluster_id = self._conf_reader._get_value_with_default(
-                                self.SYSTEM_INFORMATION, COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.CLUSTER_ID), '001')
-        self._rack_id = self._conf_reader._get_value_with_default(
-                                self.SYSTEM_INFORMATION, COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.RACK_ID), '001')
-        self._node_id = self._conf_reader._get_value_with_default(
-                                self.SYSTEM_INFORMATION, COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.NODE_ID), '001')
+        self._site_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.SITE_ID}",'DC01')
+        self._rack_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.RACK_ID}",'RC01')
+        self._node_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.NODE_ID}",'SN01')
+        self._cluster_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{self.CLUSTER_ID}",'CC01')
         # Allow systemd to process all the drives so we can map device name to serial numbers
         #time.sleep(120)
 
@@ -541,8 +539,7 @@ class RAIDsensor(SensorThread, InternalMsgQ):
 
     def _get_RAID_status_file(self):
         """Retrieves the file containing the RAID status information"""
-        return self._conf_reader._get_value_with_default(self.RAIDSENSOR,
-                                                        self.RAID_STATUS_FILE,
+        return Conf.get(SSPL_CONF, f"{self.RAIDSENSOR}>{self.RAID_STATUS_FILE}",
                                                         '/proc/mdstat')
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""

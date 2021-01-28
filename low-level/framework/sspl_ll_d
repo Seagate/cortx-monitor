@@ -24,56 +24,64 @@
  ****************************************************************************
 """
 
-import getopt
 import fcntl
+import getopt
+import json
 import logging
 import os
 import queue
 import signal
-import sys
 import subprocess
-from threading import Thread
+import sys
 import time
-import uuid
-import json
 import traceback
+import uuid
+from threading import Thread
 
 # Add the top level directories
 sys.path.insert(0, f'/opt/seagate/cortx/sspl/low-level')
 
-from framework.utils.config_reader import ConfigReader
-from framework.utils.service_logging import init_logging
-from framework.utils.service_logging import logger
-from framework.utils.store_factory import store
-
-# Modules for handling RabbitMQ messages and manipulating internal threads
-from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
-from framework.rabbitmq.rabbitmq_ingress_processor import RabbitMQingressProcessor
-
-from framework.rabbitmq.plane_cntrl_rmq_egress_processor import PlaneCntrlRMQegressProcessor
-from framework.rabbitmq.plane_cntrl_rmq_ingress_processor import PlaneCntrlRMQingressProcessor
-from framework.base.sspl_constants import enabled_products, OperatingSystem, COMMON_CONFIGS, SSPL_SETTINGS, sspl_settings_configured_groups
-from framework.base.module_thread import SensorThread
+from actuators.impl.actuator import Actuator
 from framework.actuator_state_manager import actuator_state_manager
-
+from framework.base.module_thread import SensorThread
+from framework.base.sspl_constants import (COMMON_CONFIGS, PRODUCT_FAMILY,
+                                           SSPL_SETTINGS, OperatingSystem,
+                                           enabled_products,
+                                           sspl_settings_configured_groups)
 from framework.rabbitmq.logging_processor import LoggingProcessor
-from framework.rabbitmq.thread_controller import ThreadController
+from framework.rabbitmq.plane_cntrl_rmq_egress_processor import \
+    PlaneCntrlRMQegressProcessor
+from framework.rabbitmq.plane_cntrl_rmq_ingress_processor import \
+    PlaneCntrlRMQingressProcessor
 from framework.rabbitmq.rabbitmq_egress_accumulated_msgs_processor import \
     RabbitMQEgressAccumulatedMsgsProcessor
-from framework.base.sspl_constants import PRODUCT_FAMILY
-
-from actuators.impl.actuator import Actuator
-from message_handlers.node_controller_msg_handler import NodeControllerMsgHandler
-from message_handlers.node_data_msg_handler import NodeDataMsgHandler
-from message_handlers.disk_msg_handler import DiskMsgHandler
-from message_handlers.logging_msg_handler import LoggingMsgHandler
-from message_handlers.service_msg_handler import ServiceMsgHandler
-from message_handlers.plane_cntrl_msg_handler import PlaneCntrlMsgHandler
-from message_handlers.real_stor_encl_msg_handler import RealStorEnclMsgHandler
-from message_handlers.real_stor_actuator_msg_handler import RealStorActuatorMsgHandler
-
+# Modules for handling RabbitMQ messages and manipulating internal threads
+from framework.rabbitmq.rabbitmq_egress_processor import \
+    RabbitMQegressProcessor
+from framework.rabbitmq.rabbitmq_ingress_processor import \
+    RabbitMQingressProcessor
+from framework.rabbitmq.thread_controller import ThreadController
+from framework.utils.conf_utils import (CLUSTER, GLOBAL_CONF, HOST, MONITOR,
+                                        OPERATING_SYSTEM, PORT, PRODUCT,
+                                        RELEASE, RSYSLOG, SETUP, SRVNODE,
+                                        SSPL_CONF, SYSTEM_INFORMATION,
+                                        THREADED, Conf)
+from framework.utils.config_reader import ConfigReader
+from framework.utils.service_logging import init_logging, logger
+from framework.utils.store_factory import store
 # Message to send to HAlon upon critical thread errors
 from json_msgs.messages.actuators.thread_controller import ThreadControllerMsg
+from message_handlers.disk_msg_handler import DiskMsgHandler
+from message_handlers.logging_msg_handler import LoggingMsgHandler
+from message_handlers.node_controller_msg_handler import \
+    NodeControllerMsgHandler
+from message_handlers.node_data_msg_handler import NodeDataMsgHandler
+from message_handlers.plane_cntrl_msg_handler import PlaneCntrlMsgHandler
+from message_handlers.real_stor_actuator_msg_handler import \
+    RealStorActuatorMsgHandler
+from message_handlers.real_stor_encl_msg_handler import RealStorEnclMsgHandler
+from message_handlers.service_msg_handler import ServiceMsgHandler
+
 
 #DO NOT EDIT: Marker comment to dynamically add code to initialize coverage obj for code coverage report generation
 
@@ -87,7 +95,6 @@ DEGRADED_STATE_MODULES = 'degraded_state_modules'
 
 # Section containing information about the system we're running on
 SYS_INFORMATION = 'SYSTEM_INFORMATION'
-OPER_SYSTEM     = 'operating_system'
 PRODUCT_NAME    = 'product'
 SETUP           = 'setup'
 LOG_LEVEL       = 'log_level'
@@ -275,14 +282,13 @@ def main(conf_reader, systemd_support):
     sspl_threaded_modules = {}
 
     # Read in operating system value from configuration file
-    operating_system = conf_reader._get_value(SYS_INFORMATION, COMMON_CONFIGS.get(SYS_INFORMATION).get(OPER_SYSTEM))
-    logger.info("sspl-ll Bootstrap: configuring for OS: %s" % operating_system)
+    logger.info("sspl-ll Bootstrap: configuring for OS: %s" % OPERATING_SYSTEM)
 
     # Read in product value from configuration file
-    product = conf_reader._get_value(SYS_INFORMATION, COMMON_CONFIGS.get(SYS_INFORMATION).get(PRODUCT_NAME))
+    product = Conf.get(GLOBAL_CONF, f"{RELEASE}>{PRODUCT}")
     # Read in setup value from configuration file
     try:
-        setup = conf_reader._get_value(SYS_INFORMATION, COMMON_CONFIGS.get(SYS_INFORMATION).get(SETUP))
+        setup = Conf.get(GLOBAL_CONF, f"{RELEASE}>{SETUP}")
     except Exception:
         setup = 'hw'
 
@@ -297,9 +303,8 @@ def main(conf_reader, systemd_support):
 
     conf_reader = ConfigReader()
     for group in SSPL_SETTINGS.keys():
-        monitor = conf_reader._get_value_with_default(
-                group, 'monitor', 'true')
-        if monitor != 'true':
+        monitor = Conf.get(SSPL_CONF, f"{group}>{MONITOR}", 'true')
+        if monitor not in ['true', True]:
             sspl_settings_configured_groups -= {group}
 
 
@@ -346,7 +351,7 @@ def main(conf_reader, systemd_support):
 
     sspl_threaded_modules, msgQlist = _sensors_actuators_factory(
                                             sspl_threaded_modules, msgQlist,
-                                            operating_system, product, setup)
+                                            OPERATING_SYSTEM, product, setup)
 
     # Add the ThreadConroller automatically
     msgQlist[ThreadController.name()] = queue.Queue()
@@ -402,12 +407,13 @@ def main(conf_reader, systemd_support):
             # or it is defined in core modules or prodcut is LDR_R2
             resume = False
             if name in modules_to_resume or name in ThreadController.ALWAYS_ACTIVE_MODULES \
-                or product.upper() == "LDR_R2":
+                or product.upper() == "LR2":
                 resume = True
 
             thread = Thread(target=_run_thread_capture_errors,
                             args=(curr_module, sspl_threaded_modules, msgQlist, conf_reader, product, resume))
             thread.start()
+            logger.info(f"Started: {curr_module}")
 
         # Start the ThreadController module with the list of threads
         logger.info("Starting: %s" % ThreadController.name())
@@ -415,7 +421,7 @@ def main(conf_reader, systemd_support):
         # Initialize the thread controller with the list of references to all modules
         controller_thread = Thread(target=_run_thread_capture_errors,
                             args=(threadController, sspl_threaded_modules, msgQlist, conf_reader, product, True))
-        threadController.initialize_thread_list(sspl_threaded_modules, operating_system, product, systemd_support)
+        threadController.initialize_thread_list(sspl_threaded_modules, OPERATING_SYSTEM, product, systemd_support)
         controller_thread.start()
 
         # Block main thread until thread controller has been halted
@@ -532,7 +538,7 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist, operating_system
         # Look at module's configuration section and determine if it's threaded
         threaded = 'True'
         try:
-            threaded = conf_reader._get_value(klass.name().upper(), 'threaded')
+            threaded = Conf.get(SSPL_CONF, f"{klass.name().upper()}>{THREADED}")
             if threaded == '':
                 threaded = 'False'
         except Exception as e:
@@ -542,7 +548,7 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist, operating_system
                         % (module, threaded, klass.name()))
 
         # If it's threaded then add it to the list which will be handled by the ThreadController
-        if threaded in ['True', 'true']:
+        if threaded in ['True', 'true', True]:
             sspl_threaded_modules[klass.name()] = klass()
             msgQlist[klass.name()] = queue.Queue()
         elif issubclass(klass, Actuator):
@@ -772,13 +778,9 @@ if __name__ == "__main__":
 
     # Initialize logging
     try:
-        logging_level = conf_reader._get_value_with_default(SYS_INFORMATION, LOG_LEVEL, "INFO")
-        syslog_host = conf_reader._get_value_with_default(SYS_INFORMATION,
-                                                          COMMON_CONFIGS.get(SYS_INFORMATION).get(SYSLOG_HOST_KEY),
-                                                          DEFAULT_SYSLOG_HOST)
-        syslog_port = int(conf_reader._get_value_with_default(SYS_INFORMATION,
-                                                              COMMON_CONFIGS.get(SYS_INFORMATION).get(SYSLOG_PORT_KEY),
-                                                              DEFAULT_SYSLOG_PORT))
+        logging_level = Conf.get(SSPL_CONF, f"{SYS_INFORMATION}>{LOG_LEVEL}", "INFO")
+        syslog_host = Conf.get(GLOBAL_CONF, f"{RSYSLOG}>{HOST}", DEFAULT_SYSLOG_HOST)
+        syslog_port = int(Conf.get(GLOBAL_CONF, f"{RSYSLOG}>{PORT}", DEFAULT_SYSLOG_PORT))
         init_logging("SSPL-LL", logging_level, syslog_host, syslog_port)
 
     except Exception as err:
