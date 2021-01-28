@@ -189,7 +189,7 @@ XINITDWATCHDOG:
 
 RARITANPDU:
    user: admin
-   pass: admin
+   pass: gAAAAABgEnOnRAhNzFyATr3iZdoC_tCeqEBqnwFb7CNYVXhd6i3Pl93Il7aDsG0Ro5ZRRaXr2LUPQEse46NVlDTAK7gbzoxGyg==
    comm_port: /dev/ttyACM0
    IP_addr: 172.16.1.222
    max_login_attempts: 2
@@ -200,7 +200,7 @@ RAIDSENSOR:
 
 IPMI:
    user: admin
-   pass: admin
+   pass: gAAAAABgEnOnRAhNzFyATr3iZdoC_tCeqEBqnwFb7CNYVXhd6i3Pl93Il7aDsG0Ro5ZRRaXr2LUPQEse46NVlDTAK7gbzoxGyg==
 
 BMC_INTERFACE:
    default: system

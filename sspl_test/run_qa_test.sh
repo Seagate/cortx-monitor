@@ -144,6 +144,8 @@ restore_cfg_services()
         port=$(conf $common_config get "storage>$encl_id>controller>primary>port")
         port=$(echo $port | tr -d "["\" | tr -d "\"]")
         if [ "$port" == "$MOCK_SERVER_PORT" ]
+        # TODO: Avoid set on global config, need to change this before 
+        # provisioner gives common backend
         then
             conf $common_config set "storage>$encl_id>controller>primary>port=$primary_port"
             conf $common_config set "storage>$encl_id>controller>primary>ip=$primary_ip"
