@@ -60,7 +60,6 @@ class SSPLDevDeploy:
         self.CORTX_MONITOR_BASE_URL = "https://raw.githubusercontent.com/Seagate/cortx-monitor/1cec21efc4f5776cabc6e749ed4a57fa90466972"
         self.install_3rd_party_packages = False
         self.skip_bmc = False
-        self.initialize_sspl = False
         self.TARGET_BUILD = ""
         self.RPMS_PATH = ""
         self.PRODUCT_VERSION = "LR2"
@@ -91,8 +90,6 @@ class SSPLDevDeploy:
             self.cleanup()
         if self.args.standalone_installation:
             self.install_3rd_party_packages = True
-        if self.args.initialize_sspl:
-            self.initialize_sspl = True
         if self.args.product_version:
             self.PRODUCT_VERSION = self.args.product_version
         if self.args.rmq_user:
@@ -287,14 +284,13 @@ class SSPLDevDeploy:
 
     def setup_sspl(self):
         """Initialize SSPL service."""
-        from cortx.sspl.bin.sspl_setup import main
-        if self.initialize_sspl:
-            commands = [
-                "post_install --config %s" % (self.sample_global_config),
-                "init --config %s" % (self.sample_global_config),
-                "config --config %s" % (self.sample_global_config),
-                "check"
-            ]
+        from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.sspl_setup import main
+        commands = [
+            "sspl_setup post_install --config %s" % (self.sample_global_config),
+            "sspl_setup init --config %s" % (self.sample_global_config),
+            "sspl_setup config --config %s" % (self.sample_global_config),
+            "sspl_setup check"
+        ]
         if self.CLUSTER_NODES:
             # WARN: Configuring RMQ cluster will remove existing cluster setup.
             commands.append("join_cluster --nodes %s" % (self.CLUSTER_NODES))
@@ -350,7 +346,6 @@ if __name__ == '__main__':
     argParser.add_argument("-N", "--cluster_nodes", default="", help="Nodes separated by delimeter ',' ie. node1,node2")
     argParser.add_argument("--standalone_installation", action="store_true", help="Configure SSPL 3rd party \
         dependencies like consul, rabbitmq")
-    argParser.add_argument("--initialize_sspl", action="store_true", help="Initialize SSPL")
     argParser.add_argument("--setup_repo", action="store_true", help="Setup yum repos")
     argParser.add_argument("--cleanup", action="store_true", help="Stop sspl-ll and remove installed SSPL RPMs")
     args = argParser.parse_args()
