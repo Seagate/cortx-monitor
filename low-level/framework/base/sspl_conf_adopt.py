@@ -67,7 +67,7 @@ class YamlConfDiff(object):
                     d2[k] = d1[k]
 
 if __name__ == '__main__':
-    config_file1 = '/opt/seagate/cortx/sspl/conf/sspl.conf.LDR_R2.yaml'
+    config_file1 = '/opt/seagate/cortx/sspl/conf/sspl.conf.LR2.yaml'
     config_file2 = '/etc/sspl.conf'
     tmp_config_file = '/tmp/sspl_tmp.conf'
     file_type = "yaml"

@@ -113,7 +113,7 @@ SSPL_DIR=/opt/seagate/%{product_family}/sspl
     ln -sf $SSPL_DIR/low-level/files/opt/seagate/sspl/setup/generate_sspl_bundle/sspl_bundle_generate /usr/bin/sspl_bundle_generate
     ln -sf $SSPL_DIR/low-level/files/opt/seagate/sspl/setup/generate_sspl_bundle/sspl_bundle_generate $SSPL_DIR/bin/sspl_bundle_generate
     ln -sf $SSPL_DIR/low-level/files/opt/seagate/sspl/setup/manifest_support_bundle /usr/bin/manifest_support_bundle
-    ln -sf $SSPL_DIR/low-level/framework/sspl_rabbitmq_reinit $SSPL_DIR/bin/sspl_rabbitmq_reinit
+    ln -sf $SSPL_DIR/low-level/framework/sspl_rabbitmq_reinit.py $SSPL_DIR/bin/sspl_rabbitmq_reinit
     ln -sf $SSPL_DIR/low-level/framework/base/sspl_constants.py $SSPL_DIR/bin/sspl_constants.py
     ln -sf $SSPL_DIR/low-level/framework/sspl_init $SSPL_DIR/bin/sspl_init
     ln -sf $SSPL_DIR/low-level/framework/sspl_reinit $SSPL_DIR/bin/sspl_reinit
