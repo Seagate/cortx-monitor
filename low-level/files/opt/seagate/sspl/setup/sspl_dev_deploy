@@ -34,6 +34,7 @@ import glob
 import traceback
 
 localhost_fqdn = socket.getfqdn().split('.')[0]
+SSPL_BASE_DIR = "/opt/seagate/cortx/sspl"
 
 
 class DeployError(Exception):
@@ -56,8 +57,9 @@ class SSPLDevDeploy:
     def __init__(self, args):
         """Initialize required config variables."""
         self.args = args
+        # TODO: replace this by main branch URL
         # self.CORTX_MONITOR_BASE_URL = "https://raw.githubusercontent.com/Seagate/cortx-monitor/main"
-        self.CORTX_MONITOR_BASE_URL = "https://raw.githubusercontent.com/Seagate/cortx-monitor/1cec21efc4f5776cabc6e749ed4a57fa90466972"
+        self.CORTX_MONITOR_BASE_URL = "https://raw.githubusercontent.com/satish-seagate/cortx-monitor/eos-16520-main-converting_sspl_dev_deploy_shell_to_python"
         self.install_3rd_party_packages = False
         self.skip_bmc = False
         self.TARGET_BUILD = ""
@@ -181,7 +183,7 @@ class SSPLDevDeploy:
                print(f"ERROR: Unable to download {pkg_name}.")
             cmd = "yum install -y %s%s" % (build_url, pkg[0])
             returncode = os.system(cmd)
-            if returncode != 0:
+            if not (returncode==0 or returncode==256):
                raise DeployError(returncode, "Failed to install %s.", pkg_name)
 
             print("INFO: INSTALLING rabbitmq-server...")
@@ -221,7 +223,6 @@ class SSPLDevDeploy:
     def update_config(self):
         """Update sspl and sample global config values."""
         from cortx.utils.conf_store import Conf
-        SSPL_BASE_DIR = "/opt/seagate/cortx/sspl"
 
         self.sspl_config = "%s/conf/sspl.conf.%s.yaml" % (SSPL_BASE_DIR, self.PRODUCT_VERSION)
         self.sample_global_config = "%s/conf/sample_global_cortx_config.yaml" % (SSPL_BASE_DIR)
@@ -274,30 +275,30 @@ class SSPLDevDeploy:
         from cortx.utils.service import Service
         from cortx.utils.validator.v_service import ServiceV
         from cortx.utils.validator.error import VError
-        from cortx.sspl.lowlevel.framework import sspl_rabbitmq_reinit
         try:
             ServiceV().validate("isrunning", ["rabbitmq-server"])
         except VError:
             Service('dbus').process('start', 'rabbitmq-server.service')
-        sspl_rabbitmq_reinit.main(self.PRODUCT_VERSION)
         print("INFO: Done rabbitmq setup.")
 
     def setup_sspl(self):
         """Initialize SSPL service."""
-        from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.sspl_setup import main
+        setup_script = "%s/bin/sspl_setup" % (SSPL_BASE_DIR)
+
         commands = [
-            "sspl_setup post_install --config %s" % (self.sample_global_config),
-            "sspl_setup init --config %s" % (self.sample_global_config),
-            "sspl_setup config --config %s" % (self.sample_global_config),
-            "sspl_setup check"
+            "%s post_install --config yaml://%s" % (setup_script, self.sample_global_config),
+            "%s init --config yaml://%s" % (setup_script, self.sample_global_config),
+            "%s config --config yaml://%s" % (setup_script, self.sample_global_config)
         ]
         if self.CLUSTER_NODES:
-            # WARN: Configuring RMQ cluster will remove existing cluster setup.
-            commands.append("join_cluster --nodes %s" % (self.CLUSTER_NODES))
+            # WARN: This command will reset existing cluster setup and
+            # join user requested nodes in cluster
+            commands.append("%s join_cluster --nodes %s" % (setup_script, self.CLUSTER_NODES))
+
         # Execute setup commands
         for cmd in commands:
-            print("INFO: Executing command: 'sspl_setup %s'" % (cmd))
-            main(cmd.split())
+            print("INFO: Executing command: '%s'" % (cmd))
+            os.system(cmd)
 
 
 def main(args):
@@ -313,7 +314,6 @@ def main(args):
         deploy.update_config()
         deploy.setup_rabbitmq()
         deploy.setup_sspl()
-        print("INFO: ********* SUCCESS!! **********")
     except:
         traceback.print_exc()
         print("INFO: Deployment is failed.")
