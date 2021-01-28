@@ -17,11 +17,11 @@
 #
 
 
-# *******************************************************************
-#  Description:   SSPL prerequisites script to setup environment
-#  Purpose    :   Setup yum repos, consul and rabbitmq for SSPL
+# ******************************************************************************
+#  Description:   Initialize SSPL service by deploying SSPL RPMS and depedencies
+#  Purpose    :   Setup yum repos, rabbitmq for SSPL and override config data
 #  Usage      :   ./sspl_dev_deploy --help
-# *******************************************************************
+# ******************************************************************************
 
 import sys
 import errno
