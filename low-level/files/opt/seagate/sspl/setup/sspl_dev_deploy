@@ -65,7 +65,7 @@ class SSPLDevDeploy:
         self.RPMS_PATH = ""
         self.PRODUCT_VERSION = "LR2"
         self.RMQ_USER = "sspluser"
-        self.RMQ_PASSWD = "xxxx"
+        self.RMQ_PASSWD = ""
         self.CNTRLR_A = "10.0.0.2"
         self.CNTRLR_B = "10.0.0.3"
         self.CNTRLR_A_PORT = "80"
@@ -179,18 +179,18 @@ class SSPLDevDeploy:
             _ = os.system(cmd)
 
             print("INFO: INSTALLING cortx-py-utils...")
-            # yum install -y cortx-py-utils 2>&1 | tee -a "${LOG_FILE}"
-            # TODO: When RE brings main branch as same strucure as cortx_builds,
-            # below should be removed and setup_yum_repo should be able to give cortx-py-utils.
-            #pkg_name="cortx-py-utils"
-            #build_url="http://cortx-storage.colo.seagate.com/releases/cortx/github/main/centos-7.8.2003/cortx-utils_last_successful/"
-            #pkg = [re.findall("<a .*>(.*?)</a>", str(line))[0] for line in urllib.request.urlopen(build_url).readlines() if pkg_name in str(line)]
-            #if not pkg:
-            #    print(f"ERROR: Unable to download {pkg_name}.")
-            #cmd = "yum install -y %s%s" % (build_url, pkg[0])
-            #returncode = os.system(cmd)
-            #if returncode != 0:
-            #    raise DeployError(returncode, "Failed to install %s.", pkg_name)
+            pkg_name="cortx-py-utils"
+            # TODO: EOS-17072 - last_successful location is not having recent
+            # cortx-py-utils package. Untill then proceeding with static one.
+            # build_url="http://cortx-storage.colo.seagate.com/releases/cortx/github/main/centos-7.8.2003/cortx-utils_last_successful/"
+            build_url = "http://cortx-storage.colo.seagate.com/releases/eos/github/main/centos-7.8.2003/cortx-utils_99/prod/cortx_iso/"
+            pkg = [re.findall("<a .*>(.*?)</a>", str(line))[0] for line in urllib.request.urlopen(build_url).readlines() if pkg_name in str(line)]
+            if not pkg:
+               print(f"ERROR: Unable to download {pkg_name}.")
+            cmd = "yum install -y %s%s" % (build_url, pkg[0])
+            returncode = os.system(cmd)
+            if returncode != 0:
+               raise DeployError(returncode, "Failed to install %s.", pkg_name)
 
             print("INFO: INSTALLING rabbitmq-server...")
             cmd = "yum install -y rabbitmq-server"
@@ -245,8 +245,10 @@ class SSPLDevDeploy:
 
         Conf.set("sspl", "RABBITMQINGRESSPROCESSOR>username", self.RMQ_USER)
         Conf.set("sspl", "RABBITMQEGRESSPROCESSOR>username", self.RMQ_USER)
-        Conf.set("sspl", "RABBITMQINGRESSPROCESSOR>password", self.RMQ_PASSWD)
-        Conf.set("sspl", "RABBITMQEGRESSPROCESSOR>password", self.RMQ_PASSWD)
+        if self.RMQ_PASSWD:
+            Conf.set("sspl", "RABBITMQINGRESSPROCESSOR>password", self.RMQ_PASSWD)
+            Conf.set("sspl", "RABBITMQEGRESSPROCESSOR>password", self.RMQ_PASSWD)
+            Conf.set("sspl", "LOGGINGPROCESSOR>password", self.RMQ_PASSWD)
         Conf.set("global_config", "storage>enclosure_1>controller>primary>ip", self.CNTRLR_A)
         Conf.set("global_config", "storage>enclosure_1>controller>primary>port", self.CNTRLR_A_PORT)
         Conf.set("global_config", "storage>enclosure_1>controller>secondary>ip", self.CNTRLR_B)
