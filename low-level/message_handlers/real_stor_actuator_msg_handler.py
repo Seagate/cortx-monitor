@@ -25,7 +25,7 @@ import time
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.sspl_constants import enabled_products
-from framework.utils.conf_utils import GLOBAL_CONF, RELEASE, SSPL_CONF, Conf
+from framework.utils.conf_utils import GLOBAL_CONF, RELEASE, Conf
 from framework.utils.service_logging import logger
 from json_msgs.messages.actuators.realstor_actuator_response import \
     RealStorActuatorMsg

@@ -200,30 +200,30 @@ class RabbitMQingressProcessorTests(ScheduledModuleThread, InternalMsgQ):
     def _configure_exchange(self):
         """Configure the RabbitMQ exchange with defaults available"""
         try:
-            self._virtual_host = Conf.get(SSPL_TEST_CONF, 
+            self._virtual_host = Conf.get(SSPL_TEST_CONF,
                             f"{self.RABBITMQPROCESSORTEST}>{self.VIRT_HOST}","SSPL"
             )
-            self._primary_rabbitmq_host = Conf.get(SSPL_TEST_CONF, 
+            self._primary_rabbitmq_host = Conf.get(SSPL_TEST_CONF,
             f"{self.RABBITMQPROCESSORTEST}>{self.PRIMARY_RABBITMQ_HOST}", "localhost"
             )
-            self._exchange_name = Conf.get(SSPL_TEST_CONF, 
+            self._exchange_name = Conf.get(SSPL_TEST_CONF,
                 f"{self.RABBITMQPROCESSORTEST}>{self.EXCHANGE_NAME}", "sspl-in"
             )
             self._queue_name = Conf.get(SSPL_TEST_CONF,
              f"{self.RABBITMQPROCESSORTEST}>{self.QUEUE_NAME}", "actuator-req-queue"
             )
-            self._routing_key = Conf.get(SSPL_TEST_CONF, 
+            self._routing_key = Conf.get(SSPL_TEST_CONF,
             f"{self.RABBITMQPROCESSORTEST}>{self.ROUTING_KEY}", "actuator-req-key"
             )
-            self._username = Conf.get(SSPL_TEST_CONF, 
+            self._username = Conf.get(SSPL_TEST_CONF,
             f"{self.RABBITMQPROCESSORTEST}>{self.USER_NAME}", "sspluser"
             )
-            self._password = Conf.get(SSPL_TEST_CONF, 
+            self._password = Conf.get(SSPL_TEST_CONF,
             f"{self.RABBITMQPROCESSORTEST}>{self.PASSWORD}", "sspl4ever"
             )
-            self.cluster_id = Conf.get(SSPL_TEST_CONF, 
-                f"{self.SYSTEM_INFORMATION_KEY}>{self.CLUSTER_ID_KEY}", '')
-    
+            self.cluster_id = Conf.get(SSPL_TEST_CONF,
+                f"{self.SYSTEM_INFORMATION_KEY}>{self.CLUSTER_ID_KEY}", 'CC01')
+
             # Decrypt RabbitMQ Password
             decryption_key = encryptor.gen_key(self.cluster_id, ServiceTypes.RABBITMQ.value)
             self._password = encryptor.decrypt(decryption_key, self._password.encode('ascii'), "RabbitMQingressProcessor")

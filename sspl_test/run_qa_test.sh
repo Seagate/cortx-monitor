@@ -135,23 +135,23 @@ restore_cfg_services()
         # This is required otherwise, everytime if we run sanity, key-value
         # pairs will be appended which will break the sanity.
         # Also, everytime, updated values from /etc/sspl.conf should be updated.
-        sed -i 's/node_id: '"$node_id"'/node_id: 001/g' /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/conf/sspl_tests.conf
-        sed -i 's/rack_id: '"$rack_id"'/rack_id: 001/g' /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/conf/sspl_tests.conf
-        sed -i 's/site_id: '"$site_id"'/site_id: 001/g' /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/conf/sspl_tests.conf
-        sed -i 's/cluster_id: '"$cluster_id"'/cluster_id: 001/g' /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/conf/sspl_tests.conf
+        sed -i "s/node_id: $node_id/node_id: SN01/g" /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/conf/sspl_tests.conf
+        sed -i "s/rack_id: $rack_id/rack_id: RC01/g" /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/conf/sspl_tests.conf
+        sed -i "s/site_id: $site_id/site_id: DC01/g" /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/conf/sspl_tests.conf
+        sed -i "s/cluster_id: $cluster_id/cluster_id: CC01/g" /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/conf/sspl_tests.conf
     elif [ "$SSPL_STORE_TYPE" == "confstor" ]
     then
-        port=`conf $common_config get "storage>$encl_id>controller>primary>port"`
+        port=$(conf $common_config get "storage>$encl_id>controller>primary>port")
         port=$(echo $port | tr -d "["\" | tr -d "\"]")
         if [ "$port" == "$MOCK_SERVER_PORT" ]
         then
             conf $common_config set "storage>$encl_id>controller>primary>port=$primary_port"
             conf $common_config set "storage>$encl_id>controller>primary>ip=$primary_ip"
         fi
-        conf $test_config set "SYSTEM_INFORMATION>node_id=SN01"
-        conf $test_config set "SYSTEM_INFORMATION>site_id=DC01"
-        conf $test_config set "SYSTEM_INFORMATION>rack_id=RC01"
-        conf $test_config set "SYSTEM_INFORMATION>cluster_id=CC01"
+        conf "$test_config" set "SYSTEM_INFORMATION>node_id=SN01"
+        conf "$test_config" set "SYSTEM_INFORMATION>site_id=DC01"
+        conf "$test_config" set "SYSTEM_INFORMATION>rack_id=RC01"
+        conf "$test_config" set "SYSTEM_INFORMATION>cluster_id=CC01"
     else
         $CONSUL_PATH/consul kv put sspl/config/STORAGE_ENCLOSURE/controller/primary_mc/ip $primary_ip
         port=$($CONSUL_PATH/consul kv get sspl/config/STORAGE_ENCLOSURE/controller/primary_mc/port)

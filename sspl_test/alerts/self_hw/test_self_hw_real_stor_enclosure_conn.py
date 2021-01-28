@@ -13,23 +13,23 @@
 # about this software or licensing, please email opensource@seagate.com or
 # cortx-questions@seagate.com.
 
+import hashlib
+import json
+import time
+
 # Checks connectivity to hw enclosure as part of hw self test
 # Read current sspl config (ip, port, username, pw)
 # Login to enclosure via webservice api request
 # Retrive show system cmd info
 import requests
-import hashlib
-import time
-import json
-
-from alerts.self_hw.self_hw_utilities import run_cmd, get_from_consul, get_node_id
-
 from cortx.utils.security.cipher import Cipher
-from framework.utils.conf_utils import (CLUSTER, CONTROLLER, CLUSTER_ID, ENCLOSURE,
-                                        GLOBAL_CONF, IP, MGMT_INTERFACE,
-                                        SECRET, POLLING_FREQUENCY, PORT,
-                                        PRIMARY, SECONDARY, SRVNODE, SSPL_CONF,
+
+from alerts.self_hw.self_hw_utilities import get_node_id
+from framework.utils.conf_utils import (CLUSTER, CLUSTER_ID, CONTROLLER,
+                                        ENCLOSURE, GLOBAL_CONF, IP, PORT,
+                                        PRIMARY, SECONDARY, SECRET, SRVNODE,
                                         STORAGE, STORAGE_ENCLOSURE, USER, Conf)
+
 
 def gen_key(cluster_id, service_name):
     ''' Generate key for decryption '''

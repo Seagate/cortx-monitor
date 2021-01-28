@@ -35,7 +35,7 @@ def update_sensor_info():
     sensors["SASPORTSENSOR"] = "true"
     sensors["MEMFAULTSENSOR"] = "true"
     sensors["CPUFAULTSENSOR"] = "true"
-    
+
     try:
         with open("/etc/machine-id") as f:
             node_key_id = f.read().strip("\n")

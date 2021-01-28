@@ -212,7 +212,7 @@ class SSPLConfig:
             rmq_cluster_status_cmd = "rabbitmqctl cluster_status"
             output, error, returncode = SimpleProcess(rmq_cluster_status_cmd).run()
             cluster_nodes = re.search(
-                        r"running_nodes,\['rabbit@(?P<cluster_nodes>.+?)'\]", 
+                        r"running_nodes,\['rabbit@(?P<cluster_nodes>.+?)'\]",
                         output.decode()).groupdict()["cluster_nodes"]
         else:
             raise SetupError(
