@@ -26,7 +26,7 @@ import sys
 import errno
 import argparse
 import os
-import requests
+import shutil
 import urllib.request
 import re
 import socket
@@ -56,9 +56,9 @@ class SSPLDevDeploy:
     def __init__(self, args):
         """Initialize required config variables."""
         self.args = args
-        self.CORTX_MONITOR_BASE_URL = "https://raw.githubusercontent.com/Seagate/cortx-monitor/main"
+        # self.CORTX_MONITOR_BASE_URL = "https://raw.githubusercontent.com/Seagate/cortx-monitor/main"
+        self.CORTX_MONITOR_BASE_URL = "https://raw.githubusercontent.com/Seagate/cortx-monitor/1cec21efc4f5776cabc6e749ed4a57fa90466972"
         self.install_3rd_party_packages = False
-        self.setup_repo = False
         self.skip_bmc = False
         self.initialize_sspl = False
         self.TARGET_BUILD = ""
@@ -93,8 +93,6 @@ class SSPLDevDeploy:
             self.install_3rd_party_packages = True
         if self.args.initialize_sspl:
             self.initialize_sspl = True
-        if self.args.setup_repo:
-            self.setup_repo = True
         if self.args.product_version:
             self.PRODUCT_VERSION = self.args.product_version
         if self.args.rmq_user:
@@ -148,13 +146,10 @@ class SSPLDevDeploy:
 
     def setup_yum_repos(self):
         """Setup common, 3rd_party and build specific repos."""
-        if not self.setup_repo:
-            return
         setup_repo_url = self.CORTX_MONITOR_BASE_URL + \
             "/low-level/files/opt/seagate/sspl/setup/setup_yum_repos.py"
-        setup_repo_txt = requests.get(setup_repo_url, allow_redirects=True)
-        with open('setup_yum_repos.py', 'w+') as fle:
-            fle.write(setup_repo_txt.content)
+        with urllib.request.urlopen(setup_repo_url) as response, open("setup_yum_repos.py", 'wb') as out_file:
+            shutil.copyfileobj(response, out_file)
         os.chmod("setup_yum_repos.py", 0o775)
 
         if self.TARGET_BUILD:
@@ -313,8 +308,10 @@ def main(args):
     """Main method to start SSPL deployment."""
     try:
         deploy = SSPLDevDeploy(args)
+        if args.setup_repo:
+            deploy.setup_yum_repos()
+            return
         deploy.parse_args()
-        deploy.setup_yum_repos()
         deploy.install_dependencies()
         deploy.install_sspl_rpms()
         deploy.update_config()
