@@ -18,6 +18,7 @@ cluster:
    server_nodes:
      30512e5ae6df9f1ea02327bab45e499d: srvnode1
    srvnode1:
+      node_type: virtual
       site_id: DC01
       rack_id: RC01
       node_id: SN01

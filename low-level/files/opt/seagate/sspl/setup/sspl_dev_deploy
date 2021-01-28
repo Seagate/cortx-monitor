@@ -16,9 +16,8 @@
 # please email opensource@seagate.com or cortx-questions@seagate.com.
 #
 
-
 # ******************************************************************************
-#  Description:   Initialize SSPL service by deploying SSPL RPMS and depedencies
+#  Description:   Initialize SSPL service by deploying SSPL RPMS and dependencies
 #  Purpose    :   Setup yum repos, rabbitmq for SSPL and override config data
 #  Usage      :   ./sspl_dev_deploy --help
 # ******************************************************************************
@@ -30,15 +29,12 @@ import os
 import requests
 import urllib.request
 import re
-import shutil
 import socket
-import subprocess
 import glob
+import traceback
 
 localhost_fqdn = socket.getfqdn().split('.')[0]
-LOG_FILE = "/tmp/sspl_dev_deploy.log"
-if not os.path.exists(LOG_FILE):
-    open(LOG_FILE, 'a').close()
+
 
 class DeployError(Exception):
     """Generic Exception with error code and output."""
@@ -55,20 +51,19 @@ class DeployError(Exception):
 
 
 class SSPLDevDeploy:
-    """ SSPL Dev Deploy Script """
+    """SSPL Dev Deploy Script"""
 
     def __init__(self, args):
+        """Initialize required config variables."""
         self.args = args
         self.CORTX_MONITOR_BASE_URL = "https://raw.githubusercontent.com/Seagate/cortx-monitor/main"
-        self.PERSISTENT_CONFIG_FILE = "/opt/seagate/cortx/sspl/generated_configs"
         self.install_3rd_party_packages = False
         self.setup_repo = False
         self.skip_bmc = False
         self.initialize_sspl = False
         self.TARGET_BUILD = ""
         self.RPMS_PATH = ""
-        self.PRODUCT_VERSION = "LDR_R2"
-        self.NODE = "srvnode-1"
+        self.PRODUCT_VERSION = "LR2"
         self.RMQ_USER = "sspluser"
         self.RMQ_PASSWD = "xxxx"
         self.CNTRLR_A = "10.0.0.2"
@@ -82,8 +77,16 @@ class SSPLDevDeploy:
         self.BMC_PASSWD = "xxxx"
         self.SERVER_TYPE = "virtual"
         self.STORAGE_TYPE = "virtual"
+        self.CLUSTER_NODES = ""
+        # Config files
+        self.sspl_config = None
+        self.sample_global_config = None
+        print("=======================")
+        print("INFO: Deploying SSPL...")
+        print("=======================")
 
     def parse_args(self):
+        """Override the default values."""
         if self.args.cleanup:
             self.cleanup()
         if self.args.standalone_installation:
@@ -94,247 +97,245 @@ class SSPLDevDeploy:
             self.setup_repo = True
         if self.args.product_version:
             self.PRODUCT_VERSION = self.args.product_version
-        else:
-            print("ERROR: Product version(LDR_R1/LR2) not provided")
-            sys.exit(1)
-        if self.args.node:
-            self.NODE = self.args.node
-        else:
-            print("ERROR: Node name not provided")
-            sys.exit(1)
         if self.args.rmq_user:
             self.RMQ_USER = self.args.rmq_user
-        else:
-            print("ERROR: Rabbitmq user not provided")
-            sys.exit(1)
         if self.args.rmq_passwd:
             self.RMQ_PASSWD = self.args.rmq_passwd
-        else:
-            print("ERROR: Rabbitmq password not provided")
-            sys.exit(1)
         if self.args.cntrlr_a:
             self.CNTRLR_A = self.args.cntrlr_a
-        else:
-            print("ERROR: Controller A IP not provided")
-            sys.exit(1)
         if self.args.cntrlr_a_port:
             self.CNTRLR_A_PORT = self.args.cntrlr_a_port
-        else:
-            print("ERROR: Controller A Port not provided")
-            sys.exit(1)
         if self.args.cntrlr_b:
             self.CNTRLR_B = self.args.cntrlr_b
-        else:
-            print("ERROR: Controller B IP not provided")
-            sys.exit(1)
         if self.args.cntrlr_b_port:
             self.CNTRLR_B_PORT = self.args.cntrlr_b_port
-        else:
-            print("ERROR: Controller B Port not provided")
-            sys.exit(1)
         if self.args.cntrlr_user:
             self.CNTRLR_USER = self.args.cntrlr_user
-        else:
-            print("ERROR: Controller user name not provided")
-            sys.exit(1)
         if self.args.cntrlr_pass:
             self.CNTRLR_PASSWD = self.args.cntrlr_pass
-        else:
-            print("ERROR: Controller password not provided")
-            sys.exit(1)
         if self.args.target_build_url:
             self.TARGET_BUILD = self.args.target_build_url
-        else:
-            print("WARNING: Target build not provided")
         if self.args.local_rpms_path:
             self.RPMS_PATH = self.args.local_rpms_path
-        else:
-            print("ERROR: Local RPMS not provided")
-            sys.exit(1)
         if self.args.bmc_ip:
             self.BMC_IP = self.args.bmc_ip
-        else:
-            print("WARNING: BMC IP not provided")
         if self.args.bmc_user:
             self.BMC_USER = self.args.bmc_user
-        else:
-            print("WARNING: BMC user not provided")
         if self.args.bmc_passwd:
             self.BMC_PASSWD = self.args.bmc_passwd
-        else:
-            print("WARNING: BMC password not provided")
         if self.args.storage_type:
             self.STORAGE_TYPE = self.args.storage_type
-        else:
-            print("ERROR: Storage type not provided")
-            sys.exit(1)
         if self.args.server_type:
             self.SERVER_TYPE = self.args.server_type
-        else:
-            print("ERROR: Server type not provided")
-            sys.exit(1)
+        if self.args.cluster_nodes:
+            self.CLUSTER_NODES = self.args.cluster_nodes
+        if not (self.TARGET_BUILD or self.RPMS_PATH):
+            argParser.print_help()
+            raise DeployError(1, "Target build url or local RPMS path is missing")
+        if self.RPMS_PATH and not os.path.exists(self.RPMS_PATH):
+            raise DeployError(1, "RPMS path is not found.")
 
-    def process(self):
-        # Updating local and global yaml config
-        Conf.set("sspl", "RABBITMQCLUSTER>cluster_nodes", self.NODE)
+    def cleanup(self):
+        """Stop sspl service and remove SSPL RPMS."""
+        cmd = "systemctl stop sspl-ll.service"
+        _ = os.system(cmd)
+        cmd = "yum remove -y cortx-sspl.noarch"
+        returncode = os.system(cmd)
+        if returncode != 0:
+            raise DeployError(returncode, "Unable to remove sspl RPMS. %s",
+                              "Cleanup failed.")
+        sys.exit(0)
+
+    def setup_yum_repos(self):
+        """Setup common, 3rd_party and build specific repos."""
+        if not self.setup_repo:
+            return
+        setup_repo_url = self.CORTX_MONITOR_BASE_URL + \
+            "/low-level/files/opt/seagate/sspl/setup/setup_yum_repos.py"
+        setup_repo_txt = requests.get(setup_repo_url, allow_redirects=True)
+        with open('setup_yum_repos.py', 'w+') as fle:
+            fle.write(setup_repo_txt.content)
+        os.chmod("setup_yum_repos.py", 0o775)
+
+        if self.TARGET_BUILD:
+            cmd = "./setup_yum_repos.py -t %s" % (self.TARGET_BUILD)
+            returncode= os.system(cmd)
+        else:
+            cmd = "./setup_yum_repos.py"
+            returncode = os.system(cmd)
+        if returncode != 0:
+            raise DeployError(returncode, "%s - Failed to setup yum repos.",
+                "setup_yum_repos.py")
+
+    def install_dependencies(self):
+        """Install common and 3rd_party application."""
+        if self.install_3rd_party_packages:
+            print("INFO: INSTALLING python3...")
+            cmd = "yum install -y python3"
+            _ = os.system(cmd)
+
+            # cortx-py-utils dependency
+            cmd = "python3 -m pip install toml pyyaml"
+            _ = os.system(cmd)
+
+            print("INFO: INSTALLING cortx-py-utils...")
+            # yum install -y cortx-py-utils 2>&1 | tee -a "${LOG_FILE}"
+            # TODO: When RE brings main branch as same strucure as cortx_builds,
+            # below should be removed and setup_yum_repo should be able to give cortx-py-utils.
+            #pkg_name="cortx-py-utils"
+            #build_url="http://cortx-storage.colo.seagate.com/releases/cortx/github/main/centos-7.8.2003/cortx-utils_last_successful/"
+            #pkg = [re.findall("<a .*>(.*?)</a>", str(line))[0] for line in urllib.request.urlopen(build_url).readlines() if pkg_name in str(line)]
+            #if not pkg:
+            #    print(f"ERROR: Unable to download {pkg_name}.")
+            #cmd = "yum install -y %s%s" % (build_url, pkg[0])
+            #returncode = os.system(cmd)
+            #if returncode != 0:
+            #    raise DeployError(returncode, "Failed to install %s.", pkg_name)
+
+            print("INFO: INSTALLING rabbitmq-server...")
+            cmd = "yum install -y rabbitmq-server"
+            returncode = os.system(cmd)
+            if returncode != 0:
+                raise DeployError(returncode, "Failed to install rabbitmq-server.")
+
+            print("INFO: Done installing SSPL dependencies.")
+
+    def install_sspl_rpms(self):
+        """Install SSPL RPMS."""
+        # If local RPMS location is specified, SSPL RPMS will be
+        # installed from the speicifed path. Otherwise yum repos.
+        if self.RPMS_PATH:
+            print("INFO: Installing SSPL RPMS from local path - %s" % (self.RPMS_PATH))
+            packages = glob.glob(self.RPMS_PATH+'/cortx-*-2.*')
+            sspl_rpm_cmd = f"sudo yum install -y {' '.join(packages)}"
+            returncode = os.system(sspl_rpm_cmd)
+        else:
+            print("INFO: Installing SSPL RPMS using yum repos...")
+            sspl_cmd = "yum install -y cortx-sspl.noarch"
+            sspl_test_cmd = "yum install -y cortx-sspl-test"
+            returncode = os.system(sspl_cmd)
+            if returncode != 0:
+                raise DeployError(returncode, "Failed to install 'cortx-sspl'")
+            returncode = os.system(sspl_test_cmd)
+            if returncode != 0:
+                raise DeployError(returncode, "Failed to install 'cortx-sspl-test'")
+
+        print("INFO: INSTALLING required python3 site-packages..")
+        cmd = "python3 -m pip install -r /opt/seagate/cortx/sspl/low-level/requirements.txt"
+        _ = os.system(cmd)
+
+        print("INFO: Done installing SSPL RPMS.")
+
+    def update_config(self):
+        """Update sspl and sample global config values."""
+        from cortx.utils.conf_store import Conf
+        SSPL_BASE_DIR = "/opt/seagate/cortx/sspl"
+
+        self.sspl_config = "%s/conf/sspl.conf.%s.yaml" % (SSPL_BASE_DIR, self.PRODUCT_VERSION)
+        self.sample_global_config = "%s/conf/sample_global_cortx_config.yaml" % (SSPL_BASE_DIR)
+        if not os.path.exists(self.sspl_config):
+            raise DeployError(1, "sspl config file not found.")
+        if not os.path.exists(self.sample_global_config):
+            raise DeployError(1, "Sample global config file not found.")
+
+        print("INFO: Updating config values in config files..\n" + \
+            "SSPL_CONFIG: %s \nGLOBAL_CONFIG: %s" % (self.sspl_config, self.sample_global_config))
+        Conf.load("sspl", "yaml://%s" % (self.sspl_config))
+        Conf.load("global_config", "yaml://%s" % (self.sample_global_config))
+
         Conf.set("sspl", "RABBITMQINGRESSPROCESSOR>username", self.RMQ_USER)
         Conf.set("sspl", "RABBITMQEGRESSPROCESSOR>username", self.RMQ_USER)
         Conf.set("sspl", "RABBITMQINGRESSPROCESSOR>password", self.RMQ_PASSWD)
         Conf.set("sspl", "RABBITMQEGRESSPROCESSOR>password", self.RMQ_PASSWD)
         Conf.set("global_config", "storage>enclosure_1>controller>primary>ip", self.CNTRLR_A)
         Conf.set("global_config", "storage>enclosure_1>controller>primary>port", self.CNTRLR_A_PORT)
-        Conf.set("global_config", "storage>enclosure_1>controller>secondary>ip", self.CNTRLR_A)
+        Conf.set("global_config", "storage>enclosure_1>controller>secondary>ip", self.CNTRLR_B)
         Conf.set("global_config", "storage>enclosure_1>controller>secondary>port", self.CNTRLR_B_PORT)
         Conf.set("global_config", "storage>enclosure_1>controller>user", self.CNTRLR_USER)
         Conf.set("global_config", "storage>enclosure_1>controller>secret", self.CNTRLR_PASSWD)
         Conf.set("global_config", "storage>enclosure_1>type", self.STORAGE_TYPE)
+        Conf.set("global_config", "cluser>srvnode1>node_type", self.SERVER_TYPE)
         Conf.set("global_config", "release>product", self.PRODUCT_VERSION)
-        if not os.path.exists("/opt/seagate/cortx/sspl"):
-            os.makedirs("/opt/seagate/cortx/sspl")
-            open(self.PERSISTENT_CONFIG_FILE, 'a').close()
 
+        # Update BMC Information
         if self.PRODUCT_VERSION == "LR2" and not self.BMC_IP:
             self.skip_bmc = True
-            print("Skipping BMC information for LR2...")
+            print("INFO: Skipping BMC information for LR2...")
         else:
             if not self.BMC_IP:
-                print("ERROR: -i <BMC IPV4> is required.")
-                sys.exit(1)
+                raise DeployError(1, "ERROR: -i <BMC IPV4> is required for non LR2 system.")
             if not self.BMC_USER:
-                print("ERROR: -u <BMC user> is required.")
-                sys.exit(1)
+                raise DeployError(1, "ERROR: -u <BMC user> is required for non LR2 system.")
             if not self.BMC_PASSWD:
-                print("ERROR: -p <BMC password> is required.")
-                sys.exit(1)
+                raise DeployError(1, "ERROR: -p <BMC password> is required for non LR2 system.")
+            Conf.set("global_config", "cluster>srvnode1>bmc>ip", self.BMC_IP)
+            Conf.set("global_config", "cluster>srvnode1>bmc>user", self.BMC_USER)
+            Conf.set("global_config", "cluster>srvnode1>bmc>secret", self.BMC_PASSWD)
 
-    def cleanup(self):
-        # Cleanup
-        subprocess.call("systemctl stop sspl-ll.service".split(),
-                stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False)
-        returncode = subprocess.call("yum remove -y cortx-sspl.noarch".split(),
-                stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False)
-        if returncode != 0:
-            raise DeployError(returncode, "%s - failure. %s", "Do Cleanup")
-        sys.exit(0)
-    
-    def build_common_repos(self):
-        # Setup common, 3rd_party and build specific repos
-        if self.setup_repo:
-            setup_repo_url = self.CORTX_MONITOR_BASE_URL + \
-                "/low-level/files/opt/seagate/sspl/setup/setup_yum_repos.py"
-            setup_repo_txt = requests.get(setup_repo_url, allow_redirects=True)
-            with open('setup_yum_repos.py', 'w+') as fle:
-                fle.write(setup_repo_txt.content)
-            os.chmod("setup_yum_repos.py", 0o775)
-
-            if self.TARGET_BUILD:
-                returncode = subprocess.call(f"./setup_yum_repos.py -t {self.TARGET_BUILD}".split(),
-                    stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False)
-            else:
-                returncode = subprocess.call("./setup_yum_repos.py".split(),
-                    stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False)
-            if returncode != 0:
-                raise DeployError(returncode, "%s - building yum repo failure",
-                    "setup_yum_repos.py")
-            else:
-                print("\nDone setup repos")
-                sys.exit(0)
-
-    def install_sspl_rpms(self):
-        # Install common and 3rd_party application
-        self.build_common_repos()
-        subprocess.call(f"python3 -m pip install -r /opt/seagate/cortx/sspl/low-level/requirements.txt".split(),
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False)
-        if self.install_3rd_party_packages:
-            print("INFO: INSTALLING python3...")
-            subprocess.call("yum install -y python3".split(), stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE, shell=False)
-
-            print("INFO: INSTALLING cortx-py-utils...")
-            # yum install -y cortx-py-utils 2>&1 | tee -a "${LOG_FILE}"
-            # TODO: When RE brings main branch as same strucure as cortx_builds,
-            # below should be removed and setup_yum_repo should be able to give cortx-py-utils.
-            pkg_name="cortx-py-utils"
-            build_url="http://cortx-storage.colo.seagate.com/releases/cortx/github/main/centos-7.8.2003/cortx-utils_last_successful/"
-            pkg = [re.findall("<a .*>(.*?)</a>", str(line))[0] for line in urllib.request.urlopen(build_url).readlines() if pkg_name in str(line)]
-            if pkg:
-                subprocess.call(f"yum install -y {build_url}{pkg[0]}".split(), stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE, shell=False)
-            else:
-                print(f"Unable to download {pkg_name}.")
-            subprocess.call("python3 -m pip install toml pyyaml".split(), stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE, shell=False)
-            print("INFO: INSTALLING rabbitmq-server...")
-            subprocess.call("yum install -y rabbitmq-server".split(), stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE, shell=False)
-
-        # If local RPMS location is specified, SSPL RPMS will be
-        # installed from the speicifed path. Otherwise yum repos.
-        if self.RPMS_PATH:
-            print(f"INFO: Installing SSPL RPMS from local path - {self.RPMS_PATH}")
-            sspl_rpm_cmd = f"sudo yum install -y {' '.join(glob.glob(self.RPMS_PATH+'/cortx-*-2.*'))}"
-            subprocess.call(sspl_rpm_cmd.split(), stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE, shell=False)
-        else:
-            print("INFO: Installing SSPL RPMS using yum repos...")
-            subprocess.call("yum install -y cortx-sspl.noarch".split(), stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE, shell=False)
-            subprocess.call("yum install -y cortx-sspl-test".split(), stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE, shell=False)
-
-        print("Done installing SSPL RPMS.")
-
-    def update_sspl_config(self):
-        # update sspl config file
-        SOURCE_CONF = f"{SSPL_BASE_DIR}/low-level/files/opt/seagate/sspl/conf/sspl.conf.{self.PRODUCT_VERSION}"
-        shutil.copyfile(SOURCE_CONF, file_store_config_path)
-        CONFIG_FEEDER = f"{SSPL_BASE_DIR}/low-level/files/opt/seagate/sspl/bin/load_sspl_config.py"
-        print(f"INFO: Loading {file_store_config_path} config file..")
-        print(f"{CONFIG_FEEDER} {self.NODE} {self.RMQ_USER}")
-        if self.skip_bmc:
-            SimpleProcess(f"python3 {CONFIG_FEEDER} -N {self.NODE} -C {file_store_config_path} \
-                -Ru {self.RMQ_USER} -Rp {self.RMQ_PASSWD} \
-                    -A {self.CNTRLR_A} -Ap {self.CNTRLR_A_PORT} -B {self.CNTRLR_B} -Bp {self.CNTRLR_B_PORT} \
-                        -U {self.CNTRLR_USER} -P {self.CNTRLR_PASSWD} \
-                            -St {self.STORAGE_TYPE} -Sr {self.SERVER_TYPE}").run()
-        else:
-            SimpleProcess(f"python3 {CONFIG_FEEDER} -N {self.NODE} -C {file_store_config_path} \
-                -Ru {self.RMQ_USER} -Rp {self.RMQ_PASSWD} \
-                    -A {self.CNTRLR_A} -Ap {self.CNTRLR_A_PORT} -B {self.CNTRLR_B} -Bp {self.CNTRLR_B_PORT} \
-                        -U {self.CNTRLR_USER} -P {self.CNTRLR_PASSWD} \
-                            -St {self.STORAGE_TYPE} -Sr {self.SERVER_TYPE} \
-                                --bmc_ip {self.BMC_IP} --bmc_user {self.BMC_USER} --bmc_passwd {self.BMC_PASSWD}").run()
+        Conf.save("sspl")
+        Conf.save("global_config")
 
     def setup_rabbitmq(self):
-        # Start rabbitmq
+        """Start rabbitmq"""
+        from cortx.utils.service import Service
+        from cortx.utils.validator.v_service import ServiceV
+        from cortx.utils.validator.error import VError
+        from cortx.sspl.lowlevel.framework import sspl_rabbitmq_reinit
         try:
             ServiceV().validate("isrunning", ["rabbitmq-server"])
         except VError:
             Service('dbus').process('start', 'rabbitmq-server.service')
         sspl_rabbitmq_reinit.main(self.PRODUCT_VERSION)
-        RMQClusterConfiguration(localhost_fqdn).process()
-        print("Done rabbitmq setup.")
+        print("INFO: Done rabbitmq setup.")
 
     def setup_sspl(self):
+        """Initialize SSPL service."""
+        from cortx.sspl.bin.sspl_setup import main
         if self.initialize_sspl:
-            # /opt/seagate/cortx/sspl/bin/sspl_setup setup -p $PRODUCT_VERSION
-            pass
+            commands = [
+                "post_install --config %s" % (self.sample_global_config),
+                "init --config %s" % (self.sample_global_config),
+                "config --config %s" % (self.sample_global_config),
+                "check"
+            ]
+        if self.CLUSTER_NODES:
+            # WARN: Configuring RMQ cluster will remove existing cluster setup.
+            commands.append("join_cluster --nodes %s" % (self.CLUSTER_NODES))
+        # Execute setup commands
+        for cmd in commands:
+            print("INFO: Executing command: 'sspl_setup %s'" % (cmd))
+            main(cmd.split())
 
+
+def main(args):
+    """Main method to start SSPL deployment."""
+    try:
+        deploy = SSPLDevDeploy(args)
+        deploy.parse_args()
+        deploy.setup_yum_repos()
+        deploy.install_dependencies()
+        deploy.install_sspl_rpms()
+        deploy.update_config()
+        deploy.setup_rabbitmq()
+        deploy.setup_sspl()
+        print("INFO: ********* SUCCESS!! **********")
+    except:
+        traceback.print_exc()
+        print("INFO: Deployment is failed.")
 
 
 if __name__ == '__main__':
     description = "SSPL prerequisite script. (Bounded to single node provisioning)"
     argParser = argparse.ArgumentParser(
         formatter_class = argparse.RawDescriptionHelpFormatter, description=description,
-        add_help=False, allow_abbrev=False)
-    argParser.add_argument("-V", "--product_version", default="LDR_R2", help="Product version")
-    argParser.add_argument("-N", "--node", default="srvnode-1", help="Node name/id")
+        add_help=True, allow_abbrev=False)
+    argParser.add_argument("-V", "--product_version", default="LR2", help="Product version")
     argParser.add_argument("-A", "--cntrlr_a", default="10.0.0.2", help="Controller-A IP")
     argParser.add_argument("-B", "--cntrlr_b", default="10.0.0.3", help="Controller-B IP")
     argParser.add_argument("-L", "--local_rpms_path", default="", help="Local RPMS location")
     argParser.add_argument("-T", "--target_build_url", default="", help="Target \
         build base url pointed to release bundle base directory. if specified the following \
-            directory structure is assumed: <base_url>/ centos7.7 <-- OS ISO is mounted here \
+            directory structure is assumed:\n <base_url>/ \n centos7.7 <-- OS ISO is mounted here\n \
             3rd_party <-- CORTX 3rd party ISO is mounted here cortx_iso <-- CORTX ISO (main) is mounted here")
     argParser.add_argument("-Ap", "--cntrlr_a_port", default="80", help="Controller-A Port")
     argParser.add_argument("-Bp", "--cntrlr_b_port", default="80", help="Controller-B Port")
@@ -347,32 +348,11 @@ if __name__ == '__main__':
     argParser.add_argument("-Rp", "--rmq_passwd", default="", help="Rabbitmq password")
     argParser.add_argument("-St", "--storage_type", default="", help="Storage type  ie. jbod, rbod, 5u84, virtual")
     argParser.add_argument("-Sr", "--server_type", default="", help="Server type   ie. physical, virtual")
+    argParser.add_argument("-N", "--cluster_nodes", default="", help="Nodes separated by delimeter ',' ie. node1,node2")
     argParser.add_argument("--standalone_installation", action="store_true", help="Configure SSPL 3rd party \
         dependencies like consul, rabbitmq")
     argParser.add_argument("--initialize_sspl", action="store_true", help="Initialize SSPL")
     argParser.add_argument("--setup_repo", action="store_true", help="Setup yum repos")
     argParser.add_argument("--cleanup", action="store_true", help="Stop sspl-ll and remove installed SSPL RPMs")
-    argParser.add_argument("-h", "--help", action="store_true", help="Availabe arugumets")
     args = argParser.parse_args()
-    if args.help or len(sys.argv) == 1:
-        argParser.print_help()
-        sys.exit(1)
-    deploy = SSPLDevDeploy(args)
-    deploy.parse_args()
-    deploy.install_sspl_rpms()
-    from cortx.utils.service import Service
-    from cortx.utils.process import SimpleProcess
-    from cortx.utils.validator.v_service import ServiceV
-    from cortx.utils.validator.error import VError
-    from cortx.utils.conf_store import Conf
-    Conf.load("sspl", "yaml:///opt/seagate/cortx/sspl/conf/sspl.conf.LR2.yaml")
-    Conf.load("global_config", "yaml:///opt/seagate/cortx/sspl/conf/sample_global_cortx_config.yaml")
-    # from cortx.sspl.lowlevel.framework import sspl_rabbitmq_reinit
-    # from cortx.sspl.bin.setup_rabbitmq_cluster import RMQClusterConfiguration
-    # from cortx.sspl.bin.sspl_constants import SSPL_BASE_DIR, file_store_config_path
-    # deploy.update_sspl_config()
-    # deploy.setup_rabbitmq()
-    # deploy.process()
-    # deploy.setup_sspl()
-    print(f"For more details see: {LOG_FILE}")
-    print("***** COMPLETED!!! *****")
+    main(args)

@@ -75,7 +75,7 @@ RABBITMQINGRESSPROCESSOR:
    exchange_name: sspl-in
    routing_key: actuator-req-key
    username: sspluser
-   password: gAAAAABgB8tRJLZBfI6uCAtt4B8YYjveDvhHnFCbeKYsXuYxSLl3KZE5Tp94Jl2qQq9-X7x7_CinZZSh4cm9rMJ4G3HKz36I-Q==
+   password: gAAAAABgEtgHbbhhfpp9UOj4b1CTSbrWyC2EAB8GSoc9DN70QO2Bz_X02xoqjr-KqmFs1S9t3OQjAdIfWtU4xn-LSCfeCZJBpg==
    primary_rabbitmq_host: localhost
 
 RABBITMQEGRESSPROCESSOR:
@@ -87,7 +87,7 @@ RABBITMQEGRESSPROCESSOR:
    ack_exchange_name: sspl-out
    ack_routing_key: sensor-key
    username: sspluser
-   password: gAAAAABgB8tRJLZBfI6uCAtt4B8YYjveDvhHnFCbeKYsXuYxSLl3KZE5Tp94Jl2qQq9-X7x7_CinZZSh4cm9rMJ4G3HKz36I-Q==
+   password: gAAAAABgEtgHbbhhfpp9UOj4b1CTSbrWyC2EAB8GSoc9DN70QO2Bz_X02xoqjr-KqmFs1S9t3OQjAdIfWtU4xn-LSCfeCZJBpg==
    message_signature_username: sspl-ll
    message_signature_token: ALOIUD986798df69a8koDISLKJ282983
    message_signature_expires: 3600
@@ -102,7 +102,7 @@ LOGGINGPROCESSOR:
    exchange_name: sspl-in
    routing_key: iem-key
    username: sspluser
-   password: gAAAAABgB8tRJLZBfI6uCAtt4B8YYjveDvhHnFCbeKYsXuYxSLl3KZE5Tp94Jl2qQq9-X7x7_CinZZSh4cm9rMJ4G3HKz36I-Q==
+   password: gAAAAABgEtgHbbhhfpp9UOj4b1CTSbrWyC2EAB8GSoc9DN70QO2Bz_X02xoqjr-KqmFs1S9t3OQjAdIfWtU4xn-LSCfeCZJBpg==
    primary_rabbitmq_host: localhost
 
 RABBITMQCLUSTER:

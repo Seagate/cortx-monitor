@@ -21,12 +21,53 @@
 # *********************************************************
 
 import os
-import sys
 import shutil
+import argparse
 import subprocess
 
 CORTX_BASE_URL = "http://cortx-storage.colo.seagate.com/releases/cortx"
 
+COMMON_REPOS = """[cortx_commons]
+name=cortx_commons
+gpgcheck=0
+enabled=1
+baseurl=%s
+"""
+
+PLATFORM_BASE = """[cortx_platform_base]
+name=cortx_platform_base
+gpgcheck=0
+enabled=1
+baseurl=%s
+"""
+
+PLATFORM_EXTRAS = """[cortx_platform_extras]
+name=cortx_platform_extras
+gpgcheck=0
+enabled=1
+baseurl=%s
+"""
+
+EPEL = """[epel]
+name=epel
+gpgcheck=0
+enabled=1
+baseurl=%s
+"""
+
+SSPL = """[sspl]
+name=sspl
+gpgcheck=1
+gpgkey=%s
+enabled=1
+baseurl=%s
+"""
+SSPL_UPLOADS = """[sspl_uploads]
+name=sspl_uploads
+gpgcheck=0
+enabled=1
+baseurl=%s
+"""
 
 class SetupYumRepo:
     """Create repo files under /etc/yum.repos.d"""
@@ -75,12 +116,7 @@ class SetupYumRepo:
     def create_commons_repos(self):
         """Create common platform base, extra and epel repos."""
         # Create common repo
-        content = """[cortx_commons]
-name=cortx_commons
-gpgcheck=0
-enabled=1
-baseurl=%s
-""" % (self.url_local_repo_commons)
+        content =  COMMON_REPOS % (self.url_local_repo_commons)
         with open(self.cortx_commons_repo, "w") as fObj:
             fObj.write(content)
 
@@ -90,12 +126,7 @@ baseurl=%s
             url = "http://ssc-satellite1.colo.seagate.com/pulp/repos/EOS/Library/custom/CentOS-7/CentOS-7-OS/"
 
         if url:
-            content = """[cortx_platform_base]
-name=cortx_platform_base
-gpgcheck=0
-enabled=1
-baseurl=%s
-""" % (url)
+            content = PLATFORM_BASE % (url)
             with open(self.cortx_platform_base_repo, "w") as fObj:
                 fObj.write(content)
 
@@ -105,12 +136,7 @@ baseurl=%s
             url = "http://ssc-satellite1.colo.seagate.com/pulp/repos/EOS/Library/custom/CentOS-7/CentOS-7-Extras/"
 
         if url:
-            content = """[cortx_platform_extras]
-name=cortx_platform_extras
-gpgcheck=0
-enabled=1
-baseurl=%s
-""" % (url)
+            content = PLATFORM_EXTRAS % (url)
             with open(self.cortx_platform_extras_repo, "w") as fObj:
                 fObj.write(content)
 
@@ -118,36 +144,20 @@ baseurl=%s
         url = self.epel_repo
         if not self.build_url:
             url = "http://ssc-satellite1.colo.seagate.com/pulp/repos/EOS/Library/custom/EPEL-7/EPEL-7/"
-        content = """[epel]
-name=epel
-gpgcheck=0
-enabled=1
-baseurl=%s
-""" % (url)
+        content = EPEL % (url)
         with open(self.third_party_epel_repo, "w") as fObj:
             fObj.write(content)
 
     def create_sspl_repo(self):
         """Create sspl repo file"""
         gpg_file = self.url_sspl_repo + "/RPM-GPG-KEY-Seagate"
-        content = """[sspl]
-name=sspl
-gpgcheck=1
-gpgkey=%s
-enabled=1
-baseurl=%s
-""" % (gpg_file, self.url_sspl_repo)
+        content = SSPL % (gpg_file, self.url_sspl_repo)
         with open(self.sspl_repo, "w") as fObj:
             fObj.write(content)
 
     def create_sspl_uploads_repo(self):
         """Create sspl uploads repo file"""
-        content = """[sspl_uploads]
-name=sspl_uploads
-gpgcheck=0
-enabled=1
-baseurl=%s
-""" % (self.url_uploads_repo)
+        content = SSPL_UPLOADS % (self.url_uploads_repo)
         with open(self.sspl_uploads_repo, "w") as fObj:
             fObj.write(content)
 
@@ -185,3 +195,19 @@ def main(target_build_url=None):
                     stderr=subprocess.PIPE, shell=False)
     subprocess.call(cmd2.split(), stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE, shell=False)
+
+    print("INFO: Created yum repo files.")
+
+
+if __name__ == '__main__':
+    description = "setup_yum_repos"
+    argParser = argparse.ArgumentParser(
+        formatter_class = argparse.RawDescriptionHelpFormatter, description=description,
+        add_help=True, allow_abbrev=False)
+    argParser.add_argument("-t", "--target_build_url", default="", help="Target build URL")
+    args = argParser.parse_args()
+    target_build_url = args.target_build_url
+    if target_build_url:
+        main(target_build_url)
+    else:
+        main()
