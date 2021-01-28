@@ -33,6 +33,7 @@ import re
 import shutil
 import socket
 import subprocess
+import glob
 
 localhost_fqdn = socket.getfqdn().split('.')[0]
 LOG_FILE = "/tmp/sspl_dev_deploy.log"
@@ -60,7 +61,6 @@ class SSPLDevDeploy:
         self.args = args
         self.CORTX_MONITOR_BASE_URL = "https://raw.githubusercontent.com/Seagate/cortx-monitor/main"
         self.PERSISTENT_CONFIG_FILE = "/opt/seagate/cortx/sspl/generated_configs"
-        self.do_cleanup = False
         self.install_3rd_party_packages = False
         self.setup_repo = False
         self.skip_bmc = False
@@ -82,12 +82,10 @@ class SSPLDevDeploy:
         self.BMC_PASSWD = "xxxx"
         self.SERVER_TYPE = "virtual"
         self.STORAGE_TYPE = "virtual"
-        Conf.load("sspl", "yaml:///opt/seagate/cortx/sspl/conf/sspl.conf.LR2.yaml")
-        Conf.load("cortx", "yum:///opt/seagate/cortx/sspl/conf/sample_global_cortx_config.yaml")
 
     def parse_args(self):
         if self.args.cleanup:
-            self.do_cleanup = True
+            self.cleanup()
         if self.args.standalone_installation:
             self.install_3rd_party_packages = True
         if self.args.initialize_sspl:
@@ -96,71 +94,58 @@ class SSPLDevDeploy:
             self.setup_repo = True
         if self.args.product_version:
             self.PRODUCT_VERSION = self.args.product_version
-            Conf.set("cortx", "release>product", self.PRODUCT_VERSION)
         else:
             print("ERROR: Product version(LDR_R1/LR2) not provided")
             sys.exit(1)
         if self.args.node:
             self.NODE = self.args.node
-            Conf.set("sspl", "RABBITMQCLUSTER>cluster_nodes", self.NODE)
         else:
             print("ERROR: Node name not provided")
             sys.exit(1)
         if self.args.rmq_user:
             self.RMQ_USER = self.args.rmq_user
-            Conf.set("sspl", "RABBITMQINGRESSPROCESSOR>username", self.RMQ_USER)
-            Conf.set("sspl", "RABBITMQEGRESSPROCESSOR>username", self.RMQ_USER)
         else:
             print("ERROR: Rabbitmq user not provided")
             sys.exit(1)
         if self.args.rmq_passwd:
             self.RMQ_PASSWD = self.args.rmq_passwd
-            Conf.set("sspl", "RABBITMQINGRESSPROCESSOR>password", self.RMQ_PASSWD)
-            Conf.set("sspl", "RABBITMQEGRESSPROCESSOR>password", self.RMQ_PASSWD)
         else:
             print("ERROR: Rabbitmq password not provided")
             sys.exit(1)
         if self.args.cntrlr_a:
             self.CNTRLR_A = self.args.cntrlr_a
-            Conf.set("cortx", "storage>enclosure_1>controller>primary>ip", self.CNTRLR_A)
         else:
             print("ERROR: Controller A IP not provided")
             sys.exit(1)
         if self.args.cntrlr_a_port:
             self.CNTRLR_A_PORT = self.args.cntrlr_a_port
-            Conf.set("cortx", "storage>enclosure_1>controller>primary>port", self.CNTRLR_A_PORT)
         else:
             print("ERROR: Controller A Port not provided")
             sys.exit(1)
         if self.args.cntrlr_b:
             self.CNTRLR_B = self.args.cntrlr_b
-            Conf.set("cortx", "storage>enclosure_1>controller>secondary>ip", self.CNTRLR_A)
         else:
             print("ERROR: Controller B IP not provided")
             sys.exit(1)
         if self.args.cntrlr_b_port:
             self.CNTRLR_B_PORT = self.args.cntrlr_b_port
-            Conf.set("cortx", "storage>enclosure_1>controller>secondary>port", self.CNTRLR_B_PORT)
         else:
             print("ERROR: Controller B Port not provided")
             sys.exit(1)
         if self.args.cntrlr_user:
             self.CNTRLR_USER = self.args.cntrlr_user
-            Conf.set("cortx", "storage>enclosure_1>controller>user", self.CNTRLR_USER)
         else:
             print("ERROR: Controller user name not provided")
             sys.exit(1)
         if self.args.cntrlr_pass:
             self.CNTRLR_PASSWD = self.args.cntrlr_pass
-            Conf.set("cortx", "storage>enclosure_1>controller>secret", self.CNTRLR_PASSWD)
         else:
             print("ERROR: Controller password not provided")
             sys.exit(1)
         if self.args.target_build_url:
             self.TARGET_BUILD = self.args.target_build_url
         else:
-            print("ERROR: Target build not provided")
-            sys.exit(1)
+            print("WARNING: Target build not provided")
         if self.args.local_rpms_path:
             self.RPMS_PATH = self.args.local_rpms_path
         else:
@@ -169,21 +154,17 @@ class SSPLDevDeploy:
         if self.args.bmc_ip:
             self.BMC_IP = self.args.bmc_ip
         else:
-            print("ERROR: BMC IP not provided")
-            sys.exit(1)
+            print("WARNING: BMC IP not provided")
         if self.args.bmc_user:
             self.BMC_USER = self.args.bmc_user
         else:
-            print("ERROR: BMC user not provided")
-            sys.exit(1)
+            print("WARNING: BMC user not provided")
         if self.args.bmc_passwd:
             self.BMC_PASSWD = self.args.bmc_passwd
         else:
-            print("ERROR: BMC password not provided")
-            sys.exit(1)
+            print("WARNING: BMC password not provided")
         if self.args.storage_type:
             self.STORAGE_TYPE = self.args.storage_type
-            Conf.set("cortx", "storage>enclosure_1>type", self.STORAGE_TYPE)
         else:
             print("ERROR: Storage type not provided")
             sys.exit(1)
@@ -194,6 +175,20 @@ class SSPLDevDeploy:
             sys.exit(1)
 
     def process(self):
+        # Updating local and global yaml config
+        Conf.set("sspl", "RABBITMQCLUSTER>cluster_nodes", self.NODE)
+        Conf.set("sspl", "RABBITMQINGRESSPROCESSOR>username", self.RMQ_USER)
+        Conf.set("sspl", "RABBITMQEGRESSPROCESSOR>username", self.RMQ_USER)
+        Conf.set("sspl", "RABBITMQINGRESSPROCESSOR>password", self.RMQ_PASSWD)
+        Conf.set("sspl", "RABBITMQEGRESSPROCESSOR>password", self.RMQ_PASSWD)
+        Conf.set("global_config", "storage>enclosure_1>controller>primary>ip", self.CNTRLR_A)
+        Conf.set("global_config", "storage>enclosure_1>controller>primary>port", self.CNTRLR_A_PORT)
+        Conf.set("global_config", "storage>enclosure_1>controller>secondary>ip", self.CNTRLR_A)
+        Conf.set("global_config", "storage>enclosure_1>controller>secondary>port", self.CNTRLR_B_PORT)
+        Conf.set("global_config", "storage>enclosure_1>controller>user", self.CNTRLR_USER)
+        Conf.set("global_config", "storage>enclosure_1>controller>secret", self.CNTRLR_PASSWD)
+        Conf.set("global_config", "storage>enclosure_1>type", self.STORAGE_TYPE)
+        Conf.set("global_config", "release>product", self.PRODUCT_VERSION)
         if not os.path.exists("/opt/seagate/cortx/sspl"):
             os.makedirs("/opt/seagate/cortx/sspl")
             open(self.PERSISTENT_CONFIG_FILE, 'a').close()
@@ -203,26 +198,26 @@ class SSPLDevDeploy:
             print("Skipping BMC information for LR2...")
         else:
             if not self.BMC_IP:
-                print("ERROR: --i <BMC IPV4> is required.")
+                print("ERROR: -i <BMC IPV4> is required.")
                 sys.exit(1)
             if not self.BMC_USER:
-                print("ERROR: --u <BMC user> is required.")
+                print("ERROR: -u <BMC user> is required.")
                 sys.exit(1)
             if not self.BMC_PASSWD:
-                print("ERROR: --p <BMC password> is required.")
+                print("ERROR: -p <BMC password> is required.")
                 sys.exit(1)
+
+    def cleanup(self):
+        # Cleanup
+        subprocess.call("systemctl stop sspl-ll.service".split(),
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False)
+        returncode = subprocess.call("yum remove -y cortx-sspl.noarch".split(),
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False)
+        if returncode != 0:
+            raise DeployError(returncode, "%s - failure. %s", "Do Cleanup")
+        sys.exit(0)
     
     def build_common_repos(self):
-        # Cleanup
-        if self.do_cleanup:
-            subprocess.call("systemctl stop sspl-ll.service".split(),
-                    stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False)
-            returncode = subprocess.call("yum remove -y cortx-sspl.noarch".split(),
-                    stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False)
-            if returncode != 0:
-                raise DeployError(returncode, "%s - failure. %s", "Do Cleanup")
-            sys.exit(0)
-
         # Setup common, 3rd_party and build specific repos
         if self.setup_repo:
             setup_repo_url = self.CORTX_MONITOR_BASE_URL + \
@@ -248,7 +243,7 @@ class SSPLDevDeploy:
     def install_sspl_rpms(self):
         # Install common and 3rd_party application
         self.build_common_repos()
-        subprocess.call(f"python3 -m pip install -r {SSPL_BASE_DIR}/low-level/requirements.txt".split(),
+        subprocess.call(f"python3 -m pip install -r /opt/seagate/cortx/sspl/low-level/requirements.txt".split(),
             stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False)
         if self.install_3rd_party_packages:
             print("INFO: INSTALLING python3...")
@@ -277,10 +272,7 @@ class SSPLDevDeploy:
         # installed from the speicifed path. Otherwise yum repos.
         if self.RPMS_PATH:
             print(f"INFO: Installing SSPL RPMS from local path - {self.RPMS_PATH}")
-            sspl_rpm_cmd = f"sudo yum localinstall -y {self.RPMS_PATH}/cortx-libsspl_sec-2* \
-                {self.RPMS_PATH}/cortx-libsspl_sec-method_none-2* \
-                    {self.RPMS_PATH}/cortx-sspl-2* \
-                        {self.RPMS_PATH}/cortx-sspl-test-2*"
+            sspl_rpm_cmd = f"sudo yum install -y {' '.join(glob.glob(self.RPMS_PATH+'/cortx-*'))}"
             subprocess.call(sspl_rpm_cmd.split(), stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE, shell=False)
         else:
@@ -348,9 +340,9 @@ if __name__ == '__main__':
     argParser.add_argument("-Bp", "--cntrlr_b_port", default="80", help="Controller-B Port")
     argParser.add_argument("-U", "--cntrlr_user", default="manage", help="Controller Username")
     argParser.add_argument("-P", "--cntrlr_pass", default="", help="Controller Password")
-    argParser.add_argument("--i", "--bmc_ip", default="", help="BMC IP")
-    argParser.add_argument("--u", "--bmc_user", default="", help="BMC User")
-    argParser.add_argument("--p", "--bmc_passwd", default="", help="BMC Password")
+    argParser.add_argument("-i", "--bmc_ip", default="", help="BMC IP")
+    argParser.add_argument("-u", "--bmc_user", default="", help="BMC User")
+    argParser.add_argument("-p", "--bmc_passwd", default="", help="BMC Password")
     argParser.add_argument("-Ru", "--rmq_user", default="sspluser", help="Rabbitmq username")
     argParser.add_argument("-Rp", "--rmq_passwd", default="", help="Rabbitmq password")
     argParser.add_argument("-St", "--storage_type", default="", help="Storage type  ie. jbod, rbod, 5u84, virtual")
@@ -373,12 +365,14 @@ if __name__ == '__main__':
     from cortx.utils.validator.v_service import ServiceV
     from cortx.utils.validator.error import VError
     from cortx.utils.conf_store import Conf
-    from cortx.sspl.lowlevel.framework import sspl_rabbitmq_reinit
-    from cortx.sspl.bin.setup_rabbitmq_cluster import RMQClusterConfiguration
-    from cortx.sspl.bin.sspl_constants import SSPL_BASE_DIR, file_store_config_path
-    deploy.update_sspl_config()
-    deploy.setup_rabbitmq()
-    deploy.process()
-    deploy.setup_sspl()
+    Conf.load("sspl", "yaml:///opt/seagate/cortx/sspl/conf/sspl.conf.LR2.yaml")
+    Conf.load("global_config", "yaml:///opt/seagate/cortx/sspl/conf/sample_global_cortx_config.yaml")
+    # from cortx.sspl.lowlevel.framework import sspl_rabbitmq_reinit
+    # from cortx.sspl.bin.setup_rabbitmq_cluster import RMQClusterConfiguration
+    # from cortx.sspl.bin.sspl_constants import SSPL_BASE_DIR, file_store_config_path
+    # deploy.update_sspl_config()
+    # deploy.setup_rabbitmq()
+    # deploy.process()
+    # deploy.setup_sspl()
     print(f"For more details see: {LOG_FILE}")
     print("***** COMPLETED!!! *****")
