@@ -272,7 +272,7 @@ class SSPLDevDeploy:
         # installed from the speicifed path. Otherwise yum repos.
         if self.RPMS_PATH:
             print(f"INFO: Installing SSPL RPMS from local path - {self.RPMS_PATH}")
-            sspl_rpm_cmd = f"sudo yum install -y {' '.join(glob.glob(self.RPMS_PATH+'/cortx-*'))}"
+            sspl_rpm_cmd = f"sudo yum install -y {' '.join(glob.glob(self.RPMS_PATH+'/cortx-*-2.*'))}"
             subprocess.call(sspl_rpm_cmd.split(), stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE, shell=False)
         else:
