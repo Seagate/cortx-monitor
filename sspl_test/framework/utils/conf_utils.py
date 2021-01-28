@@ -140,7 +140,7 @@ with open("/etc/machine-id") as f:
 
 Conf.load(GLOBAL_CONF, "yaml:///etc/sample_global_cortx_config.yaml")
 Conf.load(SSPL_CONF, "yaml:///etc/sspl.conf")
-Conf.load(SSPL_TEST_CONF, "yaml:///opt/seagate/cortx/sspl/sspl_test/conf/sspl_tests.conf.yaml")
+Conf.load(SSPL_TEST_CONF, "yaml:///opt/seagate/cortx/sspl/sspl_test/conf/sspl_tests.conf")
 
 SRVNODE = Conf.get("GLOBAL", f'{CLUSTER}>{SERVER_NODES}')[MACHINE_ID]
 ENCLOSURE = Conf.get("GLOBAL", f"{CLUSTER}>{SRVNODE}>{STORAGE}>{ENCLOSURE_ID}")

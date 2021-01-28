@@ -29,7 +29,7 @@ from framework.target.enclosure import StorageEnclosure
 from framework.utils import encryptor
 from framework.utils.conf_utils import (CLUSTER, CONTROLLER, ENCLOSURE,
                                         GLOBAL_CONF, IP, MGMT_INTERFACE,
-                                        PASSWORD, POLLING_FREQUENCY, PORT,
+                                        SECRET, POLLING_FREQUENCY, PORT,
                                         PRIMARY, SECONDARY, SRVNODE, SSPL_CONF,
                                         STORAGE, STORAGE_ENCLOSURE, USER, Conf)
 from framework.utils.service_logging import logger
@@ -133,7 +133,7 @@ class RealStorEnclosure(StorageEnclosure):
         self.active_wsport = self.mc1_wsport
 
         self.user = Conf.get(GLOBAL_CONF, f"{STORAGE}>{ENCLOSURE}>{CONTROLLER}>{USER}", self.DEFAULT_USER)
-        self.passwd = Conf.get(GLOBAL_CONF, f"{STORAGE}>{ENCLOSURE}>{CONTROLLER}>{PASSWORD}", self.DEFAULT_PASSWD)
+        self.passwd = Conf.get(GLOBAL_CONF, f"{STORAGE}>{ENCLOSURE}>{CONTROLLER}>{SECRET}", self.DEFAULT_PASSWD)
 
         self.mc_interface = Conf.get(SSPL_CONF, f"{STORAGE_ENCLOSURE}>{MGMT_INTERFACE}", "cliapi")
 

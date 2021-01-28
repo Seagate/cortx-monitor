@@ -27,7 +27,7 @@ from alerts.self_hw.self_hw_utilities import run_cmd, get_from_consul, get_node_
 from cortx.utils.security.cipher import Cipher
 from framework.utils.conf_utils import (CLUSTER, CONTROLLER, CLUSTER_ID, ENCLOSURE,
                                         GLOBAL_CONF, IP, MGMT_INTERFACE,
-                                        PASSWORD, POLLING_FREQUENCY, PORT,
+                                        SECRET, POLLING_FREQUENCY, PORT,
                                         PRIMARY, SECONDARY, SRVNODE, SSPL_CONF,
                                         STORAGE, STORAGE_ENCLOSURE, USER, Conf)
 
@@ -77,7 +77,7 @@ def test_self_hw_real_stor_enclosure_conn(args):
         ip = Conf.get(GLOBAL_CONF, f"{STORAGE}>{ENCLOSURE}>{CONTROLLER}>{SECONDARY}>{IP}")
         port = Conf.get(GLOBAL_CONF, f"{STORAGE}>{ENCLOSURE}>{CONTROLLER}>{SECONDARY}>{PORT}")
     username = Conf.get(GLOBAL_CONF, f"{STORAGE}>{ENCLOSURE}>{CONTROLLER}>{USER}")
-    passwd = Conf.get(GLOBAL_CONF, f"{STORAGE}>{ENCLOSURE}>{CONTROLLER}>{PASSWORD}")
+    passwd = Conf.get(GLOBAL_CONF, f"{STORAGE}>{ENCLOSURE}>{CONTROLLER}>{SECRET}")
     cluster_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{CLUSTER_ID}",'CC01')
 
     # decrypt the passwd

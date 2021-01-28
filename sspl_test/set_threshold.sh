@@ -26,7 +26,7 @@ sspl_config=$5
 transmit_interval=$1
 if [ "$SSPL_STORE_TYPE" == "file" ]
 then
-    [[ -f /etc/cortx/sspl.conf ]] && sed -i -e "s/\(transmit_interval: \).*/\1$transmit_interval/" /etc/cortx/sspl.conf
+    [[ -f /etc/sspl.conf ]] && sed -i -e "s/\(transmit_interval: \).*/\1$transmit_interval/" /etc/sspl.conf
 elif [ "$SSPL_STORE_TYPE" == "confstor" ]
 then
     conf $sspl_config set "NODEDATAMSGHANDLER>transmit_interval=$transmit_interval"
@@ -40,7 +40,7 @@ fi
 out=$2
 if [ "$SSPL_STORE_TYPE" == "file" ]
 then
-    [[ -f /etc/cortx/sspl.conf ]] && sed -i -e "s/\(disk_usage_threshold: \).*/\1$out/" /etc/cortx/sspl.conf
+    [[ -f /etc/sspl.conf ]] && sed -i -e "s/\(disk_usage_threshold: \).*/\1$out/" /etc/sspl.conf
 elif [ "$SSPL_STORE_TYPE" == "confstor" ]
 then
     conf $sspl_config set "NODEDATAMSGHANDLER>disk_usage_threshold=$out"
@@ -54,7 +54,7 @@ fi
 host_out=$3
 if [ "$SSPL_STORE_TYPE" == "file" ]
 then
-    [[ -f /etc/cortx/sspl.conf ]] && sed -i -e "s/\(host_memory_usage_threshold: \).*/\1$host_out/" /etc/cortx/sspl.conf
+    [[ -f /etc/sspl.conf ]] && sed -i -e "s/\(host_memory_usage_threshold: \).*/\1$host_out/" /etc/sspl.conf
 elif [ "$SSPL_STORE_TYPE" == "confstor" ]
 then
     conf $sspl_config set "NODEDATAMSGHANDLER>host_memory_usage_threshold=$host_out"
@@ -68,7 +68,7 @@ fi
 cpu_out=$4
 if [ "$SSPL_STORE_TYPE" == "file" ]
 then
-    [[ -f /etc/cortx/sspl.conf ]] && sed -i -e "s/\(cpu_usage_threshold: \).*/\1$cpu_out/" /etc/cortx/sspl.conf
+    [[ -f /etc/sspl.conf ]] && sed -i -e "s/\(cpu_usage_threshold: \).*/\1$cpu_out/" /etc/sspl.conf
 elif [ "$SSPL_STORE_TYPE" == "confstor" ]
 then
     conf $sspl_config set "NODEDATAMSGHANDLER>cpu_usage_threshold=$cpu_out"
