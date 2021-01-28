@@ -288,7 +288,8 @@ class SSPLDevDeploy:
         commands = [
             "%s post_install --config yaml://%s" % (setup_script, self.sample_global_config),
             "%s init --config yaml://%s" % (setup_script, self.sample_global_config),
-            "%s config --config yaml://%s" % (setup_script, self.sample_global_config)
+            "%s config --config yaml://%s" % (setup_script, self.sample_global_config),
+            "%s check" % (setup_script)
         ]
         if self.CLUSTER_NODES:
             # WARN: This command will reset existing cluster setup and

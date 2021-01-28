@@ -374,10 +374,9 @@ class CheckCmd(Cmd):
     def __init__(self, args):
         super().__init__(args)
 
-        from cortx.sspl.bin.sspl_constants import PRODUCT_FAMILY
-
-        self.SSPL_CONFIGURED="/var/%s/sspl/sspl-configured" % (PRODUCT_FAMILY)
-        self.services = ["rabbitmq-server"]
+        self.SSPL_CONFIGURED="/var/cortx/sspl/sspl-configured"
+        self.services = ["rabbitmq-server", "sspl-ll"]
+        Service('dbus').process('start', 'sspl-ll.service')
 
     def validate(self):
         # Common validator classes to check Cortx/system wide validator
