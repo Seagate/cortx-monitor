@@ -198,7 +198,7 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
             self._password      = Conf.get(SSPL_CONF, f"{self.LOGGINGPROCESSOR}>{self.PASSWORD}",
                                                                  'sspl4ever')
 
-            cluster_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{self.CLUSTER_ID_KEY}",'001')
+            cluster_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{self.CLUSTER_ID_KEY}",'CC01')
 
             # Decrypt RabbitMQ Password
             decryption_key = encryptor.gen_key(cluster_id, ServiceTypes.RABBITMQ.value)

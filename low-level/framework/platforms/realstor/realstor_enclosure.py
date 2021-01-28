@@ -140,11 +140,11 @@ class RealStorEnclosure(StorageEnclosure):
         self.pollfreq = int(Conf.get(SSPL_CONF, f"{self.CONF_REALSTORSENSORS}>{POLLING_FREQUENCY}",
                         self.DEFAULT_POLL))
 
-        self.site_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.SITE_ID}",'001')
-        self.rack_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.RACK_ID}",'001')
-        self.node_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.NODE_ID}",'001')
+        self.site_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.SITE_ID}",'DC01')
+        self.rack_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.RACK_ID}",'RC01')
+        self.node_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.NODE_ID}",'SN01')
         # Need to keep cluster_id string here to generate decryption key
-        self.cluster_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{self.CLUSTER_ID}",'001')
+        self.cluster_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{self.CLUSTER_ID}",'CC01')
         # Decrypt MC Password
         decryption_key = encryptor.gen_key(self.cluster_id, ServiceTypes.STORAGE_ENCLOSURE.value)
         self.passwd = encryptor.decrypt(decryption_key, self.passwd.encode('ascii'), "RealStoreEncl")

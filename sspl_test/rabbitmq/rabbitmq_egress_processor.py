@@ -188,8 +188,8 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
             self._iem_route_addr = Conf.get(SSPL_TEST_CONF, f"{self.RABBITMQPROCESSOR}>{self.IEM_ROUTE_ADDR}",'')
             self._iem_route_exchange_name = Conf.get(SSPL_TEST_CONF, f"{self.RABBITMQPROCESSOR}>{self.IEM_ROUTE_EXCHANGE_NAME}",
                                                                  'sspl-in')
-            self._node_id = Conf.get(SSPL_TEST_CONF, f"{self.SYSTEM_INFORMATION}>{self.NODE_ID}",'001')
-            cluster_id = Conf.get(SSPL_TEST_CONF, f"{self.SYSTEM_INFORMATION}>{self.CLUSTER_ID}",'001')
+            self._node_id = Conf.get(SSPL_TEST_CONF, f"{self.SYSTEM_INFORMATION}>{self.NODE_ID}",'SN01')
+            cluster_id = Conf.get(SSPL_TEST_CONF, f"{self.SYSTEM_INFORMATION}>{self.CLUSTER_ID}",'CC01')
 
             # Decrypt RabbitMQ Password
             decryption_key = encryptor.gen_key(cluster_id, ServiceTypes.RABBITMQ.value)

@@ -261,9 +261,9 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
                                                                  'sspluser')
             self._password = Conf.get(SSPL_CONF, f"{self.RABBITMQPROCESSOR}>{self.PASSWORD}",'')
 
-            cluster_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{self.CLUSTER_ID_KEY}",'001')
+            cluster_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{self.CLUSTER_ID_KEY}",'CC01')
 
-            node_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.NODE_ID_KEY}",'001')
+            node_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.NODE_ID_KEY}",'SN01')
             # Decrypt RabbitMQ Password
             decryption_key = encryptor.gen_key(cluster_id, ServiceTypes.RABBITMQ.value)
             self._password = encryptor.decrypt(decryption_key, self._password.encode('ascii'), "RabbitMQingressProcessor")

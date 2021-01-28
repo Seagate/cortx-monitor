@@ -61,10 +61,10 @@ class IEMSensor(SensorThread, InternalMsgQ):
     # Default values for config  settings
     DEFAULT_LOG_FILE_PATH = f"/var/log/{PRODUCT_FAMILY}/iem/iem_messages"
     DEFAULT_TIMESTAMP_FILE_PATH = f"/var/{PRODUCT_FAMILY}/sspl/data/iem/last_processed_msg_time"
-    DEFAULT_SITE_ID = "001"
-    DEFAULT_RACK_ID = "001"
-    DEFAULT_NODE_ID = "001"
-    DEFAULT_CLUSTER_ID= "001"
+    DEFAULT_SITE_ID = "DC01"
+    DEFAULT_RACK_ID = "RC01"
+    DEFAULT_NODE_ID = "SN01"
+    DEFAULT_CLUSTER_ID= "CC01"
 
     # RANGE/VALID VALUES for IEC Components
     # NOTE: Ranges are   in hex number system.
@@ -133,10 +133,10 @@ class IEMSensor(SensorThread, InternalMsgQ):
         self._timestamp_file_path = Conf.get(SSPL_CONF, f"{self.SENSOR_NAME.upper()}>{self.TIMESTAMP_FILE_PATH_KEY}",
                 self.DEFAULT_TIMESTAMP_FILE_PATH)
 
-        self._site_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{SITE_ID}",'001')
-        self._rack_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{RACK_ID}",'001')
-        self._node_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{NODE_ID}",'001')
-        self._cluster_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{CLUSTER_ID}",'001')
+        self._site_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{SITE_ID}",'DC01')
+        self._rack_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{RACK_ID}",'RC01')
+        self._node_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{NODE_ID}",'SN01')
+        self._cluster_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{CLUSTER_ID}",'CC01')
 
         return True
 

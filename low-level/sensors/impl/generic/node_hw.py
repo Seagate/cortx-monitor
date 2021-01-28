@@ -245,10 +245,10 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         # Initialize internal message queues for this module
         super(NodeHWsensor, self).initialize_msgQ(msgQlist)
 
-        self._site_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.SITE_ID}",'001')
-        self._rack_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.RACK_ID}",'001')
-        self._node_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.NODE_ID}",'001')
-        self._cluster_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{self.CLUSTER_ID}",'001')
+        self._site_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.SITE_ID}",'DC01')
+        self._rack_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.RACK_ID}",'RC01')
+        self._node_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.NODE_ID}",'SN01')
+        self._cluster_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{self.CLUSTER_ID}",'CC01')
         self._bmc_user = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.BMC}>{USER}",
                                                 'ADMIN')
         self._bmc_passwd = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.BMC}>{SECRET}",

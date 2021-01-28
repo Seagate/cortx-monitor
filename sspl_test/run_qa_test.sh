@@ -159,10 +159,10 @@ restore_cfg_services()
         then
             $CONSUL_PATH/consul kv put sspl/config/STORAGE_ENCLOSURE/controller/primary_mc/port $primary_port
         fi
-        $CONSUL_PATH/consul kv put sspl_test/config/SYSTEM_INFORMATION/node_id '001'
-        $CONSUL_PATH/consul kv put sspl_test/config/SYSTEM_INFORMATION/site_id '001'
-        $CONSUL_PATH/consul kv put sspl_test/config/SYSTEM_INFORMATION/rack_id '001'
-        $CONSUL_PATH/consul kv put sspl_test/config/SYSTEM_INFORMATION/cluster_id '001'
+        $CONSUL_PATH/consul kv put sspl_test/config/SYSTEM_INFORMATION/node_id 'SN01'
+        $CONSUL_PATH/consul kv put sspl_test/config/SYSTEM_INFORMATION/site_id 'DC01'
+        $CONSUL_PATH/consul kv put sspl_test/config/SYSTEM_INFORMATION/rack_id 'RC01'
+        $CONSUL_PATH/consul kv put sspl_test/config/SYSTEM_INFORMATION/cluster_id 'CC01'
     fi
 
     if [ "$IS_VIRTUAL" == "true" ]

@@ -27,7 +27,7 @@ cluster:
          enclosure_id: enclosure_1
       bmc:
          ip: 127.0.0.1
-         secret: admin
+         secret: gAAAAABgEnOnRAhNzFyATr3iZdoC_tCeqEBqnwFb7CNYVXhd6i3Pl93Il7aDsG0Ro5ZRRaXr2LUPQEse46NVlDTAK7gbzoxGyg==
          user: admin
 
 storage:

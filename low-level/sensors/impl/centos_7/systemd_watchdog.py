@@ -180,10 +180,10 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
 
         self._product = product
 
-        self._site_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{SITE_ID}",'001')
-        self._rack_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{RACK_ID}",'001')
-        self._node_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{NODE_ID}",'001')
-        self._cluster_id = Conf.get(GLOBAL_CONF, f'{CLUSTER}>{CLUSTER_ID}','001')
+        self._site_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{SITE_ID}",'DC01')
+        self._rack_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{RACK_ID}",'RC01')
+        self._node_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{NODE_ID}",'SN01')
+        self._cluster_id = Conf.get(GLOBAL_CONF, f'{CLUSTER}>{CLUSTER_ID}','CC01')
 
         self.vol_ras = Conf.get(SSPL_CONF, f"{self.SYSTEM_INFORMATION}>{DATA_PATH_KEY}", self.DEFAULT_RAS_VOL)
 
@@ -954,7 +954,7 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
 
     def _get_monitored_services(self):
         """Retrieves the list of services to be monitored"""
-        return Conf.get(SSPL_CONF, f"{self.SYSTEMDWATCHDOG}>{self.MONITORED_SERVICES}")
+        return Conf.get(SSPL_CONF, f"{self.SYSTEMDWATCHDOG}>{self.MONITORED_SERVICES}", [])
 
     def _interface_added(self, object_path, interfaces_and_properties):
         """Callback for when an interface like drive or SMART job has been added"""

@@ -82,10 +82,10 @@ SYSTEM_INFORMATION:
     cli_type: CS_A
     setup: cortx
     data_path: /var/cortx/sspl/data/
-    cluster_id: '001'
-    site_id: '001'
-    rack_id: '001'
-    node_id: '001'
+    cluster_id: 'CC01'
+    site_id: 'DC01'
+    rack_id: 'RC01'
+    node_id: 'SN01'
     log_level: INFO
     sspl_log_file_path: /var/log/cortx/sspl/sspl.log
     syslog_host: localhost

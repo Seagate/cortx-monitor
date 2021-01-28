@@ -129,10 +129,10 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         self._host_memory_usage_threshold = Conf.get(SSPL_CONF, f"{self.NODEDATAMSGHANDLER}>{self.HOST_MEMORY_USAGE_THRESHOLD}",
                                                 self.DEFAULT_HOST_MEMORY_USAGE_THRESHOLD)
 
-        self.site_id = Conf.get(GLOBAL_CONF, f'{CLUSTER}>{SRVNODE}>{self.SITE_ID}','001')
-        self.rack_id = Conf.get(GLOBAL_CONF, f'{CLUSTER}>{SRVNODE}>{self.RACK_ID}','001')
-        self.node_id = Conf.get(GLOBAL_CONF, f'{CLUSTER}>{SRVNODE}>{self.NODE_ID}','001')
-        self.cluster_id = Conf.get(GLOBAL_CONF, f'{CLUSTER}>{self.CLUSTER_ID}','001')
+        self.site_id = Conf.get(GLOBAL_CONF, f'{CLUSTER}>{SRVNODE}>{self.SITE_ID}','DC01')
+        self.rack_id = Conf.get(GLOBAL_CONF, f'{CLUSTER}>{SRVNODE}>{self.RACK_ID}','RC01')
+        self.node_id = Conf.get(GLOBAL_CONF, f'{CLUSTER}>{SRVNODE}>{self.NODE_ID}','SN01')
+        self.cluster_id = Conf.get(GLOBAL_CONF, f'{CLUSTER}>{self.CLUSTER_ID}','CC01')
 
         self.prev_nw_status = {}
         self.bmcNwStatus = None

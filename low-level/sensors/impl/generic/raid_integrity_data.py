@@ -96,10 +96,10 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
         self._alert_msg = None
         self._fault_state = None
         self._suspended = False
-        self._site_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.SITE_ID}",'001')
-        self._rack_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.RACK_ID}",'001')
-        self._node_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.NODE_ID}",'001')
-        self._cluster_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{self.CLUSTER_ID}",'001')
+        self._site_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.SITE_ID}",'DC01')
+        self._rack_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.RACK_ID}",'RC01')
+        self._node_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.NODE_ID}",'SN01')
+        self._cluster_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{self.CLUSTER_ID}",'CC01')
         self._timestamp_file_path = Conf.get(SSPL_CONF, f"{self.RAIDIntegritySensor}>{self.TIMESTAMP_FILE_PATH_KEY}",
                                         self.DEFAULT_TIMESTAMP_FILE_PATH)
         self._polling_interval = Conf.get(SSPL_CONF, f"{self.RAIDIntegritySensor}>{self.POLLING_INTERVAL}",
