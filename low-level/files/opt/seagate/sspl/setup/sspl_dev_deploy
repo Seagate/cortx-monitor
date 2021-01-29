@@ -82,14 +82,9 @@ class SSPLDevDeploy:
         # Config files
         self.sspl_config = None
         self.sample_global_config = None
-        print("=======================")
-        print("INFO: Deploying SSPL...")
-        print("=======================")
 
     def parse_args(self):
         """Override the default values."""
-        if self.args.cleanup:
-            self.cleanup()
         if self.args.standalone_installation:
             self.install_3rd_party_packages = True
         if self.args.product_version:
@@ -126,11 +121,6 @@ class SSPLDevDeploy:
             self.SERVER_TYPE = self.args.server_type
         if self.args.cluster_nodes:
             self.CLUSTER_NODES = self.args.cluster_nodes
-        if not (self.TARGET_BUILD or self.RPMS_PATH):
-            argParser.print_help()
-            raise DeployError(1, "Target build url or local RPMS path is missing")
-        if self.RPMS_PATH and not os.path.exists(self.RPMS_PATH):
-            raise DeployError(1, "RPMS path is not found.")
 
     def cleanup(self):
         """Stop sspl service and remove SSPL RPMS."""
@@ -141,7 +131,11 @@ class SSPLDevDeploy:
         if returncode != 0:
             raise DeployError(returncode, "Unable to remove sspl RPMS. %s",
                               "Cleanup failed.")
-        sys.exit(0)
+        cmd = "yum remove -y cortx-py-utils"
+        returncode = self._execute_cmd(cmd)
+        if returncode != 0:
+            raise DeployError(returncode, "Unable to remove cortx-py-utils RPM. %s",
+                              "Cleanup failed.")
 
     def setup_yum_repos(self):
         """Setup common, 3rd_party and build specific repos."""
@@ -169,7 +163,7 @@ class SSPLDevDeploy:
             _ = self._execute_cmd(cmd)
 
             # cortx-py-utils dependency
-            cmd = "python3 -m pip -r https://raw.githubusercontent.com/Seagate/cortx-utils/main/py-utils/requirements.txt"
+            cmd = "python3 -m pip install -r https://raw.githubusercontent.com/Seagate/cortx-utils/main/py-utils/requirements.txt"
             _ = self._execute_cmd(cmd)
 
             print("INFO: INSTALLING cortx-py-utils...")
@@ -180,7 +174,7 @@ class SSPLDevDeploy:
                print(f"ERROR: Unable to download {pkg_name}.")
             cmd = "yum install -y %s%s" % (build_url, pkg[0])
             returncode = self._execute_cmd(cmd)
-            if not (returncode==0 or returncode==256):
+            if returncode != 0:
                raise DeployError(returncode, "Failed to install %s.", pkg_name)
 
             print("INFO: INSTALLING rabbitmq-server...")
@@ -323,10 +317,16 @@ def main(args):
     """Main method to start SSPL deployment."""
     try:
         deploy = SSPLDevDeploy(args)
+        deploy.parse_args()
         if args.setup_repo:
             deploy.setup_yum_repos()
             return
-        deploy.parse_args()
+        if args.cleanup:
+            deploy.cleanup()
+            return
+        print("=======================")
+        print("INFO: Deploying SSPL...")
+        print("=======================")
         deploy.install_dependencies()
         deploy.install_sspl_rpms()
         deploy.update_config()

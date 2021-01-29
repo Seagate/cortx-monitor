@@ -107,7 +107,7 @@ class SetupYumRepo:
         """Make build specific url."""
         if self.build_url:
             self.cortx_deps_repo = "%s/3rd_party" % self.build_url
-            self.epel_repo = "%s/EPEL-7" % self.build_url
+            self.epel_repo = "%s/3rd_party/EPEL-7" % self.build_url
             self.url_local_repo_commons = self.cortx_deps_repo
             self.url_sspl_repo = "%s/cortx_iso" % self.build_url
         self._validate_centos_release_support()
