@@ -256,7 +256,8 @@ class SSPLDevDeploy:
         Conf.set("global_config", "storage>enclosure_1>controller>user", self.CNTRLR_USER)
         Conf.set("global_config", "storage>enclosure_1>controller>secret", self.CNTRLR_PASSWD)
         Conf.set("global_config", "storage>enclosure_1>type", self.STORAGE_TYPE)
-        Conf.set("global_config", "cluser>srvnode1>node_type", self.SERVER_TYPE)
+        srvnode = Conf.get("global_config", "cluster>server_nodes>%s" % (node_key_id))
+        Conf.set("global_config", "cluser>%s>node_type" % (srvnode), self.SERVER_TYPE)
         Conf.set("global_config", "release>product", self.PRODUCT_VERSION)
 
         # Update BMC Information
