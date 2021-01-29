@@ -25,6 +25,10 @@ import os
 import time
 import re
 import random
+# Adding sspl and sspl_test path
+test_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+os.sys.path.append(os.path.join(test_path))
+from sspl_test.framework.utils.conf_utils import Conf, SSPL_TEST_CONF
 
 SSPL_USER = "sspluser"
 SSPL_PASS = "sspl4ever"
@@ -34,10 +38,11 @@ CONSUL_HOST = '127.0.0.1'
 CONSUL_PORT = '8500'
 component = 'sspl/config'
 RABBITMQ_CLUSTER_SECTION = 'RABBITMQCLUSTER'
+RABBITMQ_CLUSTER_HOSTS_KEY = 'cluster_nodes'
+
 host = os.getenv('CONSUL_HOST', CONSUL_HOST)
 port = os.getenv('CONSUL_PORT', CONSUL_PORT)
 SSPL_STORE_TYPE = 'file'
-sspl_config_file = '/etc/sspl.conf'
 
 # Onward LDR_R2, consul will be abstracted out and won't exist as hard dependency for SSPL
 if SSPL_STORE_TYPE == 'consul':
@@ -52,11 +57,7 @@ def get_cluster_connection(username, password, virtual_host):
         consul_key = component + '/' + RABBITMQ_CLUSTER_SECTION + '/' + 'cluster_nodes'
         hosts = consul_conn.kv.get(consul_key)[1]["Value"].decode()
     else:
-        with open(sspl_config_file) as fObj:
-            config = fObj.read()
-        cluster_nodes = re.findall(r"cluster_nodes=(.*)\n", config)
-    if cluster_nodes:
-        hosts = cluster_nodes[0]
+        hosts = Conf.get(SSPL_TEST_CONF, f"{RABBITMQ_CLUSTER_SECTION}>{RABBITMQ_CLUSTER_HOSTS_KEY}")
     if isinstance(hosts, str):
         hosts = hosts.strip().split(",")
     print(f"Cluster Nodes: {hosts}")

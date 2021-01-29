@@ -32,16 +32,17 @@ PRODUCT_FAMILY = 'cortx'
 enabled_products = ["CS-A", "SINGLE","DUAL", "CLUSTER", "LDR_R1", "LR2"]
 cs_products = ["CS-A"]
 cs_legacy_products = ["CS-L", "CS-G"]
-setups = ["cortx"]
+setups = ["vm", "cortx", "ssu", "gw", "cmu"]
 RESOURCE_PATH = "/opt/seagate/%s/sspl/low-level/json_msgs/schemas/" % (PRODUCT_FAMILY)
 CLI_RESOURCE_PATH = "/opt/seagate/%s/sspl/low-level/tests/manual" % (PRODUCT_FAMILY)
 DATA_PATH = "/var/%s/sspl/data/" % (PRODUCT_FAMILY)
-SSPL_CONFIGURED= "/var/%s/sspl/sspl-configured" % (PRODUCT_FAMILY)
+SSPL_CONFIGURED_DIR = "/var/%s/sspl" % (PRODUCT_FAMILY)
+SSPL_CONFIGURED = "%s/sspl-configured" % SSPL_CONFIGURED_DIR
 RESOURCE_HEALTH_VIEW = "/usr/bin/resource_health_view"
 CONSUL_DUMP = "/opt/seagate/%s/sspl/bin/consuldump.py" % (PRODUCT_FAMILY)
-NODE_ID = "001"
-SITE_ID = "001"
-RACK_ID = "001"
+NODE_ID = "SN01"
+SITE_ID = "DC01"
+RACK_ID = "RC01"
 SSPL_STORE_TYPE = 'file'
 SYSLOG_HOST = 'localhost'
 SYSLOG_PORT = '514'
@@ -58,6 +59,13 @@ ENCL_DOWNLOAD_LOG_MAX_RETRY = 60
 ENCL_DOWNLOAD_LOG_WAIT_BEFORE_RETRY = 15
 SSPL_BASE_DIR = "/opt/seagate/%s/sspl" % (PRODUCT_FAMILY)
 PRODUCT_BASE_DIR="/opt/seagate/$PRODUCT_FAMILY/"
+RSYSLOG_IEM_CONF ="/etc/rsyslog.d/0-iemfwd.conf"
+RSYSLOG_SSPL_CONF = "/etc/rsyslog.d/1-ssplfwd.conf"
+LOGROTATE_DIR  ="/etc/logrotate.d"
+IEM_LOGROTATE_CONF = "%s/iem_messages" % LOGROTATE_DIR
+SSPL_LOGROTATE_CONF = "%s/sspl_logs" % LOGROTATE_DIR
+HPI_PATH = '/tmp/dcs/hpi'
+MDADM_PATH = '/etc/mdadm.conf'
 
 # This file will be created when sspl is being configured for node replacement case
 REPLACEMENT_NODE_ENV_VAR_FILE = "/etc/profile.d/set_replacement_env.sh"
@@ -77,26 +85,6 @@ CONSUL_PORT = '8500'
 
 # TODO Keep only constants in this file.
 # other values(configs) should come from config.
-
-# TODO: Below finding machine id/node_key_id code will be replaced by PR #281 [EO-16515]
-try:
-    with open("/etc/machine-id") as f:
-        node_key_id = f.read().strip("\n")
-except Exception as err:
-    print("Failed to get machine-id. - %s" % (err))
-
-storage_type = Conf.get('global_config',
-                        'storage>enclosure_1>type')
-server_type = Conf.get('global_config',
-                       'cluster>%s>node_type' % (node_key_id))
-cluster_id = Conf.get('global_config',
-                      'cluster>cluster_id')
-node_id = Conf.get('global_config',
-                   'cluster>%s>node_id' % (node_key_id))
-site_id = Conf.get('global_config',
-                   'cluster>%s>site_id' % (node_key_id))
-rack_id = Conf.get('global_config',
-                   'cluster>%s>site_id' % (node_key_id))
 
 # If SSPL is not configured, use salt interface
 if not os.path.exists(SSPL_CONFIGURED) and PRODUCT_NAME=="LDR_R1":

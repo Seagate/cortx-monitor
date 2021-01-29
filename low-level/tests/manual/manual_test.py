@@ -170,7 +170,7 @@ class ManualTest():
         self.cluster_id = conf_reader._get_value_with_default(
                                                 self.SYSTEM_INFORMATION,
                                                 self.CLUSTER_ID,
-                                                '001')
+                                                'CC01')
 
         # Ingress configuration
         if self.module_name == "RABBITMQINGRESSPROCESSOR":

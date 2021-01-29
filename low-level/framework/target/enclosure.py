@@ -19,13 +19,14 @@
  ****************************************************************************
 """
 
-import os
 import errno
+import os
 
+from framework.base.sspl_constants import PRODUCT_FAMILY
+from framework.utils.conf_utils import DATA_PATH_KEY, SSPL_CONF, Conf
 from framework.utils.config_reader import ConfigReader
 from framework.utils.service_logging import logger
-from framework.base.sspl_constants import PRODUCT_FAMILY
-from framework.base.sspl_constants import COMMON_CONFIGS
+
 
 class StorageEnclosure(object):
 
@@ -66,8 +67,7 @@ class StorageEnclosure(object):
             logger.error("[ Error ] when validating the config file {0} - {1}"\
                  .format(self.CONF_FILE, err))
 
-        self.vol_ras = self.conf_reader._get_value_with_default(\
-            self.SYSINFO, COMMON_CONFIGS.get(self.SYSINFO).get("data_path"), self.DEFAULT_RAS_VOL)
+        self.vol_ras = Conf.get(SSPL_CONF, f"{self.SYSINFO}>{DATA_PATH_KEY}", self.DEFAULT_RAS_VOL)
 
         self.encl_cache = self.vol_ras + "encl/"
         self.frus = self.encl_cache + "frus/"

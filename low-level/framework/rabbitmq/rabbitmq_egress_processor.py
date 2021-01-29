@@ -19,29 +19,30 @@
  ****************************************************************************
 """
 
-import json
-import pika
-import time
-import sys
-
-from framework.base.module_thread import ScheduledModuleThread
-from framework.base.internal_msgQ import InternalMsgQ
-from framework.utils.service_logging import logger
-from .rabbitmq_connector import RabbitMQSafeConnection, connection_exceptions
-from framework.utils import encryptor
-from framework.utils.store_factory import store
-from framework.utils import mon_utils
-from framework.utils.store_queue import store_queue
-from framework.base.sspl_constants import ServiceTypes, COMMON_CONFIGS
-
 import ctypes
+import json
+import sys
+import time
+
+import pika
+
+from framework.base.internal_msgQ import InternalMsgQ
+from framework.base.module_thread import ScheduledModuleThread
+from framework.base.sspl_constants import ServiceTypes
+from framework.utils import encryptor
+from framework.utils.conf_utils import CLUSTER, GLOBAL_CONF, SSPL_CONF, Conf
+from framework.utils.service_logging import logger
+from framework.utils.store_factory import store
+from framework.utils.store_queue import StoreQueue
+
+from .rabbitmq_connector import RabbitMQSafeConnection, connection_exceptions
+
 try:
     use_security_lib=True
     SSPL_SEC = ctypes.cdll.LoadLibrary('libsspl_sec.so.0')
 except Exception as ae:
     logger.info("RabbitMQegressProcessor, libsspl_sec not found, disabling authentication on egress msgs")
     use_security_lib=False
-
 
 class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
     """Handles outgoing messages via rabbitMQ over localhost"""
@@ -90,6 +91,7 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
         # Initialize internal message queues for this module
         super(RabbitMQegressProcessor, self).initialize_msgQ(msgQlist)
 
+        self.store_queue = StoreQueue()
         # Flag denoting that a shutdown message has been placed
         #  into our message queue from the main sspl_ll_d handler
         self._request_shutdown = False
@@ -153,58 +155,40 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
     def _read_config(self):
         """Configure the RabbitMQ exchange with defaults available"""
         try:
-            self._virtual_host  = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
-                                                                 self.VIRT_HOST,
-                                                                 'SSPL')
+            self._virtual_host  = Conf.get(SSPL_CONF, f"{self.RABBITMQPROCESSOR}>{self.VIRT_HOST}",
+                                                            'SSPL')
 
             # Read common RabbitMQ configuration
-            self._primary_rabbitmq_host = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
-                                                                 self.PRIMARY_RABBITMQ_HOST,
+            self._primary_rabbitmq_host = Conf.get(SSPL_CONF, f"{self.RABBITMQPROCESSOR}>{self.PRIMARY_RABBITMQ_HOST}",
                                                                  'localhost')
 
             # Read RabbitMQ configuration for sensor messages
-            self._queue_name    = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
-                                                                 self.QUEUE_NAME,
+            self._queue_name    = Conf.get(SSPL_CONF, f"{self.RABBITMQPROCESSOR}>{self.QUEUE_NAME}",
                                                                  'sensor-queue')
-            self._exchange_name = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
-                                                                 self.EXCHANGE_NAME,
+            self._exchange_name = Conf.get(SSPL_CONF, f"{self.RABBITMQPROCESSOR}>{self.EXCHANGE_NAME}",
                                                                  'sspl-out')
-            self._routing_key   = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
-                                                                 self.ROUTING_KEY,
+            self._routing_key   = Conf.get(SSPL_CONF, f"{self.RABBITMQPROCESSOR}>{self.ROUTING_KEY}",
                                                                  'sensor-key')
             # Read RabbitMQ configuration for Ack messages
-            self._ack_queue_name = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
-                                                                 self.ACK_QUEUE_NAME,
+            self._ack_queue_name = Conf.get(SSPL_CONF, f"{self.RABBITMQPROCESSOR}>{self.ACK_QUEUE_NAME}",
                                                                  'sensor-queue')
-            self._ack_routing_key = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
-                                                                 self.ACK_ROUTING_KEY,
+            self._ack_routing_key = Conf.get(SSPL_CONF, f"{self.RABBITMQPROCESSOR}>{self.ACK_ROUTING_KEY}",
                                                                  'sensor-key')
 
-            self._username = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
-                                                                 self.USER_NAME,
+            self._username = Conf.get(SSPL_CONF, f"{self.RABBITMQPROCESSOR}>{self.USER_NAME}",
                                                                  'sspluser')
-            self._password = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
-                                                                 self.PASSWORD,
-                                                                 '')
-            self._signature_user = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
-                                                                 self.SIGNATURE_USERNAME,
+            self._password = Conf.get(SSPL_CONF, f"{self.RABBITMQPROCESSOR}>{self.PASSWORD}",'')
+            self._signature_user = Conf.get(SSPL_CONF, f"{self.RABBITMQPROCESSOR}>{self.SIGNATURE_USERNAME}",
                                                                  'sspl-ll')
-            self._signature_token = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
-                                                                 self.SIGNATURE_TOKEN,
+            self._signature_token = Conf.get(SSPL_CONF, f"{self.RABBITMQPROCESSOR}>{self.SIGNATURE_TOKEN}",
                                                                  'FAKETOKEN1234')
-            self._signature_expires = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
-                                                                 self.SIGNATURE_EXPIRES,
+            self._signature_expires = Conf.get(SSPL_CONF, f"{self.RABBITMQPROCESSOR}>{self.SIGNATURE_EXPIRES}",
                                                                  "3600")
-            self._iem_route_addr = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
-                                                                 self.IEM_ROUTE_ADDR,
-                                                                 '')
-            self._iem_route_exchange_name = self._conf_reader._get_value_with_default(self.RABBITMQPROCESSOR,
-                                                                 self.IEM_ROUTE_EXCHANGE_NAME,
+            self._iem_route_addr = Conf.get(SSPL_CONF, f"{self.RABBITMQPROCESSOR}>{self.IEM_ROUTE_ADDR}",'')
+            self._iem_route_exchange_name = Conf.get(SSPL_CONF, f"{self.RABBITMQPROCESSOR}>{self.IEM_ROUTE_EXCHANGE_NAME}",
                                                                  'sspl-in')
 
-            cluster_id = self._conf_reader._get_value_with_default(self.SYSTEM_INFORMATION_KEY,
-                                                                   COMMON_CONFIGS.get(self.SYSTEM_INFORMATION_KEY).get(self.CLUSTER_ID_KEY),
-                                                                   '')
+            cluster_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{self.CLUSTER_ID_KEY}",'CC01')
 
             # Decrypt RabbitMQ Password
             decryption_key = encryptor.gen_key(cluster_id, ServiceTypes.RABBITMQ.value)
@@ -298,10 +282,10 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
                                             body=jsonMsg)
                 except connection_exceptions:
                     logger.error("RabbitMQegressProcessor, _transmit_msg_on_exchange, rabbitmq connectivity lost, adding message to consul %s" % self._jsonMsg)
-                    store_queue.put(jsonMsg)
+                    self.store_queue.put(jsonMsg)
                 except Exception as err:
                     logger.error(f'RabbitMQegressProcessor, _transmit_msg_on_exchange, Unknown error {err} while publishing the message, adding to persistent store {self._jsonMsg}')
-                    store_queue.put(jsonMsg)
+                    self.store_queue.put(jsonMsg)
 
 
             # No exceptions thrown so success

@@ -157,12 +157,37 @@ class InitCmd(Cmd):
         super().__init__(args)
 
     def validate(self):
-        # Common validator classes to check Cortx/system wide validator
-        pass
+        if not self.args:
+            raise SetupError(
+                    errno.EINVAL,
+                    "%s - Argument validation failure. Global config is needed",
+                    self.name)
+        if (len(self.args) != 2) or (self.args[0] != "--config"):
+            raise SetupError(
+                    errno.EINVAL,
+                    "%s - Argument validation failure. Check Usage.",
+                    self.name)
+        global_config = self.args[1]
+        Conf.load('global_config', global_config)
+
+        role = Conf.get('global_config', 'release>setup')
+        if not role:
+            raise SetupError(
+                    errno.EINVAL,
+                    "%s - validation failure. %s",
+                    self.name,
+                    "Role not found in %s" % (global_config))
+        from cortx.sspl.bin.sspl_constants import setups
+        if role not in setups:
+            raise SetupError(
+                    errno.EINVAL,
+                    "%s - validataion failure. %s",
+                    self.name,
+                    "Role %s is not supported. Check Usage" % role)
 
     def process(self):
-        # TODO: Import relevant python script here for further execution.
-        pass
+        from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.sspl_setup_init import SSPLInit
+        SSPLInit().process()
 
 
 class ConfigCmd(Cmd):
@@ -174,13 +199,45 @@ class ConfigCmd(Cmd):
         super().__init__(args)
 
     def validate(self):
-        # Common validator classes to check Cortx/system wide validator
-        pass
+        if not self.args:
+            raise SetupError(
+                    errno.EINVAL,
+                    "%s - Argument validation failure. Global config is needed",
+                    self.name)
+        if (len(self.args) != 2) or (self.args[0] != "--config"):
+            raise SetupError(
+                    errno.EINVAL,
+                    "%s - Argument validation failure. Check Usage.",
+                    self.name)
+        global_config = self.args[1]
+        Conf.load('global_config', global_config)
+
+        role = Conf.get('global_config', 'release>setup')
+        if not role:
+            raise SetupError(
+                    errno.EINVAL,
+                    "%s - validation failure. %s",
+                    self.name,
+                    "Role not found in %s" % (global_config))
+        from cortx.sspl.bin.sspl_constants import setups
+        if role not in setups:
+            raise SetupError(
+                    errno.EINVAL,
+                    "%s - validataion failure. %s",
+                    self.name,
+                    "Role %s is not supported. Check Usage" % role)
+
+        product = Conf.get('global_config', 'release>product')
+        if not product:
+            raise SetupError(
+                    errno.EINVAL,
+                    "%s - validation failure. %s",
+                    self.name,
+                    "Product not found in %s" % (global_config))
 
     def process(self):
-        # TODO: Import relevant python script here for further execution.
-        pass
-
+        from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.sspl_config import SSPLConfig
+        SSPLConfig().process()
 
 class TestCmd(Cmd):
     """Starts test based on plan:
@@ -276,18 +333,37 @@ class ResetCmd(Cmd):
 
     name = "reset"
     script = "sspl_reset"
+    process_class=None
 
     def __init__(self, args):
         super().__init__(args)
 
     def validate(self):
-        # Common validator classes to check Cortx/system wide validator
-        pass
+        if not self.args:
+            raise SetupError(1,
+                             "%s - validation failure. %s",
+                             self.name,
+                             "SSPL Reset requires the type of reset(hard|soft).")
+
+        if self.args[0] not in ["hard", "soft"]:
+            raise SetupError(1, "Invalid reset type specified. %s", self.args[0])
+
+        try:
+            if self.args[0] == "hard":
+                self.process_class = "HardReset"
+            elif self.args[0] == "soft":
+                self.process_class = "SoftReset"
+        except (IndexError, ValueError):
+            raise SetupError(errno.EINVAL, "Invalid Argument for %s"% self.name)
+
 
     def process(self):
-        # TODO: Import relevant python script here for further execution.
-        pass
-
+        if self.process_class == "HardReset":
+            from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.sspl_reset import HardReset
+            HardReset().process()
+        elif self.process_class == "SoftReset":
+            from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.sspl_reset import SoftReset
+            SoftReset().process()
 
 class CheckCmd(Cmd):
     """Validates configs and environment prepared for SSPL initialization.
@@ -301,8 +377,7 @@ class CheckCmd(Cmd):
         from cortx.sspl.bin.sspl_constants import PRODUCT_FAMILY
 
         self.SSPL_CONFIGURED="/var/%s/sspl/sspl-configured" % (PRODUCT_FAMILY)
-        self.services = ["rabbitmq-server", "sspl-ll"]
-        Service('dbus').process('start', 'sspl-ll.service')
+        self.services = ["rabbitmq-server"]
 
     def validate(self):
         # Common validator classes to check Cortx/system wide validator
