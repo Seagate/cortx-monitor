@@ -70,14 +70,12 @@ baseurl=%s
 """
 
 class SetupYumRepo:
-
-    """Create repo files under /etc/yum.repos.d"""
-
-    name = "Setup Yum Repo"
+    """Create repo files under /etc/yum.repos.d."""
 
     def __init__(self, target_build_url):
         """Initialize yum repo object."""
         self.build_url = target_build_url
+        self.name = "Setup Yum Repo"
         self.cortx_deps_repo = None
         self.epel_repo = None
         self.url_sspl_repo = None

@@ -175,10 +175,7 @@ class SSPLDevDeploy:
 
             print("INFO: INSTALLING cortx-py-utils...")
             pkg_name="cortx-py-utils"
-            # TODO: EOS-17072 - last_successful location is not having recent
-            # cortx-py-utils package. Untill then proceeding with static one.
-            # build_url="http://cortx-storage.colo.seagate.com/releases/cortx/github/main/centos-7.8.2003/cortx-utils_last_successful/"
-            build_url = "http://cortx-storage.colo.seagate.com/releases/eos/github/main/centos-7.8.2003/cortx-utils_99/prod/cortx_iso/"
+            build_url = "http://cortx-storage.colo.seagate.com/releases/cortx/github/main/centos-7.8.2003/cortx-utils_last_successful/"
             pkg = [re.findall("<a .*>(.*?)</a>", str(line))[0] for line in urllib.request.urlopen(build_url).readlines() if pkg_name in str(line)]
             if not pkg:
                print(f"ERROR: Unable to download {pkg_name}.")
