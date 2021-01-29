@@ -162,10 +162,6 @@ class SSPLDevDeploy:
             cmd = "yum install -y python3"
             _ = self._execute_cmd(cmd)
 
-            # cortx-py-utils dependency
-            cmd = "python3 -m pip install -r https://raw.githubusercontent.com/Seagate/cortx-utils/main/py-utils/requirements.txt"
-            _ = self._execute_cmd(cmd)
-
             print("INFO: INSTALLING cortx-py-utils...")
             pkg_name="cortx-py-utils"
             build_url = "http://cortx-storage.colo.seagate.com/releases/cortx/github/main/centos-7.8.2003/cortx-utils_last_successful/"
