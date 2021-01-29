@@ -236,6 +236,13 @@ class SSPLDevDeploy:
         Conf.load("sspl", "yaml://%s" % (self.sspl_config))
         Conf.load("global_config", "yaml://%s" % (self.sample_global_config))
 
+        try:
+            with open("/etc/machine-id") as f:
+                node_key_id = f.read().strip("\n")
+                Conf.set("global_config", "cluster>server_nodes", {node_key_id:"srvnode1"})
+        except Exception as err:
+            raise DeployError(1, "Failed to get machine-id. - %s" % (err))
+
         Conf.set("sspl", "RABBITMQINGRESSPROCESSOR>username", self.RMQ_USER)
         Conf.set("sspl", "RABBITMQEGRESSPROCESSOR>username", self.RMQ_USER)
         if self.RMQ_PASSWD:
