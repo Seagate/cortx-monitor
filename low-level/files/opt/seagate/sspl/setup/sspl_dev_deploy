@@ -169,7 +169,7 @@ class SSPLDevDeploy:
             _ = os.system(cmd)
 
             # cortx-py-utils dependency
-            cmd = "python3 -m pip install toml pyyaml"
+            cmd = "python3 -m pip -r https://raw.githubusercontent.com/Seagate/cortx-utils/main/py-utils/requirements.txt"
             _ = os.system(cmd)
 
             print("INFO: INSTALLING cortx-py-utils...")
