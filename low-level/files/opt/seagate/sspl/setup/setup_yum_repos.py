@@ -70,7 +70,8 @@ baseurl=%s
 """
 
 class SetupYumRepo:
-    """Create repo files under /etc/yum.repos.d."""
+
+    """Create repo files under /etc/yum.repos.d"""
 
     name = "Setup Yum Repo"
 
