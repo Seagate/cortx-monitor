@@ -59,8 +59,7 @@ class SSPLDevDeploy:
         """Initialize required config variables."""
         self.args = args
         # TODO: replace this by main branch URL
-        # self.CORTX_MONITOR_BASE_URL = "https://raw.githubusercontent.com/Seagate/cortx-monitor/main"
-        self.CORTX_MONITOR_BASE_URL = "https://raw.githubusercontent.com/satish-seagate/cortx-monitor/eos-16520-main-converting_sspl_dev_deploy_shell_to_python"
+        self.CORTX_MONITOR_BASE_URL = "https://raw.githubusercontent.com/Seagate/cortx-monitor/main"
         self.install_3rd_party_packages = False
         self.skip_bmc = False
         self.TARGET_BUILD = ""
