@@ -70,7 +70,7 @@ baseurl=%s
 """
 
 class SetupYumRepo:
-    """Create repo files under /etc/yum.repos.d"""
+    """Create repo files under /etc/yum.repos.d."""
 
     name = "Setup Yum Repo"
 
@@ -149,21 +149,21 @@ class SetupYumRepo:
             fObj.write(content)
 
     def create_sspl_repo(self):
-        """Create sspl repo file"""
+        """Create sspl repo file."""
         gpg_file = self.url_sspl_repo + "/RPM-GPG-KEY-Seagate"
         content = SSPL % (gpg_file, self.url_sspl_repo)
         with open(self.sspl_repo, "w") as fObj:
             fObj.write(content)
 
     def create_sspl_uploads_repo(self):
-        """Create sspl uploads repo file"""
+        """Create sspl uploads repo file."""
         content = SSPL_UPLOADS % (self.url_uploads_repo)
         with open(self.sspl_uploads_repo, "w") as fObj:
             fObj.write(content)
 
     @staticmethod
     def take_backup(src, dst):
-        """Copy files from soruce directory to destination directory"""
+        """Copy files from soruce directory to destination directory."""
         if not os.path.exists(dst):
             os.makedirs(dst)
         for item in os.listdir(src):
@@ -173,7 +173,7 @@ class SetupYumRepo:
 
 
 def main(target_build_url=None):
-    """Main method to create yum repo files"""
+    """Main method to create yum repo files."""
     yum = SetupYumRepo(target_build_url)
 
     # Take backup on existing repo

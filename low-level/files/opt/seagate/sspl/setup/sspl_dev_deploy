@@ -32,6 +32,7 @@ import re
 import socket
 import glob
 import traceback
+import subprocess
 
 localhost_fqdn = socket.getfqdn().split('.')[0]
 SSPL_BASE_DIR = "/opt/seagate/cortx/sspl"
@@ -135,9 +136,9 @@ class SSPLDevDeploy:
     def cleanup(self):
         """Stop sspl service and remove SSPL RPMS."""
         cmd = "systemctl stop sspl-ll.service"
-        _ = os.system(cmd)
+        _ = self._execute_cmd(cmd)
         cmd = "yum remove -y cortx-sspl.noarch"
-        returncode = os.system(cmd)
+        returncode = self._execute_cmd(cmd)
         if returncode != 0:
             raise DeployError(returncode, "Unable to remove sspl RPMS. %s",
                               "Cleanup failed.")
@@ -153,10 +154,10 @@ class SSPLDevDeploy:
 
         if self.TARGET_BUILD:
             cmd = "./setup_yum_repos.py -t %s" % (self.TARGET_BUILD)
-            returncode= os.system(cmd)
+            returncode= self._execute_cmd(cmd)
         else:
             cmd = "./setup_yum_repos.py"
-            returncode = os.system(cmd)
+            returncode = self._execute_cmd(cmd)
         if returncode != 0:
             raise DeployError(returncode, "%s - Failed to setup yum repos.",
                 "setup_yum_repos.py")
@@ -166,11 +167,11 @@ class SSPLDevDeploy:
         if self.install_3rd_party_packages:
             print("INFO: INSTALLING python3...")
             cmd = "yum install -y python3"
-            _ = os.system(cmd)
+            _ = self._execute_cmd(cmd)
 
             # cortx-py-utils dependency
             cmd = "python3 -m pip -r https://raw.githubusercontent.com/Seagate/cortx-utils/main/py-utils/requirements.txt"
-            _ = os.system(cmd)
+            _ = self._execute_cmd(cmd)
 
             print("INFO: INSTALLING cortx-py-utils...")
             pkg_name="cortx-py-utils"
@@ -182,13 +183,13 @@ class SSPLDevDeploy:
             if not pkg:
                print(f"ERROR: Unable to download {pkg_name}.")
             cmd = "yum install -y %s%s" % (build_url, pkg[0])
-            returncode = os.system(cmd)
+            returncode = self._execute_cmd(cmd)
             if not (returncode==0 or returncode==256):
                raise DeployError(returncode, "Failed to install %s.", pkg_name)
 
             print("INFO: INSTALLING rabbitmq-server...")
             cmd = "yum install -y rabbitmq-server"
-            returncode = os.system(cmd)
+            returncode = self._execute_cmd(cmd)
             if returncode != 0:
                 raise DeployError(returncode, "Failed to install rabbitmq-server.")
 
@@ -202,21 +203,21 @@ class SSPLDevDeploy:
             print("INFO: Installing SSPL RPMS from local path - %s" % (self.RPMS_PATH))
             packages = glob.glob(self.RPMS_PATH+'/cortx-*-2.*')
             sspl_rpm_cmd = f"sudo yum install -y {' '.join(packages)}"
-            returncode = os.system(sspl_rpm_cmd)
+            returncode = self._execute_cmd(sspl_rpm_cmd)
         else:
             print("INFO: Installing SSPL RPMS using yum repos...")
             sspl_cmd = "yum install -y cortx-sspl.noarch"
             sspl_test_cmd = "yum install -y cortx-sspl-test"
-            returncode = os.system(sspl_cmd)
+            returncode = self._execute_cmd(sspl_cmd)
             if returncode != 0:
                 raise DeployError(returncode, "Failed to install 'cortx-sspl'")
-            returncode = os.system(sspl_test_cmd)
+            returncode = self._execute_cmd(sspl_test_cmd)
             if returncode != 0:
                 raise DeployError(returncode, "Failed to install 'cortx-sspl-test'")
 
         print("INFO: INSTALLING required python3 site-packages..")
         cmd = "python3 -m pip install -r /opt/seagate/cortx/sspl/low-level/requirements.txt"
-        _ = os.system(cmd)
+        _ = self._execute_cmd(cmd)
 
         print("INFO: Done installing SSPL RPMS.")
 
@@ -249,14 +250,21 @@ class SSPLDevDeploy:
             Conf.set("sspl", "RABBITMQINGRESSPROCESSOR>password", self.RMQ_PASSWD)
             Conf.set("sspl", "RABBITMQEGRESSPROCESSOR>password", self.RMQ_PASSWD)
             Conf.set("sspl", "LOGGINGPROCESSOR>password", self.RMQ_PASSWD)
-        Conf.set("global_config", "storage>enclosure_1>controller>primary>ip", self.CNTRLR_A)
-        Conf.set("global_config", "storage>enclosure_1>controller>primary>port", self.CNTRLR_A_PORT)
-        Conf.set("global_config", "storage>enclosure_1>controller>secondary>ip", self.CNTRLR_B)
-        Conf.set("global_config", "storage>enclosure_1>controller>secondary>port", self.CNTRLR_B_PORT)
-        Conf.set("global_config", "storage>enclosure_1>controller>user", self.CNTRLR_USER)
-        Conf.set("global_config", "storage>enclosure_1>controller>secret", self.CNTRLR_PASSWD)
-        Conf.set("global_config", "storage>enclosure_1>type", self.STORAGE_TYPE)
         srvnode = Conf.get("global_config", "cluster>server_nodes>%s" % (node_key_id))
+        enclosure_id  = Conf.get("global_config", "cluster>%s>storage>enclosure_id" % (srvnode))
+        Conf.set("global_config", "storage>%s>controller>primary>ip" % (enclosure_id),
+            self.CNTRLR_A)
+        Conf.set("global_config", "storage>%s>controller>primary>port" % (enclosure_id),
+            self.CNTRLR_A_PORT)
+        Conf.set("global_config", "storage>%s>controller>secondary>ip" % (enclosure_id),
+            self.CNTRLR_B)
+        Conf.set("global_config", "storage>%s>controller>secondary>port" % (enclosure_id),
+            self.CNTRLR_B_PORT)
+        Conf.set("global_config", "storage>%s>controller>user" % (enclosure_id),
+            self.CNTRLR_USER)
+        Conf.set("global_config", "storage>%s>controller>secret" % (enclosure_id),
+            self.CNTRLR_PASSWD)
+        Conf.set("global_config", "storage>%s>type" % (enclosure_id), self.STORAGE_TYPE)
         Conf.set("global_config", "cluser>%s>node_type" % (srvnode), self.SERVER_TYPE)
         Conf.set("global_config", "release>product", self.PRODUCT_VERSION)
 
@@ -307,7 +315,12 @@ class SSPLDevDeploy:
         # Execute setup commands
         for cmd in commands:
             print("INFO: Executing command: '%s'" % (cmd))
-            os.system(cmd)
+            self._execute_cmd(cmd)
+
+    def _execute_cmd(self, cmd):
+        """Executing commands."""
+        returncode = subprocess.call(cmd.split(), shell=False):
+        return returncode
 
 
 def main(args):
