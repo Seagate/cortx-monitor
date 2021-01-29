@@ -33,6 +33,8 @@ import socket
 import glob
 import traceback
 import subprocess
+import site
+import importlib
 
 localhost_fqdn = socket.getfqdn().split('.')[0]
 SSPL_BASE_DIR = "/opt/seagate/cortx/sspl"
@@ -209,6 +211,8 @@ class SSPLDevDeploy:
 
     def update_config(self):
         """Update sspl and sample global config values."""
+        # Reload site, so newly added packages can be imported
+        importlib.reload(site)
         from cortx.utils.conf_store import Conf
 
         self.sspl_config = "%s/conf/sspl.conf.%s.yaml" % (SSPL_BASE_DIR, self.PRODUCT_VERSION)
