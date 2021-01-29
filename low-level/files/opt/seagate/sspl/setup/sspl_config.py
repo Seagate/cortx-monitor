@@ -285,7 +285,7 @@ class SSPLConfig:
         if not os.path.exists(consts.REPLACEMENT_NODE_ENV_VAR_FILE):
             with open(f'{consts.SSPL_BASE_DIR}/low-level/files/opt/seagate' + \
                 '/sspl/conf/build-requested-loglevel', 'r') as f:
-                log_level = f.readline()
+                log_level = f.readline().strip()
 
             if not log_level:
                 log_level = "INFO"
