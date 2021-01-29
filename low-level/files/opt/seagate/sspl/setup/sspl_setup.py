@@ -56,7 +56,7 @@ class Cmd:
             [ init --config [<global_config_url>] ]
             [ config --config [<global_config_url>] ]
             [ test --config [<global_config_url>] --plan [sanity|alerts|self_primary|self_secondary] ]
-            [ reset [hard|soft] ]
+            [ reset --config [<global_config_url>] --type [hard|soft] ]
             [ join_cluster --nodes [<nodes>] ]
             [ manifest_support_bundle [<id>] [<path>] ]
             [ support_bundle [<id>] [<path>] ]
@@ -252,27 +252,19 @@ class TestCmd(Cmd):
 
     def validate(self):
         if self.args:
-            i=0
-            while i < len(self.args):
-                # Provision for --config <global_config_url> for future use-case.
-                if self.args[i] == "--config":
-                    try:
-                        global_config = self.args[i+1]
-                        Conf.load('global_config', global_config)
-                    except (IndexError):
-                        raise SetupError(1, "global_config_url not specified. Please check usage")
-                elif self.args[i] == "--plan":
-                    if self.args[i+1] in self.sspl_test_plans:
-                        self.test_plan_found=True
-                        break
-                    else:
+            try:
+                if "--config" in self.args:
+                    conf_index = self.args.index("--config")
+                    global_config = self.args[conf_index+1]
+                    # Provision for --config <global_config_url> for future use-case.
+                    # Conf.load('global_config', global_config)
+                if "--plan" in self.args:
+                    plan_index = self.args.index("--plan")
+                    if self.args[plan_index+1] not in self.sspl_test_plans:
                         raise SetupError(1, "Invalid plan type specified. Please check usage")
-                i=+1
-        if not self.test_plan_found:
-            default_plan = "self_primary"
-            self.args.insert(0, default_plan)
-        if "--plan" in self.args:
-            self.args.remove("--plan")
+            except Exception as ex:
+                raise SetupError(1, "%s - validation failure. %s", self.name, str(ex))
+
         result = PkgV().validate("rpms", "sspl-test")
         if result == -1:
             raise SetupError(1, "'sspl-test' rpm pkg not found.")
@@ -339,22 +331,37 @@ class ResetCmd(Cmd):
         super().__init__(args)
 
     def validate(self):
-        if not self.args:
+        if self.args:
+            try:
+                if "--config" in self.args:
+                    conf_index = self.args.index("--config")
+                    global_config = self.args[conf_index+1]
+                    # Provision for --config <global_config_url> for future use-case.
+                    # Conf.load('global_config', global_config)
+                if "--type" in self.args:
+                    type_index = self.args.index("--type")
+                    if self.args[type_index+1] not in ["hard", "soft"]:
+                        raise SetupError(1, "Invalid reset type specified. Please check usage")
+                else:
+                    raise SetupError(1, "SSPL Reset requires the type of reset(hard|soft).")
+            except Exception as ex:
+                raise SetupError(1, "%s - validation failure. %s", self.name, str(ex))
+        else:
             raise SetupError(1,
                              "%s - validation failure. %s",
                              self.name,
                              "SSPL Reset requires the type of reset(hard|soft).")
 
-        if self.args[0] not in ["hard", "soft"]:
-            raise SetupError(1, "Invalid reset type specified. %s", self.args[0])
-
-        try:
-            if self.args[0] == "hard":
-                self.process_class = "HardReset"
-            elif self.args[0] == "soft":
-                self.process_class = "SoftReset"
-        except (IndexError, ValueError):
-            raise SetupError(errno.EINVAL, "Invalid Argument for %s"% self.name)
+        for i in range(len(self.args)):
+            try:
+                if self.args[i] == "hard":
+                    self.process_class = "HardReset"
+                    break
+                elif self.args[i] == "soft":
+                    self.process_class = "SoftReset"
+                    break
+            except (IndexError, ValueError):
+                raise SetupError(errno.EINVAL, "Invalid Argument for %s"% self.name)
 
 
     def process(self):

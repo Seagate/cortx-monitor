@@ -27,8 +27,15 @@ class SSPLTestCmd:
         self.name = "sspl_test"
 
     def process(self):
-        # TODO: Need to convert run_tests.sh from shell to python.
-        CMD = f"{TEST_DIR}/run_tests.sh test {' '.join(self.args)}"
+        # TODO: Need to convert run_tests.sh from shell to python
+        test_plan=None
+        sspl_test_plans = ["sanity", "alerts", "self_primary","self_secondary"]
+        for i in range(len(self.args)):
+            if self.args[i] in sspl_test_plans:
+                test_plan = self.args[i]
+        if test_plan is None:
+            test_plan="self_primary"
+        CMD = f"{TEST_DIR}/run_tests.sh test {test_plan}"
         output, error, returncode = SimpleProcess(CMD).run(realtime_output=True)
         if returncode != 0:
             raise SetupError(returncode, error + " CMD: %s", CMD)
