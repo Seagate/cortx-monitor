@@ -18,6 +18,7 @@
 set -e -u -o pipefail
 
 ##############################################################################
+# [ OUTDATED FROM LR2 RELEASE]
 # This script is meant to be used by developers.
 # Components are not supposed to install/start consul by itself in production,
 # provisioner would do. This script calls all the provisioner
