@@ -319,7 +319,7 @@ class SSPLDevDeploy:
 
     def _execute_cmd(self, cmd):
         """Executing commands."""
-        returncode = subprocess.call(cmd.split(), shell=False):
+        returncode = subprocess.call(cmd.split(), shell=False)
         return returncode
 
 
