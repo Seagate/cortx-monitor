@@ -730,8 +730,6 @@ def set_log_level(signal_number, frame):
         log_level = log_level.decode('utf-8')
     logger.info(f"Received SIGUSR1 signal to set log level to '{log_level}'")
     logger.setLevel(log_level)
-    #DO NOT EDIT: Marker comment to dynamically add code to stop coverage, save and generate code coverage report
-
 
 def refresh_iem_log_file(signal_number, frame):
     iem_sensor = threadController.get_sspl_module("IEMSensor")
@@ -739,6 +737,26 @@ def refresh_iem_log_file(signal_number, frame):
         iem_sensor.refresh_file()
     else:
         logger.info(f"IEMSensor is not in running, ignoring signal to refresh file")
+
+def generate_cov_report(signal_number, frame):
+    # co object will be available on execution of
+    # /opt/seagate/cortx/sspl/sspl_test/start_sspl_coverge.sh
+    logger.info("Ending Coverage Scope")
+    co.stop()
+    logger.info("coverage object stopped.")
+    co.save()
+    logger.info("coverage info saved.")
+    cov_per = co.xml_report(
+ 						outfile='/tmp/sspl/sspl_xml_coverage_report.xml',
+ 						ignore_errors=True,
+ 					)
+    logger.info(f"XML coverage report generated with coverage of {cov_per}%")
+ 	## Enable below code to inable HTML report generation
+ 	# html_cov_per = co.html_report(
+ 	#                     directory='/tmp/sspl/sspl_html_coverage',
+ 	#                     ignore_errors=True,
+ 	#                 )
+ 	# logger.info(f"HTML coverage report geverated with coverage of {html_cov_per}%")
 
 
 if __name__ == "__main__":
@@ -794,6 +812,8 @@ if __name__ == "__main__":
     signal.signal(signal.SIGUSR1, set_log_level)
     # Handle signal for iem file refresh
     signal.signal(signal.SIGUSR2, refresh_iem_log_file)
+    # Handle signal to stop, save and generate coverage report
+    signal.signal(signal.SIGRTMIN, generate_cov_report)
 
     try:
         # Create a PID file for systemd
