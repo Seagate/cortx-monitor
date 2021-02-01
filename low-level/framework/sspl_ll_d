@@ -739,23 +739,8 @@ def refresh_iem_log_file(signal_number, frame):
         logger.info(f"IEMSensor is not in running, ignoring signal to refresh file")
 
 def generate_cov_report(signal_number, frame):
-    # co object will be available on execution of
-    # /opt/seagate/cortx/sspl/sspl_test/start_sspl_coverge.sh
-    logger.info("Ending Coverage Scope")
-    co.stop()
-    logger.info("coverage object stopped.")
-    co.save()
-    logger.info("coverage info saved.")
-    cov_per = co.xml_report(ignore_errors=True,
-                            outfile='/tmp/sspl/sspl_xml_coverage_report.xml')
-    logger.info(f"XML coverage report generated with coverage of {cov_per}%")
- 	## Enable below code to inable HTML report generation
- 	# html_cov_per = co.html_report(
- 	#                     directory='/tmp/sspl/sspl_html_coverage',
- 	#                     ignore_errors=True,
- 	#                 )
- 	# logger.info(f"HTML coverage report geverated with coverage of {html_cov_per}%")
-
+    #DO NOT EDIT: Marker comment to dynamically add code to stop coverage, save and generate code coverage report
+    pass
 
 if __name__ == "__main__":
     # Retrieve configuration file for sspl-ll service
