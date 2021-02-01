@@ -23,7 +23,7 @@
 
 import requests
 from requests.exceptions import Timeout, ConnectionError, HTTPError
-from framework.utils.service_logging import logger
+from cortx.sspl.framework.utils.service_logging import logger
 
 class WebServices(object):
     # Http Methods

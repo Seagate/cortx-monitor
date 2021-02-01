@@ -28,17 +28,17 @@ import uuid
 
 from zope.interface import implementer
 
-from framework.base.internal_msgQ import InternalMsgQ
-from framework.base.module_thread import SensorThread
-from framework.base.sspl_constants import COMMON_CONFIGS
-from framework.utils.conf_utils import (CLUSTER, GLOBAL_CONF, SRVNODE,
-                                        SSPL_CONF, Conf)
-from framework.utils.service_logging import logger
-from framework.utils.severity_reader import SeverityReader
-from message_handlers.logging_msg_handler import LoggingMsgHandler
+from cortx.sspl.framework.base.internal_msgQ import InternalMsgQ
+from cortx.sspl.framework.base.module_thread import SensorThread
+from cortx.sspl.framework.base.sspl_constants import COMMON_CONFIGS
+from cortx.sspl.framework.utils.conf_utils import (CLUSTER, GLOBAL_CONF, SRVNODE,
+    SSPL_CONF, Conf)
+from cortx.sspl.framework.utils.service_logging import logger
+from cortx.sspl.framework.utils.severity_reader import SeverityReader
+from cortx.sspl.message_handlers.logging_msg_handler import LoggingMsgHandler
 # Modules that receive messages from this module
-from message_handlers.node_data_msg_handler import NodeDataMsgHandler
-from sensors.Iraid import IRAIDsensor
+from cortx.sspl.message_handlers.node_data_msg_handler import NodeDataMsgHandler
+from cortx.sspl.sensors.Iraid import IRAIDsensor
 
 
 @implementer(IRAIDsensor)

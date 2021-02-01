@@ -17,8 +17,8 @@
 Factory module which returns instance of specific tool/utility class.
 """
 
-from framework.utils.sysfs_interface import *
-from framework.utils.procfs_interface import *
+from cortx.sspl.framework.utils.sysfs_interface import *
+from cortx.sspl.framework.utils.procfs_interface import *
 
 class ToolFactory(object):
     """"Returns instance of a specific Tool class from the factory"""

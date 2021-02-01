@@ -24,8 +24,8 @@ import errno
 import json
 import pickle
 from configparser import ConfigParser
-from framework.utils.store import Store
-from framework.utils.service_logging import logger
+from cortx.sspl.framework.utils.store import Store
+from cortx.sspl.framework.utils.service_logging import logger
 
 class FileStore(Store):
 

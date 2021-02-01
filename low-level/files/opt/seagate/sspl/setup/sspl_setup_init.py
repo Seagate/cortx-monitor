@@ -29,7 +29,7 @@ from cortx.sspl.bin.sspl_constants import (file_store_config_path,
                                           HPI_PATH, MDADM_PATH)
 from cortx.utils.validator.v_service import ServiceV
 from cortx.utils.validator.v_pkg import PkgV
-from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.error import SetupError
+from cortx.sspl.bin.error import SetupError
 from cortx.utils.conf_store import Conf
 
 class SSPLInit:

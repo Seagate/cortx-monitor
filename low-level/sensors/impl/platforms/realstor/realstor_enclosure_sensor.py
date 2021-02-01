@@ -26,16 +26,16 @@ import uuid
 
 from zope.interface import implementer
 
-from framework.base.module_thread import SensorThread
-from framework.base.internal_msgQ import InternalMsgQ
-from framework.utils.service_logging import logger
-from framework.utils.severity_reader import SeverityReader
-from framework.platforms.realstor.realstor_enclosure import singleton_realstorencl
+from cortx.sspl.framework.base.module_thread import SensorThread
+from cortx.sspl.framework.base.internal_msgQ import InternalMsgQ
+from cortx.sspl.framework.utils.service_logging import logger
+from cortx.sspl.framework.utils.severity_reader import SeverityReader
+from cortx.sspl.framework.platforms.realstor.realstor_enclosure import singleton_realstorencl
 
 # Modules that receive messages from this module
-from message_handlers.real_stor_encl_msg_handler import RealStorEnclMsgHandler
+from cortx.sspl.message_handlers.real_stor_encl_msg_handler import RealStorEnclMsgHandler
 
-from sensors.Ienclosure import IEnclosure
+from cortx.sspl.sensors.Ienclosure import IEnclosure
 
 @implementer(IEnclosure)
 class RealStorEnclosureSensor(SensorThread, InternalMsgQ):

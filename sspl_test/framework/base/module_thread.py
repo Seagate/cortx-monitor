@@ -25,7 +25,7 @@ import abc
 import json
 
 from sched import scheduler
-from .debug import Debug
+from cortx.sspl.sspl_test.framework.base.debug import Debug
 
 
 class ModuleThread(metaclass=abc.ABCMeta):

@@ -16,8 +16,7 @@
 # cortx-questions@seagate.com.
 
 from cortx.utils.conf_store import Conf
-
-from framework.utils.utility import Utility
+from cortx.sspl.framework.utils.utility import Utility
 
 # Indexes
 GLOBAL_CONF = "GLOBAL"

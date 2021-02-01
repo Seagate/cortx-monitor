@@ -23,10 +23,10 @@ import json
 import syslog
 
 from zope.interface import implementer
-from loggers.ILogger import ILogger
-from framework.base.debug import Debug
-from framework.utils.autoemail import AutoEmail
-from framework.utils.service_logging import logger
+from cortx.sspl.loggers.ILogger import ILogger
+from cortx.sspl.framework.base.debug import Debug
+from cortx.sspl.framework.utils.autoemail import AutoEmail
+from cortx.sspl.framework.utils.service_logging import logger
 
 try:
    from systemd import journal

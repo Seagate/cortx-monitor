@@ -21,10 +21,9 @@
 import subprocess
 
 from zope.interface import implementer
-from actuators.Iraid import IRAIDactuator
-
-from framework.base.debug import Debug
-from framework.utils.service_logging import logger
+from cortx.sspl.actuators.Iraid import IRAIDactuator
+from cortx.sspl.framework.base.debug import Debug
+from cortx.sspl.framework.utils.service_logging import logger
 
 @implementer(IRAIDactuator)
 class RAIDactuator(Debug):

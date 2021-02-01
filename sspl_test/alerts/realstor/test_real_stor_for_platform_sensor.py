@@ -19,9 +19,9 @@ import psutil
 import time
 import sys
 
-from sspl_test.default import *
-from sspl_test.rabbitmq.rabbitmq_ingress_processor_tests import RabbitMQingressProcessorTests
-from sspl_test.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
+from cortx.sspl.sspl_test.default import *
+from cortx.sspl.sspl_test.rabbitmq.rabbitmq_ingress_processor_tests import RabbitMQingressProcessorTests
+from cortx.sspl.sspl_test.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 
 def init(args):
     pass

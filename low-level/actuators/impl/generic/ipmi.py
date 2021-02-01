@@ -21,11 +21,11 @@
 import subprocess
 
 from zope.interface import implementer
-from actuators.Iipmi import Iipmi
-
-from framework.base.debug import Debug
-from framework.utils.service_logging import logger
-from framework.utils.conf_utils import Conf, SSPL_CONF, IPMI, USER, PASSWORD
+from cortx.sspl.actuators.Iipmi import Iipmi
+from cortx.sspl.framework.base.debug import Debug
+from cortx.sspl.framework.utils.service_logging import logger
+from cortx.sspl.framework.utils.conf_utils import (Conf, SSPL_CONF,
+    IPMI, USER, PASSWORD)
 
 @implementer(Iipmi)
 class IPMI(Debug):

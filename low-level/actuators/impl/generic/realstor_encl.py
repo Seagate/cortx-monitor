@@ -22,13 +22,13 @@ import json
 import time
 import socket
 
-from actuators.impl.actuator import Actuator
-
-from framework.base.debug import Debug
-from framework.utils.service_logging import logger
-from framework.utils import mon_utils
-from framework.platforms.realstor.realstor_enclosure import singleton_realstorencl
-from framework.base.sspl_constants import AlertTypes, SeverityTypes, ResourceTypes
+from cortx.sspl.actuators.impl.actuator import Actuator
+from cortx.sspl.framework.base.debug import Debug
+from cortx.sspl.framework.utils.service_logging import logger
+from cortx.sspl.framework.utils import mon_utils
+from cortx.sspl.framework.platforms.realstor.realstor_enclosure import singleton_realstorencl
+from cortx.sspl.framework.base.sspl_constants import (AlertTypes,
+    SeverityTypes, ResourceTypes)
 
 
 class RealStorActuator(Actuator, Debug):

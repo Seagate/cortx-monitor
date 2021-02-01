@@ -21,15 +21,15 @@
 
 import json
 
-from framework.base.internal_msgQ import InternalMsgQ
-from framework.base.module_thread import ScheduledModuleThread
-from framework.base.sspl_constants import enabled_products
+from cortx.sspl.framework.base.internal_msgQ import InternalMsgQ
+from cortx.sspl.framework.base.module_thread import ScheduledModuleThread
+from cortx.sspl.framework.base.sspl_constants import enabled_products
 # Modules that receive messages from this module
-from framework.rabbitmq.rabbitmq_egress_processor import \
+from cortx.sspl.framework.rabbitmq.rabbitmq_egress_processor import \
     RabbitMQegressProcessor
-from framework.utils.conf_utils import SSPL_CONF, Conf
-from framework.utils.service_logging import logger
-from json_msgs.messages.actuators.ack_response import AckResponseMsg
+from cortx.sspl.framework.utils.conf_utils import SSPL_CONF, Conf
+from cortx.sspl.framework.utils.service_logging import logger
+from cortx.sspl.json_msgs.messages.actuators.ack_response import AckResponseMsg
 
 
 class LoggingMsgHandler(ScheduledModuleThread, InternalMsgQ):
@@ -71,7 +71,7 @@ class LoggingMsgHandler(ScheduledModuleThread, InternalMsgQ):
     def _import_products(self, product):
         """Import classes based on which product is being used"""
         if product.lower() in [x.lower() for x in enabled_products]:
-            from loggers.impl.iem_logger import IEMlogger
+            from cortx.sspl.loggers.impl.iem_logger import IEMlogger
             self._iem_logger = IEMlogger(self._conf_reader)
 
     def run(self):

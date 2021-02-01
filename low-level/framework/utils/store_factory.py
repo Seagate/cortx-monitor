@@ -17,9 +17,10 @@ import os
 import sys
 from configparser import ConfigParser
 
-from framework.utils.filestore import FileStore
-from framework.utils.consulstore import ConsulStore
-from framework.base.sspl_constants import StoreTypes, SSPL_STORE_TYPE, CONSUL_HOST, CONSUL_PORT, file_store_config_path
+from cortx.sspl.framework.utils.filestore import FileStore
+from cortx.sspl.framework.utils.consulstore import ConsulStore
+from cortx.sspl.framework.base.sspl_constants import (StoreTypes, SSPL_STORE_TYPE,
+    CONSUL_HOST, CONSUL_PORT, file_store_config_path)
 
 
 class StorFactory:

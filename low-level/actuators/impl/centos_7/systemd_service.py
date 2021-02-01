@@ -23,11 +23,9 @@ import json
 import time
 
 from zope.interface import implementer
-from actuators.IService import IService
-
-from framework.base.debug import Debug
-from framework.utils.service_logging import logger
-
+from cortx.sspl.actuators.IService import IService
+from cortx.sspl.framework.base.debug import Debug
+from cortx.sspl.framework.utils.service_logging import logger
 from dbus import SystemBus, Interface, exceptions as debus_exceptions
 
 @implementer(IService)

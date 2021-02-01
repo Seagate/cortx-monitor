@@ -24,17 +24,17 @@ import json
 import socket
 
 # Import Actuator states table
-from framework.actuator_state_manager import actuator_state_manager
-from framework.base.internal_msgQ import InternalMsgQ
-from framework.base.module_thread import ScheduledModuleThread
-from framework.base.sspl_constants import enabled_products
-from framework.utils.conf_utils import GLOBAL_CONF, RELEASE, SSPL_CONF, Conf
-from framework.utils.service_logging import logger
-from json_msgs.messages.actuators.ack_response import AckResponseMsg
-from json_msgs.messages.actuators.ndhw_ack_response import NodeHwAckResponseMsg
-from message_handlers.disk_msg_handler import DiskMsgHandler
-from message_handlers.service_msg_handler import ServiceMsgHandler
-from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
+from cortx.sspl.framework.actuator_state_manager import actuator_state_manager
+from cortx.sspl.framework.base.internal_msgQ import InternalMsgQ
+from cortx.sspl.framework.base.module_thread import ScheduledModuleThread
+from cortx.sspl.framework.base.sspl_constants import enabled_products
+from cortx.sspl.framework.utils.conf_utils import GLOBAL_CONF, RELEASE, SSPL_CONF, Conf
+from cortx.sspl.framework.utils.service_logging import logger
+from cortx.sspl.json_msgs.messages.actuators.ack_response import AckResponseMsg
+from cortx.sspl.json_msgs.messages.actuators.ndhw_ack_response import NodeHwAckResponseMsg
+from cortx.sspl.message_handlers.disk_msg_handler import DiskMsgHandler
+from cortx.sspl.message_handlers.service_msg_handler import ServiceMsgHandler
+from cortx.sspl.framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 
 
 class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
@@ -162,7 +162,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
             if component == 'SSPL':
                 # Query the Zope GlobalSiteManager for an object implementing the MOTR actuator
                 if self._command_line_actuator is None:
-                    from actuators.Icommand_line import ICommandLine
+                    from cortx.sspl.actuators.Icommand_line import ICommandLine
 
                     command_line_actuator_class = self._queryUtility(ICommandLine)
                     # Instantiate CommandLine Actuator only if class is loaded
@@ -189,7 +189,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     return
                 # Query the Zope GlobalSiteManager for an object implementing the IHPI actuator
                 if self._HPI_actuator is None:
-                    from actuators.Ihpi import IHPI
+                    from cortx.sspl.actuators.Ihpi import IHPI
                     # Load HPIActuator class
                     HPI_actuator_class = self._queryUtility(IHPI)
                     # Instantiate HPIActuator only if class is loaded
@@ -228,7 +228,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
             elif component == "PDU:":
                 # Query the Zope GlobalSiteManager for an object implementing the IPDU actuator
                 if self._PDU_actuator is None:
-                    from actuators.Ipdu import IPDU
+                    from cortx.sspl.actuators.Ipdu import IPDU
 
                     PDU_actuator_class = self._queryUtility(IPDU)
                     # Instantiate RaritanPDU Actuator only if class is loaded
@@ -269,7 +269,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     # requests will go to INITIALIZED state case.
                     logger.info("RAID actuator is imported and initializing")
 
-                    from actuators.Iraid import IRAIDactuator
+                    from cortx.sspl.actuators.Iraid import IRAIDactuator
                     actuator_state_manager.set_state(
                             "RAIDactuator", actuator_state_manager.INITIALIZING)
                     # Query the Zope GlobalSiteManager for an object implementing the IRAIDactuator
@@ -296,7 +296,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
             elif component == "IPMI":
                 # Query the Zope GlobalSiteManager for an object implementing the IPMI actuator
                 if self._IPMI_actuator is None:
-                    from actuators.Iipmi import Iipmi
+                    from cortx.sspl.actuators.Iipmi import Iipmi
 
                     IPMI_actuator_class = self._queryUtility(Iipmi)
                     # Instantiate IPMI Actuator only if class is loaded
@@ -322,7 +322,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     return
                 # Query the Zope GlobalSiteManager for an object implementing the IHPI actuator
                 if self._HPI_actuator is None:
-                    from actuators.Ihpi import IHPI
+                    from cortx.sspl.actuators.Ihpi import IHPI
                     # Load HPIActuator class
                     HPI_actuator_class = self._queryUtility(IHPI)
                     # Instantiate HPIActuator only if class is loaded
@@ -364,7 +364,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     return
                 # Query the Zope GlobalSiteManager for an object implementing the IHPI actuator
                 if self._HPI_actuator is None:
-                    from actuators.Ihpi import IHPI
+                    from cortx.sspl.actuators.Ihpi import IHPI
                     # Load HPIActuator class
                     HPI_actuator_class = self._queryUtility(IHPI)
                     # Instantiate HPIActuator only if class is loaded
@@ -407,7 +407,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     return
                 # Query the Zope GlobalSiteManager for an object implementing the IHPI actuator
                 if self._HPI_actuator is None:
-                    from actuators.Ihpi import IHPI
+                    from cortx.sspl.actuators.Ihpi import IHPI
                     # Load HPIActuator class
                     HPI_actuator_class = self._queryUtility(IHPI)
                     # Instantiate HPIActuator only if class is loaded
@@ -480,7 +480,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     logger.info("Hdparm actuator is imported and initializing")
                     # Query the Zope GlobalSiteManager for an object
                     # implementing the hdparm actuator.
-                    from actuators.Ihdparm import IHdparm
+                    from cortx.sspl.actuators.Ihdparm import IHdparm
                     actuator_state_manager.set_state(
                             "Hdparm", actuator_state_manager.INITIALIZING)
                     hdparm_actuator_class = self._queryUtility(IHdparm)
@@ -537,7 +537,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                         return
                 else:
                     if self._smartctl_actuator is None:
-                        from actuators.Ismartctl import ISmartctl
+                        from cortx.sspl.actuators.Ismartctl import ISmartctl
                         smartctl_actuator_class = self._queryUtility(ISmartctl)
                         if smartctl_actuator_class:
                             self._smartctl_actuator = self._queryUtility(ISmartctl)()
@@ -710,8 +710,8 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 try:
                     # Load and Instantiate the Actuator for the first request
                     if self._NodeHW_actuator is None:
-                        from actuators.impl.generic.node_hw import NodeHWactuator
-                        from framework.utils.ipmi_client import IpmiFactory
+                        from cortx.sspl.actuators.impl.generic.node_hw import NodeHWactuator
+                        from cortx.sspl.framework.utils.ipmi_client import IpmiFactory
                         self.ipmi_client_name = Conf.get(SSPL_CONF, f"{self.NODE_HW_ACTUATOR}>{self.IPMI_IMPLEMENTOR}",
                             "ipmitool")
                         ipmi_factory = IpmiFactory()
@@ -755,7 +755,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
         try:
             # Query the Zope GlobalSiteManager for an object implementing the smart actuator
             if self._smartctl_actuator is None:
-                from actuators.Ismartctl import ISmartctl
+                from cortx.sspl.actuators.Ismartctl import ISmartctl
                 smartctl_actuator_class = self._queryUtility(ISmartctl)
                 if smartctl_actuator_class:
                     self._smartctl_actuator = self._queryUtility(ISmartctl)()

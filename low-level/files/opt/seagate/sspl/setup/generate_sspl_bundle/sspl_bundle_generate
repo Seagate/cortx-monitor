@@ -23,12 +23,12 @@ import sys
 import shutil
 import json
 import subprocess
-# Add the top level directories
-sys.path.insert(0, f'/opt/seagate/cortx/sspl/low-level')
-from framework.platforms.realstor.realstor_enclosure import singleton_realstorencl
-from framework.base.sspl_constants import (PRODUCT_FAMILY, SUPPORT_REQUESTOR_NAME, SUPPORT_EMAIL_ID, SUPPORT_CONTACT_NUMBER,
-     ENCL_TRIGGER_LOG_MAX_RETRY, ENCL_DOWNLOAD_LOG_MAX_RETRY, ENCL_DOWNLOAD_LOG_WAIT_BEFORE_RETRY, CONSUL_DUMP)
-from framework.utils.config_reader import ConfigReader
+
+from cortx.sspl.framework.platforms.realstor.realstor_enclosure import singleton_realstorencl
+from cortx.sspl.framework.base.sspl_constants import (PRODUCT_FAMILY,
+    SUPPORT_REQUESTOR_NAME, SUPPORT_EMAIL_ID, SUPPORT_CONTACT_NUMBER, CONSUL_DUMP,
+    ENCL_TRIGGER_LOG_MAX_RETRY, ENCL_DOWNLOAD_LOG_MAX_RETRY, ENCL_DOWNLOAD_LOG_WAIT_BEFORE_RETRY)
+from cortx.sspl.framework.utils.config_reader import ConfigReader
 onGoingRequestPath = "/tmp/sspl-sb-req.txt"
 sspl_bundle_tmp = f"sspl_bundle_{str(int(time.time()))}"
 

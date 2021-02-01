@@ -24,20 +24,20 @@ import json
 from pyasn1.codec.ber import decoder
 from zope.interface import implementer
 
-from framework.base.internal_msgQ import InternalMsgQ
-from framework.base.module_thread import SensorThread
+from cortx.sspl.framework.base.internal_msgQ import InternalMsgQ
+from cortx.sspl.framework.base.module_thread import SensorThread
 # Modules that receive messages from this module
-from framework.rabbitmq.rabbitmq_egress_processor import \
+from cortx.sspl.framework.rabbitmq.rabbitmq_egress_processor import \
     RabbitMQegressProcessor
-from framework.utils.conf_utils import SSPL_CONF, Conf
-from framework.utils.service_logging import logger
-from json_msgs.messages.sensors.snmp_trap import SNMPtrapMsg
-from message_handlers.logging_msg_handler import LoggingMsgHandler
+from cortx.sspl.framework.utils.conf_utils import SSPL_CONF, Conf
+from cortx.sspl.framework.utils.service_logging import logger
+from cortx.sspl.json_msgs.messages.sensors.snmp_trap import SNMPtrapMsg
+from cortx.sspl.message_handlers.logging_msg_handler import LoggingMsgHandler
 from pysnmp.carrier.asynsock.dgram import udp, udp6
 from pysnmp.carrier.asynsock.dispatch import AsynsockDispatcher
 from pysnmp.proto import api
 from pysnmp.smi import builder, view
-from sensors.INode_data import INodeData
+from cortx.sspl.sensors.INode_data import INodeData
 
 
 @implementer(INodeData)

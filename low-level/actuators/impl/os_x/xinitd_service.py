@@ -21,9 +21,8 @@
 
 
 from zope.interface import implementer
-from actuators.IService import IService
-
-from framework.base.debug import Debug
+from cortx.sspl.actuators.IService import IService
+from cortx.sspl.framework.base.debug import Debug
 
 @implementer(IService)
 class XinitdService(Debug):

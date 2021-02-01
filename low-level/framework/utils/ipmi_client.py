@@ -16,8 +16,8 @@
 import os
 import subprocess
 
-from framework.utils.ipmi import IPMI
-from framework.utils.service_logging import logger
+from cortx.sspl.framework.utils.ipmi import IPMI
+from cortx.sspl.framework.utils.service_logging import logger
 
 
 class IPMITool(IPMI):

@@ -23,11 +23,10 @@ import paramiko
 from functools import partial
 
 from zope.interface import implementer
-from actuators.Ipdu import IPDU
-
-from framework.base.debug import Debug
-from framework.utils.service_logging import logger
-from framework.utils.conf_utils import Conf, SSPL_CONF
+from cortx.sspl.actuators.Ipdu import IPDU
+from cortx.sspl.framework.base.debug import Debug
+from cortx.sspl.framework.utils.service_logging import logger
+from cortx.sspl.framework.utils.conf_utils import Conf, SSPL_CONF
 
 @implementer(IPDU)
 class RaritanPDU(Debug):

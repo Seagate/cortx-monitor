@@ -30,21 +30,21 @@ import uuid
 
 from zope.interface import implementer
 
-from framework.base.debug import Debug
-from framework.base.internal_msgQ import InternalMsgQ
-from framework.base.module_thread import SensorThread
-from framework.base.sspl_constants import (PRODUCT_FAMILY, ServiceTypes,
-                                           node_key_id)
-from framework.utils import encryptor
-from framework.utils.conf_utils import (CLUSTER, GLOBAL_CONF, IP, SECRET,
-                                        SRVNODE, SSPL_CONF, USER, Conf)
-from framework.utils.config_reader import ConfigReader
-from framework.utils.service_logging import logger
-from framework.utils.severity_reader import SeverityReader
-from framework.utils.store_factory import file_store
-from message_handlers.logging_msg_handler import LoggingMsgHandler
-from message_handlers.node_data_msg_handler import NodeDataMsgHandler
-from sensors.INode_hw import INodeHWsensor
+from cortx.sspl.framework.base.debug import Debug
+from cortx.sspl.framework.base.internal_msgQ import InternalMsgQ
+from cortx.sspl.framework.base.module_thread import SensorThread
+from cortx.sspl.framework.base.sspl_constants import (PRODUCT_FAMILY, ServiceTypes,
+    node_key_id)
+from cortx.sspl.framework.utils import encryptor
+from cortx.sspl.framework.utils.conf_utils import (CLUSTER, GLOBAL_CONF, IP, SECRET,
+    SRVNODE, SSPL_CONF, USER, Conf)
+from cortx.sspl.framework.utils.config_reader import ConfigReader
+from cortx.sspl.framework.utils.service_logging import logger
+from cortx.sspl.framework.utils.severity_reader import SeverityReader
+from cortx.sspl.framework.utils.store_factory import file_store
+from cortx.sspl.message_handlers.logging_msg_handler import LoggingMsgHandler
+from cortx.sspl.message_handlers.node_data_msg_handler import NodeDataMsgHandler
+from cortx.sspl.sensors.INode_hw import INodeHWsensor
 
 # bash exit codes
 BASH_ILLEGAL_CMD = 127

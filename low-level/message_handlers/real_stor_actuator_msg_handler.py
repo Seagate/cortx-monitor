@@ -22,14 +22,14 @@
 import json
 import time
 
-from framework.base.internal_msgQ import InternalMsgQ
-from framework.base.module_thread import ScheduledModuleThread
-from framework.base.sspl_constants import enabled_products
-from framework.utils.conf_utils import GLOBAL_CONF, RELEASE, Conf
-from framework.utils.service_logging import logger
-from json_msgs.messages.actuators.realstor_actuator_response import \
+from cortx.sspl.framework.base.internal_msgQ import InternalMsgQ
+from cortx.sspl.framework.base.module_thread import ScheduledModuleThread
+from cortx.sspl.framework.base.sspl_constants import enabled_products
+from cortx.sspl.framework.utils.conf_utils import GLOBAL_CONF, RELEASE, Conf
+from cortx.sspl.framework.utils.service_logging import logger
+from cortx.sspl.json_msgs.messages.actuators.realstor_actuator_response import \
     RealStorActuatorMsg
-from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
+from cortx.sspl.framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 
 
 class RealStorActuatorMsgHandler(ScheduledModuleThread, InternalMsgQ):
@@ -147,7 +147,7 @@ class RealStorActuatorMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
             if self._real_stor_actuator is None:
                 try:
-                    from actuators.impl.generic.realstor_encl import RealStorActuator
+                    from cortx.sspl.actuators.impl.generic.realstor_encl import RealStorActuator
                     self._real_stor_actuator = RealStorActuator()
                 except ImportError as e:
                     logger.warn("RealStor Actuator not loaded")

@@ -17,7 +17,7 @@
 
 
 import json
-from .manual_test import ManualTest
+from cortx.sspl.tests.manual.manual_test import ManualTest
 
 manTest = ManualTest("PLANECNTRLRMQEGRESSPROCESSOR")
 

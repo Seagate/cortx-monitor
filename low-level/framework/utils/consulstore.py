@@ -21,12 +21,13 @@
 """
 import os
 import consul
-from framework.utils.store import Store
-from framework.utils.service_logging import logger
 import pickle
-from framework.base.sspl_constants import MAX_CONSUL_RETRY, WAIT_BEFORE_RETRY, CONSUL_ERR_STRING
 import time
 import requests
+from cortx.sspl.framework.utils.store import Store
+from cortx.sspl.framework.utils.service_logging import logger
+from cortx.sspl.framework.base.sspl_constants import (MAX_CONSUL_RETRY,
+    WAIT_BEFORE_RETRY, CONSUL_ERR_STRING)
 
 class ConsulStore(Store):
 

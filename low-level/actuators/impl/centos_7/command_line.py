@@ -21,10 +21,9 @@
 import subprocess
 
 from zope.interface import implementer
-from actuators.Icommand_line import ICommandLine
-
-from framework.base.debug import Debug
-from framework.utils.service_logging import logger
+from cortx.sspl.actuators.Icommand_line import ICommandLine
+from cortx.sspl.framework.base.debug import Debug
+from cortx.sspl.framework.utils.service_logging import logger
 
 @implementer(ICommandLine)
 class CommandLine(Debug):

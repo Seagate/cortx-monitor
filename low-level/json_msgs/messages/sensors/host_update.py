@@ -28,8 +28,8 @@
 import json
 import time
 import calendar
-from json_msgs.messages.sensors.base_sensors_msg import BaseSensorMsg
-from framework.utils import mon_utils
+from cortx.sspl.json_msgs.messages.sensors.base_sensors_msg import BaseSensorMsg
+from cortx.sspl.framework.utils import mon_utils
 class HostUpdateMsg(BaseSensorMsg):
     '''
     The JSON message transmitted by the node message handler

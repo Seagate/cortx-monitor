@@ -21,11 +21,9 @@
 """
 
 from zope.interface import implementer
-from actuators.ILogin import ILogin
-
-from framework.base.debug import Debug
-from framework.utils.service_logging import logger
-
+from cortx.sspl.actuators.ILogin import ILogin
+from cortx.sspl.framework.base.debug import Debug
+from cortx.sspl.framework.utils.service_logging import logger
 from dbus import SystemBus, Interface, exceptions as debus_exceptions
 
 

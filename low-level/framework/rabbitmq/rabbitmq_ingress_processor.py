@@ -23,23 +23,21 @@ import ctypes
 import json
 import os
 import time
-
 import pika
 from cortx.utils.security.cipher import Cipher
 from jsonschema import Draft3Validator, validate
 
-from framework.base.internal_msgQ import InternalMsgQ
-from framework.base.module_thread import ScheduledModuleThread
-from framework.base.sspl_constants import RESOURCE_PATH, ServiceTypes
-from framework.rabbitmq.rabbitmq_egress_processor import \
+from cortx.sspl.framework.base.internal_msgQ import InternalMsgQ
+from cortx.sspl.framework.base.module_thread import ScheduledModuleThread
+from cortx.sspl.framework.base.sspl_constants import RESOURCE_PATH, ServiceTypes
+from cortx.sspl.framework.rabbitmq.rabbitmq_egress_processor import \
     RabbitMQegressProcessor
-from framework.utils import encryptor
-from framework.utils.conf_utils import (CLUSTER, GLOBAL_CONF, SRVNODE,
-                                        SSPL_CONF, Conf)
-from framework.utils.service_logging import logger
-from json_msgs.messages.actuators.ack_response import AckResponseMsg
-
-from .rabbitmq_connector import RabbitMQSafeConnection
+from cortx.sspl.framework.utils import encryptor
+from cortx.sspl.framework.utils.conf_utils import (CLUSTER, GLOBAL_CONF, SRVNODE,
+    SSPL_CONF, Conf)
+from cortx.sspl.framework.utils.service_logging import logger
+from cortx.sspl.json_msgs.messages.actuators.ack_response import AckResponseMsg
+from cortx.sspl.framework.rabbitmq.rabbitmq_connector import RabbitMQSafeConnection
 
 try:
     use_security_lib = True

@@ -17,7 +17,7 @@
 # We can restart SSPL and wait for an alert from SSPL if there is a failure
 # If there is no failure, that would mean connectivity is OK
 import os
-from sspl_test.framework.base.sspl_constants import SSPL_TEST_PATH
+from cortx.sspl.sspl_test.framework.base.sspl_constants import SSPL_TEST_PATH
 
 def init(args):
     pass

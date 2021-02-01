@@ -27,7 +27,7 @@
 
 import json
 
-from json_msgs.messages.actuators.base_actuators_msg import BaseActuatorMsg
+from cortx.sspl.json_msgs.messages.actuators.base_actuators_msg import BaseActuatorMsg
 
 class NodeHwAckResponseMsg(BaseActuatorMsg):
     '''

@@ -24,11 +24,12 @@ import sys
 import configparser
 import time
 import requests
-from framework.base.sspl_constants import (component, salt_provisioner_pillar_sls, file_store_config_path,
-        SSPL_STORE_TYPE, StoreTypes, salt_uniq_passwd_per_node, COMMON_CONFIGS, SSPL_CONFIGS, CONSUL_PORT,
-        MAX_CONSUL_RETRY, WAIT_BEFORE_RETRY, CONSUL_ERR_STRING, CONSUL_HOST, PRODUCT_NAME)
-from framework.utils.consulstore import ConsulStore
-from framework.utils.filestore import FileStore
+from cortx.sspl.framework.base.sspl_constants import (component, SSPL_CONFIGS,
+    salt_provisioner_pillar_sls, file_store_config_path, SSPL_STORE_TYPE, StoreTypes,
+    salt_uniq_passwd_per_node, COMMON_CONFIGS, CONSUL_PORT, CONSUL_HOST, PRODUCT_NAME,
+    MAX_CONSUL_RETRY, WAIT_BEFORE_RETRY, CONSUL_ERR_STRING)
+from cortx.sspl.framework.utils.consulstore import ConsulStore
+from cortx.sspl.framework.utils.filestore import FileStore
 # Onward LDR_R2, consul and salt will be abstracted out and won't exist as hard dependencies of SSPL
 try:
     import salt.client
@@ -145,7 +146,7 @@ class ConfigReader(object):
         Specific function for executable binary.
         """
         print("Running via sspl service and taking key values from store factory")
-        from framework.utils.store_factory import store
+        from cortx.sspl.framework.utils.store_factory import store
         self.store = store
 
     def _get_value(self, section, key):

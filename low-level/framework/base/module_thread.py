@@ -25,8 +25,8 @@ import json
 import threading
 import time
 from sched import scheduler
-from .debug import Debug
-from framework.utils.service_logging import logger
+from cortx.sspl.framework.base.debug import Debug
+from cortx.sspl.framework.utils.service_logging import logger
 
 class DependencyState(object):
     DEPS_STARTING = 0

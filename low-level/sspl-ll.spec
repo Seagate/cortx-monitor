@@ -145,7 +145,8 @@ PYTHON_BASE_DIR=/usr/lib/python3.6/site-packages/cortx/sspl
 [ -d "${SSPL_DIR}" ] && {
     mkdir -p $PYTHON_BASE_DIR
     ln -sf $SSPL_DIR/bin $PYTHON_BASE_DIR/bin
-    ln -sf $SSPL_DIR/low-level $PYTHON_BASE_DIR/lowlevel
+    ln -sf $SSPL_DIR/low-level/* $PYTHON_BASE_DIR/
+    ln -sf $SSPL_DIR/sspl_test $PYTHON_BASE_DIR/sspl_test
 }
 
 # In case of upgrade start sspl-ll after upgrade
@@ -166,9 +167,13 @@ fi
 systemctl stop sspl-ll.service 2> /dev/null
 
 %postun
+PYTHON_BASE_DIR=/usr/lib/python3.6/site-packages/cortx/sspl
+SSPL_BIN_DIR=/opt/seagate/%{product_family}/sspl/bin
 rm -f /etc/polkit-1/rules.d/sspl-ll_dbus_policy.rules
 rm -f /etc/dbus-1/system.d/sspl-ll_dbus_policy.conf
 [ "$1" == "0" ] && rm -f /opt/seagate/%{product_family}/sspl/sspl_init
+rm -rf $PYTHON_BASE_DIR $SSPL_BIN_DIR /usr/bin/sspl_ll_d /usr/bin/resource_health_view
+rm -rf /usr/bin/sspl_bundle_generate /usr/bin/manifest_support_bundle /usr/bin/manifest_support_bundle
 
 %files
 %defattr(-,sspl-ll,root,-)

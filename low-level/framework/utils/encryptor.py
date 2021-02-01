@@ -20,7 +20,7 @@
 """
 
 from cortx.utils.security.cipher import Cipher, CipherInvalidToken
-from framework.utils.service_logging import logger
+from cortx.sspl.framework.utils.service_logging import logger
 
 
 def gen_key(cluster_id, service_name):

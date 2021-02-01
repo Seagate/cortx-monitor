@@ -22,10 +22,10 @@
 import errno
 import os
 
-from framework.base.sspl_constants import PRODUCT_FAMILY
-from framework.utils.conf_utils import DATA_PATH_KEY, SSPL_CONF, Conf
-from framework.utils.config_reader import ConfigReader
-from framework.utils.service_logging import logger
+from cortx.sspl.framework.base.sspl_constants import PRODUCT_FAMILY
+from cortx.sspl.framework.utils.conf_utils import DATA_PATH_KEY, SSPL_CONF, Conf
+from cortx.sspl.framework.utils.config_reader import ConfigReader
+from cortx.sspl.framework.utils.service_logging import logger
 
 
 class StorageEnclosure(object):

@@ -32,13 +32,13 @@ from datetime import datetime
 import psutil
 from zope.interface import implementer
 
-from framework.base.debug import Debug
-from framework.utils.conf_utils import SSPL_CONF, Conf
-from framework.utils.config_reader import ConfigReader
-from framework.utils.service_logging import logger
-from framework.utils.sysfs_interface import SysFS
-from framework.utils.tool_factory import ToolFactory
-from sensors.INode_data import INodeData
+from cortx.sspl.framework.base.debug import Debug
+from cortx.sspl.framework.utils.conf_utils import SSPL_CONF, Conf
+from cortx.sspl.framework.utils.config_reader import ConfigReader
+from cortx.sspl.framework.utils.service_logging import logger
+from cortx.sspl.framework.utils.sysfs_interface import SysFS
+from cortx.sspl.framework.utils.tool_factory import ToolFactory
+from cortx.sspl.sensors.INode_data import INodeData
 
 
 @implementer(INodeData)

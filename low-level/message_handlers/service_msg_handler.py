@@ -22,16 +22,16 @@
 import errno
 import json
 
-from framework.actuator_state_manager import actuator_state_manager
-from framework.base.module_thread import ScheduledModuleThread
-from framework.base.internal_msgQ import InternalMsgQ
-from framework.utils.service_logging import logger
-from framework.base.sspl_constants import enabled_products
-from json_msgs.messages.actuators.service_controller import ServiceControllerMsg
-from json_msgs.messages.sensors.service_watchdog import ServiceWatchdogMsg
-from json_msgs.messages.actuators.ack_response import AckResponseMsg
+from cortx.sspl.framework.actuator_state_manager import actuator_state_manager
+from cortx.sspl.framework.base.module_thread import ScheduledModuleThread
+from cortx.sspl.framework.base.internal_msgQ import InternalMsgQ
+from cortx.sspl.framework.utils.service_logging import logger
+from cortx.sspl.framework.base.sspl_constants import enabled_products
+from cortx.sspl.json_msgs.messages.actuators.service_controller import ServiceControllerMsg
+from cortx.sspl.json_msgs.messages.sensors.service_watchdog import ServiceWatchdogMsg
+from cortx.sspl.json_msgs.messages.actuators.ack_response import AckResponseMsg
 # Modules that receive messages from this module
-from message_handlers.logging_msg_handler import LoggingMsgHandler
+from cortx.sspl.message_handlers.logging_msg_handler import LoggingMsgHandler
 
 
 class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
@@ -160,7 +160,7 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 # This case will be for first request only. Subsequent
                 # requests will go to INITIALIZED state case.
                 logger.info("Service actuator is imported and initializing")
-                from actuators.IService import IService
+                from cortx.sspl.actuators.IService import IService
                 actuator_state_manager.set_state(
                     "Service", actuator_state_manager.INITIALIZING)
                 service_actuator_class = self._query_utility(IService)
@@ -201,7 +201,7 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
             if service_request != "None":
                 # Query the Zope GlobalSiteManager for an object implementing IService
                 if self._service_actuator is None:
-                    from actuators.IService import IService
+                    from cortx.sspl.actuators.IService import IService
                     self._service_actuator = self._query_utility(IService)()
                     self._log_debug(f"_process_msg, service_actuator name: {self._service_actuator.name()}")
                 service_name, state, substate = self._service_actuator.perform_request(jsonMsg)

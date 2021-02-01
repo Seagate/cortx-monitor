@@ -22,23 +22,23 @@
 import json
 import time
 
-from framework.base.internal_msgQ import InternalMsgQ
-from framework.base.module_thread import ScheduledModuleThread
-from framework.base.sspl_constants import enabled_products
-from framework.utils.conf_utils import (CLUSTER, GLOBAL_CONF, SRVNODE,
+from cortx.sspl.framework.base.internal_msgQ import InternalMsgQ
+from cortx.sspl.framework.base.module_thread import ScheduledModuleThread
+from cortx.sspl.framework.base.sspl_constants import enabled_products
+from cortx.sspl.framework.utils.conf_utils import (CLUSTER, GLOBAL_CONF, SRVNODE,
                                         SSPL_CONF, Conf)
-from framework.utils.service_logging import logger
-from framework.utils.severity_reader import SeverityReader
-from json_msgs.messages.sensors.cpu_data import CPUdataMsg
-from json_msgs.messages.sensors.disk_space_alert import DiskSpaceAlertMsg
-from json_msgs.messages.sensors.host_update import HostUpdateMsg
-from json_msgs.messages.sensors.if_data import IFdataMsg
-from json_msgs.messages.sensors.local_mount_data import LocalMountDataMsg
-from json_msgs.messages.sensors.node_hw_data import NodeIPMIDataMsg
-from json_msgs.messages.sensors.raid_data import RAIDdataMsg
-from json_msgs.messages.sensors.raid_integrity_msg import RAIDIntegrityMsg
-from message_handlers.logging_msg_handler import LoggingMsgHandler
-from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
+from cortx.sspl.framework.utils.service_logging import logger
+from cortx.sspl.framework.utils.severity_reader import SeverityReader
+from cortx.sspl.json_msgs.messages.sensors.cpu_data import CPUdataMsg
+from cortx.sspl.json_msgs.messages.sensors.disk_space_alert import DiskSpaceAlertMsg
+from cortx.sspl.json_msgs.messages.sensors.host_update import HostUpdateMsg
+from cortx.sspl.json_msgs.messages.sensors.if_data import IFdataMsg
+from cortx.sspl.json_msgs.messages.sensors.local_mount_data import LocalMountDataMsg
+from cortx.sspl.json_msgs.messages.sensors.node_hw_data import NodeIPMIDataMsg
+from cortx.sspl.json_msgs.messages.sensors.raid_data import RAIDdataMsg
+from cortx.sspl.json_msgs.messages.sensors.raid_integrity_msg import RAIDIntegrityMsg
+from cortx.sspl.message_handlers.logging_msg_handler import LoggingMsgHandler
+from cortx.sspl.framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 
 
 class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
@@ -193,7 +193,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         try:
             # Query the Zope GlobalSiteManager for an object implementing INodeData
             if self._node_sensor is None:
-                from sensors.INode_data import INodeData
+                from cortx.sspl.sensors.INode_data import INodeData
                 self._node_sensor = self._queryUtility(INodeData)()
                 self._log_debug("_node_sensor name: %s" % self._node_sensor.name())
 

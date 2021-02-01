@@ -21,10 +21,9 @@
 import subprocess
 
 from zope.interface import implementer
-from actuators.Ihdparm import IHdparm
-
-from framework.base.debug import Debug
-from framework.utils.service_logging import logger
+from cortx.sspl.actuators.Ihdparm import IHdparm
+from cortx.sspl.framework.base.debug import Debug
+from cortx.sspl.framework.utils.service_logging import logger
 
 @implementer(IHdparm)
 class Hdparm(Debug):

@@ -24,17 +24,15 @@ import hashlib
 import json
 import time
 
-from framework.base.sspl_constants import ServiceTypes
-from framework.target.enclosure import StorageEnclosure
-from framework.utils import encryptor
-from framework.utils.conf_utils import (CLUSTER, CONTROLLER, ENCLOSURE,
-                                        GLOBAL_CONF, IP, MGMT_INTERFACE,
-                                        SECRET, POLLING_FREQUENCY, PORT,
-                                        PRIMARY, SECONDARY, SRVNODE, SSPL_CONF,
-                                        STORAGE, STORAGE_ENCLOSURE, USER, Conf)
-from framework.utils.service_logging import logger
-from framework.utils.store_factory import store
-from framework.utils.webservices import WebServices
+from cortx.sspl.framework.base.sspl_constants import ServiceTypes
+from cortx.sspl.framework.target.enclosure import StorageEnclosure
+from cortx.sspl.framework.utils import encryptor
+from cortx.sspl.framework.utils.conf_utils import (CLUSTER, CONTROLLER, ENCLOSURE,
+    GLOBAL_CONF, IP, MGMT_INTERFACE, SECRET, POLLING_FREQUENCY, PORT, PRIMARY, SECONDARY,
+    SRVNODE, SSPL_CONF, STORAGE, STORAGE_ENCLOSURE, USER, Conf)
+from cortx.sspl.framework.utils.service_logging import logger
+from cortx.sspl.framework.utils.store_factory import store
+from cortx.sspl.framework.utils.webservices import WebServices
 
 
 class RealStorEnclosure(StorageEnclosure):

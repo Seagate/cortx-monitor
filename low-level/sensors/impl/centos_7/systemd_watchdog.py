@@ -38,23 +38,22 @@ from dbus.mainloop.glib import DBusGMainLoop
 from gi.repository import GObject as gobject
 from zope.interface import implementer
 
-from framework.base.internal_msgQ import InternalMsgQ
-from framework.base.module_thread import SensorThread
-from framework.base.sspl_constants import cs_products
-from framework.rabbitmq.rabbitmq_egress_processor import \
+from cortx.sspl.framework.base.internal_msgQ import InternalMsgQ
+from cortx.sspl.framework.base.module_thread import SensorThread
+from cortx.sspl.framework.base.sspl_constants import cs_products
+from cortx.sspl.framework.rabbitmq.rabbitmq_egress_processor import \
     RabbitMQegressProcessor
-from framework.utils.conf_utils import (
-    CLUSTER, CLUSTER_ID, DATA_PATH_KEY, GLOBAL_CONF, NODE_ID, RACK_ID, SITE_ID,
-    SRVNODE, SSPL_CONF, Conf)
-from framework.utils.service_logging import logger
-from framework.utils.severity_reader import SeverityReader
-from framework.utils.store_factory import file_store
-from json_msgs.messages.actuators.ack_response import AckResponseMsg
-from message_handlers.disk_msg_handler import DiskMsgHandler
-from message_handlers.node_data_msg_handler import NodeDataMsgHandler
+from cortx.sspl.framework.utils.conf_utils import (SRVNODE, SSPL_CONF, Conf,
+    CLUSTER, CLUSTER_ID, DATA_PATH_KEY, GLOBAL_CONF, NODE_ID, RACK_ID, SITE_ID,)
+from cortx.sspl.framework.utils.service_logging import logger
+from cortx.sspl.framework.utils.severity_reader import SeverityReader
+from cortx.sspl.framework.utils.store_factory import file_store
+from cortx.sspl.json_msgs.messages.actuators.ack_response import AckResponseMsg
+from cortx.sspl.message_handlers.disk_msg_handler import DiskMsgHandler
+from cortx.sspl.message_handlers.node_data_msg_handler import NodeDataMsgHandler
 # Modules that receive messages from this module
-from message_handlers.service_msg_handler import ServiceMsgHandler
-from sensors.IService_watchdog import IServiceWatchdog
+from cortx.sspl.message_handlers.service_msg_handler import ServiceMsgHandler
+from cortx.sspl.sensors.IService_watchdog import IServiceWatchdog
 
 store = file_store
 

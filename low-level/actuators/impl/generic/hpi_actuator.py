@@ -62,16 +62,12 @@ import time
 import subprocess
 
 from zope.interface import implementer
-from actuators.Ihpi import IHPI
-
-from framework.base.debug import Debug
-from framework.utils.service_logging import logger
-
+from cortx.sspl.actuators.Ihpi import IHPI
+from cortx.sspl.framework.base.debug import Debug
+from cortx.sspl.framework.utils.service_logging import logger
 from xrtx_hpi_lib.hpi_session_management import PyHpiSessionManagement
-
-from openhpi_baselib import SA_OK, SaHpiCtrlStateT, SaHpiCtrlStateUnionT, \
-        HpiUtilGen, saHpiControlSet
-
+from openhpi_baselib import (SA_OK, SaHpiCtrlStateT, SaHpiCtrlStateUnionT,
+    HpiUtilGen, saHpiControlSet)
 from hpi.inventory.iterator import SubFruIterator
 from hpi.inventory.parser.inventory import SystemInventoryParser
 from hpi.inventory.system import SystemInventory

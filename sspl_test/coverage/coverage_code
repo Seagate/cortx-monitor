@@ -1,4 +1,4 @@
-from coverage import Coverage
+from cortx.sspl.sspl_test.coverage import Coverage
 co = Coverage(
             data_file='/tmp/sspl/.sspl_report',
             include="/opt/seagate/*",

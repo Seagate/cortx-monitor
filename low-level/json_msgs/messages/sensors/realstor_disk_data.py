@@ -22,7 +22,7 @@
 
 import json
 
-from json_msgs.messages.sensors.base_sensors_msg import BaseSensorMsg
+from cortx.sspl.json_msgs.messages.sensors.base_sensors_msg import BaseSensorMsg
 
 class RealStorDiskDataMsg(BaseSensorMsg):
     """The JSON message transmitted by the RealStor Disk Sensor"""

@@ -20,7 +20,7 @@
 """
 
 import json
-from sspl_test.framework.utils.service_logging import logger
+from cortx.sspl.sspl_test.framework.utils.service_logging import logger
 try:
    from systemd import journal
    use_journal=True

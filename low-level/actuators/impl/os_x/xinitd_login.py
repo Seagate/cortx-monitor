@@ -21,9 +21,8 @@
 
 
 from zope.interface import implementer
-from actuators.ILogin import ILogin
-
-from framework.base.debug import Debug
+from cortx.sspl.actuators.ILogin import ILogin
+from cortx.sspl.framework.base.debug import Debug
 
 @implementer(ILogin)
 class XinitdLogin(Debug):

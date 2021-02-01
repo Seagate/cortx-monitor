@@ -23,7 +23,7 @@
 
 import json
 
-from json_msgs.messages.sensors.base_sensors_msg import BaseSensorMsg
+from cortx.sspl.json_msgs.messages.sensors.base_sensors_msg import BaseSensorMsg
 
 
 class RealStorSideplaneExpanderDataMsg(BaseSensorMsg):

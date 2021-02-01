@@ -23,9 +23,9 @@ import sys
 import socket
 import json
 import subprocess
-# Add the top level directories
-sys.path.insert(0, f'/opt/seagate/cortx/sspl/low-level')
-from framework.base.sspl_constants import PRODUCT_FAMILY, node_key_id, cluster_id, RESOURCE_HEALTH_VIEW
+
+from cortx.sspl.framework.base.sspl_constants import (PRODUCT_FAMILY,
+    node_key_id, cluster_id, RESOURCE_HEALTH_VIEW)
 
 onGoingRequestPath = "/tmp/sspl-msb-req.txt"
 

@@ -20,14 +20,14 @@
 """
 import json
 
-from framework.base.module_thread import ScheduledModuleThread
-from framework.base.internal_msgQ import InternalMsgQ
-from framework.utils.service_logging import logger
-from framework.base.sspl_constants import cs_legacy_products
+from cortx.sspl.framework.base.module_thread import ScheduledModuleThread
+from cortx.sspl.framework.base.internal_msgQ import InternalMsgQ
+from cortx.sspl.framework.utils.service_logging import logger
+from cortx.sspl.framework.base.sspl_constants import cs_legacy_products
 
 # Modules that receive messages from this module
-from framework.rabbitmq.plane_cntrl_rmq_egress_processor import PlaneCntrlRMQegressProcessor
-from json_msgs.messages.actuators.ack_response import AckResponseMsg
+from cortx.sspl.framework.rabbitmq.plane_cntrl_rmq_egress_processor import PlaneCntrlRMQegressProcessor
+from cortx.sspl.json_msgs.messages.actuators.ack_response import AckResponseMsg
 
 
 class PlaneCntrlMsgHandler(ScheduledModuleThread, InternalMsgQ):

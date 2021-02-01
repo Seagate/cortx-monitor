@@ -153,7 +153,7 @@ class PostInstallCmd(Cmd):
                              "Product not found in %s" % (self.global_config))
 
     def process(self):
-        from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.sspl_post_install import SSPLPostInstall
+        from cortx.sspl.bin.sspl_post_install import SSPLPostInstall
         SSPLPostInstall(self.args).process()
 
 
@@ -198,7 +198,7 @@ class InitCmd(Cmd):
                     "Role %s is not supported. Check Usage" % role)
 
     def process(self):
-        from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.sspl_setup_init import SSPLInit
+        from cortx.sspl.bin.sspl_setup_init import SSPLInit
         SSPLInit().process()
 
 
@@ -251,7 +251,7 @@ class ConfigCmd(Cmd):
                     "Product not found in %s" % (global_config))
 
     def process(self):
-        from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.sspl_config import SSPLConfig
+        from cortx.sspl.bin.sspl_config import SSPLConfig
         SSPLConfig().process()
 
 class TestCmd(Cmd):
@@ -294,7 +294,7 @@ class TestCmd(Cmd):
             raise SetupError(1, "'sspl-test' rpm pkg not found.")
 
     def process(self):
-        from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.sspl_test import SSPLTestCmd
+        from cortx.sspl.bin.sspl_test import SSPLTestCmd
         SSPLTestCmd(self.args).process()
 
 
@@ -387,10 +387,10 @@ class ResetCmd(Cmd):
 
     def process(self):
         if self.process_class == "HardReset":
-            from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.sspl_reset import HardReset
+            from cortx.sspl.bin.sspl_reset import HardReset
             HardReset().process()
         elif self.process_class == "SoftReset":
-            from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.sspl_reset import SoftReset
+            from cortx.sspl.bin.sspl_reset import SoftReset
             SoftReset().process()
 
 class CheckCmd(Cmd):

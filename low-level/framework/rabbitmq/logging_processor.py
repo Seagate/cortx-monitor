@@ -22,22 +22,20 @@
 
 import json
 import time
+import pika
 from syslog import (LOG_ALERT, LOG_CRIT, LOG_DEBUG, LOG_EMERG, LOG_ERR,
                     LOG_INFO, LOG_NOTICE, LOG_WARNING)
 
-import pika
-
-from framework.base.internal_msgQ import InternalMsgQ
-from framework.base.module_thread import ScheduledModuleThread
-from framework.base.sspl_constants import ServiceTypes
-from framework.utils import encryptor
-from framework.utils.autoemail import AutoEmail
-from framework.utils.conf_utils import CLUSTER, GLOBAL_CONF, SSPL_CONF, Conf
-from framework.utils.service_logging import logger
+from cortx.sspl.framework.base.internal_msgQ import InternalMsgQ
+from cortx.sspl.framework.base.module_thread import ScheduledModuleThread
+from cortx.sspl.framework.base.sspl_constants import ServiceTypes
+from cortx.sspl.framework.utils import encryptor
+from cortx.sspl.framework.utils.autoemail import AutoEmail
+from cortx.sspl.framework.utils.conf_utils import CLUSTER, GLOBAL_CONF, SSPL_CONF, Conf
+from cortx.sspl.framework.utils.service_logging import logger
 # Modules that receive messages from this module
-from message_handlers.logging_msg_handler import LoggingMsgHandler
-
-from .rabbitmq_connector import RabbitMQSafeConnection
+from cortx.sspl.message_handlers.logging_msg_handler import LoggingMsgHandler
+from cortx.sspl.framework.rabbitmq.rabbitmq_connector import RabbitMQSafeConnection
 
 try:
    from systemd import journal

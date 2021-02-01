@@ -34,7 +34,7 @@ from cortx.sspl.bin import sspl_constants as consts
 from cortx.utils.service import Service
 from cortx.utils.process import SimpleProcess
 from cortx.utils.validator.v_service import ServiceV
-from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.error import SetupError
+from cortx.sspl.bin.error import SetupError
 from cortx.utils.conf_store import Conf
 from cortx.sspl.bin.conf_based_sensors_enable import update_sensor_info
 

@@ -26,36 +26,21 @@ import time
 from socket import gethostname
 from threading import Thread
 
-from framework.base.internal_msgQ import InternalMsgQ
-from framework.base.module_thread import (ScheduledModuleThread, SensorThread,
-                                          SensorThreadState)
-from framework.base.sspl_constants import (SSPL_SETTINGS, OperatingSystem,
-                                           cs_legacy_products, cs_products,
-                                           enabled_products,
-                                           sspl_settings_configured_groups)
-from framework.rabbitmq.logging_processor import LoggingProcessor
-from framework.rabbitmq.plane_cntrl_rmq_egress_processor import \
+from cortx.sspl.framework.base.internal_msgQ import InternalMsgQ
+from cortx.sspl.framework.base.module_thread import (ScheduledModuleThread,
+    SensorThread, SensorThreadState)
+from cortx.sspl.framework.base.sspl_constants import (SSPL_SETTINGS, cs_products,
+    OperatingSystem, cs_legacy_products, enabled_products, sspl_settings_configured_groups)
+from cortx.sspl.framework.rabbitmq.plane_cntrl_rmq_egress_processor import \
     PlaneCntrlRMQegressProcessor
 # Import modules to control
-from framework.rabbitmq.rabbitmq_egress_processor import \
+from cortx.sspl.framework.rabbitmq.rabbitmq_egress_processor import \
     RabbitMQegressProcessor
-from framework.rabbitmq.rabbitmq_ingress_processor import \
-    RabbitMQingressProcessor
-from framework.utils.conf_utils import SSPL_CONF, Conf
-from framework.utils.service_logging import logger
-from json_msgs.messages.actuators.thread_controller import ThreadControllerMsg
-from message_handlers.disk_msg_handler import DiskMsgHandler
+from cortx.sspl.framework.utils.conf_utils import SSPL_CONF, Conf
+from cortx.sspl.framework.utils.service_logging import logger
+from cortx.sspl.json_msgs.messages.actuators.thread_controller import ThreadControllerMsg
 # Note that all threaded message handlers must have an import here to be controlled
-from message_handlers.logging_msg_handler import LoggingMsgHandler
-from message_handlers.node_controller_msg_handler import \
-    NodeControllerMsgHandler
-from message_handlers.node_data_msg_handler import NodeDataMsgHandler
-from message_handlers.plane_cntrl_msg_handler import PlaneCntrlMsgHandler
-from message_handlers.real_stor_actuator_msg_handler import \
-    RealStorActuatorMsgHandler
-from message_handlers.real_stor_encl_msg_handler import RealStorEnclMsgHandler
-from message_handlers.service_msg_handler import ServiceMsgHandler
-
+from cortx.sspl.message_handlers.real_stor_encl_msg_handler import RealStorEnclMsgHandler
 
 # Global method used by Thread to capture and log errors.  This must be global.
 def _run_thread_capture_errors(curr_module, sspl_modules, msgQlist,
@@ -153,30 +138,30 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
             operating_system.lower() in OperatingSystem.CENTOS7.value.lower() or operating_system.lower() in OperatingSystem.RHEL7.value.lower():
             # Note that all threaded sensors and actuators must have an
             # import here to be controlled
-            from sensors.impl.centos_7.systemd_watchdog import SystemdWatchdog
-            from sensors.impl.centos_7.drive_manager import DriveManager
-            from sensors.impl.centos_7.hpi_monitor import HPIMonitor
+            from cortx.sspl.sensors.impl.centos_7.systemd_watchdog import SystemdWatchdog
+            from cortx.sspl.sensors.impl.centos_7.drive_manager import DriveManager
+            from cortx.sspl.sensors.impl.centos_7.hpi_monitor import HPIMonitor
 
         # Handle configurations for specific products
         if product.lower() == "cs-a":
-            from sensors.impl.generic.SMR_drive_data import SMRdriveData
+            from cortx.sspl.sensors.impl.generic.SMR_drive_data import SMRdriveData
         if product.lower() in [x.lower() for x in enabled_products]:
-            from sensors.impl.platforms.realstor.realstor_disk_sensor \
+            from cortx.sspl.sensors.impl.platforms.realstor.realstor_disk_sensor \
                 import RealStorDiskSensor
-            from sensors.impl.platforms.realstor.realstor_psu_sensor \
+            from cortx.sspl.sensors.impl.platforms.realstor.realstor_psu_sensor \
                 import RealStorPSUSensor
-            from sensors.impl.platforms.realstor.realstor_fan_sensor \
+            from cortx.sspl.sensors.impl.platforms.realstor.realstor_fan_sensor \
                 import RealStorFanSensor
-            from sensors.impl.platforms.realstor.realstor_controller_sensor \
+            from cortx.sspl.sensors.impl.platforms.realstor.realstor_controller_sensor \
                 import RealStorControllerSensor
-            from sensors.impl.platforms.realstor.realstor_sideplane_expander_sensor \
+            from cortx.sspl.sensors.impl.platforms.realstor.realstor_sideplane_expander_sensor \
                 import RealStorSideplaneExpanderSensor
-            from sensors.impl.platforms.realstor.realstor_dg_volume_sensor \
+            from cortx.sspl.sensors.impl.platforms.realstor.realstor_dg_volume_sensor \
                 import RealStorLogicalVolumeSensor
-            from sensors.impl.platforms.realstor.realstor_enclosure_sensor \
+            from cortx.sspl.sensors.impl.platforms.realstor.realstor_enclosure_sensor \
                 import RealStorEnclosureSensor
-            from sensors.impl.generic.raid import RAIDsensor
-            from sensors.impl.generic.raid_integrity_data import RAIDIntegritySensor
+            from cortx.sspl.sensors.impl.generic.raid import RAIDsensor
+            from cortx.sspl.sensors.impl.generic.raid_integrity_data import RAIDIntegritySensor
 
     def run(self):
         """Run the module periodically on its own thread."""

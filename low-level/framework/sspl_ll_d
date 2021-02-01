@@ -38,49 +38,42 @@ import traceback
 import uuid
 from threading import Thread
 
-# Add the top level directories
-sys.path.insert(0, f'/opt/seagate/cortx/sspl/low-level')
-
-from actuators.impl.actuator import Actuator
-from framework.actuator_state_manager import actuator_state_manager
-from framework.base.module_thread import SensorThread
-from framework.base.sspl_constants import (COMMON_CONFIGS, PRODUCT_FAMILY,
-                                           SSPL_SETTINGS, OperatingSystem,
-                                           enabled_products,
-                                           sspl_settings_configured_groups)
-from framework.rabbitmq.logging_processor import LoggingProcessor
-from framework.rabbitmq.plane_cntrl_rmq_egress_processor import \
+from cortx.sspl.actuators.impl.actuator import Actuator
+from cortx.sspl.framework.actuator_state_manager import actuator_state_manager
+from cortx.sspl.framework.base.module_thread import SensorThread
+from cortx.sspl.framework.base.sspl_constants import (COMMON_CONFIGS, PRODUCT_FAMILY,
+    SSPL_SETTINGS, OperatingSystem, enabled_products, sspl_settings_configured_groups)
+from cortx.sspl.framework.rabbitmq.logging_processor import LoggingProcessor
+from cortx.sspl.framework.rabbitmq.plane_cntrl_rmq_egress_processor import \
     PlaneCntrlRMQegressProcessor
-from framework.rabbitmq.plane_cntrl_rmq_ingress_processor import \
+from cortx.sspl.framework.rabbitmq.plane_cntrl_rmq_ingress_processor import \
     PlaneCntrlRMQingressProcessor
-from framework.rabbitmq.rabbitmq_egress_accumulated_msgs_processor import \
+from cortx.sspl.framework.rabbitmq.rabbitmq_egress_accumulated_msgs_processor import \
     RabbitMQEgressAccumulatedMsgsProcessor
 # Modules for handling RabbitMQ messages and manipulating internal threads
-from framework.rabbitmq.rabbitmq_egress_processor import \
+from cortx.sspl.framework.rabbitmq.rabbitmq_egress_processor import \
     RabbitMQegressProcessor
-from framework.rabbitmq.rabbitmq_ingress_processor import \
+from cortx.sspl.framework.rabbitmq.rabbitmq_ingress_processor import \
     RabbitMQingressProcessor
-from framework.rabbitmq.thread_controller import ThreadController
-from framework.utils.conf_utils import (CLUSTER, GLOBAL_CONF, HOST, MONITOR,
-                                        OPERATING_SYSTEM, PORT, PRODUCT,
-                                        RELEASE, RSYSLOG, SETUP, SRVNODE,
-                                        SSPL_CONF, SYSTEM_INFORMATION,
-                                        THREADED, Conf)
-from framework.utils.config_reader import ConfigReader
-from framework.utils.service_logging import init_logging, logger
-from framework.utils.store_factory import store
+from cortx.sspl.framework.rabbitmq.thread_controller import ThreadController
+from cortx.sspl.framework.utils.conf_utils import (CLUSTER, GLOBAL_CONF, HOST,
+    MONITOR, OPERATING_SYSTEM, PORT, PRODUCT, RELEASE, RSYSLOG, SETUP, SRVNODE,
+    SSPL_CONF, SYSTEM_INFORMATION, THREADED, Conf)
+from cortx.sspl.framework.utils.config_reader import ConfigReader
+from cortx.sspl.framework.utils.service_logging import init_logging, logger
+from cortx.sspl.framework.utils.store_factory import store
 # Message to send to HAlon upon critical thread errors
-from json_msgs.messages.actuators.thread_controller import ThreadControllerMsg
-from message_handlers.disk_msg_handler import DiskMsgHandler
-from message_handlers.logging_msg_handler import LoggingMsgHandler
-from message_handlers.node_controller_msg_handler import \
+from cortx.sspl.json_msgs.messages.actuators.thread_controller import ThreadControllerMsg
+from cortx.sspl.message_handlers.disk_msg_handler import DiskMsgHandler
+from cortx.sspl.message_handlers.logging_msg_handler import LoggingMsgHandler
+from cortx.sspl.message_handlers.node_controller_msg_handler import \
     NodeControllerMsgHandler
-from message_handlers.node_data_msg_handler import NodeDataMsgHandler
-from message_handlers.plane_cntrl_msg_handler import PlaneCntrlMsgHandler
-from message_handlers.real_stor_actuator_msg_handler import \
+from cortx.sspl.message_handlers.node_data_msg_handler import NodeDataMsgHandler
+from cortx.sspl.message_handlers.plane_cntrl_msg_handler import PlaneCntrlMsgHandler
+from cortx.sspl.message_handlers.real_stor_actuator_msg_handler import \
     RealStorActuatorMsgHandler
-from message_handlers.real_stor_encl_msg_handler import RealStorEnclMsgHandler
-from message_handlers.service_msg_handler import ServiceMsgHandler
+from cortx.sspl.message_handlers.real_stor_encl_msg_handler import RealStorEnclMsgHandler
+from cortx.sspl.message_handlers.service_msg_handler import ServiceMsgHandler
 
 
 #DO NOT EDIT: Marker comment to dynamically add code to initialize coverage obj for code coverage report generation
@@ -452,78 +445,78 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist, operating_system
     # Import in the proper classes based upon values from config file
     if operating_system == OperatingSystem.CENTOS7.value or operating_system == OperatingSystem.RHEL7.value or \
         operating_system.lower() in OperatingSystem.CENTOS7.value.lower() or operating_system.lower() in OperatingSystem.RHEL7.value.lower():
-        from actuators.impl.centos_7.systemd_service import SystemdService as Service
-        from actuators.impl.centos_7.command_line import CommandLine as CommandLine
-        from actuators.impl.centos_7.systemd_login import SystemdLogin as Login
-        from sensors.impl.centos_7.drive_manager import DriveManager as DriveManager
-        from sensors.impl.centos_7.systemd_watchdog import SystemdWatchdog as ServiceWatchdog
-        from sensors.impl.centos_7.hpi_monitor import HPIMonitor as HPIMonitor
+        from cortx.sspl.actuators.impl.centos_7.systemd_service import SystemdService as Service
+        from cortx.sspl.actuators.impl.centos_7.command_line import CommandLine as CommandLine
+        from cortx.sspl.actuators.impl.centos_7.systemd_login import SystemdLogin as Login
+        from cortx.sspl.sensors.impl.centos_7.drive_manager import DriveManager as DriveManager
+        from cortx.sspl.sensors.impl.centos_7.systemd_watchdog import SystemdWatchdog as ServiceWatchdog
+        from cortx.sspl.sensors.impl.centos_7.hpi_monitor import HPIMonitor as HPIMonitor
 
     elif operating_system == OperatingSystem.CENTOS6.value or operating_system == OperatingSystem.RHEL6.value:
         # Nothing yet
         pass
 
     elif operating_system in [OperatingSystem.OSX.value, OperatingSystem.OSX.value.lower()]:
-        from actuators.impl.os_x.xinitd_service import XinitdService as Service
-        from actuators.impl.os_x.xinitd_login import XinitdLogin as Login
-        from sensors.impl.os_x.drive_manager import DriveManager as DriveManager
-        from sensors.impl.os_x.xinitd_watchdog import XinitdWatchdog as ServiceWatchdog
-        from sensors.impl.os_x.hpi_monitor import HPIMonitor as HPIMonitor
+        from cortx.sspl.actuators.impl.os_x.xinitd_service import XinitdService as Service
+        from cortx.sspl.actuators.impl.os_x.xinitd_login import XinitdLogin as Login
+        from cortx.sspl.sensors.impl.os_x.drive_manager import DriveManager as DriveManager
+        from cortx.sspl.sensors.impl.os_x.xinitd_watchdog import XinitdWatchdog as ServiceWatchdog
+        from cortx.sspl.sensors.impl.os_x.hpi_monitor import HPIMonitor as HPIMonitor
 
     else:
         raise Exception(f"Operating System '{operating_system}' not supported")
 
     if product.lower() == "cs-a":
-        from actuators.impl.generic.raritan_pdu import RaritanPDU
-        from actuators.impl.generic.ipmi import IPMI
+        from cortx.sspl.actuators.impl.generic.raritan_pdu import RaritanPDU
+        from cortx.sspl.actuators.impl.generic.ipmi import IPMI
         if setup not in ['cmu', 'gw', 'vm']:
             try:
-                from actuators.impl.generic.hpi_actuator import HPIactuator
+                from cortx.sspl.actuators.impl.generic.hpi_actuator import HPIactuator
             except ImportError:
                 logger.info("Could not import HPIactuator")
 
-        from sensors.impl.generic.SNMP_traps import SNMPtraps
+        from cortx.sspl.sensors.impl.generic.SNMP_traps import SNMPtraps
 
     if product.upper() in enabled_products:
-        from sensors.impl.platforms.realstor.realstor_disk_sensor \
+        from cortx.sspl.sensors.impl.platforms.realstor.realstor_disk_sensor \
         import RealStorDiskSensor
-        from sensors.impl.platforms.realstor.realstor_psu_sensor \
+        from cortx.sspl.sensors.impl.platforms.realstor.realstor_psu_sensor \
         import RealStorPSUSensor
-        from sensors.impl.platforms.realstor.realstor_fan_sensor \
+        from cortx.sspl.sensors.impl.platforms.realstor.realstor_fan_sensor \
         import RealStorFanSensor
-        from sensors.impl.platforms.realstor.realstor_controller_sensor \
+        from cortx.sspl.sensors.impl.platforms.realstor.realstor_controller_sensor \
         import RealStorControllerSensor
-        from sensors.impl.platforms.realstor.realstor_sideplane_expander_sensor \
+        from cortx.sspl.sensors.impl.platforms.realstor.realstor_sideplane_expander_sensor \
         import RealStorSideplaneExpanderSensor
-        from sensors.impl.platforms.realstor.realstor_dg_volume_sensor \
+        from cortx.sspl.sensors.impl.platforms.realstor.realstor_dg_volume_sensor \
         import RealStorLogicalVolumeSensor
-        from sensors.impl.platforms.realstor.realstor_enclosure_sensor \
+        from cortx.sspl.sensors.impl.platforms.realstor.realstor_enclosure_sensor \
         import RealStorEnclosureSensor
-        from sensors.impl.generic.iem_sensor import IEMSensor
-        from sensors.impl.generic.node_hw import NodeHWsensor
-        from sensors.impl.generic.node_sas_port import SASPortSensor
-        from sensors.impl.generic.node_memory_fault import MemFaultSensor
-        from sensors.impl.generic.cpu_fault_sensor import CPUFaultSensor
+        from cortx.sspl.sensors.impl.generic.iem_sensor import IEMSensor
+        from cortx.sspl.sensors.impl.generic.node_hw import NodeHWsensor
+        from cortx.sspl.sensors.impl.generic.node_sas_port import SASPortSensor
+        from cortx.sspl.sensors.impl.generic.node_memory_fault import MemFaultSensor
+        from cortx.sspl.sensors.impl.generic.cpu_fault_sensor import CPUFaultSensor
 
     if product.lower() in [x.lower() for x in enabled_products]:
         import inspect
 
-        from actuators.impl.generic.raid import RAIDactuator
-        from actuators.impl.generic.hdparm import Hdparm
-        from actuators.impl.generic.smartctl import Smartctl
-        from actuators.impl.generic.node_hw import NodeHWactuator
-        from actuators.impl.generic.realstor_encl import RealStorActuator
+        from cortx.sspl.actuators.impl.generic.raid import RAIDactuator
+        from cortx.sspl.actuators.impl.generic.hdparm import Hdparm
+        from cortx.sspl.actuators.impl.generic.smartctl import Smartctl
+        from cortx.sspl.actuators.impl.generic.node_hw import NodeHWactuator
+        from cortx.sspl.actuators.impl.generic.realstor_encl import RealStorActuator
 
-        from sensors.impl.generic.raid import RAIDsensor
-        from sensors.impl.generic.raid_integrity_data import RAIDIntegritySensor
-        from sensors.impl.generic.node_data import NodeData as NodeData
-        # from sensors.impl.generic.SMR_drive_data import SMRdriveData
+        from cortx.sspl.sensors.impl.generic.raid import RAIDsensor
+        from cortx.sspl.sensors.impl.generic.raid_integrity_data import RAIDIntegritySensor
+        from cortx.sspl.sensors.impl.generic.node_data import NodeData as NodeData
+        # from cortx.sspl.sensors.impl.generic.SMR_drive_data import SMRdriveData
 
         from zope.component import getGlobalSiteManager
         from zope.interface import implementedBy
 
         from zope.component import queryUtility
-        from loggers.impl.iem_logger import IEMlogger
+        from cortx.sspl.loggers.impl.iem_logger import IEMlogger
 
         # The Zope Global Site Manager containing objects that implement the desired interfaces
         gsm = getGlobalSiteManager()

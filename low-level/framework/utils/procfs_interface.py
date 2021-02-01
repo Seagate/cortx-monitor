@@ -20,7 +20,7 @@ drivers information and configuration.
 import os
 
 from pathlib import Path
-from framework.utils.utility import Utility
+from cortx.sspl.framework.utils.utility import Utility
 
 
 class ProcFS(Utility):

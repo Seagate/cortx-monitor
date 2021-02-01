@@ -23,12 +23,10 @@ import time
 # Retrive show system cmd info
 import requests
 from cortx.utils.security.cipher import Cipher
-
-from alerts.self_hw.self_hw_utilities import get_node_id
-from framework.utils.conf_utils import (CLUSTER, CLUSTER_ID, CONTROLLER,
-                                        ENCLOSURE, GLOBAL_CONF, IP, PORT,
-                                        PRIMARY, SECONDARY, SECRET, SRVNODE,
-                                        STORAGE, STORAGE_ENCLOSURE, USER, Conf)
+from cortx.sspl.sspl_test.alerts.self_hw.self_hw_utilities import get_node_id
+from cortx.sspl.sspl_test.utils.conf_utils import (CLUSTER, CLUSTER_ID, CONTROLLER,
+    ENCLOSURE, GLOBAL_CONF, IP, PORT, PRIMARY, SECONDARY, SECRET, STORAGE, USER,
+    STORAGE_ENCLOSURE, Conf)
 
 
 def gen_key(cluster_id, service_name):

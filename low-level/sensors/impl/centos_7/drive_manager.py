@@ -32,14 +32,14 @@ import time
 import pyinotify
 from zope.interface import implementer
 
-from framework.base.internal_msgQ import InternalMsgQ
-from framework.base.module_thread import SensorThread
-from framework.base.sspl_constants import PRODUCT_FAMILY
-from framework.utils.conf_utils import SSPL_CONF, Conf
-from framework.utils.service_logging import logger
+from cortx.sspl.framework.base.internal_msgQ import InternalMsgQ
+from cortx.sspl.framework.base.module_thread import SensorThread
+from cortx.sspl.framework.base.sspl_constants import PRODUCT_FAMILY
+from cortx.sspl.framework.utils.conf_utils import SSPL_CONF, Conf
+from cortx.sspl.framework.utils.service_logging import logger
 # Modules that receive messages from this module
-from message_handlers.disk_msg_handler import DiskMsgHandler
-from sensors.IDrive_manager import IDriveManager
+from cortx.sspl.message_handlers.disk_msg_handler import DiskMsgHandler
+from cortx.sspl.sensors.IDrive_manager import IDriveManager
 
 
 @implementer(IDriveManager)

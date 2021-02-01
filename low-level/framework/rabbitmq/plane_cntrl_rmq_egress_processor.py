@@ -25,12 +25,12 @@ import pika
 import os
 import time
 
-from framework.base.module_thread import ScheduledModuleThread
-from framework.base.internal_msgQ import InternalMsgQ
-from framework.utils.service_logging import logger
-from .rabbitmq_connector import RabbitMQSafeConnection
-from json_msgs.messages.actuators.thread_controller import ThreadControllerMsg
-from json_msgs.messages.actuators.ack_response import AckResponseMsg
+from cortx.sspl.framework.base.module_thread import ScheduledModuleThread
+from cortx.sspl.framework.base.internal_msgQ import InternalMsgQ
+from cortx.sspl.framework.utils.service_logging import logger
+from cortx.sspl.framework.rabbitmq.rabbitmq_connector import RabbitMQSafeConnection
+from cortx.sspl.json_msgs.messages.actuators.thread_controller import ThreadControllerMsg
+from cortx.sspl.json_msgs.messages.actuators.ack_response import AckResponseMsg
 
 import ctypes
 try:

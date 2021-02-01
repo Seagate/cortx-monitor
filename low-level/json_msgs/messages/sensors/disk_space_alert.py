@@ -29,8 +29,8 @@ import json
 import calendar
 import time
 
-from json_msgs.messages.sensors.base_sensors_msg import BaseSensorMsg
-from framework.utils import mon_utils
+from cortx.sspl.json_msgs.messages.sensors.base_sensors_msg import BaseSensorMsg
+from cortx.sspl.framework.utils import mon_utils
 
 class DiskSpaceAlertMsg(BaseSensorMsg):
     """The JSON message transmitted by the node message handler"""

@@ -46,11 +46,11 @@ try:
 except ImportError:
     print("Error importing python-jsonschema package")
 
-sys.path.insert(0, '../..')
-from framework.utils.service_logging import init_logging
-from framework.utils.config_reader import ConfigReader
-from framework.base.sspl_constants import RESOURCE_PATH, ServiceTypes
-from framework.utils import encryptor
+# sys.path.insert(0, '../..')
+from cortx.sspl.framework.utils.service_logging import init_logging
+from cortx.sspl.framework.utils.config_reader import ConfigReader
+from cortx.sspl.framework.base.sspl_constants import RESOURCE_PATH, ServiceTypes
+from cortx.sspl.framework.utils import encryptor
 
 try:
     use_security_lib=True

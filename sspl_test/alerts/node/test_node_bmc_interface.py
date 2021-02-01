@@ -21,13 +21,13 @@ import time
 import sys
 import subprocess
 
-from sspl_test.default import world
-from sspl_test.rabbitmq.rabbitmq_ingress_processor_tests import RabbitMQingressProcessorTests
-from sspl_test.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
-from sspl_test.common import check_sspl_ll_is_running
+from cortx.sspl.sspl_test.default import world
+from cortx.sspl.sspl_test.rabbitmq.rabbitmq_ingress_processor_tests import RabbitMQingressProcessorTests
+from cortx.sspl.sspl_test.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
+from cortx.sspl.sspl_test.common import check_sspl_ll_is_running
 
-from sspl_test.framework.base.sspl_constants import DATA_PATH
-from sspl_test.alerts.node import simulate_bmc_interface_alert
+from cortx.sspl.sspl_test.framework.base.sspl_constants import DATA_PATH
+from cortx.sspl.sspl_test.alerts.node import simulate_bmc_interface_alert
 
 def init(args):
     pass

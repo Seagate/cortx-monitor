@@ -25,9 +25,9 @@ import json
 from jsonschema import Draft3Validator
 from jsonschema import validate
 
-from json_msgs.messages.base_msg import BaseMsg
-from json_msgs.schemas import actuators
-from framework.base.sspl_constants import RESOURCE_PATH
+from cortx.sspl.json_msgs.messages.base_msg import BaseMsg
+from cortx.sspl.json_msgs.schemas import actuators
+from cortx.sspl.framework.base.sspl_constants import RESOURCE_PATH
 
 class BaseActuatorMsg(BaseMsg):
     '''

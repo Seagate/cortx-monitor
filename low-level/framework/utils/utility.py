@@ -19,7 +19,7 @@ Base class for all the Utility implementation
 
 import re
 import subprocess
-from cortx.sspl.lowlevel.framework.utils.service_logging import logger
+from cortx.sspl.framework.utils.service_logging import logger
 
 
 class Utility(object):

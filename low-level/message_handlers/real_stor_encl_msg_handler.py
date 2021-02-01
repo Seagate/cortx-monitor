@@ -20,20 +20,20 @@
 """
 
 
-from framework.base.module_thread import ScheduledModuleThread
-from framework.base.internal_msgQ import InternalMsgQ
-from framework.utils.service_logging import logger
-from json_msgs.messages.sensors.realstor_disk_data import RealStorDiskDataMsg
-from json_msgs.messages.sensors.realstor_psu_data import RealStorPSUDataMsg
-from json_msgs.messages.sensors.realstor_fan_data import RealStorFanDataMsg
-from json_msgs.messages.sensors.realstor_controller_data import \
+from cortx.sspl.framework.base.module_thread import ScheduledModuleThread
+from cortx.sspl.framework.base.internal_msgQ import InternalMsgQ
+from cortx.sspl.framework.utils.service_logging import logger
+from cortx.sspl.json_msgs.messages.sensors.realstor_disk_data import RealStorDiskDataMsg
+from cortx.sspl.json_msgs.messages.sensors.realstor_psu_data import RealStorPSUDataMsg
+from cortx.sspl.json_msgs.messages.sensors.realstor_fan_data import RealStorFanDataMsg
+from cortx.sspl.json_msgs.messages.sensors.realstor_controller_data import \
     RealStorControllerDataMsg
-from json_msgs.messages.sensors.realstor_sideplane_expander_data import \
+from cortx.sspl.json_msgs.messages.sensors.realstor_sideplane_expander_data import \
     RealStorSideplaneExpanderDataMsg
-from json_msgs.messages.sensors.realstor_logical_volume_data import \
+from cortx.sspl.json_msgs.messages.sensors.realstor_logical_volume_data import \
     RealStorLogicalVolumeDataMsg
-from json_msgs.messages.sensors.realstor_encl_data_msg import RealStorEnclDataMsg
-from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
+from cortx.sspl.json_msgs.messages.sensors.realstor_encl_data_msg import RealStorEnclDataMsg
+from cortx.sspl.framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 
 
 class RealStorEnclMsgHandler(ScheduledModuleThread, InternalMsgQ):

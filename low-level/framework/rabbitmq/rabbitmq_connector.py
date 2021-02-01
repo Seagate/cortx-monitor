@@ -22,10 +22,11 @@ import pika
 import pika.exceptions
 import encodings.idna  # noqa
 
-from framework.utils.service_logging import logger
-from framework.utils.config_reader import ConfigReader
-from framework.base.sspl_constants import COMMON_CONFIGS, component, CONSUL_HOST, CONSUL_PORT, SSPL_STORE_TYPE
-from framework.utils.conf_utils import SSPL_CONF, Conf
+from cortx.sspl.framework.utils.service_logging import logger
+from cortx.sspl.framework.utils.config_reader import ConfigReader
+from cortx.sspl.framework.base.sspl_constants import (COMMON_CONFIGS,
+    component, CONSUL_HOST, CONSUL_PORT, SSPL_STORE_TYPE)
+from cortx.sspl.framework.utils.conf_utils import SSPL_CONF, Conf
 
 
 RABBITMQ_CLUSTER_SECTION = 'RABBITMQCLUSTER'

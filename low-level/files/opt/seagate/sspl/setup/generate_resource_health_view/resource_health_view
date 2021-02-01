@@ -30,16 +30,15 @@ import dbus
 from dbus import SystemBus, Interface, Array
 import warnings
 warnings.filterwarnings(action='ignore',module='cryptography')
-# Add the top level directories
-sys.path.insert(0, f'/opt/seagate/cortx/sspl/low-level')
-from framework.utils.service_logging import logger
-from framework.utils.store_factory import store, file_store
-from framework.utils.ipmi_client import IpmiFactory
-from framework.utils.sysfs_interface import SysFS
-from framework.utils.tool_factory import ToolFactory
-from framework.base.sspl_constants import (component, CONSUL_HOST, CONSUL_PORT, node_key_id, PRODUCT_FAMILY,
-    storage_type, server_type, NODE_ID, SITE_ID, RACK_ID, DATA_PATH, cluster_id, node_id, SSPL_STORE_TYPE
-)
+
+from cortx.sspl.framework.utils.service_logging import logger
+from cortx.sspl.framework.utils.store_factory import store, file_store
+from cortx.sspl.framework.utils.ipmi_client import IpmiFactory
+from cortx.sspl.framework.utils.sysfs_interface import SysFS
+from cortx.sspl.framework.utils.tool_factory import ToolFactory
+from cortx.sspl.framework.base.sspl_constants import (component, CONSUL_HOST,
+    CONSUL_PORT, node_key_id, PRODUCT_FAMILY, storage_type, server_type, NODE_ID,
+    SITE_ID, RACK_ID, DATA_PATH, cluster_id, node_id, SSPL_STORE_TYPE)
 # Onward LDR_R2, consul will be abstracted out and won't exist as hard dependency for SSPL
 if SSPL_STORE_TYPE == "consul":
     import consul
@@ -1313,5 +1312,5 @@ if __name__ == "__main__":
     sys_site_id, sys_rack_id, sys_node_id, sys_cluster_id, sys_data_path = \
         SSPLHealthView._update_required_data_to_consul(args)
     if storage_type == 'rbod' and args.encl:
-        from framework.platforms.realstor.realstor_enclosure import singleton_realstorencl
+        from cortx.sspl.framework.platforms.realstor.realstor_enclosure import singleton_realstorencl
     sys.exit(SSPLHealthView().run(args))

@@ -29,18 +29,15 @@ import threading
 import time
 from functools import lru_cache
 
-from framework.base.internal_msgQ import InternalMsgQ
-from framework.base.module_thread import SensorThread
-from framework.base.sspl_constants import (PRODUCT_FAMILY,
-                                           iem_severity_to_alert_mapping,
-                                           iem_severity_types,
-                                           iem_source_types)
-from framework.utils.conf_utils import (CLUSTER, CLUSTER_ID, GLOBAL_CONF,
-                                        NODE_ID, RACK_ID, SITE_ID, SRVNODE,
-                                        SSPL_CONF, Conf)
-from framework.utils.service_logging import logger
-from json_msgs.messages.sensors.iem_data import IEMDataMsg
-from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
+from cortx.sspl.framework.base.internal_msgQ import InternalMsgQ
+from cortx.sspl.framework.base.module_thread import SensorThread
+from cortx.sspl.framework.base.sspl_constants import (PRODUCT_FAMILY,
+    iem_severity_to_alert_mapping, iem_severity_types, iem_source_types)
+from cortx.sspl.framework.utils.conf_utils import (CLUSTER, CLUSTER_ID, GLOBAL_CONF,
+    NODE_ID, RACK_ID, SITE_ID, SRVNODE, SSPL_CONF, Conf)
+from cortx.sspl.framework.utils.service_logging import logger
+from cortx.sspl.json_msgs.messages.sensors.iem_data import IEMDataMsg
+from cortx.sspl.framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 
 
 class IEMSensor(SensorThread, InternalMsgQ):

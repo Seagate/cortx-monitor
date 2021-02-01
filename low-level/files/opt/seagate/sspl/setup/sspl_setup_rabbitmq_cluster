@@ -21,10 +21,10 @@ import sys
 import socket
 import consul
 import os
-# Add the top level directories
-sys.path.insert(0, f'/opt/seagate/cortx/sspl/low-level')
-from framework.utils.config_reader import ConfigReader
-from framework.base.sspl_constants import component, CONSUL_HOST, CONSUL_PORT, COMMON_CONFIGS
+
+from cortx.sspl.framework.utils.config_reader import ConfigReader
+from cortx.sspl.framework.base.sspl_constants import (component,
+    CONSUL_HOST, CONSUL_PORT, COMMON_CONFIGS)
 
 CLUSTER_SECTION = 'RABBITMQCLUSTER'
 RABBITMQCTL = '/usr/sbin/rabbitmqctl'
