@@ -7,6 +7,7 @@ co = Coverage(
  			)
         logger.info("Starting coverage report scope")
         co.start()
+def generate_cov_report(signal_number, frame):
     logger.info("Ending Coverage Scope")
     co.stop()
     logger.info("coverage object stopped.")
@@ -21,3 +22,4 @@ co = Coverage(
  	#                     ignore_errors=True,
  	#                 )
  	# logger.info(f"HTML coverage report geverated with coverage of {html_cov_per}%")
+    signal.signal(signal.SIGUSR1, generate_cov_report)
