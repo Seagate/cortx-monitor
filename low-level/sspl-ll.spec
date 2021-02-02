@@ -107,7 +107,6 @@ mkdir -p /var/%{product_family}/sspl/bundle /var/log/%{product_family}/sspl /etc
 SSPL_DIR=/opt/seagate/%{product_family}/sspl
 
 [ -d "${SSPL_DIR}" ] && {
-    ln -sf $SSPL_DIR/bin/sspl_setup /usr/local/bin/sspl_setup
     ln -sf $SSPL_DIR/low-level/framework/sspl_ll_d /usr/bin/sspl_ll_d
     ln -sf $SSPL_DIR/low-level/framework/sspl_ll_d $SSPL_DIR/bin/sspl_ll_d
     ln -sf $SSPL_DIR/low-level/files/opt/seagate/sspl/setup/generate_resource_health_view/resource_health_view /usr/bin/resource_health_view
@@ -170,7 +169,6 @@ systemctl stop sspl-ll.service 2> /dev/null
 rm -f /etc/polkit-1/rules.d/sspl-ll_dbus_policy.rules
 rm -f /etc/dbus-1/system.d/sspl-ll_dbus_policy.conf
 [ "$1" == "0" ] && rm -f /opt/seagate/%{product_family}/sspl/sspl_init
-rm -rf /usr/local/bin/sspl_setup
 
 %files
 %defattr(-,sspl-ll,root,-)
