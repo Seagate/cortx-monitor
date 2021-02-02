@@ -72,8 +72,6 @@ def update_sensor_info():
             print("Error in connecting with consul: {}".format(cerror))
 
     # Update sensor information for sspl_test
-    test_file_config_path="/opt/seagate/%s/sspl/sspl_test/conf/sspl_tests.conf" % PRODUCT_FAMILY
-    Conf.load('sspl_test', 'yaml://%s' % test_file_config_path)
     for sect, value in sensors.items():
         Conf.set('sspl_test', '%s>%s' % (sect, key), value)
 

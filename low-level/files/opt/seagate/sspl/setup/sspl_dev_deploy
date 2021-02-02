@@ -289,12 +289,12 @@ class SSPLDevDeploy:
 
     def setup_sspl(self):
         """Initialize SSPL service."""
-        setup_script = "%s/bin/sspl_setup" % (SSPL_BASE_DIR)
+        setup_script = "/usr/local/bin/sspl_setup"
 
         commands = [
             "%s post_install --config yaml://%s" % (setup_script, self.sample_global_config),
-            "%s init --config yaml://%s" % (setup_script, self.sample_global_config),
             "%s config --config yaml://%s" % (setup_script, self.sample_global_config),
+            "%s init --config yaml://%s" % (setup_script, self.sample_global_config),
             "%s check" % (setup_script)
         ]
         if self.CLUSTER_NODES:

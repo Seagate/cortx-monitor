@@ -183,6 +183,13 @@ class SSPLConfig:
             if not os.path.exists(consts.REPLACEMENT_NODE_ENV_VAR_FILE):
                 ServiceV().validate('isrunning', ['consul'], is_process=True)
 
+        # Overwrite sspl_test config by the copy of global config
+        sspl_test_config = "%s/sspl_test/conf/sspl_tests.conf" % (consts.SSPL_BASE_DIR)
+        with open(sspl_test_config, "w") as fObj:
+            fObj.write("")
+        Conf.load("sspl_test", "yaml://%s" % (sspl_test_config))
+        Conf.copy("global_config", "sspl_test")
+
         # Get the types of server and storage we are currently running on and
         # enable/disable sensor groups in the conf file accordingly.
         update_sensor_info()

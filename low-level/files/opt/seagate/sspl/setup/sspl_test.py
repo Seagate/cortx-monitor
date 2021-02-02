@@ -25,17 +25,23 @@ class SSPLTestCmd:
     def __init__(self, args: list):
         self.args = args
         self.name = "sspl_test"
+        self.plan = "self_primary"
+        self.avoid_rmq = False
 
     def process(self):
-        # TODO: Need to convert run_tests.sh from shell to python
-        test_plan=None
-        sspl_test_plans = ["sanity", "alerts", "self_primary","self_secondary"]
-        for i in range(len(self.args)):
-            if self.args[i] in sspl_test_plans:
-                test_plan = self.args[i]
-        if test_plan is None:
-            test_plan="self_primary"
-        CMD = f"{TEST_DIR}/run_tests.sh test {test_plan}"
+        for arg in self.args:
+            try:
+                if arg == "--plan":
+                    arg_index = self.args.index("--plan")
+                    self.plan = self.args[arg_index + 1]
+                elif arg == "--avoid_rmq":
+                    self.avoid_rmq = True
+            except:
+                continue
+        # TODO: Convert shell script to python
+        # from cortx.sspl.sspl_test.run_qa_test import RunQATest
+        # RunQATest(self.plan, self.avoid_rmq).run()
+        CMD = "%s/run_qa_test.sh %s %s" % (TEST_DIR, self.plan, self.avoid_rmq)
         output, error, returncode = SimpleProcess(CMD).run(realtime_output=True)
         if returncode != 0:
             raise SetupError(returncode, error + " CMD: %s", CMD)

@@ -29,7 +29,6 @@ SSPL_STORE_TYPE=confstor
 plan=${1:-}
 avoid_rmq=${2:-}
 
-common_config=yaml:///etc/sample_global_cortx_config.yaml
 test_config=yaml:///opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/conf/sspl_tests.conf
 sspl_config=yaml:///etc/sspl.conf
 
@@ -141,14 +140,14 @@ restore_cfg_services()
         sed -i "s/cluster_id: $cluster_id/cluster_id: CC01/g" /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/conf/sspl_tests.conf
     elif [ "$SSPL_STORE_TYPE" == "confstor" ]
     then
-        port=$(conf $common_config get "storage>$encl_id>controller>primary>port")
+        port=$(conf $test_config get "storage>$encl_id>controller>primary>port")
         port=$(echo $port | tr -d "["\" | tr -d "\"]")
         if [ "$port" == "$MOCK_SERVER_PORT" ]
         # TODO: Avoid set on global config, need to change this before 
         # provisioner gives common backend
         then
-            conf $common_config set "storage>$encl_id>controller>primary>port=$primary_port"
-            conf $common_config set "storage>$encl_id>controller>primary>ip=$primary_ip"
+            conf $test_config set "storage>$encl_id>controller>primary>port=$primary_port"
+            conf $test_config set "storage>$encl_id>controller>primary>ip=$primary_ip"
         fi
         conf "$test_config" set "SYSTEM_INFORMATION>node_id=SN01"
         conf "$test_config" set "SYSTEM_INFORMATION>site_id=DC01"
@@ -217,9 +216,9 @@ if [ "$SSPL_STORE_TYPE" == "confstor" ]
 then
     # Read common key which are needed to fetch confstor config.
     machine_id=`cat /etc/machine-id`
-    srvnode=`conf $common_config get "cluster>server_nodes>$machine_id"`
+    srvnode=`conf $test_config get "cluster>server_nodes>$machine_id"`
     srvnode=$(echo $srvnode | tr -d "["\" | tr -d "\"]")
-    encl_id=`conf $common_config get "cluster>$srvnode>storage>enclosure_id"`
+    encl_id=`conf $test_config get "cluster>$srvnode>storage>enclosure_id"`
     encl_id=$(echo $encl_id | tr -d "["\" | tr -d "\"]")
 fi
 
@@ -255,16 +254,16 @@ then
     fi
 elif [ "$SSPL_STORE_TYPE" == "confstor" ]
 then
-    primary_ip=`conf $common_config get "storage>$encl_id>controller>primary>ip"`
+    primary_ip=`conf $test_config get "storage>$encl_id>controller>primary>ip"`
     primary_ip=$(echo $primary_ip | tr -d "["\" | tr -d "\"]")
-    primary_port=`conf $common_config get "storage>$encl_id>controller>primary>port"`
+    primary_port=`conf $test_config get "storage>$encl_id>controller>primary>port"`
     primary_port=$(echo $primary_port | tr -d "["\" | tr -d "\"]")
     if [ "$IS_VIRTUAL" == "true" ]
     then
         if [ "$primary_port" != "$MOCK_SERVER_PORT" ]
         then
-            conf $common_config set "storage>$encl_id>controller>primary>port=$MOCK_SERVER_PORT"
-            conf $common_config set "storage>$encl_id>controller>primary>ip=$MOCK_SERVER_IP"
+            conf $test_config set "storage>$encl_id>controller>primary>port=$MOCK_SERVER_PORT"
+            conf $test_config set "storage>$encl_id>controller>primary>ip=$MOCK_SERVER_IP"
         fi
     fi
 else
@@ -326,15 +325,15 @@ then
     host_memory_usage_threshold=$(echo $host_memory_usage_threshold| tr -d "["\" | tr -d "\"]")
     cpu_usage_threshold=`conf $sspl_config get "NODEDATAMSGHANDLER>cpu_usage_threshold"`
     cpu_usage_threshold=$(echo $cpu_usage_threshold | tr -d "["\" | tr -d "\"]")
-    node_id=`conf $common_config get "cluster>$srvnode>node_id"`
+    node_id=`conf $test_config get "cluster>$srvnode>node_id"`
     node_id=$(echo $node_id | tr -d "["\" | tr -d "\"]")
-    site_id=`conf $common_config get "cluster>$srvnode>site_id"`
+    site_id=`conf $test_config get "cluster>$srvnode>site_id"`
     site_id=$(echo $site_id | tr -d "["\" | tr -d "\"]")
-    rack_id=`conf $common_config get "cluster>$srvnode>rack_id"`
+    rack_id=`conf $test_config get "cluster>$srvnode>rack_id"`
     rack_id=$(echo $rack_id | tr -d "["\" | tr -d "\"]")
-    cluster_id=`conf $common_config get "cluster>cluster_id"`
+    cluster_id=`conf $test_config get "cluster>cluster_id"`
     cluster_id=$(echo $cluster_id | tr -d "["\" | tr -d "\"]")
-    primary_controller_ip=`conf $common_config get "storage>$encl_id>controller>primary>ip"`
+    primary_controller_ip=`conf $test_config get "storage>$encl_id>controller>primary>ip"`
     primary_controller_ip=$(echo $primary_controller_ip | tr -d "["\" | tr -d "\"]")
 else
     transmit_interval=$(sed -n -e '/transmit_interval/ s/.*\: *//p' /etc/sspl.conf)

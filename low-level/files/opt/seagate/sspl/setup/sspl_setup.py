@@ -245,23 +245,25 @@ class TestCmd(Cmd):
 
     name = "test"
     test_plan_found=False
-    sspl_test_plans = ["sanity", "alerts", "self_primary","self_secondary"] 
+    sspl_test_plans = ["sanity", "alerts", "self_primary","self_secondary"]
 
     def __init__(self, args):
         super().__init__(args)
 
     def validate(self):
-        if self.args:
+        for arg in self.args:
             try:
-                if "--config" in self.args:
+                if arg == "--config":
                     conf_index = self.args.index("--config")
-                    global_config = self.args[conf_index+1]
-                    # Provision for --config <global_config_url> for future use-case.
-                    # Conf.load('global_config', global_config)
-                if "--plan" in self.args:
+                    global_config = self.args[conf_index + 1]
+                    Conf.load('global_config', global_config)
+                elif arg == "--plan":
                     plan_index = self.args.index("--plan")
-                    if self.args[plan_index+1] not in self.sspl_test_plans:
-                        raise SetupError(1, "Invalid plan type specified. Please check usage")
+                    plan = self.args[plan_index + 1]
+                    if plan not in self.sspl_test_plans:
+                        raise Exception("Invalid plan type specified. Please check usage")
+                else:
+                    continue
             except Exception as ex:
                 raise SetupError(1, "%s - validation failure. %s", self.name, str(ex))
 
