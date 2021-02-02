@@ -31,7 +31,8 @@ from cortx.sspl.bin.error import SetupError
 from cortx.sspl.bin.sspl_constants import (REPLACEMENT_NODE_ENV_VAR_FILE,
                                            SSPL_BASE_DIR,
                                            file_store_config_path,
-                                           sample_global_config,
+                                           sspl_config_path,
+                                           sspl_test_config_path,
                                            PRODUCT_BASE_DIR)
 from cortx.sspl.lowlevel.framework import sspl_rabbitmq_reinit
 
@@ -39,9 +40,9 @@ from cortx.sspl.lowlevel.framework import sspl_rabbitmq_reinit
 class SSPLPostInstall:
     """Prepare environment for SSPL service."""
 
-    def __init__(self, args: list):
+    def __init__(self, args: str):
         """Ssplpostinstall init."""
-        self.args = args
+        self.global_config = args.config[0]
         self.name = "sspl_post_install"
         self._script_dir = os.path.dirname(os.path.abspath(__file__))
         self.RSYSLOG_CONF="/etc/rsyslog.d/0-iemfwd.conf"
@@ -57,10 +58,19 @@ class SSPLPostInstall:
         if not os.path.exists(file_store_config_path):
             shutil.copyfile("%s/conf/sspl.conf.%s.yaml" % (SSPL_BASE_DIR, PRODUCT_NAME),
                             file_store_config_path)
-        if not os.path.exists(sample_global_config):
-            shutil.copyfile("%s/conf/sample_global_cortx_config.yaml" % (SSPL_BASE_DIR),
-                            sample_global_config)
-        Conf.load("sspl", "yaml://%s" % (file_store_config_path))
+
+        # Global config path in sspl.conf will be referred by sspl-ll service later.
+        Conf.load("sspl", sspl_config_path)
+        Conf.set("sspl", "SYSTEM_INFORMATION>global_config_url", self.global_config)
+        Conf.save("sspl")
+
+        # Update Rabbitmq values in sspl_tests.conf
+        Conf.load("sspl_test", sspl_test_config_path)
+        rmq_passwd = Conf.get("sspl", "RABBITMQEGRESSPROCESSOR>password")
+        Conf.set("sspl_test", "RABBITMQEGRESSPROCESSOR>password", rmq_passwd)
+        Conf.set("sspl_test", "RABBITMQINGRESSPROCESSOR>password", rmq_passwd)
+        Conf.set("sspl_test", "LOGGINGPROCESSOR>password", rmq_passwd)
+        Conf.save("sspl_test")
 
         environ = Conf.get("sspl", "SYSTEM_INFORMATION>environment")
         if environ == "DEV":

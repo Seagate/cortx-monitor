@@ -49,7 +49,8 @@ class SSPLConfig:
         """Init method for sspl setup config."""
         self._script_dir = os.path.dirname(os.path.abspath(__file__))
         self.role = None
-        Conf.load('sspl', 'yaml://%s' % consts.file_store_config_path)
+        Conf.load('sspl', consts.sspl_config_path)
+        Conf.load('sspl_test', consts.sspl_test_config_path)
 
     def replace_expr(self, filename:str, key, new_str:str):
 
@@ -182,13 +183,6 @@ class SSPLConfig:
         if consts.PRODUCT_NAME == 'LDR_R1':
             if not os.path.exists(consts.REPLACEMENT_NODE_ENV_VAR_FILE):
                 ServiceV().validate('isrunning', ['consul'], is_process=True)
-
-        # Overwrite sspl_test config by the copy of global config
-        sspl_test_config = "%s/sspl_test/conf/sspl_tests.conf" % (consts.SSPL_BASE_DIR)
-        with open(sspl_test_config, "w") as fObj:
-            fObj.write("")
-        Conf.load("sspl_test", "yaml://%s" % (sspl_test_config))
-        Conf.copy("global_config", "sspl_test")
 
         # Get the types of server and storage we are currently running on and
         # enable/disable sensor groups in the conf file accordingly.

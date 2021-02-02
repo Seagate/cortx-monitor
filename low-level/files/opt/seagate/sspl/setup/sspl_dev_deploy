@@ -289,7 +289,7 @@ class SSPLDevDeploy:
 
     def setup_sspl(self):
         """Initialize SSPL service."""
-        setup_script = "/usr/local/bin/sspl_setup"
+        setup_script = "%s/bin/sspl_setup" % (SSPL_BASE_DIR)
 
         commands = [
             "%s post_install --config yaml://%s" % (setup_script, self.sample_global_config),

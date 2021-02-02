@@ -138,8 +138,9 @@ VIRTUAL_HOST="virtual_host"
 with open("/etc/machine-id") as f:
     MACHINE_ID = f.read().strip("\n")
 
-Conf.load(GLOBAL_CONF, "yaml:///etc/sample_global_cortx_config.yaml")
 Conf.load(SSPL_CONF, "yaml:///etc/sspl.conf")
+global_config = Conf.get(SSPL_CONF, "SYSTEM_INFORMATION>global_config_url")
+Conf.load(GLOBAL_CONF, global_config)
 Conf.load(SSPL_TEST_CONF, "yaml:///opt/seagate/cortx/sspl/sspl_test/conf/sspl_tests.conf")
 
 SRVNODE = Conf.get("GLOBAL", f'{CLUSTER}>{SERVER_NODES}')[MACHINE_ID]

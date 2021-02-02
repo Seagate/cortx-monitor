@@ -29,8 +29,10 @@ SSPL_STORE_TYPE=confstor
 plan=${1:-}
 avoid_rmq=${2:-}
 
-test_config=yaml:///opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/conf/sspl_tests.conf
-sspl_config=yaml:///etc/sspl.conf
+sspl_config_file=/etc/sspl.conf
+test_config_file=/opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/conf/sspl_tests.conf
+sspl_config=yaml://${sspl_config_file}
+test_config=yaml://${test_config_file}
 
 flask_help()
 {
@@ -72,7 +74,7 @@ pre_requisites()
 
     systemctl status rabbitmq-server 1>/dev/null && export status=true || export status=false
 
-    if [ -z "$avoid_rmq" ]; then
+    if [ "$avoid_rmq" == "False" ]; then
         # Start rabbitmq if not already running
         if [ "$status" = "false" ]; then
             echo "Starting rabbitmq server as needed for tests"
@@ -236,7 +238,7 @@ flask_installed=$(python3.6 -c 'import pkgutil; print(1 if pkgutil.find_loader("
 
 # Take backup of original sspl.conf
 [[ -f /etc/sspl.conf ]] && $sudo cp /etc/sspl.conf /etc/sspl.conf.back
-[[ -f /etc/sample_global_cortx_config.yaml ]] && $sudo cp /etc/sample_global_cortx_config.yaml /etc/sample_global_cortx_config.yaml.back
+[[ -f $test_config_file ]] && $sudo cp $test_config_file ${test_config_file}.back
 
 # check the port configured in consul
 # if virtual machine, change the port to $MOCK_SERVER_PORT as mock_server runs on $MOCK_SERVER_PORT
@@ -425,7 +427,7 @@ then
     # setting back the actual values
     $sudo $script_dir/set_threshold.sh $transmit_interval $disk_usage_threshold $host_memory_usage_threshold $cpu_usage_threshold $sspl_config
     [[ -f /etc/sspl.conf.back ]] && $sudo mv /etc/sspl.conf.back /etc/sspl.conf
-    [[ -f /etc/sample_global_cortx_config.yaml.back ]] && $sudo mv /etc/sample_global_cortx_config.yaml.back /etc/sample_global_cortx_config.yaml
+    [[ -f ${test_config_file}.back ]] && $sudo mv ${test_config_file}.back $test_config_file
 fi
 
 echo "Tests completed, restored configs and services .."

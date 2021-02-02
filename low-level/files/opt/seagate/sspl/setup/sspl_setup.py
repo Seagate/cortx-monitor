@@ -40,7 +40,7 @@ class Cmd:
     """Setup Command."""
 
     def __init__(self, args: dict):
-        self._args = args.args
+        self._args = args
         self._script_dir = os.path.dirname(os.path.abspath(__file__))
 
     @property
@@ -98,21 +98,26 @@ class JoinClusterCmd(Cmd):
 
     def __init__(self, args):
         super().__init__(args)
+        self.nodes = None
+
+    @staticmethod
+    def add_args(parser: str, cls: str, name: str):
+        """Add Command args for parsing."""
+        parsers = parser.add_parser(cls.name, help='%s' % cls.__doc__)
+        parsers.add_argument('args', nargs='*', default=[], help='args')
+        parsers.add_argument('--nodes', nargs='*', default=[], help='Node names separted by comma')
+        parsers.set_defaults(command=cls)
 
     def validate(self):
-        if not self.args:
+        if not self.args.nodes:
             raise SetupError(1,
                              "Validation failure. %s",
                              "join_cluster requires comma separated node names as argument.")
-        if (len(self.args) != 2) or (self.args[0] != "--nodes"):
-            raise SetupError(1,
-                             "%s - Argument validation failure. %s",
-                             self.name,
-                             "Check usage.")
+        self.nodes = self.args.nodes[0]
 
     def process(self):
         from cortx.sspl.bin.setup_rabbitmq_cluster import RMQClusterConfiguration
-        RMQClusterConfiguration(self.args[1]).process()
+        RMQClusterConfiguration(self.nodes).process()
 
 
 class PostInstallCmd(Cmd):
@@ -122,30 +127,34 @@ class PostInstallCmd(Cmd):
 
     def __init__(self, args: dict):
         super().__init__(args)
+        self.global_config = None
+
+    @staticmethod
+    def add_args(parser: str, cls: str, name: str):
+        """Add Command args for parsing."""
+        parsers = parser.add_parser(cls.name, help='%s' % cls.__doc__)
+        parsers.add_argument('args', nargs='*', default=[], help='args')
+        parsers.add_argument('--config', nargs='*', default=[], help='Global config url')
+        parsers.set_defaults(command=cls)
 
     def validate(self):
-        if not self.args:
+        if not self.args.config:
             raise SetupError(1,
                              "%s - Argument validation failure. %s",
                              self.name,
                              "Post install requires global config.")
-        if (len(self.args) != 2) or (self.args[0] != "--config"):
-            raise SetupError(1,
-                             "%s - Argument validation failure. %s",
-                             self.name,
-                             "Check usage.")
-        global_config = self.args[1]
-        Conf.load('global_config', global_config)
+        self.global_config = self.args.config[0]
+        Conf.load('global_config', self.global_config)
         product = Conf.get('global_config', 'release>product')
         if not product:
             raise SetupError(1,
                              "%s - validation failure. %s",
                              self.name,
-                             "Product not found in %s" % (global_config))
+                             "Product not found in %s" % (self.global_config))
 
     def process(self):
         from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.sspl_post_install import SSPLPostInstall
-        SSPLPostInstall(self.args[1]).process()
+        SSPLPostInstall(self.args).process()
 
 
 class InitCmd(Cmd):
@@ -156,18 +165,21 @@ class InitCmd(Cmd):
     def __init__(self, args):
         super().__init__(args)
 
+    @staticmethod
+    def add_args(parser: str, cls: str, name: str):
+        """Add Command args for parsing."""
+        parsers = parser.add_parser(cls.name, help='%s' % cls.__doc__)
+        parsers.add_argument('args', nargs='*', default=[], help='args')
+        parsers.add_argument('--config', nargs='*', default=[], help='Global config url')
+        parsers.set_defaults(command=cls)
+
     def validate(self):
-        if not self.args:
+        if not self.args.config:
             raise SetupError(
                     errno.EINVAL,
                     "%s - Argument validation failure. Global config is needed",
                     self.name)
-        if (len(self.args) != 2) or (self.args[0] != "--config"):
-            raise SetupError(
-                    errno.EINVAL,
-                    "%s - Argument validation failure. Check Usage.",
-                    self.name)
-        global_config = self.args[1]
+        global_config = self.args.config[0]
         Conf.load('global_config', global_config)
 
         role = Conf.get('global_config', 'release>setup')
@@ -198,18 +210,21 @@ class ConfigCmd(Cmd):
     def __init__(self, args):
         super().__init__(args)
 
+    @staticmethod
+    def add_args(parser: str, cls: str, name: str):
+        """Add Command args for parsing."""
+        parsers = parser.add_parser(cls.name, help='%s' % cls.__doc__)
+        parsers.add_argument('args', nargs='*', default=[], help='args')
+        parsers.add_argument('--config', nargs='*', default=[], help='Global config url')
+        parsers.set_defaults(command=cls)
+
     def validate(self):
-        if not self.args:
+        if not self.args.config:
             raise SetupError(
                     errno.EINVAL,
                     "%s - Argument validation failure. Global config is needed",
                     self.name)
-        if (len(self.args) != 2) or (self.args[0] != "--config"):
-            raise SetupError(
-                    errno.EINVAL,
-                    "%s - Argument validation failure. Check Usage.",
-                    self.name)
-        global_config = self.args[1]
+        global_config = self.args.config[0]
         Conf.load('global_config', global_config)
 
         role = Conf.get('global_config', 'release>setup')
@@ -250,24 +265,31 @@ class TestCmd(Cmd):
     def __init__(self, args):
         super().__init__(args)
 
-    def validate(self):
-        for arg in self.args:
-            try:
-                if arg == "--config":
-                    conf_index = self.args.index("--config")
-                    global_config = self.args[conf_index + 1]
-                    Conf.load('global_config', global_config)
-                elif arg == "--plan":
-                    plan_index = self.args.index("--plan")
-                    plan = self.args[plan_index + 1]
-                    if plan not in self.sspl_test_plans:
-                        raise Exception("Invalid plan type specified. Please check usage")
-                else:
-                    continue
-            except Exception as ex:
-                raise SetupError(1, "%s - validation failure. %s", self.name, str(ex))
+    @staticmethod
+    def add_args(parser: str, cls: str, name: str):
+        """Add Command args for parsing."""
+        parsers = parser.add_parser(cls.name, help='%s' % cls.__doc__)
+        parsers.add_argument('args', nargs='*', default=[], help='args')
+        parsers.add_argument('--config', nargs='*', default=[], help='Global config url')
+        parsers.add_argument('--plan', nargs='*', default=[], help='Test plan type')
+        parsers.add_argument('--avoid_rmq', action="store_true", help='Boolean - Disable RabbitMQ?')
+        parsers.set_defaults(command=cls)
 
-        result = PkgV().validate("rpms", "sspl-test")
+    def validate(self):
+        if not self.args.config:
+            raise SetupError(
+                    errno.EINVAL,
+                    "%s - Argument validation failure. Global config is needed",
+                    self.name)
+        global_config = self.args.config[0]
+        Conf.load('global_config', global_config)
+        if not self.args.plan:
+            raise SetupError(
+                    errno.EINVAL,
+                    "%s - Argument validation failure. Test plan is needed",
+                    self.name)
+
+        result = PkgV().validate("rpms", "sspl-test1")
         if result == -1:
             raise SetupError(1, "'sspl-test' rpm pkg not found.")
 
@@ -332,39 +354,36 @@ class ResetCmd(Cmd):
     def __init__(self, args):
         super().__init__(args)
 
+    @staticmethod
+    def add_args(parser: str, cls: str, name: str):
+        """Add Command args for parsing."""
+        parsers = parser.add_parser(cls.name, help='%s' % cls.__doc__)
+        parsers.add_argument('args', nargs='*', default=[], help='args')
+        parsers.add_argument('--config', nargs='*', default=[], help='Global config url')
+        parsers.add_argument('--type', nargs='*', default=[], help='Reset type (hard|soft)')
+        parsers.set_defaults(command=cls)
+
     def validate(self):
-        if self.args:
-            try:
-                if "--config" in self.args:
-                    conf_index = self.args.index("--config")
-                    global_config = self.args[conf_index+1]
-                    # Provision for --config <global_config_url> for future use-case.
-                    # Conf.load('global_config', global_config)
-                if "--type" in self.args:
-                    type_index = self.args.index("--type")
-                    if self.args[type_index+1] not in ["hard", "soft"]:
-                        raise SetupError(1, "Invalid reset type specified. Please check usage")
-                else:
-                    raise SetupError(1, "SSPL Reset requires the type of reset(hard|soft).")
-            except Exception as ex:
-                raise SetupError(1, "%s - validation failure. %s", self.name, str(ex))
+        if not self.args.config:
+            raise SetupError(
+                    errno.EINVAL,
+                    "%s - Argument validation failure. Global config is required.",
+                    self.name)
+        global_config = self.args.config[0]
+        Conf.load('global_config', global_config)
+        if not self.args.type:
+            raise SetupError(
+                    errno.EINVAL,
+                    "%s - Argument validation failure. Reset type is required.",
+                    self.name)
+
+        reset_type = self.args.type[0]
+        if reset_type == "hard":
+            self.process_class = "HardReset"
+        elif reset_type == "soft":
+            self.process_class = "SoftReset"
         else:
-            raise SetupError(1,
-                             "%s - validation failure. %s",
-                             self.name,
-                             "SSPL Reset requires the type of reset(hard|soft).")
-
-        for i in range(len(self.args)):
-            try:
-                if self.args[i] == "hard":
-                    self.process_class = "HardReset"
-                    break
-                elif self.args[i] == "soft":
-                    self.process_class = "SoftReset"
-                    break
-            except (IndexError, ValueError):
-                raise SetupError(errno.EINVAL, "Invalid Argument for %s"% self.name)
-
+            raise SetupError(1, "Invalid reset type specified. Please check usage.")
 
     def process(self):
         if self.process_class == "HardReset":

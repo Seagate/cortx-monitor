@@ -12,10 +12,17 @@
 # For any questions about this software or licensing,
 # please email opensource@seagate.com or cortx-questions@seagate.com.
 
-from cortx.sspl.bin.sspl_constants import PRODUCT_FAMILY
+import shutil
+
 from cortx.utils.process import SimpleProcess
+from cortx.utils.conf_store import Conf
+from cortx.utils.service import Service
 from cortx.utils.validator.v_pkg import PkgV
 from cortx.sspl.bin.error import SetupError
+from cortx.sspl.bin.sspl_constants import (PRODUCT_FAMILY,
+                                           sspl_config_path,
+                                           sspl_test_file_path,
+                                           sspl_test_config_path)
 
 TEST_DIR = f"/opt/seagate/{PRODUCT_FAMILY}/sspl/sspl_test"
 
@@ -29,19 +36,33 @@ class SSPLTestCmd:
         self.avoid_rmq = False
 
     def process(self):
-        for arg in self.args:
-            try:
-                if arg == "--plan":
-                    arg_index = self.args.index("--plan")
-                    self.plan = self.args[arg_index + 1]
-                elif arg == "--avoid_rmq":
-                    self.avoid_rmq = True
-            except:
-                continue
+        global_config = self.args.config[0]
+        self.plan = self.args.plan[0]
+        self.avoid_rmq = self.args.avoid_rmq
+
+        Conf.load("sspl", sspl_config_path)
+        Conf.load("sspl_test", sspl_test_config_path)
+
+        # Take back up of sspl test config
+        sspl_test_backup = '/etc/sspl_tests.conf.back'
+        shutil.copyfile(sspl_test_file_path, sspl_test_backup)
+        global_config_url = Conf.get("sspl", "SYSTEM_INFORMATION>global_config_url")
+
+        # Global config path in sspl_tests.conf will be referred by sspl_tests later
+        Conf.copy("global_config", "sspl_test")
+        Conf.set("sspl", "SYSTEM_INFORMATION>global_config_url", sspl_test_config_path)
+        Conf.save("sspl")
+
         # TODO: Convert shell script to python
         # from cortx.sspl.sspl_test.run_qa_test import RunQATest
         # RunQATest(self.plan, self.avoid_rmq).run()
         CMD = "%s/run_qa_test.sh %s %s" % (TEST_DIR, self.plan, self.avoid_rmq)
         output, error, returncode = SimpleProcess(CMD).run(realtime_output=True)
+        # Restore the original path/file & service, then throw exception
+        # if execution is failed.
+        Conf.set("sspl", "SYSTEM_INFORMATION>global_config_url", global_config_url)
+        Conf.save("sspl")
+        shutil.copyfile(sspl_test_backup, sspl_test_file_path)
+        Service('dbus').process('restart', 'sspl-ll.service')
         if returncode != 0:
-            raise SetupError(returncode, error + " CMD: %s", CMD)
+            raise SetupError(returncode, error + "%s - CMD: %s", self.name, CMD)
