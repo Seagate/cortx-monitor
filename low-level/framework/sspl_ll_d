@@ -717,11 +717,11 @@ def send_thread_controller_request(state):
         }
     thread_controller_queue.put((json.dumps(state_change_msg), None))
 
-# NOTE: Dynamic config change including log level set will be enabled through ConfStor.
-# On getting a trigger, this same function (set_log_level(signal_number, frame)) can be
-# used back to set the required log level, excluding its interaction with Consul.
-
 # def set_log_level(signal_number, frame):
+#     # NOTE: Dynamic config change including log level set will be enabled through ConfStor.
+#     # On getting a trigger, this same function (set_log_level(signal_number, frame)) can be
+#     # used back to set the required log level, excluding its interaction with Consul.
+
 #     """Handles SIGUSR1 for dynamic log level setting.
 #        Key log_level should be registered in consul.
 #        On SIGHUP signal reception, this function lookup
