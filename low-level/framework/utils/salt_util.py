@@ -19,7 +19,7 @@ Module which provides common config information using cortx utils
 """
 
 import configparser
-from cortx.utils.kv_store.kv_store_collection import PillarStore as PillarStorage
+from cortx.utils.kvstore.pillar import PillarStorage
 import subprocess
 import sys
 
