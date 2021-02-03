@@ -717,6 +717,10 @@ def send_thread_controller_request(state):
         }
     thread_controller_queue.put((json.dumps(state_change_msg), None))
 
+# NOTE: Dynamic config change including log level set will be enabled through ConfStor.
+# On getting a trigger, this same function (set_log_level(signal_number, frame)) can be
+# used back to set the required log level, excluding its interaction with Consul.
+
 # def set_log_level(signal_number, frame):
 #     """Handles SIGUSR1 for dynamic log level setting.
 #        Key log_level should be registered in consul.
@@ -793,7 +797,7 @@ if __name__ == "__main__":
     # signal.signal(signal.SIGUSR1, set_log_level)
     # Handle signal for iem file refresh
     signal.signal(signal.SIGUSR2, refresh_iem_log_file)
-    #DO NOT EDIT: Marker comment to dynamically add signal handler for coverage job
+    #DO NOT EDIT: Marker comment to dynamically add signal handler for SIGUSR1 to generate code coverage report
 
     try:
         # Create a PID file for systemd
