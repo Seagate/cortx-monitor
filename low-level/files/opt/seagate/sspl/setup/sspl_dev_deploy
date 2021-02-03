@@ -128,12 +128,12 @@ class SSPLDevDeploy:
         """Stop sspl service and remove SSPL RPMS."""
         cmd = "systemctl stop sspl-ll.service"
         _ = self._execute_cmd(cmd)
-        cmd = "yum remove -y cortx-sspl.noarch"
+        cmd = "yum --setopt=tsflags=noscripts erase -y cortx-sspl.noarch"
         returncode = self._execute_cmd(cmd)
         if returncode != 0:
             raise DeployError(returncode, "Unable to remove sspl RPMS. %s",
                               "Cleanup failed.")
-        cmd = "yum remove -y cortx-py-utils"
+        cmd = "yum --setopt=tsflags=noscripts erase -y cortx-py-utils"
         returncode = self._execute_cmd(cmd)
         if returncode != 0:
             raise DeployError(returncode, "Unable to remove cortx-py-utils RPM. %s",
