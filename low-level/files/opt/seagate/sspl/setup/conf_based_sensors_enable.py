@@ -23,7 +23,7 @@ from cortx.sspl.bin.sspl_constants import (CONSUL_HOST, CONSUL_PORT,
                                         PRODUCT_FAMILY,
                                         SSPL_STORE_TYPE)
 
-def update_sensor_info():
+def update_sensor_info(config_index):
 
     key = 'monitor'
 
@@ -54,11 +54,6 @@ def update_sensor_info():
         sensors["CPUFAULTSENSOR"] = "false"
         sensors["RAIDSENSOR"] = "false"
 
-    for sect, value in sensors.items():
-        Conf.set('sspl', '%s>%s' % (sect, key), value)
-
-    Conf.save('sspl')
-
     # Onward LDR_R2, consul will be abstracted out and it won't exit as hard dependeny of SSPL
     # Note: SSPL has backward compatibility to LDR_R1 and there consul is a dependency of SSPL.
     if SSPL_STORE_TYPE == "consul":
@@ -73,6 +68,6 @@ def update_sensor_info():
 
     # Update sensor information for sspl_test
     for sect, value in sensors.items():
-        Conf.set('sspl_test', '%s>%s' % (sect, key), value)
+        Conf.set(config_index, '%s>%s' % (sect, key), value)
 
-    Conf.save('sspl_test')
+    Conf.save(config_index)

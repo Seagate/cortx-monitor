@@ -19,6 +19,7 @@ from cortx.utils.conf_store import Conf
 from cortx.utils.service import Service
 from cortx.utils.validator.v_pkg import PkgV
 from cortx.sspl.bin.error import SetupError
+from cortx.sspl.bin.conf_based_sensors_enable import update_sensor_info
 from cortx.sspl.bin.sspl_constants import (PRODUCT_FAMILY,
                                            sspl_config_path,
                                            sspl_test_file_path,
@@ -52,6 +53,16 @@ class SSPLTestCmd:
         Conf.copy("global_config", "sspl_test")
         Conf.set("sspl", "SYSTEM_INFORMATION>global_config_url", sspl_test_config_path)
         Conf.save("sspl")
+
+        # Enable & disable sensors based on environment
+        update_sensor_info('sspl_test')
+
+        # Get rabbitmq values from sspl.conf and update sspl_tests.conf
+        rmq_passwd = Conf.get("sspl", "RABBITMQEGRESSPROCESSOR>password")
+        Conf.set("sspl_test", "RABBITMQEGRESSPROCESSOR>password", rmq_passwd)
+        Conf.set("sspl_test", "RABBITMQINGRESSPROCESSOR>password", rmq_passwd)
+        Conf.set("sspl_test", "LOGGINGPROCESSOR>password", rmq_passwd)
+        Conf.save("sspl_test")
 
         # TODO: Convert shell script to python
         # from cortx.sspl.sspl_test.run_qa_test import RunQATest

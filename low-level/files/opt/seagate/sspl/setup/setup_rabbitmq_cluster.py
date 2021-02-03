@@ -188,6 +188,8 @@ class RMQClusterConfiguration:
                 print(f"RabbitMQ cluster is formed only with current host: {node_fqdn}")
 
     def process(self):
+        if not self.requested_nodes:
+            return
         # Setup RMQ config - rabbitmq ports and erlang cookie
         self.setup_rabbitmq()
 

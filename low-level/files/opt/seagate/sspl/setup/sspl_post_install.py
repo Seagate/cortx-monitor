@@ -64,14 +64,6 @@ class SSPLPostInstall:
         Conf.set("sspl", "SYSTEM_INFORMATION>global_config_url", self.global_config)
         Conf.save("sspl")
 
-        # Update Rabbitmq values in sspl_tests.conf
-        Conf.load("sspl_test", sspl_test_config_path)
-        rmq_passwd = Conf.get("sspl", "RABBITMQEGRESSPROCESSOR>password")
-        Conf.set("sspl_test", "RABBITMQEGRESSPROCESSOR>password", rmq_passwd)
-        Conf.set("sspl_test", "RABBITMQINGRESSPROCESSOR>password", rmq_passwd)
-        Conf.set("sspl_test", "LOGGINGPROCESSOR>password", rmq_passwd)
-        Conf.save("sspl_test")
-
         environ = Conf.get("sspl", "SYSTEM_INFORMATION>environment")
         if environ == "DEV":
             self.ENVIRONMENT = environ
