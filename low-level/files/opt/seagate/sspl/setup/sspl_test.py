@@ -60,8 +60,7 @@ class SSPLTestCmd:
         # Get rabbitmq values from sspl.conf and update sspl_tests.conf
         rmq_passwd = Conf.get("sspl", "RABBITMQEGRESSPROCESSOR>password")
         Conf.set("sspl_test", "RABBITMQEGRESSPROCESSOR>password", rmq_passwd)
-        Conf.set("sspl_test", "RABBITMQINGRESSPROCESSOR>password", rmq_passwd)
-        Conf.set("sspl_test", "LOGGINGPROCESSOR>password", rmq_passwd)
+        Conf.set("sspl_test", "RABBITMQINGRESSPROCESSORTESTS>password", rmq_passwd)
         Conf.save("sspl_test")
 
         # TODO: Convert shell script to python

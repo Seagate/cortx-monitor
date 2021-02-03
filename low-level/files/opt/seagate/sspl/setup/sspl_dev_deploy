@@ -230,7 +230,7 @@ class SSPLDevDeploy:
         try:
             with open("/etc/machine-id") as f:
                 node_key_id = f.read().strip("\n")
-                Conf.set("global_config", "cluster>server_nodes", {node_key_id:"srvnode1"})
+                Conf.set("global_config", "cluster>server_nodes", {node_key_id:"srvnode-1"})
         except Exception as err:
             raise DeployError(1, "Failed to get machine-id. - %s" % (err))
 
@@ -269,9 +269,9 @@ class SSPLDevDeploy:
                 raise DeployError(1, "ERROR: -u <BMC user> is required for non LR2 system.")
             if not self.BMC_PASSWD:
                 raise DeployError(1, "ERROR: -p <BMC password> is required for non LR2 system.")
-            Conf.set("global_config", "cluster>srvnode1>bmc>ip", self.BMC_IP)
-            Conf.set("global_config", "cluster>srvnode1>bmc>user", self.BMC_USER)
-            Conf.set("global_config", "cluster>srvnode1>bmc>secret", self.BMC_PASSWD)
+            Conf.set("global_config", "cluster>%s>bmc>ip" % (srvnode), self.BMC_IP)
+            Conf.set("global_config", "cluster>%s>bmc>user" % (srvnode), self.BMC_USER)
+            Conf.set("global_config", "cluster>%s>bmc>secret" % (srvnode), self.BMC_PASSWD)
 
         Conf.save("sspl")
         Conf.save("global_config")

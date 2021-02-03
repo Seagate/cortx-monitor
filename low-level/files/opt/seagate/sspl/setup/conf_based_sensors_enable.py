@@ -17,8 +17,9 @@
 
 import os
 import consul
-from cortx.utils.conf_store import Conf
 
+from cortx.utils.conf_store import Conf
+from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.error import SetupError
 from cortx.sspl.bin.sspl_constants import (CONSUL_HOST, CONSUL_PORT,
                                         PRODUCT_FAMILY,
                                         SSPL_STORE_TYPE)
@@ -38,14 +39,15 @@ def update_sensor_info(config_index):
 
     try:
         with open("/etc/machine-id") as f:
-            node_key_id = f.read().strip("\n")
+            machine_id = f.read().strip("\n")
     except Exception as err:
-        print("Failed to get machine-id. - %s" % (err))
+        raise SetupError("Failed to get machine-id. - %s" % (err))
 
     storage_type = Conf.get('global_config','storage>enclosure_1>type')
     if storage_type and storage_type.lower() in ["virtual", "jbod"]:
         sensors["REALSTORSENSORS"] = "false"
 
+    node_key_id = Conf.get('global_config','cluster>server_nodes>%s' %(machine_id))
     server_type = Conf.get('global_config','cluster>%s>node_type' % (node_key_id))
     if server_type and server_type.lower() in ["virtual"]:
         sensors["NODEHWSENSOR"] = "false"
