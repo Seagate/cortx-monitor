@@ -189,6 +189,8 @@ class RMQClusterConfiguration:
 
     def process(self):
         if not self.requested_nodes:
+            print("Cluster setup on this single node setup is ignored. " + \
+                  "Clustering requires joining nodes as argument.")
             return
         # Setup RMQ config - rabbitmq ports and erlang cookie
         self.setup_rabbitmq()

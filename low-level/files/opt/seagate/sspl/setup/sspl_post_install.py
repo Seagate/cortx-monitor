@@ -32,7 +32,6 @@ from cortx.sspl.bin.sspl_constants import (REPLACEMENT_NODE_ENV_VAR_FILE,
                                            SSPL_BASE_DIR,
                                            file_store_config_path,
                                            sspl_config_path,
-                                           sspl_test_config_path,
                                            PRODUCT_BASE_DIR)
 from cortx.sspl.lowlevel.framework import sspl_rabbitmq_reinit
 

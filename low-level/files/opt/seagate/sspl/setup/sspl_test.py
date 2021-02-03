@@ -37,7 +37,6 @@ class SSPLTestCmd:
         self.avoid_rmq = False
 
     def process(self):
-        global_config = self.args.config[0]
         self.plan = self.args.plan[0]
         self.avoid_rmq = self.args.avoid_rmq
 
@@ -49,6 +48,7 @@ class SSPLTestCmd:
         shutil.copyfile(sspl_test_file_path, sspl_test_backup)
         global_config_url = Conf.get("sspl", "SYSTEM_INFORMATION>global_config_url")
 
+        # Add global config in sspl_test config and revert the changes once test completes.
         # Global config path in sspl_tests.conf will be referred by sspl_tests later
         Conf.copy("global_config", "sspl_test")
         Conf.set("sspl", "SYSTEM_INFORMATION>global_config_url", sspl_test_config_path)
@@ -75,4 +75,4 @@ class SSPLTestCmd:
         shutil.copyfile(sspl_test_backup, sspl_test_file_path)
         Service('dbus').process('restart', 'sspl-ll.service')
         if returncode != 0:
-            raise SetupError(returncode, error + "%s - CMD: %s", self.name, CMD)
+            raise SetupError(returncode, "%s - ERROR: %s - CMD %s", self.name, error, CMD)

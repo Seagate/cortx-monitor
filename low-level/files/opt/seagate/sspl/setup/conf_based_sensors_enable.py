@@ -68,7 +68,7 @@ def update_sensor_info(config_index):
         except Exception as cerror:
             print("Error in connecting with consul: {}".format(cerror))
 
-    # Update sensor information for sspl_test
+    # Update sensor information in config
     for sect, value in sensors.items():
         Conf.set(config_index, '%s>%s' % (sect, key), value)
 
