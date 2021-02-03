@@ -289,7 +289,7 @@ class TestCmd(Cmd):
                     "%s - Argument validation failure. Test plan is needed",
                     self.name)
 
-        result = PkgV().validate("rpms", "sspl-test1")
+        result = PkgV().validate("rpms", "sspl-test")
         if result == -1:
             raise SetupError(1, "'sspl-test' rpm pkg not found.")
 
