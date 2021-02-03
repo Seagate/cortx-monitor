@@ -16,8 +16,8 @@
 cluster:
    cluster_id: CC01
    server_nodes:
-     7c4fd75dfedd7662e6a39b0a53274922: srvnode1
-   srvnode1:
+     7c4fd75dfedd7662e6a39b0a53274922: srvnode-1
+   srvnode-1:
       node_type: virtual
       site_id: DC01
       rack_id: RC01
