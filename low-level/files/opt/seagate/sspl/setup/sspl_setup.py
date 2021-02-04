@@ -312,7 +312,7 @@ class SupportBundleCmd(Cmd):
         pass
 
     def process(self):
-        args = ' '.join(self._args)
+        args = ' '.join(self._args.args)
         sspl_bundle_generate = "%s/%s %s" % (self._script_dir, self.script, args)
         output, error, returncode = SimpleProcess(sspl_bundle_generate).run()
         if returncode != 0:
@@ -334,7 +334,7 @@ class ManifestSupportBundleCmd(Cmd):
         pass
 
     def process(self):
-        args = ' '.join(self._args)
+        args = ' '.join(self._args.args)
         manifest_support_bundle = "%s/%s %s" % (self._script_dir, self.script, args)
         output, error, returncode = SimpleProcess(manifest_support_bundle).run()
         if returncode != 0:

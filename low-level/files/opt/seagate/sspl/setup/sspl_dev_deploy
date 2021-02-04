@@ -392,7 +392,9 @@ def main(args):
         deploy.setup_sspl()
     except:
         traceback.print_exc()
-        print("INFO: Deployment is failed.")
+        print("ERROR: Deployment is failed.")
+    else:
+        print("INFO: Deployment is successful !!")
 
 
 if __name__ == '__main__':
