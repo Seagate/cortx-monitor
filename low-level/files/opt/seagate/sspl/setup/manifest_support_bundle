@@ -23,9 +23,24 @@ import sys
 import socket
 import json
 import subprocess
-# Add the top level directories
-sys.path.insert(0, f'/opt/seagate/cortx/sspl/low-level')
-from framework.base.sspl_constants import PRODUCT_FAMILY, node_key_id, cluster_id, RESOURCE_HEALTH_VIEW
+
+from cortx.utils.conf_store import Conf
+from cortx.sspl.lowlevel.framework.base.sspl_constants import PRODUCT_FAMILY, RESOURCE_HEALTH_VIEW, sspl_config_path
+
+SSPL_CONF = "SSPL_CONFIG"
+GLOBAL_CONF = "GLOBAL_CONFIG"
+Conf.load(SSPL_CONF, sspl_config_path)
+global_config_url = Conf.get(SSPL_CONF, "SYSTEM_INFORMATION>global_config_url")
+Conf.load(GLOBAL_CONF, global_config_url)
+
+# Get cluster_id and node_key_id from global config
+cluster_id = Conf.get(GLOBAL_CONF, "cluster>cluster_id")
+try:
+    with open("/etc/machine-id") as f:
+        machine_id = f.read().strip("\n")
+    node_key_id = Conf.get(GLOBAL_CONF, "cluster>server_nodes>%s" % (machine_id))
+except:
+    node_key_id = "srvnode-1"
 
 onGoingRequestPath = "/tmp/sspl-msb-req.txt"
 
@@ -55,7 +70,7 @@ class ManifestSupportBundle(object):
             if os.path.exists(configure_path):
                 self.localTempPath = configure_path+"manifest/"
             else:
-                print("Given path doesn't exist")
+                print("ERROR: Given path %s doesn't exist" %(configure_path))
                 tmpFile.close()
                 os.remove(onGoingRequestPath)
                 sys.exit(1)

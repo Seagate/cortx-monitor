@@ -27,7 +27,7 @@ import distutils.dir_util
 from cortx.utils.process import SimpleProcess
 from cortx.utils.service import Service
 from cortx.utils.conf_store import Conf
-from cortx.sspl.bin.error import SetupError
+from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.error import SetupError
 from cortx.sspl.bin.sspl_constants import (REPLACEMENT_NODE_ENV_VAR_FILE,
                                            SSPL_BASE_DIR,
                                            file_store_config_path,

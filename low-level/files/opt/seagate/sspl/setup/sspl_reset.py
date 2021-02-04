@@ -6,7 +6,7 @@ from cortx.sspl.bin.sspl_constants import (PRODUCT_FAMILY,
 from cortx.utils.process import SimpleProcess
 from cortx.utils.service import Service
 from cortx.utils.conf_store import Conf
-from cortx.sspl.bin.error import SetupError
+from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.error import SetupError
 
 
 class HardReset:

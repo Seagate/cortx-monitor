@@ -366,7 +366,7 @@ class SSPLDevDeploy:
         if response:
             _out = response.decode()
         if error:
-            _out = error.decode()
+            _out = error.decode().replace("\n", " ")
         _rc = process.returncode
         return (_out, _rc)
 
