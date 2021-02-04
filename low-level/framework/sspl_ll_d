@@ -717,21 +717,23 @@ def send_thread_controller_request(state):
         }
     thread_controller_queue.put((json.dumps(state_change_msg), None))
 
-def set_log_level(signal_number, frame):
-    """Handles SIGUSR1 for dynamic log level setting.
-       Key log_level should be registered in consul.
-       On SIGHUP signal reception, this function lookup
-       consul for latest value set with log_level key.
-    """
-    key='sspl/config/SYSTEM_INFORMATION/log_level'
-    logger.info("signal handler is called with {0}".format(signal_number))
-    log_level = store.get(key)
-    if log_level and isinstance(log_level, bytes):
-        log_level = log_level.decode('utf-8')
-    logger.info(f"Received SIGUSR1 signal to set log level to '{log_level}'")
-    logger.setLevel(log_level)
-    #DO NOT EDIT: Marker comment to dynamically add code to stop coverage, save and generate code coverage report
+# def set_log_level(signal_number, frame):
+#     # NOTE: Dynamic config change including log level set will be enabled through ConfStor.
+#     # On getting a trigger, this same function (set_log_level(signal_number, frame)) can be
+#     # used back to set the required log level, excluding its interaction with Consul.
 
+#     """Handles SIGUSR1 for dynamic log level setting.
+#        Key log_level should be registered in consul.
+#        On SIGHUP signal reception, this function lookup
+#        consul for latest value set with log_level key.
+#     """
+#     key='sspl/config/SYSTEM_INFORMATION/log_level'
+#     logger.info("signal handler is called with {0}".format(signal_number))
+#     log_level = store.get(key)
+#     if log_level and isinstance(log_level, bytes):
+#         log_level = log_level.decode('utf-8')
+#     logger.info(f"Received SIGUSR1 signal to set log level to '{log_level}'")
+#     logger.setLevel(log_level)
 
 def refresh_iem_log_file(signal_number, frame):
     iem_sensor = threadController.get_sspl_module("IEMSensor")
@@ -740,6 +742,7 @@ def refresh_iem_log_file(signal_number, frame):
     else:
         logger.info(f"IEMSensor is not in running, ignoring signal to refresh file")
 
+#DO NOT EDIT: Marker comment to dynamically add code to stop coverage, save and generate code coverage report
 
 if __name__ == "__main__":
     # Retrieve configuration file for sspl-ll service
@@ -791,9 +794,10 @@ if __name__ == "__main__":
         sys.exit(os.EX_USAGE)
 
     # Handle signals for log level change
-    signal.signal(signal.SIGUSR1, set_log_level)
+    # signal.signal(signal.SIGUSR1, set_log_level)
     # Handle signal for iem file refresh
     signal.signal(signal.SIGUSR2, refresh_iem_log_file)
+    #DO NOT EDIT: Marker comment to dynamically add signal handler for SIGUSR1 to generate code coverage report
 
     try:
         # Create a PID file for systemd

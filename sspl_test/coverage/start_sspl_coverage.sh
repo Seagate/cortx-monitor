@@ -38,7 +38,10 @@ curr_line=`grep -n "#DO NOT EDIT: Marker comment to dynamically add code to star
 copy_lines 8 9
 
 curr_line=`grep -n "#DO NOT EDIT: Marker comment to dynamically add code to stop coverage, save and generate code coverage report" $target_dir/sspl_ll_d_coverage | cut -d : -f1`
-copy_lines 10 25
+copy_lines 10 24
+
+curr_line=`grep -n "#DO NOT EDIT: Marker comment to dynamically add signal handler for SIGUSR1 to generate code coverage report" $target_dir/sspl_ll_d_coverage | cut -d : -f1`
+copy_lines 25 25
 
 echo "Changing the soft link and adding permission for /tmp/sspl/ folder"
 ln -sf $target_dir/sspl_ll_d_coverage /usr/bin/sspl_ll_d
