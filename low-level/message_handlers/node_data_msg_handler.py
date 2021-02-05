@@ -151,7 +151,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         self._raid_device = "N/A"
         self.os_sensor_type = {
             "disk_space" : self.disk_sensor_data,
-            "system" : self.host_sensor_data,
+            "memory_usage" : self.host_sensor_data,
             "nw"   : self.if_sensor_data,
             "cpu"  : self.cpu_sensor_data,
             "raid_data" : self.raid_sensor_data
@@ -256,7 +256,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             self.sensor_type = jsonMsg.get("sensor_request_type").get("node_data").get("sensor_type").split(":")[2]
             self._log_debug("_processMsg, sensor_type: %s" % self.sensor_type)
 
-            if self.sensor_type == "system":
+            if self.sensor_type == "memory_usage":
                 self._generate_host_update()
                 sensor_message_type = self.os_sensor_type.get(self.sensor_type, "")
                 if sensor_message_type:
@@ -389,7 +389,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 jsonMsg = hostUpdateMsg.getJson()
                 # Transmit it out over rabbitMQ channel
                 self.host_sensor_data = jsonMsg
-                self.os_sensor_type["system"] = self.host_sensor_data
+                self.os_sensor_type["memory_usage"] = self.host_sensor_data
                 # RAAL stands for - RAise ALert
                 logger.info(f"RAAL: {jsonMsg}")
                 self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
@@ -419,7 +419,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 jsonMsg = hostUpdateMsg.getJson()
                 # Transmit it out over rabbitMQ channel
                 self.host_sensor_data = jsonMsg
-                self.os_sensor_type["system"] = self.host_sensor_data
+                self.os_sensor_type["memory_usage"] = self.host_sensor_data
                 logger.info(f"RAAL: {jsonMsg}")
                 self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
                 self.host_fault = False
