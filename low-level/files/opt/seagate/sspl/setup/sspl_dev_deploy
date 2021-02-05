@@ -162,7 +162,23 @@ class SSPLDevDeploy:
         if self.install_3rd_party_packages:
             print("INFO: INSTALLING python3...")
             cmd = "yum install -y python3"
-            _ = self._execute_cmd(cmd)
+            self._execute_cmd(cmd)
+
+            print("INFO: INSTALLING jsonschema==3.2.0")
+            cmd = "pip3 install jsonschema==3.2.0"
+            self._execute_cmd(cmd)
+
+            print("INFO: INSTALLING requests==2.25.1")
+            cmd = "pip3 install requests==2.25.1"
+            self._execute_cmd(cmd)
+
+            print("INFO: INSTALLING python-consul==1.1.0")
+            cmd = "pip3 install python-consul==1.1.0"
+            self._execute_cmd(cmd)
+
+            print("INFO: INSTALLING paramiko==2.7.2")
+            cmd = "pip3 install paramiko==2.7.2"
+            self._execute_cmd(cmd)
 
             print("INFO: INSTALLING cortx-py-utils...")
             pkg_name="cortx-py-utils"
