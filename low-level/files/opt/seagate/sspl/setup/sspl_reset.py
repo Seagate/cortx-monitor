@@ -37,7 +37,7 @@ class HardReset:
         CMD = "id -u sspl-ll"
         output, error, returncode = SimpleProcess(CMD).run()
         if returncode != 0:
-            raise SetupError(returncode, error + " CMD: %s", CMD)
+            raise SetupError(returncode, "ERROR: %s - CMD %s", error, CMD)
         else:
             self.user_present=True
 
@@ -45,7 +45,7 @@ class HardReset:
             CMD="/usr/sbin/userdel sspl-ll"
             output, error, returncode = SimpleProcess(CMD).run()
             if returncode != 0:
-                raise SetupError(returncode, error + " CMD: %s", CMD)
+                raise SetupError(returncode, "ERROR: %s - CMD %s", error, CMD)
 
         # Remove log directories
         shutil.rmtree(f"/var/log/{PRODUCT_FAMILY}/sspl", ignore_errors=True)

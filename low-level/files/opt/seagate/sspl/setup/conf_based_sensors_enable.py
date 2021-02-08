@@ -17,13 +17,14 @@
 
 import os
 import consul
-from cortx.utils.conf_store import Conf
 
+from cortx.utils.conf_store import Conf
+from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.error import SetupError
 from cortx.sspl.bin.sspl_constants import (CONSUL_HOST, CONSUL_PORT,
                                         PRODUCT_FAMILY,
                                         SSPL_STORE_TYPE)
 
-def update_sensor_info():
+def update_sensor_info(config_index):
 
     key = 'monitor'
 
@@ -38,14 +39,15 @@ def update_sensor_info():
 
     try:
         with open("/etc/machine-id") as f:
-            node_key_id = f.read().strip("\n")
+            machine_id = f.read().strip("\n")
     except Exception as err:
-        print("Failed to get machine-id. - %s" % (err))
+        raise SetupError("Failed to get machine-id. - %s" % (err))
 
     storage_type = Conf.get('global_config','storage>enclosure_1>type')
     if storage_type and storage_type.lower() in ["virtual", "jbod"]:
         sensors["REALSTORSENSORS"] = "false"
 
+    node_key_id = Conf.get('global_config','cluster>server_nodes>%s' %(machine_id))
     server_type = Conf.get('global_config','cluster>%s>node_type' % (node_key_id))
     if server_type and server_type.lower() in ["virtual"]:
         sensors["NODEHWSENSOR"] = "false"
@@ -53,11 +55,6 @@ def update_sensor_info():
         sensors["MEMFAULTSENSOR"] = "false"
         sensors["CPUFAULTSENSOR"] = "false"
         sensors["RAIDSENSOR"] = "false"
-
-    for sect, value in sensors.items():
-        Conf.set('sspl', '%s>%s' % (sect, key), value)
-
-    Conf.save('sspl')
 
     # Onward LDR_R2, consul will be abstracted out and it won't exit as hard dependeny of SSPL
     # Note: SSPL has backward compatibility to LDR_R1 and there consul is a dependency of SSPL.
@@ -71,10 +68,8 @@ def update_sensor_info():
         except Exception as cerror:
             print("Error in connecting with consul: {}".format(cerror))
 
-    # Update sensor information for sspl_test
-    test_file_config_path="/opt/seagate/%s/sspl/sspl_test/conf/sspl_tests.conf" % PRODUCT_FAMILY
-    Conf.load('sspl_test', 'yaml://%s' % test_file_config_path)
+    # Update sensor information in config
     for sect, value in sensors.items():
-        Conf.set('sspl_test', '%s>%s' % (sect, key), value)
+        Conf.set(config_index, '%s>%s' % (sect, key), value)
 
-    Conf.save('sspl_test')
+    Conf.save(config_index)

@@ -140,8 +140,9 @@ utility = Utility()
 MACHINE_ID = utility.get_machine_id()
 OPERATING_SYSTEM = utility.get_os()
 
-Conf.load("GLOBAL", "yaml:///etc/sample_global_cortx_config.yaml")
-Conf.load("SSPL", "yaml:///etc/sspl.conf")
+Conf.load(SSPL_CONF, "yaml:///etc/sspl.conf")
+global_config = Conf.get("SSPL", "SYSTEM_INFORMATION>global_config_url")
+Conf.load(GLOBAL_CONF, global_config)
 
 SRVNODE = Conf.get("GLOBAL", f'{CLUSTER}>{SERVER_NODES}')[MACHINE_ID]
 ENCLOSURE = Conf.get("GLOBAL", f"{CLUSTER}>{SRVNODE}>{STORAGE}>{ENCLOSURE_ID}")

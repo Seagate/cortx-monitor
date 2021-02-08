@@ -128,12 +128,12 @@ class SSPLDevDeploy:
         """Stop sspl service and remove SSPL RPMS."""
         cmd = "systemctl stop sspl-ll.service"
         _ = self._execute_cmd(cmd)
-        cmd = "yum remove -y cortx-sspl.noarch"
+        cmd = "yum --setopt=tsflags=noscripts erase -y cortx-sspl.noarch"
         returncode = self._execute_cmd(cmd)
         if returncode != 0:
             raise DeployError(returncode, "Unable to remove sspl RPMS. %s",
                               "Cleanup failed.")
-        cmd = "yum remove -y cortx-py-utils"
+        cmd = "yum --setopt=tsflags=noscripts erase -y cortx-py-utils"
         returncode = self._execute_cmd(cmd)
         if returncode != 0:
             raise DeployError(returncode, "Unable to remove cortx-py-utils RPM. %s",
@@ -229,8 +229,9 @@ class SSPLDevDeploy:
 
         try:
             with open("/etc/machine-id") as f:
-                node_key_id = f.read().strip("\n")
-                Conf.set("global_config", "cluster>server_nodes", {node_key_id:"srvnode1"})
+                machine_id = f.read().strip("\n")
+                Conf.set("global_config", "cluster>server_nodes", {machine_id:"srvnode-1"})
+                Conf.save("global_config")
         except Exception as err:
             raise DeployError(1, "Failed to get machine-id. - %s" % (err))
 
@@ -240,7 +241,7 @@ class SSPLDevDeploy:
             Conf.set("sspl", "RABBITMQINGRESSPROCESSOR>password", self.RMQ_PASSWD)
             Conf.set("sspl", "RABBITMQEGRESSPROCESSOR>password", self.RMQ_PASSWD)
             Conf.set("sspl", "LOGGINGPROCESSOR>password", self.RMQ_PASSWD)
-        srvnode = Conf.get("global_config", "cluster>server_nodes>%s" % (node_key_id))
+        srvnode = Conf.get("global_config", "cluster>server_nodes>%s" % (machine_id))
         enclosure_id  = Conf.get("global_config", "cluster>%s>storage>enclosure_id" % (srvnode))
         Conf.set("global_config", "storage>%s>controller>primary>ip" % (enclosure_id),
             self.CNTRLR_A)
@@ -255,7 +256,7 @@ class SSPLDevDeploy:
         Conf.set("global_config", "storage>%s>controller>secret" % (enclosure_id),
             self.CNTRLR_PASSWD)
         Conf.set("global_config", "storage>%s>type" % (enclosure_id), self.STORAGE_TYPE)
-        Conf.set("global_config", "cluser>%s>node_type" % (srvnode), self.SERVER_TYPE)
+        Conf.set("global_config", "cluster>%s>node_type" % (srvnode), self.SERVER_TYPE)
         Conf.set("global_config", "release>product", self.PRODUCT_VERSION)
 
         # Update BMC Information
@@ -269,9 +270,9 @@ class SSPLDevDeploy:
                 raise DeployError(1, "ERROR: -u <BMC user> is required for non LR2 system.")
             if not self.BMC_PASSWD:
                 raise DeployError(1, "ERROR: -p <BMC password> is required for non LR2 system.")
-            Conf.set("global_config", "cluster>srvnode1>bmc>ip", self.BMC_IP)
-            Conf.set("global_config", "cluster>srvnode1>bmc>user", self.BMC_USER)
-            Conf.set("global_config", "cluster>srvnode1>bmc>secret", self.BMC_PASSWD)
+            Conf.set("global_config", "cluster>%s>bmc>ip" % (srvnode), self.BMC_IP)
+            Conf.set("global_config", "cluster>%s>bmc>user" % (srvnode), self.BMC_USER)
+            Conf.set("global_config", "cluster>%s>bmc>secret" % (srvnode), self.BMC_PASSWD)
 
         Conf.save("sspl")
         Conf.save("global_config")
@@ -293,8 +294,8 @@ class SSPLDevDeploy:
 
         commands = [
             "%s post_install --config yaml://%s" % (setup_script, self.sample_global_config),
-            "%s init --config yaml://%s" % (setup_script, self.sample_global_config),
             "%s config --config yaml://%s" % (setup_script, self.sample_global_config),
+            "%s init --config yaml://%s" % (setup_script, self.sample_global_config),
             "%s check" % (setup_script)
         ]
         if self.CLUSTER_NODES:

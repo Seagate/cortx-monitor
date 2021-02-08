@@ -49,7 +49,8 @@ class SSPLConfig:
         """Init method for sspl setup config."""
         self._script_dir = os.path.dirname(os.path.abspath(__file__))
         self.role = None
-        Conf.load('sspl', 'yaml://%s' % consts.file_store_config_path)
+        self.config_index = 'sspl'
+        Conf.load(self.config_index, consts.sspl_config_path)
 
     def replace_expr(self, filename:str, key, new_str:str):
 
@@ -185,7 +186,7 @@ class SSPLConfig:
 
         # Get the types of server and storage we are currently running on and
         # enable/disable sensor groups in the conf file accordingly.
-        update_sensor_info()
+        update_sensor_info(self.config_index)
 
     def get_rabbitmq_cluster_nodes(self):
         cluster_nodes = None
