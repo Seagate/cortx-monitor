@@ -83,10 +83,10 @@ class SSPLBundleGenerate(object):
             if os.path.exists(configure_path):
                 self.localTempPath = configure_path+"sspl/"
             else:
-                print("ERROR: Given path %s doesn't exist" %(configure_path))
+                msg = "Given path %s doesn't exist" %(configure_path)
                 tmpFile.close()
                 os.remove(onGoingRequestPath)
-                sys.exit(1)
+                raise Exception(msg)
         if not os.path.exists(self.localTempPath):
             os.makedirs(self.localTempPath)
         try:
@@ -137,10 +137,10 @@ class SSPLBundleGenerate(object):
                 shutil.copy(self.enclosure_log, self.localTempPath+enclosure_zip_file)
 
         except (OSError, tarfile.TarError) as err:
-            print("Facing problem while creating sspl support bundle : %s" % err)
+            msg = "Facing problem while creating sspl support bundle : %s" % err
             tmpFile.close()
             os.remove(onGoingRequestPath)
-            sys.exit(1)
+            raise Exception(msg)
 
         print("SSPL Support Bundle Files Uploaded Successfully..!")
         print("SSPL Support Bundle Location: %s" % self.localTempPath+file_name)
@@ -309,6 +309,8 @@ if __name__ == "__main__":
             shutil.rmtree(f"/tmp/{sspl_bundle_tmp}")
             os.remove(onGoingRequestPath)
         else:
-            print("ERROR: Unrecognized arguments: %s" % sys.argv)
+            msg = "Unrecognized arguments: %s" % sys.argv
+            raise Exception(msg)
     else:
-        print("Already SSPL Support Bundle request is going on, So skipping current request..!")
+        msg = "Already SSPL Support Bundle request is going on, So skipping current request..!"
+        raise Exception(msg)
