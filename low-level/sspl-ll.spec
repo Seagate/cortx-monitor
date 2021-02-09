@@ -63,16 +63,21 @@ SSPL_BASE=${RPM_BUILD_ROOT}/opt/seagate/%{product_family}/sspl
 mkdir -p $SSPL_BASE
 mkdir -p ${RPM_BUILD_ROOT}/etc/{systemd/system,dbus-1/system.d,polkit-1/rules.d,sspl-ll/templates/snmp}
 cp -afv files/etc ${RPM_BUILD_ROOT}/
-cp -afv files/opt/seagate/sspl/* $SSPL_BASE/
-
-# Rename setup directory to bin directory and remove .py extension of sspl_setup files.
-mv $SSPL_BASE/setup $SSPL_BASE/bin
-mv $SSPL_BASE/bin/sspl_setup.py $SSPL_BASE/bin/sspl_setup
+cp -afv files/opt/seagate/sspl/conf $SSPL_BASE/
+mkdir -p $SSPL_BASE/bin
 
 # Copy the service into /opt/seagate/%{product_family}/sspl where it will execute from
 cp -rp __init__.py $SSPL_BASE
 mkdir -p $SSPL_BASE/low-level
 cp -rp . $SSPL_BASE/low-level
+
+# Coping independent executable script inside sspl/low-level to easier access core code access.
+SSPL_SETUP=$SSPL_BASE/low-level/files/opt/seagate/sspl/setup
+cp -p $SSPL_SETUP/generate_resource_health_view/resource_health_view $SSPL_BASE/low-level/
+cp -p $SSPL_SETUP/generate_sspl_bundle/sspl_bundle_generate $SSPL_BASE/low-level/
+cp -p $SSPL_SETUP/manifest_support_bundle $SSPL_BASE/low-level/
+cp -p $SSPL_SETUP/sspl_setup.py $SSPL_BASE/low-level/sspl_setup
+cp -p $SSPL_SETUP/consuldump.py $SSPL_BASE/low-level/
 
 %pre
 # Add the sspl-ll user during first install if it doesnt exist
@@ -107,17 +112,14 @@ mkdir -p /var/%{product_family}/sspl/bundle /var/log/%{product_family}/sspl /etc
 SSPL_DIR=/opt/seagate/%{product_family}/sspl
 
 [ -d "${SSPL_DIR}" ] && {
-    ln -sf $SSPL_DIR/low-level/framework/sspl_ll_d /usr/bin/sspl_ll_d
-    ln -sf $SSPL_DIR/low-level/framework/sspl_ll_d $SSPL_DIR/bin/sspl_ll_d
-    ln -sf $SSPL_DIR/low-level/files/opt/seagate/sspl/setup/generate_resource_health_view/resource_health_view /usr/bin/resource_health_view
-    ln -sf $SSPL_DIR/low-level/files/opt/seagate/sspl/setup/generate_sspl_bundle/sspl_bundle_generate /usr/bin/sspl_bundle_generate
-    ln -sf $SSPL_DIR/low-level/files/opt/seagate/sspl/setup/generate_sspl_bundle/sspl_bundle_generate $SSPL_DIR/bin/sspl_bundle_generate
-    ln -sf $SSPL_DIR/low-level/files/opt/seagate/sspl/setup/manifest_support_bundle /usr/bin/manifest_support_bundle
-    ln -sf $SSPL_DIR/low-level/framework/sspl_rabbitmq_reinit.py $SSPL_DIR/bin/sspl_rabbitmq_reinit
-    ln -sf $SSPL_DIR/low-level/framework/base/sspl_constants.py $SSPL_DIR/bin/sspl_constants.py
-    ln -sf $SSPL_DIR/low-level/framework/sspl_init $SSPL_DIR/bin/sspl_init
-    ln -sf $SSPL_DIR/low-level/framework/sspl_reinit $SSPL_DIR/bin/sspl_reinit
-    ln -sf $SSPL_DIR/low-level/framework/utils/salt_util.py $SSPL_DIR/bin/salt_util.py
+    ln -sf $SSPL_DIR/low-level/resource_health_view $SSPL_DIR/bin/resource_health_view
+    ln -sf $SSPL_DIR/low-level/sspl_bundle_generate $SSPL_DIR/bin/sspl_bundle_generate
+    ln -sf $SSPL_DIR/low-level/manifest_support_bundle $SSPL_DIR/bin/manifest_support_bundle
+    ln -sf $SSPL_DIR/low-level/sspl_setup $SSPL_DIR/bin/sspl_setup
+    ln -sf $SSPL_DIR/low-level/consuldump.py $SSPL_DIR/bin/consuldump.py
+    ln -sf $SSPL_DIR/low-level/resource_health_view /usr/bin/resource_health_view
+    ln -sf $SSPL_DIR/low-level/sspl_bundle_generate /usr/bin/sspl_bundle_generate
+    ln -sf $SSPL_DIR/low-level/manifest_support_bundle /usr/bin/manifest_support_bundle
 }
 
 # run conf_diff.py script
@@ -138,15 +140,7 @@ SSPL_DIR=/opt/seagate/%{product_family}/sspl
 
 # Copy init script
 [ -f $SSPL_DIR/sspl_init ] ||
-    ln -s $SSPL_DIR/bin/sspl_provisioner_init $SSPL_DIR/sspl_init
-
-# Creating softlink under site-packages to use sspl module easier way.
-PYTHON_BASE_DIR=/usr/lib/python3.6/site-packages/cortx/sspl
-[ -d "${SSPL_DIR}" ] && {
-    mkdir -p $PYTHON_BASE_DIR
-    ln -sf $SSPL_DIR/bin $PYTHON_BASE_DIR/bin
-    ln -sf $SSPL_DIR/low-level $PYTHON_BASE_DIR/lowlevel
-}
+    ln -sf $SSPL_DIR/low-level/files/opt/seagate/sspl/setup/sspl_provisioner_init $SSPL_DIR/sspl_init
 
 # In case of upgrade start sspl-ll after upgrade
 if [ "$1" == "2" ]; then
@@ -169,6 +163,7 @@ systemctl stop sspl-ll.service 2> /dev/null
 rm -f /etc/polkit-1/rules.d/sspl-ll_dbus_policy.rules
 rm -f /etc/dbus-1/system.d/sspl-ll_dbus_policy.conf
 [ "$1" == "0" ] && rm -f /opt/seagate/%{product_family}/sspl/sspl_init
+rm -f /usr/bin/resource_health_view /usr/bin/sspl_bundle_generate /usr/bin/manifest_support_bundle
 
 %files
 %defattr(-,sspl-ll,root,-)

@@ -18,9 +18,9 @@ from cortx.utils.process import SimpleProcess
 from cortx.utils.conf_store import Conf
 from cortx.utils.service import Service
 from cortx.utils.validator.v_pkg import PkgV
-from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.error import SetupError
-from cortx.sspl.bin.conf_based_sensors_enable import update_sensor_info
-from cortx.sspl.bin.sspl_constants import (PRODUCT_FAMILY,
+from .setup_error import SetupError
+from .conf_based_sensors_enable import update_sensor_info
+from framework.base.sspl_constants import (PRODUCT_FAMILY,
                                            sspl_config_path,
                                            sspl_test_file_path,
                                            sspl_test_config_path,

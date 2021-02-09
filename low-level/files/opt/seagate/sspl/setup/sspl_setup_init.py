@@ -25,7 +25,7 @@ import os
 import pwd
 import errno
 
-from cortx.sspl.bin.sspl_constants import (sspl_config_path,
+from framework.base.sspl_constants import (sspl_config_path,
                                            setups,
                                            HPI_PATH,
                                            MDADM_PATH,
@@ -33,7 +33,7 @@ from cortx.sspl.bin.sspl_constants import (sspl_config_path,
                                            GLOBAL_CONFIG_INDEX)
 from cortx.utils.validator.v_service import ServiceV
 from cortx.utils.validator.v_pkg import PkgV
-from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.error import SetupError
+from .setup_error import SetupError
 from cortx.utils.conf_store import Conf
 
 

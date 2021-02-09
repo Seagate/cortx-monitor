@@ -35,7 +35,7 @@ from cortx.utils.service import Service
 from cortx.utils.validator.v_pkg import PkgV
 from cortx.utils.validator.v_service import ServiceV
 from cortx.utils.validator.error import VError
-from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.error import SetupError
+from files.opt.seagate.sspl.setup.setup_error import SetupError
 
 
 class Cmd:
@@ -118,7 +118,7 @@ class JoinClusterCmd(Cmd):
         self.nodes = self.args.nodes[0]
 
     def process(self):
-        from cortx.sspl.bin.setup_rabbitmq_cluster import RMQClusterConfiguration
+        from files.opt.seagate.sspl.setup.setup_rabbitmq_cluster import RMQClusterConfiguration
         RMQClusterConfiguration(self.nodes).process()
 
 
@@ -148,7 +148,7 @@ class PostInstallCmd(Cmd):
 
     def process(self):
         """Configure SSPL post installation"""
-        from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.sspl_post_install import SSPLPostInstall
+        from files.opt.seagate.sspl.setup.sspl_post_install import SSPLPostInstall
         post_install = SSPLPostInstall(self.args)
         post_install.validate()
         post_install.process()
@@ -180,7 +180,7 @@ class InitCmd(Cmd):
 
     def process(self):
         """Configure SSPL init"""
-        from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.sspl_setup_init import SSPLInit
+        from files.opt.seagate.sspl.setup.sspl_setup_init import SSPLInit
         sspl_init = SSPLInit()
         sspl_init.process()
 
@@ -211,7 +211,7 @@ class ConfigCmd(Cmd):
 
     def process(self):
         """Setup SSPL configuration"""
-        from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.sspl_config import SSPLConfig
+        from files.opt.seagate.sspl.setup.sspl_config import SSPLConfig
         sspl_config = SSPLConfig()
         sspl_config.validate()
         sspl_config.process()
@@ -257,7 +257,7 @@ class TestCmd(Cmd):
 
     def process(self):
         """Setup and run SSPL test"""
-        from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.sspl_test import SSPLTestCmd
+        from files.opt.seagate.sspl.setup.sspl_test import SSPLTestCmd
         sspl_test = SSPLTestCmd(self.args)
         sspl_test.process()
 
@@ -356,10 +356,10 @@ class ResetCmd(Cmd):
 
     def process(self):
         if self.process_class == "HardReset":
-            from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.sspl_reset import HardReset
+            from files.opt.seagate.sspl.setup.sspl_reset import HardReset
             HardReset().process()
         elif self.process_class == "SoftReset":
-            from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.sspl_reset import SoftReset
+            from files.opt.seagate.sspl.setup.sspl_reset import SoftReset
             SoftReset().process()
 
 class CheckCmd(Cmd):

@@ -25,10 +25,10 @@ import json
 import subprocess
 
 from cortx.utils.conf_store import Conf
-from cortx.sspl.lowlevel.framework.base.sspl_constants import (PRODUCT_FAMILY,
-                                                               RESOURCE_HEALTH_VIEW,
-                                                               sspl_config_path,
-                                                               GLOBAL_CONFIG_INDEX)
+from framework.base.sspl_constants import (PRODUCT_FAMILY,
+                                        RESOURCE_HEALTH_VIEW,
+                                        sspl_config_path,
+                                        GLOBAL_CONFIG_INDEX)
 
 SSPL_CONF = "SSPL_CONFIG"
 Conf.load(SSPL_CONF, sspl_config_path)

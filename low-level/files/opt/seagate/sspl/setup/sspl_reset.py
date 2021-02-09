@@ -1,7 +1,7 @@
 import os
 import shutil
 
-from cortx.sspl.bin.sspl_constants import (PRODUCT_FAMILY,
+from framework.base.sspl_constants import (PRODUCT_FAMILY,
                                            file_store_config_path,
                                            SSPL_CONFIGURED,
                                            DATA_PATH,
@@ -10,7 +10,7 @@ from cortx.sspl.bin.sspl_constants import (PRODUCT_FAMILY,
 from cortx.utils.process import SimpleProcess
 from cortx.utils.service import Service
 from cortx.utils.conf_store import Conf
-from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.error import SetupError
+from .setup_error import SetupError
 
 
 class HardReset:
