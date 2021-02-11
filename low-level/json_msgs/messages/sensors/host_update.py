@@ -57,6 +57,7 @@ class HostUpdateMsg(BaseSensorMsg):
                        process_count,
                        running_process_count,
                        alert_type,
+                       event,
                        username  = "SSPL-LL",
                        signature = "N/A",
                        in_time      = "N/A",
@@ -82,6 +83,7 @@ class HostUpdateMsg(BaseSensorMsg):
         self._node_id           = node_id
         self._cluster_id        = cluster_id
         self.alert_type         = alert_type
+        self.event              = event
 
         epoch_time = str(int(time.time()))
         alert_id = mon_utils.get_alert_id(epoch_time)
@@ -122,7 +124,8 @@ class HostUpdateMsg(BaseSensorMsg):
                                   "totalMemory" : self._total_memory,
                                   "loggedInUsers" : self._logged_in_users,
                                   "processCount"  : self._process_count,
-                                  "runningProcessCount" : self._running_process_count
+                                  "runningProcessCount" : self._running_process_count,
+                                  "event" : self.event
                                   }
                               }
                           }

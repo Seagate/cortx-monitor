@@ -51,6 +51,7 @@ class DiskSpaceAlertMsg(BaseSensorMsg):
                        site_id, rack_id,
                        node_id, cluster_id,
                        alert_type,
+                       event,
                        username  = "SSPL-LL",
                        signature = "N/A",
                        in_time      = "N/A",
@@ -74,6 +75,7 @@ class DiskSpaceAlertMsg(BaseSensorMsg):
         self._node_id                = node_id
         self._cluster_id             = cluster_id
         self.alert_type              = alert_type
+        self.event                   = event
 
         epoch_time = str(calendar.timegm(time.gmtime()))
         alert_id = mon_utils.get_alert_id(epoch_time)
@@ -115,7 +117,8 @@ class DiskSpaceAlertMsg(BaseSensorMsg):
                                       "value" : self._total_space,
                                       "units" : self._units
                                   },
-                                  "diskUsedPercentage" : self._disk_used_percentage
+                                  "diskUsedPercentage" : self._disk_used_percentage,
+                                  "event" : self.event
                               }
                           }
                       }

@@ -39,7 +39,7 @@ class CPUdataMsg(BaseSensorMsg):
     MESSAGE_VERSION  = "1.0.0"
 
     SEVERITY = "warning"
-    RESOURCE_TYPE = "node:os:cpu"
+    RESOURCE_TYPE = "node:os:cpu_usage"
     RESOURCE_ID = "0"
 
     def __init__(self, host_id,
@@ -60,6 +60,7 @@ class CPUdataMsg(BaseSensorMsg):
                        node_id,
                        cluster_id,
                        alert_type,
+                       event,
                        username  = "SSPL-LL",
                        signature = "N/A",
                        in_time      = "N/A",
@@ -88,6 +89,7 @@ class CPUdataMsg(BaseSensorMsg):
         self._node_id           = node_id
         self._cluster_id        = cluster_id
         self.alert_type         = alert_type
+        self.event              = event
 
         epoch_time = str(int(time.time()))
         alert_id = mon_utils.get_alert_id(epoch_time)
@@ -132,7 +134,8 @@ class CPUdataMsg(BaseSensorMsg):
                                   "systemTime"    : self._system_time,
                                   "userTime"      : self._user_time,
                                   "coreData"      : self._core_data,
-                                  "cpu_usage"     : self._cpu_usage
+                                  "cpu_usage"     : self._cpu_usage,
+                                  "event"         : self.event
                               }
                           }
                       }
