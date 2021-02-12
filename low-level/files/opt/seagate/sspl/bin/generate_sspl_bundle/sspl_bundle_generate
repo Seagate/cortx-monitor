@@ -24,15 +24,15 @@ import shutil
 import json
 import subprocess
 
-from framework.platforms.realstor.realstor_enclosure import singleton_realstorencl
-from framework.base.sspl_constants import PRODUCT_FAMILY, SUPPORT_REQUESTOR_NAME, SUPPORT_EMAIL_ID, SUPPORT_CONTACT_NUMBER, \
-     ENCL_TRIGGER_LOG_MAX_RETRY, ENCL_DOWNLOAD_LOG_MAX_RETRY, ENCL_DOWNLOAD_LOG_WAIT_BEFORE_RETRY
+from framework.base.sspl_constants import (PRODUCT_FAMILY, SUPPORT_REQUESTOR_NAME,
+    SUPPORT_EMAIL_ID, SUPPORT_CONTACT_NUMBER, ENCL_TRIGGER_LOG_MAX_RETRY,
+    ENCL_DOWNLOAD_LOG_MAX_RETRY, ENCL_DOWNLOAD_LOG_WAIT_BEFORE_RETRY, DATA_PATH)
 
 # Add the top level directories
 sys.path.insert(0, f'/opt/seagate/{PRODUCT_FAMILY}/sspl/low-level')
 from framework.utils.config_reader import ConfigReader
-onGoingRequestPath = "/tmp/sspl-sb-req.txt"
-sspl_bundle_tmp = f"sspl_bundle_{str(int(time.time()))}"
+onGoingRequestPath = f"{DATA_PATH}sspl-sb-req.txt"
+sspl_bundle_tmp = f"{DATA_PATH}sspl_bundle_{str(int(time.time()))}"
 
 class SSPLBundleGenerate(object):
 
@@ -46,16 +46,16 @@ class SSPLBundleGenerate(object):
         self.sspl_conf_dir = f"/opt/seagate/{PRODUCT_FAMILY}/provisioner/pillar/components/sspl.sls"
         self.rabbitmq_conf_dir = "/etc/rabbitmq/rabbitmq.config"
         self.rabbitmq_log_dir = "/var/log/rabbitmq"
-        self.rabbitmq_status = f"/tmp/{sspl_bundle_tmp}/rabbitmq_status.txt"
-        self.ipmi_sel_data = f"/tmp/{sspl_bundle_tmp}/ipmi_sel_data_{str(int(time.time()))}.txt"
+        self.rabbitmq_status = f"{sspl_bundle_tmp}/rabbitmq_status.txt"
+        self.ipmi_sel_data = f"{sspl_bundle_tmp}/ipmi_sel_data_{str(int(time.time()))}.txt"
         self.consul_folder_name = 'consul_sspl_data'
-        self.consul_sspl_config = f"/tmp/{sspl_bundle_tmp}/consuldump_sspl_config/"
-        self.consul_sspl_cache = f"/tmp/{sspl_bundle_tmp}/consuldump_sspl_cache/"
-        self.consul_system_information_data = f"/tmp/{sspl_bundle_tmp}/consuldump_system_information/"
-        self.consul_storage_enclosure_data = f"/tmp/{sspl_bundle_tmp}/consuldump_storage_enclosure/"
-        self.consul_rabbitmq_data = f"/tmp/{sspl_bundle_tmp}/consuldump_rabbitmq/"
-        self.boot_drvs_dta = f'/tmp/{sspl_bundle_tmp}/Server_OS_boot_drives_SMART_data_{str(int(time.time()))}'
-        self.enclosure_log = f"/tmp/{sspl_bundle_tmp}/enclosure_logs.zip"
+        self.consul_sspl_config = f"{sspl_bundle_tmp}/consuldump_sspl_config/"
+        self.consul_sspl_cache = f"{sspl_bundle_tmp}/consuldump_sspl_cache/"
+        self.consul_system_information_data = f"{sspl_bundle_tmp}/consuldump_system_information/"
+        self.consul_storage_enclosure_data = f"{sspl_bundle_tmp}/consuldump_storage_enclosure/"
+        self.consul_rabbitmq_data = f"{sspl_bundle_tmp}/consuldump_rabbitmq/"
+        self.boot_drvs_dta = f'{sspl_bundle_tmp}/Server_OS_boot_drives_SMART_data_{str(int(time.time()))}'
+        self.enclosure_log = f"{sspl_bundle_tmp}/enclosure_logs.zip"
         self.enclosure_wwn = "NA"
         self.rabbitmq_cmd = {
             "Rabbitmq status": "systemctl status rabbitmq-server",
@@ -79,6 +79,7 @@ class SSPLBundleGenerate(object):
                 self.sspl_conf_dir)
             print(err)
             print("Exiting ...")
+            sspl_bundle_cleanup()
             sys.exit(1)
 
         sspl_log_dir = conf_reader._get_value_with_default(self.SYS_INFORMATION,
@@ -94,7 +95,7 @@ class SSPLBundleGenerate(object):
             else:
                 print("Given path doesn't exist")
                 tmpFile.close()
-                os.remove(onGoingRequestPath)
+                sspl_bundle_cleanup()
                 sys.exit(1)
         if not os.path.exists(self.localTempPath):
             os.makedirs(self.localTempPath)
@@ -148,7 +149,7 @@ class SSPLBundleGenerate(object):
         except (OSError, tarfile.TarError) as err:
             print("Facing problem while creating sspl support bundle : %s" % err)
             tmpFile.close()
-            os.remove(onGoingRequestPath)
+            sspl_bundle_cleanup()
             sys.exit(1)
 
         print("SSPL Support Bundle Files Uploaded Successfully..!")
@@ -177,7 +178,7 @@ class SSPLBundleGenerate(object):
 
     def get_consul_data(self):
         self.consul_folder_name = f"consul_sspl_data-{str(int(time.time()))}"
-        consuldump = f"/opt/seagate/{PRODUCT_FAMILY}/sspl/bin/consuldump.py -n {self.consul_folder_name} -l /tmp/{sspl_bundle_tmp}/ -d"
+        consuldump = f"/opt/seagate/{PRODUCT_FAMILY}/sspl/bin/consuldump.py -n {self.consul_folder_name} -l {sspl_bundle_tmp}/ -d"
         consuldump_cmd = {
             "sspl_config": f"{consuldump} consul_sspl_config sspl/",
             "sspl_cache": f"{consuldump} consul_sspl_cache var/{PRODUCT_FAMILY}/sspl",
@@ -190,7 +191,7 @@ class SSPLBundleGenerate(object):
             if subout[2] != 0:
                 print(f"Unable to get consul data of {key}...!")
             del subout
-        consul_folder_path = f"/tmp/{sspl_bundle_tmp}/{self.consul_folder_name}"
+        consul_folder_path = f"{sspl_bundle_tmp}/{self.consul_folder_name}"
         self.consul_sspl_config = f"{consul_folder_path}/consul_sspl_config"
         self.consul_sspl_cache = f"{consul_folder_path}/consul_sspl_cache"
         self.consul_system_information = f"{consul_folder_path}/consul_system_information"
@@ -226,6 +227,7 @@ class SSPLBundleGenerate(object):
         return response.rstrip('\n'), error.rstrip('\n'), return_code
 
     def get_enclosure_logs(self):
+        from framework.platforms.realstor.realstor_enclosure import singleton_realstorencl
         url = singleton_realstorencl.build_url(singleton_realstorencl.URI_CLIAPI_BASE)
         COLLECTING_DEBUG_LOG_STARTED = False
         for encl_trigger_log_retry_index in range(0, ENCL_TRIGGER_LOG_MAX_RETRY):
@@ -253,7 +255,7 @@ class SSPLBundleGenerate(object):
                         " response-type {2}".format(singleton_realstorencl.LDR_R1_ENCL, url, response_data["status"][0]["response-type"], "Debug log"))
 
         if COLLECTING_DEBUG_LOG_STARTED == True:
-            self.enclosure_wwn = self.get_enclosure_wwn()
+            self.enclosure_wwn = self.get_enclosure_wwn(singleton_realstorencl)
             url = singleton_realstorencl.build_url(singleton_realstorencl.URI_CLIAPI_DOWNLOADDEBUGDATA)
             for encl_download_retry_index in range(0, ENCL_DOWNLOAD_LOG_MAX_RETRY):
                 response = singleton_realstorencl.ws_request(url, singleton_realstorencl.ws.HTTP_GET)
@@ -286,7 +288,7 @@ class SSPLBundleGenerate(object):
                 if encl_download_retry_index == ( ENCL_DOWNLOAD_LOG_MAX_RETRY - 1 ):
                     print("ERR: Enclosure debug logs retry count exceeded::{0}".format(url))
 
-    def get_enclosure_wwn(self):
+    def get_enclosure_wwn(self, singleton_realstorencl):
         url = singleton_realstorencl.build_url(singleton_realstorencl.URI_CLIAPI_SHOWENCLOSURE)
         response = singleton_realstorencl.ws_request(url, singleton_realstorencl.ws.HTTP_GET)
 
@@ -305,19 +307,24 @@ class SSPLBundleGenerate(object):
         enclosure_wwn = response_data.get("enclosures")[0]["enclosure-wwn"]
         return enclosure_wwn
 
+def sspl_bundle_cleanup():
+    """Cleanup activity for SSPL Support Bundle"""
+    if os.path.exists(onGoingRequestPath):
+        os.remove(onGoingRequestPath)
+    if os.path.exists(sspl_bundle_tmp):
+        shutil.rmtree(sspl_bundle_tmp)
+
 if __name__ == "__main__":
     if not os.path.isfile(onGoingRequestPath):
         if len(sys.argv) < 3:
             print("Unrecognized arguments: %s" % sys.argv)
             sys.exit(1)
         tmpFile = open(onGoingRequestPath, "w")
-        os.makedirs(f"/tmp/{sspl_bundle_tmp}")
+        os.makedirs(sspl_bundle_tmp)
         SSPLBundleObj = SSPLBundleGenerate()
         SSPLBundleObj.generate_sspl_support_bundle(sys.argv, tmpFile)
         tmpFile.close()
-        # Removed sspl support bundle temp folder.
-        shutil.rmtree(f"/tmp/{sspl_bundle_tmp}")
-        os.remove(onGoingRequestPath)
+        sspl_bundle_cleanup()
     else:
         print("Already SSPL Support Bundle request is going on, So skipping current request..!")
         sys.exit(1)
