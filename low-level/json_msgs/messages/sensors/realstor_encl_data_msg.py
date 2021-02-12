@@ -63,7 +63,7 @@ class RealStorEnclDataMsg(BaseSensorMsg):
         self._resource_id = self._encl_info.get("resource_id")
         self._resource_type = self._encl_info.get("resource_type")
         self._event_time = self._encl_info.get("event_time")
-        description = self._specific_info.get("health-reason")
+        description = self._specific_info.get("event")
 
         self._json = {"title": self.TITLE,
                     "description": self.DESCRIPTION,

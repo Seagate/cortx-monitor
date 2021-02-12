@@ -244,10 +244,14 @@ class CPUFaultSensor(SensorThread, InternalMsgQ):
         self.fill_specific_info()
         alert_specific_info = self.specific_info
 
-        if alert_type == "fault":
-            description = "%s is missing." %cpu
-        else:
-            description = "Found %s" %cpu
+        res_id = self.RESOURCE_ID + str(cpu)
+
+        for item in alert_specific_info:
+            if item['resource_id'] == res_id:
+                if alert_type == "fault":
+                    description = "Faulty CPU detected, %s state is %s" %(item['resource_id'], item["state"])
+                else:
+                    description = "Fault resolved for CPU, %s state is  %s" %(item['resource_id'], item["state"])
 
         info = {
                 "site_id": self._site_id,
@@ -255,7 +259,7 @@ class CPUFaultSensor(SensorThread, InternalMsgQ):
                 "rack_id": self._rack_id,
                 "node_id": self._node_id,
                 "resource_type": self.RESOURCE_TYPE,
-                "resource_id": self.RESOURCE_ID + str(cpu),
+                "resource_id": res_id,
                 "event_time": epoch_time,
                 "description": description
                 }
