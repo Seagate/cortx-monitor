@@ -25,15 +25,32 @@ import json
 import subprocess
 # Add the top level directories
 sys.path.insert(0, f'/opt/seagate/cortx/sspl/low-level')
-from framework.base.sspl_constants import (PRODUCT_FAMILY, SUPPORT_REQUESTOR_NAME, SUPPORT_EMAIL_ID, SUPPORT_CONTACT_NUMBER,
-     ENCL_TRIGGER_LOG_MAX_RETRY, ENCL_DOWNLOAD_LOG_MAX_RETRY, ENCL_DOWNLOAD_LOG_WAIT_BEFORE_RETRY, CONSUL_DUMP,
-     sspl_config_path)
+from framework.base.sspl_constants import (PRODUCT_FAMILY, SUPPORT_REQUESTOR_NAME,
+    SUPPORT_EMAIL_ID, SUPPORT_CONTACT_NUMBER, ENCL_TRIGGER_LOG_MAX_RETRY,
+    ENCL_DOWNLOAD_LOG_MAX_RETRY, ENCL_DOWNLOAD_LOG_WAIT_BEFORE_RETRY, CONSUL_DUMP,
+    sspl_config_path, DATA_PATH)
 from cortx.utils.conf_store import Conf
 
-onGoingRequestPath = "/tmp/sspl-sb-req.txt"
-sspl_bundle_tmp = f"sspl_bundle_{str(int(time.time()))}"
+onGoingRequestPath = f"{DATA_PATH}sspl-sb-req.txt"
+sspl_bundle_tmp = f"{DATA_PATH}sspl_bundle_{str(int(time.time()))}"
 SSPL_CONF = "SSPL_CONFIG"
 Conf.load(SSPL_CONF, sspl_config_path)
+
+
+class SSPLBundleError(Exception):
+    """Generic Exception with error code and output."""
+
+    def __init__(self, rc, message, *args):
+        """Initialize with custom error message and return code."""
+        self._rc = rc
+        self._desc = message % (args)
+        sspl_bundle_cleanup()
+
+    def __str__(self):
+        """Format error string."""
+        if self._rc == 0: return self._desc
+        return "SSPLBundleError(%d): %s" %(self._rc, self._desc)
+
 
 class SSPLBundleGenerate(object):
 
@@ -47,16 +64,16 @@ class SSPLBundleGenerate(object):
         self.sspl_conf_dir = f"/opt/seagate/{PRODUCT_FAMILY}/provisioner/pillar/components/sspl.sls"
         self.rabbitmq_conf_dir = "/etc/rabbitmq/rabbitmq.config"
         self.rabbitmq_log_dir = "/var/log/rabbitmq"
-        self.rabbitmq_status = f"/tmp/{sspl_bundle_tmp}/rabbitmq_status.txt"
-        self.ipmi_sel_data = f"/tmp/{sspl_bundle_tmp}/ipmi_sel_data_{str(int(time.time()))}.txt"
+        self.rabbitmq_status = f"{sspl_bundle_tmp}/rabbitmq_status.txt"
+        self.ipmi_sel_data = f"{sspl_bundle_tmp}/ipmi_sel_data_{str(int(time.time()))}.txt"
         self.consul_folder_name = 'consul_sspl_data'
-        self.consul_sspl_config = f"/tmp/{sspl_bundle_tmp}/consuldump_sspl_config/"
-        self.consul_sspl_cache = f"/tmp/{sspl_bundle_tmp}/consuldump_sspl_cache/"
-        self.consul_system_information_data = f"/tmp/{sspl_bundle_tmp}/consuldump_system_information/"
-        self.consul_storage_enclosure_data = f"/tmp/{sspl_bundle_tmp}/consuldump_storage_enclosure/"
-        self.consul_rabbitmq_data = f"/tmp/{sspl_bundle_tmp}/consuldump_rabbitmq/"
-        self.boot_drvs_dta = f'/tmp/{sspl_bundle_tmp}/Server_OS_boot_drives_SMART_data_{str(int(time.time()))}'
-        self.enclosure_log = f"/tmp/{sspl_bundle_tmp}/enclosure_logs.zip"
+        self.consul_sspl_config = f"{sspl_bundle_tmp}/consuldump_sspl_config/"
+        self.consul_sspl_cache = f"{sspl_bundle_tmp}/consuldump_sspl_cache/"
+        self.consul_system_information_data = f"{sspl_bundle_tmp}/consuldump_system_information/"
+        self.consul_storage_enclosure_data = f"{sspl_bundle_tmp}/consuldump_storage_enclosure/"
+        self.consul_rabbitmq_data = f"{sspl_bundle_tmp}/consuldump_rabbitmq/"
+        self.boot_drvs_dta = f'{sspl_bundle_tmp}/Server_OS_boot_drives_SMART_data_{str(int(time.time()))}'
+        self.enclosure_log = f"{sspl_bundle_tmp}/enclosure_logs.zip"
         self.enclosure_wwn = "NA"
         self.rabbitmq_cmd = {
             "Rabbitmq status": "systemctl status rabbitmq-server",
@@ -85,8 +102,7 @@ class SSPLBundleGenerate(object):
             else:
                 msg = "Given path %s doesn't exist" %(configure_path)
                 tmpFile.close()
-                os.remove(onGoingRequestPath)
-                raise Exception(msg)
+                raise SSPLBundleError(1, msg)
         if not os.path.exists(self.localTempPath):
             os.makedirs(self.localTempPath)
         try:
@@ -139,8 +155,7 @@ class SSPLBundleGenerate(object):
         except (OSError, tarfile.TarError) as err:
             msg = "Facing problem while creating sspl support bundle : %s" % err
             tmpFile.close()
-            os.remove(onGoingRequestPath)
-            raise Exception(msg)
+            raise SSPLBundleError(1, msg)
 
         print("SSPL Support Bundle Files Uploaded Successfully..!")
         print("SSPL Support Bundle Location: %s" % self.localTempPath+file_name)
@@ -168,7 +183,7 @@ class SSPLBundleGenerate(object):
 
     def get_consul_data(self):
         self.consul_folder_name = f"consul_sspl_data-{str(int(time.time()))}"
-        consuldump = f"{CONSUL_DUMP} -n {self.consul_folder_name} -l /tmp/{sspl_bundle_tmp}/ -d"
+        consuldump = f"{CONSUL_DUMP} -n {self.consul_folder_name} -l {sspl_bundle_tmp}/ -d"
         consuldump_cmd = {
             "sspl_config": f"{consuldump} consul_sspl_config sspl/",
             "sspl_cache": f"{consuldump} consul_sspl_cache var/{PRODUCT_FAMILY}/sspl",
@@ -181,7 +196,7 @@ class SSPLBundleGenerate(object):
             if subout[2] != 0:
                 print(f"Unable to get consul data of {key}...!")
             del subout
-        consul_folder_path = f"/tmp/{sspl_bundle_tmp}/{self.consul_folder_name}"
+        consul_folder_path = f"{sspl_bundle_tmp}/{self.consul_folder_name}"
         self.consul_sspl_config = f"{consul_folder_path}/consul_sspl_config"
         self.consul_sspl_cache = f"{consul_folder_path}/consul_sspl_cache"
         self.consul_system_information = f"{consul_folder_path}/consul_system_information"
@@ -297,20 +312,25 @@ class SSPLBundleGenerate(object):
         enclosure_wwn = response_data.get("enclosures")[0]["enclosure-wwn"]
         return enclosure_wwn
 
+def sspl_bundle_cleanup():
+    """Cleanup activity for SSPL Support Bundle"""
+    if os.path.exists(onGoingRequestPath):
+        os.remove(onGoingRequestPath)
+    if os.path.exists(sspl_bundle_tmp):
+        shutil.rmtree(sspl_bundle_tmp)
+
 if __name__ == "__main__":
     if not os.path.isfile(onGoingRequestPath):
         if len(sys.argv) >= 3:
             tmpFile = open(onGoingRequestPath, "w")
-            os.makedirs(f"/tmp/{sspl_bundle_tmp}")
+            os.makedirs(sspl_bundle_tmp)
             SSPLBundleObj = SSPLBundleGenerate()
             SSPLBundleObj.generate_sspl_support_bundle(sys.argv, tmpFile)
             tmpFile.close()
-            # Removed sspl support bundle temp folder.
-            shutil.rmtree(f"/tmp/{sspl_bundle_tmp}")
-            os.remove(onGoingRequestPath)
+            sspl_bundle_cleanup()
         else:
             msg = "Unrecognized arguments: %s" % sys.argv
-            raise Exception(msg)
+            raise SSPLBundleError(1, msg)
     else:
         msg = "Already SSPL Support Bundle request is going on, So skipping current request..!"
         raise Exception(msg)
