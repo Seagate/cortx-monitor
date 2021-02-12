@@ -23,9 +23,24 @@ import sys
 import socket
 import json
 import subprocess
-# Add the top level directories
-sys.path.insert(0, f'/opt/seagate/cortx/sspl/low-level')
-from framework.base.sspl_constants import PRODUCT_FAMILY, node_key_id, cluster_id, RESOURCE_HEALTH_VIEW
+
+from cortx.utils.conf_store import Conf
+from cortx.sspl.lowlevel.framework.base.sspl_constants import PRODUCT_FAMILY, RESOURCE_HEALTH_VIEW, sspl_config_path
+
+SSPL_CONF = "SSPL_CONFIG"
+GLOBAL_CONF = "GLOBAL_CONFIG"
+Conf.load(SSPL_CONF, sspl_config_path)
+global_config_url = Conf.get(SSPL_CONF, "SYSTEM_INFORMATION>global_config_url")
+Conf.load(GLOBAL_CONF, global_config_url)
+
+# Get cluster_id and node_key_id from global config
+cluster_id = Conf.get(GLOBAL_CONF, "cluster>cluster_id")
+try:
+    with open("/etc/machine-id") as f:
+        machine_id = f.read().strip("\n")
+    node_key_id = Conf.get(GLOBAL_CONF, "cluster>server_nodes>%s" % (machine_id))
+except:
+    node_key_id = "srvnode-1"
 
 onGoingRequestPath = "/tmp/sspl-msb-req.txt"
 
@@ -55,10 +70,10 @@ class ManifestSupportBundle(object):
             if os.path.exists(configure_path):
                 self.localTempPath = configure_path+"manifest/"
             else:
-                print("Given path doesn't exist")
+                msg = "Given path %s doesn't exist" %(configure_path)
                 tmpFile.close()
                 os.remove(onGoingRequestPath)
-                sys.exit(1)
+                raise Exception(msg)
         if not os.path.exists(self.localTempPath):
             os.makedirs(self.localTempPath)
         try:
@@ -122,10 +137,10 @@ class ManifestSupportBundle(object):
                 tar.close()
 
         except (OSError, tarfile.TarError) as err:
-            print("Facing problem while creating manifest support bundle : %s" % err)
+            msg = "Facing problem while creating manifest support bundle : %s" % err
             tmpFile.close()
             os.remove(onGoingRequestPath)
-            sys.exit(1)
+            raise Exception(msg)
 
         print("Manifest Support Bundle Location: %s" % self.localTempPath+file_name)
 
@@ -165,8 +180,7 @@ class ManifestSupportBundle(object):
         try:
             filtered_data_all = self.filter_node_summary_dict(node_manifest_dict)
         except:
-            print ('Unable to create manifest summary file')
-            exit()
+            raise Exception('Unable to create manifest summary file')
 
         for key in filtered_data_all['children'][0]['children']:
             if key['id'].lower().startswith(node_summary_types):
@@ -243,13 +257,14 @@ class ManifestSupportBundle(object):
                 
 if __name__ == "__main__":
     if not os.path.isfile(onGoingRequestPath):
-        if len(sys.argv) is not 3:
-            print("Unrecognized arguments: %s" % sys.argv)
-            sys.exit(1)
-        tmpFile = open(onGoingRequestPath, "w")
-        ManifestSupportBundle().make_manifest_support_bundle_tarfile(sys.argv, tmpFile)
-        tmpFile.close()
-        os.remove(onGoingRequestPath)
+        if len(sys.argv) == 3:
+            tmpFile = open(onGoingRequestPath, "w")
+            ManifestSupportBundle().make_manifest_support_bundle_tarfile(sys.argv, tmpFile)
+            tmpFile.close()
+            os.remove(onGoingRequestPath)
+        else:
+            msg = "Unrecognized arguments: %s" % sys.argv
+            raise Exception(msg)
     else:
-        print("Already Manifest Support Bundle request is going on, So skipping current request..!")
-        sys.exit(1)
+        msg = "Already Manifest Support Bundle request is going on, So skipping current request..!"
+        raise Exception(msg)

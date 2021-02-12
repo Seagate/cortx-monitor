@@ -28,7 +28,7 @@ import re
 from cortx.utils.conf_store import Conf
 from cortx.utils.process import SimpleProcess
 from cortx.sspl.bin.sspl_constants import file_store_config_path
-from cortx.sspl.bin.error import SetupError
+from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.error import SetupError
 
 localhost_fqdn = socket.getfqdn().split('.')[0]
 
