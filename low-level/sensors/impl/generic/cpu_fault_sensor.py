@@ -245,9 +245,9 @@ class CPUFaultSensor(SensorThread, InternalMsgQ):
         alert_specific_info = self.specific_info
 
         if alert_type == "fault":
-            description = "Fault is detected for cpu core"
+            description = "%s is missing." %cpu
         else:
-            description = "Fault resolved for cpu core"
+            description = "Found %s" %cpu
 
         info = {
                 "site_id": self._site_id,

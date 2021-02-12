@@ -1139,15 +1139,15 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
         """Sends an internal msg to DiskMsgHandler"""
 
         if alert_type == self.DISK_FAULT_ALERT_TYPE:
-            description = "Fault detected for node drive."
+            description = "Fault detected for server drive."
         elif alert_type == self.DISK_FAULT_RESOLVED_ALERT_TYPE:
-            description = "Fault resolved for node drive."
+            description = "Fault resolved for server drive."
         elif alert_type == self.DISK_INSERTED_ALERT_TYPE:
-            description = "Node drive is inserted."
+            description = "Server drive is inserted."
         elif alert_type == self.DISK_REMOVED_ALERT_TYPE:
-            description = "Node drive is missing."
+            description = "Server drive is missing."
         else:
-            description = "Node drive alert."
+            description = "Server drive alert."
         event_time = str(int(time.time()))
         severity_reader = SeverityReader()
         msg =  {"sensor_response_type" : "node_disk",

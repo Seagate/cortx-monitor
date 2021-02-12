@@ -457,13 +457,13 @@ class RAIDsensor(SensorThread, InternalMsgQ):
         self._alert_id = self._get_alert_id(epoch_time)
         host_name = socket.getfqdn()
         if alert_type == self.MISSING:
-            description = "Raid array or drive from raid array is missing."
+            description = "RAID array or drive from RAID array is missing."
         elif alert_type == self.FAULT:
-            description = "Raid array or drive from raid array is faulty."
+            description = "RAID array or drive from RAID array is faulty."
         elif alert_type == self.INSERTION:
-            description = "Inserted drive in raid array."
+            description = "Inserted drive in RAID array."
         elif alert_type == self.FAULT_RESOLVED:
-            description = "Fault for raid drive is resolved"
+            description = "Fault for RAID array or RAID drive is resolved"
         else:
             description = "Raid array alert"
 
