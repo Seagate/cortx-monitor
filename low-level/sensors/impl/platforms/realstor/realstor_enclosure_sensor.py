@@ -197,7 +197,8 @@ class RealStorEnclosureSensor(SensorThread, InternalMsgQ):
                 "node_id": self.rssencl.node_id,
                 "resource_type": self.RESOURCE_TYPE,
                 "resource_id": resource_id,
-                "event_time": epoch_time
+                "event_time": epoch_time,
+                "description": encl_status
             }
 
         internal_json_msg = json.dumps(

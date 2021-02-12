@@ -114,7 +114,8 @@ class HostUpdateMsg(BaseSensorMsg):
                                 "cluster_id": self._cluster_id,
                                 "resource_type": self.RESOURCE_TYPE,
                                 "resource_id": self.RESOURCE_ID,
-                                "event_time": epoch_time
+                                "event_time": epoch_time,
+                                "description": self.event
                               },
                               "specific_info": {
                                   "localtime" : self._local_time,
@@ -124,8 +125,7 @@ class HostUpdateMsg(BaseSensorMsg):
                                   "totalMemory" : self._total_memory,
                                   "loggedInUsers" : self._logged_in_users,
                                   "processCount"  : self._process_count,
-                                  "runningProcessCount" : self._running_process_count,
-                                  "event" : self.event
+                                  "runningProcessCount" : self._running_process_count
                                   }
                               }
                           }

@@ -244,6 +244,11 @@ class CPUFaultSensor(SensorThread, InternalMsgQ):
         self.fill_specific_info()
         alert_specific_info = self.specific_info
 
+        if alert_type == "fault":
+            description = "Fault is detected for cpu core"
+        else:
+            description = "Fault resolved for cpu core"
+
         info = {
                 "site_id": self._site_id,
                 "cluster_id": self._cluster_id,
@@ -251,7 +256,8 @@ class CPUFaultSensor(SensorThread, InternalMsgQ):
                 "node_id": self._node_id,
                 "resource_type": self.RESOURCE_TYPE,
                 "resource_id": self.RESOURCE_ID + str(cpu),
-                "event_time": epoch_time
+                "event_time": epoch_time,
+                "description": description
                 }
 
         internal_json_msg = json.dumps(

@@ -228,11 +228,11 @@ class MemFaultSensor(SensorThread, InternalMsgQ):
         specific_info = {}
         specific_info_list = []
         if alert_type == "fault":
-            specific_info["event"] = \
+            description = \
                     "Total available main memory value decreased from {} kB to {} kB"\
                     .format(self.prev_mem, self.total_mem)
         elif alert_type == "fault_resolved":
-            specific_info["event"] = \
+            description = \
                     "Total main memory value available {} kB"\
                     .format(self.total_mem)
 
@@ -251,7 +251,8 @@ class MemFaultSensor(SensorThread, InternalMsgQ):
             "node_id": self._node_id,
             "resource_type": self.RESOURCE_TYPE,
             "resource_id": self.RESOURCE_ID,
-            "event_time": epoch_time
+            "event_time": epoch_time,
+            "description": description
             }
 
         internal_json_msg = json.dumps(

@@ -457,7 +457,6 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         successful = self._node_sensor.read_data("local_mount_data", self._get_debug(), self._units)
         if not successful:
             logger.error("NodeDataMsgHandler, _generate_local_mount_data was NOT successful.")
-
         # Create the local mount data message and hand it over to the egress processor to transmit
         localMountDataMsg = LocalMountDataMsg(self._node_sensor.host_id,
                                 self._epoch_time,
@@ -466,7 +465,8 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                                 self._node_sensor.free_swap,
                                 self._node_sensor.total_space,
                                 self._node_sensor.total_swap,
-                                self._units)
+                                self._units
+                                )
 
         # Add in uuid if it was present in the json request
         if self._uuid is not None:

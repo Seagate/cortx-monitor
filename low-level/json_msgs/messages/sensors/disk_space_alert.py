@@ -106,7 +106,8 @@ class DiskSpaceAlertMsg(BaseSensorMsg):
                                 "cluster_id": self._cluster_id,
                                 "resource_type": self.RESOURCE_TYPE,
                                 "resource_id": self.RESOURCE_ID,
-                                "event_time": epoch_time
+                                "event_time": epoch_time,
+                                "description": self.event
                               },
                               "specific_info": {
                                   "freeSpace"  : {
@@ -117,8 +118,7 @@ class DiskSpaceAlertMsg(BaseSensorMsg):
                                       "value" : self._total_space,
                                       "units" : self._units
                                   },
-                                  "diskUsedPercentage" : self._disk_used_percentage,
-                                  "event" : self.event
+                                  "diskUsedPercentage" : self._disk_used_percentage
                               }
                           }
                       }

@@ -120,7 +120,8 @@ class CPUdataMsg(BaseSensorMsg):
                                 "cluster_id": self._cluster_id,
                                 "resource_type": self.RESOURCE_TYPE,
                                 "resource_id": self.RESOURCE_ID,
-                                "event_time": epoch_time
+                                "event_time": epoch_time,
+                                "description": self.event
                               },
                           "specific_info": {
                                   "localtime"     : self._local_time,
@@ -134,8 +135,7 @@ class CPUdataMsg(BaseSensorMsg):
                                   "systemTime"    : self._system_time,
                                   "userTime"      : self._user_time,
                                   "coreData"      : self._core_data,
-                                  "cpu_usage"     : self._cpu_usage,
-                                  "event"         : self.event
+                                  "cpu_usage"     : self._cpu_usage
                               }
                           }
                       }

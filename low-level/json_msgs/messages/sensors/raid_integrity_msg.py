@@ -96,6 +96,7 @@ class RAIDIntegrityMsg(BaseSensorMsg):
                                             "resource_id": self._resource_id,
                                             "resource_type": self._resource_type,
                                             "event_time": self._event_time,
+                                            "description": self._error_msg
                                         },
                                     "specific_info": {
                                             "error": self._error_msg
