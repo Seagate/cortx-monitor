@@ -77,10 +77,11 @@ def test_bmc_interface(args):
     assert(bmc_interface_info.get("node_id") is not None)
     assert(bmc_interface_info.get("cluster_id") is not None)
     assert(bmc_interface_info.get("resource_id") is not None)
+    assert(bmc_interface_info.get("description") is not None )
 
     bmc_interface_specific_info = bmc_interface_message.get("specific_info")
     if bmc_interface_specific_info:
-        assert(bmc_interface_specific_info.get("event") is not None)
+        assert(bmc_interface_specific_info.get("channel info") is not None)
 
 def backup_bmc_config():
     # read active bmc interface

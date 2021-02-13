@@ -64,6 +64,7 @@ def test_if_data_sensor(args):
     assert(if_data_info.get("resource_type") is not None)
     assert(if_data_info.get("event_time") is not None)
     assert(if_data_info.get("resource_id") is not None)
+    assert(if_data_info.get("description") is not None)
 
     if_data_specific_info = if_data_msg.get("specific_info")
     assert(if_data_specific_info is not None)
