@@ -38,7 +38,6 @@ class DiskSpaceAlertMsg(BaseSensorMsg):
     ACTUATOR_MSG_TYPE = "disk_space_alert"
     MESSAGE_VERSION  = "1.0.0"
 
-    SEVERITY = "warning"
     RESOURCE_TYPE = "node:os:disk_space"
     RESOURCE_ID = "0"
 
@@ -77,6 +76,11 @@ class DiskSpaceAlertMsg(BaseSensorMsg):
         self.alert_type              = alert_type
         self.event                   = event
 
+        if self.alert_type == "fault":
+            self.severity = "warning"
+        else:
+            self.severity = "informational"
+
         epoch_time = str(calendar.timegm(time.gmtime()))
         alert_id = mon_utils.get_alert_id(epoch_time)
 
@@ -96,7 +100,7 @@ class DiskSpaceAlertMsg(BaseSensorMsg):
                               },
                           "sensor_response_type": {
                               "alert_type": self.alert_type,
-                              "severity": self.SEVERITY,
+                              "severity": self.severity,
                               "alert_id": alert_id,
                               "host_id": self._host_id,
                               "info": {
