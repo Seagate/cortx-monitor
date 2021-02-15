@@ -30,7 +30,6 @@ import time
 import calendar
 from json_msgs.messages.sensors.base_sensors_msg import BaseSensorMsg
 from framework.utils import mon_utils
-
 class HostUpdateMsg(BaseSensorMsg):
     '''
     The JSON message transmitted by the node message handler
@@ -39,6 +38,7 @@ class HostUpdateMsg(BaseSensorMsg):
     ACTUATOR_MSG_TYPE = "host_update"
     MESSAGE_VERSION  = "1.0.0"
 
+    SEVERITY = "warning"
     RESOURCE_TYPE = "node:os:memory_usage"
     RESOURCE_ID = "0"
 
@@ -84,11 +84,9 @@ class HostUpdateMsg(BaseSensorMsg):
         self._cluster_id        = cluster_id
         self.alert_type         = alert_type
         self.event              = event
-
-        if self.alert_type == "fault":
-            self.severity = "warning"
-        else:
-            self.severity = "informational"
+        
+        if self.alert_type == "fault_resolved":
+            self.SEVERITY = "informational"
 
         epoch_time = str(int(time.time()))
         alert_id = mon_utils.get_alert_id(epoch_time)
@@ -109,7 +107,7 @@ class HostUpdateMsg(BaseSensorMsg):
                               },
                           "sensor_response_type": {
                               "alert_type": self.alert_type,
-                              "severity": self.severity,
+                              "severity": self.SEVERITY,
                               "alert_id": alert_id,
                               "host_id": self._host_id,
                               "info": {

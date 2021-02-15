@@ -38,6 +38,7 @@ class CPUdataMsg(BaseSensorMsg):
     ACTUATOR_MSG_TYPE = "cpu_data"
     MESSAGE_VERSION  = "1.0.0"
 
+    SEVERITY = "warning"
     RESOURCE_TYPE = "node:os:cpu_usage"
     RESOURCE_ID = "0"
 
@@ -89,11 +90,9 @@ class CPUdataMsg(BaseSensorMsg):
         self._cluster_id        = cluster_id
         self.alert_type         = alert_type
         self.event              = event
- 
-        if self.alert_type == "fault":
-            self.severity = "warning"
-        else:
-            self.severity = "informational"
+        
+        if self.alert_type == "fault_resolved":
+            self.SEVERITY = "informational"
 
         epoch_time = str(int(time.time()))
         alert_id = mon_utils.get_alert_id(epoch_time)
@@ -114,7 +113,7 @@ class CPUdataMsg(BaseSensorMsg):
                               },
                           "sensor_response_type": {
                               "alert_type": self.alert_type,
-                              "severity": self.severity,
+                              "severity": self.SEVERITY,
                               "alert_id": alert_id,
                               "host_id": self._host_id,
                               "info": {
