@@ -69,6 +69,7 @@ def test_real_stor_enclosure_sensor(agrs):
     assert(encl_sensor_info.get("resource_id") is not None)
     assert(encl_sensor_info.get("resource_type") is not None)
     assert(encl_sensor_info.get("event_time") is not None)
+    assert(encl_sensor_info.get("description") is not None)
 
     encl_specific_info = encl_sensor_msg.get("specific_info")
     if encl_specific_info:

@@ -63,6 +63,7 @@ def test_disk_space_alert(agrs):
     assert(disk_space_info.get("resource_type") is not None)
     assert(disk_space_info.get("event_time") is not None)
     assert(disk_space_info.get("resource_id") is not None)
+    assert(disk_space_info.get("description") is not None)
 
     disk_space_specific_info = disk_space_sensor_msg.get("specific_info")
     assert(disk_space_specific_info is not None)

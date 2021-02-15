@@ -61,6 +61,7 @@ def test_host_update_data_sensor(args):
     assert(info.get("resource_type") is not None)
     assert(info.get("event_time") is not None)
     assert(info.get("resource_id") is not None)
+    assert(info.get("description") is not None)
 
     specific_info = host_update_msg.get("specific_info")
     assert(specific_info.get("loggedInUsers") is not None)

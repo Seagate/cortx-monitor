@@ -456,6 +456,16 @@ class RAIDsensor(SensorThread, InternalMsgQ):
         severity = severity_reader.map_severity(alert_type)
         self._alert_id = self._get_alert_id(epoch_time)
         host_name = socket.getfqdn()
+        if alert_type == self.MISSING:
+            description = "RAID array or drive from RAID array is missing."
+        elif alert_type == self.FAULT:
+            description = "RAID array or drive from RAID array is faulty."
+        elif alert_type == self.INSERTION:
+            description = "Inserted drive in RAID array."
+        elif alert_type == self.FAULT_RESOLVED:
+            description = "Fault for RAID array or RAID drive is resolved"
+        else:
+            description = "Raid array alert"
 
         info = {
                 "site_id": self._site_id,
@@ -464,7 +474,8 @@ class RAIDsensor(SensorThread, InternalMsgQ):
                 "node_id": self._node_id,
                 "resource_type": self.RESOURCE_TYPE,
                 "resource_id": resource_id,
-                "event_time": epoch_time
+                "event_time": epoch_time,
+                "description": description
                }
         specific_info = {
             "device": device,

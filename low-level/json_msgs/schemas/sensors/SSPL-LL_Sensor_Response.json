@@ -331,6 +331,11 @@
 											"description": "ID which uniquely identifies the resource/instance",
 											"type": "string",
 											"required": true
+										},
+										"description": {
+											"description": "description about alert",
+											"type": "string",
+											"required": true
 										}
 									}
 								},
@@ -780,6 +785,11 @@
 												"unhealthy_components":{
 													"type": "array",
 													"required": false
+												},
+												"description": {
+													"description": "description about alert",
+													"type": "string",
+													"required": true
 												}
 										}}
 									}
@@ -853,7 +863,12 @@
                                             "description": "ID which uniquely identifies the resource/instance",
                                             "type": "string",
                                             "required": true
-                                                }
+                                                },
+										"description": {
+											"description": "description about alert",
+                                            "type": "string",
+                                            "required": true
+										}
                                             }
                                         },
                                 "specific_info": {

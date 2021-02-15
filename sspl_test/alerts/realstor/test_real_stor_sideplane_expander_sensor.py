@@ -61,6 +61,7 @@ def test_real_stor_sideplane_expander_sensor(agrs):
     assert(sideplane_expander_info_data.get("resource_type") is not None)
     assert(sideplane_expander_info_data.get("event_time") is not None)
     assert(sideplane_expander_info_data.get("resource_id") is not None)
+    assert(sideplane_expander_info_data.get("description") is not None)
 
     sideplane_expander_specific_info_data = sideplane_expander_sensor_msg.get("specific_info", {})
 

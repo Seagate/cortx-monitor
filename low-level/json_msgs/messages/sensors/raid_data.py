@@ -69,6 +69,7 @@ class RAIDdataMsg(BaseSensorMsg):
         self._event_time = self._sensor_info.get("event_time")
         self._device = self._sensor_specific_info.get("device")
         self._drive = self._sensor_specific_info.get("drives")
+        description = self._sensor_info.get("description")
 
         self._json = {"title" : self.TITLE,
                       "description" : self.DESCRIPTION,
@@ -96,6 +97,7 @@ class RAIDdataMsg(BaseSensorMsg):
                                             "resource_id": self._resource_id,
                                             "resource_type": self._resource_type,
                                             "event_time": self._event_time,
+                                            "description": description
                                         },
                                     "specific_info": {
                                             "device": self._device,
