@@ -84,7 +84,7 @@ class HostUpdateMsg(BaseSensorMsg):
         self._cluster_id        = cluster_id
         self.alert_type         = alert_type
         self.event              = event
-        
+
         if self.alert_type == "fault_resolved":
             self.SEVERITY = "informational"
 
