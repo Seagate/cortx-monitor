@@ -127,17 +127,23 @@ class SSPLDevDeploy:
     def cleanup(self):
         """Stop sspl service and remove SSPL RPMS."""
         cmd = "systemctl stop sspl-ll.service"
-        _ = self._execute_cmd(cmd)
+        self._execute_cmd(cmd)
         cmd = "yum --setopt=tsflags=noscripts erase -y cortx-sspl.noarch"
-        returncode = self._execute_cmd(cmd)
-        if returncode != 0:
-            raise DeployError(returncode, "Unable to remove sspl RPMS. %s",
-                              "Cleanup failed.")
+        out, rc = self._execute_cmd(cmd)
+        if rc != 0:
+            raise DeployError(rc,
+                              "%s - %s CMD: %s",
+                              out,
+                              "Unable to remove sspl RPMS. Cleanup failed.",
+                              cmd)
         cmd = "yum --setopt=tsflags=noscripts erase -y cortx-py-utils"
-        returncode = self._execute_cmd(cmd)
-        if returncode != 0:
-            raise DeployError(returncode, "Unable to remove cortx-py-utils RPM. %s",
-                              "Cleanup failed.")
+        out, rc = self._execute_cmd(cmd)
+        if rc != 0:
+            raise DeployError(rc,
+                              "%s - %s CMD: %s",
+                              out,
+                              "Unable to remove cortx-py-utils. Cleanup failed.",
+                              cmd)
 
     def setup_yum_repos(self):
         """Setup common, 3rd_party and build specific repos."""
@@ -149,20 +155,39 @@ class SSPLDevDeploy:
 
         if self.TARGET_BUILD:
             cmd = "./setup_yum_repos.py -t %s" % (self.TARGET_BUILD)
-            returncode= self._execute_cmd(cmd)
+            out, rc = self._execute_cmd(cmd)
         else:
             cmd = "./setup_yum_repos.py"
-            returncode = self._execute_cmd(cmd)
-        if returncode != 0:
-            raise DeployError(returncode, "%s - Failed to setup yum repos.",
-                "setup_yum_repos.py")
+            out, rc = self._execute_cmd(cmd)
+        if rc != 0:
+            raise DeployError(rc,
+                              "%s - %s CMD: %s",
+                              out,
+                              "Failed to setup yum repos.",
+                              cmd)
 
     def install_dependencies(self):
         """Install common and 3rd_party application."""
         if self.install_3rd_party_packages:
             print("INFO: INSTALLING python3...")
             cmd = "yum install -y python3"
-            _ = self._execute_cmd(cmd)
+            self._execute_cmd(cmd)
+
+            print("INFO: INSTALLING jsonschema==3.2.0")
+            cmd = "pip3 install jsonschema==3.2.0"
+            self._execute_cmd(cmd)
+
+            print("INFO: INSTALLING requests==2.25.1")
+            cmd = "pip3 install requests==2.25.1"
+            self._execute_cmd(cmd)
+
+            print("INFO: INSTALLING python-consul==1.1.0")
+            cmd = "pip3 install python-consul==1.1.0"
+            self._execute_cmd(cmd)
+
+            print("INFO: INSTALLING paramiko==2.7.2")
+            cmd = "pip3 install paramiko==2.7.2"
+            self._execute_cmd(cmd)
 
             print("INFO: INSTALLING cortx-py-utils...")
             pkg_name="cortx-py-utils"
@@ -171,16 +196,23 @@ class SSPLDevDeploy:
             if not pkg:
                print(f"ERROR: Unable to download {pkg_name}.")
             cmd = "yum install -y %s%s" % (build_url, pkg[0])
-            returncode = self._execute_cmd(cmd)
-            if returncode != 0:
-               raise DeployError(returncode, "Failed to install %s.", pkg_name)
+            out, rc = self._execute_cmd(cmd)
+            if rc != 0:
+                raise DeployError(rc,
+                                  "%s - %s CMD: %s",
+                                  out,
+                                  "Failed to install %s." % (pkg_name),
+                                  cmd)
 
             print("INFO: INSTALLING rabbitmq-server...")
             cmd = "yum install -y rabbitmq-server"
-            returncode = self._execute_cmd(cmd)
-            if returncode != 0:
-                raise DeployError(returncode, "Failed to install rabbitmq-server.")
-
+            out, rc = self._execute_cmd(cmd)
+            if rc != 0:
+                raise DeployError(rc,
+                                  "%s - %s CMD: %s",
+                                  out,
+                                  "Failed to install rabbitmq-server.",
+                                  cmd)
             print("INFO: Done installing SSPL dependencies.")
 
     def install_sspl_rpms(self):
@@ -191,21 +223,34 @@ class SSPLDevDeploy:
             print("INFO: Installing SSPL RPMS from local path - %s" % (self.RPMS_PATH))
             packages = glob.glob(self.RPMS_PATH+'/cortx-*-2.*')
             sspl_rpm_cmd = f"sudo yum install -y {' '.join(packages)}"
-            returncode = self._execute_cmd(sspl_rpm_cmd)
+            out, rc = self._execute_cmd(sspl_rpm_cmd)
+            if rc != 0:
+                raise DeployError(rc,
+                                  "%s - %s CMD: %s",
+                                  out,
+                                  "Failed to install SSPL RPMS.",
+                                  sspl_rpm_cmd)
         else:
             print("INFO: Installing SSPL RPMS using yum repos...")
             sspl_cmd = "yum install -y cortx-sspl.noarch"
             sspl_test_cmd = "yum install -y cortx-sspl-test"
-            returncode = self._execute_cmd(sspl_cmd)
-            if returncode != 0:
-                raise DeployError(returncode, "Failed to install 'cortx-sspl'")
-            returncode = self._execute_cmd(sspl_test_cmd)
-            if returncode != 0:
-                raise DeployError(returncode, "Failed to install 'cortx-sspl-test'")
-
+            out, rc = self._execute_cmd(sspl_cmd)
+            if rc != 0:
+                raise DeployError(rc,
+                                  "%s - %s CMD: %s",
+                                  out,
+                                  "Failed to install 'cortx-sspl'.",
+                                  sspl_cmd)
+            out, rc = self._execute_cmd(sspl_test_cmd)
+            if rc != 0:
+                raise DeployError(rc,
+                                  "%s - %s CMD: %s",
+                                  out,
+                                  "Failed to install 'cortx-sspl-test'.",
+                                  sspl_test_cmd)
         print("INFO: INSTALLING required python3 site-packages..")
         cmd = "python3 -m pip install -r /opt/seagate/cortx/sspl/low-level/requirements.txt"
-        _ = self._execute_cmd(cmd)
+        self._execute_cmd(cmd)
 
         print("INFO: Done installing SSPL RPMS.")
 
@@ -306,12 +351,24 @@ class SSPLDevDeploy:
         # Execute setup commands
         for cmd in commands:
             print("INFO: Executing command: '%s'" % (cmd))
-            self._execute_cmd(cmd)
+            out, rc = self._execute_cmd(cmd)
+            if rc:
+                raise DeployError(rc, "%s - CMD: %s", out, cmd)
 
     def _execute_cmd(self, cmd):
         """Executing commands."""
-        returncode = subprocess.call(cmd.split(), shell=False)
-        return returncode
+        _out = None
+        process = subprocess.Popen(cmd.split(),
+                                   shell=False,
+                                   stdout=None,
+                                   stderr=subprocess.PIPE)
+        response, error = process.communicate()
+        if response:
+            _out = response.decode()
+        if error:
+            _out = error.decode().replace("\n", " ")
+        _rc = process.returncode
+        return (_out, _rc)
 
 
 def main(args):
@@ -335,7 +392,9 @@ def main(args):
         deploy.setup_sspl()
     except:
         traceback.print_exc()
-        print("INFO: Deployment is failed.")
+        print("ERROR: Deployment is failed.")
+    else:
+        print("INFO: Deployment is successful !!")
 
 
 if __name__ == '__main__':

@@ -34,7 +34,7 @@ from cortx.utils.service import Service
 from cortx.utils.validator.v_pkg import PkgV
 from cortx.utils.validator.v_service import ServiceV
 from cortx.utils.validator.error import VError
-from cortx.sspl.bin.error import SetupError
+from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.error import SetupError
 
 class Cmd:
     """Setup Command."""
@@ -312,9 +312,9 @@ class SupportBundleCmd(Cmd):
         pass
 
     def process(self):
-        args = ' '.join(self._args)
+        args = ' '.join(self._args.args)
         sspl_bundle_generate = "%s/%s %s" % (self._script_dir, self.script, args)
-        output, error, returncode = SimpleProcess(sspl_bundle_generate).run()
+        output, error, returncode = SimpleProcess(sspl_bundle_generate).run(realtime_output=True)
         if returncode != 0:
             raise SetupError(returncode, "%s - validation failure. %s", self.name, error)
 
@@ -334,9 +334,9 @@ class ManifestSupportBundleCmd(Cmd):
         pass
 
     def process(self):
-        args = ' '.join(self._args)
+        args = ' '.join(self._args.args)
         manifest_support_bundle = "%s/%s %s" % (self._script_dir, self.script, args)
-        output, error, returncode = SimpleProcess(manifest_support_bundle).run()
+        output, error, returncode = SimpleProcess(manifest_support_bundle).run(realtime_output=True)
         if returncode != 0:
             raise SetupError(returncode, "%s - validation failure. %s", self.name, error)
 
