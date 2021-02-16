@@ -32,7 +32,8 @@ from cortx.sspl.bin.sspl_constants import (REPLACEMENT_NODE_ENV_VAR_FILE,
                                            SSPL_BASE_DIR,
                                            file_store_config_path,
                                            sspl_config_path,
-                                           PRODUCT_BASE_DIR)
+                                           PRODUCT_BASE_DIR,
+                                           GLOBAL_CONFIG)
 from cortx.sspl.lowlevel.framework import sspl_rabbitmq_reinit
 
 
@@ -42,6 +43,7 @@ class SSPLPostInstall:
     def __init__(self, args: str):
         """Ssplpostinstall init."""
         self.global_config = args.config[0]
+        self.global_config_dump = args.config[-1]
         self.name = "sspl_post_install"
         self._script_dir = os.path.dirname(os.path.abspath(__file__))
         self.RSYSLOG_CONF="/etc/rsyslog.d/0-iemfwd.conf"
@@ -51,16 +53,17 @@ class SSPLPostInstall:
 
     def process(self):
         """Configure SSPL logs and service based on config."""
-        PRODUCT_NAME = Conf.get('global_config', 'release>product')
+        PRODUCT_NAME = Conf.get(GLOBAL_CONFIG, 'release>product')
 
         # Copy and load product specific sspl config
         if not os.path.exists(file_store_config_path):
             shutil.copyfile("%s/conf/sspl.conf.%s.yaml" % (SSPL_BASE_DIR, PRODUCT_NAME),
                             file_store_config_path)
 
-        # Global config path in sspl.conf will be referred by sspl-ll service later.
+        # Global config copy path in sspl.conf will be referred by sspl-ll service later.
         Conf.load("sspl", sspl_config_path)
         Conf.set("sspl", "SYSTEM_INFORMATION>global_config_url", self.global_config)
+        Conf.set("sspl", "SYSTEM_INFORMATION>global_config_dump_url", self.global_config_dump)
         Conf.save("sspl")
 
         environ = Conf.get("sspl", "SYSTEM_INFORMATION>environment")

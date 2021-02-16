@@ -26,6 +26,7 @@ from cortx.sspl.bin.sspl_constants import (PRODUCT_FAMILY,
                                            sspl_test_config_path)
 
 TEST_DIR = f"/opt/seagate/{PRODUCT_FAMILY}/sspl/sspl_test"
+GLOBAL_CONFIG = "global_config_dump"
 
 class SSPLTestCmd:
     """Starts test based on plan (sanity|alerts|self_primary|self_secondary)."""
@@ -46,12 +47,13 @@ class SSPLTestCmd:
         # Take back up of sspl test config
         sspl_test_backup = '/etc/sspl_tests.conf.back'
         shutil.copyfile(sspl_test_file_path, sspl_test_backup)
-        global_config_url = Conf.get("sspl", "SYSTEM_INFORMATION>global_config_url")
 
         # Add global config in sspl_test config and revert the changes once test completes.
         # Global config path in sspl_tests.conf will be referred by sspl_tests later
-        Conf.copy("global_config", "sspl_test")
-        Conf.set("sspl", "SYSTEM_INFORMATION>global_config_url", sspl_test_config_path)
+        global_config_dump_url = Conf.get("sspl", "SYSTEM_INFORMATION>global_config_dump_url")
+        Conf.load(GLOBAL_CONFIG, global_config_dump_url)
+        Conf.copy(GLOBAL_CONFIG, "sspl_test")
+        Conf.set("sspl", "SYSTEM_INFORMATION>global_config_dump_url", sspl_test_config_path)
         Conf.save("sspl")
 
         # Enable & disable sensors based on environment
@@ -70,7 +72,7 @@ class SSPLTestCmd:
         output, error, returncode = SimpleProcess(CMD).run(realtime_output=True)
         # Restore the original path/file & service, then throw exception
         # if execution is failed.
-        Conf.set("sspl", "SYSTEM_INFORMATION>global_config_url", global_config_url)
+        Conf.set("sspl", "SYSTEM_INFORMATION>global_config_dump_url", global_config_dump_url)
         Conf.save("sspl")
         shutil.copyfile(sspl_test_backup, sspl_test_file_path)
         Service('dbus').process('restart', 'sspl-ll.service')

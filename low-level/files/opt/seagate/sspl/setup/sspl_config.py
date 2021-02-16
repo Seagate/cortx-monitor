@@ -103,7 +103,7 @@ class SSPLConfig:
             os.remove(consts.SSPL_CONFIGURED)
 
         # validate Product
-        product = Conf.get('global_config', 'release>product')
+        product = Conf.get(consts.GLOBAL_CONFIG, 'release>product')
 
         if not consts.enabled_products:
             raise SetupError(errno.EINVAL, "No enabled products!")
@@ -232,7 +232,7 @@ class SSPLConfig:
 
     def process(self):
         cmd = "config"
-        self.role = Conf.get('global_config', 'release>setup')
+        self.role = Conf.get(consts.GLOBAL_CONFIG, 'release>setup')
         if(cmd == "config"):
             self.config_sspl()
         else:

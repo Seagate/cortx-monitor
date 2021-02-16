@@ -26,6 +26,7 @@ import traceback
 import os
 import syslog
 import time
+from urllib.parse import urlparse
 
 # using cortx package
 from cortx.utils.process import SimpleProcess
@@ -35,6 +36,13 @@ from cortx.utils.validator.v_pkg import PkgV
 from cortx.utils.validator.v_service import ServiceV
 from cortx.utils.validator.error import VError
 from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.error import SetupError
+
+spec_type = "yaml"
+global_config = "prvsnr_global_config"
+global_config_dump = "global_config"
+global_config_dump_loc = "/etc/sspl_global_config_dump.%s" % spec_type
+global_config_dump_url = "%s://%s" % (spec_type, global_config_dump_loc)
+
 
 class Cmd:
     """Setup Command."""
@@ -87,6 +95,20 @@ class Cmd:
         parsers.add_argument('args', nargs='*', default=[], help='args')
         parsers.set_defaults(command=cls)
 
+    @staticmethod
+    def dump_global_config(prvsnr_global_config_url):
+        Conf.load(global_config, prvsnr_global_config_url)
+        url_spec = urlparse(global_config_dump_url)
+        path = url_spec.path
+        store_loc = os.path.dirname(path)
+        if not os.path.exists(store_loc):
+            os.makedirs(store_loc)
+        with open(path, "w") as f:
+            f.write("")
+        Conf.load(global_config_dump, global_config_dump_url)
+        # Make copy of global config
+        Conf.copy(global_config, global_config_dump)
+        Conf.save(global_config_dump)
 
 class JoinClusterCmd(Cmd):
     """Join nodes in cluster. To join mutiple nodes, use delimeter ","
@@ -143,14 +165,18 @@ class PostInstallCmd(Cmd):
                              "%s - Argument validation failure. %s",
                              self.name,
                              "Post install requires global config.")
-        self.global_config = self.args.config[0]
-        Conf.load('global_config', self.global_config)
-        product = Conf.get('global_config', 'release>product')
+
+        # Dump global config
+        prvsnr_global_config_url = self.args.config[0]
+        self.dump_global_config(prvsnr_global_config_url)
+        self.args.config.append(global_config_dump_url)
+
+        product = Conf.get(global_config_dump, 'release>product')
         if not product:
             raise SetupError(1,
                              "%s - validation failure. %s",
                              self.name,
-                             "Product not found in %s" % (self.global_config))
+                             "Product not found in %s" % (global_config_dump_url))
 
     def process(self):
         from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.sspl_post_install import SSPLPostInstall
@@ -179,16 +205,19 @@ class InitCmd(Cmd):
                     errno.EINVAL,
                     "%s - Argument validation failure. Global config is needed",
                     self.name)
-        global_config = self.args.config[0]
-        Conf.load('global_config', global_config)
 
-        role = Conf.get('global_config', 'release>setup')
+        # Dump global config
+        prvsnr_global_config_url = self.args.config[0]
+        self.dump_global_config(prvsnr_global_config_url)
+        self.args.config[0] = global_config_dump_url
+
+        role = Conf.get(global_config_dump, 'release>setup')
         if not role:
             raise SetupError(
                     errno.EINVAL,
                     "%s - validation failure. %s",
                     self.name,
-                    "Role not found in %s" % (global_config))
+                    "Role not found in %s" % (global_config_dump_url))
         from cortx.sspl.bin.sspl_constants import setups
         if role not in setups:
             raise SetupError(
@@ -224,16 +253,19 @@ class ConfigCmd(Cmd):
                     errno.EINVAL,
                     "%s - Argument validation failure. Global config is needed",
                     self.name)
-        global_config = self.args.config[0]
-        Conf.load('global_config', global_config)
 
-        role = Conf.get('global_config', 'release>setup')
+        # Dump global config
+        prvsnr_global_config_url = self.args.config[0]
+        self.dump_global_config(prvsnr_global_config_url)
+        self.args.config[0] = global_config_dump_url
+
+        role = Conf.get(global_config_dump, 'release>setup')
         if not role:
             raise SetupError(
                     errno.EINVAL,
                     "%s - validation failure. %s",
                     self.name,
-                    "Role not found in %s" % (global_config))
+                    "Role not found in %s" % (global_config_dump_url))
         from cortx.sspl.bin.sspl_constants import setups
         if role not in setups:
             raise SetupError(
@@ -242,13 +274,13 @@ class ConfigCmd(Cmd):
                     self.name,
                     "Role %s is not supported. Check Usage" % role)
 
-        product = Conf.get('global_config', 'release>product')
+        product = Conf.get(global_config_dump, 'release>product')
         if not product:
             raise SetupError(
                     errno.EINVAL,
                     "%s - validation failure. %s",
                     self.name,
-                    "Product not found in %s" % (global_config))
+                    "Product not found in %s" % (global_config_dump_url))
 
     def process(self):
         from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.sspl_config import SSPLConfig
@@ -281,8 +313,12 @@ class TestCmd(Cmd):
                     errno.EINVAL,
                     "%s - Argument validation failure. Global config is needed",
                     self.name)
-        global_config = self.args.config[0]
-        Conf.load('global_config', global_config)
+
+        # Dump global config
+        prvsnr_global_config_url = self.args.config[0]
+        self.dump_global_config(prvsnr_global_config_url)
+        self.args.config[0] = global_config_dump_url
+
         if not self.args.plan:
             raise SetupError(
                     errno.EINVAL,
@@ -369,8 +405,12 @@ class ResetCmd(Cmd):
                     errno.EINVAL,
                     "%s - Argument validation failure. Global config is required.",
                     self.name)
-        global_config = self.args.config[0]
-        Conf.load('global_config', global_config)
+
+        # Dump global config
+        prvsnr_global_config_url = self.args.config[0]
+        self.dump_global_config(prvsnr_global_config_url)
+        self.args.config[0] = global_config_dump_url
+
         if not self.args.type:
             raise SetupError(
                     errno.EINVAL,

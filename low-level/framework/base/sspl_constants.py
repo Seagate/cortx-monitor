@@ -66,6 +66,7 @@ IEM_LOGROTATE_CONF = "%s/iem_messages" % LOGROTATE_DIR
 SSPL_LOGROTATE_CONF = "%s/sspl_logs" % LOGROTATE_DIR
 HPI_PATH = '/tmp/dcs/hpi'
 MDADM_PATH = '/etc/mdadm.conf'
+GLOBAL_CONFIG = "global_config"
 
 # This file will be created when sspl is being configured for node replacement case
 REPLACEMENT_NODE_ENV_VAR_FILE = "/etc/profile.d/set_replacement_env.sh"

@@ -143,7 +143,7 @@ MACHINE_ID = utility.get_machine_id()
 OPERATING_SYSTEM = utility.get_os()
 
 Conf.load(SSPL_CONF, "yaml:///etc/sspl.conf")
-global_config = Conf.get("SSPL", "SYSTEM_INFORMATION>global_config_url")
+global_config = Conf.get("SSPL", "SYSTEM_INFORMATION>global_config_dump_url")
 Conf.load(GLOBAL_CONF, global_config)
 
 SRVNODE = Conf.get("GLOBAL", f'{CLUSTER}>{SERVER_NODES}')[MACHINE_ID]

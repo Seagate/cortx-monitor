@@ -26,11 +26,13 @@ import pwd
 import errno
 
 from cortx.sspl.bin.sspl_constants import (file_store_config_path,
-                                          HPI_PATH, MDADM_PATH)
+                                          HPI_PATH, MDADM_PATH,
+                                          GLOBAL_CONFIG)
 from cortx.utils.validator.v_service import ServiceV
 from cortx.utils.validator.v_pkg import PkgV
 from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.error import SetupError
 from cortx.utils.conf_store import Conf
+
 
 class SSPLInit:
 
@@ -100,7 +102,7 @@ class SSPLInit:
                 os.chown(os.path.join(root, item), uid, grpid)
 
     def process(self):
-        self.role = Conf.get('global_config', 'release>setup')
+        self.role = Conf.get(GLOBAL_CONFIG, 'release>setup')
 
         if self.dp:
             # Extract the data path
