@@ -67,7 +67,8 @@ class IEMDataMsg(BaseSensorMsg):
                         "node_id": info.get("node_id"),
                         "cluster_id": info.get("cluster_id"),
                         "rack_id": info.get("rack_id"),
-                        "resource_type": "iem"
+                        "resource_type": "iem",
+                        "description": info.get("description")
                     },
                     "alert_type": info.get("alert_type"),
                     "severity": info.get("severity"),
@@ -76,7 +77,6 @@ class IEMDataMsg(BaseSensorMsg):
                         "component": info.get("component_id"),
                         "module": info.get("module_id"),
                         "event": info.get("event_id"),
-                        "description": info.get("description"),
                         "IEC": info.get("IEC")
                     },
                     "alert_id": mon_utils.get_alert_id(self._epoch_time),

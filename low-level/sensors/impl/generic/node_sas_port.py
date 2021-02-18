@@ -421,10 +421,10 @@ class SASPortSensor(SensorThread, InternalMsgQ):
         if port != -1:
             # This is a port level alert, add an error key in specific info
             if alert_type == 'fault':
-                specific_info["error"] = f"No connectivity detected on the SAS port {port}, possible \
-causes could be missing SAS cable, bad cable connection, faulty cable or SAS port failure"
+                description  = f"No connectivity detected on the SAS port {port}, possible \
+causes could be missing SAS cable, bad cable connection, faulty cable or SAS port failure."
             elif alert_type == 'fault_resolved':
-                specific_info["error"] = "null"
+                description  = "Connection established on SAS port."
             specific_info_list.append(specific_info)
             specific_info = {}
 
@@ -455,7 +455,8 @@ causes could be missing SAS cable, bad cable connection, faulty cable or SAS por
                     "node_id": self._node_id,
                     "resource_type": self.RESOURCE_TYPE, # node:interface:sas
                     "resource_id": self.RESOURCE_ID, # SASHBA-0
-                    "event_time": epoch_time
+                    "event_time": epoch_time,
+                    "description": description
                     }
         else:
             # This is a port level alert
@@ -466,7 +467,8 @@ causes could be missing SAS cable, bad cable connection, faulty cable or SAS por
                     "node_id": self._node_id,
                     "resource_type": self.RESOURCE_TYPE + ':port', # node:interface:sas:port
                     "resource_id": self.RESOURCE_ID + f'-port-{port}', # SASHBA-0-port-0
-                    "event_time": epoch_time
+                    "event_time": epoch_time,
+                    "description": description
                     }
 
         internal_json_msg = json.dumps(

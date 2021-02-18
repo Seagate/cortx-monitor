@@ -682,11 +682,11 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
                 "cluster_id":self._cluster_id,
                 "resource_type": resource_type,
                 "resource_id": resource_id,
-                "event_time": epoch_time
+                "event_time": epoch_time,
+                "description": channel_status
             }
 
         specific_info = {
-                "event": channel_status,
                 "channel info": channel_info
             }
 
@@ -922,7 +922,8 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
                         "cluster_id":self._cluster_id ,
                         "resource_type": resource_type,
                         "resource_id": sensor_name,
-                        "event_time": self._get_epoch_time_from_date_and_time(date, _time)
+                        "event_time": self._get_epoch_time_from_date_and_time(date, _time),
+                        "description": event
                     }
 
         if is_last:
@@ -960,7 +961,8 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
             "cluster_id": self._cluster_id,
             "resource_type": resource_type,
             "resource_id": sensor,
-            "event_time": self._get_epoch_time_from_date_and_time(date, _time)
+            "event_time": self._get_epoch_time_from_date_and_time(date, _time),
+            "description": event
         }
 
         try:
@@ -972,7 +974,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         dynamic, static = self._get_sensor_sdr_props(sensor_id)
         specific_info = {}
         specific_info["fru_id"] = sensor
-        specific_info["event"] = event
+
         specific_info.update(static)
 
         # Remove unnecessary characters props
@@ -1037,7 +1039,8 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
             "cluster_id": self._cluster_id,
             "resource_type": resource_type,
             "resource_id": sensor,
-            "event_time": self._get_epoch_time_from_date_and_time(date, _time)
+            "event_time": self._get_epoch_time_from_date_and_time(date, _time),
+            "description": event
         }
 
         try:
@@ -1049,7 +1052,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         dynamic, static = self._get_sensor_sdr_props(sensor_id)
         specific_info = {}
         specific_info["fru_id"] = sensor
-        specific_info["event"] = event
+
         specific_info.update(static)
 
         for key in ['Deassertions Enabled', 'Assertions Enabled',
@@ -1076,6 +1079,8 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
             disk_sensors_list = self._get_sensor_list_by_entity(common['Entity ID'])
             disk_sensors_list.remove(sensor_id)
 
+            description = f"{event} - {status}"
+
             if not specific:
                 specific = {"States Asserted": "N/A", "Sensor Type (Discrete)": "N/A"}
             specific_info = specific
@@ -1092,7 +1097,8 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
                 "cluster_id": self._cluster_id,
                 "resource_type": resource_type,
                 "resource_id": sensor,
-                "event_time": self._get_epoch_time_from_date_and_time(date, _time)
+                "event_time": self._get_epoch_time_from_date_and_time(date, _time),
+                "description": description
             }
             if (event, status) in alert_severity_dict:
                 alert_type = alert_severity_dict[(event, status)][0]
@@ -1101,7 +1107,6 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
                 alert_type = "fault"
                 severity   = "informational"
             specific_info["fru_id"] = sensor
-            specific_info["event"] = f"{event} - {status}"
 
             if is_last:
                 specific_info.update(specific_dynamic)
@@ -1140,7 +1145,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         specific_info = {}
         specific_info.update(common)
         specific_info.update(specific)
-        specific_info.update({'fru_id': sensor, 'event': event})
+        specific_info.update({'fru_id': sensor})
         if is_last:
             specific_info.update(specific_dynamic)
 
@@ -1151,7 +1156,8 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
             "cluster_id":self._cluster_id ,
             "resource_type": resource_type,
             "resource_id": sensor_name,
-            "event_time": self._get_epoch_time_from_date_and_time(date, _time)
+            "event_time": self._get_epoch_time_from_date_and_time(date, _time),
+            "description": event
         }
 
         self._send_json_msg(resource_type, alert_type, severity, info, specific_info)
@@ -1180,7 +1186,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         specific_info = {}
         specific_info.update(common)
         specific_info.update(specific)
-        specific_info.update({'fru_id': sensor, 'event': event})
+        specific_info.update({'fru_id': sensor})
         if is_last:
             specific_info.update(specific_dynamic)
 
@@ -1191,7 +1197,8 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
             "cluster_id":self._cluster_id ,
             "resource_type": resource_type,
             "resource_id": sensor_name,
-            "event_time": self._get_epoch_time_from_date_and_time(date, _time)
+            "event_time": self._get_epoch_time_from_date_and_time(date, _time),
+            "description": event
         }
 
         self._send_json_msg(resource_type, alert_type, severity, info, specific_info)
@@ -1222,7 +1229,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
 #        specific_info = {}
 #        specific_info.update(common)
 #        specific_info.update(specific)
-#        specific_info.update({'fru_id': sensor, 'event': event})
+#        specific_info.update({'fru_id': sensor})
 #        if is_last:
 #            specific_info.update(specific_dynamic)
 #
@@ -1233,7 +1240,8 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
 #            "cluster_id":self._cluster_id ,
 #            "resource_type": resource_type,
 #            "resource_id": sensor_name,
-#            "event_time": self._get_epoch_time_from_date_and_time(date, _time)
+#            "event_time": self._get_epoch_time_from_date_and_time(date, _time),
+#            "description": event
 #        }
 #
 #        self._send_json_msg(resource_type, alert_type, severity, info, specific_info)

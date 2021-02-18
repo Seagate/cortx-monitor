@@ -60,6 +60,7 @@ class RealStorPSUDataMsg(BaseSensorMsg):
         self._resource_id = self._fru_info.get("resource_id")
         self._resource_type = self._fru_info.get("resource_type")
         self._event_time = self._fru_info.get("event_time")
+        description = self._fru_specific_info.get("health-reason")
 
         self._json = {"title": self.TITLE,
                       "description": self.DESCRIPTION,
@@ -86,7 +87,8 @@ class RealStorPSUDataMsg(BaseSensorMsg):
                                             "cluster_id": self._cluster_id,
                                             "resource_type": self._resource_type,
                                             "event_time": self._event_time,
-                                            "resource_id": self._resource_id
+                                            "resource_id": self._resource_id,
+                                            "description": description
                                         },
                                     "specific_info": self._fru_specific_info
                                 }

@@ -96,12 +96,12 @@ class IFdataMsg(BaseSensorMsg):
                                 "node_id": self._node_id,
                                 "cluster_id": self._cluster_id,
                                 "rack_id": self._rack_id,
-                                "resource_type": self._resource_type
+                                "resource_type": self._resource_type,
+                                "description": event
                              },
                              "specific_info": {
                                 "localtime": self._local_time,
-                                "interfaces": self._interfaces,
-                                "event": event
+                                "interfaces": self._interfaces
                              },
                              "host_id": self._host_id,
                              "alert_type":self.alert_type,
