@@ -297,8 +297,7 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
                                             properties=msg_props,
                                             body=jsonMsg)
 
-                    # RAAL stands for RAise ALert
-                    logger.info(f"RAAL: {jsonMsg}")
+                    logger.info(f"Published Alert: {jsonMsg}")
 
                 except connection_exceptions:
                     logger.error("RabbitMQegressProcessor, _transmit_msg_on_exchange, rabbitmq connectivity lost, adding message to consul %s" % self._jsonMsg)
