@@ -232,15 +232,24 @@ class CPUFaultSensor(SensorThread, InternalMsgQ):
         # Populate specific info
         self.fill_specific_info()
         alert_specific_info = self.specific_info
+        res_id = self.RESOURCE_ID + str(cpu)
+
+        for item in alert_specific_info:
+            if item['resource_id'] == res_id:
+                if alert_type == "fault":
+                    description = "Faulty CPU detected, %s state is %s" %(item['resource_id'], item["state"])
+                else:
+                    description = "Fault resolved for CPU, %s state is  %s" %(item['resource_id'], item["state"])
 
         info = {
                 "site_id": self._site_id,
                 "cluster_id": self._cluster_id,
                 "rack_id": self._rack_id,
                 "node_id": self._node_id,
-                "resource_type": self.RESOURCE_TYPE,
+                "resource_type": res_id,
                 "resource_id": self.RESOURCE_ID + str(cpu),
-                "event_time": epoch_time
+                "event_time": epoch_time,
+                "description": description
                 }
 
         internal_json_msg = json.dumps(

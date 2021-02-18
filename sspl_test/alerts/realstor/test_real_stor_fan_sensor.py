@@ -61,6 +61,7 @@ def test_real_stor_fan_module_sensor(agrs):
     assert(fan_module_info.get("resource_type") is not None)
     assert(fan_module_info.get("event_time") is not None)
     assert(fan_module_info.get("resource_id") is not None)
+    assert(fan_module_info.get("description") is not None)
 
     fru_specific_info = fan_module_sensor_msg.get("specific_info", {})
     if fru_specific_info:

@@ -344,7 +344,8 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
                 "node_id": self._node_id,
                 "resource_type": self.RESOURCE_TYPE,
                 "resource_id": resource_id,
-                "event_time": epoch_time
+                "event_time": epoch_time,
+                "description": error_msg
                }
         specific_info = {
             "error": error_msg
