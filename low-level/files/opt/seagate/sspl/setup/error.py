@@ -26,7 +26,7 @@ class SetupError(Exception):
     def __init__(self, rc, message, *args):
         """Initialize with custom error message and return code."""
         self._rc = rc
-        self._desc = message % (args)
+        self._desc = "%s %s" % (message, args)
 
     def __str__(self):
         """Format error string."""
