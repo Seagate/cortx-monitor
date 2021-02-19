@@ -130,6 +130,9 @@ class RabbitMQEgressAccumulatedMsgsProcessor(ScheduledModuleThread, InternalMsgQ
                             continue
                     self._connection.publish(exchange=self._exchange_name,routing_key=self._routing_key,properties=msg_props,body=message)
 
+                    if "sensor_response_type" in dict_msg["message"]:
+                        logger.info(f"Publishing Accumulated Alert: {message}")
+
                 self._connection.cleanup()
         except connection_exceptions as e:
             logger.error(connection_error_msg.format(e))
