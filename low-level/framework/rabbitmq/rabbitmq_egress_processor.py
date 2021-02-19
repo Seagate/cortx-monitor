@@ -276,10 +276,15 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
                 self._add_signature()
                 jsonMsg = json.dumps(self._jsonMsg).encode('utf8')
                 try:
-                    self._connection.publish(exchange=self._exchange_name,
-                                            routing_key=self._routing_key,
-                                            properties=msg_props,
-                                            body=jsonMsg)
+                    if self.store_queue.is_empty():
+                        self._connection.publish(exchange=self._exchange_name,
+                                                routing_key=self._routing_key,
+                                                properties=msg_props,
+                                                body=jsonMsg)
+                    else:
+                        self.store_queue.put(jsonMsg)
+                        logger.info("'Accumulated msg queue' is not Empty." +\
+                                    " Adding the msg to the end of the queue")
                 except connection_exceptions:
                     logger.error("RabbitMQegressProcessor, _transmit_msg_on_exchange, rabbitmq connectivity lost, adding message to consul %s" % self._jsonMsg)
                     self.store_queue.put(jsonMsg)
