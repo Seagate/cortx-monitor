@@ -276,7 +276,7 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
                                              routing_key=self._ack_routing_key,
                                              properties=msg_props,
                                              body=jsonMsg)
-                self._log_debug("_transmit_msg_on_exchange, Successfully Sent: %s" % jsonMsg)
+                logger.debug("_transmit_msg_on_exchange, Successfully Sent: %s" % jsonMsg)
             # Routing requests for IEM msgs sent from the LoggingMsgHandler
             elif self._jsonMsg.get("message").get("IEM_routing") is not None:
                 log_msg = self._jsonMsg.get("message").get("IEM_routing").get("log_msg")
@@ -288,7 +288,7 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
                                                  body=str(log_msg))
                 else:
                     logger.warn("RabbitMQegressProcessor, Attempted to route IEM without a valid 'iem_route_addr' set.")
-                self._log_debug("_transmit_msg_on_exchange, Successfully Sent: %s" % log_msg)
+                logger.debug("_transmit_msg_on_exchange, Successfully Sent: %s" % log_msg)
             else:
                 self._add_signature()
                 jsonMsg = json.dumps(self._jsonMsg).encode('utf8')
