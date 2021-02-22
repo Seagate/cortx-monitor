@@ -26,6 +26,7 @@ import subprocess
 import traceback
 import tempfile
 import re
+import copy
 import dbus
 from dbus import SystemBus, Interface, Array
 import warnings
@@ -37,12 +38,10 @@ from framework.utils.store_factory import store, file_store
 from framework.utils.ipmi_client import IpmiFactory
 from framework.utils.sysfs_interface import SysFS
 from framework.utils.tool_factory import ToolFactory
-from framework.base.sspl_constants import (component, CONSUL_HOST, CONSUL_PORT, node_key_id, PRODUCT_FAMILY,
-    storage_type, server_type, NODE_ID, SITE_ID, RACK_ID, DATA_PATH, cluster_id, node_id, SSPL_STORE_TYPE
-)
-# Onward LDR_R2, consul will be abstracted out and won't exist as hard dependency for SSPL
-if SSPL_STORE_TYPE == "consul":
-    import consul
+from framework.base.sspl_constants import PRODUCT_FAMILY , DATA_PATH
+from framework.utils.conf_utils import (CLUSTER, ENCLOSURE, GLOBAL_CONF, SRVNODE,
+    STORAGE, Conf, NODE_TYPE, TYPE, SITE_ID, RACK_ID, NODE_ID, CLUSTER_ID, RELEASE,
+    TARGET_BUILD)
 
 
 class SSPLHealthView(object):
@@ -64,7 +63,7 @@ class SSPLHealthView(object):
 
     def __init__(self):
 
-        persistent_data_location = sys_data_path
+        persistent_data_location = DATA_PATH
         storage_encl_dir = persistent_data_location + 'encl/frus/'
         self.encl_disks_filename = storage_encl_dir + 'disks/'
         self.encl_psus_filename = storage_encl_dir + 'psus/psudata.json'
@@ -97,11 +96,11 @@ class SSPLHealthView(object):
 
         self.encl_hw_specifics_api = 'configuration'
 
-        self.SITE_ID = sys_site_id
-        self.RACK_ID = sys_rack_id
+        self.SITE_ID = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{SITE_ID}", 'DC01')
+        self.RACK_ID = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{RACK_ID}", 'RC01')
         self.HOST_NAME = socket.getfqdn()
-        self.NODE_ID = sys_node_id
-        self.CLUSTER_ID = sys_cluster_id
+        self.NODE_ID = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{NODE_ID}", 'SN01')
+        self.CLUSTER_ID = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{CLUSTER_ID}", 'CC01')
         self.fru_id_map = None
         self.sensor_id_map = None
         self.ipmi_fru_lst = ['disk', 'fan', 'psu']
@@ -123,7 +122,7 @@ class SSPLHealthView(object):
 
         self._resource_health_view.update({
             "healthview_metadata": {
-                "version": "1.0"
+                "version": "2.0"
             }
         })
         self._resource_health_view['cluster'].update({'cluster_id':self.CLUSTER_ID})
@@ -160,7 +159,7 @@ class SSPLHealthView(object):
                                                         [self.SITE_ID]['rack'][self.RACK_ID]\
                                                         ['nodes']['storage_encl']
                 except Exception as e:
-                    print("Error while extracting values from health view json % : " % e)
+                    print("Error while extracting values from health view json %s : " % e)
                     return False
 
                 for category in ['sw', 'interfaces', 'platform_sensors']:
@@ -180,7 +179,7 @@ class SSPLHealthView(object):
                                                         [self.SITE_ID]['rack'][self.RACK_ID]\
                                                         ['nodes']['storage_encl']
                 except Exception as e:
-                    print("Error while extracting values from health view json % : " % e)
+                    print("Error while extracting values from health view json %s : " % e)
                     return False
                 self.build_health_view_storage_encl_cache(storage_encl_health_json, 'hw')
                 if self.correct_mc_config:
@@ -189,7 +188,7 @@ class SSPLHealthView(object):
                     self.build_health_view_storage_encl_cache(storage_encl_health_json, 'platform_sensors')
                     health_view_created = True
                 else:
-                    print("Management controller IPs are not configured properly on node or consul", end=" ")
+                    print("Management controller IPs are not configured properly on node or in ConfStore", end=" ")
                     print("or it is inaccessible for the current node.")
                     print("Ignored to collect enclosure health view data.")
 
@@ -207,19 +206,19 @@ class SSPLHealthView(object):
                 try:
                     node_health_json = self._resource_health_view['cluster']['sites']\
                                                         [self.SITE_ID]['rack'][self.RACK_ID]\
-                                                        ['nodes']['node:'+node_key_id] =\
+                                                        ['nodes']['node:' + SRVNODE] =\
                                                         self._resource_health_view['cluster']['sites']\
                                                         [self.SITE_ID]['rack'][self.RACK_ID]\
                                                         ['nodes'].pop('node')
                     node_health_json.update({'node_id':self.NODE_ID})
                 except Exception as e:
-                    print("Error while extracting values from health view json % : " % e)
+                    print("Error while extracting values from health view json %s : " % e)
                     return False
 
                 for category in ['hw', 'interfaces', 'platform_sensors']:
                     del self._resource_health_view['cluster']['sites']\
                                                         [self.SITE_ID]['rack'][self.RACK_ID]\
-                                                        ['nodes']['node:'+node_key_id][category]
+                                                        ['nodes']['node:' + SRVNODE][category]
                 self.build_health_view_node_server_cache(node_health_json, 'os')
                 health_view_created = True
 
@@ -227,13 +226,13 @@ class SSPLHealthView(object):
                 try:
                     node_health_json = self._resource_health_view['cluster']['sites']\
                                                         [self.SITE_ID]['rack'][self.RACK_ID]\
-                                                        ['nodes']['node:'+node_key_id] =\
+                                                        ['nodes']['node:' + SRVNODE] =\
                                                         self._resource_health_view['cluster']['sites']\
                                                         [self.SITE_ID]['rack'][self.RACK_ID]\
                                                         ['nodes'].pop('node')
                     node_health_json.update({'node_id':self.NODE_ID})
                 except Exception as e:
-                    print("Error while extracting values from health view json % : " % e)
+                    print("Error while extracting values from health view json %s : " % e)
                     return False
                 self.build_health_view_node_server_cache(node_health_json, 'hw')
                 self.build_health_view_node_server_cache(node_health_json, 'platform_sensors')
@@ -271,7 +270,7 @@ class SSPLHealthView(object):
                     print('Enclosure Support data Json Created Successfully..! :%s' % self.ENCL_MANIFEST_PATH)
 
                 else:
-                    print("Management controller IPs are not configured properly on node or consul", end=" ")
+                    print("Management controller IPs are not configured properly on node or in ConfStore", end=" ")
                     print("or it is inaccessible for the current node.")
                     print("Ignored to collect enclosure manifest data.")
 
@@ -1021,20 +1020,17 @@ class SSPLHealthView(object):
             "fetch_time": int(time.time())
         }
         os_sw_info_dict = {
-            'cortx_sw': {'health':'', 'cortx_sw_info': common_field},
-            'operating_system': {'health':'', 'operating_system_info': common_field},
+            'cortx_sw': {'health':'', 'cortx_sw_info': copy.copy(common_field)},
+            'operating_system': {'health':'', 'operating_system_info': copy.copy(common_field)},
             'disks': {}
         }
         cortx_build_version = 'NA'
-        # TODO: Remove salt dependency
-        cortx_build_cmd = f"sudo salt-call pillar.get release:target_build --output=newline_values_only"
         try:
-            subout = subprocess.Popen(cortx_build_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            result = subout.stdout.readlines()
-            if result == [] or result == "":
-                print("Unable to fetch cortx build version.")
+            cortx_build = Conf.get(GLOBAL_CONF, f"{RELEASE}>{TARGET_BUILD}", 'NA')
+            if cortx_build != 'NA':
+                cortx_build_version = cortx_build.rstrip('\n').split('/')[-2]
             else:
-                cortx_build_version = result[0].decode().rstrip('\n').split('/')[-2]
+                cortx_build_version = cortx_build
         except Exception as e:
             logger.error(f"Unable to fetch cortx build version. : {traceback.format_exc()}")
             print("Unable to fetch cortx build version.")
@@ -1042,7 +1038,7 @@ class SSPLHealthView(object):
 
         os_sw_info_dict['cortx_sw']['cortx_sw_info'].update({'version':cortx_build_version,
                                             'license-info': 'NA',
-                                            'cluster-id':cluster_id})
+                                            'cluster-id':self.CLUSTER_ID})
 
         os_serial = subprocess.Popen(['uname', '-rvmpio'], stdout=subprocess.PIPE).communicate()[0].decode("utf-8").rstrip()
         os_model = subprocess.Popen(['cat', '/etc/system-release'], stdout=subprocess.PIPE).communicate()[0].decode("utf-8").rstrip()
@@ -1218,72 +1214,6 @@ class SSPLHealthView(object):
         smart_status = response['smart_status']['passed']
         return 'OK' if smart_status else 'Fault'
 
-    @staticmethod
-    def _update_required_data_to_consul(args):
-
-        base_info = {'/SYSTEM_INFORMATION/site_id': 'system_information/site_id',
-                '/SYSTEM_INFORMATION/rack_id': 'system_information/rack_id',
-                '/SYSTEM_INFORMATION/node_id': f'system_information/{node_key_id}/node_id',
-                '/SYSTEM_INFORMATION/cluster_id': 'system_information/cluster_id',
-                '/SYSTEM_INFORMATION/data_path': 'system_information/data_path'}
-
-        if storage_type == 'rbod' and args.encl:
-            base_info.update({
-                '/STORAGE_ENCLOSURE/controller/primary_mc/ip': 'storage_enclosure/controller/primary_mc/ip',
-                '/STORAGE_ENCLOSURE/controller/secondary_mc/ip': 'storage_enclosure/controller/secondary_mc/ip',
-                '/STORAGE_ENCLOSURE/controller/primary_mc/port': 'storage_enclosure/controller/primary_mc/port',
-                '/STORAGE_ENCLOSURE/controller/secondary_mc/port': 'storage_enclosure/controller/secondary_mc/port',
-                '/STORAGE_ENCLOSURE/controller/user': 'storage_enclosure/controller/user',
-                '/STORAGE_ENCLOSURE/controller/secret': 'storage_enclosure/controller/password'
-            })
-        host = os.getenv('CONSUL_HOST', CONSUL_HOST)
-        port = os.getenv('CONSUL_PORT', CONSUL_PORT)
-        print(f"Consul Host : {host}")
-        print(f"Consul Port : {port}")
-        sys_site_id = SITE_ID
-        sys_rack_id = RACK_ID
-        sys_node_id = NODE_ID
-        sys_data_path = DATA_PATH
-        try:
-            consul_conn = consul.Consul(host=host, port=port)
-            for key, value in base_info.items():
-                try:
-                    consul_value = consul_conn.kv.get(value)[1]["Value"].decode()
-                    if key.endswith('site_id'):
-                        sys_site_id = consul_value
-                    elif key.endswith('rack_id'):
-                        sys_rack_id = consul_value
-                    elif key.endswith('node_id'):
-                        sys_node_id = consul_value
-                    elif key.endswith('cluster_id'):
-                        sys_cluster_id = consul_value
-                    elif key.endswith('data_path'):
-                        sys_data_path = consul_value
-                    consul_conn.kv.put(component+key, consul_value)
-
-                except TypeError as e:
-                    print(f"Unable get value from common config : {value} with error: {e}")
-                    if key.endswith('site_id'):
-                        consul_value = sys_site_id
-                    elif key.endswith('rack_id'):
-                        consul_value = sys_rack_id
-                    elif key.endswith('node_id'):
-                        consul_value = sys_node_id
-                    elif key.endswith('data_path'):
-                        consul_value = sys_data_path
-                    else:
-                        print("Exiting ...")
-                        sys.exit(os.EX_USAGE)
-                    print(f"Setting default value for {component+key} : {consul_value}")
-                    consul_conn.kv.put(component+key, consul_value)
-                print(f"Inserting common config {component+key}")
-
-            return sys_site_id, sys_rack_id, sys_node_id, sys_cluster_id, sys_data_path
-        except Exception as serror:
-            print(f"Error in connecting consul: {serror}")
-            print("Exiting ...")
-            sys.exit(os.EX_USAGE)
-
 if __name__ == "__main__":
     description = "Resource Health View Schema"
     parser = argparse.ArgumentParser(description=description, formatter_class=\
@@ -1302,16 +1232,19 @@ if __name__ == "__main__":
         print('Missing arguments')
         parser.print_help()
         sys.exit(1)
+    storage_type = Conf.get(GLOBAL_CONF, f"{STORAGE}>{ENCLOSURE}>{TYPE}", 'virtual').lower()
+    server_type = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{NODE_TYPE}", 'virtual').lower()
     print(f"Storage Type : '{storage_type}'")
     print(f"Server Type '{server_type}'")
+
+    if storage_type in ['5u84', 'rbod', 'pods']:
+        storage_type = 'rbod'
 
     if storage_type == 'virtual' and server_type == 'virtual':
         print("Resource health view is not supported in virtual server and virtual storage deployment")
         print("Exiting ...")
         sys.exit(os.EX_USAGE)
 
-    sys_site_id, sys_rack_id, sys_node_id, sys_cluster_id, sys_data_path = \
-        SSPLHealthView._update_required_data_to_consul(args)
     if storage_type == 'rbod' and args.encl:
         from framework.platforms.realstor.realstor_enclosure import singleton_realstorencl
     sys.exit(SSPLHealthView().run(args))

@@ -120,6 +120,7 @@ SENSORS="sensors"
 SERVER_NODES="server_nodes"
 SETUP="setup"
 SITE_ID="site_id"
+NODE_TYPE="node_type"
 SMART_TEST_INTERVAL="smart_test_interval"
 SSPL_LOG_FILE_PATH="sspl_log_file_path"
 STORAGE="storage"
@@ -133,6 +134,7 @@ UNITS="units"
 USER="user"
 USERNAME="username"
 VIRTUAL_HOST="virtual_host"
+TARGET_BUILD="target_build"
 
 # Get SRVNODE and ENCLOSURE so it can be used in other files to get
 # server_node and enclosure specific config
