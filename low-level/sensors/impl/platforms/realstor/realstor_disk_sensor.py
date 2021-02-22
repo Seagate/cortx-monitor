@@ -272,6 +272,21 @@ class RealStorDiskSensor(SensorThread, InternalMsgQ):
             #raise alert for added drive
             self._rss_raise_disk_alert(self.rssencl.FRU_INSERTION, disk_info)
 
+            # Update health status for inserted disk in memfault cache,
+            # to raise fault alert after insertion if inserted disk status is not OK.
+            if disk_info["health"] != "OK":
+                for id_fault, cached_fault in enumerate(self.rssencl.memcache_faults):
+                    #fetch disk slot from component_id present in memcache_faults.
+                    try:
+                        component_id = cached_fault["component-id"]
+                        if component_id.startswith('Disk 0'):
+                            disk_id = int(cached_fault["component-id"].split()[1].split('.')[1])
+                            if disk_id == slot:
+                                self.rssencl.memcache_faults[id_fault]['health'] = "OK"
+                    except Exception as e:
+                        logger.error(f"Error in updating health status for \
+                        inserted disk in memfault cache {e}")
+
         # Update cached disk data after comparison
         self.memcache_disks = self.latest_disks
         self.rssencl.memcache_frus.update({"disks":self.memcache_disks})
