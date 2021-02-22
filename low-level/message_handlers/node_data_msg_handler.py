@@ -393,8 +393,6 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 # Transmit it out over rabbitMQ channel
                 self.host_sensor_data = jsonMsg
                 self.os_sensor_type["memory_usage"] = self.host_sensor_data
-                # RAAL stands for - RAise ALert
-                logger.info(f"RAAL: {jsonMsg}")
                 self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
 
         if (self._node_sensor.total_memory["percent"] < self._host_memory_usage_threshold) and (self.host_fault == True):
@@ -425,7 +423,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 # Transmit it out over rabbitMQ channel
                 self.host_sensor_data = jsonMsg
                 self.os_sensor_type["memory_usage"] = self.host_sensor_data
-                logger.info(f"RAAL: {jsonMsg}")
+
                 self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
                 self.host_fault = False
 
@@ -453,7 +451,6 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             localMountDataMsg.set_uuid(self._uuid)
         jsonMsg = localMountDataMsg.getJson()
 
-        logger.info(f"RAAL: {jsonMsg}")
         # Transmit it out over rabbitMQ channel
         self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
 
@@ -515,7 +512,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 jsonMsg = cpuDataMsg.getJson()
                 self.cpu_sensor_data = jsonMsg
                 self.os_sensor_type["cpu_usage"] = self.cpu_sensor_data
-                logger.info(f"RAAL: {jsonMsg}")
+
                 # Transmit it out over rabbitMQ channel
                 self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
 
@@ -553,7 +550,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             jsonMsg = cpuDataMsg.getJson()
             self.cpu_sensor_data = jsonMsg
             self.os_sensor_type["cpu_usage"] = self.cpu_sensor_data
-            logger.info(f"RAAL: {jsonMsg}")
+
             # Transmit it out over rabbitMQ channel
             self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
             self.cpu_fault = False
@@ -582,7 +579,6 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         #                                'log_msg': '{}'.format(jsonMsg)}}})
         #self._write_internal_msgQ(LoggingMsgHandler.name(), internal_json_msg)
 
-        logger.info(f"RAAL: {jsonMsg}")
         # Transmit it out over rabbitMQ channel
         self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
 
@@ -774,7 +770,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 jsonMsg = diskSpaceAlertMsg.getJson()
                 self.disk_sensor_data = jsonMsg
                 self.os_sensor_type["disk_space"] = self.disk_sensor_data
-                logger.info(f"RAAL: {jsonMsg}")
+
                 # Transmit it out over rabbitMQ channel
                 self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
 
@@ -803,7 +799,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             jsonMsg = diskSpaceAlertMsg.getJson()
             self.disk_sensor_data = jsonMsg
             self.os_sensor_type["disk_space"] = self.disk_sensor_data
-            logger.info(f"RAAL: {jsonMsg}")
+
             # Transmit it out over rabbitMQ channel
             self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
             self.disk_fault = False

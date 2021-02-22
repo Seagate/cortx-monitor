@@ -493,8 +493,6 @@ class RAIDsensor(SensorThread, InternalMsgQ):
             })
         self.prev_alert_type[device] = alert_type
         self.alert_type = None
-        # RAAL stands for - RAise ALert
-        logger.info(f"RAAL: {internal_json_msg}")
 
         # Send the event to node data message handler to generate json message and send out
         self._write_internal_msgQ(NodeDataMsgHandler.name(), internal_json_msg)

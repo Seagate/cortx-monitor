@@ -275,8 +275,6 @@ class IEMSensor(SensorThread, InternalMsgQ):
         }
         iem_data_msg = IEMDataMsg(info)
         json_msg = iem_data_msg.getJson()
-        # RAAL stands for - RAise ALert
-        logger.info(f"RAAL: {json_msg}")
         self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
 
     def _get_component(self, component):
