@@ -24,7 +24,7 @@ from cortx.sspl.bin.sspl_constants import (CONSUL_HOST,
                                            CONSUL_PORT,
                                            PRODUCT_FAMILY,
                                            SSPL_STORE_TYPE,
-                                           GLOBAL_CONFIG)
+                                           GLOBAL_CONFIG_INDEX)
 
 def update_sensor_info(config_index):
 
@@ -45,15 +45,20 @@ def update_sensor_info(config_index):
     except Exception as err:
         raise SetupError(1, "Failed to get machine-id. - %s" % (err))
 
-    srvnode = Conf.get(GLOBAL_CONFIG, "cluster>server_nodes>%s" % (machine_id))
-    enclosure_id  = Conf.get(GLOBAL_CONFIG, "cluster>%s>storage>enclosure_id" % (srvnode))
-    node_key_id = Conf.get(GLOBAL_CONFIG,'cluster>server_nodes>%s' %(machine_id))
+    srvnode = Conf.get(GLOBAL_CONFIG_INDEX,
+                       "cluster>server_nodes>%s" % (machine_id))
+    enclosure_id = Conf.get(GLOBAL_CONFIG_INDEX,
+                            "cluster>%s>storage>enclosure_id" % (srvnode))
+    node_key_id = Conf.get(GLOBAL_CONFIG_INDEX,
+                           'cluster>server_nodes>%s' % (machine_id))
 
-    storage_type = Conf.get(GLOBAL_CONFIG,'storage>%s>type' % enclosure_id)
+    storage_type = Conf.get(GLOBAL_CONFIG_INDEX,
+                            'storage>%s>type' % enclosure_id)
     if storage_type and storage_type.lower() in ["virtual", "jbod"]:
         sensors["REALSTORSENSORS"] = "false"
 
-    server_type = Conf.get(GLOBAL_CONFIG,'cluster>%s>node_type' % (node_key_id))
+    server_type = Conf.get(GLOBAL_CONFIG_INDEX,
+                           'cluster>%s>node_type' % (node_key_id))
     if server_type and server_type.lower() in ["virtual"]:
         sensors["NODEHWSENSOR"] = "false"
         sensors["SASPORTSENSOR"] = "false"

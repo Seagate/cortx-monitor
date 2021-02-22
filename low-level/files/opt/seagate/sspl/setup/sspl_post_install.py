@@ -22,6 +22,7 @@
 import os
 import shutil
 import distutils.dir_util
+from urllib.parse import urlparse
 
 # using cortx package
 from cortx.utils.process import SimpleProcess
@@ -33,17 +34,19 @@ from cortx.sspl.bin.sspl_constants import (REPLACEMENT_NODE_ENV_VAR_FILE,
                                            file_store_config_path,
                                            sspl_config_path,
                                            PRODUCT_BASE_DIR,
-                                           GLOBAL_CONFIG)
+                                           GLOBAL_CONFIG_INDEX,
+                                           SSPL_CONFIG_INDEX)
 from cortx.sspl.lowlevel.framework import sspl_rabbitmq_reinit
 
 
 class SSPLPostInstall:
     """Prepare environment for SSPL service."""
 
+    name = "SSPL Post Install"
+
     def __init__(self, args: str):
         """Ssplpostinstall init."""
-        self.global_config = args.config[0]
-        self.global_config_dump = args.config[-1]
+        self.global_config_url = args.config[0]
         self.name = "sspl_post_install"
         self._script_dir = os.path.dirname(os.path.abspath(__file__))
         self.RSYSLOG_CONF="/etc/rsyslog.d/0-iemfwd.conf"
@@ -51,22 +54,54 @@ class SSPLPostInstall:
         self.PACEMAKER_INSTALLATION_PATH="/lib/ocf/resource.d/seagate/"
         self.ENVIRONMENT = "PROD"
 
+        # Load and dump provsioner global config
+        self.prvsnr_global_config = "prvsnr_global_config"
+        spec_type = "yaml"
+        global_config_dump_loc = "/etc/sspl_global_config_dump.%s" % spec_type
+        self.global_config_dump_url = "%s://%s" % (spec_type,
+                                                   global_config_dump_loc)
+        Conf.load(self.prvsnr_global_config, self.global_config_url)
+        self.dump_global_config()
+
+    def dump_global_config(self):
+        """Dump provisioner global config and load it."""
+        url_spec = urlparse(self.global_config_dump_url)
+        path = url_spec.path
+        store_loc = os.path.dirname(path)
+        if not os.path.exists(store_loc):
+            os.makedirs(store_loc)
+        with open(path, "w") as f:
+            f.write("")
+        # Make copy of global config
+        Conf.load(GLOBAL_CONFIG_INDEX, self.global_config_dump_url)
+        Conf.copy(self.prvsnr_global_config, GLOBAL_CONFIG_INDEX)
+        Conf.save(GLOBAL_CONFIG_INDEX)
+
+    def validate(self):
+        self.PRODUCT_NAME = Conf.get(GLOBAL_CONFIG_INDEX, 'release>product')
+        if not self.PRODUCT_NAME:
+            raise SetupError(1,
+                             "%s - validation failure. %s",
+                             self.name,
+                             "Product not found in SSPL global config dump.")
+
     def process(self):
         """Configure SSPL logs and service based on config."""
-        PRODUCT_NAME = Conf.get(GLOBAL_CONFIG, 'release>product')
 
         # Copy and load product specific sspl config
         if not os.path.exists(file_store_config_path):
-            shutil.copyfile("%s/conf/sspl.conf.%s.yaml" % (SSPL_BASE_DIR, PRODUCT_NAME),
+            shutil.copyfile("%s/conf/sspl.conf.%s.yaml" % (SSPL_BASE_DIR, self.PRODUCT_NAME),
                             file_store_config_path)
 
         # Global config copy path in sspl.conf will be referred by sspl-ll service later.
-        Conf.load("sspl", sspl_config_path)
-        Conf.set("sspl", "SYSTEM_INFORMATION>global_config_url", self.global_config)
-        Conf.set("sspl", "SYSTEM_INFORMATION>global_config_dump_url", self.global_config_dump)
-        Conf.save("sspl")
+        Conf.load(SSPL_CONFIG_INDEX, sspl_config_path)
+        Conf.set(SSPL_CONFIG_INDEX, "SYSTEM_INFORMATION>global_config_url",
+                 self.global_config_url)
+        Conf.set(SSPL_CONFIG_INDEX, "SYSTEM_INFORMATION>global_config_dump_url",
+                 self.global_config_dump_url)
+        Conf.save(SSPL_CONFIG_INDEX)
 
-        environ = Conf.get("sspl", "SYSTEM_INFORMATION>environment")
+        environ = Conf.get(SSPL_CONFIG_INDEX, "SYSTEM_INFORMATION>environment")
         if environ == "DEV":
             self.ENVIRONMENT = environ
 
@@ -78,7 +113,7 @@ class SSPLPostInstall:
         # node replacement case
         # TODO: Need to avoid LDR in CORTX and check if we can use "CORTXr1"
         # Onward LR2, consul will be abstracted out and it won't exit as hard dependeny of SSPL
-        if PRODUCT_NAME == "LDR_R1":
+        if self.PRODUCT_NAME == "LDR_R1":
             # setup consul if not running already
             if not os.path.exists(REPLACEMENT_NODE_ENV_VAR_FILE):
                 sspl_setup_consul = "%s/sspl_setup_consul -e %s" % (self._script_dir,
@@ -93,7 +128,7 @@ class SSPLPostInstall:
         if returncode != 0:
             raise SetupError(returncode, error, pip_cmd)
         # Splitting current function into 2 functions to reduce the complexity of the code.
-        self.install_files(PRODUCT_NAME)
+        self.install_files(self.PRODUCT_NAME)
 
     def install_files(self, PRODUCT):
         """Configure required log files."""
@@ -148,7 +183,8 @@ class SSPLPostInstall:
         # already configured on the healthy node
         # Configure rabbitmq
         if not os.path.exists(REPLACEMENT_NODE_ENV_VAR_FILE):
-            setup_rmq = Conf.get("sspl", "RABBITMQCLUSTER>setup_rmq")
+            setup_rmq = Conf.get(
+                SSPL_CONFIG_INDEX, "RABBITMQCLUSTER>setup_rmq")
             if setup_rmq:
                 Service('dbus').process('start', 'rabbitmq-server.service')
                 sspl_rabbitmq_reinit.main(PRODUCT)

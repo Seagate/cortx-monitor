@@ -260,8 +260,13 @@ class SSPLDevDeploy:
         importlib.reload(site)
         from cortx.utils.conf_store import Conf
 
-        self.sspl_config = "%s/conf/sspl.conf.%s.yaml" % (SSPL_BASE_DIR, self.PRODUCT_VERSION)
-        self.sample_global_config = "%s/conf/sample_global_cortx_config.yaml" % (SSPL_BASE_DIR)
+        sspl_config_index = "sspl"
+        global_config_index = "global"
+
+        self.sspl_config = "%s/conf/sspl.conf.%s.yaml" % (
+            SSPL_BASE_DIR, self.PRODUCT_VERSION)
+        self.sample_global_config = "%s/conf/sample_global_cortx_config.yaml" % SSPL_BASE_DIR
+
         if not os.path.exists(self.sspl_config):
             raise DeployError(1, "sspl config file not found.")
         if not os.path.exists(self.sample_global_config):
@@ -269,40 +274,49 @@ class SSPLDevDeploy:
 
         print("INFO: Updating config values in config files..\n" + \
             "SSPL_CONFIG: %s \nGLOBAL_CONFIG: %s" % (self.sspl_config, self.sample_global_config))
-        Conf.load("sspl", "yaml://%s" % (self.sspl_config))
-        Conf.load("global_config", "yaml://%s" % (self.sample_global_config))
+        Conf.load(sspl_config_index, "yaml://%s" % self.sspl_config)
+        Conf.load(global_config_index, "yaml://%s" % self.sample_global_config)
 
         try:
             with open("/etc/machine-id") as f:
                 machine_id = f.read().strip("\n")
-                Conf.set("global_config", "cluster>server_nodes", {machine_id:"srvnode-1"})
-                Conf.save("global_config")
+                Conf.set(global_config_index, "cluster>server_nodes", {machine_id:"srvnode-1"})
+                Conf.save(global_config_index)
         except Exception as err:
             raise DeployError(1, "Failed to get machine-id. - %s" % (err))
 
-        Conf.set("sspl", "RABBITMQINGRESSPROCESSOR>username", self.RMQ_USER)
-        Conf.set("sspl", "RABBITMQEGRESSPROCESSOR>username", self.RMQ_USER)
+        Conf.set(sspl_config_index,
+                 "RABBITMQINGRESSPROCESSOR>username", self.RMQ_USER)
+        Conf.set(sspl_config_index,
+                 "RABBITMQEGRESSPROCESSOR>username", self.RMQ_USER)
         if self.RMQ_PASSWD:
-            Conf.set("sspl", "RABBITMQINGRESSPROCESSOR>password", self.RMQ_PASSWD)
-            Conf.set("sspl", "RABBITMQEGRESSPROCESSOR>password", self.RMQ_PASSWD)
-            Conf.set("sspl", "LOGGINGPROCESSOR>password", self.RMQ_PASSWD)
-        srvnode = Conf.get("global_config", "cluster>server_nodes>%s" % (machine_id))
-        enclosure_id  = Conf.get("global_config", "cluster>%s>storage>enclosure_id" % (srvnode))
-        Conf.set("global_config", "storage>%s>controller>primary>ip" % (enclosure_id),
-            self.CNTRLR_A)
-        Conf.set("global_config", "storage>%s>controller>primary>port" % (enclosure_id),
-            self.CNTRLR_A_PORT)
-        Conf.set("global_config", "storage>%s>controller>secondary>ip" % (enclosure_id),
-            self.CNTRLR_B)
-        Conf.set("global_config", "storage>%s>controller>secondary>port" % (enclosure_id),
-            self.CNTRLR_B_PORT)
-        Conf.set("global_config", "storage>%s>controller>user" % (enclosure_id),
-            self.CNTRLR_USER)
-        Conf.set("global_config", "storage>%s>controller>secret" % (enclosure_id),
-            self.CNTRLR_PASSWD)
-        Conf.set("global_config", "storage>%s>type" % (enclosure_id), self.STORAGE_TYPE)
-        Conf.set("global_config", "cluster>%s>node_type" % (srvnode), self.SERVER_TYPE)
-        Conf.set("global_config", "release>product", self.PRODUCT_VERSION)
+            Conf.set(sspl_config_index,
+                     "RABBITMQINGRESSPROCESSOR>password", self.RMQ_PASSWD)
+            Conf.set(sspl_config_index,
+                     "RABBITMQEGRESSPROCESSOR>password", self.RMQ_PASSWD)
+            Conf.set(sspl_config_index,
+                     "LOGGINGPROCESSOR>password", self.RMQ_PASSWD)
+        srvnode = Conf.get(
+            global_config_index, "cluster>server_nodes>%s" % (machine_id))
+        enclosure_id = Conf.get(
+            global_config_index, "cluster>%s>storage>enclosure_id" % (srvnode))
+        Conf.set(global_config_index, "storage>%s>controller>primary>ip" % (enclosure_id),
+                 self.CNTRLR_A)
+        Conf.set(global_config_index, "storage>%s>controller>primary>port" % (enclosure_id),
+                 self.CNTRLR_A_PORT)
+        Conf.set(global_config_index, "storage>%s>controller>secondary>ip" % (enclosure_id),
+                 self.CNTRLR_B)
+        Conf.set(global_config_index, "storage>%s>controller>secondary>port" % (enclosure_id),
+                 self.CNTRLR_B_PORT)
+        Conf.set(global_config_index, "storage>%s>controller>user" % (enclosure_id),
+                 self.CNTRLR_USER)
+        Conf.set(global_config_index, "storage>%s>controller>secret" % (enclosure_id),
+                 self.CNTRLR_PASSWD)
+        Conf.set(global_config_index, "storage>%s>type" %
+                 (enclosure_id), self.STORAGE_TYPE)
+        Conf.set(global_config_index, "cluster>%s>node_type" %
+                 (srvnode), self.SERVER_TYPE)
+        Conf.set(global_config_index, "release>product", self.PRODUCT_VERSION)
 
         # Update BMC Information
         if self.PRODUCT_VERSION == "LR2" and not self.BMC_IP:
@@ -315,12 +329,15 @@ class SSPLDevDeploy:
                 raise DeployError(1, "ERROR: -u <BMC user> is required for non LR2 system.")
             if not self.BMC_PASSWD:
                 raise DeployError(1, "ERROR: -p <BMC password> is required for non LR2 system.")
-            Conf.set("global_config", "cluster>%s>bmc>ip" % (srvnode), self.BMC_IP)
-            Conf.set("global_config", "cluster>%s>bmc>user" % (srvnode), self.BMC_USER)
-            Conf.set("global_config", "cluster>%s>bmc>secret" % (srvnode), self.BMC_PASSWD)
+            Conf.set(global_config_index, "cluster>%s>bmc>ip" %
+                     (srvnode), self.BMC_IP)
+            Conf.set(global_config_index, "cluster>%s>bmc>user" %
+                     (srvnode), self.BMC_USER)
+            Conf.set(global_config_index, "cluster>%s>bmc>secret" %
+                     (srvnode), self.BMC_PASSWD)
 
-        Conf.save("sspl")
-        Conf.save("global_config")
+        Conf.save(sspl_config_index)
+        Conf.save(global_config_index)
 
     def setup_rabbitmq(self):
         """Start rabbitmq"""

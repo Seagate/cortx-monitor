@@ -20,7 +20,7 @@ from cortx.utils.conf_store import Conf
 # Indexes
 GLOBAL_CONF = "GLOBAL"
 SSPL_CONF = "SSPL"
-SSPL_TEST_CONF = "SSPL-Test"
+SSPL_TEST_CONF = "SSPL_Test"
 
 # Keys constans
 BMC_INTERFACE="BMC_INTERFACE"
@@ -143,5 +143,5 @@ global_config = Conf.get(SSPL_CONF, "SYSTEM_INFORMATION>global_config_dump_url")
 Conf.load(GLOBAL_CONF, global_config)
 Conf.load(SSPL_TEST_CONF, "yaml:///opt/seagate/cortx/sspl/sspl_test/conf/sspl_tests.conf")
 
-SRVNODE = Conf.get("GLOBAL", f'{CLUSTER}>{SERVER_NODES}')[MACHINE_ID]
-ENCLOSURE = Conf.get("GLOBAL", f"{CLUSTER}>{SRVNODE}>{STORAGE}>{ENCLOSURE_ID}")
+SRVNODE = Conf.get(GLOBAL_CONF, f'{CLUSTER}>{SERVER_NODES}')[MACHINE_ID]
+ENCLOSURE = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{STORAGE}>{ENCLOSURE_ID}")

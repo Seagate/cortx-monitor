@@ -2,7 +2,11 @@ import os
 import shutil
 
 from cortx.sspl.bin.sspl_constants import (PRODUCT_FAMILY,
- file_store_config_path, SSPL_CONFIGURED, DATA_PATH)
+                                           file_store_config_path,
+                                           SSPL_CONFIGURED,
+                                           DATA_PATH,
+                                           SSPL_CONFIG_INDEX,
+                                           sspl_config_path)
 from cortx.utils.process import SimpleProcess
 from cortx.utils.service import Service
 from cortx.utils.conf_store import Conf
@@ -71,12 +75,12 @@ class SoftReset:
 
     def process(self):
         # Remove .json files and truncate iem log file
-        Conf.load("sspl", "yaml://%s" % (file_store_config_path))
+        Conf.load(SSPL_CONFIG_INDEX, sspl_config_path)
         for root, dirs, files in os.walk("/var/cortx/sspl/data/"):
             for file in files:
                 if file.endswith(".json"):
                     os.remove(os.path.join(root, file))
-        IEM_FILE_PATH=Conf.get("sspl", "IEMSENSOR>log_file_path")
+        IEM_FILE_PATH = Conf.get(SSPL_CONFIG_INDEX, "IEMSENSOR>log_file_path")
         if os.path.exists(IEM_FILE_PATH):
             with open(IEM_FILE_PATH, 'r+') as f:
                 f.truncate()

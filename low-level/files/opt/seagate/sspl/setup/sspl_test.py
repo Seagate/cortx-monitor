@@ -23,10 +23,12 @@ from cortx.sspl.bin.conf_based_sensors_enable import update_sensor_info
 from cortx.sspl.bin.sspl_constants import (PRODUCT_FAMILY,
                                            sspl_config_path,
                                            sspl_test_file_path,
-                                           sspl_test_config_path)
+                                           sspl_test_config_path,
+                                           GLOBAL_CONFIG_INDEX,
+                                           SSPL_CONFIG_INDEX,
+                                           SSPL_TEST_CONFIG_INDEX)
 
 TEST_DIR = f"/opt/seagate/{PRODUCT_FAMILY}/sspl/sspl_test"
-GLOBAL_CONFIG = "global_config_dump"
 
 class SSPLTestCmd:
     """Starts test based on plan (sanity|alerts|self_primary|self_secondary)."""
@@ -36,13 +38,16 @@ class SSPLTestCmd:
         self.name = "sspl_test"
         self.plan = "self_primary"
         self.avoid_rmq = False
+        # Load global, sspl and test configs
+        Conf.load(SSPL_CONFIG_INDEX, sspl_config_path)
+        global_config_url = Conf.get(SSPL_CONFIG_INDEX,
+                                     "SYSTEM_INFORMATION>global_config_dump_url")
+        Conf.load(GLOBAL_CONFIG_INDEX, global_config_url)
+        Conf.load(SSPL_TEST_CONFIG_INDEX, sspl_test_config_path)
 
     def process(self):
         self.plan = self.args.plan[0]
         self.avoid_rmq = self.args.avoid_rmq
-
-        Conf.load("sspl", sspl_config_path)
-        Conf.load("sspl_test", sspl_test_config_path)
 
         # Take back up of sspl test config
         sspl_test_backup = '/etc/sspl_tests.conf.back'
@@ -50,20 +55,22 @@ class SSPLTestCmd:
 
         # Add global config in sspl_test config and revert the changes once test completes.
         # Global config path in sspl_tests.conf will be referred by sspl_tests later
-        global_config_dump_url = Conf.get("sspl", "SYSTEM_INFORMATION>global_config_dump_url")
-        Conf.load(GLOBAL_CONFIG, global_config_dump_url)
-        Conf.copy(GLOBAL_CONFIG, "sspl_test")
-        Conf.set("sspl", "SYSTEM_INFORMATION>global_config_dump_url", sspl_test_config_path)
-        Conf.save("sspl")
+        global_config_dump_url = Conf.get(SSPL_CONFIG_INDEX,
+                                          "SYSTEM_INFORMATION>global_config_dump_url")
+        Conf.copy(GLOBAL_CONFIG_INDEX, SSPL_TEST_CONFIG_INDEX)
+        Conf.set(SSPL_CONFIG_INDEX,
+                 "SYSTEM_INFORMATION>global_config_dump_url", sspl_test_config_path)
+        Conf.save(SSPL_CONFIG_INDEX)
 
         # Enable & disable sensors based on environment
-        update_sensor_info('sspl_test')
+        update_sensor_info(SSPL_TEST_CONFIG_INDEX)
 
         # Get rabbitmq values from sspl.conf and update sspl_tests.conf
-        rmq_passwd = Conf.get("sspl", "RABBITMQEGRESSPROCESSOR>password")
-        Conf.set("sspl_test", "RABBITMQEGRESSPROCESSOR>password", rmq_passwd)
-        Conf.set("sspl_test", "RABBITMQINGRESSPROCESSORTESTS>password", rmq_passwd)
-        Conf.save("sspl_test")
+        rmq_passwd = Conf.get(SSPL_CONFIG_INDEX,
+                              "RABBITMQEGRESSPROCESSOR>password")
+        Conf.set(SSPL_TEST_CONFIG_INDEX,
+                 "RABBITMQEGRESSPROCESSOR>password", rmq_passwd)
+        Conf.save(SSPL_TEST_CONFIG_INDEX)
 
         # TODO: Convert shell script to python
         # from cortx.sspl.sspl_test.run_qa_test import RunQATest
@@ -72,8 +79,9 @@ class SSPLTestCmd:
         output, error, returncode = SimpleProcess(CMD).run(realtime_output=True)
         # Restore the original path/file & service, then throw exception
         # if execution is failed.
-        Conf.set("sspl", "SYSTEM_INFORMATION>global_config_dump_url", global_config_dump_url)
-        Conf.save("sspl")
+        Conf.set(SSPL_CONFIG_INDEX,
+                 "SYSTEM_INFORMATION>global_config_dump_url", global_config_dump_url)
+        Conf.save(SSPL_CONFIG_INDEX)
         shutil.copyfile(sspl_test_backup, sspl_test_file_path)
         Service('dbus').process('restart', 'sspl-ll.service')
         if returncode != 0:

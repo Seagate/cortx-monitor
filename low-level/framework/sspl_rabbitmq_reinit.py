@@ -28,7 +28,11 @@ import sys
 import pika
 
 # using cortx package
-from cortx.sspl.bin.sspl_constants import cs_legacy_products, enabled_products, ServiceTypes
+from cortx.sspl.bin.sspl_constants import (cs_legacy_products,
+                                           enabled_products,
+                                           ServiceTypes,
+                                           SSPL_CONFIG_INDEX,
+                                           GLOBAL_CONFIG_INDEX)
 from cortx.utils.security.cipher import Cipher, CipherInvalidToken
 from cortx.utils.conf_store import Conf
 
@@ -69,14 +73,15 @@ def decrypt(key, text):
 
 def main(product):
     """Main line for this program."""
-    virtual_host = Conf.get("sspl", "%s>%s" % (SECTION, VIRT_HOST_KEY))
-    username = Conf.get("sspl", "%s>%s" % (SECTION, USER_NAME_KEY))
-    password = Conf.get("sspl", "%s>%s" % (SECTION, PASSWORD_KEY))
+    virtual_host = Conf.get(SSPL_CONFIG_INDEX, "%s>%s" %
+                            (SECTION, VIRT_HOST_KEY))
+    username = Conf.get(SSPL_CONFIG_INDEX, "%s>%s" % (SECTION, USER_NAME_KEY))
+    password = Conf.get(SSPL_CONFIG_INDEX, "%s>%s" % (SECTION, PASSWORD_KEY))
 
     if product in cs_legacy_products:
-        primary_rabbitmq_server = Conf.get("sspl",
+        primary_rabbitmq_server = Conf.get(SSPL_CONFIG_INDEX,
                                            "%s>%s" % (SECTION, "primary_rabbitmq_host"))
-        secondary_rabbitmq_server = Conf.get("sspl",
+        secondary_rabbitmq_server = Conf.get(SSPL_CONFIG_INDEX,
                                              "%s>%s" % (SECTION, "secondary_rabbitmq_server"))
     _check_rabbitmq_status()
     _start_rabbitmq()
@@ -84,7 +89,8 @@ def main(product):
     _create_vhost_if_necessary(virtual_host, product)
 
     # Decrypt password -----------------------
-    cluster_id = Conf.get("global_config", "%s>%s" % ("cluster", CLUSTER_ID_KEY))
+    cluster_id = Conf.get(GLOBAL_CONFIG_INDEX, "%s>%s" %
+                          ("cluster", CLUSTER_ID_KEY))
     # Generate key
     key = gen_key(cluster_id, ServiceTypes.RABBITMQ.value)
     password = decrypt(key, password.encode('ascii'))
@@ -164,12 +170,13 @@ def _set_ha_policy(queue_name):
 
 def _get_connection_config(section, exchange_key=EXCHANGE_NAME_KEY,
                            queue_key=QUEUE_NAME_KEY, routing_key=ROUTING_KEY):
-    vhost = Conf.get("sspl", "%s>%s" % (section, VIRT_HOST_KEY))
-    exchange_name = Conf.get("sspl", "%s>%s" % (section, exchange_key))
-    queue_name = Conf.get("sspl", "%s>%s" % (section, queue_key))
-    routing_key = Conf.get("sspl", "%s>%s" % (section, routing_key))
-    username =  Conf.get("sspl", "%s>%s" % (section, USER_NAME_KEY))
-    password = Conf.get("sspl", "%s>%s" % (section, PASSWORD_KEY))
+    vhost = Conf.get(SSPL_CONFIG_INDEX, "%s>%s" % (section, VIRT_HOST_KEY))
+    exchange_name = Conf.get(SSPL_CONFIG_INDEX, "%s>%s" %
+                             (section, exchange_key))
+    queue_name = Conf.get(SSPL_CONFIG_INDEX, "%s>%s" % (section, queue_key))
+    routing_key = Conf.get(SSPL_CONFIG_INDEX, "%s>%s" % (section, routing_key))
+    username = Conf.get(SSPL_CONFIG_INDEX, "%s>%s" % (section, USER_NAME_KEY))
+    password = Conf.get(SSPL_CONFIG_INDEX, "%s>%s" % (section, PASSWORD_KEY))
     return vhost, username, password, exchange_name, queue_name, routing_key
 
 
