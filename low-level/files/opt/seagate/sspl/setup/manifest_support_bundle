@@ -25,20 +25,23 @@ import json
 import subprocess
 
 from cortx.utils.conf_store import Conf
-from cortx.sspl.lowlevel.framework.base.sspl_constants import PRODUCT_FAMILY, RESOURCE_HEALTH_VIEW, sspl_config_path
+from cortx.sspl.lowlevel.framework.base.sspl_constants import (PRODUCT_FAMILY,
+                                                               RESOURCE_HEALTH_VIEW,
+                                                               sspl_config_path,
+                                                               GLOBAL_CONFIG_INDEX)
 
 SSPL_CONF = "SSPL_CONFIG"
-GLOBAL_CONF = "GLOBAL_CONFIG"
 Conf.load(SSPL_CONF, sspl_config_path)
-global_config_url = Conf.get(SSPL_CONF, "SYSTEM_INFORMATION>global_config_url")
-Conf.load(GLOBAL_CONF, global_config_url)
+global_config_url = Conf.get(SSPL_CONF, "SYSTEM_INFORMATION>global_config_copy_url")
+Conf.load(GLOBAL_CONFIG_INDEX, global_config_url)
 
 # Get cluster_id and node_key_id from global config
-cluster_id = Conf.get(GLOBAL_CONF, "cluster>cluster_id")
+cluster_id = Conf.get(GLOBAL_CONFIG_INDEX, "cluster>cluster_id")
 try:
     with open("/etc/machine-id") as f:
         machine_id = f.read().strip("\n")
-    node_key_id = Conf.get(GLOBAL_CONF, "cluster>server_nodes>%s" % (machine_id))
+    node_key_id = Conf.get(GLOBAL_CONFIG_INDEX,
+                           "cluster>server_nodes>%s" % (machine_id))
 except:
     node_key_id = "srvnode-1"
 
@@ -98,7 +101,7 @@ class ManifestSupportBundle(object):
                     Can't determine the SSPL state, So enclosure data also being collected.")
                 sspl_state == 'active'
                 subprocess.call([f"{RESOURCE_HEALTH_VIEW}", "-n", "-e", "-s"], shell=False)
-            
+
             date_time = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
             if os.path.exists(self.encl_manifest) and sspl_state == 'active':
                 with open(self.encl_manifest) as json_file:
@@ -125,7 +128,7 @@ class ManifestSupportBundle(object):
                     with open(self.encl_manifest, 'r') as j:
                         encl_manifest_dict = json.loads(j.read())
                         node_encl_summary["cluster"].update(self.fetch_encl_summary_data(encl_manifest_dict["hw_specifics"]))
-                
+
                 if os.path.exists(self.node_manifest):
                     tar.add(self.node_manifest, arcname=file_dir+"/node-{0}_manifest.json".format(self.node_hostname))
                     with open(self.node_manifest, 'r') as j:
@@ -254,7 +257,7 @@ class ManifestSupportBundle(object):
                 if value == "N/A" : value = "NA"
                 encl_dict.update({key:value})
         return encl_dict
-                
+
 if __name__ == "__main__":
     if not os.path.isfile(onGoingRequestPath):
         if len(sys.argv) == 3:

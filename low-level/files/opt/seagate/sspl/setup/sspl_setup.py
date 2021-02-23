@@ -26,6 +26,7 @@ import traceback
 import os
 import syslog
 import time
+from urllib.parse import urlparse
 
 # using cortx package
 from cortx.utils.process import SimpleProcess
@@ -35,6 +36,7 @@ from cortx.utils.validator.v_pkg import PkgV
 from cortx.utils.validator.v_service import ServiceV
 from cortx.utils.validator.error import VError
 from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.error import SetupError
+
 
 class Cmd:
     """Setup Command."""
@@ -127,7 +129,6 @@ class PostInstallCmd(Cmd):
 
     def __init__(self, args: dict):
         super().__init__(args)
-        self.global_config = None
 
     @staticmethod
     def add_args(parser: str, cls: str, name: str):
@@ -138,23 +139,19 @@ class PostInstallCmd(Cmd):
         parsers.set_defaults(command=cls)
 
     def validate(self):
+        """Validate post install command arguments"""
         if not self.args.config:
             raise SetupError(1,
                              "%s - Argument validation failure. %s",
                              self.name,
-                             "Post install requires global config.")
-        self.global_config = self.args.config[0]
-        Conf.load('global_config', self.global_config)
-        product = Conf.get('global_config', 'release>product')
-        if not product:
-            raise SetupError(1,
-                             "%s - validation failure. %s",
-                             self.name,
-                             "Product not found in %s" % (self.global_config))
+                             "Global config is required.")
 
     def process(self):
+        """Configure SSPL post installation"""
         from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.sspl_post_install import SSPLPostInstall
-        SSPLPostInstall(self.args).process()
+        post_install = SSPLPostInstall(self.args)
+        post_install.validate()
+        post_install.process()
 
 
 class InitCmd(Cmd):
@@ -174,32 +171,18 @@ class InitCmd(Cmd):
         parsers.set_defaults(command=cls)
 
     def validate(self):
+        """Validate init command arguments"""
         if not self.args.config:
             raise SetupError(
                     errno.EINVAL,
                     "%s - Argument validation failure. Global config is needed",
                     self.name)
-        global_config = self.args.config[0]
-        Conf.load('global_config', global_config)
-
-        role = Conf.get('global_config', 'release>setup')
-        if not role:
-            raise SetupError(
-                    errno.EINVAL,
-                    "%s - validation failure. %s",
-                    self.name,
-                    "Role not found in %s" % (global_config))
-        from cortx.sspl.bin.sspl_constants import setups
-        if role not in setups:
-            raise SetupError(
-                    errno.EINVAL,
-                    "%s - validataion failure. %s",
-                    self.name,
-                    "Role %s is not supported. Check Usage" % role)
 
     def process(self):
+        """Configure SSPL init"""
         from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.sspl_setup_init import SSPLInit
-        SSPLInit().process()
+        sspl_init = SSPLInit()
+        sspl_init.process()
 
 
 class ConfigCmd(Cmd):
@@ -219,48 +202,27 @@ class ConfigCmd(Cmd):
         parsers.set_defaults(command=cls)
 
     def validate(self):
+        """Validate config command arguments"""
         if not self.args.config:
-            raise SetupError(
-                    errno.EINVAL,
-                    "%s - Argument validation failure. Global config is needed",
-                    self.name)
-        global_config = self.args.config[0]
-        Conf.load('global_config', global_config)
-
-        role = Conf.get('global_config', 'release>setup')
-        if not role:
-            raise SetupError(
-                    errno.EINVAL,
-                    "%s - validation failure. %s",
-                    self.name,
-                    "Role not found in %s" % (global_config))
-        from cortx.sspl.bin.sspl_constants import setups
-        if role not in setups:
-            raise SetupError(
-                    errno.EINVAL,
-                    "%s - validataion failure. %s",
-                    self.name,
-                    "Role %s is not supported. Check Usage" % role)
-
-        product = Conf.get('global_config', 'release>product')
-        if not product:
-            raise SetupError(
-                    errno.EINVAL,
-                    "%s - validation failure. %s",
-                    self.name,
-                    "Product not found in %s" % (global_config))
+            raise SetupError(1,
+                             "%s - Argument validation failure. %s",
+                             self.name,
+                             "Global config is required.")
 
     def process(self):
+        """Setup SSPL configuration"""
         from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.sspl_config import SSPLConfig
-        SSPLConfig().process()
+        sspl_config = SSPLConfig()
+        sspl_config.validate()
+        sspl_config.process()
 
 class TestCmd(Cmd):
     """Starts test based on plan:
     (sanity|alerts|self_primary|self_secondary)."""
 
     name = "test"
-    test_plan_found=False
-    sspl_test_plans = ["sanity", "alerts", "self_primary","self_secondary"]
+    test_plan_found = False
+    sspl_test_plans = ["sanity", "alerts", "self_primary", "self_secondary"]
 
     def __init__(self, args):
         super().__init__(args)
@@ -276,13 +238,13 @@ class TestCmd(Cmd):
         parsers.set_defaults(command=cls)
 
     def validate(self):
+        """Validate test command arguments"""
         if not self.args.config:
-            raise SetupError(
-                    errno.EINVAL,
-                    "%s - Argument validation failure. Global config is needed",
-                    self.name)
-        global_config = self.args.config[0]
-        Conf.load('global_config', global_config)
+            raise SetupError(errno.EINVAL,
+                             "%s - Argument validation failure. %s",
+                             self.name,
+                             "Global config is required.")
+
         if not self.args.plan:
             raise SetupError(
                     errno.EINVAL,
@@ -294,8 +256,10 @@ class TestCmd(Cmd):
             raise SetupError(1, "'sspl-test' rpm pkg not found.")
 
     def process(self):
+        """Setup and run SSPL test"""
         from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.sspl_test import SSPLTestCmd
-        SSPLTestCmd(self.args).process()
+        sspl_test = SSPLTestCmd(self.args)
+        sspl_test.process()
 
 
 class SupportBundleCmd(Cmd):
@@ -316,7 +280,10 @@ class SupportBundleCmd(Cmd):
         sspl_bundle_generate = "%s/%s %s" % (self._script_dir, self.script, args)
         output, error, returncode = SimpleProcess(sspl_bundle_generate).run(realtime_output=True)
         if returncode != 0:
-            raise SetupError(returncode, "%s - validation failure. %s", self.name, error)
+            raise SetupError(returncode,
+                             "%s - validation failure. %s",
+                             self.name,
+                             error)
 
 
 class ManifestSupportBundleCmd(Cmd):
@@ -338,7 +305,10 @@ class ManifestSupportBundleCmd(Cmd):
         manifest_support_bundle = "%s/%s %s" % (self._script_dir, self.script, args)
         output, error, returncode = SimpleProcess(manifest_support_bundle).run(realtime_output=True)
         if returncode != 0:
-            raise SetupError(returncode, "%s - validation failure. %s", self.name, error)
+            raise SetupError(returncode,
+                             "%s - validation failure. %s",
+                             self.name,
+                             error)
 
 
 class ResetCmd(Cmd):
@@ -366,16 +336,15 @@ class ResetCmd(Cmd):
     def validate(self):
         if not self.args.config:
             raise SetupError(
-                    errno.EINVAL,
-                    "%s - Argument validation failure. Global config is required.",
-                    self.name)
-        global_config = self.args.config[0]
-        Conf.load('global_config', global_config)
+                errno.EINVAL,
+                "%s - Argument validation failure. Global config is required.",
+                self.name)
+
         if not self.args.type:
             raise SetupError(
-                    errno.EINVAL,
-                    "%s - Argument validation failure. Reset type is required.",
-                    self.name)
+                errno.EINVAL,
+                "%s - Argument validation failure. Reset type is required.",
+                self.name)
 
         reset_type = self.args.type[0]
         if reset_type == "hard":
@@ -411,7 +380,10 @@ class CheckCmd(Cmd):
             error = "SSPL is not configured. Run provisioner scripts in %s" % (self._script_dir)
             syslog.openlog(logoption=syslog.LOG_PID, facility=syslog.LOG_LOCAL3)
             syslog.syslog(syslog.LOG_ERR, error)
-            raise SetupError(1, "%s - validation failure. %s", self.name, error)
+            raise SetupError(1,
+                             "%s - validation failure. %s",
+                             self.name,
+                             error)
         # Validate required services are running
         retry = 3
         while retry > 0:
