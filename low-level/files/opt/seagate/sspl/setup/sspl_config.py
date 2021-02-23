@@ -48,9 +48,29 @@ class SSPLConfig:
     def __init__(self):
         """Init method for sspl setup config."""
         self._script_dir = os.path.dirname(os.path.abspath(__file__))
-        self.role = None
-        self.config_index = 'sspl'
-        Conf.load(self.config_index, consts.sspl_config_path)
+        # Load sspl and global configs
+        Conf.load(consts.SSPL_CONFIG_INDEX, consts.sspl_config_path)
+        global_config_url = Conf.get(
+            consts.SSPL_CONFIG_INDEX, "SYSTEM_INFORMATION>global_config_copy_url")
+        Conf.load(consts.GLOBAL_CONFIG_INDEX, global_config_url)
+        self.product = Conf.get(consts.GLOBAL_CONFIG_INDEX, 'release>product')
+
+    def validate(self):
+        """Validate config for supported role and product"""
+        # Validate role
+        self.role = Conf.get(consts.GLOBAL_CONFIG_INDEX, 'release>setup')
+        if not self.role:
+            raise SetupError(
+                errno.EINVAL,
+                "%s - validation failure. %s",
+                self.name,
+                "Role not found in global config copy.")
+        if self.role not in consts.setups:
+            raise SetupError(
+                errno.EINVAL,
+                "%s - validation failure. %s",
+                self.name,
+                "Role '%s' is not supported. Check Usage" % self.role)
 
     def replace_expr(self, filename:str, key, new_str:str):
 
@@ -102,20 +122,8 @@ class SSPLConfig:
         if os.path.isfile(consts.SSPL_CONFIGURED):
             os.remove(consts.SSPL_CONFIGURED)
 
-        # validate Product
-        product = Conf.get('global_config', 'release>product')
-
-        if not consts.enabled_products:
-            raise SetupError(errno.EINVAL, "No enabled products!")
-
-        if product not in consts.enabled_products:
-            raise SetupError(
-                        errno.EINVAL,
-                        "Product '%s' is not in enabled products list: %s",
-                        product, consts.enabled_products)
-
         # Add sspl-ll user to required groups and sudoers file etc.
-        sspl_reinit = [f"{consts.SSPL_BASE_DIR}/bin/sspl_reinit", product]
+        sspl_reinit = [f"{consts.SSPL_BASE_DIR}/bin/sspl_reinit", self.product]
         _ , error, returncode = SimpleProcess(sspl_reinit).run()
         if returncode:
             raise SetupError(returncode,
@@ -129,8 +137,10 @@ class SSPLConfig:
 
         # SSPL Log file configuration
         # SSPL_LOG_FILE_PATH = self.getval_from_ssplconf('sspl_log_file_path')
-        SSPL_LOG_FILE_PATH = Conf.get('sspl', 'SYSTEM_INFORMATION>sspl_log_file_path')
-        IEM_LOG_FILE_PATH = Conf.get('sspl', 'IEMSENSOR>log_file_path')
+        SSPL_LOG_FILE_PATH = Conf.get(
+            consts.SSPL_CONFIG_INDEX, 'SYSTEM_INFORMATION>sspl_log_file_path')
+        IEM_LOG_FILE_PATH = Conf.get(
+            consts.SSPL_CONFIG_INDEX, 'IEMSENSOR>log_file_path')
         if SSPL_LOG_FILE_PATH:
             self.replace_expr(consts.RSYSLOG_SSPL_CONF,
                         'File.*[=,"]', 'File="%s"' % SSPL_LOG_FILE_PATH)
@@ -140,7 +150,8 @@ class SSPLConfig:
 
         # IEM configuration
         # Configure log file path in Rsyslog and logrotate configuration file
-        IEM_LOG_FILE_PATH = Conf.get('sspl', 'IEMSENSOR>log_file_path')
+        IEM_LOG_FILE_PATH = Conf.get(
+            consts.SSPL_CONFIG_INDEX, 'IEMSENSOR>log_file_path')
 
         if IEM_LOG_FILE_PATH:
             self.replace_expr(consts.RSYSLOG_IEM_CONF,
@@ -186,7 +197,7 @@ class SSPLConfig:
 
         # Get the types of server and storage we are currently running on and
         # enable/disable sensor groups in the conf file accordingly.
-        update_sensor_info(self.config_index)
+        update_sensor_info(consts.SSPL_CONFIG_INDEX)
 
     def get_rabbitmq_cluster_nodes(self):
         cluster_nodes = None
@@ -232,7 +243,6 @@ class SSPLConfig:
 
     def process(self):
         cmd = "config"
-        self.role = Conf.get('global_config', 'release>setup')
         if(cmd == "config"):
             self.config_sspl()
         else:
@@ -276,8 +286,9 @@ class SSPLConfig:
                 consul_conn.kv.put(
                         "sspl/config/RABBITMQCLUSTER/cluster_nodes", pout)
             else:
-                Conf.set('sspl', 'RABBITMQCLUSTER>cluster_nodes', pout)
-                Conf.save('sspl')
+                Conf.set(consts.SSPL_CONFIG_INDEX,
+                         'RABBITMQCLUSTER>cluster_nodes', pout)
+                Conf.save(consts.SSPL_CONFIG_INDEX)
 
         # Skip this step if sspl is being configured for node replacement
         # scenario as consul data is already
@@ -302,8 +313,9 @@ class SSPLConfig:
                             "sspl/config/SYSTEM_INFORMATION/log_level",
                             log_level)
                 else:
-                    Conf.set('sspl', 'SYSTEM_INFORMATION>log_level', log_level)
-                    Conf.save('sspl')
+                    Conf.set(consts.SSPL_CONFIG_INDEX,
+                             'SYSTEM_INFORMATION>log_level', log_level)
+                    Conf.save(consts.SSPL_CONFIG_INDEX)
             else:
                 raise SetupError(
                             errno.EINVAL,

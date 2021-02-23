@@ -25,12 +25,17 @@ import os
 import pwd
 import errno
 
-from cortx.sspl.bin.sspl_constants import (file_store_config_path,
-                                          HPI_PATH, MDADM_PATH)
+from cortx.sspl.bin.sspl_constants import (sspl_config_path,
+                                           setups,
+                                           HPI_PATH,
+                                           MDADM_PATH,
+                                           SSPL_CONFIG_INDEX,
+                                           GLOBAL_CONFIG_INDEX)
 from cortx.utils.validator.v_service import ServiceV
 from cortx.utils.validator.v_pkg import PkgV
 from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.error import SetupError
 from cortx.utils.conf_store import Conf
+
 
 class SSPLInit:
 
@@ -38,7 +43,7 @@ class SSPLInit:
        rpm dependencies based on role.
     """
 
-    name = "init"
+    name = "SSPL Init"
 
     SSU_DEPENDENCY_RPMS = [
                 "sg3_utils",
@@ -60,11 +65,15 @@ class SSPLInit:
     VM_DEPENDENCY_RPMS = []
 
     def __init__(self):
-
         """initial variables and ConfStor setup."""
         self.role = None
         self.dp = True
-        Conf.load('sspl', f"yaml://{file_store_config_path}")
+        # Load sspl and global configs
+        Conf.load(SSPL_CONFIG_INDEX, sspl_config_path)
+        global_config_url = Conf.get(
+            SSPL_CONFIG_INDEX, "SYSTEM_INFORMATION>global_config_copy_url")
+        Conf.load(GLOBAL_CONFIG_INDEX, global_config_url)
+        self.role = Conf.get(GLOBAL_CONFIG_INDEX, 'release>setup')
 
     def check_dependencies(self):
         # Check for dependency rpms and required processes active state based
@@ -100,16 +109,15 @@ class SSPLInit:
                 os.chown(os.path.join(root, item), uid, grpid)
 
     def process(self):
-        self.role = Conf.get('global_config', 'release>setup')
-
         if self.dp:
             # Extract the data path
-            sspldp = Conf.get('sspl', 'SYSTEM_INFORMATION>data_path')
-            if not sspldp :
+            sspldp = Conf.get(SSPL_CONFIG_INDEX,
+                              'SYSTEM_INFORMATION>data_path')
+            if not sspldp:
                 raise SetupError(
-                            errno.EINVAL,
-                            "Data Path Not set in %s"
-                            % file_store_config_path)
+                    errno.EINVAL,
+                    "Data Path Not set in %s"
+                    % sspl_config_path)
 
             # Crete the directory and assign permissions
             os.makedirs(sspldp, mode=0o766, exist_ok=True)
@@ -140,4 +148,3 @@ class SSPLInit:
                         errno.EINVAL,
                         "No User Found with name : %s", 'sspl-ll')
         os.chown(MDADM_PATH, sspl_ll_uid, -1)
-        
