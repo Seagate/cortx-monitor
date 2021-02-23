@@ -20,9 +20,11 @@ import consul
 
 from cortx.utils.conf_store import Conf
 from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.error import SetupError
-from cortx.sspl.bin.sspl_constants import (CONSUL_HOST, CONSUL_PORT,
-                                        PRODUCT_FAMILY,
-                                        SSPL_STORE_TYPE)
+from cortx.sspl.bin.sspl_constants import (CONSUL_HOST,
+                                           CONSUL_PORT,
+                                           PRODUCT_FAMILY,
+                                           SSPL_STORE_TYPE,
+                                           GLOBAL_CONFIG_INDEX)
 
 def update_sensor_info(config_index):
 
@@ -41,14 +43,22 @@ def update_sensor_info(config_index):
         with open("/etc/machine-id") as f:
             machine_id = f.read().strip("\n")
     except Exception as err:
-        raise SetupError("Failed to get machine-id. - %s" % (err))
+        raise SetupError(1, "Failed to get machine-id. - %s" % (err))
 
-    storage_type = Conf.get('global_config','storage>enclosure_1>type')
+    srvnode = Conf.get(GLOBAL_CONFIG_INDEX,
+                       "cluster>server_nodes>%s" % (machine_id))
+    enclosure_id = Conf.get(GLOBAL_CONFIG_INDEX,
+                            "cluster>%s>storage>enclosure_id" % (srvnode))
+    node_key_id = Conf.get(GLOBAL_CONFIG_INDEX,
+                           'cluster>server_nodes>%s' % (machine_id))
+
+    storage_type = Conf.get(GLOBAL_CONFIG_INDEX,
+                            'storage>%s>type' % enclosure_id)
     if storage_type and storage_type.lower() in ["virtual", "jbod"]:
         sensors["REALSTORSENSORS"] = "false"
 
-    node_key_id = Conf.get('global_config','cluster>server_nodes>%s' %(machine_id))
-    server_type = Conf.get('global_config','cluster>%s>node_type' % (node_key_id))
+    server_type = Conf.get(GLOBAL_CONFIG_INDEX,
+                           'cluster>%s>node_type' % (node_key_id))
     if server_type and server_type.lower() in ["virtual"]:
         sensors["NODEHWSENSOR"] = "false"
         sensors["SASPORTSENSOR"] = "false"
