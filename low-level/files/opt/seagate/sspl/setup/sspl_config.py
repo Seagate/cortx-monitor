@@ -51,7 +51,7 @@ class SSPLConfig:
         # Load sspl and global configs
         Conf.load(consts.SSPL_CONFIG_INDEX, consts.sspl_config_path)
         global_config_url = Conf.get(
-            consts.SSPL_CONFIG_INDEX, "SYSTEM_INFORMATION>global_config_dump_url")
+            consts.SSPL_CONFIG_INDEX, "SYSTEM_INFORMATION>global_config_copy_url")
         Conf.load(consts.GLOBAL_CONFIG_INDEX, global_config_url)
 
     def validate(self):
@@ -63,7 +63,7 @@ class SSPLConfig:
                 errno.EINVAL,
                 "%s - validation failure. %s",
                 self.name,
-                "Role not found in SSPL global config dump.")
+                "Role not found in global config copy.")
         if self.role not in consts.setups:
             raise SetupError(
                 errno.EINVAL,

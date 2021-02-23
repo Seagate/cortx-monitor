@@ -41,7 +41,7 @@ class SSPLTestCmd:
         # Load global, sspl and test configs
         Conf.load(SSPL_CONFIG_INDEX, sspl_config_path)
         global_config_url = Conf.get(SSPL_CONFIG_INDEX,
-                                     "SYSTEM_INFORMATION>global_config_dump_url")
+                                     "SYSTEM_INFORMATION>global_config_copy_url")
         Conf.load(GLOBAL_CONFIG_INDEX, global_config_url)
         Conf.load(SSPL_TEST_CONFIG_INDEX, sspl_test_config_path)
 
@@ -55,11 +55,11 @@ class SSPLTestCmd:
 
         # Add global config in sspl_test config and revert the changes once test completes.
         # Global config path in sspl_tests.conf will be referred by sspl_tests later
-        global_config_dump_url = Conf.get(SSPL_CONFIG_INDEX,
-                                          "SYSTEM_INFORMATION>global_config_dump_url")
+        global_config_copy_url = Conf.get(SSPL_CONFIG_INDEX,
+                                          "SYSTEM_INFORMATION>global_config_copy_url")
         Conf.copy(GLOBAL_CONFIG_INDEX, SSPL_TEST_CONFIG_INDEX)
         Conf.set(SSPL_CONFIG_INDEX,
-                 "SYSTEM_INFORMATION>global_config_dump_url", sspl_test_config_path)
+                 "SYSTEM_INFORMATION>global_config_copy_url", sspl_test_config_path)
         Conf.save(SSPL_CONFIG_INDEX)
 
         # Enable & disable sensors based on environment
@@ -80,7 +80,7 @@ class SSPLTestCmd:
         # Restore the original path/file & service, then throw exception
         # if execution is failed.
         Conf.set(SSPL_CONFIG_INDEX,
-                 "SYSTEM_INFORMATION>global_config_dump_url", global_config_dump_url)
+                 "SYSTEM_INFORMATION>global_config_copy_url", global_config_copy_url)
         Conf.save(SSPL_CONFIG_INDEX)
         shutil.copyfile(sspl_test_backup, sspl_test_file_path)
         Service('dbus').process('restart', 'sspl-ll.service')

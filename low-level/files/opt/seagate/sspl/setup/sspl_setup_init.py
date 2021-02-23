@@ -72,7 +72,7 @@ class SSPLInit:
         # Load sspl and global configs
         Conf.load(SSPL_CONFIG_INDEX, sspl_config_path)
         global_config_url = Conf.get(
-            SSPL_CONFIG_INDEX, "SYSTEM_INFORMATION>global_config_dump_url")
+            SSPL_CONFIG_INDEX, "SYSTEM_INFORMATION>global_config_copy_url")
         Conf.load(GLOBAL_CONFIG_INDEX, global_config_url)
 
     def validate(self):

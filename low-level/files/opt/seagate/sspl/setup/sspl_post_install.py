@@ -35,7 +35,8 @@ from cortx.sspl.bin.sspl_constants import (REPLACEMENT_NODE_ENV_VAR_FILE,
                                            sspl_config_path,
                                            PRODUCT_BASE_DIR,
                                            GLOBAL_CONFIG_INDEX,
-                                           SSPL_CONFIG_INDEX)
+                                           SSPL_CONFIG_INDEX,
+                                           CONFIG_SPEC_TYPE)
 from cortx.sspl.lowlevel.framework import sspl_rabbitmq_reinit
 
 
@@ -54,18 +55,17 @@ class SSPLPostInstall:
         self.PACEMAKER_INSTALLATION_PATH="/lib/ocf/resource.d/seagate/"
         self.ENVIRONMENT = "PROD"
 
-        # Load and dump provsioner global config
+        # Load and dump provsioner supplied global config in required format
         self.prvsnr_global_config = "prvsnr_global_config"
-        spec_type = "yaml"
-        global_config_dump_loc = "/etc/sspl_global_config_dump.%s" % spec_type
-        self.global_config_dump_url = "%s://%s" % (spec_type,
-                                                   global_config_dump_loc)
+        global_config_copy_loc = "/etc/sspl_global_config_copy.%s" % CONFIG_SPEC_TYPE
+        self.global_config_copy_url = "%s://%s" % (CONFIG_SPEC_TYPE,
+                                                   global_config_copy_loc)
         Conf.load(self.prvsnr_global_config, self.global_config_url)
         self.dump_global_config()
 
     def dump_global_config(self):
         """Dump provisioner global config and load it."""
-        url_spec = urlparse(self.global_config_dump_url)
+        url_spec = urlparse(self.global_config_copy_url)
         path = url_spec.path
         store_loc = os.path.dirname(path)
         if not os.path.exists(store_loc):
@@ -73,7 +73,7 @@ class SSPLPostInstall:
         with open(path, "w") as f:
             f.write("")
         # Make copy of global config
-        Conf.load(GLOBAL_CONFIG_INDEX, self.global_config_dump_url)
+        Conf.load(GLOBAL_CONFIG_INDEX, self.global_config_copy_url)
         Conf.copy(self.prvsnr_global_config, GLOBAL_CONFIG_INDEX)
         Conf.save(GLOBAL_CONFIG_INDEX)
 
@@ -97,8 +97,8 @@ class SSPLPostInstall:
         Conf.load(SSPL_CONFIG_INDEX, sspl_config_path)
         Conf.set(SSPL_CONFIG_INDEX, "SYSTEM_INFORMATION>global_config_url",
                  self.global_config_url)
-        Conf.set(SSPL_CONFIG_INDEX, "SYSTEM_INFORMATION>global_config_dump_url",
-                 self.global_config_dump_url)
+        Conf.set(SSPL_CONFIG_INDEX, "SYSTEM_INFORMATION>global_config_copy_url",
+                 self.global_config_copy_url)
         Conf.save(SSPL_CONFIG_INDEX)
 
         environ = Conf.get(SSPL_CONFIG_INDEX, "SYSTEM_INFORMATION>environment")

@@ -28,13 +28,11 @@ sys.path.insert(0, f'/opt/seagate/cortx/sspl/low-level')
 from framework.base.sspl_constants import (PRODUCT_FAMILY, SUPPORT_REQUESTOR_NAME,
     SUPPORT_EMAIL_ID, SUPPORT_CONTACT_NUMBER, ENCL_TRIGGER_LOG_MAX_RETRY,
     ENCL_DOWNLOAD_LOG_MAX_RETRY, ENCL_DOWNLOAD_LOG_WAIT_BEFORE_RETRY, CONSUL_DUMP,
-    sspl_config_path, DATA_PATH)
-from cortx.utils.conf_store import Conf
+    DATA_PATH)
+from framework.utils.conf_utils import Conf, SSPL_CONF
 
 onGoingRequestPath = f"{DATA_PATH}sspl-sb-req.txt"
 sspl_bundle_tmp = f"{DATA_PATH}sspl_bundle_{str(int(time.time()))}"
-SSPL_CONF = "SSPL_CONFIG"
-Conf.load(SSPL_CONF, sspl_config_path)
 
 
 class SSPLBundleError(Exception):
@@ -141,7 +139,7 @@ class SSPLBundleGenerate(object):
                 self.rabbitmq_log_dir: file_dir+"/rabbitmq/logs/",
                 iem_log_dir: file_dir+"/iems/"
             }
-                
+
             with tarfile.open(self.localTempPath+file_name, "w:gz") as tar:
                 for key, value in tarfile_data.items():
                     if os.path.exists(key):
@@ -223,7 +221,7 @@ class SSPLBundleGenerate(object):
 
                 except Exception as e:
                     print("Error in writing {0} file: {1}".format(response, e))
-    
+
     def _run_command(self, command):
         """Run the command and get the response and error returned"""
         process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
