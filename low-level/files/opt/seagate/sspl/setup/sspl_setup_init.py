@@ -65,7 +65,6 @@ class SSPLInit:
     VM_DEPENDENCY_RPMS = []
 
     def __init__(self):
-
         """initial variables and ConfStor setup."""
         self.role = None
         self.dp = True
@@ -74,21 +73,7 @@ class SSPLInit:
         global_config_url = Conf.get(
             SSPL_CONFIG_INDEX, "SYSTEM_INFORMATION>global_config_copy_url")
         Conf.load(GLOBAL_CONFIG_INDEX, global_config_url)
-
-    def validate(self):
         self.role = Conf.get(GLOBAL_CONFIG_INDEX, 'release>setup')
-        if not self.role:
-            raise SetupError(
-                errno.EINVAL,
-                "%s - validation failure. %s",
-                self.name,
-                "Role not found in SSPL global config dump.")
-        if self.role not in setups:
-            raise SetupError(
-                errno.EINVAL,
-                "%s - validation failure. %s",
-                self.name,
-                "Role '%s' is not supported. Check Usage" % self.role)
 
     def check_dependencies(self):
         # Check for dependency rpms and required processes active state based

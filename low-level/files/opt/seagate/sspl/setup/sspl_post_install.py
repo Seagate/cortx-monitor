@@ -36,7 +36,8 @@ from cortx.sspl.bin.sspl_constants import (REPLACEMENT_NODE_ENV_VAR_FILE,
                                            PRODUCT_BASE_DIR,
                                            GLOBAL_CONFIG_INDEX,
                                            SSPL_CONFIG_INDEX,
-                                           CONFIG_SPEC_TYPE)
+                                           CONFIG_SPEC_TYPE,
+                                           enabled_products)
 from cortx.sspl.lowlevel.framework import sspl_rabbitmq_reinit
 
 
@@ -79,11 +80,22 @@ class SSPLPostInstall:
 
     def validate(self):
         self.PRODUCT_NAME = Conf.get(GLOBAL_CONFIG_INDEX, 'release>product')
+
+        # Validate product
         if not self.PRODUCT_NAME:
             raise SetupError(1,
                              "%s - validation failure. %s",
                              self.name,
-                             "Product not found in SSPL global config dump.")
+                             "Product not found in global config copy.")
+
+        if not enabled_products:
+            raise SetupError(1, "No enabled products!")
+
+        if self.PRODUCT_NAME not in enabled_products:
+            raise SetupError(1,
+                            "Product '%s' is not in enabled products list: %s",
+                            self.PRODUCT_NAME,
+                            enabled_products)
 
     def process(self):
         """Configure SSPL logs and service based on config."""

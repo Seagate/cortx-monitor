@@ -182,7 +182,6 @@ class InitCmd(Cmd):
         """Configure SSPL init"""
         from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.sspl_setup_init import SSPLInit
         sspl_init = SSPLInit()
-        sspl_init.validate()
         sspl_init.process()
 
 

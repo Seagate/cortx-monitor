@@ -53,6 +53,7 @@ class SSPLConfig:
         global_config_url = Conf.get(
             consts.SSPL_CONFIG_INDEX, "SYSTEM_INFORMATION>global_config_copy_url")
         Conf.load(consts.GLOBAL_CONFIG_INDEX, global_config_url)
+        self.product = Conf.get(consts.GLOBAL_CONFIG_INDEX, 'release>product')
 
     def validate(self):
         """Validate config for supported role and product"""
@@ -70,16 +71,6 @@ class SSPLConfig:
                 "%s - validation failure. %s",
                 self.name,
                 "Role '%s' is not supported. Check Usage" % self.role)
-
-        # Validate Product
-        self.product = Conf.get(consts.GLOBAL_CONFIG_INDEX, 'release>product')
-        if not consts.enabled_products:
-            raise SetupError(errno.EINVAL, "No enabled products!")
-        if self.product not in consts.enabled_products:
-            raise SetupError(
-                errno.EINVAL,
-                "Product '%s' is not in enabled products list: %s",
-                self.product, consts.enabled_products)
 
     def replace_expr(self, filename:str, key, new_str:str):
 
