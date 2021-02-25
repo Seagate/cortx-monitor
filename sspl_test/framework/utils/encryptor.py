@@ -21,6 +21,7 @@
 
 from cortx.utils.security.cipher import Cipher
 
+
 def gen_key(cluster_id, service_name):
     # Generate key for decryption
     key = Cipher.generate_key(cluster_id, service_name)

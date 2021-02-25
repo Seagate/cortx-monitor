@@ -16,6 +16,7 @@
 from time import sleep
 from subprocess import call
 
+
 def create_nw_interface():
     # Load the dummy interface module
     call("modprobe dummy".split())

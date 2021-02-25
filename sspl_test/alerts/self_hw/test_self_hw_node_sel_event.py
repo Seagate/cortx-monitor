@@ -16,13 +16,14 @@
 import os
 import time
 
-from sspl_test.default import *
-from sspl_test.rabbitmq.rabbitmq_ingress_processor_tests import RabbitMQingressProcessorTests
-from sspl_test.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
-from sspl_test.common import check_sspl_ll_is_running
+from default import world
+from rabbitmq.rabbitmq_ingress_processor_tests import RabbitMQingressProcessorTests
+from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
+from common import check_sspl_ll_is_running
 
 from alerts.self_hw.self_hw_utilities import run_cmd
-from sspl_test.framework.base.sspl_constants import SSPL_TEST_PATH
+from framework.base.sspl_constants import SSPL_TEST_PATH
+
 
 def init(args):
     pass

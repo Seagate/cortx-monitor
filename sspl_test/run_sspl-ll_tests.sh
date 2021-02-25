@@ -18,7 +18,6 @@
 echo "Running Automated Integration Tests for SSPL-LL"
 script_dir=$(dirname $0)
 source "$script_dir"/constants.sh
-export PYTHONPATH="$script_dir"/../..:"$script_dir"/../../low-level
 # Default test plan is sanity
 PLAN=${1:-sanity}
 

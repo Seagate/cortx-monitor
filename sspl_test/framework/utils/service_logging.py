@@ -22,6 +22,7 @@
 import logging.handlers
 import time
 
+
 logger_facility = "sspl-ll"
 logger = logging.getLogger(logger_facility)
 

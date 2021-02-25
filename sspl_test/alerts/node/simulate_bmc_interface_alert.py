@@ -16,7 +16,7 @@
 import os
 from time import sleep
 from subprocess import call
-from sspl_test.framework.base.sspl_constants import CONSUL_PATH
+from framework.base.sspl_constants import CONSUL_PATH
 
 
 def kcs_channel_alert(active_bmc_IF_key,active_bmc_IF_value):

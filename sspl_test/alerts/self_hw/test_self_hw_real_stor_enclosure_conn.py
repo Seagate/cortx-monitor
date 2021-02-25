@@ -23,7 +23,6 @@ import time
 # Retrive show system cmd info
 import requests
 from cortx.utils.security.cipher import Cipher
-
 from alerts.self_hw.self_hw_utilities import get_node_id
 from framework.utils.conf_utils import (CLUSTER, CLUSTER_ID, CONTROLLER,
                                         ENCLOSURE, GLOBAL_CONF, IP, PORT,

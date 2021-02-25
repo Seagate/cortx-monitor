@@ -25,7 +25,7 @@ import abc
 import json
 
 from sched import scheduler
-from .debug import Debug
+from framework.base.debug import Debug
 
 
 class ModuleThread(metaclass=abc.ABCMeta):

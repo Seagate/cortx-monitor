@@ -29,14 +29,14 @@ from jsonschema import Draft3Validator
 from jsonschema import validate
 
 from pika import exceptions
-from sspl_test.framework.utils import encryptor
-from sspl_test.framework.base.module_thread import ScheduledModuleThread
-from sspl_test.framework.base.internal_msgQ import InternalMsgQ
-from sspl_test.framework.utils.service_logging import logger
-from sspl_test.framework.base.sspl_constants import RESOURCE_PATH
-from sspl_test.framework.base.sspl_constants import ServiceTypes
+from framework.utils import encryptor
+from framework.base.module_thread import ScheduledModuleThread
+from framework.base.internal_msgQ import InternalMsgQ
+from framework.utils.service_logging import logger
+from framework.base.sspl_constants import RESOURCE_PATH
+from framework.base.sspl_constants import ServiceTypes
 from .rabbitmq_sspl_test_connector import RabbitMQSafeConnection
-from sspl_test.framework.utils.conf_utils import Conf, SSPL_TEST_CONF
+from framework.utils.conf_utils import Conf, SSPL_TEST_CONF
 import ctypes
 SSPL_SEC = ctypes.cdll.LoadLibrary('libsspl_sec.so.0')
 
