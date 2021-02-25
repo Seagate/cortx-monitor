@@ -28,7 +28,7 @@ import sys
 import pika
 
 # using cortx package
-from cortx.sspl.bin.sspl_constants import (cs_legacy_products,
+from framework.base.sspl_constants import (cs_legacy_products,
                                            enabled_products,
                                            ServiceTypes,
                                            SSPL_CONFIG_INDEX,

@@ -34,7 +34,7 @@ from json_msgs.messages.actuators.ack_response import AckResponseMsg
 from json_msgs.messages.actuators.ndhw_ack_response import NodeHwAckResponseMsg
 from message_handlers.disk_msg_handler import DiskMsgHandler
 from message_handlers.service_msg_handler import ServiceMsgHandler
-from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
+from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 
 
 class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):

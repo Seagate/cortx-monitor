@@ -38,9 +38,6 @@ import traceback
 import uuid
 from threading import Thread
 
-# Add the top level directories
-sys.path.insert(0, f'/opt/seagate/cortx/sspl/low-level')
-
 from actuators.impl.actuator import Actuator
 from framework.actuator_state_manager import actuator_state_manager
 from framework.base.module_thread import SensorThread

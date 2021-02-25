@@ -38,15 +38,22 @@ Installs sspl_ll_cli
 [ "${RPM_BUILD_ROOT}" != "/" ] && rm -rf ${RPM_BUILD_ROOT}
 
 %install
-mkdir -p ${RPM_BUILD_ROOT}/opt/seagate/%{product_family}/sspl/low-level/cli
-cp -rp . ${RPM_BUILD_ROOT}/opt/seagate/%{product_family}/sspl/low-level/cli
+SSPL_BASE=${RPM_BUILD_ROOT}/opt/seagate/%{product_family}/sspl
+mkdir -p $SSPL_BASE/low-level/cli
+cp -rp . $SSPL_BASE/low-level/cli
 
 %post
 SSPL_DIR=/opt/seagate/%{product_family}/sspl
+# Coping independent executable script inside sspl/low-level to easier access core code access.
+cp -p $SSPL_DIR/low-level/cli/sspl-ll-cli $SSPL_DIR/low-level/
 
 [ -d "${SSPL_DIR}/low-level/cli" ] && {
-    ln -sf $SSPL_DIR/low-level/cli/sspl_ll_cli /usr/bin/sspl_ll_cli
+    ln -sf $SSPL_DIR/low-level/sspl-ll-cli /usr/bin/sspl-ll-cli
 }
+
+%postun
+rm -f $SSPL_DIR/low-level/sspl-ll-cli
+rm -f /usr/bin/sspl-ll-cli
 
 %files
 %defattr(-,sspl-ll,root,-)

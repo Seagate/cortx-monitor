@@ -38,7 +38,7 @@ from json_msgs.messages.sensors.node_hw_data import NodeIPMIDataMsg
 from json_msgs.messages.sensors.raid_data import RAIDdataMsg
 from json_msgs.messages.sensors.raid_integrity_msg import RAIDIntegrityMsg
 from message_handlers.logging_msg_handler import LoggingMsgHandler
-from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
+from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 
 
 class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):

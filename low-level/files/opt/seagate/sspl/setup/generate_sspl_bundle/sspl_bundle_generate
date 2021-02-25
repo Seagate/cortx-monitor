@@ -23,8 +23,7 @@ import sys
 import shutil
 import json
 import subprocess
-# Add the top level directories
-sys.path.insert(0, f'/opt/seagate/cortx/sspl/low-level')
+
 from framework.base.sspl_constants import (PRODUCT_FAMILY, SUPPORT_REQUESTOR_NAME,
     SUPPORT_EMAIL_ID, SUPPORT_CONTACT_NUMBER, ENCL_TRIGGER_LOG_MAX_RETRY,
     ENCL_DOWNLOAD_LOG_MAX_RETRY, ENCL_DOWNLOAD_LOG_WAIT_BEFORE_RETRY, CONSUL_DUMP,

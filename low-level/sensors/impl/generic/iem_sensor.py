@@ -40,7 +40,7 @@ from framework.utils.conf_utils import (CLUSTER, CLUSTER_ID, GLOBAL_CONF,
                                         SSPL_CONF, Conf)
 from framework.utils.service_logging import logger
 from json_msgs.messages.sensors.iem_data import IEMDataMsg
-from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
+from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 
 
 class IEMSensor(SensorThread, InternalMsgQ):

@@ -22,8 +22,8 @@ import os
 from enum import Enum
 
 # using cortx package
-from cortx.sspl.lowlevel.framework.utils.salt_util import SaltInterface
-from cortx.sspl.lowlevel.framework.utils.service_logging import logger
+from framework.utils.salt_util import SaltInterface
+from framework.utils.service_logging import logger
 from cortx.utils.conf_store import Conf
 
 

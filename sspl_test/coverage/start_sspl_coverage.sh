@@ -15,7 +15,7 @@ then
 fi
 
 echo "Creating required files for coverage.."
-target_dir='/opt/seagate/cortx/sspl/low-level/framework'
+target_dir='/opt/seagate/cortx/sspl/low-level'
 cov_code_dir='/opt/seagate/cortx/sspl/sspl_test/coverage'
 
 sudo cp $target_dir/sspl_ll_d $target_dir/sspl_ll_d_coverage
@@ -43,8 +43,9 @@ copy_lines 10 24
 curr_line=`grep -n "#DO NOT EDIT: Marker comment to dynamically add signal handler for SIGUSR1 to generate code coverage report" $target_dir/sspl_ll_d_coverage | cut -d : -f1`
 copy_lines 25 25
 
-echo "Changing the soft link and adding permission for /tmp/sspl/ folder"
-ln -sf $target_dir/sspl_ll_d_coverage /usr/bin/sspl_ll_d
+echo "Changing existing sspl_ll_d file and adding permission for /tmp/sspl/ folder"
+sudo mv $target_dir/sspl_ll_d $target_dir/sspl_ll_d.back
+sudo mv $target_dir/sspl_ll_d_coverage $target_dir/sspl_ll_d
 
 chmod 777 /tmp/sspl/* 
 chown sspl-ll:sspl-ll /tmp/sspl/ -R
