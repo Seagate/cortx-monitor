@@ -180,6 +180,8 @@ SYSTEMDWATCHDOG:
    monitor: true
    threaded: true
    monitored_services:
+       - consul.service
+       - rabbitmq-server.service
    smart_test_interval: 999999999
    run_smart_on_start: 'False'
 
