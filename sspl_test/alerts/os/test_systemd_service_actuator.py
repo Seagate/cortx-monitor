@@ -22,6 +22,8 @@ from sspl_test.rabbitmq.rabbitmq_ingress_processor_tests import RabbitMQingressP
 from sspl_test.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 from sspl_test.common import check_sspl_ll_is_running
 
+RESOURCE_TYPE = "node:sw:os:service"
+
 def init(args):
     pass
 
@@ -39,7 +41,7 @@ def test_systemd_service_valid_request(args):
         try:
             # Make sure we get back the message type that matches the request
             msg_type = ingressMsg.get("actuator_response_type")
-            if msg_type["info"]["resource_type"] == "node:sw:os:service":
+            if msg_type["info"]["resource_type"] == RESOURCE_TYPE:
                 service_actuator_msg = msg_type
                 break
         except Exception as exception:
@@ -51,13 +53,13 @@ def test_systemd_service_valid_request(args):
     assert(service_actuator_msg.get("severity") is not None)
     assert(service_actuator_msg.get("host_id") is not None)
     assert(service_actuator_msg.get("info") is not None)
-    
+
     info = service_actuator_msg.get("info")
     assert(info.get("site_id") is not None)
     assert(info.get("node_id") is not None)
     assert(info.get("cluster_id") is not None)
     assert(info.get("rack_id") is not None)
-    assert(info.get("resource_type") is not None)
+    assert(info.get("resource_type") == RESOURCE_TYPE)
     assert(info.get("event_time") is not None)
     assert(info.get("resource_id") is not None)
 
@@ -76,7 +78,7 @@ def test_systemd_service_invalid_request(args):
         try:
             # Make sure we get back the message type that matches the request
             msg_type = ingressMsg.get("actuator_response_type")
-            if msg_type["info"]["resource_type"] == "node:sw:os:service":
+            if msg_type["info"]["resource_type"] == RESOURCE_TYPE:
                 service_actuator_msg = msg_type
                 break
         except Exception as exception:
@@ -94,7 +96,7 @@ def test_systemd_service_invalid_request(args):
     assert(info.get("node_id") is not None)
     assert(info.get("cluster_id") is not None)
     assert(info.get("rack_id") is not None)
-    assert(info.get("resource_type") is not None)
+    assert(info.get("resource_type") == RESOURCE_TYPE)
     assert(info.get("event_time") is not None)
     assert(info.get("resource_id") is not None)
 

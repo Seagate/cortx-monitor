@@ -32,7 +32,8 @@ from framework.base.sspl_constants import enabled_products
 from json_msgs.messages.actuators.service_controller import ServiceControllerMsg
 from json_msgs.messages.sensors.service_watchdog import ServiceWatchdogMsg
 from json_msgs.messages.actuators.ack_response import AckResponseMsg
-from framework.utils.conf_utils import (CLUSTER, GLOBAL_CONF, SRVNODE, SSPL_CONF, Conf)
+from framework.utils.conf_utils import (CLUSTER, GLOBAL_CONF, SRVNODE, SSPL_CONF, Conf, SITE_ID,
+                                        CLUSTER_ID, NODE_ID, RACK_ID, SYSTEMDWATCHDOG, MONITORED_SERVICES)
 # Modules that receive messages from this module
 from message_handlers.logging_msg_handler import LoggingMsgHandler
 
@@ -42,13 +43,6 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
     MODULE_NAME = "ServiceMsgHandler"
     PRIORITY = 2
-
-    SITE_ID = "site_id"
-    CLUSTER_ID = "cluster_id"
-    NODE_ID = "node_id"
-    RACK_ID = "rack_id"
-    SYSTEMDWATCHDOG = "SYSTEMDWATCHDOG"
-    MONITORED_SERVICES = "monitored_services"
 
     RESOURCE_TYPE = "node:sw:os:service"
 
@@ -92,11 +86,11 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
         self._import_products(product)
 
         self.host_id = socket.getfqdn()
-        self.site_id = Conf.get(GLOBAL_CONF, f'{CLUSTER}>{SRVNODE}>{self.SITE_ID}','DC01')
-        self.rack_id = Conf.get(GLOBAL_CONF, f'{CLUSTER}>{SRVNODE}>{self.RACK_ID}','RC01')
-        self.node_id = Conf.get(GLOBAL_CONF, f'{CLUSTER}>{SRVNODE}>{self.NODE_ID}','SN01')
-        self.cluster_id = Conf.get(GLOBAL_CONF, f'{CLUSTER}>{self.CLUSTER_ID}','CC01')
-        self.monitored_services = Conf.get(SSPL_CONF, f'{self.SYSTEMDWATCHDOG}>{self.MONITORED_SERVICES}')
+        self.site_id = Conf.get(GLOBAL_CONF, f'{CLUSTER}>{SRVNODE}>{SITE_ID}','DC01')
+        self.rack_id = Conf.get(GLOBAL_CONF, f'{CLUSTER}>{SRVNODE}>{RACK_ID}','RC01')
+        self.node_id = Conf.get(GLOBAL_CONF, f'{CLUSTER}>{SRVNODE}>{NODE_ID}','SN01')
+        self.cluster_id = Conf.get(GLOBAL_CONF, f'{CLUSTER}>{CLUSTER_ID}','CC01')
+        self.monitored_services = Conf.get(SSPL_CONF, f'{SYSTEMDWATCHDOG}>{MONITORED_SERVICES}')
 
     def _import_products(self, product):
         """Import classes based on which product is being used"""
@@ -162,10 +156,10 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
             error_info = {}
             if service_name not in self.monitored_services:
-                logger.error(f"{service_name} - service is not present in monitored_services list," +\
+                logger.error(f"{service_name} - service is not present in monitored_services list,"
                                 " SSPL cannot monitor/control action for this service.")
-                msg = "Invalid Service name or service_name is not present in monitored_services list." +\
-                            " Add service name in monitored_services in /etc/sspl.conf file."
+                msg = ("Invalid Service name or service_name is not present in monitored_services list."
+                         "Add service name in monitored_services in /etc/sspl.conf file.")
                 error_info["service_name"] = service_name
                 error_info["request"] = service_request
                 error_info["error_msg"] = msg
@@ -306,7 +300,7 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
         pid, cmd_line_path,service_substate = actuator_instance.get_service_info(service_name)
         service_info["service_name"] = service_name
         service_info["service_state"] = result
-        service_info["service_substate"] = service_substate
+        service_info["service_status"] = service_substate
         service_info["PID"] = pid
         service_info["command_line_path"] = cmd_line_path
 

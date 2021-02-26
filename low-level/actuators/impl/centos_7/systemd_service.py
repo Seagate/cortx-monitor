@@ -169,19 +169,19 @@ class SystemdService(Debug):
         return (self._service_name, result, None, False)
 
     def _get_activestate(self):
-        """"Returns the active state of the unit"""
+        """"Returns the active state of the unit."""
         return self._proxy.Get('org.freedesktop.systemd1.Unit',
                                 'ActiveState',
                                 dbus_interface='org.freedesktop.DBus.Properties')
 
     def _get_active_substate(self):
-        """"Returns the active state of the unit"""
+        """"Returns the active state of the unit."""
         return self._proxy.Get('org.freedesktop.systemd1.Unit',
                                 'SubState',
                                 dbus_interface='org.freedesktop.DBus.Properties')
 
     def is_service_enabled(self, service_name):
-        """Check service status : disabled/enabled"""
+        """Check service status : disabled/enabled."""
         state = str(self._manager.GetUnitFileState(service_name))
         if state == 'enabled':
             return True, state
