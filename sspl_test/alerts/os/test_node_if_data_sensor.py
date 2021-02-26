@@ -39,7 +39,7 @@ def test_if_data_sensor(args):
     # Wait untill expected resource type found in RMQ ingress processor msgQ.
     start_time = time.time()
     max_wait_time = 60
-    while not if_data_msg and (time.time()-start_time) < max_wait_time:
+    while not if_data_msg:
         if not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
             ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
             print("Received: {0}".format(ingressMsg))
@@ -50,6 +50,8 @@ def test_if_data_sensor(args):
                     if_data_msg = msg_type
             except Exception as exception:
                 print(exception)
+        if (time.time()-start_time) > max_wait_time:
+            break
 
     assert(if_data_msg is not None)
     assert(if_data_msg.get("alert_type") is not None)

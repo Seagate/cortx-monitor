@@ -37,7 +37,7 @@ def test_disk_space_alert(agrs):
     # Wait untill expected resource type found in RMQ ingress processor msgQ.
     start_time = time.time()
     max_wait_time = 60
-    while not disk_space_sensor_msg and (time.time()-start_time) < max_wait_time:
+    while not disk_space_sensor_msg:
         if not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
             ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
             print("Received: {0}".format(ingressMsg))
@@ -48,6 +48,8 @@ def test_disk_space_alert(agrs):
                     disk_space_sensor_msg = msg_type
             except Exception as exception:
                 print(exception)
+        if (time.time()-start_time) > max_wait_time:
+            break
 
     assert(disk_space_sensor_msg is not None)
     assert(disk_space_sensor_msg.get("alert_type") is not None)
