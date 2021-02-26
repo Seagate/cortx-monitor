@@ -191,12 +191,12 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
                             data = fs.read().rstrip()
                         if self.FAULT_RESOLVED in data:
                             self.alert_type = self.FAULT
-                            self._alert_msg = "Inconsistencies detected in RAID protected disks, in %s RAID array." %device
+                            self._alert_msg = "RAID disks present in %s RAID array, needs synchronization." %device
                             self._send_json_msg(self.alert_type, device, self._alert_msg)
                             self._update_fault_state_file(device, self.FAULT, fault_status_file)
                     else:
                         self.alert_type = self.FAULT
-                        self._alert_msg = "Inconsistencies detected in RAID protected disks, in %s RAID array." %device
+                        self._alert_msg = "RAID disks present in %s RAID array, needs synchronization." %device
                         self._send_json_msg(self.alert_type, device, self._alert_msg)
                         self._update_fault_state_file(device, self.FAULT, fault_status_file)
 
@@ -252,7 +252,7 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
                         faulty_device = data.split(":")[0].rstrip()
                         if device == faulty_device:
                             self.alert_type = self.FAULT_RESOLVED
-                            self._alert_msg = "Prior data inconsistency fault detected in RAID protected disks, in %s RAID array is resolved." %device
+                            self._alert_msg = "RAID disks present in %s RAID array are synchronized." %device
                             self._send_json_msg(self.alert_type, device, self._alert_msg)
                             self._update_fault_state_file(device, self.FAULT_RESOLVED, fault_status_file)
             else:
