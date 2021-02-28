@@ -60,7 +60,7 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
     PRIORITY = 2
 
     # Section and keys in configuration file
-    LOGGINGPROCESSOR = MODULE_NAME.upper()
+    PROCESSOR = MODULE_NAME.upper()
     EXCHANGE_NAME = 'exchange_name'
     QUEUE_NAME = 'queue_name'
     ROUTING_KEY = 'routing_key'
@@ -202,16 +202,16 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
                                  f"{CLUSTER}>{SRVNODE}>{self.NODE_ID_KEY}",
                                  'SN01')
         self._consumer_id = Conf.get(SSPL_CONF,
-                                     f"{self.RABBITMQPROCESSOR}>{self.CONSUMER_ID}",
+                                     f"{self.PROCESSOR}>{self.CONSUMER_ID}",
                                      'sspl_in')
         self._consumer_group = Conf.get(SSPL_CONF,
-                                        f"{self.RABBITMQPROCESSOR}>{self.CONSUMER_GROUP}",
+                                        f"{self.PROCESSOR}>{self.CONSUMER_GROUP}",
                                         'cortx_monitor')
         self._message_type = Conf.get(SSPL_CONF,
-                                      f"{self.RABBITMQPROCESSOR}>{self.MESSAGE_TYPE}",
+                                      f"{self.PROCESSOR}>{self.MESSAGE_TYPE}",
                                       'IEM')
         self._offset = Conf.get(SSPL_CONF,
-                                f"{self.RABBITMQPROCESSOR}>{self.OFFSET}",
+                                f"{self.PROCESSOR}>{self.OFFSET}",
                                 'earliest')
 
     def shutdown(self):

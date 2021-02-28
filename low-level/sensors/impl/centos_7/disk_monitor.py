@@ -41,7 +41,7 @@ from zope.interface import implementer
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.module_thread import SensorThread
 from framework.base.sspl_constants import cs_products
-from framework.rabbitmq.rabbitmq_egress_processor import \
+from framework.messaging.egress_processor import \
     RabbitMQegressProcessor
 from framework.utils.conf_utils import (CLUSTER_ID_KEY, DATA_PATH_KEY,
     GLOBAL_CONF, NODE_ID_KEY, RACK_ID_KEY, SITE_ID_KEY, SSPL_CONF, Conf)
@@ -373,7 +373,7 @@ class DiskMonitor(SensorThread, InternalMsgQ):
                     request = f"SMART_TEST: {jsonMsg_serial_number}"
                     # Send an Ack msg back with SMART results as Unsupported
                     json_msg = AckResponseMsg(request, self.SMART_STATUS_UNSUPPORTED, "").getJson()
-                    self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+                    self._write_internal_msgQ(EgressProcessor.name(), json_msg)
                     return
 
                 self._log_debug("_processMsg, Starting SMART test")
@@ -425,7 +425,7 @@ class DiskMonitor(SensorThread, InternalMsgQ):
 
                                 # Send an Ack msg back with SMART results
                                 json_msg = AckResponseMsg(request, response, uuid).getJson()
-                                self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+                                self._write_internal_msgQ(EgressProcessor.name(), json_msg)
 
                                 # Remove from our list if it's present
                                 serial_number = self._smart_uuids.get(uuid)
@@ -533,7 +533,7 @@ class DiskMonitor(SensorThread, InternalMsgQ):
 
                     # Send an Ack msg back with SMART results
                     json_msg = AckResponseMsg(request, ack_response, smart_uuid).getJson()
-                    self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+                    self._write_internal_msgQ(EgressProcessor.name(), json_msg)
 
                     # Remove from our list
                     self._smart_uuids[smart_uuid] = None
@@ -820,7 +820,7 @@ class DiskMonitor(SensorThread, InternalMsgQ):
 
                                     # Send an Ack msg back with SMART results
                                     json_msg = AckResponseMsg(request, response, smart_uuid).getJson()
-                                    self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+                                    self._write_internal_msgQ(EgressProcessor.name(), json_msg)
 
                                     # Remove from our list
                                     self._smart_uuids[smart_uuid] = None

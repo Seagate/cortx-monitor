@@ -33,7 +33,7 @@ from json_msgs.messages.sensors.realstor_sideplane_expander_data import \
 from json_msgs.messages.sensors.realstor_logical_volume_data import \
     RealStorLogicalVolumeDataMsg
 from json_msgs.messages.sensors.realstor_encl_data_msg import RealStorEnclDataMsg
-from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
+from framework.messaging.egress_processor import EgressProcessor
 
 
 class RealStorEnclMsgHandler(ScheduledModuleThread, InternalMsgQ):
@@ -47,7 +47,7 @@ class RealStorEnclMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
     # Dependency list
     DEPENDENCIES = {
-                    "plugins": ["RabbitMQegressProcessor"],
+                    "plugins": ["EgressProcessor"],
                     "rpms": []
     }
 
@@ -165,7 +165,7 @@ class RealStorEnclMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 # get the previously saved json message for the sensor type
                 # and send the RabbitMQ Message
                 if sensor_message_type:
-                    self._write_internal_msgQ(RabbitMQegressProcessor.name(),
+                    self._write_internal_msgQ(EgressProcessor.name(),
                                               sensor_message_type, self._event)
                 else:
                     self._log_debug(f"RealStorEnclMsgHandler, _process_msg, \
@@ -214,7 +214,7 @@ class RealStorEnclMsgHandler(ScheduledModuleThread, InternalMsgQ):
         # save the json message in memory to serve sspl CLI sensor request
         self._disk_sensor_message = json_msg
         self._fru_type[sensor_type] = self._disk_sensor_message
-        self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg, self._event)
+        self._write_internal_msgQ(EgressProcessor.name(), json_msg, self._event)
 
     def _generate_psu_alert(self, json_msg, host_name, alert_type, alert_id,
                                              severity, info, specific_info, sensor_type):
@@ -231,7 +231,7 @@ class RealStorEnclMsgHandler(ScheduledModuleThread, InternalMsgQ):
         # Saves the json message in memory to serve sspl CLI sensor request
         self._psu_sensor_message = json_msg
         self._fru_type[sensor_type] = self._psu_sensor_message
-        self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg, self._event)
+        self._write_internal_msgQ(EgressProcessor.name(), json_msg, self._event)
 
     def _generate_fan_module_alert(self, json_msg, host_name, alert_type, alert_id,
                                              severity, info, specific_info, sensor_type):
@@ -249,7 +249,7 @@ class RealStorEnclMsgHandler(ScheduledModuleThread, InternalMsgQ):
         self._fan_module_sensor_message = json_msg
         self._fru_type[sensor_type] = \
             self._fan_module_sensor_message
-        self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg, self._event)
+        self._write_internal_msgQ(EgressProcessor.name(), json_msg, self._event)
 
     def _generate_controller_alert(self, json_msg, host_name, alert_type, alert_id,
                                        severity, info, specific_info, sensor_type):
@@ -268,7 +268,7 @@ class RealStorEnclMsgHandler(ScheduledModuleThread, InternalMsgQ):
         self._controller_sensor_message = json_msg
         self._fru_type[sensor_type] = \
             self._controller_sensor_message
-        self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg, self._event)
+        self._write_internal_msgQ(EgressProcessor.name(), json_msg, self._event)
 
     def _generate_expander_alert(self, json_msg, host_name, alert_type,
                                          alert_id, severity, info, specific_info, sensor_type):
@@ -287,7 +287,7 @@ class RealStorEnclMsgHandler(ScheduledModuleThread, InternalMsgQ):
         self._expander_sensor_message = json_msg
         self._fru_type[sensor_type] = \
             self._expander_sensor_message
-        self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg, self._event)
+        self._write_internal_msgQ(EgressProcessor.name(), json_msg, self._event)
 
     def _generate_logical_volume_alert(self, json_msg, host_name, alert_type, alert_id,
                                                    severity, info, specific_info, sensor_type):
@@ -306,7 +306,7 @@ class RealStorEnclMsgHandler(ScheduledModuleThread, InternalMsgQ):
         self._logical_volume_sensor_message = json_msg
         self._fru_type[sensor_type] = \
             self._logical_volume_sensor_message
-        self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg, self._event)
+        self._write_internal_msgQ(EgressProcessor.name(), json_msg, self._event)
 
     def _generate_enclosure_alert(self, json_msg, host_name, alert_type, alert_id,
                                             severity, info, specific_info, sensor_type):
@@ -321,7 +321,7 @@ class RealStorEnclMsgHandler(ScheduledModuleThread, InternalMsgQ):
         json_msg = real_stor_encl_msg.getJson()
         self._enclosure_message = json_msg
         self._fru_type[sensor_type] = self._enclosure_message
-        self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg, self._event)
+        self._write_internal_msgQ(EgressProcessor.name(), json_msg, self._event)
 
     def suspend(self):
         """Suspends the module thread. It should be non-blocking"""

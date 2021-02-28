@@ -18,7 +18,7 @@
 import time
 
 from default import world
-from rabbitmq.rabbitmq_ingress_processor_tests import RabbitMQingressProcessorTests
+from messaging.ingress_processor_tests import IngressProcessorTests
 from common import check_sspl_ll_is_running
 from cortx.utils.service import DbusServiceHandler
 from alerts.os.dummy_service_files import simulate_service_alerts
@@ -62,9 +62,9 @@ def assert_on_mismatch(sensor_response, alert_type):
 
 def read_ingress_queue():
     """Read ingress queue and extract msg with matching RESOURCE_TYPE."""
-    while not world.sspl_modules[RabbitMQingressProcessorTests.name()]\
+    while not world.sspl_modules[IngressProcessorTests.name()]\
                                                     ._is_my_msgQ_empty():
-        ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]\
+        ingressMsg = world.sspl_modules[IngressProcessorTests.name()]\
                                                     ._read_my_msgQ()
         time.sleep(0.1)
         print("Received: %s " % ingressMsg)

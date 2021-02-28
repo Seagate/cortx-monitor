@@ -20,8 +20,8 @@ import time
 import sys
 
 from default import world
-from rabbitmq.rabbitmq_ingress_processor_tests import RabbitMQingressProcessorTests
-from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
+from messaging.ingress_processor_tests import IngressProcessorTests
+from messaging.egress_processor_tests import EgressProcessorTests
 
 
 def init(args):
@@ -32,8 +32,8 @@ def test_real_stor_sensor_current(agrs):
     enclosure_sensor_message_request("ENCL:enclosure:sensor:current", "*")
     enclosure_sensor_msg = None
     time.sleep(4)
-    while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
-        ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
+    while not world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
+        ingressMsg = world.sspl_modules[IngressProcessorTests.name()]._read_my_msgQ()
         time.sleep(0.1)
         print("Received: %s" % ingressMsg)
         try:
@@ -71,8 +71,8 @@ def test_real_stor_sensor_voltage(agrs):
     enclosure_sensor_message_request("ENCL:enclosure:sensor:voltage", "*")
     enclosure_sensor_msg = None
     time.sleep(4)
-    while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
-        ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
+    while not world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
+        ingressMsg = world.sspl_modules[IngressProcessorTests.name()]._read_my_msgQ()
         time.sleep(2)
         print("Received: %s" % ingressMsg)
         try:
@@ -110,8 +110,8 @@ def test_real_stor_sensor_temperature(agrs):
     enclosure_sensor_message_request("ENCL:enclosure:sensor:temperature", "*")
     enclosure_sensor_msg = None
     time.sleep(4)
-    while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
-        ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
+    while not world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
+        ingressMsg = world.sspl_modules[IngressProcessorTests.name()]._read_my_msgQ()
         time.sleep(2)
         print("Received: %s" % ingressMsg)
         try:
@@ -183,8 +183,8 @@ def check_sspl_ll_is_running():
     assert found == True
 
     # Clear the message queue buffer out
-    while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
-        world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
+    while not world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
+        world.sspl_modules[IngressProcessorTests.name()]._read_my_msgQ()
 
 def enclosure_sensor_message_request(resource_type, resource_id):
 
@@ -222,6 +222,6 @@ def enclosure_sensor_message_request(resource_type, resource_id):
             }
         }
     }
-    world.sspl_modules[RabbitMQegressProcessor.name()]._write_internal_msgQ(RabbitMQegressProcessor.name(), egressMsg)
+    world.sspl_modules[EgressProcessorTests.name()]._write_internal_msgQ(EgressProcessorTests.name(), egressMsg)
 
 test_list = [test_real_stor_sensor_current, test_real_stor_sensor_voltage, test_real_stor_sensor_temperature]

@@ -88,7 +88,7 @@ sspl_test_config_path = "%s://%s" % (CONFIG_SPEC_TYPE, sspl_test_file_path)
 global_config_path = "%s://%s" %(CONFIG_SPEC_TYPE, global_config_file_path)
 salt_provisioner_pillar_sls = 'sspl'
 salt_uniq_attr_per_node = ['cluster_id']
-salt_uniq_passwd_per_node = ['RABBITMQINGRESSPROCESSOR', 'RABBITMQEGRESSPROCESSOR', 'LOGGINGPROCESSOR']
+salt_uniq_passwd_per_node = ['INGRESSPROCESSOR', 'EGRESSPROCESSOR', 'LOGGINGPROCESSOR']
 
 # Initialize to default values
 node_key_id = 'srvnode-1'
@@ -172,8 +172,8 @@ SSPL_SETTINGS = {
 
         "_ENABLE_ALWAYS": {
             "ACTUATORS" : ["Service", "RAIDactuator", "Smartctl", "NodeHWactuator", "RealStorActuator"],
-            "CORE_PROCESSORS" : ("RabbitMQegressProcessor", "RabbitMQingressProcessor", "LoggingProcessor"),
-            "DEGRADED_STATE_MODULES" : ("DiskMonitor", "ServiceMonitor", "NodeData", "IEMSensor",
+            "CORE_PROCESSORS" : ("EgressProcessor", "IngressProcessor", "LoggingProcessor"),
+            "DEGRADED_STATE_MODULES" : ("ServiceWatchdog", "NodeData", "IEMSensor",
                 "DiskMsgHandler", "LoggingMsgHandler", "ServiceMsgHandler", "NodeDataMsgHandler",
                 "NodeControllerMsgHandler"),
             "MESSAGE_HANDLERS" : ("DiskMsgHandler", "LoggingMsgHandler", "ServiceMsgHandler", "NodeDataMsgHandler",
@@ -211,7 +211,7 @@ if SSPL_STORE_TYPE == 'consul':
             "password" : "controller/secret",
             "mgmt_interface" : "controller/mgmt_interface"
         },
-        "RABBITMQCLUSTER": {
+        "MESSAGINGCLUSTER": {
             "sspl_key" : "key_provided_by_provisioner",
             "cluster_nodes" : "rabbitmq/cluster_nodes",
             "erlang_cookie" : "rabbitmq/erlang_cookie"
@@ -249,7 +249,7 @@ else:
             "password" : "password",
             "mgmt_interface" : "mgmt_interface"
         },
-        "RABBITMQCLUSTER": {
+        "MESSAGINGCLUSTER": {
             "sspl_key" : "key_provided_by_provisioner",
             "cluster_nodes" : "cluster_nodes",
             "erlang_cookie" : "erlang_cookie"

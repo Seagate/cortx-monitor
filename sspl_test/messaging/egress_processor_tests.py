@@ -15,7 +15,7 @@
 
 """
  ****************************************************************************
-  Description:       Handles outgoing messages via rabbitMQ over localhost
+  Description:       Handles outgoing messages via messaging over localhost
  ****************************************************************************
 """
 
@@ -36,14 +36,14 @@ try:
     SSPL_SEC = ctypes.cdll.LoadLibrary('libsspl_sec.so.0')
 except Exception as ae:
     logger.info(
-        "RabbitMQegressProcessor, libsspl_sec not found, disabling authentication on egress msgs")
+        "EgressProcessorTests, libsspl_sec not found, disabling authentication on egress msgs")
     use_security_lib = False
 
 
-class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
-    """Handles outgoing messages via rabbitMQ over localhost"""
+class EgressProcessorTests(ScheduledModuleThread, InternalMsgQ):
+    """Handles outgoing messages via messaging over localhost"""
 
-    MODULE_NAME = "RabbitMQegressProcessor"
+    MODULE_NAME = "EgressProcessorTests"
     PRIORITY = 1
 
     # Section and keys in configuration file
@@ -53,7 +53,7 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
     CLUSTER_ID = "cluster_id"
     SITE_ID = "site_id"
 
-    RABBITMQPROCESSOR = MODULE_NAME.upper()
+    PROCESSOR = MODULE_NAME.upper()
     SIGNATURE_USERNAME = 'message_signature_username'
     SIGNATURE_TOKEN = 'message_signature_token'
     SIGNATURE_EXPIRES = 'message_signature_expires'
@@ -65,19 +65,19 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
     @staticmethod
     def name():
         """ @return: name of the module."""
-        return RabbitMQegressProcessor.MODULE_NAME
+        return EgressProcessorTests.MODULE_NAME
 
     def __init__(self):
-        super(RabbitMQegressProcessor, self).__init__(self.MODULE_NAME,
+        super(EgressProcessorTests, self).__init__(self.MODULE_NAME,
                                                       self.PRIORITY)
 
     def initialize(self, conf_reader, msgQlist, product):
         """initialize configuration reader and internal msg queues"""
         # Initialize ScheduledMonitorThread
-        super(RabbitMQegressProcessor, self).initialize(conf_reader)
+        super(EgressProcessorTests, self).initialize(conf_reader)
 
         # Initialize internal message queues for this module
-        super(RabbitMQegressProcessor, self).initialize_msgQ(msgQlist)
+        super(EgressProcessorTests, self).initialize_msgQ(msgQlist)
 
         # Flag denoting that a shutdown message has been placed
         #  into our message queue from the main sspl_ll_d handler
@@ -87,7 +87,7 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
 
         self._product = product
 
-        # Configure RabbitMQ Exchange to transmit messages
+        # Configure messaging Exchange to transmit messages
         self._connection = None
         self._read_config()
         self._producer = MessageProducer(producer_id=self._producer_id,
@@ -114,9 +114,9 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
 
         except Exception:
             # Log it and restart the whole process when a failure occurs
-            logger.exception("RabbitMQegressProcessor restarting")
+            logger.exception("EgressProcessorTests restarting")
 
-            # Configure RabbitMQ Exchange to receive messages
+            # Configure messaging Exchange to receive messages
             self._get_connection()
             self._get_ack_connection()
 
@@ -131,29 +131,29 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
             self._scheduler.enter(1, self._priority, self.run, ())
 
     def _read_config(self):
-        """Configure the RabbitMQ exchange with defaults available"""
+        """Configure the messaging exchange with defaults available"""
         try:
             self._signature_user = Conf.get(SSPL_TEST_CONF,
-                                            f"{self.RABBITMQPROCESSOR}>{self.SIGNATURE_USERNAME}",
+                                            f"{self.PROCESSOR}>{self.SIGNATURE_USERNAME}",
                                             'sspl-ll')
             self._signature_token = Conf.get(SSPL_TEST_CONF,
-                                             f"{self.RABBITMQPROCESSOR}>{self.SIGNATURE_TOKEN}",
+                                             f"{self.PROCESSOR}>{self.SIGNATURE_TOKEN}",
                                              'FAKETOKEN1234')
             self._signature_expires = Conf.get(SSPL_TEST_CONF,
-                                               f"{self.RABBITMQPROCESSOR}>{self.SIGNATURE_EXPIRES}",
+                                               f"{self.PROCESSOR}>{self.SIGNATURE_EXPIRES}",
                                                "3600")
             self._producer_id = Conf.get(SSPL_TEST_CONF,
-                                         f"{self.RABBITMQPROCESSOR}>{self.PRODUCER_ID}",
+                                         f"{self.PROCESSOR}>{self.PRODUCER_ID}",
                                          "sspl-sensor")
             self._message_type = Conf.get(SSPL_TEST_CONF,
-                                          f"{self.RABBITMQPROCESSOR}>{self.MESSAGE_TYPE}",
+                                          f"{self.PROCESSOR}>{self.MESSAGE_TYPE}",
                                           "Alerts")
             self._method = Conf.get(SSPL_TEST_CONF,
-                                    f"{self.RABBITMQPROCESSOR}>{self.METHOD}",
+                                    f"{self.PROCESSOR}>{self.METHOD}",
                                     "Sync")
 
         except Exception as ex:
-            logger.error("RabbitMQegressProcessor, _read_config: %r" % ex)
+            logger.error("EgressProcessorTests, _read_config: %r" % ex)
 
     def _add_signature(self):
         """Adds the authentication signature to the message"""
@@ -184,7 +184,7 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
             self._jsonMsg["signature"] = "SecurityLibNotInstalled"
 
     def _transmit_msg_on_exchange(self):
-        """Transmit json message onto RabbitMQ exchange"""
+        """Transmit json message onto messaging exchange"""
         self._log_debug(
             "_transmit_msg_on_exchange, jsonMsg: %s" % self._jsonMsg)
 
@@ -201,7 +201,7 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
                         "thread_response") == \
                     "SSPL-LL is shutting down":
                 logger.info(
-                    "RabbitMQegressProcessor, _transmit_msg_on_exchange, received"
+                    "EgressProcessorTests, _transmit_msg_on_exchange, received"
                     "global shutdown message from sspl_ll_d")
                 self._request_shutdown = True
 
@@ -231,7 +231,7 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
                     self._producer.send([json.dumps(self._jsonMsg)])
                 else:
                     logger.warn(
-                        "RabbitMQegressProcessor, Attempted to route IEM without a valid 'iem_route_addr' set.")
+                        "EgressProcessorTests, Attempted to route IEM without a valid 'iem_route_addr' set.")
 
             elif self._jsonMsg.get("message") is not None:
                 message = self._jsonMsg.get("message")
@@ -253,9 +253,9 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
 
         except Exception as ex:
             logger.exception(
-                "RabbitMQegressProcessor, _transmit_msg_on_exchange: %r" % ex)
+                "EgressProcessorTests, _transmit_msg_on_exchange: %r" % ex)
             self._msg_sent_succesfull = False
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""
-        super(RabbitMQegressProcessor, self).shutdown()
+        super(EgressProcessorTests, self).shutdown()

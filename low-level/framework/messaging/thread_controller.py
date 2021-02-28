@@ -33,14 +33,14 @@ from framework.base.sspl_constants import (SSPL_SETTINGS, OperatingSystem,
                                            cs_legacy_products, cs_products,
                                            enabled_products,
                                            sspl_settings_configured_groups)
-from framework.rabbitmq.logging_processor import LoggingProcessor
-from framework.rabbitmq.plane_cntrl_rmq_egress_processor import \
+from framework.messaging.logging_processor import LoggingProcessor
+from framework.messaging.plane_cntrl_rmq_egress_processor import \
     PlaneCntrlRMQegressProcessor
 # Import modules to control
-from framework.rabbitmq.rabbitmq_egress_processor import \
-    RabbitMQegressProcessor
-from framework.rabbitmq.rabbitmq_ingress_processor import \
-    RabbitMQingressProcessor
+from framework.messaging.egress_processor import \
+    EgressProcessor
+from framework.messaging.ingress_processor import \
+    IngressProcessor
 from framework.utils.conf_utils import SSPL_CONF, Conf
 from framework.utils.service_logging import logger
 from json_msgs.messages.actuators.thread_controller import ThreadControllerMsg
@@ -78,7 +78,7 @@ def _run_thread_capture_errors(curr_module, sspl_modules, msgQlist,
         json_msg = ThreadControllerMsg(curr_module.name(), error_msg).getJson()
 
         if product.lower() in [x.lower() for x in enabled_products]:
-            self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+            self._write_internal_msgQ(EgressProcessor.name(), json_msg)
         elif product.lower() in [x.lower() for x in cs_legacy_products]:
             self._write_internal_msgQ(
                 PlaneCntrlRMQegressProcessor.name(), json_msg)
@@ -97,7 +97,7 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
     # Section and keys in configuration file
     THREADCONTROLLER = MODULE_NAME.upper()
     ALWAYS_ACTIVE_MODULES = [
-        "RabbitMQegressProcessor", "RabbitMQingressProcessor",
+        "EgressProcessor", "IngressProcessor",
         "ThreadController", "LoggingMsgHandler"
     ]
 
@@ -214,7 +214,7 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
             # Notify external applications that've started up successfully
             startup_msg = "SSPL-LL service has started successfully"
             json_msg = ThreadControllerMsg(ThreadController.name(), startup_msg).getJson()
-            self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+            self._write_internal_msgQ(EgressProcessor.name(), json_msg)
             self._threads_initialized = True
 
             #self._set_debug(True)
@@ -274,8 +274,8 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
             self._start_module(module_name)
         elif thread_request == "stop":
             # Don't let the outside world stop us from using RabbitMQ connection or shut down this thread
-            if module_name == "RabbitMQegressProcessor" or \
-                module_name == "RabbitMQingressProcessor" or \
+            if module_name == "EgressProcessor" or \
+                module_name == "IngressProcessor" or \
                 module_name == "ThreadController":
                     logger.warn("Attempt to stop RabbitMQ or ThreadController Processors, \
                                     ignoring. Please try 'restart' instead.")
@@ -318,7 +318,7 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
         msgString = threadControllerMsg.getJson()
         logger.info("ThreadController, response: %s" % str(msgString))
         if self._product.lower() in [x.lower() for x in enabled_products]:
-            self._write_internal_msgQ(RabbitMQegressProcessor.name(), msgString)
+            self._write_internal_msgQ(EgressProcessor.name(), msgString)
         elif self._product.lower() in [x.lower() for x in cs_legacy_products]:
             self._write_internal_msgQ(PlaneCntrlRMQegressProcessor.name(), msgString)
 
@@ -453,7 +453,7 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
 
                 # Populate an actuator response message and transmit
                 msgString = ThreadControllerMsg("All Modules", "Restarted with debug mode off").getJson()
-                self._write_internal_msgQ(RabbitMQegressProcessor.name(), msgString)
+                self._write_internal_msgQ(EgressProcessor.name(), msgString)
                 return True
 
         return False
@@ -468,12 +468,12 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
         """Clean up scheduler queue and gracefully shutdown thread"""
         super(ThreadController, self).shutdown()
 
-    def check_RabbitMQegressProcessor_is_running(self):
+    def check_EgressProcessor_is_running(self):
         """Used by the shutdown_handler to allow queued egress msgs to complete"""
         if self._product.lower() in [x.lower() for x in enabled_products]:
             return self._sspl_modules[PlaneCntrlRMQegressProcessor.name()].is_running()
         elif self._product.lower() in [x.lower() for x in cs_legacy_products]:
-            return self._sspl_modules[RabbitMQegressProcessor.name()].is_running()
+            return self._sspl_modules[EgressProcessor.name()].is_running()
 
     def _get_degraded_state_modules_list(self):
         """Reads list of modules to run in degraded state and returns a list

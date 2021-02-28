@@ -13,7 +13,7 @@
 # about this software or licensing, please email opensource@seagate.com or
 # cortx-questions@seagate.com.
 
-"""RabbitMQ processor for automated integration tests"""
+"""messaging processor for automated integration tests"""
 
 from threading import Event
 

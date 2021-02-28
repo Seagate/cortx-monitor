@@ -22,8 +22,8 @@ import sys
 import subprocess
 
 from default import world
-from rabbitmq.rabbitmq_ingress_processor_tests import RabbitMQingressProcessorTests
-from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
+from messaging.ingress_processor_tests import IngressProcessorTests
+from messaging.egress_processor_tests import EgressProcessorTests
 from common import check_sspl_ll_is_running
 
 
@@ -37,10 +37,10 @@ def test_real_stor_enclosure_sensor(agrs):
     encl_sensor_message_request("enclosure")
     encl_sensor_msg = None
     while time.time() < timeout:
-        if world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
+        if world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
             time.sleep(1)
             continue
-        ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
+        ingressMsg = world.sspl_modules[IngressProcessorTests.name()]._read_my_msgQ()
         time.sleep(0.1)
         print("Received: %s" % ingressMsg)
         try:
@@ -119,6 +119,6 @@ def encl_sensor_message_request(resource_type):
             }
         }
     }
-    world.sspl_modules[RabbitMQegressProcessor.name()]._write_internal_msgQ(RabbitMQegressProcessor.name(), egressMsg)
+    world.sspl_modules[EgressProcessorTests.name()]._write_internal_msgQ(EgressProcessorTests.name(), egressMsg)
 
 test_list = [test_real_stor_enclosure_sensor]

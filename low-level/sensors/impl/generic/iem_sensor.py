@@ -39,7 +39,7 @@ from framework.utils.conf_utils import (CLUSTER_ID_KEY, GLOBAL_CONF, NODE_ID_KEY
     RACK_ID_KEY, SITE_ID_KEY, SSPL_CONF, Conf)
 from framework.utils.service_logging import logger
 from json_msgs.messages.sensors.iem_data import IEMDataMsg
-from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
+from framework.messaging.egress_processor import EgressProcessor
 
 
 class IEMSensor(SensorThread, InternalMsgQ):
@@ -87,7 +87,7 @@ class IEMSensor(SensorThread, InternalMsgQ):
 
     # Dependency list
     DEPENDENCIES = {
-                    "plugins": ["RabbitMQegressProcessor"],
+                    "plugins": ["EgressProcessor"],
                     "rpms": []
     }
 
@@ -274,7 +274,7 @@ class IEMSensor(SensorThread, InternalMsgQ):
         }
         iem_data_msg = IEMDataMsg(info)
         json_msg = iem_data_msg.getJson()
-        self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+        self._write_internal_msgQ(EgressProcessor.name(), json_msg)
 
     def _get_component(self, component):
         "Decode a component"

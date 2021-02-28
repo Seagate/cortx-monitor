@@ -20,8 +20,8 @@
 
 SSPL_LL_SETTING:
    core_processors:
-      - RabbitMQegressProcessor
-      - RabbitMQingressProcessor
+      - EgressProcessor
+      - IngressProcessor
       - LoggingProcessor
    message_handlers:
       - DiskMsgHandler
@@ -71,13 +71,13 @@ SSPL_LL_SETTING:
       - MemFaultSensor
       - CPUFaultSensor
 
-RABBITMQINGRESSPROCESSOR:
+INGRESSPROCESSOR:
    consumer_id: sspl_actuator
    consumer_group: cortx_monitor
    message_type: requests
    offset: latest
 
-RABBITMQEGRESSPROCESSOR:
+EGRESSPROCESSOR:
    message_signature_username: sspl-ll
    message_signature_token: ALOIUD986798df69a8koDISLKJ282983
    message_signature_expires: 3600
@@ -92,8 +92,8 @@ LOGGINGPROCESSOR:
    message_type: IEM
    offset: earliest
 
-RABBITMQCLUSTER:
-   setup_rmq: true
+MESSAGINGCLUSTER:
+   setup_cluster: true
    cluster_nodes: localhost
    erlang_cookie: QLDZYPYEYGHECTHYQXFJ
 

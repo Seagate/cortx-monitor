@@ -30,8 +30,8 @@ from jsonschema import Draft3Validator, validate
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.sspl_constants import RESOURCE_PATH
-from framework.rabbitmq.rabbitmq_egress_processor import \
-    RabbitMQegressProcessor
+from framework.messaging.egress_processor import \
+    EgressProcessor
 from framework.utils.conf_utils import CLUSTER, SRVNODE, SSPL_CONF, Conf
 from framework.utils.service_logging import logger
 from json_msgs.messages.actuators.ack_response import AckResponseMsg
@@ -46,14 +46,14 @@ except Exception as ae:
     use_security_lib = False
 
 
-class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
-    """Handles incoming messages via rabbitMQ"""
+class IngressProcessor(ScheduledModuleThread, InternalMsgQ):
+    """Handles incoming messages via message bus"""
 
-    MODULE_NAME = "RabbitMQingressProcessor"
+    MODULE_NAME = "IngressProcessor"
     PRIORITY = 1
 
     # Section and keys in configuration file
-    RABBITMQPROCESSOR = MODULE_NAME.upper()
+    PROCESSOR = MODULE_NAME.upper()
     CONSUMER_ID = "consumer_id"
     CONSUMER_GROUP = "consumer_group"
     MESSAGE_TYPE = "message_type"
@@ -68,10 +68,10 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
     @staticmethod
     def name():
         """ @return: name of the module."""
-        return RabbitMQingressProcessor.MODULE_NAME
+        return IngressProcessor.MODULE_NAME
 
     def __init__(self):
-        super(RabbitMQingressProcessor, self).__init__(self.MODULE_NAME,
+        super(IngressProcessor, self).__init__(self.MODULE_NAME,
                                                        self.PRIORITY)
 
         # Read in the actuator schema for validating messages
@@ -101,10 +101,10 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
     def initialize(self, conf_reader, msgQlist, product):
         """initialize configuration reader and internal msg queues"""
         # Initialize ScheduledMonitorThread
-        super(RabbitMQingressProcessor, self).initialize(conf_reader)
+        super(IngressProcessor, self).initialize(conf_reader)
 
         # Initialize internal message queues for this module
-        super(RabbitMQingressProcessor, self).initialize_msgQ(msgQlist)
+        super(IngressProcessor, self).initialize_msgQ(msgQlist)
 
         self._read_config()
         producer_initialized.wait()
@@ -119,14 +119,14 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
 
         # time.sleep(180)
         logger.info(
-            "RabbitMQingressProcessor, Initialization complete, accepting requests")
+            "IngressProcessor, Initialization complete, accepting requests")
 
         try:
             while True:
                 message = self._consumer.receive()
                 if message:
                     logger.info(
-                        f"RabbitMQingressProcessor, Message Recieved: {message}")
+                        f"IngressProcessor, Message Recieved: {message}")
                     self._process_msg(message)
                     self._consumer.ack()
                 else:
@@ -134,12 +134,12 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
         except Exception as e:
             if self.is_running() is True:
                 logger.info(
-                    "RabbitMQingressProcessor ungracefully breaking out of run loop, restarting.")
-                logger.error("RabbitMQingressProcessor, Exception: %s" % str(e))
+                    "IngressProcessor ungracefully breaking out of run loop, restarting.")
+                logger.error("IngressProcessor, Exception: %s" % str(e))
                 self._scheduler.enter(10, self._priority, self.run, ())
             else:
                 logger.info(
-                    "RabbitMQingressProcessor gracefully breaking out of run Loop, not restarting.")
+                    "IngressProcessor gracefully breaking out of run Loop, not restarting.")
 
         self._log_debug("Finished processing successfully")
 
@@ -168,7 +168,7 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
                     SSPL_SEC.sspl_verify_message(msg_len, str(message),
                                                  username, signature) != 0:
                 logger.warn(
-                    "RabbitMQingressProcessor, Authentication failed on message: %s" % ingressMsg)
+                    "IngressProcessor, Authentication failed on message: %s" % ingressMsg)
                 return
 
             # Get the incoming message type
@@ -197,10 +197,10 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
 
         except Exception as ex:
             logger.error(
-                "RabbitMQingressProcessor, _process_msg unrecognized message: %r" % ingressMsg)
+                "IngressProcessor, _process_msg unrecognized message: %r" % ingressMsg)
             ack_msg = AckResponseMsg("Error Processing Msg",
                                      "Msg Handler Not Found", uuid).getJson()
-            self._write_internal_msgQ(RabbitMQegressProcessor.name(), ack_msg)
+            self._write_internal_msgQ(EgressProcessor.name(), ack_msg)
 
     def _send_to_msg_handler(self, msgType, message, uuid):
         # Hand off to appropriate actuator message handler
@@ -234,30 +234,30 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
             ack_msg = AckResponseMsg("Error Processing Message",
                                      "Message Handler Not Found",
                                      uuid).getJson()
-            self._write_internal_msgQ(RabbitMQegressProcessor.name(),
+            self._write_internal_msgQ(EgressProcessor.name(),
                                       ack_msg)
 
     def _read_config(self):
-        """Configure the RabbitMQ exchange with defaults available"""
+        """Read config for messaging bus"""
         # Make methods locally available
         self._node_id = Conf.get(SSPL_CONF,
                                  f"{CLUSTER}>{SRVNODE}>{self.NODE_ID_KEY}",
                                  'SN01')
         self._consumer_id = Conf.get(SSPL_CONF,
-                                     f"{self.RABBITMQPROCESSOR}>{self.CONSUMER_ID}",
+                                     f"{self.PROCESSOR}>{self.CONSUMER_ID}",
                                      'sspl_actuator')
         self._consumer_group = Conf.get(SSPL_CONF,
-                                        f"{self.RABBITMQPROCESSOR}>{self.CONSUMER_GROUP}",
+                                        f"{self.PROCESSOR}>{self.CONSUMER_GROUP}",
                                         'cortx_monitor')
         self._message_type = Conf.get(SSPL_CONF,
-                                      f"{self.RABBITMQPROCESSOR}>{self.MESSAGE_TYPE}",
+                                      f"{self.PROCESSOR}>{self.MESSAGE_TYPE}",
                                       'requests')
         self._offset = Conf.get(SSPL_CONF,
-                                f"{self.RABBITMQPROCESSOR}>{self.OFFSET}",
+                                f"{self.PROCESSOR}>{self.OFFSET}",
                                 'earliest')
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""
         # TODO: cleanup message bus connection if that
         # functionality get added in messaging framework
-        super(RabbitMQingressProcessor, self).shutdown()
+        super(IngressProcessor, self).shutdown()

@@ -126,10 +126,10 @@ class SSPLConfig:
         # Configure rabbitmq
         if not os.path.exists(consts.REPLACEMENT_NODE_ENV_VAR_FILE):
             message_types = [Conf.get(consts.SSPL_CONFIG_INDEX,
-                                      "RABBITMQINGRESSPROCESSOR"
+                                      "INGRESSPROCESSOR"
                                       ">message_type"),
                              Conf.get(consts.SSPL_CONFIG_INDEX,
-                                      "RABBITMQEGRESSPROCESSOR"
+                                      "EGRESSPROCESSOR"
                                       ">message_type")]
             mbadmin = MessageBusAdmin(admin_id="admin")
             try:

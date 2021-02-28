@@ -15,7 +15,7 @@
 
 """
  ****************************************************************************
-  Description:       Handles incoming messages via rabbitMQ for automated tests
+  Description:       Handles incoming messages via messaging for automated tests
  ****************************************************************************
 """
 
@@ -42,14 +42,14 @@ from . import producer_initialized
 SSPL_SEC = ctypes.cdll.LoadLibrary('libsspl_sec.so.0')
 
 
-class RabbitMQingressProcessorTests(ScheduledModuleThread, InternalMsgQ):
-    """Handles incoming messages via rabbitMQ for automated tests"""
+class IngressProcessorTests(ScheduledModuleThread, InternalMsgQ):
+    """Handles incoming messages via messaging for automated tests"""
 
-    MODULE_NAME = "RabbitMQingressProcessorTests"
+    MODULE_NAME = "IngressProcessorTests"
     PRIORITY = 1
 
     # Section and keys in configuration file
-    RABBITMQPROCESSORTEST = MODULE_NAME.upper()
+    PROCESSOR = MODULE_NAME.upper()
     CONSUMER_ID = "consumer_id"
     CONSUMER_GROUP = "consumer_group"
     MESSAGE_TYPE = "message_type"
@@ -62,10 +62,10 @@ class RabbitMQingressProcessorTests(ScheduledModuleThread, InternalMsgQ):
     @staticmethod
     def name():
         """ @return: name of the module."""
-        return RabbitMQingressProcessorTests.MODULE_NAME
+        return IngressProcessorTests.MODULE_NAME
 
     def __init__(self):
-        super(RabbitMQingressProcessorTests, self).__init__(self.MODULE_NAME,
+        super(IngressProcessorTests, self).__init__(self.MODULE_NAME,
                                                             self.PRIORITY)
 
         # Read in the actuator schema for validating messages
@@ -97,10 +97,10 @@ class RabbitMQingressProcessorTests(ScheduledModuleThread, InternalMsgQ):
     def initialize(self, conf_reader, msgQlist, product):
         """initialize configuration reader and internal msg queues"""
         # Initialize ScheduledMonitorThread
-        super(RabbitMQingressProcessorTests, self).initialize(conf_reader)
+        super(IngressProcessorTests, self).initialize(conf_reader)
 
         # Initialize internal message queues for this module
-        super(RabbitMQingressProcessorTests, self).initialize_msgQ(msgQlist)
+        super(IngressProcessorTests, self).initialize_msgQ(msgQlist)
 
         self._read_config()
 
@@ -116,14 +116,14 @@ class RabbitMQingressProcessorTests(ScheduledModuleThread, InternalMsgQ):
 
         # time.sleep(180)
         logger.info(
-            "RabbitMQingressProcessor, Initialization complete, accepting requests")
+            "IngressProcessorTests, Initialization complete, accepting requests")
 
         try:
             while True:
                 message = self._consumer.receive()
                 if message:
                     logger.info(
-                        f"RabbitMQingressProcessor, Message Recieved: {message}")
+                        f"IngressProcessorTests, Message Recieved: {message}")
                     self._process_msg(message)
                     # Acknowledge message was received
                     self._consumer.ack()
@@ -132,12 +132,12 @@ class RabbitMQingressProcessorTests(ScheduledModuleThread, InternalMsgQ):
         except Exception as e:
             if self.is_running() is True:
                 logger.info(
-                    "RabbitMQingressProcessor ungracefully breaking out of run loop, restarting.")
-                logger.error("RabbitMQingressProcessor, Exception: %s" % str(e))
+                    "IngressProcessorTests ungracefully breaking out of run loop, restarting.")
+                logger.error("IngressProcessorTests, Exception: %s" % str(e))
                 self._scheduler.enter(10, self._priority, self.run, ())
             else:
                 logger.info(
-                    "RabbitMQingressProcessor gracefully breaking out of run Loop, not restarting.")
+                    "IngressProcessorTests gracefully breaking out of run Loop, not restarting.")
 
         self._log_debug("Finished processing successfully")
 
@@ -194,34 +194,34 @@ class RabbitMQingressProcessorTests(ScheduledModuleThread, InternalMsgQ):
                     return
             # If the message comes from other SSPL hosts, do not pass that
             # message to internal queue. This happens as SSPL instances are
-            # listening to common queues in a RabbitMQ cluster.
+            # listening to common queues in a messaging cluster.
             if 'host_id' in msgType and socket.getfqdn() != msgType['host_id']:
                 return
             # Write to the msg queue so the lettuce tests can
             #  retrieve it and examine for accuracy during automated testing
-            self._write_internal_msgQ("RabbitMQingressProcessorTests", message)
+            self._write_internal_msgQ("IngressProcessorTests", message)
 
         except Exception as ex:
             logger.exception(
                 "_process_msg unrecognized message: %r" % ingressMsg)
 
     def _read_config(self):
-        """Configure the RabbitMQ exchange with defaults available"""
+        """Configure the messaging exchange with defaults available"""
         # Make methods locally available
         self._node_id = Conf.get(SSPL_TEST_CONF, NODE_ID_KEY, 'SN01')
         self._consumer_id = Conf.get(SSPL_TEST_CONF,
-                                     f"{self.RABBITMQPROCESSORTEST}>{self.CONSUMER_ID}",
+                                     f"{self.PROCESSOR}>{self.CONSUMER_ID}",
                                      'sspl_actuator')
         self._consumer_group = Conf.get(SSPL_TEST_CONF,
-                                        f"{self.RABBITMQPROCESSORTEST}>{self.CONSUMER_GROUP}",
+                                        f"{self.PROCESSOR}>{self.CONSUMER_GROUP}",
                                         'cortx_monitor')
         self._message_type = Conf.get(SSPL_TEST_CONF,
-                                      f"{self.RABBITMQPROCESSORTEST}>{self.MESSAGE_TYPE}",
+                                      f"{self.PROCESSOR}>{self.MESSAGE_TYPE}",
                                       'Requests')
         self._offset = Conf.get(SSPL_TEST_CONF,
-                                f"{self.RABBITMQPROCESSORTEST}>{self.OFFSET}",
+                                f"{self.PROCESSOR}>{self.OFFSET}",
                                 'earliest')
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""
-        super(RabbitMQingressProcessorTests, self).shutdown()
+        super(IngressProcessorTests, self).shutdown()
