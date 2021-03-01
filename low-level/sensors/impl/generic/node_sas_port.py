@@ -420,13 +420,6 @@ class SASPortSensor(SensorThread, InternalMsgQ):
         specific_info = {}
         specific_info_list = []
         description = "N/A"
-        if port != -1:
-            # This is a port level alert, add an error key in specific info
-            if alert_type == 'fault':
-                description = f"No connectivity detected on the SAS port {port}, possible \
-causes could be missing SAS cable, bad cable connection, faulty cable or SAS port failure"
-            elif alert_type == 'fault_resolved':
-                description = "Connection established on SAS port."
 
         # specific_info will contain all 16 phys for conn level alert
         # Only 4 phys for port level alert
@@ -460,6 +453,11 @@ causes could be missing SAS cable, bad cable connection, faulty cable or SAS por
                     }
         else:
             # This is a port level alert
+            if alert_type == 'fault':
+                description = f"No connectivity detected on the SAS port {port}, possible \
+                                causes could be missing SAS cable, bad cable connection, faulty cable or SAS port failure."
+            elif alert_type == 'fault_resolved':
+                description = "Connection established on SAS port."
             info = {
                     "site_id": self._site_id,
                     "cluster_id": self._cluster_id,
