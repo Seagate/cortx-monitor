@@ -15,7 +15,7 @@
 
 import json
 import os
-from time import sleep
+import time
 import sys
 
 from sspl_test.alerts.os import simulate_network_interface as mock_eth_interface
@@ -24,29 +24,34 @@ from sspl_test.rabbitmq.rabbitmq_ingress_processor_tests import RabbitMQingressP
 from sspl_test.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 from sspl_test.common import check_sspl_ll_is_running
 
+
+resource_type = "node:interface:nw"
+
 def init(args):
     pass
 
 def test_if_data_sensor(args):
     check_sspl_ll_is_running()
-    node_data_sensor_message_request("node:interface:nw")
+    node_data_sensor_message_request(resource_type)
     if_data_msg = None
     #create dummy interface to get network alerts
     mock_eth_interface.shuffle_nw_interface()
-    sleep(10)
-    while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
-        ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
-        sleep(0.1)
-        print("Received for if_data: {0}".format(ingressMsg))
-        try:
-            # Make sure we get back the message type that matches the request
-            msg_type = ingressMsg.get("sensor_response_type")
-            if msg_type["info"]["resource_type"] == "node:interface:nw":
-                if_data_msg = msg_type
-                break
-        except Exception as exception:
-            sleep(0.1)
-            print(exception)
+    # Wait untill expected resource type found in RMQ ingress processor msgQ.
+    start_time = time.time()
+    max_wait_time = 60
+    while not if_data_msg:
+        if not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
+            ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
+            print("Received: {0}".format(ingressMsg))
+            try:
+                # Make sure we get back the message type that matches the request
+                msg_type = ingressMsg.get("sensor_response_type")
+                if msg_type["info"]["resource_type"] == resource_type:
+                    if_data_msg = msg_type
+            except Exception as exception:
+                print(exception)
+        if (time.time()-start_time) > max_wait_time:
+            break
 
     assert(if_data_msg is not None)
     assert(if_data_msg.get("alert_type") is not None)
@@ -61,7 +66,7 @@ def test_if_data_sensor(args):
     assert(if_data_info.get("node_id") is not None)
     assert(if_data_info.get("cluster_id") is not None)
     assert(if_data_info.get("rack_id") is not None)
-    assert(if_data_info.get("resource_type") is not None)
+    assert(if_data_info.get("resource_type") == resource_type)
     assert(if_data_info.get("event_time") is not None)
     assert(if_data_info.get("resource_id") is not None)
     assert(if_data_info.get("description") is not None)
