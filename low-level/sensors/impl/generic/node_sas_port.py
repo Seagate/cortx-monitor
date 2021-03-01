@@ -419,7 +419,7 @@ class SASPortSensor(SensorThread, InternalMsgQ):
 
         specific_info = {}
         specific_info_list = []
-
+        description = "N/A"
         if port != -1:
             # This is a port level alert, add an error key in specific info
             if alert_type == 'fault':
@@ -427,8 +427,6 @@ class SASPortSensor(SensorThread, InternalMsgQ):
 causes could be missing SAS cable, bad cable connection, faulty cable or SAS port failure"
             elif alert_type == 'fault_resolved':
                 description = "Connection established on SAS port."
-            specific_info_list.append(specific_info)
-            specific_info = {}
 
         # specific_info will contain all 16 phys for conn level alert
         # Only 4 phys for port level alert
