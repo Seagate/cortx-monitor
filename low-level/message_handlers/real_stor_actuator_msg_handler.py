@@ -29,7 +29,7 @@ from framework.utils.conf_utils import GLOBAL_CONF, RELEASE, Conf
 from framework.utils.service_logging import logger
 from json_msgs.messages.actuators.realstor_actuator_response import \
     RealStorActuatorMsg
-from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
+from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 
 
 class RealStorActuatorMsgHandler(ScheduledModuleThread, InternalMsgQ):

@@ -28,8 +28,8 @@ from urllib.parse import urlparse
 from cortx.utils.process import SimpleProcess
 from cortx.utils.service import Service
 from cortx.utils.conf_store import Conf
-from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.error import SetupError
-from cortx.sspl.bin.sspl_constants import (REPLACEMENT_NODE_ENV_VAR_FILE,
+from .setup_error import SetupError
+from framework.base.sspl_constants import (REPLACEMENT_NODE_ENV_VAR_FILE,
                                            SSPL_BASE_DIR,
                                            file_store_config_path,
                                            sspl_config_path,
@@ -38,7 +38,7 @@ from cortx.sspl.bin.sspl_constants import (REPLACEMENT_NODE_ENV_VAR_FILE,
                                            SSPL_CONFIG_INDEX,
                                            CONFIG_SPEC_TYPE,
                                            enabled_products)
-from cortx.sspl.lowlevel.framework import sspl_rabbitmq_reinit
+from framework import sspl_rabbitmq_reinit
 
 
 class SSPLPostInstall:

@@ -19,8 +19,8 @@ import os
 import consul
 
 from cortx.utils.conf_store import Conf
-from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.error import SetupError
-from cortx.sspl.bin.sspl_constants import (CONSUL_HOST,
+from .setup_error import SetupError
+from framework.base.sspl_constants import (CONSUL_HOST,
                                            CONSUL_PORT,
                                            PRODUCT_FAMILY,
                                            SSPL_STORE_TYPE,

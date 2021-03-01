@@ -30,13 +30,13 @@ import re
 import errno
 import consul
 
-from cortx.sspl.bin import sspl_constants as consts
+from framework.base import sspl_constants as consts
 from cortx.utils.service import Service
 from cortx.utils.process import SimpleProcess
 from cortx.utils.validator.v_service import ServiceV
-from cortx.sspl.lowlevel.files.opt.seagate.sspl.setup.error import SetupError
+from .setup_error import SetupError
 from cortx.utils.conf_store import Conf
-from cortx.sspl.bin.conf_based_sensors_enable import update_sensor_info
+from .conf_based_sensors_enable import update_sensor_info
 
 
 class SSPLConfig:
@@ -115,7 +115,7 @@ class SSPLConfig:
         # Onward LDR_R2, salt will be abstracted out and it won't
         # exist as a hard dependeny of SSPL
         if consts.PRODUCT_NAME == "LDR_R1":
-            from cortx.sspl.bin.salt_util import SaltInterface
+            from framework.utils.salt_util import SaltInterface
             salt_util = SaltInterface()
             salt_util.update_config_file(consts.file_store_config_path)
 
@@ -123,11 +123,11 @@ class SSPLConfig:
             os.remove(consts.SSPL_CONFIGURED)
 
         # Add sspl-ll user to required groups and sudoers file etc.
-        sspl_reinit = [f"{consts.SSPL_BASE_DIR}/bin/sspl_reinit", self.product]
+        sspl_reinit = [f"{consts.SSPL_BASE_DIR}/low-level/framework/sspl_reinit", self.product]
         _ , error, returncode = SimpleProcess(sspl_reinit).run()
         if returncode:
             raise SetupError(returncode,
-                    "%s/bin/sspl_reinit failed for product %s with error : %e",
+                    "%s/low-level/framework/sspl_reinit failed for product %s with error : %e",
                       consts.SSPL_BASE_DIR, product, error
                     )
 

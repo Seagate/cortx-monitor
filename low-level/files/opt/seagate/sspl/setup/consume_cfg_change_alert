@@ -23,7 +23,7 @@ source $SCRIPT_DIR/constants.sh
 exec &>> /var/log/$PRODUCT_FAMILY/sspl/consul-${0##*/}.log
 exec &> >(stdbuf -oL gawk '{ print strftime("%Y-%m-%d %H:%M:%S"), $0 }')
 
-SSPL_PID=`/usr/bin/pgrep -d " " -f /usr/bin/sspl_ll_d`
+SSPL_PID=`/usr/bin/pgrep -d " " -f /opt/seagate/cortx/sspl/low-level/sspl_ll_d`
 LOG_LEVEL=`curl -Ss -XGET \
            http://127.0.0.1:8500/v1/kv/sspl/config/SYSTEM_INFORMATION/log_level | \
            jq -r '.[].Value' | base64 -d`

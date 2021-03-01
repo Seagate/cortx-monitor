@@ -31,8 +31,7 @@ import dbus
 from dbus import SystemBus, Interface, Array
 import warnings
 warnings.filterwarnings(action='ignore',module='cryptography')
-# Add the top level directories
-sys.path.insert(0, f'/opt/seagate/cortx/sspl/low-level')
+
 from framework.utils.service_logging import logger
 from framework.utils.store_factory import store, file_store
 from framework.utils.ipmi_client import IpmiFactory
@@ -49,7 +48,8 @@ class SSPLHealthView(object):
 
     RESOURCE_HEALTH_VIEW_FILE = 'resource_health_view.json'
     RESOURCE_HEALTH_VIEW_PATH = '/tmp/' + RESOURCE_HEALTH_VIEW_FILE
-    TEMPLATE_SCHEMA_FILE = f'/opt/seagate/{PRODUCT_FAMILY}/sspl/bin/generate_resource_health_view/resource_health_view_template.json'
+    TEMPLATE_SCHEMA_FILE = f'/opt/seagate/{PRODUCT_FAMILY}/sspl/low-level/files'\
+    '/opt/seagate/sspl/setup/generate_resource_health_view/resource_health_view_template.json'
 
     ENCL_MANIFEST_PATH = '/tmp/encl_manifest.json'
     NODE_MANIFEST_PATH = '/tmp/node_manifest.json'
