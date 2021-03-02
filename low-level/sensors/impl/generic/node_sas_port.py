@@ -441,6 +441,11 @@ class SASPortSensor(SensorThread, InternalMsgQ):
 
         if port == -1:
             # This is a SAS HBA level connection alert
+            if alert_type == 'fault':
+                description = "SAS connection error detected in SAS HBA %s." %self.RESOURCE_ID
+            elif alert_type == 'fault_resolved':
+                description = "SAS connection re-established in SAS HBA %s." %self.RESOURCE_ID
+
             info = {
                     "site_id": self._site_id,
                     "cluster_id": self._cluster_id,
@@ -454,8 +459,9 @@ class SASPortSensor(SensorThread, InternalMsgQ):
         else:
             # This is a port level alert
             if alert_type == 'fault':
-                description = f"No connectivity detected on the SAS port {port}, possible \
-                                causes could be missing SAS cable, bad cable connection, faulty cable or SAS port failure."
+                description = ("No connectivity detected on the SAS port %s, possible"
+                                "causes could be missing SAS cable, bad cable connection,"
+                                 "faulty cable or SAS port failure." %port)
             elif alert_type == 'fault_resolved':
                 description = "Connection established on SAS port."
             info = {
