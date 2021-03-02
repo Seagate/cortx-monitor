@@ -807,6 +807,9 @@ if __name__ == "__main__":
                     print("Another instance of SSPL with pid %s is active. exiting..." % pid)
                     sys.exit(os.EX_OK)
 
+            if not os.path.isdir('/var/run/sspl_ll/'):
+                os.mkdir('/var/run/sspl_ll/')
+
             with open(pidfile, "w") as fileObj:
                 fileObj.write(str(os.getpid()))
 
@@ -816,7 +819,7 @@ if __name__ == "__main__":
         main(conf_reader, systemd_support)
 
     except (Exception) as err:
-        logger.exception("Error while initiliazing sspl-ll service: ")
+        logger.exception("While spawning, sspl-ll process encountered critical error : %s" %err)
         sys.exit(os.EX_USAGE)
 
     print("SSPL-LL Process started successfully")
