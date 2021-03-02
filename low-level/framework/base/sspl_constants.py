@@ -252,6 +252,40 @@ else:
 
 SSPL_CONFIGS = ['log_level', 'cli_type', 'sspl_log_file_path', 'cluster_id', 'storage_enclosure', 'setup', 'operating_system']
 
+# SSPL python 3rd party package dependencies
+pip3s_packages_main = {
+    "jsonschema": "3.2.0",
+    "pika": "1.1.0",
+    "python-daemon": "2.2.4",
+    "requests": "2.25.1",
+    "zope.component": "4.6.2",
+    "zope.event": "4.5.0",
+    "zope.interface": "5.2.0",
+    "pyinotify": "0.9.6",
+    "cryptography": "2.3"
+}
+
+pip3s_packages_test = {
+    "Flask": "1.1.1"
+}
+
+# SSPL 3rd party RPM dependencies
+rpm_dependencies = [
+    "rabbitmq-server",
+    "udisks2",
+    "hdparm",
+    "python36",
+    "ipmitool",
+    "smartmontools",
+    "lshw",
+    "python36-dbus",
+    "python36-paramiko",
+    "python36-psutil",
+    "python36-gobject",
+    "systemd-python36",
+    "perl",
+    "shadow-utils"
+]
 
 class RaidDataConfig(Enum):
     MDSTAT_FILE = "/proc/mdstat"

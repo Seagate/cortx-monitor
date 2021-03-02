@@ -26,7 +26,8 @@ from framework.base.sspl_constants import (PRODUCT_FAMILY,
                                            sspl_test_config_path,
                                            GLOBAL_CONFIG_INDEX,
                                            SSPL_CONFIG_INDEX,
-                                           SSPL_TEST_CONFIG_INDEX)
+                                           SSPL_TEST_CONFIG_INDEX,
+                                           pip3s_packages_test)
 
 TEST_DIR = f"/opt/seagate/{PRODUCT_FAMILY}/sspl/sspl_test"
 
@@ -45,6 +46,14 @@ class SSPLTestCmd:
                                      "SYSTEM_INFORMATION>global_config_copy_url")
         Conf.load(GLOBAL_CONFIG_INDEX, global_config_url)
         Conf.load(SSPL_TEST_CONFIG_INDEX, sspl_test_config_path)
+
+    @staticmethod
+    def validate():
+        """Check for required packages are installed."""
+        pkg_validator = PkgV()
+        pkg_validator.validate_pip3s(host=None,
+                                     pkgs=pip3s_packages_test,
+                                     skip_version_check=False)
 
     def process(self):
         self.plan = self.args.plan[0]

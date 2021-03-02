@@ -27,6 +27,7 @@ from urllib.parse import urlparse
 # using cortx package
 from cortx.utils.process import SimpleProcess
 from cortx.utils.service import DbusServiceHandler
+from cortx.utils.validator.v_pkg import PkgV
 from cortx.utils.conf_store import Conf
 from .setup_error import SetupError
 from framework.base.sspl_constants import (REPLACEMENT_NODE_ENV_VAR_FILE,
@@ -37,7 +38,9 @@ from framework.base.sspl_constants import (REPLACEMENT_NODE_ENV_VAR_FILE,
                                            GLOBAL_CONFIG_INDEX,
                                            SSPL_CONFIG_INDEX,
                                            CONFIG_SPEC_TYPE,
-                                           enabled_products)
+                                           enabled_products,
+                                           pip3s_packages_main,
+                                           rpm_dependencies)
 from framework import sspl_rabbitmq_reinit
 
 
@@ -79,6 +82,19 @@ class SSPLPostInstall:
         Conf.save(GLOBAL_CONFIG_INDEX)
 
     def validate(self):
+        """Check below requirements are met in setup.
+
+        1. required python 3rd party packages are installed
+        2. required rpm dependencies are installed
+        3. product specified in global config is supported by SSPL
+        """
+        pkg_validator = PkgV()
+        pkg_validator.validate_pip3s(host=None,
+                                     pkgs=pip3s_packages_main,
+                                     skip_version_check=False)
+        pkg_validator.validate_rpms(host=None,
+                                    pkgs=rpm_dependencies)
+
         self.PRODUCT_NAME = Conf.get(GLOBAL_CONFIG_INDEX, 'release>product')
 
         # Validate product
@@ -134,11 +150,6 @@ class SSPLPostInstall:
                 if returncode != 0:
                     raise SetupError(returncode, error, sspl_setup_consul)
 
-        # Install packages which are not available in YUM repo, from PIP
-        pip_cmd = "python3 -m pip install -r %s/low-level/requirements.txt" % (SSPL_BASE_DIR)
-        output, error, returncode = SimpleProcess(pip_cmd).run()
-        if returncode != 0:
-            raise SetupError(returncode, error, pip_cmd)
         # Splitting current function into 2 functions to reduce the complexity of the code.
         self.install_files(self.PRODUCT_NAME)
 
