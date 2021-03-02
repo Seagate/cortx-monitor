@@ -17,13 +17,12 @@ import time
 import random
 import subprocess
 import re
-
 import pika
 import pika.exceptions
 import encodings.idna  # noqa
+from framework.utils.service_logging import logger
+from framework.utils.conf_utils import Conf, SSPL_TEST_CONF
 
-from sspl_test.framework.utils.service_logging import logger
-from sspl_test.framework.utils.conf_utils import Conf, SSPL_TEST_CONF
 
 RABBITMQCTL = '/usr/sbin/rabbitmqctl'
 

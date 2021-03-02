@@ -17,6 +17,7 @@
 
 from cortx.utils.conf_store import Conf
 
+
 # Indexes
 GLOBAL_CONF = "GLOBAL"
 SSPL_CONF = "SSPL"

@@ -31,19 +31,13 @@ import os
 import psutil
 import subprocess
 from threading import Thread
-from sspl_test.default import *
+from default import world
+from framework.utils.service_logging import init_logging
+from framework.utils.service_logging import logger
+from rabbitmq.rabbitmq_ingress_processor_tests import RabbitMQingressProcessorTests
+from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
+from framework.utils.conf_utils import Conf, SSPL_TEST_CONF, GLOBAL_CONF
 
-from sspl_test.framework.utils.service_logging import init_logging
-from sspl_test.framework.utils.service_logging import logger
-
-# Adding sspl and sspl_test path
-test_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-os.sys.path.append(os.path.join(test_path))
-os.sys.path.append(os.path.join(test_path + "/../"))
-
-from sspl_test.rabbitmq.rabbitmq_ingress_processor_tests import RabbitMQingressProcessorTests
-from sspl_test.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
-from sspl_test.framework.utils.conf_utils import Conf, SSPL_TEST_CONF, GLOBAL_CONF
 
 PY2 = sys.version_info[0] == 2
 PY3 = sys.version_info[0] == 3

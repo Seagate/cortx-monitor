@@ -22,7 +22,8 @@
 """
 import copy
 import json
-from sspl_test.framework.utils.service_logging import logger
+from framework.utils.service_logging import logger
+
 
 class InternalMsgQ(object):
     """Base Class for internal message queue communications between modules"""

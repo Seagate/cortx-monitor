@@ -18,11 +18,11 @@ import os
 import time
 import sys
 
-from sspl_test.alerts.os import simulate_network_interface as mock_eth_interface
-from sspl_test.default import *
-from sspl_test.rabbitmq.rabbitmq_ingress_processor_tests import RabbitMQingressProcessorTests
-from sspl_test.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
-from sspl_test.common import check_sspl_ll_is_running
+from alerts.os import simulate_network_interface as mock_eth_interface
+from default import world
+from rabbitmq.rabbitmq_ingress_processor_tests import RabbitMQingressProcessorTests
+from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
+from common import check_sspl_ll_is_running
 
 
 resource_type = "node:interface:nw"
