@@ -180,8 +180,22 @@ SYSTEMDWATCHDOG:
    monitor: true
    threaded: true
    monitored_services:
-       - consul.service
-       - rabbitmq-server.service
+      - hare-consul-agent.service
+      - hare-consul-agent-c1.service
+      - hare-consul-agent-c2.service
+      - elasticsearch.service
+      - kibana.service
+      - statsd.service
+      - rsyslog.service
+      - haproxy.service
+      - slapd.service
+      - corosync.service
+      - pacemaker.service
+      - pcsd.service
+      - lnet.service
+      - salt-master.service
+      - salt-minion.service
+      - glusterd.service
    smart_test_interval: 999999999
    run_smart_on_start: 'False'
 

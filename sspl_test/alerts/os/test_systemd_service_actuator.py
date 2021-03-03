@@ -30,7 +30,7 @@ def init(args):
 def test_systemd_service_valid_request(args):
     check_sspl_ll_is_running()
     # TODO: Change service name, once get final 3rd party service name
-    service_actuator_request("rabbitmq-server.service", "status")
+    service_actuator_request("rsyslog.service", "status")
     service_actuator_msg = None
     time.sleep(6)
     ingressMsg = {}
@@ -67,7 +67,7 @@ def test_systemd_service_valid_request(args):
 
 def test_systemd_service_invalid_request(args):
     check_sspl_ll_is_running()
-    service_actuator_request("temp_dummpy.service", "status")
+    service_actuator_request("temp_dummy.service", "status")
     service_actuator_msg = None
     time.sleep(6)
     ingressMsg = {}

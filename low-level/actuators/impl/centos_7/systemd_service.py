@@ -80,8 +80,8 @@ class SystemdService(Debug):
             self._proxy = self._bus.get_object("org.freedesktop.systemd1", str(systemd_unit))
 
             # The returned result of the desired action
-            result = None
-
+            result = {}
+            is_err_response = False
             if self._service_request == "restart":
                 self._manager.RestartUnit(self._service_name, 'replace')
 
@@ -105,9 +105,11 @@ class SystemdService(Debug):
                 # Return the status below
                 state = self._get_activestate()
                 substate = self._get_active_substate()
+                result["state"] = state
+                result["substate"] = substate
                 self._log_debug("perform_request, state: %s, substate: %s" %
                                 (str(state), str(substate)))
-                return (self._service_name, state, substate, False)
+                return (self._service_name, result, is_err_response)
 
             elif self._service_request == "enable":
                 service_list = []
@@ -118,11 +120,18 @@ class SystemdService(Debug):
                    False will enable a service persistently(creates symlink in /etc/.. directory)"""
                 bool_res, dbus_result = self._manager.EnableUnitFiles(service_list, False, True)
                 # Parse dbus output.
+                # dbus o/p: dbus.Array([dbus.Struct((dbus.String('symlink'),
+                # dbus.String('/etc/systemd/system/multi-user.target.wants/statsd.service'),
+                # dbus.String('/usr/lib/systemd/system/statsd.service')), signature=None)], signature=dbus.Signature('(sss)'))
+
                 if list(dbus_result):
-                    result = []
-                    for field in list(dbus_result)[0]:
-                        result.append(field)
-                self._log_debug("perform_request, bool: %s, result: %s" % (bool_res, result))
+                    dbus_result = list(dbus_result[0])
+                    for field in dbus_result:
+                        if field == "symlink":
+                            result["symlink"] = []
+                            continue
+                        result["symlink"].append(str(field))
+                    self._log_debug("perform_request, bool: %s, result: %s" % (bool_res, result))
 
             elif self._service_request == "disable":
                 service_list = []
@@ -134,39 +143,41 @@ class SystemdService(Debug):
                 dbus_result = self._manager.DisableUnitFiles(service_list, False)
                 # Parse dbus output.
                 if list(dbus_result):
-                    result = []
-                    for field in list(dbus_result)[0]:
-                        if field:
-                            result.append(str(field))
-
-                self._log_debug("perform_request, result: %s" % result)
-
+                    dbus_result = list(dbus_result[0])
+                    for field in dbus_result:
+                        if field == "unlink":
+                            result["unlink"] = []
+                            continue
+                        elif field:
+                            result["unlink"].append(str(field))
+                    self._log_debug("perform_request, : %s" % result)
             else:
                 self._log_debug("perform_request, Unknown service request")
-                return (self._service_name, "Unknown service request", None, True)
+                is_err_response = True
+                return (self._service_name, "Unknown service request", is_err_response)
 
         except debus_exceptions.DBusException as error:
+            is_err_response = True
             logger.exception("DBus Exception: %r" % error)
-            return (self._service_name, str(error), None, True)
+            return (self._service_name, str(error),  is_err_response)
 
         except Exception as ae:
             logger.exception("Exception: %r" % ae)
-            return (self._service_name, str(ae), None, True)
+            is_err_response = True
+            return (self._service_name, str(ae), is_err_response)
 
         # Give the unit some time to finish starting/stopping to get final status
         time.sleep(5)
 
-        # Get the current status of the process and return it back if no result
-        if result is None:
-            state = self._get_activestate()
-            substate = self._get_active_substate()
-            self._log_debug("perform_request, state: %s, substate: %s" %
-                                (str(state), str(substate)))
-            return (self._service_name, state, substate, False)
+        # Get the current status of the process and return it back:
+        state = self._get_activestate()
+        substate = self._get_active_substate()
+        result["state"] = state
+        result["substate"] = substate
 
-        if not isinstance(result, list):
-            result = str(result)
-        return (self._service_name, result, None, False)
+        self._log_debug("perform_request, state: %s, substate: %s" %
+                                (str(state), str(substate)))
+        return (self._service_name, result, is_err_response)
 
     def _get_activestate(self):
         """"Returns the active state of the unit."""
@@ -190,10 +201,24 @@ class SystemdService(Debug):
 
     def get_service_info(self, service_name):
         """Fetch service_pid and other informatrion."""
-        unit = self._bus.get_object('org.freedesktop.systemd1',self._manager.GetUnit(service_name))
-        Iunit = Interface(unit, dbus_interface='org.freedesktop.DBus.Properties')
-        curr_pid = str(Iunit.Get('org.freedesktop.systemd1.Service', 'ExecMainPID'))
-        command_line =  list(Iunit.Get('org.freedesktop.systemd1.Service', 'ExecStart'))
-        command_line = str(command_line[0][0])
-        _, service_substate = self.is_service_enabled(service_name)
-        return curr_pid, command_line, service_substate
+        is_err_response = False
+        try:
+            # check service state, we can fetch service info(pid, command_line)
+            # only if service is active and service unit has loaded into systemd.
+            state = self._get_activestate()
+            _, service_substate = self.is_service_enabled(service_name)
+            if state == 'inactive':
+                logger.info("Service state is %s and %s unit is not loaded into systemd,"
+                            "Could not fetch pid, command_line_path for this service." %(state, service_name))
+                return (service_substate, None, None, is_err_response)
+            else:
+                unit = self._bus.get_object('org.freedesktop.systemd1',self._manager.GetUnit(service_name))
+                Iunit = Interface(unit, dbus_interface='org.freedesktop.DBus.Properties')
+                curr_pid = str(Iunit.Get('org.freedesktop.systemd1.Service', 'ExecMainPID'))
+                command_line =  list(Iunit.Get('org.freedesktop.systemd1.Service', 'ExecStart'))
+                command_line = str(command_line[0][0])
+                return  (service_substate, curr_pid, command_line, is_err_response)
+        except debus_exceptions.DBusException as error:
+            logger.exception("DBus Exception: %r" % error)
+            is_err_response = True
+            return (str(error), None, None, is_err_response)

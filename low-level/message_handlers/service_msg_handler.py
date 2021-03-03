@@ -33,7 +33,7 @@ from json_msgs.messages.actuators.service_controller import ServiceControllerMsg
 from json_msgs.messages.sensors.service_watchdog import ServiceWatchdogMsg
 from json_msgs.messages.actuators.ack_response import AckResponseMsg
 from framework.utils.conf_utils import (CLUSTER, GLOBAL_CONF, SRVNODE, SSPL_CONF, Conf, SITE_ID,
-                                        CLUSTER_ID, NODE_ID, RACK_ID, SYSTEMDWATCHDOG, MONITORED_SERVICES)
+                                        CLUSTER_ID, NODE_ID, RACK_ID, STORAGE_SET_ID, SYSTEMDWATCHDOG, MONITORED_SERVICES)
 # Modules that receive messages from this module
 from message_handlers.logging_msg_handler import LoggingMsgHandler
 
@@ -90,6 +90,7 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
         self.rack_id = Conf.get(GLOBAL_CONF, f'{CLUSTER}>{SRVNODE}>{RACK_ID}','RC01')
         self.node_id = Conf.get(GLOBAL_CONF, f'{CLUSTER}>{SRVNODE}>{NODE_ID}','SN01')
         self.cluster_id = Conf.get(GLOBAL_CONF, f'{CLUSTER}>{CLUSTER_ID}','CC01')
+        self.storage_set_id = Conf.get(GLOBAL_CONF, f'{CLUSTER}>{SRVNODE}>{STORAGE_SET_ID}', 'ST01')
         self.monitored_services = Conf.get(SSPL_CONF, f'{SYSTEMDWATCHDOG}>{MONITORED_SERVICES}')
 
     def _import_products(self, product):
@@ -154,20 +155,12 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 .get("service_controller").get("service_request")
             request = f"{service_request}:{service_name}"
 
-            error_info = {}
             if service_name not in self.monitored_services:
                 logger.error(f"{service_name} - service is not present in monitored_services list,"
                                 " SSPL cannot monitor/control action for this service.")
                 msg = ("Invalid Service name or service_name is not present in monitored_services list."
                          "Add service name in monitored_services in /etc/sspl.conf file.")
-                error_info["service_name"] = service_name
-                error_info["request"] = service_request
-                error_info["error_msg"] = msg
-                error_info["error_no"] = errno.EINVAL
-                response = self._create_actuator_response(error_info)
-                service_controller_msg = ServiceControllerMsg(response).getJson()
-                self._write_internal_msgQ("RabbitMQegressProcessor", service_controller_msg)
-                return
+                self.send_error_response(service_request, service_name, msg, errno.EINVAL)
 
             # If the state is INITIALIZED, We can assume that actuator is
             # ready to perform operation.
@@ -179,13 +172,7 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
             elif actuator_state_manager.is_initializing("Service"):
                 # This state will not be reached. Kept here for consistency.
                 logger.info("Service actuator is initializing")
-                error_info["service_name"] = service_name
-                error_info["request"] = service_request
-                error_info["error_msg"] = "BUSY"
-                error_info["error_no"] = errno.EBUSY
-                response = self._create_actuator_response(error_info)
-                service_controller_msg = ServiceControllerMsg(response).getJson()
-                self._write_internal_msgQ("RabbitMQegressProcessor", service_controller_msg)
+                self.send_error_response(service_request, service_name, "BUSY", errno.EBUSY)
 
             elif actuator_state_manager.is_imported("Service"):
                 # This case will be for first request only. Subsequent
@@ -285,21 +272,19 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
             self.send_error_response(service_request, service_name, msg, errno.EPERM)
             return
 
-        service_name, state, substate, error = actuator_instance.perform_request(json_msg)
+        service_name, result, error = actuator_instance.perform_request(json_msg)
         if error:
-            self.send_error_response(service_request, service_name, state)
+            self.send_error_response(service_request, service_name, result)
             return
 
-        if substate:
-            result = f"{state}:{substate}"
-        else:
-            result = state
-
         self._log_debug(f"_processMsg, service_name: {service_name}, result: {result}")
+        service_substate, pid, cmd_line_path, error = actuator_instance.get_service_info(service_name)
+        if error:
+            self.send_error_response(service_request, service_name, service_substate)
+            return
 
-        pid, cmd_line_path,service_substate = actuator_instance.get_service_info(service_name)
         service_info["service_name"] = service_name
-        service_info["service_state"] = result
+        service_info.update(result)
         service_info["service_status"] = service_substate
         service_info["PID"] = pid
         service_info["command_line_path"] = cmd_line_path
@@ -325,11 +310,11 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
     def _check_service_request(self, actuator_instance, service_name, service_request):
         """Check service is enabled or not."""
-        # If service_request is start/stop/restart,
+        # If service_request is start/stop/restart/status,
         # then check service is enabled or not.
         # If it is enable then only process the request.
 
-        if service_request not in ["disable","enable", "status"]:
+        if service_request not in ["disable","enable"]:
             is_enabled, _ = actuator_instance.is_service_enabled(service_name)
             return is_enabled
         else:
@@ -341,10 +326,11 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
         epoch_time = str(int(time.time()))
         specific_info = []
         info = {
+            "cluster_id": self.cluster_id,
             "site_id": self.site_id,
             "rack_id": self.rack_id,
+            "storage_set_id": self.storage_set_id,
             "node_id": self.node_id,
-            "cluster_id": self.cluster_id,
             "resource_id": resource_id,
             "resource_type": self.RESOURCE_TYPE,
             "event_time": epoch_time
