@@ -18,24 +18,27 @@ import random
 import subprocess
 import re
 import os
-import consul
 import pika
 import pika.exceptions
 import encodings.idna  # noqa
 
 from framework.utils.service_logging import logger
 from framework.utils.config_reader import ConfigReader
-from framework.base.sspl_constants import COMMON_CONFIGS, component, CONSUL_HOST, CONSUL_PORT
+from framework.base.sspl_constants import COMMON_CONFIGS, component, CONSUL_HOST, CONSUL_PORT, SSPL_STORE_TYPE
+from framework.utils.conf_utils import SSPL_CONF, Conf
 
 
 RABBITMQ_CLUSTER_SECTION = 'RABBITMQCLUSTER'
 RABBITMQ_CLUSTER_HOSTS_KEY = 'cluster_nodes'
 
-host = os.getenv('CONSUL_HOST', CONSUL_HOST)
-port = os.getenv('CONSUL_PORT', CONSUL_PORT)
-consul_conn = consul.Consul(host=host, port=port)
+# Onward LDR_R2, consul will be abstracted out and won't exist as hard dependency for SSPL
+if SSPL_STORE_TYPE == 'consul':
+    import consul
+    host = os.getenv('CONSUL_HOST', CONSUL_HOST)
+    port = os.getenv('CONSUL_PORT', CONSUL_PORT)
+    consul_conn = consul.Consul(host=host, port=port)
 
-config = ConfigReader()
+config_reader = ConfigReader()
 connection_exceptions = (
     pika.exceptions.AMQPConnectionError,
     pika.exceptions.ChannelClosedByBroker,
@@ -50,8 +53,12 @@ connection_error_msg = (
 def get_cluster_connection(username, password, virtual_host):
     """Makes connection with one of the rabbitmq node.
     """
-    consul_key = component + '/' + RABBITMQ_CLUSTER_SECTION + '/' + RABBITMQ_CLUSTER_HOSTS_KEY
-    hosts = consul_conn.kv.get(consul_key)[1]["Value"].decode()
+    hosts = ""
+    if SSPL_STORE_TYPE == 'consul':
+        consul_key = component + '/' + RABBITMQ_CLUSTER_SECTION + '/' + RABBITMQ_CLUSTER_HOSTS_KEY
+        hosts = consul_conn.kv.get(consul_key)[1]["Value"].decode()
+    else:
+        hosts = Conf.get(SSPL_CONF, f"{RABBITMQ_CLUSTER_SECTION}>{RABBITMQ_CLUSTER_HOSTS_KEY}")
     if isinstance(hosts, str):
         hosts = hosts.strip().split(",")
     logger.debug(f'Cluster nodes: {hosts}')

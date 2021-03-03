@@ -31,19 +31,13 @@ import os
 import psutil
 import subprocess
 from threading import Thread
-from sspl_test.default import *
+from default import world
+from framework.utils.service_logging import init_logging
+from framework.utils.service_logging import logger
+from rabbitmq.rabbitmq_ingress_processor_tests import RabbitMQingressProcessorTests
+from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
+from framework.utils.conf_utils import Conf, SSPL_TEST_CONF, GLOBAL_CONF
 
-from sspl_test.framework.utils.config_reader import ConfigReader
-from sspl_test.framework.utils.service_logging import init_logging
-from sspl_test.framework.utils.service_logging import logger
-
-# Adding sspl and sspl_test path
-test_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-os.sys.path.append(os.path.join(test_path))
-os.sys.path.append(os.path.join(test_path + "/../"))
-
-from sspl_test.rabbitmq.rabbitmq_ingress_processor_tests import RabbitMQingressProcessorTests
-from sspl_test.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 
 PY2 = sys.version_info[0] == 2
 PY3 = sys.version_info[0] == 3
@@ -58,7 +52,7 @@ SSPL_SETTING    = 'SSPL-TESTS_SETTING'
 MODULES         = 'modules'
 SYS_INFORMATION = 'SYSTEM_INFORMATION'
 PRODUCT_NAME    = 'product'
-
+conf_reader = None
 class TestFailed(Exception):
     def __init__(self, desc):
         desc = '[%s] %s' %(inspect.stack()[1][3], desc)
@@ -66,17 +60,6 @@ class TestFailed(Exception):
 
 def init_rabbitMQ_msg_processors():
     """The main bootstrap for sspl automated tests"""
-
-    # Retrieve configuration file for sspl-ll service
-    try:
-        conf_reader = ConfigReader()
-    except (IOError, ConfigReader.Error) as err:
-        # We don't have logger yet, need to find log_level from conf file first
-        print("[ Error ] when validating the configuration file %s :" % \
-            path_to_conf_file)
-        print(err)
-        print("Exiting ...")
-        exit(os.EX_USAGE)
 
     # Initialize logging
     try:
@@ -89,8 +72,7 @@ def init_rabbitMQ_msg_processors():
         exit(os.EX_USAGE)
 
     # Modules to be used for testing
-    conf_modules = conf_reader._get_value_list(SSPL_SETTING,
-                                                MODULES)
+    conf_modules = Conf.get(SSPL_TEST_CONF, f"{SSPL_SETTING}>{MODULES}")
 
     # Create a map of references to all the module's message queues.  Each module
     #  is passed this mapping so that it can send messages to other modules.
@@ -100,9 +82,8 @@ def init_rabbitMQ_msg_processors():
     world.sspl_modules = {}
 
     # Read in product value from configuration file
-    product = conf_reader._get_value(SYS_INFORMATION, PRODUCT_NAME)
+    product = Conf.get(GLOBAL_CONF, f"release>{PRODUCT_NAME}")
     logger.info("sspl-ll Bootstrap: product name supported: %s" % product)
-
     # Use reflection to instantiate the class based upon its class name in config file
     for conf_thread in conf_modules:
         klass = globals()[conf_thread]

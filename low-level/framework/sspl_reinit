@@ -25,7 +25,7 @@
 #
 script_dir=$(dirname $0)
 # Import common constants
-. $script_dir/constants.sh
+source $script_dir/constants.sh
 
 [ "${1}" = "CS-L" -o "${1}" = "CS-G" ] && {
     id -u sspl-ll &>/dev/null || /usr/sbin/useradd \
@@ -40,8 +40,8 @@ script_dir=$(dirname $0)
 chown -R sspl-ll:root /opt/seagate/$PRODUCT_FAMILY/sspl
 
 # Create a link to low-level cli for easy global access
-if [ -f /opt/seagate/$PRODUCT_FAMILY/sspl/cli/lib/sspl_ll_cli ]; then
-    ln -sf /opt/seagate/$PRODUCT_FAMILY/sspl/cli/lib/sspl_ll_cli /usr/bin/sspl_ll_cli
+if [ -f /opt/seagate/$PRODUCT_FAMILY/sspl/low-level/cli/sspl_ll_cli ]; then
+    ln -sf /opt/seagate/$PRODUCT_FAMILY/sspl/low-level/cli/sspl_ll_cli /usr/bin/sspl_ll_cli
 fi
 
 # Assign the required groups
@@ -51,7 +51,9 @@ usermod -a -G disk sspl-ll
 usermod -a -G disk sspl-ll
 
 # Update the sudoers file with the sspl-ll user and available commands
-SUDO_LINE="sspl-ll	ALL = NOPASSWD: /usr/sbin/smartctl, /usr/sbin/mdadm, /usr/bin/mount, /usr/bin/umount, /usr/sbin/swapon, /usr/sbin/swapoff, /usr/sbin/hdparm, /usr/bin/systemctl, /usr/sbin/wbcli, /usr/bin/ipmitool, /usr/bin/systemd-detect-virt, /bin/salt-call, /bin/tee, /usr/bin/facter, /usr/bin/provisioner"
+SUDO_LINE="sspl-ll	ALL = NOPASSWD: /usr/sbin/smartctl, /usr/sbin/mdadm, /usr/bin/mount, /usr/bin/umount, /usr/sbin/swapon, /usr/sbin/swapoff, /usr/sbin/hdparm, /usr/bin/systemctl, /usr/sbin/wbcli, /usr/bin/ipmitool, /usr/bin/systemd-detect-virt, /bin/tee, /usr/bin/facter"
+[ "$PRODUCT_NAME" == "LDR_R1" ] && SUDO_LINE="${SUDO_LINE}, /usr/bin/provisioner, /bin/salt-call"
+
 echo "$SUDO_LINE" | tee /etc/sudoers.d/sspl > /dev/null
 chmod 440 /etc/sudoers.d/sspl
 # Set noop = true in puppet conf file to avoid the sspl auth file getting
@@ -76,10 +78,10 @@ rm -Rf /tmp/dcs/dmreport
 setcap cap_sys_rawio=ep /usr/bin/python2.7
 
 # Make sure security policies are in place
-cp -f /opt/seagate/$PRODUCT_FAMILY/sspl/conf/etc/polkit-1/rules.d/sspl-ll_dbus_policy.rules /etc/polkit-1/rules.d
-cp -f /opt/seagate/$PRODUCT_FAMILY/sspl/conf/etc/dbus-1/system.d/sspl-ll_dbus_policy.conf /etc/dbus-1/system.d
+cp -f /opt/seagate/$PRODUCT_FAMILY/sspl/low-level/files/etc/polkit-1/rules.d/sspl-ll_dbus_policy.rules /etc/polkit-1/rules.d
+cp -f /opt/seagate/$PRODUCT_FAMILY/sspl/low-level/files/etc/dbus-1/system.d/sspl-ll_dbus_policy.conf /etc/dbus-1/system.d
 
 mkdir -p /etc/sspl-ll/templates/snmp
-cp -rf /opt/seagate/$PRODUCT_FAMILY/sspl/conf/snmp/* /etc/sspl-ll/templates/snmp
+cp -rf /opt/seagate/$PRODUCT_FAMILY/sspl/low-level/snmp/* /etc/sspl-ll/templates/snmp
 
 rm -Rf /var/run/sspl_ll

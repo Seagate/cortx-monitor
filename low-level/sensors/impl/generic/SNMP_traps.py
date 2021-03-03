@@ -21,26 +21,24 @@
 """
 import json
 
-from framework.base.module_thread import SensorThread
-from framework.base.internal_msgQ import InternalMsgQ
-from framework.utils.service_logging import logger
-
-# Modules that receive messages from this module
-from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
-from message_handlers.logging_msg_handler import LoggingMsgHandler
-
-from json_msgs.messages.sensors.snmp_trap import SNMPtrapMsg
-
-from pysnmp.smi import builder, view
-
-from pysnmp.carrier.asynsock.dispatch import AsynsockDispatcher
-from pysnmp.carrier.asynsock.dgram import udp, udp6
 from pyasn1.codec.ber import decoder
-from pysnmp.proto import api
-
-
 from zope.interface import implementer
+
+from framework.base.internal_msgQ import InternalMsgQ
+from framework.base.module_thread import SensorThread
+# Modules that receive messages from this module
+from framework.rabbitmq.rabbitmq_egress_processor import \
+    RabbitMQegressProcessor
+from framework.utils.conf_utils import SSPL_CONF, Conf
+from framework.utils.service_logging import logger
+from json_msgs.messages.sensors.snmp_trap import SNMPtrapMsg
+from message_handlers.logging_msg_handler import LoggingMsgHandler
+from pysnmp.carrier.asynsock.dgram import udp, udp6
+from pysnmp.carrier.asynsock.dispatch import AsynsockDispatcher
+from pysnmp.proto import api
+from pysnmp.smi import builder, view
 from sensors.INode_data import INodeData
+
 
 @implementer(INodeData)
 class SNMPtraps(SensorThread, InternalMsgQ):
@@ -250,16 +248,12 @@ class SNMPtraps(SensorThread, InternalMsgQ):
 
     def _get_config(self):
         """Retrieves the information in /etc/sspl.conf"""
-        self._enabled_traps = self._conf_reader._get_value_list(self.SNMPTRAPS,
-                                                        self.ENABLED_TRAPS)
-        self._enabled_MIBS  = self._conf_reader._get_value_list(self.SNMPTRAPS,
-                                                        self.ENABLED_MIBS)
+        self._enabled_traps = Conf.get(SSPL_CONF, f"{self.SNMPTRAPS}>{self.ENABLED_TRAPS}")
+        self._enabled_MIBS  = Conf.get(SSPL_CONF, f"{self.SNMPTRAPS}>{self.ENABLED_MIBS}")
 
-        self._bind_ip = self._conf_reader._get_value_with_default(self.SNMPTRAPS,
-                                                        self.BIND_IP,
+        self._bind_ip = Conf.get(SSPL_CONF, f"{self.SNMPTRAPS}>{self.BIND_IP}",
                                                         'service')
-        self._bind_port = int(self._conf_reader._get_value_with_default(self.SNMPTRAPS,
-                                                        self.BIND_PORT,
+        self._bind_port = int(Conf.get(SSPL_CONF, f"{self.SNMPTRAPS}>{self.BIND_PORT}",
                                                         1620))
 
         logger.info("          Listening on %s:%s" % (self._bind_ip, self._bind_port))

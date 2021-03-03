@@ -42,7 +42,6 @@ from os.path import isfile, join
 from dbus import SystemBus, Interface, exceptions as debus_exceptions
 
 import sys
-sys.path.insert(0, '/opt/seagate/cortx/sspl/low-level')
 from framework.utils.config_reader import ConfigReader
 
 import ctypes

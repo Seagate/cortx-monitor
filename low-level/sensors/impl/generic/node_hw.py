@@ -19,31 +19,32 @@
  ****************************************************************************
 """
 
-import os
-import subprocess
-import time
+import calendar
 import json
+import os
 import re
 import socket
+import subprocess
+import time
 import uuid
-import calendar
 
 from zope.interface import implementer
 
-from framework.utils.severity_reader import SeverityReader
-from message_handlers.node_data_msg_handler import NodeDataMsgHandler
-from message_handlers.logging_msg_handler import LoggingMsgHandler
-
 from framework.base.debug import Debug
-from framework.base.module_thread import SensorThread
 from framework.base.internal_msgQ import InternalMsgQ
-from framework.base.sspl_constants import PRODUCT_FAMILY
-from framework.base.sspl_constants import COMMON_CONFIGS,ServiceTypes,node_key_id
+from framework.base.module_thread import SensorThread
+from framework.base.sspl_constants import (PRODUCT_FAMILY, ServiceTypes,
+                                           node_key_id)
+from framework.utils import encryptor
+from framework.utils.conf_utils import (CLUSTER, GLOBAL_CONF, IP, SECRET,
+                                        SRVNODE, SSPL_CONF, USER, Conf)
 from framework.utils.config_reader import ConfigReader
 from framework.utils.service_logging import logger
-from framework.utils import encryptor
-from sensors.INode_hw import INodeHWsensor
+from framework.utils.severity_reader import SeverityReader
 from framework.utils.store_factory import file_store
+from message_handlers.logging_msg_handler import LoggingMsgHandler
+from message_handlers.node_data_msg_handler import NodeDataMsgHandler
+from sensors.INode_hw import INodeHWsensor
 
 # bash exit codes
 BASH_ILLEGAL_CMD = 127
@@ -188,8 +189,8 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         except (IOError, ConfigReader.Error) as err:
             logger.error("[ Error ] when validating the config file {0} - {1}"\
                  .format(self.CONF_FILE, err))
-        self.polling_interval = int(self.conf_reader._get_value_with_default(
-            self.NODEHWSENSOR, self.POLLING_INTERVAL, self.DEFAULT_POLLING_INTERVAL))
+        self.polling_interval = int(Conf.get(SSPL_CONF, f"{self.NODEHWSENSOR}>{self.POLLING_INTERVAL}",
+                            self.DEFAULT_POLLING_INTERVAL))
 
     def _get_file(self, name):
         if os.path.exists(name):
@@ -244,48 +245,23 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         # Initialize internal message queues for this module
         super(NodeHWsensor, self).initialize_msgQ(msgQlist)
 
-        # read bmc interface value from sspl.conf
-        self.file_conf_reader = ConfigReader(is_test=True, test_config_path='/etc/sspl.conf')
-
-        self._site_id = conf_reader._get_value_with_default(
-                                                self.SYSTEM_INFORMATION,
-                                                COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.SITE_ID),
-                                                '001')
-        self._rack_id = conf_reader._get_value_with_default(
-                                                self.SYSTEM_INFORMATION,
-                                                COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.RACK_ID),
-                                                '001')
-        self._node_id = conf_reader._get_value_with_default(
-                                                self.SYSTEM_INFORMATION,
-                                                COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.NODE_ID),
-                                                '001')
-        self._cluster_id = conf_reader._get_value_with_default(
-                                                self.SYSTEM_INFORMATION,
-                                                COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.CLUSTER_ID),
-                                                '001')
-        self._bmc_user = conf_reader._get_value_with_default(
-                                                self.BMC,
-                                                COMMON_CONFIGS.get(self.BMC).get(self.BMC_LAN_USER),
+        self._site_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.SITE_ID}",'DC01')
+        self._rack_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.RACK_ID}",'RC01')
+        self._node_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.NODE_ID}",'SN01')
+        self._cluster_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{self.CLUSTER_ID}",'CC01')
+        self._bmc_user = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.BMC}>{USER}",
                                                 'ADMIN')
-        self._bmc_passwd = conf_reader._get_value_with_default(
-                                                self.BMC,
-                                                COMMON_CONFIGS.get(self.BMC).get(self.BMC_LAN_PASSWD),
+        self._bmc_passwd = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.BMC}>{SECRET}",
                                                'ADMIN')
-        self._bmc_ip = conf_reader._get_value_with_default(
-                                                self.BMC,
-                                                COMMON_CONFIGS.get(self.BMC).get(self.BMC_LAN_IP),
+        self._bmc_ip = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.BMC}>{IP}",
                                                 '')
-        self._channel_interface = self.file_conf_reader._get_value_with_default(
-                                                self.BMC_INTERFACE,
-                                                self.BMC_CHANNEL_IF,
+        self._channel_interface = Conf.get(SSPL_CONF, f"{self.BMC_INTERFACE}>{self.BMC_CHANNEL_IF}",
                                                 'system')
 
         decryption_key = encryptor.gen_key(self._cluster_id, ServiceTypes.CLUSTER.value)
         self._bmc_passwd = encryptor.decrypt(decryption_key, self._bmc_passwd.encode('ascii'), 'Node_hw')
 
-        data_dir =  self.conf_reader._get_value_with_default(self.SYSINFO,
-                    COMMON_CONFIGS.get(self.SYSINFO).get(self.DATA_PATH_KEY),
-                    self.DATA_PATH_VALUE_DEFAULT)
+        data_dir =  Conf.get(SSPL_CONF, f"{self.SYSINFO}>{self.DATA_PATH_KEY}", self.DATA_PATH_VALUE_DEFAULT)
         self.cache_dir_path = os.path.join(data_dir, self.CACHE_DIR_NAME)
 
         # define variable in consul to check for bmc channel interface fallback
@@ -706,11 +682,11 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
                 "cluster_id":self._cluster_id,
                 "resource_type": resource_type,
                 "resource_id": resource_id,
-                "event_time": epoch_time
+                "event_time": epoch_time,
+                "description": channel_status
             }
 
         specific_info = {
-                "event": channel_status,
                 "channel info": channel_info
             }
 
@@ -946,7 +922,8 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
                         "cluster_id":self._cluster_id ,
                         "resource_type": resource_type,
                         "resource_id": sensor_name,
-                        "event_time": self._get_epoch_time_from_date_and_time(date, _time)
+                        "event_time": self._get_epoch_time_from_date_and_time(date, _time),
+                        "description": event
                     }
 
         if is_last:
@@ -984,7 +961,8 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
             "cluster_id": self._cluster_id,
             "resource_type": resource_type,
             "resource_id": sensor,
-            "event_time": self._get_epoch_time_from_date_and_time(date, _time)
+            "event_time": self._get_epoch_time_from_date_and_time(date, _time),
+            "description": event
         }
 
         try:
@@ -996,7 +974,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         dynamic, static = self._get_sensor_sdr_props(sensor_id)
         specific_info = {}
         specific_info["fru_id"] = sensor
-        specific_info["event"] = event
+
         specific_info.update(static)
 
         # Remove unnecessary characters props
@@ -1061,7 +1039,8 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
             "cluster_id": self._cluster_id,
             "resource_type": resource_type,
             "resource_id": sensor,
-            "event_time": self._get_epoch_time_from_date_and_time(date, _time)
+            "event_time": self._get_epoch_time_from_date_and_time(date, _time),
+            "description": event
         }
 
         try:
@@ -1073,7 +1052,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         dynamic, static = self._get_sensor_sdr_props(sensor_id)
         specific_info = {}
         specific_info["fru_id"] = sensor
-        specific_info["event"] = event
+
         specific_info.update(static)
 
         for key in ['Deassertions Enabled', 'Assertions Enabled',
@@ -1100,6 +1079,8 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
             disk_sensors_list = self._get_sensor_list_by_entity(common['Entity ID'])
             disk_sensors_list.remove(sensor_id)
 
+            description = f"{event} - {status}"
+
             if not specific:
                 specific = {"States Asserted": "N/A", "Sensor Type (Discrete)": "N/A"}
             specific_info = specific
@@ -1116,7 +1097,8 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
                 "cluster_id": self._cluster_id,
                 "resource_type": resource_type,
                 "resource_id": sensor,
-                "event_time": self._get_epoch_time_from_date_and_time(date, _time)
+                "event_time": self._get_epoch_time_from_date_and_time(date, _time),
+                "description": description
             }
             if (event, status) in alert_severity_dict:
                 alert_type = alert_severity_dict[(event, status)][0]
@@ -1125,7 +1107,6 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
                 alert_type = "fault"
                 severity   = "informational"
             specific_info["fru_id"] = sensor
-            specific_info["event"] = f"{event} - {status}"
 
             if is_last:
                 specific_info.update(specific_dynamic)
@@ -1164,7 +1145,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         specific_info = {}
         specific_info.update(common)
         specific_info.update(specific)
-        specific_info.update({'fru_id': sensor, 'event': event})
+        specific_info.update({'fru_id': sensor})
         if is_last:
             specific_info.update(specific_dynamic)
 
@@ -1175,7 +1156,8 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
             "cluster_id":self._cluster_id ,
             "resource_type": resource_type,
             "resource_id": sensor_name,
-            "event_time": self._get_epoch_time_from_date_and_time(date, _time)
+            "event_time": self._get_epoch_time_from_date_and_time(date, _time),
+            "description": event
         }
 
         self._send_json_msg(resource_type, alert_type, severity, info, specific_info)
@@ -1204,7 +1186,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         specific_info = {}
         specific_info.update(common)
         specific_info.update(specific)
-        specific_info.update({'fru_id': sensor, 'event': event})
+        specific_info.update({'fru_id': sensor})
         if is_last:
             specific_info.update(specific_dynamic)
 
@@ -1215,7 +1197,8 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
             "cluster_id":self._cluster_id ,
             "resource_type": resource_type,
             "resource_id": sensor_name,
-            "event_time": self._get_epoch_time_from_date_and_time(date, _time)
+            "event_time": self._get_epoch_time_from_date_and_time(date, _time),
+            "description": event
         }
 
         self._send_json_msg(resource_type, alert_type, severity, info, specific_info)
@@ -1246,7 +1229,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
 #        specific_info = {}
 #        specific_info.update(common)
 #        specific_info.update(specific)
-#        specific_info.update({'fru_id': sensor, 'event': event})
+#        specific_info.update({'fru_id': sensor})
 #        if is_last:
 #            specific_info.update(specific_dynamic)
 #
@@ -1257,7 +1240,8 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
 #            "cluster_id":self._cluster_id ,
 #            "resource_type": resource_type,
 #            "resource_id": sensor_name,
-#            "event_time": self._get_epoch_time_from_date_and_time(date, _time)
+#            "event_time": self._get_epoch_time_from_date_and_time(date, _time),
+#            "description": event
 #        }
 #
 #        self._send_json_msg(resource_type, alert_type, severity, info, specific_info)
@@ -1279,9 +1263,6 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
                 }
             }
           })
-
-        # RAAL stands for - RAise ALert
-        logger.info(f"RAAL: {internal_json_msg}")
 
         # Send the event to node data message handler to generate json message and send out
         self._write_internal_msgQ(NodeDataMsgHandler.name(), internal_json_msg)

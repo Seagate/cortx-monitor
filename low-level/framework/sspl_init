@@ -18,8 +18,7 @@
 set -u -o pipefail
 
 SCRIPT_NAME=$(basename $0)
-. $SCRIPT_NAME/constants.sh
-DIR_NAME="/opt/seagate/$PRODUCT_FAMILY/sspl"
+source $script_dir/constants.sh
 SSPL_CONF="/etc/sspl.conf"
 RSYSLOG_CONF="/etc/rsyslog.d/0-iemfwd.conf"
 RSYSLOG_SSPL_CONF="/etc/rsyslog.d/1-ssplfwd.conf"
@@ -142,7 +141,7 @@ create_req() {
 config_sspl() {
 
     # Install packages which are not available in YUM repo, from PIP
-    pip3.6 install -r /opt/seagate/$PRODUCT_FAMILY/sspl/conf/requirements.txt
+    pip3.6 install -r /opt/seagate/$PRODUCT_FAMILY/sspl/low-level/requirements.txt
 
     # steps from %post section of sspl-ll.spec
 
@@ -151,10 +150,10 @@ config_sspl() {
 
     # Copy rsyslog configuration
     [ -f /etc/rsyslog.d/0-iemfwd.conf ] ||
-       cp /opt/seagate/$PRODUCT_FAMILY/sspl/conf/etc/rsyslog.d/0-iemfwd.conf /etc/rsyslog.d/0-iemfwd.conf
+       cp /opt/seagate/$PRODUCT_FAMILY/sspl/low-level/files/etc/rsyslog.d/0-iemfwd.conf /etc/rsyslog.d/0-iemfwd.conf
 
     [ -f $RSYSLOG_SSPL_CONF ] ||
-       cp /opt/seagate/$PRODUCT_FAMILY/sspl/conf/$RSYSLOG_SSPL_CONF $RSYSLOG_SSPL_CONF
+       cp /opt/seagate/$PRODUCT_FAMILY/sspl/low-level/files/$RSYSLOG_SSPL_CONF $RSYSLOG_SSPL_CONF
 
     force=0
     role=
@@ -203,7 +202,7 @@ config_sspl() {
     product=$(sed -nr 's/^product=([^,]+)$/\1/p' $SSPL_CONF | head -1)
     [ -z "$product" ] && echo "No product specified in $SSPL_CONF" && exit 1
 
-    enabled_products=$(python3.6 $DIR_NAME/bin/sspl_constants.py)
+    enabled_products=$(python3.6 $SSPL_BASE_DIR/bin/sspl_constants.py)
     [ -z "$enabled_products" ] && echo "No enabled products!" && exit 1
     [[ $enabled_products =~ (^| )$product($| ) ]] || {
         echo "Product '$product' is not in enabled products list: $enabled_products";
@@ -218,9 +217,9 @@ config_sspl() {
 
     # Add sspl-ll user to required groups and sudoers file etc.
     echo "Initializing SSPL configuration ... "
-    $SSPL_BASE_DIR/bin/sspl_reinit $product || {
+    $SSPL_BASE_DIR/low-level/framework/sspl_reinit $product || {
         reinit_err="$?";
-        echo -n "$SSPL_BASE_DIR/bin/sspl_reinit failed ";
+        echo -n "$SSPL_BASE_DIR/low-level/framework/sspl_reinit failed ";
         echo "with exit code ${reinit_err} for product $product";
         exit 1;
     }
@@ -230,9 +229,9 @@ config_sspl() {
 
     # Add required user and vhost to RabbitMQ. Set user permissions etc.
     echo "Creating required RABBITMQ configuration.... "
-    python3 $SSPL_BASE_DIR/bin/sspl_rabbitmq_reinit $product || {
+    python3 $SSPL_BASE_DIR/low-level/framework/sspl_rabbitmq_reinit.py $product || {
         reinit_err="$?";
-        echo -n "$SSPL_BASE_DIR/bin/sspl_rabbitmq_reinit failed ";
+        echo -n "$SSPL_BASE_DIR/low-level/framework/sspl_rabbitmq_reinit.py failed ";
         echo "with exit code ${reinit_err} for product $product";
         exit 1;
     }
@@ -254,7 +253,7 @@ config_sspl() {
     [ ! -z "$SSPL_LOG_FILE_PATH" ] &&
     {
         sed -i "s|File=.*|File=\"$SSPL_LOG_FILE_PATH\")|g" $RSYSLOG_SSPL_CONF
-        sed -i "1 s|^.*$|${SSPL_LOG_FILE_PATH}|g" /opt/seagate/$PRODUCT_FAMILY/sspl/conf/etc/logrotate.d/sspl_logs
+        sed -i "1 s|^.*$|${SSPL_LOG_FILE_PATH}|g" /opt/seagate/$PRODUCT_FAMILY/sspl/low-level/files/etc/logrotate.d/sspl_logs
     }
 
 
@@ -267,7 +266,7 @@ config_sspl() {
         sed -i "s|File=.*|File=\/var/log/$PRODUCT_FAMILY/iem/iem_messages\"|g" $RSYSLOG_CONF
     else
         sed -i "s|File=.*|File=\"${LOG_FILE_PATH}\"|g" $RSYSLOG_CONF
-        sed -i "1 s|^.*$|${LOG_FILE_PATH}|g" /opt/seagate/$PRODUCT_FAMILY/sspl/conf/etc/logrotate.d/iem_messages
+        sed -i "1 s|^.*$|${LOG_FILE_PATH}|g" /opt/seagate/$PRODUCT_FAMILY/sspl/low-level/files/etc/logrotate.d/iem_messages
     fi
 
     # Create logrotate dir in case it's not present for dev environment
@@ -275,8 +274,8 @@ config_sspl() {
         mkdir -p ${LOGROTATE_DIR}
     fi
 
-    cp /opt/seagate/$PRODUCT_FAMILY/sspl/conf/etc/logrotate.d/iem_messages $IEM_LOGROTATE_CONF
-    cp /opt/seagate/$PRODUCT_FAMILY/sspl/conf/etc/logrotate.d/sspl_logs $SSPL_LOGROTATE_CONF
+    cp /opt/seagate/$PRODUCT_FAMILY/sspl/low-level/files/etc/logrotate.d/iem_messages $IEM_LOGROTATE_CONF
+    cp /opt/seagate/$PRODUCT_FAMILY/sspl/low-level/files/etc/logrotate.d/sspl_logs $SSPL_LOGROTATE_CONF
 
     # This rsyslog restart will happen after successful updation of rsyslog
     # conf file and before sspl starts. If at all this will be removed from

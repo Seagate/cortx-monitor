@@ -17,31 +17,33 @@
 
 import subprocess
 import ast
-import configparser
-from enum import Enum
+import sys
 import os
+from enum import Enum
 
-try:
-    from salt_util import SaltInterface
-    from service_logging import logger
-except Exception as e:
-    from framework.utils.salt_util import SaltInterface
-    from framework.utils.service_logging import logger
+# using cortx package
+from framework.utils.salt_util import SaltInterface
+from framework.utils.service_logging import logger
+from cortx.utils.conf_store import Conf
 
-PRODUCT_NAME = 'LDR_R1'
+
+PRODUCT_NAME = 'LR2'
 PRODUCT_FAMILY = 'cortx'
-enabled_products = ["CS-A", "SINGLE","DUAL", "CLUSTER", "LDR_R1", "LDR_R2"]
+enabled_products = ["CS-A", "SINGLE","DUAL", "CLUSTER", "LDR_R1", "LR2"]
 cs_products = ["CS-A"]
 cs_legacy_products = ["CS-L", "CS-G"]
-setups = ["cortx"]
-RESOURCE_PATH = f"/opt/seagate/{PRODUCT_FAMILY}/sspl/resources/"
-CLI_RESOURCE_PATH = f"/opt/seagate/{PRODUCT_FAMILY}/sspl/cli"
-DATA_PATH = f"/var/{PRODUCT_FAMILY}/sspl/data/"
-SSPL_CONFIGURED=f"/var/{PRODUCT_FAMILY}/sspl/sspl-configured"
-NODE_ID = "001"
-SITE_ID = "001"
-RACK_ID = "001"
-SSPL_STORE_TYPE = 'consul'
+setups = ["vm", "cortx", "ssu", "gw", "cmu"]
+RESOURCE_PATH = "/opt/seagate/%s/sspl/low-level/json_msgs/schemas/" % (PRODUCT_FAMILY)
+CLI_RESOURCE_PATH = "/opt/seagate/%s/sspl/low-level/tests/manual" % (PRODUCT_FAMILY)
+DATA_PATH = "/var/%s/sspl/data/" % (PRODUCT_FAMILY)
+SSPL_CONFIGURED_DIR = "/var/%s/sspl" % (PRODUCT_FAMILY)
+SSPL_CONFIGURED = "%s/sspl-configured" % SSPL_CONFIGURED_DIR
+RESOURCE_HEALTH_VIEW = "/usr/bin/resource_health_view"
+CONSUL_DUMP = "/opt/seagate/%s/sspl/bin/consuldump.py" % (PRODUCT_FAMILY)
+NODE_ID = "SN01"
+SITE_ID = "DC01"
+RACK_ID = "RC01"
+SSPL_STORE_TYPE = 'file'
 SYSLOG_HOST = 'localhost'
 SYSLOG_PORT = '514'
 SYSINFO = "SYSTEM_INFORMATION"
@@ -55,10 +57,29 @@ SUPPORT_CONTACT_NUMBER = "18007324283"
 ENCL_TRIGGER_LOG_MAX_RETRY = 10
 ENCL_DOWNLOAD_LOG_MAX_RETRY = 60
 ENCL_DOWNLOAD_LOG_WAIT_BEFORE_RETRY = 15
+SSPL_BASE_DIR = "/opt/seagate/%s/sspl" % (PRODUCT_FAMILY)
+PRODUCT_BASE_DIR="/opt/seagate/$PRODUCT_FAMILY/"
+RSYSLOG_IEM_CONF ="/etc/rsyslog.d/0-iemfwd.conf"
+RSYSLOG_SSPL_CONF = "/etc/rsyslog.d/1-ssplfwd.conf"
+LOGROTATE_DIR  ="/etc/logrotate.d"
+IEM_LOGROTATE_CONF = "%s/iem_messages" % LOGROTATE_DIR
+SSPL_LOGROTATE_CONF = "%s/sspl_logs" % LOGROTATE_DIR
+HPI_PATH = '/tmp/dcs/hpi'
+MDADM_PATH = '/etc/mdadm.conf'
+GLOBAL_CONFIG_INDEX = "global"
+SSPL_CONFIG_INDEX = "sspl"
+SSPL_TEST_CONFIG_INDEX = "sspl_test"
+CONFIG_SPEC_TYPE = "yaml"
+
+# This file will be created when sspl is being configured for node replacement case
+REPLACEMENT_NODE_ENV_VAR_FILE = "/etc/profile.d/set_replacement_env.sh"
 
 # required only for init
 component = 'sspl/config'
 file_store_config_path = '/etc/sspl.conf'
+sspl_test_file_path = "%s/sspl_test/conf/sspl_tests.conf" % (SSPL_BASE_DIR)
+sspl_config_path = "yaml://%s" % (file_store_config_path)
+sspl_test_config_path = "yaml://%s" % (sspl_test_file_path)
 salt_provisioner_pillar_sls = 'sspl'
 salt_uniq_attr_per_node = ['cluster_id']
 salt_uniq_passwd_per_node = ['RABBITMQINGRESSPROCESSOR', 'RABBITMQEGRESSPROCESSOR', 'LOGGINGPROCESSOR']
@@ -69,26 +90,17 @@ CONSUL_HOST = '127.0.0.1'
 CONSUL_PORT = '8500'
 
 # TODO Keep only constants in this file.
-# other values(configs) should come from cofig.
-# Check if SSPL is configured
-if os.path.exists(SSPL_CONFIGURED):
-    try:
-        config = configparser.ConfigParser()
-        config.read(file_store_config_path)
-        node_key_id = config['SYSTEM_INFORMATION']['salt_minion_id']
-        CONSUL_HOST = config['DATASTORE']['consul_host']
-        CONSUL_PORT = config['DATASTORE']['consul_port']
-    except Exception as err:
-        print(f'sspl_constants : Failed to read from {file_store_config_path} due to error - {err}')
-# If not configured, use salt interface
-else:
+# other values(configs) should come from config.
+
+# If SSPL is not configured, use salt interface
+if not os.path.exists(SSPL_CONFIGURED) and PRODUCT_NAME=="LDR_R1":
     try:
         salt_int = SaltInterface()
         node_key_id = salt_int.get_node_id()
         CONSUL_HOST = salt_int.get_consul_vip()
         CONSUL_PORT = salt_int.get_consul_port()
     except Exception as err:
-        print(f'sspl_constants : Failed to read from SaltInterface due to error - {err}')
+        print('sspl_constants : Failed to read from SaltInterface due to error - %s' % (err))
 
 CONSUL_ERR_STRING = '500 No cluster leader'
 
@@ -160,62 +172,86 @@ SSPL_SETTINGS = {
 # The keys which are actually active
 sspl_settings_configured_groups = set()
 
-COMMON_CONFIGS = {
-    "SYSTEM_INFORMATION": {
-        "sspl_key" : "key_provided_by_provisioner",
-        "operating_system" : "operating_system",
-        "kernel_version" : "kernel_version",
-        "product" : "product",
-        "site_id" : "site_id",
-        "rack_id" : "rack_id",
-        "node_id" : f"{node_key_id}/node_id",
-        "cluster_id" : "cluster_id",
-        "syslog_host" : "syslog_host",
-        "syslog_port" : "syslog_port",
-        "setup" : "setup",
-        "data_path" : "data_path"
-    },
-    "STORAGE_ENCLOSURE": {
-        "sspl_key" : "key_provided_by_provisioner",
-        "primary_controller_ip" : "controller/primary_mc/ip",
-        "primary_controller_port" : "controller/primary_mc/port",
-        "secondary_controller_ip" : "controller/secondary_mc/ip",
-        "secondary_controller_port" : "controller/secondary_mc/port",
-        "user" : "controller/user",
-        "password" : "controller/secret",
-        "mgmt_interface" : "controller/mgmt_interface"
-    },
-    "RABBITMQCLUSTER": {
-        "sspl_key" : "key_provided_by_provisioner",
-        "cluster_nodes" : "rabbitmq/cluster_nodes",
-        "erlang_cookie" : "rabbitmq/erlang_cookie"
-    },
-    "BMC": {
-        "sspl_key" : "key_provided_by_provisioner",
-        f"ip_{node_key_id}" : f"{node_key_id}/ip",
-        f"user_{node_key_id}" : f"{node_key_id}/user",
-        f"secret_{node_key_id}" : f"{node_key_id}/secret"
+if SSPL_STORE_TYPE == 'consul':
+    COMMON_CONFIGS = {
+        "SYSTEM_INFORMATION": {
+            "sspl_key" : "key_provided_by_provisioner",
+            "operating_system" : "operating_system",
+            "kernel_version" : "kernel_version",
+            "product" : "product",
+            "site_id" : "site_id",
+            "rack_id" : "rack_id",
+            "node_id" : f"{node_key_id}/node_id",
+            "cluster_id" : "cluster_id",
+            "syslog_host" : "syslog_host",
+            "syslog_port" : "syslog_port",
+            "setup" : "setup",
+            "data_path" : "data_path"
+        },
+        "STORAGE_ENCLOSURE": {
+            "sspl_key" : "key_provided_by_provisioner",
+            "primary_controller_ip" : "controller/primary_mc/ip",
+            "primary_controller_port" : "controller/primary_mc/port",
+            "secondary_controller_ip" : "controller/secondary_mc/ip",
+            "secondary_controller_port" : "controller/secondary_mc/port",
+            "user" : "controller/user",
+            "password" : "controller/secret",
+            "mgmt_interface" : "controller/mgmt_interface"
+        },
+        "RABBITMQCLUSTER": {
+            "sspl_key" : "key_provided_by_provisioner",
+            "cluster_nodes" : "rabbitmq/cluster_nodes",
+            "erlang_cookie" : "rabbitmq/erlang_cookie"
+        },
+        "BMC": {
+            "sspl_key" : "key_provided_by_provisioner",
+            f"ip_{node_key_id}" : f"{node_key_id}/ip",
+            f"user_{node_key_id}" : f"{node_key_id}/user",
+            f"secret_{node_key_id}" : f"{node_key_id}/secret"
+        }
     }
-}
+else:
+    COMMON_CONFIGS = {
+        "SYSTEM_INFORMATION": {
+            "sspl_key" : "key_provided_by_provisioner",
+            "operating_system" : "operating_system",
+            "kernel_version" : "kernel_version",
+            "product" : "product",
+            "site_id" : "site_id",
+            "rack_id" : "rack_id",
+            "node_id" : "node_id",
+            "cluster_id" : "cluster_id",
+            "syslog_host" : "syslog_host",
+            "syslog_port" : "syslog_port",
+            "setup" : "setup",
+            "data_path" : "data_path"
+        },
+        "STORAGE_ENCLOSURE": {
+            "sspl_key" : "key_provided_by_provisioner",
+            "primary_controller_ip" : "primary_controller_ip",
+            "primary_controller_port" : "primary_controller_port",
+            "secondary_controller_ip" : "secondary_controller_ip",
+            "secondary_controller_port" : "secondary_controller_port",
+            "user" : "user",
+            "password" : "password",
+            "mgmt_interface" : "mgmt_interface"
+        },
+        "RABBITMQCLUSTER": {
+            "sspl_key" : "key_provided_by_provisioner",
+            "cluster_nodes" : "cluster_nodes",
+            "erlang_cookie" : "erlang_cookie"
+        },
+        "BMC": {
+            "sspl_key" : "key_provided_by_provisioner",
+            f"ip" : f"ip",
+            f"user" : f"user",
+            f"secret" : f"secret"
+        }
+    }
+
 
 SSPL_CONFIGS = ['log_level', 'cli_type', 'sspl_log_file_path', 'cluster_id', 'storage_enclosure', 'setup', 'operating_system']
 
-try:
-    setup_info = subprocess.Popen(['sudo', '/usr/bin/provisioner', 'get_setup_info'],
-        stdout=subprocess.PIPE).communicate()[0].decode("utf-8").rstrip()
-    setup_info = ast.literal_eval(setup_info)
-    storage_type = setup_info['storage_type'].lower()
-    server_type = setup_info['server_type'].lower()
-    logger.info(f"Storage Type : '{storage_type}'")
-    logger.info(f"Server Type '{server_type}'")
-
-except Exception as err:
-    logger.debug(f"Error in getting setup information of server and storage type : {err}")
-    print(f"Error in getting setup information of server and storage type : {err}")
-    storage_type = 'virtual'
-    server_type = 'virtual'
-    logger.debug(f"Considering default storage type : '{storage_type}'")
-    logger.debug(f"Considering default server type : '{server_type}'")
 
 class RaidDataConfig(Enum):
     MDSTAT_FILE = "/proc/mdstat"

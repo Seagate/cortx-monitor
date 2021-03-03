@@ -19,25 +19,27 @@
  ****************************************************************************
 """
 
-import os
-import math
-import socket
-import psutil
-import threading
-import subprocess as sp
-import re
 import errno
-
-from datetime import datetime
+import math
+import os
+import re
+import socket
+import subprocess as sp
+import threading
 import time
+from datetime import datetime
+
+import psutil
 from zope.interface import implementer
 
 from framework.base.debug import Debug
+from framework.utils.conf_utils import SSPL_CONF, Conf
+from framework.utils.config_reader import ConfigReader
 from framework.utils.service_logging import logger
-from sensors.INode_data import INodeData
 from framework.utils.sysfs_interface import SysFS
 from framework.utils.tool_factory import ToolFactory
-from framework.utils.config_reader import ConfigReader
+from sensors.INode_data import INodeData
+
 
 @implementer(INodeData)
 class NodeData(Debug):
@@ -73,9 +75,7 @@ class NodeData(Debug):
 
         self.conf_reader = ConfigReader()
 
-        nw_fault_utility = self.conf_reader._get_value_with_default(
-                                              self.name().capitalize(),
-                                              self.PROBE,
+        nw_fault_utility = Conf.get(SSPL_CONF, f"{self.name().capitalize()}>{self.PROBE}",
                                               "sysfs")
 
         self._utility_instance = None
@@ -281,8 +281,9 @@ class NodeData(Debug):
         try:
             bmcdata = {'ifId': 'ebmc0', 'ipV4Prev': "", 'ipV4': "", 'nwStatus': "DOWN", 'nwCableConnStatus': 'UNKNOWN'}
             ipdata = sp.Popen("sudo ipmitool lan print", shell=True, stdout=sp.PIPE, stderr=sp.PIPE).communicate()[0].decode().strip()
-            bmcip = re.findall("\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}", ipdata)[0]
+            bmcip = re.findall("\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}", ipdata)
             if bmcip:
+                bmcip = bmcip[0]
                 pingbmchost = "ping -c1 -W1 -q "+bmcip
                 child = sp.Popen(pingbmchost.split(), stdout=sp.PIPE)
                 streamdata = child.communicate()[0] #child must be communicated before fetching return code.

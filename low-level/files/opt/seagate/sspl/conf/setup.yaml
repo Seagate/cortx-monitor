@@ -13,35 +13,50 @@
 # about this software or licensing, please email opensource@seagate.com or
 # cortx-questions@seagate.com.
 
-sspl:
-    post_install:
-         script: /opt/seagate/cortx/sspl/bin/sspl_setup
-         args:
-            - post_install -p LDR_R1
-    init:
-         script: /opt/seagate/cortx/sspl/bin/sspl_setup
-         args:
-            - init -r cortx
-    config:
-         script: /opt/seagate/cortx/sspl/bin/sspl_setup
-         args:
-            - config -f
-    test:
-         script: /opt/seagate/cortx/sspl/bin/sspl_setup
-         args:
-            - test self
-    reset:
-         script: /opt/seagate/cortx/sspl/bin/sspl_setup
-         args:
-            - reset hard -p LDR_R1
-    ha:
-         script: /opt/seagate/cortx/ha/conf/script/build-ha-sspl
-         args:
-            - /opt/seagate/cortx/iostack-ha/conf/build-ha-args.yaml
+sspl: 
+  post_install: 
+    cmd: /opt/seagate/cortx/sspl/bin/sspl_setup post_install
+    args: --config $URL
 
-    ha-cleanup:
-         script: /opt/seagate/cortx/ha/conf/script/prov-ha-sspl-reset
-         args: null
+  config: 
+    cmd: /opt/seagate/cortx/sspl/bin/sspl_setup config
+    args: --config $URL
 
-support_bundle:
-    - /opt/seagate/cortx/sspl/bin/sspl_bundle_generate
+  init: 
+    cmd: /opt/seagate/cortx/sspl/bin/sspl_setup init
+    args: --config $URL
+
+  test: 
+    cmd: /opt/seagate/cortx/sspl/bin/sspl_setup test
+    args: --config $URL --plan sanity
+
+  upgrade: 
+    cmd: /opt/seagate/cortx/sspl/bin/sspl_setup upgrade
+    args: --config $URL
+
+  reset: 
+    cmd: /opt/seagate/cortx/sspl/bin/sspl_setup reset
+    args: --config $URL --type hard
+
+  cleanup: 
+    cmd: /opt/seagate/cortx/sspl/bin/sspl_setup cleanup
+    args: --config $URL
+
+  backup: 
+    cmd: /opt/seagate/cortx/sspl/bin/sspl_setup backup
+    args: --location $URL
+
+  restore: 
+    cmd: /opt/seagate/cortx/sspl/bin/sspl_setup restore
+    args: --location $URL
+
+  ha: 
+    cmd: /opt/seagate/cortx/ha/conf/script/build-ha-sspl
+    args: /opt/seagate/cortx/iostack-ha/conf/build-ha-args.yaml
+
+  ha-cleanup: 
+    cmd: /opt/seagate/cortx/ha/conf/script/prov-ha-sspl-reset
+    args: null
+
+support_bundle: 
+  - /usr/bin/sspl_bundle_generate

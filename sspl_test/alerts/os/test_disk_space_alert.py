@@ -20,32 +20,36 @@ import psutil
 import time
 import sys
 
-from sspl_test.default import *
-from sspl_test.rabbitmq.rabbitmq_ingress_processor_tests import RabbitMQingressProcessorTests
-from sspl_test.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
+from default import world
+from rabbitmq.rabbitmq_ingress_processor_tests import RabbitMQingressProcessorTests
+from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
+
+
+resource_type = "node:os:disk_space"
 
 def init(args):
     pass
 
 def test_disk_space_alert(agrs):
     check_sspl_ll_is_running()
-    disk_space_data_sensor_request("node:os:disk_space")
+    disk_space_data_sensor_request(resource_type)
     disk_space_sensor_msg = None
-    time.sleep(4)
-    while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
-        ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
-        time.sleep(0.1)
-        print("Received: {0}".format(ingressMsg))
-
-        try:
-            # Make sure we get back the message type that matches the request
-            msg_type = ingressMsg.get("sensor_response_type")
-            if msg_type["info"]["resource_type"] == "node:os:disk_space":
-                disk_space_sensor_msg = msg_type
-                break
-        except Exception as exception:
-            time.sleep(0.1)
-            print(exception)
+    # Wait untill expected resource type found in RMQ ingress processor msgQ.
+    start_time = time.time()
+    max_wait_time = 60
+    while not disk_space_sensor_msg:
+        if not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
+            ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
+            print("Received: {0}".format(ingressMsg))
+            try:
+                # Make sure we get back the message type that matches the request
+                msg_type = ingressMsg.get("sensor_response_type")
+                if msg_type["info"]["resource_type"] == resource_type:
+                    disk_space_sensor_msg = msg_type
+            except Exception as exception:
+                print(exception)
+        if (time.time()-start_time) > max_wait_time:
+            break
 
     assert(disk_space_sensor_msg is not None)
     assert(disk_space_sensor_msg.get("alert_type") is not None)
@@ -60,9 +64,10 @@ def test_disk_space_alert(agrs):
     assert(disk_space_info.get("node_id") is not None)
     assert(disk_space_info.get("cluster_id") is not None)
     assert(disk_space_info.get("rack_id") is not None)
-    assert(disk_space_info.get("resource_type") is not None)
+    assert(disk_space_info.get("resource_type") == resource_type)
     assert(disk_space_info.get("event_time") is not None)
     assert(disk_space_info.get("resource_id") is not None)
+    assert(disk_space_info.get("description") is not None)
 
     disk_space_specific_info = disk_space_sensor_msg.get("specific_info")
     assert(disk_space_specific_info is not None)

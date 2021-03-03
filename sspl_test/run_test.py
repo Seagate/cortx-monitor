@@ -28,14 +28,12 @@ import traceback
 import errno
 import re
 import argparse
+
 from generate_test_report import generate_html_report
-from framework.utils.config_reader import ConfigReader
+from common import (TestFailed, init_rabbitMQ_msg_processors,
+    stop_rabbitMQ_msg_processors)
+from framework.utils.conf_utils import Conf, SSPL_TEST_CONF
 
-# Adding sspl and sspl_test path
-test_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-os.sys.path.append(os.path.join(test_path))
-
-from sspl_test.common import TestFailed, init_rabbitMQ_msg_processors, stop_rabbitMQ_msg_processors
 
 skip_group_prefixes = {
     "REALSTORSENSORS": "alerts.realstor",
@@ -45,20 +43,15 @@ skip_group_prefixes = {
 }
 
 def conf_skipped_prefixes():
-    conf_reader = ConfigReader()
     for group in skip_group_prefixes.keys():
-        monitor = conf_reader._get_value_with_default(
-                group, 'monitor', 'true')
-        if monitor != 'true':
+        monitor = Conf.get(SSPL_TEST_CONF,f"{group}>monitor", 'true')
+        if monitor not in ['true', True]:
             yield skip_group_prefixes[group]
 
 result = {}
 
 def tmain(argp, argv):
 
-    # Import required TEST modules
-    ts_path = os.path.dirname(argv)
-    os.sys.path.append(os.path.join(ts_path, '..', '..'))
     args = {}
 
     # Prepare to run the test, all or subset per command line args
@@ -93,7 +86,7 @@ def tmain(argp, argv):
             continue
 
         try:
-            ts_module = __import__('sspl_test.%s' %ts, fromlist=[ts])
+            ts_module = __import__(ts, fromlist=[ts])
             # Initialization
             init = getattr(ts_module, 'init')
             init(args)

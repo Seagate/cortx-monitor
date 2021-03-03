@@ -17,20 +17,18 @@ import time
 import random
 import subprocess
 import re
-
 import pika
 import pika.exceptions
 import encodings.idna  # noqa
+from framework.utils.service_logging import logger
+from framework.utils.conf_utils import Conf, SSPL_TEST_CONF
 
-from sspl_test.framework.utils.service_logging import logger
-from sspl_test.framework.utils.config_reader import ConfigReader
 
 RABBITMQCTL = '/usr/sbin/rabbitmqctl'
 
 RABBITMQ_CLUSTER_SECTION = 'RABBITMQCLUSTER'
 RABBITMQ_CLUSTER_HOSTS_KEY = 'cluster_nodes'
 
-config = ConfigReader()
 connection_exceptions = (
     pika.exceptions.AMQPConnectionError,
     pika.exceptions.ChannelClosedByBroker,
@@ -61,7 +59,9 @@ def get_cluster_connection(username, password, virtual_host):
     """Makes connection with one of the rabbitmq node.
     """
     #hosts = get_cluster_nodes()  # Depreciated (EOS-8860)
-    hosts = config.get_value_list(RABBITMQ_CLUSTER_SECTION, RABBITMQ_CLUSTER_HOSTS_KEY)
+    hosts = Conf.get(SSPL_TEST_CONF, f"{RABBITMQ_CLUSTER_SECTION}>{RABBITMQ_CLUSTER_HOSTS_KEY}")
+    if isinstance(hosts, str):
+        hosts = hosts.strip().split(",")
     logger.debug(f'Cluster nodes [SSPL TEST]: {hosts}')
     ampq_hosts = [
         f'amqp://{username}:{password}@{host}/{virtual_host}' for host in hosts

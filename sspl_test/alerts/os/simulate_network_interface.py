@@ -16,6 +16,7 @@
 from time import sleep
 from subprocess import call
 
+
 def create_nw_interface():
     # Load the dummy interface module
     call("modprobe dummy".split())
@@ -36,6 +37,7 @@ def shuffle_nw_interface():
     create_nw_interface()
     sleep(3)
     # Change interface's state from down to up
-    # Default state for eth-mocked and br0 is down.  
+    # Default state for eth-mocked and br0 is down.
     call("ip link set eth-mocked up".split())
+    sleep(.1)
     call("ip link set br0 up".split())

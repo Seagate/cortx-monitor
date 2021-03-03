@@ -33,7 +33,6 @@ class StorFactory:
                 store_type = os.getenv('SSPL_STORE_TYPE', SSPL_STORE_TYPE)
                 if store_type == StoreTypes.FILE.value:
                     StorFactory.__store = FileStore()
-                    StorFactory.__store.read(file_store_config_path)
                 elif store_type == StoreTypes.CONSUL.value:
                     host = os.getenv('CONSUL_HOST', CONSUL_HOST)
                     port = os.getenv('CONSUL_PORT', CONSUL_PORT)

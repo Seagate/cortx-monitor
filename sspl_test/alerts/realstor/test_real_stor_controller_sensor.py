@@ -20,9 +20,10 @@ import psutil
 import time
 import sys
 
-from sspl_test.default import *
-from sspl_test.rabbitmq.rabbitmq_ingress_processor_tests import RabbitMQingressProcessorTests
-from sspl_test.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
+from default import world
+from rabbitmq.rabbitmq_ingress_processor_tests import RabbitMQingressProcessorTests
+from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
+
 
 def init(args):
     pass
@@ -61,6 +62,7 @@ def test_real_stor_controller_sensor(agrs):
     assert(info.get("resource_type") is not None)
     assert(info.get("event_time") is not None)
     assert(info.get("resource_id") is not None)
+    assert(info.get("description") is not None)
 
     specific_info = controller_sensor_msg.get("specific_info")
     assert(specific_info.get("object_name") is not None)

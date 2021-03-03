@@ -28,17 +28,19 @@ from threading import Event
 
 from zope.interface import implementer
 
-from framework.base.module_thread import SensorThread
 from framework.base.internal_msgQ import InternalMsgQ
+from framework.base.module_thread import SensorThread
+from framework.platforms.realstor.realstor_enclosure import \
+    singleton_realstorencl
+from framework.utils.conf_utils import (POLLING_FREQUENCY_OVERRIDE, SSPL_CONF,
+                                        Conf)
 from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
-from framework.platforms.realstor.realstor_enclosure import singleton_realstorencl
 from framework.utils.store_factory import store
-
 # Modules that receive messages from this module
 from message_handlers.real_stor_encl_msg_handler import RealStorEnclMsgHandler
-
 from sensors.Ipsu import IPSUsensor
+
 
 @implementer(IPSUsensor)
 class RealStorPSUSensor(SensorThread, InternalMsgQ):
@@ -86,9 +88,8 @@ class RealStorPSUSensor(SensorThread, InternalMsgQ):
         self._previously_faulty_psus = {}
 
         self.pollfreq_psusensor = \
-            int(self.rssencl.conf_reader._get_value_with_default(\
-                self.rssencl.CONF_REALSTORPSUSENSOR,\
-                "polling_frequency_override", 0))
+            int(Conf.get(SSPL_CONF, f"{self.rssencl.CONF_REALSTORPSUSENSOR}>{POLLING_FREQUENCY_OVERRIDE}",
+                        0))
 
         if self.pollfreq_psusensor == 0:
                 self.pollfreq_psusensor = self.rssencl.pollfreq
@@ -382,8 +383,6 @@ class RealStorPSUSensor(SensorThread, InternalMsgQ):
         if not json_msg:
             return
         self._event.clear()
-        # RAAL stands for - RAise ALert
-        logger.info(f"RAAL: {json_msg}")
         self._write_internal_msgQ(RealStorEnclMsgHandler.name(), json_msg, self._event)
 
     def _check_if_psu_not_installed(self, health_reason):

@@ -1,0 +1,826 @@
+#!/usr/bin/python3.6
+# -*- coding: utf-8 -*-
+
+# Copyright (c) 2001-2020 Seagate Technology LLC and/or its Affiliates
+#
+# This program is free software: you can redistribute it and/or modify it under the
+# terms of the GNU Affero General Public License as published by the Free Software
+# Foundation, either version 3 of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+# PARTICULAR PURPOSE. See the GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License along
+# with this program. If not, see <https://www.gnu.org/licenses/>. For any questions
+# about this software or licensing, please email opensource@seagate.com or
+# cortx-questions@seagate.com.
+
+
+
+"""
+ ****************************************************************************
+  Description:       Entry point for the sspl-ll daemon service
+ ****************************************************************************
+"""
+
+import fcntl
+import getopt
+import json
+import logging
+import os
+import queue
+import signal
+import subprocess
+import sys
+import time
+import traceback
+import uuid
+from threading import Thread
+
+from actuators.impl.actuator import Actuator
+from framework.actuator_state_manager import actuator_state_manager
+from framework.base.module_thread import SensorThread
+from framework.base.sspl_constants import (COMMON_CONFIGS, PRODUCT_FAMILY,
+                                           SSPL_SETTINGS, OperatingSystem,
+                                           enabled_products,
+                                           sspl_settings_configured_groups)
+from framework.rabbitmq.logging_processor import LoggingProcessor
+from framework.rabbitmq.plane_cntrl_rmq_egress_processor import \
+    PlaneCntrlRMQegressProcessor
+from framework.rabbitmq.plane_cntrl_rmq_ingress_processor import \
+    PlaneCntrlRMQingressProcessor
+from framework.rabbitmq.rabbitmq_egress_accumulated_msgs_processor import \
+    RabbitMQEgressAccumulatedMsgsProcessor
+# Modules for handling RabbitMQ messages and manipulating internal threads
+from framework.rabbitmq.rabbitmq_egress_processor import \
+    RabbitMQegressProcessor
+from framework.rabbitmq.rabbitmq_ingress_processor import \
+    RabbitMQingressProcessor
+from framework.rabbitmq.thread_controller import ThreadController
+from framework.utils.conf_utils import (CLUSTER, GLOBAL_CONF, HOST, MONITOR,
+                                        OPERATING_SYSTEM, PORT, PRODUCT,
+                                        RELEASE, RSYSLOG, SETUP, SRVNODE,
+                                        SSPL_CONF, SYSTEM_INFORMATION,
+                                        THREADED, Conf)
+from framework.utils.config_reader import ConfigReader
+from framework.utils.service_logging import init_logging, logger
+from framework.utils.store_factory import store
+# Message to send to HAlon upon critical thread errors
+from json_msgs.messages.actuators.thread_controller import ThreadControllerMsg
+from message_handlers.disk_msg_handler import DiskMsgHandler
+from message_handlers.logging_msg_handler import LoggingMsgHandler
+from message_handlers.node_controller_msg_handler import \
+    NodeControllerMsgHandler
+from message_handlers.node_data_msg_handler import NodeDataMsgHandler
+from message_handlers.plane_cntrl_msg_handler import PlaneCntrlMsgHandler
+from message_handlers.real_stor_actuator_msg_handler import \
+    RealStorActuatorMsgHandler
+from message_handlers.real_stor_encl_msg_handler import RealStorEnclMsgHandler
+from message_handlers.service_msg_handler import ServiceMsgHandler
+
+
+#DO NOT EDIT: Marker comment to dynamically add code to initialize coverage obj for code coverage report generation
+
+# Section and key in config file for bootstrap
+SSPL_SETTING    = 'SSPL-LL_SETTING'
+CORE_PROCESSORS = 'core_processors'
+MSG_HANDLERS    = 'message_handlers'
+SENSORS         = 'sensors'
+ACTUATORS       = 'actuators'
+DEGRADED_STATE_MODULES = 'degraded_state_modules'
+
+# Section containing information about the system we're running on
+SYS_INFORMATION = 'SYSTEM_INFORMATION'
+PRODUCT_NAME    = 'product'
+SETUP           = 'setup'
+LOG_LEVEL       = 'log_level'
+SYSLOG_HOST_KEY = "syslog_host"
+SYSLOG_PORT_KEY = "syslog_port"
+DEFAULT_SYSLOG_HOST = "localhost"
+DEFAULT_SYSLOG_PORT = 514
+
+# State file
+STATE_FILE =  f"/var/{PRODUCT_FAMILY}/sspl/data/state.txt"
+STATES = ["active", "degrade"]
+DEFAULT_STATE = "degrade"
+
+# Keys for state file
+STATE_KEY = "state" # Indicates desired state of SSPL to switch in
+
+# Instantiate the internal ThreadController. Global so the shutdown callback
+#  method can use it to properly halt all running threads.
+threadController = ThreadController()
+
+# Queue instance for ThreadController. We need to enqueue a message to a queue
+# that which is attached to ThreadController. We have msgQlist that contains
+# list of queues for various modules but its scope is till main() function. We
+# need ThreadController queue which can be accessible out of main function and
+# so We need to take this global variable.
+thread_controller_queue = None
+sspl_role_state = None
+
+def _dropPrivileges(user):
+    """Remove root privileges to control possible access"""
+    if os.getuid() != 0:
+        return
+
+    import prctl
+    from pwd import getpwnam
+    from grp import getgrnam
+
+    altgroups = ('disk',)
+    transition_caps = ('setuid', 'setgid')
+    keep_caps = ('sys_rawio',)
+
+    prctl.securebits.no_setuid_fixup = True
+
+    prctl.cap_effective.limit(*transition_caps + keep_caps)
+    prctl.cap_permitted.limit(*transition_caps + keep_caps)
+
+    pw = getpwnam(user)
+    os.setgid(pw.pw_gid)
+    os.setuid(pw.pw_uid)
+
+    os.setgroups([getgrnam(gname).gr_gid for gname in altgroups])
+
+    prctl.cap_effective.drop(*transition_caps)
+    prctl.cap_permitted.drop(*transition_caps)
+
+
+def is_package_installed(rpm_name):
+    """Checks installation status of <rpm_name> using
+       rpm utility and returns status based on the return code.
+    """
+    if not rpm_name or rpm_name.strip() == "":
+        raise TypeError("RPM name can't be None or blank")
+    child_process = subprocess.Popen(["rpm", "-q", rpm_name], stdout=subprocess.PIPE)
+    stream_data = child.communicate()[0]
+    return child.returncode == 0
+
+
+def are_external_dependencies_available(plugin_name, rpm_deps):
+    """Checks for availability of external dependencies and returns
+       True/False based on availability. Currently it checks for RPM
+       package installations only.
+    """
+    if not plugin_name or plugin_name.strip() == "":
+        raise TypeError("Plugin name can't be blank or None")
+    return are_rpm_dependencies_loaded(plugin_name, rpm_deps)
+
+
+def are_rpm_dependencies_loaded(plugin_name, rpm_deps):
+    """Checks that RPM dependencies are installed. Returns
+       boolean status based on that.
+    """
+    if not plugin_name or plugin_name.strip() == "":
+        raise TypeError("Plugin name can't be blank or None")
+    if rpm_deps is None:
+        raise TypeError("RPM list can't be None")
+    if len(rpm_deps) == 0:
+        return True
+    installed = False
+    for rpm in rpm_deps:
+        if not is_package_installed(rpm):
+            installed = False
+            logger.warn("Couldn't find RPM dependency "
+                "{0} for module {1}".format(rpm, plugin_name))
+    return installed
+
+
+def are_internal_dependencies_loaded(plugin_name, internal_deps,
+                                    loaded_module_list):
+    """Checks that plugin dependencies are loaded. Returns
+       boolean status based on that.
+    """
+    if not plugin_name or plugin_name.strip() == "":
+        raise TypeError("Plugin name can't be blank or None")
+    if not loaded_module_list:
+        raise TypeError("Module list can't be None")
+    installed = True
+    for plugin in internal_deps:
+        if not plugin in loaded_module_list.keys():
+            installed = False
+            logger.warn(
+                "Couldn't find plugin dependency "
+                "{0} for module {1}".format(plugin, plugin_name))
+    return installed
+
+
+def check_dependencies(sspl_threaded_modules):
+    """Checks for dependencies for each plugin in <loaded_plugin_dict>.
+       Returns a set of plugins with missing dependencies.
+    """
+    dependency_broken_modules = set()
+    logger.info("Dependency check started")
+    for name, curr_module in list(sspl_threaded_modules.items()):
+        # Check for dependency method availability. If it is not available
+        # then assume that it has no dependency.
+        if hasattr(curr_module, "dependencies"):
+            logger.info("Checking dependencies for {0}".format(name))
+            dependencies = curr_module.dependencies()
+            internal_deps = dependencies.get("plugins", [])
+            rpm_deps = dependencies.get("rpms", [])
+            # Check for internal deps
+            if not are_internal_dependencies_loaded(
+                name, internal_deps, sspl_threaded_modules):
+                dependency_broken_modules.add(name)
+            # Check for external deps
+            if not are_external_dependencies_available(name, rpm_deps):
+                dependency_broken_modules.add(name)
+        else:
+            logger.info("No dependencies specified for {0}".format(name))
+    return dependency_broken_modules
+
+def verify_sensor_dependency_graph(stm):
+    sensor_modules = { m for m in stm.keys() if isinstance(stm[m], SensorThread) }
+    reachable = { m : set(get_sensor_thread_deps(m, stm)) for m in sensor_modules }
+
+    progress = True
+    while progress:
+        progress = False
+        for (m, deps) in reachable.items():
+            if m in deps:
+                raise Exception("Cycle detected from {} to {}".format(m, m))
+            new_deps = set(deps)
+            for d in deps:
+                new_deps |= reachable[d]
+            if deps < new_deps:
+                progress = True
+                reachable[d] = new_deps
+
+def get_sensor_thread_deps(name, sspl_threaded_modules):
+    curr_module = sspl_threaded_modules[name]
+    if not hasattr(curr_module, "dependencies"):
+        return []
+    dep_names = curr_module.dependencies().get("init")
+    if not dep_names:
+        return []
+
+    logger.error("dep_names for {} are {}".format(name, dep_names))
+
+    deps = []
+    for n in dep_names:
+        m = sspl_threaded_modules.get(n)
+        if m and isinstance(m, SensorThread):
+            deps.append(n)
+    return deps
+
+
+def main(conf_reader, systemd_support):
+    """The main bootstrap for sspl"""
+    logger.info("sspl-ll Bootstrap: Obtaining list of modules from config file")
+
+    # Create a map of references to all the module's message queues.  Each module
+    #  is passed this mapping so that it can send messages to other modules.
+    msgQlist = {}
+
+    # Create a mapping of all the instantiated modules to their names
+    sspl_threaded_modules = {}
+
+    # Read in operating system value from configuration file
+    logger.info("sspl-ll Bootstrap: configuring for OS: %s" % OPERATING_SYSTEM)
+
+    # Read in product value from configuration file
+    product = Conf.get(GLOBAL_CONF, f"{RELEASE}>{PRODUCT}")
+    # Read in setup value from configuration file
+    try:
+        setup = Conf.get(GLOBAL_CONF, f"{RELEASE}>{SETUP}")
+    except Exception:
+        setup = 'hw'
+
+    logger.info("sspl-ll Bootstrap: setup=%s product=%s" % (setup, product))
+
+    # CS-L/G systems run as root and we set capabilities on the process to control the access available to it
+    if product not in enabled_products:
+        _dropPrivileges("sspl-ll")
+
+    global sspl_settings_configured_groups
+    sspl_settings_configured_groups |= SSPL_SETTINGS.keys()
+
+    conf_reader = ConfigReader()
+    for group in SSPL_SETTINGS.keys():
+        monitor = Conf.get(SSPL_CONF, f"{group}>{MONITOR}", 'true')
+        if monitor not in ['true', True]:
+            sspl_settings_configured_groups -= {group}
+
+
+    # List of modules to run in degraded mode
+    modules_to_resume = []
+    try:
+        # Read list of modules from conf file to load in degraded mode
+        for group in sspl_settings_configured_groups:
+            modules_to_resume.extend(SSPL_SETTINGS[group].get("DEGRADED_STATE_MODULES"))
+    except Exception as e:
+        logger.warn("Configuration not found: degraded_state_modules")
+        modules_to_resume = []
+    logger.info("modules_to_resume: {0}".format(str(modules_to_resume)))
+
+    # Use reflection to instantiate the classes based upon its class name in config file
+    core_processors = []
+    for group in sspl_settings_configured_groups:
+        core_processors.extend(SSPL_SETTINGS[group].get("CORE_PROCESSORS"))
+    logger.info("sspl-ll Bootstrap: core processors to load: %s" % (core_processors, ))
+    for core_processor in core_processors:
+        klass = globals()[core_processor]
+
+        # Create mappings of modules and their message queues
+        sspl_threaded_modules[klass.name()] = klass()
+        msgQlist[klass.name()] = queue.Queue()
+
+    # Add rabbitmq_egress_accumulated_msgs_processor.py in sspl_threaded_modules
+    sspl_threaded_modules[RabbitMQEgressAccumulatedMsgsProcessor] = RabbitMQEgressAccumulatedMsgsProcessor()
+    msgQlist[RabbitMQEgressAccumulatedMsgsProcessor.name()] = queue.Queue()
+
+    message_handlers = []
+    for group in sspl_settings_configured_groups:
+        message_handlers.extend(SSPL_SETTINGS[group].get("MESSAGE_HANDLERS"))
+    logger.info("sspl-ll Bootstrap: message handlers to load: %s" % (message_handlers, ))
+
+    for message_handler in message_handlers:
+        klass = globals()[message_handler]
+
+        # Create mappings of modules and their message queues
+        sspl_threaded_modules[klass.name()] = klass()
+        msgQlist[klass.name()] = queue.Queue()
+
+    # Instantiate the sensors and actuators
+
+    sspl_threaded_modules, msgQlist = _sensors_actuators_factory(
+                                            sspl_threaded_modules, msgQlist,
+                                            OPERATING_SYSTEM, product, setup)
+
+    # Add the ThreadConroller automatically
+    msgQlist[ThreadController.name()] = queue.Queue()
+
+    # Make ThreadController queue globally accessible
+    global thread_controller_queue
+    global sspl_role_state
+    thread_controller_queue = msgQlist[ThreadController.name()]
+
+    # Check if there is any pending request for thread_controller
+    if sspl_role_state is not None:
+        logger.info('thread controller queue is ready and serving the sspl \
+                     role switch State: {sspl_role_state} request received earlier')
+
+        send_thread_controller_request(sspl_role_state)
+
+        # Reset the variable
+        sspl_role_state = None
+
+    # Check dependencies for each plugin and get a list of plugins with
+    # missing dependencies.
+    dependency_broken_modules = check_dependencies(sspl_threaded_modules)
+
+    # IMP NOTE:
+    # -----------------------------------------------------------------------
+    # Here SSPL notifies Systemd that it is ready. Please note that here
+    # notifying Systemd about readyness doesn't mean all the plugins are
+    # loaded and ready to serve. It just means SSPL core is ready and it
+    # has started loading and initializing plugins.
+    if systemd_support:
+        from systemd.daemon import notify
+        notify("READY=1")
+        logger.info("SSPL has started initialization")
+    resume_module = False
+    try:
+        for name, curr_module in sspl_threaded_modules.items():
+            if isinstance(curr_module, SensorThread):
+                deps = get_sensor_thread_deps(name, sspl_threaded_modules)
+                logger.debug("sensor dependencies for {} are {}".format(name, deps))
+                curr_module.prepare([sspl_threaded_modules[n] for n in deps])
+        verify_sensor_dependency_graph(sspl_threaded_modules)
+        # Loop through the list of instanced modules and start them on threads
+        for name, curr_module in sspl_threaded_modules.items():
+            if name in dependency_broken_modules:
+                logger.warning(
+                    "SSPL Bootstrap: Unable to load plugin {0} due to "
+                    "failed dependency resolution".format(name))
+                continue
+            logger.info("Starting: %s" % curr_module.name())
+
+            # SSPL will be started in degrade mode by default.
+            # Run module only if it is allowed to run in degraded mode
+            # or it is defined in core modules or prodcut is LDR_R2
+            resume = False
+            if name in modules_to_resume or name in ThreadController.ALWAYS_ACTIVE_MODULES \
+                or product.upper() == "LR2":
+                resume = True
+
+            thread = Thread(target=_run_thread_capture_errors,
+                            args=(curr_module, sspl_threaded_modules, msgQlist, conf_reader, product, resume))
+            thread.start()
+            logger.info(f"Started: {curr_module}")
+
+        # Start the ThreadController module with the list of threads
+        logger.info("Starting: %s" % ThreadController.name())
+
+        # Initialize the thread controller with the list of references to all modules
+        controller_thread = Thread(target=_run_thread_capture_errors,
+                            args=(threadController, sspl_threaded_modules, msgQlist, conf_reader, product, True))
+        threadController.initialize_thread_list(sspl_threaded_modules, OPERATING_SYSTEM, product, systemd_support)
+        controller_thread.start()
+
+        # Block main thread until thread controller has been halted
+        controller_thread.join()
+
+    except Exception as ex:
+        logger.exception(ex)
+
+
+# TODO: Create a factory class instead of a method
+def _sensors_actuators_factory(sspl_threaded_modules, msgQlist, operating_system, product, setup):
+    """Loops thru list of sensors/actuators and instantiate"""
+
+    # Read in list of sensors
+    sensors = []
+    for group in sspl_settings_configured_groups:
+        sensors.extend(SSPL_SETTINGS[group].get("SENSORS"))
+    logger.info("sspl-ll Bootstrap: sensors to load: %s" % (sensors, ))
+
+    # Read in list of actuators
+    actuators = []
+    for group in sspl_settings_configured_groups:
+        actuators.extend(SSPL_SETTINGS[group].get("ACTUATORS"))
+    if setup in ['gw', 'cmu', 'vm'] and 'HPIactuator' in actuators:
+        actuators.remove('HPIactuator')
+    logger.info("sspl-ll Bootstrap: actuators to load: %s" % (actuators, ))
+
+    # Import in the proper classes based upon values from config file
+    if operating_system == OperatingSystem.CENTOS7.value or operating_system == OperatingSystem.RHEL7.value or \
+        operating_system.lower() in OperatingSystem.CENTOS7.value.lower() or operating_system.lower() in OperatingSystem.RHEL7.value.lower():
+        from actuators.impl.centos_7.systemd_service import SystemdService as Service
+        from actuators.impl.centos_7.command_line import CommandLine as CommandLine
+        from actuators.impl.centos_7.systemd_login import SystemdLogin as Login
+        from sensors.impl.centos_7.drive_manager import DriveManager as DriveManager
+        from sensors.impl.centos_7.systemd_watchdog import SystemdWatchdog as ServiceWatchdog
+        from sensors.impl.centos_7.hpi_monitor import HPIMonitor as HPIMonitor
+
+    elif operating_system == OperatingSystem.CENTOS6.value or operating_system == OperatingSystem.RHEL6.value:
+        # Nothing yet
+        pass
+
+    elif operating_system in [OperatingSystem.OSX.value, OperatingSystem.OSX.value.lower()]:
+        from actuators.impl.os_x.xinitd_service import XinitdService as Service
+        from actuators.impl.os_x.xinitd_login import XinitdLogin as Login
+        from sensors.impl.os_x.drive_manager import DriveManager as DriveManager
+        from sensors.impl.os_x.xinitd_watchdog import XinitdWatchdog as ServiceWatchdog
+        from sensors.impl.os_x.hpi_monitor import HPIMonitor as HPIMonitor
+
+    else:
+        raise Exception(f"Operating System '{operating_system}' not supported")
+
+    if product.lower() == "cs-a":
+        from actuators.impl.generic.raritan_pdu import RaritanPDU
+        from actuators.impl.generic.ipmi import IPMI
+        if setup not in ['cmu', 'gw', 'vm']:
+            try:
+                from actuators.impl.generic.hpi_actuator import HPIactuator
+            except ImportError:
+                logger.info("Could not import HPIactuator")
+
+        from sensors.impl.generic.SNMP_traps import SNMPtraps
+
+    if product.upper() in enabled_products:
+        from sensors.impl.platforms.realstor.realstor_disk_sensor \
+        import RealStorDiskSensor
+        from sensors.impl.platforms.realstor.realstor_psu_sensor \
+        import RealStorPSUSensor
+        from sensors.impl.platforms.realstor.realstor_fan_sensor \
+        import RealStorFanSensor
+        from sensors.impl.platforms.realstor.realstor_controller_sensor \
+        import RealStorControllerSensor
+        from sensors.impl.platforms.realstor.realstor_sideplane_expander_sensor \
+        import RealStorSideplaneExpanderSensor
+        from sensors.impl.platforms.realstor.realstor_dg_volume_sensor \
+        import RealStorLogicalVolumeSensor
+        from sensors.impl.platforms.realstor.realstor_enclosure_sensor \
+        import RealStorEnclosureSensor
+        from sensors.impl.generic.iem_sensor import IEMSensor
+        from sensors.impl.generic.node_hw import NodeHWsensor
+        from sensors.impl.generic.node_sas_port import SASPortSensor
+        from sensors.impl.generic.node_memory_fault import MemFaultSensor
+        from sensors.impl.generic.cpu_fault_sensor import CPUFaultSensor
+
+    if product.lower() in [x.lower() for x in enabled_products]:
+        import inspect
+
+        from actuators.impl.generic.raid import RAIDactuator
+        from actuators.impl.generic.hdparm import Hdparm
+        from actuators.impl.generic.smartctl import Smartctl
+        from actuators.impl.generic.node_hw import NodeHWactuator
+        from actuators.impl.generic.realstor_encl import RealStorActuator
+
+        from sensors.impl.generic.raid import RAIDsensor
+        from sensors.impl.generic.raid_integrity_data import RAIDIntegritySensor
+        from sensors.impl.generic.node_data import NodeData as NodeData
+        # from sensors.impl.generic.SMR_drive_data import SMRdriveData
+
+        from zope.component import getGlobalSiteManager
+        from zope.interface import implementedBy
+
+        from zope.component import queryUtility
+        from loggers.impl.iem_logger import IEMlogger
+
+        # The Zope Global Site Manager containing objects that implement the desired interfaces
+        gsm = getGlobalSiteManager()
+
+    # Loop through the list of sensors/actuators and instantiate appropriately
+    #  based upon whether or not it is threaded
+    modules = sensors + actuators
+    for module in modules:
+        # Instantiate the class using reflection on the module's name; must match class name
+        klass = locals()[module]
+
+        # Look at module's configuration section and determine if it's threaded
+        threaded = 'True'
+        try:
+            threaded = Conf.get(SSPL_CONF, f"{klass.name().upper()}>{THREADED}")
+            if threaded == '':
+                threaded = 'False'
+        except Exception as e:
+            threaded = 'False'  # Wasn't present so default to False
+
+        logger.info("Processing: %s, threaded: %s, Instantiated Class: %s"
+                        % (module, threaded, klass.name()))
+
+        # If it's threaded then add it to the list which will be handled by the ThreadController
+        if threaded in ['True', 'true', True]:
+            sspl_threaded_modules[klass.name()] = klass()
+            msgQlist[klass.name()] = queue.Queue()
+        elif issubclass(klass, Actuator):
+            logger.info("%s derived from %s Base class" %
+                        (klass.name(), inspect.getmro(klass)[1].__name__))
+        else:
+            # It's a static non-threaded object, register it with the Zope global site manager
+            interface_impl = list(implementedBy(klass))[0]  # Assumes single inheritance only
+            logger.info("            Implements Interface: %s" % interface_impl.__name__)
+
+            if product.lower() in [x.lower() for x in enabled_products]:
+                actuator_state_manager.set_state(module, actuator_state_manager.IMPORTED)
+                gsm.registerUtility(klass, interface_impl)
+    return (sspl_threaded_modules, msgQlist)
+
+
+def _run_thread_capture_errors(curr_module, sspl_threaded_modules, msgQlist, conf_reader, product, resume):
+    """Run the given thread and log any errors that happen on it.
+    Will stop all sspl_threaded_modules if one of them fails."""
+    try:
+        # Suspend module threads
+        if resume == False:
+            curr_module.suspend()
+        # Each module is passed a reference list to message queues so it can transmit
+        # internal messages to other modules as desired
+        logger.info("Starting: %s" % curr_module.name())
+        curr_module.start_thread(conf_reader, msgQlist, product)
+
+    except Exception as ex:
+        # Populate an actuator response message and transmit back to HAlon that we have a fatal error
+        # error_msg = "SSPL-LL encountered an error, terminating service Error, restarting daemon:{}" \
+        #             .format(str(logger.exception(ex)))
+        # jsonMsg   = ThreadControllerMsg(curr_module.name(), error_msg).getJson()
+        # curr_module._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
+
+        # Shut down any running threads, error is non-recoverable
+        # shutdown_handler()
+
+        # Pause for threads to cleanup and kill main process
+        # logger.info("Killing main process in 10 seconds to allow thread cleanup time")
+        # time.sleep(10)
+        # logger.info("Systemd will restart SSPL-LL momentarily")
+        # os.kill(os.getpid(), signal.SIGKILL)
+
+        #TODO: Restart thread instead of shutdown
+        logger.error(f"{curr_module.name()} has encountered an error {ex}, error is unrecoverable , shutting down {curr_module.name()}")
+        curr_module.shutdown()
+
+def shutdown_handler(signum=None, frame=None):
+    """Handler called when shutting down"""
+    logger.info("sspl-ll is shutting down")
+
+    shutdown_msg = "SSPL-LL is shutting down"
+    jsonMsg   = ThreadControllerMsg(threadController.name(), shutdown_msg).getJson()
+    threadController._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
+
+    # Wait for the RabbitMQegressProcessor to finish processing
+    # any messages which it may have in its queue
+    while threadController.check_RabbitMQegressProcessor_is_running() is True:
+        logger.info("Waiting for rabbitMQegress to finish sending queued msgs")
+        time.sleep(2)
+
+    # Now call the shutdown methods for all modules to gracefully halt
+    threadController.shutdown_all_modules()
+
+    # Halt the thread controller module last for a clean system shutdown
+    threadController.shutdown()
+
+    # Let systemd know that we've stopped successfully
+    try:
+        from systemd.daemon import notify
+        notify("STOPPING=1")
+    except Exception as ex:
+        logger.info("sspl-ll is not using systemd, ignoring.")
+
+
+def print_usage():
+    """Display the syntax usage for this script"""
+    print("""sspl_ll_d
+    -h:    Display this help
+    """)
+
+
+def signal_handler(signal_number, frame):
+    """Handles SIGHUP currently. On SIGHUP signal reception, this function
+       reads intended state for SSPL from a text file. After that it calls
+       ThreadController methods to switch to different mode.
+       The entries in text file should be in form of <key=value>.
+    """
+    # Ignore a new  SIGHUP while handling current SIGHUP
+    # Signal will be enabled at the end of this handler
+    signal.signal(signal.SIGHUP, signal.SIG_IGN)
+
+    logger.debug("signal_handler called with {0}".format(signal_number))
+
+    try:
+        entries = dict()
+        state = "active"
+        global sspl_role_state
+        with open(STATE_FILE) as state_file:
+
+            for line in state_file.readlines():
+                # This try block supresses exceptions in for loop when
+                # something wrong happens while reading entries. Because
+                # of this for loop it will log warning and move forward
+                # to next entry.
+                try:
+                    splitted_data = line.split("=")
+                    # Put as a key-value in dictionary
+                    entries[splitted_data[0].strip()] = splitted_data[1].strip()
+                except Exception as exc:
+                    logger.warn("Error in reading key: {0}".format(exc))
+
+        state = entries[STATE_KEY]
+        logger.debug("state contains {0}".format(state))
+
+        if state.strip().lower() not in STATES:
+            logger.warn("Invalid state found: {0}. Falling back to default state {1}".format(state, DEFAULT_STATE))
+            state = DEFAULT_STATE
+
+        logger.info("Received SIGHUP to switch to {0} state".format(state))
+        if thread_controller_queue:
+            send_thread_controller_request(state)
+        else:
+            logger.warning(f'thread_controller_queue is not ready, saving the \
+                            sspl role switch request state, State: {state} to \
+                            process again later.')
+
+            # This can be the edge case. SSPL is not yet fully initialized and it
+            # received the signal to promote or may be demote. So, as the thread is
+            # not ready to accept that request, it will not be served and will be
+            # lost if not saved. So, to avoid this, once SSPL receives the request and
+            # thread is not yet ready,save the request to serve it later when thread
+            # will be ready.
+            sspl_role_state = state
+
+    except Exception as e:
+        logger.warn("Error in signal_handler processing {} ".format(e))
+
+    finally:
+        # Enable the signal handler
+        signal.signal(signal.SIGHUP, signal_handler)
+
+def send_thread_controller_request(state):
+    '''Creates a internal request for thread controller
+       and puts in into its own queue'''
+    logger.debug(f'Creating and sending the sspl role switch request to \
+                 switch to {state} state')
+    state_change_msg = {
+                "sspl_ll_debug": {
+                    "debug_component": "sensor",
+                    "debug_enabled": (logger.level == logging.DEBUG)
+                },
+                "sspl_ll_msg_header": {
+                    "msg_version": "1.0.0",
+                    "uuid": str(uuid.uuid4()),
+                    "schema_version": "1.0.0",
+                    "sspl_version": "1.0.0",
+                },
+                "actuator_request_type": {
+                    "thread_controller": {
+                        "module_name": "all",
+                        "thread_request": state
+                    }
+                }
+        }
+    thread_controller_queue.put((json.dumps(state_change_msg), None))
+
+# def set_log_level(signal_number, frame):
+#     # NOTE: Dynamic config change including log level set will be enabled through ConfStor.
+#     # On getting a trigger, this same function (set_log_level(signal_number, frame)) can be
+#     # used back to set the required log level, excluding its interaction with Consul.
+
+#     """Handles SIGUSR1 for dynamic log level setting.
+#        Key log_level should be registered in consul.
+#        On SIGHUP signal reception, this function lookup
+#        consul for latest value set with log_level key.
+#     """
+#     key='sspl/config/SYSTEM_INFORMATION/log_level'
+#     logger.info("signal handler is called with {0}".format(signal_number))
+#     log_level = store.get(key)
+#     if log_level and isinstance(log_level, bytes):
+#         log_level = log_level.decode('utf-8')
+#     logger.info(f"Received SIGUSR1 signal to set log level to '{log_level}'")
+#     logger.setLevel(log_level)
+
+def refresh_iem_log_file(signal_number, frame):
+    iem_sensor = threadController.get_sspl_module("IEMSensor")
+    if iem_sensor:
+        iem_sensor.refresh_file()
+    else:
+        logger.info(f"IEMSensor is not in running, ignoring signal to refresh file")
+
+#DO NOT EDIT: Marker comment to dynamically add code to stop coverage, save and generate code coverage report
+
+if __name__ == "__main__":
+    # Retrieve configuration file for sspl-ll service
+    try:
+        opts = getopt.getopt(sys.argv[1:], "h:", ["help", "systemd="])
+
+    except getopt.GetoptError as err:
+        print_usage()
+        sys.exit(os.EX_USAGE)
+
+    signal.signal(signal.SIGHUP, signal_handler)
+
+    systemd_support = True
+    if len(opts[0]) > 0:
+        for opt, arg in opts[0]:
+            if opt == "-s" or opt == "--systemd":
+                if arg == "False":
+                    systemd_support = False
+            else:
+                print_usage()
+                sys.exit(os.EX_USAGE)
+
+    # Validate configuration file for required valid values
+    try:
+        conf_reader = ConfigReader()
+    except (IOError, ConfigReader.Error) as err:
+        # We don't have logger yet, need to find log_level from conf file first
+        print("[ Error ] when validating the configuration : ")
+        print(err)
+        print("Exiting ...")
+        sys.exit(os.EX_USAGE)
+    except Exception as e:
+        print(err)
+        print("Exiting ...")
+        sys.exit(os.EX_USAGE)
+
+    # Initialize logging
+    try:
+        logging_level = Conf.get(SSPL_CONF, f"{SYS_INFORMATION}>{LOG_LEVEL}", "INFO")
+        syslog_host = Conf.get(GLOBAL_CONF, f"{RSYSLOG}>{HOST}", DEFAULT_SYSLOG_HOST)
+        syslog_port = int(Conf.get(GLOBAL_CONF, f"{RSYSLOG}>{PORT}", DEFAULT_SYSLOG_PORT))
+        init_logging("SSPL-LL", logging_level, syslog_host, syslog_port)
+
+    except Exception as err:
+        # We don't have logger since it threw an exception, use generic 'print'
+        print("[ Error ] when initializing logging :")
+        print(err)
+        print("Exiting ...")
+        sys.exit(os.EX_USAGE)
+
+    # Handle signals for log level change
+    # signal.signal(signal.SIGUSR1, set_log_level)
+    # Handle signal for iem file refresh
+    signal.signal(signal.SIGUSR2, refresh_iem_log_file)
+    #DO NOT EDIT: Marker comment to dynamically add signal handler for SIGUSR1 to generate code coverage report
+
+    try:
+        # Create a PID file for systemd
+        if systemd_support:
+            pidfile = "/var/run/sspl_ll/sspl_ll.pid"
+            if os.path.isfile(pidfile):
+                with open(pidfile) as fileObj:
+                    pid = fileObj.read()
+                if len(pid) and os.path.exists("/proc/%s" % pid):
+                    print("Another instance of SSPL with pid %s is active. exiting..." % pid)
+                    sys.exit(os.EX_OK)
+
+            if not os.path.isdir('/var/run/sspl_ll/'):
+                os.mkdir('/var/run/sspl_ll/')
+
+            with open(pidfile, "w") as fileObj:
+                fileObj.write(str(os.getpid()))
+
+        #DO NOT EDIT: Marker comment to dynamically add code to start the code coverage scope
+
+        # Start sspl-ll as a main process running multiple threads
+        main(conf_reader, systemd_support)
+
+    except (Exception) as err:
+        logger.exception("While spawning, sspl-ll process encountered critical error : %s" %err)
+        sys.exit(os.EX_USAGE)
+
+    print("SSPL-LL Process started successfully")
+    sys.exit(os.EX_OK)

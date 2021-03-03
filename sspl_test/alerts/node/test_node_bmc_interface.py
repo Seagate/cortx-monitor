@@ -21,13 +21,13 @@ import time
 import sys
 import subprocess
 
-from sspl_test.default import world
-from sspl_test.rabbitmq.rabbitmq_ingress_processor_tests import RabbitMQingressProcessorTests
-from sspl_test.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
-from sspl_test.common import check_sspl_ll_is_running
+from default import world
+from rabbitmq.rabbitmq_ingress_processor_tests import RabbitMQingressProcessorTests
+from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
+from common import check_sspl_ll_is_running
+from framework.base.sspl_constants import DATA_PATH
+from alerts.node import simulate_bmc_interface_alert
 
-from sspl_test.framework.base.sspl_constants import DATA_PATH
-from sspl_test.alerts.node import simulate_bmc_interface_alert
 
 def init(args):
     pass
@@ -77,10 +77,11 @@ def test_bmc_interface(args):
     assert(bmc_interface_info.get("node_id") is not None)
     assert(bmc_interface_info.get("cluster_id") is not None)
     assert(bmc_interface_info.get("resource_id") is not None)
+    assert(bmc_interface_info.get("description") is not None )
 
     bmc_interface_specific_info = bmc_interface_message.get("specific_info")
     if bmc_interface_specific_info:
-        assert(bmc_interface_specific_info.get("event") is not None)
+        assert(bmc_interface_specific_info.get("channel info") is not None)
 
 def backup_bmc_config():
     # read active bmc interface

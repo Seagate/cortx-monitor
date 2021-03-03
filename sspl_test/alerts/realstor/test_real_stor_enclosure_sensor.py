@@ -21,10 +21,11 @@ import time
 import sys
 import subprocess
 
-from sspl_test.default import *
-from sspl_test.rabbitmq.rabbitmq_ingress_processor_tests import RabbitMQingressProcessorTests
-from sspl_test.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
-from sspl_test.common import check_sspl_ll_is_running
+from default import world
+from rabbitmq.rabbitmq_ingress_processor_tests import RabbitMQingressProcessorTests
+from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
+from common import check_sspl_ll_is_running
+
 
 def init(args):
     pass
@@ -69,6 +70,7 @@ def test_real_stor_enclosure_sensor(agrs):
     assert(encl_sensor_info.get("resource_id") is not None)
     assert(encl_sensor_info.get("resource_type") is not None)
     assert(encl_sensor_info.get("event_time") is not None)
+    assert(encl_sensor_info.get("description") is not None)
 
     encl_specific_info = encl_sensor_msg.get("specific_info")
     if encl_specific_info:

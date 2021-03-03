@@ -18,26 +18,28 @@
   Description:       Validates raid data for data corruption.
  ****************************************************************************
 """
-import os
 import json
-import time
-import subprocess
+import os
 import socket
+import subprocess
+import time
 import uuid
-
 from datetime import datetime
 
-from framework.base.module_thread import SensorThread
-from framework.base.internal_msgQ import InternalMsgQ
-from framework.base.sspl_constants import COMMON_CONFIGS, RaidDataConfig, RaidAlertMsgs, WAIT_BEFORE_RETRY, PRODUCT_FAMILY
-from framework.utils.severity_reader import SeverityReader
-from framework.utils.service_logging import logger
+from zope.interface import implementer
 
+from framework.base.internal_msgQ import InternalMsgQ
+from framework.base.module_thread import SensorThread
+from framework.base.sspl_constants import (PRODUCT_FAMILY, WAIT_BEFORE_RETRY,
+                                           RaidAlertMsgs, RaidDataConfig)
+from framework.utils.conf_utils import (CLUSTER, GLOBAL_CONF, SRVNODE,
+                                        SSPL_CONF, Conf)
+from framework.utils.service_logging import logger
+from framework.utils.severity_reader import SeverityReader
 # Modules that receive messages from this module
 from message_handlers.node_data_msg_handler import NodeDataMsgHandler
-
-from zope.interface import implementer
 from sensors.Iraid import IRAIDsensor
+
 
 @implementer(IRAIDsensor)
 class RAIDIntegritySensor(SensorThread, InternalMsgQ):
@@ -94,18 +96,14 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
         self._alert_msg = None
         self._fault_state = None
         self._suspended = False
-        self._site_id = self._conf_reader._get_value_with_default(
-                                self.SYSTEM_INFORMATION, COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.SITE_ID), '001')
-        self._cluster_id = self._conf_reader._get_value_with_default(
-                                self.SYSTEM_INFORMATION, COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.CLUSTER_ID), '001')
-        self._rack_id = self._conf_reader._get_value_with_default(
-                                self.SYSTEM_INFORMATION, COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.RACK_ID), '001')
-        self._node_id = self._conf_reader._get_value_with_default(
-                                self.SYSTEM_INFORMATION, COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.NODE_ID), '001')  
-        self._timestamp_file_path = self._conf_reader._get_value_with_default(
-                                    self.RAIDIntegritySensor, self.TIMESTAMP_FILE_PATH_KEY, self.DEFAULT_TIMESTAMP_FILE_PATH)
-        self._polling_interval = int(self._conf_reader._get_value_with_default(
-                                self.RAIDIntegritySensor, self.POLLING_INTERVAL, self.DEFAULT_POLLING_INTERVAL))
+        self._site_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.SITE_ID}",'DC01')
+        self._rack_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.RACK_ID}",'RC01')
+        self._node_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.NODE_ID}",'SN01')
+        self._cluster_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{self.CLUSTER_ID}",'CC01')
+        self._timestamp_file_path = Conf.get(SSPL_CONF, f"{self.RAIDIntegritySensor}>{self.TIMESTAMP_FILE_PATH_KEY}",
+                                        self.DEFAULT_TIMESTAMP_FILE_PATH)
+        self._polling_interval = Conf.get(SSPL_CONF, f"{self.RAIDIntegritySensor}>{self.POLLING_INTERVAL}",
+                                    self.DEFAULT_POLLING_INTERVAL)
         return True
 
     def read_data(self):
@@ -186,12 +184,12 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
                             data = fs.read().rstrip()
                         if self.FAULT_RESOLVED in data:
                             self.alert_type = self.FAULT
-                            self._alert_msg = RaidAlertMsgs.MISMATCH_MSG.value
+                            self._alert_msg = "RAID disks present in %s RAID array, needs synchronization." %device
                             self._send_json_msg(self.alert_type, device, self._alert_msg)
                             self._update_fault_state_file(device, self.FAULT, fault_status_file)
                     else:
                         self.alert_type = self.FAULT
-                        self._alert_msg = RaidAlertMsgs.MISMATCH_MSG.value
+                        self._alert_msg = "RAID disks present in %s RAID array, needs synchronization." %device
                         self._send_json_msg(self.alert_type, device, self._alert_msg)
                         self._update_fault_state_file(device, self.FAULT, fault_status_file)
 
@@ -247,7 +245,7 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
                         faulty_device = data.split(":")[0].rstrip()
                         if device == faulty_device:
                             self.alert_type = self.FAULT_RESOLVED
-                            self._alert_msg = "Mismatch_cnt found '0' for " + device
+                            self._alert_msg = "RAID disks present in %s RAID array are synchronized." %device
                             self._send_json_msg(self.alert_type, device, self._alert_msg)
                             self._update_fault_state_file(device, self.FAULT_RESOLVED, fault_status_file)
             else:
@@ -346,7 +344,8 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
                 "node_id": self._node_id,
                 "resource_type": self.RESOURCE_TYPE,
                 "resource_id": resource_id,
-                "event_time": epoch_time
+                "event_time": epoch_time,
+                "description": error_msg
                }
         specific_info = {
             "error": error_msg
@@ -367,8 +366,6 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
                 }
             })
         self.alert_type = None
-        # RAAL stands for - RAise ALert
-        logger.info(f"RAAL: {internal_json_msg}")
 
         # Send the event to node data message handler to generate json message and send out
         self._write_internal_msgQ(NodeDataMsgHandler.name(), internal_json_msg)
@@ -440,4 +437,3 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
             if os.path.getmtime(os.path.join(path, file)) < (current_time - 24*60*60) :
                 if os.path.isfile(os.path.join(path, file)):
                     os.remove(os.path.join(path, file))
-

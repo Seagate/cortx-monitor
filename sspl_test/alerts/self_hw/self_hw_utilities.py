@@ -17,6 +17,7 @@
 # commonly used in hw self test
 import subprocess
 
+
 def run_cmd(cmd):
     subout = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     result = subout.stdout.readlines()

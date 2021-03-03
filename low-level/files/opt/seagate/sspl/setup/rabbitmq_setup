@@ -1,0 +1,54 @@
+#!/bin/bash
+
+# Copyright (c) 2020 Seagate Technology LLC and/or its Affiliates
+#
+# This program is free software: you can redistribute it and/or modify it under the
+# terms of the GNU Affero General Public License as published by the Free Software
+# Foundation, either version 3 of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+# PARTICULAR PURPOSE. See the GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License along
+# with this program. If not, see <https://www.gnu.org/licenses/>. For any questions
+# about this software or licensing, please email opensource@seagate.com or
+# cortx-questions@seagate.com.
+
+set -e -u -o pipefail
+
+##############################################################################
+# This script performs following operations
+# - Starts rabbitmq-server if not running, resets RabbitMQ and stop.
+#   It does following in reset.
+#    - It returns a RabbitMQ node to its virgin state. Removes the node from any
+#      cluster it belongs to, removes all data from the management database,
+#      such as configured users and vhosts, and deletes all persistent messages.
+#    - Creates VHost, user and queues.
+#    - Set permissions and tags for user.
+###############################################################################
+script_dir=$(dirname $0)
+
+# Import common constants
+source $script_dir/constants.sh
+
+# Start rabbitmq if not already running
+systemctl status rabbitmq-server 1>/dev/null && export status=true || export status=false
+if [ "$status" = "false" ]; then
+    systemctl start rabbitmq-server
+fi
+
+# Get product
+product=$(sed -nr 's/^product=([^,]+)$/\1/p' $SSPL_CONF | head -1)
+[ -z "$PRODUCT_NAME" ] && echo "No product specified in $SSPL_CONF" && exit 1
+
+# Add required user and vhost to RabbitMQ. Set user permissions etc.
+echo "Creating required RABBITMQ configuration.... "
+python3 $SSPL_BASE_DIR/low-level/framework/sspl_rabbitmq_reinit.py $PRODUCT_NAME || {
+    reinit_err="$?";
+    echo -n "$SSPL_BASE_DIR/low-level/framework/sspl_rabbitmq_reinit.py failed ";
+    echo "with exit code ${reinit_err} for product $PRODUCT_NAME";
+    exit 1;
+}
+
+# systemctl stop rabbitmq-server

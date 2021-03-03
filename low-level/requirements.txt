@@ -1,12 +1,6 @@
-jsonschema==3.1.1
 pika==1.1.0
-pyserial==3.4
 python-daemon==2.2.4
-requests==2.22.0
-zope.component==4.6
-zope.event==4.4
-zope.interface==4.7.1
-pyinotify==0.9.4
-python-consul==1.1.0
-PyInstaller==3.5
-cryptography==2.8
+zope.component==4.6.2
+zope.event==4.5
+zope.interface==5.2.0
+pyinotify==0.9.6

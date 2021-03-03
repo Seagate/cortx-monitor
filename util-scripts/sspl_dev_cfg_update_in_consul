@@ -57,5 +57,5 @@ sleep 5
 # Doesn't need below line for dual node setup.
 # Uncomment below line of code for a single node setup or dev environment.
 # echo "state=active" > /var/cortx/sspl/data/state.txt
-PID=`/sbin/pidof -s /usr/bin/sspl_ll_d`
+PID=`/usr/bin/pgrep -d " " -f /opt/seagate/cortx/sspl/low-level/sspl_ll_d`
 kill -s SIGHUP $PID

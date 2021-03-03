@@ -18,10 +18,11 @@ import os
 from time import sleep
 import sys
 
-from sspl_test.default import *
-from sspl_test.rabbitmq.rabbitmq_ingress_processor_tests import RabbitMQingressProcessorTests
-from sspl_test.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
-from sspl_test.common import check_sspl_ll_is_running
+from default import world
+from rabbitmq.rabbitmq_ingress_processor_tests import RabbitMQingressProcessorTests
+from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
+from common import check_sspl_ll_is_running
+
 
 def init(args):
     pass
@@ -61,6 +62,7 @@ def test_host_update_data_sensor(args):
     assert(info.get("resource_type") is not None)
     assert(info.get("event_time") is not None)
     assert(info.get("resource_id") is not None)
+    assert(info.get("description") is not None)
 
     specific_info = host_update_msg.get("specific_info")
     assert(specific_info.get("loggedInUsers") is not None)

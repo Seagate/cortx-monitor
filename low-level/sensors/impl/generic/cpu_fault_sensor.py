@@ -19,21 +19,23 @@ on the Node server
 """
 
 import json
+import os
 import socket
 import time
 import uuid
-import os
 
 from framework.base.internal_msgQ import InternalMsgQ
+from framework.base.module_thread import SensorThread
+from framework.base.sspl_constants import DATA_PATH
+from framework.utils.conf_utils import (CLUSTER, GLOBAL_CONF, SRVNODE,
+                                        SSPL_CONF, Conf)
 from framework.utils.service_logging import logger
+from framework.utils.severity_reader import SeverityReader
+from framework.utils.store_factory import file_store
+from framework.utils.sysfs_interface import SysFS
+from framework.utils.tool_factory import ToolFactory
 from message_handlers.logging_msg_handler import LoggingMsgHandler
 from message_handlers.node_data_msg_handler import NodeDataMsgHandler
-from framework.base.module_thread import SensorThread
-from framework.utils.severity_reader import SeverityReader
-from framework.utils.sysfs_interface import SysFS
-from framework.utils.store_factory import file_store
-from framework.utils.tool_factory import ToolFactory
-from framework.base.sspl_constants import COMMON_CONFIGS, DATA_PATH
 
 # Override default store
 store = file_store
@@ -92,22 +94,13 @@ class CPUFaultSensor(SensorThread, InternalMsgQ):
 
         super(CPUFaultSensor, self).initialize_msgQ(msgQlist)
 
-        self._site_id = self._conf_reader._get_value_with_default(
-                                self.SYSTEM_INFORMATION_KEY,
-                                COMMON_CONFIGS.get(self.SYSTEM_INFORMATION_KEY).get(self.SITE_ID_KEY), '001')
-        self._cluster_id = self._conf_reader._get_value_with_default(
-                                self.SYSTEM_INFORMATION_KEY,
-                                COMMON_CONFIGS.get(self.SYSTEM_INFORMATION_KEY).get(self.CLUSTER_ID_KEY), '001')
-        self._rack_id = self._conf_reader._get_value_with_default(
-                                self.SYSTEM_INFORMATION_KEY,
-                                COMMON_CONFIGS.get(self.SYSTEM_INFORMATION_KEY).get(self.RACK_ID_KEY), '001')
-        self._node_id = self._conf_reader._get_value_with_default(
-                                self.SYSTEM_INFORMATION_KEY,
-                                COMMON_CONFIGS.get(self.SYSTEM_INFORMATION_KEY).get(self.NODE_ID_KEY), '001')
+        self._site_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.SITE_ID_KEY}",'DC01')
+        self._rack_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.RACK_ID_KEY}",'RC01')
+        self._node_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.NODE_ID_KEY}",'SN01')
+        self._cluster_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{self.CLUSTER_ID_KEY}",'CC01')
 
         # get the cpu fault implementor from configuration
-        cpu_fault_utility = self._conf_reader._get_value_with_default(
-                                    self.name().capitalize(), self.PROBE,
+        cpu_fault_utility = Conf.get(SSPL_CONF, f"{self.name().capitalize()}>{self.PROBE}",
                                     'sysfs')
 
         # Creating the instance of ToolFactory class
@@ -239,15 +232,24 @@ class CPUFaultSensor(SensorThread, InternalMsgQ):
         # Populate specific info
         self.fill_specific_info()
         alert_specific_info = self.specific_info
+        res_id = self.RESOURCE_ID + str(cpu)
+
+        for item in alert_specific_info:
+            if item['resource_id'] == res_id:
+                if alert_type == "fault":
+                    description = "Faulty CPU detected, %s state is %s" %(item['resource_id'], item["state"])
+                else:
+                    description = "Fault resolved for CPU, %s state is  %s" %(item['resource_id'], item["state"])
 
         info = {
                 "site_id": self._site_id,
                 "cluster_id": self._cluster_id,
                 "rack_id": self._rack_id,
                 "node_id": self._node_id,
-                "resource_type": self.RESOURCE_TYPE,
+                "resource_type": res_id,
                 "resource_id": self.RESOURCE_ID + str(cpu),
-                "event_time": epoch_time
+                "event_time": epoch_time,
+                "description": description
                 }
 
         internal_json_msg = json.dumps(
@@ -279,8 +281,6 @@ class CPUFaultSensor(SensorThread, InternalMsgQ):
         try:
             json_msg = self._create_json_message(cpu, alert_type)
             if json_msg:
-                # RAAL stands for - RAise ALert
-                logger.info(f"RAAL: {json_msg}")
                 self._write_internal_msgQ(NodeDataMsgHandler.name(), json_msg)
             return True
         except Exception as e:

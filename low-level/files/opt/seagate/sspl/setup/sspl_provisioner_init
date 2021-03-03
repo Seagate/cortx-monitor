@@ -1,0 +1,180 @@
+#!/bin/bash
+
+# Copyright (c) 2020 Seagate Technology LLC and/or its Affiliates
+#
+# This program is free software: you can redistribute it and/or modify it under the
+# terms of the GNU Affero General Public License as published by the Free Software
+# Foundation, either version 3 of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+# PARTICULAR PURPOSE. See the GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License along
+# with this program. If not, see <https://www.gnu.org/licenses/>. For any questions
+# about this software or licensing, please email opensource@seagate.com or
+# cortx-questions@seagate.com.
+
+set -e -u -o pipefail
+
+##############################################################################
+# [ OUTDATED FROM LR2 RELEASE]
+# This script is meant to be used by developers.
+# Components are not supposed to install/start consul by itself in production,
+# provisioner would do. This script calls all the provisioner
+# scripts sequentially. It will replace sspl_init eventually.
+##############################################################################
+
+SCRIPT_DIR=$(dirname $0)
+SCRIPT_NAME=$(basename $0)
+
+source $SCRIPT_DIR/constants.sh
+
+rmq_cluster=true
+rmq_cluster_nodes=
+install_provisioner=true
+read_provisioner_config=true
+
+usage() {
+    cat << EOF
+    $SCRIPT_NAME
+        [-p|--product-name <LDR_R1|LDR_R2>]
+        [-c|--rmq-cluster <true|false>]
+        [-n|--rmq-nodes <name of the nodes>]
+        [-i|--install-provisioner <true|false>]
+        [-P|--read-provisioner-config <true|false>]
+EOF
+    exit 1
+}
+
+while getopts ":p:c:n:i:P:" OPTION; do
+    case $OPTION in
+        p )
+            PRODUCT_NAME=$OPTARG
+            ;;
+        c )
+            rmq_cluster=$OPTARG
+            ;;
+        n )
+            rmq_cluster_nodes=$OPTARG
+            ;;
+        i )
+            install_provisioner=$OPTARG
+            ;;
+        P )
+            read_provisioner_config=$OPTARG
+            ;;
+        * )
+            usage
+            ;;
+    esac
+done
+
+[ -z "$rmq_cluster" ] && rmq_cluster=true
+[ -z "$PRODUCT_NAME" ] && PRODUCT_NAME="LDR_R1"
+
+setup_provisioner_prereq(){
+    if ! [ "$(rpm -qa | grep cortx-prvsnr-cli)" ]; then
+        # get defined host name from salt minion and update hosts file
+        SRVNODE=
+        [ -f "/etc/salt/minion_id" ] && SRVNODE="$(cat /etc/salt/minion_id)"
+        if [ -n "$SRVNODE" ]; then
+            [ -z "$(cat /etc/hosts | grep $SRVNODE)" ] && echo "127.0.0.1 $SRVNODE" >> /etc/hosts
+        fi
+    else
+        # It will remove already installed packages
+        yum remove -y cortx-prvsnr-cli*
+        rm -rf /etc/salt/*
+    fi
+
+    # to install updated packages
+    pkg_name="cortx-prvsnr-cli-1.0.0"
+    build_url="http://cortx-storage.colo.seagate.com/releases/cortx/github/release/rhel-7.7.1908/last_successful/"
+    yum install -y $build_url/$(curl -s $build_url/|grep $pkg_name|sed 's/<\/*[^"]*"//g'|cut -d"\"" -f1)
+    # provisioner decides the setup(single or dual node) for deployment and
+    # they don't use this dev init script. This script supports only single node setup.
+    sudo /opt/seagate/cortx/provisioner/cli/src/setup-provisioner -S $build_url
+    salt-call state.apply components.system
+    python3 /opt/seagate/cortx/provisioner/cli/pillar_encrypt
+
+}
+
+
+start_req_services(){
+    [ "$rmq_cluster" == true ] && systemctl start rabbitmq-server.service
+    systemctl start sspl-ll.service
+
+    # TODO: Temporary change until HA integration is in place
+    # Switch SSPL to active state to resume all the suspended plugins. If SSPL is
+    # not switched to active state then plugins will not respond and tests will
+    # fail. Sending SIGUP to SSPL makes SSPL to read state file and switch state.
+    TRIES=0
+    SSPL_STATUS=$(systemctl show -p ActiveState sspl-ll | sed 's/ActiveState=//g')
+    while [ $SSPL_STATUS != "active" ]
+    do
+        echo SSPL Service not started. Waiting...
+        sleep 2
+        TRIES=$((TRIES+1))
+        SSPL_STATUS=$(systemctl show -p ActiveState sspl-ll | sed 's/ActiveState=//g')
+        if [ $TRIES -gt 4 ]
+        then
+            break
+        fi
+    done
+
+    if [ $SSPL_STATUS == "active" -a $PRODUCT_NAME == "LDR_R2" ]
+    then
+        echo SSPL Service started.
+        echo Waiting 5 seconds to initialize.
+        sleep 5
+        echo "*************************************************************************"
+        echo "SSPL state is 'active'"
+        echo "*************************************************************************"
+    elif [ $SSPL_STATUS == "active" -a $PRODUCT_NAME == "LDR_R1" ]
+    then
+        echo SSPL Service started.
+        echo Waiting 5 seconds to initialize.
+        sleep 5
+        echo "*************************************************************************"
+        echo "Changing SSPL state to 'active', disable step once HA integration complete"
+        echo "*************************************************************************"
+        echo "state=active" > /var/$PRODUCT_FAMILY/sspl/data/state.txt
+        PID=`/usr/bin/pgrep -d " " -f /opt/seagate/cortx/sspl/low-level/sspl_ll_d`
+        kill -s SIGHUP $PID
+    else
+        echo SSPL Service not started after 10 seconds.
+        echo Failed to make SSPL state ACTIVE
+    fi
+}
+
+if [ "$install_provisioner" == true ]; then
+    setup_provisioner_prereq
+fi
+$SCRIPT_DIR/sspl_setup post_install -p $PRODUCT_NAME -e DEV -c $rmq_cluster
+$SCRIPT_DIR/sspl_setup_init -r $PRODUCT_FAMILY
+
+declare -a sspl_config_args=()
+if [ "${read_provisioner_config}" == "false" ]; then
+    sspl_config_args+=(-d)
+fi
+
+if [ "$PRODUCT_NAME" == "LDR_R2" ]; then
+    if ! [ -z "$rmq_cluster_nodes" ]; then
+        sspl_config_args+=(-n $rmq_cluster_nodes)
+    fi
+    if [ "${#sspl_config_args[@]}" -eq 0 ]; then
+        $SCRIPT_DIR/sspl_config
+    else
+        $SCRIPT_DIR/sspl_config "${sspl_config_args[@]}"
+    fi
+
+    [ "$rmq_cluster" == true ] && $SCRIPT_DIR/sspl_setup_rabbitmq_cluster
+else
+    if [ "${#sspl_config_args[@]}" -eq 0 ]; then
+        $SCRIPT_DIR/sspl_config
+    else
+        $SCRIPT_DIR/sspl_config "${sspl_config_args[@]}"
+    fi
+    $SCRIPT_DIR/sspl_setup_rabbitmq_cluster
+fi
+start_req_services

@@ -21,40 +21,40 @@
 
  ****************************************************************************
 """
-import re
-import os
-import json
-import time
 import copy
+import json
+import os
+import re
+import socket
 import subprocess
 import threading
+import time
 import uuid
-
 from datetime import datetime, timedelta
 
-from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
-from framework.base.module_thread import SensorThread
+import dbus
+from dbus import Array, Interface, SystemBus
+from dbus.mainloop.glib import DBusGMainLoop
+from gi.repository import GObject as gobject
+from zope.interface import implementer
+
 from framework.base.internal_msgQ import InternalMsgQ
+from framework.base.module_thread import SensorThread
+from framework.base.sspl_constants import cs_products
+from framework.rabbitmq.rabbitmq_egress_processor import \
+    RabbitMQegressProcessor
+from framework.utils.conf_utils import (
+    CLUSTER, CLUSTER_ID, DATA_PATH_KEY, GLOBAL_CONF, NODE_ID, RACK_ID, SITE_ID,
+    SRVNODE, SSPL_CONF, Conf)
 from framework.utils.service_logging import logger
-from framework.base.sspl_constants import cs_products, COMMON_CONFIGS
 from framework.utils.severity_reader import SeverityReader
 from framework.utils.store_factory import file_store
-
-# Modules that receive messages from this module
-from message_handlers.service_msg_handler import ServiceMsgHandler
+from json_msgs.messages.actuators.ack_response import AckResponseMsg
 from message_handlers.disk_msg_handler import DiskMsgHandler
 from message_handlers.node_data_msg_handler import NodeDataMsgHandler
-
-from json_msgs.messages.actuators.ack_response import AckResponseMsg
-
-from zope.interface import implementer
+# Modules that receive messages from this module
+from message_handlers.service_msg_handler import ServiceMsgHandler
 from sensors.IService_watchdog import IServiceWatchdog
-
-import dbus
-from dbus import SystemBus, Interface, Array
-from gi.repository import GObject as gobject
-from dbus.mainloop.glib import DBusGMainLoop
-import socket
 
 store = file_store
 
@@ -180,25 +180,12 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
 
         self._product = product
 
-        self._site_id = conf_reader._get_value_with_default(
-                                                self.SYSTEM_INFORMATION,
-                                                COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.SITE_ID),
-                                                '001')
-        self._rack_id = conf_reader._get_value_with_default(
-                                                self.SYSTEM_INFORMATION,
-                                                COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.RACK_ID),
-                                                '001')
-        self._node_id = conf_reader._get_value_with_default(
-                                                self.SYSTEM_INFORMATION,
-                                                COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.NODE_ID),
-                                                '001')
-        self._cluster_id = conf_reader._get_value_with_default(
-                                                self.SYSTEM_INFORMATION,
-                                                COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.CLUSTER_ID),
-                                                '001')
+        self._site_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{SITE_ID}",'DC01')
+        self._rack_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{RACK_ID}",'RC01')
+        self._node_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{NODE_ID}",'SN01')
+        self._cluster_id = Conf.get(GLOBAL_CONF, f'{CLUSTER}>{CLUSTER_ID}','CC01')
 
-        self.vol_ras = conf_reader._get_value_with_default(\
-            self.SYSTEM_INFORMATION, COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get("data_path"), self.DEFAULT_RAS_VOL)
+        self.vol_ras = Conf.get(SSPL_CONF, f"{self.SYSTEM_INFORMATION}>{DATA_PATH_KEY}", self.DEFAULT_RAS_VOL)
 
         self.server_cache = self.vol_ras + "server/"
         self.disk_cache_path = self.server_cache + "systemd_watchdog/disks/disks.json"
@@ -706,7 +693,7 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
         """Run the command and get the response and error returned"""
         process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
         response, error = process.communicate()
-        return response.rstrip('\n'), error.rstrip('\n')
+        return response.rstrip('\n'), error.rstrip('\n'), process.returncode
 
     def _get_drives(self):
         """
@@ -726,7 +713,7 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
         drives = self._disk_manager.GetManagedObjects()
 
         return {obj_path : { self.DRIVE_DBUS_INFO: interfaces_and_property["org.freedesktop.UDisks2.Drive"],
-                             'node_disk': is_local_drive(interfaces_and_property)}
+                             'node_disk': self._is_local_drive(obj_path)}
                         for obj_path, interfaces_and_property in drives.items()
                         if "drive" in obj_path and is_physical_drive(interfaces_and_property["org.freedesktop.UDisks2.Drive"])}
 
@@ -967,8 +954,7 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
 
     def _get_monitored_services(self):
         """Retrieves the list of services to be monitored"""
-        return self._conf_reader._get_value_list(self.SYSTEMDWATCHDOG,
-                                                 self.MONITORED_SERVICES)
+        return Conf.get(SSPL_CONF, f"{self.SYSTEMDWATCHDOG}>{self.MONITORED_SERVICES}", [])
 
     def _interface_added(self, object_path, interfaces_and_properties):
         """Callback for when an interface like drive or SMART job has been added"""
@@ -995,7 +981,7 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
                     self._drives[object_path][self.DRIVE_DBUS_INFO] = interfaces_and_properties['org.freedesktop.UDisks2.Drive']
 
                     drive = self._drives[object_path][self.DRIVE_DBUS_INFO]
-                    if is_local_drive(interfaces_and_properties):
+                    if self._is_local_drive(object_path):
                         self._drives[object_path]["node_disk"] = True
 
                     resource_type = self._get_resource_type(object_path)
@@ -1198,6 +1184,17 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
     def _send_msg(self, alert_type, resource_type, resource_id, specific_info):
         """Sends an internal msg to DiskMsgHandler"""
 
+        if alert_type == self.DISK_FAULT_ALERT_TYPE:
+            description = "Fault detected for server drive."
+        elif alert_type == self.DISK_FAULT_RESOLVED_ALERT_TYPE:
+            description = "Fault resolved for server drive."
+        elif alert_type == self.DISK_INSERTED_ALERT_TYPE:
+            description = "Server drive is inserted."
+        elif alert_type == self.DISK_REMOVED_ALERT_TYPE:
+            description = "Server drive is missing."
+        else:
+            description = "Server drive alert."
+
         event_time = str(int(time.time()))
         severity_reader = SeverityReader()
         msg =  {"sensor_response_type" : "node_disk",
@@ -1213,11 +1210,12 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
                         "cluster_id": self._cluster_id,
                         "resource_type": resource_type,
                         "resource_id": resource_id,
-                        "event_time": event_time},
+                        "event_time": event_time,
+                        "description": description
+                        },
                     "specific_info": specific_info
                     }
                 }
-        logger.info(f"RAAL: {msg}")
         # Send the event to disk message handler to generate json message
         self._write_internal_msgQ(DiskMsgHandler.name(), msg)
 
@@ -1291,8 +1289,7 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
 
     def _getSMART_interval(self):
         """Retrieves the frequency to run SMART tests on all the drives"""
-        smart_interval = int(self._conf_reader._get_value_with_default(self.SYSTEMDWATCHDOG,
-                                                         self.SMART_TEST_INTERVAL,
+        smart_interval = int(Conf.get(SSPL_CONF, f"{self.SYSTEMDWATCHDOG}>{self.SMART_TEST_INTERVAL}",
                                                          86400))
         # Add a sanity check to avoid constant looping, 15 minute minimum (900 secs)
         if smart_interval < 900:
@@ -1303,8 +1300,7 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
         """Retrieves value of "run_smart_on_start" from configuration file.Returns
            True|False based on that.
         """
-        run_smart_on_start = self._conf_reader._get_value_with_default(self.SYSTEMDWATCHDOG,
-                                                         self.SMART_ON_START,
+        run_smart_on_start = Conf.get(SSPL_CONF, f"{self.SYSTEMDWATCHDOG}>{self.SMART_ON_START}",
                                                          "False")
         run_smart_on_start = run_smart_on_start.lower()
         if run_smart_on_start == 'true':
@@ -1317,15 +1313,13 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
     # TODO handle boolean values from conf file
     def _getShort_SMART_enabled(self):
         """Retrieves the flag indicating to run short tests periodically"""
-        smart_interval = int(self._conf_reader._get_value_with_default(self.SYSTEMDWATCHDOG,
-                                                         self.SMART_SHORT_ENABLED,
+        smart_interval = int(Conf.get(SSPL_CONF, f"{self.SYSTEMDWATCHDOG}>{self.SMART_SHORT_ENABLED}",
                                                          86400))
         return smart_interval
 
     def _getConveyance_SMART_enabled(self):
         """Retrieves the flag indicating to run conveyance tests when a disk is inserted"""
-        smart_interval = int(self._conf_reader._get_value_with_default(self.SYSTEMDWATCHDOG,
-                                                         self.SMART_CONVEYANCE_ENABLED,
+        smart_interval = int(Conf.get(SSPL_CONF, f"{self.SYSTEMDWATCHDOG}>{self.SMART_CONVEYANCE_ENABLED}",
                                                          86400))
         # Add a sanity check to avoid constant looping, 15 minute minimum (900 secs)
         if smart_interval < 900:
@@ -1338,14 +1332,13 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
         """
         smart_supported = True
         # check on environment
-        result = self._run_command("sudo facter is_virtual")
+        result, _, _ = self._run_command("sudo facter is_virtual")
         if result:
             if 'true' in result[0]:
                 smart_supported = False
         return smart_supported
 
     def _update_drive_faults(self):
-
         # This function makes 2 assumptions:
         # 1. self._drive_info_lock is held by the caller
         # 2. self._drives and self._existing_drive are consistent with each other.
@@ -1362,7 +1355,7 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
                 cmd = f"sudo smartctl -d scsi -H {self._drive_by_device_name[object_path]} --json"
             else:
                 cmd = f"sudo smartctl -H {self._drive_by_device_name[object_path]} --json"
-            response, _ = self._run_command(cmd)
+            response, _, _ = self._run_command(cmd)
             response = json.loads(response)
             try:
                 if "No such device" in response["smartctl"]["message"][0]["string"]:
@@ -1405,7 +1398,7 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
             cmd = f"sudo smartctl -d scsi -H {self._drive_by_device_name[path]} --json"
         else:
             cmd = f"sudo smartctl -H {self._drive_by_device_name[path]} --json"
-        response, _ = self._run_command(cmd)
+        response, _, _ = self._run_command(cmd)
         response = json.loads(response)
         smart_status = response['smart_status']['passed']
         return not smart_status
@@ -1415,8 +1408,33 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
             cmd = f"sudo smartctl -d scsi -A {self._drive_by_device_name[path]}"
         else:
             cmd = f"sudo smartctl -A {self._drive_by_device_name[path]}"
-        response, _ = self._run_command(cmd)
+        response, _, _ = self._run_command(cmd)
         return response
+
+    def _is_local_drive(self, object_path):
+        """
+        Detect Node server local drives using Hdparm tool.
+        Hdparm tool give information only for node drive.
+        For external JBOD/virtual drives it will give output as:
+        "SG_IO: bad/missing sense data "
+        Hdparm does not have support for NVME drives, for this drives it gives o/p as:
+        "failed: Inappropriate ioctl for device"
+        """
+        DISK_ERR_MISSING_SENSE_DATA = "SG_IO: bad/missing sense data"
+        DISK_ERR_GET_ID_FAILURE = "HDIO_GET_IDENTITY failed: Invalid argument"
+        drive_name = self._drive_by_device_name[object_path]
+        cmd = f'sudo hdparm -i {drive_name}'
+        _, err, retcode = self._run_command(cmd)
+        if retcode == 0:
+            return True
+        else:
+            logger.debug(f"SystemdWatchdog, _is_local_drive: Error for drive {drive_name}, ERROR: {err}")
+            # TODO : In case of different error(other than "SG_IO: bad/missing sense data") for local drives,
+            # this check would fail.
+            if DISK_ERR_MISSING_SENSE_DATA not in err and DISK_ERR_GET_ID_FAILURE not in err:
+                return True
+            else:
+                return False
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""
@@ -1443,11 +1461,3 @@ def is_physical_drive(interfaces_and_property):
     [6:0:1:1]    disk    0x600c0ff00050f0bb13c7505f02000000  /dev/sdr
     """
     return interfaces_and_property["WWN"].startswith("0x5")
-
-# TODO : Improvise local disk detaction.
-# Remove fw version dependency for detecting local disk
-# Currently we consider SATA drives as local drives
-def is_local_drive(interfaces_and_property):
-    """Check if drive is SATA."""
-    return "org.freedesktop.UDisks2.Drive.Ata" in interfaces_and_property and \
-        str(interfaces_and_property["org.freedesktop.UDisks2.Drive"]["Revision"]) not in ["G265", "G280"]

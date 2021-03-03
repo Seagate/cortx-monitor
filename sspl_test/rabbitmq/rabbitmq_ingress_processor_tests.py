@@ -29,13 +29,14 @@ from jsonschema import Draft3Validator
 from jsonschema import validate
 
 from pika import exceptions
-from sspl_test.framework.utils import encryptor
-from sspl_test.framework.base.module_thread import ScheduledModuleThread
-from sspl_test.framework.base.internal_msgQ import InternalMsgQ
-from sspl_test.framework.utils.service_logging import logger
-from sspl_test.framework.base.sspl_constants import RESOURCE_PATH
-from sspl_test.framework.base.sspl_constants import ServiceTypes
+from framework.utils import encryptor
+from framework.base.module_thread import ScheduledModuleThread
+from framework.base.internal_msgQ import InternalMsgQ
+from framework.utils.service_logging import logger
+from framework.base.sspl_constants import RESOURCE_PATH
+from framework.base.sspl_constants import ServiceTypes
 from .rabbitmq_sspl_test_connector import RabbitMQSafeConnection
+from framework.utils.conf_utils import Conf, SSPL_TEST_CONF
 import ctypes
 SSPL_SEC = ctypes.cdll.LoadLibrary('libsspl_sec.so.0')
 
@@ -73,20 +74,12 @@ class RabbitMQingressProcessorTests(ScheduledModuleThread, InternalMsgQ):
                                                        self.PRIORITY)
 
         # Read in the actuator schema for validating messages
-        dir = os.path.dirname(__file__)
-        #fileName = os.path.join(dir, '..', '..', 'low-level', 'json_msgs',
-        #                        'schemas', 'actuators',
-        #                        self.JSON_ACTUATOR_SCHEMA)
         fileName = os.path.join(RESOURCE_PATH + '/actuators',
                                 self.JSON_ACTUATOR_SCHEMA)
 
         self._actuator_schema = self._load_schema(fileName)
 
         # Read in the sensor schema for validating messages
-        dir = os.path.dirname(__file__)
-        #fileName = os.path.join(dir, '..', '..', 'low-level', 'json_msgs',
-        #                        'schemas', 'sensors',
-        #                        self.JSON_SENSOR_SCHEMA)
         fileName = os.path.join(RESOURCE_PATH + '/sensors',
                                 self.JSON_SENSOR_SCHEMA)
 
@@ -207,29 +200,29 @@ class RabbitMQingressProcessorTests(ScheduledModuleThread, InternalMsgQ):
     def _configure_exchange(self):
         """Configure the RabbitMQ exchange with defaults available"""
         try:
-            self._virtual_host = self._conf_reader._get_value_with_default(
-                self.RABBITMQPROCESSORTEST, self.VIRT_HOST, "SSPL"
+            self._virtual_host = Conf.get(SSPL_TEST_CONF,
+                            f"{self.RABBITMQPROCESSORTEST}>{self.VIRT_HOST}","SSPL"
             )
-            self._primary_rabbitmq_host = self._conf_reader._get_value_with_default(
-                self.RABBITMQPROCESSORTEST, self.PRIMARY_RABBITMQ_HOST, "localhost"
+            self._primary_rabbitmq_host = Conf.get(SSPL_TEST_CONF,
+            f"{self.RABBITMQPROCESSORTEST}>{self.PRIMARY_RABBITMQ_HOST}", "localhost"
             )
-            self._exchange_name = self._conf_reader._get_value_with_default(
-                self.RABBITMQPROCESSORTEST, self.EXCHANGE_NAME, "sspl-in"
+            self._exchange_name = Conf.get(SSPL_TEST_CONF,
+                f"{self.RABBITMQPROCESSORTEST}>{self.EXCHANGE_NAME}", "sspl-in"
             )
-            self._queue_name = self._conf_reader._get_value_with_default(
-                self.RABBITMQPROCESSORTEST, self.QUEUE_NAME, "actuator-req-queue"
+            self._queue_name = Conf.get(SSPL_TEST_CONF,
+             f"{self.RABBITMQPROCESSORTEST}>{self.QUEUE_NAME}", "actuator-req-queue"
             )
-            self._routing_key = self._conf_reader._get_value_with_default(
-                self.RABBITMQPROCESSORTEST, self.ROUTING_KEY, "actuator-req-key"
+            self._routing_key = Conf.get(SSPL_TEST_CONF,
+            f"{self.RABBITMQPROCESSORTEST}>{self.ROUTING_KEY}", "actuator-req-key"
             )
-            self._username = self._conf_reader._get_value_with_default(
-                self.RABBITMQPROCESSORTEST, self.USER_NAME, "sspluser"
+            self._username = Conf.get(SSPL_TEST_CONF,
+            f"{self.RABBITMQPROCESSORTEST}>{self.USER_NAME}", "sspluser"
             )
-            self._password = self._conf_reader._get_value_with_default(
-                self.RABBITMQPROCESSORTEST, self.PASSWORD, "sspl4ever"
+            self._password = Conf.get(SSPL_TEST_CONF,
+            f"{self.RABBITMQPROCESSORTEST}>{self.PASSWORD}", "sspl4ever"
             )
-            self.cluster_id = self._conf_reader._get_value_with_default(
-                self.SYSTEM_INFORMATION_KEY, self.CLUSTER_ID_KEY, '')
+            self.cluster_id = Conf.get(SSPL_TEST_CONF,
+                f"{self.SYSTEM_INFORMATION_KEY}>{self.CLUSTER_ID_KEY}", 'CC01')
 
             # Decrypt RabbitMQ Password
             decryption_key = encryptor.gen_key(self.cluster_id, ServiceTypes.RABBITMQ.value)

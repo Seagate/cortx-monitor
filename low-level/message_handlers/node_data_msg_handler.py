@@ -22,24 +22,24 @@
 import json
 import time
 
-from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
+from framework.base.module_thread import ScheduledModuleThread
+from framework.base.sspl_constants import enabled_products
+from framework.utils.conf_utils import (CLUSTER, GLOBAL_CONF, SRVNODE,
+                                        SSPL_CONF, Conf)
 from framework.utils.service_logging import logger
-from framework.base.sspl_constants import enabled_products, COMMON_CONFIGS
-
-from json_msgs.messages.sensors.host_update import HostUpdateMsg
-from json_msgs.messages.sensors.local_mount_data import LocalMountDataMsg
+from framework.utils.severity_reader import SeverityReader
 from json_msgs.messages.sensors.cpu_data import CPUdataMsg
+from json_msgs.messages.sensors.disk_space_alert import DiskSpaceAlertMsg
+from json_msgs.messages.sensors.host_update import HostUpdateMsg
 from json_msgs.messages.sensors.if_data import IFdataMsg
+from json_msgs.messages.sensors.local_mount_data import LocalMountDataMsg
+from json_msgs.messages.sensors.node_hw_data import NodeIPMIDataMsg
 from json_msgs.messages.sensors.raid_data import RAIDdataMsg
 from json_msgs.messages.sensors.raid_integrity_msg import RAIDIntegrityMsg
-from json_msgs.messages.sensors.disk_space_alert import DiskSpaceAlertMsg
-from json_msgs.messages.sensors.node_hw_data import NodeIPMIDataMsg
-
-from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
-
 from message_handlers.logging_msg_handler import LoggingMsgHandler
-from framework.utils.severity_reader import SeverityReader
+from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
+
 
 class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
     """Message Handler for generic node requests and generating
@@ -116,46 +116,24 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         # Initialize internal message queues for this module
         super(NodeDataMsgHandler, self).initialize_msgQ(msgQlist)
 
-        self._transmit_interval = int(self._conf_reader._get_value_with_default(
-                                                self.NODEDATAMSGHANDLER,
-                                                self.TRANSMIT_INTERVAL,
+        self._transmit_interval = int(Conf.get(SSPL_CONF, f"{self.NODEDATAMSGHANDLER}>{self.TRANSMIT_INTERVAL}",
                                                 60))
-        self._units = self._conf_reader._get_value_with_default(
-                                                self.NODEDATAMSGHANDLER,
-                                                self.UNITS,
+        self._units = Conf.get(SSPL_CONF, f"{self.NODEDATAMSGHANDLER}>{self.UNITS}",
                                                 "MB")
-        self._disk_usage_threshold = self._conf_reader._get_value_with_default(
-                                                self.NODEDATAMSGHANDLER,
-                                                self.DISK_USAGE_THRESHOLD,
+        self._disk_usage_threshold = Conf.get(SSPL_CONF, f"{self.NODEDATAMSGHANDLER}>{self.DISK_USAGE_THRESHOLD}",
                                                 self.DEFAULT_DISK_USAGE_THRESHOLD)
 
-        self._cpu_usage_threshold = self._conf_reader._get_value_with_default(
-                                                self.NODEDATAMSGHANDLER,
-                                                self.CPU_USAGE_THRESHOLD,
+        self._cpu_usage_threshold = Conf.get(SSPL_CONF, f"{self.NODEDATAMSGHANDLER}>{self.CPU_USAGE_THRESHOLD}",
                                                 self.DEFAULT_CPU_USAGE_THRESHOLD)
 
-        self._host_memory_usage_threshold = self._conf_reader._get_value_with_default(
-                                                self.NODEDATAMSGHANDLER,
-                                                self.HOST_MEMORY_USAGE_THRESHOLD,
+        self._host_memory_usage_threshold = Conf.get(SSPL_CONF, f"{self.NODEDATAMSGHANDLER}>{self.HOST_MEMORY_USAGE_THRESHOLD}",
                                                 self.DEFAULT_HOST_MEMORY_USAGE_THRESHOLD)
 
-        self.site_id = self._conf_reader._get_value_with_default(
-                                                self.SYSTEM_INFORMATION,
-                                                COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.SITE_ID),
-                                                '001')
-        self.rack_id = self._conf_reader._get_value_with_default(
-                                                self.SYSTEM_INFORMATION,
-                                                COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.RACK_ID),
-                                                '001')
-        self.node_id = self._conf_reader._get_value_with_default(
-                                                self.SYSTEM_INFORMATION,
-                                                COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.NODE_ID),
-                                                '001')
+        self.site_id = Conf.get(GLOBAL_CONF, f'{CLUSTER}>{SRVNODE}>{self.SITE_ID}','DC01')
+        self.rack_id = Conf.get(GLOBAL_CONF, f'{CLUSTER}>{SRVNODE}>{self.RACK_ID}','RC01')
+        self.node_id = Conf.get(GLOBAL_CONF, f'{CLUSTER}>{SRVNODE}>{self.NODE_ID}','SN01')
+        self.cluster_id = Conf.get(GLOBAL_CONF, f'{CLUSTER}>{self.CLUSTER_ID}','CC01')
 
-        self.cluster_id = self._conf_reader._get_value_with_default(
-                                                self.SYSTEM_INFORMATION,
-                                                self.CLUSTER_ID,
-                                                '0')
         self.prev_nw_status = {}
         self.bmcNwStatus = None
         self.severity_reader = SeverityReader()
@@ -173,9 +151,9 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         self._raid_device = "N/A"
         self.os_sensor_type = {
             "disk_space" : self.disk_sensor_data,
-            "system" : self.host_sensor_data,
+            "memory_usage" : self.host_sensor_data,
             "nw"   : self.if_sensor_data,
-            "cpu"  : self.cpu_sensor_data,
+            "cpu_usage"  : self.cpu_sensor_data,
             "raid_data" : self.raid_sensor_data
         }
 
@@ -278,7 +256,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             self.sensor_type = jsonMsg.get("sensor_request_type").get("node_data").get("sensor_type").split(":")[2]
             self._log_debug("_processMsg, sensor_type: %s" % self.sensor_type)
 
-            if self.sensor_type == "system":
+            if self.sensor_type == "memory_usage":
                 self._generate_host_update()
                 sensor_message_type = self.os_sensor_type.get(self.sensor_type, "")
                 if sensor_message_type:
@@ -288,7 +266,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     self._log_debug(f"NodeDataMsgHandler, _process_msg, \
                         No past data found for {self.sensor_type} sensor type")
 
-            elif self.sensor_type == "cpu":
+            elif self.sensor_type == "cpu_usage":
                 self._generate_cpu_data()
                 sensor_message_type = self.os_sensor_type.get(self.sensor_type, "")
                 if sensor_message_type:
@@ -387,8 +365,10 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             if not self.host_fault:
                 self.host_fault = True
                 # Create the disk space data message and hand it over to the egress processor to transmit
-                logger.warning("Host Memory usage increased to {}%, beyond configured threshold of {}%".\
-                    format(self._node_sensor.total_memory["percent"], self._host_memory_usage_threshold))
+                fault_event = "Host memory usage increased to %s, beyond configured threshold of %s" \
+                                %(self._node_sensor.total_memory["percent"], self._host_memory_usage_threshold)
+
+                logger.warning(fault_event)
 
                 logged_in_users = []
                 # Create the host update message and hand it over to the egress processor to transmit
@@ -403,7 +383,8 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                                         self._node_sensor.logged_in_users,
                                         self._node_sensor.process_count,
                                         self._node_sensor.running_process_count,
-                                        self.FAULT
+                                        self.FAULT,
+                                        fault_event
                                         )
                 # Add in uuid if it was present in the json request
                 if self._uuid is not None:
@@ -411,14 +392,13 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 jsonMsg = hostUpdateMsg.getJson()
                 # Transmit it out over rabbitMQ channel
                 self.host_sensor_data = jsonMsg
-                self.os_sensor_type["system"] = self.host_sensor_data
-                # RAAL stands for - RAise ALert
-                logger.info(f"RAAL: {jsonMsg}")
+                self.os_sensor_type["memory_usage"] = self.host_sensor_data
                 self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
 
         if (self._node_sensor.total_memory["percent"] < self._host_memory_usage_threshold) and (self.host_fault == True):
-                logger.warning("Host Memory usage decrease to {}%, lesser than configured threshold of {}%".\
-                    format(self._host_memory_usage_threshold, self._node_sensor.total_memory["percent"]))
+                fault_resolved_event = "Host memory usage decreased to %s, lesser than configured threshold of %s" \
+                                        %(self._node_sensor.total_memory["percent"], self._host_memory_usage_threshold)
+                logger.warning(fault_resolved_event)
                 logged_in_users = []
                 # Create the host update message and hand it over to the egress processor to transmit
                 hostUpdateMsg = HostUpdateMsg(self._node_sensor.host_id,
@@ -432,7 +412,8 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                                         self._node_sensor.logged_in_users,
                                         self._node_sensor.process_count,
                                         self._node_sensor.running_process_count,
-                                        self.FAULT_RESOLVED
+                                        self.FAULT_RESOLVED,
+                                        fault_resolved_event
                                         )
 
                 # Add in uuid if it was present in the json request
@@ -441,8 +422,8 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 jsonMsg = hostUpdateMsg.getJson()
                 # Transmit it out over rabbitMQ channel
                 self.host_sensor_data = jsonMsg
-                self.os_sensor_type["system"] = self.host_sensor_data
-                logger.info(f"RAAL: {jsonMsg}")
+                self.os_sensor_type["memory_usage"] = self.host_sensor_data
+
                 self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
                 self.host_fault = False
 
@@ -470,7 +451,6 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             localMountDataMsg.set_uuid(self._uuid)
         jsonMsg = localMountDataMsg.getJson()
 
-        logger.info(f"RAAL: {jsonMsg}")
         # Transmit it out over rabbitMQ channel
         self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
 
@@ -499,8 +479,10 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             if not self.cpu_fault :
                 self.cpu_fault = True
                 # Create the cpu usage data message and hand it over to the egress processor to transmit
-                logger.warning("CPU usage increased to {}%, beyond configured threshold of {}%".\
-                    format(self._node_sensor.cpu_usage, self._cpu_usage_threshold))
+
+                fault_event = "CPU usage increased to %s, beyond configured threshold of %s" \
+                                %(self._node_sensor.cpu_usage, self._cpu_usage_threshold)
+                logger.warning(fault_event)
 
                 # Create the local mount data message and hand it over to the egress processor to transmit
                 cpuDataMsg = CPUdataMsg(self._node_sensor.host_id,
@@ -520,7 +502,8 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                                     self.rack_id,
                                     self.node_id,
                                     self.cluster_id,
-                                    self.FAULT
+                                    self.FAULT,
+                                    fault_event
                                 )
 
                 # Add in uuid if it was present in the json request
@@ -528,15 +511,16 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     cpuDataMsg.set_uuid(self._uuid)
                 jsonMsg = cpuDataMsg.getJson()
                 self.cpu_sensor_data = jsonMsg
-                self.os_sensor_type["cpu"] = self.cpu_sensor_data
-                logger.info(f"RAAL: {jsonMsg}")
+                self.os_sensor_type["cpu_usage"] = self.cpu_sensor_data
+
                 # Transmit it out over rabbitMQ channel
                 self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
 
         if (self._node_sensor.cpu_usage <= self._cpu_usage_threshold) and (self.cpu_fault == True):
             # Create the cpu usage data message and hand it over to the egress processor to transmit
-            logger.warning("CPU usage decrised to {}%, lesser than configured threshold of {}%".\
-                format(self._cpu_usage_threshold, self._node_sensor.cpu_usage))
+            fault_resolved_event = "CPU usage decreased to %s, lesser than configured threshold of %s" \
+                %(self._node_sensor.cpu_usage, self._cpu_usage_threshold)
+            logger.warning(fault_resolved_event)
 
             # Create the local mount data message and hand it over to the egress processor to transmit
             cpuDataMsg = CPUdataMsg(self._node_sensor.host_id,
@@ -556,7 +540,8 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                                 self.rack_id,
                                 self.node_id,
                                 self.cluster_id,
-                                self.FAULT_RESOLVED
+                                self.FAULT_RESOLVED,
+                                fault_resolved_event
                             )
 
             # Add in uuid if it was present in the json request
@@ -564,8 +549,8 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 cpuDataMsg.set_uuid(self._uuid)
             jsonMsg = cpuDataMsg.getJson()
             self.cpu_sensor_data = jsonMsg
-            self.os_sensor_type["cpu"] = self.cpu_sensor_data
-            logger.info(f"RAAL: {jsonMsg}")
+            self.os_sensor_type["cpu_usage"] = self.cpu_sensor_data
+
             # Transmit it out over rabbitMQ channel
             self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
             self.cpu_fault = False
@@ -594,7 +579,6 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         #                                'log_msg': '{}'.format(jsonMsg)}}})
         #self._write_internal_msgQ(LoggingMsgHandler.name(), internal_json_msg)
 
-        logger.info(f"RAAL: {jsonMsg}")
         # Transmit it out over rabbitMQ channel
         self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
 
@@ -768,8 +752,9 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             if not self.disk_fault:
                 self.disk_fault = True
                 # Create the disk space data message and hand it over to the egress processor to transmit
-                logger.warning("Disk usage increased to {}%, beyond configured threshold of {}%".\
-                    format(self._node_sensor.disk_used_percentage, self._disk_usage_threshold))
+                fault_event = "Disk usage increased to %s, beyond configured threshold of %s" \
+                                %(self._node_sensor.disk_used_percentage, self._disk_usage_threshold)
+                logger.warning(fault_event)
                 diskSpaceAlertMsg = DiskSpaceAlertMsg(self._node_sensor.host_id,
                                         self._epoch_time,
                                         self._node_sensor.total_space,
@@ -777,7 +762,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                                         self._node_sensor.disk_used_percentage,
                                         self._units,
                                         self.site_id, self.rack_id,
-                                        self.node_id, self.cluster_id, self.FAULT)
+                                        self.node_id, self.cluster_id, self.FAULT,fault_event)
 
                 # Add in uuid if it was present in the json request
                 if self._uuid is not None:
@@ -785,14 +770,15 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 jsonMsg = diskSpaceAlertMsg.getJson()
                 self.disk_sensor_data = jsonMsg
                 self.os_sensor_type["disk_space"] = self.disk_sensor_data
-                logger.info(f"RAAL: {jsonMsg}")
+
                 # Transmit it out over rabbitMQ channel
                 self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
 
         if (self._node_sensor.disk_used_percentage <= self._disk_usage_threshold) and (self.disk_fault == True):
             # Create the disk space data message and hand it over to the egress processor to transmit
-            logger.warning("Disk usage decrised to {}%, lesser than threshold of {}%".\
-                format(self._disk_usage_threshold, self._node_sensor.disk_used_percentage, ))
+            fault_resolved_event = "Disk usage decreased to %s, lesser than configured threshold of %s" \
+                                %(self._node_sensor.disk_used_percentage, self._disk_usage_threshold)
+            logger.warning(fault_resolved_event)
             diskSpaceAlertMsg = DiskSpaceAlertMsg(self._node_sensor.host_id,
                                     self._epoch_time,
                                     self._node_sensor.total_space,
@@ -803,7 +789,8 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                                     self.rack_id,
                                     self.node_id,
                                     self.cluster_id,
-                                    self.FAULT_RESOLVED
+                                    self.FAULT_RESOLVED,
+                                    fault_resolved_event
                                     )
 
             # Add in uuid if it was present in the json request
@@ -812,7 +799,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             jsonMsg = diskSpaceAlertMsg.getJson()
             self.disk_sensor_data = jsonMsg
             self.os_sensor_type["disk_space"] = self.disk_sensor_data
-            logger.info(f"RAAL: {jsonMsg}")
+
             # Transmit it out over rabbitMQ channel
             self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
             self.disk_fault = False
@@ -923,4 +910,3 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""
         super(NodeDataMsgHandler, self).shutdown()
-

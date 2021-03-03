@@ -25,9 +25,6 @@ import json
 import threading
 import time
 from sched import scheduler
-
-from framework.utils.service_logging import logger
-
 from .debug import Debug
 from framework.utils.service_logging import logger
 

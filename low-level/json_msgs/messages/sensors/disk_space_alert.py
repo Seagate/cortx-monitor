@@ -51,6 +51,7 @@ class DiskSpaceAlertMsg(BaseSensorMsg):
                        site_id, rack_id,
                        node_id, cluster_id,
                        alert_type,
+                       event,
                        username  = "SSPL-LL",
                        signature = "N/A",
                        in_time      = "N/A",
@@ -74,6 +75,10 @@ class DiskSpaceAlertMsg(BaseSensorMsg):
         self._node_id                = node_id
         self._cluster_id             = cluster_id
         self.alert_type              = alert_type
+        self.event                   = event
+
+        if self.alert_type == "fault_resolved":
+            self.SEVERITY = "informational"
 
         epoch_time = str(calendar.timegm(time.gmtime()))
         alert_id = mon_utils.get_alert_id(epoch_time)
@@ -104,7 +109,8 @@ class DiskSpaceAlertMsg(BaseSensorMsg):
                                 "cluster_id": self._cluster_id,
                                 "resource_type": self.RESOURCE_TYPE,
                                 "resource_id": self.RESOURCE_ID,
-                                "event_time": epoch_time
+                                "event_time": epoch_time,
+                                "description": self.event
                               },
                               "specific_info": {
                                   "freeSpace"  : {

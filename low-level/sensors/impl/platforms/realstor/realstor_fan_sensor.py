@@ -28,17 +28,19 @@ from threading import Event
 
 from zope.interface import implementer
 
-from framework.base.module_thread import SensorThread
 from framework.base.internal_msgQ import InternalMsgQ
+from framework.base.module_thread import SensorThread
+from framework.platforms.realstor.realstor_enclosure import \
+    singleton_realstorencl
+from framework.utils.conf_utils import (POLLING_FREQUENCY_OVERRIDE, SSPL_CONF,
+                                        Conf)
 from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
-from framework.platforms.realstor.realstor_enclosure import singleton_realstorencl
 from framework.utils.store_factory import store
-
 # Modules that receive messages from this module
 from message_handlers.real_stor_encl_msg_handler import RealStorEnclMsgHandler
-
 from sensors.Ifan import IFANsensor
+
 
 @implementer(IFANsensor)
 class RealStorFanSensor(SensorThread, InternalMsgQ):
@@ -84,9 +86,8 @@ class RealStorFanSensor(SensorThread, InternalMsgQ):
         self._fanmodule_prcache = None
 
         self.pollfreq_fansensor = \
-            int(self.rssencl.conf_reader._get_value_with_default(\
-                self.rssencl.CONF_REALSTORFANSENSOR,\
-                "polling_frequency_override", 0))
+            int(Conf.get(SSPL_CONF, f"{self.rssencl.CONF_REALSTORFANSENSOR}>{POLLING_FREQUENCY_OVERRIDE}",
+                        0))
 
         if self.pollfreq_fansensor == 0:
                 self.pollfreq_fansensor = self.rssencl.pollfreq
@@ -329,8 +330,6 @@ class RealStorFanSensor(SensorThread, InternalMsgQ):
         """Transmit data to RealStorMsgHandler to be processed and sent out"""
 
         self._event.clear()
-        # RAAL stands for - RAise ALert
-        logger.info(f"RAAL: {json_msg}")
         # Send the event to real stor message handler
         # to generate json message and send out
         self._write_internal_msgQ(RealStorEnclMsgHandler.name(), json_msg, self._event)

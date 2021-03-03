@@ -20,23 +20,25 @@ on the Node server
 
 import errno
 import json
+import os
 import socket
 import time
 import uuid
-import os
 
-from framework.utils.config_reader import ConfigReader
 from framework.base.debug import Debug
 from framework.base.internal_msgQ import InternalMsgQ
-from framework.utils.service_logging import logger
-from message_handlers.logging_msg_handler import LoggingMsgHandler
-from message_handlers.node_data_msg_handler import NodeDataMsgHandler
 from framework.base.module_thread import SensorThread
+from framework.base.sspl_constants import DATA_PATH
+from framework.utils.conf_utils import (CLUSTER, GLOBAL_CONF, SRVNODE,
+                                        SSPL_CONF, Conf)
+from framework.utils.config_reader import ConfigReader
+from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
+from framework.utils.store_factory import file_store
 from framework.utils.sysfs_interface import SysFS
 from framework.utils.tool_factory import ToolFactory
-from framework.base.sspl_constants import COMMON_CONFIGS, DATA_PATH
-from framework.utils.store_factory import file_store
+from message_handlers.logging_msg_handler import LoggingMsgHandler
+from message_handlers.node_data_msg_handler import NodeDataMsgHandler
 
 # Override default store
 store = file_store
@@ -128,22 +130,17 @@ class SASPortSensor(SensorThread, InternalMsgQ):
 
         super(SASPortSensor, self).initialize_msgQ(msgQlist)
 
-        self._site_id = self._conf_reader._get_value_with_default(
-                                self.SYSTEM_INFORMATION, COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.SITE_ID), '001')
-        self._cluster_id = self._conf_reader._get_value_with_default(
-                                self.SYSTEM_INFORMATION, COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.CLUSTER_ID), '001')
-        self._rack_id = self._conf_reader._get_value_with_default(
-                                self.SYSTEM_INFORMATION, COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.RACK_ID), '001')
-        self._node_id = self._conf_reader._get_value_with_default(
-                                self.SYSTEM_INFORMATION, COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.NODE_ID), '001')
+        self._site_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.SITE_ID}",'DC01')
+        self._rack_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.RACK_ID}",'RC01')
+        self._node_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.NODE_ID}",'SN01')
+        self._cluster_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{self.CLUSTER_ID}",'CC01')
 
         # Get the sas port implementor from configuration
-        sas_port_utility = self._conf_reader._get_value_with_default(
-                                    self.name().capitalize(), self.PROBE,
+        sas_port_utility = Conf.get(SSPL_CONF, f"{self.name().capitalize()}>{self.PROBE}",
                                     "sysfs")
 
-        self.polling_interval = int(self._conf_reader._get_value_with_default(
-            self.SENSOR_NAME.upper(), self.POLLING_INTERVAL, self.DEFAULT_POLLING_INTERVAL))
+        self.polling_interval = int(Conf.get(SSPL_CONF, f"{self.SENSOR_NAME.upper()}>{self.POLLING_INTERVAL}",
+                                        self.DEFAULT_POLLING_INTERVAL))
 
         # Creating the instance of ToolFactory class
         self.tool_factory = ToolFactory()
@@ -420,16 +417,7 @@ class SASPortSensor(SensorThread, InternalMsgQ):
 
         specific_info = {}
         specific_info_list = []
-
-        if port != -1:
-            # This is a port level alert, add an error key in specific info
-            if alert_type == 'fault':
-                specific_info["error"] = f"No connectivity detected on the SAS port {port}, possible \
-causes could be missing SAS cable, bad cable connection, faulty cable or SAS port failure"
-            elif alert_type == 'fault_resolved':
-                specific_info["error"] = "null"
-            specific_info_list.append(specific_info)
-            specific_info = {}
+        description = "N/A"
 
         # specific_info will contain all 16 phys for conn level alert
         # Only 4 phys for port level alert
@@ -451,6 +439,11 @@ causes could be missing SAS cable, bad cable connection, faulty cable or SAS por
 
         if port == -1:
             # This is a SAS HBA level connection alert
+            if alert_type == 'fault':
+                description = "SAS connection error detected in SAS HBA %s." %self.RESOURCE_ID
+            elif alert_type == 'fault_resolved':
+                description = "SAS connection re-established in SAS HBA %s." %self.RESOURCE_ID
+
             info = {
                     "site_id": self._site_id,
                     "cluster_id": self._cluster_id,
@@ -458,10 +451,18 @@ causes could be missing SAS cable, bad cable connection, faulty cable or SAS por
                     "node_id": self._node_id,
                     "resource_type": self.RESOURCE_TYPE, # node:interface:sas
                     "resource_id": self.RESOURCE_ID, # SASHBA-0
-                    "event_time": epoch_time
+                    "event_time": epoch_time,
+                    "description": description
                     }
         else:
             # This is a port level alert
+            if alert_type == 'fault':
+                description = ("No connectivity detected on the SAS port %s, possible"
+                                "causes could be missing SAS cable, bad cable connection,"
+                                 "faulty cable or SAS port failure." %port)
+            elif alert_type == 'fault_resolved':
+                description = "Connection established on SAS port."
+
             info = {
                     "site_id": self._site_id,
                     "cluster_id": self._cluster_id,
@@ -469,7 +470,8 @@ causes could be missing SAS cable, bad cable connection, faulty cable or SAS por
                     "node_id": self._node_id,
                     "resource_type": self.RESOURCE_TYPE + ':port', # node:interface:sas:port
                     "resource_id": self.RESOURCE_ID + f'-port-{port}', # SASHBA-0-port-0
-                    "event_time": epoch_time
+                    "event_time": epoch_time,
+                    "description": description
                     }
 
         internal_json_msg = json.dumps(
@@ -501,8 +503,6 @@ causes could be missing SAS cable, bad cable connection, faulty cable or SAS por
 
         json_msg = self._create_json_message(alert_type, port)
         if json_msg:
-            # RAAL stands for - RAise ALert
-            logger.info(f"RAAL: {json_msg}")
             self._write_internal_msgQ(NodeDataMsgHandler.name(), json_msg)
 
     def suspend(self):
@@ -518,4 +518,3 @@ causes could be missing SAS cable, bad cable connection, faulty cable or SAS por
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""
         super(SASPortSensor, self).shutdown()
-

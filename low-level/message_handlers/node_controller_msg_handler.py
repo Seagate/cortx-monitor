@@ -23,20 +23,18 @@ import errno
 import json
 import socket
 
-from framework.base.module_thread import ScheduledModuleThread
-from framework.base.internal_msgQ import InternalMsgQ
-from framework.utils.service_logging import logger
-from framework.base.sspl_constants import enabled_products, COMMON_CONFIGS
-
-from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
-from json_msgs.messages.actuators.ack_response import AckResponseMsg
-from json_msgs.messages.actuators.ndhw_ack_response import NodeHwAckResponseMsg
-
-from message_handlers.disk_msg_handler import DiskMsgHandler
-from message_handlers.service_msg_handler import ServiceMsgHandler
-
 # Import Actuator states table
 from framework.actuator_state_manager import actuator_state_manager
+from framework.base.internal_msgQ import InternalMsgQ
+from framework.base.module_thread import ScheduledModuleThread
+from framework.base.sspl_constants import enabled_products
+from framework.utils.conf_utils import GLOBAL_CONF, RELEASE, SSPL_CONF, Conf
+from framework.utils.service_logging import logger
+from json_msgs.messages.actuators.ack_response import AckResponseMsg
+from json_msgs.messages.actuators.ndhw_ack_response import NodeHwAckResponseMsg
+from message_handlers.disk_msg_handler import DiskMsgHandler
+from message_handlers.service_msg_handler import ServiceMsgHandler
+from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 
 
 class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
@@ -101,9 +99,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
         self._NodeHW_actuator       = None
 
         self._import_products(product)
-        self.setup = self._conf_reader._get_value_with_default(self.SYS_INFORMATION,
-                                                               COMMON_CONFIGS.get(self.SYS_INFORMATION).get(self.SETUP),
-                                                               "ssu")
+        self.setup = Conf.get(GLOBAL_CONF, f"{RELEASE}>{self.SETUP}","ssu")
         self.ipmi_client_name = None
 
     def _import_products(self, product):
@@ -716,8 +712,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     if self._NodeHW_actuator is None:
                         from actuators.impl.generic.node_hw import NodeHWactuator
                         from framework.utils.ipmi_client import IpmiFactory
-                        self.ipmi_client_name = self._conf_reader._get_value_with_default(
-                            self.NODE_HW_ACTUATOR, self.IPMI_IMPLEMENTOR,
+                        self.ipmi_client_name = Conf.get(SSPL_CONF, f"{self.NODE_HW_ACTUATOR}>{self.IPMI_IMPLEMENTOR}",
                             "ipmitool")
                         ipmi_factory = IpmiFactory()
                         ipmi_client = \
@@ -821,8 +816,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
     def _is_env_vm(self):
         """Retrieves the current setup and returns True|False based on setup value."""
-        setup = self._conf_reader._get_value_with_default(self.SYS_INFORMATION,
-                                                          self.SETUP,
+        setup = Conf.get(GLOBAL_CONF, f"{RELEASE}>{self.SETUP}",
                                                           "ssu")
         return setup.lower() in ['gw', 'cmu', 'vm']
 
