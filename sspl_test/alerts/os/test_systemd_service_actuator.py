@@ -17,7 +17,7 @@
 
 import time
 
-from sspl_test.default import *
+from sspl_test.default import world
 from sspl_test.rabbitmq.rabbitmq_ingress_processor_tests import RabbitMQingressProcessorTests
 from sspl_test.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 from sspl_test.common import check_sspl_ll_is_running

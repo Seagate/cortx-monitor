@@ -180,7 +180,7 @@ class SystemdService(Debug):
         return (self._service_name, result, is_err_response)
 
     def _get_activestate(self):
-        """"Returns the active state of the unit."""
+        """Returns the active state of the unit."""
         return self._proxy.Get('org.freedesktop.systemd1.Unit',
                                 'ActiveState',
                                 dbus_interface='org.freedesktop.DBus.Properties')
@@ -214,10 +214,15 @@ class SystemdService(Debug):
             else:
                 unit = self._bus.get_object('org.freedesktop.systemd1',self._manager.GetUnit(service_name))
                 Iunit = Interface(unit, dbus_interface='org.freedesktop.DBus.Properties')
+                # Fetch main_pid of service
                 curr_pid = str(Iunit.Get('org.freedesktop.systemd1.Service', 'ExecMainPID'))
+                # Fetch command_line_path with argument(if any)
                 command_line =  list(Iunit.Get('org.freedesktop.systemd1.Service', 'ExecStart'))
-                command_line = str(command_line[0][0])
-                return  (service_substate, curr_pid, command_line, is_err_response)
+                # Parse dbus output to fetch command line path with args.
+                command_line_path_with_args = []
+                for field in list(command_line[0][1]):
+                    command_line_path_with_args.append(str(field))
+                return  (service_substate, curr_pid, command_line_path_with_args, is_err_response)
         except debus_exceptions.DBusException as error:
             logger.exception("DBus Exception: %r" % error)
             is_err_response = True
