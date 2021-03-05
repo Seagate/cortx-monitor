@@ -26,8 +26,7 @@ from framework.base.sspl_constants import (PRODUCT_FAMILY,
                                            sspl_test_config_path,
                                            GLOBAL_CONFIG_INDEX,
                                            SSPL_CONFIG_INDEX,
-                                           SSPL_TEST_CONFIG_INDEX,
-                                           pip3s_packages_test)
+                                           SSPL_TEST_CONFIG_INDEX)
 
 TEST_DIR = f"/opt/seagate/{PRODUCT_FAMILY}/sspl/sspl_test"
 
@@ -50,10 +49,14 @@ class SSPLTestCmd:
     @staticmethod
     def validate():
         """Check for required packages are installed."""
+        # python 3rd party package dependency
+        pip3_3ps_packages_test = {
+            "Flask": "1.1.1"
+        }
         pkg_validator = PkgV()
-        pkg_validator.validate_pip3s(host=None,
-                                     pkgs=pip3s_packages_test,
-                                     skip_version_check=False)
+        pkg_validator.validate_pip3_pkgs(host=None,
+                                         pkgs=pip3_3ps_packages_test,
+                                         skip_version_check=False)
 
     def process(self):
         self.plan = self.args.plan[0]
