@@ -196,6 +196,7 @@ SYSTEMDWATCHDOG:
       - salt-master.service
       - salt-minion.service
       - glusterd.service
+      - scsi-network-relay.service
    smart_test_interval: 999999999
    run_smart_on_start: 'False'
 

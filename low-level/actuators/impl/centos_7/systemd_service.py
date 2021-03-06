@@ -27,6 +27,7 @@ from actuators.IService import IService
 
 from framework.base.debug import Debug
 from framework.utils.service_logging import logger
+from cortx.utils.service import Service
 
 from dbus import SystemBus, Interface, exceptions as debus_exceptions
 
@@ -69,7 +70,7 @@ class SystemdService(Debug):
             self._service_name = jsonMsg.get("actuator_request_type").get("service_watchdog_controller").get("service_name")
             self._service_request = jsonMsg.get("actuator_request_type").get("service_watchdog_controller").get("service_request")
 
-        self._log_debug("perform_request, service_name: %s, service_request: %s" % \
+        logger.debug("perform_request, service_name: %s, service_request: %s" % \
                         (self._service_name, self._service_request))
 
         try:
@@ -82,34 +83,24 @@ class SystemdService(Debug):
             # The returned result of the desired action
             result = {}
             is_err_response = False
-            if self._service_request == "restart":
-                self._manager.RestartUnit(self._service_name, 'replace')
-
-                # Ensure we get an "active" status and not "activating"
-                max_wait = 0
-                while self._get_activestate() != "active":
-                    self._log_debug("status is still activating, pausing")
-                    time.sleep(1)
-                    max_wait += 1
-                    if max_wait > 20:
-                        self._log_debug("maximum wait for service restart reached")
-                        break
-
-            elif self._service_request == "start":
-                self._manager.StartUnit(self._service_name, 'replace')
-
-            elif self._service_request == "stop":
-                self._manager.StopUnit(self._service_name, 'replace')
+            if self._service_request in ['restart', 'start', 'stop']:
+                Service('dbus').process(self._service_request, self._service_name)
+                if self._service_request == "restart":
+                    # Ensure we get an "active" status and not "activating"
+                    state, _, _, _  = Service('dbus').get_service_information(self._service_name)
+                    max_wait = 0
+                    while state != "active":
+                        logger.debug("status is still activating, pausing")
+                        time.sleep(1)
+                        max_wait += 1
+                        if max_wait > 20:
+                            logger.debug("maximum wait for service restart reached")
+                            break
+                        state, _, _, _ = Service('dbus').get_service_information(self._service_name)
 
             elif self._service_request == "status":
                 # Return the status below
-                state = self._get_activestate()
-                substate = self._get_active_substate()
-                result["state"] = state
-                result["substate"] = substate
-                self._log_debug("perform_request, state: %s, substate: %s" %
-                                (str(state), str(substate)))
-                return (self._service_name, result, is_err_response)
+                state, substate, pid, command_line = Service('dbus').get_service_information(self._service_name)
 
             elif self._service_request == "enable":
                 service_list = []
@@ -119,19 +110,8 @@ class SystemdService(Debug):
                    True will enable a service for runtime only(creates symlink in /run/.. directory)
                    False will enable a service persistently(creates symlink in /etc/.. directory)"""
                 bool_res, dbus_result = self._manager.EnableUnitFiles(service_list, False, True)
-                # Parse dbus output.
-                # dbus o/p: dbus.Array([dbus.Struct((dbus.String('symlink'),
-                # dbus.String('/etc/systemd/system/multi-user.target.wants/statsd.service'),
-                # dbus.String('/usr/lib/systemd/system/statsd.service')), signature=None)], signature=dbus.Signature('(sss)'))
-
-                if list(dbus_result):
-                    dbus_result = list(dbus_result[0])
-                    for field in dbus_result:
-                        if field == "symlink":
-                            result["symlink"] = []
-                            continue
-                        result["symlink"].append(str(field))
-                    self._log_debug("perform_request, bool: %s, result: %s" % (bool_res, result))
+                result = self.parse_enable_disable_dbus_result(dbus_result)
+                logger.debug("perform_request, bool: %s, result: %s" % (bool_res, result))
 
             elif self._service_request == "disable":
                 service_list = []
@@ -141,18 +121,10 @@ class SystemdService(Debug):
                    True will disable a service for runtime only(removes symlink from /run/.. directory)
                    False will disable a service persistently(removes symlink from /etc/.. directory)"""
                 dbus_result = self._manager.DisableUnitFiles(service_list, False)
-                # Parse dbus output.
-                if list(dbus_result):
-                    dbus_result = list(dbus_result[0])
-                    for field in dbus_result:
-                        if field == "unlink":
-                            result["unlink"] = []
-                            continue
-                        elif field:
-                            result["unlink"].append(str(field))
-                    self._log_debug("perform_request, : %s" % result)
+                result = self.parse_enable_disable_dbus_result(dbus_result)
+                logger.debug("perform_request, : %s" % result)
             else:
-                self._log_debug("perform_request, Unknown service request")
+                logger.debug("perform_request, Unknown service request")
                 is_err_response = True
                 return (self._service_name, "Unknown service request", is_err_response)
 
@@ -170,60 +142,38 @@ class SystemdService(Debug):
         time.sleep(5)
 
         # Get the current status of the process and return it back:
-        state = self._get_activestate()
-        substate = self._get_active_substate()
+        state, substate, pid, command_line = Service('dbus').get_service_information(self._service_name)
+        status = Service('dbus').check_service_is_enabled(self._service_name)
+        # Parse dbus output to fetch command line path with args.
+        command_line_path_with_args = []
+        for field in list(command_line[0][1]):
+            command_line_path_with_args.append(str(field))
+
         result["state"] = state
         result["substate"] = substate
+        result["status"] = status
+        result["pid"] = pid
+        result["command_line_path"] = command_line_path_with_args
 
-        self._log_debug("perform_request, state: %s, substate: %s" %
+        logger.debug("perform_request, state: %s, substate: %s" %
                                 (str(state), str(substate)))
         return (self._service_name, result, is_err_response)
 
-    def _get_activestate(self):
-        """Returns the active state of the unit."""
-        return self._proxy.Get('org.freedesktop.systemd1.Unit',
-                                'ActiveState',
-                                dbus_interface='org.freedesktop.DBus.Properties')
-
-    def _get_active_substate(self):
-        """"Returns the active state of the unit."""
-        return self._proxy.Get('org.freedesktop.systemd1.Unit',
-                                'SubState',
-                                dbus_interface='org.freedesktop.DBus.Properties')
-
-    def is_service_enabled(self, service_name):
-        """Check service status : disabled/enabled."""
-        state = str(self._manager.GetUnitFileState(service_name))
-        if state == 'enabled':
-            return True, state
-        else:
-            return False, state
-
-    def get_service_info(self, service_name):
-        """Fetch service_pid and other informatrion."""
-        is_err_response = False
-        try:
-            # check service state, we can fetch service info(pid, command_line)
-            # only if service is active and service unit has loaded into systemd.
-            state = self._get_activestate()
-            _, service_substate = self.is_service_enabled(service_name)
-            if state == 'inactive':
-                logger.info("Service state is %s and %s unit is not loaded into systemd,"
-                            "Could not fetch pid, command_line_path for this service." %(state, service_name))
-                return (service_substate, None, None, is_err_response)
-            else:
-                unit = self._bus.get_object('org.freedesktop.systemd1',self._manager.GetUnit(service_name))
-                Iunit = Interface(unit, dbus_interface='org.freedesktop.DBus.Properties')
-                # Fetch main_pid of service
-                curr_pid = str(Iunit.Get('org.freedesktop.systemd1.Service', 'ExecMainPID'))
-                # Fetch command_line_path with argument(if any)
-                command_line =  list(Iunit.Get('org.freedesktop.systemd1.Service', 'ExecStart'))
-                # Parse dbus output to fetch command line path with args.
-                command_line_path_with_args = []
-                for field in list(command_line[0][1]):
-                    command_line_path_with_args.append(str(field))
-                return  (service_substate, curr_pid, command_line_path_with_args, is_err_response)
-        except debus_exceptions.DBusException as error:
-            logger.exception("DBus Exception: %r" % error)
-            is_err_response = True
-            return (str(error), None, None, is_err_response)
+    def parse_enable_disable_dbus_result(self, dbus_result):
+        """Parse debus output and add in dictionary"""
+        # Parse dbus output.
+        # dbus o/p: dbus.Array([dbus.Struct((dbus.String('symlink'),
+        # dbus.String('/etc/systemd/system/multi-user.target.wants/statsd.service'),
+        # dbus.String('/usr/lib/systemd/system/statsd.service')), signature=None)], signature=dbus.Signature('(sss)'))
+        result = {}
+        key = None
+        if list(dbus_result):
+            dbus_result = list(dbus_result[0])
+            for field in dbus_result:
+                if field in ["symlink", "unlink"]:
+                    key = field
+                    result[key] = []
+                    continue
+                elif field:
+                    result[key].append(str(field))
+        return result

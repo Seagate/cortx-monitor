@@ -17,10 +17,10 @@
 
 import time
 
-from sspl_test.default import world
-from sspl_test.rabbitmq.rabbitmq_ingress_processor_tests import RabbitMQingressProcessorTests
-from sspl_test.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
-from sspl_test.common import check_sspl_ll_is_running
+from default import world
+from rabbitmq.rabbitmq_ingress_processor_tests import RabbitMQingressProcessorTests
+from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
+from common import check_sspl_ll_is_running
 
 RESOURCE_TYPE = "node:sw:os:service"
 
@@ -28,9 +28,11 @@ def init(args):
     pass
 
 def test_systemd_service_valid_request(args):
+    service_name = "rsyslog.service"
+    request =  "status"
     check_sspl_ll_is_running()
     # TODO: Change service name, once get final 3rd party service name
-    service_actuator_request("rsyslog.service", "status")
+    service_actuator_request(service_name, request)
     service_actuator_msg = None
     time.sleep(6)
     ingressMsg = {}
@@ -49,7 +51,7 @@ def test_systemd_service_valid_request(args):
             print(exception)
 
     assert(service_actuator_msg is not None)
-    assert(service_actuator_msg.get("alert_type") is not None)
+    assert(service_actuator_msg.get("alert_type") == "UPDATE")
     assert(service_actuator_msg.get("severity") is not None)
     assert(service_actuator_msg.get("host_id") is not None)
     assert(service_actuator_msg.get("info") is not None)
@@ -61,13 +63,15 @@ def test_systemd_service_valid_request(args):
     assert(info.get("rack_id") is not None)
     assert(info.get("resource_type") == RESOURCE_TYPE)
     assert(info.get("event_time") is not None)
-    assert(info.get("resource_id") is not None)
+    assert(info.get("resource_id") == service_name)
 
     assert(service_actuator_msg.get("specific_info") is not None)
 
 def test_systemd_service_invalid_request(args):
+    service_name = "temp_dummy.service"
+    request = "start"
     check_sspl_ll_is_running()
-    service_actuator_request("temp_dummy.service", "status")
+    service_actuator_request(service_name, request)
     service_actuator_msg = None
     time.sleep(6)
     ingressMsg = {}
@@ -86,7 +90,7 @@ def test_systemd_service_invalid_request(args):
             print(exception)
 
     assert(service_actuator_msg is not None)
-    assert(service_actuator_msg.get("alert_type") is not None)
+    assert(service_actuator_msg.get("alert_type") == "UPDATE")
     assert(service_actuator_msg.get("severity") is not None)
     assert(service_actuator_msg.get("host_id") is not None)
     assert(service_actuator_msg.get("info") is not None)
@@ -98,7 +102,7 @@ def test_systemd_service_invalid_request(args):
     assert(info.get("rack_id") is not None)
     assert(info.get("resource_type") == RESOURCE_TYPE)
     assert(info.get("event_time") is not None)
-    assert(info.get("resource_id") is not None)
+    assert(info.get("resource_id") == service_name)
 
     assert(service_actuator_msg.get("specific_info") is not None)
     specific_info = service_actuator_msg.get("specific_info")
@@ -111,7 +115,7 @@ def service_actuator_request(service_name, action):
                 "username": "sspl-ll",
                 "expires": 3600,
                 "signature": "None",
-                "time": "2018-07-31 04:08:04.071170",
+                "time": "2020-03-06 04:08:04.071170",
                 "message": {
                     "sspl_ll_debug": {
                         "debug_component": "sensor",

@@ -16,20 +16,14 @@
 import os
 from framework.utils.service_logging import logger
 
-class ErrnoMapping(object):
-
-    def __init__(self):
-        super(ErrnoMapping, self).__init__()
     
-    def map_errno_to_text(self, err_no):
-        """Convert numerical errno to its meaning."""
-        try:
-            err_info = os.strerror(err_no)
-            return err_info
-        except ValueError as e:
-            raise Exception('ErrnoMapping, map_errno_to_text, Unknown error number: %s' % e)
-            return
-        except Exception as e:
-            logger.error('ErrnoMapping, map_errno_to_text, Exception occured \
-                            while mapping errno to text: %s ' % e)
-            return
+def map_errno_to_text(err_no):
+    """Convert numerical errno to its meaning."""
+    try:
+        err_info = os.strerror(err_no)
+        return err_info
+    except ValueError as err:
+        raise Exception("map_errno_to_text, Unknown error number: %s" % err)
+    except Exception as err:
+        logger.error("map_errno_to_text errno to text mapping failed due to %s: %s " % err)
+        return
