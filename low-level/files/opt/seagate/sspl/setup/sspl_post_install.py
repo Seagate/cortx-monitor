@@ -88,8 +88,9 @@ class SSPLPostInstall:
         """
         # SSPL python 3rd party package dependencies
         pip3_3ps_packages_main = {
-            "cryptography": "2.3",
+            "cryptography": "2.8",
             "jsonschema": "3.2.0",
+            "pika": "1.1.0",
             "pyinotify": "0.9.6",
             "python-daemon": "2.2.4",
             "requests": "2.25.1",
