@@ -136,6 +136,12 @@ USERNAME="username"
 VIRTUAL_HOST="virtual_host"
 TARGET_BUILD="target_build"
 
+# Alerts config
+FAULT_RESOLVED = "fault_resolved"
+FAULT = "fault"
+MISSING = "missing"
+INSERTION = "insertion"
+
 # Get SRVNODE and ENCLOSURE so it can be used in other files to get
 # server_node and enclosure specific config
 utility = Utility()
@@ -148,3 +154,9 @@ Conf.load(GLOBAL_CONF, global_config)
 
 SRVNODE = Conf.get(GLOBAL_CONF, f'{CLUSTER}>{SERVER_NODES}')[MACHINE_ID]
 ENCLOSURE = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{STORAGE}>{ENCLOSURE_ID}")
+
+# Get SYSTEM INFORMATION specific config to use in other files.
+GLOBAL_SITE_ID = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{SITE_ID}",'DC01')
+GLOBAL_RACK_ID = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{RACK_ID}",'RC01')
+GLOBAL_NODE_ID = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{NODE_ID}",'SN01')
+GLOBAL_CLUSTER_ID = Conf.get(GLOBAL_CONF, f'{CLUSTER}>{CLUSTER_ID}','CC01')

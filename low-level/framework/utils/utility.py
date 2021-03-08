@@ -18,6 +18,10 @@ Base class for all the Utility implementation
 """
 
 import re
+import os
+import time
+import calendar
+import socket
 import subprocess
 from framework.utils.service_logging import logger
 
@@ -79,3 +83,50 @@ class Utility(object):
             else:
                 return None
 
+    def get_epoch_time(self, date, _time):
+        timestamp_format = '%m/%d/%Y %H:%M:%S'
+        timestamp = time.strptime('{} {}'.format(date, _time), timestamp_format)
+        return str(int(calendar.timegm(timestamp)))
+
+    def create_file(self, path):
+        """Create a file at specified path."""
+        dir = path[:path.rindex("/")]
+        if not os.path.exists(dir):
+            os.makedirs(dir)
+        if not os.path.exists(path):
+            file = open(path, "w+")
+            file.close()
+
+    def read_raw_filedata(self, file):
+        """Reads the data from the file and returns it as a string."""
+        if not os.path.isfile(file):
+            return str(None)
+
+        with open (file, "r") as datafile:
+            return str(datafile.read().replace('\n', ''))
+
+    def get_hostname(self):
+        try:
+            logger.debug(f"Fetched hostname:{socket.getfqdn()} using getfqdn().")
+            return socket.getfqdn()
+        except Exception as ex:
+            logger.error(f"Got exception: {ex} when trying to get hostname using getfqdn().")
+        try:
+            from subprocess import run, PIPE
+            from re import findall
+
+            IP_CMD = "ip -f inet addr show scope global up | grep inet"
+            IP_REGEX = b'\\b(\\d{1,3}(?:\\.\d{1,3}){3})/\d{1,2}\\b'
+
+            ip_out = run(IP_CMD, stdout=PIPE, shell=True, check=True)
+            ip_list = findall(IP_REGEX, ip_out.stdout)
+            if ip_list:
+                logger.debug(f"Fetched hostname:{ip_list[0]} using ip addr command.")
+                return ip_list[0]
+        except Exception as ex:
+            logger.error(f"Got exception: {ex} when trying to get hostname"
+                    " using ip addr command.")
+
+        # Ultimate fallback, when we are completely out of options
+        logger.debug("Returning hostname:'localhost'.")
+        return "localhost"
