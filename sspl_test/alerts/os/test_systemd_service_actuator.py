@@ -34,7 +34,7 @@ def test_systemd_service_valid_request(args):
     # TODO: Change service name, once get final 3rd party service name
     service_actuator_request(service_name, request)
     service_actuator_msg = None
-    time.sleep(6)
+    time.sleep(8)
     ingressMsg = {}
     while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
         ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
@@ -73,7 +73,7 @@ def test_systemd_service_invalid_request(args):
     check_sspl_ll_is_running()
     service_actuator_request(service_name, request)
     service_actuator_msg = None
-    time.sleep(6)
+    time.sleep(4)
     ingressMsg = {}
     while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
         ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
@@ -94,7 +94,7 @@ def test_systemd_service_invalid_request(args):
     assert(service_actuator_msg.get("severity") is not None)
     assert(service_actuator_msg.get("host_id") is not None)
     assert(service_actuator_msg.get("info") is not None)
-    
+
     info = service_actuator_msg.get("info")
     assert(info.get("site_id") is not None)
     assert(info.get("node_id") is not None)
@@ -137,11 +137,10 @@ def service_actuator_request(service_name, action):
                             "service_controller": {
                                 "service_request": action,
                                 "service_name": service_name
-                                
                             }
                     }
                 }
             }
     world.sspl_modules[RabbitMQegressProcessor.name()]._write_internal_msgQ(RabbitMQegressProcessor.name(), egressMsg)
-    
+
 test_list = [test_systemd_service_valid_request, test_systemd_service_invalid_request]

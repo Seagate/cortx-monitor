@@ -159,7 +159,7 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
             if service_name not in self.monitored_services:
                 logger.error(f"{service_name} - service not monitored")
-                msg = "Check if supplied service name is valid, %s service is not monitored or managed." % service_name
+                msg = "Check if supplied service name is valid, %s is not monitored or managed." % service_name
                 self.send_error_response(service_request, service_name, msg, errno.EINVAL)
                 return
             elif service_request not in ["disable","enable"]:
@@ -227,7 +227,7 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     from actuators.IService import IService
                     self._service_actuator = self._query_utility(IService)()
                     logger.debug(f"_process_msg, service_actuator name: {self._service_actuator.name()}")
-                service_name, result, err = self._service_actuator.perform_request(jsonMsg)
+                service_name, result, _ = self._service_actuator.perform_request(jsonMsg)
                 state = result.get("state")
                 substate = result.get("substate")
                 logger.debug(f"_processMsg, service_name: {service_name}, state: {state}, substate: {substate}")
@@ -291,7 +291,7 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
         self._write_internal_msgQ("RabbitMQegressProcessor", json_msg)
 
     def send_error_response(self, request, service_name, err_msg, err_no=None):
-        """Send error in response"""
+        """Send error in response."""
         error_info = {}
         error_response = True
         error_info["service_name"] = service_name

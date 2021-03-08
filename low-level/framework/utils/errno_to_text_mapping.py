@@ -16,7 +16,6 @@
 import os
 from framework.utils.service_logging import logger
 
-    
 def map_errno_to_text(err_no):
     """Convert numerical errno to its meaning."""
     try:

@@ -102,6 +102,7 @@ class SystemdService(Debug):
                 # Return the status below
                 state, substate, pid, command_line = Service('dbus').get_service_information(self._service_name)
 
+            # TODO: Use cortx.utils Service class methods for enable/disable services.
             elif self._service_request == "enable":
                 service_list = []
                 service_list.append(self._service_name)
@@ -110,7 +111,8 @@ class SystemdService(Debug):
                    True will enable a service for runtime only(creates symlink in /run/.. directory)
                    False will enable a service persistently(creates symlink in /etc/.. directory)"""
                 bool_res, dbus_result = self._manager.EnableUnitFiles(service_list, False, True)
-                result = self.parse_enable_disable_dbus_result(dbus_result)
+                res = parse_enable_disable_dbus_result(dbus_result)
+                result.update(res)
                 logger.debug("perform_request, bool: %s, result: %s" % (bool_res, result))
 
             elif self._service_request == "disable":
@@ -121,7 +123,8 @@ class SystemdService(Debug):
                    True will disable a service for runtime only(removes symlink from /run/.. directory)
                    False will disable a service persistently(removes symlink from /etc/.. directory)"""
                 dbus_result = self._manager.DisableUnitFiles(service_list, False)
-                result = self.parse_enable_disable_dbus_result(dbus_result)
+                res = parse_enable_disable_dbus_result(dbus_result)
+                result.update(res)
                 logger.debug("perform_request, : %s" % result)
             else:
                 logger.debug("perform_request, Unknown service request")
@@ -159,21 +162,21 @@ class SystemdService(Debug):
                                 (str(state), str(substate)))
         return (self._service_name, result, is_err_response)
 
-    def parse_enable_disable_dbus_result(self, dbus_result):
-        """Parse debus output and add in dictionary"""
-        # Parse dbus output.
-        # dbus o/p: dbus.Array([dbus.Struct((dbus.String('symlink'),
-        # dbus.String('/etc/systemd/system/multi-user.target.wants/statsd.service'),
-        # dbus.String('/usr/lib/systemd/system/statsd.service')), signature=None)], signature=dbus.Signature('(sss)'))
-        result = {}
-        key = None
-        if list(dbus_result):
-            dbus_result = list(dbus_result[0])
-            for field in dbus_result:
-                if field in ["symlink", "unlink"]:
-                    key = field
-                    result[key] = []
-                    continue
-                elif field:
-                    result[key].append(str(field))
-        return result
+def parse_enable_disable_dbus_result(dbus_result):
+    """Parse debus output and add in dictionary."""
+    # Parse dbus output.
+    # dbus o/p: dbus.Array([dbus.Struct((dbus.String('symlink'),
+    # dbus.String('/etc/systemd/system/multi-user.target.wants/statsd.service'),
+    # dbus.String('/usr/lib/systemd/system/statsd.service')), signature=None)], signature=dbus.Signature('(sss)'))
+    result = {}
+    key = None
+    if list(dbus_result):
+        dbus_result = list(dbus_result[0])
+        for field in dbus_result:
+            if field in ["symlink", "unlink"]:
+                key = field
+                result[key] = []
+                continue
+            elif field:
+                result[key].append(str(field))
+    return result
