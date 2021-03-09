@@ -29,15 +29,17 @@ def init(args):
 
 def test_systemd_service_valid_request(args):
     service_name = "rsyslog.service"
-    request =  "status"
+    request = "status"
     check_sspl_ll_is_running()
     # TODO: Change service name, once get final 3rd party service name
     service_actuator_request(service_name, request)
     service_actuator_msg = None
     time.sleep(8)
     ingressMsg = {}
-    while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
-        ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
+    while not world.sspl_modules[RabbitMQingressProcessorTests.name()]\
+                                                        ._is_my_msgQ_empty():
+        ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]\
+                                                    ._read_my_msgQ()
         time.sleep(0.1)
         print("Received: %s " % ingressMsg)
         try:
@@ -64,8 +66,8 @@ def test_systemd_service_valid_request(args):
     assert(info.get("resource_type") == RESOURCE_TYPE)
     assert(info.get("event_time") is not None)
     assert(info.get("resource_id") == service_name)
-
     assert(service_actuator_msg.get("specific_info") is not None)
+
 
 def test_systemd_service_invalid_request(args):
     service_name = "temp_dummy.service"
@@ -75,8 +77,10 @@ def test_systemd_service_invalid_request(args):
     service_actuator_msg = None
     time.sleep(4)
     ingressMsg = {}
-    while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
-        ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
+    while not world.sspl_modules[RabbitMQingressProcessorTests.name()]\
+                                                    ._is_my_msgQ_empty():
+        ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]\
+                                                    ._read_my_msgQ()
         time.sleep(0.1)
         print("Received: %s " % ingressMsg)
         try:
@@ -107,6 +111,7 @@ def test_systemd_service_invalid_request(args):
     assert(service_actuator_msg.get("specific_info") is not None)
     specific_info = service_actuator_msg.get("specific_info")
     assert (specific_info[0].get("error_msg") is not None)
+
 
 def service_actuator_request(service_name, action):
     egressMsg = {
@@ -141,6 +146,8 @@ def service_actuator_request(service_name, action):
                     }
                 }
             }
-    world.sspl_modules[RabbitMQegressProcessor.name()]._write_internal_msgQ(RabbitMQegressProcessor.name(), egressMsg)
+    world.sspl_modules[RabbitMQegressProcessor.name()]._write_internal_msgQ\
+                                    (RabbitMQegressProcessor.name(), egressMsg)
 
-test_list = [test_systemd_service_valid_request, test_systemd_service_invalid_request]
+test_list = [test_systemd_service_valid_request,\
+                                         test_systemd_service_invalid_request]

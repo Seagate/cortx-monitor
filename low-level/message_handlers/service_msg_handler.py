@@ -35,7 +35,8 @@ from json_msgs.messages.sensors.service_watchdog import ServiceWatchdogMsg
 from framework.utils.errno_to_text_mapping import map_errno_to_text
 from cortx.utils.service import Service
 from framework.utils.conf_utils import (CLUSTER, GLOBAL_CONF, SRVNODE, SSPL_CONF, Conf, SITE_ID,
-                                        CLUSTER_ID, NODE_ID, RACK_ID, STORAGE_SET_ID, SYSTEMDWATCHDOG, MONITORED_SERVICES)
+                                        CLUSTER_ID, NODE_ID, RACK_ID, STORAGE_SET_ID,
+                                        SYSTEMDWATCHDOG, MONITORED_SERVICES)
 # Modules that receive messages from this module
 from message_handlers.logging_msg_handler import LoggingMsgHandler
 
@@ -47,7 +48,7 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
     PRIORITY = 2
 
     RESOURCE_TYPE = "node:sw:os:service"
-    ALERT_TYPE    = "UPDATE"
+    ALERT_TYPE = "UPDATE"
     # Dependency list
     DEPENDENCIES = {
         "plugins": [
