@@ -59,6 +59,9 @@ class SystemdService(Debug):
         # Subscribe to signal changes
         self._manager.Subscribe()
 
+        # create service cls obj.
+        self._service = Service('dbus')
+
     def perform_request(self, jsonMsg):
         """Performs the service request"""
         self._check_debug(jsonMsg)
@@ -87,15 +90,15 @@ class SystemdService(Debug):
             if self._service_request in ['restart', 'start']:
                 # Before restart/start the service, check service state. If it is not active
                 # or activating then only process restart/start request.
-                service_state  = Service('dbus').get_state(self._service_name)
+                service_state  = self._service.get_state(self._service_name)
                 state = service_state.state
                 if state not in ['active','activating']:
                     if self._service_request == "restart":
-                        Service('dbus').restart(self._service_name)
+                        self._service.restart(self._service_name)
                     elif self._service_request == "start":
-                        Service('dbus').start(self._service_name)
+                        self._service.start(self._service_name)
                     # Ensure we get an "active" state and not "activating"
-                    service_state  = Service('dbus').get_state(self._service_name)
+                    service_state  = self._service.get_state(self._service_name)
                     state = service_state.state
                     max_wait = 0
                     while state != "active":
@@ -106,7 +109,7 @@ class SystemdService(Debug):
                         if max_wait > 20:
                             logger.debug("maximum wait - %s seconds, for service restart reached." %max_wait)
                             break
-                        service_state  = Service('dbus').get_state(self._service_name)
+                        service_state  = self._service.get_state(self._service_name)
                         state = service_state.state
 
                 else:
@@ -117,11 +120,11 @@ class SystemdService(Debug):
                     return (self._service_name, err_msg, is_err_response)
 
             elif self._service_request == "stop":
-                Service('dbus').stop(self._service_name)
+                self._service.stop(self._service_name)
 
             elif self._service_request == "status":
                 # Return the status below
-                service_status = Service('dbus').get_state(self._service_name)
+                service_status = self._service.get_state(self._service_name)
 
             # TODO: Use cortx.utils Service class methods for enable/disable services.
             elif self._service_request == "enable":
@@ -167,12 +170,12 @@ class SystemdService(Debug):
         time.sleep(5)
 
         # Get the current status of the process and return it back:
-        service_status = Service('dbus').get_state(self._service_name)
+        service_status = self._service.get_state(self._service_name)
         pid = service_status.pid
         state = service_status.state
         substate = service_status.substate
-        status = Service('dbus').is_enabled(self._service_name)
-        timestamp = get_service_uptime(self._service_name)
+        status = self._service.is_enabled(self._service_name)
+        uptime = get_service_uptime(self._service_name)
         # Parse dbus output to fetch command line path with args.
         command_line = service_status.command_line_path
         command_line_path_with_args = []
@@ -182,7 +185,7 @@ class SystemdService(Debug):
         result["state"] = state
         result["substate"] = substate
         result["status"] = status
-        result["uptime"] = timestamp
+        result["uptime"] = uptime
         result["command_line_path"] = command_line_path_with_args
 
         logger.debug("perform_request, state: %s, substate: %s" %
