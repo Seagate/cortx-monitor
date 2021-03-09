@@ -84,21 +84,34 @@ class SystemdService(Debug):
             # The returned result of the desired action
             result = {}
             is_err_response = False
-            if self._service_request in ['restart', 'start', 'stop']:
-                Service('dbus').process(self._service_request, self._service_name)
-                if self._service_request == "restart":
-                    # Ensure we get an "active" status and not "activating"
+            if self._service_request in ['restart', 'start']:
+                # Before restart/start the service, check service state. If it is not active
+                # or activating then only process restart/start request.
+                state, _, _, _  = Service('dbus').get_service_information(self._service_name)
+                if state not in ['active','activating']:
+                    Service('dbus').process(self._service_request, self._service_name)
+                    # Ensure we get an "active" state and not "activating"
                     state, _, _, _  = Service('dbus').get_service_information(self._service_name)
                     max_wait = 0
                     while state != "active":
-                        logger.debug("%s status is activating, needs 'active' state after 'restart' "
-                                                    "request has been processed, retrying" % self._service_name)
+                        logger.debug("%s status is activating, needs 'active' state after %s "
+                        "request has been processed, retrying" % (self._service_name, self._service_request))
                         time.sleep(1)
                         max_wait += 1
                         if max_wait > 20:
                             logger.debug("maximum wait for service restart reached")
                             break
                         state, _, _, _ = Service('dbus').get_service_information(self._service_name)
+
+                else:
+                    is_err_response = True
+                    err_msg = ("Can not process %s request, for %s service, as service is already in %s state"
+                                                %(self._service_request, self._service_name, state))
+                    logger.error(err_msg)
+                    return (self._service_name, err_msg, is_err_response)
+
+            elif self._service_request == "stop":
+                Service('dbus').process(self._service_request, self._service_name)
 
             elif self._service_request == "status":
                 # Return the status below
@@ -127,7 +140,7 @@ class SystemdService(Debug):
                 dbus_result = self._manager.DisableUnitFiles(service_list, False)
                 res = parse_enable_disable_dbus_result(dbus_result)
                 result.update(res)
-                logger.debug("perform_request result for disable request: %s" % result)
+                logger.debug("perform_request, result for disable request: %s" % result)
             else:
                 logger.error("perform_request, Unknown service request - %s for service - %s"
                                                          %(self._service_request, self._service_name))
