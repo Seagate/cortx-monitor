@@ -99,13 +99,13 @@ class SystemdService(Debug):
                         time.sleep(1)
                         max_wait += 1
                         if max_wait > 20:
-                            logger.debug("maximum wait for service restart reached")
+                            logger.debug("maximum wait - %s seconds, for service restart reached." %max_wait)
                             break
                         state, _, _, _ = Service('dbus').get_service_information(self._service_name)
 
                 else:
                     is_err_response = True
-                    err_msg = ("Can not process %s request, for %s service, as service is already in %s state"
+                    err_msg = ("Can not process '%s' request, for '%s' service, as service is already in %s state"
                                                 %(self._service_request, self._service_name, state))
                     logger.error(err_msg)
                     return (self._service_name, err_msg, is_err_response)
@@ -167,12 +167,12 @@ class SystemdService(Debug):
         command_line_path_with_args = []
         for field in list(command_line[0][1]):
             command_line_path_with_args.append(str(field))
-        timestamp = get_service_timestamp(self._service_name)
+        timestamp = get_service_uptime(self._service_name)
         result["state"] = state
         result["substate"] = substate
         result["status"] = status
         result["pid"] = pid
-        result["timestamp"] = timestamp
+        result["uptime"] = timestamp
         result["command_line_path"] = command_line_path_with_args
 
         logger.debug("perform_request, state: %s, substate: %s" %
@@ -198,9 +198,9 @@ def parse_enable_disable_dbus_result(dbus_result):
                 result[key].append(str(field))
     return result
 
-def get_service_timestamp(service_name):
-    """Get service timestamp."""
-    timestamp = None
+def get_service_uptime(service_name):
+    """Get service uptime."""
+    timestamp = "NA"
     cmd = f"systemctl status {service_name} "
     output, error, returncode = SimpleProcess(cmd).run()
     if returncode != 0:

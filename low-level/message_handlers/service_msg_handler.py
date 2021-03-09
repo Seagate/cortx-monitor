@@ -168,7 +168,7 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 if status == "disabled":
                     logger.error(f"{service_name} - service is disabled")
                     msg = ("%s service is disabled, 'enable' request needed before current '%s' "
-                                    "request can be processed" % (service_name, service_request ))
+                                    "request can be processed." % (service_name, service_request ))
                     self.send_error_response(service_request, service_name, msg, errno.EPERM)
                     return
             # If the state is INITIALIZED, We can assume that actuator is
