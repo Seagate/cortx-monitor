@@ -21,6 +21,7 @@
 
 import json
 import time
+import re
 
 from zope.interface import implementer
 from actuators.IService import IService
@@ -28,7 +29,7 @@ from actuators.IService import IService
 from framework.base.debug import Debug
 from framework.utils.service_logging import logger
 from cortx.utils.service import Service
-
+from cortx.utils.process import SimpleProcess
 from dbus import SystemBus, Interface, exceptions as debus_exceptions
 
 @implementer(IService)
@@ -151,11 +152,12 @@ class SystemdService(Debug):
         command_line_path_with_args = []
         for field in list(command_line[0][1]):
             command_line_path_with_args.append(str(field))
-
+        timestamp = get_service_timestamp(self._service_name)
         result["state"] = state
         result["substate"] = substate
         result["status"] = status
         result["pid"] = pid
+        result["timestamp"] = timestamp
         result["command_line_path"] = command_line_path_with_args
 
         logger.debug("perform_request, state: %s, substate: %s" %
@@ -180,3 +182,19 @@ def parse_enable_disable_dbus_result(dbus_result):
             elif field:
                 result[key].append(str(field))
     return result
+
+def get_service_timestamp(service_name):
+    """Get service timestamp."""
+    timestamp = None
+    cmd = f"systemctl status {service_name} "
+    output, error, returncode = SimpleProcess(cmd).run()
+    if returncode != 0:
+        logger.error("get_service_timestamp: CMD %s failed to get timestamp due to error: %s" %(cmd, error))
+    else:
+        output=output.decode('utf-8')
+        timestamp_status = r"Active:(.*) since (.*)"
+        for line in output.splitlines():
+            status_line = re.search(timestamp_status, line)
+            if status_line:
+                timestamp = status_line.group(2).strip()
+    return timestamp
