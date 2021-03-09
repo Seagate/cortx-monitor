@@ -181,7 +181,7 @@ class SSPLConfig:
         # "/var/log/<product>/sspl/sspl.log" file. So, initial logs needs to be collected from
         # "/var/log/messages"
 
-        Service('dbus').process("restart", 'rsyslog.service')
+        Service('dbus').restart('rsyslog.service')
 
         # For node replacement scenario consul will not be running on the new node. But,
         # there will be two instance of consul running on healthy node. When new node is configured

@@ -83,6 +83,6 @@ class SSPLTestCmd:
                  "SYSTEM_INFORMATION>global_config_copy_url", global_config_copy_url)
         Conf.save(SSPL_CONFIG_INDEX)
         shutil.copyfile(sspl_test_backup, sspl_test_file_path)
-        Service('dbus').process('restart', 'sspl-ll.service')
+        Service('dbus').restart('sspl-ll.service')
         if returncode != 0:
             raise SetupError(returncode, "%s - ERROR: %s - CMD %s", self.name, error, CMD)

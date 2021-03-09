@@ -167,7 +167,7 @@ class SSPLPostInstall:
 
         # Copy sspl-ll.service file and enable service
         shutil.copyfile(currentProduct, "/etc/systemd/system/sspl-ll.service")
-        Service('dbus').process('enable', 'sspl-ll.service')
+        Service('dbus').enable('sspl-ll.service')
         daemon_reload_cmd = "systemctl daemon-reload"
         output, error, returncode = SimpleProcess(daemon_reload_cmd).run()
         if returncode != 0:
@@ -198,6 +198,6 @@ class SSPLPostInstall:
             setup_rmq = Conf.get(
                 SSPL_CONFIG_INDEX, "RABBITMQCLUSTER>setup_rmq")
             if setup_rmq:
-                Service('dbus').process('start', 'rabbitmq-server.service')
+                Service('dbus').start('rabbitmq-server.service')
                 sspl_rabbitmq_reinit.main(PRODUCT)
 

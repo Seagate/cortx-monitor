@@ -347,7 +347,7 @@ class SSPLDevDeploy:
         try:
             ServiceV().validate("isrunning", ["rabbitmq-server"])
         except VError:
-            Service('dbus').process('start', 'rabbitmq-server.service')
+            Service('dbus').start('rabbitmq-server.service')
         print("INFO: Done rabbitmq setup.")
 
     def setup_sspl(self):

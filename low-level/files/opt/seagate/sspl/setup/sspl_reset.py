@@ -26,7 +26,7 @@ class HardReset:
 
     def process(self):
         # stop sspl service
-        Service('dbus').process('stop', 'sspl-ll.service')
+        Service('dbus').stop('sspl-ll.service')
 
         # Remove sspl_conf
         self.del_file(file_store_config_path)

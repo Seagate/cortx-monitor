@@ -164,10 +164,10 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 self.send_error_response(service_request, service_name, msg, errno.EINVAL)
                 return
             elif service_request not in ["disable","enable"]:
-                status = Service('dbus').check_service_is_enabled(service_name)
+                status = Service('dbus').is_enabled(service_name)
                 if status == "disabled":
                     logger.error(f"{service_name} - service is disabled")
-                    msg = ("%s service is disabled, 'enable' request needed before current '%s' "
+                    msg = ("%s is disabled, enable request needed before current - %s "
                                     "request can be processed." % (service_name, service_request ))
                     self.send_error_response(service_request, service_name, msg, errno.EPERM)
                     return
@@ -181,7 +181,8 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
             elif actuator_state_manager.is_initializing("Service"):
                 # This state will not be reached. Kept here for consistency.
                 logger.info("Service actuator is initializing")
-                self.send_error_response(service_request, service_name, "BUSY", errno.EBUSY)
+                self.send_error_response(service_request, service_name, \
+                                        "BUSY - Service actuator is initializing.", errno.EBUSY)
 
             elif actuator_state_manager.is_imported("Service"):
                 # This case will be for first request only. Subsequent

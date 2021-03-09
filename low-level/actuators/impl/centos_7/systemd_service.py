@@ -87,11 +87,16 @@ class SystemdService(Debug):
             if self._service_request in ['restart', 'start']:
                 # Before restart/start the service, check service state. If it is not active
                 # or activating then only process restart/start request.
-                state, _, _, _  = Service('dbus').get_service_information(self._service_name)
+                service_state  = Service('dbus').get_state(self._service_name)
+                state = service_state.state
                 if state not in ['active','activating']:
-                    Service('dbus').process(self._service_request, self._service_name)
+                    if self._service_request == "restart":
+                        Service('dbus').restart(self._service_name)
+                    elif self._service_request == "start":
+                        Service('dbus').start(self._service_name)
                     # Ensure we get an "active" state and not "activating"
-                    state, _, _, _  = Service('dbus').get_service_information(self._service_name)
+                    service_state  = Service('dbus').get_state(self._service_name)
+                    state = service_state.state
                     max_wait = 0
                     while state != "active":
                         logger.debug("%s status is activating, needs 'active' state after %s "
@@ -101,21 +106,22 @@ class SystemdService(Debug):
                         if max_wait > 20:
                             logger.debug("maximum wait - %s seconds, for service restart reached." %max_wait)
                             break
-                        state, _, _, _ = Service('dbus').get_service_information(self._service_name)
+                        service_state  = Service('dbus').get_state(self._service_name)
+                        state = service_state.state
 
                 else:
                     is_err_response = True
-                    err_msg = ("Can not process '%s' request, for '%s' service, as service is already in %s state"
+                    err_msg = ("Can not process %s request, for %s, as service is already in %s state."
                                                 %(self._service_request, self._service_name, state))
                     logger.error(err_msg)
                     return (self._service_name, err_msg, is_err_response)
 
             elif self._service_request == "stop":
-                Service('dbus').process(self._service_request, self._service_name)
+                Service('dbus').stop(self._service_name)
 
             elif self._service_request == "status":
                 # Return the status below
-                state, substate, pid, command_line = Service('dbus').get_service_information(self._service_name)
+                service_status = Service('dbus').get_state(self._service_name)
 
             # TODO: Use cortx.utils Service class methods for enable/disable services.
             elif self._service_request == "enable":
@@ -161,17 +167,21 @@ class SystemdService(Debug):
         time.sleep(5)
 
         # Get the current status of the process and return it back:
-        state, substate, pid, command_line = Service('dbus').get_service_information(self._service_name)
-        status = Service('dbus').check_service_is_enabled(self._service_name)
+        service_status = Service('dbus').get_state(self._service_name)
+        pid = service_status.pid
+        state = service_status.state
+        substate = service_status.substate
+        status = Service('dbus').is_enabled(self._service_name)
+        timestamp = get_service_uptime(self._service_name)
         # Parse dbus output to fetch command line path with args.
+        command_line = service_status.command_line_path
         command_line_path_with_args = []
         for field in list(command_line[0][1]):
             command_line_path_with_args.append(str(field))
-        timestamp = get_service_uptime(self._service_name)
+        result["pid"] = pid
         result["state"] = state
         result["substate"] = substate
         result["status"] = status
-        result["pid"] = pid
         result["uptime"] = timestamp
         result["command_line_path"] = command_line_path_with_args
 
