@@ -32,7 +32,7 @@ from framework.base.sspl_constants import enabled_products
 from json_msgs.messages.actuators.service_controller import ServiceControllerMsg
 from json_msgs.messages.sensors.service_watchdog import ServiceWatchdogMsg
 
-from framework.utils.errno_to_text_mapping import map_errno_to_text
+from framework.utils.utility import errno_to_str_mapping
 from cortx.utils.service import Service
 from framework.utils.conf_utils import (CLUSTER, GLOBAL_CONF, SRVNODE, SSPL_CONF, Conf, SITE_ID,
                                         CLUSTER_ID, NODE_ID, RACK_ID, STORAGE_SET_ID,
@@ -167,7 +167,8 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 status = Service('dbus').check_service_is_enabled(service_name)
                 if status == "disabled":
                     logger.error(f"{service_name} - service is disabled")
-                    msg = "Service is disabled, first send the request to enable the service, and then to start the service."
+                    msg = ("%s service is disabled, 'enable' request needed before current '%s' "
+                                    "request can be processed" % (service_name, service_request ))
                     self.send_error_response(service_request, service_name, msg, errno.EPERM)
                     return
             # If the state is INITIALIZED, We can assume that actuator is
@@ -299,7 +300,7 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
         error_info["request"] = request
         error_info["error_msg"] = err_msg
         if err_no is not None:
-            str_err = map_errno_to_text(err_no)
+            str_err = errno_to_str_mapping(err_no)
             error_info["error_no"] = f"{err_no} - {str_err}"
         response = self._create_actuator_response(error_info, error_response)
         service_controller_msg = ServiceControllerMsg(response).getJson()

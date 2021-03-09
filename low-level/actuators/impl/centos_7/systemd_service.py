@@ -91,7 +91,8 @@ class SystemdService(Debug):
                     state, _, _, _  = Service('dbus').get_service_information(self._service_name)
                     max_wait = 0
                     while state != "active":
-                        logger.debug("status is still activating, pausing")
+                        logger.debug("%s status is activating, needs 'active' state after 'restart' "
+                                                    "request has been processed, retrying" % self._service_name)
                         time.sleep(1)
                         max_wait += 1
                         if max_wait > 20:
@@ -111,10 +112,10 @@ class SystemdService(Debug):
                 """EnableUnitFiles() function takes second argument as boolean.
                    True will enable a service for runtime only(creates symlink in /run/.. directory)
                    False will enable a service persistently(creates symlink in /etc/.. directory)"""
-                bool_res, dbus_result = self._manager.EnableUnitFiles(service_list, False, True)
+                _, dbus_result = self._manager.EnableUnitFiles(service_list, False, True)
                 res = parse_enable_disable_dbus_result(dbus_result)
                 result.update(res)
-                logger.debug("perform_request, bool: %s, result: %s" % (bool_res, result))
+                logger.debug("perform_request, result for enable request: result: %s" % (result))
 
             elif self._service_request == "disable":
                 service_list = []
@@ -126,9 +127,10 @@ class SystemdService(Debug):
                 dbus_result = self._manager.DisableUnitFiles(service_list, False)
                 res = parse_enable_disable_dbus_result(dbus_result)
                 result.update(res)
-                logger.debug("perform_request, : %s" % result)
+                logger.debug("perform_request result for disable request: %s" % result)
             else:
-                logger.debug("perform_request, Unknown service request")
+                logger.error("perform_request, Unknown service request - %s for service - %s"
+                                                         %(self._service_request, self._service_name))
                 is_err_response = True
                 return (self._service_name, "Unknown service request", is_err_response)
 
@@ -138,7 +140,7 @@ class SystemdService(Debug):
             return (self._service_name, str(error),  is_err_response)
 
         except Exception as ae:
-            logger.exception("Exception: %r" % ae)
+            logger.exception("SystemD Exception: %r" % ae)
             is_err_response = True
             return (self._service_name, str(ae), is_err_response)
 
