@@ -33,9 +33,10 @@ from json_msgs.messages.actuators.service_controller import ServiceControllerMsg
 from json_msgs.messages.sensors.service_watchdog import ServiceWatchdogMsg
 
 from framework.utils.utility import errno_to_str_mapping
-from cortx.utils.service import Service
-from framework.utils.conf_utils import (CLUSTER, GLOBAL_CONF, SRVNODE, SSPL_CONF, Conf, SITE_ID,
-                                        CLUSTER_ID, NODE_ID, RACK_ID, STORAGE_SET_ID,
+from cortx.utils.service import DbusServiceHandler
+from framework.utils.conf_utils import (CLUSTER, GLOBAL_CONF, SRVNODE, SSPL_CONF,
+                                        Conf, SITE_ID, CLUSTER_ID, NODE_ID,
+                                        RACK_ID, STORAGE_SET_ID,
                                         SYSTEMDWATCHDOG, MONITORED_SERVICES)
 # Modules that receive messages from this module
 from message_handlers.logging_msg_handler import LoggingMsgHandler
@@ -74,7 +75,7 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
                                                 self.PRIORITY)
         self._service_actuator = None
         self._query_utility = None
-
+        self._dbus_service = DbusServiceHandler()
         # Flag to indicate suspension of module
         self._suspended = False
 
@@ -89,12 +90,17 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
         self._import_products(product)
 
         self.host_id = socket.getfqdn()
-        self.site_id = Conf.get(GLOBAL_CONF, f'{CLUSTER}>{SRVNODE}>{SITE_ID}','DC01')
-        self.rack_id = Conf.get(GLOBAL_CONF, f'{CLUSTER}>{SRVNODE}>{RACK_ID}','RC01')
-        self.node_id = Conf.get(GLOBAL_CONF, f'{CLUSTER}>{SRVNODE}>{NODE_ID}','SN01')
+        self.site_id = Conf.get(GLOBAL_CONF,
+                                    f'{CLUSTER}>{SRVNODE}>{SITE_ID}','DC01')
+        self.rack_id = Conf.get(GLOBAL_CONF,
+                                    f'{CLUSTER}>{SRVNODE}>{RACK_ID}','RC01')
+        self.node_id = Conf.get(GLOBAL_CONF,
+                                    f'{CLUSTER}>{SRVNODE}>{NODE_ID}','SN01')
         self.cluster_id = Conf.get(GLOBAL_CONF, f'{CLUSTER}>{CLUSTER_ID}','CC01')
-        self.storage_set_id = Conf.get(GLOBAL_CONF, f'{CLUSTER}>{SRVNODE}>{STORAGE_SET_ID}', 'ST01')
-        self.monitored_services = Conf.get(SSPL_CONF, f'{SYSTEMDWATCHDOG}>{MONITORED_SERVICES}')
+        self.storage_set_id = Conf.get(GLOBAL_CONF,
+                                f'{CLUSTER}>{SRVNODE}>{STORAGE_SET_ID}', 'ST01')
+        self.monitored_services = Conf.get(SSPL_CONF,
+                                    f'{SYSTEMDWATCHDOG}>{MONITORED_SERVICES}')
 
     def _import_products(self, product):
         """Import classes based on which product is being used"""
@@ -149,7 +155,8 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
             logger.debug(f"_processMsg, uuid: {uuid}")
 
         # Handle service start, stop, restart, status requests
-        if jsonMsg.get("actuator_request_type").get("service_controller") is not None:
+        if jsonMsg.get("actuator_request_type").get("service_controller") \
+                                                            is not None:
             logger.debug("_processMsg, msg_type: service_controller")
 
             service_name = jsonMsg.get("actuator_request_type") \
@@ -160,21 +167,26 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
             if service_name not in self.monitored_services:
                 logger.error(f"{service_name} - service not monitored")
-                msg = "Check if supplied service name is valid, %s is not monitored or managed." % service_name
-                self.send_error_response(service_request, service_name, msg, errno.EINVAL)
+                msg = ("Check if supplied service name is valid, %s is not "
+                                        "monitored or managed." % service_name)
+                self.send_error_response(service_request, service_name,
+                                                            msg, errno.EINVAL)
                 return
             elif service_request not in ["disable","enable"]:
-                status = Service('dbus').is_enabled(service_name)
+                status = self._dbus_service.is_enabled(service_name)
                 if status == "disabled":
                     logger.error(f"{service_name} - service is disabled")
-                    msg = ("%s is disabled, enable request needed before current - %s "
-                                    "request can be processed." % (service_name, service_request ))
-                    self.send_error_response(service_request, service_name, msg, errno.EPERM)
+                    msg = ("%s is disabled, enable request needed before "
+                                "current - %s request can be processed." 
+                                 % (service_name, service_request ))
+                    self.send_error_response(service_request, service_name,
+                                                            msg, errno.EPERM)
                     return
             # If the state is INITIALIZED, We can assume that actuator is
             # ready to perform operation.
             if actuator_state_manager.is_initialized("Service"):
-                logger.debug(f"_process_msg, service_actuator name: {self._service_actuator.name()}")
+                logger.debug(f"_process_msg, service_actuator name: \
+                                        {self._service_actuator.name()}")
                 self._execute_request(self._service_actuator, jsonMsg, uuid)
 
             # If the state is INITIALIZING, need to send message
@@ -182,7 +194,7 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 # This state will not be reached. Kept here for consistency.
                 logger.info("Service actuator is initializing")
                 self.send_error_response(service_request, service_name, \
-                                        "BUSY - Service actuator is initializing.", errno.EBUSY)
+                        "BUSY - Service actuator is initializing.", errno.EBUSY)
 
             elif actuator_state_manager.is_imported("Service"):
                 # This case will be for first request only. Subsequent
@@ -198,9 +210,11 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     # not be able serve any subsequent requests. This applies
                     # to instantiation of evey actuator.
                     self._service_actuator = service_actuator_class()
-                    logger.info(f"_process_msg, service_actuator name: {self._service_actuator.name()}")
+                    logger.info(f"_process_msg, service_actuator name: \
+                                            {self._service_actuator.name()}")
                     self._execute_request(self._service_actuator, jsonMsg, uuid)
-                    actuator_state_manager.set_state("Service", actuator_state_manager.INITIALIZED)
+                    actuator_state_manager.set_state("Service",
+                                            actuator_state_manager.INITIALIZED)
                 else:
                     logger.info("Service actuator is not instantiated")
 
@@ -210,34 +224,50 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 logger.warn("Service actuator is not loaded or not supported")
 
         # Handle events generated by the service watchdogs
-        elif jsonMsg.get("actuator_request_type").get("service_watchdog_controller") is not None:
+        elif jsonMsg.get("actuator_request_type").\
+                            get("service_watchdog_controller") is not None:
             logger.debug("_processMsg, msg_type: service_watchdog_controller")
 
             # Parse out values to be sent
-            service_name = jsonMsg.get("actuator_request_type").get("service_watchdog_controller").get("service_name")
-            state = jsonMsg.get("actuator_request_type").get("service_watchdog_controller").get("state")
-            prev_state = jsonMsg.get("actuator_request_type").get("service_watchdog_controller").get("previous_state")
-            substate = jsonMsg.get("actuator_request_type").get("service_watchdog_controller").get("substate")
-            prev_substate = jsonMsg.get("actuator_request_type").get("service_watchdog_controller").get("previous_substate")
-            pid = jsonMsg.get("actuator_request_type").get("service_watchdog_controller").get("pid")
-            prev_pid = jsonMsg.get("actuator_request_type").get("service_watchdog_controller").get("previous_pid")
+            service_name = jsonMsg.get("actuator_request_type").\
+                        get("service_watchdog_controller").get("service_name")
+            state = jsonMsg.get("actuator_request_type").\
+                        get("service_watchdog_controller").get("state")
+            prev_state = jsonMsg.get("actuator_request_type").\
+                        get("service_watchdog_controller").get("previous_state")
+            substate = jsonMsg.get("actuator_request_type").\
+                        get("service_watchdog_controller").get("substate")
+            prev_substate = jsonMsg.get("actuator_request_type").\
+                        get("service_watchdog_controller").get("previous_substate")
+            pid = jsonMsg.get("actuator_request_type").\
+                        get("service_watchdog_controller").get("pid")
+            prev_pid = jsonMsg.get("actuator_request_type").\
+                        get("service_watchdog_controller").get("previous_pid")
 
-            # Pull out the service_request and if it's equal to "status" then get current status (state, substate)
-            service_request = jsonMsg.get("actuator_request_type").get("service_watchdog_controller").get("service_request")
+            # Pull out the service_request and if it's equal to "status" 
+            # then get current status (state, substate)
+            service_request = jsonMsg.get("actuator_request_type").\
+                        get("service_watchdog_controller").get("service_request")
             if service_request != "None":
-                # Query the Zope GlobalSiteManager for an object implementing IService
+                # Query the Zope GlobalSiteManager for an object
+                # implementing IService
                 if self._service_actuator is None:
                     from actuators.IService import IService
                     self._service_actuator = self._query_utility(IService)()
-                    logger.debug(f"_process_msg, service_actuator name: {self._service_actuator.name()}")
-                service_name, result, _ = self._service_actuator.perform_request(jsonMsg)
+                    logger.debug(f"_process_msg, service_actuator name: \
+                                            {self._service_actuator.name()}")
+                service_name, result, _ = self._service_actuator.\
+                                                    perform_request(jsonMsg)
                 state = result.get("state")
                 substate = result.get("substate")
-                logger.debug(f"_processMsg, service_name: {service_name}, state: {state}, substate: {substate}")
-                logger.debug(f"_processMsg, prev state: {prev_state}, prev substate: {prev_substate}")
+                logger.debug(f"_processMsg, service_name: {service_name}, \
+                                        state: {state}, substate: {substate}")
+                logger.debug(f"_processMsg, prev state: {prev_state}, \
+                                            prev substate: {prev_substate}")
 
             # Create a service watchdog message and send it out
-            jsonMsg = ServiceWatchdogMsg(service_name, state, prev_state, substate, prev_substate, pid, prev_pid).getJson()
+            jsonMsg = ServiceWatchdogMsg(service_name, state, prev_state,
+                            substate, prev_substate, pid, prev_pid).getJson()
             self._write_internal_msgQ("RabbitMQegressProcessor", jsonMsg)
 
             # Create an IEM if the resulting service state is failed
@@ -272,15 +302,19 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
         """Calls perform_request method of an actuator and sends response to
            output channel.
         """
-        service_name = json_msg.get("actuator_request_type").get("service_controller").get("service_name")
-        service_request = json_msg.get("actuator_request_type").get("service_controller").get("service_request")
+        service_name = json_msg.get("actuator_request_type").\
+                            get("service_controller").get("service_name")
+        service_request = json_msg.get("actuator_request_type").\
+                            get("service_controller").get("service_request")
         service_info = {}
-        service_name, result, error = actuator_instance.perform_request(json_msg)
+        service_name, result, error = actuator_instance.\
+                                                perform_request(json_msg)
         if error:
             self.send_error_response(service_request, service_name, result)
             return
 
-        logger.debug(f"_processMsg, service_name: {service_name}, result: {result}")
+        logger.debug(f"_processMsg, service_name: {service_name}, \
+                                                result: {result}")
 
         service_info["service_name"] = service_name
         service_info.update(result)
@@ -305,7 +339,8 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
             error_info["error_no"] = f"{err_no} - {str_err}"
         response = self._create_actuator_response(error_info, error_response)
         service_controller_msg = ServiceControllerMsg(response).getJson()
-        self._write_internal_msgQ("RabbitMQegressProcessor", service_controller_msg)
+        self._write_internal_msgQ("RabbitMQegressProcessor",
+                                                    service_controller_msg)
 
     def _create_actuator_response(self, service_info, is_error=False):
         """Create JSON msg."""

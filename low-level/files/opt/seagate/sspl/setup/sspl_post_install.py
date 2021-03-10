@@ -26,7 +26,7 @@ from urllib.parse import urlparse
 
 # using cortx package
 from cortx.utils.process import SimpleProcess
-from cortx.utils.service import Service
+from cortx.utils.service import DbusServiceHandler
 from cortx.utils.conf_store import Conf
 from .setup_error import SetupError
 from framework.base.sspl_constants import (REPLACEMENT_NODE_ENV_VAR_FILE,
@@ -145,6 +145,7 @@ class SSPLPostInstall:
     def install_files(self, PRODUCT):
         """Configure required log files."""
 
+        dbus_service = DbusServiceHandler()
         # Copy rsyslog configuration
         if not os.path.exists(self.RSYSLOG_CONF):
             shutil.copyfile("%s/low-level/files/%s" % (SSPL_BASE_DIR, self.RSYSLOG_CONF),
@@ -167,7 +168,7 @@ class SSPLPostInstall:
 
         # Copy sspl-ll.service file and enable service
         shutil.copyfile(currentProduct, "/etc/systemd/system/sspl-ll.service")
-        Service('dbus').enable('sspl-ll.service')
+        dbus_service.enable('sspl-ll.service')
         daemon_reload_cmd = "systemctl daemon-reload"
         output, error, returncode = SimpleProcess(daemon_reload_cmd).run()
         if returncode != 0:
@@ -198,6 +199,6 @@ class SSPLPostInstall:
             setup_rmq = Conf.get(
                 SSPL_CONFIG_INDEX, "RABBITMQCLUSTER>setup_rmq")
             if setup_rmq:
-                Service('dbus').start('rabbitmq-server.service')
+                dbus_service.start('rabbitmq-server.service')
                 sspl_rabbitmq_reinit.main(PRODUCT)
 

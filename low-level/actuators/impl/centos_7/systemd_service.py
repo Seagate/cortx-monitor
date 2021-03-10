@@ -28,7 +28,7 @@ from actuators.IService import IService
 
 from framework.base.debug import Debug
 from framework.utils.service_logging import logger
-from cortx.utils.service import Service
+from cortx.utils.service import DbusServiceHandler
 from cortx.utils.process import SimpleProcess
 from dbus import SystemBus, Interface, exceptions as debus_exceptions
 
@@ -53,26 +53,33 @@ class SystemdService(Debug):
         self._bus = SystemBus()
 
         # Obtain a manager interface to d-bus for communications with systemd
-        systemd = self._bus.get_object('org.freedesktop.systemd1', '/org/freedesktop/systemd1')
-        self._manager = Interface(systemd, dbus_interface='org.freedesktop.systemd1.Manager')
+        systemd = self._bus.get_object('org.freedesktop.systemd1',
+                                                '/org/freedesktop/systemd1')
+        self._manager = Interface(systemd,
+                            dbus_interface='org.freedesktop.systemd1.Manager')
 
         # Subscribe to signal changes
         self._manager.Subscribe()
 
         # create service cls obj.
-        self._service = Service('dbus')
+        self._service = DbusServiceHandler()
 
     def perform_request(self, jsonMsg):
         """Performs the service request"""
         self._check_debug(jsonMsg)
 
         # Parse out the service name and request to perform on it
-        if jsonMsg.get("actuator_request_type").get("service_controller") is not None:
-            self._service_name = jsonMsg.get("actuator_request_type").get("service_controller").get("service_name")
-            self._service_request = jsonMsg.get("actuator_request_type").get("service_controller").get("service_request")
+        if jsonMsg.get("actuator_request_type").get("service_controller") \
+                                                                is not None:
+            self._service_name = jsonMsg.get("actuator_request_type").\
+                                get("service_controller").get("service_name")
+            self._service_request = jsonMsg.get("actuator_request_type").\
+                        get("service_controller").get("service_request")
         else:
-            self._service_name = jsonMsg.get("actuator_request_type").get("service_watchdog_controller").get("service_name")
-            self._service_request = jsonMsg.get("actuator_request_type").get("service_watchdog_controller").get("service_request")
+            self._service_name = jsonMsg.get("actuator_request_type").\
+                        get("service_watchdog_controller").get("service_name")
+            self._service_request = jsonMsg.get("actuator_request_type").\
+                        get("service_watchdog_controller").get("service_request")
 
         logger.debug("perform_request, service_name: %s, service_request: %s" % \
                         (self._service_name, self._service_request))
@@ -82,14 +89,16 @@ class SystemdService(Debug):
             systemd_unit = self._manager.LoadUnit(self._service_name)
 
             # Get a proxy to systemd for accessing properties of units
-            self._proxy = self._bus.get_object("org.freedesktop.systemd1", str(systemd_unit))
+            self._proxy = self._bus.get_object("org.freedesktop.systemd1", \
+                                                            str(systemd_unit))
 
             # The returned result of the desired action
             result = {}
             is_err_response = False
             if self._service_request in ['restart', 'start']:
-                # Before restart/start the service, check service state. If it is not active
-                # or activating then only process restart/start request.
+                # Before restart/start the service, check service state.
+                # If it is not active or activating then only process
+                # restart/start request.
                 service_state  = self._service.get_state(self._service_name)
                 state = service_state.state
                 if state not in ['active','activating']:
@@ -102,20 +111,23 @@ class SystemdService(Debug):
                     state = service_state.state
                     max_wait = 0
                     while state != "active":
-                        logger.debug("%s status is activating, needs 'active' state after %s "
-                        "request has been processed, retrying" % (self._service_name, self._service_request))
+                        logger.debug("%s status is activating, needs 'active' "
+                        "state after %s request has been processed, retrying"
+                        % (self._service_name, self._service_request))
                         time.sleep(1)
                         max_wait += 1
                         if max_wait > 20:
-                            logger.debug("maximum wait - %s seconds, for service restart reached." %max_wait)
+                            logger.debug("maximum wait - %s seconds, for "
+                                        "service restart reached." %max_wait)
                             break
-                        service_state  = self._service.get_state(self._service_name)
+                        service_state = self._service.get_state(self._service_name)
                         state = service_state.state
 
                 else:
                     is_err_response = True
-                    err_msg = ("Can not process %s request, for %s, as service is already in %s state."
-                                                %(self._service_request, self._service_name, state))
+                    err_msg = ("Can not process %s request, for %s, as service "
+                    "is already in %s state." %(self._service_request,
+                                                    self._service_name, state))
                     logger.error(err_msg)
                     return (self._service_name, err_msg, is_err_response)
 
@@ -126,35 +138,43 @@ class SystemdService(Debug):
                 # Return the status below
                 service_status = self._service.get_state(self._service_name)
 
-            # TODO: Use cortx.utils Service class methods for enable/disable services.
+            # TODO: Use cortx.utils Service class methods for
+            # enable/disable services.
             elif self._service_request == "enable":
                 service_list = []
                 service_list.append(self._service_name)
 
                 """EnableUnitFiles() function takes second argument as boolean.
-                   True will enable a service for runtime only(creates symlink in /run/.. directory)
-                   False will enable a service persistently(creates symlink in /etc/.. directory)"""
-                _, dbus_result = self._manager.EnableUnitFiles(service_list, False, True)
+                   True will enable a service for runtime only(creates symlink
+                   in /run/.. directory) False will enable a service 
+                   persistently (creates symlink in /etc/.. directory)"""
+                _, dbus_result = self._manager.EnableUnitFiles(service_list, 
+                                                                False, True)
                 res = parse_enable_disable_dbus_result(dbus_result)
                 result.update(res)
-                logger.debug("perform_request, result for enable request: result: %s" % (result))
+                logger.debug("perform_request, result for enable request: "
+                                                    "result: %s" % (result))
 
             elif self._service_request == "disable":
                 service_list = []
                 service_list.append(self._service_name)
 
                 """DisableUnitFiles() function takes second argument as boolean.
-                   True will disable a service for runtime only(removes symlink from /run/.. directory)
-                   False will disable a service persistently(removes symlink from /etc/.. directory)"""
+                   True will disable a service for runtime only(removes symlink
+                   from /run/.. directory) False will disable a service
+                   persistently(removes symlink from /etc/.. directory)"""
                 dbus_result = self._manager.DisableUnitFiles(service_list, False)
                 res = parse_enable_disable_dbus_result(dbus_result)
                 result.update(res)
-                logger.debug("perform_request, result for disable request: %s" % result)
+                logger.debug("perform_request, result for disable request: %s"
+                                                                    % result)
             else:
-                logger.error("perform_request, Unknown service request - %s for service - %s"
-                                                         %(self._service_request, self._service_name))
+                logger.error("perform_request, Unknown service request - %s "
+                                "for service - %s" %(self._service_request,
+                                self._service_name))
                 is_err_response = True
-                return (self._service_name, "Unknown service request", is_err_response)
+                return (self._service_name, "Unknown service request", 
+                                                            is_err_response)
 
         except debus_exceptions.DBusException as error:
             is_err_response = True
@@ -197,7 +217,8 @@ def parse_enable_disable_dbus_result(dbus_result):
     # Parse dbus output.
     # dbus o/p: dbus.Array([dbus.Struct((dbus.String('symlink'),
     # dbus.String('/etc/systemd/system/multi-user.target.wants/statsd.service'),
-    # dbus.String('/usr/lib/systemd/system/statsd.service')), signature=None)], signature=dbus.Signature('(sss)'))
+    # dbus.String('/usr/lib/systemd/system/statsd.service')), signature=None)],
+    # signature=dbus.Signature('(sss)'))
     result = {}
     key = None
     if list(dbus_result):
@@ -213,16 +234,17 @@ def parse_enable_disable_dbus_result(dbus_result):
 
 def get_service_uptime(service_name):
     """Get service uptime."""
-    timestamp = "NA"
+    uptime = "NA"
     cmd = f"systemctl status {service_name} "
     output, error, returncode = SimpleProcess(cmd).run()
     if returncode != 0:
-        logger.error("get_service_timestamp: CMD %s failed to get timestamp due to error: %s" %(cmd, error))
+        logger.error("get_service_timestamp: CMD %s failed to get timestamp "
+                                            "due to error: %s" %(cmd, error))
     else:
         output=output.decode('utf-8')
         timestamp_status = r"Active:(.*) since (.*)"
         for line in output.splitlines():
             status_line = re.search(timestamp_status, line)
             if status_line:
-                timestamp = status_line.group(2).strip()
-    return timestamp
+                uptime = status_line.group(2).strip()
+    return uptime

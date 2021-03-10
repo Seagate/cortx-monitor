@@ -31,7 +31,7 @@ import errno
 import consul
 
 from framework.base import sspl_constants as consts
-from cortx.utils.service import Service
+from cortx.utils.service import DbusServiceHandler
 from cortx.utils.process import SimpleProcess
 from cortx.utils.validator.v_service import ServiceV
 from .setup_error import SetupError
@@ -180,8 +180,8 @@ class SSPLConfig:
         # here, there will be a chance that SSPL intial logs will not be present in
         # "/var/log/<product>/sspl/sspl.log" file. So, initial logs needs to be collected from
         # "/var/log/messages"
-
-        Service('dbus').restart('rsyslog.service')
+        service = DbusServiceHandler()
+        service.restart('rsyslog.service')
 
         # For node replacement scenario consul will not be running on the new node. But,
         # there will be two instance of consul running on healthy node. When new node is configured

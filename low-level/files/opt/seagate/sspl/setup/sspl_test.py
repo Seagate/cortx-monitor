@@ -16,7 +16,7 @@ import shutil
 
 from cortx.utils.process import SimpleProcess
 from cortx.utils.conf_store import Conf
-from cortx.utils.service import Service
+from cortx.utils.service import DbusServiceHandler
 from cortx.utils.validator.v_pkg import PkgV
 from .setup_error import SetupError
 from .conf_based_sensors_enable import update_sensor_info
@@ -38,6 +38,7 @@ class SSPLTestCmd:
         self.name = "sspl_test"
         self.plan = "self_primary"
         self.avoid_rmq = False
+        self.dbus_service = DbusServiceHandler()
         # Load global, sspl and test configs
         Conf.load(SSPL_CONFIG_INDEX, sspl_config_path)
         global_config_url = Conf.get(SSPL_CONFIG_INDEX,
@@ -83,6 +84,6 @@ class SSPLTestCmd:
                  "SYSTEM_INFORMATION>global_config_copy_url", global_config_copy_url)
         Conf.save(SSPL_CONFIG_INDEX)
         shutil.copyfile(sspl_test_backup, sspl_test_file_path)
-        Service('dbus').restart('sspl-ll.service')
+        self.dbus_service.restart('sspl-ll.service')
         if returncode != 0:
             raise SetupError(returncode, "%s - ERROR: %s - CMD %s", self.name, error, CMD)
