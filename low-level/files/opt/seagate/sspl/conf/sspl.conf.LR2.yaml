@@ -180,6 +180,20 @@ SYSTEMDWATCHDOG:
    monitor: true
    threaded: true
    monitored_services:
+      - hare-consul-agent.service
+      - hare-consul-agent-c1.service
+      - hare-consul-agent-c2.service
+      - elasticsearch.service
+      - statsd.service
+      - rsyslog.service
+      - haproxy.service
+      - slapd.service
+      - lnet.service
+      - salt-master.service
+      - salt-minion.service
+      - glusterd.service
+      - scsi-network-relay.service
+      - multipathd.service
    smart_test_interval: 999999999
    run_smart_on_start: 'False'
 
