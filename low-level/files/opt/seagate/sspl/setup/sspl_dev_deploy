@@ -185,13 +185,13 @@ class SSPLDevDeploy:
             cmd = "pip3 install python-consul==1.1.0"
             self._execute_cmd(cmd)
 
-            print("INFO: INSTALLING paramiko==2.7.2")
-            cmd = "pip3 install paramiko==2.7.2"
+            print("INFO: INSTALLING paramiko==2.7.1")
+            cmd = "pip3 install paramiko==2.7.1"
             self._execute_cmd(cmd)
 
             print("INFO: INSTALLING cortx-py-utils...")
             pkg_name="cortx-py-utils"
-            build_url = "http://cortx-storage.colo.seagate.com/releases/cortx/github/main/centos-7.8.2003/cortx-utils_last_successful/"
+            build_url = "http://cortx-storage.colo.seagate.com/releases/cortx/github/main/centos-7.8.2003/last_successful_prod/cortx_iso/"
             pkg = [re.findall("<a .*>(.*?)</a>", str(line))[0] for line in urllib.request.urlopen(build_url).readlines() if pkg_name in str(line)]
             if not pkg:
                print(f"ERROR: Unable to download {pkg_name}.")
