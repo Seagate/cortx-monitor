@@ -29,7 +29,7 @@ class BaseMsg(metaclass=abc.ABCMeta):
 
 
     SCHEMA_VERSION  = "1.0.0"
-    SSPL_VERSION    = "1.0.0"
+    SSPL_VERSION    = "2.0.0"
 
 
     def __init__(self):

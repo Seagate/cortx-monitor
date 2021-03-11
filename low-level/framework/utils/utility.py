@@ -19,6 +19,7 @@ Base class for all the Utility implementation
 
 import re
 import subprocess
+import os
 from framework.utils.service_logging import logger
 
 
@@ -79,3 +80,13 @@ class Utility(object):
             else:
                 return None
 
+def errno_to_str_mapping(err_no):
+    """Convert numerical errno to its meaning."""
+    try:
+        err_info = os.strerror(err_no)
+        return err_info
+    except ValueError as err:
+        raise Exception("map_errno_to_text, Unknown error number: %s" % err)
+    except Exception as err:
+        logger.error("map_errno_to_text errno to text mapping failed due to %s: %s " % err)
+        return
