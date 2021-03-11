@@ -146,9 +146,9 @@ class SystemdService(Debug):
 
                 """EnableUnitFiles() function takes second argument as boolean.
                    True will enable a service for runtime only(creates symlink
-                   in /run/.. directory) False will enable a service 
+                   in /run/.. directory) False will enable a service
                    persistently (creates symlink in /etc/.. directory)"""
-                _, dbus_result = self._manager.EnableUnitFiles(service_list, 
+                _, dbus_result = self._manager.EnableUnitFiles(service_list,
                                                                 False, True)
                 res = parse_enable_disable_dbus_result(dbus_result)
                 result.update(res)
@@ -173,7 +173,7 @@ class SystemdService(Debug):
                                 "for service - %s" %(self._service_request,
                                 self._service_name))
                 is_err_response = True
-                return (self._service_name, "Unknown service request", 
+                return (self._service_name, "Unknown service request",
                                                             is_err_response)
 
         except debus_exceptions.DBusException as error:
