@@ -180,6 +180,7 @@ class SSPLConfig:
         # here, there will be a chance that SSPL intial logs will not be present in
         # "/var/log/<product>/sspl/sspl.log" file. So, initial logs needs to be collected from
         # "/var/log/messages"
+
         service = DbusServiceHandler()
         service.restart('rsyslog.service')
 

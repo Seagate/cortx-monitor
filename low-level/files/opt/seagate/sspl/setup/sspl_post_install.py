@@ -146,6 +146,7 @@ class SSPLPostInstall:
         """Configure required log files."""
 
         dbus_service = DbusServiceHandler()
+
         # Copy rsyslog configuration
         if not os.path.exists(self.RSYSLOG_CONF):
             shutil.copyfile("%s/low-level/files/%s" % (SSPL_BASE_DIR, self.RSYSLOG_CONF),
@@ -168,6 +169,7 @@ class SSPLPostInstall:
 
         # Copy sspl-ll.service file and enable service
         shutil.copyfile(currentProduct, "/etc/systemd/system/sspl-ll.service")
+
         dbus_service.enable('sspl-ll.service')
         daemon_reload_cmd = "systemctl daemon-reload"
         output, error, returncode = SimpleProcess(daemon_reload_cmd).run()

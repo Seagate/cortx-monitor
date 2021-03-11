@@ -39,6 +39,7 @@ class SSPLTestCmd:
         self.plan = "self_primary"
         self.avoid_rmq = False
         self.dbus_service = DbusServiceHandler()
+
         # Load global, sspl and test configs
         Conf.load(SSPL_CONFIG_INDEX, sspl_config_path)
         global_config_url = Conf.get(SSPL_CONFIG_INDEX,
