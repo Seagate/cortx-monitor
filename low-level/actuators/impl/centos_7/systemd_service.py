@@ -32,7 +32,7 @@ from cortx.utils.service import DbusServiceHandler
 from cortx.utils.process import SimpleProcess
 from dbus import SystemBus, Interface, exceptions as debus_exceptions
 
-@implementer(IService)
+@implementer(IService)..
 class SystemdService(Debug):
     """Handles service request messages to systemd"""
 
