@@ -25,15 +25,15 @@ import time
 import socket
 import json
 
-from dbus import Interface, SystemBus, DBusException
+from dbus import Interface, SystemBus, DBusException, PROPERTIES_IFACE
 from dbus.mainloop.glib import DBusGMainLoop
-from gi.repository import GLib
+from gi.repository import GObject as gobject
 
 from zope.interface import implementer
 from sensors.ISystem_monitor import ISystemMonitor
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.module_thread import SensorThread
-from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor                      
+from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 from message_handlers.service_msg_handler import ServiceMsgHandler
 from framework.utils.service_logging import logger
 
@@ -41,7 +41,7 @@ from framework.utils.conf_utils import (GLOBAL_CONF, CLUSTER, SRVNODE, SITE_ID,
                 RACK_ID, NODE_ID, CLUSTER_ID, SSPL_CONF, Conf)
 from framework.utils.severity_reader import SeverityReader
 from framework.utils.mon_utils import get_alert_id
-from cortx.utils.service import Service
+from cortx.utils.service import Service, ServiceError
 
 @implementer(ISystemMonitor)
 class ServiceMonitor(SensorThread, InternalMsgQ):
@@ -67,11 +67,14 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
     def __init__(self):
         super(ServiceMonitor, self).__init__(self.SENSOR_NAME,
                                                 self.PRIORITY)
+        logger.info("__init__ call from ServiceMonitor")
         self.services_to_monitor = \
             Conf.get(SSPL_CONF, f"{self.SERVICEMONITOR}>{self.MONITORED_SERVICES}", [])
         self.remove_disabled_services()
+
+        logger.info("from ServiceMonitor : ", self.services_to_monitor)
         self.initial_alert_sent = False
-        
+
         self.monitored_services = []
         self.not_active_services = {}
         self.failed_services = []
@@ -93,7 +96,7 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
 
         # Initialize internal message queues for this module
         super(ServiceMonitor, self).initialize_msgQ(msgQlist)
-        
+
         # Integrate into the main dbus loop to catch events
         DBusGMainLoop(set_as_default=True)
 
@@ -101,23 +104,30 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
         systemd = self._bus.get_object("org.freedesktop.systemd1", "/org/freedesktop/systemd1")
         self._manager = Interface(systemd, dbus_interface='org.freedesktop.systemd1.Manager')
 
+        return True
+
 
     def remove_disabled_services(self):
-        self.services_to_monitor = \
-           [service for service in self.services_to_monitor 
-            if 'enabled' in Service('dbus').check_service_is_enabled(service)]
+        temp = self.services_to_monitor
+        for service in temp:
+            try:
+                if 'disabled' in Service('dbus').is_enabled(service):
+                    self.services_to_monitor.remove(service)
+            except ServiceError:
+                self.services_to_monitor.remove(service)
 
     def run(self):
         # method will be re-executed after fixed interval (eg : 30s)
+        logger.info("In run() of ServiceMonitor")
         for service in self.services_to_monitor:
             try:
                 unit = self._bus.get_object('org.freedesktop.systemd1',\
                                             self._manager.LoadUnit(service))
-                Iunit = self._bus.Interface(unit, dbus_interface='org.freedesktop.DBus.Properties')
+                Iunit = Interface(unit, dbus_interface='org.freedesktop.DBus.Properties')
                 state = str(Iunit.Get('org.freedesktop.systemd1.Unit', 'ActiveState'))
                 substate = str(Iunit.Get('org.freedesktop.systemd1.Unit', 'SubState'))
                 pid = str(Iunit.Get('org.freedesktop.systemd1.Service', 'ExecMainPID'))
-            
+
                 if state != "active":
                     if not self.initial_alert_sent:
                         self.raise_alert(service, "N/A", state, "N/A", substate,
@@ -127,14 +137,15 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
 
                 self.update_states(service, state, substate, pid)
 
-                Iunit = Interface(unit,
+                Iunit2 = Interface(unit,
                                 dbus_interface='org.freedesktop.systemd1.Manager')
 
-                Iunit.connect_to_signal('PropertiesChanged',
+                Iunit2.connect_to_signal('PropertiesChanged',
                                         lambda a, b, c, p = unit :
                                         self.on_prop_changed(a, b, c, p),
-                                        dbus_interface=self._bus.PROPERTIES_IFACE)
+                                        dbus_interface=PROPERTIES_IFACE)
 
+                logger.info(f"{service}({pid}) state is {state}:{substate}")
                 if self.initial_alert_sent:
                     self.raise_alert(service, "N/A", state, "N/A", substate,
                                      "N/A", pid, 3)
@@ -147,9 +158,6 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
                     "N/A", "N/A", 0)
                 logger.error(f"{service} is not active initially. \n Error {err}")
 
-        self.loop = GLib.MainLoop()
-        self.loop.run()
-
         self.initial_alert_sent = True
 
         for service, start_time in self.not_active_services.items():
@@ -160,14 +168,17 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
                 self.raise_alert(service, state, state, substate, substate,
                                 pid , pid, 2)
 
+        self.loop = gobject.MainLoop()
+        self.loop.run()
+
     def update_states(self, service, state, substate, pid):
         self.service_status[service] = {
-            "state" : state, 
+            "state" : state,
             "substate" : substate,
             "pid" : pid
         }
 
-    def on_prop_changed(self, interface, changed_properties, 
+    def on_prop_changed(self, interface, changed_properties,
                                 invalidated_properties, unit):
         Iunit = self._bus.Interface(unit, dbus_interface='org.freedesktop.DBus.Properties')
         service = str(Iunit.Get('org.freedesktop.systemd1.Unit', 'Id'))
@@ -176,7 +187,7 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
 
         if prev_state == state:
             return
-        
+
         substate = str(Iunit.Get('org.freedesktop.systemd1.Unit', 'SubState'))
         pid = str(Iunit.Get('org.freedesktop.systemd1.Service', 'ExecMainPID'))
 
@@ -186,12 +197,12 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
         logger.info(f"{service} changed state from " + \
                     f"{prev_state}:{prev_substate} to {state}:{substate}")
 
-        self.action_per_transition(service, prev_state, state, 
+        self.action_per_transition(service, prev_state, state,
                     prev_substate, substate, prev_pid, pid)
 
         self.update_states(service, state, substate, pid)
 
-    def action_per_transition(self, service, prev_state, state, 
+    def action_per_transition(self, service, prev_state, state,
                         prev_substate, substate, prev_pid, pid):
 
         alert_index = -1
@@ -240,11 +251,11 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
                 alert_index = 4
 
         if alert_index != -1:
-            self.raise_alert(service, prev_state, state, 
+            self.raise_alert(service, prev_state, state,
                 prev_substate, substate, prev_pid, pid,
                 alert_index)
 
-    def raise_alert(self, service, prev_state, state, prev_substate, 
+    def raise_alert(self, service, prev_state, state, prev_substate,
                     substate, prev_pid, pid, alert_index):
 
         alert_info = [
@@ -254,7 +265,7 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
                 "fault", "", ""],
             [f"{service} is in a non_active state for more than {self.MAX_WAIT_TIME} seconds.",
                 "fault", "", ""],                           #2
-            [f"{service} returned to running state.",    
+            [f"{service} returned to running state.",
                 "fault_resolved", "", ""],                  #3
             [f"service state transition from {prev_state} to {state} is not handled.",
                 "missing", "", ""]                          #4
@@ -274,7 +285,7 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
         self._rack_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{RACK_ID}",'RC01')
         self._node_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{NODE_ID}",'SN01')
         self._cluster_id = Conf.get(GLOBAL_CONF, f'{CLUSTER}>{CLUSTER_ID}','CC01')
-        
+
 
         info = {
                 "site_id": self._site_id,
@@ -289,7 +300,7 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
                 "recommendation" : recommendation,
                 }
 
-        alert_msg = json.dumps({
+        alert_msg = {
             "sensor_request_type": {
                 "service_status_alert": {
                     "host_id": host_name,
@@ -308,7 +319,7 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
                     }
                 }
             }
-        })
+        }
         self._write_internal_msgQ(ServiceMsgHandler.name(), alert_msg)
 
     def suspend(self):
@@ -324,6 +335,3 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""
         super(ServiceMonitor, self).shutdown()
-
-if __name__ == "__main__":
-    print(ServiceMonitor().services_to_monitor)
