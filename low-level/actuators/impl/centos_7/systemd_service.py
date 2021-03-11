@@ -144,10 +144,10 @@ class SystemdService(Debug):
                 service_list = []
                 service_list.append(self._service_name)
 
-                """EnableUnitFiles() function takes second argument as boolean.
-                   True will enable a service for runtime only(creates symlink
-                   in /run/.. directory) False will enable a service
-                   persistently (creates symlink in /etc/.. directory)"""
+                # EnableUnitFiles() function takes second argument as boolean.
+                # 'True' will enable a service for runtime only(creates symlink
+                #  in /run/.. directory) 'False' will enable a service
+                #  persistently (creates symlink in /etc/.. directory)
                 _, dbus_result = self._manager.EnableUnitFiles(service_list,
                                                                 False, True)
                 res = parse_enable_disable_dbus_result(dbus_result)
@@ -159,10 +159,10 @@ class SystemdService(Debug):
                 service_list = []
                 service_list.append(self._service_name)
 
-                """DisableUnitFiles() function takes second argument as boolean.
-                   True will disable a service for runtime only(removes symlink
-                   from /run/.. directory) False will disable a service
-                   persistently(removes symlink from /etc/.. directory)"""
+                # DisableUnitFiles() function takes second argument as boolean.
+                # 'True' will disable a service for runtime only(removes symlink
+                # from /run/.. directory) 'False' will disable a service
+                # persistently(removes symlink from /etc/.. directory)
                 dbus_result = self._manager.DisableUnitFiles(service_list, False)
                 res = parse_enable_disable_dbus_result(dbus_result)
                 result.update(res)

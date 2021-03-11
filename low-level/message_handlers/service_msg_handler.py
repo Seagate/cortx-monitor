@@ -177,7 +177,7 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 if status == "disabled":
                     logger.error(f"{service_name} - service is disabled")
                     msg = ("%s is disabled, enable request needed before "
-                                "current - %s request can be processed." 
+                                "current - %s request can be processed."
                                  % (service_name, service_request ))
                     self.send_error_response(service_request, service_name,
                                                             msg, errno.EPERM)
@@ -244,7 +244,7 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
             prev_pid = jsonMsg.get("actuator_request_type").\
                         get("service_watchdog_controller").get("previous_pid")
 
-            # Pull out the service_request and if it's equal to "status" 
+            # Pull out the service_request and if it's equal to "status"
             # then get current status (state, substate)
             service_request = jsonMsg.get("actuator_request_type").\
                         get("service_watchdog_controller").get("service_request")
