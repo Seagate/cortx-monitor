@@ -31,7 +31,7 @@ from urllib.parse import urlparse
 # using cortx package
 from cortx.utils.process import SimpleProcess
 from cortx.utils.conf_store import Conf
-from cortx.utils.service import Service
+from cortx.utils.service import DbusServiceHandler
 from cortx.utils.validator.v_pkg import PkgV
 from cortx.utils.validator.v_service import ServiceV
 from cortx.utils.validator.error import VError

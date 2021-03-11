@@ -341,13 +341,14 @@ class SSPLDevDeploy:
 
     def setup_rabbitmq(self):
         """Start rabbitmq"""
-        from cortx.utils.service import Service
+        from cortx.utils.service import DbusServiceHandler
         from cortx.utils.validator.v_service import ServiceV
         from cortx.utils.validator.error import VError
+        dbus_service = DbusServiceHandler()
         try:
             ServiceV().validate("isrunning", ["rabbitmq-server"])
         except VError:
-            Service('dbus').process('start', 'rabbitmq-server.service')
+            dbus_service.start('rabbitmq-server.service')
         print("INFO: Done rabbitmq setup.")
 
     def setup_sspl(self):

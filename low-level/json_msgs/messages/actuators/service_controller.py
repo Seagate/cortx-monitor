@@ -37,8 +37,7 @@ class ServiceControllerMsg(BaseActuatorMsg):
     ACTUATOR_MSG_TYPE = "service_controller"
     MESSAGE_VERSION  = "1.0.0"
 
-    def __init__(self, service_name,
-                       service_response,
+    def __init__(self, actuator_response,
                        username  = "SSPL-LL",
                        signature = "N/A",
                        time      = "N/A",
@@ -49,8 +48,12 @@ class ServiceControllerMsg(BaseActuatorMsg):
         self._signature         = signature
         self._time              = time
         self._expires           = expires
-        self._service_name      = service_name
-        self._service_response  = service_response
+        self._info              = actuator_response.get("info")
+        self._specific_info     = actuator_response.get("specific_info")
+
+        self._host_id           = actuator_response.get("host_id")
+        self._alert_type         = actuator_response.get("alert_type")
+        self._severity          = actuator_response.get("severity")
 
         self._json = {"title" : self.TITLE,
                       "description" : self.DESCRIPTION,
@@ -63,16 +66,17 @@ class ServiceControllerMsg(BaseActuatorMsg):
                           "sspl_ll_msg_header": {
                                 "schema_version" : self.SCHEMA_VERSION,
                                 "sspl_version" : self.SSPL_VERSION,
-                                "msg_version" : self.MESSAGE_VERSION,
+                                "msg_version" : self.MESSAGE_VERSION
                                 },
                           "actuator_response_type": {
-                                self.ACTUATOR_MSG_TYPE: {
-                                    "service_name" : self._service_name,
-                                    "service_response" : self._service_response
-                                    }
-                                }
+                               "host_id": self._host_id,
+                               "alert_type": self._alert_type,
+                               "severity": self._severity,
+                               "info": self._info,
+                              "specific_info": self._specific_info
                           }
                       }
+                  }
 
     def getJson(self):
         """Return a validated JSON object"""
