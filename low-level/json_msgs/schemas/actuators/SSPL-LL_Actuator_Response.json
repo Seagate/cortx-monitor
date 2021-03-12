@@ -119,22 +119,6 @@
 								}
 							}
 						},
-
-						"service_controller": {
-							"type": "object",
-							"properties": {
-								"service_name": {
-									"description": "Identify the service to be managed",
-									"type": "string",
-									"required": true
-								},
-								"service_response": {
-									"description": "Response from action applied: start | stop | restart | status",
-									"type": "string",
-									"required": true
-								}
-							}
-						},
 						"host_id": {
 							"description": "Host ID of node.",
 							"type": "string",
@@ -185,11 +169,6 @@
 								},
 								"event_time": {
 									"description": "Time of fetch data from IPMI. Required only for node hw actuator",
-									"type": "string",
-									"required": false
-								},
-								"event_time": {
-									"description": "Time of fetched data using IPMI.",
 									"type": "string",
 									"required": false
 								}

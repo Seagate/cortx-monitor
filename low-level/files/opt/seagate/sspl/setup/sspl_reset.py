@@ -8,7 +8,7 @@ from framework.base.sspl_constants import (PRODUCT_FAMILY,
                                            SSPL_CONFIG_INDEX,
                                            sspl_config_path)
 from cortx.utils.process import SimpleProcess
-from cortx.utils.service import Service
+from cortx.utils.service import DbusServiceHandler
 from cortx.utils.conf_store import Conf
 from .setup_error import SetupError
 
@@ -26,7 +26,8 @@ class HardReset:
 
     def process(self):
         # stop sspl service
-        Service('dbus').process('stop', 'sspl-ll.service')
+        dbus_service = DbusServiceHandler()
+        dbus_service.stop('sspl-ll.service')
 
         # Remove sspl_conf
         self.del_file(file_store_config_path)
