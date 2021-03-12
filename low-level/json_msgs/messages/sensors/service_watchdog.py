@@ -37,13 +37,7 @@ class ServiceWatchdogMsg(BaseSensorMsg):
     ACTUATOR_MSG_TYPE = "service_watchdog"
     MESSAGE_VERSION  = "1.0.0"
 
-    def __init__(self, service_name,
-                       state,
-                       previous_state,
-                       substate,
-                       previous_substate,
-                       pid,
-                       previous_pid,
+    def __init__(self, jsonMsg,
                        username  = "SSPL-LL",
                        signature = "N/A",
                        time      = "N/A",
@@ -54,13 +48,6 @@ class ServiceWatchdogMsg(BaseSensorMsg):
         self._signature          = signature
         self._time               = time
         self._expires            = expires
-        self._service_name       = service_name
-        self._state              = state
-        self._previous_state     = previous_state
-        self._substate           = substate
-        self._previous_substate  = previous_substate
-        self._pid                = pid
-        self._previous_pid       = previous_pid
 
         self._json = {"title" : self.TITLE,
                       "description" : self.DESCRIPTION,
@@ -75,17 +62,7 @@ class ServiceWatchdogMsg(BaseSensorMsg):
                                 "sspl_version" : self.SSPL_VERSION,
                                 "msg_version" : self.MESSAGE_VERSION,
                                 },
-                          "sensor_response_type": {
-                                self.ACTUATOR_MSG_TYPE: {
-                                    "service_name" : self._service_name,
-                                    "service_state" : self._state,
-                                    "previous_service_state" : self._previous_state,
-                                    "service_substate": self._substate,
-                                    "previous_service_substate": self._previous_substate,
-                                    "pid" : self._pid,
-                                    "previous_pid" : self._previous_pid
-                                    }
-                                }
+                          "sensor_response_type": jsonMsg["service_status_alert"]
                           }
                       }
 

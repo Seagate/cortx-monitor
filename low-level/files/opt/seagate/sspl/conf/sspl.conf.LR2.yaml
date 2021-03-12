@@ -33,6 +33,7 @@ SSPL_LL_SETTING:
       - RealStorActuatorMsgHandler
    sensors:
       - ServiceWatchdog
+      - ServiceMonitor
       - RAIDsensor
       - NodeData
       - RealStorFanSensor
@@ -55,6 +56,7 @@ SSPL_LL_SETTING:
       - RealStorActuator
    degraded_state_modules:
       - ServiceWatchdog
+      - ServiceMonitor
       - RAIDsensor
       - NodeData
       - IEMSensor
@@ -182,6 +184,33 @@ SYSTEMDWATCHDOG:
       - multipathd.service
    smart_test_interval: 999999999
    run_smart_on_start: 'False'
+
+SERVICEMONITOR:
+   monitor: true
+   threaded: true
+   thread_sleep: 1
+   polling_frequency: 15
+   threshold_inactive_time: 60
+   monitored_services:
+      - rabbitmq-server.service
+      - hare-consul-agent.service
+      - hare-consul-agent-c1.service
+      - hare-consul-agent-c2.service
+      - elasticsearch.service
+      - kibana.service
+      - statsd.service
+      - rsyslog.service
+      - haproxy.service
+      - slapd.service
+      - corosync.service
+      - pacemaker.service
+      - pcsd.service
+      - lnet.service
+      - salt-master.service
+      - salt-minion.service
+      - glusterd.service
+      - scsi-network-relay.service
+
 
 NODEHWACTUATOR:
    ipmi_client: ipmitool

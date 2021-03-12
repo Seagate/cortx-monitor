@@ -154,6 +154,7 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
             # Note that all threaded sensors and actuators must have an
             # import here to be controlled
             from sensors.impl.centos_7.systemd_watchdog import SystemdWatchdog
+            from sensors.impl.centos_7.service_monitor import ServiceMonitor
             from sensors.impl.centos_7.drive_manager import DriveManager
             from sensors.impl.centos_7.hpi_monitor import HPIMonitor
 

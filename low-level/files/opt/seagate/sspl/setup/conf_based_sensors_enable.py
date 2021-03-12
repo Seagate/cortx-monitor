@@ -34,6 +34,7 @@ def update_sensor_info(config_index):
     sensors["REALSTORSENSORS"] = "true"
     sensors["NODEHWSENSOR"] = "true"
     sensors["SYSTEMDWATCHDOG"] = "true"
+    sensors["SERVICEMONITOR"] = "true"
     sensors["RAIDSENSOR"] = "true"
     sensors["SASPORTSENSOR"] = "true"
     sensors["MEMFAULTSENSOR"] = "true"

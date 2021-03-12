@@ -156,16 +156,23 @@ SSPL_SETTINGS = {
             "MESSAGE_HANDLERS": [],
             "SENSORS": ["CPUFaultSensor"],
         },
+        "SERVICEMONITOR": {
+            "ACTUATORS": [],
+            "CORE_PROCESSORS": [],
+            "DEGRADED_STATE_MODULES": [],
+            "MESSAGE_HANDLERS": [],
+            "SENSORS": [],
+        },
 
         "_ENABLE_ALWAYS": {
             "ACTUATORS" : ["Service", "RAIDactuator", "Smartctl", "NodeHWactuator", "RealStorActuator"],
             "CORE_PROCESSORS" : ("RabbitMQegressProcessor", "RabbitMQingressProcessor", "LoggingProcessor"),
-            "DEGRADED_STATE_MODULES" : ("ServiceWatchdog", "NodeData", "IEMSensor",
+            "DEGRADED_STATE_MODULES" : ("ServiceWatchdog", "ServiceMonitor", "NodeData", "IEMSensor",
                 "DiskMsgHandler", "LoggingMsgHandler", "ServiceMsgHandler", "NodeDataMsgHandler",
                 "NodeControllerMsgHandler"),
             "MESSAGE_HANDLERS" : ("DiskMsgHandler", "LoggingMsgHandler", "ServiceMsgHandler", "NodeDataMsgHandler",
                 "NodeControllerMsgHandler", "RealStorEnclMsgHandler", "RealStorActuatorMsgHandler"),
-            "SENSORS" : ["ServiceWatchdog", "NodeData",  "IEMSensor"]
+            "SENSORS" : ["ServiceWatchdog", "ServiceMonitor", "NodeData",  "IEMSensor"]
         }
 }
 
