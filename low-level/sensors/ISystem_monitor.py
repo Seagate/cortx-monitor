@@ -22,8 +22,9 @@
 from zope.interface import Interface
 
 class ISystemMonitor(Interface):
-    """Interface for system monitoring classes"""
+
+    """Interface for system monitoring classes."""
 
 
     def read_data(self):
-        """Notifies service to send its data"""
+        """Notifies service to send its data."""

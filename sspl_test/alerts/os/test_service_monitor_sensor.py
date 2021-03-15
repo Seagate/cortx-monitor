@@ -1,0 +1,102 @@
+# Copyright (c) 2020 Seagate Technology LLC and/or its Affiliates
+#
+# This program is free software: you can redistribute it and/or modify it under the
+# terms of the GNU Affero General Public License as published by the Free Software
+# Foundation, either version 3 of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+# PARTICULAR PURPOSE. See the GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License along
+# with this program. If not, see <https://www.gnu.org/licenses/>. For any questions
+# about this software or licensing, please email opensource@seagate.com or
+# cortx-questions@seagate.com.
+
+# -*- coding: utf-8 -*-
+
+import time
+
+from default import world
+from rabbitmq.rabbitmq_ingress_processor_tests import RabbitMQingressProcessorTests
+from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
+from common import check_sspl_ll_is_running
+from cortx.utils.service import DbusServiceHandler
+
+RESOURCE_TYPE = "node:sw:os:service"
+WAIT_TIME = 75   # 60s wait_time + 10s buffer
+service_name = "rsyslog.service"
+
+def init(args):
+    pass
+
+def assert_on_mismatch(sensor_response, alert_type):
+    assert(sensor_response is not None)
+    assert(sensor_response.get("alert_type") == alert_type)
+    assert(sensor_response.get("severity") is not None)
+    assert(sensor_response.get("host_id") is not None)
+    assert(sensor_response.get("info") is not None)
+
+    info = sensor_response.get("info")
+    assert(info.get("site_id") is not None)
+    assert(info.get("node_id") is not None)
+    assert(info.get("cluster_id") is not None)
+    assert(info.get("rack_id") is not None)
+    assert(info.get("resource_type") == RESOURCE_TYPE)
+    assert(info.get("event_time") is not None)
+    assert(info.get("resource_id") == service_name)
+
+    assert(sensor_response.get("specific_info") is not None)
+    specific_info = sensor_response.get("specific_info")
+    assert (specific_info.get("state") is not None)
+    assert (specific_info.get("previous_state") is not None)
+    assert (specific_info.get("substate") is not None)
+    assert (specific_info.get("previous_substate") is not None)
+    assert (specific_info.get("pid") is not None)
+    assert (specific_info.get("previous_pid") is not None)
+
+def check_extract_response():
+    while not world.sspl_modules[RabbitMQingressProcessorTests.name()]\
+                                                    ._is_my_msgQ_empty():
+        ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]\
+                                                    ._read_my_msgQ()
+        time.sleep(0.1)
+        print("Received: %s " % ingressMsg)
+        try:
+            # Make sure we get back the message type that matches the request
+            msg_type = ingressMsg.get("sensor_response_type")
+            if msg_type["info"]["resource_type"] == RESOURCE_TYPE:
+                return msg_type
+        except Exception as exception:
+            time.sleep(0.1)
+            print(exception)
+    return None
+
+def test_service_inactive_alert(args):
+    check_sspl_ll_is_running()
+    DbusServiceHandler().stop(service_name)
+    time.sleep(WAIT_TIME)
+    sensor_response = check_extract_response()
+    assert_on_mismatch(sensor_response, "fault")
+
+def test_service_fault_resolved_alert(args):
+    check_sspl_ll_is_running()
+    DbusServiceHandler().start(service_name)
+    time.sleep(5)
+    sensor_response = check_extract_response()
+    assert_on_mismatch(sensor_response, "fault_resolved")
+
+def test_service_restart_case(args):
+    check_sspl_ll_is_running()
+    DbusServiceHandler().restart(service_name)
+    time.sleep(WAIT_TIME)
+    sensor_response = check_extract_response()
+    state = DbusServiceHandler().get_state(service_name).state
+    if sensor_response and state == "active":
+        print(sensor_response)
+        assert(sensor_response['info']['alert_type'] == "fault")
+
+
+test_list = [test_service_inactive_alert,
+             test_service_fault_resolved_alert,
+             test_service_restart_case]

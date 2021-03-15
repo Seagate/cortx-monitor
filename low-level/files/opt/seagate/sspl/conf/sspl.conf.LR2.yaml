@@ -192,19 +192,15 @@ SERVICEMONITOR:
    polling_frequency: 15
    threshold_inactive_time: 60
    monitored_services:
-      - rabbitmq-server.service
       - hare-consul-agent.service
       - hare-consul-agent-c1.service
       - hare-consul-agent-c2.service
       - elasticsearch.service
-      - kibana.service
+      - multipathd.service
       - statsd.service
       - rsyslog.service
       - haproxy.service
       - slapd.service
-      - corosync.service
-      - pacemaker.service
-      - pcsd.service
       - lnet.service
       - salt-master.service
       - salt-minion.service

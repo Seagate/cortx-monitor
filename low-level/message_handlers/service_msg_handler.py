@@ -158,7 +158,7 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
         if "actuator_request_type" in jsonMsg and \
            "service_controller" in jsonMsg["actuator_request_type"]:
 
-            self._log_debug("_processMsg, msg_type: service_controller")
+            logger.debug("_processMsg, msg_type: service_controller")
 
             service_name = jsonMsg.get("actuator_request_type") \
                 .get("service_controller").get("service_name")
@@ -228,7 +228,7 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
         elif "actuator_request_type" in jsonMsg and \
              "service_watchdog_controller" in jsonMsg["actuator_request_type"]:
 
-            self._log_debug("_processMsg, msg_type: service_watchdog_controller")
+            logger.debug("_processMsg, msg_type: service_watchdog_controller")
 
             # Parse out values to be sent
             service_name = jsonMsg.get("actuator_request_type").\

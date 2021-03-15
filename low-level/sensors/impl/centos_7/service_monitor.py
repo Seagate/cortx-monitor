@@ -15,15 +15,14 @@
 
 """
  ****************************************************************************
+
   Description:       Monitors Centos 7 systemd for service events and notifies
                     the ServiceMsgHandler.
-
  ****************************************************************************
 """
 
 import time
 import socket
-import json
 
 from dbus import Interface, SystemBus, DBusException, PROPERTIES_IFACE
 from dbus.mainloop.glib import DBusGMainLoop
@@ -33,7 +32,6 @@ from zope.interface import implementer
 from sensors.ISystem_monitor import ISystemMonitor
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.module_thread import SensorThread
-from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 from message_handlers.service_msg_handler import ServiceMsgHandler
 from framework.utils.service_logging import logger
 
@@ -66,6 +64,7 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
         return ServiceMonitor.SENSOR_NAME
 
     def __init__(self):
+        "Initialize the relavent datastructures."
         super(ServiceMonitor, self).__init__(self.SENSOR_NAME,
                                                 self.PRIORITY)
 
@@ -87,11 +86,11 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
             int(Conf.get(SSPL_CONF, f"{self.SERVICEMONITOR}>{self.MAX_WAIT_TIME}", 60))
 
     def read_data(self):
-        """Return the dict of service status'"""
+        """Return the dict of service status."""
         return self.service_status
 
     def initialize(self, conf_reader, msgQlist, product):
-        """initialize configuration reader and internal msg queues"""
+        """initialize configuration reader and internal msg queues."""
 
         # Initialize ScheduledMonitorThread and InternalMsgQ
         super(ServiceMonitor, self).initialize(conf_reader)
@@ -129,7 +128,7 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
                 self.raise_alert(service, "N/A", "N/A", "N/A", "N/A",
                     "N/A", "N/A", 0)
                 logger.error(f"{service} is not active initially. \n Error {err}")
-        
+
         logger.debug(f"failed_services : {self.failed_services}")
         logger.debug(f"services_to_monitor : {self.services_to_monitor}")
 
@@ -153,10 +152,10 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
                     self.connect_to_sig(service)
 
                 self.check_notactive_services()
-            
+
             delay+=1
 
-    def connect_to_sig(self, service):  
+    def connect_to_sig(self, service):
         try:
             unit = self._bus.get_object('org.freedesktop.systemd1',\
                                         self._manager.LoadUnit(service))
@@ -182,7 +181,7 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
                 self.raise_alert(service, "N/A", state, "N/A", substate,
                                     "N/A", pid, 0)
                 logger.error(f"{service} is not active initially. state = {state}:{substate}")
-            
+
             self.services_to_monitor.remove(service)
 
             return None
@@ -211,7 +210,7 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
 
     def on_prop_changed(self, interface, changed_properties,
                                 invalidated_properties, unit):
-        
+
         logger.debug("In on_prop_changed")
         Iunit = Interface(unit, dbus_interface='org.freedesktop.DBus.Properties')
         service = str(Iunit.Get('org.freedesktop.systemd1.Unit', 'Id'))
@@ -232,7 +231,7 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
                     f"{prev_state}:{prev_substate} to {state}:{substate}")
 
         self.update_status(service, state, substate, pid)
-        
+
         self.action_per_transition(service, prev_state, state,
                     prev_substate, substate, prev_pid, pid)
 
@@ -379,15 +378,15 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
         self._write_internal_msgQ(ServiceMsgHandler.name(), alert_msg)
 
     def suspend(self):
-        """Suspend the module thread. It should be non-blocking"""
+        """Suspend the module thread. It should be non-blocking."""
         super(ServiceMonitor, self).suspend()
         self._suspended = True
 
     def resume(self):
-        """Resumes the module thread. It should be non-blocking"""
+        """Resumes the module thread. It should be non-blocking."""
         super(ServiceMonitor, self).resume()
         self._suspended = False
 
     def shutdown(self):
-        """Clean up scheduler queue and gracefully shutdown thread"""
+        """Clean up scheduler queue and gracefully shutdown thread."""
         super(ServiceMonitor, self).shutdown()
