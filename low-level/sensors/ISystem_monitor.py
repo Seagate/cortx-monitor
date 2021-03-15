@@ -25,5 +25,5 @@ class ISystemMonitor(Interface):
     """Interface for system monitoring classes"""
 
 
-    # def read_data(self):
-    #     """Notifies service to send its data"""
+    def read_data(self):
+        """Notifies service to send its data"""
