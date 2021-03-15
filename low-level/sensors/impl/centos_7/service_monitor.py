@@ -263,10 +263,16 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
                 alert_index = 1
             else:
                 alert_index = 4
-        elif prev_state == "inactive":
+        elif prev_state == "inactive" or prev_state == "failed":
             if state == "activating":
                 if service not in self.not_active_services:
                     self.not_active_services[service] = int(time.time())
+            if state == "active":
+                if service in self.failed_services:
+                    self.failed_services.remove(service)
+                    alert_index = 3
+                elif service in self.not_active_services:
+                    self.not_active_services.pop(service)
             else:
                 alert_index = 4
         elif prev_state == "activating":
