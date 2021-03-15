@@ -185,8 +185,8 @@ class SSPLDevDeploy:
             cmd = "pip3 install python-consul==1.1.0"
             self._execute_cmd(cmd)
 
-            print("INFO: INSTALLING paramiko==2.7.2")
-            cmd = "pip3 install paramiko==2.7.2"
+            print("INFO: INSTALLING paramiko==2.7.1")
+            cmd = "pip3 install paramiko==2.7.1"
             self._execute_cmd(cmd)
 
             print("INFO: INSTALLING cortx-py-utils...")
