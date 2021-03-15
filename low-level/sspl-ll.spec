@@ -32,14 +32,9 @@ URL:        https://github.com/Seagate/cortx-sspl
 Source0:    %{name}-%{version}.tgz
 BuildRoot:  %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 BuildRequires: python36 rpm-build sudo
-Requires:   rabbitmq-server udisks2 hdparm python36 ipmitool smartmontools lshw
 Requires:   %{product_family}-libsspl_sec = %{version}-%{release}
 Requires:   %{product_family}-libsspl_sec-method_none = %{version}-%{release}
-
-Requires:  python36-dbus python36-paramiko
-Requires:  python36-psutil python36-gobject systemd-python36
-Requires:   perl(Config::Any) cortx-py-utils
-Requires(pre): shadow-utils
+Requires:   cortx-py-utils
 
 # Disabling for LDR_R1-non-requirement
 # Requires:  zabbix22-agent
@@ -150,7 +145,6 @@ fi
 
 if [ "$1" = "1" ]; then
     echo "Installation complete. Follow the instructions."
-    echo "Run pip3.6 install -r /opt/seagate/%{product_family}/sspl/low-level/requirements.txt"
     echo "Run /opt/seagate/%{product_family}/sspl/sspl_init to configure SSPL"
 fi
 

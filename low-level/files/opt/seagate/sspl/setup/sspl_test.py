@@ -46,6 +46,18 @@ class SSPLTestCmd:
         Conf.load(GLOBAL_CONFIG_INDEX, global_config_url)
         Conf.load(SSPL_TEST_CONFIG_INDEX, sspl_test_config_path)
 
+    @staticmethod
+    def validate():
+        """Check for required packages are installed."""
+        # python 3rd party package dependency
+        pip3_3ps_packages_test = {
+            "Flask": "1.1.1"
+        }
+        pkg_validator = PkgV()
+        pkg_validator.validate_pip3_pkgs(host=None,
+                                         pkgs=pip3_3ps_packages_test,
+                                         skip_version_check=False)
+
     def process(self):
         self.plan = self.args.plan[0]
         self.avoid_rmq = self.args.avoid_rmq

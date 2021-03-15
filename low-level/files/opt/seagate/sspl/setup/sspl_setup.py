@@ -259,6 +259,7 @@ class TestCmd(Cmd):
         """Setup and run SSPL test"""
         from files.opt.seagate.sspl.setup.sspl_test import SSPLTestCmd
         sspl_test = SSPLTestCmd(self.args)
+        sspl_test.validate()
         sspl_test.process()
 
 
