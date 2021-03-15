@@ -111,7 +111,7 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
         return True
 
     def remove_disabled_services(self):
-        temp = self.services_to_monitor
+        temp = self.services_to_monitor.copy()
         for service in temp:
             try:
                 if 'disabled' in str(self._manager.GetUnitFileState(service)):
@@ -122,7 +122,7 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
     def run(self):
         logger.info(f"Monitoring Services : {self.services_to_monitor}")
 
-        temp_ser_to_mon = self.services_to_monitor
+        temp_ser_to_mon = self.services_to_monitor.copy()
         for service in temp_ser_to_mon:
             err = self.connect_to_sig(service)
             if err:
@@ -148,7 +148,7 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
             if delay == self.polling_frequency:
                 delay = 0
 
-                temp_ser_to_mon = self.services_to_monitor
+                temp_ser_to_mon = self.services_to_monitor.copy()
                 for service in temp_ser_to_mon:
                     self.connect_to_sig(service)
 
@@ -190,7 +190,7 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
             return err
 
     def check_notactive_services(self):
-        temp_not_active_ser = self.not_active_services
+        temp_not_active_ser = self.not_active_services.copy()
         for service, start_time in temp_not_active_ser.items():
             logger.debug(f"{service} : {start_time}, {int(time.time()) - start_time}, {self.max_wait_time}")
             if int(time.time()) - start_time > self.max_wait_time:
@@ -267,7 +267,7 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
             if state == "activating":
                 if service not in self.not_active_services:
                     self.not_active_services[service] = int(time.time())
-            if state == "active":
+            elif state == "active":
                 if service in self.failed_services:
                     self.failed_services.remove(service)
                     alert_index = 3
