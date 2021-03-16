@@ -15,6 +15,7 @@
 
 """
  ****************************************************************************
+ 
   Description:       Interface for all system monitoring classes
  ****************************************************************************
 """
@@ -22,7 +23,6 @@
 from zope.interface import Interface
 
 class ISystemMonitor(Interface):
-
     """Interface for system monitoring classes."""
 
 

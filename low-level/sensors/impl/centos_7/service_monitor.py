@@ -80,7 +80,7 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
             int(Conf.get(SSPL_CONF, f"{self.SERVICEMONITOR}>{self.THREAD_SLEEP}", 1))
 
         self.polling_frequency = \
-            int(Conf.get(SSPL_CONF, f"{self.SERVICEMONITOR}>{self.POLLING_FREQUENCY}", 15))
+            int(Conf.get(SSPL_CONF, f"{self.SERVICEMONITOR}>{self.POLLING_FREQUENCY}", 30))
 
         self.max_wait_time = \
             int(Conf.get(SSPL_CONF, f"{self.SERVICEMONITOR}>{self.MAX_WAIT_TIME}", 60))
@@ -100,7 +100,8 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
 
         # Integrate into the main dbus loop to catch events
         DBusGMainLoop(set_as_default=True)
-
+        
+        # Initialize SystemBus and get Manager Interface
         self._bus = SystemBus()
         systemd = self._bus.get_object("org.freedesktop.systemd1", "/org/freedesktop/systemd1")
         self._manager = Interface(systemd, dbus_interface='org.freedesktop.systemd1.Manager')
@@ -110,6 +111,7 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
         return True
 
     def remove_disabled_services(self):
+        """Remove `disabled` services from the list of services to monitor."""
         temp = self.services_to_monitor.copy()
         for service in temp:
             try:
@@ -120,42 +122,57 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
 
     def run(self):
         logger.info(f"Monitoring Services : {self.services_to_monitor}")
+        try:
+            # Register all the services to signal of 'PropertiesChanged' and
+            # raise an alert if some service is not active on initially or if
+            # Unit is not found for the service
+            temp_ser_to_mon = self.services_to_monitor.copy()
+            for service in temp_ser_to_mon:
+                err = self.connect_to_prop_changed_signal(service)
+                if err:
+                    self.raise_alert(service, "N/A", "N/A", "N/A", "N/A",
+                        "N/A", "N/A", 0)
+                    logger.error(f"{service} is not active initially. \n Error {err}")
 
-        temp_ser_to_mon = self.services_to_monitor.copy()
-        for service in temp_ser_to_mon:
-            err = self.connect_to_sig(service)
-            if err:
-                self.raise_alert(service, "N/A", "N/A", "N/A", "N/A",
-                    "N/A", "N/A", 0)
-                logger.error(f"{service} is not active initially. \n Error {err}")
+            logger.debug(f"failed_services : {self.failed_services}")
+            logger.debug(f"services_to_monitor : {self.services_to_monitor}")
 
-        logger.debug(f"failed_services : {self.failed_services}")
-        logger.debug(f"services_to_monitor : {self.services_to_monitor}")
+            # Retrieve the main loop which will be called in the run method
+            self._loop = gobject.MainLoop()
 
-        # Retrieve the main loop which will be called in the run method
-        self._loop = gobject.MainLoop()
+            # Initialize the gobject threads and get its context
+            gobject.threads_init()
+            context = self._loop.get_context()
 
-        # Initialize the gobject threads and get its context
-        gobject.threads_init()
-        context = self._loop.get_context()
+            delay = 0
+            while self.is_running():
+                # At interval of 'thread_sleep' check for events occured for
+                # registered services and process them(call on_pro_changed())
+                context.iteration(False)
+                time.sleep(self.thread_sleep)
 
-        delay = 0
-        while self.is_running():
-            context.iteration(False)
-            time.sleep(self.thread_sleep)
+                # At interval of 'polling_freqency' process unregistered
+                # services and services with not-active state. 
+                if delay == self.polling_frequency:
+                    delay = 0
 
-            if delay == self.polling_frequency:
-                delay = 0
+                    temp_ser_to_mon = self.services_to_monitor.copy()
+                    for service in temp_ser_to_mon:
+                        self.connect_to_prop_changed_signal(service)
 
-                temp_ser_to_mon = self.services_to_monitor.copy()
-                for service in temp_ser_to_mon:
-                    self.connect_to_sig(service)
+                    self.check_notactive_services()
 
-                self.check_notactive_services()
+                delay+=1
 
-            delay+=1
+            logger.debug("ServiceMonitor gracefully breaking out " +\
+                                "of dbus Loop, not restarting.")
+        except Exception as e:
+            if self.is_running:
+                logger.debug("Ungracefully breaking out of " +\
+                                "dbus loop with error: %s" % e)
 
-    def connect_to_sig(self, service):
+    def connect_to_prop_changed_signal(self, service):
+        """Connect the service to the 'PropertiesChanged' Signal."""
         try:
             unit = self._bus.get_object('org.freedesktop.systemd1',\
                                         self._manager.LoadUnit(service))
@@ -189,6 +206,9 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
             return err
 
     def check_notactive_services(self):
+        """Raise Alert if any of the not-active services has exceeded
+            the threshould time for inactivity.
+        """
         temp_not_active_ser = self.not_active_services.copy()
         for service, start_time in temp_not_active_ser.items():
             logger.debug(f"{service} : {start_time}, {int(time.time()) - start_time}, {self.max_wait_time}")
@@ -210,6 +230,7 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
 
     def on_prop_changed(self, interface, changed_properties,
                                 invalidated_properties, unit):
+        """Process the `PropertiesChanged` Signal from some service."""
 
         logger.debug("In on_prop_changed")
         Iunit = Interface(unit, dbus_interface='org.freedesktop.DBus.Properties')
@@ -238,10 +259,11 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
 
     def action_per_transition(self, service, prev_state, state,
                         prev_substate, substate, prev_pid, pid):
-
+        """Take action according to the state change of the service."""
         alert_index = -1
 
-        logger.debug(f"in action_per_transition for {service} : ({prev_state}:{prev_substate}) -> ({state}:{substate})")
+        logger.debug(f"in action_per_transition for {service} : " + \
+            f"({prev_state}:{prev_substate}) -> ({state}:{substate})")
 
         if prev_state == "active" or prev_state == "reloading":
             if state == "reloading" or state == "active":
@@ -307,12 +329,9 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
 
     def raise_alert(self, service, prev_state, state, prev_substate,
                     substate, prev_pid, pid, alert_index):
-
+        """ Send the alert to ServiceMsgHandler."""
         # Each alert info contains 4 fields
-        # 1. Description
-        # 2. Alert Type
-        # 3. Impact
-        # 4. Recommendation
+        # 1.Description | 2.Alert Type | 3.Impact | 4.Recommendation
         alert_info = [
             [f"{service} is not found/running initially",   #index 0
                 "fault", "", ""],

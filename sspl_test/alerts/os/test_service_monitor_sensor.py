@@ -19,7 +19,6 @@ import time
 
 from default import world
 from rabbitmq.rabbitmq_ingress_processor_tests import RabbitMQingressProcessorTests
-from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 from common import check_sspl_ll_is_running
 from cortx.utils.service import DbusServiceHandler
 
@@ -55,7 +54,8 @@ def assert_on_mismatch(sensor_response, alert_type):
     assert (specific_info.get("pid") is not None)
     assert (specific_info.get("previous_pid") is not None)
 
-def check_extract_response():
+def read_ingress_queue():
+    """Read ingress queue and extract msg with matching RESOURCE_TYPE."""
     while not world.sspl_modules[RabbitMQingressProcessorTests.name()]\
                                                     ._is_my_msgQ_empty():
         ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]\
@@ -76,21 +76,21 @@ def test_service_inactive_alert(args):
     check_sspl_ll_is_running()
     DbusServiceHandler().stop(service_name)
     time.sleep(WAIT_TIME)
-    sensor_response = check_extract_response()
+    sensor_response = read_ingress_queue()
     assert_on_mismatch(sensor_response, "fault")
 
 def test_service_fault_resolved_alert(args):
     check_sspl_ll_is_running()
     DbusServiceHandler().start(service_name)
     time.sleep(5)
-    sensor_response = check_extract_response()
+    sensor_response = read_ingress_queue()
     assert_on_mismatch(sensor_response, "fault_resolved")
 
 def test_service_restart_case(args):
     check_sspl_ll_is_running()
     DbusServiceHandler().restart(service_name)
     time.sleep(WAIT_TIME)
-    sensor_response = check_extract_response()
+    sensor_response = read_ingress_queue()
     state = DbusServiceHandler().get_state(service_name).state
     if sensor_response and state == "active":
         print(sensor_response)
