@@ -115,12 +115,14 @@ class SSPLPostInstall:
             "udisks2": "2.8.4"
         }
         pkg_validator = PkgV()
+        # TODO: Enable version check once EOS-18332 is implemented at
+        # infrastructure level by RE.
         pkg_validator.validate_pip3_pkgs(host=None,
                                          pkgs=pip3_3ps_packages_main,
-                                         skip_version_check=False)
+                                         skip_version_check=True)
         pkg_validator.validate_rpm_pkgs(host=None,
                                         pkgs=rpm_3ps_packages,
-                                        skip_version_check=False)
+                                        skip_version_check=True)
 
         self.PRODUCT_NAME = Conf.get(GLOBAL_CONFIG_INDEX, 'release>product')
 
@@ -176,6 +178,14 @@ class SSPLPostInstall:
                 output, error, returncode = SimpleProcess(sspl_setup_consul).run()
                 if returncode != 0:
                     raise SetupError(returncode, error, sspl_setup_consul)
+
+        # TODO: Remove package installation step once EOS-18332 is implemented at
+        # infrastructure level by RE.
+        # Install packages which are not available in YUM repo, from PIP
+        pip_cmd = "python3 -m pip install -r %s/low-level/requirements.txt" % (SSPL_BASE_DIR)
+        output, error, returncode = SimpleProcess(pip_cmd).run()
+        if returncode != 0:
+            raise SetupError(returncode, error, pip_cmd)
 
         # Splitting current function into 2 functions to reduce the complexity of the code.
         self.install_files(self.PRODUCT_NAME)

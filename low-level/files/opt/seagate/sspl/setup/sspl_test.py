@@ -54,9 +54,11 @@ class SSPLTestCmd:
             "Flask": "1.1.1"
         }
         pkg_validator = PkgV()
+        # TODO: Enable version check once EOS-18332 is implemented at
+        # infrastructure level by RE.
         pkg_validator.validate_pip3_pkgs(host=None,
                                          pkgs=pip3_3ps_packages_test,
-                                         skip_version_check=False)
+                                         skip_version_check=True)
 
     def process(self):
         self.plan = self.args.plan[0]
