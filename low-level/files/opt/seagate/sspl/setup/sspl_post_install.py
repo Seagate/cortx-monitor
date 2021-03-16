@@ -86,6 +86,14 @@ class SSPLPostInstall:
         2. required rpm dependencies are installed
         3. product specified in global config is supported by SSPL
         """
+        # TODO: Remove package installation step once EOS-18332 is implemented at
+        # infrastructure level by RE.
+        # Install packages which are not available in YUM repo, from PIP
+        pip_cmd = "python3 -m pip install -r %s/low-level/requirements.txt" % (SSPL_BASE_DIR)
+        output, error, returncode = SimpleProcess(pip_cmd).run()
+        if returncode != 0:
+            raise SetupError(returncode, error, pip_cmd)
+
         # SSPL python 3rd party package dependencies
         pip3_3ps_packages_main = {
             "cryptography": "2.8",
@@ -178,14 +186,6 @@ class SSPLPostInstall:
                 output, error, returncode = SimpleProcess(sspl_setup_consul).run()
                 if returncode != 0:
                     raise SetupError(returncode, error, sspl_setup_consul)
-
-        # TODO: Remove package installation step once EOS-18332 is implemented at
-        # infrastructure level by RE.
-        # Install packages which are not available in YUM repo, from PIP
-        pip_cmd = "python3 -m pip install -r %s/low-level/requirements.txt" % (SSPL_BASE_DIR)
-        output, error, returncode = SimpleProcess(pip_cmd).run()
-        if returncode != 0:
-            raise SetupError(returncode, error, pip_cmd)
 
         # Splitting current function into 2 functions to reduce the complexity of the code.
         self.install_files(self.PRODUCT_NAME)
