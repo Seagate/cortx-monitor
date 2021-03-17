@@ -19,7 +19,6 @@
  ****************************************************************************
 """
 
-import pika
 import json
 import os
 import time
@@ -28,16 +27,19 @@ import socket
 from jsonschema import Draft3Validator
 from jsonschema import validate
 
-from pika import exceptions
-from framework.utils import encryptor
+from cortx.utils.message_bus import MessageBus
+from cortx.utils.message_bus import MessageConsumer
+
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
 from framework.base.sspl_constants import RESOURCE_PATH
-from framework.base.sspl_constants import ServiceTypes
-from .rabbitmq_sspl_test_connector import RabbitMQSafeConnection
-from framework.utils.conf_utils import Conf, SSPL_TEST_CONF
+
+from framework.utils.conf_utils import (CLUSTER, SRVNODE,
+                                        Conf, SSPL_TEST_CONF)
 import ctypes
+from . import message_bus, producer_initialized
+
 SSPL_SEC = ctypes.cdll.LoadLibrary('libsspl_sec.so.0')
 
 
@@ -45,24 +47,21 @@ class RabbitMQingressProcessorTests(ScheduledModuleThread, InternalMsgQ):
     """Handles incoming messages via rabbitMQ for automated tests"""
 
     MODULE_NAME = "RabbitMQingressProcessorTests"
-    PRIORITY    = 1
+    PRIORITY = 1
 
     # Section and keys in configuration file
     RABBITMQPROCESSORTEST = MODULE_NAME.upper()
-    PRIMARY_RABBITMQ_HOST = 'primary_rabbitmq_host'
-    EXCHANGE_NAME         = 'exchange_name'
-    QUEUE_NAME            = 'queue_name'
-    ROUTING_KEY           = 'routing_key'
-    VIRT_HOST             = 'virtual_host'
-    USER_NAME             = 'username'
-    PASSWORD              = 'password'
-
-    SYSTEM_INFORMATION_KEY = "SYSTEM_INFORMATION"
+    CONSUMER_ID = "consumer_id"
+    CONSUMER_GROUP = "consumer_group"
+    MESSAGE_TYPE = "message_type"
+    OFFSET = "offset"
+    SYSTEM_INFORMATION_KEY = 'SYSTEM_INFORMATION'
+    CLUSTER_ID_KEY = 'cluster_id'
+    NODE_ID_KEY = 'node_id'
     CLUSTER_ID_KEY = "cluster_id"
 
     JSON_ACTUATOR_SCHEMA = "SSPL-LL_Actuator_Response.json"
-    JSON_SENSOR_SCHEMA   = "SSPL-LL_Sensor_Response.json"
-
+    JSON_SENSOR_SCHEMA = "SSPL-LL_Sensor_Response.json"
 
     @staticmethod
     def name():
@@ -71,7 +70,7 @@ class RabbitMQingressProcessorTests(ScheduledModuleThread, InternalMsgQ):
 
     def __init__(self):
         super(RabbitMQingressProcessorTests, self).__init__(self.MODULE_NAME,
-                                                       self.PRIORITY)
+                                                            self.PRIORITY)
 
         # Read in the actuator schema for validating messages
         fileName = os.path.join(RESOURCE_PATH + '/actuators',
@@ -107,63 +106,79 @@ class RabbitMQingressProcessorTests(ScheduledModuleThread, InternalMsgQ):
         # Initialize internal message queues for this module
         super(RabbitMQingressProcessorTests, self).initialize_msgQ(msgQlist)
 
-        # Configure RabbitMQ Exchange to receive messages
-        self._configure_exchange()
+        self._read_config()
 
-        # Display values used to configure pika from the config file
-        self._log_debug("RabbitMQ user: %s" % self._username)
-        self._log_debug("RabbitMQ exchange: %s, routing_key: %s, vhost: %s" %
-                      (self._exchange_name, self._routing_key, self._virtual_host))
+        producer_initialized.wait()
+        self._consumer = MessageConsumer(message_bus,
+                                         consumer_id=self._consumer_id,
+                                         consumer_group=self._consumer_group,
+                                         message_types=[self._message_type],
+                                         auto_ack=False, offset=self._offset)
 
     def run(self):
-        """Run the module periodically on its own thread. """
-        self._log_debug("Start accepting requests")
+        # self._set_debug(True)
+        # self._set_debug_persist(True)
+
+        # time.sleep(180)
+        logger.info(
+            "RabbitMQingressProcessor, Initialization complete, accepting requests")
 
         try:
-            self._connection.consume(callback=self._process_msg)
-        except Exception:
-            if self.is_running() == True:
-                logger.info("RabbitMQingressProcessorTests ungracefully breaking out of run loop, restarting.")
-
-                # Configure RabbitMQ Exchange to receive messages
-                self._configure_exchange()
-                self._scheduler.enter(1, self._priority, self.run, ())
+            while True:
+                message = self._consumer.receive()
+                if message:
+                    logger.info(
+                        f"RabbitMQingressProcessor, Message Recieved: {message}")
+                    self._process_msg(message)
+                    # Acknowledge message was received
+                    self._consumer.ack()
+                else:
+                    time.sleep(1)
+        except Exception as e:
+            if self.is_running() is True:
+                logger.info(
+                    "RabbitMQingressProcessor ungracefully breaking out of run loop, restarting.")
+                logger.error("RabbitMQingressProcessor, Exception: %s" % str(e))
+                self._scheduler.enter(10, self._priority, self.run, ())
             else:
-                logger.info("RabbitMQingressProcessorTests gracefully breaking out of run Loop, not restarting.")
+                logger.info(
+                    "RabbitMQingressProcessor gracefully breaking out of run Loop, not restarting.")
 
         self._log_debug("Finished processing successfully")
 
-    def _process_msg(self, ch, method, properties, body):
+    def _process_msg(self, body):
         """Parses the incoming message and hands off to the appropriate module"""
 
         self._log_debug("_process_msg, body: %s" % body)
 
         ingressMsg = {}
         try:
-            if isinstance(body, dict) == False:
+            if isinstance(body, dict) is False:
                 ingressMsg = json.loads(body)
             else:
                 ingressMsg = body
 
             # Authenticate message using username and signature fields
-            username  = ingressMsg.get("username")
+            username = ingressMsg.get("username")
             signature = ingressMsg.get("signature")
-            message   = ingressMsg.get("message")
+            message = ingressMsg.get("message")
 
-            assert(username is not None)
-            assert(signature is not None)
-            assert(message is not None)
+            assert (username is not None)
+            assert (signature is not None)
+            assert (message is not None)
 
-            msg_len   = len(message) + 1
+            msg_len = len(message) + 1
 
-            if SSPL_SEC.sspl_verify_message(msg_len, str(message), username, signature) != 0:
-                logger.error("Authentication failed on message: %s" % ingressMsg)
+            if SSPL_SEC.sspl_verify_message(msg_len, str(message), username,
+                                            signature) != 0:
+                logger.error(
+                    "Authentication failed on message: %s" % ingressMsg)
                 return
 
             # We're acting as HAlon so ignore actuator_requests
             #  and sensor_requests messages
             if message.get("actuator_request_type") is not None or \
-                message.get("sensor_request_type") is not None:
+                    message.get("sensor_request_type") is not None:
                 return
 
             # Get the message type
@@ -179,74 +194,41 @@ class RabbitMQingressProcessorTests(ScheduledModuleThread, InternalMsgQ):
                 validate(ingressMsg, self._sensor_schema)
 
                 # Ignore drive status messages when thread starts up during tests
-                if message.get("sensor_response_type").get("disk_status_drivemanager") is not None:
+                if message.get("sensor_response_type").get(
+                        "disk_status_drivemanager") is not None:
                     return
             # If the message comes from other SSPL hosts, do not pass that
             # message to internal queue. This happens as SSPL instances are
             # listening to common queues in a RabbitMQ cluster.
             if 'host_id' in msgType and socket.getfqdn() != msgType['host_id']:
-                self._connection.ack(ch, delivery_tag=method.delivery_tag)
                 return
             # Write to the msg queue so the lettuce tests can
             #  retrieve it and examine for accuracy during automated testing
             self._write_internal_msgQ("RabbitMQingressProcessorTests", message)
 
-            # Acknowledge message was received
-            self._connection.ack(ch, delivery_tag=method.delivery_tag)
-
         except Exception as ex:
-            logger.exception("_process_msg unrecognized message: %r" % ingressMsg)
+            logger.exception(
+                "_process_msg unrecognized message: %r" % ingressMsg)
 
-    def _configure_exchange(self):
+    def _read_config(self):
         """Configure the RabbitMQ exchange with defaults available"""
-        try:
-            self._virtual_host = Conf.get(SSPL_TEST_CONF,
-                            f"{self.RABBITMQPROCESSORTEST}>{self.VIRT_HOST}","SSPL"
-            )
-            self._primary_rabbitmq_host = Conf.get(SSPL_TEST_CONF,
-            f"{self.RABBITMQPROCESSORTEST}>{self.PRIMARY_RABBITMQ_HOST}", "localhost"
-            )
-            self._exchange_name = Conf.get(SSPL_TEST_CONF,
-                f"{self.RABBITMQPROCESSORTEST}>{self.EXCHANGE_NAME}", "sspl-in"
-            )
-            self._queue_name = Conf.get(SSPL_TEST_CONF,
-             f"{self.RABBITMQPROCESSORTEST}>{self.QUEUE_NAME}", "actuator-req-queue"
-            )
-            self._routing_key = Conf.get(SSPL_TEST_CONF,
-            f"{self.RABBITMQPROCESSORTEST}>{self.ROUTING_KEY}", "actuator-req-key"
-            )
-            self._username = Conf.get(SSPL_TEST_CONF,
-            f"{self.RABBITMQPROCESSORTEST}>{self.USER_NAME}", "sspluser"
-            )
-            self._password = Conf.get(SSPL_TEST_CONF,
-            f"{self.RABBITMQPROCESSORTEST}>{self.PASSWORD}", "sspl4ever"
-            )
-            self.cluster_id = Conf.get(SSPL_TEST_CONF,
-                f"{self.SYSTEM_INFORMATION_KEY}>{self.CLUSTER_ID_KEY}", 'CC01')
-
-            # Decrypt RabbitMQ Password
-            decryption_key = encryptor.gen_key(self.cluster_id, ServiceTypes.RABBITMQ.value)
-            self._password = encryptor.decrypt(decryption_key, self._password.encode('ascii'), "RabbitMQingressProcessor")
-            self._connection = RabbitMQSafeConnection(
-                self._username,
-                self._password,
-                self._virtual_host,
-                self._exchange_name,
-                self._routing_key,
-                self._queue_name
-            )
-        except Exception as ex:
-            logger.exception("_configure_exchange: %r" % ex)
-            raise
+        # Make methods locally available
+        self._node_id = Conf.get(SSPL_TEST_CONF,
+                                 f"{CLUSTER}>{SRVNODE}>{self.NODE_ID_KEY}",
+                                 'SN01')
+        self._consumer_id = Conf.get(SSPL_TEST_CONF,
+                                     f"{self.RABBITMQPROCESSORTEST}>{self.CONSUMER_ID}",
+                                     'sspl_actuator')
+        self._consumer_group = Conf.get(SSPL_TEST_CONF,
+                                        f"{self.RABBITMQPROCESSORTEST}>{self.CONSUMER_GROUP}",
+                                        'cortx_monitor')
+        self._message_type = Conf.get(SSPL_TEST_CONF,
+                                      f"{self.RABBITMQPROCESSORTEST}>{self.MESSAGE_TYPE}",
+                                      'Requests')
+        self._offset = Conf.get(SSPL_TEST_CONF,
+                                f"{self.RABBITMQPROCESSORTEST}>{self.OFFSET}",
+                                'earliest')
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""
         super(RabbitMQingressProcessorTests, self).shutdown()
-        time.sleep(4)
-        try:
-            self._connection.cleanup()
-        except pika.exceptions.ConnectionClosed:
-            logger.info("RabbitMQingressProcessorTests, shutdown, RabbitMQ ConnectionClosed")
-        except Exception as err:
-            logger.info("RabbitMQingressProcessorTests, shutdown, RabbitMQ {}".format(str(err)))
-
