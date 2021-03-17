@@ -27,6 +27,7 @@ from urllib.parse import urlparse
 # using cortx package
 from cortx.utils.process import SimpleProcess
 from cortx.utils.service import DbusServiceHandler
+from cortx.utils.validator.v_pkg import PkgV
 from cortx.utils.conf_store import Conf
 from .setup_error import SetupError
 from framework.base.sspl_constants import (REPLACEMENT_NODE_ENV_VAR_FILE,
@@ -79,6 +80,48 @@ class SSPLPostInstall:
         Conf.save(GLOBAL_CONFIG_INDEX)
 
     def validate(self):
+        """Check below requirements are met in setup.
+
+        1. required python 3rd party packages are installed
+        2. required rpm dependencies are installed
+        3. product specified in global config is supported by SSPL
+        """
+        # SSPL python 3rd party package dependencies
+        pip3_3ps_packages_main = {
+            "cryptography": "2.8",
+            "jsonschema": "3.2.0",
+            "pika": "1.1.0",
+            "pyinotify": "0.9.6",
+            "python-daemon": "2.2.4",
+            "requests": "2.25.1",
+            "zope.component": "4.6.2",
+            "zope.event": "4.5.0",
+            "zope.interface": "5.2.0"
+        }
+        # SSPL 3rd party RPM dependencies
+        rpm_3ps_packages = {
+            "hdparm": "9.43",
+            "ipmitool": "1.8.18",
+            "lshw": "B.02.18",
+            "python3": "3.6.8",
+            "python36-dbus": "1.2.4",
+            "python36-gobject": "3.22.0",
+            "python36-paramiko": "2.1.1",
+            "python36-psutil": "5.6.7",
+            "rabbitmq-server": "3.8.9",
+            "shadow-utils": "4.6",
+            "smartmontools": "7.0",
+            "systemd-python36": "1.0.0",
+            "udisks2": "2.8.4"
+        }
+        pkg_validator = PkgV()
+        pkg_validator.validate_pip3_pkgs(host=None,
+                                         pkgs=pip3_3ps_packages_main,
+                                         skip_version_check=False)
+        pkg_validator.validate_rpm_pkgs(host=None,
+                                        pkgs=rpm_3ps_packages,
+                                        skip_version_check=False)
+
         self.PRODUCT_NAME = Conf.get(GLOBAL_CONFIG_INDEX, 'release>product')
 
         # Validate product
@@ -134,11 +177,6 @@ class SSPLPostInstall:
                 if returncode != 0:
                     raise SetupError(returncode, error, sspl_setup_consul)
 
-        # Install packages which are not available in YUM repo, from PIP
-        pip_cmd = "python3 -m pip install -r %s/low-level/requirements.txt" % (SSPL_BASE_DIR)
-        output, error, returncode = SimpleProcess(pip_cmd).run()
-        if returncode != 0:
-            raise SetupError(returncode, error, pip_cmd)
         # Splitting current function into 2 functions to reduce the complexity of the code.
         self.install_files(self.PRODUCT_NAME)
 
