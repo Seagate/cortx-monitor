@@ -194,39 +194,7 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
             self._check_debug(message)
             self._log_debug("_process_msg, ingressMsg: %s" % ingressMsg)
 
-            # Hand off to appropriate actuator message handler
-            if msgType.get("logging") is not None:
-                self._write_internal_msgQ("LoggingMsgHandler", message)
-
-            elif msgType.get("thread_controller") is not None:
-                self._write_internal_msgQ("ThreadController", message)
-
-            elif msgType.get("service_controller") is not None:
-                self._write_internal_msgQ("ServiceMsgHandler", message)
-
-            elif msgType.get("node_controller") is not None:
-                self._write_internal_msgQ("NodeControllerMsgHandler", message)
-
-            elif msgType.get("storage_enclosure") is not None:
-                self._write_internal_msgQ("RealStorActuatorMsgHandler", message)
-
-            # Hand off to appropriate sensor message handler
-            elif msgType.get("node_data") is not None:
-                self._write_internal_msgQ("NodeDataMsgHandler", message)
-
-            elif msgType.get("enclosure_alert") is not None:
-                self._write_internal_msgQ("RealStorEnclMsgHandler", message)
-
-            elif msgType.get("storage_enclosure") is not None:
-                self._write_internal_msgQ("RealStorActuatorMsgHandler", message)
-            # ... handle other incoming messages that have been validated
-            else:
-                # Send ack about not finding a msg handler
-                ack_msg = AckResponseMsg("Error Processing Message",
-                                         "Message Handler Not Found",
-                                         uuid).getJson()
-                self._write_internal_msgQ(RabbitMQegressProcessor.name(),
-                                          ack_msg)
+            self._send_to_msg_handler(msgType, message, uuid)
 
         except Exception as ex:
             logger.error(
@@ -234,6 +202,41 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
             ack_msg = AckResponseMsg("Error Processing Msg",
                                      "Msg Handler Not Found", uuid).getJson()
             self._write_internal_msgQ(RabbitMQegressProcessor.name(), ack_msg)
+
+    def _send_to_msg_handler(self, msgType, message, uuid):
+        # Hand off to appropriate actuator message handler
+        if msgType.get("logging") is not None:
+            self._write_internal_msgQ("LoggingMsgHandler", message)
+
+        elif msgType.get("thread_controller") is not None:
+            self._write_internal_msgQ("ThreadController", message)
+
+        elif msgType.get("service_controller") is not None:
+            self._write_internal_msgQ("ServiceMsgHandler", message)
+
+        elif msgType.get("node_controller") is not None:
+            self._write_internal_msgQ("NodeControllerMsgHandler", message)
+
+        elif msgType.get("storage_enclosure") is not None:
+            self._write_internal_msgQ("RealStorActuatorMsgHandler", message)
+
+        # Hand off to appropriate sensor message handler
+        elif msgType.get("node_data") is not None:
+            self._write_internal_msgQ("NodeDataMsgHandler", message)
+
+        elif msgType.get("enclosure_alert") is not None:
+            self._write_internal_msgQ("RealStorEnclMsgHandler", message)
+
+        elif msgType.get("storage_enclosure") is not None:
+            self._write_internal_msgQ("RealStorActuatorMsgHandler", message)
+        # ... handle other incoming messages that have been validated
+        else:
+            # Send ack about not finding a msg handler
+            ack_msg = AckResponseMsg("Error Processing Message",
+                                     "Message Handler Not Found",
+                                     uuid).getJson()
+            self._write_internal_msgQ(RabbitMQegressProcessor.name(),
+                                      ack_msg)
 
     def _read_config(self):
         """Configure the RabbitMQ exchange with defaults available"""

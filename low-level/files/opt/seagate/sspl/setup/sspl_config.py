@@ -55,6 +55,7 @@ class SSPLConfig:
             "SYSTEM_INFORMATION>global_config_copy_url")
         Conf.load(consts.GLOBAL_CONFIG_INDEX, global_config_url)
         self.product = Conf.get(consts.GLOBAL_CONFIG_INDEX, 'release>product')
+        self.topic_already_exists = "ALREADY_EXISTS"
 
     def validate(self):
         """Validate config for supported role and product"""
@@ -212,19 +213,19 @@ class SSPLConfig:
         # already configured on the healthy node
         # Configure rabbitmq
         if not os.path.exists(consts.REPLACEMENT_NODE_ENV_VAR_FILE):
-            message_types = set([Conf.get(consts.SSPL_CONFIG_INDEX,
-                                          "RABBITMQINGRESSPROCESSOR"
-                                          ">message_type"),
-                                 Conf.get(consts.SSPL_CONFIG_INDEX,
-                                          "RABBITMQEGRESSPROCESSOR"
-                                          ">message_type")])
+            message_types = [Conf.get(consts.SSPL_CONFIG_INDEX,
+                                      "RABBITMQINGRESSPROCESSOR"
+                                      ">message_type"),
+                             Conf.get(consts.SSPL_CONFIG_INDEX,
+                                      "RABBITMQEGRESSPROCESSOR"
+                                      ">message_type")]
             mb = MessageBus()
             mbadmin = MessageBusAdmin(mb, admin_id='admin')
             try:
                 mbadmin.register_message_type(message_types=message_types,
                                               partitions=1)
             except MessageBusError as e:
-                if "ALREADY_EXISTS" in e.desc:
+                if self.topic_already_exists in e.desc:
                     # Topic already exists
                     pass
                 else:

@@ -355,6 +355,11 @@ fi
 
 if [ "$IS_VIRTUAL" == "true" ]
 then
+    # consume all alerts before SSPL restarts. So sspl_start_checker
+    # waits till SSPL initialized, if previous alerts are availble,
+    # sspl_start_checker will use those and test cases will be executed
+    # before SSPL initialization
+    $script_dir/rabbitmq/consume.py
     echo "Restarting SSPL"
     $sudo systemctl restart sspl-ll
     echo "Waiting for SSPL to complete initialization of all the plugins.."

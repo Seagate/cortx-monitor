@@ -22,7 +22,6 @@
 import json
 import time
 from cortx.utils.message_bus import MessageProducer
-from cortx.utils.message_bus import MessageBus
 
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ

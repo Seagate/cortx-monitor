@@ -23,7 +23,7 @@ import ctypes
 import json
 import time
 
-from cortx.utils.message_bus import MessageProducer, MessageBus
+from cortx.utils.message_bus import MessageProducer
 from cortx.utils.message_bus.error import MessageBusError
 
 from framework.base.internal_msgQ import InternalMsgQ
@@ -85,7 +85,7 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
                                          producer_id=self._producer_id,
                                          message_type=self._message_type,
                                          method=self._method)
-        producer_initialized.set()    
+        producer_initialized.set()
 
     def run(self):
         """Run the module periodically on its own thread. """

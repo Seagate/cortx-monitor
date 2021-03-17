@@ -174,7 +174,7 @@ class SSPLPostInstall:
                 sspl_setup_consul = "%s/sspl_setup_consul -e %s" % (
                     self._script_dir,
                     self.ENVIRONMENT)
-                output, error, returncode = SimpleProcess(
+                _, error, returncode = SimpleProcess(
                     sspl_setup_consul).run()
                 if returncode != 0:
                     raise SetupError(returncode, error, sspl_setup_consul)

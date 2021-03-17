@@ -336,8 +336,7 @@ class SSPLDevDeploy:
         self.setup_kafka()
 
     def setup_kafka(self):
-        # Install Kafka dependencies
-        self._execute_cmd("yum install -y java-1.8.0-openjdk-headless")
+        # Setup kafka
 
         file_path = (f"{self.CORTX_MONITOR_BASE_URL}"
                      "/low-level/files/opt/seagate/sspl/setup/standalone")

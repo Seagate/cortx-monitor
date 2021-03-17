@@ -73,7 +73,7 @@ def process_msg(body):
 
 
 if __name__ == "__main__":
-    message_bus = MessageBus() 
+    message_bus = MessageBus()
     consumer = MessageConsumer(message_bus, consumer_id="sspl-test",
                                consumer_group="cortx_monitor",
                                message_types=["alerts"],

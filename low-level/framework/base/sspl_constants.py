@@ -69,7 +69,6 @@ MDADM_PATH = '/etc/mdadm.conf'
 GLOBAL_CONFIG_INDEX = "global"
 SSPL_CONFIG_INDEX = "sspl"
 SSPL_TEST_CONFIG_INDEX = "sspl_test"
-MESSAGE_BUS_CONFIG_INDEX = "message_bus"
 CONFIG_SPEC_TYPE = "yaml"
 
 # This file will be created when sspl is being configured for node replacement case
@@ -81,7 +80,6 @@ file_store_config_path = '/etc/sspl.conf'
 sspl_test_file_path = "%s/sspl_test/conf/sspl_tests.conf" % (SSPL_BASE_DIR)
 sspl_config_path = "yaml://%s" % (file_store_config_path)
 sspl_test_config_path = "yaml://%s" % (sspl_test_file_path)
-message_bus_file_path = "json:///etc/%s/message_bus.conf" % (PRODUCT_FAMILY)
 salt_provisioner_pillar_sls = 'sspl'
 salt_uniq_attr_per_node = ['cluster_id']
 salt_uniq_passwd_per_node = ['RABBITMQINGRESSPROCESSOR', 'RABBITMQEGRESSPROCESSOR', 'LOGGINGPROCESSOR']

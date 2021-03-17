@@ -21,7 +21,7 @@
 import json
 import time
 
-from cortx.utils.message_bus import MessageProducer, MessageBus
+from cortx.utils.message_bus import MessageProducer
 from cortx.utils.message_bus.error import MessageBusError
 
 from framework.base.internal_msgQ import InternalMsgQ
