@@ -33,7 +33,7 @@ def update_sensor_info(config_index):
     sensors = dict()
     sensors["REALSTORSENSORS"] = "true"
     sensors["NODEHWSENSOR"] = "true"
-    sensors["SYSTEMDWATCHDOG"] = "true"
+    sensors["DISKMONITOR"] = "true"
     sensors["SERVICEMONITOR"] = "true"
     sensors["RAIDSENSOR"] = "true"
     sensors["SASPORTSENSOR"] = "true"

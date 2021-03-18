@@ -37,7 +37,7 @@ from cortx.utils.service import DbusServiceHandler
 from framework.utils.conf_utils import (CLUSTER, GLOBAL_CONF, SRVNODE, SSPL_CONF,
                                         Conf, SITE_ID, CLUSTER_ID, NODE_ID,
                                         RACK_ID, STORAGE_SET_ID,
-                                        SYSTEMDWATCHDOG, MONITORED_SERVICES)
+                                        SERVICEMONITOR, MONITORED_SERVICES)
 # Modules that receive messages from this module
 from message_handlers.logging_msg_handler import LoggingMsgHandler
 
@@ -100,7 +100,7 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
         self.storage_set_id = Conf.get(GLOBAL_CONF,
                                 f'{CLUSTER}>{SRVNODE}>{STORAGE_SET_ID}', 'ST01')
         self.monitored_services = Conf.get(SSPL_CONF,
-                                    f'{SYSTEMDWATCHDOG}>{MONITORED_SERVICES}')
+                                    f'{SERVICEMONITOR}>{MONITORED_SERVICES}')
 
     def _import_products(self, product):
         """Import classes based on which product is being used"""
