@@ -23,7 +23,7 @@ from common import check_sspl_ll_is_running
 from cortx.utils.service import DbusServiceHandler
 
 RESOURCE_TYPE = "node:sw:os:service"
-WAIT_TIME = 75   # 60s wait_time + 10s buffer
+WAIT_TIME = 75   # 60s wait_time + 15s buffer
 service_name = "rsyslog.service"
 
 def init(args):

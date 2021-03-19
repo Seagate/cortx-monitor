@@ -42,7 +42,7 @@ class ServiceWatchdogMsg(BaseSensorMsg):
                        signature = "N/A",
                        time      = "N/A",
                        expires   = -1):
-        """ Create message schema for the ServiceMonitor Sensor"""
+        """Create message schema for the ServiceMonitor Sensor"""
         super(ServiceWatchdogMsg, self).__init__()
 
         self._username           = username
