@@ -165,7 +165,8 @@ NODEHWSENSOR:
 
 REALSTORLOGICALVOLUMESENSOR:
    threaded: true
-   polling_frequency_override: 0
+   # Polling frequency override here applicable for both Disk Group & Logical Volume monitoring
+   polling_frequency_override: 10
 
 REALSTORENCLOSURESENSOR:
    threaded: true
