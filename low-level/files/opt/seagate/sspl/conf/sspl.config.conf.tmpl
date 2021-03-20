@@ -11,14 +11,26 @@ server_node:
     cluster_id: cid01
     hostname: ssc-vm-2217.colo.seagate.com
     name: srvnode-1
+    network:
+      data:
+        private_fqdn: srvnode-1.data.private
+        private_interfaces:
+        - eth1
+        public_fqdn: srvnode-1.data.public
+        public_interfaces:
+        - eth0
+      management:
+        interfaces:
+        - lo
+        public_fqdn: srvnode-1.mgmt.public
     node_id: '1'
     rack_id: '1'
     site_id: '1'
     storage:
-      enclosure_id: enclosure-1
+      enclosure_id: enc30512e5ae6df9f1ea02327bab45e499d
     type: VM
 storage_enclosure:
-  enclosure-1:
+  enc30512e5ae6df9f1ea02327bab45e499d:
     controller:
       password: Admin123
       primary:
@@ -29,6 +41,5 @@ storage_enclosure:
         port: '22'
       type: Gallium
       user: admin
-  enclosure_1:
-    name: enclosure-1
+    name: enc30512e5ae6df9f1ea02327bab45e499d
     type: RBOD
