@@ -13,8 +13,7 @@
 # about this software or licensing, please email opensource@seagate.com or
 # cortx-questions@seagate.com.
 
-"""
- ****************************************************************************
+""" ****************************************************************************
 
   Description:       Monitors Systemd for service events and notifies
                     the ServiceMsgHandler.
@@ -64,7 +63,7 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
         return ServiceMonitor.SENSOR_NAME
 
     def __init__(self):
-        "Initialize the relavent datastructures."
+        """Initialize the relavent datastructures."""
         super(ServiceMonitor, self).__init__(self.SENSOR_NAME,
                                                 self.PRIORITY)
 
@@ -188,7 +187,7 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
         return int(time.time())
 
     def get_service_status(self, service = None, unit = None):
-        """returns tuple of unit, service name, state, substate and pid"""
+        """returns tuple of unit, service name, state, substate and pid."""
         if not unit:
             unit = self._bus.get_object('org.freedesktop.systemd1',\
                                     self._manager.LoadUnit(service))

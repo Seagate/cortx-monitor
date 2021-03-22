@@ -30,7 +30,7 @@ from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
 from framework.base.sspl_constants import enabled_products
 from json_msgs.messages.actuators.service_controller import ServiceControllerMsg
-from json_msgs.messages.sensors.service_watchdog import ServiceWatchdogMsg
+from json_msgs.messages.sensors.service_monitor_msg import ServiceMonitorMsg
 
 from framework.utils.utility import errno_to_str_mapping
 from cortx.utils.service import DbusServiceHandler
@@ -228,7 +228,7 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
         elif "sensor_request_type" in jsonMsg and \
             "service_status_alert" in jsonMsg["sensor_request_type"]:
             logger.debug(f"Received alert from ServiceMonitor : {jsonMsg}")
-            jsonMsg1 = ServiceWatchdogMsg(jsonMsg["sensor_request_type"]).getJson()
+            jsonMsg1 = ServiceMonitorMsg(jsonMsg["sensor_request_type"]).getJson()
             self._write_internal_msgQ("RabbitMQegressProcessor", jsonMsg1)
 
             # Create an IEM if the resulting service state is failed

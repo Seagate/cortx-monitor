@@ -16,7 +16,7 @@
 """
  ****************************************************************************
   Description:       Defines the JSON message transmitted by the
-                    Service Watchdogs. There may be a time when we need to
+                    Service Monitor. There may be a time when we need to
                     maintain state as far as messages being transmitted.  This
                     may involve aggregation of multiple messages before
                     transmissions or simply deferring an acknowledgment to
@@ -29,12 +29,9 @@ import json
 
 from json_msgs.messages.sensors.base_sensors_msg import BaseSensorMsg
 
-class ServiceWatchdogMsg(BaseSensorMsg):
-    '''
-    The JSON message transmitted by the Service Watchdogs
-    '''
+class ServiceMonitorMsg(BaseSensorMsg):
+    """The JSON message transmitted by the Service Monitor."""
 
-    ACTUATOR_MSG_TYPE = "service_watchdog"
     MESSAGE_VERSION  = "1.0.0"
 
     def __init__(self, jsonMsg,
@@ -42,8 +39,8 @@ class ServiceWatchdogMsg(BaseSensorMsg):
                        signature = "N/A",
                        time      = "N/A",
                        expires   = -1):
-        """Create message schema for the ServiceMonitor Sensor"""
-        super(ServiceWatchdogMsg, self).__init__()
+        """Create message schema for the ServiceMonitor Sensor."""
+        super(ServiceMonitorMsg, self).__init__()
 
         self._username           = username
         self._signature          = signature
