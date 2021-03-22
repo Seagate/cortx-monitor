@@ -28,6 +28,7 @@ from framework.base.sspl_constants import (PRODUCT_FAMILY,
                                            SSPL_CONFIG_INDEX,
                                            SSPL_TEST_CONFIG_INDEX)
 
+
 TEST_DIR = f"/opt/seagate/{PRODUCT_FAMILY}/sspl/sspl_test"
 
 class SSPLTestCmd:
@@ -85,6 +86,35 @@ class SSPLTestCmd:
                  "RABBITMQEGRESSPROCESSOR>password", rmq_passwd)
         Conf.save(SSPL_TEST_CONFIG_INDEX)
 
+        # TODO: Move lines 90-116 & 125-127 to RunQATest class
+        # Create dummy service and add service name in /etc/sspl.conf
+        service_name = "dummy_service.service"
+        service_file_path = f"{TEST_DIR}/alerts/os/dummy_service_files/dummy_service.service"
+        service_executable_code = f"{TEST_DIR}/alerts/os/dummy_service_files/dummy_service.py"
+        shutil.copy(service_executable_code, '/tmp/sspl/dummy_service.py')
+        # Make service file executable.
+        cmd = "chmod +x /tmp/sspl/dummy_service.py"
+        _, error, returncode = SimpleProcess(cmd).run()
+        if returncode !=0:
+            print("%s error occurred while executing cmd: %s" %(error, cmd))
+        # Copy service file to /etc/systemd/system/ path.
+        shutil.copyfile(service_file_path, '/etc/systemd/system/dummy_service.service')
+        cmd= "systemctl daemon-reload"
+        _, error, returncode = SimpleProcess(cmd).run()
+        if returncode !=0:
+                print("%s error occurred while executing cmd: %s" %(error, cmd))
+        cmd = "systemctl enable dummy_service.service"
+        _, error, returncode = SimpleProcess(cmd).run()
+        if returncode !=0:
+                print("%s error occurred while executing cmd: %s" %(error, cmd))
+        self.dbus_service.start('dummy_service.service')
+
+        service_list = Conf.get(SSPL_CONFIG_INDEX, "SERVICEMONITOR>monitored_services")
+        service_list.append(service_name)
+        Conf.set(SSPL_CONFIG_INDEX, "SERVICEMONITOR>monitored_services",
+            service_list)
+        Conf.save(SSPL_CONFIG_INDEX)
+
         # TODO: Convert shell script to python
         # from cortx.sspl.sspl_test.run_qa_test import RunQATest
         # RunQATest(self.plan, self.avoid_rmq).run()
@@ -92,6 +122,9 @@ class SSPLTestCmd:
         output, error, returncode = SimpleProcess(CMD).run(realtime_output=True)
         # Restore the original path/file & service, then throw exception
         # if execution is failed.
+        service_list.remove(service_name)
+        Conf.set(SSPL_CONFIG_INDEX,"SERVICEMONITOR>monitored_services",
+            service_list)
         Conf.set(SSPL_CONFIG_INDEX,
                  "SYSTEM_INFORMATION>global_config_copy_url", global_config_copy_url)
         Conf.save(SSPL_CONFIG_INDEX)

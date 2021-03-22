@@ -244,7 +244,7 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
                             "log_type": "IEM",
                             "log_msg": "IEC: 020003001: Service entered a "\
                                 "Failed state : %s"
-                                % {json.dumps(specific_info, sort_keys=True)}
+                                % (json.dumps(specific_info, sort_keys=True))
                             }
                         }
                     })

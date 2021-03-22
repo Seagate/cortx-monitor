@@ -388,7 +388,8 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
                 f"{service} is not available for use.",
                 "Try to restart the service"],
             [f"{service} in a non_active state for more than {self.max_wait_time} seconds.",
-                f"{service} is not available for use.",      #index 1
+                "fault",                                     #index 1
+                f"{service} is not available for use.",
                 "Try to restart the service"],
             [f"{service} in {state} state.",
                 "fault_resolved",                            #index 2

@@ -21,10 +21,11 @@ from default import world
 from rabbitmq.rabbitmq_ingress_processor_tests import RabbitMQingressProcessorTests
 from common import check_sspl_ll_is_running
 from cortx.utils.service import DbusServiceHandler
+from alerts.os.dummy_service_files import simulate_service_alerts
 
 RESOURCE_TYPE = "node:sw:os:service"
-WAIT_TIME = 75   # 60s wait_time + 15s buffer
-service_name = "rsyslog.service"
+WAIT_TIME = 80   # 60s wait_time + 15s buffer
+service_name = "dummy_service.service"
 
 def init(args):
     pass
@@ -74,17 +75,28 @@ def read_ingress_queue():
 
 def test_service_inactive_alert(args):
     check_sspl_ll_is_running()
+    # Simulate Fault alert by stopping the service.
     DbusServiceHandler().stop(service_name)
     time.sleep(WAIT_TIME)
     sensor_response = read_ingress_queue()
     assert_on_mismatch(sensor_response, "fault")
-
-def test_service_fault_resolved_alert(args):
-    check_sspl_ll_is_running()
+    # Simulate Fault resolved alert.
     DbusServiceHandler().start(service_name)
     time.sleep(5)
     sensor_response = read_ingress_queue()
     assert_on_mismatch(sensor_response, "fault_resolved")
+
+
+def test_service_failed_alert(args):
+    simulate_service_alerts.simulate_fault_alert()
+    time.sleep(5)
+    sensor_response = read_ingress_queue()
+    assert_on_mismatch(sensor_response, "fault")
+    simulate_service_alerts.restore_service_file()
+    time.sleep(5)
+    sensor_response = read_ingress_queue()
+    assert_on_mismatch(sensor_response, "fault_resolved")
+
 
 def test_service_restart_case(args):
     check_sspl_ll_is_running()
@@ -94,9 +106,9 @@ def test_service_restart_case(args):
     state = DbusServiceHandler().get_state(service_name).state
     if sensor_response and state == "active":
         print(sensor_response)
-        assert(sensor_response['info']['alert_type'] == "fault")
-
+        assert(sensor_response['info']['alert_type'] != "fault")
+    simulate_service_alerts.cleanup()
 
 test_list = [test_service_inactive_alert,
-             test_service_fault_resolved_alert,
+            test_service_failed_alert,
              test_service_restart_case]
