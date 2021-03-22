@@ -100,7 +100,7 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
 
         # Integrate into the main dbus loop to catch events
         DBusGMainLoop(set_as_default=True)
-        
+
         # Initialize SystemBus and get Manager Interface
         self._bus = SystemBus()
         systemd = self._bus.get_object("org.freedesktop.systemd1",
@@ -151,7 +151,7 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
             context = self._loop.get_context()
 
             time_to_check_lists = self.current_time() + self.polling_frequency
-            
+
             while self.is_running():
                 # At interval of 'thread_sleep' check for events occured for
                 # registered services and process them(call on_pro_changed())
@@ -159,7 +159,7 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
                 time.sleep(self.thread_sleep)
 
                 # At interval of 'polling_freqency' process unregistered
-                # services and services with not-active state. 
+                # services and services with not-active state.
                 if time_to_check_lists <= self.current_time():
                     time_to_check_lists = self.current_time() + \
                                             self.polling_frequency
@@ -191,17 +191,17 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
         """returns tuple of unit, service name, state, substate and pid"""
         if not unit:
             unit = self._bus.get_object('org.freedesktop.systemd1',\
-                                    self._manager.LoadUnit(service))    
-        
+                                    self._manager.LoadUnit(service))
+
         Iunit = Interface(unit, dbus_interface='org.freedesktop.DBus.Properties')
-        
+
         if not service:
             service = str(Iunit.Get('org.freedesktop.systemd1.Unit', 'Id'))
-        
+
         state = str(Iunit.Get('org.freedesktop.systemd1.Unit', 'ActiveState'))
         substate = str(Iunit.Get('org.freedesktop.systemd1.Unit', 'SubState'))
         pid = str(Iunit.Get('org.freedesktop.systemd1.Service', 'ExecMainPID'))
-        
+
         return (unit, service, state, substate, pid)
 
     def connect_to_prop_changed_signal(self, service):
@@ -224,7 +224,8 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
             logger.debug(f"{service}({pid}) state is {state}:{substate}")
 
             if state in  ["activating", "reloading", "deactivating"]:
-                self.not_active_services[service] = self.current_time()
+                self.not_active_services[service] = \
+                                    [self.current_time(), "N/A", "N/A"]
             elif state != "active":
                 self.failed_services.append(service)
                 self.raise_alert(service, "N/A", state, "N/A", substate,
@@ -240,15 +241,17 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
             the threshould time for inactivity.
         """
         not_active_services_copy = self.not_active_services.copy()
-        for service, start_time in not_active_services_copy.items():
+        for service, [start_time, prev_state, prev_substate]\
+                                 in not_active_services_copy.items():
+
             if self.current_time() - start_time > self.max_wait_time:
                 state = self.service_status[service]["state"]
                 substate = self.service_status[service]["substate"]
                 pid = self.service_status[service]["pid"]
                 self.not_active_services.pop(service)
                 self.failed_services.append(service)
-                self.raise_alert(service, state, state, substate, substate,
-                                pid , pid, 1)
+                self.raise_alert(service, prev_state, state, prev_substate,
+                                 substate, pid , pid, 1)
 
     def update_status(self, service, state, substate, pid):
         self.service_status[service] = {
@@ -267,7 +270,7 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
 
         logger.debug(f"Event for {service}, properties changed from "\
                      f"{prev_state} to {state}")
-        
+
         if prev_state == state:
             return
 
@@ -286,7 +289,11 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
     def action_per_transition(self, service, prev_state, state,
                         prev_substate, substate, prev_pid, pid):
         """Take action according to the state change of the service."""
-        alert_index = -1
+
+        # alert_info_index : index pointing to alert_info table from
+        #               ServiceMonitor:raise_alerts() representing alert
+        #               description, type, impact etc. to be sent.
+        alert_info_index = -1
 
         logger.debug(f"ServiceMonitor:action_per_transition for {service} : " + \
             f"({prev_state}:{prev_substate}) -> ({state}:{substate})")
@@ -297,90 +304,106 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
                 self.not_active_services.pop(service)
                 if service in self.failed_services:
                     self.failed_services.remove(service)
-                    alert_index = 2
-            elif state in ["deactivating", "inactive", "reloading"]:
-                # active -> deactivating/inactive/reloading 
+                    alert_info_index = 2
+            elif state != "failed":
+                # active -> deactivating/inactive/reloading/activating
                 # or
-                # reloading -> deactivating/inactive
-                self.not_active_services[service] = self.current_time()
+                # reloading -> deactivating/inactive/activating
+                self.not_active_services[service] = \
+                    [self.current_time(), prev_state, prev_substate]
             elif state == "failed":
                 # active/reloading -> failed
-                self.failed_services.append(service)
-                alert_index = 0
-            else:
-                alert_index = 3
+                if service not in self.failed_services:
+                    self.failed_services.append(service)
+                    alert_info_index = 0
         elif prev_state == "deactivating":
             if state in ["inactive", "activating"]:
                 # deactivating -> inactive/activating
                 if service not in self.not_active_services:
-                    self.not_active_services[service] = self.current_time()
+                    self.not_active_services[service] = \
+                        [self.current_time(), prev_state, prev_substate]
             elif state == "failed":
                 # deactivating -> failed
-                self.failed_services.append(service)
-                alert_index = 0
+                if service not in self.failed_services:
+                    self.failed_services.append(service)
+                    alert_info_index = 0
             else:
-                alert_index = 3
+                alert_info_index = 3
         elif prev_state in ["inactive", "failed"]:
             if state == "activating":
                 # inactive/failed -> activating
                 if service not in self.not_active_services:
-                    self.not_active_services[service] = self.current_time()
+                    self.not_active_services[service] = \
+                        [self.current_time(), prev_state, prev_substate]
             elif state == "active":
                 # inactive/failed -> active
                 if service in self.failed_services:
                     self.failed_services.remove(service)
-                    alert_index = 2
+                    alert_info_index = 2
                 if service in self.not_active_services:
                     self.not_active_services.pop(service)
+            elif state == "failed":
+                # inactive -> failed
+                if service not in self.failed_services:
+                    self.failed_services.append(service)
+                    alert_info_index = 0
             else:
-                alert_index = 3
+                alert_info_index = 3
         elif prev_state == "activating":
             if service in self.not_active_services:
                 self.not_active_services.pop(service)
             if state in ["inactive", "deactivating"]:
                 # activating -> inactive/deactivating
                 self.failed_services.append(service)
-                alert_index = 0
+                alert_info_index = 0
             elif state == "active":
                 # activating -> active
                 if service in self.failed_services:
                     self.failed_services.remove(service)
-                    alert_index = 2
+                    alert_info_index = 2
                 else :
                     # its a restart.
                     pass
             elif state == "failed":
                 # activating -> failed
-                self.failed_services.append(service)
-                alert_index = 0
+                if service not in self.failed_services:
+                    self.failed_services.append(service)
+                    alert_info_index = 0
             else:
-                alert_index = 3
+                alert_info_index = 3
 
-        if alert_index != -1:
+        if alert_info_index != -1:
             self.raise_alert(service, prev_state, state,
                 prev_substate, substate, prev_pid, pid,
-                alert_index)
+                alert_info_index)
 
     def raise_alert(self, service, prev_state, state, prev_substate,
-                    substate, prev_pid, pid, alert_index):
+                    substate, prev_pid, pid, alert_info_index):
         """ Send the alert to ServiceMsgHandler."""
         # Each alert info contains 4 fields
         # 1.Description | 2.Alert Type | 3.Impact | 4.Recommendation
         alert_info = [
             [f"{service} in {state} state.",                #index 0
-                "fault", "", ""],
+                "fault",
+                f"{service} is not available for use.",
+                "Try to restart the service"],
             [f"{service} in a non_active state for more than {self.max_wait_time} seconds.",
-                "fault", "", ""],                           #index 1
-            [f"{service} returned to running state.",
-                "fault_resolved", "", ""],                  #index 2
+                f"{service} is not available for use.",      #index 1
+                "Try to restart the service"],
+            [f"{service} in {state} state.",
+                "fault_resolved",                            #index 2
+                f"{service} is available for use now.",
+                ""],
             [f"service state transition from {prev_state} to {state} is not handled.",
-                "missing", "", ""]                          #index 3
+                "missing",                                   #index 3
+                "SSPL is not handling the trnasition",
+                "SSPL should be conacted to register an action for the transition."]
         ]
 
-        description = alert_info[alert_index][0]
-        alert_type = alert_info[alert_index][1]
-        impact = alert_info[alert_index][2]
-        recommendation = alert_info[alert_index][3]
+        description = alert_info[alert_info_index][0]
+        alert_type = alert_info[alert_info_index][1]
+        impact = alert_info[alert_info_index][2]
+        recommendation = alert_info[alert_info_index][3]
 
         severity = SeverityReader().map_severity(alert_type)
         epoch_time = str(self.current_time())
@@ -416,12 +439,12 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
                     "info": info,
                     "specific_info" : {
                         "service_name" : service,
-                        "state" : state,
                         "previous_state" : prev_state,
-                        "substate" : substate,
+                        "state" : state,
                         "previous_substate" : prev_substate,
-                        "pid" : pid,
+                        "substate" : substate,
                         "previous_pid" : prev_pid,
+                        "pid" : pid,
                     }
                 }
             }
