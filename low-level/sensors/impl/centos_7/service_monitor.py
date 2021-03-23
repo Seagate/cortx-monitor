@@ -334,6 +334,13 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
                 if service not in self.failed_services:
                     self.failed_services.append(service)
                     alert_info_index = 0
+            elif state == "active":
+                # deactivating -> active
+                if service in self.not_active_services:
+                    self.not_active_services.pop(service)
+                if service in self.failed_services:
+                    self.failed_services.remove(service)
+                    alert_info_index = 2
             else:
                 alert_info_index = 3
         elif prev_state in ["inactive", "failed"]:
@@ -379,6 +386,9 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
             else:
                 alert_info_index = 3
 
+        if alert_info_index == 3:
+            logger.warning(f"{service} service state transition from "\
+                           f"{prev_state} to {state} is not handled.")
         if alert_info_index != -1:
             self.raise_alert(service, prev_state, state,
                 prev_substate, substate, prev_pid, pid,
@@ -402,11 +412,6 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
                 "fault_resolved",                            #index 2
                 f"{service} service is available now.",
                 ""],
-            [f"{service} service state transition from {prev_state} to {state}"\
-                " is not handled.",
-                "missing",                                   #index 3
-                "State transition not recognized, unknown impact.",
-                "If alert needs to be categorized, raise request for same"]
         ]
 
         description = alert_info[alert_info_index][0]

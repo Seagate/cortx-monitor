@@ -104,6 +104,8 @@ class SSPLTestCmd:
         _, error, returncode = SimpleProcess(cmd).run()
         if returncode !=0:
             print("%s error occurred while executing cmd: %s" %(error, cmd))
+            print("failed to assign execute permission for dummy_service.py."\
+                    " dummy_service will fail.")
 
         # Copy service file to /etc/systemd/system/ path.
         shutil.copyfile(service_file_path_src,
@@ -111,7 +113,8 @@ class SSPLTestCmd:
         cmd= "systemctl daemon-reload"
         _, error, returncode = SimpleProcess(cmd).run()
         if returncode !=0:
-                print("%s error occurred while executing cmd: %s" %(error, cmd))
+                print(f"failed to execute '{cmd}', systemctl will be unable"\
+                    f" to manage the dummy_service.service \nError: {error}")
 
         self.dbus_service.enable(service_name)
         self.dbus_service.start(service_name)

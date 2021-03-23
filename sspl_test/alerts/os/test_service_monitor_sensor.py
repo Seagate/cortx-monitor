@@ -24,11 +24,16 @@ from cortx.utils.service import DbusServiceHandler
 from alerts.os.dummy_service_files import simulate_service_alerts
 
 RESOURCE_TYPE = "node:sw:os:service"
-WAIT_TIME = 80   # 60s wait_time + 15s buffer
+WAIT_TIME = 80   # 60s wait_time + 20s buffer
 service_name = "dummy_service.service"
 
 def init(args):
     pass
+
+def check_service_is_running(service_name):
+    state = DbusServiceHandler().get_state(service_name).state
+    assert(state == "active")
+    return state
 
 def assert_on_mismatch(sensor_response, alert_type):
     assert(sensor_response is not None)
@@ -75,6 +80,7 @@ def read_ingress_queue():
 
 def test_service_inactive_alert(args):
     check_sspl_ll_is_running()
+    check_service_is_running(service_name)
     # Simulate Fault alert by stopping the service.
     DbusServiceHandler().stop(service_name)
     time.sleep(WAIT_TIME)
@@ -86,8 +92,9 @@ def test_service_inactive_alert(args):
     sensor_response = read_ingress_queue()
     assert_on_mismatch(sensor_response, "fault_resolved")
 
-
 def test_service_failed_alert(args):
+    check_sspl_ll_is_running()
+    check_service_is_running(service_name)
     simulate_service_alerts.simulate_fault_alert()
     time.sleep(5)
     sensor_response = read_ingress_queue()
@@ -97,14 +104,14 @@ def test_service_failed_alert(args):
     sensor_response = read_ingress_queue()
     assert_on_mismatch(sensor_response, "fault_resolved")
 
-
 def test_service_restart_case(args):
     check_sspl_ll_is_running()
+    check_service_is_running(service_name)
     DbusServiceHandler().restart(service_name)
     time.sleep(WAIT_TIME)
     sensor_response = read_ingress_queue()
-    state = DbusServiceHandler().get_state(service_name).state
-    if sensor_response and state == "active":
+    check_service_is_running(service_name)
+    if sensor_response:
         print(sensor_response)
         assert(sensor_response['info']['alert_type'] != "fault")
     simulate_service_alerts.cleanup()
