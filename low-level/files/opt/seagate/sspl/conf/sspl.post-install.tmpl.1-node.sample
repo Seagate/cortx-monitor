@@ -1,0 +1,27 @@
+cortx:
+  release:
+    product: LR2
+    setup: cortx
+server_node:
+  30512e5ae6df9f1ea02327bab45e499d:
+    bmc:
+      ip: 198.120.10.1
+      secret: Admin123
+      user: ADMIN
+    hostname: ssc-vm-2217.colo.seagate.com
+    name: srvnode-1
+    storage:
+      enclosure_id: enc30512e5ae6df9f1ea02327bab45e499d
+    type: VM
+storage_enclosure:
+  enc30512e5ae6df9f1ea02327bab45e499d:
+    controller:
+      password: Admin123
+      primary:
+        ip: 10.0.0.2
+        port: '22'
+      secondary:
+        ip: 10.0.0.3
+        port: '22'
+      type: Gallium
+      user: admin

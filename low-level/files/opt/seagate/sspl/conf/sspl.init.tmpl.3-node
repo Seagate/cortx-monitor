@@ -1,0 +1,139 @@
+cluster:
+  TMPL_CLUSTER_ID:
+    name: cortx_cluster
+    site:
+      storage_set_count: '3'
+    site_count: '1'
+    storage_set:
+    - name: StorageSet-1
+      server_nodes:
+      - TMPL_NODE_NAME_1
+      - TMPL_NODE_NAME_2
+      - TMPL_NODE_NAME_3
+      storage_enclosures:
+      - TMPL_ENCLOSURE_NAME_1
+      - TMPL_ENCLOSURE_NAME_2
+      - TMPL_ENCLOSURE_NAME_3
+cortx:
+  release:
+    product: LR2
+    setup: cortx
+server_node:
+  TMPL_MACHINE_ID_1:
+    bmc:
+      ip: TMPL_BMC_IP_1
+      secret: TMPL_BMC_SECRET_1
+      user: TMPL_BMC_USER_1
+    cluster_id: TMPL_CLUSTER_ID_1
+    hostname: TMPL_HOSTNAME_1
+    name: TMPL_NODE_NAME_1
+    network:
+      data:
+        private_fqdn: TMPL_DATA_PRIVATE_FQDN_1
+        private_interfaces:
+        - TMPL_DATA_PRIVATE_INTERFACE_1
+        public_fqdn: TMPL_DATA_PUBLIC_FQDN_1
+        public_interfaces:
+        - TMPL_DATA_PUBLIC_INTERFACE_1
+      management:
+        interfaces:
+        - TMPL_MGMT_INTERFACE_1
+        public_fqdn: TMPL_MGMT_PUBLIC_FQDN_1
+    node_id: TMPL_NODE_ID_1
+    rack_id: TMPL_RACK_ID_1
+    site_id: TMPL_SITE_ID_1
+    storage:
+      enclosure_id: TMPL_ENCLOSURE_ID_1
+    type: TMPL_SERVER_NODE_TYPE_1
+  TMPL_MACHINE_ID_2:
+    bmc:
+      ip: TMPL_BMC_IP_2
+      secret: TMPL_BMC_SECRET_2
+      user: TMPL_BMC_USER_2
+    cluster_id: TMPL_CLUSTER_ID_2
+    hostname: TMPL_HOSTNAME_2
+    name: TMPL_NODE_NAME_2
+    network:
+      data:
+        private_fqdn: TMPL_DATA_PRIVATE_FQDN_2
+        private_interfaces:
+        - TMPL_DATA_PRIVATE_INTERFACE_2
+        public_fqdn: TMPL_DATA_PUBLIC_FQDN_2
+        public_interfaces:
+        - TMPL_DATA_PUBLIC_INTERFACE_2
+      management:
+        interfaces:
+        - TMPL_MGMT_INTERFACE_2
+        public_fqdn: TMPL_MGMT_PUBLIC_INTERFACE_2
+    node_id: TMPL_NODE_ID_2
+    rack_id: TMPL_RACK_ID_2
+    site_id: TMPL_SITE_ID_2
+    storage:
+      enclosure_id: TMPL_ENCLOSURE_ID_2
+    type: TMPL_SERVER_NODE_TYPE_2
+  TMPL_MACHINE_ID_3:
+    bmc:
+      ip: TMPL_BMC_IP_3
+      secret: TMPL_BMC_SECRET_3
+      user: TMPL_BMC_USER_3
+    cluster_id: TMPL_CLUSTER_ID_3
+    hostname: TMPL_HOSTNAME_3
+    name: TMPL_NODE_NAME_3
+    network:
+      data:
+        private_fqdn: TMPL_DATA_PRIVATE_FQDN_3
+        private_interfaces:
+        - TMPL_DATA_PRIVATE_INTERFACE_3
+        public_fqdn: TMPL_DATA_PUBLIC_FQDN_3
+        public_interfaces:
+        - TMPL_DATA_PUBLIC_INTERFACE_3
+      management:
+        interfaces:
+        - TMPL_MGMT_INTERFACE_3
+        public_fqdn: TMPL_MGMT_PUBLIC_FQDN_3
+    node_id: TMPL_NODE_ID_3
+    rack_id: TMPL_RACK_ID_3
+    site_id: TMPL_SITE_ID_3
+    storage:
+      enclosure_id: TMPL_ENCLOSURE_ID_3
+    type: TMPL_SERVER_NODE_TYPE_3
+storage_enclosure:
+  TMPL_ENCLOSURE_ID_1:
+    controller:
+      password: TMPL_CONTROLLER_PASSWORD_1
+      primary:
+        ip: TMPL_PRIMARY_CONTROLLER_IP_1
+        port: TMPL_PRIMARY_CONTROLLER_PORT_1
+      secondary:
+        ip: TMPL_SECONDARY_CONTROLLER_IP_1
+        port: TMPL_SECONDARY_CONTROLLER_PORT_1
+      type: TMPL_CONTROLLER_TYPE_1
+      user: TMPL_CONTROLLER_USER_1
+    name: TMPL_ENCLOSURE_NAME_1
+    type: TMPL_ENCLOSURE_TYPE_1
+  TMPL_ENCLOSURE_ID_2:
+    controller:
+      password: TMPL_CONTROLLER_PASSWORD_2
+      primary:
+        ip: TMPL_PRIMARY_CONTROLLER_IP_2
+        port: TMPL_PRIMARY_CONTROLLER_PORT_2
+      secondary:
+        ip: TMPL_SECONDARY_CONTROLLER_IP_2
+        port: TMPL_SECONDARY_CONTROLLER_PORT_2
+      type: TMPL_CONTROLLER_TYPE_2
+      user: TMPL_CONTROLLER_USER_2
+    name: TMPL_ENCLOSURE_NAME_2
+    type: TMPL_ENCLOSURE_TYPE_2
+  TMPL_ENCLOSURE_ID_3:
+    controller:
+      password: TMPL_CONTROLLER_PASSWORD_3
+      primary:
+        ip: TMPL_PRIMARY_CONTROLLER_IP_3
+        port: TMPL_PRIMARY_CONTROLLER_PORT_3
+      secondary:
+        ip: TMPL_SECONDARY_CONTROLLER_IP_3
+        port: TMPL_SECONDARY_CONTROLLER_PORT_3
+      type: TMPL_CONTROLLER_TYPE_3
+      user: TMPL_CONTROLLER_USER_3
+    name: TMPL_ENCLOSURE_NAME_3
+    type: TMPL_ENCLOSURE_TYPE_3
