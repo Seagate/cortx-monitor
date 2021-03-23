@@ -13,6 +13,7 @@
 # please email opensource@seagate.com or cortx-questions@seagate.com.
 
 import shutil
+import os
 
 from cortx.utils.process import SimpleProcess
 from cortx.utils.conf_store import Conf
@@ -89,25 +90,31 @@ class SSPLTestCmd:
         # TODO: Move lines 90-116 & 125-127 to RunQATest class
         # Create dummy service and add service name in /etc/sspl.conf
         service_name = "dummy_service.service"
-        service_file_path = f"{TEST_DIR}/alerts/os/dummy_service_files/dummy_service.service"
-        service_executable_code = f"{TEST_DIR}/alerts/os/dummy_service_files/dummy_service.py"
-        shutil.copy(service_executable_code, '/tmp/sspl/dummy_service.py')
+        service_file_path_src = f"{TEST_DIR}/alerts/os/dummy_service_files/dummy_service.service"
+        service_executable_code_src = f"{TEST_DIR}/alerts/os/dummy_service_files/dummy_service.py"
+        service_file_path_des = "/etc/systemd/system"
+        service_executable_code_des = "/var/cortx/sspl/test"
+
+        os.makedirs(service_executable_code_des, 0o777, exist_ok=True)
+
+        shutil.copy(service_executable_code_src,
+                    f'{service_executable_code_des}/dummy_service.py')
         # Make service file executable.
-        cmd = "chmod +x /tmp/sspl/dummy_service.py"
+        cmd = f"chmod +x {service_executable_code_des}/dummy_service.py"
         _, error, returncode = SimpleProcess(cmd).run()
         if returncode !=0:
             print("%s error occurred while executing cmd: %s" %(error, cmd))
+
         # Copy service file to /etc/systemd/system/ path.
-        shutil.copyfile(service_file_path, '/etc/systemd/system/dummy_service.service')
+        shutil.copyfile(service_file_path_src,
+                        f'{service_file_path_des}/dummy_service.service')
         cmd= "systemctl daemon-reload"
         _, error, returncode = SimpleProcess(cmd).run()
         if returncode !=0:
                 print("%s error occurred while executing cmd: %s" %(error, cmd))
-        cmd = "systemctl enable dummy_service.service"
-        _, error, returncode = SimpleProcess(cmd).run()
-        if returncode !=0:
-                print("%s error occurred while executing cmd: %s" %(error, cmd))
-        self.dbus_service.start('dummy_service.service')
+
+        self.dbus_service.enable(service_name)
+        self.dbus_service.start(service_name)
 
         service_list = Conf.get(SSPL_CONFIG_INDEX, "SERVICEMONITOR>monitored_services")
         service_list.append(service_name)

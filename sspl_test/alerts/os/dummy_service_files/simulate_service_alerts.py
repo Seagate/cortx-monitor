@@ -23,28 +23,29 @@ from cortx.utils.service import DbusServiceHandler
 path = os.path.dirname(os.path.abspath(__file__))
 service_name = "dummy_service.service"
 service_file_path = f"{path}/{service_name}"
-service_executable_code = f"{path}/dummy_service.py"
+service_executable_code_src = f"{path}/dummy_service.py"
+service_executable_code_des = "/var/cortx/sspl/test"
 dbus_service = DbusServiceHandler()
 
 def simulate_fault_alert():
     """Simulate fault for dummy service by deleting executable service file."""
-    os.remove("/tmp/sspl/dummy_service.py")
+    os.remove(f"{service_executable_code_des}/dummy_service.py")
     dbus_service.restart(service_name)
 
 def restore_service_file():
     """Simulate fault resolved for dummy service by creating executable
         service file."""
-    shutil.copy(service_executable_code, '/tmp/sspl/')
+    shutil.copy(service_executable_code_src, service_executable_code_des)
     # Make service file executable.
-    cmd = "chmod +x /tmp/sspl/dummy_service.py"
+    cmd = f"chmod +x {service_executable_code_des}/dummy_service.py"
     execute_cmd(cmd)
     dbus_service.restart(service_name)
 
 def cleanup():
-    os.remove("/tmp/sspl/dummy_service.py")
-    os.remove(f"/etc/systemd/system/{service_name}")
     dbus_service.stop(service_name)
-    execute_cmd(f"systemctl disable {service_name}")
+    dbus_service.disable(service_name)
+    os.remove(f"{service_executable_code_des}/dummy_service.py")
+    os.remove(f"/etc/systemd/system/{service_name}")
     execute_cmd("systemctl daemon-reload")
 
 def execute_cmd(cmd):

@@ -13,8 +13,9 @@
 # about this software or licensing, please email opensource@seagate.com or
 # cortx-questions@seagate.com.
 
-""" ****************************************************************************
+"""Sensor to Monitor Systemd Services.
 
+ ****************************************************************************
   Description:       Monitors Systemd for service events and notifies
                     the ServiceMsgHandler.
  ****************************************************************************
@@ -37,7 +38,7 @@ from framework.utils.service_logging import logger
 from framework.utils.conf_utils import (GLOBAL_CONF, CLUSTER, SRVNODE, SITE_ID,
                 RACK_ID, NODE_ID, CLUSTER_ID, SSPL_CONF, Conf)
 from framework.utils.severity_reader import SeverityReader
-from framework.utils.mon_utils import get_alert_id
+from framework.utils.mon_utils import get_alert_id, current_time
 
 @implementer(ISystemMonitor)
 class ServiceMonitor(SensorThread, InternalMsgQ):
@@ -149,7 +150,7 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
             gobject.threads_init()
             context = self._loop.get_context()
 
-            time_to_check_lists = self.current_time() + self.polling_frequency
+            time_to_check_lists = current_time() + self.polling_frequency
 
             while self.is_running():
                 # At interval of 'thread_sleep' check for events occured for
@@ -159,12 +160,15 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
 
                 # At interval of 'polling_freqency' process unregistered
                 # services and services with not-active state.
-                if time_to_check_lists <= self.current_time():
-                    time_to_check_lists = self.current_time() + \
+                if time_to_check_lists <= current_time():
+                    time_to_check_lists = current_time() + \
                                             self.polling_frequency
 
-                    # Try to bind the enabled services ont he node to the
-                    # signal whose Unit was earlier not found
+                    # Try to bind the enabled services on the node to the
+                    # signal whose Unit was earlier not found. On successfully
+                    # registering for service state change signal, remove from
+                    # local list as monitoring enabled through SystemD
+                    # and to avoid re-registration.
                     services_to_monitor_copy = self.services_to_monitor.copy()
                     for service in services_to_monitor_copy:
                         if not self.connect_to_prop_changed_signal(service):
@@ -182,9 +186,6 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
         except Exception as err:
             logger.error("Ungracefully breaking out of " +\
                             "ServiceMonitor:run() with error: %s" % err)
-
-    def current_time(self):
-        return int(time.time())
 
     def get_service_status(self, service = None, unit = None):
         """returns tuple of unit, service name, state, substate and pid."""
@@ -204,13 +205,17 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
         return (unit, service, state, substate, pid)
 
     def connect_to_prop_changed_signal(self, service):
-        """Bind the service to a signal('PropertiesChanged') which will be
-           triggered whenever the service changes it's state/substate.
+        """Bind the service to a signal('PropertiesChanged').
+        
+           Fetch the service unit from systemd and its state, substate,
+           pid etc. Bind the service to the sigle which will be triggered
+           whenever the service changes it's state/substate. Also raise
+           an alert if service is in failed/inactive state.
         """
         try:
             unit, _, state, substate, pid = self.get_service_status(service=service)
 
-            self.update_status(service, state, substate, pid)
+            self.update_status_local_cache(service, state, substate, pid)
 
             Iunit2 = Interface(unit,
                             dbus_interface='org.freedesktop.systemd1.Manager')
@@ -224,7 +229,7 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
 
             if state in  ["activating", "reloading", "deactivating"]:
                 self.not_active_services[service] = \
-                                    [self.current_time(), "N/A", "N/A"]
+                                    [current_time(), "N/A", "N/A"]
             elif state != "active":
                 self.failed_services.append(service)
                 self.raise_alert(service, "N/A", state, "N/A", substate,
@@ -236,14 +241,16 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
             return err
 
     def check_notactive_services(self):
-        """Raise Alert if any of the not-active services has exceeded
-            the threshould time for inactivity.
+        """Monitor non-active Services.
+        
+           Raise FAULT Alert if any of the not-active services has exceeded
+           the threshould time for inactivity.
         """
         not_active_services_copy = self.not_active_services.copy()
         for service, [start_time, prev_state, prev_substate]\
                                  in not_active_services_copy.items():
 
-            if self.current_time() - start_time > self.max_wait_time:
+            if current_time() - start_time > self.max_wait_time:
                 state = self.service_status[service]["state"]
                 substate = self.service_status[service]["substate"]
                 pid = self.service_status[service]["pid"]
@@ -251,8 +258,10 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
                 self.failed_services.append(service)
                 self.raise_alert(service, prev_state, state, prev_substate,
                                  substate, pid , pid, 1)
+                logger.warning(f"{service} in {state}:{substate} for "\
+                               f"more than {self.max_wait_time} seconds.")
 
-    def update_status(self, service, state, substate, pid):
+    def update_status_local_cache(self, service, state, substate, pid):
         self.service_status[service] = {
             "state" : state,
             "substate" : substate,
@@ -279,7 +288,7 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
         logger.info(f"{service} changed state from " + \
                     f"{prev_state}:{prev_substate} to {state}:{substate}")
 
-        self.update_status(service, state, substate, pid)
+        self.update_status_local_cache(service, state, substate, pid)
 
         self.action_per_transition(service, prev_state, state,
                     prev_substate, substate, prev_pid, pid)
@@ -288,7 +297,6 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
     def action_per_transition(self, service, prev_state, state,
                         prev_substate, substate, prev_pid, pid):
         """Take action according to the state change of the service."""
-
         # alert_info_index : index pointing to alert_info table from
         #               ServiceMonitor:raise_alerts() representing alert
         #               description, type, impact etc. to be sent.
@@ -309,7 +317,7 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
                 # or
                 # reloading -> deactivating/inactive/activating
                 self.not_active_services[service] = \
-                    [self.current_time(), prev_state, prev_substate]
+                    [current_time(), prev_state, prev_substate]
             elif state == "failed":
                 # active/reloading -> failed
                 if service not in self.failed_services:
@@ -320,7 +328,7 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
                 # deactivating -> inactive/activating
                 if service not in self.not_active_services:
                     self.not_active_services[service] = \
-                        [self.current_time(), prev_state, prev_substate]
+                        [current_time(), prev_state, prev_substate]
             elif state == "failed":
                 # deactivating -> failed
                 if service not in self.failed_services:
@@ -333,7 +341,7 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
                 # inactive/failed -> activating
                 if service not in self.not_active_services:
                     self.not_active_services[service] = \
-                        [self.current_time(), prev_state, prev_substate]
+                        [current_time(), prev_state, prev_substate]
             elif state == "active":
                 # inactive/failed -> active
                 if service in self.failed_services:
@@ -382,22 +390,23 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
         # Each alert info contains 4 fields
         # 1.Description | 2.Alert Type | 3.Impact | 4.Recommendation
         alert_info = [
-            [f"{service} in {state} state.",                #index 0
+            [f"{service} in {state} state.",                 #index 0
                 "fault",
-                f"{service} is not available for use.",
+                f"{service} service is unavailable.",
                 "Try to restart the service"],
             [f"{service} in a non_active state for more than {self.max_wait_time} seconds.",
                 "fault",                                     #index 1
-                f"{service} is not available for use.",
+                f"{service} service is unavailable.",
                 "Try to restart the service"],
             [f"{service} in {state} state.",
                 "fault_resolved",                            #index 2
-                f"{service} is available for use now.",
+                f"{service} service is available now.",
                 ""],
-            [f"service state transition from {prev_state} to {state} is not handled.",
+            [f"{service} service state transition from {prev_state} to {state}"\
+                " is not handled.",
                 "missing",                                   #index 3
-                "SSPL is not handling the trnasition",
-                "SSPL should be conacted to register an action for the transition."]
+                "State transition not recognized, unknown impact.",
+                "If alert needs to be categorized, raise request for same"]
         ]
 
         description = alert_info[alert_info_index][0]
@@ -406,7 +415,7 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
         recommendation = alert_info[alert_info_index][3]
 
         severity = SeverityReader().map_severity(alert_type)
-        epoch_time = str(self.current_time())
+        epoch_time = str(current_time())
         alert_id = get_alert_id(epoch_time)
         host_name = socket.getfqdn()
 

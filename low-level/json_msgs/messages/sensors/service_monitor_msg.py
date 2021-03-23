@@ -34,11 +34,8 @@ class ServiceMonitorMsg(BaseSensorMsg):
 
     MESSAGE_VERSION  = "1.0.0"
 
-    def __init__(self, jsonMsg,
-                       username  = "SSPL-LL",
-                       signature = "N/A",
-                       time      = "N/A",
-                       expires   = -1):
+    def __init__(self, jsonMsg, username  = "SSPL-LL", signature = "N/A",
+                       time      = "N/A", expires   = -1):
         """Create message schema for the ServiceMonitor Sensor."""
         super(ServiceMonitorMsg, self).__init__()
 

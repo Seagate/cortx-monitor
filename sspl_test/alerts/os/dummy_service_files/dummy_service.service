@@ -20,9 +20,9 @@ Description=Dummy service for SSPL Testing
 
 [Service]
 Type=simple
-ExecStart=/tmp/sspl/dummy_service.py start
-ExecStop=/tmp/sspl/dummy_service.py stop
-ExecReload=/tmp/sspl/dummy_service.py reload
+ExecStart=/var/cortx/sspl/test/dummy_service.py start
+ExecStop=/var/cortx/sspl/test/dummy_service.py stop
+ExecReload=/var/cortx/sspl/test/dummy_service.py reload
 Restart=always
 
 [Install]
