@@ -20,7 +20,6 @@
 """
 
 import uuid
-import time
 
 def get_alert_id(epoch_time):
     """Returns alert id which is a combination of
@@ -29,7 +28,3 @@ def get_alert_id(epoch_time):
     salt = str(uuid.uuid4().hex)
     alert_id = epoch_time + salt
     return alert_id
-
-def current_time():
-	"""Returns the time as integer number in seconds since the epoch in UTC."""
-	return int(time.time())

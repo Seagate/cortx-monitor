@@ -14,11 +14,14 @@
 # cortx-questions@seagate.com.
 
 class ThreadException(Exception):
+
     """Generic Exception to handle Threads errors."""
 
     def __init__(self, module, message):
+        """Handle error msg from thread modules."""
         self._module = module
         self._desc = message
 
     def __str__(self):
+        """Returns formated error msg."""
         return "%s: error: %s" %(self._module, self._desc)

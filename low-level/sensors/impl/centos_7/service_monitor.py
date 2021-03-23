@@ -39,11 +39,12 @@ from framework.utils.service_logging import logger
 from framework.utils.conf_utils import (GLOBAL_CONF, CLUSTER, SRVNODE, SITE_ID,
                 RACK_ID, NODE_ID, CLUSTER_ID, Conf)
 from framework.utils.severity_reader import SeverityReader
-from framework.utils.mon_utils import get_alert_id, current_time
-from framework.utils.thread_exception import ThreadException
+from framework.utils.mon_utils import get_alert_id
+from thread_exception import ThreadException
 
 @implementer(ISystemMonitor)
 class ServiceMonitor(SensorThread, InternalMsgQ):
+
     """ Sensor to monitor state change events of services. """
 
     SENSOR_NAME       = "ServiceMonitor"
@@ -124,6 +125,10 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
                 if 'disabled' in str(self._manager.GetUnitFileState(service)):
                     self.services_to_monitor.remove(service)
             except DBusException as err:
+                # If a service is enabled then it definitely has 'UnitFileState`,
+                # but for disabled both presence or absence of UnitFileState is
+                # possible. so if `UnitFileState' not present for the service,
+                # it is definitely disabled.
                 logger.error(f"{service} removed from services_to_monitor due "\
                              f"to error : {err}")
                 self.services_to_monitor.remove(service)
@@ -154,8 +159,12 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
             GLib.threads_init()
             context = self._loop.get_context()
 
-            time_to_check_lists = current_time() + self.polling_frequency
+            time_to_check_lists = self.current_time() + self.polling_frequency
 
+            # WHILE LOOP FUNCTION : every second we check for
+            # properties change event if any generated (using context
+            # iteration) and after a delay of polling frequency we
+            # check for inactive processes.
             while self.is_running():
                 # At interval of 'thread_sleep' check for events occured for
                 # registered services and process them(call on_pro_changed())
@@ -164,8 +173,8 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
 
                 # At interval of 'polling_freqency' process unregistered
                 # services and services with not-active state.
-                if time_to_check_lists <= current_time():
-                    time_to_check_lists = current_time() + \
+                if time_to_check_lists <= self.current_time():
+                    time_to_check_lists = self.current_time() + \
                                             self.polling_frequency
 
                     # Try to bind the enabled services on the node to the
@@ -195,6 +204,10 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
             raise ThreadException(self.SENSOR_NAME,
                 "Ungracefully breaking out of ServiceMonitor:run() "\
                 "with error: %s" % err)
+
+    def current_time(self):
+        """Returns the time as integer number in seconds since the epoch in UTC."""
+        return int(time.time())
 
     def get_service_status(self, service = None, unit = None):
         """Returns tuple of unit, service name, state, substate and pid."""
@@ -239,7 +252,7 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
 
             if state in  ["activating", "reloading", "deactivating"]:
                 self.not_active_services[service] = \
-                                    [current_time(), "N/A", "N/A"]
+                                    [self.current_time(), "N/A", "N/A"]
             elif state != "active":
                 self.failed_services.append(service)
                 self.raise_alert(service, "N/A", state, "N/A", substate,
@@ -261,7 +274,7 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
         for service, [start_time, prev_state, prev_substate]\
                                  in not_active_services_copy.items():
 
-            if current_time() - start_time > self.max_wait_time:
+            if self.current_time() - start_time > self.max_wait_time:
                 state = self.service_status[service]["state"]
                 substate = self.service_status[service]["substate"]
                 pid = self.service_status[service]["pid"]
@@ -285,15 +298,15 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
         _, service, state, substate, pid = self.get_service_status(unit=unit)
 
         prev_state = self.service_status[service]["state"]
+        prev_substate = self.service_status[service]["substate"]
+        prev_pid = self.service_status[service]["pid"]
 
         logger.debug(f"Event for {service}, properties changed from "\
-                     f"{prev_state} to {state}")
+                     f"{prev_state}:{prev_substate} to {state}:{substate}")
 
         if prev_state == state:
             return
 
-        prev_substate = self.service_status[service]["substate"]
-        prev_pid = self.service_status[service]["pid"]
 
         logger.info(f"{service} changed state from " + \
                     f"{prev_state}:{prev_substate} to {state}:{substate}")
@@ -327,7 +340,7 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
                 # or
                 # reloading -> deactivating/inactive/activating
                 self.not_active_services[service] = \
-                    [current_time(), prev_state, prev_substate]
+                    [self.current_time(), prev_state, prev_substate]
             elif state == "failed":
                 # active/reloading -> failed
                 if service not in self.failed_services:
@@ -338,7 +351,7 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
                 # deactivating -> inactive/activating
                 if service not in self.not_active_services:
                     self.not_active_services[service] = \
-                        [current_time(), prev_state, prev_substate]
+                        [self.current_time(), prev_state, prev_substate]
             elif state == "failed":
                 # deactivating -> failed
                 if service not in self.failed_services:
@@ -358,7 +371,7 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
                 # inactive/failed -> activating
                 if service not in self.not_active_services:
                     self.not_active_services[service] = \
-                        [current_time(), prev_state, prev_substate]
+                        [self.current_time(), prev_state, prev_substate]
             elif state == "active":
                 # inactive/failed -> active
                 if service in self.failed_services:
@@ -430,7 +443,7 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
         recommendation = alert_info[alert_info_index][3]
 
         severity = SeverityReader().map_severity(alert_type)
-        epoch_time = str(current_time())
+        epoch_time = str(self.current_time())
         alert_id = get_alert_id(epoch_time)
         host_name = socket.getfqdn()
 

@@ -30,6 +30,7 @@ import json
 from json_msgs.messages.sensors.base_sensors_msg import BaseSensorMsg
 
 class ServiceMonitorMsg(BaseSensorMsg):
+
     """The JSON message transmitted by the Service Monitor."""
 
     MESSAGE_VERSION  = "1.0.0"
