@@ -1,0 +1,139 @@
+cluster:
+  cid01:
+    name: cortx_cluster
+    site:
+      storage_set_count: '3'
+    site_count: '1'
+    storage_set:
+    - name: StorageSet-1
+      server_nodes:
+      - srvnode-1
+      - srvnode-2
+      - srvnode-3
+      storage_enclosures:
+      - encserial-1
+      - encserial-2
+      - encserial-3
+cortx:
+  release:
+    product: LR2
+    setup: cortx
+server_node:
+  30512e5ae6df9f1ea02327bab45e499d:
+    bmc:
+      ip: 198.120.10.1
+      secret: Admin123
+      user: ADMIN
+    cluster_id: cid01
+    hostname: ssc-vm-2217.colo.seagate.com
+    name: srvnode-1
+    network:
+      data:
+        private_fqdn: srvnode-1.data.private
+        private_interfaces:
+        - enp175s0f1
+        public_fqdn: srvnode-1.data.public
+        public_interfaces:
+        - enp175s0f0
+      management:
+        interfaces:
+        - eno1
+        public_fqdn: srvnode-1.mgmt.public
+    node_id: '1'
+    rack_id: '1'
+    site_id: '1'
+    storage:
+      enclosure_id: enc30512e5ae6df9f1ea02327bab45e499d
+    type: VM
+  40512e5ae6df9f1ea02327bab45e499e:
+    bmc:
+      ip: 198.120.10.2
+      secret: Admin123
+      user: ADMIN
+    cluster_id: cid01
+    hostname: ssc-vm-2218.colo.seagate.com
+    name: srvnode-2
+    network:
+      data:
+        private_fqdn: srvnode-2.data.private
+        private_interfaces:
+        - enp175s0f1
+        public_fqdn: srvnode-2.data.public
+        public_interfaces:
+        - enp175s0f0
+      management:
+        interfaces:
+        - eno1
+        public_fqdn: srvnode-2.mgmt.public
+    node_id: '2'
+    rack_id: '1'
+    site_id: '1'
+    storage:
+      enclosure_id: enc40512e5ae6df9f1ea02327bab45e499e
+    type: VM
+  50512e5ae6df9f1ea02327bab45e499f:
+    bmc:
+      ip: 198.120.10.3
+      secret: Admin123
+      user: ADMIN
+    cluster_id: cid01
+    hostname: ssc-vm-2219.colo.seagate.com
+    name: srvnode-3
+    network:
+      data:
+        private_fqdn: srvnode-3.data.private
+        private_interfaces:
+        - enp175s0f1
+        public_fqdn: srvnode-3.data.public
+        public_interfaces:
+        - enp175s0f0
+      management:
+        interfaces:
+        - eno1
+        public_fqdn: srvnode-3.mgmt.public
+    node_id: '3'
+    rack_id: '1'
+    site_id: '1'
+    storage:
+      enclosure_id: enc50512e5ae6df9f1ea02327bab45e499f
+    type: VM
+storage_enclosure:
+  enc30512e5ae6df9f1ea02327bab45e499d:
+    controller:
+      password: Admin123
+      primary:
+        ip: 10.0.0.2
+        port: '22'
+      secondary:
+        ip: 10.0.0.3
+        port: '22'
+      type: Gallium
+      user: admin
+    name: encserial-1
+    type: RBOD
+  enc40512e5ae6df9f1ea02327bab45e499e:
+    controller:
+      password: Admin123
+      primary:
+        ip: 10.0.0.2
+        port: '22'
+      secondary:
+        ip: 10.0.0.3
+        port: '22'
+      type: Gallium
+      user: admin
+    name: encserial-2
+    type: RBOD
+  enc50512e5ae6df9f1ea02327bab45e499f:
+    controller:
+      password: Admin123
+      primary:
+        ip: 10.0.0.2
+        port: '22'
+      secondary:
+        ip: 10.0.0.3
+        port: '22'
+      type: Gallium
+      user: admin
+    name: encserial-3
+    type: RBOD

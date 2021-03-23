@@ -1,0 +1,69 @@
+cortx:
+  release:
+    product: LR2
+    setup: cortx
+server_node:
+  TMPL_MACHINE_ID_1:
+    bmc:
+      ip: TMPL_BMC_IP_1
+      secret: TMPL_BMC_SECRET_1
+      user: TMPL_BMC_USER_1
+    hostname: TMPL_HOSTNAME_1
+    name: TMPL_NODE_NAME_1
+    storage:
+      enclosure_id: TMPL_ENCLOSURE_ID_1
+    type: TMPL_SERVER_NODE_TYPE_1
+  TMPL_MACHINE_ID_2:
+    bmc:
+      ip: TMPL_BMC_IP_2
+      secret: TMPL_BMC_SECRET_2
+      user: TMPL_BMC_USER_2
+    hostname: TMPL_HOSTNAME_2
+    name: TMPL_NODE_NAME_2
+    storage:
+      enclosure_id: TMPL_ENCLOSURE_ID_2
+    type: TMPL_SERVER_NODE_TYPE_2
+  TMPL_MACHINE_ID_3:
+    bmc:
+      ip: TMPL_BMC_IP_3
+      secret: TMPL_BMC_SECRET_3
+      user: TMPL_BMC_USER_3
+    hostname: TMPL_HOSTNAME_3
+    name: TMPL_NODE_NAME_3
+    storage:
+      enclosure_id: TMPL_ENCLOSURE_ID_3
+    type: TMPL_SERVER_NODE_TYPE_3
+storage_enclosure:
+  TMPL_ENCLOSURE_ID_1:
+    controller:
+      password: TMPL_CONTROLLER_PASSWORD_1
+      primary:
+        ip: TMPL_PRIMARY_CONTROLLER_IP_1
+        port: TMPL_PRIMARY_CONTROLLER_PORT_1
+      secondary:
+        ip: TMPL_SECONDARY_CONTROLLER_IP_1
+        port: TMPL_SECONDARY_CONTROLLER_PORT_1
+      type: TMPL_CONTROLLER_TYPE_1
+      user: TMPL_CONTROLLER_USER_1
+  TMPL_ENCLOSURE_ID_2:
+    controller:
+      password: TMPL_CONTROLLER_PASSWORD_2
+      primary:
+        ip: TMPL_PRIMARY_CONTROLLER_IP_2
+        port: TMPL_PRIMARY_CONTROLLER_PORT_2
+      secondary:
+        ip: TMPL_SECONDARY_CONTROLLER_IP_2
+        port: TMPL_SECONDARY_CONTROLLER_PORT_2
+      type: TMPL_CONTROLLER_TYPE_2
+      user: TMPL_CONTROLLER_USER_2
+  TMPL_ENCLOSURE_ID_3:
+    controller:
+      password: TMPL_CONTROLLER_PASSWORD_3
+      primary:
+        ip: TMPL_PRIMARY_CONTROLLER_IP_3
+        port: TMPL_PRIMARY_CONTROLLER_PORT_3
+      secondary:
+        ip: TMPL_SECONDARY_CONTROLLER_IP_3
+        port: TMPL_SECONDARY_CONTROLLER_PORT_3
+      type: TMPL_CONTROLLER_TYPE_3
+      user: TMPL_CONTROLLER_USER_3

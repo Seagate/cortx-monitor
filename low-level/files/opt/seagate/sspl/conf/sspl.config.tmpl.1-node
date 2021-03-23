@@ -1,0 +1,45 @@
+cortx:
+  release:
+    product: LR2
+    setup: cortx
+server_node:
+  TMPL_MACHINE_ID:
+    bmc:
+      ip: TMPL_BMC_IP
+      secret: TMPL_BMC_SECRET
+      user: TMPL_BMC_USER
+    cluster_id: TMPL_CLUSTER_ID
+    hostname: TMPL_HOSTNAME
+    name: TMPL_NODE_NAME
+    network:
+      data:
+        private_fqdn: TMPL_DATA_PRIVATE_FQDN
+        private_interfaces:
+        - TMPL_DATA_PRIVATE_INTERFACE
+        public_fqdn: TMPL_DATA_PUBLIC_FQDN
+        public_interfaces:
+        - TMPL_DATA_PUBLIC_INTERFACE
+      management:
+        interfaces:
+        - TMPL_MGMT_INTERFACE
+        public_fqdn: TMPL_MGMT_PUBLIC_FQDN
+    node_id: TMPL_NODE_ID
+    rack_id: TMPL_RACK_ID
+    site_id: TMPL_SITE_ID
+    storage:
+      enclosure_id: TMPL_ENCLOSURE_ID
+    type: TMPL_SERVER_NODE_TYPE
+storage_enclosure:
+  TMPL_ENCLOSURE_ID:
+    controller:
+      password: TMPL_CONTROLLER_PASSWORD
+      primary:
+        ip: TMPL_PRIMARY_CONTROLLER_IP
+        port: TMPL_PRIMARY_CONTROLLER_PORT
+      secondary:
+        ip: TMPL_SECONDARY_CONTROLLER_IP
+        port: TMPL_SECONDARY_CONTROLLER_PORT
+      type: TMPL_CONTROLLER_TYPE
+      user: TMPL_CONTROLLER_USER
+    name: TMPL_ENCLOSURE_ID
+    type: TMPL_ENCLOSURE_TYPE
