@@ -14,8 +14,6 @@
 # cortx-questions@seagate.com.
 
 """
- Sensor to Monitor Systemd Services.
-
  ****************************************************************************
   Description:       Monitors Systemd for service events and notifies
                     the ServiceMsgHandler.
@@ -44,7 +42,6 @@ from thread_exception import ThreadException
 
 @implementer(ISystemMonitor)
 class ServiceMonitor(SensorThread, InternalMsgQ):
-
     """ Sensor to monitor state change events of services. """
 
     SENSOR_NAME       = "ServiceMonitor"
@@ -96,7 +93,6 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
 
     def initialize(self, conf_reader, msgQlist, product):
         """initialize configuration reader and internal msg queues."""
-
         # Initialize ScheduledMonitorThread and InternalMsgQ
         super(ServiceMonitor, self).initialize(conf_reader)
 

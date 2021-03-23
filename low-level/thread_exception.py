@@ -14,7 +14,6 @@
 # cortx-questions@seagate.com.
 
 class ThreadException(Exception):
-
     """Generic Exception to handle Threads errors."""
 
     def __init__(self, module, message):
