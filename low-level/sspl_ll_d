@@ -78,6 +78,7 @@ from message_handlers.real_stor_actuator_msg_handler import \
     RealStorActuatorMsgHandler
 from message_handlers.real_stor_encl_msg_handler import RealStorEnclMsgHandler
 from message_handlers.service_msg_handler import ServiceMsgHandler
+from framework.utils.thread_exception import ThreadException
 
 
 #DO NOT EDIT: Marker comment to dynamically add code to initialize coverage obj for code coverage report generation
@@ -575,6 +576,11 @@ def _run_thread_capture_errors(curr_module, sspl_threaded_modules, msgQlist, con
         logger.info("Starting: %s" % curr_module.name())
         curr_module.start_thread(conf_reader, msgQlist, product)
 
+    except ThreadException as ex:
+        #TODO: Restart thread instead of shutdown
+        logger.error("%s, error is unrecoverable , shutting down %s" %
+            (ex, curr_module.name()))
+        curr_module.shutdown()
     except Exception as ex:
         # Populate an actuator response message and transmit back to HAlon that we have a fatal error
         # error_msg = "SSPL-LL encountered an error, terminating service Error, restarting daemon:{}" \

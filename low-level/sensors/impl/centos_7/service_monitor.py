@@ -13,7 +13,8 @@
 # about this software or licensing, please email opensource@seagate.com or
 # cortx-questions@seagate.com.
 
-"""Sensor to Monitor Systemd Services.
+"""
+ Sensor to Monitor Systemd Services.
 
  ****************************************************************************
   Description:       Monitors Systemd for service events and notifies
@@ -26,7 +27,7 @@ import socket
 
 from dbus import Interface, SystemBus, DBusException, PROPERTIES_IFACE
 from dbus.mainloop.glib import DBusGMainLoop
-from gi.repository import GObject as gobject
+from gi.repository import GLib
 
 from zope.interface import implementer
 from sensors.ISystem_monitor import ISystemMonitor
@@ -36,13 +37,14 @@ from message_handlers.service_msg_handler import ServiceMsgHandler
 from framework.utils.service_logging import logger
 
 from framework.utils.conf_utils import (GLOBAL_CONF, CLUSTER, SRVNODE, SITE_ID,
-                RACK_ID, NODE_ID, CLUSTER_ID, SSPL_CONF, Conf)
+                RACK_ID, NODE_ID, CLUSTER_ID, Conf)
 from framework.utils.severity_reader import SeverityReader
 from framework.utils.mon_utils import get_alert_id, current_time
+from framework.utils.thread_exception import ThreadException
 
 @implementer(ISystemMonitor)
 class ServiceMonitor(SensorThread, InternalMsgQ):
-    """Sensor to monitor state change events of services."""
+    """ Sensor to monitor state change events of services. """
 
     SENSOR_NAME       = "ServiceMonitor"
     PRIORITY          = 2
@@ -54,6 +56,7 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
     THREAD_SLEEP       = 'thread_sleep'
     POLLING_FREQUENCY  = 'polling_frequency'
     MAX_WAIT_TIME      = 'threshold_inactive_time'
+    SSPL_CONFIG        = "SSPL_CONF"
 
     # Dependency list
     DEPENDENCIES = {"plugins": ["SeviceMsgHandler"]}
@@ -68,8 +71,9 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
         super(ServiceMonitor, self).__init__(self.SENSOR_NAME,
                                                 self.PRIORITY)
 
+        Conf.load(self.SSPL_CONFIG, "yaml:///etc/sspl.conf")
         self.services_to_monitor = \
-            Conf.get(SSPL_CONF, f"{self.SERVICEMONITOR}>{self.MONITORED_SERVICES}", [])
+            Conf.get(self.SSPL_CONFIG, f"{self.SERVICEMONITOR}>{self.MONITORED_SERVICES}", [])
 
         self.not_active_services = {}
         self.failed_services = []
@@ -77,13 +81,13 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
         self.service_status = {}
 
         self.thread_sleep = \
-            int(Conf.get(SSPL_CONF, f"{self.SERVICEMONITOR}>{self.THREAD_SLEEP}", 1))
+            int(Conf.get(self.SSPL_CONFIG, f"{self.SERVICEMONITOR}>{self.THREAD_SLEEP}", 1))
 
         self.polling_frequency = \
-            int(Conf.get(SSPL_CONF, f"{self.SERVICEMONITOR}>{self.POLLING_FREQUENCY}", 30))
+            int(Conf.get(self.SSPL_CONFIG, f"{self.SERVICEMONITOR}>{self.POLLING_FREQUENCY}", 30))
 
         self.max_wait_time = \
-            int(Conf.get(SSPL_CONF, f"{self.SERVICEMONITOR}>{self.MAX_WAIT_TIME}", 60))
+            int(Conf.get(self.SSPL_CONFIG, f"{self.SERVICEMONITOR}>{self.MAX_WAIT_TIME}", 60))
 
     def read_data(self):
         """Return the dict of service status."""
@@ -144,10 +148,10 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
             logger.debug(f"services_to_monitor : {self.services_to_monitor}")
 
             # Retrieve the main loop which will be called in the run method
-            self._loop = gobject.MainLoop()
+            self._loop = GLib.MainLoop()
 
             # Initialize the gobject threads and get its context
-            gobject.threads_init()
+            GLib.threads_init()
             context = self._loop.get_context()
 
             time_to_check_lists = current_time() + self.polling_frequency
@@ -180,15 +184,20 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
 
             logger.info("ServiceMonitor gracefully breaking out " +\
                                 "of dbus Loop, not restarting.")
+        except GLib.Error as err:
+            raise ThreadException(self.SENSOR_NAME,
+                "Ungrecefully breaking out of GLib.MainLoop() with error: %s"
+                %err)
         except DBusException as err:
-            logger.error("Ungracefully breaking out of " +\
-                                "dbus loop with error: %s" % err)
+            raise ThreadException(self.SENSOR_NAME,
+                "Ungracefully breaking out of dbus loop with error: %s"% err)
         except Exception as err:
-            logger.error("Ungracefully breaking out of " +\
-                            "ServiceMonitor:run() with error: %s" % err)
+            raise ThreadException(self.SENSOR_NAME,
+                "Ungracefully breaking out of ServiceMonitor:run() "\
+                "with error: %s" % err)
 
     def get_service_status(self, service = None, unit = None):
-        """returns tuple of unit, service name, state, substate and pid."""
+        """Returns tuple of unit, service name, state, substate and pid."""
         if not unit:
             unit = self._bus.get_object('org.freedesktop.systemd1',\
                                     self._manager.LoadUnit(service))
@@ -205,8 +214,9 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
         return (unit, service, state, substate, pid)
 
     def connect_to_prop_changed_signal(self, service):
-        """Bind the service to a signal('PropertiesChanged').
-        
+        """
+        Bind the service to a signal('PropertiesChanged').
+
            Fetch the service unit from systemd and its state, substate,
            pid etc. Bind the service to the sigle which will be triggered
            whenever the service changes it's state/substate. Also raise
@@ -241,8 +251,9 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
             return err
 
     def check_notactive_services(self):
-        """Monitor non-active Services.
-        
+        """
+        Monitor non-active Services.
+
            Raise FAULT Alert if any of the not-active services has exceeded
            the threshould time for inactivity.
         """
@@ -271,7 +282,6 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
     def on_prop_changed(self, interface, changed_properties,
                                 invalidated_properties, unit):
         """Handler to process the service state change signal."""
-
         _, service, state, substate, pid = self.get_service_status(unit=unit)
 
         prev_state = self.service_status[service]["state"]
@@ -396,7 +406,7 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
 
     def raise_alert(self, service, prev_state, state, prev_substate,
                     substate, prev_pid, pid, alert_info_index):
-        """ Send the alert to ServiceMsgHandler."""
+        """Send the alert to ServiceMsgHandler."""
         # Each alert info contains 4 fields
         # 1.Description | 2.Alert Type | 3.Impact | 4.Recommendation
         alert_info = [
