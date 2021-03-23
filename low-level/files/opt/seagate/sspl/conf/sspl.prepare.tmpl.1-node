@@ -9,19 +9,19 @@ server_node:
       secret: TMPL_BMC_SECRET
       user: TMPL_BMC_USER
     hostname: TMPL_HOSTNAME
-    name: srvnode-1
+    name: TMPL_NODE_NAME
     network:
       data:
-        private_fqdn: srvnode-1.data.private
+        private_fqdn: TMPL_DATA_PRIVATE_FQDN
         private_interfaces:
         - TMPL_PRIVATE_INTERFACE
-        public_fqdn: srvnode-1.data.public
+        public_fqdn: TMPL_DATA_PUBLIC_FQDN
         public_interfaces:
-        - TMPL_PUBLIC_INTERFACE
+        - TMPL_DATA_PUBLIC_INTERFACE
       management:
         interfaces:
         - TMPL_MGMT_INTERFACE
-        public_fqdn: srvnode-1.mgmt.public
+        public_fqdn: TMPL_MGMT_PUBLIC_FQDN
     node_id: TMPL_NODE_ID
     rack_id: TMPL_RACK_ID
     site_id: TMPL_SITE_ID

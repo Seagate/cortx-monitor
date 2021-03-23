@@ -9,7 +9,7 @@ server_node:
       secret: TMPL_BMC_SECRET
       user: TMPL_BMC_USER
     hostname: TMPL_HOSTNAME
-    name: srvnode-1
+    name: TMPL_NODE_NAME
     storage:
       enclosure_id: TMPL_ENCLOSURE_ID
     type: TMPL_SERVER_NODE_TYPE

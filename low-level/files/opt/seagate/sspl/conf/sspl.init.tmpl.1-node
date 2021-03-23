@@ -1,5 +1,5 @@
 cluster:
-  cid01:
+  TMPL_CLUSTER_ID:
     name: cortx_cluster
     site:
       storage_set_count: '1'
@@ -7,7 +7,7 @@ cluster:
     storage_set:
     - name: StorageSet-1
       server_nodes:
-      - srvnode-1
+      - TMPL_NODE_NAME
       storage_enclosures:
       - encserial-1
 cortx:
@@ -22,19 +22,19 @@ server_node:
       user: TMPL_BMC_USER
     cluster_id: TMPL_CLUSTER_ID
     hostname: TMPL_HOSTNAME
-    name: srvnode-1
+    name: TMPL_NODE_NAME
     network:
       data:
-        private_fqdn: srvnode-1.data.private
+        private_fqdn: TMPL_DATA_PRIVATE_FQDN
         private_interfaces:
-        - TMPL_PRIVATE_INTERFACE
-        public_fqdn: srvnode-1.data.public
+        - TMPL_DATA_PRIVATE_INTERFACE
+        public_fqdn: TMPL_DATA_PUBLIC_FQDN
         public_interfaces:
-        - TMPL_PUBLIC_INTERFACE
+        - TMPL_DATA_PUBLIC_INTERFACE
       management:
         interfaces:
         - TMPL_MGMT_INTERFACE
-        public_fqdn: srvnode-1.mgmt.public
+        public_fqdn: TMPL_MGMT_PUBLIC_FQDN
     node_id: TMPL_NODE_ID
     rack_id: TMPL_RACK_ID
     site_id: TMPL_SITE_ID

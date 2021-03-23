@@ -10,19 +10,19 @@ server_node:
       user: TMPL_BMC_USER_1
     cluster_id: TMPL_CLUSTER_ID_1
     hostname: TMPL_HOSTNAME_1
-    name: srvnode-1
+    name: TMPL_NODE_NAME_1
     network:
       data:
-        private_fqdn: srvnode-1.data.private
+        private_fqdn: TMPL_DATA_PRIVATE_FQDN_1
         private_interfaces:
-        - TMPL_PRIVATE_INTERFACE_1
-        public_fqdn: srvnode-1.data.public
+        - TMPL_DATA_PRIVATE_INTERFACE_1
+        public_fqdn: TMPL_DATA_PUBLIC_FQDN_1
         public_interfaces:
-        - TMPL_PUBLIC_INTERFACE_1
+        - TMPL_DATA_PUBLIC_INTERFACE_1
       management:
         interfaces:
         - TMPL_MGMT_INTERFACE_1
-        public_fqdn: srvnode-1.mgmt.public
+        public_fqdn: TMPL_MGMT_PUBLIC_FQDN_1
     node_id: TMPL_NODE_ID_1
     rack_id: TMPL_RACK_ID_1
     site_id: TMPL_SITE_ID_1
@@ -36,19 +36,19 @@ server_node:
       user: TMPL_BMC_USER_2
     cluster_id: TMPL_CLUSTER_ID_2
     hostname: TMPL_HOSTNAME_2
-    name: srvnode-2
+    name: TMPL_NODE_NAME_2
     network:
       data:
-        private_fqdn: srvnode-2.data.private
+        private_fqdn: TMPL_DATA_PRIVATE_FQDN_2
         private_interfaces:
-        - TMPL_PRIVATE_INTERFACE_2
-        public_fqdn: srvnode-2.data.public
+        - TMPL_DATA_PRIVATE_INTERFACE_2
+        public_fqdn: TMPL_DATA_PUBLIC_FQDN_2
         public_interfaces:
-        - TMPL_PUBLIC_INTERFACE_2
+        - TMPL_DATA_PUBLIC_INTERFACE_2
       management:
         interfaces:
         - TMPL_MGMT_INTERFACE_2
-        public_fqdn: srvnode-2.mgmt.public
+        public_fqdn: TMPL_MGMT_PUBLIC_FQDN_2
     node_id: TMPL_NODE_ID_2
     rack_id: TMPL_RACK_ID_2
     site_id: TMPL_SITE_ID_2
@@ -62,19 +62,19 @@ server_node:
       user: TMPL_BMC_USER_3
     cluster_id: TMPL_CLUSTER_ID_3
     hostname: TMPL_HOSTNAME_3
-    name: srvnode-3
+    name: TMPL_NODE_NAME_3
     network:
       data:
-        private_fqdn: srvnode-3.data.private
+        private_fqdn: TMPL_DATA_PRIVATE_FQDN_3
         private_interfaces:
-        - TMPL_PRIVATE_INTERFACE_3
-        public_fqdn: srvnode-3.data.public
+        - TMPL_DATA_PRIVATE_INTERFACE_3
+        public_fqdn: TMPL_DATA_PUBLIC_FQDN_3
         public_interfaces:
-        - TMPL_PUBLIC_INTERFACE_3
+        - TMPL_DATA_PUBLIC_INTERFACE_3
       management:
         interfaces:
         - TMPL_MGMT_INTERFACE_3
-        public_fqdn: srvnode-3.mgmt.public
+        public_fqdn: TMPL_MGMT_PUBLIC_FQDN_3
     node_id: TMPL_NODE_ID_3
     rack_id: TMPL_RACK_ID_3
     site_id: TMPL_SITE_ID_3

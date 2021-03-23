@@ -9,7 +9,7 @@ server_node:
       secret: TMPL_BMC_SECRET_1
       user: TMPL_BMC_USER_1
     hostname: TMPL_HOSTNAME_1
-    name: srvnode-1
+    name: TMPL_NODE_NAME_1
     storage:
       enclosure_id: TMPL_ENCLOSURE_ID_1
     type: TMPL_SERVER_NODE_TYPE_1
@@ -19,7 +19,7 @@ server_node:
       secret: TMPL_BMC_SECRET_2
       user: TMPL_BMC_USER_2
     hostname: TMPL_HOSTNAME_2
-    name: srvnode-2
+    name: TMPL_NODE_NAME_2
     storage:
       enclosure_id: TMPL_ENCLOSURE_ID_2
     type: TMPL_SERVER_NODE_TYPE_2
@@ -29,7 +29,7 @@ server_node:
       secret: TMPL_BMC_SECRET_3
       user: TMPL_BMC_USER_3
     hostname: TMPL_HOSTNAME_3
-    name: srvnode-3
+    name: TMPL_NODE_NAME_3
     storage:
       enclosure_id: TMPL_ENCLOSURE_ID_3
     type: TMPL_SERVER_NODE_TYPE_3
