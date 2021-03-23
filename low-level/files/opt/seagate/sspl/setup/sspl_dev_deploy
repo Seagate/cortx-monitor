@@ -37,6 +37,7 @@ import tarfile
 
 localhost_fqdn = socket.getfqdn().split('.')[0]
 SSPL_BASE_DIR = "/opt/seagate/cortx/sspl"
+UTILS_BASE_DIR = "/opt/seagate/cortx/utils"
 
 
 class DeployError(Exception):
@@ -323,16 +324,16 @@ class SSPLDevDeploy:
                      (srvnode), self.BMC_USER)
             Conf.set(global_config_index, "cluster>%s>bmc>secret" %
                      (srvnode), self.BMC_PASSWD)
-
+        # set public_ip, required by cortx-utils
+        public_ip = socket.gethostbyname(socket.getfqdn())
+        Conf.set(global_config_index, "cluster>%s>network>mgmt>public_ip" %
+                 (srvnode), public_ip)
         Conf.save(sspl_config_index)
         Conf.save(global_config_index)
 
     def setup_message_broker(self):
         # Copy message bus conf file
         os.makedirs("/etc/cortx/", exist_ok=True)
-        shutil.copyfile(f"{SSPL_BASE_DIR}/low-level/files/opt/seagate/sspl"
-                        "/setup/standalone/message_bus.conf",
-                        "/etc/cortx/message_bus.conf")
         self.setup_kafka()
 
     def setup_kafka(self):
@@ -387,22 +388,27 @@ class SSPLDevDeploy:
 
     def setup_sspl(self):
         """Initialize SSPL service."""
-        setup_script = "%s/bin/sspl_setup" % (SSPL_BASE_DIR)
+        sspl_setup_script = "%s/bin/sspl_setup" % (SSPL_BASE_DIR)
+        utils_setup_script = "%s/bin/utils_setup" % (UTILS_BASE_DIR)
 
         commands = [
             "%s post_install --config yaml://%s" % (
-                setup_script, self.sample_global_config),
+                utils_setup_script, self.sample_global_config),
+            "%s post_install --config yaml://%s" % (
+                sspl_setup_script, self.sample_global_config),
             "%s config --config yaml://%s" % (
-                setup_script, self.sample_global_config),
+                utils_setup_script, self.sample_global_config),
+            "%s config --config yaml://%s" % (
+                sspl_setup_script, self.sample_global_config),
             "%s init --config yaml://%s" % (
-                setup_script, self.sample_global_config),
-            "%s check" % (setup_script)
+                sspl_setup_script, self.sample_global_config),
+            "%s check" % (sspl_setup_script)
         ]
         if self.CLUSTER_NODES:
             # WARN: This command will reset existing cluster setup and
             # join user requested nodes in cluster
             commands.append("%s join_cluster --nodes %s" % (
-                setup_script, self.CLUSTER_NODES))
+                sspl_setup_script, self.CLUSTER_NODES))
 
         # Execute setup commands
         for cmd in commands:

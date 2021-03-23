@@ -41,7 +41,6 @@ class RabbitMQEgressAccumulatedMsgsProcessor(ScheduledModuleThread,
 
     # TODO: read egress config from common place
     # Section and keys in configuration file
-    # Section and keys in configuration file
     RABBITMQPROCESSOR = 'RabbitMQegressProcessor'
     SIGNATURE_USERNAME = 'message_signature_username'
     SIGNATURE_TOKEN = 'message_signature_token'
