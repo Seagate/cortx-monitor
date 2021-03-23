@@ -191,8 +191,6 @@ SERVICEMONITOR:
       - salt-minion.service
       - glusterd.service
       - scsi-network-relay.service
-      - zookeeper.service
-      - kafka.service
 
 NODEHWACTUATOR:
    ipmi_client: ipmitool
