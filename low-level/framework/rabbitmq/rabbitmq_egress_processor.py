@@ -21,58 +21,42 @@
 
 import ctypes
 import json
-import sys
 import time
 
-import pika
+from cortx.utils.message_bus import MessageProducer
+from cortx.utils.message_bus.error import MessageBusError
 
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.module_thread import ScheduledModuleThread
-from framework.base.sspl_constants import ServiceTypes
-from framework.utils import encryptor
-from framework.utils.conf_utils import CLUSTER, GLOBAL_CONF, SSPL_CONF, Conf
+from framework.utils.conf_utils import SSPL_CONF, Conf
 from framework.utils.service_logging import logger
-from framework.utils.store_factory import store
 from framework.utils.store_queue import StoreQueue
-
-from .rabbitmq_connector import RabbitMQSafeConnection, connection_exceptions
+from . import message_bus, producer_initialized
 
 try:
-    use_security_lib=True
+    use_security_lib = True
     SSPL_SEC = ctypes.cdll.LoadLibrary('libsspl_sec.so.0')
 except Exception as ae:
-    logger.info("RabbitMQegressProcessor, libsspl_sec not found, disabling authentication on egress msgs")
-    use_security_lib=False
+    logger.info(
+        "RabbitMQegressProcessor, libsspl_sec not found, disabling authentication on egress msgs")
+    use_security_lib = False
+
 
 class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
     """Handles outgoing messages via rabbitMQ over localhost"""
 
     MODULE_NAME = "RabbitMQegressProcessor"
-    PRIORITY    = 1
+    PRIORITY = 1
 
     # Section and keys in configuration file
-    RABBITMQPROCESSOR       = MODULE_NAME.upper()
-    VIRT_HOST               = 'virtual_host'
-
-    PRIMARY_RABBITMQ_HOST   = 'primary_rabbitmq_host'
-    EXCHANGE_NAME           = 'exchange_name'
-    QUEUE_NAME              = 'queue_name'
-    ROUTING_KEY             = 'routing_key'
-
-    ACK_QUEUE_NAME          = 'ack_queue_name'
-    ACK_ROUTING_KEY         = 'ack_routing_key'
-
-    USER_NAME               = 'username'
-    PASSWORD                = 'password'
-    SIGNATURE_USERNAME      = 'message_signature_username'
-    SIGNATURE_TOKEN         = 'message_signature_token'
-    SIGNATURE_EXPIRES       = 'message_signature_expires'
-    IEM_ROUTE_ADDR          = 'iem_route_addr'
-    IEM_ROUTE_EXCHANGE_NAME = 'iem_route_exchange_name'
-
-    SYSTEM_INFORMATION_KEY = 'SYSTEM_INFORMATION'
-    CLUSTER_ID_KEY = 'cluster_id'
-    NODE_ID_KEY = 'node_id'
+    RABBITMQPROCESSOR = MODULE_NAME.upper()
+    SIGNATURE_USERNAME = 'message_signature_username'
+    SIGNATURE_TOKEN = 'message_signature_token'
+    SIGNATURE_EXPIRES = 'message_signature_expires'
+    IEM_ROUTE_ADDR = 'iem_route_addr'
+    PRODUCER_ID = 'producer_id'
+    MESSAGE_TYPE = 'message_type'
+    METHOD = 'method'
 
     @staticmethod
     def name():
@@ -96,39 +80,19 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
         #  into our message queue from the main sspl_ll_d handler
         self._request_shutdown = False
 
-        self._product = product
-
-        # Configure RabbitMQ Exchange to transmit messages
-        self._connection = None
         self._read_config()
-
-        self._connection = RabbitMQSafeConnection(
-            self._username, self._password, self._virtual_host,
-            self._exchange_name, self._routing_key, self._queue_name
-        )
-
-        self._ack_connection = RabbitMQSafeConnection(
-            self._username, self._password, self._virtual_host,
-            self._exchange_name, self._ack_routing_key, self._ack_queue_name
-        )
-
-        self._iem_connection = RabbitMQSafeConnection(
-            self._username, self._password, self._virtual_host,
-            self._iem_route_exchange_name, self._routing_key,
-            self._queue_name
-        )
-
-        # Display values used to configure pika from the config file
-        self._log_debug("RabbitMQ user: %s" % self._username)
-        self._log_debug("RabbitMQ exchange: %s, routing_key: %s, vhost: %s" %
-                       (self._exchange_name, self._routing_key, self._virtual_host))
+        self._producer = MessageProducer(message_bus,
+                                         producer_id=self._producer_id,
+                                         message_type=self._message_type,
+                                         method=self._method)
+        producer_initialized.set()
 
     def run(self):
         """Run the module periodically on its own thread. """
         self._log_debug("Start accepting requests")
 
-        #self._set_debug(True)
-        #self._set_debug_persist(True)
+        # self._set_debug(True)
+        # self._set_debug_persist(True)
 
         try:
             # Loop thru all messages in queue until and transmit
@@ -155,48 +119,25 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
     def _read_config(self):
         """Configure the RabbitMQ exchange with defaults available"""
         try:
-            self._virtual_host  = Conf.get(SSPL_CONF, f"{self.RABBITMQPROCESSOR}>{self.VIRT_HOST}",
-                                                            'SSPL')
+            self._signature_user = Conf.get(SSPL_CONF,
+                                            f"{self.RABBITMQPROCESSOR}>{self.SIGNATURE_USERNAME}",
+                                            'sspl-ll')
+            self._signature_token = Conf.get(SSPL_CONF,
+                                             f"{self.RABBITMQPROCESSOR}>{self.SIGNATURE_TOKEN}",
+                                             'FAKETOKEN1234')
+            self._signature_expires = Conf.get(SSPL_CONF,
+                                               f"{self.RABBITMQPROCESSOR}>{self.SIGNATURE_EXPIRES}",
+                                               "3600")
+            self._producer_id = Conf.get(SSPL_CONF,
+                                         f"{self.RABBITMQPROCESSOR}>{self.PRODUCER_ID}",
+                                         "sspl-sensor")
+            self._message_type = Conf.get(SSPL_CONF,
+                                          f"{self.RABBITMQPROCESSOR}>{self.MESSAGE_TYPE}",
+                                          "alerts")
+            self._method = Conf.get(SSPL_CONF,
+                                    f"{self.RABBITMQPROCESSOR}>{self.METHOD}",
+                                    "sync")
 
-            # Read common RabbitMQ configuration
-            self._primary_rabbitmq_host = Conf.get(SSPL_CONF, f"{self.RABBITMQPROCESSOR}>{self.PRIMARY_RABBITMQ_HOST}",
-                                                                 'localhost')
-
-            # Read RabbitMQ configuration for sensor messages
-            self._queue_name    = Conf.get(SSPL_CONF, f"{self.RABBITMQPROCESSOR}>{self.QUEUE_NAME}",
-                                                                 'sensor-queue')
-            self._exchange_name = Conf.get(SSPL_CONF, f"{self.RABBITMQPROCESSOR}>{self.EXCHANGE_NAME}",
-                                                                 'sspl-out')
-            self._routing_key   = Conf.get(SSPL_CONF, f"{self.RABBITMQPROCESSOR}>{self.ROUTING_KEY}",
-                                                                 'sensor-key')
-            # Read RabbitMQ configuration for Ack messages
-            self._ack_queue_name = Conf.get(SSPL_CONF, f"{self.RABBITMQPROCESSOR}>{self.ACK_QUEUE_NAME}",
-                                                                 'sensor-queue')
-            self._ack_routing_key = Conf.get(SSPL_CONF, f"{self.RABBITMQPROCESSOR}>{self.ACK_ROUTING_KEY}",
-                                                                 'sensor-key')
-
-            self._username = Conf.get(SSPL_CONF, f"{self.RABBITMQPROCESSOR}>{self.USER_NAME}",
-                                                                 'sspluser')
-            self._password = Conf.get(SSPL_CONF, f"{self.RABBITMQPROCESSOR}>{self.PASSWORD}",'')
-            self._signature_user = Conf.get(SSPL_CONF, f"{self.RABBITMQPROCESSOR}>{self.SIGNATURE_USERNAME}",
-                                                                 'sspl-ll')
-            self._signature_token = Conf.get(SSPL_CONF, f"{self.RABBITMQPROCESSOR}>{self.SIGNATURE_TOKEN}",
-                                                                 'FAKETOKEN1234')
-            self._signature_expires = Conf.get(SSPL_CONF, f"{self.RABBITMQPROCESSOR}>{self.SIGNATURE_EXPIRES}",
-                                                                 "3600")
-            self._iem_route_addr = Conf.get(SSPL_CONF, f"{self.RABBITMQPROCESSOR}>{self.IEM_ROUTE_ADDR}",'')
-            self._iem_route_exchange_name = Conf.get(SSPL_CONF, f"{self.RABBITMQPROCESSOR}>{self.IEM_ROUTE_EXCHANGE_NAME}",
-                                                                 'sspl-in')
-
-            cluster_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{self.CLUSTER_ID_KEY}",'CC01')
-
-            # Decrypt RabbitMQ Password
-            decryption_key = encryptor.gen_key(cluster_id, ServiceTypes.RABBITMQ.value)
-            self._password = encryptor.decrypt(decryption_key, self._password.encode('ascii'), "RabbitMQegressProcessor")
-
-            if self._iem_route_addr != "":
-                logger.info("         Routing IEMs to host: %s" % self._iem_route_addr)
-                logger.info("         Using IEM exchange: %s" % self._iem_route_exchange_name)
         except Exception as ex:
             logger.error("RabbitMQegressProcessor, _read_config: %r" % ex)
 
@@ -204,22 +145,24 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
         """Adds the authentication signature to the message"""
         self._log_debug("_add_signature, jsonMsg: %s" % self._jsonMsg)
         self._jsonMsg["username"] = self._signature_user
-        self._jsonMsg["expires"]  = int(self._signature_expires)
-        self._jsonMsg["time"]     = str(int(time.time()))
+        self._jsonMsg["expires"] = int(self._signature_expires)
+        self._jsonMsg["time"] = str(int(time.time()))
 
         if use_security_lib:
             authn_token_len = len(self._signature_token) + 1
-            session_length  = int(self._signature_expires)
-            token = ctypes.create_string_buffer(SSPL_SEC.sspl_get_token_length())
+            session_length = int(self._signature_expires)
+            token = ctypes.create_string_buffer(
+                SSPL_SEC.sspl_get_token_length())
 
             SSPL_SEC.sspl_generate_session_token(
-                                    self._signature_user, authn_token_len,
-                                    self._signature_token, session_length, token)
+                self._signature_user, authn_token_len,
+                self._signature_token, session_length, token)
 
             # Generate the signature
             msg_len = len(self._jsonMsg) + 1
             sig = ctypes.create_string_buffer(SSPL_SEC.sspl_get_sig_length())
-            SSPL_SEC.sspl_sign_message(msg_len, str(self._jsonMsg), self._signature_user,
+            SSPL_SEC.sspl_sign_message(msg_len, str(self._jsonMsg),
+                                       self._signature_user,
                                        token, sig)
 
             self._jsonMsg["signature"] = str(sig.raw, encoding='utf-8')
@@ -228,21 +171,25 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
 
     def _transmit_msg_on_exchange(self):
         """Transmit json message onto RabbitMQ exchange"""
-        self._log_debug("_transmit_msg_on_exchange, jsonMsg: %s" % self._jsonMsg)
+        self._log_debug(
+            "_transmit_msg_on_exchange, jsonMsg: %s" % self._jsonMsg)
 
         try:
             # Check for shut down message from sspl_ll_d and set a flag to shutdown
             #  once our message queue is empty
-            if self._jsonMsg.get("message").get("actuator_response_type") is not None and \
-                self._jsonMsg.get("message").get("actuator_response_type").get("thread_controller") is not None and \
-                self._jsonMsg.get("message").get("actuator_response_type").get("thread_controller").get("thread_response") == \
+            if self._jsonMsg.get("message").get(
+                    "actuator_response_type") is not None and \
+                    self._jsonMsg.get("message").get(
+                        "actuator_response_type").get(
+                        "thread_controller") is not None and \
+                    self._jsonMsg.get("message").get(
+                        "actuator_response_type").get("thread_controller").get(
+                        "thread_response") == \
                     "SSPL-LL is shutting down":
-                    logger.info("RabbitMQegressProcessor, _transmit_msg_on_exchange, received" \
-                                    "global shutdown message from sspl_ll_d")
-                    self._request_shutdown = True
-
-            msg_props = pika.BasicProperties()
-            msg_props.content_type = "text/plain"
+                logger.info(
+                    "RabbitMQegressProcessor, _transmit_msg_on_exchange, received"
+                    "global shutdown message from sspl_ll_d")
+                self._request_shutdown = True
 
             # Publish json message to the correct channel
             # NOTE: We need to route ThreadController messages to ACK channel.
@@ -251,47 +198,48 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
             # is "thread_controller".
             # TODO: Find a proper way to solve this issue. Avoid changing
             # core egress processor code
-            if self._jsonMsg.get("message").get("actuator_response_type") is not None and \
-              (self._jsonMsg.get("message").get("actuator_response_type").get("ack") is not None or \
-                self._jsonMsg.get("message").get("actuator_response_type").get("thread_controller") is not None):
+            if self._jsonMsg.get("message").get(
+                    "actuator_response_type") is not None and \
+                    (self._jsonMsg.get("message").get(
+                        "actuator_response_type").get("ack") is not None or
+                     self._jsonMsg.get("message").get(
+                         "actuator_response_type").get(
+                         "thread_controller") is not None):
                 self._add_signature()
-                jsonMsg = json.dumps(self._jsonMsg).encode('utf8')
-                self._ack_connection.publish(exchange=self._exchange_name,
-                                             routing_key=self._ack_routing_key,
-                                             properties=msg_props,
-                                             body=jsonMsg)
-                logger.debug("_transmit_msg_on_exchange, Successfully Sent: %s" % jsonMsg)
+                self._producer.send([json.dumps(self._jsonMsg)])
+                logger.debug(
+                    "_transmit_msg_on_exchange, Successfully Sent: %s" % self._jsonMsg)
 
             # Routing requests for IEM msgs sent from the LoggingMsgHandler
             elif self._jsonMsg.get("message").get("IEM_routing") is not None:
-                log_msg = self._jsonMsg.get("message").get("IEM_routing").get("log_msg")
+                log_msg = self._jsonMsg.get("message").get("IEM_routing").get(
+                    "log_msg")
                 if self._iem_route_addr != "":
-                    self._iem_connection.publish(exchange=self._iem_route_exchange_name,
-                                                 routing_key=self._routing_key,
-                                                 properties=msg_props,
-                                                 body=str(log_msg))
+                    self._producer.send([json.dumps(self._jsonMsg)])
                 else:
-                    logger.warn("RabbitMQegressProcessor, Attempted to route IEM without a valid 'iem_route_addr' set.")
-                logger.debug("_transmit_msg_on_exchange, Successfully Sent: %s" % log_msg)
+                    logger.warn(
+                        "RabbitMQegressProcessor, Attempted to route IEM without a valid 'iem_route_addr' set.")
+                logger.debug(
+                    "_transmit_msg_on_exchange, Successfully Sent: %s" % log_msg)
             else:
                 self._add_signature()
-                jsonMsg = json.dumps(self._jsonMsg).encode('utf8')
+                jsonMsg = json.dumps(self._jsonMsg)
                 try:
                     if self.store_queue.is_empty():
-                        self._connection.publish(exchange=self._exchange_name,
-                                                routing_key=self._routing_key,
-                                                properties=msg_props,
-                                                body=jsonMsg)
+                        self._producer.send([jsonMsg])
                         logger.info(f"Published Alert: {jsonMsg}")
                     else:
-                        self.store_queue.put(jsonMsg)
-                        logger.info("'Accumulated msg queue' is not Empty." +\
+                        logger.info("'Accumulated msg queue' is not Empty." +
                                     " Adding the msg to the end of the queue")
-                except connection_exceptions:
-                    logger.error("RabbitMQegressProcessor, _transmit_msg_on_exchange, rabbitmq connectivity lost, adding message to consul %s" % self._jsonMsg)
+                        self.store_queue.put(jsonMsg)
+                except MessageBusError as e:
+                    logger.error(
+                        f"RabbitMQegressProcessor, _transmit_msg_on_exchange, error {e} in producing message,\
+                                    adding message to consul {self._jsonMsg}")
                     self.store_queue.put(jsonMsg)
                 except Exception as err:
-                    logger.error(f'RabbitMQegressProcessor, _transmit_msg_on_exchange, Unknown error {err} while publishing the message, adding to persistent store {self._jsonMsg}')
+                    logger.error(
+                        f'RabbitMQegressProcessor, _transmit_msg_on_exchange, Unknown error {err} while publishing the message, adding to persistent store {self._jsonMsg}')
                     self.store_queue.put(jsonMsg)
 
             # If event is added by sensors, set it
@@ -299,7 +247,8 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
                 self._event.set()
 
         except Exception as ex:
-            logger.error(f'RabbitMQegressProcessor, _transmit_msg_on_exchange, problem while publishing the message:{ex}, adding message to consul: {self._jsonMsg}')
+            logger.error(
+                f'RabbitMQegressProcessor, _transmit_msg_on_exchange, problem while publishing the message:{ex}, adding message to consul: {self._jsonMsg}')
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""

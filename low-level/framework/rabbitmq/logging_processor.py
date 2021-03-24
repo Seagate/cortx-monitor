@@ -21,56 +21,52 @@
 """
 
 import json
-import time
 from syslog import (LOG_ALERT, LOG_CRIT, LOG_DEBUG, LOG_EMERG, LOG_ERR,
                     LOG_INFO, LOG_NOTICE, LOG_WARNING)
+import time
 
-import pika
+from cortx.utils.message_bus import MessageConsumer
 
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.module_thread import ScheduledModuleThread
-from framework.base.sspl_constants import ServiceTypes
-from framework.utils import encryptor
 from framework.utils.autoemail import AutoEmail
-from framework.utils.conf_utils import CLUSTER, GLOBAL_CONF, SSPL_CONF, Conf
+from framework.utils.conf_utils import CLUSTER, SRVNODE, SSPL_CONF, Conf
 from framework.utils.service_logging import logger
 # Modules that receive messages from this module
 from message_handlers.logging_msg_handler import LoggingMsgHandler
-
-from .rabbitmq_connector import RabbitMQSafeConnection
+from . import message_bus, producer_initialized
 
 try:
-   from systemd import journal
-   use_journal=True
+    from systemd import journal
+
+    use_journal = True
 except ImportError:
-    use_journal=False
-
-
+    use_journal = False
 
 LOGLEVELS = {
-    "LOG_EMERG"   : LOG_EMERG,
-    "LOG_ALERT"   : LOG_ALERT,
-    "LOG_CRIT"    : LOG_CRIT,
-    "LOG_ERR"     : LOG_ERR,
-    "LOG_WARNING" : LOG_WARNING,
-    "LOG_NOTICE"  : LOG_NOTICE,
-    "LOG_INFO"    : LOG_INFO,
-    "LOG_DEBUG"   : LOG_DEBUG
+    "LOG_EMERG": LOG_EMERG,
+    "LOG_ALERT": LOG_ALERT,
+    "LOG_CRIT": LOG_CRIT,
+    "LOG_ERR": LOG_ERR,
+    "LOG_WARNING": LOG_WARNING,
+    "LOG_NOTICE": LOG_NOTICE,
+    "LOG_INFO": LOG_INFO,
+    "LOG_DEBUG": LOG_DEBUG
 }
 
-class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
 
+class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
     MODULE_NAME = "LoggingProcessor"
-    PRIORITY    = 2
+    PRIORITY = 2
 
     # Section and keys in configuration file
-    LOGGINGPROCESSOR    = MODULE_NAME.upper()
-    EXCHANGE_NAME       = 'exchange_name'
-    QUEUE_NAME          = 'queue_name'
-    ROUTING_KEY         = 'routing_key'
-    VIRT_HOST           = 'virtual_host'
-    USER_NAME           = 'username'
-    PASSWORD            = 'password'
+    LOGGINGPROCESSOR = MODULE_NAME.upper()
+    EXCHANGE_NAME = 'exchange_name'
+    QUEUE_NAME = 'queue_name'
+    ROUTING_KEY = 'routing_key'
+    VIRT_HOST = 'virtual_host'
+    USER_NAME = 'username'
+    PASSWORD = 'password'
 
     SYSTEM_INFORMATION_KEY = 'SYSTEM_INFORMATION'
     CLUSTER_ID_KEY = 'cluster_id'
@@ -83,7 +79,7 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
 
     def __init__(self):
         super(LoggingProcessor, self).__init__(self.MODULE_NAME,
-                                                  self.PRIORITY)
+                                               self.PRIORITY)
 
     def initialize(self, conf_reader, msgQlist, product):
         """initialize configuration reader and internal msg queues"""
@@ -94,34 +90,49 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
         super(LoggingProcessor, self).initialize_msgQ(msgQlist)
 
         self._autoemailer = AutoEmail(conf_reader)
-        # Configure RabbitMQ Exchange to receive messages
-        self._configure_exchange(retry=False)
+
+        self._read_config()
+        producer_initialized.wait()
+        self._consumer = MessageConsumer(message_bus,
+                                         consumer_id=self._consumer_id,
+                                         consumer_group=self._consumer_group,
+                                         message_types=[self._message_type],
+                                         auto_ack=False, offset=self._offset)
 
     def run(self):
         """Run the module periodically on its own thread."""
-        #self._set_debug(True)
-        #self._set_debug_persist(True)
+        # self._set_debug(True)
+        # self._set_debug_persist(True)
 
         self._log_debug("Start accepting requests")
         try:
-            self._connection.consume(callback=self._process_msg)
+            while True:
+                message = self._consumer.receive()
+                if message:
+                    logger.info(f"LoggingProcessor, Message Recieved: {message}")
+                    self._process_msg(message)
+                    self._consumer.ack()
+                else:
+                    time.sleep(1)
         except Exception as ae:
             if self.is_running() is True:
-                logger.info("LoggingProcessor ungracefully breaking out of run loop, restarting: %s"
-                            % ae)
+                logger.info(
+                    "LoggingProcessor ungracefully breaking out of run loop, restarting: %s"
+                    % ae)
                 self._configure_exchange(retry=True)
                 self._scheduler.enter(10, self._priority, self.run, ())
             else:
-                logger.info("LoggingProcessor gracefully breaking out of run Loop, not restarting.")
+                logger.info(
+                    "LoggingProcessor gracefully breaking out of run Loop, not restarting.")
 
         self._log_debug("Finished processing successfully")
 
-    def _process_msg(self, ch, method, properties, body):
+    def _process_msg(self, body):
         """Parses the incoming message and hands off to the appropriate module"""
         try:
             # Encode and remove blankspace,\n,\t - Leaving as it might be useful
-            #ingressMsgTxt = json.dumps(body, ensure_ascii=True).encode('utf8')
-            #ingressMsg = json.loads(' '.join(ingressMsgTxt.split()))
+            # ingressMsgTxt = json.dumps(body, ensure_ascii=True).encode('utf8')
+            # ingressMsg = json.loads(' '.join(ingressMsgTxt.split()))
 
             # Enable debugging if it's found in the message
             if "debug" in body.lower():
@@ -131,7 +142,8 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
             try:
                 log_msg = body.encode('utf8')
             except Exception as de:
-                self._log_debug("_process_msg, no encoding applied, writing to syslog")
+                logger.debug(
+                    "_process_msg, no encoding applied, writing to syslog")
                 log_msg = body
 
             # See if there is log level at the beginning
@@ -147,75 +159,63 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
             event_code = None
             try:
                 event_code_start = log_msg.index("IEC:") + 4
-                event_code_stop  = log_msg.index(":", event_code_start)
+                event_code_stop = log_msg.index(":", event_code_start)
 
                 # Parse out the event code and remove any blank spaces
-                event_code = log_msg[event_code_start : event_code_stop].strip()
+                event_code = log_msg[event_code_start: event_code_stop].strip()
                 self._log_debug("log_msg, event_code: %s" % event_code)
             except Exception as e:
                 # Log message has no IEC to use as message_id in journal, ignoring
-                self._log_debug('Log message has no IEC to use as message_id in journal, ignoring: error: '.format(e))
+                self._log_debug(
+                    'Log message has no IEC to use as message_id in journal, ignoring: error: {}'.format(
+                        e))
 
             # Not an IEM so just dump it to the journal and don't worry about email and routing back to CMU
             if event_code is None:
                 if use_journal:
-                    journal.send(log_msg, MESSAGE_ID=event_code, PRIORITY=priority,
+                    journal.send(log_msg, MESSAGE_ID=event_code,
+                                 PRIORITY=priority,
                                  SYSLOG_IDENTIFIER="sspl-ll")
                 else:
                     logger.info(log_msg)
             else:
                 # Send the IEM to the logging msg handler to be processed
                 internal_json_msg = json.dumps(
-                    {"actuator_request_type" : {
+                    {"actuator_request_type": {
                         "logging": {
                             "log_level": log_level,
                             "log_type": "IEM",
                             "log_msg": log_msg
-                            }
                         }
-                     })
+                    }
+                    })
                 # Send the event to logging msg handler to send IEM message to journald
-                self._write_internal_msgQ(LoggingMsgHandler.name(), internal_json_msg)
+                self._write_internal_msgQ(LoggingMsgHandler.name(),
+                                          internal_json_msg)
 
-            # Acknowledge message was received
-            self._connection.ack(ch, delivery_tag=method.delivery_tag)
         except Exception as ex:
             logger.error("_process_msg: %r" % ex)
 
-    def _configure_exchange(self, retry=False):
+    def _read_config(self):
         """Configure the RabbitMQ exchange with defaults available"""
-        try:
-            self._virtual_host  = Conf.get(SSPL_CONF, f"{self.LOGGINGPROCESSOR}>{self.VIRT_HOST}",
-                                                                 'SSPL')
-            self._exchange_name = Conf.get(SSPL_CONF, f"{self.LOGGINGPROCESSOR}>{self.EXCHANGE_NAME}",
-                                                                 'sspl-in')
-            self._queue_name    = Conf.get(SSPL_CONF, f"{self.LOGGINGPROCESSOR}>{self.QUEUE_NAME}",
-                                                                 'iem-queue')
-            self._routing_key   = Conf.get(SSPL_CONF, f"{self.LOGGINGPROCESSOR}>{self.ROUTING_KEY}",
-                                                                 'iem-key')
-            self._username      = Conf.get(SSPL_CONF, f"{self.LOGGINGPROCESSOR}>{self.USER_NAME}",
-                                                                 'sspluser')
-            self._password      = Conf.get(SSPL_CONF, f"{self.LOGGINGPROCESSOR}>{self.PASSWORD}",
-                                                                 'sspl4ever')
-
-            cluster_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{self.CLUSTER_ID_KEY}",'CC01')
-
-            # Decrypt RabbitMQ Password
-            decryption_key = encryptor.gen_key(cluster_id, ServiceTypes.RABBITMQ.value)
-            self._password = encryptor.decrypt(decryption_key, self._password.encode('ascii'), "LoggingProcessor")
-
-            self._connection = RabbitMQSafeConnection(
-                self._username, self._password, self._virtual_host,
-                self._exchange_name, self._routing_key, self._queue_name
-            )
-        except Exception as ex:
-            logger.error("_configure_exchange: %s" % ex)
-
+        # Make methods locally available
+        self._node_id = Conf.get(SSPL_CONF,
+                                 f"{CLUSTER}>{SRVNODE}>{self.NODE_ID_KEY}",
+                                 'SN01')
+        self._consumer_id = Conf.get(SSPL_CONF,
+                                     f"{self.RABBITMQPROCESSOR}>{self.CONSUMER_ID}",
+                                     'sspl_in')
+        self._consumer_group = Conf.get(SSPL_CONF,
+                                        f"{self.RABBITMQPROCESSOR}>{self.CONSUMER_GROUP}",
+                                        'cortx_monitor')
+        self._message_type = Conf.get(SSPL_CONF,
+                                      f"{self.RABBITMQPROCESSOR}>{self.MESSAGE_TYPE}",
+                                      'IEM')
+        self._offset = Conf.get(SSPL_CONF,
+                                f"{self.RABBITMQPROCESSOR}>{self.OFFSET}",
+                                'earliest')
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""
         super(LoggingProcessor, self).shutdown()
-        try:
-            self._connection.cleanup()
-        except pika.exceptions.ConnectionClosed:
-            logger.info("LoggingProcessor, shutdown, RabbitMQ ConnectionClosed")
+

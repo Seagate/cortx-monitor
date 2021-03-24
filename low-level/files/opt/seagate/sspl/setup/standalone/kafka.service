@@ -13,11 +13,15 @@
 # about this software or licensing, please email opensource@seagate.com or
 # cortx-questions@seagate.com.
 
-"""RabbitMQ processor for automated integration tests"""
+[Unit]
+Requires=zookeeper.service
+After=zookeeper.service
 
-from threading import Event
-from cortx.utils.message_bus import MessageBus
+[Service]
+Type=simple
+ExecStart=/opt/kafka/kafka_2.13-2.7.0/bin/kafka-server-start.sh /opt/kafka/kafka_2.13-2.7.0/config/server.properties
+ExecStop=/opt/kafka/kafka_2.13-2.7.0/bin/kafka-server-stop.sh
+Restart=on-abnormal
 
-
-message_bus = MessageBus()
-producer_initialized = Event()
+[Install]
+WantedBy=multi-user.target

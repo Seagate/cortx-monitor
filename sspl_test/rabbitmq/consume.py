@@ -1,3 +1,5 @@
+#!/usr/bin/python3.6
+
 # Copyright (c) 2020 Seagate Technology LLC and/or its Affiliates
 #
 # This program is free software: you can redistribute it and/or modify it under the
@@ -13,11 +15,27 @@
 # about this software or licensing, please email opensource@seagate.com or
 # cortx-questions@seagate.com.
 
-"""RabbitMQ processor for automated integration tests"""
+"""Consume any unacknowledged messages from sspl."""
 
-from threading import Event
+
+import sys
+
 from cortx.utils.message_bus import MessageBus
+from cortx.utils.message_bus import MessageConsumer
 
+if __name__ == "__main__":
+    message_bus = MessageBus()
+    consumer = MessageConsumer(message_bus, consumer_id="sspl-test",
+                               consumer_group="cortx_monitor",
+                               message_types=["alerts"],
+                               auto_ack=False, offset="latest")
 
-message_bus = MessageBus()
-producer_initialized = Event()
+    while True:
+        try:
+            message = consumer.receive(timeout=3)
+            if message:
+                consumer.ack()
+            else:
+                sys.exit(0)
+        except Exception as e:
+            print(e)
