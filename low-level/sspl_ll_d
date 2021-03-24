@@ -58,11 +58,12 @@ from framework.rabbitmq.rabbitmq_egress_processor import \
 from framework.rabbitmq.rabbitmq_ingress_processor import \
     RabbitMQingressProcessor
 from framework.rabbitmq.thread_controller import ThreadController
+from framework.base.global_config import GlobalConf
 from framework.utils.conf_utils import (CLUSTER, GLOBAL_CONF, HOST, MONITOR,
                                         OPERATING_SYSTEM, PORT, PRODUCT,
-                                        RELEASE, RSYSLOG, SETUP, SRVNODE,
+                                        RELEASE, RSYSLOG, SETUP,
                                         SSPL_CONF, SYSTEM_INFORMATION,
-                                        THREADED, Conf)
+                                        THREADED)
 from framework.utils.config_reader import ConfigReader
 from framework.utils.service_logging import init_logging, logger
 from framework.utils.store_factory import store
@@ -282,10 +283,12 @@ def main(conf_reader, systemd_support):
     logger.info("sspl-ll Bootstrap: configuring for OS: %s" % OPERATING_SYSTEM)
 
     # Read in product value from configuration file
-    product = Conf.get(GLOBAL_CONF, f"{RELEASE}>{PRODUCT}")
-    # Read in setup value from configuration file
+    
+    conf_list = ['product', 'setup']
+    response_dict = GlobalConf().fetch_global_config(conf_list)
+    product = response_dict['product']
     try:
-        setup = Conf.get(GLOBAL_CONF, f"{RELEASE}>{SETUP}")
+        setup = response_dict['setup']
     except Exception:
         setup = 'hw'
 
@@ -300,7 +303,9 @@ def main(conf_reader, systemd_support):
 
     conf_reader = ConfigReader()
     for group in SSPL_SETTINGS.keys():
-        monitor = Conf.get(SSPL_CONF, f"{group}>{MONITOR}", 'true')
+        monitor = GlobalConf().fetch_sspl_config(
+            query_string = f"{group}>{MONITOR}",
+            default_val = 'true')
         if monitor not in ['true', True]:
             sspl_settings_configured_groups -= {group}
 
@@ -535,7 +540,8 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist, operating_system
         # Look at module's configuration section and determine if it's threaded
         threaded = 'True'
         try:
-            threaded = Conf.get(SSPL_CONF, f"{klass.name().upper()}>{THREADED}")
+            threaded = GlobalConf().fetch_sspl_config(
+                query_string = f"{klass.name().upper()}>{THREADED}")
             if threaded == '':
                 threaded = 'False'
         except Exception as e:
@@ -778,9 +784,13 @@ if __name__ == "__main__":
 
     # Initialize logging
     try:
-        logging_level = Conf.get(SSPL_CONF, f"{SYS_INFORMATION}>{LOG_LEVEL}", "INFO")
-        syslog_host = Conf.get(GLOBAL_CONF, f"{RSYSLOG}>{HOST}", DEFAULT_SYSLOG_HOST)
-        syslog_port = int(Conf.get(GLOBAL_CONF, f"{RSYSLOG}>{PORT}", DEFAULT_SYSLOG_PORT))
+        global_conf = GlobalConf()
+        logging_level = global_conf.fetch_sspl_config(
+            query_string = f"{SYS_INFORMATION}>{LOG_LEVEL}",
+            default_val = "INFO")
+        response_dict = global_conf.fetch_global_config(['rsyslog_host', 'rsyslog_port'])
+        syslog_host = response_dict['rsyslog_host']
+        syslog_port = int(response_dict['rsyslog_port'])
         init_logging("SSPL-LL", logging_level, syslog_host, syslog_port)
 
     except Exception as err:

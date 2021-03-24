@@ -25,8 +25,7 @@ import time
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.sspl_constants import enabled_products
-from framework.utils.conf_utils import (CLUSTER, GLOBAL_CONF, SRVNODE,
-                                        SSPL_CONF, Conf)
+from framework.base.global_config import GlobalConf
 from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
 from json_msgs.messages.sensors.cpu_data import CPUdataMsg
@@ -60,10 +59,6 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
     DEFAULT_HOST_MEMORY_USAGE_THRESHOLD = 80
 
     SYSTEM_INFORMATION = "SYSTEM_INFORMATION"
-    SITE_ID = "site_id"
-    CLUSTER_ID = "cluster_id"
-    NODE_ID = "node_id"
-    RACK_ID = "rack_id"
 
     IPMI_RESOURCE_TYPE_PSU = "node:fru:psu"
     IPMI_RESOURCE_TYPE_FAN = "node:fru:fan"
@@ -115,24 +110,8 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
         # Initialize internal message queues for this module
         super(NodeDataMsgHandler, self).initialize_msgQ(msgQlist)
-
-        self._transmit_interval = int(Conf.get(SSPL_CONF, f"{self.NODEDATAMSGHANDLER}>{self.TRANSMIT_INTERVAL}",
-                                                60))
-        self._units = Conf.get(SSPL_CONF, f"{self.NODEDATAMSGHANDLER}>{self.UNITS}",
-                                                "MB")
-        self._disk_usage_threshold = Conf.get(SSPL_CONF, f"{self.NODEDATAMSGHANDLER}>{self.DISK_USAGE_THRESHOLD}",
-                                                self.DEFAULT_DISK_USAGE_THRESHOLD)
-
-        self._cpu_usage_threshold = Conf.get(SSPL_CONF, f"{self.NODEDATAMSGHANDLER}>{self.CPU_USAGE_THRESHOLD}",
-                                                self.DEFAULT_CPU_USAGE_THRESHOLD)
-
-        self._host_memory_usage_threshold = Conf.get(SSPL_CONF, f"{self.NODEDATAMSGHANDLER}>{self.HOST_MEMORY_USAGE_THRESHOLD}",
-                                                self.DEFAULT_HOST_MEMORY_USAGE_THRESHOLD)
-
-        self.site_id = Conf.get(GLOBAL_CONF, f'{CLUSTER}>{SRVNODE}>{self.SITE_ID}','DC01')
-        self.rack_id = Conf.get(GLOBAL_CONF, f'{CLUSTER}>{SRVNODE}>{self.RACK_ID}','RC01')
-        self.node_id = Conf.get(GLOBAL_CONF, f'{CLUSTER}>{SRVNODE}>{self.NODE_ID}','SN01')
-        self.cluster_id = Conf.get(GLOBAL_CONF, f'{CLUSTER}>{self.CLUSTER_ID}','CC01')
+        self._global_conf = GlobalConf()
+        self._read_config()
 
         self.prev_nw_status = {}
         self.bmcNwStatus = None
@@ -377,8 +356,8 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                                         self._node_sensor.boot_time,
                                         self._node_sensor.up_time,
                                         self._node_sensor.uname, self._units,
-                                        self.site_id, self.rack_id,
-                                        self.node_id, self.cluster_id,
+                                        self._site_id, self._rack_id,
+                                        self._node_id, self._cluster_id,
                                         self._node_sensor.total_memory,
                                         self._node_sensor.logged_in_users,
                                         self._node_sensor.process_count,
@@ -406,8 +385,8 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                                         self._node_sensor.boot_time,
                                         self._node_sensor.up_time,
                                         self._node_sensor.uname, self._units,
-                                        self.site_id, self.rack_id,
-                                        self.node_id, self.cluster_id,
+                                        self._site_id, self._rack_id,
+                                        self._node_id, self._cluster_id,
                                         self._node_sensor.total_memory,
                                         self._node_sensor.logged_in_users,
                                         self._node_sensor.process_count,
@@ -498,10 +477,10 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                                     self._node_sensor.user_time,
                                     self._node_sensor.cpu_core_data,
                                     self._node_sensor.cpu_usage,
-                                    self.site_id,
-                                    self.rack_id,
-                                    self.node_id,
-                                    self.cluster_id,
+                                    self._site_id,
+                                    self._rack_id,
+                                    self._node_id,
+                                    self._cluster_id,
                                     self.FAULT,
                                     fault_event
                                 )
@@ -536,10 +515,10 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                                 self._node_sensor.user_time,
                                 self._node_sensor.cpu_core_data,
                                 self._node_sensor.cpu_usage,
-                                self.site_id,
-                                self.rack_id,
-                                self.node_id,
-                                self.cluster_id,
+                                self._site_id,
+                                self._rack_id,
+                                self._node_id,
+                                self._cluster_id,
                                 self.FAULT_RESOLVED,
                                 fault_resolved_event
                             )
@@ -562,7 +541,9 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                                 self._node_sensor.if_data,
                                 resource_id,
                                 resource_type,
-                                self.site_id, self.node_id, self.cluster_id, self.rack_id, state, severity, event)
+                                self._site_id, self._node_id,
+                                self._cluster_id, self._rack_id,
+                                state, severity, event)
         # Add in uuid if it was present in the json request
         if self._uuid is not None:
             ifDataMsg.set_uuid(self._uuid)
@@ -761,8 +742,9 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                                         self._node_sensor.free_space,
                                         self._node_sensor.disk_used_percentage,
                                         self._units,
-                                        self.site_id, self.rack_id,
-                                        self.node_id, self.cluster_id, self.FAULT,fault_event)
+                                        self._site_id, self._rack_id,
+                                        self._node_id, self._cluster_id,
+                                        self.FAULT,fault_event)
 
                 # Add in uuid if it was present in the json request
                 if self._uuid is not None:
@@ -785,10 +767,10 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                                     self._node_sensor.free_space,
                                     self._node_sensor.disk_used_percentage,
                                     self._units,
-                                    self.site_id,
-                                    self.rack_id,
-                                    self.node_id,
-                                    self.cluster_id,
+                                    self._site_id,
+                                    self._rack_id,
+                                    self._node_id,
+                                    self._cluster_id,
                                     self.FAULT_RESOLVED,
                                     fault_resolved_event
                                     )
@@ -896,6 +878,33 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             node_ipmi_data_msg.set_uuid(self._uuid)
         jsonMsg = node_ipmi_data_msg.getJson()
         self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
+
+    def _read_config(self):
+        conf_list = ['cluster_id', 'site_id', 'rack_id', 'node_id']
+        response = self._global_conf.fetch_global_config(conf_list)
+        self._cluster_id = response['cluster_id']
+        self._site_id = response['site_id']
+        self._node_id = response['node_id']
+        self._rack_id = response['rack_id']
+
+        self._transmit_interval = int(self._global_conf.fetch_sspl_config(
+            query_string = f"{self.NODEDATAMSGHANDLER}>{self.TRANSMIT_INTERVAL}",
+            default_val = 60))
+        self._units = self._global_conf.fetch_sspl_config(
+            query_string = f"{self.NODEDATAMSGHANDLER}>{self.UNITS}",
+            default_val = "MB")
+        self._disk_usage_threshold = self._global_conf.fetch_sspl_config(
+            query_string = f"{self.NODEDATAMSGHANDLER}>{self.DISK_USAGE_THRESHOLD}",
+            default_val = self.DEFAULT_DISK_USAGE_THRESHOLD)
+
+        self._cpu_usage_threshold = self._global_conf.fetch_sspl_config(
+            query_string = f"{self.NODEDATAMSGHANDLER}>{self.CPU_USAGE_THRESHOLD}",
+            default_val = self.DEFAULT_CPU_USAGE_THRESHOLD)
+
+        self._host_memory_usage_threshold = self._global_conf.fetch_sspl_config(
+            query_string = f"{self.NODEDATAMSGHANDLER}>{self.HOST_MEMORY_USAGE_THRESHOLD}",
+            default_val = self.DEFAULT_HOST_MEMORY_USAGE_THRESHOLD)
+
 
     def suspend(self):
         """Suspends the module thread. It should be non-blocking"""

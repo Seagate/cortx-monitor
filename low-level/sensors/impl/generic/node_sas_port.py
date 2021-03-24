@@ -29,8 +29,7 @@ from framework.base.debug import Debug
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.module_thread import SensorThread
 from framework.base.sspl_constants import DATA_PATH
-from framework.utils.conf_utils import (CLUSTER, GLOBAL_CONF, SRVNODE,
-                                        SSPL_CONF, Conf)
+from framework.base.global_config import GlobalConf
 from framework.utils.config_reader import ConfigReader
 from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
@@ -74,10 +73,6 @@ class SASPortSensor(SensorThread, InternalMsgQ):
 
     # section in the configuration store
     SYSTEM_INFORMATION = "SYSTEM_INFORMATION"
-    SITE_ID = "site_id"
-    CLUSTER_ID = "cluster_id"
-    NODE_ID = "node_id"
-    RACK_ID = "rack_id"
     POLLING_INTERVAL = "polling_interval"
     CACHE_DIR_NAME  = "server"
 
@@ -129,18 +124,13 @@ class SASPortSensor(SensorThread, InternalMsgQ):
         super(SASPortSensor, self).initialize(conf_reader)
 
         super(SASPortSensor, self).initialize_msgQ(msgQlist)
-
-        self._site_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.SITE_ID}",'DC01')
-        self._rack_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.RACK_ID}",'RC01')
-        self._node_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.NODE_ID}",'SN01')
-        self._cluster_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{self.CLUSTER_ID}",'CC01')
+        self._global_conf = GlobalConf()
+        self._read_config()
 
         # Get the sas port implementor from configuration
-        sas_port_utility = Conf.get(SSPL_CONF, f"{self.name().capitalize()}>{self.PROBE}",
-                                    "sysfs")
-
-        self.polling_interval = int(Conf.get(SSPL_CONF, f"{self.SENSOR_NAME.upper()}>{self.POLLING_INTERVAL}",
-                                        self.DEFAULT_POLLING_INTERVAL))
+        sas_port_utility = self._global_conf.fetch_sspl_config(
+            query_string = f"{self.name().capitalize()}>{self.PROBE}",
+            default_val = "sysfs")
 
         # Creating the instance of ToolFactory class
         self.tool_factory = ToolFactory()
@@ -446,9 +436,9 @@ class SASPortSensor(SensorThread, InternalMsgQ):
 
             info = {
                     "site_id": self._site_id,
-                    "cluster_id": self._cluster_id,
                     "rack_id": self._rack_id,
                     "node_id": self._node_id,
+                    "cluster_id" : self._cluster_id,
                     "resource_type": self.RESOURCE_TYPE, # node:interface:sas
                     "resource_id": self.RESOURCE_ID, # SASHBA-0
                     "event_time": epoch_time,
@@ -465,9 +455,9 @@ class SASPortSensor(SensorThread, InternalMsgQ):
 
             info = {
                     "site_id": self._site_id,
-                    "cluster_id": self._cluster_id,
                     "rack_id": self._rack_id,
                     "node_id": self._node_id,
+                    "cluster_id" : self._cluster_id,
                     "resource_type": self.RESOURCE_TYPE + ':port', # node:interface:sas:port
                     "resource_id": self.RESOURCE_ID + f'-port-{port}', # SASHBA-0-port-0
                     "event_time": epoch_time,
@@ -497,6 +487,17 @@ class SASPortSensor(SensorThread, InternalMsgQ):
         salt = str(uuid.uuid4().hex)
         alert_id = epoch_time + salt
         return alert_id
+
+    def _read_config(self):
+        conf_list = ['cluster_id', 'site_id', 'rack_id', 'node_id']
+        response = self._global_conf.fetch_global_config(conf_list)
+        self._cluster_id = response['cluster_id']
+        self._site_id = response['site_id']
+        self._node_id = response['node_id']
+        self._rack_id = response['rack_id']
+        self.polling_interval = int(self._global_conf.fetch_sspl_config(
+            query_string = f"{self.SENSOR_NAME.upper()}>{self.POLLING_INTERVAL}",
+            default_val = self.DEFAULT_POLLING_INTERVAL))
 
     def _generate_alert(self, alert_type, port):
         """Queues the message to NodeData Message Handler"""

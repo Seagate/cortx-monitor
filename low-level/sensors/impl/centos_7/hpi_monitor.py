@@ -28,7 +28,7 @@ from zope.interface import implementer
 
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.module_thread import SensorThread
-from framework.utils.conf_utils import SSPL_CONF, Conf
+from framework.base.global_config import GlobalConf
 from framework.utils.service_logging import logger
 # Modules that receive messages from this module
 from message_handlers.disk_msg_handler import DiskMsgHandler
@@ -348,13 +348,17 @@ class HPIMonitor(SensorThread, InternalMsgQ):
 
     def _getHpi_Monitor_Dir(self):
         """Retrieves the hpi monitor path to monitor on the file system"""
-        return Conf.get(SSPL_CONF, f"{self.HPIMONITOR}>{self.HPI_MONITOR_DIR}",
-                                                '/tmp/dcs/hpi')
+        response = GlobalConf().fetch_sspl_config(
+            query_string = f"{self.HPIMONITOR}>{self.HPI_MONITOR_DIR}",
+            default_val ='/tmp/dcs/hpi')
+        return response
 
     def _getStart_delay(self):
         """Retrieves the start delay used to allow dcs-collector to startup first"""
-        return Conf.get(SSPL_CONF, f"{self.HPIMONITOR}>{self.START_DELAY}",
-                                                    '20')
+        response = GlobalConf().fetch_sspl_config(
+            query_string = f"{self.HPIMONITOR}>{self.START_DELAY}",
+            default_val = '20')
+        return response
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""

@@ -34,8 +34,8 @@ from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.module_thread import SensorThread
 from framework.platforms.realstor.realstor_enclosure import \
     singleton_realstorencl
-from framework.utils.conf_utils import (POLLING_FREQUENCY_OVERRIDE, SSPL_CONF,
-                                        Conf)
+from framework.base.global_config import GlobalConf
+from framework.utils.conf_utils import POLLING_FREQUENCY_OVERRIDE
 from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
 from framework.utils.store_factory import store
@@ -102,8 +102,9 @@ class RealStorDiskSensor(SensorThread, InternalMsgQ):
         self.disks_prcache = f"{self.rssencl.frus}disks/"
 
         self.pollfreq_disksensor = \
-            int(Conf.get(SSPL_CONF, f"{self.rssencl.CONF_REALSTORDISKSENSOR}>{POLLING_FREQUENCY_OVERRIDE}",
-                        0))
+            int(GlobalConf().fetch_sspl_config(
+                query_string =  f"{self.rssencl.CONF_REALSTORDISKSENSOR}>{POLLING_FREQUENCY_OVERRIDE}",
+                default_val = 0))
 
         if self.pollfreq_disksensor == 0:
                 self.pollfreq_disksensor = self.rssencl.pollfreq

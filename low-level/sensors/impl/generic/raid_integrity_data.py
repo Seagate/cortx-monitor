@@ -32,8 +32,8 @@ from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.module_thread import SensorThread
 from framework.base.sspl_constants import (PRODUCT_FAMILY, WAIT_BEFORE_RETRY,
                                            RaidAlertMsgs, RaidDataConfig)
-from framework.utils.conf_utils import (CLUSTER, GLOBAL_CONF, SRVNODE,
-                                        SSPL_CONF, Conf)
+from framework.base.global_config import GlobalConf
+from framework.utils.conf_utils import (FAULT_RESOLVED, FAULT, SUCCESS)
 from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
 # Modules that receive messages from this module
@@ -53,10 +53,6 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
     RAIDIntegritySensor = SENSOR_NAME.upper()
 
     SYSTEM_INFORMATION = "SYSTEM_INFORMATION"
-    SITE_ID = "site_id"
-    CLUSTER_ID = "cluster_id"
-    NODE_ID = "node_id"
-    RACK_ID = "rack_id"
     POLLING_INTERVAL = "polling_interval"
     TIMESTAMP_FILE_PATH_KEY = "timestamp_file_path"
 
@@ -70,9 +66,7 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
     # alerts
     FAULT_RESOLVED = "fault_resolved"
     FAULT = "fault"
-    MISSING = "missing"
     SUCCESS = "success"
-    FAILED = "failed"
 
     @staticmethod
     def name():
@@ -96,14 +90,8 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
         self._alert_msg = None
         self._fault_state = None
         self._suspended = False
-        self._site_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.SITE_ID}",'DC01')
-        self._rack_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.RACK_ID}",'RC01')
-        self._node_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.NODE_ID}",'SN01')
-        self._cluster_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{self.CLUSTER_ID}",'CC01')
-        self._timestamp_file_path = Conf.get(SSPL_CONF, f"{self.RAIDIntegritySensor}>{self.TIMESTAMP_FILE_PATH_KEY}",
-                                        self.DEFAULT_TIMESTAMP_FILE_PATH)
-        self._polling_interval = Conf.get(SSPL_CONF, f"{self.RAIDIntegritySensor}>{self.POLLING_INTERVAL}",
-                                    self.DEFAULT_POLLING_INTERVAL)
+        self._global_conf = GlobalConf()
+        self._read_config()
         return True
 
     def read_data(self):
@@ -182,16 +170,16 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
                     if os.path.exists(fault_status_file):
                         with open(fault_status_file, 'r') as fs:
                             data = fs.read().rstrip()
-                        if self.FAULT_RESOLVED in data:
-                            self.alert_type = self.FAULT
+                        if FAULT_RESOLVED in data:
+                            self.alert_type = FAULT
                             self._alert_msg = "RAID disks present in %s RAID array, needs synchronization." %device
                             self._send_json_msg(self.alert_type, device, self._alert_msg)
-                            self._update_fault_state_file(device, self.FAULT, fault_status_file)
+                            self._update_fault_state_file(device, FAULT, fault_status_file)
                     else:
-                        self.alert_type = self.FAULT
+                        self.alert_type = FAULT
                         self._alert_msg = "RAID disks present in %s RAID array, needs synchronization." %device
                         self._send_json_msg(self.alert_type, device, self._alert_msg)
-                        self._update_fault_state_file(device, self.FAULT, fault_status_file)
+                        self._update_fault_state_file(device, FAULT, fault_status_file)
 
                     # Retry to check mismatch_cnt
                     self._retry_execution(self._check_mismatch_count, device)
@@ -241,13 +229,13 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
                 if os.path.exists(fault_status_file):
                     with open(fault_status_file, 'r') as fs:
                         data = fs.read().rstrip()
-                    if self.FAULT in data:
+                    if FAULT in data:
                         faulty_device = data.split(":")[0].rstrip()
                         if device == faulty_device:
-                            self.alert_type = self.FAULT_RESOLVED
+                            self.alert_type = FAULT_RESOLVED
                             self._alert_msg = "RAID disks present in %s RAID array are synchronized." %device
                             self._send_json_msg(self.alert_type, device, self._alert_msg)
-                            self._update_fault_state_file(device, self.FAULT_RESOLVED, fault_status_file)
+                            self._update_fault_state_file(device, FAULT_RESOLVED, fault_status_file)
             else:
                 status = "failed"
                 logger.debug("Mismatch found in {} file in raid_integrity_data!"
@@ -320,7 +308,7 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
                          .format(function_call, RaidDataConfig.NEXT_ITERATION_TIME.value))
             time.sleep(RaidDataConfig.NEXT_ITERATION_TIME.value)
             result = function_call(device)
-            if result == self.SUCCESS:
+            if result == SUCCESS:
                 return
 
     def _get_unique_filename(self, filename, device):
@@ -378,6 +366,20 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
         alert_id = epoch_time + salt
         return alert_id
 
+    def _read_config(self):
+        conf_list = ['cluster_id', 'site_id', 'rack_id', 'node_id']
+        response = self._global_conf.fetch_global_config(conf_list)
+        self._cluster_id = response['cluster_id']
+        self._site_id = response['site_id']
+        self._node_id = response['node_id']
+        self._rack_id = response['rack_id']
+        self._timestamp_file_path = self._global_conf.fetch_sspl_config(
+            query_string = f"{self.RAIDIntegritySensor}>{self.TIMESTAMP_FILE_PATH_KEY}",
+            default_val = self.DEFAULT_TIMESTAMP_FILE_PATH)
+        self._polling_interval =  self._global_conf.fetch_sspl_config(
+            query_string = f"{self.RAIDIntegritySensor}>{self.POLLING_INTERVAL}",
+            default_val = self.DEFAULT_POLLING_INTERVAL)
+
     def suspend(self):
         """Suspends the module thread. It should be non-blocking"""
         super(RAIDIntegritySensor, self).suspend()
@@ -408,7 +410,7 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
         dir_path = path[:path.rindex("/")]
         if not os.path.exists(dir_path):
             os.makedirs(dir_path)
-            logger.debug("{} in creation of dir path : {}".format(self.SUCCESS, dir_path))
+            logger.debug("{} in creation of dir path : {}".format(SUCCESS, dir_path))
         if not os.path.exists(path):
             file = open(path, "w+")
             file.close()

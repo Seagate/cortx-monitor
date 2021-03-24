@@ -35,9 +35,7 @@ from framework.base.sspl_constants import (PRODUCT_FAMILY,
                                            iem_severity_to_alert_mapping,
                                            iem_severity_types,
                                            iem_source_types)
-from framework.utils.conf_utils import (CLUSTER, CLUSTER_ID, GLOBAL_CONF,
-                                        NODE_ID, RACK_ID, SITE_ID, SRVNODE,
-                                        SSPL_CONF, Conf)
+from framework.base.global_config import GlobalConf
 from framework.utils.service_logging import logger
 from json_msgs.messages.sensors.iem_data import IEMDataMsg
 from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
@@ -53,18 +51,10 @@ class IEMSensor(SensorThread, InternalMsgQ):
     # Keys for config settings
     LOG_FILE_PATH_KEY = "log_file_path"
     TIMESTAMP_FILE_PATH_KEY = "timestamp_file_path"
-    SITE_ID_KEY = "site_id"
-    RACK_ID_KEY = "rack_id"
-    NODE_ID_KEY = "node_id"
-    CLUSTER_ID_KEY = "cluster_id"
 
     # Default values for config  settings
     DEFAULT_LOG_FILE_PATH = f"/var/log/{PRODUCT_FAMILY}/iem/iem_messages"
     DEFAULT_TIMESTAMP_FILE_PATH = f"/var/{PRODUCT_FAMILY}/sspl/data/iem/last_processed_msg_time"
-    DEFAULT_SITE_ID = "DC01"
-    DEFAULT_RACK_ID = "RC01"
-    DEFAULT_NODE_ID = "SN01"
-    DEFAULT_CLUSTER_ID= "CC01"
 
     # RANGE/VALID VALUES for IEC Components
     # NOTE: Ranges are   in hex number system.
@@ -109,10 +99,6 @@ class IEMSensor(SensorThread, InternalMsgQ):
             self.SENSOR_NAME, self.PRIORITY)
         self._log_file_path = None
         self._timestamp_file_path = None
-        self._site_id = None
-        self._rack_id = None
-        self._node_id = None
-        self._cluster_id = None
         self._iem_logs = None
         self._iem_log_file_lock = threading.Lock()
 
@@ -126,18 +112,8 @@ class IEMSensor(SensorThread, InternalMsgQ):
         super(IEMSensor, self).initialize_msgQ(msgQlist)
 
         # Read configurations
-
-        self._log_file_path = Conf.get(SSPL_CONF, f"{self.SENSOR_NAME.upper()}>{self.LOG_FILE_PATH_KEY}",
-                self.DEFAULT_LOG_FILE_PATH)
-
-        self._timestamp_file_path = Conf.get(SSPL_CONF, f"{self.SENSOR_NAME.upper()}>{self.TIMESTAMP_FILE_PATH_KEY}",
-                self.DEFAULT_TIMESTAMP_FILE_PATH)
-
-        self._site_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{SITE_ID}",'DC01')
-        self._rack_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{RACK_ID}",'RC01')
-        self._node_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{NODE_ID}",'SN01')
-        self._cluster_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{CLUSTER_ID}",'CC01')
-
+        self._global_conf = GlobalConf()
+        self._read_config()
         return True
 
     def read_data(self):
@@ -415,6 +391,22 @@ class IEMSensor(SensorThread, InternalMsgQ):
                 if self._iem_logs:
                     self._iem_logs.close()
                     self._iem_logs = open(self._log_file_path)
+
+    def _read_config(self):
+        conf_list = ['cluster_id', 'site_id', 'rack_id', 'node_id']
+        response = self._global_conf.fetch_global_config(conf_list)
+        self._cluster_id = response['cluster_id']
+        self._site_id = response['site_id']
+        self._node_id = response['node_id']
+        self._rack_id = response['rack_id']
+        self._log_file_path = self._global_conf.fetch_sspl_config(
+            query_string = f"{self.SENSOR_NAME.upper()}>{self.LOG_FILE_PATH_KEY}",
+            default_val = self.DEFAULT_LOG_FILE_PATH)
+
+        self._timestamp_file_path = self._global_conf.fetch_sspl_config(
+            query_string = f"{self.SENSOR_NAME.upper()}>{self.TIMESTAMP_FILE_PATH_KEY}",
+            default_val = self.DEFAULT_TIMESTAMP_FILE_PATH)
+
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""

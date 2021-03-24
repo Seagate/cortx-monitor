@@ -27,11 +27,9 @@ import time
 from framework.base.sspl_constants import ServiceTypes
 from framework.target.enclosure import StorageEnclosure
 from framework.utils import encryptor
-from framework.utils.conf_utils import (CLUSTER, CONTROLLER, ENCLOSURE,
-                                        GLOBAL_CONF, IP, MGMT_INTERFACE,
-                                        SECRET, POLLING_FREQUENCY, PORT,
-                                        PRIMARY, SECONDARY, SRVNODE, SSPL_CONF,
-                                        STORAGE, STORAGE_ENCLOSURE, USER, Conf)
+from framework.base.global_config import GlobalConf
+from framework.utils.conf_utils import (MGMT_INTERFACE, POLLING_FREQUENCY,
+                                        STORAGE, STORAGE_ENCLOSURE)
 from framework.utils.service_logging import logger
 from framework.utils.store_factory import store
 from framework.utils.webservices import WebServices
@@ -57,10 +55,6 @@ class RealStorEnclosure(StorageEnclosure):
     CONF_REALSTORENCLOSURESENSOR = "REALSTORENCLOSURESENSOR"
     CONF_REALSTORSENSORS = "REALSTORSENSORS"
     DEFAULT_POLL = 30
-    SITE_ID = "site_id"
-    CLUSTER_ID = "cluster_id"
-    NODE_ID = "node_id"
-    RACK_ID = "rack_id"
 
     DEFAULT_USER = "manage"
     DEFAULT_PASSWD = "!manage"
@@ -117,37 +111,17 @@ class RealStorEnclosure(StorageEnclosure):
         # WS Request common headers
         self.ws = WebServices()
         self.common_reqheaders = {}
+        self._conf = GlobalConf().fetch_global_config(["cluster_id", "site_id",
+                            "node_id", "rack_id", "mc1", "mc1_wsport",
+                            "mc2", "mc2_wsport", "user", "secret"])
+        self.active_ip = self._conf['mc1']
+        self.active_wsport = self._conf['mc1_wsport']
+        self._read_config()
 
         self.encl_conf = self.CONF_SECTION_MC
 
         self.system_persistent_cache = self.encl_cache + "system/"
         self.faults_persistent_cache = self.system_persistent_cache + "faults.json"
-
-        # Read in mc value from configuration file
-        self.mc1 = Conf.get(GLOBAL_CONF, f"{STORAGE}>{ENCLOSURE}>{CONTROLLER}>{PRIMARY}>{IP}", self.DEFAULT_MC_IP)
-        self.mc1_wsport = str(Conf.get(GLOBAL_CONF, f"{STORAGE}>{ENCLOSURE}>{CONTROLLER}>{PRIMARY}>{PORT}", ''))
-        self.mc2 = Conf.get(GLOBAL_CONF, f"{STORAGE}>{ENCLOSURE}>{SECONDARY}>{IP}", self.DEFAULT_MC_IP)
-        self.mc2_wsport = str(Conf.get(GLOBAL_CONF, f"{STORAGE}>{ENCLOSURE}>{CONTROLLER}>{SECONDARY}>{PORT}", ''))
-
-        self.active_ip = self.mc1
-        self.active_wsport = self.mc1_wsport
-
-        self.user = Conf.get(GLOBAL_CONF, f"{STORAGE}>{ENCLOSURE}>{CONTROLLER}>{USER}", self.DEFAULT_USER)
-        self.passwd = Conf.get(GLOBAL_CONF, f"{STORAGE}>{ENCLOSURE}>{CONTROLLER}>{SECRET}", self.DEFAULT_PASSWD)
-
-        self.mc_interface = Conf.get(SSPL_CONF, f"{STORAGE_ENCLOSURE}>{MGMT_INTERFACE}", "cliapi")
-
-        self.pollfreq = int(Conf.get(SSPL_CONF, f"{self.CONF_REALSTORSENSORS}>{POLLING_FREQUENCY}",
-                        self.DEFAULT_POLL))
-
-        self.site_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.SITE_ID}",'DC01')
-        self.rack_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.RACK_ID}",'RC01')
-        self.node_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.NODE_ID}",'SN01')
-        # Need to keep cluster_id string here to generate decryption key
-        self.cluster_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{self.CLUSTER_ID}",'CC01')
-        # Decrypt MC Password
-        decryption_key = encryptor.gen_key(self.cluster_id, ServiceTypes.STORAGE_ENCLOSURE.value)
-        self.passwd = encryptor.decrypt(decryption_key, self.passwd.encode('ascii'), "RealStoreEncl")
 
         if self.mc_interface not in self.realstor_supported_interfaces:
             logger.error("Unspported Realstor interface configured,"
@@ -182,16 +156,16 @@ class RealStorEnclosure(StorageEnclosure):
         """Switches active ip between primary and secondary management controller
            ips"""
 
-        if self.mc1 == self.mc2 and \
-            self.mc1_wsport == self.mc2_wsport:
+        if self._conf['mc1'] == self._conf['mc2'] and \
+            self._conf['mc1_wsport'] == self._conf['mc2_wsport']:
             return
 
-        if self.active_ip == self.mc1:
-            self.active_ip = self.mc2
-            self.active_wsport = self.mc2_wsport
-        elif self.active_ip == self.mc2:
-            self.active_ip = self.mc1
-            self.active_wsport = self.mc1_wsport
+        if self.active_ip == self._conf['mc1']:
+            self.active_ip = self._conf['mc2']
+            self.active_wsport = self._conf['mc2_wsport']
+        elif self.active_ip == self._conf['mc2']:
+            self.active_ip = self._conf['mc1']
+            self.active_wsport = self._conf['mc1_wsport']
 
         self.login()
         logger.debug("Current MC active ip {0}, active wsport {1}. Logged-in\
@@ -268,7 +242,7 @@ class RealStorEnclosure(StorageEnclosure):
         """Perform realstor login to get session key & make it available
            in common request headers"""
 
-        cli_api_auth = self.user + '_' + self.passwd
+        cli_api_auth = self._conf['user'] + '_' + self.passwd
 
         url = self.build_url(self.URI_CLIAPI_LOGIN)
         auth_hash = hashlib.sha256(cli_api_auth.encode('utf-8')).hexdigest()
@@ -452,6 +426,22 @@ class RealStorEnclosure(StorageEnclosure):
                      self.existing_faults = False
             else:
                 logger.error("poll system failed with err %d" % api_resp)
+
+    def _read_config(self):
+        """ Read Configurations from global config"""
+        self.mc_interface = self._global_conf.fetch_sspl_config(
+            query_string=f"{STORAGE_ENCLOSURE}>{MGMT_INTERFACE}",
+            default_val="cliapi")
+
+        self.pollfreq = self._global_conf.fetch_sspl_config(
+            query_string=f"{self.CONF_REALSTORSENSORS}>{POLLING_FREQUENCY}",
+            default_val = self.DEFAULT_POLL)
+
+        # Decrypt MC Password
+        decryption_key = encryptor.gen_key(self._conf['cluster_id'],
+                                    ServiceTypes.STORAGE_ENCLOSURE.value)
+        self.passwd = encryptor.decrypt(decryption_key, self._conf['secret'].encode('ascii'),
+                                        "RealStoreEncl")
 
 # Object to use as singleton instance
 singleton_realstorencl = RealStorEnclosure()

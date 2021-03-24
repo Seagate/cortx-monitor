@@ -27,6 +27,7 @@ from socket import gethostname
 from threading import Thread
 
 from framework.base.internal_msgQ import InternalMsgQ
+from framework.base.global_config import GlobalConf
 from framework.base.module_thread import (ScheduledModuleThread, SensorThread,
                                           SensorThreadState)
 from framework.base.sspl_constants import (SSPL_SETTINGS, OperatingSystem,
@@ -41,7 +42,6 @@ from framework.rabbitmq.rabbitmq_egress_processor import \
     RabbitMQegressProcessor
 from framework.rabbitmq.rabbitmq_ingress_processor import \
     RabbitMQingressProcessor
-from framework.utils.conf_utils import SSPL_CONF, Conf
 from framework.utils.service_logging import logger
 from json_msgs.messages.actuators.thread_controller import ThreadControllerMsg
 from message_handlers.disk_msg_handler import DiskMsgHandler
@@ -482,7 +482,8 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
         modules_to_resume = []
         try:
             # Read list of modules from conf file to load in degraded mode
-            modules_to_resume = Conf.get(SSPL_CONF, f"{self.SSPL_SETTING}>{self.DEGRADED_STATE_MODULES}")
+            modules_to_resume = GlobalConf().fetch_sspl_config(
+                            query_string = f"{self.SSPL_SETTING}>{self.DEGRADED_STATE_MODULES}")
         except Exception as e:
             logger.warn("ThreadController: Configuration not found, degraded_state_modules")
         return modules_to_resume

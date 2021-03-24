@@ -35,7 +35,7 @@ from zope.interface import implementer
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.module_thread import SensorThread
 from framework.base.sspl_constants import PRODUCT_FAMILY
-from framework.utils.conf_utils import SSPL_CONF, Conf
+from framework.base.global_config import GlobalConf
 from framework.utils.service_logging import logger
 # Modules that receive messages from this module
 from message_handlers.disk_msg_handler import DiskMsgHandler
@@ -246,13 +246,17 @@ class DriveManager(SensorThread, InternalMsgQ):
 
     def _getDrive_Mngr_Dir(self):
         """Retrieves the drivemanager path to monitor on the file system"""
-        return Conf.get(SSPL_CONF, f"{self.DRIVEMANAGER}>{self.DRIVE_MANAGER_DIR}",
-                                                    '/tmp/dcs/drivemanager')
+        response = GlobalConf().fetch_sspl_config(
+            query_string = f"{self.DRIVEMANAGER}>{self.DRIVE_MANAGER_DIR}",
+            default_val = '/tmp/dcs/drivemanager')
+        return response
 
     def _getStart_delay(self):
         """Retrieves the start delay used to allow dcs-collector to startup first"""
-        return Conf.get(SSPL_CONF, f"{self.DRIVEMANAGER}>{self.START_DELAY}",
-                                                    '20')
+        response = GlobalConf().fetch_sspl_config(
+            query_string = f"{self.DRIVEMANAGER}>{self.START_DELAY}",
+            default_val = '20')
+        return response
 
     def _notify_DiskMsgHandler(self, status_file : str, serial_num_file):
         """Send the event to the disk message handler for generating JSON message"""

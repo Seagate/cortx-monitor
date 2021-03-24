@@ -27,8 +27,7 @@ import uuid
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.module_thread import SensorThread
 from framework.base.sspl_constants import DATA_PATH
-from framework.utils.conf_utils import (CLUSTER, GLOBAL_CONF, SRVNODE,
-                                        SSPL_CONF, Conf)
+from framework.base.global_config import GlobalConf
 from framework.utils.procfs_interface import ProcFS
 from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
@@ -51,10 +50,6 @@ class MemFaultSensor(SensorThread, InternalMsgQ):
 
     # section in the configuration store
     SYSTEM_INFORMATION_KEY = "SYSTEM_INFORMATION"
-    SITE_ID_KEY = "site_id"
-    CLUSTER_ID_KEY = "cluster_id"
-    NODE_ID_KEY = "node_id"
-    RACK_ID_KEY = "rack_id"
     POLLING_INTERVAL_KEY = "polling_interval"
     CACHE_DIR_NAME  = "server"
 
@@ -98,17 +93,12 @@ class MemFaultSensor(SensorThread, InternalMsgQ):
 
         super(MemFaultSensor, self).initialize_msgQ(msgQlist)
 
-        self._site_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.SITE_ID_KEY}",'DC01')
-        self._rack_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.RACK_ID_KEY}",'RC01')
-        self._node_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.NODE_ID_KEY}",'SN01')
-        self._cluster_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{self.CLUSTER_ID_KEY}",'CC01')
-
         # get the mem fault implementor from configuration
-        mem_fault_utility = Conf.get(SSPL_CONF, f"{self.name().capitalize()}>{self.PROBE}",
-            "procfs")
-
-        self.polling_interval = int(Conf.get(SSPL_CONF,f"{self.SENSOR_NAME.upper()}>{self.POLLING_INTERVAL_KEY}",
-                    self.DEFAULT_POLLING_INTERVAL))
+        self._global_conf = GlobalConf()
+        self._read_config()
+        mem_fault_utility = self._global_conf.fetch_sspl_config(
+            query_string = f"{self.name().capitalize()}>{self.PROBE}",
+            default_val = "procfs")
 
         # Creating the instance of ToolFactory class
         self.tool_factory = ToolFactory()
@@ -258,6 +248,18 @@ class MemFaultSensor(SensorThread, InternalMsgQ):
             }})
 
         return internal_json_msg
+
+    def _read_config(self):
+        conf_list = ['cluster_id', 'site_id', 'rack_id', 'node_id']
+        response = self._global_conf.fetch_global_config(conf_list)
+        self._cluster_id = response['cluster_id']
+        self._site_id = response['site_id']
+        self._node_id = response['node_id']
+        self._rack_id = response['rack_id']
+        self.polling_interval = int(self._global_conf.fetch_sspl_config(
+            query_string = f"{self.SENSOR_NAME.upper()}>{self.POLLING_INTERVAL_KEY}",
+            default_val = self.DEFAULT_POLLING_INTERVAL))
+
 
 
     def _get_alert_id(self, epoch_time):

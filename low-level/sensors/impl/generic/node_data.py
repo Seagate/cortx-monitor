@@ -33,7 +33,7 @@ import psutil
 from zope.interface import implementer
 
 from framework.base.debug import Debug
-from framework.utils.conf_utils import SSPL_CONF, Conf
+from framework.base.global_config import GlobalConf
 from framework.utils.config_reader import ConfigReader
 from framework.utils.service_logging import logger
 from framework.utils.sysfs_interface import SysFS
@@ -75,8 +75,9 @@ class NodeData(Debug):
 
         self.conf_reader = ConfigReader()
 
-        nw_fault_utility = Conf.get(SSPL_CONF, f"{self.name().capitalize()}>{self.PROBE}",
-                                              "sysfs")
+        nw_fault_utility = GlobalConf().fetch_sspl_config(
+            query_string = f"{self.name().capitalize()}>{self.PROBE}",
+            default_val = "sysfs")
 
         self._utility_instance = None
 

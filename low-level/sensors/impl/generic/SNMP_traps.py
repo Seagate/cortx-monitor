@@ -29,7 +29,7 @@ from framework.base.module_thread import SensorThread
 # Modules that receive messages from this module
 from framework.rabbitmq.rabbitmq_egress_processor import \
     RabbitMQegressProcessor
-from framework.utils.conf_utils import SSPL_CONF, Conf
+from framework.base.global_config import GlobalConf
 from framework.utils.service_logging import logger
 from json_msgs.messages.sensors.snmp_trap import SNMPtrapMsg
 from message_handlers.logging_msg_handler import LoggingMsgHandler
@@ -75,6 +75,7 @@ class SNMPtraps(SensorThread, InternalMsgQ):
 
         self._set_debug(True)
         self._set_debug_persist(True)
+        self._global_conf = GlobalConf()
 
         self._get_config()
 
@@ -248,13 +249,17 @@ class SNMPtraps(SensorThread, InternalMsgQ):
 
     def _get_config(self):
         """Retrieves the information in /etc/sspl.conf"""
-        self._enabled_traps = Conf.get(SSPL_CONF, f"{self.SNMPTRAPS}>{self.ENABLED_TRAPS}")
-        self._enabled_MIBS  = Conf.get(SSPL_CONF, f"{self.SNMPTRAPS}>{self.ENABLED_MIBS}")
+        self._enabled_traps = self._global_conf.fetch_sspl_config(
+            query_string = f"{self.SNMPTRAPS}>{self.ENABLED_TRAPS}")
+        self._enabled_MIBS  = self._global_conf.fetch_sspl_config(
+            query_string = f"{self.SNMPTRAPS}>{self.ENABLED_MIBS}")
 
-        self._bind_ip = Conf.get(SSPL_CONF, f"{self.SNMPTRAPS}>{self.BIND_IP}",
-                                                        'service')
-        self._bind_port = int(Conf.get(SSPL_CONF, f"{self.SNMPTRAPS}>{self.BIND_PORT}",
-                                                        1620))
+        self._bind_ip = self._global_conf.fetch_sspl_config(
+            query_string = f"{self.SNMPTRAPS}>{self.BIND_IP}",
+            default_val = 'service')
+        self._bind_port = int(self._global_conf.fetch_sspl_config(
+            query_string = f"{self.SNMPTRAPS}>{self.BIND_PORT}",
+            default_val = 1620))
 
         logger.info("          Listening on %s:%s" % (self._bind_ip, self._bind_port))
         logger.info("          Enabled traps: %s" % str(self._enabled_traps))

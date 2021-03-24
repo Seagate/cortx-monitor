@@ -30,7 +30,7 @@ from cortx.utils.message_bus import MessageConsumer
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.module_thread import ScheduledModuleThread
 from framework.utils.autoemail import AutoEmail
-from framework.utils.conf_utils import CLUSTER, SRVNODE, SSPL_CONF, Conf
+from framework.base.global_config import GlobalConf
 from framework.utils.service_logging import logger
 # Modules that receive messages from this module
 from message_handlers.logging_msg_handler import LoggingMsgHandler
@@ -69,8 +69,6 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
     PASSWORD = 'password'
 
     SYSTEM_INFORMATION_KEY = 'SYSTEM_INFORMATION'
-    CLUSTER_ID_KEY = 'cluster_id'
-    NODE_ID_KEY = 'node_id'
 
     @staticmethod
     def name():
@@ -79,7 +77,7 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
 
     def __init__(self):
         super(LoggingProcessor, self).__init__(self.MODULE_NAME,
-                                               self.PRIORITY)
+                                                  self.PRIORITY)
 
     def initialize(self, conf_reader, msgQlist, product):
         """initialize configuration reader and internal msg queues"""
@@ -90,7 +88,7 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
         super(LoggingProcessor, self).initialize_msgQ(msgQlist)
 
         self._autoemailer = AutoEmail(conf_reader)
-
+        self._global_conf = GlobalConf()
         self._read_config()
         producer_initialized.wait()
         self._consumer = MessageConsumer(message_bus,
@@ -198,22 +196,21 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
 
     def _read_config(self):
         """Configure the RabbitMQ exchange with defaults available"""
-        # Make methods locally available
-        self._node_id = Conf.get(SSPL_CONF,
-                                 f"{CLUSTER}>{SRVNODE}>{self.NODE_ID_KEY}",
-                                 'SN01')
-        self._consumer_id = Conf.get(SSPL_CONF,
-                                     f"{self.RABBITMQPROCESSOR}>{self.CONSUMER_ID}",
-                                     'sspl_in')
-        self._consumer_group = Conf.get(SSPL_CONF,
-                                        f"{self.RABBITMQPROCESSOR}>{self.CONSUMER_GROUP}",
-                                        'cortx_monitor')
-        self._message_type = Conf.get(SSPL_CONF,
-                                      f"{self.RABBITMQPROCESSOR}>{self.MESSAGE_TYPE}",
-                                      'IEM')
-        self._offset = Conf.get(SSPL_CONF,
-                                f"{self.RABBITMQPROCESSOR}>{self.OFFSET}",
-                                'earliest')
+        try:
+            self._consumer_id = self._global_conf.fetch_sspl_config(
+                                    query_string = f"{self.RABBITMQPROCESSOR}>{self.CONSUMER_ID}",
+                                    default_val = 'sspl_in')
+            self._consumer_group = self._global_conf.fetch_sspl_config(
+                                    query_string = f"{self.RABBITMQPROCESSOR}>{self.CONSUMER_GROUP}",
+                                    default_val = 'cortx_monitor')
+            self._message_type = self._global_conf.fetch_sspl_config(
+                                    query_string = f"{self.RABBITMQPROCESSOR}>{self.MESSAGE_TYPE}",
+                                    default_val = 'IEM')
+            self._offset = self._global_conf.fetch_sspl_config(
+                                    query_string = f"{self.RABBITMQPROCESSOR}>{self.OFFSET}",
+                                    default_val = 'earliest')
+        except Exception as ex:
+            logger.error("_configure_exchange: %s" % ex)
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""

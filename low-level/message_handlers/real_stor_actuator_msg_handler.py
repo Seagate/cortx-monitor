@@ -25,7 +25,7 @@ import time
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.sspl_constants import enabled_products
-from framework.utils.conf_utils import GLOBAL_CONF, RELEASE, Conf
+from framework.base.global_config import GlobalConf
 from framework.utils.service_logging import logger
 from json_msgs.messages.actuators.realstor_actuator_response import \
     RealStorActuatorMsg
@@ -83,7 +83,8 @@ class RealStorActuatorMsgHandler(ScheduledModuleThread, InternalMsgQ):
         self._real_stor_actuator    = None
 
         self._import_products(product)
-        self.setup = Conf.get(GLOBAL_CONF, f"{RELEASE}>{self.SETUP}","ssu")
+        response_dict = GlobalConf().fetch_global_config(['setup'])
+        self.setup = response_dict['setup']
 
     def _import_products(self, product):
         """Import classes based on which product is being used"""

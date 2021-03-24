@@ -26,7 +26,7 @@ from cortx.utils.message_bus.error import MessageBusError
 
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.module_thread import ScheduledModuleThread
-from framework.utils.conf_utils import SSPL_CONF, Conf
+from framework.base.global_config import GlobalConf
 from framework.utils.service_logging import logger
 from framework.utils.store_queue import StoreQueue
 from . import message_bus, producer_initialized
@@ -72,6 +72,7 @@ class RabbitMQEgressAccumulatedMsgsProcessor(ScheduledModuleThread,
             msgQlist)
 
         self.store_queue = StoreQueue()
+        self._global_conf = GlobalConf()
         self._read_config()
 
         producer_initialized.wait()
@@ -134,24 +135,24 @@ class RabbitMQEgressAccumulatedMsgsProcessor(ScheduledModuleThread,
     def _read_config(self):
         """Configure the RabbitMQ exchange with defaults available"""
         try:
-            self._signature_user = Conf.get(SSPL_CONF,
-                                            f"{self.RABBITMQPROCESSOR}>{self.SIGNATURE_USERNAME}",
-                                            'sspl-ll')
-            self._signature_token = Conf.get(SSPL_CONF,
-                                             f"{self.RABBITMQPROCESSOR}>{self.SIGNATURE_TOKEN}",
-                                             'FAKETOKEN1234')
-            self._signature_expires = Conf.get(SSPL_CONF,
-                                               f"{self.RABBITMQPROCESSOR}>{self.SIGNATURE_EXPIRES}",
-                                               "3600")
-            self._producer_id = Conf.get(SSPL_CONF,
-                                         f"{self.RABBITMQPROCESSOR}>{self.PRODUCER_ID}",
-                                         "sspl-sensor")
-            self._message_type = Conf.get(SSPL_CONF,
-                                          f"{self.RABBITMQPROCESSOR}>{self.MESSAGE_TYPE}",
-                                          "alerts")
-            self._method = Conf.get(SSPL_CONF,
-                                    f"{self.RABBITMQPROCESSOR}>{self.METHOD}",
-                                    "sync")
+            self._signature_user = self._global_conf.fetch_sspl_config(
+                                    query_string = f"{self.RABBITMQPROCESSOR}>{self.SIGNATURE_USERNAME}",
+                                    default_val = 'sspl-ll')
+            self._signature_token = self._global_conf.fetch_sspl_config(
+                                    query_string = f"{self.RABBITMQPROCESSOR}>{self.SIGNATURE_TOKEN}",
+                                    default_val = 'FAKETOKEN1234')
+            self._signature_expires = self._global_conf.fetch_sspl_config(
+                                    query_string = f"{self.RABBITMQPROCESSOR}>{self.SIGNATURE_EXPIRES}",
+                                    default_val = "3600")
+            self._producer_id = self._global_conf.fetch_sspl_config(
+                                    query_string = f"{self.RABBITMQPROCESSOR}>{self.PRODUCER_ID}",
+                                    default_val = "sspl-sensor")
+            self._message_type = self._global_conf.fetch_sspl_config(
+                                    query_string = f"{self.RABBITMQPROCESSOR}>{self.MESSAGE_TYPE}",
+                                    default_val = "alerts")
+            self._method = self._global_conf.fetch_sspl_config(
+                                    query_string = f"{self.RABBITMQPROCESSOR}>{self.METHOD}",
+                                    default_val = "sync")
         except Exception as ex:
             logger.error("RabbitMQegressProcessor, _read_config: %r" % ex)
 

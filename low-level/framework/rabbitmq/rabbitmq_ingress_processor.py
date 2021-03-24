@@ -32,7 +32,7 @@ from framework.base.module_thread import ScheduledModuleThread
 from framework.base.sspl_constants import RESOURCE_PATH
 from framework.rabbitmq.rabbitmq_egress_processor import \
     RabbitMQegressProcessor
-from framework.utils.conf_utils import CLUSTER, SRVNODE, SSPL_CONF, Conf
+from framework.base.global_config import GlobalConf
 from framework.utils.service_logging import logger
 from json_msgs.messages.actuators.ack_response import AckResponseMsg
 from . import message_bus, producer_initialized
@@ -59,8 +59,6 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
     MESSAGE_TYPE = "message_type"
     OFFSET = "offset"
     SYSTEM_INFORMATION_KEY = 'SYSTEM_INFORMATION'
-    CLUSTER_ID_KEY = 'cluster_id'
-    NODE_ID_KEY = 'node_id'
 
     JSON_ACTUATOR_SCHEMA = "SSPL-LL_Actuator_Request.json"
     JSON_SENSOR_SCHEMA = "SSPL-LL_Sensor_Request.json"
@@ -105,7 +103,7 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
 
         # Initialize internal message queues for this module
         super(RabbitMQingressProcessor, self).initialize_msgQ(msgQlist)
-
+        self._global_conf = GlobalConf()
         self._read_config()
         producer_initialized.wait()
         self._consumer = MessageConsumer(message_bus,
@@ -241,21 +239,22 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
     def _read_config(self):
         """Configure the RabbitMQ exchange with defaults available"""
         # Make methods locally available
-        self._node_id = Conf.get(SSPL_CONF,
-                                 f"{CLUSTER}>{SRVNODE}>{self.NODE_ID_KEY}",
-                                 'SN01')
-        self._consumer_id = Conf.get(SSPL_CONF,
-                                     f"{self.RABBITMQPROCESSOR}>{self.CONSUMER_ID}",
-                                     'sspl_actuator')
-        self._consumer_group = Conf.get(SSPL_CONF,
-                                        f"{self.RABBITMQPROCESSOR}>{self.CONSUMER_GROUP}",
-                                        'cortx_monitor')
-        self._message_type = Conf.get(SSPL_CONF,
-                                      f"{self.RABBITMQPROCESSOR}>{self.MESSAGE_TYPE}",
-                                      'requests')
-        self._offset = Conf.get(SSPL_CONF,
-                                f"{self.RABBITMQPROCESSOR}>{self.OFFSET}",
-                                'earliest')
+        try:
+            # Read RabbitMQ configuration for sensor messages
+            self._consumer_id = self._global_conf.fetch_sspl_config(
+                                    query_string = f"{self.RABBITMQPROCESSOR}>{self.CONSUMER_ID}",
+                                    default_val = 'sspl_actuator')
+            self._consumer_group = self._global_conf.fetch_sspl_config(
+                                    query_string = f"{self.RABBITMQPROCESSOR}>{self.CONSUMER_GROUP}",
+                                    default_val ='cortx_monitor')
+            self._message_type = self._global_conf.fetch_sspl_config(
+                                    query_string = f"{self.RABBITMQPROCESSOR}>{self.MESSAGE_TYPE}",
+                                    default_val = 'requests')
+            self._offset = self._global_conf.fetch_sspl_config(
+                                    query_string = f"{self.RABBITMQPROCESSOR}>{self.OFFSET}",
+                                    default_val = 'earliest')
+        except Exception as ex:
+            logger.error("RabbitMQingressProcessor, _configure_exchange: %r" % ex)
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""

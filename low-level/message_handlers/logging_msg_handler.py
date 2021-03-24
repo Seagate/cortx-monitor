@@ -27,7 +27,7 @@ from framework.base.sspl_constants import enabled_products
 # Modules that receive messages from this module
 from framework.rabbitmq.rabbitmq_egress_processor import \
     RabbitMQegressProcessor
-from framework.utils.conf_utils import SSPL_CONF, Conf
+from framework.base.global_config import GlobalConf
 from framework.utils.service_logging import logger
 from json_msgs.messages.actuators.ack_response import AckResponseMsg
 
@@ -64,6 +64,7 @@ class LoggingMsgHandler(ScheduledModuleThread, InternalMsgQ):
         super(LoggingMsgHandler, self).initialize_msgQ(msgQlist)
 
         # Read in configuration values
+        self._global_conf = GlobalConf()
         self._conf_reader = conf_reader
         self._read_config()
         self._import_products(product)
@@ -193,10 +194,13 @@ class LoggingMsgHandler(ScheduledModuleThread, InternalMsgQ):
     def _read_config(self):
         """Read in configuration values"""
         try:
-            self._iem_routing_enabled = Conf.get(SSPL_CONF, f"{self.LOGGINGMSGHANDLER}>{self.IEM_ROUTING_ENABLED}",
-                                                                 'false')
-            self._iem_log_locally     = Conf.get(SSPL_CONF, f"{self.LOGGINGMSGHANDLER}>{self.IEM_LOG_LOCALLY}",
-                                                                 'true')
+            self._iem_routing_enabled = self._global_conf.fetch_sspl_config(
+                query_string = f"{self.LOGGINGMSGHANDLER}>{self.IEM_ROUTING_ENABLED}",
+                default_val = 'false')
+            self._iem_log_locally = self._global_conf.fetch_sspl_config(
+                query_string = f"{self.LOGGINGMSGHANDLER}>{self.IEM_LOG_LOCALLY}",
+                default_val ='true')
+
             logger.info(f"IEM routing enabled: {str(self._iem_routing_enabled)}")
             logger.info(f"IEM log locally: {str(self._iem_log_locally)}")
         except Exception as ex:

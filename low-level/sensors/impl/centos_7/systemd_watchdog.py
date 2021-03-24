@@ -43,9 +43,8 @@ from framework.base.module_thread import SensorThread
 from framework.base.sspl_constants import cs_products
 from framework.rabbitmq.rabbitmq_egress_processor import \
     RabbitMQegressProcessor
-from framework.utils.conf_utils import (
-    CLUSTER, CLUSTER_ID, DATA_PATH_KEY, GLOBAL_CONF, NODE_ID, RACK_ID, SITE_ID,
-    SRVNODE, SSPL_CONF, Conf)
+from framework.base.global_config import GlobalConf
+from framework.utils.conf_utils import DATA_PATH_KEY
 from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
 from framework.utils.store_factory import file_store
@@ -74,11 +73,6 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
     SETUP              = 'setup'
 
     DEFAULT_RAS_VOL = "/var/cortx/sspl/data/"
-
-    SITE_ID = "site_id"
-    RACK_ID = "rack_id"
-    NODE_ID = "node_id"
-    CLUSTER_ID = "cluster_id"
 
     DISK_INSERTED_ALERT_TYPE = "insertion"
     DISK_REMOVED_ALERT_TYPE = "missing"
@@ -146,6 +140,9 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
         # Initialize internal message queues for this module
         super(SystemdWatchdog, self).initialize_msgQ(msgQlist)
 
+        self._global_conf = GlobalConf()
+        self._read_config()
+
         # Retrieves the frequency to run SMART tests on all the drives
         self._smart_interval = self._getSMART_interval()
 
@@ -179,13 +176,6 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
         self._thread_speed_safeguard = -1000  # Init to a negative number to allow extra time at startup
 
         self._product = product
-
-        self._site_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{SITE_ID}",'DC01')
-        self._rack_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{RACK_ID}",'RC01')
-        self._node_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{NODE_ID}",'SN01')
-        self._cluster_id = Conf.get(GLOBAL_CONF, f'{CLUSTER}>{CLUSTER_ID}','CC01')
-
-        self.vol_ras = Conf.get(SSPL_CONF, f"{self.SYSTEM_INFORMATION}>{DATA_PATH_KEY}", self.DEFAULT_RAS_VOL)
 
         self.server_cache = self.vol_ras + "server/"
         self.disk_cache_path = self.server_cache + "systemd_watchdog/disks/disks.json"
@@ -954,7 +944,10 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
 
     def _get_monitored_services(self):
         """Retrieves the list of services to be monitored"""
-        return Conf.get(SSPL_CONF, f"{self.SYSTEMDWATCHDOG}>{self.MONITORED_SERVICES}", [])
+        response = self._global_conf.fetch_sspl_config(
+            query_string = f"{self.SYSTEMDWATCHDOG}>{self.MONITORED_SERVICES}",
+            default_val = [])
+        return response
 
     def _interface_added(self, object_path, interfaces_and_properties):
         """Callback for when an interface like drive or SMART job has been added"""
@@ -1289,8 +1282,10 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
 
     def _getSMART_interval(self):
         """Retrieves the frequency to run SMART tests on all the drives"""
-        smart_interval = int(Conf.get(SSPL_CONF, f"{self.SYSTEMDWATCHDOG}>{self.SMART_TEST_INTERVAL}",
-                                                         86400))
+        smart_interval = int(self._global_conf.fetch_sspl_config(
+            query_string = f"{self.SYSTEMDWATCHDOG}>{self.SMART_TEST_INTERVAL}",
+            default_val = 86400))
+
         # Add a sanity check to avoid constant looping, 15 minute minimum (900 secs)
         if smart_interval < 900:
             smart_interval = 86400
@@ -1300,8 +1295,10 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
         """Retrieves value of "run_smart_on_start" from configuration file.Returns
            True|False based on that.
         """
-        run_smart_on_start = Conf.get(SSPL_CONF, f"{self.SYSTEMDWATCHDOG}>{self.SMART_ON_START}",
-                                                         "False")
+        run_smart_on_start = self._global_conf.fetch_sspl_config(
+            query_string = f"{self.SYSTEMDWATCHDOG}>{self.SMART_ON_START}",
+            default_val = "False")
+
         run_smart_on_start = run_smart_on_start.lower()
         if run_smart_on_start == 'true':
             return True
@@ -1313,14 +1310,16 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
     # TODO handle boolean values from conf file
     def _getShort_SMART_enabled(self):
         """Retrieves the flag indicating to run short tests periodically"""
-        smart_interval = int(Conf.get(SSPL_CONF, f"{self.SYSTEMDWATCHDOG}>{self.SMART_SHORT_ENABLED}",
-                                                         86400))
+        smart_interval = int(self._global_conf.fetch_sspl_config(
+            query_string = f"{self.SYSTEMDWATCHDOG}>{self.SMART_SHORT_ENABLED}",
+            default_val = 86400))
         return smart_interval
 
     def _getConveyance_SMART_enabled(self):
         """Retrieves the flag indicating to run conveyance tests when a disk is inserted"""
-        smart_interval = int(Conf.get(SSPL_CONF, f"{self.SYSTEMDWATCHDOG}>{self.SMART_CONVEYANCE_ENABLED}",
-                                                         86400))
+        smart_interval = int(self._global_conf.fetch_sspl_config(
+            query_string = f"{self.SYSTEMDWATCHDOG}>{self.SMART_CONVEYANCE_ENABLED}",
+            default_val = 86400))
         # Add a sanity check to avoid constant looping, 15 minute minimum (900 secs)
         if smart_interval < 900:
             smart_interval = 900
@@ -1392,6 +1391,17 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
                                resource_id,
                                specific_info)
             # else no change
+
+    def _read_config(self):
+        conf_list = ['cluster_id', 'site_id', 'rack_id', 'node_id']
+        response = self._global_conf.fetch_global_config(conf_list)
+        self._cluster_id = response['cluster_id']
+        self._site_id = response['site_id']
+        self._node_id = response['node_id']
+        self._rack_id = response['rack_id']
+        self.vol_ras = self._global_conf.fetch_sspl_config(
+            query_string = f"{self.SYSTEM_INFORMATION}>{DATA_PATH_KEY}",
+            default_val = self.DEFAULT_RAS_VOL)
 
     def _is_drive_faulty(self, path):
         if not self._drives[path]["node_disk"]:

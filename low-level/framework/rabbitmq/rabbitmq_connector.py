@@ -25,7 +25,7 @@ import encodings.idna  # noqa
 from framework.utils.service_logging import logger
 from framework.utils.config_reader import ConfigReader
 from framework.base.sspl_constants import COMMON_CONFIGS, component, CONSUL_HOST, CONSUL_PORT, SSPL_STORE_TYPE
-from framework.utils.conf_utils import SSPL_CONF, Conf
+from framework.base.global_config import GlobalConf
 
 
 RABBITMQ_CLUSTER_SECTION = 'RABBITMQCLUSTER'
@@ -58,7 +58,8 @@ def get_cluster_connection(username, password, virtual_host):
         consul_key = component + '/' + RABBITMQ_CLUSTER_SECTION + '/' + RABBITMQ_CLUSTER_HOSTS_KEY
         hosts = consul_conn.kv.get(consul_key)[1]["Value"].decode()
     else:
-        hosts = Conf.get(SSPL_CONF, f"{RABBITMQ_CLUSTER_SECTION}>{RABBITMQ_CLUSTER_HOSTS_KEY}")
+        hosts = GlobalConf().fetch_sspl_config(
+            query_string=f"{RABBITMQ_CLUSTER_SECTION}>{RABBITMQ_CLUSTER_HOSTS_KEY}")
     if isinstance(hosts, str):
         hosts = hosts.strip().split(",")
     logger.debug(f'Cluster nodes: {hosts}')

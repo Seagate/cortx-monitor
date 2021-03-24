@@ -15,8 +15,6 @@
 # about this software or licensing, please email opensource@seagate.com or
 # cortx-questions@seagate.com.
 
-from cortx.utils.conf_store import Conf
-
 from framework.utils.utility import Utility
 
 # Indexes
@@ -62,7 +60,6 @@ ALWAYS_LOG_IEM="always_log_iem"
 BMC="bmc"
 CLI_TYPE="cli_type"
 CLUSTER="cluster"
-CLUSTER_ID="cluster_id"
 CLUSTER_NODES="cluster_nodes"
 CONSUL_HOST="consul_host"
 CONSUL_PORT="consul_port"
@@ -97,7 +94,6 @@ MESSAGE_SIGNATURE_USERNAME="message_signature_username"
 MGMT_INTERFACE="mgmt_interface"
 MONITOR="monitor"
 MONITORED_SERVICES="monitored_services"
-NODE_ID="node_id"
 PASS="pass"
 PASSWORD="password"
 POLLING_FREQUENCY="polling_frequency"
@@ -109,7 +105,6 @@ PRIMARY_RABBITMQ_HOST="primary_rabbitmq_host"
 PROBE="probe"
 PRODUCT="product"
 QUEUE_NAME="queue_name"
-RACK_ID="rack_id"
 RELEASE="release"
 ROUTING_KEY="routing_key"
 RSYSLOG="rsyslog"
@@ -119,7 +114,6 @@ SECRET="secret"
 SENSORS="sensors"
 SERVER_NODES="server_nodes"
 SETUP="setup"
-SITE_ID="site_id"
 NODE_TYPE="node_type"
 SMART_TEST_INTERVAL="smart_test_interval"
 SSPL_LOG_FILE_PATH="sspl_log_file_path"
@@ -135,16 +129,16 @@ USER="user"
 USERNAME="username"
 VIRTUAL_HOST="virtual_host"
 TARGET_BUILD="target_build"
+CONF_API_DELIMITER=">"
 
-# Get SRVNODE and ENCLOSURE so it can be used in other files to get
-# server_node and enclosure specific config
+# Alerts config
+FAULT_RESOLVED = "fault_resolved"
+FAULT = "fault"
+MISSING = "missing"
+INSERTION = "insertion"
+SUCCESS = "success"
+FAILED = "failed"
+
 utility = Utility()
 MACHINE_ID = utility.get_machine_id()
 OPERATING_SYSTEM = utility.get_os()
-
-Conf.load(SSPL_CONF, "yaml:///etc/sspl.conf")
-global_config = Conf.get(SSPL_CONF, "SYSTEM_INFORMATION>global_config_copy_url")
-Conf.load(GLOBAL_CONF, global_config)
-
-SRVNODE = Conf.get(GLOBAL_CONF, f'{CLUSTER}>{SERVER_NODES}')[MACHINE_ID]
-ENCLOSURE = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{STORAGE}>{ENCLOSURE_ID}")

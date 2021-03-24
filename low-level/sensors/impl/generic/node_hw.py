@@ -36,8 +36,7 @@ from framework.base.module_thread import SensorThread
 from framework.base.sspl_constants import (PRODUCT_FAMILY, ServiceTypes,
                                            node_key_id)
 from framework.utils import encryptor
-from framework.utils.conf_utils import (CLUSTER, GLOBAL_CONF, IP, SECRET,
-                                        SRVNODE, SSPL_CONF, USER, Conf)
+from framework.base.global_config import GlobalConf
 from framework.utils.config_reader import ConfigReader
 from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
@@ -96,10 +95,6 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
     IPMI_ENCODING = 'utf-8'
 
     SYSTEM_INFORMATION = "SYSTEM_INFORMATION"
-    SITE_ID = "site_id"
-    RACK_ID = "rack_id"
-    NODE_ID = "node_id"
-    CLUSTER_ID = "cluster_id"
 
     BMC_INTERFACE = "BMC_INTERFACE"
     BMC = "BMC"
@@ -189,8 +184,6 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         except (IOError, ConfigReader.Error) as err:
             logger.error("[ Error ] when validating the config file {0} - {1}"\
                  .format(self.CONF_FILE, err))
-        self.polling_interval = int(Conf.get(SSPL_CONF, f"{self.NODEHWSENSOR}>{self.POLLING_INTERVAL}",
-                            self.DEFAULT_POLLING_INTERVAL))
 
     def _get_file(self, name):
         if os.path.exists(name):
@@ -244,26 +237,8 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
 
         # Initialize internal message queues for this module
         super(NodeHWsensor, self).initialize_msgQ(msgQlist)
-
-        self._site_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.SITE_ID}",'DC01')
-        self._rack_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.RACK_ID}",'RC01')
-        self._node_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.NODE_ID}",'SN01')
-        self._cluster_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{self.CLUSTER_ID}",'CC01')
-        self._bmc_user = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.BMC}>{USER}",
-                                                'ADMIN')
-        self._bmc_passwd = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.BMC}>{SECRET}",
-                                               'ADMIN')
-        self._bmc_ip = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.BMC}>{IP}",
-                                                '')
-        self._channel_interface = Conf.get(SSPL_CONF, f"{self.BMC_INTERFACE}>{self.BMC_CHANNEL_IF}",
-                                                'system')
-
-        decryption_key = encryptor.gen_key(self._cluster_id, ServiceTypes.CLUSTER.value)
-        self._bmc_passwd = encryptor.decrypt(decryption_key, self._bmc_passwd.encode('ascii'), 'Node_hw')
-
-        data_dir =  Conf.get(SSPL_CONF, f"{self.SYSINFO}>{self.DATA_PATH_KEY}", self.DATA_PATH_VALUE_DEFAULT)
-        self.cache_dir_path = os.path.join(data_dir, self.CACHE_DIR_NAME)
-
+        self._global_conf = GlobalConf()
+        self._read_config()
         # define variable in consul to check for bmc channel interface fallback
         self.ACTIVE_BMC_IF = os.path.join(self.cache_dir_path, f'ACTIVE_BMC_IF_{self._node_id}')
         self.LAN_ALERT = os.path.join(self.cache_dir_path, f'LAN_ALERT_{self._node_id}')
@@ -677,9 +652,9 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
 
         info = {
                 "site_id": self._site_id,
+                "cluster_id": self._cluster_id,
                 "rack_id": self._rack_id,
                 "node_id": self._node_id,
-                "cluster_id":self._cluster_id,
                 "resource_type": resource_type,
                 "resource_id": resource_id,
                 "event_time": epoch_time,
@@ -917,9 +892,9 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
             severity = "informational"
 
         fru_info = {    "site_id": self._site_id,
+                        "cluster_id": self._cluster_id,
                         "rack_id": self._rack_id,
                         "node_id": self._node_id,
-                        "cluster_id":self._cluster_id ,
                         "resource_type": resource_type,
                         "resource_id": sensor_name,
                         "event_time": self._get_epoch_time_from_date_and_time(date, _time),
@@ -956,9 +931,9 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         resource_type = NodeDataMsgHandler.IPMI_RESOURCE_TYPE_PSU
         info = {
             "site_id": self._site_id,
+            "cluster_id": self._cluster_id,
             "rack_id": self._rack_id,
             "node_id": self._node_id,
-            "cluster_id": self._cluster_id,
             "resource_type": resource_type,
             "resource_id": sensor,
             "event_time": self._get_epoch_time_from_date_and_time(date, _time),
@@ -1034,9 +1009,9 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
 
         info = {
             "site_id": self._site_id,
+            "cluster_id": self._cluster_id,
             "rack_id": self._rack_id,
             "node_id": self._node_id,
-            "cluster_id": self._cluster_id,
             "resource_type": resource_type,
             "resource_id": sensor,
             "event_time": self._get_epoch_time_from_date_and_time(date, _time),
@@ -1092,9 +1067,9 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
             resource_type = NodeDataMsgHandler.IPMI_RESOURCE_TYPE_DISK
             info = {
                 "site_id": self._site_id,
+                "cluster_id": self._cluster_id,
                 "rack_id": self._rack_id,
                 "node_id": self._node_id,
-                "cluster_id": self._cluster_id,
                 "resource_type": resource_type,
                 "resource_id": sensor,
                 "event_time": self._get_epoch_time_from_date_and_time(date, _time),
@@ -1151,9 +1126,9 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
 
         info = {
             "site_id": self._site_id,
+            "cluster_id": self._cluster_id,
             "rack_id": self._rack_id,
             "node_id": self._node_id,
-            "cluster_id":self._cluster_id ,
             "resource_type": resource_type,
             "resource_id": sensor_name,
             "event_time": self._get_epoch_time_from_date_and_time(date, _time),
@@ -1192,9 +1167,9 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
 
         info = {
             "site_id": self._site_id,
+            "cluster_id": self._cluster_id,
             "rack_id": self._rack_id,
             "node_id": self._node_id,
-            "cluster_id":self._cluster_id ,
             "resource_type": resource_type,
             "resource_id": sensor_name,
             "event_time": self._get_epoch_time_from_date_and_time(date, _time),
@@ -1305,6 +1280,33 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         timestamp_format = '%m/%d/%Y %H:%M:%S'
         timestamp = time.strptime('{} {}'.format(_date,_time), timestamp_format)
         return str(int(calendar.timegm(timestamp)))
+
+    def _read_config(self):
+        conf_list = ['cluster_id', 'site_id', 'rack_id', 'node_id', 'bmc_user', 'bmc_secret', 'bmc_ip']
+        response = self._global_conf.fetch_global_config(conf_list)
+        self._cluster_id = response['cluster_id']
+        self._site_id = response['site_id']
+        self._node_id = response['node_id']
+        self._rack_id = response['rack_id']
+        self._bmc_user = response['bmc_user']
+        self._bmc_passwd = response['bmc_secret']
+        self._bmc_ip = ''
+
+        self.polling_interval = int(self._global_conf.fetch_sspl_config(
+            query_string = f"{self.NODEHWSENSOR}>{self.POLLING_INTERVAL}",
+            default_val = self.DEFAULT_POLLING_INTERVAL))
+
+        decryption_key = encryptor.gen_key(self._cluster_id, ServiceTypes.CLUSTER.value)
+        self._bmc_passwd = encryptor.decrypt(decryption_key, self._bmc_passwd.encode('ascii'), 'Node_hw')
+
+        self._channel_interface =self._global_conf.fetch_sspl_config(
+            query_string = f"{self.BMC_INTERFACE}>{self.BMC_CHANNEL_IF}",
+            default_val = 'system')
+
+        data_dir = self._global_conf.fetch_sspl_config(
+            query_string = f"{self.SYSINFO}>{self.DATA_PATH_KEY}",
+            default_val = self.DATA_PATH_VALUE_DEFAULT)
+        self.cache_dir_path = os.path.join(data_dir, self.CACHE_DIR_NAME)
 
     def suspend(self):
         """Suspends the module thread. It should be non-blocking"""

@@ -70,6 +70,13 @@ GLOBAL_CONFIG_INDEX = "global"
 SSPL_CONFIG_INDEX = "sspl"
 SSPL_TEST_CONFIG_INDEX = "sspl_test"
 CONFIG_SPEC_TYPE = "yaml"
+DATACENTER01 = "DC01"
+RACK01 = "RC01"
+SERVERNODE01 = "SN01"
+CLUSTER01 = "CC01"
+DEFAULT_MC_IP = "127.0.0.1"
+DEFAULT_SYSLOG_HOST = "localhost"
+DEFAULT_SYSLOG_PORT = 514
 
 # This file will be created when sspl is being configured for node replacement case
 REPLACEMENT_NODE_ENV_VAR_FILE = "/etc/profile.d/set_replacement_env.sh"

@@ -31,8 +31,9 @@ from zope.interface import implementer
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.module_thread import SensorThread
 from framework.base.sspl_constants import COMMON_CONFIGS
-from framework.utils.conf_utils import (CLUSTER, GLOBAL_CONF, SRVNODE,
-                                        SSPL_CONF, Conf)
+from framework.base.global_config import GlobalConf
+from framework.utils.conf_utils import (FAULT, FAULT_RESOLVED, MISSING,
+                                        INSERTION)
 from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
 from message_handlers.logging_msg_handler import LoggingMsgHandler
@@ -57,19 +58,9 @@ class RAIDsensor(SensorThread, InternalMsgQ):
     RAID_DOWN_DRIVE_STATUS = [ { "status" : "Down/Missing" }, { "status" : "Down/Missing" } ]
 
     SYSTEM_INFORMATION = "SYSTEM_INFORMATION"
-    SITE_ID = "site_id"
-    CLUSTER_ID = "cluster_id"
-    NODE_ID = "node_id"
-    RACK_ID = "rack_id"
 
     prev_alert_type = {}
     alert_type = None
-
-    # alerts
-    FAULT_RESOLVED = "fault_resolved"
-    FAULT = "fault"
-    MISSING = "missing"
-    INSERTION = "insertion"
 
     # Dependency list
     DEPENDENCIES = {
@@ -102,6 +93,9 @@ class RAIDsensor(SensorThread, InternalMsgQ):
         # Initialize internal message queues for this module
         super(RAIDsensor, self).initialize_msgQ(msgQlist)
 
+        self._global_conf = GlobalConf()
+        self._read_config()
+
         self._RAID_status_file = self._get_RAID_status_file()
         logger.info(f"Monitoring RAID status file: {self._RAID_status_file}")
 
@@ -124,11 +118,6 @@ class RAIDsensor(SensorThread, InternalMsgQ):
         self._missing_drv = {}
 
         self._prev_drive_dict = {}
-
-        self._site_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.SITE_ID}",'DC01')
-        self._rack_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.RACK_ID}",'RC01')
-        self._node_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.NODE_ID}",'SN01')
-        self._cluster_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{self.CLUSTER_ID}",'CC01')
         # Allow systemd to process all the drives so we can map device name to serial numbers
         #time.sleep(120)
 
@@ -196,8 +185,8 @@ class RAIDsensor(SensorThread, InternalMsgQ):
         for device in md_device_list:
             if drive_dict:
                 if len(drive_dict[device]) < self._total_drives[device] and \
-                    device in self.prev_alert_type and self.prev_alert_type[device] != self.MISSING:
-                    self.alert_type = self.MISSING
+                    device in self.prev_alert_type and self.prev_alert_type[device] != MISSING:
+                    self.alert_type = MISSING
                     if device in self._prev_drive_dict:
                         missing_drive = set(self._prev_drive_dict[device]).difference(set(drive_dict[device]))
                         try:
@@ -212,8 +201,8 @@ class RAIDsensor(SensorThread, InternalMsgQ):
                     self._drive_state_changed = True
 
                 elif len(drive_dict[device]) >= self._total_drives[device] and \
-                    device in self.prev_alert_type and self.prev_alert_type[device] == self.MISSING:
-                    self.alert_type = self.INSERTION
+                    device in self.prev_alert_type and self.prev_alert_type[device] == MISSING:
+                    self.alert_type = INSERTION
                     resource_id = device+":/dev/"+drive_dict[device][0]
                     self._map_drive_status(device, drive_dict[device][0], "Down/Recovery")
                     self._drive_state_changed = True
@@ -231,15 +220,15 @@ class RAIDsensor(SensorThread, InternalMsgQ):
                             drive_status = drive.get("status")
                             if drive_status not in ["U", "UP"] and device in self._faulty_drive_list and \
                                 drive_name not in self._faulty_drive_list[device] and \
-                                self.prev_alert_type[device] != self.MISSING:
-                                self.alert_type = self.FAULT
+                                self.prev_alert_type[device] != MISSING:
+                                self.alert_type = FAULT
                                 self._map_drive_status(device, drive_name, "Down")
                                 self._drive_state_changed = True
                                 self._faulty_drive_list[device][drive_name] = self.alert_type
 
                             elif drive_status in ["U", "UP", "Down/Recovery"] and device in self._faulty_drive_list and \
                                 drive_name in self._faulty_drive_list[device]:
-                                self.alert_type = self.FAULT_RESOLVED
+                                self.alert_type = FAULT_RESOLVED
                                 self._map_drive_status(device, drive_name, "UP")
                                 self._drive_state_changed = True
                                 del self._faulty_drive_list[device][drive_name]
@@ -414,13 +403,13 @@ class RAIDsensor(SensorThread, InternalMsgQ):
         for device in conf_device_list:
             if device not in md_device_list and device not in self._faulty_device_list:
                 # add that missing raid array entry into the list of raid devices
-                self.alert_type = self.FAULT
+                self.alert_type = FAULT
                 self._send_json_msg(self.alert_type, device, device, self.RAID_DOWN_DRIVE_STATUS)
-                self._faulty_device_list[device] = self.FAULT
+                self._faulty_device_list[device] = FAULT
 
             elif device in md_device_list and device in self._faulty_device_list:
                 # add that missing raid array entry into the list of raid devices
-                self.alert_type = self.FAULT_RESOLVED
+                self.alert_type = FAULT_RESOLVED
                 self._map_drive_status(device, drive_dict, "Down/Recovery")
                 self._send_json_msg(self.alert_type, device, device, self._drives[device])
                 del self._faulty_device_list[device]
@@ -451,13 +440,13 @@ class RAIDsensor(SensorThread, InternalMsgQ):
         self._alert_id = self._get_alert_id(epoch_time)
         host_name = socket.getfqdn()
 
-        if alert_type == self.MISSING:
+        if alert_type == MISSING:
             description = "RAID array or drive from RAID array is missing."
-        elif alert_type == self.FAULT:
+        elif alert_type == FAULT:
             description = "RAID array or drive from RAID array is faulty."
-        elif alert_type == self.INSERTION:
+        elif alert_type == INSERTION:
             description = "Inserted drive in RAID array."
-        elif alert_type == self.FAULT_RESOLVED:
+        elif alert_type == FAULT_RESOLVED:
             description = "Fault for RAID array or RAID drive is resolved"
         else:
             description = "Raid array alert"
@@ -547,10 +536,21 @@ class RAIDsensor(SensorThread, InternalMsgQ):
 
         return response.decode().rstrip('\n'), error.decode().rstrip('\n')
 
+    def _read_config(self):
+        conf_list = ['cluster_id', 'site_id', 'rack_id', 'node_id']
+        response = self._global_conf.fetch_global_config(conf_list)
+        self._cluster_id = response['cluster_id']
+        self._site_id = response['site_id']
+        self._node_id = response['node_id']
+        self._rack_id = response['rack_id']
+
     def _get_RAID_status_file(self):
         """Retrieves the file containing the RAID status information"""
-        return Conf.get(SSPL_CONF, f"{self.RAIDSENSOR}>{self.RAID_STATUS_FILE}",
-                                                        '/proc/mdstat')
+        response = self._global_conf.fetch_sspl_config(
+            query_string = f"{self.RAIDSENSOR}>{self.RAID_STATUS_FILE}",
+            default_val = '/proc/mdstat')
+        return response
+
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""
         super(RAIDsensor, self).shutdown()

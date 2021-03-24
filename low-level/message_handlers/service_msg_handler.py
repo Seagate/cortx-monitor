@@ -31,13 +31,10 @@ from framework.utils.service_logging import logger
 from framework.base.sspl_constants import enabled_products
 from json_msgs.messages.actuators.service_controller import ServiceControllerMsg
 from json_msgs.messages.sensors.service_watchdog import ServiceWatchdogMsg
-
 from framework.utils.utility import errno_to_str_mapping
 from cortx.utils.service import DbusServiceHandler
-from framework.utils.conf_utils import (CLUSTER, GLOBAL_CONF, SRVNODE, SSPL_CONF,
-                                        Conf, SITE_ID, CLUSTER_ID, NODE_ID,
-                                        RACK_ID, STORAGE_SET_ID,
-                                        SYSTEMDWATCHDOG, MONITORED_SERVICES)
+from framework.base.global_config import GlobalConf
+from framework.utils.conf_utils import SYSTEMDWATCHDOG, MONITORED_SERVICES
 # Modules that receive messages from this module
 from message_handlers.logging_msg_handler import LoggingMsgHandler
 
@@ -88,19 +85,13 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
         super(ServiceMsgHandler, self).initialize_msgQ(msgQlist)
 
         self._import_products(product)
-
+        self._global_conf = GlobalConf()
+        self._read_config()
         self.host_id = socket.getfqdn()
-        self.site_id = Conf.get(GLOBAL_CONF,
-                                    f'{CLUSTER}>{SRVNODE}>{SITE_ID}','DC01')
-        self.rack_id = Conf.get(GLOBAL_CONF,
-                                    f'{CLUSTER}>{SRVNODE}>{RACK_ID}','RC01')
-        self.node_id = Conf.get(GLOBAL_CONF,
-                                    f'{CLUSTER}>{SRVNODE}>{NODE_ID}','SN01')
-        self.cluster_id = Conf.get(GLOBAL_CONF, f'{CLUSTER}>{CLUSTER_ID}','CC01')
-        self.storage_set_id = Conf.get(GLOBAL_CONF,
-                                f'{CLUSTER}>{SRVNODE}>{STORAGE_SET_ID}', 'ST01')
-        self.monitored_services = Conf.get(SSPL_CONF,
-                                    f'{SYSTEMDWATCHDOG}>{MONITORED_SERVICES}')
+        response = self._global_conf.fetch_global_config(['storage_set_id'])
+        self.storage_set_id = response['storage_set_id']
+        self.monitored_services = self._global_conf.fetch_sspl_config(
+                        query_string = f'{SYSTEMDWATCHDOG}>{MONITORED_SERVICES}')
 
     def _import_products(self, product):
         """Import classes based on which product is being used"""
@@ -352,11 +343,11 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
         epoch_time = str(int(time.time()))
         specific_info = []
         info = {
-            "cluster_id": self.cluster_id,
-            "site_id": self.site_id,
-            "rack_id": self.rack_id,
+            "cluster_id": self._cluster_id,
+            "site_id": self._site_id,
+            "rack_id": self._rack_id,
             "storage_set_id": self.storage_set_id,
-            "node_id": self.node_id,
+            "node_id": self._node_id,
             "resource_id": resource_id,
             "resource_type": self.RESOURCE_TYPE,
             "event_time": epoch_time
@@ -374,6 +365,14 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
         }
 
         return response
+
+    def _read_config(self):
+        conf_list = ['cluster_id', 'site_id', 'node_id', 'rack_id']
+        response_dict = self._global_conf.fetch_global_config(conf_list)
+        self._cluster_id = response_dict['cluster_id']
+        self._site_id = response_dict['site_id']
+        self._rack_id = response_dict['rack_id']
+        self._node_id = response_dict['node_id']
 
     def suspend(self):
         """Suspends the module thread. It should be non-blocking"""

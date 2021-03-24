@@ -25,7 +25,7 @@ import argparse
 import re
 
 # using cortx library
-from framework.utils.conf_utils import Conf, SSPL_CONF
+from framework.base.global_config import GlobalConf
 from cortx.utils.process import SimpleProcess
 from .setup_error import SetupError
 
@@ -43,6 +43,7 @@ class RMQClusterConfiguration:
     ERLANG_COOKIE_PATH = "/var/lib/rabbitmq/.erlang.cookie"
 
     def __init__(self, nodes):
+        self._global_conf = GlobalConf()
         self.requested_nodes = nodes
 
     def setup_rabbitmq(self):
@@ -102,8 +103,8 @@ class RMQClusterConfiguration:
         command = 'systemctl stop rabbitmq-server'
         self._send_command(command)
         # all rabbitmq servers needs to have same erlang cookie for clustering.
-        cookie_value = Conf.get(SSPL_CONF, "%s>%s" %
-                                (self.SECTION, self.ERLANG_COOKIE))
+        cookie_value = self._global_conf.fetch_sspl_config(qwery_string="%s>%s" %
+                                                (self.SECTION, self.ERLANG_COOKIE))
         command = f'chmod +w {self.ERLANG_COOKIE_PATH}'
         self._send_command(command)
         command = f'echo "{cookie_value}" > {self.ERLANG_COOKIE_PATH}'
@@ -145,8 +146,8 @@ class RMQClusterConfiguration:
         """
         Updates RMQ cluster nodes in sspl config file
         """
-        Conf.set(SSPL_CONF, "%s>%s" %
-                 (self.SECTION, self.CLUSTER_NODES), self.requested_nodes)
+        self._global_conf.set_sspl_config(request="%s>%s" %
+                 (self.SECTION, self.CLUSTER_NODES), value = self.requested_nodes)
         print("Successfully updated RMQ cluster nodes in config.")
 
     def make_rmq_cluster(self):

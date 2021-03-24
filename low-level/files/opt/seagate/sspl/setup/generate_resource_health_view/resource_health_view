@@ -38,10 +38,7 @@ from framework.utils.ipmi_client import IpmiFactory
 from framework.utils.sysfs_interface import SysFS
 from framework.utils.tool_factory import ToolFactory
 from framework.base.sspl_constants import PRODUCT_FAMILY , DATA_PATH
-from framework.utils.conf_utils import (CLUSTER, ENCLOSURE, GLOBAL_CONF, SRVNODE,
-    STORAGE, Conf, NODE_TYPE, TYPE, SITE_ID, RACK_ID, NODE_ID, CLUSTER_ID, RELEASE,
-    TARGET_BUILD)
-
+from framework.base.global_config import GlobalConf
 
 class SSPLHealthView(object):
     """docstring for SSPLHealthView"""
@@ -62,7 +59,11 @@ class SSPLHealthView(object):
     SERVER_TYPE_PHYSICAL = 'physical'
 
     def __init__(self):
-
+        self._global_conf = GlobalConf()
+        self._conf = self._global_conf.fetch_global_config(
+            ['cluster_id','site_id', 'node_id', 'rack_id', 'target_build'])
+        self._cortx_build = self._conf['target_build']
+        self._srvnode = self._global_conf.SRVNODE
         persistent_data_location = DATA_PATH
         storage_encl_dir = persistent_data_location + 'encl/frus/'
         self.encl_disks_filename = storage_encl_dir + 'disks/'
@@ -96,11 +97,7 @@ class SSPLHealthView(object):
 
         self.encl_hw_specifics_api = 'configuration'
 
-        self.SITE_ID = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{SITE_ID}", 'DC01')
-        self.RACK_ID = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{RACK_ID}", 'RC01')
         self.HOST_NAME = socket.getfqdn()
-        self.NODE_ID = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{NODE_ID}", 'SN01')
-        self.CLUSTER_ID = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{CLUSTER_ID}", 'CC01')
         self.fru_id_map = None
         self.sensor_id_map = None
         self.ipmi_fru_lst = ['disk', 'fan', 'psu']
@@ -125,13 +122,13 @@ class SSPLHealthView(object):
                 "version": "2.0"
             }
         })
-        self._resource_health_view['cluster'].update({'cluster_id':self.CLUSTER_ID})
-        self._resource_health_view['cluster']['sites'][self.SITE_ID] =\
+        self._resource_health_view['cluster'].update({'cluster_id':self._conf['cluster_id']})
+        self._resource_health_view['cluster']['sites'][self._conf['site_id']] =\
             self._resource_health_view['cluster']['sites'].pop('site_id')
 
-        self._resource_health_view['cluster']['sites'][self.SITE_ID]['rack']\
-            [self.RACK_ID] = self._resource_health_view['cluster']['sites']\
-                [self.SITE_ID]['rack'].pop('rack_id')
+        self._resource_health_view['cluster']['sites'][self._conf['site_id']]['rack']\
+            [self._conf['rack_id']] = self._resource_health_view['cluster']['sites']\
+                [self._conf['site_id']]['rack'].pop('rack_id')
 
     def run(self, args):
         health_view_created = False
@@ -156,19 +153,21 @@ class SSPLHealthView(object):
             if args.encl and self.storage_type == self.STORAGE_TYPE_JBOD:
                 try:
                     storage_encl_health_json = self._resource_health_view['cluster']['sites']\
-                                                        [self.SITE_ID]['rack'][self.RACK_ID]\
-                                                        ['nodes']['storage_encl']
+                                                [self._conf['site_id']]['rack'][self._conf['rack_id']]\
+                                                ['nodes']['storage_encl']
                 except Exception as e:
                     print("Error while extracting values from health view json %s : " % e)
                     return False
 
                 for category in ['sw', 'interfaces', 'platform_sensors']:
                     del self._resource_health_view['cluster']['sites']\
-                                                            [self.SITE_ID]['rack'][self.RACK_ID]\
+                                                            [self._conf['site_id']]\
+                                                            ['rack'][self._conf['rack_id']]\
                                                             ['nodes']['storage_encl'][category]
                 for sub_category in ['psus', 'controllers', 'fans', 'sideplane_expander']:
                     del self._resource_health_view['cluster']['sites']\
-                                                            [self.SITE_ID]['rack'][self.RACK_ID]\
+                                                            [self._conf['site_id']]\
+                                                            ['rack'][self._conf['rack_id']]\
                                                             ['nodes']['storage_encl']['hw']['fru'][sub_category]
                 self.build_health_view_storage_jbod_cache(storage_encl_health_json)
                 health_view_created = True
@@ -176,7 +175,8 @@ class SSPLHealthView(object):
             elif args.encl and self.storage_type == self.STORAGE_TYPE_RBOD:
                 try:
                     storage_encl_health_json = self._resource_health_view['cluster']['sites']\
-                                                        [self.SITE_ID]['rack'][self.RACK_ID]\
+                                                        [self._conf['site_id']]\
+                                                        ['rack'][self._conf['rack_id']]\
                                                         ['nodes']['storage_encl']
                 except Exception as e:
                     print("Error while extracting values from health view json %s : " % e)
@@ -194,43 +194,50 @@ class SSPLHealthView(object):
 
             elif self.storage_type == self.STORAGE_TYPE_VIRTUAL:
                 self._resource_health_view['cluster']['sites']\
-                                                    [self.SITE_ID]['rack'][self.RACK_ID]\
+                                                    [self._conf['site_id']]\
+                                                    ['rack'][self._conf['rack_id']]\
                                                     ['nodes']['storage_encl'].clear()
 
             elif not args.encl:
                 del self._resource_health_view['cluster']['sites']\
-                                                        [self.SITE_ID]['rack'][self.RACK_ID]\
+                                                        [self._conf['site_id']]\
+                                                        ['rack'][self._conf['rack_id']]\
                                                         ['nodes']['storage_encl']
 
             if args.node and self.server_type == self.SERVER_TYPE_VIRTUAL:
                 try:
                     node_health_json = self._resource_health_view['cluster']['sites']\
-                                                        [self.SITE_ID]['rack'][self.RACK_ID]\
-                                                        ['nodes']['node:' + SRVNODE] =\
+                                                        [self._conf['site_id']]\
+                                                        ['rack'][self._conf['rack_id']]\
+                                                        ['nodes']['node:' + self._srvnode] =\
                                                         self._resource_health_view['cluster']['sites']\
-                                                        [self.SITE_ID]['rack'][self.RACK_ID]\
+                                                        [self._conf['site_id']]\
+                                                        ['rack'][self._conf['rack_id']]\
                                                         ['nodes'].pop('node')
-                    node_health_json.update({'node_id':self.NODE_ID})
+                    node_health_json.update({'node_id':self._conf['node_id']})
                 except Exception as e:
                     print("Error while extracting values from health view json %s : " % e)
                     return False
 
                 for category in ['hw', 'interfaces', 'platform_sensors']:
                     del self._resource_health_view['cluster']['sites']\
-                                                        [self.SITE_ID]['rack'][self.RACK_ID]\
-                                                        ['nodes']['node:' + SRVNODE][category]
+                                                        [self._conf['site_id']]\
+                                                        ['rack'][self._conf['rack_id']]\
+                                                        ['nodes']['node:' + self._srvnode][category]
                 self.build_health_view_node_server_cache(node_health_json, 'os')
                 health_view_created = True
 
             elif args.node:
                 try:
                     node_health_json = self._resource_health_view['cluster']['sites']\
-                                                        [self.SITE_ID]['rack'][self.RACK_ID]\
-                                                        ['nodes']['node:' + SRVNODE] =\
+                                                        [self._conf['site_id']]\
+                                                        ['rack'][self._conf['rack_id']]\
+                                                        ['nodes']['node:' + self._srvnode] =\
                                                         self._resource_health_view['cluster']['sites']\
-                                                        [self.SITE_ID]['rack'][self.RACK_ID]\
+                                                        [self._conf['site_id']]\
+                                                        ['rack'][self._conf['rack_id']]\
                                                         ['nodes'].pop('node')
-                    node_health_json.update({'node_id':self.NODE_ID})
+                    node_health_json.update({'node_id':self._conf['node_id']})
                 except Exception as e:
                     print("Error while extracting values from health view json %s : " % e)
                     return False
@@ -242,7 +249,8 @@ class SSPLHealthView(object):
 
             elif not args.node:
                 del self._resource_health_view['cluster']['sites']\
-                                    [self.SITE_ID]['rack'][self.RACK_ID]\
+                                    [self._conf['site_id']]\
+                                    ['rack'][self._conf['rack_id']]\
                                     ['nodes']['node']
 
             self.write_content_in_file(self.RESOURCE_HEALTH_VIEW_PATH, self._resource_health_view,
@@ -253,10 +261,10 @@ class SSPLHealthView(object):
 
         else:
             support_common_data = {
-                "cluster_id": self.CLUSTER_ID,
-                "site_id": self.SITE_ID,
-                "rack_id": self.RACK_ID,
-                "node_id": self.NODE_ID
+                "cluster_id": self._conf['cluster_id'],
+                "site_id": self._conf['site_id'],
+                "rack_id": self._conf['rack_id'],
+                "node_id": self._conf['node_id']
             }
             if args.encl and args.support and self.storage_type == self.STORAGE_TYPE_RBOD:
                 encl_support_data = {}
@@ -1026,11 +1034,10 @@ class SSPLHealthView(object):
         }
         cortx_build_version = 'NA'
         try:
-            cortx_build = Conf.get(GLOBAL_CONF, f"{RELEASE}>{TARGET_BUILD}", 'NA')
-            if cortx_build != 'NA':
-                cortx_build_version = cortx_build.rstrip('\n').split('/')[-2]
+            if self._cortx_build != 'NA':
+                cortx_build_version = self._cortx_build.rstrip('\n').split('/')[-2]
             else:
-                cortx_build_version = cortx_build
+                cortx_build_version = self._cortx_build
         except Exception as e:
             logger.error(f"Unable to fetch cortx build version. : {traceback.format_exc()}")
             print("Unable to fetch cortx build version.")
@@ -1038,7 +1045,7 @@ class SSPLHealthView(object):
 
         os_sw_info_dict['cortx_sw']['cortx_sw_info'].update({'version':cortx_build_version,
                                             'license-info': 'NA',
-                                            'cluster-id':self.CLUSTER_ID})
+                                            'cluster-id':self._conf['cluster_id']})
 
         os_serial = subprocess.Popen(['uname', '-rvmpio'], stdout=subprocess.PIPE).communicate()[0].decode("utf-8").rstrip()
         os_model = subprocess.Popen(['cat', '/etc/system-release'], stdout=subprocess.PIPE).communicate()[0].decode("utf-8").rstrip()
@@ -1232,8 +1239,10 @@ if __name__ == "__main__":
         print('Missing arguments')
         parser.print_help()
         sys.exit(1)
-    storage_type = Conf.get(GLOBAL_CONF, f"{STORAGE}>{ENCLOSURE}>{TYPE}", 'virtual').lower()
-    server_type = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{NODE_TYPE}", 'virtual').lower()
+    
+    response_dict = GlobalConf().fetch_global_config(["storage_type", "server_type"])
+    storage_type = response_dict['storage_type']
+    server_type = response_dict['server_type']
     print(f"Storage Type : '{storage_type}'")
     print(f"Server Type '{server_type}'")
 
