@@ -78,6 +78,7 @@ from message_handlers.real_stor_actuator_msg_handler import \
     RealStorActuatorMsgHandler
 from message_handlers.real_stor_encl_msg_handler import RealStorEnclMsgHandler
 from message_handlers.service_msg_handler import ServiceMsgHandler
+from framework.base.module_thread import ThreadException
 
 
 #DO NOT EDIT: Marker comment to dynamically add code to initialize coverage obj for code coverage report generation
@@ -453,7 +454,8 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist, operating_system
         from actuators.impl.centos_7.command_line import CommandLine as CommandLine
         from actuators.impl.centos_7.systemd_login import SystemdLogin as Login
         from sensors.impl.centos_7.drive_manager import DriveManager as DriveManager
-        from sensors.impl.centos_7.systemd_watchdog import SystemdWatchdog as ServiceWatchdog
+        from sensors.impl.centos_7.disk_monitor import DiskMonitor
+        from sensors.impl.centos_7.service_monitor import ServiceMonitor
         from sensors.impl.centos_7.hpi_monitor import HPIMonitor as HPIMonitor
 
     elif operating_system == OperatingSystem.CENTOS6.value or operating_system == OperatingSystem.RHEL6.value:
@@ -574,6 +576,11 @@ def _run_thread_capture_errors(curr_module, sspl_threaded_modules, msgQlist, con
         logger.info("Starting: %s" % curr_module.name())
         curr_module.start_thread(conf_reader, msgQlist, product)
 
+    except ThreadException as ex:
+        #TODO: Restart thread instead of shutdown
+        logger.error("%s, error is unrecoverable , shutting down %s" %
+            (ex, curr_module.name()))
+        curr_module.shutdown()
     except Exception as ex:
         # Populate an actuator response message and transmit back to HAlon that we have a fatal error
         # error_msg = "SSPL-LL encountered an error, terminating service Error, restarting daemon:{}" \

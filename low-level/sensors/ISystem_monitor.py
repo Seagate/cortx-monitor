@@ -15,15 +15,15 @@
 
 """
  ****************************************************************************
-  Description:       Interface for all service watchdog classes
+
+  Description:       Interface for all system monitoring classes
  ****************************************************************************
 """
 
 from zope.interface import Interface
 
-class IServiceWatchdog(Interface):
-    """Interface for service watchdog classes"""
-
+class ISystemMonitor(Interface):
+    """Interface for system monitoring classes."""
 
     def read_data(self):
-        """Notifies service to send its data"""
+        """Notifies service to send its data."""

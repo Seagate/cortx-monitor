@@ -515,7 +515,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
                 # If the drive field is an asterisk then send all the smart results for all drives available
                 if drive_request == "*":
-                    # Send the event to SystemdWatchdog to schedule SMART test
+                    # Send the event to DiskMonitor to schedule SMART test
                     internal_json_msg = json.dumps(
                         {"sensor_request_type" : "disk_smart_test",
                          "serial_number" : "*",
@@ -523,7 +523,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                          "uuid" : uuid
                          })
 
-                    self._write_internal_msgQ("SystemdWatchdog", internal_json_msg)
+                    self._write_internal_msgQ("DiskMonitor", internal_json_msg)
                     return
 
                 # Put together a message to get the serial number of the drive using hdparm tool
@@ -552,7 +552,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     else:
                         serial_number = drive_request
 
-                    # Send the event to SystemdWatchdog to schedule SMART test
+                    # Send the event to DiskMonitor to schedule SMART test
                     internal_json_msg = json.dumps(
                         {"sensor_request_type" : "disk_smart_test",
                             "serial_number" : serial_number,
@@ -560,7 +560,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                             "uuid" : uuid
                         })
 
-                    self._write_internal_msgQ("SystemdWatchdog", internal_json_msg)
+                    self._write_internal_msgQ("DiskMonitor", internal_json_msg)
 
             elif component == "DRVM":
                 # Requesting the current status from drivemanager
@@ -679,7 +679,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 else:
                     serial_number = sim_request[1]
 
-                # SMART simulation requests are sent to SystemdWatchdog
+                # SMART simulation requests are sent to DiskMonitor
                 if sim_request[0] == "SMART_FAILURE":
                     logger.info(f"NodeControllerMsgHandler, simulating SMART_FAILURE on drive: {serial_number}")
 
@@ -690,8 +690,8 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                          "uuid" : uuid
                          })
 
-                    # Send the event to SystemdWatchdog to handle it from here
-                    self._write_internal_msgQ("SystemdWatchdog", internal_json_msg)
+                    # Send the event to DiskMonitor to handle it from here
+                    self._write_internal_msgQ("DiskMonitor", internal_json_msg)
 
                 else:
                     # Send a message to the disk message handler to handle simulation request
