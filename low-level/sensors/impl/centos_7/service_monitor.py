@@ -125,8 +125,8 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
                 # but for disabled both presence or absence of UnitFileState is
                 # possible. so if `UnitFileState' not present for the service,
                 # it is definitely disabled.
-                logger.error(f"{service} removed from services_to_monitor due "\
-                             f"to error : {err}")
+                logger.error(f"{service} is not getting monitored due "\
+                             f"to an error : {err}")
                 self.services_to_monitor.remove(service)
 
     def run(self):
@@ -423,7 +423,7 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
                 "fault",
                 f"{service} service is unavailable.",
                 "Try to restart the service"],
-            [f"{service} in a non_active state for more than {self.max_wait_time} seconds.",
+            [f"{service} in a {state} state for more than {self.max_wait_time} seconds.",
                 "fault",                                     #index 1
                 f"{service} service is unavailable.",
                 "Try to restart the service"],
