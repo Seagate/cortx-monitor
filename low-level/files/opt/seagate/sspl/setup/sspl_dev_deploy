@@ -324,10 +324,9 @@ class SSPLDevDeploy:
                      (srvnode), self.BMC_USER)
             Conf.set(global_config_index, "cluster>%s>bmc>secret" %
                      (srvnode), self.BMC_PASSWD)
-        # set public_ip, required by cortx-utils
-        public_ip = socket.gethostbyname(socket.getfqdn())
-        Conf.set(global_config_index, "cluster>%s>network>mgmt>public_ip" %
-                 (srvnode), public_ip)
+        # kafka>servers, required by cortx-utils
+        Conf.set(global_config_index, "cortx>software>kafka>servers",
+                 [socket.getfqdn()])
         Conf.save(sspl_config_index)
         Conf.save(global_config_index)
 
