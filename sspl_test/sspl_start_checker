@@ -1,0 +1,87 @@
+#!/usr/bin/python3.6
+
+# Copyright (c) 2020 Seagate Technology LLC and/or its Affiliates
+#
+# This program is free software: you can redistribute it and/or modify it under the
+# terms of the GNU Affero General Public License as published by the Free Software
+# Foundation, either version 3 of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+# PARTICULAR PURPOSE. See the GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License along
+# with this program. If not, see <https://www.gnu.org/licenses/>. For any questions
+# about this software or licensing, please email opensource@seagate.com or
+# cortx-questions@seagate.com.
+
+
+import sys
+import json
+import socket
+
+from cortx.utils.message_bus import MessageBus
+from cortx.utils.message_bus import MessageConsumer
+
+from framework.base.sspl_constants import SSPL_TEST_PATH
+
+
+def process_msg(body):
+    """
+    Following is a message to check.
+    {"username": "sspl-ll", "description": "Seagate Storage Platform Library -
+    Low Level - Actuator Response", "title": "SSPL-LL Actuator Response",
+    "expires": 3600, "signature": "None", "time": "2019-10-03 07:52:40.268960",
+    "message": {"actuator_response_type": {"thread_controller": {"module_name":
+    "ThreadController", "thread_response": "SSPL-LL service has started successfully",
+    "ack_type": "N/A"}}, "sspl_ll_msg_header": {"msg_version": "1.0.0",
+    "schema_version": "1.0.0", "sspl_version": "1.0.0"}}}
+
+    For HW self test:
+    check for this string : "BMC is unreachable"
+    """
+
+    # print(body)
+    successfull_msg = "SSPL-LL service has started successfully"
+    received_msg = None
+    msg_dict = None
+    try:
+        msg_dict = json.loads(body)
+        received_msg = (msg_dict["message"]["actuator_response_type"]
+                        ["thread_controller"]["thread_response"])
+        # Validate SSPL service host too, because multiple SSPL instances
+        # may send the same message in the cluster.
+        host = msg_dict["message"]["actuator_response_type"]["host_id"]
+        if received_msg == successfull_msg and host == socket.getfqdn():
+            print("Got message: {0}".format(received_msg))
+            sys.exit(0)
+    except Exception as e:
+        print(body)
+        print(e)
+        pass
+
+    # Check for bmc unreachable error
+    bmc_conn_error = "BMC is unreachable"
+    if bmc_conn_error in body.decode():
+        print("BMC Unreachable, BMC connectivity test failed.")
+        # Create a file to check later
+        bmc_err_file = f"{SSPL_TEST_PATH}/self_hw_bmc_error.txt"
+        f = open(bmc_err_file, "w")
+        f.close()
+
+
+if __name__ == "__main__":
+    message_bus = MessageBus()
+    consumer = MessageConsumer(message_bus, consumer_id="sspl-test",
+                               consumer_group="cortx_monitor",
+                               message_types=["alerts"],
+                               auto_ack=False, offset="latest")
+
+    while True:
+        try:
+            message = consumer.receive(timeout=3)
+            if message:
+                process_msg(message)
+                consumer.ack()
+        except Exception as e:
+            print(e)

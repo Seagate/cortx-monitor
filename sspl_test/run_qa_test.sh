@@ -17,8 +17,6 @@
 
 MOCK_SERVER_IP=127.0.0.1
 MOCK_SERVER_PORT=28200
-RMQ_SELF_STARTED=0
-RMQ_SELF_STOPPED=0
 IS_VIRTUAL=$(facter is_virtual)
 
 [[ $EUID -ne 0 ]] && sudo=sudo
@@ -69,24 +67,6 @@ pre_requisites()
         $sudo mkdir -p /var/$PRODUCT_FAMILY/sspl/orig-data/iem
         if [ -f /var/$PRODUCT_FAMILY/sspl/data/iem/last_processed_msg_time ]; then
             $sudo mv /var/$PRODUCT_FAMILY/sspl/data/iem/last_processed_msg_time /var/$PRODUCT_FAMILY/sspl/orig-data/iem/last_processed_msg_time
-        fi
-    fi
-
-    systemctl status rabbitmq-server 1>/dev/null && export status=true || export status=false
-
-    if [ "$avoid_rmq" == "False" ]; then
-        # Start rabbitmq if not already running
-        if [ "$status" = "false" ]; then
-            echo "Starting rabbitmq server as needed for tests"
-            systemctl start rabbitmq-server
-            RMQ_SELF_STARTED=1
-        fi
-    else
-        # Stop rabbitmq if running already
-        if [ "$status" = "true" ]; then
-            echo "Stopping rabbitmq server as needed for tests"
-            systemctl stop rabbitmq-server
-            RMQ_SELF_STOPPED=1
         fi
     fi
 
@@ -173,20 +153,6 @@ restore_cfg_services()
         echo "Stopping mock server"
         kill_mock_server
         deleteMockedInterface
-    fi
-
-    if [ "$RMQ_SELF_STARTED" -eq 1 ]
-    then
-        echo "Stopping rabbitmq server as was started for tests"
-        systemctl stop rabbitmq-server
-        RMQ_SELF_STARTED=0
-    fi
-
-    if [ "$RMQ_SELF_STOPPED" -eq 1 ]
-    then
-        echo "Starting rabbitmq server as was stopped for tests"
-        systemctl start rabbitmq-server
-        RMQ_SELF_STOPPED=0
     fi
 
     # Remove ipmisimtool
@@ -389,10 +355,15 @@ fi
 
 if [ "$IS_VIRTUAL" == "true" ]
 then
+    # consume all alerts before SSPL restarts. So sspl_start_checker
+    # waits till SSPL initialized, if previous alerts are availble,
+    # sspl_start_checker will use those and test cases will be executed
+    # before SSPL initialization
+    $script_dir/rabbitmq/consume.py
     echo "Restarting SSPL"
     $sudo systemctl restart sspl-ll
     echo "Waiting for SSPL to complete initialization of all the plugins.."
-    $script_dir/rabbitmq_start_checker sspl-out sensor-key
+    $script_dir/sspl_start_checker
 fi
 
 echo "Initialization completed. Starting tests"

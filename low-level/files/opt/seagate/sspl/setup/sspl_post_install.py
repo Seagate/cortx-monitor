@@ -39,7 +39,6 @@ from framework.base.sspl_constants import (REPLACEMENT_NODE_ENV_VAR_FILE,
                                            SSPL_CONFIG_INDEX,
                                            CONFIG_SPEC_TYPE,
                                            enabled_products)
-from framework import sspl_rabbitmq_reinit
 
 
 class SSPLPostInstall:
@@ -52,9 +51,9 @@ class SSPLPostInstall:
         self.global_config_url = args.config[0]
         self.name = "sspl_post_install"
         self._script_dir = os.path.dirname(os.path.abspath(__file__))
-        self.RSYSLOG_CONF="/etc/rsyslog.d/0-iemfwd.conf"
-        self.RSYSLOG_SSPL_CONF="/etc/rsyslog.d/1-ssplfwd.conf"
-        self.PACEMAKER_INSTALLATION_PATH="/lib/ocf/resource.d/seagate/"
+        self.RSYSLOG_CONF = "/etc/rsyslog.d/0-iemfwd.conf"
+        self.RSYSLOG_SSPL_CONF = "/etc/rsyslog.d/1-ssplfwd.conf"
+        self.PACEMAKER_INSTALLATION_PATH = "/lib/ocf/resource.d/seagate/"
         self.ENVIRONMENT = "PROD"
 
         # Load and dump provsioner supplied global config in required format
@@ -136,16 +135,17 @@ class SSPLPostInstall:
 
         if self.PRODUCT_NAME not in enabled_products:
             raise SetupError(1,
-                            "Product '%s' is not in enabled products list: %s",
-                            self.PRODUCT_NAME,
-                            enabled_products)
+                             "Product '%s' is not in enabled products list: %s",
+                             self.PRODUCT_NAME,
+                             enabled_products)
 
     def process(self):
         """Configure SSPL logs and service based on config."""
 
         # Copy and load product specific sspl config
         if not os.path.exists(file_store_config_path):
-            shutil.copyfile("%s/conf/sspl.conf.%s.yaml" % (SSPL_BASE_DIR, self.PRODUCT_NAME),
+            shutil.copyfile("%s/conf/sspl.conf.%s.yaml" %
+                            (SSPL_BASE_DIR, self.PRODUCT_NAME),
                             file_store_config_path)
 
         # Global config copy path in sspl.conf will be referred by sspl-ll service later.
@@ -171,9 +171,11 @@ class SSPLPostInstall:
         if self.PRODUCT_NAME == "LDR_R1":
             # setup consul if not running already
             if not os.path.exists(REPLACEMENT_NODE_ENV_VAR_FILE):
-                sspl_setup_consul = "%s/sspl_setup_consul -e %s" % (self._script_dir,
-                                                                    self.ENVIRONMENT)
-                output, error, returncode = SimpleProcess(sspl_setup_consul).run()
+                sspl_setup_consul = "%s/sspl_setup_consul -e %s" % (
+                    self._script_dir,
+                    self.ENVIRONMENT)
+                _, error, returncode = SimpleProcess(
+                    sspl_setup_consul).run()
                 if returncode != 0:
                     raise SetupError(returncode, error, sspl_setup_consul)
 
@@ -186,11 +188,13 @@ class SSPLPostInstall:
         dbus_service = DbusServiceHandler()
         # Copy rsyslog configuration
         if not os.path.exists(self.RSYSLOG_CONF):
-            shutil.copyfile("%s/low-level/files/%s" % (SSPL_BASE_DIR, self.RSYSLOG_CONF),
-                            self.RSYSLOG_CONF)
+            shutil.copyfile(
+                "%s/low-level/files/%s" % (SSPL_BASE_DIR, self.RSYSLOG_CONF),
+                self.RSYSLOG_CONF)
 
         if not os.path.exists(self.RSYSLOG_SSPL_CONF):
-            shutil.copyfile("%s/low-level/files/%s" % (SSPL_BASE_DIR, self.RSYSLOG_SSPL_CONF),
+            shutil.copyfile("%s/low-level/files/%s" % (
+                SSPL_BASE_DIR, self.RSYSLOG_SSPL_CONF),
                             self.RSYSLOG_SSPL_CONF)
 
         # Create soft link for SINGLE product name service to existing LDR_R1, LR2 service
@@ -202,7 +206,8 @@ class SSPLPostInstall:
                        currentProduct)
 
         if PRODUCT == "CLUSTER" and not os.path.exists(currentProduct):
-            os.symlink("%s/conf/sspl-ll.service.LR2" % (SSPL_BASE_DIR), currentProduct)
+            os.symlink("%s/conf/sspl-ll.service.LR2" % (SSPL_BASE_DIR),
+                       currentProduct)
 
         # Copy sspl-ll.service file and enable service
         shutil.copyfile(currentProduct, "/etc/systemd/system/sspl-ll.service")
@@ -214,7 +219,8 @@ class SSPLPostInstall:
 
         # Copy IEC mapping files
         os.makedirs("%s/iem/iec_mapping" % (PRODUCT_BASE_DIR), exist_ok=True)
-        distutils.dir_util.copy_tree("%s/low-level/files/iec_mapping/" % (SSPL_BASE_DIR),
+        distutils.dir_util.copy_tree(
+            "%s/low-level/files/iec_mapping/" % (SSPL_BASE_DIR),
             "%s/iem/iec_mapping" % (PRODUCT_BASE_DIR))
 
         # Skip this step if sspl is being configured for node replacement scenario as sspl configurations are
@@ -223,20 +229,11 @@ class SSPLPostInstall:
         # Onward LR2, consul will be abstracted out and it won't exit as hard dependeny of SSPL
         if PRODUCT == "LDR_R1":
             if not os.path.exists(REPLACEMENT_NODE_ENV_VAR_FILE):
-                config_from_salt = "%s/sspl_fetch_config_from_salt.py %s %s" % (self._script_dir,
-                                                                                self.ENVIRONMENT,
-                                                                                PRODUCT)
-                output, error, returncode = SimpleProcess(config_from_salt).run()
+                config_from_salt = "%s/sspl_fetch_config_from_salt.py %s %s" % (
+                    self._script_dir,
+                    self.ENVIRONMENT,
+                    PRODUCT)
+                output, error, returncode = SimpleProcess(
+                    config_from_salt).run()
                 if returncode != 0:
                     raise SetupError(returncode, error, config_from_salt)
-
-        # Skip this step if sspl is being configured for node replacement scenario as rabbitmq cluster is
-        # already configured on the healthy node
-        # Configure rabbitmq
-        if not os.path.exists(REPLACEMENT_NODE_ENV_VAR_FILE):
-            setup_rmq = Conf.get(
-                SSPL_CONFIG_INDEX, "RABBITMQCLUSTER>setup_rmq")
-            if setup_rmq:
-                dbus_service.start('rabbitmq-server.service')
-                sspl_rabbitmq_reinit.main(PRODUCT)
-
