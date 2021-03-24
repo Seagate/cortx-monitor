@@ -1,0 +1,57 @@
+cluster:
+  cid01:
+    name: cortx_cluster
+    site:
+      storage_set_count: '1'
+    site_count: '1'
+    storage_set:
+    - name: StorageSet-1
+      server_nodes:
+      - srvnode-1
+      storage_enclosures:
+      - encserial-1
+cortx:
+  release:
+    product: LR2
+    setup: cortx
+server_node:
+  30512e5ae6df9f1ea02327bab45e499d:
+    bmc:
+      ip: 198.120.10.1
+      secret: Admin123
+      user: ADMIN
+    cluster_id: cid01
+    hostname: ssc-vm-2217.colo.seagate.com
+    name: srvnode-1
+    network:
+      data:
+        private_fqdn: srvnode-1.data.private
+        private_interfaces:
+        - enp175s0f1
+        public_fqdn: srvnode-1.data.public
+        public_interfaces:
+        - enp175s0f0
+      management:
+        interfaces:
+        - eno1
+        public_fqdn: srvnode-1.mgmt.public
+    node_id: '1'
+    rack_id: '1'
+    site_id: '1'
+    storage:
+      enclosure_id: enc30512e5ae6df9f1ea02327bab45e499d
+    type: VM
+storage_enclosure:
+  enc30512e5ae6df9f1ea02327bab45e499d:
+    controller:
+      password: Admin123
+      primary:
+        ip: 10.0.0.2
+        port: '22'
+      secondary:
+        ip: 10.0.0.3
+        port: '22'
+      type: Gallium
+      user: admin
+    name: encserial-1
+    type: RBOD
