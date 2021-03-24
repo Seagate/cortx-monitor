@@ -29,7 +29,8 @@ from datetime import datetime
 
 from framework.base.module_thread import SensorThread
 from framework.base.internal_msgQ import InternalMsgQ
-from framework.base.sspl_constants import COMMON_CONFIGS, RaidDataConfig, RaidAlertMsgs, WAIT_BEFORE_RETRY, PRODUCT_FAMILY
+from framework.base.sspl_constants import (COMMON_CONFIGS, RaidDataConfig,
+    RaidAlertMsgs, WAIT_BEFORE_RETRY, PRODUCT_FAMILY)
 from framework.utils.severity_reader import SeverityReader
 from framework.utils.service_logging import logger
 from framework.utils.utility import Utility
@@ -61,7 +62,7 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
 
     # check once a week (below time is in seconds), the integrity of raid data
     DEFAULT_POLLING_INTERVAL = "604800"
-    DEFAULT_RAID_DATA_PATH = f"/var/{PRODUCT_FAMILY}/sspl/data/raid_integrity/"
+    DEFAULT_RAID_DATA_PATH = RaidDataConfig.RAID_RESULT_DIR.value
     DEFAULT_TIMESTAMP_FILE_PATH = DEFAULT_RAID_DATA_PATH + "last_execution_time"
 
     alert_type = None
@@ -110,6 +111,9 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
         self.utility = Utility()
         if self.utility.is_env_vm():
             self.shutdown()
+        
+        # Create DEFAULT_RAID_DATA_PATH if already not exist.
+        self._create_file(self.DEFAULT_RAID_DATA_PATH)
 
         return True
 
@@ -440,10 +444,11 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
         if os.path.exists(self._timestamp_file_path):
             os.remove(self._timestamp_file_path)
         path = RaidDataConfig.RAID_RESULT_DIR.value
-        current_time = time.time()
-        result_files = [file for file in os.listdir(path) if file.endswith(".txt")]
-        for file in result_files:
-            if os.path.getmtime(os.path.join(path, file)) < (current_time - 24*60*60) :
-                if os.path.isfile(os.path.join(path, file)):
-                    os.remove(os.path.join(path, file))
+        if os.path.exists(path):
+            current_time = time.time()
+            result_files = [file for file in os.listdir(path) if file.endswith(".txt")]
+            for file in result_files:
+                if os.path.getmtime(os.path.join(path, file)) < (current_time - 24*60*60):
+                    if os.path.isfile(os.path.join(path, file)):
+                        os.remove(os.path.join(path, file))
 

@@ -57,6 +57,7 @@ class SSPLBundleGenerate(object):
         self.boot_drvs_dta = f'{sspl_bundle_tmp}/Server_OS_boot_drives_SMART_data_{str(int(time.time()))}'
         self.enclosure_log = f"{sspl_bundle_tmp}/enclosure_logs.zip"
         self.enclosure_wwn = "NA"
+        self.sspl_data_dir = f"/var/{PRODUCT_FAMILY}/sspl/data"
         self.rabbitmq_cmd = {
             "Rabbitmq status": "systemctl status rabbitmq-server",
             "Rabbitmq cluster status": "rabbitmqctl cluster_status",
@@ -116,8 +117,16 @@ class SSPLBundleGenerate(object):
             self.get_ipmi_sel_data()
             self.get_consul_data()
             self.get_drives_smart_data()
+            self.get_rabbitmq_data()
             if sspl_state == "active" and "-noencl" not in parser:
                 self.get_enclosure_logs()
+
+            if os.path.exists(self.enclosure_log) and sspl_state == 'active' \
+                    and "-noencl" not in parser:
+                enclosure_zip_file = "enclosure-wwn-{0}-logs-{1}.zip".format(
+                    self.enclosure_wwn, str(int(time.time())))
+                shutil.copy(self.enclosure_log, self.localTempPath+enclosure_zip_file)
+                print("Enclosure Log File Location: %s" % self.localTempPath+enclosure_zip_file)
 
             file_dir = file_name.replace(".tar.gz","")
             tarfile_data = {
@@ -133,18 +142,21 @@ class SSPLBundleGenerate(object):
                 self.rabbitmq_status: file_dir+"/rabbitmq/status/rabbitmq_status.txt",
                 self.rabbitmq_conf_dir: file_dir+"/rabbitmq/config/rabbitmq.config",
                 self.rabbitmq_log_dir: file_dir+"/rabbitmq/logs/",
+                self.sspl_data_dir: file_dir+"/sspl/data/",
                 iem_log_dir: file_dir+"/iems/"
             }
+
+            # Exclude some duplicate file from the bundle
+            EXCLUDE_FILES = ['sspl-sb-req.txt', sspl_bundle_tmp]
                 
             with tarfile.open(self.localTempPath+file_name, "w:gz") as tar:
                 for key, value in tarfile_data.items():
                     if os.path.exists(key):
-                        tar.add(key, arcname=value)
+                        try:
+                            tar.add(key, arcname=value, exclude=lambda x: x in EXCLUDE_FILES)
+                        except IOError as err:
+                            print("Unable to include %s logs with an error %s" % (key, err))
                 tar.close()
-
-            if os.path.exists(self.enclosure_log) and sspl_state == 'active' and "-noencl" not in parser:
-                enclosure_zip_file = "enclosure-wwn-{0}-logs-{1}.zip".format(self.enclosure_wwn, str(int(time.time())))
-                shutil.copy(self.enclosure_log, self.localTempPath+enclosure_zip_file)
 
         except (OSError, tarfile.TarError) as err:
             print("Facing problem while creating sspl support bundle : %s" % err)
@@ -152,10 +164,8 @@ class SSPLBundleGenerate(object):
             sspl_bundle_cleanup()
             sys.exit(1)
 
-        print("SSPL Support Bundle Files Uploaded Successfully..!")
         print("SSPL Support Bundle Location: %s" % self.localTempPath+file_name)
-        if os.path.exists(self.enclosure_log) and sspl_state == 'active' and "-noencl" not in parser:
-            print("Enclosure Log File Location: %s" % self.localTempPath+enclosure_zip_file)
+        print("SSPL Support Bundle Files Uploaded Successfully..!")
 
     def get_rabbitmq_data(self):
         rmq_file = open(self.rabbitmq_status, "w+")
@@ -170,11 +180,12 @@ class SSPLBundleGenerate(object):
         rmq_file.close()
 
     def get_ipmi_sel_data(self):
-        ipmi_sel_cmd = f"ipmitool sel list > {self.ipmi_sel_data}"
-        subout = self._run_command(ipmi_sel_cmd)
-        if subout[2] != 0:
+        response, _, return_code = self._run_command("ipmitool sel list")
+        if return_code != 0:
             print("Required ipmitool is missing from the Node server to fetch sel data..!")
-        del subout
+        else:
+            with open(self.ipmi_sel_data, 'w+') as sel_list:
+                sel_list.write(response)
 
     def get_consul_data(self):
         self.consul_folder_name = f"consul_sspl_data-{str(int(time.time()))}"
@@ -200,24 +211,24 @@ class SSPLBundleGenerate(object):
 
     def get_drives_smart_data(self):
         lsscsi_cmd = "lsscsi | grep disk"
-        lsscsi_response, _, return_code = self._run_command(lsscsi_cmd)
+        lsscsi_response, _, _ = self._run_command(lsscsi_cmd)
         if not os.path.exists(self.boot_drvs_dta):
             os.makedirs(self.boot_drvs_dta)
         for res in lsscsi_response.split("\n"):
             drive_path = res.strip().split(' ')[-1]
             smartctl_cmd = f"sudo smartctl -a {drive_path} --json"
-            response, _, return_code = self._run_command(smartctl_cmd)
+            response, _, _ = self._run_command(smartctl_cmd)
             response = json.loads(response)
-            # TODO: Find better way to get local disk.
-            # Filtering out local disk
-            if response['device']['protocol'] == 'ATA':
-                try:
+            try:
+                # TODO: Find better way to get local disk.
+                # Filtering out local disk
+                if 'device' in response and response['device']['protocol'] == 'ATA':
                     file_name = drive_path.replace('/', '_')[1:]
                     with open(f"{self.boot_drvs_dta}/{file_name}.json", "w+") as fp:
                         json.dump(response, fp,  indent=4)
 
-                except Exception as e:
-                    print("Error in writing {0} file: {1}".format(response, e))
+            except Exception as e:
+                print("Error in writing {0} file: {1}".format(response, e))
     
     def _run_command(self, command):
         """Run the command and get the response and error returned"""
@@ -321,8 +332,13 @@ if __name__ == "__main__":
             sys.exit(1)
         tmpFile = open(onGoingRequestPath, "w")
         os.makedirs(sspl_bundle_tmp)
-        SSPLBundleObj = SSPLBundleGenerate()
-        SSPLBundleObj.generate_sspl_support_bundle(sys.argv, tmpFile)
+        try:
+            SSPLBundleObj = SSPLBundleGenerate()
+            SSPLBundleObj.generate_sspl_support_bundle(sys.argv, tmpFile)
+        except Exception as e:
+            print("SSPL support bundle script is failed with an unexpected "
+                "error. please try again ..!")
+            print("Error Message : %s" % e)
         tmpFile.close()
         sspl_bundle_cleanup()
     else:

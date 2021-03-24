@@ -82,8 +82,8 @@ setup_provisioner_prereq(){
     fi
 
     # to install updated packages
-    pkg_name="cortx-prvsnr-cli-1.0.0"
-    build_url="http://cortx-storage.colo.seagate.com/releases/cortx/github/dev/rhel-7.7.1908/provisioner_last_successful"
+    pkg_name="cortx-prvsnr-cli-1.0.1"
+    build_url="http://cortx-storage.colo.seagate.com/releases/cortx/github/cortx-1.0/centos-7.8.2003/last_successful"
     yum install -y $build_url/$(curl -s $build_url/|grep $pkg_name|sed 's/<\/*[^"]*"//g'|cut -d"\"" -f1)
     # provisioner decides the setup(single or dual node) for deployment and
     # they don't use this dev init script. This script supports only single node setup.

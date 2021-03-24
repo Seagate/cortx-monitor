@@ -97,6 +97,9 @@ class ConsulDump():
             return data.decode()
         except TypeError:
             return deserialized.__str__()
+        except Exception:
+            return data.decode()
+
 
     def dump(self):
         for key, options in self.keys.items():
