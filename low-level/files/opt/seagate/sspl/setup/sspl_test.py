@@ -123,7 +123,7 @@ class SSPLTestCmd:
         service_list.append(service_name)
         Conf.set(SSPL_CONFIG_INDEX, "SERVICEMONITOR>monitored_services",
             service_list)
-        
+
         threshold_inactive_time_original = Conf.get(SSPL_CONFIG_INDEX,
                                     "SERVICEMONITOR>threshold_inactive_time")
         threshold_inactive_time_new = 30
