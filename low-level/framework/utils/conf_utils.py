@@ -107,6 +107,7 @@ POLLING_INTERVAL="polling_interval"
 PORT="port"
 PRIMARY="primary"
 PRIMARY_RABBITMQ_HOST="primary_rabbitmq_host"
+PRODUCT_NAME = 'product'
 PROBE="probe"
 PRODUCT="product"
 QUEUE_NAME="queue_name"
@@ -144,8 +145,7 @@ MACHINE_ID = utility.get_machine_id()
 OPERATING_SYSTEM = utility.get_os()
 
 Conf.load(SSPL_CONF, "yaml:///etc/sspl.conf")
-global_config = Conf.get(SSPL_CONF, "SYSTEM_INFORMATION>global_config_copy_url")
-Conf.load(GLOBAL_CONF, global_config)
+Conf.load(GLOBAL_CONF, "yaml:///etc/sspl_global_config_copy.yaml")
 
 SRVNODE = Conf.get(GLOBAL_CONF, f'{CLUSTER}>{SERVER_NODES}')[MACHINE_ID]
 ENCLOSURE = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{STORAGE}>{ENCLOSURE_ID}")

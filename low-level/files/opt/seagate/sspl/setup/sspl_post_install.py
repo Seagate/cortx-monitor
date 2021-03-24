@@ -20,72 +20,92 @@
 ###################################################################
 
 import os
+import pwd
+import grp
+import errno
 import shutil
+import socket
 import distutils.dir_util
 from urllib.parse import urlparse
 
 # using cortx package
+from cortx.utils.conf_store import Conf
 from cortx.utils.process import SimpleProcess
 from cortx.utils.service import DbusServiceHandler
+from cortx.utils.validator.v_network import NetworkV
 from cortx.utils.validator.v_pkg import PkgV
-from cortx.utils.conf_store import Conf
+from cortx.utils.validator.v_service import ServiceV
 from .setup_error import SetupError
-from framework.base.sspl_constants import (REPLACEMENT_NODE_ENV_VAR_FILE,
-                                           SSPL_BASE_DIR,
-                                           file_store_config_path,
-                                           sspl_config_path,
-                                           PRODUCT_BASE_DIR,
-                                           GLOBAL_CONFIG_INDEX,
-                                           SSPL_CONFIG_INDEX,
-                                           CONFIG_SPEC_TYPE,
-                                           enabled_products)
+from framework.base import sspl_constants as consts
+from framework.utils.utility import Utility
 
 
 class SSPLPostInstall:
     """Prepare environment for SSPL service."""
 
-    name = "SSPL Post Install"
+    name = "sspl_post_install"
 
-    def __init__(self, args: str):
-        """Ssplpostinstall init."""
-        self.global_config_url = args.config[0]
-        self.name = "sspl_post_install"
-        self._script_dir = os.path.dirname(os.path.abspath(__file__))
-        self.RSYSLOG_CONF = "/etc/rsyslog.d/0-iemfwd.conf"
-        self.RSYSLOG_SSPL_CONF = "/etc/rsyslog.d/1-ssplfwd.conf"
-        self.PACEMAKER_INSTALLATION_PATH = "/lib/ocf/resource.d/seagate/"
-        self.ENVIRONMENT = "PROD"
-
-        # Load and dump provsioner supplied global config in required format
-        self.prvsnr_global_config = "prvsnr_global_config"
-        global_config_copy_loc = "/etc/sspl_global_config_copy.%s" % CONFIG_SPEC_TYPE
-        self.global_config_copy_url = "%s://%s" % (CONFIG_SPEC_TYPE,
-                                                   global_config_copy_loc)
-        Conf.load(self.prvsnr_global_config, self.global_config_url)
-        self.dump_global_config()
-
-    def dump_global_config(self):
-        """Dump provisioner global config and load it."""
-        url_spec = urlparse(self.global_config_copy_url)
-        path = url_spec.path
-        store_loc = os.path.dirname(path)
-        if not os.path.exists(store_loc):
-            os.makedirs(store_loc)
-        with open(path, "w") as f:
-            f.write("")
-        # Make copy of global config
-        Conf.load(GLOBAL_CONFIG_INDEX, self.global_config_copy_url)
-        Conf.copy(self.prvsnr_global_config, GLOBAL_CONFIG_INDEX)
-        Conf.save(GLOBAL_CONFIG_INDEX)
+    def __init__(self):
+        """Initialize varibales for post install."""
+        self.user = "sspl-ll"
+        self.sspl_log_path = "/var/log/%s/sspl/" % consts.PRODUCT_FAMILY
+        self.sspl_bundle_path = "/var/%s/sspl/bundle/" % consts.PRODUCT_FAMILY
+        self.state_file = "%s/state.txt" % consts.DATA_PATH
+        self.dbus_service = DbusServiceHandler()
 
     def validate(self):
         """Check below requirements are met in setup.
 
-        1. required python 3rd party packages are installed
-        2. required rpm dependencies are installed
-        3. product specified in global config is supported by SSPL
+        1. Given product is supported by SSPL
+        2. Given setup is supported by SSPL
+        3. Required pre-requisites softwares are installed.
+        4. Validate BMC connectivity
+        5. Validate storage controller connectivity
         """
-        # SSPL python 3rd party package dependencies
+        machine_id = Utility.get_machine_id()
+
+        # Validate input/provisioner configs
+        self.product = Utility.get_config_value(consts.PRVSNR_CONFIG_INDEX,
+            "cortx>release>product")
+        self.setup = Utility.get_config_value(consts.PRVSNR_CONFIG_INDEX,
+            "cortx>release>setup")
+        node_type = Utility.get_config_value(consts.PRVSNR_CONFIG_INDEX,
+             "server_nodes>%s>type" % machine_id)
+        if node_type.lower() != "vm":
+            bmc_ip = Utility.get_config_value(consts.PRVSNR_CONFIG_INDEX,
+                "server_nodes>%s>bmc>ip" % machine_id)
+            enclosure_id = Utility.get_config_value(consts.PRVSNR_CONFIG_INDEX,
+                "server_nodes>%s>storage>enclosure_id" % machine_id)
+            primary_ip = Utility.get_config_value(consts.PRVSNR_CONFIG_INDEX,
+                "storage_enclosure>%s>storage>controller>primary>ip" % enclosure_id)
+            secondary_ip = Utility.get_config_value(consts.PRVSNR_CONFIG_INDEX,
+                "storage_enclosure>%s>storage>controller>secondary>ip" % enclosure_id)
+
+        # Validate product support
+        if self.product not in consts.enabled_products:
+            raise SetupError(errno.EINVAL,
+                "Product '%s' is not in sspl supported product list: %s",
+                self.product, consts.enabled_products)
+
+        # Validate setup support
+        if self.setup not in consts.setups:
+            raise SetupError(errno.EINVAL,
+                "Setup '%s' is not in sspl supported setup list: %s",
+                self.setup, consts.setups)
+
+        # Validate required pip3s and rpms are installed
+        self.validate_dependencies(self.setup)
+
+        # Validate BMC & Storage controller IP reachability
+        if node_type.lower() != "vm":
+            # cluster_id required for decrypting the secret is only available from
+            # the prepare stage. However accessibility validation will be done in
+            # prepare stage. So at this time, validating ip reachability is fine.
+            NetworkV().validate("connectivity", [bmc_ip, primary_ip, secondary_ip])
+
+    @staticmethod
+    def validate_dependencies(setup):
+        """Validate pre-requisites software packages."""
         pip3_3ps_packages_main = {
             "cryptography": "2.8",
             "jsonschema": "3.2.0",
@@ -96,8 +116,7 @@ class SSPLPostInstall:
             "zope.component": "4.6.2",
             "zope.event": "4.5.0",
             "zope.interface": "5.2.0"
-        }
-        # SSPL 3rd party RPM dependencies
+            }
         rpm_3ps_packages = {
             "hdparm": "9.43",
             "ipmitool": "1.8.18",
@@ -112,128 +131,169 @@ class SSPLPostInstall:
             "smartmontools": "7.0",
             "systemd-python36": "1.0.0",
             "udisks2": "2.8.4"
-        }
+            }
+        ssu_dependency_rpms = [
+            "sg3_utils",
+            "gemhpi",
+            "pull_sea_logs",
+            "python-hpi",
+            "zabbix-agent-lib",
+            "zabbix-api-gescheit",
+            "zabbix-xrtx-lib",
+            "python-openhpi-baselib",
+            "zabbix-collector"
+            ]
+        ssu_required_process = [
+            "openhpid",
+            "dcs-collectord"
+            ]
+        vm_dependency_rpms = []
+
         pkg_validator = PkgV()
-        pkg_validator.validate_pip3_pkgs(host=None,
-                                         pkgs=pip3_3ps_packages_main,
-                                         skip_version_check=False)
-        pkg_validator.validate_rpm_pkgs(host=None,
-                                        pkgs=rpm_3ps_packages,
-                                        skip_version_check=False)
+        pkg_validator.validate_pip3_pkgs(host=None, pkgs=pip3_3ps_packages_main,
+            skip_version_check=False)
+        pkg_validator.validate_rpm_pkgs(host=None, pkgs=rpm_3ps_packages,
+            skip_version_check=False)
 
-        self.PRODUCT_NAME = Conf.get(GLOBAL_CONFIG_INDEX, 'release>product')
-
-        # Validate product
-        if not self.PRODUCT_NAME:
-            raise SetupError(1,
-                             "%s - validation failure. %s",
-                             self.name,
-                             "Product not found in global config copy.")
-
-        if not enabled_products:
-            raise SetupError(1, "No enabled products!")
-
-        if self.PRODUCT_NAME not in enabled_products:
-            raise SetupError(1,
-                             "Product '%s' is not in enabled products list: %s",
-                             self.PRODUCT_NAME,
-                             enabled_products)
+        # Check for sspl required processes and misc dependencies if
+        # setup/role is other than cortx
+        if setup == "ssu":
+            pkg_validator.validate("rpms", ssu_dependency_rpms)
+            ServiceV().validate("isrunning", ssu_required_process)
+        elif setup == "vm" or setup == "gw" or setup == "cmu":
+            # No dependency currently. Keeping this section as it
+            # may be needed in future.
+            pkg_validator.validate("rpms", vm_dependency_rpms)
+            # No processes to check in VM environment
 
     def process(self):
-        """Configure SSPL logs and service based on config."""
+        """Create SSPL user and required config files."""
+        self.create_sspl_conf()
+        # Load sspl config
+        Conf.load(consts.SSPL_CONFIG_INDEX, consts.sspl_config_path)
+        self.create_user()
+        self.create_directories_and_ownership()
+        self.configure_sspl_syslog()
+        self.install_sspl_service_files()
+        self.enable_sspl_service()
 
-        # Copy and load product specific sspl config
-        if not os.path.exists(file_store_config_path):
-            shutil.copyfile("%s/conf/sspl.conf.%s.yaml" %
-                            (SSPL_BASE_DIR, self.PRODUCT_NAME),
-                            file_store_config_path)
+    def create_sspl_conf(self):
+        """Install product specific sspl config."""
+        if not os.path.exists(consts.file_store_config_path):
+            shutil.copyfile("%s/conf/sspl.conf.yaml" % consts.SSPL_BASE_DIR,
+                consts.file_store_config_path)
 
-        # Global config copy path in sspl.conf will be referred by sspl-ll service later.
-        Conf.load(SSPL_CONFIG_INDEX, sspl_config_path)
-        Conf.set(SSPL_CONFIG_INDEX, "SYSTEM_INFORMATION>global_config_url",
-                 self.global_config_url)
-        Conf.set(SSPL_CONFIG_INDEX, "SYSTEM_INFORMATION>global_config_copy_url",
-                 self.global_config_copy_url)
-        Conf.save(SSPL_CONFIG_INDEX)
+    def create_user(self):
+        """Add sspl-ll user and validate user creation."""
+        os.system("/usr/sbin/useradd -r %s -s /sbin/nologin \
+            -c 'User account to run the %s service'" % (self.user, self.user))
+        usernames = [x[0] for x in pwd.getpwall()]
+        if self.user not in usernames:
+            raise SetupError(errno.EINVAL,
+                "User %s doesn't exit. Please add user." % self.user)
+        # Add sspl-ll user to required groups and sudoers file etc.
+        sspl_reinit = "%s/low-level/framework/sspl_reinit" % consts.SSPL_BASE_DIR
+        _ , error, rc = SimpleProcess(sspl_reinit).run()
+        if rc:
+            raise SetupError(rc, "%s failed for with error : %e", sspl_reinit, error)
 
-        environ = Conf.get(SSPL_CONFIG_INDEX, "SYSTEM_INFORMATION>environment")
-        if environ == "DEV":
-            self.ENVIRONMENT = environ
+    def create_directories_and_ownership(self):
+        """Create ras persistent cache directory and state file.
+        Assign ownership recursively on the configured directory.
+        The created state file will be used later by SSPL resourse agent(HA).
+        """
+        # Extract the data path
+        sspldp = Utility.get_config_value(consts.SSPL_CONFIG_INDEX,
+            "SYSTEM_INFORMATION>data_path")
+        if not sspldp:
+            raise SetupError(errno.EINVAL, "Data path not set in sspl.conf")
+        sspl_uid = Utility.get_uid(self.user)
+        sspl_gid = Utility.get_gid(self.user)
+        if sspl_uid == -1 or sspl_gid == -1:
+            raise SetupError(errno.EINVAL,
+                "No user found with name : %s", self.user)
+        # Create state file and grant permission
+        if not os.path.exists(self.state_file):
+            file = open(self.state_file, "w")
+            file.close()
+        # Create sspl data directory
+        os.makedirs(sspldp, mode=0o766, exist_ok=True)
+        os.chown(sspldp, sspl_uid, sspl_gid)
+        for base, dirs, files in os.walk(consts.SSPL_CONFIGURED_DIR):
+            for dir in dirs:
+                os.chown(os.path.join(base, dir), sspl_uid, sspl_gid)
+            for file in files:
+                os.chown(os.path.join(base, file), sspl_uid, sspl_gid)
+        # Create SSPL log and bundle directories
+        os.makedirs(self.sspl_log_path, exist_ok=True)
+        os.makedirs(self.sspl_bundle_path, exist_ok=True)
+        # Create /tmp/dcs/hpi if required. Not required for '<product>' role
+        if self.setup != "cortx":
+            os.makedirs(consts.HPI_PATH, mode=0o777, exist_ok=True)
+            zabbix_uid = Utility.get_uid("zabbix")
+            if zabbix_uid != -1:
+                os.chown(consts.HPI_PATH, zabbix_uid, -1)
+        # Create mdadm.conf to set ACL on it.
+        with open(consts.MDADM_PATH, 'a'):
+            os.utime(consts.MDADM_PATH)
+        os.chmod(consts.MDADM_PATH, mode=0o666)
+        os.chown(consts.MDADM_PATH, sspl_uid, -1)
 
-        # sspl_setup_consul script install consul in dev env and checks if consul process is running
-        # on prod. For node replacement scenario consul will not be running on the new node. But,
-        # there will be two instance of consul running on healthy node. When new node is configured
-        # consul will be brought back on it. We are using VIP to connect to consul. So, if consul
-        # is not running on new node, we dont need to error out. So, need to skip this step for
-        # node replacement case
-        # TODO: Need to avoid LDR in CORTX and check if we can use "CORTXr1"
-        # Onward LR2, consul will be abstracted out and it won't exit as hard dependeny of SSPL
-        if self.PRODUCT_NAME == "LDR_R1":
-            # setup consul if not running already
-            if not os.path.exists(REPLACEMENT_NODE_ENV_VAR_FILE):
-                sspl_setup_consul = "%s/sspl_setup_consul -e %s" % (
-                    self._script_dir,
-                    self.ENVIRONMENT)
-                _, error, returncode = SimpleProcess(
-                    sspl_setup_consul).run()
-                if returncode != 0:
-                    raise SetupError(returncode, error, sspl_setup_consul)
+    def configure_sspl_syslog(self):
+        """Configure log file path in rsyslog and update logrotate config file."""
+        system_files_root = "%s/low-level/files" % consts.SSPL_BASE_DIR
+        sspl_log_file_path = Utility.get_config_value(consts.SSPL_CONFIG_INDEX,
+            "SYSTEM_INFORMATION>sspl_log_file_path")
+        iem_log_file_path = Utility.get_config_value(consts.SSPL_CONFIG_INDEX,
+            "IEMSENSOR>log_file_path")
 
-        # Splitting current function into 2 functions to reduce the complexity of the code.
-        self.install_files(self.PRODUCT_NAME)
+        # IEM configuration
+        os.makedirs("%s/iem/iec_mapping" % consts.PRODUCT_BASE_DIR, exist_ok=True)
+        distutils.dir_util.copy_tree("%s/iec_mapping/" % system_files_root,
+            "%s/iem/iec_mapping" % consts.PRODUCT_BASE_DIR)
+        if not os.path.exists(consts.RSYSLOG_IEM_CONF):
+            shutil.copyfile("%s/%s" % (system_files_root, consts.RSYSLOG_IEM_CONF),
+                consts.RSYSLOG_IEM_CONF)
+        # Update log location as per sspl.conf
+        Utility.replace_expr(consts.RSYSLOG_IEM_CONF,
+            'File.*[=,"]', 'File="%s"' % iem_log_file_path)
 
-    def install_files(self, PRODUCT):
-        """Configure required log files."""
+        # SSPL rsys log configuration
+        if not os.path.exists(consts.RSYSLOG_SSPL_CONF):
+            shutil.copyfile("%s/%s" % (system_files_root, consts.RSYSLOG_SSPL_CONF),
+                consts.RSYSLOG_SSPL_CONF)
+        # Update log location as per sspl.conf
+        Utility.replace_expr(consts.RSYSLOG_SSPL_CONF, 'File.*[=,"]',
+            'File="%s"' % sspl_log_file_path)
 
-        dbus_service = DbusServiceHandler()
-        # Copy rsyslog configuration
-        if not os.path.exists(self.RSYSLOG_CONF):
-            shutil.copyfile(
-                "%s/low-level/files/%s" % (SSPL_BASE_DIR, self.RSYSLOG_CONF),
-                self.RSYSLOG_CONF)
+        # Configure logrotate
+        # Create logrotate dir in case it's not present
+        os.makedirs(consts.LOGROTATE_DIR, exist_ok=True)
+        Utility.replace_expr("%s/etc/logrotate.d/iem_messages" % system_files_root,
+            0, iem_log_file_path)
+        Utility.replace_expr("%s/etc/logrotate.d/sspl_logs" % system_files_root,
+            0, sspl_log_file_path)
+        shutil.copy2("%s/etc/logrotate.d/iem_messages" % system_files_root,
+            consts.IEM_LOGROTATE_CONF)
+        shutil.copy2("%s/etc/logrotate.d/sspl_logs" % system_files_root,
+            consts.SSPL_LOGROTATE_CONF)
+        # This rsyslog restart will happen after successful updation of rsyslog
+        # conf file and before sspl starts. If at all this will be removed from
+        # here, there will be a chance that SSPL intial logs will not be present in
+        # "/var/log/<product>/sspl/sspl.log" file. So, initial logs needs to be collected from
+        # "/var/log/messages"
+        service = DbusServiceHandler()
+        service.restart('rsyslog.service')
 
-        if not os.path.exists(self.RSYSLOG_SSPL_CONF):
-            shutil.copyfile("%s/low-level/files/%s" % (
-                SSPL_BASE_DIR, self.RSYSLOG_SSPL_CONF),
-                            self.RSYSLOG_SSPL_CONF)
-
-        # Create soft link for SINGLE product name service to existing LDR_R1, LR2 service
-        # Instead of keeping separate service file for SINGLE product with same content.
-        currentProduct = "%s/conf/sspl-ll.service.%s" % (SSPL_BASE_DIR, PRODUCT)
-        if (PRODUCT == "SINGLE" and not os.path.exists(currentProduct)) or \
-                (PRODUCT == "DUAL" and not os.path.exists(currentProduct)):
-            os.symlink("%s/conf/sspl-ll.service.%s" % (SSPL_BASE_DIR, PRODUCT),
-                       currentProduct)
-
-        if PRODUCT == "CLUSTER" and not os.path.exists(currentProduct):
-            os.symlink("%s/conf/sspl-ll.service.LR2" % (SSPL_BASE_DIR),
-                       currentProduct)
-
-        # Copy sspl-ll.service file and enable service
+    def install_sspl_service_files(self):
+        """Copy service file to systemd location."""
+        currentProduct = "%s/conf/sspl-ll.service" % consts.SSPL_BASE_DIR
         shutil.copyfile(currentProduct, "/etc/systemd/system/sspl-ll.service")
-        dbus_service.enable('sspl-ll.service')
+
+    def enable_sspl_service(self):
+        """Enable sspl-ll service."""
+        self.dbus_service.enable("sspl-ll.service")
         daemon_reload_cmd = "systemctl daemon-reload"
-        output, error, returncode = SimpleProcess(daemon_reload_cmd).run()
-        if returncode != 0:
-            raise SetupError(returncode, error, daemon_reload_cmd)
-
-        # Copy IEC mapping files
-        os.makedirs("%s/iem/iec_mapping" % (PRODUCT_BASE_DIR), exist_ok=True)
-        distutils.dir_util.copy_tree(
-            "%s/low-level/files/iec_mapping/" % (SSPL_BASE_DIR),
-            "%s/iem/iec_mapping" % (PRODUCT_BASE_DIR))
-
-        # Skip this step if sspl is being configured for node replacement scenario as sspl configurations are
-        # already available in consul on the healthy node
-        # Running script for fetching the config using salt and feeding values to consul
-        # Onward LR2, consul will be abstracted out and it won't exit as hard dependeny of SSPL
-        if PRODUCT == "LDR_R1":
-            if not os.path.exists(REPLACEMENT_NODE_ENV_VAR_FILE):
-                config_from_salt = "%s/sspl_fetch_config_from_salt.py %s %s" % (
-                    self._script_dir,
-                    self.ENVIRONMENT,
-                    PRODUCT)
-                output, error, returncode = SimpleProcess(
-                    config_from_salt).run()
-                if returncode != 0:
-                    raise SetupError(returncode, error, config_from_salt)
+        output, error, rc = SimpleProcess(daemon_reload_cmd).run()
+        if rc != 0:
+            raise SetupError(rc, error, daemon_reload_cmd)

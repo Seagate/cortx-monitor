@@ -44,7 +44,8 @@ from framework.base.module_thread import SensorThread
 from framework.base.sspl_constants import (COMMON_CONFIGS, PRODUCT_FAMILY,
                                            SSPL_SETTINGS, OperatingSystem,
                                            enabled_products,
-                                           sspl_settings_configured_groups)
+                                           sspl_settings_configured_groups,
+                                           STATE_FILE)
 from framework.rabbitmq.logging_processor import LoggingProcessor
 from framework.rabbitmq.plane_cntrl_rmq_egress_processor import \
     PlaneCntrlRMQegressProcessor
@@ -60,9 +61,11 @@ from framework.rabbitmq.rabbitmq_ingress_processor import \
 from framework.rabbitmq.thread_controller import ThreadController
 from framework.utils.conf_utils import (CLUSTER, GLOBAL_CONF, HOST, MONITOR,
                                         OPERATING_SYSTEM, PORT, PRODUCT,
-                                        RELEASE, RSYSLOG, SETUP, SRVNODE,
+                                        RELEASE, SYSLOG_HOST_KEY,
+                                        SYSLOG_PORT_KEY, SETUP, SRVNODE,
                                         SSPL_CONF, SYSTEM_INFORMATION,
-                                        THREADED, Conf)
+                                        THREADED, Conf,
+                                        PRODUCT_NAME, LOG_LEVEL)
 from framework.utils.config_reader import ConfigReader
 from framework.utils.service_logging import init_logging, logger
 from framework.utils.store_factory import store
@@ -91,18 +94,7 @@ SENSORS         = 'sensors'
 ACTUATORS       = 'actuators'
 DEGRADED_STATE_MODULES = 'degraded_state_modules'
 
-# Section containing information about the system we're running on
-SYS_INFORMATION = 'SYSTEM_INFORMATION'
-PRODUCT_NAME    = 'product'
-SETUP           = 'setup'
-LOG_LEVEL       = 'log_level'
-SYSLOG_HOST_KEY = "syslog_host"
-SYSLOG_PORT_KEY = "syslog_port"
-DEFAULT_SYSLOG_HOST = "localhost"
-DEFAULT_SYSLOG_PORT = 514
-
 # State file
-STATE_FILE =  f"/var/{PRODUCT_FAMILY}/sspl/data/state.txt"
 STATES = ["active", "degrade"]
 DEFAULT_STATE = "degrade"
 
@@ -785,9 +777,9 @@ if __name__ == "__main__":
 
     # Initialize logging
     try:
-        logging_level = Conf.get(SSPL_CONF, f"{SYS_INFORMATION}>{LOG_LEVEL}", "INFO")
-        syslog_host = Conf.get(GLOBAL_CONF, f"{RSYSLOG}>{HOST}", DEFAULT_SYSLOG_HOST)
-        syslog_port = int(Conf.get(GLOBAL_CONF, f"{RSYSLOG}>{PORT}", DEFAULT_SYSLOG_PORT))
+        logging_level = Conf.get(SSPL_CONF, f"{SYSTEM_INFORMATION}>{LOG_LEVEL}", "INFO")
+        syslog_host = Conf.get(SSPL_CONF, f"{SYSTEM_INFORMATION}>{SYSLOG_HOST_KEY}")
+        syslog_port = int(Conf.get(SSPL_CONF, f"{SYSTEM_INFORMATION}>{SYSLOG_PORT_KEY}")
         init_logging("SSPL-LL", logging_level, syslog_host, syslog_port)
 
     except Exception as err:
