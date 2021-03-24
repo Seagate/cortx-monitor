@@ -123,6 +123,12 @@ class SSPLTestCmd:
         service_list.append(service_name)
         Conf.set(SSPL_CONFIG_INDEX, "SERVICEMONITOR>monitored_services",
             service_list)
+        
+        threshold_inactive_time_original = Conf.get(SSPL_CONFIG_INDEX,
+                                    "SERVICEMONITOR>threshold_inactive_time")
+        threshold_inactive_time_new = 30
+        Conf.set(SSPL_CONFIG_INDEX, "SERVICEMONITOR>threshold_inactive_time",
+            threshold_inactive_time_new)
         Conf.save(SSPL_CONFIG_INDEX)
 
         # TODO: Convert shell script to python
@@ -135,6 +141,8 @@ class SSPLTestCmd:
         service_list.remove(service_name)
         Conf.set(SSPL_CONFIG_INDEX,"SERVICEMONITOR>monitored_services",
             service_list)
+        Conf.set(SSPL_CONFIG_INDEX, "SERVICEMONITOR>threshold_inactive_time",
+            threshold_inactive_time_original)
         Conf.set(SSPL_CONFIG_INDEX,
                  "SYSTEM_INFORMATION>global_config_copy_url", global_config_copy_url)
         Conf.save(SSPL_CONFIG_INDEX)

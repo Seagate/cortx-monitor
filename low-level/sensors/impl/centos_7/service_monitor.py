@@ -15,8 +15,8 @@
 
 """
  ****************************************************************************
-  Description:       Monitors Systemd for service events and notifies
-                    the ServiceMsgHandler.
+  Description:  Monitors Systemd for service events and notifies
+                the ServiceMsgHandler.
  ****************************************************************************
 """
 
@@ -125,7 +125,7 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
                 # but for disabled both presence or absence of UnitFileState is
                 # possible. so if `UnitFileState' not present for the service,
                 # it is definitely disabled.
-                logger.error(f"{service} is not getting monitored due "\
+                logger.debug(f"{service} is not getting monitored due "\
                              f"to an error : {err}")
                 self.services_to_monitor.remove(service)
 
@@ -168,7 +168,7 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
                 time.sleep(self.thread_sleep)
 
                 # At interval of 'polling_freqency' process unregistered
-                # services and services with not-active state.
+                # services and services with not-active (intermidiate) state.
                 if time_to_check_lists <= self.current_time():
                     time_to_check_lists = self.current_time() + \
                                             self.polling_frequency
@@ -224,7 +224,7 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
 
     def connect_to_prop_changed_signal(self, service):
         """
-        Bind the service to a signal('PropertiesChanged').
+           Bind the service to a signal('PropertiesChanged').
 
            Fetch the service unit from systemd and its state, substate,
            pid etc. Bind the service to the sigle which will be triggered
@@ -261,7 +261,7 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
 
     def check_notactive_services(self):
         """
-        Monitor non-active Services.
+           Monitor non-active Services.
 
            Raise FAULT Alert if any of the not-active services has exceeded
            the threshould time for inactivity.

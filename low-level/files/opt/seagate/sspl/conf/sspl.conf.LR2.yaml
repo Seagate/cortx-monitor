@@ -175,7 +175,7 @@ SERVICEMONITOR:
    threaded: true
    thread_sleep: 1
    polling_frequency: 15
-   threshold_inactive_time: 60
+   threshold_inactive_time: 180
    monitored_services:
       - hare-consul-agent.service
       - hare-consul-agent-c1.service

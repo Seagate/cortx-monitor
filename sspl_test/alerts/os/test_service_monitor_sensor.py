@@ -24,7 +24,7 @@ from cortx.utils.service import DbusServiceHandler
 from alerts.os.dummy_service_files import simulate_service_alerts
 
 RESOURCE_TYPE = "node:sw:os:service"
-WAIT_TIME = 80   # 60s wait_time + 20s buffer
+WAIT_TIME = 50   # 30s wait_time (set for testing) + 20s buffer
 service_name = "dummy_service.service"
 
 def init(args):
@@ -117,5 +117,5 @@ def test_service_restart_case(args):
     simulate_service_alerts.cleanup()
 
 test_list = [test_service_inactive_alert,
-            test_service_failed_alert,
+             test_service_failed_alert,
              test_service_restart_case]
