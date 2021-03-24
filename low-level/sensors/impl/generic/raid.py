@@ -73,7 +73,7 @@ class RAIDsensor(SensorThread, InternalMsgQ):
 
     # Dependency list
     DEPENDENCIES = {
-                    "init": ["SystemdWatchdog"],
+                    "init": ["DiskMonitor"],
     }
 
     @staticmethod

@@ -222,7 +222,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
             if sensor_request_type == "disk_smart_test":
                 # This is currently deprecated and unused as requests for SMART tests now actually run
                 #  a new test instead of just returning the results from the last test.  The
-                #  NodeControllerMsgHandler now relays requests to the SystemdWatchdog to run the test
+                #  NodeControllerMsgHandler now relays requests to the DiskMonitor to run the test
 
                 # If the serial number is an asterisk then send over all the smart results for all drives
                 if serial_number == "*":
@@ -642,7 +642,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 {"sensor_request_type" : "resend_drive_status",
                     "serial_number" : serial_number
                 })
-            self._write_internal_msgQ("SystemdWatchdog", internal_json_msg)
+            self._write_internal_msgQ("DiskMonitor", internal_json_msg)
 
     def _remove_replaced_drive(self, serial_number, enclosure, drive_num):
         """Check for a drive being replaced with a new one and delete the old one"""

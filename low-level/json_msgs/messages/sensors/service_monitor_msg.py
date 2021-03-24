@@ -16,7 +16,7 @@
 """
  ****************************************************************************
   Description:       Defines the JSON message transmitted by the
-                    Service Watchdogs. There may be a time when we need to
+                    Service Monitor. There may be a time when we need to
                     maintain state as far as messages being transmitted.  This
                     may involve aggregation of multiple messages before
                     transmissions or simply deferring an acknowledgment to
@@ -29,38 +29,21 @@ import json
 
 from json_msgs.messages.sensors.base_sensors_msg import BaseSensorMsg
 
-class ServiceWatchdogMsg(BaseSensorMsg):
-    '''
-    The JSON message transmitted by the Service Watchdogs
-    '''
+class ServiceMonitorMsg(BaseSensorMsg):
 
-    ACTUATOR_MSG_TYPE = "service_watchdog"
+    """The JSON message transmitted by the Service Monitor."""
+
     MESSAGE_VERSION  = "1.0.0"
 
-    def __init__(self, service_name,
-                       state,
-                       previous_state,
-                       substate,
-                       previous_substate,
-                       pid,
-                       previous_pid,
-                       username  = "SSPL-LL",
-                       signature = "N/A",
-                       time      = "N/A",
-                       expires   = -1):
-        super(ServiceWatchdogMsg, self).__init__()
+    def __init__(self, jsonMsg, username  = "SSPL-LL", signature = "N/A",
+                       time      = "N/A", expires   = -1):
+        """Create message schema for the ServiceMonitor Sensor."""
+        super(ServiceMonitorMsg, self).__init__()
 
         self._username           = username
         self._signature          = signature
         self._time               = time
         self._expires            = expires
-        self._service_name       = service_name
-        self._state              = state
-        self._previous_state     = previous_state
-        self._substate           = substate
-        self._previous_substate  = previous_substate
-        self._pid                = pid
-        self._previous_pid       = previous_pid
 
         self._json = {"title" : self.TITLE,
                       "description" : self.DESCRIPTION,
@@ -75,17 +58,7 @@ class ServiceWatchdogMsg(BaseSensorMsg):
                                 "sspl_version" : self.SSPL_VERSION,
                                 "msg_version" : self.MESSAGE_VERSION,
                                 },
-                          "sensor_response_type": {
-                                self.ACTUATOR_MSG_TYPE: {
-                                    "service_name" : self._service_name,
-                                    "service_state" : self._state,
-                                    "previous_service_state" : self._previous_state,
-                                    "service_substate": self._substate,
-                                    "previous_service_substate": self._previous_substate,
-                                    "pid" : self._pid,
-                                    "previous_pid" : self._previous_pid
-                                    }
-                                }
+                          "sensor_response_type": jsonMsg["service_status_alert"]
                           }
                       }
 
@@ -97,7 +70,7 @@ class ServiceWatchdogMsg(BaseSensorMsg):
 
     def get_service_name(self):
         return self._service_name
-    
+
     def set_service_name(self, service_name):
         self._service_name = service_name
 

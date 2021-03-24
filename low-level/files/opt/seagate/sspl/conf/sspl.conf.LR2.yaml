@@ -32,7 +32,8 @@ SSPL_LL_SETTING:
       - RealStorEnclMsgHandler
       - RealStorActuatorMsgHandler
    sensors:
-      - ServiceWatchdog
+      - DiskMonitor
+      - ServiceMonitor
       - RAIDsensor
       - NodeData
       - RealStorFanSensor
@@ -54,7 +55,8 @@ SSPL_LL_SETTING:
       - NodeHWactuator
       - RealStorActuator
    degraded_state_modules:
-      - ServiceWatchdog
+      - DiskMonitor
+      - ServiceMonitor
       - RAIDsensor
       - NodeData
       - IEMSensor
@@ -162,14 +164,24 @@ IEMSENSOR:
    log_file_path: /var/log/cortx/iem/iem_messages
    timestamp_file_path: /var/cortx/sspl/data/iem/last_processed_msg_time
 
-SYSTEMDWATCHDOG:
+DISKMONITOR:
    monitor: true
    threaded: true
+   smart_test_interval: 999999999
+   run_smart_on_start: 'False'
+
+SERVICEMONITOR:
+   monitor: true
+   threaded: true
+   thread_sleep: 1
+   polling_frequency: 15
+   threshold_inactive_time: 180
    monitored_services:
       - hare-consul-agent.service
       - hare-consul-agent-c1.service
       - hare-consul-agent-c2.service
       - elasticsearch.service
+      - multipathd.service
       - statsd.service
       - rsyslog.service
       - haproxy.service
@@ -179,9 +191,6 @@ SYSTEMDWATCHDOG:
       - salt-minion.service
       - glusterd.service
       - scsi-network-relay.service
-      - multipathd.service
-   smart_test_interval: 999999999
-   run_smart_on_start: 'False'
 
 NODEHWACTUATOR:
    ipmi_client: ipmitool

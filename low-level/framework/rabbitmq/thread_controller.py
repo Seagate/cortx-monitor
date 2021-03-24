@@ -153,7 +153,8 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
             operating_system.lower() in OperatingSystem.CENTOS7.value.lower() or operating_system.lower() in OperatingSystem.RHEL7.value.lower():
             # Note that all threaded sensors and actuators must have an
             # import here to be controlled
-            from sensors.impl.centos_7.systemd_watchdog import SystemdWatchdog
+            from sensors.impl.centos_7.disk_monitor import DiskMonitor
+            from sensors.impl.centos_7.service_monitor import ServiceMonitor
             from sensors.impl.centos_7.drive_manager import DriveManager
             from sensors.impl.centos_7.hpi_monitor import HPIMonitor
 
