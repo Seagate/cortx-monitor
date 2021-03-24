@@ -135,8 +135,7 @@ class Utility(object):
                 if not re.search(new_str, lines[key]):
                     lines.insert(key, new_str)
             else:
-                raise SetupError(errno.EINVAL, "Key data type : '%s', should be string or int",
-                                 type(key))
+                raise Exception("Key data type : '%s', should be string or int" % type(key))
             f.seek(0)
             for line in lines:
                 f.write(line)

@@ -173,8 +173,16 @@ class SSPLDevDeploy:
 
     def install_dependencies(self):
         """Install common and 3rd_party application."""
-        print("INFO: INSTALLING cortx-py-utils...")
+        pkg_name = "cortx-prereq"
+        print("INFO: INSTALLING %s..." % pkg_name)
+        cmd = "yum install -y %s" % pkg_name
+        out, rc = self._execute_cmd(cmd)
+        if rc != 0:
+            raise DeployError(rc, "%s - %s CMD: %s",
+                out, "Failed to install %s." % (pkg_name), cmd)
+
         pkg_name = "cortx-py-utils"
+        print("INFO: INSTALLING cortx-py-utils...")
         build_url = ("http://cortx-storage.colo.seagate.com/releases/"
                      "cortx/components/github/main/centos-7.8.2003/"
                      "dev/cortx-utils/last_successful/")
@@ -238,11 +246,56 @@ class SSPLDevDeploy:
         importlib.reload(site)
         from cortx.utils.conf_store import Conf
 
+        machine_id = None
+        with open("/etc/machine-id") as f:
+            machine_id = f.read().strip()
+        if not machine_id:
+            raise DeployError(1, "Failed to get machine-id.")
+
+        config_url = "/opt/seagate/cortx/sspl/conf/sspl.init.tmpl.1-node"
+        kv_list_1_node = [
+            "cortx>release>product=LR2",
+            "cortx>release>setup=cortx",
+            "server_node>TMPL_MACHINE_ID>name=TMPL_NODE_NAME",
+            "server_node>TMPL_MACHINE_ID>hostname=TMPL_HOSTNAME",
+            "server_node>TMPL_MACHINE_ID>type=TMPL_SERVER_NODE_TYPE",
+            "server_node>TMPL_MACHINE_ID>bmc>ip=TMPL_BMC_IP",
+            "server_node>TMPL_MACHINE_ID>bmc>user=TMPL_BMC_USER",
+            "server_node>TMPL_MACHINE_ID>bmc>secret=TMPL_BMC_SECRET",
+            "server_node>TMPL_MACHINE_ID>storage>enclosure_id=TMPL_ENCLOSURE_ID",
+            "storage_enclosure>TMPL_ENCLOSURE_ID>controller>type=TMPL_CONTROLLER_TYPE",
+            "storage_enclosure>TMPL_ENCLOSURE_ID>controller>user=TMPL_CONTROLLER_USER",
+            "storage_enclosure>TMPL_ENCLOSURE_ID>controller>password=TMPL_CONTROLLER_PASSWORD",
+            "storage_enclosure>TMPL_ENCLOSURE_ID>controller>primary>ip=TMPL_PRIMARY_CONTROLLER_IP",
+            "storage_enclosure>TMPL_ENCLOSURE_ID>controller>primary>port=TMPL_PRIMARY_CONTROLLER_PORT",
+            "storage_enclosure>TMPL_ENCLOSURE_ID>controller>secondary>ip=TMPL_SECONDARY_CONTROLLER_IP",
+            "storage_enclosure>TMPL_ENCLOSURE_ID>controller>secondary>port=TMPL_SECONDARY_CONTROLLER_PORT",
+            "server_node>TMPL_MACHINE_ID>site_id=TMPL_SITE_ID",
+            "server_node>TMPL_MACHINE_ID>rack_id=TMPL_RACK_ID",
+            "server_node>TMPL_MACHINE_ID>node_id=TMPL_NODE_ID",
+            "storage_enclosure>TMPL_ENCLOSURE_ID>name=TMPL_ENCLOSURE_ID",
+            "storage_enclosure>TMPL_ENCLOSURE_ID>type=TMPL_ENCLOSURE_TYPE",
+            "server_node>TMPL_MACHINE_ID>network>management>interfaces[0]=TMPL_MGMT_INTERFACE",
+            "server_node>TMPL_MACHINE_ID>network>management>public_fqdn=TMPL_MGMT_PUBLIC_FQDN",
+            "server_node>TMPL_MACHINE_ID>network>data>public_interfaces[0]=TMPL_PUBLIC_INTERFACE",
+            "server_node>TMPL_MACHINE_ID>network>data>public_fqdn=TMPL_DATA_PUBLIC_FQDN",
+            "server_node>TMPL_MACHINE_ID>network>data>private_interfaces[0]=TMPL_PRIVATE_INTERFACE",
+            "server_node>TMPL_MACHINE_ID>network>data>private_fqdn=TMPL_DATA_PRIVATE_FQDN",
+            "cortx>release>setup=cortx",
+            "server_node>TMPL_MACHINE_ID>cluster_id=TMPL_CLUSTER_ID",
+            "cluster>cid01>name=cortx_cluster",
+            "cluster>cid01>site_count=1",
+            "cluster>cid01>site>storage_set_count=1",
+            "cluster>cid01>storage_set[0]>name=StorageSet-1",
+            "cluster>cid01>storage_set[0]>server_nodes[0]=TMPL_NODE_NAME",
+            "cluster>cid01>storage_set[0]>storage_enclosures[0]=TMPL_STORAGE_ENCLOSURE_0"
+            ]
+        cmd = "conf %s set %s" % (url, kv)
+
         sspl_config_index = "sspl"
         global_config_index = "global"
 
-        self.sspl_config = "%s/conf/sspl.conf.%s.yaml" % (
-            SSPL_BASE_DIR, self.PRODUCT_VERSION)
+        self.sspl_config = "%s/conf/sspl.conf.yaml" % SSPL_BASE_DIR
         self.sample_global_config = "%s/conf/sample_global_cortx_config.yaml" % SSPL_BASE_DIR
 
         if not os.path.exists(self.sspl_config):
@@ -256,14 +309,8 @@ class SSPLDevDeploy:
         Conf.load(sspl_config_index, "yaml://%s" % self.sspl_config)
         Conf.load(global_config_index, "yaml://%s" % self.sample_global_config)
 
-        try:
-            with open("/etc/machine-id") as f:
-                machine_id = f.read().strip("\n")
-                Conf.set(global_config_index, "cluster>server_nodes",
-                         {machine_id: "srvnode-1"})
-                Conf.save(global_config_index)
-        except Exception as err:
-            raise DeployError(1, "Failed to get machine-id. - %s" % (err))
+        Conf.set(global_config_index, "cluster>server_nodes", {machine_id: "srvnode-1"})
+        Conf.save(global_config_index)
 
         Conf.set(sspl_config_index,
                  "RABBITMQINGRESSPROCESSOR>username", self.RMQ_USER)

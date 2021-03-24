@@ -59,13 +59,12 @@ from framework.rabbitmq.rabbitmq_egress_processor import \
 from framework.rabbitmq.rabbitmq_ingress_processor import \
     RabbitMQingressProcessor
 from framework.rabbitmq.thread_controller import ThreadController
-from framework.utils.conf_utils import (CLUSTER, GLOBAL_CONF, HOST, MONITOR,
-                                        OPERATING_SYSTEM, PORT, PRODUCT,
-                                        RELEASE, SYSLOG_HOST_KEY,
-                                        SYSLOG_PORT_KEY, SETUP, SRVNODE,
+from framework.utils.conf_utils import (GLOBAL_CONF, HOST, MONITOR,
+                                        OPERATING_SYSTEM, PORT, PRODUCT_KEY,
+                                        SYSLOG_HOST_KEY,
+                                        SYSLOG_PORT_KEY, SETUP_KEY,
                                         SSPL_CONF, SYSTEM_INFORMATION,
-                                        THREADED, Conf,
-                                        PRODUCT_NAME, LOG_LEVEL)
+                                        THREADED, Conf, LOG_LEVEL)
 from framework.utils.config_reader import ConfigReader
 from framework.utils.service_logging import init_logging, logger
 from framework.utils.store_factory import store
@@ -275,10 +274,10 @@ def main(conf_reader, systemd_support):
     logger.info("sspl-ll Bootstrap: configuring for OS: %s" % OPERATING_SYSTEM)
 
     # Read in product value from configuration file
-    product = Conf.get(GLOBAL_CONF, f"{RELEASE}>{PRODUCT}")
+    product = Conf.get(GLOBAL_CONF, PRODUCT_KEY)
     # Read in setup value from configuration file
     try:
-        setup = Conf.get(GLOBAL_CONF, f"{RELEASE}>{SETUP}")
+        setup = Conf.get(GLOBAL_CONF, SETUP_KEY)
     except Exception:
         setup = 'hw'
 

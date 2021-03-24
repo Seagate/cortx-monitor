@@ -25,6 +25,7 @@ import json
 import subprocess
 
 from cortx.utils.conf_store import Conf
+from framework.utils.conf_utils import Utility
 from framework.base.sspl_constants import (PRODUCT_FAMILY,
                                         RESOURCE_HEALTH_VIEW,
                                         sspl_config_path,
@@ -35,15 +36,11 @@ Conf.load(SSPL_CONF, sspl_config_path)
 global_config_url = Conf.get(SSPL_CONF, "SYSTEM_INFORMATION>global_config_copy_url")
 Conf.load(GLOBAL_CONFIG_INDEX, global_config_url)
 
+machine_id = Utility.get_machine_id()
+
 # Get cluster_id and node_key_id from global config
-cluster_id = Conf.get(GLOBAL_CONFIG_INDEX, "cluster>cluster_id")
-try:
-    with open("/etc/machine-id") as f:
-        machine_id = f.read().strip("\n")
-    node_key_id = Conf.get(GLOBAL_CONFIG_INDEX,
-                           "cluster>server_nodes>%s" % (machine_id))
-except:
-    node_key_id = "srvnode-1"
+cluster_id = Conf.get(GLOBAL_CONFIG_INDEX, "server_node>%s>cluster_id" % machine_id)
+node_key_id = Conf.get(GLOBAL_CONFIG_INDEX, "server_node>%s>name" % machine_id)
 
 onGoingRequestPath = "/tmp/sspl-msb-req.txt"
 

@@ -28,7 +28,7 @@ from framework.actuator_state_manager import actuator_state_manager
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.sspl_constants import enabled_products
-from framework.utils.conf_utils import GLOBAL_CONF, RELEASE, SSPL_CONF, Conf
+from framework.utils.conf_utils import GLOBAL_CONF, SSPL_CONF, Conf, SETUP_KEY
 from framework.utils.service_logging import logger
 from json_msgs.messages.actuators.ack_response import AckResponseMsg
 from json_msgs.messages.actuators.ndhw_ack_response import NodeHwAckResponseMsg
@@ -44,7 +44,6 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
     PRIORITY    = 2
 
     SYS_INFORMATION = 'SYSTEM_INFORMATION'
-    SETUP = 'setup'
     NODE_HW_ACTUATOR = 'NODEHWACTUATOR'
     IPMI_IMPLEMENTOR = 'ipmi_client'
 
@@ -99,7 +98,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
         self._NodeHW_actuator       = None
 
         self._import_products(product)
-        self.setup = Conf.get(GLOBAL_CONF, f"{RELEASE}>{self.SETUP}","ssu")
+        self.setup = Conf.get(GLOBAL_CONF, SETUP_KEY, "ssu")
         self.ipmi_client_name = None
 
     def _import_products(self, product):
@@ -816,8 +815,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
     def _is_env_vm(self):
         """Retrieves the current setup and returns True|False based on setup value."""
-        setup = Conf.get(GLOBAL_CONF, f"{RELEASE}>{self.SETUP}",
-                                                          "ssu")
+        setup = Conf.get(GLOBAL_CONF, SETUP_KEY, "ssu")
         return setup.lower() in ['gw', 'cmu', 'vm']
 
     def suspend(self):

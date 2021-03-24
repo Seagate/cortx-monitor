@@ -24,10 +24,10 @@ import time
 import requests
 from cortx.utils.security.cipher import Cipher
 from alerts.self_hw.self_hw_utilities import get_node_id
-from framework.utils.conf_utils import (CLUSTER, CLUSTER_ID, CONTROLLER,
-                                        ENCLOSURE, GLOBAL_CONF, IP, PORT,
-                                        PRIMARY, SECONDARY, SECRET, SRVNODE,
-                                        STORAGE, STORAGE_ENCLOSURE, USER, Conf)
+from framework.utils.conf_utils import (GLOBAL_CONF, Conf, SITE_ID_KEY,
+    RACK_ID_KEY, NODE_ID_KEY, CLUSTER_ID_KEY, CNTRLR_PRIMARY_IP_KEY,
+    CNTRLR_PRIMARY_PORT_KEY, CNTRLR_SECONDARY_IP_KEY, CNTRLR_SECONDARY_PORT_KEY,
+    CNTRLR_USER_KEY, CNTRLR_PASSWD_KEY)
 
 
 def gen_key(cluster_id, service_name):
@@ -69,19 +69,15 @@ def init(args):
 
 def test_self_hw_real_stor_enclosure_conn(args):
     # Default to srvnode-1
-    ip = Conf.get(GLOBAL_CONF, f"{STORAGE}>{ENCLOSURE}>{CONTROLLER}>{PRIMARY}>{IP}")
-    port = Conf.get(GLOBAL_CONF, f"{STORAGE}>{ENCLOSURE}>{CONTROLLER}>{PRIMARY}>{PORT}")
+    ip = Conf.get(GLOBAL_CONF, CNTRLR_PRIMARY_IP_KEY)
+    port = Conf.get(GLOBAL_CONF, CNTRLR_PRIMARY_PORT_KEY)
     if get_node_id() == "srvnode-2":
         # Update
-        ip = Conf.get(GLOBAL_CONF, f"{STORAGE}>{ENCLOSURE}>{CONTROLLER}>{SECONDARY}>{IP}")
-        port = Conf.get(GLOBAL_CONF, f"{STORAGE}>{ENCLOSURE}>{CONTROLLER}>{SECONDARY}>{PORT}")
-    username = Conf.get(GLOBAL_CONF, f"{STORAGE}>{ENCLOSURE}>{CONTROLLER}>{USER}")
-    passwd = Conf.get(GLOBAL_CONF, f"{STORAGE}>{ENCLOSURE}>{CONTROLLER}>{SECRET}")
-    cluster_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{CLUSTER_ID}",'CC01')
-
-    # decrypt the passwd
-    decryption_key = gen_key(cluster_id, 'storage_enclosure')
-    passwd = decrypt(decryption_key, passwd.encode('ascii'))
+        ip = Conf.get(GLOBAL_CONF, CNTRLR_SECONDARY_IP_KEY)
+        port = Conf.get(GLOBAL_CONF, CNTRLR_SECONDARY_PORT_KEY)
+    username = Conf.get(GLOBAL_CONF, CNTRLR_USER_KEY)
+    passwd = Conf.get(GLOBAL_CONF, CNTRLR_PASSWD_KEY)
+    cluster_id = Conf.get(GLOBAL_CONF, CLUSTER_ID_KEY,'CC01')
 
     # build url for primary
     cli_api_auth = username + '_' + passwd
