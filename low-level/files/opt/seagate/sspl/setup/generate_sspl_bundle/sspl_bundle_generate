@@ -59,30 +59,15 @@ class SSPLBundleGenerate(object):
         self.sspl_log_default = f"/var/log/{PRODUCT_FAMILY}/sspl"
         self.iem_log_default = f"/var/log/{PRODUCT_FAMILY}/iem"
         self.sspl_conf_dir = f"/opt/seagate/{PRODUCT_FAMILY}/provisioner/pillar/components/sspl.sls"
-        self.rabbitmq_conf_dir = "/etc/rabbitmq/rabbitmq.config"
-        self.rabbitmq_log_dir = "/var/log/rabbitmq"
-        self.rabbitmq_status = f"{sspl_bundle_tmp}/rabbitmq_status.txt"
         self.ipmi_sel_data = f"{sspl_bundle_tmp}/ipmi_sel_data_{str(int(time.time()))}.txt"
         self.consul_folder_name = 'consul_sspl_data'
         self.consul_sspl_config = f"{sspl_bundle_tmp}/consuldump_sspl_config/"
         self.consul_sspl_cache = f"{sspl_bundle_tmp}/consuldump_sspl_cache/"
         self.consul_system_information_data = f"{sspl_bundle_tmp}/consuldump_system_information/"
         self.consul_storage_enclosure_data = f"{sspl_bundle_tmp}/consuldump_storage_enclosure/"
-        self.consul_rabbitmq_data = f"{sspl_bundle_tmp}/consuldump_rabbitmq/"
         self.boot_drvs_dta = f'{sspl_bundle_tmp}/Server_OS_boot_drives_SMART_data_{str(int(time.time()))}'
         self.enclosure_log = f"{sspl_bundle_tmp}/enclosure_logs.zip"
         self.enclosure_wwn = "NA"
-        self.rabbitmq_cmd = {
-            "Rabbitmq status": "systemctl status rabbitmq-server",
-            "Rabbitmq cluster status": "rabbitmqctl cluster_status",
-            "Rabbitmq node status": "rabbitmqctl status",
-            "Rabbitmq environment": "rabbitmqctl environment",
-            "Rabbitmq report": "rabbitmqctl report",
-            "Lists all queues in the current node": "rabbitmqctl list_queues",
-            "Lists all vhosts in the current node": "rabbitmqctl list_vhosts",
-            "Lists all rabbitmq channels in virtual host": "rabbitmqctl list_channels",
-            "Lists all users": "rabbitmqctl list_users"
-        }
 
     def generate_sspl_support_bundle(self, parser, tmpFile):
         file_name = "sspl_%s.tar.gz" % parser[1]
@@ -130,12 +115,8 @@ class SSPLBundleGenerate(object):
                 self.consul_sspl_cache: file_dir+"/sspl/consul/consul_sspl_cache.txt",
                 self.consul_system_information: file_dir+"/sspl/consul/consul_system_information.txt",
                 self.consul_storage_enclosure: file_dir+"/sspl/consul/consul_storage_enclosure.txt",
-                self.consul_rabbitmq: file_dir+"/sspl/consul/consul_rabbitmq.txt",
                 self.boot_drvs_dta: file_dir+"/drives_SMART_data/",
                 self.ipmi_sel_data: file_dir+"/ipmi/ipmi_sel_data.txt",
-                self.rabbitmq_status: file_dir+"/rabbitmq/status/rabbitmq_status.txt",
-                self.rabbitmq_conf_dir: file_dir+"/rabbitmq/config/rabbitmq.config",
-                self.rabbitmq_log_dir: file_dir+"/rabbitmq/logs/",
                 iem_log_dir: file_dir+"/iems/"
             }
 
@@ -159,18 +140,6 @@ class SSPLBundleGenerate(object):
         if os.path.exists(self.enclosure_log) and sspl_state == 'active' and "-noencl" not in parser:
             print("Enclosure Log File Location: %s" % self.localTempPath+enclosure_zip_file)
 
-    def get_rabbitmq_data(self):
-        rmq_file = open(self.rabbitmq_status, "w+")
-        for key, value in self.rabbitmq_cmd.items():
-            rmq_file.write(key+':\nCommand: '+value+'\n')
-            try:
-                out = os.popen(value).read()
-                rmq_file.write(out+'\n\n')
-            except IOError as e:
-                rmq_file.write("Information is not available : %s \n\n" % e)
-            rmq_file.write("======================================================= \n")
-        rmq_file.close()
-
     def get_ipmi_sel_data(self):
         ipmi_sel_cmd = f"ipmitool sel list > {self.ipmi_sel_data}"
         subout = self._run_command(ipmi_sel_cmd)
@@ -185,8 +154,7 @@ class SSPLBundleGenerate(object):
             "sspl_config": f"{consuldump} consul_sspl_config sspl/",
             "sspl_cache": f"{consuldump} consul_sspl_cache var/{PRODUCT_FAMILY}/sspl",
             "system_information": f"{consuldump} consul_system_information system_information/",
-            "storage_enclosure": f"{consuldump} consul_storage_enclosure storage_enclosure/",
-            "rabbitmq": f"{consuldump} consul_rabbitmq rabbitmq/"
+            "storage_enclosure": f"{consuldump} consul_storage_enclosure storage_enclosure/"
         }
         for key, value in consuldump_cmd.items():
             subout = self._run_command(value)
@@ -198,7 +166,6 @@ class SSPLBundleGenerate(object):
         self.consul_sspl_cache = f"{consul_folder_path}/consul_sspl_cache"
         self.consul_system_information = f"{consul_folder_path}/consul_system_information"
         self.consul_storage_enclosure = f"{consul_folder_path}/consul_storage_enclosure"
-        self.consul_rabbitmq = f"{consul_folder_path}/consul_rabbitmq"
 
     def get_drives_smart_data(self):
         lsscsi_cmd = "lsscsi | grep disk"
