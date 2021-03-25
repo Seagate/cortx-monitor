@@ -30,15 +30,6 @@ cluster:
          ip: 127.0.0.1
          secret: gAAAAABgEnOnRAhNzFyATr3iZdoC_tCeqEBqnwFb7CNYVXhd6i3Pl93Il7aDsG0Ro5ZRRaXr2LUPQEse46NVlDTAK7gbzoxGyg==
          user: admin
-      roles:
-      - kafka_server
-      network:
-         mgmt:
-            interfaces:
-            - eth0
-            public_ip:
-            netmask:
-            gateway:
 
 storage:
    enclosure_1:
@@ -62,3 +53,10 @@ release:
    product: LR2
    setup: cortx
    target_build:
+
+cortx:
+   software:
+      common:
+         message_bus_type: kafka
+      kafka:
+         servers:
