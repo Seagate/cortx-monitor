@@ -41,5 +41,5 @@ storage_enclosure:
         port: '22'
       type: Gallium
       user: admin
-    name: enc30512e5ae6df9f1ea02327bab45e499d
+    name: enclosure-1
     type: RBOD

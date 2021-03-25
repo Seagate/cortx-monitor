@@ -25,7 +25,7 @@ from cortx.utils.security.cipher import Cipher
 from cortx.utils.validator.v_bmc import BmcV
 from cortx.utils.validator.v_controller import ControllerV
 from cortx.utils.validator.v_network import NetworkV
-from .setup_error import SetupError
+from files.opt.seagate.sspl.setup.setup_error import SetupError
 from framework.utils.utility import Utility
 from framework.base.sspl_constants import PRVSNR_CONFIG_INDEX
 
@@ -48,6 +48,9 @@ class SSPLPrepare:
         4. Validate network interface availability
         """
         machine_id = Utility.get_machine_id()
+        mgmt_interfaces = []
+        data_private_interfaces = []
+        data_public_interfaces = []
 
         # Validate input/provisioner configs
         node_type = Utility.get_config_value(PRVSNR_CONFIG_INDEX,
@@ -73,18 +76,19 @@ class SSPLPrepare:
                 "storage_enclosure>%s>storage>controller>user" % enclosure_id)
             cntrlr_passwd = Utility.get_config_value(PRVSNR_CONFIG_INDEX,
                 "storage_enclosure>%s>storage>controller>password" % enclosure_id)
+            data_private_fqdn = Utility.get_config_value(PRVSNR_CONFIG_INDEX,
+                "server_node>%s>network>data>private_fqdn" % machine_id)
+            data_private_interfaces = Utility.get_config_value(PRVSNR_CONFIG_INDEX,
+                "server_node>%s>network>data>private_interfaces" % machine_id)
+            data_public_fqdn = Utility.get_config_value(PRVSNR_CONFIG_INDEX,
+                "server_node>%s>network>data>public_fqdn" % machine_id)
+            data_public_interfaces = Utility.get_config_value(PRVSNR_CONFIG_INDEX,
+                "server_node>%s>network>data>public_interfaces" % machine_id)
+            # mgmt public fqdn should also be for VM?
+            mgmt_public_fqdn = Utility.get_config_value(PRVSNR_CONFIG_INDEX,
+                "server_node>%s>network>management>public_fqdn" % machine_id)
         mgmt_interfaces = Utility.get_config_value(PRVSNR_CONFIG_INDEX,
             "server_node>%s>network>management>interfaces" % machine_id)
-        mgmt_public_fqdn = Utility.get_config_value(PRVSNR_CONFIG_INDEX,
-            "server_node>%s>network>management>public_fqdn" % machine_id)
-        data_private_fqdn = Utility.get_config_value(PRVSNR_CONFIG_INDEX,
-            "server_node>%s>network>data>private_fqdn" % machine_id)
-        data_private_interfaces = Utility.get_config_value(PRVSNR_CONFIG_INDEX,
-            "server_node>%s>network>data>private_interfaces" % machine_id)
-        data_public_fqdn = Utility.get_config_value(PRVSNR_CONFIG_INDEX,
-            "server_node>%s>network>data>public_fqdn" % machine_id)
-        data_public_interfaces = Utility.get_config_value(PRVSNR_CONFIG_INDEX,
-            "server_node>%s>network>data>public_interfaces" % machine_id)
 
         # Validate BMC & Storage controller accessibility
         if node_type.lower() != "vm":
@@ -93,9 +97,10 @@ class SSPLPrepare:
             c_validator.validate("accessible", [primary_ip, cntrlr_user, cntrlr_passwd])
             c_validator.validate("accessible", [secondary_ip, cntrlr_user, cntrlr_passwd])
 
-        # Validate network fqdn reachability
-        NetworkV().validate("connectivity", [mgmt_public_fqdn,
-            data_private_fqdn, data_public_fqdn])
+            # Validate network fqdn reachability
+            # mgmt public fqdn should also be for VM?
+            NetworkV().validate("connectivity", [mgmt_public_fqdn,
+                data_private_fqdn, data_public_fqdn])
 
         # Validate network interface availability
         for i_list in [mgmt_interfaces, data_private_interfaces, data_public_interfaces]:

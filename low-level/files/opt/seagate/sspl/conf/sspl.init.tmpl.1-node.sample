@@ -9,7 +9,7 @@ cluster:
       server_nodes:
       - srvnode-1
       storage_enclosures:
-      - encserial-1
+      - enclosure-1
 cortx:
   release:
     product: LR2
@@ -53,5 +53,5 @@ storage_enclosure:
         port: '22'
       type: Gallium
       user: admin
-    name: encserial-1
+    name: enclosure-1
     type: RBOD

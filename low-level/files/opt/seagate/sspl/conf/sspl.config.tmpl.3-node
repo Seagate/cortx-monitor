@@ -93,7 +93,7 @@ storage_enclosure:
         port: TMPL_SECONDARY_CONTROLLER_PORT_1
       type: TMPL_CONTROLLER_TYPE_1
       user: TMPL_CONTROLLER_USER_1
-    name: TMPL_ENCLOSURE_ID_1
+    name: TMPL_ENCLOSURE_NAME_1
     type: TMPL_ENCLOSURE_TYPE_1
   TMPL_ENCLOSURE_ID_2:
     controller:
@@ -106,7 +106,7 @@ storage_enclosure:
         port: TMPL_SECONDARY_CONTROLLER_PORT_2
       type: TMPL_CONTROLLER_TYPE_2
       user: TMPL_CONTROLLER_USER_2
-    name: TMPL_ENCLOSURE_ID_2
+    name: TMPL_ENCLOSURE_NAME_2
     type: TMPL_ENCLOSURE_TYPE_2
   TMPL_ENCLOSURE_ID_3:
     controller:
@@ -119,5 +119,5 @@ storage_enclosure:
         port: TMPL_SECONDARY_CONTROLLER_PORT_3
       type: TMPL_CONTROLLER_TYPE_3
       user: TMPL_CONTROLLER_USER_3
-    name: TMPL_ENCLOSURE_ID_3
+    name: TMPL_ENCLOSURE_NAME_3
     type: TMPL_ENCLOSURE_TYPE_3

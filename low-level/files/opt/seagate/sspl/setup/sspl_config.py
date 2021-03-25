@@ -34,7 +34,7 @@ from cortx.utils.message_bus import MessageBus, MessageBusAdmin
 from cortx.utils.message_bus.error import MessageBusError
 from cortx.utils.process import SimpleProcess
 from cortx.utils.service import DbusServiceHandler
-from .setup_error import SetupError
+from files.opt.seagate.sspl.setup.setup_error import SetupError
 from .conf_based_sensors_enable import update_sensor_info
 from framework.base import sspl_constants as consts
 from framework.utils.utility import Utility
@@ -105,12 +105,12 @@ class SSPLConfig:
         if not os.path.exists(consts.REPLACEMENT_NODE_ENV_VAR_FILE):
             with open(f"{consts.SSPL_BASE_DIR}/low-level/files/opt/seagate" + \
                 "/sspl/conf/build-requested-loglevel") as f:
-                log_level = f.readline().strip()
+                log_level = f.read().strip()
 
             if not log_level:
                 log_level = "INFO"
 
-            if log_level not in ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]:
+            if log_level in ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]:
                 Conf.set(consts.SSPL_CONFIG_INDEX, "SYSTEM_INFORMATION>log_level", log_level)
                 Conf.save(consts.SSPL_CONFIG_INDEX)
             else:

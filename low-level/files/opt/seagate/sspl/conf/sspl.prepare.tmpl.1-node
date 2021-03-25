@@ -8,13 +8,14 @@ server_node:
       ip: TMPL_BMC_IP
       secret: TMPL_BMC_SECRET
       user: TMPL_BMC_USER
+    cluster_id: TMPL_CLUSTER_ID
     hostname: TMPL_HOSTNAME
     name: TMPL_NODE_NAME
     network:
       data:
         private_fqdn: TMPL_DATA_PRIVATE_FQDN
         private_interfaces:
-        - TMPL_PRIVATE_INTERFACE
+        - TMPL_DATA_PRIVATE_INTERFACE
         public_fqdn: TMPL_DATA_PUBLIC_FQDN
         public_interfaces:
         - TMPL_DATA_PUBLIC_INTERFACE
@@ -40,5 +41,5 @@ storage_enclosure:
         port: TMPL_SECONDARY_CONTROLLER_PORT
       type: TMPL_CONTROLLER_TYPE
       user: TMPL_CONTROLLER_USER
-    name: TMPL_ENCLOSURE_ID
+    name: TMPL_ENCLOSURE_NAME
     type: TMPL_ENCLOSURE_TYPE

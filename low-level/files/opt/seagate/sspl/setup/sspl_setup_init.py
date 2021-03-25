@@ -25,10 +25,8 @@ import pwd
 import errno
 
 from cortx.utils.conf_store import Conf
-from .setup_error import SetupError
-from framework.base.sspl_constants import (SSPL_CONFIG_INDEX,
-                                           PRVSNR_CONFIG_INDEX,
-                                           global_config_path)
+from files.opt.seagate.sspl.setup.setup_error import SetupError
+from framework.base import sspl_constants as consts
 from framework.utils.utility import Utility
 
 
@@ -40,6 +38,7 @@ class SSPLInit:
     def __init__(self):
         """Initialize variables for sspl init."""
         self.user = "sspl-ll"
+        Conf.load(consts.SSPL_CONFIG_INDEX, consts.sspl_config_path)
 
     def validate(self):
         """Check for below requirement.
@@ -54,23 +53,23 @@ class SSPLInit:
                 "User %s doesn't exit. Please add user." % self.user)
         # Check input/provisioner configs
         machine_id = Utility.get_machine_id()
-        cluster_id = Utility.get_config_value(PRVSNR_CONFIG_INDEX,
+        cluster_id = Utility.get_config_value(consts.PRVSNR_CONFIG_INDEX,
             "server_node>%s>cluster_id" % machine_id)
-        cluster_name = Utility.get_config_value(PRVSNR_CONFIG_INDEX,
+        cluster_name = Utility.get_config_value(consts.PRVSNR_CONFIG_INDEX,
             "cluster>%s>name" % cluster_id)
-        site_count = Utility.get_config_value(PRVSNR_CONFIG_INDEX,
-            "cluster>%s>site_count" % cluster_id)
-        storage_set_count = Utility.get_config_value(PRVSNR_CONFIG_INDEX,
-            "cluster>%s>site>storage_set_count" % cluster_id)
+        site_count = int(Utility.get_config_value(consts.PRVSNR_CONFIG_INDEX,
+            "cluster>%s>site_count" % cluster_id))
+        storage_set_count = int(Utility.get_config_value(consts.PRVSNR_CONFIG_INDEX,
+            "cluster>%s>site>storage_set_count" % cluster_id))
         for i in range(storage_set_count):
-            storage_set_name = Utility.get_config_value(PRVSNR_CONFIG_INDEX,
+            storage_set_name = Utility.get_config_value(consts.PRVSNR_CONFIG_INDEX,
                 "cluster>%s>storage_set[%s]>name" % (cluster_id, i))
-            server_nodes = Utility.get_config_value(PRVSNR_CONFIG_INDEX,
+            server_nodes = Utility.get_config_value(consts.PRVSNR_CONFIG_INDEX,
                 "cluster>%s>storage_set[%s]>server_nodes" % (cluster_id, i))
-            storage_enclosures = Utility.get_config_value(PRVSNR_CONFIG_INDEX,
+            storage_enclosures = Utility.get_config_value(consts.PRVSNR_CONFIG_INDEX,
                 "cluster>%s>storage_set[%s]>storage_enclosures" % (cluster_id, i))
 
     def process(self):
         """Update sspl config."""
-        Conf.set(SSPL_CONFIG_INDEX, "SYSTEM_INFORMATION>global_config_copy_url",
-            global_config_path)
+        Conf.set(consts.SSPL_CONFIG_INDEX, "SYSTEM_INFORMATION>global_config_copy_url",
+            consts.global_config_path)

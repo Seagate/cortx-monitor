@@ -44,7 +44,7 @@ from framework.base.sspl_constants import cs_products
 from framework.rabbitmq.rabbitmq_egress_processor import \
     RabbitMQegressProcessor
 from framework.utils.conf_utils import (CLUSTER_ID_KEY, DATA_PATH_KEY,
-    GLOBAL_CONF, NODE_ID_KEY, RACK_ID_KEY, SITE_ID_KEY, SSPL_CONF_KEY, Conf)
+    GLOBAL_CONF, NODE_ID_KEY, RACK_ID_KEY, SITE_ID_KEY, SSPL_CONF, Conf)
 from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
 from framework.utils.store_factory import file_store

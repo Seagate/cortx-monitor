@@ -35,7 +35,7 @@ from cortx.utils.service import DbusServiceHandler
 from cortx.utils.validator.v_network import NetworkV
 from cortx.utils.validator.v_pkg import PkgV
 from cortx.utils.validator.v_service import ServiceV
-from .setup_error import SetupError
+from files.opt.seagate.sspl.setup.setup_error import SetupError
 from framework.base import sspl_constants as consts
 from framework.utils.utility import Utility
 
@@ -70,12 +70,12 @@ class SSPLPostInstall:
         self.setup = Utility.get_config_value(consts.PRVSNR_CONFIG_INDEX,
             "cortx>release>setup")
         node_type = Utility.get_config_value(consts.PRVSNR_CONFIG_INDEX,
-             "server_nodes>%s>type" % machine_id)
+             "server_node>%s>type" % machine_id)
         if node_type.lower() != "vm":
             bmc_ip = Utility.get_config_value(consts.PRVSNR_CONFIG_INDEX,
-                "server_nodes>%s>bmc>ip" % machine_id)
+                "server_node>%s>bmc>ip" % machine_id)
             enclosure_id = Utility.get_config_value(consts.PRVSNR_CONFIG_INDEX,
-                "server_nodes>%s>storage>enclosure_id" % machine_id)
+                "server_node>%s>storage>enclosure_id" % machine_id)
             primary_ip = Utility.get_config_value(consts.PRVSNR_CONFIG_INDEX,
                 "storage_enclosure>%s>storage>controller>primary>ip" % enclosure_id)
             secondary_ip = Utility.get_config_value(consts.PRVSNR_CONFIG_INDEX,

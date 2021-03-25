@@ -9,7 +9,7 @@ cluster:
       server_nodes:
       - TMPL_NODE_NAME
       storage_enclosures:
-      - encserial-1
+      - TMPL_ENCLOSURE_NAME
 cortx:
   release:
     product: LR2
@@ -53,5 +53,5 @@ storage_enclosure:
         port: TMPL_SECONDARY_CONTROLLER_PORT
       type: TMPL_CONTROLLER_TYPE
       user: TMPL_CONTROLLER_USER
-    name: encserial-1
+    name: TMPL_ENCLOSURE_NAME
     type: TMPL_ENCLOSURE_TYPE

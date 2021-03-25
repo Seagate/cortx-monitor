@@ -34,7 +34,7 @@ from cortx.utils.conf_store import Conf
 from cortx.utils.validator.v_pkg import PkgV
 from cortx.utils.validator.v_service import ServiceV
 from cortx.utils.validator.error import VError
-from .setup_error import SetupError
+from files.opt.seagate.sspl.setup.setup_error import SetupError
 from framework.base.sspl_constants import (PRVSNR_CONFIG_INDEX,
                                            GLOBAL_CONFIG_INDEX,
                                            global_config_path)
@@ -359,13 +359,17 @@ class ResetCmd(Cmd):
 
     def validate(self):
         if not self.args.config:
-            raise SetupError(errno.EINVAL,
-                            "%s - Argument validation failure. Global config is required.",
-                            self.name)
+            raise SetupError(
+                errno.EINVAL,
+                "%s - Argument validation failure. Global config is required.",
+                self.name)
+
         if not self.args.type:
-            raise SetupError(errno.EINVAL,
-                             "%s - Argument validation failure. Reset type is required.",
-                             self.name)
+            raise SetupError(
+                errno.EINVAL,
+                "%s - Argument validation failure. Reset type is required.",
+                self.name)
+
         reset_type = self.args.type[0]
         if reset_type == "hard":
             self.process_class = "HardReset"
@@ -381,6 +385,60 @@ class ResetCmd(Cmd):
         elif self.process_class == "SoftReset":
             from files.opt.seagate.sspl.setup.sspl_reset import SoftReset
             SoftReset().process()
+
+
+class CheckCmd(Cmd):
+    """Validates configs and environment prepared for SSPL initialization.
+    """
+
+    name = "check"
+
+    def __init__(self, args):
+        super().__init__(args)
+
+        self.SSPL_CONFIGURED="/var/cortx/sspl/sspl-configured"
+        self.services = []
+
+    def validate(self):
+        # Common validator classes to check Cortx/system wide validator
+        if not os.path.exists(self.SSPL_CONFIGURED):
+            error = "SSPL is not configured. Run provisioner scripts in %s" % (self._script_dir)
+            syslog.openlog(logoption=syslog.LOG_PID, facility=syslog.LOG_LOCAL3)
+            syslog.syslog(syslog.LOG_ERR, error)
+            raise SetupError(1,
+                             "%s - validation failure. %s",
+                             self.name,
+                             error)
+        # Validate required services are running
+        retry = 3
+        while retry > 0:
+            try:
+                ServiceV().validate('isrunning', self.services)
+            except VError:
+                retry -= 1
+                time.sleep(5)
+            else:
+                break
+        ServiceV().validate('isrunning', self.services)
+
+    def process(self):
+        pass
+
+
+class CleanupCmd(Cmd):
+    """Removes SSPL configs."""
+
+    name = "cleanup"
+
+    def __init__(self, args):
+        super().__init__(args)
+
+    def validate(self):
+        # Common validator classes to check Cortx/system wide validator
+        pass
+
+    def process(self):
+        pass
 
 
 def main(argv: dict):

@@ -37,7 +37,7 @@ from cortx.utils.service import DbusServiceHandler
 from framework.utils.conf_utils import (GLOBAL_CONF, SSPL_CONF,
                                         Conf, SITE_ID_KEY, CLUSTER_ID_KEY, NODE_ID_KEY,
                                         RACK_ID_KEY, STORAGE_SET_ID_KEY,
-                                        SYSTEMDWATCHDOG, MONITORED_SERVICES)
+                                        SERVICEMONITOR, MONITORED_SERVICES)
 # Modules that receive messages from this module
 from message_handlers.logging_msg_handler import LoggingMsgHandler
 
