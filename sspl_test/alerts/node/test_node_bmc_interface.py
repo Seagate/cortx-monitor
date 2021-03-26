@@ -22,7 +22,8 @@ import sys
 import subprocess
 
 from default import world
-from rabbitmq.rabbitmq_ingress_processor_tests import RabbitMQingressProcessorTests
+from rabbitmq.rabbitmq_ingress_processor_tests import \
+    RabbitMQingressProcessorTests
 from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 from common import check_sspl_ll_is_running
 from framework.base.sspl_constants import DATA_PATH
@@ -32,18 +33,9 @@ from alerts.node import simulate_bmc_interface_alert
 def init(args):
     pass
 
-def test_bmc_interface(args):
-    check_sspl_ll_is_running()
-    # backup active bmc interface
-    BMC_IF_CONSUL_KEY,BMC_IF_CONSUL_VAL = backup_bmc_config()
-
-    if BMC_IF_CONSUL_VAL == "lan":
-        simulate_bmc_interface_alert.lan_channel_alert(BMC_IF_CONSUL_KEY,BMC_IF_CONSUL_VAL)
-    else:
-        simulate_bmc_interface_alert.kcs_channel_alert(BMC_IF_CONSUL_KEY,BMC_IF_CONSUL_VAL)
-
+def assert_triggers(alert_type, wait_time):
     bmc_interface_message = None
-    time.sleep(25)
+    time.sleep(wait_time)
     while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
         ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
         time.sleep(0.1)
@@ -59,13 +51,10 @@ def test_bmc_interface(args):
             time.sleep(0.1)
             print(exception)
 
-    #restore bmc config and activate ipmisimtool
-    simulate_bmc_interface_alert.restore_config()
 
     assert(bmc_interface_message is not None)
     assert(bmc_interface_message.get("alert_type") is not None)
-    alert_type = bmc_interface_message.get("alert_type")
-    assert(alert_type=="fault")
+    assert(bmc_interface_message.get("alert_type") == alert_type)
     assert(bmc_interface_message.get("alert_id") is not None)
     assert(bmc_interface_message.get("severity") is not None)
     assert(bmc_interface_message.get("host_id") is not None)
@@ -82,6 +71,23 @@ def test_bmc_interface(args):
     bmc_interface_specific_info = bmc_interface_message.get("specific_info")
     if bmc_interface_specific_info:
         assert(bmc_interface_specific_info.get("channel info") is not None)
+
+
+def test_bmc_interface(args):
+    check_sspl_ll_is_running()
+    # backup active bmc interface
+    BMC_IF_CONSUL_KEY,BMC_IF_CONSUL_VAL = backup_bmc_config()
+
+    if BMC_IF_CONSUL_VAL == "lan":
+        simulate_bmc_interface_alert.lan_channel_alert(BMC_IF_CONSUL_KEY,BMC_IF_CONSUL_VAL)
+    else:
+        simulate_bmc_interface_alert.kcs_channel_alert(BMC_IF_CONSUL_KEY,BMC_IF_CONSUL_VAL)
+    assert_triggers("fault", 25)
+
+def test_node_bmc_fault_resolved(args):
+    #restore bmc config and activate ipmisimtool
+    simulate_bmc_interface_alert.restore_config()
+    assert_triggers("fault_resolved", 35)
 
 def backup_bmc_config():
     # read active bmc interface
@@ -110,4 +116,5 @@ def run_cmd(cmd):
     retcode = process.returncode
     return result,retcode
 
-test_list = [test_bmc_interface]
+test_list = [test_bmc_interface, test_node_bmc_fault_resolved]
+
