@@ -24,7 +24,7 @@ server_node:
       ip: TMPL_BMC_IP_1
       secret: TMPL_BMC_SECRET_1
       user: TMPL_BMC_USER_1
-    cluster_id: TMPL_CLUSTER_ID_1
+    cluster_id: TMPL_CLUSTER_ID
     hostname: TMPL_HOSTNAME_1
     name: TMPL_NODE_NAME_1
     network:
@@ -50,7 +50,7 @@ server_node:
       ip: TMPL_BMC_IP_2
       secret: TMPL_BMC_SECRET_2
       user: TMPL_BMC_USER_2
-    cluster_id: TMPL_CLUSTER_ID_2
+    cluster_id: TMPL_CLUSTER_ID
     hostname: TMPL_HOSTNAME_2
     name: TMPL_NODE_NAME_2
     network:
@@ -76,7 +76,7 @@ server_node:
       ip: TMPL_BMC_IP_3
       secret: TMPL_BMC_SECRET_3
       user: TMPL_BMC_USER_3
-    cluster_id: TMPL_CLUSTER_ID_3
+    cluster_id: TMPL_CLUSTER_ID
     hostname: TMPL_HOSTNAME_3
     name: TMPL_NODE_NAME_3
     network:

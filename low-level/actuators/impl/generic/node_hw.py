@@ -56,7 +56,7 @@ class NodeHWactuator(Actuator, Debug):
         super(NodeHWactuator, self).__init__()
         self._site_id = Conf.get(GLOBAL_CONF, SITE_ID_KEY, "DC01")
         self._rack_id = Conf.get(GLOBAL_CONF, RACK_ID_KEY, "RC01")
-        self._node_id = Conf.get(GLOBAL_CONF, NODE_ID_KEy, "SN01")
+        self._node_id = Conf.get(GLOBAL_CONF, NODE_ID_KEY, "SN01")
         self.host_id = socket.getfqdn()
         self.sensor_id_map = None
         self._executor = executor

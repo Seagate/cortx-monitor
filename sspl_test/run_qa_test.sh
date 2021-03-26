@@ -32,6 +32,8 @@ test_config_file=/opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/conf/sspl_tests.con
 sspl_config=yaml://${sspl_config_file}
 test_config=yaml://${test_config_file}
 
+machine_id=`cat /etc/machine-id`
+
 flask_help()
 {
  echo "Check if prior Flask version was installed using yum
@@ -51,13 +53,6 @@ flask_help()
 
 pre_requisites()
 {
-    # copy RMQ password to sspl_test/config
-    if [ "$SSPL_STORE_TYPE" == "consul" ]; then
-        pw=$($CONSUL_PATH/consul kv get sspl/config/RABBITMQINGRESSPROCESSOR/password)
-        $CONSUL_PATH/consul kv put sspl_test/config/RABBITMQINGRESSPROCESSORTESTS/password $pw
-        pw=$($CONSUL_PATH/consul kv get sspl/config/RABBITMQEGRESSPROCESSOR/password)
-        $CONSUL_PATH/consul kv put sspl_test/config/RABBITMQEGRESSPROCESSOR/password $pw
-    fi
     if [ "$IS_VIRTUAL" == "true" ]
     then
         # Backing up original persistence data
@@ -75,14 +70,6 @@ pre_requisites()
     then
         cp -Rp $script_dir/ipmi_simulator/ipmisimtool /usr/bin
         touch /tmp/activate_ipmisimtool
-    fi
-
-    if [ "$IS_VIRTUAL" == "true" -a "$SSPL_STORE_TYPE" == "consul" ]
-    then
-        # clearing $CONSUL_PATH/consul keys.
-        $CONSUL_PATH/consul kv delete -recurse var/$PRODUCT_FAMILY/sspl/data
-        # clearing consul keys.
-        $CONSUL_PATH/consul kv delete -recurse var/$PRODUCT_FAMILY/sspl/data
     fi
 }
 
@@ -125,27 +112,16 @@ restore_cfg_services()
         port=$(conf $test_config get "storage>$encl_id>controller>primary>port")
         port=$(echo $port | tr -d "["\" | tr -d "\"]")
         if [ "$port" == "$MOCK_SERVER_PORT" ]
-        # TODO: Avoid set on global config, need to change this before 
+        # TODO: Avoid set on global config, need to change this before
         # provisioner gives common backend
         then
-            conf $test_config set "storage>$encl_id>controller>primary>port=$primary_port"
-            conf $test_config set "storage>$encl_id>controller>primary>ip=$primary_ip"
+            conf $test_config set "storage_enclosure>$encl_id>controller>primary>port=$primary_port"
+            conf $test_config set "storage_enclosure>$encl_id>controller>primary>ip=$primary_ip"
         fi
-        conf "$test_config" set "SYSTEM_INFORMATION>node_id=SN01"
-        conf "$test_config" set "SYSTEM_INFORMATION>site_id=DC01"
-        conf "$test_config" set "SYSTEM_INFORMATION>rack_id=RC01"
-        conf "$test_config" set "SYSTEM_INFORMATION>cluster_id=CC01"
-    else
-        $CONSUL_PATH/consul kv put sspl/config/STORAGE_ENCLOSURE/controller/primary_mc/ip $primary_ip
-        port=$($CONSUL_PATH/consul kv get sspl/config/STORAGE_ENCLOSURE/controller/primary_mc/port)
-        if [ "$port" == "$MOCK_SERVER_PORT" ]
-        then
-            $CONSUL_PATH/consul kv put sspl/config/STORAGE_ENCLOSURE/controller/primary_mc/port $primary_port
-        fi
-        $CONSUL_PATH/consul kv put sspl_test/config/SYSTEM_INFORMATION/node_id 'SN01'
-        $CONSUL_PATH/consul kv put sspl_test/config/SYSTEM_INFORMATION/site_id 'DC01'
-        $CONSUL_PATH/consul kv put sspl_test/config/SYSTEM_INFORMATION/rack_id 'RC01'
-        $CONSUL_PATH/consul kv put sspl_test/config/SYSTEM_INFORMATION/cluster_id 'CC01'
+        conf "$test_config" set "server_node>$machine_id>node_id=SN01"
+        conf "$test_config" set "server_node>$machine_id>site_id=DC01"
+        conf "$test_config" set "server_node>$machine_id>rack_id=RC01"
+        conf "$test_config" set "server_node>$machine_id>cluster_id=CC01"
     fi
 
     if [ "$IS_VIRTUAL" == "true" ]
@@ -158,14 +134,6 @@ restore_cfg_services()
     # Remove ipmisimtool
     rm -f /usr/bin/ipmisimtool
     rm -f /tmp/activate_ipmisimtool
-
-    # Restore $CONSUL_PATH/consul data
-    if [ "$IS_VIRTUAL" == "true" -a "$SSPL_STORE_TYPE" == "consul" ]
-    then
-        $CONSUL_PATH/consul kv delete -recurse var/$PRODUCT_FAMILY/sspl/data
-        $CONSUL_PATH/consul kv import @/tmp/consul_backup.json
-        $sudo rm -f /tmp/consul_backup.json
-    fi
 }
 
 cleanup()
@@ -183,10 +151,7 @@ execute_test()
 if [ "$SSPL_STORE_TYPE" == "confstor" ]
 then
     # Read common key which are needed to fetch confstor config.
-    machine_id=`cat /etc/machine-id`
-    srvnode=`conf $test_config get "cluster>server_nodes>$machine_id"`
-    srvnode=$(echo $srvnode | tr -d "["\" | tr -d "\"]")
-    encl_id=`conf $test_config get "cluster>$srvnode>storage>enclosure_id"`
+    encl_id=`conf $test_config get "server_node>$machine_id>storage>enclosure_id"`
     encl_id=$(echo $encl_id | tr -d "["\" | tr -d "\"]")
 fi
 
@@ -206,32 +171,20 @@ flask_installed=$(python3.6 -c 'import pkgutil; print(1 if pkgutil.find_loader("
 [[ -f /etc/sspl.conf ]] && $sudo cp /etc/sspl.conf /etc/sspl.conf.back
 [[ -f $test_config_file ]] && $sudo cp $test_config_file ${test_config_file}.back
 
-# check the port configured in consul
+# check the port configured
 # if virtual machine, change the port to $MOCK_SERVER_PORT as mock_server runs on $MOCK_SERVER_PORT
-if [ "$SSPL_STORE_TYPE" == "consul" ]
+if [ "$SSPL_STORE_TYPE" == "confstor" ]
 then
-    primary_ip=$($CONSUL_PATH/consul kv get sspl/config/STORAGE_ENCLOSURE/controller/primary_mc/ip)
-    primary_port=$($CONSUL_PATH/consul kv get sspl/config/STORAGE_ENCLOSURE/controller/primary_mc/port)
-    if [ "$IS_VIRTUAL" == "true" ]
-    then
-        $CONSUL_PATH/consul kv put sspl/config/STORAGE_ENCLOSURE/controller/primary_mc/ip $MOCK_SERVER_IP
-        if [ "$primary_port" != "$MOCK_SERVER_PORT" ]
-        then
-            $CONSUL_PATH/consul kv put sspl/config/STORAGE_ENCLOSURE/controller/primary_mc/port $MOCK_SERVER_PORT
-        fi
-    fi
-elif [ "$SSPL_STORE_TYPE" == "confstor" ]
-then
-    primary_ip=`conf $test_config get "storage>$encl_id>controller>primary>ip"`
+    primary_ip=`conf $test_config get "storage_enclosure>$encl_id>controller>primary>ip"`
     primary_ip=$(echo $primary_ip | tr -d "["\" | tr -d "\"]")
-    primary_port=`conf $test_config get "storage>$encl_id>controller>primary>port"`
+    primary_port=`conf $test_config get "storage_enclosure>$encl_id>controller>primary>port"`
     primary_port=$(echo $primary_port | tr -d "["\" | tr -d "\"]")
     if [ "$IS_VIRTUAL" == "true" ]
     then
         if [ "$primary_port" != "$MOCK_SERVER_PORT" ]
         then
-            conf $test_config set "storage>$encl_id>controller>primary>port=$MOCK_SERVER_PORT"
-            conf $test_config set "storage>$encl_id>controller>primary>ip=$MOCK_SERVER_IP"
+            conf $test_config set "storage_enclosure>$encl_id>controller>primary>port=$MOCK_SERVER_PORT"
+            conf $test_config set "storage_enclosure>$encl_id>controller>primary>ip=$MOCK_SERVER_IP"
         fi
     fi
 else
@@ -261,29 +214,7 @@ fi
 # primary_controller_ip=127.0.0.1 and primary_controller_port=$MOCK_SERVER_PORT (for vm)
 # For sanity test SSPL should connect to mock server instead of real server (for vm)
 # Restart SSPL to re-read configuration
-if [ "$SSPL_STORE_TYPE" == "consul" ]
-then
-    # Find the nodename
-    if [ "$PRODUCT_NAME" == "LDR_R1" ]; then
-        SRVNODE="$(sudo salt-call grains.get id --output=newline_values_only)"
-    else
-        SRVNODE="$(consul kv get system_information/salt_minion_id)"
-    fi
-    if [ -z "$SRVNODE" ];then
-        SRVNODE="$(cat /etc/salt/minion_id)"
-        if [ -z "$SRVNODE" ];then
-            SRVNODE="srvnode-1"
-        fi
-    fi
-    transmit_interval=$($CONSUL_PATH/consul kv get sspl/config/NODEDATAMSGHANDLER/transmit_interval)
-    disk_usage_threshold=$($CONSUL_PATH/consul kv get sspl/config/NODEDATAMSGHANDLER/disk_usage_threshold)
-    host_memory_usage_threshold=$($CONSUL_PATH/consul kv get sspl/config/NODEDATAMSGHANDLER/host_memory_usage_threshold)
-    cpu_usage_threshold=$($CONSUL_PATH/consul kv get sspl/config/NODEDATAMSGHANDLER/cpu_usage_threshold)
-    rack_id=$($CONSUL_PATH/consul kv get system_information/rack_id)
-    site_id=$($CONSUL_PATH/consul kv get system_information/site_id)
-    node_id=$($CONSUL_PATH/consul kv get system_information/$SRVNODE/node_id)
-    cluster_id=$($CONSUL_PATH/consul kv get system_information/cluster_id)
-elif [ "$SSPL_STORE_TYPE" == "confstor" ]
+if [ "$SSPL_STORE_TYPE" == "confstor" ]
 then
     transmit_interval=`conf $sspl_config get "NODEDATAMSGHANDLER>transmit_interval"`
     transmit_interval=$(echo $transmit_interval | tr -d "["\" | tr -d "\"]")
@@ -293,15 +224,15 @@ then
     host_memory_usage_threshold=$(echo $host_memory_usage_threshold| tr -d "["\" | tr -d "\"]")
     cpu_usage_threshold=`conf $sspl_config get "NODEDATAMSGHANDLER>cpu_usage_threshold"`
     cpu_usage_threshold=$(echo $cpu_usage_threshold | tr -d "["\" | tr -d "\"]")
-    node_id=`conf $test_config get "cluster>$srvnode>node_id"`
+    node_id=`conf $test_config get "server_node>$machine_id>node_id"`
     node_id=$(echo $node_id | tr -d "["\" | tr -d "\"]")
-    site_id=`conf $test_config get "cluster>$srvnode>site_id"`
+    site_id=`conf $test_config get "server_node>$machine_id>site_id"`
     site_id=$(echo $site_id | tr -d "["\" | tr -d "\"]")
-    rack_id=`conf $test_config get "cluster>$srvnode>rack_id"`
+    rack_id=`conf $test_config get "server_node>$machine_id>rack_id"`
     rack_id=$(echo $rack_id | tr -d "["\" | tr -d "\"]")
-    cluster_id=`conf $test_config get "cluster>cluster_id"`
+    cluster_id=`conf $test_config get "server_node>$machine_id>cluster_id"`
     cluster_id=$(echo $cluster_id | tr -d "["\" | tr -d "\"]")
-    primary_controller_ip=`conf $test_config get "storage>$encl_id>controller>primary>ip"`
+    primary_controller_ip=`conf $test_config get "storage_enclosure>$encl_id>controller>primary>ip"`
     primary_controller_ip=$(echo $primary_controller_ip | tr -d "["\" | tr -d "\"]")
 else
     transmit_interval=$(sed -n -e '/transmit_interval/ s/.*\: *//p' /etc/sspl.conf)
@@ -323,26 +254,12 @@ then
     $sudo $script_dir/set_threshold.sh "10" $disk_out "0" "0" $sspl_config
 fi
 
-if [ "$SSPL_STORE_TYPE" == "consul" ]
+if [ "$SSPL_STORE_TYPE" == "confstor" ]
 then
-    # Update consul with updated System Information
-    # append above parsed key-value pairs in consul under [SYSTEM_INFORMATION] section
-    $CONSUL_PATH/consul kv put sspl_test/config/SYSTEM_INFORMATION/node_id $node_id
-    $CONSUL_PATH/consul kv put sspl_test/config/SYSTEM_INFORMATION/site_id $site_id
-    $CONSUL_PATH/consul kv put sspl_test/config/SYSTEM_INFORMATION/rack_id $rack_id
-    $CONSUL_PATH/consul kv put sspl_test/config/SYSTEM_INFORMATION/cluster_id $cluster_id
-    # updateing rabbitmq cluster
-    CLUSTER_NODES=$($CONSUL_PATH/consul kv get sspl/config/RABBITMQCLUSTER/cluster_nodes)
-    $CONSUL_PATH/consul kv put sspl_test/config/RABBITMQCLUSTER/cluster_nodes $CLUSTER_NODES
-elif [ "$SSPL_STORE_TYPE" == "confstor" ]
-then
-    conf $test_config set "SYSTEM_INFORMATION>node_id=$node_id"
-    conf $test_config set "SYSTEM_INFORMATION>site_id=$site_id"
-    conf $test_config set "SYSTEM_INFORMATION>rack_id=$rack_id"
-    conf $test_config set "SYSTEM_INFORMATION>cluster_id=$cluster_id"
-    CLUSTER_NODES=`conf $sspl_config get "RABBITMQCLUSTER>cluster_nodes"`
-    CLUSTER_NODES=$(echo $CLUSTER_NODES | tr -d "["\" | tr -d "\"]")
-    conf $test_config set "RABBITMQCLUSTER>cluster_nodes=$CLUSTER_NODES"
+    conf $test_config set "server_node>$machine_id>node_id=$node_id"
+    conf $test_config set "server_node>$machine_id>site_id=$site_id"
+    conf $test_config set "server_node>$machine_id>rack_id=$rack_id"
+    conf $test_config set "server_node>$machine_id>cluster_id=$cluster_id"
 else
     # Update sspl_tests.conf with updated System Information
     # append above parsed key-value pairs in sspl_tests.conf under [SYSTEM_INFORMATION] section
