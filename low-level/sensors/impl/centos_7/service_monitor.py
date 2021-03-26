@@ -22,6 +22,7 @@
 
 import time
 import socket
+import copy
 
 from dbus import Interface, SystemBus, DBusException, PROPERTIES_IFACE
 from dbus.mainloop.glib import DBusGMainLoop
@@ -35,7 +36,7 @@ from message_handlers.service_msg_handler import ServiceMsgHandler
 from framework.utils.service_logging import logger
 
 from framework.utils.conf_utils import (GLOBAL_CONF, CLUSTER, SRVNODE, SITE_ID,
-                RACK_ID, NODE_ID, CLUSTER_ID, Conf)
+                RACK_ID, NODE_ID, SSPL_CONF, CLUSTER_ID, Conf)
 from framework.utils.severity_reader import SeverityReader
 from framework.utils.mon_utils import get_alert_id
 from framework.base.module_thread import ThreadException
@@ -54,7 +55,6 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
     THREAD_SLEEP       = 'thread_sleep'
     POLLING_FREQUENCY  = 'polling_frequency'
     MAX_WAIT_TIME      = 'threshold_inactive_time'
-    SSPL_CONFIG        = "SSPL_CONF"
 
     # Dependency list
     DEPENDENCIES = {"plugins": ["SeviceMsgHandler"]}
@@ -69,9 +69,9 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
         super(ServiceMonitor, self).__init__(self.SENSOR_NAME,
                                                 self.PRIORITY)
 
-        Conf.load(self.SSPL_CONFIG, "yaml:///etc/sspl.conf")
-        self.services_to_monitor = \
-            Conf.get(self.SSPL_CONFIG, f"{self.SERVICEMONITOR}>{self.MONITORED_SERVICES}", [])
+        self.services_to_monitor = copy.deepcopy(
+            Conf.get(SSPL_CONF, f"{self.SERVICEMONITOR}>{self.MONITORED_SERVICES}", [])
+        )
 
         self.not_active_services = {}
         self.failed_services = []
@@ -79,13 +79,13 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
         self.service_status = {}
 
         self.thread_sleep = \
-            int(Conf.get(self.SSPL_CONFIG, f"{self.SERVICEMONITOR}>{self.THREAD_SLEEP}", 1))
+            int(Conf.get(SSPL_CONF, f"{self.SERVICEMONITOR}>{self.THREAD_SLEEP}", 1))
 
         self.polling_frequency = \
-            int(Conf.get(self.SSPL_CONFIG, f"{self.SERVICEMONITOR}>{self.POLLING_FREQUENCY}", 30))
+            int(Conf.get(SSPL_CONF, f"{self.SERVICEMONITOR}>{self.POLLING_FREQUENCY}", 30))
 
         self.max_wait_time = \
-            int(Conf.get(self.SSPL_CONFIG, f"{self.SERVICEMONITOR}>{self.MAX_WAIT_TIME}", 60))
+            int(Conf.get(SSPL_CONF, f"{self.SERVICEMONITOR}>{self.MAX_WAIT_TIME}", 60))
 
     def read_data(self):
         """Return the dict of service status."""
@@ -115,7 +115,7 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
 
     def remove_disabled_services(self):
         """Remove `disabled` services from the list of services to monitor."""
-        temp = self.services_to_monitor.copy()
+        temp = copy.deepcopy(self.services_to_monitor)
         for service in temp:
             try:
                 if 'disabled' in str(self._manager.GetUnitFileState(service)):
@@ -135,7 +135,7 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
             # Register all the services to signal of 'PropertiesChanged' and
             # raise an alert if some service is not active on initially or if
             # Unit is not found for the service
-            services_to_monitor_copy = self.services_to_monitor.copy()
+            services_to_monitor_copy = copy.deepcopy(self.services_to_monitor)
             for service in services_to_monitor_copy:
                 err = self.connect_to_prop_changed_signal(service)
                 if err:
@@ -178,7 +178,7 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
                     # registering for service state change signal, remove from
                     # local list as monitoring enabled through SystemD
                     # and to avoid re-registration.
-                    services_to_monitor_copy = self.services_to_monitor.copy()
+                    services_to_monitor_copy = copy.deepcopy(self.services_to_monitor)
                     for service in services_to_monitor_copy:
                         if not self.connect_to_prop_changed_signal(service):
                             self.services_to_monitor.remove(service)
@@ -266,7 +266,7 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
            Raise FAULT Alert if any of the not-active services has exceeded
            the threshould time for inactivity.
         """
-        not_active_services_copy = self.not_active_services.copy()
+        not_active_services_copy = copy.deepcopy(self.not_active_services)
         for service, [start_time, prev_state, prev_substate]\
                                  in not_active_services_copy.items():
 
