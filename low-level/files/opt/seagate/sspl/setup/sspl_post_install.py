@@ -179,9 +179,10 @@ class SSPLPostInstall:
 
     def create_sspl_conf(self):
         """Install product specific sspl config."""
+        # Copy and load product specific sspl config
         if not os.path.exists(consts.file_store_config_path):
-            shutil.copyfile("%s/conf/sspl.conf.yaml" % consts.SSPL_BASE_DIR,
-                consts.file_store_config_path)
+            shutil.copyfile("%s/conf/sspl.conf.%s.yaml" % (consts.SSPL_BASE_DIR,
+                self.product), consts.file_store_config_path)
 
     def create_user(self):
         """Add sspl-ll user and validate user creation."""
@@ -286,8 +287,18 @@ class SSPLPostInstall:
         service.restart('rsyslog.service')
 
     def install_sspl_service_files(self):
-        """Copy service file to systemd location."""
-        currentProduct = "%s/conf/sspl-ll.service" % consts.SSPL_BASE_DIR
+        """Copy service file to systemd location based on product."""
+        # Create soft link for SINGLE product name service to existing LDR_R1, LR2 service
+        # Instead of keeping separate service file for SINGLE product with same content.
+        currentProduct = "%s/conf/sspl-ll.service.%s" % (consts.SSPL_BASE_DIR,
+                                                         self.product)
+        if (self.product == "SINGLE" and not os.path.exists(currentProduct)) or \
+                (self.product == "DUAL" and not os.path.exists(currentProduct)):
+            os.symlink("%s/conf/sspl-ll.service.%s" % (consts.SSPL_BASE_DIR, self.product),
+                       currentProduct)
+        if self.product == "CLUSTER" and not os.path.exists(currentProduct):
+            os.symlink("%s/conf/sspl-ll.service.LR2" % (consts.SSPL_BASE_DIR),
+                       currentProduct)
         shutil.copyfile(currentProduct, "/etc/systemd/system/sspl-ll.service")
 
     def enable_sspl_service(self):

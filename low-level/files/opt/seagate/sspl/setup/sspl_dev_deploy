@@ -284,9 +284,6 @@ class SSPLDevDeploy:
 
     def setup_sspl(self):
         """Initialize SSPL service."""
-        sspl_config = "%s/conf/sspl.conf.yaml" % SSPL_BASE_DIR
-        if not os.path.exists(sspl_config):
-            raise DeployError(1, "sspl config file not found.")
         # Override template varibales by values from input file
         post_install_tmpl = "%s/conf/sspl.post-install.tmpl.%s" % (SSPL_BASE_DIR, self.deploy_type)
         prepare_tmpl = "%s/conf/sspl.prepare.tmpl.%s" % (SSPL_BASE_DIR, self.deploy_type)
