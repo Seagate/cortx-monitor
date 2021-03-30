@@ -21,7 +21,7 @@ from cortx.utils.conf_store import Conf
 # Indexes
 GLOBAL_CONF = "GLOBAL"
 SSPL_CONF = "SSPL"
-SSPL_TEST_CONF = "SSPL_Test"
+SSPL_TEST_CONF = "SSPL_TEST"
 
 # Keys constans
 BMC_INTERFACE="BMC_INTERFACE"

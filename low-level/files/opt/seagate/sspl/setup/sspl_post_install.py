@@ -71,7 +71,7 @@ class SSPLPostInstall:
             "cortx>release>setup")
         node_type = Utility.get_config_value(consts.PRVSNR_CONFIG_INDEX,
              "server_node>%s>type" % machine_id)
-        if node_type.lower() != "vm":
+        if node_type.lower() not in ["vm", "virtual"]:
             bmc_ip = Utility.get_config_value(consts.PRVSNR_CONFIG_INDEX,
                 "server_node>%s>bmc>ip" % machine_id)
             enclosure_id = Utility.get_config_value(consts.PRVSNR_CONFIG_INDEX,
@@ -97,7 +97,7 @@ class SSPLPostInstall:
         self.validate_dependencies(self.setup)
 
         # Validate BMC & Storage controller IP reachability
-        if node_type.lower() != "vm":
+        if node_type.lower() not in ["vm", "virtual"]:
             # cluster_id required for decrypting the secret is only available from
             # the prepare stage. However accessibility validation will be done in
             # prepare stage. So at this time, validating ip reachability is fine.

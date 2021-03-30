@@ -35,7 +35,7 @@ import site
 import importlib
 import tarfile
 
-localhost_fqdn = socket.getfqdn().split('.')[0]
+localhost_fqdn = socket.getfqdn()
 SSPL_BASE_DIR = "/opt/seagate/cortx/sspl"
 UTILS_BASE_DIR = "/opt/seagate/cortx/utils"
 
@@ -71,7 +71,6 @@ class SSPLDevDeploy:
         self.message_broker = "kafka"
         self.variable_file = None
         self.deploy_type = "1-node"
-        # Config files
         self.utils_config = None
         self.temp_dir = "%s/conf/temp" % SSPL_BASE_DIR
         self.machine_id = None
@@ -79,6 +78,9 @@ class SSPLDevDeploy:
             self.machine_id = f.read().strip()
         if not self.machine_id:
             raise DeployError(1, "Failed to get machine-id.")
+        # Overwite config values
+        self.storage_type = None
+        self.server_type = None
 
     def parse_args(self):
         """Override the default values."""
@@ -92,6 +94,10 @@ class SSPLDevDeploy:
             self.variable_file = self.args.variable_file
         if self.args.message_broker:
             self.message_broker = self.args.message_broker
+        if self.args.storage_type:
+            self.storage_type = self.args.storage_type
+        if self.args.server_type:
+            self.server_type = self.args.server_type
         if not self.nodes or len(self.nodes) == 1:
             self.deploy_type = "1-node"
         elif len(self.nodes) == 2:
@@ -242,9 +248,9 @@ class SSPLDevDeploy:
         os.remove(f"/tmp/kafka_{kafka_version}.tgz")
         print("INFO: Done kafka setup.")
 
-    @staticmethod
-    def create_config(variable_file, config_files):
+    def create_config(self, variable_file, config_files):
         """Override template varibales by values from input file."""
+        from cortx.utils.conf_store import Conf
         lines = []
         variables = {}
         with open(variable_file) as f:
@@ -253,7 +259,7 @@ class SSPLDevDeploy:
             result = re.search(r"(.*)=(.*)", line.strip())
             if result:
                 variables.update({result.groups()[0]: result.groups()[1]})
-        for c_file in config_files:
+        for stage, c_file in config_files.items():
             replaced_data = None
             for k, v in variables.items():
                 with open(c_file, "rt") as f:
@@ -266,6 +272,15 @@ class SSPLDevDeploy:
                 if tmpl_var:
                     raise DeployError(1,
                         "Failed to update config %s for %s." % (c_file, tmpl_var.group()))
+            # Overwrite user requested feilds
+            if stage in ["config", "init"] and self.storage_type and self.server_type:
+                tmp_index = "tmp_sspl_%s" % stage
+                Conf.load(tmp_index, "yaml://%s" % c_file)
+                Conf.set(tmp_index, "server_node>%s>type" % self.machine_id, self.server_type)
+                enclosure_id = Conf.get(tmp_index, "server_node>%s>storage>enclosure_id" %
+                    self.machine_id)
+                Conf.set(tmp_index, "storage_enclosure>%s>type" % enclosure_id, self.storage_type)
+                Conf.save(tmp_index)
 
     def setup_sspl(self):
         """Initialize SSPL service."""
@@ -283,9 +298,14 @@ class SSPLDevDeploy:
         prepare_config = "%s/prepare.%s" % (self.temp_dir, self.deploy_type)
         config_config = "%s/config.%s" % (self.temp_dir, self.deploy_type)
         init_config = "%s/init.%s" % (self.temp_dir, self.deploy_type)
-        config_files = [post_install_config, prepare_config, config_config, init_config]
+        config_files = {
+            "post_install": post_install_config,
+            "prepare": prepare_config,
+            "config": config_config,
+            "init": init_config
+        }
         for i in range(len(tmpl_files)):
-            shutil.copyfile(tmpl_files[i], config_files[i])
+            shutil.copyfile(tmpl_files[i], list(config_files.values())[i])
         self.create_config(self.variable_file, config_files)
 
         sspl_setup_script = "%s/bin/sspl_setup" % SSPL_BASE_DIR
@@ -367,6 +387,8 @@ if __name__ == '__main__':
     argParser.add_argument("-M", "--message_broker", help="Currently we support only 'kafka'",
                            default="kafka")
     argParser.add_argument("--variable_file", help="Holds input values to templates")
+    argParser.add_argument("--storage_type", help="Set storage type at config stage.")
+    argParser.add_argument("--server_type", help="Set server type at config stage.")
     argParser.add_argument("--cleanup", action="store_true",
                            help="Stop sspl-ll and remove installed SSPL RPMs")
     args = argParser.parse_args()

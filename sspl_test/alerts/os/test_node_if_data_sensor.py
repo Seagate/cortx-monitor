@@ -76,6 +76,9 @@ def test_if_data_sensor(args):
     assert(if_data_specific_info.get("localtime") is not None)
     assert(if_data_specific_info.get("interfaces") is not None)
 
+    # Remove interface added for test purpose
+    mock_eth_interface.delete_nw_interface()
+
 
 def node_data_sensor_message_request(sensor_type):
     egressMsg = {

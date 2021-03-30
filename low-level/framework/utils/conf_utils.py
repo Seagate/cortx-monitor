@@ -147,7 +147,8 @@ MACHINE_ID = utility.get_machine_id()
 OPERATING_SYSTEM = utility.get_os()
 
 Conf.load(SSPL_CONF, "yaml:///etc/sspl.conf")
-Conf.load(GLOBAL_CONF, "yaml:///etc/sspl_global_config_copy.yaml")
+global_config = Conf.get(SSPL_CONF, "SYSTEM_INFORMATION>global_config_copy_url")
+Conf.load(GLOBAL_CONF, global_config)
 
 SRVNODE = Conf.get(GLOBAL_CONF, "server_node>%s>name" % MACHINE_ID)
 ENCLOSURE = Conf.get(GLOBAL_CONF, "server_node>%s>storage>enclosure_id" % MACHINE_ID)

@@ -91,9 +91,9 @@ class Cmd:
         parsers.add_argument('args', nargs='*', default=[], help='args')
         parsers.set_defaults(command=cls)
 
-    def copy_provisioner_config(self, stage=None):
-        """Dump provisioner supplied config in required format"""
-        # Copy supplied config in another index
+    def copy_input_config(self, stage=None):
+        """Dump input config in required format"""
+        # Copy input config in another index
         url_spec = urlparse(global_config_path)
         path = url_spec.path
         store_loc = os.path.dirname(path)
@@ -138,7 +138,7 @@ class PostInstallCmd(Cmd):
 
     def process(self):
         """Perform SSPL post installation."""
-        self.copy_provisioner_config(stage=self.name)
+        self.copy_input_config(stage=self.name)
         self.post_install.process()
 
 
@@ -173,7 +173,7 @@ class PrepareCmd(Cmd):
 
     def process(self):
         """Configure SSPL for prepare stage."""
-        self.copy_provisioner_config()
+        self.copy_input_config()
         self.prepare.process()
 
 
@@ -208,7 +208,7 @@ class ConfigCmd(Cmd):
 
     def process(self):
         """Setup SSPL configuration."""
-        self.copy_provisioner_config()
+        self.copy_input_config()
         self.sspl_config.process()
 
 
@@ -243,7 +243,7 @@ class InitCmd(Cmd):
 
     def process(self):
         """Configure SSPL init."""
-        self.copy_provisioner_config()
+        self.copy_input_config()
         self.sspl_init.process()
 
 

@@ -34,8 +34,8 @@ from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
 from framework.base.sspl_constants import RESOURCE_PATH
 
-from framework.utils.conf_utils import (CLUSTER, SRVNODE,
-                                        Conf, SSPL_TEST_CONF)
+from framework.utils.conf_utils import Conf, SSPL_TEST_CONF, NODE_ID_KEY
+
 import ctypes
 from . import message_bus, producer_initialized
 
@@ -55,9 +55,6 @@ class RabbitMQingressProcessorTests(ScheduledModuleThread, InternalMsgQ):
     MESSAGE_TYPE = "message_type"
     OFFSET = "offset"
     SYSTEM_INFORMATION_KEY = 'SYSTEM_INFORMATION'
-    CLUSTER_ID_KEY = 'cluster_id'
-    NODE_ID_KEY = 'node_id'
-    CLUSTER_ID_KEY = "cluster_id"
 
     JSON_ACTUATOR_SCHEMA = "SSPL-LL_Actuator_Response.json"
     JSON_SENSOR_SCHEMA = "SSPL-LL_Sensor_Response.json"
@@ -212,9 +209,7 @@ class RabbitMQingressProcessorTests(ScheduledModuleThread, InternalMsgQ):
     def _read_config(self):
         """Configure the RabbitMQ exchange with defaults available"""
         # Make methods locally available
-        self._node_id = Conf.get(SSPL_TEST_CONF,
-                                 f"{CLUSTER}>{SRVNODE}>{self.NODE_ID_KEY}",
-                                 'SN01')
+        self._node_id = Conf.get(SSPL_TEST_CONF, NODE_ID_KEY, 'SN01')
         self._consumer_id = Conf.get(SSPL_TEST_CONF,
                                      f"{self.RABBITMQPROCESSORTEST}>{self.CONSUMER_ID}",
                                      'sspl_actuator')

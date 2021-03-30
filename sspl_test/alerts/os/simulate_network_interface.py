@@ -41,3 +41,9 @@ def shuffle_nw_interface():
     call("ip link set eth-mocked up".split())
     sleep(.1)
     call("ip link set br0 up".split())
+
+def delete_nw_interface():
+    # Delete created new intefaces
+    call("ip link delete dummy0".split())
+    sleep(.1)
+    call("ip link delete br0".split())

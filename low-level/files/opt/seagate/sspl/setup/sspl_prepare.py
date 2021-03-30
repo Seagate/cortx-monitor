@@ -15,6 +15,7 @@
 # about this software or licensing, please email opensource@seagate.com or
 # cortx-questions@seagate.com.
 
+import os
 import errno
 import socket
 
@@ -102,14 +103,15 @@ class SSPLPrepare:
 
         # Validate network interface availability
         for i_list in [mgmt_interfaces, data_private_interfaces, data_public_interfaces]:
-            self.validate_nw_interface(i_list)
+            self.validate_nw_cable_connection(i_list)
+        self.validate_nw_interfaces()
 
     def process(self):
         """Configure SSPL at prepare stage."""
         pass
 
-    def validate_nw_interface(self, interfaces):
-        """Check network interfaces are up.
+    def validate_nw_cable_connection(self, interfaces):
+        """Check network interface links are up.
         carrier:0 - link down
         carrier:1 - link up
         """
@@ -121,5 +123,15 @@ class SSPLPrepare:
             output, error, rc = SimpleProcess(cmd).run()
             output = output.decode().strip()
             if output == "0":
+                raise SetupError(errno.EINVAL, "%s - validation failure. %s",
+                    self.name, "Network interface %s is down." % interface)
+
+    def validate_nw_interfaces(self):
+        """Check network intefaces are up."""
+        cmd = "ip --br a | awk '{print $1, $2}'"
+        nws = [nw.strip() for nw in os.popen(cmd)]
+        nw_status = {nw.split(" ")[0]: nw.split(" ")[1] for nw in nws}
+        for interface, status in nw_status.items():
+            if status in ["down", "DOWN"]:
                 raise SetupError(errno.EINVAL, "%s - validation failure. %s",
                     self.name, "Network interface %s is down." % interface)

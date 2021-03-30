@@ -36,10 +36,10 @@ def update_sensor_info(config_index, node_type, enclosure_type):
     sensors["MEMFAULTSENSOR"] = "true"
     sensors["CPUFAULTSENSOR"] = "true"
 
-    if enclosure_type and enclosure_type.lower() in ["virtual", "jbod"]:
+    if enclosure_type and enclosure_type.lower() in ["virtual", "vm", "jbod"]:
         sensors["REALSTORSENSORS"] = "false"
 
-    if node_type and node_type.lower() in ["virtual"]:
+    if node_type and node_type.lower() in ["virtual", "vm"]:
         sensors["NODEHWSENSOR"] = "false"
         sensors["SASPORTSENSOR"] = "false"
         sensors["MEMFAULTSENSOR"] = "false"
