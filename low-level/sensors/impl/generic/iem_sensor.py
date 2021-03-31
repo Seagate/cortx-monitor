@@ -16,7 +16,7 @@
 """
  ****************************************************************************
   Description:       Reads IEMs from RSyslog filtered file and sends
-                    to RabbitMQ sensor channel.
+                    to message bus.
   ****************************************************************************
 """
 import csv
@@ -212,8 +212,7 @@ class IEMSensor(SensorThread, InternalMsgQ):
             timestamp_file.write(log_timestamp)
 
     def _send_msg(self, iem_components, log_timestamp):
-        """Creates JSON message from iem components and sends to RabbitMQ
-           channel.
+        """Creates JSON message from iem components and sends to message bus.
         """
         # IEM format is IEC:DESCRIPTION
         # IEC format is SEVERITY|SOURCEID|COMPONENTID|MODULEID|EVENTID

@@ -47,7 +47,7 @@ except Exception as ae:
 
 
 class IngressProcessor(ScheduledModuleThread, InternalMsgQ):
-    """Handles incoming messages via message bus"""
+    """Handles incoming messages via message bus."""
 
     MODULE_NAME = "IngressProcessor"
     PRIORITY = 1
@@ -238,7 +238,7 @@ class IngressProcessor(ScheduledModuleThread, InternalMsgQ):
                                       ack_msg)
 
     def _read_config(self):
-        """Read config for messaging bus"""
+        """Read config for messaging bus."""
         # Make methods locally available
         self._node_id = Conf.get(SSPL_CONF,
                                  f"{CLUSTER}>{SRVNODE}>{self.NODE_ID_KEY}",

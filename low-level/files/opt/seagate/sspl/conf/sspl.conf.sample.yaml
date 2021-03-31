@@ -157,7 +157,6 @@ SYSTEMDWATCHDOG:
       - crond.service
       - syslog.service
       - sshd.service
-      - rabbitmq-server.service
       - lnet.service
       - network.service
       - mcollective.service

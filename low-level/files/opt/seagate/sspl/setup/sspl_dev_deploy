@@ -18,7 +18,7 @@
 
 # ******************************************************************************
 #  Description:   Initialize SSPL service by deploying SSPL RPMS and dependencies
-#  Purpose    :   Setup yum repos, rabbitmq for SSPL and override config data
+#  Purpose    :   Setup yum repos, message bus for SSPL and override config data
 #  Usage      :   ./sspl_dev_deploy --help
 # ******************************************************************************
 

@@ -43,7 +43,7 @@ SSPL_SEC = ctypes.cdll.LoadLibrary('libsspl_sec.so.0')
 
 
 class IngressProcessorTests(ScheduledModuleThread, InternalMsgQ):
-    """Handles incoming messages via messaging for automated tests"""
+    """Handles incoming messages via messaging for automated tests."""
 
     MODULE_NAME = "IngressProcessorTests"
     PRIORITY = 1
@@ -206,7 +206,7 @@ class IngressProcessorTests(ScheduledModuleThread, InternalMsgQ):
                 "_process_msg unrecognized message: %r" % ingressMsg)
 
     def _read_config(self):
-        """Configure the messaging exchange with defaults available"""
+        """Configure the messaging exchange with defaults available."""
         # Make methods locally available
         self._node_id = Conf.get(SSPL_TEST_CONF, NODE_ID_KEY, 'SN01')
         self._consumer_id = Conf.get(SSPL_TEST_CONF,

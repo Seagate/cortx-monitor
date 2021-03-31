@@ -33,7 +33,7 @@ from . import producer_initialized
 
 
 class EgressAccumulatedMsgsProcessor(ScheduledModuleThread, InternalMsgQ):
-    """Send any unsent message to message bus"""
+    """Send any unsent message to message bus."""
 
     SENSOR_NAME = "EgressAccumulatedMsgsProcessor"
     PRIORITY    = 1
@@ -130,7 +130,7 @@ class EgressAccumulatedMsgsProcessor(ScheduledModuleThread, InternalMsgQ):
             self._scheduler.enter(30, self._priority, self.run, ())
 
     def _read_config(self):
-        """Read config for messaging bus"""
+        """Read config for messaging bus."""
         try:
             self._signature_user = Conf.get(SSPL_CONF,
                                             f"{self.PROCESSOR}>{self.SIGNATURE_USERNAME}",

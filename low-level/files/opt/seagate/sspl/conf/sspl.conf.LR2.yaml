@@ -92,11 +92,6 @@ LOGGINGPROCESSOR:
    message_type: IEM
    offset: earliest
 
-MESSAGINGCLUSTER:
-   setup_cluster: true
-   cluster_nodes: localhost
-   erlang_cookie: QLDZYPYEYGHECTHYQXFJ
-
 LOGGINGMSGHANDLER:
    iem_routing_enabled: false
    iem_log_locally: true

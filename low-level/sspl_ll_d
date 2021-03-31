@@ -47,13 +47,9 @@ from framework.base.sspl_constants import (COMMON_CONFIGS, PRODUCT_FAMILY,
                                            sspl_settings_configured_groups,
                                            SYSLOG_HOST, SYSLOG_PORT)
 from framework.messaging.logging_processor import LoggingProcessor
-from framework.messaging.plane_cntrl_rmq_egress_processor import \
-    PlaneCntrlRMQegressProcessor
-from framework.messaging.plane_cntrl_rmq_ingress_processor import \
-    PlaneCntrlRMQingressProcessor
 from framework.messaging.egress_accumulated_msgs_processor import \
     EgressAccumulatedMsgsProcessor
-# Modules for handling RabbitMQ messages and manipulating internal threads
+# Modules for handling messages and manipulating internal threads
 from framework.messaging.egress_processor import \
     EgressProcessor
 from framework.messaging.ingress_processor import \
@@ -63,7 +59,8 @@ from framework.utils.conf_utils import (GLOBAL_CONF, HOST, MONITOR,
                                         OPERATING_SYSTEM, PORT, PRODUCT,
                                         RELEASE, RSYSLOG, SETUP, SRVNODE,
                                         SSPL_CONF, SYSTEM_INFORMATION,
-                                        THREADED, Conf, LOG_LEVEL)
+                                        THREADED, Conf, LOG_LEVEL,
+                                        PRODUCT_KEY, SETUP_KEY)
 from framework.utils.config_reader import ConfigReader
 from framework.utils.service_logging import init_logging, logger
 from framework.utils.store_factory import store
@@ -74,7 +71,6 @@ from message_handlers.logging_msg_handler import LoggingMsgHandler
 from message_handlers.node_controller_msg_handler import \
     NodeControllerMsgHandler
 from message_handlers.node_data_msg_handler import NodeDataMsgHandler
-from message_handlers.plane_cntrl_msg_handler import PlaneCntrlMsgHandler
 from message_handlers.real_stor_actuator_msg_handler import \
     RealStorActuatorMsgHandler
 from message_handlers.real_stor_encl_msg_handler import RealStorEnclMsgHandler
@@ -320,7 +316,7 @@ def main(conf_reader, systemd_support):
         sspl_threaded_modules[klass.name()] = klass()
         msgQlist[klass.name()] = queue.Queue()
 
-    # Add rabbitmq_egress_accumulated_msgs_processor.py in sspl_threaded_modules
+    # Add egress_accumulated_msgs_processor.py in sspl_threaded_modules
     sspl_threaded_modules[EgressAccumulatedMsgsProcessor] = EgressAccumulatedMsgsProcessor()
     msgQlist[EgressAccumulatedMsgsProcessor.name()] = queue.Queue()
 
@@ -603,7 +599,7 @@ def shutdown_handler(signum=None, frame=None):
     # Wait for the EgressProcessor to finish processing
     # any messages which it may have in its queue
     while threadController.check_EgressProcessor_is_running() is True:
-        logger.info("Waiting for rabbitMQegress to finish sending queued msgs")
+        logger.info("Waiting for egress to finish sending queued msgs")
         time.sleep(2)
 
     # Now call the shutdown methods for all modules to gracefully halt

@@ -196,7 +196,7 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
             logger.error("_process_msg: %r" % ex)
 
     def _read_config(self):
-        """Configure the RabbitMQ exchange with defaults available"""
+        """Configure with defaults available"""
         # Make methods locally available
         self._node_id = Conf.get(SSPL_CONF,
                                  f"{CLUSTER}>{SRVNODE}>{self.NODE_ID_KEY}",

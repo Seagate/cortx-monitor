@@ -42,7 +42,7 @@ from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.module_thread import SensorThread
 from framework.base.sspl_constants import cs_products
 from framework.messaging.egress_processor import \
-    RabbitMQegressProcessor
+    EgressProcessor
 from framework.utils.conf_utils import (CLUSTER_ID_KEY, DATA_PATH_KEY,
     GLOBAL_CONF, NODE_ID_KEY, RACK_ID_KEY, SITE_ID_KEY, SSPL_CONF, Conf)
 from framework.utils.service_logging import logger

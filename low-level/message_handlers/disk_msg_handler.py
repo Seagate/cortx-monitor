@@ -266,7 +266,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                         # Obtain json message containing all relevant data
                         internal_json_msg = drive.toDriveMngrJsonMsg(uuid=uuid).getJson()
 
-                        # Send the json message to the RabbitMQ processor to transmit out
+                        # Send the json message to the message processor to transmit out
                         self._log_debug(f"_process_msg, internal_json_msg: {internal_json_msg}")
                         self._write_internal_msgQ(EgressProcessor.name(), internal_json_msg)
 
@@ -284,7 +284,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     # Obtain json message containing all relevant data
                     internal_json_msg = drive.toDriveMngrJsonMsg(uuid=uuid).getJson()
 
-                    # Send the json message to the RabbitMQ processor to transmit out
+                    # Send the json message to the message processor to transmit out
                     self._log_debug(f"_process_msg, internal_json_msg: {internal_json_msg}")
                     self._write_internal_msgQ(EgressProcessor.name(), internal_json_msg)
 
@@ -308,7 +308,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                         # Obtain json message containing all relevant data
                         internal_json_msg = drive.toHPIjsonMsg(uuid=uuid).getJson()
 
-                        # Send the json message to the RabbitMQ processor to transmit out
+                        # Send the json message to the message processor to transmit out
                         self._log_debug(f"_process_msg, internal_json_msg: {internal_json_msg}")
                         self._write_internal_msgQ(EgressProcessor.name(), internal_json_msg)
 
@@ -326,7 +326,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     # Obtain json message containing all relevant data
                     internal_json_msg = drive.toHPIjsonMsg(uuid=uuid).getJson()
 
-                    # Send the json message to the RabbitMQ processor to transmit out
+                    # Send the json message to the message processor to transmit out
                     self._log_debug(f"_process_msg, internal_json_msg: {internal_json_msg}")
                     self._write_internal_msgQ(EgressProcessor.name(), internal_json_msg)
 
@@ -374,7 +374,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
         expanderResetMsg = ExpanderResetMsg()
         internal_json_msg = expanderResetMsg.getJson()
 
-        # Send the json message to the RabbitMQ processor to transmit out
+        # Send the json message to the message processor to transmit out
         self._write_internal_msgQ(EgressProcessor.name(), internal_json_msg)
 
         # Loop thru all the drivemanager drives and set to EMPTY_None to simulate drive dropping out of OS
@@ -386,7 +386,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
             json_msg.setStatus("EMPTY_None")
             internal_json_msg = json_msg.getJson()
 
-            # Send the json message to the RabbitMQ processor to transmit out
+            # Send the json message to the message processor to transmit out
             self._write_internal_msgQ(EgressProcessor.name(), internal_json_msg)
 
         # Loop thru all the drivemanager drives and set to EMPTY_None to simulate drive dropping out of OS
@@ -398,7 +398,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
             json_msg.setStatus("OK_None")
             internal_json_msg = json_msg.getJson()
 
-            # Send the json message to the RabbitMQ processor to transmit out
+            # Send the json message to the message processor to transmit out
             self._write_internal_msgQ(EgressProcessor.name(), internal_json_msg)
 
     def _sim_drive_uninstall(self, serial_number):
@@ -411,7 +411,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
             json_msg.setStatus("EMPTY_None")
             internal_json_msg = json_msg.getJson()
 
-            # Send the json message to the RabbitMQ processor to transmit out
+            # Send the json message to the message processor to transmit out
             self._log_debug(f"_process_msg, internal_json_msg: {internal_json_msg}")
             self._write_internal_msgQ(EgressProcessor.name(), internal_json_msg)
 
@@ -424,7 +424,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
             json_msg.setDiskInstalled(False)
             internal_json_msg = json_msg.getJson()
 
-            # Send the json message to the RabbitMQ processor to transmit out
+            # Send the json message to the message processor to transmit out
             self._log_debug(f"_process_msg, internal_json_msg: {internal_json_msg}")
             self._write_internal_msgQ(EgressProcessor.name(), internal_json_msg)
 
@@ -438,7 +438,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
             json_msg.setStatus("OK_None")
             internal_json_msg = json_msg.getJson()
 
-            # Send the json message to the RabbitMQ processor to transmit out
+            # Send the json message to the message processor to transmit out
             self._log_debug(f"_process_msg, internal_json_msg: {internal_json_msg}")
             self._write_internal_msgQ(EgressProcessor.name(), internal_json_msg)
 
@@ -451,7 +451,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
             json_msg.setDiskInstalled(True)
             internal_json_msg = json_msg.getJson()
 
-            # Send the json message to the RabbitMQ processor to transmit out
+            # Send the json message to the message processor to transmit out
             self._log_debug(f"_process_msg, internal_json_msg: {internal_json_msg}")
             self._write_internal_msgQ(EgressProcessor.name(), internal_json_msg)
 
@@ -483,7 +483,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
             # Obtain json message containing all relevant data
             internal_json_msg = drive.toDriveMngrJsonMsg().getJson()
 
-            # Send the json message to the RabbitMQ processor to transmit out
+            # Send the json message to the message processor to transmit out
             self._write_internal_msgQ(EgressProcessor.name(), internal_json_msg)
 
     def _transmit_all_HPI_responses(self):
@@ -492,7 +492,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
             # Obtain json message containing all relevant data
             internal_json_msg = drive.toHPIjsonMsg().getJson()
 
-            # Send the json message to the RabbitMQ processor to transmit out
+            # Send the json message to the message processor to transmit out
             self._write_internal_msgQ(EgressProcessor.name(), internal_json_msg)
 
     def _process_drivemanager_response(self, jsonMsg, serial_number):
@@ -569,7 +569,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
         # Obtain json message containing all relevant data
         internal_json_msg = drive.toDriveMngrJsonMsg().getJson()
 
-        # Send the json message to the RabbitMQ processor to transmit out
+        # Send the json message to the message processor to transmit out
         self._write_internal_msgQ(EgressProcessor.name(), internal_json_msg)
 
         # Write the serial number and status to DCS file
@@ -610,7 +610,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
         # Obtain json message containing all relevant data
         internal_json_msg = drive.toHPIjsonMsg().getJson()
 
-        # Send the json message to the RabbitMQ processor to transmit out
+        # Send the json message to the message processor to transmit out
         self._log_debug(f"_process_msg, internal_json_msg: {internal_json_msg}")
         self._write_internal_msgQ(EgressProcessor.name(), internal_json_msg)
 
@@ -627,7 +627,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 # Obtain json message containing all relevant data
                 internal_json_msg = drivemngr_drive.toDriveMngrJsonMsg().getJson()
 
-                # Send the json message to the RabbitMQ processor to transmit out
+                # Send the json message to the message processor to transmit out
                 self._write_internal_msgQ(EgressProcessor.name(), internal_json_msg)
 
                 # Write the serial number and status to DCS file
@@ -746,7 +746,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 # Obtain json message containing all relevant data
                 internal_json_msg = drive.toHPIjsonMsg().getJson()
 
-                # Send the json message to the RabbitMQ processor to transmit out
+                # Send the json message to the message processor to transmit out
                 self._log_debug(f"_process_hpi_response_ZBX_NOTPRESENT, internal_json_msg: {internal_json_msg}")
                 self._write_internal_msgQ(EgressProcessor.name(), internal_json_msg)
 
@@ -956,7 +956,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
         expanderResetMsg = ExpanderResetMsg()
         internal_json_msg = expanderResetMsg.getJson()
 
-        # Send the json message to the RabbitMQ processor to transmit out
+        # Send the json message to the message processor to transmit out
         self._write_internal_msgQ(EgressProcessor.name(), internal_json_msg)
 
         log_msg  = "IEC: 020005001: Expander Reset Triggered"

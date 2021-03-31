@@ -41,7 +41,7 @@ except Exception as ae:
 
 
 class EgressProcessorTests(ScheduledModuleThread, InternalMsgQ):
-    """Handles outgoing messages via messaging over localhost"""
+    """Handles outgoing messages via messaging over localhost."""
 
     MODULE_NAME = "EgressProcessorTests"
     PRIORITY = 1
@@ -131,7 +131,7 @@ class EgressProcessorTests(ScheduledModuleThread, InternalMsgQ):
             self._scheduler.enter(1, self._priority, self.run, ())
 
     def _read_config(self):
-        """Configure the messaging exchange with defaults available"""
+        """Configure the messaging exchange with defaults available."""
         try:
             self._signature_user = Conf.get(SSPL_TEST_CONF,
                                             f"{self.PROCESSOR}>{self.SIGNATURE_USERNAME}",
@@ -184,7 +184,7 @@ class EgressProcessorTests(ScheduledModuleThread, InternalMsgQ):
             self._jsonMsg["signature"] = "SecurityLibNotInstalled"
 
     def _transmit_msg_on_exchange(self):
-        """Transmit json message onto messaging exchange"""
+        """Transmit json message onto messaging exchange."""
         self._log_debug(
             "_transmit_msg_on_exchange, jsonMsg: %s" % self._jsonMsg)
 

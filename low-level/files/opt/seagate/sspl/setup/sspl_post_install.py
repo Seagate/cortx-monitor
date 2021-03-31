@@ -122,7 +122,6 @@ class SSPLPostInstall:
             "python36-gobject": "3.22.0",
             "python36-paramiko": "2.1.1",
             "python36-psutil": "5.6.7",
-            "rabbitmq-server": "3.8.9",
             "shadow-utils": "4.6",
             "smartmontools": "7.0",
             "systemd-python36": "1.0.0",

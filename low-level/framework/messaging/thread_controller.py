@@ -34,8 +34,6 @@ from framework.base.sspl_constants import (SSPL_SETTINGS, OperatingSystem,
                                            enabled_products,
                                            sspl_settings_configured_groups)
 from framework.messaging.logging_processor import LoggingProcessor
-from framework.messaging.plane_cntrl_rmq_egress_processor import \
-    PlaneCntrlRMQegressProcessor
 # Import modules to control
 from framework.messaging.egress_processor import \
     EgressProcessor
@@ -50,7 +48,6 @@ from message_handlers.logging_msg_handler import LoggingMsgHandler
 from message_handlers.node_controller_msg_handler import \
     NodeControllerMsgHandler
 from message_handlers.node_data_msg_handler import NodeDataMsgHandler
-from message_handlers.plane_cntrl_msg_handler import PlaneCntrlMsgHandler
 from message_handlers.real_stor_actuator_msg_handler import \
     RealStorActuatorMsgHandler
 from message_handlers.real_stor_encl_msg_handler import RealStorEnclMsgHandler
@@ -273,11 +270,11 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
         elif thread_request == "start":
             self._start_module(module_name)
         elif thread_request == "stop":
-            # Don't let the outside world stop us from using RabbitMQ connection or shut down this thread
+            # Don't let the outside world stop us or shut down this thread
             if module_name == "EgressProcessor" or \
                 module_name == "IngressProcessor" or \
                 module_name == "ThreadController":
-                    logger.warn("Attempt to stop RabbitMQ or ThreadController Processors, \
+                    logger.warn("Attempt to stop message processors or ThreadController Processors, \
                                     ignoring. Please try 'restart' instead.")
                     return
             self._stop_module(module_name)

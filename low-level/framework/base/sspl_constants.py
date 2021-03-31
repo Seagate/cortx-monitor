@@ -211,11 +211,6 @@ if SSPL_STORE_TYPE == 'consul':
             "password" : "controller/secret",
             "mgmt_interface" : "controller/mgmt_interface"
         },
-        "MESSAGINGCLUSTER": {
-            "sspl_key" : "key_provided_by_provisioner",
-            "cluster_nodes" : "rabbitmq/cluster_nodes",
-            "erlang_cookie" : "rabbitmq/erlang_cookie"
-        },
         "BMC": {
             "sspl_key" : "key_provided_by_provisioner",
             f"ip_{node_key_id}" : f"{node_key_id}/ip",
@@ -248,11 +243,6 @@ else:
             "user" : "user",
             "password" : "password",
             "mgmt_interface" : "mgmt_interface"
-        },
-        "MESSAGINGCLUSTER": {
-            "sspl_key" : "key_provided_by_provisioner",
-            "cluster_nodes" : "cluster_nodes",
-            "erlang_cookie" : "erlang_cookie"
         },
         "BMC": {
             "sspl_key" : "key_provided_by_provisioner",
