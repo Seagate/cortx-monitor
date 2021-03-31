@@ -58,7 +58,7 @@ class SSPLPrepare:
             "server_node>%s>type" % machine_id)
         cluster_id = Utility.get_config_value(PRVSNR_CONFIG_INDEX,
             "server_node>%s>cluster_id" % machine_id)
-        if node_type.lower() != "vm":
+        if node_type.lower() not in ["virtual", "vm"]:
             bmc_ip = Utility.get_config_value(PRVSNR_CONFIG_INDEX,
                 "server_node>%s>bmc>ip" % machine_id)
             bmc_user = Utility.get_config_value(PRVSNR_CONFIG_INDEX,
@@ -91,7 +91,7 @@ class SSPLPrepare:
             "server_node>%s>network>data>public_fqdn" % machine_id)
 
         # Validate BMC & Storage controller accessibility
-        if node_type.lower() != "vm":
+        if node_type.lower() not in ["virtual", "vm"]:
             BmcV().validate('accessible', [socket.getfqdn(), bmc_ip, bmc_user, bmc_passwd])
             c_validator = ControllerV()
             c_validator.validate("accessible", [primary_ip, cntrlr_user, cntrlr_passwd])

@@ -34,6 +34,7 @@ import subprocess
 import site
 import importlib
 import tarfile
+import time
 
 localhost_fqdn = socket.getfqdn()
 SSPL_BASE_DIR = "/opt/seagate/cortx/sspl"
@@ -67,11 +68,11 @@ class SSPLDevDeploy:
                           "/last_successful_prod/")
         self.target_build = None
         self.rpms_path = None
-        self.nodes = None
+        self.nodes = {localhost_fqdn}
         self.message_broker = "kafka"
         self.variable_file = None
         self.deploy_type = "1-node"
-        self.utils_config = None
+        self.utils_config = "/etc/cortx/utils.yaml"
         self.temp_dir = "%s/conf/temp" % SSPL_BASE_DIR
         self.machine_id = None
         with open("/etc/machine-id") as f:
@@ -89,7 +90,10 @@ class SSPLDevDeploy:
         if self.args.local_rpms_path:
             self.rpms_path = self.args.local_rpms_path
         if self.args.nodes:
-            self.nodes = self.args.nodes.split(",")
+            nodes = self.args.nodes.strip().split(",")
+            for node in nodes:
+                self.nodes.add(node)
+            self.nodes = sorted(self.nodes)
         if self.args.variable_file:
             self.variable_file = self.args.variable_file
         if self.args.message_broker:
@@ -98,17 +102,24 @@ class SSPLDevDeploy:
             self.storage_type = self.args.storage_type
         if self.args.server_type:
             self.server_type = self.args.server_type
-        if not self.nodes or len(self.nodes) == 1:
+        if len(self.nodes) == 1:
             self.deploy_type = "1-node"
-        elif len(self.nodes) == 2:
-            self.deploy_type = "3-node"
-        else:
+        elif len(self.nodes) > 3:
             raise DeployError(1,
-                "Deploying on more than 3 node is not supported at this time.")
+                "Deploying on more than 3 node is not supported at this time. %s",
+                "Received: %s." % self.nodes)
+        else:
+            self.deploy_type = "3-node"
 
     def cleanup(self):
         """Stop sspl service and remove SSPL RPMS."""
         cmd = "systemctl stop sspl-ll.service"
+        self._execute_cmd(cmd)
+        cmd = "systemctl stop kafka.service"
+        self._execute_cmd(cmd)
+        cmd = "systemctl stop zookeeper.service"
+        self._execute_cmd(cmd)
+        cmd = "rm -rf /tmp/kafka-logs /opt/kafka /var/lib/zookeeper /var/lib/kafka-logs"
         self._execute_cmd(cmd)
         cmd = "yum --setopt=tsflags=noscripts erase -y cortx-sspl.noarch"
         out, rc = self._execute_cmd(cmd)
@@ -209,7 +220,6 @@ class SSPLDevDeploy:
         if self.message_broker == "kafka":
             self.setup_kafka()
         # Prepare utils config
-        self.utils_config = "/etc/cortx/utils.yaml"
         utils_index = "utils"
         with open(self.utils_config, "w") as f:
             f.write("")
@@ -234,19 +244,89 @@ class SSPLDevDeploy:
         tar = tarfile.open(f"/tmp/kafka_{kafka_version}.tgz")
         tar.extractall("/opt/kafka")
         tar.close()
-        r = urllib.request.urlopen(f"{file_path}/zookeeper.service")
-        with open("/etc/systemd/system/zookeeper.service", "wb") as f:
-            shutil.copyfileobj(r, f)
-        r = urllib.request.urlopen(f"{file_path}/kafka.service")
-        with open("/etc/systemd/system/kafka.service", "wb") as f:
-            shutil.copyfileobj(r, f)
-        self._execute_cmd("systemctl enable zookeeper.service")
-        self._execute_cmd("systemctl enable kafka.service")
-        self._execute_cmd("systemctl daemon-reload")
-        self._execute_cmd("systemctl start zookeeper.service")
-        self._execute_cmd("systemctl start kafka.service")
+        # Configure cluster
+        if len(self.nodes) > 1:
+            cmd = "systemctl enable firewalld"
+            self._execute_cmd(cmd)
+            cmd = "systemctl start firewalld"
+            self._execute_cmd(cmd)
+            for port in range(2889, 2889 + len(self.nodes)):
+                cmd = "firewall-cmd --add-port=%s/tcp --permanent" % port
+                self._execute_cmd(cmd)
+            # Set zookeeper property
+            zk_prop_file = "/opt/kafka/kafka_2.13-2.7.0/config/zookeeper.properties"
+            zk_data_dir = "/var/lib/zookeeper"
+            os.makedirs(zk_data_dir, exist_ok=True)
+            zk_cluster_config = {
+                "tickTime": "2000",
+                "initLimit": "10",
+                "syncLimit": "5",
+                "dataDir": "%s" % zk_data_dir,
+                "clientPort": "2181",
+                "autopurge.snapRetainCount": "3",
+                "autopurge.purgeInterval": "24"
+            }
+            node_ids = {fqdn:myid for myid, fqdn in enumerate(self.nodes, 1)}
+            for fqdn, myid in node_ids.items():
+                zk_cluster_config.update({"server.%s" % myid: "%s:2888:3888" % fqdn})
+                if fqdn in localhost_fqdn:
+                    with open("%s/myid" % zk_data_dir, "w") as f:
+                        f.write(str(myid))
+            self.update_property_file(zk_prop_file, zk_cluster_config)
+            r = urllib.request.urlopen(f"{file_path}/zookeeper.service")
+            with open("/etc/systemd/system/zookeeper.service", "wb") as f:
+                shutil.copyfileobj(r, f)
+            self._execute_cmd("systemctl enable zookeeper.service")
+            self._execute_cmd("systemctl daemon-reload")
+            self._execute_cmd("systemctl start zookeeper.service")
+            # set kafka property
+            kafka_prop_file = "/opt/kafka/kafka_2.13-2.7.0/config/server.properties"
+            kafka_log_dir = "/var/lib/kafka-logs"
+            os.makedirs(kafka_log_dir, exist_ok=True)
+            cluster = ["%s:2181" % node for node in self.nodes]
+            cluster = ",".join(cluster)
+            k_cluster_config = {
+                "log.dirs": "%s" % kafka_log_dir,
+                "broker.id": "%s" % node_ids[localhost_fqdn],
+                "zookeeper.connect": "%s" % cluster
+            }
+            self.update_property_file(kafka_prop_file, k_cluster_config)
+            r = urllib.request.urlopen(f"{file_path}/kafka.service")
+            with open("/etc/systemd/system/kafka.service", "wb") as f:
+                shutil.copyfileobj(r, f)
+            self._execute_cmd("systemctl enable kafka.service")
+            self._execute_cmd("systemctl daemon-reload")
+            self._execute_cmd("systemctl start kafka.service")
+        else:
+            r = urllib.request.urlopen(f"{file_path}/zookeeper.service")
+            with open("/etc/systemd/system/zookeeper.service", "wb") as f:
+                shutil.copyfileobj(r, f)
+            r = urllib.request.urlopen(f"{file_path}/kafka.service")
+            with open("/etc/systemd/system/kafka.service", "wb") as f:
+                shutil.copyfileobj(r, f)
+            self._execute_cmd("systemctl enable zookeeper.service")
+            self._execute_cmd("systemctl enable kafka.service")
+            self._execute_cmd("systemctl daemon-reload")
+            self._execute_cmd("systemctl start zookeeper.service")
+            self._execute_cmd("systemctl start kafka.service")
         os.remove(f"/tmp/kafka_{kafka_version}.tgz")
         print("INFO: Done kafka setup.")
+
+    def update_property_file(self, prop_file, cluster_config):
+        """Set values for required key in the property file"""
+        with open(prop_file) as f:
+            properties = f.read()
+        for k, v in cluster_config.items():
+            matched_str = re.search("(%s.*=)(.*)" % k, properties)
+            if not matched_str:
+                with open(prop_file, "a+") as f:
+                    f.writelines(["%s=%s\n" % (k, v)])
+            else:
+                with open(prop_file) as f:
+                    content = f.read()
+                content = content.replace(matched_str.group(), f"{k}={v}")
+                with open(prop_file, "w") as f:
+                    f.write(content)
 
     def create_config(self, variable_file, config_files):
         """Override template varibales by values from input file."""
@@ -282,7 +362,7 @@ class SSPLDevDeploy:
                 Conf.set(tmp_index, "storage_enclosure>%s>type" % enclosure_id, self.storage_type)
                 Conf.save(tmp_index)
 
-    def setup_sspl(self):
+    def initialize_sspl(self):
         """Initialize SSPL service."""
         # Override template varibales by values from input file
         post_install_tmpl = "%s/conf/sspl.post-install.tmpl.%s" % (SSPL_BASE_DIR, self.deploy_type)
@@ -290,7 +370,9 @@ class SSPLDevDeploy:
         config_tmpl = "%s/conf/sspl.config.tmpl.%s" % (SSPL_BASE_DIR, self.deploy_type)
         init_tmpl = "%s/conf/sspl.init.tmpl.%s" % (SSPL_BASE_DIR, self.deploy_type)
         tmpl_files = [post_install_tmpl, prepare_tmpl, config_tmpl, init_tmpl]
-        os.makedirs(self.temp_dir)
+        if os.path.exists(self.temp_dir):
+            os.system("rm -rf %s", self.temp_dir)
+        os.mkdir(self.temp_dir)
         post_install_config = "%s/post-install.%s" % (self.temp_dir, self.deploy_type)
         prepare_config = "%s/prepare.%s" % (self.temp_dir, self.deploy_type)
         config_config = "%s/config.%s" % (self.temp_dir, self.deploy_type)
@@ -342,26 +424,37 @@ def main(args):
     """Main method to start SSPL deployment."""
     deploy = SSPLDevDeploy(args)
     deploy.parse_args()
-    if args.setup_repo:
-        deploy.setup_yum_repos()
-        return
     if args.cleanup:
         deploy.cleanup()
         return
-    try:
-        print("=======================")
-        print("INFO: Deploying SSPL...")
-        print("=======================")
-        deploy.install_dependencies()
-        deploy.install_sspl_rpms()
-        deploy.setup_message_broker()
-        deploy.setup_sspl()
-    except:
-        print("---DeployError---")
-        traceback.print_exc()
-        print("ERROR: Deployment is failed.")
-    else:
-        print("INFO: Deployment is successful !!")
+    if args.setup:
+        try:
+            deploy.setup_yum_repos()
+            deploy.install_dependencies()
+            deploy.setup_message_broker()
+            print("INFO: Setup is done.")
+        except Exception as err:
+            print("ERROR: %s" % err)
+            print("ERROR: Setup is failed.")
+        else:
+            return
+    if args.deploy:
+        try:
+            print("=======================")
+            print("INFO: Deploying SSPL...")
+            print("=======================")
+            if not args.variable_file:
+                raise Exception("sspl_dev_deploy requires variable config file.")
+            deploy.install_sspl_rpms()
+            deploy.initialize_sspl()
+            print("INFO: Deployment is successful !!")
+        except Exception as err:
+            print("---DeployError---")
+            print("ERROR: %s" % err)
+            #traceback.print_exc()
+            print("ERROR: Deployment is failed.")
+        else:
+            return
 
 
 if __name__ == '__main__':
@@ -370,8 +463,12 @@ if __name__ == '__main__':
         formatter_class=argparse.RawDescriptionHelpFormatter,
         description=description,
         add_help=True, allow_abbrev=False)
-    argParser.add_argument("--setup_repo", action="store_true",
-                           help="Setup yum repos")
+    # cleanup arg
+    argParser.add_argument("--cleanup", action="store_true",
+                           help="Stop sspl-ll and remove installed SSPL RPMs")
+    # Setup args
+    argParser.add_argument("--setup", action="store_true",
+                           help="Setup yum repos and message broker")
     argParser.add_argument("-L", "--local_rpms_path", default="",
                            help="Local RPMS location")
     argParser.add_argument("-T", "--target_build_url", default="", help="Target "
@@ -383,10 +480,11 @@ if __name__ == '__main__':
     argParser.add_argument("-N", "--nodes", help="Nodes to create cluster")
     argParser.add_argument("-M", "--message_broker", help="Currently we support only 'kafka'",
                            default="kafka")
+    # Deploy args
+    argParser.add_argument("--deploy", action="store_true",
+                           help="Flag to start deployment")
     argParser.add_argument("--variable_file", help="Holds input values to templates")
     argParser.add_argument("--storage_type", help="Set storage type at config stage.")
     argParser.add_argument("--server_type", help="Set server type at config stage.")
-    argParser.add_argument("--cleanup", action="store_true",
-                           help="Stop sspl-ll and remove installed SSPL RPMs")
     args = argParser.parse_args()
     main(args)

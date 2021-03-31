@@ -8,11 +8,17 @@ cluster:
     - name: StorageSet-1
       server_nodes:
       - TMPL_NODE_NAME_1
-      - TMPL_NODE_NAME_2
-      - TMPL_NODE_NAME_3
       storage_enclosures:
       - TMPL_ENCLOSURE_NAME_1
+    - name: StorageSet-2
+      server_nodes:
+      - TMPL_NODE_NAME_2
+      storage_enclosures:
       - TMPL_ENCLOSURE_NAME_2
+    - name: StorageSet-3
+      server_nodes:
+      - TMPL_NODE_NAME_3
+      storage_enclosures:
       - TMPL_ENCLOSURE_NAME_3
 cortx:
   release:
@@ -64,7 +70,7 @@ server_node:
       management:
         interfaces:
         - TMPL_MGMT_INTERFACE_2
-        public_fqdn: TMPL_MGMT_PUBLIC_INTERFACE_2
+        public_fqdn: TMPL_MGMT_PUBLIC_FQDN_2
     node_id: TMPL_NODE_ID_2
     rack_id: TMPL_RACK_ID_2
     site_id: TMPL_SITE_ID_2
