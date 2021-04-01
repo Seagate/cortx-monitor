@@ -39,6 +39,7 @@ from framework.utils.conf_utils import (GLOBAL_CONF, CLUSTER, SRVNODE, SITE_ID,
                 RACK_ID, NODE_ID, SSPL_CONF, CLUSTER_ID, Conf)
 from framework.utils.severity_reader import SeverityReader
 from framework.utils.mon_utils import get_alert_id
+from framework.utils.iem import Iem
 from framework.base.module_thread import ThreadException
 
 @implementer(ISystemMonitor)
@@ -98,6 +99,8 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
 
         # Initialize internal message queues for this module
         super(ServiceMonitor, self).initialize_msgQ(msgQlist)
+
+        self.iem = Iem()
 
         # Integrate into the main dbus loop to catch events
         DBusGMainLoop(set_as_default=True)
@@ -482,6 +485,16 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
                 }
             }
         }
+        if service == "kafka.service" and alert_type == "fault":
+            severity = self.iem.Severity["ERROR"]
+            iec = self.iem.EVENT_CODE["KAFKA_NOT_ACTIVE"]
+            description = self.iem.EVENT_STRING[iec][0]
+            self.iem.generate_iem(severity, iec, description)
+        elif service == "kafka.service" and alert_type == "fault_resolved":
+            severity = self.iem.Severity["INFO"]
+            iec = self.iem.EVENT_CODE["KAFKA_ACTIVE"]
+            description = self.iem.EVENT_STRING[iec][0]
+            self.iem.generate_iem(severity, iec, description)
         self._write_internal_msgQ(ServiceMsgHandler.name(), alert_msg)
 
     def suspend(self):

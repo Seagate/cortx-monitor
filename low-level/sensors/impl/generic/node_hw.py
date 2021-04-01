@@ -43,6 +43,7 @@ from framework.utils.config_reader import ConfigReader
 from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
 from framework.utils.store_factory import file_store
+from framework.utils.iem import Iem
 from message_handlers.logging_msg_handler import LoggingMsgHandler
 from message_handlers.node_data_msg_handler import NodeDataMsgHandler
 from sensors.INode_hw import INodeHWsensor
@@ -253,6 +254,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         self._bmc_user = Conf.get(GLOBAL_CONF, BMC_USER_KEY, 'ADMIN')
         _bmc_secret = Conf.get(GLOBAL_CONF, BMC_SECRET_KEY, 'ADMIN')
         self._bmc_ip = Conf.get(GLOBAL_CONF, BMC_IP_KEY, '')
+
         self._channel_interface = Conf.get(SSPL_CONF,
             f"{self.BMC_INTERFACE}>{self.BMC_CHANNEL_IF}", 'system')
         # Decrypt bmc secret
@@ -260,7 +262,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
             ServiceTypes.SERVER_NODE.value)
         self.__bmc_passwd = encryptor.decrypt(decryption_key,
             _bmc_secret, self.SENSOR_NAME)
-
+        self.iem = Iem()
         data_dir =  Conf.get(SSPL_CONF, f"{self.SYSINFO}>{self.DATA_PATH_KEY}", self.DATA_PATH_VALUE_DEFAULT)
         self.cache_dir_path = os.path.join(data_dir, self.CACHE_DIR_NAME)
 
@@ -573,11 +575,21 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
                     resstr = b''.join([val for val in res if val])
                     resstr = resstr.decode(self.IPMI_ENCODING)
                     if resstr.find(self.IPMI_ERRSTR) == 0:
-                        logger.error(f"{self.SENSOR_NAME}: {ipmi_tool} error:: {resstr}\n \
-                            Dependencies failed, shutting down sensor")
+                        logger.error(f"{self.SENSOR_NAME}: {ipmi_tool} \
+                            error:: {resstr}\n Dependencies failed, \
+                            shutting down sensor")
+                        severity = self.iem.Severity["ERROR"]
+                        iec = self.iem.EVENT_CODE["IPMITOOL_ERROR"]
+                        description = self.iem.EVENT_STRING[iec][0]
+                        self.iem.generate_iem(severity, iec, description)
                         self.request_shutdown = True
             elif (retcode == BASH_ILLEGAL_CMD):
-                logger.error(f"{self.SENSOR_NAME}: Required ipmitool missing on Node. Dependencies failed, shutting down sensor")
+                logger.error(f"{self.SENSOR_NAME}: Required ipmitool missing \
+                    on Node. Dependencies failed, shutting down sensor")
+                severity = self.iem.Severity["ERROR"]
+                iec = self.iem.EVENT_CODE["IPMITOOL_UNAVAILABLE"]
+                description = self.iem.EVENT_STRING[iec][0]
+                self.iem.generate_iem(severity, iec, description)
                 self.request_shutdown = True
 
         if grep_args is not None and retcode == 0 and isinstance(res, tuple):

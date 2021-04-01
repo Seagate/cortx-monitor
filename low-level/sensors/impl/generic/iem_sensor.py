@@ -40,7 +40,7 @@ from framework.utils.conf_utils import (CLUSTER_ID_KEY, GLOBAL_CONF, NODE_ID_KEY
 from framework.utils.service_logging import logger
 from json_msgs.messages.sensors.iem_data import IEMDataMsg
 from framework.messaging.egress_processor import EgressProcessor
-
+from framework.utils.iem import Iem
 
 class IEMSensor(SensorThread, InternalMsgQ):
     """Monitors Rsyslog for IEMs"""
@@ -214,6 +214,8 @@ class IEMSensor(SensorThread, InternalMsgQ):
     def _send_msg(self, iem_components, log_timestamp):
         """Creates JSON message from iem components and sends to message bus.
         """
+        impact = "NA"
+        recommendation = "NA"
         # IEM format is IEC:DESCRIPTION
         # IEC format is SEVERITY|SOURCEID|COMPONENTID|MODULEID|EVENTID
         # Field lengths ----1---|---1----|------3----|----3---|---4---
@@ -248,6 +250,12 @@ class IEMSensor(SensorThread, InternalMsgQ):
         if not self._are_components_in_range(**args):
             return
 
+        # component-id for sspl=005
+        if component_id == "005":
+            event_code = component_id + module_id + event_id
+            impact = Iem().EVENT_STRING[event_code][1]
+            recommendation = Iem().EVENT_STRING[event_code][2]
+
         # Update severity and source_id
         alert_type = iem_severity_to_alert_mapping.get(severity)
         severity = iem_severity_types.get(severity, severity)
@@ -267,6 +275,8 @@ class IEMSensor(SensorThread, InternalMsgQ):
             "event_id": event_id,
             "severity": severity,
             "description": description,
+            "impact": impact,
+            "recommendation": recommendation,
             "alert_type": alert_type,
             "event_time": event_time,
             "IEC": "".join(iem_components[:-1])

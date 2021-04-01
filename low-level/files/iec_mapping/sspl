@@ -1,0 +1,8 @@
+0050010001,Ipmitool,Ipmitool command is not working
+0050010002,Ipmitool,Ipmitool is not installed
+0050010003,Hdparm,Hdparm command is not working
+0050010004,Hdparm,Hdparm is not installed
+0050010005,Smartcmontool,Smartctl command is not working
+0050010006,Udisks2,Udisks is not installed
+0050020001,Kafka,Kafka service is not in active state
+0050020002,Kafka,Kafka service is in active state
