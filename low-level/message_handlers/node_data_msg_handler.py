@@ -21,11 +21,12 @@
 
 import json
 import time
+import os
 
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
-from framework.base.sspl_constants import enabled_products, COMMON_CONFIGS
+from framework.base.sspl_constants import enabled_products, COMMON_CONFIGS, DATA_PATH
 
 from json_msgs.messages.sensors.host_update import HostUpdateMsg
 from json_msgs.messages.sensors.local_mount_data import LocalMountDataMsg
@@ -40,6 +41,10 @@ from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 
 from message_handlers.logging_msg_handler import LoggingMsgHandler
 from framework.utils.severity_reader import SeverityReader
+from framework.utils.store_factory import file_store
+
+# Override default store
+store = file_store
 
 class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
     """Message Handler for generic node requests and generating
@@ -83,6 +88,8 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
     FAULT_RESOLVED = "fault_resolved"
 
     INTERFACE_FAULT_DETECTED = False
+
+    CACHE_DIR_NAME  = "server"
 
     # Dependency list
     DEPENDENCIES = {
@@ -156,10 +163,8 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                                                 self.SYSTEM_INFORMATION,
                                                 self.CLUSTER_ID,
                                                 '0')
-        self.prev_nw_status = {}
         self.bmcNwStatus = None
         self.severity_reader = SeverityReader()
-        self.prev_cable_cnxns = {}
         self._node_sensor    = None
         self._login_actuator = None
         self.disk_sensor_data = None
@@ -179,10 +184,6 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             "raid_data" : self.raid_sensor_data
         }
 
-        # Dir to maintain fault detected state for interface
-        # in case of cable fault detection
-        self.interface_fault_state = {}
-
         # UUID used in json msgs
         self._uuid = None
 
@@ -193,6 +194,26 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         self._drive_byid_by_serial_number = {}
 
         self._import_products(product)
+        cache_dir_path = os.path.join(DATA_PATH, self.CACHE_DIR_NAME)
+        self.NW_SENSOR_DATA_PATH = os.path.join(cache_dir_path, f'NW_SENSOR_DATA_{self.node_id}')
+        # Get the stored previous alert info
+        self.persistent_nw_data = store.get(self.NW_SENSOR_DATA_PATH)
+        if self.persistent_nw_data is None:
+            self.prev_nw_status = {}
+            self.prev_cable_cnxns = {}
+            # Dir to maintain fault detected state for interface
+            # in case of cable fault detection
+            self.interface_fault_state = {}
+            persistent_nw_data = {
+                'prev_nw_status' : self.prev_nw_status,
+                'prev_cable_cnxns' : self.prev_cable_cnxns,
+                'interface_fault_state' : self.interface_fault_state
+            }
+            store.put(persistent_nw_data, self.NW_SENSOR_DATA_PATH)
+        else:
+            self.prev_nw_status = self.persistent_nw_data.get('prev_nw_status', {})
+            self.prev_cable_cnxns = self.persistent_nw_data.get('prev_cable_cnxns', {})
+            self.interface_fault_state = self.persistent_nw_data.get('interface_fault_state', {})
 
     def _import_products(self, product):
         """Import classes based on which product is being used"""
@@ -602,6 +623,12 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
         # Transmit it out over rabbitMQ channel
         self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
+        persistent_nw_data = {
+            'prev_nw_status' : self.prev_nw_status,
+            'prev_cable_cnxns' : self.prev_cable_cnxns,
+            'interface_fault_state' : self.interface_fault_state
+        }
+        store.put(persistent_nw_data, self.NW_SENSOR_DATA_PATH)
 
     def _generate_if_data(self):
         """Create & transmit a network interface data message as defined
