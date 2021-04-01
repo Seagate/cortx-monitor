@@ -26,6 +26,7 @@ SSPL_STORE_TYPE=confstor
 
 plan=${1:-}
 avoid_rmq=${2:-}
+coverage_enabled=${3:-}
 
 sspl_config=yaml://$SSPL_CONFIG_FILE
 sspl_test_config=yaml://$SSPL_TEST_CONFIG_FILE
@@ -273,6 +274,11 @@ fi
 
 if [ "$IS_VIRTUAL" == "true" ]
 then
+    echo "Coverage enabled : $coverage_enabled"
+    if [ "$coverage_enabled" == "True" ]
+    then
+        $sudo sh $script_dir/coverage/start_sspl_coverage.sh
+    fi
     # consume all alerts before SSPL restarts. So sspl_start_checker
     # waits till SSPL initialized, if previous alerts are availble,
     # sspl_start_checker will use those and test cases will be executed
