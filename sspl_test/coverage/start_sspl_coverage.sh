@@ -1,8 +1,4 @@
-#! /bin/sh
-
-echo "Stopping sspl-ll.service for enabling code coverage"
-systemctl stop sspl-ll.service
-
+ #! /bin/sh
 echo "Checking and installing coverage.py"
 pip3_status=$(which pip3)
 pip_status=$(which pip)
@@ -26,7 +22,7 @@ copy_lines() {
         str=`sed $((line_num))!d $cov_code_dir/coverage_code`; fix='\';
         str="${fix}${str}";
         curr_line=$((curr_line+1));
-        echo $curr_line $str;
+        # echo $curr_line $str;
         sed -i "$curr_line i $str" $target_dir/sspl_ll_d_coverage;
     done    
 }
@@ -43,15 +39,13 @@ copy_lines 10 24
 curr_line=`grep -n "#DO NOT EDIT: Marker comment to dynamically add signal handler for SIGUSR1 to generate code coverage report" $target_dir/sspl_ll_d_coverage | cut -d : -f1`
 copy_lines 25 25
 
-echo "Changing existing sspl_ll_d file and adding permission for /tmp/sspl/ folder"
+echo "Changing existing sspl_ll_d file and adding permission for /var/cortx/sspl/ folder"
 sudo mv $target_dir/sspl_ll_d $target_dir/sspl_ll_d.back
 sudo mv $target_dir/sspl_ll_d_coverage $target_dir/sspl_ll_d
 
-chmod 777 /tmp/sspl/* 
-chown sspl-ll:sspl-ll /tmp/sspl/ -R
 
-echo "Starting the sspl-ll.service back.."
-systemctl start sspl-ll.service
+chmod 755 /var/cortx/sspl/* 
+chown sspl-ll:sspl-ll /var/cortx/sspl/ -R
 
-echo "Environment is set for testing.. "
-echo "Please execute stop_sspl_coverage.sh after testing so that coverage report is generated."
+# chmod 755 $target_dir/sspl_ll_d 
+# chown sspl-ll:sspl-ll $target_dir/sspl_ll_d

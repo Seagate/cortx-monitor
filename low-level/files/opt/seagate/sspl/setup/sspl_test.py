@@ -39,6 +39,8 @@ class SSPLTestCmd:
         self.name = "sspl_test"
         self.plan = "self"
         self.avoid_rmq = False
+        self.coverage_enabled = \
+            True if "--coverage" in self.args.args else False
         self.dbus_service = DbusServiceHandler()
         if args.config and args.config[0]:
             self.sspl_test_gc_url = args.config[0]
