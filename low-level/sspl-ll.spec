@@ -118,7 +118,7 @@ fi
 
 if [ "$1" = "1" ]; then
     echo "Installation complete. Follow the instructions."
-    echo "Run SSPL mini provisioner commands (post_install, config, init)"
+    echo "Run SSPL mini provisioner commands (post_install, prepare, config, init)"
     echo "Start sspl-ll service."
 fi
 

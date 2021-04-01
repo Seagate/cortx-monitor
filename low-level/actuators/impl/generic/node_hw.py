@@ -26,10 +26,9 @@ import json
 from actuators.impl.actuator import Actuator
 from framework.base.debug import Debug
 from framework.utils.service_logging import logger
-from framework.base.sspl_constants import (AlertTypes, SensorTypes,
-                                           SeverityTypes, COMMON_CONFIGS)
+from framework.base.sspl_constants import AlertTypes, SensorTypes, SeverityTypes
 from framework.utils.conf_utils import (Conf, GLOBAL_CONF, SITE_ID_KEY,
-                                        RACK_ID_KEY, NODE_ID_KEY)
+    RACK_ID_KEY, NODE_ID_KEY)
 
 
 class NodeHWactuator(Actuator, Debug):

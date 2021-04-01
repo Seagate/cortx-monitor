@@ -20,7 +20,6 @@ import errno
 import socket
 
 # using cortx package
-from cortx.utils.conf_store import Conf
 from cortx.utils.process import SimpleProcess
 from cortx.utils.security.cipher import Cipher
 from cortx.utils.validator.v_bmc import BmcV
@@ -90,9 +89,9 @@ class SSPLPrepare:
         data_public_fqdn = Utility.get_config_value(PRVSNR_CONFIG_INDEX,
             "server_node>%s>network>data>public_fqdn" % machine_id)
 
-        # Validate BMC & Storage controller accessibility
+        # Validate BMC connectivity & storage controller accessibility
         if node_type.lower() not in ["virtual", "vm"]:
-            BmcV().validate('accessible', [socket.getfqdn(), bmc_ip, bmc_user, bmc_passwd])
+            NetworkV().validate("connectivity", [bmc_ip])
             c_validator = ControllerV()
             c_validator.validate("accessible", [primary_ip, cntrlr_user, cntrlr_passwd])
             c_validator.validate("accessible", [secondary_ip, cntrlr_user, cntrlr_passwd])
@@ -112,8 +111,8 @@ class SSPLPrepare:
 
     def validate_nw_cable_connection(self, interfaces):
         """Check network interface links are up.
-        carrier:0 - link down
-        carrier:1 - link up
+        0 - Cable disconnected
+        1 - Cable connected
         """
         if not isinstance(interfaces, list):
             raise SetupError(errno.EINVAL, "%s - validation failure. %s",
@@ -124,7 +123,7 @@ class SSPLPrepare:
             output = output.decode().strip()
             if output == "0":
                 raise SetupError(errno.EINVAL, "%s - validation failure. %s",
-                    self.name, "Network interface %s is down." % interface)
+                    self.name, "Network interface cable is disconnected - %s." % interface)
 
     def validate_nw_interfaces(self):
         """Check network intefaces are up."""

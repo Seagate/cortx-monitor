@@ -39,7 +39,7 @@ from framework.utils.sysfs_interface import SysFS
 from framework.utils.tool_factory import ToolFactory
 from framework.base.sspl_constants import PRODUCT_FAMILY , DATA_PATH
 from framework.utils.conf_utils import (GLOBAL_CONF, SRVNODE,
-    Conf, STORAGE_TYPE_KEY, NODE_TYPE_KEY, TYPE, SITE_ID_KEY, RACK_ID_KEY,
+    Conf, STORAGE_TYPE_KEY, NODE_TYPE_KEY, SITE_ID_KEY, RACK_ID_KEY,
     NODE_ID_KEY, CLUSTER_ID_KEY, RELEASE, TARGET_BUILD)
 
 

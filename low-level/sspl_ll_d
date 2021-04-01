@@ -43,7 +43,7 @@ from framework.actuator_state_manager import actuator_state_manager
 from framework.base.module_thread import SensorThread
 from framework.base.sspl_constants import (COMMON_CONFIGS, PRODUCT_FAMILY,
     SSPL_SETTINGS, OperatingSystem, enabled_products,
-    sspl_settings_configured_groups)
+    sspl_settings_configured_groups, SYSLOG_HOST, SYSLOG_PORT)
 from framework.rabbitmq.logging_processor import LoggingProcessor
 from framework.rabbitmq.plane_cntrl_rmq_egress_processor import \
     PlaneCntrlRMQegressProcessor
@@ -58,11 +58,8 @@ from framework.rabbitmq.rabbitmq_ingress_processor import \
     RabbitMQingressProcessor
 from framework.rabbitmq.thread_controller import ThreadController
 from framework.utils.conf_utils import (GLOBAL_CONF, HOST, MONITOR,
-                                        OPERATING_SYSTEM, PORT, PRODUCT_KEY,
-                                        SYSLOG_HOST,
-                                        SYSLOG_PORT, SETUP_KEY,
-                                        SSPL_CONF, SYSTEM_INFORMATION,
-                                        THREADED, Conf, LOG_LEVEL)
+    OPERATING_SYSTEM, PORT, PRODUCT_KEY, SETUP_KEY, SSPL_CONF, SYSTEM_INFORMATION,
+    THREADED, Conf, LOG_LEVEL)
 from framework.utils.config_reader import ConfigReader
 from framework.utils.service_logging import init_logging, logger
 from framework.utils.store_factory import store
@@ -776,9 +773,7 @@ if __name__ == "__main__":
     # Initialize logging
     try:
         logging_level = Conf.get(SSPL_CONF, f"{SYSTEM_INFORMATION}>{LOG_LEVEL}", "INFO")
-        syslog_host = Conf.get(SSPL_CONF, f"{SYSTEM_INFORMATION}>{SYSLOG_HOST}")
-        syslog_port = int(Conf.get(SSPL_CONF, f"{SYSTEM_INFORMATION}>{SYSLOG_PORT}"))
-        init_logging("SSPL-LL", logging_level, syslog_host, syslog_port)
+        init_logging("SSPL-LL", logging_level, SYSLOG_HOST, SYSLOG_PORT)
 
     except Exception as err:
         # We don't have logger since it threw an exception, use generic 'print'

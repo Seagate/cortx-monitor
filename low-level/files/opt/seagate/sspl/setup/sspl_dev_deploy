@@ -96,6 +96,9 @@ class SSPLDevDeploy:
             self.nodes = sorted(self.nodes)
         if self.args.variable_file:
             self.variable_file = self.args.variable_file
+            if not os.path.exists(self.variable_file):
+                raise DeployError(1, "Variable file '%s' not found.",
+                    self.variable_file)
         if self.args.message_broker:
             self.message_broker = self.args.message_broker
         if self.args.storage_type:
@@ -308,7 +311,9 @@ class SSPLDevDeploy:
             self._execute_cmd("systemctl enable kafka.service")
             self._execute_cmd("systemctl daemon-reload")
             self._execute_cmd("systemctl start zookeeper.service")
+            self._execute_cmd("systemctl status zookeeper.service")
             self._execute_cmd("systemctl start kafka.service")
+            self._execute_cmd("systemctl status kafka.service")
         os.remove(f"/tmp/kafka_{kafka_version}.tgz")
         print("INFO: Done kafka setup.")
 

@@ -33,7 +33,6 @@ from cortx.utils.conf_store import Conf
 from cortx.utils.message_bus import MessageBus, MessageBusAdmin
 from cortx.utils.message_bus.error import MessageBusError
 from cortx.utils.process import SimpleProcess
-from cortx.utils.service import DbusServiceHandler
 from files.opt.seagate.sspl.setup.setup_error import SetupError
 from .conf_based_sensors_enable import update_sensor_info
 from framework.base import sspl_constants as consts
@@ -55,7 +54,7 @@ class SSPLConfig:
 
         1. Validate input configs
         2. Validate sspl conf is created
-        3. Message bus is accessible
+        3. Check if message bus is accessible
         """
         if os.geteuid() != 0:
             raise SetupError(errno.EINVAL,
@@ -63,7 +62,7 @@ class SSPLConfig:
 
         # Validate input/provisioner configs
         machine_id = Utility.get_machine_id()
-        cluster_id = Utility.get_config_value(consts.PRVSNR_CONFIG_INDEX,
+        Utility.get_config_value(consts.PRVSNR_CONFIG_INDEX,
             "server_node>%s>cluster_id" % machine_id)
         self.node_type = Utility.get_config_value(consts.PRVSNR_CONFIG_INDEX,
             "server_node>%s>type" % machine_id)

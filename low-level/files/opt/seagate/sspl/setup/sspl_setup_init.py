@@ -43,7 +43,7 @@ class SSPLInit:
     def validate(self):
         """Check for below requirement.
 
-        1. Validate sspl-ll user exists
+        1. Validate if sspl-ll user exists
         2. Validate input keys
         """
         # Check sspl-ll user exists
@@ -55,18 +55,18 @@ class SSPLInit:
         machine_id = Utility.get_machine_id()
         cluster_id = Utility.get_config_value(consts.PRVSNR_CONFIG_INDEX,
             "server_node>%s>cluster_id" % machine_id)
-        cluster_name = Utility.get_config_value(consts.PRVSNR_CONFIG_INDEX,
+        Utility.get_config_value(consts.PRVSNR_CONFIG_INDEX,
             "cluster>%s>name" % cluster_id)
-        site_count = int(Utility.get_config_value(consts.PRVSNR_CONFIG_INDEX,
-            "cluster>%s>site_count" % cluster_id))
+        Utility.get_config_value(consts.PRVSNR_CONFIG_INDEX,
+            "cluster>%s>site_count" % cluster_id)
         storage_set_count = int(Utility.get_config_value(consts.PRVSNR_CONFIG_INDEX,
             "cluster>%s>site>storage_set_count" % cluster_id))
         for i in range(storage_set_count):
-            storage_set_name = Utility.get_config_value(consts.PRVSNR_CONFIG_INDEX,
+            Utility.get_config_value(consts.PRVSNR_CONFIG_INDEX,
                 "cluster>%s>storage_set[%s]>name" % (cluster_id, i))
-            server_nodes = Utility.get_config_value(consts.PRVSNR_CONFIG_INDEX,
+            Utility.get_config_value(consts.PRVSNR_CONFIG_INDEX,
                 "cluster>%s>storage_set[%s]>server_nodes" % (cluster_id, i))
-            storage_enclosures = Utility.get_config_value(consts.PRVSNR_CONFIG_INDEX,
+            Utility.get_config_value(consts.PRVSNR_CONFIG_INDEX,
                 "cluster>%s>storage_set[%s]>storage_enclosures" % (cluster_id, i))
 
     def process(self):

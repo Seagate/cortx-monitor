@@ -27,8 +27,8 @@ SSPL_STORE_TYPE=confstor
 plan=${1:-}
 avoid_rmq=${2:-}
 
-sspl_config=yaml://$sspl_config_file
-sspl_test_config=yaml://$sspl_test_config_file
+sspl_config=yaml://$SSPL_CONFIG_FILE
+sspl_test_config=yaml://$SSPL_TEST_CONFIG_FILE
 global_config_url=`conf $sspl_config get "SYSTEM_INFORMATION>global_config_copy_url"`
 global_config=$(echo $global_config_url | tr -d "["\" | tr -d "\"]")
 
@@ -93,11 +93,11 @@ restore_cfg_services()
     # Restoring MC port to value stored before tests
     if [ "$SSPL_STORE_TYPE" == "file" ]
     then
-        port=$(sed -n -e '/primary_controller_port/ s/.*\: *//p' $sspl_config_file)
+        port=$(sed -n -e '/primary_controller_port/ s/.*\: *//p' $SSPL_CONFIG_FILE)
         if [ "$port" == "$MOCK_SERVER_PORT" ]
         then
-            sed -i 's/primary_controller_ip: '"$MOCK_SERVER_IP"'/primary_controller_ip: '"$primary_ip"'/g' $sspl_config_file
-            sed -i 's/primary_controller_port: '"$MOCK_SERVER_PORT"'/primary_controller_port: '"$primary_port"'/g' $sspl_config_file
+            sed -i 's/primary_controller_ip: '"$MOCK_SERVER_IP"'/primary_controller_ip: '"$primary_ip"'/g' $SSPL_CONFIG_FILE
+            sed -i 's/primary_controller_port: '"$MOCK_SERVER_PORT"'/primary_controller_port: '"$primary_port"'/g' $SSPL_CONFIG_FILE
         fi
         # Removing updated system information from sspl_tests.conf
         # This is required otherwise, everytime if we run sanity, key-value
@@ -168,7 +168,7 @@ flask_installed=$(python3.6 -c 'import pkgutil; print(1 if pkgutil.find_loader("
 [ "$PRODUCT_NAME" == "LDR_R1" ] && python3 $script_dir/put_config_to_consul.py
 
 # Take backup of original sspl.conf
-[[ -f $sspl_config_file ]] && $sudo cp $sspl_config_file ${sspl_config_file}.back
+[[ -f $SSPL_CONFIG_FILE ]] && $sudo cp $SSPL_CONFIG_FILE ${SSPL_CONFIG_FILE}.back
 #[[ -f $test_config_file ]] && $sudo cp $test_config_file ${test_config_file}.back
 [[ -f $global_config_file ]] && $sudo cp $global_config_file ${global_config_file}.back
 
@@ -189,14 +189,14 @@ then
         fi
     fi
 else
-    primary_ip=$(sed -n -e '/primary_controller_ip/ s/.*\: *//p' $sspl_config_file)
-    primary_port=$(sed -n -e '/primary_controller_port/ s/.*\: *//p' $sspl_config_file)
+    primary_ip=$(sed -n -e '/primary_controller_ip/ s/.*\: *//p' $SSPL_CONFIG_FILE)
+    primary_port=$(sed -n -e '/primary_controller_port/ s/.*\: *//p' $SSPL_CONFIG_FILE)
     if [ "$IS_VIRTUAL" == "true" ]
     then
         if [ "$primary_port" != "$MOCK_SERVER_PORT" ]
         then
-            sed -i 's/primary_controller_ip: '"$primary_ip"'/primary_controller_ip: '"$MOCK_SERVER_IP"'/g' $sspl_config_file
-            sed -i 's/primary_controller_port: '"$primary_port"'/primary_controller_port: '"$MOCK_SERVER_PORT"'/g' $sspl_config_file
+            sed -i 's/primary_controller_ip: '"$primary_ip"'/primary_controller_ip: '"$MOCK_SERVER_IP"'/g' $SSPL_CONFIG_FILE
+            sed -i 's/primary_controller_port: '"$primary_port"'/primary_controller_port: '"$MOCK_SERVER_PORT"'/g' $SSPL_CONFIG_FILE
         fi
     fi
 fi
@@ -236,16 +236,16 @@ then
     primary_controller_ip=`conf $global_config get "storage_enclosure>$encl_id>controller>primary>ip"`
     primary_controller_ip=$(echo $primary_controller_ip | tr -d "["\" | tr -d "\"]")
 else
-    transmit_interval=$(sed -n -e '/transmit_interval/ s/.*\: *//p' $sspl_config_file)
-    disk_usage_threshold=$(sed -n -e '/disk_usage_threshold/ s/.*\: *//p' $sspl_config_file)
-    host_memory_usage_threshold=$(sed -n -e '/host_memory_usage_threshold/ s/.*\: *//p' $sspl_config_file)
-    cpu_usage_threshold=$(sed -n -e '/cpu_usage_threshold/ s/.*\: *//p' $sspl_config_file)
-    rack_id=$(sed -n -e '/rack_id/ s/.*\: *//p' $sspl_config_file)
-    site_id=$(sed -n -e '/site_id/ s/.*\: *//p' $sspl_config_file)
-    node_id=$(sed -n -e '/node_id/ s/.*\: *//p' $sspl_config_file)
-    cluster_id=$(sed -n -e '/cluster_id/ s/.*\: *//p' $sspl_config_file)
-    cluster_nodes=$(sed -n -e '/cluster_nodes/ s/.*\: *//p' $sspl_config_file)
-    primary_controller_ip=$(sed -n -e '/primary_controller_ip/ s/.*\: *//p' $sspl_config_file)
+    transmit_interval=$(sed -n -e '/transmit_interval/ s/.*\: *//p' $SSPL_CONFIG_FILE)
+    disk_usage_threshold=$(sed -n -e '/disk_usage_threshold/ s/.*\: *//p' $SSPL_CONFIG_FILE)
+    host_memory_usage_threshold=$(sed -n -e '/host_memory_usage_threshold/ s/.*\: *//p' $SSPL_CONFIG_FILE)
+    cpu_usage_threshold=$(sed -n -e '/cpu_usage_threshold/ s/.*\: *//p' $SSPL_CONFIG_FILE)
+    rack_id=$(sed -n -e '/rack_id/ s/.*\: *//p' $SSPL_CONFIG_FILE)
+    site_id=$(sed -n -e '/site_id/ s/.*\: *//p' $SSPL_CONFIG_FILE)
+    node_id=$(sed -n -e '/node_id/ s/.*\: *//p' $SSPL_CONFIG_FILE)
+    cluster_id=$(sed -n -e '/cluster_id/ s/.*\: *//p' $SSPL_CONFIG_FILE)
+    cluster_nodes=$(sed -n -e '/cluster_nodes/ s/.*\: *//p' $SSPL_CONFIG_FILE)
+    primary_controller_ip=$(sed -n -e '/primary_controller_ip/ s/.*\: *//p' $SSPL_CONFIG_FILE)
 fi
 
 # setting values for testing
@@ -315,7 +315,7 @@ if [ "$IS_VIRTUAL" == "true" ]
 then
     # setting back the actual values
     $sudo $script_dir/set_threshold.sh $transmit_interval $disk_usage_threshold $host_memory_usage_threshold $cpu_usage_threshold $sspl_config
-    [[ -f ${sspl_config_file}.back ]] && $sudo mv ${sspl_config_file}.back $sspl_config_file
+    [[ -f ${SSPL_CONFIG_FILE}.back ]] && $sudo mv ${SSPL_CONFIG_FILE}.back $SSPL_CONFIG_FILE
     #[[ -f ${test_config_file}.back ]] && $sudo mv ${test_config_file}.back $test_config_file
     [[ -f ${global_config_file}.back ]] && $sudo mv ${global_config_file}.back $global_config_file
 fi

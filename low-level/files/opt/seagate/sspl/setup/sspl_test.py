@@ -19,17 +19,11 @@ from cortx.utils.process import SimpleProcess
 from cortx.utils.conf_store import Conf
 from cortx.utils.service import DbusServiceHandler
 from cortx.utils.validator.v_pkg import PkgV
-from files.opt.seagate.sspl.setup.setup_error import SetupError
 from .conf_based_sensors_enable import update_sensor_info
 from framework.utils.utility import Utility
-from framework.base.sspl_constants import (PRODUCT_FAMILY,
-                                           sspl_config_path,
-                                           sspl_test_file_path,
-                                           sspl_test_config_path,
-                                           global_config_path,
-                                           GLOBAL_CONFIG_INDEX,
-                                           SSPL_CONFIG_INDEX,
-                                           SSPL_TEST_CONFIG_INDEX)
+from framework.base.sspl_constants import (PRODUCT_FAMILY, sspl_config_path,
+    sspl_test_file_path, sspl_test_config_path, global_config_path,
+    GLOBAL_CONFIG_INDEX, SSPL_CONFIG_INDEX, SSPL_TEST_CONFIG_INDEX)
 
 
 TEST_DIR = f"/opt/seagate/{PRODUCT_FAMILY}/sspl/sspl_test"
@@ -79,7 +73,7 @@ class SSPLTestCmd:
             "storage_enclosure>%s>type" % enclosure_id)
 
     def process(self):
-        """Run test using user requested test plan"""
+        """Run test using user requested test plan."""
         self.plan = self.args.plan[0]
         self.avoid_rmq = self.args.avoid_rmq
 

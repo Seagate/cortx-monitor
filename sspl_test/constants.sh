@@ -18,5 +18,5 @@ PRODUCT_FAMILY='cortx'
 CONSUL_PATH="/usr/bin/"
 SSPL_STORE_TYPE='file'
 CONFIG_SPEC_TYPE="yaml"
-sspl_config_file="/etc/sspl.conf"
-sspl_test_config_file="/opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/conf/sspl_tests.conf"
+SSPL_CONFIG_FILE="/etc/sspl.conf"
+SSPL_TEST_CONFIG_FILE="/opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/conf/sspl_tests.conf"

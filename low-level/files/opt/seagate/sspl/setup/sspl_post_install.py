@@ -21,12 +21,9 @@
 
 import os
 import pwd
-import grp
 import errno
 import shutil
-import socket
 import distutils.dir_util
-from urllib.parse import urlparse
 
 # using cortx package
 from cortx.utils.conf_store import Conf
@@ -48,17 +45,17 @@ class SSPLPostInstall:
     def __init__(self):
         """Initialize varibales for post install."""
         self.user = "sspl-ll"
-        self.sspl_log_path = "/var/log/%s/sspl/" % consts.PRODUCT_FAMILY
-        self.sspl_bundle_path = "/var/%s/sspl/bundle/" % consts.PRODUCT_FAMILY
+        consts.SSPL_LOG_PATH = "/var/log/%s/sspl/" % consts.PRODUCT_FAMILY
+        consts.SSPL_BUNDLE_PATH = "/var/%s/sspl/bundle/" % consts.PRODUCT_FAMILY
         self.state_file = "%s/state.txt" % consts.DATA_PATH
         self.dbus_service = DbusServiceHandler()
 
     def validate(self):
         """Check below requirements are met in setup.
 
-        1. Given product is supported by SSPL
-        2. Given setup is supported by SSPL
-        3. Required pre-requisites softwares are installed.
+        1. Check if given product is supported by SSPL
+        2. Check if given setup is supported by SSPL
+        3. Check if required pre-requisites softwares are installed.
         4. Validate BMC connectivity
         5. Validate storage controller connectivity
         """
@@ -226,8 +223,8 @@ class SSPLPostInstall:
             for file in files:
                 os.chown(os.path.join(base, file), sspl_uid, sspl_gid)
         # Create SSPL log and bundle directories
-        os.makedirs(self.sspl_log_path, exist_ok=True)
-        os.makedirs(self.sspl_bundle_path, exist_ok=True)
+        os.makedirs(consts.SSPL_LOG_PATH, exist_ok=True)
+        os.makedirs(consts.SSPL_BUNDLE_PATH, exist_ok=True)
         # Create /tmp/dcs/hpi if required. Not required for '<product>' role
         if self.setup != "cortx":
             os.makedirs(consts.HPI_PATH, mode=0o777, exist_ok=True)

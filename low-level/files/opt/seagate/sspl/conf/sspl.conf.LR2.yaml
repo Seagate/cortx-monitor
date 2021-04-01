@@ -224,5 +224,3 @@ SYSTEM_INFORMATION:
    sspl_log_file_path: /var/log/cortx/sspl/sspl.log
    log_level: INFO
    environment: PROD
-   syslog_host: localhost
-   syslog_port: 514

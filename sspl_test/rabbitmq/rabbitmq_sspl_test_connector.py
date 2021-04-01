@@ -17,7 +17,6 @@ import time
 import random
 import subprocess
 import re
-
 import pika
 import pika.exceptions
 import encodings.idna  # noqa
