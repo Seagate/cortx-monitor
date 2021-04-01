@@ -31,11 +31,13 @@ from urllib.parse import urlparse
 # using cortx package
 from cortx.utils.process import SimpleProcess
 from cortx.utils.conf_store import Conf
-from cortx.utils.service import DbusServiceHandler
 from cortx.utils.validator.v_pkg import PkgV
 from cortx.utils.validator.v_service import ServiceV
 from cortx.utils.validator.error import VError
 from files.opt.seagate.sspl.setup.setup_error import SetupError
+from framework.base.sspl_constants import (PRVSNR_CONFIG_INDEX,
+                                           GLOBAL_CONFIG_INDEX,
+                                           global_config_path)
 
 
 class Cmd:
@@ -89,78 +91,32 @@ class Cmd:
         parsers.add_argument('args', nargs='*', default=[], help='args')
         parsers.set_defaults(command=cls)
 
-
-class JoinClusterCmd(Cmd):
-    """Join nodes in cluster. To join mutiple nodes, use delimeter ","
-    between node names. ie.node1,node2
-    """
-
-    name = "join_cluster"
-    script = "setup_rabbitmq_cluster"
-
-    def __init__(self, args):
-        super().__init__(args)
-        self.nodes = None
-
-    @staticmethod
-    def add_args(parser: str, cls: str, name: str):
-        """Add Command args for parsing."""
-        parsers = parser.add_parser(cls.name, help='%s' % cls.__doc__)
-        parsers.add_argument('args', nargs='*', default=[], help='args')
-        parsers.add_argument('--nodes', nargs='*', default=[], help='Node names separted by comma')
-        parsers.set_defaults(command=cls)
-
-    def validate(self):
-        if not self.args.nodes:
-            raise SetupError(1,
-                             "Validation failure. %s",
-                             "join_cluster requires comma separated node names as argument.")
-        self.nodes = self.args.nodes[0]
-
-    def process(self):
-        from files.opt.seagate.sspl.setup.setup_rabbitmq_cluster import RMQClusterConfiguration
-        RMQClusterConfiguration(self.nodes).process()
+    def copy_input_config(self, stage=None):
+        """Dump input config in required format"""
+        # Copy input config in another index
+        url_spec = urlparse(global_config_path)
+        path = url_spec.path
+        store_loc = os.path.dirname(path)
+        if not os.path.exists(store_loc):
+            os.makedirs(store_loc)
+        if not os.path.exists(path) or stage == "post_install":
+            with open(path, "w") as f:
+                f.write("")
+        Conf.load(GLOBAL_CONFIG_INDEX, global_config_path)
+        Conf.copy(PRVSNR_CONFIG_INDEX, GLOBAL_CONFIG_INDEX)
+        Conf.save(GLOBAL_CONFIG_INDEX)
 
 
 class PostInstallCmd(Cmd):
-    """Prepare the environment for sspl service."""
+    """Performs pre-requisite checks and basic configuration."""
 
     name = "post_install"
 
     def __init__(self, args: dict):
-        super().__init__(args)
-
-    @staticmethod
-    def add_args(parser: str, cls: str, name: str):
-        """Add Command args for parsing."""
-        parsers = parser.add_parser(cls.name, help='%s' % cls.__doc__)
-        parsers.add_argument('args', nargs='*', default=[], help='args')
-        parsers.add_argument('--config', nargs='*', default=[], help='Global config url')
-        parsers.set_defaults(command=cls)
-
-    def validate(self):
-        """Validate post install command arguments"""
-        if not self.args.config:
-            raise SetupError(1,
-                             "%s - Argument validation failure. %s",
-                             self.name,
-                             "Global config is required.")
-
-    def process(self):
-        """Configure SSPL post installation"""
+        """Initialize post install command"""
         from files.opt.seagate.sspl.setup.sspl_post_install import SSPLPostInstall
-        post_install = SSPLPostInstall(self.args)
-        post_install.validate()
-        post_install.process()
-
-
-class InitCmd(Cmd):
-    """Creates data path and checks required role."""
-
-    name = "init"
-
-    def __init__(self, args):
         super().__init__(args)
+        self.post_install = SSPLPostInstall()
 
     @staticmethod
     def add_args(parser: str, cls: str, name: str):
@@ -171,27 +127,66 @@ class InitCmd(Cmd):
         parsers.set_defaults(command=cls)
 
     def validate(self):
-        """Validate init command arguments"""
+        """Validate post install command arguments and given input."""
         if not self.args.config:
-            raise SetupError(
-                    errno.EINVAL,
-                    "%s - Argument validation failure. Global config is needed",
-                    self.name)
+            raise SetupError(errno.EINVAL,
+                "%s - Argument validation failure. %s",
+                self.name, "Global config URL is required.")
+        # Validate config inputs
+        Conf.load(PRVSNR_CONFIG_INDEX, self.args.config[0])
+        self.post_install.validate()
 
     def process(self):
-        """Configure SSPL init"""
-        from files.opt.seagate.sspl.setup.sspl_setup_init import SSPLInit
-        sspl_init = SSPLInit()
-        sspl_init.process()
+        """Perform SSPL post installation."""
+        self.copy_input_config(stage=self.name)
+        self.post_install.process()
+
+
+class PrepareCmd(Cmd):
+    """Configures SSPL after node preperation."""
+
+    name = "prepare"
+
+    def __init__(self, args: dict):
+        """Initialize prepare command"""
+        from files.opt.seagate.sspl.setup.sspl_prepare import SSPLPrepare
+        super().__init__(args)
+        self.prepare = SSPLPrepare()
+
+    @staticmethod
+    def add_args(parser: str, cls: str, name: str):
+        """Add Command args for parsing."""
+        parsers = parser.add_parser(cls.name, help='%s' % cls.__doc__)
+        parsers.add_argument('args', nargs='*', default=[], help='args')
+        parsers.add_argument('--config', nargs='*', default=[], help='Global config url')
+        parsers.set_defaults(command=cls)
+
+    def validate(self):
+        """Validate prepare install command arguments and given input."""
+        if not self.args.config:
+            raise SetupError(errno.EINVAL,
+                "%s - Argument validation failure. %s",
+                self.name, "Global config URL is required.")
+        # Validate config inputs
+        Conf.load(PRVSNR_CONFIG_INDEX, self.args.config[0])
+        self.prepare.validate()
+
+    def process(self):
+        """Configure SSPL for prepare stage."""
+        self.copy_input_config()
+        self.prepare.process()
 
 
 class ConfigCmd(Cmd):
-    """Configues SSPL role, logs and sensors needs to be enabled."""
+    """Configures message bus and sspl sensor monitor state."""
 
     name = "config"
 
     def __init__(self, args):
+        """Initialize config command."""
+        from files.opt.seagate.sspl.setup.sspl_config import SSPLConfig
         super().__init__(args)
+        self.sspl_config = SSPLConfig()
 
     @staticmethod
     def add_args(parser: str, cls: str, name: str):
@@ -202,23 +197,60 @@ class ConfigCmd(Cmd):
         parsers.set_defaults(command=cls)
 
     def validate(self):
-        """Validate config command arguments"""
+        """Validate config command arguments."""
         if not self.args.config:
-            raise SetupError(1,
-                             "%s - Argument validation failure. %s",
-                             self.name,
-                             "Global config is required.")
+            raise SetupError(errno.EINVAL,
+                "%s - Argument validation failure. %s",
+                self.name, "Global config URL is required.")
+        # Validate config inputs
+        Conf.load(PRVSNR_CONFIG_INDEX, self.args.config[0])
+        self.sspl_config.validate()
 
     def process(self):
-        """Setup SSPL configuration"""
-        from files.opt.seagate.sspl.setup.sspl_config import SSPLConfig
-        sspl_config = SSPLConfig()
-        sspl_config.validate()
-        sspl_config.process()
+        """Setup SSPL configuration."""
+        self.copy_input_config()
+        self.sspl_config.process()
+
+
+
+class InitCmd(Cmd):
+    """Configure SSPL post cluster configuration."""
+
+    name = "init"
+
+    def __init__(self, args):
+        from files.opt.seagate.sspl.setup.sspl_setup_init import SSPLInit
+        super().__init__(args)
+        self.sspl_init = SSPLInit()
+
+    @staticmethod
+    def add_args(parser: str, cls: str, name: str):
+        """Add Command args for parsing."""
+        parsers = parser.add_parser(cls.name, help='%s' % cls.__doc__)
+        parsers.add_argument('args', nargs='*', default=[], help='args')
+        parsers.add_argument('--config', nargs='*', default=[], help='Global config url')
+        parsers.set_defaults(command=cls)
+
+    def validate(self):
+        """Validate init command arguments."""
+        if not self.args.config:
+            raise SetupError(errno.EINVAL,
+                "%s - Argument validation failure. %s",
+                self.name, "Global config is required.")
+        # Validate config inputs
+        Conf.load(PRVSNR_CONFIG_INDEX, self.args.config[0])
+        self.sspl_init.validate()
+
+    def process(self):
+        """Configure SSPL init."""
+        self.copy_input_config()
+        self.sspl_init.process()
+
 
 class TestCmd(Cmd):
     """Starts test based on plan:
-    (sanity|alerts|self_primary|self_secondary)."""
+    (sanity|alerts|self_primary|self_secondary).
+    """
 
     name = "test"
     test_plan_found = False
@@ -234,23 +266,19 @@ class TestCmd(Cmd):
         parsers.add_argument('args', nargs='*', default=[], help='args')
         parsers.add_argument('--config', nargs='*', default=[], help='Global config url')
         parsers.add_argument('--plan', nargs='*', default=[], help='Test plan type')
-        parsers.add_argument('--avoid_rmq', action="store_true", help='Boolean - Disable RabbitMQ?')
+        parsers.add_argument('--avoid_rmq', action="store_true",help='Boolean - Disable RabbitMQ?')
         parsers.set_defaults(command=cls)
 
     def validate(self):
-        """Validate test command arguments"""
+        """Validate test command arguments."""
         if not self.args.config:
             raise SetupError(errno.EINVAL,
                              "%s - Argument validation failure. %s",
-                             self.name,
-                             "Global config is required.")
-
+                             self.name, "Global config is required.")
         if not self.args.plan:
-            raise SetupError(
-                    errno.EINVAL,
-                    "%s - Argument validation failure. Test plan is needed",
-                    self.name)
-
+            raise SetupError(errno.EINVAL,
+                             "%s - Argument validation failure. Test plan is needed",
+                             self.name)
         result = PkgV().validate("rpms", "sspl-test")
         if result == -1:
             raise SetupError(1, "'sspl-test' rpm pkg not found.")
@@ -279,17 +307,14 @@ class SupportBundleCmd(Cmd):
     def process(self):
         args = ' '.join(self._args.args)
         sspl_bundle_generate = "%s/%s %s" % (self._script_dir, self.script, args)
-        output, error, returncode = SimpleProcess(sspl_bundle_generate).run(realtime_output=True)
-        if returncode != 0:
-            raise SetupError(returncode,
-                             "%s - validation failure. %s",
-                             self.name,
-                             error)
+        output, error, rc = SimpleProcess(sspl_bundle_generate).run(realtime_output=True)
+        if rc != 0:
+            raise SetupError(rc, "%s - validation failure. %s",
+                             self.name, error)
 
 
 class ManifestSupportBundleCmd(Cmd):
-    """Collects enclosure, cluster and node information.
-    """
+    """Collects enclosure, cluster and node information."""
 
     name = "manifest_support_bundle"
     script = "manifest_support_bundle"
@@ -304,12 +329,10 @@ class ManifestSupportBundleCmd(Cmd):
     def process(self):
         args = ' '.join(self._args.args)
         manifest_support_bundle = "%s/%s %s" % (self._script_dir, self.script, args)
-        output, error, returncode = SimpleProcess(manifest_support_bundle).run(realtime_output=True)
-        if returncode != 0:
-            raise SetupError(returncode,
-                             "%s - validation failure. %s",
-                             self.name,
-                             error)
+        output, error, rc = SimpleProcess(manifest_support_bundle).run(realtime_output=True)
+        if rc != 0:
+            raise SetupError(rc, "%s - validation failure. %s",
+                             self.name, error)
 
 
 class ResetCmd(Cmd):
@@ -363,6 +386,7 @@ class ResetCmd(Cmd):
             from files.opt.seagate.sspl.setup.sspl_reset import SoftReset
             SoftReset().process()
 
+
 class CheckCmd(Cmd):
     """Validates configs and environment prepared for SSPL initialization.
     """
@@ -396,6 +420,22 @@ class CheckCmd(Cmd):
             else:
                 break
         ServiceV().validate('isrunning', self.services)
+
+    def process(self):
+        pass
+
+
+class CleanupCmd(Cmd):
+    """Removes SSPL configs."""
+
+    name = "cleanup"
+
+    def __init__(self, args):
+        super().__init__(args)
+
+    def validate(self):
+        # Common validator classes to check Cortx/system wide validator
+        pass
 
     def process(self):
         pass

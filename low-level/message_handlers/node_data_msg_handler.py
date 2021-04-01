@@ -25,8 +25,8 @@ import time
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.sspl_constants import enabled_products
-from framework.utils.conf_utils import (CLUSTER, GLOBAL_CONF, SRVNODE,
-                                        SSPL_CONF, Conf)
+from framework.utils.conf_utils import (GLOBAL_CONF, SSPL_CONF, Conf,
+                                        SITE_ID_KEY, RACK_ID_KEY, NODE_ID_KEY, CLUSTER_ID_KEY)
 from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
 from json_msgs.messages.sensors.cpu_data import CPUdataMsg
@@ -129,10 +129,10 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         self._host_memory_usage_threshold = Conf.get(SSPL_CONF, f"{self.NODEDATAMSGHANDLER}>{self.HOST_MEMORY_USAGE_THRESHOLD}",
                                                 self.DEFAULT_HOST_MEMORY_USAGE_THRESHOLD)
 
-        self.site_id = Conf.get(GLOBAL_CONF, f'{CLUSTER}>{SRVNODE}>{self.SITE_ID}','DC01')
-        self.rack_id = Conf.get(GLOBAL_CONF, f'{CLUSTER}>{SRVNODE}>{self.RACK_ID}','RC01')
-        self.node_id = Conf.get(GLOBAL_CONF, f'{CLUSTER}>{SRVNODE}>{self.NODE_ID}','SN01')
-        self.cluster_id = Conf.get(GLOBAL_CONF, f'{CLUSTER}>{self.CLUSTER_ID}','CC01')
+        self.site_id = Conf.get(GLOBAL_CONF, SITE_ID_KEY, "DC01")
+        self.rack_id = Conf.get(GLOBAL_CONF, RACK_ID_KEY, "RC01")
+        self.node_id = Conf.get(GLOBAL_CONF, NODE_ID_KEY, "SN01")
+        self.cluster_id = Conf.get(GLOBAL_CONF, CLUSTER_ID_KEY, "CC01")
 
         self.prev_nw_status = {}
         self.bmcNwStatus = None

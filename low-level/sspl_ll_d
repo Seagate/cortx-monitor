@@ -42,9 +42,8 @@ from actuators.impl.actuator import Actuator
 from framework.actuator_state_manager import actuator_state_manager
 from framework.base.module_thread import SensorThread
 from framework.base.sspl_constants import (COMMON_CONFIGS, PRODUCT_FAMILY,
-                                           SSPL_SETTINGS, OperatingSystem,
-                                           enabled_products,
-                                           sspl_settings_configured_groups)
+    SSPL_SETTINGS, OperatingSystem, enabled_products,
+    sspl_settings_configured_groups, SYSLOG_HOST, SYSLOG_PORT)
 from framework.rabbitmq.logging_processor import LoggingProcessor
 from framework.rabbitmq.plane_cntrl_rmq_egress_processor import \
     PlaneCntrlRMQegressProcessor
@@ -58,11 +57,9 @@ from framework.rabbitmq.rabbitmq_egress_processor import \
 from framework.rabbitmq.rabbitmq_ingress_processor import \
     RabbitMQingressProcessor
 from framework.rabbitmq.thread_controller import ThreadController
-from framework.utils.conf_utils import (CLUSTER, GLOBAL_CONF, HOST, MONITOR,
-                                        OPERATING_SYSTEM, PORT, PRODUCT,
-                                        RELEASE, RSYSLOG, SETUP, SRVNODE,
-                                        SSPL_CONF, SYSTEM_INFORMATION,
-                                        THREADED, Conf)
+from framework.utils.conf_utils import (GLOBAL_CONF, HOST, MONITOR,
+    OPERATING_SYSTEM, PORT, PRODUCT_KEY, SETUP_KEY, SSPL_CONF, SYSTEM_INFORMATION,
+    THREADED, Conf, LOG_LEVEL)
 from framework.utils.config_reader import ConfigReader
 from framework.utils.service_logging import init_logging, logger
 from framework.utils.store_factory import store
@@ -90,16 +87,6 @@ MSG_HANDLERS    = 'message_handlers'
 SENSORS         = 'sensors'
 ACTUATORS       = 'actuators'
 DEGRADED_STATE_MODULES = 'degraded_state_modules'
-
-# Section containing information about the system we're running on
-SYS_INFORMATION = 'SYSTEM_INFORMATION'
-PRODUCT_NAME    = 'product'
-SETUP           = 'setup'
-LOG_LEVEL       = 'log_level'
-SYSLOG_HOST_KEY = "syslog_host"
-SYSLOG_PORT_KEY = "syslog_port"
-DEFAULT_SYSLOG_HOST = "localhost"
-DEFAULT_SYSLOG_PORT = 514
 
 # State file
 STATE_FILE =  f"/var/{PRODUCT_FAMILY}/sspl/data/state.txt"
@@ -283,10 +270,10 @@ def main(conf_reader, systemd_support):
     logger.info("sspl-ll Bootstrap: configuring for OS: %s" % OPERATING_SYSTEM)
 
     # Read in product value from configuration file
-    product = Conf.get(GLOBAL_CONF, f"{RELEASE}>{PRODUCT}")
+    product = Conf.get(GLOBAL_CONF, PRODUCT_KEY)
     # Read in setup value from configuration file
     try:
-        setup = Conf.get(GLOBAL_CONF, f"{RELEASE}>{SETUP}")
+        setup = Conf.get(GLOBAL_CONF, SETUP_KEY)
     except Exception:
         setup = 'hw'
 
@@ -785,10 +772,8 @@ if __name__ == "__main__":
 
     # Initialize logging
     try:
-        logging_level = Conf.get(SSPL_CONF, f"{SYS_INFORMATION}>{LOG_LEVEL}", "INFO")
-        syslog_host = Conf.get(GLOBAL_CONF, f"{RSYSLOG}>{HOST}", DEFAULT_SYSLOG_HOST)
-        syslog_port = int(Conf.get(GLOBAL_CONF, f"{RSYSLOG}>{PORT}", DEFAULT_SYSLOG_PORT))
-        init_logging("SSPL-LL", logging_level, syslog_host, syslog_port)
+        logging_level = Conf.get(SSPL_CONF, f"{SYSTEM_INFORMATION}>{LOG_LEVEL}", "INFO")
+        init_logging("SSPL-LL", logging_level, SYSLOG_HOST, SYSLOG_PORT)
 
     except Exception as err:
         # We don't have logger since it threw an exception, use generic 'print'

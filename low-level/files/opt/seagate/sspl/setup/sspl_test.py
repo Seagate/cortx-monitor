@@ -19,18 +19,15 @@ from cortx.utils.process import SimpleProcess
 from cortx.utils.conf_store import Conf
 from cortx.utils.service import DbusServiceHandler
 from cortx.utils.validator.v_pkg import PkgV
-from .setup_error import SetupError
 from .conf_based_sensors_enable import update_sensor_info
-from framework.base.sspl_constants import (PRODUCT_FAMILY,
-                                           sspl_config_path,
-                                           sspl_test_file_path,
-                                           sspl_test_config_path,
-                                           GLOBAL_CONFIG_INDEX,
-                                           SSPL_CONFIG_INDEX,
-                                           SSPL_TEST_CONFIG_INDEX)
+from framework.utils.utility import Utility
+from framework.base.sspl_constants import (PRODUCT_FAMILY, sspl_config_path,
+    sspl_test_file_path, sspl_test_config_path, global_config_path,
+    GLOBAL_CONFIG_INDEX, SSPL_CONFIG_INDEX, SSPL_TEST_CONFIG_INDEX)
 
 
 TEST_DIR = f"/opt/seagate/{PRODUCT_FAMILY}/sspl/sspl_test"
+SSPL_TEST_GLOBAL_CONFIG = "sspl_test_gc"
 
 class SSPLTestCmd:
     """Starts test based on plan (sanity|alerts|self_primary|self_secondary)."""
@@ -43,24 +40,40 @@ class SSPLTestCmd:
         self.dbus_service = DbusServiceHandler()
         # Load global, sspl and test configs
         Conf.load(SSPL_CONFIG_INDEX, sspl_config_path)
-        global_config_url = Conf.get(SSPL_CONFIG_INDEX,
-                                     "SYSTEM_INFORMATION>global_config_copy_url")
-        Conf.load(GLOBAL_CONFIG_INDEX, global_config_url)
         Conf.load(SSPL_TEST_CONFIG_INDEX, sspl_test_config_path)
+        # Take copy of global config passed to sspl_test
+        if args.config and args.config[0]:
+            sspl_test_gc_url = args.config[0]
+        else:
+            sspl_test_gc_url = global_config_path
+        sspl_test_gc_copy_file = "/etc/sspl_test_gc_url.yaml"
+        with open(sspl_test_gc_copy_file, "w") as f:
+            f.write("")
+        self.sspl_test_gc_copy_url = "yaml://%s" % sspl_test_gc_copy_file
+        Conf.load(SSPL_TEST_GLOBAL_CONFIG, self.sspl_test_gc_copy_url)
+        Conf.load("global_config", sspl_test_gc_url)
+        Conf.copy("global_config", SSPL_TEST_GLOBAL_CONFIG)
 
-    @staticmethod
-    def validate():
+    def validate(self):
         """Check for required packages are installed."""
         # python 3rd party package dependency
         pip3_3ps_packages_test = {
             "Flask": "1.1.1"
-        }
+            }
         pkg_validator = PkgV()
-        pkg_validator.validate_pip3_pkgs(host=None,
-                                         pkgs=pip3_3ps_packages_test,
-                                         skip_version_check=False)
+        pkg_validator.validate_pip3_pkgs(host=None, pkgs=pip3_3ps_packages_test,
+            skip_version_check=False)
+        # Validate input configs
+        machine_id = Utility.get_machine_id()
+        self.node_type = Conf.get(SSPL_TEST_GLOBAL_CONFIG,
+            "server_node>%s>type" % machine_id)
+        enclosure_id = Conf.get(SSPL_TEST_GLOBAL_CONFIG,
+            "server_node>%s>storage>enclosure_id" % machine_id)
+        self.enclosure_type = Conf.get(SSPL_TEST_GLOBAL_CONFIG,
+            "storage_enclosure>%s>type" % enclosure_id)
 
     def process(self):
+        """Run test using user requested test plan."""
         self.plan = self.args.plan[0]
         self.avoid_rmq = self.args.avoid_rmq
 
@@ -70,22 +83,14 @@ class SSPLTestCmd:
 
         # Add global config in sspl_test config and revert the changes once test completes.
         # Global config path in sspl_tests.conf will be referred by sspl_tests later
-        global_config_copy_url = Conf.get(SSPL_CONFIG_INDEX,
-                                          "SYSTEM_INFORMATION>global_config_copy_url")
-        Conf.copy(GLOBAL_CONFIG_INDEX, SSPL_TEST_CONFIG_INDEX)
-        Conf.set(SSPL_CONFIG_INDEX,
-                 "SYSTEM_INFORMATION>global_config_copy_url", sspl_test_config_path)
+        sspl_global_config_url = Conf.get(SSPL_CONFIG_INDEX,
+            "SYSTEM_INFORMATION>global_config_copy_url")
+        Conf.set(SSPL_CONFIG_INDEX, "SYSTEM_INFORMATION>global_config_copy_url",
+            self.sspl_test_gc_copy_url)
         Conf.save(SSPL_CONFIG_INDEX)
 
         # Enable & disable sensors based on environment
-        update_sensor_info(SSPL_TEST_CONFIG_INDEX)
-
-        # Get rabbitmq values from sspl.conf and update sspl_tests.conf
-        rmq_passwd = Conf.get(SSPL_CONFIG_INDEX,
-                              "RABBITMQEGRESSPROCESSOR>password")
-        Conf.set(SSPL_TEST_CONFIG_INDEX,
-                 "RABBITMQEGRESSPROCESSOR>password", rmq_passwd)
-        Conf.save(SSPL_TEST_CONFIG_INDEX)
+        update_sensor_info(SSPL_TEST_CONFIG_INDEX, self.node_type, self.enclosure_type)
 
         # TODO: Move lines 90-116 & 125-127 to RunQATest class
         # Create dummy service and add service name in /etc/sspl.conf
@@ -135,7 +140,11 @@ class SSPLTestCmd:
         # from cortx.sspl.sspl_test.run_qa_test import RunQATest
         # RunQATest(self.plan, self.avoid_rmq).run()
         CMD = "%s/run_qa_test.sh %s %s" % (TEST_DIR, self.plan, self.avoid_rmq)
-        output, error, returncode = SimpleProcess(CMD).run(realtime_output=True)
+        try:
+            output, error, rc = SimpleProcess(CMD).run(realtime_output=True)
+        except KeyboardInterrupt:
+            rc = 1
+            error = "KeyboardInterrupt occurred while executing sspl test."
         # Restore the original path/file & service, then throw exception
         # if execution is failed.
         service_list.remove(service_name)
@@ -143,10 +152,9 @@ class SSPLTestCmd:
             service_list)
         Conf.set(SSPL_CONFIG_INDEX, "SERVICEMONITOR>threshold_inactive_time",
             threshold_inactive_time_original)
-        Conf.set(SSPL_CONFIG_INDEX,
-                 "SYSTEM_INFORMATION>global_config_copy_url", global_config_copy_url)
+        Conf.set(SSPL_CONFIG_INDEX, "SYSTEM_INFORMATION>global_config_copy_url",
+            sspl_global_config_url)
         Conf.save(SSPL_CONFIG_INDEX)
         shutil.copyfile(sspl_test_backup, sspl_test_file_path)
-        self.dbus_service.restart('sspl-ll.service')
-        if returncode != 0:
-            raise SetupError(returncode, "%s - ERROR: %s - CMD %s", self.name, error, CMD)
+        if rc != 0:
+            raise Exception("%s - ERROR: %s - CMD %s" % (self.name, error, CMD))

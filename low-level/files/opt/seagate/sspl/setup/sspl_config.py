@@ -27,185 +27,94 @@ import os
 import shutil
 import re
 import errno
-import consul
 
+# Using cortx package
+from cortx.utils.conf_store import Conf
 from cortx.utils.message_bus import MessageBus, MessageBusAdmin
 from cortx.utils.message_bus.error import MessageBusError
-from framework.base import sspl_constants as consts
-from cortx.utils.service import DbusServiceHandler
 from cortx.utils.process import SimpleProcess
-from cortx.utils.validator.v_service import ServiceV
-from .setup_error import SetupError
-from cortx.utils.conf_store import Conf
+from files.opt.seagate.sspl.setup.setup_error import SetupError
 from .conf_based_sensors_enable import update_sensor_info
+from framework.base import sspl_constants as consts
+from framework.utils.utility import Utility
 
 
 class SSPLConfig:
-    """SSPL Setup Config Interface."""
+    """SSPL setup config interface."""
 
     name = "config"
 
     def __init__(self):
-        """Init method for sspl setup config."""
-        self._script_dir = os.path.dirname(os.path.abspath(__file__))
-        # Load sspl and global configs
-        Conf.load(consts.SSPL_CONFIG_INDEX, consts.sspl_config_path)
-        global_config_url = Conf.get(
-            consts.SSPL_CONFIG_INDEX,
-            "SYSTEM_INFORMATION>global_config_copy_url")
-        Conf.load(consts.GLOBAL_CONFIG_INDEX, global_config_url)
-        self.product = Conf.get(consts.GLOBAL_CONFIG_INDEX, 'release>product')
+        """Initialize varibales for Config stage."""
         self.topic_already_exists = "ALREADY_EXISTS"
+        Conf.load(consts.SSPL_CONFIG_INDEX, consts.sspl_config_path)
 
     def validate(self):
-        """Validate config for supported role and product"""
-        # Validate role
-        self.role = Conf.get(consts.GLOBAL_CONFIG_INDEX, 'release>setup')
-        if not self.role:
-            raise SetupError(
-                errno.EINVAL,
-                "%s - validation failure. %s",
-                self.name,
-                "Role not found in global config copy.")
-        if self.role not in consts.setups:
-            raise SetupError(
-                errno.EINVAL,
-                "%s - validation failure. %s",
-                self.name,
-                "Role '%s' is not supported. Check Usage" % self.role)
+        """Check for below requirement.
 
-    def replace_expr(self, filename: str, key, new_str: str):
-
-        """The function helps to replace the expression provided as key
-            with new string in the file provided in filename
-            OR
-            It inserts the new string at given line as a key in the
-            provided file.
+        1. Validate input configs
+        2. Validate sspl conf is created
+        3. Check if message bus is accessible
         """
+        if os.geteuid() != 0:
+            raise SetupError(errno.EINVAL,
+                "Run this command with root privileges.")
 
-        with open(filename, 'r+') as f:
-            lines = f.readlines()
-            if isinstance(key, str):
-                for i, line in enumerate(lines):
-                    if re.search(key, line):
-                        lines[i] = re.sub(key, new_str, lines[i])
-            elif isinstance(key, int):
-                if not re.search(new_str, lines[key]):
-                    lines.insert(key, new_str)
-            else:
-                raise SetupError(
-                    errno.EINVAL,
-                    "Key data type : '%s', should be string or int",
-                    type(key))
-            f.seek(0)
-            for line in lines:
-                f.write(line)
+        # Validate input/provisioner configs
+        machine_id = Utility.get_machine_id()
+        Utility.get_config_value(consts.PRVSNR_CONFIG_INDEX,
+            "server_node>%s>cluster_id" % machine_id)
+        self.node_type = Utility.get_config_value(consts.PRVSNR_CONFIG_INDEX,
+            "server_node>%s>type" % machine_id)
+        enclosure_id = Utility.get_config_value(consts.PRVSNR_CONFIG_INDEX,
+            "server_node>%s>storage>enclosure_id" % machine_id)
+        self.enclosure_type = Utility.get_config_value(consts.PRVSNR_CONFIG_INDEX,
+            "storage_enclosure>%s>type" % enclosure_id)
 
-    def config_sspl(self):
-        if (os.geteuid() != 0):
-            raise SetupError(
-                errno.EINVAL,
-                "Run this command with root privileges!!")
-
+        # Validate sspl conf is created
         if not os.path.isfile(consts.file_store_config_path):
-            raise SetupError(
-                errno.EINVAL,
-                "Missing configuration!! Create and rerun.",
+            raise SetupError(errno.EINVAL,
+                "Missing configuration - %s !! Create and rerun.",
                 consts.file_store_config_path)
 
-        # Put minion id, consul_host and consul_port in conf file
-        # Onward LDR_R2, salt will be abstracted out and it won't
-        # exist as a hard dependeny of SSPL
-        if consts.PRODUCT_NAME == "LDR_R1":
-            from framework.utils.salt_util import SaltInterface
-            salt_util = SaltInterface()
-            salt_util.update_config_file(consts.file_store_config_path)
+        # Validate message bus is accessible
+        self.mb = MessageBus()
 
+    def process(self):
+        """Configure sensor monitoring and log level setting."""
         if os.path.isfile(consts.SSPL_CONFIGURED):
             os.remove(consts.SSPL_CONFIGURED)
-
-        # Add sspl-ll user to required groups and sudoers file etc.
-        sspl_reinit = [
-            f"{consts.SSPL_BASE_DIR}/low-level/framework/sspl_reinit",
-            self.product]
-        _, error, returncode = SimpleProcess(sspl_reinit).run()
-        if returncode:
-            raise SetupError(returncode,
-                             "%s/low-level/framework/sspl_reinit failed for"
-                             "product %s with error : %e",
-                             consts.SSPL_BASE_DIR, self.product, error
-                             )
 
         os.makedirs(consts.SSPL_CONFIGURED_DIR, exist_ok=True)
         with open(consts.SSPL_CONFIGURED, 'a'):
             os.utime(consts.SSPL_CONFIGURED)
 
-        # SSPL Log file configuration
-        # SSPL_LOG_FILE_PATH = self.getval_from_ssplconf('sspl_log_file_path')
-        SSPL_LOG_FILE_PATH = Conf.get(
-            consts.SSPL_CONFIG_INDEX, 'SYSTEM_INFORMATION>sspl_log_file_path')
-        IEM_LOG_FILE_PATH = Conf.get(
-            consts.SSPL_CONFIG_INDEX, 'IEMSENSOR>log_file_path')
-        if SSPL_LOG_FILE_PATH:
-            self.replace_expr(consts.RSYSLOG_SSPL_CONF,
-                              'File.*[=,"]', 'File="%s"' % SSPL_LOG_FILE_PATH)
-            self.replace_expr(f"{consts.SSPL_BASE_DIR}/low-level/files/etc/logrotate.d/sspl_logs",
-                              0, SSPL_LOG_FILE_PATH)
-
-        # IEM configuration
-        # Configure log file path in Rsyslog and logrotate configuration file
-        IEM_LOG_FILE_PATH = Conf.get(
-            consts.SSPL_CONFIG_INDEX, 'IEMSENSOR>log_file_path')
-
-        if IEM_LOG_FILE_PATH:
-            self.replace_expr(consts.RSYSLOG_IEM_CONF,
-                              'File.*[=,"]', 'File="%s"' % IEM_LOG_FILE_PATH)
-            self.replace_expr(
-                f'{consts.SSPL_BASE_DIR}/low-level/files/etc/logrotate.d/iem_messages',
-                0, IEM_LOG_FILE_PATH)
-        else:
-            self.replace_expr(consts.RSYSLOG_IEM_CONF,
-                              'File.*[=,"]',
-                              'File="/var/log/%s/iem/iem_messages"' %
-                              consts.PRODUCT_FAMILY)
-
-        # Create logrotate dir in case it's not present for dev environment
-        if not os.path.exists(consts.LOGROTATE_DIR):
-            os.makedirs(consts.LOGROTATE_DIR)
-
-        shutil.copy2(
-            '%s/low-level/files/etc/logrotate.d/iem_messages' %
-            consts.SSPL_BASE_DIR,
-            consts.IEM_LOGROTATE_CONF)
-
-        shutil.copy2('%s/low-level/files/etc/logrotate.d/sspl_logs' %
-                     consts.SSPL_BASE_DIR, consts.SSPL_LOGROTATE_CONF)
-
-        # This rsyslog restart will happen after successful updation of rsyslog
-        # conf file and before sspl starts. If at all this will be removed from
-        # here, there will be a chance that SSPL intial logs will not be present in
-        # "/var/log/<product>/sspl/sspl.log" file. So, initial logs needs to be collected from
-        # "/var/log/messages"
-        service = DbusServiceHandler()
-        service.restart('rsyslog.service')
-
-        # For node replacement scenario consul will not be running on the new node. But,
-        # there will be two instance of consul running on healthy node. When new node is configured
-        # consul will be brought back on it. We are using VIP to connect to consul. So, if consul
-        # is not running on new node, we dont need to error out.
-        # If consul is not running, exit
-        # Onward LDR_R2, consul will be abstracted out and it won't
-        # exit as hard dependeny of SSPL
-
-        if consts.PRODUCT_NAME == 'LDR_R1':
-            if not os.path.exists(consts.REPLACEMENT_NODE_ENV_VAR_FILE):
-                ServiceV().validate('isrunning', ['consul'], is_process=True)
-
         # Get the types of server and storage we are currently running on and
         # enable/disable sensor groups in the conf file accordingly.
-        update_sensor_info(consts.SSPL_CONFIG_INDEX)
+        update_sensor_info(consts.SSPL_CONFIG_INDEX, self.node_type,
+            self.enclosure_type)
 
+        # Message bus topic creation
         self.create_message_types()
+
+        # Skip this step if sspl is being configured for node replacement
+        # scenario as consul data is already
+        # available on healthy node
+        # Updating build requested log level
+        if not os.path.exists(consts.REPLACEMENT_NODE_ENV_VAR_FILE):
+            with open(f"{consts.SSPL_BASE_DIR}/low-level/files/opt/seagate" + \
+                "/sspl/conf/build-requested-loglevel") as f:
+                log_level = f.read().strip()
+
+            if not log_level:
+                log_level = "INFO"
+
+            if log_level in ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]:
+                Conf.set(consts.SSPL_CONFIG_INDEX, "SYSTEM_INFORMATION>log_level", log_level)
+                Conf.save(consts.SSPL_CONFIG_INDEX)
+            else:
+                raise SetupError(errno.EINVAL,
+                    "Unexpected log level is requested, '%s'", log_level)
 
     def create_message_types(self):
         # Skip this step if sspl is being configured for node
@@ -219,54 +128,11 @@ class SSPLConfig:
                              Conf.get(consts.SSPL_CONFIG_INDEX,
                                       "RABBITMQEGRESSPROCESSOR"
                                       ">message_type")]
-            mb = MessageBus()
-            mbadmin = MessageBusAdmin(mb, admin_id='admin')
+            mbadmin = MessageBusAdmin(self.mb, admin_id="admin")
             try:
                 mbadmin.register_message_type(message_types=message_types,
                                               partitions=1)
             except MessageBusError as e:
-                if self.topic_already_exists in e.desc:
-                    # Topic already exists
-                    pass
-                else:
+                if self.topic_already_exists not in e.desc:
+                    # if topic not already exists, raise exception
                     raise e
-
-    def process(self):
-        cmd = "config"
-        if (cmd == "config"):
-            self.config_sspl()
-        else:
-            raise SetupError(errno.EINVAL, "cmd val should be config")
-
-        # Skip this step if sspl is being configured for node replacement
-        # scenario as consul data is already
-        # available on healthy node
-        # Updating build requested log level
-        if not os.path.exists(consts.REPLACEMENT_NODE_ENV_VAR_FILE):
-            with open(f'{consts.SSPL_BASE_DIR}/low-level/files/opt/seagate'
-                      '/sspl/conf/build-requested-loglevel', 'r') as f:
-                log_level = f.readline().strip()
-
-            if not log_level:
-                log_level = "INFO"
-
-            if log_level == "DEBUG" or log_level == "INFO" or \
-                    log_level == "WARNING" or log_level == "ERROR" or \
-                    log_level == "CRITICAL":
-                if consts.PRODUCT_NAME == "LDR_R1":
-                    host = os.getenv('CONSUL_HOST', consts.CONSUL_HOST)
-                    port = os.getenv('CONSUL_PORT', consts.CONSUL_PORT)
-                    consul_conn = consul.Consul(host=host, port=port)
-                    consul_conn.kv.put(
-                        "sspl/config/SYSTEM_INFORMATION/log_level",
-                        log_level)
-                else:
-                    Conf.set(consts.SSPL_CONFIG_INDEX,
-                             'SYSTEM_INFORMATION>log_level', log_level)
-                    Conf.save(consts.SSPL_CONFIG_INDEX)
-            else:
-                raise SetupError(
-                    errno.EINVAL,
-                    "Unexpected log level is requested, '%s'",
-                    log_level
-                )

@@ -8,11 +8,17 @@ cluster:
     - name: StorageSet-1
       server_nodes:
       - TMPL_NODE_NAME_1
-      - TMPL_NODE_NAME_2
-      - TMPL_NODE_NAME_3
       storage_enclosures:
       - TMPL_ENCLOSURE_NAME_1
+    - name: StorageSet-2
+      server_nodes:
+      - TMPL_NODE_NAME_2
+      storage_enclosures:
       - TMPL_ENCLOSURE_NAME_2
+    - name: StorageSet-3
+      server_nodes:
+      - TMPL_NODE_NAME_3
+      storage_enclosures:
       - TMPL_ENCLOSURE_NAME_3
 cortx:
   release:
@@ -24,7 +30,7 @@ server_node:
       ip: TMPL_BMC_IP_1
       secret: TMPL_BMC_SECRET_1
       user: TMPL_BMC_USER_1
-    cluster_id: TMPL_CLUSTER_ID_1
+    cluster_id: TMPL_CLUSTER_ID
     hostname: TMPL_HOSTNAME_1
     name: TMPL_NODE_NAME_1
     network:
@@ -50,7 +56,7 @@ server_node:
       ip: TMPL_BMC_IP_2
       secret: TMPL_BMC_SECRET_2
       user: TMPL_BMC_USER_2
-    cluster_id: TMPL_CLUSTER_ID_2
+    cluster_id: TMPL_CLUSTER_ID
     hostname: TMPL_HOSTNAME_2
     name: TMPL_NODE_NAME_2
     network:
@@ -64,7 +70,7 @@ server_node:
       management:
         interfaces:
         - TMPL_MGMT_INTERFACE_2
-        public_fqdn: TMPL_MGMT_PUBLIC_INTERFACE_2
+        public_fqdn: TMPL_MGMT_PUBLIC_FQDN_2
     node_id: TMPL_NODE_ID_2
     rack_id: TMPL_RACK_ID_2
     site_id: TMPL_SITE_ID_2
@@ -76,7 +82,7 @@ server_node:
       ip: TMPL_BMC_IP_3
       secret: TMPL_BMC_SECRET_3
       user: TMPL_BMC_USER_3
-    cluster_id: TMPL_CLUSTER_ID_3
+    cluster_id: TMPL_CLUSTER_ID
     hostname: TMPL_HOSTNAME_3
     name: TMPL_NODE_NAME_3
     network:

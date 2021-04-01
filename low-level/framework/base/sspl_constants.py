@@ -24,7 +24,6 @@ from enum import Enum
 # using cortx package
 from framework.utils.salt_util import SaltInterface
 from framework.utils.service_logging import logger
-from cortx.utils.conf_store import Conf
 
 
 PRODUCT_NAME = 'LR2'
@@ -36,8 +35,8 @@ setups = ["vm", "cortx", "ssu", "gw", "cmu"]
 RESOURCE_PATH = "/opt/seagate/%s/sspl/low-level/json_msgs/schemas/" % (PRODUCT_FAMILY)
 CLI_RESOURCE_PATH = "/opt/seagate/%s/sspl/low-level/tests/manual" % (PRODUCT_FAMILY)
 DATA_PATH = "/var/%s/sspl/data/" % (PRODUCT_FAMILY)
-SSPL_CONFIGURED_DIR = "/var/%s/sspl" % (PRODUCT_FAMILY)
-SSPL_CONFIGURED = "%s/sspl-configured" % SSPL_CONFIGURED_DIR
+SSPL_CONFIGURED_DIR = "/var/%s/sspl/" % (PRODUCT_FAMILY)
+SSPL_CONFIGURED = "%s/sspl-configured" % (SSPL_CONFIGURED_DIR)
 RESOURCE_HEALTH_VIEW = "/usr/bin/resource_health_view"
 CONSUL_DUMP = "/opt/seagate/%s/sspl/bin/consuldump.py" % (PRODUCT_FAMILY)
 NODE_ID = "SN01"
@@ -45,7 +44,7 @@ SITE_ID = "DC01"
 RACK_ID = "RC01"
 SSPL_STORE_TYPE = 'file'
 SYSLOG_HOST = 'localhost'
-SYSLOG_PORT = '514'
+SYSLOG_PORT = 514
 SYSINFO = "SYSTEM_INFORMATION"
 PRODUCT = "product"
 SETUP = "setup"
@@ -64,11 +63,14 @@ RSYSLOG_SSPL_CONF = "/etc/rsyslog.d/1-ssplfwd.conf"
 LOGROTATE_DIR  ="/etc/logrotate.d"
 IEM_LOGROTATE_CONF = "%s/iem_messages" % LOGROTATE_DIR
 SSPL_LOGROTATE_CONF = "%s/sspl_logs" % LOGROTATE_DIR
+SSPL_LOG_PATH = "/var/log/%s/sspl/" % PRODUCT_FAMILY
+SSPL_BUNDLE_PATH = "/var/%s/sspl/bundle/" % PRODUCT_FAMILY
 HPI_PATH = '/tmp/dcs/hpi'
 MDADM_PATH = '/etc/mdadm.conf'
-GLOBAL_CONFIG_INDEX = "global"
-SSPL_CONFIG_INDEX = "sspl"
-SSPL_TEST_CONFIG_INDEX = "sspl_test"
+PRVSNR_CONFIG_INDEX = "prvsnr_input_config"
+GLOBAL_CONFIG_INDEX = "GLOBAL"
+SSPL_CONFIG_INDEX = "SSPL"
+SSPL_TEST_CONFIG_INDEX = "SSPL_TEST"
 CONFIG_SPEC_TYPE = "yaml"
 
 # This file will be created when sspl is being configured for node replacement case
@@ -78,8 +80,10 @@ REPLACEMENT_NODE_ENV_VAR_FILE = "/etc/profile.d/set_replacement_env.sh"
 component = 'sspl/config'
 file_store_config_path = '/etc/sspl.conf'
 sspl_test_file_path = "%s/sspl_test/conf/sspl_tests.conf" % (SSPL_BASE_DIR)
-sspl_config_path = "yaml://%s" % (file_store_config_path)
-sspl_test_config_path = "yaml://%s" % (sspl_test_file_path)
+global_config_file_path = "/etc/sspl_global_config_copy.%s" % (CONFIG_SPEC_TYPE)
+sspl_config_path = "%s://%s" % (CONFIG_SPEC_TYPE, file_store_config_path)
+sspl_test_config_path = "%s://%s" % (CONFIG_SPEC_TYPE, sspl_test_file_path)
+global_config_path = "%s://%s" %(CONFIG_SPEC_TYPE, global_config_file_path)
 salt_provisioner_pillar_sls = 'sspl'
 salt_uniq_attr_per_node = ['cluster_id']
 salt_uniq_passwd_per_node = ['RABBITMQINGRESSPROCESSOR', 'RABBITMQEGRESSPROCESSOR', 'LOGGINGPROCESSOR']
