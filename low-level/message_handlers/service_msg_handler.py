@@ -34,9 +34,9 @@ from json_msgs.messages.sensors.service_monitor_msg import ServiceMonitorMsg
 
 from framework.utils.utility import errno_to_str_mapping
 from cortx.utils.service import DbusServiceHandler
-from framework.utils.conf_utils import (CLUSTER, GLOBAL_CONF, SRVNODE, SSPL_CONF,
-                                        Conf, SITE_ID, CLUSTER_ID, NODE_ID,
-                                        RACK_ID, STORAGE_SET_ID,
+from framework.utils.conf_utils import (GLOBAL_CONF, SSPL_CONF,
+                                        Conf, SITE_ID_KEY, CLUSTER_ID_KEY, NODE_ID_KEY,
+                                        RACK_ID_KEY, STORAGE_SET_ID_KEY,
                                         SERVICEMONITOR, MONITORED_SERVICES)
 # Modules that receive messages from this module
 from message_handlers.logging_msg_handler import LoggingMsgHandler
@@ -90,15 +90,11 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
         self._import_products(product)
 
         self.host_id = socket.getfqdn()
-        self.site_id = Conf.get(GLOBAL_CONF,
-                                    f'{CLUSTER}>{SRVNODE}>{SITE_ID}','DC01')
-        self.rack_id = Conf.get(GLOBAL_CONF,
-                                    f'{CLUSTER}>{SRVNODE}>{RACK_ID}','RC01')
-        self.node_id = Conf.get(GLOBAL_CONF,
-                                    f'{CLUSTER}>{SRVNODE}>{NODE_ID}','SN01')
-        self.cluster_id = Conf.get(GLOBAL_CONF, f'{CLUSTER}>{CLUSTER_ID}','CC01')
-        self.storage_set_id = Conf.get(GLOBAL_CONF,
-                                f'{CLUSTER}>{SRVNODE}>{STORAGE_SET_ID}', 'ST01')
+        self.site_id = Conf.get(GLOBAL_CONF, SITE_ID_KEY, "DC01")
+        self.rack_id = Conf.get(GLOBAL_CONF, RACK_ID_KEY, "RC01")
+        self.node_id = Conf.get(GLOBAL_CONF, NODE_ID_KEY, "SN01")
+        self.cluster_id = Conf.get(GLOBAL_CONF, CLUSTER_ID_KEY, "CC01")
+        self.storage_set_id = Conf.get(GLOBAL_CONF, STORAGE_SET_ID_KEY, "ST01")
         self.monitored_services = Conf.get(SSPL_CONF,
                                     f'{SERVICEMONITOR}>{MONITORED_SERVICES}')
 

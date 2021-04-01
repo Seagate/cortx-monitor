@@ -8,6 +8,7 @@ server_node:
       ip: TMPL_BMC_IP_1
       secret: TMPL_BMC_SECRET_1
       user: TMPL_BMC_USER_1
+    cluster_id: TMPL_CLUSTER_ID
     hostname: TMPL_HOSTNAME_1
     name: TMPL_NODE_NAME_1
     network:
@@ -33,6 +34,7 @@ server_node:
       ip: TMPL_BMC_IP_2
       secret: TMPL_BMC_SECRET_2
       user: TMPL_BMC_USER_2
+    cluster_id: TMPL_CLUSTER_ID
     hostname: TMPL_HOSTNAME_2
     name: TMPL_NODE_NAME_2
     network:
@@ -58,6 +60,7 @@ server_node:
       ip: TMPL_BMC_IP_3
       secret: TMPL_BMC_SECRET_3
       user: TMPL_BMC_USER_3
+    cluster_id: TMPL_CLUSTER_ID
     hostname: TMPL_HOSTNAME_3
     name: TMPL_NODE_NAME_3
     network:
@@ -90,7 +93,7 @@ storage_enclosure:
         port: TMPL_SECONDARY_CONTROLLER_PORT_1
       type: TMPL_CONTROLLER_TYPE_1
       user: TMPL_CONTROLLER_USER_1
-    name: TMPL_ENCLOSURE_ID_1
+    name: TMPL_ENCLOSURE_NAME_1
     type: TMPL_ENCLOSURE_TYPE_1
   TMPL_ENCLOSURE_ID_2:
     controller:
@@ -103,7 +106,7 @@ storage_enclosure:
         port: TMPL_SECONDARY_CONTROLLER_PORT_2
       type: TMPL_CONTROLLER_TYPE_2
       user: TMPL_CONTROLLER_USER_2
-    name: TMPL_ENCLOSURE_ID_2
+    name: TMPL_ENCLOSURE_NAME_2
     type: TMPL_ENCLOSURE_TYPE_2
   TMPL_ENCLOSURE_ID_3:
     controller:
@@ -116,5 +119,5 @@ storage_enclosure:
         port: TMPL_SECONDARY_CONTROLLER_PORT_3
       type: TMPL_CONTROLLER_TYPE_3
       user: TMPL_CONTROLLER_USER_3
-    name: TMPL_ENCLOSURE_ID_3
+    name: TMPL_ENCLOSURE_NAME_3
     type: TMPL_ENCLOSURE_TYPE_3

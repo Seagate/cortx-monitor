@@ -36,7 +36,7 @@ from framework.utils.service_logging import init_logging
 from framework.utils.service_logging import logger
 from rabbitmq.rabbitmq_ingress_processor_tests import RabbitMQingressProcessorTests
 from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
-from framework.utils.conf_utils import Conf, SSPL_TEST_CONF, GLOBAL_CONF
+from framework.utils.conf_utils import Conf, SSPL_TEST_CONF, GLOBAL_CONF, PRODUCT_KEY
 
 
 PY2 = sys.version_info[0] == 2
@@ -82,7 +82,7 @@ def init_rabbitMQ_msg_processors():
     world.sspl_modules = {}
 
     # Read in product value from configuration file
-    product = Conf.get(GLOBAL_CONF, f"release>{PRODUCT_NAME}")
+    product = Conf.get(GLOBAL_CONF, PRODUCT_KEY)
     logger.info("sspl-ll Bootstrap: product name supported: %s" % product)
     # Use reflection to instantiate the class based upon its class name in config file
     for conf_thread in conf_modules:

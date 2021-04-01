@@ -27,7 +27,7 @@ import re
 # using cortx library
 from framework.utils.conf_utils import Conf, SSPL_CONF
 from cortx.utils.process import SimpleProcess
-from .setup_error import SetupError
+from files.opt.seagate.sspl.setup.setup_error import SetupError
 
 localhost_fqdn = socket.getfqdn().split('.')[0]
 

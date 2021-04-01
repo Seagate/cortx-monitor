@@ -18,18 +18,14 @@
 import os
 import consul
 
+# Using cortx package
 from cortx.utils.conf_store import Conf
-from .setup_error import SetupError
-from framework.base.sspl_constants import (CONSUL_HOST,
-                                           CONSUL_PORT,
-                                           PRODUCT_FAMILY,
-                                           SSPL_STORE_TYPE,
-                                           GLOBAL_CONFIG_INDEX)
 
-def update_sensor_info(config_index):
 
-    key = 'monitor'
-
+def update_sensor_info(config_index, node_type, enclosure_type):
+    """Enable or disable sensor monitoring based on node_type
+    and enclosure_type.
+    """
     sensors = dict()
     sensors["REALSTORSENSORS"] = "true"
     sensors["NODEHWSENSOR"] = "true"
@@ -40,47 +36,18 @@ def update_sensor_info(config_index):
     sensors["MEMFAULTSENSOR"] = "true"
     sensors["CPUFAULTSENSOR"] = "true"
 
-    try:
-        with open("/etc/machine-id") as f:
-            machine_id = f.read().strip("\n")
-    except Exception as err:
-        raise SetupError(1, "Failed to get machine-id. - %s" % (err))
-
-    srvnode = Conf.get(GLOBAL_CONFIG_INDEX,
-                       "cluster>server_nodes>%s" % (machine_id))
-    enclosure_id = Conf.get(GLOBAL_CONFIG_INDEX,
-                            "cluster>%s>storage>enclosure_id" % (srvnode))
-    node_key_id = Conf.get(GLOBAL_CONFIG_INDEX,
-                           'cluster>server_nodes>%s' % (machine_id))
-
-    storage_type = Conf.get(GLOBAL_CONFIG_INDEX,
-                            'storage>%s>type' % enclosure_id)
-    if storage_type and storage_type.lower() in ["virtual", "jbod"]:
+    if enclosure_type and enclosure_type.lower() in ["virtual", "vm", "jbod"]:
         sensors["REALSTORSENSORS"] = "false"
 
-    server_type = Conf.get(GLOBAL_CONFIG_INDEX,
-                           'cluster>%s>node_type' % (node_key_id))
-    if server_type and server_type.lower() in ["virtual"]:
+    if node_type and node_type.lower() in ["virtual", "vm"]:
         sensors["NODEHWSENSOR"] = "false"
         sensors["SASPORTSENSOR"] = "false"
         sensors["MEMFAULTSENSOR"] = "false"
         sensors["CPUFAULTSENSOR"] = "false"
         sensors["RAIDSENSOR"] = "false"
 
-    # Onward LDR_R2, consul will be abstracted out and it won't exit as hard dependeny of SSPL
-    # Note: SSPL has backward compatibility to LDR_R1 and there consul is a dependency of SSPL.
-    if SSPL_STORE_TYPE == "consul":
-        host = os.getenv('CONSUL_HOST', CONSUL_HOST)
-        port = os.getenv('CONSUL_PORT', CONSUL_PORT)
-        try:
-            consul_conn = consul.Consul(host=host, port=port)
-            for sect, value in sensors.items():
-                consul_conn.kv.put("sspl/config/%s/monitor" % sect, value)
-        except Exception as cerror:
-            print("Error in connecting with consul: {}".format(cerror))
-
     # Update sensor information in config
     for sect, value in sensors.items():
-        Conf.set(config_index, '%s>%s' % (sect, key), value)
+        Conf.set(config_index, '%s>monitor' % sect, value)
 
     Conf.save(config_index)

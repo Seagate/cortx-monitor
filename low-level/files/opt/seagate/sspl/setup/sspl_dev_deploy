@@ -34,8 +34,9 @@ import subprocess
 import site
 import importlib
 import tarfile
+import time
 
-localhost_fqdn = socket.getfqdn().split('.')[0]
+localhost_fqdn = socket.getfqdn()
 SSPL_BASE_DIR = "/opt/seagate/cortx/sspl"
 UTILS_BASE_DIR = "/opt/seagate/cortx/utils"
 
@@ -52,7 +53,7 @@ class DeployError(Exception):
         """Format error string."""
         if self._rc == 0:
             return self._desc
-        return "DeployError(%d): %s" % (self._rc, self._desc)
+        return "(%d): %s" % (self._rc, self._desc)
 
 
 class SSPLDevDeploy:
@@ -61,93 +62,81 @@ class SSPLDevDeploy:
     def __init__(self, args):
         """Initialize required config variables."""
         self.args = args
-        # TODO: replace this by main branch URL
         self.CORTX_MONITOR_BASE_URL = "https://raw.githubusercontent.com/Seagate/cortx-monitor/main"
         self.build_url = ("http://cortx-storage.colo.seagate.com/releases"
                           "/cortx/github/main/centos-7.8.2003"
                           "/last_successful_prod/")
-        self.install_3rd_party_packages = False
-        self.skip_bmc = False
-        self.TARGET_BUILD = ""
-        self.RPMS_PATH = ""
-        self.PRODUCT_VERSION = "LR2"
-        self.RMQ_USER = "sspluser"
-        self.RMQ_PASSWD = ""
-        self.CNTRLR_A = "10.0.0.2"
-        self.CNTRLR_B = "10.0.0.3"
-        self.CNTRLR_A_PORT = "80"
-        self.CNTRLR_B_PORT = "80"
-        self.CNTRLR_USER = "manage"
-        self.CNTRLR_PASSWD = "xxxx"
-        self.BMC_IP = ""
-        self.BMC_USER = ""
-        self.BMC_PASSWD = "xxxx"
-        self.SERVER_TYPE = "virtual"
-        self.STORAGE_TYPE = "virtual"
-        self.CLUSTER_NODES = ""
-        # Config files
-        self.sspl_config = None
-        self.sample_global_config = None
+        self.target_build = None
+        self.rpms_path = None
+        self.nodes = {localhost_fqdn}
+        self.message_broker = "kafka"
+        self.variable_file = None
+        self.deploy_type = "1-node"
+        self.utils_config = "/etc/cortx/utils.yaml"
+        self.temp_dir = "%s/conf/temp" % SSPL_BASE_DIR
+        self.machine_id = None
+        with open("/etc/machine-id") as f:
+            self.machine_id = f.read().strip()
+        if not self.machine_id:
+            raise DeployError(1, "Failed to get machine-id.")
+        # Overwite config values
+        self.storage_type = None
+        self.server_type = None
 
     def parse_args(self):
         """Override the default values."""
-        if self.args.standalone_installation:
-            self.install_3rd_party_packages = True
-        if self.args.product_version:
-            self.PRODUCT_VERSION = self.args.product_version
-        if self.args.rmq_user:
-            self.RMQ_USER = self.args.rmq_user
-        if self.args.rmq_passwd:
-            self.RMQ_PASSWD = self.args.rmq_passwd
-        if self.args.cntrlr_a:
-            self.CNTRLR_A = self.args.cntrlr_a
-        if self.args.cntrlr_a_port:
-            self.CNTRLR_A_PORT = self.args.cntrlr_a_port
-        if self.args.cntrlr_b:
-            self.CNTRLR_B = self.args.cntrlr_b
-        if self.args.cntrlr_b_port:
-            self.CNTRLR_B_PORT = self.args.cntrlr_b_port
-        if self.args.cntrlr_user:
-            self.CNTRLR_USER = self.args.cntrlr_user
-        if self.args.cntrlr_pass:
-            self.CNTRLR_PASSWD = self.args.cntrlr_pass
         if self.args.target_build_url:
-            self.TARGET_BUILD = self.args.target_build_url
+            self.target_build = self.args.target_build_url
         if self.args.local_rpms_path:
-            self.RPMS_PATH = self.args.local_rpms_path
-        if self.args.bmc_ip:
-            self.BMC_IP = self.args.bmc_ip
-        if self.args.bmc_user:
-            self.BMC_USER = self.args.bmc_user
-        if self.args.bmc_passwd:
-            self.BMC_PASSWD = self.args.bmc_passwd
+            self.rpms_path = self.args.local_rpms_path
+        if self.args.nodes:
+            nodes = self.args.nodes.strip().split(",")
+            for node in nodes:
+                self.nodes.add(node)
+            self.nodes = sorted(self.nodes)
+        if self.args.variable_file:
+            self.variable_file = self.args.variable_file
+            if not os.path.exists(self.variable_file):
+                raise DeployError(1, "Variable file '%s' not found.",
+                    self.variable_file)
+        if self.args.message_broker:
+            self.message_broker = self.args.message_broker
         if self.args.storage_type:
-            self.STORAGE_TYPE = self.args.storage_type
+            self.storage_type = self.args.storage_type
         if self.args.server_type:
-            self.SERVER_TYPE = self.args.server_type
-        if self.args.cluster_nodes:
-            self.CLUSTER_NODES = self.args.cluster_nodes
+            self.server_type = self.args.server_type
+        if len(self.nodes) == 1:
+            self.deploy_type = "1-node"
+        elif len(self.nodes) > 3:
+            raise DeployError(1,
+                "Deploying on more than 3 node is not supported at this time. %s",
+                "Received: %s." % self.nodes)
+        else:
+            self.deploy_type = "3-node"
 
     def cleanup(self):
         """Stop sspl service and remove SSPL RPMS."""
         cmd = "systemctl stop sspl-ll.service"
         self._execute_cmd(cmd)
+        cmd = "systemctl stop kafka.service"
+        self._execute_cmd(cmd)
+        cmd = "systemctl stop zookeeper.service"
+        self._execute_cmd(cmd)
+        cmd = "rm -rf /tmp/kafka-logs /opt/kafka /var/lib/zookeeper /var/lib/kafka-logs"
+        self._execute_cmd(cmd)
         cmd = "yum --setopt=tsflags=noscripts erase -y cortx-sspl.noarch"
         out, rc = self._execute_cmd(cmd)
         if rc != 0:
-            raise DeployError(rc,
-                              "%s - %s CMD: %s",
-                              out,
-                              "Unable to remove sspl RPMS. Cleanup failed.",
-                              cmd)
+            raise DeployError(rc, "%s - %s CMD: %s",
+                out, "Unable to remove sspl RPMS. Cleanup failed.", cmd)
         cmd = "yum --setopt=tsflags=noscripts erase -y cortx-py-utils"
         out, rc = self._execute_cmd(cmd)
         if rc != 0:
-            raise DeployError(rc,
-                              "%s - %s CMD: %s",
-                              out,
-                              "Unable to remove cortx-py-utils. Cleanup failed.",
-                              cmd)
+            raise DeployError(rc, "%s - %s CMD: %s",
+                out, "Unable to remove cortx-py-utils. Cleanup failed.", cmd)
+        if os.path.exists(self.temp_dir):
+            cmd = "rm -rf %s" % self.temp_dir
+            self._execute_cmd(cmd)
 
     def setup_yum_repos(self):
         """Setup common, 3rd_party and build specific repos."""
@@ -158,23 +147,30 @@ class SSPLDevDeploy:
             shutil.copyfileobj(response, out_file)
         os.chmod("setup_yum_repos.py", 0o775)
 
-        if self.TARGET_BUILD:
-            cmd = "./setup_yum_repos.py -t %s" % (self.TARGET_BUILD)
+        if self.target_build:
+            cmd = "./setup_yum_repos.py -t %s" % (self.target_build)
             out, rc = self._execute_cmd(cmd)
         else:
             cmd = "./setup_yum_repos.py"
             out, rc = self._execute_cmd(cmd)
         if rc != 0:
-            raise DeployError(rc,
-                              "%s - %s CMD: %s",
-                              out,
-                              "Failed to setup yum repos.",
-                              cmd)
+            raise DeployError(rc, "%s - %s CMD: %s",
+                out, "Failed to setup yum repos.", cmd)
 
     def install_dependencies(self):
-        """Install common and 3rd_party application."""
-        print("INFO: INSTALLING cortx-py-utils...")
+        """Install common and 3rd_party applications."""
+        if not (self.target_build or self.rpms_path):
+            raise DeployError(1, "Target build or RPMS path is not given.")
+        pkg_name = "cortx-prereq"
+        print("INFO: INSTALLING %s..." % pkg_name)
+        cmd = "yum install -y %s" % pkg_name
+        out, rc = self._execute_cmd(cmd)
+        if rc != 0:
+            raise DeployError(rc, "%s - %s CMD: %s",
+                out, "Failed to install %s." % (pkg_name), cmd)
+
         pkg_name = "cortx-py-utils"
+        print("INFO: INSTALLING cortx-py-utils...")
         build_url = ("http://cortx-storage.colo.seagate.com/releases/"
                      "cortx/components/github/main/centos-7.8.2003/"
                      "dev/cortx-utils/last_successful/")
@@ -186,229 +182,226 @@ class SSPLDevDeploy:
         cmd = "yum install -y %s%s" % (build_url, pkg[0])
         out, rc = self._execute_cmd(cmd)
         if rc != 0:
-            raise DeployError(rc,
-                              "%s - %s CMD: %s",
-                              out,
-                              "Failed to install %s." % (pkg_name),
-                              cmd)
+            raise DeployError(rc, "%s - %s CMD: %s",
+                out, "Failed to install %s." % (pkg_name), cmd)
 
     def install_sspl_rpms(self):
         """Install SSPL RPMS."""
         # If local RPMS location is specified, SSPL RPMS will be
         # installed from the speicifed path. Otherwise yum repos.
-        if self.RPMS_PATH:
+        if self.rpms_path:
             print("INFO: Installing SSPL RPMS from local path - %s" % (
-                self.RPMS_PATH))
-            packages = glob.glob(self.RPMS_PATH + '/cortx-*-2.*')
+                self.rpms_path))
+            packages = glob.glob(self.rpms_path + '/cortx-*-2.*')
             sspl_rpm_cmd = f"sudo yum install -y {' '.join(packages)}"
             out, rc = self._execute_cmd(sspl_rpm_cmd)
             if rc != 0:
-                raise DeployError(rc,
-                                  "%s - %s CMD: %s",
-                                  out,
-                                  "Failed to install SSPL RPMS.",
-                                  sspl_rpm_cmd)
+                raise DeployError(rc, "%s - %s CMD: %s",
+                    out, "Failed to install SSPL RPMS.", sspl_rpm_cmd)
         else:
             print("INFO: Installing SSPL RPMS using yum repos...")
             sspl_cmd = "yum install -y cortx-sspl.noarch"
             sspl_test_cmd = "yum install -y cortx-sspl-test"
             out, rc = self._execute_cmd(sspl_cmd)
             if rc != 0:
-                raise DeployError(rc,
-                                  "%s - %s CMD: %s",
-                                  out,
-                                  "Failed to install 'cortx-sspl'.",
-                                  sspl_cmd)
+                raise DeployError(rc, "%s - %s CMD: %s",
+                    out, "Failed to install 'cortx-sspl'.", sspl_cmd)
             out, rc = self._execute_cmd(sspl_test_cmd)
             if rc != 0:
-                raise DeployError(rc,
-                                  "%s - %s CMD: %s",
-                                  out,
-                                  "Failed to install 'cortx-sspl-test'.",
-                                  sspl_test_cmd)
-        print("INFO: INSTALLING required python3 site-packages..")
-        cmd = "python3 -m pip install -r /opt/seagate/cortx/sspl/low-level/requirements.txt"
-        self._execute_cmd(cmd)
+                raise DeployError(rc, "%s - %s CMD: %s",
+                    out, "Failed to install 'cortx-sspl-test'.", sspl_test_cmd)
 
-        print("INFO: Done installing SSPL RPMS.")
-
-    def update_config(self):
-        """Update sspl and sample global config values."""
         # Reload site, so newly added packages can be imported
         importlib.reload(site)
-        from cortx.utils.conf_store import Conf
-
-        sspl_config_index = "sspl"
-        global_config_index = "global"
-
-        self.sspl_config = "%s/conf/sspl.conf.%s.yaml" % (
-            SSPL_BASE_DIR, self.PRODUCT_VERSION)
-        self.sample_global_config = "%s/conf/sample_global_cortx_config.yaml" % SSPL_BASE_DIR
-
-        if not os.path.exists(self.sspl_config):
-            raise DeployError(1, "sspl config file not found.")
-        if not os.path.exists(self.sample_global_config):
-            raise DeployError(1, "Sample global config file not found.")
-
-        print("INFO: Updating config values in config files..\n" +
-              "SSPL_CONFIG: %s \nGLOBAL_CONFIG: %s" % (
-                  self.sspl_config, self.sample_global_config))
-        Conf.load(sspl_config_index, "yaml://%s" % self.sspl_config)
-        Conf.load(global_config_index, "yaml://%s" % self.sample_global_config)
-
-        try:
-            with open("/etc/machine-id") as f:
-                machine_id = f.read().strip("\n")
-                Conf.set(global_config_index, "cluster>server_nodes",
-                         {machine_id: "srvnode-1"})
-                Conf.save(global_config_index)
-        except Exception as err:
-            raise DeployError(1, "Failed to get machine-id. - %s" % (err))
-
-        Conf.set(sspl_config_index,
-                 "RABBITMQINGRESSPROCESSOR>username", self.RMQ_USER)
-        Conf.set(sspl_config_index,
-                 "RABBITMQEGRESSPROCESSOR>username", self.RMQ_USER)
-        if self.RMQ_PASSWD:
-            Conf.set(sspl_config_index,
-                     "RABBITMQINGRESSPROCESSOR>password", self.RMQ_PASSWD)
-            Conf.set(sspl_config_index,
-                     "RABBITMQEGRESSPROCESSOR>password", self.RMQ_PASSWD)
-            Conf.set(sspl_config_index,
-                     "LOGGINGPROCESSOR>password", self.RMQ_PASSWD)
-        srvnode = Conf.get(
-            global_config_index, "cluster>server_nodes>%s" % (machine_id))
-        enclosure_id = Conf.get(
-            global_config_index, "cluster>%s>storage>enclosure_id" % (srvnode))
-        Conf.set(global_config_index,
-                 "storage>%s>controller>primary>ip" % (enclosure_id),
-                 self.CNTRLR_A)
-        Conf.set(global_config_index,
-                 "storage>%s>controller>primary>port" % (enclosure_id),
-                 self.CNTRLR_A_PORT)
-        Conf.set(global_config_index,
-                 "storage>%s>controller>secondary>ip" % (enclosure_id),
-                 self.CNTRLR_B)
-        Conf.set(global_config_index,
-                 "storage>%s>controller>secondary>port" % (enclosure_id),
-                 self.CNTRLR_B_PORT)
-        Conf.set(global_config_index,
-                 "storage>%s>controller>user" % (enclosure_id),
-                 self.CNTRLR_USER)
-        Conf.set(global_config_index,
-                 "storage>%s>controller>secret" % (enclosure_id),
-                 self.CNTRLR_PASSWD)
-        Conf.set(global_config_index, "storage>%s>type" %
-                 (enclosure_id), self.STORAGE_TYPE)
-        Conf.set(global_config_index, "cluster>%s>node_type" %
-                 (srvnode), self.SERVER_TYPE)
-        Conf.set(global_config_index, "release>product", self.PRODUCT_VERSION)
-
-        # Update BMC Information
-        if self.PRODUCT_VERSION == "LR2" and not self.BMC_IP:
-            self.skip_bmc = True
-            print("INFO: Skipping BMC information for LR2...")
-        else:
-            if not self.BMC_IP:
-                raise DeployError(1,
-                                  "ERROR: -i <BMC IPV4> is required for non LR2 system.")
-            if not self.BMC_USER:
-                raise DeployError(1,
-                                  "ERROR: -u <BMC user> is required for non LR2 system.")
-            if not self.BMC_PASSWD:
-                raise DeployError(1,
-                                  "ERROR: -p <BMC password> is required for non LR2 system.")
-            Conf.set(global_config_index, "cluster>%s>bmc>ip" %
-                     (srvnode), self.BMC_IP)
-            Conf.set(global_config_index, "cluster>%s>bmc>user" %
-                     (srvnode), self.BMC_USER)
-            Conf.set(global_config_index, "cluster>%s>bmc>secret" %
-                     (srvnode), self.BMC_PASSWD)
-        # kafka>servers, required by cortx-utils
-        Conf.set(global_config_index, "cortx>software>kafka>servers",
-                 [socket.getfqdn()])
-        Conf.save(sspl_config_index)
-        Conf.save(global_config_index)
+        print("INFO: Done installing SSPL RPMS.")
 
     def setup_message_broker(self):
-        # Copy message bus conf file
+        """Setup message broker"""
+        from cortx.utils.conf_store import Conf
+        # Copy message bus conf files
         os.makedirs("/etc/cortx/", exist_ok=True)
-        self.setup_kafka()
+        if self.message_broker == "kafka":
+            self.setup_kafka()
+        # Prepare utils config
+        utils_index = "utils"
+        with open(self.utils_config, "w") as f:
+            f.write("")
+        Conf.load(utils_index, "yaml://%s" % self.utils_config)
+        Conf.set(utils_index, "cortx>software>common>message_bus_type", self.message_broker)
+        if not self.nodes:
+            Conf.set(utils_index, "cortx>software>kafka>servers[0]", localhost_fqdn)
+        else:
+            for num, node in enumerate(self.nodes):
+                Conf.set(utils_index, "cortx>software>kafka>servers[%s]" % num, node)
+        Conf.save(utils_index)
 
     def setup_kafka(self):
-        # Setup kafka
-
+        """Setup kafka"""
         file_path = (f"{self.CORTX_MONITOR_BASE_URL}"
                      "/low-level/files/opt/seagate/sspl/setup/standalone")
         kafka_version = '2.13-2.7.0'
-        r = urllib.request.urlopen(
-            f"{self.build_url}/3rd_party/commons/"
+        r = urllib.request.urlopen(f"{self.build_url}/3rd_party/commons/"
             f"kafka/kafka_{kafka_version}.tgz")
         with open(f"/tmp/kafka_{kafka_version}.tgz", "wb") as f:
             shutil.copyfileobj(r, f)
         tar = tarfile.open(f"/tmp/kafka_{kafka_version}.tgz")
         tar.extractall("/opt/kafka")
         tar.close()
-        r = urllib.request.urlopen(
-            f"{file_path}/zookeeper.service")
-        with open("/etc/systemd/system/zookeeper.service", "wb") as f:
-            shutil.copyfileobj(r, f)
-        r = urllib.request.urlopen(
-            f"{file_path}/kafka.service")
-        with open("/etc/systemd/system/kafka.service", "wb") as f:
-            shutil.copyfileobj(r, f)
-        self._execute_cmd("systemctl enable zookeeper.service")
-        self._execute_cmd("systemctl enable kafka.service")
-        self._execute_cmd("systemctl daemon-reload")
-        self._execute_cmd("systemctl start zookeeper.service")
-        self._execute_cmd("systemctl start kafka.service")
+        # Configure cluster
+        if len(self.nodes) > 1:
+            cmd = "systemctl enable firewalld"
+            self._execute_cmd(cmd)
+            cmd = "systemctl start firewalld"
+            self._execute_cmd(cmd)
+            for port in range(2889, 2889 + len(self.nodes)):
+                cmd = "firewall-cmd --add-port=%s/tcp --permanent" % port
+                self._execute_cmd(cmd)
+            # Set zookeeper property
+            zk_prop_file = "/opt/kafka/kafka_2.13-2.7.0/config/zookeeper.properties"
+            zk_data_dir = "/var/lib/zookeeper"
+            os.makedirs(zk_data_dir, exist_ok=True)
+            zk_cluster_config = {
+                "tickTime": "2000",
+                "initLimit": "10",
+                "syncLimit": "5",
+                "dataDir": "%s" % zk_data_dir,
+                "clientPort": "2181",
+                "autopurge.snapRetainCount": "3",
+                "autopurge.purgeInterval": "24"
+            }
+            node_ids = {fqdn:myid for myid, fqdn in enumerate(self.nodes, 1)}
+            for fqdn, myid in node_ids.items():
+                zk_cluster_config.update({"server.%s" % myid: "%s:2888:3888" % fqdn})
+                if fqdn in localhost_fqdn:
+                    with open("%s/myid" % zk_data_dir, "w") as f:
+                        f.write(str(myid))
+            self.update_property_file(zk_prop_file, zk_cluster_config)
+            r = urllib.request.urlopen(f"{file_path}/zookeeper.service")
+            with open("/etc/systemd/system/zookeeper.service", "wb") as f:
+                shutil.copyfileobj(r, f)
+            self._execute_cmd("systemctl enable zookeeper.service")
+            self._execute_cmd("systemctl daemon-reload")
+            self._execute_cmd("systemctl start zookeeper.service")
+            # set kafka property
+            kafka_prop_file = "/opt/kafka/kafka_2.13-2.7.0/config/server.properties"
+            kafka_log_dir = "/var/lib/kafka-logs"
+            os.makedirs(kafka_log_dir, exist_ok=True)
+            cluster = ["%s:2181" % node for node in self.nodes]
+            cluster = ",".join(cluster)
+            k_cluster_config = {
+                "log.dirs": "%s" % kafka_log_dir,
+                "broker.id": "%s" % node_ids[localhost_fqdn],
+                "zookeeper.connect": "%s" % cluster
+            }
+            self.update_property_file(kafka_prop_file, k_cluster_config)
+            r = urllib.request.urlopen(f"{file_path}/kafka.service")
+            with open("/etc/systemd/system/kafka.service", "wb") as f:
+                shutil.copyfileobj(r, f)
+            self._execute_cmd("systemctl enable kafka.service")
+            self._execute_cmd("systemctl daemon-reload")
+            self._execute_cmd("systemctl start kafka.service")
+        else:
+            r = urllib.request.urlopen(f"{file_path}/zookeeper.service")
+            with open("/etc/systemd/system/zookeeper.service", "wb") as f:
+                shutil.copyfileobj(r, f)
+            r = urllib.request.urlopen(f"{file_path}/kafka.service")
+            with open("/etc/systemd/system/kafka.service", "wb") as f:
+                shutil.copyfileobj(r, f)
+            self._execute_cmd("systemctl enable zookeeper.service")
+            self._execute_cmd("systemctl enable kafka.service")
+            self._execute_cmd("systemctl daemon-reload")
+            self._execute_cmd("systemctl start zookeeper.service")
+            self._execute_cmd("systemctl status zookeeper.service")
+            self._execute_cmd("systemctl start kafka.service")
+            self._execute_cmd("systemctl status kafka.service")
         os.remove(f"/tmp/kafka_{kafka_version}.tgz")
+        print("INFO: Done kafka setup.")
 
-    def setup_rabbitmq(self):
-        """Start rabbitmq"""
-        from cortx.utils.service import DbusServiceHandler
-        from cortx.utils.validator.v_service import ServiceV
-        from cortx.utils.validator.error import VError
-        dbus_service = DbusServiceHandler()
-        print("INFO: INSTALLING rabbitmq-server...")
-        cmd = "yum install -y rabbitmq-server"
-        out, rc = self._execute_cmd(cmd)
-        if rc != 0:
-            raise DeployError(rc,
-                              "%s - %s CMD: %s",
-                              out,
-                              "Failed to install rabbitmq-server.",
-                              cmd)
-        try:
-            ServiceV().validate("isrunning", ["rabbitmq-server"])
-        except VError:
-            dbus_service.start('rabbitmq-server.service')
-        print("INFO: Done rabbitmq setup.")
+    def update_property_file(self, prop_file, cluster_config):
+        """Set values for required key in the property file"""
+        with open(prop_file) as f:
+            properties = f.read()
+        for k, v in cluster_config.items():
+            matched_str = re.search("(%s.*=)(.*)" % k, properties)
+            if not matched_str:
+                with open(prop_file, "a+") as f:
+                    f.writelines(["%s=%s\n" % (k, v)])
+            else:
+                with open(prop_file) as f:
+                    content = f.read()
+                content = content.replace(matched_str.group(), f"{k}={v}")
+                with open(prop_file, "w") as f:
+                    f.write(content)
 
-    def setup_sspl(self):
+    def create_config(self, variable_file, config_files):
+        """Override template varibales by values from input file."""
+        from cortx.utils.conf_store import Conf
+        lines = []
+        variables = {}
+        with open(variable_file) as f:
+            lines = f.readlines()
+        for line in lines:
+            result = re.search(r"(.*)=(.*)", line.strip())
+            if result:
+                variables.update({result.groups()[0]: result.groups()[1]})
+        for stage, c_file in config_files.items():
+            replaced_data = None
+            for k, v in variables.items():
+                with open(c_file, "rt") as f:
+                    data = f.read()
+                replaced_data = data.replace(k, v)
+                with open(c_file, "wt") as f:
+                    f.write(replaced_data)
+            if replaced_data:
+                tmpl_var = re.search(r"(TMPL_[\w]+)", replaced_data)
+                if tmpl_var:
+                    raise DeployError(1,
+                        "Failed to update config %s for %s." % (c_file, tmpl_var.group()))
+            # Overwrite user requested feilds
+            if stage in ["config", "init"] and self.storage_type and self.server_type:
+                tmp_index = "tmp_sspl_%s" % stage
+                Conf.load(tmp_index, "yaml://%s" % c_file)
+                Conf.set(tmp_index, "server_node>%s>type" % self.machine_id, self.server_type)
+                enclosure_id = Conf.get(tmp_index, "server_node>%s>storage>enclosure_id" %
+                    self.machine_id)
+                Conf.set(tmp_index, "storage_enclosure>%s>type" % enclosure_id, self.storage_type)
+                Conf.save(tmp_index)
+
+    def initialize_sspl(self):
         """Initialize SSPL service."""
-        sspl_setup_script = "%s/bin/sspl_setup" % (SSPL_BASE_DIR)
-        utils_setup_script = "%s/bin/utils_setup" % (UTILS_BASE_DIR)
+        # Override template varibales by values from input file
+        post_install_tmpl = "%s/conf/sspl.post-install.tmpl.%s" % (SSPL_BASE_DIR, self.deploy_type)
+        prepare_tmpl = "%s/conf/sspl.prepare.tmpl.%s" % (SSPL_BASE_DIR, self.deploy_type)
+        config_tmpl = "%s/conf/sspl.config.tmpl.%s" % (SSPL_BASE_DIR, self.deploy_type)
+        init_tmpl = "%s/conf/sspl.init.tmpl.%s" % (SSPL_BASE_DIR, self.deploy_type)
+        tmpl_files = [post_install_tmpl, prepare_tmpl, config_tmpl, init_tmpl]
+        if os.path.exists(self.temp_dir):
+            os.system("rm -rf %s", self.temp_dir)
+        os.mkdir(self.temp_dir)
+        post_install_config = "%s/post-install.%s" % (self.temp_dir, self.deploy_type)
+        prepare_config = "%s/prepare.%s" % (self.temp_dir, self.deploy_type)
+        config_config = "%s/config.%s" % (self.temp_dir, self.deploy_type)
+        init_config = "%s/init.%s" % (self.temp_dir, self.deploy_type)
+        config_files = {
+            "post_install": post_install_config,
+            "prepare": prepare_config,
+            "config": config_config,
+            "init": init_config
+        }
+        for i in range(len(tmpl_files)):
+            shutil.copyfile(tmpl_files[i], list(config_files.values())[i])
+        self.create_config(self.variable_file, config_files)
 
+        sspl_setup_script = "%s/bin/sspl_setup" % SSPL_BASE_DIR
+        utils_setup_script = "%s/bin/utils_setup" % UTILS_BASE_DIR
         commands = [
-            "%s post_install --config yaml://%s" % (
-                utils_setup_script, self.sample_global_config),
-            "%s post_install --config yaml://%s" % (
-                sspl_setup_script, self.sample_global_config),
-            "%s config --config yaml://%s" % (
-                utils_setup_script, self.sample_global_config),
-            "%s config --config yaml://%s" % (
-                sspl_setup_script, self.sample_global_config),
-            "%s init --config yaml://%s" % (
-                sspl_setup_script, self.sample_global_config),
-            "%s check" % (sspl_setup_script)
+            "%s post_install --config yaml://%s" % (utils_setup_script, self.utils_config),
+            "%s post_install --config yaml://%s" % (sspl_setup_script, post_install_config),
+            "%s prepare --config yaml://%s" % (sspl_setup_script, prepare_config),
+            "%s config --config yaml://%s" % (utils_setup_script, self.utils_config),
+            "%s config --config yaml://%s" % (sspl_setup_script, config_config),
+            "%s init --config yaml://%s" % (sspl_setup_script, init_config)
         ]
-        if self.CLUSTER_NODES:
-            # WARN: This command will reset existing cluster setup and
-            # join user requested nodes in cluster
-            commands.append("%s join_cluster --nodes %s" % (
-                sspl_setup_script, self.CLUSTER_NODES))
-
         # Execute setup commands
         for cmd in commands:
             print("INFO: Executing command: '%s'" % (cmd))
@@ -434,76 +427,69 @@ class SSPLDevDeploy:
 
 def main(args):
     """Main method to start SSPL deployment."""
-    try:
-        deploy = SSPLDevDeploy(args)
-        deploy.parse_args()
-        if args.setup_repo:
+    deploy = SSPLDevDeploy(args)
+    deploy.parse_args()
+    if args.cleanup:
+        deploy.cleanup()
+        return
+    if args.setup:
+        try:
             deploy.setup_yum_repos()
+            deploy.install_dependencies()
+            deploy.setup_message_broker()
+            print("INFO: Setup is done.")
+        except Exception as err:
+            print("ERROR: %s" % err)
+            print("ERROR: Setup is failed.")
+        else:
             return
-        if args.cleanup:
-            deploy.cleanup()
+    if args.deploy:
+        try:
+            print("=======================")
+            print("INFO: Deploying SSPL...")
+            print("=======================")
+            if not args.variable_file:
+                raise Exception("sspl_dev_deploy requires variable config file.")
+            deploy.install_sspl_rpms()
+            deploy.initialize_sspl()
+            print("INFO: Deployment is successful !!")
+        except Exception as err:
+            print("---DeployError---")
+            print("ERROR: %s" % err)
+            #traceback.print_exc()
+            print("ERROR: Deployment is failed.")
+        else:
             return
-        print("=======================")
-        print("INFO: Deploying SSPL...")
-        print("=======================")
-        deploy.install_dependencies()
-        deploy.install_sspl_rpms()
-        deploy.update_config()
-        deploy.setup_message_broker()
-        deploy.setup_sspl()
-    except:
-        traceback.print_exc()
-        print("ERROR: Deployment is failed.")
-    else:
-        print("INFO: Deployment is successful !!")
 
 
 if __name__ == '__main__':
-    description = "SSPL prerequisite script. (Bounded to single node provisioning)"
+    description = "SSPL dev deploy script."
     argParser = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
         description=description,
         add_help=True, allow_abbrev=False)
-    argParser.add_argument("-V", "--product_version", default="LR2",
-                           help="Product version")
-    argParser.add_argument("-A", "--cntrlr_a", default="10.0.0.2",
-                           help="Controller-A IP")
-    argParser.add_argument("-B", "--cntrlr_b", default="10.0.0.3",
-                           help="Controller-B IP")
-    argParser.add_argument("-L", "--local_rpms_path", default="",
-                           help="Local RPMS location")
-    argParser.add_argument("-T", "--target_build_url", default="", help="Target \
-        build base url pointed to release bundle base directory. if specified the following \
-            directory structure is assumed:\n <base_url>/ \n centos7.7 <-- OS ISO is mounted here\n \
-            3rd_party <-- CORTX 3rd party ISO is mounted here cortx_iso <-- CORTX ISO (main) is mounted here")
-    argParser.add_argument("-Ap", "--cntrlr_a_port", default="80",
-                           help="Controller-A Port")
-    argParser.add_argument("-Bp", "--cntrlr_b_port", default="80",
-                           help="Controller-B Port")
-    argParser.add_argument("-U", "--cntrlr_user", default="manage",
-                           help="Controller Username")
-    argParser.add_argument("-P", "--cntrlr_pass", default="",
-                           help="Controller Password")
-    argParser.add_argument("-i", "--bmc_ip", default="", help="BMC IP")
-    argParser.add_argument("-u", "--bmc_user", default="", help="BMC User")
-    argParser.add_argument("-p", "--bmc_passwd", default="",
-                           help="BMC Password")
-    argParser.add_argument("-Ru", "--rmq_user", default="sspluser",
-                           help="Rabbitmq username")
-    argParser.add_argument("-Rp", "--rmq_passwd", default="",
-                           help="Rabbitmq password")
-    argParser.add_argument("-St", "--storage_type", default="",
-                           help="Storage type  ie. jbod, rbod, 5u84, virtual")
-    argParser.add_argument("-Sr", "--server_type", default="",
-                           help="Server type   ie. physical, virtual")
-    argParser.add_argument("-N", "--cluster_nodes", default="",
-                           help="Nodes separated by delimeter ',' ie. node1,node2")
-    argParser.add_argument("--standalone_installation", action="store_true",
-                           help="Configure SSPL 3rd party \
-        dependencies like consul, rabbitmq")
-    argParser.add_argument("--setup_repo", action="store_true",
-                           help="Setup yum repos")
+    # cleanup arg
     argParser.add_argument("--cleanup", action="store_true",
                            help="Stop sspl-ll and remove installed SSPL RPMs")
+    # Setup args
+    argParser.add_argument("--setup", action="store_true",
+                           help="Setup yum repos and message broker")
+    argParser.add_argument("-L", "--local_rpms_path", default="",
+                           help="Local RPMS location")
+    argParser.add_argument("-T", "--target_build_url", default="", help="Target "
+        "build base url pointed to release bundle base directory. if specified "
+        "the following directory structure is assumed:\n"
+        "<base_url>/ \n centos7.7 <-- OS ISO is mounted here\n\t"
+            "3rd_party <-- CORTX 3rd party ISO is mounted here \n\t"
+            "cortx_iso <-- CORTX ISO (main) is mounted here")
+    argParser.add_argument("-N", "--nodes", help="Nodes to create cluster")
+    argParser.add_argument("-M", "--message_broker", help="Currently we support only 'kafka'",
+                           default="kafka")
+    # Deploy args
+    argParser.add_argument("--deploy", action="store_true",
+                           help="Flag to start deployment")
+    argParser.add_argument("--variable_file", help="Holds input values to templates")
+    argParser.add_argument("--storage_type", help="Set storage type at config stage.")
+    argParser.add_argument("--server_type", help="Set server type at config stage.")
     args = argParser.parse_args()
     main(args)

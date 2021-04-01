@@ -93,7 +93,7 @@ storage_enclosure:
         port: '22'
       type: Gallium
       user: admin
-    name: enc30512e5ae6df9f1ea02327bab45e499d
+    name: enclosure-1
     type: RBOD
   enc40512e5ae6df9f1ea02327bab45e499e:
     controller:
@@ -106,7 +106,7 @@ storage_enclosure:
         port: '22'
       type: Gallium
       user: admin
-    name: enc40512e5ae6df9f1ea02327bab45e499e
+    name: enclosure-2
     type: RBOD
   enc50512e5ae6df9f1ea02327bab45e499f:
     controller:
@@ -119,5 +119,5 @@ storage_enclosure:
         port: '22'
       type: Gallium
       user: admin
-    name: enc50512e5ae6df9f1ea02327bab45e499f
+    name: enclosure-3
     type: RBOD

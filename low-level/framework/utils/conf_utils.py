@@ -107,6 +107,7 @@ POLLING_INTERVAL="polling_interval"
 PORT="port"
 PRIMARY="primary"
 PRIMARY_RABBITMQ_HOST="primary_rabbitmq_host"
+PRODUCT_NAME = 'product'
 PROBE="probe"
 PRODUCT="product"
 QUEUE_NAME="queue_name"
@@ -147,5 +148,24 @@ Conf.load(SSPL_CONF, "yaml:///etc/sspl.conf")
 global_config = Conf.get(SSPL_CONF, "SYSTEM_INFORMATION>global_config_copy_url")
 Conf.load(GLOBAL_CONF, global_config)
 
-SRVNODE = Conf.get(GLOBAL_CONF, f'{CLUSTER}>{SERVER_NODES}')[MACHINE_ID]
-ENCLOSURE = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{STORAGE}>{ENCLOSURE_ID}")
+SRVNODE = Conf.get(GLOBAL_CONF, "server_node>%s>name" % MACHINE_ID)
+ENCLOSURE = Conf.get(GLOBAL_CONF, "server_node>%s>storage>enclosure_id" % MACHINE_ID)
+
+PRODUCT_KEY = "cortx>release>product"
+SETUP_KEY = "cortx>release>setup"
+SITE_ID_KEY = "server_node>%s>site_id" % MACHINE_ID
+NODE_ID_KEY = "server_node>%s>node_id" % MACHINE_ID
+RACK_ID_KEY = "server_node>%s>rack_id" % MACHINE_ID
+CLUSTER_ID_KEY = "server_node>%s>cluster_id" % MACHINE_ID
+STORAGE_SET_ID_KEY = "server_node>%s>storage_set_id" % MACHINE_ID
+NODE_TYPE_KEY = "server_node>%s>type" % MACHINE_ID
+STORAGE_TYPE_KEY = "storage_enclosure>%s>type" % ENCLOSURE
+CNTRLR_PRIMARY_IP_KEY = "storage_enclosure>%s>controller>primary>ip" % ENCLOSURE
+CNTRLR_PRIMARY_PORT_KEY = "storage_enclosure>%s>controller>primary>port" % ENCLOSURE
+CNTRLR_SECONDARY_IP_KEY = "storage_enclosure>%s>controller>secondary>ip" % ENCLOSURE
+CNTRLR_SECONDARY_PORT_KEY = "storage_enclosure>%s>controller>secondary>port" % ENCLOSURE
+CNTRLR_USER_KEY = "storage_enclosure>%s>controller>user" % ENCLOSURE
+CNTRLR_PASSWD_KEY = "storage_enclosure>%s>controller>password" % ENCLOSURE
+BMC_IP_KEY = "server_node>%s>bmc>ip" % MACHINE_ID
+BMC_USER_KEY = "server_node>%s>bmc>user" % MACHINE_ID
+BMC_SECRET_KEY = "server_node>%s>bmc>secret" % MACHINE_ID

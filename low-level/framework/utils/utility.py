@@ -20,6 +20,12 @@ Base class for all the Utility implementation
 import re
 import subprocess
 import os
+import pwd
+import grp
+import errno
+import socket
+from cortx.utils.conf_store import Conf
+from cortx.utils.conf_store.error import ConfError
 from framework.utils.service_logging import logger
 
 
@@ -60,12 +66,17 @@ class Utility(object):
             logger.warning("Error while reading whether env is vm or not, assuming VM env : {e}")
         return is_vm
 
-    def get_machine_id(self):
+    @staticmethod
+    def get_machine_id():
         """
         Returns machine-id from /etc/machine-id.
         """
+        machine_id = None
         with open("/etc/machine-id") as f:
-            return f.read().strip("\n")
+            machine_id = f.read().strip()
+        if not machine_id:
+            raise Exception("Unable to get machine id from host '%s'." % socket.getfqdn())
+        return machine_id
 
     def get_os(self):
         """
@@ -79,6 +90,55 @@ class Utility(object):
                 return "".join([_.strip('"') for _ in os_id+os_version_id])
             else:
                 return None
+
+    @staticmethod
+    def get_uid(user_name):
+        """Get user id."""
+        uid = -1
+        try :
+            uid = pwd.getpwnam(user_name).pw_uid
+        except KeyError:
+            pass
+        return uid
+
+    @staticmethod
+    def get_gid(user_name):
+        """Get group id."""
+        gid = -1
+        try :
+            gid = grp.getgrnam(user_name).gr_gid
+        except KeyError:
+            pass
+        return gid
+
+    @staticmethod
+    def get_config_value(index, key):
+        value = Conf.get(index, key)
+        if not value:
+            raise ConfError(errno.EINVAL, "Config validation failure. \
+                No value found for key: '%s' in input config.", key)
+        return value
+
+    @staticmethod
+    def replace_expr(filename:str, key, new_str:str):
+        """The function helps to replace the expression provided as key
+        with new string in the file provided in filename OR it inserts
+        the new string at given line as a key in the provided file.
+        """
+        with open(filename, 'r+') as f:
+            lines = f.readlines()
+            if isinstance(key, str):
+                for i, line in enumerate(lines):
+                    if re.search(key, line):
+                        lines[i] = re.sub(key, new_str, lines[i])
+            elif isinstance(key, int):
+                if not re.search(new_str, lines[key]):
+                    lines.insert(key, new_str)
+            else:
+                raise Exception("Key data type : '%s', should be string or int" % type(key))
+            f.seek(0)
+            for line in lines:
+                f.write(line)
 
 def errno_to_str_mapping(err_no):
     """Convert numerical errno to its meaning."""
