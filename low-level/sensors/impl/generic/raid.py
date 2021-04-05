@@ -28,7 +28,7 @@ import uuid
 
 from framework.base.module_thread import SensorThread
 from framework.base.internal_msgQ import InternalMsgQ
-from framework.base.sspl_constants import COMMON_CONFIGS
+from framework.base.sspl_constants import COMMON_CONFIGS, DATA_PATH
 from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
 
@@ -39,6 +39,10 @@ from message_handlers.logging_msg_handler import LoggingMsgHandler
 from zope.interface import implementer
 from sensors.Iraid import IRAIDsensor
 from framework.utils.utility import Utility
+from framework.utils.store_factory import file_store
+
+# Override default store
+store = file_store
 
 @implementer(IRAIDsensor)
 class RAIDsensor(SensorThread, InternalMsgQ):
@@ -69,6 +73,8 @@ class RAIDsensor(SensorThread, InternalMsgQ):
     FAULT = "fault"
     MISSING = "missing"
     INSERTION = "insertion"
+
+    CACHE_DIR_NAME  = "server"
 
     # Dependency list
     DEPENDENCIES = {
@@ -124,6 +130,8 @@ class RAIDsensor(SensorThread, InternalMsgQ):
 
         self._prev_drive_dict = {}
 
+        self.prev_alert_type = {}
+
         self._site_id = self._conf_reader._get_value_with_default(
                                 self.SYSTEM_INFORMATION, COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.SITE_ID), '001')
         self._cluster_id = self._conf_reader._get_value_with_default(
@@ -132,6 +140,37 @@ class RAIDsensor(SensorThread, InternalMsgQ):
                                 self.SYSTEM_INFORMATION, COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.RACK_ID), '001')
         self._node_id = self._conf_reader._get_value_with_default(
                                 self.SYSTEM_INFORMATION, COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.NODE_ID), '001')
+        
+        cache_dir_path = os.path.join(DATA_PATH, self.CACHE_DIR_NAME)
+        self.RAID_SENSOR_DATA_PATH = os.path.join(cache_dir_path,
+                                        f'RAID_SENSOR_DATA_{self.node_id}')
+        # Get the stored previous alert info
+        self.persistent_raid_data = store.get(self.RAID_SENSOR_DATA_PATH)
+        if self.persistent_raid_data:
+            self._RAID_status_contents = self.persistent_raid_data['_RAID_status_contents']
+            self._RAID_status = self.persistent_raid_data['_RAID_status']
+            self._faulty_drive_list = self.persistent_raid_data['_faulty_drive_list']
+            self._faulty_device_list = self.persistent_raid_data['_faulty_device_list']
+            self._drives = self.persistent_raid_data['_drives']
+            self._total_drives = self.persistent_raid_data['_total_drives']
+            self._devices = self.persistent_raid_data['_devices']
+            self._missing_drv = self.persistent_raid_data['_missing_drv']
+            self._prev_drive_dict = self.persistent_raid_data['_prev_drive_dict']
+            self.prev_alert_type = self.persistent_raid_data['prev_alert_type']
+        else:
+            self.persistent_raid_data = {
+                '_RAID_status_contents' : self._RAID_status_contents,
+                '_RAID_status' : self._RAID_status,
+                '_faulty_drive_list' : self._faulty_drive_list,
+                '_faulty_device_list' : self._faulty_device_list,
+                '_drives' : self._drives,
+                '_total_drives' : self._total_drives,
+                '_devices' : self._devices,
+                '_missing_drv' : self._missing_drv,
+                '_prev_drive_dict' : self._prev_drive_dict,
+                'prev_alert_type' : self.prev_alert_type,
+            }
+            
         # Allow systemd to process all the drives so we can map device name to serial numbers
         #time.sleep(120)
         self.utility = Utility()
@@ -503,6 +542,19 @@ class RAIDsensor(SensorThread, InternalMsgQ):
 
         # Send the event to node data message handler to generate json message and send out
         self._write_internal_msgQ(NodeDataMsgHandler.name(), internal_json_msg)
+        self.persistent_raid_data = {
+                '_RAID_status_contents' : self._RAID_status_contents,
+                '_RAID_status' : self._RAID_status,
+                '_faulty_drive_list' : self._faulty_drive_list,
+                '_faulty_device_list' : self._faulty_device_list,
+                '_drives' : self._drives,
+                '_total_drives' : self._total_drives,
+                '_devices' : self._devices,
+                '_missing_drv' : self._missing_drv,
+                '_prev_drive_dict' : self._prev_drive_dict,
+                'prev_alert_type' : self.prev_alert_type,
+            }
+        store.put(self.persistent_raid_data, self.RAID_SENSOR_DATA_PATH)
 
     def _log_IEM(self):
         """Sends an IEM to logging msg handler"""
