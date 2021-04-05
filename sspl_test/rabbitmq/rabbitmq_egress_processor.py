@@ -27,7 +27,7 @@ from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
 from framework.utils.conf_utils import Conf, SSPL_TEST_CONF
-from . import message_bus, producer_initialized
+from . import producer_initialized
 
 import ctypes
 
@@ -90,8 +90,7 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
         # Configure RabbitMQ Exchange to transmit messages
         self._connection = None
         self._read_config()
-        self._producer = MessageProducer(message_bus,
-                                         producer_id=self._producer_id,
+        self._producer = MessageProducer(producer_id=self._producer_id,
                                          message_type=self._message_type,
                                          method=self._method)
         producer_initialized.set()

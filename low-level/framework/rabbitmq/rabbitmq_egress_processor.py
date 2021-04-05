@@ -31,7 +31,7 @@ from framework.base.module_thread import ScheduledModuleThread
 from framework.utils.conf_utils import SSPL_CONF, Conf
 from framework.utils.service_logging import logger
 from framework.utils.store_queue import StoreQueue
-from . import message_bus, producer_initialized
+from . import producer_initialized
 
 try:
     use_security_lib = True
@@ -81,8 +81,7 @@ class RabbitMQegressProcessor(ScheduledModuleThread, InternalMsgQ):
         self._request_shutdown = False
 
         self._read_config()
-        self._producer = MessageProducer(message_bus,
-                                         producer_id=self._producer_id,
+        self._producer = MessageProducer(producer_id=self._producer_id,
                                          message_type=self._message_type,
                                          method=self._method)
         producer_initialized.set()

@@ -29,7 +29,7 @@ from framework.base.module_thread import ScheduledModuleThread
 from framework.utils.conf_utils import SSPL_CONF, Conf
 from framework.utils.service_logging import logger
 from framework.utils.store_queue import StoreQueue
-from . import message_bus, producer_initialized
+from . import producer_initialized
 
 
 class RabbitMQEgressAccumulatedMsgsProcessor(ScheduledModuleThread,
@@ -75,8 +75,7 @@ class RabbitMQEgressAccumulatedMsgsProcessor(ScheduledModuleThread,
         self._read_config()
 
         producer_initialized.wait()
-        self._producer = MessageProducer(message_bus,
-                                         producer_id="acuumulated processor",
+        self._producer = MessageProducer(producer_id="acuumulated processor",
                                          message_type=self._message_type,
                                          method=self._method)
 
