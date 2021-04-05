@@ -37,7 +37,7 @@ from framework.base.sspl_constants import RESOURCE_PATH
 from framework.utils.conf_utils import Conf, SSPL_TEST_CONF, NODE_ID_KEY
 
 import ctypes
-from . import message_bus, producer_initialized
+from . import producer_initialized
 
 SSPL_SEC = ctypes.cdll.LoadLibrary('libsspl_sec.so.0')
 
@@ -105,8 +105,7 @@ class RabbitMQingressProcessorTests(ScheduledModuleThread, InternalMsgQ):
         self._read_config()
 
         producer_initialized.wait()
-        self._consumer = MessageConsumer(message_bus,
-                                         consumer_id=self._consumer_id,
+        self._consumer = MessageConsumer(consumer_id=self._consumer_id,
                                          consumer_group=self._consumer_group,
                                          message_types=[self._message_type],
                                          auto_ack=False, offset=self._offset)

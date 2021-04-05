@@ -35,7 +35,7 @@ from framework.rabbitmq.rabbitmq_egress_processor import \
 from framework.utils.conf_utils import CLUSTER, SRVNODE, SSPL_CONF, Conf
 from framework.utils.service_logging import logger
 from json_msgs.messages.actuators.ack_response import AckResponseMsg
-from . import message_bus, producer_initialized
+from . import producer_initialized
 
 try:
     use_security_lib = True
@@ -108,8 +108,7 @@ class RabbitMQingressProcessor(ScheduledModuleThread, InternalMsgQ):
 
         self._read_config()
         producer_initialized.wait()
-        self._consumer = MessageConsumer(message_bus,
-                                         consumer_id=self._consumer_id,
+        self._consumer = MessageConsumer(consumer_id=self._consumer_id,
                                          consumer_group=self._consumer_group,
                                          message_types=[self._message_type],
                                          auto_ack=False, offset=self._offset)
