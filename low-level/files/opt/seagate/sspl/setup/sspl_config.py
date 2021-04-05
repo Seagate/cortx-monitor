@@ -128,7 +128,7 @@ class SSPLConfig:
                              Conf.get(consts.SSPL_CONFIG_INDEX,
                                       "RABBITMQEGRESSPROCESSOR"
                                       ">message_type")]
-            mbadmin = MessageBusAdmin(self.mb, admin_id="admin")
+            mbadmin = MessageBusAdmin(admin_id="admin")
             try:
                 mbadmin.register_message_type(message_types=message_types,
                                               partitions=1)

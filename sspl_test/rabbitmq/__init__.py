@@ -16,8 +16,5 @@
 """RabbitMQ processor for automated integration tests"""
 
 from threading import Event
-from cortx.utils.message_bus import MessageBus
 
-
-message_bus = MessageBus()
 producer_initialized = Event()

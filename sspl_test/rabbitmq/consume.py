@@ -20,12 +20,10 @@
 
 import sys
 
-from cortx.utils.message_bus import MessageBus
 from cortx.utils.message_bus import MessageConsumer
 
 if __name__ == "__main__":
-    message_bus = MessageBus()
-    consumer = MessageConsumer(message_bus, consumer_id="sspl-test",
+    consumer = MessageConsumer(consumer_id="sspl-test",
                                consumer_group="cortx_monitor",
                                message_types=["alerts"],
                                auto_ack=False, offset="latest")

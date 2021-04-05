@@ -34,7 +34,7 @@ from framework.utils.conf_utils import CLUSTER, SRVNODE, SSPL_CONF, Conf
 from framework.utils.service_logging import logger
 # Modules that receive messages from this module
 from message_handlers.logging_msg_handler import LoggingMsgHandler
-from . import message_bus, producer_initialized
+from . import producer_initialized
 
 try:
     from systemd import journal
@@ -93,8 +93,7 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
 
         self._read_config()
         producer_initialized.wait()
-        self._consumer = MessageConsumer(message_bus,
-                                         consumer_id=self._consumer_id,
+        self._consumer = MessageConsumer(consumer_id=self._consumer_id,
                                          consumer_group=self._consumer_group,
                                          message_types=[self._message_type],
                                          auto_ack=False, offset=self._offset)
