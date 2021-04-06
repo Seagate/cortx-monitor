@@ -46,6 +46,3 @@ sudo mv $target_dir/sspl_ll_d_coverage $target_dir/sspl_ll_d
 
 chmod 755 /var/cortx/sspl/* 
 chown sspl-ll:sspl-ll /var/cortx/sspl/ -R
-
-# chmod 755 $target_dir/sspl_ll_d 
-# chown sspl-ll:sspl-ll $target_dir/sspl_ll_d

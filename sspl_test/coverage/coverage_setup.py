@@ -12,7 +12,7 @@ report_path = "/var/cortx/sspl/sspl_xml_coverage_report.xml"
 def coverage_setup():
     print("Creating required files for coverage..")
     patch1_name = "initialize coverage obj for code coverage report generation"
-    patch1_start_ind = 0 
+    patch1_start_ind = 0
     patch1_n_of_lines = 7
 
     patch2_name = "start the code coverage scope"
@@ -62,7 +62,7 @@ def coverage_setup():
     uid =  pwd.getpwnam("sspl-ll").pw_uid
     os.chmod(f"{file_path}/sspl_ll_d", 0o755)
     os.chown(f'{file_path}/sspl_ll_d', uid, -1)
-    
+
     os.chmod('/var/cortx/sspl/', 0o755)
     os.chown('/var/cortx/sspl/', uid, -1)
 
@@ -77,7 +77,7 @@ def coverage_reset():
     modification_time = \
         os.path.getmtime(report_path)
     if(time.time() - modification_time < 100):
-        modification_time = time.strftime('%Y-%m-%d %H:%M:%S', 
+        modification_time = time.strftime('%Y-%m-%d %H:%M:%S',
                                           time.localtime(modification_time))
         print("%s : The Code Coverage Report is saved at %s" %
               (modification_time, report_path))
@@ -87,8 +87,3 @@ def coverage_reset():
     os.remove(f'{file_path}/sspl_ll_d')
     shutil.move(f'{file_path}/sspl_ll_d.bak',
                 f'{file_path}/sspl_ll_d')
-
-
-if __name__ == "__main__":
-    coverage_setup()
-    coverage_reset()
