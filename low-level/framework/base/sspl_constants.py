@@ -28,6 +28,7 @@ from framework.utils.service_logging import logger
 
 PRODUCT_NAME = 'LR2'
 PRODUCT_FAMILY = 'cortx'
+USER = "sspl-ll"
 enabled_products = ["CS-A", "SINGLE","DUAL", "CLUSTER", "LDR_R1", "LR2"]
 cs_products = ["CS-A"]
 cs_legacy_products = ["CS-L", "CS-G"]
@@ -56,11 +57,12 @@ SUPPORT_CONTACT_NUMBER = "18007324283"
 ENCL_TRIGGER_LOG_MAX_RETRY = 10
 ENCL_DOWNLOAD_LOG_MAX_RETRY = 60
 ENCL_DOWNLOAD_LOG_WAIT_BEFORE_RETRY = 15
-SSPL_BASE_DIR = "/opt/seagate/%s/sspl" % (PRODUCT_FAMILY)
-PRODUCT_BASE_DIR="/opt/seagate/$PRODUCT_FAMILY/"
+PRODUCT_BASE_DIR = "/opt/seagate/%s/" % (PRODUCT_FAMILY)
+SSPL_BASE_DIR = "%s/sspl" % (PRODUCT_BASE_DIR)
+SSPL_CLI_DIR = "%s/low-level/cli" % (SSPL_BASE_DIR)
 RSYSLOG_IEM_CONF ="/etc/rsyslog.d/0-iemfwd.conf"
 RSYSLOG_SSPL_CONF = "/etc/rsyslog.d/1-ssplfwd.conf"
-LOGROTATE_DIR  ="/etc/logrotate.d"
+LOGROTATE_DIR = "/etc/logrotate.d"
 IEM_LOGROTATE_CONF = "%s/iem_messages" % LOGROTATE_DIR
 SSPL_LOGROTATE_CONF = "%s/sspl_logs" % LOGROTATE_DIR
 SSPL_LOG_PATH = "/var/log/%s/sspl/" % PRODUCT_FAMILY

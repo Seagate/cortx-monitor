@@ -133,7 +133,7 @@ rm -f /etc/dbus-1/system.d/sspl-ll_dbus_policy.conf
 rm -f /usr/bin/resource_health_view /usr/bin/sspl_bundle_generate /usr/bin/manifest_support_bundle
 
 %files
-%defattr(-,sspl-ll,root,-)
+%defattr(-,root,root,-)
 /opt/seagate/%{product_family}/sspl/*
 
 %changelog
