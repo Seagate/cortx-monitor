@@ -78,7 +78,9 @@ cp -p $SSPL_SETUP/consuldump.py $SSPL_BASE/low-level/
 # take backup of cache folder if exists
 mkdir -p /opt/seagate/backup/%{version}
 [ -f /etc/sspl.conf ] && cp -p /etc/sspl.conf /opt/seagate/backup/%{version}/sspl.conf
-[ -d /var/%{product_family}/sspl ] && cp -Rp /var/%{product_family}/sspl /opt/seagate/backup/%{version}/
+if [ -d /var/%{product_family}/sspl ]; then
+    cp -Rp /var/%{product_family}/sspl /opt/seagate/backup/%{version}/
+fi
 
 %post
 SSPL_DIR=/opt/seagate/%{product_family}/sspl
