@@ -91,6 +91,21 @@ kill_mock_server()
 
 restore_cfg_services()
 {
+    # clear the dummy_service configurations made for
+    # alerts.os.test_service_monitor_sensor test
+    service_name=dummy_service.service
+    service_executable_code_des=/var/cortx/sspl/test
+    $sudo systemctl stop $service_name
+    $sudo systemctl disable $service_name
+    $sudo rm -rf $service_executable_code_des/dummy_service.py
+    $sudo rm -rf /etc/systemd/system/$service_name
+    $sudo systemctl daemon-reload
+
+    # call reset env script for coverage if coverage is enabled.
+    if [ "$coverage_enabled" == "True" ]
+    then
+        $sudo sh $script_dir/coverage/stop_sspl_coverage.sh
+    fi
     # Restoring MC port to value stored before tests
     if [ "$SSPL_STORE_TYPE" == "file" ]
     then
