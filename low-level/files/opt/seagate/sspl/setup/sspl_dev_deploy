@@ -163,7 +163,13 @@ class SSPLDevDeploy:
             raise DeployError(1, "Target build or RPMS path is not given.")
         pkg_name = "cortx-prereq"
         print("INFO: INSTALLING %s..." % pkg_name)
-        cmd = "yum install -y %s" % pkg_name
+        prereq_url = ("http://cortx-storage.colo.seagate.com/releases/cortx/"
+            "third-party-deps/rpm/install-cortx-prereq.sh")
+        with urllib.request.urlopen(prereq_url) as response, open(
+                "install-cortx-prereq.sh", 'wb') as out_file:
+            shutil.copyfileobj(response, out_file)
+        os.chmod("install-cortx-prereq.sh", 0o775)
+        cmd = "sh install-cortx-prereq.sh"
         out, rc = self._execute_cmd(cmd)
         if rc != 0:
             raise DeployError(rc, "%s - %s CMD: %s",
@@ -200,8 +206,8 @@ class SSPLDevDeploy:
                     out, "Failed to install SSPL RPMS.", sspl_rpm_cmd)
         else:
             print("INFO: Installing SSPL RPMS using yum repos...")
-            sspl_cmd = "yum install -y cortx-sspl.noarch"
-            sspl_test_cmd = "yum install -y cortx-sspl-test"
+            sspl_cmd = "yum install -y --nogpgcheck cortx-sspl"
+            sspl_test_cmd = "yum install -y --nogpgcheck cortx-sspl-test"
             out, rc = self._execute_cmd(sspl_cmd)
             if rc != 0:
                 raise DeployError(rc, "%s - %s CMD: %s",
@@ -432,7 +438,7 @@ def main(args):
     if args.cleanup:
         deploy.cleanup()
         return
-    if args.setup:
+    if args.prereq:
         try:
             deploy.setup_yum_repos()
             deploy.install_dependencies()
@@ -472,7 +478,7 @@ if __name__ == '__main__':
     argParser.add_argument("--cleanup", action="store_true",
                            help="Stop sspl-ll and remove installed SSPL RPMs")
     # Setup args
-    argParser.add_argument("--setup", action="store_true",
+    argParser.add_argument("--prereq", action="store_true",
                            help="Setup yum repos and message broker")
     argParser.add_argument("-L", "--local_rpms_path", default="",
                            help="Local RPMS location")

@@ -23,7 +23,8 @@ from .conf_based_sensors_enable import update_sensor_info
 from framework.utils.utility import Utility
 from framework.base.sspl_constants import (PRODUCT_FAMILY, sspl_config_path,
     sspl_test_file_path, sspl_test_config_path, global_config_path,
-    GLOBAL_CONFIG_INDEX, SSPL_CONFIG_INDEX, SSPL_TEST_CONFIG_INDEX)
+    GLOBAL_CONFIG_INDEX, SSPL_CONFIG_INDEX, SSPL_TEST_CONFIG_INDEX, SSPL_BASE_DIR,
+    USER)
 
 
 TEST_DIR = f"/opt/seagate/{PRODUCT_FAMILY}/sspl/sspl_test"
@@ -76,6 +77,10 @@ class SSPLTestCmd:
         """Run test using user requested test plan."""
         self.plan = self.args.plan[0]
         self.avoid_rmq = self.args.avoid_rmq
+
+        sspl_uid = Utility.get_uid(USER)
+        gid = Utility.get_gid("root")
+        Utility.set_ownership_recursively(TEST_DIR, sspl_uid, gid)
 
         # Take back up of sspl test config
         sspl_test_backup = '/etc/sspl_tests.conf.back'

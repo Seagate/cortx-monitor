@@ -44,7 +44,6 @@ class SSPLPostInstall:
 
     def __init__(self):
         """Initialize varibales for post install."""
-        self.user = "sspl-ll"
         consts.SSPL_LOG_PATH = "/var/log/%s/sspl/" % consts.PRODUCT_FAMILY
         consts.SSPL_BUNDLE_PATH = "/var/%s/sspl/bundle/" % consts.PRODUCT_FAMILY
         self.state_file = "%s/state.txt" % consts.DATA_PATH
@@ -184,11 +183,11 @@ class SSPLPostInstall:
     def create_user(self):
         """Add sspl-ll user and validate user creation."""
         os.system("/usr/sbin/useradd -r %s -s /sbin/nologin \
-            -c 'User account to run the %s service'" % (self.user, self.user))
+            -c 'User account to run the %s service'" % (consts.USER, consts.USER))
         usernames = [x[0] for x in pwd.getpwall()]
-        if self.user not in usernames:
+        if consts.USER not in usernames:
             raise SetupError(errno.EINVAL,
-                "User %s doesn't exit. Please add user." % self.user)
+                "User %s doesn't exit. Please add user." % consts.USER)
         # Add sspl-ll user to required groups and sudoers file etc.
         sspl_reinit = "%s/low-level/framework/sspl_reinit" % consts.SSPL_BASE_DIR
         _ , error, rc = SimpleProcess(sspl_reinit).run()
@@ -205,23 +204,22 @@ class SSPLPostInstall:
             "SYSTEM_INFORMATION>data_path")
         if not sspldp:
             raise SetupError(errno.EINVAL, "Data path not set in sspl.conf")
-        sspl_uid = Utility.get_uid(self.user)
-        sspl_gid = Utility.get_gid(self.user)
+        sspl_uid = Utility.get_uid(consts.USER)
+        sspl_gid = Utility.get_gid("root")
         if sspl_uid == -1 or sspl_gid == -1:
             raise SetupError(errno.EINVAL,
-                "No user found with name : %s", self.user)
-        # Create state file and grant permission
+                "No user found with name : %s", consts.USER)
+        # Create sspl data directory if not exists
+        os.makedirs(sspldp, mode=0o766, exist_ok=True)
+        # Create state file under sspl data directory
         if not os.path.exists(self.state_file):
             file = open(self.state_file, "w")
             file.close()
-        # Create sspl data directory
-        os.makedirs(sspldp, mode=0o766, exist_ok=True)
-        os.chown(sspldp, sspl_uid, sspl_gid)
-        for base, dirs, files in os.walk(consts.SSPL_CONFIGURED_DIR):
-            for dir in dirs:
-                os.chown(os.path.join(base, dir), sspl_uid, sspl_gid)
-            for file in files:
-                os.chown(os.path.join(base, file), sspl_uid, sspl_gid)
+        Utility.set_ownership_recursively(sspldp, sspl_uid, sspl_gid)
+        Utility.set_ownership_recursively(consts.SSPL_BASE_DIR, sspl_uid, sspl_gid)
+        Utility.set_ownership_recursively(consts.DATA_PATH, sspl_uid, sspl_gid)
+        Utility.set_ownership_recursively(sspldp, sspl_uid, sspl_gid)
+
         # Create SSPL log and bundle directories
         os.makedirs(consts.SSPL_LOG_PATH, exist_ok=True)
         os.makedirs(consts.SSPL_BUNDLE_PATH, exist_ok=True)

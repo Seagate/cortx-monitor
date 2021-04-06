@@ -94,7 +94,7 @@ fi
 #fi
 
 %files
-%defattr(-,sspl-ll,root,-)
+%defattr(-,root,root,-)
 /opt/seagate/%{product_family}/sspl/sspl_test
 
 %changelog
