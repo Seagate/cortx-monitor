@@ -76,10 +76,10 @@ cp -p $SSPL_SETUP/consuldump.py $SSPL_BASE/low-level/
 
 %pre
 # take backup of cache folder if exists
-mkdir -p /opt/seagate/backup/%{version}
-[ -f /etc/sspl.conf ] && cp -p /etc/sspl.conf /opt/seagate/backup/%{version}/sspl.conf
-if [ -d /var/%{product_family}/sspl ]; then
-    cp -Rp /var/%{product_family}/sspl /opt/seagate/backup/%{version}/
+mkdir -p /opt/seagate/%{product_family}/backup/%{version}/sspl
+[ -f /etc/sspl.conf ] && cp -p /etc/sspl.conf /opt/seagate/%{product_family}/backup/%{version}/sspl/sspl.conf
+if [ -d /var/%{product_family}/sspl/data ]; then
+    cp -Rp /var/%{product_family}/sspl/data /opt/seagate/%{product_family}/backup/%{version}/sspl/
 fi
 
 %post
@@ -103,7 +103,8 @@ SSPL_DIR=/opt/seagate/%{product_family}/sspl
 [ -f /tmp/sspl_tmp.conf ] && cp /tmp/sspl_tmp.conf /etc/sspl.conf
 
 # restore of data & iem folder
-[ -d /opt/seagate/backup/%{version}/sspl ] && cp -Rp /opt/seagate/backup/%{version}/sspl/* /var/%{product_family}/sspl/
+[ -d /opt/seagate/%{product_family}/backup/%{version}/sspl ] &&
+    cp -Rp /opt/seagate/%{product_family}/backup/%{version}/sspl/* /var/%{product_family}/sspl/
 
 # Copy rsyslog configuration
 # [ -f /etc/rsyslog.d/0-iemfwd.conf ] ||
