@@ -140,6 +140,16 @@ class Utility(object):
             for line in lines:
                 f.write(line)
 
+    @staticmethod
+    def set_ownership_recursively(root_dir, uid, gid):
+        """Set ownership recursively."""
+        os.chown(root_dir, uid, gid)
+        for base, dirs, files in os.walk(root_dir):
+            for _dir in dirs:
+                os.chown(os.path.join(base, _dir), uid, gid)
+            for file in files:
+                os.chown(os.path.join(base, file), uid, gid)
+
 def errno_to_str_mapping(err_no):
     """Convert numerical errno to its meaning."""
     try:
@@ -150,3 +160,4 @@ def errno_to_str_mapping(err_no):
     except Exception as err:
         logger.error("map_errno_to_text errno to text mapping failed due to %s: %s " % err)
         return
+
