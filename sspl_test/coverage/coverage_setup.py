@@ -7,7 +7,7 @@ import psutil
 import time
 
 file_path = "/opt/seagate/cortx/sspl/low-level"
-report_path = "/var/cortx/sspl/sspl_xml_coverage_report.xml"
+report_path = "/var/cortx/sspl/coverage/sspl_xml_coverage_report.xml"
 
 def coverage_setup():
     print("Creating required files for coverage..")
@@ -63,8 +63,8 @@ def coverage_setup():
     os.chmod(f"{file_path}/sspl_ll_d", 0o755)
     os.chown(f'{file_path}/sspl_ll_d', uid, -1)
 
-    os.chmod('/var/cortx/sspl/', 0o755)
-    os.chown('/var/cortx/sspl/', uid, -1)
+    os.makedirs('/var/cortx/sspl/coverage/', 0o755, exist_ok=True)
+    os.chown('/var/cortx/sspl/coverage/', uid, -1)
 
 
 def coverage_reset():
