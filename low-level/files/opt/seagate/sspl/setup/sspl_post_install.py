@@ -205,20 +205,17 @@ class SSPLPostInstall:
         if not sspldp:
             raise SetupError(errno.EINVAL, "Data path not set in sspl.conf")
         sspl_uid = Utility.get_uid(consts.USER)
-        sspl_gid = Utility.get_gid("root")
+        sspl_gid = Utility.get_gid(consts.USER)
         if sspl_uid == -1 or sspl_gid == -1:
             raise SetupError(errno.EINVAL,
                 "No user found with name : %s", consts.USER)
         # Create sspl data directory if not exists
-        os.makedirs(sspldp, mode=0o766, exist_ok=True)
+        os.makedirs(sspldp, exist_ok=True)
         # Create state file under sspl data directory
         if not os.path.exists(self.state_file):
             file = open(self.state_file, "w")
             file.close()
-        Utility.set_ownership_recursively(sspldp, sspl_uid, sspl_gid)
-        Utility.set_ownership_recursively(consts.SSPL_BASE_DIR, sspl_uid, sspl_gid)
-        Utility.set_ownership_recursively(consts.DATA_PATH, sspl_uid, sspl_gid)
-        Utility.set_ownership_recursively(sspldp, sspl_uid, sspl_gid)
+        Utility.set_ownership_recursively(consts.SSPL_CONFIGURED_DIR,sspl_uid,sspl_gid)
 
         # Create SSPL log and bundle directories
         os.makedirs(consts.SSPL_LOG_PATH, exist_ok=True)
