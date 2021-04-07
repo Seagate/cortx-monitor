@@ -84,7 +84,7 @@ server_node:
 storage_enclosure:
   TMPL_ENCLOSURE_ID_1:
     controller:
-      password: TMPL_CONTROLLER_PASSWORD_1
+      secret: TMPL_CONTROLLER_SECRET_1
       primary:
         ip: TMPL_PRIMARY_CONTROLLER_IP_1
         port: TMPL_PRIMARY_CONTROLLER_PORT_1
@@ -97,7 +97,7 @@ storage_enclosure:
     type: TMPL_ENCLOSURE_TYPE_1
   TMPL_ENCLOSURE_ID_2:
     controller:
-      password: TMPL_CONTROLLER_PASSWORD_2
+      secret: TMPL_CONTROLLER_SECRET_2
       primary:
         ip: TMPL_PRIMARY_CONTROLLER_IP_2
         port: TMPL_PRIMARY_CONTROLLER_PORT_2
@@ -110,7 +110,7 @@ storage_enclosure:
     type: TMPL_ENCLOSURE_TYPE_2
   TMPL_ENCLOSURE_ID_3:
     controller:
-      password: TMPL_CONTROLLER_PASSWORD_3
+      secret: TMPL_CONTROLLER_SECRET_3
       primary:
         ip: TMPL_PRIMARY_CONTROLLER_IP_3
         port: TMPL_PRIMARY_CONTROLLER_PORT_3

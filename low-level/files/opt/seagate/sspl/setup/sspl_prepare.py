@@ -27,7 +27,7 @@ from cortx.utils.validator.v_controller import ControllerV
 from cortx.utils.validator.v_network import NetworkV
 from files.opt.seagate.sspl.setup.setup_error import SetupError
 from framework.utils.utility import Utility
-from framework.base.sspl_constants import PRVSNR_CONFIG_INDEX
+from framework.base.sspl_constants import PRVSNR_CONFIG_INDEX, ServiceTypes
 
 
 class SSPLPrepare:
@@ -62,20 +62,10 @@ class SSPLPrepare:
                 "server_node>%s>bmc>ip" % machine_id)
             bmc_user = Utility.get_config_value(PRVSNR_CONFIG_INDEX,
                 "server_node>%s>bmc>user" % machine_id)
-            secret = Utility.get_config_value(PRVSNR_CONFIG_INDEX,
+            bmc_secret = Utility.get_config_value(PRVSNR_CONFIG_INDEX,
                 "server_node>%s>bmc>secret" % machine_id)
-            key = Cipher.generate_key(cluster_id, "cluster")
-            bmc_passwd = Cipher.decrypt(key, secret.encode("ascii")).decode()
-            enclosure_id = Utility.get_config_value(PRVSNR_CONFIG_INDEX,
-                "server_node>%s>storage>enclosure_id" % machine_id)
-            primary_ip = Utility.get_config_value(PRVSNR_CONFIG_INDEX,
-                "storage_enclosure>%s>storage>controller>primary>ip" % enclosure_id)
-            secondary_ip = Utility.get_config_value(PRVSNR_CONFIG_INDEX,
-                "storage_enclosure>%s>storage>controller>secondary>ip" % enclosure_id)
-            cntrlr_user = Utility.get_config_value(PRVSNR_CONFIG_INDEX,
-                "storage_enclosure>%s>storage>controller>user" % enclosure_id)
-            cntrlr_passwd = Utility.get_config_value(PRVSNR_CONFIG_INDEX,
-                "storage_enclosure>%s>storage>controller>password" % enclosure_id)
+            bmc_key = Cipher.generate_key(cluster_id, ServiceTypes.SERVER_NODE.value)
+            bmc_passwd = Cipher.decrypt(bmc_key, bmc_secret.encode("utf-8")).decode("utf-8")
             data_private_interfaces = Utility.get_config_value(PRVSNR_CONFIG_INDEX,
                 "server_node>%s>network>data>private_interfaces" % machine_id)
             data_public_interfaces = Utility.get_config_value(PRVSNR_CONFIG_INDEX,
@@ -88,10 +78,25 @@ class SSPLPrepare:
             "server_node>%s>network>data>private_fqdn" % machine_id)
         data_public_fqdn = Utility.get_config_value(PRVSNR_CONFIG_INDEX,
             "server_node>%s>network>data>public_fqdn" % machine_id)
+        enclosure_id = Utility.get_config_value(PRVSNR_CONFIG_INDEX,
+            "server_node>%s>storage>enclosure_id" % machine_id)
+        primary_ip = Utility.get_config_value(PRVSNR_CONFIG_INDEX,
+            "storage_enclosure>%s>controller>primary>ip" % enclosure_id)
+        secondary_ip = Utility.get_config_value(PRVSNR_CONFIG_INDEX,
+            "storage_enclosure>%s>controller>secondary>ip" % enclosure_id)
+        cntrlr_user = Utility.get_config_value(PRVSNR_CONFIG_INDEX,
+            "storage_enclosure>%s>controller>user" % enclosure_id)
+        cntrlr_secret = Utility.get_config_value(PRVSNR_CONFIG_INDEX,
+            "storage_enclosure>%s>controller>secret" % enclosure_id)
+        cntrlr_key = Cipher.generate_key(cluster_id,
+            ServiceTypes.STORAGE_ENCLOSURE.value)
+        cntrlr_passwd = Cipher.decrypt(cntrlr_key,
+            cntrlr_secret.encode("utf-8")).decode("utf-8")
 
         # Validate BMC connectivity & storage controller accessibility
         if node_type.lower() not in ["virtual", "vm"]:
-            NetworkV().validate("connectivity", [bmc_ip])
+            NetworkV().validate("connectivity", [bmc_ip, primary_ip, secondary_ip])
+            BmcV().validate("accessible", [socket.getfqdn(), bmc_ip, bmc_user, bmc_passwd])
             c_validator = ControllerV()
             c_validator.validate("accessible", [primary_ip, cntrlr_user, cntrlr_passwd])
             c_validator.validate("accessible", [secondary_ip, cntrlr_user, cntrlr_passwd])

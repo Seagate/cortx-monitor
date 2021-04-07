@@ -84,7 +84,7 @@ server_node:
 storage_enclosure:
   enc30512e5ae6df9f1ea02327bab45e499d:
     controller:
-      password: Admin123
+      secret: Admin123
       primary:
         ip: 10.0.0.2
         port: '22'
@@ -97,7 +97,7 @@ storage_enclosure:
     type: RBOD
   enc40512e5ae6df9f1ea02327bab45e499e:
     controller:
-      password: Admin123
+      secret: Admin123
       primary:
         ip: 10.0.0.2
         port: '22'
@@ -110,7 +110,7 @@ storage_enclosure:
     type: RBOD
   enc50512e5ae6df9f1ea02327bab45e499f:
     controller:
-      password: Admin123
+      secret: Admin123
       primary:
         ip: 10.0.0.2
         port: '22'

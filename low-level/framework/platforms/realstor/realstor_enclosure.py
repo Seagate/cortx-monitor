@@ -147,6 +147,10 @@ class RealStorEnclosure(StorageEnclosure):
         self.node_id = Conf.get(GLOBAL_CONF, NODE_ID_KEY, "SN01")
         # Need to keep cluster_id string here to generate decryption key
         self.cluster_id = Conf.get(GLOBAL_CONF, CLUSTER_ID_KEY, "CC01")
+        # Decrypt MC secret
+        decryption_key = encryptor.gen_key(self.cluster_id,
+            ServiceTypes.STORAGE_ENCLOSURE.value)
+        self.passwd = encryptor.decrypt(decryption_key, self.passwd, "RealStoreEncl")
 
         if self.mc_interface not in self.realstor_supported_interfaces:
             logger.error("Unspported Realstor interface configured,"

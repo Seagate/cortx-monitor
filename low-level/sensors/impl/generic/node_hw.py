@@ -253,11 +253,13 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         self._bmc_user = Conf.get(GLOBAL_CONF, BMC_USER_KEY, 'ADMIN')
         self._bmc_passwd = Conf.get(GLOBAL_CONF, BMC_SECRET_KEY, 'ADMIN')
         self._bmc_ip = Conf.get(GLOBAL_CONF, BMC_IP_KEY, '')
-        self._channel_interface = Conf.get(SSPL_CONF, f"{self.BMC_INTERFACE}>{self.BMC_CHANNEL_IF}",
-                                                'system')
-
-        decryption_key = encryptor.gen_key(self._cluster_id, ServiceTypes.CLUSTER.value)
-        self._bmc_passwd = encryptor.decrypt(decryption_key, self._bmc_passwd.encode('ascii'), 'Node_hw')
+        self._channel_interface = Conf.get(SSPL_CONF,
+            f"{self.BMC_INTERFACE}>{self.BMC_CHANNEL_IF}", 'system')
+        # Decrypt bmc secret
+        decryption_key = encryptor.gen_key(self._cluster_id,
+            ServiceTypes.SERVER_NODE.value)
+        self._bmc_passwd = encryptor.decrypt(decryption_key,
+            self._bmc_passwd, self.SENSOR_NAME)
 
         data_dir =  Conf.get(SSPL_CONF, f"{self.SYSINFO}>{self.DATA_PATH_KEY}", self.DATA_PATH_VALUE_DEFAULT)
         self.cache_dir_path = os.path.join(data_dir, self.CACHE_DIR_NAME)

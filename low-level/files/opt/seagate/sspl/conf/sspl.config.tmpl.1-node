@@ -32,7 +32,7 @@ server_node:
 storage_enclosure:
   TMPL_ENCLOSURE_ID:
     controller:
-      password: TMPL_CONTROLLER_PASSWORD
+      secret: TMPL_CONTROLLER_SECRET
       primary:
         ip: TMPL_PRIMARY_CONTROLLER_IP
         port: TMPL_PRIMARY_CONTROLLER_PORT
