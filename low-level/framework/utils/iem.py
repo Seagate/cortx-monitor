@@ -33,19 +33,19 @@ class Iem:
 
     # EVENT_STRING = { event_code : [description, impact, recommendation] }
     EVENT_STRING = {
-        "0050010001" : ["Ipmitool command is giving error.",
-            "Server sensors can not be monitored.",
+        "0050010001" : ["Ipmitool command execution error.",
+            "Server resource monitoring halted.",
             "Reinstall/reconfigure ipmitool package."],
-        "0050010002" : ["Ipmitool is not installed..",
+        "0050010002" : ["Ipmitool is not installed.",
             "Server sensors can not be monitored.",
             "Install ipmitool package."],
-        "0050010003" : ["Hdparm is command is giving error.",
+        "0050010003" : ["Hdparm command execution error.",
             "Server local drives can not be monitored.",
             "Reinstall/reconfigure hdparm package."],
         "0050010004" : ["Hdparm is not installed.",
             "Server local drives can not be monitored.",
             "Install hdparm package."],
-        "0050010005" : ["Smartctl command is giving error.",
+        "0050010005" : ["Smartctl command execution error.",
             "Can not fetch drive information.",
             "Reinstall/reconfigure smartmonotool package."],
         "0050010006" : ["UDISKS2 is not installed.",
@@ -61,4 +61,7 @@ class Iem:
 
     def generate_iem(self, severity, event_code, desc):
         iem = "IEC:%sS%s:%s" %(severity, event_code, desc)
+        self.log_iem(iem)
+
+    def log_iem(self, iem):
         syslog.syslog(iem)
