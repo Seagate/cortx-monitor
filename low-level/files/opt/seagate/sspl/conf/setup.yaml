@@ -32,7 +32,7 @@ sspl:
 
   test:
     cmd: /opt/seagate/cortx/sspl/bin/sspl_setup test
-    args: --config $URL --plan self_primary
+    args: --config $URL --plan self
 
   upgrade:
     cmd: /opt/seagate/cortx/sspl/bin/sspl_setup upgrade

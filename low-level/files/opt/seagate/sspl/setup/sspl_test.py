@@ -35,7 +35,7 @@ class SSPLTestCmd:
     def __init__(self, args: list):
         self.args = args
         self.name = "sspl_test"
-        self.plan = "self_primary"
+        self.plan = "self"
         self.avoid_rmq = False
         self.dbus_service = DbusServiceHandler()
         # Load global, sspl and test configs
@@ -76,9 +76,9 @@ class SSPLTestCmd:
         """Run test using user requested test plan."""
         self.plan = self.args.plan[0]
         self.avoid_rmq = self.args.avoid_rmq
-        # if self.plan is other than self_primary or self_secondary
+        # if self.plan is other than "self"
         # then only config change and service restart is required.
-        if self.plan not in ["self_primary" , "self_secondary" ]:
+        if self.plan != "self":
             # Take back up of sspl test config
             sspl_test_backup = '/etc/sspl_tests.conf.back'
             shutil.copyfile(sspl_test_file_path, sspl_test_backup)
