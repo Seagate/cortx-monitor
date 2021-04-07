@@ -29,7 +29,7 @@ def gen_key(cluster_id, service_name):
 
 
 def encrypt(key, text):
-    """Encrypt sensitive data. Ex: RabbitMQ credentials."""
+    """Encrypt sensitive data. Ex: messaging credentials."""
     # Before encrypting text we need to convert string to bytes using encode()
     # method
     return Cipher.encrypt(key, text.encode())

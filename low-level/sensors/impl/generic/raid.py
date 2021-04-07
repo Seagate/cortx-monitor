@@ -384,7 +384,7 @@ class RAIDsensor(SensorThread, InternalMsgQ):
     def _process_missing_md_devices(self, md_device_list, drive_dict):
         """ checks the md raid configuration file, compares all it's
             entries with list of arrays from mdstat file and sends
-            missing entry in RabbitMQ channel
+            missing entry
         """
 
         if not os.path.isfile(self.RAID_CONF_FILE):

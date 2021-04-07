@@ -38,7 +38,7 @@ from json_msgs.messages.sensors.node_hw_data import NodeIPMIDataMsg
 from json_msgs.messages.sensors.raid_data import RAIDdataMsg
 from json_msgs.messages.sensors.raid_integrity_msg import RAIDIntegrityMsg
 from message_handlers.logging_msg_handler import LoggingMsgHandler
-from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
+from framework.messaging.egress_processor import EgressProcessor
 
 
 class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
@@ -86,7 +86,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
     # Dependency list
     DEPENDENCIES = {
-                    "plugins": ["RabbitMQegressProcessor"],
+                    "plugins": ["EgressProcessor"],
                     "rpms": []
     }
 
@@ -260,7 +260,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 self._generate_host_update()
                 sensor_message_type = self.os_sensor_type.get(self.sensor_type, "")
                 if sensor_message_type:
-                    self._write_internal_msgQ(RabbitMQegressProcessor.name(),
+                    self._write_internal_msgQ(EgressProcessor.name(),
                                           sensor_message_type)
                 else:
                     self._log_debug(f"NodeDataMsgHandler, _process_msg, \
@@ -270,7 +270,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 self._generate_cpu_data()
                 sensor_message_type = self.os_sensor_type.get(self.sensor_type, "")
                 if sensor_message_type:
-                    self._write_internal_msgQ(RabbitMQegressProcessor.name(),
+                    self._write_internal_msgQ(EgressProcessor.name(),
                                           sensor_message_type)
                 else:
                     self._log_debug(f"NodeDataMsgHandler, _process_msg, \
@@ -280,7 +280,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 self._generate_if_data()
                 sensor_message_type = self.os_sensor_type.get(self.sensor_type, "")
                 if sensor_message_type:
-                    self._write_internal_msgQ(RabbitMQegressProcessor.name(),
+                    self._write_internal_msgQ(EgressProcessor.name(),
                                           sensor_message_type)
                 else:
                     self._log_debug(f"NodeDataMsgHandler, _process_msg, \
@@ -290,7 +290,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 self._generate_disk_space_alert()
                 sensor_message_type = self.os_sensor_type.get(self.sensor_type, "")
                 if sensor_message_type:
-                    self._write_internal_msgQ(RabbitMQegressProcessor.name(),
+                    self._write_internal_msgQ(EgressProcessor.name(),
                                           sensor_message_type)
                 else:
                     self._log_debug(f"NodeDataMsgHandler, _process_msg, \
@@ -300,7 +300,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 self._generate_raid_data(jsonMsg)
                 sensor_message_type = self.os_sensor_type.get(self.sensor_type, "")
                 if sensor_message_type:
-                    self._write_internal_msgQ(RabbitMQegressProcessor.name(),
+                    self._write_internal_msgQ(EgressProcessor.name(),
                                             sensor_message_type)
                 else:
                     self._log_debug("NodeDataMsgHandler, _process_msg " +
@@ -310,7 +310,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 self._generate_raid_integrity_data(jsonMsg)
                 sensor_message_type = self.os_sensor_type.get(self.sensor_type, "")
                 if sensor_message_type:
-                    self._write_internal_msgQ(RabbitMQegressProcessor.name(),
+                    self._write_internal_msgQ(EgressProcessor.name(),
                                             sensor_message_type)
                 else:
                     self._log_debug("NodeDataMsgHandler, _process_msg " +
@@ -390,10 +390,10 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 if self._uuid is not None:
                     hostUpdateMsg.set_uuid(self._uuid)
                 jsonMsg = hostUpdateMsg.getJson()
-                # Transmit it out over rabbitMQ channel
+                # Transmit it to message processor
                 self.host_sensor_data = jsonMsg
                 self.os_sensor_type["memory_usage"] = self.host_sensor_data
-                self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
+                self._write_internal_msgQ(EgressProcessor.name(), jsonMsg)
 
         if (self._node_sensor.total_memory["percent"] < self._host_memory_usage_threshold) and (self.host_fault == True):
                 fault_resolved_event = "Host memory usage decreased to %s, lesser than configured threshold of %s" \
@@ -420,11 +420,11 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 if self._uuid is not None:
                     hostUpdateMsg.set_uuid(self._uuid)
                 jsonMsg = hostUpdateMsg.getJson()
-                # Transmit it out over rabbitMQ channel
+                # Transmit it to message processor
                 self.host_sensor_data = jsonMsg
                 self.os_sensor_type["memory_usage"] = self.host_sensor_data
 
-                self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
+                self._write_internal_msgQ(EgressProcessor.name(), jsonMsg)
                 self.host_fault = False
 
     def _generate_local_mount_data(self):
@@ -451,8 +451,8 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             localMountDataMsg.set_uuid(self._uuid)
         jsonMsg = localMountDataMsg.getJson()
 
-        # Transmit it out over rabbitMQ channel
-        self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
+        # Transmit it to message processor
+        self._write_internal_msgQ(EgressProcessor.name(), jsonMsg)
 
     def _generate_cpu_data(self):
         """Create & transmit a cpu_data message as defined
@@ -513,8 +513,8 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 self.cpu_sensor_data = jsonMsg
                 self.os_sensor_type["cpu_usage"] = self.cpu_sensor_data
 
-                # Transmit it out over rabbitMQ channel
-                self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
+                # Transmit it to message processor
+                self._write_internal_msgQ(EgressProcessor.name(), jsonMsg)
 
         if (self._node_sensor.cpu_usage <= self._cpu_usage_threshold) and (self.cpu_fault == True):
             # Create the cpu usage data message and hand it over to the egress processor to transmit
@@ -551,8 +551,8 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             self.cpu_sensor_data = jsonMsg
             self.os_sensor_type["cpu_usage"] = self.cpu_sensor_data
 
-            # Transmit it out over rabbitMQ channel
-            self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
+            # Transmit it to message processor
+            self._write_internal_msgQ(EgressProcessor.name(), jsonMsg)
             self.cpu_fault = False
 
     def _send_ifdata_json_msg(self, sensor_type, resource_id, resource_type, state, severity, event=""):
@@ -579,8 +579,8 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         #                                'log_msg': '{}'.format(jsonMsg)}}})
         #self._write_internal_msgQ(LoggingMsgHandler.name(), internal_json_msg)
 
-        # Transmit it out over rabbitMQ channel
-        self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
+        # Transmit it to message processor
+        self._write_internal_msgQ(EgressProcessor.name(), jsonMsg)
 
     def _generate_if_data(self):
         """Create & transmit a network interface data message as defined
@@ -771,8 +771,8 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 self.disk_sensor_data = jsonMsg
                 self.os_sensor_type["disk_space"] = self.disk_sensor_data
 
-                # Transmit it out over rabbitMQ channel
-                self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
+                # Transmit it to message processor
+                self._write_internal_msgQ(EgressProcessor.name(), jsonMsg)
 
         if (self._node_sensor.disk_used_percentage <= self._disk_usage_threshold) and (self.disk_fault == True):
             # Create the disk space data message and hand it over to the egress processor to transmit
@@ -800,8 +800,8 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             self.disk_sensor_data = jsonMsg
             self.os_sensor_type["disk_space"] = self.disk_sensor_data
 
-            # Transmit it out over rabbitMQ channel
-            self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
+            # Transmit it to message processor
+            self._write_internal_msgQ(EgressProcessor.name(), jsonMsg)
             self.disk_fault = False
 
     def _generate_raid_data(self, jsonMsg):
@@ -895,7 +895,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         if self._uuid is not None:
             node_ipmi_data_msg.set_uuid(self._uuid)
         jsonMsg = node_ipmi_data_msg.getJson()
-        self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
+        self._write_internal_msgQ(EgressProcessor.name(), jsonMsg)
 
     def suspend(self):
         """Suspends the module thread. It should be non-blocking"""

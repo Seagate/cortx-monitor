@@ -18,8 +18,8 @@
 import time
 
 from default import world
-from rabbitmq.rabbitmq_ingress_processor_tests import RabbitMQingressProcessorTests
-from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
+from messaging.ingress_processor_tests import IngressProcessorTests
+from messaging.egress_processor_tests import EgressProcessorTests
 from common import check_sspl_ll_is_running
 
 RESOURCE_TYPE = "node:sw:os:service"
@@ -36,9 +36,9 @@ def test_systemd_service_valid_request(args):
     service_actuator_msg = None
     time.sleep(8)
     ingressMsg = {}
-    while not world.sspl_modules[RabbitMQingressProcessorTests.name()]\
+    while not world.sspl_modules[IngressProcessorTests.name()]\
                                                         ._is_my_msgQ_empty():
-        ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]\
+        ingressMsg = world.sspl_modules[IngressProcessorTests.name()]\
                                                     ._read_my_msgQ()
         time.sleep(0.1)
         print("Received: %s " % ingressMsg)
@@ -77,9 +77,9 @@ def test_systemd_service_invalid_request(args):
     service_actuator_msg = None
     time.sleep(4)
     ingressMsg = {}
-    while not world.sspl_modules[RabbitMQingressProcessorTests.name()]\
+    while not world.sspl_modules[IngressProcessorTests.name()]\
                                                     ._is_my_msgQ_empty():
-        ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]\
+        ingressMsg = world.sspl_modules[IngressProcessorTests.name()]\
                                                     ._read_my_msgQ()
         time.sleep(0.1)
         print("Received: %s " % ingressMsg)
@@ -146,8 +146,8 @@ def service_actuator_request(service_name, action):
                     }
                 }
             }
-    world.sspl_modules[RabbitMQegressProcessor.name()]._write_internal_msgQ\
-                                    (RabbitMQegressProcessor.name(), egressMsg)
+    world.sspl_modules[EgressProcessorTests.name()]._write_internal_msgQ\
+                                    (EgressProcessorTests.name(), egressMsg)
 
 test_list = [test_systemd_service_valid_request,\
                                          test_systemd_service_invalid_request]

@@ -16,8 +16,8 @@
 SSPL-LL_SETTING:
 
    core_processors: 
-      - RabbitMQegressProcessor
-      - RabbitMQingressProcessor
+      - EgressProcessor
+      - IngressProcessor
       - LoggingProcessor
 
    message_handlers: 
@@ -91,41 +91,26 @@ SYSTEM_INFORMATION:
     syslog_host: localhost
     syslog_port: 514
 
-RABBITMQINGRESSPROCESSOR:
-   virtual_host: SSPL
-   queue_name: actuator-req-queue
-   exchange_name: sspl-in
-   routing_key: actuator-req-key
-   username: sspluser
-   password: gAAAAABf_F2Xh3y0x2rPTRGL0ld4f_u1AwI5pRHOOEk49-lSNsq339Mn8m9bSBsGH-U8bCaPnTJPW-LR4yQHc_CpSbhU3AL5wQ==
-   primary_rabbitmq_host: localhost
+INGRESSPROCESSOR:
+   consumer_id: sspl_actuator
+   consumer_group: cortx_monitor
+   message_type: Requests
+   offset: earliest
 
-RABBITMQEGRESSPROCESSOR:
-   virtual_host: SSPL
-   queue_name: sensor-queue
-   exchange_name: sspl-out
-   routing_key: sensor-key
-   ack_queue_name: sensor-queue
-   ack_exchange_name: sspl-out
-   ack_routing_key: sensor-key
-   username: sspluser
-   password: gAAAAABf_F2Xh3y0x2rPTRGL0ld4f_u1AwI5pRHOOEk49-lSNsq339Mn8m9bSBsGH-U8bCaPnTJPW-LR4yQHc_CpSbhU3AL5wQ==
+EGRESSPROCESSOR:
    message_signature_username: sspl-ll
    message_signature_token: ALOIUD986798df69a8koDISLKJ282983
    message_signature_expires: 3600
-   iem_route_addr: 
-   iem_route_exchange_name: sspl-out
-   primary_rabbitmq_host: localhost
    limit_consul_memory: 50000000
+   producer_id: sspl-sensor
+   message_type: Alerts
+   method: sync
 
 LOGGINGPROCESSOR:
-   virtual_host: SSPL
-   queue_name: iem-queue
-   exchange_name: sspl-in
-   routing_key: iem-key
-   username: sspluser
-   password: gAAAAABf_F2Xh3y0x2rPTRGL0ld4f_u1AwI5pRHOOEk49-lSNsq339Mn8m9bSBsGH-U8bCaPnTJPW-LR4yQHc_CpSbhU3AL5wQ==
-   primary_rabbitmq_host: localhost
+   consumer_id: sspl_in
+   consumer_group: cortx_monitor
+   message_type: IEM
+   offset: earliest
 
 LOGGINGMSGHANDLER:
    iem_routing_enabled: false
@@ -172,7 +157,6 @@ SYSTEMDWATCHDOG:
       - crond.service
       - syslog.service
       - sshd.service
-      - rabbitmq-server.service
       - lnet.service
       - network.service
       - mcollective.service

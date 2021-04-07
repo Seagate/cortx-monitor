@@ -36,8 +36,8 @@ sspl_conf_update=(
         ["sspl/config/STORAGE_ENCLOSURE/user"]=$encl_user
         ["sspl/config/STORAGE_ENCLOSURE/password"]=$encl_encrypt_pass
         ["sspl/config/SYSTEM_INFORMATION/cluster_id"]=$cluster_id
-        ["sspl/config/RABBITMQINGRESSPROCESSOR/password"]=$rbmq_encrypt_pass
-        ["sspl/config/RABBITMQEGRESSPROCESSOR/password"]=$rbmq_encrypt_pass
+        ["sspl/config/INGRESSPROCESSOR/password"]=$rbmq_encrypt_pass
+        ["sspl/config/EGRESSPROCESSOR/password"]=$rbmq_encrypt_pass
         ["sspl/config/LOGGINGPROCESSOR/password"]=$rbmq_encrypt_pass
 )
 
