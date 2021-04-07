@@ -28,12 +28,17 @@ from zope.interface import implementer
 
 from framework.base.module_thread import SensorThread
 from framework.base.internal_msgQ import InternalMsgQ
+from framework.base.sspl_constants import DATA_PATH
 from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
 from framework.platforms.realstor.realstor_enclosure import singleton_realstorencl
 
 # Modules that receive messages from this module
 from message_handlers.real_stor_encl_msg_handler import RealStorEnclMsgHandler
+from framework.utils.store_factory import file_store
+
+# Override default store
+store = file_store
 
 from sensors.Ienclosure import IEnclosure
 
@@ -59,6 +64,8 @@ class RealStorEnclosureSensor(SensorThread, InternalMsgQ):
                             "Both controllers have shut down; no restart",\
                             "Storage Controller booted up (cold boot - power up).",\
                             "Management Controller configuration parameters were set"]
+    
+    CACHE_DIR_NAME  = "server"
 
     PRIORITY = 1
 
@@ -98,6 +105,21 @@ class RealStorEnclosureSensor(SensorThread, InternalMsgQ):
 
         # Initialize internal message queues for this module
         super(RealStorEnclosureSensor, self).initialize_msgQ(msgQlist)
+
+        cache_dir_path = os.path.join(DATA_PATH, self.CACHE_DIR_NAME)
+        self.ENCL_SENSOR_DATA_PATH = os.path.join(cache_dir_path,
+                                        f'ENCL_SENSOR_DATA_')
+        # Get the stored previous alert info
+        self.persistent_encl_data = store.get(self.ENCL_SENSOR_DATA_PATH)
+        if self.persistent_encl_data:
+            self.fault_alert = self.persistent_encl_data['fault_alert']
+            self.previous_alert_type = self.persistent_encl_data['previous_alert_type']
+        else:
+            self.persistent_encl_data = {
+                'fault_alert' = self.fault_alert,
+                'previous_alert_type' = self.previous_alert_type,
+            }
+            store.put(self.persistent_encl_data, self.ENCL_SENSOR_DATA_PATH)
 
         return True
 
@@ -218,6 +240,11 @@ class RealStorEnclosureSensor(SensorThread, InternalMsgQ):
 
         self.previous_alert_type = alert_type
         self._write_internal_msgQ(RealStorEnclMsgHandler.name(), internal_json_msg)
+        self.persistent_encl_data = {
+                'fault_alert' = self.fault_alert,
+                'previous_alert_type' = self.previous_alert_type,
+            }
+        store.put(self.persistent_encl_data, self.ENCL_SENSOR_DATA_PATH)
 
     def _get_alert_id(self, epoch_time):
         """Returns alert id which is a combination of
