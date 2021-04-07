@@ -121,15 +121,15 @@ class SSPLConfig:
 
     def create_message_types(self):
         # Skip this step if sspl is being configured for node
-        # replacement scenario as rabbitmq cluster is
+        # replacement scenario as cluster is
         # already configured on the healthy node
-        # Configure rabbitmq
+        # Configure message bus
         if not os.path.exists(consts.REPLACEMENT_NODE_ENV_VAR_FILE):
             message_types = [Conf.get(consts.SSPL_CONFIG_INDEX,
-                                      "RABBITMQINGRESSPROCESSOR"
+                                      "INGRESSPROCESSOR"
                                       ">message_type"),
                              Conf.get(consts.SSPL_CONFIG_INDEX,
-                                      "RABBITMQEGRESSPROCESSOR"
+                                      "EGRESSPROCESSOR"
                                       ">message_type")]
             mbadmin = MessageBusAdmin(admin_id="admin")
             try:

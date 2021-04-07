@@ -17,8 +17,8 @@ import os
 import time
 
 from default import world
-from rabbitmq.rabbitmq_ingress_processor_tests import RabbitMQingressProcessorTests
-from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
+from messaging.ingress_processor_tests import IngressProcessorTests
+from messaging.egress_processor_tests import EgressProcessorTests
 from common import check_sspl_ll_is_running
 
 from alerts.self_hw.self_hw_utilities import run_cmd
@@ -32,8 +32,8 @@ def wait_for_asserted_event():
     time.sleep(0.1)
     ingressMsg = {}
     got_alert = False
-    while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
-        ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
+    while not world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
+        ingressMsg = world.sspl_modules[IngressProcessorTests.name()]._read_my_msgQ()
         time.sleep(0.1)
         print("Received: %s" % ingressMsg)
         try:
@@ -56,8 +56,8 @@ def wait_for_deasserted_event():
     time.sleep(0.1)
     ingressMsg = {}
     got_alert = False
-    while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
-        ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
+    while not world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
+        ingressMsg = world.sspl_modules[IngressProcessorTests.name()]._read_my_msgQ()
         time.sleep(0.1)
         print("Received: %s" % ingressMsg)
         try:

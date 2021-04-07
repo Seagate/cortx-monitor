@@ -66,7 +66,7 @@ class StoreTypes(Enum):
     CONSUL = "consul"
 
 class ServiceTypes(Enum):
-    RABBITMQ = "rabbitmq"
+    MESSAGING = "messaging"
 
 if __name__ == "__main__":
     print(' '.join(enabled_products))

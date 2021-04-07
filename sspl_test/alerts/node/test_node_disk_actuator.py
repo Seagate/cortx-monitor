@@ -20,8 +20,8 @@ import time
 import sys
 
 from default import world
-from rabbitmq.rabbitmq_ingress_processor_tests import RabbitMQingressProcessorTests
-from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
+from messaging.ingress_processor_tests import IngressProcessorTests
+from messaging.egress_processor_tests import EgressProcessorTests
 from common import check_sspl_ll_is_running
 
 
@@ -36,10 +36,10 @@ def test_node_disk_module_actuator(agrs):
     time.sleep(10)
     ingressMsg = {}
     for i in range(10):
-        if world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
+        if world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
             time.sleep(2)
-        while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
-            ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
+        while not world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
+            ingressMsg = world.sspl_modules[IngressProcessorTests.name()]._read_my_msgQ()
             time.sleep(0.1)
             print("Received: %s " % ingressMsg)
             try:
@@ -107,6 +107,6 @@ def disk_actuator_message_request(resource_type):
 		}
 	}
     }
-    world.sspl_modules[RabbitMQegressProcessor.name()]._write_internal_msgQ(RabbitMQegressProcessor.name(), egressMsg)
+    world.sspl_modules[EgressProcessorTests.name()]._write_internal_msgQ(EgressProcessorTests.name(), egressMsg)
 
 test_list = [test_node_disk_module_actuator]

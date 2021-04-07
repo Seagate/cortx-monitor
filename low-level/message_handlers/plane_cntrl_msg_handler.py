@@ -26,7 +26,7 @@ from framework.utils.service_logging import logger
 from framework.base.sspl_constants import cs_legacy_products
 
 # Modules that receive messages from this module
-from framework.rabbitmq.plane_cntrl_rmq_egress_processor import PlaneCntrlRMQegressProcessor
+from framework.messaging.plane_cntrl_rmq_egress_processor import PlaneCntrlRMQegressProcessor
 from json_msgs.messages.actuators.ack_response import AckResponseMsg
 
 

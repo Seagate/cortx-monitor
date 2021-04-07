@@ -330,7 +330,7 @@ class RealStorLogicalVolumeSensor(SensorThread, InternalMsgQ):
                 # Send message to handler
                 if send_message:
                     self._send_json_msg(internal_json_msg)
-                # Wait till msg is sent to rabbitmq or added in consul for resending.
+                # Wait till msg is sent to message bus or added in consul for resending.
                 # If timed out, do not update cache and revert in-memory cache.
                 # So, in next iteration change can be detected
                 if self._event.wait(self.rssencl.PERSISTENT_DATA_UPDATE_TIMEOUT):
@@ -401,7 +401,7 @@ class RealStorLogicalVolumeSensor(SensorThread, InternalMsgQ):
                 if send_message:
                     self._send_json_msg(internal_json_msg)
                 # Persist faulty Logical Volume list to file only if something is changed
-                # Wait till msg is sent to rabbitmq or added in consul for resending.
+                # Wait till msg is sent to message bus or added in consul for resending.
                 # If timed out, do not update cache and revert in-memory cache.
                 # So, in next iteration change can be detected
                 if self._event.wait(self.rssencl.PERSISTENT_DATA_UPDATE_TIMEOUT):

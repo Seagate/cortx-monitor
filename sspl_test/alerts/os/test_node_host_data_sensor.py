@@ -19,8 +19,8 @@ from time import sleep
 import sys
 
 from default import world
-from rabbitmq.rabbitmq_ingress_processor_tests import RabbitMQingressProcessorTests
-from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
+from messaging.ingress_processor_tests import IngressProcessorTests
+from messaging.egress_processor_tests import EgressProcessorTests
 from common import check_sspl_ll_is_running
 
 
@@ -32,8 +32,8 @@ def test_host_update_data_sensor(args):
     node_data_sensor_message_request("node:os:memory_usage")
     host_update_msg = None
     sleep(10)
-    while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
-        ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
+    while not world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
+        ingressMsg = world.sspl_modules[IngressProcessorTests.name()]._read_my_msgQ()
         sleep(0.1)
         print("Received for host_data: {0}".format(ingressMsg))
         try:
@@ -101,7 +101,7 @@ def node_data_sensor_message_request(sensor_type):
         }
     }
 
-    world.sspl_modules[RabbitMQegressProcessor.name()]._write_internal_msgQ(RabbitMQegressProcessor.name(), egressMsg)
+    world.sspl_modules[EgressProcessorTests.name()]._write_internal_msgQ(EgressProcessorTests.name(), egressMsg)
 
 
 test_list = [test_host_update_data_sensor]
