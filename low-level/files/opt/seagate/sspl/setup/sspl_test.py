@@ -78,7 +78,7 @@ class SSPLTestCmd:
         self.avoid_rmq = self.args.avoid_rmq
         # if self.plan is other than "self"
         # then only config change and service restart is required.
-        if self.plan != "self":
+        if self.plan not in ["self", "self_primary", "self_secondary"]:
             # Take back up of sspl test config
             sspl_test_backup = '/etc/sspl_tests.conf.back'
             shutil.copyfile(sspl_test_file_path, sspl_test_backup)

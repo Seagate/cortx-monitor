@@ -154,6 +154,7 @@ RACK_ID_KEY = "server_node>%s>rack_id" % MACHINE_ID
 CLUSTER_ID_KEY = "server_node>%s>cluster_id" % MACHINE_ID
 STORAGE_SET_ID_KEY = "server_node>%s>storage_set_id" % MACHINE_ID
 NODE_TYPE_KEY = "server_node>%s>type" % MACHINE_ID
+NODE_KEY = "server_node>%s>name" % MACHINE_ID
 STORAGE_TYPE_KEY = "storage_enclosure>%s>type" % ENCLOSURE
 CNTRLR_PRIMARY_IP_KEY = "storage_enclosure>%s>controller>primary>ip" % ENCLOSURE
 CNTRLR_PRIMARY_PORT_KEY = "storage_enclosure>%s>controller>primary>port" % ENCLOSURE
