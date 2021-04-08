@@ -73,7 +73,7 @@ if __name__ == "__main__":
     consumer = MessageConsumer(consumer_id="sspl-test",
                                consumer_group="cortx_monitor",
                                message_types=["alerts"],
-                               auto_ack=False, offset="latest")
+                               auto_ack=False, offset="earliest")
 
     while True:
         try:
