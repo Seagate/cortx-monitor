@@ -6,64 +6,64 @@ server_node:
   30512e5ae6df9f1ea02327bab45e499d:
     bmc:
       ip: 198.120.10.1
-      secret: Admin123
+      secret: "gAAAAABgbfiX3MkzGmtbG9alJPoyTIOdveqBHMLAg6B2TqPADdLeQMMmTF-R02DeGQesapBwn54PVYxBelDXJG5_Il5Bgw7OuQ=="
       user: ADMIN
     hostname: ssc-vm-2217.colo.seagate.com
     name: srvnode-1
     storage:
       enclosure_id: enc30512e5ae6df9f1ea02327bab45e499d
-    type: VM
+    type: physical
   40512e5ae6df9f1ea02327bab45e499e:
     bmc:
       ip: 198.120.10.2
-      secret: Admin123
+      secret: "gAAAAABgbfiX3MkzGmtbG9alJPoyTIOdveqBHMLAg6B2TqPADdLeQMMmTF-R02DeGQesapBwn54PVYxBelDXJG5_Il5Bgw7OuQ=="
       user: ADMIN
     hostname: ssc-vm-2218.colo.seagate.com
     name: srvnode-1
     storage:
       enclosure_id: enc40512e5ae6df9f1ea02327bab45e499e
-    type: VM
+    type: physical
   50512e5ae6df9f1ea02327bab45e499f:
     bmc:
       ip: 198.120.10.3
-      secret: Admin123
+      secret: "gAAAAABgbfiX3MkzGmtbG9alJPoyTIOdveqBHMLAg6B2TqPADdLeQMMmTF-R02DeGQesapBwn54PVYxBelDXJG5_Il5Bgw7OuQ=="
       user: ADMIN
     hostname: ssc-vm-2219.colo.seagate.com
     name: srvnode-1
     storage:
       enclosure_id: enc50512e5ae6df9f1ea02327bab45e499f
-    type: VM
+    type: physical
 storage_enclosure:
   enc30512e5ae6df9f1ea02327bab45e499d:
     controller:
-      password: Admin123
+      secret: "gAAAAABgbfiX3MkzGmtbG9alJPoyTIOdveqBHMLAg6B2TqPADdLeQMMmTF-R02DeGQesapBwn54PVYxBelDXJG5_Il5Bgw7OuQ=="
       primary:
         ip: 10.0.0.2
-        port: '22'
+        port: '80'
       secondary:
         ip: 10.0.0.3
-        port: '22'
+        port: '80'
       type: Gallium
       user: admin
   enc40512e5ae6df9f1ea02327bab45e499e:
     controller:
-      password: Admin123
+      secret: "gAAAAABgbfiX3MkzGmtbG9alJPoyTIOdveqBHMLAg6B2TqPADdLeQMMmTF-R02DeGQesapBwn54PVYxBelDXJG5_Il5Bgw7OuQ=="
       primary:
         ip: 10.0.0.2
-        port: '22'
+        port: '80'
       secondary:
         ip: 10.0.0.3
-        port: '22'
+        port: '80'
       type: Gallium
       user: admin
   enc50512e5ae6df9f1ea02327bab45e499f:
     controller:
-      password: Admin123
+      secret: "gAAAAABgbfiX3MkzGmtbG9alJPoyTIOdveqBHMLAg6B2TqPADdLeQMMmTF-R02DeGQesapBwn54PVYxBelDXJG5_Il5Bgw7OuQ=="
       primary:
         ip: 10.0.0.2
-        port: '22'
+        port: '80'
       secondary:
         ip: 10.0.0.3
-        port: '22'
+        port: '80'
       type: Gallium
       user: admin

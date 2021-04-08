@@ -70,12 +70,12 @@ class SSPLPostInstall:
         if node_type.lower() not in ["vm", "virtual"]:
             bmc_ip = Utility.get_config_value(consts.PRVSNR_CONFIG_INDEX,
                 "server_node>%s>bmc>ip" % machine_id)
-            enclosure_id = Utility.get_config_value(consts.PRVSNR_CONFIG_INDEX,
-                "server_node>%s>storage>enclosure_id" % machine_id)
-            primary_ip = Utility.get_config_value(consts.PRVSNR_CONFIG_INDEX,
-                "storage_enclosure>%s>storage>controller>primary>ip" % enclosure_id)
-            secondary_ip = Utility.get_config_value(consts.PRVSNR_CONFIG_INDEX,
-                "storage_enclosure>%s>storage>controller>secondary>ip" % enclosure_id)
+        enclosure_id = Utility.get_config_value(consts.PRVSNR_CONFIG_INDEX,
+            "server_node>%s>storage>enclosure_id" % machine_id)
+        primary_ip = Utility.get_config_value(consts.PRVSNR_CONFIG_INDEX,
+            "storage_enclosure>%s>controller>primary>ip" % enclosure_id)
+        secondary_ip = Utility.get_config_value(consts.PRVSNR_CONFIG_INDEX,
+            "storage_enclosure>%s>controller>secondary>ip" % enclosure_id)
 
         # Validate product support
         if self.product not in consts.enabled_products:

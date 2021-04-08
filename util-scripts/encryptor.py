@@ -55,7 +55,7 @@ def encrypt(key, text):
 
 def decrypt(key, text):
     ''' Decrypt the <text> '''
-    return Cipher.decrypt(key, text).decode()
+    return Cipher.decrypt(key, text.encode("utf-8")).decode("utf-8")
 
 
 def usage():

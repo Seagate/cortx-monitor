@@ -347,7 +347,7 @@ class SSPLDevDeploy:
         with open(variable_file) as f:
             lines = f.readlines()
         for line in lines:
-            result = re.search(r"(.*)=(.*)", line.strip())
+            result = re.search(r"(\w+)=(.*)", line.strip())
             if result:
                 variables.update({result.groups()[0]: result.groups()[1]})
         for stage, c_file in config_files.items():
@@ -382,7 +382,7 @@ class SSPLDevDeploy:
         init_tmpl = "%s/conf/sspl.init.tmpl.%s" % (SSPL_BASE_DIR, self.deploy_type)
         tmpl_files = [post_install_tmpl, prepare_tmpl, config_tmpl, init_tmpl]
         if os.path.exists(self.temp_dir):
-            os.system("rm -rf %s", self.temp_dir)
+            os.system("rm -rf %s" % self.temp_dir)
         os.mkdir(self.temp_dir)
         post_install_config = "%s/post-install.%s" % (self.temp_dir, self.deploy_type)
         prepare_config = "%s/prepare.%s" % (self.temp_dir, self.deploy_type)

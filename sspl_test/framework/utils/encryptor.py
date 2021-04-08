@@ -37,5 +37,5 @@ def encrypt(key, text):
 
 def decrypt(key, text, caller=None):
     """Decrypt the <text>."""
-    decrypt_text = Cipher.decrypt(key, text).decode()
+    decrypt_text = Cipher.decrypt(key, text.encode("utf-8")).decode("utf-8")
     return decrypt_text
