@@ -64,8 +64,6 @@ class RealStorEnclosureSensor(SensorThread, InternalMsgQ):
                             "Both controllers have shut down; no restart",\
                             "Storage Controller booted up (cold boot - power up).",\
                             "Management Controller configuration parameters were set"]
-    
-    CACHE_DIR_NAME  = "server"
 
     PRIORITY = 1
 
@@ -106,9 +104,8 @@ class RealStorEnclosureSensor(SensorThread, InternalMsgQ):
         # Initialize internal message queues for this module
         super(RealStorEnclosureSensor, self).initialize_msgQ(msgQlist)
 
-        cache_dir_path = os.path.join(DATA_PATH, self.CACHE_DIR_NAME)
-        self.ENCL_SENSOR_DATA_PATH = os.path.join(cache_dir_path,
-                                        f'ENCL_SENSOR_DATA_')
+        self.ENCL_SENSOR_DATA_PATH = os.path.join(self.rssencl.encl_cache,
+                                           'enclosure_data.json')
         # Get the stored previous alert info
         self.persistent_encl_data = store.get(self.ENCL_SENSOR_DATA_PATH)
         if self.persistent_encl_data:
