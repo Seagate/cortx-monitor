@@ -33,7 +33,7 @@ from framework.utils.conf_utils import (GLOBAL_CONF, MGMT_INTERFACE,
                                         CNTRLR_PRIMARY_IP_KEY, CNTRLR_PRIMARY_PORT_KEY,
                                         CNTRLR_SECONDARY_IP_KEY, CNTRLR_SECONDARY_PORT_KEY,
                                         SITE_ID_KEY, RACK_ID_KEY, NODE_ID_KEY, CLUSTER_ID_KEY,
-                                        CNTRLR_USER_KEY, CNTRLR_PASSWD_KEY)
+                                        CNTRLR_USER_KEY, CNTRLR_SECRET_KEY)
 from framework.utils.service_logging import logger
 from framework.utils.store_factory import store
 from framework.utils.webservices import WebServices
@@ -135,7 +135,7 @@ class RealStorEnclosure(StorageEnclosure):
         self.active_wsport = self.mc1_wsport
 
         self.user = Conf.get(GLOBAL_CONF, CNTRLR_USER_KEY, self.DEFAULT_USER)
-        self.passwd = Conf.get(GLOBAL_CONF, CNTRLR_PASSWD_KEY, self.DEFAULT_PASSWD)
+        _secret = Conf.get(GLOBAL_CONF, CNTRLR_SECRET_KEY, self.DEFAULT_PASSWD)
 
         self.mc_interface = Conf.get(SSPL_CONF, f"{STORAGE_ENCLOSURE}>{MGMT_INTERFACE}", "cliapi")
 
@@ -150,7 +150,7 @@ class RealStorEnclosure(StorageEnclosure):
         # Decrypt MC secret
         decryption_key = encryptor.gen_key(self.cluster_id,
             ServiceTypes.STORAGE_ENCLOSURE.value)
-        self.passwd = encryptor.decrypt(decryption_key, self.passwd, "RealStoreEncl")
+        self.__passwd = encryptor.decrypt(decryption_key, _secret, "RealStoreEncl")
 
         if self.mc_interface not in self.realstor_supported_interfaces:
             logger.error("Unspported Realstor interface configured,"
@@ -271,7 +271,7 @@ class RealStorEnclosure(StorageEnclosure):
         """Perform realstor login to get session key & make it available
            in common request headers"""
 
-        cli_api_auth = self.user + '_' + self.passwd
+        cli_api_auth = self.user + '_' + self.__passwd
 
         url = self.build_url(self.URI_CLIAPI_LOGIN)
         auth_hash = hashlib.sha256(cli_api_auth.encode('utf-8')).hexdigest()

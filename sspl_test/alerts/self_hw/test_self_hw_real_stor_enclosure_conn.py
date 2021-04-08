@@ -27,7 +27,7 @@ from alerts.self_hw.self_hw_utilities import get_node_id
 from framework.utils.conf_utils import (GLOBAL_CONF, Conf, SITE_ID_KEY,
     RACK_ID_KEY, NODE_ID_KEY, CLUSTER_ID_KEY, CNTRLR_PRIMARY_IP_KEY,
     CNTRLR_PRIMARY_PORT_KEY, CNTRLR_SECONDARY_IP_KEY, CNTRLR_SECONDARY_PORT_KEY,
-    CNTRLR_USER_KEY, CNTRLR_PASSWD_KEY)
+    CNTRLR_USER_KEY, CNTRLR_SECRET_KEY)
 
 
 def gen_key(cluster_id, service_name):
@@ -76,7 +76,7 @@ def test_self_hw_real_stor_enclosure_conn(args):
         ip = Conf.get(GLOBAL_CONF, CNTRLR_SECONDARY_IP_KEY)
         port = Conf.get(GLOBAL_CONF, CNTRLR_SECONDARY_PORT_KEY)
     username = Conf.get(GLOBAL_CONF, CNTRLR_USER_KEY)
-    passwd = Conf.get(GLOBAL_CONF, CNTRLR_PASSWD_KEY)
+    passwd = Conf.get(GLOBAL_CONF, CNTRLR_SECRET_KEY)
     cluster_id = Conf.get(GLOBAL_CONF, CLUSTER_ID_KEY,'CC01')
 
     # build url for primary
