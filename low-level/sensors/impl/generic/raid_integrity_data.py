@@ -60,8 +60,10 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
     POLLING_INTERVAL = "polling_interval"
     TIMESTAMP_FILE_PATH_KEY = "timestamp_file_path"
 
-    # check once a week (below time is in seconds), the integrity of raid data
-    DEFAULT_POLLING_INTERVAL = "604800"
+    # check once in two weeks (below time is in seconds), the integrity of raid data
+    DEFAULT_POLLING_INTERVAL = "1209600"
+    # interval to check integrity can not be set below one day i.e. 86400 seconds.
+    MIN_POLLING_INTERVAL = "86400"
     DEFAULT_RAID_DATA_PATH = RaidDataConfig.RAID_RESULT_DIR.value
     DEFAULT_TIMESTAMP_FILE_PATH = DEFAULT_RAID_DATA_PATH + "last_execution_time"
 
@@ -108,6 +110,11 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
                                     self.RAIDIntegritySensor, self.TIMESTAMP_FILE_PATH_KEY, self.DEFAULT_TIMESTAMP_FILE_PATH)
         self._polling_interval = int(self._conf_reader._get_value_with_default(
                                 self.RAIDIntegritySensor, self.POLLING_INTERVAL, self.DEFAULT_POLLING_INTERVAL))
+        self._next_scheduled_time = self._polling_interval
+        
+        if self._polling_interval < self.MIN_POLLING_INTERVAL:
+            self._polling_interval = self.MIN_POLLING_INTERVAL
+
         self.utility = Utility()
         if self.utility.is_env_vm():
             self.shutdown()
@@ -122,8 +129,6 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
 
     def run(self):
         """Run the sensor on its own thread"""
-        # (below time is in seconds)
-        DEFAULT_POLLING_INTERVAL = "604800"
         # Do not proceed if module is suspended
         if self._suspended == True:
             if os.path.exists(self._timestamp_file_path):
@@ -131,9 +136,9 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
                     last_processed_log_timestamp = timestamp_file.read().strip()
                 current_time = int(time.time())
                 if current_time > int(last_processed_log_timestamp):
-                    self._polling_interval = int(DEFAULT_POLLING_INTERVAL) - (current_time - int(last_processed_log_timestamp))
-            logger.info("Scheduling RAID validate again after:{} seconds".format(self._polling_interval))
-            self._scheduler.enter(self._polling_interval, self._priority, self.run, ())
+                    self._next_scheduled_time = self._polling_interval - (current_time - int(last_processed_log_timestamp))
+            logger.info("Scheduling RAID validate again after:{} seconds".format(self._next_scheduled_time))
+            self._scheduler.enter(self._next_scheduled_time, self._priority, self.run, ())
             return
 
         # Check for debug mode being activated
@@ -155,9 +160,9 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
                 last_processed_log_timestamp = timestamp_file.read().strip()
                 current_time = int(time.time())
                 if current_time > int(last_processed_log_timestamp):
-                    self._polling_interval = int(DEFAULT_POLLING_INTERVAL) - (current_time - int(last_processed_log_timestamp))
-            logger.info("Scheduling RAID validate again after:{} seconds".format(self._polling_interval))
-            self._scheduler.enter(self._polling_interval, self._priority, self.run, ())
+                    self._next_scheduled_time = self._polling_interval - (current_time - int(last_processed_log_timestamp))
+            logger.info("Scheduling RAID validate again after:{} seconds".format(self._next_scheduled_time))
+            self._scheduler.enter(self._next_scheduled_time, self._priority, self.run, ())
         except Exception as ae:
             logger.exception(ae)
 
