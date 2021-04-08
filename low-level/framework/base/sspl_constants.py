@@ -305,6 +305,7 @@ class ServiceTypes(Enum):
     RABBITMQ = "rabbitmq"
     STORAGE_ENCLOSURE = "storage_enclosure"
     CLUSTER = "cluster"
+    SERVER_NODE = "server_node"
 
 class OperatingSystem(Enum):
     CENTOS7 = "centos7"
