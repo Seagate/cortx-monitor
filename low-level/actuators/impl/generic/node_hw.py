@@ -27,8 +27,7 @@ from actuators.impl.actuator import Actuator
 from framework.base.debug import Debug
 from framework.utils.service_logging import logger
 from framework.base.sspl_constants import AlertTypes, SensorTypes, SeverityTypes
-from framework.utils.conf_utils import (Conf, GLOBAL_CONF, SITE_ID_KEY,
-    RACK_ID_KEY, NODE_ID_KEY)
+from framework.utils.conf_utils import fetch_config
 
 
 class NodeHWactuator(Actuator, Debug):
@@ -36,10 +35,6 @@ class NodeHWactuator(Actuator, Debug):
     """
 
     ACTUATOR_NAME = "NodeHWactuator"
-    SYSTEM_INFORMATION = "SYSTEM_INFORMATION"
-    SITE_ID = "site_id"
-    RACK_ID = "rack_id"
-    NODE_ID = "node_id"
     NODE_REQUEST_MAP = {
         "disk" : "Drive Slot / Bay",
         "fan" : "Fan",
@@ -53,9 +48,7 @@ class NodeHWactuator(Actuator, Debug):
 
     def __init__(self, executor, conf_reader):
         super(NodeHWactuator, self).__init__()
-        self._site_id = Conf.get(GLOBAL_CONF, SITE_ID_KEY, "DC01")
-        self._rack_id = Conf.get(GLOBAL_CONF, RACK_ID_KEY, "RC01")
-        self._node_id = Conf.get(GLOBAL_CONF, NODE_ID_KEY, "SN01")
+        self._conf = fetch_config(["site_id", "node_id", "rack_id"])
         self.host_id = socket.getfqdn()
         self.sensor_id_map = None
         self._executor = executor
@@ -178,9 +171,9 @@ class NodeHWactuator(Actuator, Debug):
           "host_id": self.host_id,
           "instance_id": resource_id,
           "info": {
-            "site_id": self._site_id,
-            "rack_id": self._rack_id,
-            "node_id": self._node_id,
+            "site_id": self._conf['site_id'],
+            "rack_id": self._conf['rack_id'],
+            "node_id": self._conf['node_id'],
             "resource_id": resource_id,
             "resource_type": resource_type,
             "event_time": epoch_time
@@ -276,9 +269,9 @@ class NodeHWactuator(Actuator, Debug):
         response['alert_type'] = AlertTypes.GET.value
         response['severity'] = SeverityTypes.INFORMATIONAL.value
         response['info'] = {
-            "site_id": self._site_id,
-            "rack_id": self._rack_id,
-            "node_id": self._node_id,
+            "site_id": self._conf['site_id'],
+            "rack_id": self._conf['rack_id'],
+            "node_id": self._conf['node_id'],
             "resource_type": "node:sensor:" + self._sensor_type.lower(),
             "resource_id": self._resource_id,
             "event_time": str(calendar.timegm(time.gmtime())),

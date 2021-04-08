@@ -74,6 +74,11 @@ GLOBAL_CONFIG_INDEX = "GLOBAL"
 SSPL_CONFIG_INDEX = "SSPL"
 SSPL_TEST_CONFIG_INDEX = "SSPL_TEST"
 CONFIG_SPEC_TYPE = "yaml"
+DEFAULT_DC = "DC01"
+DEFAULT_RACK = "RC01"
+DEFAULT_SN = "SN01"
+DEFAULT_CLUSTER = "CC01"
+
 
 # This file will be created when sspl is being configured for node replacement case
 REPLACEMENT_NODE_ENV_VAR_FILE = "/etc/profile.d/set_replacement_env.sh"

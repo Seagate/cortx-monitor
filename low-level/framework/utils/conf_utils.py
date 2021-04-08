@@ -18,6 +18,8 @@
 from cortx.utils.conf_store import Conf
 
 from framework.utils.utility import Utility
+from framework.base.sspl_constants import ( DEFAULT_DC, DEFAULT_RACK,
+                                DEFAULT_CLUSTER, DEFAULT_SN)
 
 # Indexes
 GLOBAL_CONF = "GLOBAL"
@@ -151,6 +153,7 @@ ENCLOSURE = Conf.get(GLOBAL_CONF, "server_node>%s>storage>enclosure_id" % MACHIN
 
 PRODUCT_KEY = "cortx>release>product"
 SETUP_KEY = "cortx>release>setup"
+CORTX_BUILD_KEY = "%s>%s" % (RELEASE, TARGET_BUILD) 
 SITE_ID_KEY = "server_node>%s>site_id" % MACHINE_ID
 NODE_ID_KEY = "server_node>%s>node_id" % MACHINE_ID
 RACK_ID_KEY = "server_node>%s>rack_id" % MACHINE_ID
@@ -167,3 +170,54 @@ CNTRLR_PASSWD_KEY = "storage_enclosure>%s>controller>password" % ENCLOSURE
 BMC_IP_KEY = "server_node>%s>bmc>ip" % MACHINE_ID
 BMC_USER_KEY = "server_node>%s>bmc>user" % MACHINE_ID
 BMC_SECRET_KEY = "server_node>%s>bmc>secret" % MACHINE_ID
+DATA_PRIVATE_INTERFACE_KEY = "server_node>%s>network>data>private_interfaces" % MACHINE_ID
+DATA_PUBLIC_INTERFACE_KEY = "server_node>%s>network>data>public_interfaces" % MACHINE_ID
+MGMT_PUBLIC_FQDN_KEY = "server_node>%s>network>management>public_fqdn" % MACHINE_ID
+MGMT_INTERFACES_KEY = "server_node>%s>network>management>interfaces" % MACHINE_ID
+DATA_PRIVATE_FQDN_KEY = "server_node>%s>network>data>private_fqdn" % MACHINE_ID
+DATA_PUBLIC_FQDN_KEY = "server_node>%s>network>data>public_fqdn" % MACHINE_ID
+
+conf_dict = {
+    "site_id": SITE_ID_KEY + "__default:" + DEFAULT_DC,
+    "node_id": NODE_ID_KEY + "__default:" + DEFAULT_SN,
+    "cluster_id": CLUSTER_ID_KEY + "__default:" + DEFAULT_CLUSTER,
+    "rack_id": RACK_ID_KEY + "__default:" + DEFAULT_RACK,
+    "cortx_build": CORTX_BUILD_KEY,
+    "storage_type": STORAGE_TYPE_KEY + "__default:virtual",
+    "server_type": NODE_TYPE_KEY + "__default:virtual",
+    "bmc_ip": BMC_IP_KEY,
+    "bmc_user": BMC_USER_KEY,
+    "bmc_secret": BMC_SECRET_KEY,
+    "primary_ip": CNTRLR_PRIMARY_IP_KEY,
+    "secondary_ip": CNTRLR_SECONDARY_IP_KEY,
+    "cntrlr_user": CNTRLR_USER_KEY,
+    "cntrlr_passwd": CNTRLR_PASSWD_KEY,
+    "data_private_interfaces": DATA_PRIVATE_INTERFACE_KEY,
+    "data_public_interfaces": DATA_PUBLIC_INTERFACE_KEY,
+    "mgmt_public_fqdn": MGMT_PUBLIC_FQDN_KEY,
+    "mgmt_interfaces": MGMT_INTERFACES_KEY,
+    "data_private_fqdn": DATA_PRIVATE_FQDN_KEY,
+    "data_public_fqdn": DATA_PUBLIC_FQDN_KEY
+}
+
+def fetch_config(conf_list, index='GLOBAL'):
+    try:
+        response = {}
+        default_val = ""
+        for key in conf_list:
+            if key not in conf_dict:
+                raise KeyError(f"key:{key} not found in the config.")
+            output = conf_dict[key]
+            if "__default" in output:
+                req_string = output.split("__")[0]
+                temp_val = output.split("__")[1]
+                default_val = temp_val.split(":")[1]
+            else:
+                req_string = output
+            global_val = Conf.get(index, req_string, default_val)
+            if not global_val:
+                raise ValueError(f"Value is none for key:{key} in the config.")
+            response[key] = global_val
+        return response
+    except Exception as ex:
+        raise Exception(f"Failed in fetch_config. ERROR:{str(ex)}")
