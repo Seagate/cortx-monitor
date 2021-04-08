@@ -59,11 +59,13 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
     RACK_ID = "rack_id"
     POLLING_INTERVAL = "polling_interval"
     TIMESTAMP_FILE_PATH_KEY = "timestamp_file_path"
+    FAULT_ACCEPTED_TIME = "fault_accepted_time"
 
     # check once in two weeks (below time is in seconds), the integrity of raid data
     DEFAULT_POLLING_INTERVAL = "1209600"
     # interval to check integrity can not be set below one day i.e. 86400 seconds.
     MIN_POLLING_INTERVAL = "86400"
+    DEFAULT_FAULT_ACCEPTED_TIME = "86400"
     DEFAULT_RAID_DATA_PATH = RaidDataConfig.RAID_RESULT_DIR.value
     DEFAULT_TIMESTAMP_FILE_PATH = DEFAULT_RAID_DATA_PATH + "last_execution_time"
 
@@ -98,6 +100,7 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
         self._alert_msg = None
         self._fault_state = None
         self._suspended = False
+        self._fault_detected_time = -1
         self._site_id = self._conf_reader._get_value_with_default(
                                 self.SYSTEM_INFORMATION, COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.SITE_ID), '001')
         self._cluster_id = self._conf_reader._get_value_with_default(
@@ -111,6 +114,8 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
         self._polling_interval = int(self._conf_reader._get_value_with_default(
                                 self.RAIDIntegritySensor, self.POLLING_INTERVAL, self.DEFAULT_POLLING_INTERVAL))
         self._next_scheduled_time = self._polling_interval
+        self._fault_accepted_time = int(self._conf_reader._get_value_with_default(
+                                self.RAIDIntegritySensor, self.FAULT_ACCEPTED_TIME, self.DEFAULT_FAULT_ACCEPTED_TIME))
         
         if self._polling_interval < self.MIN_POLLING_INTERVAL:
             self._polling_interval = self.MIN_POLLING_INTERVAL
@@ -151,6 +156,16 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
             # Log RAIDIntegritySensor execution timestamp
             self._create_file(self._timestamp_file_path)
             self._log_timestamp()
+
+            current_time = int(time.time())
+            if self._fault_detected_time != -1 and \
+                current_time - self._fault_detected_time > self._fault_accepted_time:
+
+                self.alert_type = self.FAULT
+                self._alert_msg = "Disk %s may have developed a fault, it might "\
+                    "need a replacement. Please contact Seagate support" %device
+                self._send_json_msg(self.alert_type, device, self._alert_msg)
+                self._fault_detected_time = -1
 
             # Validate the raid data files and notify the node data msg handler
             self._raid_health_monitor()
@@ -203,11 +218,15 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
                             self._alert_msg = "RAID disks present in %s RAID array, needs synchronization." %device
                             self._send_json_msg(self.alert_type, device, self._alert_msg)
                             self._update_fault_state_file(device, self.FAULT, fault_status_file)
+                            self._polling_interval = self.MIN_POLLING_INTERVAL
+                            self._fault_detected_time = int(time.time())
                     else:
                         self.alert_type = self.FAULT
                         self._alert_msg = "RAID disks present in %s RAID array, needs synchronization." %device
                         self._send_json_msg(self.alert_type, device, self._alert_msg)
                         self._update_fault_state_file(device, self.FAULT, fault_status_file)
+                        self._polling_interval = self.MIN_POLLING_INTERVAL
+                        self._fault_detected_time = int(time.time())
 
                     # Retry to check mismatch_cnt
                     self._retry_execution(self._check_mismatch_count, device)
@@ -264,6 +283,9 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
                             self._alert_msg = "RAID disks present in %s RAID array are synchronized." %device
                             self._send_json_msg(self.alert_type, device, self._alert_msg)
                             self._update_fault_state_file(device, self.FAULT_RESOLVED, fault_status_file)
+                            self._polling_interval = int(self._conf_reader._get_value_with_default(
+                                self.RAIDIntegritySensor, self.POLLING_INTERVAL, self.DEFAULT_POLLING_INTERVAL))
+                            self._fault_detected_time = -1
             else:
                 status = "failed"
                 logger.debug("Mismatch found in {} file in raid_integrity_data!"

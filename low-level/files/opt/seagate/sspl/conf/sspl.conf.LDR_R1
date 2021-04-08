@@ -107,6 +107,7 @@ RAID_status_file=/proc/mdstat
 [RAIDINTEGRITYSENSOR]
 polling_interval=1209600
 timestamp_file_path=/var/cortx/sspl/data/raid_integrity/last_execution_time
+fault_accepted_time=86400
 
 [IPMI]
 user=admin
