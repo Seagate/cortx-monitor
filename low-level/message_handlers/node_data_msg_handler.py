@@ -201,7 +201,10 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         
         self.persistent_cpu_sensor_data = store.get(self.CPU_SENSOR_DATA_PATH)
         if self.persistent_cpu_sensor_data:
-            self.cpu_fault = bool(self.persistent_cpu_sensor_data['cpu_fault'])
+            if self.persistent_cpu_sensor_data['cpu_fault'] == "True":
+                self.cpu_fault = True
+            else:
+                self.cpu_fault = False
         else:
             self.persistent_cpu_sensor_data = {
                 'cpu_fault' : str(self.cpu_fault),
@@ -213,7 +216,10 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         
         self.persistent_disk_sensor_data = store.get(self.DISK_SENSOR_DATA_PATH)
         if self.persistent_disk_sensor_data:
-            self.disk_fault = bool(self.persistent_disk_sensor_data['disk_fault'])
+            if self.persistent_disk_sensor_data['disk_fault'] == "True":
+                self.disk_fault = True
+            else:
+                self.disk_fault = False
         else:
             self.persistent_disk_sensor_data = {
                 'disk_fault' : str(self.disk_fault),
@@ -225,7 +231,10 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         
         self.persistent_host_sensor_data = store.get(self.HOST_SENSOR_DATA_PATH)
         if self.persistent_host_sensor_data:
-            self.host_fault = bool(self.persistent_host_sensor_data['host_fault'])
+            if self.persistent_host_sensor_data['host_fault'] == "True":
+                self.host_fault = True
+            else:
+                self.host_fault = False
         else:
             self.persistent_host_sensor_data = {
                 'host_fault' : str(self.host_fault),
