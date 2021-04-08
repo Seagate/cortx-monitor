@@ -113,8 +113,8 @@ class RealStorEnclosureSensor(SensorThread, InternalMsgQ):
             self.previous_alert_type = self.persistent_encl_data['previous_alert_type']
         else:
             self.persistent_encl_data = {
-                'fault_alert' = self.fault_alert,
-                'previous_alert_type' = self.previous_alert_type,
+                'fault_alert' : self.fault_alert,
+                'previous_alert_type' : self.previous_alert_type,
             }
             store.put(self.persistent_encl_data, self.ENCL_SENSOR_DATA_PATH)
 
@@ -238,8 +238,8 @@ class RealStorEnclosureSensor(SensorThread, InternalMsgQ):
         self.previous_alert_type = alert_type
         self._write_internal_msgQ(RealStorEnclMsgHandler.name(), internal_json_msg)
         self.persistent_encl_data = {
-                'fault_alert' = self.fault_alert,
-                'previous_alert_type' = self.previous_alert_type,
+                'fault_alert' : self.fault_alert,
+                'previous_alert_type' : self.previous_alert_type,
             }
         store.put(self.persistent_encl_data, self.ENCL_SENSOR_DATA_PATH)
 
