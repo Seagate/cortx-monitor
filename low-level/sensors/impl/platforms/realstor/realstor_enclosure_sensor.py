@@ -28,7 +28,6 @@ from zope.interface import implementer
 
 from framework.base.module_thread import SensorThread
 from framework.base.internal_msgQ import InternalMsgQ
-from framework.base.sspl_constants import DATA_PATH
 from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
 from framework.platforms.realstor.realstor_enclosure import singleton_realstorencl

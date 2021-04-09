@@ -140,7 +140,7 @@ class RAIDsensor(SensorThread, InternalMsgQ):
                                 self.SYSTEM_INFORMATION, COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.RACK_ID), '001')
         self._node_id = self._conf_reader._get_value_with_default(
                                 self.SYSTEM_INFORMATION, COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.NODE_ID), '001')
-        
+
         cache_dir_path = os.path.join(DATA_PATH, self.CACHE_DIR_NAME)
         self.RAID_SENSOR_DATA_PATH = os.path.join(cache_dir_path,
                                         f'RAID_SENSOR_DATA_{self.node_id}')
@@ -170,7 +170,7 @@ class RAIDsensor(SensorThread, InternalMsgQ):
                 '_prev_drive_dict' : self._prev_drive_dict,
                 'prev_alert_type' : self.prev_alert_type,
             }
-            
+
         # Allow systemd to process all the drives so we can map device name to serial numbers
         #time.sleep(120)
         self.utility = Utility()

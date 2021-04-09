@@ -73,7 +73,7 @@ class NodeData(Debug):
         load_15min_avg = threading.Thread(target=self._load_15min_avg).start()
 
         self.if_data = []
-        
+
         self.conf_reader = ConfigReader()
         self.utility = Utility()
         self.is_env_vm = self.utility.is_env_vm()

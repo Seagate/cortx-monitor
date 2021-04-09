@@ -64,7 +64,7 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
     # check once in two weeks (below time is in seconds), the integrity of raid data
     DEFAULT_POLLING_INTERVAL = "1209600"
     # interval to check integrity can not be set below one day i.e. 86400 seconds.
-    MIN_POLLING_INTERVAL = "86400"
+    MIN_POLLING_INTERVAL = 86400
     DEFAULT_FAULT_ACCEPTED_TIME = "86400"
     DEFAULT_RAID_DATA_PATH = RaidDataConfig.RAID_RESULT_DIR.value
     DEFAULT_TIMESTAMP_FILE_PATH = DEFAULT_RAID_DATA_PATH + "last_execution_time"
@@ -285,6 +285,8 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
                             self._update_fault_state_file(device, self.FAULT_RESOLVED, fault_status_file)
                             self._polling_interval = int(self._conf_reader._get_value_with_default(
                                 self.RAIDIntegritySensor, self.POLLING_INTERVAL, self.DEFAULT_POLLING_INTERVAL))
+                            self._polling_interval = max(self._polling_interval,
+                                                         self.MIN_POLLING_INTERVAL)
                             self._fault_detected_time = -1
             else:
                 status = "failed"

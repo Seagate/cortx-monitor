@@ -196,9 +196,9 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         self._import_products(product)
         cache_dir_path = os.path.join(DATA_PATH, self.CACHE_DIR_NAME)
 
-        # Persistent Cache for CPU sensor  
+        # Persistent Cache for CPU sensor
         self.CPU_SENSOR_DATA_PATH = os.path.join(cache_dir_path, f'CPU_SENSOR_DATA_{self.node_id}')
-        
+
         self.persistent_cpu_sensor_data = store.get(self.CPU_SENSOR_DATA_PATH)
         if self.persistent_cpu_sensor_data:
             if self.persistent_cpu_sensor_data['cpu_fault'] == "True":
@@ -211,9 +211,9 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             }
             store.put(self.persistent_cpu_sensor_data, self.CPU_SENSOR_DATA_PATH)
 
-        # Persistent Cache for Disk sensor  
+        # Persistent Cache for Disk sensor
         self.DISK_SENSOR_DATA_PATH = os.path.join(cache_dir_path, f'DISK_SENSOR_DATA_{self.node_id}')
-        
+
         self.persistent_disk_sensor_data = store.get(self.DISK_SENSOR_DATA_PATH)
         if self.persistent_disk_sensor_data:
             if self.persistent_disk_sensor_data['disk_fault'] == "True":
@@ -226,9 +226,9 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             }
             store.put(self.persistent_disk_sensor_data, self.DISK_SENSOR_DATA_PATH)
 
-        # Persistent Cache for Memory(Host) sensor  
+        # Persistent Cache for Memory(Host) sensor
         self.HOST_SENSOR_DATA_PATH = os.path.join(cache_dir_path, f'HOST_SENSOR_DATA_{self.node_id}')
-        
+
         self.persistent_host_sensor_data = store.get(self.HOST_SENSOR_DATA_PATH)
         if self.persistent_host_sensor_data:
             if self.persistent_host_sensor_data['host_fault'] == "True":
@@ -241,7 +241,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             }
             store.put(self.persistent_host_sensor_data, self.HOST_SENSOR_DATA_PATH)
 
-        # Persistent Cache for Nework sensor  
+        # Persistent Cache for Nework sensor
         self.NW_SENSOR_DATA_PATH = os.path.join(cache_dir_path, f'NW_SENSOR_DATA_{self.node_id}')
         # Get the stored previous alert info
         self.persistent_nw_data = store.get(self.NW_SENSOR_DATA_PATH)
@@ -395,7 +395,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 else:
                     self._log_debug("NodeDataMsgHandler, _process_msg " +
                             f"No past data found for {self.sensor_type} sensor type")
-            
+
             elif self.sensor_type == "raid_integrity":
                 self._generate_raid_integrity_data(jsonMsg)
                 sensor_message_type = self.os_sensor_type.get(self.sensor_type, "")
@@ -453,7 +453,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
         if self._node_sensor.total_memory["percent"] >= self._host_memory_usage_threshold \
             and not self.host_fault:
-            
+
             # Create the disk space data message and hand it over to the egress processor to transmit
             self.host_fault = True
             # Create the disk space data message and hand it over to the egress processor to transmit
@@ -890,7 +890,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             # Create the disk space data message and hand it over to the egress processor to transmit
             fault_resolved_event = "Disk usage decreased to %s, lesser than configured threshold of %s" \
                                     %(self._node_sensor.disk_used_percentage, self._disk_usage_threshold)
-            
+
             logger.warning(fault_resolved_event)
 
             diskSpaceAlertMsg = DiskSpaceAlertMsg(self._node_sensor.host_id,
@@ -990,7 +990,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             jsonMsg = RAIDintegrityMsg.getJson()
             self.raid_integrity_data = jsonMsg
             self.os_sensor_type["raid_integrity"] = self.raid_integrity_data
-             
+
             self._log_debug("_generate_raid_integrity_data, host_id: %s" %
                     (self._node_sensor.host_id))
 
