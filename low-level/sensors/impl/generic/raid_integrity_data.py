@@ -100,7 +100,6 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
         self._alert_msg = None
         self._fault_state = None
         self._suspended = False
-        self._fault_detected_time = -1
         self._site_id = self._conf_reader._get_value_with_default(
                                 self.SYSTEM_INFORMATION, COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.SITE_ID), '001')
         self._cluster_id = self._conf_reader._get_value_with_default(
@@ -157,16 +156,6 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
             self._create_file(self._timestamp_file_path)
             self._log_timestamp()
 
-            current_time = int(time.time())
-            if self._fault_detected_time != -1 and \
-                current_time - self._fault_detected_time > self._fault_accepted_time:
-
-                self.alert_type = self.FAULT
-                self._alert_msg = "Disk %s may have developed a fault, it might "\
-                    "need a replacement. Please contact Seagate support" %device
-                self._send_json_msg(self.alert_type, device, self._alert_msg)
-                self._fault_detected_time = -1
-
             # Validate the raid data files and notify the node data msg handler
             self._raid_health_monitor()
 
@@ -213,20 +202,32 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
                     if os.path.exists(fault_status_file):
                         with open(fault_status_file, 'r') as fs:
                             data = fs.read().rstrip()
-                        if self.FAULT_RESOLVED in data:
+                        data = json.loads(data)
+                        if data['fault_detected_time'] != -1 and \
+                           int(time.time()) - data['fault_detected_time'] > self._fault_accepted_time:
+
+                            self.alert_type = self.FAULT
+                            self._alert_msg = "Disk %s may have developed a fault, it might "\
+                                "need a replacement. Please contact Seagate support" %device
+                            self._send_json_msg(self.alert_type, device, self._alert_msg)
+                            self._update_fault_state_file(device, self.FAULT,
+                                                          fault_status_file)
+
+                        if data['state'] == self.FAULT_RESOLVED:
                             self.alert_type = self.FAULT
                             self._alert_msg = "RAID disks present in %s RAID array, needs synchronization." %device
                             self._send_json_msg(self.alert_type, device, self._alert_msg)
-                            self._update_fault_state_file(device, self.FAULT, fault_status_file)
+                            self._update_fault_state_file(device, self.FAULT,
+                                        fault_status_file, int(time.time()))
                             self._polling_interval = self.MIN_POLLING_INTERVAL
                             self._fault_detected_time = int(time.time())
                     else:
                         self.alert_type = self.FAULT
                         self._alert_msg = "RAID disks present in %s RAID array, needs synchronization." %device
                         self._send_json_msg(self.alert_type, device, self._alert_msg)
-                        self._update_fault_state_file(device, self.FAULT, fault_status_file)
+                        self._update_fault_state_file(device, self.FAULT,
+                                        fault_status_file, int(time.time()))
                         self._polling_interval = self.MIN_POLLING_INTERVAL
-                        self._fault_detected_time = int(time.time())
 
                     # Retry to check mismatch_cnt
                     self._retry_execution(self._check_mismatch_count, device)
@@ -276,8 +277,9 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
                 if os.path.exists(fault_status_file):
                     with open(fault_status_file, 'r') as fs:
                         data = fs.read().rstrip()
-                    if self.FAULT in data:
-                        faulty_device = data.split(":")[0].rstrip()
+                    data = json.loads(data)
+                    if data['state'] == self.FAULT:
+                        faulty_device = data['device']
                         if device == faulty_device:
                             self.alert_type = self.FAULT_RESOLVED
                             self._alert_msg = "RAID disks present in %s RAID array are synchronized." %device
@@ -287,7 +289,6 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
                                 self.RAIDIntegritySensor, self.POLLING_INTERVAL, self.DEFAULT_POLLING_INTERVAL))
                             self._polling_interval = max(self._polling_interval,
                                                          self.MIN_POLLING_INTERVAL)
-                            self._fault_detected_time = -1
             else:
                 status = "failed"
                 logger.debug("Mismatch found in {} file in raid_integrity_data!"
@@ -461,12 +462,17 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
         with open(self._timestamp_file_path, "w") as timestamp_file:
             timestamp_file.write(current_time)
 
-    def _update_fault_state_file(self, device, fstate, fault_state_file):
+    def _update_fault_state_file(self, device, fstate, fault_state_file,
+                                 fault_detected_time=-1):
         self._fault_state = fstate
-        data = device + ":" + self._fault_state
+        data = {
+            'device' : device,
+            'state' : fstate,
+            'fault_detected_time' : fault_detected_time, 
+        }
         self._create_file(fault_state_file)
         with open(fault_state_file, 'w') as fs:
-            fs.write(data)
+            fs.write(json.dumps(data))
  
     def _cleanup(self):
         """Clean up the validate raid result files"""

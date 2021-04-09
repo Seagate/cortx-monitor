@@ -34,10 +34,7 @@ from framework.platforms.realstor.realstor_enclosure import singleton_realstoren
 
 # Modules that receive messages from this module
 from message_handlers.real_stor_encl_msg_handler import RealStorEnclMsgHandler
-from framework.utils.store_factory import file_store
-
-# Override default store
-store = file_store
+from framework.utils.store_factory import store
 
 from sensors.Ienclosure import IEnclosure
 
