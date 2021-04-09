@@ -220,7 +220,6 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
                             self._update_fault_state_file(device, self.FAULT,
                                         fault_status_file, int(time.time()))
                             self._polling_interval = self.MIN_POLLING_INTERVAL
-                            self._fault_detected_time = int(time.time())
                     else:
                         self.alert_type = self.FAULT
                         self._alert_msg = "RAID disks present in %s RAID array, needs synchronization." %device
