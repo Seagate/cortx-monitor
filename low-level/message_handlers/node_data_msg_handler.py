@@ -199,7 +199,9 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         # Persistent Cache for CPU sensor
         self.CPU_SENSOR_DATA_PATH = os.path.join(cache_dir_path, f'CPU_SENSOR_DATA_{self.node_id}')
 
-        self.persistent_cpu_sensor_data = store.get(self.CPU_SENSOR_DATA_PATH)
+        self.persistent_cpu_sensor_data = {}
+        if os.path.isfile(self.CPU_SENSOR_DATA_PATH):
+            self.persistent_cpu_sensor_data = store.get(self.CPU_SENSOR_DATA_PATH)
         if self.persistent_cpu_sensor_data:
             if self.persistent_cpu_sensor_data['cpu_fault'] == "True":
                 self.cpu_fault = True
@@ -214,7 +216,9 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         # Persistent Cache for Disk sensor
         self.DISK_SENSOR_DATA_PATH = os.path.join(cache_dir_path, f'DISK_SENSOR_DATA_{self.node_id}')
 
-        self.persistent_disk_sensor_data = store.get(self.DISK_SENSOR_DATA_PATH)
+        self.persistent_disk_sensor_data = {}
+        if os.path.isfile(self.DISK_SENSOR_DATA_PATH):
+            self.persistent_disk_sensor_data = store.get(self.DISK_SENSOR_DATA_PATH)
         if self.persistent_disk_sensor_data:
             if self.persistent_disk_sensor_data['disk_fault'] == "True":
                 self.disk_fault = True
@@ -229,7 +233,9 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         # Persistent Cache for Memory(Host) sensor
         self.HOST_SENSOR_DATA_PATH = os.path.join(cache_dir_path, f'HOST_SENSOR_DATA_{self.node_id}')
 
-        self.persistent_host_sensor_data = store.get(self.HOST_SENSOR_DATA_PATH)
+        self.persistent_host_sensor_data = {}
+        if os.path.isfile(self.HOST_SENSOR_DATA_PATH):
+            self.persistent_host_sensor_data = store.get(self.HOST_SENSOR_DATA_PATH)
         if self.persistent_host_sensor_data:
             if self.persistent_host_sensor_data['host_fault'] == "True":
                 self.host_fault = True
