@@ -221,10 +221,26 @@ class DiskMonitor(SensorThread, InternalMsgQ):
         try:
             # Connect to dbus system wide
             self._bus = SystemBus()
+            try:
+                # Obtain a disk manager interface for monitoring drives
+                disk_systemd = self._bus.get_object('org.freedesktop.UDisks2',
+                    '/org/freedesktop/UDisks2')
+                udisks_fault_event = self._iem.EVENT_CODE["UDISKS2_UNAVAILABLE"]
+                prev_fault_iem_event = self._iem.check_fault_event(
+                    udisks_fault_event[1], udisks_fault_event[0])
+                if prev_fault_iem_event:
+                    severity = self._iem.Severity["INFO"]
+                    event = self._iem.EVENT_CODE["UDISKS2_AVAILABLE"]
+                    self._iem.create_iem_fields(event, severity)
+            except dbus.DBusException as err:
+                logger.error("DiskMonitor: Error occurred while"
+                    " initializing dbus UDisks interface. : %s" %err)
+                if self.UDISKS2_UNAVAILABLE in str(err):
+                    event = self._iem.EVENT_CODE["UDISKS2_UNAVAILABLE"]
+                    severity = self._iem.Severity["ERROR"]
+                    self._iem.create_iem_fields(event,severity)
+                    return
 
-            # Obtain a disk manager interface for monitoring drives
-            disk_systemd = self._bus.get_object('org.freedesktop.UDisks2',
-                '/org/freedesktop/UDisks2')
             self._disk_manager = Interface(disk_systemd,
                 dbus_interface='org.freedesktop.DBus.ObjectManager')
 
@@ -288,16 +304,6 @@ class DiskMonitor(SensorThread, InternalMsgQ):
 
             self._log_debug("DiskMonitor gracefully breaking out " \
                                 "of dbus Loop, not restarting.")
-
-        except dbus.DBusException as err:
-            logger.error("DiskMonitor: Error occurred while"
-                " initializing dbus UDisks interface. : %s" %err)
-            if self.UDISKS2_UNAVAILABLE in str(err):
-                severity = self._iem.Severity["ERROR"]
-                iec = self._iem.EVENT_CODE["UDISKS2_UNAVAILABLE"]
-                description = self._iem.EVENT_STRING[iec][0]
-                self._iem.generate_iem(severity, iec, description)
-                return
 
         except Exception as ae:
             # Check for debug mode being activated when it breaks out of blocking loop
@@ -1065,7 +1071,20 @@ class DiskMonitor(SensorThread, InternalMsgQ):
                 cmd = f"sudo smartctl -d scsi -H {self._drive_by_device_name[object_path]} --json"
             else:
                 cmd = f"sudo smartctl -H {self._drive_by_device_name[object_path]} --json"
-            response, _, _ = self._run_command(cmd)
+            response, err, retcode = self._run_command(cmd)
+            event_info = self._iem.EVENT_CODE["SMARTMONTOOL_ERROR"]
+            if retcode != 0 and err:
+                severity = self._iem.Severity["ERROR"]
+                self._iem.create_iem_fields(event_info, severity)
+                return
+            # Before raising fault_resolved iem,
+            # check if any fault iem alert is present for smartctl.
+            is_prev_fault_iem = self._iem.check_fault_event(event_info[1],
+                event_info[0])
+            if is_prev_fault_iem and retcode == 0 and response:
+                severity = self._iem.Severity["INFO"]
+                event = self._iem.EVENT_CODE["SMARTMONTOOL_AVAILABLE"]
+                self._iem.create_iem_fields(event, severity)
             response = json.loads(response)
             try:
                 if "No such device" in response["smartctl"]["message"][0]["string"]:
@@ -1114,21 +1133,23 @@ class DiskMonitor(SensorThread, InternalMsgQ):
         return not smart_status
 
     def _get_drive_fault_info(self, path):
+        event_info = self._iem.EVENT_CODE["SMARTMONTOOL_ERROR"]
         if not self._drives[path]["node_disk"]:
             cmd = f"sudo smartctl -d scsi -A {self._drive_by_device_name[path]}"
         else:
             cmd = f"sudo smartctl -A {self._drive_by_device_name[path]}"
-        response, _, retcode = self._run_command(cmd)
-        if retcode != 0:
-            # if drive is removed then smartctl cmd may give response as
-            # "No such device" and for drive removal we raise normal alert,
-            # No need to raise IEM.
-            res = ''.join(response)
-            if "No such device" not in res:
-                severity = self._iem.Severity["Warning"]
-                iec = self._iem.EVENT_CODE["SMARTMONTOOL_ERROR"]
-                description = self._iem.EVENT_STRING[iec][0]
-                self._iem.generate_iem(severity, iec, description)
+        response, err, retcode = self._run_command(cmd)
+        if retcode != 0 and err:
+            severity = self._iem.Severity["ERROR"]
+            self._iem.create_iem_fields(event_info, severity)
+        # Before raising fault_resolved iem,
+        # check if any fault iem alert is present for smartctl.
+        is_prev_fault_iem = self._iem.check_fault_event(event_info[1],
+            event_info[0])
+        if is_prev_fault_iem and retcode == 0:
+            severity = self._iem.Severity["INFO"]
+            event = self._iem.EVENT_CODE["SMARTMONTOOL_AVAILABLE"]
+            self._iem.create_iem_fields(event, severity)
         return response
 
     def _is_local_drive(self, object_path):
@@ -1146,14 +1167,14 @@ class DiskMonitor(SensorThread, InternalMsgQ):
         cmd = f'sudo hdparm -i {drive_name}'
         _, err, retcode = self._run_command(cmd)
         if retcode == 0:
+            event_name = self._iem.EVENT_CODE["HDPARM_ERROR"][1]
+            is_prev_fault_iem = self._iem.check_fault_event(event_name,
+                self._iem.EVENT_CODE["HDPARM_ERROR"][0])
+            if is_prev_fault_iem:
+                severity = self._iem.Severity["INFO"]
+                event_info = self._iem.EVENT_CODE["HDPARM_AVAILABLE"]
+                self._iem.create_iem_fields(event_info, severity)
             return True
-        elif retcode == 127:
-            logger.error("DiskMonitor, _is_local_drive: Required Hdparm tool "
-                "is not installed on node.")
-            severity = self._iem.Severity["Error"]
-            iec = self._iem.EVENT_CODE["HDPARM_UNAVAILABLE"]
-            description = self._iem.EVENT_STRING[iec][0]
-            self._iem.generate_iem(severity, iec, description)
         else:
             logger.debug(f"DiskMonitor, _is_local_drive: Error for drive \
                 {drive_name}, ERROR: {err}")
@@ -1167,10 +1188,9 @@ class DiskMonitor(SensorThread, InternalMsgQ):
                 #  Invalid argument"
                 logger.error("DiskMonitor, _is_local_drive: Error for drive:%s,"
                     "Error: %s" %(drive_name, err))
-                severity = self._iem.Severity["Error"]
-                iec = self._iem.EVENT_CODE["HDPARM_ERROR"]
-                description = self._iem.EVENT_STRING[iec][0]
-                self._iem.generate_iem(severity, iec, description)
+                event_info = self._iem.EVENT_CODE["HDPARM_ERROR"]
+                severity = self._iem.Severity["ERROR"]
+                self._iem.create_iem_fields(event_info, severity)
                 return True
             else:
                 return False

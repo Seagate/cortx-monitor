@@ -578,19 +578,26 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
                         logger.error(f"{self.SENSOR_NAME}: {ipmi_tool} \
                             error:: {resstr}\n Dependencies failed, \
                             shutting down sensor")
-                        severity = self.iem.Severity["ERROR"]
-                        iec = self.iem.EVENT_CODE["IPMITOOL_ERROR"]
-                        description = self.iem.EVENT_STRING[iec][0]
-                        self.iem.generate_iem(severity, iec, description)
                         self.request_shutdown = True
+                severity = self.iem.Severity["ERROR"]
+                event_info = self.iem.EVENT_CODE["IPMITOOL_ERROR"]
+                self.iem.create_iem_fields(event_info, severity)
             elif (retcode == BASH_ILLEGAL_CMD):
                 logger.error(f"{self.SENSOR_NAME}: Required ipmitool missing \
                     on Node. Dependencies failed, shutting down sensor")
-                severity = self.iem.Severity["ERROR"]
-                iec = self.iem.EVENT_CODE["IPMITOOL_UNAVAILABLE"]
-                description = self.iem.EVENT_STRING[iec][0]
-                self.iem.generate_iem(severity, iec, description)
                 self.request_shutdown = True
+                severity = self.iem.Severity["ERROR"]
+                event_info = self.iem.EVENT_CODE["IPMITOOL_ERROR"]
+                self.iem.create_iem_fields(event_info, severity)
+
+        if retcode == 0: 
+            fault_event_name = self.iem.EVENT_CODE["IPMITOOL_ERROR"][1]
+            is_ipmi_fault_iem = self.iem.check_fault_event(fault_event_name,
+                self.iem.EVENT_CODE["IPMITOOL_ERROR"][0])
+            if is_ipmi_fault_iem:
+                severity = self.iem.Severity["INFO"]
+                iec = self.iem.EVENT_CODE["IPMITOOL_AVAILABLE"]
+                self.iem.create_iem_fields(iec, severity)
 
         if grep_args is not None and retcode == 0 and isinstance(res, tuple):
             import re
