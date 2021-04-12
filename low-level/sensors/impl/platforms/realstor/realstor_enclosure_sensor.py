@@ -105,12 +105,15 @@ class RealStorEnclosureSensor(SensorThread, InternalMsgQ):
         # Get the stored previous alert info
         self.persistent_encl_data = store.get(self.ENCL_SENSOR_DATA_PATH)
         if self.persistent_encl_data:
-            self.fault_alert = self.persistent_encl_data['fault_alert']
+            if self.persistent_encl_data['fault_alert'] == "True":
+                self.fault_alert = True
+            else:
+                self.fault_alert = False
             self.previous_alert_type = self.persistent_encl_data['previous_alert_type']
         else:
             self.persistent_encl_data = {
-                'fault_alert' : self.fault_alert,
-                'previous_alert_type' : self.previous_alert_type,
+                'fault_alert' : str(self.fault_alert),
+                'previous_alert_type' : str(self.previous_alert_type),
             }
             store.put(self.persistent_encl_data, self.ENCL_SENSOR_DATA_PATH)
 
@@ -135,6 +138,7 @@ class RealStorEnclosureSensor(SensorThread, InternalMsgQ):
         try:
             # Timeout counter for controller login failed and ws request failed
             mc_timeout_counter = self.rssencl.mc_timeout_counter
+            ws_response_status = self.rssencl.ws_responce_status
 
             if mc_timeout_counter > 10 and self.fault_alert is False:
                 self.alert_type = self.rssencl.FRU_FAULT
@@ -146,7 +150,8 @@ class RealStorEnclosureSensor(SensorThread, InternalMsgQ):
 
                 self.fault_alert = True
 
-            elif mc_timeout_counter == 0 and self.previous_alert_type != self.rssencl.FRU_FAULT_RESOLVED \
+            elif mc_timeout_counter == 0 and  ws_response_status == 200 \
+                and self.previous_alert_type != self.rssencl.FRU_FAULT_RESOLVED \
                 and self.fault_alert == True:
 
                 # Check system status
@@ -164,7 +169,7 @@ class RealStorEnclosureSensor(SensorThread, InternalMsgQ):
                                     self.encl_status = event
                                     break
 
-                self.fault_alert = False
+                    self.fault_alert = False
 
             if self.alert_type is not None:
                 self.send_json_msg(self.alert_type, self.encl_status)
@@ -234,8 +239,8 @@ class RealStorEnclosureSensor(SensorThread, InternalMsgQ):
         self.previous_alert_type = alert_type
         self._write_internal_msgQ(RealStorEnclMsgHandler.name(), internal_json_msg)
         self.persistent_encl_data = {
-                'fault_alert' : self.fault_alert,
-                'previous_alert_type' : self.previous_alert_type,
+                'fault_alert' : str(self.fault_alert),
+                'previous_alert_type' : str(self.previous_alert_type),
             }
         store.put(self.persistent_encl_data, self.ENCL_SENSOR_DATA_PATH)
 

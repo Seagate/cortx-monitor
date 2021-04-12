@@ -97,6 +97,7 @@ class RealStorEnclosure(StorageEnclosure):
 
     poll_system_ts = 0
     mc_timeout_counter = 0
+    ws_responce_status = None
 
     # resource inmemory cache
     latest_faults = {}
@@ -289,6 +290,8 @@ class RealStorEnclosure(StorageEnclosure):
         if not response:
             logger.warn("Login webservice request failed {0}".format(url))
             return
+
+        self.ws_responce_status = response.status_code
 
         if response.status_code != self.ws.HTTP_OK:
             if response.status_code == self.ws.HTTP_TIMEOUT:

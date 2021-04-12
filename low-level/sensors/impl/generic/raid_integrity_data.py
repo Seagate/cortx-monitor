@@ -96,7 +96,7 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
 
         # Initialize internal message queues for this module
         super(RAIDIntegritySensor, self).initialize_msgQ(msgQlist)
-        
+
         self._alert_msg = None
         self._fault_state = None
         self._suspended = False
@@ -107,7 +107,7 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
         self._rack_id = self._conf_reader._get_value_with_default(
                                 self.SYSTEM_INFORMATION, COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.RACK_ID), '001')
         self._node_id = self._conf_reader._get_value_with_default(
-                                self.SYSTEM_INFORMATION, COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.NODE_ID), '001')  
+                                self.SYSTEM_INFORMATION, COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.NODE_ID), '001')
         self._timestamp_file_path = self._conf_reader._get_value_with_default(
                                     self.RAIDIntegritySensor, self.TIMESTAMP_FILE_PATH_KEY, self.DEFAULT_TIMESTAMP_FILE_PATH)
         self._polling_interval = int(self._conf_reader._get_value_with_default(
@@ -115,14 +115,14 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
         self._next_scheduled_time = self._polling_interval
         self._fault_accepted_time = int(self._conf_reader._get_value_with_default(
                                 self.RAIDIntegritySensor, self.FAULT_ACCEPTED_TIME, self.DEFAULT_FAULT_ACCEPTED_TIME))
-        
+
         if self._polling_interval < self.MIN_POLLING_INTERVAL:
             self._polling_interval = self.MIN_POLLING_INTERVAL
 
         self.utility = Utility()
         if self.utility.is_env_vm():
             self.shutdown()
-        
+
         # Create DEFAULT_RAID_DATA_PATH if already not exist.
         self._create_file(self.DEFAULT_RAID_DATA_PATH)
 
@@ -176,14 +176,14 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
             if len(devices) == 0:
                 return
             logger.debug("Fetched devices:{}".format(devices))
-            
+
             for device in devices:
                 # Update the state as 'check' for RAID device file
                 result = self._update_raid_device_file(device)
                 if result == "failed":
                     self._retry_execution(self._update_raid_device_file, device)
                 logger.info("RAID device state is changed to 'check'")
-    
+
                 # Check RAID device array state is 'idle' or not
                 result = self._check_raid_state(device)
                 if result == "failed":
@@ -467,12 +467,12 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
         data = {
             'device' : device,
             'state' : fstate,
-            'fault_detected_time' : fault_detected_time, 
+            'fault_detected_time' : fault_detected_time,
         }
         self._create_file(fault_state_file)
         with open(fault_state_file, 'w') as fs:
             fs.write(json.dumps(data))
- 
+
     def _cleanup(self):
         """Clean up the validate raid result files"""
         if os.path.exists(self._timestamp_file_path):
