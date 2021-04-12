@@ -48,6 +48,10 @@ class RealStorActuator(Actuator, Debug):
     FRU_PSU = "psu"
     FRU_SIDEPLANE = "sideplane"
 
+    ALERT_TYPE = "GET"
+    SEVERITY = "informational"
+    CTRL_ACTION_LST = ['shutdown', 'restart']
+
     @staticmethod
     def name():
         """ @return: name of the module."""
@@ -84,13 +88,35 @@ class RealStorActuator(Actuator, Debug):
         response = "N/A"
         try:
             enclosure_request = jsonMsg.get("actuator_request_type").get("storage_enclosure").get("enclosure_request")
-            (request_type, enclosure, component, component_type) = [
-                    s.strip() for s in enclosure_request.split(":")]
+            enclosure_request_data = [
+                s.strip() for s in enclosure_request.split(":")]
+            ctrl_action = ""
+            ctrl_type = ""
+            if enclosure_request_data[-1] == "shutdown":
+                # "ENCL: enclosure:fru:controller:shutdown"
+                (request_type, _, component, component_type,
+                    ctrl_action) = enclosure_request_data
+            elif enclosure_request_data[-1] == "restart":
+                # "ENCL: enclosure:fru:controller:sc:restart"
+                # "ENCL: enclosure:fru:controller:mc:restart"
+                (request_type, _, component, component_type,
+                    ctrl_type, ctrl_action) = enclosure_request_data
+            else:
+                # "ENCL: enclosure:fru:controller"
+                (request_type, _, component, component_type) = \
+                    enclosure_request_data
 
             resource = jsonMsg.get("actuator_request_type").get("storage_enclosure").get("resource")
-            if component == "fru":
-                response = self.make_response(self.request_fru_func[request_type][component_type](
-                    resource), component ,component_type, resource)
+            if ctrl_action in self.CTRL_ACTION_LST:
+                response = self.make_response(
+                    self._put_enclosure_action(ctrl_action, ctrl_type,
+                    resource.strip(), enclosure_request),
+                    component, component_type, resource,
+                    ctrl_action = ctrl_action)
+            elif component == "fru":
+                response = self.make_response(self.request_fru_func[
+                    request_type][component_type](resource), component,
+                    component_type, resource)
             elif component == "sensor":
                 response = self.make_response(
                             self._get_sensor_data(sensor_type=component_type, sensor_name=resource),
@@ -111,7 +137,7 @@ class RealStorActuator(Actuator, Debug):
                             component_type,
                             resource)
                 else:
-                    logger.error("Unsupported system request :{}".format(component_type))
+                    logger.error("Unsupported system request :{}".format(enclosure_request))
 
         except Exception as e:
             logger.exception("Error while getting details for JSON: {}".format(jsonMsg))
@@ -119,13 +145,23 @@ class RealStorActuator(Actuator, Debug):
 
         return response
 
-    def make_response(self, component_details, component, component_type, resource_id):
+    def make_response(self, component_details, component, component_type,
+            resource_id, ctrl_action = None):
 
         resource_type = "enclosure:{}:{}".format(component, component_type)
         epoch_time = str(int(time.time()))
         alert_id = mon_utils.get_alert_id(epoch_time)
 
-        if component == "fru":
+        if ctrl_action in self.CTRL_ACTION_LST:
+            resource_type = component_details['resource_type']
+            del component_details['resource_type']
+            self.ALERT_TYPE = component_details['alert_type']
+            del component_details['alert_type']
+            self.SEVERITY = component_details['severity']
+            del component_details['severity']
+            if self.SEVERITY == "warning":
+                del component_details['description']
+        elif component == "fru":
             if resource_id == self.RESOURCE_ALL:
                 for comp in component_details:
                     comp['resource_id'] = self.fru_response_manipulators[
@@ -134,8 +170,8 @@ class RealStorActuator(Actuator, Debug):
                 resource_id = self.fru_response_manipulators[component_type](component_details)
 
         response = {
-          "alert_type":"GET",
-          "severity":"informational",
+          "alert_type": self.ALERT_TYPE,
+          "severity": self.SEVERITY,
           "host_id": socket.getfqdn(),
           "alert_id": alert_id,
           "info": {
@@ -593,13 +629,20 @@ class RealStorActuator(Actuator, Debug):
     def _get_encl_response(self, uri, request_type):
         """ query enclosure and return json data"""
         url = self.rssencl.build_url(uri)
+        response = {}
         response = self.rssencl.ws_request(url, request_type)
         if not response:
+            # The request did but sometimes we get a response delay (response
+            # timeout). In the shutdown of both controllers we did not get a
+            # response because the controller not available in that case.
+            response = None
             logger.warn(f"Failed to get data for {uri}")
-            return None
+            return response
         if response.status_code != self.rssencl.ws.HTTP_OK:
+            # Failure of web service request.
+            response = {}
             logger.error(f"Failed to get data for {uri}")
-            return None
+            return response
         try:
             response = json.loads(response.content)
             api_response = self.rssencl.get_api_status(response.get('status'))
@@ -607,8 +650,103 @@ class RealStorActuator(Actuator, Debug):
                 (api_response == -1 and response.status_code == self.rssencl.ws.HTTP_OK):
                 return response
             else:
+                response = {}
                 logger.error(f"invalid data for {uri}")
-                return None
+                return response
         except ValueError as err:
+            response = {}
             logger.error(f"invalid data for {uri} {err}")
-            return None
+            return response
+
+    def _put_enclosure_action(self, ctrl_action, ctrl_type, resource,
+            enclosure_request):
+        severity = "informational"
+        message = "request performed successfully."
+        invalid_args = False
+        ctrl_cmd = ""
+        action_type = ""
+        if resource.startswith(("controller_a", "controller_b")):
+            ctrl_name = resource.split("controller_")[1].split(':')[0]
+        elif resource == "*":
+            ctrl_name = "both"
+        else:
+            ctrl_name = ""
+            invalid_args = True
+
+        if ctrl_action == "shutdown":
+            ctrl_cmd = f"{ctrl_action} {ctrl_name}"
+            action_type = ctrl_action
+        else:
+            ctrl_cmd = f"{ctrl_action} {ctrl_type} {ctrl_name}"
+            action_type = f"{ctrl_action} {ctrl_type}"
+
+        if (ctrl_action == "restart" and not resource.endswith(('sc', 'mc', "*"))) \
+            or (ctrl_action == "shutdown" and resource.endswith(('sc', 'mc'))) or \
+            not ctrl_cmd.endswith((' a', ' b', ' both')):
+            # Checking/validating that we are passing appropriate/correct
+            # controller with "ctrl_cmd"
+            # Example : shutdown <a|b|both> or restart sc <a|b|both>
+            invalid_args = True
+
+        if invalid_args:
+            # Invalid resource 'shutdown abc' for an
+            # 'ENCL: enclosure:fru:controller:shutdown' actuator request
+            err_msg = "Invalid resource '{}' for an '{}' actuator request".format(
+                resource, enclosure_request)
+            logger.error(err_msg)
+            raise Exception(err_msg)
+
+        encl_response = self._get_encl_response(
+            self.rssencl.URI_CLIAPI_BASE + ctrl_cmd.replace(' ', '/'),
+            self.rssencl.ws.HTTP_GET
+        )
+        if encl_response == {}:
+            # The control request not performed successfully.
+            # Got HTTP Status != 200 or return_code != 0.
+            severity = "warning"
+            message = "request failed. Please try again...!"
+
+        # Some info will be deleted from the "response_str" in the "make_response"
+        # method which is not required further. We are keeping this to decide some
+        # fields in the "make_response" method.
+        response_str = {
+            'shutdown' : {
+                'message': 'Shutdown %s' % (message),
+                'description': 'Shuts down the Storage Controller in a controller '
+                    'module. This ensures that a proper failover sequence is used, '
+                    'which includes stopping all I/O operations and writing any '
+                    'data in write cache to disk.',
+                'command': ctrl_cmd,
+                'alert_type': 'control:shutdown',
+                'severity': severity,
+                'resource_type': 'enclosure:fru:controller'
+                },
+            'restart sc' : {
+                'message': 'Restart / Start Storage Controller %s' % (message),
+                'description' : 'Restarts the Storage Controller in a controller '
+                    'module. When you restart a Storage Controller, it attempts '
+                    'to shut down with a proper failover sequence, which includes '
+                    'stopping all I/O operations and flushing the write cache to '
+                    'disk, and then the Storage Controller restarts. Restarting a '
+                    'Storage Controller restarts the corresponding Management '
+                    'Controller.',
+                'command': ctrl_cmd,
+                'alert_type': 'control:restart',
+                'severity': severity,
+                'resource_type': 'enclosure:fru:controller:sc'
+                },
+            'restart mc' : {
+                'message' : 'Restart / Start Management Controller %s' % (message),
+                'description' : 'Restarts the Management Controller in a '
+                    'controller module. When you restart a Management Controller,'
+                    ' communication with it is lost until it successfully '
+                    'restarts. If the restart fails, the partner Management '
+                    'Controller remains active with full ownership of operations '
+                    'and configuration information.',
+                'command': ctrl_cmd,
+                'alert_type': 'control:restart',
+                'severity': severity,
+                'resource_type': 'enclosure:fru:controller:mc'
+                }
+        }
+        return response_str[action_type]
