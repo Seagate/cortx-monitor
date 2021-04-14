@@ -238,6 +238,7 @@ class SSPLPostInstall:
             "SYSTEM_INFORMATION>sspl_log_file_path")
         iem_log_file_path = Utility.get_config_value(consts.SSPL_CONFIG_INDEX,
             "IEMSENSOR>log_file_path")
+        manifest_log_file_path = sspl_log_file_path.replace("/sspl.log","/manifest.log")
 
         # IEM configuration
         os.makedirs("%s/iem/iec_mapping" % consts.PRODUCT_BASE_DIR, exist_ok=True)
@@ -258,6 +259,14 @@ class SSPLPostInstall:
         Utility.replace_expr(consts.RSYSLOG_SSPL_CONF, 'File.*[=,"]',
             'File="%s"' % sspl_log_file_path)
 
+        # Manifest Bundle log configuration
+        if not os.path.exists(consts.RSYSLOG_MSB_CONF):
+            shutil.copyfile("%s/%s" % (system_files_root, consts.RSYSLOG_MSB_CONF),
+                consts.RSYSLOG_MSB_CONF)
+        # Update log location as per sspl.conf
+        Utility.replace_expr(consts.RSYSLOG_MSB_CONF, 'File.*[=,"]',
+            'File="%s"' % manifest_log_file_path)
+
         # Configure logrotate
         # Create logrotate dir in case it's not present
         os.makedirs(consts.LOGROTATE_DIR, exist_ok=True)
@@ -269,6 +278,8 @@ class SSPLPostInstall:
             consts.IEM_LOGROTATE_CONF)
         shutil.copy2("%s/etc/logrotate.d/sspl_logs" % system_files_root,
             consts.SSPL_LOGROTATE_CONF)
+        shutil.copy2("%s/etc/logrotate.d/manifest_logs" % system_files_root,
+            consts.MSB_LOGROTATE_CONF)
         # This rsyslog restart will happen after successful updation of rsyslog
         # conf file and before sspl starts. If at all this will be removed from
         # here, there will be a chance that SSPL intial logs will not be present in
