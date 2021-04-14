@@ -486,17 +486,9 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
             }
         }
         if service == "kafka.service" and alert_type == "fault":
-            event = self.iem.EVENT_CODE["KAFKA_NOT_ACTIVE"]
-            severity = self.iem.Severity["ERROR"]
-            self.iem.create_iem_fields(event, severity)
+            self.iem.iem_fault("KAFKA_NOT_ACTIVE")
         elif service == "kafka.service" and alert_type == "fault_resolved":
-            is_kafka_fault_iem = self.iem.check_fault_event(
-                self.iem.EVENT_CODE["KAFKA_NOT_ACTIVE"][1],
-                self.iem.EVENT_CODE["KAFKA_NOT_ACTIVE"][0])
-            if is_kafka_fault_iem:
-                severity = self.iem.Severity["INFO"]
-                event = self.iem.EVENT_CODE["KAFKA_ACTIVE"]
-                self.iem.create_iem_fields(event, severity)
+            self.iem.iem_fault_resolved("KAFKA_NOT_ACTIVE", "KAFKA_ACTIVE")
         self._write_internal_msgQ(ServiceMsgHandler.name(), alert_msg)
 
     def suspend(self):

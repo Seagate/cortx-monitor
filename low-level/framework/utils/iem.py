@@ -17,7 +17,6 @@ import syslog
 import os
 
 from framework.base.sspl_constants import IEM_DATA_PATH
-from framework.utils.store_factory import file_store
 from framework.utils.service_logging import logger
 
 class Iem:
@@ -50,7 +49,7 @@ class Iem:
             "Server local drives can not be monitored.",
             "Reinstall/reconfigure hdparm package."],
         "0050010004" : ["Hdparm command executed susscessfully.",
-            "Started server local drives monitoring."
+            "Started server local drives monitoring.",
             ""],
         "0050010005" : ["Smartctl command execution error.",
             "Can not fetch drive information.",
@@ -116,12 +115,25 @@ class Iem:
         if not previous_iem:
             log_iem(iem)
 
-    def create_iem_fields(self, event,severity):
+    def create_iem_fields(self, event, severity):
         event_code = event[0]
         event_name = event[1]
         description = self.EVENT_STRING[event_code][0]
         self.generate_iem(severity, event_code, event_name, description)
 
+    def iem_fault(self, event):
+        event = self.EVENT_CODE[event]
+        severity = self.Severity["ERROR"]
+        self.create_iem_fields(event,severity)
+
+    def iem_fault_resolved(self, fault_event, fault_res_event):
+        fault_events = self.EVENT_CODE[fault_event]
+        prev_fault_iem_event = self.check_fault_event(
+        fault_events[1], fault_events[0])
+        if prev_fault_iem_event:
+            severity = self.Severity["INFO"]
+            event = self.EVENT_CODE[fault_res_event]
+            self.create_iem_fields(event, severity)
 
 def log_iem(iem):
     """Log iem using syslog."""
