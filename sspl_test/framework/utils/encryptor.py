@@ -22,9 +22,9 @@
 from cortx.utils.security.cipher import Cipher
 
 
-def gen_key(cluster_id, service_name):
+def gen_key(unique_seed, root_node):
     # Generate key for decryption
-    key = Cipher.generate_key(cluster_id, service_name)
+    key = Cipher.generate_key(unique_seed, root_node)
     return key
 
 

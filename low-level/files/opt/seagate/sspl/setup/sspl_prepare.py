@@ -64,7 +64,7 @@ class SSPLPrepare:
                 "server_node>%s>bmc>user" % machine_id)
             bmc_secret = Utility.get_config_value(PRVSNR_CONFIG_INDEX,
                 "server_node>%s>bmc>secret" % machine_id)
-            bmc_key = Cipher.generate_key(cluster_id, ServiceTypes.SERVER_NODE.value)
+            bmc_key = Cipher.generate_key(machine_id, ServiceTypes.SERVER_NODE.value)
             bmc_passwd = Cipher.decrypt(bmc_key, bmc_secret.encode("utf-8")).decode("utf-8")
             data_private_interfaces = Utility.get_config_value(PRVSNR_CONFIG_INDEX,
                 "server_node>%s>network>data>private_interfaces" % machine_id)
@@ -88,7 +88,7 @@ class SSPLPrepare:
             "storage_enclosure>%s>controller>user" % enclosure_id)
         cntrlr_secret = Utility.get_config_value(PRVSNR_CONFIG_INDEX,
             "storage_enclosure>%s>controller>secret" % enclosure_id)
-        cntrlr_key = Cipher.generate_key(cluster_id,
+        cntrlr_key = Cipher.generate_key(enclosure_id,
             ServiceTypes.STORAGE_ENCLOSURE.value)
         cntrlr_passwd = Cipher.decrypt(cntrlr_key,
             cntrlr_secret.encode("utf-8")).decode("utf-8")

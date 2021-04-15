@@ -33,7 +33,7 @@ from framework.utils.conf_utils import (GLOBAL_CONF, MGMT_INTERFACE,
                                         CNTRLR_PRIMARY_IP_KEY, CNTRLR_PRIMARY_PORT_KEY,
                                         CNTRLR_SECONDARY_IP_KEY, CNTRLR_SECONDARY_PORT_KEY,
                                         SITE_ID_KEY, RACK_ID_KEY, NODE_ID_KEY, CLUSTER_ID_KEY,
-                                        CNTRLR_USER_KEY, CNTRLR_SECRET_KEY)
+                                        ENCLOSURE, CNTRLR_USER_KEY, CNTRLR_SECRET_KEY)
 from framework.utils.service_logging import logger
 from framework.utils.store_factory import store
 from framework.utils.webservices import WebServices
@@ -60,7 +60,6 @@ class RealStorEnclosure(StorageEnclosure):
     CONF_REALSTORSENSORS = "REALSTORSENSORS"
     DEFAULT_POLL = 30
     SITE_ID = "site_id"
-    CLUSTER_ID = "cluster_id"
     NODE_ID = "node_id"
     RACK_ID = "rack_id"
 
@@ -145,10 +144,9 @@ class RealStorEnclosure(StorageEnclosure):
         self.site_id = Conf.get(GLOBAL_CONF, SITE_ID_KEY, "DC01")
         self.rack_id = Conf.get(GLOBAL_CONF, RACK_ID_KEY, "RC01")
         self.node_id = Conf.get(GLOBAL_CONF, NODE_ID_KEY, "SN01")
-        # Need to keep cluster_id string here to generate decryption key
         self.cluster_id = Conf.get(GLOBAL_CONF, CLUSTER_ID_KEY, "CC01")
         # Decrypt MC secret
-        decryption_key = encryptor.gen_key(self.cluster_id,
+        decryption_key = encryptor.gen_key(ENCLOSURE,
             ServiceTypes.STORAGE_ENCLOSURE.value)
         self.__passwd = encryptor.decrypt(decryption_key, _secret, "RealStoreEncl")
 
