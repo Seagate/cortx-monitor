@@ -130,7 +130,9 @@ fi
 if [ "$1" == "0" ]; then
     rm -f /var/%{product_family}/sspl/sspl-configured
 fi
-[ systemctl status sspl-ll.service 2> /dev/null ] && systemctl stop sspl-ll.service 2> /dev/null
+if [ systemctl status sspl-ll.service 2> /dev/null ]; then
+    systemctl stop sspl-ll.service 2> /dev/null
+fi
 
 %postun
 rm -f /etc/polkit-1/rules.d/sspl-ll_dbus_policy.rules
