@@ -30,9 +30,9 @@ from framework.utils.conf_utils import (GLOBAL_CONF, Conf, SITE_ID_KEY,
     CNTRLR_USER_KEY, CNTRLR_SECRET_KEY)
 
 
-def gen_key(cluster_id, service_name):
+def gen_key(unique_seed, root_node):
     ''' Generate key for decryption '''
-    key = Cipher.generate_key(cluster_id, service_name)
+    key = Cipher.generate_key(unique_seed, root_node)
     return key
 
 def decrypt(key, text):
