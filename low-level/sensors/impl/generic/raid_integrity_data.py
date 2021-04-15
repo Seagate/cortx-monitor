@@ -62,7 +62,7 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
 
     # check once a week (below time is in seconds), the integrity of raid data
     DEFAULT_POLLING_INTERVAL = "604800"
-    DEFAULT_RAID_DATA_PATH = f"/var/{PRODUCT_FAMILY}/sspl/data/raid_integrity/"
+    DEFAULT_RAID_DATA_PATH = RaidDataConfig.RAID_RESULT_DIR.value
     DEFAULT_TIMESTAMP_FILE_PATH = DEFAULT_RAID_DATA_PATH + "last_execution_time"
 
     alert_type = None
@@ -104,6 +104,9 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
                                         self.DEFAULT_TIMESTAMP_FILE_PATH)
         self._polling_interval = Conf.get(SSPL_CONF, f"{self.RAIDIntegritySensor}>{self.POLLING_INTERVAL}",
                                     self.DEFAULT_POLLING_INTERVAL)
+        
+        # Create DEFAULT_RAID_DATA_PATH if already not exist.
+        self._create_file(self.DEFAULT_RAID_DATA_PATH)
         return True
 
     def read_data(self):
@@ -431,9 +434,10 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
         if os.path.exists(self._timestamp_file_path):
             os.remove(self._timestamp_file_path)
         path = RaidDataConfig.RAID_RESULT_DIR.value
-        current_time = time.time()
-        result_files = [file for file in os.listdir(path) if file.endswith(".txt")]
-        for file in result_files:
-            if os.path.getmtime(os.path.join(path, file)) < (current_time - 24*60*60) :
-                if os.path.isfile(os.path.join(path, file)):
-                    os.remove(os.path.join(path, file))
+        if os.path.exists(path):
+            current_time = time.time()
+            result_files = [file for file in os.listdir(path) if file.endswith(".txt")]
+            for file in result_files:
+                if os.path.getmtime(os.path.join(path, file)) < (current_time - 24*60*60):
+                    if os.path.isfile(os.path.join(path, file)):
+                        os.remove(os.path.join(path, file))
