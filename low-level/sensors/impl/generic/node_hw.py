@@ -38,7 +38,7 @@ from framework.base.sspl_constants import (PRODUCT_FAMILY, ServiceTypes,
 from framework.utils import encryptor
 from framework.utils.conf_utils import (GLOBAL_CONF, IP, SECRET,
     SSPL_CONF, USER, Conf, SITE_ID_KEY, RACK_ID_KEY, NODE_ID_KEY,
-    CLUSTER_ID_KEY, BMC_IP_KEY, BMC_USER_KEY, BMC_SECRET_KEY)
+    CLUSTER_ID_KEY, BMC_IP_KEY, BMC_USER_KEY, BMC_SECRET_KEY, MACHINE_ID)
 from framework.utils.config_reader import ConfigReader
 from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
@@ -256,7 +256,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         self._channel_interface = Conf.get(SSPL_CONF,
             f"{self.BMC_INTERFACE}>{self.BMC_CHANNEL_IF}", 'system')
         # Decrypt bmc secret
-        decryption_key = encryptor.gen_key(self._cluster_id,
+        decryption_key = encryptor.gen_key(MACHINE_ID,
             ServiceTypes.SERVER_NODE.value)
         self.__bmc_passwd = encryptor.decrypt(decryption_key,
             _bmc_secret, self.SENSOR_NAME)
