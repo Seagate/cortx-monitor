@@ -263,8 +263,8 @@ class RaidDataConfig(Enum):
     MISMATCH_COUNT_FILE = "/md/mismatch_cnt"
     STATE_COMMAND_RESPONSE = 'idle'
     MISMATCH_COUNT_RESPONSE = '0'
-    RAID_RESULT_DIR = "/tmp"
-    RAID_RESULT_FILE_PATH = "/tmp/result_raid_health_file"
+    RAID_RESULT_DIR = f"{DATA_PATH}raid_integrity/"
+    RAID_RESULT_FILE_PATH = f"{RAID_RESULT_DIR}result_raid_health_file"
     RAID_MISMATCH_FAULT_STATUS = "mismatch_cnt_fault_status"
     MAX_RETRIES = 10
     NEXT_ITERATION_TIME = 3600
