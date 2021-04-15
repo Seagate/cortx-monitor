@@ -119,7 +119,7 @@ if [ "$1" == "2" ]; then
     systemctl restart sspl-ll.service 2> /dev/null
 fi
 
-if [ "$1" = "1" ]; then
+if [ "$1" == "1" ]; then
     echo "Installation complete. Follow the instructions."
     echo "Run SSPL mini provisioner commands (post_install, prepare, config, init)"
     echo "Start sspl-ll service."
@@ -127,8 +127,10 @@ fi
 
 %preun
 # Remove configuration in case of uninstall
-[[ $1 = 0 ]] &&  rm -f /var/%{product_family}/sspl/sspl-configured
-systemctl stop sspl-ll.service 2> /dev/null
+if [ "$1" == "0" ]; then
+    rm -f /var/%{product_family}/sspl/sspl-configured
+fi
+[ systemctl status sspl-ll.service 2> /dev/null ] && systemctl stop sspl-ll.service 2> /dev/null
 
 %postun
 rm -f /etc/polkit-1/rules.d/sspl-ll_dbus_policy.rules
