@@ -584,7 +584,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
                     on Node. Dependencies failed, shutting down sensor")
                 self.request_shutdown = True
                 self.iem.iem_fault("IPMITOOL_ERROR")
-        if retcode == 0:
+        else:
             self.iem.iem_fault_resolved("IPMITOOL_ERROR", "IPMITOOL_AVAILABLE")
 
         if grep_args is not None and retcode == 0 and isinstance(res, tuple):
