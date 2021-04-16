@@ -21,20 +21,20 @@ from framework.utils.service_logging import logger
 
 class Iem:
     Severity = {
-    "INFO" : "I", "WARN" : "W", "ERROR" : "E", "CRITICAL" : "C" }
+        "INFO" : "I", "WARN" : "W", "ERROR" : "E", "CRITICAL" : "C" }
 
     # EVENT_CODE = [event_code, event]
     EVENT_CODE = {
-    "IPMITOOL_ERROR" : ["0050010001", "IPMITOOL"],
-    "IPMITOOL_AVAILABLE" : ["0050010002", "IPMITOOL"],
-    "HDPARM_ERROR" : ["0050010003", "HDPARM"],
-    "HDPARM_AVAILABLE" : ["0050010004", "HDPARM"],
-    "SMARTMONTOOL_ERROR" : ["0050010005", "SMARTMONTOOL"],
-    "SMARTMONTOOL_AVAILABLE" : ["0050010006", "SMARTMONTOOL"],
-    "UDISKS2_UNAVAILABLE" : ["0050010007", "UDISKS2"],
-    "UDISKS2_AVAILABLE" : ["0050010008", "UDISKS2"],
-    "KAFKA_NOT_ACTIVE" : ["0050020001", "KAFKA"],
-    "KAFKA_ACTIVE" : ["0050020002", "KAFKA"]
+        "IPMITOOL_ERROR" : ["0050010001", "IPMITOOL"],
+        "IPMITOOL_AVAILABLE" : ["0050010002", "IPMITOOL"],
+        "HDPARM_ERROR" : ["0050010003", "HDPARM"],
+        "HDPARM_AVAILABLE" : ["0050010004", "HDPARM"],
+        "SMARTMONTOOL_ERROR" : ["0050010005", "SMARTMONTOOL"],
+        "SMARTMONTOOL_AVAILABLE" : ["0050010006", "SMARTMONTOOL"],
+        "UDISKS2_UNAVAILABLE" : ["0050010007", "UDISKS2"],
+        "UDISKS2_AVAILABLE" : ["0050010008", "UDISKS2"],
+        "KAFKA_NOT_ACTIVE" : ["0050020001", "KAFKA"],
+        "KAFKA_ACTIVE" : ["0050020002", "KAFKA"]
     }
 
     # EVENT_STRING = { event_code : [description, impact, recommendation] }
@@ -124,12 +124,12 @@ class Iem:
     def iem_fault(self, event):
         event = self.EVENT_CODE[event]
         severity = self.Severity["ERROR"]
-        self.create_iem_fields(event,severity)
+        self.create_iem_fields(event, severity)
 
     def iem_fault_resolved(self, fault_event, fault_res_event):
         fault_events = self.EVENT_CODE[fault_event]
         prev_fault_iem_event = self.check_fault_event(
-        fault_events[1], fault_events[0])
+            fault_events[1], fault_events[0])
         if prev_fault_iem_event:
             severity = self.Severity["INFO"]
             event = self.EVENT_CODE[fault_res_event]

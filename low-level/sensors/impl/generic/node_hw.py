@@ -254,7 +254,6 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         self._bmc_user = Conf.get(GLOBAL_CONF, BMC_USER_KEY, 'ADMIN')
         _bmc_secret = Conf.get(GLOBAL_CONF, BMC_SECRET_KEY, 'ADMIN')
         self._bmc_ip = Conf.get(GLOBAL_CONF, BMC_IP_KEY, '')
-
         self._channel_interface = Conf.get(SSPL_CONF,
             f"{self.BMC_INTERFACE}>{self.BMC_CHANNEL_IF}", 'system')
         # Decrypt bmc secret
