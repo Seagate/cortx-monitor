@@ -29,8 +29,8 @@ from framework.base.debug import Debug
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.module_thread import SensorThread
 from framework.base.sspl_constants import DATA_PATH
-from framework.utils.conf_utils import (CLUSTER, GLOBAL_CONF, SRVNODE,
-                                        SSPL_CONF, Conf)
+from framework.utils.conf_utils import (GLOBAL_CONF, SSPL_CONF, Conf,
+    SITE_ID_KEY, RACK_ID_KEY, NODE_ID_KEY, CLUSTER_ID_KEY)
 from framework.utils.config_reader import ConfigReader
 from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
@@ -130,10 +130,10 @@ class SASPortSensor(SensorThread, InternalMsgQ):
 
         super(SASPortSensor, self).initialize_msgQ(msgQlist)
 
-        self._site_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.SITE_ID}",'DC01')
-        self._rack_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.RACK_ID}",'RC01')
-        self._node_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.NODE_ID}",'SN01')
-        self._cluster_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{self.CLUSTER_ID}",'CC01')
+        self._site_id = Conf.get(GLOBAL_CONF, SITE_ID_KEY,'DC01')
+        self._rack_id = Conf.get(GLOBAL_CONF, RACK_ID_KEY,'RC01')
+        self._node_id = Conf.get(GLOBAL_CONF, NODE_ID_KEY,'SN01')
+        self._cluster_id = Conf.get(GLOBAL_CONF, CLUSTER_ID_KEY,'CC01')
 
         # Get the sas port implementor from configuration
         sas_port_utility = Conf.get(SSPL_CONF, f"{self.name().capitalize()}>{self.PROBE}",

@@ -27,8 +27,8 @@ import uuid
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.module_thread import SensorThread
 from framework.base.sspl_constants import DATA_PATH
-from framework.utils.conf_utils import (CLUSTER, GLOBAL_CONF, SRVNODE,
-                                        SSPL_CONF, Conf)
+from framework.utils.conf_utils import (GLOBAL_CONF, SSPL_CONF, Conf,
+    SITE_ID_KEY, RACK_ID_KEY, NODE_ID_KEY, CLUSTER_ID_KEY)
 from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
 from framework.utils.store_factory import file_store
@@ -51,10 +51,10 @@ class CPUFaultSensor(SensorThread, InternalMsgQ):
 
     # Section in the configuration store
     SYSTEM_INFORMATION_KEY = "SYSTEM_INFORMATION"
-    SITE_ID_KEY = "site_id"
-    CLUSTER_ID_KEY = "cluster_id"
-    NODE_ID_KEY = "node_id"
-    RACK_ID_KEY = "rack_id"
+    SITE_ID = "site_id"
+    CLUSTER_ID = "cluster_id"
+    NODE_ID = "node_id"
+    RACK_ID = "rack_id"
     CACHE_DIR_NAME  = "server"
 
     RESOURCE_ID = "CPU-"
@@ -94,10 +94,10 @@ class CPUFaultSensor(SensorThread, InternalMsgQ):
 
         super(CPUFaultSensor, self).initialize_msgQ(msgQlist)
 
-        self._site_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.SITE_ID_KEY}",'DC01')
-        self._rack_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.RACK_ID_KEY}",'RC01')
-        self._node_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.NODE_ID_KEY}",'SN01')
-        self._cluster_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{self.CLUSTER_ID_KEY}",'CC01')
+        self._site_id = Conf.get(GLOBAL_CONF, SITE_ID_KEY,'DC01')
+        self._rack_id = Conf.get(GLOBAL_CONF, RACK_ID_KEY,'RC01')
+        self._node_id = Conf.get(GLOBAL_CONF, NODE_ID_KEY,'SN01')
+        self._cluster_id = Conf.get(GLOBAL_CONF, CLUSTER_ID_KEY,'CC01')
 
         # get the cpu fault implementor from configuration
         cpu_fault_utility = Conf.get(SSPL_CONF, f"{self.name().capitalize()}>{self.PROBE}",

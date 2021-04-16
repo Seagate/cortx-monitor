@@ -22,8 +22,8 @@ import sys
 import subprocess
 
 from default import world
-from rabbitmq.rabbitmq_ingress_processor_tests import RabbitMQingressProcessorTests
-from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
+from messaging.ingress_processor_tests import IngressProcessorTests
+from messaging.egress_processor_tests import EgressProcessorTests
 from common import check_sspl_ll_is_running
 from framework.base.sspl_constants import DATA_PATH
 from alerts.node import simulate_bmc_interface_alert
@@ -44,8 +44,8 @@ def test_bmc_interface(args):
 
     bmc_interface_message = None
     time.sleep(25)
-    while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
-        ingressMsg = world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
+    while not world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
+        ingressMsg = world.sspl_modules[IngressProcessorTests.name()]._read_my_msgQ()
         time.sleep(0.1)
         print("Received: %s" % ingressMsg)
         try:

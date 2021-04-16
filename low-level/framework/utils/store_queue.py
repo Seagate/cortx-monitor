@@ -31,12 +31,12 @@ from framework.utils.store_factory import store
 
 class StoreQueue:
 
-    RABBITMQPROCESSOR    = 'RABBITMQEGRESSPROCESSOR'
+    PROCESSOR    = 'EgressProcessor'
     LIMIT_CONSUL_MEMORY  = 'limit_consul_memory'
     CACHE_DIR_NAME       = "SSPL_UNSENT_MESSAGES"
 
     def __init__(self):
-        self._max_size = int(Conf.get(SSPL_CONF, f"{self.RABBITMQPROCESSOR}>{self.LIMIT_CONSUL_MEMORY}", 50000000))
+        self._max_size = int(Conf.get(SSPL_CONF, f"{self.PROCESSOR}>{self.LIMIT_CONSUL_MEMORY}", 50000000))
 
         self.cache_dir_path = os.path.join(DATA_PATH, self.CACHE_DIR_NAME)
         self.SSPL_MEMORY_USAGE = os.path.join(self.cache_dir_path, 'SSPL_MEMORY_USAGE')

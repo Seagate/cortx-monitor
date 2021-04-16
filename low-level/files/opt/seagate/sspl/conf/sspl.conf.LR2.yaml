@@ -20,8 +20,8 @@
 
 SSPL_LL_SETTING:
    core_processors:
-      - RabbitMQegressProcessor
-      - RabbitMQingressProcessor
+      - EgressProcessor
+      - IngressProcessor
       - LoggingProcessor
    message_handlers:
       - DiskMsgHandler
@@ -32,7 +32,8 @@ SSPL_LL_SETTING:
       - RealStorEnclMsgHandler
       - RealStorActuatorMsgHandler
    sensors:
-      - ServiceWatchdog
+      - DiskMonitor
+      - ServiceMonitor
       - RAIDsensor
       - NodeData
       - RealStorFanSensor
@@ -54,7 +55,8 @@ SSPL_LL_SETTING:
       - NodeHWactuator
       - RealStorActuator
    degraded_state_modules:
-      - ServiceWatchdog
+      - DiskMonitor
+      - ServiceMonitor
       - RAIDsensor
       - NodeData
       - IEMSensor
@@ -69,46 +71,26 @@ SSPL_LL_SETTING:
       - MemFaultSensor
       - CPUFaultSensor
 
-RABBITMQINGRESSPROCESSOR:
-   virtual_host: SSPL
-   queue_name: actuator-req-queue
-   exchange_name: sspl-in
-   routing_key: actuator-req-key
-   username: sspluser
-   password: gAAAAABgB8tRJLZBfI6uCAtt4B8YYjveDvhHnFCbeKYsXuYxSLl3KZE5Tp94Jl2qQq9-X7x7_CinZZSh4cm9rMJ4G3HKz36I-Q==
-   primary_rabbitmq_host: localhost
+INGRESSPROCESSOR:
+   consumer_id: sspl_actuator
+   consumer_group: cortx_monitor
+   message_type: requests
+   offset: latest
 
-RABBITMQEGRESSPROCESSOR:
-   virtual_host: SSPL
-   queue_name: sensor-queue
-   exchange_name: sspl-out
-   routing_key: sensor-key
-   ack_queue_name: sensor-queue
-   ack_exchange_name: sspl-out
-   ack_routing_key: sensor-key
-   username: sspluser
-   password: gAAAAABgB8tRJLZBfI6uCAtt4B8YYjveDvhHnFCbeKYsXuYxSLl3KZE5Tp94Jl2qQq9-X7x7_CinZZSh4cm9rMJ4G3HKz36I-Q==
+EGRESSPROCESSOR:
    message_signature_username: sspl-ll
    message_signature_token: ALOIUD986798df69a8koDISLKJ282983
    message_signature_expires: 3600
-   iem_route_addr:
-   iem_route_exchange_name: sspl-out
-   primary_rabbitmq_host: localhost
    limit_consul_memory: 50000000
+   producer_id: sspl-sensor
+   message_type: alerts
+   method: sync
 
 LOGGINGPROCESSOR:
-   virtual_host: SSPL
-   queue_name: iem-queue
-   exchange_name: sspl-in
-   routing_key: iem-key
-   username: sspluser
-   password: gAAAAABgB8tRJLZBfI6uCAtt4B8YYjveDvhHnFCbeKYsXuYxSLl3KZE5Tp94Jl2qQq9-X7x7_CinZZSh4cm9rMJ4G3HKz36I-Q==
-   primary_rabbitmq_host: localhost
-
-RABBITMQCLUSTER:
-   setup_rmq: true
-   cluster_nodes: localhost
-   erlang_cookie: QLDZYPYEYGHECTHYQXFJ
+   consumer_id: sspl_in
+   consumer_group: cortx_monitor
+   message_type: IEM
+   offset: earliest
 
 LOGGINGMSGHANDLER:
    iem_routing_enabled: false
@@ -177,14 +159,24 @@ IEMSENSOR:
    log_file_path: /var/log/cortx/iem/iem_messages
    timestamp_file_path: /var/cortx/sspl/data/iem/last_processed_msg_time
 
-SYSTEMDWATCHDOG:
+DISKMONITOR:
    monitor: true
    threaded: true
+   smart_test_interval: 999999999
+   run_smart_on_start: 'False'
+
+SERVICEMONITOR:
+   monitor: true
+   threaded: true
+   thread_sleep: 1
+   polling_frequency: 15
+   threshold_inactive_time: 180
    monitored_services:
       - hare-consul-agent.service
       - hare-consul-agent-c1.service
       - hare-consul-agent-c2.service
       - elasticsearch.service
+      - multipathd.service
       - statsd.service
       - rsyslog.service
       - haproxy.service
@@ -194,9 +186,8 @@ SYSTEMDWATCHDOG:
       - salt-minion.service
       - glusterd.service
       - scsi-network-relay.service
-      - multipathd.service
-   smart_test_interval: 999999999
-   run_smart_on_start: 'False'
+      - kafka.service
+      - zookeeper.service
 
 NODEHWACTUATOR:
    ipmi_client: ipmitool

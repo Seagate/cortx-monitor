@@ -56,5 +56,5 @@ rm -f $SSPL_DIR/low-level/sspl-ll-cli
 rm -f /usr/bin/sspl-ll-cli
 
 %files
-%defattr(-,sspl-ll,root,-)
+%defattr(-,root,root,-)
 /opt/seagate/%{product_family}/sspl/low-level/cli

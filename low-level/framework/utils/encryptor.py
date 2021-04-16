@@ -23,9 +23,10 @@ from cortx.utils.security.cipher import Cipher, CipherInvalidToken
 from framework.utils.service_logging import logger
 
 
-def gen_key(cluster_id, service_name):
+def gen_key(unique_seed, root_node):
+    '''Generate Cipher key based on unique seed and corresponding root_node'''
     # Generate key for decryption
-    key = Cipher.generate_key(cluster_id, service_name)
+    key = Cipher.generate_key(unique_seed, root_node)
     return key
 
 
@@ -40,8 +41,7 @@ def decrypt(key, text, caller=None):
     '''Decrypt the <text>'''
     decrypt_text = text
     try:
-        decrypt_text = Cipher.decrypt(key, text).decode()
-        return decrypt_text
+        decrypt_text = Cipher.decrypt(key, text.encode("utf-8"))
     except CipherInvalidToken as e:
         logger.error("{0}:Password decryption failed requested by {1}.".format(e, caller))
-        return decrypt_text.decode()
+    return decrypt_text.decode("utf-8")

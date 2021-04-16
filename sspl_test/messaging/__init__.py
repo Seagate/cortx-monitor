@@ -13,4 +13,8 @@
 # about this software or licensing, please email opensource@seagate.com or
 # cortx-questions@seagate.com.
 
-"""Modules for handling rabbitMQ processing"""
+"""messaging processor for automated integration tests."""
+
+from threading import Event
+
+producer_initialized = Event()

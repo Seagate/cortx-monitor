@@ -26,8 +26,9 @@ import json
 from actuators.impl.actuator import Actuator
 from framework.base.debug import Debug
 from framework.utils.service_logging import logger
-from framework.base.sspl_constants import AlertTypes, SensorTypes, SeverityTypes, COMMON_CONFIGS
-from framework.utils.conf_utils import Conf, CLUSTER, GLOBAL_CONF, SITE_ID, RACK_ID, NODE_ID, SRVNODE
+from framework.base.sspl_constants import AlertTypes, SensorTypes, SeverityTypes
+from framework.utils.conf_utils import (Conf, GLOBAL_CONF, SITE_ID_KEY,
+    RACK_ID_KEY, NODE_ID_KEY)
 
 
 class NodeHWactuator(Actuator, Debug):
@@ -52,9 +53,9 @@ class NodeHWactuator(Actuator, Debug):
 
     def __init__(self, executor, conf_reader):
         super(NodeHWactuator, self).__init__()
-        self._site_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{SITE_ID}",'DC01')
-        self._rack_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{RACK_ID}",'RC01')
-        self._node_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{NODE_ID}",'SN01')
+        self._site_id = Conf.get(GLOBAL_CONF, SITE_ID_KEY, "DC01")
+        self._rack_id = Conf.get(GLOBAL_CONF, RACK_ID_KEY, "RC01")
+        self._node_id = Conf.get(GLOBAL_CONF, NODE_ID_KEY, "SN01")
         self.host_id = socket.getfqdn()
         self.sensor_id_map = None
         self._executor = executor

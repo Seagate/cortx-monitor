@@ -22,14 +22,14 @@
 from cortx.utils.security.cipher import Cipher
 
 
-def gen_key(cluster_id, service_name):
+def gen_key(unique_seed, root_node):
     # Generate key for decryption
-    key = Cipher.generate_key(cluster_id, service_name)
+    key = Cipher.generate_key(unique_seed, root_node)
     return key
 
 
 def encrypt(key, text):
-    """Encrypt sensitive data. Ex: RabbitMQ credentials."""
+    """Encrypt sensitive data. Ex: messaging credentials."""
     # Before encrypting text we need to convert string to bytes using encode()
     # method
     return Cipher.encrypt(key, text.encode())
@@ -37,5 +37,5 @@ def encrypt(key, text):
 
 def decrypt(key, text, caller=None):
     """Decrypt the <text>."""
-    decrypt_text = Cipher.decrypt(key, text).decode()
+    decrypt_text = Cipher.decrypt(key, text.encode("utf-8")).decode("utf-8")
     return decrypt_text

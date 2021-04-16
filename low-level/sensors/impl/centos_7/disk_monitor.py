@@ -15,9 +15,9 @@
 
 """
  ****************************************************************************
-  Description:       Monitors Centos 7 systemd for service events and notifies
-                    the ServiceMsgHandler.  Detects drive add/remove event,
-                    performs SMART on drives and notifies DiskMsgHandler.
+
+  Description:Detects drive add/remove event,
+              performs SMART on drives and notifies DiskMsgHandler.
 
  ****************************************************************************
 """
@@ -41,33 +41,29 @@ from zope.interface import implementer
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.module_thread import SensorThread
 from framework.base.sspl_constants import cs_products
-from framework.rabbitmq.rabbitmq_egress_processor import \
-    RabbitMQegressProcessor
-from framework.utils.conf_utils import (
-    CLUSTER, CLUSTER_ID, DATA_PATH_KEY, GLOBAL_CONF, NODE_ID, RACK_ID, SITE_ID,
-    SRVNODE, SSPL_CONF, Conf)
+from framework.messaging.egress_processor import \
+    EgressProcessor
+from framework.utils.conf_utils import (CLUSTER_ID_KEY, DATA_PATH_KEY,
+    GLOBAL_CONF, NODE_ID_KEY, RACK_ID_KEY, SITE_ID_KEY, SSPL_CONF, Conf)
 from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
 from framework.utils.store_factory import file_store
 from json_msgs.messages.actuators.ack_response import AckResponseMsg
 from message_handlers.disk_msg_handler import DiskMsgHandler
 from message_handlers.node_data_msg_handler import NodeDataMsgHandler
-# Modules that receive messages from this module
-from message_handlers.service_msg_handler import ServiceMsgHandler
-from sensors.IService_watchdog import IServiceWatchdog
-
+from sensors.ISystem_monitor import ISystemMonitor
+from framework.utils.mon_utils import get_alert_id
 store = file_store
 
-@implementer(IServiceWatchdog)
-class SystemdWatchdog(SensorThread, InternalMsgQ):
+@implementer(ISystemMonitor)
+class DiskMonitor(SensorThread, InternalMsgQ):
 
 
-    SENSOR_NAME       = "SystemdWatchdog"
+    SENSOR_NAME       = "DiskMonitor"
     PRIORITY          = 2
 
     # Section and keys in configuration file
-    SYSTEMDWATCHDOG    = SENSOR_NAME.upper()
-    MONITORED_SERVICES = 'monitored_services'
+    DISKMONITOR        = SENSOR_NAME.upper()
     SMART_TEST_INTERVAL= 'smart_test_interval'
     SMART_ON_START     = 'run_smart_on_start'
     SYSTEM_INFORMATION = 'SYSTEM_INFORMATION'
@@ -88,7 +84,7 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
 
     # Dependency list
     DEPENDENCIES = {
-                    "plugins": ["ServiceMsgHandler", "DiskMsgHandler", "NodeDataMsgHandler"],
+                    "plugins": ["DiskMsgHandler", "NodeDataMsgHandler"],
                     "init": ["HPIMonitor"],
                     "rpms": ["smartmontools"]
     }
@@ -104,21 +100,11 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
     @staticmethod
     def name():
         """@return: name of the module."""
-        return SystemdWatchdog.SENSOR_NAME
+        return DiskMonitor.SENSOR_NAME
 
     def __init__(self):
-        super(SystemdWatchdog, self).__init__(self.SENSOR_NAME,
+        super(DiskMonitor, self).__init__(self.SENSOR_NAME,
                                                   self.PRIORITY)
-        # Mapping of services and their status'
-        self._service_status = {}
-
-        self._monitored_services = []
-        self._inactive_services  = []
-        self._wildcard_services  = []
-
-        # Mapping of current service PIDs
-        self._service_pids = {}
-
         # Mapping of SMART jobs and their properties
         self._smart_jobs = {}
 
@@ -141,19 +127,19 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
         """initialize configuration reader and internal msg queues"""
 
         # Initialize ScheduledMonitorThread and InternalMsgQ
-        super(SystemdWatchdog, self).initialize(conf_reader)
+        super(DiskMonitor, self).initialize(conf_reader)
 
         # Initialize internal message queues for this module
-        super(SystemdWatchdog, self).initialize_msgQ(msgQlist)
+        super(DiskMonitor, self).initialize_msgQ(msgQlist)
 
         # Retrieves the frequency to run SMART tests on all the drives
         self._smart_interval = self._getSMART_interval()
 
         self._run_smart_on_start = self._can_run_smart_on_start()
-        self._log_debug(f"SystemdWatchdog, Run SMART test on start: {self._run_smart_on_start}")
+        self._log_debug(f"DiskMonitor, Run SMART test on start: {self._run_smart_on_start}")
 
         self._smart_supported = self._is_smart_supported()
-        self._log_debug(f"SystemdWatchdog, SMART supported: {self._smart_supported}")
+        self._log_debug(f"DiskMonitor, SMART supported: {self._smart_supported}")
 
         # Dict of drives by-id symlink from systemd
         self._drive_by_id = {}
@@ -180,10 +166,10 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
 
         self._product = product
 
-        self._site_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{SITE_ID}",'DC01')
-        self._rack_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{RACK_ID}",'RC01')
-        self._node_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{NODE_ID}",'SN01')
-        self._cluster_id = Conf.get(GLOBAL_CONF, f'{CLUSTER}>{CLUSTER_ID}','CC01')
+        self._site_id = Conf.get(GLOBAL_CONF, SITE_ID_KEY,'DC01')
+        self._rack_id = Conf.get(GLOBAL_CONF, RACK_ID_KEY,'RC01')
+        self._node_id = Conf.get(GLOBAL_CONF, NODE_ID_KEY,'SN01')
+        self._cluster_id = Conf.get(GLOBAL_CONF, CLUSTER_ID_KEY,'CC01')
 
         self.vol_ras = Conf.get(SSPL_CONF, f"{self.SYSTEM_INFORMATION}>{DATA_PATH_KEY}", self.DEFAULT_RAS_VOL)
 
@@ -203,8 +189,8 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
         if self._product in cs_products:
             # Wait for the dcs-collector to populate the /tmp/dcs/hpi directory
             while not os.path.isdir(self._hpi_base_dir):
-                logger.info(f"SystemdWatchdog, dir not found: {self._hpi_base_dir}")
-                logger.info(f"SystemdWatchdog, rechecking in {self._start_delay} secs")
+                logger.info(f"DiskMonitor, dir not found: {self._hpi_base_dir}")
+                logger.info(f"DiskMonitor, rechecking in {self._start_delay} secs")
                 time.sleep(int(self._start_delay))
 
         # Allow time for the hpi_monitor to come up
@@ -214,7 +200,7 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
 
     def read_data(self):
         """Return the dict of service status'"""
-        return self._service_status
+        return {}
 
     def run(self):
         """Run the monitoring periodically on its own thread."""
@@ -230,12 +216,6 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
         try:
             # Connect to dbus system wide
             self._bus = SystemBus()
-
-            # Get an instance of systemd1
-            systemd = self._bus.get_object("org.freedesktop.systemd1", "/org/freedesktop/systemd1")
-
-            # Use the systemd object to get an interface to the Manager
-            self._manager = Interface(systemd, dbus_interface='org.freedesktop.systemd1.Manager')
 
             # Obtain a disk manager interface for monitoring drives
             disk_systemd = self._bus.get_object('org.freedesktop.UDisks2', '/org/freedesktop/UDisks2')
@@ -263,79 +243,6 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
                 self._update_drive_faults()
                 store.put(self._existing_drive, self.disk_cache_path)
 
-            # Read in the list of services to monitor
-            self._monitored_services = self._get_monitored_services()
-
-            # Retrieve a list of all the service units
-            units = self._manager.ListUnits()
-
-            # Update the list of monitored services with wildcard entries
-            self._add_wildcard_services()
-
-            #  Start out assuming their all inactive
-            self._inactive_services = list(self._monitored_services)
-
-            logger.info("Monitoring the following services listed in /etc/sspl.conf:")
-            for unit in units:
-
-                if ".service" in unit[0]:
-                    unit_name = unit[0]
-
-                    # Apply the filter from config file if present
-                    if self._monitored_services:
-                        if unit_name not in self._monitored_services:
-                            continue
-                    logger.debug(f"    {unit_name}")
-
-                    # Retrieve an object representation of the systemd unit
-                    unit = self._bus.get_object('org.freedesktop.systemd1',
-                                                self._manager.GetUnit(unit_name))
-
-                    state = unit.Get('org.freedesktop.systemd1.Unit', 'ActiveState',
-                             dbus_interface='org.freedesktop.DBus.Properties')
-
-                    substate = unit.Get('org.freedesktop.systemd1.Unit', 'SubState',
-                             dbus_interface='org.freedesktop.DBus.Properties')
-
-                    self._service_status[str(unit_name)] = str(state) + ":" + str(substate)
-
-                    # Remove it from our inactive list; it's alive and well
-                    if state == "active":
-                        if unit_name in self._inactive_services:
-                            self._inactive_services.remove(unit_name)
-
-                    # Use the systemd unit to get an Interface to call methods
-                    Iunit = Interface(unit,
-                                      dbus_interface='org.freedesktop.systemd1.Manager')
-
-                    # Connect the PropertiesChanged signal to the unit and assign a callback
-                    Iunit.connect_to_signal('PropertiesChanged',
-                                            lambda a, b, c, p = unit :
-                                            self._on_prop_changed(a, b, c, p),
-                                            dbus_interface=dbus.PROPERTIES_IFACE)
-
-                    # Get the current PID of the service
-                    curr_pid = self._get_service_pid(unit)
-
-                    # Update the mapping of current pids
-                    self._service_pids[str(unit_name)] = curr_pid
-
-                    # Setting service_request to 'status' will case msg handler to retrieve current values
-                    msgString = json.dumps({"actuator_request_type": {
-                                    "service_watchdog_controller": {
-                                        "service_name" : unit_name,
-                                        "service_request" : "None",
-                                        "state" : state,
-                                        "previous_state" : "N/A",
-                                        "substate" : substate,
-                                        "previous_substate" : "N/A",
-                                        "pid" : curr_pid,
-                                        "previous_pid" : "N/A"
-                                        }
-                                    }
-                                 })
-                    self._write_internal_msgQ(ServiceMsgHandler.name(), msgString)
-
             # Retrieve the main loop which will be called in the run method
             self._loop = gobject.MainLoop()
 
@@ -343,30 +250,20 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
             gobject.threads_init()
             context = self._loop.get_context()
 
-            logger.info("SystemdWatchdog initialization completed")
+            logger.info("DiskMonitor initialization completed")
 
             # Leave enabled for now, it's not too verbose and handy in logs when status' change
             self._set_debug(True)
             self._set_debug_persist(True)
 
             # Loop forever iterating over the context
-            step = 0
             while self._running == True:
                 context.iteration(False)
                 time.sleep(self._thread_sleep)
 
-                if len(self._inactive_services) > 0:
-                    self._examine_inactive_services()
-
                 # Perform SMART tests and refresh drive list on a regular interval
                 if datetime.now() > self._next_smart_tm:
                     self._init_drives(stagger=True)
-
-                # Search for new wildcard services suddenly appearing, ie m0d@<fid>
-                step += 1
-                if len(self._wildcard_services) > 0 and step >= 15:
-                    step : int = 0
-                    self._search_new_services()
 
                 # Process any msgs sent to us
                 self._check_msg_queue()
@@ -382,7 +279,7 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
                 #     # Slow the main thread down to save on CPU as it gets sped up on drive removal
                 #     self._thread_sleep = 5.0
 
-            self._log_debug("SystemdWatchdog gracefully breaking out " \
+            self._log_debug("DiskMonitor gracefully breaking out " \
                                 "of dbus Loop, not restarting.")
 
         except Exception as ae:
@@ -476,7 +373,7 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
                     request = f"SMART_TEST: {jsonMsg_serial_number}"
                     # Send an Ack msg back with SMART results as Unsupported
                     json_msg = AckResponseMsg(request, self.SMART_STATUS_UNSUPPORTED, "").getJson()
-                    self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+                    self._write_internal_msgQ(EgressProcessor.name(), json_msg)
                     return
 
                 self._log_debug("_processMsg, Starting SMART test")
@@ -528,7 +425,7 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
 
                                 # Send an Ack msg back with SMART results
                                 json_msg = AckResponseMsg(request, response, uuid).getJson()
-                                self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+                                self._write_internal_msgQ(EgressProcessor.name(), json_msg)
 
                                 # Remove from our list if it's present
                                 serial_number = self._smart_uuids.get(uuid)
@@ -537,54 +434,6 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
 
                         except Exception as e:
                             self._log_debug(f"_process_msg, Exception: {e}")
-
-    def _add_wildcard_services(self):
-        """Update the list of monitored services with wildcard entries"""
-        units = self._manager.ListUnits()
-        try:
-            # Look for wildcards in monitored services list and expandit
-            examined_services = copy.deepcopy(self._monitored_services)
-            for service in examined_services:
-                if "*" in service:
-                    # Remove service name from monitored_services and add to wildcard services list
-                    self._monitored_services.remove(service)
-                    self._wildcard_services.append(service)
-                    logger.info(f"Processing wildcard service: {service}")
-
-                    # Search thru list of services on the system that match the starting chars
-                    start_chars = service.split("*")[0]
-                    logger.info(f"Searching for services starting with: {start_chars}")
-                    for unit in units:
-                        unit_name = str(unit[0]).split("/")[-1]
-                        if unit_name.startswith(start_chars):
-                            logger.info(f"    {unit_name}")
-                            self._monitored_services.append(unit_name)
-        except Exception as ae:
-            logger.exception(ae)
-
-    def _search_new_services(self):
-        """Look for any new wildcard services, ie m0d@<fid>"""
-        units = self._manager.ListUnits()
-        #logger.info("Searching for new services")
-        #logger.info("inactive_services: %s" % str(self._inactive_services))
-        #logger.info("monitored_services: %s" % str(self._monitored_services))
-        #logger.info("wildcard_services: %s" % str(self._wildcard_services))
-
-        try:
-            for service in self._wildcard_services:
-                # Search thru list of services on the system that match the starting chars
-                start_chars = service.split("*")[0]
-                for unit in units:
-                    unit_name = str(unit[0]).split("/")[-1]
-
-                    if unit_name.startswith(start_chars) and \
-                       unit_name not in self._monitored_services and \
-                       unit_name not in self._inactive_services:
-                        logger.info(f"Adding newly found wildcard service: {unit_name}")
-                        self._inactive_services.append(unit_name)
-
-        except Exception as ae:
-            logger.exception(ae)
 
     def _update_by_id_paths(self):
         """Updates the global dict of by-id symlinks for each drive"""
@@ -684,7 +533,7 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
 
                     # Send an Ack msg back with SMART results
                     json_msg = AckResponseMsg(request, ack_response, smart_uuid).getJson()
-                    self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+                    self._write_internal_msgQ(EgressProcessor.name(), json_msg)
 
                     # Remove from our list
                     self._smart_uuids[smart_uuid] = None
@@ -806,155 +655,6 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
 
         # Update the next time to run SMART tests
         self._next_smart_tm = datetime.now() + timedelta(seconds=self._smart_interval)
-
-    def _examine_inactive_services(self):
-        """See if an inactive service has been successfully started
-            and if so attach a callback method to its properties
-            to detect changes
-        """
-        examined_services = copy.deepcopy(self._inactive_services)
-        for disabled_service in examined_services:
-            # Retrieve an object representation of the systemd unit
-            unit = self._bus.get_object('org.freedesktop.systemd1',
-                                        self._manager.LoadUnit(disabled_service))
-
-            state = unit.Get('org.freedesktop.systemd1.Unit', 'ActiveState',
-                             dbus_interface='org.freedesktop.DBus.Properties')
-
-            substate = unit.Get('org.freedesktop.systemd1.Unit', 'SubState',
-                             dbus_interface='org.freedesktop.DBus.Properties')
-
-            if state == "active":
-                self._log_debug(f"Service: {disabled_service} is now active and being monitored!")
-                self._service_status[str(disabled_service)] = str(state) + ":" + str(substate)
-
-                # Use the systemd unit to get an Interface to call methods
-                Iunit = Interface(unit,
-                                  dbus_interface='org.freedesktop.systemd1.Manager')
-
-                # Connect the PropertiesChanged signal to the unit and assign a callback
-                Iunit.connect_to_signal('PropertiesChanged',
-                                         lambda a, b, c, p = unit :
-                                         self._on_prop_changed(a, b, c, p),
-                                         dbus_interface=dbus.PROPERTIES_IFACE)
-
-                # Remove the service from the inactive list and add it to our currently monitored list
-                self._inactive_services.remove(disabled_service)
-                if disabled_service not in self._monitored_services:
-                    self._monitored_services.append(disabled_service)
-
-                # Get the current PID of the service
-                curr_pid = self._get_service_pid(unit)
-
-                # Retrieve the previous pid of the service
-                prev_pid = self._service_pids.get(str(disabled_service), "N/A")
-
-                # Update the mapping of current pids
-                self._service_pids[str(disabled_service)] = curr_pid
-
-                # Send out notification of the state change
-                msgString = json.dumps({"actuator_request_type": {
-                                    "service_watchdog_controller": {
-                                        "service_name" : disabled_service,
-                                        "service_request" : "None",
-                                        "state" : state,
-                                        "previous_state" : "inactive",
-                                        "substate" : substate,
-                                        "previous_substate" : "dead",
-                                        "pid" : curr_pid,
-                                        "previous_pid" : prev_pid
-                                        }
-                                    }
-                                 })
-                self._write_internal_msgQ(ServiceMsgHandler.name(), msgString)
-
-        if len(self._inactive_services) == 0:
-            self._log_debug("Successfully monitoring all services now!")
-
-    def _get_service_pid(self, unit):
-        """Returns the current PID of the service"""
-        # Get the interface for the unit
-        Iunit = Interface(unit, dbus_interface='org.freedesktop.DBus.Properties')
-
-        curr_pid = Iunit.Get('org.freedesktop.systemd1.Service', 'ExecMainPID')
-        return str(curr_pid)
-
-    def _get_prop_changed(self, unit, interface, prop_name, changed_properties, invalidated_properties):
-        """Retrieves the property that changed"""
-        if prop_name in invalidated_properties:
-            return unit.Get(interface, prop_name, dbus_interface=dbus.PROPERTIES_IFACE)
-        elif prop_name in changed_properties:
-            return changed_properties[prop_name]
-        else:
-            return None
-
-    def _on_prop_changed(self, interface, changed_properties, invalidated_properties, unit):
-        """Callback to handle state changes in services"""
-        # We currently only care about the unit interface
-        if interface != 'org.freedesktop.systemd1.Unit':
-            return
-
-        # Get the interface for the unit
-        Iunit = Interface(unit, dbus_interface='org.freedesktop.DBus.Properties')
-
-        # Always call methods on the interface not the actual object
-        unit_name = str(Iunit.Get(interface, "Id"))
-
-        # Get the state and substate for the service
-        state = self._get_prop_changed(unit, interface, "ActiveState",
-                                       changed_properties, invalidated_properties)
-
-        substate = self._get_prop_changed(unit, interface, "SubState",
-                                          changed_properties, invalidated_properties)
-
-        # Compare prev to curr pids to see if the service restarted abruptly
-        curr_pid = self._get_service_pid(unit)
-
-        # Retrieve the previous pid of the service
-        prev_pid = self._service_pids.get(unit_name, "N/A")
-
-        # Update the mapping of current pids
-        self._service_pids[unit_name] = curr_pid
-
-        # The state can change from an incoming json msg to the service msg handler
-        #  This provides a catch to make sure that we don't send redundant msgs
-        if self._service_status.get(unit_name, "") == str(state) + ":" + str(substate):
-            #self._log_debug("_on_prop_changed, No service state change detected: %s" % unit_name)
-            #self._log_debug("\tstate: %s, substate: %s" % (state, substate))
-            return
-
-        self._log_debug(f"_on_prop_changed, Service state change detected on unit: {unit_name}")
-
-        # get the previous state and substate for the service
-        previous_state = self._service_status.get(unit_name, "N/A:N/A").split(":")[0]
-        previous_substate = self._service_status.get(unit_name, "N/A:N/A").split(":")[1]
-
-        self._log_debug(f"_on_prop_changed, State: {state}, Substate: {substate}")
-        self._log_debug(f"_on_prop_changed, Previous State: {previous_state}, Previous Substate: {previous_substate}")
-
-        # Update the state in the global dict for later use
-        self._service_status[unit_name] = str(state) + ":" + str(substate)
-
-        # Notify the service message handler to transmit the status of the service
-        msgString = json.dumps(
-                    {"actuator_request_type": {
-                        "service_watchdog_controller": {
-                            "service_name" : unit_name,
-                            "service_request" : "None",
-                            "state" : state,
-                            "previous_state" : previous_state,
-                            "substate" : substate,
-                            "previous_substate" : previous_substate,
-                            "pid" : curr_pid,
-                            "previous_pid" : prev_pid
-                            }
-                        }
-                     })
-        self._write_internal_msgQ(ServiceMsgHandler.name(), msgString)
-
-    def _get_monitored_services(self):
-        """Retrieves the list of services to be monitored"""
-        return Conf.get(SSPL_CONF, f"{self.SYSTEMDWATCHDOG}>{self.MONITORED_SERVICES}", [])
 
     def _interface_added(self, object_path, interfaces_and_properties):
         """Callback for when an interface like drive or SMART job has been added"""
@@ -1120,7 +820,7 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
 
                                     # Send an Ack msg back with SMART results
                                     json_msg = AckResponseMsg(request, response, smart_uuid).getJson()
-                                    self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+                                    self._write_internal_msgQ(EgressProcessor.name(), json_msg)
 
                                     # Remove from our list
                                     self._smart_uuids[smart_uuid] = None
@@ -1201,7 +901,7 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
                "response" : {
                     "alert_type": alert_type,
                     "severity": severity_reader.map_severity(alert_type),
-                    "alert_id": self._get_alert_id(event_time),
+                    "alert_id": get_alert_id(event_time),
                     "host_id": socket.getfqdn(),
                     "info": {
                         "site_id": self._site_id,
@@ -1218,14 +918,6 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
                 }
         # Send the event to disk message handler to generate json message
         self._write_internal_msgQ(DiskMsgHandler.name(), msg)
-
-    def _get_alert_id(self, epoch_time):
-        """Returns alert id which is a combination of
-           epoch_time and salt value
-        """
-        salt = str(uuid.uuid4().hex)
-        alert_id = epoch_time + salt
-        return alert_id
 
     def _notify_msg_handler_sn_device_mappings(self, disk_path, serial_number):
         """Sends an internal msg to handlers who need to maintain a
@@ -1289,7 +981,7 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
 
     def _getSMART_interval(self):
         """Retrieves the frequency to run SMART tests on all the drives"""
-        smart_interval = int(Conf.get(SSPL_CONF, f"{self.SYSTEMDWATCHDOG}>{self.SMART_TEST_INTERVAL}",
+        smart_interval = int(Conf.get(SSPL_CONF, f"{self.DISKMONITOR}>{self.SMART_TEST_INTERVAL}",
                                                          86400))
         # Add a sanity check to avoid constant looping, 15 minute minimum (900 secs)
         if smart_interval < 900:
@@ -1300,7 +992,7 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
         """Retrieves value of "run_smart_on_start" from configuration file.Returns
            True|False based on that.
         """
-        run_smart_on_start = Conf.get(SSPL_CONF, f"{self.SYSTEMDWATCHDOG}>{self.SMART_ON_START}",
+        run_smart_on_start = Conf.get(SSPL_CONF, f"{self.DISKMONITOR}>{self.SMART_ON_START}",
                                                          "False")
         run_smart_on_start = run_smart_on_start.lower()
         if run_smart_on_start == 'true':
@@ -1313,13 +1005,13 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
     # TODO handle boolean values from conf file
     def _getShort_SMART_enabled(self):
         """Retrieves the flag indicating to run short tests periodically"""
-        smart_interval = int(Conf.get(SSPL_CONF, f"{self.SYSTEMDWATCHDOG}>{self.SMART_SHORT_ENABLED}",
+        smart_interval = int(Conf.get(SSPL_CONF, f"{self.DISKMONITOR}>{self.SMART_SHORT_ENABLED}",
                                                          86400))
         return smart_interval
 
     def _getConveyance_SMART_enabled(self):
         """Retrieves the flag indicating to run conveyance tests when a disk is inserted"""
-        smart_interval = int(Conf.get(SSPL_CONF, f"{self.SYSTEMDWATCHDOG}>{self.SMART_CONVEYANCE_ENABLED}",
+        smart_interval = int(Conf.get(SSPL_CONF, f"{self.DISKMONITOR}>{self.SMART_CONVEYANCE_ENABLED}",
                                                          86400))
         # Add a sanity check to avoid constant looping, 15 minute minimum (900 secs)
         if smart_interval < 900:
@@ -1359,7 +1051,7 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
             response = json.loads(response)
             try:
                 if "No such device" in response["smartctl"]["message"][0]["string"]:
-                    logger.debug(f"SystemdWatchdog, _update_drive_faults, drive {object_path} is removed, ignoring SMART test")
+                    logger.debug(f"DiskMonitor, _update_drive_faults, drive {object_path} is removed, ignoring SMART test")
                     continue
             # If smratctl command is not failing there will be no ["smartctl"]["message"][0]["string"] in response
             except (KeyError, IndexError):
@@ -1428,7 +1120,7 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
         if retcode == 0:
             return True
         else:
-            logger.debug(f"SystemdWatchdog, _is_local_drive: Error for drive {drive_name}, ERROR: {err}")
+            logger.debug(f"DiskMonitor, _is_local_drive: Error for drive {drive_name}, ERROR: {err}")
             # TODO : In case of different error(other than "SG_IO: bad/missing sense data") for local drives,
             # this check would fail.
             if DISK_ERR_MISSING_SENSE_DATA not in err and DISK_ERR_GET_ID_FAILURE not in err:
@@ -1438,7 +1130,7 @@ class SystemdWatchdog(SensorThread, InternalMsgQ):
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""
-        super(SystemdWatchdog, self).shutdown()
+        super(DiskMonitor, self).shutdown()
 
 def is_physical_drive(interfaces_and_property):
     """

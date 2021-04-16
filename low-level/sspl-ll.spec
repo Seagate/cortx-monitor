@@ -75,35 +75,14 @@ cp -p $SSPL_SETUP/sspl_setup.py $SSPL_BASE/low-level/sspl_setup
 cp -p $SSPL_SETUP/consuldump.py $SSPL_BASE/low-level/
 
 %pre
-# Add the sspl-ll user during first install if it doesnt exist
-# Add this user in the primary group itself instead of zabbix group
-id -u sspl-ll &>/dev/null || {
-    echo "Creating sspl-ll user..."
-    #/usr/sbin/useradd -r -g zabbix -s /sbin/nologin  \
-    /usr/sbin/useradd -r sspl-ll -s /sbin/nologin  \
-            -c "User account to run the sspl-ll service"
-}
-
 # take backup of cache folder if exists
-mkdir -p /opt/seagate/backup/%{version}
-[ -f /etc/sspl.conf ] && cp -p /etc/sspl.conf /opt/seagate/backup/%{version}/sspl.conf
-[ -d /var/%{product_family}/sspl ] && cp -Rp /var/%{product_family}/sspl /opt/seagate/backup/%{version}/
-
-# Create ras persistent cache folder
-# TODO: In production this directory will be created by provisioner
-# Remove this code when provisioner part is ready.
-mkdir -p /var/%{product_family}/sspl/data/
-chown -R sspl-ll /var/%{product_family}/sspl/
-
-# Create state file and grant required permission
-# This state file will be used later by SSPL resourse agent(HA)
-STATE_FILE=/var/%{product_family}/sspl/data/state.txt
-[ -f $STATE_FILE ] || touch $STATE_FILE
-chown sspl-ll:sspl-ll $STATE_FILE
-chmod 644 $STATE_FILE
+mkdir -p /opt/seagate/%{product_family}/backup/%{version}/sspl
+[ -f /etc/sspl.conf ] && cp -p /etc/sspl.conf /opt/seagate/%{product_family}/backup/%{version}/sspl/sspl.conf
+if [ -d /var/%{product_family}/sspl/data ]; then
+    cp -Rp /var/%{product_family}/sspl/data /opt/seagate/%{product_family}/backup/%{version}/sspl/
+fi
 
 %post
-mkdir -p /var/%{product_family}/sspl/bundle /var/log/%{product_family}/sspl /etc/sspl
 SSPL_DIR=/opt/seagate/%{product_family}/sspl
 
 [ -d "${SSPL_DIR}" ] && {
@@ -124,7 +103,8 @@ SSPL_DIR=/opt/seagate/%{product_family}/sspl
 [ -f /tmp/sspl_tmp.conf ] && cp /tmp/sspl_tmp.conf /etc/sspl.conf
 
 # restore of data & iem folder
-[ -d /opt/seagate/backup/%{version}/sspl ] && cp -Rp /opt/seagate/backup/%{version}/sspl/* /var/%{product_family}/sspl/
+[ -d /opt/seagate/%{product_family}/backup/%{version}/sspl ] &&
+    cp -Rp /opt/seagate/%{product_family}/backup/%{version}/sspl/* /var/%{product_family}/sspl/
 
 # Copy rsyslog configuration
 # [ -f /etc/rsyslog.d/0-iemfwd.conf ] ||
@@ -133,34 +113,32 @@ SSPL_DIR=/opt/seagate/%{product_family}/sspl
 # [ -f /etc/rsyslog.d/1-ssplfwd.conf ] ||
 #    cp /opt/seagate/%{product_family}/sspl/low-level/files/etc/rsyslog.d/1-ssplfwd.conf /etc/rsyslog.d/1-ssplfwd.conf
 
-# Copy init script
-[ -f $SSPL_DIR/sspl_init ] ||
-    ln -sf $SSPL_DIR/low-level/files/opt/seagate/sspl/setup/sspl_provisioner_init $SSPL_DIR/sspl_init
-
 # In case of upgrade start sspl-ll after upgrade
 if [ "$1" == "2" ]; then
     echo "Restarting sspl-ll service..."
     systemctl restart sspl-ll.service 2> /dev/null
 fi
 
-if [ "$1" = "1" ]; then
+if [ "$1" == "1" ]; then
     echo "Installation complete. Follow the instructions."
-    echo "Run /opt/seagate/%{product_family}/sspl/sspl_init to configure SSPL"
+    echo "Run SSPL mini provisioner commands (post_install, prepare, config, init)"
+    echo "Start sspl-ll service."
 fi
 
 %preun
 # Remove configuration in case of uninstall
-[[ $1 = 0 ]] &&  rm -f /var/%{product_family}/sspl/sspl-configured
-systemctl stop sspl-ll.service 2> /dev/null
+if [ "$1" == "0" ]; then
+    rm -f /var/%{product_family}/sspl/sspl-configured
+fi
+systemctl stop sspl-ll.service 2> /dev/null || true
 
 %postun
 rm -f /etc/polkit-1/rules.d/sspl-ll_dbus_policy.rules
 rm -f /etc/dbus-1/system.d/sspl-ll_dbus_policy.conf
-[ "$1" == "0" ] && rm -f /opt/seagate/%{product_family}/sspl/sspl_init
 rm -f /usr/bin/resource_health_view /usr/bin/sspl_bundle_generate /usr/bin/manifest_support_bundle
 
 %files
-%defattr(-,sspl-ll,root,-)
+%defattr(-,root,root,-)
 /opt/seagate/%{product_family}/sspl/*
 
 %changelog

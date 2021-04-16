@@ -18,4 +18,5 @@ alerts.realstor.test_real_stor_sideplane_actuator
 alerts.node.test_node_psu_actuator
 alerts.node.test_node_fan_actuator
 alerts.os.test_systemd_service_actuator
+alerts.os.test_service_monitor_sensor
 alerts.realstor.test_real_stor_enclosure_sensor

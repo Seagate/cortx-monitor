@@ -44,25 +44,23 @@ from framework.base.module_thread import SensorThread
 from framework.base.sspl_constants import (COMMON_CONFIGS, PRODUCT_FAMILY,
                                            SSPL_SETTINGS, OperatingSystem,
                                            enabled_products,
-                                           sspl_settings_configured_groups)
-from framework.rabbitmq.logging_processor import LoggingProcessor
-from framework.rabbitmq.plane_cntrl_rmq_egress_processor import \
-    PlaneCntrlRMQegressProcessor
-from framework.rabbitmq.plane_cntrl_rmq_ingress_processor import \
-    PlaneCntrlRMQingressProcessor
-from framework.rabbitmq.rabbitmq_egress_accumulated_msgs_processor import \
-    RabbitMQEgressAccumulatedMsgsProcessor
-# Modules for handling RabbitMQ messages and manipulating internal threads
-from framework.rabbitmq.rabbitmq_egress_processor import \
-    RabbitMQegressProcessor
-from framework.rabbitmq.rabbitmq_ingress_processor import \
-    RabbitMQingressProcessor
-from framework.rabbitmq.thread_controller import ThreadController
-from framework.utils.conf_utils import (CLUSTER, GLOBAL_CONF, HOST, MONITOR,
+                                           sspl_settings_configured_groups,
+                                           SYSLOG_HOST, SYSLOG_PORT)
+from framework.messaging.logging_processor import LoggingProcessor
+from framework.messaging.egress_accumulated_msgs_processor import \
+    EgressAccumulatedMsgsProcessor
+# Modules for handling messages and manipulating internal threads
+from framework.messaging.egress_processor import \
+    EgressProcessor
+from framework.messaging.ingress_processor import \
+    IngressProcessor
+from framework.messaging.thread_controller import ThreadController
+from framework.utils.conf_utils import (GLOBAL_CONF, HOST, MONITOR,
                                         OPERATING_SYSTEM, PORT, PRODUCT,
                                         RELEASE, RSYSLOG, SETUP, SRVNODE,
                                         SSPL_CONF, SYSTEM_INFORMATION,
-                                        THREADED, Conf)
+                                        THREADED, Conf, LOG_LEVEL,
+                                        PRODUCT_KEY, SETUP_KEY)
 from framework.utils.config_reader import ConfigReader
 from framework.utils.service_logging import init_logging, logger
 from framework.utils.store_factory import store
@@ -73,11 +71,11 @@ from message_handlers.logging_msg_handler import LoggingMsgHandler
 from message_handlers.node_controller_msg_handler import \
     NodeControllerMsgHandler
 from message_handlers.node_data_msg_handler import NodeDataMsgHandler
-from message_handlers.plane_cntrl_msg_handler import PlaneCntrlMsgHandler
 from message_handlers.real_stor_actuator_msg_handler import \
     RealStorActuatorMsgHandler
 from message_handlers.real_stor_encl_msg_handler import RealStorEnclMsgHandler
 from message_handlers.service_msg_handler import ServiceMsgHandler
+from framework.base.module_thread import ThreadException
 
 
 #DO NOT EDIT: Marker comment to dynamically add code to initialize coverage obj for code coverage report generation
@@ -89,16 +87,6 @@ MSG_HANDLERS    = 'message_handlers'
 SENSORS         = 'sensors'
 ACTUATORS       = 'actuators'
 DEGRADED_STATE_MODULES = 'degraded_state_modules'
-
-# Section containing information about the system we're running on
-SYS_INFORMATION = 'SYSTEM_INFORMATION'
-PRODUCT_NAME    = 'product'
-SETUP           = 'setup'
-LOG_LEVEL       = 'log_level'
-SYSLOG_HOST_KEY = "syslog_host"
-SYSLOG_PORT_KEY = "syslog_port"
-DEFAULT_SYSLOG_HOST = "localhost"
-DEFAULT_SYSLOG_PORT = 514
 
 # State file
 STATE_FILE =  f"/var/{PRODUCT_FAMILY}/sspl/data/state.txt"
@@ -282,10 +270,10 @@ def main(conf_reader, systemd_support):
     logger.info("sspl-ll Bootstrap: configuring for OS: %s" % OPERATING_SYSTEM)
 
     # Read in product value from configuration file
-    product = Conf.get(GLOBAL_CONF, f"{RELEASE}>{PRODUCT}")
+    product = Conf.get(GLOBAL_CONF, PRODUCT_KEY)
     # Read in setup value from configuration file
     try:
-        setup = Conf.get(GLOBAL_CONF, f"{RELEASE}>{SETUP}")
+        setup = Conf.get(GLOBAL_CONF, SETUP_KEY)
     except Exception:
         setup = 'hw'
 
@@ -328,9 +316,9 @@ def main(conf_reader, systemd_support):
         sspl_threaded_modules[klass.name()] = klass()
         msgQlist[klass.name()] = queue.Queue()
 
-    # Add rabbitmq_egress_accumulated_msgs_processor.py in sspl_threaded_modules
-    sspl_threaded_modules[RabbitMQEgressAccumulatedMsgsProcessor] = RabbitMQEgressAccumulatedMsgsProcessor()
-    msgQlist[RabbitMQEgressAccumulatedMsgsProcessor.name()] = queue.Queue()
+    # Add egress_accumulated_msgs_processor.py in sspl_threaded_modules
+    sspl_threaded_modules[EgressAccumulatedMsgsProcessor] = EgressAccumulatedMsgsProcessor()
+    msgQlist[EgressAccumulatedMsgsProcessor.name()] = queue.Queue()
 
     message_handlers = []
     for group in sspl_settings_configured_groups:
@@ -453,7 +441,8 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist, operating_system
         from actuators.impl.centos_7.command_line import CommandLine as CommandLine
         from actuators.impl.centos_7.systemd_login import SystemdLogin as Login
         from sensors.impl.centos_7.drive_manager import DriveManager as DriveManager
-        from sensors.impl.centos_7.systemd_watchdog import SystemdWatchdog as ServiceWatchdog
+        from sensors.impl.centos_7.disk_monitor import DiskMonitor
+        from sensors.impl.centos_7.service_monitor import ServiceMonitor
         from sensors.impl.centos_7.hpi_monitor import HPIMonitor as HPIMonitor
 
     elif operating_system == OperatingSystem.CENTOS6.value or operating_system == OperatingSystem.RHEL6.value:
@@ -574,12 +563,17 @@ def _run_thread_capture_errors(curr_module, sspl_threaded_modules, msgQlist, con
         logger.info("Starting: %s" % curr_module.name())
         curr_module.start_thread(conf_reader, msgQlist, product)
 
+    except ThreadException as ex:
+        #TODO: Restart thread instead of shutdown
+        logger.error("%s, error is unrecoverable , shutting down %s" %
+            (ex, curr_module.name()))
+        curr_module.shutdown()
     except Exception as ex:
         # Populate an actuator response message and transmit back to HAlon that we have a fatal error
         # error_msg = "SSPL-LL encountered an error, terminating service Error, restarting daemon:{}" \
         #             .format(str(logger.exception(ex)))
         # jsonMsg   = ThreadControllerMsg(curr_module.name(), error_msg).getJson()
-        # curr_module._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
+        # curr_module._write_internal_msgQ(EgressProcessor.name(), jsonMsg)
 
         # Shut down any running threads, error is non-recoverable
         # shutdown_handler()
@@ -600,12 +594,12 @@ def shutdown_handler(signum=None, frame=None):
 
     shutdown_msg = "SSPL-LL is shutting down"
     jsonMsg   = ThreadControllerMsg(threadController.name(), shutdown_msg).getJson()
-    threadController._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
+    threadController._write_internal_msgQ(EgressProcessor.name(), jsonMsg)
 
-    # Wait for the RabbitMQegressProcessor to finish processing
+    # Wait for the EgressProcessor to finish processing
     # any messages which it may have in its queue
-    while threadController.check_RabbitMQegressProcessor_is_running() is True:
-        logger.info("Waiting for rabbitMQegress to finish sending queued msgs")
+    while threadController.check_EgressProcessor_is_running() is True:
+        logger.info("Waiting for egress to finish sending queued msgs")
         time.sleep(2)
 
     # Now call the shutdown methods for all modules to gracefully halt
@@ -778,10 +772,8 @@ if __name__ == "__main__":
 
     # Initialize logging
     try:
-        logging_level = Conf.get(SSPL_CONF, f"{SYS_INFORMATION}>{LOG_LEVEL}", "INFO")
-        syslog_host = Conf.get(GLOBAL_CONF, f"{RSYSLOG}>{HOST}", DEFAULT_SYSLOG_HOST)
-        syslog_port = int(Conf.get(GLOBAL_CONF, f"{RSYSLOG}>{PORT}", DEFAULT_SYSLOG_PORT))
-        init_logging("SSPL-LL", logging_level, syslog_host, syslog_port)
+        logging_level = Conf.get(SSPL_CONF, f"{SYSTEM_INFORMATION}>{LOG_LEVEL}", "INFO")
+        init_logging("SSPL-LL", logging_level, SYSLOG_HOST, SYSLOG_PORT)
 
     except Exception as err:
         # We don't have logger since it threw an exception, use generic 'print'

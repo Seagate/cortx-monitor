@@ -28,13 +28,13 @@ from framework.actuator_state_manager import actuator_state_manager
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.sspl_constants import enabled_products
-from framework.utils.conf_utils import GLOBAL_CONF, RELEASE, SSPL_CONF, Conf
+from framework.utils.conf_utils import GLOBAL_CONF, SSPL_CONF, Conf, SETUP_KEY
 from framework.utils.service_logging import logger
 from json_msgs.messages.actuators.ack_response import AckResponseMsg
 from json_msgs.messages.actuators.ndhw_ack_response import NodeHwAckResponseMsg
 from message_handlers.disk_msg_handler import DiskMsgHandler
 from message_handlers.service_msg_handler import ServiceMsgHandler
-from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
+from framework.messaging.egress_processor import EgressProcessor
 
 
 class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
@@ -44,7 +44,6 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
     PRIORITY    = 2
 
     SYS_INFORMATION = 'SYSTEM_INFORMATION'
-    SETUP = 'setup'
     NODE_HW_ACTUATOR = 'NODEHWACTUATOR'
     IPMI_IMPLEMENTOR = 'ipmi_client'
 
@@ -54,7 +53,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
     DEPENDENCIES = {
                     "plugins": [
                         "ServiceMsgHandler",
-                        "RabbitMQegressProcessor",
+                        "EgressProcessor",
                         "DiskMsgHandler"
                     ],
                     "rpms": []
@@ -99,7 +98,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
         self._NodeHW_actuator       = None
 
         self._import_products(product)
-        self.setup = Conf.get(GLOBAL_CONF, f"{RELEASE}>{self.SETUP}","ssu")
+        self.setup = Conf.get(GLOBAL_CONF, SETUP_KEY, "ssu")
         self.ipmi_client_name = None
 
     def _import_products(self, product):
@@ -171,7 +170,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     else:
                         logger.warn("CommandLine Actuator not loaded")
                         json_msg = AckResponseMsg(node_request, NodeControllerMsgHandler.UNSUPPORTED_REQUEST, uuid).getJson()
-                        self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+                        self._write_internal_msgQ(EgressProcessor.name(), json_msg)
                         return
 
                 # Perform the request and get the response
@@ -179,7 +178,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 self._log_debug(f"_process_msg, command line response: {command_line_response}")
 
                 json_msg = AckResponseMsg(node_request, command_line_response, uuid).getJson()
-                self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+                self._write_internal_msgQ(EgressProcessor.name(), json_msg)
 
             # Handle LED effects using the HPI actuator
             elif component == "LED:":
@@ -199,7 +198,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                         logger.warn("HPIActuator not loaded")
                         if self._product.lower() in [x.lower() for x in enabled_products]:
                             json_msg = AckResponseMsg(node_request, NodeControllerMsgHandler.UNSUPPORTED_REQUEST, uuid).getJson()
-                            self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+                            self._write_internal_msgQ(EgressProcessor.name(), json_msg)
                         return
 
                     self._log_debug(f"_process_msg, _HPI_actuator name: {self._HPI_actuator.name()}")
@@ -209,7 +208,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     self._log_debug(f"_process_msg, hpi_response: {hpi_response}")
 
                     json_msg = AckResponseMsg(node_request, hpi_response, uuid).getJson()
-                    self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+                    self._write_internal_msgQ(EgressProcessor.name(), json_msg)
 
             # Set the Bezel LED color using the GEM interface
             elif component == "BEZE":
@@ -223,7 +222,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 self._log_debug(f"_process_msg, gem_response: {gem_response}")
 
                 json_msg = AckResponseMsg(node_request, gem_response, uuid).getJson()
-                self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+                self._write_internal_msgQ(EgressProcessor.name(), json_msg)
 
             elif component == "PDU:":
                 # Query the Zope GlobalSiteManager for an object implementing the IPDU actuator
@@ -237,7 +236,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     else:
                         logger.warn("RaritanPDU Actuator not loaded")
                         json_msg = AckResponseMsg(node_request, NodeControllerMsgHandler.UNSUPPORTED_REQUEST, uuid).getJson()
-                        self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+                        self._write_internal_msgQ(EgressProcessor.name(), json_msg)
                         return
 
                 # Perform the request on the PDU and get the response
@@ -245,7 +244,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 self._log_debug(f"_process_msg, pdu_response: {pdu_response}")
 
                 json_msg = AckResponseMsg(node_request, pdu_response, uuid).getJson()
-                self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+                self._write_internal_msgQ(EgressProcessor.name(), json_msg)
 
             elif component == "RAID":
                 # If the state is INITIALIZED, We can assume that actuator is
@@ -262,7 +261,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     busy_json_msg = AckResponseMsg(
                         node_request, "BUSY", uuid, error_no=errno.EBUSY).getJson()
                     self._write_internal_msgQ(
-                        "RabbitMQegressProcessor", busy_json_msg)
+                        "EgressProcessor", busy_json_msg)
 
                 elif actuator_state_manager.is_imported("RAIDactuator"):
                     # This case will be for first request only. Subsequent
@@ -305,7 +304,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     else:
                         logger.warn("IPMI Actuator not loaded")
                         json_msg = AckResponseMsg(node_request, NodeControllerMsgHandler.UNSUPPORTED_REQUEST, uuid).getJson()
-                        self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+                        self._write_internal_msgQ(EgressProcessor.name(), json_msg)
                         return
 
                 # Perform the IPMI request on the node and get the response
@@ -313,7 +312,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 self._log_debug(f"_process_msg, ipmi_response: {ipmi_response}")
 
                 json_msg = AckResponseMsg(node_request, ipmi_response, uuid).getJson()
-                self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+                self._write_internal_msgQ(EgressProcessor.name(), json_msg)
 
             elif component == "STOP":
                 # HPI related operations are not supported in VM environment.
@@ -332,7 +331,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                         logger.warn("HPIActuator not loaded")
                         if self._product.lower() in [x.lower() for x in enabled_products]:
                             json_msg = AckResponseMsg(node_request, NodeControllerMsgHandler.UNSUPPORTED_REQUEST, uuid).getJson()
-                            self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+                            self._write_internal_msgQ(EgressProcessor.name(), json_msg)
                         return
 
                     self._log_debug(f"_process_msg, _HPI_actuator name: {self._HPI_actuator.name()}")
@@ -355,7 +354,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                         hpi_response = "Successful"
 
                     json_msg = AckResponseMsg(node_request, hpi_response, uuid).getJson()
-                    self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+                    self._write_internal_msgQ(EgressProcessor.name(), json_msg)
 
             elif component == "STAR":
                 # HPI related operations are not supported in VM environment.
@@ -374,7 +373,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                         logger.warn("HPIActuator not loaded")
                         if self._product.lower() in [x.lower() for x in enabled_products]:
                             json_msg = AckResponseMsg(node_request, NodeControllerMsgHandler.UNSUPPORTED_REQUEST, uuid).getJson()
-                            self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+                            self._write_internal_msgQ(EgressProcessor.name(), json_msg)
                         return
 
                     self._log_debug(f"_process_msg, _HPI_actuator name: {self._HPI_actuator.name()}")
@@ -397,7 +396,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                         hpi_response = "Successful"
 
                     json_msg = AckResponseMsg(node_request, hpi_response, uuid).getJson()
-                    self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+                    self._write_internal_msgQ(EgressProcessor.name(), json_msg)
 
 
             elif component == "RESE":
@@ -417,7 +416,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                         logger.warn("HPIActuator not loaded")
                         if self._product.lower() in [x.lower() for x in enabled_products]:
                             json_msg = AckResponseMsg(node_request, NodeControllerMsgHandler.UNSUPPORTED_REQUEST, uuid).getJson()
-                            self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+                            self._write_internal_msgQ(EgressProcessor.name(), json_msg)
                         return
 
                     self._log_debug(f"_process_msg, _HPI_actuator name: {self._HPI_actuator.name()}")
@@ -451,7 +450,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                             hpi_response = "Successful"
 
                     json_msg = AckResponseMsg(node_request, hpi_response, uuid).getJson()
-                    self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+                    self._write_internal_msgQ(EgressProcessor.name(), json_msg)
 
             elif component == "HDPA":
                 # If the state is INITIALIZED, We can assume that actuator is
@@ -463,7 +462,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     self._log_debug(f"_process_msg, hdparm_response: {hdparm_response}")
 
                     json_msg = AckResponseMsg(node_request, hdparm_response, uuid).getJson()
-                    self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+                    self._write_internal_msgQ(EgressProcessor.name(), json_msg)
 
                 # If the state is INITIALIZING, need to send message
                 elif actuator_state_manager.is_initializing("Hdparm"):
@@ -472,7 +471,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     busy_json_msg = AckResponseMsg(
                         node_request, "BUSY", uuid, error_no=errno.EBUSY).getJson()
                     self._write_internal_msgQ(
-                        "RabbitMQegressProcessor", busy_json_msg)
+                        "EgressProcessor", busy_json_msg)
 
                 elif actuator_state_manager.is_imported("Hdparm"):
                     # This case will be for first request only. Subsequent
@@ -496,7 +495,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                         self._log_debug(f"_process_msg, hdparm_response: {hdparm_response}")
 
                         json_msg = AckResponseMsg(node_request, hdparm_response, uuid).getJson()
-                        self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+                        self._write_internal_msgQ(EgressProcessor.name(), json_msg)
                         actuator_state_manager.set_state(
                             "Hdparm", actuator_state_manager.INITIALIZED)
                     else:
@@ -515,7 +514,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
                 # If the drive field is an asterisk then send all the smart results for all drives available
                 if drive_request == "*":
-                    # Send the event to SystemdWatchdog to schedule SMART test
+                    # Send the event to DiskMonitor to schedule SMART test
                     internal_json_msg = json.dumps(
                         {"sensor_request_type" : "disk_smart_test",
                          "serial_number" : "*",
@@ -523,7 +522,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                          "uuid" : uuid
                          })
 
-                    self._write_internal_msgQ("SystemdWatchdog", internal_json_msg)
+                    self._write_internal_msgQ("DiskMonitor", internal_json_msg)
                     return
 
                 # Put together a message to get the serial number of the drive using hdparm tool
@@ -533,7 +532,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     # Send error response back on ack channel
                     if error != "":
                         json_msg = AckResponseMsg(node_request, error, uuid).getJson()
-                        self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+                        self._write_internal_msgQ(EgressProcessor.name(), json_msg)
                         return
                 else:
                     if self._smartctl_actuator is None:
@@ -547,12 +546,12 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     serial_compare = self._smartctl_actuator._check_serial_number(drive_request)
                     if not serial_compare:
                         json_msg = AckResponseMsg(node_request, "Drive Not Found", uuid).getJson()
-                        self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+                        self._write_internal_msgQ(EgressProcessor.name(), json_msg)
                         return
                     else:
                         serial_number = drive_request
 
-                    # Send the event to SystemdWatchdog to schedule SMART test
+                    # Send the event to DiskMonitor to schedule SMART test
                     internal_json_msg = json.dumps(
                         {"sensor_request_type" : "disk_smart_test",
                             "serial_number" : serial_number,
@@ -560,7 +559,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                             "uuid" : uuid
                         })
 
-                    self._write_internal_msgQ("SystemdWatchdog", internal_json_msg)
+                    self._write_internal_msgQ("DiskMonitor", internal_json_msg)
 
             elif component == "DRVM":
                 # Requesting the current status from drivemanager
@@ -590,7 +589,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     # Send error response back on ack channel
                     if error != "":
                         json_msg = AckResponseMsg(node_request, error, uuid).getJson()
-                        self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+                        self._write_internal_msgQ(EgressProcessor.name(), json_msg)
                         return
                 else:
                     serial_number = drive_request
@@ -616,7 +615,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 if self.setup == 'cortx':
                     logger.warn("HPIMonitor not loaded")
                     json_msg = AckResponseMsg(node_request, NodeControllerMsgHandler.UNSUPPORTED_REQUEST, uuid).getJson()
-                    self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+                    self._write_internal_msgQ(EgressProcessor.name(), json_msg)
                     return
 
                 node_request = jsonMsg.get("actuator_request_type").get("node_controller").get("node_request")
@@ -644,7 +643,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     # Send error response back on ack channel
                     if error != "":
                         json_msg = AckResponseMsg(node_request, error, uuid).getJson()
-                        self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+                        self._write_internal_msgQ(EgressProcessor.name(), json_msg)
                         return
                 else:
                     serial_number = drive_request
@@ -674,12 +673,12 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     # Send error response back on ack channel
                     if error != "":
                         json_msg = AckResponseMsg(node_request, error, uuid).getJson()
-                        self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+                        self._write_internal_msgQ(EgressProcessor.name(), json_msg)
                         return
                 else:
                     serial_number = sim_request[1]
 
-                # SMART simulation requests are sent to SystemdWatchdog
+                # SMART simulation requests are sent to DiskMonitor
                 if sim_request[0] == "SMART_FAILURE":
                     logger.info(f"NodeControllerMsgHandler, simulating SMART_FAILURE on drive: {serial_number}")
 
@@ -690,8 +689,8 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                          "uuid" : uuid
                          })
 
-                    # Send the event to SystemdWatchdog to handle it from here
-                    self._write_internal_msgQ("SystemdWatchdog", internal_json_msg)
+                    # Send the event to DiskMonitor to handle it from here
+                    self._write_internal_msgQ("DiskMonitor", internal_json_msg)
 
                 else:
                     # Send a message to the disk message handler to handle simulation request
@@ -730,7 +729,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     node_hw_response = self._NodeHW_actuator.perform_request(node_request)
                     self._log_debug(f"_process_msg, node_hw_response: {node_hw_response}")
                     json_msg = NodeHwAckResponseMsg(node_request, node_hw_response, uuid).getJson()
-                    self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+                    self._write_internal_msgQ(EgressProcessor.name(), json_msg)
                 except ImportError as e:
                     logger.error(f"Modules could not be loaded: {e}")
                     return
@@ -743,7 +742,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 self._log_debug(response)
 
                 json_msg = AckResponseMsg(node_request, response, uuid).getJson()
-                self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+                self._write_internal_msgQ(EgressProcessor.name(), json_msg)
 
             # ... handle other node message types
 
@@ -800,7 +799,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
         self._log_debug(f"_process_msg, raid_response: {raid_response}")
 
         json_msg = AckResponseMsg(node_request, raid_response, uuid).getJson()
-        self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+        self._write_internal_msgQ(EgressProcessor.name(), json_msg)
 
         # Restart openhpid to update HPI data only if it is a H/W environment
         if self.setup in [ "hw", "ssu" ]:
@@ -816,8 +815,7 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
     def _is_env_vm(self):
         """Retrieves the current setup and returns True|False based on setup value."""
-        setup = Conf.get(GLOBAL_CONF, f"{RELEASE}>{self.SETUP}",
-                                                          "ssu")
+        setup = Conf.get(GLOBAL_CONF, SETUP_KEY, "ssu")
         return setup.lower() in ['gw', 'cmu', 'vm']
 
     def suspend(self):

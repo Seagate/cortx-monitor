@@ -30,8 +30,8 @@ import re
 import argparse
 
 from generate_test_report import generate_html_report
-from common import (TestFailed, init_rabbitMQ_msg_processors,
-    stop_rabbitMQ_msg_processors)
+from common import (TestFailed, init_messaging_msg_processors,
+    stop_messaging_msg_processors)
 from framework.utils.conf_utils import Conf, SSPL_TEST_CONF
 
 
@@ -136,10 +136,10 @@ if __name__ == '__main__':
         args = argParser.parse_args()
 
         args = argParser.parse_args()
-        init_rabbitMQ_msg_processors()
+        init_messaging_msg_processors()
         tmain(args, sys.argv[0])
         generate_html_report(result)
-        stop_rabbitMQ_msg_processors()
+        stop_messaging_msg_processors()
     except Exception as e:
         print(e, traceback.format_exc())
-        stop_rabbitMQ_msg_processors()
+        stop_messaging_msg_processors()

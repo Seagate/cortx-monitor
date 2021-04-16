@@ -24,11 +24,11 @@ from enum import Enum
 # using cortx package
 from framework.utils.salt_util import SaltInterface
 from framework.utils.service_logging import logger
-from cortx.utils.conf_store import Conf
 
 
 PRODUCT_NAME = 'LR2'
 PRODUCT_FAMILY = 'cortx'
+USER = "sspl-ll"
 enabled_products = ["CS-A", "SINGLE","DUAL", "CLUSTER", "LDR_R1", "LR2"]
 cs_products = ["CS-A"]
 cs_legacy_products = ["CS-L", "CS-G"]
@@ -36,8 +36,8 @@ setups = ["vm", "cortx", "ssu", "gw", "cmu"]
 RESOURCE_PATH = "/opt/seagate/%s/sspl/low-level/json_msgs/schemas/" % (PRODUCT_FAMILY)
 CLI_RESOURCE_PATH = "/opt/seagate/%s/sspl/low-level/tests/manual" % (PRODUCT_FAMILY)
 DATA_PATH = "/var/%s/sspl/data/" % (PRODUCT_FAMILY)
-SSPL_CONFIGURED_DIR = "/var/%s/sspl" % (PRODUCT_FAMILY)
-SSPL_CONFIGURED = "%s/sspl-configured" % SSPL_CONFIGURED_DIR
+SSPL_CONFIGURED_DIR = "/var/%s/sspl/" % (PRODUCT_FAMILY)
+SSPL_CONFIGURED = "%s/sspl-configured" % (SSPL_CONFIGURED_DIR)
 RESOURCE_HEALTH_VIEW = "/usr/bin/resource_health_view"
 CONSUL_DUMP = "/opt/seagate/%s/sspl/bin/consuldump.py" % (PRODUCT_FAMILY)
 NODE_ID = "SN01"
@@ -45,7 +45,7 @@ SITE_ID = "DC01"
 RACK_ID = "RC01"
 SSPL_STORE_TYPE = 'file'
 SYSLOG_HOST = 'localhost'
-SYSLOG_PORT = '514'
+SYSLOG_PORT = 514
 SYSINFO = "SYSTEM_INFORMATION"
 PRODUCT = "product"
 SETUP = "setup"
@@ -57,18 +57,22 @@ SUPPORT_CONTACT_NUMBER = "18007324283"
 ENCL_TRIGGER_LOG_MAX_RETRY = 10
 ENCL_DOWNLOAD_LOG_MAX_RETRY = 60
 ENCL_DOWNLOAD_LOG_WAIT_BEFORE_RETRY = 15
-SSPL_BASE_DIR = "/opt/seagate/%s/sspl" % (PRODUCT_FAMILY)
-PRODUCT_BASE_DIR="/opt/seagate/$PRODUCT_FAMILY/"
+PRODUCT_BASE_DIR = "/opt/seagate/%s/" % (PRODUCT_FAMILY)
+SSPL_BASE_DIR = "%s/sspl" % (PRODUCT_BASE_DIR)
+SSPL_CLI_DIR = "%s/low-level/cli" % (SSPL_BASE_DIR)
 RSYSLOG_IEM_CONF ="/etc/rsyslog.d/0-iemfwd.conf"
 RSYSLOG_SSPL_CONF = "/etc/rsyslog.d/1-ssplfwd.conf"
-LOGROTATE_DIR  ="/etc/logrotate.d"
+LOGROTATE_DIR = "/etc/logrotate.d"
 IEM_LOGROTATE_CONF = "%s/iem_messages" % LOGROTATE_DIR
 SSPL_LOGROTATE_CONF = "%s/sspl_logs" % LOGROTATE_DIR
+SSPL_LOG_PATH = "/var/log/%s/sspl/" % PRODUCT_FAMILY
+SSPL_BUNDLE_PATH = "/var/%s/sspl/bundle/" % PRODUCT_FAMILY
 HPI_PATH = '/tmp/dcs/hpi'
 MDADM_PATH = '/etc/mdadm.conf'
-GLOBAL_CONFIG_INDEX = "global"
-SSPL_CONFIG_INDEX = "sspl"
-SSPL_TEST_CONFIG_INDEX = "sspl_test"
+PRVSNR_CONFIG_INDEX = "prvsnr_input_config"
+GLOBAL_CONFIG_INDEX = "GLOBAL"
+SSPL_CONFIG_INDEX = "SSPL"
+SSPL_TEST_CONFIG_INDEX = "SSPL_TEST"
 CONFIG_SPEC_TYPE = "yaml"
 
 # This file will be created when sspl is being configured for node replacement case
@@ -78,11 +82,13 @@ REPLACEMENT_NODE_ENV_VAR_FILE = "/etc/profile.d/set_replacement_env.sh"
 component = 'sspl/config'
 file_store_config_path = '/etc/sspl.conf'
 sspl_test_file_path = "%s/sspl_test/conf/sspl_tests.conf" % (SSPL_BASE_DIR)
-sspl_config_path = "yaml://%s" % (file_store_config_path)
-sspl_test_config_path = "yaml://%s" % (sspl_test_file_path)
+global_config_file_path = "/etc/sspl_global_config_copy.%s" % (CONFIG_SPEC_TYPE)
+sspl_config_path = "%s://%s" % (CONFIG_SPEC_TYPE, file_store_config_path)
+sspl_test_config_path = "%s://%s" % (CONFIG_SPEC_TYPE, sspl_test_file_path)
+global_config_path = "%s://%s" %(CONFIG_SPEC_TYPE, global_config_file_path)
 salt_provisioner_pillar_sls = 'sspl'
 salt_uniq_attr_per_node = ['cluster_id']
-salt_uniq_passwd_per_node = ['RABBITMQINGRESSPROCESSOR', 'RABBITMQEGRESSPROCESSOR', 'LOGGINGPROCESSOR']
+salt_uniq_passwd_per_node = ['INGRESSPROCESSOR', 'EGRESSPROCESSOR', 'LOGGINGPROCESSOR']
 
 # Initialize to default values
 node_key_id = 'srvnode-1'
@@ -121,7 +127,7 @@ SSPL_SETTINGS = {
             "MESSAGE_HANDLERS": [],
             "SENSORS": [ "NodeHWsensor"],
         },
-        "SYSTEMDWATCHDOG": {
+        "DISKMONITOR": {
             "ACTUATORS": [],
             "CORE_PROCESSORS": [],
             "DEGRADED_STATE_MODULES": [],
@@ -156,16 +162,23 @@ SSPL_SETTINGS = {
             "MESSAGE_HANDLERS": [],
             "SENSORS": ["CPUFaultSensor"],
         },
+        "SERVICEMONITOR": {
+            "ACTUATORS": [],
+            "CORE_PROCESSORS": [],
+            "DEGRADED_STATE_MODULES": [],
+            "MESSAGE_HANDLERS": [],
+            "SENSORS": [],
+        },
 
         "_ENABLE_ALWAYS": {
             "ACTUATORS" : ["Service", "RAIDactuator", "Smartctl", "NodeHWactuator", "RealStorActuator"],
-            "CORE_PROCESSORS" : ("RabbitMQegressProcessor", "RabbitMQingressProcessor", "LoggingProcessor"),
+            "CORE_PROCESSORS" : ("EgressProcessor", "IngressProcessor", "LoggingProcessor"),
             "DEGRADED_STATE_MODULES" : ("ServiceWatchdog", "NodeData", "IEMSensor",
                 "DiskMsgHandler", "LoggingMsgHandler", "ServiceMsgHandler", "NodeDataMsgHandler",
                 "NodeControllerMsgHandler"),
             "MESSAGE_HANDLERS" : ("DiskMsgHandler", "LoggingMsgHandler", "ServiceMsgHandler", "NodeDataMsgHandler",
                 "NodeControllerMsgHandler", "RealStorEnclMsgHandler", "RealStorActuatorMsgHandler"),
-            "SENSORS" : ["ServiceWatchdog", "NodeData",  "IEMSensor"]
+            "SENSORS" : ["DiskMonitor", "ServiceMonitor", "NodeData",  "IEMSensor"]
         }
 }
 
@@ -197,11 +210,6 @@ if SSPL_STORE_TYPE == 'consul':
             "user" : "controller/user",
             "password" : "controller/secret",
             "mgmt_interface" : "controller/mgmt_interface"
-        },
-        "RABBITMQCLUSTER": {
-            "sspl_key" : "key_provided_by_provisioner",
-            "cluster_nodes" : "rabbitmq/cluster_nodes",
-            "erlang_cookie" : "rabbitmq/erlang_cookie"
         },
         "BMC": {
             "sspl_key" : "key_provided_by_provisioner",
@@ -236,11 +244,6 @@ else:
             "password" : "password",
             "mgmt_interface" : "mgmt_interface"
         },
-        "RABBITMQCLUSTER": {
-            "sspl_key" : "key_provided_by_provisioner",
-            "cluster_nodes" : "cluster_nodes",
-            "erlang_cookie" : "erlang_cookie"
-        },
         "BMC": {
             "sspl_key" : "key_provided_by_provisioner",
             f"ip" : f"ip",
@@ -260,8 +263,8 @@ class RaidDataConfig(Enum):
     MISMATCH_COUNT_FILE = "/md/mismatch_cnt"
     STATE_COMMAND_RESPONSE = 'idle'
     MISMATCH_COUNT_RESPONSE = '0'
-    RAID_RESULT_DIR = "/tmp"
-    RAID_RESULT_FILE_PATH = "/tmp/result_raid_health_file"
+    RAID_RESULT_DIR = f"{DATA_PATH}raid_integrity/"
+    RAID_RESULT_FILE_PATH = f"{RAID_RESULT_DIR}result_raid_health_file"
     RAID_MISMATCH_FAULT_STATUS = "mismatch_cnt_fault_status"
     MAX_RETRIES = 10
     NEXT_ITERATION_TIME = 3600
@@ -302,6 +305,7 @@ class ServiceTypes(Enum):
     RABBITMQ = "rabbitmq"
     STORAGE_ENCLOSURE = "storage_enclosure"
     CLUSTER = "cluster"
+    SERVER_NODE = "server_node"
 
 class OperatingSystem(Enum):
     CENTOS7 = "centos7"

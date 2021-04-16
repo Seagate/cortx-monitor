@@ -36,8 +36,9 @@ from framework.base.module_thread import SensorThread
 from framework.base.sspl_constants import (PRODUCT_FAMILY, ServiceTypes,
                                            node_key_id)
 from framework.utils import encryptor
-from framework.utils.conf_utils import (CLUSTER, GLOBAL_CONF, IP, SECRET,
-                                        SRVNODE, SSPL_CONF, USER, Conf)
+from framework.utils.conf_utils import (GLOBAL_CONF, IP, SECRET,
+    SSPL_CONF, USER, Conf, SITE_ID_KEY, RACK_ID_KEY, NODE_ID_KEY,
+    CLUSTER_ID_KEY, BMC_IP_KEY, BMC_USER_KEY, BMC_SECRET_KEY, MACHINE_ID)
 from framework.utils.config_reader import ConfigReader
 from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
@@ -245,21 +246,20 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         # Initialize internal message queues for this module
         super(NodeHWsensor, self).initialize_msgQ(msgQlist)
 
-        self._site_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.SITE_ID}",'DC01')
-        self._rack_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.RACK_ID}",'RC01')
-        self._node_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.NODE_ID}",'SN01')
-        self._cluster_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{self.CLUSTER_ID}",'CC01')
-        self._bmc_user = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.BMC}>{USER}",
-                                                'ADMIN')
-        self._bmc_passwd = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.BMC}>{SECRET}",
-                                               'ADMIN')
-        self._bmc_ip = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.BMC}>{IP}",
-                                                '')
-        self._channel_interface = Conf.get(SSPL_CONF, f"{self.BMC_INTERFACE}>{self.BMC_CHANNEL_IF}",
-                                                'system')
-
-        decryption_key = encryptor.gen_key(self._cluster_id, ServiceTypes.CLUSTER.value)
-        self._bmc_passwd = encryptor.decrypt(decryption_key, self._bmc_passwd.encode('ascii'), 'Node_hw')
+        self._site_id = Conf.get(GLOBAL_CONF, SITE_ID_KEY,'DC01')
+        self._rack_id = Conf.get(GLOBAL_CONF, RACK_ID_KEY,'RC01')
+        self._node_id = Conf.get(GLOBAL_CONF, NODE_ID_KEY,'SN01')
+        self._cluster_id = Conf.get(GLOBAL_CONF, CLUSTER_ID_KEY,'CC01')
+        self._bmc_user = Conf.get(GLOBAL_CONF, BMC_USER_KEY, 'ADMIN')
+        _bmc_secret = Conf.get(GLOBAL_CONF, BMC_SECRET_KEY, 'ADMIN')
+        self._bmc_ip = Conf.get(GLOBAL_CONF, BMC_IP_KEY, '')
+        self._channel_interface = Conf.get(SSPL_CONF,
+            f"{self.BMC_INTERFACE}>{self.BMC_CHANNEL_IF}", 'system')
+        # Decrypt bmc secret
+        decryption_key = encryptor.gen_key(MACHINE_ID,
+            ServiceTypes.SERVER_NODE.value)
+        self.__bmc_passwd = encryptor.decrypt(decryption_key,
+            _bmc_secret, self.SENSOR_NAME)
 
         data_dir =  Conf.get(SSPL_CONF, f"{self.SYSINFO}>{self.DATA_PATH_KEY}", self.DATA_PATH_VALUE_DEFAULT)
         self.cache_dir_path = os.path.join(data_dir, self.CACHE_DIR_NAME)
@@ -301,7 +301,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         # check  for lan falut resolved alert
         if self.lan_channel_err or self.lan_fault == "fault":
             command = self.IPMITOOL + " -H " + self._bmc_ip + " -U " + self._bmc_user + \
-                        " -P " + self._bmc_passwd + " -I " + "lan " + "channel info"
+                        " -P " + self.__bmc_passwd + " -I " + "lan " + "channel info"
             res, retcode = self._run_command(command)
             self.lan_cmd_retcode = retcode
 
@@ -556,7 +556,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
                 command = ipmi_tool + subcommand
             elif self._channel_interface == self.LAN_IF and self.active_bmc_if != self.SYSTEM_IF:
                 command = ipmi_tool + " -H " + self._bmc_ip + " -U " + self._bmc_user + \
-                        " -P " + self._bmc_passwd + " -I " + "lan " + subcommand
+                        " -P " + self.__bmc_passwd + " -I " + "lan " + subcommand
             else:
                 logger.error("Invalid BMC channel interface")
 

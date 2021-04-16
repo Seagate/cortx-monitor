@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2020 Seagate Technology LLC and/or its Affiliates
+# Copyright (c) 2020 Seagate Technology LLC and/or its Affiliates
 #
 # This program is free software: you can redistribute it and/or modify it under the
 # terms of the GNU Affero General Public License as published by the Free Software
@@ -13,17 +13,15 @@
 # about this software or licensing, please email opensource@seagate.com or
 # cortx-questions@seagate.com.
 
-"""
- ****************************************************************************
-  Description:       Interface for all service watchdog classes
- ****************************************************************************
-"""
+[Unit]
+Requires=zookeeper.service
+After=zookeeper.service
 
-from zope.interface import Interface
+[Service]
+Type=simple
+ExecStart=/opt/kafka/kafka_2.13-2.7.0/bin/kafka-server-start.sh /opt/kafka/kafka_2.13-2.7.0/config/server.properties
+ExecStop=/opt/kafka/kafka_2.13-2.7.0/bin/kafka-server-stop.sh
+Restart=on-abnormal
 
-class IServiceWatchdog(Interface):
-    """Interface for service watchdog classes"""
-
-
-    def read_data(self):
-        """Notifies service to send its data"""
+[Install]
+WantedBy=multi-user.target

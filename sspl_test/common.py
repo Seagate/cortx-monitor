@@ -34,9 +34,9 @@ from threading import Thread
 from default import world
 from framework.utils.service_logging import init_logging
 from framework.utils.service_logging import logger
-from rabbitmq.rabbitmq_ingress_processor_tests import RabbitMQingressProcessorTests
-from rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
-from framework.utils.conf_utils import Conf, SSPL_TEST_CONF, GLOBAL_CONF
+from messaging.ingress_processor_tests import IngressProcessorTests
+from messaging.egress_processor_tests import EgressProcessorTests
+from framework.utils.conf_utils import Conf, SSPL_TEST_CONF, GLOBAL_CONF, PRODUCT_KEY
 
 
 PY2 = sys.version_info[0] == 2
@@ -58,7 +58,7 @@ class TestFailed(Exception):
         desc = '[%s] %s' %(inspect.stack()[1][3], desc)
         super(TestFailed, self).__init__(desc)
 
-def init_rabbitMQ_msg_processors():
+def init_messaging_msg_processors():
     """The main bootstrap for sspl automated tests"""
 
     # Initialize logging
@@ -82,7 +82,7 @@ def init_rabbitMQ_msg_processors():
     world.sspl_modules = {}
 
     # Read in product value from configuration file
-    product = Conf.get(GLOBAL_CONF, f"release>{PRODUCT_NAME}")
+    product = Conf.get(GLOBAL_CONF, PRODUCT_KEY)
     logger.info("sspl-ll Bootstrap: product name supported: %s" % product)
     # Use reflection to instantiate the class based upon its class name in config file
     for conf_thread in conf_modules:
@@ -111,8 +111,8 @@ def init_rabbitMQ_msg_processors():
         time.sleep(2)
 
         # Clear the message queue buffer out from msgs sent at startup
-        while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
-            world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
+        while not world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
+            world.sspl_modules[IngressProcessorTests.name()]._read_my_msgQ()
 
     except Exception as ex:
         logger.exception(ex)
@@ -136,7 +136,7 @@ def _run_thread_capture_errors(curr_module, msgQlist, conf_reader, product):
         error_msg = "SSPL-Tests encountered an error, terminating service Error: " + \
                     ", Exception: " + logger.exception(ex)
         jsonMsg   = ThreadControllerMsg(curr_module, error_msg).getJson()
-        curr_module._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
+        curr_module._write_internal_msgQ(EgressProcessorTests.name(), jsonMsg)
 
         # Shut it down, error is non-recoverable
         for name, other_module in list(world.sspl_modules.items()):
@@ -165,11 +165,11 @@ def check_sspl_ll_is_running():
     assert found == True
 
     # Clear the message queue buffer out
-    while not world.sspl_modules[RabbitMQingressProcessorTests.name()]._is_my_msgQ_empty():
-        world.sspl_modules[RabbitMQingressProcessorTests.name()]._read_my_msgQ()
+    while not world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
+        world.sspl_modules[IngressProcessorTests.name()]._read_my_msgQ()
 
-def stop_rabbitMQ_msg_processors():
-    """Shuts down rabbitmq threads and terminates tests"""
+def stop_messaging_msg_processors():
+    """Shuts down messaging threads and terminates tests"""
     time.sleep(5)
     print("SSPL Automated Test Process ended successfully")
     for name, module in list(world.sspl_modules.items()):

@@ -38,9 +38,9 @@ from framework.utils.ipmi_client import IpmiFactory
 from framework.utils.sysfs_interface import SysFS
 from framework.utils.tool_factory import ToolFactory
 from framework.base.sspl_constants import PRODUCT_FAMILY , DATA_PATH
-from framework.utils.conf_utils import (CLUSTER, ENCLOSURE, GLOBAL_CONF, SRVNODE,
-    STORAGE, Conf, NODE_TYPE, TYPE, SITE_ID, RACK_ID, NODE_ID, CLUSTER_ID, RELEASE,
-    TARGET_BUILD)
+from framework.utils.conf_utils import (GLOBAL_CONF, SRVNODE,
+    Conf, STORAGE_TYPE_KEY, NODE_TYPE_KEY, SITE_ID_KEY, RACK_ID_KEY,
+    NODE_ID_KEY, CLUSTER_ID_KEY, RELEASE, TARGET_BUILD)
 
 
 class SSPLHealthView(object):
@@ -96,11 +96,11 @@ class SSPLHealthView(object):
 
         self.encl_hw_specifics_api = 'configuration'
 
-        self.SITE_ID = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{SITE_ID}", 'DC01')
-        self.RACK_ID = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{RACK_ID}", 'RC01')
+        self.SITE_ID = Conf.get(GLOBAL_CONF, SITE_ID_KEY, 'DC01')
+        self.RACK_ID = Conf.get(GLOBAL_CONF, RACK_ID_KEY, 'RC01')
         self.HOST_NAME = socket.getfqdn()
-        self.NODE_ID = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{NODE_ID}", 'SN01')
-        self.CLUSTER_ID = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{CLUSTER_ID}", 'CC01')
+        self.NODE_ID = Conf.get(GLOBAL_CONF, NODE_ID_KEY, 'SN01')
+        self.CLUSTER_ID = Conf.get(GLOBAL_CONF, CLUSTER_ID_KEY, 'CC01')
         self.fru_id_map = None
         self.sensor_id_map = None
         self.ipmi_fru_lst = ['disk', 'fan', 'psu']
@@ -1232,8 +1232,8 @@ if __name__ == "__main__":
         print('Missing arguments')
         parser.print_help()
         sys.exit(1)
-    storage_type = Conf.get(GLOBAL_CONF, f"{STORAGE}>{ENCLOSURE}>{TYPE}", 'virtual').lower()
-    server_type = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{NODE_TYPE}", 'virtual').lower()
+    storage_type = Conf.get(GLOBAL_CONF, STORAGE_TYPE_KEY, 'virtual').lower()
+    server_type = Conf.get(GLOBAL_CONF, NODE_TYPE_KEY, 'virtual').lower()
     print(f"Storage Type : '{storage_type}'")
     print(f"Server Type '{server_type}'")
 

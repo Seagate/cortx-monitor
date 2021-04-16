@@ -25,11 +25,11 @@ import time
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.sspl_constants import enabled_products
-from framework.utils.conf_utils import GLOBAL_CONF, RELEASE, Conf
+from framework.utils.conf_utils import GLOBAL_CONF, Conf, SETUP_KEY
 from framework.utils.service_logging import logger
 from json_msgs.messages.actuators.realstor_actuator_response import \
     RealStorActuatorMsg
-from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
+from framework.messaging.egress_processor import EgressProcessor
 
 
 class RealStorActuatorMsgHandler(ScheduledModuleThread, InternalMsgQ):
@@ -47,7 +47,7 @@ class RealStorActuatorMsgHandler(ScheduledModuleThread, InternalMsgQ):
     DEPENDENCIES = {
                     "plugins": [
                         "ServiceMsgHandler",
-                        "RabbitMQegressProcessor",
+                        "EgressProcessor",
                         "DiskMsgHandler"
                     ],
                     "rpms": []
@@ -83,7 +83,7 @@ class RealStorActuatorMsgHandler(ScheduledModuleThread, InternalMsgQ):
         self._real_stor_actuator    = None
 
         self._import_products(product)
-        self.setup = Conf.get(GLOBAL_CONF, f"{RELEASE}>{self.SETUP}","ssu")
+        self.setup = Conf.get(GLOBAL_CONF, SETUP_KEY)
 
     def _import_products(self, product):
         """Import classes based on which product is being used"""
@@ -158,7 +158,7 @@ class RealStorActuatorMsgHandler(ScheduledModuleThread, InternalMsgQ):
             self._log_debug(f"_process_msg, RealStor response: {real_stor_response}")
 
             json_msg = RealStorActuatorMsg(real_stor_response, uuid).getJson()
-            self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+            self._write_internal_msgQ(EgressProcessor.name(), json_msg)
 
     def suspend(self):
         """Suspends the module thread. It should be non-blocking"""

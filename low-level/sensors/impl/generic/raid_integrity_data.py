@@ -32,8 +32,8 @@ from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.module_thread import SensorThread
 from framework.base.sspl_constants import (PRODUCT_FAMILY, WAIT_BEFORE_RETRY,
                                            RaidAlertMsgs, RaidDataConfig)
-from framework.utils.conf_utils import (CLUSTER, GLOBAL_CONF, SRVNODE,
-                                        SSPL_CONF, Conf)
+from framework.utils.conf_utils import (GLOBAL_CONF, SSPL_CONF, Conf,
+    SITE_ID_KEY, RACK_ID_KEY, NODE_ID_KEY, CLUSTER_ID_KEY)
 from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
 # Modules that receive messages from this module
@@ -62,7 +62,7 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
 
     # check once a week (below time is in seconds), the integrity of raid data
     DEFAULT_POLLING_INTERVAL = "604800"
-    DEFAULT_RAID_DATA_PATH = f"/var/{PRODUCT_FAMILY}/sspl/data/raid_integrity/"
+    DEFAULT_RAID_DATA_PATH = RaidDataConfig.RAID_RESULT_DIR.value
     DEFAULT_TIMESTAMP_FILE_PATH = DEFAULT_RAID_DATA_PATH + "last_execution_time"
 
     alert_type = None
@@ -92,18 +92,21 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
 
         # Initialize internal message queues for this module
         super(RAIDIntegritySensor, self).initialize_msgQ(msgQlist)
-        
+
         self._alert_msg = None
         self._fault_state = None
         self._suspended = False
-        self._site_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.SITE_ID}",'DC01')
-        self._rack_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.RACK_ID}",'RC01')
-        self._node_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{self.NODE_ID}",'SN01')
-        self._cluster_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{self.CLUSTER_ID}",'CC01')
+        self._site_id = Conf.get(GLOBAL_CONF, SITE_ID_KEY,'DC01')
+        self._rack_id = Conf.get(GLOBAL_CONF, RACK_ID_KEY,'RC01')
+        self._node_id = Conf.get(GLOBAL_CONF, NODE_ID_KEY,'SN01')
+        self._cluster_id = Conf.get(GLOBAL_CONF, CLUSTER_ID_KEY,'CC01')
         self._timestamp_file_path = Conf.get(SSPL_CONF, f"{self.RAIDIntegritySensor}>{self.TIMESTAMP_FILE_PATH_KEY}",
                                         self.DEFAULT_TIMESTAMP_FILE_PATH)
         self._polling_interval = Conf.get(SSPL_CONF, f"{self.RAIDIntegritySensor}>{self.POLLING_INTERVAL}",
                                     self.DEFAULT_POLLING_INTERVAL)
+        
+        # Create DEFAULT_RAID_DATA_PATH if already not exist.
+        self._create_file(self.DEFAULT_RAID_DATA_PATH)
         return True
 
     def read_data(self):
@@ -431,9 +434,10 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
         if os.path.exists(self._timestamp_file_path):
             os.remove(self._timestamp_file_path)
         path = RaidDataConfig.RAID_RESULT_DIR.value
-        current_time = time.time()
-        result_files = [file for file in os.listdir(path) if file.endswith(".txt")]
-        for file in result_files:
-            if os.path.getmtime(os.path.join(path, file)) < (current_time - 24*60*60) :
-                if os.path.isfile(os.path.join(path, file)):
-                    os.remove(os.path.join(path, file))
+        if os.path.exists(path):
+            current_time = time.time()
+            result_files = [file for file in os.listdir(path) if file.endswith(".txt")]
+            for file in result_files:
+                if os.path.getmtime(os.path.join(path, file)) < (current_time - 24*60*60):
+                    if os.path.isfile(os.path.join(path, file)):
+                        os.remove(os.path.join(path, file))

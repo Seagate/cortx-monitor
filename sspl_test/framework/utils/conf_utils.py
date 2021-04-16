@@ -21,7 +21,7 @@ from cortx.utils.conf_store import Conf
 # Indexes
 GLOBAL_CONF = "GLOBAL"
 SSPL_CONF = "SSPL"
-SSPL_TEST_CONF = "SSPL_Test"
+SSPL_TEST_CONF = "SSPL_TEST"
 
 # Keys constans
 BMC_INTERFACE="BMC_INTERFACE"
@@ -36,9 +36,8 @@ MEMFAULTSENSOR="MEMFAULTSENSOR"
 NODEDATAMSGHANDLER="NODEDATAMSGHANDLER"
 NODEHWACTUATOR="NODEHWACTUATOR"
 NODEHWSENSOR="NODEHWSENSOR"
-RABBITMQCLUSTER="RABBITMQCLUSTER"
-RABBITMQEGRESSPROCESSOR="RABBITMQEGRESSPROCESSOR"
-RABBITMQINGRESSPROCESSOR="RABBITMQINGRESSPROCESSOR"
+EGRESSPROCESSORTESTS="EGRESSPROCESSORTESTS"
+INGRESSPROCESSOR="INGRESSPROCESSOR"
 RAIDSENSOR="RAIDSENSOR"
 RAID_STATUS_FILE="RAID_status_file"
 REALSTORCONTROLLERSENSOR="REALSTORCONTROLLERSENSOR"
@@ -105,7 +104,7 @@ POLLING_FREQUENCY_OVERRIDE="polling_frequency_override"
 POLLING_INTERVAL="polling_interval"
 PORT="port"
 PRIMARY="primary"
-PRIMARY_RABBITMQ_HOST="primary_rabbitmq_host"
+PRIMARY_MESSAGING_HOST="primary_messaging_host"
 PROBE="probe"
 PRODUCT="product"
 QUEUE_NAME="queue_name"
@@ -137,12 +136,31 @@ VIRTUAL_HOST="virtual_host"
 # Get SRVNODE and ENCLOSURE so it can be used in other files to get
 # server_node and enclosure specific config
 with open("/etc/machine-id") as f:
-    MACHINE_ID = f.read().strip("\n")
+    MACHINE_ID = f.read().strip()
 
 Conf.load(SSPL_CONF, "yaml:///etc/sspl.conf")
 global_config = Conf.get(SSPL_CONF, "SYSTEM_INFORMATION>global_config_copy_url")
 Conf.load(GLOBAL_CONF, global_config)
 Conf.load(SSPL_TEST_CONF, "yaml:///opt/seagate/cortx/sspl/sspl_test/conf/sspl_tests.conf")
 
-SRVNODE = Conf.get(GLOBAL_CONF, f'{CLUSTER}>{SERVER_NODES}')[MACHINE_ID]
-ENCLOSURE = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{STORAGE}>{ENCLOSURE_ID}")
+SRVNODE = Conf.get(GLOBAL_CONF, "server_node>%s>name" % MACHINE_ID)
+ENCLOSURE = Conf.get(GLOBAL_CONF, "server_node>%s>storage>enclosure_id" % MACHINE_ID)
+
+PRODUCT_KEY = "cortx>release>product"
+SETUP_KEY = "cortx>release>setup"
+SITE_ID_KEY = "server_node>%s>site_id" % MACHINE_ID
+NODE_ID_KEY = "server_node>%s>node_id" % MACHINE_ID
+RACK_ID_KEY = "server_node>%s>rack_id" % MACHINE_ID
+CLUSTER_ID_KEY = "server_node>%s>cluster_id" % MACHINE_ID
+STORAGE_SET_ID_KEY = "server_node>%s>storage_set_id" % MACHINE_ID
+NODE_TYPE_KEY = "server_node>%s>type" % MACHINE_ID
+STORAGE_TYPE_KEY = "storage_enclosure>%s>type" % ENCLOSURE
+CNTRLR_PRIMARY_IP_KEY = "storage_enclosure>%s>controller>primary>ip" % ENCLOSURE
+CNTRLR_PRIMARY_PORT_KEY = "storage_enclosure>%s>controller>primary>port" % ENCLOSURE
+CNTRLR_SECONDARY_IP_KEY = "storage_enclosure>%s>controller>secondary>ip" % ENCLOSURE
+CNTRLR_SECONDARY_PORT_KEY = "storage_enclosure>%s>controller>secondary>port" % ENCLOSURE
+CNTRLR_USER_KEY = "storage_enclosure>%s>controller>user" % ENCLOSURE
+CNTRLR_SECRET_KEY = "storage_enclosure>%s>controller>secret" % ENCLOSURE
+BMC_IP_KEY = "server_node>%s>bmc>ip" % MACHINE_ID
+BMC_USER_KEY = "server_node>%s>bmc>user" % MACHINE_ID
+BMC_SECRET_KEY = "server_node>%s>bmc>secret" % MACHINE_ID

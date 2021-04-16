@@ -10,7 +10,7 @@ from framework.base.sspl_constants import (PRODUCT_FAMILY,
 from cortx.utils.process import SimpleProcess
 from cortx.utils.service import DbusServiceHandler
 from cortx.utils.conf_store import Conf
-from .setup_error import SetupError
+from files.opt.seagate.sspl.setup.setup_error import SetupError
 
 
 class HardReset:

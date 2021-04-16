@@ -16,7 +16,7 @@
 """
  ****************************************************************************
   Description:       Reads IEMs from RSyslog filtered file and sends
-                    to RabbitMQ sensor channel.
+                    to message bus.
   ****************************************************************************
 """
 import csv
@@ -35,12 +35,11 @@ from framework.base.sspl_constants import (PRODUCT_FAMILY,
                                            iem_severity_to_alert_mapping,
                                            iem_severity_types,
                                            iem_source_types)
-from framework.utils.conf_utils import (CLUSTER, CLUSTER_ID, GLOBAL_CONF,
-                                        NODE_ID, RACK_ID, SITE_ID, SRVNODE,
-                                        SSPL_CONF, Conf)
+from framework.utils.conf_utils import (CLUSTER_ID_KEY, GLOBAL_CONF, NODE_ID_KEY,
+    RACK_ID_KEY, SITE_ID_KEY, SSPL_CONF, Conf)
 from framework.utils.service_logging import logger
 from json_msgs.messages.sensors.iem_data import IEMDataMsg
-from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
+from framework.messaging.egress_processor import EgressProcessor
 
 
 class IEMSensor(SensorThread, InternalMsgQ):
@@ -88,7 +87,7 @@ class IEMSensor(SensorThread, InternalMsgQ):
 
     # Dependency list
     DEPENDENCIES = {
-                    "plugins": ["RabbitMQegressProcessor"],
+                    "plugins": ["EgressProcessor"],
                     "rpms": []
     }
 
@@ -133,10 +132,10 @@ class IEMSensor(SensorThread, InternalMsgQ):
         self._timestamp_file_path = Conf.get(SSPL_CONF, f"{self.SENSOR_NAME.upper()}>{self.TIMESTAMP_FILE_PATH_KEY}",
                 self.DEFAULT_TIMESTAMP_FILE_PATH)
 
-        self._site_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{SITE_ID}",'DC01')
-        self._rack_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{RACK_ID}",'RC01')
-        self._node_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{NODE_ID}",'SN01')
-        self._cluster_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{CLUSTER_ID}",'CC01')
+        self._site_id = Conf.get(GLOBAL_CONF, SITE_ID_KEY,'DC01')
+        self._rack_id = Conf.get(GLOBAL_CONF, RACK_ID_KEY,'RC01')
+        self._node_id = Conf.get(GLOBAL_CONF, NODE_ID_KEY,'SN01')
+        self._cluster_id = Conf.get(GLOBAL_CONF, CLUSTER_ID_KEY,'CC01')
 
         return True
 
@@ -213,8 +212,7 @@ class IEMSensor(SensorThread, InternalMsgQ):
             timestamp_file.write(log_timestamp)
 
     def _send_msg(self, iem_components, log_timestamp):
-        """Creates JSON message from iem components and sends to RabbitMQ
-           channel.
+        """Creates JSON message from iem components and sends to message bus.
         """
         # IEM format is IEC:DESCRIPTION
         # IEC format is SEVERITY|SOURCEID|COMPONENTID|MODULEID|EVENTID
@@ -275,7 +273,7 @@ class IEMSensor(SensorThread, InternalMsgQ):
         }
         iem_data_msg = IEMDataMsg(info)
         json_msg = iem_data_msg.getJson()
-        self._write_internal_msgQ(RabbitMQegressProcessor.name(), json_msg)
+        self._write_internal_msgQ(EgressProcessor.name(), json_msg)
 
     def _get_component(self, component):
         "Decode a component"
