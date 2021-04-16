@@ -23,6 +23,7 @@ import os
 import pwd
 import errno
 import shutil
+import socket
 import distutils.dir_util
 
 # using cortx package
@@ -145,10 +146,10 @@ class SSPLPostInstall:
         vm_dependency_rpms = []
 
         pkg_validator = PkgV()
-        pkg_validator.validate_pip3_pkgs(host=None, pkgs=pip3_3ps_packages_main,
-            skip_version_check=False)
-        pkg_validator.validate_rpm_pkgs(host=None, pkgs=rpm_3ps_packages,
-            skip_version_check=False)
+        pkg_validator.validate_pip3_pkgs(host=socket.getfqdn(),
+            pkgs=pip3_3ps_packages_main, skip_version_check=False)
+        pkg_validator.validate_rpm_pkgs(host=socket.getfqdn(),
+            pkgs=rpm_3ps_packages, skip_version_check=False)
 
         # Check for sspl required processes and misc dependencies if
         # setup/role is other than cortx

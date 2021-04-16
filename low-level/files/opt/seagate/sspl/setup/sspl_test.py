@@ -14,6 +14,7 @@
 
 import shutil
 import os
+import socket
 
 from cortx.utils.process import SimpleProcess
 from cortx.utils.conf_store import Conf
@@ -56,13 +57,19 @@ class SSPLTestCmd:
 
     def validate(self):
         """Check for required packages are installed."""
+        # RPM dependency
+        rpm_deps = {
+            "cortx-sspl-test": None
+            }
         # python 3rd party package dependency
         pip3_3ps_packages_test = {
             "Flask": "1.1.1"
             }
         pkg_validator = PkgV()
-        pkg_validator.validate_pip3_pkgs(host=None, pkgs=pip3_3ps_packages_test,
-            skip_version_check=False)
+        pkg_validator.validate_pip3_pkgs(host=socket.getfqdn(),
+            pkgs=pip3_3ps_packages_test, skip_version_check=False)
+        pkg_validator.validate_rpm_pkgs(host=socket.getfqdn(),
+            pkgs=rpm_deps, skip_version_check=True)
         # Validate input configs
         machine_id = Utility.get_machine_id()
         self.node_type = Conf.get(SSPL_TEST_GLOBAL_CONFIG,
