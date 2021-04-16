@@ -39,21 +39,11 @@ class SSPLTestCmd:
         self.plan = "self_primary"
         self.avoid_rmq = False
         self.dbus_service = DbusServiceHandler()
-        # Load global, sspl and test configs
-        Conf.load(SSPL_CONFIG_INDEX, sspl_config_path)
-        Conf.load(SSPL_TEST_CONFIG_INDEX, sspl_test_config_path)
-        # Take copy of global config passed to sspl_test
         if args.config and args.config[0]:
-            sspl_test_gc_url = args.config[0]
+            self.sspl_test_gc_url = args.config[0]
         else:
-            sspl_test_gc_url = global_config_path
-        sspl_test_gc_copy_file = "/etc/sspl_test_gc_url.yaml"
-        with open(sspl_test_gc_copy_file, "w") as f:
-            f.write("")
-        self.sspl_test_gc_copy_url = "yaml://%s" % sspl_test_gc_copy_file
-        Conf.load(SSPL_TEST_GLOBAL_CONFIG, self.sspl_test_gc_copy_url)
-        Conf.load("global_config", sspl_test_gc_url)
-        Conf.copy("global_config", SSPL_TEST_GLOBAL_CONFIG)
+            self.sspl_test_gc_url = global_config_path
+        self.sspl_test_gc_copy_file = "/etc/sspl_test_gc_url.yaml"
 
     def validate(self):
         """Check for required packages are installed."""
@@ -70,6 +60,16 @@ class SSPLTestCmd:
             pkgs=pip3_3ps_packages_test, skip_version_check=False)
         pkg_validator.validate_rpm_pkgs(host=socket.getfqdn(),
             pkgs=rpm_deps, skip_version_check=True)
+        # Load global, sspl and test configs
+        Conf.load(SSPL_CONFIG_INDEX, sspl_config_path)
+        Conf.load(SSPL_TEST_CONFIG_INDEX, sspl_test_config_path)
+        # Take copy of supplied config passed to sspl_test and load it
+        with open(self.sspl_test_gc_copy_file, "w") as f:
+            f.write("")
+        self.sspl_test_gc_copy_url = "yaml://%s" % self.sspl_test_gc_copy_file
+        Conf.load(SSPL_TEST_GLOBAL_CONFIG, self.sspl_test_gc_copy_url)
+        Conf.load("global_config", self.sspl_test_gc_url)
+        Conf.copy("global_config", SSPL_TEST_GLOBAL_CONFIG)
         # Validate input configs
         machine_id = Utility.get_machine_id()
         self.node_type = Conf.get(SSPL_TEST_GLOBAL_CONFIG,
