@@ -256,12 +256,13 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         self._bmc_ip = Conf.get(GLOBAL_CONF, BMC_IP_KEY, '')
         self._channel_interface = Conf.get(SSPL_CONF,
             f"{self.BMC_INTERFACE}>{self.BMC_CHANNEL_IF}", 'system')
+        self.iem = Iem()
+        self.iem.check_exsisting_fault_iems()
         # Decrypt bmc secret
         decryption_key = encryptor.gen_key(MACHINE_ID,
             ServiceTypes.SERVER_NODE.value)
         self.__bmc_passwd = encryptor.decrypt(decryption_key,
             _bmc_secret, self.SENSOR_NAME)
-        self.iem = Iem()
         data_dir =  Conf.get(SSPL_CONF, f"{self.SYSINFO}>{self.DATA_PATH_KEY}", self.DATA_PATH_VALUE_DEFAULT)
         self.cache_dir_path = os.path.join(data_dir, self.CACHE_DIR_NAME)
 
@@ -579,13 +580,16 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
                             shutting down sensor")
                         self.request_shutdown = True
                 self.iem.iem_fault("IPMITOOL_ERROR")
+                self.iem.IPMITOOL_IEM_FAULT = True
             elif (retcode == BASH_ILLEGAL_CMD):
                 logger.error(f"{self.SENSOR_NAME}: Required ipmitool missing \
                     on Node. Dependencies failed, shutting down sensor")
                 self.request_shutdown = True
                 self.iem.iem_fault("IPMITOOL_ERROR")
-        else:
-            self.iem.iem_fault_resolved("IPMITOOL_ERROR", "IPMITOOL_AVAILABLE")
+                self.iem.IPMITOOL_IEM_FAULT = True
+        elif (retcode == 0 and self.iem.IPMITOOL_IEM_FAULT):
+            self.iem.iem_fault_resolved("IPMITOOL_AVAILABLE")
+            self.iem.IPMITOOL_IEM_FAULT = False
 
         if grep_args is not None and retcode == 0 and isinstance(res, tuple):
             import re

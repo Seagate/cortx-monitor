@@ -174,6 +174,7 @@ class DiskMonitor(SensorThread, InternalMsgQ):
         self._cluster_id = Conf.get(GLOBAL_CONF, CLUSTER_ID_KEY,'CC01')
 
         self._iem = Iem()
+        self._iem.check_exsisting_fault_iems()
 
         self.vol_ras = Conf.get(SSPL_CONF, f"{self.SYSTEM_INFORMATION}>{DATA_PATH_KEY}",
             self.DEFAULT_RAS_VOL)
@@ -225,12 +226,18 @@ class DiskMonitor(SensorThread, InternalMsgQ):
                 # Obtain a disk manager interface for monitoring drives
                 disk_systemd = self._bus.get_object('org.freedesktop.UDisks2',
                     '/org/freedesktop/UDisks2')
-                self._iem.iem_fault_resolved("UDISKS2_UNAVAILABLE", "UDISKS2_AVAILABLE")
+                # these line executed only one time at start of sensor thread,
+                # hence for udisks calling 'check_fault_resolved_iems()' function directly
+                # instead of calling fault_resolved_iem().
+                if self._iem.UDISKS2_IEM_FAULT:
+                    self._iem.fault_resolved_iems("UDISKS2_AVAILABLE")
+                    self._iem.UDISKS2_IEM_FAULT = False
             except dbus.DBusException as err:
                 logger.error("DiskMonitor: Error occurred while"
                     " initializing dbus UDisks interface. : %s" %err)
                 if self.UDISKS2_UNAVAILABLE in str(err):
                     self._iem.iem_fault("UDISKS2_UNAVAILABLE")
+                    self._iem.UDISKS2_IEM_FAULT = True
                     return
 
             self._disk_manager = Interface(disk_systemd,
@@ -1065,11 +1072,12 @@ class DiskMonitor(SensorThread, InternalMsgQ):
                 cmd = f"sudo smartctl -H {self._drive_by_device_name[object_path]} --json"
             response, err, retcode = self._run_command(cmd)
             if retcode != 0 and err:
-                self._iem.iem_fault("SMARTMONTOOL_ERROR")
+                self._iem.iem_fault("SMARTCTL_ERROR")
+                self._iem.SMARTCTL_IEM_FAULT = True
                 return
-            if retcode == 0 and response:
-                self._iem.iem_fault_resolved("SMARTMONTOOL_ERROR",
-                    "SMARTMONTOOL_AVAILABLE")
+            if retcode == 0 and response and self._iem.SMARTCTL_IEM_FAULT:
+                self._iem.iem_fault_resolved("SMARTCTL_AVAILABLE")
+                self._iem.SMARTCTL_IEM_FAULT = False
             response = json.loads(response)
             try:
                 if "No such device" in response["smartctl"]["message"][0]["string"]:
@@ -1124,9 +1132,11 @@ class DiskMonitor(SensorThread, InternalMsgQ):
             cmd = f"sudo smartctl -A {self._drive_by_device_name[path]}"
         response, err, retcode = self._run_command(cmd)
         if retcode != 0 and err:
-            self._iem.iem_fault("SMARTMONTOOL_ERROR")
-        if retcode == 0:
-            self._iem.iem_fault_resolved("SMARTMONTOOL_ERROR", "SMARTMONTOOL_AVAILABLE")
+            self._iem.iem_fault("SMARTCTL_ERROR")
+            self._iem.SMARTCTL_IEM_FAULT = True
+        if retcode == 0 and self._iem.SMARTCTL_IEM_FAULT:
+            self._iem.iem_fault_resolved("SMARTCTL_AVAILABLE")
+            self._iem.SMARTCTL_IEM_FAULT = False
         return response
 
     def _is_local_drive(self, object_path):
@@ -1142,9 +1152,11 @@ class DiskMonitor(SensorThread, InternalMsgQ):
         DISK_ERR_GET_ID_FAILURE = "HDIO_GET_IDENTITY failed: Invalid argument"
         drive_name = self._drive_by_device_name[object_path]
         cmd = f'sudo hdparm -i {drive_name}'
-        _, err, retcode = self._run_command(cmd)
+        res, err, retcode = self._run_command(cmd)
         if retcode == 0:
-            self._iem.iem_fault_resolved("HDPARM_ERROR", "HDPARM_AVAILABLE")
+            if self._iem.HDPARM_IEM_FAULT:
+                self._iem.iem_fault_resolved("HDPARM_AVAILABLE")
+                self._iem.HDPARM_IEM_FAULT = False
             return True
         else:
             logger.debug(f"DiskMonitor, _is_local_drive: Error for drive \
@@ -1158,8 +1170,9 @@ class DiskMonitor(SensorThread, InternalMsgQ):
                 # "SG_IO: bad/missing sense data" or "HDIO_GET_IDENTITY failed:
                 #  Invalid argument"
                 logger.error("DiskMonitor, _is_local_drive: Error for drive:%s,"
-                    "Error: %s" %(drive_name, err))
+                    "Error: %s, , RESPONSE: %s" %(drive_name, err, res))
                 self._iem.iem_fault("HDPARM_ERROR")
+                self._iem.HDPARM_IEM_FAULT = True
                 return True
             else:
                 return False

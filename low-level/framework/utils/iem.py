@@ -20,6 +20,12 @@ from framework.base.sspl_constants import IEM_DATA_PATH
 from framework.utils.service_logging import logger
 
 class Iem:
+    SMARTCTL_IEM_FAULT = False
+    UDISKS2_IEM_FAULT = False
+    HDPARM_IEM_FAULT = False
+    IPMITOOL_IEM_FAULT = False
+    KAFKA_IEM_FAULT = False
+
     Severity = {
         "INFO" : "I", "WARN" : "W", "ERROR" : "E", "CRITICAL" : "C" }
 
@@ -29,8 +35,8 @@ class Iem:
         "IPMITOOL_AVAILABLE" : ["0050010002", "IPMITOOL"],
         "HDPARM_ERROR" : ["0050010003", "HDPARM"],
         "HDPARM_AVAILABLE" : ["0050010004", "HDPARM"],
-        "SMARTMONTOOL_ERROR" : ["0050010005", "SMARTMONTOOL"],
-        "SMARTMONTOOL_AVAILABLE" : ["0050010006", "SMARTMONTOOL"],
+        "SMARTCTL_ERROR" : ["0050010005", "SMARTCTL"],
+        "SMARTCTL_AVAILABLE" : ["0050010006", "SMARTCTL"],
         "UDISKS2_UNAVAILABLE" : ["0050010007", "UDISKS2"],
         "UDISKS2_AVAILABLE" : ["0050010008", "UDISKS2"],
         "KAFKA_NOT_ACTIVE" : ["0050020001", "KAFKA"],
@@ -39,42 +45,42 @@ class Iem:
 
     # EVENT_STRING = { event_code : [description, impact, recommendation] }
     EVENT_STRING = {
-        "0050010001" : ["Ipmitool command execution error.",
-            "Server resource monitoring halted.",
+        "0050010001" : ["ipmitool command execution error.",
+            "Server resource monitoring through IPMI halted.",
             "Reinstall/reconfigure ipmitool package."],
-        "0050010002" : ["Ipmitool command executed successfully.",
-            "Server resource monitoring started.",
+        "0050010002" : ["ipmitool command execution success again.",
+            "Server resource monitoring through IPMI enabled again.",
             ""],
-        "0050010003" : ["Hdparm command execution error.",
-            "Server local drives can not be monitored.",
+        "0050010003" : ["hdparm command execution error.",
+            "Server local drives monitoring through hdparm halted.",
             "Reinstall/reconfigure hdparm package."],
-        "0050010004" : ["Hdparm command executed susscessfully.",
-            "Started server local drives monitoring.",
+        "0050010004" : ["hdparm command execution success again.",
+            "Server local drives monitoring through hdparm enabled again.",
             ""],
-        "0050010005" : ["Smartctl command execution error.",
-            "Can not fetch drive information.",
+        "0050010005" : ["smartctl command execution error.",
+            "Unable to fetch server drive SMART test results and related health info.",
             "Reinstall/reconfigure smartmonotool package."],
-        "0050010006" : ["Smartctl command executed successfully.",
-            "Can fetch drive information.",
+        "0050010006" : ["smartctl command execution success again.",
+            "Enabled again to fetch server drive SMART test results and related health info.",
             ""],
-        "0050010007" : ["UDisks2 is not installed.",
-            "Can not fetch drive information using dbus interface.",
-            "Reinstall/reconfigure UDisks2 package."],
-        "0050010008" : ["UDisks2 is available.",
-            "Can fetch drive information using dbus interface.",
+        "0050010007" : ["udisks2 is not installed.",
+            "Unable to fetch server drive info using systemd dbus interface.",
+            "Reinstall/reconfigure udisks2 package."],
+        "0050010008" : ["udisks2 is available.",
+            "Enabled again to fetch server drive info using systemd dbus interface.",
             ""],
         "0050020001" : ["Kafka service is not in active state.",
-            "SSPL can not raise an alerts.",
+            "Cortx health alerts may not be delivered to consumers like CSM.",
             "Reconfigure/start kafka service."],
-        "0050020002" : ["Kafka service is in active state.",
-            "Kafka service is available.",
+        "0050020002" : ["Kafka service is back in active state.",
+            "Cortx health alerts will get delivered to consumers like CSM.",
             ""]
     }
 
-    def check_previous_iem_event(self, event_name, event_code):
+    def check_existing_iem_event(self, event_name, event_code):
         """Before logging iem, check if is already present."""
         previous_iem_event = None
-        is_iem_exist = False
+        iem_exist = False
         if not os.path.exists(IEM_DATA_PATH):
             os.makedirs(IEM_DATA_PATH)
         iem_event_path = f'{IEM_DATA_PATH}/iem_{event_name}'
@@ -91,10 +97,10 @@ class Iem:
                         file.close()
                 else:
                     logger.info("%s - IEM already created." %event_code)
-                    is_iem_exist = True
+                    iem_exist = True
                 f.close()
 
-        return is_iem_exist
+        return iem_exist
 
     def check_fault_event(self, event_name, *events):
         """Before logging fault_resolved iem event,
@@ -108,33 +114,42 @@ class Iem:
                 fault_iem = True
         return fault_iem
 
-    def generate_iem(self, severity, event_code, event_name, description):
-        """Generate iem."""
-        iem = "IEC:%sS%s:%s" %(severity, event_code, description)
-        previous_iem = self.check_previous_iem_event(event_name, event_code)
-        if not previous_iem:
-            log_iem(iem)
+    def create_iec(self, severity, event_code, description):
+        """Create iec."""
+        iec = "IEC:%sS%s:%s" %(severity, event_code, description)
+        generate_iem(iec)
 
     def create_iem_fields(self, event, severity):
         event_code = event[0]
         event_name = event[1]
         description = self.EVENT_STRING[event_code][0]
-        self.generate_iem(severity, event_code, event_name, description)
+        previous_iem = self.check_existing_iem_event(event_name, event_code)
+        if not previous_iem:
+            self.create_iec(severity, event_code, description)
 
     def iem_fault(self, event):
         event = self.EVENT_CODE[event]
         severity = self.Severity["ERROR"]
         self.create_iem_fields(event, severity)
 
-    def iem_fault_resolved(self, fault_event, fault_res_event):
-        fault_events = self.EVENT_CODE[fault_event]
-        prev_fault_iem_event = self.check_fault_event(
-            fault_events[1], fault_events[0])
-        if prev_fault_iem_event:
-            severity = self.Severity["INFO"]
-            event = self.EVENT_CODE[fault_res_event]
-            self.create_iem_fields(event, severity)
+    def iem_fault_resolved(self, fault_res_event):
+        severity = self.Severity["INFO"]
+        event = self.EVENT_CODE[fault_res_event]
+        self.create_iem_fields(event, severity)
 
-def log_iem(iem):
-    """Log iem using syslog."""
+    def check_exsisting_fault_iems(self):
+        """Incase of sspl restart or node reboot, Check if
+        previous iems fault are present."""
+        fault_events = ["IPMITOOL_ERROR", "HDPARM_ERROR",
+            "UDISKS2_UNAVAILABLE", "SMARTCTL_ERROR", "KAFKA_NOT_ACTIVE"]
+        for event in fault_events:
+            event_data = self.EVENT_CODE[event]
+            event_name = event_data[0]
+            prev_fault_iem_event = self.check_fault_event(
+                event_data[1], event_name)
+            if prev_fault_iem_event:
+                setattr(self, f'{event_name}_IEM_FAULT', True)
+
+def generate_iem(iem):
+    """Generate iem."""
     syslog.syslog(iem)

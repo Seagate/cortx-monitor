@@ -101,6 +101,7 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
         super(ServiceMonitor, self).initialize_msgQ(msgQlist)
 
         self.iem = Iem()
+        self.iem.check_exsisting_fault_iems()
 
         # Integrate into the main dbus loop to catch events
         DBusGMainLoop(set_as_default=True)
@@ -485,11 +486,19 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
                 }
             }
         }
+
+        self.raise_iem(service, alert_type)
+        self._write_internal_msgQ(ServiceMsgHandler.name(), alert_msg)
+
+    def raise_iem(self, service, alert_type):
+        """Raise iem alert for kafka service."""
         if service == "kafka.service" and alert_type == "fault":
             self.iem.iem_fault("KAFKA_NOT_ACTIVE")
-        elif service == "kafka.service" and alert_type == "fault_resolved":
-            self.iem.iem_fault_resolved("KAFKA_NOT_ACTIVE", "KAFKA_ACTIVE")
-        self._write_internal_msgQ(ServiceMsgHandler.name(), alert_msg)
+            self.iem.KAFKA_IEM_FAULT = True
+        elif (service == "kafka.service" and alert_type == "fault_resolved" 
+            and self.iem.KAFKA_IEM_FAULT):
+            self.iem.iem_fault_resolved("KAFKA_ACTIVE")
+            self.iem.KAFKA_IEM_FAULT = False
 
     def suspend(self):
         """Suspend the module thread. It should be non-blocking."""
