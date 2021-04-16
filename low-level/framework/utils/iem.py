@@ -20,27 +20,25 @@ from framework.base.sspl_constants import IEM_DATA_PATH
 from framework.utils.service_logging import logger
 
 class Iem:
-    SMARTCTL_IEM_FAULT = False
-    UDISKS2_IEM_FAULT = False
-    HDPARM_IEM_FAULT = False
-    IPMITOOL_IEM_FAULT = False
-    KAFKA_IEM_FAULT = False
-
+    # event_name will be added in this list in case of fault iem.
+    # and before raising fault_resolved iems,
+    # will check if event is present in this list or not.
+    fault_iems = []
     Severity = {
         "INFO" : "I", "WARN" : "W", "ERROR" : "E", "CRITICAL" : "C" }
 
     # EVENT_CODE = [event_code, event]
     EVENT_CODE = {
-        "IPMITOOL_ERROR" : ["0050010001", "IPMITOOL"],
-        "IPMITOOL_AVAILABLE" : ["0050010002", "IPMITOOL"],
-        "HDPARM_ERROR" : ["0050010003", "HDPARM"],
-        "HDPARM_AVAILABLE" : ["0050010004", "HDPARM"],
-        "SMARTCTL_ERROR" : ["0050010005", "SMARTCTL"],
-        "SMARTCTL_AVAILABLE" : ["0050010006", "SMARTCTL"],
-        "UDISKS2_UNAVAILABLE" : ["0050010007", "UDISKS2"],
-        "UDISKS2_AVAILABLE" : ["0050010008", "UDISKS2"],
-        "KAFKA_NOT_ACTIVE" : ["0050020001", "KAFKA"],
-        "KAFKA_ACTIVE" : ["0050020002", "KAFKA"]
+        "IPMITOOL_ERROR" : ["0050010001", "ipmitool"],
+        "IPMITOOL_AVAILABLE" : ["0050010002", "ipmitool"],
+        "HDPARM_ERROR" : ["0050010003", "hdparm"],
+        "HDPARM_AVAILABLE" : ["0050010004", "hdparm"],
+        "SMARTCTL_ERROR" : ["0050010005", "smartctl"],
+        "SMARTCTL_AVAILABLE" : ["0050010006", "smartctl"],
+        "UDISKS2_UNAVAILABLE" : ["0050010007", "udisks2"],
+        "UDISKS2_AVAILABLE" : ["0050010008", "udisks2"],
+        "KAFKA_NOT_ACTIVE" : ["0050020001", "kafka"],
+        "KAFKA_ACTIVE" : ["0050020002", "kafka"]
     }
 
     # EVENT_STRING = { event_code : [description, impact, recommendation] }
@@ -59,7 +57,7 @@ class Iem:
             ""],
         "0050010005" : ["smartctl command execution error.",
             "Unable to fetch server drive SMART test results and related health info.",
-            "Reinstall/reconfigure smartmonotool package."],
+            "Reinstall/reconfigure smartmonotools package."],
         "0050010006" : ["smartctl command execution success again.",
             "Enabled again to fetch server drive SMART test results and related health info.",
             ""],
@@ -119,13 +117,19 @@ class Iem:
         iec = "IEC:%sS%s:%s" %(severity, event_code, description)
         generate_iem(iec)
 
-    def create_iem_fields(self, event, severity):
+    def create_iem_fields(self, event, severity, event_type=None):
         event_code = event[0]
         event_name = event[1]
         description = self.EVENT_STRING[event_code][0]
-        previous_iem = self.check_existing_iem_event(event_name, event_code)
-        if not previous_iem:
-            self.create_iec(severity, event_code, description)
+        if event_type == "fault_resolved" and event_name in self.fault_iems:
+            iem_event_path = f'{IEM_DATA_PATH}/iem_{event_name}'
+            if os.path.exists(iem_event_path):
+                os.remove(iem_event_path)
+                self.create_iec(severity, event_code, description)
+        else:
+            previous_iem = self.check_existing_iem_event(event_name, event_code)
+            if not previous_iem:
+                self.create_iec(severity, event_code, description)
 
     def iem_fault(self, event):
         event = self.EVENT_CODE[event]
@@ -135,7 +139,8 @@ class Iem:
     def iem_fault_resolved(self, fault_res_event):
         severity = self.Severity["INFO"]
         event = self.EVENT_CODE[fault_res_event]
-        self.create_iem_fields(event, severity)
+        event_type = "fault_resolved"
+        self.create_iem_fields(event, severity, event_type)
 
     def check_exsisting_fault_iems(self):
         """Incase of sspl restart or node reboot, Check if
@@ -144,11 +149,11 @@ class Iem:
             "UDISKS2_UNAVAILABLE", "SMARTCTL_ERROR", "KAFKA_NOT_ACTIVE"]
         for event in fault_events:
             event_data = self.EVENT_CODE[event]
-            event_name = event_data[0]
+            event_name = event_data[1]
             prev_fault_iem_event = self.check_fault_event(
-                event_data[1], event_name)
+                event_name, event_data[0])
             if prev_fault_iem_event:
-                setattr(self, f'{event_name}_IEM_FAULT', True)
+                self.fault_iems.append(event_name)
 
 def generate_iem(iem):
     """Generate iem."""

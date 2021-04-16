@@ -258,6 +258,8 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
             f"{self.BMC_INTERFACE}>{self.BMC_CHANNEL_IF}", 'system')
         self.iem = Iem()
         self.iem.check_exsisting_fault_iems()
+        self.IPMI = self.iem.EVENT_CODE["IPMITOOL_AVAILABLE"][1]
+
         # Decrypt bmc secret
         decryption_key = encryptor.gen_key(MACHINE_ID,
             ServiceTypes.SERVER_NODE.value)
@@ -580,16 +582,18 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
                             shutting down sensor")
                         self.request_shutdown = True
                 self.iem.iem_fault("IPMITOOL_ERROR")
-                self.iem.IPMITOOL_IEM_FAULT = True
+                if self.IPMI not in self.iem.fault_iems:
+                    self.iem.fault_iems.append(self.IPMI)
             elif (retcode == BASH_ILLEGAL_CMD):
                 logger.error(f"{self.SENSOR_NAME}: Required ipmitool missing \
                     on Node. Dependencies failed, shutting down sensor")
                 self.request_shutdown = True
                 self.iem.iem_fault("IPMITOOL_ERROR")
-                self.iem.IPMITOOL_IEM_FAULT = True
-        elif (retcode == 0 and self.iem.IPMITOOL_IEM_FAULT):
+                if self.IPMI not in self.iem.fault_iems:
+                    self.iem.fault_iems.append(self.IPMI)
+        elif (retcode == 0 and self.IPMI in self.iem.fault_iems):
             self.iem.iem_fault_resolved("IPMITOOL_AVAILABLE")
-            self.iem.IPMITOOL_IEM_FAULT = False
+            self.iem.fault_iems.remove(self.IPMI)
 
         if grep_args is not None and retcode == 0 and isinstance(res, tuple):
             import re
