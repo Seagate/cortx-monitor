@@ -1,0 +1,10 @@
+0050010001,ipmitool,ipmitool command execution error
+0050010002,ipmitool,ipmitool command execution success again
+0050010003,hdparm,hdparm command execution error
+0050010004,hdparm,hdparm command execution success again
+0050010005,smartctl,smartctl command execution error
+0050010006,smartctl,smartctl command execution success again
+0050010007,udisks2,udisks is not installed
+0050010008,udisks2,udisks2 is available
+0050020001,Kafka,Kafka service is not in active state
+0050020002,Kafka,Kafka service is back in active state

@@ -39,6 +39,7 @@ from framework.utils.conf_utils import (GLOBAL_CONF, CLUSTER, SRVNODE, SITE_ID,
                 RACK_ID, NODE_ID, SSPL_CONF, CLUSTER_ID, Conf)
 from framework.utils.severity_reader import SeverityReader
 from framework.utils.mon_utils import get_alert_id
+from framework.utils.iem import Iem
 from framework.base.module_thread import ThreadException
 
 @implementer(ISystemMonitor)
@@ -98,6 +99,10 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
 
         # Initialize internal message queues for this module
         super(ServiceMonitor, self).initialize_msgQ(msgQlist)
+
+        self.iem = Iem()
+        self.iem.check_exsisting_fault_iems()
+        self.KAFKA = self.iem.EVENT_CODE["KAFKA_ACTIVE"][1]
 
         # Integrate into the main dbus loop to catch events
         DBusGMainLoop(set_as_default=True)
@@ -482,7 +487,20 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
                 }
             }
         }
+
+        self.raise_iem(service, alert_type)
         self._write_internal_msgQ(ServiceMsgHandler.name(), alert_msg)
+
+    def raise_iem(self, service, alert_type):
+        """Raise iem alert for kafka service."""
+        if service == "kafka.service" and alert_type == "fault":
+            self.iem.iem_fault("KAFKA_NOT_ACTIVE")
+            if (self.KAFKA not in self.iem.fault_iems):
+                self.iem.fault_iems.append(self.KAFKA)
+        elif (service == "kafka.service" and alert_type == "fault_resolved"
+            and self.KAFKA in self.iem.fault_iems):
+            self.iem.iem_fault_resolved("KAFKA_ACTIVE")
+            self.iem.fault_iems.remove(self.KAFKA)
 
     def suspend(self):
         """Suspend the module thread. It should be non-blocking."""
