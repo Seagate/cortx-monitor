@@ -57,16 +57,22 @@ class YamlConfDiff(object):
     def update_diff(self, d1, d2):
         for k in d1:
             if not d2.get(k):
-                d2.update({k: dict()})
-            if type(d1[k]) is list:
-                d2[k] = d1[k]
-            elif type(d1[k]) is dict and type(d2[k]) is dict:
-                v1 = d1[k]
-                v2 = d2[k]
-                self.update_diff(v1, v2)
+                # Add new key if found
+                d2.update({k: d1[k]})
             else:
-                if d1[k] != d2[k]:
-                    d2[k] = d1[k]
+                if type(d1[k]) is dict and type(d2[k]) is dict:
+                    v1 = d1[k]
+                    v2 = d2[k]
+                    self.update_diff(v1, v2)
+                else:
+                    # Overwrite existing value by new value if diff
+                    # found on value for that key.
+                    #
+                    # Assume list of sensors enabled in d1. If d1 and d2 list
+                    # are not same, sensors enabled list will be overwritten.
+                    # if d1[k] != d2[k]:
+                    #     d2[k] = d1[k]
+                    pass
 
 if __name__ == '__main__':
     config_file1 = '/opt/seagate/cortx/sspl/conf/sspl.conf.LR2.yaml'

@@ -110,7 +110,7 @@ class SSPLConfig:
                 log_level = f.read().strip()
 
             if not log_level:
-                log_level = "INFO"
+                log_level= Conf.get(consts.SSPL_CONFIG_INDEX, "SYSTEM_INFORMATION>log_level")
 
             if log_level in ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]:
                 Conf.set(consts.SSPL_CONFIG_INDEX, "SYSTEM_INFORMATION>log_level", log_level)
