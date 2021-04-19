@@ -59,7 +59,7 @@ class Cmd:
             [ post_install --config [<global_config_url>] ]
             [ init --config [<global_config_url>] ]
             [ config --config [<global_config_url>] ]
-            [ test --config [<global_config_url>] --plan [sanity|alerts|self_primary|self_secondary] ]
+            [ test --config [<global_config_url>] --plan [sanity|alerts|self_primary|self_secondary|self] ]
             [ reset --config [<global_config_url>] --type [hard|soft] ]
             [ join_cluster --nodes [<nodes>] ]
             [ manifest_support_bundle [<id>] [<path>] ]
@@ -254,7 +254,7 @@ class TestCmd(Cmd):
 
     name = "test"
     test_plan_found = False
-    sspl_test_plans = ["sanity", "alerts", "self_primary", "self_secondary"]
+    sspl_test_plans = ["sanity", "alerts", "self_primary", "self_secondary", "self"]
 
     def __init__(self, args):
         super().__init__(args)

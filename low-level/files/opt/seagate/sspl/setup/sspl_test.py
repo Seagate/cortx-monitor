@@ -35,7 +35,7 @@ class SSPLTestCmd:
     def __init__(self, args: list):
         self.args = args
         self.name = "sspl_test"
-        self.plan = "self_primary"
+        self.plan = "self"
         self.avoid_rmq = False
         self.dbus_service = DbusServiceHandler()
         # Load global, sspl and test configs
@@ -76,85 +76,107 @@ class SSPLTestCmd:
         """Run test using user requested test plan."""
         self.plan = self.args.plan[0]
         self.avoid_rmq = self.args.avoid_rmq
+        # if self.plan is other than "self"
+        # then only config change and service restart is required.
+        if self.plan not in ["self", "self_primary", "self_secondary"]:
+            # Take back up of sspl test config
+            sspl_test_backup = '/etc/sspl_tests.conf.back'
+            shutil.copyfile(sspl_test_file_path, sspl_test_backup)
 
-        # Take back up of sspl test config
-        sspl_test_backup = '/etc/sspl_tests.conf.back'
-        shutil.copyfile(sspl_test_file_path, sspl_test_backup)
+            # Add global config in sspl_test config and revert the changes once test completes.
+            # Global config path in sspl_tests.conf will be referred by sspl_tests later
+            sspl_global_config_url = Conf.get(SSPL_CONFIG_INDEX,
+                "SYSTEM_INFORMATION>global_config_copy_url")
+            Conf.set(SSPL_CONFIG_INDEX, "SYSTEM_INFORMATION>global_config_copy_url",
+                self.sspl_test_gc_copy_url)
+            Conf.save(SSPL_CONFIG_INDEX)
 
-        # Add global config in sspl_test config and revert the changes once test completes.
-        # Global config path in sspl_tests.conf will be referred by sspl_tests later
-        sspl_global_config_url = Conf.get(SSPL_CONFIG_INDEX,
-            "SYSTEM_INFORMATION>global_config_copy_url")
-        Conf.set(SSPL_CONFIG_INDEX, "SYSTEM_INFORMATION>global_config_copy_url",
-            self.sspl_test_gc_copy_url)
-        Conf.save(SSPL_CONFIG_INDEX)
+            # Enable & disable sensors based on environment
+            update_sensor_info(SSPL_TEST_CONFIG_INDEX, self.node_type, self.enclosure_type)
 
-        # Enable & disable sensors based on environment
-        update_sensor_info(SSPL_TEST_CONFIG_INDEX, self.node_type, self.enclosure_type)
+            # TODO: Move lines 99-131 & 152-159 to RunQATest class
+            # Create dummy service and add service name in /etc/sspl.conf
+            service_name = "dummy_service.service"
+            service_file_path_src = f"{TEST_DIR}/alerts/os/dummy_service_files/dummy_service.service"
+            service_executable_code_src = f"{TEST_DIR}/alerts/os/dummy_service_files/dummy_service.py"
+            service_file_path_des = "/etc/systemd/system"
+            service_executable_code_des = "/var/cortx/sspl/test"
 
-        # TODO: Move lines 90-116 & 125-127 to RunQATest class
-        # Create dummy service and add service name in /etc/sspl.conf
-        service_name = "dummy_service.service"
-        service_file_path_src = f"{TEST_DIR}/alerts/os/dummy_service_files/dummy_service.service"
-        service_executable_code_src = f"{TEST_DIR}/alerts/os/dummy_service_files/dummy_service.py"
-        service_file_path_des = "/etc/systemd/system"
-        service_executable_code_des = "/var/cortx/sspl/test"
+            os.makedirs(service_executable_code_des, 0o777, exist_ok=True)
 
-        os.makedirs(service_executable_code_des, 0o777, exist_ok=True)
+            shutil.copy(service_executable_code_src,
+                        f'{service_executable_code_des}/dummy_service.py')
+            # Make service file executable.
+            cmd = f"chmod +x {service_executable_code_des}/dummy_service.py"
+            _, error, returncode = SimpleProcess(cmd).run()
+            if returncode !=0:
+                print("%s error occurred while executing cmd: %s" %(error, cmd))
+                print("failed to assign execute permission for dummy_service.py."\
+                        " dummy_service will fail.")
 
-        shutil.copy(service_executable_code_src,
-                    f'{service_executable_code_des}/dummy_service.py')
-        # Make service file executable.
-        cmd = f"chmod +x {service_executable_code_des}/dummy_service.py"
-        _, error, returncode = SimpleProcess(cmd).run()
-        if returncode !=0:
-            print("%s error occurred while executing cmd: %s" %(error, cmd))
-            print("failed to assign execute permission for dummy_service.py."\
-                    " dummy_service will fail.")
+            # Copy service file to /etc/systemd/system/ path.
+            shutil.copyfile(service_file_path_src,
+                            f'{service_file_path_des}/dummy_service.service')
+            cmd= "systemctl daemon-reload"
+            _, error, returncode = SimpleProcess(cmd).run()
+            if returncode !=0:
+                    print(f"failed to execute '{cmd}', systemctl will be unable"\
+                        f" to manage the dummy_service.service \nError: {error}")
 
-        # Copy service file to /etc/systemd/system/ path.
-        shutil.copyfile(service_file_path_src,
-                        f'{service_file_path_des}/dummy_service.service')
-        cmd= "systemctl daemon-reload"
-        _, error, returncode = SimpleProcess(cmd).run()
-        if returncode !=0:
-                print(f"failed to execute '{cmd}', systemctl will be unable"\
-                    f" to manage the dummy_service.service \nError: {error}")
+            self.dbus_service.enable(service_name)
+            self.dbus_service.start(service_name)
 
-        self.dbus_service.enable(service_name)
-        self.dbus_service.start(service_name)
+            service_list = Conf.get(SSPL_CONFIG_INDEX, "SERVICEMONITOR>monitored_services")
+            service_list.append(service_name)
+            Conf.set(SSPL_CONFIG_INDEX, "SERVICEMONITOR>monitored_services",
+                service_list)
 
-        service_list = Conf.get(SSPL_CONFIG_INDEX, "SERVICEMONITOR>monitored_services")
-        service_list.append(service_name)
-        Conf.set(SSPL_CONFIG_INDEX, "SERVICEMONITOR>monitored_services",
-            service_list)
+            threshold_inactive_time_original = Conf.get(SSPL_CONFIG_INDEX,
+                                        "SERVICEMONITOR>threshold_inactive_time")
+            threshold_inactive_time_new = 30
+            Conf.set(SSPL_CONFIG_INDEX, "SERVICEMONITOR>threshold_inactive_time",
+                threshold_inactive_time_new)
+            Conf.save(SSPL_CONFIG_INDEX)
 
-        threshold_inactive_time_original = Conf.get(SSPL_CONFIG_INDEX,
-                                    "SERVICEMONITOR>threshold_inactive_time")
-        threshold_inactive_time_new = 30
-        Conf.set(SSPL_CONFIG_INDEX, "SERVICEMONITOR>threshold_inactive_time",
-            threshold_inactive_time_new)
-        Conf.save(SSPL_CONFIG_INDEX)
+            # TODO: Convert shell script to python
+            # from cortx.sspl.sspl_test.run_qa_test import RunQATest
+            # RunQATest(self.plan, self.avoid_rmq).run()
+            CMD = "%s/run_qa_test.sh %s %s" % (TEST_DIR, self.plan, self.avoid_rmq)
+            try:
+                output, error, rc = SimpleProcess(CMD).run(realtime_output=True)
+            except KeyboardInterrupt:
+                rc = 1
+                error = "KeyboardInterrupt occurred while executing sspl test."
+            # Restore the original path/file & service, then throw exception
+            # if execution is failed.
+            service_list.remove(service_name)
+            Conf.set(SSPL_CONFIG_INDEX,"SERVICEMONITOR>monitored_services",
+                service_list)
+            Conf.set(SSPL_CONFIG_INDEX, "SERVICEMONITOR>threshold_inactive_time",
+                threshold_inactive_time_original)
+            Conf.set(SSPL_CONFIG_INDEX, "SYSTEM_INFORMATION>global_config_copy_url",
+                sspl_global_config_url)
+            Conf.save(SSPL_CONFIG_INDEX)
+            shutil.copyfile(sspl_test_backup, sspl_test_file_path)
+            if rc != 0:
+                raise TestException("%s - ERROR: %s - CMD %s" % (self.name, error, CMD))
+        else:
+            # TODO: Convert shell script to python
+            # from cortx.sspl.sspl_test.run_qa_test import RunQATest
+            # RunQATest(self.plan, self.avoid_rmq).run()
+            try:
+                CMD = "%s/run_qa_test.sh %s %s" % (TEST_DIR, self.plan, self.avoid_rmq)
+                output, error, returncode = SimpleProcess(CMD).run(realtime_output=True)
+            except KeyboardInterrupt:
+                raise TestException("KeyboardInterrupt occurred while executing sspl test.")
+            except Exception as error:
+                raise TestException("Error occurred while executing self test: %s" %error)
 
-        # TODO: Convert shell script to python
-        # from cortx.sspl.sspl_test.run_qa_test import RunQATest
-        # RunQATest(self.plan, self.avoid_rmq).run()
-        CMD = "%s/run_qa_test.sh %s %s" % (TEST_DIR, self.plan, self.avoid_rmq)
-        try:
-            output, error, rc = SimpleProcess(CMD).run(realtime_output=True)
-        except KeyboardInterrupt:
-            rc = 1
-            error = "KeyboardInterrupt occurred while executing sspl test."
-        # Restore the original path/file & service, then throw exception
-        # if execution is failed.
-        service_list.remove(service_name)
-        Conf.set(SSPL_CONFIG_INDEX,"SERVICEMONITOR>monitored_services",
-            service_list)
-        Conf.set(SSPL_CONFIG_INDEX, "SERVICEMONITOR>threshold_inactive_time",
-            threshold_inactive_time_original)
-        Conf.set(SSPL_CONFIG_INDEX, "SYSTEM_INFORMATION>global_config_copy_url",
-            sspl_global_config_url)
-        Conf.save(SSPL_CONFIG_INDEX)
-        shutil.copyfile(sspl_test_backup, sspl_test_file_path)
-        if rc != 0:
-            raise Exception("%s - ERROR: %s - CMD %s" % (self.name, error, CMD))
+class TestException(Exception):
+    def __init__(self, message):
+            """Handle error msg from thread modules."""
+            self._desc = message
+
+    def __str__(self):
+        """Returns formated error msg."""
+        return "error: %s" %(self._desc)

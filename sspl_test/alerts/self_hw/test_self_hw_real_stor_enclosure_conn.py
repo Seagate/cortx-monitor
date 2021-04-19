@@ -24,8 +24,8 @@ import time
 import requests
 from cortx.utils.security.cipher import Cipher
 from alerts.self_hw.self_hw_utilities import get_node_id
-from framework.utils.conf_utils import (GLOBAL_CONF, Conf, SITE_ID_KEY,
-    RACK_ID_KEY, NODE_ID_KEY, CLUSTER_ID_KEY, CNTRLR_PRIMARY_IP_KEY,
+from framework.utils.conf_utils import (GLOBAL_CONF, Conf,
+    ENCLOSURE, CNTRLR_PRIMARY_IP_KEY,
     CNTRLR_PRIMARY_PORT_KEY, CNTRLR_SECONDARY_IP_KEY, CNTRLR_SECONDARY_PORT_KEY,
     CNTRLR_USER_KEY, CNTRLR_SECRET_KEY)
 
@@ -77,8 +77,12 @@ def test_self_hw_real_stor_enclosure_conn(args):
         port = Conf.get(GLOBAL_CONF, CNTRLR_SECONDARY_PORT_KEY)
     username = Conf.get(GLOBAL_CONF, CNTRLR_USER_KEY)
     passwd = Conf.get(GLOBAL_CONF, CNTRLR_SECRET_KEY)
-    cluster_id = Conf.get(GLOBAL_CONF, CLUSTER_ID_KEY,'CC01')
-
+    try:
+        # decrypt the passwd
+        decryption_key = gen_key(ENCLOSURE, 'storage_enclosure')
+        passwd = decrypt(decryption_key, passwd)
+    except  Exception as e:
+        print(f"passwd decryption failed with error: {e}")
     # build url for primary
     cli_api_auth = username + '_' + passwd
     auth_hash = hashlib.sha256(cli_api_auth.encode('utf-8')).hexdigest()
