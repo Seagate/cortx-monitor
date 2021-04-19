@@ -53,6 +53,7 @@ from message_handlers.disk_msg_handler import DiskMsgHandler
 from message_handlers.node_data_msg_handler import NodeDataMsgHandler
 from sensors.ISystem_monitor import ISystemMonitor
 from framework.utils.mon_utils import get_alert_id
+from framework.utils.iem import Iem
 store = file_store
 
 @implementer(ISystemMonitor)
@@ -96,6 +97,7 @@ class DiskMonitor(SensorThread, InternalMsgQ):
     NODE_DISK_RESOURCE_TYPE = "node:os:disk"
     ENCLOSURE_DISK_RESOURCE_TYPE = "enclosure:fru:disk"
     SMARTCTL_PASSED_RESPONSE = "SMART overall-health self-assessment test result: PASSED"
+    UDISKS2_UNAVAILABLE = "org.freedesktop.UDisks2 was not provided"
 
     @staticmethod
     def name():
@@ -171,7 +173,14 @@ class DiskMonitor(SensorThread, InternalMsgQ):
         self._node_id = Conf.get(GLOBAL_CONF, NODE_ID_KEY,'SN01')
         self._cluster_id = Conf.get(GLOBAL_CONF, CLUSTER_ID_KEY,'CC01')
 
-        self.vol_ras = Conf.get(SSPL_CONF, f"{self.SYSTEM_INFORMATION}>{DATA_PATH_KEY}", self.DEFAULT_RAS_VOL)
+        self._iem = Iem()
+        self._iem.check_exsisting_fault_iems()
+        self.UDISKS2 = self._iem.EVENT_CODE["UDISKS2_UNAVAILABLE"][1]
+        self.HDPARM = self._iem.EVENT_CODE["HDPARM_ERROR"][1]
+        self.SMARTCTL = self._iem.EVENT_CODE["SMARTCTL_ERROR"][1]
+
+        self.vol_ras = Conf.get(SSPL_CONF, f"{self.SYSTEM_INFORMATION}>{DATA_PATH_KEY}",
+            self.DEFAULT_RAS_VOL)
 
         self.server_cache = self.vol_ras + "server/"
         self.disk_cache_path = self.server_cache + "systemd_watchdog/disks/disks.json"
@@ -216,10 +225,27 @@ class DiskMonitor(SensorThread, InternalMsgQ):
         try:
             # Connect to dbus system wide
             self._bus = SystemBus()
+            try:
+                # Obtain a disk manager interface for monitoring drives
+                disk_systemd = self._bus.get_object('org.freedesktop.UDisks2',
+                    '/org/freedesktop/UDisks2')
+                # these line executed only one time at start of sensor thread,
+                # hence for udisks calling 'check_fault_resolved_iems()' function directly
+                # instead of calling fault_resolved_iem().
+                if self.UDISKS2 in self._iem.fault_iems:
+                    self._iem.iem_fault_resolved("UDISKS2_AVAILABLE")
+                    self._iem.fault_iems.remove(self.UDISKS2)
+            except dbus.DBusException as err:
+                logger.error("DiskMonitor: Error occurred while"
+                    " initializing dbus UDisks interface. : %s" %err)
+                if self.UDISKS2_UNAVAILABLE in str(err):
+                    self._iem.iem_fault("UDISKS2_UNAVAILABLE")
+                    if self.UDISKS2 not in self._iem.fault_iems:
+                        self._iem.fault_iems.append(self.UDISKS2)
+                    return
 
-            # Obtain a disk manager interface for monitoring drives
-            disk_systemd = self._bus.get_object('org.freedesktop.UDisks2', '/org/freedesktop/UDisks2')
-            self._disk_manager = Interface(disk_systemd, dbus_interface='org.freedesktop.DBus.ObjectManager')
+            self._disk_manager = Interface(disk_systemd,
+                dbus_interface='org.freedesktop.DBus.ObjectManager')
 
             # Assign callbacks to all devices to capture signals
             self._disk_manager.connect_to_signal('InterfacesAdded', self._interface_added)
@@ -837,7 +863,8 @@ class DiskMonitor(SensorThread, InternalMsgQ):
         """Create the status_reason field and notify disk msg handler"""
 
         # Possible SMART status for systemd described at
-        # http://udisks.freedesktop.org/docs/latest/gdbus-org.freedesktop.UDisks2.Drive.Ata.html#gdbus-property-org-freedesktop-UDisks2-Drive-Ata.SmartSelftestStatus
+        # http://udisks.freedesktop.org/docs/latest/gdbus-org.freedesktop.UDisks2.
+        # Drive.Ata.html#gdbus-property-org-freedesktop-UDisks2-Drive-Ata.SmartSelftestStatus
         if smart_status.lower() == "success" or \
             smart_status.lower() == "inprogress":
             status_reason = "OK_None"
@@ -1040,14 +1067,23 @@ class DiskMonitor(SensorThread, InternalMsgQ):
 
         for object_path in self._drives.keys():
 
-            # To handle case when drvie is removed, but interface_removed function is not yet
+            # To handle case when drive is removed, but interface_removed function is not yet
             # called, so drive will be still in self._drives, but smartctl command will fail as
             # device is removed.
             if not self._drives[object_path]["node_disk"]:
                 cmd = f"sudo smartctl -d scsi -H {self._drive_by_device_name[object_path]} --json"
             else:
                 cmd = f"sudo smartctl -H {self._drive_by_device_name[object_path]} --json"
-            response, _, _ = self._run_command(cmd)
+            response, err, retcode = self._run_command(cmd)
+            if retcode != 0 and err:
+                self._iem.iem_fault("SMARTCTL_ERROR")
+                if self.SMARTCTL not in self._iem.fault_iems:
+                    self._iem.fault_iems.append(self.SMARTCTL)
+                return
+            if retcode == 0 and response and self.SMARTCTL in self._iem.fault_iems:
+                self._iem.iem_fault_resolved("SMARTCTL_AVAILABLE")
+                self._iem.fault_iems.remove(self.SMARTCTL)
+
             response = json.loads(response)
             try:
                 if "No such device" in response["smartctl"]["message"][0]["string"]:
@@ -1100,7 +1136,14 @@ class DiskMonitor(SensorThread, InternalMsgQ):
             cmd = f"sudo smartctl -d scsi -A {self._drive_by_device_name[path]}"
         else:
             cmd = f"sudo smartctl -A {self._drive_by_device_name[path]}"
-        response, _, _ = self._run_command(cmd)
+        response, err, retcode = self._run_command(cmd)
+        if retcode != 0 and err:
+            self._iem.iem_fault("SMARTCTL_ERROR")
+            if self.SMARTCTL not in self._iem.fault_iems:
+                self._iem.fault_iems.append(self.SMARTCTL)
+        if retcode == 0 and self.SMARTCTL in self._iem.fault_iems:
+            self._iem.iem_fault_resolved("SMARTCTL_AVAILABLE")
+            self._iem.fault_iems.remove(self.SMARTCTL)
         return response
 
     def _is_local_drive(self, object_path):
@@ -1116,14 +1159,28 @@ class DiskMonitor(SensorThread, InternalMsgQ):
         DISK_ERR_GET_ID_FAILURE = "HDIO_GET_IDENTITY failed: Invalid argument"
         drive_name = self._drive_by_device_name[object_path]
         cmd = f'sudo hdparm -i {drive_name}'
-        _, err, retcode = self._run_command(cmd)
+        res, err, retcode = self._run_command(cmd)
         if retcode == 0:
+            if self.HDPARM in self._iem.fault_iems:
+                self._iem.iem_fault_resolved("HDPARM_AVAILABLE")
+                self._iem.fault_iems.remove(self.HDPARM)
             return True
         else:
-            logger.debug(f"DiskMonitor, _is_local_drive: Error for drive {drive_name}, ERROR: {err}")
-            # TODO : In case of different error(other than "SG_IO: bad/missing sense data") for local drives,
+            logger.debug(f"DiskMonitor, _is_local_drive: Error for drive \
+                {drive_name}, ERROR: {err}")
+            # TODO : In case of different error(other than \
+            # "SG_IO: bad/missing sense data") for local drives,
             # this check would fail.
-            if DISK_ERR_MISSING_SENSE_DATA not in err and DISK_ERR_GET_ID_FAILURE not in err:
+            if DISK_ERR_MISSING_SENSE_DATA not in err and \
+                DISK_ERR_GET_ID_FAILURE not in err:
+                # Raise IEM if hdparm gives error other than
+                # "SG_IO: bad/missing sense data" or "HDIO_GET_IDENTITY failed:
+                #  Invalid argument"
+                logger.error("DiskMonitor, _is_local_drive: Error for drive:%s,"
+                    "Error: %s, , RESPONSE: %s" %(drive_name, err, res))
+                self._iem.iem_fault("HDPARM_ERROR")
+                if self.HDPARM not in self._iem.fault_iems:
+                    self._iem.fault_iems.append(self.HDPARM)
                 return True
             else:
                 return False

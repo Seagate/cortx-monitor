@@ -36,6 +36,7 @@ setups = ["vm", "cortx", "ssu", "gw", "cmu"]
 RESOURCE_PATH = "/opt/seagate/%s/sspl/low-level/json_msgs/schemas/" % (PRODUCT_FAMILY)
 CLI_RESOURCE_PATH = "/opt/seagate/%s/sspl/low-level/tests/manual" % (PRODUCT_FAMILY)
 DATA_PATH = "/var/%s/sspl/data/" % (PRODUCT_FAMILY)
+IEM_DATA_PATH = "/var/%s/sspl/data/iem/sspl_iems"  %(PRODUCT_FAMILY)
 SSPL_CONFIGURED_DIR = "/var/%s/sspl/" % (PRODUCT_FAMILY)
 SSPL_CONFIGURED = "%s/sspl-configured" % (SSPL_CONFIGURED_DIR)
 RESOURCE_HEALTH_VIEW = "/usr/bin/resource_health_view"
@@ -277,6 +278,7 @@ class RaidAlertMsgs(Enum):
 class AlertTypes(Enum):
     GET = "get"
     FAULT = "fault"
+    FAULT_RESOLVED = "fault_resolved"
 
 
 class SensorTypes(Enum):
@@ -333,7 +335,7 @@ iem_severity_to_alert_mapping = {
     "W": AlertTypes.GET.value,
     "N": AlertTypes.GET.value,
     "C": AlertTypes.GET.value,
-    "I": AlertTypes.GET.value,
+    "I": AlertTypes.FAULT_RESOLVED.value,
     "D": AlertTypes.GET.value,
     "B": AlertTypes.GET.value
 }

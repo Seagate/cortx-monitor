@@ -68,7 +68,9 @@ class IEMDataMsg(BaseSensorMsg):
                         "cluster_id": info.get("cluster_id"),
                         "rack_id": info.get("rack_id"),
                         "resource_type": "iem",
-                        "description": info.get("description")
+                        "description": info.get("description"),
+                        "impact": info.get("impact"),
+                        "recommendation": info.get("recommendation")
                     },
                     "alert_type": info.get("alert_type"),
                     "severity": info.get("severity"),
