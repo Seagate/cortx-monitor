@@ -315,10 +315,10 @@ if [ "$IS_VIRTUAL" == "true" ]
 then
     # setting back the actual values
     $sudo $script_dir/set_threshold.sh $transmit_interval $disk_usage_threshold $host_memory_usage_threshold $cpu_usage_threshold $sspl_config
-    [[ -f ${SSPL_CONFIG_FILE}.back ]] && $sudo mv ${SSPL_CONFIG_FILE}.back $SSPL_CONFIG_FILE
-    #[[ -f ${test_config_file}.back ]] && $sudo mv ${test_config_file}.back $test_config_file
-    [[ -f ${global_config_file}.back ]] && $sudo mv ${global_config_file}.back $global_config_file
 fi
+[[ -f ${SSPL_CONFIG_FILE}.back ]] && $sudo mv ${SSPL_CONFIG_FILE}.back $SSPL_CONFIG_FILE
+#[[ -f ${test_config_file}.back ]] && $sudo mv ${test_config_file}.back $test_config_file
+[[ -f ${global_config_file}.back ]] && $sudo mv ${global_config_file}.back $global_config_file
 
 echo "Tests completed, restored configs and services .."
 restore_cfg_services
