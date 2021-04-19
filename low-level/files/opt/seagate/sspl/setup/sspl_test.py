@@ -94,7 +94,7 @@ class SSPLTestCmd:
             # Enable & disable sensors based on environment
             update_sensor_info(SSPL_TEST_CONFIG_INDEX, self.node_type, self.enclosure_type)
 
-            # TODO: Move lines 90-116 & 125-127 to RunQATest class
+            # TODO: Move lines 99-131 & 152-159 to RunQATest class
             # Create dummy service and add service name in /etc/sspl.conf
             service_name = "dummy_service.service"
             service_file_path_src = f"{TEST_DIR}/alerts/os/dummy_service_files/dummy_service.service"
@@ -159,7 +159,7 @@ class SSPLTestCmd:
             Conf.save(SSPL_CONFIG_INDEX)
             shutil.copyfile(sspl_test_backup, sspl_test_file_path)
             if rc != 0:
-                raise Exception("%s - ERROR: %s - CMD %s" % (self.name, error, CMD))
+                raise TestException("%s - ERROR: %s - CMD %s" % (self.name, error, CMD))
         else:
             # TODO: Convert shell script to python
             # from cortx.sspl.sspl_test.run_qa_test import RunQATest
@@ -168,4 +168,15 @@ class SSPLTestCmd:
                 CMD = "%s/run_qa_test.sh %s %s" % (TEST_DIR, self.plan, self.avoid_rmq)
                 output, error, returncode = SimpleProcess(CMD).run(realtime_output=True)
             except KeyboardInterrupt:
-                print("KeyboardInterrupt occurred while executing sspl test.")
+                raise TestException("KeyboardInterrupt occurred while executing sspl test.")
+            except Exception as error:
+                raise TestException("Error occurred while executing self test: %s" %error)
+
+class TestException(Exception):
+    def __init__(self, message):
+            """Handle error msg from thread modules."""
+            self._desc = message
+
+    def __str__(self):
+        """Returns formated error msg."""
+        return "error: %s" %(self._desc)

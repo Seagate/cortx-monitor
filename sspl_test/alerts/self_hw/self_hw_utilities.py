@@ -38,9 +38,9 @@ def is_virtual():
     return retVal
 
 def get_node_id():
-        node_key = 'srvnode-1'
+        node_id = 'srvnode-1'
         try:
-            node_key = Conf.get(GLOBAL_CONF, NODE_KEY)
+            node_id = Conf.get(GLOBAL_CONF, NODE_KEY)
         except Exception as e:
             print(f"Can't read node id, using 'srvnode-1' : {e}")
-        return node_key
+        return node_id
