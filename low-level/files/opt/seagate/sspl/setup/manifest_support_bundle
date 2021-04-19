@@ -23,39 +23,56 @@ import sys
 import socket
 import json
 import subprocess
+import logging
+from framework.utils.conf_utils import (GLOBAL_CONF, Conf,
+    STORAGE_TYPE_KEY, SITE_ID_KEY, RACK_ID_KEY,
+    NODE_ID_KEY, CLUSTER_ID_KEY, SSPL_CONF)
+from framework.base.sspl_constants import DATA_PATH, SYSLOG_HOST, SYSLOG_PORT
 
-from cortx.utils.conf_store import Conf
-from framework.utils.conf_utils import Utility
-from framework.base.sspl_constants import (PRODUCT_FAMILY,
-                                        RESOURCE_HEALTH_VIEW,
-                                        sspl_config_path,
-                                        GLOBAL_CONFIG_INDEX)
+ManifestData = f"{DATA_PATH}support_bundle/manifest_data"
+if not os.path.exists(ManifestData):
+    os.makedirs(ManifestData)
 
-SSPL_CONF = "SSPL_CONFIG"
-Conf.load(SSPL_CONF, sspl_config_path)
-global_config_url = Conf.get(SSPL_CONF, "SYSTEM_INFORMATION>global_config_copy_url")
-Conf.load(GLOBAL_CONFIG_INDEX, global_config_url)
+sspl_msb_req = f"{ManifestData}/sspl-msb-req.txt"
+node_manifest = f"{ManifestData}/node_manifest.json"
+encl_manifest = f"{ManifestData}/encl_manifest.json"
+manifest_summary = f"{ManifestData}/manifest_summary.json"
+sspl_state_file = f"{DATA_PATH}state.txt"
 
-machine_id = Utility.get_machine_id()
+class ManifestBundleError(Exception):
+    """Generic Exception with error code and output."""
 
-# Get cluster_id and node_key_id from global config
-cluster_id = Conf.get(GLOBAL_CONFIG_INDEX, "server_node>%s>cluster_id" % machine_id)
-node_key_id = Conf.get(GLOBAL_CONFIG_INDEX, "server_node>%s>name" % machine_id)
+    def __init__(self, rc, message, *args):
+        """Initialize with custom error message and return code."""
+        self._rc = rc
+        self._desc = message % (args)
+        manifest_bundle_cleanup()
 
-onGoingRequestPath = "/tmp/sspl-msb-req.txt"
+    def __str__(self):
+        """Format error string."""
+        if self._rc == 0: return self._desc
+        return "SSPLBundleError(%d): %s" %(self._rc, self._desc)
+
 
 class ManifestSupportBundle(object):
 
-    def __init__(self):
+    STORAGE_TYPE_RBOD = 'rbod'
 
-        self.localTempPath = "/tmp/support_bundle/"
-        self.encl_manifest = "/tmp/encl_manifest.json"
-        self.node_manifest = "/tmp/node_manifest.json"
-        self.manifest_summary = "/tmp/manifest_summary.json"
+    def __init__(self):
+        self._logger = logger
         self.lr_serial_number_path = "/opt/seagate/lr-serial-number"
         self.node_hostname = socket.gethostname().split('.', 1)[0]
         self.encl_summary_filter={}
-        self.cluster_id = cluster_id
+        self.site_id = Conf.get(GLOBAL_CONF, SITE_ID_KEY, 'DC01')
+        self.rack_id = Conf.get(GLOBAL_CONF, RACK_ID_KEY, 'RC01')
+        self.node_id = Conf.get(GLOBAL_CONF, NODE_ID_KEY, 'SN01')
+        self.cluster_id = Conf.get(GLOBAL_CONF, CLUSTER_ID_KEY, 'CC01')
+        self.sspl_state = sspl_state
+        self.hostname = socket.getfqdn()
+        self.support_common_data = {}
+        self.storage_type = Conf.get(GLOBAL_CONF, STORAGE_TYPE_KEY, 'virtual').lower()
+        if self.storage_type in ['5u84', 'rbod', 'pods']:
+            self.storage_type = 'rbod'
         self.encl_summary_fields = ["object-name", "durable-id", "vendor-name", "product-id", "serial-number",
                             "model", "product-brand", "description", "status", "health", "health-reason",
                             "platform-type", "platform-brand", "part-number", "enclosure-wwn", "vendor",
@@ -63,45 +80,44 @@ class ManifestSupportBundle(object):
         self.node_summary_fields = ['id', 'class', 'description', 'product', 'serial', 'vendor',
                             'part-number', 'model-number','children', 'physid', 'version']
 
-
     def make_manifest_support_bundle_tarfile(self, parser, tmpFile):
+        localTempPath = f"{ManifestData}/manifest_bundle/"
         configure_path = parser[2]
         if configure_path:
             if os.path.exists(configure_path):
-                self.localTempPath = configure_path+"manifest/"
+                localTempPath = configure_path+"manifest/"
             else:
                 msg = "Given path %s doesn't exist" %(configure_path)
+                self._logger.error(msg)
                 tmpFile.close()
-                os.remove(onGoingRequestPath)
-                raise Exception(msg)
-        if not os.path.exists(self.localTempPath):
-            os.makedirs(self.localTempPath)
+                raise ManifestBundleError(1, msg)
+        if not os.path.exists(localTempPath):
+            os.makedirs(localTempPath)
         try:
-            sspl_state = ""
             try:
                 lr_serial_number = open(self.lr_serial_number_path).readline().rstrip()
             except (FileNotFoundError, OSError) as e:
-                print(f"Unable to get lr serial number from the given path : {self.lr_serial_number_path}")
+                self._logger.error(f"Unable to get lr serial number from the given path:"
+                                "{self.lr_serial_number_path}")
                 lr_serial_number = "NA"
-
             try:
-                sspl_state=open(f"/var/{PRODUCT_FAMILY}/sspl/data/state.txt").readline().rstrip().split("=")
+                self.support_common_data = {
+                    "cluster_id": self.cluster_id,
+                    "site_id": self.site_id,
+                    "rack_id": self.rack_id,
+                    "node_id": self.node_id
+                }
+                self.capture_node_data()
                 # Capturing enclosure data only when sspl state is active
-                sspl_state = sspl_state[1] if len(sspl_state)==2 else ''
-                if sspl_state == 'active':
-                    subprocess.call([f"{RESOURCE_HEALTH_VIEW}", "-n", "-e", "-s"], shell=False)
-                else:
-                    print("SSPL state is not active, So enclosure data are ignored to collecte.")
-                    subprocess.call([f"{RESOURCE_HEALTH_VIEW}", "-n", "-s"], shell=False)
-            except (FileNotFoundError, OSError) as e:
-                print(f"Failed to open the SSPL 'state.txt' file with an error '{e}',\
-                    Can't determine the SSPL state, So enclosure data also being collected.")
-                sspl_state == 'active'
-                subprocess.call([f"{RESOURCE_HEALTH_VIEW}", "-n", "-e", "-s"], shell=False)
+                if self.sspl_state == 'active':
+                    if self.storage_type == self.STORAGE_TYPE_RBOD:
+                        self.capture_enclosure_data()
+            except Exception as e:
+                self._logger.error(f"Failed to capture the Manifest data. Error:{str(e)}")
 
             date_time = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
-            if os.path.exists(self.encl_manifest) and sspl_state == 'active':
-                with open(self.encl_manifest) as json_file:
+            if os.path.exists(encl_manifest) and self.sspl_state == 'active':
+                with open(encl_manifest) as json_file:
                     data = json.load(json_file)
                     enclosure_wwn = data["enclosure_wwn"]
                 file_name = "manifest_{0}_SN-{1}_Node-{2}_plus_Encl-{3}_{4}.tar.gz".format(date_time, lr_serial_number,
@@ -110,7 +126,7 @@ class ManifestSupportBundle(object):
                 file_name = "manifest_{0}_SN-{1}_Node-{2}_{3}.tar.gz".format(date_time, lr_serial_number, self.node_hostname,
                     parser[1])
 
-            with tarfile.open(self.localTempPath+file_name, "w:gz") as tar:
+            with tarfile.open(localTempPath+file_name, "w:gz") as tar:
                 file_dir = file_name.replace(".tar.gz","")
                 manifest_file_name = "{0}.json".format(file_name.replace("manifest_", "MS_")\
                     .replace(f"_{parser[1]}.tar.gz","").replace("plus_",""))
@@ -120,37 +136,139 @@ class ManifestSupportBundle(object):
                         "cluster-id": self.cluster_id
                     }
                 }
-                if os.path.exists(self.encl_manifest) and sspl_state == 'active':
-                    tar.add(self.encl_manifest, arcname=file_dir+"/enclosure-{0}_manifest.json".format(enclosure_wwn))
-                    with open(self.encl_manifest, 'r') as j:
+                if os.path.exists(encl_manifest) and self.sspl_state == 'active':
+                    try:
+                        tar.add(encl_manifest, arcname=file_dir+"/enclosure-{0}_manifest.json"
+                                .format(enclosure_wwn))
+                    except IOError as err:
+                        self._logger.error("Unable to include %s logs with an error %s"
+                                            % (encl_manifest, err))
+                    with open(encl_manifest, 'r') as j:
                         encl_manifest_dict = json.loads(j.read())
                         node_encl_summary["cluster"].update(self.fetch_encl_summary_data(encl_manifest_dict["hw_specifics"]))
 
-                if os.path.exists(self.node_manifest):
-                    tar.add(self.node_manifest, arcname=file_dir+"/node-{0}_manifest.json".format(self.node_hostname))
-                    with open(self.node_manifest, 'r') as j:
+                if os.path.exists(node_manifest):
+                    try:
+                        tar.add(node_manifest, arcname=file_dir+"/node-{0}_manifest.json"
+                                .format(self.node_hostname))
+                    except IOError as err:
+                        self._logger.error("Unable to include %s logs with an error %s"
+                                            % (node_manifest, err))
+                    with open(node_manifest, 'r') as j:
                         node_manifest_dict = json.loads(j.read())
                         node_encl_summary["cluster"].update(self.fetch_node_summary_data(node_manifest_dict["hw_specifics"]))
-                self.write_content_in_file(node_encl_summary, self.manifest_summary, "manifest_summary.json")
-                if os.path.exists(self.manifest_summary):
-                    tar.add(self.manifest_summary, arcname=file_dir+"/"+manifest_file_name)
+                self.write_content_in_file(node_encl_summary, manifest_summary, "manifest_summary.json")
+                if os.path.exists(manifest_summary):
+                    try:
+                        tar.add(manifest_summary, arcname=file_dir+"/"+manifest_file_name)
+                    except IOError as err:
+                        self._logger.error("Unable to include %s logs with an error %s"
+                                            % (manifest_summary, err))
                 tar.close()
-
         except (OSError, tarfile.TarError) as err:
             msg = "Facing problem while creating manifest support bundle : %s" % err
+            self._logger.error(msg)
             tmpFile.close()
-            os.remove(onGoingRequestPath)
-            raise Exception(msg)
+            raise ManifestBundleError(1, msg)
 
-        print("Manifest Support Bundle Location: %s" % self.localTempPath+file_name)
+        self._logger.info("Manifest Support Bundle Location: %s" % localTempPath+file_name)
+
+    def capture_node_data(self):
+        # Get Node Support Data
+        node_support_data = {}
+        node_support_data.update(self.support_common_data)
+        node_support_data.update({"hostname": self.hostname})
+        node_support_data["hw_specifics"] = self.build_node_hw_specifics_instances()
+        self.write_content_in_file(node_support_data, node_manifest,
+                                   'node support data')
+        self._logger.info('Node Support data Json Created Successfully..! :%s' % node_manifest)
+
+    def capture_enclosure_data(self):
+        # Get Enclosure Support Data
+        encl_support_data = {}
+        encl_support_data.update(self.support_common_data)
+        encl_data_response = self.build_encl_hw_specifics_instances()
+        if encl_data_response and 'enclosures' in encl_data_response:
+            encl_support_data["enclosure_wwn"] = encl_data_response["enclosures"][0]["enclosure-wwn"]
+            encl_support_data["hw_specifics"] = encl_data_response
+            self.write_content_in_file(encl_support_data, encl_manifest,
+                                        'enclosure support data')
+            self._logger.info('Enclosure Support data Json Created Successfully..! :%s' 
+                              % encl_manifest)
+        else:
+            self._logger.error("Management controller IPs are not configured properly on node or in ConfStore")
+            self._logger.error("or it is inaccessible for the current node.")
+            self._logger.error("Ignored to collect enclosure manifest data.")
+
+    def build_node_hw_specifics_instances(self):
+        lshw_dict = {}
+        proc = subprocess.Popen(['lshw', '-json'], stdout=subprocess.PIPE)
+        str_dict, err = proc.communicate()
+        if err:
+            self._logger.error(f"Failed to capture Node support data. Error:{str(err)}")
+        lshw_dict = json.loads(str_dict.decode("utf-8"))
+        return lshw_dict
+
+    def build_encl_hw_specifics_instances(self):
+        fan_module_list = []
+        sideplane_list = []
+        chassis_midplane_list = []
+        response = self.fetch_ws_request_data("/show/configuration", 'configuration')
+        if not response or response.status_code != singleton_realstorencl.ws.HTTP_OK:
+            return
+        enclosure_data = json.loads(response.text)
+        if enclosure_data and 'enclosure-fru' in enclosure_data and 'enclosures' in enclosure_data:
+            for encl_fru in enclosure_data['enclosure-fru']:
+                if encl_fru['name'] == 'FAN MODULE':
+                    try:
+                        fan_number = encl_fru['fru-location'].split()[-1]
+                        for fan_module in enclosure_data['enclosures'][0]['fan-modules']:
+                            if fan_module['durable-id'].split('.')[-1] == fan_number:
+                                fan_module['part-number'] = encl_fru['part-number']
+                                fan_module['serial-number'] = encl_fru['serial-number']
+                                fan_module_list.append(fan_module)
+                    except Exception as e:
+                        self._logger.error("Error while updating fan module {0} information : {1}"
+                                            .format(fan_number, e))
+                elif encl_fru['name'] == 'SIDEPLANE':
+                    encl_fru['object-name'] = encl_fru['name'].lower()
+                    sideplane_list.append(encl_fru)
+                elif encl_fru['name'] == 'CHASSIS_MIDPLANE':
+                    encl_fru['object-name'] = encl_fru['name'].lower()
+                    chassis_midplane_list.append(encl_fru)
+
+            if len(fan_module_list) == len(enclosure_data['enclosures'][0]['fan-modules']):
+                enclosure_data['enclosures'][0]['fan-modules'] = fan_module_list
+            if sideplane_list:
+                enclosure_data['enclosures'][0].update({'sideplane':sideplane_list})
+            if chassis_midplane_list:
+                enclosure_data['enclosures'][0].update({'chassis-midplane':chassis_midplane_list})
+        return enclosure_data
+
+    def fetch_ws_request_data(self, show_fru, fru):
+
+        url = singleton_realstorencl.build_url(show_fru)
+        response = singleton_realstorencl.ws_request(url, singleton_realstorencl.ws.HTTP_GET)
+
+        if not response:
+            self._logger.error("{0}:: {2} status unavailable as ws request {1}"
+                " failed".format(singleton_realstorencl.LDR_R1_ENCL, url, fru))
+            return response
+
+        if response.status_code != singleton_realstorencl.ws.HTTP_OK:
+            if url.find(singleton_realstorencl.ws.LOOPBACK) == -1:
+                self._logger.error("{0}:: http request {1} to get {3} failed with"
+                    " err {2}".format(singleton_realstorencl.LDR_R1_ENCL, url, response.status_code, fru))
+            return response
+
+        return response
 
     def write_content_in_file(self, file_data, file_path, instance):
         try:
             with open(file_path, 'w+') as fp:
                 json.dump(file_data, fp,  indent=4)
-
         except Exception as e:
-            print("Error in writing {0} file: {1}".format(instance, e))
+            self._logger.error("Error in writing {0} file: {1}".format(instance, e))
             return False
 
     def fetch_node_summary_data(self, node_manifest_dict):
@@ -164,11 +282,11 @@ class ManifestSupportBundle(object):
             subout = subprocess.Popen(cortx_build_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             result = subout.stdout.readlines()
             if result == [] or result == "":
-                print("Unable to fetch cortx build version.")
+                self._logger.error("Unable to fetch cortx build version.")
             else:
                 cortx_build_version = result[0].decode().rstrip('\n').split('/')[-2]
         except Exception as e:
-            print("Unable to fetch cortx build version.")
+            self._logger.error("Unable to fetch cortx build version.")
         cortx = {'id':'Cortx SW', 'version':cortx_build_version, 'license-info': 'NA', 'cluster-id':self.cluster_id}
         post_node_filter_list.append(cortx)
 
@@ -192,7 +310,7 @@ class ManifestSupportBundle(object):
 
         filtered_data_all['children'] = post_node_filter_list
         filtered_data_all['hostname'] = filtered_data_all.pop('id')
-        final_node_summary_dict.update({node_key_id:filtered_data_all})
+        final_node_summary_dict.update({self.node_id: filtered_data_all})
 
         return final_node_summary_dict
 
@@ -255,16 +373,66 @@ class ManifestSupportBundle(object):
                 encl_dict.update({key:value})
         return encl_dict
 
+def manifest_bundle_cleanup():
+    """Cleanup activity for Manifest Support Bundle"""
+    try:
+        if os.path.exists(sspl_msb_req):
+            os.remove(sspl_msb_req)
+        remove_files = [encl_manifest, node_manifest, manifest_summary]
+        for rm_file in remove_files:
+            if os.path.exists(rm_file):
+                os.remove(rm_file)
+    except OSError as ex:
+        print(f"Failed in manifest bundle cleanup. Error:{str(ex)}")
+
+def initialize_logging(parser):
+    # set Logging Handlers
+    _logger = logging.getLogger('manifest_sb')
+    logging_level = Conf.get(SSPL_CONF, f"{'SYSTEM_INFORMATION'}>{'log_level'}",
+                                            "INFO")
+    _logger.setLevel(logging_level)
+    handler = logging.handlers.SysLogHandler(
+                    address=(SYSLOG_HOST, SYSLOG_PORT))
+    syslog_format = "%(name)s[%(process)d]: " \
+                    "%(levelname)s %(message)s (%(filename)s:%(lineno)d)"
+    formatter = logging.Formatter(syslog_format)
+    handler.setFormatter(formatter)
+    _logger.addHandler(handler)
+
+    # Add console handler
+    if "console" in parser:
+        console = logging.StreamHandler(sys.stdout)
+        console.setFormatter(formatter)
+        _logger.addHandler(console)
+    return _logger
+
 if __name__ == "__main__":
-    if not os.path.isfile(onGoingRequestPath):
-        if len(sys.argv) == 3:
-            tmpFile = open(onGoingRequestPath, "w")
+    if not os.path.isfile(sspl_msb_req):
+        if len(sys.argv) >= 3:
+            try:
+                # Initialize logging
+                logger = initialize_logging(sys.argv)
+
+                sspl_state=open(sspl_state_file).readline().rstrip().split("=")
+                sspl_state = sspl_state[1] if len(sspl_state)==2 else ''
+                logger.info(f"Fetched SSPL state:{sspl_state}")
+                if sspl_state == 'active':
+                    from framework.platforms.realstor.realstor_enclosure import singleton_realstorencl
+                else:
+                    logger.info("SSPL state is not active, So enclosure data will not be captured.")
+            except (FileNotFoundError, OSError) as e:
+                logger.error(f"Failed to open the SSPL 'state.txt' file with an error '{e}',\
+                      Can't determine the SSPL state, So enclosure data also being collected.")
+                sspl_state = 'active'
+                from framework.platforms.realstor.realstor_enclosure import singleton_realstorencl
+
+            tmpFile = open(sspl_msb_req, "w")
             ManifestSupportBundle().make_manifest_support_bundle_tarfile(sys.argv, tmpFile)
             tmpFile.close()
-            os.remove(onGoingRequestPath)
+            manifest_bundle_cleanup()
         else:
             msg = "Unrecognized arguments: %s" % sys.argv
-            raise Exception(msg)
+            raise ManifestBundleError(1, msg)
     else:
         msg = "Already Manifest Support Bundle request is going on, So skipping current request..!"
         raise Exception(msg)

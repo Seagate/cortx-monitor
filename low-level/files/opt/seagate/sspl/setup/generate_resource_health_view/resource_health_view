@@ -24,7 +24,6 @@ import argparse
 import psutil
 import subprocess
 import traceback
-import tempfile
 import re
 import copy
 import dbus
@@ -50,9 +49,6 @@ class SSPLHealthView(object):
     RESOURCE_HEALTH_VIEW_PATH = '/tmp/' + RESOURCE_HEALTH_VIEW_FILE
     TEMPLATE_SCHEMA_FILE = f'/opt/seagate/{PRODUCT_FAMILY}/sspl/low-level/files'\
     '/opt/seagate/sspl/setup/generate_resource_health_view/resource_health_view_template.json'
-
-    ENCL_MANIFEST_PATH = '/tmp/encl_manifest.json'
-    NODE_MANIFEST_PATH = '/tmp/node_manifest.json'
 
     STORAGE_TYPE_JBOD = 'jbod'
     STORAGE_TYPE_RBOD = 'rbod'
@@ -93,8 +89,6 @@ class SSPLHealthView(object):
         self.SAS_RESOURCE_ID = "SASHBA-0"
         self.node_interface_data = ['sas_port', 'network_cable']
         self.NW_CBL_CARRIER_FILE = "/sys/class/net/{}/carrier"
-
-        self.encl_hw_specifics_api = 'configuration'
 
         self.SITE_ID = Conf.get(GLOBAL_CONF, SITE_ID_KEY, 'DC01')
         self.RACK_ID = Conf.get(GLOBAL_CONF, RACK_ID_KEY, 'RC01')
@@ -139,149 +133,111 @@ class SSPLHealthView(object):
             self.RESOURCE_HEALTH_VIEW_PATH = args.path
             if os.path.exists(args.path):
                 self.RESOURCE_HEALTH_VIEW_PATH = args.path if args.path.endswith('/') else args.path+'/'
-                if args.support and args.encl:
-                    self.ENCL_MANIFEST_PATH = self.RESOURCE_HEALTH_VIEW_PATH + "encl_manifest.json"
-                if args.support and args.node:
-                    self.NODE_MANIFEST_PATH = self.RESOURCE_HEALTH_VIEW_PATH + "node_manifest.json"
-                if not args.support:
-                    self.RESOURCE_HEALTH_VIEW_PATH += self.RESOURCE_HEALTH_VIEW_FILE
+                self.RESOURCE_HEALTH_VIEW_PATH += self.RESOURCE_HEALTH_VIEW_FILE
             else:
                 print("Given path doesn't exist")
                 sys.exit(1)
 
-        if not args.support:
-            if os.path.exists(self.RESOURCE_HEALTH_VIEW_PATH):
-                print("Resource Health view JSON file already exists, overriding ...!")
+        if os.path.exists(self.RESOURCE_HEALTH_VIEW_PATH):
+            print("Resource Health view JSON file already exists, overriding ...!")
 
-            if args.encl and self.storage_type == self.STORAGE_TYPE_JBOD:
-                try:
-                    storage_encl_health_json = self._resource_health_view['cluster']['sites']\
-                                                        [self.SITE_ID]['rack'][self.RACK_ID]\
-                                                        ['nodes']['storage_encl']
-                except Exception as e:
-                    print("Error while extracting values from health view json %s : " % e)
-                    return False
-
-                for category in ['sw', 'interfaces', 'platform_sensors']:
-                    del self._resource_health_view['cluster']['sites']\
-                                                            [self.SITE_ID]['rack'][self.RACK_ID]\
-                                                            ['nodes']['storage_encl'][category]
-                for sub_category in ['psus', 'controllers', 'fans', 'sideplane_expander']:
-                    del self._resource_health_view['cluster']['sites']\
-                                                            [self.SITE_ID]['rack'][self.RACK_ID]\
-                                                            ['nodes']['storage_encl']['hw']['fru'][sub_category]
-                self.build_health_view_storage_jbod_cache(storage_encl_health_json)
-                health_view_created = True
-
-            elif args.encl and self.storage_type == self.STORAGE_TYPE_RBOD:
-                try:
-                    storage_encl_health_json = self._resource_health_view['cluster']['sites']\
-                                                        [self.SITE_ID]['rack'][self.RACK_ID]\
-                                                        ['nodes']['storage_encl']
-                except Exception as e:
-                    print("Error while extracting values from health view json %s : " % e)
-                    return False
-                self.build_health_view_storage_encl_cache(storage_encl_health_json, 'hw')
-                if self.correct_mc_config:
-                    self.build_health_view_storage_encl_cache(storage_encl_health_json, 'sw')
-                    self.build_health_view_storage_encl_cache(storage_encl_health_json, 'interfaces')
-                    self.build_health_view_storage_encl_cache(storage_encl_health_json, 'platform_sensors')
-                    health_view_created = True
-                else:
-                    print("Management controller IPs are not configured properly on node or in ConfStore", end=" ")
-                    print("or it is inaccessible for the current node.")
-                    print("Ignored to collect enclosure health view data.")
-
-            elif self.storage_type == self.STORAGE_TYPE_VIRTUAL:
-                self._resource_health_view['cluster']['sites']\
+        if args.encl and self.storage_type == self.STORAGE_TYPE_JBOD:
+            try:
+                storage_encl_health_json = self._resource_health_view['cluster']['sites']\
                                                     [self.SITE_ID]['rack'][self.RACK_ID]\
-                                                    ['nodes']['storage_encl'].clear()
+                                                    ['nodes']['storage_encl']
+            except Exception as e:
+                print("Error while extracting values from health view json %s : " % e)
+                return False
 
-            elif not args.encl:
+            for category in ['sw', 'interfaces', 'platform_sensors']:
                 del self._resource_health_view['cluster']['sites']\
                                                         [self.SITE_ID]['rack'][self.RACK_ID]\
-                                                        ['nodes']['storage_encl']
-
-            if args.node and self.server_type == self.SERVER_TYPE_VIRTUAL:
-                try:
-                    node_health_json = self._resource_health_view['cluster']['sites']\
-                                                        [self.SITE_ID]['rack'][self.RACK_ID]\
-                                                        ['nodes']['node:' + SRVNODE] =\
-                                                        self._resource_health_view['cluster']['sites']\
-                                                        [self.SITE_ID]['rack'][self.RACK_ID]\
-                                                        ['nodes'].pop('node')
-                    node_health_json.update({'node_id':self.NODE_ID})
-                except Exception as e:
-                    print("Error while extracting values from health view json %s : " % e)
-                    return False
-
-                for category in ['hw', 'interfaces', 'platform_sensors']:
-                    del self._resource_health_view['cluster']['sites']\
-                                                        [self.SITE_ID]['rack'][self.RACK_ID]\
-                                                        ['nodes']['node:' + SRVNODE][category]
-                self.build_health_view_node_server_cache(node_health_json, 'os')
-                health_view_created = True
-
-            elif args.node:
-                try:
-                    node_health_json = self._resource_health_view['cluster']['sites']\
-                                                        [self.SITE_ID]['rack'][self.RACK_ID]\
-                                                        ['nodes']['node:' + SRVNODE] =\
-                                                        self._resource_health_view['cluster']['sites']\
-                                                        [self.SITE_ID]['rack'][self.RACK_ID]\
-                                                        ['nodes'].pop('node')
-                    node_health_json.update({'node_id':self.NODE_ID})
-                except Exception as e:
-                    print("Error while extracting values from health view json %s : " % e)
-                    return False
-                self.build_health_view_node_server_cache(node_health_json, 'hw')
-                self.build_health_view_node_server_cache(node_health_json, 'platform_sensors')
-                self.build_health_view_node_server_cache(node_health_json, 'interfaces')
-                self.build_health_view_node_server_cache(node_health_json, 'os')
-                health_view_created = True
-
-            elif not args.node:
+                                                        ['nodes']['storage_encl'][category]
+            for sub_category in ['psus', 'controllers', 'fans', 'sideplane_expander']:
                 del self._resource_health_view['cluster']['sites']\
-                                    [self.SITE_ID]['rack'][self.RACK_ID]\
-                                    ['nodes']['node']
+                                                        [self.SITE_ID]['rack'][self.RACK_ID]\
+                                                        ['nodes']['storage_encl']['hw']['fru'][sub_category]
+            self.build_health_view_storage_jbod_cache(storage_encl_health_json)
+            health_view_created = True
 
-            self.write_content_in_file(self.RESOURCE_HEALTH_VIEW_PATH, self._resource_health_view,
-                                        'resource health view')
+        elif args.encl and self.storage_type == self.STORAGE_TYPE_RBOD:
+            try:
+                storage_encl_health_json = self._resource_health_view['cluster']['sites']\
+                                                    [self.SITE_ID]['rack'][self.RACK_ID]\
+                                                    ['nodes']['storage_encl']
+            except Exception as e:
+                print("Error while extracting values from health view json %s : " % e)
+                return False
+            self.build_health_view_storage_encl_cache(storage_encl_health_json, 'hw')
+            if self.correct_mc_config:
+                self.build_health_view_storage_encl_cache(storage_encl_health_json, 'sw')
+                self.build_health_view_storage_encl_cache(storage_encl_health_json, 'interfaces')
+                self.build_health_view_storage_encl_cache(storage_encl_health_json, 'platform_sensors')
+                health_view_created = True
+            else:
+                print("Management controller IPs are not configured properly on node or in ConfStore", end=" ")
+                print("or it is inaccessible for the current node.")
+                print("Ignored to collect enclosure health view data.")
 
-            if health_view_created:
-                print('Resource Health View Json Created Successfully..! :%s' % self.RESOURCE_HEALTH_VIEW_PATH)
+        elif self.storage_type == self.STORAGE_TYPE_VIRTUAL:
+            self._resource_health_view['cluster']['sites']\
+                                                [self.SITE_ID]['rack'][self.RACK_ID]\
+                                                ['nodes']['storage_encl'].clear()
 
-        else:
-            support_common_data = {
-                "cluster_id": self.CLUSTER_ID,
-                "site_id": self.SITE_ID,
-                "rack_id": self.RACK_ID,
-                "node_id": self.NODE_ID
-            }
-            if args.encl and args.support and self.storage_type == self.STORAGE_TYPE_RBOD:
-                encl_support_data = {}
-                encl_support_data.update(support_common_data)
-                encl_data_response = self.build_encl_hw_specifics_instances()
-                if encl_data_response and 'enclosures' in encl_data_response:
-                    encl_support_data["enclosure_wwn"] = encl_data_response["enclosures"][0]["enclosure-wwn"]
-                    encl_support_data["hw_specifics"] = encl_data_response
-                    self.write_content_in_file(self.ENCL_MANIFEST_PATH, encl_support_data,
-                                                'enclosure support data')
-                    print('Enclosure Support data Json Created Successfully..! :%s' % self.ENCL_MANIFEST_PATH)
+        elif not args.encl:
+            del self._resource_health_view['cluster']['sites']\
+                                                    [self.SITE_ID]['rack'][self.RACK_ID]\
+                                                    ['nodes']['storage_encl']
 
-                else:
-                    print("Management controller IPs are not configured properly on node or in ConfStore", end=" ")
-                    print("or it is inaccessible for the current node.")
-                    print("Ignored to collect enclosure manifest data.")
+        if args.node and self.server_type == self.SERVER_TYPE_VIRTUAL:
+            try:
+                node_health_json = self._resource_health_view['cluster']['sites']\
+                                                    [self.SITE_ID]['rack'][self.RACK_ID]\
+                                                    ['nodes']['node:' + SRVNODE] =\
+                                                    self._resource_health_view['cluster']['sites']\
+                                                    [self.SITE_ID]['rack'][self.RACK_ID]\
+                                                    ['nodes'].pop('node')
+                node_health_json.update({'node_id':self.NODE_ID})
+            except Exception as e:
+                print("Error while extracting values from health view json %s : " % e)
+                return False
 
-            if args.node and args.support:
-                node_support_data = {}
-                node_support_data.update(support_common_data)
-                node_support_data.update({"hostname": self.HOST_NAME})
-                node_support_data["hw_specifics"] = self.build_node_hw_specifics_instances()
-                self.write_content_in_file(self.NODE_MANIFEST_PATH, node_support_data,
-                                            'node support data')
-                print('Node Support data Json Created Successfully..! :%s' % self.NODE_MANIFEST_PATH)
+            for category in ['hw', 'interfaces', 'platform_sensors']:
+                del self._resource_health_view['cluster']['sites']\
+                                                    [self.SITE_ID]['rack'][self.RACK_ID]\
+                                                    ['nodes']['node:' + SRVNODE][category]
+            self.build_health_view_node_server_cache(node_health_json, 'os')
+            health_view_created = True
+
+        elif args.node:
+            try:
+                node_health_json = self._resource_health_view['cluster']['sites']\
+                                                    [self.SITE_ID]['rack'][self.RACK_ID]\
+                                                    ['nodes']['node:' + SRVNODE] =\
+                                                    self._resource_health_view['cluster']['sites']\
+                                                    [self.SITE_ID]['rack'][self.RACK_ID]\
+                                                    ['nodes'].pop('node')
+                node_health_json.update({'node_id':self.NODE_ID})
+            except Exception as e:
+                print("Error while extracting values from health view json %s : " % e)
+                return False
+            self.build_health_view_node_server_cache(node_health_json, 'hw')
+            self.build_health_view_node_server_cache(node_health_json, 'platform_sensors')
+            self.build_health_view_node_server_cache(node_health_json, 'interfaces')
+            self.build_health_view_node_server_cache(node_health_json, 'os')
+            health_view_created = True
+
+        elif not args.node:
+            del self._resource_health_view['cluster']['sites']\
+                                [self.SITE_ID]['rack'][self.RACK_ID]\
+                                ['nodes']['node']
+
+        self.write_content_in_file(self.RESOURCE_HEALTH_VIEW_PATH, self._resource_health_view,
+                                    'resource health view')
+
+        if health_view_created:
+            print('Resource Health View Json Created Successfully..! :%s' % self.RESOURCE_HEALTH_VIEW_PATH)
 
     def build_health_view_storage_encl_cache(self, storage_encl_health_json, category):
 
@@ -797,38 +753,6 @@ class SSPLHealthView(object):
                 store.put(system[singleton_realstorencl.FAULT_KEY],
                     singleton_realstorencl.faults_persistent_cache)
 
-    def build_encl_hw_specifics_instances(self):
-        fan_module_list = []
-        sideplane_list = []
-        chassis_midplane_list = []
-        enclosure_data = self.get_realstor_show_data(self.encl_hw_specifics_api)
-        if enclosure_data and 'enclosure-fru' in enclosure_data and 'enclosures' in enclosure_data:
-            for encl_fru in enclosure_data['enclosure-fru']:
-                if encl_fru['name'] == 'FAN MODULE':
-                    try:
-                        fan_number = encl_fru['fru-location'].split()[-1]
-                        for fan_module in enclosure_data['enclosures'][0]['fan-modules']:
-                            if fan_module['durable-id'].split('.')[-1] == fan_number:
-                                fan_module['part-number'] = encl_fru['part-number']
-                                fan_module['serial-number'] = encl_fru['serial-number']
-                                fan_module_list.append(fan_module)
-                    except Exception as e:
-                        print("Error while updating fan module {0} information : {1}".format(fan_number, e))
-                elif encl_fru['name'] == 'SIDEPLANE':
-                    encl_fru['object-name'] = encl_fru['name'].lower()
-                    sideplane_list.append(encl_fru)
-                elif encl_fru['name'] == 'CHASSIS_MIDPLANE':
-                    encl_fru['object-name'] = encl_fru['name'].lower()
-                    chassis_midplane_list.append(encl_fru)
-
-            if len(fan_module_list) == len(enclosure_data['enclosures'][0]['fan-modules']):
-                enclosure_data['enclosures'][0]['fan-modules'] = fan_module_list
-            if sideplane_list:
-                enclosure_data['enclosures'][0].update({'sideplane':sideplane_list})
-            if chassis_midplane_list:
-                enclosure_data['enclosures'][0].update({'chassis-midplane':chassis_midplane_list})
-        return enclosure_data
-
     def write_content_in_file(self, file_path, file_data, instance):
         try:
             with open(file_path, 'w+') as fp:
@@ -864,8 +788,6 @@ class SSPLHealthView(object):
         elif fru == "sas-link-health":
             show_fru = singleton_realstorencl.URI_CLIAPI_SASHEALTHSTATUS
             fru = "expander-ports"
-        elif fru == 'configuration':
-            show_fru = "/show/configuration"
 
         response = self.fetch_ws_request_data(show_fru, fru)
         if not response or response.status_code != singleton_realstorencl.ws.HTTP_OK:
@@ -874,8 +796,6 @@ class SSPLHealthView(object):
             return []
         else:
             response_data = json.loads(response.text)
-            if fru == 'configuration':
-                return response_data
             fru_data = response_data.get(fru)
             return fru_data
 
@@ -1052,17 +972,6 @@ class SSPLHealthView(object):
 
         return os_sw_info_dict
 
-    def build_node_hw_specifics_instances(self):
-        lshw_dict = {}
-        with tempfile.TemporaryFile() as tempf:
-            proc = subprocess.Popen(['lshw', '-json'], stdout=tempf)
-            proc.wait()
-            tempf.seek(0)
-            str_dict = tempf.read().decode("utf-8")
-            lshw_dict = json.loads(str_dict)
-
-        return lshw_dict
-
     def build_node_sas_port_instances(self):
         sas_port_data = {}
         resource_type = "node:interface:sas"
@@ -1221,7 +1130,6 @@ if __name__ == "__main__":
     parser.add_argument("-h", "--help", action="store_true", help="Availabe arugumets")
     parser.add_argument("-n", "--node", action="store_true", help="fetch current node data")
     parser.add_argument("-e", "--encl", action="store_true", help="fetch current node enclouser data")
-    parser.add_argument("-s", "--support", action="store_true", help="fetch support data")
     parser.add_argument("--path", metavar="<path> eg. --path '/tmp/sspl/'", help="Health view\
             schema destination path (Note: Path need to be already exist)")
 
