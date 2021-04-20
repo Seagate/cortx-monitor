@@ -65,7 +65,7 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
     DEFAULT_SCAN_FREQUENCY = "1209600"
     # Minimum allowed frequency for RAID integrity scans is 1 day
     # (86400 seconds ), as frequent scans affect disk i/o performance
-    MIN_SCAN_FREQUENCY = 120
+    MIN_SCAN_FREQUENCY = 86400
     DEFAULT_FAULT_ACCEPTED_TIME = "86400"
     DEFAULT_RAID_DATA_PATH = RaidDataConfig.RAID_RESULT_DIR.value
     DEFAULT_TIMESTAMP_FILE_PATH = DEFAULT_RAID_DATA_PATH + "last_execution_time"
