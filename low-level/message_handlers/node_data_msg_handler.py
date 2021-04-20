@@ -234,19 +234,19 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         # Persistent Cache for high Memory Usage
         self.MEMORY_USAGE_DATA_PATH = os.path.join(cache_dir_path, f'MEMORY_USAGE_DATA_{self.node_id}')
 
-        self.persistent_host_usage_data = {}
+        self.persistent_memory_usage_data = {}
         if os.path.isfile(self.MEMORY_USAGE_DATA_PATH):
-            self.persistent_host_usage_data = store.get(self.MEMORY_USAGE_DATA_PATH)
-        if self.persistent_host_usage_data:
-            if self.persistent_host_usage_data['high_memory_usage'] == "True":
+            self.persistent_memory_usage_data = store.get(self.MEMORY_USAGE_DATA_PATH)
+        if self.persistent_memory_usage_data:
+            if self.persistent_memory_usage_data['high_memory_usage'] == "True":
                 self.high_memory_usage = True
             else:
                 self.high_memory_usage = False
         else:
-            self.persistent_host_usage_data = {
+            self.persistent_memory_usage_data = {
                 'high_memory_usage' : str(self.high_memory_usage),
             }
-            store.put(self.persistent_host_usage_data, self.MEMORY_USAGE_DATA_PATH)
+            store.put(self.persistent_memory_usage_data, self.MEMORY_USAGE_DATA_PATH)
 
         # Persistent Cache for Nework sensor
         self.NW_SENSOR_DATA_PATH = os.path.join(cache_dir_path, f'NW_SENSOR_DATA_{self.node_id}')
@@ -493,8 +493,8 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             self.host_sensor_data = jsonMsg
             self.os_sensor_type["memory_usage"] = self.host_sensor_data
             self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
-            self.persistent_host_usage_data["high_memory_usage"] = str(self.high_memory_usage)
-            store.put(self.persistent_host_usage_data, self.MEMORY_USAGE_DATA_PATH)
+            self.persistent_memory_usage_data["high_memory_usage"] = str(self.high_memory_usage)
+            store.put(self.persistent_memory_usage_data, self.MEMORY_USAGE_DATA_PATH)
 
         if self._node_sensor.total_memory["percent"] < self._host_memory_usage_threshold \
             and self.high_memory_usage:
@@ -528,8 +528,8 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             self.os_sensor_type["memory_usage"] = self.host_sensor_data
             self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
             self.high_memory_usage = False
-            self.persistent_host_usage_data["high_memory_usage"] = str(self.high_memory_usage)
-            store.put(self.persistent_host_usage_data, self.MEMORY_USAGE_DATA_PATH)
+            self.persistent_memory_usage_data["high_memory_usage"] = str(self.high_memory_usage)
+            store.put(self.persistent_memory_usage_data, self.MEMORY_USAGE_DATA_PATH)
 
     def _generate_local_mount_data(self):
         """Create & transmit a local_mount_data message as defined
