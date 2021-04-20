@@ -104,6 +104,9 @@ max_login_attempts=2
 threaded=true
 RAID_status_file=/proc/mdstat
 
+[RAIDINTEGRITYSENSOR]
+polling_interval=1209600
+
 [IPMI]
 user=admin
 pass=admin
