@@ -150,7 +150,7 @@ class RealStorEnclosureSensor(SensorThread, InternalMsgQ):
 
                 self.fault_alert = True
 
-            elif mc_timeout_counter == 0 and  ws_response_status == 200 \
+            elif mc_timeout_counter == 0 and  ws_response_status == self.rssencl.ws.HTTP_OK \
                 and self.previous_alert_type != self.rssencl.FRU_FAULT_RESOLVED \
                 and self.fault_alert == True:
 
