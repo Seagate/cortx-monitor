@@ -23,15 +23,19 @@ import sys
 import shutil
 import json
 import subprocess
+import logging
 
 from framework.base.sspl_constants import (PRODUCT_FAMILY, SUPPORT_REQUESTOR_NAME,
     SUPPORT_EMAIL_ID, SUPPORT_CONTACT_NUMBER, ENCL_TRIGGER_LOG_MAX_RETRY,
     ENCL_DOWNLOAD_LOG_MAX_RETRY, ENCL_DOWNLOAD_LOG_WAIT_BEFORE_RETRY, CONSUL_DUMP,
-    DATA_PATH)
+    DATA_PATH, SYSLOG_HOST, SYSLOG_PORT)
 from framework.utils.conf_utils import Conf, SSPL_CONF
 
-onGoingRequestPath = f"{DATA_PATH}sspl-sb-req.txt"
-sspl_bundle_tmp = f"{DATA_PATH}sspl_bundle_{str(int(time.time()))}"
+SB_DATA_PATH = DATA_PATH + 'support_bundle'
+if not os.path.exists(SB_DATA_PATH):
+    os.makedirs(SB_DATA_PATH)
+sspl_sb_req = f"{SB_DATA_PATH}/sspl-sb-req.txt"
+sspl_bundle_tmp = f"{SB_DATA_PATH}sspl_bundle_{str(int(time.time()))}"
 
 
 class SSPLBundleError(Exception):
@@ -95,12 +99,13 @@ class SSPLBundleGenerate(object):
                 # Capturing enclosure logs only when sspl state is active
                 sspl_state = sspl_state[1] if len(sspl_state)==2 else ''
                 if not sspl_state == 'active':
-                    print("SSPL is in 'degraded' mode, so enclosure data not collected as part of this node support bundle.")
+                    logger.info("SSPL is in 'degraded' mode,"
+                         "so enclosure data not collected as part of this node support bundle.")
 
             except (FileNotFoundError, OSError) as e:
-                print(f"Failed to open the SSPL 'state.txt' file with an error '{e}',\
+                logger.error(f"Failed to open the SSPL 'state.txt' file with an error '{e}',\
                     Can't determine the SSPL state, So enclosure logs also being collected.")
-                sspl_state == 'active'
+                sspl_state = 'active'
 
             self.get_ipmi_sel_data()
             self.get_consul_data()
@@ -113,7 +118,7 @@ class SSPLBundleGenerate(object):
                 enclosure_zip_file = "enclosure-wwn-{0}-logs-{1}.zip".format(
                     self.enclosure_wwn, str(int(time.time())))
                 shutil.copy(self.enclosure_log, self.localTempPath+enclosure_zip_file)
-                print("Enclosure Log File Location: %s" % self.localTempPath+enclosure_zip_file)
+                logger.info("Enclosure Log File Location: %s" % self.localTempPath+enclosure_zip_file)
 
             file_dir = file_name.replace(".tar.gz","")
             tarfile_data = {
@@ -138,21 +143,22 @@ class SSPLBundleGenerate(object):
                         try:
                             tar.add(key, arcname=value, exclude=lambda x: x in EXCLUDE_FILES)
                         except IOError as err:
-                            print("Unable to include %s logs with an error %s" % (key, err))
-                tar.close()
+                            logger.error("Unable to include %s logs with an error %s" 
+                                               % (key, err))
 
         except (OSError, tarfile.TarError) as err:
             msg = "Facing problem while creating sspl support bundle : %s" % err
             tmpFile.close()
             raise SSPLBundleError(1, msg)
 
-        print("SSPL Support Bundle Location: %s" % self.localTempPath+file_name)
-        print("SSPL Support Bundle Files Uploaded Successfully..!")
+        logger.info("SSPL Support Bundle Files Uploaded Successfully..!")
+        logger.info("SSPL Support Bundle Location: %s" % self.localTempPath+file_name)
 
     def get_ipmi_sel_data(self):
         response, _, return_code = self._run_command("ipmitool sel list")
         if return_code != 0:
-            print("Required ipmitool is missing from the Node server to fetch sel data..!")
+            logger.error(
+            "Required ipmitool is missing from the Node server to fetch sel data..!")
         else:
             with open(self.ipmi_sel_data, 'w+') as sel_list:
                 sel_list.write(response)
@@ -169,7 +175,7 @@ class SSPLBundleGenerate(object):
         for key, value in consuldump_cmd.items():
             subout = self._run_command(value)
             if subout[2] != 0:
-                print(f"Unable to get consul data of {key}...!")
+                logger.error(f"Unable to get consul data of {key}...!")
             del subout
         consul_folder_path = f"{sspl_bundle_tmp}/{self.consul_folder_name}"
         self.consul_sspl_config = f"{consul_folder_path}/consul_sspl_config"
@@ -196,7 +202,7 @@ class SSPLBundleGenerate(object):
                         json.dump(response, fp,  indent=4)
 
             except Exception as e:
-                print("Error in writing {0} file: {1}".format(response, e))
+                logger.error("Error in writing {0} file: {1}".format(response, e))
 
     def _run_command(self, command):
         """Run the command and get the response and error returned"""
@@ -214,23 +220,23 @@ class SSPLBundleGenerate(object):
                 post_data=f'{singleton_realstorencl.URL_ENCLLOGS_POSTDATA}/"{SUPPORT_REQUESTOR_NAME}"{SUPPORT_EMAIL_ID}"{SUPPORT_CONTACT_NUMBER}')
 
             if not response:
-                print("{0}:: {2} status unavailable as ws request {1}"
+                logger.error("{0}:: {2} status unavailable as ws request {1}"
                     " failed".format(singleton_realstorencl.LDR_R1_ENCL, url, "Debug log"))
                 break
 
             elif response.status_code != singleton_realstorencl.ws.HTTP_OK:
-                print("{0}:: http request {1} to get {3} failed with"
+                logger.error("{0}:: http request {1} to get {3} failed with"
                     " err {2} enclosure trigger log retry index {4}".format(singleton_realstorencl.LDR_R1_ENCL, url, response.status_code, \
                         "Debug log", encl_trigger_log_retry_index))
 
             else:
                 response_data = response.json()
                 if response_data["status"][0]["response-type"] == "Success" and response_data["status"][0]["response"] == "Collecting debug logs.":
-                    print("INFO: Collecting enclosure debug logs in progress")
+                    logger.info("Collecting enclosure debug logs in progress")
                     COLLECTING_DEBUG_LOG_STARTED = True
                     break
                 else:
-                    print("{0}:: http request {1} to get {3} failed with"
+                    logger.error("{0}:: http request {1} to get {3} failed with"
                         " response-type {2}".format(singleton_realstorencl.LDR_R1_ENCL, url, response_data["status"][0]["response-type"], "Debug log"))
 
         if COLLECTING_DEBUG_LOG_STARTED == True:
@@ -239,10 +245,10 @@ class SSPLBundleGenerate(object):
             for encl_download_retry_index in range(0, ENCL_DOWNLOAD_LOG_MAX_RETRY):
                 response = singleton_realstorencl.ws_request(url, singleton_realstorencl.ws.HTTP_GET)
                 if not response:
-                    print("{0}:: {2} status unavailable as ws request {1}"
+                    logger.error("{0}:: {2} status unavailable as ws request {1}"
                         " failed".format(singleton_realstorencl.LDR_R1_ENCL, url, "Debug log"))
                 elif response.status_code != singleton_realstorencl.ws.HTTP_OK:
-                    print("{0}:: http request {1} to get {3} failed with"
+                    logger.error("{0}:: http request {1} to get {3} failed with"
                         " err {2}".format(singleton_realstorencl.LDR_R1_ENCL, url, response.status_code, "Debug log"))
                 else:
                     if response.headers.get('Content-Type') == 'application/json; charset="utf-8"':
@@ -250,35 +256,35 @@ class SSPLBundleGenerate(object):
                         if response_data["status"][0]["response-type"] == "Error":
                             time.sleep(ENCL_DOWNLOAD_LOG_WAIT_BEFORE_RETRY)
                         else:
-                            print("ERR: Unexpected response-type {0} URL {1}".format(response_data["status"][0]["response-type"],url))
+                            logger.error("ERR: Unexpected response-type {0} URL {1}".format(response_data["status"][0]["response-type"],url))
                             break
                     elif response.headers.get('Content-Type') == 'IntentionallyUnknownMimeType; charset="utf-8"':
                         if response.headers.get('content-disposition') == 'attachment; filename="store.zip"':
                             with open(self.enclosure_log,'wb') as enclosure_resp:
                                 enclosure_resp.write(response.content)
                                 enclosure_resp.close()
-                                print("INFO: Enclosure debug logs saved successfully")
+                                logger.info("Enclosure debug logs saved successfully")
                         else:
-                            print("ERR: No attachment found::{0}".format(url))
+                            logger.error("ERR: No attachment found::{0}".format(url))
                         break
                     else:
-                        print("ERR: Unknown Content-Type::{0}".format(url))
+                        logger.error("ERR: Unknown Content-Type::{0}".format(url))
                         break
                 if encl_download_retry_index == ( ENCL_DOWNLOAD_LOG_MAX_RETRY - 1 ):
-                    print("ERR: Enclosure debug logs retry count exceeded::{0}".format(url))
+                    logger.error("ERR: Enclosure debug logs retry count exceeded::{0}".format(url))
 
     def get_enclosure_wwn(self, singleton_realstorencl):
         url = singleton_realstorencl.build_url(singleton_realstorencl.URI_CLIAPI_SHOWENCLOSURE)
         response = singleton_realstorencl.ws_request(url, singleton_realstorencl.ws.HTTP_GET)
 
         if not response:
-            print("{0}:: {2} status unavailable as ws request {1}"
+            logger.error("{0}:: {2} status unavailable as ws request {1}"
                 " failed".format(singleton_realstorencl.EES_ENCL, url, fru))
             return
 
         if response.status_code != singleton_realstorencl.ws.HTTP_OK:
             if url.find(singleton_realstorencl.ws.LOOPBACK) == -1:
-                print("{0}:: http request {1} to get {3} failed with"
+                logger.error("{0}:: http request {1} to get {3} failed with"
                     " err {2}".format(singleton_realstorencl.EES_ENCL, url, response.status_code, fru))
             return
 
@@ -288,23 +294,46 @@ class SSPLBundleGenerate(object):
 
 def sspl_bundle_cleanup():
     """Cleanup activity for SSPL Support Bundle"""
-    if os.path.exists(onGoingRequestPath):
-        os.remove(onGoingRequestPath)
+    if os.path.exists(sspl_sb_req):
+        os.remove(sspl_sb_req)
     if os.path.exists(sspl_bundle_tmp):
         shutil.rmtree(sspl_bundle_tmp)
 
+def initialize_logging(parser):
+    # set Logging Handlers
+    _logger = logging.getLogger('sspl_sb')
+    logging_level = Conf.get(SSPL_CONF, f"{'SYSTEM_INFORMATION'}>{'log_level'}", "INFO")
+    _logger.setLevel(logging_level)
+    handler = logging.handlers.SysLogHandler(
+                    address=(SYSLOG_HOST, SYSLOG_PORT))
+    syslog_format = "%(name)s[%(process)d]: " \
+                    "%(levelname)s %(message)s (%(filename)s:%(lineno)d)"
+    formatter = logging.Formatter(syslog_format)
+    handler.setFormatter(formatter)
+    _logger.addHandler(handler)
+
+    # Add console handler
+    if "console" in parser:
+        console = logging.StreamHandler(sys.stdout)
+        console.setFormatter(formatter)
+        _logger.addHandler(console)
+    return _logger
+
 if __name__ == "__main__":
-    if not os.path.isfile(onGoingRequestPath):
+    if not os.path.isfile(sspl_sb_req):
         if len(sys.argv) >= 3:
-            tmpFile = open(onGoingRequestPath, "w")
+            # Initialize logging
+            logger = initialize_logging(sys.argv)
+            tmpFile = open(sspl_sb_req, "w")
             os.makedirs(sspl_bundle_tmp)
             try:
                 SSPLBundleObj = SSPLBundleGenerate()
                 SSPLBundleObj.generate_sspl_support_bundle(sys.argv, tmpFile)
             except Exception as e:
-                print("SSPL support bundle script is failed with an unexpected "
+                logger.error("SSPL support bundle script is failed with an unexpected "
                     "error. please try again ..!")
-                print("Error Message : %s" % e)
+                logger.error("Error Message : %s" % e)
+                raise SSPLBundleError(1, msg)
             tmpFile.close()
             sspl_bundle_cleanup()
         else:
