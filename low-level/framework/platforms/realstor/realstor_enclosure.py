@@ -97,6 +97,7 @@ class RealStorEnclosure(StorageEnclosure):
 
     poll_system_ts = 0
     mc_timeout_counter = 0
+    ws_response_status = None
 
     # resource inmemory cache
     latest_faults = {}
@@ -235,7 +236,7 @@ class RealStorEnclosure(StorageEnclosure):
                 try:
                     jresponse = json.loads(response.content)
 
-                    #TODO: Need a way to check return-code 2 in more optimal way if possible, 
+                    #TODO: Need a way to check return-code 2 in more optimal way if possible,
                     # currently being checked for all http 200 responses
                     if jresponse:
 
@@ -289,6 +290,8 @@ class RealStorEnclosure(StorageEnclosure):
         if not response:
             logger.warn("Login webservice request failed {0}".format(url))
             return
+
+        self.ws_response_status = response.status_code
 
         if response.status_code != self.ws.HTTP_OK:
             if response.status_code == self.ws.HTTP_TIMEOUT:
