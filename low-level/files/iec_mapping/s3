@@ -6,3 +6,5 @@
 0030060001,Data,Delete object failed causing stale data in Motr
 0030060002,Data,Delete index failed causing stale data in Motr
 0030060003,Data,Metadata corrupted
+0030060004,Data,Data integrity failed
+0030060005,Data,Metadata integrity failed
