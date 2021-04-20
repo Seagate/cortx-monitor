@@ -202,14 +202,14 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
                         if self.FAULT_RESOLVED in data:
                             self.alert_type = self.FAULT
                             self._alert_msg = "RAID disks present in %s RAID array, needs synchronization." %device +\
-                                " If fault persists for more than 1 or 2 days, Please contact Seagate support."
+                                " If fault persists for more than 2 days, Please contact Seagate support."
                             self._send_json_msg(self.alert_type, device, self._alert_msg)
                             self._update_fault_state_file(device, self.FAULT, fault_status_file)
                             self._scan_frequency = self.MIN_SCAN_FREQUENCY
                     else:
                         self.alert_type = self.FAULT
                         self._alert_msg = "RAID disks present in %s RAID array, needs synchronization." %device +\
-                                " If fault persists for more than 1 or 2 days, Please contact Seagate support."
+                                " If fault persists for more than 2 days, Please contact Seagate support."
                         self._send_json_msg(self.alert_type, device, self._alert_msg)
                         self._update_fault_state_file(device, self.FAULT, fault_status_file)
                         self._scan_frequency = self.MIN_SCAN_FREQUENCY
