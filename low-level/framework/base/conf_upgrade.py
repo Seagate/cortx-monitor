@@ -15,8 +15,10 @@
 
 import sys
 import os
+import shutil
 
 from cortx.utils.conf_store import Conf
+from cortx.utils.conf_store.error import ConfError
 from cortx.utils.kv_store.kv_payload import KvPayload
 
 
@@ -38,10 +40,13 @@ class ConfUpgrade:
         new_conf_url: conf store url for new config file
         merged_conf_url: conf store url for merged config file
         """
-        merged_path = merged_conf_url.split(":/")[1]
+        self.merged_path = merged_conf_url.split(":/")[1]
+        self.merged_path_dir = "/".join(self.merged_path.split("/")[:-1])
+        self.existing_path = existing_conf_url.split(":/")[1]
         Conf.load(EXISTING_CONF, existing_conf_url)
         Conf.load(NEW_CONF, new_conf_url)
-        with open(merged_path, "w"):
+        os.makedirs(self.merged_path_dir, exist_ok=True)
+        with open(self.merged_path, "w"):
             pass
         Conf.load(MERGED_CONF, merged_conf_url)
 
@@ -55,13 +60,14 @@ class ConfUpgrade:
                 changed_keys[key] = changed_key_payload.get(key)
         return changed_keys
 
-    def upgrade(self):
+    def create_merged_config(self):
         """Create merged config file using existing and new configs."""
         existing_keys = set(Conf.get_keys(EXISTING_CONF, key_index=False))
         new_keys = set(Conf.get_keys(NEW_CONF, key_index=False))
         changed_keys = self.get_changed_keys()
         removed_keys = existing_keys - new_keys
         added_keys = new_keys - existing_keys
+        retained_keys = existing_keys - removed_keys
         # For newly added keys, get key and value both from new config file
         for key in added_keys:
             Conf.set(MERGED_CONF, key, Conf.get(NEW_CONF, key))
@@ -69,24 +75,41 @@ class ConfUpgrade:
         # config file
         for old_key, new_key in changed_keys.items():
             Conf.set(MERGED_CONF, new_key, Conf.get(EXISTING_CONF, old_key))
-        # For existing keys. get key and value both from existing config file
-        for key in existing_keys:
-            # Dont add removed keys
-            if key not in removed_keys:
-                Conf.set(MERGED_CONF, key, Conf.get(EXISTING_CONF, key))
+        # For retained keys. get key and value both from existing config file
+        for key in retained_keys:
+            Conf.set(MERGED_CONF, key, Conf.get(EXISTING_CONF, key))
         # OBSOLETE and CHANGED should always come from new config
         Conf.set(MERGED_CONF, CHANGED, Conf.get(NEW_CONF, CHANGED))
         Conf.set(MERGED_CONF, OBSOLETE, Conf.get(NEW_CONF, OBSOLETE))
         Conf.save(MERGED_CONF)
 
+    def upgrade_existing_config(self):
+        """Copy merged config file to existing config file."""
+        shutil.copyfile(self.merged_path, self.existing_path)
+
+    def remove_merged_config(self):
+        """Remove tmp files created for merging config."""
+        os.remove(self.merged_path)
+        os.removedirs(self.merged_path_dir)
+
 
 if __name__ == "__main__":
     new_conf_url = 'yaml:///opt/seagate/cortx/sspl/conf/sspl.conf.LR2.yaml'
     existing_conf_url = 'yaml:///etc/sspl.conf'
-    merged_conf_url = 'yaml:///tmp/sspl_tmp.conf'
+    merged_conf_url = 'yaml:///opt/seagate/cortx/sspl/tmp/merged.conf'
     # Only proceed if both existing and new config path are present
     for filepath in [existing_conf_url, new_conf_url]:
         if not os.path.exists(filepath.split(":/")[1]):
-            print("Exiting, File", filepath, "does not exists")
+            print("Exiting, File %s does not exists" % filepath)
             sys.exit(0)
-    ConfUpgrade(existing_conf_url, new_conf_url, merged_conf_url).upgrade()
+    conf_upgrade = ConfUpgrade(existing_conf_url, new_conf_url,
+                               merged_conf_url)
+    try:
+        conf_upgrade.create_merged_config()
+    except ConfError as e:
+        print("Error: %s while upgrading config file, existing config"
+              "file is retained" % e)
+    else:
+        conf_upgrade.upgrade_existing_config()
+    finally:
+        conf_upgrade.remove_merged_config()

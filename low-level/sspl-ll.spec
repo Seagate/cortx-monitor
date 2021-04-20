@@ -96,12 +96,8 @@ SSPL_DIR=/opt/seagate/%{product_family}/sspl
     ln -sf $SSPL_DIR/low-level/manifest_support_bundle /usr/bin/manifest_support_bundle
 }
 
-# run conf_diff.py script
+# upgrade conf
 [ -f $SSPL_DIR/low-level/framework/base/conf_upgrade.py ] && python3 $SSPL_DIR/low-level/framework/base/conf_upgrade.py
-
-# restore /tmp/sspl_tmp.conf (its updated from previuos version of /etc/sspl.conf & new keys added in sspl.conf.LDR_R1)
-[ -f /tmp/sspl_tmp.conf ] && cp /tmp/sspl_tmp.conf /etc/sspl.conf
-rm -f /tmp/sspl_tmp.conf
 
 # restore of data & iem folder
 [ -d /opt/seagate/%{product_family}/backup/%{version}/sspl ] &&

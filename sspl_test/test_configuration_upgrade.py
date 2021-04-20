@@ -19,9 +19,11 @@ class TestConfUpgrade(unittest.TestCase):
         base_config = os.path.dirname(os.path.abspath(__file__)).replace(
                                       "sspl_test", base_config)
         base_config_url = f"yaml://{base_config}"
-        self.existing_config = "/tmp/existing.conf"
-        self.new_config = "/tmp/new.conf"
-        self.merged_config = "/tmp/merged.conf"
+        self.tmp_dir = "/opt/seagate/cortx/sspl/tmp"
+        self.existing_config = f"/{self.tmp_dir}/existing.conf"
+        self.new_config = f"/{self.tmp_dir}/new.conf"
+        self.merged_config = f"/{self.tmp_dir}/merged.conf"
+        os.makedirs(self.tmp_dir, exist_ok=True)
         with open(self.existing_config, "w"):
             pass
         with open(self.new_config, "w"):
@@ -52,7 +54,7 @@ class TestConfUpgrade(unittest.TestCase):
         conf_upgrade = ConfUpgrade(self.existing_config_url,
                                    self.new_config_url,
                                    self.merged_config_url)
-        conf_upgrade.upgrade()
+        conf_upgrade.create_merged_config()
         Conf.load("merged", self.merged_config_url)
         self.assertIsNotNone(Conf.get("merged", "FOO>eggs"))
         self.assertIsNotNone(Conf.get("merged", "BAZ>bar"))
@@ -72,7 +74,7 @@ class TestConfUpgrade(unittest.TestCase):
         conf_upgrade = ConfUpgrade(self.existing_config_url,
                                    self.new_config_url,
                                    self.merged_config_url)
-        conf_upgrade.upgrade()
+        conf_upgrade.create_merged_config()
         Conf.load("merged", self.merged_config_url)
         self.assertIsNone(Conf.get("merged", "FOO"))
         self.assertIsNotNone(Conf.get("merged", "FOOBAR"))
@@ -89,7 +91,7 @@ class TestConfUpgrade(unittest.TestCase):
         conf_upgrade = ConfUpgrade(self.existing_config_url,
                                    self.new_config_url,
                                    self.merged_config_url)
-        conf_upgrade.upgrade()
+        conf_upgrade.create_merged_config()
         Conf.load("merged", self.merged_config_url)
         self.assertIsNone(Conf.get("merged", "FOO"))
         self.assertIsNotNone(Conf.get("merged", "FOOBAR"))
@@ -106,7 +108,7 @@ class TestConfUpgrade(unittest.TestCase):
         conf_upgrade = ConfUpgrade(self.existing_config_url,
                                    self.new_config_url,
                                    self.merged_config_url)
-        conf_upgrade.upgrade()
+        conf_upgrade.create_merged_config()
         Conf.load("merged", self.merged_config_url)
         self.assertIsNotNone(Conf.get("merged", "FOO>bar"))
 
@@ -119,7 +121,7 @@ class TestConfUpgrade(unittest.TestCase):
         conf_upgrade = ConfUpgrade(self.existing_config_url,
                                    self.new_config_url,
                                    self.merged_config_url)
-        conf_upgrade.upgrade()
+        conf_upgrade.create_merged_config()
         Conf.load("merged", self.merged_config_url)
         self.assertIsNone(Conf.get("merged", "FOO>bar"))
 
@@ -127,6 +129,7 @@ class TestConfUpgrade(unittest.TestCase):
         os.remove(self.existing_config)
         os.remove(self.new_config)
         os.remove(self.merged_config)
+        os.removedirs(self.tmp_dir)
         Conf._conf = None
 
 
