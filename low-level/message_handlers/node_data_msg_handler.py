@@ -80,9 +80,9 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
     # IPMI_RESOURCE_TYPE_CURRENT = "node:sensor:current"
     NW_RESOURCE_TYPE = "node:interface:nw"
     NW_CABLE_RESOURCE_TYPE = "node:interface:nw:cable"
-    host_fault = False
-    cpu_fault = False
-    disk_fault = False
+    high_memory_usage = False
+    high_cpu_usage = False
+    high_disk_usage = False
     if_fault = False
     FAULT = "fault"
     FAULT_RESOLVED = "fault_resolved"
@@ -196,56 +196,57 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         self._import_products(product)
         cache_dir_path = os.path.join(DATA_PATH, self.CACHE_DIR_NAME)
 
-        # Persistent Cache for CPU sensor
-        self.CPU_SENSOR_DATA_PATH = os.path.join(cache_dir_path, f'CPU_SENSOR_DATA_{self.node_id}')
+        # Persistent Cache for High CPU usage
+        self.CPU_USAGE_DATA_PATH = os.path.join(cache_dir_path,
+                                f'CPU_USAGE_DATA_{self.node_id}')
 
-        self.persistent_cpu_sensor_data = {}
-        if os.path.isfile(self.CPU_SENSOR_DATA_PATH):
-            self.persistent_cpu_sensor_data = store.get(self.CPU_SENSOR_DATA_PATH)
-        if self.persistent_cpu_sensor_data:
-            if self.persistent_cpu_sensor_data['cpu_fault'] == "True":
-                self.cpu_fault = True
+        self.persistent_cpu_usage_data = {}
+        if os.path.isfile(self.CPU_USAGE_DATA_PATH):
+            self.persistent_cpu_usage_data = store.get(self.CPU_USAGE_DATA_PATH)
+        if self.persistent_cpu_usage_data:
+            if self.persistent_cpu_usage_data['high_cpu_usage'] == "True":
+                self.high_cpu_usage = True
             else:
-                self.cpu_fault = False
+                self.high_cpu_usage = False
         else:
-            self.persistent_cpu_sensor_data = {
-                'cpu_fault' : str(self.cpu_fault),
+            self.persistent_cpu_usage_data = {
+                'high_cpu_usage' : str(self.high_cpu_usage),
             }
-            store.put(self.persistent_cpu_sensor_data, self.CPU_SENSOR_DATA_PATH)
+            store.put(self.persistent_cpu_usage_data, self.CPU_USAGE_DATA_PATH)
 
-        # Persistent Cache for Disk sensor
-        self.DISK_SENSOR_DATA_PATH = os.path.join(cache_dir_path, f'DISK_SENSOR_DATA_{self.node_id}')
+        # Persistent Cache for High Disk Usage
+        self.DISK_USAGE_DATA_PATH = os.path.join(cache_dir_path, f'DISK_USAGE_DATA_{self.node_id}')
 
-        self.persistent_disk_sensor_data = {}
-        if os.path.isfile(self.DISK_SENSOR_DATA_PATH):
-            self.persistent_disk_sensor_data = store.get(self.DISK_SENSOR_DATA_PATH)
-        if self.persistent_disk_sensor_data:
-            if self.persistent_disk_sensor_data['disk_fault'] == "True":
-                self.disk_fault = True
+        self.persistent_disk_usage_data = {}
+        if os.path.isfile(self.DISK_USAGE_DATA_PATH):
+            self.persistent_disk_usage_data = store.get(self.DISK_USAGE_DATA_PATH)
+        if self.persistent_disk_usage_data:
+            if self.persistent_disk_usage_data['high_disk_usage'] == "True":
+                self.high_disk_usage = True
             else:
-                self.disk_fault = False
+                self.high_disk_usage = False
         else:
-            self.persistent_disk_sensor_data = {
-                'disk_fault' : str(self.disk_fault),
+            self.persistent_disk_usage_data = {
+                'high_disk_usage' : str(self.high_disk_usage),
             }
-            store.put(self.persistent_disk_sensor_data, self.DISK_SENSOR_DATA_PATH)
+            store.put(self.persistent_disk_usage_data, self.DISK_USAGE_DATA_PATH)
 
-        # Persistent Cache for Memory(Host) sensor
-        self.HOST_SENSOR_DATA_PATH = os.path.join(cache_dir_path, f'HOST_SENSOR_DATA_{self.node_id}')
+        # Persistent Cache for high Memory Usage
+        self.MEMORY_USAGE_DATA_PATH = os.path.join(cache_dir_path, f'MEMORY_USAGE_DATA_{self.node_id}')
 
-        self.persistent_host_sensor_data = {}
-        if os.path.isfile(self.HOST_SENSOR_DATA_PATH):
-            self.persistent_host_sensor_data = store.get(self.HOST_SENSOR_DATA_PATH)
-        if self.persistent_host_sensor_data:
-            if self.persistent_host_sensor_data['host_fault'] == "True":
-                self.host_fault = True
+        self.persistent_host_usage_data = {}
+        if os.path.isfile(self.MEMORY_USAGE_DATA_PATH):
+            self.persistent_host_usage_data = store.get(self.MEMORY_USAGE_DATA_PATH)
+        if self.persistent_host_usage_data:
+            if self.persistent_host_usage_data['high_memory_usage'] == "True":
+                self.high_memory_usage = True
             else:
-                self.host_fault = False
+                self.high_memory_usage = False
         else:
-            self.persistent_host_sensor_data = {
-                'host_fault' : str(self.host_fault),
+            self.persistent_host_usage_data = {
+                'high_memory_usage' : str(self.high_memory_usage),
             }
-            store.put(self.persistent_host_sensor_data, self.HOST_SENSOR_DATA_PATH)
+            store.put(self.persistent_host_usage_data, self.MEMORY_USAGE_DATA_PATH)
 
         # Persistent Cache for Nework sensor
         self.NW_SENSOR_DATA_PATH = os.path.join(cache_dir_path, f'NW_SENSOR_DATA_{self.node_id}')
@@ -458,10 +459,10 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             self._host_memory_usage_threshold = self.DEFAULT_HOST_MEMORY_USAGE_THRESHOLD
 
         if self._node_sensor.total_memory["percent"] >= self._host_memory_usage_threshold \
-            and not self.host_fault:
+            and not self.high_memory_usage:
 
             # Create the disk space data message and hand it over to the egress processor to transmit
-            self.host_fault = True
+            self.high_memory_usage = True
             # Create the disk space data message and hand it over to the egress processor to transmit
             fault_event = "Host memory usage increased to %s, beyond configured threshold of %s" \
                             %(self._node_sensor.total_memory["percent"], self._host_memory_usage_threshold)
@@ -492,11 +493,11 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             self.host_sensor_data = jsonMsg
             self.os_sensor_type["memory_usage"] = self.host_sensor_data
             self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
-            self.persistent_host_sensor_data["host_fault"] = str(self.host_fault)
-            store.put(self.persistent_host_sensor_data, self.HOST_SENSOR_DATA_PATH)
+            self.persistent_host_usage_data["high_memory_usage"] = str(self.high_memory_usage)
+            store.put(self.persistent_host_usage_data, self.MEMORY_USAGE_DATA_PATH)
 
         if self._node_sensor.total_memory["percent"] < self._host_memory_usage_threshold \
-            and self.host_fault:
+            and self.high_memory_usage:
             fault_resolved_event = "Host memory usage decreased to %s, lesser than configured threshold of %s" \
                                     %(self._node_sensor.total_memory["percent"], self._host_memory_usage_threshold)
 
@@ -526,9 +527,9 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             self.host_sensor_data = jsonMsg
             self.os_sensor_type["memory_usage"] = self.host_sensor_data
             self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
-            self.host_fault = False
-            self.persistent_host_sensor_data["host_fault"] = str(self.host_fault)
-            store.put(self.persistent_host_sensor_data, self.HOST_SENSOR_DATA_PATH)
+            self.high_memory_usage = False
+            self.persistent_host_usage_data["high_memory_usage"] = str(self.high_memory_usage)
+            store.put(self.persistent_host_usage_data, self.MEMORY_USAGE_DATA_PATH)
 
     def _generate_local_mount_data(self):
         """Create & transmit a local_mount_data message as defined
@@ -578,9 +579,9 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             self._cpu_usage_threshold = self.DEFAULT_CPU_USAGE_THRESHOLD
 
         if self._node_sensor.cpu_usage >= self._cpu_usage_threshold \
-            and not self.cpu_fault:
+            and not self.high_cpu_usage:
 
-            self.cpu_fault = True
+            self.high_cpu_usage = True
             # Create the cpu usage data message and hand it over to the egress processor to transmit
             fault_event = "CPU usage increased to %s, beyond configured threshold of %s" \
                             %(self._node_sensor.cpu_usage, self._cpu_usage_threshold)
@@ -617,11 +618,11 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             self.os_sensor_type["cpu_usage"] = self.cpu_sensor_data
             # Transmit it out over rabbitMQ channel
             self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
-            self.persistent_cpu_sensor_data["cpu_fault"] = str(self.cpu_fault)
-            store.put(self.persistent_cpu_sensor_data, self.CPU_SENSOR_DATA_PATH)
+            self.persistent_cpu_usage_data["high_cpu_usage"] = str(self.high_cpu_usage)
+            store.put(self.persistent_cpu_usage_data, self.CPU_USAGE_DATA_PATH)
 
         if self._node_sensor.cpu_usage < self._cpu_usage_threshold \
-            and self.cpu_fault:
+            and self.high_cpu_usage:
             # Create the cpu usage data message and hand it over to the egress processor to transmit
             fault_resolved_event = "CPU usage decreased to %s, lesser than configured threshold of %s" \
                                     %(self._node_sensor.cpu_usage, self._cpu_usage_threshold)
@@ -658,9 +659,9 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             self.os_sensor_type["cpu_usage"] = self.cpu_sensor_data
             # Transmit it out over rabbitMQ channel
             self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
-            self.cpu_fault = False
-            self.persistent_cpu_sensor_data["cpu_fault"] = str(self.cpu_fault)
-            store.put(self.persistent_cpu_sensor_data, self.CPU_SENSOR_DATA_PATH)
+            self.high_cpu_usage = False
+            self.persistent_cpu_usage_data["high_cpu_usage"] = str(self.high_cpu_usage)
+            store.put(self.persistent_cpu_usage_data, self.CPU_USAGE_DATA_PATH)
 
     def _send_ifdata_json_msg(self, sensor_type, resource_id, resource_type, state, severity, event=""):
         """A resuable method for transmitting IFDataMsg to RMQ and IEM logging"""
@@ -862,9 +863,9 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             self._disk_usage_threshold = self.DEFAULT_DISK_USAGE_THRESHOLD
 
         if self._node_sensor.disk_used_percentage >= self._disk_usage_threshold\
-            and not self.disk_fault:
+            and not self.high_disk_usage:
 
-            self.disk_fault = True
+            self.high_disk_usage = True
             # Create the disk space data message and hand it over to the egress processor to transmit
             fault_event = "Disk usage increased to %s, beyond configured threshold of %s" \
                             %(self._node_sensor.disk_used_percentage, self._disk_usage_threshold)
@@ -888,11 +889,11 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             self.os_sensor_type["disk_space"] = self.disk_sensor_data
             # Transmit it out over rabbitMQ channel
             self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
-            self.persistent_disk_sensor_data['disk_fault'] = str(self.disk_fault)
-            store.put(self.persistent_disk_sensor_data, self.DISK_SENSOR_DATA_PATH)
+            self.persistent_disk_usage_data['high_disk_usage'] = str(self.high_disk_usage)
+            store.put(self.persistent_disk_usage_data, self.DISK_USAGE_DATA_PATH)
 
         if self._node_sensor.disk_used_percentage < self._disk_usage_threshold\
-             and self.disk_fault:
+             and self.high_disk_usage:
             # Create the disk space data message and hand it over to the egress processor to transmit
             fault_resolved_event = "Disk usage decreased to %s, lesser than configured threshold of %s" \
                                     %(self._node_sensor.disk_used_percentage, self._disk_usage_threshold)
@@ -921,9 +922,9 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             self.os_sensor_type["disk_space"] = self.disk_sensor_data
             # Transmit it out over rabbitMQ channel
             self._write_internal_msgQ(RabbitMQegressProcessor.name(), jsonMsg)
-            self.disk_fault = False
-            self.persistent_disk_sensor_data['disk_fault'] = str(self.disk_fault)
-            store.put(self.persistent_disk_sensor_data, self.DISK_SENSOR_DATA_PATH)
+            self.high_disk_usage = False
+            self.persistent_disk_usage_data['high_disk_usage'] = str(self.high_disk_usage)
+            store.put(self.persistent_disk_usage_data, self.DISK_USAGE_DATA_PATH)
 
     def _generate_raid_data(self, jsonMsg):
         """Create & transmit a RAID status data message as defined

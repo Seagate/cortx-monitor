@@ -106,7 +106,6 @@ RAID_status_file=/proc/mdstat
 
 [RAIDINTEGRITYSENSOR]
 polling_interval=1209600
-fault_accepted_time=86400
 
 [IPMI]
 user=admin

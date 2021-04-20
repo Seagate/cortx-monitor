@@ -59,14 +59,12 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
     RACK_ID = "rack_id"
     SCAN_FREQUENCY = "polling_interval"
     TIMESTAMP_FILE_PATH_KEY = "timestamp_file_path"
-    FAULT_ACCEPTED_TIME = "fault_accepted_time"
 
     # Scan for RAID integrity error every 2 weeks (1209600 seconds)
     DEFAULT_SCAN_FREQUENCY = "1209600"
     # Minimum allowed frequency for RAID integrity scans is 1 day
     # (86400 seconds ), as frequent scans affect disk i/o performance
     MIN_SCAN_FREQUENCY = 86400
-    DEFAULT_FAULT_ACCEPTED_TIME = "86400"
     DEFAULT_RAID_DATA_PATH = RaidDataConfig.RAID_RESULT_DIR.value
     DEFAULT_TIMESTAMP_FILE_PATH = DEFAULT_RAID_DATA_PATH + "last_execution_time"
 
@@ -114,8 +112,6 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
         self._scan_frequency = int(self._conf_reader._get_value_with_default(
                                 self.RAIDIntegritySensor, self.SCAN_FREQUENCY, self.DEFAULT_SCAN_FREQUENCY))
         self._next_scheduled_time = self._scan_frequency
-        self._fault_accepted_time = int(self._conf_reader._get_value_with_default(
-                                self.RAIDIntegritySensor, self.FAULT_ACCEPTED_TIME, self.DEFAULT_FAULT_ACCEPTED_TIME))
 
         if self._scan_frequency < self.MIN_SCAN_FREQUENCY:
             self._scan_frequency = self.MIN_SCAN_FREQUENCY
@@ -203,30 +199,19 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
                     if os.path.exists(fault_status_file):
                         with open(fault_status_file, 'r') as fs:
                             data = fs.read().rstrip()
-                        data = json.loads(data)
-                        if data['fault_detected_time'] != -1 and \
-                           int(time.time()) - data['fault_detected_time'] > self._fault_accepted_time:
-
+                        if self.FAULT_RESOLVED in data:
                             self.alert_type = self.FAULT
-                            self._alert_msg = "Disk %s may have developed a fault, it might "\
-                                "need a replacement. Please contact Seagate support" %device
+                            self._alert_msg = "RAID disks present in %s RAID array, needs synchronization." %device +\
+                                " If fault persists for more than 1 or 2 days, Please contact Seagate support."
                             self._send_json_msg(self.alert_type, device, self._alert_msg)
-                            self._update_fault_state_file(device, self.FAULT,
-                                                          fault_status_file)
-
-                        if data['state'] == self.FAULT_RESOLVED:
-                            self.alert_type = self.FAULT
-                            self._alert_msg = "RAID disks present in %s RAID array, needs synchronization." %device
-                            self._send_json_msg(self.alert_type, device, self._alert_msg)
-                            self._update_fault_state_file(device, self.FAULT,
-                                        fault_status_file, int(time.time()))
+                            self._update_fault_state_file(device, self.FAULT, fault_status_file)
                             self._scan_frequency = self.MIN_SCAN_FREQUENCY
                     else:
                         self.alert_type = self.FAULT
-                        self._alert_msg = "RAID disks present in %s RAID array, needs synchronization." %device
+                        self._alert_msg = "RAID disks present in %s RAID array, needs synchronization." %device +\
+                                " If fault persists for more than 1 or 2 days, Please contact Seagate support."
                         self._send_json_msg(self.alert_type, device, self._alert_msg)
-                        self._update_fault_state_file(device, self.FAULT,
-                                        fault_status_file, int(time.time()))
+                        self._update_fault_state_file(device, self.FAULT, fault_status_file)
                         self._scan_frequency = self.MIN_SCAN_FREQUENCY
 
                     # Retry to check mismatch_cnt
@@ -277,9 +262,8 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
                 if os.path.exists(fault_status_file):
                     with open(fault_status_file, 'r') as fs:
                         data = fs.read().rstrip()
-                    data = json.loads(data)
-                    if data['state'] == self.FAULT:
-                        faulty_device = data['device']
+                    if self.FAULT in data:
+                        faulty_device = data.split(":")[0].rstrip()
                         if device == faulty_device:
                             self.alert_type = self.FAULT_RESOLVED
                             self._alert_msg = "RAID disks present in %s RAID array are synchronized." %device
@@ -462,17 +446,12 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
         with open(self._timestamp_file_path, "w") as timestamp_file:
             timestamp_file.write(current_time)
 
-    def _update_fault_state_file(self, device, fstate, fault_state_file,
-                                 fault_detected_time=-1):
+    def _update_fault_state_file(self, device, fstate, fault_state_file):
         self._fault_state = fstate
-        data = {
-            'device' : device,
-            'state' : fstate,
-            'fault_detected_time' : fault_detected_time,
-        }
+        data = device + ":" + self._fault_state
         self._create_file(fault_state_file)
         with open(fault_state_file, 'w') as fs:
-            fs.write(json.dumps(data))
+            fs.write(data)
 
     def _cleanup(self):
         """Clean up the validate raid result files"""
