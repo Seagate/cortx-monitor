@@ -86,6 +86,8 @@ class SSPLTestCmd:
         """Run test using user requested test plan."""
         self.plan = self.args.plan[0]
         self.avoid_rmq = self.args.avoid_rmq
+        if "--coverage" in self.args.args:
+            self.coverage_enabled = True
         # if self.plan is other than "self"
         # then only config change and service restart is required.
         if self.plan not in ["self", "self_primary", "self_secondary"]:
@@ -153,7 +155,8 @@ class SSPLTestCmd:
             # TODO: Convert shell script to python
             # from cortx.sspl.sspl_test.run_qa_test import RunQATest
             # RunQATest(self.plan, self.avoid_rmq).run()
-            CMD = "%s/run_qa_test.sh %s %s" % (TEST_DIR, self.plan, self.avoid_rmq)
+            CMD = "%s/run_qa_test.sh %s %s %s"\
+                   %(TEST_DIR, self.plan, self.avoid_rmq, self.coverage_enabled)
             try:
                 output, error, rc = SimpleProcess(CMD).run(realtime_output=True)
             except KeyboardInterrupt:
@@ -178,7 +181,8 @@ class SSPLTestCmd:
             # from cortx.sspl.sspl_test.run_qa_test import RunQATest
             # RunQATest(self.plan, self.avoid_rmq).run()
             try:
-                CMD = "%s/run_qa_test.sh %s %s" % (TEST_DIR, self.plan, self.avoid_rmq)
+                CMD = "%s/run_qa_test.sh %s %s %s"\
+                       %(TEST_DIR, self.plan, self.avoid_rmq, self.coverage_enabled)
                 output, error, returncode = SimpleProcess(CMD).run(realtime_output=True)
             except KeyboardInterrupt:
                 msg = "KeyboardInterrupt occurred while executing sspl test."
