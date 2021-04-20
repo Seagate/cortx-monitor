@@ -57,14 +57,15 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
     CLUSTER_ID = "cluster_id"
     NODE_ID = "node_id"
     RACK_ID = "rack_id"
-    POLLING_INTERVAL = "polling_interval"
+    SCAN_FREQUENCY = "polling_interval"
     TIMESTAMP_FILE_PATH_KEY = "timestamp_file_path"
     FAULT_ACCEPTED_TIME = "fault_accepted_time"
 
-    # check once in two weeks (below time is in seconds), the integrity of raid data
-    DEFAULT_POLLING_INTERVAL = "1209600"
-    # interval to check integrity can not be set below one day i.e. 86400 seconds.
-    MIN_POLLING_INTERVAL = 86400
+    # Scan for RAID integrity error every 2 weeks (1209600 seconds)
+    DEFAULT_SCAN_FREQUENCY = "1209600"
+    # Minimum allowed frequency for RAID integrity scans is 1 day
+    # (86400 seconds ), as frequent scans affect disk i/o performance
+    MIN_SCAN_FREQUENCY = 120
     DEFAULT_FAULT_ACCEPTED_TIME = "86400"
     DEFAULT_RAID_DATA_PATH = RaidDataConfig.RAID_RESULT_DIR.value
     DEFAULT_TIMESTAMP_FILE_PATH = DEFAULT_RAID_DATA_PATH + "last_execution_time"
@@ -110,14 +111,14 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
                                 self.SYSTEM_INFORMATION, COMMON_CONFIGS.get(self.SYSTEM_INFORMATION).get(self.NODE_ID), '001')
         self._timestamp_file_path = self._conf_reader._get_value_with_default(
                                     self.RAIDIntegritySensor, self.TIMESTAMP_FILE_PATH_KEY, self.DEFAULT_TIMESTAMP_FILE_PATH)
-        self._polling_interval = int(self._conf_reader._get_value_with_default(
-                                self.RAIDIntegritySensor, self.POLLING_INTERVAL, self.DEFAULT_POLLING_INTERVAL))
-        self._next_scheduled_time = self._polling_interval
+        self._scan_frequency = int(self._conf_reader._get_value_with_default(
+                                self.RAIDIntegritySensor, self.SCAN_FREQUENCY, self.DEFAULT_SCAN_FREQUENCY))
+        self._next_scheduled_time = self._scan_frequency
         self._fault_accepted_time = int(self._conf_reader._get_value_with_default(
                                 self.RAIDIntegritySensor, self.FAULT_ACCEPTED_TIME, self.DEFAULT_FAULT_ACCEPTED_TIME))
 
-        if self._polling_interval < self.MIN_POLLING_INTERVAL:
-            self._polling_interval = self.MIN_POLLING_INTERVAL
+        if self._scan_frequency < self.MIN_SCAN_FREQUENCY:
+            self._scan_frequency = self.MIN_SCAN_FREQUENCY
 
         self.utility = Utility()
         if self.utility.is_env_vm():
@@ -140,7 +141,7 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
                     last_processed_log_timestamp = timestamp_file.read().strip()
                 current_time = int(time.time())
                 if current_time > int(last_processed_log_timestamp):
-                    self._next_scheduled_time = self._polling_interval - (current_time - int(last_processed_log_timestamp))
+                    self._next_scheduled_time = self._scan_frequency - (current_time - int(last_processed_log_timestamp))
             logger.info("Scheduling RAID validate again after:{} seconds".format(self._next_scheduled_time))
             self._scheduler.enter(self._next_scheduled_time, self._priority, self.run, ())
             return
@@ -164,7 +165,7 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
                 last_processed_log_timestamp = timestamp_file.read().strip()
                 current_time = int(time.time())
                 if current_time > int(last_processed_log_timestamp):
-                    self._next_scheduled_time = self._polling_interval - (current_time - int(last_processed_log_timestamp))
+                    self._next_scheduled_time = self._scan_frequency - (current_time - int(last_processed_log_timestamp))
             logger.info("Scheduling RAID validate again after:{} seconds".format(self._next_scheduled_time))
             self._scheduler.enter(self._next_scheduled_time, self._priority, self.run, ())
         except Exception as ae:
@@ -219,14 +220,14 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
                             self._send_json_msg(self.alert_type, device, self._alert_msg)
                             self._update_fault_state_file(device, self.FAULT,
                                         fault_status_file, int(time.time()))
-                            self._polling_interval = self.MIN_POLLING_INTERVAL
+                            self._scan_frequency = self.MIN_SCAN_FREQUENCY
                     else:
                         self.alert_type = self.FAULT
                         self._alert_msg = "RAID disks present in %s RAID array, needs synchronization." %device
                         self._send_json_msg(self.alert_type, device, self._alert_msg)
                         self._update_fault_state_file(device, self.FAULT,
                                         fault_status_file, int(time.time()))
-                        self._polling_interval = self.MIN_POLLING_INTERVAL
+                        self._scan_frequency = self.MIN_SCAN_FREQUENCY
 
                     # Retry to check mismatch_cnt
                     self._retry_execution(self._check_mismatch_count, device)
@@ -284,10 +285,10 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
                             self._alert_msg = "RAID disks present in %s RAID array are synchronized." %device
                             self._send_json_msg(self.alert_type, device, self._alert_msg)
                             self._update_fault_state_file(device, self.FAULT_RESOLVED, fault_status_file)
-                            self._polling_interval = int(self._conf_reader._get_value_with_default(
-                                self.RAIDIntegritySensor, self.POLLING_INTERVAL, self.DEFAULT_POLLING_INTERVAL))
-                            self._polling_interval = max(self._polling_interval,
-                                                         self.MIN_POLLING_INTERVAL)
+                            self._scan_frequency = int(self._conf_reader._get_value_with_default(
+                                self.RAIDIntegritySensor, self.SCAN_FREQUENCY, self.DEFAULT_SCAN_FREQUENCY))
+                            self._scan_frequency = max(self._scan_frequency,
+                                                         self.MIN_SCAN_FREQUENCY)
             else:
                 status = "failed"
                 logger.debug("Mismatch found in {} file in raid_integrity_data!"

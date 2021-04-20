@@ -124,7 +124,7 @@ class RAIDsensor(SensorThread, InternalMsgQ):
 
         self._total_drives = {}
 
-        self._devices = set()
+        self._devices = []
 
         self._missing_drv = {}
 
@@ -304,6 +304,7 @@ class RAIDsensor(SensorThread, InternalMsgQ):
         drive_dict = {}
         monitored_device = mdstat
         drive_status_changed = {}
+        self._devices.clear()
         # Array of optional identity json sections for drives in array
         self._identity = {}
 
@@ -324,7 +325,7 @@ class RAIDsensor(SensorThread, InternalMsgQ):
             # Parse out status' and path info for each drive
             if "md" in fields[0]:
                 self._device = f"/dev/{fields[0]}"
-                self._devices.add(self._device)
+                self._devices.append(self._device)
                 self._log_debug(f"md device found: {self._device}")
                 md_device_list.append(self._device)
                 drive_dict[self._device] = []
