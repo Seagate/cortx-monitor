@@ -83,6 +83,11 @@ CONFIG_SPEC_TYPE = "yaml"
 # This file will be created when sspl is being configured for node replacement case
 REPLACEMENT_NODE_ENV_VAR_FILE = "/etc/profile.d/set_replacement_env.sh"
 
+# required only for support bundle.
+SB_DATA_PATH = DATA_PATH + 'support_bundle'
+SSPL_SB_TMP = f"{SB_DATA_PATH}/sspl_support_bundle_tmp"
+SSPL_SB_REQUEST = f"{SB_DATA_PATH}/sspl-sb-req.txt"
+
 # required only for init
 component = 'sspl/config'
 file_store_config_path = '/etc/sspl.conf'

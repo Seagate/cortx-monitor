@@ -23,19 +23,14 @@ import sys
 import shutil
 import json
 import subprocess
+import glob
 import logging
 
 from framework.base.sspl_constants import (PRODUCT_FAMILY, SUPPORT_REQUESTOR_NAME,
     SUPPORT_EMAIL_ID, SUPPORT_CONTACT_NUMBER, ENCL_TRIGGER_LOG_MAX_RETRY,
-    ENCL_DOWNLOAD_LOG_MAX_RETRY, ENCL_DOWNLOAD_LOG_WAIT_BEFORE_RETRY, CONSUL_DUMP,
-    DATA_PATH, SYSLOG_HOST, SYSLOG_PORT)
+    ENCL_DOWNLOAD_LOG_MAX_RETRY, ENCL_DOWNLOAD_LOG_WAIT_BEFORE_RETRY, DATA_PATH, 
+    SSPL_SB_REQUEST, SB_DATA_PATH, SSPL_SB_TMP, SYSLOG_HOST, SYSLOG_PORT)
 from framework.utils.conf_utils import Conf, SSPL_CONF
-
-SB_DATA_PATH = DATA_PATH + 'support_bundle'
-if not os.path.exists(SB_DATA_PATH):
-    os.makedirs(SB_DATA_PATH)
-sspl_sb_req = f"{SB_DATA_PATH}/sspl-sb-req.txt"
-sspl_bundle_tmp = f"{SB_DATA_PATH}sspl_bundle_{str(int(time.time()))}"
 
 
 class SSPLBundleError(Exception):
@@ -45,7 +40,6 @@ class SSPLBundleError(Exception):
         """Initialize with custom error message and return code."""
         self._rc = rc
         self._desc = message % (args)
-        sspl_bundle_cleanup()
 
     def __str__(self):
         """Format error string."""
@@ -62,25 +56,26 @@ class SSPLBundleGenerate(object):
         self.localTempPath = "/tmp/support_bundle/"
         self.sspl_log_default = f"/var/log/{PRODUCT_FAMILY}/sspl"
         self.iem_log_default = f"/var/log/{PRODUCT_FAMILY}/iem"
-        self.sspl_conf_dir = f"/opt/seagate/{PRODUCT_FAMILY}/provisioner/pillar/components/sspl.sls"
-        self.ipmi_sel_data = f"{sspl_bundle_tmp}/ipmi_sel_data_{str(int(time.time()))}.txt"
-        self.consul_folder_name = 'consul_sspl_data'
-        self.consul_sspl_config = f"{sspl_bundle_tmp}/consuldump_sspl_config/"
-        self.consul_sspl_cache = f"{sspl_bundle_tmp}/consuldump_sspl_cache/"
-        self.consul_system_information_data = f"{sspl_bundle_tmp}/consuldump_system_information/"
-        self.consul_storage_enclosure_data = f"{sspl_bundle_tmp}/consuldump_storage_enclosure/"
-        self.boot_drvs_dta = f'{sspl_bundle_tmp}/Server_OS_boot_drives_SMART_data_{str(int(time.time()))}'
-        self.enclosure_log = f"{sspl_bundle_tmp}/enclosure_logs.zip"
+        self.sspl_conf_dir = f"{SSPL_SB_TMP}/sspl_conf/"
+        self.ipmi_sel_data = f"{SSPL_SB_TMP}/ipmi_sel_data_{str(int(time.time()))}.txt"
+        self.boot_drvs_dta = f'{SSPL_SB_TMP}/Server_OS_boot_drives_SMART_data_{str(int(time.time()))}'
+        self.enclosure_log = f"{SSPL_SB_TMP}/enclosure_logs.zip"
         self.enclosure_wwn = "NA"
-        self.sspl_data_dir = f"/var/{PRODUCT_FAMILY}/sspl/data"
 
-    def generate_sspl_support_bundle(self, parser, tmpFile):
+    def generate_sspl_support_bundle(self, parser):
+        if os.path.isfile(SSPL_SB_REQUEST):
+            msg = "One SSPL Support Bundle request is ongoing already, skipping current request..!"
+            logger.error(msg)
+            raise SystemExit(msg)
+
+        os.makedirs(SSPL_SB_TMP, exist_ok=True)
+        open(SSPL_SB_REQUEST, "a").close()
         file_name = "sspl_%s.tar.gz" % parser[1]
 
-        sspl_log_dir = Conf.get(SSPL_CONF,
-                                "%s>sspl_log_file_path" % (self.SYS_INFORMATION)).replace("/sspl.log","")
-        iem_log_dir = Conf.get(SSPL_CONF,
-                               "%s>log_file_path" % (self.IEM_SENSOR)).replace("/iem_messages","")
+        sspl_log_dir = Conf.get(SSPL_CONF, "%s>sspl_log_file_path" % \
+            (self.SYS_INFORMATION)).replace("/sspl.log","")
+        iem_log_dir = Conf.get(SSPL_CONF, "%s>log_file_path" % \
+            (self.IEM_SENSOR)).replace("/iem_messages","")
 
         configure_path = parser[2]
         if configure_path:
@@ -88,10 +83,9 @@ class SSPLBundleGenerate(object):
                 self.localTempPath = configure_path+"sspl/"
             else:
                 msg = "Given path %s doesn't exist" %(configure_path)
-                tmpFile.close()
+                sspl_bundle_cleanup()
                 raise SSPLBundleError(1, msg)
-        if not os.path.exists(self.localTempPath):
-            os.makedirs(self.localTempPath)
+        os.makedirs(self.localTempPath, exist_ok=True)
         try:
             sspl_state = ""
             try:
@@ -108,7 +102,7 @@ class SSPLBundleGenerate(object):
                 sspl_state = 'active'
 
             self.get_ipmi_sel_data()
-            self.get_consul_data()
+            self.get_config_data()
             self.get_drives_smart_data()
             if sspl_state == "active" and "-noencl" not in parser:
                 self.get_enclosure_logs()
@@ -122,20 +116,16 @@ class SSPLBundleGenerate(object):
 
             file_dir = file_name.replace(".tar.gz","")
             tarfile_data = {
-                sspl_log_dir: file_dir+"/sspl/logs/",
-                self.sspl_conf_dir: file_dir+"/sspl/config/sspl.sls",
-                self.consul_sspl_config: file_dir+"/sspl/consul/consul_sspl_config.txt",
-                self.consul_sspl_cache: file_dir+"/sspl/consul/consul_sspl_cache.txt",
-                self.consul_system_information: file_dir+"/sspl/consul/consul_system_information.txt",
-                self.consul_storage_enclosure: file_dir+"/sspl/consul/consul_storage_enclosure.txt",
-                self.boot_drvs_dta: file_dir+"/drives_SMART_data/",
-                self.ipmi_sel_data: file_dir+"/ipmi/ipmi_sel_data.txt",
-                self.sspl_data_dir: file_dir+"/sspl/data/",
-                iem_log_dir: file_dir+"/iems/"
+                sspl_log_dir : os.path.join(file_dir, "sspl/logs/"),
+                self.sspl_conf_dir : os.path.join(file_dir, "sspl/config/"),
+                self.boot_drvs_dta : os.path.join(file_dir, "drives_SMART_data/"),
+                self.ipmi_sel_data : os.path.join(file_dir, "ipmi/ipmi_sel_data.txt"),
+                DATA_PATH : os.path.join(file_dir, "sspl/data/"),
+                iem_log_dir : os.path.join(file_dir, "iems/")
             }
 
             # Exclude some duplicate file from the bundle
-            EXCLUDE_FILES = ['sspl-sb-req.txt', sspl_bundle_tmp]
+            EXCLUDE_FILES = [SB_DATA_PATH]
 
             with tarfile.open(self.localTempPath+file_name, "w:gz") as tar:
                 for key, value in tarfile_data.items():
@@ -148,7 +138,7 @@ class SSPLBundleGenerate(object):
 
         except (OSError, tarfile.TarError) as err:
             msg = "Facing problem while creating sspl support bundle : %s" % err
-            tmpFile.close()
+            sspl_bundle_cleanup()
             raise SSPLBundleError(1, msg)
 
         logger.info("SSPL Support Bundle Files Uploaded Successfully..!")
@@ -163,31 +153,15 @@ class SSPLBundleGenerate(object):
             with open(self.ipmi_sel_data, 'w+') as sel_list:
                 sel_list.write(response)
 
-    def get_consul_data(self):
-        self.consul_folder_name = f"consul_sspl_data-{str(int(time.time()))}"
-        consuldump = f"{CONSUL_DUMP} -n {self.consul_folder_name} -l {sspl_bundle_tmp}/ -d"
-        consuldump_cmd = {
-            "sspl_config": f"{consuldump} consul_sspl_config sspl/",
-            "sspl_cache": f"{consuldump} consul_sspl_cache var/{PRODUCT_FAMILY}/sspl",
-            "system_information": f"{consuldump} consul_system_information system_information/",
-            "storage_enclosure": f"{consuldump} consul_storage_enclosure storage_enclosure/"
-        }
-        for key, value in consuldump_cmd.items():
-            subout = self._run_command(value)
-            if subout[2] != 0:
-                logger.error(f"Unable to get consul data of {key}...!")
-            del subout
-        consul_folder_path = f"{sspl_bundle_tmp}/{self.consul_folder_name}"
-        self.consul_sspl_config = f"{consul_folder_path}/consul_sspl_config"
-        self.consul_sspl_cache = f"{consul_folder_path}/consul_sspl_cache"
-        self.consul_system_information = f"{consul_folder_path}/consul_system_information"
-        self.consul_storage_enclosure = f"{consul_folder_path}/consul_storage_enclosure"
+    def get_config_data(self):
+        os.makedirs(self.sspl_conf_dir, exist_ok=True)
+        for conf_file in glob.glob('/etc/sspl*.*'):
+            shutil.copy(conf_file, self.sspl_conf_dir)
 
     def get_drives_smart_data(self):
         lsscsi_cmd = "lsscsi | grep disk"
         lsscsi_response, _, _ = self._run_command(lsscsi_cmd)
-        if not os.path.exists(self.boot_drvs_dta):
-            os.makedirs(self.boot_drvs_dta)
+        os.makedirs(self.boot_drvs_dta, exist_ok=True)
         for res in lsscsi_response.split("\n"):
             drive_path = res.strip().split(' ')[-1]
             smartctl_cmd = f"sudo smartctl -a {drive_path} --json"
@@ -294,10 +268,10 @@ class SSPLBundleGenerate(object):
 
 def sspl_bundle_cleanup():
     """Cleanup activity for SSPL Support Bundle"""
-    if os.path.exists(sspl_sb_req):
-        os.remove(sspl_sb_req)
-    if os.path.exists(sspl_bundle_tmp):
-        shutil.rmtree(sspl_bundle_tmp)
+    if os.path.exists(SSPL_SB_REQUEST):
+        os.remove(SSPL_SB_REQUEST)
+    if os.path.exists(SSPL_SB_TMP):
+        shutil.rmtree(SSPL_SB_TMP)
 
 def initialize_logging(parser):
     # set Logging Handlers
@@ -319,26 +293,21 @@ def initialize_logging(parser):
         _logger.addHandler(console)
     return _logger
 
+logger = initialize_logging(sys.argv)
+
 if __name__ == "__main__":
-    if not os.path.isfile(sspl_sb_req):
-        if len(sys.argv) >= 3:
-            # Initialize logging
-            logger = initialize_logging(sys.argv)
-            tmpFile = open(sspl_sb_req, "w")
-            os.makedirs(sspl_bundle_tmp)
-            try:
-                SSPLBundleObj = SSPLBundleGenerate()
-                SSPLBundleObj.generate_sspl_support_bundle(sys.argv, tmpFile)
-            except Exception as e:
-                logger.error("SSPL support bundle script is failed with an unexpected "
-                    "error. please try again ..!")
-                logger.error("Error Message : %s" % e)
-                raise SSPLBundleError(1, msg)
-            tmpFile.close()
+    if len(sys.argv) >= 3:
+        try:
+            SSPLBundleObj = SSPLBundleGenerate()
+            SSPLBundleObj.generate_sspl_support_bundle(sys.argv)
+        except Exception as e:
+            logger.error("SSPL support bundle script is failed with an unexpected "
+                "error. please try again ..!")
+            msg = "Error Message : %s" % e
+            logger.error(msg)
             sspl_bundle_cleanup()
-        else:
-            msg = "Unrecognized arguments: %s" % sys.argv
             raise SSPLBundleError(1, msg)
+        sspl_bundle_cleanup()
     else:
-        msg = "Already SSPL Support Bundle request is going on, So skipping current request..!"
-        raise Exception(msg)
+        msg = "Unrecognized arguments: %s" % sys.argv
+        raise SSPLBundleError(1, msg)
