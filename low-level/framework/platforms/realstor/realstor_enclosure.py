@@ -104,6 +104,7 @@ class RealStorEnclosure(StorageEnclosure):
 
     poll_system_ts = 0
     mc_timeout_counter = 0
+    ws_response_status = None
 
     # resource inmemory cache
     latest_faults = {}
@@ -219,6 +220,8 @@ class RealStorEnclosure(StorageEnclosure):
 
             if response is None:
                 continue
+
+            self.ws_response_status = response.status_code
 
             if response.status_code == self.ws.HTTP_OK:
 

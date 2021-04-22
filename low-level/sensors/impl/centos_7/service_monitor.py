@@ -23,6 +23,7 @@
 import time
 import socket
 import copy
+import os
 
 from dbus import Interface, SystemBus, DBusException, PROPERTIES_IFACE
 from dbus.mainloop.glib import DBusGMainLoop
@@ -34,6 +35,7 @@ from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.module_thread import SensorThread
 from message_handlers.service_msg_handler import ServiceMsgHandler
 from framework.utils.service_logging import logger
+from framework.base.sspl_constants import DATA_PATH
 
 from framework.utils.conf_utils import (GLOBAL_CONF, CLUSTER, SRVNODE, SITE_ID,
                 RACK_ID, NODE_ID, SSPL_CONF, CLUSTER_ID, Conf)
@@ -41,6 +43,10 @@ from framework.utils.severity_reader import SeverityReader
 from framework.utils.mon_utils import get_alert_id
 from framework.utils.iem import Iem
 from framework.base.module_thread import ThreadException
+from framework.utils.store_factory import file_store
+
+# Override default store
+store = file_store
 
 @implementer(ISystemMonitor)
 class ServiceMonitor(SensorThread, InternalMsgQ):
@@ -56,6 +62,8 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
     THREAD_SLEEP       = 'thread_sleep'
     POLLING_FREQUENCY  = 'polling_frequency'
     MAX_WAIT_TIME      = 'threshold_inactive_time'
+
+    CACHE_DIR_NAME  = "server"
 
     # Dependency list
     DEPENDENCIES = {"plugins": ["SeviceMsgHandler"]}
@@ -74,7 +82,12 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
             Conf.get(SSPL_CONF, f"{self.SERVICEMONITOR}>{self.MONITORED_SERVICES}", [])
         )
 
-        self.not_active_services = {}
+        self.not_active_services = {
+            # 'service_name' : [timestamp, prev_state, prev_substate],
+            # timestamp => instance when transition to non_active state occurred.
+            # prev_state => state from which it came to non_active state
+            # prev_substate => substate from which it came to non_acitve substate.
+        }
         self.failed_services = []
 
         self.service_status = {}
@@ -113,6 +126,30 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
                                        "/org/freedesktop/systemd1")
         self._manager = Interface(systemd,
                             dbus_interface='org.freedesktop.systemd1.Manager')
+
+        cache_dir_path = os.path.join(DATA_PATH, self.CACHE_DIR_NAME)
+        self.SERVICE_MONITOR_DATA_PATH = os.path.join(cache_dir_path,
+                                         f'SERVICE_MONITOR_DATA')
+        # Get the stored previous service info
+        self.persistent_service_data = {}
+        if os.path.isfile(self.SERVICE_MONITOR_DATA_PATH):
+            self.persistent_service_data = \
+                store.get(self.SERVICE_MONITOR_DATA_PATH)
+        if self.persistent_service_data:
+            self.not_active_services = \
+                self.persistent_service_data['not_active_services']
+            self.failed_services = \
+                self.persistent_service_data['failed_services']
+            self.service_status = \
+                self.persistent_service_data['service_status']
+        else:
+            self.persistent_service_data = {
+                'not_active_services' : self.not_active_services,
+                'failed_services' : self.failed_services,
+                'service_status' : self.service_status
+            }
+            store.put(self.persistent_service_data,
+                      self.SERVICE_MONITOR_DATA_PATH)
 
         self.remove_disabled_services()
 
@@ -239,6 +276,13 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
         try:
             unit, _, state, substate, pid = self.get_service_status(service=service)
 
+            if service in self.service_status:
+                prev_state = self.service_status[service]['state']
+                prev_substate = self.service_status[service]['substate']
+                prev_pid = self.service_status[service]['pid']
+            else:
+                prev_state = prev_substate = prev_pid  = "N/A"
+
             self.update_status_local_cache(service, state, substate, pid)
 
             Iunit2 = Interface(unit,
@@ -252,13 +296,25 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
             logger.debug(f"{service}({pid}) state is {state}:{substate}")
 
             if state in  ["activating", "reloading", "deactivating"]:
-                self.not_active_services[service] = \
-                                    [self.current_time(), "N/A", "N/A"]
-            elif state != "active":
+                if service not in self.not_active_services:
+                    self.not_active_services[service] = \
+                                    [self.current_time(), state, substate]
+            elif state != "active" and service not in self.failed_services:
                 self.failed_services.append(service)
-                self.raise_alert(service, "N/A", state, "N/A", substate,
-                                    "N/A", pid, 0)
+                self.raise_alert(service, prev_state, state, prev_substate,
+                                 substate, prev_pid, pid, 0)
                 logger.error(f"{service} is not active initially. state = {state}:{substate}")
+            elif state == "active":
+                if service in self.failed_services:
+                    self.failed_services.remove(service)
+                    self.raise_alert(service, prev_state, state, prev_substate,
+                        substate, prev_pid, pid, 2)
+                    logger.info(f"{service} returned to good state. state = {state}:{substate}")
+                elif service in self.not_active_services:
+                    self.not_active_services.pop(service)
+                    self.raise_alert(service, prev_state, state, prev_substate,
+                        substate, prev_pid, pid, 2)
+                    logger.info(f"{service} returned to good state. state = {state}:{substate}")
 
             return None
         except DBusException as err:
@@ -490,6 +546,13 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
 
         self.raise_iem(service, alert_type)
         self._write_internal_msgQ(ServiceMsgHandler.name(), alert_msg)
+        self.persistent_service_data = {
+            'not_active_services' : self.not_active_services,
+            'failed_services' : self.failed_services,
+            'service_status' : self.service_status
+        }
+        store.put(self.persistent_service_data,
+                    self.SERVICE_MONITOR_DATA_PATH)
 
     def raise_iem(self, service, alert_type):
         """Raise iem alert for kafka service."""

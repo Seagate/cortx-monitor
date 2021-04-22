@@ -31,6 +31,7 @@ from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
 from framework.platforms.realstor.realstor_enclosure import singleton_realstorencl
+from framework.utils.store_factory import store
 
 # Modules that receive messages from this module
 from message_handlers.real_stor_encl_msg_handler import RealStorEnclMsgHandler
@@ -99,6 +100,23 @@ class RealStorEnclosureSensor(SensorThread, InternalMsgQ):
         # Initialize internal message queues for this module
         super(RealStorEnclosureSensor, self).initialize_msgQ(msgQlist)
 
+        self.ENCL_SENSOR_DATA_PATH = os.path.join(self.rssencl.encl_cache,
+                                           'enclosure_data.json')
+        # Get the stored previous alert info
+        self.persistent_encl_data = store.get(self.ENCL_SENSOR_DATA_PATH)
+        if self.persistent_encl_data:
+            if self.persistent_encl_data['fault_alert'] == "True":
+                self.fault_alert = True
+            else:
+                self.fault_alert = False
+            self.previous_alert_type = self.persistent_encl_data['previous_alert_type']
+        else:
+            self.persistent_encl_data = {
+                'fault_alert' : str(self.fault_alert),
+                'previous_alert_type' : str(self.previous_alert_type),
+            }
+            store.put(self.persistent_encl_data, self.ENCL_SENSOR_DATA_PATH)
+
         return True
 
     def read_data(self):
@@ -120,6 +138,7 @@ class RealStorEnclosureSensor(SensorThread, InternalMsgQ):
         try:
             # Timeout counter for controller login failed and ws request failed
             mc_timeout_counter = self.rssencl.mc_timeout_counter
+            ws_response_status = self.rssencl.ws_response_status
 
             if mc_timeout_counter > 10 and self.fault_alert is False:
                 self.alert_type = self.rssencl.FRU_FAULT
@@ -131,7 +150,8 @@ class RealStorEnclosureSensor(SensorThread, InternalMsgQ):
 
                 self.fault_alert = True
 
-            elif mc_timeout_counter == 0 and self.previous_alert_type != self.rssencl.FRU_FAULT_RESOLVED \
+            elif mc_timeout_counter == 0 and  ws_response_status == self.rssencl.ws.HTTP_OK \
+                and self.previous_alert_type != self.rssencl.FRU_FAULT_RESOLVED \
                 and self.fault_alert == True:
 
                 # Check system status
@@ -149,7 +169,7 @@ class RealStorEnclosureSensor(SensorThread, InternalMsgQ):
                                     self.encl_status = event
                                     break
 
-                self.fault_alert = False
+                    self.fault_alert = False
 
             if self.alert_type is not None:
                 self.send_json_msg(self.alert_type, self.encl_status)
@@ -218,6 +238,11 @@ class RealStorEnclosureSensor(SensorThread, InternalMsgQ):
 
         self.previous_alert_type = alert_type
         self._write_internal_msgQ(RealStorEnclMsgHandler.name(), internal_json_msg)
+        self.persistent_encl_data = {
+                'fault_alert' : str(self.fault_alert),
+                'previous_alert_type' : str(self.previous_alert_type),
+            }
+        store.put(self.persistent_encl_data, self.ENCL_SENSOR_DATA_PATH)
 
     def _get_alert_id(self, epoch_time):
         """Returns alert id which is a combination of
