@@ -57,11 +57,14 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
     CLUSTER_ID = "cluster_id"
     NODE_ID = "node_id"
     RACK_ID = "rack_id"
-    POLLING_INTERVAL = "polling_interval"
+    SCAN_FREQUENCY = "polling_interval"
     TIMESTAMP_FILE_PATH_KEY = "timestamp_file_path"
 
-    # check once a week (below time is in seconds), the integrity of raid data
-    DEFAULT_POLLING_INTERVAL = "604800"
+    # Scan for RAID integrity error every 2 weeks (1209600 seconds)
+    DEFAULT_SCAN_FREQUENCY = "1209600"
+    # Minimum allowed frequency for RAID integrity scans is 1 day
+    # (86400 seconds ), as frequent scans affect disk i/o performance
+    MIN_SCAN_FREQUENCY = 86400
     DEFAULT_RAID_DATA_PATH = RaidDataConfig.RAID_RESULT_DIR.value
     DEFAULT_TIMESTAMP_FILE_PATH = DEFAULT_RAID_DATA_PATH + "last_execution_time"
 
@@ -102,9 +105,13 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
         self._cluster_id = Conf.get(GLOBAL_CONF, CLUSTER_ID_KEY,'CC01')
         self._timestamp_file_path = Conf.get(SSPL_CONF, f"{self.RAIDIntegritySensor}>{self.TIMESTAMP_FILE_PATH_KEY}",
                                         self.DEFAULT_TIMESTAMP_FILE_PATH)
-        self._polling_interval = Conf.get(SSPL_CONF, f"{self.RAIDIntegritySensor}>{self.POLLING_INTERVAL}",
-                                    self.DEFAULT_POLLING_INTERVAL)
-        
+        self._scan_frequency = Conf.get(SSPL_CONF, f"{self.RAIDIntegritySensor}>{self.SCAN_FREQUENCY}",
+                                    self.DEFAULT_SCAN_FREQUENCY)
+        self._next_scheduled_time = self._scan_frequency
+
+        if self._scan_frequency < self.MIN_SCAN_FREQUENCY:
+            self._scan_frequency = self.MIN_SCAN_FREQUENCY
+
         # Create DEFAULT_RAID_DATA_PATH if already not exist.
         self._create_file(self.DEFAULT_RAID_DATA_PATH)
         return True
@@ -114,8 +121,6 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
 
     def run(self):
         """Run the sensor on its own thread"""
-        # (below time is in seconds)
-        DEFAULT_POLLING_INTERVAL = "604800"
         # Do not proceed if module is suspended
         if self._suspended == True:
             if os.path.exists(self._timestamp_file_path):
@@ -123,9 +128,11 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
                     last_processed_log_timestamp = timestamp_file.read().strip()
                 current_time = int(time.time())
                 if current_time > int(last_processed_log_timestamp):
-                    self._polling_interval = int(DEFAULT_POLLING_INTERVAL) - (current_time - int(last_processed_log_timestamp))
-            logger.info("Scheduling RAID validate again after:{} seconds".format(self._polling_interval))
-            self._scheduler.enter(self._polling_interval, self._priority, self.run, ())
+                    self._next_scheduled_time = self._scan_frequency - \
+                        (current_time - int(last_processed_log_timestamp))
+            logger.info("Scheduling RAID validate again after: %s seconds"
+                        % self._next_scheduled_time)
+            self._scheduler.enter(self._next_scheduled_time, self._priority, self.run, ())
             return
 
         # Check for debug mode being activated
@@ -147,9 +154,11 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
                 last_processed_log_timestamp = timestamp_file.read().strip()
                 current_time = int(time.time())
                 if current_time > int(last_processed_log_timestamp):
-                    self._polling_interval = int(DEFAULT_POLLING_INTERVAL) - (current_time - int(last_processed_log_timestamp))
-            logger.info("Scheduling RAID validate again after:{} seconds".format(self._polling_interval))
-            self._scheduler.enter(self._polling_interval, self._priority, self.run, ())
+                    self._next_scheduled_time = self._scan_frequency - \
+                        (current_time - int(last_processed_log_timestamp))
+            logger.info("Scheduling RAID validate again after: %s seconds"
+                        % self._next_scheduled_time)
+            self._scheduler.enter(self._next_scheduled_time, self._priority, self.run, ())
         except Exception as ae:
             logger.exception(ae)
 
@@ -159,14 +168,14 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
             if len(devices) == 0:
                 return
             logger.debug("Fetched devices:{}".format(devices))
-            
+
             for device in devices:
                 # Update the state as 'check' for RAID device file
                 result = self._update_raid_device_file(device)
                 if result == "failed":
                     self._retry_execution(self._update_raid_device_file, device)
                 logger.info("RAID device state is changed to 'check'")
-    
+
                 # Check RAID device array state is 'idle' or not
                 result = self._check_raid_state(device)
                 if result == "failed":
@@ -187,14 +196,20 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
                             data = fs.read().rstrip()
                         if self.FAULT_RESOLVED in data:
                             self.alert_type = self.FAULT
-                            self._alert_msg = "RAID disks present in %s RAID array, needs synchronization." %device
+                            self._alert_msg = "RAID disks present in %s RAID array"\
+                                ", needs synchronization. If fault persists for "\
+                                "more than 2 days, Please contact Seagate support."%device
                             self._send_json_msg(self.alert_type, device, self._alert_msg)
                             self._update_fault_state_file(device, self.FAULT, fault_status_file)
+                            self._scan_frequency = self.MIN_SCAN_FREQUENCY
                     else:
                         self.alert_type = self.FAULT
-                        self._alert_msg = "RAID disks present in %s RAID array, needs synchronization." %device
+                        self._alert_msg = "RAID disks present in %s RAID array"\
+                                ", needs synchronization. If fault persists for "\
+                                "more than 2 days, Please contact Seagate support."%device
                         self._send_json_msg(self.alert_type, device, self._alert_msg)
                         self._update_fault_state_file(device, self.FAULT, fault_status_file)
+                        self._scan_frequency = self.MIN_SCAN_FREQUENCY
 
                     # Retry to check mismatch_cnt
                     self._retry_execution(self._check_mismatch_count, device)
@@ -251,6 +266,11 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
                             self._alert_msg = "RAID disks present in %s RAID array are synchronized." %device
                             self._send_json_msg(self.alert_type, device, self._alert_msg)
                             self._update_fault_state_file(device, self.FAULT_RESOLVED, fault_status_file)
+                            self._scan_frequency = Conf.get(SSPL_CONF,
+                                    f"{self.RAIDIntegritySensor}>{self.SCAN_FREQUENCY}",
+                                    self.DEFAULT_SCAN_FREQUENCY)
+                            self._scan_frequency = max(self._scan_frequency,
+                                                       self.MIN_SCAN_FREQUENCY)
             else:
                 status = "failed"
                 logger.debug("Mismatch found in {} file in raid_integrity_data!"
@@ -428,7 +448,7 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
         self._create_file(fault_state_file)
         with open(fault_state_file, 'w') as fs:
             fs.write(data)
- 
+
     def _cleanup(self):
         """Clean up the validate raid result files"""
         if os.path.exists(self._timestamp_file_path):

@@ -108,6 +108,10 @@ RAIDSENSOR:
    threaded: true
    RAID_status_file: /proc/mdstat
 
+RAIDINTEGRITYSENSOR:
+   threaded: true
+   polling_interval: 1209600
+
 IPMI:
    user: admin
    pass: gAAAAABgEnOnRAhNzFyATr3iZdoC_tCeqEBqnwFb7CNYVXhd6i3Pl93Il7aDsG0Ro5ZRRaXr2LUPQEse46NVlDTAK7gbzoxGyg==
