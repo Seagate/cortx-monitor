@@ -175,10 +175,6 @@ class RealStorActuator(Actuator, Debug):
           "host_id": socket.getfqdn(),
           "alert_id": alert_id,
           "info": {
-            "site_id": self.rssencl.site_id,
-            "rack_id": self.rssencl.rack_id,
-            "node_id": self.rssencl.node_id,
-            "cluster_id": self.rssencl.cluster_id,
             "resource_type": resource_type,
             "resource_id": resource_id,
             "event_time": epoch_time
@@ -526,10 +522,6 @@ class RealStorActuator(Actuator, Debug):
         response['severity'] = SeverityTypes.INFORMATIONAL.value
         response['alert_id'] = mon_utils.get_alert_id(epoch_time)
         response['info'] = {
-            "site_id": self.rssencl.site_id,
-            "rack_id": self.rssencl.rack_id,
-            "node_id": self.rssencl.node_id,
-            "cluster_id": self.rssencl.cluster_id,
             "resource_type": f"enclosure:{self._enclosure_type.lower()}:{self._enclosure_resource_type.lower()}",
             "resource_id": self._resource_id,
             "event_time": epoch_time,

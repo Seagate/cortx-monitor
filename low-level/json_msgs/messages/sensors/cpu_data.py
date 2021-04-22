@@ -55,10 +55,6 @@ class CPUdataMsg(BaseSensorMsg):
                        user_time,
                        core_data,
                        cpu_usage,
-                       site_id,
-                       rack_id,
-                       node_id,
-                       cluster_id,
                        alert_type,
                        event,
                        username  = "SSPL-LL",
@@ -84,10 +80,6 @@ class CPUdataMsg(BaseSensorMsg):
         self._user_time         = user_time
         self._core_data         = core_data
         self._cpu_usage         = cpu_usage
-        self._site_id           = site_id
-        self._rack_id           = rack_id
-        self._node_id           = node_id
-        self._cluster_id        = cluster_id
         self.alert_type         = alert_type
         self.event              = event
 
@@ -117,10 +109,6 @@ class CPUdataMsg(BaseSensorMsg):
                               "alert_id": alert_id,
                               "host_id": self._host_id,
                               "info": {
-                                "site_id": self._site_id,
-                                "rack_id": self._rack_id,
-                                "node_id": self._node_id,
-                                "cluster_id": self._cluster_id,
                                 "resource_type": self.RESOURCE_TYPE,
                                 "resource_id": self.RESOURCE_ID,
                                 "event_time": epoch_time,

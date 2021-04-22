@@ -35,8 +35,7 @@ from framework.base.sspl_constants import (PRODUCT_FAMILY,
                                            iem_severity_to_alert_mapping,
                                            iem_severity_types,
                                            iem_source_types)
-from framework.utils.conf_utils import (CLUSTER_ID_KEY, GLOBAL_CONF, NODE_ID_KEY,
-    RACK_ID_KEY, SITE_ID_KEY, SSPL_CONF, Conf)
+from framework.utils.conf_utils import SSPL_CONF, Conf
 from framework.utils.service_logging import logger
 from json_msgs.messages.sensors.iem_data import IEMDataMsg
 from framework.messaging.egress_processor import EgressProcessor
@@ -52,10 +51,6 @@ class IEMSensor(SensorThread, InternalMsgQ):
     # Keys for config settings
     LOG_FILE_PATH_KEY = "log_file_path"
     TIMESTAMP_FILE_PATH_KEY = "timestamp_file_path"
-    SITE_ID_KEY = "site_id"
-    RACK_ID_KEY = "rack_id"
-    NODE_ID_KEY = "node_id"
-    CLUSTER_ID_KEY = "cluster_id"
 
     # Default values for config  settings
     DEFAULT_LOG_FILE_PATH = f"/var/log/{PRODUCT_FAMILY}/iem/iem_messages"
@@ -108,10 +103,6 @@ class IEMSensor(SensorThread, InternalMsgQ):
             self.SENSOR_NAME, self.PRIORITY)
         self._log_file_path = None
         self._timestamp_file_path = None
-        self._site_id = None
-        self._rack_id = None
-        self._node_id = None
-        self._cluster_id = None
         self._iem_logs = None
         self._iem_log_file_lock = threading.Lock()
 
@@ -131,12 +122,6 @@ class IEMSensor(SensorThread, InternalMsgQ):
 
         self._timestamp_file_path = Conf.get(SSPL_CONF, f"{self.SENSOR_NAME.upper()}>{self.TIMESTAMP_FILE_PATH_KEY}",
                 self.DEFAULT_TIMESTAMP_FILE_PATH)
-
-        self._site_id = Conf.get(GLOBAL_CONF, SITE_ID_KEY,'DC01')
-        self._rack_id = Conf.get(GLOBAL_CONF, RACK_ID_KEY,'RC01')
-        self._node_id = Conf.get(GLOBAL_CONF, NODE_ID_KEY,'SN01')
-        self._cluster_id = Conf.get(GLOBAL_CONF, CLUSTER_ID_KEY,'CC01')
-
         return True
 
     def read_data(self):
@@ -265,10 +250,6 @@ class IEMSensor(SensorThread, InternalMsgQ):
         component_id, module_id, event_id = self._decode_msg( f"{component_id}{module_id}{event_id}")
 
         info = {
-            "site_id": self._site_id,
-            "rack_id": self._rack_id,
-            "node_id": self._node_id,
-            "cluster_id" : self._cluster_id,
             "source_id": source_id,
             "component_id": component_id,
             "module_id": module_id,

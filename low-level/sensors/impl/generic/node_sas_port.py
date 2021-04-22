@@ -30,7 +30,7 @@ from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.module_thread import SensorThread
 from framework.base.sspl_constants import DATA_PATH
 from framework.utils.conf_utils import (GLOBAL_CONF, SSPL_CONF, Conf,
-    SITE_ID_KEY, RACK_ID_KEY, NODE_ID_KEY, CLUSTER_ID_KEY)
+    NODE_ID_KEY)
 from framework.utils.config_reader import ConfigReader
 from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
@@ -74,10 +74,6 @@ class SASPortSensor(SensorThread, InternalMsgQ):
 
     # section in the configuration store
     SYSTEM_INFORMATION = "SYSTEM_INFORMATION"
-    SITE_ID = "site_id"
-    CLUSTER_ID = "cluster_id"
-    NODE_ID = "node_id"
-    RACK_ID = "rack_id"
     POLLING_INTERVAL = "polling_interval"
     CACHE_DIR_NAME  = "server"
 
@@ -130,10 +126,7 @@ class SASPortSensor(SensorThread, InternalMsgQ):
 
         super(SASPortSensor, self).initialize_msgQ(msgQlist)
 
-        self._site_id = Conf.get(GLOBAL_CONF, SITE_ID_KEY,'DC01')
-        self._rack_id = Conf.get(GLOBAL_CONF, RACK_ID_KEY,'RC01')
         self._node_id = Conf.get(GLOBAL_CONF, NODE_ID_KEY,'SN01')
-        self._cluster_id = Conf.get(GLOBAL_CONF, CLUSTER_ID_KEY,'CC01')
 
         # Get the sas port implementor from configuration
         sas_port_utility = Conf.get(SSPL_CONF, f"{self.name().capitalize()}>{self.PROBE}",
@@ -445,10 +438,6 @@ class SASPortSensor(SensorThread, InternalMsgQ):
                 description = "SAS connection re-established in SAS HBA %s." %self.RESOURCE_ID
 
             info = {
-                    "site_id": self._site_id,
-                    "cluster_id": self._cluster_id,
-                    "rack_id": self._rack_id,
-                    "node_id": self._node_id,
                     "resource_type": self.RESOURCE_TYPE, # node:interface:sas
                     "resource_id": self.RESOURCE_ID, # SASHBA-0
                     "event_time": epoch_time,
@@ -464,10 +453,6 @@ class SASPortSensor(SensorThread, InternalMsgQ):
                 description = "Connection established on SAS port."
 
             info = {
-                    "site_id": self._site_id,
-                    "cluster_id": self._cluster_id,
-                    "rack_id": self._rack_id,
-                    "node_id": self._node_id,
                     "resource_type": self.RESOURCE_TYPE + ':port', # node:interface:sas:port
                     "resource_id": self.RESOURCE_ID + f'-port-{port}', # SASHBA-0-port-0
                     "event_time": epoch_time,

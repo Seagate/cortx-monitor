@@ -37,8 +37,8 @@ from framework.base.sspl_constants import (PRODUCT_FAMILY, ServiceTypes,
                                            node_key_id)
 from framework.utils import encryptor
 from framework.utils.conf_utils import (GLOBAL_CONF, IP, SECRET,
-    SSPL_CONF, USER, Conf, SITE_ID_KEY, RACK_ID_KEY, NODE_ID_KEY,
-    CLUSTER_ID_KEY, BMC_IP_KEY, BMC_USER_KEY, BMC_SECRET_KEY, MACHINE_ID)
+    SSPL_CONF, USER, Conf, NODE_ID_KEY, BMC_IP_KEY, BMC_USER_KEY,
+    BMC_SECRET_KEY, MACHINE_ID)
 from framework.utils.config_reader import ConfigReader
 from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
@@ -98,10 +98,6 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
     IPMI_ENCODING = 'utf-8'
 
     SYSTEM_INFORMATION = "SYSTEM_INFORMATION"
-    SITE_ID = "site_id"
-    RACK_ID = "rack_id"
-    NODE_ID = "node_id"
-    CLUSTER_ID = "cluster_id"
 
     BMC_INTERFACE = "BMC_INTERFACE"
     BMC = "BMC"
@@ -247,10 +243,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         # Initialize internal message queues for this module
         super(NodeHWsensor, self).initialize_msgQ(msgQlist)
 
-        self._site_id = Conf.get(GLOBAL_CONF, SITE_ID_KEY,'DC01')
-        self._rack_id = Conf.get(GLOBAL_CONF, RACK_ID_KEY,'RC01')
         self._node_id = Conf.get(GLOBAL_CONF, NODE_ID_KEY,'SN01')
-        self._cluster_id = Conf.get(GLOBAL_CONF, CLUSTER_ID_KEY,'CC01')
         self._bmc_user = Conf.get(GLOBAL_CONF, BMC_USER_KEY, 'ADMIN')
         _bmc_secret = Conf.get(GLOBAL_CONF, BMC_SECRET_KEY, 'ADMIN')
         self._bmc_ip = Conf.get(GLOBAL_CONF, BMC_IP_KEY, '')
@@ -691,10 +684,6 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         severity_reader = SeverityReader()
 
         info = {
-                "site_id": self._site_id,
-                "rack_id": self._rack_id,
-                "node_id": self._node_id,
-                "cluster_id":self._cluster_id,
                 "resource_type": resource_type,
                 "resource_id": resource_id,
                 "event_time": epoch_time,
@@ -931,11 +920,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
             alert_type = "miscellaneous"
             severity = "informational"
 
-        fru_info = {    "site_id": self._site_id,
-                        "rack_id": self._rack_id,
-                        "node_id": self._node_id,
-                        "cluster_id":self._cluster_id ,
-                        "resource_type": resource_type,
+        fru_info = {    "resource_type": resource_type,
                         "resource_id": sensor_name,
                         "event_time": self._get_epoch_time_from_date_and_time(date, _time),
                         "description": event
@@ -970,10 +955,6 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         sensor_id = self.sensor_id_map[self.TYPE_PSU_SUPPLY][sensor_num]
         resource_type = NodeDataMsgHandler.IPMI_RESOURCE_TYPE_PSU
         info = {
-            "site_id": self._site_id,
-            "rack_id": self._rack_id,
-            "node_id": self._node_id,
-            "cluster_id": self._cluster_id,
             "resource_type": resource_type,
             "resource_id": sensor,
             "event_time": self._get_epoch_time_from_date_and_time(date, _time),
@@ -1048,10 +1029,6 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         resource_type = NodeDataMsgHandler.IPMI_RESOURCE_TYPE_PSU
 
         info = {
-            "site_id": self._site_id,
-            "rack_id": self._rack_id,
-            "node_id": self._node_id,
-            "cluster_id": self._cluster_id,
             "resource_type": resource_type,
             "resource_id": sensor,
             "event_time": self._get_epoch_time_from_date_and_time(date, _time),
@@ -1106,10 +1083,6 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
 
             resource_type = NodeDataMsgHandler.IPMI_RESOURCE_TYPE_DISK
             info = {
-                "site_id": self._site_id,
-                "rack_id": self._rack_id,
-                "node_id": self._node_id,
-                "cluster_id": self._cluster_id,
                 "resource_type": resource_type,
                 "resource_id": sensor,
                 "event_time": self._get_epoch_time_from_date_and_time(date, _time),
@@ -1165,10 +1138,6 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
             specific_info.update(specific_dynamic)
 
         info = {
-            "site_id": self._site_id,
-            "rack_id": self._rack_id,
-            "node_id": self._node_id,
-            "cluster_id":self._cluster_id ,
             "resource_type": resource_type,
             "resource_id": sensor_name,
             "event_time": self._get_epoch_time_from_date_and_time(date, _time),
@@ -1206,10 +1175,6 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
             specific_info.update(specific_dynamic)
 
         info = {
-            "site_id": self._site_id,
-            "rack_id": self._rack_id,
-            "node_id": self._node_id,
-            "cluster_id":self._cluster_id ,
             "resource_type": resource_type,
             "resource_id": sensor_name,
             "event_time": self._get_epoch_time_from_date_and_time(date, _time),

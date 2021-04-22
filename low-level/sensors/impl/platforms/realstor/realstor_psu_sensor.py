@@ -312,10 +312,6 @@ class RealStorPSUSensor(SensorThread, InternalMsgQ):
         host_name = self._get_hostname()
 
         info = {
-                "site_id": self.rssencl.site_id,
-                "cluster_id": self.rssencl.cluster_id,
-                "rack_id": self.rssencl.rack_id,
-                "node_id": self.rssencl.node_id,
                 "resource_type": self.RESOURCE_CATEGORY,
                 "resource_id": resource_id,
                 "event_time": epoch_time

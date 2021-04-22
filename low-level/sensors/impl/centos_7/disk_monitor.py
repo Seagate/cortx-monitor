@@ -43,8 +43,7 @@ from framework.base.module_thread import SensorThread
 from framework.base.sspl_constants import cs_products
 from framework.messaging.egress_processor import \
     EgressProcessor
-from framework.utils.conf_utils import (CLUSTER_ID_KEY, DATA_PATH_KEY,
-    GLOBAL_CONF, NODE_ID_KEY, RACK_ID_KEY, SITE_ID_KEY, SSPL_CONF, Conf)
+from framework.utils.conf_utils import DATA_PATH_KEY, SSPL_CONF, Conf
 from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
 from framework.utils.store_factory import file_store
@@ -71,11 +70,6 @@ class DiskMonitor(SensorThread, InternalMsgQ):
     SETUP              = 'setup'
 
     DEFAULT_RAS_VOL = "/var/cortx/sspl/data/"
-
-    SITE_ID = "site_id"
-    RACK_ID = "rack_id"
-    NODE_ID = "node_id"
-    CLUSTER_ID = "cluster_id"
 
     DISK_INSERTED_ALERT_TYPE = "insertion"
     DISK_REMOVED_ALERT_TYPE = "missing"
@@ -167,12 +161,6 @@ class DiskMonitor(SensorThread, InternalMsgQ):
         self._thread_speed_safeguard = -1000  # Init to a negative number to allow extra time at startup
 
         self._product = product
-
-        self._site_id = Conf.get(GLOBAL_CONF, SITE_ID_KEY,'DC01')
-        self._rack_id = Conf.get(GLOBAL_CONF, RACK_ID_KEY,'RC01')
-        self._node_id = Conf.get(GLOBAL_CONF, NODE_ID_KEY,'SN01')
-        self._cluster_id = Conf.get(GLOBAL_CONF, CLUSTER_ID_KEY,'CC01')
-
         self._iem = Iem()
         self._iem.check_exsisting_fault_iems()
         self.UDISKS2 = self._iem.EVENT_CODE["UDISKS2_UNAVAILABLE"][1]
@@ -931,10 +919,6 @@ class DiskMonitor(SensorThread, InternalMsgQ):
                     "alert_id": get_alert_id(event_time),
                     "host_id": socket.getfqdn(),
                     "info": {
-                        "site_id": self._site_id,
-                        "rack_id": self._rack_id,
-                        "node_id": self._node_id,
-                        "cluster_id": self._cluster_id,
                         "resource_type": resource_type,
                         "resource_id": resource_id,
                         "event_time": event_time,

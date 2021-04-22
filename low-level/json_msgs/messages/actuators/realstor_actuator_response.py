@@ -54,10 +54,6 @@ class RealStorActuatorMsg(BaseActuatorMsg):
         self._severity      = sensor_response.get("severity")
 
         info = sensor_response.get("info")
-        self._site_id = info.get("site_id")
-        self._rack_id = info.get("rack_id")
-        self._node_id = info.get("node_id")
-        self._cluster_id = info.get("cluster_id")
         self._resource_type = info.get("resource_type")
         self._resource_id = info.get("resource_id")
         self._event_time = info.get("event_time")
@@ -85,10 +81,6 @@ class RealStorActuatorMsg(BaseActuatorMsg):
                               "alert_id": self._alert_id,
                               "severity": self._severity,
                               "info": {
-                                  "site_id": self._site_id,
-                                  "rack_id": self._rack_id,
-                                  "node_id": self._node_id,
-                                  "cluster_id": self._cluster_id,
                                   "resource_type": self._resource_type,
                                   "resource_id": self._resource_id,
                                   "event_time": self._event_time,

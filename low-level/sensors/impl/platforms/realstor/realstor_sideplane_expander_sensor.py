@@ -300,10 +300,6 @@ class RealStorSideplaneExpanderSensor(SensorThread, InternalMsgQ):
 
 
         info = {
-                "site_id": self.rssencl.site_id,
-                "cluster_id": self.rssencl.cluster_id,
-                "rack_id": self.rssencl.rack_id,
-                "node_id": self.rssencl.node_id,
                 "resource_type": self.RESOURCE_TYPE,
                 "resource_id": resource_id,
                 "event_time": epoch_time

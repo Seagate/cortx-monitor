@@ -32,8 +32,7 @@ from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.module_thread import SensorThread
 from framework.base.sspl_constants import (PRODUCT_FAMILY, WAIT_BEFORE_RETRY,
                                            RaidAlertMsgs, RaidDataConfig)
-from framework.utils.conf_utils import (GLOBAL_CONF, SSPL_CONF, Conf,
-    SITE_ID_KEY, RACK_ID_KEY, NODE_ID_KEY, CLUSTER_ID_KEY)
+from framework.utils.conf_utils import SSPL_CONF, Conf
 from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
 # Modules that receive messages from this module
@@ -53,10 +52,7 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
     RAIDIntegritySensor = SENSOR_NAME.upper()
 
     SYSTEM_INFORMATION = "SYSTEM_INFORMATION"
-    SITE_ID = "site_id"
-    CLUSTER_ID = "cluster_id"
-    NODE_ID = "node_id"
-    RACK_ID = "rack_id"
+
     SCAN_FREQUENCY = "polling_interval"
     TIMESTAMP_FILE_PATH_KEY = "timestamp_file_path"
 
@@ -99,10 +95,7 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
         self._alert_msg = None
         self._fault_state = None
         self._suspended = False
-        self._site_id = Conf.get(GLOBAL_CONF, SITE_ID_KEY,'DC01')
-        self._rack_id = Conf.get(GLOBAL_CONF, RACK_ID_KEY,'RC01')
-        self._node_id = Conf.get(GLOBAL_CONF, NODE_ID_KEY,'SN01')
-        self._cluster_id = Conf.get(GLOBAL_CONF, CLUSTER_ID_KEY,'CC01')
+
         self._timestamp_file_path = Conf.get(SSPL_CONF, f"{self.RAIDIntegritySensor}>{self.TIMESTAMP_FILE_PATH_KEY}",
                                         self.DEFAULT_TIMESTAMP_FILE_PATH)
         self._scan_frequency = Conf.get(SSPL_CONF, f"{self.RAIDIntegritySensor}>{self.SCAN_FREQUENCY}",
@@ -361,10 +354,6 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
         host_name = socket.getfqdn()
 
         info = {
-                "site_id": self._site_id,
-                "cluster_id": self._cluster_id,
-                "rack_id": self._rack_id,
-                "node_id": self._node_id,
                 "resource_type": self.RESOURCE_TYPE,
                 "resource_id": resource_id,
                 "event_time": epoch_time,

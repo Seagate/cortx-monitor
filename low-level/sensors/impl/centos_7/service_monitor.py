@@ -36,9 +36,8 @@ from framework.base.module_thread import SensorThread
 from message_handlers.service_msg_handler import ServiceMsgHandler
 from framework.utils.service_logging import logger
 from framework.base.sspl_constants import DATA_PATH
-
-from framework.utils.conf_utils import (GLOBAL_CONF, CLUSTER, SRVNODE, SITE_ID,
-                RACK_ID, NODE_ID, SSPL_CONF, CLUSTER_ID, Conf)
+from framework.utils.conf_utils import ( GLOBAL_CONF, SSPL_CONF,
+    Conf, NODE_ID_KEY)
 from framework.utils.severity_reader import SeverityReader
 from framework.utils.mon_utils import get_alert_id
 from framework.utils.iem import Iem
@@ -127,10 +126,7 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
         self._manager = Interface(systemd,
                             dbus_interface='org.freedesktop.systemd1.Manager')
 
-        self._site_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{SITE_ID}",'DC01')
-        self._rack_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{RACK_ID}",'RC01')
-        self._node_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{NODE_ID}",'SN01')
-        self._cluster_id = Conf.get(GLOBAL_CONF, f'{CLUSTER}>{CLUSTER_ID}','CC01')
+        self._node_id = Conf.get(GLOBAL_CONF, NODE_ID_KEY,'SN01')
 
         cache_dir_path = os.path.join(DATA_PATH, self.CACHE_DIR_NAME)
         self.SERVICE_MONITOR_DATA_PATH = os.path.join(cache_dir_path,
@@ -514,10 +510,6 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
         host_name = socket.getfqdn()
 
         info = {
-                "site_id": self._site_id,
-                "cluster_id": self._cluster_id,
-                "rack_id": self._rack_id,
-                "node_id": self._node_id,
                 "resource_type": self.RESOURCE_TYPE,
                 "resource_id": service,
                 "event_time": epoch_time,

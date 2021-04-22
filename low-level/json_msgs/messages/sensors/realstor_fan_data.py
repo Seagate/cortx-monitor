@@ -54,10 +54,6 @@ class RealStorFanDataMsg(BaseSensorMsg):
         self._fru_info = info
         self._fru_specific_info = specific_info
 
-        self._site_id = self._fru_info.get("site_id")
-        self._rack_id = self._fru_info.get("rack_id")
-        self._node_id = self._fru_info.get("node_id")
-        self._cluster_id = self._fru_info.get("cluster_id")
         self._resource_id = self._fru_info.get("resource_id")
         self._resource_type = self._fru_info.get("resource_type")
         self._event_time = self._fru_info.get("event_time")
@@ -82,10 +78,6 @@ class RealStorFanDataMsg(BaseSensorMsg):
                                     "alert_id": self._alert_id,
                                     "severity": self._severity,
                                     "info": {
-                                            "site_id": self._site_id,
-                                            "rack_id": self._rack_id,
-                                            "node_id": self._node_id,
-                                            "cluster_id": self._cluster_id,
                                             "resource_type": self._resource_type,
                                             "event_time": self._event_time,
                                             "resource_id": self._resource_id,
