@@ -127,9 +127,14 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
         self._manager = Interface(systemd,
                             dbus_interface='org.freedesktop.systemd1.Manager')
 
+        self._site_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{SITE_ID}",'DC01')
+        self._rack_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{RACK_ID}",'RC01')
+        self._node_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{NODE_ID}",'SN01')
+        self._cluster_id = Conf.get(GLOBAL_CONF, f'{CLUSTER}>{CLUSTER_ID}','CC01')
+
         cache_dir_path = os.path.join(DATA_PATH, self.CACHE_DIR_NAME)
         self.SERVICE_MONITOR_DATA_PATH = os.path.join(cache_dir_path,
-                                         f'SERVICE_MONITOR_DATA')
+                                         f'SERVICE_MONITOR_DATA_{self._node_id}')
         # Get the stored previous service info
         self.persistent_service_data = {}
         if os.path.isfile(self.SERVICE_MONITOR_DATA_PATH):
@@ -503,12 +508,6 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
         epoch_time = str(self.current_time())
         alert_id = get_alert_id(epoch_time)
         host_name = socket.getfqdn()
-
-        self._site_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{SITE_ID}",'DC01')
-        self._rack_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{RACK_ID}",'RC01')
-        self._node_id = Conf.get(GLOBAL_CONF, f"{CLUSTER}>{SRVNODE}>{NODE_ID}",'SN01')
-        self._cluster_id = Conf.get(GLOBAL_CONF, f'{CLUSTER}>{CLUSTER_ID}','CC01')
-
 
         info = {
                 "site_id": self._site_id,
