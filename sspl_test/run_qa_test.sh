@@ -24,9 +24,18 @@ script_dir=$(dirname $0)
 source $script_dir/constants.sh
 SSPL_STORE_TYPE=confstor
 
-plan=${1:-}
-avoid_rmq=${2:-}
-coverage_enabled=${3:-}
+while [ $# -gt 0 ]; do
+    case $1 in
+        --plan )
+            declare plan="$2"
+            ;;
+        --coverage )
+            declare coverage_enabled="$2"
+            ;;
+        * ) ;;
+    esac
+    shift
+done
 
 sspl_config=yaml://$SSPL_CONFIG_FILE
 sspl_test_config=yaml://$SSPL_TEST_CONFIG_FILE

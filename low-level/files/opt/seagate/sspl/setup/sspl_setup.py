@@ -283,7 +283,7 @@ class TestCmd(Cmd):
         parsers.add_argument('args', nargs='*', default=[], help='args')
         parsers.add_argument('--config', nargs='*', default=[], help='Global config url')
         parsers.add_argument('--plan', nargs='*', default=[], help='Test plan type')
-        parsers.add_argument('--avoid_rmq', action="store_true",help='Boolean - Disable RabbitMQ?')
+        parsers.add_argument('--coverage', action="store_true", help='Boolean - Enable Code Coverage.')
         parsers.set_defaults(command=cls)
 
     def validate(self):
