@@ -311,14 +311,14 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
                 logger.error(f"{service} is not active initially. state = {state}:{substate}")
             elif state == "active":
                 if service in self.failed_services:
-                    self.failed_services.remove(service)
                     self.raise_alert(service, prev_state, state, prev_substate,
                         substate, prev_pid, pid, 2)
+                    self.failed_services.remove(service)
                     logger.info(f"{service} returned to good state. state = {state}:{substate}")
                 elif service in self.not_active_services:
-                    self.not_active_services.pop(service)
                     self.raise_alert(service, prev_state, state, prev_substate,
                         substate, prev_pid, pid, 2)
+                    self.not_active_services.pop(service)
                     logger.info(f"{service} returned to good state. state = {state}:{substate}")
 
             return None

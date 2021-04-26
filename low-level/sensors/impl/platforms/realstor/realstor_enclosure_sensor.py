@@ -105,7 +105,7 @@ class RealStorEnclosureSensor(SensorThread, InternalMsgQ):
         # Get the stored previous alert info
         self.persistent_encl_data = store.get(self.ENCL_SENSOR_DATA_PATH)
         if self.persistent_encl_data:
-            if self.persistent_encl_data['fault_alert'] == "True":
+            if self.persistent_encl_data['fault_alert'].lower() == "true":
                 self.fault_alert = True
             else:
                 self.fault_alert = False
@@ -138,6 +138,7 @@ class RealStorEnclosureSensor(SensorThread, InternalMsgQ):
         try:
             # Timeout counter for controller login failed and ws request failed
             mc_timeout_counter = self.rssencl.mc_timeout_counter
+            # check ws_resonse status code to verify if request was successful.
             ws_response_status = self.rssencl.ws_response_status
 
             if mc_timeout_counter > 10 and self.fault_alert is False:

@@ -182,7 +182,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         if os.path.isfile(self.CPU_USAGE_DATA_PATH):
             self.persistent_cpu_usage_data = store.get(self.CPU_USAGE_DATA_PATH)
         if self.persistent_cpu_usage_data:
-            if self.persistent_cpu_usage_data['high_cpu_usage'] == "True":
+            if self.persistent_cpu_usage_data['high_cpu_usage'].lower() == "true":
                 self.high_cpu_usage = True
             else:
                 self.high_cpu_usage = False
@@ -193,13 +193,14 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             store.put(self.persistent_cpu_usage_data, self.CPU_USAGE_DATA_PATH)
 
         # Persistent Cache for High Disk Usage
-        self.DISK_USAGE_DATA_PATH = os.path.join(cache_dir_path, f'DISK_USAGE_DATA_{self.node_id}')
+        self.DISK_USAGE_DATA_PATH = os.path.join(cache_dir_path,
+                                f'DISK_USAGE_DATA_{self.node_id}')
 
         self.persistent_disk_usage_data = {}
         if os.path.isfile(self.DISK_USAGE_DATA_PATH):
             self.persistent_disk_usage_data = store.get(self.DISK_USAGE_DATA_PATH)
         if self.persistent_disk_usage_data:
-            if self.persistent_disk_usage_data['high_disk_usage'] == "True":
+            if self.persistent_disk_usage_data['high_disk_usage'].lower() == "true":
                 self.high_disk_usage = True
             else:
                 self.high_disk_usage = False
@@ -210,13 +211,14 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             store.put(self.persistent_disk_usage_data, self.DISK_USAGE_DATA_PATH)
 
         # Persistent Cache for high Memory Usage
-        self.MEMORY_USAGE_DATA_PATH = os.path.join(cache_dir_path, f'MEMORY_USAGE_DATA_{self.node_id}')
+        self.MEMORY_USAGE_DATA_PATH = os.path.join(cache_dir_path,
+                                f'MEMORY_USAGE_DATA_{self.node_id}')
 
         self.persistent_memory_usage_data = {}
         if os.path.isfile(self.MEMORY_USAGE_DATA_PATH):
             self.persistent_memory_usage_data = store.get(self.MEMORY_USAGE_DATA_PATH)
         if self.persistent_memory_usage_data:
-            if self.persistent_memory_usage_data['high_memory_usage'] == "True":
+            if self.persistent_memory_usage_data['high_memory_usage'].lower() == "true":
                 self.high_memory_usage = True
             else:
                 self.high_memory_usage = False
