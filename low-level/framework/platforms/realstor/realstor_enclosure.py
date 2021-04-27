@@ -104,6 +104,8 @@ class RealStorEnclosure(StorageEnclosure):
 
     poll_system_ts = 0
     mc_timeout_counter = 0
+    # ws_response_status: HTTP response status code.
+    # eg: 200 for HTTP_OK, 400 for BAD_REQUEST
     ws_response_status = None
 
     # resource inmemory cache
