@@ -80,10 +80,16 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
     # IPMI_RESOURCE_TYPE_CURRENT = "node:sensor:current"
     NW_RESOURCE_TYPE = "node:interface:nw"
     NW_CABLE_RESOURCE_TYPE = "node:interface:nw:cable"
-    high_memory_usage = False
-    high_cpu_usage = False
-    high_disk_usage = False
-    if_fault = False
+    high_usage = {
+        'cpu' : False,
+        'disk' : False,
+        'memory' : False
+    }
+    prev_nw_status = {}
+    prev_cable_cnxns = {}
+    # Dir to maintain fault detected state for interface
+    # in case of cable fault detection
+    interface_fault_state = {}
     FAULT = "fault"
     FAULT_RESOLVED = "fault_resolved"
 
@@ -172,82 +178,59 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         self._drive_byid_by_serial_number = {}
 
         self._import_products(product)
-        cache_dir_path = os.path.join(DATA_PATH, self.CACHE_DIR_NAME)
+        self.cache_dir_path = os.path.join(DATA_PATH, self.CACHE_DIR_NAME)
 
+        self.persistent_data = {
+            'cpu' : {},
+            'disk' : {},
+            'memory' : {},
+            'nw' : {}
+        }
         # Persistent Cache for High CPU usage
-        self.CPU_USAGE_DATA_PATH = os.path.join(cache_dir_path,
-                                f'CPU_USAGE_DATA_{self.node_id}')
-
-        self.persistent_cpu_usage_data = {}
-        if os.path.isfile(self.CPU_USAGE_DATA_PATH):
-            self.persistent_cpu_usage_data = store.get(self.CPU_USAGE_DATA_PATH)
-        if self.persistent_cpu_usage_data:
-            if self.persistent_cpu_usage_data['high_cpu_usage'].lower() == "true":
-                self.high_cpu_usage = True
-            else:
-                self.high_cpu_usage = False
-        else:
-            self.persistent_cpu_usage_data = {
-                'high_cpu_usage' : str(self.high_cpu_usage),
-            }
-            store.put(self.persistent_cpu_usage_data, self.CPU_USAGE_DATA_PATH)
-
+        self.fetch_from_persistent_cache('cpu', 'CPU_USAGE_DATA')
         # Persistent Cache for High Disk Usage
-        self.DISK_USAGE_DATA_PATH = os.path.join(cache_dir_path,
-                                f'DISK_USAGE_DATA_{self.node_id}')
-
-        self.persistent_disk_usage_data = {}
-        if os.path.isfile(self.DISK_USAGE_DATA_PATH):
-            self.persistent_disk_usage_data = store.get(self.DISK_USAGE_DATA_PATH)
-        if self.persistent_disk_usage_data:
-            if self.persistent_disk_usage_data['high_disk_usage'].lower() == "true":
-                self.high_disk_usage = True
-            else:
-                self.high_disk_usage = False
-        else:
-            self.persistent_disk_usage_data = {
-                'high_disk_usage' : str(self.high_disk_usage),
-            }
-            store.put(self.persistent_disk_usage_data, self.DISK_USAGE_DATA_PATH)
-
-        # Persistent Cache for high Memory Usage
-        self.MEMORY_USAGE_DATA_PATH = os.path.join(cache_dir_path,
-                                f'MEMORY_USAGE_DATA_{self.node_id}')
-
-        self.persistent_memory_usage_data = {}
-        if os.path.isfile(self.MEMORY_USAGE_DATA_PATH):
-            self.persistent_memory_usage_data = store.get(self.MEMORY_USAGE_DATA_PATH)
-        if self.persistent_memory_usage_data:
-            if self.persistent_memory_usage_data['high_memory_usage'].lower() == "true":
-                self.high_memory_usage = True
-            else:
-                self.high_memory_usage = False
-        else:
-            self.persistent_memory_usage_data = {
-                'high_memory_usage' : str(self.high_memory_usage),
-            }
-            store.put(self.persistent_memory_usage_data, self.MEMORY_USAGE_DATA_PATH)
-
+        self.fetch_from_persistent_cache('disk', 'DISK_USAGE_DATA')
+        # Persistent Cache for High Memory Usage
+        self.fetch_from_persistent_cache('memory', 'MEMORY_USAGE_DATA')
         # Persistent Cache for Nework sensor
-        self.NW_SENSOR_DATA_PATH = os.path.join(cache_dir_path, f'NW_SENSOR_DATA_{self.node_id}')
-        # Get the stored previous alert info
-        self.persistent_nw_data = store.get(self.NW_SENSOR_DATA_PATH)
-        if self.persistent_nw_data is None:
-            self.prev_nw_status = {}
-            self.prev_cable_cnxns = {}
-            # Dir to maintain fault detected state for interface
-            # in case of cable fault detection
-            self.interface_fault_state = {}
-            persistent_nw_data = {
+        self.fetch_from_persistent_cache('nw', 'NW_SENSOR_DATA')
+
+    def fetch_from_persistent_cache(self, resource, data_path):
+        PER_DATA_PATH = os.path.join(self.cache_dir_path,
+                            f'{data_path}_{self.node_id}')
+
+        if os.path.isfile(PER_DATA_PATH):
+            self.persistent_data[resource] = store.get(PER_DATA_PATH)
+        if self.persistent_data[resource]:
+            if resource == 'nw':
+                self.prev_nw_status = \
+                    self.persistent_data[resource].get('prev_nw_status', {})
+                self.prev_cable_cnxns \
+                    = self.persistent_data[resource].get('prev_cable_cnxns', {})
+                self.interface_fault_state \
+                    = self.persistent_data[resource].get('interface_fault_state', {})
+            elif self.persistent_data[resource]\
+                [f'high_{resource}_usage'].lower() == "true":
+                self.high_usage[resource] = True
+            else:
+                self.high_usage[resource] = False
+        else:
+            self.save_to_persistent_cache(resource, data_path)
+
+    def save_to_persistent_cache(self, resource, data_path):
+        PER_DATA_PATH = os.path.join(self.cache_dir_path,
+                            f'{data_path}_{self.node_id}')
+        if resource == 'nw':
+            self.persistent_data[resource] = {
                 'prev_nw_status' : self.prev_nw_status,
                 'prev_cable_cnxns' : self.prev_cable_cnxns,
                 'interface_fault_state' : self.interface_fault_state
             }
-            store.put(persistent_nw_data, self.NW_SENSOR_DATA_PATH)
         else:
-            self.prev_nw_status = self.persistent_nw_data.get('prev_nw_status', {})
-            self.prev_cable_cnxns = self.persistent_nw_data.get('prev_cable_cnxns', {})
-            self.interface_fault_state = self.persistent_nw_data.get('interface_fault_state', {})
+            self.persistent_data[resource] = {
+                f'high_{resource}_usage' : str(self.high_usage[resource]),
+            }
+        store.put(self.persistent_data[resource], PER_DATA_PATH)
 
     def _import_products(self, product):
         """Import classes based on which product is being used"""
@@ -439,10 +422,10 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             self._host_memory_usage_threshold = self.DEFAULT_HOST_MEMORY_USAGE_THRESHOLD
 
         if self._node_sensor.total_memory["percent"] >= self._host_memory_usage_threshold \
-           and not self.high_memory_usage:
+           and not self.high_usage['memory']:
 
             # Create the disk space data message and hand it over to the egress processor to transmit
-            self.high_memory_usage = True
+            self.high_usage['memory'] = True
             # Create the disk space data message and hand it over to the egress processor to transmit
             fault_event = "Host memory usage increased to %s, beyond configured threshold of %s" \
                           %(self._node_sensor.total_memory["percent"],
@@ -474,11 +457,10 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             self.host_sensor_data = jsonMsg
             self.os_sensor_type["memory_usage"] = self.host_sensor_data
             self._write_internal_msgQ(EgressProcessor.name(), jsonMsg)
-            self.persistent_memory_usage_data["high_memory_usage"] = str(self.high_memory_usage)
-            store.put(self.persistent_memory_usage_data, self.MEMORY_USAGE_DATA_PATH)
+            self.save_to_persistent_cache('memory', 'MEMORY_USAGE_DATA')
 
         if self._node_sensor.total_memory["percent"] < self._host_memory_usage_threshold \
-           and self.high_memory_usage:
+           and self.high_usage['memory']:
 
             fault_resolved_event = "Host memory usage decreased to %s, lesser than configured threshold of %s" \
                                     %(self._node_sensor.total_memory["percent"],
@@ -509,9 +491,8 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             self.host_sensor_data = jsonMsg
             self.os_sensor_type["memory_usage"] = self.host_sensor_data
             self._write_internal_msgQ(EgressProcessor.name(), jsonMsg)
-            self.high_memory_usage = False
-            self.persistent_memory_usage_data["high_memory_usage"] = str(self.high_memory_usage)
-            store.put(self.persistent_memory_usage_data, self.MEMORY_USAGE_DATA_PATH)
+            self.high_usage['memory'] = False
+            self.save_to_persistent_cache('memory', 'MEMORY_USAGE_DATA')
 
     def _generate_local_mount_data(self):
         """Create & transmit a local_mount_data message as defined
@@ -561,9 +542,9 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             self._cpu_usage_threshold = self.DEFAULT_CPU_USAGE_THRESHOLD
 
         if self._node_sensor.cpu_usage >= self._cpu_usage_threshold \
-           and not self.high_cpu_usage :
+           and not self.high_usage['cpu'] :
 
-            self.high_cpu_usage = True
+            self.high_usage['cpu'] = True
             # Create the cpu usage data message and hand it over to the egress processor to transmit
 
             fault_event = "CPU usage increased to %s, beyond configured threshold of %s" \
@@ -602,11 +583,10 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             # Transmit it to message processor
             self._write_internal_msgQ(EgressProcessor.name(), jsonMsg)
             # Store the state to Persistent Cache.
-            self.persistent_cpu_usage_data["high_cpu_usage"] = str(self.high_cpu_usage)
-            store.put(self.persistent_cpu_usage_data, self.CPU_USAGE_DATA_PATH)
+            self.save_to_persistent_cache('cpu', 'CPU_USAGE_DATA')
 
         if self._node_sensor.cpu_usage < self._cpu_usage_threshold \
-           and self.high_cpu_usage:
+           and self.high_usage['cpu']:
 
             # Create the cpu usage data message and hand it over to the egress processor to transmit
             fault_resolved_event = "CPU usage decreased to %s, lesser than configured threshold of %s" \
@@ -644,10 +624,9 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
             # Transmit it to message processor
             self._write_internal_msgQ(EgressProcessor.name(), jsonMsg)
-            self.high_cpu_usage = False
+            self.high_usage['cpu'] = False
             # Store the state to Persistent Cache.
-            self.persistent_cpu_usage_data["high_cpu_usage"] = str(self.high_cpu_usage)
-            store.put(self.persistent_cpu_usage_data, self.CPU_USAGE_DATA_PATH)
+            self.save_to_persistent_cache('cpu', 'CPU_USAGE_DATA')
 
     def _send_ifdata_json_msg(self, sensor_type, resource_id, resource_type, state, severity, event=""):
         """A resuable method for transmitting IFDataMsg to RMQ and IEM logging"""
@@ -675,12 +654,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
         # Transmit it to message processor
         self._write_internal_msgQ(EgressProcessor.name(), jsonMsg)
-        persistent_nw_data = {
-            'prev_nw_status' : self.prev_nw_status,
-            'prev_cable_cnxns' : self.prev_cable_cnxns,
-            'interface_fault_state' : self.interface_fault_state
-        }
-        store.put(persistent_nw_data, self.NW_SENSOR_DATA_PATH)
+        self.save_to_persistent_cache('nw', 'NW_SENSOR_DATA')
 
     def _generate_if_data(self):
         """Create & transmit a network interface data message as defined
@@ -849,9 +823,9 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             self._disk_usage_threshold = self.DEFAULT_DISK_USAGE_THRESHOLD
 
         if self._node_sensor.disk_used_percentage >= self._disk_usage_threshold \
-           and not self.high_disk_usage:
+           and not self.high_usage['disk']:
 
-            self.high_disk_usage = True
+            self.high_usage['disk'] = True
             # Create the disk space data message and hand it over to the egress processor to transmit
             fault_event = "Disk usage increased to %s, beyond configured threshold of %s" \
                           %(self._node_sensor.disk_used_percentage,
@@ -876,11 +850,10 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             # Transmit it to message processor
             self._write_internal_msgQ(EgressProcessor.name(), jsonMsg)
             # Save the new state in Persistent Cache.
-            self.persistent_disk_usage_data['high_disk_usage'] = str(self.high_disk_usage)
-            store.put(self.persistent_disk_usage_data, self.DISK_USAGE_DATA_PATH)
+            self.save_to_persistent_cache('disk', 'DISK_USAGE_DATA')
 
         if self._node_sensor.disk_used_percentage <= self._disk_usage_threshold \
-           and self.high_disk_usage:
+           and self.high_usage['disk']:
 
             # Create the disk space data message and hand it over to the egress processor to transmit
             fault_resolved_event = "Disk usage decreased to %s, lesser than configured threshold of %s" \
@@ -909,10 +882,9 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
             # Transmit it to message processor
             self._write_internal_msgQ(EgressProcessor.name(), jsonMsg)
-            self.high_disk_usage = False
+            self.high_usage['disk'] = False
             # Save the new state in Persistent Cache.
-            self.persistent_disk_usage_data['high_disk_usage'] = str(self.high_disk_usage)
-            store.put(self.persistent_disk_usage_data, self.DISK_USAGE_DATA_PATH)
+            self.save_to_persistent_cache('disk', 'DISK_USAGE_DATA')
 
     def _generate_raid_data(self, jsonMsg):
         """Create & transmit a RAID status data message as defined
