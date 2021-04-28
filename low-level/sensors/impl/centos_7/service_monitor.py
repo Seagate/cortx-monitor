@@ -305,21 +305,22 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
                     self.not_active_services[service] = \
                                     [self.current_time(), state, substate]
             elif state != "active" and service not in self.failed_services:
-                self.failed_services.append(service)
                 self.raise_alert(service, prev_state, state, prev_substate,
                                  substate, prev_pid, pid, 0)
+                if service in self.not_active_services:
+                    self.not_active_services.pop(service)
+                self.failed_services.append(service)
                 logger.error(f"{service} is not active initially. state = {state}:{substate}")
             elif state == "active":
                 if service in self.failed_services:
+                    self.raise_alert(service, prev_state, state, prev_substate,
+                        substate, prev_pid, pid, 2)
                     self.failed_services.remove(service)
-                    self.raise_alert(service, prev_state, state, prev_substate,
-                        substate, prev_pid, pid, 2)
                     logger.info(f"{service} returned to good state. state = {state}:{substate}")
-                elif service in self.not_active_services:
+                if service in self.not_active_services:
                     self.not_active_services.pop(service)
-                    self.raise_alert(service, prev_state, state, prev_substate,
-                        substate, prev_pid, pid, 2)
-                    logger.info(f"{service} returned to good state. state = {state}:{substate}")
+  
+            self.update_persistent_cache()
 
             return None
         except DBusException as err:
@@ -340,10 +341,11 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
                 state = self.service_status[service]["state"]
                 substate = self.service_status[service]["substate"]
                 pid = self.service_status[service]["pid"]
-                self.not_active_services.pop(service)
-                self.failed_services.append(service)
                 self.raise_alert(service, prev_state, state, prev_substate,
                                  substate, pid , pid, 1)
+                self.not_active_services.pop(service)
+                self.failed_services.append(service)
+                self.update_persistent_cache()
                 logger.warning(f"{service} in {state}:{substate} for "\
                                f"more than {self.max_wait_time} seconds.")
 
@@ -479,6 +481,8 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
                 prev_substate, substate, prev_pid, pid,
                 alert_info_index)
 
+        self.update_persistent_cache()
+
     def raise_alert(self, service, prev_state, state, prev_substate,
                     substate, prev_pid, pid, alert_info_index):
         """Send the alert to ServiceMsgHandler."""
@@ -545,6 +549,8 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
 
         self.raise_iem(service, alert_type)
         self._write_internal_msgQ(ServiceMsgHandler.name(), alert_msg)
+
+    def update_persistent_cache(self):
         self.persistent_service_data = {
             'not_active_services' : self.not_active_services,
             'failed_services' : self.failed_services,
