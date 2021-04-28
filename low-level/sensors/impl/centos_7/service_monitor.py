@@ -319,7 +319,7 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
                     logger.info(f"{service} returned to good state. state = {state}:{substate}")
                 if service in self.not_active_services:
                     self.not_active_services.pop(service)
-  
+
             self.update_persistent_cache()
 
             return None
