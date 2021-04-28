@@ -138,7 +138,9 @@ class RealStorEnclosureSensor(SensorThread, InternalMsgQ):
         try:
             # Timeout counter for controller login failed and ws request failed
             mc_timeout_counter = self.rssencl.mc_timeout_counter
-            # check ws_resonse status code to verify if request was successful.
+            # mc_timeout_counter==0, fault_alert==True & prev_alert_type!=FAULT_RESOLVED
+            # all can be met True with a sspl restart & persistent cache, so ws_response
+            # status finally decides whether to send FAULT_RESOLVED alert or not.
             ws_response_status = self.rssencl.ws_response_status
 
             if mc_timeout_counter > 10 and self.fault_alert is False:
