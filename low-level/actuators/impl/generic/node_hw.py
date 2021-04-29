@@ -46,7 +46,6 @@ class NodeHWactuator(Actuator, Debug):
         """ @return: name of the module."""
         return NodeHWactuator.ACTUATOR_NAME
 
-
     def __init__(self, executor, conf_reader):
         super(NodeHWactuator, self).__init__()
         self.host_id = socket.getfqdn()
