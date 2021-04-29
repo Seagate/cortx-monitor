@@ -194,7 +194,7 @@ SERVICEMONITOR:
       - glusterd.service
       - scsi-network-relay.service
       - kafka.service
-      - zookeeper.service
+      - kafka-zookeeper.service
 
 NODEHWACTUATOR:
    ipmi_client: ipmitool
