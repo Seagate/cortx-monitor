@@ -13,6 +13,7 @@
 # about this software or licensing, please email opensource@seagate.com or
 # cortx-questions@seagate.com.
 
+import re
 import os
 import subprocess
 
@@ -33,6 +34,20 @@ class IPMITool(IPMI):
         if cls._instance is None:
             cls._instance = super(IPMITool, cls).__new__(cls)
         return cls._instance
+
+    def get_manufacturer_name(self):
+        """Returns node server manufacturer name.
+            Example: Supermicro, Intel Corporation, DELL Inc
+        """
+        manufacturer = ""
+        cmd = "ipmitool bmc info"
+        output, rc = self._run_ipmitool_subcommand(cmd)
+        if rc == 0:
+            search_res = re.search(
+                r"Manufacturer Name[\s]+:[\s]+([\w]+)(.*)", output)
+            if search_res:
+                manufacturer = search_res.groups()[0]
+        return manufacturer
 
     def get_sensor_list_by_entity(self, entity_id):
         """Returns the sensor list based on entity id using ipmitool utility
@@ -55,27 +70,29 @@ class IPMITool(IPMI):
             Output Format : List of Tuple
             Output Example : [(HDD 1 Status, F1, ok, 4.2, Drive Present),]
         """
-        sensor_list_out, retcode = self._run_ipmitool_subcommand(f"sdr type '{fru_type.title()}'")
+        cmd = "sdr type '%s'" % fru_type.title()
+        sensor_list_out, retcode = self._run_ipmitool_subcommand(cmd)
+        if isinstance(sensor_list_out, tuple):
+            sensor_list_out = [val for val in sensor_list_out if val]
+            sensor_list_out = b''.join(sensor_list_out).decode("utf-8")
         if retcode != 0:
-            if isinstance(sensor_list_out, tuple):
-                sensor_list_out = [val for val in sensor_list_out if val]
-            msg = "ipmitool sdr type command failed: {0}".format(b''.join(sensor_list_out))
+            msg = "ipmitool sdr type command failed: {0}".format(
+                sensor_list_out.replace("\n", " "))
             logger.warning(msg)
             return
-        sensor_list = b''.join(sensor_list_out).decode("utf-8").split("\n")
+        sensor_list = sensor_list_out.split("\n")
 
         out = []
         for sensor in sensor_list:
             if sensor == "":
-                break
+                continue
             # Example of output form 'sdr type' command:
             # Sys Fan 2B       | 33h | ok  | 29.4 | 5332 RPM
             # PS1 1a Fan Fail  | A0h | ok  | 29.13 |
             # HDD 1 Status     | F1h | ok  |  4.2 | Drive Present
-            fields_list = [ f.strip() for f in sensor.split("|")]
+            fields_list = [f.strip() for f in sensor.split("|")]
             sensor_id, sensor_num, status, entity_id, reading  = fields_list
             sensor_num = sensor_num.strip("h").lower()
-
             out.append((sensor_id, sensor_num, status, entity_id, reading))
         return out
 
@@ -96,15 +113,18 @@ class IPMITool(IPMI):
            Output Format : Tuple inside dictionary of common and specific data
            Output Example : ({common dict data},{specific dict data})
         """
-        props_list_out, retcode = self._run_ipmitool_subcommand("sensor get '{0}'".format(sensor_id))
+        cmd = "sensor get '%s'" % sensor_id
+        props_list_out, retcode = self._run_ipmitool_subcommand(cmd)
+        if isinstance(props_list_out, tuple):
+            props_list_out = [val for val in props_list_out if val]
+            props_list_out = b''.join(props_list_out).decode("utf-8")
         if retcode != 0:
-            if isinstance(props_list_out, tuple):
-                props_list_out = [val for val in props_list_out if val]
-            msg = "ipmitool sensor get command failed: {0}".format(b''.join(props_list_out))
+            msg = "ipmitool sensor get command failure: {0}".format(
+                props_list_out.replace("\n", " "))
             logger.warning(msg)
-            err_response = {sensor_id: {"ERROR": msg}}
+            err_response = {"ERROR": msg}
             return (False, err_response)
-        props_list = b''.join(props_list_out).decode("utf-8").split("\n")
+        props_list = props_list_out.split("\n")
         props_list = props_list[1:] # The first line is 'Locating sensor record...'
 
         specific = {}
@@ -139,8 +159,14 @@ class IPMITool(IPMI):
         """
         for fru in fru_list:
             fru_detail = self.get_sensor_list_by_type(fru)
-            sensor_id_map[fru] = {fru_detail.index(fru): fru[0].strip()
-                for fru in fru_detail}
+            if fru_detail:
+                sensor_id_map[fru] = {fru_detail.index(fru): fru[0].strip()
+                    for fru in fru_detail}
+            else:
+                manufacturer = self.get_manufacturer_name()
+                msg = "'%s' sensors not seen in the node server: %s" % (
+                    fru, manufacturer)
+                sensor_id_map[fru] = {msg: ""}
         return sensor_id_map
 
     def _run_command(self, command, out_file=subprocess.PIPE):
