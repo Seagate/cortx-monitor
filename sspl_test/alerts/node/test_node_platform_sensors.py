@@ -19,10 +19,6 @@ from messaging.ingress_processor_tests import IngressProcessorTests
 from messaging.egress_processor_tests import EgressProcessorTests
 from common import check_sspl_ll_is_running
 
-
-    # TYPE_TEMPERATURE = "Temperature"
-    # TYPE_VOLTAGE = "Voltage"
-
 UUID="16476007-a739-4785-b5c6-f3de189cdf18"
 
 def init(args):

@@ -42,6 +42,9 @@ class IPMITool(IPMI):
         manufacturer = ""
         cmd = "ipmitool bmc info"
         output, rc = self._run_ipmitool_subcommand(cmd)
+        if isinstance(output, tuple):
+            output = [val for val in output if val]
+            output = b''.join(output).decode("utf-8")
         if rc == 0:
             search_res = re.search(
                 r"Manufacturer Name[\s]+:[\s]+([\w]+)(.*)", output)
