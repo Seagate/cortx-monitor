@@ -33,81 +33,8 @@ from cortx.utils.process import SimpleProcess
 from cortx.utils.security.cipher import Cipher
 from cortx.utils.validator.v_bmc import BmcV
 
-sensor_type = "node:bmc:interface:kcs"
-
 def init(args):
     pass
-
-def test_bmc_accessible_through_kcs(args):
-    check_sspl_ll_is_running()
-    node_data_sensor_message_request(sensor_type)
-    bmc_interface_message = None
-    while not world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
-        ingressMsg = world.sspl_modules[IngressProcessorTests.name()]._read_my_msgQ()
-        time.sleep(0.1)
-        print("Received: %s" % ingressMsg)
-        try:
-            # Make sure we get back the message type that matches the request
-            msg_type = ingressMsg.get("sensor_response_type")
-            if msg_type["info"]["resource_type"] == sensor_type:
-                bmc_interface_message = msg_type
-                break
-        except Exception as exception:
-            print(exception)
-
-    assert(bmc_interface_message is not None)
-    assert(bmc_interface_message.get("alert_type") is not None)
-    assert(bmc_interface_message.get("alert_id") is not None)
-    assert(bmc_interface_message.get("severity") is not None)
-    assert(bmc_interface_message.get("host_id") is not None)
-    assert(bmc_interface_message.get("info") is not None)
-
-    bmc_interface_info = bmc_interface_message.get("info")
-    assert(bmc_interface_info.get("site_id") is not None)
-    assert(bmc_interface_info.get("rack_id") is not None)
-    assert(bmc_interface_info.get("node_id") is not None)
-    assert(bmc_interface_info.get("cluster_id") is not None)
-    assert(bmc_interface_info.get("resource_i") is not None)
-    assert(bmc_interface_info.get("description") is not None )
-
-    # KCS channel specifc validations
-    bmc_interface_specific_info = bmc_interface_message.get("specific_info")
-    assert(bmc_interface_specific_info.get("channel info") is not None)
-    channel_info = bmc_interface_specific_info.get("channel info")
-    assert(channel_info.get("Channel Protocol Type") == "KCS")
-    alert_type = bmc_interface_message.get("alert_type")
-    assert(alert_type != "fault")
-
-def node_data_sensor_message_request(sensor_type):
-    egressMsg = {
-        "title": "SSPL Actuator Request",
-        "description": "Seagate Storage Platform Library - Actuator Request",
-
-        "username" : "JohnDoe",
-        "signature" : "None",
-        "time" : "2021-04-22 11:25:28.852492",
-        "expires" : 500,
-
-        "message" : {
-            "sspl_ll_msg_header": {
-                "schema_version": "1.0.0",
-                "sspl_version": "1.0.0",
-                "msg_version": "1.0.0"
-            },
-             "sspl_ll_debug": {
-                "debug_component" : "sensor",
-                "debug_enabled" : True
-            },
-            "sensor_request_type": {
-                "node_data": {
-                    "sensor_type": sensor_type
-                }
-            }
-        }
-    }
-
-    world.sspl_modules[EgressProcessorTests.name()]._write_internal_msgQ(
-        EgressProcessorTests.name(), egressMsg)
 
 def test_bmc_config(args):
     """Check if BMC configuration are valid."""
@@ -142,7 +69,7 @@ def test_bmc_firmware_version(args):
         print("Expected: %s Actual: %s" % (expected_ver, version_found))
         assert False
 
-def test_bmc_channel_type_is_kcs(args):
+def test_bmc_accessible_through_kcs(args):
     """Check if BMC channel type is KCS."""
     cmd = "sudo ipmitool channel info"  # Channel Protocol Type : KCS
     expected_channel = "KCS"
@@ -163,6 +90,5 @@ def test_bmc_channel_type_is_kcs(args):
 test_list = [
     test_bmc_config,
     test_bmc_firmware_version,
-    test_bmc_channel_type_is_kcs,
     test_bmc_accessible_through_kcs
     ]
