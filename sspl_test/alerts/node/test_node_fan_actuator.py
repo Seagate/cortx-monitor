@@ -61,7 +61,7 @@ def test_node_fan_module_actuator(agrs):
     assert(fan_module_actuator_msg.get("severity") is not None)
     assert(fan_module_actuator_msg.get("host_id") is not None)
     assert(fan_module_actuator_msg.get("info") is not None)
-    assert(fan_module_actuator_msg.get("instance_id") is not None)
+    assert(fan_module_actuator_msg.get("instance_id") == instance_id)
 
     fan_module_info = fan_module_actuator_msg.get("info")
     assert(fan_module_info.get("site_id") is not None)
@@ -69,40 +69,59 @@ def test_node_fan_module_actuator(agrs):
     assert(fan_module_info.get("rack_id") is not None)
     assert(fan_module_info.get("resource_type") is not None)
     assert(fan_module_info.get("event_time") is not None)
-    assert(fan_module_info.get("resource_id") == "*")
+    assert(fan_module_info.get("resource_id") is not None)
 
     fan_specific_infos = fan_module_actuator_msg.get("specific_info")
     assert(fan_specific_infos is not None)
 
-    for fan_specific_info in fan_specific_infos:
-        assert(fan_specific_info is not None)
-        if fan_specific_info.get("ERROR"):
-            # Skip any validation on specific info if ERROR seen on FRU
-            continue
-        resource_id = fan_specific_info.get("resource_id", "")
-        if fan_specific_info.get(resource_id):
-            assert(fan_specific_info.get(resource_id).get("ERROR") is not None)
-            # Skip any validation on specific info if ERROR seen on sensor
-            continue
-        if "Fan Fail" in resource_id:
-            assert(fan_specific_info.get("Sensor Type (Discrete)") is not None)
-            assert(fan_specific_info.get("resource_id") is not None)
-        else:
-            assert(fan_specific_info.get("resource_id") is not None)
-            assert(fan_specific_info.get("Sensor Type (Threshold)") is not None)
-            assert(fan_specific_info.get("Sensor Reading") is not None)
-            assert(fan_specific_info.get("Status") is not None)
-            assert(fan_specific_info.get("Lower Non_Recoverable") is not None)
-            assert(fan_specific_info.get("Lower Critical") is not None)
-            assert(fan_specific_info.get("Lower Non_Critical") is not None)
-            assert(fan_specific_info.get("Upper Non_Critical") is not None)
-            assert(fan_specific_info.get("Upper Critical") is not None)
-            assert(fan_specific_info.get("Upper Non_Recoverable") is not None)
-            assert(fan_specific_info.get("Positive Hysteresis") is not None)
-            assert(fan_specific_info.get("Negative Hysteresis") is not None)
-            assert(fan_specific_info.get("Assertion Events") is not None)
-            assert(fan_specific_info.get("Assertions Enabled") is not None)
-            assert(fan_specific_info.get("Deassertions Enabled") is not None)
+    if fan_module_info.get("resource_id") == "*":
+        for fan_specific_info in fan_specific_infos:
+            assert(fan_specific_info is not None)
+            if fan_specific_info.get("ERROR"):
+                # Skip any validation on specific info if ERROR seen on FRU
+                continue
+            resource_id = fan_specific_info.get("resource_id", "")
+            if fan_specific_info.get(resource_id):
+                assert(fan_specific_info.get(resource_id).get("ERROR") is not None)
+                # Skip any validation on specific info if ERROR seen on sensor
+                continue
+            if "Fan Fail" in resource_id:
+                assert(fan_specific_info.get("Sensor Type (Discrete)") is not None)
+                assert(fan_specific_info.get("resource_id") is not None)
+            else:
+                assert(fan_specific_info.get("resource_id") is not None)
+                assert(fan_specific_info.get("Sensor Type (Threshold)") is not None)
+                assert(fan_specific_info.get("Sensor Reading") is not None)
+                assert(fan_specific_info.get("Status") is not None)
+                assert(fan_specific_info.get("Lower Non_Recoverable") is not None)
+                assert(fan_specific_info.get("Lower Critical") is not None)
+                assert(fan_specific_info.get("Lower Non_Critical") is not None)
+                assert(fan_specific_info.get("Upper Non_Critical") is not None)
+                assert(fan_specific_info.get("Upper Critical") is not None)
+                assert(fan_specific_info.get("Upper Non_Recoverable") is not None)
+                assert(fan_specific_info.get("Positive Hysteresis") is not None)
+                assert(fan_specific_info.get("Negative Hysteresis") is not None)
+                assert(fan_specific_info.get("Assertion Events") is not None)
+                assert(fan_specific_info.get("Assertions Enabled") is not None)
+                assert(fan_specific_info.get("Deassertions Enabled") is not None)
+    else:
+        # Skip any validation if ERROR seen on the specifc FRU
+        if not fan_specific_infos.get("ERROR"):
+            assert(fan_specific_infos.get("Sensor Type (Threshold)") is not None)
+            assert(fan_specific_infos.get("Sensor Reading") is not None)
+            assert(fan_specific_infos.get("Status") is not None)
+            assert(fan_specific_infos.get("Lower Non_Recoverable") is not None)
+            assert(fan_specific_infos.get("Lower Critical") is not None)
+            assert(fan_specific_infos.get("Lower Non_Critical") is not None)
+            assert(fan_specific_infos.get("Upper Non_Critical") is not None)
+            assert(fan_specific_infos.get("Upper Critical") is not None)
+            assert(fan_specific_infos.get("Upper Non_Recoverable") is not None)
+            assert(fan_specific_infos.get("Positive Hysteresis") is not None)
+            assert(fan_specific_infos.get("Negative Hysteresis") is not None)
+            assert(fan_specific_infos.get("Assertion Events") is not None)
+            assert(fan_specific_infos.get("Assertions Enabled") is not None)
+            assert(fan_specific_infos.get("Deassertions Enabled") is not None)
+            assert(fan_specific_infos.get("resource_id") is not None)
 
 def fan_actuator_message_request(resource_type, instance_id):
     egressMsg = {

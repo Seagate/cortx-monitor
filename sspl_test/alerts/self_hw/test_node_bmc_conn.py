@@ -21,12 +21,7 @@ import os
 import re
 import time
 import socket
-import subprocess
 
-from default import world
-from messaging.ingress_processor_tests import IngressProcessorTests
-from messaging.egress_processor_tests import EgressProcessorTests
-from common import check_sspl_ll_is_running
 from framework.utils.conf_utils import (
     Conf, GLOBAL_CONF, ENCLOSURE, MACHINE_ID, BMC_IP_KEY, BMC_USER_KEY, BMC_SECRET_KEY)
 from cortx.utils.process import SimpleProcess
@@ -81,11 +76,14 @@ def test_bmc_accessible_through_kcs(args):
             r"Channel Protocol Type[\s]+:[\s]+(\w+)(.*)", res_op)
         if search_res:
             channel_found = search_res.groups()[0]
+        if expected_channel != channel_found:
+            print("Expected: %s Actual: %s" % (expected_channel, channel_found))
+            assert False
     else:
-        raise Exception("ERROR: %s" % res_err.decode())
-    if expected_channel != channel_found:
-        print("Expected: %s Actual: %s" % (expected_channel, channel_found))
-        assert False
+        res_err = res_err.decode()
+        kcs_errors = ("could not find inband device", "driver timeout")
+        if not any(err for err in kcs_errors if err in res_err):
+            raise Exception("Channel type is not KCS. ERROR: %s" % res_err.decode())
 
 test_list = [
     test_bmc_config,

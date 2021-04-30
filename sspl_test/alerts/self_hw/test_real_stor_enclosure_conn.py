@@ -69,7 +69,7 @@ def show_system(ip, port, sessionKey):
 def init(args):
     pass
 
-def test_self_hw_real_stor_enclosure_conn(args):
+def test_real_stor_enclosure_conn(args):
     # Default to srvnode-1
     ip = primary_ip
     port = primary_port
@@ -125,7 +125,7 @@ def test_firmware_version_ok(args):
 
 
 test_list = [
-    test_self_hw_real_stor_enclosure_conn,
+    test_real_stor_enclosure_conn,
     test_controller_ip_reachability,
     test_controller_ip_accessibility,
     test_firmware_version_ok

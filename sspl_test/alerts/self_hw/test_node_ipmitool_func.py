@@ -20,7 +20,7 @@
 import re
 
 from cortx.utils.process import SimpleProcess
-
+from alerts.self_hw.self_hw_utilities import get_manufacturer_name
 
 def init(args):
     pass
@@ -32,7 +32,6 @@ def test_ipmitool_version(args):
     expected_ipmi_compliant = "v2 compliant"
     # Check ipmitool version
     tool_ver_cmd = "ipmitool -V"    # ipmitool version 1.8.18
-    print("Executing command: %s" % tool_ver_cmd)
     res_op, res_err, res_rc = SimpleProcess(tool_ver_cmd).run()
     if res_rc == 0:
         res_op = res_op.decode()
@@ -78,43 +77,34 @@ def test_ipmitool_version(args):
 
 def test_sensor_availability(args):
     """Fail if any expected sensor is not detected by ipmitool."""
-    commands = {
-        "Voltage sensors": "ipmitool sdr type Voltage",
-        "Temperature sensors": "ipmitool sdr type Temperature",
-        "Fan sensors": "ipmitool sdr type Fan",
-        "Power Supply sensors": "ipmitool sdr type 'Power Supply'",
-        "Power Unit sensors": "ipmitool sdr type 'Power Unit'",
-        "Drive sensors": "ipmitool sdr type 'Drive Slot / Bay'"
-    }
+    found_all_sensors = True
+    sensors = [
+        "Voltage",
+        "Temperature",
+        "Power Supply",
+        "Drive Slot / Bay",
+        "Fan"
+        ]
     # Get manufacturer name
-    server_name = None
-    bmc_info_cmd = "ipmitool bmc info"   # Manufacturer Name : Supermicro
-    res_op, res_err, res_rc = SimpleProcess(bmc_info_cmd).run()
-    if res_rc == 0:
-        res_op = res_op.decode()
-        search_res = re.search(
-            r"Manufacturer Name[\s]+:[\s]+([\w.]+)(.*)", res_op)
-        if search_res:
-            server_name = search_res.groups()[0]
-    else:
-        raise Exception("ERROR: %s" % res_err.decode())
-    assert(server_name is not None)
-    for sensor, cmd in commands.items():
+    manufacturer = get_manufacturer_name()
+    for sensor in sensors:
+        cmd = ["ipmitool", "sdr", "type", sensor]
         res_op, res_err, res_rc = SimpleProcess(cmd).run()
         if res_rc == 0:
             res_op = res_op.decode().replace("\n", "")
             if not res_op:
+                found_all_sensors = False
                 print(
-                    "'%s' sensor is not seen in '%s' server." % (
-                        sensor, server_name))
-                assert(False)
+                    "'%s' sensor is not seen in %s node server." % (
+                        sensor, manufacturer))
         else:
             raise Exception("ERROR: %s" % res_err.decode())
+    assert(found_all_sensors == True)
 
 def test_ipmitool_sel_accessibility(args):
     """Check sel list is accessible."""
     sel_command = "ipmitool sel list"
-    res_op, res_err, res_rc = SimpleProcess(sel_command).run()
+    res_op, _, res_rc = SimpleProcess(sel_command).run()
     if res_rc != 0:
         res_op = res_op.decode()
 
