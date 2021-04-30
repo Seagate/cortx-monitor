@@ -60,7 +60,7 @@ def test_node_disk_module_actuator(agrs):
     assert(disk_actuator_msg.get("severity") is not None)
     assert(disk_actuator_msg.get("host_id") is not None)
     assert(disk_actuator_msg.get("info") is not None)
-    assert(disk_actuator_msg.get("instance_id") is not None)
+    assert(disk_actuator_msg.get("instance_id") == instance_id)
 
     disk_actuator_info = disk_actuator_msg.get("info")
     assert(disk_actuator_info.get("site_id") is not None)
@@ -68,25 +68,33 @@ def test_node_disk_module_actuator(agrs):
     assert(disk_actuator_info.get("rack_id") is not None)
     assert(disk_actuator_info.get("resource_type") is not None)
     assert(disk_actuator_info.get("event_time") is not None)
-    assert(disk_actuator_info.get("resource_id") == "*")
+    assert(disk_actuator_info.get("resource_id") is not None)
 
     disk_specific_infos = disk_actuator_msg.get("specific_info")
     assert(disk_specific_infos is not None)
 
-    for disk_specific_info in disk_specific_infos:
-        assert(disk_specific_info is not None)
-        if disk_specific_info.get("ERROR"):
-            # Skip any validation on specific info if ERROR seen on FRU
-            continue
-        resource_id = disk_specific_info.get("resource_id", "")
-        if disk_specific_info.get(resource_id):
-            assert(disk_specific_info.get(resource_id).get("ERROR") is not None)
-            # Skip any validation on specific info if ERROR seen on sensor
-            continue
-        assert(disk_specific_info.get("Sensor Type (Discrete)") is not None)
-        assert(disk_specific_info.get("resource_id") is not None)
-        if "States Asserted" in disk_specific_info:
-            assert(disk_specific_info.get("States Asserted") is not None)
+    if disk_actuator_info.get("resource_id") == "*":
+        for disk_specific_info in disk_specific_infos:
+            assert(disk_specific_info is not None)
+            if disk_specific_info.get("ERROR"):
+                # Skip any validation on specific info if ERROR seen on FRU
+                continue
+            resource_id = disk_specific_info.get("resource_id", "")
+            if disk_specific_info.get(resource_id):
+                assert(disk_specific_info.get(resource_id).get("ERROR") is not None)
+                # Skip any validation on specific info if ERROR seen on sensor
+                continue
+            assert(disk_specific_info.get("Sensor Type (Discrete)") is not None)
+            assert(disk_specific_info.get("resource_id") is not None)
+            if "States Asserted" in disk_specific_info:
+                assert(disk_specific_info.get("States Asserted") is not None)
+    else:
+        # Skip any validation if ERROR seen on the specifc FRU
+        if not disk_specific_infos.get("ERROR"):
+            assert(disk_specific_infos.get("Sensor Type (Discrete)") is not None)
+            assert(disk_specific_infos.get("resource_id") is not None)
+            if "States Asserted" in disk_specific_infos:
+                assert(disk_specific_infos.get("States Asserted") is not None)
 
 def disk_actuator_message_request(resource_type, instance_id):
     egressMsg = {

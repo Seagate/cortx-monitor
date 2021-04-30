@@ -40,7 +40,7 @@ class IPMITool(IPMI):
             Example: Supermicro, Intel Corporation, DELL Inc
         """
         manufacturer = ""
-        cmd = "ipmitool bmc info"
+        cmd = "bmc info"
         output, rc = self._run_ipmitool_subcommand(cmd)
         if isinstance(output, tuple):
             output = [val for val in output if val]
@@ -167,7 +167,7 @@ class IPMITool(IPMI):
                     for fru in fru_detail}
             else:
                 manufacturer = self.get_manufacturer_name()
-                msg = "'%s' sensors not seen in the node server: %s" % (
+                msg = "'%s' sensors not seen in %s node server" % (
                     fru, manufacturer)
                 sensor_id_map[fru] = {msg: ""}
         return sensor_id_map

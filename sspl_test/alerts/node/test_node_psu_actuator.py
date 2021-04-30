@@ -71,20 +71,25 @@ def test_node_psu_module_actuator(agrs):
     fru_specific_infos = psu_module_actuator_msg.get("specific_info")
     assert(fru_specific_infos is not None)
 
-    for fru_specific_info in fru_specific_infos:
-        assert(fru_specific_info is not None)
-        if fru_specific_info.get("ERROR"):
-            # Skip any validation on specific info if ERROR seen on FRU
-            continue
-        assert(fru_specific_info.get("resource_id") is not None)
-        resource_id = fru_specific_info.get("resource_id")
-        if fru_specific_info.get(resource_id):
-            assert(fru_specific_info.get(resource_id).get("ERROR") is not None)
-            # Skip any validation on specific info if ERROR seen on sensor
-            continue
-        assert(fru_specific_info.get("States Asserted") is not None)
-        assert(fru_specific_info.get("Sensor Type (Discrete)") is not None)
-
+    if psu_module_actuator_msg.get("instance_id") == "*":
+        for fru_specific_info in fru_specific_infos:
+            assert(fru_specific_info is not None)
+            if fru_specific_info.get("ERROR"):
+                # Skip any validation on specific info if ERROR seen on FRU
+                continue
+            assert(fru_specific_info.get("resource_id") is not None)
+            resource_id = fru_specific_info.get("resource_id")
+            if fru_specific_info.get(resource_id):
+                assert(fru_specific_info.get(resource_id).get("ERROR") is not None)
+                # Skip any validation on specific info if ERROR seen on sensor
+                continue
+            assert(fru_specific_info.get("States Asserted") is not None)
+            assert(fru_specific_info.get("Sensor Type (Discrete)") is not None)
+    else:
+        # Skip any validation if ERROR seen on the specifc FRU
+        if not fru_specific_infos.get("ERROR"):
+            assert(fru_specific_infos.get("States Asserted") is not None)
+            assert(fru_specific_infos.get("Sensor Type (Discrete)") is not None)
 
 def psu_actuator_message_request(resource_type, instance_id):
     egressMsg = {
