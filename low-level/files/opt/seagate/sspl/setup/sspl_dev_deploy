@@ -248,13 +248,13 @@ class SSPLDevDeploy:
 
     def setup_kafka(self):
         """Setup kafka"""
-        kafka_version = '2.13_2.7.0'
-        r = urllib.request.urlopen(f"{self.build_url}/3rd_party/commons/"
-            f"kafka/kafka-{kafka_version}-el7.x86_64.rpm")
+        build_url = f"{self.build_url}/3rd_party/commons/kafka/"
 
-        with open(f"/tmp/kafka-{kafka_version}-el7.x86_64.rpm", "wb") as f:
-            shutil.copyfileobj(r, f)
-        cmd = f"yum install /tmp/kafka-{kafka_version}-el7.x86_64.rpm -y"
+        pkg = [re.findall("<a .*>(.*?)</a>", str(line))[0] for line in 
+               urllib.request.urlopen(build_url).readlines()
+               if re.search(r"kafka.*\.rpm", str(line))][0]
+
+        cmd = f"yum install -y {build_url}{pkg}"
         self._execute_cmd(cmd)
         cmd = "chown -R kafka:kafka /tmp/zookeeper/"
         self._execute_cmd(cmd)
@@ -313,7 +313,6 @@ class SSPLDevDeploy:
             self._execute_cmd("systemctl status kafka-zookeeper.service")
             self._execute_cmd("systemctl start kafka.service")
             self._execute_cmd("systemctl status kafka.service")
-        os.remove(f"/tmp/kafka-{kafka_version}-el7.x86_64.rpm")
         print("INFO: Done kafka setup.")
 
     def update_property_file(self, prop_file, cluster_config):
