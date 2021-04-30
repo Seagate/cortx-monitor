@@ -113,7 +113,7 @@ restore_cfg_services()
     # call reset env script for coverage if coverage is enabled.
     if [ "$coverage_enabled" == "True" ]
     then
-        $sudo python3 $script_dir/coverage/coverage_setup.py stop
+        $sudo python3 "$script_dir/coverage/coverage_setup.py" stop
     fi
     # Restoring MC port to value stored before tests
     if [ "$SSPL_STORE_TYPE" == "file" ]
@@ -301,7 +301,7 @@ then
     echo "Coverage enabled : $coverage_enabled"
     if [ "$coverage_enabled" == "True" ]
     then
-        $sudo python3 $script_dir/coverage/coverage_setup.py start
+        $sudo python3 "$script_dir/coverage/coverage_setup.py" start
     fi
     # consume all alerts before SSPL restarts. So sspl_start_checker
     # waits till SSPL initialized, if previous alerts are availble,
