@@ -160,7 +160,7 @@ def print_help():
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        print_help()        
+        print_help()
         sys.exit(100)
     if sys.argv[-1] == 'start':
         err_code = coverage_setup()
