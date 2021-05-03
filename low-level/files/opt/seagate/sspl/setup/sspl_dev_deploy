@@ -120,8 +120,13 @@ class SSPLDevDeploy:
         self._execute_cmd(cmd)
         cmd = "systemctl stop kafka.service"
         self._execute_cmd(cmd)
-        cmd = "systemctl stop zookeeper.service"
+        cmd = "systemctl stop kafka-zookeeper.service"
         self._execute_cmd(cmd)
+        cmd = "yum --setopt=tsflags=noscripts erase -y kafka"
+        out, rc = self._execute_cmd(cmd)
+        if rc != 0:
+            raise DeployError(rc, "%s - %s CMD: %s",
+                out, "Unable to remove kafka.rpm. Cleanup failed.", cmd)
         cmd = "rm -rf /tmp/kafka-logs /opt/kafka /var/lib/zookeeper /var/lib/kafka-logs"
         self._execute_cmd(cmd)
         cmd = "yum --setopt=tsflags=noscripts erase -y cortx-sspl.noarch"
@@ -243,16 +248,16 @@ class SSPLDevDeploy:
 
     def setup_kafka(self):
         """Setup kafka"""
-        file_path = (f"{self.CORTX_MONITOR_BASE_URL}"
-                     "/low-level/files/opt/seagate/sspl/setup/standalone")
-        kafka_version = '2.13-2.7.0'
-        r = urllib.request.urlopen(f"{self.build_url}/3rd_party/commons/"
-            f"kafka/kafka_{kafka_version}.tgz")
-        with open(f"/tmp/kafka_{kafka_version}.tgz", "wb") as f:
-            shutil.copyfileobj(r, f)
-        tar = tarfile.open(f"/tmp/kafka_{kafka_version}.tgz")
-        tar.extractall("/opt/kafka")
-        tar.close()
+        build_url = f"{self.build_url}/3rd_party/commons/kafka/"
+
+        pkg = [re.findall("<a .*>(.*?)</a>", str(line))[0] for line in 
+               urllib.request.urlopen(build_url).readlines()
+               if re.search(r"kafka.*\.rpm", str(line))][0]
+
+        cmd = f"yum install -y {build_url}{pkg}"
+        self._execute_cmd(cmd)
+        cmd = "chown -R kafka:kafka /tmp/zookeeper/"
+        self._execute_cmd(cmd)
         # Configure cluster
         if len(self.nodes) > 1:
             cmd = "systemctl enable firewalld"
@@ -263,7 +268,7 @@ class SSPLDevDeploy:
                 cmd = "firewall-cmd --add-port=%s/tcp --permanent" % port
                 self._execute_cmd(cmd)
             # Set zookeeper property
-            zk_prop_file = "/opt/kafka/kafka_2.13-2.7.0/config/zookeeper.properties"
+            zk_prop_file = "/opt/kafka/config/zookeeper.properties"
             zk_data_dir = "/var/lib/zookeeper"
             os.makedirs(zk_data_dir, exist_ok=True)
             zk_cluster_config = {
@@ -282,14 +287,11 @@ class SSPLDevDeploy:
                     with open("%s/myid" % zk_data_dir, "w") as f:
                         f.write(str(myid))
             self.update_property_file(zk_prop_file, zk_cluster_config)
-            r = urllib.request.urlopen(f"{file_path}/zookeeper.service")
-            with open("/etc/systemd/system/zookeeper.service", "wb") as f:
-                shutil.copyfileobj(r, f)
-            self._execute_cmd("systemctl enable zookeeper.service")
+            self._execute_cmd("systemctl enable kafka-zookeeper.service")
             self._execute_cmd("systemctl daemon-reload")
-            self._execute_cmd("systemctl start zookeeper.service")
+            self._execute_cmd("systemctl start kafka-zookeeper.service")
             # set kafka property
-            kafka_prop_file = "/opt/kafka/kafka_2.13-2.7.0/config/server.properties"
+            kafka_prop_file = "/opt/kafka/config/server.properties"
             kafka_log_dir = "/var/lib/kafka-logs"
             os.makedirs(kafka_log_dir, exist_ok=True)
             cluster = ["%s:2181" % node for node in self.nodes]
@@ -300,27 +302,17 @@ class SSPLDevDeploy:
                 "zookeeper.connect": "%s" % cluster
             }
             self.update_property_file(kafka_prop_file, k_cluster_config)
-            r = urllib.request.urlopen(f"{file_path}/kafka.service")
-            with open("/etc/systemd/system/kafka.service", "wb") as f:
-                shutil.copyfileobj(r, f)
             self._execute_cmd("systemctl enable kafka.service")
             self._execute_cmd("systemctl daemon-reload")
             self._execute_cmd("systemctl start kafka.service")
         else:
-            r = urllib.request.urlopen(f"{file_path}/zookeeper.service")
-            with open("/etc/systemd/system/zookeeper.service", "wb") as f:
-                shutil.copyfileobj(r, f)
-            r = urllib.request.urlopen(f"{file_path}/kafka.service")
-            with open("/etc/systemd/system/kafka.service", "wb") as f:
-                shutil.copyfileobj(r, f)
-            self._execute_cmd("systemctl enable zookeeper.service")
+            self._execute_cmd("systemctl enable kafka-zookeeper.service")
             self._execute_cmd("systemctl enable kafka.service")
             self._execute_cmd("systemctl daemon-reload")
-            self._execute_cmd("systemctl start zookeeper.service")
-            self._execute_cmd("systemctl status zookeeper.service")
+            self._execute_cmd("systemctl start kafka-zookeeper.service")
+            self._execute_cmd("systemctl status kafka-zookeeper.service")
             self._execute_cmd("systemctl start kafka.service")
             self._execute_cmd("systemctl status kafka.service")
-        os.remove(f"/tmp/kafka_{kafka_version}.tgz")
         print("INFO: Done kafka setup.")
 
     def update_property_file(self, prop_file, cluster_config):
