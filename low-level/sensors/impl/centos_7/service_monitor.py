@@ -22,7 +22,7 @@
 
 import socket
 import time
-from enum import IntEnum, Enum
+from enum import Enum
 
 from dbus import PROPERTIES_IFACE, DBusException, Interface, SystemBus
 from dbus.mainloop.glib import DBusGMainLoop
@@ -95,15 +95,6 @@ class EnabledState:
     @staticmethod
     def transit(service):
         pass
-
-
-class ServiceState(IntEnum):
-    ACTIVE = 0
-    RELOADING = 1
-    INACTIVE = 2
-    FAILED = 3
-    ACTIVATING = 4
-    DEACTIVATING = 5
 
 
 class FailedAlert(Enum):
