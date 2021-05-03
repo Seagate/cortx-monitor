@@ -170,6 +170,13 @@ class SSPLTestCmd:
             shutil.copyfile(sspl_test_backup, sspl_test_file_path)
             if rc != 0:
                 raise TestException("%s - ERROR: %s - CMD %s" % (self.name, error, CMD))
+
+            print('Starting the SSPL..')
+            CMD = "systemctl restart sspl-ll"
+            try:
+                SimpleProcess(CMD).run(realtime_output=True)
+            except Exception as error:
+                raise TestException("Error occurred while executing sspl tests: %s" %error)
         else:
             # TODO: Convert shell script to python
             # from cortx.sspl.sspl_test.run_qa_test import RunQATest

@@ -100,6 +100,12 @@ kill_mock_server()
 
 restore_cfg_services()
 {
+    # call reset env script for coverage if coverage is enabled.
+    if [ "$coverage_enabled" == "True" ]
+    then
+        $sudo python3 "$script_dir/coverage/coverage_setup.py" stop
+    fi
+
     # clear the dummy_service configurations made for
     # alerts.os.test_service_monitor_sensor test
     service_name=dummy_service.service
@@ -109,12 +115,6 @@ restore_cfg_services()
     $sudo rm -rf $service_executable_code_des/dummy_service.py
     $sudo rm -rf /etc/systemd/system/$service_name
     $sudo systemctl daemon-reload
-
-    # call reset env script for coverage if coverage is enabled.
-    if [ "$coverage_enabled" == "True" ]
-    then
-        $sudo python3 "$script_dir/coverage/coverage_setup.py" stop
-    fi
     # Restoring MC port to value stored before tests
     if [ "$SSPL_STORE_TYPE" == "file" ]
     then
@@ -298,6 +298,8 @@ fi
 
 if [ "$IS_VIRTUAL" == "true" ]
 then
+    echo "Stopping the SSPL"
+    $sudo systemctl stop sspl-ll
     echo "Coverage enabled : $coverage_enabled"
     if [ "$coverage_enabled" == "True" ]
     then
@@ -308,8 +310,8 @@ then
     # sspl_start_checker will use those and test cases will be executed
     # before SSPL initialization
     $script_dir/messaging/consume.py
-    echo "Restarting SSPL"
-    $sudo systemctl restart sspl-ll
+    echo "Starting the SSPL"
+    $sudo systemctl start sspl-ll
     echo "Waiting for SSPL to complete initialization of all the plugins.."
     $script_dir/sspl_start_checker
 fi

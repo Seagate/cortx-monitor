@@ -28,8 +28,8 @@ topdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.sys.path.insert(0, topdir)
 from framework.base.sspl_constants import DATA_PATH
 
-file_path = "/opt/seagate/cortx/sspl/low-level"
-report_path = f"{DATA_PATH}coverage/sspl_xml_coverage_report.xml"
+SSPL_LL_D = "/opt/seagate/cortx/sspl/low-level/sspl_ll_d"
+REPORT_PATH = f"{DATA_PATH}coverage/sspl_xml_coverage_report.xml"
 
 PATCH_1 = """\
 from coverage import Coverage
@@ -74,7 +74,8 @@ def coverage_setup():
        for code coverage report and assigns permission to the directory.
     """
     print("Installing coverage.py")
-    _, err, return_code = SimpleProcess('python3 -m pip install coverage').run()
+    cmd = 'python3 -m pip install coverage'
+    _, err, return_code = SimpleProcess(cmd).run()
     if return_code:
         print(err)
         return return_code
@@ -85,7 +86,7 @@ def coverage_setup():
     patch3_name = "stop coverage, save and generate code coverage report"
     patch4_name = "signal handler for SIGUSR1 to generate code coverage report"
 
-    with open(f'{file_path}/sspl_ll_d', 'r') as sspl_ll_d:
+    with open(SSPL_LL_D, 'r') as sspl_ll_d:
         sspl_ll_d_lines = sspl_ll_d.readlines()
 
     for i, line in enumerate(sspl_ll_d_lines):
@@ -102,18 +103,16 @@ def coverage_setup():
             for j,l in enumerate(PATCH_4.split('\n')):
                 sspl_ll_d_lines.insert(i+j+1, l+'\n')
 
-    shutil.move(f'{file_path}/sspl_ll_d',
-                f'{file_path}/sspl_ll_d.bak')
+    shutil.move(SSPL_LL_D, f'{SSPL_LL_D}.bak')
 
-    with open(f'{file_path}/sspl_ll_d', 'x') as sspl_ll_d:
+    with open(SSPL_LL_D, 'x') as sspl_ll_d:
         for line in sspl_ll_d_lines:
             sspl_ll_d.write(line)
 
-    print("coverage : adding permission to files %s, %s"%
-            (f"{file_path}/sspl_ll_d", report_path))
+    print("Adding permission to files %s, %s"%(SSPL_LL_D, REPORT_PATH))
     uid =  pwd.getpwnam("sspl-ll").pw_uid
-    os.chmod(f"{file_path}/sspl_ll_d", 0o755)
-    os.chown(f'{file_path}/sspl_ll_d', uid, -1)
+    os.chmod(SSPL_LL_D, 0o755)
+    os.chown(SSPL_LL_D, uid, -1)
 
     os.makedirs(f'{DATA_PATH}coverage/', 0o755, exist_ok=True)
     os.chown(f'{DATA_PATH}coverage/', uid, -1)
@@ -125,31 +124,45 @@ def coverage_reset():
        Swap modified sspl_ll_d file with original one.
     """
     print("Generating the coverage report..")
+    pid = 0
     for proc in psutil.process_iter():
         if "sspl_ll_d" in proc.name():
             pid = proc.pid
 
-    os.kill(pid, signal.SIGUSR1)
+    if pid:
+        try:
+            os.kill(pid, signal.SIGUSR1)
+        except Exception as err:
+            print(err)
+    else:
+        print("sspl-ll.service is not running.")
+
     time.sleep(5)
 
-    if os.path.isfile(report_path):
-        modification_time = \
-            os.path.getmtime(report_path)
+    if os.path.isfile(REPORT_PATH):
+        modification_time = os.path.getmtime(REPORT_PATH)
 
         if (time.time() - modification_time) < 100:
             modification_time = time.strftime('%Y-%m-%d %H:%M:%S',
                                         time.localtime(modification_time))
             print("%s : The Code Coverage Report is saved at %s" %
-                (modification_time, report_path))
+                  (modification_time, REPORT_PATH))
         else:
             print("The Code Coverage Report generation failed.")
     else:
-        print("%s file does not exists."%report_path)
+        print("%s file does not exists."%REPORT_PATH)
 
-    if os.path.isfile(f'{file_path}/sspl_ll_d.bak'):
-        os.remove(f'{file_path}/sspl_ll_d')
-        shutil.move(f'{file_path}/sspl_ll_d.bak',
-                    f'{file_path}/sspl_ll_d')
+    print("Stopping the SSPL..")
+    cmd = 'systemctl stop sspl-ll.service'
+    _, err, return_code = SimpleProcess(cmd).run()
+    if return_code:
+        print(err)
+        return return_code
+
+    if os.path.isfile(f'{SSPL_LL_D}.bak'):
+        os.remove(SSPL_LL_D)
+        shutil.move(f'{SSPL_LL_D}.bak', SSPL_LL_D)
+
 
 def print_help():
     print('Error: Incorrect arguments to coverage_setup file.\n'
