@@ -22,16 +22,19 @@ import re
 from cortx.utils.process import SimpleProcess
 from alerts.self_hw.self_hw_utilities import get_manufacturer_name
 
+
+REQUIRED_IPMITOOL_VERSION = "1.8.18"
+MIN_REQUIRED_SEL_VERSION = 2
+
+
 def init(args):
     pass
 
 def test_ipmitool_version(args):
-    """Check for expected ipmitool & IPMI version and v2 compliant."""
-    expected_ipmitool_ver = "1.8.18"
-    expected_ipmi_version = "2.0"
-    expected_ipmi_compliant = "v2 compliant"
+    """Check for expected ipmitool & IPMI v2 compliant."""
     # Check ipmitool version
     tool_ver_cmd = "ipmitool -V"    # ipmitool version 1.8.18
+    version_found = None
     res_op, res_err, res_rc = SimpleProcess(tool_ver_cmd).run()
     if res_rc == 0:
         res_op = res_op.decode()
@@ -41,37 +44,26 @@ def test_ipmitool_version(args):
             version_found = search_res.groups()[0]
     else:
         raise Exception("ERROR: %s" % res_err.decode())
-    if version_found != expected_ipmitool_ver:
-        print("Expected: %s Actual: %s" % (
-            expected_ipmitool_ver, version_found))
-        assert False
+    if not (version_found >= REQUIRED_IPMITOOL_VERSION):
+        print("VERSION MISMATCH WITH IPMITOOL")
+        print("Expected: %s" % REQUIRED_IPMITOOL_VERSION)
+        print("Found: %s" % version_found)
 
-    # Check IPMI version
-    ipmi_ver_cmd = "ipmitool bmc info"     # IPMI Version : 2.0
-    res_op, res_err, res_rc = SimpleProcess(ipmi_ver_cmd).run()
+    # Check IPMI SEL compliance is >= v2
+    sel_ver_cmd = "ipmitool sel info"   # Version : 1.5 (v1.5, v2 compliant)
+    res_op, res_err, res_rc = SimpleProcess(sel_ver_cmd).run()
     if res_rc == 0:
         res_op = res_op.decode()
         search_res = re.search(
-            r"IPMI Version[\s]+:[\s]+([\w.]+)(.*)", res_op)
+            r"Version[\s]+:[\s]+([\w.]+)[\s]+\(([\w.,\s]+)\)(.*)", res_op)
         if search_res:
-            version_found = search_res.groups()[0]
-    else:
-        raise Exception("ERROR: %s" % res_err.decode())
-    if version_found != expected_ipmi_version:
-        print("Expected: %s Actual: %s" % (
-            expected_ipmi_version, version_found))
-        assert False
-
-    # Check IPMI v2 compliant
-    ipmi_compliant = "ipmitool sel info"   # Version : 1.5 (v1.5, v2 compliant)
-    res_op, res_err, res_rc = SimpleProcess(ipmi_compliant).run()
-    if res_rc == 0:
-        res_op = res_op.decode()
-        search_res = re.search(
-            r"Version[\s]+:[\s]+.*(%s).*" % expected_ipmi_compliant, res_op)
-        if not search_res:
-            raise Exception(
-                "ERROR: IPMITOOL is not %s" % expected_ipmi_compliant)
+            if not (float(search_res.groups()[0]) >= MIN_REQUIRED_SEL_VERSION) and \
+                "v2" not in search_res.groups()[1]:
+                # Fail if ipmi complinace is not >= v2
+                print("IPMI IS NOT V2 COMPLIANT.")
+                print("Minimum required ipmi version: %s" % MIN_REQUIRED_SEL_VERSION)
+                print("Found: %s" % search_res.groups()[1])
+                assert(False)
     else:
         raise Exception("ERROR: %s" % res_err.decode())
 
