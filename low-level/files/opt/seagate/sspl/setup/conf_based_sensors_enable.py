@@ -32,6 +32,7 @@ def update_sensor_info(config_index, node_type, enclosure_type):
     sensors["DISKMONITOR"] = "true"
     sensors["SERVICEMONITOR"] = "true"
     sensors["RAIDSENSOR"] = "true"
+    sensors["RAIDINTEGRITYSENSOR"] = "true"
     sensors["SASPORTSENSOR"] = "true"
     sensors["MEMFAULTSENSOR"] = "true"
     sensors["CPUFAULTSENSOR"] = "true"
@@ -45,6 +46,7 @@ def update_sensor_info(config_index, node_type, enclosure_type):
         sensors["MEMFAULTSENSOR"] = "false"
         sensors["CPUFAULTSENSOR"] = "false"
         sensors["RAIDSENSOR"] = "false"
+        sensors["RAIDINTEGRITYSENSOR"] = "false"
 
     # Update sensor information in config
     for sect, value in sensors.items():

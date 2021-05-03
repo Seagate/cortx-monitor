@@ -104,6 +104,9 @@ class RealStorEnclosure(StorageEnclosure):
 
     poll_system_ts = 0
     mc_timeout_counter = 0
+    # ws_response_status: HTTP response status code. eg: 200 for HTTP_OK
+    # used in realstor_enclosure_sensor to decide on FAULT_RESOLVED condition.
+    ws_response_status = None
 
     # resource inmemory cache
     latest_faults = {}
@@ -219,6 +222,8 @@ class RealStorEnclosure(StorageEnclosure):
 
             if response is None:
                 continue
+
+            self.ws_response_status = response.status_code
 
             if response.status_code == self.ws.HTTP_OK:
 

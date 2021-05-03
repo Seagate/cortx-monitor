@@ -35,6 +35,7 @@ SSPL_LL_SETTING:
       - DiskMonitor
       - ServiceMonitor
       - RAIDsensor
+      - RAIDIntegritySensor
       - NodeData
       - RealStorFanSensor
       - RealStorPSUSensor
@@ -58,6 +59,7 @@ SSPL_LL_SETTING:
       - DiskMonitor
       - ServiceMonitor
       - RAIDsensor
+      - RAIDIntegritySensor
       - NodeData
       - IEMSensor
       - NodeHWsensor
@@ -107,6 +109,11 @@ RAIDSENSOR:
    monitor: true
    threaded: true
    RAID_status_file: /proc/mdstat
+
+RAIDINTEGRITYSENSOR:
+   monitor: true
+   threaded: true
+   polling_interval: 1209600
 
 IPMI:
    user: admin
