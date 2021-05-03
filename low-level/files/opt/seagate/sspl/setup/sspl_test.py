@@ -184,10 +184,9 @@ class SSPLTestCmd:
         else:
             # TODO: Convert shell script to python
             # from cortx.sspl.sspl_test.run_qa_test import RunQATest
-            # RunQATest(self.plan, self.coverage_enabled).run()
+            # RunQATest(self.plan).run()
             try:
-                CMD = "%s/run_qa_test.sh --plan %s --coverage %s"\
-                       %(TEST_DIR, self.plan, self.coverage_enabled)
+                CMD = "%s/run_qa_test.sh --plan %s"%(TEST_DIR, self.plan)
                 output, error, returncode = SimpleProcess(CMD).run(realtime_output=True)
             except KeyboardInterrupt:
                 msg = "KeyboardInterrupt occurred while executing sspl test."
