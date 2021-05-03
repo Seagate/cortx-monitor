@@ -60,11 +60,6 @@ class RAIDIntegrityMsg(BaseSensorMsg):
         self._signature         = signature
         self._time              = time
         self._expires           = expires
-        self._site_id = self._sensor_info.get("site_id")
-        self._rack_id = self._sensor_info.get("rack_id")
-        self._node_id = self._sensor_info.get("node_id")
-        self._node_id = self._sensor_info.get("node_id")
-        self._cluster_id = self._sensor_info.get("cluster_id")
         self._resource_id = self._sensor_info.get("resource_id")
         self._resource_type = self._sensor_info.get("resource_type")
         self._event_time = self._sensor_info.get("event_time")
@@ -89,10 +84,6 @@ class RAIDIntegrityMsg(BaseSensorMsg):
                                     "alert_type": self._alert_type,
                                     "severity": self._severity,
                                     "info": {
-                                            "site_id": self._site_id,
-                                            "rack_id": self._rack_id,
-                                            "node_id": self._node_id,
-                                            "cluster_id": self._cluster_id,
                                             "resource_id": self._resource_id,
                                             "resource_type": self._resource_type,
                                             "event_time": self._event_time,

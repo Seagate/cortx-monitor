@@ -446,10 +446,6 @@ class RealStorLogicalVolumeSensor(SensorThread, InternalMsgQ):
         generic_info.update(extended_info)
 
         info = {
-                "site_id": self.rssencl.site_id,
-                "cluster_id": self.rssencl.cluster_id,
-                "rack_id": self.rssencl.rack_id,
-                "node_id": self.rssencl.node_id,
                 "resource_type": self.RESOURCE_TYPE_LVOL,
                 "resource_id": resource_id,
                 "event_time": epoch_time
@@ -496,10 +492,6 @@ class RealStorLogicalVolumeSensor(SensorThread, InternalMsgQ):
         generic_info.update(extended_info)
 
         info = {
-                "site_id": self.rssencl.site_id,
-                "cluster_id": self.rssencl.cluster_id,
-                "rack_id": self.rssencl.rack_id,
-                "node_id": self.rssencl.node_id,
                 "resource_type": self.RESOURCE_TYPE_DG,
                 "resource_id": resource_id,
                 "event_time": epoch_time

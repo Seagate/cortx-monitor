@@ -56,9 +56,6 @@ class NodeHwAckResponseMsg(BaseActuatorMsg):
         self._severity      = ack_msg.get("severity")
 
         info = ack_msg.get("info")
-        self._site_id = info.get("site_id")
-        self._rack_id = info.get("rack_id")
-        self._node_id = info.get("node_id")
         self._resource_type = info.get("resource_type")
         self._resource_id = info.get("resource_id")
         self._fetch_time = info.get("event_time")
@@ -88,9 +85,6 @@ class NodeHwAckResponseMsg(BaseActuatorMsg):
                               "instance_id": self._instance_id,
                               "severity": self._severity,
                               "info": {
-                                  "site_id": self._site_id,
-                                  "rack_id": self._rack_id,
-                                  "node_id": self._node_id,
                                   "resource_type": self._resource_type,
                                   "resource_id": self._resource_id,
                                   "event_time": self._fetch_time

@@ -63,10 +63,6 @@ class IEMDataMsg(BaseSensorMsg):
                     "info": {
                         "event_time": info.get("event_time"),
                         "resource_id": "iem",
-                        "site_id": info.get("site_id"),
-                        "node_id": info.get("node_id"),
-                        "cluster_id": info.get("cluster_id"),
-                        "rack_id": info.get("rack_id"),
                         "resource_type": "iem",
                         "description": info.get("description"),
                         "impact": info.get("impact"),

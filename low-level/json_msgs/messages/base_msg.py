@@ -21,6 +21,12 @@
 """
 
 import abc
+from framework.utils.service_logging import logger
+from framework.utils.conf_utils import (GLOBAL_CONF, SITE_ID_KEY,
+        RACK_ID_KEY, NODE_ID_KEY, CLUSTER_ID_KEY, Conf)
+from framework.base.sspl_constants import (DEFAULT_DC, DEFAULT_RACK,
+        DEFAULT_SN, DEFAULT_CLUSTER)
+from cortx.utils.kv_store import KvPayload
 
 class BaseMsg(metaclass=abc.ABCMeta):
     '''
@@ -38,6 +44,31 @@ class BaseMsg(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def getJson(self):
         raise NotImplementedError("Subclasses should implement this!")
+
+    def prepare_message(self, jsonMsg, message_type):
+        """Adds all common key fields to the JsonMsg"""
+        try:
+            if jsonMsg.get("message").get(
+                message_type).get("info") is None:
+                return
+            payload = KvPayload(jsonMsg)
+            if payload.get(f"message>{message_type}>info>site_id") is None:
+                jsonMsg["message"][message_type]["info"]["site_id"] = Conf.get(
+                    GLOBAL_CONF, SITE_ID_KEY, DEFAULT_DC)
+            if payload.get(f"message>{message_type}>info>node_id") is None:
+                jsonMsg["message"][message_type]["info"]["node_id"] = Conf.get(
+                    GLOBAL_CONF, NODE_ID_KEY, DEFAULT_SN)
+            if payload.get(f"message>{message_type}>info>rack_id") is None:
+                jsonMsg["message"][message_type]["info"]["rack_id"] = Conf.get(
+                    GLOBAL_CONF, RACK_ID_KEY, DEFAULT_RACK)
+            if payload.get(f"message>{message_type}>info>cluster_id") is None:
+                jsonMsg["message"][message_type]["info"]["cluster_id"] = Conf.get(
+                    GLOBAL_CONF, CLUSTER_ID_KEY, DEFAULT_CLUSTER)
+
+            logger.debug("prepare_message, jsonMsg: %s" % jsonMsg)
+        except KeyError as ex:
+            logger.exception(f"Failed to prepare json message. JsonMsg:{jsonMsg}."
+                         f"Error:{str(ex)}")
 
     def normalize_kv(self, item):
         """Normalize all keys coming from firmware from - to _"""

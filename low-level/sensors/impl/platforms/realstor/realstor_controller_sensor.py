@@ -306,10 +306,6 @@ class RealStorControllerSensor(SensorThread, InternalMsgQ):
         resource_id = controller_detail.get("durable-id", "")
         host_name = socket.gethostname()
         info = {
-                "site_id": self.rssencl.site_id,
-                "cluster_id": self.rssencl.cluster_id,
-                "rack_id": self.rssencl.rack_id,
-                "node_id": self.rssencl.node_id,
                 "resource_type": self.RESOURCE_TYPE,
                 "resource_id": resource_id,
                 "event_time": epoch_time

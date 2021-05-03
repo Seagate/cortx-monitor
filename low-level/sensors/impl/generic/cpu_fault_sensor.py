@@ -27,8 +27,8 @@ import uuid
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.module_thread import SensorThread
 from framework.base.sspl_constants import DATA_PATH
-from framework.utils.conf_utils import (GLOBAL_CONF, SSPL_CONF, Conf,
-    SITE_ID_KEY, RACK_ID_KEY, NODE_ID_KEY, CLUSTER_ID_KEY)
+from framework.utils.conf_utils import (NODE_ID_KEY, Conf,
+    SSPL_CONF, GLOBAL_CONF)
 from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
 from framework.utils.store_factory import file_store
@@ -51,10 +51,6 @@ class CPUFaultSensor(SensorThread, InternalMsgQ):
 
     # Section in the configuration store
     SYSTEM_INFORMATION_KEY = "SYSTEM_INFORMATION"
-    SITE_ID = "site_id"
-    CLUSTER_ID = "cluster_id"
-    NODE_ID = "node_id"
-    RACK_ID = "rack_id"
     CACHE_DIR_NAME  = "server"
 
     RESOURCE_ID = "CPU-"
@@ -94,11 +90,6 @@ class CPUFaultSensor(SensorThread, InternalMsgQ):
 
         super(CPUFaultSensor, self).initialize_msgQ(msgQlist)
 
-        self._site_id = Conf.get(GLOBAL_CONF, SITE_ID_KEY,'DC01')
-        self._rack_id = Conf.get(GLOBAL_CONF, RACK_ID_KEY,'RC01')
-        self._node_id = Conf.get(GLOBAL_CONF, NODE_ID_KEY,'SN01')
-        self._cluster_id = Conf.get(GLOBAL_CONF, CLUSTER_ID_KEY,'CC01')
-
         # get the cpu fault implementor from configuration
         cpu_fault_utility = Conf.get(SSPL_CONF, f"{self.name().capitalize()}>{self.PROBE}",
                                     'sysfs')
@@ -114,6 +105,7 @@ class CPUFaultSensor(SensorThread, InternalMsgQ):
             logger.error(f"Error while initializing, shutting down CPUFaultSensor : {e}")
             self.shutdown()
 
+        self._node_id = Conf.get(GLOBAL_CONF, NODE_ID_KEY,'SN01')
         cache_dir_path = os.path.join(DATA_PATH, self.CACHE_DIR_NAME)
         self.CPU_FAULT_SENSOR_DATA = os.path.join(cache_dir_path, f'CPU_FAULT_SENSOR_DATA_{self._node_id}')
 
@@ -242,10 +234,6 @@ class CPUFaultSensor(SensorThread, InternalMsgQ):
                     description = "Fault resolved for CPU, %s state is  %s" %(item['resource_id'], item["state"])
 
         info = {
-                "site_id": self._site_id,
-                "cluster_id": self._cluster_id,
-                "rack_id": self._rack_id,
-                "node_id": self._node_id,
                 "resource_type": res_id,
                 "resource_id": self.RESOURCE_ID + str(cpu),
                 "event_time": epoch_time,

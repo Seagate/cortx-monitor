@@ -27,8 +27,7 @@ from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.sspl_constants import enabled_products, DATA_PATH
 from framework.utils.conf_utils import (GLOBAL_CONF, SSPL_CONF, Conf,
-                                        SITE_ID_KEY, RACK_ID_KEY, NODE_ID_KEY,
-                                        CLUSTER_ID_KEY)
+                                        NODE_ID_KEY)
 from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
 from json_msgs.messages.sensors.cpu_data import CPUdataMsg
@@ -65,10 +64,6 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
     DEFAULT_HOST_MEMORY_USAGE_THRESHOLD = 80
 
     SYSTEM_INFORMATION = "SYSTEM_INFORMATION"
-    SITE_ID = "site_id"
-    CLUSTER_ID = "cluster_id"
-    NODE_ID = "node_id"
-    RACK_ID = "rack_id"
 
     IPMI_RESOURCE_TYPE_PSU = "node:fru:psu"
     IPMI_RESOURCE_TYPE_FAN = "node:fru:fan"
@@ -142,10 +137,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         self._host_memory_usage_threshold = Conf.get(SSPL_CONF, f"{self.NODEDATAMSGHANDLER}>{self.HOST_MEMORY_USAGE_THRESHOLD}",
                                                 self.DEFAULT_HOST_MEMORY_USAGE_THRESHOLD)
 
-        self.site_id = Conf.get(GLOBAL_CONF, SITE_ID_KEY, "DC01")
-        self.rack_id = Conf.get(GLOBAL_CONF, RACK_ID_KEY, "RC01")
         self.node_id = Conf.get(GLOBAL_CONF, NODE_ID_KEY, "SN01")
-        self.cluster_id = Conf.get(GLOBAL_CONF, CLUSTER_ID_KEY, "CC01")
 
         self.bmcNwStatus = None
         self.severity_reader = SeverityReader()
@@ -440,8 +432,6 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                                     self._node_sensor.boot_time,
                                     self._node_sensor.up_time,
                                     self._node_sensor.uname, self._units,
-                                    self.site_id, self.rack_id,
-                                    self.node_id, self.cluster_id,
                                     self._node_sensor.total_memory,
                                     self._node_sensor.logged_in_users,
                                     self._node_sensor.process_count,
@@ -473,8 +463,6 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                                     self._node_sensor.boot_time,
                                     self._node_sensor.up_time,
                                     self._node_sensor.uname, self._units,
-                                    self.site_id, self.rack_id,
-                                    self.node_id, self.cluster_id,
                                     self._node_sensor.total_memory,
                                     self._node_sensor.logged_in_users,
                                     self._node_sensor.process_count,
@@ -565,10 +553,6 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                                 self._node_sensor.user_time,
                                 self._node_sensor.cpu_core_data,
                                 self._node_sensor.cpu_usage,
-                                self.site_id,
-                                self.rack_id,
-                                self.node_id,
-                                self.cluster_id,
                                 self.FAULT,
                                 fault_event
                             )
@@ -607,10 +591,6 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                                 self._node_sensor.user_time,
                                 self._node_sensor.cpu_core_data,
                                 self._node_sensor.cpu_usage,
-                                self.site_id,
-                                self.rack_id,
-                                self.node_id,
-                                self.cluster_id,
                                 self.FAULT_RESOLVED,
                                 fault_resolved_event
                             )
@@ -635,7 +615,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                                 self._node_sensor.if_data,
                                 resource_id,
                                 resource_type,
-                                self.site_id, self.node_id, self.cluster_id, self.rack_id, state, severity, event)
+                                state, severity, event)
         # Add in uuid if it was present in the json request
         if self._uuid is not None:
             ifDataMsg.set_uuid(self._uuid)
@@ -726,9 +706,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         Get network interfaces with fault/OK state for each interface.
         Parameters:
                     interfaces(list) : List of availabel network interfaces
-
         Returns: Dictionary of network interfaces having key as interface name and value as fault state.
-
         Return type: dict
         """
         nw_alerts = {}
@@ -837,8 +815,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                                     self._node_sensor.free_space,
                                     self._node_sensor.disk_used_percentage,
                                     self._units,
-                                    self.site_id, self.rack_id,
-                                    self.node_id, self.cluster_id, self.FAULT,fault_event)
+                                    self.FAULT,fault_event)
 
             # Add in uuid if it was present in the json request
             if self._uuid is not None:
@@ -865,10 +842,6 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                                     self._node_sensor.free_space,
                                     self._node_sensor.disk_used_percentage,
                                     self._units,
-                                    self.site_id,
-                                    self.rack_id,
-                                    self.node_id,
-                                    self.cluster_id,
                                     self.FAULT_RESOLVED,
                                     fault_resolved_event
                                     )

@@ -48,10 +48,6 @@ class HostUpdateMsg(BaseSensorMsg):
                        up_time,
                        uname,
                        units,
-                       site_id,
-                       rack_id,
-                       node_id,
-                       cluster_id,
                        total_memory,
                        logged_in_users,
                        process_count,
@@ -73,15 +69,11 @@ class HostUpdateMsg(BaseSensorMsg):
         self._boot_time         = boot_time
         self._up_time           = up_time
         self._uname             = uname
-        self._total_memory         = total_memory
+        self._total_memory      = total_memory
         self._units             = units
         self._logged_in_users   = logged_in_users
         self._process_count     = process_count
         self._running_process_count = running_process_count
-        self._site_id           = site_id
-        self._rack_id           = rack_id
-        self._node_id           = node_id
-        self._cluster_id        = cluster_id
         self.alert_type         = alert_type
         self.event              = event
 
@@ -111,10 +103,6 @@ class HostUpdateMsg(BaseSensorMsg):
                               "alert_id": alert_id,
                               "host_id": self._host_id,
                               "info": {
-                                "site_id": self._site_id,
-                                "rack_id": self._rack_id,
-                                "node_id": self._node_id,
-                                "cluster_id": self._cluster_id,
                                 "resource_type": self.RESOURCE_TYPE,
                                 "resource_id": self.RESOURCE_ID,
                                 "event_time": epoch_time,

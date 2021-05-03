@@ -32,7 +32,7 @@ from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.module_thread import SensorThread
 from framework.base.sspl_constants import COMMON_CONFIGS, DATA_PATH
 from framework.utils.conf_utils import (GLOBAL_CONF, SSPL_CONF, Conf,
-    SITE_ID_KEY, RACK_ID_KEY, NODE_ID_KEY, CLUSTER_ID_KEY)
+    NODE_ID_KEY)
 from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
 from message_handlers.logging_msg_handler import LoggingMsgHandler
@@ -60,10 +60,6 @@ class RAIDsensor(SensorThread, InternalMsgQ):
     RAID_DOWN_DRIVE_STATUS = [ { "status" : "Down/Missing" }, { "status" : "Down/Missing" } ]
 
     SYSTEM_INFORMATION = "SYSTEM_INFORMATION"
-    SITE_ID = "site_id"
-    CLUSTER_ID = "cluster_id"
-    NODE_ID = "node_id"
-    RACK_ID = "rack_id"
 
     prev_alert_type = {}
     alert_type = None
@@ -131,11 +127,8 @@ class RAIDsensor(SensorThread, InternalMsgQ):
         self._prev_drive_dict = {}
 
         self.prev_alert_type = {}
-
-        self._site_id = Conf.get(GLOBAL_CONF, SITE_ID_KEY,'DC01')
-        self._rack_id = Conf.get(GLOBAL_CONF, RACK_ID_KEY,'RC01')
         self._node_id = Conf.get(GLOBAL_CONF, NODE_ID_KEY,'SN01')
-        self._cluster_id = Conf.get(GLOBAL_CONF, CLUSTER_ID_KEY,'CC01')
+
         # Allow systemd to process all the drives so we can map device name to serial numbers
         #time.sleep(120)
 
@@ -504,10 +497,6 @@ class RAIDsensor(SensorThread, InternalMsgQ):
             description = "Raid array alert"
 
         info = {
-                "site_id": self._site_id,
-                "cluster_id": self._cluster_id,
-                "rack_id": self._rack_id,
-                "node_id": self._node_id,
                 "resource_type": self.RESOURCE_TYPE,
                 "resource_id": resource_id,
                 "event_time": epoch_time,

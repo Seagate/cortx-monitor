@@ -44,10 +44,6 @@ class IFdataMsg(BaseSensorMsg):
                        interfaces,
                        resource_id,
                        resource_type,
-                       site_id,
-                       node_id,
-                       cluster_id,
-                       rack_id,
                        alert_type,
                        severity,
                        event,
@@ -66,10 +62,6 @@ class IFdataMsg(BaseSensorMsg):
         self._interfaces        = interfaces
         self._resource_id       = resource_id
         self._resource_type     = resource_type
-        self._site_id           = site_id
-        self._node_id           = node_id
-        self._cluster_id        = cluster_id
-        self._rack_id           = rack_id
         self.alert_type         = alert_type
         self._severity          = severity
 
@@ -92,10 +84,6 @@ class IFdataMsg(BaseSensorMsg):
                              "info": {
                                 "event_time": epoch_time,
                                 "resource_id": self._resource_id,
-                                "site_id": self._site_id,
-                                "node_id": self._node_id,
-                                "cluster_id": self._cluster_id,
-                                "rack_id": self._rack_id,
                                 "resource_type": self._resource_type,
                                 "description": event
                              },
