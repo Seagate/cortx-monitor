@@ -109,12 +109,17 @@ class NodeHWactuator(Actuator, Debug):
             specifics.append(specific_info)
 
         if (fru == "Power Supply") or (fru == "Fan") or (fru == "Drive Slot / Bay"):
-            for each in specifics:
-                if each.get('States Asserted'):
-                    each['States Asserted'] = ' '.join(x.strip() for x in each['States Asserted'].split())
             if not specifics:
-                msg = list(self.sensor_id_map[fru.lower()].keys())[0]
+                manufacturer = self._executor.get_manufacturer_name()
+                msg = "'%s' sensors not seen in %s node server" % (
+                    fru, manufacturer)
                 specifics.append({"ERROR": msg})
+                logger.critical(msg)
+            else:
+                for each in specifics:
+                    if each.get('States Asserted'):
+                        each['States Asserted'] = ' '.join(
+                            x.strip() for x in each['States Asserted'].split())
 
         self.fru_specific_info = {}
         return specifics

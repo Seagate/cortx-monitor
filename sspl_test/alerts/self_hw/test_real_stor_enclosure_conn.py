@@ -105,10 +105,10 @@ def test_real_stor_enclosure_conn(args):
         print(f"Login to enclosure failed : {e}")
         assert(False)
 
-def test_controller_ip_reachability(args):
+def test_controller_reachability(args):
     NetworkV().validate("connectivity", [primary_ip, secondary_ip])
 
-def test_controller_ip_accessibility(args):
+def test_controller_accessibility(args):
     c_validator = ControllerV()
     c_validator.validate(
         "accessible", [primary_ip, cntrlr_user, cntrlr_passwd])
@@ -126,7 +126,7 @@ def test_firmware_version_ok(args):
 
 test_list = [
     test_real_stor_enclosure_conn,
-    test_controller_ip_reachability,
-    test_controller_ip_accessibility,
+    test_controller_reachability,
+    test_controller_accessibility,
     test_firmware_version_ok
     ]
