@@ -56,7 +56,7 @@ from framework.rabbitmq.rabbitmq_ingress_processor import RabbitMQingressProcess
 from framework.rabbitmq.plane_cntrl_rmq_egress_processor import PlaneCntrlRMQegressProcessor
 from framework.rabbitmq.plane_cntrl_rmq_ingress_processor import PlaneCntrlRMQingressProcessor
 from framework.base.sspl_constants import enabled_products, OperatingSystem, \
-    COMMON_CONFIGS, SSPL_SETTINGS, DISABLE_FOR_VIRTUAL_STORAGE, DISABLE_FOR_VIRTUAL_SERVER
+    COMMON_CONFIGS, DISABLE_FOR_VIRTUAL_STORAGE, DISABLE_FOR_VIRTUAL_SERVER, file_store_config_path
 from framework.base.module_thread import SensorThread
 from framework.actuator_state_manager import actuator_state_manager
 
@@ -300,14 +300,14 @@ def main(conf_reader, systemd_support):
     modules_to_resume = []
     try:
         # Read list of modules from conf file to load in degraded mode
-        modules_to_resume = SSPL_SETTINGS.get("DEGRADED_STATE_MODULES")
+        modules_to_resume = sspl_config_reader._get_value_list(SSPL_SETTING, DEGRADED_STATE_MODULES)
     except Exception as e:
         logger.warn("Configuration not found: degraded_state_modules")
         modules_to_resume = []
     logger.info("modules_to_resume: {0}".format(str(modules_to_resume)))
 
     # Use reflection to instantiate the classes based upon its class name in config file
-    core_processors = SSPL_SETTINGS.get("CORE_PROCESSORS")
+    core_processors = sspl_config_reader._get_value_list(SSPL_SETTING, CORE_PROCESSORS)
     logger.info("sspl-ll Bootstrap: default core processors to start: %s" % (core_processors, ))
     core_processors = _tune_modules_for_env(core_processors)
 
@@ -322,7 +322,7 @@ def main(conf_reader, systemd_support):
     sspl_threaded_modules[RabbitMQEgressAccumulatedMsgsProcessor] = RabbitMQEgressAccumulatedMsgsProcessor()
     msgQlist[RabbitMQEgressAccumulatedMsgsProcessor.name()] = queue.Queue()
 
-    message_handlers = SSPL_SETTINGS.get("MESSAGE_HANDLERS")
+    message_handlers = sspl_config_reader._get_value_list(SSPL_SETTING, MSG_HANDLERS)
     logger.info("sspl-ll Bootstrap: default message handlers to start: %s" % (message_handlers, ))
 
     message_handlers = _tune_modules_for_env(message_handlers)
@@ -483,10 +483,10 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist, operating_system
     """Loops thru list of sensors/actuators and instantiate"""
 
     # Read in list of sensors
-    sensors = SSPL_SETTINGS.get("SENSORS")
+    sensors = sspl_config_reader._get_value_list(SSPL_SETTING, SENSORS)
 
     # Read in list of actuators
-    actuators = SSPL_SETTINGS.get("ACTUATORS")
+    actuators = sspl_config_reader._get_value_list(SSPL_SETTING, ACTUATORS)
     if setup in ['gw', 'cmu', 'vm'] and 'HPIactuator' in actuators:
         actuators.remove('HPIactuator')
 
@@ -808,6 +808,7 @@ if __name__ == "__main__":
     # Validate configuration file for required valid values
     try:
         conf_reader = ConfigReader()
+        sspl_config_reader = ConfigReader(is_test=True, test_config_path=file_store_config_path)
     except (IOError, ConfigReader.Error) as err:
         # We don't have logger yet, need to find log_level from conf file first
         print("[ Error ] when validating the configuration : ")
