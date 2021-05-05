@@ -31,25 +31,26 @@ def init(args):
 def test_node_disk_module_actuator(agrs):
     print("Enters into test_node_disk_module_actuator")
     check_sspl_ll_is_running()
-    disk_actuator_message_request("NDHW:node:fru:disk")
+    time.sleep(30)
+    instance_id = "*"
+    disk_actuator_message_request("NDHW:node:fru:disk", instance_id)
     disk_actuator_msg = None
-    time.sleep(10)
     ingressMsg = {}
     for i in range(10):
         if world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
             time.sleep(2)
         while not world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
             ingressMsg = world.sspl_modules[IngressProcessorTests.name()]._read_my_msgQ()
-            time.sleep(0.1)
             print("Received: %s " % ingressMsg)
             try:
                 # Make sure we get back the message type that matches the request
                 msg_type = ingressMsg.get("actuator_response_type")
-                if msg_type["info"]["resource_type"] == "node:fru:disk":
+                if msg_type["info"]["resource_type"] == "node:fru:disk" and \
+                    msg_type["info"]["resource_id"] == instance_id:
+                    # Break if condition is met
                     disk_actuator_msg = msg_type
                     break
             except Exception as exception:
-                time.sleep(0.1)
                 print(exception)
 
         if disk_actuator_msg:
@@ -80,7 +81,7 @@ def test_node_disk_module_actuator(agrs):
         if "States Asserted" in disk_actuator_specific_info:
             assert(disk_actuator_specific_info.get("States Asserted") is not None)
 
-def disk_actuator_message_request(resource_type):
+def disk_actuator_message_request(resource_type, instance_id):
     egressMsg = {
 	"username": "sspl-ll",
 	"expires": 3600,
@@ -102,7 +103,7 @@ def disk_actuator_message_request(resource_type):
 		"actuator_request_type": {
 			"node_controller": {
 				"node_request": resource_type,
-				"resource": "*"
+				"resource": instance_id
 			}
 		}
 	}
