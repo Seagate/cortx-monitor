@@ -28,6 +28,10 @@ from cortx.utils.process import SimpleProcess
 from cortx.utils.security.cipher import Cipher
 from cortx.utils.validator.v_bmc import BmcV
 
+
+CHANNEL_PROTOCOL = "Channel Protocol Type"
+FIRMWARE_VERSION = "Firmware Revision"
+
 def init(args):
     pass
 
@@ -55,14 +59,15 @@ def test_bmc_firmware_version(args):
     if res_rc == 0:
         res_op = res_op.decode()
         search_res = re.search(
-            r"Firmware Revision[\s]+:[\s]+([\w.]+)(.*)", res_op)
+            r"%s[\s]+:[\s]+([\w.]+)(.*)" % FIRMWARE_VERSION, res_op)
         if search_res:
             version_found = search_res.groups()[0]
     else:
         raise Exception("ERROR: %s" % res_err.decode())
     if expected_ver != version_found:
-        print("Expected: %s Actual: %s" % (expected_ver, version_found))
-        assert False
+        print("UNEXPECTED BMC FIRMWARE VERSION FOUND.")
+        print("Expected: %s" % expected_ver)
+        print("Found: %s" % version_found)
 
 def test_bmc_accessible_through_kcs(args):
     """Check if BMC channel type is KCS."""
@@ -73,17 +78,18 @@ def test_bmc_accessible_through_kcs(args):
     if res_rc == 0:
         res_op = res_op.decode()
         search_res = re.search(
-            r"Channel Protocol Type[\s]+:[\s]+(\w+)(.*)", res_op)
+            r"%s[\s]+:[\s]+(\w+)(.*)" % CHANNEL_PROTOCOL, res_op)
         if search_res:
             channel_found = search_res.groups()[0]
         if expected_channel != channel_found:
-            print("Expected: %s Actual: %s" % (expected_channel, channel_found))
-            assert False
+            print("UNEXPECTED BMC CHANNEL TYPE FOUND.")
+            print("Expected: %s" % expected_channel)
+            print("Found: %s" % channel_found)
     else:
         res_err = res_err.decode()
         kcs_errors = ("could not find inband device", "driver timeout")
         if not any(err for err in kcs_errors if err in res_err):
-            raise Exception("Channel type is not KCS. ERROR: %s" % res_err.decode())
+            raise Exception("ERROR: %s" % res_err.decode())
 
 test_list = [
     test_bmc_config,

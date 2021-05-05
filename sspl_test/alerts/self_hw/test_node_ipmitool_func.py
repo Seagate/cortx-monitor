@@ -23,6 +23,8 @@ from cortx.utils.process import SimpleProcess
 from alerts.self_hw.self_hw_utilities import get_manufacturer_name
 
 
+IPMITOOL_VERSION = "ipmitool version"
+SEL_VERSION = "Version"
 REQUIRED_IPMITOOL_VERSION = "1.8.18"
 MIN_REQUIRED_SEL_VERSION = 2
 
@@ -39,7 +41,7 @@ def test_ipmitool_version(args):
     if res_rc == 0:
         res_op = res_op.decode()
         search_res = re.search(
-            r"ipmitool version[\s]+([\w.]+)(.*)", res_op)
+            r"%s[\s]+([\w.]+)(.*)" % IPMITOOL_VERSION, res_op)
         if search_res:
             version_found = search_res.groups()[0]
     else:
@@ -55,7 +57,7 @@ def test_ipmitool_version(args):
     if res_rc == 0:
         res_op = res_op.decode()
         search_res = re.search(
-            r"Version[\s]+:[\s]+([\w.]+)[\s]+\(([\w.,\s]+)\)(.*)", res_op)
+            r"%s[\s]+:[\s]+([\w.]+)[\s]+\(([\w.,\s]+)\)(.*)" % SEL_VERSION, res_op)
         if search_res:
             if not (float(search_res.groups()[0]) >= MIN_REQUIRED_SEL_VERSION) and \
                 "v2" not in search_res.groups()[1]:
