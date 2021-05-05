@@ -326,7 +326,7 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
                     # Try to connect to PropertiesChanged if earlier it failed
                     for service in properties_changed_not_subscribed_services.copy():
                         try:
-                            Service.subscribe_properties_changed_signal(
+                            self.subscribe_properties_changed_signal(
                                 self.services[service])
                         except DBusException:
                             pass
