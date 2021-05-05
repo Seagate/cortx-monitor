@@ -193,8 +193,6 @@ class Service:
             UNIT_IFACE, 'SubState'))
         self.pid = str(self.properties_iface.Get(
             SERVICE_IFACE, 'ExecMainPID'))
-        print("properties_changed_handler  called")
-        print(self.previous_state, "to", self.state)
         if self.state != self.previous_state:
             if self.state == "active":
                 if self.failed:
@@ -394,7 +392,6 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
         properties_changed_not_subscribed_services.discard(service.name)
 
     def unit_file_state_change_handler(self):
-        print("unit_file_state_change_handler called")
         for service in self.services.values():
             service.handle_unit_state_change()
 
@@ -478,8 +475,6 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
                 }
             }
         }
-        print(alert)
-        print(message)
         self.raise_iem(service.name,
                        alert.alert_type.value)
         self._write_internal_msgQ(ServiceMsgHandler.name(), message)
