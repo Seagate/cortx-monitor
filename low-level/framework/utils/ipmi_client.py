@@ -13,6 +13,7 @@
 # about this software or licensing, please email opensource@seagate.com or
 # cortx-questions@seagate.com.
 
+import re
 import os
 import subprocess
 
@@ -27,12 +28,29 @@ class IPMITool(IPMI):
     _instance = None
     IPMITOOL = "sudo /usr/bin/ipmitool "
     IPMISIMTOOL = "/usr/bin/ipmisimtool "
+    MANUFACTURER = "Manufacturer Name"
 
     def __new__(cls):
         """new method"""
         if cls._instance is None:
             cls._instance = super(IPMITool, cls).__new__(cls)
         return cls._instance
+
+    def get_manufacturer_name(self):
+        """Returns node server manufacturer name.
+            Example: Supermicro, Intel Corporation, DELL Inc
+        """
+        manufacturer_name = ""
+        cmd = "bmc info"
+        output, rc = self._run_ipmitool_subcommand(cmd)
+        if rc == 0:
+            if isinstance(output, tuple):
+                output = b''.join(output).decode("utf-8")
+            search_res = re.search(
+                r"%s[\s]+:[\s]+([\w]+)(.*)" % self.MANUFACTURER, output)
+            if search_res:
+                manufacturer_name = search_res.groups()[0]
+        return manufacturer_name
 
     def get_sensor_list_by_entity(self, entity_id):
         """Returns the sensor list based on entity id using ipmitool utility
