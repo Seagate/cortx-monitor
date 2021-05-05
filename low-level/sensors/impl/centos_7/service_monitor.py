@@ -22,8 +22,8 @@
 
 import socket
 import time
-from collections import deque
 from enum import Enum
+from queue import Queue
 
 from dbus import PROPERTIES_IFACE, DBusException, Interface, SystemBus
 from dbus.mainloop.glib import DBusGMainLoop
@@ -46,58 +46,11 @@ UNIT_IFACE = "org.freedesktop.systemd1.Unit"
 SERVICE_IFACE = "org.freedesktop.systemd1.Service"
 MANAGER_IFACE = 'org.freedesktop.systemd1.Manager'
 SYSTEMD_BUS = "org.freedesktop.systemd1"
-DUMP_PATH = f"/{DATA_PATH}/server/SERVICE_MONITOR/"
+CACHE_PATH = f"/{DATA_PATH}/server/SERVICE_MONITOR/"
 
 inactive_services = set()
-properties_changed_not_connected_services = set()
-alerts = deque()
-
-
-class ActiveState:
-    failed = False
-
-    @staticmethod
-    def enter(service):
-        inactive_services.discard(service.name)
-
-
-class FailedState:
-    failed = True
-
-    @staticmethod
-    def enter(service):
-        inactive_services.discard(service.name)
-
-
-class InactiveState:
-    failed = False
-
-    @staticmethod
-    def enter(service):
-        inactive_services.add(service.name)
-
-
-class DisabledState:
-    disabled = True
-
-    @staticmethod
-    def enter(service):
-        inactive_services.discard(service.name)
-        properties_changed_not_connected_services.discard(service.name)
-        service.state = "N/A"
-        if service.signal:
-            service.signal.remove()
-
-
-class EnabledState:
-    disabled = False
-
-    @staticmethod
-    def enter(service):
-        ServiceMonitor.connect_to_prop_changed_signal(service)
-        # Call properties_changed_handler transit service to correct state
-        # on start up or if service is enabled after start up
-        service.properties_changed_handler("", "", "")
+properties_changed_not_subscribed_services = set()
+alerts = Queue()
 
 
 class FailedAlert(Enum):
@@ -121,6 +74,59 @@ class ResolvedAlert(Enum):
     recommendation = ""
 
 
+class ActiveState:
+    failed = False
+
+    @staticmethod
+    def enter(service):
+        inactive_services.discard(service.name)
+
+
+class FailedState:
+    failed = True
+
+    @staticmethod
+    def enter(service):
+        inactive_services.discard(service.name)
+
+
+class InactiveState:
+    failed = False
+
+    @staticmethod
+    def enter(service):
+        service.inactive_enter_timestamp = time.time()
+        inactive_services.add(service.name)
+
+
+class DisabledState:
+    disabled = True
+
+    @staticmethod
+    def enter(service):
+        logger.info("{} service is disabled, it will not be "
+                    "monitored".format(service.name))
+        inactive_services.discard(service.name)
+        properties_changed_not_subscribed_services.discard(service.name)
+        if service.properties_changed_signal:
+            service.properties_changed_signal.remove()
+
+
+class EnabledState:
+    disabled = False
+
+    @staticmethod
+    def enter(service):
+        try:
+            ServiceMonitor.subscribe_properties_changed_signal(service)
+        except DBusException:
+            properties_changed_not_subscribed_services.add(service.name)
+            alerts.put((service.name, FailedAlert))
+        # Call properties_changed_handler transit service to correct state
+        # on start up or if service is enabled after start up
+        service.properties_changed_handler("", "", "")
+
+
 class Service:
     """
     The Service class representing systemd service.
@@ -140,15 +146,14 @@ class Service:
         self.previous_state = "N/A"
         self.previous_substate = "N/A"
         self.previous_pid = "N/A"
-        self.state_changed_time = time.time()
+        self.inactive_enter_timestamp = time.time()
         self.inactive_threshold = int(
             Conf.get(SSPL_CONF,
                      f"{ServiceMonitor.name().upper()}>threshold_inactive_time",
                      '60'))
-        self.signal = None
+        self.properties_changed_signal = None
         self._service_state = ActiveState
         self._unit_state = None
-        self.alerts = []
 
     @property
     def disabled(self):
@@ -164,11 +169,12 @@ class Service:
         return self._service_state.failed
 
     def is_inactive_for_threshold_time(self):
-        return time.time() - self.state_changed_time > self.inactive_threshold
+        return time.time() - self.inactive_enter_timestamp > self.inactive_threshold
 
     def new_service_state(self, new_state):
-        self._service_state = new_state
-        new_state.enter(self)
+        if new_state != self._service_state:
+            self._service_state = new_state
+            new_state.enter(self)
 
     def new_unit_state(self, new_state):
         self._unit_state = new_state
@@ -190,20 +196,17 @@ class Service:
         print("properties_changed_handler  called")
         print(self.previous_state, "to", self.state)
         if self.state != self.previous_state:
-            self.state_changed_time = time.time()
             if self.state == "active":
                 if self.failed:
-                    alerts.append((self.name, ResolvedAlert))
+                    alerts.put((self.name, ResolvedAlert))
                 self.new_service_state(ActiveState)
-            elif self.state == "failed" or \
-                    self.previous_state == "activating" and \
-                    self.state in ["inactive", "deactivating"]:
+            elif self.state == "failed":
                 if not self.failed:
-                    alerts.append((self.name, FailedAlert))
+                    alerts.put((self.name, FailedAlert))
                 self.new_service_state(FailedState)
             else:
                 self.new_service_state(InactiveState)
-                self.dump()
+                self.dump_to_cache()
 
     def handle_unit_state_change(self):
         if self.disabled and self.enabled_on_disk:
@@ -216,27 +219,27 @@ class Service:
         """
         Initialize service from cache
         """
-        data = store.get(f"{DUMP_PATH}/{service_name}")
+        data = store.get(f"{CACHE_PATH}/{service_name}")
         service = cls(unit)
-        service.state = data["service_state"]
-        service.state_changed_time = data["state_changed_time"]
         service.new_service_state(data["service_monitor_state"])
+        service.state = data["service_state"]
+        service.inactive_enter_timestamp = data["inactive_enter_timestamp"]
         return service
 
-    def dump(self):
+    def dump_to_cache(self):
         """
         Write service status to cache
         """
         data = {
             "service_state": self.state,
             "service_monitor_state": self._service_state,
-            "state_changed_time": self.state_changed_time
+            "inactive_enter_timestamp": self.inactive_enter_timestamp
         }
-        store.put(data, f"{DUMP_PATH}/{self.name}")
+        store.put(data, f"{CACHE_PATH}/{self.name}")
 
     @staticmethod
-    def dump_exists(service_name):
-        exists, _ = store.exists(f"{DUMP_PATH}/{service_name}")
+    def cache_exists(service_name):
+        exists, _ = store.exists(f"{CACHE_PATH}/{service_name}")
         return exists
 
 
@@ -297,32 +300,16 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
         self.iem.check_exsisting_fault_iems()
         self.KAFKA = self.iem.EVENT_CODE["KAFKA_ACTIVE"][1]
 
-        DBusGMainLoop(set_as_default=True)
-
-        # Initialize SystemBus and get Manager Interface
-        self._bus = SystemBus()
-        systemd = self._bus.get_object(SYSTEMD_BUS,
-                                       "/org/freedesktop/systemd1")
-        self._manager = Interface(systemd,
-                                  dbus_interface=MANAGER_IFACE)
-
-        # Retrieve the main loop which will be called in the run method
-        self._loop = GLib.MainLoop()
-
-        # Initialize the gobject threads and get its context
-        GLib.threads_init()
-        self.context = self._loop.get_context()
-
         return True
 
     def run(self):
 
         try:
             # Initialize dbus to catch events
+            self.initialize_dbus()
             for service in self.services_to_monitor:
                 self.initialize_service(service)
-            print(self.services)
-            self.connect_to_unit_file_changed_handler(self.services)
+            self.subscribe_unit_file_changed_signal()
 
             logger.info(f"Monitoring Services : {self.services.keys()}")
 
@@ -339,16 +326,18 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
                 self.process_events()
                 if not iterations % iterations_to_check_for_inactive_services:
                     # Try to connect to PropertiesChanged if earlier it failed
-                    for service in properties_changed_not_connected_services.copy():
-                        self.connect_to_prop_changed_signal(
-                            self.services[service])
+                    for service in properties_changed_not_subscribed_services.copy():
+                        try:
+                            Service.subscribe_properties_changed_signal(
+                                self.services[service])
+                        except DBusException:
+                            pass
                     # Initialize errored service again
                     for service in self.services_to_monitor - set(
                             self.services.keys()):
                         self.initialize_service(service)
                     # Check for services in intermediate state(not active)
                     self.check_inactive_services()
-
                 time.sleep(self.thread_sleep)
                 iterations += 1
             logger.info("ServiceMonitor gracefully breaking out " +
@@ -367,46 +356,11 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
                                   "Ungracefully breaking out of"
                                   "ServiceMonitor:run() with error: %s" % err)
 
-    @staticmethod
-    def connect_to_prop_changed_signal(service):
-        """
-           Register service for getting properties changed event.
-        """
-        try:
-            unit = Interface(service.unit,
-                             dbus_interface=MANAGER_IFACE)
-            service.signal = unit.connect_to_signal('PropertiesChanged',
-                                                    service.properties_changed_handler,
-                                                    dbus_interface=PROPERTIES_IFACE)
-        except DBusException:
-            if service.name not in properties_changed_not_connected_services:
-                properties_changed_not_connected_services.add(service.name)
-                alerts.append((service.name, FailedAlert))
-        else:
-            properties_changed_not_connected_services.discard(service.name)
-
-    def connect_to_unit_file_changed_handler(self, services):
-        self._manager.connect_to_signal('UnitFilesChanged',
-                                        self.unit_file_state_change_handler,
-                                        dbus_interface=MANAGER_IFACE)
-
-    def unit_file_state_change_handler(self):
-        print("unit_file_state_change_handler called")
-        for service in self.services.values():
-            service.handle_unit_state_change()
-
-    def process_events(self):
-        while self.context.pending():
-            self.context.iteration(False)
-        while alerts:
-            service, alert = alerts.popleft()
-            self.raise_alert(service, alert)
-
     def initialize_service(self, service_name):
         try:
             unit = self._bus.get_object(SYSTEMD_BUS,
                                         self._manager.LoadUnit(service_name))
-            if Service.dump_exists(service_name):
+            if Service.cache_exists(service_name):
                 service = Service.from_cache(service_name, unit)
             else:
                 service = Service(unit)
@@ -421,6 +375,53 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
                          "{} seconds".format(DBusException, service_name,
                                              self.polling_frequency))
 
+    def subscribe_unit_file_changed_signal(self):
+        self._manager.connect_to_signal('UnitFilesChanged',
+                                        self.unit_file_state_change_handler,
+                                        dbus_interface=MANAGER_IFACE)
+
+    @staticmethod
+    def subscribe_properties_changed_signal(service):
+        """
+           Register service for getting properties changed event.
+        """
+        unit = Interface(service.unit,
+                         dbus_interface=MANAGER_IFACE)
+        service.properties_changed_signal = unit.connect_to_signal(
+            'PropertiesChanged',
+            service.properties_changed_handler,
+            dbus_interface=PROPERTIES_IFACE)
+        properties_changed_not_subscribed_services.discard(service.name)
+
+    def unit_file_state_change_handler(self):
+        print("unit_file_state_change_handler called")
+        for service in self.services.values():
+            service.handle_unit_state_change()
+
+    def process_events(self):
+        while self.context.pending():
+            self.context.iteration(False)
+        while not alerts.empty():
+            service, alert = alerts.get()
+            self.raise_alert(service, alert)
+
+    def initialize_dbus(self):
+        DBusGMainLoop(set_as_default=True)
+
+        # Initialize SystemBus and get Manager Interface
+        self._bus = SystemBus()
+        systemd = self._bus.get_object(SYSTEMD_BUS,
+                                       "/org/freedesktop/systemd1")
+        self._manager = Interface(systemd,
+                                  dbus_interface=MANAGER_IFACE)
+
+        # Retrieve the main loop which will be called in the run method
+        self._loop = GLib.MainLoop()
+
+        # Initialize the gobject threads and get its context
+        GLib.threads_init()
+        self.context = self._loop.get_context()
+
     def check_inactive_services(self):
         """
            Monitor non-active Services.
@@ -432,6 +433,7 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
             if self.services[service].is_inactive_for_threshold_time():
                 self.raise_alert(service, InactiveAlert)
                 self.services[service].new_service_state(FailedState)
+                self.services[service].dump_to_cache()
 
     def raise_iem(self, service, alert_type):
         """Raise iem alert for kafka service."""
@@ -481,7 +483,7 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
         self.raise_iem(service.name,
                        alert.alert_type.value)
         self._write_internal_msgQ(ServiceMsgHandler.name(), message)
-        service.dump()
+        service.dump_to_cache()
 
     def suspend(self):
         """Suspend the module thread. It should be non-blocking."""
