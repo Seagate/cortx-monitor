@@ -34,6 +34,7 @@ from cortx.utils.validator.v_network import NetworkV
 from cortx.utils.validator.v_pkg import PkgV
 from cortx.utils.validator.v_service import ServiceV
 from files.opt.seagate.sspl.setup.setup_error import SetupError
+from files.opt.seagate.sspl.setup.setup_logger import logger
 from framework.base import sspl_constants as consts
 from framework.utils.utility import Utility
 
@@ -80,15 +81,17 @@ class SSPLPostInstall:
 
         # Validate product support
         if self.product not in consts.enabled_products:
-            raise SetupError(errno.EINVAL,
-                "Product '%s' is not in sspl supported product list: %s",
+            msg = "Product '%s' is not in sspl supported product list: %s" % (
                 self.product, consts.enabled_products)
+            logger.error(msg)
+            raise SetupError(errno.EINVAL, msg)
 
         # Validate setup support
         if self.setup not in consts.setups:
-            raise SetupError(errno.EINVAL,
-                "Setup '%s' is not in sspl supported setup list: %s",
+            msg = "Setup '%s' is not in sspl supported setup list: %s" % (
                 self.setup, consts.setups)
+            logger.error(msg)
+            raise SetupError(errno.EINVAL, msg)
 
         # Validate required pip3s and rpms are installed
         self.validate_dependencies(self.setup)
@@ -186,13 +189,16 @@ class SSPLPostInstall:
             -c 'User account to run the %s service'" % (consts.USER, consts.USER))
         usernames = [x[0] for x in pwd.getpwall()]
         if consts.USER not in usernames:
-            raise SetupError(errno.EINVAL,
-                "User %s doesn't exit. Please add user." % consts.USER)
+            msg = "User %s doesn't exit. Please add user." % (consts.USER)
+            logger.error(msg)
+            raise SetupError(errno.EINVAL, msg)
         # Add sspl-ll user to required groups and sudoers file etc.
         sspl_reinit = "%s/low-level/framework/sspl_reinit" % consts.SSPL_BASE_DIR
         _ , error, rc = SimpleProcess(sspl_reinit).run()
         if rc:
-            raise SetupError(rc, "%s failed for with error : %e", sspl_reinit, error)
+            msg = "%s failed for with error : %e" % (sspl_reinit, error)
+            logger.error(msg)
+            raise SetupError(rc, msg)
 
     def create_directories_and_ownership(self):
         """Create ras persistent cache directory and state file.
@@ -207,8 +213,9 @@ class SSPLPostInstall:
         sspl_uid = Utility.get_uid(consts.USER)
         sspl_gid = Utility.get_gid(consts.USER)
         if sspl_uid == -1 or sspl_gid == -1:
-            raise SetupError(errno.EINVAL,
-                "No user found with name : %s", consts.USER)
+            msg = "No user found with name : %s" % (consts.USER)
+            logger.error(msg)
+            raise SetupError(errno.EINVAL, msg)
         # Create sspl data directory if not exists
         os.makedirs(sspldp, exist_ok=True)
         # Create state file under sspl data directory
@@ -241,6 +248,7 @@ class SSPLPostInstall:
         iem_log_file_path = Utility.get_config_value(consts.SSPL_CONFIG_INDEX,
             "IEMSENSOR>log_file_path")
         manifest_log_file_path = sspl_log_file_path.replace("/sspl.log","/manifest.log")
+        setup_log_file_path = sspl_log_file_path.replace("/sspl.log","/sspl-setup.log")
 
         # IEM configuration
         os.makedirs("%s/iem/iec_mapping" % consts.PRODUCT_BASE_DIR, exist_ok=True)
@@ -277,6 +285,14 @@ class SSPLPostInstall:
         Utility.replace_expr(consts.RSYSLOG_SB_CONF, 'File.*[=,"]',
             'File="%s"' % sspl_sb_log_file_path)
 
+        # SSPL Setup log configuration
+        if not os.path.exists(consts.RSYSLOG_SETUP_CONF):
+            shutil.copyfile("%s/%s" % (system_files_root, consts.RSYSLOG_SETUP_CONF),
+                consts.RSYSLOG_SETUP_CONF)
+        # Update log location as per sspl.conf
+        Utility.replace_expr(consts.RSYSLOG_SETUP_CONF, 'File.*[=,"]',
+            'File="%s"' % setup_log_file_path)
+
         # Configure logrotate
         # Create logrotate dir in case it's not present
         os.makedirs(consts.LOGROTATE_DIR, exist_ok=True)
@@ -286,6 +302,8 @@ class SSPLPostInstall:
             0, sspl_log_file_path)
         Utility.replace_expr("%s/etc/logrotate.d/sspl_sb_logs" % system_files_root,
             0, sspl_sb_log_file_path)
+        Utility.replace_expr("%s/etc/logrotate.d/sspl_setup_logs" % system_files_root,
+            0, setup_log_file_path)
         shutil.copy2("%s/etc/logrotate.d/iem_messages" % system_files_root,
             consts.IEM_LOGROTATE_CONF)
         shutil.copy2("%s/etc/logrotate.d/sspl_logs" % system_files_root,
@@ -294,6 +312,8 @@ class SSPLPostInstall:
             consts.MSB_LOGROTATE_CONF)
         shutil.copy2("%s/etc/logrotate.d/sspl_sb_logs" % system_files_root,
             consts.SB_LOGROTATE_CONF)
+        shutil.copy2("%s/etc/logrotate.d/sspl_setup_logs" % system_files_root,
+            consts.SETUP_LOGROTATE_CONF)
 
         # This rsyslog restart will happen after successful updation of rsyslog
         # conf file and before sspl starts. If at all this will be removed from
@@ -324,4 +344,5 @@ class SSPLPostInstall:
         daemon_reload_cmd = "systemctl daemon-reload"
         output, error, rc = SimpleProcess(daemon_reload_cmd).run()
         if rc != 0:
+            logger.error(f"Failed in enable sspl service. ERROR: {error}")
             raise SetupError(rc, error, daemon_reload_cmd)
