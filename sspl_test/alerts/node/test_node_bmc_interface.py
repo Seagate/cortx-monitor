@@ -43,21 +43,25 @@ def test_bmc_interface(args):
         simulate_bmc_interface_alert.kcs_channel_alert(BMC_IF_CONSUL_KEY,BMC_IF_CONSUL_VAL)
 
     bmc_interface_message = None
-    time.sleep(25)
-    while not world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
-        ingressMsg = world.sspl_modules[IngressProcessorTests.name()]._read_my_msgQ()
-        time.sleep(0.1)
-        print("Received: %s" % ingressMsg)
-        try:
-            # Make sure we get back the message type that matches the request
-            msg_type = ingressMsg.get("sensor_response_type")
-            if msg_type["info"]["resource_type"] == "node:bmc:interface:kcs" or \
-                msg_type["info"]["resource_type"] == "node:bmc:interface:rmcp":
-                bmc_interface_message = msg_type
-                break
-        except Exception as exception:
-            time.sleep(0.1)
-            print(exception)
+    for i in range(30):
+        if world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
+            time.sleep(2)
+        while not world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
+            ingressMsg = world.sspl_modules[IngressProcessorTests.name()]._read_my_msgQ()
+            print("Received: %s" % ingressMsg)
+            try:
+                # Make sure we get back the message type that matches the request
+                msg_type = ingressMsg.get("sensor_response_type")
+                if msg_type["info"]["resource_type"] == "node:bmc:interface:kcs" or \
+                    msg_type["info"]["resource_type"] == "node:bmc:interface:rmcp":
+                    bmc_interface_message = msg_type
+                    break
+            except Exception as exception:
+                print(exception)
+
+        if bmc_interface_message:
+            break
+        time.sleep(1)
 
     #restore bmc config and activate ipmisimtool
     simulate_bmc_interface_alert.restore_config()

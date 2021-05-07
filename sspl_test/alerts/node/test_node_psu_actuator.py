@@ -31,23 +31,29 @@ def init(args):
 
 def test_node_psu_module_actuator(agrs):
     check_sspl_ll_is_running()
-    psu_actuator_message_request("NDHW:node:fru:psu", "*")
+    instance_id = "*"
+    psu_actuator_message_request("NDHW:node:fru:psu", instance_id)
     psu_module_actuator_msg = None
-    time.sleep(6)
     ingressMsg = {}
-    while not world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
-        ingressMsg = world.sspl_modules[IngressProcessorTests.name()]._read_my_msgQ()
-        time.sleep(0.1)
-        print("Received: %s " % ingressMsg)
-        try:
-            # Make sure we get back the message type that matches the request
-            msg_type = ingressMsg.get("actuator_response_type")
-            if msg_type["info"]["resource_type"] == "node:fru:psu":
-                psu_module_actuator_msg = msg_type
-                break
-        except Exception as exception:
-            time.sleep(0.1)
-            print(exception)
+    for i in range(10):
+        if world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
+            time.sleep(2)
+        while not world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
+            ingressMsg = world.sspl_modules[IngressProcessorTests.name()]._read_my_msgQ()
+            print("Received: %s " % ingressMsg)
+            try:
+                # Make sure we get back the message type that matches the request
+                msg_type = ingressMsg.get("actuator_response_type")
+                if msg_type["info"]["resource_type"] == "node:fru:psu"  and \
+                    msg_type["info"]["resource_id"] == instance_id:
+                    psu_module_actuator_msg = msg_type
+                    break
+            except Exception as exception:
+                print(exception)
+
+        if psu_module_actuator_msg:
+            break
+        time.sleep(1)
 
     assert(ingressMsg.get("sspl_ll_msg_header").get("uuid") == UUID)
     assert(psu_module_actuator_msg is not None)
@@ -74,7 +80,7 @@ def test_node_psu_module_actuator(agrs):
             assert(fru_specific_info.get("Sensor Type (Discrete)") is not None)
             assert(fru_specific_info.get("resource_id") is not None)
 
-def psu_actuator_message_request(resource_type, resource_id):
+def psu_actuator_message_request(resource_type, instance_id):
     egressMsg = {
         "title": "SSPL Actuator Request",
         "description": "Seagate Storage Platform Library - Actuator Request",
@@ -104,7 +110,7 @@ def psu_actuator_message_request(resource_type, resource_id):
             "actuator_request_type": {
                 "node_controller": {
                     "node_request": resource_type,
-                    "resource": "*"
+                    "resource": instance_id
                 }
             }
         }

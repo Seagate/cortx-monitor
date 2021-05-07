@@ -44,21 +44,29 @@ def test_node_fan_module_actuator(agrs):
     check_sspl_ll_is_running()
     fan_actuator_message_request("NDHW:node:fru:fan", str(test_resource))
     fan_module_actuator_msg = None
-    time.sleep(6)
     ingressMsg = {}
-    while not world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
-        ingressMsg = world.sspl_modules[IngressProcessorTests.name()]._read_my_msgQ()
-        time.sleep(0.1)
-        print("Received: %s" % ingressMsg)
-        try:
-            # Make sure we get back the message type that matches the request
-            msg_type = ingressMsg.get("actuator_response_type")
-            if msg_type["info"]["resource_type"] == "node:fru:fan":
-                fan_module_actuator_msg = msg_type
-                break
-        except Exception as exception:
+    for i in range(10):
+        if world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
+            time.sleep(2)
+        while not world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
+            ingressMsg = world.sspl_modules[IngressProcessorTests.name()]._read_my_msgQ()
             time.sleep(0.1)
-            print(exception)
+            print("Received: %s" % ingressMsg)
+            try:
+                # Make sure we get back the message type that matches the request
+                msg_type = ingressMsg.get("actuator_response_type")
+                if msg_type["info"]["resource_type"] == "node:fru:fan"  and \
+                    msg_type["info"]["resource_id"] == test_resource:
+                    # Break if condition is met
+                    fan_module_actuator_msg = msg_type
+                    break
+            except Exception as exception:
+                time.sleep(0.1)
+                print(exception)
+
+        if fan_module_actuator_msg:
+            break
+        time.sleep(1)
 
     assert(ingressMsg.get("sspl_ll_msg_header").get("uuid") == UUID)
 
@@ -122,7 +130,7 @@ def test_node_fan_module_actuator(agrs):
         assert(fru_specific_infos.get("Deassertions Enabled") is not None)
         assert(fru_specific_infos.get("resource_id") is not None)
 
-def fan_actuator_message_request(resource_type, resource_id):
+def fan_actuator_message_request(resource_type, instance_id):
     egressMsg = {
         "title": "SSPL Actuator Request",
         "description": "Seagate Storage Platform Library - Actuator Request",
@@ -152,7 +160,7 @@ def fan_actuator_message_request(resource_type, resource_id):
             "actuator_request_type": {
                 "node_controller": {
                     "node_request": resource_type,
-                    "resource": resource_id
+                    "resource": instance_id
                 }
             }
         }

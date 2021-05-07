@@ -127,7 +127,7 @@ class SSPLDevDeploy:
         if rc != 0:
             raise DeployError(rc, "%s - %s CMD: %s",
                 out, "Unable to remove kafka.rpm. Cleanup failed.", cmd)
-        cmd = "rm -rf /tmp/kafka-logs /opt/kafka /var/lib/zookeeper /var/lib/kafka-logs"
+        cmd = "rm -rf /tmp/kafka-logs /tmp/zookeeper /opt/kafka /var/lib/zookeeper /var/lib/kafka-logs"
         self._execute_cmd(cmd)
         cmd = "yum --setopt=tsflags=noscripts erase -y cortx-sspl.noarch"
         out, rc = self._execute_cmd(cmd)
