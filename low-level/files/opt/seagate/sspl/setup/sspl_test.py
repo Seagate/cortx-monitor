@@ -21,6 +21,7 @@ from cortx.utils.conf_store import Conf
 from cortx.utils.service import DbusServiceHandler
 from cortx.utils.validator.v_pkg import PkgV
 from .conf_based_sensors_enable import update_sensor_info
+from files.opt.seagate.sspl.setup.setup_logger import logger
 from framework.utils.utility import Utility
 from framework.base.sspl_constants import (PRODUCT_FAMILY, sspl_config_path,
     sspl_test_file_path, sspl_test_config_path, global_config_path,
@@ -117,9 +118,10 @@ class SSPLTestCmd:
             cmd = f"chmod +x {service_executable_code_des}/dummy_service.py"
             _, error, returncode = SimpleProcess(cmd).run()
             if returncode !=0:
-                print("%s error occurred while executing cmd: %s" %(error, cmd))
-                print("failed to assign execute permission for dummy_service.py."\
-                        " dummy_service will fail.")
+                logger.error("%s error occurred while executing cmd: %s"
+                                  %(error, cmd))
+                logger.error("failed to assign execute permission for"
+                "dummy_service.py. dummy_service will fail.")
 
             # Copy service file to /etc/systemd/system/ path.
             shutil.copyfile(service_file_path_src,
@@ -127,8 +129,9 @@ class SSPLTestCmd:
             cmd= "systemctl daemon-reload"
             _, error, returncode = SimpleProcess(cmd).run()
             if returncode !=0:
-                    print(f"failed to execute '{cmd}', systemctl will be unable"\
-                        f" to manage the dummy_service.service \nError: {error}")
+                    logger.error(f"failed to execute '{cmd}',"
+                    "systemctl will be unable to manage the dummy_service.service"
+                    f"\nError: {error}")
 
             self.dbus_service.enable(service_name)
             self.dbus_service.start(service_name)
@@ -154,6 +157,7 @@ class SSPLTestCmd:
             except KeyboardInterrupt:
                 rc = 1
                 error = "KeyboardInterrupt occurred while executing sspl test."
+                logger.error("%s - ERROR: %s - CMD %s" % (self.name, error, CMD))
             # Restore the original path/file & service, then throw exception
             # if execution is failed.
             service_list.remove(service_name)
@@ -175,9 +179,13 @@ class SSPLTestCmd:
                 CMD = "%s/run_qa_test.sh %s %s" % (TEST_DIR, self.plan, self.avoid_rmq)
                 output, error, returncode = SimpleProcess(CMD).run(realtime_output=True)
             except KeyboardInterrupt:
-                raise TestException("KeyboardInterrupt occurred while executing sspl test.")
+                msg = "KeyboardInterrupt occurred while executing sspl test."
+                logger.error(msg)
+                raise TestException(msg)
             except Exception as error:
-                raise TestException("Error occurred while executing self test: %s" %error)
+                msg = "Error occurred while executing self test: %s" % error
+                logger.error(msg)
+                raise TestException(msg)
 
 class TestException(Exception):
     def __init__(self, message):

@@ -11,7 +11,7 @@ from cortx.utils.process import SimpleProcess
 from cortx.utils.service import DbusServiceHandler
 from cortx.utils.conf_store import Conf
 from files.opt.seagate.sspl.setup.setup_error import SetupError
-
+from files.opt.seagate.sspl.setup.setup_logger import logger
 
 class HardReset:
     """Performs SSPL Hard reset.
@@ -42,7 +42,9 @@ class HardReset:
         CMD = "id -u sspl-ll"
         output, error, returncode = SimpleProcess(CMD).run()
         if returncode != 0:
-            raise SetupError(returncode, "ERROR: %s - CMD %s", error, CMD)
+            msg = "ERROR: %s - CMD %s" % (error, CMD)
+            logger.error(msg)
+            raise SetupError(returncode, msg)
         else:
             self.user_present=True
 
@@ -50,7 +52,9 @@ class HardReset:
             CMD="/usr/sbin/userdel sspl-ll"
             output, error, returncode = SimpleProcess(CMD).run()
             if returncode != 0:
-                raise SetupError(returncode, "ERROR: %s - CMD %s", error, CMD)
+                msg = "ERROR: %s - CMD %s" % (error, CMD)
+                logger.error(msg)
+                raise SetupError(returncode, msg)
 
         # Remove log directories
         shutil.rmtree(f"/var/log/{PRODUCT_FAMILY}/sspl", ignore_errors=True)
