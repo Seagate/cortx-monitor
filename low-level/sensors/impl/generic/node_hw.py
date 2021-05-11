@@ -178,6 +178,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
             # to test the current sensor
             # self.TYPE_CURRENT: self._parse_current_info,
         }
+        self.faulty_resources = {}
 
         # Flag to indicate suspension of module
         self._suspended = False
@@ -480,6 +481,63 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
             logger.warning(f"{self.SENSOR_NAME} Node hw monitoring disabled")
             self.shutdown()
 
+    def _check_faulty_resource_status(self):
+        # Currently, the SSPL sensor relies on IPMI SEL events to track server
+        # resources fault & recovery. However, its been observed multiple times
+        # with Supermicro servers, that SEL not getting updated in case recoveries
+        # of some resources.
+        # here we are polling resources that are detected to be faulty or missing
+        # periodically, in addition to current polling for SEL.
+
+        # Copying object to avoid RuntimeError: dictionary changed size during iteration
+        faulty_res = self.faulty_resources.copy()
+        for sensor_id in faulty_res:
+            dynamic, static = self._get_sensor_sdr_props(sensor_id)
+            if dynamic and 'States Asserted' in dynamic:
+                #  'States Asserted': 'Power Supply, Presence detected'
+                resource_state = re.sub(',  +', ', ', re.sub('[\[\]]','',
+                    dynamic['States Asserted']).replace('\n',','))
+                sensor_status = resource_state.split(',')
+                sensor_status = sensor_status[0] if len(sensor_status) == 1 \
+                    else sensor_status[1]
+                sensor_status = sensor_status.strip()
+                if sensor_status in ["", "Presence detected"]:
+                    self._generate_resource_alert(sensor_id, faulty_res)
+            elif static and 'Assertion Events' in static \
+                and 'Status' in static:
+                # 'Status': 'ok'
+                # 'Assertion Events': ''
+                if static['Assertion Events'] in [""] \
+                    and static['Status'] == 'ok':
+                    self._generate_resource_alert(sensor_id, faulty_res)
+        del faulty_res
+
+    def _generate_resource_alert(self, sensor_id, faulty_res):
+        status = faulty_res[sensor_id]['status'].lower()
+        status = 'Deasserted' if status == 'asserted' else 'Asserted'
+        event = faulty_res[sensor_id]['event']
+        if event.lower().endswith(("going high", "going low")):
+            threshold_old = event.split(" ")[-1]
+            threshold_new = ' high' if threshold_old == 'low' else ' low'
+            event = event.replace(f" {threshold_old}", threshold_new)
+        date_time = time.strftime("%m/%d/%Y | %H:%M:%S")
+        device_id = faulty_res[sensor_id]['device_id']
+        # 2 | 04/16/2019 | 05:29:09 | Fan #0x30 | Lower Non-critical going low  | Asserted
+        sel_line = f"0 | {date_time} | {device_id} | {event} | {status}"
+        is_last = True
+        index, date, event_time, device_id, device_type, sensor_num, event, \
+            status = self._make_sel_event(sel_line)
+        logger.warn("Found missing entry in the ipmitool sel list for %s resource."
+            " Generating resource alert manually" % (sensor_id))
+        try:
+            self.fru_types[faulty_res[sensor_id]['fru_type']](index,
+                date, event_time, device_id, sensor_num, event, status, is_last)
+        except KeyError:
+            logger.warn(f"Sensor {sensor_num} for {device_type} is not present, ignoring event")
+        except Exception as e:
+            logger.error(f"_generate_resource_alert, error {e} while processing \
+                sel_event: {(index, date, event_time, device_id, device_type, sensor_num, event, status)}, ignoring event")
+
     def _get_sel_event(self):
         last_index = self._read_index_file()
 
@@ -554,6 +612,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
 
         if last_index is not None:
             self._write_index_file(last_index)
+        self._check_faulty_resource_status()
         self.list_file.seek(0)
         self.list_file.truncate()
 
@@ -912,6 +971,10 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         event = event.strip()
         status = status.strip()
 
+        # Ensure that event and status are unchanged for next use.
+        original_event = event
+        original_status = status
+
         if status.lower() == "deasserted" and event.lower() == "fully redundant":
             alert_type = "fault"
         elif status.lower() == "asserted" and event.lower() == "fully redundant":
@@ -958,6 +1021,16 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         if is_last:
             fan_info.update(fan_specific_data_dynamic)
 
+        if alert_type == "fault":
+            self.faulty_resources[sensor_name] = {
+                'status': original_status,
+                'event': original_event,
+                'device_id': device_id,
+                'fru_type': self.TYPE_FAN
+            }
+        elif alert_type in ['fault_resolved', 'miscellaneous'] and sensor_name in self.faulty_resources:
+            del self.faulty_resources[sensor_name]
+
         self._send_json_msg(resource_type, alert_type, severity, fru_info, fan_info)
         self._log_IEM(resource_type, alert_type, severity, fru_info, fan_info)
 
@@ -977,8 +1050,12 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
             ("Power Supply Inactive", "Deasserted"): ("fault_resolved","informational"),
             ("Predictive failure", "Asserted"): ("fault","warning"),
             ("Predictive failure", "Deasserted"): ("fault_resolved","informational"),
+            ("Predictive failure ()", "Asserted"): ("fault","warning"),
+            ("Predictive failure ()", "Deasserted"): ("fault_resolved","informational"),
             ("Presence detected", "Asserted"): ("insertion","informational"),
             ("Presence detected", "Deasserted"): ("missing","critical"),
+            ("Presence detected ()", "Asserted"): ("insertion","informational"),
+            ("Presence detected ()", "Deasserted"): ("missing","critical"),
         }
 
         sensor_id = self.sensor_id_map[self.TYPE_PSU_SUPPLY][sensor_num]
@@ -1017,6 +1094,17 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         if is_last:
             specific_info.update(dynamic)
 
+        if alert_type in ["fault", "missing"]:
+            self.faulty_resources[sensor_id] = {
+                'status': status,
+                'event': event,
+                'device_id': sensor,
+                'fru_type': self.TYPE_PSU_SUPPLY
+            }
+        elif alert_type in ['fault_resolved', 'miscellaneous', 'insertion'] and \
+            sensor_id in self.faulty_resources:
+            del self.faulty_resources[sensor_id]
+
         self._send_json_msg(resource_type, alert_type, severity, info, specific_info)
         self._log_IEM(resource_type, alert_type, severity, info, specific_info)
 
@@ -1031,6 +1119,8 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
             ("AC lost", "Deasserted"): ("fault_resolved", "informational"),
             ("Failure detected", "Asserted"): ("fault", "critical"),
             ("Failure detected", "Deasserted"): ("fault_resolved", "informational"),
+            ("Failure detected ()", "Asserted"): ("fault", "critical"),
+            ("Failure detected ()", "Deasserted"): ("fault_resolved", "informational"),
             ("Power off/down", "Asserted"): ("fault", "critical"),
             ("Power off/down", "Deasserted"): ("fault_resolved", "informational"),
             ("Soft-power control failure", "Asserted"): ("fault", "warning"),
@@ -1093,6 +1183,16 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         if is_last:
             specific_info.update(dynamic)
 
+        if alert_type == "fault":
+            self.faulty_resources[sensor_id] = {
+                'status': status,
+                'event': event,
+                'device_id': sensor,
+                'fru_type': self.TYPE_PSU_UNIT
+            }
+        elif alert_type in ['fault_resolved', 'miscellaneous'] and sensor_id in self.faulty_resources:
+            del self.faulty_resources[sensor_id]
+
         self._send_json_msg(resource_type, alert_type, severity, info, specific_info)
         self._log_IEM(resource_type, alert_type, severity, info, specific_info)
 
@@ -1146,6 +1246,17 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
                 except KeyError:
                     pass
 
+            if alert_type in ["fault", "missing"]:
+                self.faulty_resources[sensor_id] = {
+                    'status': status,
+                    'event': event,
+                    'device_id': sensor,
+                    'fru_type': self.TYPE_DISK
+                }
+            elif alert_type in ['fault_resolved', 'miscellaneous', 'insertion'] and \
+                sensor_id in self.faulty_resources:
+                del self.faulty_resources[sensor_id]
+
             self._send_json_msg(resource_type, alert_type, severity, info, specific_info)
             self._log_IEM(resource_type, alert_type, severity, info, specific_info)
 
@@ -1160,7 +1271,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         if alert_type:
             severity_reader = SeverityReader()
             severity = severity_reader.map_severity(alert_type)
-            if threshold.lower() in ['low', 'high'] and status.lower == "deasserted":
+            if threshold.lower() in ['low', 'high'] and status.lower() == "deasserted":
                 severity = "informational"
         else:
             alert_type = "miscellaneous"
@@ -1186,6 +1297,18 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
             "event_time": self._get_epoch_time_from_date_and_time(date, _time),
             "description": event
         }
+
+        if (threshold.lower() in ['low', 'high'] and status.lower() == "asserted"):
+            self.faulty_resources[sensor_name] = {
+                'status': status,
+                'event': event,
+                'device_id': sensor,
+                'fru_type': self.TYPE_TEMPERATURE
+            }
+        elif (alert_type in ['fault_resolved', 'miscellaneous'] or \
+            (threshold.lower() in ['low', 'high'] and status.lower() == "deasserted")) \
+                and sensor_name in self.faulty_resources:
+            del self.faulty_resources[sensor_name]
 
         self._send_json_msg(resource_type, alert_type, severity, info, specific_info)
         self._log_IEM(resource_type, alert_type, severity, info, specific_info)
@@ -1201,7 +1324,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         if alert_type:
             severity_reader = SeverityReader()
             severity = severity_reader.map_severity(alert_type)
-            if threshold.lower() in ['low', 'high'] and status.lower == "deasserted":
+            if threshold.lower() in ['low', 'high'] and status.lower() == "deasserted":
                 severity = "informational"
         else:
             alert_type = "miscellaneous"
@@ -1227,6 +1350,18 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
             "event_time": self._get_epoch_time_from_date_and_time(date, _time),
             "description": event
         }
+
+        if (threshold.lower() in ['low', 'high'] and status.lower() == "asserted"):
+            self.faulty_resources[sensor_name] = {
+                'status': status,
+                'event': event,
+                'device_id': sensor,
+                'fru_type': self.TYPE_VOLTAGE
+            }
+        elif (alert_type in ['fault_resolved', 'miscellaneous'] or \
+            (threshold.lower() in ['low', 'high'] and status.lower() == "deasserted")) \
+                and sensor_name in self.faulty_resources:
+            del self.faulty_resources[sensor_name]
 
         self._send_json_msg(resource_type, alert_type, severity, info, specific_info)
         self._log_IEM(resource_type, alert_type, severity, info, specific_info)
