@@ -24,6 +24,7 @@ import socket
 from framework.utils.conf_utils import (
     Conf, SSPL_CONF, GLOBAL_CONF, MACHINE_ID, BMC_IP_KEY,
     BMC_USER_KEY, BMC_SECRET_KEY)
+from alerts.self_hw.self_hw_utilities import get_manufacturer_name
 from cortx.utils.process import SimpleProcess
 from cortx.utils.security.cipher import Cipher
 from cortx.utils.validator.v_bmc import BmcV
@@ -111,8 +112,58 @@ def test_bmc_is_accessible(args):
         if res_rc != 0:
             raise Exception("ERROR: %s" % res_err.decode())
 
+def test_chassis_selftest(args):
+    """Check chassis selttestsel is passed."""
+    cmd = "ipmitool chassis selftest"
+    expected_res = "Self Test Results    : passed"
+    res_op, res_err, res_rc = SimpleProcess(cmd).run()
+    if res_rc == 0:
+        res_op = res_op.decode()
+        if expected_res not in res_op:
+            assert False, res_op
+    else:
+        raise Exception("ERROR: %s" % res_err.decode())
+
+def test_sensor_availability(args):
+    """Fail if any expected sensor is not detected by ipmitool."""
+    found_all_sensors = True
+    sensors = [
+        "Voltage",
+        "Temperature",
+        "Power Supply",
+        "Drive Slot / Bay",
+        "Fan"
+        ]
+    # Get manufacturer name
+    manufacturer = get_manufacturer_name()
+    for sensor in sensors:
+        cmd = ["ipmitool", "sdr", "type", sensor]
+        res_op, res_err, res_rc = SimpleProcess(cmd).run()
+        if res_rc == 0:
+            res_op = res_op.decode().replace("\n", "")
+            if not res_op:
+                found_all_sensors = False
+                print(
+                    "'%s' sensor is not seen in %s node server." % (
+                        sensor, manufacturer))
+        else:
+            raise Exception("ERROR: %s" % res_err.decode())
+    assert found_all_sensors == True
+
+def test_ipmitool_sel_accessibility(args):
+    """Check sel list is accessible."""
+    sel_command = "ipmitool sel list"
+    _, res_err, res_rc = SimpleProcess(sel_command).run()
+    if res_rc != 0:
+        res_err = res_err.decode()
+        assert False, "CMD failure: %s" % res_err
+
+
 test_list = [
     test_bmc_config,
     test_bmc_firmware_version,
-    test_bmc_is_accessible
+    test_bmc_is_accessible,
+    test_chassis_selftest,
+    test_sensor_availability,
+    test_ipmitool_sel_accessibility
     ]

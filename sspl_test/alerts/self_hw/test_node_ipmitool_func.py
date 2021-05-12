@@ -20,7 +20,6 @@
 import re
 
 from cortx.utils.process import SimpleProcess
-from alerts.self_hw.self_hw_utilities import get_manufacturer_name
 
 
 IPMITOOL_VERSION = "ipmitool version"
@@ -51,6 +50,8 @@ def test_ipmitool_version(args):
         print("Expected: %s" % REQUIRED_IPMITOOL_VERSION)
         print("Found: %s" % version_found)
 
+def test_sel_version(args):
+    """Check for expected IPMI v2 compliant."""
     # Check IPMI SEL compliance is >= v2
     sel_ver_cmd = "ipmitool sel info"   # Version : 1.5 (v1.5, v2 compliant)
     res_op, res_err, res_rc = SimpleProcess(sel_ver_cmd).run()
@@ -69,42 +70,7 @@ def test_ipmitool_version(args):
     else:
         raise Exception("ERROR: %s" % res_err.decode())
 
-def test_sensor_availability(args):
-    """Fail if any expected sensor is not detected by ipmitool."""
-    found_all_sensors = True
-    sensors = [
-        "Voltage",
-        "Temperature",
-        "Power Supply",
-        "Drive Slot / Bay",
-        "Fan"
-        ]
-    # Get manufacturer name
-    manufacturer = get_manufacturer_name()
-    for sensor in sensors:
-        cmd = ["ipmitool", "sdr", "type", sensor]
-        res_op, res_err, res_rc = SimpleProcess(cmd).run()
-        if res_rc == 0:
-            res_op = res_op.decode().replace("\n", "")
-            if not res_op:
-                found_all_sensors = False
-                print(
-                    "'%s' sensor is not seen in %s node server." % (
-                        sensor, manufacturer))
-        else:
-            raise Exception("ERROR: %s" % res_err.decode())
-    assert found_all_sensors == True
-
-def test_ipmitool_sel_accessibility(args):
-    """Check sel list is accessible."""
-    sel_command = "ipmitool sel list"
-    res_op, _, res_rc = SimpleProcess(sel_command).run()
-    if res_rc != 0:
-        res_op = res_op.decode()
-
-
 test_list = [
     test_ipmitool_version,
-    test_sensor_availability,
-    test_ipmitool_sel_accessibility
+    test_sel_version
     ]
