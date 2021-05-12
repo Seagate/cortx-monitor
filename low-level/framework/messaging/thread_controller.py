@@ -30,7 +30,7 @@ from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.module_thread import (ScheduledModuleThread, SensorThread,
     SensorThreadState)
 from framework.base.sspl_constants import (OperatingSystem, cs_legacy_products,
-    cs_products, enabled_products, sspl_settings_configured_groups)
+    cs_products, enabled_products)
 from framework.messaging.logging_processor import LoggingProcessor
 # Import modules to control
 from framework.messaging.egress_processor import \
