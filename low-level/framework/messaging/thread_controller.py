@@ -28,11 +28,9 @@ from threading import Thread
 
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.module_thread import (ScheduledModuleThread, SensorThread,
-                                          SensorThreadState)
-from framework.base.sspl_constants import (SSPL_SETTINGS, OperatingSystem,
-                                           cs_legacy_products, cs_products,
-                                           enabled_products,
-                                           sspl_settings_configured_groups)
+    SensorThreadState)
+from framework.base.sspl_constants import (OperatingSystem, cs_legacy_products,
+    cs_products, enabled_products, sspl_settings_configured_groups)
 from framework.messaging.logging_processor import LoggingProcessor
 # Import modules to control
 from framework.messaging.egress_processor import \
@@ -134,9 +132,7 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
 
         # Initialize internal message queues for this module
         super(ThreadController, self).initialize_msgQ(msgQlist)
-        self._modules_to_resume = []
-        for group in sspl_settings_configured_groups:
-            self._modules_to_resume.extend(SSPL_SETTINGS[group].get("DEGRADED_STATE_MODULES"))
+        self._modules_to_resume = self._get_degraded_state_modules_list()
 
     def initialize_thread_list(self, sspl_modules, operating_system, product,
                                systemd_support):
@@ -480,7 +476,9 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
         modules_to_resume = []
         try:
             # Read list of modules from conf file to load in degraded mode
-            modules_to_resume = Conf.get(SSPL_CONF, f"{self.SSPL_SETTING}>{self.DEGRADED_STATE_MODULES}")
+            modules_to_resume = Conf.get(SSPL_CONF,
+                f"{self.SSPL_SETTING}>{self.DEGRADED_STATE_MODULES}", [])
         except Exception as e:
-            logger.warn("ThreadController: Configuration not found, degraded_state_modules")
+            logger.warn("ThreadController: Configuration not found,"
+                "degraded_state_modules")
         return modules_to_resume

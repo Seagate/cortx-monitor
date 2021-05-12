@@ -42,10 +42,8 @@ from actuators.impl.actuator import Actuator
 from framework.actuator_state_manager import actuator_state_manager
 from framework.base.module_thread import SensorThread
 from framework.base.sspl_constants import (COMMON_CONFIGS, PRODUCT_FAMILY,
-                                           SSPL_SETTINGS, OperatingSystem,
-                                           enabled_products,
-                                           sspl_settings_configured_groups,
-                                           SYSLOG_HOST, SYSLOG_PORT)
+    OperatingSystem, enabled_products, sspl_settings_configured_groups,
+    SYSLOG_HOST, SYSLOG_PORT)
 from framework.messaging.logging_processor import LoggingProcessor
 from framework.messaging.egress_accumulated_msgs_processor import \
     EgressAccumulatedMsgsProcessor
@@ -56,11 +54,9 @@ from framework.messaging.ingress_processor import \
     IngressProcessor
 from framework.messaging.thread_controller import ThreadController
 from framework.utils.conf_utils import (GLOBAL_CONF, HOST, MONITOR,
-                                        OPERATING_SYSTEM, PORT, PRODUCT,
-                                        RELEASE, RSYSLOG, SETUP, SRVNODE,
-                                        SSPL_CONF, SYSTEM_INFORMATION,
-                                        THREADED, Conf, LOG_LEVEL,
-                                        PRODUCT_KEY, SETUP_KEY)
+    OPERATING_SYSTEM, PORT, PRODUCT, RELEASE, RSYSLOG, SETUP, SRVNODE,
+    SSPL_CONF, SYSTEM_INFORMATION, THREADED, Conf, LOG_LEVEL,
+    PRODUCT_KEY, SETUP_KEY)
 from framework.utils.config_reader import ConfigReader
 from framework.utils.service_logging import init_logging, logger
 from framework.utils.store_factory import store
@@ -81,12 +77,15 @@ from framework.base.module_thread import ThreadException
 #DO NOT EDIT: Marker comment to dynamically add code to initialize coverage obj for code coverage report generation
 
 # Section and key in config file for bootstrap
-SSPL_SETTING    = 'SSPL-LL_SETTING'
+SSPL_SETTING    = 'SSPL_LL_SETTING'
 CORE_PROCESSORS = 'core_processors'
 MSG_HANDLERS    = 'message_handlers'
 SENSORS         = 'sensors'
 ACTUATORS       = 'actuators'
 DEGRADED_STATE_MODULES = 'degraded_state_modules'
+ENV_BASED_SENSORS = 'ENV_BASED_SENSORS'
+ALWAYS_ENABLE_SENSORS = 'ALWAYS_ENABLE_SENSORS'
+REALSTORSENSORS = 'REALSTORSENSORS'
 
 # State file
 STATE_FILE =  f"/var/{PRODUCT_FAMILY}/sspl/data/state.txt"
@@ -284,30 +283,29 @@ def main(conf_reader, systemd_support):
         _dropPrivileges("sspl-ll")
 
     global sspl_settings_configured_groups
-    sspl_settings_configured_groups |= SSPL_SETTINGS.keys()
+    env_based_sensors = Conf.get(SSPL_CONF,
+        f'{SSPL_SETTING}>{ENV_BASED_SENSORS}', [])
+    sspl_settings_configured_groups |= set(env_based_sensors)
 
     conf_reader = ConfigReader()
-    for group in SSPL_SETTINGS.keys():
+    for group in env_based_sensors:
         monitor = Conf.get(SSPL_CONF, f"{group}>{MONITOR}", 'true')
         if monitor not in ['true', True]:
             sspl_settings_configured_groups -= {group}
 
 
     # List of modules to run in degraded mode
-    modules_to_resume = []
     try:
         # Read list of modules from conf file to load in degraded mode
-        for group in sspl_settings_configured_groups:
-            modules_to_resume.extend(SSPL_SETTINGS[group].get("DEGRADED_STATE_MODULES"))
+        modules_to_resume = Conf.get(SSPL_CONF,
+            f'{SSPL_SETTING}>{DEGRADED_STATE_MODULES}', [])
     except Exception as e:
         logger.warn("Configuration not found: degraded_state_modules")
         modules_to_resume = []
     logger.info("modules_to_resume: {0}".format(str(modules_to_resume)))
 
     # Use reflection to instantiate the classes based upon its class name in config file
-    core_processors = []
-    for group in sspl_settings_configured_groups:
-        core_processors.extend(SSPL_SETTINGS[group].get("CORE_PROCESSORS"))
+    core_processors = Conf.get(SSPL_CONF, f'{SSPL_SETTING}>{CORE_PROCESSORS}', [])
     logger.info("sspl-ll Bootstrap: core processors to load: %s" % (core_processors, ))
     for core_processor in core_processors:
         klass = globals()[core_processor]
@@ -320,9 +318,7 @@ def main(conf_reader, systemd_support):
     sspl_threaded_modules[EgressAccumulatedMsgsProcessor] = EgressAccumulatedMsgsProcessor()
     msgQlist[EgressAccumulatedMsgsProcessor.name()] = queue.Queue()
 
-    message_handlers = []
-    for group in sspl_settings_configured_groups:
-        message_handlers.extend(SSPL_SETTINGS[group].get("MESSAGE_HANDLERS"))
+    message_handlers = Conf.get(SSPL_CONF, f'{SSPL_SETTING}>{MSG_HANDLERS}', [])
     logger.info("sspl-ll Bootstrap: message handlers to load: %s" % (message_handlers, ))
 
     for message_handler in message_handlers:
@@ -422,14 +418,23 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist, operating_system
 
     # Read in list of sensors
     sensors = []
-    for group in sspl_settings_configured_groups:
-        sensors.extend(SSPL_SETTINGS[group].get("SENSORS"))
+    sensors_list = Conf.get(SSPL_CONF, f'{SSPL_SETTING}>{SENSORS}', [])
+    always_enable_sensors = Conf.get(SSPL_CONF,
+        f'{SSPL_SETTING}>{ALWAYS_ENABLE_SENSORS}', [])
+    for sensor in sensors_list:
+        # to start sensor thread add sensor into sensors list only if it is
+        # present in alywas_enable_list or if it is present in
+        # sspl_configured_groups.
+        if (sensor.startswith('RealStor') and
+            REALSTORSENSORS in sspl_settings_configured_groups):
+            sensors.append(sensor)
+        elif (sensor.upper() in sspl_settings_configured_groups or
+            sensor in always_enable_sensors):
+            sensors.append(sensor)
     logger.info("sspl-ll Bootstrap: sensors to load: %s" % (sensors, ))
 
     # Read in list of actuators
-    actuators = []
-    for group in sspl_settings_configured_groups:
-        actuators.extend(SSPL_SETTINGS[group].get("ACTUATORS"))
+    actuators = Conf.get(SSPL_CONF, f'{SSPL_SETTING}>{ACTUATORS}', [])
     if setup in ['gw', 'cmu', 'vm'] and 'HPIactuator' in actuators:
         actuators.remove('HPIactuator')
     logger.info("sspl-ll Bootstrap: actuators to load: %s" % (actuators, ))

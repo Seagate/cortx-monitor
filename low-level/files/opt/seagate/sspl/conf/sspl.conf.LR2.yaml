@@ -55,23 +55,19 @@ SSPL_LL_SETTING:
       - Smartctl
       - NodeHWactuator
       - RealStorActuator
-   degraded_state_modules:
-      - DiskMonitor
-      - ServiceMonitor
-      - RAIDsensor
-      - RAIDIntegritySensor
+   ALWAYS_ENABLE_SENSORS:
       - NodeData
       - IEMSensor
-      - NodeHWsensor
-      - DiskMsgHandler
-      - LoggingMsgHandler
-      - ServiceMsgHandler
-      - NodeDataMsgHandler
-      - NodeControllerMsgHandler
-      - RealStorActuatorMsgHandler
-      - SASPortSensor
-      - MemFaultSensor
-      - CPUFaultSensor
+      - ServiceMonitor
+   ENV_BASED_SENSORS:
+      - REALSTORSENSORS
+      - NODEHWSENSOR
+      - DISKMONITOR
+      - RAIDSENSOR
+      - RAIDINTEGRITYSENSOR
+      - MEMFAULTSENSOR
+      - SASPORTSENSOR
+      - CPUFAULTSENSOR
 
 INGRESSPROCESSOR:
    consumer_id: sspl_actuator
