@@ -154,6 +154,7 @@ then
     then
     echo "VM detected."
     echo "ERROR: self or self_primary plan is intended to run on hardware setup."
+    exit 1
     fi
 fi
 
