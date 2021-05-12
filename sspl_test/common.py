@@ -193,7 +193,7 @@ def get_fru_response(resource_type, instance_id):
     sensor_msg = None
     for i in range(30):
         if world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
-            time.sleep(1)
+            time.sleep(2)
         while not world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
             ingressMsg = world.sspl_modules[IngressProcessorTests.name()]._read_my_msgQ()
             time.sleep(0.1)
@@ -207,7 +207,6 @@ def get_fru_response(resource_type, instance_id):
                     sensor_msg = msg_type
                     break
             except Exception as exception:
-                time.sleep(0.1)
                 print(exception)
         if sensor_msg:
             break
