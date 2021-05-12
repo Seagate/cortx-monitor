@@ -65,7 +65,7 @@ def test_ipmitool_version(args):
                 print("IPMI IS NOT V2 COMPLIANT.")
                 print("Minimum required ipmi version: %s" % MIN_REQUIRED_SEL_VERSION)
                 print("Found: %s" % search_res.groups()[1])
-                assert(False)
+                assert False
     else:
         raise Exception("ERROR: %s" % res_err.decode())
 
@@ -93,7 +93,7 @@ def test_sensor_availability(args):
                         sensor, manufacturer))
         else:
             raise Exception("ERROR: %s" % res_err.decode())
-    assert(found_all_sensors == True)
+    assert found_all_sensors == True
 
 def test_ipmitool_sel_accessibility(args):
     """Check sel list is accessible."""

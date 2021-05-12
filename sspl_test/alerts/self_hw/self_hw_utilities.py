@@ -49,7 +49,8 @@ def get_node_id():
 
 def get_manufacturer_name():
     """Returns node server manufacturer name.
-        Example: Supermicro, Intel Corporation, DELL Inc
+
+    Example: Supermicro, Intel Corporation, DELL Inc
     """
     manufacturer = ""
     cmd = "ipmitool bmc info"
