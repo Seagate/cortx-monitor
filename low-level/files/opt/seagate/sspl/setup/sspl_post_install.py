@@ -29,7 +29,6 @@ import distutils.dir_util
 # using cortx package
 from cortx.utils.conf_store import Conf
 from cortx.utils.process import SimpleProcess
-from cortx.utils.service import DbusServiceHandler
 from cortx.utils.validator.v_network import NetworkV
 from cortx.utils.validator.v_pkg import PkgV
 from cortx.utils.validator.v_service import ServiceV
@@ -48,7 +47,6 @@ class SSPLPostInstall:
         consts.SSPL_LOG_PATH = "/var/log/%s/sspl/" % consts.PRODUCT_FAMILY
         consts.SSPL_BUNDLE_PATH = "/var/%s/sspl/bundle/" % consts.PRODUCT_FAMILY
         self.state_file = "%s/state.txt" % consts.DATA_PATH
-        self.dbus_service = DbusServiceHandler()
 
     def validate(self):
         """Check below requirements are met in setup.
@@ -164,9 +162,16 @@ class SSPLPostInstall:
 
     def process(self):
         """Create SSPL user and required config files."""
+        # dbus module import is implicit in cortx utils. Keeping this
+        # after dependency validation will enrich the use of
+        # validate_dependencies() method.
+        from cortx.utils.service import DbusServiceHandler
+        self.dbus_service = DbusServiceHandler()
+
+        # Create and load sspl config
         self.create_sspl_conf()
-        # Load sspl config
         Conf.load(consts.SSPL_CONFIG_INDEX, consts.sspl_config_path)
+
         self.create_user()
         self.create_directories_and_ownership()
         self.configure_sspl_syslog()
@@ -300,8 +305,7 @@ class SSPLPostInstall:
         # here, there will be a chance that SSPL intial logs will not be present in
         # "/var/log/<product>/sspl/sspl.log" file. So, initial logs needs to be collected from
         # "/var/log/messages"
-        service = DbusServiceHandler()
-        service.restart('rsyslog.service')
+        self.dbus_service.restart('rsyslog.service')
 
     def install_sspl_service_files(self):
         """Copy service file to systemd location based on product."""
