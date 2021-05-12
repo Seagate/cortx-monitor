@@ -23,25 +23,27 @@ import time
 # Retrive show system cmd info
 import requests
 from cortx.utils.security.cipher import Cipher
+from cortx.utils.validator.v_controller import ControllerV
+from cortx.utils.validator.v_network import NetworkV
 from alerts.self_hw.self_hw_utilities import get_node_id
 from framework.utils.conf_utils import (GLOBAL_CONF, Conf,
     ENCLOSURE, CNTRLR_PRIMARY_IP_KEY,
     CNTRLR_PRIMARY_PORT_KEY, CNTRLR_SECONDARY_IP_KEY, CNTRLR_SECONDARY_PORT_KEY,
-    CNTRLR_USER_KEY, CNTRLR_SECRET_KEY)
-
-
-def gen_key(unique_seed, root_node):
-    ''' Generate key for decryption '''
-    key = Cipher.generate_key(unique_seed, root_node)
-    return key
-
-def decrypt(key, text):
-    ''' Decrypt the <text> '''
-    return Cipher.decrypt(key, text.encode("utf-8")).decode("utf-8")
+    CNTRLR_USER_KEY, CNTRLR_SECRET_KEY, ENCLOSURE)
+from framework.utils.encryptor import gen_key, decrypt
 
 login_headers = {'datatype':'json'}
 timeout = 20
 HTTP_OK = 200
+primary_ip = Conf.get(GLOBAL_CONF, CNTRLR_PRIMARY_IP_KEY)
+secondary_ip = Conf.get(GLOBAL_CONF, CNTRLR_SECONDARY_IP_KEY)
+primary_port = Conf.get(GLOBAL_CONF, CNTRLR_PRIMARY_PORT_KEY)
+secondary_port = Conf.get(GLOBAL_CONF, CNTRLR_SECONDARY_PORT_KEY)
+cntrlr_user = Conf.get(GLOBAL_CONF, CNTRLR_USER_KEY)
+cntrlr_secret = Conf.get(GLOBAL_CONF, CNTRLR_SECRET_KEY)
+cntrlr_key = gen_key(ENCLOSURE, "storage_enclosure")
+cntrlr_passwd = decrypt(cntrlr_key, cntrlr_secret)
+
 
 def show_system(ip, port, sessionKey):
     url = f"http://{ip}:{port}/api/show/system"
@@ -61,7 +63,7 @@ def show_system(ip, port, sessionKey):
         else:
             assert(False)
     except:
-        print("Show system failed.")
+        print("ERROR: Show system failed.")
         assert(False)
 
 def init(args):
@@ -69,22 +71,15 @@ def init(args):
 
 def test_self_hw_real_stor_enclosure_conn(args):
     # Default to srvnode-1
-    ip = Conf.get(GLOBAL_CONF, CNTRLR_PRIMARY_IP_KEY)
-    port = Conf.get(GLOBAL_CONF, CNTRLR_PRIMARY_PORT_KEY)
+    ip = primary_ip
+    port = primary_port
     if get_node_id() == "srvnode-2":
         # Update
-        ip = Conf.get(GLOBAL_CONF, CNTRLR_SECONDARY_IP_KEY)
-        port = Conf.get(GLOBAL_CONF, CNTRLR_SECONDARY_PORT_KEY)
-    username = Conf.get(GLOBAL_CONF, CNTRLR_USER_KEY)
-    passwd = Conf.get(GLOBAL_CONF, CNTRLR_SECRET_KEY)
-    try:
-        # decrypt the passwd
-        decryption_key = gen_key(ENCLOSURE, 'storage_enclosure')
-        passwd = decrypt(decryption_key, passwd)
-    except  Exception as e:
-        print(f"passwd decryption failed with error: {e}")
+        ip = secondary_ip
+        port = secondary_port
+
     # build url for primary
-    cli_api_auth = username + '_' + passwd
+    cli_api_auth = cntrlr_user + '_' + cntrlr_passwd
     auth_hash = hashlib.sha256(cli_api_auth.encode('utf-8')).hexdigest()
     url = f"http://{ip}:{port}/api/login/{auth_hash}"
 
@@ -110,4 +105,28 @@ def test_self_hw_real_stor_enclosure_conn(args):
         print(f"Login to enclosure failed : {e}")
         assert(False)
 
-test_list = [test_self_hw_real_stor_enclosure_conn]
+def test_controller_ip_reachability(args):
+    NetworkV().validate("connectivity", [primary_ip, secondary_ip])
+
+def test_controller_ip_accessibility(args):
+    c_validator = ControllerV()
+    c_validator.validate(
+        "accessible", [primary_ip, cntrlr_user, cntrlr_passwd])
+    c_validator.validate(
+        "accessible", [secondary_ip, cntrlr_user, cntrlr_passwd])
+
+def test_firmware_version_ok(args):
+    mc_expected = ["GN265", "GN280"]
+    c_validator = ControllerV()
+    c_validator.validate(
+        "firmware", [primary_ip, cntrlr_user, cntrlr_passwd, mc_expected])
+    c_validator.validate(
+        "firmware", [secondary_ip, cntrlr_user, cntrlr_passwd, mc_expected])
+
+
+test_list = [
+    test_self_hw_real_stor_enclosure_conn,
+    test_controller_ip_reachability,
+    test_controller_ip_accessibility,
+    test_firmware_version_ok
+    ]

@@ -46,6 +46,7 @@ class NodeHWactuator(Actuator, Debug):
         """ @return: name of the module."""
         return NodeHWactuator.ACTUATOR_NAME
 
+
     def __init__(self, executor, conf_reader):
         super(NodeHWactuator, self).__init__()
         self.host_id = socket.getfqdn()
@@ -108,15 +109,13 @@ class NodeHWactuator(Actuator, Debug):
             specific_info["resource_id"] = sensor_id
             specifics.append(specific_info)
 
-        if fru == "Power Supply":
+        if (fru == "Power Supply") or (fru == "Fan") or (fru == "Drive Slot / Bay"):
             for each in specifics:
                 if each.get('States Asserted'):
                     each['States Asserted'] = ' '.join(x.strip() for x in each['States Asserted'].split())
-
-        if (fru == "Fan") or (fru == "Drive Slot / Bay"):
-            for each in specifics:
-                if each.get('States Asserted'):
-                    each['States Asserted'] = ' '.join(x.strip() for x in each['States Asserted'].split())
+            if not specifics:
+                msg = list(self.sensor_id_map[fru.lower()].keys())[0]
+                specifics.append({"ERROR": msg})
 
         self.fru_specific_info = {}
         return specifics

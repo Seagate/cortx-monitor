@@ -14,40 +14,28 @@
 # cortx-questions@seagate.com.
 
 # -*- coding: utf-8 -*-
-import json
-import os
-import psutil
+
 import time
-import sys
-from alerts.self_hw.self_hw_utilities import run_cmd, is_virtual
 from default import world
 from messaging.ingress_processor_tests import IngressProcessorTests
 from messaging.egress_processor_tests import EgressProcessorTests
 from common import check_sspl_ll_is_running
 
 
-UUID="16476007-a739-4785-b5c6-f3de189cdf11"
-# Check which fans are OK
-test_resource = "*" # Use * if virtual machine
-result = run_cmd('ipmitool sdr type Fan')
-if result and not is_virtual():
-        for resource in result:
-            if 'ok' in resource.decode().lower():
-                # this is the first ok resource, use it in case of real HW
-                test_resource = resource.decode().split('|')[0].strip()
-                break
+UUID="16476007-a739-4785-b5c6-f3de189cdf12"
 
 def init(args):
     pass
 
 def test_node_fan_module_actuator(agrs):
     check_sspl_ll_is_running()
-    fan_actuator_message_request("NDHW:node:fru:fan", str(test_resource))
+    instance_id = "*"
+    fan_actuator_message_request("NDHW:node:fru:fan", instance_id)
     fan_module_actuator_msg = None
     ingressMsg = {}
-    for i in range(10):
+    for i in range(30):
         if world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
-            time.sleep(2)
+            time.sleep(1)
         while not world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
             ingressMsg = world.sspl_modules[IngressProcessorTests.name()]._read_my_msgQ()
             time.sleep(0.1)
@@ -55,18 +43,16 @@ def test_node_fan_module_actuator(agrs):
             try:
                 # Make sure we get back the message type that matches the request
                 msg_type = ingressMsg.get("actuator_response_type")
-                if msg_type["info"]["resource_type"] == "node:fru:fan"  and \
-                    msg_type["info"]["resource_id"] == test_resource:
-                    # Break if condition is met
+                if msg_type["info"]["resource_type"] == "node:fru:fan" and \
+                    msg_type["instance_id"] == instance_id:
+                    # Break if condition is satisfied.
                     fan_module_actuator_msg = msg_type
                     break
             except Exception as exception:
                 time.sleep(0.1)
                 print(exception)
-
         if fan_module_actuator_msg:
             break
-        time.sleep(1)
 
     assert(ingressMsg.get("sspl_ll_msg_header").get("uuid") == UUID)
 
@@ -83,63 +69,49 @@ def test_node_fan_module_actuator(agrs):
     assert(fan_module_info.get("rack_id") is not None)
     assert(fan_module_info.get("resource_type") is not None)
     assert(fan_module_info.get("event_time") is not None)
-    assert(fan_module_info.get("resource_id") is not None)
+    assert(fan_module_info.get("resource_id") == "*")
 
-    fru_specific_infos = fan_module_actuator_msg.get("specific_info", {})
+    fan_specific_infos = fan_module_actuator_msg.get("specific_info")
+    assert(fan_specific_infos is not None)
 
-    if fru_specific_infos and fan_module_info.get("resource_id") == "*":
-        for fru_specific_info in fru_specific_infos:
-            resource_id = fru_specific_info.get("resource_id")
-            if "Fan Fail" in resource_id:
-                assert(fru_specific_info.get("Sensor Type (Discrete)") is not None)
-                assert(fru_specific_info.get("resource_id") is not None)
-            elif "System Fan" in resource_id:
-                assert(fru_specific_info.get("Status") is not None)
-                assert(fru_specific_info.get("Sensor Type (Threshold)") is not None)
-                assert(fru_specific_info.get("Sensor Reading") is not None)
-                assert(fru_specific_info.get("Lower Non-Recoverable") is not None)
-                assert(fru_specific_info.get("Assertions Enabled") is not None)
-                assert(fru_specific_info.get("Upper Non-Critical") is not None)
-                assert(fru_specific_info.get("Upper Non-Recoverable") is not None)
-                assert(fru_specific_info.get("Positive Hysteresis") is not None)
-                assert(fru_specific_info.get("Lower Critical") is not None)
-                assert(fru_specific_info.get("Deassertions Enabled") is not None)
-                assert(fru_specific_info.get("Lower Non-Critical") is not None)
-                assert(fru_specific_info.get("Upper Critical") is not None)
-                assert(fru_specific_info.get("Negative Hysteresis") is not None)
-                assert(fru_specific_info.get("Assertion Events") is not None)
-                assert(fru_specific_info.get("resource_id") is not None)
-            else:
-                assert(fru_specific_info.get("States Asserted") is not None)
-                assert(fru_specific_info.get("Sensor Type (Discrete)") is not None)
-                assert(fru_specific_info.get("resource_id") is not None)
-    elif fru_specific_infos:
-        assert(fru_specific_infos.get("Sensor Type (Threshold)") is not None)
-        assert(fru_specific_infos.get("Sensor Reading") is not None)
-        assert(fru_specific_infos.get("Status") is not None)
-        assert(fru_specific_infos.get("Lower Non_Recoverable") is not None)
-        assert(fru_specific_infos.get("Lower Critical") is not None)
-        assert(fru_specific_infos.get("Lower Non_Critical") is not None)
-        assert(fru_specific_infos.get("Upper Non_Critical") is not None)
-        assert(fru_specific_infos.get("Upper Critical") is not None)
-        assert(fru_specific_infos.get("Upper Non_Recoverable") is not None)
-        assert(fru_specific_infos.get("Positive Hysteresis") is not None)
-        assert(fru_specific_infos.get("Negative Hysteresis") is not None)
-        assert(fru_specific_infos.get("Assertion Events") is not None)
-        assert(fru_specific_infos.get("Assertions Enabled") is not None)
-        assert(fru_specific_infos.get("Deassertions Enabled") is not None)
-        assert(fru_specific_infos.get("resource_id") is not None)
+    for fan_specific_info in fan_specific_infos:
+        assert(fan_specific_info is not None)
+        if fan_specific_info.get("ERROR"):
+            # Skip any validation on specific info if ERROR seen on FRU
+            continue
+        resource_id = fan_specific_info.get("resource_id", "")
+        if fan_specific_info.get(resource_id):
+            assert(fan_specific_info.get(resource_id).get("ERROR") is not None)
+            # Skip any validation on specific info if ERROR seen on sensor
+            continue
+        if "Fan Fail" in resource_id:
+            assert(fan_specific_info.get("Sensor Type (Discrete)") is not None)
+            assert(fan_specific_info.get("resource_id") is not None)
+        else:
+            assert(fan_specific_info.get("resource_id") is not None)
+            assert(fan_specific_info.get("Sensor Type (Threshold)") is not None)
+            assert(fan_specific_info.get("Sensor Reading") is not None)
+            assert(fan_specific_info.get("Status") is not None)
+            assert(fan_specific_info.get("Lower Non_Recoverable") is not None)
+            assert(fan_specific_info.get("Lower Critical") is not None)
+            assert(fan_specific_info.get("Lower Non_Critical") is not None)
+            assert(fan_specific_info.get("Upper Non_Critical") is not None)
+            assert(fan_specific_info.get("Upper Critical") is not None)
+            assert(fan_specific_info.get("Upper Non_Recoverable") is not None)
+            assert(fan_specific_info.get("Positive Hysteresis") is not None)
+            assert(fan_specific_info.get("Negative Hysteresis") is not None)
+            assert(fan_specific_info.get("Assertion Events") is not None)
+            assert(fan_specific_info.get("Assertions Enabled") is not None)
+            assert(fan_specific_info.get("Deassertions Enabled") is not None)
 
 def fan_actuator_message_request(resource_type, instance_id):
     egressMsg = {
         "title": "SSPL Actuator Request",
         "description": "Seagate Storage Platform Library - Actuator Request",
-
         "username" : "JohnDoe",
         "signature" : "None",
         "time" : "2015-05-29 14:28:30.974749",
         "expires" : 500,
-
         "message" : {
             "sspl_ll_msg_header": {
                 "schema_version": "1.0.0",
@@ -151,12 +123,6 @@ def fan_actuator_message_request(resource_type, instance_id):
                 "debug_component" : "sensor",
                 "debug_enabled" : True
             },
-            "request_path": {
-                "site_id": "1",
-                "rack_id": "1",
-                "node_id": "1"
-            },
-            "response_dest": {},
             "actuator_request_type": {
                 "node_controller": {
                     "node_request": resource_type,
