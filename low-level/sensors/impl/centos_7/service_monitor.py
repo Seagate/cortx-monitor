@@ -318,7 +318,8 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
             logger.info(f"Monitoring Services : {self.services.keys()}")
             if not self.services_to_monitor:
                 logger.info(
-                    "No service to monitor, shutting down".format(self.name()))
+                    "No service to monitor, shutting down {}".format(
+                        self.name()))
                 self.shutdown()
             # WHILE LOOP FUNCTION : every second we check for
             # properties change event if any generated (using context
