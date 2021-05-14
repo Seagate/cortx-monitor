@@ -425,6 +425,8 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist, operating_system
         # to start sensor thread add sensor into sensors list only if it is
         # present in alywas_enable_list or if it is present in
         # sspl_configured_groups.
+        # (sensor name present in sspl_configured_groups
+        # only if 'monitor' field value is True)
         if (sensor.startswith('RealStor') and
             REALSTORSENSORS in sspl_settings_configured_groups):
             sensors.append(sensor)
