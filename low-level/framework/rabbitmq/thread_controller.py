@@ -37,7 +37,8 @@ from framework.rabbitmq.rabbitmq_egress_processor import RabbitMQegressProcessor
 from framework.rabbitmq.rabbitmq_ingress_processor import RabbitMQingressProcessor
 from framework.rabbitmq.plane_cntrl_rmq_egress_processor import PlaneCntrlRMQegressProcessor
 from framework.rabbitmq.logging_processor import LoggingProcessor
-from framework.base.sspl_constants import enabled_products, cs_legacy_products, cs_products, OperatingSystem, SSPL_SETTINGS
+from framework.base.sspl_constants import (enabled_products, cs_legacy_products, cs_products,
+    OperatingSystem, file_store_config_path)
 
 # Note that all threaded message handlers must have an import here to be controlled
 from message_handlers.logging_msg_handler import LoggingMsgHandler
@@ -130,7 +131,7 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
 
         # Initialize internal message queues for this module
         super(ThreadController, self).initialize_msgQ(msgQlist)
-        self._modules_to_resume = list(SSPL_SETTINGS.get("DEGRADED_STATE_MODULES"))
+        self._modules_to_resume = self._get_degraded_state_modules_list()
 
     def initialize_thread_list(self, sspl_modules, operating_system, product,
                                systemd_support):
@@ -474,7 +475,9 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
         modules_to_resume = []
         try:
             # Read list of modules from conf file to load in degraded mode
-            modules_to_resume = self._conf_reader._get_value_list(self.SSPL_SETTING,
+            from framework.utils.config_reader import ConfigReader
+            read_sspl_conf_file = ConfigReader(is_test=True, test_config_path=file_store_config_path)
+            modules_to_resume = read_sspl_conf_file._get_value_list(self.SSPL_SETTING,
                                                           self.DEGRADED_STATE_MODULES)
         except Exception as e:
             logger.warn("ThreadController: Configuration not found, degraded_state_modules")

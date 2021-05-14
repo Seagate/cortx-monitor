@@ -87,20 +87,6 @@ else:
     except Exception as err:
         print(f'sspl_constants : Failed to read from SaltInterface due to error - {err}')
 
-SSPL_SETTINGS = {
-        "ACTUATORS" : ["Service", "RAIDactuator", "Smartctl", "NodeHWactuator", "RealStorActuator"],
-        "CORE_PROCESSORS" : ("RabbitMQegressProcessor", "RabbitMQingressProcessor", "LoggingProcessor"),
-        "DEGRADED_STATE_MODULES" : ("ServiceWatchdog", "RAIDsensor", "NodeData", "IEMSensor", "NodeHWsensor",
-                            "DiskMsgHandler", "LoggingMsgHandler", "ServiceMsgHandler", "NodeDataMsgHandler",
-                            "NodeControllerMsgHandler", "SASPortSensor", "MemFaultSensor", "CPUFaultSensor"),
-        "MESSAGE_HANDLERS" : ("DiskMsgHandler", "LoggingMsgHandler", "ServiceMsgHandler", "NodeDataMsgHandler",
-                        "NodeControllerMsgHandler", "RealStorEnclMsgHandler", "RealStorActuatorMsgHandler"),
-        "SENSORS" : ["ServiceWatchdog", "RAIDsensor", "NodeData", "RealStorFanSensor", "RealStorPSUSensor",
-            "RealStorControllerSensor", "RealStorDiskSensor", "RealStorSideplaneExpanderSensor",
-            "RealStorLogicalVolumeSensor", "IEMSensor", "NodeHWsensor", "RealStorEnclosureSensor",
-            "SASPortSensor", "MemFaultSensor", "CPUFaultSensor", "RAIDIntegritySensor"]
-}
-
 COMMON_CONFIGS = {
     "SYSTEM_INFORMATION": {
         "sspl_key" : "key_provided_by_provisioner",
