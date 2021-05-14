@@ -100,7 +100,7 @@ class DisabledState:
     @staticmethod
     def enter(service):
         logger.warning("{} service is disabled, it will not be "
-                    "monitored".format(service.name))
+                       "monitored".format(service.name))
         Service.inactive.discard(service.name)
         Service.monitoring_disabled.discard(service.name)
         if service.properties_changed_signal:
@@ -276,7 +276,7 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
                                              self.PRIORITY)
 
         self.services_to_monitor = set(Conf.get(
-            SSPL_CONF, f"{self.SERVICEMONITOR}>{self.MONITORED_SERVICES}"))
+            SSPL_CONF, f"{self.SERVICEMONITOR}>{self.MONITORED_SERVICES}", []))
 
         self.services = {}
 
@@ -301,9 +301,6 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
         # Initialize internal message queues for this module
         super(ServiceMonitor, self).initialize_msgQ(msgQlist)
 
-        if not self.services_to_monitor:
-            raise ValueError(
-                "No service to monitor, shutting down".format(self.name()))
         self.iem = Iem()
         self.iem.check_exsisting_fault_iems()
         self.KAFKA = self.iem.EVENT_CODE["KAFKA_ACTIVE"][1]
@@ -319,7 +316,10 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
 
         try:
             logger.info(f"Monitoring Services : {self.services.keys()}")
-
+            if not self.services_to_monitor:
+                logger.info(
+                    "No service to monitor, shutting down".format(self.name()))
+                self.shutdown()
             # WHILE LOOP FUNCTION : every second we check for
             # properties change event if any generated (using context
             # iteration) and after a delay of polling frequency we
@@ -423,8 +423,8 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
         """
         for service in Service.inactive.copy():
             if self.services[service].is_inactive_for_threshold_time():
-                self.raise_alert(self.services[service].name, FailedAlert)
                 self.services[service].new_service_state(FailedState)
+                self.raise_alert(self.services[service].name, FailedAlert)
 
     def raise_iem(self, service, alert_type):
         """Raise iem alert for kafka service."""
