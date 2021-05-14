@@ -202,7 +202,7 @@ SYSTEM_INFORMATION:
    log_level: INFO
    environment: PROD
    sysfs_base_path: /sys/
-
+   sspl_state: active
 
 # NOTE: Keys present in OBSOLETE section are out of date
 # and will be removed in furture version. Keys present in 

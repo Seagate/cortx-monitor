@@ -22,6 +22,7 @@ SYSTEM_INFORMATION:
     sspl_log_file_path: /var/log/cortx/sspl/sspl.log
     syslog_host: localhost
     syslog_port: 514
+    sspl_state: degrade
 
 INGRESSPROCESSOR:
    consumer_id: sspl_actuator

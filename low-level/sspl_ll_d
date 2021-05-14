@@ -55,7 +55,7 @@ from framework.messaging.thread_controller import ThreadController
 from framework.utils.conf_utils import (GLOBAL_CONF, HOST, MONITOR,
     OPERATING_SYSTEM, PORT, PRODUCT, RELEASE, RSYSLOG, SETUP, SRVNODE,
     SSPL_CONF, SYSTEM_INFORMATION, THREADED, Conf, LOG_LEVEL,
-    PRODUCT_KEY, SETUP_KEY)
+    PRODUCT_KEY, SETUP_KEY, SSPL_STATE)
 from framework.utils.config_reader import ConfigReader
 from framework.utils.service_logging import init_logging, logger
 from framework.utils.store_factory import store
@@ -87,7 +87,7 @@ REALSTORSENSORS = 'REALSTORSENSORS'
 # State file
 STATE_FILE =  f"/var/{PRODUCT_FAMILY}/sspl/data/state.txt"
 STATES = ["active", "degrade"]
-DEFAULT_STATE = "degrade"
+DEFAULT_STATE = Conf.get(SSPL_CONF, f"{SYSTEM_INFORMATION}>{SSPL_STATE}", "active")
 
 # Keys for state file
 STATE_KEY = "state" # Indicates desired state of SSPL to switch in
@@ -626,7 +626,7 @@ def signal_handler(signal_number, frame):
 
     try:
         entries = dict()
-        state = "active"
+        state = DEFAULT_STATE
         global sspl_role_state
         with open(STATE_FILE) as state_file:
 
