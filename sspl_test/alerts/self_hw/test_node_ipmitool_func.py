@@ -66,7 +66,7 @@ def test_sel_version(args):
                 print("IPMI IS NOT V2 COMPLIANT.")
                 print("Minimum required ipmi version: %s" % MIN_REQUIRED_SEL_VERSION)
                 print("Found: %s" % search_res.groups()[1])
-                assert False
+                assert(False)
     else:
         raise Exception("ERROR: %s" % res_err.decode())
 

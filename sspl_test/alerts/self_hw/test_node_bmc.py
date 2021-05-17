@@ -148,7 +148,7 @@ def test_sensor_availability(args):
                         sensor, manufacturer))
         else:
             raise Exception("ERROR: %s" % res_err.decode())
-    assert found_all_sensors == True
+    assert(found_all_sensors == True)
 
 def test_ipmitool_sel_accessibility(args):
     """Check sel list is accessible."""

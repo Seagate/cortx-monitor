@@ -30,41 +30,41 @@ def test_node_temperature_sensor(agrs):
     send_msg_request("NDHW:%s" % resource_type, instance_id)
     ingressMsg = get_fru_response(resource_type, instance_id)
 
-    assert ingressMsg.get("sspl_ll_msg_header").get("uuid") == UUID
+    assert(ingressMsg.get("sspl_ll_msg_header").get("uuid") == UUID)
     sensor_msg = ingressMsg.get("actuator_response_type")
-    assert sensor_msg is not None
-    assert sensor_msg.get("alert_type") is not None
-    assert sensor_msg.get("severity") is not None
-    assert sensor_msg.get("host_id") is not None
-    assert sensor_msg.get("info") is not None
-    assert sensor_msg.get("instance_id") == instance_id
+    assert(sensor_msg is not None)
+    assert(sensor_msg.get("alert_type") is not None)
+    assert(sensor_msg.get("severity") is not None)
+    assert(sensor_msg.get("host_id") is not None)
+    assert(sensor_msg.get("info") is not None)
+    assert(sensor_msg.get("instance_id") == instance_id)
 
     temp_module_info = sensor_msg.get("info")
-    assert temp_module_info.get("site_id") is not None
-    assert temp_module_info.get("node_id") is not None
-    assert temp_module_info.get("rack_id") is not None
-    assert temp_module_info.get("resource_type") is not None
-    assert temp_module_info.get("event_time") is not None
-    assert temp_module_info.get("resource_id") is not None
+    assert(temp_module_info.get("site_id") is not None)
+    assert(temp_module_info.get("node_id") is not None)
+    assert(temp_module_info.get("rack_id") is not None)
+    assert(temp_module_info.get("resource_type") is not None)
+    assert(temp_module_info.get("event_time") is not None)
+    assert(temp_module_info.get("resource_id") is not None)
 
     fru_specific_infos = sensor_msg.get("specific_info")
-    assert fru_specific_infos is not None
+    assert(fru_specific_infos is not None)
 
     for fru_specific_info in fru_specific_infos:
-        assert fru_specific_info is not None
+        assert(fru_specific_info is not None)
         if fru_specific_info.get("ERROR"):
             # Skip any validation on specific info if ERROR seen on FRU
             continue
-        assert fru_specific_info.get("resource_id") is not None
+        assert(fru_specific_info.get("resource_id") is not None)
         resource_id = fru_specific_info.get("resource_id")
         if fru_specific_info.get(resource_id):
-            assert fru_specific_info.get(resource_id).get("ERROR") is not None
+            assert(fru_specific_info.get(resource_id).get("ERROR") is not None)
             # Skip any validation on specific info if ERROR seen on sensor
             continue
-        assert fru_specific_info.get("sensor_number") is not None
-        assert fru_specific_info.get("sensor_status") is not None
-        assert fru_specific_info.get("entity_id_instance") is not None
-        assert fru_specific_info.get("sensor_reading") is not None
+        assert(fru_specific_info.get("sensor_number") is not None)
+        assert(fru_specific_info.get("sensor_status") is not None)
+        assert(fru_specific_info.get("entity_id_instance") is not None)
+        assert(fru_specific_info.get("sensor_reading") is not None)
 
 
 def test_node_voltage_sensor(agrs):
@@ -74,41 +74,41 @@ def test_node_voltage_sensor(agrs):
     send_msg_request("NDHW:%s" % resource_type, instance_id)
     ingressMsg = get_fru_response(resource_type, instance_id)
 
-    assert ingressMsg.get("sspl_ll_msg_header").get("uuid") == UUID
+    assert(ingressMsg.get("sspl_ll_msg_header").get("uuid") == UUID)
     sensor_msg = ingressMsg.get("actuator_response_type")
-    assert sensor_msg is not None
-    assert sensor_msg.get("alert_type") is not None
-    assert sensor_msg.get("severity") is not None
-    assert sensor_msg.get("host_id") is not None
-    assert sensor_msg.get("info") is not None
-    assert sensor_msg.get("instance_id") == instance_id
+    assert(sensor_msg is not None)
+    assert(sensor_msg.get("alert_type") is not None)
+    assert(sensor_msg.get("severity") is not None)
+    assert(sensor_msg.get("host_id") is not None)
+    assert(sensor_msg.get("info") is not None)
+    assert(sensor_msg.get("instance_id") == instance_id)
 
     volt_module_info = sensor_msg.get("info")
-    assert volt_module_info.get("site_id") is not None
-    assert volt_module_info.get("node_id") is not None
-    assert volt_module_info.get("rack_id") is not None
-    assert volt_module_info.get("resource_type") is not None
-    assert volt_module_info.get("event_time") is not None
-    assert volt_module_info.get("resource_id") is not None
+    assert(volt_module_info.get("site_id") is not None)
+    assert(volt_module_info.get("node_id") is not None)
+    assert(volt_module_info.get("rack_id") is not None)
+    assert(volt_module_info.get("resource_type") is not None)
+    assert(volt_module_info.get("event_time") is not None)
+    assert(volt_module_info.get("resource_id") is not None)
 
     fru_specific_infos = sensor_msg.get("specific_info")
-    assert fru_specific_infos is not None
+    assert(fru_specific_infos is not None)
 
     for fru_specific_info in fru_specific_infos:
-        assert fru_specific_info is not None
+        assert(fru_specific_info is not None)
         if fru_specific_info.get("ERROR"):
             # Skip any validation on specific info if ERROR seen on FRU
             continue
-        assert fru_specific_info.get("resource_id") is not None
+        assert(fru_specific_info.get("resource_id") is not None)
         resource_id = fru_specific_info.get("resource_id")
         if fru_specific_info.get(resource_id):
-            assert fru_specific_info.get(resource_id).get("ERROR") is not None
+            assert(fru_specific_info.get(resource_id).get("ERROR") is not None)
             # Skip any validation on specific info if ERROR seen on sensor
             continue
-        assert fru_specific_info.get("sensor_number") is not None
-        assert fru_specific_info.get("sensor_status") is not None
-        assert fru_specific_info.get("entity_id_instance") is not None
-        assert fru_specific_info.get("sensor_reading") is not None
+        assert(fru_specific_info.get("sensor_number") is not None)
+        assert(fru_specific_info.get("sensor_status") is not None)
+        assert(fru_specific_info.get("entity_id_instance") is not None)
+        assert(fru_specific_info.get("sensor_reading") is not None)
 
 
 def send_msg_request(resource_type, instance_id):
