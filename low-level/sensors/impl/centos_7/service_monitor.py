@@ -22,7 +22,7 @@
 
 import socket
 import time
-from enum import Enum
+from collections import namedtuple
 from queue import Queue
 
 from dbus import PROPERTIES_IFACE, DBusException, Interface, SystemBus
@@ -48,66 +48,76 @@ MANAGER_IFACE = 'org.freedesktop.systemd1.Manager'
 SYSTEMD_BUS = "org.freedesktop.systemd1"
 CACHE_PATH = f"/{DATA_PATH}/server/service_monitor/"
 
-
-class FailedAlert(Enum):
-    alert_type = "fault"
-    description = "{} in {} state."
-    impact = "{} service is unavailable."
-    recommendation = "Try to restart the service"
-
-
-class InactiveAlert(Enum):
-    alert_type = "fault"
-    description = "{} in {} state for more than {} seconds."
-    impact = "{} service is unavailable."
-    recommendation = "Try to restart the service"
-
-
-class ResolvedAlert(Enum):
-    alert_type = "fault_resolved"
-    description = "{} in {} state."
-    impact = "{} service is available now."
-    recommendation = ""
+Alert = namedtuple('Alert', 'alert_type description impact recommendation')
+FailedAlert = Alert("fault", "{} in {} state.", "{} service is unavailable.",
+                    "Try to restart the service")
+InactiveAlert = Alert("fault", "{} in {} state for more than {} seconds.",
+                      "{} service is unavailable.",
+                      "Try to restart the service")
+ResolvedAlert = Alert("fault_resolved", "{} in {} state.",
+                      "{} service is available now.",
+                      "No action required")
 
 
 class ActiveState:
-    failed = False
+    """
+    State class representing monitoring state Active and actions needed to do
+    when service becomes active.
+    """
 
     @staticmethod
     def enter(service):
-        Service.inactive.discard(service.name)
+        Service.non_active.discard(service.name)
 
 
 class FailedState:
-    failed = True
+    """
+    State class representing monitoring state Failed and actions needed to do
+    when service raises alert(nonactive for threshold time or failed directly).
+    """
 
     @staticmethod
     def enter(service):
-        Service.inactive.discard(service.name)
+        Service.non_active.discard(service.name)
 
 
 class InactiveState:
-    failed = False
+    """
+    State class representing monitoring state Inactive and actions needed to do
+    when service change state other than active or failed.
+    """
 
     @staticmethod
     def enter(service):
-        service.inactive_enter_timestamp = time.time()
-        Service.inactive.add(service.name)
+        service.nonactive_enter_timestamp = time.time()
+        Service.non_active.add(service.name)
 
 
 class DisabledState:
+    """
+    State class representing monitoring state Disabled and actions needed to do
+    when service is disabled.
+    When service enters into Disabled state, it removes signal. So, monitoring
+    for particular service will be stopped.
+    """
 
     @staticmethod
     def enter(service):
         logger.warning("{} service is disabled, it will not be "
                        "monitored".format(service.name))
-        Service.inactive.discard(service.name)
+        Service.non_active.discard(service.name)
         Service.monitoring_disabled.discard(service.name)
         if service.properties_changed_signal:
             service.properties_changed_signal.remove()
 
 
 class EnabledState:
+    """
+    State class representing monitoring state Enabled and actions needed to do
+    when service is enabled.
+    When service enters into Enabled state, it registers signal which will be
+    called when service change state.
+    """
 
     @staticmethod
     def enter(service):
@@ -122,6 +132,10 @@ class EnabledState:
 
 
 class MonitoringDisabled:
+    """
+    State class representing monitoring state MonitoringDisabled and actions needed
+    to do when signal registration for any service failed.
+    """
 
     @staticmethod
     def enter(service):
@@ -133,10 +147,11 @@ class MonitoringDisabled:
 class Service:
     """
     The Service class representing systemd service.
+    This class use various internals states for managing service state effectively.
     """
 
     alerts = Queue()
-    inactive = set()
+    non_active = set()
     monitoring_disabled = set()
 
     def __init__(self, unit):
@@ -153,8 +168,8 @@ class Service:
         self.previous_state = "N/A"
         self.previous_substate = "N/A"
         self.previous_pid = "N/A"
-        self.inactive_enter_timestamp = time.time()
-        self.inactive_threshold = int(
+        self.nonactive_enter_timestamp = time.time()
+        self.nonactive_threshold = int(
             Conf.get(SSPL_CONF,
                      f"{ServiceMonitor.name().upper()}>threshold_inactive_time",
                      '60'))
@@ -163,25 +178,17 @@ class Service:
         self._unit_state = None
 
     @property
-    def enabled_on_disk(self):
+    def is_enabled(self):
         return 'disabled' not in self.properties_iface.Get(
             UNIT_IFACE, 'UnitFileState')
 
-    @property
-    def failed(self):
-        return self._service_state.failed
-
-    def is_inactive_for_threshold_time(self):
-        return time.time() - self.inactive_enter_timestamp > self.inactive_threshold
+    def is_nonactive_for_threshold_time(self):
+        return time.time() - self.nonactive_enter_timestamp > self.nonactive_threshold
 
     def new_service_state(self, new_state):
-        if self.is_valid_state_change(new_state):
+        if self._service_state != new_state:
             self._service_state = new_state
             new_state.enter(self)
-
-    def is_valid_state_change(self, new_state):
-        return self._service_state != new_state and not (
-                self._service_state == FailedState and new_state == InactiveState)
 
     def new_unit_state(self, new_state):
         if new_state != self._unit_state:
@@ -209,21 +216,23 @@ class Service:
 
         if self.state != self.previous_state:
             if self.state == "active":
-                if self.failed:
+                if self._service_state is FailedState:
                     Service.alerts.put(
                         ServiceMonitor.get_alert(self, ResolvedAlert))
                 self.new_service_state(ActiveState)
             elif self.state == "failed":
-                if not self.failed:
+                if self._service_state is not FailedState:
                     Service.alerts.put(
                         ServiceMonitor.get_alert(self, FailedAlert))
                 self.new_service_state(FailedState)
             else:
-                self.new_service_state(InactiveState)
+                # Avoid raising duplicate alerts
+                if self._service_state != FailedState:
+                    self.new_service_state(InactiveState)
                 self.dump_to_cache()
 
     def handle_unit_state_change(self):
-        if self.enabled_on_disk:
+        if self.is_enabled:
             self.new_unit_state(EnabledState)
         else:
             self.new_unit_state(DisabledState)
@@ -237,7 +246,7 @@ class Service:
         service = cls(unit)
         service.new_service_state(data["service_monitor_state"])
         service.state = data["service_state"]
-        service.inactive_enter_timestamp = data["inactive_enter_timestamp"]
+        service.nonactive_enter_timestamp = data["nonactive_enter_timestamp"]
         return service
 
     def dump_to_cache(self):
@@ -247,7 +256,7 @@ class Service:
         data = {
             "service_state": self.state,
             "service_monitor_state": self._service_state,
-            "inactive_enter_timestamp": self.inactive_enter_timestamp
+            "nonactive_enter_timestamp": self.nonactive_enter_timestamp
         }
         store.put(data, f"{CACHE_PATH}/{self.name}")
 
@@ -334,16 +343,16 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
             # WHILE LOOP FUNCTION : every second we check for
             # properties change event if any generated (using context
             # iteration) and after a delay of polling frequency we
-            # check for inactive processes.
+            # check for non_active processes.
             iterations = 0
-            iterations_to_check_for_inactive_services = int(
+            non_active_check = int(
                 self.polling_frequency / self.thread_sleep) or 1
             while self.is_running():
                 # At interval of 'thread_sleep' check for events occurred for
                 # services and process them
                 self.process_events()
                 self.process_alerts()
-                if not iterations % iterations_to_check_for_inactive_services:
+                if not iterations % non_active_check:
                     # Initialize errored service again
                     for service in self.services_to_monitor - set(
                             self.services.keys()):
@@ -351,7 +360,7 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
                     for service in Service.monitoring_disabled.copy():
                         self.services[service].new_unit_state(EnabledState)
                     # Check for services in intermediate state(not active)
-                    self.check_inactive_services()
+                    self.check_nonactive_services()
                 time.sleep(self.thread_sleep)
                 iterations += 1
             logger.info("ServiceMonitor gracefully breaking out " +
@@ -425,15 +434,15 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
         self._loop = GLib.MainLoop()
         self.context = self._loop.get_context()
 
-    def check_inactive_services(self):
+    def check_nonactive_services(self):
         """
            Monitor non-active Services.
 
            Raise FAULT Alert if any of the not-active services has exceeded
            the threshold time for inactivity.
         """
-        for service in Service.inactive.copy():
-            if self.services[service].is_inactive_for_threshold_time():
+        for service in Service.non_active.copy():
+            if self.services[service].is_nonactive_for_threshold_time():
                 self.services[service].new_service_state(FailedState)
                 self.raise_alert(self.get_alert(self.services[service],
                                                 FailedAlert))
@@ -456,18 +465,18 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
                 "service_status_alert": {
                     "host_id": socket.getfqdn(),
                     "severity": SeverityReader().map_severity(
-                        alert.alert_type.value),
+                        alert.alert_type),
                     "alert_id": get_alert_id(str(int(time.time()))),
-                    "alert_type": alert.alert_type.value,
+                    "alert_type": alert.alert_type,
                     "info": {
                         "resource_type": cls.RESOURCE_TYPE,
                         "resource_id": service.name,
                         "event_time": str(int(time.time())),
-                        "description": alert["description"].value.format(
+                        "description": alert.description.format(
                             service.name, service.state,
-                            service.inactive_threshold),
-                        "impact": alert["impact"].value.format(service.name),
-                        "recommendation": alert.recommendation.value,
+                            service.nonactive_threshold),
+                        "impact": alert.impact.format(service.name),
+                        "recommendation": alert.recommendation,
                     },
                     "specific_info": {
                         "service_name": service.name,

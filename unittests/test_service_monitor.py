@@ -77,23 +77,9 @@ class TestServiceMonitor(unittest.TestCase):
     def terminate_run(self, *args, **kwargs):
         self.service_monitor.is_running.return_value = False
 
-    def test_is_valid_state_change(self):
-        service = Service(Mock())
-        service._service_state = ActiveState
-        self.assertIs(service.is_valid_state_change(ActiveState), False)
-        self.assertIs(service.is_valid_state_change(InactiveState), True)
-        self.assertIs(service.is_valid_state_change(FailedState), True)
-        service._service_state = FailedState
-        self.assertIs(service.is_valid_state_change(ActiveState), True)
-        self.assertIs(service.is_valid_state_change(InactiveState), False)
-        self.assertIs(service.is_valid_state_change(FailedState), False)
-        service._service_state = InactiveState
-        self.assertIs(service.is_valid_state_change(ActiveState), True)
-        self.assertIs(service.is_valid_state_change(InactiveState), False)
-        self.assertIs(service.is_valid_state_change(FailedState), True)
 
     @patch(
-        'sensors.impl.centos_7.service_monitor.Service.is_inactive_for_threshold_time',
+        'sensors.impl.centos_7.service_monitor.Service.is_nonactive_for_threshold_time',
         new=Mock(return_value=True))
     def test_fault_alert_if_service_is_inactive_at_start(self):
         self.mocked_properties_value["ActiveState"] = "inactive"
@@ -117,7 +103,7 @@ class TestServiceMonitor(unittest.TestCase):
         return fault_alert
 
     @patch(
-        'sensors.impl.centos_7.service_monitor.Service.is_inactive_for_threshold_time',
+        'sensors.impl.centos_7.service_monitor.Service.is_nonactive_for_threshold_time',
         new=Mock(return_value=True))
     def test_fault_alert_if_service_is_failed_at_start(self):
         self.fail_service_at_start()
@@ -140,7 +126,7 @@ class TestServiceMonitor(unittest.TestCase):
         self.mocked_properties_value["ActiveState"] = "active"
         self.service_monitor.initialize(Mock(), Mock(), Mock())
         self.service_monitor.services[
-            "spam.service"].is_inactive_for_threshold_time = Mock(
+            "spam.service"].is_nonactive_for_threshold_time = Mock(
             return_value=True)
         self.service_monitor.process_events = Mock(
             side_effect=partial(self.service_monitor.services[
@@ -189,10 +175,10 @@ class TestServiceMonitor(unittest.TestCase):
         self.service_active_at_start()
         self.mocked_properties_value["ActiveState"] = "inactive"
         self.service_monitor_run_iteration()
-        self.assertIn("spam.service", Service.inactive)
+        self.assertIn("spam.service", Service.non_active)
         self.mocked_properties_value["ActiveState"] = "active"
         self.service_monitor_run_iteration()
-        self.assertNotIn("spam.service", Service.inactive)
+        self.assertNotIn("spam.service", Service.non_active)
         self.service_monitor._write_internal_msgQ.assert_not_called()
 
     def service_active_at_start(self):
@@ -211,7 +197,7 @@ class TestServiceMonitor(unittest.TestCase):
         store.get = Mock(return_value={
             "service_state": "inactive",
             "service_monitor_state": InactiveState,
-            "inactive_enter_timestamp": time.time() - 999
+            "nonactive_enter_timestamp": time.time() - 999
         })
         self.service_monitor.initialize(Mock(), Mock(), Mock())
         self.assertIs(
@@ -266,8 +252,8 @@ class TestServiceMonitor(unittest.TestCase):
                           "spam.service"]._unit_state, EnabledState)
 
 
-def tearDown(self):
-    pass
+    def tearDown(self):
+        pass
 
 
 if __name__ == "__main__":
