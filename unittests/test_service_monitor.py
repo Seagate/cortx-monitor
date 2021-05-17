@@ -241,7 +241,8 @@ class TestServiceMonitor(unittest.TestCase):
         self.service_monitor_run_iteration()
         self.assert_fault_is_raised()
 
-    def raise_dbus_exception(self, *args, **kwargs):
+    @staticmethod
+    def raise_dbus_exception(*args, **kwargs):
         signal = args[0]
         if signal == "PropertiesChanged":
             raise dbus.exceptions.DBusException
