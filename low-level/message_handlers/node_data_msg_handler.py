@@ -82,7 +82,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         'disk' : False,
         'memory' : False
     }
-    check_time = {
+    usage_time_map = {
         'cpu' : -1,
         'memory' : -1,
         'disk' : -1
@@ -133,10 +133,10 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
         self._transmit_interval = int(Conf.get(SSPL_CONF, f"{self.NODEDATAMSGHANDLER}>{self.TRANSMIT_INTERVAL}",
                                                 60))
-        self._cpu_transmit_duration_threshold = int(Conf.get(SSPL_CONF, f"{self.NODEDATAMSGHANDLER}>{self.CPU_TRANSMIT_DURATION_THRESHOLD}",
-                                                60))
-        self._memory_transmit_duration_threshold = int(Conf.get(SSPL_CONF, f"{self.NODEDATAMSGHANDLER}>{self.MEMORY_TRANSMIT_DURATION_THRESHOLD}",
-                                                60))
+        self._cpu_transmit_duration_threshold = int(Conf.get(SSPL_CONF,
+                                                f"{self.NODEDATAMSGHANDLER}>{self.CPU_TRANSMIT_DURATION_THRESHOLD}",60))
+        self._memory_transmit_duration_threshold = int(Conf.get(SSPL_CONF,
+                                                f"{self.NODEDATAMSGHANDLER}>{self.MEMORY_TRANSMIT_DURATION_THRESHOLD}",60))
         self._units = Conf.get(SSPL_CONF, f"{self.NODEDATAMSGHANDLER}>{self.UNITS}",
                                                 "MB")
         self._disk_usage_threshold = Conf.get(SSPL_CONF, f"{self.NODEDATAMSGHANDLER}>{self.DISK_USAGE_THRESHOLD}",
@@ -232,15 +232,15 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         else:
             self.persistent_data[resource] = {
                 f'high_{resource}_usage' : str(self.high_usage[resource]),
-                f'{resource}_check_time' : str(self.check_time[resource])
+                f'{resource}_usage_time_map' : str(self.usage_time_map[resource])
             }
         store.put(self.persistent_data[resource], PER_DATA_PATH)
 
     def read_persistent_data(self, data_path):
-        """Read resource data from persistent cache"""
+        """Read resource data from persistent cache."""
         PER_DATA_PATH = os.path.join(self.cache_dir_path,
                             f'{data_path}_{self.node_id}')
-        
+
         if os.path.isfile(PER_DATA_PATH):
             persistent_data = store.get(PER_DATA_PATH)
             return persistent_data
@@ -444,11 +444,11 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             self._host_memory_usage_threshold = self.DEFAULT_HOST_MEMORY_USAGE_THRESHOLD
         
         memory_persistent_data = self.read_persistent_data('MEMORY_USAGE_DATA')
-        if memory_persistent_data['memory_check_time']:
-            previous_check_time = int(memory_persistent_data['memory_check_time'])
+        if memory_persistent_data['memory_usage_time_map']:
+            previous_check_time = int(memory_persistent_data['memory_usage_time_map'])
         else:
             previous_check_time = int(-1)
-        self.check_time['memory'] = current_time
+        self.usage_time_map['memory'] = current_time
 
         if self._node_sensor.total_memory["percent"] >= self._host_memory_usage_threshold \
            and not self.high_usage['memory']:
@@ -456,12 +456,12 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 previous_check_time = current_time
                 self.persist_state_data('memory', 'MEMORY_USAGE_DATA')
             logger.debug(f"previous check time: {previous_check_time}")
-            logger.debug(f"current check time: {self.check_time['memory']}")
+            logger.debug(f"current check time: {self.usage_time_map['memory']}")
 
-            if self.check_time['memory'] - previous_check_time >= self._memory_transmit_duration_threshold:
+            if self.usage_time_map['memory'] - previous_check_time >= self._memory_transmit_duration_threshold:
                 # Create the disk space data message and hand it over to the egress processor to transmit
                 self.high_usage['memory'] = True
-                self.check_time['memory'] = current_time
+                self.usage_time_map['memory'] = current_time
                 # Create the disk space data message and hand it over to the egress processor to transmit
                 fault_event = "Host memory usage increased to %s, beyond configured threshold of %s for more than %s seconds" \
                             %(self._node_sensor.total_memory["percent"], self._host_memory_usage_threshold,
@@ -495,7 +495,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
         if self._node_sensor.total_memory["percent"] < self._host_memory_usage_threshold:
             if not self.high_usage['memory']:
-                self.check_time['memory'] = current_time
+                self.usage_time_map['memory'] = current_time
                 self.persist_state_data('memory', 'MEMORY_USAGE_DATA')
             else:
                 fault_resolved_event = "Host memory usage decreased to %s, lesser than configured threshold of %s" \
@@ -526,7 +526,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 self.os_sensor_type["memory_usage"] = self.host_sensor_data
                 self._write_internal_msgQ(EgressProcessor.name(), jsonMsg)
                 self.high_usage['memory'] = False
-                self.check_time['memory'] = int(-1)
+                self.usage_time_map['memory'] = int(-1)
                 self.persist_state_data('memory', 'MEMORY_USAGE_DATA')
 
     def _generate_local_mount_data(self):
@@ -580,11 +580,11 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             self._cpu_usage_threshold = self.DEFAULT_CPU_USAGE_THRESHOLD
 
         cpu_persistent_data = self.read_persistent_data('CPU_USAGE_DATA')
-        if cpu_persistent_data['cpu_check_time']:
-            previous_check_time = int(cpu_persistent_data['cpu_check_time'])
+        if cpu_persistent_data['cpu_usage_time_map']:
+            previous_check_time = int(cpu_persistent_data['cpu_usage_time_map'])
         else:
             previous_check_time = int(-1)
-        self.check_time['cpu'] = current_time
+        self.usage_time_map['cpu'] = current_time
 
         if self._node_sensor.cpu_usage >= self._cpu_usage_threshold \
            and not self.high_usage['cpu']:
@@ -592,12 +592,12 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 previous_check_time = current_time
                 self.persist_state_data('cpu', 'CPU_USAGE_DATA')
             logger.debug(f"previous check time: {previous_check_time}")
-            logger.debug(f"current check time: {self.check_time['cpu']}")
+            logger.debug(f"current check time: {self.usage_time_map['cpu']}")
             
-            if self.check_time['cpu'] - previous_check_time >= self._cpu_transmit_duration_threshold:
+            if self.usage_time_map['cpu'] - previous_check_time >= self._cpu_transmit_duration_threshold:
 
                 self.high_usage['cpu'] = True
-                self.check_time['cpu'] = current_time
+                self.usage_time_map['cpu'] = current_time
                 # Create the cpu usage data message and hand it over to the egress processor to transmit
 
                 fault_event = "CPU usage increased to %s, beyond configured threshold of %s for more than %s seconds" \
@@ -637,7 +637,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
         if self._node_sensor.cpu_usage < self._cpu_usage_threshold:
             if not self.high_usage['cpu']:
-                self.check_time['cpu'] = current_time
+                self.usage_time_map['cpu'] = current_time
                 self.persist_state_data('cpu', 'CPU_USAGE_DATA')
             else:
                 # Create the cpu usage data message and hand it over to the egress processor to transmit
@@ -673,7 +673,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 # Transmit it to message processor
                 self._write_internal_msgQ(EgressProcessor.name(), jsonMsg)
                 self.high_usage['cpu'] = False
-                self.check_time['cpu'] = int(-1)
+                self.usage_time_map['cpu'] = int(-1)
                 # Store the state to Persistent Cache.
                 self.persist_state_data('cpu', 'CPU_USAGE_DATA')
 
