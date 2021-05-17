@@ -237,10 +237,10 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         store.put(self.persistent_data[resource], PER_DATA_PATH)
 
     def read_persistent_data(self, data_path):
-        """Read resource data from persistent cache"""
+        """Read resource data from persistent cache."""
         PER_DATA_PATH = os.path.join(self.cache_dir_path,
                             f'{data_path}_{self.node_id}')
-        
+
         if os.path.isfile(PER_DATA_PATH):
             persistent_data = store.get(PER_DATA_PATH)
             return persistent_data
