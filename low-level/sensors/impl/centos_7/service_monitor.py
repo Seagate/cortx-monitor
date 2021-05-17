@@ -125,7 +125,8 @@ class MonitoringDisabled:
 
     @staticmethod
     def enter(service):
-        Service.alerts.put(ServiceMonitor.get_alert(service.name, FailedAlert))
+        if service.name not in Service.monitoring_disabled:
+            Service.alerts.put(ServiceMonitor.get_alert(service, FailedAlert))
         Service.monitoring_disabled.add(service.name)
 
 
@@ -348,7 +349,7 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
                             self.services.keys()):
                         self.initialize_service(service)
                     for service in Service.monitoring_disabled.copy():
-                        service.new_unit_state(EnabledState)
+                        self.services[service].new_unit_state(EnabledState)
                     # Check for services in intermediate state(not active)
                     self.check_inactive_services()
                 time.sleep(self.thread_sleep)

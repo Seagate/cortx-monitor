@@ -20,6 +20,8 @@ import unittest
 from functools import partial
 from unittest.mock import Mock, patch
 
+import dbus.exceptions
+
 PROJECT_ROOT = "/".join(os.path.abspath(__file__).split("/")
                         [:-2]) + "/low-level"
 sys.path.append(PROJECT_ROOT)
@@ -28,7 +30,9 @@ from sensors.impl.centos_7.service_monitor import (ServiceMonitor, Conf,
                                                    Service,
                                                    store, ActiveState,
                                                    InactiveState, SystemBus,
-                                                   Interface, FailedState)
+                                                   Interface, FailedState,
+                                                   MonitoringDisabled,
+                                                   EnabledState, DisabledState)
 
 
 class TestServiceMonitor(unittest.TestCase):
@@ -50,7 +54,9 @@ class TestServiceMonitor(unittest.TestCase):
 
         Conf.get = Mock(side_effect=self.mocked_conf)
         Interface.Get = Mock(side_effect=self.mocked_properties)
+        SystemBus.get_object = Mock()
         Service.dump_to_cache = Mock()
+        Service.cache_exists = Mock(return_value=False)
         self.service_monitor = ServiceMonitor()
         self.service_monitor._write_internal_msgQ = Mock()
         self.service_monitor.is_running = Mock(return_value=True)
@@ -71,14 +77,6 @@ class TestServiceMonitor(unittest.TestCase):
     def terminate_run(self, *args, **kwargs):
         self.service_monitor.is_running.return_value = False
 
-    def test_cache_exist(self):
-        store.exists = Mock(return_value=(True, True))
-        self.assertTrue(Service.cache_exists("spam.service"))
-
-    def test_cache_not_exists(self):
-        store.exists = Mock(return_value=(False, True))
-        self.assertFalse(Service.cache_exists("spam.service"))
-
     def test_is_valid_state_change(self):
         service = Service(Mock())
         service._service_state = ActiveState
@@ -98,9 +96,6 @@ class TestServiceMonitor(unittest.TestCase):
         'sensors.impl.centos_7.service_monitor.Service.is_inactive_for_threshold_time',
         new=Mock(return_value=True))
     def test_fault_alert_if_service_is_inactive_at_start(self):
-        Service.cache_exists = Mock(return_value=False)
-        SystemBus.get_object = Mock()
-
         self.mocked_properties_value["ActiveState"] = "inactive"
         self.service_monitor.initialize(Mock(), Mock(), Mock())
         self.service_monitor_run_iteration()
@@ -142,8 +137,6 @@ class TestServiceMonitor(unittest.TestCase):
 
     def test_fault_alert_if_service_change_state_from_active_to_inactive(
             self):
-        Service.cache_exists = Mock(return_value=False)
-        SystemBus.get_object = Mock()
         self.mocked_properties_value["ActiveState"] = "active"
         self.service_monitor.initialize(Mock(), Mock(), Mock())
         self.service_monitor.services[
@@ -187,8 +180,6 @@ class TestServiceMonitor(unittest.TestCase):
                 "specific_info"]["state"], "active")
 
     def fail_service_at_start(self):
-        Service.cache_exists = Mock(return_value=False)
-        SystemBus.get_object = Mock()
         self.mocked_properties_value["ActiveState"] = "failed"
         self.service_monitor.initialize(Mock(), Mock(), Mock())
         self.service_monitor_run_iteration()
@@ -205,8 +196,6 @@ class TestServiceMonitor(unittest.TestCase):
         self.service_monitor._write_internal_msgQ.assert_not_called()
 
     def service_active_at_start(self):
-        Service.cache_exists = Mock(return_value=False)
-        SystemBus.get_object = Mock()
         self.mocked_properties_value["ActiveState"] = "active"
         self.service_monitor.initialize(Mock(), Mock(), Mock())
         self.service_monitor.process_events = Mock(
@@ -215,15 +204,15 @@ class TestServiceMonitor(unittest.TestCase):
                                 "", "", ""))
         self.service_monitor_run_iteration()
 
+    @patch(
+        'sensors.impl.centos_7.service_monitor.Service.cache_exists',
+        new=Mock(return_value=True))
     def test_fault_alert_if_service_is_inactive_in_cache(self):
         store.get = Mock(return_value={
             "service_state": "inactive",
             "service_monitor_state": InactiveState,
             "inactive_enter_timestamp": time.time() - 999
         })
-        Service.cache_exists = Mock(return_value=True)
-        Service.dump_to_cache = Mock()
-        SystemBus.get_object = Mock()
         self.service_monitor.initialize(Mock(), Mock(), Mock())
         self.assertIs(
             self.service_monitor.services["spam.service"]._service_state,
@@ -231,19 +220,54 @@ class TestServiceMonitor(unittest.TestCase):
         self.service_monitor_run_iteration()
         self.service_monitor._write_internal_msgQ.assert_called_once()
 
-    def test_no_alert_if_failed_service_is_disabled_at_start(self):
+    def test_no_alert_for_disabled_service(self):
         self.mocked_properties_value["UnitFileState"] = "disabled"
         self.mocked_properties_value["ActiveState"] = "failed"
-        Service.cache_exists = Mock(return_value=True)
-        Service.dump_to_cache = Mock()
-        SystemBus.get_object = Mock()
         self.service_monitor.initialize(Mock(), Mock(), Mock())
-        self.assertIs(Service.alerts.empty(), True)
+        self.assertIs(self.service_monitor.services[
+                          "spam.service"]._unit_state,
+                      DisabledState)
+        self.service_monitor_run_iteration()
+        self.service_monitor._write_internal_msgQ.assert_not_called()
 
-    def tearDown(self):
-        pass
+    def test_alert_for_enabled_service(self):
+        # Service is disabled at start
+        self.test_no_alert_for_disabled_service()
+        # Enable service
+        self.mocked_properties_value["UnitFileState"] = "enabled"
+        self.service_monitor.unit_file_state_change_handler()
+        self.assertIs(self.service_monitor.services[
+                          "spam.service"]._unit_state, EnabledState)
+        self.service_monitor_run_iteration()
+        self.assert_fault_is_raised()
+
+    def raise_dbus_exception(self, *args, **kwargs):
+        signal = args[0]
+        if signal == "PropertiesChanged":
+            raise dbus.exceptions.DBusException
+
+    def test_service_enters_into_monitoring_disabled_state_if_signal_reg_failed(
+            self):
+        Interface.connect_to_signal = Mock(
+            side_effect=self.raise_dbus_exception)
+        self.service_monitor.initialize(Mock(), Mock(), Mock())
+        self.assertIs(self.service_monitor.services[
+                          "spam.service"]._unit_state, MonitoringDisabled)
+        self.service_monitor_run_iteration()
+        self.assert_fault_is_raised()
+        self.service_monitor_run_iteration()
+        self.service_monitor_run_iteration()
+        self.service_monitor._write_internal_msgQ.assert_called_once()
+        self.mocked_properties_value["ActiveState"] = "active"
+        Interface.connect_to_signal = Mock()
+        self.service_monitor_run_iteration()
+        self.assertIs(self.service_monitor.services[
+                          "spam.service"]._unit_state, EnabledState)
+
+
+def tearDown(self):
+    pass
 
 
 if __name__ == "__main__":
     unittest.main()
-
