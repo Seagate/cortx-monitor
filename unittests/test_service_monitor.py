@@ -103,10 +103,6 @@ class TestServiceMonitor(unittest.TestCase):
 
         self.mocked_properties_value["ActiveState"] = "inactive"
         self.service_monitor.initialize(Mock(), Mock(), Mock())
-        self.service_monitor.process_events = Mock(
-            side_effect=partial(self.service_monitor.services[
-                                    "spam.service"].properties_changed_handler,
-                                "", "", ""))
         self.service_monitor_run_iteration()
         fault_alert = self.assert_fault_is_raised()
         self.assertEqual(
@@ -157,18 +153,24 @@ class TestServiceMonitor(unittest.TestCase):
             side_effect=partial(self.service_monitor.services[
                                     "spam.service"].properties_changed_handler,
                                 "", "", ""))
-        # self.service_monitor_run_iteration()
         self.mocked_properties_value["ActiveState"] = "inactive"
         self.service_monitor_run_iteration()
         fault_alert = self.assert_fault_is_raised()
         self.assertEqual(
             fault_alert["sensor_request_type"]["service_status_alert"][
                 "specific_info"]["state"], "inactive")
+        self.assertEqual(
+            fault_alert["sensor_request_type"]["service_status_alert"][
+                "specific_info"]["previous_state"], "active")
 
     def test_fault_resolved_if_service_change_state_from_failed_to_active(self):
         self.fail_service_at_start()
         self.assert_fault_is_raised()
         self.mocked_properties_value["ActiveState"] = "active"
+        self.service_monitor.process_events = Mock(
+            side_effect=partial(self.service_monitor.services[
+                                    "spam.service"].properties_changed_handler,
+                                "", "", ""))
         self.service_monitor_run_iteration()
         self.assertEqual(self.service_monitor._write_internal_msgQ.call_count,
                          2)
@@ -189,10 +191,6 @@ class TestServiceMonitor(unittest.TestCase):
         SystemBus.get_object = Mock()
         self.mocked_properties_value["ActiveState"] = "failed"
         self.service_monitor.initialize(Mock(), Mock(), Mock())
-        self.service_monitor.process_events = Mock(
-            side_effect=partial(self.service_monitor.services[
-                                    "spam.service"].properties_changed_handler,
-                                "", "", ""))
         self.service_monitor_run_iteration()
 
     def test_no_alert_if_state_changed_from_inactive_to_active_before_threshold(

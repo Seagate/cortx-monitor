@@ -125,7 +125,7 @@ class MonitoringDisabled:
 
     @staticmethod
     def enter(service):
-        Service.alerts.put((service.name, FailedAlert))
+        Service.alerts.put(ServiceMonitor.get_alert(service.name, FailedAlert))
         Service.monitoring_disabled.add(service.name)
 
 
@@ -184,30 +184,38 @@ class Service:
 
     def new_unit_state(self, new_state):
         if new_state != self._unit_state:
-            new_state.enter(self)
             self._unit_state = new_state
+            new_state.enter(self)
 
     def properties_changed_handler(self, interface, changed_properties,
                                    invalidated_properties):
 
-        self.previous_state = self.state
-        self.previous_substate = self.substate
-        self.previous_pid = self.pid
-
-        self.state = str(self.properties_iface.Get(
+        state = str(self.properties_iface.Get(
             UNIT_IFACE, 'ActiveState'))
-        self.substate = str(self.properties_iface.Get(
+        substate = str(self.properties_iface.Get(
             UNIT_IFACE, 'SubState'))
-        self.pid = str(self.properties_iface.Get(
+        pid = str(self.properties_iface.Get(
             SERVICE_IFACE, 'ExecMainPID'))
+        if state != self.state:
+            self.previous_state = self.state
+            self.state = state
+        if substate != self.substate:
+            self.previous_substate = self.substate
+            self.substate = substate
+        if pid != self.pid:
+            self.previous_pid = self.pid
+            self.pid = pid
+
         if self.state != self.previous_state:
             if self.state == "active":
                 if self.failed:
-                    Service.alerts.put((self.name, ResolvedAlert))
+                    Service.alerts.put(
+                        ServiceMonitor.get_alert(self, ResolvedAlert))
                 self.new_service_state(ActiveState)
             elif self.state == "failed":
                 if not self.failed:
-                    Service.alerts.put((self.name, FailedAlert))
+                    Service.alerts.put(
+                        ServiceMonitor.get_alert(self, FailedAlert))
                 self.new_service_state(FailedState)
             else:
                 self.new_service_state(InactiveState)
@@ -265,6 +273,8 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
     # Dependency list
     DEPENDENCIES = {"plugins": ["SeviceMsgHandler"]}
 
+    RESOURCE_TYPE = "node:sw:os:service"
+
     @staticmethod
     def name():
         """@return: name of the module."""
@@ -287,7 +297,6 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
         self.polling_frequency = int(Conf.get(SSPL_CONF,
                                               f"{self.SERVICEMONITOR}>{self.POLLING_FREQUENCY}",
                                               "30"))
-        self.resource_type = "node:sw:os:service"
 
     def read_data(self):
         """Return the dict of service status."""
@@ -399,8 +408,8 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
 
     def process_alerts(self):
         while not Service.alerts.empty():
-            service, alert = Service.alerts.get()
-            self.raise_alert(service, alert)
+            message = Service.alerts.get()
+            self.raise_alert(message)
 
     def initialize_dbus(self):
         DBusGMainLoop(set_as_default=True)
@@ -425,7 +434,8 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
         for service in Service.inactive.copy():
             if self.services[service].is_inactive_for_threshold_time():
                 self.services[service].new_service_state(FailedState)
-                self.raise_alert(self.services[service].name, FailedAlert)
+                self.raise_alert(self.get_alert(self.services[service],
+                                                FailedAlert))
 
     def raise_iem(self, service, alert_type):
         """Raise iem alert for kafka service."""
@@ -438,9 +448,9 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
             self.iem.iem_fault_resolved("KAFKA_ACTIVE")
             self.iem.fault_iems.remove(self.KAFKA)
 
-    def raise_alert(self, service, alert):
-        service = self.services[service]
-        message = {
+    @classmethod
+    def get_alert(cls, service, alert):
+        return {
             "sensor_request_type": {
                 "service_status_alert": {
                     "host_id": socket.getfqdn(),
@@ -449,7 +459,7 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
                     "alert_id": get_alert_id(str(int(time.time()))),
                     "alert_type": alert.alert_type.value,
                     "info": {
-                        "resource_type": self.resource_type,
+                        "resource_type": cls.RESOURCE_TYPE,
                         "resource_id": service.name,
                         "event_time": str(int(time.time())),
                         "description": alert["description"].value.format(
@@ -470,10 +480,15 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
                 }
             }
         }
-        self.raise_iem(service.name,
-                       alert.alert_type.value)
+
+    def raise_alert(self, message):
+        service = message["sensor_request_type"]["service_status_alert"][
+            "info"]["resource_id"]
+        alert_type = message["sensor_request_type"]["service_status_alert"][
+            "alert_type"]
+        self.raise_iem(service, alert_type)
         self._write_internal_msgQ(ServiceMsgHandler.name(), message)
-        service.dump_to_cache()
+        self.services[service].dump_to_cache()
 
     def suspend(self):
         """Suspend the module thread. It should be non-blocking."""
