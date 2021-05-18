@@ -71,9 +71,9 @@ PATCH_4 = """\
 def coverage_setup():
     """Installs pip3 coverage pkg and creates required files for code coverage.
 
-       Creates a temporary sspl_ll_d file and injects different patches of code 
-       to enable code coverage tracking. Also creates target directory for code
-       coverage report and assigns permission to the directory.
+    Creates a temporary sspl_ll_d file and injects different patches of code
+    to enable code coverage tracking. Also creates target directory for code
+    coverage report and assigns permission to the directory.
     """
     print("Installing coverage.py")
     cmd = 'python3 -m pip install coverage'
@@ -124,8 +124,8 @@ def coverage_setup():
 def coverage_reset():
     """Generates the code coverage report and resets the environment.
 
-       Sends SIGUSR1 signal to sspl_ll_d to trigger code coverage report
-       generation. Restores the original sspl_ll_d file.
+    Sends SIGUSR1 signal to sspl_ll_d to trigger code coverage report
+    generation. Restores the original sspl_ll_d file.
     """
     print("Generating the coverage report..")
     pid = 0
