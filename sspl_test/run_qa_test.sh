@@ -177,6 +177,16 @@ execute_test()
     $sudo $script_dir/run_sspl-ll_tests.sh $plan
 }
 
+if [ "$plan" == "self" ] || [ "$plan" == "self_primary" ]
+then
+    if [ "$IS_VIRTUAL" == "true" ]
+    then
+    echo "VM detected."
+    echo "ERROR: self or self_primary plan is intended to run on hardware setup."
+    exit 1
+    fi
+fi
+
 if [ "$SSPL_STORE_TYPE" == "confstor" ]
 then
     # Read common key which are needed to fetch confstor config.

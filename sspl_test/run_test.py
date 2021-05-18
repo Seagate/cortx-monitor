@@ -97,21 +97,25 @@ def tmain(argp, argv):
             continue
 
         # Actual test execution
+        found_failed_test = False
+        duration = 0
         for test in ts_module.test_list:
             test_count += 1
             try:
                 start_time = time.time()
                 test(args)
-                duration = time.time() - start_time
+                duration += time.time() - start_time
                 print('%s:%s: PASSED (Time: %ds)' %(ts, test.__name__, duration))
                 pass_count += 1
-                result.update({ts: {"Pass": duration}})
-
             except (TestFailed, Exception) as e:
                 print('%s:%s: FAILED #@#@#@' %(ts, test.__name__))
                 print('    %s\n' %e)
                 fail_count += 1
-                result.update({ts: {"Fail": 0}})
+                found_failed_test = True
+        if not found_failed_test:
+            result.update({ts: {"Pass": duration}})
+        else:
+            result.update({ts: {"Fail": duration}})
 
     # View of consolidated test suite status
     print('\n', '*'*90)
