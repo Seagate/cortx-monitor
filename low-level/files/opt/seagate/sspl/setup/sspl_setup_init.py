@@ -26,6 +26,7 @@ import errno
 
 from cortx.utils.conf_store import Conf
 from files.opt.seagate.sspl.setup.setup_error import SetupError
+from files.opt.seagate.sspl.setup.setup_logger import logger
 from framework.base import sspl_constants as consts
 from framework.utils.utility import Utility
 
@@ -49,8 +50,9 @@ class SSPLInit:
         # Check sspl-ll user exists
         sspl_uid = Utility.get_uid(self.user)
         if sspl_uid == -1:
-            raise SetupError(errno.EINVAL,
-                "User %s doesn't exit. Please add user." % self.user)
+            msg = "User %s doesn't exit. Please add user." % self.user
+            logger.error(msg)
+            raise SetupError(errno.EINVAL, msg)
         # Check input/provisioner configs
         machine_id = Utility.get_machine_id()
         cluster_id = Utility.get_config_value(consts.PRVSNR_CONFIG_INDEX,
