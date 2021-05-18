@@ -82,8 +82,6 @@ MSG_HANDLERS    = 'message_handlers'
 SENSORS         = 'sensors'
 ACTUATORS       = 'actuators'
 DEGRADED_STATE_MODULES = 'degraded_state_modules'
-ENV_BASED_SENSORS = 'ENV_BASED_SENSORS'
-ALWAYS_ENABLE_SENSORS = 'ALWAYS_ENABLE_SENSORS'
 REALSTORSENSORS = 'REALSTORSENSORS'
 
 # State file
