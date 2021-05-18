@@ -23,19 +23,21 @@ import os
 from pathlib import Path
 
 from framework.utils.utility import Utility
+from framework.utils.conf_utils import SSPL_CONF, Conf
 
 class SysFS(Utility):
     """Module which is responsible for fetching information
        internal to system such as SAS Port/SAS phy/network
        using /sys file system"""
 
-    sysfs = "/sys/class/"
-    cpu_online_fp = "/sys/devices/system/cpu/online"
     nw_phy_link_state = {'0':'DOWN', '1':'UP', 'unknown':'UNKNOWN'}
 
     def __init__(self):
         """init method"""
         super(SysFS, self).__init__()
+        self.sysfs_base_path = SysFS.get_sysfs_base_path()
+        self.sysfs = self.sysfs_base_path + "class/"
+        self.cpu_online_fp = self.sysfs_base_path + "devices/system/cpu/online"
         self.sas_phy_dir_list = []
         self.phy_dir_dict = {}
         self.sas_phy_dir_path = {}
@@ -46,7 +48,6 @@ class SysFS(Utility):
            method of os module. And stores iterator to that path in the
            dictionary with key as dir_name.
            Ex: {"phy0": PosixPath('phy0')}"""
-
         try:
             self.sas_phy_dir_path = self.get_sys_dir_path('sas_phy')
             self.sas_phy_dir_list = os.listdir(self.sas_phy_dir_path)
@@ -58,10 +59,16 @@ class SysFS(Utility):
         except OSError as os_error:
             return os_error.errno
 
+    @classmethod
+    def get_sysfs_base_path(cls):
+        """Returns the sysfs base path. Ex: /sys."""
+        sysfs_base_path = Conf.get(SSPL_CONF, "SYSTEM_INFORMATION>sysfs_base_path",
+                            '/sys/')
+        return sysfs_base_path
+
     def get_sys_dir_path(self, sys_dir_name):
         """Returns the complete sysfs directory path
            Ex: if arg is 'sas_phy', it will return /sys/class/sas_phy"""
-
         sys_dir_path = os.path.join(self.sysfs, sys_dir_name)
         return sys_dir_path
 
@@ -69,7 +76,6 @@ class SysFS(Utility):
         """Iterates over the phy directory using the iterator and returns
            the dict with key as phy_name and value as negotiated linkrate
            {'phy0': <12G/Unknown/..>}"""
-
         phy_dir = {}
         # Get the iterator from the initialized global dictionary
         # And again iterates over respective directory to get the value

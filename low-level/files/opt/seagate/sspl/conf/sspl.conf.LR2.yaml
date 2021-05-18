@@ -199,6 +199,7 @@ SYSTEM_INFORMATION:
    sspl_log_file_path: /var/log/cortx/sspl/sspl.log
    log_level: INFO
    environment: PROD
+   sysfs_base_path: /sys/
 
 
 # NOTE: Keys present in OBSOLETE section are out of date
