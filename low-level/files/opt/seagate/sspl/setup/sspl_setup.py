@@ -305,6 +305,12 @@ class TestCmd(Cmd):
             raise SetupError(1, msg)
         logger.info("%s - Validation done" % self.name)
 
+        if self.args.coverage and 'self' in self.args.plan[0]:
+            raise SetupError(errno.EINVAL,
+                    "%s - Argument validation failure. %s",
+                    self.name,
+                    "Code coverage can not be enabled with self tests.")
+
     def process(self):
         """Setup and run SSPL test"""
         from files.opt.seagate.sspl.setup.sspl_test import SSPLTestCmd

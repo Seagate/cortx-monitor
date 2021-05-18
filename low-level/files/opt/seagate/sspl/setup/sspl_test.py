@@ -175,7 +175,7 @@ class SSPLTestCmd:
             if rc != 0:
                 raise TestException("%s - ERROR: %s - CMD %s" % (self.name, error, CMD))
 
-            print('Starting the SSPL..')
+            print('Restarting the SSPL service..')
             CMD = "systemctl restart sspl-ll"
             try:
                 SimpleProcess(CMD).run(realtime_output=True)

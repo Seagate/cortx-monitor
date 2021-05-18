@@ -69,9 +69,11 @@ PATCH_4 = """\
 """
 
 def coverage_setup():
-    """Installs pip3 coverage package. Injects different patches code from
-       coverage_code file to sspl_ll_d file, also creates target directory
-       for code coverage report and assigns permission to the directory.
+    """Installs pip3 coverage pkg and creates required files for code coverage.
+
+       Creates a temporary sspl_ll_d file and injects different patches of code 
+       to enable code coverage tracking. Also creates target directory for code
+       coverage report and assigns permission to the directory.
     """
     print("Installing coverage.py")
     cmd = 'python3 -m pip install coverage'
@@ -120,8 +122,10 @@ def coverage_setup():
     return 0
 
 def coverage_reset():
-    """Send SIGUSR1 signal to sspl_ll_d to trigger code coverage report generation.
-       Swap modified sspl_ll_d file with original one.
+    """Generates the code coverage report and resets the environment.
+
+       Sends SIGUSR1 signal to sspl_ll_d to trigger code coverage report
+       generation. Restores the original sspl_ll_d file.
     """
     print("Generating the coverage report..")
     pid = 0
@@ -152,7 +156,7 @@ def coverage_reset():
     else:
         print("%s file does not exists."%REPORT_PATH)
 
-    print("Stopping the SSPL..")
+    print("Stoping the SSPL service..")
     cmd = 'systemctl stop sspl-ll.service'
     _, err, return_code = SimpleProcess(cmd).run()
     if return_code:

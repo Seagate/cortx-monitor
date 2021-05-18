@@ -24,6 +24,7 @@ script_dir=$(dirname $0)
 source $script_dir/constants.sh
 SSPL_STORE_TYPE=confstor
 
+coverage_enabled="False"
 while [ $# -gt 0 ]; do
     case $1 in
         --plan )
@@ -301,9 +302,9 @@ fi
 
 if [ "$IS_VIRTUAL" == "true" ]
 then
-    echo "Stopping the SSPL"
+    echo "Stoping the SSPL service"
     $sudo systemctl stop sspl-ll
-    echo "Coverage enabled : $coverage_enabled"
+    echo "Code Coverage enabled : $coverage_enabled"
     if [ "$coverage_enabled" == "True" ]
     then
         $sudo python3 "$script_dir/coverage/coverage_setup.py" start
@@ -313,7 +314,7 @@ then
     # sspl_start_checker will use those and test cases will be executed
     # before SSPL initialization
     $script_dir/messaging/consume.py
-    echo "Starting the SSPL"
+    echo "Starting the SSPL service"
     $sudo systemctl start sspl-ll
     echo "Waiting for SSPL to complete initialization of all the plugins.."
     $script_dir/sspl_start_checker
