@@ -245,7 +245,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         if os.path.isfile(PER_DATA_PATH):
             persistent_data = store.get(PER_DATA_PATH)
             return persistent_data
-        
+
         return None
 
     def _import_products(self, product):
