@@ -125,79 +125,12 @@ if not os.path.exists(SSPL_CONFIGURED) and PRODUCT_NAME=="LDR_R1":
 CONSUL_ERR_STRING = '500 No cluster leader'
 
 SSPL_SETTINGS = {
-        "REALSTORSENSORS": {
-            "ACTUATORS": [],
-            "CORE_PROCESSORS": [],
-            "DEGRADED_STATE_MODULES": [],
-            "MESSAGE_HANDLERS": [],
-            "SENSORS": ["RealStorFanSensor", "RealStorPSUSensor",
-                "RealStorControllerSensor", "RealStorDiskSensor", "RealStorSideplaneExpanderSensor",
-                "RealStorLogicalVolumeSensor", "RealStorEnclosureSensor"],
-        },
-        "NODEHWSENSOR": {
-            "ACTUATORS": [],
-            "CORE_PROCESSORS": [],
-            "DEGRADED_STATE_MODULES": [ "NodeHWsensor"],
-            "MESSAGE_HANDLERS": [],
-            "SENSORS": [ "NodeHWsensor"],
-        },
-        "DISKMONITOR": {
-            "ACTUATORS": [],
-            "CORE_PROCESSORS": [],
-            "DEGRADED_STATE_MODULES": [],
-            "MESSAGE_HANDLERS": [],
-            "SENSORS": [],
-        },
-        "RAIDSENSOR": {
-            "ACTUATORS": [],
-            "CORE_PROCESSORS": [],
-            "DEGRADED_STATE_MODULES": ["RAIDsensor"],
-            "MESSAGE_HANDLERS": [],
-            "SENSORS": ["RAIDsensor", "RAIDIntegritySensor"],
-        },
-        "SASPORTSENSOR": {
-            "ACTUATORS": [],
-            "CORE_PROCESSORS": [],
-            "DEGRADED_STATE_MODULES": ["SASPortSensor"],
-            "MESSAGE_HANDLERS": [],
-            "SENSORS": ["SASPortSensor"],
-        },
-        "MEMFAULTSENSOR": {
-            "ACTUATORS": [],
-            "CORE_PROCESSORS": [],
-            "DEGRADED_STATE_MODULES": ["MemFaultSensor"],
-            "MESSAGE_HANDLERS": [],
-            "SENSORS": ["MemFaultSensor"],
-        },
-        "CPUFAULTSENSOR": {
-            "ACTUATORS": [],
-            "CORE_PROCESSORS": [],
-            "DEGRADED_STATE_MODULES": ["CPUFaultSensor"],
-            "MESSAGE_HANDLERS": [],
-            "SENSORS": ["CPUFaultSensor"],
-        },
-        "SERVICEMONITOR": {
-            "ACTUATORS": [],
-            "CORE_PROCESSORS": [],
-            "DEGRADED_STATE_MODULES": [],
-            "MESSAGE_HANDLERS": [],
-            "SENSORS": [],
-        },
-
-        "_ENABLE_ALWAYS": {
-            "ACTUATORS" : ["Service", "RAIDactuator", "Smartctl", "NodeHWactuator", "RealStorActuator"],
-            "CORE_PROCESSORS" : ("EgressProcessor", "IngressProcessor", "LoggingProcessor"),
-            "DEGRADED_STATE_MODULES" : ("ServiceWatchdog", "NodeData", "IEMSensor",
-                "DiskMsgHandler", "LoggingMsgHandler", "ServiceMsgHandler", "NodeDataMsgHandler",
-                "NodeControllerMsgHandler"),
-            "MESSAGE_HANDLERS" : ("DiskMsgHandler", "LoggingMsgHandler", "ServiceMsgHandler", "NodeDataMsgHandler",
-                "NodeControllerMsgHandler", "RealStorEnclMsgHandler", "RealStorActuatorMsgHandler"),
-            "SENSORS" : ["DiskMonitor", "ServiceMonitor", "NodeData",  "IEMSensor"]
-        }
+    "CORE_PROCESSORS": ["EgressProcessor", "IngressProcessor",
+        "LoggingProcessor"],
+    "MESSAGE_HANDLERS": ["DiskMsgHandler", "LoggingMsgHandler",
+        "ServiceMsgHandler", "NodeDataMsgHandler", "NodeControllerMsgHandler",
+        "RealStorEnclMsgHandler", "RealStorActuatorMsgHandler"]
 }
-
-# The keys which are actually active
-sspl_settings_configured_groups = set()
 
 if SSPL_STORE_TYPE == 'consul':
     COMMON_CONFIGS = {
