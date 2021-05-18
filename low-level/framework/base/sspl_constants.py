@@ -64,10 +64,12 @@ SSPL_CLI_DIR = "%s/low-level/cli" % (SSPL_BASE_DIR)
 RSYSLOG_IEM_CONF ="/etc/rsyslog.d/0-iemfwd.conf"
 RSYSLOG_SSPL_CONF = "/etc/rsyslog.d/1-ssplfwd.conf"
 RSYSLOG_MSB_CONF = "/etc/rsyslog.d/1-msbfwd.conf"
+RSYSLOG_SETUP_CONF = "/etc/rsyslog.d/1-setupfwd.conf"
 LOGROTATE_DIR = "/etc/logrotate.d"
 IEM_LOGROTATE_CONF = "%s/iem_messages" % LOGROTATE_DIR
 SSPL_LOGROTATE_CONF = "%s/sspl_logs" % LOGROTATE_DIR
 MSB_LOGROTATE_CONF = "%s/manifest_logs" % LOGROTATE_DIR
+SETUP_LOGROTATE_CONF = "%s/sspl_setup_logs" % LOGROTATE_DIR
 RSYSLOG_SB_CONF = "/etc/rsyslog.d/1-ssplsbfwd.conf"
 SB_LOGROTATE_CONF = "%s/sspl_sb_logs" % LOGROTATE_DIR
 SSPL_LOG_PATH = "/var/log/%s/sspl/" % PRODUCT_FAMILY
@@ -125,79 +127,12 @@ if not os.path.exists(SSPL_CONFIGURED) and PRODUCT_NAME=="LDR_R1":
 CONSUL_ERR_STRING = '500 No cluster leader'
 
 SSPL_SETTINGS = {
-        "REALSTORSENSORS": {
-            "ACTUATORS": [],
-            "CORE_PROCESSORS": [],
-            "DEGRADED_STATE_MODULES": [],
-            "MESSAGE_HANDLERS": [],
-            "SENSORS": ["RealStorFanSensor", "RealStorPSUSensor",
-                "RealStorControllerSensor", "RealStorDiskSensor", "RealStorSideplaneExpanderSensor",
-                "RealStorLogicalVolumeSensor", "RealStorEnclosureSensor"],
-        },
-        "NODEHWSENSOR": {
-            "ACTUATORS": [],
-            "CORE_PROCESSORS": [],
-            "DEGRADED_STATE_MODULES": [ "NodeHWsensor"],
-            "MESSAGE_HANDLERS": [],
-            "SENSORS": [ "NodeHWsensor"],
-        },
-        "DISKMONITOR": {
-            "ACTUATORS": [],
-            "CORE_PROCESSORS": [],
-            "DEGRADED_STATE_MODULES": [],
-            "MESSAGE_HANDLERS": [],
-            "SENSORS": [],
-        },
-        "RAIDSENSOR": {
-            "ACTUATORS": [],
-            "CORE_PROCESSORS": [],
-            "DEGRADED_STATE_MODULES": ["RAIDsensor"],
-            "MESSAGE_HANDLERS": [],
-            "SENSORS": ["RAIDsensor", "RAIDIntegritySensor"],
-        },
-        "SASPORTSENSOR": {
-            "ACTUATORS": [],
-            "CORE_PROCESSORS": [],
-            "DEGRADED_STATE_MODULES": ["SASPortSensor"],
-            "MESSAGE_HANDLERS": [],
-            "SENSORS": ["SASPortSensor"],
-        },
-        "MEMFAULTSENSOR": {
-            "ACTUATORS": [],
-            "CORE_PROCESSORS": [],
-            "DEGRADED_STATE_MODULES": ["MemFaultSensor"],
-            "MESSAGE_HANDLERS": [],
-            "SENSORS": ["MemFaultSensor"],
-        },
-        "CPUFAULTSENSOR": {
-            "ACTUATORS": [],
-            "CORE_PROCESSORS": [],
-            "DEGRADED_STATE_MODULES": ["CPUFaultSensor"],
-            "MESSAGE_HANDLERS": [],
-            "SENSORS": ["CPUFaultSensor"],
-        },
-        "SERVICEMONITOR": {
-            "ACTUATORS": [],
-            "CORE_PROCESSORS": [],
-            "DEGRADED_STATE_MODULES": [],
-            "MESSAGE_HANDLERS": [],
-            "SENSORS": [],
-        },
-
-        "_ENABLE_ALWAYS": {
-            "ACTUATORS" : ["Service", "RAIDactuator", "Smartctl", "NodeHWactuator", "RealStorActuator"],
-            "CORE_PROCESSORS" : ("EgressProcessor", "IngressProcessor", "LoggingProcessor"),
-            "DEGRADED_STATE_MODULES" : ("ServiceWatchdog", "NodeData", "IEMSensor",
-                "DiskMsgHandler", "LoggingMsgHandler", "ServiceMsgHandler", "NodeDataMsgHandler",
-                "NodeControllerMsgHandler"),
-            "MESSAGE_HANDLERS" : ("DiskMsgHandler", "LoggingMsgHandler", "ServiceMsgHandler", "NodeDataMsgHandler",
-                "NodeControllerMsgHandler", "RealStorEnclMsgHandler", "RealStorActuatorMsgHandler"),
-            "SENSORS" : ["DiskMonitor", "ServiceMonitor", "NodeData",  "IEMSensor"]
-        }
+    "CORE_PROCESSORS": ["EgressProcessor", "IngressProcessor",
+        "LoggingProcessor"],
+    "MESSAGE_HANDLERS": ["DiskMsgHandler", "LoggingMsgHandler",
+        "ServiceMsgHandler", "NodeDataMsgHandler", "NodeControllerMsgHandler",
+        "RealStorEnclMsgHandler", "RealStorActuatorMsgHandler"]
 }
-
-# The keys which are actually active
-sspl_settings_configured_groups = set()
 
 if SSPL_STORE_TYPE == 'consul':
     COMMON_CONFIGS = {

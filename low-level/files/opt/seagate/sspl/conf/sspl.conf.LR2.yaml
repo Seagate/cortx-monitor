@@ -19,18 +19,6 @@
 # and move it to DATASTORE
 
 SSPL_LL_SETTING:
-   core_processors:
-      - EgressProcessor
-      - IngressProcessor
-      - LoggingProcessor
-   message_handlers:
-      - DiskMsgHandler
-      - LoggingMsgHandler
-      - ServiceMsgHandler
-      - NodeDataMsgHandler
-      - NodeControllerMsgHandler
-      - RealStorEnclMsgHandler
-      - RealStorActuatorMsgHandler
    sensors:
       - DiskMonitor
       - ServiceMonitor
@@ -55,23 +43,6 @@ SSPL_LL_SETTING:
       - Smartctl
       - NodeHWactuator
       - RealStorActuator
-   degraded_state_modules:
-      - DiskMonitor
-      - ServiceMonitor
-      - RAIDsensor
-      - RAIDIntegritySensor
-      - NodeData
-      - IEMSensor
-      - NodeHWsensor
-      - DiskMsgHandler
-      - LoggingMsgHandler
-      - ServiceMsgHandler
-      - NodeDataMsgHandler
-      - NodeControllerMsgHandler
-      - RealStorActuatorMsgHandler
-      - SASPortSensor
-      - MemFaultSensor
-      - CPUFaultSensor
 
 INGRESSPROCESSOR:
    consumer_id: sspl_actuator
@@ -230,6 +201,7 @@ SYSTEM_INFORMATION:
    sspl_log_file_path: /var/log/cortx/sspl/sspl.log
    log_level: INFO
    environment: PROD
+   sysfs_base_path: /sys/
 
 
 # NOTE: Keys present in OBSOLETE section are out of date
