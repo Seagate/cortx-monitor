@@ -316,6 +316,7 @@ then
     $script_dir/messaging/consume.py
     echo "Starting the SSPL service"
     $sudo systemctl start sspl-ll
+    sleep 5
     echo "Waiting for SSPL to complete initialization of all the plugins.."
     $script_dir/sspl_start_checker
 fi
