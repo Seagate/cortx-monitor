@@ -232,6 +232,7 @@ class Service:
                 self.dump_to_cache()
 
     def handle_unit_state_change(self):
+        # TODO: Check if alert needs to be generated for UnitFileState change
         if self.is_enabled:
             self.new_unit_state(EnabledState)
         else:
@@ -391,7 +392,7 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
             self.services[service_name] = service
         except DBusException:
             logger.error("Error: {} Failed to initialize service {},"
-                         "initialization will be retired in"
+                         "initialization will be retried in"
                          "{} seconds".format(DBusException, service_name,
                                              self.polling_frequency))
 
