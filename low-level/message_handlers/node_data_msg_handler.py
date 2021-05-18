@@ -41,6 +41,7 @@ from json_msgs.messages.sensors.raid_integrity_msg import RAIDIntegrityMsg
 from message_handlers.logging_msg_handler import LoggingMsgHandler
 from framework.messaging.egress_processor import EgressProcessor
 from framework.utils.store_factory import file_store
+from framework.utils.utility import Utility
 
 # Override default store
 store = file_store
@@ -55,8 +56,8 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
     # Section and keys in configuration file
     NODEDATAMSGHANDLER = MODULE_NAME.upper()
     TRANSMIT_INTERVAL = 'transmit_interval'
-    CPU_TRANSMIT_DURATION_THRESHOLD = 'cpu_transmit_duration_threshold'
-    MEMORY_TRANSMIT_DURATION_THRESHOLD = 'memory_transmit_duration_threshold'
+    HIGH_CPU_USAGE_WAIT_THRESHOLD = 'high_cpu_usage_wait_threshold'
+    HIGH_MEMORY_USAGE_WAIT_THRESHOLD = 'high_memory_usage_wait_threshold'
     UNITS = 'units'
     DISK_USAGE_THRESHOLD = 'disk_usage_threshold'
     DEFAULT_DISK_USAGE_THRESHOLD = 80
@@ -133,10 +134,10 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
         self._transmit_interval = int(Conf.get(SSPL_CONF, f"{self.NODEDATAMSGHANDLER}>{self.TRANSMIT_INTERVAL}",
                                                 60))
-        self._cpu_transmit_duration_threshold = int(Conf.get(SSPL_CONF,
-                                                f"{self.NODEDATAMSGHANDLER}>{self.CPU_TRANSMIT_DURATION_THRESHOLD}",60))
-        self._memory_transmit_duration_threshold = int(Conf.get(SSPL_CONF,
-                                                f"{self.NODEDATAMSGHANDLER}>{self.MEMORY_TRANSMIT_DURATION_THRESHOLD}",60))
+        self._high_cpu_usage_wait_threshold = int(Conf.get(SSPL_CONF,
+                                                f"{self.NODEDATAMSGHANDLER}>{self.HIGH_CPU_USAGE_WAIT_THRESHOLD}",60))
+        self._high_memory_usage_wait_threshold = int(Conf.get(SSPL_CONF,
+                                                f"{self.NODEDATAMSGHANDLER}>{self.HIGH_MEMORY_USAGE_WAIT_THRESHOLD}",60))
         self._units = Conf.get(SSPL_CONF, f"{self.NODEDATAMSGHANDLER}>{self.UNITS}",
                                                 "MB")
         self._disk_usage_threshold = Conf.get(SSPL_CONF, f"{self.NODEDATAMSGHANDLER}>{self.DISK_USAGE_THRESHOLD}",
@@ -245,11 +246,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             persistent_data = store.get(PER_DATA_PATH)
             return persistent_data
         
-        return False
-
-    def get_current_time(self):
-        """Returns the time as integer number in seconds since the epoch in UTC."""
-        return int(time.time())
+        return None
 
     def _import_products(self, product):
         """Import classes based on which product is being used"""
@@ -424,8 +421,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         """Create & transmit a host update message as defined
             by the sensor response json schema"""
 
-        current_time = self.get_current_time()
-        logger.debug(f"current check time: {current_time}")
+        current_time = Utility.get_current_time()
 
         # Notify the node sensor to update its data required for the host_update message
         successful = self._node_sensor.read_data("host_update", self._get_debug(), self._units)
@@ -444,7 +440,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             self._host_memory_usage_threshold = self.DEFAULT_HOST_MEMORY_USAGE_THRESHOLD
         
         memory_persistent_data = self.read_persistent_data('MEMORY_USAGE_DATA')
-        if memory_persistent_data['memory_usage_time_map']:
+        if memory_persistent_data.get('memory_usage_time_map') is not None:
             previous_check_time = int(memory_persistent_data['memory_usage_time_map'])
         else:
             previous_check_time = int(-1)
@@ -455,17 +451,14 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             if previous_check_time == -1:
                 previous_check_time = current_time
                 self.persist_state_data('memory', 'MEMORY_USAGE_DATA')
-            logger.debug(f"previous check time: {previous_check_time}")
-            logger.debug(f"current check time: {self.usage_time_map['memory']}")
 
-            if self.usage_time_map['memory'] - previous_check_time >= self._memory_transmit_duration_threshold:
-                # Create the disk space data message and hand it over to the egress processor to transmit
+            if self.usage_time_map['memory'] - previous_check_time >= self._high_memory_usage_wait_threshold:
                 self.high_usage['memory'] = True
-                self.usage_time_map['memory'] = current_time
-                # Create the disk space data message and hand it over to the egress processor to transmit
+
+                # Create the memory data message and hand it over to the egress processor to transmit
                 fault_event = "Host memory usage increased to %s, beyond configured threshold of %s for more than %s seconds" \
                             %(self._node_sensor.total_memory["percent"], self._host_memory_usage_threshold,
-                                self._memory_transmit_duration_threshold)
+                                self._high_memory_usage_wait_threshold)
 
                 logger.warning(fault_event)
 
@@ -495,14 +488,15 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
         if self._node_sensor.total_memory["percent"] < self._host_memory_usage_threshold:
             if not self.high_usage['memory']:
-                self.usage_time_map['memory'] = current_time
                 self.persist_state_data('memory', 'MEMORY_USAGE_DATA')
             else:
+                # Create the memory data message and hand it over to the egress processor to transmit
                 fault_resolved_event = "Host memory usage decreased to %s, lesser than configured threshold of %s" \
                                         %(self._node_sensor.total_memory["percent"],
                                         self._host_memory_usage_threshold)
                 logger.warning(fault_resolved_event)
                 logged_in_users = []
+
                 # Create the host update message and hand it over to the egress processor to transmit
                 hostUpdateMsg = HostUpdateMsg(self._node_sensor.host_id,
                                         self._epoch_time,
@@ -560,8 +554,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         """Create & transmit a cpu_data message as defined
             by the sensor response json schema"""
 
-        current_time = self.get_current_time()
-        logger.debug(f"current check time: {current_time}")
+        current_time = Utility.get_current_time()
         
         # Notify the node sensor to update its data required for the cpu_data message
         successful = self._node_sensor.read_data("cpu_data", self._get_debug())
@@ -580,7 +573,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             self._cpu_usage_threshold = self.DEFAULT_CPU_USAGE_THRESHOLD
 
         cpu_persistent_data = self.read_persistent_data('CPU_USAGE_DATA')
-        if cpu_persistent_data['cpu_usage_time_map']:
+        if cpu_persistent_data.get('cpu_usage_time_map') is not None:
             previous_check_time = int(cpu_persistent_data['cpu_usage_time_map'])
         else:
             previous_check_time = int(-1)
@@ -591,21 +584,18 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             if previous_check_time == -1:
                 previous_check_time = current_time
                 self.persist_state_data('cpu', 'CPU_USAGE_DATA')
-            logger.debug(f"previous check time: {previous_check_time}")
-            logger.debug(f"current check time: {self.usage_time_map['cpu']}")
             
-            if self.usage_time_map['cpu'] - previous_check_time >= self._cpu_transmit_duration_threshold:
+            if self.usage_time_map['cpu'] - previous_check_time >= self._high_cpu_usage_wait_threshold:
 
                 self.high_usage['cpu'] = True
-                self.usage_time_map['cpu'] = current_time
-                # Create the cpu usage data message and hand it over to the egress processor to transmit
 
+                # Create the cpu usage data message and hand it over to the egress processor to transmit
                 fault_event = "CPU usage increased to %s, beyond configured threshold of %s for more than %s seconds" \
                                 %(self._node_sensor.cpu_usage, self._cpu_usage_threshold,
-                                    self._cpu_transmit_duration_threshold)
+                                    self._high_cpu_usage_wait_threshold)
                 logger.warning(fault_event)
 
-                # Create the local mount data message and hand it over to the egress processor to transmit
+                # Create the cpu usage update message and hand it over to the egress processor to transmit
                 cpuDataMsg = CPUdataMsg(self._node_sensor.host_id,
                                     self._epoch_time,
                                     self._node_sensor.csps,
@@ -637,7 +627,6 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
         if self._node_sensor.cpu_usage < self._cpu_usage_threshold:
             if not self.high_usage['cpu']:
-                self.usage_time_map['cpu'] = current_time
                 self.persist_state_data('cpu', 'CPU_USAGE_DATA')
             else:
                 # Create the cpu usage data message and hand it over to the egress processor to transmit
@@ -645,7 +634,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     %(self._node_sensor.cpu_usage, self._cpu_usage_threshold)
                 logger.warning(fault_resolved_event)
 
-                # Create the local mount data message and hand it over to the egress processor to transmit
+                # Create the cpu usage update message and hand it over to the egress processor to transmit
                 cpuDataMsg = CPUdataMsg(self._node_sensor.host_id,
                                     self._epoch_time,
                                     self._node_sensor.csps,

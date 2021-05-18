@@ -24,6 +24,7 @@ import pwd
 import grp
 import errno
 import socket
+import time
 from cortx.utils.conf_store import Conf
 from cortx.utils.conf_store.error import ConfError
 from framework.utils.service_logging import logger
@@ -149,6 +150,11 @@ class Utility(object):
                 os.chown(os.path.join(base, _dir), uid, gid)
             for file in files:
                 os.chown(os.path.join(base, file), uid, gid)
+
+    @staticmethod
+    def get_current_time():
+        """Returns the time as integer number in seconds since the epoch in UTC."""
+        return int(time.time())
 
 def errno_to_str_mapping(err_no):
     """Convert numerical errno to its meaning."""
