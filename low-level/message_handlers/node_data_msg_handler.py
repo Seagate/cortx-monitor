@@ -438,7 +438,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             logger.warning("Host Memory Alert, Invalid host_memory_usage_threshold value are entered in config.")
             # Assigning default value to _memory_usage_threshold
             self._host_memory_usage_threshold = self.DEFAULT_HOST_MEMORY_USAGE_THRESHOLD
-        
+
         memory_persistent_data = self.read_persistent_data('MEMORY_USAGE_DATA')
         if memory_persistent_data.get('memory_usage_time_map') is not None:
             previous_check_time = int(memory_persistent_data['memory_usage_time_map'])
@@ -555,7 +555,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             by the sensor response json schema"""
 
         current_time = Utility.get_current_time()
-        
+
         # Notify the node sensor to update its data required for the cpu_data message
         successful = self._node_sensor.read_data("cpu_data", self._get_debug())
         if not successful:
@@ -584,7 +584,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             if previous_check_time == -1:
                 previous_check_time = current_time
                 self.persist_state_data('cpu', 'CPU_USAGE_DATA')
-            
+
             if self.usage_time_map['cpu'] - previous_check_time >= self._high_cpu_usage_wait_threshold:
 
                 self.high_usage['cpu'] = True
