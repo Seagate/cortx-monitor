@@ -19,18 +19,6 @@
 # and move it to DATASTORE
 
 SSPL_LL_SETTING:
-   core_processors:
-      - EgressProcessor
-      - IngressProcessor
-      - LoggingProcessor
-   message_handlers:
-      - DiskMsgHandler
-      - LoggingMsgHandler
-      - ServiceMsgHandler
-      - NodeDataMsgHandler
-      - NodeControllerMsgHandler
-      - RealStorEnclMsgHandler
-      - RealStorActuatorMsgHandler
    sensors:
       - DiskMonitor
       - ServiceMonitor
@@ -55,19 +43,6 @@ SSPL_LL_SETTING:
       - Smartctl
       - NodeHWactuator
       - RealStorActuator
-   ALWAYS_ENABLE_SENSORS:
-      - NodeData
-      - IEMSensor
-      - ServiceMonitor
-   ENV_BASED_SENSORS:
-      - REALSTORSENSORS
-      - NODEHWSENSOR
-      - DISKMONITOR
-      - RAIDSENSOR
-      - RAIDINTEGRITYSENSOR
-      - MEMFAULTSENSOR
-      - SASPORTSENSOR
-      - CPUFAULTSENSOR
 
 INGRESSPROCESSOR:
    consumer_id: sspl_actuator

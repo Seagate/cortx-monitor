@@ -41,9 +41,8 @@ from threading import Thread
 from actuators.impl.actuator import Actuator
 from framework.actuator_state_manager import actuator_state_manager
 from framework.base.module_thread import SensorThread
-from framework.base.sspl_constants import (COMMON_CONFIGS, PRODUCT_FAMILY,
-    OperatingSystem, enabled_products, sspl_settings_configured_groups,
-    SYSLOG_HOST, SYSLOG_PORT)
+from framework.base.sspl_constants import (SSPL_SETTINGS, COMMON_CONFIGS, PRODUCT_FAMILY,
+    OperatingSystem, enabled_products, SYSLOG_HOST, SYSLOG_PORT)
 from framework.messaging.logging_processor import LoggingProcessor
 from framework.messaging.egress_accumulated_msgs_processor import \
     EgressAccumulatedMsgsProcessor
@@ -77,7 +76,7 @@ from framework.base.module_thread import ThreadException
 #DO NOT EDIT: Marker comment to dynamically add code to initialize coverage obj for code coverage report generation
 
 # Section and key in config file for bootstrap
-SSPL_SETTING    = 'SSPL_LL_SETTING'
+CONF_SSPL_SETTING    = 'SSPL_LL_SETTING'
 CORE_PROCESSORS = 'core_processors'
 MSG_HANDLERS    = 'message_handlers'
 SENSORS         = 'sensors'
@@ -282,30 +281,20 @@ def main(conf_reader, systemd_support):
     if product not in enabled_products:
         _dropPrivileges("sspl-ll")
 
-    global sspl_settings_configured_groups
-    env_based_sensors = Conf.get(SSPL_CONF,
-        f'{SSPL_SETTING}>{ENV_BASED_SENSORS}', [])
-    sspl_settings_configured_groups |= set(env_based_sensors)
-
     conf_reader = ConfigReader()
-    for group in env_based_sensors:
-        monitor = Conf.get(SSPL_CONF, f"{group}>{MONITOR}", 'true')
-        if monitor not in ['true', True]:
-            sspl_settings_configured_groups -= {group}
-
 
     # List of modules to run in degraded mode
     try:
         # Read list of modules from conf file to load in degraded mode
         modules_to_resume = Conf.get(SSPL_CONF,
-            f'{SSPL_SETTING}>{DEGRADED_STATE_MODULES}', [])
+            f'{CONF_SSPL_SETTING}>{DEGRADED_STATE_MODULES}', [])
     except Exception as e:
         logger.warn("Configuration not found: degraded_state_modules")
         modules_to_resume = []
     logger.info("modules_to_resume: {0}".format(str(modules_to_resume)))
 
     # Use reflection to instantiate the classes based upon its class name in config file
-    core_processors = Conf.get(SSPL_CONF, f'{SSPL_SETTING}>{CORE_PROCESSORS}', [])
+    core_processors = SSPL_SETTINGS.get("CORE_PROCESSORS")
     logger.info("sspl-ll Bootstrap: core processors to load: %s" % (core_processors, ))
     for core_processor in core_processors:
         klass = globals()[core_processor]
@@ -318,7 +307,7 @@ def main(conf_reader, systemd_support):
     sspl_threaded_modules[EgressAccumulatedMsgsProcessor] = EgressAccumulatedMsgsProcessor()
     msgQlist[EgressAccumulatedMsgsProcessor.name()] = queue.Queue()
 
-    message_handlers = Conf.get(SSPL_CONF, f'{SSPL_SETTING}>{MSG_HANDLERS}', [])
+    message_handlers = SSPL_SETTINGS.get("MESSAGE_HANDLERS")
     logger.info("sspl-ll Bootstrap: message handlers to load: %s" % (message_handlers, ))
 
     for message_handler in message_handlers:
@@ -418,25 +407,20 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist, operating_system
 
     # Read in list of sensors
     sensors = []
-    sensors_list = Conf.get(SSPL_CONF, f'{SSPL_SETTING}>{SENSORS}', [])
-    always_enable_sensors = Conf.get(SSPL_CONF,
-        f'{SSPL_SETTING}>{ALWAYS_ENABLE_SENSORS}', [])
+    sensors_list = Conf.get(SSPL_CONF, f'{CONF_SSPL_SETTING}>{SENSORS}', [])
     for sensor in sensors_list:
-        # to start sensor thread add sensor into sensors list only if it is
-        # present in alywas_enable_list or if it is present in
-        # sspl_configured_groups.
-        # (sensor name present in sspl_configured_groups
+        # to start sensor thread add sensor into sensors list
         # only if 'monitor' field value is True)
-        if (sensor.startswith('RealStor') and
-            REALSTORSENSORS in sspl_settings_configured_groups):
-            sensors.append(sensor)
-        elif (sensor.upper() in sspl_settings_configured_groups or
-            sensor in always_enable_sensors):
+        if sensor.startswith('RealStor'):
+            monitor = Conf.get(SSPL_CONF, f"{REALSTORSENSORS}>{MONITOR}", 'true')
+        else:
+            monitor = Conf.get(SSPL_CONF, f"{sensor.upper()}>{MONITOR}", 'true')
+        if monitor in ['true', True]:
             sensors.append(sensor)
     logger.info("sspl-ll Bootstrap: sensors to load: %s" % (sensors, ))
 
     # Read in list of actuators
-    actuators = Conf.get(SSPL_CONF, f'{SSPL_SETTING}>{ACTUATORS}', [])
+    actuators = Conf.get(SSPL_CONF, f'{CONF_SSPL_SETTING}>{ACTUATORS}', [])
     if setup in ['gw', 'cmu', 'vm'] and 'HPIactuator' in actuators:
         actuators.remove('HPIactuator')
     logger.info("sspl-ll Bootstrap: actuators to load: %s" % (actuators, ))

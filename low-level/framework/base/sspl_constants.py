@@ -124,8 +124,13 @@ if not os.path.exists(SSPL_CONFIGURED) and PRODUCT_NAME=="LDR_R1":
 
 CONSUL_ERR_STRING = '500 No cluster leader'
 
-# The keys which are actually active
-sspl_settings_configured_groups = set()
+SSPL_SETTINGS = {
+    "CORE_PROCESSORS": ["EgressProcessor", "IngressProcessor",
+        "LoggingProcessor"],
+    "MESSAGE_HANDLERS": ["DiskMsgHandler", "LoggingMsgHandler",
+        "ServiceMsgHandler", "NodeDataMsgHandler", "NodeControllerMsgHandler",
+        "RealStorEnclMsgHandler", "RealStorActuatorMsgHandler"]
+}
 
 if SSPL_STORE_TYPE == 'consul':
     COMMON_CONFIGS = {
