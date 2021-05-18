@@ -32,6 +32,7 @@ from framework.base.sspl_constants import PRVSNR_CONFIG_INDEX, ServiceTypes
 
 
 class SSPLPrepare:
+
     """Setup and validate post network configuration."""
 
     name = "sspl_prepare"
@@ -42,7 +43,6 @@ class SSPLPrepare:
 
     def validate(self):
         """Check below requirements.
-
         1. Validate input configs
         2. Validate BMC connectivity
         3. Validate storage controller connectivity
@@ -117,6 +117,7 @@ class SSPLPrepare:
 
     def validate_nw_cable_connection(self, interfaces):
         """Check network interface links are up.
+
         0 - Cable disconnected
         1 - Cable connected
         """

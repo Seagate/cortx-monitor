@@ -40,6 +40,7 @@ from framework.utils.utility import Utility
 
 
 class SSPLPostInstall:
+
     """Prepare environment for SSPL service."""
 
     name = "sspl_post_install"
@@ -53,7 +54,6 @@ class SSPLPostInstall:
 
     def validate(self):
         """Check below requirements are met in setup.
-
         1. Check if given product is supported by SSPL
         2. Check if given setup is supported by SSPL
         3. Check if required pre-requisites softwares are installed.
@@ -202,6 +202,7 @@ class SSPLPostInstall:
 
     def create_directories_and_ownership(self):
         """Create ras persistent cache directory and state file.
+
         Assign ownership recursively on the configured directory.
         The created state file will be used later by SSPL resourse agent(HA).
         """

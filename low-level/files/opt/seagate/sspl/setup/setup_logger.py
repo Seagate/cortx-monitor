@@ -13,13 +13,10 @@
 # about this software or licensing, please email opensource@seagate.com or
 # cortx-questions@seagate.com.
 
-"""
+# ****************************************************************************
+#  Description:       Logger for sspl mini provisioner interface scripts
+# ****************************************************************************
 
- ****************************************************************************
-  Description:       Logger for sspl mini provisioner interface scripts
- ****************************************************************************
-
-"""
 import logging
 
 logger_facility = "sspl-setup"

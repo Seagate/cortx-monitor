@@ -22,7 +22,6 @@ import sys
 import errno
 import argparse
 import inspect
-import traceback
 import os
 import syslog
 import time
