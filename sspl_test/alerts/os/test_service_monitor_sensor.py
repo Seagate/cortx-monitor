@@ -114,7 +114,6 @@ def test_service_restart_case(args):
     if sensor_response:
         print(sensor_response)
         assert(sensor_response['info']['alert_type'] != "fault")
-    simulate_service_alerts.cleanup()
 
 test_list = [test_service_inactive_alert,
              test_service_failed_alert,

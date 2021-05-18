@@ -38,7 +38,8 @@ class SSPLTestCmd:
         self.args = args
         self.name = "sspl_test"
         self.plan = "self"
-        self.avoid_rmq = False
+        self.coverage_enabled = False
+
         self.dbus_service = DbusServiceHandler()
         if args.config and args.config[0]:
             self.sspl_test_gc_url = args.config[0]
@@ -83,7 +84,8 @@ class SSPLTestCmd:
     def process(self):
         """Run test using user requested test plan."""
         self.plan = self.args.plan[0]
-        self.avoid_rmq = self.args.avoid_rmq
+        self.coverage_enabled = self.args.coverage
+
         # if self.plan is other than "self"
         # then only config change and service restart is required.
         if self.plan not in ["self", "self_primary", "self_secondary"]:
@@ -150,8 +152,9 @@ class SSPLTestCmd:
 
             # TODO: Convert shell script to python
             # from cortx.sspl.sspl_test.run_qa_test import RunQATest
-            # RunQATest(self.plan, self.avoid_rmq).run()
-            CMD = "%s/run_qa_test.sh %s %s" % (TEST_DIR, self.plan, self.avoid_rmq)
+            # RunQATest(self.plan, self.coverage_enabled).run()
+            CMD = "%s/run_qa_test.sh --plan %s --coverage %s"\
+                   %(TEST_DIR, self.plan, self.coverage_enabled)
             try:
                 output, error, rc = SimpleProcess(CMD).run(realtime_output=True)
             except KeyboardInterrupt:
@@ -171,12 +174,19 @@ class SSPLTestCmd:
             shutil.copyfile(sspl_test_backup, sspl_test_file_path)
             if rc != 0:
                 raise TestException("%s - ERROR: %s - CMD %s" % (self.name, error, CMD))
+
+            print('Restarting the SSPL service..')
+            CMD = "systemctl restart sspl-ll"
+            try:
+                SimpleProcess(CMD).run(realtime_output=True)
+            except Exception as error:
+                raise TestException("Error occurred while executing sspl tests: %s" %error)
         else:
             # TODO: Convert shell script to python
             # from cortx.sspl.sspl_test.run_qa_test import RunQATest
-            # RunQATest(self.plan, self.avoid_rmq).run()
+            # RunQATest(self.plan).run()
             try:
-                CMD = "%s/run_qa_test.sh %s %s" % (TEST_DIR, self.plan, self.avoid_rmq)
+                CMD = "%s/run_qa_test.sh --plan %s"%(TEST_DIR, self.plan)
                 output, error, returncode = SimpleProcess(CMD).run(realtime_output=True)
             except KeyboardInterrupt:
                 msg = "KeyboardInterrupt occurred while executing sspl test."
