@@ -27,10 +27,9 @@ PROJECT_ROOT = "/".join(os.path.abspath(__file__).split("/")
 sys.path.append(PROJECT_ROOT)
 
 from sensors.impl.centos_7.service_monitor import (ServiceMonitor, Conf,
-                                                   Service,
-                                                   store, ActiveState,
+                                                   Service, store,
                                                    InactiveState, SystemBus,
-                                                   Interface, FailedState,
+                                                   Interface,
                                                    MonitoringDisabled,
                                                    EnabledState, DisabledState)
 
@@ -76,7 +75,6 @@ class TestServiceMonitor(unittest.TestCase):
 
     def terminate_run(self, *args, **kwargs):
         self.service_monitor.is_running.return_value = False
-
 
     @patch(
         'sensors.impl.centos_7.service_monitor.Service.is_nonactive_for_threshold_time',
@@ -250,7 +248,6 @@ class TestServiceMonitor(unittest.TestCase):
         self.service_monitor_run_iteration()
         self.assertIs(self.service_monitor.services[
                           "spam.service"]._unit_state, EnabledState)
-
 
     def tearDown(self):
         pass
