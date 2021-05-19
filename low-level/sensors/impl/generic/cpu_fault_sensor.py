@@ -234,7 +234,7 @@ class CPUFaultSensor(SensorThread, InternalMsgQ):
                     description = "Fault resolved for CPU, %s state is  %s" %(item['resource_id'], item["state"])
 
         info = {
-                "resource_type": res_id,
+                "resource_type": self.RESOURCE_TYPE,
                 "resource_id": self.RESOURCE_ID + str(cpu),
                 "event_time": epoch_time,
                 "description": description
