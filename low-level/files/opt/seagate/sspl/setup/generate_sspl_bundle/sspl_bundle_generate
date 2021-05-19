@@ -30,7 +30,7 @@ from framework.base.sspl_constants import (PRODUCT_FAMILY, SUPPORT_REQUESTOR_NAM
     SUPPORT_EMAIL_ID, SUPPORT_CONTACT_NUMBER, ENCL_TRIGGER_LOG_MAX_RETRY,
     ENCL_DOWNLOAD_LOG_MAX_RETRY, ENCL_DOWNLOAD_LOG_WAIT_BEFORE_RETRY, DATA_PATH, 
     SSPL_SB_REQUEST, SB_DATA_PATH, SSPL_SB_TMP, SYSLOG_HOST, SYSLOG_PORT)
-from framework.utils.conf_utils import Conf, SSPL_CONF
+from framework.utils.conf_utils import Conf, SSPL_CONF, SYSTEM_INFORMATION, SSPL_STATE
 
 
 class SSPLBundleError(Exception):
@@ -87,11 +87,11 @@ class SSPLBundleGenerate(object):
                 raise SSPLBundleError(1, msg)
         os.makedirs(self.localTempPath, exist_ok=True)
         try:
-            sspl_state = ""
+            DEFAULT_STATE = Conf.get(SSPL_CONF, f"{SYSTEM_INFORMATION}>{SSPL_STATE}", "active")
             try:
                 sspl_state=open(f"/var/{PRODUCT_FAMILY}/sspl/data/state.txt").readline().rstrip().split("=")
                 # Capturing enclosure logs only when sspl state is active
-                sspl_state = sspl_state[1] if len(sspl_state)==2 else ''
+                sspl_state = sspl_state[1] if len(sspl_state)==2 else DEFAULT_STATE
                 if not sspl_state == 'active':
                     logger.info("SSPL is in 'degraded' mode,"
                          "so enclosure data not collected as part of this node support bundle.")
@@ -145,10 +145,10 @@ class SSPLBundleGenerate(object):
         logger.info("SSPL Support Bundle Location: %s" % self.localTempPath+file_name)
 
     def get_ipmi_sel_data(self):
-        response, _, return_code = self._run_command("ipmitool sel list")
+        response, error, return_code = self._run_command("ipmitool sel list")
         if return_code != 0:
-            logger.error(
-            "Required ipmitool is missing from the Node server to fetch sel data..!")
+            logger.warn(
+            f"Unable to fetch SEL list data with an error : {error}")
         else:
             with open(self.ipmi_sel_data, 'w+') as sel_list:
                 sel_list.write(response)
