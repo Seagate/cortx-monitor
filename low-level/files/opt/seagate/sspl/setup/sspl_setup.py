@@ -22,6 +22,7 @@ import sys
 import errno
 import argparse
 import inspect
+import shutil
 import os
 import syslog
 import time
@@ -36,8 +37,8 @@ from cortx.utils.validator.error import VError
 from files.opt.seagate.sspl.setup.setup_error import SetupError
 from files.opt.seagate.sspl.setup.setup_logger import init_logging, logger
 from framework.base.sspl_constants import (PRVSNR_CONFIG_INDEX,
-                                           GLOBAL_CONFIG_INDEX,
-                                           global_config_path)
+    GLOBAL_CONFIG_INDEX, global_config_path, file_store_config_path,
+    SSPL_BASE_DIR)
 
 
 class Cmd:
@@ -65,6 +66,7 @@ class Cmd:
             [ manifest_support_bundle [<id>] [<path>] ]
             [ support_bundle [<id>] [<path>] ]
             [ check ]
+            [ cleanup ]
             \n""")
 
     @staticmethod
@@ -463,9 +465,43 @@ class CheckCmd(Cmd):
 
 
 class CleanupCmd(Cmd):
-    """Removes SSPL configs."""
+
+    """Restores the default SSPL configs."""
 
     name = "cleanup"
+    product = None
+
+    def __init__(self, args):
+        super().__init__(args)
+
+    def validate(self):
+        # Validate config inputs
+        from framework.utils.utility import Utility
+        Conf.load(GLOBAL_CONFIG_INDEX, global_config_path)
+        self.product = Utility.get_config_value(GLOBAL_CONFIG_INDEX,
+            "cortx>release>product")
+        if self.product is None:
+            msg = "%s - validation failure. %s" % (
+                self.name, "'Product' name is required to restore suitable configs.")
+            logger.error(msg)
+            raise SetupError(errno.EINVAL, msg)
+        logger.info("%s - Validation done" % self.name)
+
+    def process(self):
+        try:
+            if os.path.exists(file_store_config_path):
+                os.remove(file_store_config_path)
+            shutil.copyfile("%s/conf/sspl.conf.%s.yaml" % (SSPL_BASE_DIR,
+                self.product), file_store_config_path)
+            logger.info("%s - Process done" % self.name)
+        except OSError as e:
+            logger.error(f"Failed in Cleanup. ERROR: {e}")
+
+
+class BackupCmd(Cmd):
+    """Backup support for SSPL componenet."""
+
+    name = "backup"
 
     def __init__(self, args):
         super().__init__(args)
@@ -475,7 +511,23 @@ class CleanupCmd(Cmd):
         pass
 
     def process(self):
+        logger.info(f"{self.name} interface not implemented.")
+
+
+class RestoreCmd(Cmd):
+    """Restore support for SSPL componenet."""
+
+    name = "restore"
+
+    def __init__(self, args):
+        super().__init__(args)
+
+    def validate(self):
+        # Common validator classes to check Cortx/system wide validator
         pass
+
+    def process(self):
+        logger.info(f"{self.name} interface not implemented.")
 
 
 def main(argv: dict):
