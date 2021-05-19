@@ -17,7 +17,7 @@ class TestConfUpgrade(unittest.TestCase):
     def setUp(self):
         base_config = "low-level/files/opt/seagate/sspl/conf/sspl.conf.LR2.yaml"
         base_config = os.path.dirname(os.path.abspath(__file__)).replace(
-                                      "sspl_test", base_config)
+                                      "unittests/framework/base", base_config)
         base_config_url = f"yaml://{base_config}"
         self.tmp_dir = "/opt/seagate/cortx/sspl/tmp"
         self.existing_config = f"/{self.tmp_dir}/existing.conf"
