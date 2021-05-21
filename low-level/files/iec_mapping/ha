@@ -1,2 +1,2 @@
-0080010001,Node, The cluster has lost $host server. System is running in degraded mode. For more information refer the Troubleshooting guide. Extra Info: host=$host; status=$status;
-0080010002,Node, Server $host has joined back the cluster. System is restored. Extra Info: host=$host; status=$status;
+0080010001,Node,The cluster has lost one server. System is running in degraded mode.
+0080010002,Node,Server has joined back the cluster. System is restored.
