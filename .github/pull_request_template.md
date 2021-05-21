@@ -25,8 +25,8 @@ For major feature, post the link to the solution page on the confluence Monitor 
 
 ## Integration:
 
-* [ ] If there is any interface change, did you communicate to other components?
-* [ ] if there is any interface change, other componenent gate gatekeepers are ready to merge?
+* [ ] If there is any interface change, did you communicate it to other components?
+* [ ] If there is any interface change, other componenent gate gatekeepers are ready to accept the change?
 * [ ] Did you complete deployment test if applicable?
 <!-- If not applicable, explain here why? -->
 
