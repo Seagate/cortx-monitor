@@ -9,7 +9,7 @@ PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__)).replace(
     "sspl_test", "low-level/framework"
 )
 sys.path.append(PROJECT_ROOT)
-from base.conf_upgrade import ConfUpgrade
+from framework.base.conf_upgrade import ConfUpgrade
 
 
 class TestConfUpgrade(unittest.TestCase):

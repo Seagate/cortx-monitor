@@ -19,7 +19,10 @@ class TestServiceMsgHandler(unittest.TestCase):
         self.service_msg_handler.host_id = 1
 
     def test_create_actuator_response(self):
-        msg = self.service_msg_handler._create_actuator_response(self.service_info)
-        assert msg['host_id'] == 1
-        assert msg['instance_id'] == 'kafka'
-        assert msg['specific_info'][0]['service_name'] == 'kafka'
+        resp_msg = self.service_msg_handler._create_actuator_response(self.service_info)
+        assert resp_msg['host_id'] == 1
+        assert resp_msg['instance_id'] == 'kafka'
+        assert resp_msg['specific_info'][0]['service_name'] == 'kafka'
+        assert resp_msg['specific_info'][0]['status'] == 'failed'
+        assert resp_msg['alert_type'] == 'UPDATE'
+        assert resp_msg['info']['resource_type'] == 'node:sw:os:service'
