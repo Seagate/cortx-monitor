@@ -13,9 +13,7 @@
 # about this software or licensing, please email opensource@seagate.com or
 # cortx-questions@seagate.com.
 
-import time
-
-from common import check_sspl_ll_is_running, get_fru_response, write_to_egress_msgQ
+from common import check_sspl_ll_is_running, get_fru_response, send_node_controller_message_request
 
 
 UUID="16476007-a739-4785-b5c6-f3de189cdf18"
@@ -27,7 +25,7 @@ def test_node_temperature_sensor(agrs):
     check_sspl_ll_is_running()
     instance_id = "*"
     resource_type = "node:sensor:temperature"
-    send_msg_request("NDHW:%s" % resource_type, instance_id)
+    send_node_controller_message_request(UUID, "NDHW:%s" % resource_type, instance_id)
     ingressMsg = get_fru_response(resource_type, instance_id)
 
     assert(ingressMsg.get("sspl_ll_msg_header").get("uuid") == UUID)
@@ -71,7 +69,7 @@ def test_node_voltage_sensor(agrs):
     check_sspl_ll_is_running()
     instance_id = "*"
     resource_type = "node:sensor:voltage"
-    send_msg_request("NDHW:%s" % resource_type, instance_id)
+    send_node_controller_message_request(UUID, "NDHW:%s" % resource_type, instance_id)
     ingressMsg = get_fru_response(resource_type, instance_id)
 
     assert(ingressMsg.get("sspl_ll_msg_header").get("uuid") == UUID)
@@ -111,44 +109,8 @@ def test_node_voltage_sensor(agrs):
         assert(fru_specific_info.get("sensor_reading") is not None)
 
 
-def send_msg_request(resource_type, instance_id):
-    request = {
-        "title": "SSPL Actuator Request",
-        "description": "Seagate Storage Platform Library - Actuator Request",
-
-        "username" : "JohnDoe",
-        "signature" : "None",
-        "time" : "2015-05-29 14:28:30.974749",
-        "expires" : 500,
-
-        "message" : {
-            "sspl_ll_msg_header": {
-                "schema_version": "1.0.0",
-                "sspl_version": "1.0.0",
-                "msg_version": "1.0.0",
-                "uuid": UUID
-            },
-             "sspl_ll_debug": {
-                "debug_component" : "sensor",
-                "debug_enabled" : True
-            },
-            "request_path": {
-                "site_id": "1",
-                "rack_id": "1",
-                "node_id": "1"
-            },
-            "response_dest": {},
-            "actuator_request_type": {
-                "node_controller": {
-                    "node_request": resource_type,
-                    "resource": instance_id
-                }
-            }
-        }
-    }
-    write_to_egress_msgQ(request)
-
 test_list = [
     test_node_temperature_sensor,
     test_node_voltage_sensor
     ]
+

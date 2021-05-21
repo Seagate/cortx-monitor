@@ -15,9 +15,7 @@
 
 # -*- coding: utf-8 -*-
 
-import time
-
-from common import check_sspl_ll_is_running, get_fru_response, write_to_egress_msgQ
+from common import check_sspl_ll_is_running, get_fru_response, send_node_controller_message_request
 
 
 UUID="16476007-a739-4785-b5c6-f3de189cdf18"
@@ -29,7 +27,7 @@ def test_node_disk_module_actuator(agrs):
     check_sspl_ll_is_running()
     instance_id = "*"
     resource_type = "node:fru:disk"
-    send_msg_request("NDHW:%s" % resource_type, instance_id)
+    send_node_controller_message_request(UUID, "NDHW:%s" % resource_type, instance_id)
     ingressMsg = get_fru_response(resource_type, instance_id)
 
     assert(ingressMsg.get("sspl_ll_msg_header").get("uuid") == UUID)
@@ -84,33 +82,5 @@ def test_node_disk_module_actuator(agrs):
             if "States Asserted" in disk_specific_infos:
                 assert(disk_specific_infos.get("States Asserted") is not None)
 
-def send_msg_request(resource_type, instance_id):
-    request = {
-	"username": "sspl-ll",
-	"expires": 3600,
-	"description": "Seagate Storage Platform Library - Actuator Request",
-	"title": "SSPL-LL Actuator Request",
-	"signature": "None",
-	"time": "2018-07-31 04:08:04.071170",
-	"message": {
-		"sspl_ll_msg_header": {
-			"msg_version": "1.0.0",
-			"uuid": UUID,
-			"schema_version": "1.0.0",
-			"sspl_version": "1.0.0"
-		},
-		"sspl_ll_debug": {
-			"debug_component": "sensor",
-			"debug_enabled": True
-		},
-		"actuator_request_type": {
-			"node_controller": {
-				"node_request": resource_type,
-				"resource": instance_id
-			}
-		}
-	}
-    }
-    write_to_egress_msgQ(request)
 
 test_list = [test_node_disk_module_actuator]

@@ -14,11 +14,7 @@
 # cortx-questions@seagate.com.
 
 # -*- coding: utf-8 -*-
-import json
-import os
-import psutil
 import time
-import sys
 import subprocess
 
 from default import world

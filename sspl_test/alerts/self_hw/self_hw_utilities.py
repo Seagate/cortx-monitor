@@ -16,6 +16,7 @@
 # This file contains some utility functions/globals
 # commonly used in hw self test
 import re
+import socket
 import subprocess
 from cortx.utils.process import SimpleProcess
 from framework.utils.conf_utils import (GLOBAL_CONF, Conf,
@@ -63,3 +64,32 @@ def get_manufacturer_name():
         if search_res:
             manufacturer = search_res.groups()[0]
     return manufacturer
+
+def get_server_details():
+    """Returns dictionary of node server information which includes
+    FRU device descriptions like bmc manufacturer, product and more.
+    """
+    fru_info = {
+        "Host": socket.getfqdn(),
+        "Board Mfg": None,
+        "Board Product": None,
+        "Board Part Number": None,
+        "Product Name": None,
+        "Product Part Number": None
+        }
+    cmd = "ipmitool fru print"
+    search_res = ""
+    res_op, _, res_rc = SimpleProcess(cmd).run()
+    if isinstance(res_op, bytes):
+        res_op = res_op.decode("utf-8")
+    if res_rc == 0:
+        search_res = re.search(r"((.*[\S\n\s]+ID 1\)).*)|(.*[\S\n\s]+)", res_op)
+        if search_res:
+            search_res = search_res.group()
+    for key in fru_info.keys():
+        if key in search_res:
+            device_desc = re.search(r"%s[\s]+:[\s]+([\w-]+)(.*)" % key, res_op)
+            if device_desc:
+                value = device_desc.groups()[0]
+            fru_info.update({key: value})
+    return fru_info

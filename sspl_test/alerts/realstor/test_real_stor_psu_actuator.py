@@ -14,38 +14,19 @@
 # cortx-questions@seagate.com.
 
 # -*- coding: utf-8 -*-
-import json
-import os
-import psutil
-import time
-import sys
 
-from default import world
-from messaging.ingress_processor_tests import IngressProcessorTests
-from messaging.egress_processor_tests import EgressProcessorTests
+from common import check_sspl_ll_is_running, get_fru_response, send_enclosure_request
 
 
 def init(args):
     pass
 
 def test_real_stor_psu_actuator(agrs):
-    check_sspl_ll_is_running()
-    psu_actuator_message_request("ENCL:enclosure:fru:psu")
-    psu_actuator_msg = None
-    time.sleep(4)
-    while not world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
-        ingressMsg = world.sspl_modules[IngressProcessorTests.name()]._read_my_msgQ()
-        print("Received: %s" % ingressMsg)
-        try:
-            # Make sure we get back the message type that matches the request
-            msg_type = ingressMsg.get("actuator_response_type")
-            time.sleep(0.1)
-            if msg_type['info']['resource_type'] == "enclosure:fru:psu":
-                psu_actuator_msg = msg_type
-                break
-        except Exception as exception:
-            time.sleep(0.1)
-            print(exception)
+    instance_id = "*"
+    resource_type = "enclosure:fru:psu"
+    send_enclosure_request("ENCL:%s" % resource_type, instance_id)
+    ingressMsg = get_fru_response(resource_type, instance_id)
+    psu_actuator_msg = ingressMsg.get("actuator_response_type")
 
     assert(psu_actuator_msg is not None)
     assert(psu_actuator_msg.get("host_id") is not None)
@@ -98,70 +79,6 @@ def test_real_stor_psu_actuator(agrs):
         assert(psu_specific_info.get("position") is not None)
         assert(psu_specific_info.get("model") is not None)
         assert(psu_specific_info.get("mfg_vendor_id") is not None)
-    
 
-
-def check_sspl_ll_is_running():
-    # Check that the state for sspl_ll service is active
-    found = False
-
-    # Support for python-psutil < 2.1.3
-    for proc in psutil.process_iter():
-        if proc.name == "sspl_ll_d" and \
-           proc.status in (psutil.STATUS_RUNNING, psutil.STATUS_SLEEPING):
-               found = True
-
-    # Support for python-psutil 2.1.3+
-    if found == False:
-        for proc in psutil.process_iter():
-            pinfo = proc.as_dict(attrs=['cmdline', 'status'])
-            if "sspl_ll_d" in str(pinfo['cmdline']) and \
-                pinfo['status'] in (psutil.STATUS_RUNNING, psutil.STATUS_SLEEPING):
-                    found = True
-
-    assert found == True
-
-    # Clear the message queue buffer out
-    while not world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
-        world.sspl_modules[IngressProcessorTests.name()]._read_my_msgQ()
-
-
-def psu_actuator_message_request(resource_type):
-    egressMsg = {
-        "title": "SSPL Actuator Request",
-        "description": "Seagate Storage Platform Library - Actuator Request",
-
-        "username" : "JohnDoe",
-        "signature" : "None",
-        "time" : "2015-05-29 14:28:30.974749",
-        "expires" : 500,
-
-        "message": {
-        "sspl_ll_debug": {
-        "debug_component": "sensor",
-        "debug_enabled": True
-        },
-        "response_dest": {
-        },
-        "sspl_ll_msg_header": {
-        "msg_version": "1.0.0",
-        "uuid": "16476007-a739-4785-b5c7-f3de189cdf9d",
-        "schema_version": "1.0.0",
-        "sspl_version": "1.0.0"
-        },
-        "request_path": {
-                    "site_id": "0",
-                    "node_id": "1",
-                    "rack_id": "0"
-        },
-        "actuator_request_type": {
-            "storage_enclosure": {
-                "enclosure_request": resource_type,
-                "resource": "*"
-                }
-                }
-            }
-        }
-    world.sspl_modules[EgressProcessorTests.name()]._write_internal_msgQ(EgressProcessorTests.name(), egressMsg)
 
 test_list = [test_real_stor_psu_actuator]
