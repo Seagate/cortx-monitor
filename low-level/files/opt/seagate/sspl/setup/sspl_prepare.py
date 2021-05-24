@@ -140,7 +140,7 @@ class SSPLPrepare:
                 res_err = res_err.decode()
                 kcs_errors = ("could not find inband device", "driver timeout")
                 if not any(err for err in kcs_errors if err in res_err):
-                    raise Exception("BMC accessible through KCS - ERROR: %s" % res_err)
+                    raise Exception("BMC is NOT accessible through KCS - ERROR: %s" % res_err)
         elif channel_interface == "lan":
             # Check BMC is accessible through LAN
             subcommand = "channel info"
@@ -148,7 +148,7 @@ class SSPLPrepare:
                 bmc_ip, bmc_user, bmc_passwd, subcommand)
             _, res_err, res_rc = SimpleProcess(cmd).run()
             if res_rc != 0:
-                raise Exception("BMC accessible over lan - ERROR: %s" % res_err.decode())
+                raise Exception("BMC is NOT accessible over lan - ERROR: %s" % res_err.decode())
 
     def process(self):
         """Configure SSPL at prepare stage."""

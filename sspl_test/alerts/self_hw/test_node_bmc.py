@@ -35,6 +35,7 @@ CHANNEL_MEDIUM = "Channel Medium Type"
 FIRMWARE_VERSION = "Firmware Revision"
 IPMI_VERSION = "IPMI Version"
 REQUIRED_IPMI_VERSION = "2.0"
+MIN_REQUIRED_IPMI_VERSION = 2
 SEL_VERSION = "Version"
 MIN_REQUIRED_SEL_VERSION = 2
 
@@ -104,7 +105,7 @@ def test_bmc_is_accessible(args):
             res_err = res_err.decode()
             kcs_errors = ("could not find inband device", "driver timeout")
             if not any(err for err in kcs_errors if err in res_err):
-                raise Exception("BMC accessible through KCS - ERROR: %s" % res_err)
+                raise Exception("BMC is NOT accessible through KCS - ERROR: %s" % res_err)
     elif channel_interface == "lan":
         # Check BMC is accessible through LAN
         subcommand = "channel info"
@@ -118,7 +119,7 @@ def test_bmc_is_accessible(args):
             bmc_ip, bmc_user, bmc_passwd, subcommand)
         res_op, res_err, res_rc = SimpleProcess(cmd).run()
         if res_rc != 0:
-            raise Exception("BMC accessible over lan - ERROR: %s" % res_err.decode())
+            raise Exception("BMC is NOT accessible over lan - ERROR: %s" % res_err.decode())
 
 def test_ipmi_version(args):
     """Check for expected IPMI version."""
@@ -134,7 +135,7 @@ def test_ipmi_version(args):
             version_found = search_res.groups()[0]
     else:
         raise Exception("ERROR: %s" % res_err.decode())
-    if not (version_found == REQUIRED_IPMI_VERSION):
+    if not (float(search_res.groups()[0]) >= MIN_REQUIRED_IPMI_VERSION):
         print("VERSION MISMATCH WITH IPMIT")
         print("Expected: %s" % REQUIRED_IPMI_VERSION)
         print("Found: %s" % version_found)

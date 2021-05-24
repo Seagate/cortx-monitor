@@ -66,8 +66,8 @@ def get_manufacturer_name():
     return manufacturer
 
 def get_server_details():
-    """Returns dictionary of node server information which includes
-    FRU device descriptions like bmc manufacturer, product and more.
+    """Returns a dictionary of 'FRU device description on ID 0' information
+    which includes Board and Product information.
     """
     fru_info = {
         "Host": socket.getfqdn(),
@@ -78,12 +78,14 @@ def get_server_details():
         "Product Part Number": None
         }
     cmd = "ipmitool fru print"
+    prefix = "FRU Device Description : Builtin FRU Device (ID 0)"
     search_res = ""
     res_op, _, res_rc = SimpleProcess(cmd).run()
     if isinstance(res_op, bytes):
         res_op = res_op.decode("utf-8")
     if res_rc == 0:
-        search_res = re.search(r"((.*[\S\n\s]+ID 1\)).*)|(.*[\S\n\s]+)", res_op)
+        # Get only 'FRU Device Description : Builtin FRU Device (ID 0)' information
+        search_res = re.search(r"((.*%s[\S\n\s]+ID 1\)).*)|(.*[\S\n\s]+)" % prefix, res_op)
         if search_res:
             search_res = search_res.group()
     for key in fru_info.keys():
