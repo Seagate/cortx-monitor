@@ -64,8 +64,6 @@ class NodeHWactuator(Actuator, Debug):
     def _get_fru_instances(self, fru, fru_instance):
         """Get the fru information based on fru_type and instance"""
         response = None
-        sensor_props_list = {}
-        fru_info_dict = {}
         try:
             if self.sensor_id_map:
                 fru_dict = self.sensor_id_map[fru.lower()]
@@ -225,29 +223,24 @@ class NodeHWactuator(Actuator, Debug):
          Deassertions Enabled  : unc+ ucr+
         """
         try:
-            sensor_get_response, return_code = self._executor._run_ipmitool_subcommand("sensor get '{0}'".format(sensor_name))
+            cmd = f"sensor get '{sensor_name}'"
+            sensor_get_response, err, return_code = \
+                self._executor._run_ipmitool_subcommand(cmd)
             if return_code == 0:
                 return self._response_to_dict(sensor_get_response)
             else:
-                msg = "sensor get '{0}' : command failed with error {1}".format(sensor_name, sensor_get_response)
+                msg = (f"sensor get '{sensor_name}' :"
+                        " command failed with error {err}")
                 logger.warn(msg)
                 return self._errorstr_to_dict(sensor_get_response)
         except Exception as err:
             logger.error("Exception occurred in _get_sensor_properties for cmd - sensor get '{0}': {1}".format(sensor_name, err))
 
-    def _get_str_response(self, data):
-        # check if data is tuple, convert to string
-        if isinstance(data, tuple):
-            data_str = ''.join([item.decode("utf8") for item in data])
-        else:
-            data_str = data.decode("utf-8")
-        return data_str
 
     def _errorstr_to_dict(self, data):
         error_resp = {'sensor_error': None}
         try:
-            data_str = self._get_str_response(data)
-            for line in data_str.split("\n"):
+            for line in data.split("\n"):
                 if "Sensor Reading" in line:
                     error_str = "-".join(line.split(":")[1:])
                     error_resp['sensor_reading'] = error_str
@@ -282,25 +275,15 @@ class NodeHWactuator(Actuator, Debug):
         :return:
         """
         many_sensors = False
-        if sensor_name == "*":
-            many_sensors = True
-            sdr_type_response, return_code = self._executor._run_ipmitool_subcommand(
-                "sdr type '{0}'".format(sensor_type))
-
-        else:
-            sdr_type_response, return_code = self._executor._run_ipmitool_subcommand(
-                "sdr type '{0}'".format(sensor_type),
-                grep_args=sensor_name)
+        grep_args = None if sensor_name == "*" else sensor_name
+        sdr_type_response, err, return_code = \
+            self._executor._run_ipmitool_subcommand(
+                f"sdr type '{sensor_type}'", grep_args=grep_args)
 
         if return_code != 0:
-            msg = "sdr type '{0}' : command failed with error {1}".format(sensor_type, sdr_type_response)
+            msg = f"sdr type '{sensor_type}' : command failed with error {err}"
             logger.error(msg)
-            errlist = [i.decode() for i in sdr_type_response]
-            if any(errlist):
-                errormsg = "{}".format(sdr_type_response)
-            else:
-                errormsg = sensor_name + " sensor is not available"
-            error_resp = {'sensor_status': errormsg}
+            error_resp = {'sensor_status': err}
             response['specific_info'] = error_resp
         else:
             if many_sensors:
@@ -329,9 +312,8 @@ class NodeHWactuator(Actuator, Debug):
         many_sensors_data = []
         properties = {}
         try:
-            data_str = self._get_str_response(data)
             # from properties list split out key and values.
-            for line in data_str.split("\n"):
+            for line in data.split("\n"):
                 if split_char in line:
                     if dict_keys is not None:
                         inner_dict = dict()

@@ -19,16 +19,40 @@ import subprocess
 
 from framework.utils.ipmi import IPMI
 from framework.utils.service_logging import logger
+from cortx.utils.process import SimpleProcess
+from framework.utils.conf_utils import (Conf, SSPL_CONF, GLOBAL_CONF,
+    BMC_CHANNEL_IF, BMC_INTERFACE, BMC_IP_KEY, BMC_USER_KEY, BMC_SECRET_KEY,
+    MACHINE_ID, NODE_ID_KEY)
+from framework.utils import encryptor
+from framework.base.sspl_constants import ServiceTypes
+from framework.utils.store_factory import file_store
+from framework.base.sspl_constants import DATA_PATH
 
+# Override default store
+store = file_store
 
 class IPMITool(IPMI):
     """Concrete singleton class dervied from IPMI base class which implements
        functionality using ipmitool utility
     """
     _instance = None
+    NAME="IPMITOOL"
     IPMITOOL = "sudo /usr/bin/ipmitool "
     IPMISIMTOOL = "/usr/bin/ipmisimtool "
     MANUFACTURER = "Manufacturer Name"
+    SYSTEM_IF = "system"
+    LAN_IF = "lan"
+    _node_id = Conf.get(GLOBAL_CONF, NODE_ID_KEY,'SN01')
+    ACTIVE_INTERFACE  = f"{DATA_PATH}server/ACTIVE_BMC_IF_{_node_id}"
+    ACTIVE_IPMI_TOOL = None
+    VM_ERROR = 'Could not open device at'
+    RMCP_ERRS = ("Unable to establish LAN session", "Unable to establish IPMI v1.5 / RMCP session",
+                "Unable to establish IPMI v2 / RMCP+ session" ,"connection timeout","session timeout",
+                "driver timeout","message timeout","Address lookup for -U failed","BMC busy","invalid user name",
+                "password invalid","password verification timeout","k_g invalid","privilege level insufficient",
+                "privilege level cannot be obtained for this user","authentication type unavailable for attempted privilege level" )
+
+    KCS_ERRS = ("could not find inband device", "driver timeout")
 
     def __new__(cls):
         """new method"""
@@ -42,10 +66,8 @@ class IPMITool(IPMI):
         """
         manufacturer_name = ""
         cmd = "bmc info"
-        output, rc = self._run_ipmitool_subcommand(cmd)
+        output, _, rc = self._run_ipmitool_subcommand(cmd)
         if rc == 0:
-            if isinstance(output, tuple):
-                output = b''.join(output).decode("utf-8")
             search_res = re.search(
                 r"%s[\s]+:[\s]+([\w]+)(.*)" % self.MANUFACTURER, output)
             if search_res:
@@ -73,14 +95,12 @@ class IPMITool(IPMI):
             Output Format : List of Tuple
             Output Example : [(HDD 1 Status, F1, ok, 4.2, Drive Present),]
         """
-        sensor_list_out, retcode = self._run_ipmitool_subcommand(f"sdr type '{fru_type.title()}'")
+        sensor_list_out, error, retcode = self._run_ipmitool_subcommand(f"sdr type '{fru_type.title()}'")
         if retcode != 0:
-            if isinstance(sensor_list_out, tuple):
-                sensor_list_out = [val for val in sensor_list_out if val]
-            msg = "ipmitool sdr type command failed: {0}".format(b''.join(sensor_list_out))
+            msg = "ipmitool sdr type command failed: {0}".format(error)
             logger.warning(msg)
             return
-        sensor_list = b''.join(sensor_list_out).decode("utf-8").split("\n")
+        sensor_list = sensor_list_out.split("\n")
 
         out = []
         for sensor in sensor_list:
@@ -114,15 +134,14 @@ class IPMITool(IPMI):
            Output Format : Tuple inside dictionary of common and specific data
            Output Example : ({common dict data},{specific dict data})
         """
-        props_list_out, retcode = self._run_ipmitool_subcommand("sensor get '{0}'".format(sensor_id))
+        props_list_out, error, retcode = \
+            self._run_ipmitool_subcommand(f"sensor get '{sensor_id}'")
         if retcode != 0:
-            if isinstance(props_list_out, tuple):
-                props_list_out = [val for val in props_list_out if val]
-            msg = "ipmitool sensor get command failed: {0}".format(b''.join(props_list_out))
+            msg = f"ipmitool sensor get command failed: {error}"
             logger.warning(msg)
             err_response = {sensor_id: {"ERROR": msg}}
             return (False, err_response)
-        props_list = b''.join(props_list_out).decode("utf-8").split("\n")
+        props_list = props_list_out.split("\n")
         props_list = props_list[1:] # The first line is 'Locating sensor record...'
 
         specific = {}
@@ -164,36 +183,64 @@ class IPMITool(IPMI):
     def _run_command(self, command, out_file=subprocess.PIPE):
         """executes commands"""
         process = subprocess.Popen(command, shell=True, stdout=out_file, stderr=subprocess.PIPE)
-        result = process.communicate()
-        return result, process.returncode
+        result, error = process.communicate()
+        return result, error, process.returncode
 
-    def _run_ipmitool_subcommand(self, subcommand, grep_args=None, out_file=subprocess.PIPE):
-        """executes ipmitool sub-commands, and optionally greps the output"""
+    def _run_ipmitool_subcommand(self, subcommand, grep_args=None):
+        """executes ipmitool sub-commands, and optionally greps the output."""
+        self.ACTIVE_IPMI_TOOL = self.IPMITOOL
+        host_conf_cmd = ""
 
-        ipmi_tool = self.IPMITOOL
-
-        # A dummy file path check to select ipmi simulator if
-        # simulator is required, otherwise default ipmitool.
+        # Set ipmitool to ipmisimtool if activated.
         if os.path.exists("/tmp/activate_ipmisimtool"):
-            res, retcode = self._run_command(command=f"{self.IPMISIMTOOL} sel info")
-            if retcode == 0:
-                ipmi_tool = self.IPMISIMTOOL
-                logger.info("IPMI simulator is activated")
+            cmd = self.IPMISIMTOOL + " sel info"
+            _, _, retcode = SimpleProcess(cmd).run()
+            if retcode in [0, 2]:
+                self.ACTIVE_IPMI_TOOL = self.IPMISIMTOOL
+                logger.info("IPMI simulator is activated.")
 
-        command = ipmi_tool + subcommand
-        if grep_args is not None:
-            command += " | grep "
-            if isinstance(grep_args, list):
-                grep_args_str = ""
-                for arg in grep_args:
-                    grep_args_str = "'{}' ".format(arg)
-                command += grep_args_str
-            else:
-                command += "'{}'".format(grep_args)
-        res, retcode = self._run_command(command, out_file)
+        # Fetch channel info from config file and cache.
+        _channel_interface = Conf.get(SSPL_CONF, "%s>%s" %
+                                (BMC_INTERFACE, BMC_CHANNEL_IF))
 
-        return res, retcode
+        _active_interface = store.get(self.ACTIVE_INTERFACE, None)
+        print(_channel_interface, _active_interface)
 
+        # Set host_conf_cmd based on channel info.
+        if _channel_interface == self.LAN_IF and \
+           _active_interface != self.SYSTEM_IF:
+            bmc_ip = Conf.get(GLOBAL_CONF, BMC_IP_KEY, '')
+            bmc_user = Conf.get(GLOBAL_CONF, BMC_USER_KEY, 'ADMIN')
+            bmc_secret = Conf.get(GLOBAL_CONF, BMC_SECRET_KEY, 'ADMIN')
+
+            decryption_key = encryptor.gen_key(MACHINE_ID,
+                                               ServiceTypes.SERVER_NODE.value)
+            bmc_pass = encryptor.decrypt(decryption_key,
+                                         bmc_secret, self.NAME)
+
+            host_conf_cmd = f"-I lanplus -H {bmc_ip} -U {bmc_user} -P {bmc_pass}"
+
+        # generate the final cmd and execute on shell.
+        command = " ".join([self.ACTIVE_IPMI_TOOL, host_conf_cmd, subcommand])
+
+        # out, error, retcode = SimpleProcess(command).run()
+        out, error, retcode = self._run_command(command)
+
+        # Decode bytes encoded strings.
+        if isinstance(out, bytes):
+            out = bytes.decode(out)
+        if isinstance(error, bytes):
+            error = bytes.decode(error)
+
+        # Grep the output as per grep_args provided.
+        if grep_args is not None and retcode == 0:
+            final_list = []
+            for l in out.split('\n'):
+                if re.search(grep_args, l) is not None:
+                    final_list += [l]
+            out = '\n'.join(final_list)
+
+        return out, error, retcode
 
 class IpmiFactory(object):
     """Factory class which returns instance of specific IPMI related
