@@ -13,15 +13,9 @@
 # about this software or licensing, please email opensource@seagate.com or
 # cortx-questions@seagate.com.
 
-import json
-import os
-import psutil
 import time
-import sys
-from default import world
-from messaging.ingress_processor_tests import IngressProcessorTests
-from messaging.egress_processor_tests import EgressProcessorTests
-from common import check_sspl_ll_is_running
+
+from common import check_sspl_ll_is_running, get_fru_response, write_to_egress_msgQ
 
 
 UUID="16476007-a739-4785-b5c6-f3de189cdf12"
@@ -32,36 +26,19 @@ def init(args):
 def test_node_psu_module_actuator(agrs):
     check_sspl_ll_is_running()
     instance_id = "*"
-    psu_actuator_message_request("NDHW:node:fru:psu", instance_id)
-    psu_module_actuator_msg = None
-    ingressMsg = {}
-    for i in range(10):
-        if world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
-            time.sleep(2)
-        while not world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
-            ingressMsg = world.sspl_modules[IngressProcessorTests.name()]._read_my_msgQ()
-            print("Received: %s " % ingressMsg)
-            try:
-                # Make sure we get back the message type that matches the request
-                msg_type = ingressMsg.get("actuator_response_type")
-                if msg_type["info"]["resource_type"] == "node:fru:psu"  and \
-                    msg_type["info"]["resource_id"] == instance_id:
-                    psu_module_actuator_msg = msg_type
-                    break
-            except Exception as exception:
-                print(exception)
-
-        if psu_module_actuator_msg:
-            break
-        time.sleep(1)
+    resource_type = "node:fru:psu"
+    send_msg_request("NDHW:%s" % resource_type, instance_id)
+    ingressMsg = get_fru_response(resource_type, instance_id)
 
     assert(ingressMsg.get("sspl_ll_msg_header").get("uuid") == UUID)
+
+    psu_module_actuator_msg = ingressMsg.get("actuator_response_type")
     assert(psu_module_actuator_msg is not None)
     assert(psu_module_actuator_msg.get("alert_type") is not None)
     assert(psu_module_actuator_msg.get("severity") is not None)
     assert(psu_module_actuator_msg.get("host_id") is not None)
     assert(psu_module_actuator_msg.get("info") is not None)
-    assert(psu_module_actuator_msg.get("instance_id") is not None)
+    assert(psu_module_actuator_msg.get("instance_id") == instance_id)
 
     psu_module_info = psu_module_actuator_msg.get("info")
     assert(psu_module_info.get("site_id") is not None)
@@ -71,17 +48,39 @@ def test_node_psu_module_actuator(agrs):
     assert(psu_module_info.get("event_time") is not None)
     assert(psu_module_info.get("resource_id") is not None)
 
-    fru_specific_infos = psu_module_actuator_msg.get("specific_info", {})
+    fru_specific_infos = psu_module_actuator_msg.get("specific_info")
+    assert(fru_specific_infos is not None)
 
-    if fru_specific_infos:
+    if psu_module_actuator_msg.get("instance_id") == "*":
         for fru_specific_info in fru_specific_infos:
-            resource_id = fru_specific_info.get("resource_id")
-            assert(fru_specific_info.get("States Asserted") is not None)
-            assert(fru_specific_info.get("Sensor Type (Discrete)") is not None)
+            assert(fru_specific_info is not None)
+            if fru_specific_info.get("ERROR"):
+                # Skip any validation on specific info if ERROR seen on FRU
+                continue
             assert(fru_specific_info.get("resource_id") is not None)
+            resource_id = fru_specific_info.get("resource_id")
+            if fru_specific_info.get(resource_id):
+                assert(fru_specific_info.get(resource_id).get("ERROR") is not None)
+                # Skip any validation on specific info if ERROR seen on sensor
+                continue
+            assert(fru_specific_info.get("States Asserted") is not None)
+            sensor_type = [
+                k if k.startswith("Sensor Type") else None
+                for k in fru_specific_info.keys()
+                ][0]
+            assert(sensor_type is not None)
+    else:
+        # Skip any validation if ERROR seen on the specifc FRU
+        if not fru_specific_infos.get("ERROR"):
+            assert(fru_specific_infos.get("States Asserted") is not None)
+            sensor_type = [
+                k if k.startswith("Sensor Type") else None
+                for k in fru_specific_infos.keys()
+                ][0]
+            assert(sensor_type is not None)
 
-def psu_actuator_message_request(resource_type, instance_id):
-    egressMsg = {
+def send_msg_request(resource_type, instance_id):
+    request = {
         "title": "SSPL Actuator Request",
         "description": "Seagate Storage Platform Library - Actuator Request",
 
@@ -115,7 +114,6 @@ def psu_actuator_message_request(resource_type, instance_id):
             }
         }
     }
-    world.sspl_modules[EgressProcessorTests.name()]._write_internal_msgQ(EgressProcessorTests.name(), egressMsg)
+    write_to_egress_msgQ(request)
 
 test_list = [test_node_psu_module_actuator]
-

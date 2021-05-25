@@ -15,7 +15,9 @@
 
 # This file contains some utility functions/globals
 # commonly used in hw self test
+import re
 import subprocess
+from cortx.utils.process import SimpleProcess
 from framework.utils.conf_utils import (GLOBAL_CONF, Conf,
     NODE_KEY)
 
@@ -44,3 +46,20 @@ def get_node_id():
         except Exception as e:
             print(f"Can't read node id, using 'srvnode-1' : {e}")
         return node_id
+
+def get_manufacturer_name():
+    """Returns node server manufacturer name.
+
+    Example: Supermicro, Intel Corporation, DELL Inc
+    """
+    manufacturer = ""
+    cmd = "ipmitool bmc info"
+    res_op, _, res_rc = SimpleProcess(cmd).run()
+    if isinstance(res_op, bytes):
+        res_op = res_op.decode("utf-8")
+    if res_rc == 0:
+        search_res = re.search(
+            r"Manufacturer Name[\s]+:[\s]+([\w]+)(.*)", res_op)
+        if search_res:
+            manufacturer = search_res.groups()[0]
+    return manufacturer

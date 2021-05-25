@@ -26,11 +26,13 @@ from cortx.utils.validator.v_bmc import BmcV
 from cortx.utils.validator.v_controller import ControllerV
 from cortx.utils.validator.v_network import NetworkV
 from files.opt.seagate.sspl.setup.setup_error import SetupError
+from files.opt.seagate.sspl.setup.setup_logger import logger
 from framework.utils.utility import Utility
 from framework.base.sspl_constants import PRVSNR_CONFIG_INDEX, ServiceTypes
 
 
 class SSPLPrepare:
+
     """Setup and validate post network configuration."""
 
     name = "sspl_prepare"
@@ -41,7 +43,6 @@ class SSPLPrepare:
 
     def validate(self):
         """Check below requirements.
-
         1. Validate input configs
         2. Validate BMC connectivity
         3. Validate storage controller connectivity
@@ -116,29 +117,38 @@ class SSPLPrepare:
 
     def validate_nw_cable_connection(self, interfaces):
         """Check network interface links are up.
+
         0 - Cable disconnected
         1 - Cable connected
         """
         if not isinstance(interfaces, list):
-            raise SetupError(errno.EINVAL, "%s - validation failure. %s",
-                self.name, "Expected list of interfaces. Received, %s." % interfaces)
+            msg = "%s - validation failure. %s" % (self.name,
+                "Expected list of interfaces. Received, %s." % interfaces)
+            logger.error(msg)
+            raise SetupError(errno.EINVAL, msg)
         for interface in interfaces:
             cmd = "cat /sys/class/net/%s/carrier" % interface
             output, error, rc = SimpleProcess(cmd).run()
             output = output.decode().strip()
             if output == "0":
-                raise SetupError(errno.EINVAL, "%s - validation failure. %s",
-                    self.name, "Network interface cable is disconnected - %s." % interface)
+                msg = "%s - validation failure. %s" % (self.name,
+                    "Network interface cable is disconnected - %s." % interface)
+                logger.error(msg)
+                raise SetupError(errno.EINVAL, msg)
 
     def validate_nw_interfaces(self, interfaces):
         """Check network intefaces are up."""
         if not isinstance(interfaces, list):
-            raise SetupError(errno.EINVAL, "%s - validation failure. %s",
-                self.name, "Expected list of interfaces. Received, %s." % interfaces)
+            msg = "%s - validation failure. %s" % (self.name,
+                "Expected list of interfaces. Received, %s." % interfaces)
+            logger.error(msg)
+            raise SetupError(errno.EINVAL, msg)
         cmd = "ip --br a | awk '{print $1, $2}'"
         nws = [nw.strip() for nw in os.popen(cmd)]
         nw_status = {nw.split(" ")[0]: nw.split(" ")[1] for nw in nws}
         for interface, status in nw_status.items():
             if interface in interfaces and status in ["down", "DOWN"]:
-                raise SetupError(errno.EINVAL, "%s - validation failure. %s",
+                msg = "%s - validation failure. %s" % (
                     self.name, "Network interface %s is down." % interface)
+                logger.error(msg)
+                raise SetupError(errno.EINVAL, msg)

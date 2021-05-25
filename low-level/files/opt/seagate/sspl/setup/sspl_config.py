@@ -34,6 +34,7 @@ from cortx.utils.message_bus import MessageBus, MessageBusAdmin
 from cortx.utils.message_bus.error import MessageBusError
 from cortx.utils.process import SimpleProcess
 from files.opt.seagate.sspl.setup.setup_error import SetupError
+from files.opt.seagate.sspl.setup.setup_logger import logger
 from .conf_based_sensors_enable import update_sensor_info
 from framework.base import sspl_constants as consts
 from framework.utils.utility import Utility
@@ -57,8 +58,9 @@ class SSPLConfig:
         3. Check if message bus is accessible
         """
         if os.geteuid() != 0:
-            raise SetupError(errno.EINVAL,
-                "Run this command with root privileges.")
+            msg = "Run this command with root privileges."
+            logger.error(msg)
+            raise SetupError(errno.EINVAL, msg)
 
         # Validate input/provisioner configs
         machine_id = Utility.get_machine_id()
@@ -73,9 +75,10 @@ class SSPLConfig:
 
         # Validate sspl conf is created
         if not os.path.isfile(consts.file_store_config_path):
-            raise SetupError(errno.EINVAL,
-                "Missing configuration - %s !! Create and rerun.",
+            msg = "Missing configuration - %s !! Create and rerun." % (
                 consts.file_store_config_path)
+            logger.error(msg)
+            raise SetupError(errno.EINVAL, msg)
 
         # Validate message bus is accessible
         self.mb = MessageBus()
@@ -116,8 +119,9 @@ class SSPLConfig:
                 Conf.set(consts.SSPL_CONFIG_INDEX, "SYSTEM_INFORMATION>log_level", log_level)
                 Conf.save(consts.SSPL_CONFIG_INDEX)
             else:
-                raise SetupError(errno.EINVAL,
-                    "Unexpected log level is requested, '%s'", log_level)
+                msg = "Unexpected log level is requested, '%s'" % (log_level)
+                logger.error(msg)
+                raise SetupError(errno.EINVAL, msg)
 
     def create_message_types(self):
         # Skip this step if sspl is being configured for node
@@ -138,4 +142,6 @@ class SSPLConfig:
             except MessageBusError as e:
                 if self.topic_already_exists not in e.desc:
                     # if topic not already exists, raise exception
-                    raise e
+                    msg = f"MessageBusError:{e}"
+                    logger.exception(msg)
+                    raise SetupError(1, msg)

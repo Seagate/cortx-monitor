@@ -188,3 +188,31 @@ def check_os_platform():
         return platform
     if error:
         print("Failed to get the os platform: error:{}".format(error.decode().rstrip('\n')))
+
+def get_fru_response(resource_type, instance_id):
+    sensor_msg = None
+    for i in range(30):
+        if world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
+            time.sleep(2)
+        while not world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
+            ingressMsg = world.sspl_modules[IngressProcessorTests.name()]._read_my_msgQ()
+            time.sleep(0.1)
+            print("Received: %s " % ingressMsg)
+            try:
+                # Make sure we get back the message type that matches the request
+                msg_type = ingressMsg.get("actuator_response_type")
+                if msg_type["info"]["resource_type"] == resource_type and \
+                    msg_type["instance_id"] == instance_id:
+                    # Break if condition is satisfied.
+                    sensor_msg = msg_type
+                    break
+            except Exception as exception:
+                print(exception)
+        if sensor_msg:
+            break
+    return ingressMsg
+
+def write_to_egress_msgQ(request):
+    world.sspl_modules[
+        EgressProcessorTests.name()
+        ]._write_internal_msgQ(EgressProcessorTests.name(), request)

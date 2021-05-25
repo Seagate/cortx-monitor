@@ -22,7 +22,6 @@ import sys
 import errno
 import argparse
 import inspect
-import traceback
 import os
 import syslog
 import time
@@ -35,6 +34,7 @@ from cortx.utils.validator.v_pkg import PkgV
 from cortx.utils.validator.v_service import ServiceV
 from cortx.utils.validator.error import VError
 from files.opt.seagate.sspl.setup.setup_error import SetupError
+from files.opt.seagate.sspl.setup.setup_logger import init_logging, logger
 from framework.base.sspl_constants import (PRVSNR_CONFIG_INDEX,
                                            GLOBAL_CONFIG_INDEX,
                                            global_config_path)
@@ -117,6 +117,7 @@ class PostInstallCmd(Cmd):
         from files.opt.seagate.sspl.setup.sspl_post_install import SSPLPostInstall
         super().__init__(args)
         self.post_install = SSPLPostInstall()
+        logger.info("%s - Init done" % self.name)
 
     @staticmethod
     def add_args(parser: str, cls: str, name: str):
@@ -129,17 +130,20 @@ class PostInstallCmd(Cmd):
     def validate(self):
         """Validate post install command arguments and given input."""
         if not self.args.config:
-            raise SetupError(errno.EINVAL,
-                "%s - Argument validation failure. %s",
+            msg = "%s - Argument validation failure. %s" % (
                 self.name, "Global config URL is required.")
+            logger.error(msg)
+            raise SetupError(errno.EINVAL, msg)
         # Validate config inputs
         Conf.load(PRVSNR_CONFIG_INDEX, self.args.config[0])
         self.post_install.validate()
+        logger.info("%s - Validation done" % self.name)
 
     def process(self):
         """Perform SSPL post installation."""
         self.copy_input_config(stage=self.name)
         self.post_install.process()
+        logger.info("%s - Process done" % self.name)
 
 
 class PrepareCmd(Cmd):
@@ -152,6 +156,7 @@ class PrepareCmd(Cmd):
         from files.opt.seagate.sspl.setup.sspl_prepare import SSPLPrepare
         super().__init__(args)
         self.prepare = SSPLPrepare()
+        logger.info("%s - Init done" % self.name)
 
     @staticmethod
     def add_args(parser: str, cls: str, name: str):
@@ -164,17 +169,20 @@ class PrepareCmd(Cmd):
     def validate(self):
         """Validate prepare install command arguments and given input."""
         if not self.args.config:
-            raise SetupError(errno.EINVAL,
-                "%s - Argument validation failure. %s",
+            msg = "%s - Argument validation failure. %s" % (
                 self.name, "Global config URL is required.")
+            logger.error(msg)
+            raise SetupError(errno.EINVAL, msg)
         # Validate config inputs
         Conf.load(PRVSNR_CONFIG_INDEX, self.args.config[0])
         self.prepare.validate()
+        logger.info("%s - Validation done" % self.name)
 
     def process(self):
         """Configure SSPL for prepare stage."""
         self.copy_input_config()
         self.prepare.process()
+        logger.info("%s - Process done" % self.name)
 
 
 class ConfigCmd(Cmd):
@@ -187,6 +195,7 @@ class ConfigCmd(Cmd):
         from files.opt.seagate.sspl.setup.sspl_config import SSPLConfig
         super().__init__(args)
         self.sspl_config = SSPLConfig()
+        logger.info("%s - Init done" % self.name)
 
     @staticmethod
     def add_args(parser: str, cls: str, name: str):
@@ -199,17 +208,20 @@ class ConfigCmd(Cmd):
     def validate(self):
         """Validate config command arguments."""
         if not self.args.config:
-            raise SetupError(errno.EINVAL,
-                "%s - Argument validation failure. %s",
+            msg = "%s - Argument validation failure. %s" % (
                 self.name, "Global config URL is required.")
+            logger.error(msg)
+            raise SetupError(errno.EINVAL, msg)
         # Validate config inputs
         Conf.load(PRVSNR_CONFIG_INDEX, self.args.config[0])
         self.sspl_config.validate()
+        logger.info("%s - validation done" % self.name)
 
     def process(self):
         """Setup SSPL configuration."""
         self.copy_input_config()
         self.sspl_config.process()
+        logger.info("%s - Process done" % self.name)
 
 
 
@@ -222,6 +234,7 @@ class InitCmd(Cmd):
         from files.opt.seagate.sspl.setup.sspl_setup_init import SSPLInit
         super().__init__(args)
         self.sspl_init = SSPLInit()
+        logger.info("%s - Init done" % self.name)
 
     @staticmethod
     def add_args(parser: str, cls: str, name: str):
@@ -234,17 +247,20 @@ class InitCmd(Cmd):
     def validate(self):
         """Validate init command arguments."""
         if not self.args.config:
-            raise SetupError(errno.EINVAL,
-                "%s - Argument validation failure. %s",
+            msg = "%s - Argument validation failure. %s" % (
                 self.name, "Global config is required.")
+            logger.error(msg)
+            raise SetupError(errno.EINVAL, msg)
         # Validate config inputs
         Conf.load(PRVSNR_CONFIG_INDEX, self.args.config[0])
         self.sspl_init.validate()
+        logger.info("%s - validation done" % self.name)
 
     def process(self):
         """Configure SSPL init."""
         self.copy_input_config()
         self.sspl_init.process()
+        logger.info("%s - Process done" % self.name)
 
 
 class TestCmd(Cmd):
@@ -258,6 +274,7 @@ class TestCmd(Cmd):
 
     def __init__(self, args):
         super().__init__(args)
+        logger.info("%s - Init done" % self.name)
 
     @staticmethod
     def add_args(parser: str, cls: str, name: str):
@@ -266,22 +283,33 @@ class TestCmd(Cmd):
         parsers.add_argument('args', nargs='*', default=[], help='args')
         parsers.add_argument('--config', nargs='*', default=[], help='Global config url')
         parsers.add_argument('--plan', nargs='*', default=[], help='Test plan type')
-        parsers.add_argument('--avoid_rmq', action="store_true",help='Boolean - Disable RabbitMQ?')
+        parsers.add_argument('--coverage', action="store_true", help='Boolean - Enable Code Coverage.')
         parsers.set_defaults(command=cls)
 
     def validate(self):
         """Validate test command arguments."""
         if not self.args.config:
-            raise SetupError(errno.EINVAL,
-                             "%s - Argument validation failure. %s",
-                             self.name, "Global config is required.")
+            msg = "%s - Argument validation failure. %s" % (
+                self.name, "Global config is required.")
+            logger.error(msg)
+            raise SetupError(errno.EINVAL, msg)
         if not self.args.plan:
-            raise SetupError(errno.EINVAL,
-                             "%s - Argument validation failure. Test plan is needed",
-                             self.name)
+            msg = "%s - Argument validation failure. Test plan is needed" % (
+                self.name)
+            logger.error(msg)
+            raise SetupError(errno.EINVAL, msg)
         result = PkgV().validate("rpms", "sspl-test")
         if result == -1:
-            raise SetupError(1, "'sspl-test' rpm pkg not found.")
+            msg = "'sspl-test' rpm pkg not found."
+            logger.error(msg)
+            raise SetupError(1, msg)
+        logger.info("%s - Validation done" % self.name)
+
+        if self.args.coverage and 'self' in self.args.plan[0]:
+            raise SetupError(errno.EINVAL,
+                    "%s - Argument validation failure. %s",
+                    self.name,
+                    "Code coverage can not be enabled with self tests.")
 
     def process(self):
         """Setup and run SSPL test"""
@@ -289,6 +317,7 @@ class TestCmd(Cmd):
         sspl_test = SSPLTestCmd(self.args)
         sspl_test.validate()
         sspl_test.process()
+        logger.info("%s - Process done" % self.name)
 
 
 class SupportBundleCmd(Cmd):
@@ -309,8 +338,10 @@ class SupportBundleCmd(Cmd):
         sspl_bundle_generate = "%s/%s %s" % (self._script_dir, self.script, args)
         output, error, rc = SimpleProcess(sspl_bundle_generate).run(realtime_output=True)
         if rc != 0:
-            raise SetupError(rc, "%s - validation failure. %s",
-                             self.name, error)
+            msg = "%s - validation failure. %s" % (self.name, error)
+            logger.error(msg)
+            raise SetupError(rc, msg)
+        logger.info("%s - Process done" % self.name)
 
 
 class ManifestSupportBundleCmd(Cmd):
@@ -331,8 +362,10 @@ class ManifestSupportBundleCmd(Cmd):
         manifest_support_bundle = "%s/%s %s" % (self._script_dir, self.script, args)
         output, error, rc = SimpleProcess(manifest_support_bundle).run(realtime_output=True)
         if rc != 0:
-            raise SetupError(rc, "%s - validation failure. %s",
-                             self.name, error)
+            msg = "%s - validation failure. %s" % (self.name, error)
+            logger.error(msg)
+            raise SetupError(rc, msg)
+        logger.info("%s - Process done" % self.name)
 
 
 class ResetCmd(Cmd):
@@ -359,16 +392,16 @@ class ResetCmd(Cmd):
 
     def validate(self):
         if not self.args.config:
-            raise SetupError(
-                errno.EINVAL,
-                "%s - Argument validation failure. Global config is required.",
+            msg = "%s - Argument validation failure. Global config is required." % (
                 self.name)
+            logger.error(msg)
+            raise SetupError(errno.EINVAL, msg)
 
         if not self.args.type:
-            raise SetupError(
-                errno.EINVAL,
-                "%s - Argument validation failure. Reset type is required.",
+            msg = "%s - Argument validation failure. Reset type is required." % (
                 self.name)
+            logger.error(msg)
+            raise SetupError(errno.EINVAL, msg)
 
         reset_type = self.args.type[0]
         if reset_type == "hard":
@@ -377,6 +410,7 @@ class ResetCmd(Cmd):
             self.process_class = "SoftReset"
         else:
             raise SetupError(1, "Invalid reset type specified. Please check usage.")
+        logger.info("%s - Validation done" % self.name)
 
     def process(self):
         if self.process_class == "HardReset":
@@ -385,6 +419,7 @@ class ResetCmd(Cmd):
         elif self.process_class == "SoftReset":
             from files.opt.seagate.sspl.setup.sspl_reset import SoftReset
             SoftReset().process()
+        logger.info("%s - Process done" % self.name)
 
 
 class CheckCmd(Cmd):
@@ -405,6 +440,7 @@ class CheckCmd(Cmd):
             error = "SSPL is not configured. Run provisioner scripts in %s" % (self._script_dir)
             syslog.openlog(logoption=syslog.LOG_PID, facility=syslog.LOG_LOCAL3)
             syslog.syslog(syslog.LOG_ERR, error)
+            logger.error(error)
             raise SetupError(1,
                              "%s - validation failure. %s",
                              self.name,
@@ -420,6 +456,7 @@ class CheckCmd(Cmd):
             else:
                 break
         ServiceV().validate('isrunning', self.services)
+        logger.info("%s - Validation done" % self.name)
 
     def process(self):
         pass
@@ -443,6 +480,7 @@ class CleanupCmd(Cmd):
 
 def main(argv: dict):
     try:
+        init_logging()
         desc = "SSPL Setup Interface"
         command = Cmd.get_command(desc, argv[1:])
         if not command:
@@ -452,8 +490,7 @@ def main(argv: dict):
         command.process()
 
     except Exception as e:
-        sys.stderr.write("error: %s\n\n" % str(e))
-        sys.stderr.write("%s\n" % traceback.format_exc())
+        logger.exception(f"Failed in SSPL Setup Interface. ERROR: {e}")
         Cmd.usage(argv[0])
         return errno.EINVAL
 

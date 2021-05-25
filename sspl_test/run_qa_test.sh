@@ -24,8 +24,19 @@ script_dir=$(dirname $0)
 source $script_dir/constants.sh
 SSPL_STORE_TYPE=confstor
 
-plan=${1:-}
-avoid_rmq=${2:-}
+coverage_enabled="False"
+while [ $# -gt 0 ]; do
+    case $1 in
+        --plan )
+            declare plan="$2"
+            ;;
+        --coverage )
+            declare coverage_enabled="$2"
+            ;;
+        * ) ;;
+    esac
+    shift
+done
 
 sspl_config=yaml://$SSPL_CONFIG_FILE
 sspl_test_config=yaml://$SSPL_TEST_CONFIG_FILE
@@ -58,7 +69,10 @@ pre_requisites()
         # Backing up original persistence data
         $sudo rm -rf /var/$PRODUCT_FAMILY/sspl/orig-data
         $sudo mkdir -p /var/$PRODUCT_FAMILY/sspl/orig-data
-        $sudo find /var/$PRODUCT_FAMILY/sspl -maxdepth 2 -type d -path "/var/$PRODUCT_FAMILY/sspl/data/*" -not -name 'iem'  -exec bash -c 'mv -f ${0} ${0/data/orig-data}/' {} \;
+        $sudo find "/var/$PRODUCT_FAMILY/sspl" -maxdepth 2 \
+            -type d -path "/var/$PRODUCT_FAMILY/sspl/data/*" \
+            -not \( -name 'iem' -o  -name 'coverage' \)  \
+            -exec bash -c 'mv -f ${0} ${0/data/orig-data}/' {} \;
         $sudo mkdir -p /var/$PRODUCT_FAMILY/sspl/orig-data/iem
         if [ -f /var/$PRODUCT_FAMILY/sspl/data/iem/last_processed_msg_time ]; then
             $sudo mv /var/$PRODUCT_FAMILY/sspl/data/iem/last_processed_msg_time /var/$PRODUCT_FAMILY/sspl/orig-data/iem/last_processed_msg_time
@@ -90,6 +104,21 @@ kill_mock_server()
 
 restore_cfg_services()
 {
+    # call reset env script for coverage if coverage is enabled.
+    if [ "$coverage_enabled" == "True" ]
+    then
+        $sudo python3 "$script_dir/coverage/coverage_setup.py" stop
+    fi
+
+    # clear the dummy_service configurations made for
+    # alerts.os.test_service_monitor_sensor test
+    service_name=dummy_service.service
+    service_executable_code_des=/var/cortx/sspl/test
+    $sudo systemctl stop $service_name
+    $sudo systemctl disable $service_name
+    $sudo rm -rf $service_executable_code_des/dummy_service.py
+    $sudo rm -rf /etc/systemd/system/$service_name
+    $sudo systemctl daemon-reload
     # Restoring MC port to value stored before tests
     if [ "$SSPL_STORE_TYPE" == "file" ]
     then
@@ -147,6 +176,16 @@ execute_test()
 {
     $sudo $script_dir/run_sspl-ll_tests.sh $plan
 }
+
+if [ "$plan" == "self" ] || [ "$plan" == "self_primary" ]
+then
+    if [ "$IS_VIRTUAL" == "true" ]
+    then
+    echo "VM detected."
+    echo "ERROR: self or self_primary plan is intended to run on hardware setup."
+    exit 1
+    fi
+fi
 
 if [ "$SSPL_STORE_TYPE" == "confstor" ]
 then
@@ -273,13 +312,21 @@ fi
 
 if [ "$IS_VIRTUAL" == "true" ]
 then
+    echo "Stoping the SSPL service"
+    $sudo systemctl stop sspl-ll
+    echo "Code Coverage enabled : $coverage_enabled"
+    if [ "$coverage_enabled" == "True" ]
+    then
+        $sudo python3 "$script_dir/coverage/coverage_setup.py" start
+    fi
     # consume all alerts before SSPL restarts. So sspl_start_checker
     # waits till SSPL initialized, if previous alerts are availble,
     # sspl_start_checker will use those and test cases will be executed
     # before SSPL initialization
     $script_dir/messaging/consume.py
-    echo "Restarting SSPL"
-    $sudo systemctl restart sspl-ll
+    echo "Starting the SSPL service"
+    $sudo systemctl start sspl-ll
+    sleep 5
     echo "Waiting for SSPL to complete initialization of all the plugins.."
     $script_dir/sspl_start_checker
 fi
@@ -303,8 +350,15 @@ retcode=$?
 if [ "$IS_VIRTUAL" == "true" ]
 then
     # Restoring original cache data
-    $sudo find /var/$PRODUCT_FAMILY/sspl -maxdepth 2 -type d -path "/var/$PRODUCT_FAMILY/sspl/data/*" -not -name 'iem'  -exec bash -c 'rm -rf ${0}' {} \;
-    $sudo find /var/$PRODUCT_FAMILY/sspl -maxdepth 2 -type d -path "/var/$PRODUCT_FAMILY/sspl/orig-data/*" -not -name 'iem'  -exec bash -c 'mv -f ${0} ${0/orig-data/data}/' {} \;
+    $sudo find "/var/$PRODUCT_FAMILY/sspl" -maxdepth 2 \
+        -type d -path "/var/$PRODUCT_FAMILY/sspl/data/*" \
+        -not \( -name 'iem' -o  -name 'coverage' \) \
+        -exec bash -c 'rm -rf ${0}' {} \;
+
+    $sudo find "/var/$PRODUCT_FAMILY/sspl" -maxdepth 2 \
+        -type d -path "/var/$PRODUCT_FAMILY/sspl/orig-data/*" \
+        -not \( -name 'iem' -o  -name 'coverage' \) \
+        -exec bash -c 'mv -f ${0} ${0/orig-data/data}/' {} \;
     if [ -f /var/$PRODUCT_FAMILY/sspl/orig-data/iem/last_processed_msg_time ]; then
         $sudo mv /var/$PRODUCT_FAMILY/sspl/orig-data/iem/last_processed_msg_time /var/$PRODUCT_FAMILY/sspl/data/iem/last_processed_msg_time
     fi

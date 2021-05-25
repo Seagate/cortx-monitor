@@ -25,8 +25,8 @@ import json
 import subprocess
 import logging
 from framework.utils.conf_utils import (GLOBAL_CONF, Conf,
-    STORAGE_TYPE_KEY, SITE_ID_KEY, RACK_ID_KEY,
-    NODE_ID_KEY, CLUSTER_ID_KEY, SSPL_CONF)
+    STORAGE_TYPE_KEY, SITE_ID_KEY, RACK_ID_KEY, SYSTEM_INFORMATION,
+    NODE_ID_KEY, CLUSTER_ID_KEY, SSPL_CONF, SSPL_STATE, LOG_LEVEL)
 from framework.base.sspl_constants import DATA_PATH, SYSLOG_HOST, SYSLOG_PORT
 
 ManifestData = f"{DATA_PATH}support_bundle/manifest_data"
@@ -388,7 +388,7 @@ def manifest_bundle_cleanup():
 def initialize_logging(parser):
     # set Logging Handlers
     _logger = logging.getLogger('manifest_sb')
-    logging_level = Conf.get(SSPL_CONF, f"{'SYSTEM_INFORMATION'}>{'log_level'}",
+    logging_level = Conf.get(SSPL_CONF, f"{SYSTEM_INFORMATION}>{LOG_LEVEL}",
                                             "INFO")
     _logger.setLevel(logging_level)
     handler = logging.handlers.SysLogHandler(
@@ -412,9 +412,9 @@ if __name__ == "__main__":
             try:
                 # Initialize logging
                 logger = initialize_logging(sys.argv)
-
+                DEFAULT_STATE = Conf.get(SSPL_CONF, f"{SYSTEM_INFORMATION}>{SSPL_STATE}", "active")
                 sspl_state=open(sspl_state_file).readline().rstrip().split("=")
-                sspl_state = sspl_state[1] if len(sspl_state)==2 else ''
+                sspl_state = sspl_state[1] if len(sspl_state)==2 else DEFAULT_STATE
                 logger.info(f"Fetched SSPL state:{sspl_state}")
                 if sspl_state == 'active':
                     from framework.platforms.realstor.realstor_enclosure import singleton_realstorencl
