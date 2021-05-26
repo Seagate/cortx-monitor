@@ -38,7 +38,7 @@ from framework.base.sspl_constants import (PRODUCT_FAMILY, ServiceTypes,
 from framework.utils import encryptor
 from framework.utils.conf_utils import (GLOBAL_CONF, IP, SECRET,
     SSPL_CONF, USER, Conf, NODE_ID_KEY, BMC_IP_KEY, BMC_USER_KEY,
-    BMC_SECRET_KEY, MACHINE_ID)
+    BMC_SECRET_KEY, MACHINE_ID, NODEHWSENSOR, IPMI_CLIENT)
 from framework.utils.config_reader import ConfigReader
 from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
@@ -122,7 +122,6 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
     sel_last_queried = None
     SEL_QUERY_FREQ = 300
 
-    NODEHWSENSOR = "NODEHWSENSOR"
     POLLING_INTERVAL = "polling_interval"
     DEFAULT_POLLING_INTERVAL = "30"
 
@@ -172,8 +171,9 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         except (IOError, ConfigReader.Error) as err:
             logger.error("[ Error ] when validating the config file {0} - {1}"\
                  .format(self.CONF_FILE, err))
-        self.polling_interval = int(Conf.get(SSPL_CONF, f"{self.NODEHWSENSOR}>{self.POLLING_INTERVAL}",
-                            self.DEFAULT_POLLING_INTERVAL))
+        self.polling_interval = int(Conf.get(SSPL_CONF,
+                    f"{NODEHWSENSOR}>{self.POLLING_INTERVAL}",
+                    self.DEFAULT_POLLING_INTERVAL))
 
     def _get_file(self, name):
         if os.path.exists(name):
@@ -236,7 +236,9 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         # Initialize internal message queues for this module
         super(NodeHWsensor, self).initialize_msgQ(msgQlist)
 
-        self.ipmi_tool = IpmiFactory().get_implementor('ipmitool')
+        ipmi_client = Conf.get(SSPL_CONF, f"{NODEHWSENSOR}>{IPMI_CLIENT}",
+                               "ipmitool")
+        self.ipmi_tool = IpmiFactory().get_implementor(ipmi_client)
 
         self._node_id = Conf.get(GLOBAL_CONF, NODE_ID_KEY,'SN01')
         self._bmc_user = Conf.get(GLOBAL_CONF, BMC_USER_KEY, 'ADMIN')
@@ -373,7 +375,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
                 logger.warning(f"SEL usage above threshold {self.SEL_USAGE_THRESHOLD}%, \
                     clearing SEL")
 
-                cleared, err, retcode = self._run_ipmitool_subcommand("sel clear")
+                _, err, retcode = self._run_ipmitool_subcommand("sel clear")
                 if retcode != 0:
                     logger.critical(f"{self.host_id}: Error in clearing SEL, overflow"
                         " may result in loss of node alerts from SEL in future")
@@ -605,7 +607,6 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         # Detect if ipmitool removed or facing error after sensor initialized
         if retcode != 0:
             logger.error(f"{self.ipmi_tool.NAME} can't fetch monitoring data for {self.SENSOR_NAME}")
-            logger.info(f"Sumedh test log :\n {res} \n {err} \n {retcode}")
             if retcode == 1:
                 if err.find(self.ipmi_tool.VM_ERROR) != -1:
                     logger.error((f"{self.SENSOR_NAME}: {self.ipmi_tool.NAME}"
@@ -843,7 +844,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
             msg = f"ipmitool sensor get command failed: {err}"
             logger.warning(msg)
             return (False, False, False)
-        props_list = res.split("\n")
+        props_list = props_list_out.split('\n')
         props_list = props_list[1:] # The first line is 'Locating sensor record...'
 
         specific_static = {}

@@ -31,6 +31,7 @@ from framework.base.sspl_constants import DATA_PATH
 # Override default store
 store = file_store
 
+
 class IPMITool(IPMI):
     """Concrete singleton class dervied from IPMI base class which implements
        functionality using ipmitool utility
@@ -42,16 +43,20 @@ class IPMITool(IPMI):
     MANUFACTURER = "Manufacturer Name"
     SYSTEM_IF = "system"
     LAN_IF = "lan"
-    _node_id = Conf.get(GLOBAL_CONF, NODE_ID_KEY,'SN01')
-    ACTIVE_INTERFACE  = f"{DATA_PATH}server/ACTIVE_BMC_IF_{_node_id}"
+    _node_id = Conf.get(GLOBAL_CONF, NODE_ID_KEY, 'SN01')
+    ACTIVE_INTERFACE = f"{DATA_PATH}server/ACTIVE_BMC_IF_{_node_id}"
     ACTIVE_IPMI_TOOL = None
     VM_ERROR = 'Could not open device at'
-    RMCP_ERRS = ("Unable to establish LAN session", "Unable to establish IPMI v1.5 / RMCP session",
-                "Unable to establish IPMI v2 / RMCP+ session" ,"connection timeout","session timeout",
-                "driver timeout","message timeout","Address lookup for -U failed","BMC busy","invalid user name",
-                "password invalid","password verification timeout","k_g invalid","privilege level insufficient",
-                "privilege level cannot be obtained for this user","authentication type unavailable for attempted privilege level" )
-
+    RMCP_ERRS = ("Unable to establish LAN session",
+                 "Unable to establish IPMI v1.5 / RMCP session",
+                 "Unable to establish IPMI v2 / RMCP+ session",
+                 "connection timeout","session timeout",
+                 "driver timeout","message timeout",
+                 "Address lookup for -U failed","BMC busy","invalid user name",
+                 "password invalid","password verification timeout",
+                 "k_g invalid","privilege level insufficient",
+                 "privilege level cannot be obtained for this user",
+                 "authentication type unavailable for attempted privilege level")
     KCS_ERRS = ("could not find inband device", "driver timeout")
 
     def __new__(cls):
@@ -180,14 +185,8 @@ class IPMITool(IPMI):
                 for fru in fru_detail}
         return sensor_id_map
 
-    def _run_command(self, command, out_file=subprocess.PIPE):
-        """executes commands"""
-        process = subprocess.Popen(command, shell=True, stdout=out_file, stderr=subprocess.PIPE)
-        result, error = process.communicate()
-        return result, error, process.returncode
-
     def _run_ipmitool_subcommand(self, subcommand, grep_args=None):
-        """executes ipmitool sub-commands, and optionally greps the output."""
+        """Executes ipmitool sub-commands, and optionally greps the output."""
         self.ACTIVE_IPMI_TOOL = self.IPMITOOL
         host_conf_cmd = ""
 
@@ -204,11 +203,11 @@ class IPMITool(IPMI):
                                 (BMC_INTERFACE, BMC_CHANNEL_IF))
 
         _active_interface = store.get(self.ACTIVE_INTERFACE, None)
-        print(_channel_interface, _active_interface)
 
         # Set host_conf_cmd based on channel info.
         if _channel_interface == self.LAN_IF and \
-           _active_interface != self.SYSTEM_IF:
+           _active_interface != self.SYSTEM_IF and \
+           self.ACTIVE_IPMI_TOOL != self.IPMISIMTOOL:
             bmc_ip = Conf.get(GLOBAL_CONF, BMC_IP_KEY, '')
             bmc_user = Conf.get(GLOBAL_CONF, BMC_USER_KEY, 'ADMIN')
             bmc_secret = Conf.get(GLOBAL_CONF, BMC_SECRET_KEY, 'ADMIN')
@@ -223,8 +222,7 @@ class IPMITool(IPMI):
         # generate the final cmd and execute on shell.
         command = " ".join([self.ACTIVE_IPMI_TOOL, host_conf_cmd, subcommand])
 
-        # out, error, retcode = SimpleProcess(command).run()
-        out, error, retcode = self._run_command(command)
+        out, error, retcode = SimpleProcess([command]).run(shell=True)
 
         # Decode bytes encoded strings.
         if isinstance(out, bytes):
@@ -239,6 +237,13 @@ class IPMITool(IPMI):
                 if re.search(grep_args, l) is not None:
                     final_list += [l]
             out = '\n'.join(final_list)
+
+        # Assign error_msg to err from output
+        if retcode and not error:
+            out, error = error, out
+        # Remove '\n' from error, for matching errors to error stings.
+        if error:
+            error = error.replace('\n', '')
 
         return out, error, retcode
 
