@@ -215,9 +215,10 @@ def get_fru_response(resource_type, instance_id):
     return ingressMsg
 
 def send_node_controller_message_request(uuid, resource_type, instance_id="*"):
-    """This method creates actuator request using resource_type and instance_id.
-    The request will be written in EgressProcesser message Queue.
+    """
+    This method creates actuator request using resource_type and instance_id.
 
+    The request will be written in EgressProcesser message Queue.
     param:
         uuid: Unique ID for the request
         resource_type: Type of resource

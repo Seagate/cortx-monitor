@@ -73,6 +73,7 @@ class SSPLDevDeploy:
         self.variable_file = None
         self.deploy_type = "1-node"
         self.utils_config = "/etc/cortx/utils.yaml"
+        self.utils_index = "utils"
         self.temp_dir = "%s/conf/temp" % SSPL_BASE_DIR
         self.machine_id = None
         with open("/etc/machine-id") as f:
@@ -226,25 +227,26 @@ class SSPLDevDeploy:
         importlib.reload(site)
         print("INFO: Done installing SSPL RPMS.")
 
+    def prepare_utils_config(self):
+        from cortx.utils.conf_store import Conf
+        with open(self.utils_config, "w") as f:
+            f.write("")
+        Conf.load(self.utils_index, "yaml://%s" % self.utils_config)
+        Conf.set(self.utils_index, "cortx>software>common>message_bus_type",
+            self.message_broker)
+        if not self.nodes:
+            Conf.set(self.utils_index, "cortx>software>kafka>servers[0]", localhost_fqdn)
+        else:
+            for num, node in enumerate(self.nodes):
+                Conf.set(self.utils_index, "cortx>software>kafka>servers[%s]" % num, node)
+        Conf.save(self.utils_index)
+
     def setup_message_broker(self):
         """Setup message broker"""
-        from cortx.utils.conf_store import Conf
         # Copy message bus conf files
         os.makedirs("/etc/cortx/", exist_ok=True)
         if self.message_broker == "kafka":
             self.setup_kafka()
-        # Prepare utils config
-        utils_index = "utils"
-        with open(self.utils_config, "w") as f:
-            f.write("")
-        Conf.load(utils_index, "yaml://%s" % self.utils_config)
-        Conf.set(utils_index, "cortx>software>common>message_bus_type", self.message_broker)
-        if not self.nodes:
-            Conf.set(utils_index, "cortx>software>kafka>servers[0]", localhost_fqdn)
-        else:
-            for num, node in enumerate(self.nodes):
-                Conf.set(utils_index, "cortx>software>kafka>servers[%s]" % num, node)
-        Conf.save(utils_index)
 
     def setup_kafka(self):
         """Setup kafka"""
@@ -334,6 +336,7 @@ class SSPLDevDeploy:
     def create_config(self, variable_file, config_files):
         """Override template varibales by values from input file."""
         from cortx.utils.conf_store import Conf
+        self.prepare_utils_config()
         lines = []
         variables = {}
         with open(variable_file) as f:
@@ -355,6 +358,10 @@ class SSPLDevDeploy:
                 if tmpl_var:
                     raise DeployError(1,
                         "Failed to update config %s for %s." % (c_file, tmpl_var.group()))
+            # Add utils config to main config
+            Conf.load(stage, "yaml://%s" % c_file)
+            Conf.copy(self.utils_index, stage)
+            Conf.save(stage)
             # Overwrite user requested feilds
             if stage in ["config", "init"] and self.storage_type and self.server_type:
                 tmp_index = "tmp_sspl_%s" % stage
@@ -393,10 +400,10 @@ class SSPLDevDeploy:
         sspl_setup_script = "%s/bin/sspl_setup" % SSPL_BASE_DIR
         utils_setup_script = "%s/bin/utils_setup" % UTILS_BASE_DIR
         commands = [
-            "%s post_install --config yaml://%s" % (utils_setup_script, self.utils_config),
+            "%s post_install --config yaml://%s" % (utils_setup_script, post_install_config),
             "%s post_install --config yaml://%s" % (sspl_setup_script, post_install_config),
             "%s prepare --config yaml://%s" % (sspl_setup_script, prepare_config),
-            "%s config --config yaml://%s" % (utils_setup_script, self.utils_config),
+            "%s config --config yaml://%s" % (utils_setup_script, config_config),
             "%s config --config yaml://%s" % (sspl_setup_script, config_config),
             "%s init --config yaml://%s" % (sspl_setup_script, init_config)
         ]

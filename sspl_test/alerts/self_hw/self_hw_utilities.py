@@ -67,8 +67,7 @@ def get_manufacturer_name():
 
 def get_server_details():
     """Returns a dictionary of 'FRU device description on ID 0' information
-    which includes Board and Product information.
-    """
+    which includes Board and Product information."""
     fru_info = {
         "Host": socket.getfqdn(),
         "Board Mfg": None,

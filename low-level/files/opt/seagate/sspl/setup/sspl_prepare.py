@@ -57,7 +57,7 @@ class SSPLPrepare:
         # Validate input/provisioner configs
         node_type = Utility.get_config_value(consts.PRVSNR_CONFIG_INDEX,
             "server_node>%s>type" % machine_id)
-        cluster_id = Utility.get_config_value(consts.PRVSNR_CONFIG_INDEX,
+        Utility.get_config_value(consts.PRVSNR_CONFIG_INDEX,
             "server_node>%s>cluster_id" % machine_id)
         if node_type.lower() not in ["virtual", "vm"]:
             bmc_ip = Utility.get_config_value(consts.PRVSNR_CONFIG_INDEX,
