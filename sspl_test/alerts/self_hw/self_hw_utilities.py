@@ -66,9 +66,11 @@ def get_manufacturer_name():
     return manufacturer
 
 def get_server_details():
-    """Returns a dictionary of 'FRU device description on ID 0' information
+    """Returns a dictionary of server information using ipmitool.
 
-    Server details includes Hostname, Board and Product information.
+    Grep 'FRU device description on ID 0' information from the output
+    of 'ipmitool fru print'. Server details includes Hostname, Board and
+    Product information.
     """
     fru_info = {
         "Host": socket.getfqdn(),

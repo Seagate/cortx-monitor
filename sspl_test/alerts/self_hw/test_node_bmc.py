@@ -44,7 +44,8 @@ def init(args):
     pass
 
 def test_bmc_config(args):
-    """Check if BMC configuration are valid.
+    """
+    Check if BMC configuration are valid.
 
     Testing BMC config with ipmitool is possible only when ipmi over lan
     is configured(out-band setup). It is taken care by test_bmc_is_accessible.
