@@ -133,9 +133,9 @@ class SSPLPrepare:
                 if search_res:
                     channel_found = search_res.groups()[0]
                 if expected_channel != channel_found:
-                    print("UNEXPECTED BMC CHANNEL TYPE FOUND.")
-                    print("Expected: %s" % expected_channel)
-                    print("Found: %s" % channel_found)
+                    logger.critical(
+                        "UNEXPECTED BMC CHANNEL TYPE FOUND. Expected: '%s' Found: '%s'" %(
+                            expected_channel, channel_found))
             else:
                 res_err = res_err.decode()
                 kcs_errors = ("could not find inband device", "driver timeout")
