@@ -15,9 +15,7 @@
 
 # -*- coding: utf-8 -*-
 
-import time
-
-from common import check_sspl_ll_is_running, get_fru_response, write_to_egress_msgQ
+from common import check_sspl_ll_is_running, get_fru_response, send_node_controller_message_request
 
 
 UUID="16476007-a739-4785-b5c6-f3de189cdf12"
@@ -29,7 +27,7 @@ def test_node_fan_module_actuator(agrs):
     check_sspl_ll_is_running()
     instance_id = "*"
     resource_type = "node:fru:fan"
-    send_msg_request("NDHW:%s" % resource_type, instance_id)
+    send_node_controller_message_request(UUID, "NDHW:%s" % resource_type, instance_id)
     ingressMsg = get_fru_response(resource_type, instance_id)
 
     assert(ingressMsg.get("sspl_ll_msg_header").get("uuid") == UUID)
@@ -115,33 +113,5 @@ def test_node_fan_module_actuator(agrs):
             assert(fan_specific_infos.get("Deassertions Enabled") is not None)
             assert(fan_specific_infos.get("resource_id") is not None)
 
-def send_msg_request(resource_type, instance_id):
-    request = {
-        "title": "SSPL Actuator Request",
-        "description": "Seagate Storage Platform Library - Actuator Request",
-        "username" : "JohnDoe",
-        "signature" : "None",
-        "time" : "2015-05-29 14:28:30.974749",
-        "expires" : 500,
-        "message" : {
-            "sspl_ll_msg_header": {
-                "schema_version": "1.0.0",
-                "sspl_version": "1.0.0",
-                "msg_version": "1.0.0",
-                "uuid": UUID
-            },
-             "sspl_ll_debug": {
-                "debug_component" : "sensor",
-                "debug_enabled" : True
-            },
-            "actuator_request_type": {
-                "node_controller": {
-                    "node_request": resource_type,
-                    "resource": instance_id
-                }
-            }
-        }
-    }
-    write_to_egress_msgQ(request)
 
 test_list = [test_node_fan_module_actuator]

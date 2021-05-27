@@ -16,6 +16,7 @@
 # This file contains some utility functions/globals
 # commonly used in hw self test
 import re
+import socket
 import subprocess
 from cortx.utils.process import SimpleProcess
 from framework.utils.conf_utils import (GLOBAL_CONF, Conf,
@@ -63,3 +64,37 @@ def get_manufacturer_name():
         if search_res:
             manufacturer = search_res.groups()[0]
     return manufacturer
+
+def get_server_details():
+    """Returns a dictionary of server information using ipmitool.
+
+    Grep 'FRU device description on ID 0' information from the output
+    of 'ipmitool fru print'. Server details includes Hostname, Board and
+    Product information.
+    """
+    fru_info = {
+        "Host": socket.getfqdn(),
+        "Board Mfg": None,
+        "Board Product": None,
+        "Board Part Number": None,
+        "Product Name": None,
+        "Product Part Number": None
+        }
+    cmd = "ipmitool fru print"
+    prefix = "FRU Device Description : Builtin FRU Device (ID 0)"
+    search_res = ""
+    res_op, _, res_rc = SimpleProcess(cmd).run()
+    if isinstance(res_op, bytes):
+        res_op = res_op.decode("utf-8")
+    if res_rc == 0:
+        # Get only 'FRU Device Description : Builtin FRU Device (ID 0)' information
+        search_res = re.search(r"((.*%s[\S\n\s]+ID 1\)).*)|(.*[\S\n\s]+)" % prefix, res_op)
+        if search_res:
+            search_res = search_res.group()
+    for key in fru_info.keys():
+        if key in search_res:
+            device_desc = re.search(r"%s[\s]+:[\s]+([\w-]+)(.*)" % key, res_op)
+            if device_desc:
+                value = device_desc.groups()[0]
+            fru_info.update({key: value})
+    return fru_info

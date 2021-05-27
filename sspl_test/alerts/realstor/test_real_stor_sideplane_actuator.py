@@ -14,16 +14,8 @@
 # cortx-questions@seagate.com.
 
 # -*- coding: utf-8 -*-
-import json
-import os
-import psutil
-import time
-import sys
 
-from default import world
-from messaging.ingress_processor_tests import IngressProcessorTests
-from messaging.egress_processor_tests import EgressProcessorTests
-from common import check_sspl_ll_is_running
+from common import check_sspl_ll_is_running, get_fru_response, send_enclosure_request
 
 
 def init(args):
@@ -31,23 +23,12 @@ def init(args):
 
 def test_real_stor_sideplane_module_actuator(agrs):
     check_sspl_ll_is_running()
-    # sideplane_actuator_message_request("ENCL:enclosure:fru:sideplane", "Left Sideplane")
-    sideplane_actuator_message_request("ENCL:enclosure:fru:sideplane", "*")
-    sideplane_module_actuator_msg = None
-    time.sleep(4)
-    while not world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
-        ingressMsg = world.sspl_modules[IngressProcessorTests.name()]._read_my_msgQ()
-        time.sleep(0.1)
-        print("Received: %s" % ingressMsg)
-        try:
-            # Make sure we get back the message type that matches the request
-            msg_type = ingressMsg.get("actuator_response_type")
-            if msg_type["info"]["resource_type"] == "enclosure:fru:sideplane":
-                sideplane_module_actuator_msg = msg_type
-                break
-        except Exception as exception:
-            time.sleep(0.1)
-            print(exception)
+    instance_id = "*"
+    resource_type = "enclosure:fru:sideplane"
+    send_enclosure_request("ENCL:%s" % resource_type, instance_id)
+    ingressMsg = get_fru_response(resource_type, instance_id)
+    sideplane_module_actuator_msg = ingressMsg.get("actuator_response_type")
+
     assert(sideplane_module_actuator_msg is not None)
     assert(sideplane_module_actuator_msg.get("alert_type") is not None)
     assert(sideplane_module_actuator_msg.get("alert_id") is not None)
@@ -155,42 +136,5 @@ def verify_sideplane_module_specific_info(sideplane_specific_info):
                     assert(expander.get("health_numeric") is not None)
                     assert(expander.get("health_reason") is not None)
                     assert(expander.get("health_recommendation") is not None)
-
-def sideplane_actuator_message_request(resource_type, resource_id):
-    egressMsg = {
-        "title": "SSPL Actuator Request",
-        "description": "Seagate Storage Platform Library - Actuator Request",
-
-        "username" : "JohnDoe",
-        "signature" : "None",
-        "time" : "2015-05-29 14:28:30.974749",
-        "expires" : 500,
-
-        "message" : {
-            "sspl_ll_msg_header": {
-                "schema_version": "1.0.0",
-                "sspl_version": "1.0.0",
-                "msg_version": "1.0.0"
-            },
-             "sspl_ll_debug": {
-                "debug_component" : "sensor",
-                "debug_enabled" : True
-            },
-            "request_path": {
-                "site_id": "1",
-                "rack_id": "1",
-                "cluster_id": "1",
-                "node_id": "1"
-            },
-            "response_dest": {},
-            "actuator_request_type": {
-                "storage_enclosure": {
-                    "enclosure_request": resource_type,
-                    "resource": resource_id
-                }
-            }
-        }
-    }
-    world.sspl_modules[EgressProcessorTests.name()]._write_internal_msgQ(EgressProcessorTests.name(), egressMsg)
 
 test_list = [test_real_stor_sideplane_module_actuator]
