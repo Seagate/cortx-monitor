@@ -414,6 +414,15 @@ class SSPLDevDeploy:
             if rc:
                 raise DeployError(rc, "%s - CMD: %s", out, cmd)
 
+    def restore_default_config(self):
+        """ Restore the SSPL config to its default config."""
+        sspl_setup_script = "%s/bin/sspl_setup" % SSPL_BASE_DIR
+        cmd = "%s cleanup" % (sspl_setup_script)
+        print("INFO: Executing command: '%s'" % (cmd))
+        out, rc = self._execute_cmd(cmd)
+        if rc:
+            raise DeployError(rc, "%s - CMD: %s", out, cmd)
+
     def _execute_cmd(self, cmd):
         """Executing commands."""
         _out = None
@@ -437,6 +446,8 @@ def main(args):
     if args.cleanup:
         deploy.cleanup()
         return
+    if args.reset_config:
+        deploy.restore_default_config()
     if args.prereq:
         try:
             deploy.setup_yum_repos()
@@ -476,6 +487,9 @@ if __name__ == '__main__':
     # cleanup arg
     argParser.add_argument("--cleanup", action="store_true",
                            help="Stop sspl-ll and remove installed SSPL RPMs")
+    argParser.add_argument("--reset_config", action="store_true",
+                           help="Restores default SSPL config")
+
     # Setup args
     argParser.add_argument("--prereq", action="store_true",
                            help="Setup yum repos and message broker")
