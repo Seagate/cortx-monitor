@@ -51,12 +51,12 @@ class TestServiceMonitor(unittest.TestCase):
             "UnitFileState": "enabled"
         }
 
-        Conf.get = Mock(side_effect=self.mocked_conf)
         Interface.Get = Mock(side_effect=self.mocked_properties)
         SystemBus.get_object = Mock()
         Service.dump_to_cache = Mock()
         Service.cache_exists = Mock(return_value=False)
-        self.service_monitor = ServiceMonitor()
+        with patch("cortx.utils.conf_store.Conf.get", new=Mock(side_effect=self.mocked_conf)):
+            self.service_monitor = ServiceMonitor()
         self.service_monitor._write_internal_msgQ = Mock()
         self.service_monitor.is_running = Mock(return_value=True)
         time.sleep = Mock(side_effect=self.terminate_run)
