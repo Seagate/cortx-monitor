@@ -383,8 +383,8 @@ class ManifestSupportBundleCmd(Cmd):
 
 class ResetCmd(Cmd):
 
-    """Performs SSPL config reset.
-    Reset Interface is used to reset configs and clean log directory
+    """Reset Interface is used to reset Data/MetaData
+    and clean log files
     """
 
     name = "reset"
@@ -410,8 +410,8 @@ class ResetCmd(Cmd):
             raise SetupError(errno.EINVAL, msg)
 
     def process(self):
-        from files.opt.seagate.sspl.setup.sspl_reset import HardReset
-        HardReset().process()
+        from files.opt.seagate.sspl.setup.sspl_reset import Reset
+        Reset().process()
         logger.info("%s - Process done" % self.name)
 
 
