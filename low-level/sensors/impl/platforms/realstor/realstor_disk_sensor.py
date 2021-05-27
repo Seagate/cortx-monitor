@@ -39,7 +39,6 @@ from framework.utils.conf_utils import (POLLING_FREQUENCY_OVERRIDE, SSPL_CONF,
 from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
 from framework.utils.store_factory import store
-from message_handlers.logging_msg_handler import LoggingMsgHandler
 # Modules that receive messages from this module
 from message_handlers.real_stor_encl_msg_handler import RealStorEnclMsgHandler
 from sensors.IRealStor_disk_sensor import IRealStorDiskSensor
@@ -203,7 +202,7 @@ class RealStorDiskSensor(SensorThread, InternalMsgQ):
         self._send_json_msg(alert_type, disk, extended_info)
 
         # send IEM
-        self._log_IEM(alert_type, disk, extended_info)
+        # self._log_IEM(alert_type, disk, extended_info)
 
     def _rss_check_disks_presence(self):
         """Match cached realstor disk info with latest retrieved disks info """
@@ -548,22 +547,24 @@ class RealStorDiskSensor(SensorThread, InternalMsgQ):
         # Send the event to storage encl message handler to generate json message and send out
         self._write_internal_msgQ(RealStorEnclMsgHandler.name(), internal_json_msg, self._event)
 
-    def _log_IEM(self, alert_type, details, ext):
-        """Sends an IEM to logging msg handler"""
-        json_data = self._gen_json_msg(alert_type, details, ext)
+    # DEPRICATED: LoggingMsgHandler is no more in use. IEM routing
+    #             is handled by IEM() class and other MsgHandlers.
+    # def _log_IEM(self, alert_type, details, ext):
+    #     """Sends an IEM to logging msg handler"""
+    #     json_data = self._gen_json_msg(alert_type, details, ext)
 
-        # Send the event to storage encl message handler to generate json message
-        # and send out
-        internal_json_msg=json.dumps(
-                {'actuator_request_type':
-                    {'logging':
-                        {'log_level': 'LOG_WARNING', 'log_type': 'IEM',
-                          'log_msg': f'{json_data}'}
-                    }
-                })
+    #     # Send the event to storage encl message handler to generate json message
+    #     # and send out
+    #     internal_json_msg=json.dumps(
+    #             {'actuator_request_type':
+    #                 {'logging':
+    #                     {'log_level': 'LOG_WARNING', 'log_type': 'IEM',
+    #                       'log_msg': f'{json_data}'}
+    #                 }
+    #             })
 
-        # Send the event to logging msg handler to send IEM message to journald
-        self._write_internal_msgQ(LoggingMsgHandler.name(), internal_json_msg)
+    #     # Send the event to logging msg handler to send IEM message to journald
+    #     self._write_internal_msgQ(LoggingMsgHandler.name(), internal_json_msg)
 
     def suspend(self):
         """Suspends the module thread. It should be non-blocking"""

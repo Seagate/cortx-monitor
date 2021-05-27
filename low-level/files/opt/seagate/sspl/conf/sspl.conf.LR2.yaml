@@ -65,10 +65,6 @@ LOGGINGPROCESSOR:
    message_type: IEM
    offset: earliest
 
-LOGGINGMSGHANDLER:
-   iem_routing_enabled: false
-   iem_log_locally: true
-
 NODEDATAMSGHANDLER:
    transmit_interval: 10
    high_cpu_usage_wait_threshold: 30

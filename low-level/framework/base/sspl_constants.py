@@ -104,7 +104,7 @@ sspl_test_config_path = "%s://%s" % (CONFIG_SPEC_TYPE, sspl_test_file_path)
 global_config_path = "%s://%s" %(CONFIG_SPEC_TYPE, global_config_file_path)
 salt_provisioner_pillar_sls = 'sspl'
 salt_uniq_attr_per_node = ['cluster_id']
-salt_uniq_passwd_per_node = ['INGRESSPROCESSOR', 'EGRESSPROCESSOR', 'LOGGINGPROCESSOR']
+salt_uniq_passwd_per_node = ['INGRESSPROCESSOR', 'EGRESSPROCESSOR']
 
 # Initialize to default values
 node_key_id = 'srvnode-1'
@@ -127,10 +127,9 @@ if not os.path.exists(SSPL_CONFIGURED) and PRODUCT_NAME=="LDR_R1":
 CONSUL_ERR_STRING = '500 No cluster leader'
 
 SSPL_SETTINGS = {
-    "CORE_PROCESSORS": ["EgressProcessor", "IngressProcessor",
-        "LoggingProcessor"],
-    "MESSAGE_HANDLERS": ["DiskMsgHandler", "LoggingMsgHandler",
-        "ServiceMsgHandler", "NodeDataMsgHandler", "NodeControllerMsgHandler",
+    "CORE_PROCESSORS": ["EgressProcessor", "IngressProcessor"],
+    "MESSAGE_HANDLERS": ["DiskMsgHandler","ServiceMsgHandler",
+        "NodeDataMsgHandler", "NodeControllerMsgHandler",
         "RealStorEnclMsgHandler", "RealStorActuatorMsgHandler"]
 }
 

@@ -38,8 +38,6 @@ from framework.utils.conf_utils import (GLOBAL_CONF, SSPL_CONF,
                                         Conf, SITE_ID_KEY, CLUSTER_ID_KEY, NODE_ID_KEY,
                                         RACK_ID_KEY, STORAGE_SET_ID_KEY,
                                         SERVICEMONITOR, MONITORED_SERVICES)
-# Modules that receive messages from this module
-from message_handlers.logging_msg_handler import LoggingMsgHandler
 
 
 class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
@@ -52,9 +50,7 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
     ALERT_TYPE = "UPDATE"
     # Dependency list
     DEPENDENCIES = {
-        "plugins": [
-            "LoggingMsgHandler",
-            "EgressProcessor"],
+        "plugins": ["EgressProcessor"],
         "rpms": []
     }
 
@@ -227,26 +223,28 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
             jsonMsg1 = ServiceMonitorMsg(jsonMsg["sensor_request_type"]).getJson()
             self._write_internal_msgQ("EgressProcessor", jsonMsg1)
 
-            # Create an IEM if the resulting service state is failed
-            specific_info = \
-                jsonMsg['sensor_request_type']['service_status_alert']['specific_info']
-            state = specific_info['state']
+            # DEPRICATED: LoggingMsgHandler is no more in use. IEM routing
+            #             is handled by IEM() class and other MsgHandlers.
+            # # Create an IEM if the resulting service state is failed
+            # specific_info = \
+            #     jsonMsg['sensor_request_type']['service_status_alert']['specific_info']
+            # state = specific_info['state']
 
-            if state == "failed":
-                internal_json_msg = json.dumps(
-                    {"actuator_request_type" : {
-                        "logging": {
-                            "log_level": "LOG_WARNING",
-                            "log_type": "IEM",
-                            "log_msg": "IEC: 020003001: Service entered a "\
-                                "Failed state : %s"
-                                % (json.dumps(specific_info, sort_keys=True))
-                            }
-                        }
-                    })
-                # Send the event to logging msg handler to send IEM message to journald
-                self._write_internal_msgQ(
-                    LoggingMsgHandler.name(), internal_json_msg)
+            # if state == "failed":
+            #     internal_json_msg = json.dumps(
+            #         {"actuator_request_type" : {
+            #             "logging": {
+            #                 "log_level": "LOG_WARNING",
+            #                 "log_type": "IEM",
+            #                 "log_msg": "IEC: 020003001: Service entered a "\
+            #                     "Failed state : %s"
+            #                     % (json.dumps(specific_info, sort_keys=True))
+            #                 }
+            #             }
+            #         })
+            #     # Send the event to logging msg handler to send IEM message to journald
+            #     self._write_internal_msgQ(
+            #         LoggingMsgHandler.name(), internal_json_msg)
 
         # ... handle other service message types
 

@@ -37,7 +37,7 @@ from json_msgs.messages.sensors.expander_reset import ExpanderResetMsg
 from json_msgs.messages.sensors.hpi_data import HPIDataMsg
 from json_msgs.messages.sensors.node_hw_data import NodeIPMIDataMsg
 # Modules that receive messages from this module
-from message_handlers.logging_msg_handler import LoggingMsgHandler
+# from message_handlers.logging_msg_handler import LoggingMsgHandler
 
 
 class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
@@ -57,7 +57,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
     # Dependency list
     DEPENDENCIES = {
-                    "plugins": ["LoggingMsgHandler", "EgressProcessor"],
+                    "plugins": ["EgressProcessor"],
                     "rpms": []
     }
 
@@ -851,28 +851,30 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 logger.info(f"DiskMsgHandler, Unknown disk status/reason: {status}/{reason}")
                 return
 
-        json_data = {"enclosure_serial_number": drive.get_drive_enclosure(),
-                         "disk_serial_number": drive.getSerialNumber(),
-                         "slot": drive.get_drive_num(),
-                         "status": status,
-                         "reason": reason,
-                         "hostname": self._host_id,
-                         "path_id": drive.get_path_id()
-                         }
+        # DEPRICATED: LoggingMsgHandler is no more in use. IEM routing
+        #             is handled by IEM() class and other MsgHandlers.
+        #  json_data = {"enclosure_serial_number": drive.get_drive_enclosure(),
+        #                  "disk_serial_number": drive.getSerialNumber(),
+        #                  "slot": drive.get_drive_num(),
+        #                  "status": status,
+        #                  "reason": reason,
+        #                  "hostname": self._host_id,
+        #                  "path_id": drive.get_path_id()
+        #                  }
 
-        self._log_debug(f"_log_IEM, log_msg: %{log_msg}:{json.dumps(json_data, sort_keys=True)}")
-        internal_json_msg = json.dumps(
-                    {"actuator_request_type" : {
-                        "logging": {
-                            "log_level": "LOG_WARNING",
-                            "log_type": "IEM",
-                            "log_msg": f"{log_msg}:{json.dumps(json_data, sort_keys=True)}"
-                            }
-                        }
-                     })
+        # self._log_debug(f"_log_IEM, log_msg: %{log_msg}:{json.dumps(json_data, sort_keys=True)}")
+        # internal_json_msg = json.dumps(
+        #             {"actuator_request_type" : {
+        #                 "logging": {
+        #                     "log_level": "LOG_WARNING",
+        #                     "log_type": "IEM",
+        #                     "log_msg": f"{log_msg}:{json.dumps(json_data, sort_keys=True)}"
+        #                     }
+        #                 }
+        #              })
 
-        # Send the event to logging msg handler to send IEM message to journald
-        self._write_internal_msgQ(LoggingMsgHandler.name(), internal_json_msg)
+        # # Send the event to logging msg handler to send IEM message to journald
+        # self._write_internal_msgQ(LoggingMsgHandler.name(), internal_json_msg)
 
     def _check_expander_reset(self):
         """Check for expander reset by polling for sgXX changes
@@ -959,22 +961,24 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
         # Send the json message to the message processor to transmit out
         self._write_internal_msgQ(EgressProcessor.name(), internal_json_msg)
 
-        log_msg  = "IEC: 020005001: Expander Reset Triggered"
-        json_data = {"scsi_generic_device": self._scsi_generic}
+        # DEPRICATED: LoggingMsgHandler is no more in use. IEM routing
+        #             is handled by IEM() class and other MsgHandlers.
+        # log_msg  = "IEC: 020005001: Expander Reset Triggered"
+        # json_data = {"scsi_generic_device": self._scsi_generic}
 
-        # Log an IEM
-        internal_json_msg = json.dumps(
-                    {"actuator_request_type" : {
-                        "logging": {
-                            "log_level": "LOG_WARNING",
-                            "log_type": "IEM",
-                            "log_msg": f"{log_msg}:{json.dumps(json_data, sort_keys=True)}"
-                            }
-                        }
-                     })
+        # # Log an IEM
+        # internal_json_msg = json.dumps(
+        #             {"actuator_request_type" : {
+        #                 "logging": {
+        #                     "log_level": "LOG_WARNING",
+        #                     "log_type": "IEM",
+        #                     "log_msg": f"{log_msg}:{json.dumps(json_data, sort_keys=True)}"
+        #                     }
+        #                 }
+        #              })
 
-        # Send the event to logging msg handler to send IEM message to journald
-        self._write_internal_msgQ(LoggingMsgHandler.name(), internal_json_msg)
+        # # Send the event to logging msg handler to send IEM message to journald
+        # self._write_internal_msgQ(LoggingMsgHandler.name(), internal_json_msg)
 
     def _trigger_expander_reset(self):
             """Trigger an expander reset by rebooting via wbcli tool"""
