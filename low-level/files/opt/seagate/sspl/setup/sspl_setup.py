@@ -465,7 +465,6 @@ class CheckCmd(Cmd):
 
 
 class CleanupCmd(Cmd):
-
     """Restores the default SSPL configs."""
 
     name = "cleanup"
