@@ -36,8 +36,6 @@ from json_msgs.messages.sensors.drive_mngr import DriveMngrMsg
 from json_msgs.messages.sensors.expander_reset import ExpanderResetMsg
 from json_msgs.messages.sensors.hpi_data import HPIDataMsg
 from json_msgs.messages.sensors.node_hw_data import NodeIPMIDataMsg
-# Modules that receive messages from this module
-# from message_handlers.logging_msg_handler import LoggingMsgHandler
 
 
 class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
