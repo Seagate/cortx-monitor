@@ -55,7 +55,8 @@ class SSPLTestCmd:
             }
         # python 3rd party package dependency
         pip3_3ps_packages_test = {
-            "Flask": "1.1.1"
+            "Flask": "1.1.1",
+            "coverage": "5.5"
             }
         pkg_validator = PkgV()
         pkg_validator.validate_pip3_pkgs(host=socket.getfqdn(),
