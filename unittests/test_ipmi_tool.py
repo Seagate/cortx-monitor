@@ -28,6 +28,7 @@ from framework.utils.ipmi_client import IpmiFactory, Conf, store
 
 
 class TestIpmiTool(unittest.TestCase):
+
     """Test IpmiTool over different platform and interface settings."""
 
     ERR_STR = "\noutput: %s\nerror: %s\nreturn code: %s"
