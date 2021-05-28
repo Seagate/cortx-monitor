@@ -330,33 +330,6 @@ class RealStorFanSensor(SensorThread, InternalMsgQ):
         # to generate json message and send out
         self._write_internal_msgQ(RealStorEnclMsgHandler.name(), json_msg, self._event)
 
-    # DEPRICATED: LoggingMsgHandler is no more in use. IEM routing
-    #             is handled by IEM() class and other MsgHandlers.
-    # def _log_IEM(self, info, extended_info):
-    #     """Sends an IEM to logging msg handler"""
-
-    #     json_data = json.dumps(
-    #         {"sensor_request_type": {
-    #             "enclosure_alert": {
-    #                     "status": "update",
-    #                     "sensor_type": RealStorFanSensor.SENSOR_TYPE,
-    #                     "resource_type": RealStorFanSensor.RESOURCE_TYPE
-    #             },
-    #             "info": info,
-    #             "extended_info": extended_info
-    #             }}, sort_keys=True)
-
-    #     # Send the event to real stor message handler
-    #     # to generate json message and send out
-    #     internal_json_msg = json.dumps(
-    #             {'actuator_request_type':
-    #                 {'logging':
-    #                     {'log_level': 'LOG_WARNING', 'log_type': 'IEM',
-    #                         'log_msg': f'{json_data}'}}})
-
-    #     Send the event to logging msg handler to send IEM message to journald
-    #     self._write_internal_msgQ(LoggingMsgHandler.name(), internal_json_msg)
-
     def suspend(self):
         """Suspends the module thread. It should be non-blocking"""
         super(RealStorFanSensor, self).suspend()

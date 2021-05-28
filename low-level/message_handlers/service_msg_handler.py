@@ -223,29 +223,6 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
             jsonMsg1 = ServiceMonitorMsg(jsonMsg["sensor_request_type"]).getJson()
             self._write_internal_msgQ("EgressProcessor", jsonMsg1)
 
-            # DEPRICATED: LoggingMsgHandler is no more in use. IEM routing
-            #             is handled by IEM() class and other MsgHandlers.
-            # # Create an IEM if the resulting service state is failed
-            # specific_info = \
-            #     jsonMsg['sensor_request_type']['service_status_alert']['specific_info']
-            # state = specific_info['state']
-
-            # if state == "failed":
-            #     internal_json_msg = json.dumps(
-            #         {"actuator_request_type" : {
-            #             "logging": {
-            #                 "log_level": "LOG_WARNING",
-            #                 "log_type": "IEM",
-            #                 "log_msg": "IEC: 020003001: Service entered a "\
-            #                     "Failed state : %s"
-            #                     % (json.dumps(specific_info, sort_keys=True))
-            #                 }
-            #             }
-            #         })
-            #     # Send the event to logging msg handler to send IEM message to journald
-            #     self._write_internal_msgQ(
-            #         LoggingMsgHandler.name(), internal_json_msg)
-
         # ... handle other service message types
 
     def _execute_request(self, actuator_instance, json_msg, uuid):

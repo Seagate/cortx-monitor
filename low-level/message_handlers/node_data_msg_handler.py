@@ -680,17 +680,6 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         self.if_sensor_data = jsonMsg
         self.os_sensor_type[sensor_type] = self.if_sensor_data
 
-        # DEPRICATED: LoggingMsgHandler is no more in use. IEM routing
-        #             is handled by IEM() class and other MsgHandlers.
-        # Send the event to logging msg handler to send IEM message to journald
-        #internal_json_msg=json.dumps({
-        #                        'actuator_request_type': {
-        #                            'logging': {
-        #                                'log_level': 'LOG_WARNING',
-        #                                'log_type': 'IEM',
-        #                                'log_msg': '{}'.format(jsonMsg)}}})
-        #self._write_internal_msgQ(LoggingMsgHandler.name(), internal_json_msg)
-
         # Transmit it to message processor
         self._write_internal_msgQ(EgressProcessor.name(), jsonMsg)
         self.persist_state_data('nw', 'NW_SENSOR_DATA')

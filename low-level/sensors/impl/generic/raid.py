@@ -540,28 +540,6 @@ class RAIDsensor(SensorThread, InternalMsgQ):
             }
         store.put(self.persistent_raid_data, self.RAID_SENSOR_DATA_PATH)
 
-    # DEPRICATED: LoggingMsgHandler is no more in use. IEM routing
-    #             is handled by IEM() class and other MsgHandlers.
-    # def _log_IEM(self):
-    #     """Sends an IEM to logging msg handler"""
-    #     json_data = json.dumps(
-    #         {"sensor_request_type": {
-    #             "node_data": {
-    #                 "status": "update",
-    #                 "sensor_type": "node:os:raid_data",
-    #                 "device": self._devices,
-    #                 "drives": self._drives
-    #                 }
-    #             }
-    #         }, sort_keys=True)
-
-    #     # Send the event to node data message handler to generate json message and send out
-    #     internal_json_msg=json.dumps(
-    #             {'actuator_request_type': {'logging': {'log_level': 'LOG_WARNING', 'log_type': 'IEM', 'log_msg': f'{json_data}'}}})
-
-    #     # Send the event to logging msg handler to send IEM message to journald
-    #     self._write_internal_msgQ(LoggingMsgHandler.name(), internal_json_msg)
-
     def _get_alert_id(self, epoch_time):
         """Returns alert id which is a combination of
         epoch_time and salt value

@@ -175,22 +175,6 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
                                  SYSLOG_IDENTIFIER="sspl-ll")
                 else:
                     logger.info(log_msg)
-            # DEPRICATED: LoggingMsgHandler is no more in use. IEM routing
-            #             is handled by IEM() class and other MsgHandlers.
-            # else:
-            #     # Send the IEM to the logging msg handler to be processed
-            #     internal_json_msg = json.dumps(
-            #         {"actuator_request_type": {
-            #             "logging": {
-            #                 "log_level": log_level,
-            #                 "log_type": "IEM",
-            #                 "log_msg": log_msg
-            #             }
-            #         }
-            #         })
-            #     # Send the event to logging msg handler to send IEM message to journald
-            #     self._write_internal_msgQ(LoggingMsgHandler.name(),
-            #                               internal_json_msg)
 
         except Exception as ex:
             logger.error("_process_msg: %r" % ex)

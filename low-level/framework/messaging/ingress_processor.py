@@ -204,12 +204,6 @@ class IngressProcessor(ScheduledModuleThread, InternalMsgQ):
 
     def _send_to_msg_handler(self, msgType, message, uuid):
         # Hand off to appropriate actuator message handler
-
-        # DEPRICATED: LoggingMsgHandler is no more in use. IEM routing
-        #             is handled by IEM() class and other MsgHandlers.
-        # if msgType.get("logging") is not None:
-        #     self._write_internal_msgQ("LoggingMsgHandler", message)
-
         if msgType.get("thread_controller") is not None:
             self._write_internal_msgQ("ThreadController", message)
 

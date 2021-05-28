@@ -217,29 +217,8 @@ class SNMPtraps(SensorThread, InternalMsgQ):
         if '*' in self._enabled_traps or \
             self._trap_name in self._enabled_traps:
 
-            # Log IEM
-            self._log_iem(json_data)
-
             # Transmit to Halon
             self._transmit_json_msg(json_data)
-
-    # DEPRICATED: LoggingMsgHandler is no more in use. IEM routing
-    #             is handled by IEM() class and other MsgHandlers.
-    # def _log_iem(self, json_data):
-    #     """Create IEM and send to logging msg handler"""
-    #     log_msg = f"IEC: 020004001: SNMP Trap Received, {self._trap_name}"
-    #     internal_json_msg = json.dumps(
-    #                 {"actuator_request_type" : {
-    #                     "logging": {
-    #                         "log_level": "LOG_WARNING",
-    #                         "log_type": "IEM",
-    #                         "log_msg": f"{log_msg}:{json.dumps(json_data, sort_keys=True)}"
-    #                         }
-    #                     }
-    #                  })
-
-    #     # Send the event to logging msg handler to send IEM message to journald
-    #     self._write_internal_msgQ(LoggingMsgHandler.name(), internal_json_msg)
 
     def _transmit_json_msg(self, json_data):
         """Transmit message to halon by passing it to egress msg handler"""

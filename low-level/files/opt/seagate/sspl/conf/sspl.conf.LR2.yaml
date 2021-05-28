@@ -59,12 +59,6 @@ EGRESSPROCESSOR:
    message_type: alerts
    method: sync
 
-LOGGINGPROCESSOR:
-   consumer_id: sspl_in
-   consumer_group: cortx_monitor
-   message_type: IEM
-   offset: earliest
-
 NODEDATAMSGHANDLER:
    transmit_interval: 10
    high_cpu_usage_wait_threshold: 30
@@ -201,7 +195,7 @@ SYSTEM_INFORMATION:
    sspl_state: active
 
 # NOTE: Keys present in OBSOLETE section are out of date
-# and will be removed in furture version. Keys present in 
+# and will be removed in furture version. Keys present in
 # CHANGED are keys replaced, existing values are moved
 # to new keys.
 
