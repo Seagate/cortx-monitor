@@ -25,15 +25,16 @@ PROJECT_ROOT = "/".join(os.path.abspath(__file__).split("/")
 os.sys.path.append(PROJECT_ROOT)
 
 from framework.utils.ipmi_client import IpmiFactory, Conf, store
+from framework.base.sspl_constants import DATA_PATH
 
 
 class TestIpmiTool(unittest.TestCase):
-
     """Test IpmiTool over different platform and interface settings."""
 
     ERR_STR = "\noutput: %s\nerror: %s\nreturn code: %s"
 
     def setUp(self):
+        """Mock the config values and spwan required class objects."""
         self.mocked_values = {
             "BMC_INTERFACE>default": 'system',
             "/var/cortx/sspl/data/server/ACTIVE_BMC_IF_SN01": 'system',
@@ -72,8 +73,8 @@ class TestIpmiTool(unittest.TestCase):
                         [:-2]) + "/sspl_test"
 
         shutil.copy(f"{sspl_test}/ipmi_simulator/ipmisimtool", "/usr/bin")
-        with open('/tmp/activate_ipmisimtool', 'a'):
-            os.utime('/tmp/activate_ipmisimtool')
+        with open(f"{DATA_PATH}/server/activate_ipmisimtool", 'a'):
+            os.utime(f"{DATA_PATH}/server/activate_ipmisimtool")
 
         out, err, retcode = \
             self.tool._run_ipmitool_subcommand("sdr type 'Fan'")
@@ -84,7 +85,7 @@ class TestIpmiTool(unittest.TestCase):
 
         # Stop ipmisimtool
         os.remove('/usr/bin/ipmisimtool')
-        os.remove('/tmp/activate_ipmisimtool')
+        os.remove(f"{DATA_PATH}/server/activate_ipmisimtool")
 
     def tearDown(self):
         pass

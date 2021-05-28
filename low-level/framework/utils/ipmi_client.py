@@ -37,9 +37,10 @@ class IPMITool(IPMI):
        functionality using ipmitool utility
     """
     _instance = None
-    NAME="IPMITOOL"
+    NAME = "IPMITOOL"
     IPMITOOL = "sudo /usr/bin/ipmitool "
     IPMISIMTOOL = "/usr/bin/ipmisimtool "
+    IPMI_ENCODING = 'utf8'
     MANUFACTURER = "Manufacturer Name"
     SYSTEM_IF = "system"
     LAN_IF = "lan"
@@ -191,7 +192,7 @@ class IPMITool(IPMI):
         host_conf_cmd = ""
 
         # Set ipmitool to ipmisimtool if activated.
-        if os.path.exists("/tmp/activate_ipmisimtool"):
+        if os.path.exists(f"{DATA_PATH}/server/activate_ipmisimtool"):
             cmd = self.IPMISIMTOOL + " sel info"
             _, _, retcode = SimpleProcess(cmd).run()
             if retcode in [0, 2]:
@@ -206,7 +207,7 @@ class IPMITool(IPMI):
 
         # Set host_conf_cmd based on channel info.
         if _channel_interface == self.LAN_IF and \
-           _active_interface != self.SYSTEM_IF and \
+           _active_interface == self.LAN_IF and \
            self.ACTIVE_IPMI_TOOL != self.IPMISIMTOOL:
             bmc_ip = Conf.get(GLOBAL_CONF, BMC_IP_KEY, '')
             bmc_user = Conf.get(GLOBAL_CONF, BMC_USER_KEY, 'ADMIN')
@@ -225,10 +226,10 @@ class IPMITool(IPMI):
         out, error, retcode = SimpleProcess([command]).run(shell=True)
 
         # Decode bytes encoded strings.
-        if isinstance(out, bytes):
-            out = bytes.decode(out)
-        if isinstance(error, bytes):
-            error = bytes.decode(error)
+        if not isinstance(out, str):
+            out = out.decode(self.IPMI_ENCODING)
+        if not isinstance(error, str):
+            error = error.decode(self.IPMI_ENCODING)
 
         # Grep the output as per grep_args provided.
         if grep_args is not None and retcode == 0:

@@ -44,6 +44,7 @@ global_config_url=`conf $sspl_config get "SYSTEM_INFORMATION>global_config_copy_
 global_config=$(echo $global_config_url | tr -d "["\" | tr -d "\"]")
 
 machine_id=`cat /etc/machine-id`
+DATA_PATH="/var/$PRODUCT_FAMILY/sspl/data/"
 
 flask_help()
 {
@@ -77,13 +78,13 @@ pre_requisites()
         if [ -f /var/$PRODUCT_FAMILY/sspl/data/iem/last_processed_msg_time ]; then
             $sudo mv /var/$PRODUCT_FAMILY/sspl/data/iem/last_processed_msg_time /var/$PRODUCT_FAMILY/sspl/orig-data/iem/last_processed_msg_time
         fi
-    fi
 
-    # Enable ipmi simulator
-    if [ "$IS_VIRTUAL" == "true" ]
-    then
+        # Enable ipmi simulator
         cp -Rp $script_dir/ipmi_simulator/ipmisimtool /usr/bin
-        touch /tmp/activate_ipmisimtool
+        mkdir -p "$DATA_PATH/server/"
+        chown -R sspl-ll:sspl-ll "$DATA_PATH/server/"
+        chmod 755 "$DATA_PATH/server/"
+        touch "$DATA_PATH/server/activate_ipmisimtool"
     fi
 }
 
@@ -162,7 +163,7 @@ restore_cfg_services()
 
     # Remove ipmisimtool
     rm -f /usr/bin/ipmisimtool
-    rm -f /tmp/activate_ipmisimtool
+    rm -f "$DATA_PATH/server/activate_ipmisimtool"
 }
 
 cleanup()

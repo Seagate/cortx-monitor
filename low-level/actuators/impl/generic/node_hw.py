@@ -275,10 +275,10 @@ class NodeHWactuator(Actuator, Debug):
         :return:
         """
         many_sensors = False
-        grep_args = None if sensor_name == "*" else sensor_name
+        search_args = None if sensor_name == "*" else sensor_name
         sdr_type_response, err, return_code = \
             self._executor._run_ipmitool_subcommand(
-                f"sdr type '{sensor_type}'", grep_args=grep_args)
+                f"sdr type '{sensor_type}'", grep_args=search_args)
 
         if return_code != 0:
             msg = f"sdr type '{sensor_type}' : command failed with error {err}"

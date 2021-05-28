@@ -236,9 +236,9 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         # Initialize internal message queues for this module
         super(NodeHWsensor, self).initialize_msgQ(msgQlist)
 
-        ipmi_client = Conf.get(SSPL_CONF, f"{NODEHWSENSOR}>{IPMI_CLIENT}",
-                               "ipmitool")
-        self.ipmi_tool = IpmiFactory().get_implementor(ipmi_client)
+        ipmi_client_name = Conf.get(SSPL_CONF, f"{NODEHWSENSOR}>{IPMI_CLIENT}",
+                                    "ipmitool")
+        self.ipmi_client = IpmiFactory().get_implementor(ipmi_client_name)
 
         self._node_id = Conf.get(GLOBAL_CONF, NODE_ID_KEY,'SN01')
         self._bmc_user = Conf.get(GLOBAL_CONF, BMC_USER_KEY, 'ADMIN')
@@ -410,7 +410,8 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
                     self._fetch_channel_info()
 
                 # Reset sensor_map_id after ipmi simulation
-                if not os.path.exists("/tmp/activate_ipmisimtool"):
+                if not os.path.exists("%s/activate_ipmisimtool"
+                                      % self.cache_dir_path):
                     # Sensor numbers set by ipmisimtool would cause key lookup
                     # failure with actual ipmitool SDRs. So sensor_map_id needs
                     # to be refreshed with current SDRs.
@@ -596,9 +597,10 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
     def _run_ipmitool_subcommand(self, subcommand, grep_args=None, out_file=subprocess.PIPE):
         """executes ipmitool sub-commands, and optionally greps the output"""
 
-        res, err, retcode = self.ipmi_tool._run_ipmitool_subcommand(subcommand, grep_args)
+        res, err, retcode = \
+            self.ipmi_client._run_ipmitool_subcommand(subcommand, grep_args)
 
-        if self.IPMISIMTOOL in self.ipmi_tool.ACTIVE_IPMI_TOOL:
+        if self.IPMISIMTOOL in self.ipmi_client.ACTIVE_IPMI_TOOL:
             self.sdr_reset_required = True
 
         # check channel fault and fault resolved alert
@@ -606,10 +608,11 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
 
         # Detect if ipmitool removed or facing error after sensor initialized
         if retcode != 0:
-            logger.error(f"{self.ipmi_tool.NAME} can't fetch monitoring data for {self.SENSOR_NAME}")
+            logger.error("%s can't fetch monitoring data for %s"
+                         % (self.ipmi_client.NAME, self.SENSOR_NAME))
             if retcode == 1:
-                if err.find(self.ipmi_tool.VM_ERROR) != -1:
-                    logger.error((f"{self.SENSOR_NAME}: {self.ipmi_tool.NAME}"
+                if err.find(self.ipmi_client.VM_ERROR) != -1:
+                    logger.error((f"{self.SENSOR_NAME}: {self.ipmi_client.NAME}"
                         f"error:: {err}\n Dependencies failed,"
                         "shutting down sensor"))
                     self.request_shutdown = True
@@ -649,10 +652,10 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         if isinstance(self.lan_fault,bytes):
             self.lan_fault = self.lan_fault.decode()
 
-        if self.active_bmc_if == self.ipmi_tool.SYSTEM_IF:
+        if self.active_bmc_if == self.ipmi_client.SYSTEM_IF:
             self._check_kcs_if_alert(err,retcode)
             channel_info = self.KCS_CHANNEL_INFO
-        elif self.active_bmc_if == self.ipmi_tool.LAN_IF or self.lan_fault is None:
+        elif self.active_bmc_if == self.ipmi_client.LAN_IF or self.lan_fault is None:
             self._check_lan_if_alert(err,retcode)
             channel_info = self.LAN_CHANNEL_INFO
 
@@ -686,7 +689,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
                 self.lan_channel_err = True
                 logger.warning("BMC is unreachable through lan interface ip, \
                                 ipmitool fallback to KCS interface if local server is being monitored")
-                self.active_bmc_if = self.ipmi_tool.SYSTEM_IF
+                self.active_bmc_if = self.ipmi_client.SYSTEM_IF
                 store.put(self.active_bmc_if,self.ACTIVE_BMC_IF)
                 if self.lan_fault is None:
                     self.lan_fault = alert_type
@@ -699,7 +702,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         if self.CHANNEL_INFO:
             channel_info = self.CHANNEL_INFO
 
-        if self.active_bmc_if != self.ipmi_tool.LAN_IF and raise_fault_resolved_lan:
+        if self.active_bmc_if != self.ipmi_client.LAN_IF and raise_fault_resolved_lan:
             channel_info = self.LAN_CHANNEL_INFO
 
         resource_id = channel_info.get('Channel Medium Type')
@@ -729,13 +732,13 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
 
         if retcode != 0:
             # TODO: search for error codes which ipmitool returns in case of channel error
-            if err in self.ipmi_tool.KCS_ERRS:
+            if err in self.ipmi_client.KCS_ERRS:
                 self.kcs_interface_alert = True
 
     def _check_lan_if_alert(self,err,retcode):
 
         if retcode !=0:
-            if err in self.ipmi_tool.RMCP_ERRS:
+            if err in self.ipmi_client.RMCP_ERRS:
                 self.lan_interface_alert = True
 
     def read_data(self):
