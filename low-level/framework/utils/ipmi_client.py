@@ -16,6 +16,7 @@
 import re
 import os
 import subprocess
+import shlex
 
 from framework.utils.ipmi import IPMI
 from framework.utils.service_logging import logger
@@ -222,8 +223,9 @@ class IPMITool(IPMI):
 
         # generate the final cmd and execute on shell.
         command = " ".join([self.ACTIVE_IPMI_TOOL, host_conf_cmd, subcommand])
+        command = shlex.split(command)
 
-        out, error, retcode = SimpleProcess([command]).run(shell=True)
+        out, error, retcode = SimpleProcess(command).run()
 
         # Decode bytes encoded strings.
         if not isinstance(out, str):
