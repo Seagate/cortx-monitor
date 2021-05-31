@@ -150,6 +150,22 @@ class SSPLTestCmd:
                 threshold_inactive_time_new)
             Conf.save(SSPL_CONFIG_INDEX)
 
+            cpu_usage_alert_wait = Conf.get(SSPL_CONFIG_INDEX,
+                "NODEDATAMSGHANDLER>high_cpu_usage_wait_threshold")
+            memory_usage_alert_wait = Conf.get(SSPL_CONFIG_INDEX,
+                "NODEDATAMSGHANDLER>high_memory_usage_wait_threshold")
+
+            cpu_usage_alert_wait_new = 10
+            memory_usage_alert_wait_new = 20
+
+            Conf.set(SSPL_CONFIG_INDEX,
+                     "NODEDATAMSGHANDLER>high_cpu_usage_wait_threshold",
+                     cpu_usage_alert_wait_new)
+            Conf.set(SSPL_CONFIG_INDEX,
+                     "NODEDATAMSGHANDLER>high_memory_usage_wait_threshold",
+                      memory_usage_alert_wait_new)
+            Conf.save(SSPL_CONFIG_INDEX)
+
             # TODO: Convert shell script to python
             # from cortx.sspl.sspl_test.run_qa_test import RunQATest
             # RunQATest(self.plan, self.coverage_enabled).run()
@@ -168,8 +184,15 @@ class SSPLTestCmd:
                 service_list)
             Conf.set(SSPL_CONFIG_INDEX, "SERVICEMONITOR>threshold_inactive_time",
                 threshold_inactive_time_original)
-            Conf.set(SSPL_CONFIG_INDEX, "SYSTEM_INFORMATION>global_config_copy_url",
-                sspl_global_config_url)
+            Conf.set(SSPL_CONFIG_INDEX,
+                     "SYSTEM_INFORMATION>global_config_copy_url",
+                     sspl_global_config_url)
+            Conf.set(SSPL_CONFIG_INDEX,
+                     "NODEDATAMSGHANDLER>high_cpu_usage_wait_threshold",
+                     cpu_usage_alert_wait)
+            Conf.set(SSPL_CONFIG_INDEX,
+                     "NODEDATAMSGHANDLER>high_memory_usage_wait_threshold",
+                     memory_usage_alert_wait)
             Conf.save(SSPL_CONFIG_INDEX)
             shutil.copyfile(sspl_test_backup, sspl_test_file_path)
             if rc != 0:
