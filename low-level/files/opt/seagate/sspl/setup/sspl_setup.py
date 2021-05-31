@@ -61,7 +61,7 @@ class Cmd:
             [ init --config [<global_config_url>] ]
             [ config --config [<global_config_url>] ]
             [ test --config [<global_config_url>] --plan [sanity|alerts|self_primary|self_secondary|self] ]
-            [ reset --config [<global_config_url>] --type [hard|soft] ]
+            [ reset --config [<global_config_url>] ]
             [ join_cluster --nodes [<nodes>] ]
             [ manifest_support_bundle [<id>] [<path>] ]
             [ support_bundle [<id>] [<path>] ]
@@ -78,7 +78,7 @@ class Cmd:
         subparsers = parser.add_subparsers()
         cmds = inspect.getmembers(sys.modules[__name__])
         cmds = [(x, y) for x, y in cmds
-            if x.endswith("Cmd") and x != "Cmd"]
+                if x.endswith("Cmd") and x != "Cmd"]
         for name, cmd in cmds:
             cmd.add_args(subparsers, cmd, name)
 
@@ -116,7 +116,8 @@ class PostInstallCmd(Cmd):
 
     def __init__(self, args: dict):
         """Initialize post install command"""
-        from files.opt.seagate.sspl.setup.sspl_post_install import SSPLPostInstall
+        from files.opt.seagate.sspl.setup.sspl_post_install import (
+            SSPLPostInstall)
         super().__init__(args)
         self.post_install = SSPLPostInstall()
         logger.info("%s - Init done" % self.name)
@@ -126,7 +127,8 @@ class PostInstallCmd(Cmd):
         """Add Command args for parsing."""
         parsers = parser.add_parser(cls.name, help='%s' % cls.__doc__)
         parsers.add_argument('args', nargs='*', default=[], help='args')
-        parsers.add_argument('--config', nargs='*', default=[], help='Global config url')
+        parsers.add_argument('--config', nargs='*', default=[],
+                             help='Global config url')
         parsers.set_defaults(command=cls)
 
     def validate(self):
@@ -165,7 +167,8 @@ class PrepareCmd(Cmd):
         """Add Command args for parsing."""
         parsers = parser.add_parser(cls.name, help='%s' % cls.__doc__)
         parsers.add_argument('args', nargs='*', default=[], help='args')
-        parsers.add_argument('--config', nargs='*', default=[], help='Global config url')
+        parsers.add_argument('--config', nargs='*', default=[],
+                             help='Global config url')
         parsers.set_defaults(command=cls)
 
     def validate(self):
@@ -204,7 +207,8 @@ class ConfigCmd(Cmd):
         """Add Command args for parsing."""
         parsers = parser.add_parser(cls.name, help='%s' % cls.__doc__)
         parsers.add_argument('args', nargs='*', default=[], help='args')
-        parsers.add_argument('--config', nargs='*', default=[], help='Global config url')
+        parsers.add_argument('--config', nargs='*', default=[],
+                             help='Global config url')
         parsers.set_defaults(command=cls)
 
     def validate(self):
@@ -226,7 +230,6 @@ class ConfigCmd(Cmd):
         logger.info("%s - Process done" % self.name)
 
 
-
 class InitCmd(Cmd):
     """Configure SSPL post cluster configuration."""
 
@@ -243,7 +246,8 @@ class InitCmd(Cmd):
         """Add Command args for parsing."""
         parsers = parser.add_parser(cls.name, help='%s' % cls.__doc__)
         parsers.add_argument('args', nargs='*', default=[], help='args')
-        parsers.add_argument('--config', nargs='*', default=[], help='Global config url')
+        parsers.add_argument('--config', nargs='*', default=[],
+                             help='Global config url')
         parsers.set_defaults(command=cls)
 
     def validate(self):
@@ -283,9 +287,12 @@ class TestCmd(Cmd):
         """Add Command args for parsing."""
         parsers = parser.add_parser(cls.name, help='%s' % cls.__doc__)
         parsers.add_argument('args', nargs='*', default=[], help='args')
-        parsers.add_argument('--config', nargs='*', default=[], help='Global config url')
-        parsers.add_argument('--plan', nargs='*', default=[], help='Test plan type')
-        parsers.add_argument('--coverage', action="store_true", help='Boolean - Enable Code Coverage.')
+        parsers.add_argument('--config', nargs='*', default=[],
+                             help='Global config url')
+        parsers.add_argument('--plan', nargs='*', default=[],
+                             help='Test plan type')
+        parsers.add_argument('--coverage', action="store_true",
+                             help='Boolean - Enable Code Coverage.')
         parsers.set_defaults(command=cls)
 
     def validate(self):
@@ -309,9 +316,9 @@ class TestCmd(Cmd):
 
         if self.args.coverage and 'self' in self.args.plan[0]:
             raise SetupError(errno.EINVAL,
-                    "%s - Argument validation failure. %s",
-                    self.name,
-                    "Code coverage can not be enabled with self tests.")
+                             "%s - Argument validation failure. %s",
+                             self.name,
+                             "Code coverage can not be enabled with self tests.")
 
     def process(self):
         """Setup and run SSPL test"""
@@ -337,8 +344,10 @@ class SupportBundleCmd(Cmd):
 
     def process(self):
         args = ' '.join(self._args.args)
-        sspl_bundle_generate = "%s/%s %s" % (self._script_dir, self.script, args)
-        output, error, rc = SimpleProcess(sspl_bundle_generate).run(realtime_output=True)
+        sspl_bundle_generate = "%s/%s %s" % (self._script_dir,
+                                             self.script, args)
+        _, error, rc = SimpleProcess(sspl_bundle_generate).run(
+            realtime_output=True)
         if rc != 0:
             msg = "%s - validation failure. %s" % (self.name, error)
             logger.error(msg)
@@ -361,8 +370,10 @@ class ManifestSupportBundleCmd(Cmd):
 
     def process(self):
         args = ' '.join(self._args.args)
-        manifest_support_bundle = "%s/%s %s" % (self._script_dir, self.script, args)
-        output, error, rc = SimpleProcess(manifest_support_bundle).run(realtime_output=True)
+        manifest_support_bundle = "%s/%s %s" % (self._script_dir,
+                                                self.script, args)
+        _, error, rc = SimpleProcess(manifest_support_bundle).run(
+            realtime_output=True)
         if rc != 0:
             msg = "%s - validation failure. %s" % (self.name, error)
             logger.error(msg)
@@ -371,14 +382,13 @@ class ManifestSupportBundleCmd(Cmd):
 
 
 class ResetCmd(Cmd):
-    """Performs SSPL config reset. Options: hard, soft.
-    'hard' is used to reset configs and clean log directory where
-    'soft' is to clean only the data path.
+
+    """Reset Interface is used to reset Data/MetaData
+    and clean log files
     """
 
     name = "reset"
     script = "sspl_reset"
-    process_class=None
 
     def __init__(self, args):
         super().__init__(args)
@@ -388,39 +398,20 @@ class ResetCmd(Cmd):
         """Add Command args for parsing."""
         parsers = parser.add_parser(cls.name, help='%s' % cls.__doc__)
         parsers.add_argument('args', nargs='*', default=[], help='args')
-        parsers.add_argument('--config', nargs='*', default=[], help='Global config url')
-        parsers.add_argument('--type', nargs='*', default=[], help='Reset type (hard|soft)')
+        parsers.add_argument('--config', nargs='*', default=[],
+                             help='Global config url')
         parsers.set_defaults(command=cls)
 
     def validate(self):
         if not self.args.config:
-            msg = "%s - Argument validation failure. Global config is required." % (
-                self.name)
+            msg = "%s - Argument validation failure. %s" % (
+                self.name, "Global config is required.")
             logger.error(msg)
             raise SetupError(errno.EINVAL, msg)
-
-        if not self.args.type:
-            msg = "%s - Argument validation failure. Reset type is required." % (
-                self.name)
-            logger.error(msg)
-            raise SetupError(errno.EINVAL, msg)
-
-        reset_type = self.args.type[0]
-        if reset_type == "hard":
-            self.process_class = "HardReset"
-        elif reset_type == "soft":
-            self.process_class = "SoftReset"
-        else:
-            raise SetupError(1, "Invalid reset type specified. Please check usage.")
-        logger.info("%s - Validation done" % self.name)
 
     def process(self):
-        if self.process_class == "HardReset":
-            from files.opt.seagate.sspl.setup.sspl_reset import HardReset
-            HardReset().process()
-        elif self.process_class == "SoftReset":
-            from files.opt.seagate.sspl.setup.sspl_reset import SoftReset
-            SoftReset().process()
+        from files.opt.seagate.sspl.setup.sspl_reset import Reset
+        Reset().process()
         logger.info("%s - Process done" % self.name)
 
 
@@ -433,14 +424,16 @@ class CheckCmd(Cmd):
     def __init__(self, args):
         super().__init__(args)
 
-        self.SSPL_CONFIGURED="/var/cortx/sspl/sspl-configured"
+        self.SSPL_CONFIGURED = "/var/cortx/sspl/sspl-configured"
         self.services = []
 
     def validate(self):
         # Common validator classes to check Cortx/system wide validator
         if not os.path.exists(self.SSPL_CONFIGURED):
-            error = "SSPL is not configured. Run provisioner scripts in %s" % (self._script_dir)
-            syslog.openlog(logoption=syslog.LOG_PID, facility=syslog.LOG_LOCAL3)
+            error = "SSPL is not configured. Run provisioner scripts in %s" % (
+                self._script_dir)
+            syslog.openlog(logoption=syslog.LOG_PID,
+                           facility=syslog.LOG_LOCAL3)
             syslog.syslog(syslog.LOG_ERR, error)
             logger.error(error)
             raise SetupError(1,
@@ -544,6 +537,7 @@ def main(argv: dict):
         logger.exception(f"Failed in SSPL Setup Interface. ERROR: {e}")
         Cmd.usage(argv[0])
         return errno.EINVAL
+
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv))
