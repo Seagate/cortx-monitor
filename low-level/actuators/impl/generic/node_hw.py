@@ -230,7 +230,7 @@ class NodeHWactuator(Actuator, Debug):
                 return self._response_to_dict(sensor_get_response)
             else:
                 msg = (f"sensor get '{sensor_name}' :"
-                        " command failed with error {err}")
+                       f" command failed with error {err}")
                 logger.warn(msg)
                 return self._errorstr_to_dict(sensor_get_response)
         except Exception as err:
@@ -274,8 +274,8 @@ class NodeHWactuator(Actuator, Debug):
         :param sensor_name:
         :return:
         """
-        many_sensors = False
-        search_args = None if sensor_name == "*" else sensor_name
+        many_sensors = (sensor_name == "*")
+        search_args = None if many_sensors else sensor_name
         sdr_type_response, err, return_code = \
             self._executor._run_ipmitool_subcommand(
                 f"sdr type '{sensor_type}'", grep_args=search_args)
