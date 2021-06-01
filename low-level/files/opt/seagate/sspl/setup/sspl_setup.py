@@ -524,7 +524,7 @@ class RestoreCmd(Cmd):
 
 def main(argv: dict):
     try:
-        init_logging()
+        init_logging(console_output=True)
         desc = "SSPL Setup Interface"
         command = Cmd.get_command(desc, argv[1:])
         if not command:
