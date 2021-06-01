@@ -18,11 +18,12 @@
 # ****************************************************************************
 
 import logging
+import sys
 
 logger_facility = "sspl-setup"
 _logger = logging.getLogger(logger_facility)
 
-def init_logging(syslog_host="localhost", syslog_port=514):
+def init_logging(syslog_host="localhost", syslog_port=514, console_output=False):
     """Initialize logging for sspl-setup."""
     _logger.setLevel(logging.INFO)
     # set Logging Handlers
@@ -32,7 +33,10 @@ def init_logging(syslog_host="localhost", syslog_port=514):
                     "%(levelname)s %(message)s (%(filename)s:%(lineno)d)"
     formatter = logging.Formatter(syslog_format)
     handler.setFormatter(formatter)
-    if not len(_logger.handlers):
-        _logger.addHandler(handler)
+    _logger.addHandler(handler)
+    if console_output:
+        console = logging.StreamHandler(sys.stderr)
+        console.setFormatter(formatter)
+        _logger.addHandler(console)
 
 logger = _logger
