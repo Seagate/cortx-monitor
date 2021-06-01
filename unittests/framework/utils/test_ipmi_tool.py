@@ -20,12 +20,9 @@ import unittest
 import shutil
 from unittest.mock import Mock
 
-PROJECT_ROOT = "/".join(os.path.abspath(__file__).split("/")
-                        [:-2]) + "/low-level"
-os.sys.path.append(PROJECT_ROOT)
-
 from framework.utils.ipmi_client import IpmiFactory, Conf, store
 from framework.base.sspl_constants import DATA_PATH
+from conftest import BASE_DIR
 
 
 class TestIpmiTool(unittest.TestCase):
@@ -64,13 +61,14 @@ class TestIpmiTool(unittest.TestCase):
         self.assertEqual(retcode, 1, msg=err_str)
         self.assertTrue(self.tool.VM_ERROR in err, msg=err_str)
 
-    def test_ipmi_over_lan(self):
-        pass
+    # TODO: Needs to be implemented
+    # def test_ipmi_over_lan(self):
+    #     pass
 
     def test_ipmisimtool(self):
         # Start ipmisimtool
-        sspl_test = "/".join(os.path.abspath(__file__).split("/")
-                        [:-2]) + "/sspl_test"
+        sspl_test = os.path.join(BASE_DIR, 'sspl_test')
+        print(sspl_test)
 
         shutil.copy(f"{sspl_test}/ipmi_simulator/ipmisimtool", "/usr/bin")
         with open(f"{DATA_PATH}/server/activate_ipmisimtool", 'a'):
@@ -89,7 +87,3 @@ class TestIpmiTool(unittest.TestCase):
 
     def tearDown(self):
         pass
-
-
-if __name__ == "__main__":
-    unittest.main()

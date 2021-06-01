@@ -29,7 +29,7 @@ from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.sspl_constants import enabled_products
 from framework.utils.conf_utils import (GLOBAL_CONF, SSPL_CONF, Conf,
-    SETUP_KEY, NODEHWACTUATOR, IPMI_CLIENT)
+                                        SETUP_KEY, NODEHWACTUATOR, IPMI_CLIENT)
 from framework.utils.service_logging import logger
 from json_msgs.messages.actuators.ack_response import AckResponseMsg
 from json_msgs.messages.actuators.ndhw_ack_response import NodeHwAckResponseMsg

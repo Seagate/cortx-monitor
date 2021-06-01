@@ -15,15 +15,16 @@
 
 import re
 import os
-import subprocess
 import shlex
 
 from framework.utils.ipmi import IPMI
 from framework.utils.service_logging import logger
 from cortx.utils.process import SimpleProcess
 from framework.utils.conf_utils import (Conf, SSPL_CONF, GLOBAL_CONF,
-    BMC_CHANNEL_IF, BMC_INTERFACE, BMC_IP_KEY, BMC_USER_KEY, BMC_SECRET_KEY,
-    MACHINE_ID, NODE_ID_KEY)
+                                        BMC_CHANNEL_IF, BMC_INTERFACE,
+                                        BMC_IP_KEY, BMC_USER_KEY,
+                                        BMC_SECRET_KEY, MACHINE_ID,
+                                        NODE_ID_KEY)
 from framework.utils import encryptor
 from framework.base.sspl_constants import ServiceTypes
 from framework.utils.store_factory import file_store
@@ -102,7 +103,8 @@ class IPMITool(IPMI):
             Output Format : List of Tuple
             Output Example : [(HDD 1 Status, F1, ok, 4.2, Drive Present),]
         """
-        sensor_list_out, error, retcode = self._run_ipmitool_subcommand(f"sdr type '{fru_type.title()}'")
+        sensor_list_out, error, retcode = \
+            self._run_ipmitool_subcommand(f"sdr type '{fru_type.title()}'")
         if retcode != 0:
             msg = "ipmitool sdr type command failed: {0}".format(error)
             logger.warning(msg)
@@ -249,6 +251,7 @@ class IPMITool(IPMI):
             error = error.replace('\n', '')
 
         return out, error, retcode
+
 
 class IpmiFactory(object):
     """Factory class which returns instance of specific IPMI related

@@ -171,9 +171,9 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         except (IOError, ConfigReader.Error) as err:
             logger.error("[ Error ] when validating the config file {0} - {1}"\
                  .format(self.CONF_FILE, err))
-        self.polling_interval = int(Conf.get(SSPL_CONF,
-                    f"{NODEHWSENSOR}>{self.POLLING_INTERVAL}",
-                    self.DEFAULT_POLLING_INTERVAL))
+        self.polling_interval = \
+            int(Conf.get(SSPL_CONF, f"{NODEHWSENSOR}>{self.POLLING_INTERVAL}",
+                         self.DEFAULT_POLLING_INTERVAL))
 
     def _get_file(self, name):
         if os.path.exists(name):
@@ -631,9 +631,9 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
             self.iem.fault_iems.remove(self.IPMI)
 
         # write res to out_file only if there is no channel error
-        if not self.channel_err and isinstance(res,tuple):
+        if not self.channel_err and res:
             if out_file != subprocess.PIPE:
-                out_file.write(res[0])
+                out_file.write(res)
 
         return res, err, retcode
 
@@ -750,7 +750,8 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
            the first element is the sensor id and
            the second is the number."""
 
-        sensor_list_out, err, retcode = self._run_ipmitool_subcommand(f"sdr type '{sensor_type}'")
+        sensor_list_out, err, retcode = \
+            self._run_ipmitool_subcommand(f"sdr type '{sensor_type}'")
         out = []
 
         if retcode != 0:
@@ -781,7 +782,8 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         """get list of sensors belonging to entity 'entity_id'
            Returns a list of sensor IDs"""
 
-        sensor_list_out, err, retcode = self._run_ipmitool_subcommand(f"sdr entity '{entity_id}'")
+        sensor_list_out, err, retcode = \
+            self._run_ipmitool_subcommand(f"sdr entity '{entity_id}'")
         if retcode != 0:
             msg = f"ipmitool sdr entity command failed: {err}"
             logger.error(msg)
@@ -803,7 +805,8 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         return out
 
     def _get_sensor_sdr_props(self, sensor_id):
-        props_list_out, err, retcode = self._run_ipmitool_subcommand(f"sdr get '{sensor_id}'")
+        props_list_out, err, retcode = \
+            self._run_ipmitool_subcommand(f"sdr get '{sensor_id}'")
         if retcode != 0:
             msg = f"ipmitool sensor get command failed: {err}"
             logger.warning(msg)
@@ -842,7 +845,8 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
            common is a dict of common sensor properties and
            their values for this sensor, and
            specific is a dict of the properties specific to this sensor"""
-        props_list_out, err, retcode = self._run_ipmitool_subcommand(f"sensor get '{sensor_id}'")
+        props_list_out, err, retcode = \
+            self._run_ipmitool_subcommand(f"sensor get '{sensor_id}'")
         if retcode != 0:
             msg = f"ipmitool sensor get command failed: {err}"
             logger.warning(msg)
