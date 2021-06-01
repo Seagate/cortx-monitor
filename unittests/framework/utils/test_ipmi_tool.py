@@ -68,7 +68,6 @@ class TestIpmiTool(unittest.TestCase):
     def test_ipmisimtool(self):
         # Start ipmisimtool
         sspl_test = os.path.join(BASE_DIR, 'sspl_test')
-        print(sspl_test)
 
         shutil.copy(f"{sspl_test}/ipmi_simulator/ipmisimtool", "/usr/bin")
         with open(f"{DATA_PATH}/server/activate_ipmisimtool", 'a'):
