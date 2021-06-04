@@ -70,6 +70,7 @@ from message_handlers.real_stor_encl_msg_handler import RealStorEnclMsgHandler
 from message_handlers.service_msg_handler import ServiceMsgHandler
 from framework.base.module_thread import ThreadException
 
+from cortx.utils.iem_framework import EventMessage
 
 #DO NOT EDIT: Marker comment to dynamically add code to initialize coverage obj for code coverage report generation
 
@@ -713,6 +714,9 @@ def send_thread_controller_request(state):
 #     logger.info(f"Received SIGUSR1 signal to set log level to '{log_level}'")
 #     logger.setLevel(log_level)
 
+def initialize_iem():
+    EventMessage.init(component='sspl', source='S')
+
 def refresh_iem_log_file(signal_number, frame):
     iem_sensor = threadController.get_sspl_module("IEMSensor")
     if iem_sensor:
@@ -774,6 +778,9 @@ if __name__ == "__main__":
     # Handle signal for iem file refresh
     signal.signal(signal.SIGUSR2, refresh_iem_log_file)
     #DO NOT EDIT: Marker comment to dynamically add signal handler for SIGUSR1 to generate code coverage report
+
+    # Initialize IEM framework
+    initialize_iem()
 
     try:
         # Create a PID file for systemd

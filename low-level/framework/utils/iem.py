@@ -14,10 +14,13 @@
 # cortx-questions@seagate.com.
 
 import syslog
+import socket
 import os
 
 from framework.base.sspl_constants import IEM_DATA_PATH
 from framework.utils.service_logging import logger
+from cortx.utils.iem_framework import EventMessage
+
 
 class Iem:
     # event_name will be added in this list in case of fault iem.
@@ -74,7 +77,6 @@ class Iem:
             "Cortx health alerts will get delivered to consumers like CSM.",
             ""]
     }
-
     def check_existing_iem_event(self, event_name, event_code):
         """Before logging iem, check if is already present."""
         previous_iem_event = None
@@ -112,24 +114,26 @@ class Iem:
                 fault_iem = True
         return fault_iem
 
-    def create_iec(self, severity, event_code, description):
-        """Create iec."""
-        iec = "IEC:%sS%s:%s" %(severity, event_code, description)
-        generate_iem(iec)
-
     def create_iem_fields(self, event, severity, event_type=None):
         event_code = event[0]
         event_name = event[1]
         description = self.EVENT_STRING[event_code][0]
+        impact = self.EVENT_STRING[event_code][1]
+        recommendation = self.EVENT_STRING[event_code][2]
         if event_type == "fault_resolved" and event_name in self.fault_iems:
             iem_event_path = f'{IEM_DATA_PATH}/iem_{event_name}'
             if os.path.exists(iem_event_path):
                 os.remove(iem_event_path)
-                self.create_iec(severity, event_code, description)
+                specific_info={
+                    'impact': impact,
+                    'recommendation': recommendation,
+                    'host_id': socket.getfqdn()
+        }
+                self.generate_iem(event_name, event_code, severity,description, specific_info)
         else:
             previous_iem = self.check_existing_iem_event(event_name, event_code)
             if not previous_iem:
-                self.create_iec(severity, event_code, description)
+                self.generate_iem(event_name, event_code, severity,description, specific_info)
 
     def iem_fault(self, event):
         event = self.EVENT_CODE[event]
@@ -155,6 +159,9 @@ class Iem:
             if prev_fault_iem_event:
                 self.fault_iems.append(event_name)
 
-def generate_iem(iem):
-    """Generate iem."""
-    syslog.syslog(iem)
+    def generate_iem(self, module, event_code, severity, description, specific_info):
+        """Generate iem and send it to a MessgaeBroker."""
+
+        EventMessage.send(module=module, event_id=event_code,
+                          severity=severity, message=description,
+                          params=specific_info)
