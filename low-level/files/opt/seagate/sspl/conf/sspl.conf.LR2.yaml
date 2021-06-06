@@ -87,6 +87,7 @@ RAIDINTEGRITYSENSOR:
    monitor: true
    threaded: true
    polling_interval: 1209600
+   retry_interval: 3600
 
 IPMI:
    user: admin
