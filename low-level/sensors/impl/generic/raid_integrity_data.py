@@ -31,7 +31,8 @@ from zope.interface import implementer
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.module_thread import SensorThread
 from framework.base.sspl_constants import (PRODUCT_FAMILY, WAIT_BEFORE_RETRY,
-                                           RaidAlertMsgs, RaidDataConfig)
+                                           RaidAlertMsgs, RaidDataConfig,
+                                           BLOCK_DIR)
 from framework.utils.conf_utils import (SSPL_CONF, Conf, SYSTEM_INFORMATION,
                                         SYSFS_PATH)
 from framework.utils.service_logging import logger
@@ -109,7 +110,7 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
 
         sysfs_path = Conf.get(SSPL_CONF,
                               f'{SYSTEM_INFORMATION}>{SYSFS_PATH}')
-        self.raid_dir = sysfs_path + RaidDataConfig.BLOCK_DIR.value
+        self.raid_dir = sysfs_path + BLOCK_DIR
 
         self.retry_interval = int(
             Conf.get(SSPL_CONF,
