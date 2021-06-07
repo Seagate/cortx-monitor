@@ -124,6 +124,7 @@ NODEHWSENSOR:
    monitor: true
    threaded: true
    polling_interval: 30
+   ipmi_client: ipmitool
 
 REALSTORLOGICALVOLUMESENSOR:
    threaded: true

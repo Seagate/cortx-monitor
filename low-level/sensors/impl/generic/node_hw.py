@@ -38,7 +38,7 @@ from framework.base.sspl_constants import (PRODUCT_FAMILY, ServiceTypes,
 from framework.utils import encryptor
 from framework.utils.conf_utils import (GLOBAL_CONF, IP, SECRET,
     SSPL_CONF, USER, Conf, NODE_ID_KEY, BMC_IP_KEY, BMC_USER_KEY,
-    BMC_SECRET_KEY, MACHINE_ID)
+    BMC_SECRET_KEY, MACHINE_ID, NODEHWSENSOR, IPMI_CLIENT)
 from framework.utils.config_reader import ConfigReader
 from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
@@ -47,6 +47,7 @@ from framework.utils.iem import Iem
 from message_handlers.logging_msg_handler import LoggingMsgHandler
 from message_handlers.node_data_msg_handler import NodeDataMsgHandler
 from sensors.INode_hw import INodeHWsensor
+from framework.utils.ipmi_client import IpmiFactory
 
 # bash exit codes
 BASH_ILLEGAL_CMD = 127
@@ -93,29 +94,12 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
     UPDATE_CREATE_MODE = "w+"
     UPDATE_ONLY_MODE   = "r+"
 
-    IPMI_ERRSTR = "Could not open device at "
     IPMI_SDR_ERR = "command failed"
-    IPMI_ENCODING = 'utf-8'
 
     SYSTEM_INFORMATION = "SYSTEM_INFORMATION"
 
     BMC_INTERFACE = "BMC_INTERFACE"
-    BMC = "BMC"
-    BMC_LAN_USER = f"user_{node_key_id}"
-    BMC_LAN_PASSWD = f"secret_{node_key_id}"
-    BMC_LAN_IP = f"ip_{node_key_id}"
     BMC_CHANNEL_IF = "default"
-
-    SYSTEM_IF = "system"
-    LAN_IF = "lan"
-
-    RMCP_ERRS = ("Unable to establish LAN session", "Unable to establish IPMI v1.5 / RMCP session",
-                "Unable to establish IPMI v2 / RMCP+ session" ,"connection timeout","session timeout",
-                "driver timeout","message timeout","Address lookup for -U failed","BMC busy","invalid user name",
-                "password invalid","password verification timeout","k_g invalid","privilege level insufficient",
-                "privilege level cannot be obtained for this user","authentication type unavailable for attempted privilege level" )
-
-    KCS_ERRS = ("could not find inband device", "driver timeout")
 
     CHANNEL_INFO = {}
 
@@ -138,7 +122,6 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
     sel_last_queried = None
     SEL_QUERY_FREQ = 300
 
-    NODEHWSENSOR = "NODEHWSENSOR"
     POLLING_INTERVAL = "polling_interval"
     DEFAULT_POLLING_INTERVAL = "30"
 
@@ -188,8 +171,9 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         except (IOError, ConfigReader.Error) as err:
             logger.error("[ Error ] when validating the config file {0} - {1}"\
                  .format(self.CONF_FILE, err))
-        self.polling_interval = int(Conf.get(SSPL_CONF, f"{self.NODEHWSENSOR}>{self.POLLING_INTERVAL}",
-                            self.DEFAULT_POLLING_INTERVAL))
+        self.polling_interval = \
+            int(Conf.get(SSPL_CONF, f"{NODEHWSENSOR}>{self.POLLING_INTERVAL}",
+                         self.DEFAULT_POLLING_INTERVAL))
 
     def _get_file(self, name):
         if os.path.exists(name):
@@ -252,6 +236,10 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         # Initialize internal message queues for this module
         super(NodeHWsensor, self).initialize_msgQ(msgQlist)
 
+        ipmi_client_name = Conf.get(SSPL_CONF, f"{NODEHWSENSOR}>{IPMI_CLIENT}",
+                                    "ipmitool")
+        self.ipmi_client = IpmiFactory().get_implementor(ipmi_client_name)
+
         self._node_id = Conf.get(GLOBAL_CONF, NODE_ID_KEY,'SN01')
         self._bmc_user = Conf.get(GLOBAL_CONF, BMC_USER_KEY, 'ADMIN')
         _bmc_secret = Conf.get(GLOBAL_CONF, BMC_SECRET_KEY, 'ADMIN')
@@ -281,7 +269,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
             store.put(self.active_bmc_if,self.ACTIVE_BMC_IF)
 
         # Set flag 'request_shutdown' to true if ipmitool/simulator is non-functional
-        res, retcode = self._run_ipmitool_subcommand("sel info")
+        _, _, retcode = self._run_ipmitool_subcommand("sel info")
         if retcode != 0 and self.channel_err is False:
                 self.request_shutdown = True
         else:
@@ -295,10 +283,9 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
     def _fetch_channel_info(self):
         # fetch bmc interface (KCS or LAN)  information
 
-        res, retcode = self._run_ipmitool_subcommand("channel info")
+        res, _, retcode = self._run_ipmitool_subcommand("channel info")
         if retcode == 0:
-            resstr = b''.join([val for val in res if val]).decode(self.IPMI_ENCODING)
-            channel_info = resstr.strip().split("\n")
+            channel_info = res.strip().split("\n")
             # convert channel_info into dict
             channel_info = {k.strip():v.strip() for k,v in (x.split(":") for x in channel_info[1:]\
                             if ":" in x)}
@@ -318,13 +305,11 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
             f.seek(0)
             f.truncate()
             available_fru = '|'.join(self.fru_types.keys())
-            sel_out, retcode = self._run_ipmitool_subcommand(
+            _, err, retcode = self._run_ipmitool_subcommand(
                     "sel list", grep_args=f"{available_fru}",
                     out_file=f)
             if retcode != 0:
-                if isinstance(sel_out, tuple):
-                    sel_out = [val for val in sel_out if val]
-                msg = f"ipmitool sel list command failed: {b''.join(sel_out)}"
+                msg = f"ipmitool sel list command failed: {err}"
                 logger.error(msg)
                 raise Exception(msg)
 
@@ -351,17 +336,17 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
                 return
 
         try:
-            sel_info, retcode = self._run_ipmitool_subcommand("sel info")
+            sel_info, err, retcode = self._run_ipmitool_subcommand("sel info")
             if retcode != 0:
                 logger.error(f"ipmitool sel info command failed,  \
-                    with err {sel_info}")
+                    with err {err}")
                 return (False)
 
             # record SEL last queried time
             self.sel_last_queried = time.time()
 
             key = val = None
-            info_list = b''.join(sel_info).decode(self.IPMI_ENCODING).split("\n")
+            info_list = sel_info.split("\n")
 
             for info in info_list:
                 if ':' in info:
@@ -390,7 +375,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
                 logger.warning(f"SEL usage above threshold {self.SEL_USAGE_THRESHOLD}%, \
                     clearing SEL")
 
-                cleared, retcode = self._run_ipmitool_subcommand("sel clear")
+                _, err, retcode = self._run_ipmitool_subcommand("sel clear")
                 if retcode != 0:
                     logger.critical(f"{self.host_id}: Error in clearing SEL, overflow"
                         " may result in loss of node alerts from SEL in future")
@@ -425,7 +410,8 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
                     self._fetch_channel_info()
 
                 # Reset sensor_map_id after ipmi simulation
-                if not os.path.exists("/tmp/activate_ipmisimtool"):
+                if not os.path.exists("%s/activate_ipmisimtool"
+                                      % self.cache_dir_path):
                     # Sensor numbers set by ipmisimtool would cause key lookup
                     # failure with actual ipmitool SDRs. So sensor_map_id needs
                     # to be refreshed with current SDRs.
@@ -611,75 +597,47 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
     def _run_ipmitool_subcommand(self, subcommand, grep_args=None, out_file=subprocess.PIPE):
         """executes ipmitool sub-commands, and optionally greps the output"""
 
-        ipmi_tool = self.IPMITOOL
+        res, err, retcode = \
+            self.ipmi_client._run_ipmitool_subcommand(subcommand, grep_args)
 
-        # A dummy file path check to select ipmi simulator if
-        # simulator is required, otherwise default ipmitool.
-        if os.path.exists("/tmp/activate_ipmisimtool"):
-            res, retcode = self._run_command(command=f"{self.IPMISIMTOOL} sel info")
-            # ipmisimtool returns retcode 2 for channel interface alert
-            if retcode == 0 or retcode == 2:
-                ipmi_tool = self.IPMISIMTOOL
-                logger.debug("IPMI simulator is activated")
-                self.sdr_reset_required = True
-
-        if ipmi_tool==self.IPMISIMTOOL:
-            command = ipmi_tool + subcommand
-        else:
-            if self._channel_interface == self.SYSTEM_IF or self.active_bmc_if==self.SYSTEM_IF:
-                command = ipmi_tool + subcommand
-            elif self._channel_interface == self.LAN_IF and self.active_bmc_if != self.SYSTEM_IF:
-                command = ipmi_tool + " -H " + self._bmc_ip + " -U " + self._bmc_user + \
-                        " -P " + self.__bmc_passwd + " -I " + "lan " + subcommand
-            else:
-                logger.error("Invalid BMC channel interface")
-
-        res, retcode = self._run_command(command, subprocess.PIPE)
+        if self.IPMISIMTOOL in self.ipmi_client.ACTIVE_IPMI_TOOL:
+            self.sdr_reset_required = True
 
         # check channel fault and fault resolved alert
-        self._check_channel_error(res,retcode)
+        self._check_channel_error(res, err, retcode)
 
         # Detect if ipmitool removed or facing error after sensor initialized
         if retcode != 0:
-            logger.error(f"{ipmi_tool} can't fetch monitoring data for {self.SENSOR_NAME}")
+            logger.error("%s can't fetch monitoring data for %s"
+                         % (self.ipmi_client.NAME, self.SENSOR_NAME))
             if retcode == 1:
-                if isinstance(res, tuple):
-                    resstr = b''.join([val for val in res if val])
-                    resstr = resstr.decode(self.IPMI_ENCODING)
-                    if resstr.find(self.IPMI_ERRSTR) == 0:
-                        logger.error(f"{self.SENSOR_NAME}: {ipmi_tool} \
-                            error:: {resstr}\n Dependencies failed, \
-                            shutting down sensor")
-                        self.request_shutdown = True
+                if err.find(self.ipmi_client.VM_ERROR) != -1:
+                    logger.error((f"{self.SENSOR_NAME}: {self.ipmi_client.NAME}"
+                        f"error:: {err}\n Dependencies failed,"
+                        "shutting down sensor"))
+                    self.request_shutdown = True
                 self.iem.iem_fault("IPMITOOL_ERROR")
                 if self.IPMI not in self.iem.fault_iems:
                     self.iem.fault_iems.append(self.IPMI)
-            elif (retcode == BASH_ILLEGAL_CMD):
+            elif retcode == BASH_ILLEGAL_CMD:
                 logger.error(f"{self.SENSOR_NAME}: Required ipmitool missing \
                     on Node. Dependencies failed, shutting down sensor")
                 self.request_shutdown = True
                 self.iem.iem_fault("IPMITOOL_ERROR")
                 if self.IPMI not in self.iem.fault_iems:
                     self.iem.fault_iems.append(self.IPMI)
-        elif (retcode == 0 and self.IPMI in self.iem.fault_iems):
+        elif retcode == 0 and self.IPMI in self.iem.fault_iems:
             self.iem.iem_fault_resolved("IPMITOOL_AVAILABLE")
             self.iem.fault_iems.remove(self.IPMI)
 
-        if grep_args is not None and retcode == 0 and isinstance(res, tuple):
-            import re
-            final_list = []
-            for l in res[0].decode(encoding=self.IPMI_ENCODING).split('\n'):
-                if re.search(grep_args, l) is not None:
-                    final_list += [l]
-            res = ('\n'.join(final_list), res[1])
         # write res to out_file only if there is no channel error
-        if not self.channel_err and isinstance(res,tuple):
+        if not self.channel_err and res:
             if out_file != subprocess.PIPE:
-                out_file.write(res[0])
+                out_file.write(res)
 
-        return res, retcode
+        return res, err, retcode
 
-    def _check_channel_error(self, res, retcode):
+    def _check_channel_error(self, res, err, retcode):
         # check res present in possible errors or not
         resource_id = None
         resource_type = None
@@ -689,25 +647,15 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         epoch_time = str(int(time.time()))
         raise_fault_resolved_lan = False
 
-        res = b''.join([val for val in res if val]).decode(self.IPMI_ENCODING)
-        if retcode != 0:
-            err_index = res.find("Error")
-            if err_index >= 0:
-                err = res[err_index:].split("Error:")[1].strip()
-            else:
-                err = res.split("\n")[0]
-        else:
-            err = res
-
         if isinstance(self.active_bmc_if, bytes):
             self.active_bmc_if = self.active_bmc_if.decode()
         if isinstance(self.lan_fault,bytes):
             self.lan_fault = self.lan_fault.decode()
 
-        if self.active_bmc_if == self.SYSTEM_IF:
+        if self.active_bmc_if == self.ipmi_client.SYSTEM_IF:
             self._check_kcs_if_alert(err,retcode)
             channel_info = self.KCS_CHANNEL_INFO
-        elif self.active_bmc_if == self.LAN_IF or self.lan_fault is None:
+        elif self.active_bmc_if == self.ipmi_client.LAN_IF or self.lan_fault is None:
             self._check_lan_if_alert(err,retcode)
             channel_info = self.LAN_CHANNEL_INFO
 
@@ -741,7 +689,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
                 self.lan_channel_err = True
                 logger.warning("BMC is unreachable through lan interface ip, \
                                 ipmitool fallback to KCS interface if local server is being monitored")
-                self.active_bmc_if = self.SYSTEM_IF
+                self.active_bmc_if = self.ipmi_client.SYSTEM_IF
                 store.put(self.active_bmc_if,self.ACTIVE_BMC_IF)
                 if self.lan_fault is None:
                     self.lan_fault = alert_type
@@ -754,7 +702,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         if self.CHANNEL_INFO:
             channel_info = self.CHANNEL_INFO
 
-        if self.active_bmc_if != self.LAN_IF and raise_fault_resolved_lan:
+        if self.active_bmc_if != self.ipmi_client.LAN_IF and raise_fault_resolved_lan:
             channel_info = self.LAN_CHANNEL_INFO
 
         resource_id = channel_info.get('Channel Medium Type')
@@ -784,13 +732,13 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
 
         if retcode != 0:
             # TODO: search for error codes which ipmitool returns in case of channel error
-            if err in self.KCS_ERRS:
+            if err in self.ipmi_client.KCS_ERRS:
                 self.kcs_interface_alert = True
 
     def _check_lan_if_alert(self,err,retcode):
 
         if retcode !=0:
-            if err in self.RMCP_ERRS:
+            if err in self.ipmi_client.RMCP_ERRS:
                 self.lan_interface_alert = True
 
     def read_data(self):
@@ -802,17 +750,16 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
            the first element is the sensor id and
            the second is the number."""
 
-        sensor_list_out, retcode = self._run_ipmitool_subcommand(f"sdr type '{sensor_type}'")
+        sensor_list_out, err, retcode = \
+            self._run_ipmitool_subcommand(f"sdr type '{sensor_type}'")
         out = []
 
         if retcode != 0:
-            if isinstance(sensor_list_out, tuple):
-                sensor_list_out = [val for val in sensor_list_out if val]
-            msg = f"ipmitool sdr type command failed: {b''.join(sensor_list_out)}"
+            msg = f"ipmitool sdr type command failed: {err}"
             logger.warning(msg)
             return out
 
-        sensor_list = b''.join(sensor_list_out).decode(self.IPMI_ENCODING).split("\n")
+        sensor_list = sensor_list_out.split("\n")
 
         for sensor in sensor_list:
             if self.IPMI_SDR_ERR in sensor:
@@ -835,14 +782,13 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         """get list of sensors belonging to entity 'entity_id'
            Returns a list of sensor IDs"""
 
-        sensor_list_out, retcode = self._run_ipmitool_subcommand(f"sdr entity '{entity_id}'")
+        sensor_list_out, err, retcode = \
+            self._run_ipmitool_subcommand(f"sdr entity '{entity_id}'")
         if retcode != 0:
-            if isinstance(sensor_list_out, tuple):
-                sensor_list_out = [val for val in sensor_list_out if val]
-            msg = f"ipmitool sdr entity command failed: {b''.join(sensor_list_out)}"
+            msg = f"ipmitool sdr entity command failed: {err}"
             logger.error(msg)
             return
-        sensor_list = b''.join(sensor_list_out).decode(self.IPMI_ENCODING).split("\n")
+        sensor_list = sensor_list_out.split("\n")
 
         out = []
         for sensor in sensor_list:
@@ -859,14 +805,13 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         return out
 
     def _get_sensor_sdr_props(self, sensor_id):
-        props_list_out, retcode = self._run_ipmitool_subcommand(f"sdr get '{sensor_id}'")
+        props_list_out, err, retcode = \
+            self._run_ipmitool_subcommand(f"sdr get '{sensor_id}'")
         if retcode != 0:
-            if isinstance(props_list_out, tuple):
-                props_list_out = [val for val in props_list_out if val]
-            msg = f"ipmitool sensor get command failed: {b''.join(props_list_out)}"
+            msg = f"ipmitool sensor get command failed: {err}"
             logger.warning(msg)
             return
-        props_list = b''.join(props_list_out).decode(self.IPMI_ENCODING).split("\n")
+        props_list = props_list_out.split("\n")
 
         static_keys = {}
         dynamic = {}
@@ -900,14 +845,13 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
            common is a dict of common sensor properties and
            their values for this sensor, and
            specific is a dict of the properties specific to this sensor"""
-        props_list_out, retcode = self._run_ipmitool_subcommand(f"sensor get '{sensor_id}'")
+        props_list_out, err, retcode = \
+            self._run_ipmitool_subcommand(f"sensor get '{sensor_id}'")
         if retcode != 0:
-            if isinstance(props_list_out, tuple):
-                props_list_out = [val for val in props_list_out if val]
-            msg = f"ipmitool sensor get command failed: {b''.join(props_list_out)}"
+            msg = f"ipmitool sensor get command failed: {err}"
             logger.warning(msg)
             return (False, False, False)
-        props_list = b''.join(props_list_out).decode(self.IPMI_ENCODING).split("\n")
+        props_list = props_list_out.split('\n')
         props_list = props_list[1:] # The first line is 'Locating sensor record...'
 
         specific_static = {}
