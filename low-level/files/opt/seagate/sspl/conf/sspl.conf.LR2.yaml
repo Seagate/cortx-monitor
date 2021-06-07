@@ -157,7 +157,6 @@ SERVICEMONITOR:
       - scsi-network-relay.service
       - kafka.service
       - kafka-zookeeper.service
-      - cortx_message_bus.service
 
 NODEHWACTUATOR:
    ipmi_client: ipmitool
