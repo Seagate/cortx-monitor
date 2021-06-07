@@ -28,7 +28,8 @@ from framework.actuator_state_manager import actuator_state_manager
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.sspl_constants import enabled_products
-from framework.utils.conf_utils import GLOBAL_CONF, SSPL_CONF, Conf, SETUP_KEY
+from framework.utils.conf_utils import (GLOBAL_CONF, SSPL_CONF, Conf,
+                                        SETUP_KEY, NODEHWACTUATOR, IPMI_CLIENT)
 from framework.utils.service_logging import logger
 from json_msgs.messages.actuators.ack_response import AckResponseMsg
 from json_msgs.messages.actuators.ndhw_ack_response import NodeHwAckResponseMsg
@@ -44,8 +45,6 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
     PRIORITY    = 2
 
     SYS_INFORMATION = 'SYSTEM_INFORMATION'
-    NODE_HW_ACTUATOR = 'NODEHWACTUATOR'
-    IPMI_IMPLEMENTOR = 'ipmi_client'
 
     UNSUPPORTED_REQUEST = "Unsupported Request"
 
@@ -711,8 +710,8 @@ class NodeControllerMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     if self._NodeHW_actuator is None:
                         from actuators.impl.generic.node_hw import NodeHWactuator
                         from framework.utils.ipmi_client import IpmiFactory
-                        self.ipmi_client_name = Conf.get(SSPL_CONF, f"{self.NODE_HW_ACTUATOR}>{self.IPMI_IMPLEMENTOR}",
-                            "ipmitool")
+                        self.ipmi_client_name = Conf.get(SSPL_CONF,
+                            f"{NODEHWACTUATOR}>{IPMI_CLIENT}", "ipmitool")
                         ipmi_factory = IpmiFactory()
                         ipmi_client = \
                            ipmi_factory.get_implementor(self.ipmi_client_name)
