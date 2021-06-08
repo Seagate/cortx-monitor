@@ -14,12 +14,12 @@
 # cortx-questions@seagate.com.
 
 import syslog
-import socket
 import os
 
 from framework.base.sspl_constants import IEM_DATA_PATH
 from framework.utils.service_logging import logger
 from cortx.utils.iem_framework import EventMessage
+from cortx.utils.iem_framework.error import EventMessageError
 
 
 class Iem:
@@ -77,6 +77,7 @@ class Iem:
             "Cortx health alerts will get delivered to consumers like CSM.",
             ""]
     }
+
     def check_existing_iem_event(self, event_name, event_code):
         """Before logging iem, check if is already present."""
         previous_iem_event = None
@@ -118,22 +119,15 @@ class Iem:
         event_code = event[0]
         event_name = event[1]
         description = self.EVENT_STRING[event_code][0]
-        impact = self.EVENT_STRING[event_code][1]
-        recommendation = self.EVENT_STRING[event_code][2]
         if event_type == "fault_resolved" and event_name in self.fault_iems:
             iem_event_path = f'{IEM_DATA_PATH}/iem_{event_name}'
             if os.path.exists(iem_event_path):
                 os.remove(iem_event_path)
-                specific_info={
-                    'impact': impact,
-                    'recommendation': recommendation,
-                    'host_id': socket.getfqdn()
-        }
-                self.generate_iem(event_name, event_code, severity,description, specific_info)
+                self.generate_iem(event_name, event_code, severity, description)
         else:
             previous_iem = self.check_existing_iem_event(event_name, event_code)
             if not previous_iem:
-                self.generate_iem(event_name, event_code, severity,description, specific_info)
+                self.generate_iem(event_name, event_code, severity, description)
 
     def iem_fault(self, event):
         event = self.EVENT_CODE[event]
@@ -159,9 +153,48 @@ class Iem:
             if prev_fault_iem_event:
                 self.fault_iems.append(event_name)
 
-    def generate_iem(self, module, event_code, severity, description, specific_info):
+    def generate_iem(self, module, event_code, severity, description):
         """Generate iem and send it to a MessgaeBroker."""
+        try:
+            EventMessage.send(module=module, event_id=event_code,
+                              severity=severity, message_blob=description)
+        except EventMessageError as e:
+            logger.error("Failed to generate & send IEM alert."
+                         f"Error:{e}")
 
-        EventMessage.send(module=module, event_id=event_code,
-                          severity=severity, message=description,
-                          params=specific_info)
+# For Testing Purpose
+
+#    def verify_iem_receive(self):
+#        """ Receive IEM alert message."""
+#        EventMessage.subscribe(component='sspl')
+#        alert = EventMessage.receive()
+#        logger.info(f"IEM AlertMsg:{alert}")
+
+# Sample response JSON received for component: SSPL
+# For 'impitool' Error.
+#{
+#  "iem": {
+#    "version": "1",
+#    "info": {
+#      "severity": "Error",
+#      "type": "Software",
+#      "event_time": 1623154174.0197868
+#    },
+#    "location": {
+#      "site_id": "1",
+#      "node_id": "10",
+#      "rack_id": "5"
+#    },
+#    "source": {
+#      "site_id": "1",
+#      "node_id": "10",
+#      "rack_id": "5",
+#      "component": "sspl",
+#      "module": "ipmitool"
+#    },
+#    "contents": {
+#      "event": "0050010001",
+#      "message": "ipmitool command execution error."
+#    }
+#  }
+#}

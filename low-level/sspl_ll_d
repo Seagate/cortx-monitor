@@ -58,6 +58,7 @@ from framework.utils.conf_utils import (GLOBAL_CONF, HOST, MONITOR,
 from framework.utils.config_reader import ConfigReader
 from framework.utils.service_logging import init_logging, logger
 from framework.utils.store_factory import store
+from cortx.utils.iem_framework.error import EventMessageError
 # Message to send to HAlon upon critical thread errors
 from json_msgs.messages.actuators.thread_controller import ThreadControllerMsg
 from message_handlers.disk_msg_handler import DiskMsgHandler
@@ -715,7 +716,13 @@ def send_thread_controller_request(state):
 #     logger.setLevel(log_level)
 
 def initialize_iem():
-    EventMessage.init(component='sspl', source='S')
+    try:
+        EventMessage.init(component='sspl', source='S')
+        logger.debug("IEM framework initiated successfully!!!")
+    except EventMessageError as e:
+        logger.error("Failed to initialize IEM Framework."
+                     f"ERROR:{e}")
+        raise
 
 def refresh_iem_log_file(signal_number, frame):
     iem_sensor = threadController.get_sspl_module("IEMSensor")
