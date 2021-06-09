@@ -17,8 +17,7 @@
 
 """
  ***************************************************************************
-  Description: ServerMap class provides resource map and related information
-               like health, manifest, etc,.
+  Description: Server class to provide fru health and specific information
  ***************************************************************************
 """
 
@@ -26,7 +25,7 @@ from resource_map import ResourceMap
 
 
 class ServerMap(ResourceMap):
-    """Provides server resource related information."""
+    """Provides health information of FRUs in a node"""
 
     name = "server"
 
@@ -35,15 +34,13 @@ class ServerMap(ResourceMap):
         pass
 
     def get_health_info(self, rpath):
-        """
-        Get health information of fru in given resource id
-
+        """Get health information of fru in given resource id
         rpath: Resource id (Example: nodes[0]>compute[0]>hw>disks)
         """
-        pass
+        return
 
 
-# if __name__ == "__main__":
-#     server = ServerMap()
-#     health_data = server.get_health_info(rpath="nodes[0]>compute[0]>hw>disks")
-#     print(health_data)
+if __name__ == "__main__":
+    server = ServerMap()
+    health_data = server.get_health_info(rpath="nodes[0]>compute[0]>hw>disks")
+    print(health_data)

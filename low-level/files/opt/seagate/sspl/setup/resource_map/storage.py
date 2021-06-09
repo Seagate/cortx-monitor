@@ -17,8 +17,8 @@
 
 """
  ***************************************************************************
-  Description: StorageMap class provides resource map and related information
-               like health, manifest, etc,.
+  Description: Storage class to provide fru health and specific information
+               through controller web service.
  ***************************************************************************
 """
 
@@ -35,12 +35,12 @@ from resource_map import ResourceMap
 
 
 class StorageMap(ResourceMap):
-    """Provides storage resource related information."""
+    """Provides health information of FRUs in storage"""
 
     name = "storage"
 
     def __init__(self):
-        """Initialize storage."""
+        """Initialize storage"""
         super().__init__()
         self.validate_storage_type_support()
         self.storage_frus = {
@@ -50,10 +50,10 @@ class StorageMap(ResourceMap):
 
     @staticmethod
     def validate_storage_type_support():
-        """Check for supported storage type."""
+        """Check for supported storage type"""
         storage_type = Conf.get(GLOBAL_CONF, STORAGE_TYPE_KEY, "virtual").lower()
-        supported_types = ["5u84", "rbod", "pods", "corvault"]
-        if storage_type not in supported_types:
+        supportted_types = ["5u84", "rbod", "pods"]
+        if storage_type not in supportted_types:
             raise ResourceMapError(
                 errno.EINVAL,
                 "Health provider is not supported for storage type '%s'." % storage_type)
@@ -62,7 +62,6 @@ class StorageMap(ResourceMap):
     def get_node_details(node):
         """
         Parse node information and returns left string and instance.
-
         Example
             "storage"    -> ("storage", "*")
             "storage[0]" -> ("storage", "0")
@@ -74,17 +73,16 @@ class StorageMap(ResourceMap):
 
     def get_health_info(self, rpath):
         """
-        Fetch health information for given FRU.
-
+        Fetch health information for given FRU
         rpath: Resouce path (Example: nodes[0]>storage[0]>hw>controllers)
         """
         info = {}
         nodes = rpath.strip().split(">")
         leaf_node, _ = self.get_node_details(nodes[-1])
         if leaf_node == "storage":
+            info["last_updated"] = int(time.time())
             for fru in self.storage_frus:
                 info.update({fru: self.storage_frus[fru]()})
-            info["last_updated"] = int(time.time())
         else:
             fru = None
             fru_found = False
@@ -103,7 +101,7 @@ class StorageMap(ResourceMap):
     def get_controllers_info(self):
         """Update and return controller information in specific format"""
         data = []
-        controllers = self.get_realstor_encl_data("controllers")
+        controllers = self.get_realstor_show_data("controllers")
         for controller in controllers:
             controller_dict = {
               "uid": controller.get("durable-id"),
@@ -159,8 +157,8 @@ class StorageMap(ResourceMap):
         return data
 
     @staticmethod
-    def get_realstor_encl_data(fru: str):
-        """Fetch fru information through webservice API."""
+    def get_realstor_show_data(fru: str):
+        """Fetch fru information through webservice API"""
         from framework.platforms.realstor.realstor_enclosure import (
             singleton_realstorencl as ENCL)
 
@@ -181,10 +179,7 @@ class StorageMap(ResourceMap):
         return fru_data
 
 
-# if __name__ == "__main__":
-#     storage = StorageMap()
-#     frus = ["controllers", "psus"]
-#     for fru in frus:
-#         rpath = f"nodes[0]>storage[0]>hw>{fru}"
-#         health_data = storage.get_health_info(rpath=rpath)
-#         print(health_data)
+if __name__ == "__main__":
+    storage = StorageMap()
+    health_data = storage.get_health_info(rpath="nodes[0]>storage[0]>hw>controllers")
+    print(health_data)

@@ -19,19 +19,17 @@ from abc import ABCMeta, abstractmethod
 
 
 class ResourceMap(metaclass=ABCMeta):
-    """Abstract class for all other resource types."""
+    """Abstract class for all other resource types"""
 
     name = "resource"
 
     def __init__(self):
-        """Initialize resource."""
+        """Initialize resource"""
         pass
 
     @abstractmethod
     def get_health_info(self, rpath):
-        """
-        Get health information of fru in given resource id.
-
+        """Get health information of fru in given resource id
         rpath: Resource id (Example: hw>disks)
         """
         pass
