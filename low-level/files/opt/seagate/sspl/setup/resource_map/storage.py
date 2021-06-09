@@ -45,7 +45,8 @@ class StorageMap(ResourceMap):
         self.validate_storage_type_support()
         self.storage_frus = {
             "controllers": self.get_controllers_info,
-            "psus": self.get_psu_info
+            "psus": self.get_psu_info,
+            "sas_ports": self.get_sas_ports_info,
             }
 
     @staticmethod
@@ -167,7 +168,8 @@ class StorageMap(ResourceMap):
         fru_data = []
         fru_uri_map = {
             "controllers": ENCL.URI_CLIAPI_SHOWCONTROLLERS,
-            "power-supplies": ENCL.URI_CLIAPI_SHOWPSUS
+            "power-supplies": ENCL.URI_CLIAPI_SHOWPSUS,
+            "expander-ports": ENCL.URI_CLIAPI_SASHEALTHSTATUS,
         }
         url = ENCL.build_url(fru_uri_map.get(fru))
         response = ENCL.ws_request(url, ENCL.ws.HTTP_GET)
@@ -180,8 +182,33 @@ class StorageMap(ResourceMap):
 
         return fru_data
 
+    def get_sas_ports_info(self):
+        data = []
+        sas_ports = self.get_realstor_show_data("expander-ports")
+        if not sas_ports:
+            return data
+        for sas_port in sas_ports:
+            port_dict = {
+                "uid": sas_port.get("durable-id"),
+                "fru": "false",
+                "last_updated": int(time.time()),
+                "health": {
+                    "status": sas_port.get("health", "NA"),
+                    "description": sas_port.get("health-reason"),
+                    "recommendation": sas_port.get("health-recommendation"),
+                    "specifics": [
+                        {
+                            "sas-port-type": sas_port.get("sas-port-type"),
+                            "controller": sas_port.get("controller")
+                        }
+                    ]
+                }
+            }
+            data.append(port_dict)
+        return data
+
 
 # if __name__ == "__main__":
-#     storage = StorageMap()
-#     health_data = storage.get_health_info(rpath="nodes[0]>storage[0]>hw>controllers")
+#     storage = StorageHealth()
+#     health_data = storage.get_health_info(rpath="nodes[0]>storage[0]>hw>sas_ports")
 #     print(health_data)
