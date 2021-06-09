@@ -30,11 +30,11 @@ import time
 from framework.utils.conf_utils import (
     GLOBAL_CONF, SRVNODE, Conf, STORAGE_TYPE_KEY, NODE_TYPE_KEY, SITE_ID_KEY,
     RACK_ID_KEY, NODE_ID_KEY, CLUSTER_ID_KEY, RELEASE, TARGET_BUILD)
-from error import HealthProviderError
-from resource_health import ResourceHealth
+from error import ResourceMapError
+from resource_map import ResourceMap
 
 
-class StorageHealth(ResourceHealth):
+class StorageMap(ResourceMap):
     """Provides health information of FRUs in storage"""
 
     name = "storage"
@@ -53,7 +53,7 @@ class StorageHealth(ResourceHealth):
         storage_type = Conf.get(GLOBAL_CONF, STORAGE_TYPE_KEY, "virtual").lower()
         supportted_types = ["5u84", "rbod", "pods"]
         if storage_type not in supportted_types:
-            raise HealthProviderError(
+            raise ResourceMapError(
                 errno.EINVAL,
                 "Health provider is not supported for storage type '%s'." % storage_type)
 
@@ -73,7 +73,7 @@ class StorageHealth(ResourceHealth):
     def get_health_info(self, rpath):
         """
         Fetch health information for given FRU
-        rpath: Resouce path (Example: hw>controllers)
+        rpath: Resouce path (Example: nodes[0]>storage[0]>hw>controllers)
         """
         info = {}
         nodes = rpath.strip().split(">")
@@ -92,7 +92,7 @@ class StorageHealth(ResourceHealth):
                     info = self.storage_frus[fru]()
                     break
         if not fru_found:
-            raise HealthProviderError(
+            raise ResourceMapError(
                 errno.EINVAL,
                 "Health provider doesn't have support for'{rpath}'.")
         return info
@@ -147,7 +147,8 @@ class StorageHealth(ResourceHealth):
 
         return fru_data
 
+
 if __name__ == "__main__":
-    storage = StorageHealth()
+    storage = StorageMap()
     health_data = storage.get_health_info(rpath="nodes[0]>storage[0]>hw>controllers")
     print(health_data)

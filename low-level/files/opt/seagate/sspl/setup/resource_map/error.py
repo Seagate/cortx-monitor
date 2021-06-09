@@ -18,10 +18,10 @@
 from cortx.utils.errors import BaseError
 
 
-class HealthProviderError(BaseError):
+class ResourceMapError(BaseError):
     """Generic Exception with error code and output."""
 
     def __init__(self, rc=0, desc=None, message_id=None, message_args=None):
-        """Initialize HealthProviderError"""
-        super(HealthProviderError, self).__init__(
-              rc, 'HealthProvider Error: %s' % desc, message_id, message_args)
+        """Initialize ResourceMapError"""
+        super(ResourceMapError, self).__init__(
+              rc, 'ResourceMap Error: %s' % desc, message_id, message_args)

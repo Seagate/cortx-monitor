@@ -95,7 +95,7 @@ SSPL_DIR=/opt/seagate/%{product_family}/sspl
     ln -sf $SSPL_DIR/low-level/sspl_bundle_generate /usr/bin/sspl_bundle_generate
     ln -sf $SSPL_DIR/low-level/manifest_support_bundle /usr/bin/manifest_support_bundle
     ln -sf $SSPL_DIR/low-level/framework $SSPL_DIR/low-level/files/opt/seagate/sspl/setup/health_provider/
-    ln -sf $SSPL_DIR/low-level/files/opt/seagate/sspl/setup/health_provider $SSPL_DIR/health_provider
+    ln -sf $SSPL_DIR/low-level/files/opt/seagate/sspl/setup/health_provider $SSPL_DIR/bin/health_provider
 }
 
 # upgrade conf

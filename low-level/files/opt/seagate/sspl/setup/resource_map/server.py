@@ -21,10 +21,10 @@
  ***************************************************************************
 """
 
-from resource_health import ResourceHealth
+from resource_map import ResourceMap
 
 
-class ServerHealth(ResourceHealth):
+class ServerMap(ResourceMap):
     """Provides health information of FRUs in a node"""
 
     name = "server"
@@ -33,8 +33,14 @@ class ServerHealth(ResourceHealth):
         """Initialize server"""
         pass
 
-    def get_health_info(self, rid):
+    def get_health_info(self, rpath):
         """Get health information of fru in given resource id
-        rid: Resource id (Example: hw>disks)
+        rpath: Resource id (Example: nodes[0]>compute[0]>hw>disks)
         """
         return
+
+
+if __name__ == "__main__":
+    server = ServerMap()
+    health_data = server.get_health_info(rpath="nodes[0]>compute[0]>hw>disks")
+    print(health_data)

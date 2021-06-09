@@ -15,21 +15,6 @@
 # For any questions about this software or licensing,
 # please email opensource@seagate.com or cortx-questions@seagate.com
 
-from abc import ABCMeta, abstractmethod
 
-
-class ResourceHealth(metaclass=ABCMeta):
-    """Abstract class for all other resource types"""
-
-    name = "resource"
-
-    def __init__(self):
-        """Initialize resource"""
-        pass
-
-    @abstractmethod
-    def get_health_info(self, rpath):
-        """Get health information of fru in given resource id
-        rpath: Resource id (Example: hw>disks)
-        """
-        pass
+from server import ServerMap
+from storage import StorageMap
