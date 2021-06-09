@@ -31,7 +31,6 @@ from framework.base.module_thread import (ScheduledModuleThread, SensorThread,
     SensorThreadState)
 from framework.base.sspl_constants import (OperatingSystem, cs_legacy_products,
     cs_products, enabled_products)
-from framework.messaging.logging_processor import LoggingProcessor
 # Import modules to control
 from framework.messaging.egress_processor import \
     EgressProcessor
@@ -42,7 +41,6 @@ from framework.utils.service_logging import logger
 from json_msgs.messages.actuators.thread_controller import ThreadControllerMsg
 from message_handlers.disk_msg_handler import DiskMsgHandler
 # Note that all threaded message handlers must have an import here to be controlled
-from message_handlers.logging_msg_handler import LoggingMsgHandler
 from message_handlers.node_controller_msg_handler import \
     NodeControllerMsgHandler
 from message_handlers.node_data_msg_handler import NodeDataMsgHandler
@@ -93,7 +91,7 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
     THREADCONTROLLER = MODULE_NAME.upper()
     ALWAYS_ACTIVE_MODULES = [
         "EgressProcessor", "IngressProcessor",
-        "ThreadController", "LoggingMsgHandler"
+        "ThreadController"
     ]
 
     # Constats for keys to read from conf file

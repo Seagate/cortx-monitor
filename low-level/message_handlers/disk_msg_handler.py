@@ -36,8 +36,6 @@ from json_msgs.messages.sensors.drive_mngr import DriveMngrMsg
 from json_msgs.messages.sensors.expander_reset import ExpanderResetMsg
 from json_msgs.messages.sensors.hpi_data import HPIDataMsg
 from json_msgs.messages.sensors.node_hw_data import NodeIPMIDataMsg
-# Modules that receive messages from this module
-from message_handlers.logging_msg_handler import LoggingMsgHandler
 
 
 class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
@@ -53,11 +51,9 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
     MAX_DM_EVENTS     = 'max_drivemanager_events'
     MAX_DM_EVENTS_INT = 'max_drivemanager_event_interval'
 
-    ALWAYS_LOG_IEM = 'always_log_iem'
-
     # Dependency list
     DEPENDENCIES = {
-                    "plugins": ["LoggingMsgHandler", "EgressProcessor"],
+                    "plugins": ["EgressProcessor"],
                     "rpms": []
     }
 
@@ -91,9 +87,6 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
         # Read in the location to serialize disk_info.json
         self._disk_info_file = self._getDiskInfo_File()
-
-        # Bool flag signifying to always log disk status even when it hasn't changed
-        self._always_log_IEM = self._getAlways_log_IEM()
 
         # Dict of drive manager data for drives
         self._drvmngr_drives = {}
@@ -507,9 +500,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
             drive = self._drvmngr_drives.get(serial_number)
             if drive.get_drive_status().lower() == status.lower() and \
                 drive.get_path_id() == path_id:
-
-                if not self._always_log_IEM:
-                    return
+                return
 
             # Check for expander reset by examining scsi generic value changing
             # DEPRECATED for drivemanager interval checks
@@ -528,9 +519,6 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
             # Update the status and path_id
             drive.set_drive_status(status)
             drive.set_path_id(path_id)
-
-            # Log an IEM
-            self._log_IEM(drive)
 
         # Create a new Drive object and add it to dict
         else:
@@ -561,10 +549,6 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
             # Update the dict of drive manager drives and write s/n and status to file
             self._drvmngr_drives[serial_number] = drive
-
-            # Log an IEM if flag is set to do so
-            if self._always_log_IEM:
-                self._log_IEM(drive)
 
         # Obtain json message containing all relevant data
         internal_json_msg = drive.toDriveMngrJsonMsg().getJson()
@@ -616,7 +600,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
         # See if there is a drivemanager drive available and update its HPI data if changed
         if self._drvmngr_drives.get(serial_number) is not None:
-            # Ignore if nothing changed otherwise send json msg, serialize and log IEM
+            # Ignore if nothing changed otherwise send json msg and serialize
             drivemngr_drive = self._drvmngr_drives.get(serial_number)
             if drivemngr_drive.get_drive_enclosure() != drive.get_drive_enclosure() or \
                 drivemngr_drive.get_drive_num() != drive.get_drive_num():
@@ -632,9 +616,6 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
                 # Write the serial number and status to DCS file
                 self._serialize_disk_status()
-
-                # Log an IEM because we have new data
-                self._log_IEM(drivemngr_drive)
 
         # Have the drivemanager resend the drive's state in the OS
         if self._drvmngr_drives:
@@ -821,59 +802,6 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
         except Exception as ae:
             logger.exception(ae)
 
-    def _log_IEM(self, drive):
-        """Sends an IEM to logging msg handler"""
-        # Split apart the drive status into status and reason values
-        # Status is first word before the first '_'
-        status, reason = str(drive.get_drive_status()).split("_", 1)
-        self._log_debug(f"_log_IEM, status: {status} reason:{reason}")
-
-        log_msg = ""
-        if status.lower() == "empty" or \
-           status.lower() == "unused":   # Backwards compatible with external drivemanager
-            log_msg = "IEC: 020001002: Drive removed"
-
-        elif status.lower() == "ok" or \
-             status.lower() == "inuse":  # Backwards compatible with external drivemanager
-            log_msg = "IEC: 020001001: Drive added/back to normal state"
-
-        elif status.lower() == "failed":
-            # Only handling SMART failures for now
-            if "smart" in reason.lower():
-                log_msg = "IEC: 020002002: SMART validation test has failed"
-
-        if len(log_msg) == 0:
-            if "halon" in status.lower():
-                # These status are sent from Halon as HDS log types and get handled in logging_msg_handler
-                return
-            else:
-                # The status was generated within sspl-ll but we don't recognize it
-                logger.info(f"DiskMsgHandler, Unknown disk status/reason: {status}/{reason}")
-                return
-
-        json_data = {"enclosure_serial_number": drive.get_drive_enclosure(),
-                         "disk_serial_number": drive.getSerialNumber(),
-                         "slot": drive.get_drive_num(),
-                         "status": status,
-                         "reason": reason,
-                         "hostname": self._host_id,
-                         "path_id": drive.get_path_id()
-                         }
-
-        self._log_debug(f"_log_IEM, log_msg: %{log_msg}:{json.dumps(json_data, sort_keys=True)}")
-        internal_json_msg = json.dumps(
-                    {"actuator_request_type" : {
-                        "logging": {
-                            "log_level": "LOG_WARNING",
-                            "log_type": "IEM",
-                            "log_msg": f"{log_msg}:{json.dumps(json_data, sort_keys=True)}"
-                            }
-                        }
-                     })
-
-        # Send the event to logging msg handler to send IEM message to journald
-        self._write_internal_msgQ(LoggingMsgHandler.name(), internal_json_msg)
-
     def _check_expander_reset(self):
         """Check for expander reset by polling for sgXX changes
         DEPRECATED for drivemanager interval checks"""
@@ -936,7 +864,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     # Trigger a full expander reset when a partial has occurred
                     self._trigger_expander_reset()
 
-                    # Log IEM and send out JSON msg
+                    # Send out JSON msg
                     self._transmit_expander_reset()
                 else:
                     logger.info("DiskMsgHandler, Expander reset detected.")
@@ -958,23 +886,6 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
         # Send the json message to the message processor to transmit out
         self._write_internal_msgQ(EgressProcessor.name(), internal_json_msg)
-
-        log_msg  = "IEC: 020005001: Expander Reset Triggered"
-        json_data = {"scsi_generic_device": self._scsi_generic}
-
-        # Log an IEM
-        internal_json_msg = json.dumps(
-                    {"actuator_request_type" : {
-                        "logging": {
-                            "log_level": "LOG_WARNING",
-                            "log_type": "IEM",
-                            "log_msg": f"{log_msg}:{json.dumps(json_data, sort_keys=True)}"
-                            }
-                        }
-                     })
-
-        # Send the event to logging msg handler to send IEM message to journald
-        self._write_internal_msgQ(LoggingMsgHandler.name(), internal_json_msg)
 
     def _trigger_expander_reset(self):
             """Trigger an expander reset by rebooting via wbcli tool"""
@@ -1007,11 +918,7 @@ class DiskMsgHandler(ScheduledModuleThread, InternalMsgQ):
         """Retrieves the file location"""
         return Conf.get(SSPL_CONF, f"{self.DISKMSGHANDLER}>{self.DISKINFO_FILE}",
                                     '/tmp/dcs/disk_info.json')
-    def _getAlways_log_IEM(self):
-        """Retrieves flag signifying we should always log disk status as an IEM even if they
-            haven't changed.  This is useful for always logging SMART results"""
-        val = bool(Conf.get(SSPL_CONF, f"{self.DISKMSGHANDLER}>{self.ALWAYS_LOG_IEM}",
-                                        False))
+
     def _getDM_exp_reset_values(self):
         """Retrieves the values used to determine partial expander resets"""
         self._max_drivemanager_events = int(Conf.get(SSPL_CONF, f"{self.DISKMSGHANDLER}>{self.MAX_DM_EVENTS}",
