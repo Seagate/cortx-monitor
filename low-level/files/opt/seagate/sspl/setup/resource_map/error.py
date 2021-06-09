@@ -22,6 +22,6 @@ class ResourceMapError(BaseError):
     """Generic Exception with error code and output."""
 
     def __init__(self, rc=0, desc=None, message_id=None, message_args=None):
-        """Initialize ResourceMapError"""
+        """Initialize ResourceMapError."""
         super(ResourceMapError, self).__init__(
               rc, 'ResourceMap Error: %s' % desc, message_id, message_args)
