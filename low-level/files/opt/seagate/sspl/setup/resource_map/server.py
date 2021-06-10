@@ -22,17 +22,34 @@
  ***************************************************************************
 """
 
+import errno
+import time
+import os
+import re
+import psutil
+import socket
 from resource_map import ResourceMap
+from error import ResourceMapError
+
+from framework.utils.tool_factory import ToolFactory
 
 
 class ServerMap(ResourceMap):
     """Provides server resource related information."""
 
     name = "server"
+    SAS_RESOURCE_ID = ["SASHBA-0"]
+    NW_CBL_CARRIER_FILE = "/sys/class/net/%s/carrier"
+    NW_CBL_OPERSTATE_FILE = "/sys/class/net/%s/operstate"
 
     def __init__(self):
         """Initialize server"""
-        pass
+        super().__init__()
+        self.server_frus = {
+            'sas_hba': self.get_sas_hba_info,
+            'sas_ports': self.get_sas_ports_info,
+            'nw_ports': self.get_nw_ports_info
+        }
 
     def get_health_info(self, rpath):
         """
@@ -40,10 +57,192 @@ class ServerMap(ResourceMap):
 
         rpath: Resource id (Example: nodes[0]>compute[0]>hw>disks)
         """
-        pass
+        info = {}
+        fru_found = False
+        nodes = rpath.strip().split(">")
+        leaf_node, _ = self.get_node_details(nodes[-1])
+        if leaf_node == "compute":
+            for fru in self.server_frus:
+                info.update({fru: self.server_frus[fru]()})
+            info["last_updated"] = int(time.time())
+            fru_found = True
+        else:
+            fru = None
+            for node in nodes:
+                fru, _ = self.get_node_details(node)
+                if self.server_frus.get(fru):
+                    fru_found = True
+                    info = self.server_frus[fru]()
+                    break
+        if not fru_found:
+            raise ResourceMapError(
+                errno.EINVAL,
+                "Health provider doesn't have support for'{rpath}'.")
+        return info
+
+    @staticmethod
+    def get_node_details(node):
+        """
+        Parse node information and returns left string and instance.
+
+        Example
+            "storage"    -> ("storage", "*")
+            "storage[0]" -> ("storage", "0")
+        """
+        res = re.search(r"(\w+)\[([\d]+)\]|(\w+)", node)
+        inst = res.groups()[1] if res.groups()[1] else "*"
+        node = res.groups()[0] if res.groups()[1] else res.groups()[2]
+        return node, inst
+
+    def get_data_template(self, uid, is_fru: bool):
+        return {
+            "uid": uid,
+            "fru": str(is_fru).lower(),
+            "last_updated": int(time.time()),
+            "health": {
+                "status": "",
+                "description": "",
+                "recommendation": "",
+                "specifics": []
+            }
+        }
+
+    def set_health_data(self, obj: dict, status, description=None,
+                        recommendation=None):
+        good_state = (status == "OK")
+        if not description:
+            description = "%s is %s in good state" % (
+                            obj.get("uid"),
+                            '' if good_state else 'not')
+        if not recommendation:
+            recommendation = 'None' if good_state\
+                             else "Contact Seagate Support."
+
+        obj["health"].update({
+            "status": status,
+            "description": description,
+            "recommendation": recommendation
+        })
+
+    def get_sas_hba_info(self):
+        return self.get_sas_ports_info("sas_hba")
+
+    def get_sas_ports_info(self, leaf_node="sas_ports"):
+        sas_hba_data = []
+        health_data = []
+        for sas_rid in self.SAS_RESOURCE_ID:
+            r_data = self.get_data_template(sas_rid, False)
+            sysfs_instance = ToolFactory().get_instance('sysfs')
+            sysfs_instance.initialize()
+            sas_ports_dict = sysfs_instance.get_phy_negotiated_link_rate()
+            sas_ports_dict = sorted(sas_ports_dict.items(),
+                                    key=lambda kv: int(kv[0].split(':')[1]))
+            health = []
+            if sas_ports_dict:
+                for rid, rate in sas_ports_dict:
+                    r_data["health"]["specifics"].append({
+                        "resource_id": f"{sas_rid}:{rid.strip()}",
+                        "negotiated_link_rate": rate.strip()
+                    })
+                    if "Gbit".lower() in rate.strip().lower():
+                        health.append("OK")
+
+            # By some logic set health status, description, recommendation
+            health_data.append(health)
+            health_status = "OK" if "OK" in health else "Fault"
+            self.set_health_data(r_data, health_status)
+            sas_hba_data.append(r_data)
+
+        if leaf_node == "sas_hba":
+            return sas_hba_data
+
+        sas_ports_data = []
+        for heath_list in health_data:
+            for i, health in enumerate(heath_list):
+                if i % 4:
+                    continue
+
+                sas_port_data = self.get_data_template(f'sas_port_{i/4+1}',
+                                                       False)
+                sas_port_data["health"]["specifics"].append({
+                    "negotiated_link_rate": "12.0 Gbit"
+                })
+
+                health_status = "OK" if "OK" in heath_list[i:i+4] else "Fault"
+                self.set_health_data(sas_port_data, health_status)
+                sas_ports_data.append(sas_port_data)
+
+        return sas_ports_data
+
+    def get_nw_ports_info(self):
+        network_cable_data = []
+        io_counters = psutil.net_io_counters(pernic=True)
+
+        for interface, addrs in psutil.net_if_addrs().items():
+            nic_info = self.get_data_template(interface, False)
+
+            specifics = {}
+            for addr in addrs:
+                if addr.family == socket.AF_INET:
+                    specifics["ipV4"] = addr.address
+
+            if interface in io_counters:
+                io_info = io_counters[interface]
+                specifics.update({
+                    "networkErrors": io_info.errin + io_info.errout,
+                    "droppedPacketsIn": io_info.dropin,
+                    "droppedPacketsOut": io_info.dropout,
+                    "packetsIn": io_info.packets_recv,
+                    "packetsOut": io_info.packets_sent,
+                    "trafficIn": io_info.bytes_recv,
+                    "trafficOut": io_info.bytes_sent
+                })
+
+            nw_status, nw_cable_conn_status = \
+                self.get_nw_status(interface)
+
+            specifics["nwStatus"] = nw_status
+            specifics["nwCableConnStatus"] = nw_cable_conn_status
+            nic_info["health"]["specifics"].append(specifics)
+
+            # set health status, description and recommendation
+            if nw_status == "UP" and nw_cable_conn_status == "OK":
+                health_status = "OK"
+            elif nw_status == "UNKNOWN" and nw_cable_conn_status == "NA":
+                health_status = "NA"
+            else:
+                health_status = "Fault"
+
+            self.set_health_data(nic_info, health_status)
+
+            network_cable_data.append(nic_info)
+
+        return network_cable_data
+
+    def get_nw_status(self, interface):
+        phy_link_state = {"0": "Fault", "1": "OK", "unknown": "NA"}
+        nw_status = nw_cable_conn_status = ""
+        try:
+            if os.path.isfile(self.NW_CBL_OPERSTATE_FILE % interface):
+                with open(self.NW_CBL_OPERSTATE_FILE % interface) as cf:
+                    nw_status = cf.read().strip().upper()
+
+            if os.path.isfile(self.NW_CBL_CARRIER_FILE % interface):
+                with open(self.NW_CBL_CARRIER_FILE % interface) as cf:
+                    nw_cable_conn_status = cf.read().strip()
+
+            if nw_cable_conn_status not in phy_link_state:
+                nw_cable_conn_status = "unknown"
+            nw_cable_conn_status = phy_link_state[nw_cable_conn_status]
+
+        except Exception as err:
+            raise ResourceMapError(errno.EINVAL,
+                                   ("Unable to fetch network status due to"
+                                    " an error: %s" % err))
+        return nw_status, nw_cable_conn_status
 
 
 # if __name__ == "__main__":
 #     server = ServerMap()
-#     health_data = server.get_health_info(rpath="nodes[0]>compute[0]>hw>disks")
+#     health_data = server.get_health_info(rpath="nodes[0]>compute[0]")
 #     print(health_data)

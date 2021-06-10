@@ -80,15 +80,16 @@ class StorageMap(ResourceMap):
         rpath: Resouce path (Example: nodes[0]>storage[0]>hw>controllers)
         """
         info = {}
+        fru_found = False
         nodes = rpath.strip().split(">")
         leaf_node, _ = self.get_node_details(nodes[-1])
         if leaf_node == "storage":
             for fru in self.storage_frus:
                 info.update({fru: self.storage_frus[fru]()})
             info["last_updated"] = int(time.time())
+            fru_found = True
         else:
             fru = None
-            fru_found = False
             for node in nodes:
                 fru, _ = self.get_node_details(node)
                 if self.storage_frus.get(fru):
@@ -184,7 +185,7 @@ class StorageMap(ResourceMap):
 
     def get_sas_ports_info(self):
         data = []
-        sas_ports = self.get_realstor_show_data("expander-ports")
+        sas_ports = self.get_realstor_encl_data("expander-ports")
         if not sas_ports:
             return data
         for sas_port in sas_ports:
@@ -209,6 +210,6 @@ class StorageMap(ResourceMap):
 
 
 # if __name__ == "__main__":
-#     storage = StorageHealth()
-#     health_data = storage.get_health_info(rpath="nodes[0]>storage[0]>hw>sas_ports")
+#     storage = StorageMap()
+#     health_data = storage.get_health_info(rpath="nodes[0]>storage[0]")
 #     print(health_data)
