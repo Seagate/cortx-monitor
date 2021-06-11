@@ -158,8 +158,6 @@ class StorageMap(ResourceMap):
             data.append(psu_dict)
         return data
 
-
-
     @staticmethod
     def get_realstor_encl_data(fru: str):
         """Fetch fru information through webservice API."""
