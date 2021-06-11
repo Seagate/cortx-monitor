@@ -44,7 +44,8 @@ class StorageMap(ResourceMap):
         super().__init__()
         self.validate_storage_type_support()
         self.storage_frus = {
-            "controllers": self.get_controllers_info
+            "controllers": self.get_controllers_info,
+            "psus": self.get_psus_info
             }
 
     @staticmethod
@@ -128,6 +129,37 @@ class StorageMap(ResourceMap):
             data.append(controller_dict)
         return data
 
+    def get_psus_info(self):
+        """Update and return PSUs information in specific format."""
+        data = []
+        psus = self.get_realstor_encl_data("power-supplies")
+        for psu in psus:
+            psu_dict = {
+              "uid": psu.get("durable-id"),
+              "fru": "true",
+              "last_updated": int(time.time()),
+              "health": {
+                "status": psu.get("health", "NA"),
+                "description": psu.get("description"),
+                "recommendation": psu.get("health-recommendation"),
+                "specifics": [
+                  {
+                    "location": psu.get("location", "NA"),
+                    "dc12v": psu.get("dc12v", "NA"),
+                    "dc5v": psu.get("dc5v", "NA"),
+                    "dc33v": psu.get("dc33v", "NA"),
+                    "dc12i": psu.get("dc12i", "NA"),
+                    "dc5i": psu.get("dc5i", "NA"),
+                    "dctemp": psu.get("dctemp", "NA")
+                  }
+                ]
+              }
+            }
+            data.append(psu_dict)
+        return data
+
+
+
     @staticmethod
     def get_realstor_encl_data(fru: str):
         """Fetch fru information through webservice API."""
@@ -136,7 +168,8 @@ class StorageMap(ResourceMap):
 
         fru_data = []
         fru_uri_map = {
-            "controllers": ENCL.URI_CLIAPI_SHOWCONTROLLERS
+            "controllers": ENCL.URI_CLIAPI_SHOWCONTROLLERS,
+            "power-supplies": ENCL.URI_CLIAPI_SHOWPSUS
         }
         url = ENCL.build_url(fru_uri_map.get(fru))
         response = ENCL.ws_request(url, ENCL.ws.HTTP_GET)
@@ -150,7 +183,10 @@ class StorageMap(ResourceMap):
         return fru_data
 
 
-# if __name__ == "__main__":
-#     storage = StorageMap()
-#     health_data = storage.get_health_info(rpath="nodes[0]>storage[0]>hw>controllers")
-#     print(health_data)
+if __name__ == "__main__":
+    storage = StorageMap()
+    frus = ["controllers", "psus"]
+    for fru in frus:
+        rpath = f"nodes[0]>storage[0]>hw>{fru}"
+        health_data = storage.get_health_info(rpath=rpath)
+        print(health_data)
