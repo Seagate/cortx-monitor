@@ -15,7 +15,6 @@
 # For any questions about this software or licensing,
 # please email opensource@seagate.com or cortx-questions@seagate.com
 
-
 import time
 import re
 import errno
@@ -216,25 +215,37 @@ class ServerMap(ResourceMap):
         return response
 
     def get_mem_info(self):
-        """Collect & return system memory info in specific format """
+        """Update and return memory info in specific format"""
 
-        from framework.utils.conf_utils import SSPL_CONF, Conf
-        default_mem_usage_threshold = int(Conf.get(SSPL_CONF,
-            "NODEDATAMSGHANDLER>host_memory_usage_threshold",
-            80))
+        from framework.utils.store_factory import file_store
+        node_id = Conf.get(GLOBAL_CONF, NODE_ID_KEY,'SN01')
+        self.store = file_store
+        cache_dir_path = os.path.join(DATA_PATH, 'server')
+        self.MEM_FAULT_SENSOR_DATA = os.path.join(cache_dir_path,
+                                             f'MEM_FAULT_SENSOR_DATA_{node_id}')
         data = []
         status = "OK"
         description = "Host memory is in good health"
-        self.mem_info = dict(psutil.virtual_memory()._asdict())
-        curr_mem_usage_threshold = int(self.mem_info['percent'])
-        if curr_mem_usage_threshold > int(default_mem_usage_threshold):
-            status = "Overloaded"
-            description = (f"Current host memory usage is {curr_mem_usage_threshold},"
-                           f"beyond configured threshold of {default_mem_usage_threshold}")
-
-        memory_dict = self.prepare_mem_json(status,
-                                            description)
-        data.append(memory_dict)
+        utility_instance = ToolFactory().get_instance('procfs')
+        mem_path = utility_instance.get_proc_memory('meminfo')
+        if mem_path.is_file():
+            meminfo_dict = self.read_mem_file(mem_path)
+            total_mem = meminfo_dict['MemTotal:']
+            path_exists, _ = self.store.exists(self.MEM_FAULT_SENSOR_DATA)
+            if path_exists:
+                self.get_stored_mem_info()
+                if self.fault_alert_state == "fault":
+                    status = "FAULT"
+                    description  = \
+                    "Total available main memory value decreased"\
+                    f"from {self.prev_mem} kB to {total_mem} kB"
+            memory_dict = self.prepare_mem_json(status,
+                                                description)
+            data.append(memory_dict)
+        else:
+            raise HealthProviderError(
+                errno.EINVAL,
+                f"{mem_path}: file does not exist")
         return data
 
     def prepare_mem_json(self, status, description):
