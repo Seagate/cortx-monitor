@@ -34,9 +34,6 @@ from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
 from framework.base.sspl_constants import RESOURCE_PATH
 
-# Import message handlers to hand off messages
-from message_handlers.logging_msg_handler import LoggingMsgHandler
-
 import ctypes
 SSPL_SEC = ctypes.cdll.LoadLibrary('libsspl_sec.so.0')
 

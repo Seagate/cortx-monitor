@@ -38,7 +38,6 @@ from json_msgs.messages.sensors.local_mount_data import LocalMountDataMsg
 from json_msgs.messages.sensors.node_hw_data import NodeIPMIDataMsg
 from json_msgs.messages.sensors.raid_data import RAIDdataMsg
 from json_msgs.messages.sensors.raid_integrity_msg import RAIDIntegrityMsg
-from message_handlers.logging_msg_handler import LoggingMsgHandler
 from framework.messaging.egress_processor import EgressProcessor
 from framework.utils.store_factory import file_store
 from framework.utils.utility import Utility
@@ -680,15 +679,6 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         jsonMsg = ifDataMsg.getJson()
         self.if_sensor_data = jsonMsg
         self.os_sensor_type[sensor_type] = self.if_sensor_data
-
-        # Send the event to logging msg handler to send IEM message to journald
-        #internal_json_msg=json.dumps({
-        #                        'actuator_request_type': {
-        #                            'logging': {
-        #                                'log_level': 'LOG_WARNING',
-        #                                'log_type': 'IEM',
-        #                                'log_msg': '{}'.format(jsonMsg)}}})
-        #self._write_internal_msgQ(LoggingMsgHandler.name(), internal_json_msg)
 
         # Transmit it to message processor
         self._write_internal_msgQ(EgressProcessor.name(), jsonMsg)

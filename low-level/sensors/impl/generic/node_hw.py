@@ -44,7 +44,6 @@ from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
 from framework.utils.store_factory import file_store
 from framework.utils.iem import Iem
-from message_handlers.logging_msg_handler import LoggingMsgHandler
 from message_handlers.node_data_msg_handler import NodeDataMsgHandler
 from sensors.INode_hw import INodeHWsensor
 from framework.utils.ipmi_client import IpmiFactory
@@ -135,7 +134,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
 
     # Dependency list
     DEPENDENCIES = {
-                    "plugins": ["NodeDataMsgHandler", "LoggingMsgHandler"],
+                    "plugins": ["NodeDataMsgHandler"],
                     "rpms": []
     }
 
@@ -966,7 +965,6 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
 
         self._send_json_msg(resource_type, alert_type, severity, fru_info, fan_info)
         store.put(self.faulty_resources, self.faulty_resources_path)
-        self._log_IEM(resource_type, alert_type, severity, fru_info, fan_info)
 
     def _parse_psu_supply_info(self, index, date, _time, sensor, sensor_num, event, status, is_last):
         """Parse out PSU related changes that gets reflected in the ipmi sel list"""
@@ -1038,7 +1036,6 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
 
         self._send_json_msg(resource_type, alert_type, severity, info, specific_info)
         store.put(self.faulty_resources, self.faulty_resources_path)
-        self._log_IEM(resource_type, alert_type, severity, info, specific_info)
 
     def _parse_psu_unit_info(self, index, date, _time, sensor, sensor_num, event, status, is_last):
         """Parse out PSU related changes that gets reflected in the ipmi sel list"""
@@ -1121,7 +1118,6 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
 
         self._send_json_msg(resource_type, alert_type, severity, info, specific_info)
         store.put(self.faulty_resources, self.faulty_resources_path)
-        self._log_IEM(resource_type, alert_type, severity, info, specific_info)
 
     def _parse_disk_info(self, index, date, _time, sensor, sensor_num, event, status, is_last):
         """Parse out Disk related changes that gets reaflected in the ipmi sel list"""
@@ -1182,7 +1178,6 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
 
             self._send_json_msg(resource_type, alert_type, severity, info, specific_info)
             store.put(self.faulty_resources, self.faulty_resources_path)
-            self._log_IEM(resource_type, alert_type, severity, info, specific_info)
 
     def _parse_temperature_info(self, index, date, _time, sensor, sensor_num, event, status, is_last):
 
@@ -1232,7 +1227,6 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
 
         self._send_json_msg(resource_type, alert_type, severity, info, specific_info)
         store.put(self.faulty_resources, self.faulty_resources_path)
-        self._log_IEM(resource_type, alert_type, severity, info, specific_info)
 
     def _parse_voltage_info(self, index, date, _time, sensor, sensor_num, event, status, is_last):
 
@@ -1282,7 +1276,6 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
 
         self._send_json_msg(resource_type, alert_type, severity, info, specific_info)
         store.put(self.faulty_resources, self.faulty_resources_path)
-        self._log_IEM(resource_type, alert_type, severity, info, specific_info)
 
 # TODO: Enable this code once Intel servers become available
 # to test the current sensor
@@ -1338,7 +1331,6 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
 #
 #        self._send_json_msg(resource_type, alert_type, severity, info, specific_info)
 #        store.put(self.faulty_resources, self.faulty_resources_path)
-#        self._log_IEM(resource_type, alert_type, severity, info, specific_info)
 
     def _send_json_msg(self, resource_type, alert_type, severity, info, specific_info):
         """Transmit data to NodeDataMsgHandler which takes two arguments.
@@ -1359,29 +1351,6 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
 
         # Send the event to node data message handler to generate json message and send out
         self._write_internal_msgQ(NodeDataMsgHandler.name(), internal_json_msg)
-
-    def _log_IEM(self, resource_type, alert_type, severity, info, specific_info):
-        """Sends an IEM to logging msg handler"""
-
-        json_data = json.dumps({
-            "sensor_request_type" : {
-                "node_data":{
-                    "alert_type": alert_type,
-                    "severity": severity,
-                    "alert_id": self._get_alert_id(info["event_time"]),
-                    "host_id": self.host_id,
-                    "info": info,
-                    "specific_info": specific_info
-                }
-               }
-            }, sort_keys=True)
-
-        # Send the event to node data message handler to generate json message and send out
-        internal_json_msg = json.dumps(
-                {'actuator_request_type': {'logging': {'log_level': 'LOG_WARNING', 'log_type': 'IEM', 'log_msg': f'{json_data}'}}})
-
-        # Send the event to logging msg handler to send IEM message to journald
-        self._write_internal_msgQ(LoggingMsgHandler.name(), internal_json_msg)
 
     def _get_host_id(self):
         return socket.getfqdn()

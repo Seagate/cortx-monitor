@@ -43,7 +43,6 @@ from framework.actuator_state_manager import actuator_state_manager
 from framework.base.module_thread import SensorThread
 from framework.base.sspl_constants import (SSPL_SETTINGS, COMMON_CONFIGS, PRODUCT_FAMILY,
     OperatingSystem, enabled_products, SYSLOG_HOST, SYSLOG_PORT)
-from framework.messaging.logging_processor import LoggingProcessor
 from framework.messaging.egress_accumulated_msgs_processor import \
     EgressAccumulatedMsgsProcessor
 # Modules for handling messages and manipulating internal threads
@@ -62,7 +61,6 @@ from framework.utils.store_factory import store
 # Message to send to HAlon upon critical thread errors
 from json_msgs.messages.actuators.thread_controller import ThreadControllerMsg
 from message_handlers.disk_msg_handler import DiskMsgHandler
-from message_handlers.logging_msg_handler import LoggingMsgHandler
 from message_handlers.node_controller_msg_handler import \
     NodeControllerMsgHandler
 from message_handlers.node_data_msg_handler import NodeDataMsgHandler
