@@ -31,8 +31,10 @@ from zope.interface import implementer
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.module_thread import SensorThread
 from framework.base.sspl_constants import (PRODUCT_FAMILY, WAIT_BEFORE_RETRY,
-                                           RaidAlertMsgs, RaidDataConfig)
-from framework.utils.conf_utils import SSPL_CONF, Conf
+                                           RaidAlertMsgs, RaidDataConfig,
+                                           BLOCK_DIR)
+from framework.utils.conf_utils import (SSPL_CONF, Conf, SYSTEM_INFORMATION,
+                                        SYSFS_PATH)
 from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
 # Modules that receive messages from this module
@@ -54,6 +56,7 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
     SYSTEM_INFORMATION = "SYSTEM_INFORMATION"
 
     SCAN_FREQUENCY = "polling_interval"
+    RETRY_INTERVAL = "retry_interval"
     TIMESTAMP_FILE_PATH_KEY = "timestamp_file_path"
 
     # Scan for RAID integrity error every 2 weeks (1209600 seconds)
@@ -104,6 +107,14 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
 
         if self._scan_frequency < self.MIN_SCAN_FREQUENCY:
             self._scan_frequency = self.MIN_SCAN_FREQUENCY
+
+        sysfs_path = Conf.get(SSPL_CONF,
+                              f'{SYSTEM_INFORMATION}>{SYSFS_PATH}')
+        self.raid_dir = sysfs_path + BLOCK_DIR
+
+        self.retry_interval = int(
+            Conf.get(SSPL_CONF,
+                     f'{self.RAIDIntegritySensor}>{self.RETRY_INTERVAL}'))
 
         # Create DEFAULT_RAID_DATA_PATH if already not exist.
         self._create_file(self.DEFAULT_RAID_DATA_PATH)
@@ -234,9 +245,9 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
     def _check_mismatch_count(self, device):
         try:
             status = None
-            raid_dir = RaidDataConfig.DIR.value
             mismatch_cnt_file = RaidDataConfig.MISMATCH_COUNT_FILE.value
-            MISMATCH_COUNT_COMMAND = 'cat ' + raid_dir + device + mismatch_cnt_file
+            MISMATCH_COUNT_COMMAND = 'cat ' + self.raid_dir + device +\
+                                     mismatch_cnt_file
             logger.debug('Executing MISMATCH_CNT_COMMAND:{}'
                          .format(MISMATCH_COUNT_COMMAND))
             response, error = self._run_command(MISMATCH_COUNT_COMMAND)
@@ -278,11 +289,11 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
         try:
             status = None
             raid_check = 0
-            raid_dir = RaidDataConfig.DIR.value
             sync_action_file = RaidDataConfig.SYNC_ACTION_FILE.value
             while raid_check <= RaidDataConfig.MAX_RETRIES.value:
                 self.output_file = self._get_unique_filename(RaidDataConfig.RAID_RESULT_FILE_PATH.value, device)
-                STATE_COMMAND = 'cat ' + raid_dir + device + sync_action_file
+                STATE_COMMAND = 'cat ' + self.raid_dir + device +\
+                                sync_action_file
                 logger.debug('Executing STATE_COMMAND:{}'.format(STATE_COMMAND))
                 response, error = self._run_command(STATE_COMMAND)
                 if error:
@@ -309,10 +320,10 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
         try:
             status = "failed"
             raid_check = 0
-            raid_dir = RaidDataConfig.DIR.value
             sync_action_file = RaidDataConfig.SYNC_ACTION_FILE.value
             while raid_check <= RaidDataConfig.MAX_RETRIES.value:
-                CHECK_COMMAND = "echo 'check' |sudo tee " + raid_dir + device + sync_action_file + " > /dev/null"
+                CHECK_COMMAND = "echo 'check' |sudo tee " + self.raid_dir +\
+                                device + sync_action_file + " > /dev/null"
                 logger.debug('Executing CHECK_COMMAND:{}'.format(CHECK_COMMAND))
                 response, error = self._run_command(CHECK_COMMAND)
                 if error:
@@ -333,8 +344,8 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
     def _retry_execution(self, function_call, device):
         while True:
             logger.debug("Executing function:{} after {} time interval"
-                         .format(function_call, RaidDataConfig.NEXT_ITERATION_TIME.value))
-            time.sleep(RaidDataConfig.NEXT_ITERATION_TIME.value)
+                         .format(function_call, self.retry_interval))
+            time.sleep(self.retry_interval)
             result = function_call(device)
             if result == self.SUCCESS:
                 return

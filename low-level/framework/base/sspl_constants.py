@@ -85,6 +85,7 @@ DEFAULT_DC = "DEFAULT_DC01"
 DEFAULT_RACK = "DEAFULT_RC01"
 DEFAULT_SN = "DEFAULT_SN01"
 DEFAULT_CLUSTER = "DEFAULT_CC01"
+BLOCK_DIR = "/block/"
 
 # This file will be created when sspl is being configured for node replacement case
 REPLACEMENT_NODE_ENV_VAR_FILE = "/etc/profile.d/set_replacement_env.sh"
@@ -206,7 +207,6 @@ SSPL_CONFIGS = ['log_level', 'cli_type', 'sspl_log_file_path', 'cluster_id', 'st
 
 class RaidDataConfig(Enum):
     MDSTAT_FILE = "/proc/mdstat"
-    DIR = "/sys/block/"
     SYNC_ACTION_FILE = "/md/sync_action"
     MISMATCH_COUNT_FILE = "/md/mismatch_cnt"
     STATE_COMMAND_RESPONSE = 'idle'
@@ -215,7 +215,6 @@ class RaidDataConfig(Enum):
     RAID_RESULT_FILE_PATH = f"{RAID_RESULT_DIR}result_raid_health_file"
     RAID_MISMATCH_FAULT_STATUS = "mismatch_cnt_fault_status"
     MAX_RETRIES = 10
-    NEXT_ITERATION_TIME = 3600
     PRIORITY = 1
 
 class RaidAlertMsgs(Enum):
