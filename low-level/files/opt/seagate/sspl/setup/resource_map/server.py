@@ -22,14 +22,14 @@ import errno
 from framework.utils.ipmi_client import IpmiFactory
 from framework.base import sspl_constants
 
-import errno
-import time
+
 import psutil
 from pathlib import Path
 from framework.utils.tool_factory import ToolFactory
 from resource_map import ResourceMap
 from error import ResourceMapError
 from framework.base.sspl_constants import CPU_PATH
+
 
 
 class ServerMap(ResourceMap):
@@ -49,6 +49,7 @@ class ServerMap(ResourceMap):
         self.server_frus = {
             'cpu': self.get_cpu_info,
             'platform_sensors': self.get_platform_sensors_info,
+            'memory': self.get_mem_info
         }
         self._ipmi = IpmiFactory().get_implementor("ipmitool")
         self.platform_sensor_list = ['Temperature', 'Voltage', 'Current']
@@ -214,10 +215,67 @@ class ServerMap(ResourceMap):
                 )
         return response
 
+    def get_mem_info(self):
+        """Collect & return system memory info in specific format """
+
+        from framework.utils.conf_utils import SSPL_CONF, Conf
+        default_mem_usage_threshold = int(Conf.get(SSPL_CONF,
+            "NODEDATAMSGHANDLER>host_memory_usage_threshold",
+            80))
+        data = []
+        status = "OK"
+        description = "Host memory is in good health"
+        self.mem_info = dict(psutil.virtual_memory()._asdict())
+        curr_mem_usage_threshold = int(self.mem_info['percent'])
+        if curr_mem_usage_threshold > int(default_mem_usage_threshold):
+            status = "Overloaded"
+            description = (f"Current host memory usage is {curr_mem_usage_threshold},"
+                           f"beyond configured threshold of {default_mem_usage_threshold}")
+
+        memory_dict = self.prepare_mem_json(status,
+                                            description)
+        data.append(memory_dict)
+        return data
+
+    def prepare_mem_json(self, status, description):
+        """Update and return memory information dict """
+        total_memory = {}
+        for key, value in self.mem_info.items():
+            if key == 'percent':
+                total_memory['percent'] = str(self.mem_info['percent']) + '%'
+            else:
+                total_memory[key] = str(self.mem_info[key] >> 20) + 'MB'
+
+        memory_dict = {
+            "uid": "main_memory",
+            "fru": "false",
+            "last_updated": int(time.time()),
+            "health": {
+                "status": status,
+                "description": description,
+                "specifics": [
+                    {
+                        "total": total_memory['total'],
+                        "available": total_memory['available'],
+                        "percent": total_memory['percent'],
+                        "used": total_memory['used'],
+                        "free": total_memory['free'],
+                        "active": total_memory['active'],
+                        "inactive": total_memory['inactive'],
+                        "buffers": total_memory['buffers'],
+                        "cached": total_memory['cached'],
+                        "shared": total_memory['shared'],
+                        "slab": total_memory['slab']
+                    }
+                ]
+            }
+        }
+        return memory_dict
+
 
 # if __name__ == "__main__":
 #     server = ServerMap()
 #     health_data = server.get_health_info(
-#         rpath="nodes[0]>compute[0]>hw>platform_sensors"
+#         rpath="nodes[0]>compute[0]>hw>memory")
 #     )
 #     print(health_data)
