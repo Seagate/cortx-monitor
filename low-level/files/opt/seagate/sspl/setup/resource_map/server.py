@@ -96,7 +96,9 @@ class ServerMap(ResourceMap):
                                    '/sys/')
         return sysfs_base_path
 
-    def get_data_template(self, uid, is_fru: bool):
+    @staticmethod
+    def get_data_template(uid, is_fru: bool):
+        """Returns health template."""
         return {
             "uid": uid,
             "fru": str(is_fru).lower(),
@@ -109,25 +111,29 @@ class ServerMap(ResourceMap):
             }
         }
 
-    def set_health_data(self, obj: dict, status, description=None,
+    @staticmethod
+    def set_health_data(health_data: dict, status, description=None,
                         recommendation=None, specification=None):
+        """Sets health attributes for a component."""
         good_state = (status == "OK")
         if not description:
             description = "%s is %s in good health" % (
-                obj.get("uid"),
+                health_data.get("uid"),
                 '' if good_state else 'not')
         if not recommendation:
             recommendation = 'None' if good_state\
                              else "Contact Seagate Support."
 
-        obj["health"].update({
+        health_data["health"].update({
             "status": status,
             "description": description,
             "recommendation": recommendation,
             "specifics": specification
         })
+        return health_data
 
     def get_cpu_info(self):
+        """Update and return CPU information in specific format."""
         cpu_data = []
         cpu_present = self.get_cpu_list("present")
         cpu_online = self.get_cpu_list("online")
@@ -145,15 +151,13 @@ class ServerMap(ResourceMap):
                     "cpu_usage": usage,
                     "state": online_status
                 }
-
             ]
             self.set_health_data(cpu_dict, status=health_status,
                                  specification=specification)
             cpu_data.append(cpu_dict)
 
     def get_cpu_list(self, mode):
-        """Returns the cpus present after reading
-        """
+        """Returns the cpus present after reading."""
         cpu_info_path = Path(self.cpu_path+mode)
         # Read the text from /cpu/online file
         cpu_info = cpu_info_path.read_text()
@@ -165,6 +169,7 @@ class ServerMap(ResourceMap):
 
     def convert_cpu_info_list(self, cpu_info):
         """Converts cpu info as read from file to a list of cpu indexes
+        
         eg. '0-2,4,6-8' => [0,1,2,4,6,7,8]
         """
         # Split the string with comma
