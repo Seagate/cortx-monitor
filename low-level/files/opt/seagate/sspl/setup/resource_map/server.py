@@ -15,12 +15,11 @@
 # For any questions about this software or licensing,
 # please email opensource@seagate.com or cortx-questions@seagate.com
 
-"""
- ***************************************************************************
-  Description: ServerMap class provides resource map and related information
-               like health, manifest, etc,.
- ***************************************************************************
-"""
+
+import time
+import re
+import errno
+from framework.utils.ipmi_client import IpmiFactory
 
 import errno
 import time
@@ -45,8 +44,11 @@ class ServerMap(ResourceMap):
         self.sysfs_base_path = self.sysfs.get_sysfs_base_path()
         self.cpu_path = self.sysfs_base_path + CPU_PATH
         self.server_frus = {
-            'cpu': self.get_cpu_info
+            'cpu': self.get_cpu_info,
+            'platform_sensors': self.get_platform_sensors_info,
         }
+        self._ipmi = IpmiFactory().get_implementor("ipmitool")
+        self.platform_sensor_list = ['Temperature', 'Voltage', 'Current']
 
     def get_health_info(self, rpath):
         """
@@ -163,8 +165,50 @@ class ServerMap(ResourceMap):
         ]
         return cpu_data
 
+    def get_platform_sensors_info(self):
+        sensor_list = ['Temperature', 'Voltage', 'Current']
+        data = self.build_platform_sensor_data(sensor_list)
+        return data
+
+    def get_json_formatted_reading(self, reading):
+        uid = '_'.join(reading[0].split())
+        status = reading[2]
+        health_desc = 'good' if status == 'ok' else 'bad'
+        recommendation = 'Contact Seagate Support' if status != 'ok' else ''
+        resp = {
+            "uid": uid,
+            "fru": "false",
+            "last_updated":  int(time.time()),
+            "health": {
+                "status": status,
+                "description": f"{uid} is in {health_desc} health",
+                "recommendation": f"{recommendation}",
+                "specifics": [
+                    {
+                        "Sensor Reading": f"{reading[-1]}",
+                        "lower_critical_threshold": "5",
+                        "upper_critical_threshold": "88"
+                    }
+                ]
+            }
+        }
+        return resp
+
+    def build_platform_sensor_data(self, sensors):
+        """Get the sensor information based on sensor_type and instance"""
+        response = {sensor: [] for sensor in sensors}
+        for sensor in sensors:
+            sensor_reading = self._ipmi.get_sensor_list_by_type(sensor)
+            for reading in sensor_reading:
+                response[sensor].append(
+                    self.get_json_formatted_reading(reading)
+                )
+        return response
+
 
 # if __name__ == "__main__":
 #     server = ServerMap()
-#     health_data = server.get_health_info(rpath="nodes[0]>compute[0]>hw>cpu")
+#     health_data = server.get_health_info(
+#         rpath="nodes[0]>compute[0]>hw>platform_sensors"
+#     )
 #     print(health_data)
