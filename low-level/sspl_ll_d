@@ -718,7 +718,7 @@ def send_thread_controller_request(state):
 def initialize_iem():
     try:
         EventMessage.init(component='sspl', source='S')
-        logger.debug("IEM framework initiated successfully!!!")
+        logger.info("IEM framework initiated successfully!!!")
     except EventMessageError as e:
         logger.error("Failed to initialize IEM Framework."
                      f"ERROR:{e}")
@@ -787,7 +787,11 @@ if __name__ == "__main__":
     #DO NOT EDIT: Marker comment to dynamically add signal handler for SIGUSR1 to generate code coverage report
 
     # Initialize IEM framework
-    initialize_iem()
+    try:
+        initialize_iem()
+    except (Exception) as err:
+        logger.critical("Failed in IEM initialization."
+                        f"ERROR:{err}")
 
     try:
         # Create a PID file for systemd

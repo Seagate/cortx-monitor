@@ -123,11 +123,11 @@ class Iem:
             iem_event_path = f'{IEM_DATA_PATH}/iem_{event_name}'
             if os.path.exists(iem_event_path):
                 os.remove(iem_event_path)
-                self.generate_iem(event_name, event_code, severity, description)
+                IEM.generate_iem(event_name, event_code, severity, description)
         else:
             previous_iem = self.check_existing_iem_event(event_name, event_code)
             if not previous_iem:
-                self.generate_iem(event_name, event_code, severity, description)
+                IEM.generate_iem(event_name, event_code, severity, description)
 
     def iem_fault(self, event):
         event = self.EVENT_CODE[event]
@@ -153,11 +153,12 @@ class Iem:
             if prev_fault_iem_event:
                 self.fault_iems.append(event_name)
 
-    def generate_iem(self, module, event_code, severity, description):
+    @classmethod
+    def generate_iem(cls, module, event_code, severity, description):
         """Generate iem and send it to a MessgaeBroker."""
         try:
             EventMessage.send(module=module, event_id=event_code,
                               severity=severity, message_blob=description)
         except EventMessageError as e:
-            logger.error("Failed to generate & send IEM alert."
+            logger.error("Failed to send IEM alert."
                          f"Error:{e}")

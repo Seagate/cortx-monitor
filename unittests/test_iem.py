@@ -16,9 +16,9 @@
 import os
 import sys
 import unittest
-import subprocess
 
-#from cortx.utils.iem_framework import EventMessage
+from cortx.utils.iem_framework import EventMessage
+from cortx.utils.process import SimpleProcess
 
 PROJECT_ROOT = "/".join(os.path.abspath(__file__).split("/")
                         [:-2]) + "/low-level"
@@ -27,69 +27,75 @@ sys.path.append(PROJECT_ROOT)
 class TestIEM(unittest.TestCase):
 
     def setUp(self):
+        self.module = None
+        self.event_code = None
         self.EVENT_CODE = {
         "IPMITOOL_ERROR" : ["0050010001", "ipmitool"],
         "IPMITOOL_AVAILABLE" : ["0050010002", "ipmitool"]
         }
         EventMessage.init(component='sspl', source='S')
 
-    def mock_impitool_fault(self):
-        cmd = "yum remove ipmitool"
-        run_command(cmd)
-        event = self.EVENT_CODE['IMPITOOL_ERROR']
+    def mock_ipmitool_fault(self):
+        cmd = 'yum remove ipmitool'
+        res, _, _ = SimpleProcess(cmd).run()
+        event = self.EVENT_CODE['IPMITOOL_ERROR']
         self.module = event[1]
         self.event_code = event[0]
 
-    def mock_impitool_fault_resolved(self):
-        cmd = "yum install ipmitool"
-        run_command(cmd)
+    def mock_ipmitool_fault_resolved(self):
+        cmd = 'yum install ipmitool'
+        res, _, _ = SimpleProcess(cmd).run()
         event = self.EVENT_CODE['IPMITOOL_AVAILABLE']
         self.module = event[1]
         self.event_code = event[0]
 
-    def test_iem_impitool_fault_alert_send(self):
-        """ Test iem 'impitool' fault alert & send it to MessageBus """
-        self.mock_impitool_fault()
+    def test_01_ipmitool_fault_alert_send(self):
+        """ Test iem 'ipmitool' fault alert & send it to MessageBus """
+
+        print("### TestCase: test_01_ipmitool_fault_alert_send\n")
+        self.mock_ipmitool_fault()
         severity = 'E'
         description = "ipmitool command execution error"
         EventMessage.send(module=self.module, event_id=self.event_code,
                               severity=severity, message_blob=description)
 
-    def test_iem_impitool_fault_alert_receive(self):
-        """ Test iem 'impitool' fault alert receive """
+    def test_02_ipmitool_fault_alert_receive(self):
+        """ Test iem 'ipmitool' fault alert receive """
+
+        print("### TestCase: test_02_ipmitool_fault_alert_receive\n")
         EventMessage.subscribe(component='sspl')
         fault_alert = EventMessage.receive()
-        self.assertIs(type(alert), dict)
+        print(f"IEM Received:{fault_alert}")
+        self.assertIs(type(fault_alert), dict)
         self.assertEqual(fault_alert["iem"]["info"]["severity"], "Error")
-        self.assertEqual(fault_alert["iem"]["source"]["module"], "impitool")
+        self.assertEqual(fault_alert["iem"]["source"]["module"], "ipmitool")
         self.assertEqual(fault_alert["iem"]["contents"]["event"], "0050010001")
 
-    def test_iem_impitool_fault_resolved_alert_send(self):
-        """ Test iem 'impitool' fault_resolved alert and
+    def test_03_ipmitool_fault_resolved_alert_send(self):
+        """ Test iem 'ipmitool' fault_resolved alert and
         send it to MessageBus """
-        self.mock_impitool_fault_resolved()
+
+        print("### TestCase: test_03_ipmitool_fault_resolved_alert_send\n")
+        self.mock_ipmitool_fault_resolved()
         severity = 'I'
         description = "ipmitool command execution success again."
         EventMessage.send(module=self.module, event_id=self.event_code,
                               severity=severity, message_blob=description)
 
-    def test_iem_impitool_fault_resolved_receive(self):
-        """ Test iem 'impitool' fault_resolved alert receive """
-        ventMessage.subscribe(component='sspl')
+    def test_04_ipmitool_fault_resolved_receive(self):
+        """ Test iem 'ipmitool' fault_resolved alert receive """
+
+        print("### TestCase: test_04_ipmitool_fault_resolved_receive\n")
+        EventMessage.subscribe(component='sspl')
         fault_alert = EventMessage.receive()
-        self.assertIs(type(alert), dict)
-        self.assertEqual(fault_alert["iem"]["info"]["severity"], "Info")
-        self.assertEqual(fault_alert["iem"]["source"]["module"], "impitool")
+        print(f"IEM Received:{fault_alert}")
+        self.assertIs(type(fault_alert), dict)
+        self.assertEqual(fault_alert["iem"]["info"]["severity"], "Informational")
+        self.assertEqual(fault_alert["iem"]["source"]["module"], "ipmitool")
         self.assertEqual(fault_alert["iem"]["contents"]["event"], "0050010002")
 
     def tearDown(self):
         pass
-
-def run_command(command):
-    """Run the command and get the response and error returned"""
-    process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    response, error = process.communicate()
-    return response.rstrip('\n'), error.rstrip('\n')
 
 
 if __name__ == "__main__":

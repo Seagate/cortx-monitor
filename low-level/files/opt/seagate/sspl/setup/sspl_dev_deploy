@@ -378,6 +378,7 @@ class SSPLDevDeploy:
         post_install_tmpl = "%s/conf/sspl.post-install.tmpl.%s" % (SSPL_BASE_DIR, self.deploy_type)
         prepare_tmpl = "%s/conf/sspl.prepare.tmpl.%s" % (SSPL_BASE_DIR, self.deploy_type)
         config_tmpl = "%s/conf/sspl.config.tmpl.%s" % (SSPL_BASE_DIR, self.deploy_type)
+        utils_config_tmpl = "/tmp/utils.config.tmpl.%s" % (self.deploy_type)
         init_tmpl = "%s/conf/sspl.init.tmpl.%s" % (SSPL_BASE_DIR, self.deploy_type)
         tmpl_files = [post_install_tmpl, prepare_tmpl, config_tmpl, init_tmpl]
         if os.path.exists(self.temp_dir):
@@ -403,8 +404,9 @@ class SSPLDevDeploy:
             "%s post_install --config yaml://%s" % (utils_setup_script, post_install_config),
             "%s post_install --config yaml://%s" % (sspl_setup_script, post_install_config),
             "%s prepare --config yaml://%s" % (sspl_setup_script, prepare_config),
-            "%s config --config yaml://%s" % (utils_setup_script, config_config),
+            "%s config --config yaml://%s" % (utils_setup_script, utils_config_tmpl),
             "%s config --config yaml://%s" % (sspl_setup_script, config_config),
+            "%s init" % (utils_setup_script),
             "%s init --config yaml://%s" % (sspl_setup_script, init_config)
         ]
         # Execute setup commands
