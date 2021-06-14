@@ -32,20 +32,19 @@ from resource_map import ResourceMap
 from error import ResourceMapError
 
 from framework.utils.tool_factory import ToolFactory
+from framework.base.sspl_constants import (DEFAULT_RECOMMENDATION,
+                                           SAS_RESOURCE_ID)
 
 
 class ServerMap(ResourceMap):
     """Provides server resource related information."""
 
     name = "server"
-    SAS_RESOURCE_ID = ["SASHBA-0"]
-    NW_CBL_CARRIER_FILE = "/sys/class/net/%s/carrier"
-    NW_CBL_OPERSTATE_FILE = "/sys/class/net/%s/operstate"
 
     def __init__(self):
         """Initialize server."""
         super().__init__()
-        self.server_frus = {
+        self.server = {
             'sas_hba': self.get_sas_hba_info,
             'sas_ports': self.get_sas_ports_info,
             'nw_ports': self.get_nw_ports_info
@@ -64,17 +63,17 @@ class ServerMap(ResourceMap):
         nodes = rpath.strip().split(">")
         leaf_node, _ = self.get_node_details(nodes[-1])
         if leaf_node == "compute":
-            for fru in self.server_frus:
-                info.update({fru: self.server_frus[fru]()})
+            for fru in self.server:
+                info.update({fru: self.server[fru]()})
             info["last_updated"] = int(time.time())
             fru_found = True
         else:
             fru = None
             for node in nodes:
                 fru, _ = self.get_node_details(node)
-                if self.server_frus.get(fru):
+                if self.server.get(fru):
                     fru_found = True
-                    info = self.server_frus[fru]()
+                    info = self.server[fru]()
                     break
         if not fru_found:
             raise ResourceMapError(
@@ -101,7 +100,7 @@ class ServerMap(ResourceMap):
         return {
             "uid": uid,
             "fru": str(is_fru).lower(),
-            "last_updated": int(time.time()),
+            "last_updated": -1,
             "health": {
                 "status": "",
                 "description": "",
@@ -115,18 +114,20 @@ class ServerMap(ResourceMap):
         """Set the given or default health data as per health status."""
         good_state = (status == "OK")
         if not description:
-            description = "%s is %sin good state" % (
+            description = "%s is %sin good health." % (
                             obj.get("uid"),
                             '' if good_state else 'not ')
         if not recommendation:
             recommendation = 'None' if good_state\
-                             else "Contact Seagate Support."
+                             else DEFAULT_RECOMMENDATION
 
         obj["health"].update({
             "status": status,
             "description": description,
             "recommendation": recommendation
         })
+
+        obj["last_updated"] = int(time.time())
 
     def get_sas_hba_info(self):
         """Return the s SAS-HBA information."""
@@ -136,22 +137,21 @@ class ServerMap(ResourceMap):
         """Return the s SAS ports information."""
         sas_hba_data = []
         health_data = []
-        for sas_rid in self.SAS_RESOURCE_ID:
-            r_data = self.get_data_template(sas_rid, False)
+        sas_hosts = self.sysfs.get_sas_host_list()
+        for i, sas_rid in enumerate(sas_hosts):
+            host_id = SAS_RESOURCE_ID + str(i)
+            r_data = self.get_data_template(host_id, False)
             sas_ports_dict = self.sysfs.get_phy_negotiated_link_rate()
-            sas_ports_dict = sorted(sas_ports_dict.items(),
-                                    key=lambda kv: int(kv[0].split(':')[1]))
             health = []
             if sas_ports_dict:
-                for rid, rate in sas_ports_dict:
+                for rid, rate in sas_ports_dict.items():
                     r_data["health"]["specifics"].append({
-                        "resource_id": f"{sas_rid}:{rid.strip()}",
+                        "resource_id": f"{host_id}:{rid.strip()}",
                         "negotiated_link_rate": rate.strip()
                     })
                     if "Gbit".lower() in rate.strip().lower():
                         health.append("OK")
 
-            # By some logic set health status, description, recommendation
             health_data.append(health)
             health_status = "OK" if "OK" in health else "Fault"
             self.set_health_data(r_data, health_status)
@@ -212,7 +212,7 @@ class ServerMap(ResourceMap):
             nic_info["health"]["specifics"].append(specifics)
 
             # set health status, description and recommendation
-            map_status = {"UP": "OK", "DOWN": "Fault", "UNKNOWN": "UNKNOWN"}
+            map_status = {"UP": "OK", "DOWN": "Failed", "UNKNOWN": "UNKNOWN"}
             health_status = map_status[nw_cable_conn_status]
 
             self.set_health_data(nic_info, health_status)

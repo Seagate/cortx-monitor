@@ -87,6 +87,8 @@ class SysFS(Utility):
                 if 'negotiated_linkrate' in entry_str.lower() and entry.is_file():
                     link_rate = entry.read_text()
                     phy_dir[phy_name] = link_rate
+        phy_dir = dict(sorted(phy_dir.items(),
+                              key=lambda kv: int(kv[0].split(':')[1])))
         return phy_dir
 
     def convert_cpu_info_list(self, cpu_info):
@@ -159,3 +161,12 @@ class SysFS(Utility):
         except Exception as err:
             raise err
         return operstate
+
+    def get_sas_host_list(self):
+        sas_host_list = []
+        try:
+            sas_host_dir = self.get_sys_dir_path('sas_host')
+            sas_host_list = os.listdir(sas_host_dir)
+        except Exception:
+            pass
+        return sas_host_list
