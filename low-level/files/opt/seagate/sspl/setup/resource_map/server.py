@@ -131,6 +131,43 @@ class ServerMap(ResourceMap):
             "specifics": specification
         })
 
+    @staticmethod
+    def convert_cpu_info_list(cpu_info):
+        """
+        Converts cpu info as read from file to a list of cpu indexes
+
+        Example
+            '0-2,4,6-8' -> [0,1,2,4,6,7,8]
+        """
+        # Split the string with comma
+        cpu_info = cpu_info.split(',')
+        cpu_list = []
+        for item in cpu_info:
+            # Split item with a hyphen if it is a range of indexes
+            item = item.split('-')
+            if len(item) == 2:
+                # Item is a range
+                num1 = int(item[0])
+                num2 = int(item[1])
+                # Append all indexes in that range
+                for i in range(num1, num2+1):
+                    cpu_list.append(i)
+            elif len(item) == 1:
+                # Item is a single index
+                cpu_list.append(int(item[0]))
+        return cpu_list
+
+    def get_cpu_list(self, mode):
+        """Returns the cpus present after reading."""
+        cpu_info_path = Path(self.cpu_path+mode)
+        # Read the text from /cpu/online file
+        cpu_info = cpu_info_path.read_text()
+        # Drop the \n character from the end of string
+        cpu_info = cpu_info.rstrip('\n')
+        # Convert the string to list of indexes
+        cpu_list = self.convert_cpu_info_list(cpu_info)
+        return cpu_list
+
     def get_cpu_info(self):
         """Update and return CPU information in specific format."""
         cpu_data = []
@@ -156,40 +193,6 @@ class ServerMap(ResourceMap):
                                  specification=specification)
             cpu_data.append(cpu_dict)
         return cpu_data
-
-    def get_cpu_list(self, mode):
-        """Returns the cpus present after reading."""
-        cpu_info_path = Path(self.cpu_path+mode)
-        # Read the text from /cpu/online file
-        cpu_info = cpu_info_path.read_text()
-        # Drop the \n character from the end of string
-        cpu_info = cpu_info.rstrip('\n')
-        # Convert the string to list of indexes
-        cpu_list = self.convert_cpu_info_list(cpu_info)
-        return cpu_list
-
-    def convert_cpu_info_list(self, cpu_info):
-        """Converts cpu info as read from file to a list of cpu indexes
-
-        eg. '0-2,4,6-8' => [0,1,2,4,6,7,8]
-        """
-        # Split the string with comma
-        cpu_info = cpu_info.split(',')
-        cpu_list = []
-        for item in cpu_info:
-            # Split item with a hyphen if it is a range of indexes
-            item = item.split('-')
-            if len(item) == 2:
-                # Item is a range
-                num1 = int(item[0])
-                num2 = int(item[1])
-                # Append all indexes in that range
-                for i in range(num1, num2+1):
-                    cpu_list.append(i)
-            elif len(item) == 1:
-                # Item is a single index
-                cpu_list.append(int(item[0]))
-        return cpu_list
 
 
 # if __name__ == "__main__":
