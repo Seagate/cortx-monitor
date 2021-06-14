@@ -27,7 +27,7 @@ import time
 import re
 import psutil
 from pathlib import Path
-from framework.utils.conf_utils import (Conf, SSPL_CONF)
+from framework.utils.tool_factory import ToolFactory
 from resource_map import ResourceMap
 from error import ResourceMapError
 
@@ -40,8 +40,11 @@ class ServerMap(ResourceMap):
     def __init__(self):
         """Initialize server"""
         super().__init__()
-        self.sysfs_base_path = self.get_sysfs_base_path()
+        self.sysfs = ToolFactory().get_instance('sysfs')
+        self.sysfs.initialize()
+        self.sysfs_base_path = self.sysfs.get_sysfs_base_path()
         self.cpu_path = self.sysfs_base_path + "devices/system/cpu/"
+
         self.server_frus = {
             'cpu': self.get_cpu_info
         }
@@ -89,13 +92,6 @@ class ServerMap(ResourceMap):
         node = res.groups()[0] if res.groups()[1] else res.groups()[2]
         return node, inst
 
-    @classmethod
-    def get_sysfs_base_path(cls):
-        """Returns the sysfs base path. Ex: /sys."""
-        sysfs_base_path = Conf.get(SSPL_CONF,
-                                   "SYSTEM_INFORMATION>sysfs_base_path", '/sys/')
-        return sysfs_base_path
-
     @staticmethod
     def get_data_template(uid, is_fru: bool):
         """Returns health template."""
@@ -131,32 +127,6 @@ class ServerMap(ResourceMap):
             "specifics": specification
         })
 
-    @staticmethod
-    def convert_cpu_info_list(cpu_info):
-        """
-        Converts cpu info as read from file to a list of cpu indexes
-
-        Example
-            '0-2,4,6-8' -> [0,1,2,4,6,7,8]
-        """
-        # Split the string with comma
-        cpu_info = cpu_info.split(',')
-        cpu_list = []
-        for item in cpu_info:
-            # Split item with a hyphen if it is a range of indexes
-            item = item.split('-')
-            if len(item) == 2:
-                # Item is a range
-                num1 = int(item[0])
-                num2 = int(item[1])
-                # Append all indexes in that range
-                for i in range(num1, num2+1):
-                    cpu_list.append(i)
-            elif len(item) == 1:
-                # Item is a single index
-                cpu_list.append(int(item[0]))
-        return cpu_list
-
     def get_cpu_list(self, mode):
         """Returns the CPU list as per specified mode."""
         cpu_info_path = Path(self.cpu_path + mode)
@@ -165,7 +135,7 @@ class ServerMap(ResourceMap):
         # Drop the \n character from the end of string
         cpu_info = cpu_info.rstrip('\n')
         # Convert the string to list of indexes
-        cpu_list = self.convert_cpu_info_list(cpu_info)
+        cpu_list = self.sysfs.convert_cpu_info_list(cpu_info)
         return cpu_list
 
     def get_cpu_info(self):
