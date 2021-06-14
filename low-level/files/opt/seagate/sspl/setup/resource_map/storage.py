@@ -45,7 +45,7 @@ class StorageMap(ResourceMap):
         self.validate_storage_type_support()
         self.storage_frus = {
             "controllers": self.get_controllers_info,
-            "psus": self.get_psus_info
+            "psus": self.get_psu_info
             }
 
     @staticmethod
@@ -129,7 +129,7 @@ class StorageMap(ResourceMap):
             data.append(controller_dict)
         return data
 
-    def get_psus_info(self):
+    def get_psu_info(self):
         """Update and return PSUs information in specific format."""
         data = []
         psus = self.get_realstor_encl_data("power-supplies")
