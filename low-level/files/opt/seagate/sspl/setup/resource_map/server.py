@@ -43,17 +43,19 @@ class ServerMap(ResourceMap):
     NW_CBL_OPERSTATE_FILE = "/sys/class/net/%s/operstate"
 
     def __init__(self):
-        """Initialize server"""
+        """Initialize server."""
         super().__init__()
         self.server_frus = {
             'sas_hba': self.get_sas_hba_info,
             'sas_ports': self.get_sas_ports_info,
             'nw_ports': self.get_nw_ports_info
         }
+        self.sysfs = ToolFactory().get_instance('sysfs')
+        self.sysfs.initialize()
 
     def get_health_info(self, rpath):
         """
-        Get health information of fru in given resource id
+        Get health information of fru in given resource id.
 
         rpath: Resource id (Example: nodes[0]>compute[0]>hw>disks)
         """
@@ -113,9 +115,9 @@ class ServerMap(ResourceMap):
         """Set the given or default health data as per health status."""
         good_state = (status == "OK")
         if not description:
-            description = "%s is %s in good state" % (
+            description = "%s is %sin good state" % (
                             obj.get("uid"),
-                            '' if good_state else 'not')
+                            '' if good_state else 'not ')
         if not recommendation:
             recommendation = 'None' if good_state\
                              else "Contact Seagate Support."
@@ -136,9 +138,7 @@ class ServerMap(ResourceMap):
         health_data = []
         for sas_rid in self.SAS_RESOURCE_ID:
             r_data = self.get_data_template(sas_rid, False)
-            sysfs_instance = ToolFactory().get_instance('sysfs')
-            sysfs_instance.initialize()
-            sas_ports_dict = sysfs_instance.get_phy_negotiated_link_rate()
+            sas_ports_dict = self.sysfs.get_phy_negotiated_link_rate()
             sas_ports_dict = sorted(sas_ports_dict.items(),
                                     key=lambda kv: int(kv[0].split(':')[1]))
             health = []
@@ -155,7 +155,8 @@ class ServerMap(ResourceMap):
             health_data.append(health)
             health_status = "OK" if "OK" in health else "Fault"
             self.set_health_data(r_data, health_status)
-            sas_hba_data.append(r_data)
+            if r_data["health"]["specifics"]:
+                sas_hba_data.append(r_data)
 
         if leaf_node == "sas_hba":
             return sas_hba_data
@@ -211,12 +212,8 @@ class ServerMap(ResourceMap):
             nic_info["health"]["specifics"].append(specifics)
 
             # set health status, description and recommendation
-            if nw_status == "UP" and nw_cable_conn_status == "OK":
-                health_status = "OK"
-            elif nw_status == "UNKNOWN" and nw_cable_conn_status == "NA":
-                health_status = "NA"
-            else:
-                health_status = "Fault"
+            map_status = {"UP": "OK", "DOWN": "Fault", "UNKNOWN": "UNKNOWN"}
+            health_status = map_status[nw_cable_conn_status]
 
             self.set_health_data(nic_info, health_status)
 
@@ -226,21 +223,11 @@ class ServerMap(ResourceMap):
 
     def get_nw_status(self, interface):
         """Read & Return the latest network status from sysfs files."""
-        phy_link_state = {"0": "Fault", "1": "OK", "unknown": "NA"}
-        nw_status = nw_cable_conn_status = ""
         try:
-            if os.path.isfile(self.NW_CBL_OPERSTATE_FILE % interface):
-                with open(self.NW_CBL_OPERSTATE_FILE % interface) as cf:
-                    nw_status = cf.read().strip().upper()
-
-            if os.path.isfile(self.NW_CBL_CARRIER_FILE % interface):
-                with open(self.NW_CBL_CARRIER_FILE % interface) as cf:
-                    nw_cable_conn_status = cf.read().strip()
-
-            if nw_cable_conn_status not in phy_link_state:
-                nw_cable_conn_status = "unknown"
-            nw_cable_conn_status = phy_link_state[nw_cable_conn_status]
-
+            nw_status = self.sysfs.fetch_nw_operstate(interface)
+            nw_cable_conn_status = self.sysfs.fetch_nw_cable_status(
+                self.sysfs.get_sys_dir_path('net'), interface
+            )
         except Exception as err:
             raise ResourceMapError(errno.EINVAL,
                                    ("Unable to fetch network status due to"

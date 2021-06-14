@@ -142,3 +142,20 @@ class SysFS(Utility):
             return os_err.errno
         return self.nw_phy_link_state[carrier_indicator]
 
+    def fetch_nw_operstate(self, interface):
+        """
+        Return the Operational Status of the Network Interface.
+
+        Possible Values: <'UNKNOWN', 'NOTPRESENT", 'DOWN', 'LOWERLAYERDOWN',
+                          'TESTING', 'DORMANT', 'UP'>
+        """
+        operstate_file_path = os.path.join(self.get_sys_dir_path('net'),
+                                           interface, 'operstate')
+        operstate = "UNKNOWN"
+        try:
+            if os.path.isfile(operstate_file_path):
+                with open(operstate_file_path) as cFile:
+                    operstate = cFile.read().strip().upper()
+        except Exception as err:
+            raise err
+        return operstate
