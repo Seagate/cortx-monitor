@@ -44,7 +44,6 @@ class ServerMap(ResourceMap):
         self.sysfs.initialize()
         self.sysfs_base_path = self.sysfs.get_sysfs_base_path()
         self.cpu_path = self.sysfs_base_path + "devices/system/cpu/"
-
         self.server_frus = {
             'cpu': self.get_cpu_info
         }
@@ -75,7 +74,7 @@ class ServerMap(ResourceMap):
         if not fru_found:
             raise ResourceMapError(
                 errno.EINVAL,
-                "Health provider doesn't have support for'{rpath}'.")
+                f"Health provider doesn't have support for'{rpath}'.")
         return info
 
     @staticmethod
@@ -109,7 +108,7 @@ class ServerMap(ResourceMap):
 
     @staticmethod
     def set_health_data(health_data: dict, status, description=None,
-                        recommendation=None, specification=None):
+                        recommendation=None, specifics=None):
         """Sets health attributes for a component."""
         good_state = (status == "OK")
         if not description:
@@ -124,7 +123,7 @@ class ServerMap(ResourceMap):
             "status": status,
             "description": description,
             "recommendation": recommendation,
-            "specifics": specification
+            "specifics": specifics
         })
 
     def get_cpu_list(self, mode):
@@ -150,17 +149,17 @@ class ServerMap(ResourceMap):
             uid = f"cpu_{cpu_id}"
             cpu_dict = self.get_data_template(uid, False)
             online_status = "Online" if cpu_id in cpu_online else "Offline"
-            health_status = "OK" if online_status == "Online" else "Fault"
+            health_status = "OK" if online_status == "Online" else "NA"
             usage = "NA" if health_status == "Fault" \
                 else cpu_usage_dict[cpu_id]
-            specification = [
+            specifics = [
                 {
                     "cpu_usage": usage,
                     "state": online_status
                 }
             ]
             self.set_health_data(cpu_dict, status=health_status,
-                                 specification=specification)
+                                 specifics=specifics)
             cpu_data.append(cpu_dict)
         return cpu_data
 
