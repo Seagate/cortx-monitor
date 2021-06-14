@@ -95,6 +95,7 @@ class ServerMap(ResourceMap):
         return node, inst
 
     def get_data_template(self, uid, is_fru: bool):
+        """Get the health data template."""
         return {
             "uid": uid,
             "fru": str(is_fru).lower(),
@@ -109,6 +110,7 @@ class ServerMap(ResourceMap):
 
     def set_health_data(self, obj: dict, status, description=None,
                         recommendation=None):
+        """Set the given or default health data as per health status."""
         good_state = (status == "OK")
         if not description:
             description = "%s is %s in good state" % (
@@ -125,9 +127,11 @@ class ServerMap(ResourceMap):
         })
 
     def get_sas_hba_info(self):
+        """Return the s SAS-HBA information."""
         return self.get_sas_ports_info("sas_hba")
 
     def get_sas_ports_info(self, leaf_node="sas_ports"):
+        """Return the s SAS ports information."""
         sas_hba_data = []
         health_data = []
         for sas_rid in self.SAS_RESOURCE_ID:
@@ -175,6 +179,7 @@ class ServerMap(ResourceMap):
         return sas_ports_data
 
     def get_nw_ports_info(self):
+        """Return the Network ports information."""
         network_cable_data = []
         io_counters = psutil.net_io_counters(pernic=True)
 
@@ -220,6 +225,7 @@ class ServerMap(ResourceMap):
         return network_cable_data
 
     def get_nw_status(self, interface):
+        """Read & Return the latest network status from sysfs files."""
         phy_link_state = {"0": "Fault", "1": "OK", "unknown": "NA"}
         nw_status = nw_cable_conn_status = ""
         try:

@@ -184,6 +184,7 @@ class StorageMap(ResourceMap):
         return fru_data
 
     def get_sas_ports_info(self):
+        """Return the latest SAS ports information."""
         data = []
         sas_ports = self.get_realstor_encl_data("expander-ports")
         if not sas_ports:
