@@ -83,15 +83,8 @@ class StorageMap(ResourceMap):
         nodes = rpath.strip().split(">")
         leaf_node, _ = self.get_node_details(nodes[-1])
         if leaf_node == "storage":
-            # TODO should we handle >hw>* case?
-            if nodes[-1] == "controllers":
-                info.update(
-                    {"controllers": self.storage_frus["controllers"]()}
-                )
-            elif nodes[-1] == "platform_sensors":
-                info.update(
-                    {"platform_sensors": self.storage_frus["sensor-status"]()}
-                )
+            for fru in self.storage_frus:
+                info.update({fru: self.storage_frus[fru]()})
             info["last_updated"] = int(time.time())
         else:
             fru = None
@@ -178,7 +171,7 @@ class StorageMap(ResourceMap):
             for platform_sensor in platform_sensors:
                 for sensor in sensors_resp['api-response']['sensors']:
                     if sensor['sensor-type'].lower() == platform_sensor:
-                        single_senosr_data = {
+                        single_sensor_data = {
                           'uid': sensor.get('durable-id'),
                           'fru': 'false',
                           'last_updated':  int(time.time()),
@@ -195,8 +188,14 @@ class StorageMap(ResourceMap):
                               }
                             ]
                           }
-                        },
-                sensors_data.update({platform_sensor: single_senosr_data})
+                        }
+                        if platform_sensor in sensors_data:
+                            sensors_data[platform_sensor].append(single_sensor_data)
+                        else:
+                            sensors_data[platform_sensor] = [single_sensor_data]
+        for platform_sensor in platform_sensors:
+            if platform_sensor not in sensors_data:
+                sensors_data[platform_sensor] = f'Unable to retrive {platform_sensor} data'
         return sensors_data
 
     @staticmethod
