@@ -17,6 +17,7 @@
 
 import time
 import errno
+from cortx.utils.process import SimpleProcess
 import psutil
 import socket
 from pathlib import Path
@@ -64,7 +65,9 @@ class ServerMap(ResourceMap):
             'nw_ports': self.get_nw_ports_info,
             'sas_hba': self.get_sas_hba_info,
             'sas_ports': self.get_sas_ports_info,
-            'raid': self.get_raid_info
+            'raid': self.get_raid_info,
+            'disks': self.get_disks_info,
+            'psus': self.get_psu_info
         }
         sw_resources = {
             'cortx_sw_services': self.get_cortx_service_info,
@@ -728,3 +731,52 @@ class ServerMap(ResourceMap):
             self.set_health_data(raid_data, health, specifics=specifics, description=description)
             raids_data.append(raid_data)
         return raids_data
+
+    def get_disks_info(self):
+        """Update and return server drive information in specific format."""
+        units_factor_GB = 1000000000
+        overall_usage = {
+                "totalSpace":f'{int(psutil.disk_usage("/")[0])//int(units_factor_GB)} GB',
+                "usedSpace":f'{int(psutil.disk_usage("/")[1])//int(units_factor_GB)} GB',
+                "freeSpace":f'{int(psutil.disk_usage("/")[2])//int(units_factor_GB)} GB',
+                "diskUsedPercentage":psutil.disk_usage("/")[3],
+            }
+        server_drive = ServerDrives()
+        disks = []
+        for path, properties in server_drive.get_disks().items():
+            uid = server_drive._drive_by_path.get(path,
+                                    str(properties["Id"]))
+            disk_health = self.get_health_template(uid, True)
+            disk_health["last_updated"] = int(time.time())
+            health_data = server_drive.get_disk_health(path)
+            health = "OK" if health_data['SMART_health'] else "Fault"
+            self.set_health_data(disk_health, health, specifics=[{"SMART": health_data}])
+            disks.append(disk_health)
+        disks_health_info = [{
+            "overall_usage" : overall_usage,
+            "disk_count" : len(disks),
+            "disks" : disks,
+            "last_updated": int(time.time())
+        }]
+        return disks_health_info
+
+
+    def get_psu_info(self):
+        """Update and return PSU information in specific format."""
+        psus = []
+        response, _, _ = SimpleProcess("dmidecode -t 39").run()
+        response = response.decode()
+        matches = re.finditer("System Power Supply\n(\s*.*\n)\s*Location: (?P<location>.*)\n(\s*.*\n){7}\s*Status: (?P<status>.*)\n(\s*.*\n){2}\s*Plugged: (?P<plugged>.*)", response)
+        for match in matches:
+            psu_data = match.groupdict()
+            data = self.get_health_template(psu_data["location"], True)
+            data["last_updated"] = int(time.time())
+            health = "OK" if (psu_data["status"] == "Present, OK") else "Fault"
+            self.set_health_data(data, health, specifics=psu_data)
+            psus.append(data)
+        return psus
+
+if __name__ == "__main__":
+    server = ServerMap()
+    health_data = server.get_health_info(rpath="nodes[0]>compute[0]")
+    print(health_data)
