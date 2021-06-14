@@ -20,6 +20,7 @@ import time
 import re
 import errno
 from framework.utils.ipmi_client import IpmiFactory
+from framework.base import sspl_constants
 
 import errno
 import time
@@ -32,7 +33,9 @@ from framework.base.sspl_constants import CPU_PATH
 
 
 class ServerMap(ResourceMap):
-    """Provides server resource related information."""
+    """ServerMap class provides resource map and related information
+    like health, manifest, etc,.
+    """
 
     name = "server"
 
@@ -171,10 +174,13 @@ class ServerMap(ResourceMap):
         return data
 
     def get_json_formatted_reading(self, reading):
+        """builds json resposne from ipmi tool response.
+        reading arg sample: ('CPU1 Temp', '01', 'ok', '3.1', '36 degrees C')
+        """
         uid = '_'.join(reading[0].split())
         status = reading[2]
         health_desc = 'good' if status == 'ok' else 'bad'
-        recommendation = 'Contact Seagate Support' if status != 'ok' else ''
+        recommendation = sspl_constants.DEFAULT_ALERT_RECOMMENDATION if status != 'ok' else 'None'
         resp = {
             "uid": uid,
             "fru": "false",
@@ -194,10 +200,10 @@ class ServerMap(ResourceMap):
         }
         return resp
 
-    def build_platform_sensor_data(self, sensors):
+    def build_platform_sensor_data(self):
         """Get the sensor information based on sensor_type and instance"""
-        response = {sensor: [] for sensor in sensors}
-        for sensor in sensors:
+        response = {sensor: [] for sensor in self.platform_sensor_list}
+        for sensor in self.platform_sensor_list:
             sensor_reading = self._ipmi.get_sensor_list_by_type(sensor)
             for reading in sensor_reading:
                 response[sensor].append(
