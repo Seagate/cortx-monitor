@@ -181,8 +181,8 @@ class StorageMap(ResourceMap):
                             'recommendation': '',
                             'specifics': [
                               {
-                                'value': sensor.get('value'),
                                 'sensor-name': sensor.get('sensor-name'),
+                                'value': sensor.get('value'),
                                 'controller-id': sensor.get('controller-id'),
                                 'container': sensor.get('container'),
                               }
