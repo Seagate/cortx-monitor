@@ -92,8 +92,8 @@ class ServerMap(ResourceMap):
     @classmethod
     def get_sysfs_base_path(cls):
         """Returns the sysfs base path. Ex: /sys."""
-        sysfs_base_path = Conf.get(SSPL_CONF, "SYSTEM_INFORMATION>sysfs_base_path",
-                                   '/sys/')
+        sysfs_base_path = Conf.get(SSPL_CONF,
+                                   "SYSTEM_INFORMATION>sysfs_base_path", '/sys/')
         return sysfs_base_path
 
     @staticmethod
@@ -117,12 +117,12 @@ class ServerMap(ResourceMap):
         """Sets health attributes for a component."""
         good_state = (status == "OK")
         if not description:
-            description = "%s is %s in good health" % (
+            description = "%s %s in good health" % (
                 health_data.get("uid"),
-                '' if good_state else 'not')
+                'is' if good_state else 'is not')
         if not recommendation:
             recommendation = 'None' if good_state\
-                             else "Contact Seagate Support."
+                             else "Fault detected, please contact Seagate support."
 
         health_data["health"].update({
             "status": status,
@@ -130,7 +130,6 @@ class ServerMap(ResourceMap):
             "recommendation": recommendation,
             "specifics": specification
         })
-        return health_data
 
     def get_cpu_info(self):
         """Update and return CPU information in specific format."""
@@ -139,6 +138,7 @@ class ServerMap(ResourceMap):
         cpu_online = self.get_cpu_list("online")
         cpu_usage = psutil.cpu_percent(interval=None, percpu=True)
         cpu_usage_dict = dict(zip(cpu_online, cpu_usage))
+
         for cpu_id in range(0, len(cpu_present)):
             uid = f"cpu_{cpu_id}"
             cpu_dict = self.get_data_template(uid, False)
@@ -155,6 +155,7 @@ class ServerMap(ResourceMap):
             self.set_health_data(cpu_dict, status=health_status,
                                  specification=specification)
             cpu_data.append(cpu_dict)
+        return cpu_data
 
     def get_cpu_list(self, mode):
         """Returns the cpus present after reading."""
@@ -169,7 +170,7 @@ class ServerMap(ResourceMap):
 
     def convert_cpu_info_list(self, cpu_info):
         """Converts cpu info as read from file to a list of cpu indexes
-        
+
         eg. '0-2,4,6-8' => [0,1,2,4,6,7,8]
         """
         # Split the string with comma
