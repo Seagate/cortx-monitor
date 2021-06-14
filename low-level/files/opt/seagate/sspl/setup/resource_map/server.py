@@ -158,8 +158,8 @@ class ServerMap(ResourceMap):
         return cpu_list
 
     def get_cpu_list(self, mode):
-        """Returns the cpus present after reading."""
-        cpu_info_path = Path(self.cpu_path+mode)
+        """Returns the CPU list as per specified mode."""
+        cpu_info_path = Path(self.cpu_path + mode)
         # Read the text from /cpu/online file
         cpu_info = cpu_info_path.read_text()
         # Drop the \n character from the end of string
