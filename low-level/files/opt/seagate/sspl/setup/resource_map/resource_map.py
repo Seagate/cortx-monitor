@@ -41,7 +41,6 @@ class ResourceMap(metaclass=ABCMeta):
     def get_node_details(node):
         """
         Parse node information and returns left string and instance.
-
         Example
             "storage"    -> ("storage", "*")
             "storage[0]" -> ("storage", "0")
