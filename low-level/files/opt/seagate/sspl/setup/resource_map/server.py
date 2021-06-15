@@ -192,8 +192,8 @@ class ServerMap(ResourceMap):
                 "specifics": [
                     {
                         "Sensor Reading": f"{reading[-1]}",
-                        "lower_critical_threshold": "5",
-                        "upper_critical_threshold": "88"
+                        "lower_critical_threshold": "N/A",
+                        "upper_critical_threshold": "N/A"
                     }
                 ]
             }
