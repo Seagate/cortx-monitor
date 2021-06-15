@@ -95,53 +95,56 @@ class ServerMap(ResourceMap):
         return node, inst
 
     def get_sas_hba_info(self):
-        """Return the s SAS-HBA information."""
-        return self.get_sas_ports_info("sas_hba")
-
-    def get_sas_ports_info(self, leaf_node="sas_ports"):
-        """Return the s SAS ports information."""
+        """Return the latest SAS-HBA information."""
         sas_hba_data = []
-        health_data = []
-        sas_hosts = self.sysfs.get_sas_host_list()
-        for i, sas_rid in enumerate(sas_hosts):
-            host_id = SAS_RESOURCE_ID + str(i)
-            r_data = self.get_data_template(host_id, False)
-            sas_ports_dict = self.sysfs.get_phy_negotiated_link_rate()
-            health = []
-            if sas_ports_dict:
-                for rid, rate in sas_ports_dict.items():
-                    r_data["health"]["specifics"].append({
-                        "resource_id": f"{host_id}:{rid.strip()}",
-                        "negotiated_link_rate": rate.strip()
-                    })
-                    if "Gbit".lower() in rate.strip().lower():
-                        health.append("OK")
+        hosts = self.sysfs.get_sas_host_list()  # ['host1']
+        for host in hosts:
+            host_id = SAS_RESOURCE_ID + host.replace('host', '')
+            host_data = self.get_data_template(host_id, False)
+            ports = self.sysfs.get_sas_port_list(host)
+            # ports = ['port-1:0', 'port-1:1', 'port-1:2', 'port-1:3']
+            health = "OK"
+            specifics = {
+                'num_ports': len(ports),
+                'ports': []
+            }
+            for port in ports:
+                port_data = self.sysfs.get_sas_port_data(port)
+                specifics['ports'].append(port_data)
+                if port_data['state'] != 'running':
+                    health = "Failed"
 
-            health_data.append(health)
-            health_status = "OK" if "OK" in health else "Fault"
-            self.set_health_data(r_data, health_status)
-            if r_data["health"]["specifics"]:
-                sas_hba_data.append(r_data)
+            host_data['health']['specifics'].append(specifics)
 
-        if leaf_node == "sas_hba":
-            return sas_hba_data
+            self.set_health_data(host_data, health)
+            sas_hba_data.append(host_data)
+        return sas_hba_data
 
+    def get_sas_ports_info(self):
+        """Return the latest SAS Ports information."""
         sas_ports_data = []
-        for heath_list in health_data:
-            for i, health in enumerate(heath_list):
-                if i % 4:
-                    continue
+        ports = self.sysfs.get_sas_port_list()
+        # eg: ['port-1:0', 'port-1:1', 'port-1:2', 'port-1:3']
+        for port in ports:
+            port_id = 'sas_' + port
+            port_data = self.get_data_template(port_id, False)
+            phys = self.sysfs.get_phy_list_for_port(port)
+            # eg: [ 'phy-1:0', 'phy-1:1', 'phy-1:2', 'phy-1:3']
+            specifis = {
+                'num_phys': len(phys),
+                'phys': []
+            }
+            health = "OK"
+            for phy in phys:
+                phy_data = self.sysfs.get_sas_phy_data(phy)
+                specifis['phys'].append(phy_data)
+                if phy_data['state'] != 'enabled' or \
+                   'Gbit' not in phy_data['negotiated_linkrate']:
+                    health = "Failed"
 
-                sas_port_data = self.get_data_template(f'sas_port_{i//4+1}',
-                                                       False)
-                sas_port_data["health"]["specifics"].append({
-                    "negotiated_link_rate": "12.0 Gbit"
-                })
-
-                health_status = "OK" if "OK" in heath_list[i:i+4] else "Fault"
-                self.set_health_data(sas_port_data, health_status)
-                sas_ports_data.append(sas_port_data)
-
+            port_data['health']['specifics'].append(specifis)
+            self.set_health_data(port_data, health)
+            sas_ports_data.append(port_data)
         return sas_ports_data
 
     def get_nw_ports_info(self):

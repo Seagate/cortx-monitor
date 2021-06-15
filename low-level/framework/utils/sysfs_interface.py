@@ -140,8 +140,8 @@ class SysFS(Utility):
                 carrier_indicator = cFile.read().strip()
             if carrier_indicator not in self.nw_phy_link_state.keys():
                 carrier_indicator = 'unknown'
-        except OSError as os_err:
-            return os_err.errno
+        except Exception:
+            carrier_indicator = 'unknown'
         return self.nw_phy_link_state[carrier_indicator]
 
     def fetch_nw_operstate(self, interface):
@@ -163,10 +163,121 @@ class SysFS(Utility):
         return operstate
 
     def get_sas_host_list(self):
-        sas_host_list = []
+        """
+            Return SAS host list from /sys/class/sas_host directory.
+
+            eg: ['host1', 'host2']
+        """
+        sas_hosts = []
         try:
-            sas_host_dir = self.get_sys_dir_path('sas_host')
-            sas_host_list = os.listdir(sas_host_dir)
+            host_dirpath = self.get_sys_dir_path('sas_host')
+            sas_hosts = os.listdir(host_dirpath)
+            sas_hosts = [host for host in sas_hosts
+                         if 'host' in host]
         except Exception:
-            pass
-        return sas_host_list
+            return []
+        return sas_hosts
+
+    def get_sas_port_list(self, host=""):
+        """
+            Return a list of SAS ports.
+
+            searches for ports from given host in /sys/class/sas_port
+            directory if directory exists else return an empty list.
+            eg: ['port-1:0', 'port-1:1', 'port-1:2', 'port-1:3']
+        """
+        sas_ports = []
+        try:
+            host_id = host.replace('host', '')
+            port_dirpath = self.get_sys_dir_path('sas_port')
+            sas_ports = os.listdir(port_dirpath)
+            sas_ports = [port for port in sas_ports
+                         if f'port-{host_id}' in port]
+        except Exception:
+            return []
+        return sas_ports
+
+    def get_sas_port_data(self, port_name):
+        """
+            Return SAS port data/info of given port.
+
+            eg: Given input port-1:0 returns
+                { "port_id":"sas_port-0",
+                  "state":"running",
+                  "sas_address":"0x500c0fff0a98b000"
+                }
+        """
+        port_data = {}
+        try:
+            host_id, port_id = port_name.replace('port-', '').split(':')
+            port_data_path = os.path.join(
+                             self.get_sys_dir_path('sas_end_device'),
+                             f'end_device-{host_id}:{port_id}',
+                             f'device/target{host_id}:0:{port_id}',
+                             f'{host_id}:0:{port_id}:0')
+            with open(os.path.join(port_data_path, 'state')) as cFile:
+                state = cFile.read().strip()
+
+            with open(os.path.join(port_data_path, 'sas_address')) as cFile:
+                sas_addr = cFile.read().strip()
+
+            port_data = {
+                    "port_id": f'sas_port-{port_id}',
+                    "state": state,
+                    "sas_address": sas_addr
+                }
+        except Exception:
+            return {}
+        return port_data
+
+    def get_phy_list_for_port(self, port):
+        """
+            Return list of SAS phys under given port.
+
+            eg: for given port-1:0 it might return
+                [ 'phy-1:0', 'phy-1:1', 'phy-1:2', 'phy-1:3']
+                returns an empty list if port-1:0 does not exist.
+        """
+        phys = []
+        try:
+            phy_list_dir = os.path.join(
+                            self.get_sys_dir_path('sas_port'),
+                            port, 'device')
+            phys = os.listdir(phy_list_dir)
+            phys = [phy for phy in phys if 'phy' in phy]
+            phys.sort(key=lambda phy: int(phy.split(':')[1]))
+        except Exception:
+            return []
+        return phys
+
+    def get_sas_phy_data(self, phy):
+        """
+            Return SAS phy information.
+
+            eg: for phy `phy-1:8` it might return
+                {
+                    "phy_id":"phy-1:8",
+                    "state":"enabled",
+                    "negotiated_linkrate":"12.0 Gbit"
+                }
+        """
+        phy_data = {}
+        try:
+            phy_data_dir = os.path.join(
+                            self.get_sys_dir_path('sas_phy'), phy)
+
+            with open(os.path.join(phy_data_dir, 'enable')) as cFile:
+                state = cFile.read().strip()
+                state = "enabled" if state == '1' else "disabled"
+
+            with open(os.path.join(phy_data_dir, 'negotiated_linkrate')) as cFile:
+                n_link_rate = cFile.read().strip()
+
+            phy_data = {
+                "phy_id": phy,
+                "state": state,
+                "negotiated_linkrate": n_link_rate
+            }
+        except Exception:
+            return {}
+        return phy_data
