@@ -132,9 +132,11 @@ fi
 systemctl stop sspl-ll.service 2> /dev/null || true
 
 %postun
+SSPL_DIR=/opt/seagate/%{product_family}/sspl
 rm -f /etc/polkit-1/rules.d/sspl-ll_dbus_policy.rules
 rm -f /etc/dbus-1/system.d/sspl-ll_dbus_policy.conf
 rm -f /usr/bin/resource_health_view /usr/bin/sspl_bundle_generate /usr/bin/manifest_support_bundle
+rm -f $SSPL_DIR/bin/resource_map
 
 %files
 %defattr(-,root,root,-)

@@ -62,20 +62,6 @@ class StorageMap(ResourceMap):
                 errno.EINVAL,
                 "Health provider is not supported for storage type '%s'." % storage_type)
 
-    @staticmethod
-    def get_node_details(node):
-        """
-        Parse node information and returns left string and instance.
-
-        Example
-            "storage"    -> ("storage", "*")
-            "storage[0]" -> ("storage", "0")
-        """
-        res = re.search(r"(\w+)\[([\d]+)\]|(\w+)", node)
-        inst = res.groups()[1] if res.groups()[1] else "*"
-        node = res.groups()[0] if res.groups()[1] else res.groups()[2]
-        return node, inst
-
     def get_health_info(self, rpath):
         """
         Fetch health information for given FRU.
