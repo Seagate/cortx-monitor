@@ -195,7 +195,7 @@ class StorageMap(ResourceMap):
                             sensors_data[platform_sensor] = [single_sensor_data]
         for platform_sensor in platform_sensors:
             if platform_sensor not in sensors_data:
-                sensors_data[platform_sensor] = f'Unable to retrive {platform_sensor} data'
+                sensors_data[platform_sensor] = f'Unable to retrieve {platform_sensor} data'
         return sensors_data
 
     @staticmethod

@@ -165,13 +165,13 @@ class TestStorageMap(unittest.TestCase):
         resp = self.storage_map.get_platform_sensors()
 
         # Temperature
-        assert resp["temperature"] == "Unable to retrive temperature data"
+        assert resp["temperature"] == "Unable to retrieve temperature data"
 
         # Current
-        assert resp["current"] == "Unable to retrive current data"
+        assert resp["current"] == "Unable to retrieve current data"
 
         # Voltage
-        assert resp["voltage"] == "Unable to retrive voltage data"
+        assert resp["voltage"] == "Unable to retrieve voltage data"
 
 
 if __name__ == "__main__":
