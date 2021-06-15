@@ -24,7 +24,6 @@
 
 import errno
 import time
-import re
 import psutil
 from pathlib import Path
 from framework.utils.tool_factory import ToolFactory
@@ -77,20 +76,6 @@ class ServerMap(ResourceMap):
                 errno.EINVAL,
                 f"Health provider doesn't have support for'{rpath}'.")
         return info
-
-    @staticmethod
-    def get_node_details(node):
-        """
-        Parse node information and returns left string and instance.
-
-        Example
-            "storage"    -> ("storage", "*")
-            "storage[0]" -> ("storage", "0")
-        """
-        res = re.search(r"(\w+)\[([\d]+)\]|(\w+)", node)
-        inst = res.groups()[1] if res.groups()[1] else "*"
-        node = res.groups()[0] if res.groups()[1] else res.groups()[2]
-        return node, inst
 
     @staticmethod
     def set_health_data(health_data: dict, status, description=None,

@@ -15,6 +15,7 @@
 # For any questions about this software or licensing,
 # please email opensource@seagate.com or cortx-questions@seagate.com
 
+import re
 from abc import ABCMeta, abstractmethod
 
 
@@ -35,6 +36,20 @@ class ResourceMap(metaclass=ABCMeta):
         rpath: Resource id (Example: hw>disks)
         """
         pass
+
+    @staticmethod
+    def get_node_details(node):
+        """
+        Parse node information and returns left string and instance.
+
+        Example
+            "storage"    -> ("storage", "*")
+            "storage[0]" -> ("storage", "0")
+        """
+        res = re.search(r"(\w+)\[([\d]+)\]|(\w+)", node)
+        inst = res.groups()[1] if res.groups()[1] else "*"
+        node = res.groups()[0] if res.groups()[1] else res.groups()[2]
+        return node, inst
 
     @staticmethod
     def get_health_template(uid, is_fru: bool):
