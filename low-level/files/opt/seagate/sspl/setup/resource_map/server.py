@@ -113,12 +113,13 @@ class ServerMap(ResourceMap):
         })
 
     @staticmethod
-    def get_cpu_usage(index=2):
+    def get_cpu_usage(index=2, percpu=False):
         """Get CPU usage list."""
         i = 0
         cpu_usage = None
         while i < index:
-            cpu_usage = psutil.cpu_percent(interval=1, percpu=True)
+            cpu_usage = psutil.cpu_percent(interval=None, percpu=percpu)
+            time.sleep(1)
             i = i + 1
         return cpu_usage
 
@@ -138,15 +139,16 @@ class ServerMap(ResourceMap):
         per_cpu_data = []
         cpu_present = self.get_cpu_list("present")
         cpu_online = self.get_cpu_list("online")
-        cpu_usage = self.get_cpu_usage()
+        cpu_usage = self.get_cpu_usage(percpu=True)
         cpu_usage_dict = dict(zip(cpu_online, cpu_usage))
         overall_cpu_usage = list(psutil.getloadavg())
+        cpu_count = len(cpu_present)
         overall_usage = {
+            "current_usage": self.get_cpu_usage(percpu=False),
             "1_min_avg": overall_cpu_usage[0],
             "5_min_avg": overall_cpu_usage[1],
             "15_min_avg": overall_cpu_usage[2]
         }
-        cpu_count = len(cpu_present)
 
         for cpu_id in range(0, cpu_count):
             uid = f"cpu_{cpu_id}"
@@ -165,6 +167,7 @@ class ServerMap(ResourceMap):
             self.set_health_data(cpu_dict, status=health_status,
                                  specifics=specifics)
             per_cpu_data.append(cpu_dict)
+
         cpu_data = [
             {
                 "overall_usage": overall_usage,
