@@ -36,7 +36,8 @@ class ResourceMap(metaclass=ABCMeta):
         """
         pass
 
-    def get_health_template(self, uid, is_fru: bool):
+    @staticmethod
+    def get_health_template(uid, is_fru: bool):
         """Returns health template."""
         return {
             "uid": uid,

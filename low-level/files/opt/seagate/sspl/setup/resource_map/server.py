@@ -144,7 +144,7 @@ class ServerMap(ResourceMap):
         overall_cpu_usage = list(psutil.getloadavg())
         cpu_count = len(cpu_present)
         overall_usage = {
-            "current_usage": self.get_cpu_usage(percpu=False),
+            "current": self.get_cpu_usage(percpu=False),
             "1_min_avg": overall_cpu_usage[0],
             "5_min_avg": overall_cpu_usage[1],
             "15_min_avg": overall_cpu_usage[2]
@@ -178,7 +178,7 @@ class ServerMap(ResourceMap):
         return cpu_data
 
 
-if __name__ == "__main__":
-    server = ServerMap()
-    health_data = server.get_health_info(rpath="nodes[0]>compute[0]>hw>cpu")
-    print(health_data)
+# if __name__ == "__main__":
+#     server = ServerMap()
+#     health_data = server.get_health_info(rpath="nodes[0]>compute[0]>hw>cpu")
+#     print(health_data)
