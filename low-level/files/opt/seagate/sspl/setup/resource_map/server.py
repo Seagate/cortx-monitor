@@ -178,9 +178,9 @@ class ServerMap(ResourceMap):
         upper_critical = sensor_props[1].get('Upper Critical', 'NA')
         lower_non_recoverable = sensor_props[1].get('Lower Non-Recoverable', 'NA')
         upper_non_recoverable = sensor_props[1].get('Upper Non-Recoverable', 'NA')
-        status = 'Ok' if reading[2] == 'ok' else 'NA'
-        health_desc = 'good' if status == 'Ok' else 'bad'
-        recommendation = sspl_constants.DEFAULT_ALERT_RECOMMENDATION if status != 'Ok' else 'NA'
+        status = 'OK' if reading[2] == 'ok' else 'NA'
+        health_desc = 'good' if status == 'OK' else 'bad'
+        recommendation = sspl_constants.DEFAULT_ALERT_RECOMMENDATION if status != 'OK' else 'NA'
         resp = {
             "uid": uid,
             "fru": "false",
