@@ -168,16 +168,16 @@ class ServerMap(ResourceMap):
         ]
         return cpu_data
 
-    def get_platform_sensors_info(self):
-        sensor_list = ['Temperature', 'Voltage', 'Current']
-        data = self.build_platform_sensor_data(sensor_list)
-        return data
-
     def get_json_formatted_reading(self, reading):
         """builds json resposne from ipmi tool response.
         reading arg sample: ('CPU1 Temp', '01', 'ok', '3.1', '36 degrees C')
         """
         uid = '_'.join(reading[0].split())
+        sensor_id = reading[0]
+        sensor_props = self._ipmi.get_sensor_props(sensor_id)
+        print(sensor_props)
+        lower_critical = sensor_props[1].get('Lower Critical', 'NA')
+        upper_critical = sensor_props[1].get('Upper Critical', 'NA')
         status = 'OK' if reading[2] == 'ok' else 'NA'
         health_desc = 'good' if status == 'OK' else 'bad'
         recommendation = sspl_constants.DEFAULT_ALERT_RECOMMENDATION if status != 'OK' else 'NA'
@@ -192,15 +192,15 @@ class ServerMap(ResourceMap):
                 "specifics": [
                     {
                         "Sensor Reading": f"{reading[-1]}",
-                        "lower_critical_threshold": "NA",
-                        "upper_critical_threshold": "NA"
+                        "lower_critical_threshold": lower_critical,
+                        "upper_critical_threshold": upper_critical,
                     }
                 ]
             }
         }
         return resp
 
-    def build_platform_sensor_data(self):
+    def get_platform_sensors_info(self):
         """Get the sensor information based on sensor_type and instance"""
         response = {sensor: [] for sensor in self.platform_sensor_list}
         for sensor in self.platform_sensor_list:
