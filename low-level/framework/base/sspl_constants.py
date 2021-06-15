@@ -86,6 +86,7 @@ DEFAULT_RACK = "DEAFULT_RC01"
 DEFAULT_SN = "DEFAULT_SN01"
 DEFAULT_CLUSTER = "DEFAULT_CC01"
 CPU_PATH = "devices/system/cpu/"
+BLOCK_DIR = "/block/"
 
 # This file will be created when sspl is being configured for node replacement case
 REPLACEMENT_NODE_ENV_VAR_FILE = "/etc/profile.d/set_replacement_env.sh"
@@ -105,7 +106,7 @@ sspl_test_config_path = "%s://%s" % (CONFIG_SPEC_TYPE, sspl_test_file_path)
 global_config_path = "%s://%s" %(CONFIG_SPEC_TYPE, global_config_file_path)
 salt_provisioner_pillar_sls = 'sspl'
 salt_uniq_attr_per_node = ['cluster_id']
-salt_uniq_passwd_per_node = ['INGRESSPROCESSOR', 'EGRESSPROCESSOR', 'LOGGINGPROCESSOR']
+salt_uniq_passwd_per_node = ['INGRESSPROCESSOR', 'EGRESSPROCESSOR']
 
 # Initialize to default values
 node_key_id = 'srvnode-1'
@@ -128,10 +129,9 @@ if not os.path.exists(SSPL_CONFIGURED) and PRODUCT_NAME=="LDR_R1":
 CONSUL_ERR_STRING = '500 No cluster leader'
 
 SSPL_SETTINGS = {
-    "CORE_PROCESSORS": ["EgressProcessor", "IngressProcessor",
-        "LoggingProcessor"],
-    "MESSAGE_HANDLERS": ["DiskMsgHandler", "LoggingMsgHandler",
-        "ServiceMsgHandler", "NodeDataMsgHandler", "NodeControllerMsgHandler",
+    "CORE_PROCESSORS": ["EgressProcessor", "IngressProcessor"],
+    "MESSAGE_HANDLERS": ["DiskMsgHandler","ServiceMsgHandler",
+        "NodeDataMsgHandler", "NodeControllerMsgHandler",
         "RealStorEnclMsgHandler", "RealStorActuatorMsgHandler"]
 }
 
@@ -208,7 +208,6 @@ SSPL_CONFIGS = ['log_level', 'cli_type', 'sspl_log_file_path', 'cluster_id', 'st
 
 class RaidDataConfig(Enum):
     MDSTAT_FILE = "/proc/mdstat"
-    DIR = "/sys/block/"
     SYNC_ACTION_FILE = "/md/sync_action"
     MISMATCH_COUNT_FILE = "/md/mismatch_cnt"
     STATE_COMMAND_RESPONSE = 'idle'
@@ -217,7 +216,6 @@ class RaidDataConfig(Enum):
     RAID_RESULT_FILE_PATH = f"{RAID_RESULT_DIR}result_raid_health_file"
     RAID_MISMATCH_FAULT_STATUS = "mismatch_cnt_fault_status"
     MAX_RETRIES = 10
-    NEXT_ITERATION_TIME = 3600
     PRIORITY = 1
 
 class RaidAlertMsgs(Enum):

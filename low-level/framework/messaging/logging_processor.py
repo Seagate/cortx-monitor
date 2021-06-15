@@ -32,8 +32,6 @@ from framework.base.module_thread import ScheduledModuleThread
 from framework.utils.autoemail import AutoEmail
 from framework.utils.conf_utils import CLUSTER, SRVNODE, SSPL_CONF, Conf
 from framework.utils.service_logging import logger
-# Modules that receive messages from this module
-from message_handlers.logging_msg_handler import LoggingMsgHandler
 from . import producer_initialized
 
 try:
@@ -177,20 +175,6 @@ class LoggingProcessor(ScheduledModuleThread, InternalMsgQ):
                                  SYSLOG_IDENTIFIER="sspl-ll")
                 else:
                     logger.info(log_msg)
-            else:
-                # Send the IEM to the logging msg handler to be processed
-                internal_json_msg = json.dumps(
-                    {"actuator_request_type": {
-                        "logging": {
-                            "log_level": log_level,
-                            "log_type": "IEM",
-                            "log_msg": log_msg
-                        }
-                    }
-                    })
-                # Send the event to logging msg handler to send IEM message to journald
-                self._write_internal_msgQ(LoggingMsgHandler.name(),
-                                          internal_json_msg)
 
         except Exception as ex:
             logger.error("_process_msg: %r" % ex)

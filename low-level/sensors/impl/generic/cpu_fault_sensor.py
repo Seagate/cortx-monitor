@@ -34,7 +34,6 @@ from framework.utils.severity_reader import SeverityReader
 from framework.utils.store_factory import file_store
 from framework.utils.sysfs_interface import SysFS
 from framework.utils.tool_factory import ToolFactory
-from message_handlers.logging_msg_handler import LoggingMsgHandler
 from message_handlers.node_data_msg_handler import NodeDataMsgHandler
 
 # Override default store
@@ -59,7 +58,7 @@ class CPUFaultSensor(SensorThread, InternalMsgQ):
 
     # Dependency list
     DEPENDENCIES = {
-            "plugins": ["NodeDataMsgHandler", "LoggingMsgHandler"],
+            "plugins": ["NodeDataMsgHandler"],
             "rpms": []
 
         }

@@ -59,16 +59,6 @@ EGRESSPROCESSOR:
    message_type: alerts
    method: sync
 
-LOGGINGPROCESSOR:
-   consumer_id: sspl_in
-   consumer_group: cortx_monitor
-   message_type: IEM
-   offset: earliest
-
-LOGGINGMSGHANDLER:
-   iem_routing_enabled: false
-   iem_log_locally: true
-
 NODEDATAMSGHANDLER:
    transmit_interval: 10
    high_cpu_usage_wait_threshold: 30
@@ -87,6 +77,7 @@ RAIDINTEGRITYSENSOR:
    monitor: true
    threaded: true
    polling_interval: 1209600
+   retry_interval: 3600
 
 IPMI:
    user: admin
@@ -124,6 +115,7 @@ NODEHWSENSOR:
    monitor: true
    threaded: true
    polling_interval: 30
+   ipmi_client: ipmitool
 
 REALSTORLOGICALVOLUMESENSOR:
    threaded: true
@@ -205,7 +197,7 @@ SYSTEM_INFORMATION:
    sspl_state: active
 
 # NOTE: Keys present in OBSOLETE section are out of date
-# and will be removed in furture version. Keys present in 
+# and will be removed in furture version. Keys present in
 # CHANGED are keys replaced, existing values are moved
 # to new keys.
 

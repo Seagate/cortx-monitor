@@ -208,18 +208,6 @@ class EgressProcessor(ScheduledModuleThread, InternalMsgQ):
                 self._producer.send([json.dumps(self._jsonMsg)])
                 logger.debug(
                     "_transmit_msg_on_exchange, Successfully Sent: %s" % self._jsonMsg)
-
-            # Routing requests for IEM msgs sent from the LoggingMsgHandler
-            elif self._jsonMsg.get("message").get("IEM_routing") is not None:
-                log_msg = self._jsonMsg.get("message").get("IEM_routing").get(
-                    "log_msg")
-                if self._iem_route_addr != "":
-                    self._producer.send([json.dumps(self._jsonMsg)])
-                else:
-                    logger.warn(
-                        "EgressProcessor, Attempted to route IEM without a valid 'iem_route_addr' set.")
-                logger.debug(
-                    "_transmit_msg_on_exchange, Successfully Sent: %s" % log_msg)
             else:
                 self._add_signature()
                 jsonMsg = json.dumps(self._jsonMsg)

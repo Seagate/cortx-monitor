@@ -94,7 +94,7 @@ class ConfigReader(object):
                 for k in str_keys:
                     del new_conf[k]
                 common_cluster_id = salt.client.Caller().function('grains.get', 'cluster_id')
-                # Password is same for INGRESSPROCESSOR, EGRESSPROCESSOR & LOGGINGPROCESSOR
+                # Password is same for INGRESSPROCESSOR, EGRESSPROCESSOR
                 rbmq_pass = salt.client.Caller().function('pillar.get',
                                'rabbitmq:sspl:INGRESSPROCESSOR:password')
                 if common_cluster_id:

@@ -31,6 +31,7 @@ from framework.base.sspl_constants import (PRODUCT_FAMILY, SUPPORT_REQUESTOR_NAM
     ENCL_DOWNLOAD_LOG_MAX_RETRY, ENCL_DOWNLOAD_LOG_WAIT_BEFORE_RETRY, DATA_PATH, 
     SSPL_SB_REQUEST, SB_DATA_PATH, SSPL_SB_TMP, SYSLOG_HOST, SYSLOG_PORT)
 from framework.utils.conf_utils import Conf, SSPL_CONF, SYSTEM_INFORMATION, SSPL_STATE
+from framework.utils.ipmi_client import IpmiFactory
 
 
 class SSPLBundleError(Exception):
@@ -145,13 +146,17 @@ class SSPLBundleGenerate(object):
         logger.info("SSPL Support Bundle Location: %s" % self.localTempPath+file_name)
 
     def get_ipmi_sel_data(self):
-        response, error, return_code = self._run_command("ipmitool sel list")
-        if return_code != 0:
+        ipmitool = IpmiFactory().get_implementor('ipmitool')
+        res, err, retcode = ipmitool._run_ipmitool_subcommand("sel list")
+        if retcode != 0:
+            if err.find(ipmitool.VM_ERROR) != -1:
+                err = ("Detected VM environment, can't reach BMC over inband"
+                       "KCS channel, avoiding BMC data collection using IPMI.")
             logger.warn(
-            f"Unable to fetch SEL list data with an error : {error}")
+            f"Unable to fetch SEL list data with an error : {err}")
         else:
             with open(self.ipmi_sel_data, 'w+') as sel_list:
-                sel_list.write(response)
+                sel_list.write(res)
 
     def get_config_data(self):
         os.makedirs(self.sspl_conf_dir, exist_ok=True)
