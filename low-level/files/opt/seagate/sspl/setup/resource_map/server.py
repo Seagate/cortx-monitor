@@ -15,12 +15,12 @@
 # For any questions about this software or licensing,
 # please email opensource@seagate.com or cortx-questions@seagate.com
 
-"""
- ***************************************************************************
-  Description: ServerMap class provides resource map and related information
-               like health, manifest, etc,.
- ***************************************************************************
-"""
+
+import time
+import re
+import errno
+from framework.utils.ipmi_client import IpmiFactory
+from framework.base import sspl_constants
 
 import errno
 import time
@@ -33,7 +33,9 @@ from framework.base.sspl_constants import CPU_PATH
 
 
 class ServerMap(ResourceMap):
-    """Provides server resource related information."""
+    """ServerMap class provides resource map and related information
+    like health, manifest, etc,.
+    """
 
     name = "server"
 
@@ -45,8 +47,11 @@ class ServerMap(ResourceMap):
         self.sysfs_base_path = self.sysfs.get_sysfs_base_path()
         self.cpu_path = self.sysfs_base_path + CPU_PATH
         self.server_frus = {
-            'cpu': self.get_cpu_info
+            'cpu': self.get_cpu_info,
+            'platform_sensors': self.get_platform_sensors_info,
         }
+        self._ipmi = IpmiFactory().get_implementor("ipmitool")
+        self.platform_sensor_list = ['Temperature', 'Voltage', 'Current']
 
     def get_health_info(self, rpath):
         """
@@ -163,8 +168,56 @@ class ServerMap(ResourceMap):
         ]
         return cpu_data
 
+    def format_ipmi_platform_sensor_reading(self, reading):
+        """builds json resposne from ipmi tool response.
+        reading arg sample: ('CPU1 Temp', '01', 'ok', '3.1', '36 degrees C')
+        """
+        uid = '_'.join(reading[0].split())
+        sensor_id = reading[0]
+        sensor_props = self._ipmi.get_sensor_props(sensor_id)
+        lower_critical = sensor_props[1].get('Lower Critical', 'NA')
+        upper_critical = sensor_props[1].get('Upper Critical', 'NA')
+        lower_non_recoverable = sensor_props[1].get('Lower Non-Recoverable', 'NA')
+        upper_non_recoverable = sensor_props[1].get('Upper Non-Recoverable', 'NA')
+        status = 'Ok' if reading[2] == 'ok' else 'NA'
+        health_desc = 'good' if status == 'Ok' else 'bad'
+        recommendation = sspl_constants.DEFAULT_ALERT_RECOMMENDATION if status != 'Ok' else 'NA'
+        resp = {
+            "uid": uid,
+            "fru": "false",
+            "last_updated":  int(time.time()),
+            "health": {
+                "status": status,
+                "description": f"{uid} sensor is in {health_desc} health",
+                "recommendation": f"{recommendation}",
+                "specifics": [
+                    {
+                        "Sensor Reading": f"{reading[-1]}",
+                        "lower_critical_threshold": lower_critical,
+                        "upper_critical_threshold": upper_critical,
+                        "lower_non_recoverable": lower_non_recoverable,
+                        "upper_non_recoverable": upper_non_recoverable,
+                    }
+                ]
+            }
+        }
+        return resp
+
+    def get_platform_sensors_info(self):
+        """Get the sensor information based on sensor_type and instance"""
+        response = {sensor: [] for sensor in self.platform_sensor_list}
+        for sensor in self.platform_sensor_list:
+            sensor_reading = self._ipmi.get_sensor_list_by_type(sensor)
+            for reading in sensor_reading:
+                response[sensor].append(
+                    self.format_ipmi_platform_sensor_reading(reading)
+                )
+        return response
+
 
 # if __name__ == "__main__":
 #     server = ServerMap()
-#     health_data = server.get_health_info(rpath="nodes[0]>compute[0]>hw>cpu")
+#     health_data = server.get_health_info(
+#         rpath="nodes[0]>compute[0]>hw>platform_sensors"
+#     )
 #     print(health_data)
