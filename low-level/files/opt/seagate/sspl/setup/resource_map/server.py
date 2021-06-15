@@ -178,9 +178,9 @@ class ServerMap(ResourceMap):
         reading arg sample: ('CPU1 Temp', '01', 'ok', '3.1', '36 degrees C')
         """
         uid = '_'.join(reading[0].split())
-        status = reading[2]
-        health_desc = 'good' if status == 'ok' else 'bad'
-        recommendation = sspl_constants.DEFAULT_ALERT_RECOMMENDATION if status != 'ok' else 'None'
+        status = 'OK' if reading[2] == 'ok' else 'NA'
+        health_desc = 'good' if status == 'OK' else 'bad'
+        recommendation = sspl_constants.DEFAULT_ALERT_RECOMMENDATION if status != 'OK' else 'NA'
         resp = {
             "uid": uid,
             "fru": "false",
@@ -192,8 +192,8 @@ class ServerMap(ResourceMap):
                 "specifics": [
                     {
                         "Sensor Reading": f"{reading[-1]}",
-                        "lower_critical_threshold": "N/A",
-                        "upper_critical_threshold": "N/A"
+                        "lower_critical_threshold": "NA",
+                        "upper_critical_threshold": "NA"
                     }
                 ]
             }
