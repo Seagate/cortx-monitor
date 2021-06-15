@@ -15,6 +15,8 @@
 # For any questions about this software or licensing,
 # please email opensource@seagate.com or cortx-questions@seagate.com
 
+
+import socket
 import errno
 import psutil
 import re
@@ -49,7 +51,8 @@ class ServerMap(ResourceMap):
             'cpu': self.get_cpu_info,
             'platform_sensors': self.get_platform_sensors_info,
             'memory': self.get_mem_info,
-            'fans': self.get_fans_info
+            'fans': self.get_fans_info,
+            'nw_ports': self.get_nw_ports_info
         }
         self._ipmi = IpmiFactory().get_implementor("ipmitool")
         self.platform_sensor_list = ['Temperature', 'Voltage', 'Current']
@@ -285,3 +288,59 @@ class ServerMap(ResourceMap):
 
             data.append(fan_dict)
         return data
+
+    def get_nw_ports_info(self):
+        """Return the Network ports information."""
+        network_cable_data = []
+        io_counters = psutil.net_io_counters(pernic=True)
+
+        for interface, addrs in psutil.net_if_addrs().items():
+            nic_info = self.get_health_template(interface, False)
+
+            specifics = {}
+            for addr in addrs:
+                if addr.family == socket.AF_INET:
+                    specifics["ipV4"] = addr.address
+
+            if interface in io_counters:
+                io_info = io_counters[interface]
+                specifics.update({
+                    "networkErrors": io_info.errin + io_info.errout,
+                    "droppedPacketsIn": io_info.dropin,
+                    "droppedPacketsOut": io_info.dropout,
+                    "packetsIn": io_info.packets_recv,
+                    "packetsOut": io_info.packets_sent,
+                    "trafficIn": io_info.bytes_recv,
+                    "trafficOut": io_info.bytes_sent
+                })
+
+            nw_status, nw_cable_conn_status = \
+                self.get_nw_status(interface)
+
+            specifics["nwStatus"] = nw_status
+            specifics["nwCableConnStatus"] = nw_cable_conn_status
+
+            # set health status, description and recommendation
+            map_status = {"UP": "OK", "DOWN": "Disabled/Failed",
+                          "UNKNOWN": "UNKNOWN"}
+            health_status = map_status[nw_cable_conn_status]
+
+            self.set_health_data(nic_info, health_status,
+                                 specifics=[specifics])
+
+            network_cable_data.append(nic_info)
+
+        return network_cable_data
+
+    def get_nw_status(self, interface):
+        """Read & Return the latest network status from sysfs files."""
+        try:
+            nw_status = self.sysfs.fetch_nw_operstate(interface)
+            nw_cable_conn_status = self.sysfs.fetch_nw_cable_status(
+                self.sysfs.get_sys_dir_path('net'), interface
+            )
+        except Exception as err:
+            raise ResourceMapError(errno.EINVAL,
+                                   ("Unable to fetch network status due to"
+                                    " an error: %s" % err))
+        return nw_status, nw_cable_conn_status

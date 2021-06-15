@@ -138,7 +138,23 @@ class SysFS(Utility):
                 carrier_indicator = cFile.read().strip()
             if carrier_indicator not in self.nw_phy_link_state.keys():
                 carrier_indicator = 'unknown'
-        except OSError as os_err:
-            return os_err.errno
+        except Exception:
+            carrier_indicator = 'unknown'
         return self.nw_phy_link_state[carrier_indicator]
 
+    def fetch_nw_operstate(self, interface):
+        """
+        Return the Operational Status of the Network Interface.
+        Possible Values: <'UNKNOWN', 'NOTPRESENT", 'DOWN', 'LOWERLAYERDOWN',
+                          'TESTING', 'DORMANT', 'UP'>
+        """
+        operstate_file_path = os.path.join(self.get_sys_dir_path('net'),
+                                           interface, 'operstate')
+        operstate = "UNKNOWN"
+        try:
+            if os.path.isfile(operstate_file_path):
+                with open(operstate_file_path) as cFile:
+                    operstate = cFile.read().strip().upper()
+        except Exception:
+            operstate = "UNKNOWN"
+        return operstate
