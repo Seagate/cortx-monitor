@@ -35,3 +35,17 @@ class ResourceMap(metaclass=ABCMeta):
         rpath: Resource id (Example: hw>disks)
         """
         pass
+
+    def get_health_template(self, uid, is_fru: bool):
+        """Returns health template."""
+        return {
+            "uid": uid,
+            "fru": str(is_fru).lower(),
+            "last_updated": "",
+            "health": {
+                "status": "",
+                "description": "",
+                "recommendation": "",
+                "specifics": []
+            }
+        }

@@ -30,6 +30,7 @@ from pathlib import Path
 from framework.utils.tool_factory import ToolFactory
 from resource_map import ResourceMap
 from error import ResourceMapError
+from framework.base.sspl_constants import CPU_PATH
 
 
 class ServerMap(ResourceMap):
@@ -43,7 +44,7 @@ class ServerMap(ResourceMap):
         self.sysfs = ToolFactory().get_instance('sysfs')
         self.sysfs.initialize()
         self.sysfs_base_path = self.sysfs.get_sysfs_base_path()
-        self.cpu_path = self.sysfs_base_path + "devices/system/cpu/"
+        self.cpu_path = self.sysfs_base_path + CPU_PATH
         self.server_frus = {
             'cpu': self.get_cpu_info
         }
@@ -92,21 +93,6 @@ class ServerMap(ResourceMap):
         return node, inst
 
     @staticmethod
-    def get_data_template(uid, is_fru: bool):
-        """Returns health template."""
-        return {
-            "uid": uid,
-            "fru": str(is_fru).lower(),
-            "last_updated": int(time.time()),
-            "health": {
-                "status": "",
-                "description": "",
-                "recommendation": "",
-                "specifics": []
-            }
-        }
-
-    @staticmethod
     def set_health_data(health_data: dict, status, description=None,
                         recommendation=None, specifics=None):
         """Sets health attributes for a component."""
@@ -126,6 +112,16 @@ class ServerMap(ResourceMap):
             "specifics": specifics
         })
 
+    @staticmethod
+    def get_cpu_usage(index=2):
+        """Get CPU usage list."""
+        i = 0
+        cpu_usage = None
+        while i < index:
+            cpu_usage = psutil.cpu_percent(interval=1, percpu=True)
+            i = i + 1
+        return cpu_usage
+
     def get_cpu_list(self, mode):
         """Returns the CPU list as per specified mode."""
         cpu_info_path = Path(self.cpu_path + mode)
@@ -139,18 +135,26 @@ class ServerMap(ResourceMap):
 
     def get_cpu_info(self):
         """Update and return CPU information in specific format."""
-        cpu_data = []
+        per_cpu_data = []
         cpu_present = self.get_cpu_list("present")
         cpu_online = self.get_cpu_list("online")
-        cpu_usage = psutil.cpu_percent(interval=None, percpu=True)
+        cpu_usage = self.get_cpu_usage()
         cpu_usage_dict = dict(zip(cpu_online, cpu_usage))
+        overall_cpu_usage = list(psutil.getloadavg())
+        overall_usage = {
+            "1_min_avg": overall_cpu_usage[0],
+            "5_min_avg": overall_cpu_usage[1],
+            "15_min_avg": overall_cpu_usage[2]
+        }
+        cpu_count = len(cpu_present)
 
-        for cpu_id in range(0, len(cpu_present)):
+        for cpu_id in range(0, cpu_count):
             uid = f"cpu_{cpu_id}"
-            cpu_dict = self.get_data_template(uid, False)
+            cpu_dict = self.get_health_template(uid, is_fru=False)
+            cpu_dict["last_updated"] = int(time.time())
             online_status = "Online" if cpu_id in cpu_online else "Offline"
             health_status = "OK" if online_status == "Online" else "NA"
-            usage = "NA" if health_status == "Fault" \
+            usage = "NA" if health_status == "NA" \
                 else cpu_usage_dict[cpu_id]
             specifics = [
                 {
@@ -160,11 +164,18 @@ class ServerMap(ResourceMap):
             ]
             self.set_health_data(cpu_dict, status=health_status,
                                  specifics=specifics)
-            cpu_data.append(cpu_dict)
+            per_cpu_data.append(cpu_dict)
+        cpu_data = [
+            {
+                "overall_usage": overall_usage,
+                "cpu_count": cpu_count,
+                "cpus": per_cpu_data
+            }
+        ]
         return cpu_data
 
 
-# if __name__ == "__main__":
-#     server = ServerMap()
-#     health_data = server.get_health_info(rpath="nodes[0]>compute[0]>hw>cpu")
-#     print(health_data)
+if __name__ == "__main__":
+    server = ServerMap()
+    health_data = server.get_health_info(rpath="nodes[0]>compute[0]>hw>cpu")
+    print(health_data)
