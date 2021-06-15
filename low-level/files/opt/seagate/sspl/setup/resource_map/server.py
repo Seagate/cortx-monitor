@@ -15,23 +15,19 @@
 # For any questions about this software or licensing,
 # please email opensource@seagate.com or cortx-questions@seagate.com
 
+
 import time
 import re
 import errno
 from framework.utils.ipmi_client import IpmiFactory
 from framework.base import sspl_constants
 
-import errno
-import time
 import psutil
 from pathlib import Path
 from framework.utils.tool_factory import ToolFactory
 from resource_map import ResourceMap
 from error import ResourceMapError
-<<<<<<< HEAD
 from framework.base.sspl_constants import CPU_PATH
-=======
->>>>>>> * Addressed review comments
 
 
 class ServerMap(ResourceMap):
@@ -218,12 +214,7 @@ class ServerMap(ResourceMap):
         return response
 
     def get_mem_info(self):
-<<<<<<< HEAD
         """Collect & return system memory info in specific format """
-=======
-        """Update and return memory info in specific format"""
->>>>>>> * Addressed review comments
-
         from framework.utils.conf_utils import SSPL_CONF, Conf
         default_mem_usage_threshold = int(Conf.get(SSPL_CONF,
             "NODEDATAMSGHANDLER>host_memory_usage_threshold",
@@ -283,5 +274,4 @@ class ServerMap(ResourceMap):
 #     server = ServerMap()
 #     health_data = server.get_health_info(
 #         rpath="nodes[0]>compute[0]>hw>memory")
-#     )
 #     print(health_data)
