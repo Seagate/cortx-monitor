@@ -32,8 +32,7 @@ from resource_map import ResourceMap
 from error import ResourceMapError
 
 from framework.utils.tool_factory import ToolFactory
-from framework.base.sspl_constants import (DEFAULT_RECOMMENDATION,
-                                           SAS_RESOURCE_ID)
+from framework.base.sspl_constants import SAS_RESOURCE_ID
 
 
 class ServerMap(ResourceMap):
@@ -95,40 +94,6 @@ class ServerMap(ResourceMap):
         node = res.groups()[0] if res.groups()[1] else res.groups()[2]
         return node, inst
 
-    def get_data_template(self, uid, is_fru: bool):
-        """Get the health data template."""
-        return {
-            "uid": uid,
-            "fru": str(is_fru).lower(),
-            "last_updated": -1,
-            "health": {
-                "status": "",
-                "description": "",
-                "recommendation": "",
-                "specifics": []
-            }
-        }
-
-    def set_health_data(self, obj: dict, status, description=None,
-                        recommendation=None):
-        """Set the given or default health data as per health status."""
-        good_state = (status == "OK")
-        if not description:
-            description = "%s is %sin good health." % (
-                            obj.get("uid"),
-                            '' if good_state else 'not ')
-        if not recommendation:
-            recommendation = 'None' if good_state\
-                             else DEFAULT_RECOMMENDATION
-
-        obj["health"].update({
-            "status": status,
-            "description": description,
-            "recommendation": recommendation
-        })
-
-        obj["last_updated"] = int(time.time())
-
     def get_sas_hba_info(self):
         """Return the s SAS-HBA information."""
         return self.get_sas_ports_info("sas_hba")
@@ -167,7 +132,7 @@ class ServerMap(ResourceMap):
                 if i % 4:
                     continue
 
-                sas_port_data = self.get_data_template(f'sas_port_{i/4+1}',
+                sas_port_data = self.get_data_template(f'sas_port_{i//4+1}',
                                                        False)
                 sas_port_data["health"]["specifics"].append({
                     "negotiated_link_rate": "12.0 Gbit"
@@ -235,7 +200,7 @@ class ServerMap(ResourceMap):
         return nw_status, nw_cable_conn_status
 
 
-# if __name__ == "__main__":
-#     server = ServerMap()
-#     health_data = server.get_health_info(rpath="nodes[0]>compute[0]")
-#     print(health_data)
+if __name__ == "__main__":
+    server = ServerMap()
+    health_data = server.get_health_info(rpath="nodes[0]>compute[0]")
+    print(health_data)

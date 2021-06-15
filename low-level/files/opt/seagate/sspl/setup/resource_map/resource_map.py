@@ -15,8 +15,10 @@
 # For any questions about this software or licensing,
 # please email opensource@seagate.com or cortx-questions@seagate.com
 
+import time
 from abc import ABCMeta, abstractmethod
 
+from framework.base.sspl_constants import DEFAULT_RECOMMENDATION
 
 class ResourceMap(metaclass=ABCMeta):
     """Abstract class for all other resource types."""
@@ -35,3 +37,37 @@ class ResourceMap(metaclass=ABCMeta):
         rpath: Resource id (Example: hw>disks)
         """
         pass
+
+    def get_data_template(self, uid: str, is_fru: bool):
+        """Get the health data template."""
+        return {
+            "uid": uid,
+            "fru": str(is_fru).lower(),
+            "last_updated": -1,
+            "health": {
+                "status": "",
+                "description": "",
+                "recommendation": "",
+                "specifics": []
+            }
+        }
+
+    def set_health_data(self, obj: dict, status, description=None,
+                        recommendation=None):
+        """Set the given or default health data as per health status."""
+        good_state = (status == "OK")
+        if not description:
+            description = "%s is %sin good health." % (
+                            obj.get("uid"),
+                            '' if good_state else 'not ')
+        if not recommendation:
+            recommendation = 'None' if good_state\
+                             else DEFAULT_RECOMMENDATION
+
+        obj["health"].update({
+            "status": status,
+            "description": description,
+            "recommendation": recommendation
+        })
+
+        obj["last_updated"] = int(time.time())
