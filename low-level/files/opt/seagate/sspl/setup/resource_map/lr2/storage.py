@@ -53,7 +53,8 @@ class StorageMap(ResourceMap):
             "disk_groups": self.get_disk_groups_info,
             "sideplane_expanders": self.get_sideplane_expanders_info,
             "nw_ports": self.get_nw_ports_info,
-            "disks": self.get_drives_info
+            "disks": self.get_drives_info,
+            "sas_ports": self.get_sas_ports_info
         }
 
     def validate_storage_type_support(self):
@@ -418,7 +419,8 @@ class StorageMap(ResourceMap):
             "disk-groups": ENCL.URI_CLIAPI_SHOWDISKGROUPS,
             "enclosures": ENCL.URI_CLIAPI_SHOWENCLOSURE,
             "network-parameters": ENCL.URI_CLIAPI_NETWORKHEALTHSTATUS,
-            "drives": ENCL.URI_CLIAPI_SHOWDISKS
+            "drives": ENCL.URI_CLIAPI_SHOWDISKS,
+            "expander-ports": ENCL.URI_CLIAPI_SASHEALTHSTATUS
         }
         url = ENCL.build_url(fru_uri_map.get(fru))
         response = ENCL.ws_request(url, ENCL.ws.HTTP_GET)
@@ -450,3 +452,42 @@ class StorageMap(ResourceMap):
         logger.debug(self.log.svc_log(
             f"Network ports Health data:{nw_data}"))
         return nw_data
+
+    def get_sas_ports_info(self):
+        """Return the latest SAS ports information."""
+        data = []
+        sas_ports = self.get_realstor_encl_data("expander-ports")
+        if not sas_ports:
+            return data
+        for sas_port in sas_ports:
+            port_dict = {
+                "uid": sas_port.get("durable-id"),
+                "fru": "false",
+                "last_updated": int(time.time()),
+                "health": {
+                    "status": sas_port.get("health", "NA"),
+                    "description": sas_port.get("health-reason"),
+                    "recommendation": sas_port.get("health-recommendation"),
+                    "specifics": [
+                        {
+                            "sas-port-type": sas_port.get("sas-port-type"),
+                            "controller": sas_port.get("controller")
+                        }
+                    ]
+                }
+            }
+            data.append(port_dict)
+        return data
+
+
+# if __name__ == "__main__":
+#     storage = StorageMap()
+#     frus = ["controllers", "psus"]
+#     for fru in frus:
+#         rpath = f"nodes[0]>storage[0]>hw>{fru}"
+#         health_data = storage.get_health_info(rpath=rpath)
+#         print(health_data)
+#     volume_health_data = storage.get_health_info(rpath="nodes[0]>storage[0]>fw>logical_volumes")
+#     dg_health_data = storage.get_health_info(rpath="nodes[0]>storage[0]>fw>disk_groups")
+#     print(json.dumps(volume_health_data))
+#     print(json.dumps(dg_health_data))

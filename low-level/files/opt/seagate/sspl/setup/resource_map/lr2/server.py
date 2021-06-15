@@ -26,8 +26,8 @@ from framework.utils.tool_factory import ToolFactory
 from resource_map import ResourceMap
 from error import ResourceMapError
 from framework.platforms.server.network import Network
-from framework.base.sspl_constants import (CPU_PATH,
-    DEFAULT_RECOMMENDATION, HEALTH_SVC_NAME)
+from framework.base.sspl_constants import (
+    CPU_PATH, DEFAULT_RECOMMENDATION, HEALTH_SVC_NAME, SAS_RESOURCE_ID)
 from framework.utils.conf_utils import (GLOBAL_CONF, NODE_TYPE_KEY, Conf)
 from framework.utils.service_logging import CustomLog, logger
 
@@ -53,6 +53,8 @@ class ServerMap(ResourceMap):
             'platform_sensors': self.get_platform_sensors_info,
             'memory': self.get_mem_info,
             'fans': self.get_fans_info,
+            'sas_hba': self.get_sas_hba_info,
+            'sas_ports': self.get_sas_ports_info,
             'nw_ports': self.get_nw_ports_info
         }
         self._ipmi = IpmiFactory().get_implementor("ipmitool")
@@ -303,6 +305,56 @@ class ServerMap(ResourceMap):
             logger.debug(self.log.svc_log(
                 f"Fan Health Data:{fan_dict}"))
         return data
+
+    def get_sas_hba_info(self):
+        """Return the latest SAS-HBA information."""
+        sas_hba_data = []
+        hosts = self.sysfs.get_sas_host_list()  # ['host1']
+        for host in hosts:
+            host_id = SAS_RESOURCE_ID + host.replace('host', '')
+            host_data = self.get_health_template(host_id, False)
+            ports = self.sysfs.get_sas_port_list(host)
+            # ports = ['port-1:0', 'port-1:1', 'port-1:2', 'port-1:3']
+            health = "OK"
+            specifics = {
+                'num_ports': len(ports),
+                'ports': []
+            }
+            for port in ports:
+                port_data = self.sysfs.get_sas_port_data(port)
+                specifics['ports'].append(port_data)
+                if port_data['state'] != 'running':
+                    health = "Failed"
+
+            self.set_health_data(host_data, health, specifics=[specifics])
+            sas_hba_data.append(host_data)
+        return sas_hba_data
+
+    def get_sas_ports_info(self):
+        """Return the latest SAS Ports information."""
+        sas_ports_data = []
+        ports = self.sysfs.get_sas_port_list()
+        # eg: ['port-1:0', 'port-1:1', 'port-1:2', 'port-1:3']
+        for port in ports:
+            port_id = 'sas_' + port
+            port_data = self.get_health_template(port_id, False)
+            phys = self.sysfs.get_phy_list_for_port(port)
+            # eg: [ 'phy-1:0', 'phy-1:1', 'phy-1:2', 'phy-1:3']
+            specifics = {
+                'num_phys': len(phys),
+                'phys': []
+            }
+            health = "OK"
+            for phy in phys:
+                phy_data = self.sysfs.get_sas_phy_data(phy)
+                specifics['phys'].append(phy_data)
+                if phy_data['state'] != 'enabled' or \
+                   'Gbit' not in phy_data['negotiated_linkrate']:
+                    health = "Failed"
+
+            self.set_health_data(port_data, health, specifics=[specifics])
+            sas_ports_data.append(port_data)
+        return sas_ports_data
 
     def get_nw_ports_info(self):
         """Return the Network ports information."""
