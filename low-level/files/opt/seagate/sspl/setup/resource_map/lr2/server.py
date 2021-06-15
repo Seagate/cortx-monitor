@@ -307,7 +307,7 @@ class ServerMap(ResourceMap):
         return data
 
     def get_sas_hba_info(self):
-        """Return the latest SAS-HBA information."""
+        """Return SAS-HBA current health."""
         sas_hba_data = []
         hosts = self.sysfs.get_sas_host_list()  # ['host1']
         for host in hosts:
@@ -324,14 +324,14 @@ class ServerMap(ResourceMap):
                 port_data = self.sysfs.get_sas_port_data(port)
                 specifics['ports'].append(port_data)
                 if port_data['state'] != 'running':
-                    health = "Failed"
+                    health = "NA"
 
             self.set_health_data(host_data, health, specifics=[specifics])
             sas_hba_data.append(host_data)
         return sas_hba_data
 
     def get_sas_ports_info(self):
-        """Return the latest SAS Ports information."""
+        """Return SAS Ports current health."""
         sas_ports_data = []
         ports = self.sysfs.get_sas_port_list()
         # eg: ['port-1:0', 'port-1:1', 'port-1:2', 'port-1:3']
@@ -350,7 +350,7 @@ class ServerMap(ResourceMap):
                 specifics['phys'].append(phy_data)
                 if phy_data['state'] != 'enabled' or \
                    'Gbit' not in phy_data['negotiated_linkrate']:
-                    health = "Failed"
+                    health = "NA"
 
             self.set_health_data(port_data, health, specifics=[specifics])
             sas_ports_data.append(port_data)
