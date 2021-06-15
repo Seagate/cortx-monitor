@@ -58,7 +58,7 @@ class TestStorageMap(unittest.TestCase):
         sdr_type.side_effect = get_sdr_type_response
         resp = self.server_map.get_platform_sensors_info()
         assert resp["Temperature"][0]["uid"] == "CPU1_Temp"
-        assert resp["Temperature"][0]["health"]["status"] == "OK"
+        assert resp["Temperature"][0]["health"]["status"] == "Ok"
         assert (
             resp["Temperature"][0]["health"]["description"]
             == "CPU1_Temp is in good health"
@@ -81,7 +81,7 @@ class TestStorageMap(unittest.TestCase):
         sdr_type.side_effect = get_sdr_type_response
         resp = self.server_map.get_platform_sensors_info()
         assert resp["Voltage"][0]["uid"] == "12V"
-        assert resp["Voltage"][0]["health"]["status"] == "OK"
+        assert resp["Voltage"][0]["health"]["status"] == "Ok"
         assert resp["Voltage"][0]["health"]["description"] == "12V is in good health"
         assert (
             resp["Voltage"][0]["health"]["specifics"][0]["Sensor Reading"]
