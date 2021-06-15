@@ -168,7 +168,7 @@ class ServerMap(ResourceMap):
         ]
         return cpu_data
 
-    def get_json_formatted_reading(self, reading):
+    def format_ipmi_platform_sensor_reading(self, reading):
         """builds json resposne from ipmi tool response.
         reading arg sample: ('CPU1 Temp', '01', 'ok', '3.1', '36 degrees C')
         """
@@ -177,6 +177,8 @@ class ServerMap(ResourceMap):
         sensor_props = self._ipmi.get_sensor_props(sensor_id)
         lower_critical = sensor_props[1].get('Lower Critical', 'NA')
         upper_critical = sensor_props[1].get('Upper Critical', 'NA')
+        lower_non_recoverable = sensor_props[1].get('Lower Non-Recoverable', 'NA')
+        upper_non_recoverable = sensor_props[1].get('Upper Non-Recoverable', 'NA')
         status = 'OK' if reading[2] == 'ok' else 'NA'
         health_desc = 'good' if status == 'OK' else 'bad'
         recommendation = sspl_constants.DEFAULT_ALERT_RECOMMENDATION if status != 'OK' else 'NA'
@@ -193,6 +195,8 @@ class ServerMap(ResourceMap):
                         "Sensor Reading": f"{reading[-1]}",
                         "lower_critical_threshold": lower_critical,
                         "upper_critical_threshold": upper_critical,
+                        "lower_non_recoverable": lower_non_recoverable,
+                        "upper_non_recoverable": upper_non_recoverable,
                     }
                 ]
             }
@@ -206,7 +210,7 @@ class ServerMap(ResourceMap):
             sensor_reading = self._ipmi.get_sensor_list_by_type(sensor)
             for reading in sensor_reading:
                 response[sensor].append(
-                    self.get_json_formatted_reading(reading)
+                    self.format_ipmi_platform_sensor_reading(reading)
                 )
         return response
 
