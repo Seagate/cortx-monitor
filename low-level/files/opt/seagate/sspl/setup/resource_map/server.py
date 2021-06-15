@@ -175,7 +175,6 @@ class ServerMap(ResourceMap):
         uid = '_'.join(reading[0].split())
         sensor_id = reading[0]
         sensor_props = self._ipmi.get_sensor_props(sensor_id)
-        print(sensor_props)
         lower_critical = sensor_props[1].get('Lower Critical', 'NA')
         upper_critical = sensor_props[1].get('Upper Critical', 'NA')
         status = 'OK' if reading[2] == 'ok' else 'NA'
