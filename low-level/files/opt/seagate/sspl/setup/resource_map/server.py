@@ -188,7 +188,7 @@ class ServerMap(ResourceMap):
             "last_updated":  int(time.time()),
             "health": {
                 "status": status,
-                "description": f"{uid} is in {health_desc} health",
+                "description": f"{uid} sensor is in {health_desc} health",
                 "recommendation": f"{recommendation}",
                 "specifics": [
                     {

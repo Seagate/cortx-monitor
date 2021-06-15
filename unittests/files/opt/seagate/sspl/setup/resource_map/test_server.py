@@ -61,7 +61,7 @@ class TestStorageMap(unittest.TestCase):
         assert resp["Temperature"][0]["health"]["status"] == "Ok"
         assert (
             resp["Temperature"][0]["health"]["description"]
-            == "CPU1_Temp is in good health"
+            == "CPU1_Temp sensor is in good health"
         )
         assert (
             resp["Temperature"][0]["health"]["specifics"][0]["Sensor Reading"]
@@ -82,7 +82,7 @@ class TestStorageMap(unittest.TestCase):
         resp = self.server_map.get_platform_sensors_info()
         assert resp["Voltage"][0]["uid"] == "12V"
         assert resp["Voltage"][0]["health"]["status"] == "Ok"
-        assert resp["Voltage"][0]["health"]["description"] == "12V is in good health"
+        assert resp["Voltage"][0]["health"]["description"] == "12V sensor is in good health"
         assert (
             resp["Voltage"][0]["health"]["specifics"][0]["Sensor Reading"]
             == "12.37 Volts"
