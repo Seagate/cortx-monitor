@@ -85,6 +85,7 @@ DEFAULT_DC = "DEFAULT_DC01"
 DEFAULT_RACK = "DEAFULT_RC01"
 DEFAULT_SN = "DEFAULT_SN01"
 DEFAULT_CLUSTER = "DEFAULT_CC01"
+CPU_PATH = "devices/system/cpu/"
 BLOCK_DIR = "/block/"
 
 # This file will be created when sspl is being configured for node replacement case
