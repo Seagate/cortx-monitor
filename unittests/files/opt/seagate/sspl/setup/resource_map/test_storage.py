@@ -140,7 +140,7 @@ class TestStorageMap(unittest.TestCase):
     )
     def test_get_platform_sensors(self, encl_response):
         encl_response.return_value = json.loads(ENCLOSURE_RESPONSE)
-        resp = self.storage_map.get_platform_sensors()
+        resp = self.storage_map.get_platform_sensors_info()
 
         # Temperature
         assert resp["temperature"][0]['uid'] == "sensor_temp_ctrl_B.1"
@@ -162,7 +162,7 @@ class TestStorageMap(unittest.TestCase):
     )
     def test_get_platform_sensors_empty(self, encl_response):
         encl_response.return_value = ENCLOSURE_RESPONSE_EMPTY
-        resp = self.storage_map.get_platform_sensors()
+        resp = self.storage_map.get_platform_sensors_info()
 
         # Temperature
         assert "temperature" not in resp

@@ -46,7 +46,7 @@ class StorageMap(ResourceMap):
         self.storage_frus = {
             "controllers": self.get_controllers_info,
             "psus": self.get_psu_info,
-            "platform_sensors": self.get_platform_sensors,
+            "platform_sensors": self.get_platform_sensors_info,
             }
 
     @staticmethod
@@ -159,12 +159,20 @@ class StorageMap(ResourceMap):
             data.append(psu_dict)
         return data
 
-    def get_platform_sensors(self):
+    def get_platform_sensors_info(self):
         sensor_list = ['temperature', 'current', 'voltage']
         sensor_data = self.build_encl_platform_sensors_data(sensor_list)
         return sensor_data
 
     def build_encl_platform_sensors_data(self, platform_sensors):
+        """builds and resturns platform sensors data (Temperature, Voltage and Current)
+        by calling enclosure API.
+
+        Args:
+            platform_sensors - list of sensors to fetch the data.
+        Returns:
+            dict with three keys for respective sensors.
+        """
         sensors_data = {}
         sensors_resp = self.get_realstor_encl_data('sensor-status')
         if sensors_resp:
@@ -177,8 +185,8 @@ class StorageMap(ResourceMap):
                           'last_updated':  int(time.time()),
                           'health': {
                             'status': sensor.get('status'),
-                            'description': '',
-                            'recommendation': '',
+                            'description': sensor.get("description", "NA"),
+                            'recommendation': sensor.get("recommendation", "NA"),
                             'specifics': [
                               {
                                 'sensor-name': sensor.get('sensor-name'),
