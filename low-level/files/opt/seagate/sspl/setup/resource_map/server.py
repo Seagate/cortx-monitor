@@ -157,6 +157,7 @@ class ServerMap(ResourceMap):
             {
                 "overall_usage": overall_usage,
                 "cpu_count": cpu_count,
+                "last_updated": int(time.time()),
                 "cpus": per_cpu_data
             }
         ]
