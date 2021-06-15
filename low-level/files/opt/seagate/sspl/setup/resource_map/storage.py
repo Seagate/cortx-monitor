@@ -45,7 +45,8 @@ class StorageMap(ResourceMap):
         self.validate_storage_type_support()
         self.storage_frus = {
             "controllers": self.get_controllers_info,
-            "psus": self.get_psu_info
+            "psus": self.get_psu_info,
+            "platform_sensors": self.get_platform_sensors_info,
             }
 
     @staticmethod
@@ -158,6 +159,51 @@ class StorageMap(ResourceMap):
             data.append(psu_dict)
         return data
 
+    def get_platform_sensors_info(self):
+        sensor_list = ['temperature', 'current', 'voltage']
+        sensor_data = self.build_encl_platform_sensors_data(sensor_list)
+        return sensor_data
+
+    def build_encl_platform_sensors_data(self, platform_sensors):
+        """Builds and returns platform sensors data (Temperature, Voltage and Current)
+
+        It calls enclosure API to fetch the sensor data.
+
+        Args:
+            platform_sensors - list of sensors to fetch the data.
+        Returns:
+            dict with three keys for respective sensors.
+        """
+        sensors_data = {}
+        sensors_resp = self.get_realstor_encl_data('sensor-status')
+        if sensors_resp:
+            for platform_sensor in platform_sensors:
+                for sensor in sensors_resp['api-response']['sensors']:
+                    if sensor['sensor-type'].lower() == platform_sensor:
+                        single_sensor_data = {
+                          'uid': sensor.get('durable-id'),
+                          'fru': 'false',
+                          'last_updated':  int(time.time()),
+                          'health': {
+                            'status': sensor.get('status'),
+                            'description': sensor.get("description", "NA"),
+                            'recommendation': sensor.get("recommendation", "NA"),
+                            'specifics': [
+                              {
+                                'sensor-name': sensor.get('sensor-name'),
+                                'value': sensor.get('value'),
+                                'controller-id': sensor.get('controller-id'),
+                                'container': sensor.get('container'),
+                              }
+                            ]
+                          }
+                        }
+                        if platform_sensor in sensors_data:
+                            sensors_data[platform_sensor].append(single_sensor_data)
+                        else:
+                            sensors_data[platform_sensor] = [single_sensor_data]
+        return sensors_data
+
     @staticmethod
     def get_realstor_encl_data(fru: str):
         """Fetch fru information through webservice API."""
@@ -167,7 +213,8 @@ class StorageMap(ResourceMap):
         fru_data = []
         fru_uri_map = {
             "controllers": ENCL.URI_CLIAPI_SHOWCONTROLLERS,
-            "power-supplies": ENCL.URI_CLIAPI_SHOWPSUS
+            "power-supplies": ENCL.URI_CLIAPI_SHOWPSUS,
+            "platform_sensors": ENCL.URI_CLIAPI_SHOWSENSORSTATUS,
         }
         url = ENCL.build_url(fru_uri_map.get(fru))
         response = ENCL.ws_request(url, ENCL.ws.HTTP_GET)
