@@ -165,8 +165,9 @@ class StorageMap(ResourceMap):
         return sensor_data
 
     def build_encl_platform_sensors_data(self, platform_sensors):
-        """builds and resturns platform sensors data (Temperature, Voltage and Current)
-        by calling enclosure API.
+        """builds and returns platform sensors data (Temperature, Voltage and Current)
+
+        It calls calls enclosure API to fetch the sensor data.
 
         Args:
             platform_sensors - list of sensors to fetch the data.
