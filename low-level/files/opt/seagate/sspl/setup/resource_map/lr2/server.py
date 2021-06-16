@@ -48,7 +48,7 @@ class ServerMap(ResourceMap):
         self.sysfs.initialize()
         self.sysfs_base_path = self.sysfs.get_sysfs_base_path()
         self.cpu_path = self.sysfs_base_path + CPU_PATH
-        self.server_frus = {
+        self.server_map = {
             'cpu': self.get_cpu_info,
             'platform_sensors': self.get_platform_sensors_info,
             'memory': self.get_mem_info,
@@ -86,9 +86,9 @@ class ServerMap(ResourceMap):
         nodes = rpath.strip().split(">")
         leaf_node, _ = self.get_node_details(nodes[-1])
         if leaf_node == "compute":
-            for fru in self.server_frus:
+            for fru in self.server_map:
                 try:
-                    info.update({fru: self.server_frus[fru]()})
+                    info.update({fru: self.server_map[fru]()})
                 except:
                     # TODO: Log the exception
                     info.update({fru: None})
@@ -98,10 +98,10 @@ class ServerMap(ResourceMap):
             fru = None
             for node in nodes:
                 fru, _ = self.get_node_details(node)
-                if self.server_frus.get(fru):
+                if self.server_map.get(fru):
                     fru_found = True
                     try:
-                        info = self.server_frus[fru]()
+                        info = self.server_map[fru]()
                     except:
                         # TODO: Log the exception
                         info = None

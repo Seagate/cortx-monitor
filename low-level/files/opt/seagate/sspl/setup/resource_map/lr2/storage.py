@@ -45,7 +45,7 @@ class StorageMap(ResourceMap):
         super().__init__()
         self.log = CustomLog(HEALTH_SVC_NAME)
         self.validate_storage_type_support()
-        self.storage_frus = {
+        self.storage_map = {
             "controllers": self.get_controllers_info,
             "psus": self.get_psu_info,
             "platform_sensors": self.get_platform_sensors_info,
@@ -82,9 +82,9 @@ class StorageMap(ResourceMap):
         nodes = rpath.strip().split(">")
         leaf_node, _ = self.get_node_details(nodes[-1])
         if leaf_node == "storage":
-            for fru in self.storage_frus:
+            for fru in self.storage_map:
                 try:
-                    info.update({fru: self.storage_frus[fru]()})
+                    info.update({fru: self.storage_map[fru]()})
                 except:
                     # TODO: Log the exception
                     info.update({fru: None})
@@ -95,10 +95,10 @@ class StorageMap(ResourceMap):
             fru_found = False
             for node in nodes:
                 fru, _ = self.get_node_details(node)
-                if self.storage_frus.get(fru):
+                if self.storage_map.get(fru):
                     fru_found = True
                     try:
-                        info = self.storage_frus[fru]()
+                        info = self.storage_map[fru]()
                     except:
                         # TODO: Log the exception
                         info = None
@@ -454,7 +454,7 @@ class StorageMap(ResourceMap):
         return nw_data
 
     def get_sas_ports_info(self):
-        """Return the latest SAS ports information."""
+        """Return SAS ports current health."""
         data = []
         sas_ports = self.get_realstor_encl_data("expander-ports")
         if not sas_ports:
