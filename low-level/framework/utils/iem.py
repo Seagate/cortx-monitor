@@ -13,7 +13,7 @@
 # about this software or licensing, please email opensource@seagate.com or
 # cortx-questions@seagate.com.
 
-import syslog
+
 import os
 
 from framework.base.sspl_constants import IEM_DATA_PATH
@@ -123,11 +123,11 @@ class Iem:
             iem_event_path = f'{IEM_DATA_PATH}/iem_{event_name}'
             if os.path.exists(iem_event_path):
                 os.remove(iem_event_path)
-                IEM.generate_iem(event_name, event_code, severity, description)
+                self.generate_iem(event_name, event_code, severity, description)
         else:
             previous_iem = self.check_existing_iem_event(event_name, event_code)
             if not previous_iem:
-                IEM.generate_iem(event_name, event_code, severity, description)
+                self.generate_iem(event_name, event_code, severity, description)
 
     def iem_fault(self, event):
         event = self.EVENT_CODE[event]
@@ -153,10 +153,12 @@ class Iem:
             if prev_fault_iem_event:
                 self.fault_iems.append(event_name)
 
-    @classmethod
-    def generate_iem(cls, module, event_code, severity, description):
+    @staticmethod
+    def generate_iem(module, event_code, severity, description):
         """Generate iem and send it to a MessgaeBroker."""
         try:
+            logger.info(f"Sending IEM alert for module:{module}"
+                        f" and event_code:{event_code}")
             EventMessage.send(module=module, event_id=event_code,
                               severity=severity, message_blob=description)
         except EventMessageError as e:

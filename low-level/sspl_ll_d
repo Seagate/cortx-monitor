@@ -722,7 +722,6 @@ def initialize_iem():
     except EventMessageError as e:
         logger.error("Failed to initialize IEM Framework."
                      f"ERROR:{e}")
-        raise
 
 def refresh_iem_log_file(signal_number, frame):
     iem_sensor = threadController.get_sspl_module("IEMSensor")
@@ -787,11 +786,7 @@ if __name__ == "__main__":
     #DO NOT EDIT: Marker comment to dynamically add signal handler for SIGUSR1 to generate code coverage report
 
     # Initialize IEM framework
-    try:
-        initialize_iem()
-    except (Exception) as err:
-        logger.critical("Failed in IEM initialization."
-                        f"ERROR:{err}")
+    initialize_iem()
 
     try:
         # Create a PID file for systemd
