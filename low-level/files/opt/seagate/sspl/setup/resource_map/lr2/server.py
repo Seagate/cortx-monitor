@@ -320,7 +320,7 @@ class ServerMap(ResourceMap):
             specifics["nwStatus"] = nw_status
             specifics["nwCableConnStatus"] = nw_cable_conn_status
 
-            # set health status, description and recommendation
+            # set health status and description
             map_status = {"UP": "OK", "DOWN": "Disabled/Failed",
                           "UNKNOWN": "NA"}
             health_status = map_status[nw_cable_conn_status]
@@ -340,11 +340,15 @@ class ServerMap(ResourceMap):
         """Read & Return the latest network status from sysfs files."""
         try:
             nw_status = self.sysfs.fetch_nw_operstate(interface)
+        except Exception:
+            nw_status = "UNKNOWN"
+            # Log the error when logging class is in place.
+        try:
             nw_cable_conn_status = self.sysfs.fetch_nw_cable_status(
                 self.sysfs.get_sys_dir_path('net'), interface
             )
-        except Exception as err:
-            raise ResourceMapError(errno.EINVAL,
-                                   ("Unable to fetch network status due to"
-                                    " an error: %s" % err))
+        except Exception:
+            nw_status = "UNKNOWN"
+            # Log the error when logging class is in place.
+
         return nw_status, nw_cable_conn_status
