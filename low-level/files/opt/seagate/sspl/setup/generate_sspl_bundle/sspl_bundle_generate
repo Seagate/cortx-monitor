@@ -25,6 +25,7 @@ import json
 import subprocess
 import glob
 import logging
+import psutil
 
 from framework.base.sspl_constants import (PRODUCT_FAMILY, SUPPORT_REQUESTOR_NAME,
     SUPPORT_EMAIL_ID, SUPPORT_CONTACT_NUMBER, ENCL_TRIGGER_LOG_MAX_RETRY,
@@ -48,7 +49,7 @@ class SSPLBundleError(Exception):
         return "SSPLBundleError(%d): %s" %(self._rc, self._desc)
 
 
-class SSPLBundleGenerate(object):
+class SupportBundle(object):
 
     def __init__(self):
 
@@ -63,14 +64,17 @@ class SSPLBundleGenerate(object):
         self.enclosure_log = f"{SSPL_SB_TMP}/enclosure_logs.zip"
         self.enclosure_wwn = "NA"
 
-    def generate_sspl_support_bundle(self, parser):
-        if os.path.isfile(SSPL_SB_REQUEST):
-            msg = "One SSPL Support Bundle request is ongoing already, skipping current request..!"
+    def generate(self, parser):
+        allow_new_request = validate()
+        if not allow_new_request:
+            msg = "SSPL Support Bundle creation in progress. Existing..."
             logger.error(msg)
             raise SystemExit(msg)
 
         os.makedirs(SSPL_SB_TMP, exist_ok=True)
-        open(SSPL_SB_REQUEST, "a").close()
+        with open(SSPL_SB_REQUEST, 'w') as f:
+            f.write(str(os.getpid()))
+
         file_name = "sspl_%s.tar.gz" % parser[1]
 
         sspl_log_dir = Conf.get(SSPL_CONF, "%s>sspl_log_file_path" % \
@@ -278,6 +282,19 @@ def sspl_bundle_cleanup():
     if os.path.exists(SSPL_SB_TMP):
         shutil.rmtree(SSPL_SB_TMP)
 
+def validate():
+    """Checking previous process pid/request is running or not."""
+    allow_new_request = True
+    sb_pid = None
+    if os.path.isfile(SSPL_SB_REQUEST):
+        with open(SSPL_SB_REQUEST, 'r') as f:
+            sb_pid = f.read()
+        if sb_pid and psutil.pid_exists(int(sb_pid)):
+            allow_new_request = False
+        else:
+            sspl_bundle_cleanup()
+    return allow_new_request
+
 def initialize_logging(parser):
     # set Logging Handlers
     _logger = logging.getLogger('sspl_sb')
@@ -303,16 +320,14 @@ logger = initialize_logging(sys.argv)
 if __name__ == "__main__":
     if len(sys.argv) >= 3:
         try:
-            SSPLBundleObj = SSPLBundleGenerate()
-            SSPLBundleObj.generate_sspl_support_bundle(sys.argv)
+            SSPLBundleObj = SupportBundle()
+            SSPLBundleObj.generate(sys.argv)
         except Exception as e:
-            logger.error("SSPL support bundle script is failed with an unexpected "
-                "error. please try again ..!")
-            msg = "Error Message : %s" % e
+            msg = "Error occurred while creating support bundle. %s" % e
             logger.error(msg)
             sspl_bundle_cleanup()
             raise SSPLBundleError(1, msg)
         sspl_bundle_cleanup()
     else:
-        msg = "Unrecognized arguments: %s" % sys.argv
+        msg = "error: invalid argument %s" % sys.argv
         raise SSPLBundleError(1, msg)
