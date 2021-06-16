@@ -23,6 +23,7 @@ import sys
 import shutil
 import json
 import subprocess
+import psutil
 
 from framework.base.sspl_constants import (PRODUCT_FAMILY, SUPPORT_REQUESTOR_NAME,
     SUPPORT_EMAIL_ID, SUPPORT_CONTACT_NUMBER, ENCL_TRIGGER_LOG_MAX_RETRY,
@@ -32,7 +33,7 @@ from framework.base.sspl_constants import (PRODUCT_FAMILY, SUPPORT_REQUESTOR_NAM
 sys.path.insert(0, f'/opt/seagate/{PRODUCT_FAMILY}/sspl/low-level')
 from framework.utils.config_reader import ConfigReader
 onGoingRequestPath = f"{DATA_PATH}sspl-sb-req.txt"
-sspl_bundle_tmp = f"{DATA_PATH}sspl_bundle_{str(int(time.time()))}"
+sspl_bundle_tmp = f"{DATA_PATH}sspl_bundle_tmp"
 
 class SSPLBundleGenerate(object):
 
@@ -70,7 +71,7 @@ class SSPLBundleGenerate(object):
             "Lists all users": "rabbitmqctl list_users"
         }
 
-    def generate_sspl_support_bundle(self, parser, tmpFile):
+    def generate_sspl_support_bundle(self, parser):
         file_name = "sspl_%s.tar.gz" % parser[1]
         try:
             conf_reader = ConfigReader()
@@ -95,7 +96,6 @@ class SSPLBundleGenerate(object):
                 self.localTempPath = configure_path+"sspl/"
             else:
                 print("Given path doesn't exist")
-                tmpFile.close()
                 sspl_bundle_cleanup()
                 sys.exit(1)
         if not os.path.exists(self.localTempPath):
@@ -160,7 +160,6 @@ class SSPLBundleGenerate(object):
 
         except (OSError, tarfile.TarError) as err:
             print("Facing problem while creating sspl support bundle : %s" % err)
-            tmpFile.close()
             sspl_bundle_cleanup()
             sys.exit(1)
 
@@ -325,22 +324,37 @@ def sspl_bundle_cleanup():
     if os.path.exists(sspl_bundle_tmp):
         shutil.rmtree(sspl_bundle_tmp)
 
+def validate_sb_request():
+    """Checking previous process pid/request is running or not."""
+    allow_new_request = True
+    sb_pid = None
+    if os.path.isfile(onGoingRequestPath):
+        with open(onGoingRequestPath, 'r') as f:
+            sb_pid = f.read()
+        if sb_pid and psutil.pid_exists(int(sb_pid)):
+            allow_new_request = False
+        else:
+            sspl_bundle_cleanup()
+    return allow_new_request
+
 if __name__ == "__main__":
-    if not os.path.isfile(onGoingRequestPath):
-        if len(sys.argv) < 3:
-            print("Unrecognized arguments: %s" % sys.argv)
-            sys.exit(1)
-        tmpFile = open(onGoingRequestPath, "w")
+    if len(sys.argv) < 3:
+        sys.stderr.write("error: invalid argument %s" % sys.argv)
+        sys.exit(1)
+    allow_new_request = validate_sb_request()
+    if allow_new_request:
+        with open(onGoingRequestPath, 'w') as f:
+            f.write(str(os.getpid()))
         os.makedirs(sspl_bundle_tmp)
         try:
             SSPLBundleObj = SSPLBundleGenerate()
-            SSPLBundleObj.generate_sspl_support_bundle(sys.argv, tmpFile)
+            SSPLBundleObj.generate_sspl_support_bundle(sys.argv)
+            sspl_bundle_cleanup()
+            sys.exit(0)
         except Exception as e:
-            print("SSPL support bundle script is failed with an unexpected "
-                "error. please try again ..!")
-            print("Error Message : %s" % e)
-        tmpFile.close()
-        sspl_bundle_cleanup()
+            sys.stderr.write("Error occurred while creating support bundle. %s" % e)
+            sspl_bundle_cleanup()
+            sys.exit(1)
     else:
-        print("Already SSPL Support Bundle request is going on, So skipping current request..!")
+        sys.stderr.write("SSPL Support Bundle creation in progress. Existing...")
         sys.exit(1)
