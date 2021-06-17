@@ -282,9 +282,9 @@ class StorageMap(ResourceMap):
         return dg_data
 
     def get_sideplane_expanders_info(self):
-        """Fetch sideplane_expanders information using /show/enclosures api and
-            returns info in specific format."""
+        """Update and return sideplane_expanders information."""
         sideplane_expander_list = []
+        sideplane_expander_data = []
         enclosures = self.get_realstor_encl_data("enclosures")
         # TO-DO: Get sideplane_expander data for CORVAULT.
         encl_drawers = enclosures[0].get("drawers")
@@ -293,12 +293,6 @@ class StorageMap(ResourceMap):
                 sideplanes = {}
                 sideplanes = drawer.get("sideplanes")
                 sideplane_expander_list.extend(sideplanes)
-        sideplane_data = self.get_sideplane_data_dict(sideplane_expander_list)
-        return sideplane_data
-
-    def get_sideplane_data_dict(self, sideplane_expander_list):
-        """Return sideplane health data in specific format."""
-        sideplane_expander_data = []
         for sideplane in sideplane_expander_list:
             expander_data = []
             expanders = sideplane.get("expanders")
@@ -382,5 +376,5 @@ class StorageMap(ResourceMap):
 #     dg_health_data = storage.get_health_info(rpath="nodes[0]>storage[0]>fw>disk_groups")
 #     print(json.dumps(volume_health_data))
 #     print(json.dumps(dg_health_data))
-#   sideplane_data = storage.get_health_info(rpath="nodes[0]>storage[0]>fw>sideplane_expanders")
-#    print(json.dumps(sideplane_data))
+#     sideplane_data = storage.get_health_info(rpath="nodes[0]>storage[0]>fw>sideplane_expanders")
+#     print(json.dumps(sideplane_data))
