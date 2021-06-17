@@ -24,4 +24,4 @@ class ResourceMapError(BaseError):
     def __init__(self, rc=0, desc=None, message_id=None, message_args=None):
         """Initialize ResourceMapError."""
         super(ResourceMapError, self).__init__(
-              rc, 'ResourceMap Error: %s' % desc, message_id, message_args)
+              rc, 'SSPL: %s' % desc, message_id, message_args)

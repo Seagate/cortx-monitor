@@ -51,6 +51,7 @@ class StorageMap(ResourceMap):
             "disk_groups": self.get_disk_groups_info,
             "sideplane_expanders": self.get_sideplane_expanders_info,
             "nw_ports": self.get_nw_ports_info,
+            "disks": self.get_drives_info
         }
 
     @staticmethod
@@ -90,7 +91,7 @@ class StorageMap(ResourceMap):
         if not fru_found:
             raise ResourceMapError(
                 errno.EINVAL,
-                "Health provider doesn't have support for'{rpath}'.")
+                f"Health provider doesn't have support for'{rpath}'.")
         return info
 
     def get_controllers_info(self):
@@ -326,6 +327,37 @@ class StorageMap(ResourceMap):
             expander_data.append(expander_dict)
         return expander_data
 
+    def get_drives_info(self):
+        """Update and return drives information in specific format."""
+        disk_data = []
+        drives = self.get_realstor_encl_data("drives")
+        for drive in drives:
+            slot = drive.get("slot", -1)
+            if slot == -1:
+                continue
+            disk_data.append({
+                "uid": drive.get("durable-id"),
+                "fru": "true",
+                "last_updated": int(time.time()),
+                "health": {
+                    "status": drive.get("health", "NA"),
+                    "description": drive.get("health", "NA"),
+                    "recommendation": drive.get("health-recommendation", "NA"),
+                    "specifics": [
+                        {
+                            "serial-number": drive.get("serial-number", "NA"),
+                            "model": drive.get("model", "NA"),
+                            "size": drive.get("size", "NA"),
+                            "temperature": drive.get("temperature", "NA"),
+                            "disk-group": drive.get("disk-group", "NA"),
+                            "storage-pool-name": drive.get("storage-pool-name", "NA"),
+                            "location": drive.get("location", "NA")
+                            }
+                        ]
+                }
+            })
+        return disk_data
+
     @staticmethod
     def get_realstor_encl_data(fru: str):
         """Fetch fru information through webservice API."""
@@ -341,6 +373,7 @@ class StorageMap(ResourceMap):
             "disk-groups": ENCL.URI_CLIAPI_SHOWDISKGROUPS,
             "enclosures": ENCL.URI_CLIAPI_SHOWENCLOSURE,
             "network-parameters": ENCL.URI_CLIAPI_NETWORKHEALTHSTATUS,
+            "drives": ENCL.URI_CLIAPI_SHOWDISKS
         }
         url = ENCL.build_url(fru_uri_map.get(fru))
         response = ENCL.ws_request(url, ENCL.ws.HTTP_GET)
