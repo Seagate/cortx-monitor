@@ -49,7 +49,8 @@ class StorageMap(ResourceMap):
             "psus": self.get_psu_info,
             "platform_sensors": self.get_platform_sensors_info,
             "logical_volumes": self.get_logical_volumes_info,
-            "disk_groups": self.get_disk_groups_info
+            "disk_groups": self.get_disk_groups_info,
+            "sideplane_expanders": self.get_sideplane_expanders_info,
         }
 
     @staticmethod
@@ -280,6 +281,69 @@ class StorageMap(ResourceMap):
                 })
         return dg_data
 
+    def get_sideplane_expanders_info(self):
+        """Fetch sideplane_expanders information using /show/enclosures api and
+            returns info in specific format."""
+        sideplane_expander_list = []
+        enclosures = self.get_realstor_encl_data("enclosures")
+        # TO-DO: Get sideplane_expander data for CORVAULT.
+        encl_drawers = enclosures[0].get("drawers")
+        if encl_drawers:
+            for drawer in encl_drawers:
+                sideplanes = {}
+                sideplanes = drawer.get("sideplanes")
+                sideplane_expander_list.extend(sideplanes)
+        sideplane_data = self.get_sideplane_data_dict(sideplane_expander_list)
+        return sideplane_data
+
+    def get_sideplane_data_dict(self, sideplane_expander_list):
+        """Return sideplane health data in specific format."""
+        sideplane_expander_data = []
+        for sideplane in sideplane_expander_list:
+            expander_data = []
+            expanders = sideplane.get("expanders")
+            for expander in expanders:
+                expander_dict = {
+                    "uid": expander.get("durable-id", "NA"),
+                    "fru": "true",
+                    "last_updated": int(time.time()),
+                    "health": {
+                        "status": expander.get("health", "NA"),
+                        "description": expander.get("description", "NA"),
+                        "recommendation": expander.get("health-recommendation", "NA"),
+                        "specifics": [
+                            {
+                                "name": expander.get("name", "NA"),
+                                "location": expander.get("location", "NA"),
+                                "status": expander.get("status", "NA"),
+                                "drawer-id": expander.get("drawer-id", "NA")
+                            }
+                        ]
+                    }
+                }
+                expander_data.append(expander_dict)
+            sideplane_dict = {
+                "uid": sideplane.get("durable-id", "NA"),
+                "fru": "true",
+                "last_updated": int(time.time()),
+                "health": {
+                    "status": sideplane.get("health", "NA"),
+                    "description": sideplane.get("description", "NA"),
+                    "recommendation": sideplane.get("health-recommendation", "NA"),
+                    "specifics": [
+                        {
+                            "name": sideplane.get("name", "NA"),
+                            "location": sideplane.get("location", "NA"),
+                            "status": sideplane.get("status", "NA"),
+                            "drawer-id": sideplane.get("drawer-id", "NA"),
+                            "expanders": expander_data
+                        }
+                    ]
+                }
+            }
+            sideplane_expander_data.append(sideplane_dict)
+        return sideplane_expander_data
+
     @staticmethod
     def get_realstor_encl_data(fru: str):
         """Fetch fru information through webservice API."""
@@ -292,7 +356,8 @@ class StorageMap(ResourceMap):
             "power-supplies": ENCL.URI_CLIAPI_SHOWPSUS,
             "platform_sensors": ENCL.URI_CLIAPI_SHOWSENSORSTATUS,
             "volumes": ENCL.URI_CLIAPI_SHOWVOLUMES,
-            "disk-groups": ENCL.URI_CLIAPI_SHOWDISKGROUPS
+            "disk-groups": ENCL.URI_CLIAPI_SHOWDISKGROUPS,
+            "enclosures": ENCL.URI_CLIAPI_SHOWENCLOSURE
         }
         url = ENCL.build_url(fru_uri_map.get(fru))
         response = ENCL.ws_request(url, ENCL.ws.HTTP_GET)
@@ -317,3 +382,5 @@ class StorageMap(ResourceMap):
 #     dg_health_data = storage.get_health_info(rpath="nodes[0]>storage[0]>fw>disk_groups")
 #     print(json.dumps(volume_health_data))
 #     print(json.dumps(dg_health_data))
+#   sideplane_data = storage.get_health_info(rpath="nodes[0]>storage[0]>fw>sideplane_expanders")
+#    print(json.dumps(sideplane_data))
