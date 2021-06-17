@@ -148,14 +148,17 @@ class SysFS(Utility):
             eg: ['host1', 'host2']
         """
         sas_hosts = []
+        err_str = ""
+        err_no = 0
         try:
             host_dirpath = self.get_sys_dir_path('sas_host')
             sas_hosts = os.listdir(host_dirpath)
             sas_hosts = [host for host in sas_hosts
                          if 'host' in host]
-        except Exception:
+        except Exception as err:
             sas_hosts = []
-        return sas_hosts
+            err_no, err_str = err.args
+        return sas_hosts, err_str, err_no
 
     def get_sas_port_list(self, host=""):
         """
@@ -165,15 +168,18 @@ class SysFS(Utility):
             eg: ['port-1:0', 'port-1:1', 'port-1:2', 'port-1:3']
         """
         sas_ports = []
+        err_str = ""
+        err_no = 0
         try:
             host_id = host.replace('host', '')
             port_dirpath = self.get_sys_dir_path('sas_port')
             sas_ports = os.listdir(port_dirpath)
             sas_ports = [port for port in sas_ports
                          if f'port-{host_id}' in port]
-        except Exception:
+        except Exception as err:
             sas_ports = []
-        return sas_ports
+            err_no, err_str = err.args
+        return sas_ports, err_str, err_no
 
     def get_sas_port_data(self, port_name):
         """
@@ -185,6 +191,8 @@ class SysFS(Utility):
                 }
         """
         port_data = {}
+        err_str = ""
+        err_no = 0
         try:
             host_id, port_id = port_name.replace('port-', '').split(':')
             port_data_path = os.path.join(
@@ -203,9 +211,10 @@ class SysFS(Utility):
                     "state": state,
                     "sas_address": sas_addr
                 }
-        except Exception:
+        except Exception as err:
             port_data = {}
-        return port_data
+            err_no, err_str = err.args
+        return port_data, err_str, err_no
 
     def get_phy_list_for_port(self, port):
         """
@@ -215,6 +224,8 @@ class SysFS(Utility):
                 returns an empty list if port-1:0 does not exist.
         """
         phys = []
+        err_str = ""
+        err_no = 0
         try:
             phy_list_dir = os.path.join(
                             self.get_sys_dir_path('sas_port'),
@@ -222,9 +233,10 @@ class SysFS(Utility):
             phys = os.listdir(phy_list_dir)
             phys = [phy for phy in phys if 'phy' in phy]
             phys.sort(key=lambda phy: int(phy.split(':')[1]))
-        except Exception:
+        except Exception as err:
             phys = []
-        return phys
+            err_no, err_str = err.args
+        return phys, err_str, err_no
 
     def get_sas_phy_data(self, phy):
         """
@@ -237,6 +249,8 @@ class SysFS(Utility):
                 }
         """
         phy_data = {}
+        err_str = ""
+        err_no = 0
         try:
             phy_data_dir = os.path.join(
                             self.get_sys_dir_path('sas_phy'), phy)
@@ -253,6 +267,7 @@ class SysFS(Utility):
                 "state": state,
                 "negotiated_linkrate": n_link_rate
             }
-        except Exception:
+        except Exception as err:
             phy_data = {}
-        return phy_data
+            err_no, err_str = err.args
+        return phy_data, err_str, err_no

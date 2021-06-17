@@ -309,21 +309,32 @@ class ServerMap(ResourceMap):
     def get_sas_hba_info(self):
         """Return SAS-HBA current health."""
         sas_hba_data = []
-        hosts = self.sysfs.get_sas_host_list()  # ['host1']
+        hosts, err, errno = self.sysfs.get_sas_host_list()  # ['host1']
+        if errno:
+            # Log the error when logging module is ready.
+            pass
         for host in hosts:
             host_id = SAS_RESOURCE_ID + host.replace('host', '')
             host_data = self.get_health_template(host_id, False)
-            ports = self.sysfs.get_sas_port_list(host)
+            ports, err, errno = self.sysfs.get_sas_port_list(host)
             # ports = ['port-1:0', 'port-1:1', 'port-1:2', 'port-1:3']
+            if errno:
+                # Log the error when logging module is ready.
+                pass
             health = "OK"
             specifics = {
                 'num_ports': len(ports),
                 'ports': []
             }
             for port in ports:
-                port_data = self.sysfs.get_sas_port_data(port)
+                port_data, err, errno = self.sysfs.get_sas_port_data(port)
+
+                if errno:
+                    # Log the error when logging module is ready.
+                    pass
+
                 specifics['ports'].append(port_data)
-                if port_data['state'] != 'running':
+                if not port_data or port_data['state'] != 'running':
                     health = "NA"
 
             self.set_health_data(host_data, health, specifics=[specifics])
@@ -333,20 +344,29 @@ class ServerMap(ResourceMap):
     def get_sas_ports_info(self):
         """Return SAS Ports current health."""
         sas_ports_data = []
-        ports = self.sysfs.get_sas_port_list()
+        ports, err, errno = self.sysfs.get_sas_port_list()
         # eg: ['port-1:0', 'port-1:1', 'port-1:2', 'port-1:3']
+        if errno:
+            # Log the error when logging module is ready.
+            pass
         for port in ports:
             port_id = 'sas_' + port
             port_data = self.get_health_template(port_id, False)
-            phys = self.sysfs.get_phy_list_for_port(port)
+            phys, err, errno = self.sysfs.get_phy_list_for_port(port)
             # eg: [ 'phy-1:0', 'phy-1:1', 'phy-1:2', 'phy-1:3']
+            if errno:
+                # Log the error when logging module is ready.
+                pass
             specifics = {
                 'num_phys': len(phys),
                 'phys': []
             }
             health = "OK"
             for phy in phys:
-                phy_data = self.sysfs.get_sas_phy_data(phy)
+                phy_data, err, errno = self.sysfs.get_sas_phy_data(phy)
+                if errno:
+                    # Log the error when logging module is ready.
+                    pass
                 specifics['phys'].append(phy_data)
                 if phy_data['state'] != 'enabled' or \
                    'Gbit' not in phy_data['negotiated_linkrate']:
