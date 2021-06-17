@@ -290,45 +290,30 @@ class StorageMap(ResourceMap):
         encl_drawers = enclosures[0].get("drawers")
         if encl_drawers:
             for drawer in encl_drawers:
-                sideplanes = {}
                 sideplanes = drawer.get("sideplanes")
                 sideplane_expander_list.extend(sideplanes)
         for sideplane in sideplane_expander_list:
-            expander_data = []
+            sideplane_health = sideplane.get("health", "NA")
+            if sideplane_health in HEALTH_UNDESIRED_VALS:
+                description = "Sideplane is in unknown health state."
+            elif sideplane_health == "OK":
+                description = "Sideplane is in good state."
+            else:
+                description = "Sideplane is not in good state."
             expanders = sideplane.get("expanders")
-            for expander in expanders:
-                expander_dict = {
-                    "uid": expander.get("durable-id", "NA"),
-                    "fru": "true",
-                    "last_updated": int(time.time()),
-                    "health": {
-                        "status": expander.get("health", "NA"),
-                        "description": expander.get("description", "NA"),
-                        "recommendation": expander.get("health-recommendation", "NA"),
-                        "specifics": [
-                            {
-                                "name": expander.get("name", "NA"),
-                                "location": expander.get("location", "NA"),
-                                "status": expander.get("status", "NA"),
-                                "drawer-id": expander.get("drawer-id", "NA")
-                            }
-                        ]
-                    }
-                }
-                expander_data.append(expander_dict)
+            expander_data = self.get_expander_data(expanders)
             sideplane_dict = {
                 "uid": sideplane.get("durable-id", "NA"),
                 "fru": "true",
                 "last_updated": int(time.time()),
                 "health": {
-                    "status": sideplane.get("health", "NA"),
-                    "description": sideplane.get("description", "NA"),
+                    "status": sideplane_health,
+                    "description": description,
                     "recommendation": sideplane.get("health-recommendation", "NA"),
                     "specifics": [
                         {
                             "name": sideplane.get("name", "NA"),
                             "location": sideplane.get("location", "NA"),
-                            "status": sideplane.get("status", "NA"),
                             "drawer-id": sideplane.get("drawer-id", "NA"),
                             "expanders": expander_data
                         }
@@ -337,6 +322,38 @@ class StorageMap(ResourceMap):
             }
             sideplane_expander_data.append(sideplane_dict)
         return sideplane_expander_data
+
+    def get_expander_data(self, expanders):
+        """Returns expanders data in specific format."""
+        expander_data = []
+        for expander in expanders:
+            expander_health = expander.get("health", "NA")
+            if expander_health in HEALTH_UNDESIRED_VALS:
+                expander_health = "NA"
+                expander_desc = "Expander is in unknown health state."
+            elif expander_health == "OK":
+                expander_desc = "Expander is in goot state."
+            else:
+                expander_desc = "Expander is not in good state."
+            expander_dict = {
+                "uid": expander.get("durable-id", "NA"),
+                "fru": "true",
+                "last_updated": int(time.time()),
+                "health": {
+                    "status": expander_health,
+                    "description": expander_desc,
+                    "recommendation": expander.get("health-recommendation", "NA"),
+                    "specifics": [
+                        {
+                            "name": expander.get("name", "NA"),
+                            "location": expander.get("location", "NA"),
+                            "drawer-id": expander.get("drawer-id", "NA")
+                        }
+                    ]
+                }
+            }
+            expander_data.append(expander_dict)
+        return expander_data
 
     @staticmethod
     def get_realstor_encl_data(fru: str):
