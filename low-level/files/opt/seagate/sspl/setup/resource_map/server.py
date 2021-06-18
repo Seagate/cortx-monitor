@@ -122,7 +122,6 @@ class ServerMap(ResourceMap):
         for cpu_id in range(0, cpu_count):
             uid = f"cpu_{cpu_id}"
             cpu_dict = self.get_health_template(uid, is_fru=False)
-            cpu_dict["last_updated"] = int(time.time())
             online_status = "Online" if cpu_id in cpu_online else "Offline"
             health_status = "OK" if online_status == "Online" else "NA"
             usage = "NA" if health_status == "NA" \
@@ -160,26 +159,20 @@ class ServerMap(ResourceMap):
         upper_non_recoverable = sensor_props[1].get('Upper Non-Recoverable', 'NA')
         status = 'OK' if reading[2] == 'ok' else 'NA'
         health_desc = 'good' if status == 'OK' else 'bad'
+        description = f"{uid} sensor is in {health_desc} health."
         recommendation = sspl_constants.DEFAULT_ALERT_RECOMMENDATION if status != 'OK' else 'NA'
-        resp = {
-            "uid": uid,
-            "fru": "false",
-            "last_updated":  int(time.time()),
-            "health": {
-                "status": status,
-                "description": f"{uid} sensor is in {health_desc} health",
-                "recommendation": f"{recommendation}",
-                "specifics": [
-                    {
-                        "Sensor Reading": f"{reading[-1]}",
-                        "lower_critical_threshold": lower_critical,
-                        "upper_critical_threshold": upper_critical,
-                        "lower_non_recoverable": lower_non_recoverable,
-                        "upper_non_recoverable": upper_non_recoverable,
-                    }
-                ]
-            }
-        }
+        specifics = [
+            {
+                "Sensor Reading": f"{reading[-1]}",
+                "lower_critical_threshold": lower_critical,
+                "upper_critical_threshold": upper_critical,
+                "lower_non_recoverable": lower_non_recoverable,
+                "upper_non_recoverable": upper_non_recoverable,
+                }
+            ]
+        resp = self.get_health_template(uid, is_fru=False)
+        self.set_health_data(
+            resp, status, description, recommendation, specifics)
         return resp
 
     def get_platform_sensors_info(self):
@@ -201,13 +194,13 @@ class ServerMap(ResourceMap):
             80))
         data = []
         status = "OK"
-        description = "Host memory is in good health"
+        description = "Host memory is in good health."
         self.mem_info = dict(psutil.virtual_memory()._asdict())
         curr_mem_usage_threshold = int(self.mem_info['percent'])
         if curr_mem_usage_threshold > int(default_mem_usage_threshold):
             status = "Overloaded"
             description = (f"Current host memory usage is {curr_mem_usage_threshold},"
-                           f"beyond configured threshold of {default_mem_usage_threshold}")
+                           f"beyond configured threshold of {default_mem_usage_threshold}.")
 
         memory_dict = self.prepare_mem_json(status,
                                             description)
@@ -222,15 +215,8 @@ class ServerMap(ResourceMap):
                 total_memory['percent'] = str(self.mem_info['percent']) + '%'
             else:
                 total_memory[key] = str(self.mem_info[key] >> 20) + 'MB'
-
-        memory_dict = {
-            "uid": "main_memory",
-            "fru": "false",
-            "last_updated": int(time.time()),
-            "health": {
-                "status": status,
-                "description": description,
-                "specifics": [
+        uid = "main_memory"
+        specifics = [
                     {
                         "total": total_memory['total'],
                         "available": total_memory['available'],
@@ -245,8 +231,10 @@ class ServerMap(ResourceMap):
                         "slab": total_memory['slab']
                     }
                 ]
-            }
-        }
+        memory_dict = self.get_health_template(uid, is_fru=False)
+        self.set_health_data(
+            memory_dict, status=status, description=description,
+            specifics=specifics)
         return memory_dict
 
 

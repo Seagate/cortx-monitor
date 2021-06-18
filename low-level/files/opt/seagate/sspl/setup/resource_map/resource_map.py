@@ -16,6 +16,7 @@
 # please email opensource@seagate.com or cortx-questions@seagate.com
 
 import re
+import time
 from abc import ABCMeta, abstractmethod
 
 
@@ -59,7 +60,7 @@ class ResourceMap(metaclass=ABCMeta):
         return {
             "uid": uid,
             "fru": str(is_fru).lower(),
-            "last_updated": "",
+            "last_updated": int(time.time()),
             "health": {
                 "status": "",
                 "description": "",
@@ -79,8 +80,7 @@ class ResourceMap(metaclass=ABCMeta):
                 'is' if good_state else 'is not')
         if not recommendation:
             recommendation = 'None' if good_state\
-                             else "Fault detected, please contact Seagate support."
-
+                else "Fault detected, please contact Seagate support."
         health_data["health"].update({
             "status": status,
             "description": description,

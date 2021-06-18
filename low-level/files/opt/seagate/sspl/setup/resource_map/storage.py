@@ -24,7 +24,6 @@
 
 import errno
 import json
-import re
 import time
 
 from framework.utils.conf_utils import (
@@ -102,8 +101,6 @@ class StorageMap(ResourceMap):
             status = controller.get("health", "NA")
             description = controller.get("description")
             recommendation = controller.get("health-recommendation")
-            controller_dict = self.get_health_template(uid, is_fru=True)
-            controller_dict["last_updated"] = int(time.time())
             specifics = [
                 {
                     "serial-number": controller.get("serial-number", "NA"),
@@ -115,6 +112,7 @@ class StorageMap(ResourceMap):
                     "location": controller.get("position", "NA")
                 }
             ]
+            controller_dict = self.get_health_template(uid, is_fru=True)
             self.set_health_data(
                 controller_dict, status, description, recommendation,
                 specifics)
@@ -130,8 +128,6 @@ class StorageMap(ResourceMap):
             status = psu.get("health", "NA")
             description = psu.get("description")
             recommendation = psu.get("health-recommendation")
-            psu_dict = self.get_health_template(uid, is_fru=True)
-            psu_dict["last_updated"] = int(time.time())
             specifics = [
                 {
                     "location": psu.get("location", "NA"),
@@ -143,6 +139,7 @@ class StorageMap(ResourceMap):
                     "dctemp": psu.get("dctemp", "NA")
                 }
             ]
+            psu_dict = self.get_health_template(uid, is_fru=True)
             self.set_health_data(
                 psu_dict, status, description, recommendation, specifics)
             data.append(psu_dict)
@@ -172,9 +169,6 @@ class StorageMap(ResourceMap):
                         status = sensor.get('status')
                         description = sensor.get("description", "NA")
                         recommendation = sensor.get("recommendation", "NA")
-                        single_sensor_data = self.get_health_template(
-                            sensor.get('durable-id'), is_fru=False)
-                        single_sensor_data['last_updated'] = int(time.time())
                         specifics = [
                             {
                                 'sensor-name': sensor.get('sensor-name'),
@@ -183,11 +177,14 @@ class StorageMap(ResourceMap):
                                 'container': sensor.get('container'),
                             }
                         ]
+                        single_sensor_data = self.get_health_template(
+                            sensor.get('durable-id'), is_fru=False)
                         self.set_health_data(
                             single_sensor_data, status, description,
                             recommendation, specifics)
                         if platform_sensor in sensors_data:
-                            sensors_data[platform_sensor].append(single_sensor_data)
+                            sensors_data[platform_sensor].append(
+                                single_sensor_data)
                         else:
                             sensors_data[platform_sensor] = [single_sensor_data]
         return sensors_data
@@ -216,7 +213,6 @@ class StorageMap(ResourceMap):
                     }
                 ]
                 logvol_data_dict = self.get_health_template(uid, is_fru=False)
-                logvol_data_dict["last_updated"] = int(time.time())
                 self.set_health_data(
                     logvol_data_dict, health, description, recommendation,
                     specifics)
@@ -257,8 +253,6 @@ class StorageMap(ResourceMap):
                 else:
                     dg_description = "Disk group is not in good health."
                 recommendation = diskgroup.get("health-recommendation", "NA")
-                dg_data_dict = self.get_health_template(uid, is_fru=False)
-                dg_data_dict["last_updated"] = int(time.time())
                 specifics = [
                     {
                         "class": diskgroup.get("storage-type", "NA"),
@@ -276,6 +270,7 @@ class StorageMap(ResourceMap):
                         "volumes": volumes
                     }
                 ]
+                dg_data_dict = self.get_health_template(uid, is_fru=False)
                 self.set_health_data(
                     dg_data_dict, health, dg_description, recommendation,
                     specifics)
@@ -315,7 +310,6 @@ class StorageMap(ResourceMap):
                 }
             ]
             sideplane_dict = self.get_health_template(uid, is_fru=True)
-            sideplane_dict["last_updated"] = int(time.time())
             self.set_health_data(
                 sideplane_dict, health, description, recommendation, specifics)
 
@@ -344,7 +338,6 @@ class StorageMap(ResourceMap):
                 }
             ]
             expander_dict = self.get_health_template(uid, is_fru=True)
-            expander_dict["last_updated"] = int(time.time())
             self.set_health_data(
                 expander_dict, expander_health, description, recommendation,
                 specifics)
