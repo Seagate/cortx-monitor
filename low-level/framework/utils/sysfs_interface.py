@@ -130,25 +130,14 @@ class SysFS(Utility):
            values: <'0', '1', 'unknown'>. So, beased on its value, returns the
            status such as : <'DOWN', 'UP', 'UNKNOWN'> respectively.
         '''
-        carrier_file_path = os.path.join(nw_interface_path,
-                                         interface, 'carrier')
+        carrier_file_path = os.path.join(nw_interface_path, f'{interface}/carrier')
 
         carrier_indicator = 'unknown'
-        with open(carrier_file_path) as cFile:
-            carrier_indicator = cFile.read().strip()
-        if carrier_indicator not in self.nw_phy_link_state.keys():
-            carrier_indicator = 'unknown'
+        try:
+            with open(carrier_file_path) as cFile:
+                carrier_indicator = cFile.read().strip()
+            if carrier_indicator not in self.nw_phy_link_state.keys():
+                carrier_indicator = 'unknown'
+        except OSError as os_err:
+            return os_err.errno
         return self.nw_phy_link_state[carrier_indicator]
-
-    def fetch_nw_operstate(self, interface):
-        """
-        Return the Operational Status of the Network Interface.
-        Possible Values: <'UNKNOWN', 'NOTPRESENT", 'DOWN', 'LOWERLAYERDOWN',
-                          'TESTING', 'DORMANT', 'UP'>
-        """
-        operstate_file_path = os.path.join(self.get_sys_dir_path('net'),
-                                           interface, 'operstate')
-        operstate = "UNKNOWN"
-        with open(operstate_file_path) as cFile:
-            operstate = cFile.read().strip().upper()
-        return operstate
