@@ -82,26 +82,6 @@ class ServerMap(ResourceMap):
         return info
 
     @staticmethod
-    def set_health_data(health_data: dict, status, description=None,
-                        recommendation=None, specifics=None):
-        """Sets health attributes for a component."""
-        good_state = (status == "OK")
-        if not description:
-            description = "%s %s in good health" % (
-                health_data.get("uid"),
-                'is' if good_state else 'is not')
-        if not recommendation:
-            recommendation = 'None' if good_state\
-                             else "Fault detected, please contact Seagate support."
-
-        health_data["health"].update({
-            "status": status,
-            "description": description,
-            "recommendation": recommendation,
-            "specifics": specifics
-        })
-
-    @staticmethod
     def get_cpu_usage(index=2, percpu=False):
         """Get CPU usage list."""
         i = 0

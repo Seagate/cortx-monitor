@@ -50,7 +50,7 @@ class StorageMap(ResourceMap):
             "platform_sensors": self.get_platform_sensors_info,
             "logical_volumes": self.get_logical_volumes_info,
             "disk_groups": self.get_disk_groups_info,
-            "sideplane_expanders": self.get_sideplane_expanders_info,
+            "sideplane_expanders": self.get_sideplane_expanders_info
         }
 
     @staticmethod
@@ -98,16 +98,14 @@ class StorageMap(ResourceMap):
         data = []
         controllers = self.get_realstor_encl_data("controllers")
         for controller in controllers:
-            controller_dict = {
-              "uid": controller.get("durable-id"),
-              "fru": "true",
-              "last_updated": int(time.time()),
-              "health": {
-                "status": controller.get("health", "NA"),
-                "description": controller.get("description"),
-                "recommendation": controller.get("health-recommendation"),
-                "specifics": [
-                  {
+            uid = controller.get("durable-id")
+            status = controller.get("health", "NA")
+            description = controller.get("description")
+            recommendation = controller.get("health-recommendation")
+            controller_dict = self.get_health_template(uid, is_fru=True)
+            controller_dict["last_updated"] = int(time.time())
+            specifics = [
+                {
                     "serial-number": controller.get("serial-number", "NA"),
                     "disks": controller.get("disks", "NA"),
                     "virtual-disks": controller.get("virtual-disks", "NA"),
@@ -115,10 +113,11 @@ class StorageMap(ResourceMap):
                     "part-number": controller.get("part-number", "NA"),
                     "fw": controller.get("sc-fw", "NA"),
                     "location": controller.get("position", "NA")
-                  }
-                ]
-              }
-            }
+                }
+            ]
+            self.set_health_data(
+                controller_dict, status, description, recommendation,
+                specifics)
             data.append(controller_dict)
         return data
 
@@ -127,16 +126,14 @@ class StorageMap(ResourceMap):
         data = []
         psus = self.get_realstor_encl_data("power-supplies")
         for psu in psus:
-            psu_dict = {
-              "uid": psu.get("durable-id"),
-              "fru": "true",
-              "last_updated": int(time.time()),
-              "health": {
-                "status": psu.get("health", "NA"),
-                "description": psu.get("description"),
-                "recommendation": psu.get("health-recommendation"),
-                "specifics": [
-                  {
+            uid = psu.get("durable-id")
+            status = psu.get("health", "NA")
+            description = psu.get("description")
+            recommendation = psu.get("health-recommendation")
+            psu_dict = self.get_health_template(uid, is_fru=True)
+            psu_dict["last_updated"] = int(time.time())
+            specifics = [
+                {
                     "location": psu.get("location", "NA"),
                     "dc12v": psu.get("dc12v", "NA"),
                     "dc5v": psu.get("dc5v", "NA"),
@@ -144,10 +141,10 @@ class StorageMap(ResourceMap):
                     "dc12i": psu.get("dc12i", "NA"),
                     "dc5i": psu.get("dc5i", "NA"),
                     "dctemp": psu.get("dctemp", "NA")
-                  }
-                ]
-              }
-            }
+                }
+            ]
+            self.set_health_data(
+                psu_dict, status, description, recommendation, specifics)
             data.append(psu_dict)
         return data
 
@@ -172,24 +169,23 @@ class StorageMap(ResourceMap):
             for platform_sensor in platform_sensors:
                 for sensor in sensors_resp['api-response']['sensors']:
                     if sensor['sensor-type'].lower() == platform_sensor:
-                        single_sensor_data = {
-                          'uid': sensor.get('durable-id'),
-                          'fru': 'false',
-                          'last_updated':  int(time.time()),
-                          'health': {
-                            'status': sensor.get('status'),
-                            'description': sensor.get("description", "NA"),
-                            'recommendation': sensor.get("recommendation", "NA"),
-                            'specifics': [
-                              {
+                        status = sensor.get('status')
+                        description = sensor.get("description", "NA")
+                        recommendation = sensor.get("recommendation", "NA")
+                        single_sensor_data = self.get_health_template(
+                            sensor.get('durable-id'), is_fru=False)
+                        single_sensor_data['last_updated'] = int(time.time())
+                        specifics = [
+                            {
                                 'sensor-name': sensor.get('sensor-name'),
                                 'value': sensor.get('value'),
                                 'controller-id': sensor.get('controller-id'),
                                 'container': sensor.get('container'),
-                              }
-                            ]
-                          }
-                        }
+                            }
+                        ]
+                        self.set_health_data(
+                            single_sensor_data, status, description,
+                            recommendation, specifics)
                         if platform_sensor in sensors_data:
                             sensors_data[platform_sensor].append(single_sensor_data)
                         else:
@@ -202,27 +198,29 @@ class StorageMap(ResourceMap):
         logicalvolumes = self.get_realstor_encl_data("volumes")
         if logicalvolumes:
             for logicalvolume in logicalvolumes:
+                uid = logicalvolume.get("volume-name", "NA")
                 health = logicalvolume.get("health", "NA")
                 if health in HEALTH_UNDESIRED_VALS:
                     health = "NA"
-                logvol_data.append({
-                    "uid": logicalvolume.get("volume-name", "NA"),
-                    "fru": False,
-                    "last_updated": int(time.time()),
-                    "health": {
-                        "status": health,
-                        "description": logicalvolume.get("volume-description", "NA"),
-                        "recommendation": logicalvolume.get("health-recommendation", "NA"),
-                        "specifics": [
-                            {
-                                "disk_group": {
-                                    "disk_group_name": logicalvolume.get("container-name", "NA"),
-                                    "pool_serial_number": logicalvolume.get("container-serial", "NA")
-                                }
-                            }
-                        ]
+                description = logicalvolume.get("volume-description", "NA")
+                recommendation = logicalvolume.get(
+                    "health-recommendation", "NA")
+                specifics = [
+                    {
+                        "disk_group": {
+                            "disk_group_name": logicalvolume.get(
+                                "container-name", "NA"),
+                            "pool_serial_number": logicalvolume.get(
+                                "container-serial", "NA")
+                        }
                     }
-                })
+                ]
+                logvol_data_dict = self.get_health_template(uid, is_fru=False)
+                logvol_data_dict["last_updated"] = int(time.time())
+                self.set_health_data(
+                    logvol_data_dict, health, description, recommendation,
+                    specifics)
+                logvol_data.append(logvol_data_dict)
         return logvol_data
 
     def get_disk_groups_info(self):
@@ -237,12 +235,14 @@ class StorageMap(ResourceMap):
                 volume_pool_sr_no = logicalvolume.get("container-serial", "NA")
                 volume_uid = logicalvolume.get("volume-name", "NA")
                 if volume_pool_sr_no in dg_vol_map:
-                    dg_vol_map[volume_pool_sr_no].append({"volume_uid": volume_uid})
+                    dg_vol_map[volume_pool_sr_no].append(
+                        {"volume_uid": volume_uid})
                 else:
-                    dg_vol_map.update({volume_pool_sr_no:[{"volume_uid": volume_uid}]})
-        dg_description = "Disk group is in good health."
+                    dg_vol_map.update(
+                        {volume_pool_sr_no: [{"volume_uid": volume_uid}]})
         if diskgroups:
             for diskgroup in diskgroups:
+                uid = "diskgroup-" + diskgroup.get("name", "NA")
                 health = diskgroup.get("health", "NA")
                 pool_sr_no = diskgroup.get("pool-serial-number", "NA")
                 if pool_sr_no in dg_vol_map:
@@ -252,33 +252,34 @@ class StorageMap(ResourceMap):
                 if health in HEALTH_UNDESIRED_VALS:
                     health = "NA"
                     dg_description = "Disk group is in unknown health state."
-                dg_data.append({
-                    "uid": "diskgroup-" + diskgroup.get("name", "NA"),
-                    "fru": False,
-                    "last_updated": int(time.time()),
-                    "health": {
-                        "status": health,
-                        "description": dg_description,
-                        "recommendation": diskgroup.get("health-recommendation", "NA"),
-                        "specifics": [
-                            {
-                                "class": diskgroup.get("storage-type", "NA"),
-                                "disks": diskgroup.get("diskcount", "NA"),
-                                "size": diskgroup.get("size", "NA"),
-                                "free": diskgroup.get("freespace", "NA"),
-                                "status": diskgroup.get("status", "NA"),
-                                "current_job": diskgroup.get("current-job", "NA"),
-                                "current_job_completion": diskgroup.get(
-                                    "current-job-completion", "NA"),
-                                "tier": diskgroup.get("storage-tier", "NA"),
-                                "pool": diskgroup.get("pool", "NA"),
-                                "blocksize": diskgroup.get("blocksize", "NA"),
-                                "chunksize": diskgroup.get("chunksize", "NA"),
-                                "volumes": volumes
-                            }
-                        ]
+                elif health == "OK":
+                    dg_description = "Disk group is in good health."
+                else:
+                    dg_description = "Disk group is not in good health."
+                recommendation = diskgroup.get("health-recommendation", "NA")
+                dg_data_dict = self.get_health_template(uid, is_fru=False)
+                dg_data_dict["last_updated"] = int(time.time())
+                specifics = [
+                    {
+                        "class": diskgroup.get("storage-type", "NA"),
+                        "disks": diskgroup.get("diskcount", "NA"),
+                        "size": diskgroup.get("size", "NA"),
+                        "free": diskgroup.get("freespace", "NA"),
+                        "status": diskgroup.get("status", "NA"),
+                        "current_job": diskgroup.get("current-job", "NA"),
+                        "current_job_completion": diskgroup.get(
+                            "current-job-completion", "NA"),
+                        "tier": diskgroup.get("storage-tier", "NA"),
+                        "pool": diskgroup.get("pool", "NA"),
+                        "blocksize": diskgroup.get("blocksize", "NA"),
+                        "chunksize": diskgroup.get("chunksize", "NA"),
+                        "volumes": volumes
                     }
-                })
+                ]
+                self.set_health_data(
+                    dg_data_dict, health, dg_description, recommendation,
+                    specifics)
+                dg_data.append(dg_data_dict)
         return dg_data
 
     def get_sideplane_expanders_info(self):
@@ -293,33 +294,31 @@ class StorageMap(ResourceMap):
                 sideplanes = drawer.get("sideplanes")
                 sideplane_expander_list.extend(sideplanes)
         for sideplane in sideplane_expander_list:
-            sideplane_health = sideplane.get("health", "NA")
-            if sideplane_health in HEALTH_UNDESIRED_VALS:
+            uid = sideplane.get("durable-id", "NA")
+            expanders = sideplane.get("expanders")
+            expander_data = self.get_expander_data(expanders)
+            health = sideplane.get("health", "NA")
+            if health in HEALTH_UNDESIRED_VALS:
+                health = "NA"
                 description = "Sideplane is in unknown health state."
-            elif sideplane_health == "OK":
+            elif health == "OK":
                 description = "Sideplane is in good state."
             else:
                 description = "Sideplane is not in good state."
-            expanders = sideplane.get("expanders")
-            expander_data = self.get_expander_data(expanders)
-            sideplane_dict = {
-                "uid": sideplane.get("durable-id", "NA"),
-                "fru": "true",
-                "last_updated": int(time.time()),
-                "health": {
-                    "status": sideplane_health,
-                    "description": description,
-                    "recommendation": sideplane.get("health-recommendation", "NA"),
-                    "specifics": [
-                        {
-                            "name": sideplane.get("name", "NA"),
-                            "location": sideplane.get("location", "NA"),
-                            "drawer-id": sideplane.get("drawer-id", "NA"),
-                            "expanders": expander_data
-                        }
-                    ]
+            recommendation = sideplane.get("health-recommendation", "NA")
+            specifics = [
+                {
+                    "name": sideplane.get("name", "NA"),
+                    "location": sideplane.get("location", "NA"),
+                    "drawer-id": sideplane.get("drawer-id", "NA"),
+                    "expanders": expander_data
                 }
-            }
+            ]
+            sideplane_dict = self.get_health_template(uid, is_fru=True)
+            sideplane_dict["last_updated"] = int(time.time())
+            self.set_health_data(
+                sideplane_dict, health, description, recommendation, specifics)
+
             sideplane_expander_data.append(sideplane_dict)
         return sideplane_expander_data
 
@@ -327,31 +326,28 @@ class StorageMap(ResourceMap):
         """Returns expanders data in specific format."""
         expander_data = []
         for expander in expanders:
+            uid = expander.get("durable-id", "NA")
             expander_health = expander.get("health", "NA")
             if expander_health in HEALTH_UNDESIRED_VALS:
                 expander_health = "NA"
-                expander_desc = "Expander is in unknown health state."
+                description = "Expander is in unknown health state."
             elif expander_health == "OK":
-                expander_desc = "Expander is in goot state."
+                description = "Expander is in goot state."
             else:
-                expander_desc = "Expander is not in good state."
-            expander_dict = {
-                "uid": expander.get("durable-id", "NA"),
-                "fru": "true",
-                "last_updated": int(time.time()),
-                "health": {
-                    "status": expander_health,
-                    "description": expander_desc,
-                    "recommendation": expander.get("health-recommendation", "NA"),
-                    "specifics": [
-                        {
-                            "name": expander.get("name", "NA"),
-                            "location": expander.get("location", "NA"),
-                            "drawer-id": expander.get("drawer-id", "NA")
-                        }
-                    ]
+                description = "Expander is not in good state."
+            recommendation = expander.get("health-recommendation", "NA")
+            specifics = [
+                {
+                    "name": expander.get("name", "NA"),
+                    "location": expander.get("location", "NA"),
+                    "drawer-id": expander.get("drawer-id", "NA")
                 }
-            }
+            ]
+            expander_dict = self.get_health_template(uid, is_fru=True)
+            expander_dict["last_updated"] = int(time.time())
+            self.set_health_data(
+                expander_dict, expander_health, description, recommendation,
+                specifics)
             expander_data.append(expander_dict)
         return expander_data
 
@@ -384,7 +380,7 @@ class StorageMap(ResourceMap):
 
 # if __name__ == "__main__":
 #     storage = StorageMap()
-#     frus = ["controllers", "psus"]
+#     frus = ["controllers", "psus", "sideplane_expanders"]
 #     for fru in frus:
 #         rpath = f"nodes[0]>storage[0]>hw>{fru}"
 #         health_data = storage.get_health_info(rpath=rpath)
@@ -393,5 +389,3 @@ class StorageMap(ResourceMap):
 #     dg_health_data = storage.get_health_info(rpath="nodes[0]>storage[0]>fw>disk_groups")
 #     print(json.dumps(volume_health_data))
 #     print(json.dumps(dg_health_data))
-#     sideplane_data = storage.get_health_info(rpath="nodes[0]>storage[0]>fw>sideplane_expanders")
-#     print(json.dumps(sideplane_data))
