@@ -16,11 +16,11 @@
 # please email opensource@seagate.com or cortx-questions@seagate.com
 
 
-import socket
 import errno
 import psutil
 import re
 import time
+from socket import AF_INET
 from pathlib import Path
 
 from framework.utils.ipmi_client import IpmiFactory
@@ -28,6 +28,7 @@ from framework.base import sspl_constants
 from framework.utils.tool_factory import ToolFactory
 from resource_map import ResourceMap
 from error import ResourceMapError
+from framework.platforms.node.network_interface import NetworkInterface
 from framework.base.sspl_constants import (CPU_PATH, DEFAULT_RECOMMENDATION)
 from framework.utils.conf_utils import (GLOBAL_CONF, NODE_TYPE_KEY, Conf)
 
@@ -56,6 +57,7 @@ class ServerMap(ResourceMap):
         }
         self._ipmi = IpmiFactory().get_implementor("ipmitool")
         self.platform_sensor_list = ['Temperature', 'Voltage', 'Current']
+        self.nw_instance = NetworkInterface()
 
     @staticmethod
     def validate_server_type_support():
@@ -299,12 +301,12 @@ class ServerMap(ResourceMap):
 
             specifics = {}
             for addr in addrs:
-                if addr.family == socket.AF_INET:
+                if addr.family == AF_INET:
                     specifics["ipV4"] = addr.address
 
             if interface in io_counters:
                 io_info = io_counters[interface]
-                specifics.update({
+                specifics = {
                     "networkErrors": io_info.errin + io_info.errout,
                     "droppedPacketsIn": io_info.dropin,
                     "droppedPacketsOut": io_info.dropout,
@@ -312,7 +314,7 @@ class ServerMap(ResourceMap):
                     "packetsOut": io_info.packets_sent,
                     "trafficIn": io_info.bytes_recv,
                     "trafficOut": io_info.bytes_sent
-                })
+                }
 
             nw_status, nw_cable_conn_status = \
                 self.get_nw_status(interface)
@@ -339,16 +341,14 @@ class ServerMap(ResourceMap):
     def get_nw_status(self, interface):
         """Read & Return the latest network status from sysfs files."""
         try:
-            nw_status = self.sysfs.fetch_nw_operstate(interface)
+            nw_status = self.nw_instance.get_operational_state(interface)
         except Exception:
             nw_status = "UNKNOWN"
             # Log the error when logging class is in place.
         try:
-            nw_cable_conn_status = self.sysfs.fetch_nw_cable_status(
-                self.sysfs.get_sys_dir_path('net'), interface
-            )
+            nw_cable_conn_status = self.nw_instance.get_link_state(interface)
         except Exception:
-            nw_status = "UNKNOWN"
+            nw_cable_conn_status = "UNKNOWN"
             # Log the error when logging class is in place.
 
         return nw_status, nw_cable_conn_status
