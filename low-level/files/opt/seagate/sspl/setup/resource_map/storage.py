@@ -49,7 +49,8 @@ class StorageMap(ResourceMap):
             "platform_sensors": self.get_platform_sensors_info,
             "logical_volumes": self.get_logical_volumes_info,
             "disk_groups": self.get_disk_groups_info,
-            "sideplane_expanders": self.get_sideplane_expanders_info
+            "sideplane_expanders": self.get_sideplane_expanders_info,
+            "nw_ports": self.get_nw_ports_info,
         }
 
     @staticmethod
@@ -338,7 +339,8 @@ class StorageMap(ResourceMap):
             "platform_sensors": ENCL.URI_CLIAPI_SHOWSENSORSTATUS,
             "volumes": ENCL.URI_CLIAPI_SHOWVOLUMES,
             "disk-groups": ENCL.URI_CLIAPI_SHOWDISKGROUPS,
-            "enclosures": ENCL.URI_CLIAPI_SHOWENCLOSURE
+            "enclosures": ENCL.URI_CLIAPI_SHOWENCLOSURE,
+            "network-parameters": ENCL.URI_CLIAPI_NETWORKHEALTHSTATUS,
         }
         url = ENCL.build_url(fru_uri_map.get(fru))
         response = ENCL.ws_request(url, ENCL.ws.HTTP_GET)
@@ -350,3 +352,36 @@ class StorageMap(ResourceMap):
             fru_data = response_data.get(fru)
 
         return fru_data
+
+    def get_nw_ports_info(self):
+        """Return the current network health."""
+        nw_data = []
+        nw_interfaces = self.get_realstor_encl_data("network-parameters")
+        for nw_inf in nw_interfaces:
+            nw_inf_data = self.get_health_template(nw_inf.get('durable-id'),
+                                                   False)
+            specifis = {
+                "ip-address": nw_inf.get('ip-address'),
+                "link-speed": nw_inf.get('link-speed'),
+                "controller": nw_inf.get('object-name'),
+            }
+
+            self.set_health_data(
+                nw_inf_data, nw_inf.get('health'), nw_inf.get('health-reason'),
+                nw_inf.get('health-recommendation'), specifis)
+
+            nw_data.append(nw_data)
+        return nw_data
+
+
+# if __name__ == "__main__":
+#     storage = StorageMap()
+#     frus = ["controllers", "psus"]
+#     for fru in frus:
+#         rpath = f"nodes[0]>storage[0]>hw>{fru}"
+#         health_data = storage.get_health_info(rpath=rpath)
+#         print(health_data)
+#     volume_health_data = storage.get_health_info(rpath="nodes[0]>storage[0]>fw>logical_volumes")
+#     dg_health_data = storage.get_health_info(rpath="nodes[0]>storage[0]>fw>disk_groups")
+#     print(json.dumps(volume_health_data))
+#     print(json.dumps(dg_health_data))
