@@ -163,10 +163,10 @@ class StorageMap(ResourceMap):
             dict with three keys for respective sensors.
         """
         sensors_data = {}
-        sensors_resp = self.get_realstor_encl_data('sensor-status')
+        sensors_resp = self.get_realstor_encl_data('sensors')
         if sensors_resp:
             for platform_sensor in platform_sensors:
-                for sensor in sensors_resp['api-response']['sensors']:
+                for sensor in sensors_resp:
                     if sensor['sensor-type'].lower() == platform_sensor:
                         status = sensor.get('status')
                         description = sensor.get("description", "NA")
@@ -368,7 +368,7 @@ class StorageMap(ResourceMap):
         fru_uri_map = {
             "controllers": ENCL.URI_CLIAPI_SHOWCONTROLLERS,
             "power-supplies": ENCL.URI_CLIAPI_SHOWPSUS,
-            "platform_sensors": ENCL.URI_CLIAPI_SHOWSENSORSTATUS,
+            "sensors": ENCL.URI_CLIAPI_SHOWSENSORSTATUS,
             "volumes": ENCL.URI_CLIAPI_SHOWVOLUMES,
             "disk-groups": ENCL.URI_CLIAPI_SHOWDISKGROUPS,
             "enclosures": ENCL.URI_CLIAPI_SHOWENCLOSURE,

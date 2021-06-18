@@ -18,7 +18,7 @@ class TestStorageMap(unittest.TestCase):
         "files.opt.seagate.sspl.setup.resource_map.storage.StorageMap.get_realstor_encl_data"
     )
     def test_get_platform_sensors(self, encl_response):
-        encl_response.return_value = json.loads(ENCLOSURE_SENSORS_RESPONSE)
+        encl_response.return_value = json.loads(ENCLOSURE_RESPONSE)['api-response']['sensors']
         resp = self.storage_map.get_platform_sensors_info()
 
         # Temperature
