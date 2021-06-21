@@ -17,7 +17,6 @@
 
 
 import time
-import re
 import errno
 from framework.utils.ipmi_client import IpmiFactory
 
@@ -27,6 +26,7 @@ from framework.utils.tool_factory import ToolFactory
 from resource_map import ResourceMap
 from error import ResourceMapError
 from framework.base.sspl_constants import (CPU_PATH, DEFAULT_RECOMMENDATION)
+from framework.utils.conf_utils import (GLOBAL_CONF, NODE_TYPE_KEY, Conf)
 
 
 class ServerMap(ResourceMap):
@@ -39,6 +39,7 @@ class ServerMap(ResourceMap):
     def __init__(self):
         """Initialize server"""
         super().__init__()
+        self.validate_server_type_support()
         self.sysfs = ToolFactory().get_instance('sysfs')
         self.sysfs.initialize()
         self.sysfs_base_path = self.sysfs.get_sysfs_base_path()
@@ -46,10 +47,22 @@ class ServerMap(ResourceMap):
         self.server_frus = {
             'cpu': self.get_cpu_info,
             'platform_sensors': self.get_platform_sensors_info,
-            'memory': self.get_mem_info
+            'memory': self.get_mem_info,
+            'fans': self.get_fans_info
         }
         self._ipmi = IpmiFactory().get_implementor("ipmitool")
         self.platform_sensor_list = ['Temperature', 'Voltage', 'Current']
+
+    @staticmethod
+    def validate_server_type_support():
+        """Check for supported server type."""
+        server_type = Conf.get(GLOBAL_CONF, NODE_TYPE_KEY).lower()
+        # TODO Add support for 'virtual' type server.
+        supported_types = ["physical"]
+        if server_type not in supported_types:
+            raise ResourceMapError(
+                errno.EINVAL,
+                f"Health provider is not supported for server type:{server_type}")
 
     def get_health_info(self, rpath):
         """
@@ -235,3 +248,31 @@ class ServerMap(ResourceMap):
             memory_dict, status=status, description=description,
             specifics=specifics)
         return memory_dict
+
+    def get_fans_info(self):
+        """Get the Fan sensor information using ipmitool."""
+        data = []
+        sensor_reading = self._ipmi.get_sensor_list_by_type('Fan')
+        if sensor_reading is None:
+            # TODO log error
+            return
+        for fan_reading in sensor_reading:
+            sensor_id = fan_reading[0]
+            fan_dict = self.get_health_template(sensor_id, is_fru=True)
+            sensor_props = self._ipmi.get_sensor_props(sensor_id)
+            status = 'OK' if fan_reading[2] == 'ok' else 'NA'
+            lower_critical = sensor_props[1].get('Lower Critical', 'NA')
+            upper_critical = sensor_props[1].get('Upper Critical', 'NA')
+            specifics = [
+                    {
+                        "Sensor Reading": f"{fan_reading[-1]}",
+                        "lower_critical_threshold": lower_critical,
+                        "upper_critical_threshold": upper_critical
+                    }
+                ]
+
+            self.set_health_data(fan_dict, status=status,
+                                 specifics=specifics)
+
+            data.append(fan_dict)
+        return data
