@@ -30,6 +30,7 @@ from framework.base.sspl_constants import (
     CPU_PATH, DEFAULT_RECOMMENDATION, HEALTH_SVC_NAME, SAS_RESOURCE_ID)
 from framework.utils.conf_utils import (GLOBAL_CONF, NODE_TYPE_KEY, Conf)
 from framework.utils.service_logging import CustomLog, logger
+from framework.platforms.node.sas_interface import SASInterface
 
 
 class ServerMap(ResourceMap):
@@ -309,34 +310,36 @@ class ServerMap(ResourceMap):
     def get_sas_hba_info(self):
         """Return SAS-HBA current health."""
         sas_hba_data = []
-        hosts, err, errno = self.sysfs.get_sas_host_list()  # ['host1']
-        if errno:
+        sas_instance = SASInterface()
+        try:
+            hosts = sas_instance.get_host_list()  # ['host1']
+        except Exception:
+            hosts = []
             # Log the error when logging module is ready.
-            pass
+
         for host in hosts:
             host_id = SAS_RESOURCE_ID + host.replace('host', '')
             host_data = self.get_health_template(host_id, False)
-            ports, err, errno = self.sysfs.get_sas_port_list(host)
-            # ports = ['port-1:0', 'port-1:1', 'port-1:2', 'port-1:3']
-            if errno:
+            try:
+                ports = sas_instance.get_port_list(host)
+                # ports = ['port-1:0', 'port-1:1', 'port-1:2', 'port-1:3']
+            except Exception:
+                ports = []
                 # Log the error when logging module is ready.
-                pass
             health = "OK"
             specifics = {
                 'num_ports': len(ports),
                 'ports': []
             }
             for port in ports:
-                port_data, err, errno = self.sysfs.get_sas_port_data(port)
-
-                if errno:
+                try:
+                    port_data = sas_instance.get_port_data(port)
+                except Exception:
+                    port_data = []
                     # Log the error when logging module is ready.
-                    pass
-
                 specifics['ports'].append(port_data)
                 if not port_data or port_data['state'] != 'running':
                     health = "NA"
-
             self.set_health_data(host_data, health, specifics=[specifics])
             sas_hba_data.append(host_data)
         return sas_hba_data
@@ -344,34 +347,38 @@ class ServerMap(ResourceMap):
     def get_sas_ports_info(self):
         """Return SAS Ports current health."""
         sas_ports_data = []
-        ports, err, errno = self.sysfs.get_sas_port_list()
-        # eg: ['port-1:0', 'port-1:1', 'port-1:2', 'port-1:3']
-        if errno:
+        sas_instance = SASInterface()
+        try:
+            ports = sas_instance.get_port_list()
+            # eg: ['port-1:0', 'port-1:1', 'port-1:2', 'port-1:3']
+        except Exception:
+            ports = []
             # Log the error when logging module is ready.
-            pass
+
         for port in ports:
             port_id = 'sas_' + port
             port_data = self.get_health_template(port_id, False)
-            phys, err, errno = self.sysfs.get_phy_list_for_port(port)
-            # eg: [ 'phy-1:0', 'phy-1:1', 'phy-1:2', 'phy-1:3']
-            if errno:
+            try:
+                phys = sas_instance.get_phy_list_for_port(port)
+                # eg: [ 'phy-1:0', 'phy-1:1', 'phy-1:2', 'phy-1:3']
+            except Exception:
+                phys = []
                 # Log the error when logging module is ready.
-                pass
             specifics = {
                 'num_phys': len(phys),
                 'phys': []
             }
             health = "OK"
             for phy in phys:
-                phy_data, err, errno = self.sysfs.get_sas_phy_data(phy)
-                if errno:
+                try:
+                    phy_data = sas_instance.get_phy_data(phy)
+                except Exception:
+                    phy_data = {}
                     # Log the error when logging module is ready.
-                    pass
                 specifics['phys'].append(phy_data)
-                if phy_data['state'] != 'enabled' or \
+                if not phy_data or phy_data['state'] != 'enabled' or \
                    'Gbit' not in phy_data['negotiated_linkrate']:
                     health = "NA"
-
             self.set_health_data(port_data, health, specifics=[specifics])
             sas_ports_data.append(port_data)
         return sas_ports_data
