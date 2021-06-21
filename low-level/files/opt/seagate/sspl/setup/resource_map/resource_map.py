@@ -60,7 +60,7 @@ class ResourceMap(metaclass=ABCMeta):
         return {
             "uid": uid,
             "fru": str(is_fru).lower(),
-            "last_updated": int(time.time()),
+            "last_updated": "",
             "health": {
                 "status": "",
                 "description": "",
@@ -81,6 +81,7 @@ class ResourceMap(metaclass=ABCMeta):
         if not recommendation:
             recommendation = 'None' if good_state\
                 else "Fault detected, please contact Seagate support."
+        health_data["last_updated"] = int(time.time())
         health_data["health"].update({
             "status": status,
             "description": description,
