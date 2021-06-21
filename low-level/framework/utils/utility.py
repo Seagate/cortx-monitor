@@ -79,6 +79,16 @@ class Utility(object):
             raise Exception("Unable to get machine id from host '%s'." % socket.getfqdn())
         return machine_id
 
+    @staticmethod
+    def create_file(path):
+        """Create file at specified dir path."""
+        dir = path[:path.rindex("/")]
+        if not os.path.exists(dir):
+            os.makedirs(dir)
+        if not os.path.exists(path):
+            file = open(path, "w+")
+            file.close()
+
     def get_os(self):
         """
         Returns os name({ID}{VERSION_ID}) from /etc/os-release.

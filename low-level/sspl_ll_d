@@ -59,6 +59,7 @@ from framework.utils.conf_utils import (GLOBAL_CONF, HOST, MONITOR,
 from framework.utils.config_reader import ConfigReader
 from framework.utils.service_logging import init_logging, logger
 from framework.utils.store_factory import store
+from framework.utils.utility import Utility
 from cortx.utils.iem_framework.error import EventMessageError
 # Message to send to HAlon upon critical thread errors
 from json_msgs.messages.actuators.thread_controller import ThreadControllerMsg
@@ -718,23 +719,17 @@ def send_thread_controller_request(state):
 
 def initialize_iem():
     try:
-        EventMessage.init(component='sspl', source='S')
+        if os.path.exists(IEM_INIT_FAILED):
+            os.remove(IEM_INIT_FAILED)
+        EventMessage.init(component=None, source='S')
         logger.info("IEM framework initiated successfully!!!")
     except EventMessageError as e:
         # create IEM_INIT_FAILED file and log current sspl pid.
-        create_file(IEM_INIT_FAILED)
+        Utility().create_file(IEM_INIT_FAILED)
         with open(IEM_INIT_FAILED, 'w') as f:
             f.write(str(os.getpid()))
         logger.critical("Failed to initialize IEM Framework."
                      f"ERROR:{e}")
-
-def create_file(path):
-    dir = path[:path.rindex("/")]
-    if not os.path.exists(dir):
-        os.makedirs(dir)
-    if not os.path.exists(path):
-        file = open(path, "w+")
-        file.close()
 
 def refresh_iem_log_file(signal_number, frame):
     iem_sensor = threadController.get_sspl_module("IEMSensor")
