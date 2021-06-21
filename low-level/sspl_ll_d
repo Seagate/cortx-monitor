@@ -43,7 +43,7 @@ from framework.actuator_state_manager import actuator_state_manager
 from framework.base.module_thread import SensorThread
 from framework.base.sspl_constants import (SSPL_SETTINGS, COMMON_CONFIGS, PRODUCT_FAMILY,
     OperatingSystem, enabled_products, SYSLOG_HOST, SYSLOG_PORT,
-    IEM_INIT_FILE)
+    IEM_INIT_FAILED)
 from framework.messaging.egress_accumulated_msgs_processor import \
     EgressAccumulatedMsgsProcessor
 # Modules for handling messages and manipulating internal threads
@@ -721,7 +721,10 @@ def initialize_iem():
         EventMessage.init(component='sspl', source='S')
         logger.info("IEM framework initiated successfully!!!")
     except EventMessageError as e:
-        create_file(IEM_INIT_FILE)
+        # create IEM_INIT_FAILED file and log current sspl pid.
+        create_file(IEM_INIT_FAILED)
+        with open(IEM_INIT_FAILED, 'w') as f:
+            f.write(str(os.getpid()))
         logger.critical("Failed to initialize IEM Framework."
                      f"ERROR:{e}")
 
