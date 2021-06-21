@@ -312,13 +312,12 @@ class ServerMap(ResourceMap):
                     "trafficIn": io_info.bytes_recv,
                     "trafficOut": io_info.bytes_sent
                 }
-
+            # Get the interface health status.
             nw_status, nw_cable_conn_status = \
                 self.get_nw_status(nw_instance, interface)
             specifics["nwStatus"] = nw_status
             specifics["nwCableConnStatus"] = nw_cable_conn_status
-
-            # set health status and description
+            # Map and set the interface health status and description.
             map_status = {"UP": "OK", "DOWN": "Disabled/Failed",
                           "UNKNOWN": "NA"}
             health_status = map_status[nw_cable_conn_status]
@@ -327,9 +326,7 @@ class ServerMap(ResourceMap):
             )
             self.set_health_data(nic_info, health_status, description=desc,
                                  specifics=[specifics])
-
             network_cable_data.append(nic_info)
-
         return network_cable_data
 
     def get_nw_status(self, nw_interface, interface):
@@ -344,5 +341,4 @@ class ServerMap(ResourceMap):
         except Exception:
             nw_cable_conn_status = "UNKNOWN"
             # Log the error when logging class is in place.
-
         return nw_status, nw_cable_conn_status
