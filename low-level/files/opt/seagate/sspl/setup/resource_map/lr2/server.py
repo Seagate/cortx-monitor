@@ -294,14 +294,13 @@ class ServerMap(ResourceMap):
         network_cable_data = []
         io_counters = psutil.net_io_counters(pernic=True)
 
+        nw_instance = NetworkInterface()
         for interface, addrs in psutil.net_if_addrs().items():
             nic_info = self.get_health_template(interface, False)
             specifics = {}
             for addr in addrs:
                 if addr.family == AF_INET:
                     specifics["ipV4"] = addr.address
-
-            nw_instance = NetworkInterface()
             if interface in io_counters:
                 io_info = io_counters[interface]
                 specifics = {
