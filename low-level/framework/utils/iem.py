@@ -16,7 +16,7 @@
 
 import os
 
-from framework.base.sspl_constants import IEM_DATA_PATH
+from framework.base.sspl_constants import IEM_DATA_PATH, IEM_INIT_FILE
 from framework.utils.service_logging import logger
 from cortx.utils.iem_framework import EventMessage
 from cortx.utils.iem_framework.error import EventMessageError
@@ -159,6 +159,12 @@ class Iem:
         try:
             logger.info(f"Sending IEM alert for module:{module}"
                         f" and event_code:{event_code}")
+            # check if IEM Framework initialized,
+            # if not, retry initializing the IEM Frameowork
+            if os.path.exists(IEM_INIT_FILE):
+                EventMessage.init(component='sspl', source='S')
+                logger.info("IEM framework initialization complete")
+                os.remove(IEM_INIT_FILE)
             EventMessage.send(module=module, event_id=event_code,
                               severity=severity, message_blob=description)
         except EventMessageError as e:

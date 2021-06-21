@@ -42,7 +42,8 @@ from actuators.impl.actuator import Actuator
 from framework.actuator_state_manager import actuator_state_manager
 from framework.base.module_thread import SensorThread
 from framework.base.sspl_constants import (SSPL_SETTINGS, COMMON_CONFIGS, PRODUCT_FAMILY,
-    OperatingSystem, enabled_products, SYSLOG_HOST, SYSLOG_PORT)
+    OperatingSystem, enabled_products, SYSLOG_HOST, SYSLOG_PORT,
+    IEM_INIT_FILE)
 from framework.messaging.egress_accumulated_msgs_processor import \
     EgressAccumulatedMsgsProcessor
 # Modules for handling messages and manipulating internal threads
@@ -720,8 +721,17 @@ def initialize_iem():
         EventMessage.init(component='sspl', source='S')
         logger.info("IEM framework initiated successfully!!!")
     except EventMessageError as e:
-        logger.error("Failed to initialize IEM Framework."
+        create_file(IEM_INIT_FILE)
+        logger.critical("Failed to initialize IEM Framework."
                      f"ERROR:{e}")
+
+def create_file(path):
+    dir = path[:path.rindex("/")]
+    if not os.path.exists(dir):
+        os.makedirs(dir)
+    if not os.path.exists(path):
+        file = open(path, "w+")
+        file.close()
 
 def refresh_iem_log_file(signal_number, frame):
     iem_sensor = threadController.get_sspl_module("IEMSensor")
