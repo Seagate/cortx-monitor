@@ -236,10 +236,3 @@ class ServerMap(ResourceMap):
             memory_dict, status=status, description=description,
             specifics=specifics)
         return memory_dict
-
-
-# if __name__ == "__main__":
-#     server = ServerMap()
-#     health_data = server.get_health_info(
-#         rpath="nodes[0]>compute[0]>hw>memory")
-#     print(health_data)

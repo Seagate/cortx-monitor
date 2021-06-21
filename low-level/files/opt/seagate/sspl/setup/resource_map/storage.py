@@ -369,16 +369,3 @@ class StorageMap(ResourceMap):
             fru_data = response_data.get(fru)
 
         return fru_data
-
-
-# if __name__ == "__main__":
-#     storage = StorageMap()
-#     frus = ["controllers", "psus", "sideplane_expanders"]
-#     for fru in frus:
-#         rpath = f"nodes[0]>storage[0]>hw>{fru}"
-#         health_data = storage.get_health_info(rpath=rpath)
-#         print(health_data)
-#     volume_health_data = storage.get_health_info(rpath="nodes[0]>storage[0]>fw>logical_volumes")
-#     dg_health_data = storage.get_health_info(rpath="nodes[0]>storage[0]>fw>disk_groups")
-#     print(json.dumps(volume_health_data))
-#     print(json.dumps(dg_health_data))
