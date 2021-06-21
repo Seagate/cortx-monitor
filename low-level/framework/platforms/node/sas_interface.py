@@ -21,7 +21,7 @@ from framework.platforms.node.error import InterfaceError
 
 
 class SASInterface:
-    """The Class provides the access the SAS interface information."""
+    """The Class provides access to the SAS interface information."""
 
     name = "SASInterface"
 
