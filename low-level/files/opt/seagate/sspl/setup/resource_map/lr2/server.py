@@ -24,7 +24,6 @@ from socket import AF_INET
 from pathlib import Path
 
 from framework.utils.ipmi_client import IpmiFactory
-from framework.base import sspl_constants
 from framework.utils.tool_factory import ToolFactory
 from resource_map import ResourceMap
 from error import ResourceMapError
@@ -57,7 +56,6 @@ class ServerMap(ResourceMap):
         }
         self._ipmi = IpmiFactory().get_implementor("ipmitool")
         self.platform_sensor_list = ['Temperature', 'Voltage', 'Current']
-        self.nw_instance = NetworkInterface()
 
     @staticmethod
     def validate_server_type_support():
@@ -298,12 +296,12 @@ class ServerMap(ResourceMap):
 
         for interface, addrs in psutil.net_if_addrs().items():
             nic_info = self.get_health_template(interface, False)
-
             specifics = {}
             for addr in addrs:
                 if addr.family == AF_INET:
                     specifics["ipV4"] = addr.address
 
+            nw_instance = NetworkInterface()
             if interface in io_counters:
                 io_info = io_counters[interface]
                 specifics = {
@@ -317,8 +315,7 @@ class ServerMap(ResourceMap):
                 }
 
             nw_status, nw_cable_conn_status = \
-                self.get_nw_status(interface)
-
+                self.get_nw_status(nw_instance, interface)
             specifics["nwStatus"] = nw_status
             specifics["nwCableConnStatus"] = nw_cable_conn_status
 
@@ -326,11 +323,9 @@ class ServerMap(ResourceMap):
             map_status = {"UP": "OK", "DOWN": "Disabled/Failed",
                           "UNKNOWN": "NA"}
             health_status = map_status[nw_cable_conn_status]
-
             desc = "Network Interface '%s' is %sin good state" % (
                 interface, '' if health_status == "OK" else 'not '
             )
-
             self.set_health_data(nic_info, health_status, description=desc,
                                  specifics=[specifics])
 
@@ -338,15 +333,15 @@ class ServerMap(ResourceMap):
 
         return network_cable_data
 
-    def get_nw_status(self, interface):
+    def get_nw_status(self, nw_interface, interface):
         """Read & Return the latest network status from sysfs files."""
         try:
-            nw_status = self.nw_instance.get_operational_state(interface)
+            nw_status = nw_interface.get_operational_state(interface)
         except Exception:
             nw_status = "UNKNOWN"
             # Log the error when logging class is in place.
         try:
-            nw_cable_conn_status = self.nw_instance.get_link_state(interface)
+            nw_cable_conn_status = nw_interface.get_link_state(interface)
         except Exception:
             nw_cable_conn_status = "UNKNOWN"
             # Log the error when logging class is in place.

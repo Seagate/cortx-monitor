@@ -17,6 +17,7 @@ import os
 
 from framework.utils.conf_utils import (
     Conf, SSPL_CONF, SYSFS_PATH, SYSTEM_INFORMATION)
+from framework.platforms.node.error import InterfaceError
 
 
 class NetworkInterface:
@@ -25,14 +26,13 @@ class NetworkInterface:
     name = "NetworkInterface"
 
     def __init__(self):
-        """Initialize the class"""
+        """Initialize the class."""
         sysfs_dir = Conf.get(SSPL_CONF,
                              f'{SYSTEM_INFORMATION}>{SYSFS_PATH}')
         self.base_dir = os.path.join(sysfs_dir, 'class', 'net')
 
     def get_link_state(self, interface):
-        """
-        Return the current physical link state of the interface.
+        """Return the current physical link state of the interface.
 
             Posssible values are:
             1. DOWN  => physical link is down
@@ -50,7 +50,7 @@ class NetworkInterface:
                 carrier_file_path = "UNKNOWN"
         except OSError as err:
             err_no, err_msg = err.args
-            raise NetworkInterfaceError(err_no, (
+            raise InterfaceError(err_no, (
                 "Failed to read link state for interface '%s'"
                 "due to error '%s'"), interface, err_msg)
 
@@ -75,28 +75,7 @@ class NetworkInterface:
                 operstate = "UNKNOWN"
         except OSError as err:
             err_no, err_msg = err.args
-            raise NetworkInterfaceError(err_no, (
+            raise InterfaceError(err_no, (
                 "Failed to read the operational state for ",
                 "interface '%s'\n error Msg: %s"), interface, err_msg)
         return operstate
-
-
-class NetworkInterfaceError(Exception):
-    """Error Handling for Network Interface Operations."""
-
-    def __init__(self, rc, message, *args):
-        """Initialize the error information."""
-        self._rc = rc
-        self._desc = message % (args)
-
-    @property
-    def rc(self):
-        return self._rc
-
-    @property
-    def desc(self):
-        return self._desc
-
-    def __str__(self):
-        if self._rc == 0: return self._desc
-        return "error(%d): %s" % (self._rc, self._desc)
