@@ -7,7 +7,7 @@ from files.opt.seagate.sspl.setup.resource_map.storage import StorageMap
 
 from encl_api_response import (
     ENCLOSURE_RESPONSE, ENCLOSURE_SENSORS_RESPONSE, ENCLOSURE_RESPONSE_EMPTY,
-    ENCLOSURE_NW_RESPONSE)
+    ENCLOSURE_NW_RESPONSE, CONTROLLER_RESPONSE)
 
 
 class TestStorageMap(unittest.TestCase):
@@ -94,6 +94,28 @@ class TestStorageMap(unittest.TestCase):
         assert specifics['ip-address'] == '10.0.0.2'
         assert specifics['link-speed'] == '1000mbps'
         assert specifics['controller'] == 'controller-a'
+
+    @patch(
+        "files.opt.seagate.sspl.setup.resource_map.storage.StorageMap.get_realstor_encl_data"
+    )
+    def test_get_controllers(self, encl_response):
+        encl_response.return_value = json.loads(
+            CONTROLLER_RESPONSE)['api-response']['controllers']
+        resp = self.storage_map.get_controllers_info()
+        assert resp[0]['uid'] == 'controller_a'
+        assert resp[0]['health']['status'] == 'OK'
+        assert resp[0]['health']['specifics'][0]['location'] == 'Left'
+
+    @patch(
+        "files.opt.seagate.sspl.setup.resource_map.storage.StorageMap.get_realstor_encl_data"
+    )
+    def test_get_drives(self, encl_response):
+        encl_response.return_value = json.loads(
+            DRIVE_RESPONSE)['api-response']['drives']
+        resp = self.storage_map.get_drives_info()
+        assert resp[0]['uid'] == 'disk_00.00'
+        assert resp[0]['health']['status'] == 'OK'
+        assert resp[0]['health']['specifics'][0]['location'] == '0.0'
 
 
 if __name__ == "__main__":
