@@ -42,7 +42,8 @@ from actuators.impl.actuator import Actuator
 from framework.actuator_state_manager import actuator_state_manager
 from framework.base.module_thread import SensorThread
 from framework.base.sspl_constants import (SSPL_SETTINGS, COMMON_CONFIGS, PRODUCT_FAMILY,
-    OperatingSystem, enabled_products, SYSLOG_HOST, SYSLOG_PORT)
+    OperatingSystem, enabled_products, SYSLOG_HOST, SYSLOG_PORT,
+    IEM_INIT_FAILED)
 from framework.messaging.egress_accumulated_msgs_processor import \
     EgressAccumulatedMsgsProcessor
 # Modules for handling messages and manipulating internal threads
@@ -58,6 +59,8 @@ from framework.utils.conf_utils import (GLOBAL_CONF, HOST, MONITOR,
 from framework.utils.config_reader import ConfigReader
 from framework.utils.service_logging import init_logging, logger
 from framework.utils.store_factory import store
+from framework.utils.utility import Utility
+from cortx.utils.iem_framework.error import EventMessageError
 # Message to send to HAlon upon critical thread errors
 from json_msgs.messages.actuators.thread_controller import ThreadControllerMsg
 from message_handlers.disk_msg_handler import DiskMsgHandler
@@ -70,6 +73,7 @@ from message_handlers.real_stor_encl_msg_handler import RealStorEnclMsgHandler
 from message_handlers.service_msg_handler import ServiceMsgHandler
 from framework.base.module_thread import ThreadException
 
+from cortx.utils.iem_framework import EventMessage
 
 #DO NOT EDIT: Marker comment to dynamically add code to initialize coverage obj for code coverage report generation
 
@@ -713,6 +717,20 @@ def send_thread_controller_request(state):
 #     logger.info(f"Received SIGUSR1 signal to set log level to '{log_level}'")
 #     logger.setLevel(log_level)
 
+def initialize_iem():
+    try:
+        if os.path.exists(IEM_INIT_FAILED):
+            os.remove(IEM_INIT_FAILED)
+        EventMessage.init(component=None, source='S')
+        logger.info("IEM framework initiated successfully!!!")
+    except EventMessageError as e:
+        # create IEM_INIT_FAILED file and log current sspl pid.
+        Utility().create_file(IEM_INIT_FAILED)
+        with open(IEM_INIT_FAILED, 'w') as f:
+            f.write(str(os.getpid()))
+        logger.critical("Failed to initialize IEM Framework."
+                     f"ERROR:{e}")
+
 def refresh_iem_log_file(signal_number, frame):
     iem_sensor = threadController.get_sspl_module("IEMSensor")
     if iem_sensor:
@@ -774,6 +792,9 @@ if __name__ == "__main__":
     # Handle signal for iem file refresh
     signal.signal(signal.SIGUSR2, refresh_iem_log_file)
     #DO NOT EDIT: Marker comment to dynamically add signal handler for SIGUSR1 to generate code coverage report
+
+    # Initialize IEM framework
+    initialize_iem()
 
     try:
         # Create a PID file for systemd

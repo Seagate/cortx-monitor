@@ -15,9 +15,8 @@
 
 
 import os
-import psutil
 
-from framework.base.sspl_constants import IEM_DATA_PATH, IEM_INIT_FAILED
+from framework.base.sspl_constants import IEM_DATA_PATH
 from framework.utils.service_logging import logger
 from cortx.utils.iem_framework import EventMessage
 from cortx.utils.iem_framework.error import EventMessageError
@@ -79,56 +78,11 @@ class Iem:
             ""]
     }
 
-    def check_existing_iem_event(self, event_name, event_code):
-        """Before logging iem, check if is already present."""
-        previous_iem_event = None
-        iem_exist = False
-        if not os.path.exists(IEM_DATA_PATH):
-            os.makedirs(IEM_DATA_PATH)
-        iem_event_path = f'{IEM_DATA_PATH}/iem_{event_name}'
-        if not os.path.exists(iem_event_path):
-            with open(iem_event_path, 'w') as f:
-                f.write(event_code)
-                f.close()
-        else:
-            with open(iem_event_path, 'r') as f:
-                previous_iem_event = f.read().strip()
-                if previous_iem_event != event_code:
-                    with open(iem_event_path, 'w') as file:
-                        file.write(event_code)
-                        file.close()
-                else:
-                    logger.info("%s - IEM already created." %event_code)
-                    iem_exist = True
-                f.close()
-
-        return iem_exist
-
-    def check_fault_event(self, event_name, *events):
-        """Before logging fault_resolved iem event,
-        Check if fault iem event is present for that particular event."""
-        fault_iem = False
-        iem_event_path = f'{IEM_DATA_PATH}/iem_{event_name}'
-        if os.path.exists(iem_event_path):
-            with open(iem_event_path, 'r') as f:
-                previous_iem_event = f.read().strip()
-            if previous_iem_event in events:
-                fault_iem = True
-        return fault_iem
-
     def create_iem_fields(self, event, severity, event_type=None):
         event_code = event[0]
         event_name = event[1]
         description = self.EVENT_STRING[event_code][0]
-        if event_type == "fault_resolved" and event_name in self.fault_iems:
-            iem_event_path = f'{IEM_DATA_PATH}/iem_{event_name}'
-            if os.path.exists(iem_event_path):
-                os.remove(iem_event_path)
-                self.generate_iem(event_name, event_code, severity, description)
-        else:
-            previous_iem = self.check_existing_iem_event(event_name, event_code)
-            if not previous_iem:
-                self.generate_iem(event_name, event_code, severity, description)
+        self.generate_iem(event_name, event_code, severity, description)
 
     def iem_fault(self, event):
         event = self.EVENT_CODE[event]
@@ -141,34 +95,12 @@ class Iem:
         event_type = "fault_resolved"
         self.create_iem_fields(event, severity, event_type)
 
-    def check_exsisting_fault_iems(self):
-        """Incase of sspl restart or node reboot, Check if
-        previous iems fault are present."""
-        fault_events = ["IPMITOOL_ERROR", "HDPARM_ERROR",
-            "UDISKS2_UNAVAILABLE", "SMARTCTL_ERROR", "KAFKA_NOT_ACTIVE"]
-        for event in fault_events:
-            event_data = self.EVENT_CODE[event]
-            event_name = event_data[1]
-            prev_fault_iem_event = self.check_fault_event(
-                event_name, event_data[0])
-            if prev_fault_iem_event:
-                self.fault_iems.append(event_name)
-
     @staticmethod
     def generate_iem(module, event_code, severity, description):
         """Generate iem and send it to a MessgaeBroker."""
         try:
             logger.info(f"Sending IEM alert for module:{module}"
                         f" and event_code:{event_code}")
-            # check if IEM Framework initialized,
-            # if not, retry initializing the IEM Frameowork
-            if os.path.exists(IEM_INIT_FAILED):
-                with open(IEM_INIT_FAILED, 'r') as f:
-                    sspl_pid = f.read()
-                if sspl_pid and psutil.pid_exists(int(sspl_pid)):
-                    EventMessage.init(component='sspl', source='S')
-                    logger.info("IEM framework initialization completed!!")
-                os.remove(IEM_INIT_FAILED)
             EventMessage.send(module=module, event_id=event_code,
                               severity=severity, message_blob=description)
         except EventMessageError as e:

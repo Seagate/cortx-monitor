@@ -37,6 +37,7 @@ RESOURCE_PATH = "/opt/seagate/%s/sspl/low-level/json_msgs/schemas/" % (PRODUCT_F
 CLI_RESOURCE_PATH = "/opt/seagate/%s/sspl/low-level/tests/manual" % (PRODUCT_FAMILY)
 DATA_PATH = "/var/%s/sspl/data/" % (PRODUCT_FAMILY)
 IEM_DATA_PATH = "/var/%s/sspl/data/iem/sspl_iems"  %(PRODUCT_FAMILY)
+IEM_INIT_FAILED = "/var/%s/sspl/data/iem/iem_init_failure" %(PRODUCT_FAMILY)
 SSPL_CONFIGURED_DIR = "/var/%s/sspl/" % (PRODUCT_FAMILY)
 SSPL_CONFIGURED = "%s/sspl-configured" % (SSPL_CONFIGURED_DIR)
 RESOURCE_HEALTH_VIEW = "/usr/bin/resource_health_view"
