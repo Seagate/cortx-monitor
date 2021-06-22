@@ -91,6 +91,9 @@ BLOCK_DIR = "/block/"
 DEFAULT_RECOMMENDATION = 'Please Contact Seagate Support.'
 HEALTH_SVC_NAME = 'node-health'
 
+IVT_TEST_PLANS = ("full", "performance", "regression", "sanity",  "scalability")
+EMPTY_TEST_PLANS = ("full", "performance", "regression", "scalability")
+
 # This file will be created when sspl is being configured for node replacement case
 REPLACEMENT_NODE_ENV_VAR_FILE = "/etc/profile.d/set_replacement_env.sh"
 

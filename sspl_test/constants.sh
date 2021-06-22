@@ -20,3 +20,4 @@ SSPL_STORE_TYPE='file'
 CONFIG_SPEC_TYPE="yaml"
 SSPL_CONFIG_FILE="/etc/sspl.conf"
 SSPL_TEST_CONFIG_FILE="/opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/conf/sspl_tests.conf"
+IVT_TEST_PLANS=(full performance regression sanity scalability)

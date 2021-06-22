@@ -19,7 +19,7 @@ echo "Running Automated Integration Tests for SSPL-LL"
 script_dir=$(dirname $0)
 source "$script_dir"/constants.sh
 # Default test plan is sanity
-PLAN=${1:-sanity}
+PLAN=${1:-dev_sanity}
 
 SRVNODE=""
 

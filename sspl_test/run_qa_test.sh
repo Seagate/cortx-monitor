@@ -178,12 +178,12 @@ execute_test()
     $sudo $script_dir/run_sspl-ll_tests.sh $plan
 }
 
-if [ "$plan" == "self" ] || [ "$plan" == "self_primary" ]
+if [ " ${IVT_TEST_PLANS[*]} " == *"$plan"* ];
 then
     if [ "$IS_VIRTUAL" == "true" ]
     then
     echo "VM detected."
-    echo "ERROR: self or self_primary plan is intended to run on hardware setup."
+    echo "ERROR: "$plan" is intended to run on hardware setup."
     exit 1
     fi
 fi
@@ -253,7 +253,7 @@ fi
 
 # IMP NOTE: Please make sure that SSPL conf file has
 # primary_controller_ip=127.0.0.1 and primary_controller_port=$MOCK_SERVER_PORT (for vm)
-# For sanity test SSPL should connect to mock server instead of real server (for vm)
+# For dev_sanity test SSPL should connect to mock server instead of real server (for vm)
 # Restart SSPL to re-read configuration
 if [ "$SSPL_STORE_TYPE" == "confstor" ]
 then

@@ -36,9 +36,9 @@ from cortx.utils.validator.v_service import ServiceV
 from cortx.utils.validator.error import VError
 from files.opt.seagate.sspl.setup.setup_error import SetupError
 from files.opt.seagate.sspl.setup.setup_logger import init_logging, logger
-from framework.base.sspl_constants import (PRVSNR_CONFIG_INDEX,
-    GLOBAL_CONFIG_INDEX, global_config_path, file_store_config_path,
-    SSPL_BASE_DIR)
+from framework.base.sspl_constants import (
+    PRVSNR_CONFIG_INDEX, GLOBAL_CONFIG_INDEX, global_config_path,
+    file_store_config_path, SSPL_BASE_DIR, IVT_TEST_PLANS)
 
 
 class Cmd:
@@ -276,7 +276,9 @@ class TestCmd(Cmd):
 
     name = "test"
     test_plan_found = False
-    sspl_test_plans = ["sanity", "alerts", "self_primary", "self_secondary", "self"]
+    sspl_test_plans = [
+        "dev_sanity", "alerts", "self_primary", "self_secondary", "sanity"
+        "regression", "performance", "full", "scalability"]
 
     def __init__(self, args):
         super().__init__(args)
@@ -314,11 +316,12 @@ class TestCmd(Cmd):
             raise SetupError(1, msg)
         logger.info("%s - Validation done" % self.name)
 
-        if self.args.coverage and 'self' in self.args.plan[0]:
-            raise SetupError(errno.EINVAL,
-                             "%s - Argument validation failure. %s",
-                             self.name,
-                             "Code coverage can not be enabled with self tests.")
+        if self.args.coverage and self.args.plan[0] in IVT_TEST_PLANS:
+            raise SetupError(
+                errno.EINVAL, "%s - Argument validation failure. %s",
+                self.name,
+                "Code coverage can not be enabled for %s test plans."
+                % IVT_TEST_PLANS)
 
     def process(self):
         """Setup and run SSPL test"""
@@ -474,7 +477,8 @@ class CleanupCmd(Cmd):
             "cortx>release>product")
         if self.product is None:
             msg = "%s - validation failure. %s" % (
-                self.name, "'Product' name is required to restore suitable configs.")
+                self.name,
+                "'Product' name is required to restore suitable configs.")
             logger.error(msg)
             raise SetupError(errno.EINVAL, msg)
         logger.info("%s - Validation done" % self.name)
@@ -483,8 +487,8 @@ class CleanupCmd(Cmd):
         try:
             if os.path.exists(file_store_config_path):
                 os.remove(file_store_config_path)
-            shutil.copyfile("%s/conf/sspl.conf.%s.yaml" % (SSPL_BASE_DIR,
-                self.product), file_store_config_path)
+            shutil.copyfile("%s/conf/sspl.conf.%s.yaml" % (
+                SSPL_BASE_DIR, self.product), file_store_config_path)
             logger.info("%s - Process done" % self.name)
         except OSError as e:
             logger.error(f"Failed in Cleanup. ERROR: {e}")
