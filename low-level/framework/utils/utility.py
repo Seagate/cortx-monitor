@@ -82,9 +82,9 @@ class Utility(object):
     @staticmethod
     def create_file(path):
         """Create file at specified dir path."""
-        dir = path[:path.rindex("/")]
-        if not os.path.exists(dir):
-            os.makedirs(dir)
+        dir_path = path[:path.rindex("/")]
+        if not os.path.exists(dir_path):
+            os.makedirs(dir_path)
         if not os.path.exists(path):
             file = open(path, "w+")
             file.close()
