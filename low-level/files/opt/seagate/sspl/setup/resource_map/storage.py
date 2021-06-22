@@ -360,14 +360,14 @@ class StorageMap(ResourceMap):
         for nw_inf in nw_interfaces:
             nw_inf_data = self.get_health_template(nw_inf.get('durable-id'),
                                                    False)
-            specifis = {
+            specifics = {
                 "ip-address": nw_inf.get('ip-address'),
                 "link-speed": nw_inf.get('link-speed'),
                 "controller": nw_inf.get('object-name'),
             }
             self.set_health_data(
                 nw_inf_data, nw_inf.get('health'), nw_inf.get('health-reason'),
-                nw_inf.get('health-recommendation'), specifis)
+                nw_inf.get('health-recommendation'), [specifics])
             nw_data.append(nw_inf_data)
         return nw_data
 

@@ -8,6 +8,57 @@ from files.opt.seagate.sspl.setup.resource_map.storage import StorageMap
 from encl_api_response import (
     ENCLOSURE_RESPONSE, ENCLOSURE_SENSORS_RESPONSE, ENCLOSURE_RESPONSE_EMPTY)
 
+ENCLOSURE_NW_RESPONSE = """
+    [
+        {
+            "object-name":"controller-a",
+            "durable-id":"mgmtport_a",
+            "active-version":4,
+            "ip-address":"10.0.0.2",
+            "gateway":"10.0.0.1",
+            "subnet-mask":"255.255.255.0",
+            "mac-address":"00:c0:ff:44:25:e2",
+            "addressing-mode":"Manual",
+            "addressing-mode-numeric":1,
+            "link-speed":"1000mbps",
+            "link-speed-numeric":2,
+            "duplex-mode":"full",
+            "duplex-mode-numeric":0,
+            "auto-negotiation":"Disabled",
+            "auto-negotiation-numeric":0,
+            "health":"OK",
+            "health-numeric":0,
+            "health-reason":"",
+            "health-recommendation":"",
+            "ping-broadcast":"Enabled",
+            "ping-broadcast-numeric":1
+        },
+        {
+            "object-name":"controller-b",
+            "durable-id":"mgmtport_b",
+            "active-version":4,
+            "ip-address":"10.0.0.3",
+            "gateway":"10.0.0.1",
+            "subnet-mask":"255.255.255.0",
+            "mac-address":"00:c0:ff:44:1b:76",
+            "addressing-mode":"Manual",
+            "addressing-mode-numeric":1,
+            "link-speed":"1000mbps",
+            "link-speed-numeric":2,
+            "duplex-mode":"full",
+            "duplex-mode-numeric":0,
+            "auto-negotiation":"Disabled",
+            "auto-negotiation-numeric":0,
+            "health":"OK",
+            "health-numeric":0,
+            "health-reason":"",
+            "health-recommendation":"",
+            "ping-broadcast":"Enabled",
+            "ping-broadcast-numeric":1
+        }
+    ]
+"""
+
 
 class TestStorageMap(unittest.TestCase):
     def setUp(self) -> None:
@@ -79,6 +130,19 @@ class TestStorageMap(unittest.TestCase):
         assert expander_specifics[0]["location"] == "Enclosure 0, Drawer 0, Left Sideplane"
         assert expander_specifics[0]["name"] == "Sideplane 24-port Expander 0"
         assert expander_specifics[0]["drawer-id"] == 0
+
+    def test_get_nw_ports_info(self, encl_response):
+        encl_response.return_value = json.loads(ENCLOSURE_NW_RESPONSE)
+        resp = self.storage_map.get_nw_ports_info()
+        print(resp)
+        assert resp[0]['uid'] == 'mgmtport_a'
+        assert resp[0]['health']['status'] == 'OK'
+        assert resp[0]['health']['description'] == \
+            'mgmtport_a is in good health'
+        specifics = resp[0]['health']['specifics'][0]
+        assert specifics['ip-address'] == '10.0.0.2'
+        assert specifics['link-speed'] == '1000mbps'
+        assert specifics['controller'] == 'controller-a'
 
 
 if __name__ == "__main__":
