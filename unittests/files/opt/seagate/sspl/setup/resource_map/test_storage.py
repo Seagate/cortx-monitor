@@ -61,7 +61,7 @@ class TestStorageMap(unittest.TestCase):
         assert resp[0]['uid'] == 'sideplane_0.D0.B'
         assert resp[0]['health']['status'] == 'OK'
         assert resp[0]['health']['description'] == \
-            'Sideplane is in good state.'
+            'sideplane_0.D0.B is in good health.'
 
         specifics = resp[0]['health']['specifics']
         assert len(specifics) == 1
@@ -73,12 +73,13 @@ class TestStorageMap(unittest.TestCase):
         assert expanders[0]["uid"] == "expander_0.D0.B0"
         assert expanders[0]['health']["status"] == "OK"
         assert expanders[0]['health']['description'] == \
-            "Expander is in goot state."
+            "expander_0.D0.B0 is in good health."
 
         expander_specifics = expanders[0]['health']['specifics']
         assert expander_specifics[0]["location"] == "Enclosure 0, Drawer 0, Left Sideplane"
         assert expander_specifics[0]["name"] == "Sideplane 24-port Expander 0"
         assert expander_specifics[0]["drawer-id"] == 0
+
 
 if __name__ == "__main__":
     unittest.main()

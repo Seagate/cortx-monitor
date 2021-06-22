@@ -18,6 +18,7 @@
 import re
 import time
 from abc import ABCMeta, abstractmethod
+from framework.base.sspl_constants import DEFAULT_ALERT_RECOMMENDATION
 
 
 class ResourceMap(metaclass=ABCMeta):
@@ -79,8 +80,8 @@ class ResourceMap(metaclass=ABCMeta):
                 health_data.get("uid"),
                 'is' if good_state else 'is not')
         if not recommendation:
-            recommendation = 'None' if good_state\
-                else "Fault detected, please contact Seagate support."
+            recommendation = 'NA' if good_state\
+                else DEFAULT_ALERT_RECOMMENDATION
         health_data["last_updated"] = int(time.time())
         health_data["health"].update({
             "status": status,

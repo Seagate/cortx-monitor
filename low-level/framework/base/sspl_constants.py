@@ -297,7 +297,7 @@ iem_source_types = {
     "O": "OS"
 }
 
-DEFAULT_ALERT_RECOMMENDATION = 'Contact Seagate Support'
+DEFAULT_ALERT_RECOMMENDATION = 'Please Contact Seagate Support.'
 
 if __name__ == "__main__":
     print(' '.join(enabled_products))

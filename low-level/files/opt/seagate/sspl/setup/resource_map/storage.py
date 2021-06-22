@@ -245,13 +245,6 @@ class StorageMap(ResourceMap):
                     volumes = dg_vol_map[pool_sr_no]
                 else:
                     volumes = None
-                if health in HEALTH_UNDESIRED_VALS:
-                    health = "NA"
-                    dg_description = "Disk group is in unknown health state."
-                elif health == "OK":
-                    dg_description = "Disk group is in good health."
-                else:
-                    dg_description = "Disk group is not in good health."
                 recommendation = diskgroup.get("health-recommendation", "NA")
                 specifics = [
                     {
@@ -272,8 +265,8 @@ class StorageMap(ResourceMap):
                 ]
                 dg_data_dict = self.get_health_template(uid, is_fru=False)
                 self.set_health_data(
-                    dg_data_dict, health, dg_description, recommendation,
-                    specifics)
+                    dg_data_dict, health, recommendation=recommendation,
+                    specifics=specifics)
                 dg_data.append(dg_data_dict)
         return dg_data
 
@@ -282,7 +275,7 @@ class StorageMap(ResourceMap):
         sideplane_expander_list = []
         sideplane_expander_data = []
         enclosures = self.get_realstor_encl_data("enclosures")
-        # TO-DO: Get sideplane_expander data for CORVAULT.
+        #TODO : Handle CORVAULT sideplane expander data without expecting drawers
         encl_drawers = enclosures[0].get("drawers")
         if encl_drawers:
             for drawer in encl_drawers:
@@ -293,13 +286,6 @@ class StorageMap(ResourceMap):
             expanders = sideplane.get("expanders")
             expander_data = self.get_expander_data(expanders)
             health = sideplane.get("health", "NA")
-            if health in HEALTH_UNDESIRED_VALS:
-                health = "NA"
-                description = "Sideplane is in unknown health state."
-            elif health == "OK":
-                description = "Sideplane is in good state."
-            else:
-                description = "Sideplane is not in good state."
             recommendation = sideplane.get("health-recommendation", "NA")
             specifics = [
                 {
@@ -311,7 +297,8 @@ class StorageMap(ResourceMap):
             ]
             sideplane_dict = self.get_health_template(uid, is_fru=True)
             self.set_health_data(
-                sideplane_dict, health, description, recommendation, specifics)
+                sideplane_dict, status=health, recommendation=recommendation,
+                specifics=specifics)
 
             sideplane_expander_data.append(sideplane_dict)
         return sideplane_expander_data
@@ -322,13 +309,6 @@ class StorageMap(ResourceMap):
         for expander in expanders:
             uid = expander.get("durable-id", "NA")
             expander_health = expander.get("health", "NA")
-            if expander_health in HEALTH_UNDESIRED_VALS:
-                expander_health = "NA"
-                description = "Expander is in unknown health state."
-            elif expander_health == "OK":
-                description = "Expander is in goot state."
-            else:
-                description = "Expander is not in good state."
             recommendation = expander.get("health-recommendation", "NA")
             specifics = [
                 {
@@ -339,8 +319,9 @@ class StorageMap(ResourceMap):
             ]
             expander_dict = self.get_health_template(uid, is_fru=True)
             self.set_health_data(
-                expander_dict, expander_health, description, recommendation,
-                specifics)
+                expander_dict, status=expander_health,
+                recommendation=recommendation,
+                specifics=specifics)
             expander_data.append(expander_dict)
         return expander_data
 
