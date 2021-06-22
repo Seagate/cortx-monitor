@@ -20,6 +20,8 @@ import time
 from abc import ABCMeta, abstractmethod
 from framework.base.sspl_constants import DEFAULT_RECOMMENDATION
 
+from framework.base.sspl_constants import DEFAULT_RECOMMENDATION
+
 
 class ResourceMap(metaclass=ABCMeta):
     """Abstract class for all other resource types."""

@@ -134,7 +134,6 @@ class TestStorageMap(unittest.TestCase):
     def test_get_nw_ports_info(self, encl_response):
         encl_response.return_value = json.loads(ENCLOSURE_NW_RESPONSE)
         resp = self.storage_map.get_nw_ports_info()
-        print(resp)
         assert resp[0]['uid'] == 'mgmtport_a'
         assert resp[0]['health']['status'] == 'OK'
         assert resp[0]['health']['description'] == \
