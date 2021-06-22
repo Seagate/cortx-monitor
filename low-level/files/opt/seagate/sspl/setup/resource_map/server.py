@@ -20,14 +20,13 @@ import time
 import re
 import errno
 from framework.utils.ipmi_client import IpmiFactory
-from framework.base import sspl_constants
 
 import psutil
 from pathlib import Path
 from framework.utils.tool_factory import ToolFactory
 from resource_map import ResourceMap
 from error import ResourceMapError
-from framework.base.sspl_constants import CPU_PATH
+from framework.base.sspl_constants import (CPU_PATH, DEFAULT_RECOMMENDATION)
 
 
 class ServerMap(ResourceMap):
@@ -160,7 +159,7 @@ class ServerMap(ResourceMap):
         status = 'OK' if reading[2] == 'ok' else 'NA'
         health_desc = 'good' if status == 'OK' else 'bad'
         description = f"{uid} sensor is in {health_desc} health."
-        recommendation = sspl_constants.DEFAULT_ALERT_RECOMMENDATION if status != 'OK' else 'NA'
+        recommendation = DEFAULT_RECOMMENDATION if status != 'OK' else 'NA'
         specifics = [
             {
                 "Sensor Reading": f"{reading[-1]}",

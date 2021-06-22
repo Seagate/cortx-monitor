@@ -87,6 +87,7 @@ DEFAULT_SN = "DEFAULT_SN01"
 DEFAULT_CLUSTER = "DEFAULT_CC01"
 CPU_PATH = "devices/system/cpu/"
 BLOCK_DIR = "/block/"
+DEFAULT_RECOMMENDATION = 'Please Contact Seagate Support.'
 
 # This file will be created when sspl is being configured for node replacement case
 REPLACEMENT_NODE_ENV_VAR_FILE = "/etc/profile.d/set_replacement_env.sh"
@@ -297,7 +298,6 @@ iem_source_types = {
     "O": "OS"
 }
 
-DEFAULT_ALERT_RECOMMENDATION = 'Please Contact Seagate Support.'
 
 if __name__ == "__main__":
     print(' '.join(enabled_products))

@@ -18,7 +18,7 @@
 import re
 import time
 from abc import ABCMeta, abstractmethod
-from framework.base.sspl_constants import DEFAULT_ALERT_RECOMMENDATION
+from framework.base.sspl_constants import DEFAULT_RECOMMENDATION
 
 
 class ResourceMap(metaclass=ABCMeta):
@@ -81,7 +81,7 @@ class ResourceMap(metaclass=ABCMeta):
                 'is' if good_state else 'is not')
         if not recommendation:
             recommendation = 'NA' if good_state\
-                else DEFAULT_ALERT_RECOMMENDATION
+                else DEFAULT_RECOMMENDATION
         health_data["last_updated"] = int(time.time())
         health_data["health"].update({
             "status": status,
