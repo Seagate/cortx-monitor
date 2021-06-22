@@ -76,7 +76,11 @@ class StorageMap(ResourceMap):
         leaf_node, _ = self.get_node_details(nodes[-1])
         if leaf_node == "storage":
             for fru in self.storage_frus:
-                info.update({fru: self.storage_frus[fru]()})
+                try:
+                    info.update({fru: self.storage_frus[fru]()})
+                except:
+                    # TODO: Log the exception
+                    info.update({fru: None})
             info["last_updated"] = int(time.time())
             fru_found = True
         else:
@@ -86,7 +90,11 @@ class StorageMap(ResourceMap):
                 fru, _ = self.get_node_details(node)
                 if self.storage_frus.get(fru):
                     fru_found = True
-                    info = self.storage_frus[fru]()
+                    try:
+                        info = self.storage_frus[fru]()
+                    except:
+                        # TODO: Log the exception
+                        info = None
                     break
         if not fru_found:
             raise ResourceMapError(
