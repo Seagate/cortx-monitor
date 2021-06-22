@@ -5,130 +5,8 @@ from unittest.mock import patch
 
 from files.opt.seagate.sspl.setup.resource_map.storage import StorageMap
 
-
-ENCLOSURE_RESPONSE = """
-    {
-        "status_code": 200,
-        "api-response": {
-        "sensors":[
-            {
-            "drawer-id-numeric": 255,
-            "status": "OK",
-            "container": "controllers",
-            "enclosure-id": 0,
-            "sensor-type": "Temperature",
-            "durable-id": "sensor_temp_ctrl_B.1",
-            "value": "55 C",
-            "object-name": "sensor",
-            "controller-id-numeric": 0,
-            "container-numeric": 19,
-            "controller-id": "B",
-            "sensor-type-numeric": 0,
-            "sensor-name": "CPU Temperature-Ctlr B",
-            "drawer-id": "N/A",
-            "status-numeric": 1
-            },
-            {
-            "drawer-id-numeric": 255,
-            "status": "OK",
-            "container": "controllers",
-            "enclosure-id": 0,
-            "sensor-type": "Temperature",
-            "durable-id": "sensor_temp_ctrl_B.3",
-            "value": "28 C",
-            "object-name": "sensor",
-            "controller-id-numeric": 0,
-            "container-numeric": 19,
-            "controller-id": "B",
-            "sensor-type-numeric": 0,
-            "sensor-name": "Capacitor Pack Temperature-Ctlr B",
-            "drawer-id": "N/A",
-            "status-numeric": 1
-            },
-            {
-            "drawer-id-numeric": 255,
-            "status": "OK",
-            "container": "controllers",
-            "enclosure-id": 0,
-            "sensor-type": "Voltage",
-            "durable-id": "sensor_volt_ctrl_B.0",
-            "value": "8.13",
-            "object-name": "sensor",
-            "controller-id-numeric": 0,
-            "container-numeric": 19,
-            "controller-id": "B",
-            "sensor-type-numeric": 2,
-            "sensor-name": "Capacitor Pack Voltage-Ctlr B",
-            "drawer-id": "N/A",
-            "status-numeric": 1
-            },
-            {
-            "drawer-id-numeric": 255,
-            "status": "OK",
-            "container": "controllers",
-            "enclosure-id": 0,
-            "sensor-type": "Voltage",
-            "durable-id": "sensor_volt_ctrl_B.1",
-            "value": "2.03",
-            "object-name": "sensor",
-            "controller-id-numeric": 0,
-            "container-numeric": 19,
-            "controller-id": "B",
-            "sensor-type-numeric": 2,
-            "sensor-name": "Capacitor Cell 1 Voltage-Ctlr B",
-            "drawer-id": "N/A",
-            "status-numeric": 1
-            },
-            {
-            "drawer-id-numeric": 255,
-            "status": "OK",
-            "container": "power-supplies",
-            "enclosure-id": 0,
-            "sensor-type": "Current",
-            "durable-id": "sensor_curr_psu_0.1.0",
-            "value": "30.85",
-            "object-name": "sensor",
-            "controller-id-numeric": 3,
-            "container-numeric": 21,
-            "controller-id": "N/A",
-            "sensor-type-numeric": 1,
-            "sensor-name": "Current 12V Rail Loc: right-PSU",
-            "drawer-id": "N/A",
-            "status-numeric": 1
-            },
-            {
-            "drawer-id-numeric": 255,
-            "status": "OK",
-            "container": "power-supplies",
-            "enclosure-id": 0,
-            "sensor-type": "Current",
-            "durable-id": "sensor_curr_psu_0.1.1",
-            "value": "0.03",
-            "object-name": "sensor",
-            "controller-id-numeric": 3,
-            "container-numeric": 21,
-            "controller-id": "N/A",
-            "sensor-type-numeric": 1,
-            "sensor-name": "Current 5V Rail Loc: right-PSU",
-            "drawer-id": "N/A",
-            "status-numeric": 1
-            }
-        ],
-        "status": [
-            {
-                "object-name": "status",
-                "response-type": "Success",
-                "response-type-numeric": 0,
-                "response": "Command completed successfully. (2019-07-04 04:23:04)",
-                "return-code": 0,
-                "component-id": "",
-                "time-stamp": "2019-07-04 04:23:04",
-                "time-stamp-numeric": 1562214184
-            }
-        ]
-    }}
-    """
-ENCLOSURE_RESPONSE_EMPTY = {}
+from encl_api_response import (
+    ENCLOSURE_RESPONSE, ENCLOSURE_SENSORS_RESPONSE, ENCLOSURE_RESPONSE_EMPTY)
 
 
 class TestStorageMap(unittest.TestCase):
@@ -139,7 +17,7 @@ class TestStorageMap(unittest.TestCase):
         "files.opt.seagate.sspl.setup.resource_map.storage.StorageMap.get_realstor_encl_data"
     )
     def test_get_platform_sensors(self, encl_response):
-        encl_response.return_value = json.loads(ENCLOSURE_RESPONSE)
+        encl_response.return_value = json.loads(ENCLOSURE_SENSORS_RESPONSE)
         resp = self.storage_map.get_platform_sensors_info()
 
         # Temperature
@@ -172,6 +50,35 @@ class TestStorageMap(unittest.TestCase):
 
         # Voltage
         assert "voltage" not in resp
+
+    @patch(
+        "files.opt.seagate.sspl.setup.resource_map.storage.StorageMap.get_realstor_encl_data"
+    )
+    def test_get_sideplane_expander_info(self, encl_response):
+        encl_response.return_value = json.loads(
+            ENCLOSURE_RESPONSE)['api-response']['enclosures']
+        resp = self.storage_map.get_sideplane_expanders_info()
+        assert resp[0]['uid'] == 'sideplane_0.D0.B'
+        assert resp[0]['health']['status'] == 'OK'
+        assert resp[0]['health']['description'] == \
+            'sideplane_0.D0.B is in good health.'
+
+        specifics = resp[0]['health']['specifics']
+        assert len(specifics) == 1
+        assert specifics[0]['name'] == 'Left Sideplane'
+        assert specifics[0]['location'] == 'enclosure 0, drawer 0'
+        assert specifics[0]["drawer-id"] == 0
+
+        expanders = specifics[0]['expanders']
+        assert expanders[0]["uid"] == "expander_0.D0.B0"
+        assert expanders[0]['health']["status"] == "OK"
+        assert expanders[0]['health']['description'] == \
+            "expander_0.D0.B0 is in good health."
+
+        expander_specifics = expanders[0]['health']['specifics']
+        assert expander_specifics[0]["location"] == "Enclosure 0, Drawer 0, Left Sideplane"
+        assert expander_specifics[0]["name"] == "Sideplane 24-port Expander 0"
+        assert expander_specifics[0]["drawer-id"] == 0
 
 
 if __name__ == "__main__":

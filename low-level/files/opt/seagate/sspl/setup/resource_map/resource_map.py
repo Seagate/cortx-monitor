@@ -16,7 +16,9 @@
 # please email opensource@seagate.com or cortx-questions@seagate.com
 
 import re
+import time
 from abc import ABCMeta, abstractmethod
+from framework.base.sspl_constants import DEFAULT_RECOMMENDATION
 
 
 class ResourceMap(metaclass=ABCMeta):
@@ -67,3 +69,23 @@ class ResourceMap(metaclass=ABCMeta):
                 "specifics": []
             }
         }
+
+    @staticmethod
+    def set_health_data(health_data: dict, status, description=None,
+                        recommendation=None, specifics=None):
+        """Sets health attributes for a component."""
+        good_state = (status == "OK")
+        if not description:
+            description = "%s %s in good health." % (
+                health_data.get("uid"),
+                'is' if good_state else 'is not')
+        if not recommendation:
+            recommendation = 'NA' if good_state\
+                else DEFAULT_RECOMMENDATION
+        health_data["last_updated"] = int(time.time())
+        health_data["health"].update({
+            "status": status,
+            "description": description,
+            "recommendation": recommendation,
+            "specifics": specifics
+        })
