@@ -238,7 +238,7 @@ class StorageMap(ResourceMap):
                         {volume_pool_sr_no: [{"volume_uid": volume_uid}]})
         if diskgroups:
             for diskgroup in diskgroups:
-                uid = "diskgroup-" + diskgroup.get("name", "NA")
+                uid = diskgroup.get("name", "NA")
                 health = diskgroup.get("health", "NA")
                 pool_sr_no = diskgroup.get("pool-serial-number", "NA")
                 if pool_sr_no in dg_vol_map:
