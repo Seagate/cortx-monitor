@@ -252,7 +252,7 @@ class StorageMap(ResourceMap):
                     health = "NA"
                     dg_description = "Disk group is in unknown health state."
                 dg_data.append({
-                    "uid": "diskgroup-" + diskgroup.get("name", "NA"),
+                    "uid": diskgroup.get("name", "NA"),
                     "fru": False,
                     "last_updated": int(time.time()),
                     "health": {
