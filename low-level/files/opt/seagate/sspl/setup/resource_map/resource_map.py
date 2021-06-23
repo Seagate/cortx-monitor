@@ -18,7 +18,6 @@
 import re
 import time
 from abc import ABCMeta, abstractmethod
-from framework.base.sspl_constants import DEFAULT_RECOMMENDATION
 
 from framework.base.sspl_constants import DEFAULT_RECOMMENDATION
 
