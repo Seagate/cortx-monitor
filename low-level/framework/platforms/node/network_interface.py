@@ -35,11 +35,11 @@ class NetworkInterface:
         """Return the current physical link state of the interface.
 
             Posssible values are:
-            1. DOWN  => physical link is down
-            2. UP    => physical link is up
+            1. DISCONNECTED => physical link is down
+            2. CONNECTED    => physical link is up
             3. UNKNOWN
         """
-        link_status = {'0': 'DOWN', '1': 'UP'}
+        link_status = {'0': 'DISCONNECTED', '1': 'CONNECTED'}
         carrier_file_path = os.path.join(self.base_dir, interface, 'carrier')
 
         try:

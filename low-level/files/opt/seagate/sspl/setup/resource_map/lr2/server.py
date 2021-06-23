@@ -318,7 +318,7 @@ class ServerMap(ResourceMap):
             specifics["nwStatus"] = nw_status
             specifics["nwCableConnStatus"] = nw_cable_conn_status
             # Map and set the interface health status and description.
-            map_status = {"UP": "OK", "DOWN": "Disabled/Failed",
+            map_status = {"CONNECTED": "OK", "DISCONNECTED": "Disabled/Failed",
                           "UNKNOWN": "NA"}
             health_status = map_status[nw_cable_conn_status]
             desc = "Network Interface '%s' is %sin good health." % (
