@@ -457,37 +457,17 @@ class StorageMap(ResourceMap):
         """Return SAS ports current health."""
         data = []
         sas_ports = self.get_realstor_encl_data("expander-ports")
-        if not sas_ports:
-            return data
         for sas_port in sas_ports:
-            port_dict = {
-                "uid": sas_port.get("durable-id"),
-                "fru": "false",
-                "last_updated": int(time.time()),
-                "health": {
-                    "status": sas_port.get("health", "NA"),
-                    "description": sas_port.get("health-reason"),
-                    "recommendation": sas_port.get("health-recommendation"),
-                    "specifics": [
-                        {
-                            "sas-port-type": sas_port.get("sas-port-type"),
-                            "controller": sas_port.get("controller")
-                        }
-                    ]
-                }
-            }
-            data.append(port_dict)
+            port_data = self.get_health_template(sas_port.get("durable-id"),
+                                                 False)
+            specifics = [{
+                "sas-port-type": sas_port.get("sas-port-type"),
+                "controller": sas_port.get("controller"),
+                "status": sas_port.get("status")
+            }]
+            self.set_health_data(
+                port_data, sas_port.get("health"),
+                sas_port.get("health-reason"),
+                sas_port.get("health-recommendation"), specifics)
+            data.append(port_data)
         return data
-
-
-# if __name__ == "__main__":
-#     storage = StorageMap()
-#     frus = ["controllers", "psus"]
-#     for fru in frus:
-#         rpath = f"nodes[0]>storage[0]>hw>{fru}"
-#         health_data = storage.get_health_info(rpath=rpath)
-#         print(health_data)
-#     volume_health_data = storage.get_health_info(rpath="nodes[0]>storage[0]>fw>logical_volumes")
-#     dg_health_data = storage.get_health_info(rpath="nodes[0]>storage[0]>fw>disk_groups")
-#     print(json.dumps(volume_health_data))
-#     print(json.dumps(dg_health_data))
