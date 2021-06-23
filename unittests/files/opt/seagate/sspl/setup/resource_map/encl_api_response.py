@@ -303,3 +303,30 @@ ENCLOSURE_RESPONSE = """
         ]
     }}
     """
+ENCLOSURE_NW_RESPONSE = """
+    [
+        {
+            "object-name":"controller-a",
+            "durable-id":"mgmtport_a",
+            "active-version":4,
+            "ip-address":"10.0.0.2",
+            "gateway":"10.0.0.1",
+            "subnet-mask":"255.255.255.0",
+            "mac-address":"00:c0:ff:44:25:e2",
+            "addressing-mode":"Manual",
+            "addressing-mode-numeric":1,
+            "link-speed":"1000mbps",
+            "link-speed-numeric":2,
+            "duplex-mode":"full",
+            "duplex-mode-numeric":0,
+            "auto-negotiation":"Disabled",
+            "auto-negotiation-numeric":0,
+            "health":"OK",
+            "health-numeric":0,
+            "health-reason":"",
+            "health-recommendation":"",
+            "ping-broadcast":"Enabled",
+            "ping-broadcast-numeric":1
+        }
+    ]
+"""
