@@ -321,7 +321,7 @@ class ServerMap(ResourceMap):
             map_status = {"UP": "OK", "DOWN": "Disabled/Failed",
                           "UNKNOWN": "NA"}
             health_status = map_status[nw_cable_conn_status]
-            desc = "Network Interface '%s' is %sin good state" % (
+            desc = "Network Interface '%s' is %sin good health." % (
                 interface, '' if health_status == "OK" else 'not '
             )
             self.set_health_data(nic_info, health_status, description=desc,

@@ -179,7 +179,7 @@ class TestStorageMap(unittest.TestCase):
         assert resp[0]['uid'] == 'lo'
         assert resp[0]['health']['status'] == "OK"
         assert resp[0]['health']['description'] == \
-            "Network Interface 'lo' is in good state"
+            "Network Interface 'lo' is in good health."
         specifics = resp[0]['health']['specifics'][0]
         assert specifics['nwStatus'] == "UP"
         assert specifics['nwCableConnStatus'] == "UP"
