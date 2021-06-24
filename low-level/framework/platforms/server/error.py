@@ -34,11 +34,3 @@ class InterfaceError(Exception):
         if self._rc == 0:
             return self._desc
         return "error(%d): %s" % (self._rc, self._desc)
-
-
-class NetworkError(InterfaceError):
-    """Error Handling for Network related errors."""
-
-    def __init__(self, rc, message, *message_args):
-        """Initialize the Error information."""
-        super(NetworkError, self).__init__(rc, message, *message_args)

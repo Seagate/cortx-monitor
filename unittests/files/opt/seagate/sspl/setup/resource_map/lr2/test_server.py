@@ -174,6 +174,51 @@ class TestServerMap(unittest.TestCase):
             resp["Fan"][2]["health"]["recommendation"]
             == "Please Contact Seagate Support."
         )
+    @patch("framework.platforms.server.sas.SAS.get_port_data")
+    @patch("framework.platforms.server.sas.SAS.get_port_list")
+    @patch("framework.platforms.server.sas.SAS.get_host_list")
+    def test_get_sas_hba_info(self, host_list, port_list, port_data):
+        host_list.return_value = ['host1']
+        port_list.return_value = ['port-1:0']
+        port_data.return_value = {
+            "port_id": "sas_port-0",
+            "state": "running",
+            "sas_address": "0x500c0fff0a98b000"
+        }
+        resp = self.server_map.get_sas_hba_info()
+        assert resp[0]['uid'] == "SASHBA-1"
+        assert resp[0]['health']['status'] == "OK"
+        assert resp[0]['health']['description'] == \
+            "SASHBA-1 is in good health."
+        specifics = resp[0]['health']['specifics'][0]
+        assert specifics['num_ports'] == 1
+        port = specifics['ports'][0]
+        assert port['port_id'] == "sas_port-0"
+        assert port['state'] == "running"
+        assert port['sas_address'] == "0x500c0fff0a98b000"
+
+    @patch("framework.platforms.server.sas.SAS.get_phy_data")
+    @patch("framework.platforms.server.sas.SAS.get_phy_list_for_port")
+    @patch("framework.platforms.server.sas.SAS.get_port_list")
+    def test_get_sas_ports_info(self, port_list, phy_list, phy_data):
+        port_list.return_value = ['port-1:0']
+        phy_list.return_value = ['phy-1:0']
+        phy_data.return_value = {
+            "phy_id": "phy-1:8",
+            "state": "enabled",
+            "negotiated_linkrate": "12.0 Gbit"
+        }
+        resp = self.server_map.get_sas_ports_info()
+        assert resp[0]['uid'] == "sas_port-1:0"
+        assert resp[0]['health']['status'] == "OK"
+        assert resp[0]['health']['description'] == \
+            "sas_port-1:0 is in good health."
+        specifics = resp[0]['health']['specifics'][0]
+        assert specifics['num_phys'] == 1
+        phy = specifics['phys'][0]
+        assert phy['phy_id'] == "phy-1:8"
+        assert phy['state'] == "enabled"
+        assert phy['negotiated_linkrate'] == "12.0 Gbit"
 
     @patch(("files.opt.seagate.sspl.setup.resource_map.lr2.server."
             "ServerMap.get_nw_status"))

@@ -17,13 +17,13 @@ import os
 
 from framework.utils.conf_utils import (
     Conf, SSPL_CONF, SYSFS_PATH, SYSTEM_INFORMATION)
-from framework.platforms.node.error import InterfaceError
+from framework.platforms.server.error import InterfaceError
 
 
-class SASInterface:
+class SAS:
     """The Class provides access to the SAS interface information."""
 
-    name = "SASInterface"
+    name = "SAS"
 
     def __init__(self):
         """Initialize the class."""

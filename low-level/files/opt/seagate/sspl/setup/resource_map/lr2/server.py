@@ -30,7 +30,7 @@ from framework.base.sspl_constants import (
     CPU_PATH, DEFAULT_RECOMMENDATION, HEALTH_SVC_NAME, SAS_RESOURCE_ID)
 from framework.utils.conf_utils import (GLOBAL_CONF, NODE_TYPE_KEY, Conf)
 from framework.utils.service_logging import CustomLog, logger
-from framework.platforms.node.sas_interface import SASInterface
+from framework.platforms.server.sas import SAS
 
 
 class ServerMap(ResourceMap):
@@ -310,7 +310,7 @@ class ServerMap(ResourceMap):
     def get_sas_hba_info(self):
         """Return SAS-HBA current health."""
         sas_hba_data = []
-        sas_instance = SASInterface()
+        sas_instance = SAS()
         try:
             hosts = sas_instance.get_host_list()  # ['host1']
         except Exception:
@@ -347,7 +347,7 @@ class ServerMap(ResourceMap):
     def get_sas_ports_info(self):
         """Return SAS Ports current health."""
         sas_ports_data = []
-        sas_instance = SASInterface()
+        sas_instance = SAS()
         try:
             ports = sas_instance.get_port_list()
             # eg: ['port-1:0', 'port-1:1', 'port-1:2', 'port-1:3']
