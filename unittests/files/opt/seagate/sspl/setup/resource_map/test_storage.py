@@ -104,7 +104,14 @@ class TestStorageMap(unittest.TestCase):
         resp = self.storage_map.get_controllers_info()
         assert resp[0]['uid'] == 'controller_a'
         assert resp[0]['health']['status'] == 'OK'
-        assert resp[0]['health']['specifics'][0]['location'] == 'Left'
+        specifics = resp[0]['health']['specifics'][0]
+        assert specifics['serial-number'] == 'DHSIFTJ-18253C638B'
+        assert specifics['model'] == '3865'
+        assert specifics['part-number'] == '81-00000117-00-15'
+        assert specifics['disks'] == '84'
+        assert specifics['fw'] == 'GTS265R18-01'
+        assert specifics['virtual-disks'] == '2'
+        assert specifics['location'] == 'Left'
 
     @patch(
         "files.opt.seagate.sspl.setup.resource_map.storage.StorageMap.get_realstor_encl_data"
@@ -115,7 +122,14 @@ class TestStorageMap(unittest.TestCase):
         resp = self.storage_map.get_drives_info()
         assert resp[0]['uid'] == 'disk_00.00'
         assert resp[0]['health']['status'] == 'OK'
-        assert resp[0]['health']['specifics'][0]['location'] == '0.0'
+        specifics = resp[0]['health']['specifics'][0]
+        assert specifics['serial-number'] == 'Z4H099ZE0000R6375N70'
+        assert specifics['model'] == 'ST2000NM0034'
+        assert specifics['size'] == '2000.3GB'
+        assert specifics['temperature'] == '20 C'
+        assert specifics['disk-group'] == 'poola'
+        assert specifics['storage-pool-name'] == 'poola'
+        assert specifics['location'] == '0.0'
 
 
 if __name__ == "__main__":

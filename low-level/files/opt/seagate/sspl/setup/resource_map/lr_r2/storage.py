@@ -345,7 +345,7 @@ class StorageMap(ResourceMap):
                 continue
             uid = drive.get("durable-id")
             status = drive.get("health", "NA")
-            description = drive.get("health", "NA")
+            description = drive.get("description", "NA"),
             recommendation = drive.get("health-recommendation", "NA")
             specifics = [
                 {
@@ -355,7 +355,25 @@ class StorageMap(ResourceMap):
                     "temperature": drive.get("temperature", "NA"),
                     "disk-group": drive.get("disk-group", "NA"),
                     "storage-pool-name": drive.get("storage-pool-name", "NA"),
-                    "location": drive.get("location", "NA")
+                    "location": drive.get("location", "NA"),
+                    "enclosure-id": drive.get("enclosure-id", "NA"),
+                    "drawer-id": drive.get("drawer-id", "NA"),
+                    "slot": drive.get("slot", "NA"),
+                    "port": drive.get("port", "NA"),
+                    "scsi-id": drive.get("scsi-id", "NA"),
+                    "blocksize": drive.get("blocksize", "NA"),
+                    "blocks": drive.get("blocks", "NA"),
+                    "vendor": drive.get("vendor", "NA"),
+                    "revision": drive.get("revision", "NA"),
+                    "architecture": drive.get("architecture", "NA"),
+                    "interface": drive.get("interface", "NA"),
+                    "type": drive.get("type", "NA"),
+                    "blink": drive.get("blink", "NA"),
+                    "locator-led": drive.get("locator-led", "NA"),
+                    "enclosure-wwn": drive.get("enclosure-wwn", "NA"),
+                    "virtual-disk-serial": drive.get("virtual-disk-serial", "NA"),
+                    "led-status": drive.get("led-status", "NA"),
+                    "power-on-hours": drive.get("power-on-hours", "NA")
                     }
                 ]
             drives_dict = self.get_health_template(uid, is_fru=True)
