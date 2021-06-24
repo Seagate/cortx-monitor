@@ -70,7 +70,7 @@ class SAS:
         """
             Return SAS port data/info of given port.
             eg: Given input port-1:0 returns
-                { "port_id":"sas_port-0",
+                { "port_id":"sas_port-1:0",
                   "state":"running",
                   "sas_address":"0x500c0fff0a98b000"
                 }
@@ -89,7 +89,7 @@ class SAS:
                 sas_addr = cFile.read().strip()
 
             port_data = {
-                    "port_id": f'sas_port-{port_id}',
+                    "port_id": f'sas_{port_name}',
                     "state": state,
                     "sas_address": sas_addr
                 }

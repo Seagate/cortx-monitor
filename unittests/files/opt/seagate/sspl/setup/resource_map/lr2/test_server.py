@@ -181,7 +181,7 @@ class TestServerMap(unittest.TestCase):
         host_list.return_value = ['host1']
         port_list.return_value = ['port-1:0']
         port_data.return_value = {
-            "port_id": "sas_port-0",
+            "port_id": "sas_port-1:0",
             "state": "running",
             "sas_address": "0x500c0fff0a98b000"
         }
@@ -193,7 +193,7 @@ class TestServerMap(unittest.TestCase):
         specifics = resp[0]['health']['specifics'][0]
         assert specifics['num_ports'] == 1
         port = specifics['ports'][0]
-        assert port['port_id'] == "sas_port-0"
+        assert port['port_id'] == "sas_port-1:0"
         assert port['state'] == "running"
         assert port['sas_address'] == "0x500c0fff0a98b000"
 

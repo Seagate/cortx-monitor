@@ -76,7 +76,7 @@ class SASPortSensor(SensorThread, InternalMsgQ):
     POLLING_INTERVAL = "polling_interval"
     CACHE_DIR_NAME  = "server"
 
-    RESOURCE_ID = "SASHBA-0"
+    RESOURCE_ID = "SASHBA-1"
     DEFAULT_POLLING_INTERVAL = '30'
 
     PROBE = "probe"
@@ -419,10 +419,9 @@ class SASPortSensor(SensorThread, InternalMsgQ):
                 if key not in self.port_phy_list_dict[port]:
                     # Skip adding this phy
                     continue
-            # Key will be phy-0:0. So, aplit it using ':'
-            # So, structure will be SASHBA-0:phy-0
-            phy_number = key.split(":")[1]
-            specific_info["resource_id"] = self.RESOURCE_ID + ':' + "phy-" + phy_number
+            # Key will be phy-1:0.
+            # Here phy-1:0 represent 0th phy for SASHBA-1.
+            specific_info["resource_id"] = key
             specific_info["negotiated_link_rate"] = self.phy_dir_to_linkrate_mapping[key][0].strip()
             specific_info_list.append(specific_info)
             specific_info = {}
@@ -438,7 +437,7 @@ class SASPortSensor(SensorThread, InternalMsgQ):
 
             info = {
                     "resource_type": self.RESOURCE_TYPE, # node:interface:sas
-                    "resource_id": self.RESOURCE_ID, # SASHBA-0
+                    "resource_id": self.RESOURCE_ID,  # SASHBA-1
                     "event_time": epoch_time,
                     "description": description
                     }
@@ -453,7 +452,8 @@ class SASPortSensor(SensorThread, InternalMsgQ):
 
             info = {
                     "resource_type": self.RESOURCE_TYPE + ':port', # node:interface:sas:port
-                    "resource_id": self.RESOURCE_ID + f'-port-{port}', # SASHBA-0-port-0
+                    "resource_id": f'sas_port-1:{port}',
+                    # sas_port-1:0 represents 0th port of SASHBA-1
                     "event_time": epoch_time,
                     "description": description
                     }
