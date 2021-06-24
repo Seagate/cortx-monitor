@@ -28,6 +28,7 @@ from error import ResourceMapError
 from framework.platforms.server.network import Network
 from framework.base.sspl_constants import (
     CPU_PATH, DEFAULT_RECOMMENDATION, HEALTH_SVC_NAME, SAS_RESOURCE_ID)
+from framework.platforms.node.raid.raid import RaidArray
 from framework.utils.conf_utils import (GLOBAL_CONF, NODE_TYPE_KEY, Conf)
 from framework.utils.service_logging import CustomLog, logger
 from framework.platforms.server.sas import SAS
@@ -57,7 +58,8 @@ class ServerMap(ResourceMap):
             'fans': self.get_fans_info,
             'sas_hba': self.get_sas_hba_info,
             'sas_ports': self.get_sas_ports_info,
-            'nw_ports': self.get_nw_ports_info
+            'nw_ports': self.get_nw_ports_info,
+            'raid_array': self.get_raid_array_info
         }
         self._ipmi = IpmiFactory().get_implementor("ipmitool")
         self.platform_sensor_list = ['Temperature', 'Voltage', 'Current']
@@ -463,3 +465,25 @@ class ServerMap(ResourceMap):
             nw_cable_conn_status = "UNKNOWN"
             logger.exception(self.log.svc_log(err))
         return nw_status, nw_cable_conn_status
+    def get_raid_array_info(self):
+        raid_array = RaidArray()
+        raid_array_data = []
+        for raid in raid_array.get_configured_devices():
+            raid_data = self.get_health_template(raid.split("/")[-1], False)
+            raid_data["last_updated"] = int(time.time())
+            health = raid_array.get_raid_health(raid)
+            data_integrity_status = "NA"
+            devices = []
+            if health != "Missing":
+                data_integrity_status = raid_array.get_data_integrity_status(raid)
+                devices = raid_array.get_devices_status(raid)
+            specifics = [{"location": raid, "data_integrity_status" : data_integrity_status, "devices": devices}]
+            self.set_health_data(raid_data, health, specifics=specifics)
+            raid_array_data.append(raid_data)
+        return raid_array_data
+
+
+if __name__ == "__main__":
+    server = ServerMap()
+    health_data = server.get_health_info(rpath="nodes[0]>compute[0]>sw>os>raid_array")
+    print(health_data)
