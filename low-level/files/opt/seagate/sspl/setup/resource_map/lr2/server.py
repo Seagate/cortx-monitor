@@ -27,7 +27,7 @@ from framework.utils.ipmi_client import IpmiFactory
 from framework.utils.tool_factory import ToolFactory
 from resource_map import ResourceMap
 from error import ResourceMapError
-from framework.platforms.node.network_interface import NetworkInterface
+from framework.platforms.server.network_interface import NetworkInterface
 from framework.base.sspl_constants import (CPU_PATH, DEFAULT_RECOMMENDATION)
 from framework.utils.conf_utils import (GLOBAL_CONF, NODE_TYPE_KEY, Conf)
 

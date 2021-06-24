@@ -173,7 +173,7 @@ class TestStorageMap(unittest.TestCase):
     def test_get_nw_ports_info(self, io_counter, if_addrs, nw_status):
         io_counter.return_value = NET_IO_COUNTERS
         if_addrs.return_value = NET_IF_ADDRESS
-        nw_status.return_value = ("UP", "UP")
+        nw_status.return_value = ("UP", "CONNECTED")
         resp = self.server_map.get_nw_ports_info()
         print(resp)
         assert resp[0]['uid'] == 'lo'
@@ -182,7 +182,7 @@ class TestStorageMap(unittest.TestCase):
             "Network Interface 'lo' is in good health."
         specifics = resp[0]['health']['specifics'][0]
         assert specifics['nwStatus'] == "UP"
-        assert specifics['nwCableConnStatus'] == "UP"
+        assert specifics['nwCableConnStatus'] == "CONNECTED"
         assert specifics['networkErrors'] == 0
         assert specifics['droppedPacketsIn'] == 0
         assert specifics['droppedPacketsOut'] == 0
