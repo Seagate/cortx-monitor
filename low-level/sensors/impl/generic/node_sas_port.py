@@ -28,7 +28,7 @@ import uuid
 from framework.base.debug import Debug
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.module_thread import SensorThread
-from framework.base.sspl_constants import DATA_PATH
+from framework.base.sspl_constants import DATA_PATH, SAS_RESOURCE_ID
 from framework.utils.conf_utils import (GLOBAL_CONF, SSPL_CONF, Conf,
     NODE_ID_KEY)
 from framework.utils.config_reader import ConfigReader
@@ -38,6 +38,7 @@ from framework.utils.store_factory import file_store
 from framework.utils.sysfs_interface import SysFS
 from framework.utils.tool_factory import ToolFactory
 from message_handlers.node_data_msg_handler import NodeDataMsgHandler
+from framework.platforms.server.sas import SAS
 
 # Override default store
 store = file_store
@@ -76,7 +77,8 @@ class SASPortSensor(SensorThread, InternalMsgQ):
     POLLING_INTERVAL = "polling_interval"
     CACHE_DIR_NAME  = "server"
 
-    RESOURCE_ID = "SASHBA-1"
+    HOST_ID = SAS().get_host_list()[0].replace('host', '')
+    RESOURCE_ID = SAS_RESOURCE_ID + HOST_ID  # eg. SASHBA-0 if host_id=0
     DEFAULT_POLLING_INTERVAL = '30'
 
     PROBE = "probe"
@@ -437,7 +439,7 @@ class SASPortSensor(SensorThread, InternalMsgQ):
 
             info = {
                     "resource_type": self.RESOURCE_TYPE, # node:interface:sas
-                    "resource_id": self.RESOURCE_ID,  # SASHBA-1
+                    "resource_id": self.RESOURCE_ID,  # eg. SASHBA-1
                     "event_time": epoch_time,
                     "description": description
                     }
@@ -452,8 +454,8 @@ class SASPortSensor(SensorThread, InternalMsgQ):
 
             info = {
                     "resource_type": self.RESOURCE_TYPE + ':port', # node:interface:sas:port
-                    "resource_id": f'sas_port-1:{port}',
-                    # sas_port-1:0 represents 0th port of SASHBA-1
+                    "resource_id": f'sas_port-{self.HOST_ID}:{port}',
+                    # eg. sas_port-1:0 represents 0th port of SASHBA-1
                     "event_time": epoch_time,
                     "description": description
                     }
