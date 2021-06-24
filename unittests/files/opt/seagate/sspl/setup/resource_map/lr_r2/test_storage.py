@@ -3,7 +3,7 @@ import json
 
 from unittest.mock import patch
 
-from files.opt.seagate.sspl.setup.resource_map.storage import StorageMap
+from files.opt.seagate.sspl.setup.resource_map.lr_r2.storage import StorageMap
 
 from encl_api_response import (
     ENCLOSURE_RESPONSE, ENCLOSURE_SENSORS_RESPONSE, ENCLOSURE_RESPONSE_EMPTY,
@@ -15,10 +15,10 @@ class TestStorageMap(unittest.TestCase):
         self.storage_map = StorageMap()
 
     @patch(
-        "files.opt.seagate.sspl.setup.resource_map.storage.StorageMap.get_realstor_encl_data"
+        "files.opt.seagate.sspl.setup.resource_map.lr_r2.storage.StorageMap.get_realstor_encl_data"
     )
     def test_get_platform_sensors(self, encl_response):
-        encl_response.return_value = json.loads(ENCLOSURE_RESPONSE)['api-response']['sensors']
+        encl_response.return_value = json.loads(ENCLOSURE_SENSORS_RESPONSE)['api-response']['sensors']
         resp = self.storage_map.get_platform_sensors_info()
 
         # Temperature
@@ -37,7 +37,7 @@ class TestStorageMap(unittest.TestCase):
         assert resp["voltage"][0]["health"]["specifics"][0]["value"] == "8.13"
 
     @patch(
-        "files.opt.seagate.sspl.setup.resource_map.storage.StorageMap.get_realstor_encl_data"
+        "files.opt.seagate.sspl.setup.resource_map.lr_r2.storage.StorageMap.get_realstor_encl_data"
     )
     def test_get_platform_sensors_empty(self, encl_response):
         encl_response.return_value = ENCLOSURE_RESPONSE_EMPTY
@@ -53,7 +53,7 @@ class TestStorageMap(unittest.TestCase):
         assert "voltage" not in resp
 
     @patch(
-        "files.opt.seagate.sspl.setup.resource_map.storage.StorageMap.get_realstor_encl_data"
+        "files.opt.seagate.sspl.setup.resource_map.lr_r2.storage.StorageMap.get_realstor_encl_data"
     )
     def test_get_sideplane_expander_info(self, encl_response):
         encl_response.return_value = json.loads(
@@ -81,7 +81,7 @@ class TestStorageMap(unittest.TestCase):
         assert expander_specifics[0]["name"] == "Sideplane 24-port Expander 0"
         assert expander_specifics[0]["drawer-id"] == 0
 
-    @patch(("files.opt.seagate.sspl.setup.resource_map.storage."
+    @patch(("files.opt.seagate.sspl.setup.resource_map.lr_r2.storage."
             "StorageMap.get_realstor_encl_data"))
     def test_get_nw_ports_info(self, encl_response):
         encl_response.return_value = json.loads(ENCLOSURE_NW_RESPONSE)
@@ -96,7 +96,7 @@ class TestStorageMap(unittest.TestCase):
         assert specifics['controller'] == 'controller-a'
 
     @patch(
-        "files.opt.seagate.sspl.setup.resource_map.storage.StorageMap.get_realstor_encl_data"
+        "files.opt.seagate.sspl.setup.resource_map.lr_r2.storage.StorageMap.get_realstor_encl_data"
     )
     def test_get_controllers(self, encl_response):
         encl_response.return_value = json.loads(
@@ -108,13 +108,13 @@ class TestStorageMap(unittest.TestCase):
         assert specifics['serial-number'] == 'DHSIFTJ-18253C638B'
         assert specifics['model'] == '3865'
         assert specifics['part-number'] == '81-00000117-00-15'
-        assert specifics['disks'] == '84'
+        assert specifics['disks'] == 84
         assert specifics['fw'] == 'GTS265R18-01'
-        assert specifics['virtual-disks'] == '2'
+        assert specifics['virtual-disks'] == 2
         assert specifics['location'] == 'Left'
 
     @patch(
-        "files.opt.seagate.sspl.setup.resource_map.storage.StorageMap.get_realstor_encl_data"
+        "files.opt.seagate.sspl.setup.resource_map.lr_r2.storage.StorageMap.get_realstor_encl_data"
     )
     def test_get_drives(self, encl_response):
         encl_response.return_value = json.loads(
