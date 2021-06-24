@@ -6,7 +6,8 @@ from unittest.mock import patch
 from files.opt.seagate.sspl.setup.resource_map.storage import StorageMap
 
 from encl_api_response import (
-    ENCLOSURE_RESPONSE, ENCLOSURE_SENSORS_RESPONSE, ENCLOSURE_RESPONSE_EMPTY)
+    ENCLOSURE_RESPONSE, ENCLOSURE_SENSORS_RESPONSE, ENCLOSURE_RESPONSE_EMPTY,
+    ENCLOSURE_NW_RESPONSE)
 
 
 class TestStorageMap(unittest.TestCase):
@@ -79,6 +80,20 @@ class TestStorageMap(unittest.TestCase):
         assert expander_specifics[0]["location"] == "Enclosure 0, Drawer 0, Left Sideplane"
         assert expander_specifics[0]["name"] == "Sideplane 24-port Expander 0"
         assert expander_specifics[0]["drawer-id"] == 0
+
+    @patch(("files.opt.seagate.sspl.setup.resource_map.storage."
+            "StorageMap.get_realstor_encl_data"))
+    def test_get_nw_ports_info(self, encl_response):
+        encl_response.return_value = json.loads(ENCLOSURE_NW_RESPONSE)
+        resp = self.storage_map.get_nw_ports_info()
+        assert resp[0]['uid'] == 'mgmtport_a'
+        assert resp[0]['health']['status'] == 'OK'
+        assert resp[0]['health']['description'] == \
+            'mgmtport_a is in good health.'
+        specifics = resp[0]['health']['specifics'][0]
+        assert specifics['ip-address'] == '10.0.0.2'
+        assert specifics['link-speed'] == '1000mbps'
+        assert specifics['controller'] == 'controller-a'
 
 
 if __name__ == "__main__":
