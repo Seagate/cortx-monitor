@@ -111,6 +111,8 @@ class EgressAccumulatedMsgsProcessor(ScheduledModuleThread, InternalMsgQ):
                 logger.debug("Found accumulated messages, trying to send again")
                 while not self.store_queue.is_empty():
                     message = self.store_queue.get()
+                    if isinstance(message, bytes):
+                        message = message.decode()
                     dict_msg = json.loads(message)
                     if "actuator_response_type" in dict_msg["message"]:
                         event_time = dict_msg["message"] \
