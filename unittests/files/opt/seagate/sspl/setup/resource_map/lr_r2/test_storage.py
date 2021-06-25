@@ -7,7 +7,7 @@ from files.opt.seagate.sspl.setup.resource_map.lr_r2.storage import StorageMap
 
 from encl_api_response import (
     ENCLOSURE_RESPONSE, ENCLOSURE_SENSORS_RESPONSE, ENCLOSURE_RESPONSE_EMPTY,
-    ENCLOSURE_NW_RESPONSE, DRIVE_RESPONSE)
+    ENCLOSURE_NW_RESPONSE, CONTROLLER_RESPONSE, DRIVE_RESPONSE)
 
 
 class TestStorageMap(unittest.TestCase):
