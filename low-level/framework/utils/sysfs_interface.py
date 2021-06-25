@@ -141,3 +141,4 @@ class SysFS(Utility):
         except OSError as os_err:
             return os_err.errno
         return self.nw_phy_link_state[carrier_indicator]
+
