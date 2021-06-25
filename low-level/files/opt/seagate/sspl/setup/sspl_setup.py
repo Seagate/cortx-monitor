@@ -277,8 +277,18 @@ class TestCmd(Cmd):
     name = "test"
     test_plan_found = False
     sspl_test_plans = [
-        "dev_sanity", "alerts", "self_primary", "self_secondary", "sanity"
-        "regression", "performance", "full", "scalability"]
+        "alerts", "dev_sanity", "full", "performance", "regression", "sanity",
+        "scalability", "self_primary", "self_secondary"]
+    # alerts: Contains realstor and node - sensors, actuator test cases,
+    # intended to run on VM.
+    # dev_sanity: Subset of 'alerts' test plan, intended to run on VM.
+    # full, performance, regression, scalability: non implimented IVT test
+    # plans.
+    # sanity: This is pone of the IVT test plan contains
+    # HW related test cases, intended to run on HW setup.
+    # self_primary, self_secondary - Same as sanity test plan, but not included
+    # in IVT test plans.
+
 
     def __init__(self, args):
         super().__init__(args)
@@ -316,12 +326,13 @@ class TestCmd(Cmd):
             raise SetupError(1, msg)
         logger.info("%s - Validation done" % self.name)
 
-        if self.args.coverage and self.args.plan[0] in IVT_TEST_PLANS:
+        if self.args.coverage and (self.args.plan[0] in IVT_TEST_PLANS or
+            'self' in self.args.plan[0]):
             raise SetupError(
                 errno.EINVAL, "%s - Argument validation failure. %s",
                 self.name,
-                "Code coverage can not be enabled for %s test plans."
-                % IVT_TEST_PLANS)
+                "Code coverage can not be enabled for %s test plan."
+                % self.args.plan[0])
 
     def process(self):
         """Setup and run SSPL test"""

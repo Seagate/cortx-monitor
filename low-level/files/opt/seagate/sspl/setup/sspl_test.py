@@ -26,7 +26,7 @@ from framework.utils.utility import Utility
 from framework.base.sspl_constants import (
     PRODUCT_FAMILY, sspl_config_path, sspl_test_file_path,
     sspl_test_config_path, global_config_path, SSPL_CONFIG_INDEX,
-    SSPL_TEST_CONFIG_INDEX, IVT_TEST_PLANS, EMPTY_TEST_PLANS)
+    SSPL_TEST_CONFIG_INDEX, IVT_TEST_PLANS, NOT_IMPLEMENTED_TEST_PLANS)
 
 
 TEST_DIR = f"/opt/seagate/{PRODUCT_FAMILY}/sspl/sspl_test"
@@ -189,7 +189,7 @@ class SSPLTestCmd:
             CMD = "%s/run_qa_test.sh --plan %s --coverage %s"\
                    %(TEST_DIR, self.plan, self.coverage_enabled)
             try:
-                output, error, rc = SimpleProcess(CMD).run(
+                _, error, rc = SimpleProcess(CMD).run(
                     realtime_output=True)
             except KeyboardInterrupt:
                 rc = 1
@@ -228,7 +228,7 @@ class SSPLTestCmd:
             except Exception as error:
                 raise TestException(
                     "Error occurred while executing sspl tests: %s" % error)
-        elif self.plan in EMPTY_TEST_PLANS:
+        elif self.plan in NOT_IMPLEMENTED_TEST_PLANS:
             print("TEST SKIPPED: No tests included for %s test plan." % (
                 self.plan))
         else:
@@ -237,7 +237,7 @@ class SSPLTestCmd:
             # RunQATest(self.plan).run()
             try:
                 CMD = "%s/run_qa_test.sh --plan %s" % (TEST_DIR, self.plan)
-                output, error, returncode = SimpleProcess(CMD).run(
+                _, error, returncode = SimpleProcess(CMD).run(
                     realtime_output=True)
             except KeyboardInterrupt:
                 msg = "KeyboardInterrupt occurred while executing sspl test."
