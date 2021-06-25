@@ -93,6 +93,7 @@ HEALTH_SVC_NAME = 'node-health'
 
 IVT_TEST_PLANS = ("full", "performance", "regression", "sanity",  "scalability")
 NOT_IMPLEMENTED_TEST_PLANS = ("full", "performance", "regression", "scalability")
+TEST_REQ_SERVICE_RESTART = ("dev_sanity", "alerts")
 
 # This file will be created when sspl is being configured for node replacement case
 REPLACEMENT_NODE_ENV_VAR_FILE = "/etc/profile.d/set_replacement_env.sh"

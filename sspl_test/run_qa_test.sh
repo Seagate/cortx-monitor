@@ -178,12 +178,12 @@ execute_test()
     $sudo $script_dir/run_sspl-ll_tests.sh $plan
 }
 
-if [ " ${IVT_TEST_PLANS[*]} " == *"$plan"* ];
+if [ "$plan" == "sanity" ]
 then
     if [ "$IS_VIRTUAL" == "true" ]
     then
     echo "VM detected."
-    echo "ERROR: "$plan" is intended to run on hardware setup."
+    echo "ERROR: $plan is intended to run on hardware setup."
     exit 1
     fi
 fi

@@ -38,7 +38,7 @@ from files.opt.seagate.sspl.setup.setup_error import SetupError
 from files.opt.seagate.sspl.setup.setup_logger import init_logging, logger
 from framework.base.sspl_constants import (
     PRVSNR_CONFIG_INDEX, GLOBAL_CONFIG_INDEX, global_config_path,
-    file_store_config_path, SSPL_BASE_DIR, IVT_TEST_PLANS)
+    file_store_config_path, SSPL_BASE_DIR, TEST_REQ_SERVICE_RESTART)
 
 
 class Cmd:
@@ -60,7 +60,7 @@ class Cmd:
             [ post_install --config [<global_config_url>] ]
             [ init --config [<global_config_url>] ]
             [ config --config [<global_config_url>] ]
-            [ test --config [<global_config_url>] --plan [sanity|alerts|self_primary|self_secondary|self] ]
+            [ test --config [<global_config_url>] --plan [sanity|alerts|dev_sanity|full|performance|scalability|regression] ]
             [ reset --config [<global_config_url>] ]
             [ join_cluster --nodes [<nodes>] ]
             [ manifest_support_bundle [<id>] [<path>] ]
@@ -271,23 +271,21 @@ class InitCmd(Cmd):
 
 class TestCmd(Cmd):
     """Starts test based on plan:
-    (sanity|alerts|self_primary|self_secondary).
+    (sanity|alerts|dev_sanity|full|performance|regression|sanity).
     """
 
     name = "test"
     test_plan_found = False
     sspl_test_plans = [
         "alerts", "dev_sanity", "full", "performance", "regression", "sanity",
-        "scalability", "self_primary", "self_secondary"]
+        "scalability"]
     # alerts: Contains realstor and node - sensors, actuator test cases,
     # intended to run on VM.
     # dev_sanity: Subset of 'alerts' test plan, intended to run on VM.
     # full, performance, regression, scalability: non implimented IVT test
     # plans.
-    # sanity: This is pone of the IVT test plan contains
+    # sanity: This is one of the IVT test plan, which contains
     # HW related test cases, intended to run on HW setup.
-    # self_primary, self_secondary - Same as sanity test plan, but not included
-    # in IVT test plans.
 
 
     def __init__(self, args):
@@ -326,8 +324,7 @@ class TestCmd(Cmd):
             raise SetupError(1, msg)
         logger.info("%s - Validation done" % self.name)
 
-        if self.args.coverage and (self.args.plan[0] in IVT_TEST_PLANS or
-            'self' in self.args.plan[0]):
+        if self.args.coverage and self.args.plan[0] in TEST_REQ_SERVICE_RESTART:
             raise SetupError(
                 errno.EINVAL, "%s - Argument validation failure. %s",
                 self.name,

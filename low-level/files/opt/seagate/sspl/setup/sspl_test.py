@@ -34,7 +34,7 @@ SSPL_TEST_GLOBAL_CONFIG = "sspl_test_gc"
 
 
 class SSPLTestCmd:
-    """Starts test based on plan (sanity|alerts|self_primary|self_secondary)."""
+    """Starts test based on plan (sanity|alerts|dev_sanity|full|performance|scalability|regression)."""
 
     def __init__(self, args: list):
         self.args = args

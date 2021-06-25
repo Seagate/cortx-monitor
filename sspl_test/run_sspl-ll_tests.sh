@@ -43,12 +43,9 @@ then
         # Check if current node is primary
         if [[ "$PRIMARY" == *"$SRVNODE"* ]]
         then
-            PLAN="self_primary"
-        else
-            PLAN="self_secondary"
-        fi
+            PLAN="sanity"
     fi
-    [ -z "$PLAN" ] && PLAN="self_primary"
+    [ -z "$PLAN" ] && PLAN="sanity"
 fi
 
 systemctl start crond
