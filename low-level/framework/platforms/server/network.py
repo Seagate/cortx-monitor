@@ -17,13 +17,13 @@ import os
 
 from framework.utils.conf_utils import (
     Conf, SSPL_CONF, SYSFS_PATH, SYSTEM_INFORMATION)
-from framework.platforms.server.error import InterfaceError
+from framework.platforms.server.error import NetworkError
 
 
-class NetworkInterface:
+class Network:
     """The Class provides the access the Network interface information."""
 
-    name = "NetworkInterface"
+    name = "Network"
 
     def __init__(self):
         """Initialize the class."""
@@ -49,10 +49,10 @@ class NetworkInterface:
             if carrier_indicator not in link_status:
                 carrier_file_path = "UNKNOWN"
         except OSError as err:
-            err_no, err_msg = err.args
-            raise InterfaceError(err_no, (
-                "Failed to read link state for interface '%s'"
-                "due to error '%s'"), interface, err_msg)
+            raise NetworkError(err.errno, (
+                "Failed to read link state for interface '%s' "
+                "due to an Error: '%s, %s'"),
+                interface, err.strerror, err.filename)
 
         return link_status[carrier_indicator]
 
@@ -74,8 +74,8 @@ class NetworkInterface:
             if operstate not in operstates:
                 operstate = "UNKNOWN"
         except OSError as err:
-            err_no, err_msg = err.args
-            raise InterfaceError(err_no, (
-                "Failed to read the operational state for ",
-                "interface '%s'\n error Msg: %s"), interface, err_msg)
+            raise NetworkError(err.errno, (
+                "Failed to read the operational state for "
+                "interface '%s' due to an Error: '%s, %s'"),
+                interface, err.strerror, err.filename)
         return operstate

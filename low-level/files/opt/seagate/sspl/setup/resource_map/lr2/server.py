@@ -27,7 +27,7 @@ from framework.utils.ipmi_client import IpmiFactory
 from framework.utils.tool_factory import ToolFactory
 from resource_map import ResourceMap
 from error import ResourceMapError
-from framework.platforms.server.network_interface import NetworkInterface
+from framework.platforms.server.network import Network
 from framework.base.sspl_constants import (CPU_PATH, DEFAULT_RECOMMENDATION)
 from framework.utils.conf_utils import (GLOBAL_CONF, NODE_TYPE_KEY, Conf)
 
@@ -294,7 +294,7 @@ class ServerMap(ResourceMap):
         network_cable_data = []
         io_counters = psutil.net_io_counters(pernic=True)
 
-        nw_instance = NetworkInterface()
+        nw_instance = Network()
         for interface, addrs in psutil.net_if_addrs().items():
             nic_info = self.get_health_template(interface, False)
             specifics = {}
