@@ -345,7 +345,7 @@ class StorageMap(ResourceMap):
                 continue
             uid = drive.get("durable-id")
             status = drive.get("health", "NA")
-            description = drive.get("description", "NA"),
+            description = drive.get("description", "NA")
             recommendation = drive.get("health-recommendation", "NA")
             specifics = [
                 {
