@@ -2,7 +2,7 @@ import unittest
 
 from unittest.mock import patch
 
-from files.opt.seagate.sspl.setup.resource_map.lr_r2.server import ServerMap
+from files.opt.seagate.sspl.setup.resource_map.lr2.server import ServerMap
 
 
 def get_sdr_type_response(cmd):
