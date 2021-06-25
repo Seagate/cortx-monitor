@@ -94,7 +94,7 @@ SSPL_DIR=/opt/seagate/%{product_family}/sspl
     ln -sf $SSPL_DIR/low-level/resource_health_view /usr/bin/resource_health_view
     ln -sf $SSPL_DIR/low-level/sspl_bundle_generate /usr/bin/sspl_bundle_generate
     ln -sf $SSPL_DIR/low-level/manifest_support_bundle /usr/bin/manifest_support_bundle
-    ln -sf $SSPL_DIR/low-level/framework $SSPL_DIR/low-level/files/opt/seagate/sspl/setup/resource_map/lr_r2/
+    ln -sf $SSPL_DIR/low-level/framework $SSPL_DIR/low-level/files/opt/seagate/sspl/setup/resource_map/lr2/
     ln -sf $SSPL_DIR/low-level/files/opt/seagate/sspl/setup/resource_map $SSPL_DIR/bin/resource_map
 }
 

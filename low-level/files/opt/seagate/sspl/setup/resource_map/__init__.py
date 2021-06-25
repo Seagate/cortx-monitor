@@ -15,4 +15,4 @@
 # For any questions about this software or licensing,
 # please email opensource@seagate.com or cortx-questions@seagate.com
 
-"""LR-R2 solution platform monitor"""
+"""LR2 solution platform monitor"""
