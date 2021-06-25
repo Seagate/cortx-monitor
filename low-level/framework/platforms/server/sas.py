@@ -17,7 +17,7 @@ import os
 
 from framework.utils.conf_utils import (
     Conf, SSPL_CONF, SYSFS_PATH, SYSTEM_INFORMATION)
-from framework.platforms.server.error import InterfaceError
+from framework.platforms.server.error import SASError
 
 
 class SAS:
@@ -42,9 +42,9 @@ class SAS:
             sas_hosts = [host for host in sas_hosts
                          if 'host' in host]
         except OSError as err:
-            err_no, err_str = err.args
-            raise InterfaceError(
-                err_no, "Failed to get sas host list due to '%s'", err_str)
+            raise SASError(
+                err.errno, "Failed to get sas host list due to '%s, %s'",
+                err.strerror, err.filename)
         return sas_hosts
 
     def get_port_list(self, host=""):
@@ -61,9 +61,9 @@ class SAS:
             sas_ports = [port for port in sas_ports
                          if f'port-{host_id}' in port]
         except OSError as err:
-            err_no, err_str = err.args
-            raise InterfaceError(
-                err_no, "Failed to get sas port list due to '%s'", err_str)
+            raise SASError(
+                err.errno, "Failed to get sas port list due to '%s, %s'",
+                err.strerror, err.filename)
         return sas_ports
 
     def get_port_data(self, port_name):
@@ -94,9 +94,9 @@ class SAS:
                     "sas_address": sas_addr
                 }
         except OSError as err:
-            err_no, err_str = err.args
-            raise InterfaceError(
-                err_no, "Failed to get sas port data due to '%s'", err_str)
+            raise SASError(
+                err.errno, "Failed to get sas port data due to '%s, %s'",
+                err.strerror, err.filename)
         return port_data
 
     def get_phy_list_for_port(self, port):
@@ -114,9 +114,9 @@ class SAS:
             phys = [phy for phy in phys if 'phy' in phy]
             phys.sort(key=lambda phy: int(phy.split(':')[1]))
         except OSError as err:
-            err_no, err_str = err.args
-            raise InterfaceError(
-                err_no, "Failed to get sas phy list due to '%s'", err_str)
+            raise SASError(
+                err.errno, "Failed to get sas phy list due to '%s, %s'",
+                err.strerror, err.filename)
         return phys
 
     def get_phy_data(self, phy):
@@ -146,7 +146,7 @@ class SAS:
                 "negotiated_linkrate": n_link_rate
             }
         except OSError as err:
-            err_no, err_str = err.args
-            raise InterfaceError(
-                err_no, "Failed to get sas phy data due to '%s'", err_str)
+            raise SASError(
+                err.errno, "Failed to get sas phy data due to '%s, %s'",
+                err.strerror, err.filename)
         return phy_data
