@@ -17,16 +17,21 @@
 
 
 import time
-import re
+import os
 import errno
-from framework.utils.ipmi_client import IpmiFactory
-
 import psutil
+
 from pathlib import Path
+from dbus import (SystemBus, Interface, PROPERTIES_IFACE, DBusException)
+from framework.utils.ipmi_client import IpmiFactory
 from framework.utils.tool_factory import ToolFactory
+from cortx.utils.process import SimpleProcess
 from resource_map import ResourceMap
 from error import ResourceMapError
-from framework.base.sspl_constants import (CPU_PATH, DEFAULT_RECOMMENDATION)
+from framework.utils.conf_utils import (SSPL_CONF, Conf)
+from framework.base.sspl_constants import (CPU_PATH, UNIT_IFACE, SERVICE_IFACE,
+        MANAGER_IFACE, SYSTEMD_BUS, DEFAULT_RECOMMENDATION,
+        CORTX_RELEASE_FACTORY_INFO)
 
 
 class ServerMap(ResourceMap):
@@ -35,6 +40,9 @@ class ServerMap(ResourceMap):
     """
 
     name = "server"
+
+    SERVICE_HANDLER = 'SERVICEMONITOR'
+    SERVICE_LIST = 'monitored_services'
 
     def __init__(self):
         """Initialize server"""
@@ -46,7 +54,9 @@ class ServerMap(ResourceMap):
         self.server_frus = {
             'cpu': self.get_cpu_info,
             'platform_sensors': self.get_platform_sensors_info,
-            'memory': self.get_mem_info
+            'memory': self.get_mem_info,
+            'cortx_sw_services': self.get_cortx_service_info,
+            'external_sw_services': self.get_external_service_info
         }
         self._ipmi = IpmiFactory().get_implementor("ipmitool")
         self.platform_sensor_list = ['Temperature', 'Voltage', 'Current']
@@ -119,7 +129,7 @@ class ServerMap(ResourceMap):
         }
 
         for cpu_id in range(0, cpu_count):
-            uid = f"cpu_{cpu_id}"
+            uid = f"CPU-{cpu_id}"
             cpu_dict = self.get_health_template(uid, is_fru=False)
             online_status = "Online" if cpu_id in cpu_online else "Offline"
             health_status = "OK" if online_status == "Online" else "NA"
@@ -235,3 +245,102 @@ class ServerMap(ResourceMap):
             memory_dict, status=status, description=description,
             specifics=specifics)
         return memory_dict
+
+    def initialize_systemd(self):
+        """Initialize system bus and interface."""
+        self._bus = SystemBus()
+        self._systemd = self._bus.get_object(
+            SYSTEMD_BUS, "/org/freedesktop/systemd1")
+        self._manager = Interface(self._systemd, dbus_interface=MANAGER_IFACE)
+
+    def get_cortx_build_info(self):
+        """Get Cortx build info."""
+        cortx_build_info = None
+        if os.path.isfile(CORTX_RELEASE_FACTORY_INFO):
+            Conf.load(cortx_build_info, CORTX_RELEASE_FACTORY_INFO)
+        return cortx_build_info
+
+    def get_cortx_service_info(self):
+        """Get cortx service info in required format."""
+        service_info = []
+        # TODO Get list of services from HA
+        return service_info
+
+    def get_external_service_info(self):
+        """Get external service info in required format."""
+        service_info = []
+        external_services = set(Conf.get(
+            SSPL_CONF, f"{self.SERVICE_HANDLER}>{self.SERVICE_LIST}", []))
+        for service in external_services:
+            response = self.get_systemd_service_info(service)
+            service_info.append(response)
+        return service_info
+
+    def get_service_info_from_rpm(self, service, prop):
+        """Get service info from its corrosponding RPM."""
+        systemd_path_list = ["/usr/lib/systemd/system/",
+                    "/etc/systemd/system/"]
+        result = None
+        for path in systemd_path_list:
+            unit_file_path = path + service
+            if os.path.isfile(unit_file_path):
+                service_rpm, _, _ = SimpleProcess.run(
+                    ["rpm", "-qf", unit_file_path])
+                result, _, _ = SimpleProcess.run(
+                    ["rpm", "-q", "--queryformat", "%{"+prop+"}", service_rpm])
+                break
+        return result
+
+    def get_systemd_service_info(self, service_name):
+        """Get info of specified service using dbus API."""
+        self.initialize_systemd()
+        try:
+            unit = self._bus.get_object(
+                SYSTEMD_BUS, self._manager.LoadUnit(service_name))
+            properties_iface = Interface(unit, dbus_interface=PROPERTIES_IFACE)
+        except DBusException:
+            # TODO add logs
+            return
+        path_array = properties_iface.Get(SERVICE_IFACE, 'ExecStart')
+        try:
+            command_line_path = str(path_array[0][0])
+        except IndexError:
+            # TODO add logs
+            command_line_path = None
+        if command_line_path is None or \
+                'invalid' in properties_iface.Get(UNIT_IFACE, 'UnitFileState'):
+            return
+
+        is_installed = True if command_line_path is not None else False
+        uid = str(properties_iface.Get(UNIT_IFACE, 'Id'))
+        pid = str(properties_iface.Get(SERVICE_IFACE, 'ExecMainPID'))
+        description = str(properties_iface.Get(UNIT_IFACE, 'Description'))
+        state = str(properties_iface.Get(UNIT_IFACE, 'ActiveState'))
+        substate = str(properties_iface.Get(UNIT_IFACE, 'SubState'))
+        version = self.get_service_info_from_rpm(uid, "VERSION")
+        license = self.get_service_info_from_rpm(uid, "LICENSE")
+        specific_status = 'enabled' if 'disabled' not in properties_iface.Get(
+            UNIT_IFACE, 'UnitFileState') else 'disabled'
+        if specific_status == 'enabled' and state == 'active' \
+                and substate == 'running':
+            status = 'OK'
+        else:
+            status = substate
+        specifics = [
+            {
+                "service_name": uid,
+                "description": description,
+                "installed": is_installed,
+                "pid": pid,
+                "state": state,
+                "substate": substate,
+                "status": specific_status,
+                "license": license,
+                "version": version,
+                "command_line_path": command_line_path
+            }
+        ]
+        service_info = self.get_health_template(uid, is_fru=False)
+        self.set_health_data(
+            service_info, status, specifics=specifics)
+        return service_info
