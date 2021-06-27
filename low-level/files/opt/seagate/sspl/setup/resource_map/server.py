@@ -296,14 +296,16 @@ class ServerMap(ResourceMap):
             SYSTEMD_BUS, "/org/freedesktop/systemd1")
         self._manager = Interface(self._systemd, dbus_interface=MANAGER_IFACE)
 
-    def get_cortx_build_info(self):
+    @staticmethod
+    def get_cortx_build_info():
         """Get Cortx build info."""
         cortx_build_info = None
         if os.path.isfile(CORTX_RELEASE_FACTORY_INFO):
             Conf.load(cortx_build_info, CORTX_RELEASE_FACTORY_INFO)
         return cortx_build_info
 
-    def get_cortx_service_info(self):
+    @staticmethod
+    def get_cortx_service_info():
         """Get cortx service info in required format."""
         service_info = []
         # TODO Get list of services from HA
@@ -319,7 +321,8 @@ class ServerMap(ResourceMap):
             service_info.append(response)
         return service_info
 
-    def get_service_info_from_rpm(self, service, prop):
+    @staticmethod
+    def get_service_info_from_rpm(service, prop):
         """Get service info from its corrosponding RPM."""
         systemd_path_list = ["/usr/lib/systemd/system/",
                              "/etc/systemd/system/"]
@@ -361,7 +364,7 @@ class ServerMap(ResourceMap):
         state = str(properties_iface.Get(UNIT_IFACE, 'ActiveState'))
         substate = str(properties_iface.Get(UNIT_IFACE, 'SubState'))
         version = self.get_service_info_from_rpm(uid, "VERSION")
-        license = self.get_service_info_from_rpm(uid, "LICENSE")
+        service_license = self.get_service_info_from_rpm(uid, "LICENSE")
         specific_status = 'enabled' if 'disabled' not in properties_iface.Get(
             UNIT_IFACE, 'UnitFileState') else 'disabled'
         if specific_status == 'enabled' and state == 'active' \
@@ -378,7 +381,7 @@ class ServerMap(ResourceMap):
                 "state": state,
                 "substate": substate,
                 "status": specific_status,
-                "license": license,
+                "license": service_license,
                 "version": version,
                 "command_line_path": command_line_path
             }
