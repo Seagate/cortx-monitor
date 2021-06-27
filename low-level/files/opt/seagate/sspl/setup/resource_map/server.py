@@ -20,6 +20,7 @@ import time
 import os
 import errno
 import psutil
+import shlex
 
 from pathlib import Path
 from dbus import (SystemBus, Interface, PROPERTIES_IFACE, DBusException)
@@ -318,7 +319,8 @@ class ServerMap(ResourceMap):
             SSPL_CONF, f"{self.SERVICE_HANDLER}>{self.SERVICE_LIST}", []))
         for service in external_services:
             response = self.get_systemd_service_info(service)
-            service_info.append(response)
+            if response is not None:
+                service_info.append(response)
         return service_info
 
     @staticmethod
@@ -326,14 +328,27 @@ class ServerMap(ResourceMap):
         """Get service info from its corrosponding RPM."""
         systemd_path_list = ["/usr/lib/systemd/system/",
                              "/etc/systemd/system/"]
-        result = None
+        result = "NA"
         for path in systemd_path_list:
             unit_file_path = path + service
             if os.path.isfile(unit_file_path):
-                service_rpm, _, _ = SimpleProcess.run(
-                    ["rpm", "-qf", unit_file_path])
-                result, _, _ = SimpleProcess.run(
+                command = " ".join(["rpm", "-qf", unit_file_path])
+                command = shlex.split(command)
+                service_rpm, _, _ = SimpleProcess(command).run()
+                try:
+                    service_rpm = service_rpm.decode("utf-8")
+                except AttributeError:
+                    # TODO add logs
+                    return result
+                command = " ".join(
                     ["rpm", "-q", "--queryformat", "%{"+prop+"}", service_rpm])
+                command = shlex.split(command)
+                result, _, _ = SimpleProcess(command).run()
+                try:
+                    result = result.decode("utf-8")
+                except AttributeError:
+                    # TODO add logs
+                    return result
                 break
         return result
 
@@ -346,23 +361,24 @@ class ServerMap(ResourceMap):
             properties_iface = Interface(unit, dbus_interface=PROPERTIES_IFACE)
         except DBusException:
             # TODO add logs
-            return
+            return None
         path_array = properties_iface.Get(SERVICE_IFACE, 'ExecStart')
         try:
             command_line_path = str(path_array[0][0])
         except IndexError:
             # TODO add logs
-            command_line_path = None
-        if command_line_path is None or \
+            command_line_path = "NA"
+        if command_line_path == "NA" or \
                 'invalid' in properties_iface.Get(UNIT_IFACE, 'UnitFileState'):
-            return
+            return None
 
-        is_installed = True if command_line_path is not None else False
+        is_installed = True if command_line_path != "NA" else False
         uid = str(properties_iface.Get(UNIT_IFACE, 'Id'))
-        pid = str(properties_iface.Get(SERVICE_IFACE, 'ExecMainPID'))
         description = str(properties_iface.Get(UNIT_IFACE, 'Description'))
         state = str(properties_iface.Get(UNIT_IFACE, 'ActiveState'))
         substate = str(properties_iface.Get(UNIT_IFACE, 'SubState'))
+        pid = "NA" if state == "inactive" else str(
+            properties_iface.Get(SERVICE_IFACE, 'ExecMainPID'))
         version = self.get_service_info_from_rpm(uid, "VERSION")
         service_license = self.get_service_info_from_rpm(uid, "LICENSE")
         specific_status = 'enabled' if 'disabled' not in properties_iface.Get(
@@ -370,13 +386,15 @@ class ServerMap(ResourceMap):
         if specific_status == 'enabled' and state == 'active' \
                 and substate == 'running':
             status = 'OK'
+        elif not is_installed:
+            status = "Not Installed"
         else:
             status = substate
         specifics = [
             {
                 "service_name": uid,
                 "description": description,
-                "installed": is_installed,
+                "installed": str(is_installed).lower(),
                 "pid": pid,
                 "state": state,
                 "substate": substate,
