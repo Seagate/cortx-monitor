@@ -23,15 +23,17 @@ import psutil
 
 from pathlib import Path
 from dbus import (SystemBus, Interface, PROPERTIES_IFACE, DBusException)
-from framework.utils.ipmi_client import IpmiFactory
-from framework.utils.tool_factory import ToolFactory
 from cortx.utils.process import SimpleProcess
 from resource_map import ResourceMap
 from error import ResourceMapError
-from framework.utils.conf_utils import (SSPL_CONF, Conf)
-from framework.base.sspl_constants import (CPU_PATH, UNIT_IFACE, SERVICE_IFACE,
-        MANAGER_IFACE, SYSTEMD_BUS, DEFAULT_RECOMMENDATION,
-        CORTX_RELEASE_FACTORY_INFO)
+from framework.utils.ipmi_client import IpmiFactory
+from framework.utils.tool_factory import ToolFactory
+from framework.utils.conf_utils import (GLOBAL_CONF, SSPL_CONF, 
+                                        NODE_TYPE_KEY, Conf)
+from framework.base.sspl_constants import (CPU_PATH, DEFAULT_RECOMMENDATION,
+                                           UNIT_IFACE, SERVICE_IFACE,
+                                           MANAGER_IFACE, SYSTEMD_BUS,
+                                           CORTX_RELEASE_FACTORY_INFO)
 
 
 class ServerMap(ResourceMap):
@@ -47,6 +49,7 @@ class ServerMap(ResourceMap):
     def __init__(self):
         """Initialize server"""
         super().__init__()
+        self.validate_server_type_support()
         self.sysfs = ToolFactory().get_instance('sysfs')
         self.sysfs.initialize()
         self.sysfs_base_path = self.sysfs.get_sysfs_base_path()
@@ -55,11 +58,23 @@ class ServerMap(ResourceMap):
             'cpu': self.get_cpu_info,
             'platform_sensors': self.get_platform_sensors_info,
             'memory': self.get_mem_info,
+            'fans': self.get_fans_info,
             'cortx_sw_services': self.get_cortx_service_info,
             'external_sw_services': self.get_external_service_info
         }
         self._ipmi = IpmiFactory().get_implementor("ipmitool")
         self.platform_sensor_list = ['Temperature', 'Voltage', 'Current']
+
+    @staticmethod
+    def validate_server_type_support():
+        """Check for supported server type."""
+        server_type = Conf.get(GLOBAL_CONF, NODE_TYPE_KEY).lower()
+        # TODO Add support for 'virtual' type server.
+        supported_types = ["physical"]
+        if server_type not in supported_types:
+            raise ResourceMapError(
+                errno.EINVAL,
+                f"Health provider is not supported for server type:{server_type}")
 
     def get_health_info(self, rpath):
         """
@@ -164,8 +179,10 @@ class ServerMap(ResourceMap):
         sensor_props = self._ipmi.get_sensor_props(sensor_id)
         lower_critical = sensor_props[1].get('Lower Critical', 'NA')
         upper_critical = sensor_props[1].get('Upper Critical', 'NA')
-        lower_non_recoverable = sensor_props[1].get('Lower Non-Recoverable', 'NA')
-        upper_non_recoverable = sensor_props[1].get('Upper Non-Recoverable', 'NA')
+        lower_non_recoverable = sensor_props[1].get(
+            'Lower Non-Recoverable', 'NA')
+        upper_non_recoverable = sensor_props[1].get(
+            'Upper Non-Recoverable', 'NA')
         status = 'OK' if reading[2] == 'ok' else 'NA'
         health_desc = 'good' if status == 'OK' else 'bad'
         description = f"{uid} sensor is in {health_desc} health."
@@ -177,8 +194,8 @@ class ServerMap(ResourceMap):
                 "upper_critical_threshold": upper_critical,
                 "lower_non_recoverable": lower_non_recoverable,
                 "upper_non_recoverable": upper_non_recoverable,
-                }
-            ]
+            }
+        ]
         resp = self.get_health_template(uid, is_fru=False)
         self.set_health_data(
             resp, status, description, recommendation, specifics)
@@ -199,8 +216,8 @@ class ServerMap(ResourceMap):
         """Collect & return system memory info in specific format """
         from framework.utils.conf_utils import SSPL_CONF, Conf
         default_mem_usage_threshold = int(Conf.get(SSPL_CONF,
-            "NODEDATAMSGHANDLER>host_memory_usage_threshold",
-            80))
+                                                   "NODEDATAMSGHANDLER>host_memory_usage_threshold",
+                                                   80))
         data = []
         status = "OK"
         description = "Host memory is in good health."
@@ -226,25 +243,53 @@ class ServerMap(ResourceMap):
                 total_memory[key] = str(self.mem_info[key] >> 20) + 'MB'
         uid = "main_memory"
         specifics = [
-                    {
-                        "total": total_memory['total'],
-                        "available": total_memory['available'],
-                        "percent": total_memory['percent'],
-                        "used": total_memory['used'],
-                        "free": total_memory['free'],
-                        "active": total_memory['active'],
-                        "inactive": total_memory['inactive'],
-                        "buffers": total_memory['buffers'],
-                        "cached": total_memory['cached'],
-                        "shared": total_memory['shared'],
-                        "slab": total_memory['slab']
-                    }
-                ]
+            {
+                "total": total_memory['total'],
+                "available": total_memory['available'],
+                "percent": total_memory['percent'],
+                "used": total_memory['used'],
+                "free": total_memory['free'],
+                "active": total_memory['active'],
+                "inactive": total_memory['inactive'],
+                "buffers": total_memory['buffers'],
+                "cached": total_memory['cached'],
+                "shared": total_memory['shared'],
+                "slab": total_memory['slab']
+            }
+        ]
         memory_dict = self.get_health_template(uid, is_fru=False)
         self.set_health_data(
             memory_dict, status=status, description=description,
             specifics=specifics)
         return memory_dict
+
+    def get_fans_info(self):
+        """Get the Fan sensor information using ipmitool."""
+        data = []
+        sensor_reading = self._ipmi.get_sensor_list_by_type('Fan')
+        if sensor_reading is None:
+            # TODO log error
+            return
+        for fan_reading in sensor_reading:
+            sensor_id = fan_reading[0]
+            fan_dict = self.get_health_template(sensor_id, is_fru=True)
+            sensor_props = self._ipmi.get_sensor_props(sensor_id)
+            status = 'OK' if fan_reading[2] == 'ok' else 'NA'
+            lower_critical = sensor_props[1].get('Lower Critical', 'NA')
+            upper_critical = sensor_props[1].get('Upper Critical', 'NA')
+            specifics = [
+                {
+                    "Sensor Reading": f"{fan_reading[-1]}",
+                    "lower_critical_threshold": lower_critical,
+                    "upper_critical_threshold": upper_critical
+                }
+            ]
+
+            self.set_health_data(fan_dict, status=status,
+                                 specifics=specifics)
+
+            data.append(fan_dict)
+        return data
 
     def initialize_systemd(self):
         """Initialize system bus and interface."""
@@ -279,7 +324,7 @@ class ServerMap(ResourceMap):
     def get_service_info_from_rpm(self, service, prop):
         """Get service info from its corrosponding RPM."""
         systemd_path_list = ["/usr/lib/systemd/system/",
-                    "/etc/systemd/system/"]
+                             "/etc/systemd/system/"]
         result = None
         for path in systemd_path_list:
             unit_file_path = path + service
