@@ -28,7 +28,7 @@ from resource_map import ResourceMap
 from error import ResourceMapError
 from framework.utils.ipmi_client import IpmiFactory
 from framework.utils.tool_factory import ToolFactory
-from framework.utils.conf_utils import (GLOBAL_CONF, SSPL_CONF, 
+from framework.utils.conf_utils import (GLOBAL_CONF, SSPL_CONF,
                                         NODE_TYPE_KEY, Conf)
 from framework.base.sspl_constants import (CPU_PATH, DEFAULT_RECOMMENDATION,
                                            UNIT_IFACE, SERVICE_IFACE,
@@ -179,10 +179,8 @@ class ServerMap(ResourceMap):
         sensor_props = self._ipmi.get_sensor_props(sensor_id)
         lower_critical = sensor_props[1].get('Lower Critical', 'NA')
         upper_critical = sensor_props[1].get('Upper Critical', 'NA')
-        lower_non_recoverable = sensor_props[1].get(
-            'Lower Non-Recoverable', 'NA')
-        upper_non_recoverable = sensor_props[1].get(
-            'Upper Non-Recoverable', 'NA')
+        lower_non_recoverable = sensor_props[1].get('Lower Non-Recoverable', 'NA')
+        upper_non_recoverable = sensor_props[1].get('Upper Non-Recoverable', 'NA')
         status = 'OK' if reading[2] == 'ok' else 'NA'
         health_desc = 'good' if status == 'OK' else 'bad'
         description = f"{uid} sensor is in {health_desc} health."
@@ -194,8 +192,8 @@ class ServerMap(ResourceMap):
                 "upper_critical_threshold": upper_critical,
                 "lower_non_recoverable": lower_non_recoverable,
                 "upper_non_recoverable": upper_non_recoverable,
-            }
-        ]
+                }
+            ]
         resp = self.get_health_template(uid, is_fru=False)
         self.set_health_data(
             resp, status, description, recommendation, specifics)
@@ -216,8 +214,8 @@ class ServerMap(ResourceMap):
         """Collect & return system memory info in specific format """
         from framework.utils.conf_utils import SSPL_CONF, Conf
         default_mem_usage_threshold = int(Conf.get(SSPL_CONF,
-                                                   "NODEDATAMSGHANDLER>host_memory_usage_threshold",
-                                                   80))
+            "NODEDATAMSGHANDLER>host_memory_usage_threshold",
+            80))
         data = []
         status = "OK"
         description = "Host memory is in good health."
@@ -243,20 +241,20 @@ class ServerMap(ResourceMap):
                 total_memory[key] = str(self.mem_info[key] >> 20) + 'MB'
         uid = "main_memory"
         specifics = [
-            {
-                "total": total_memory['total'],
-                "available": total_memory['available'],
-                "percent": total_memory['percent'],
-                "used": total_memory['used'],
-                "free": total_memory['free'],
-                "active": total_memory['active'],
-                "inactive": total_memory['inactive'],
-                "buffers": total_memory['buffers'],
-                "cached": total_memory['cached'],
-                "shared": total_memory['shared'],
-                "slab": total_memory['slab']
-            }
-        ]
+                    {
+                        "total": total_memory['total'],
+                        "available": total_memory['available'],
+                        "percent": total_memory['percent'],
+                        "used": total_memory['used'],
+                        "free": total_memory['free'],
+                        "active": total_memory['active'],
+                        "inactive": total_memory['inactive'],
+                        "buffers": total_memory['buffers'],
+                        "cached": total_memory['cached'],
+                        "shared": total_memory['shared'],
+                        "slab": total_memory['slab']
+                    }
+                ]
         memory_dict = self.get_health_template(uid, is_fru=False)
         self.set_health_data(
             memory_dict, status=status, description=description,
@@ -278,12 +276,12 @@ class ServerMap(ResourceMap):
             lower_critical = sensor_props[1].get('Lower Critical', 'NA')
             upper_critical = sensor_props[1].get('Upper Critical', 'NA')
             specifics = [
-                {
-                    "Sensor Reading": f"{fan_reading[-1]}",
-                    "lower_critical_threshold": lower_critical,
-                    "upper_critical_threshold": upper_critical
-                }
-            ]
+                    {
+                        "Sensor Reading": f"{fan_reading[-1]}",
+                        "lower_critical_threshold": lower_critical,
+                        "upper_critical_threshold": upper_critical
+                    }
+                ]
 
             self.set_health_data(fan_dict, status=status,
                                  specifics=specifics)
