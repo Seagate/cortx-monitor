@@ -21,6 +21,7 @@ import os
 import errno
 import psutil
 import shlex
+import platform
 
 from pathlib import Path
 from dbus import (SystemBus, Interface, PROPERTIES_IFACE, DBusException)
@@ -296,6 +297,17 @@ class ServerMap(ResourceMap):
         self._systemd = self._bus.get_object(
             SYSTEMD_BUS, "/org/freedesktop/systemd1")
         self._manager = Interface(self._systemd, dbus_interface=MANAGER_IFACE)
+
+    @staticmethod
+    def get_os_info():
+        os_info = None
+        system = platform.system()
+        if system == 'Linux':
+            os_info = ' '.join(platform.linux_distribution())
+        else:
+            os_info = "{0} {1} {2}".format(
+                platform.system(), platform.release(), platform.version())
+        return os_info
 
     @staticmethod
     def get_cortx_build_info():
