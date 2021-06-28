@@ -51,6 +51,7 @@ class StorageMap(ResourceMap):
             "disk_groups": self.get_disk_groups_info,
             "sideplane_expanders": self.get_sideplane_expanders_info,
             "nw_ports": self.get_nw_ports_info,
+            "disks": self.get_drives_info
         }
 
     @staticmethod
@@ -75,7 +76,11 @@ class StorageMap(ResourceMap):
         leaf_node, _ = self.get_node_details(nodes[-1])
         if leaf_node == "storage":
             for fru in self.storage_frus:
-                info.update({fru: self.storage_frus[fru]()})
+                try:
+                    info.update({fru: self.storage_frus[fru]()})
+                except:
+                    # TODO: Log the exception
+                    info.update({fru: None})
             info["last_updated"] = int(time.time())
             fru_found = True
         else:
@@ -85,12 +90,16 @@ class StorageMap(ResourceMap):
                 fru, _ = self.get_node_details(node)
                 if self.storage_frus.get(fru):
                     fru_found = True
-                    info = self.storage_frus[fru]()
+                    try:
+                        info = self.storage_frus[fru]()
+                    except:
+                        # TODO: Log the exception
+                        info = None
                     break
         if not fru_found:
             raise ResourceMapError(
                 errno.EINVAL,
-                "Health provider doesn't have support for'{rpath}'.")
+                f"Health provider doesn't have support for'{rpath}'.")
         return info
 
     def get_controllers_info(self):
@@ -162,10 +171,10 @@ class StorageMap(ResourceMap):
             dict with three keys for respective sensors.
         """
         sensors_data = {}
-        sensors_resp = self.get_realstor_encl_data('sensor-status')
+        sensors_resp = self.get_realstor_encl_data('sensors')
         if sensors_resp:
             for platform_sensor in platform_sensors:
-                for sensor in sensors_resp['api-response']['sensors']:
+                for sensor in sensors_resp:
                     if sensor['sensor-type'].lower() == platform_sensor:
                         status = sensor.get('status')
                         description = sensor.get("description", "NA")
@@ -326,6 +335,53 @@ class StorageMap(ResourceMap):
             expander_data.append(expander_dict)
         return expander_data
 
+    def get_drives_info(self):
+        """Update and return drives information in specific format."""
+        drive_data = []
+        drives = self.get_realstor_encl_data("drives")
+        for drive in drives:
+            slot = drive.get("slot", -1)
+            if slot == -1:
+                continue
+            uid = drive.get("durable-id")
+            status = drive.get("health", "NA")
+            description = drive.get("description", "NA")
+            recommendation = drive.get("health-recommendation", "NA")
+            specifics = [
+                {
+                    "serial-number": drive.get("serial-number", "NA"),
+                    "model": drive.get("model", "NA"),
+                    "size": drive.get("size", "NA"),
+                    "temperature": drive.get("temperature", "NA"),
+                    "disk-group": drive.get("disk-group", "NA"),
+                    "storage-pool-name": drive.get("storage-pool-name", "NA"),
+                    "location": drive.get("location", "NA"),
+                    "enclosure-id": drive.get("enclosure-id", "NA"),
+                    "drawer-id": drive.get("drawer-id", "NA"),
+                    "slot": drive.get("slot", "NA"),
+                    "port": drive.get("port", "NA"),
+                    "scsi-id": drive.get("scsi-id", "NA"),
+                    "blocksize": drive.get("blocksize", "NA"),
+                    "blocks": drive.get("blocks", "NA"),
+                    "vendor": drive.get("vendor", "NA"),
+                    "revision": drive.get("revision", "NA"),
+                    "architecture": drive.get("architecture", "NA"),
+                    "interface": drive.get("interface", "NA"),
+                    "type": drive.get("type", "NA"),
+                    "blink": drive.get("blink", "NA"),
+                    "locator-led": drive.get("locator-led", "NA"),
+                    "enclosure-wwn": drive.get("enclosure-wwn", "NA"),
+                    "virtual-disk-serial": drive.get("virtual-disk-serial", "NA"),
+                    "led-status": drive.get("led-status", "NA"),
+                    "power-on-hours": drive.get("power-on-hours", "NA")
+                    }
+                ]
+            drives_dict = self.get_health_template(uid, is_fru=True)
+            self.set_health_data(
+                drives_dict, status, description, recommendation, specifics)
+            drive_data.append(drives_dict)
+        return drive_data
+
     @staticmethod
     def get_realstor_encl_data(fru: str):
         """Fetch fru information through webservice API."""
@@ -336,11 +392,12 @@ class StorageMap(ResourceMap):
         fru_uri_map = {
             "controllers": ENCL.URI_CLIAPI_SHOWCONTROLLERS,
             "power-supplies": ENCL.URI_CLIAPI_SHOWPSUS,
-            "platform_sensors": ENCL.URI_CLIAPI_SHOWSENSORSTATUS,
+            "sensors": ENCL.URI_CLIAPI_SHOWSENSORSTATUS,
             "volumes": ENCL.URI_CLIAPI_SHOWVOLUMES,
             "disk-groups": ENCL.URI_CLIAPI_SHOWDISKGROUPS,
             "enclosures": ENCL.URI_CLIAPI_SHOWENCLOSURE,
             "network-parameters": ENCL.URI_CLIAPI_NETWORKHEALTHSTATUS,
+            "drives": ENCL.URI_CLIAPI_SHOWDISKS
         }
         url = ENCL.build_url(fru_uri_map.get(fru))
         response = ENCL.ws_request(url, ENCL.ws.HTTP_GET)

@@ -3,11 +3,11 @@ import json
 
 from unittest.mock import patch
 
-from files.opt.seagate.sspl.setup.resource_map.storage import StorageMap
+from files.opt.seagate.sspl.setup.resource_map.lr2.storage import StorageMap
 
 from encl_api_response import (
     ENCLOSURE_RESPONSE, ENCLOSURE_SENSORS_RESPONSE, ENCLOSURE_RESPONSE_EMPTY,
-    ENCLOSURE_NW_RESPONSE)
+    ENCLOSURE_NW_RESPONSE, CONTROLLER_RESPONSE, DRIVE_RESPONSE)
 
 
 class TestStorageMap(unittest.TestCase):
@@ -15,10 +15,10 @@ class TestStorageMap(unittest.TestCase):
         self.storage_map = StorageMap()
 
     @patch(
-        "files.opt.seagate.sspl.setup.resource_map.storage.StorageMap.get_realstor_encl_data"
+        "files.opt.seagate.sspl.setup.resource_map.lr2.storage.StorageMap.get_realstor_encl_data"
     )
     def test_get_platform_sensors(self, encl_response):
-        encl_response.return_value = json.loads(ENCLOSURE_SENSORS_RESPONSE)
+        encl_response.return_value = json.loads(ENCLOSURE_SENSORS_RESPONSE)['api-response']['sensors']
         resp = self.storage_map.get_platform_sensors_info()
 
         # Temperature
@@ -37,7 +37,7 @@ class TestStorageMap(unittest.TestCase):
         assert resp["voltage"][0]["health"]["specifics"][0]["value"] == "8.13"
 
     @patch(
-        "files.opt.seagate.sspl.setup.resource_map.storage.StorageMap.get_realstor_encl_data"
+        "files.opt.seagate.sspl.setup.resource_map.lr2.storage.StorageMap.get_realstor_encl_data"
     )
     def test_get_platform_sensors_empty(self, encl_response):
         encl_response.return_value = ENCLOSURE_RESPONSE_EMPTY
@@ -53,7 +53,7 @@ class TestStorageMap(unittest.TestCase):
         assert "voltage" not in resp
 
     @patch(
-        "files.opt.seagate.sspl.setup.resource_map.storage.StorageMap.get_realstor_encl_data"
+        "files.opt.seagate.sspl.setup.resource_map.lr2.storage.StorageMap.get_realstor_encl_data"
     )
     def test_get_sideplane_expander_info(self, encl_response):
         encl_response.return_value = json.loads(
@@ -81,7 +81,7 @@ class TestStorageMap(unittest.TestCase):
         assert expander_specifics[0]["name"] == "Sideplane 24-port Expander 0"
         assert expander_specifics[0]["drawer-id"] == 0
 
-    @patch(("files.opt.seagate.sspl.setup.resource_map.storage."
+    @patch(("files.opt.seagate.sspl.setup.resource_map.lr2.storage."
             "StorageMap.get_realstor_encl_data"))
     def test_get_nw_ports_info(self, encl_response):
         encl_response.return_value = json.loads(ENCLOSURE_NW_RESPONSE)
@@ -94,6 +94,42 @@ class TestStorageMap(unittest.TestCase):
         assert specifics['ip-address'] == '10.0.0.2'
         assert specifics['link-speed'] == '1000mbps'
         assert specifics['controller'] == 'controller-a'
+
+    @patch(
+        "files.opt.seagate.sspl.setup.resource_map.lr2.storage.StorageMap.get_realstor_encl_data"
+    )
+    def test_get_controllers(self, encl_response):
+        encl_response.return_value = json.loads(
+            CONTROLLER_RESPONSE)['api-response']['controllers']
+        resp = self.storage_map.get_controllers_info()
+        assert resp[0]['uid'] == 'controller_a'
+        assert resp[0]['health']['status'] == 'OK'
+        specifics = resp[0]['health']['specifics'][0]
+        assert specifics['serial-number'] == 'DHSIFTJ-18253C638B'
+        assert specifics['model'] == '3865'
+        assert specifics['part-number'] == '81-00000117-00-15'
+        assert specifics['disks'] == 84
+        assert specifics['fw'] == 'GTS265R18-01'
+        assert specifics['virtual-disks'] == 2
+        assert specifics['location'] == 'Left'
+
+    @patch(
+        "files.opt.seagate.sspl.setup.resource_map.lr2.storage.StorageMap.get_realstor_encl_data"
+    )
+    def test_get_drives(self, encl_response):
+        encl_response.return_value = json.loads(
+            DRIVE_RESPONSE)['api-response']['drives']
+        resp = self.storage_map.get_drives_info()
+        assert resp[0]['uid'] == 'disk_00.00'
+        assert resp[0]['health']['status'] == 'OK'
+        specifics = resp[0]['health']['specifics'][0]
+        assert specifics['serial-number'] == 'Z4H099ZE0000R6375N70'
+        assert specifics['model'] == 'ST2000NM0034'
+        assert specifics['size'] == '2000.3GB'
+        assert specifics['temperature'] == '20 C'
+        assert specifics['disk-group'] == 'poola'
+        assert specifics['storage-pool-name'] == 'poola'
+        assert specifics['location'] == '0.0'
 
 
 if __name__ == "__main__":

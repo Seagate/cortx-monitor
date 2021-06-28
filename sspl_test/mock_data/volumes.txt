@@ -1,9 +1,9 @@
 {
-  "api-response": {
+  "api-response":{
     "volumes":[
       {
         "object-name":"volume",
-    "meta":"/meta/volumes",
+        "meta":"/meta/volumes",
         "durable-id":"V0",
         "url":"/volumes/Vol0002",
         "virtual-disk-name":"A",
@@ -86,7 +86,7 @@
       },
       {
         "object-name":"volume",
-    "meta":"/meta/volumes",
+        "meta":"/meta/volumes",
         "durable-id":"V1",
         "url":"/volumes/DATA",
         "virtual-disk-name":"A",
@@ -167,8 +167,19 @@
         "volume-group":"UNGROUPEDVOLUMES",
         "group-key":"VGU"
       }
+    ],
+    "status":[
+      {
+        "object-name":"status",
+        "response-type":"Success",
+        "response-type-numeric":0,
+        "response":"Command completed successfully. (2021-06-14 19:27:52)",
+        "return-code":0,
+        "component-id":"",
+        "time-stamp":"2021-06-14 19:27:52",
+        "time-stamp-numeric":1623698872
+      }
     ]
   },
-    "status_code": 200
+  "status_code":200
 }
-

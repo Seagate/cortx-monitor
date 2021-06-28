@@ -101,7 +101,11 @@ class ServerMap(ResourceMap):
             print(f"something went wrong: {e}")
         if leaf_node == "compute":
             for fru in self.server_frus:
-                info.update({fru: self.server_frus[fru]()})
+                try:
+                    info.update({fru: self.server_frus[fru]()})
+                except:
+                    # TODO: Log the exception
+                    info.update({fru: None})
             info["last_updated"] = int(time.time())
             fru_found = True
         else:
@@ -110,7 +114,11 @@ class ServerMap(ResourceMap):
                 fru, _ = self.get_node_details(node)
                 if self.server_frus.get(fru):
                     fru_found = True
-                    info = self.server_frus[fru]()
+                    try:
+                        info = self.server_frus[fru]()
+                    except:
+                        # TODO: Log the exception
+                        info = None
                     break
         if not fru_found:
             raise ResourceMapError(
