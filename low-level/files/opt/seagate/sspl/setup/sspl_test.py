@@ -229,8 +229,9 @@ class SSPLTestCmd:
                 raise TestException(
                     "Error occurred while executing sspl tests: %s" % error)
         elif self.plan in NOT_IMPLEMENTED_TEST_PLANS:
-            print("TEST SKIPPED: No tests included for %s test plan." % (
+            print("Tests skipped, test plan %s not applicable for SSPL." % (
                 self.plan))
+            return 0
         else:
             # TODO: Convert shell script to python
             # from cortx.sspl.sspl_test.run_qa_test import RunQATest

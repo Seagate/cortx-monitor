@@ -324,6 +324,9 @@ class TestCmd(Cmd):
             raise SetupError(1, msg)
         logger.info("%s - Validation done" % self.name)
 
+        # Service restart is required for coverage.
+        # Hence it can be enabled only with test plans
+        # which are present in TEST_REQ_SERVICE_RESTART list.
         if self.args.coverage and self.args.plan[0] in TEST_REQ_SERVICE_RESTART:
             raise SetupError(
                 errno.EINVAL, "%s - Argument validation failure. %s",
