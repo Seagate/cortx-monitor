@@ -21,7 +21,6 @@ import os
 import errno
 import psutil
 import shlex
-import platform
 
 from pathlib import Path
 from dbus import (SystemBus, Interface, PROPERTIES_IFACE, DBusException)
@@ -30,12 +29,14 @@ from resource_map import ResourceMap
 from error import ResourceMapError
 from framework.utils.ipmi_client import IpmiFactory
 from framework.utils.tool_factory import ToolFactory
+from cortx.utils.conf_store.error import ConfError
 from framework.utils.conf_utils import (GLOBAL_CONF, SSPL_CONF,
                                         NODE_TYPE_KEY, Conf)
 from framework.base.sspl_constants import (CPU_PATH, DEFAULT_RECOMMENDATION,
                                            UNIT_IFACE, SERVICE_IFACE,
                                            MANAGER_IFACE, SYSTEMD_BUS,
-                                           CORTX_RELEASE_FACTORY_INFO)
+                                           CORTX_RELEASE_FACTORY_INFO,
+                                           CONFIG_SPEC_TYPE)
 
 
 class ServerMap(ResourceMap):
@@ -54,6 +55,8 @@ class ServerMap(ResourceMap):
         self.validate_server_type_support()
         self.sysfs = ToolFactory().get_instance('sysfs')
         self.sysfs.initialize()
+        self.initialize_systemd()
+        self.initialize_cortx_build_info()
         self.sysfs_base_path = self.sysfs.get_sysfs_base_path()
         self.cpu_path = self.sysfs_base_path + CPU_PATH
         self.server_frus = {
@@ -88,6 +91,14 @@ class ServerMap(ResourceMap):
         fru_found = False
         nodes = rpath.strip().split(">")
         leaf_node, _ = self.get_node_details(nodes[-1])
+        try:
+            info["name"] = Conf.get("cortx_build_info", "NAME")
+            info["version"] = Conf.get("cortx_build_info", "VERSION")
+            info["build"] = Conf.get("cortx_build_info", "BUILD")
+            info["os"] = Conf.get("cortx_build_info", "OS")
+        except ConfError as e:
+            # TODO add logs
+            print(f"something went wrong: {e}")
         if leaf_node == "compute":
             for fru in self.server_frus:
                 info.update({fru: self.server_frus[fru]()})
@@ -299,23 +310,12 @@ class ServerMap(ResourceMap):
         self._manager = Interface(self._systemd, dbus_interface=MANAGER_IFACE)
 
     @staticmethod
-    def get_os_info():
-        os_info = None
-        system = platform.system()
-        if system == 'Linux':
-            os_info = ' '.join(platform.linux_distribution())
-        else:
-            os_info = "{0} {1} {2}".format(
-                platform.system(), platform.release(), platform.version())
-        return os_info
-
-    @staticmethod
-    def get_cortx_build_info():
-        """Get Cortx build info."""
-        cortx_build_info = None
+    def initialize_cortx_build_info():
+        """Initialize Cortx build info."""
         if os.path.isfile(CORTX_RELEASE_FACTORY_INFO):
-            Conf.load(cortx_build_info, CORTX_RELEASE_FACTORY_INFO)
-        return cortx_build_info
+            cortx_build_info_file_path = "%s://%s" % (
+                CONFIG_SPEC_TYPE, CORTX_RELEASE_FACTORY_INFO)
+            Conf.load("cortx_build_info", cortx_build_info_file_path)
 
     @staticmethod
     def get_cortx_service_info():
@@ -366,7 +366,6 @@ class ServerMap(ResourceMap):
 
     def get_systemd_service_info(self, service_name):
         """Get info of specified service using dbus API."""
-        self.initialize_systemd()
         try:
             unit = self._bus.get_object(
                 SYSTEMD_BUS, self._manager.LoadUnit(service_name))
@@ -380,43 +379,64 @@ class ServerMap(ResourceMap):
         except IndexError:
             # TODO add logs
             command_line_path = "NA"
-        if command_line_path == "NA" or \
-                'invalid' in properties_iface.Get(UNIT_IFACE, 'UnitFileState'):
-            return None
 
-        is_installed = True if command_line_path != "NA" else False
+        is_installed = True if command_line_path != "NA" or 'invalid' in properties_iface.Get(
+            UNIT_IFACE, 'UnitFileState') else False
         uid = str(properties_iface.Get(UNIT_IFACE, 'Id'))
-        description = str(properties_iface.Get(UNIT_IFACE, 'Description'))
-        state = str(properties_iface.Get(UNIT_IFACE, 'ActiveState'))
-        substate = str(properties_iface.Get(UNIT_IFACE, 'SubState'))
-        pid = "NA" if state == "inactive" else str(
-            properties_iface.Get(SERVICE_IFACE, 'ExecMainPID'))
-        version = self.get_service_info_from_rpm(uid, "VERSION")
-        service_license = self.get_service_info_from_rpm(uid, "LICENSE")
-        specific_status = 'enabled' if 'disabled' not in properties_iface.Get(
-            UNIT_IFACE, 'UnitFileState') else 'disabled'
-        if specific_status == 'enabled' and state == 'active' \
-                and substate == 'running':
-            status = 'OK'
-        elif not is_installed:
-            status = "Not Installed"
+        if not is_installed:
+            health_status = "NA"
+            health_description = f"{uid} is not installed"
+            recommendation = "NA"
+            specifics = [
+                {
+                    "service_name": uid,
+                    "description": "NA",
+                    "installed": str(is_installed).lower(),
+                    "pid": "NA",
+                    "state": "NA",
+                    "substate": "NA",
+                    "status": "NA",
+                    "license": "NA",
+                    "version": "NA",
+                    "command_line_path": "NA"
+                }
+            ]
         else:
-            status = substate
-        specifics = [
-            {
-                "service_name": uid,
-                "description": description,
-                "installed": str(is_installed).lower(),
-                "pid": pid,
-                "state": state,
-                "substate": substate,
-                "status": specific_status,
-                "license": service_license,
-                "version": version,
-                "command_line_path": command_line_path
-            }
-        ]
+            service_description = str(
+                properties_iface.Get(UNIT_IFACE, 'Description'))
+            state = str(properties_iface.Get(UNIT_IFACE, 'ActiveState'))
+            substate = str(properties_iface.Get(UNIT_IFACE, 'SubState'))
+            service_status = 'enabled' if 'disabled' not in properties_iface.Get(
+                UNIT_IFACE, 'UnitFileState') else 'disabled'
+            pid = "NA" if state == "inactive" else str(
+                properties_iface.Get(SERVICE_IFACE, 'ExecMainPID'))
+            version = self.get_service_info_from_rpm(uid, "VERSION")
+            service_license = self.get_service_info_from_rpm(uid, "LICENSE")
+            specifics = [
+                {
+                    "service_name": uid,
+                    "description": service_description,
+                    "installed": str(is_installed).lower(),
+                    "pid": pid,
+                    "state": state,
+                    "substate": substate,
+                    "status": service_status,
+                    "license": service_license,
+                    "version": version,
+                    "command_line_path": command_line_path
+                }
+            ]
+            if service_status == 'enabled' and state == 'active' \
+                    and substate == 'running':
+                health_status = 'OK'
+                health_description = f"{uid} is in good health"
+                recommendation = "NA"
+            else:
+                health_status = "substate"
+                health_description = f"{uid} is not in good health"
+                recommendation = DEFAULT_RECOMMENDATION
+
         service_info = self.get_health_template(uid, is_fru=False)
-        self.set_health_data(
-            service_info, status, specifics=specifics)
+        self.set_health_data(service_info, health_status,
+                             health_description, recommendation, specifics)
         return service_info
