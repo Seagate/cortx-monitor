@@ -77,8 +77,6 @@ class SASPortSensor(SensorThread, InternalMsgQ):
     POLLING_INTERVAL = "polling_interval"
     CACHE_DIR_NAME  = "server"
 
-    HOST_ID = SAS().get_host_list()[0].replace('host', '')
-    RESOURCE_ID = SAS_RESOURCE_ID + HOST_ID  # eg. SASHBA-0 if host_id=0
     DEFAULT_POLLING_INTERVAL = '30'
 
     PROBE = "probe"
@@ -135,6 +133,14 @@ class SASPortSensor(SensorThread, InternalMsgQ):
 
         self.polling_interval = int(Conf.get(SSPL_CONF, f"{self.SENSOR_NAME.upper()}>{self.POLLING_INTERVAL}",
                                         self.DEFAULT_POLLING_INTERVAL))
+
+        try:
+            self.HOST_ID = SAS().get_host_list()[0].replace('host', '')
+        except OSError as err:
+            logger.exception(err)
+            self.shutdown()
+
+        self.RESOURCE_ID = SAS_RESOURCE_ID + self.HOST_ID  # eg. SASHBA-0 if host_id=0
 
         # Creating the instance of ToolFactory class
         self.tool_factory = ToolFactory()
