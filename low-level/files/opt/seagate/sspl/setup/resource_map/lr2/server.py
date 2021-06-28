@@ -325,8 +325,9 @@ class ServerMap(ResourceMap):
                 CONFIG_SPEC_TYPE, CORTX_RELEASE_FACTORY_INFO)
             Conf.load("cortx_build_info", cortx_build_info_file_path)
 
+    @staticmethod
     def get_cortx_service_list():
-        """Get list of cortx services for health generation"""
+        """Get list of cortx services for health generation."""
         # TODO use solution supplied from HA for getting
         # list of cortx services or by parsing resource xml from PCS
         cortx_services = [
@@ -345,7 +346,7 @@ class ServerMap(ResourceMap):
         return cortx_services
 
     def get_external_service_list(self):
-        """Get list of external services for health generation"""
+        """Get list of external services for health generation."""
         # TODO use solution supplied from RE for getting
         # list of external services.
         external_services = set(Conf.get(
@@ -374,7 +375,8 @@ class ServerMap(ResourceMap):
 
     @staticmethod
     def get_service_info_from_rpm(service, prop):
-        """Get specified service property from its corrosponding RPM.
+        """
+        Get specified service property from its corrosponding RPM.
 
         eg. (kafka.service,'LICENSE') -> 'Apache License, Version 2.0'
         """
