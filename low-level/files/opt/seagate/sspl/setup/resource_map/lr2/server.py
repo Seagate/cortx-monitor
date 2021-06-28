@@ -15,13 +15,14 @@
 # For any questions about this software or licensing,
 # please email opensource@seagate.com or cortx-questions@seagate.com
 
-
-import time
 import errno
-from framework.utils.ipmi_client import IpmiFactory
-
 import psutil
+import re
+import time
 from pathlib import Path
+
+from framework.utils.ipmi_client import IpmiFactory
+from framework.base import sspl_constants
 from framework.utils.tool_factory import ToolFactory
 from resource_map import ResourceMap
 from error import ResourceMapError
@@ -76,7 +77,11 @@ class ServerMap(ResourceMap):
         leaf_node, _ = self.get_node_details(nodes[-1])
         if leaf_node == "compute":
             for fru in self.server_frus:
-                info.update({fru: self.server_frus[fru]()})
+                try:
+                    info.update({fru: self.server_frus[fru]()})
+                except:
+                    # TODO: Log the exception
+                    info.update({fru: None})
             info["last_updated"] = int(time.time())
             fru_found = True
         else:
@@ -85,7 +90,11 @@ class ServerMap(ResourceMap):
                 fru, _ = self.get_node_details(node)
                 if self.server_frus.get(fru):
                     fru_found = True
-                    info = self.server_frus[fru]()
+                    try:
+                        info = self.server_frus[fru]()
+                    except:
+                        # TODO: Log the exception
+                        info = None
                     break
         if not fru_found:
             raise ResourceMapError(
