@@ -18,25 +18,27 @@
 import time
 import errno
 import psutil
-
-from socket import AF_INET
+import socket
 from pathlib import Path
 from dbus import (Interface, PROPERTIES_IFACE, DBusException)
-from resource_map import ResourceMap
+
 from error import ResourceMapError
-from framework.utils.ipmi_client import IpmiFactory
-from framework.utils.tool_factory import ToolFactory
-from framework.platforms.server.network import Network
-from framework.platforms.server.software import BuildInfo, Service
-from framework.platforms.server.raid.raid import RAIDs
-from framework.utils.service_logging import CustomLog, logger
-from framework.platforms.server.sas import SAS
-from framework.platforms.server.error import (
-    SASError, NetworkError, BuildInfoError, ServiceError)
-from framework.utils.conf_utils import (GLOBAL_CONF, NODE_TYPE_KEY, Conf)
+from resource_map import ResourceMap
 from framework.base.sspl_constants import (
     CPU_PATH, DEFAULT_RECOMMENDATION, UNIT_IFACE, SERVICE_IFACE,
     SYSTEMD_BUS, SAS_RESOURCE_ID, HEALTH_SVC_NAME)
+from framework.platforms.server.raid.raid import RAIDs
+from framework.platforms.server.software import BuildInfo, Service
+from framework.platforms.server.network import Network
+from framework.platforms.server.sas import SAS
+from framework.platforms.server.error import (
+    SASError, NetworkError, BuildInfoError, ServiceError)
+from framework.utils.conf_utils import (
+    Conf, GLOBAL_CONF, SSPL_CONF, NODE_TYPE_KEY)
+from framework.utils.service_logging import CustomLog, logger
+from framework.utils.ipmi_client import IpmiFactory
+from framework.utils.tool_factory import ToolFactory
+from framework.utils.utility import Utility
 
 
 class ServerMap(ResourceMap):
@@ -55,7 +57,7 @@ class ServerMap(ResourceMap):
         self.sysfs.initialize()
         self.sysfs_base_path = self.sysfs.get_sysfs_base_path()
         self.cpu_path = self.sysfs_base_path + CPU_PATH
-        self.server_map = {
+        hw_resources = {
             'cpu': self.get_cpu_info,
             'platform_sensors': self.get_platform_sensors_info,
             'memory': self.get_mem_info,
@@ -67,6 +69,11 @@ class ServerMap(ResourceMap):
             'sas_ports': self.get_sas_ports_info,
             'nw_ports': self.get_nw_ports_info,
             'raid': self.get_raid_info
+        }
+        sw_resources = {}
+        self.server_resources = {
+            "hw": hw_resources,
+            "sw": sw_resources
         }
         self._ipmi = IpmiFactory().get_implementor("ipmitool")
         self.platform_sensor_list = ['Temperature', 'Voltage', 'Current']
@@ -93,7 +100,7 @@ class ServerMap(ResourceMap):
         logger.info(self.log.svc_log(
             f"Get Health data for rpath:{rpath}"))
         info = {}
-        fru_found = False
+        resource_found = False
         nodes = rpath.strip().split(">")
         leaf_node, _ = self.get_node_details(nodes[-1])
         build_instance = BuildInfo()
@@ -104,32 +111,68 @@ class ServerMap(ResourceMap):
         except BuildInfoError as err:
             logger.error(self.log.svc_log(
                 f"Unable to get build info due to {err}"))
+
+        # Fetch health information for all sub nodes
         if leaf_node == "compute":
-            for fru in self.server_map:
+            info = self.get_server_health_info()
+            resource_found = True
+        elif leaf_node in self.server_resources:
+            for resource, method in self.server_resources[leaf_node].items():
                 try:
-                    info.update({fru: self.server_map[fru]()})
+                    info.update({resource: method()})
+                    resource_found = True
                 except:
                     # TODO: Log the exception
-                    info.update({fru: None})
-            info["last_updated"] = int(time.time())
-            fru_found = True
+                    info = None
         else:
-            fru = None
             for node in nodes:
-                fru, _ = self.get_node_details(node)
-                if self.server_map.get(fru):
-                    fru_found = True
+                resource, _ = self.get_node_details(node)
+                for res_type in self.server_resources:
+                    method = self.server_resources[res_type].get(resource)
+                    if not method:
+                        continue
                     try:
-                        info = self.server_map[fru]()
+                        info = method()
+                        resource_found = True
                     except:
                         # TODO: Log the exception
                         info = None
+                if resource_found:
                     break
-        if not fru_found:
-            msg = f"Health provider doesn't have support for'{rpath}'."
-            logger.error(self.log.svc_log(msg))
+
+        if not resource_found:
             raise ResourceMapError(
-                errno.EINVAL, msg)
+                errno.EINVAL,
+                f"Invalid rpath or health provider doesn't have support for'{rpath}'.")
+
+        return info
+
+    def get_server_health_info(self):
+        unhealthy_resource_found = False
+        server_details = Utility.get_server_details()
+        info = {}
+        info["make"] = server_details["Board Mfg"]
+        info["model"]= server_details["Product Name"]
+        for res_type in self.server_resources:
+            info.update({res_type: {}})
+            for fru, method in self.server_resources[res_type].items():
+                try:
+                    info[res_type].update({fru: method()})
+                    for data in info[res_type][fru]:
+                        if data["health"]["status"] not in ["OK", "ok"]:
+                            unhealthy_resource_found = True
+                except:
+                    # TODO: Log the exception
+                    info[res_type].update({fru: None})
+        info["uid"] = socket.getfqdn()
+        info["last_updated"] = int(time.time())
+        info["health"] = {}
+        info["health"]["status"] = "OK" if not unhealthy_resource_found else "NOT OK"
+        health_desc = 'good' if info["health"]["status"] == 'OK' else 'bad'
+        info["health"]["description"] = f"Server is in {health_desc} health."
+        info["health"]["recommendation"] = DEFAULT_RECOMMENDATION \
+            if info["health"]["status"] != "OK" else "NA"
+        info["health"]["specifics"] = []
         return info
 
     @staticmethod
@@ -245,7 +288,6 @@ class ServerMap(ResourceMap):
 
     def get_mem_info(self):
         """Collect & return system memory info in specific format """
-        from framework.utils.conf_utils import SSPL_CONF, Conf
         default_mem_usage_threshold = int(Conf.get(SSPL_CONF,
             "NODEDATAMSGHANDLER>host_memory_usage_threshold",
             80))
@@ -431,7 +473,7 @@ class ServerMap(ResourceMap):
             nic_info = self.get_health_template(interface, False)
             specifics = {}
             for addr in addrs:
-                if addr.family == AF_INET:
+                if addr.family == socket.AF_INET:
                     specifics["ipV4"] = addr.address
             if interface in io_counters:
                 io_info = io_counters[interface]

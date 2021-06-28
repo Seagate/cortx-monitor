@@ -44,17 +44,23 @@ class StorageMap(ResourceMap):
         super().__init__()
         self.log = CustomLog(HEALTH_SVC_NAME)
         self.validate_storage_type_support()
-        self.storage_map = {
+        hw_resources = {
             "controllers": self.get_controllers_info,
             "psus": self.get_psu_info,
             "platform_sensors": self.get_platform_sensors_info,
-            "logical_volumes": self.get_logical_volumes_info,
-            "disk_groups": self.get_disk_groups_info,
             "sideplane_expanders": self.get_sideplane_expanders_info,
             "nw_ports": self.get_nw_ports_info,
             "disks": self.get_drives_info,
             "sas_ports": self.get_sas_ports_info,
             "fan_modules": self.get_fanmodules_info,
+            }
+        fw_resources = {
+            "logical_volumes": self.get_logical_volumes_info,
+            "disk_groups": self.get_disk_groups_info
+            }
+        self.storage_resources = {
+            "hw": hw_resources,
+            "fw": fw_resources
         }
 
     def validate_storage_type_support(self):
@@ -73,41 +79,44 @@ class StorageMap(ResourceMap):
         """
         Fetch health information for given FRU.
 
-        rpath: Resouce path (Example: nodes[0]>storage[0]>hw>controllers)
+        rpath: Resource path (Example: node>storage[0]>hw>controllers)
         """
         logger.info(self.log.svc_log(
             f"Get Health data for rpath:{rpath}"))
         info = {}
-        fru_found = False
+        resource_found = False
         nodes = rpath.strip().split(">")
         leaf_node, _ = self.get_node_details(nodes[-1])
+
+        # Fetch health information for all sub nodes
         if leaf_node == "storage":
-            for fru in self.storage_map:
-                try:
-                    info.update({fru: self.storage_map[fru]()})
-                except:
-                    # TODO: Log the exception
-                    info.update({fru: None})
-            info["last_updated"] = int(time.time())
-            fru_found = True
+            info = self.get_storage_health_info()
+            resource_found = True
+        elif leaf_node in self.storage_resources:
+            for resource, method in self.storage_resources[leaf_node].items():
+                info.update({resource: method()})
+            resource_found = True
         else:
-            fru = None
-            fru_found = False
             for node in nodes:
-                fru, _ = self.get_node_details(node)
-                if self.storage_map.get(fru):
-                    fru_found = True
+                resource, _ = self.get_node_details(node)
+                for res_type in self.storage_resources:
+                    method = self.storage_resources[res_type].get(resource)
+                    if not method:
+                        continue
                     try:
-                        info = self.storage_map[fru]()
+                        info = method()
+                        resource_found = True
                     except:
                         # TODO: Log the exception
                         info = None
+                if resource_found:
                     break
-        if not fru_found:
-            msg = f"Health provider doesn't have support for'{rpath}'."
-            logger.error(self.log.svc_log(msg))
+
+        if not resource_found:
             raise ResourceMapError(
-                errno.EINVAL, msg)
+                errno.EINVAL,
+                f"Invalid rpath or health provider doesn't have support for'{rpath}'.")
+
         return info
 
     @staticmethod
@@ -138,6 +147,61 @@ class StorageMap(ResourceMap):
         else:
             logger.error(self.log.svc_log("No response received from fan modules"))
         return response
+
+    def get_storage_health_info(self):
+        """Get storage enclosure information"""
+        enclosures = self.get_enclosures_info()
+        storage = []
+        for encl in enclosures:
+            info = {}
+            info["uid"] = encl["uid"]
+            encl_health = encl["health"]
+            encl_specifics = encl_health["specifics"][0]
+            info["make"] = encl_specifics.get("vendor")
+            info["model"] = encl_specifics.get("model")
+            info["health"] = {}
+            info["health"]["status"] = encl_health["status"]
+            info["health"]["description"] = encl_health["description"]
+            info["health"]["recommendation"] = encl_health["recommendation"]
+            info["health"]["specifics"] = []
+            info["last_updated"] = int(time.time())
+            for res_type in self.storage_resources:
+                info.update({res_type: {}})
+                for fru, method in self.storage_resources[res_type].items():
+                    try:
+                        info[res_type].update({fru: method()})
+                    except:
+                        # TODO: Log the exception
+                        info[res_type].update({fru: None})
+            storage.append(info)
+        return storage
+
+    def get_enclosures_info(self):
+        """Update and return enclosure information in specific format."""
+        data = []
+        enclosures = self.get_realstor_encl_data("enclosures")
+        for encl in enclosures:
+            uid = encl.get("durable-id")
+            status = encl.get("health", "NA")
+            description = encl.get("description", "NA")
+            recommendation = encl.get("health-recommendation", "NA")
+            specifics = [{
+                "vendor": encl.get("vendor", "NA"),
+                "model": encl.get("model", "NA"),
+                "platform-type": encl.get("platform-type", "NA"),
+                "board-model": encl.get("board-model", "NA"),
+                "fru-location": encl.get("fru-location", "NA"),
+                "rack-number": encl.get("rack-number", "NA"),
+                "rack-position": encl.get("rack-position", "NA"),
+                "midplane-type": encl.get("midplane-type", "NA"),
+                "locator-led": encl.get("locator-led", "NA"),
+                "part-number": encl.get("part-number", "NA")
+            }]
+            encl_dict = self.get_health_template(uid, is_fru=True)
+            self.set_health_data(
+                encl_dict, status, description, recommendation, specifics)
+            data.append(encl_dict)
+        return data
 
     def get_controllers_info(self):
         """Update and return controller information in specific format"""
