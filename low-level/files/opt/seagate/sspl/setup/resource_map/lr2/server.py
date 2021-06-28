@@ -98,7 +98,7 @@ class ServerMap(ResourceMap):
             info["os"] = Conf.get("cortx_build_info", "OS")
         except ConfError as e:
             # TODO add logs
-            print(f"something went wrong: {e}")
+            print(f"Unable to get OS & CORTX Build info: {e}")
         if leaf_node == "compute":
             for fru in self.server_frus:
                 try:
@@ -325,18 +325,35 @@ class ServerMap(ResourceMap):
                 CONFIG_SPEC_TYPE, CORTX_RELEASE_FACTORY_INFO)
             Conf.load("cortx_build_info", cortx_build_info_file_path)
 
-    @staticmethod
-    def get_cortx_service_info():
+    def get_cortx_service_list():
+        """Get list of cortx services for health generation"""
+        # TODO use solution supplied from HA for getting
+        # list of cortx services or by parsing resource xml from PCS
+        cortx_services = []
+        return cortx_services
+
+    def get_external_service_list(self):
+        """Get list of external services for health generation"""
+        # TODO use solution supplied from RE for getting
+        # list of external services.
+        external_services = set(Conf.get(
+            SSPL_CONF, f"{self.SERVICE_HANDLER}>{self.SERVICE_LIST}", []))
+        return external_services
+
+    def get_cortx_service_info(self):
         """Get cortx service info in required format."""
         service_info = []
-        # TODO Get list of services from HA
+        cortx_services = self.get_cortx_service_list()
+        for service in cortx_services:
+            response = self.get_systemd_service_info(service)
+            if response is not None:
+                service_info.append(response)
         return service_info
 
     def get_external_service_info(self):
         """Get external service info in required format."""
         service_info = []
-        external_services = set(Conf.get(
-            SSPL_CONF, f"{self.SERVICE_HANDLER}>{self.SERVICE_LIST}", []))
+        external_services = self.get_external_service_list()
         for service in external_services:
             response = self.get_systemd_service_info(service)
             if response is not None:
@@ -345,13 +362,22 @@ class ServerMap(ResourceMap):
 
     @staticmethod
     def get_service_info_from_rpm(service, prop):
-        """Get service info from its corrosponding RPM."""
+        """Get specified service property from its corrosponding RPM.
+
+        eg. (kafka.service,'LICENSE') -> 'Apache License, Version 2.0'
+        """
         systemd_path_list = ["/usr/lib/systemd/system/",
                              "/etc/systemd/system/"]
         result = "NA"
         for path in systemd_path_list:
+            # unit_file_path represents the path where
+            # systemd service file resides
+            # eg. kafka service -> /etc/systemd/system/kafka.service
             unit_file_path = path + service
             if os.path.isfile(unit_file_path):
+                # this command will return the full name of RPM
+                # which installs the service at given unit_file_path
+                # eg. /etc/systemd/system/kafka.service -> kafka-2.13_2.7.0-el7.x86_64
                 command = " ".join(["rpm", "-qf", unit_file_path])
                 command = shlex.split(command)
                 service_rpm, _, _ = SimpleProcess(command).run()
@@ -360,11 +386,14 @@ class ServerMap(ResourceMap):
                 except AttributeError:
                     # TODO add logs
                     return result
+                # this command will extract specified property from given RPM
+                # eg. (kafka-2.13_2.7.0-el7.x86_64, 'LICENSE') -> 'Apache License, Version 2.0'
                 command = " ".join(
                     ["rpm", "-q", "--queryformat", "%{"+prop+"}", service_rpm])
                 command = shlex.split(command)
                 result, _, _ = SimpleProcess(command).run()
                 try:
+                    # returned result will be in bytes
                     result = result.decode("utf-8")
                 except AttributeError:
                     # TODO add logs
@@ -440,7 +469,7 @@ class ServerMap(ResourceMap):
                 health_description = f"{uid} is in good health"
                 recommendation = "NA"
             else:
-                health_status = "substate"
+                health_status = substate
                 health_description = f"{uid} is not in good health"
                 recommendation = DEFAULT_RECOMMENDATION
 
