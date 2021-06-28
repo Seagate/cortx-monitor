@@ -471,13 +471,13 @@ class ServerMap(ResourceMap):
         for raid in RAIDs.get_configured_raids():
             raid_data = self.get_health_template(raid.id, False)
             health = raid.get_health()
-            data_integrity_status = "NA"
             devices = []
             if health != "Missing":
-                data_integrity_status = raid.get_data_integrity_status()
                 devices = raid.get_devices()
-            specifics = [{"location": raid.raid, "data_integrity_status" : data_integrity_status, "devices": devices}]
-            self.set_health_data(raid_data, health, specifics=specifics)
+            specifics = [{"location": raid.raid, 
+                    "data_integrity_status" : raid.get_data_integrity_status(), 
+                    "devices": devices}]
+            self.set_health_data(raid_data, health, specifics=specifics, resource="RAID Array")
             raid_data["last_updated"] = int(time.time())
             raids_data.append(raid_data)
         return raids_data

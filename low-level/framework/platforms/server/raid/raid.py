@@ -15,23 +15,26 @@
 
 import json
 import re
+
 from cortx.utils.process import SimpleProcess
-from framework.base.sspl_constants import RaidDataConfig, MDADM_PATH
+from framework.base.sspl_constants import MDADM_PATH, RaidDataConfig
+
 
 class RAID:
 
     def __init__(self, raid) -> None:
+        """Creats RAID class"""
         self.raid = raid
         self.id = raid.split('/')[-1]
 
     def get_devices(self):
         output, _, returncode = SimpleProcess(f"mdadm --detail --test {self.raid}").run()
         devices = []
-        for state in re.findall("^\s*\d+\s*\d+\s*\d+\s*\d+\s*(.*)", output.decode(), re.MULTILINE):
+        for state in re.findall(r"^\s*\d+\s*\d+\s*\d+\s*\d+\s*(.*)", output.decode(), re.MULTILINE):
             device = {}
             device["state"] = state
             device["identity"] = {}
-            path = re.findall("\/dev\/(.*)", state)
+            path = re.findall(r"\/dev\/(.*)", state)
             if path:
                 device["identity"]["path"] = f"/dev/{path[0]}"
                 output, _, returncode = SimpleProcess(f'smartctl -i {device["identity"]["path"]} --json').run()
@@ -47,7 +50,7 @@ class RAID:
         return devices
 
     def get_health(self):
-        output, _, returncode = SimpleProcess(f"mdadm --detail --test {self.raid}").run()
+        _, _, returncode = SimpleProcess(f"mdadm --detail --test {self.raid}").run()
         if returncode == 0:
             return "OK"
         elif returncode == 4:
@@ -58,14 +61,14 @@ class RAID:
             return "Degraded"
 
     def get_data_integrity_status(self):
-        status  = {
-                    "raid_integrity_error" : "NA",
-                    "raid_integrity_mismatch_count" : "NA"
+        status = {
+                    "raid_integrity_error": "NA",
+                    "raid_integrity_mismatch_count": "NA"
                 }
         try:
             with open(f"/sys/block/{self.id}/{RaidDataConfig.MISMATCH_COUNT_FILE.value}") as f:
                 mismatch_count = f.read().strip("\n")
-                status["raid_integrity_error"] =  mismatch_count != "0"
+                status["raid_integrity_error"] = mismatch_count != "0"
                 status["raid_integrity_mismatch_count"] = mismatch_count
                 return status
         except Exception:
@@ -73,9 +76,9 @@ class RAID:
 
 
 class RAIDs:
-        
+
     @classmethod
     def get_configured_raids(self):
         with open(MDADM_PATH) as f:
             mdadm = f.read()
-        return [RAID(re.sub("\/(?=\d)", "", device.groups()[0])) for device in re.finditer("ARRAY\s*(\S*)", mdadm)]
+        return [RAID(re.sub(r"\/(?=\d)", "", device.groups()[0])) for device in re.finditer(r"ARRAY\s*(\S*)", mdadm)]
