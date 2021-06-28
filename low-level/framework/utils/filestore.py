@@ -66,6 +66,8 @@ class FileStore(Store):
             if pickled:
                 pickle.dump(value, fh)
             else:
+                if isinstance(value, str):
+                    value = value.encode('utf-8')
                 fh.write(value)
 
         except IOError as err:
