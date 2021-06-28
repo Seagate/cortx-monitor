@@ -821,3 +821,21 @@ DRIVE_RESPONSE ="""
         ]
     }}
     """
+
+SAS_PORTS_RESPONSE = [{
+        "object-name": "expander-port",
+        "durable-id": "drawer_egress_0.D0.A0",
+        "enclosure-id": 0,
+        "controller": "A",
+        "controller-numeric": 1,
+        "sas-port-type": "Drawer Port Egress",
+        "sas-port-type-numeric": 1,
+        "sas-port-index": 0,
+        "name": "Drawer0-egress A0",
+        "status": "Up",
+        "status-numeric": 0,
+        "health": "OK",
+        "health-numeric": 0,
+        "health-reason": "",
+        "health-recommendation": ""
+    }]
