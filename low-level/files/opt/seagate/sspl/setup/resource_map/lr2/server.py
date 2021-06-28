@@ -394,7 +394,9 @@ class ServerMap(ResourceMap):
                 # eg. /etc/systemd/system/kafka.service -> kafka-2.13_2.7.0-el7.x86_64
                 command = " ".join(["rpm", "-qf", unit_file_path])
                 command = shlex.split(command)
-                service_rpm, _, _ = SimpleProcess(command).run()
+                service_rpm, _, ret_code = SimpleProcess(command).run()
+                if ret_code != 0:
+                    return result
                 try:
                     service_rpm = service_rpm.decode("utf-8")
                 except AttributeError:
@@ -405,7 +407,9 @@ class ServerMap(ResourceMap):
                 command = " ".join(
                     ["rpm", "-q", "--queryformat", "%{"+prop+"}", service_rpm])
                 command = shlex.split(command)
-                result, _, _ = SimpleProcess(command).run()
+                result, _, ret_code = SimpleProcess(command).run()
+                if ret_code != 0:
+                    return result
                 try:
                     # returned result should be in byte which need to be decoded
                     # eg. b'Apache License, Version 2.0' -> 'Apache License, Version 2.0'
