@@ -13,28 +13,41 @@
 # about this software or licensing, please email opensource@seagate.com or
 # cortx-questions@seagate.com.
 
+import json
 import re
 from cortx.utils.process import SimpleProcess
+from framework.base.sspl_constants import RaidDataConfig, MDADM_PATH
 
+class RAID:
 
-class RaidArray:
-    
-    def __init__(self) -> None:
-        self._mdstat_file = "/proc/mdstat"
-        self._mdadm_conf_file = "/etc/mdadm.conf"
-        self._read()
+    def __init__(self, raid) -> None:
+        self.raid = raid
+        self.id = raid.split('/')[-1]
 
-    def _read(self):
-        with open(self._mdstat_file) as f:
-            self._mdstat = f.read()
-        with open(self._mdadm_conf_file) as f:
-            self._mdadm = f.read()
+    def get_devices(self):
+        output, _, returncode = SimpleProcess(f"mdadm --detail --test {self.raid}").run()
+        devices = []
+        for state in re.findall("^\s*\d+\s*\d+\s*\d+\s*\d+\s*(.*)", output.decode(), re.MULTILINE):
+            device = {}
+            device["state"] = state
+            device["identity"] = {}
+            path = re.findall("\/dev\/(.*)", state)
+            if path:
+                device["identity"]["path"] = f"/dev/{path[0]}"
+                output, _, returncode = SimpleProcess(f'smartctl -i {device["identity"]["path"]} --json').run()
+                if returncode == 0:
+                    output = json.loads(output)
+                    try:
+                        device["identity"]["serialNumber"] = output["serial_number"]
+                    except KeyError:
+                        device["identity"]["serialNumber"] = "None"
+                else:
+                    device["identity"]["serialNumber"] = "None"
+            devices.append(device)
+        return devices
 
-    def get_configured_devices(self):
-        return [re.sub("\/(?=\d)", "", device.groups()[0]) for device in re.finditer("ARRAY\s*(\S*)", self._mdadm)]
-
-    def get_raid_health(self, raid):
-        output, _, returncode = SimpleProcess(f"mdadm --detail --test {raid}").run()
+    def get_health(self):
+        output, _, returncode = SimpleProcess(f"mdadm --detail --test {self.raid}").run()
         if returncode == 0:
             return "OK"
         elif returncode == 4:
@@ -44,21 +57,25 @@ class RaidArray:
         elif returncode == 1:
             return "Degraded"
 
-    def get_devices_status(self, raid):
-        output, _, returncode = SimpleProcess(f"mdadm --detail --test {raid}").run()
-        devices = []
-        for state in re.findall("^\s*\d+\s*\d+\s*\d+\s*\d+\s*(.*)", output.decode(), re.MULTILINE):
-            device = {}
-            device["state"] = state
-            device["identity"] = {}
-            path = re.findall("\/dev\/(.*)", state)
-            if path:
-                device["identity"]["path"] = f"/dev/{path[0]}"
-                device["identity"]["serialNumber"] = "None"
-            devices.append(device)
-        return devices
+    def get_data_integrity_status(self):
+        status  = {
+                    "raid_integrity_error" : "NA",
+                    "raid_integrity_mismatch_count" : "NA"
+                }
+        try:
+            with open(f"/sys/block/{self.id}/{RaidDataConfig.MISMATCH_COUNT_FILE.value}") as f:
+                mismatch_count = f.read().strip("\n")
+                status["raid_integrity_error"] =  mismatch_count != "0"
+                status["raid_integrity_mismatch_count"] = mismatch_count
+                return status
+        except Exception:
+            return status
 
 
-    def get_data_integrity_status(self, raid):
-        with open(f"/sys/block/{raid.split('/')[-1]}/md/mismatch_cnt") as f:
-            return f.read().strip("\n") == "0"
+class RAIDs:
+        
+    @classmethod
+    def get_configured_raids(self):
+        with open(MDADM_PATH) as f:
+            mdadm = f.read()
+        return [RAID(re.sub("\/(?=\d)", "", device.groups()[0])) for device in re.finditer("ARRAY\s*(\S*)", mdadm)]
