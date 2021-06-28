@@ -44,6 +44,7 @@ then
         if [[ "$PRIMARY" == *"$SRVNODE"* ]]
         then
             PLAN="sanity"
+        fi
     fi
     [ -z "$PLAN" ] && PLAN="sanity"
 fi

@@ -271,7 +271,7 @@ class InitCmd(Cmd):
 
 class TestCmd(Cmd):
     """Starts test based on plan:
-    (sanity|alerts|dev_sanity|full|performance|regression|sanity).
+    (alerts|dev_sanity|full|performance|regression|sanity).
     """
 
     name = "test"
