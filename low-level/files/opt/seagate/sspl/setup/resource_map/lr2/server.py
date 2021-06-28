@@ -329,7 +329,19 @@ class ServerMap(ResourceMap):
         """Get list of cortx services for health generation"""
         # TODO use solution supplied from HA for getting
         # list of cortx services or by parsing resource xml from PCS
-        cortx_services = []
+        cortx_services = [
+            "motr-free-space-monitor.service",
+            "s3authserver.service",
+            "s3backgroundproducer.service",
+            "s3backgroundconsumer.service",
+            "hare-hax.service",
+            "haproxy.service",
+            "sspl-ll.service",
+            "kibana.service",
+            "csm_agent.service",
+            "csm_web.service",
+            "event_analyzer.service",
+        ]
         return cortx_services
 
     def get_external_service_list(self):
@@ -393,7 +405,8 @@ class ServerMap(ResourceMap):
                 command = shlex.split(command)
                 result, _, _ = SimpleProcess(command).run()
                 try:
-                    # returned result will be in bytes
+                    # returned result should be in byte which need to be decoded
+                    # eg. b'Apache License, Version 2.0' -> 'Apache License, Version 2.0'
                     result = result.decode("utf-8")
                 except AttributeError:
                     # TODO add logs
